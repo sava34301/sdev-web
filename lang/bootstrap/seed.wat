@@ -46,10 +46,6 @@
   (import "env" "host_say_str" (func $say_str (param i32 i32)))
   (memory (export "memory") 1)
 
-  ;; ---- constants ---------------------------------------------------------
-  (global $VAR_BASE   i32 (i32.const 0x2000))
-  (global $STACK_BASE i32 (i32.const 0x4000))
-  (global $CODE_BASE  i32 (i32.const 0x8000))
 
   ;; ---- constants ---------------------------------------------------------
   (global $VAR_BASE   i32 (i32.const 0x2000))
