@@ -19,9 +19,15 @@ export interface ExecutionResult {
 export interface ExecuteOptions extends LexerOptions {}
 
 function pickRuntime(source: string): 'v1' | 'v2' {
-  const firstLine = source.slice(0, 80).split('\n', 1)[0].trim();
-  if (firstLine.startsWith('#!sdev v2')) return 'v2';
-  if (firstLine.startsWith('#!sdev v1')) return 'v1';
+  // Scan the first ~10 lines for a #!sdev shebang. IDE may prepend a
+  // `// filename` header, so we can't require line 1.
+  const head = source.split('\n', 10);
+  for (const raw of head) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('#!sdev v2')) return 'v2';
+    if (line.startsWith('#!sdev v1')) return 'v1';
+  }
   if (typeof localStorage !== 'undefined') {
     const pref = localStorage.getItem('sdev_runtime');
     if (pref === 'v2' || pref === 'v1') return pref;

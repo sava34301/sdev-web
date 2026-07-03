@@ -43,6 +43,7 @@ function tokenize(src) {
     if (c === ' ' || c === '\t' || c === '\r') { i++; col++; continue; }
     // Line comments
     if (c === '#') { while (i < src.length && src[i] !== '\n') i++; continue; }
+    if (c === '/' && src[i + 1] === '/') { while (i < src.length && src[i] !== '\n') i++; continue; }
 
     // Numbers
     if (/[0-9]/.test(c)) {
