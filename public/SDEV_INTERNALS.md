@@ -16,22 +16,33 @@ the WASM module to browser APIs (DOM, canvas, Web Serial, fetch, storage).
 - `lang/runtime/v2.js` — full v2 language in pure JavaScript (zero TypeScript
   in the language execution path).
 
-**Milestone 2 (self-hosted foundation) — shipped:**
-- `lang/bootstrap/seed.wat` — hand-written WebAssembly Text stack VM
-  (~200 lines of raw WAT, no host language). Compiled to
-  `public/wasm/sdev-seed.wasm` (~1.1 KB) by `build/build.mjs`.
-- `lang/bootstrap/compile.mjs` — bootstrap compiler: SDEV v2 source →
-  stack-VM bytecode. Bootstrap-only; discarded once stage-2 (below) lands.
-- `src/lang-bridge/wasm-runtime.ts` — browser loader. Select via
-  `#!sdev v2-wasm` header or IDE Settings → V2-WASM.
-- Automatic fallback: source outside the bootstrap subset silently reruns
-  on the JS reference runtime, so V2-WASM is always safe to enable.
+**Milestone 2 (WASM stage-0) — shipped:**
+- `lang/bootstrap/seed.wat` — hand-written WebAssembly Text stack VM,
+  compiled to `public/wasm/sdev-seed.wasm`.
+- `lang/bootstrap/compile.mjs` — bootstrap compiler: SDEV v2 source → VM
+  bytecode.
+- `src/lang-bridge/wasm-runtime.ts` — browser loader with automatic JS
+  fallback for out-of-subset features.
 
-**Milestone 3 (stage-2 self-host) — next chunk:**
-- Rewrite `lang/bootstrap/compile.mjs` as `lang/compiler/*.sdev`, compile it
-  with the stage-0 seed to produce `dist/sdev-core.wasm`, then use that
-  binary to recompile itself byte-identically. At that point the bootstrap
-  compiler and the JS reference runtime are both deleted.
+**Milestone 3 (call frames + recursion) — shipped:**
+- Seed VM expanded with five new opcodes: `CALL`, `RET`, `ENTER`,
+  `LOAD_LOC`, `STORE_LOC`. Proper call-stack with per-frame return IP,
+  saved FP, and per-frame locals — full recursion and mutual recursion.
+- Bootstrap compiler upgraded to a two-pass emitter with a symbol table
+  (globals vs locals), function decls (`to name with p1 p2 … end`),
+  `return`, and both `fn(a, b)` and `fn with a b` call forms.
+- `scripts/test-wasm-runtime.mjs` — regression suite covering `fib(10)`,
+  `fact(6)`, and mutual recursion. All pass entirely inside WAT-authored
+  WebAssembly.
+
+**Milestone 4 (full self-host) — next chunk:**
+- Add heap allocator, arrays, and string manipulation opcodes to the seed
+  VM (the current VM handles strings as immutable pool handles only).
+- Port `lang/bootstrap/compile.mjs` to `lang/compiler/*.sdev`. Compile it
+  with the seed → produce `dist/sdev-core.wasm`. Recompile itself with
+  that binary → verify byte-identical output. At that point the bootstrap
+  JS compiler AND the JS reference runtime are both deleted, and SDEV
+  compiles SDEV all the way down.
 
 ## Where we're going (Milestone 2 — post-launch)
 
