@@ -215,6 +215,90 @@
               (i32.load (local.get $addr)))
             (br $dispatch)))
 
+        ;; --- CALL (0x60) <u16 target> <u8 n_args> ---
+        ;; Frame layout at $csp: ret_ip @+0, saved_fp @+4, locals @+8...
+        ;; Args are on operand stack in order; copy into locals[0..n_args-1].
+        (if (i32.eq (local.get $op) (i32.const 0x60))
+          (then
+            ;; read operands
+            (local.set $a (i32.load16_u (i32.add (global.get $CODE_BASE) (local.get $ip)))) ;; target
+            (local.set $b (call $read_u8 (i32.add (local.get $ip) (i32.const 2))))          ;; n_args
+            (local.set $ip (i32.add (local.get $ip) (i32.const 3)))
+            ;; allocate frame at csp
+            (i32.store (global.get $csp) (local.get $ip))                                   ;; ret_ip
+            (i32.store (i32.add (global.get $csp) (i32.const 4)) (global.get $fp))          ;; saved_fp
+            (global.set $fp (global.get $csp))
+            (global.set $csp (i32.add (global.get $csp) (i32.const 8)))
+            ;; copy n_args from operand stack into locals (in order)
+            (local.set $addr (i32.sub (local.get $sp) (i32.mul (local.get $b) (i32.const 4))))
+            (block $done
+              (loop $copy
+                (br_if $done (i32.eqz (local.get $b)))
+                (i32.store (global.get $csp) (i32.load (local.get $addr)))
+                (global.set $csp (i32.add (global.get $csp) (i32.const 4)))
+                (local.set $addr (i32.add (local.get $addr) (i32.const 4)))
+                (local.set $b    (i32.sub (local.get $b)    (i32.const 1)))
+                (br $copy)
+              )
+            )
+            ;; pop original args from operand stack
+            (local.set $sp (i32.sub (local.get $sp)
+                                    (i32.mul (call $read_u8 (i32.sub (local.get $ip) (i32.const 1)))
+                                             (i32.const 4))))
+            ;; jump to target (absolute code offset)
+            (local.set $ip (local.get $a))
+            (br $dispatch)))
+
+        ;; --- RET (0x61) ---
+        (if (i32.eq (local.get $op) (i32.const 0x61))
+          (then
+            ;; pop return value
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            ;; restore ip and fp from current frame
+            (local.set $ip (i32.load (global.get $fp)))
+            (local.set $addr (i32.load (i32.add (global.get $fp) (i32.const 4))))
+            (global.set $csp (global.get $fp))
+            (global.set $fp (local.get $addr))
+            ;; push return value
+            (i32.store (local.get $sp) (local.get $a))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- ENTER (0x62) <u8 n_locals> --- reserve extra locals beyond args
+        (if (i32.eq (local.get $op) (i32.const 0x62))
+          (then
+            (global.set $csp
+              (i32.add (global.get $csp)
+                       (i32.mul (call $read_u8 (local.get $ip)) (i32.const 4))))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+            (br $dispatch)))
+
+        ;; --- LOAD_LOC (0x63) <u8 slot> ---
+        (if (i32.eq (local.get $op) (i32.const 0x63))
+          (then
+            (i32.store (local.get $sp)
+              (i32.load
+                (i32.add (global.get $fp)
+                         (i32.add (i32.const 8)
+                                  (i32.mul (call $read_u8 (local.get $ip)) (i32.const 4))))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+            (br $dispatch)))
+
+        ;; --- STORE_LOC (0x64) <u8 slot> ---
+        (if (i32.eq (local.get $op) (i32.const 0x64))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store
+              (i32.add (global.get $fp)
+                       (i32.add (i32.const 8)
+                                (i32.mul (call $read_u8 (local.get $ip)) (i32.const 4))))
+              (i32.load (local.get $sp)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+            (br $dispatch)))
+
+
         ;; unknown opcode → halt
         (br $exit)
       )
