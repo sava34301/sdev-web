@@ -608,6 +608,37 @@ export default function IDEPage() {
   const runCode = useCallback(async () => {
     if (!activeFile) return;
 
+    // ─── v2 "Prism" runtime short-circuit ───
+    // If the file opts into v2 via `#!sdev v2` (in the first ~10 lines) OR the
+    // global runtime preference is v2, route straight through the pure-JS v2
+    // runtime and skip the entire v1 translation/lexer/interpreter pipeline.
+    const rawSrc = activeFile.content;
+    const head10 = rawSrc.split('\n', 10).map(l => l.trim());
+    const shebangV2 = head10.some(l => l.startsWith('#!sdev v2'));
+    const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
+    const runtimePref = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || null;
+    const useV2 = shebangV2 || (!shebangV1 && runtimePref === 'v2');
+    if (useV2) {
+      setIsRunning(true);
+      setStatusMsg('Running (v2)…');
+      setUiState(null);
+      setWebState(null);
+      try {
+        const { run: runV2 } = await import('../../lang/runtime/v2.js') as {
+          run: (src: string, opts?: { onOutput?: (l: string) => void }) => { success: boolean; output: string[]; error: string | null };
+        };
+        const lines: string[] = [];
+        const r = runV2(rawSrc, { onOutput: (l) => lines.push(l) });
+        setOutput(r.output.length ? r.output : lines);
+        setStatusMsg(r.success ? 'Done (v2)' : `✗ ${r.error ?? 'error'}`);
+      } catch (e) {
+        setStatusMsg(`✗ v2: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setIsRunning(false);
+      }
+      return;
+    }
+
     let code = stripBoardBlocks(activeFile.content);
     const outputLines: string[] = [];
     const commands: GraphicsCommand[] = [];
