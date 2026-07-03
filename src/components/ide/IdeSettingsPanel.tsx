@@ -111,10 +111,16 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
         {/* Language runtime */}
         <div>
           <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Language Runtime</label>
-          <div className="grid grid-cols-3 gap-1">
-            {(['auto', 'v1', 'v2'] as const).map(id => {
-              const current = (typeof localStorage !== 'undefined' && (localStorage.getItem('sdev_runtime') as 'v1' | 'v2' | null)) || 'auto';
+          <div className="grid grid-cols-4 gap-1">
+            {(['auto', 'v1', 'v2', 'v2-wasm'] as const).map(id => {
+              const current = (typeof localStorage !== 'undefined' && (localStorage.getItem('sdev_runtime') as 'v1' | 'v2' | 'v2-wasm' | null)) || 'auto';
               const active = current === id;
+              const titles: Record<string, string> = {
+                auto: 'Per-file (#!sdev v2 / v2-wasm / v1 header) or default v1',
+                v1: 'Legacy runtime (forge / conjure / :: / ;;)',
+                v2: 'New easy-syntax runtime (pure JavaScript)',
+                'v2-wasm': 'Real WebAssembly execution via hand-written seed VM (integer subset; falls back to JS)',
+              };
               return (
                 <button
                   key={id}
@@ -123,8 +129,8 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
                     else localStorage.setItem('sdev_runtime', id);
                     onChange({ ...settings });
                   }}
-                  className={`text-[11px] font-mono py-1.5 rounded border transition-colors ${active ? 'border-primary text-primary bg-primary/10' : 'border-border/40 text-muted-foreground hover:border-primary/50'}`}
-                  title={id === 'v2' ? 'New easy-syntax runtime (pure JS, no TypeScript)' : id === 'v1' ? 'Legacy runtime (forge / conjure / :: / ;;)' : 'Per-file (#!sdev v2 header) or default v1'}
+                  className={`text-[10px] font-mono py-1.5 rounded border transition-colors ${active ? 'border-primary text-primary bg-primary/10' : 'border-border/40 text-muted-foreground hover:border-primary/50'}`}
+                  title={titles[id]}
                 >
                   {id.toUpperCase()}
                 </button>
@@ -132,7 +138,7 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
             })}
           </div>
           <p className="text-[10px] text-muted-foreground/70 mt-1.5 leading-tight">
-            V2 "Prism" uses the beginner-first syntax (say, set, if, for each, to). V1 keeps forge/conjure. Files starting with <code>#!sdev v2</code> always use v2.
+            V2 "Prism" is the beginner-first syntax (say, set, if, for each, to). V2-WASM runs it through a real WebAssembly VM (hand-written in WAT, 1&nbsp;KB). Files with <code>#!sdev v2</code> or <code>#!sdev v2-wasm</code> override this.
           </p>
         </div>
 

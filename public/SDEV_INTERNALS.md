@@ -10,18 +10,28 @@ itself, compiled to WebAssembly, and shipped as a single `.wasm` binary the
 browser IDE loads. TypeScript only survives in a thin bridge that connects
 the WASM module to browser APIs (DOM, canvas, Web Serial, fetch, storage).
 
-## Where we are today (Milestone 1 — Launch)
+## Where we are today
 
-- **`lang/runtime/v2.js`** — the v2 language, implemented in pure JavaScript
-  (zero TypeScript, zero dependencies). This is the reference runtime the
-  IDE uses right now.
-- **`src/lang/index.ts`** — the *only* TS file that touches execution. It
-  picks between v1 (legacy TS runtime) and v2 (this JS runtime) per file.
-- **`src/lang-bridge/`** — reserved for the future WASM bridge. Currently
-  re-exports the same `execute()` for callers that want to be explicit.
+**Milestone 1 (launch) — shipped:**
+- `lang/runtime/v2.js` — full v2 language in pure JavaScript (zero TypeScript
+  in the language execution path).
 
-Milestone 1 satisfies "detach from TypeScript" at the *language* layer:
-no part of the v2 lexer, parser, or interpreter is written in TypeScript.
+**Milestone 2 (self-hosted foundation) — shipped:**
+- `lang/bootstrap/seed.wat` — hand-written WebAssembly Text stack VM
+  (~200 lines of raw WAT, no host language). Compiled to
+  `public/wasm/sdev-seed.wasm` (~1.1 KB) by `build/build.mjs`.
+- `lang/bootstrap/compile.mjs` — bootstrap compiler: SDEV v2 source →
+  stack-VM bytecode. Bootstrap-only; discarded once stage-2 (below) lands.
+- `src/lang-bridge/wasm-runtime.ts` — browser loader. Select via
+  `#!sdev v2-wasm` header or IDE Settings → V2-WASM.
+- Automatic fallback: source outside the bootstrap subset silently reruns
+  on the JS reference runtime, so V2-WASM is always safe to enable.
+
+**Milestone 3 (stage-2 self-host) — next chunk:**
+- Rewrite `lang/bootstrap/compile.mjs` as `lang/compiler/*.sdev`, compile it
+  with the stage-0 seed to produce `dist/sdev-core.wasm`, then use that
+  binary to recompile itself byte-identically. At that point the bootstrap
+  compiler and the JS reference runtime are both deleted.
 
 ## Where we're going (Milestone 2 — post-launch)
 
