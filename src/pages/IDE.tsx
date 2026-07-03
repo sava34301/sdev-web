@@ -629,7 +629,7 @@ export default function IDEPage() {
         };
         const lines: string[] = [];
         const r = runV2(rawSrc, { onOutput: (l) => lines.push(l) });
-        setOutput((r.output.length ? r.output : lines).join('\n'));
+        setOutput(r.output.length ? r.output : lines);
         setStatusMsg(r.success ? 'Done (v2)' : `✗ ${r.error ?? 'error'}`);
       } catch (e) {
         setStatusMsg(`✗ v2: ${e instanceof Error ? e.message : String(e)}`);
