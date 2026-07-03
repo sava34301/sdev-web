@@ -12,15 +12,16 @@
 ;;
 ;; Memory layout (linear memory, 1 page = 64 KiB):
 ;;   0x0000..0x1FFF  string pool  (utf-8 blobs, length-prefixed u32)
-;;   0x2000..0x3FFF  variable slots (256 slots × 4 bytes each; sign-extended)
-;;   0x4000..0x7FFF  operand stack (u32 cells; sp grows up from base)
+;;   0x2000..0x3FFF  global variable slots (256 slots × 4 bytes)
+;;   0x4000..0x5FFF  operand stack (u32 cells; sp grows up)
+;;   0x6000..0x7FFF  call stack (frames of ret_ip, saved_fp, locals…)
 ;;   0x8000..0xFFFF  bytecode program (u8 stream)
 ;;
 ;; Opcodes (single byte, may be followed by inline operands):
 ;;   0x01 PUSH_I32 <i32 LE>         push signed 32-bit constant
 ;;   0x02 PUSH_STR <u16 idx LE>     push interned string handle (pool offset)
-;;   0x03 LOAD    <u8 slot>         push variable value
-;;   0x04 STORE   <u8 slot>         pop into variable
+;;   0x03 LOAD    <u8 slot>         push global variable value
+;;   0x04 STORE   <u8 slot>         pop into global variable
 ;;   0x10 ADD  0x11 SUB  0x12 MUL  0x13 DIV  0x14 MOD
 ;;   0x20 EQ   0x21 NE   0x22 LT   0x23 GT   0x24 LE   0x25 GE
 ;;   0x30 NOT
@@ -28,6 +29,11 @@
 ;;   0x41 JZ   <i16 off LE>         pop; jump if zero
 ;;   0x50 SAY_I32                   pop int; host prints it
 ;;   0x51 SAY_STR                   pop string handle; host prints pool[handle]
+;;   0x60 CALL <u16 target> <u8 n_args>   allocate frame, copy args, jump
+;;   0x61 RET                             pop retval, restore ip+fp, push retval
+;;   0x62 ENTER <u8 n_locals>             reserve additional local slots
+;;   0x63 LOAD_LOC <u8 slot>              push local (0..n_args-1 = args)
+;;   0x64 STORE_LOC <u8 slot>             pop into local
 ;;   0xFF HALT
 ;;
 ;; The host provides two imports:
