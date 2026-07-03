@@ -1,34 +1,32 @@
-// SDEV v2 bootstrap compiler.
+// SDEV v2 bootstrap compiler — Milestone 3 (functions + call frames).
 //
 // Compiles a subset of SDEV v2 to bytecode for the stage-0 WAT VM
 // (see lang/bootstrap/seed.wat for the opcode table and memory layout).
 //
 // Bootstrap-only: this file is written in JavaScript so the very first
 // stage of the toolchain has *something* to emit bytecode. Once the
-// stage-2 self-hosted compiler (lang/compiler/*.sdev) is complete, this
+// stage-3 self-hosted compiler (lang/compiler/*.sdev) is complete, this
 // file is deleted and SDEV compiles SDEV directly.
 //
-// Supported subset (integers-first, matches the ops the seed implements):
+// Supported subset:
 //   say <expr>
 //   set <name> to <expr>
 //   if <cond>  ... [else ...] end
 //   while <cond> ... end
-//   integer literals, string literals (say only)
+//   to <name> [with p1 p2 ...] ... end     (recursive functions)
+//   return <expr>
+//   integer / string literals, identifiers
+//   fn(args) call form, `name with a b` form
 //   + - * / %,  is / is not / < > <= >=,  and / or / not
-//   identifiers
-//
-// Anything outside this subset — functions, lists, dicts, for-each,
-// pipelines, pattern match, systems/data/hardware blocks — falls back to
-// the JS reference runtime automatically (see the runtime dispatcher).
 
 import { tokenize, SdevError } from '../runtime/v2.js';
 
-// Opcodes (must match seed.wat exactly)
 const OP = {
   PUSH_I32: 0x01, PUSH_STR: 0x02, LOAD: 0x03, STORE: 0x04,
   ADD: 0x10, SUB: 0x11, MUL: 0x12, DIV: 0x13, MOD: 0x14,
   EQ: 0x20, NE: 0x21, LT: 0x22, GT: 0x23, LE: 0x24, GE: 0x25,
   NOT: 0x30, JMP: 0x40, JZ: 0x41, SAY_I32: 0x50, SAY_STR: 0x51,
+  CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
   HALT: 0xFF,
 };
 
@@ -37,20 +35,23 @@ class Emitter {
     this.bytes = [];
     this.stringPool = new Uint8Array(0x2000);
     this.poolNext = 0;
-    this.strings = new Map(); // string → pool offset
-    this.slots = new Map();   // varname → slot index
+    this.strings = new Map();
+    this.globals = new Map();               // name → global slot
+    this.functions = new Map();              // name → { arity, offset, patchSites: [] }
   }
   emit(b) { this.bytes.push(b & 0xff); }
   emitI32(v) { this.emit(v); this.emit(v >> 8); this.emit(v >> 16); this.emit(v >> 24); }
-  emitI16At(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
+  emitU16(v) { this.emit(v); this.emit(v >> 8); }
+  patchI16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
+  patchU16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
   placeholder16() { this.emit(0); this.emit(0); return this.bytes.length - 2; }
   here() { return this.bytes.length; }
-  slotOf(name) {
-    if (!this.slots.has(name)) {
-      if (this.slots.size >= 256) throw new SdevError('too many variables (bootstrap limit 256)', 0);
-      this.slots.set(name, this.slots.size);
+  globalSlot(name) {
+    if (!this.globals.has(name)) {
+      if (this.globals.size >= 256) throw new SdevError('too many globals (256 max)', 0);
+      this.globals.set(name, this.globals.size);
     }
-    return this.slots.get(name);
+    return this.globals.get(name);
   }
   intern(str) {
     if (this.strings.has(str)) return this.strings.get(str);
@@ -65,7 +66,7 @@ class Emitter {
   }
 }
 
-// Very small recursive-descent parser mirroring the v2 grammar subset.
+// ---------------- Parser (bootstrap subset) ----------------
 function parseProgram(tokens) {
   let p = 0;
   const peek = (n = 0) => tokens[p + n];
@@ -86,12 +87,16 @@ function parseProgram(tokens) {
   function statement() {
     const t = peek();
     if (t.type === 'KW') {
-      if (t.value === 'say') { p++; return { k: 'say', expr: expr(), line: t.line }; }
-      if (t.value === 'set') { p++; const name = eat('IDENT').value; eat('KW', 'to'); return { k: 'set', name, expr: expr(), line: t.line }; }
-      if (t.value === 'if') return ifStmt();
-      if (t.value === 'while') return whileStmt();
+      if (t.value === 'say')    { p++; return { k: 'say', expr: expr(), line: t.line }; }
+      if (t.value === 'set')    { p++; const name = eat('IDENT').value; eat('KW', 'to'); return { k: 'set', name, expr: expr(), line: t.line }; }
+      if (t.value === 'if')     return ifStmt();
+      if (t.value === 'while')  return whileStmt();
+      if (t.value === 'to')     return funcDecl();
+      if (t.value === 'return') { p++; return { k: 'return', expr: peek().type === 'NL' ? null : expr(), line: t.line }; }
     }
-    throw new SdevError(`bootstrap: unsupported statement at ${t.type}:${t.value} (WASM subset). Use v2 JS runtime.`, t.line);
+    // Expression statement (e.g. `greet with "x"`).
+    const e = expr();
+    return { k: 'exprStmt', expr: e, line: t.line };
   }
   function ifStmt() {
     const t = eat('KW', 'if'); const cond = expr(); skipNL();
@@ -106,6 +111,19 @@ function parseProgram(tokens) {
     const body = []; while (!(peek().type === 'KW' && peek().value === 'end')) { body.push(statement()); skipNL(); }
     eat('KW', 'end');
     return { k: 'while', cond, body, line: t.line };
+  }
+  function funcDecl() {
+    const t = eat('KW', 'to');
+    const name = eat('IDENT').value;
+    const params = [];
+    if (peek().type === 'KW' && peek().value === 'with') {
+      p++;
+      while (peek().type === 'IDENT') { params.push(eat('IDENT').value); }
+    }
+    skipNL();
+    const body = []; while (!(peek().type === 'KW' && peek().value === 'end')) { body.push(statement()); skipNL(); }
+    eat('KW', 'end');
+    return { k: 'func', name, params, body, line: t.line };
   }
   function expr() { return or_(); }
   function or_() { let l = and_(); while (peek().type === 'KW' && peek().value === 'or') { p++; l = { k: 'bin', op: 'or', l, r: and_() }; } return l; }
@@ -123,7 +141,33 @@ function parseProgram(tokens) {
   }
   function add_() { let l = mul_(); while (peek().type === 'OP' && (peek().value === '+' || peek().value === '-')) { const op = peek().value; p++; l = { k: 'bin', op, l, r: mul_() }; } return l; }
   function mul_() { let l = un_();  while (peek().type === 'OP' && (peek().value === '*' || peek().value === '/' || peek().value === '%')) { const op = peek().value; p++; l = { k: 'bin', op, l, r: un_() }; } return l; }
-  function un_()  { if (peek().type === 'OP' && peek().value === '-') { p++; return { k: 'un', op: '-', x: un_() }; } return atom(); }
+  function un_()  { if (peek().type === 'OP' && peek().value === '-') { p++; return { k: 'un', op: '-', x: un_() }; } return callOrAtom(); }
+  function callOrAtom() {
+    const a = atom();
+    // fn(a, b) call form
+    if (a.k === 'ident' && peek().type === 'OP' && peek().value === '(') {
+      p++;
+      const args = [];
+      if (!(peek().type === 'OP' && peek().value === ')')) {
+        args.push(expr());
+        while (peek().type === 'OP' && peek().value === ',') { p++; args.push(expr()); }
+      }
+      eat('OP', ')');
+      return { k: 'call', name: a.name, args };
+    }
+    // `fn with a b` call form (space-separated single atoms)
+    if (a.k === 'ident' && peek().type === 'KW' && peek().value === 'with') {
+      p++;
+      const args = [];
+      while (canStartAtom(peek())) args.push(atom());
+      return { k: 'call', name: a.name, args };
+    }
+    return a;
+  }
+  function canStartAtom(t) {
+    return t.type === 'NUM' || t.type === 'STR' || t.type === 'IDENT'
+      || (t.type === 'OP' && t.value === '(');
+  }
   function atom() {
     const t = peek();
     if (t.type === 'NUM') { p++; if (!Number.isInteger(t.value)) throw new SdevError('bootstrap subset supports integers only', t.line); return { k: 'num', v: t.value }; }
@@ -134,20 +178,79 @@ function parseProgram(tokens) {
   }
 }
 
-function emitExpr(e, em) {
+// ---------------- Two-pass emitter ----------------
+// Pass 1: separate function decls from main statements.
+// Pass 2: emit a leading JMP to main, then function bodies (recording
+//         their offsets), then main, then HALT. Patch all CALL sites and
+//         the leading JMP with the recorded offsets.
+
+function emit(stmts, em) {
+  const funcs = stmts.filter(s => s.k === 'func');
+  const main = stmts.filter(s => s.k !== 'func');
+
+  // Register functions (name → arity) up front so recursive calls resolve.
+  for (const f of funcs) {
+    if (em.functions.has(f.name)) throw new SdevError(`duplicate function ${f.name}`, f.line);
+    em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [] });
+  }
+
+  // Leading JMP to main (patched later)
+  em.emit(OP.JMP);
+  const jmpToMainPos = em.placeholder16();
+  const afterJmpToMain = em.here();
+
+  // Emit each function body
+  for (const f of funcs) {
+    const info = em.functions.get(f.name);
+    info.offset = em.here();
+    // Local slot table: params first, then locals in declaration order.
+    const locals = new Map();
+    f.params.forEach((p, i) => locals.set(p, i));
+    // Scan for `set` and function params to determine extra locals.
+    collectSets(f.body, locals);
+    const extra = locals.size - f.params.length;
+    if (extra > 0) { em.emit(OP.ENTER); em.emit(extra); }
+    for (const s of f.body) emitStmt(s, em, locals);
+    // Fallthrough guard: implicit `return 0`.
+    em.emit(OP.PUSH_I32); em.emitI32(0); em.emit(OP.RET);
+  }
+
+  // Patch the leading JMP to point at main
+  em.patchI16(jmpToMainPos, em.here() - afterJmpToMain);
+
+  // Emit main
+  for (const s of main) emitStmt(s, em, null); // null → globals
+  em.emit(OP.HALT);
+
+  // Patch all CALL sites now that function offsets are known.
+  for (const info of em.functions.values()) {
+    for (const site of info.patchSites) em.patchU16(site, info.offset);
+  }
+}
+
+function collectSets(body, locals) {
+  for (const s of body) {
+    if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
+    if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
+    if (s.k === 'while') collectSets(s.body, locals);
+  }
+}
+
+function emitExpr(e, em, locals) {
   switch (e.k) {
     case 'num':   em.emit(OP.PUSH_I32); em.emitI32(e.v); return 'int';
     case 'str':   em.emit(OP.PUSH_STR); { const off = em.intern(e.v); em.emit(off & 0xff); em.emit((off >> 8) & 0xff); } return 'str';
-    case 'ident': em.emit(OP.LOAD); em.emit(em.slotOf(e.name)); return 'int';
+    case 'ident':
+      if (locals && locals.has(e.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(e.name)); return 'int'; }
+      em.emit(OP.LOAD); em.emit(em.globalSlot(e.name)); return 'int';
     case 'un':
-      if (e.op === '-') { em.emit(OP.PUSH_I32); em.emitI32(0); emitExpr(e.x, em); em.emit(OP.SUB); return 'int'; }
-      if (e.op === 'not') { emitExpr(e.x, em); em.emit(OP.NOT); return 'int'; }
+      if (e.op === '-') { em.emit(OP.PUSH_I32); em.emitI32(0); emitExpr(e.x, em, locals); em.emit(OP.SUB); return 'int'; }
+      if (e.op === 'not') { emitExpr(e.x, em, locals); em.emit(OP.NOT); return 'int'; }
       break;
     case 'bin': {
-      // short-circuit for and/or via JZ
-      if (e.op === 'and') { emitExpr(e.l, em); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em); em.emitI16At(fx, em.here() - before); return 'int'; }
-      if (e.op === 'or')  { emitExpr(e.l, em); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em); em.emitI16At(fx, em.here() - before); return 'int'; }
-      emitExpr(e.l, em); emitExpr(e.r, em);
+      if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
+      if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
+      emitExpr(e.l, em, locals); emitExpr(e.r, em, locals);
       switch (e.op) {
         case '+': em.emit(OP.ADD); return 'int';
         case '-': em.emit(OP.SUB); return 'int';
@@ -161,45 +264,72 @@ function emitExpr(e, em) {
         case '<=': em.emit(OP.LE); return 'int';
         case '>=': em.emit(OP.GE); return 'int';
       }
+      break;
+    }
+    case 'call': {
+      const info = em.functions.get(e.name);
+      if (!info) throw new SdevError(`unknown function ${e.name}`, 0);
+      if (e.args.length !== info.arity) throw new SdevError(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, 0);
+      for (const a of e.args) emitExpr(a, em, locals);
+      em.emit(OP.CALL);
+      const site = em.here();
+      em.emitU16(0);            // target placeholder — patched at end
+      em.emit(e.args.length);
+      info.patchSites.push(site);
+      return 'int';
     }
   }
   throw new SdevError(`bootstrap: cannot compile ${e.k}`, 0);
 }
 
-function emitStmt(s, em) {
+function emitStmt(s, em, locals) {
   switch (s.k) {
     case 'say': {
-      const kind = emitExpr(s.expr, em);
+      const kind = emitExpr(s.expr, em, locals);
       em.emit(kind === 'str' ? OP.SAY_STR : OP.SAY_I32);
       return;
     }
     case 'set': {
-      emitExpr(s.expr, em);
-      em.emit(OP.STORE); em.emit(em.slotOf(s.name));
+      emitExpr(s.expr, em, locals);
+      if (locals && locals.has(s.name)) { em.emit(OP.STORE_LOC); em.emit(locals.get(s.name)); }
+      else { em.emit(OP.STORE); em.emit(em.globalSlot(s.name)); }
       return;
     }
     case 'if': {
-      emitExpr(s.cond, em);
+      emitExpr(s.cond, em, locals);
       em.emit(OP.JZ); const jzPos = em.placeholder16(); const afterJZ = em.here();
-      s.then_.forEach(x => emitStmt(x, em));
+      s.then_.forEach(x => emitStmt(x, em, locals));
       if (s.else_) {
         em.emit(OP.JMP); const jmpPos = em.placeholder16(); const afterJmp = em.here();
-        em.emitI16At(jzPos, em.here() - afterJZ);
-        s.else_.forEach(x => emitStmt(x, em));
-        em.emitI16At(jmpPos, em.here() - afterJmp);
+        em.patchI16(jzPos, em.here() - afterJZ);
+        s.else_.forEach(x => emitStmt(x, em, locals));
+        em.patchI16(jmpPos, em.here() - afterJmp);
       } else {
-        em.emitI16At(jzPos, em.here() - afterJZ);
+        em.patchI16(jzPos, em.here() - afterJZ);
       }
       return;
     }
     case 'while': {
       const top = em.here();
-      emitExpr(s.cond, em);
+      emitExpr(s.cond, em, locals);
       em.emit(OP.JZ); const jzPos = em.placeholder16(); const afterJZ = em.here();
-      s.body.forEach(x => emitStmt(x, em));
+      s.body.forEach(x => emitStmt(x, em, locals));
       em.emit(OP.JMP); const jmpPos = em.placeholder16(); const afterJmp = em.here();
-      em.emitI16At(jmpPos, top - afterJmp);
-      em.emitI16At(jzPos, em.here() - afterJZ);
+      em.patchI16(jmpPos, top - afterJmp);
+      em.patchI16(jzPos, em.here() - afterJZ);
+      return;
+    }
+    case 'return': {
+      if (s.expr) emitExpr(s.expr, em, locals);
+      else { em.emit(OP.PUSH_I32); em.emitI32(0); }
+      em.emit(OP.RET);
+      return;
+    }
+    case 'exprStmt': {
+      // Discard result (functions with side effects, e.g. say inside).
+      emitExpr(s.expr, em, locals);
+      // Pop the result — no explicit POP opcode yet, so store into a scratch global.
+      em.emit(OP.STORE); em.emit(em.globalSlot('__scratch'));
       return;
     }
   }
@@ -209,8 +339,7 @@ export function compile(source) {
   const tokens = tokenize(source);
   const ast = parseProgram(tokens);
   const em = new Emitter();
-  ast.forEach(s => emitStmt(s, em));
-  em.emit(OP.HALT);
+  emit(ast, em);
   return {
     bytecode: new Uint8Array(em.bytes),
     stringPool: em.stringPool.slice(0, em.poolNext),
