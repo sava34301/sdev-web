@@ -1,26 +1,212 @@
-;; SDEV bootstrap seed — Stage 0.
+;; ============================================================================
+;; SDEV bootstrap seed — Stage 0 stack VM
 ;;
-;; This file will be hand-written WebAssembly Text (WAT) that executes a
-;; minimal subset of SDEV called `sdev-min`. It is the ONLY file in the
-;; language toolchain that is not itself SDEV.
+;; Hand-written WebAssembly Text. Zero TypeScript, zero JavaScript, zero
+;; other high-level languages in this file. This is the ONLY non-SDEV file
+;; in the language toolchain.
 ;;
-;; Once this seed is complete, the build pipeline is:
-;;   seed.wasm  (from this file, via wat2wasm)
-;;     compiles  ->  lang/compiler/*.sdev in sdev-min
-;;                   producing bootstrap/stage1.wasm
-;;   stage1.wasm
-;;     compiles  ->  lang/compiler/*.sdev in full SDEV
-;;                   producing dist/sdev-core.wasm
-;;   dist/sdev-core.wasm recompiles itself, byte-identical.
+;; Executes a compact bytecode that a bootstrap-only compiler emits from
+;; SDEV v2 source. Once the stage-2 compiler (written in SDEV, see
+;; lang/compiler/*.sdev) is complete, the bootstrap compiler is discarded
+;; and SDEV compiles SDEV all the way down.
 ;;
-;; Milestone 1 (shipped): the JavaScript reference runtime at
-;;   lang/runtime/v2.js executes v2 SDEV directly in the browser.
-;; Milestone 2 (this file + the SDEV compiler sources) replaces it with
-;;   a fully self-hosted WASM binary. Ship target: post-launch.
+;; Memory layout (linear memory, 1 page = 64 KiB):
+;;   0x0000..0x1FFF  string pool  (utf-8 blobs, length-prefixed u32)
+;;   0x2000..0x3FFF  variable slots (256 slots × 4 bytes each; sign-extended)
+;;   0x4000..0x7FFF  operand stack (u32 cells; sp grows up from base)
+;;   0x8000..0xFFFF  bytecode program (u8 stream)
+;;
+;; Opcodes (single byte, may be followed by inline operands):
+;;   0x01 PUSH_I32 <i32 LE>         push signed 32-bit constant
+;;   0x02 PUSH_STR <u16 idx LE>     push interned string handle (pool offset)
+;;   0x03 LOAD    <u8 slot>         push variable value
+;;   0x04 STORE   <u8 slot>         pop into variable
+;;   0x10 ADD  0x11 SUB  0x12 MUL  0x13 DIV  0x14 MOD
+;;   0x20 EQ   0x21 NE   0x22 LT   0x23 GT   0x24 LE   0x25 GE
+;;   0x30 NOT
+;;   0x40 JMP  <i16 off LE>         unconditional relative jump
+;;   0x41 JZ   <i16 off LE>         pop; jump if zero
+;;   0x50 SAY_I32                   pop int; host prints it
+;;   0x51 SAY_STR                   pop string handle; host prints pool[handle]
+;;   0xFF HALT
+;;
+;; The host provides two imports:
+;;   env.host_say_i32(i32)
+;;   env.host_say_str(offset:i32, length:i32)
+;; ============================================================================
+
 (module
+  (import "env" "host_say_i32" (func $say_i32 (param i32)))
+  (import "env" "host_say_str" (func $say_str (param i32 i32)))
   (memory (export "memory") 1)
-  ;; TODO: sdev-min lexer, parser, evaluator.
-  ;; Full opcode list and calling conventions live in
-  ;; docs: public/SDEV_INTERNALS.md
+
+  ;; ---- constants ---------------------------------------------------------
+  (global $VAR_BASE   i32 (i32.const 0x2000))
+  (global $STACK_BASE i32 (i32.const 0x4000))
+  (global $CODE_BASE  i32 (i32.const 0x8000))
+
+  ;; ---- program length (set by host before calling run) -------------------
+  (global $prog_len (mut i32) (i32.const 0))
+  (func (export "set_prog_len") (param $n i32) (global.set $prog_len (local.get $n)))
+  (func (export "code_base")  (result i32) (global.get $CODE_BASE))
   (func (export "sdev_version") (result i32) (i32.const 200))
+
+  ;; ---- helpers -----------------------------------------------------------
+  (func $read_u8 (param $ip i32) (result i32)
+    (i32.load8_u (i32.add (global.get $CODE_BASE) (local.get $ip))))
+
+  (func $read_i32 (param $ip i32) (result i32)
+    (i32.load (i32.add (global.get $CODE_BASE) (local.get $ip))))
+
+  (func $read_i16 (param $ip i32) (result i32)
+    ;; sign-extend a little-endian 16-bit value
+    (i32.shr_s
+      (i32.shl (i32.load16_u (i32.add (global.get $CODE_BASE) (local.get $ip)))
+               (i32.const 16))
+      (i32.const 16)))
+
+  ;; ---- main interpreter loop --------------------------------------------
+  (func (export "run") (result i32)
+    (local $ip i32)         ;; instruction pointer (relative to CODE_BASE)
+    (local $sp i32)         ;; stack pointer (absolute address)
+    (local $op i32)
+    (local $a  i32)
+    (local $b  i32)
+    (local $addr i32)
+
+    (local.set $ip (i32.const 0))
+    (local.set $sp (global.get $STACK_BASE))
+
+    (block $exit
+      (loop $dispatch
+        ;; halt if past program end
+        (br_if $exit (i32.ge_s (local.get $ip) (global.get $prog_len)))
+
+        (local.set $op (call $read_u8 (local.get $ip)))
+        (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+
+        ;; --- HALT (0xFF) ---
+        (if (i32.eq (local.get $op) (i32.const 0xFF))
+          (then (br $exit)))
+
+        ;; --- PUSH_I32 (0x01) ---
+        (if (i32.eq (local.get $op) (i32.const 0x01))
+          (then
+            (i32.store (local.get $sp) (call $read_i32 (local.get $ip)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- PUSH_STR (0x02) — push a 16-bit string-pool offset as handle ---
+        (if (i32.eq (local.get $op) (i32.const 0x02))
+          (then
+            (i32.store (local.get $sp) (i32.load16_u (i32.add (global.get $CODE_BASE) (local.get $ip))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 2)))
+            (br $dispatch)))
+
+        ;; --- LOAD (0x03) <u8 slot> ---
+        (if (i32.eq (local.get $op) (i32.const 0x03))
+          (then
+            (local.set $addr (i32.add (global.get $VAR_BASE)
+              (i32.mul (call $read_u8 (local.get $ip)) (i32.const 4))))
+            (i32.store (local.get $sp) (i32.load (local.get $addr)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+            (br $dispatch)))
+
+        ;; --- STORE (0x04) <u8 slot> ---
+        (if (i32.eq (local.get $op) (i32.const 0x04))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (local.set $addr (i32.add (global.get $VAR_BASE)
+              (i32.mul (call $read_u8 (local.get $ip)) (i32.const 4))))
+            (i32.store (local.get $addr) (local.get $a))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+            (br $dispatch)))
+
+        ;; --- ADD..MOD (0x10..0x14) ---
+        (if (i32.and (i32.ge_u (local.get $op) (i32.const 0x10))
+                     (i32.le_u (local.get $op) (i32.const 0x14)))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (if (i32.eq (local.get $op) (i32.const 0x10)) (then (i32.store (local.get $sp) (i32.add (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x11)) (then (i32.store (local.get $sp) (i32.sub (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x12)) (then (i32.store (local.get $sp) (i32.mul (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x13)) (then (i32.store (local.get $sp) (i32.div_s (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x14)) (then (i32.store (local.get $sp) (i32.rem_s (local.get $a) (local.get $b)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- EQ..GE (0x20..0x25) ---
+        (if (i32.and (i32.ge_u (local.get $op) (i32.const 0x20))
+                     (i32.le_u (local.get $op) (i32.const 0x25)))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (if (i32.eq (local.get $op) (i32.const 0x20)) (then (i32.store (local.get $sp) (i32.eq   (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x21)) (then (i32.store (local.get $sp) (i32.ne   (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x22)) (then (i32.store (local.get $sp) (i32.lt_s (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x23)) (then (i32.store (local.get $sp) (i32.gt_s (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x24)) (then (i32.store (local.get $sp) (i32.le_s (local.get $a) (local.get $b)))))
+            (if (i32.eq (local.get $op) (i32.const 0x25)) (then (i32.store (local.get $sp) (i32.ge_s (local.get $a) (local.get $b)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- NOT (0x30) ---
+        (if (i32.eq (local.get $op) (i32.const 0x30))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (i32.eqz (i32.load (local.get $sp))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- JMP (0x40) <i16 off> ---
+        (if (i32.eq (local.get $op) (i32.const 0x40))
+          (then
+            (local.set $ip (i32.add (local.get $ip) (i32.const 2)))
+            (local.set $ip (i32.add (local.get $ip) (call $read_i16 (i32.sub (local.get $ip) (i32.const 2)))))
+            (br $dispatch)))
+
+        ;; --- JZ (0x41) <i16 off> ---
+        (if (i32.eq (local.get $op) (i32.const 0x41))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 2)))
+            (if (i32.eqz (local.get $a))
+              (then (local.set $ip (i32.add (local.get $ip)
+                                            (call $read_i16 (i32.sub (local.get $ip) (i32.const 2)))))))
+            (br $dispatch)))
+
+        ;; --- SAY_I32 (0x50) ---
+        (if (i32.eq (local.get $op) (i32.const 0x50))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (call $say_i32 (i32.load (local.get $sp)))
+            (br $dispatch)))
+
+        ;; --- SAY_STR (0x51) ---
+        (if (i32.eq (local.get $op) (i32.const 0x51))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $addr (i32.load (local.get $sp)))
+            ;; pool layout at $addr: u32 length, then utf-8 bytes
+            (call $say_str
+              (i32.add (local.get $addr) (i32.const 4))
+              (i32.load (local.get $addr)))
+            (br $dispatch)))
+
+        ;; unknown opcode → halt
+        (br $exit)
+      )
+    )
+    (local.get $sp)
+  )
 )
