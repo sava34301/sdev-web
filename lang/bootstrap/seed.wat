@@ -51,11 +51,21 @@
   (global $STACK_BASE i32 (i32.const 0x4000))
   (global $CODE_BASE  i32 (i32.const 0x8000))
 
+  ;; ---- constants ---------------------------------------------------------
+  (global $VAR_BASE   i32 (i32.const 0x2000))
+  (global $STACK_BASE i32 (i32.const 0x4000))
+  (global $CALL_BASE  i32 (i32.const 0x6000))
+  (global $CODE_BASE  i32 (i32.const 0x8000))
+
+  ;; ---- call-frame registers ---------------------------------------------
+  (global $fp  (mut i32) (i32.const 0x6000))  ;; current frame base
+  (global $csp (mut i32) (i32.const 0x6000))  ;; call-stack tip
+
   ;; ---- program length (set by host before calling run) -------------------
   (global $prog_len (mut i32) (i32.const 0))
   (func (export "set_prog_len") (param $n i32) (global.set $prog_len (local.get $n)))
   (func (export "code_base")  (result i32) (global.get $CODE_BASE))
-  (func (export "sdev_version") (result i32) (i32.const 200))
+  (func (export "sdev_version") (result i32) (i32.const 300))
 
   ;; ---- helpers -----------------------------------------------------------
   (func $read_u8 (param $ip i32) (result i32)
