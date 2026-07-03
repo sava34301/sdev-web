@@ -108,6 +108,35 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
           ))}
         </div>
 
+        {/* Language runtime */}
+        <div>
+          <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Language Runtime</label>
+          <div className="grid grid-cols-3 gap-1">
+            {(['auto', 'v1', 'v2'] as const).map(id => {
+              const current = (typeof localStorage !== 'undefined' && (localStorage.getItem('sdev_runtime') as 'v1' | 'v2' | null)) || 'auto';
+              const active = current === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => {
+                    if (id === 'auto') localStorage.removeItem('sdev_runtime');
+                    else localStorage.setItem('sdev_runtime', id);
+                    onChange({ ...settings });
+                  }}
+                  className={`text-[11px] font-mono py-1.5 rounded border transition-colors ${active ? 'border-primary text-primary bg-primary/10' : 'border-border/40 text-muted-foreground hover:border-primary/50'}`}
+                  title={id === 'v2' ? 'New easy-syntax runtime (pure JS, no TypeScript)' : id === 'v1' ? 'Legacy runtime (forge / conjure / :: / ;;)' : 'Per-file (#!sdev v2 header) or default v1'}
+                >
+                  {id.toUpperCase()}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground/70 mt-1.5 leading-tight">
+            V2 "Prism" uses the beginner-first syntax (say, set, if, for each, to). V1 keeps forge/conjure. Files starting with <code>#!sdev v2</code> always use v2.
+          </p>
+        </div>
+
+
         {/* Reset */}
         <button
           onClick={() => onChange({ fontSize: 14, tabSize: 2, wordWrap: false, theme: 'dark', minimap: false, lineNumbers: true, autoSave: true, fontFamily: 'JetBrains Mono', liquidGlass: false })}

@@ -8,14 +8,24 @@ import { BookOpen, Variable, Wand2, GitBranch, Calculator, ArrowRight, Wrench, S
 
 const REFERENCE = [
   {
-    title: 'Core Types',
-    icon: BookOpen,
-    content: `**number** — Any number: \`42\`, \`3.14\`, \`-10\`
-**text** — Strings: \`"hello"\`, \`'world'\`, \`\\\`backticks\\\`\`
-**truth** — Booleans: \`yep\`, \`nope\`
-**void** — Null value: \`void\`
-**list** — Arrays: \`[1, 2, 3]\`
-**tome** — Dictionaries: \`{"key": "value"}\``,
+    title: 'v2 "Prism" — the easy syntax',
+    icon: Sparkles,
+    content: `Add \`#!sdev v2\` on line 1 to opt in. Reads like English.
+\`\`\`
+say "hello"
+set age to 21
+if age is 18 or more
+  say "adult"
+end
+for each n in range(5)
+  say n
+end
+to greet with who
+  say "hi " + who
+end
+greet with "world"
+\`\`\`
+Full guide: /SDEV_V2_DOCUMENTATION.md`,
   },
   {
     title: 'Variables',
