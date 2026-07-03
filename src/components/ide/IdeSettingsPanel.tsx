@@ -112,8 +112,8 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
         <div>
           <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Language Runtime</label>
           <div className="grid grid-cols-3 gap-1">
-            {(['auto', 'v1', 'v2'] as const).map(id => {
-              const current = (typeof localStorage !== 'undefined' && (localStorage.getItem('sdev_runtime') as 'v1' | 'v2' | null)) || 'auto';
+            {(['auto', 'v1', 'v2', 'v2-wasm'] as const).map(id => {
+              const current = (typeof localStorage !== 'undefined' && (localStorage.getItem('sdev_runtime') as 'v1' | 'v2' | 'v2-wasm' | null)) || 'auto';
               const active = current === id;
               return (
                 <button
