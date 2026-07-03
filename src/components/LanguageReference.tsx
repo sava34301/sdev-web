@@ -14,9 +14,15 @@ const REFERENCE = [
 \`\`\`
 say "hello"
 set age to 21
-if age is 18 or more :: say "adult" ;;
-for each n in range(5) :: say n ;;
-to greet with who :: say "hi " + who ;;
+if age is 18 or more
+  say "adult"
+end
+for each n in range(5)
+  say n
+end
+to greet with who
+  say "hi " + who
+end
 greet with "world"
 \`\`\`
 Full guide: /SDEV_V2_DOCUMENTATION.md`,
