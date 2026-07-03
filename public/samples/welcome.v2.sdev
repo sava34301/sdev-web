@@ -1,0 +1,36 @@
+#!sdev v2
+# Welcome to SDEV v2 "Prism" — the new easy syntax.
+# Every line reads like English.
+
+say "hello, world"
+
+# Variables
+set name to "friend"
+set year to 2026
+say "hi " + name + ", it is " + text(year)
+
+# If / else with natural comparisons
+set age to 21
+if age is 18 or more
+  say name + " can vote"
+else
+  say name + " cannot vote yet"
+end
+
+# Loops
+for each n in range(5)
+  say n
+end
+
+# Functions
+to greet with who
+  say "hello, " + who
+end
+
+greet with "world"
+greet("SDEV")
+
+# Pipelines
+set nums to [1, 2, 3, 4, 5]
+say nums |> sum       # 15
+say nums |> double    # [2, 4, 6, 8, 10]
