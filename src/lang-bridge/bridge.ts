@@ -18,7 +18,7 @@
  * with a self-hosted WASM module compiled from .sdev sources. This bridge
  * will then load that .wasm binary and expose the same `execute()` surface.
  */
-// @ts-expect-error — plain JS module, no .d.ts
+// Plain JS module, no .d.ts — declared ambiently below.
 import { run as runV2, VERSION as V2_VERSION } from '../../lang/runtime/v2.js';
 import { execute as executeV1 } from '@/lang';
 import type { ExecuteOptions, ExecutionResult } from '@/lang';
