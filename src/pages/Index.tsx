@@ -250,7 +250,7 @@ const Index = () => {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border text-xs text-muted-foreground font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />
-              v1.0.0
+              v. ALPHA
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.1]">
               SDEV — Code becomes{' '}
