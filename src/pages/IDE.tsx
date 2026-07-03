@@ -609,15 +609,51 @@ export default function IDEPage() {
     if (!activeFile) return;
 
     // ─── v2 "Prism" runtime short-circuit ───
-    // If the file opts into v2 via `#!sdev v2` (in the first ~10 lines) OR the
-    // global runtime preference is v2, route straight through the pure-JS v2
-    // runtime and skip the entire v1 translation/lexer/interpreter pipeline.
+    // Three v2 execution paths:
+    //   • JS reference runtime (default v2): pure JavaScript interpreter
+    //   • WASM stage-0 (`#!sdev v2-wasm` or pref `v2-wasm`): real WebAssembly
+    //     execution via the hand-written seed VM (lang/bootstrap/seed.wat).
+    //     Falls back to JS runtime if the source uses a feature outside the
+    //     bootstrap subset.
     const rawSrc = activeFile.content;
     const head10 = rawSrc.split('\n', 10).map(l => l.trim());
-    const shebangV2 = head10.some(l => l.startsWith('#!sdev v2'));
+    const shebangV2Wasm = head10.some(l => l.startsWith('#!sdev v2-wasm'));
+    const shebangV2 = head10.some(l => l.startsWith('#!sdev v2') && !l.startsWith('#!sdev v2-wasm'));
     const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
     const runtimePref = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || null;
-    const useV2 = shebangV2 || (!shebangV1 && runtimePref === 'v2');
+    const useV2Wasm = shebangV2Wasm || (!shebangV1 && !shebangV2 && runtimePref === 'v2-wasm');
+    const useV2 = !useV2Wasm && (shebangV2 || (!shebangV1 && runtimePref === 'v2'));
+
+    if (useV2Wasm) {
+      setIsRunning(true);
+      setStatusMsg('Running (v2 · WASM)…');
+      setUiState(null); setWebState(null);
+      try {
+        const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
+        try {
+          const r = await runWasm(rawSrc);
+          setOutput(r.output);
+          setStatusMsg(r.success ? 'Done (v2 · WASM)' : `✗ ${r.error ?? 'error'}`);
+        } catch (e) {
+          if (e instanceof WasmSubsetError) {
+            // Graceful fallback to JS v2 runtime for out-of-subset features.
+            const { run: runV2 } = await import('../../lang/runtime/v2.js') as {
+              run: (src: string, opts?: { onOutput?: (l: string) => void }) => { success: boolean; output: string[]; error: string | null };
+            };
+            const lines: string[] = [];
+            const r = runV2(rawSrc, { onOutput: (l) => lines.push(l) });
+            setOutput(r.output.length ? r.output : lines);
+            setStatusMsg(r.success ? 'Done (v2 · JS fallback)' : `✗ ${r.error ?? 'error'}`);
+          } else throw e;
+        }
+      } catch (e) {
+        setStatusMsg(`✗ v2-wasm: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setIsRunning(false);
+      }
+      return;
+    }
+
     if (useV2) {
       setIsRunning(true);
       setStatusMsg('Running (v2)…');
@@ -638,6 +674,7 @@ export default function IDEPage() {
       }
       return;
     }
+
 
     let code = stripBoardBlocks(activeFile.content);
     const outputLines: string[] = [];
