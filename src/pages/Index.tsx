@@ -516,7 +516,7 @@ const Index = () => {
             <span className="text-sm text-muted-foreground">— where code becomes poetry</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="/SDEV_DOCUMENTATION.md" target="_blank" className="hover:text-foreground transition-colors">Docs</a>
+            <button onClick={() => navigate('/docs')} className="hover:text-foreground transition-colors">Docs</button>
             <button onClick={() => navigate('/ide')} className="hover:text-foreground transition-colors">IDE</button>
             <span className="font-mono text-xs">v1.0.0</span>
           </div>
