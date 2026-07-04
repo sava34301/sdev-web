@@ -214,13 +214,12 @@ const Index = () => {
               >
                 Playground
               </button>
-              <a
-                href="/SDEV_DOCUMENTATION.md"
-                target="_blank"
+              <button
+                onClick={() => navigate('/docs')}
                 className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50"
               >
                 Docs
-              </a>
+              </button>
               <DownloadablesDropdown code={code} />
             </div>
           </div>
