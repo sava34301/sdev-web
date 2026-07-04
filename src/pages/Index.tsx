@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
 import { CodeEditor } from '@/components/CodeEditor';
@@ -164,11 +164,25 @@ const Index = () => {
 
   const handleShare = useCallback(() => {
     const encoded = btoa(encodeURIComponent(code));
-    const url = `${window.location.origin}?code=${encoded}`;
+    const url = `${window.location.origin}/home?code=${encoded}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [code]);
+
+  // Restore shared code from ?code= query param on load
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const shared = params.get('code');
+      if (shared) {
+        const decoded = decodeURIComponent(atob(shared));
+        setCode(decoded);
+      }
+    } catch {
+      // ignore malformed share links
+    }
+  }, []);
 
   const scrollToPlayground = () => {
     playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -200,13 +214,12 @@ const Index = () => {
               >
                 Playground
               </button>
-              <a
-                href="/SDEV_DOCUMENTATION.md"
-                target="_blank"
+              <button
+                onClick={() => navigate('/docs')}
                 className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50"
               >
                 Docs
-              </a>
+              </button>
               <DownloadablesDropdown code={code} />
             </div>
           </div>
@@ -503,7 +516,7 @@ const Index = () => {
             <span className="text-sm text-muted-foreground">— where code becomes poetry</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="/SDEV_DOCUMENTATION.md" target="_blank" className="hover:text-foreground transition-colors">Docs</a>
+            <button onClick={() => navigate('/docs')} className="hover:text-foreground transition-colors">Docs</button>
             <button onClick={() => navigate('/ide')} className="hover:text-foreground transition-colors">IDE</button>
             <span className="font-mono text-xs">v1.0.0</span>
           </div>
