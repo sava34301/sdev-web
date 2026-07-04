@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
 import { CodeEditor } from '@/components/CodeEditor';
@@ -164,11 +164,25 @@ const Index = () => {
 
   const handleShare = useCallback(() => {
     const encoded = btoa(encodeURIComponent(code));
-    const url = `${window.location.origin}?code=${encoded}`;
+    const url = `${window.location.origin}/home?code=${encoded}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [code]);
+
+  // Restore shared code from ?code= query param on load
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const shared = params.get('code');
+      if (shared) {
+        const decoded = decodeURIComponent(atob(shared));
+        setCode(decoded);
+      }
+    } catch {
+      // ignore malformed share links
+    }
+  }, []);
 
   const scrollToPlayground = () => {
     playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
