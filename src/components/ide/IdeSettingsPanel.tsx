@@ -139,7 +139,7 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
             })}
           </div>
           <p className="text-[10px] text-muted-foreground/70 mt-1.5 leading-tight">
-            V2 "Prism" is the beginner-first syntax (say, set, if, for each, to). V2-WASM runs it through a real WebAssembly VM (hand-written in WAT, 1&nbsp;KB). Files with <code>#!sdev v2</code> or <code>#!sdev v2-wasm</code> override this.
+            The web IDE runs on WebAssembly — the browser's native assembly. For native x86-64 assembly (out-of-browser), use the desktop CLI: <code>node scripts/sdev-native.mjs prog.sdev</code>.
           </p>
         </div>
 
