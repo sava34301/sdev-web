@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { HardwarePanel } from '@/components/ide/HardwarePanel';
 import { GitHubPushDialog } from '@/components/ide/GitHubPushDialog';
+import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
 import { toast } from 'sonner';
 import { stripBoardBlocks } from '@/lang/hardware/strip';
 import type { IdeFile, IdeFolder, SidePanel, IdeSettings } from '@/components/ide/types';
@@ -1775,6 +1776,8 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           onOpenChange={setShowGitHubPush}
           files={files}
         />
+
+        <DesktopNativeButton getSource={() => activeFile?.content ?? ''} />
       </div>
     </TooltipProvider>
   );
