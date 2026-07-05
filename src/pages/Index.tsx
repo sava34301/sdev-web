@@ -507,8 +507,39 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ===== RUNTIMES ===== */}
+      <section className="border-t border-border bg-background">
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">Two runtimes, one language</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              SDEV compiles from a single parser to two backends. Same syntax, same semantics — different metal.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="text-xs font-mono uppercase tracking-wider text-primary mb-2">Web · WASM</div>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2">Browser IDE</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Runs on WebAssembly — the browser's native assembly. Hand-written WAT seed VM, ~1&nbsp;KB. Zero install, works everywhere.
+              </p>
+              <code className="block text-xs font-mono text-muted-foreground bg-muted/40 rounded px-3 py-2">Open the IDE → set runtime to WASM</code>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="text-xs font-mono uppercase tracking-wider text-primary mb-2">Desktop · Native ASM</div>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2">x86-64 CLI</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Emits real x86-64 GAS assembly, links with <code>as</code>+<code>ld</code> to a static ELF. No libc, no runtime. Inspect with <code>objdump -d</code>.
+              </p>
+              <code className="block text-xs font-mono text-muted-foreground bg-muted/40 rounded px-3 py-2">node scripts/sdev-native.mjs prog.sdev -o prog</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-border bg-card/50">
+
         <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Zap className="w-4 h-4 text-primary" />

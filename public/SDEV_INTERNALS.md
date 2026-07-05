@@ -3,12 +3,21 @@
 This is a contributor document. If you just want to write SDEV, read
 `SDEV_V2_DOCUMENTATION.md` instead.
 
-## Design goal
+## Two backends, one language
 
-The SDEV language is **not written in TypeScript**. It is written in SDEV
-itself, compiled to WebAssembly, and shipped as a single `.wasm` binary the
-browser IDE loads. TypeScript only survives in a thin bridge that connects
-the WASM module to browser APIs (DOM, canvas, Web Serial, fetch, storage).
+SDEV ships **two** code-generators from the same parser:
+
+| Target        | Backend                     | Runs where                | Emits              |
+| ------------- | --------------------------- | ------------------------- | ------------------ |
+| **Web IDE**   | `lang/bootstrap/` (WAT seed VM) | Any browser              | WebAssembly bytecode |
+| **Desktop**   | `lang/native/codegen-x64.mjs` | Linux/macOS CLI          | x86-64 GAS assembly → ELF |
+
+The browser can only execute JS and WASM, so the web IDE stays on
+WebAssembly — the browser's *native* assembly. For an actual on-disk
+executable you can `objdump -d` and `strace`, use the native backend
+(`node scripts/sdev-native.mjs prog.sdev -o prog`). Both backends share
+the same lexer, parser, and language semantics.
+
 
 ## Where we are today
 
