@@ -119,8 +119,9 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
                 auto: 'Per-file (#!sdev v2 / v2-wasm / v1 header) or default v1',
                 v1: 'Legacy runtime (forge / conjure / :: / ;;)',
                 v2: 'New easy-syntax runtime (pure JavaScript)',
-                'v2-wasm': 'Real WebAssembly execution via hand-written seed VM (integer subset; falls back to JS)',
+                'v2-wasm': "Real WebAssembly — the browser's native assembly. Runs SDEV through a hand-written WAT VM.",
               };
+              const labels: Record<string, string> = { auto: 'AUTO', v1: 'V1', v2: 'V2', 'v2-wasm': 'WASM' };
               return (
                 <button
                   key={id}
