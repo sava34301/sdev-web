@@ -133,7 +133,7 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
                   className={`text-[10px] font-mono py-1.5 rounded border transition-colors ${active ? 'border-primary text-primary bg-primary/10' : 'border-border/40 text-muted-foreground hover:border-primary/50'}`}
                   title={titles[id]}
                 >
-                  {id.toUpperCase()}
+                  {labels[id]}
                 </button>
               );
             })}
