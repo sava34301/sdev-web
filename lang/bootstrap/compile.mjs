@@ -67,6 +67,7 @@ class Emitter {
 }
 
 // ---------------- Parser (bootstrap subset) ----------------
+export function parse(source) { return parseProgram(tokenize(source)); }
 function parseProgram(tokens) {
   let p = 0;
   const peek = (n = 0) => tokens[p + n];
