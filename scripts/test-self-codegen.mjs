@@ -225,6 +225,10 @@ const cases = [
   { name: 'multiple says',           src: 'say 1\nsay 2\nsay 3' },
   { name: 'nested + mixed',          src: 'say ((10 + 20) * (30 - 4)) / 5' },
   { name: 'left associativity',      src: 'say 100 - 1 - 2 - 3' },
+  { name: 'set + read',              src: 'set x to 7\nsay x' },
+  { name: 'set expr + reuse',        src: 'set a to 3 + 4\nset b to a * 2\nsay a\nsay b' },
+  { name: 'accumulator',             src: 'set s to 0\nset s to s + 10\nset s to s + 20\nset s to s + 30\nsay s' },
+  { name: 'read in expr',            src: 'set x to 5\nset y to 6\nsay x * y + x' },
 ];
 
 let failed = 0;
