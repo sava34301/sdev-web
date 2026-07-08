@@ -435,6 +435,78 @@
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
+        ;; --- SGET (0x84) --- pop idx, pop str, push byte at bytes[idx]
+        (if (i32.eq (local.get $op) (i32.const 0x84))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (i32.load8_u (i32.add (local.get $a)
+                (i32.add (i32.const 4) (local.get $b)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- CHR (0x88) --- pop n, alloc 1-char string [1|byte], push addr
+        (if (i32.eq (local.get $op) (i32.const 0x88))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (local.set $dst (call $alloc (i32.const 5)))
+            (i32.store (local.get $dst) (i32.const 1))
+            (i32.store8 (i32.add (local.get $dst) (i32.const 4)) (local.get $a))
+            (i32.store (local.get $sp) (local.get $dst))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- I2S (0x87) --- pop int, push decimal-string blob [len|utf-8]
+        (if (i32.eq (local.get $op) (i32.const 0x87))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            ;; $b = negative flag (0 or 1)
+            (local.set $b (i32.const 0))
+            (if (i32.lt_s (local.get $a) (i32.const 0))
+              (then
+                (local.set $a (i32.sub (i32.const 0) (local.get $a)))
+                (local.set $b (i32.const 1))))
+            ;; $n = digit count (>=1 even for zero)
+            (local.set $n (i32.const 0))
+            (local.set $tmp (local.get $a))
+            (block $dc (loop $lc
+              (local.set $n (i32.add (local.get $n) (i32.const 1)))
+              (local.set $tmp (i32.div_u (local.get $tmp) (i32.const 10)))
+              (br_if $dc (i32.eqz (local.get $tmp)))
+              (br $lc)))
+            ;; total length = digits + sign
+            (local.set $dst (call $alloc
+              (i32.add (i32.const 4)
+                (i32.add (local.get $n) (local.get $b)))))
+            (i32.store (local.get $dst)
+              (i32.add (local.get $n) (local.get $b)))
+            ;; write digits backward from end
+            (local.set $addr (i32.add (local.get $dst)
+              (i32.add (i32.const 4)
+                (i32.add (local.get $n) (local.get $b)))))
+            (local.set $tmp (local.get $a))
+            (block $dw (loop $lw
+              (local.set $addr (i32.sub (local.get $addr) (i32.const 1)))
+              (i32.store8 (local.get $addr)
+                (i32.add (i32.const 48)
+                  (i32.rem_u (local.get $tmp) (i32.const 10))))
+              (local.set $tmp (i32.div_u (local.get $tmp) (i32.const 10)))
+              (br_if $dw (i32.eqz (local.get $tmp)))
+              (br $lw)))
+            ;; optional minus sign at position 4
+            (if (local.get $b)
+              (then
+                (i32.store8 (i32.add (local.get $dst) (i32.const 4))
+                  (i32.const 45))))
+            (i32.store (local.get $sp) (local.get $dst))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
 
         ;; unknown opcode → halt
         (br $exit)
