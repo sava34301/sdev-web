@@ -781,39 +781,75 @@ to parse_stmt with pos
     set pos to pos + 1
     set fname to tk_txt[pos]
     set pos to pos + 1
-    # Reset local scope; params collected by parse_params land at slots 0..n-1.
+  # Milestone 5k: `to NAME with params NL body end`.
+  #
+  # This handler runs in two very different modes:
+  #
+  #   Pass 1  (emit_enabled=0, skip_fn_defs=0)
+  #     Register the function (if new), record its body-start token
+  #     position and n_params, walk the body via parse_block so that
+  #     `return EXPR` statements can update fn_ret_types[i]. Nothing is
+  #     emitted; loc_names ends up populated so we can read the extras
+  #     count.
+  #
+  #   Pass 2 main  (emit_enabled=1, skip_fn_defs=1)
+  #     Skip the whole `to ... end` block without emitting. Function
+  #     bodies for pass 2 are emitted by the driver's dedicated hoist
+  #     loop, not by parse_stmt.
+  if is_ident_word(pos, "to")
+    set pos to pos + 1
+    set fname to tk_txt[pos]
+    set pos to pos + 1
+    set body_start_pos to pos
+    # Fresh local scope; params collected by parse_params occupy slots 0..n-1.
     set loc_names[0] to 0
+    set loc_types[0] to 0
     set pos to parse_params(pos)
     set n_params to scratch[0]
-    # Emit JMP over the function body (so top-level flow skips it).
-    emit_byte(64)
-    set jmp_over to placeholder16()
-    # Record function entry.
-    set fn_names[fn_names[0] + 1] to fname
-    set fn_offsets[fn_names[0] + 1] to bc[0]
-    set fn_arities[fn_names[0] + 1] to n_params
-    set fn_ret_types[fn_names[0] + 1] to 0
-    set fn_names[0] to fn_names[0] + 1
-    set fn_offsets[0] to fn_offsets[0] + 1
-    set fn_arities[0] to fn_arities[0] + 1
-    set fn_ret_types[0] to fn_ret_types[0] + 1
+    if skip_fn_defs[0] is 1
+      # Pass 2 main: consume the body silently (parse_block emits nothing
+      # because we flip emit_enabled off for the duration).
+      set save_emit to emit_enabled[0]
+      set emit_enabled[0] to 0
+      set in_func[0] to 1
+      set pos to parse_block(pos)
+      set in_func[0] to 0
+      set emit_enabled[0] to save_emit
+      if is_ident_word(pos, "end")
+        set pos to pos + 1
+      end
+      return pos
+    end
+    # Pass 1 (collect + infer). Register once, reuse across iterations.
+    set idx to find_fn(fname)
+    if idx < 0
+      set fn_names[fn_names[0] + 1] to fname
+      set fn_offsets[fn_names[0] + 1] to 0
+      set fn_arities[fn_names[0] + 1] to n_params
+      set fn_ret_types[fn_names[0] + 1] to 0
+      set fn_extras[fn_names[0] + 1] to 0
+      set fn_body_start[fn_names[0] + 1] to body_start_pos
+      set fn_names[0] to fn_names[0] + 1
+      set fn_offsets[0] to fn_offsets[0] + 1
+      set fn_arities[0] to fn_arities[0] + 1
+      set fn_ret_types[0] to fn_ret_types[0] + 1
+      set fn_extras[0] to fn_extras[0] + 1
+      set fn_body_start[0] to fn_body_start[0] + 1
+      set idx to fn_names[0] - 1
+    end
+    set cur_fn[0] to idx + 1
     set in_func[0] to 1
-    # ENTER with a placeholder byte; patched with n_extras once body knows all locals.
-    emit_byte(98)
-    set enter_pos to bc[0]
-    emit_byte(0)
     set pos to parse_block(pos)
-    # Fallthrough guard: implicit `return 0`.
-    emit_byte(1)
-    emit_i32(0)
-    emit_byte(97)
-    set bc[enter_pos + 1] to loc_names[0] - n_params
+    # After walking the body, loc_names[0] = n_params + n_extras.
+    set fn_extras[idx + 1] to loc_names[0] - n_params
     set in_func[0] to 0
-    patch_i16(jmp_over, bc[0])
+    set cur_fn[0] to 0
     if is_ident_word(pos, "end")
       set pos to pos + 1
     end
     return pos
   end
+  return pos
+end
   return pos
 end
