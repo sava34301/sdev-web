@@ -127,6 +127,7 @@ while _i < _srclen
               set tk_count to tk_count + 1
               set _i to _i + 1
             end
+            end
           end
         end
       end
