@@ -120,11 +120,93 @@ set doubled to nums |> double
 say doubled              # [2, 4, 6, 8, 10]
 ```
 
+## Lists
+
+```sdev
+set xs to [10, 20, 30]
+say length(xs)      # 3
+say xs[0]           # 10
+set xs[1] to 99
+say xs[1]           # 99
+```
+
+Iterate the classic way or with `for each`:
+
+```sdev
+set total to 0
+set i to 0
+while i < length(xs)
+  set total to total + xs[i]
+  set i to i + 1
+end
+say total
+```
+
+## Strings
+
+Text is a first-class value. Concatenate with `+` or `concat`:
+
+```sdev
+set name to "sdev"
+say "hi " + name + "!"        # hi sdev!
+say concat("hello, ", "world") # hello, world
+say length("hello")            # 5
+```
+
+Byte-level primitives are available when you need to slice or build text
+character by character:
+
+| Builtin      | Meaning                                              |
+| ------------ | ---------------------------------------------------- |
+| `length(x)`  | length of a list **or** a string                     |
+| `concat(a,b)`| concatenate two strings                              |
+| `ord(s, i)`  | byte value of `s` at index `i` (e.g. `ord("A",0)` → 65) |
+| `chr(n)`     | 1-character string from a byte value (`chr(65)` → `"A"`) |
+| `str(n)`     | integer → decimal string (`str(-42)` → `"-42"`)       |
+
+```sdev
+# uppercase a string one byte at a time
+set s to "abc"
+set i to 0
+set out to ""
+while i < length(s)
+  set out to out + chr(ord(s, i) - 32)
+  set i to i + 1
+end
+say out             # ABC
+```
+
 ## Built-in functions
 
-`say`, `print`, `length`, `upper`, `lower`, `number`, `text`, `round`,
-`floor`, `ceil`, `abs`, `max`, `min`, `sum`, `range`, `keep`, `map`,
-`double`, `pi`, `tau`.
+`say`, `print`, `length`, `concat`, `ord`, `chr`, `str`, `upper`, `lower`,
+`number`, `text`, `round`, `floor`, `ceil`, `abs`, `max`, `min`, `sum`,
+`range`, `keep`, `map`, `double`, `pi`, `tau`.
+
+## Runtimes
+
+SDEV v2 ships with **two independent backends** — pick the one that fits
+where your program runs.
+
+| Runtime         | Where it runs         | How it executes                          |
+| --------------- | --------------------- | ---------------------------------------- |
+| **WASM (web)**  | The browser IDE       | A hand-written WebAssembly stack VM (`lang/bootstrap/seed.wat` → `public/wasm/sdev-seed.wasm`) executes bytecode emitted by the bootstrap compiler. Zero TypeScript in the language core. |
+| **Native ASM** (desktop) | Linux / macOS CLI + Electron | The same AST is emitted as x86-64 GAS assembly (`lang/native/codegen-x64.mjs`), then assembled with `as` and linked with `ld` into a standalone static ELF. No libc dependency. |
+
+Both backends share the same lexer/parser (`lang/bootstrap/compile.mjs`)
+so a program that compiles on one side compiles on the other, as long as
+you stick to the shared subset (integers, strings, lists, `if`/`while`,
+functions, recursion, and the builtins above).
+
+Compile to a native binary from a shell:
+
+```sh
+node scripts/sdev-native.mjs hello.sdev -o hello
+./hello
+```
+
+Or use the Electron desktop IDE — the "Build Native" / "Build & Run"
+buttons call the same pipeline (`electron/README.md`).
+
 
 ## Opt-in power (advanced)
 
