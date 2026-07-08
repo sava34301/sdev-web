@@ -290,9 +290,11 @@ function emitExpr(e, em, locals) {
   switch (e.k) {
     case 'num':   em.emit(OP.PUSH_I32); em.emitI32(e.v); return 'int';
     case 'str':   em.emit(OP.PUSH_STR); { const off = em.intern(e.v); em.emit(off & 0xff); em.emit((off >> 8) & 0xff); } return 'str';
-    case 'ident':
-      if (locals && locals.has(e.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(e.name)); return 'int'; }
-      em.emit(OP.LOAD); em.emit(em.globalSlot(e.name)); return 'int';
+    case 'ident': {
+      const t = scopeTypes(locals, em).get(e.name) || 'int';
+      if (locals && locals.has(e.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(e.name)); return t; }
+      em.emit(OP.LOAD); em.emit(em.globalSlot(e.name)); return t;
+    }
     case 'un':
       if (e.op === '-') { em.emit(OP.PUSH_I32); em.emitI32(0); emitExpr(e.x, em, locals); em.emit(OP.SUB); return 'int'; }
       if (e.op === 'not') { emitExpr(e.x, em, locals); em.emit(OP.NOT); return 'int'; }
