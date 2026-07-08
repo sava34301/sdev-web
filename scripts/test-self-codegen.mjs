@@ -308,22 +308,58 @@ const cases = [
 ];
 
 
+function bytesEqual(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function hex(bytes, max = 64) {
+  const n = Math.min(bytes.length, max);
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(bytes[i].toString(16).padStart(2, '0'));
+  return out.join(' ') + (bytes.length > max ? ' …' : '');
+}
+
 let failed = 0;
+let byteMatches = 0;
 for (const c of cases) {
   try {
-    const bytes = await selfCompile(c.src);
-    const selfOut = await execBytecode(bytes);
+    // Self-hosted compile.
+    const selfBytes = await selfCompile(c.src);
+    // JS bootstrap compile.
+    const { bytecode: refBytes } = compile(c.src);
+
+    // Runtime-output equivalence.
+    const selfOut = await execBytecode(selfBytes);
     const refOut  = await jsCompileAndRun(c.src);
-    const ok = JSON.stringify(selfOut) === JSON.stringify(refOut);
-    console.log(`${ok ? '✓' : '✗'} ${c.name}  (${bytes.length} bytes)`);
-    if (!ok) {
+    const outOk = JSON.stringify(selfOut) === JSON.stringify(refOut);
+
+    // Milestone 5j: byte-for-byte fixed point vs the JS bootstrap.
+    const byteOk = bytesEqual(selfBytes, refBytes);
+    if (byteOk) byteMatches++;
+
+    const ok = outOk && byteOk;
+    const tag = byteOk ? '≡' : (outOk ? '~' : '✗');
+    console.log(`${ok ? '✓' : tag} ${c.name}  (self=${selfBytes.length}B, ref=${refBytes.length}B)`);
+    if (!outOk) {
       failed++;
-      console.log('   ref (js-bootstrap):', refOut);
-      console.log('   got (sdev-compiler):', selfOut);
+      console.log('   ref (js-bootstrap) out:', refOut);
+      console.log('   got (sdev-compiler) out:', selfOut);
+    }
+    if (!byteOk) {
+      failed++;
+      console.log('   ref bytes:', hex(refBytes));
+      console.log('   got bytes:', hex(selfBytes));
     }
   } catch (e) {
     failed++;
     console.log(`✗ ${c.name} — threw: ${e.message}`);
   }
+}
+
+console.log(`\nMilestone 5j fixed-point: ${byteMatches}/${cases.length} cases produce byte-identical bytecode.`);
+if (byteMatches === cases.length && failed === 0) {
+  console.log('✓ Self-hosted codegen ≡ JS bootstrap byte-for-byte across the full suite.');
 }
 process.exit(failed);
