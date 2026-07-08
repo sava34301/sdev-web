@@ -45,6 +45,7 @@
 ;;   0x84 SGET                      pop idx, pop str, push byte at bytes[idx]
 ;;   0x87 I2S                       pop int, push decimal-string blob
 ;;   0x88 CHR                       pop byte, push new 1-char string blob
+;;   0x89 LNEW                      pop n, alloc zeroed list [n | n cells]
 ;;   0x91 STRCAT                    pop b, pop a, allocate new pool-shaped blob, push handle
 ;;   0xFF HALT
 ;;
