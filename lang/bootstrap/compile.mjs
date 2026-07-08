@@ -286,7 +286,11 @@ function emit(stmts, em) {
 
 function collectSets(body, locals) {
   for (const s of body) {
-    if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)) locals.set(s.name, locals.size);
+    // Only plain `set x to v` introduces a new binding. `set x[i] to v` is
+    // a mutation of an existing binding (must already be a local or global)
+    // so it never creates a local — that would shadow the very list it's
+    // trying to mutate.
+    if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
   }
