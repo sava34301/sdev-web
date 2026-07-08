@@ -318,31 +318,37 @@ to emit_call with name nargs
     set expr_type[0] to 0
     return 0
   end
-  # User function — resolved-now or deferred to the patch pass.
+  # User function. After pass 1, `idx` almost always resolves — but the
+  # target offset may not yet be known if this call sits inside a fn
+  # body that gets emitted before its callee (e.g. mutually recursive
+  # `is_even ↔ is_odd`). We always record a patch site in that case and
+  # let `resolve_pending_calls` write the final u16 target.
   set idx to find_fn(name)
   emit_byte(96)
   set patch_pos to bc[0]
+  set target to 0
+  set known to 0
   if idx >= 0
     set target to fn_offsets[idx + 1]
-    emit_byte(target % 256)
-    emit_byte((target / 256) % 256)
+    if target > 0
+      set known to 1
+    end
     set expr_type[0] to fn_ret_types[idx + 1]
   else
-    # Placeholder target; resolved after parsing completes.
+    set expr_type[0] to 0
+  end
+  if known is 1
+    emit_byte(target % 256)
+    emit_byte((target / 256) % 256)
+  else
     emit_byte(0)
     emit_byte(0)
-    # Record the patch site only during the real emit pass.
     if emit_enabled[0] is 1
       set pend_names[pend_names[0] + 1] to name
       set pend_pos[pend_names[0] + 1] to patch_pos
       set pend_names[0] to pend_names[0] + 1
       set pend_pos[0] to pend_pos[0] + 1
     end
-    # Forward-reference return type is unknown here; the fixed-point
-    # inference pass populates fn_ret_types before pass 2 begins, so
-    # by the time pass 2's emit_call re-hits this branch, `find_fn` is
-    # expected to succeed. This fallback keeps int as the default.
-    set expr_type[0] to 0
   end
   emit_byte(nargs)
   return 0
