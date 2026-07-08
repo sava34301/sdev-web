@@ -305,6 +305,8 @@ const cases = [
   { name: 'string fn concat',        src: 'to hi\nreturn "hi "\nend\nto you\nreturn "you"\nend\nsay hi() + you()' },
   { name: 'string fn with param',    src: 'to greet with n\nreturn "hello " + n\nend\nsay greet("world")\nsay greet("sdev")' },
   { name: 'fn returns int by str path', src: 'to pick with n\nif n is 1\nreturn "one"\nend\nreturn "many"\nend\nsay pick(1)\nsay pick(9)' },
+];
+
 
 let failed = 0;
 for (const c of cases) {
