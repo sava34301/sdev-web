@@ -331,14 +331,17 @@ to emit_call with name nargs
     # Placeholder target; resolved after parsing completes.
     emit_byte(0)
     emit_byte(0)
-    set pend_names[pend_names[0] + 1] to name
-    set pend_pos[pend_names[0] + 1] to patch_pos
-    set pend_names[0] to pend_names[0] + 1
-    set pend_pos[0] to pend_pos[0] + 1
-    # Return type is unknown at this point; default to int. Forward
-    # calls whose result flows into `say` will print as SAY_I32 — the
-    # driver either defines string-returning helpers before their use
-    # or wraps the result with `str(...)` if needed.
+    # Record the patch site only during the real emit pass.
+    if emit_enabled[0] is 1
+      set pend_names[pend_names[0] + 1] to name
+      set pend_pos[pend_names[0] + 1] to patch_pos
+      set pend_names[0] to pend_names[0] + 1
+      set pend_pos[0] to pend_pos[0] + 1
+    end
+    # Forward-reference return type is unknown here; the fixed-point
+    # inference pass populates fn_ret_types before pass 2 begins, so
+    # by the time pass 2's emit_call re-hits this branch, `find_fn` is
+    # expected to succeed. This fallback keeps int as the default.
     set expr_type[0] to 0
   end
   emit_byte(nargs)
