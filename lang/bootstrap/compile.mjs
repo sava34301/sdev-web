@@ -97,7 +97,20 @@ function parseProgram(tokens) {
     const t = peek();
     if (t.type === 'KW') {
       if (t.value === 'say')    { p++; return { k: 'say', expr: expr(), line: t.line }; }
-      if (t.value === 'set')    { p++; const name = eat('IDENT').value; eat('KW', 'to'); return { k: 'set', name, expr: expr(), line: t.line }; }
+      if (t.value === 'set')    {
+        p++;
+        const name = eat('IDENT').value;
+        // `set xs[i] to v`  → index-assignment
+        if (peek().type === 'OP' && peek().value === '[') {
+          p++;
+          const idx = expr();
+          eat('OP', ']');
+          eat('KW', 'to');
+          return { k: 'setIndex', name, idx, expr: expr(), line: t.line };
+        }
+        eat('KW', 'to');
+        return { k: 'set', name, expr: expr(), line: t.line };
+      }
       if (t.value === 'if')     return ifStmt();
       if (t.value === 'while')  return whileStmt();
       if (t.value === 'to')     return funcDecl();
