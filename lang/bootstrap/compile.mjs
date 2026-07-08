@@ -27,15 +27,20 @@ const OP = {
   EQ: 0x20, NE: 0x21, LT: 0x22, GT: 0x23, LE: 0x24, GE: 0x25,
   NOT: 0x30, JMP: 0x40, JZ: 0x41, SAY_I32: 0x50, SAY_STR: 0x51,
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
-  ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83, STRCAT: 0x91,
+  ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83,
+  SGET: 0x84, I2S: 0x87, CHR: 0x88, STRCAT: 0x91,
   HALT: 0xFF,
 };
 
 // Builtins available as function-call syntax. Each maps to a single opcode
 // sequence emitted inline. Arity is checked at compile time.
+// `ret` is the compile-time result type used by scope typing.
 const BUILTINS = {
-  length:  { arity: 1, emit: (em) => em.emit(OP.LEN) },
-  concat:  { arity: 2, emit: (em) => em.emit(OP.STRCAT) },
+  length:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LEN) },
+  concat:  { arity: 2, ret: 'str', emit: (em) => em.emit(OP.STRCAT) },
+  ord:     { arity: 2, ret: 'int', emit: (em) => em.emit(OP.SGET) },
+  chr:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.CHR) },
+  str:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
 };
 
 class Emitter {
