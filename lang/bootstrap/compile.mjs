@@ -364,7 +364,8 @@ function emitStmt(s, em, locals) {
       return;
     }
     case 'set': {
-      emitExpr(s.expr, em, locals);
+      const kind = emitExpr(s.expr, em, locals);
+      scopeTypes(locals, em).set(s.name, kind);
       if (locals && locals.has(s.name)) { em.emit(OP.STORE_LOC); em.emit(locals.get(s.name)); }
       else { em.emit(OP.STORE); em.emit(em.globalSlot(s.name)); }
       return;
