@@ -233,12 +233,52 @@ the same lexer, parser, and language semantics.
   hoist function definitions, or removing those features from the JS
   bootstrap. Milestone 5k will pick one direction and land it.
 
-**Milestone 5k (byte-identity cleanup) — next:**
-- Converge the two compilers on a single wire format. Preferred plan:
-  add a string-literal pool and function-hoisting pass to the
-  self-hosted compiler so its output matches the JS bootstrap
-  byte-for-byte across the suite. When 50/50 cases go from `~` to `≡`,
-  the JS bootstrap compiler and the JS reference runtime are deleted.
+**Milestone 5k (byte-identity fixed point) — shipped:**
+- `lang/compiler/codegen.sdev` now converges on the JS bootstrap's exact
+  wire format. All 50/50 test cases produce byte-identical bytecode **and**
+  a byte-identical string pool. The `≡` marker replaces `~` across the
+  entire suite.
+- Four architectural pieces landed together:
+  - **Two-pass compilation.** `emit_byte` is gated on `emit_enabled[0]`.
+    Pass 1 runs `parse_stmt` twice with emit disabled: it registers each
+    function (name, arity, body-start token index, extras count) and lets
+    `return EXPR` statements populate `fn_ret_types[i]` to fixed point.
+    Pass 2 resets globals and emits for real.
+  - **Function hoisting.** Pass 2 emits a leading `JMP → main`
+    placeholder, then walks the registered functions in registration
+    order — each body is re-parsed from `fn_body_start[i]` and emitted
+    contiguously. The leading `JMP` is back-patched once every body is
+    laid down, then main is emitted with `skip_fn_defs[0]=1` so
+    `parse_stmt` silently consumes any `to … end` block it encounters.
+  - **ENTER elision.** `fn_extras[i]` is measured during pass 1 by
+    reading `loc_names[0] - n_params` after the walk. Pass 2 emits
+    `ENTER extras` only when `extras > 0`, matching the JS bootstrap's
+    zero-locals shortcut.
+  - **Shared string pool.** New helper `intern_str(s)` builds a pool
+    matching the bootstrap's `[u32 len][utf8…]` records. `parse_atom`'s
+    string branch now emits `PUSH_STR` (`0x02`) + u16 pool offset
+    instead of the runtime `LNEW/CHR/STRCAT` sequence. The test driver
+    ingests the pool from a trailing `say` dump and installs it at
+    memory offset 0 for execution.
+- One `emit_call` refinement was needed for byte identity: mutually
+  recursive calls (like `is_even ↔ is_odd`) can hit a callee whose
+  offset is not yet set even though its name resolves. `emit_call` now
+  treats any `fn_offsets[idx+1] == 0` as a deferred call and records a
+  patch site; `resolve_pending_calls` fills in the u16 target after
+  every body is emitted.
+- `scripts/test-self-codegen.mjs` was reworked to (a) receive both a
+  bytecode stream and a string pool from the codegen, (b) diff both
+  against the JS bootstrap, and (c) fail on any mismatch. Its summary
+  now reports `bytecode: 50/50` and `pool: 50/50`.
+
+**Milestone 5l (JS bootstrap retirement) — next:**
+- With the self-hosted compiler byte-identical to `lang/bootstrap/compile.mjs`,
+  the bootstrap has no functional role beyond serving as the differential
+  oracle for the test suite. The next milestone rewires the IDE and the
+  web runtime to compile via the self-hosted codegen and removes
+  `lang/bootstrap/compile.mjs`, its reference runtime in `lang/runtime/v2.js`,
+  and any lingering direct imports in `src/lang-bridge/` and
+  `scripts/build-compiler.ts`.
 
 ## Where we're going (Milestone 2 — post-launch)
 
