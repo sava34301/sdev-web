@@ -322,6 +322,119 @@
             (br $dispatch)))
 
 
+        ;; --- POP (0x05) ---
+        (if (i32.eq (local.get $op) (i32.const 0x05))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- ALLOC (0x70) --- pop size, push heap addr
+        (if (i32.eq (local.get $op) (i32.const 0x70))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp) (call $alloc (local.get $a)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- NEWLIST (0x80) <u16 n> --- pop n items, alloc [len|items...]
+        (if (i32.eq (local.get $op) (i32.const 0x80))
+          (then
+            (local.set $n (i32.load16_u (i32.add (global.get $CODE_BASE) (local.get $ip))))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 2)))
+            (local.set $addr (call $alloc (i32.add (i32.const 4) (i32.mul (local.get $n) (i32.const 4)))))
+            (i32.store (local.get $addr) (local.get $n))
+            ;; items are on the stack; bottom-of-batch first
+            (local.set $dst (i32.add (local.get $addr) (i32.const 4)))
+            (local.set $b (i32.sub (local.get $sp) (i32.mul (local.get $n) (i32.const 4))))
+            (block $done_nl
+              (loop $copy_nl
+                (br_if $done_nl (i32.eqz (local.get $n)))
+                (i32.store (local.get $dst) (i32.load (local.get $b)))
+                (local.set $dst (i32.add (local.get $dst) (i32.const 4)))
+                (local.set $b   (i32.add (local.get $b)   (i32.const 4)))
+                (local.set $n   (i32.sub (local.get $n)   (i32.const 1)))
+                (br $copy_nl)))
+            ;; drop the n items and push the list address
+            (local.set $sp (i32.sub (local.get $sp)
+                                    (i32.mul (i32.load16_u (i32.sub
+                                              (i32.add (global.get $CODE_BASE) (local.get $ip))
+                                              (i32.const 2))) (i32.const 4))))
+            (i32.store (local.get $sp) (local.get $addr))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- LGET (0x81) --- pop idx, pop arr, push arr[idx]
+        (if (i32.eq (local.get $op) (i32.const 0x81))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))                ;; idx
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))                ;; arr addr
+            (i32.store (local.get $sp)
+              (i32.load (i32.add (local.get $a)
+                (i32.add (i32.const 4) (i32.mul (local.get $b) (i32.const 4))))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- LSET (0x82) --- pop val, pop idx, pop arr, arr[idx]=val
+        (if (i32.eq (local.get $op) (i32.const 0x82))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $n (i32.load (local.get $sp)))               ;; val
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))               ;; idx
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))               ;; arr
+            (i32.store (i32.add (local.get $a)
+              (i32.add (i32.const 4) (i32.mul (local.get $b) (i32.const 4))))
+              (local.get $n))
+            (br $dispatch)))
+
+        ;; --- LEN (0x83) --- pop addr, push u32 at addr
+        (if (i32.eq (local.get $op) (i32.const 0x83))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (i32.load (i32.load (local.get $sp))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- STRCAT (0x91) --- pop b, pop a, alloc [len|bytes], push handle
+        (if (i32.eq (local.get $op) (i32.const 0x91))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (local.set $n (i32.add (i32.load (local.get $a)) (i32.load (local.get $b))))
+            (local.set $dst (call $alloc (i32.add (local.get $n) (i32.const 4))))
+            (i32.store (local.get $dst) (local.get $n))
+            ;; copy A bytes
+            (local.set $addr (i32.add (local.get $dst) (i32.const 4)))
+            (local.set $n (i32.load (local.get $a)))
+            (local.set $a (i32.add (local.get $a) (i32.const 4)))
+            (block $da (loop $ca
+              (br_if $da (i32.eqz (local.get $n)))
+              (i32.store8 (local.get $addr) (i32.load8_u (local.get $a)))
+              (local.set $addr (i32.add (local.get $addr) (i32.const 1)))
+              (local.set $a    (i32.add (local.get $a)    (i32.const 1)))
+              (local.set $n    (i32.sub (local.get $n)    (i32.const 1)))
+              (br $ca)))
+            ;; copy B bytes
+            (local.set $n (i32.load (local.get $b)))
+            (local.set $b (i32.add (local.get $b) (i32.const 4)))
+            (block $db (loop $cb
+              (br_if $db (i32.eqz (local.get $n)))
+              (i32.store8 (local.get $addr) (i32.load8_u (local.get $b)))
+              (local.set $addr (i32.add (local.get $addr) (i32.const 1)))
+              (local.set $b    (i32.add (local.get $b)    (i32.const 1)))
+              (local.set $n    (i32.sub (local.get $n)    (i32.const 1)))
+              (br $cb)))
+            (i32.store (local.get $sp) (local.get $dst))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+
         ;; unknown opcode → halt
         (br $exit)
       )
