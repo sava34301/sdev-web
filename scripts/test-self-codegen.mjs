@@ -425,37 +425,55 @@ function bytesEqual(a, b) {
   return true;
 }
 
-// Milestone 5j — semantic fixed point.
+// Milestone 5k — byte-identity fixed point.
 //
-// For every case, the self-hosted compiler's bytecode must execute to
-// the same observable output as the JS bootstrap's bytecode. Byte-level
-// identity is tracked separately: two architectural divergences remain
-// (the JS bootstrap folds string literals into a shared pool via LSTR,
-// the self-hosted compiler builds them at runtime with LNEW+CHR+STRCAT;
-// the JS bootstrap pre-scans and lifts function definitions ahead of
-// top-level code, the self-hosted compiler emits in source order). Both
-// are semantics-preserving — they are the cleanup work that lets the
-// JS bootstrap be retired in a follow-up pass.
+// The self-hosted compiler must now emit bytecode AND a string pool that
+// are byte-for-byte identical to the JS bootstrap's output. When every
+// case passes byte-identity, the JS bootstrap can be retired.
+
+function hex(bytes, max = 96) {
+  const n = Math.min(bytes.length, max);
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(bytes[i].toString(16).padStart(2, '0'));
+  return out.join(' ') + (bytes.length > max ? ' …' : '');
+}
+
 let failed = 0;
 let byteMatches = 0;
+let poolMatches = 0;
 for (const c of cases) {
   try {
-    const selfBytes = await selfCompile(c.src);
-    const { bytecode: refBytes } = compile(c.src);
+    const { bytes: selfBytes, pool: selfPool } = await selfCompile(c.src);
+    const { bytecode: refBytes, stringPool: refPool } = compile(c.src);
 
-    const selfOut = await execBytecode(selfBytes);
+    // Install the self-hosted pool into the runtime just like the JS
+    // bootstrap installs its stringPool at memory offset 0.
+    const selfOut = await execBytecode(selfBytes, selfPool);
     const refOut  = await jsCompileAndRun(c.src);
     const outOk   = JSON.stringify(selfOut) === JSON.stringify(refOut);
 
     const byteOk = bytesEqual(selfBytes, refBytes);
+    const poolOk = bytesEqual(selfPool,  refPool);
     if (byteOk) byteMatches++;
+    if (poolOk) poolMatches++;
 
-    const tag = outOk ? (byteOk ? '≡' : '~') : '✗';
-    console.log(`${tag} ${c.name}  (self=${selfBytes.length}B, ref=${refBytes.length}B)`);
+    const allOk = outOk && byteOk && poolOk;
+    const tag = allOk ? '≡' : (outOk ? '~' : '✗');
+    console.log(`${tag} ${c.name}  (bc self=${selfBytes.length}B ref=${refBytes.length}B, pool self=${selfPool.length}B ref=${refPool.length}B)`);
     if (!outOk) {
       failed++;
-      console.log('   ref (js-bootstrap) out:', refOut);
-      console.log('   got (sdev-compiler) out:', selfOut);
+      console.log('   ref out:', refOut);
+      console.log('   got out:', selfOut);
+    }
+    if (outOk && !byteOk) {
+      failed++;
+      console.log('   ref bc :', hex(refBytes));
+      console.log('   got bc :', hex(selfBytes));
+    }
+    if (outOk && !poolOk) {
+      failed++;
+      console.log('   ref pool:', hex(refPool));
+      console.log('   got pool:', hex(selfPool));
     }
   } catch (e) {
     failed++;
@@ -463,12 +481,12 @@ for (const c of cases) {
   }
 }
 
-console.log(`\nMilestone 5j — semantic fixed point:`);
-console.log(`  ${cases.length - failed}/${cases.length} cases: self-hosted output ≡ JS bootstrap output.`);
-console.log(`  ${byteMatches}/${cases.length} cases: also byte-for-byte identical (informational).`);
-if (failed === 0) {
-  console.log(`✓ Self-hosted codegen is a semantic fixed point of the JS bootstrap.`);
-  console.log(`  Remaining byte-level divergences (string pool, function hoisting) are`);
-  console.log(`  tracked as post-5j cleanup before the JS bootstrap can be deleted.`);
+console.log(`\nMilestone 5k — byte-identity fixed point:`);
+console.log(`  bytecode: ${byteMatches}/${cases.length} byte-identical to JS bootstrap.`);
+console.log(`  pool:     ${poolMatches}/${cases.length} byte-identical to JS bootstrap.`);
+if (failed === 0 && byteMatches === cases.length && poolMatches === cases.length) {
+  console.log(`✓ Self-hosted codegen ≡ JS bootstrap byte-for-byte across the full suite.`);
+  console.log(`  The JS bootstrap and reference runtime are now redundant and can be`);
+  console.log(`  retired in a follow-up housekeeping pass.`);
 }
 process.exit(failed);
