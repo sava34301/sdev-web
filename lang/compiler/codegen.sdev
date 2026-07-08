@@ -746,9 +746,11 @@ to parse_stmt with pos
     set fn_names[fn_names[0] + 1] to fname
     set fn_offsets[fn_names[0] + 1] to bc[0]
     set fn_arities[fn_names[0] + 1] to n_params
+    set fn_ret_types[fn_names[0] + 1] to 0
     set fn_names[0] to fn_names[0] + 1
     set fn_offsets[0] to fn_offsets[0] + 1
     set fn_arities[0] to fn_arities[0] + 1
+    set fn_ret_types[0] to fn_ret_types[0] + 1
     set in_func[0] to 1
     # ENTER with a placeholder byte; patched with n_extras once body knows all locals.
     emit_byte(98)
