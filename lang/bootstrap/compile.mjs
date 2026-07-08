@@ -263,7 +263,7 @@ function emit(stmts, em) {
     const locals = new Map();
     f.params.forEach((p, i) => locals.set(p, i));
     // Scan for `set` and function params to determine extra locals.
-    collectSets(f.body, locals);
+    collectSets(f.body, locals, em);
     const extra = locals.size - f.params.length;
     if (extra > 0) { em.emit(OP.ENTER); em.emit(extra); }
     for (const s of f.body) emitStmt(s, em, locals);
