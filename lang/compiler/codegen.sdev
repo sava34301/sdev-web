@@ -97,23 +97,30 @@ to emit_i32 with v
   return 0
 end
 
-# ---- symbol table (global variable slots, stored in sym_names/sym_count) --
+# ---- symbol table (global variable slots) --------------------------------
 #
 # The bootstrap seed VM uses u8 slot indices for LOAD/STORE, so we cap the
-# table at 256 entries. sym_names is a list of interned identifier strings,
-# and the slot for a name is its index in that list.
+# table at 256 entries. The count is stored in the list itself at cell 0,
+# so every mutation is an index-assignment — this sidesteps the bootstrap
+# rule that "plain set NAME inside a function creates a fresh local":
+#
+#   sym_names[0]              = number of interned names
+#   sym_names[1..count]       = the interned identifier strings
+#
+# Slot i (as consumed by LOAD/STORE opcodes) lives at sym_names[i+1].
 
 to intern_name with name
-  set k to 0
-  while k < sym_count
+  set k to 1
+  set stop to sym_names[0] + 1
+  while k < stop
     if str_eq(sym_names[k], name)
-      return k
+      return k - 1
     end
     set k to k + 1
   end
-  set sym_names[sym_count] to name
-  set sym_count to sym_count + 1
-  return sym_count - 1
+  set sym_names[sym_names[0] + 1] to name
+  set sym_names[0] to sym_names[0] + 1
+  return sym_names[0] - 1
 end
 
 # ---- recursive-descent parser that emits stack-VM bytecode as it goes ----
