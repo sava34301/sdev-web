@@ -45,6 +45,7 @@ class Emitter {
     this.poolNext = 0;
     this.strings = new Map();
     this.globals = new Map();               // name → global slot
+    this.globalTypes = new Map();            // name → 'int' | 'str'
     this.functions = new Map();              // name → { arity, offset, patchSites: [] }
   }
   emit(b) { this.bytes.push(b & 0xff); }
