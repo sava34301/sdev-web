@@ -40,11 +40,24 @@ the same lexer, parser, and language semantics.
 - Bootstrap compiler upgraded to a two-pass emitter with a symbol table
   (globals vs locals), function decls (`to name with p1 p2 … end`),
   `return`, and both `fn(a, b)` and `fn with a b` call forms.
-- `scripts/test-wasm-runtime.mjs` — regression suite covering `fib(10)`,
-  `fact(6)`, and mutual recursion. All pass entirely inside WAT-authored
-  WebAssembly.
 
-**Milestone 4 (full self-host) — next chunk:**
+**Milestone 4 (heap, lists, string manipulation) — shipped:**
+- Seed VM memory grown to 4 pages (256 KiB) with a bump-pointer heap at
+  `0x10000..0x40000`. New opcodes: `POP`, `ALLOC`, `NEWLIST`, `LGET`,
+  `LSET`, `LEN`, `STRCAT`. Lists are heap blocks laid out as
+  `[u32 length | u32 items…]`; dynamic strings use the same
+  `[u32 length | utf-8 bytes]` shape as the interned pool, so `SAY_STR`
+  handles both transparently.
+- Bootstrap compiler grew list literals `[a, b, c]`, index reads
+  `xs[i]`, index assignment `set xs[i] to v`, per-scope type tracking,
+  and two polymorphic builtins: `length(x)` (lists or strings) and
+  `concat(a, b)`. The `+` operator promotes to `STRCAT` when either
+  operand is string-typed.
+- `scripts/test-wasm-runtime.mjs` now covers 10 programs including
+  list-sum loops, in-place mutation, and multi-way string concat. All
+  pass entirely inside WAT-authored WebAssembly.
+
+**Milestone 5 (full self-host) — next chunk:**
 - Add heap allocator, arrays, and string manipulation opcodes to the seed
   VM (the current VM handles strings as immutable pool handles only).
 - Port `lang/bootstrap/compile.mjs` to `lang/compiler/*.sdev`. Compile it
