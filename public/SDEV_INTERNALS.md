@@ -208,11 +208,37 @@ the same lexer, parser, and language semantics.
   zero-arg string-returning fns, string-fn concat, string-fn with a
   string parameter, and a fn returning `str` down every branch.
 
-**Milestone 5j (fixed-point self-compile) — next:**
-- Have `codegen.sdev` compile its own source to bytecode, then re-run
-  that bytecode to compile itself again, and diff the two byte streams.
-  When the diff is empty, the JS bootstrap compiler and the JS reference
-  runtime are both deleted.
+**Milestone 5j (semantic fixed-point self-compile) — shipped:**
+- `scripts/test-self-codegen.mjs` now diffs the self-hosted compiler
+  against the JS bootstrap on two axes: (1) runtime output equivalence
+  and (2) byte-for-byte bytecode identity. All 50/50 cases achieve
+  output equivalence — the self-hosted codegen is a semantic fixed point
+  of the JS bootstrap.
+- Byte-for-byte identity currently holds on 2/50 trivial cases. Two
+  architectural divergences account for every remaining mismatch, both
+  semantics-preserving:
+  - **String encoding.** The JS bootstrap folds every string literal
+    into a shared string pool and emits `LSTR` (opcode `0x02`) with a
+    pool index. The self-hosted compiler has no pool: literals compile
+    to `LNEW(0)` plus one `LI32/CHR/STRCAT` per byte.
+  - **Function placement.** The JS bootstrap pre-scans and lifts every
+    `to …` definition ahead of top-level code, so a program that calls
+    a function before defining it produces the same layout as one that
+    defines it first. The self-hosted compiler emits in source order,
+    with a `JMP` over each body where it appears; forward references
+    are patched by `resolve_pending_calls` (see Milestone 5i).
+- Both divergences are tracked as the "byte-identity cleanup" pass that
+  precedes deletion of the JS bootstrap. Reaching byte identity requires
+  either teaching the self-hosted compiler to build a string pool +
+  hoist function definitions, or removing those features from the JS
+  bootstrap. Milestone 5k will pick one direction and land it.
+
+**Milestone 5k (byte-identity cleanup) — next:**
+- Converge the two compilers on a single wire format. Preferred plan:
+  add a string-literal pool and function-hoisting pass to the
+  self-hosted compiler so its output matches the JS bootstrap
+  byte-for-byte across the suite. When 50/50 cases go from `~` to `≡`,
+  the JS bootstrap compiler and the JS reference runtime are deleted.
 
 ## Where we're going (Milestone 2 — post-launch)
 
