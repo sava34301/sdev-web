@@ -108,9 +108,24 @@ the same lexer, parser, and language semantics.
   which unblocks self-hosted compiler passes that write into global heap
   buffers from inside functions.
 
-**Milestone 5e (statements + full self-compile) — next chunk:**
-- Extend `codegen.sdev` to handle `set`, `if`/`else`, `while`, function
-  declarations (`to name with … end`), `return`, and string literals.
+**Milestone 5e (variables in the self-hosted compiler) — shipped:**
+- `codegen.sdev` grew a symbol table: `sym_names` is a list whose cell 0
+  holds the interned-name count and whose cells 1..count hold the names.
+  A new `intern_name(name)` function returns the u8 slot index the seed VM
+  uses for `LOAD` / `STORE`, adding the name on first sight. All mutation
+  goes through index-assignment on `sym_names` so it survives the
+  bootstrap's "plain `set` inside a function creates a fresh local" rule.
+- Parser: identifier atoms emit `LOAD <slot>`; the driver recognises
+  `set NAME to EXPR` and emits the expression followed by `STORE <slot>`.
+- `scripts/test-self-codegen.mjs` now runs 10 cases including
+  `set + read`, reused reads, an in-place accumulator, and multi-var
+  expressions. Self-compiled output matches the JS bootstrap byte-for-byte
+  on every one.
+
+**Milestone 5f (control flow + full self-compile) — next chunk:**
+- Extend `codegen.sdev` to handle `if`/`else`, `while`, function
+  declarations (`to name with … end`), `return`, comparison operators,
+  and string literals.
 - Self-compile: have `codegen.sdev` compile its own source to bytecode,
   then re-run that bytecode to compile itself again, and diff the two
   byte streams. When the diff is empty, the JS bootstrap compiler AND
