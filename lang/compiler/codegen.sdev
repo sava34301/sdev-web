@@ -597,13 +597,37 @@ to parse_stmt with pos
   end
   if is_ident_word(pos, "say")
     set pos to parse_cmp(pos + 1)
-    emit_byte(80)
+    if expr_type[0] is 1
+      emit_byte(81)
+    else
+      emit_byte(80)
+    end
     return pos
   end
   if is_ident_word(pos, "set")
     set pos to pos + 1
     set name to tk_txt[pos]
-    set pos to pos + 2
+    set pos to pos + 1
+    # Index-assignment form: set NAME [ EXPR ] to EXPR
+    if is_op_c(pos, 91)
+      emit_load_ident(name)
+      set pos to pos + 1
+      set pos to parse_cmp(pos)
+      if is_op_c(pos, 93)
+        set pos to pos + 1
+      end
+      if is_ident_word(pos, "to")
+        set pos to pos + 1
+      end
+      set pos to parse_cmp(pos)
+      emit_byte(130)
+      set expr_type[0] to 0
+      return pos
+    end
+    # Plain: set NAME to EXPR
+    if is_ident_word(pos, "to")
+      set pos to pos + 1
+    end
     set pos to parse_cmp(pos)
     emit_store_ident(name)
     return pos
