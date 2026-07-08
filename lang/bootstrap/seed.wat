@@ -10,18 +10,20 @@
 ;; lang/compiler/*.sdev) is complete, the bootstrap compiler is discarded
 ;; and SDEV compiles SDEV all the way down.
 ;;
-;; Memory layout (linear memory, 1 page = 64 KiB):
-;;   0x0000..0x1FFF  string pool  (utf-8 blobs, length-prefixed u32)
-;;   0x2000..0x3FFF  global variable slots (256 slots × 4 bytes)
-;;   0x4000..0x5FFF  operand stack (u32 cells; sp grows up)
-;;   0x6000..0x7FFF  call stack (frames of ret_ip, saved_fp, locals…)
-;;   0x8000..0xFFFF  bytecode program (u8 stream)
+;; Memory layout (linear memory, 4 pages = 256 KiB):
+;;   0x00000..0x01FFF  string pool  (utf-8 blobs, length-prefixed u32)
+;;   0x02000..0x03FFF  global variable slots (256 slots × 4 bytes)
+;;   0x04000..0x05FFF  operand stack (u32 cells; sp grows up)
+;;   0x06000..0x07FFF  call stack (frames of ret_ip, saved_fp, locals…)
+;;   0x08000..0x0FFFF  bytecode program (u8 stream)
+;;   0x10000..0x3FFFF  bump-pointer heap  (lists, dynamic strings)
 ;;
 ;; Opcodes (single byte, may be followed by inline operands):
 ;;   0x01 PUSH_I32 <i32 LE>         push signed 32-bit constant
 ;;   0x02 PUSH_STR <u16 idx LE>     push interned string handle (pool offset)
 ;;   0x03 LOAD    <u8 slot>         push global variable value
 ;;   0x04 STORE   <u8 slot>         pop into global variable
+;;   0x05 POP                       drop top of stack
 ;;   0x10 ADD  0x11 SUB  0x12 MUL  0x13 DIV  0x14 MOD
 ;;   0x20 EQ   0x21 NE   0x22 LT   0x23 GT   0x24 LE   0x25 GE
 ;;   0x30 NOT
@@ -34,6 +36,13 @@
 ;;   0x62 ENTER <u8 n_locals>             reserve additional local slots
 ;;   0x63 LOAD_LOC <u8 slot>              push local (0..n_args-1 = args)
 ;;   0x64 STORE_LOC <u8 slot>             pop into local
+;;   ; --- Milestone 4: heap, lists, string manipulation ---
+;;   0x70 ALLOC                     pop size, bump HP by (size+3 & ~3), push old HP
+;;   0x80 NEWLIST <u16 n>           pop n items (right→left in memory), push arr addr
+;;   0x81 LGET                      pop idx, pop arr, push arr[idx]
+;;   0x82 LSET                      pop val, pop idx, pop arr, arr[idx]=val
+;;   0x83 LEN                       pop addr, push u32 at addr (length header)
+;;   0x91 STRCAT                    pop b, pop a, allocate new pool-shaped blob, push handle
 ;;   0xFF HALT
 ;;
 ;; The host provides two imports:
