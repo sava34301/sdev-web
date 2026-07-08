@@ -122,10 +122,25 @@ the same lexer, parser, and language semantics.
   expressions. Self-compiled output matches the JS bootstrap byte-for-byte
   on every one.
 
-**Milestone 5f (control flow + full self-compile) — next chunk:**
-- Extend `codegen.sdev` to handle `if`/`else`, `while`, function
-  declarations (`to name with … end`), `return`, comparison operators,
-  and string literals.
+**Milestone 5f (control flow + comparisons) — shipped:**
+- `codegen.sdev` gained a real `parse_stmt` / `parse_block` mutual-recursion
+  pair. Statements now cover `say`, `set NAME to EXPR`, `if EXPR … end`,
+  `if EXPR … else … end`, and `while EXPR … end`. Blocks nest arbitrarily.
+- The expression grammar grew a `parse_cmp` layer: `is`, `is not`, `<`,
+  `>`, `<=`, `>=` emit `EQ`/`NE`/`LT`/`GT`/`LE`/`GE`. The driver's inline
+  lexer now peeks one byte ahead to fold `<=` / `>=` into single tokens
+  (sentinel punctuation codes 300 / 301).
+- Two new SDEV helpers, `placeholder16` and `patch_i16`, handle forward
+  and backward `JZ`/`JMP` offsets — including proper two's-complement
+  encoding for negative offsets that back-edges of `while` loops need.
+- `scripts/test-self-codegen.mjs` grew to 21 cases: comparisons in every
+  direction, `if`/`else` with both branches, `while` counting and
+  summation, and nested `if` inside `while` (a fizzbuzz-flavoured shape).
+  Every case matches the JS bootstrap byte-for-byte.
+
+**Milestone 5g (functions + full self-compile) — next chunk:**
+- Extend `codegen.sdev` to handle function declarations
+  (`to name with … end`), `return`, string literals, and list literals.
 - Self-compile: have `codegen.sdev` compile its own source to bytecode,
   then re-run that bytecode to compile itself again, and diff the two
   byte streams. When the diff is empty, the JS bootstrap compiler AND
