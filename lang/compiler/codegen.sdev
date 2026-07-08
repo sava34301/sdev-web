@@ -189,6 +189,11 @@ to find_fn with name
 end
 
 # ---- variable load / store dispatch --------------------------------------
+#
+# Milestone 5h added expression-type tracking. Every parse_* function that
+# emits a push updates `expr_type[0]` to 0 (int) or 1 (str). Persistent
+# per-variable types live in two parallel tables (`sym_types` /
+# `loc_types`) that mirror `sym_names` / `loc_names`.
 
 to emit_load_ident with name
   if in_func[0] is 1
@@ -196,16 +201,19 @@ to emit_load_ident with name
     if slot >= 0
       emit_byte(99)
       emit_byte(slot)
+      set expr_type[0] to loc_types[slot + 1]
       return 0
     end
   end
   set slot to intern_name(name)
   emit_byte(3)
   emit_byte(slot)
+  set expr_type[0] to sym_types[slot + 1]
   return 0
 end
 
 to emit_store_ident with name
+  set t to expr_type[0]
   if in_func[0] is 1
     set slot to find_local(name)
     if slot < 0
@@ -213,11 +221,13 @@ to emit_store_ident with name
     end
     emit_byte(100)
     emit_byte(slot)
+    set loc_types[slot + 1] to t
     return 0
   end
   set slot to intern_name(name)
   emit_byte(4)
   emit_byte(slot)
+  set sym_types[slot + 1] to t
   return 0
 end
 
@@ -226,26 +236,32 @@ end
 to emit_call with name nargs
   if str_eq(name, "length")
     emit_byte(131)
+    set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "concat")
     emit_byte(145)
+    set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "ord")
     emit_byte(132)
+    set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "chr")
     emit_byte(136)
+    set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "str")
     emit_byte(135)
+    set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "mklist")
     emit_byte(137)
+    set expr_type[0] to 0
     return 0
   end
   set idx to find_fn(name)
@@ -255,6 +271,7 @@ to emit_call with name nargs
     emit_byte(target % 256)
     emit_byte((target / 256) % 256)
     emit_byte(nargs)
+    set expr_type[0] to 0
   end
   return 0
 end
