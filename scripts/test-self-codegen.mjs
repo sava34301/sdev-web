@@ -153,6 +153,12 @@ set fn_offsets to mklist(256)
 set fn_offsets[0] to 0
 set fn_arities to mklist(256)
 set fn_arities[0] to 0
+set fn_ret_types to mklist(256)
+set fn_ret_types[0] to 0
+set pend_names to mklist(512)
+set pend_names[0] to 0
+set pend_pos to mklist(512)
+set pend_pos[0] to 0
 set in_func to mklist(2)
 set in_func[0] to 0
 set expr_type to mklist(2)
@@ -173,6 +179,7 @@ while going
     set going to 0
   end
 end
+resolve_pending_calls()
 emit_byte(255)
 
 say bc[0]
