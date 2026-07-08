@@ -75,6 +75,15 @@ class Emitter {
   }
 }
 
+// Per-scope type tracking. Keyed by the locals Map identity; null → globals.
+const _scopeTypes = new WeakMap();
+function scopeTypes(locals, em) {
+  if (!locals) return em.globalTypes;
+  let m = _scopeTypes.get(locals);
+  if (!m) { m = new Map(); _scopeTypes.set(locals, m); }
+  return m;
+}
+
 // ---------------- Parser (bootstrap subset) ----------------
 export function parse(source) { return parseProgram(tokenize(source)); }
 function parseProgram(tokens) {
