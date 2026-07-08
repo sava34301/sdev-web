@@ -42,6 +42,9 @@
 ;;   0x81 LGET                      pop idx, pop arr, push arr[idx]
 ;;   0x82 LSET                      pop val, pop idx, pop arr, arr[idx]=val
 ;;   0x83 LEN                       pop addr, push u32 at addr (length header)
+;;   0x84 SGET                      pop idx, pop str, push byte at bytes[idx]
+;;   0x87 I2S                       pop int, push decimal-string blob
+;;   0x88 CHR                       pop byte, push new 1-char string blob
 ;;   0x91 STRCAT                    pop b, pop a, allocate new pool-shaped blob, push handle
 ;;   0xFF HALT
 ;;
