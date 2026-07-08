@@ -1,22 +1,26 @@
-# SDEV self-hosted codegen (Milestone 5d, first slice).
+# SDEV self-hosted codegen (Milestone 5f).
 #
-# Compiles a program of `say <arith-expr>` statements to real seed-VM
-# bytecode, entirely in SDEV. Emits the byte stream to a global buffer
-# `bc` whose cell 0 holds the current count and cells 1..count hold bytes.
+# Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits
+# the byte stream to a global buffer `bc` whose cell 0 holds the current
+# byte count and cells 1..count hold the bytes. The scripts/test-self-
+# codegen.mjs driver harvests the buffer via `say`, reconstructs it as a
+# Uint8Array, feeds it into a fresh seed WASM instance, and verifies the
+# executed output matches the JS bootstrap compiler's output byte-for-byte.
 #
-# The scripts/test-self-codegen.mjs driver reads the buffer via `say`,
-# reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance,
-# and verifies the executed output matches the JS bootstrap compiler's.
-#
-# Grammar this slice covers:
-#   program := stmt (NL stmt)*
+# Grammar this milestone covers:
+#   program := stmt*
 #   stmt    := 'say' expr
-#   expr    := add
+#            | 'set' IDENT 'to' expr
+#            | 'if' expr NL block ('else' NL block)? 'end'
+#            | 'while' expr NL block 'end'
+#   block   := stmt*                              (until 'else' or 'end')
+#   expr    := cmp
+#   cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )?
 #   add     := mul (('+'|'-') mul)*
 #   mul     := atom (('*'|'/') atom)*
-#   atom    := INT | '(' expr ')'
+#   atom    := INT | IDENT | '(' expr ')'
 #
-# The next slice adds `set`, `if`, `while`, `to`, `return`.
+# The next slice adds function declarations, `return`, and string literals.
 
 # ---- character-class helpers ---------------------------------------------
 
@@ -97,6 +101,31 @@ to emit_i32 with v
   return 0
 end
 
+# Reserve a two-byte i16 placeholder and return the byte offset at which
+# it starts (0-indexed, so list cell = pos + 1). Patched later by
+# patch_i16 with the resolved target address.
+to placeholder16
+  set p to bc[0]
+  emit_byte(0)
+  emit_byte(0)
+  return p
+end
+
+# Patch the two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte
+# offset `target`. The VM interprets the offset relative to the end of
+# the instruction (pos + 2 in our layout), which handles both forward
+# and backward jumps. Negative offsets get their two's-complement 16-bit
+# encoding.
+to patch_i16 with pos target
+  set off to target - (pos + 2)
+  if off < 0
+    set off to off + 65536
+  end
+  set bc[pos + 1] to off % 256
+  set bc[pos + 2] to (off / 256) % 256
+  return 0
+end
+
 # ---- symbol table (global variable slots) --------------------------------
 #
 # The bootstrap seed VM uses u8 slot indices for LOAD/STORE, so we cap the
@@ -123,7 +152,7 @@ to intern_name with name
   return sym_names[0] - 1
 end
 
-# ---- recursive-descent parser that emits stack-VM bytecode as it goes ----
+# ---- token classifiers ---------------------------------------------------
 
 to is_op_c with pos c
   if pos >= tk_count
@@ -136,6 +165,18 @@ to is_op_c with pos c
   end
   return 0
 end
+
+to is_ident_word with pos w
+  if pos >= tk_count
+    return 0
+  end
+  if tk_kind[pos] is not 2
+    return 0
+  end
+  return str_eq(tk_txt[pos], w)
+end
+
+# ---- recursive-descent parser that emits stack-VM bytecode as it goes ----
 
 to parse_atom with pos
   if tk_kind[pos] is 1
@@ -193,6 +234,155 @@ to parse_add with pos
         set going to 0
       end
     end
+  end
+  return pos
+end
+
+# `is` / `is not` / `<` / `>` / `<=` / `>=`. At most one comparison per
+# expression (chained comparisons are not part of the SDEV grammar).
+# Two-char operators `<=` and `>=` are pre-tokenized by the driver's
+# lexer using sentinel punctuation codes 300 and 301.
+to parse_cmp with pos
+  set pos to parse_add(pos)
+  if is_ident_word(pos, "is")
+    set pos to pos + 1
+    set neg to 0
+    if is_ident_word(pos, "not")
+      set neg to 1
+      set pos to pos + 1
+    end
+    set pos to parse_add(pos)
+    if neg
+      emit_byte(33)
+    else
+      emit_byte(32)
+    end
+    return pos
+  end
+  if is_op_c(pos, 60)
+    set pos to parse_add(pos + 1)
+    emit_byte(34)
+    return pos
+  end
+  if is_op_c(pos, 62)
+    set pos to parse_add(pos + 1)
+    emit_byte(35)
+    return pos
+  end
+  if is_op_c(pos, 300)
+    set pos to parse_add(pos + 1)
+    emit_byte(36)
+    return pos
+  end
+  if is_op_c(pos, 301)
+    set pos to parse_add(pos + 1)
+    emit_byte(37)
+    return pos
+  end
+  return pos
+end
+
+# Skip newline tokens (kind 5).
+to skip_nl with pos
+  set going to 1
+  while going
+    if pos >= tk_count
+      set going to 0
+    else
+      if tk_kind[pos] is 5
+        set pos to pos + 1
+      else
+        set going to 0
+      end
+    end
+  end
+  return pos
+end
+
+# Parse a sequence of statements, stopping just before an `else` or `end`
+# ident token (or end-of-input). Returns the cursor at the terminator.
+to parse_block with pos
+  set going to 1
+  while going
+    set pos to skip_nl(pos)
+    if pos >= tk_count
+      set going to 0
+    else
+      if is_ident_word(pos, "else")
+        set going to 0
+      else
+        if is_ident_word(pos, "end")
+          set going to 0
+        else
+          set new_pos to parse_stmt(pos)
+          if new_pos is pos
+            set going to 0
+          else
+            set pos to new_pos
+          end
+        end
+      end
+    end
+  end
+  return pos
+end
+
+# One statement. Returns the cursor after the statement, or the original
+# cursor if nothing recognisable was found (which lets the top-level loop
+# bail out cleanly).
+to parse_stmt with pos
+  set pos to skip_nl(pos)
+  if pos >= tk_count
+    return pos
+  end
+  if is_ident_word(pos, "say")
+    set pos to parse_cmp(pos + 1)
+    emit_byte(80)
+    return pos
+  end
+  if is_ident_word(pos, "set")
+    set pos to pos + 1
+    set slot to intern_name(tk_txt[pos])
+    set pos to pos + 2
+    set pos to parse_cmp(pos)
+    emit_byte(4)
+    emit_byte(slot)
+    return pos
+  end
+  if is_ident_word(pos, "if")
+    set pos to parse_cmp(pos + 1)
+    emit_byte(65)
+    set jz to placeholder16()
+    set pos to parse_block(pos)
+    if is_ident_word(pos, "else")
+      set pos to pos + 1
+      emit_byte(64)
+      set jmp to placeholder16()
+      patch_i16(jz, bc[0])
+      set pos to parse_block(pos)
+      patch_i16(jmp, bc[0])
+    else
+      patch_i16(jz, bc[0])
+    end
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
+  end
+  if is_ident_word(pos, "while")
+    set loop_top to bc[0]
+    set pos to parse_cmp(pos + 1)
+    emit_byte(65)
+    set jz to placeholder16()
+    set pos to parse_block(pos)
+    emit_byte(64)
+    set back to placeholder16()
+    patch_i16(back, loop_top)
+    patch_i16(jz, bc[0])
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
   end
   return pos
 end
