@@ -93,14 +93,28 @@ the same lexer, parser, and language semantics.
 - Together with the M5b lexer, the front-end for arithmetic expressions
   now lives entirely in SDEV — the JS bootstrap only bytes-compiles it.
 
-**Milestone 5d (statements + codegen) — next chunk:**
-- Extend `parser.sdev` to statements (`set`, `if`/`else`, `while`, `to`,
-  `return`, `say`) and function definitions.
-- Add `lang/compiler/codegen.sdev` that walks the parse and emits the same
-  bytecode `lang/bootstrap/compile.mjs` produces today. Fixed-point
-  self-compile: recompile the compiler with itself and diff bytes. When
-  the diff is empty, the JS bootstrap compiler AND the JS reference
-  runtime are both deleted, and SDEV compiles SDEV all the way down.
+**Milestone 5d (self-hosted codegen — first end-to-end) — shipped:**
+- `lang/compiler/codegen.sdev` is a compiler pass written in SDEV. It
+  emits real seed-VM bytecode (PUSH_I32, ADD/SUB/MUL/DIV, SAY_I32, HALT)
+  into a global `bc` buffer, using `bc[0]` as the byte count so the whole
+  compiler can update the count via list mutation from inside functions
+  without needing global writes.
+- `scripts/test-self-codegen.mjs` runs the SDEV compiler through the seed
+  WASM VM on 6 source programs, harvests the emitted bytes, executes them
+  in a *fresh* seed WASM instance, and diffs the output against what the
+  JS bootstrap compiler produces for the same source. All 6 match.
+- Bootstrap compiler tweak: `set x[i] to v` is now correctly treated as a
+  mutation of an existing binding (never introduces a shadowing local),
+  which unblocks self-hosted compiler passes that write into global heap
+  buffers from inside functions.
+
+**Milestone 5e (statements + full self-compile) — next chunk:**
+- Extend `codegen.sdev` to handle `set`, `if`/`else`, `while`, function
+  declarations (`to name with … end`), `return`, and string literals.
+- Self-compile: have `codegen.sdev` compile its own source to bytecode,
+  then re-run that bytecode to compile itself again, and diff the two
+  byte streams. When the diff is empty, the JS bootstrap compiler AND
+  the JS reference runtime are both deleted.
 
 ## Where we're going (Milestone 2 — post-launch)
 
