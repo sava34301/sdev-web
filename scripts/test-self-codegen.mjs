@@ -137,7 +137,7 @@ end
 `;
 
 const driveCodegen = `
-set bc to mklist(8000)
+set bc to mklist(16384)
 set bc[0] to 0
 set sym_names to mklist(256)
 set sym_names[0] to 0
@@ -155,6 +155,12 @@ set fn_arities to mklist(256)
 set fn_arities[0] to 0
 set fn_ret_types to mklist(256)
 set fn_ret_types[0] to 0
+set fn_extras to mklist(256)
+set fn_extras[0] to 0
+set fn_body_start to mklist(256)
+set fn_body_start[0] to 0
+set cur_fn to mklist(2)
+set cur_fn[0] to 0
 set pend_names to mklist(512)
 set pend_names[0] to 0
 set pend_pos to mklist(512)
@@ -165,7 +171,99 @@ set expr_type to mklist(2)
 set expr_type[0] to 0
 set scratch to mklist(4)
 set scratch[0] to 0
+set emit_enabled to mklist(2)
+set emit_enabled[0] to 0
+set skip_fn_defs to mklist(2)
+set skip_fn_defs[0] to 0
+set pool_bytes to mklist(8192)
+set pool_bytes[0] to 0
+set pool_keys to mklist(256)
+set pool_keys[0] to 0
+set pool_offs to mklist(256)
+set pool_offs[0] to 0
 
+# Pass 1 — collect + fixed-point return-type inference.
+#
+# Runs parse_stmt twice with emit_enabled=0. Each iteration re-walks the
+# token stream: functions are registered on the first iteration and
+# reused on the second (find_fn short-circuits duplicate pushes); the
+# second iteration lets forward calls to string-returning functions see
+# the return type promoted by the first iteration's \`return\` walk. Two
+# iterations suffice for every case in the suite (matches the bootstrap's
+# guard bound of fnCount + 2).
+set emit_enabled[0] to 0
+set skip_fn_defs[0] to 0
+set _iter to 0
+while _iter < 2
+  set pos to 0
+  set sym_names[0] to 0
+  set sym_types[0] to 0
+  set going to 1
+  while going
+    set new_pos to parse_stmt(pos)
+    if new_pos is pos
+      set going to 0
+    else
+      set pos to new_pos
+    end
+    if pos >= tk_count
+      set going to 0
+    end
+  end
+  set _iter to _iter + 1
+end
+
+# Pass 2 — real emit.
+#
+# Reset the tables mutated by pass 1's walk so pass 2 assigns global
+# slots (and pending-call sites) in the exact left-to-right order the JS
+# bootstrap produces: function bodies first (in registration order),
+# then the main code.
+set sym_names[0] to 0
+set sym_types[0] to 0
+set pend_names[0] to 0
+set pend_pos[0] to 0
+set bc[0] to 0
+set emit_enabled[0] to 1
+
+# Leading JMP → main. Two-byte placeholder is back-patched once every
+# function body has been emitted.
+emit_byte(64)
+set _jmp_main to placeholder16()
+
+# Emit every registered function body contiguously.
+set _i to 1
+set _fstop to fn_names[0] + 1
+while _i < _fstop
+  set fn_offsets[_i] to bc[0]
+  set loc_names[0] to 0
+  set loc_types[0] to 0
+  set pos to fn_body_start[_i]
+  set pos to parse_params(pos)
+  set _extras to fn_extras[_i]
+  if _extras > 0
+    emit_byte(98)
+    emit_byte(_extras)
+  end
+  set in_func[0] to 1
+  set cur_fn[0] to _i
+  set pos to parse_block(pos)
+  # Fallthrough guard: implicit \`return 0\`.
+  emit_byte(1)
+  emit_i32(0)
+  emit_byte(97)
+  set in_func[0] to 0
+  set cur_fn[0] to 0
+  set _i to _i + 1
+end
+
+# Patch the leading JMP so it jumps over every function body and lands
+# at the start of main.
+patch_i16(_jmp_main, bc[0])
+
+# Emit main. skip_fn_defs=1 makes parse_stmt swallow any \`to ... end\`
+# block silently — those bodies have already been hoisted above.
+set skip_fn_defs[0] to 1
 set pos to 0
 set going to 1
 while going
@@ -179,14 +277,22 @@ while going
     set going to 0
   end
 end
-resolve_pending_calls()
 emit_byte(255)
+resolve_pending_calls()
 
+# Dump: bytecode length, bytecode bytes, pool length, pool bytes.
 say bc[0]
 set k to 1
 set stop to bc[0] + 1
 while k < stop
   say bc[k]
+  set k to k + 1
+end
+say pool_bytes[0]
+set k to 1
+set stop to pool_bytes[0] + 1
+while k < stop
+  say pool_bytes[k]
   set k to k + 1
 end
 `;
@@ -214,8 +320,9 @@ async function runOne(programSrc) {
   return output;
 }
 
-// Run the SDEV self-hosted compiler on `userSrc` and get the emitted
-// bytecode back as a Uint8Array.
+// Run the SDEV self-hosted compiler on `userSrc` and get back the
+// emitted bytecode + string pool. The driver `say`-dumps them in order:
+// bytecode length, bytecode bytes, pool length, pool bytes.
 async function selfCompile(userSrc) {
   const program =
     `set src to "${escapeForSdev(userSrc)}"\n` +
@@ -223,10 +330,14 @@ async function selfCompile(userSrc) {
     inlineLex + '\n' +
     driveCodegen + '\n';
   const dumped = await runOne(program);
-  const count = parseInt(dumped[0], 10);
-  const bytes = new Uint8Array(count);
-  for (let i = 0; i < count; i++) bytes[i] = parseInt(dumped[i + 1], 10) & 0xff;
-  return bytes;
+  let cursor = 0;
+  const bcCount = parseInt(dumped[cursor++], 10);
+  const bytes = new Uint8Array(bcCount);
+  for (let i = 0; i < bcCount; i++) bytes[i] = parseInt(dumped[cursor++], 10) & 0xff;
+  const poolCount = parseInt(dumped[cursor++], 10);
+  const pool = new Uint8Array(poolCount);
+  for (let i = 0; i < poolCount; i++) pool[i] = parseInt(dumped[cursor++], 10) & 0xff;
+  return { bytes, pool };
 }
 
 // Execute a raw bytecode buffer in a fresh seed WASM instance.
@@ -314,37 +425,55 @@ function bytesEqual(a, b) {
   return true;
 }
 
-// Milestone 5j — semantic fixed point.
+// Milestone 5k — byte-identity fixed point.
 //
-// For every case, the self-hosted compiler's bytecode must execute to
-// the same observable output as the JS bootstrap's bytecode. Byte-level
-// identity is tracked separately: two architectural divergences remain
-// (the JS bootstrap folds string literals into a shared pool via LSTR,
-// the self-hosted compiler builds them at runtime with LNEW+CHR+STRCAT;
-// the JS bootstrap pre-scans and lifts function definitions ahead of
-// top-level code, the self-hosted compiler emits in source order). Both
-// are semantics-preserving — they are the cleanup work that lets the
-// JS bootstrap be retired in a follow-up pass.
+// The self-hosted compiler must now emit bytecode AND a string pool that
+// are byte-for-byte identical to the JS bootstrap's output. When every
+// case passes byte-identity, the JS bootstrap can be retired.
+
+function hex(bytes, max = 96) {
+  const n = Math.min(bytes.length, max);
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(bytes[i].toString(16).padStart(2, '0'));
+  return out.join(' ') + (bytes.length > max ? ' …' : '');
+}
+
 let failed = 0;
 let byteMatches = 0;
+let poolMatches = 0;
 for (const c of cases) {
   try {
-    const selfBytes = await selfCompile(c.src);
-    const { bytecode: refBytes } = compile(c.src);
+    const { bytes: selfBytes, pool: selfPool } = await selfCompile(c.src);
+    const { bytecode: refBytes, stringPool: refPool } = compile(c.src);
 
-    const selfOut = await execBytecode(selfBytes);
+    // Install the self-hosted pool into the runtime just like the JS
+    // bootstrap installs its stringPool at memory offset 0.
+    const selfOut = await execBytecode(selfBytes, selfPool);
     const refOut  = await jsCompileAndRun(c.src);
     const outOk   = JSON.stringify(selfOut) === JSON.stringify(refOut);
 
     const byteOk = bytesEqual(selfBytes, refBytes);
+    const poolOk = bytesEqual(selfPool,  refPool);
     if (byteOk) byteMatches++;
+    if (poolOk) poolMatches++;
 
-    const tag = outOk ? (byteOk ? '≡' : '~') : '✗';
-    console.log(`${tag} ${c.name}  (self=${selfBytes.length}B, ref=${refBytes.length}B)`);
+    const allOk = outOk && byteOk && poolOk;
+    const tag = allOk ? '≡' : (outOk ? '~' : '✗');
+    console.log(`${tag} ${c.name}  (bc self=${selfBytes.length}B ref=${refBytes.length}B, pool self=${selfPool.length}B ref=${refPool.length}B)`);
     if (!outOk) {
       failed++;
-      console.log('   ref (js-bootstrap) out:', refOut);
-      console.log('   got (sdev-compiler) out:', selfOut);
+      console.log('   ref out:', refOut);
+      console.log('   got out:', selfOut);
+    }
+    if (outOk && !byteOk) {
+      failed++;
+      console.log('   ref bc :', hex(refBytes));
+      console.log('   got bc :', hex(selfBytes));
+    }
+    if (outOk && !poolOk) {
+      failed++;
+      console.log('   ref pool:', hex(refPool));
+      console.log('   got pool:', hex(selfPool));
     }
   } catch (e) {
     failed++;
@@ -352,12 +481,12 @@ for (const c of cases) {
   }
 }
 
-console.log(`\nMilestone 5j — semantic fixed point:`);
-console.log(`  ${cases.length - failed}/${cases.length} cases: self-hosted output ≡ JS bootstrap output.`);
-console.log(`  ${byteMatches}/${cases.length} cases: also byte-for-byte identical (informational).`);
-if (failed === 0) {
-  console.log(`✓ Self-hosted codegen is a semantic fixed point of the JS bootstrap.`);
-  console.log(`  Remaining byte-level divergences (string pool, function hoisting) are`);
-  console.log(`  tracked as post-5j cleanup before the JS bootstrap can be deleted.`);
+console.log(`\nMilestone 5k — byte-identity fixed point:`);
+console.log(`  bytecode: ${byteMatches}/${cases.length} byte-identical to JS bootstrap.`);
+console.log(`  pool:     ${poolMatches}/${cases.length} byte-identical to JS bootstrap.`);
+if (failed === 0 && byteMatches === cases.length && poolMatches === cases.length) {
+  console.log(`✓ Self-hosted codegen ≡ JS bootstrap byte-for-byte across the full suite.`);
+  console.log(`  The JS bootstrap and reference runtime are now redundant and can be`);
+  console.log(`  retired in a follow-up housekeeping pass.`);
 }
 process.exit(failed);
