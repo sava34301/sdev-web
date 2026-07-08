@@ -102,6 +102,8 @@ end
 const driveCodegen = `
 set bc to mklist(4000)
 set bc[0] to 0
+set sym_names to mklist(256)
+set sym_count to 0
 
 set pos to 0
 set going to 1
@@ -126,7 +128,17 @@ while going
         set pos to parse_add(pos + 1)
         emit_byte(80)
       else
-        set going to 0
+        if str_eq(tk_txt[pos], "set")
+          set pos to pos + 1
+          set target_slot to intern_name(tk_txt[pos])
+          set pos to pos + 1
+          set pos to pos + 1
+          set pos to parse_add(pos)
+          emit_byte(4)
+          emit_byte(target_slot)
+        else
+          set going to 0
+        end
       end
     else
       set going to 0
