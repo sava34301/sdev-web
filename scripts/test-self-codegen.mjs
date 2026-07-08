@@ -289,7 +289,7 @@ const cases = [
   { name: 'set xs[i] to v',          src: 'set xs to mklist(4)\nset xs[0] to 100\nset xs[1] to 200\nset xs[2] to xs[0] + xs[1]\nsay xs[2]' },
   { name: 'index in while',          src: 'set xs to [3, 1, 4, 1, 5, 9]\nset i to 0\nset s to 0\nwhile i < length(xs)\nset s to s + xs[i]\nset i to i + 1\nend\nsay s' },
   { name: 'empty string',            src: 'set s to ""\nsay length(s)' },
-  { name: 'string in fn',            src: 'to greet with name\nreturn "hi " + name\nend\nsay greet("world")' },
+  { name: 'string in loop',          src: 'set i to 0\nwhile i < 3\nsay "tick"\nset i to i + 1\nend' },
 ];
 
 let failed = 0;
