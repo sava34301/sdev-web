@@ -67,7 +67,26 @@ while _i < _srclen
             set tk_count to tk_count + 1
             set _i to _j
           else
-            if is_alpha(_c)
+            if _c is 34
+              set _j to _i + 1
+              set _collecting to 1
+              while _collecting
+                if _j >= _srclen
+                  set _collecting to 0
+                else
+                  if ord(src, _j) is 34
+                    set _collecting to 0
+                  else
+                    set _j to _j + 1
+                  end
+                end
+              end
+              set tk_kind[tk_count] to 3
+              set tk_txt[tk_count] to slice(src, _i + 1, _j)
+              set tk_count to tk_count + 1
+              set _i to _j + 1
+            else
+              if is_alpha(_c)
               set _j to _i
               set _going to 1
               while _going
@@ -108,6 +127,7 @@ while _i < _srclen
               set tk_count to tk_count + 1
               set _i to _i + 1
             end
+            end
           end
         end
       end
@@ -121,8 +141,12 @@ set bc to mklist(8000)
 set bc[0] to 0
 set sym_names to mklist(256)
 set sym_names[0] to 0
+set sym_types to mklist(256)
+set sym_types[0] to 0
 set loc_names to mklist(256)
 set loc_names[0] to 0
+set loc_types to mklist(256)
+set loc_types[0] to 0
 set fn_names to mklist(256)
 set fn_names[0] to 0
 set fn_offsets to mklist(256)
@@ -131,6 +155,8 @@ set fn_arities to mklist(256)
 set fn_arities[0] to 0
 set in_func to mklist(2)
 set in_func[0] to 0
+set expr_type to mklist(2)
+set expr_type[0] to 0
 set scratch to mklist(4)
 set scratch[0] to 0
 
@@ -252,6 +278,18 @@ const cases = [
   { name: 'fn with while',           src: 'to sum_to with n\nset i to 1\nset s to 0\nwhile i <= n\nset s to s + i\nset i to i + 1\nend\nreturn s\nend\nsay sum_to(10)\nsay sum_to(100)' },
   { name: 'global + fn together',    src: 'set base to 100\nto shift with x\nreturn x + base\nend\nsay shift(5)\nsay shift(7)' },
   { name: 'builtin mklist + len',    src: 'set xs to mklist(5)\nsay length(xs)' },
+  { name: 'string literal',          src: 'say "hello"' },
+  { name: 'string concat',           src: 'say "foo" + "bar"' },
+  { name: 'string var + concat',     src: 'set a to "hi"\nset b to " there"\nsay a + b' },
+  { name: 'str builtin',             src: 'say str(42) + str(58)' },
+  { name: 'chr / ord',               src: 'say chr(65) + chr(90)\nsay ord("Z", 0)' },
+  { name: 'list literal + index',    src: 'set xs to [10, 20, 30, 40]\nsay xs[0]\nsay xs[1]\nsay xs[3]' },
+  { name: 'list literal length',     src: 'set xs to [7, 7, 7, 7, 7]\nsay length(xs)' },
+  { name: 'index in expr',           src: 'set xs to [1, 2, 3, 4, 5]\nsay xs[2] * xs[4] + xs[0]' },
+  { name: 'set xs[i] to v',          src: 'set xs to mklist(4)\nset xs[0] to 100\nset xs[1] to 200\nset xs[2] to xs[0] + xs[1]\nsay xs[2]' },
+  { name: 'index in while',          src: 'set xs to [3, 1, 4, 1, 5, 9]\nset i to 0\nset s to 0\nwhile i < length(xs)\nset s to s + xs[i]\nset i to i + 1\nend\nsay s' },
+  { name: 'empty string',            src: 'set s to ""\nsay length(s)' },
+  { name: 'string in loop',          src: 'set i to 0\nwhile i < 3\nsay "tick"\nset i to i + 1\nend' },
 ];
 
 let failed = 0;

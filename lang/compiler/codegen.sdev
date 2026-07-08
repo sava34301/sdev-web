@@ -189,6 +189,11 @@ to find_fn with name
 end
 
 # ---- variable load / store dispatch --------------------------------------
+#
+# Milestone 5h added expression-type tracking. Every parse_* function that
+# emits a push updates `expr_type[0]` to 0 (int) or 1 (str). Persistent
+# per-variable types live in two parallel tables (`sym_types` /
+# `loc_types`) that mirror `sym_names` / `loc_names`.
 
 to emit_load_ident with name
   if in_func[0] is 1
@@ -196,16 +201,19 @@ to emit_load_ident with name
     if slot >= 0
       emit_byte(99)
       emit_byte(slot)
+      set expr_type[0] to loc_types[slot + 1]
       return 0
     end
   end
   set slot to intern_name(name)
   emit_byte(3)
   emit_byte(slot)
+  set expr_type[0] to sym_types[slot + 1]
   return 0
 end
 
 to emit_store_ident with name
+  set t to expr_type[0]
   if in_func[0] is 1
     set slot to find_local(name)
     if slot < 0
@@ -213,11 +221,13 @@ to emit_store_ident with name
     end
     emit_byte(100)
     emit_byte(slot)
+    set loc_types[slot + 1] to t
     return 0
   end
   set slot to intern_name(name)
   emit_byte(4)
   emit_byte(slot)
+  set sym_types[slot + 1] to t
   return 0
 end
 
@@ -226,26 +236,32 @@ end
 to emit_call with name nargs
   if str_eq(name, "length")
     emit_byte(131)
+    set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "concat")
     emit_byte(145)
+    set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "ord")
     emit_byte(132)
+    set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "chr")
     emit_byte(136)
+    set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "str")
     emit_byte(135)
+    set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "mklist")
     emit_byte(137)
+    set expr_type[0] to 0
     return 0
   end
   set idx to find_fn(name)
@@ -255,6 +271,7 @@ to emit_call with name nargs
     emit_byte(target % 256)
     emit_byte((target / 256) % 256)
     emit_byte(nargs)
+    set expr_type[0] to 0
   end
   return 0
 end
@@ -284,11 +301,37 @@ to is_ident_word with pos w
 end
 
 # ---- recursive-descent parser --------------------------------------------
+#
+# Every parse_* leaves `expr_type[0]` set to the type of the value it
+# pushed (0 = int, 1 = str). The top-level `say` uses this to pick between
+# SAY_I32 and SAY_STR; `+` uses it to promote to STRCAT when either
+# operand is a string.
 
 to parse_atom with pos
   if tk_kind[pos] is 1
     emit_byte(1)
     emit_i32(tk_num[pos])
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  # String literal: build the string at runtime with LNEW + CHR/STRCAT.
+  # We don't share the JS bootstrap's string pool, so every literal turns
+  # into an empty heap-string plus one CHR/STRCAT per byte.
+  if tk_kind[pos] is 3
+    set s to tk_txt[pos]
+    set slen to length(s)
+    emit_byte(1)
+    emit_i32(0)
+    emit_byte(137)
+    set i to 0
+    while i < slen
+      emit_byte(1)
+      emit_i32(ord(s, i))
+      emit_byte(136)
+      emit_byte(145)
+      set i to i + 1
+    end
+    set expr_type[0] to 1
     return pos + 1
   end
   if tk_kind[pos] is 2
@@ -325,20 +368,68 @@ to parse_atom with pos
     end
     return pos
   end
+  # List literal: [ e1, e2, ... ]
+  if is_op_c(pos, 91)
+    set pos to pos + 1
+    set n to 0
+    if is_op_c(pos, 93)
+      set pos to pos + 1
+    else
+      set pos to parse_cmp(pos)
+      set n to 1
+      while is_op_c(pos, 44)
+        set pos to parse_cmp(pos + 1)
+        set n to n + 1
+      end
+      if is_op_c(pos, 93)
+        set pos to pos + 1
+      end
+    end
+    emit_byte(128)
+    emit_byte(n % 256)
+    emit_byte((n / 256) % 256)
+    set expr_type[0] to 0
+    return pos
+  end
+  return pos
+end
+
+# Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads,
+# each emitting an LGET.
+to parse_postfix with pos
+  set going to 1
+  while going
+    if is_op_c(pos, 91)
+      set pos to pos + 1
+      set pos to parse_cmp(pos)
+      if is_op_c(pos, 93)
+        set pos to pos + 1
+      end
+      emit_byte(129)
+      set expr_type[0] to 0
+    else
+      set going to 0
+    end
+  end
   return pos
 end
 
 to parse_mul with pos
   set pos to parse_atom(pos)
+  set pos to parse_postfix(pos)
   set going to 1
   while going
     if is_op_c(pos, 42)
       set pos to parse_atom(pos + 1)
+      set pos to parse_postfix(pos)
       emit_byte(18)
+      set expr_type[0] to 0
     else
       if is_op_c(pos, 47)
         set pos to parse_atom(pos + 1)
+        set pos to parse_postfix(pos)
         emit_byte(19)
+        set expr_type[0] to 0
       else
         set going to 0
       end
@@ -352,12 +443,28 @@ to parse_add with pos
   set going to 1
   while going
     if is_op_c(pos, 43)
+      set lk to expr_type[0]
       set pos to parse_mul(pos + 1)
-      emit_byte(16)
+      set rk to expr_type[0]
+      set promote to 0
+      if lk is 1
+        set promote to 1
+      end
+      if rk is 1
+        set promote to 1
+      end
+      if promote is 1
+        emit_byte(145)
+        set expr_type[0] to 1
+      else
+        emit_byte(16)
+        set expr_type[0] to 0
+      end
     else
       if is_op_c(pos, 45)
         set pos to parse_mul(pos + 1)
         emit_byte(17)
+        set expr_type[0] to 0
       else
         set going to 0
       end
@@ -368,7 +475,7 @@ end
 
 # Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=`
 # are pre-folded by the driver's lexer into sentinel punctuation codes
-# 300 / 301.
+# 300 / 301. Every comparison yields an int (0 / 1).
 to parse_cmp with pos
   set pos to parse_add(pos)
   if is_ident_word(pos, "is")
@@ -384,26 +491,31 @@ to parse_cmp with pos
     else
       emit_byte(32)
     end
+    set expr_type[0] to 0
     return pos
   end
   if is_op_c(pos, 60)
     set pos to parse_add(pos + 1)
     emit_byte(34)
+    set expr_type[0] to 0
     return pos
   end
   if is_op_c(pos, 62)
     set pos to parse_add(pos + 1)
     emit_byte(35)
+    set expr_type[0] to 0
     return pos
   end
   if is_op_c(pos, 300)
     set pos to parse_add(pos + 1)
     emit_byte(36)
+    set expr_type[0] to 0
     return pos
   end
   if is_op_c(pos, 301)
     set pos to parse_add(pos + 1)
     emit_byte(37)
+    set expr_type[0] to 0
     return pos
   end
   return pos
@@ -485,13 +597,37 @@ to parse_stmt with pos
   end
   if is_ident_word(pos, "say")
     set pos to parse_cmp(pos + 1)
-    emit_byte(80)
+    if expr_type[0] is 1
+      emit_byte(81)
+    else
+      emit_byte(80)
+    end
     return pos
   end
   if is_ident_word(pos, "set")
     set pos to pos + 1
     set name to tk_txt[pos]
-    set pos to pos + 2
+    set pos to pos + 1
+    # Index-assignment form: set NAME [ EXPR ] to EXPR
+    if is_op_c(pos, 91)
+      emit_load_ident(name)
+      set pos to pos + 1
+      set pos to parse_cmp(pos)
+      if is_op_c(pos, 93)
+        set pos to pos + 1
+      end
+      if is_ident_word(pos, "to")
+        set pos to pos + 1
+      end
+      set pos to parse_cmp(pos)
+      emit_byte(130)
+      set expr_type[0] to 0
+      return pos
+    end
+    # Plain: set NAME to EXPR
+    if is_ident_word(pos, "to")
+      set pos to pos + 1
+    end
     set pos to parse_cmp(pos)
     emit_store_ident(name)
     return pos
