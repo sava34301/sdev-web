@@ -297,7 +297,14 @@ const cases = [
   { name: 'index in while',          src: 'set xs to [3, 1, 4, 1, 5, 9]\nset i to 0\nset s to 0\nwhile i < length(xs)\nset s to s + xs[i]\nset i to i + 1\nend\nsay s' },
   { name: 'empty string',            src: 'set s to ""\nsay length(s)' },
   { name: 'string in loop',          src: 'set i to 0\nwhile i < 3\nsay "tick"\nset i to i + 1\nend' },
-];
+  // ---- Milestone 5i: forward references + string-returning fns -----------
+  { name: 'forward call',            src: 'say greet()\nto greet\nreturn 7\nend' },
+  { name: 'forward mutual recursion', src: 'to is_even with n\nif n is 0\nreturn 1\nend\nreturn is_odd(n - 1)\nend\nto is_odd with n\nif n is 0\nreturn 0\nend\nreturn is_even(n - 1)\nend\nsay is_even(10)\nsay is_odd(10)\nsay is_even(7)' },
+  { name: 'forward call in expr',    src: 'say double(3) + double(4)\nto double with x\nreturn x * 2\nend' },
+  { name: 'string-returning fn',     src: 'to hi\nreturn "hello"\nend\nsay hi()' },
+  { name: 'string fn concat',        src: 'to hi\nreturn "hi "\nend\nto you\nreturn "you"\nend\nsay hi() + you()' },
+  { name: 'string fn with param',    src: 'to greet with n\nreturn "hello " + n\nend\nsay greet("world")\nsay greet("sdev")' },
+  { name: 'fn returns int by str path', src: 'to pick with n\nif n is 1\nreturn "one"\nend\nreturn "many"\nend\nsay pick(1)\nsay pick(9)' },
 
 let failed = 0;
 for (const c of cases) {
