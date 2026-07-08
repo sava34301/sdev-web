@@ -53,7 +53,7 @@
 (module
   (import "env" "host_say_i32" (func $say_i32 (param i32)))
   (import "env" "host_say_str" (func $say_str (param i32 i32)))
-  (memory (export "memory") 1)
+  (memory (export "memory") 4)
 
 
   ;; ---- constants ---------------------------------------------------------
@@ -61,10 +61,12 @@
   (global $STACK_BASE i32 (i32.const 0x4000))
   (global $CALL_BASE  i32 (i32.const 0x6000))
   (global $CODE_BASE  i32 (i32.const 0x8000))
+  (global $HEAP_BASE  i32 (i32.const 0x10000))
 
   ;; ---- call-frame registers ---------------------------------------------
   (global $fp  (mut i32) (i32.const 0x6000))  ;; current frame base
   (global $csp (mut i32) (i32.const 0x6000))  ;; call-stack tip
+  (global $hp  (mut i32) (i32.const 0x10000)) ;; heap bump pointer
 
   ;; ---- program length (set by host before calling run) -------------------
   (global $prog_len (mut i32) (i32.const 0))
