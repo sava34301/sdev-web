@@ -219,6 +219,17 @@ const cases = [
   { name: 'set expr + reuse',        src: 'set a to 3 + 4\nset b to a * 2\nsay a\nsay b' },
   { name: 'accumulator',             src: 'set s to 0\nset s to s + 10\nset s to s + 20\nset s to s + 30\nsay s' },
   { name: 'read in expr',            src: 'set x to 5\nset y to 6\nsay x * y + x' },
+  { name: 'comparison is',           src: 'say 5 is 5\nsay 5 is 4' },
+  { name: 'comparison is not',       src: 'say 5 is not 5\nsay 5 is not 4' },
+  { name: 'comparison lt/gt',        src: 'say 3 < 5\nsay 3 > 5' },
+  { name: 'comparison le/ge',        src: 'say 3 <= 3\nsay 3 >= 4' },
+  { name: 'if then',                 src: 'set x to 10\nif x is 10\nsay 111\nend\nsay 999' },
+  { name: 'if else true',            src: 'set x to 1\nif x is 1\nsay 100\nelse\nsay 200\nend' },
+  { name: 'if else false',           src: 'set x to 2\nif x is 1\nsay 100\nelse\nsay 200\nend' },
+  { name: 'while count up',          src: 'set i to 0\nwhile i < 5\nsay i\nset i to i + 1\nend\nsay 999' },
+  { name: 'while sum',               src: 'set i to 1\nset s to 0\nwhile i <= 10\nset s to s + i\nset i to i + 1\nend\nsay s' },
+  { name: 'nested if in while',      src: 'set i to 0\nwhile i < 6\nif i is 3\nsay 300\nelse\nsay i\nend\nset i to i + 1\nend' },
+  { name: 'fizzbuzz-lite',           src: 'set i to 1\nwhile i <= 5\nif i is 3\nsay 30\nelse\nsay i\nend\nset i to i + 1\nend' },
 ];
 
 let failed = 0;
