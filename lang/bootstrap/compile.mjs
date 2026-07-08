@@ -165,7 +165,7 @@ function parseProgram(tokens) {
   function mul_() { let l = un_();  while (peek().type === 'OP' && (peek().value === '*' || peek().value === '/' || peek().value === '%')) { const op = peek().value; p++; l = { k: 'bin', op, l, r: un_() }; } return l; }
   function un_()  { if (peek().type === 'OP' && peek().value === '-') { p++; return { k: 'un', op: '-', x: un_() }; } return callOrAtom(); }
   function callOrAtom() {
-    const a = atom();
+    let a = atom();
     // fn(a, b) call form
     if (a.k === 'ident' && peek().type === 'OP' && peek().value === '(') {
       p++;
@@ -175,20 +175,27 @@ function parseProgram(tokens) {
         while (peek().type === 'OP' && peek().value === ',') { p++; args.push(expr()); }
       }
       eat('OP', ')');
-      return { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args };
     }
     // `fn with a b` call form (space-separated single atoms)
-    if (a.k === 'ident' && peek().type === 'KW' && peek().value === 'with') {
+    else if (a.k === 'ident' && peek().type === 'KW' && peek().value === 'with') {
       p++;
       const args = [];
       while (canStartAtom(peek())) args.push(atom());
-      return { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args };
+    }
+    // postfix indexing: x[i][j]...
+    while (peek().type === 'OP' && peek().value === '[') {
+      p++;
+      const idx = expr();
+      eat('OP', ']');
+      a = { k: 'index', target: a, idx };
     }
     return a;
   }
   function canStartAtom(t) {
     return t.type === 'NUM' || t.type === 'STR' || t.type === 'IDENT'
-      || (t.type === 'OP' && t.value === '(');
+      || (t.type === 'OP' && (t.value === '(' || t.value === '['));
   }
   function atom() {
     const t = peek();
@@ -196,6 +203,17 @@ function parseProgram(tokens) {
     if (t.type === 'STR') { p++; return { k: 'str', v: t.value }; }
     if (t.type === 'IDENT') { p++; return { k: 'ident', name: t.value }; }
     if (t.type === 'OP' && t.value === '(') { p++; const e = expr(); eat('OP', ')'); return e; }
+    // list literal: [a, b, c]
+    if (t.type === 'OP' && t.value === '[') {
+      p++;
+      const items = [];
+      if (!(peek().type === 'OP' && peek().value === ']')) {
+        items.push(expr());
+        while (peek().type === 'OP' && peek().value === ',') { p++; items.push(expr()); }
+      }
+      eat('OP', ']');
+      return { k: 'list', items, line: t.line };
+    }
     throw new SdevError(`bootstrap: unexpected ${t.type}:${t.value}`, t.line);
   }
 }
