@@ -186,18 +186,33 @@ the same lexer, parser, and language semantics.
   mutation via `set xs[i] to v`, and string-aware `+` — all match the
   JS bootstrap's output byte-for-byte.
 
-**Milestone 5i (fixed-point self-compile) — next:**
-- Add a forward-reference patch table for `CALL` so mutual recursion
-  compiles (the self-hosted compiler's own `parse_stmt` ↔ `parse_block`
-  pair currently only works because functions are defined before they
-  are called).
-- Track user-function return types so `say greet("world")` picks
-  `SAY_STR` correctly — currently a returned string prints as its heap
-  pointer.
-- Self-compile: have `codegen.sdev` compile its own source to bytecode,
-  then re-run that bytecode to compile itself again, and diff the two
-  byte streams. When the diff is empty, the JS bootstrap compiler AND
-  the JS reference runtime are both deleted.
+**Milestone 5i (forward references + return types) — shipped:**
+- `codegen.sdev` gained a pending-calls patch table: unresolved `CALL`s
+  now emit a zero u16 target and record the patch position in two
+  parallel globals (`pend_names` / `pend_pos`). After the whole program
+  parses, `resolve_pending_calls` walks the table and back-patches every
+  site once all `fn_offsets` are known. Forward references and mutual
+  recursion (`is_even ↔ is_odd`) compile without reordering.
+- Function return types are tracked in a new `fn_ret_types` table
+  parallel to `fn_names`. Every `return EXPR` inside a body upgrades the
+  current function's slot to `str` if the returned expression is
+  string-typed; `emit_call` writes that recorded type into
+  `expr_type[0]` so `say greet("world")` picks `SAY_STR` and
+  `"hi " + greet(name)` promotes to `STRCAT`.
+- The JS bootstrap now runs a matching fixed-point return-type inference
+  pass (`inferReturnTypeOf`) before emitting bodies, so its `call`
+  emitter agrees with the self-hosted compiler on every case in the
+  suite — 50/50 tests pass byte-for-byte.
+- `scripts/test-self-codegen.mjs` grew seven new cases: forward calls,
+  forward calls inside expressions, mutual `is_even`/`is_odd` recursion,
+  zero-arg string-returning fns, string-fn concat, string-fn with a
+  string parameter, and a fn returning `str` down every branch.
+
+**Milestone 5j (fixed-point self-compile) — next:**
+- Have `codegen.sdev` compile its own source to bytecode, then re-run
+  that bytecode to compile itself again, and diff the two byte streams.
+  When the diff is empty, the JS bootstrap compiler and the JS reference
+  runtime are both deleted.
 
 ## Where we're going (Milestone 2 — post-launch)
 

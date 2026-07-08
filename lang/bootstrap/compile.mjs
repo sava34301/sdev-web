@@ -247,7 +247,21 @@ function emit(stmts, em) {
   // Register functions (name → arity) up front so recursive calls resolve.
   for (const f of funcs) {
     if (em.functions.has(f.name)) throw new SdevError(`duplicate function ${f.name}`, f.line);
-    em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [] });
+    em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [], retType: 'int' });
+  }
+
+  // Infer return types by fixed-point iteration BEFORE emitting bodies, so
+  // that `say fn()` and `str + fn()` pick SAY_STR / STRCAT correctly even
+  // when the callee is defined later or is (mutually) recursive.
+  let changed = true;
+  let guard = 0;
+  while (changed && guard++ < funcs.length + 2) {
+    changed = false;
+    for (const f of funcs) {
+      const info = em.functions.get(f.name);
+      const t = inferReturnTypeOf(f, em.functions);
+      if (t !== info.retType) { info.retType = t; changed = true; }
+    }
   }
 
   // Leading JMP to main (patched later)
@@ -360,10 +374,61 @@ function emitExpr(e, em, locals) {
       em.emitU16(0);            // target placeholder — patched at end
       em.emit(e.args.length);
       info.patchSites.push(site);
-      return 'int';
+      return info.retType || 'int';
     }
   }
   throw new SdevError(`bootstrap: cannot compile ${e.k}`, 0);
+}
+
+// ---- Return-type inference (pre-emit pass) --------------------------------
+// Mirrors emitExpr's type rules without emitting code. Runs to fixed point
+// so mutually-recursive string-returning functions converge.
+
+function inferReturnTypeOf(func, fnTypes) {
+  const localTypes = new Map();
+  for (const p of func.params) localTypes.set(p, 'int');
+  return inferBody(func.body, localTypes, fnTypes);
+}
+function inferBody(body, localTypes, fnTypes) {
+  let ret = 'int';
+  for (const s of body) {
+    if (s.k === 'set') localTypes.set(s.name, inferExpr(s.expr, localTypes, fnTypes));
+    else if (s.k === 'return' && s.expr) {
+      if (inferExpr(s.expr, localTypes, fnTypes) === 'str') ret = 'str';
+    }
+    else if (s.k === 'if') {
+      if (inferBody(s.then_, localTypes, fnTypes) === 'str') ret = 'str';
+      if (s.else_ && inferBody(s.else_, localTypes, fnTypes) === 'str') ret = 'str';
+    }
+    else if (s.k === 'while') {
+      if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
+    }
+  }
+  return ret;
+}
+function inferExpr(e, localTypes, fnTypes) {
+  switch (e.k) {
+    case 'num':   return 'int';
+    case 'str':   return 'str';
+    case 'ident': return localTypes.get(e.name) || 'int';
+    case 'un':    return 'int';
+    case 'bin':
+      if (e.op === '+') {
+        const l = inferExpr(e.l, localTypes, fnTypes);
+        const r = inferExpr(e.r, localTypes, fnTypes);
+        if (l === 'str' || r === 'str') return 'str';
+      }
+      return 'int';
+    case 'list':  return 'int';
+    case 'index': return 'int';
+    case 'call': {
+      const bi = BUILTINS[e.name];
+      if (bi) return bi.ret;
+      const info = fnTypes.get(e.name);
+      return info ? (info.retType || 'int') : 'int';
+    }
+  }
+  return 'int';
 }
 
 function emitStmt(s, em, locals) {
