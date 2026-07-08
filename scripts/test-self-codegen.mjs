@@ -137,7 +137,7 @@ end
 `;
 
 const driveCodegen = `
-set bc to mklist(8000)
+set bc to mklist(16384)
 set bc[0] to 0
 set sym_names to mklist(256)
 set sym_names[0] to 0
@@ -155,6 +155,12 @@ set fn_arities to mklist(256)
 set fn_arities[0] to 0
 set fn_ret_types to mklist(256)
 set fn_ret_types[0] to 0
+set fn_extras to mklist(256)
+set fn_extras[0] to 0
+set fn_body_start to mklist(256)
+set fn_body_start[0] to 0
+set cur_fn to mklist(2)
+set cur_fn[0] to 0
 set pend_names to mklist(512)
 set pend_names[0] to 0
 set pend_pos to mklist(512)
@@ -165,7 +171,99 @@ set expr_type to mklist(2)
 set expr_type[0] to 0
 set scratch to mklist(4)
 set scratch[0] to 0
+set emit_enabled to mklist(2)
+set emit_enabled[0] to 0
+set skip_fn_defs to mklist(2)
+set skip_fn_defs[0] to 0
+set pool_bytes to mklist(8192)
+set pool_bytes[0] to 0
+set pool_keys to mklist(256)
+set pool_keys[0] to 0
+set pool_offs to mklist(256)
+set pool_offs[0] to 0
 
+# Pass 1 — collect + fixed-point return-type inference.
+#
+# Runs parse_stmt twice with emit_enabled=0. Each iteration re-walks the
+# token stream: functions are registered on the first iteration and
+# reused on the second (find_fn short-circuits duplicate pushes); the
+# second iteration lets forward calls to string-returning functions see
+# the return type promoted by the first iteration's \`return\` walk. Two
+# iterations suffice for every case in the suite (matches the bootstrap's
+# guard bound of fnCount + 2).
+set emit_enabled[0] to 0
+set skip_fn_defs[0] to 0
+set _iter to 0
+while _iter < 2
+  set pos to 0
+  set sym_names[0] to 0
+  set sym_types[0] to 0
+  set going to 1
+  while going
+    set new_pos to parse_stmt(pos)
+    if new_pos is pos
+      set going to 0
+    else
+      set pos to new_pos
+    end
+    if pos >= tk_count
+      set going to 0
+    end
+  end
+  set _iter to _iter + 1
+end
+
+# Pass 2 — real emit.
+#
+# Reset the tables mutated by pass 1's walk so pass 2 assigns global
+# slots (and pending-call sites) in the exact left-to-right order the JS
+# bootstrap produces: function bodies first (in registration order),
+# then the main code.
+set sym_names[0] to 0
+set sym_types[0] to 0
+set pend_names[0] to 0
+set pend_pos[0] to 0
+set bc[0] to 0
+set emit_enabled[0] to 1
+
+# Leading JMP → main. Two-byte placeholder is back-patched once every
+# function body has been emitted.
+emit_byte(64)
+set _jmp_main to placeholder16()
+
+# Emit every registered function body contiguously.
+set _i to 1
+set _fstop to fn_names[0] + 1
+while _i < _fstop
+  set fn_offsets[_i] to bc[0]
+  set loc_names[0] to 0
+  set loc_types[0] to 0
+  set pos to fn_body_start[_i]
+  set pos to parse_params(pos)
+  set _extras to fn_extras[_i]
+  if _extras > 0
+    emit_byte(98)
+    emit_byte(_extras)
+  end
+  set in_func[0] to 1
+  set cur_fn[0] to _i
+  set pos to parse_block(pos)
+  # Fallthrough guard: implicit \`return 0\`.
+  emit_byte(1)
+  emit_i32(0)
+  emit_byte(97)
+  set in_func[0] to 0
+  set cur_fn[0] to 0
+  set _i to _i + 1
+end
+
+# Patch the leading JMP so it jumps over every function body and lands
+# at the start of main.
+patch_i16(_jmp_main, bc[0])
+
+# Emit main. skip_fn_defs=1 makes parse_stmt swallow any \`to ... end\`
+# block silently — those bodies have already been hoisted above.
+set skip_fn_defs[0] to 1
 set pos to 0
 set going to 1
 while going
@@ -179,14 +277,22 @@ while going
     set going to 0
   end
 end
-resolve_pending_calls()
 emit_byte(255)
+resolve_pending_calls()
 
+# Dump: bytecode length, bytecode bytes, pool length, pool bytes.
 say bc[0]
 set k to 1
 set stop to bc[0] + 1
 while k < stop
   say bc[k]
+  set k to k + 1
+end
+say pool_bytes[0]
+set k to 1
+set stop to pool_bytes[0] + 1
+while k < stop
+  say pool_bytes[k]
   set k to k + 1
 end
 `;
