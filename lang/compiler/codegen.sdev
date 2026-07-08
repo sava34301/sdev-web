@@ -777,10 +777,6 @@ to parse_stmt with pos
     end
     return pos
   end
-  if is_ident_word(pos, "to")
-    set pos to pos + 1
-    set fname to tk_txt[pos]
-    set pos to pos + 1
   # Milestone 5k: `to NAME with params NL body end`.
   #
   # This handler runs in two very different modes:
@@ -849,7 +845,5 @@ to parse_stmt with pos
     end
     return pos
   end
-  return pos
-end
   return pos
 end
