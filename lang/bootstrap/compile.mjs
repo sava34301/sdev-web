@@ -41,6 +41,7 @@ const BUILTINS = {
   ord:     { arity: 2, ret: 'int', emit: (em) => em.emit(OP.SGET) },
   chr:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.CHR) },
   str:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
+  mklist:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LNEW) },
 };
 
 class Emitter {
