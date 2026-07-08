@@ -103,7 +103,7 @@ const driveCodegen = `
 set bc to mklist(4000)
 set bc[0] to 0
 set sym_names to mklist(256)
-set sym_count to 0
+set sym_names[0] to 0
 
 set pos to 0
 set going to 1
