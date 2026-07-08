@@ -121,6 +121,18 @@ set bc to mklist(8000)
 set bc[0] to 0
 set sym_names to mklist(256)
 set sym_names[0] to 0
+set loc_names to mklist(256)
+set loc_names[0] to 0
+set fn_names to mklist(256)
+set fn_names[0] to 0
+set fn_offsets to mklist(256)
+set fn_offsets[0] to 0
+set fn_arities to mklist(256)
+set fn_arities[0] to 0
+set in_func to mklist(2)
+set in_func[0] to 0
+set scratch to mklist(4)
+set scratch[0] to 0
 
 set pos to 0
 set going to 1
@@ -230,6 +242,16 @@ const cases = [
   { name: 'while sum',               src: 'set i to 1\nset s to 0\nwhile i <= 10\nset s to s + i\nset i to i + 1\nend\nsay s' },
   { name: 'nested if in while',      src: 'set i to 0\nwhile i < 6\nif i is 3\nsay 300\nelse\nsay i\nend\nset i to i + 1\nend' },
   { name: 'fizzbuzz-lite',           src: 'set i to 1\nwhile i <= 5\nif i is 3\nsay 30\nelse\nsay i\nend\nset i to i + 1\nend' },
+  { name: 'zero-arg fn',             src: 'to answer\nreturn 42\nend\nsay answer()' },
+  { name: 'one-arg fn',              src: 'to sq with x\nreturn x * x\nend\nsay sq(5)\nsay sq(9)' },
+  { name: 'two-arg fn',              src: 'to add with a b\nreturn a + b\nend\nsay add(3, 4)\nsay add(10, 20)' },
+  { name: 'fn using locals',         src: 'to hyp with a b\nset s to a * a + b * b\nreturn s\nend\nsay hyp(3, 4)' },
+  { name: 'fn calls fn',             src: 'to sq with x\nreturn x * x\nend\nto sum_sq with a b\nreturn sq(a) + sq(b)\nend\nsay sum_sq(3, 4)' },
+  { name: 'recursive factorial',     src: 'to fact with n\nif n < 2\nreturn 1\nend\nreturn n * fact(n - 1)\nend\nsay fact(6)' },
+  { name: 'recursive fib',           src: 'to fib with n\nif n < 2\nreturn n\nend\nreturn fib(n - 1) + fib(n - 2)\nend\nsay fib(10)' },
+  { name: 'fn with while',           src: 'to sum_to with n\nset i to 1\nset s to 0\nwhile i <= n\nset s to s + i\nset i to i + 1\nend\nreturn s\nend\nsay sum_to(10)\nsay sum_to(100)' },
+  { name: 'global + fn together',    src: 'set base to 100\nto shift with x\nreturn x + base\nend\nsay shift(5)\nsay shift(7)' },
+  { name: 'builtin mklist + len',    src: 'set xs to mklist(5)\nsay length(xs)' },
 ];
 
 let failed = 0;

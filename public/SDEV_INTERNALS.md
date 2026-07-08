@@ -138,9 +138,40 @@ the same lexer, parser, and language semantics.
   summation, and nested `if` inside `while` (a fizzbuzz-flavoured shape).
   Every case matches the JS bootstrap byte-for-byte.
 
-**Milestone 5g (functions + full self-compile) — next chunk:**
-- Extend `codegen.sdev` to handle function declarations
-  (`to name with … end`), `return`, string literals, and list literals.
+**Milestone 5g (functions in the self-hosted compiler) — shipped:**
+- `codegen.sdev` gained function declarations (`to NAME with p1 p2 …
+  end`), `return EXPR?`, and call-syntax atoms (`NAME(a, b)`).
+- Function bodies are emitted inline, bracketed by a `JMP` that skips
+  over them so top-level flow doesn't fall in. Each body's byte offset,
+  arity, and name go into three parallel global tables
+  (`fn_names` / `fn_offsets` / `fn_arities`) so subsequent `CALL` sites
+  resolve directly — no patch pass yet, so callers must appear after
+  their callee. Recursive `fact` / `fib` work because a function can
+  call itself once its own offset has been recorded.
+- Locals get their own scope: a per-function `loc_names` list is reset
+  on every `to`, params occupy slots 0..n-1, and any `set NAME` inside
+  the body allocates a fresh local slot. `emit_load_ident` /
+  `emit_store_ident` dispatch to `LOAD_LOC` / `STORE_LOC` while
+  `in_func[0]` is 1 and fall back to the global table otherwise.
+- Six builtins compile to single opcodes: `length` → `LEN`,
+  `concat` → `STRCAT`, `ord` → `SGET`, `chr` → `CHR`, `str` → `I2S`,
+  `mklist` → `LNEW`.
+- `scripts/test-self-codegen.mjs` grew to 31 cases covering zero/one/two
+  argument functions, functions using locals + `while` loops, functions
+  calling other functions, recursive factorial, recursive `fib(10)`, and
+  the `mklist`/`length` builtins. Every case matches the JS bootstrap
+  byte-for-byte.
+
+**Milestone 5h (strings + lists + fixed-point self-compile) — next:**
+- Add string literals (`"…"`) and list literals (`[a, b, c]`) to the
+  self-hosted parser, plus expression-level type tracking so `say`
+  picks `SAY_STR` vs `SAY_I32` correctly.
+- Add index expressions (`xs[i]`) and index assignment
+  (`set xs[i] to v`) — needed for the compiler to describe its own
+  data structures.
+- Add forward-declaration / patch table for `CALL` so mutual recursion
+  compiles (the self-hosted compiler's own `parse_stmt` ↔ `parse_block`
+  pair needs this).
 - Self-compile: have `codegen.sdev` compile its own source to bytecode,
   then re-run that bytecode to compile itself again, and diff the two
   byte streams. When the diff is empty, the JS bootstrap compiler AND
