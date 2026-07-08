@@ -1,11 +1,11 @@
-# SDEV self-hosted codegen (Milestone 5f).
+# SDEV self-hosted codegen (Milestone 5g).
 #
 # Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits
 # the byte stream to a global buffer `bc` whose cell 0 holds the current
 # byte count and cells 1..count hold the bytes. The scripts/test-self-
 # codegen.mjs driver harvests the buffer via `say`, reconstructs it as a
 # Uint8Array, feeds it into a fresh seed WASM instance, and verifies the
-# executed output matches the JS bootstrap compiler's output byte-for-byte.
+# executed output matches the JS bootstrap compiler's output.
 #
 # Grammar this milestone covers:
 #   program := stmt*
@@ -13,14 +13,22 @@
 #            | 'set' IDENT 'to' expr
 #            | 'if' expr NL block ('else' NL block)? 'end'
 #            | 'while' expr NL block 'end'
+#            | 'to' IDENT ('with' IDENT*)? NL block 'end'
+#            | 'return' expr?
 #   block   := stmt*                              (until 'else' or 'end')
 #   expr    := cmp
 #   cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )?
 #   add     := mul (('+'|'-') mul)*
 #   mul     := atom (('*'|'/') atom)*
-#   atom    := INT | IDENT | '(' expr ')'
+#   atom    := INT
+#            | IDENT                              (variable load)
+#            | IDENT '(' args? ')'                (function call / builtin)
+#            | '(' expr ')'
 #
-# The next slice adds function declarations, `return`, and string literals.
+# Restriction: functions must be defined before their call sites — the
+# self-hosted compiler emits function bodies inline, bracketed by a JMP
+# that skips over them, and records each body's byte offset in a global
+# table. Forward references / mutual recursion land in a later milestone.
 
 # ---- character-class helpers ---------------------------------------------
 
@@ -102,8 +110,7 @@ to emit_i32 with v
 end
 
 # Reserve a two-byte i16 placeholder and return the byte offset at which
-# it starts (0-indexed, so list cell = pos + 1). Patched later by
-# patch_i16 with the resolved target address.
+# it starts (0-indexed, list cell = pos + 1).
 to placeholder16
   set p to bc[0]
   emit_byte(0)
@@ -111,11 +118,9 @@ to placeholder16
   return p
 end
 
-# Patch the two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte
-# offset `target`. The VM interprets the offset relative to the end of
-# the instruction (pos + 2 in our layout), which handles both forward
-# and backward jumps. Negative offsets get their two's-complement 16-bit
-# encoding.
+# Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte
+# offset `target`. Offsets are relative to the end of the instruction
+# (pos + 2). Negative offsets get two's-complement 16-bit encoding.
 to patch_i16 with pos target
   set off to target - (pos + 2)
   if off < 0
@@ -126,17 +131,18 @@ to patch_i16 with pos target
   return 0
 end
 
-# ---- symbol table (global variable slots) --------------------------------
+# ---- symbol tables --------------------------------------------------------
 #
-# The bootstrap seed VM uses u8 slot indices for LOAD/STORE, so we cap the
-# table at 256 entries. The count is stored in the list itself at cell 0,
-# so every mutation is an index-assignment — this sidesteps the bootstrap
-# rule that "plain set NAME inside a function creates a fresh local":
+# Three parallel tables live in global lists whose cell 0 holds the count
+# so every mutation is an index-assignment (immune to the bootstrap's
+# "plain set NAME inside a function creates a fresh local" rule):
 #
-#   sym_names[0]              = number of interned names
-#   sym_names[1..count]       = the interned identifier strings
-#
-# Slot i (as consumed by LOAD/STORE opcodes) lives at sym_names[i+1].
+#   sym_names   — global variable names,       slot = index - 1
+#   loc_names   — local names for CURRENT fn,  slot = index - 1
+#   fn_names    — user-defined function names
+#   fn_offsets  — parallel to fn_names, byte offset of each function's body
+#   fn_arities  — parallel to fn_names, number of declared parameters
+#   in_func     — one-cell flag (in_func[0] = 1 inside a function body)
 
 to intern_name with name
   set k to 1
@@ -150,6 +156,107 @@ to intern_name with name
   set sym_names[sym_names[0] + 1] to name
   set sym_names[0] to sym_names[0] + 1
   return sym_names[0] - 1
+end
+
+to find_local with name
+  set k to 1
+  set stop to loc_names[0] + 1
+  while k < stop
+    if str_eq(loc_names[k], name)
+      return k - 1
+    end
+    set k to k + 1
+  end
+  return 0 - 1
+end
+
+to add_local with name
+  set loc_names[loc_names[0] + 1] to name
+  set loc_names[0] to loc_names[0] + 1
+  return loc_names[0] - 1
+end
+
+to find_fn with name
+  set k to 1
+  set stop to fn_names[0] + 1
+  while k < stop
+    if str_eq(fn_names[k], name)
+      return k - 1
+    end
+    set k to k + 1
+  end
+  return 0 - 1
+end
+
+# ---- variable load / store dispatch --------------------------------------
+
+to emit_load_ident with name
+  if in_func[0] is 1
+    set slot to find_local(name)
+    if slot >= 0
+      emit_byte(99)
+      emit_byte(slot)
+      return 0
+    end
+  end
+  set slot to intern_name(name)
+  emit_byte(3)
+  emit_byte(slot)
+  return 0
+end
+
+to emit_store_ident with name
+  if in_func[0] is 1
+    set slot to find_local(name)
+    if slot < 0
+      set slot to add_local(name)
+    end
+    emit_byte(100)
+    emit_byte(slot)
+    return 0
+  end
+  set slot to intern_name(name)
+  emit_byte(4)
+  emit_byte(slot)
+  return 0
+end
+
+# ---- call emission (built-ins first, then user functions) ----------------
+
+to emit_call with name nargs
+  if str_eq(name, "length")
+    emit_byte(131)
+    return 0
+  end
+  if str_eq(name, "concat")
+    emit_byte(145)
+    return 0
+  end
+  if str_eq(name, "ord")
+    emit_byte(132)
+    return 0
+  end
+  if str_eq(name, "chr")
+    emit_byte(136)
+    return 0
+  end
+  if str_eq(name, "str")
+    emit_byte(135)
+    return 0
+  end
+  if str_eq(name, "mklist")
+    emit_byte(137)
+    return 0
+  end
+  set idx to find_fn(name)
+  if idx >= 0
+    set target to fn_offsets[idx + 1]
+    emit_byte(96)
+    emit_byte(target % 256)
+    emit_byte((target / 256) % 256)
+    emit_byte(nargs)
+  end
+  return 0
 end
 
 # ---- token classifiers ---------------------------------------------------
@@ -176,7 +283,7 @@ to is_ident_word with pos w
   return str_eq(tk_txt[pos], w)
 end
 
-# ---- recursive-descent parser that emits stack-VM bytecode as it goes ----
+# ---- recursive-descent parser --------------------------------------------
 
 to parse_atom with pos
   if tk_kind[pos] is 1
@@ -185,13 +292,34 @@ to parse_atom with pos
     return pos + 1
   end
   if tk_kind[pos] is 2
-    set slot to intern_name(tk_txt[pos])
-    emit_byte(3)
-    emit_byte(slot)
+    set name to tk_txt[pos]
+    # Function/builtin call?  IDENT '(' args ')'
+    if pos + 1 < tk_count
+      if is_op_c(pos + 1, 40)
+        set pos to pos + 2
+        set nargs to 0
+        if is_op_c(pos, 41)
+          set pos to pos + 1
+        else
+          set pos to parse_cmp(pos)
+          set nargs to 1
+          while is_op_c(pos, 44)
+            set pos to parse_cmp(pos + 1)
+            set nargs to nargs + 1
+          end
+          if is_op_c(pos, 41)
+            set pos to pos + 1
+          end
+        end
+        emit_call(name, nargs)
+        return pos
+      end
+    end
+    emit_load_ident(name)
     return pos + 1
   end
   if is_op_c(pos, 40)
-    set pos to parse_add(pos + 1)
+    set pos to parse_cmp(pos + 1)
     if is_op_c(pos, 41)
       return pos + 1
     end
@@ -238,10 +366,9 @@ to parse_add with pos
   return pos
 end
 
-# `is` / `is not` / `<` / `>` / `<=` / `>=`. At most one comparison per
-# expression (chained comparisons are not part of the SDEV grammar).
-# Two-char operators `<=` and `>=` are pre-tokenized by the driver's
-# lexer using sentinel punctuation codes 300 and 301.
+# Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=`
+# are pre-folded by the driver's lexer into sentinel punctuation codes
+# 300 / 301.
 to parse_cmp with pos
   set pos to parse_add(pos)
   if is_ident_word(pos, "is")
@@ -282,7 +409,6 @@ to parse_cmp with pos
   return pos
 end
 
-# Skip newline tokens (kind 5).
 to skip_nl with pos
   set going to 1
   while going
@@ -299,8 +425,7 @@ to skip_nl with pos
   return pos
 end
 
-# Parse a sequence of statements, stopping just before an `else` or `end`
-# ident token (or end-of-input). Returns the cursor at the terminator.
+# Parse a sequence of statements until `else`, `end`, or EOF.
 to parse_block with pos
   set going to 1
   while going
@@ -327,9 +452,32 @@ to parse_block with pos
   return pos
 end
 
-# One statement. Returns the cursor after the statement, or the original
-# cursor if nothing recognisable was found (which lets the top-level loop
-# bail out cleanly).
+# Parse the parameter list of a `to NAME with p1 p2 ...` declaration and
+# push each param into loc_names. Returns (new_pos, n_params) packed into
+# a two-cell scratch list. Since SDEV functions can only return one
+# value, we return new_pos and stash n_params in a global scratch cell.
+to parse_params with pos
+  set scratch[0] to 0
+  if is_ident_word(pos, "with")
+    set pos to pos + 1
+    set collecting to 1
+    while collecting
+      if pos >= tk_count
+        set collecting to 0
+      else
+        if tk_kind[pos] is 2
+          add_local(tk_txt[pos])
+          set scratch[0] to scratch[0] + 1
+          set pos to pos + 1
+        else
+          set collecting to 0
+        end
+      end
+    end
+  end
+  return pos
+end
+
 to parse_stmt with pos
   set pos to skip_nl(pos)
   if pos >= tk_count
@@ -342,11 +490,27 @@ to parse_stmt with pos
   end
   if is_ident_word(pos, "set")
     set pos to pos + 1
-    set slot to intern_name(tk_txt[pos])
+    set name to tk_txt[pos]
     set pos to pos + 2
     set pos to parse_cmp(pos)
-    emit_byte(4)
-    emit_byte(slot)
+    emit_store_ident(name)
+    return pos
+  end
+  if is_ident_word(pos, "return")
+    set pos to pos + 1
+    set has_value to 0
+    if pos < tk_count
+      if tk_kind[pos] is not 5
+        set has_value to 1
+      end
+    end
+    if has_value is 1
+      set pos to parse_cmp(pos)
+    else
+      emit_byte(1)
+      emit_i32(0)
+    end
+    emit_byte(97)
     return pos
   end
   if is_ident_word(pos, "if")
@@ -379,6 +543,42 @@ to parse_stmt with pos
     set back to placeholder16()
     patch_i16(back, loop_top)
     patch_i16(jz, bc[0])
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
+  end
+  if is_ident_word(pos, "to")
+    set pos to pos + 1
+    set fname to tk_txt[pos]
+    set pos to pos + 1
+    # Reset local scope; params collected by parse_params land at slots 0..n-1.
+    set loc_names[0] to 0
+    set pos to parse_params(pos)
+    set n_params to scratch[0]
+    # Emit JMP over the function body (so top-level flow skips it).
+    emit_byte(64)
+    set jmp_over to placeholder16()
+    # Record function entry.
+    set fn_names[fn_names[0] + 1] to fname
+    set fn_offsets[fn_names[0] + 1] to bc[0]
+    set fn_arities[fn_names[0] + 1] to n_params
+    set fn_names[0] to fn_names[0] + 1
+    set fn_offsets[0] to fn_offsets[0] + 1
+    set fn_arities[0] to fn_arities[0] + 1
+    set in_func[0] to 1
+    # ENTER with a placeholder byte; patched with n_extras once body knows all locals.
+    emit_byte(98)
+    set enter_pos to bc[0]
+    emit_byte(0)
+    set pos to parse_block(pos)
+    # Fallthrough guard: implicit `return 0`.
+    emit_byte(1)
+    emit_i32(0)
+    emit_byte(97)
+    set bc[enter_pos + 1] to loc_names[0] - n_params
+    set in_func[0] to 0
+    patch_i16(jmp_over, bc[0])
     if is_ident_word(pos, "end")
       set pos to pos + 1
     end
