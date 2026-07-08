@@ -81,13 +81,26 @@ the same lexer, parser, and language semantics.
   implementation of the same rules. All 6 match byte-for-byte. No lexer
   logic remains in JavaScript.
 
-**Milestone 5c (self-hosted parser + codegen) — next chunk:**
-- Port `lang/bootstrap/compile.mjs`'s parser and bytecode emitter to
-  `lang/compiler/parser.sdev` and `lang/compiler/codegen.sdev`. Compile
-  them with the seed → produce `dist/sdev-core.wasm`. Recompile the
-  compiler with that binary → verify byte-identical output. At that
-  point the bootstrap JS compiler AND the JS reference runtime are both
-  deleted, and SDEV compiles SDEV all the way down.
+**Milestone 5c (self-hosted expression parser) — shipped:**
+- `lang/compiler/parser.sdev` is a mutually-recursive precedence-climbing
+  parser written in SDEV. It reads tokens from global buffers (`tk_kind`,
+  `tk_num`, `tk_count`) that a top-level lex loop fills, and streams the
+  parse in reverse-Polish form via `say`. Handles `+ - * /`, parenthesized
+  sub-expressions, and correct left-associativity.
+- `scripts/test-self-parser.mjs` diffs the SDEV parser's RPN against a JS
+  reference on 7 expression shapes (single atom, precedence, nested
+  parens, mixed operators). All match byte-for-byte.
+- Together with the M5b lexer, the front-end for arithmetic expressions
+  now lives entirely in SDEV — the JS bootstrap only bytes-compiles it.
+
+**Milestone 5d (statements + codegen) — next chunk:**
+- Extend `parser.sdev` to statements (`set`, `if`/`else`, `while`, `to`,
+  `return`, `say`) and function definitions.
+- Add `lang/compiler/codegen.sdev` that walks the parse and emits the same
+  bytecode `lang/bootstrap/compile.mjs` produces today. Fixed-point
+  self-compile: recompile the compiler with itself and diff bytes. When
+  the diff is empty, the JS bootstrap compiler AND the JS reference
+  runtime are both deleted, and SDEV compiles SDEV all the way down.
 
 ## Where we're going (Milestone 2 — post-launch)
 
