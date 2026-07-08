@@ -22,12 +22,20 @@
 import { tokenize, SdevError } from '../runtime/v2.js';
 
 const OP = {
-  PUSH_I32: 0x01, PUSH_STR: 0x02, LOAD: 0x03, STORE: 0x04,
+  PUSH_I32: 0x01, PUSH_STR: 0x02, LOAD: 0x03, STORE: 0x04, POP: 0x05,
   ADD: 0x10, SUB: 0x11, MUL: 0x12, DIV: 0x13, MOD: 0x14,
   EQ: 0x20, NE: 0x21, LT: 0x22, GT: 0x23, LE: 0x24, GE: 0x25,
   NOT: 0x30, JMP: 0x40, JZ: 0x41, SAY_I32: 0x50, SAY_STR: 0x51,
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
+  ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83, STRCAT: 0x91,
   HALT: 0xFF,
+};
+
+// Builtins available as function-call syntax. Each maps to a single opcode
+// sequence emitted inline. Arity is checked at compile time.
+const BUILTINS = {
+  length:  { arity: 1, emit: (em) => em.emit(OP.LEN) },
+  concat:  { arity: 2, emit: (em) => em.emit(OP.STRCAT) },
 };
 
 class Emitter {
