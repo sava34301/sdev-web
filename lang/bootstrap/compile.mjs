@@ -357,6 +357,15 @@ function emitStmt(s, em, locals) {
       else { em.emit(OP.STORE); em.emit(em.globalSlot(s.name)); }
       return;
     }
+    case 'setIndex': {
+      // push arr, idx, val, then LSET
+      if (locals && locals.has(s.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(s.name)); }
+      else { em.emit(OP.LOAD); em.emit(em.globalSlot(s.name)); }
+      emitExpr(s.idx, em, locals);
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.LSET);
+      return;
+    }
     case 'if': {
       emitExpr(s.cond, em, locals);
       em.emit(OP.JZ); const jzPos = em.placeholder16(); const afterJZ = em.here();
