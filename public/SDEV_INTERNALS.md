@@ -69,13 +69,25 @@ the same lexer, parser, and language semantics.
 - Regression suite grew to 13 programs, including a byte-level uppercase
   loop that only uses `ord` + `chr` + `+` to build the result.
 
-**Milestone 5 (full self-host) — next chunk:**
-- Port `lang/bootstrap/compile.mjs` to `lang/compiler/*.sdev` (lexer first,
-  then parser, then codegen). Compile it with the seed → produce
-  `dist/sdev-core.wasm`. Recompile itself with that binary → verify
-  byte-identical output. At that point the bootstrap JS compiler AND the
-  JS reference runtime are both deleted, and SDEV compiles SDEV all the
-  way down.
+**Milestone 5b (self-hosted lexer) — shipped:**
+- `lang/compiler/lexer.sdev` is written entirely in SDEV. It tokenizes
+  integers, identifiers, string literals, single-char punctuation, and
+  newlines by walking a source string byte-by-byte with `ord`/`chr`/`str`.
+- New seed opcode `LNEW` (allocate zeroed n-cell list) landed in
+  `seed.wat` — the parser milestone will use it for a growable token
+  buffer; the lexer itself streams tokens with `say` for now.
+- `scripts/test-self-lexer.mjs` runs the SDEV lexer through the WAT VM
+  on 6 sample programs and diffs the token stream against a JS reference
+  implementation of the same rules. All 6 match byte-for-byte. No lexer
+  logic remains in JavaScript.
+
+**Milestone 5c (self-hosted parser + codegen) — next chunk:**
+- Port `lang/bootstrap/compile.mjs`'s parser and bytecode emitter to
+  `lang/compiler/parser.sdev` and `lang/compiler/codegen.sdev`. Compile
+  them with the seed → produce `dist/sdev-core.wasm`. Recompile the
+  compiler with that binary → verify byte-identical output. At that
+  point the bootstrap JS compiler AND the JS reference runtime are both
+  deleted, and SDEV compiles SDEV all the way down.
 
 ## Where we're going (Milestone 2 — post-launch)
 
