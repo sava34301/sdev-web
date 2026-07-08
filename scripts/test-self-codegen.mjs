@@ -102,6 +102,8 @@ end
 const driveCodegen = `
 set bc to mklist(4000)
 set bc[0] to 0
+set sym_names to mklist(256)
+set sym_names[0] to 0
 
 set pos to 0
 set going to 1
@@ -126,7 +128,17 @@ while going
         set pos to parse_add(pos + 1)
         emit_byte(80)
       else
-        set going to 0
+        if str_eq(tk_txt[pos], "set")
+          set pos to pos + 1
+          set target_slot to intern_name(tk_txt[pos])
+          set pos to pos + 1
+          set pos to pos + 1
+          set pos to parse_add(pos)
+          emit_byte(4)
+          emit_byte(target_slot)
+        else
+          set going to 0
+        end
       end
     else
       set going to 0
@@ -213,6 +225,10 @@ const cases = [
   { name: 'multiple says',           src: 'say 1\nsay 2\nsay 3' },
   { name: 'nested + mixed',          src: 'say ((10 + 20) * (30 - 4)) / 5' },
   { name: 'left associativity',      src: 'say 100 - 1 - 2 - 3' },
+  { name: 'set + read',              src: 'set x to 7\nsay x' },
+  { name: 'set expr + reuse',        src: 'set a to 3 + 4\nset b to a * 2\nsay a\nsay b' },
+  { name: 'accumulator',             src: 'set s to 0\nset s to s + 10\nset s to s + 20\nset s to s + 30\nsay s' },
+  { name: 'read in expr',            src: 'set x to 5\nset y to 6\nsay x * y + x' },
 ];
 
 let failed = 0;
