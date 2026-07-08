@@ -67,7 +67,26 @@ while _i < _srclen
             set tk_count to tk_count + 1
             set _i to _j
           else
-            if is_alpha(_c)
+            if _c is 34
+              set _j to _i + 1
+              set _collecting to 1
+              while _collecting
+                if _j >= _srclen
+                  set _collecting to 0
+                else
+                  if ord(src, _j) is 34
+                    set _collecting to 0
+                  else
+                    set _j to _j + 1
+                  end
+                end
+              end
+              set tk_kind[tk_count] to 3
+              set tk_txt[tk_count] to slice(src, _i + 1, _j)
+              set tk_count to tk_count + 1
+              set _i to _j + 1
+            else
+              if is_alpha(_c)
               set _j to _i
               set _going to 1
               while _going
