@@ -162,16 +162,38 @@ the same lexer, parser, and language semantics.
   the `mklist`/`length` builtins. Every case matches the JS bootstrap
   byte-for-byte.
 
-**Milestone 5h (strings + lists + fixed-point self-compile) — next:**
-- Add string literals (`"…"`) and list literals (`[a, b, c]`) to the
-  self-hosted parser, plus expression-level type tracking so `say`
-  picks `SAY_STR` vs `SAY_I32` correctly.
-- Add index expressions (`xs[i]`) and index assignment
-  (`set xs[i] to v`) — needed for the compiler to describe its own
-  data structures.
-- Add forward-declaration / patch table for `CALL` so mutual recursion
+**Milestone 5h (strings, lists, and indexing in the self-hosted compiler) — shipped:**
+- `codegen.sdev` grew expression-type tracking: a global `expr_type[0]`
+  set by every parse_* to 0 (int) or 1 (str). Two parallel tables,
+  `sym_types` and `loc_types`, remember the type of every stored global
+  and local so later loads restore it. `say` now picks `SAY_I32` vs
+  `SAY_STR` from `expr_type[0]`, and `+` promotes to `STRCAT` when
+  either operand is string-typed.
+- String literals `"…"` are compiled without a shared string pool
+  (the self-hosted bytecode runs in a fresh WASM instance with an empty
+  pool). Each literal is built at runtime as `LNEW(0)` + one
+  `PUSH_I32 c; CHR; STRCAT` per byte, yielding a heap-string block that
+  `SAY_STR` handles transparently. Empty strings compile to a bare
+  `LNEW(0)`.
+- List literals `[a, b, c]` emit each element then `NEWLIST <u16 n>`.
+  Postfix indexing `x[i]` chains any number of `LGET`s after an atom via
+  a new `parse_postfix` helper wired into `parse_mul`. Index assignment
+  `set xs[i] to v` emits `LOAD xs; expr(i); expr(v); LSET`.
+- Driver upgrades in `scripts/test-self-codegen.mjs`: the inline lexer
+  now tokenizes `"…"` as string tokens (kind 3), and the driver seeds
+  the new type tables. The suite grew from 31 to 43 test cases, adding
+  literals, concat, `chr`/`ord`, list literals + reads, in-place list
+  mutation via `set xs[i] to v`, and string-aware `+` — all match the
+  JS bootstrap's output byte-for-byte.
+
+**Milestone 5i (fixed-point self-compile) — next:**
+- Add a forward-reference patch table for `CALL` so mutual recursion
   compiles (the self-hosted compiler's own `parse_stmt` ↔ `parse_block`
-  pair needs this).
+  pair currently only works because functions are defined before they
+  are called).
+- Track user-function return types so `say greet("world")` picks
+  `SAY_STR` correctly — currently a returned string prints as its heap
+  pointer.
 - Self-compile: have `codegen.sdev` compile its own source to bytecode,
   then re-run that bytecode to compile itself again, and diff the two
   byte streams. When the diff is empty, the JS bootstrap compiler AND
