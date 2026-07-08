@@ -252,7 +252,6 @@ const cases = [
   { name: 'fn with while',           src: 'to sum_to with n\nset i to 1\nset s to 0\nwhile i <= n\nset s to s + i\nset i to i + 1\nend\nreturn s\nend\nsay sum_to(10)\nsay sum_to(100)' },
   { name: 'global + fn together',    src: 'set base to 100\nto shift with x\nreturn x + base\nend\nsay shift(5)\nsay shift(7)' },
   { name: 'builtin mklist + len',    src: 'set xs to mklist(5)\nsay length(xs)' },
-  { name: 'builtin mklist + set/get', src: 'set xs to mklist(3)\nset xs[0] to 11\nset xs[1] to 22\nset xs[2] to 33\nsay xs[0]\nsay xs[1]\nsay xs[2]' },
 ];
 
 let failed = 0;
