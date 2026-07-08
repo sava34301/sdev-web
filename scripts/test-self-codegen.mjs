@@ -20,9 +20,9 @@ const module     = await WebAssembly.compile(wasmBytes);
 const decoder    = new TextDecoder();
 
 const inlineLex = `
-set tk_kind to mklist(1000)
-set tk_num  to mklist(1000)
-set tk_txt  to mklist(1000)
+set tk_kind to mklist(2000)
+set tk_num  to mklist(2000)
+set tk_txt  to mklist(2000)
 set tk_count to 0
 set _srclen to length(src)
 set _i to 0
@@ -86,8 +86,25 @@ while _i < _srclen
               set tk_count to tk_count + 1
               set _i to _j
             else
+              set _tok to _c
+              if _c is 60
+                if _i + 1 < _srclen
+                  if ord(src, _i + 1) is 61
+                    set _tok to 300
+                    set _i to _i + 1
+                  end
+                end
+              end
+              if _c is 62
+                if _i + 1 < _srclen
+                  if ord(src, _i + 1) is 61
+                    set _tok to 301
+                    set _i to _i + 1
+                  end
+                end
+              end
               set tk_kind[tk_count] to 4
-              set tk_num[tk_count] to _c
+              set tk_num[tk_count] to _tok
               set tk_count to tk_count + 1
               set _i to _i + 1
             end
@@ -100,7 +117,7 @@ end
 `;
 
 const driveCodegen = `
-set bc to mklist(4000)
+set bc to mklist(8000)
 set bc[0] to 0
 set sym_names to mklist(256)
 set sym_names[0] to 0
@@ -108,41 +125,14 @@ set sym_names[0] to 0
 set pos to 0
 set going to 1
 while going
-  set sk to 1
-  while sk
-    if pos >= tk_count
-      set sk to 0
-    else
-      if tk_kind[pos] is 5
-        set pos to pos + 1
-      else
-        set sk to 0
-      end
-    end
+  set new_pos to parse_stmt(pos)
+  if new_pos is pos
+    set going to 0
+  else
+    set pos to new_pos
   end
   if pos >= tk_count
     set going to 0
-  else
-    if tk_kind[pos] is 2
-      if str_eq(tk_txt[pos], "say")
-        set pos to parse_add(pos + 1)
-        emit_byte(80)
-      else
-        if str_eq(tk_txt[pos], "set")
-          set pos to pos + 1
-          set target_slot to intern_name(tk_txt[pos])
-          set pos to pos + 1
-          set pos to pos + 1
-          set pos to parse_add(pos)
-          emit_byte(4)
-          emit_byte(target_slot)
-        else
-          set going to 0
-        end
-      end
-    else
-      set going to 0
-    end
   end
 end
 emit_byte(255)
@@ -229,6 +219,17 @@ const cases = [
   { name: 'set expr + reuse',        src: 'set a to 3 + 4\nset b to a * 2\nsay a\nsay b' },
   { name: 'accumulator',             src: 'set s to 0\nset s to s + 10\nset s to s + 20\nset s to s + 30\nsay s' },
   { name: 'read in expr',            src: 'set x to 5\nset y to 6\nsay x * y + x' },
+  { name: 'comparison is',           src: 'say 5 is 5\nsay 5 is 4' },
+  { name: 'comparison is not',       src: 'say 5 is not 5\nsay 5 is not 4' },
+  { name: 'comparison lt/gt',        src: 'say 3 < 5\nsay 3 > 5' },
+  { name: 'comparison le/ge',        src: 'say 3 <= 3\nsay 3 >= 4' },
+  { name: 'if then',                 src: 'set x to 10\nif x is 10\nsay 111\nend\nsay 999' },
+  { name: 'if else true',            src: 'set x to 1\nif x is 1\nsay 100\nelse\nsay 200\nend' },
+  { name: 'if else false',           src: 'set x to 2\nif x is 1\nsay 100\nelse\nsay 200\nend' },
+  { name: 'while count up',          src: 'set i to 0\nwhile i < 5\nsay i\nset i to i + 1\nend\nsay 999' },
+  { name: 'while sum',               src: 'set i to 1\nset s to 0\nwhile i <= 10\nset s to s + i\nset i to i + 1\nend\nsay s' },
+  { name: 'nested if in while',      src: 'set i to 0\nwhile i < 6\nif i is 3\nsay 300\nelse\nsay i\nend\nset i to i + 1\nend' },
+  { name: 'fizzbuzz-lite',           src: 'set i to 1\nwhile i <= 5\nif i is 3\nsay 30\nelse\nsay i\nend\nset i to i + 1\nend' },
 ];
 
 let failed = 0;
