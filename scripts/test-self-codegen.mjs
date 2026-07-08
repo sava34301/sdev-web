@@ -320,8 +320,9 @@ async function runOne(programSrc) {
   return output;
 }
 
-// Run the SDEV self-hosted compiler on `userSrc` and get the emitted
-// bytecode back as a Uint8Array.
+// Run the SDEV self-hosted compiler on `userSrc` and get back the
+// emitted bytecode + string pool. The driver `say`-dumps them in order:
+// bytecode length, bytecode bytes, pool length, pool bytes.
 async function selfCompile(userSrc) {
   const program =
     `set src to "${escapeForSdev(userSrc)}"\n` +
@@ -329,10 +330,14 @@ async function selfCompile(userSrc) {
     inlineLex + '\n' +
     driveCodegen + '\n';
   const dumped = await runOne(program);
-  const count = parseInt(dumped[0], 10);
-  const bytes = new Uint8Array(count);
-  for (let i = 0; i < count; i++) bytes[i] = parseInt(dumped[i + 1], 10) & 0xff;
-  return bytes;
+  let cursor = 0;
+  const bcCount = parseInt(dumped[cursor++], 10);
+  const bytes = new Uint8Array(bcCount);
+  for (let i = 0; i < bcCount; i++) bytes[i] = parseInt(dumped[cursor++], 10) & 0xff;
+  const poolCount = parseInt(dumped[cursor++], 10);
+  const pool = new Uint8Array(poolCount);
+  for (let i = 0; i < poolCount; i++) pool[i] = parseInt(dumped[cursor++], 10) & 0xff;
+  return { bytes, pool };
 }
 
 // Execute a raw bytecode buffer in a fresh seed WASM instance.
