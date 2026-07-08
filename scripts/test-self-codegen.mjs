@@ -278,6 +278,18 @@ const cases = [
   { name: 'fn with while',           src: 'to sum_to with n\nset i to 1\nset s to 0\nwhile i <= n\nset s to s + i\nset i to i + 1\nend\nreturn s\nend\nsay sum_to(10)\nsay sum_to(100)' },
   { name: 'global + fn together',    src: 'set base to 100\nto shift with x\nreturn x + base\nend\nsay shift(5)\nsay shift(7)' },
   { name: 'builtin mklist + len',    src: 'set xs to mklist(5)\nsay length(xs)' },
+  { name: 'string literal',          src: 'say "hello"' },
+  { name: 'string concat',           src: 'say "foo" + "bar"' },
+  { name: 'string var + concat',     src: 'set a to "hi"\nset b to " there"\nsay a + b' },
+  { name: 'str builtin',             src: 'say str(42) + str(58)' },
+  { name: 'chr / ord',               src: 'say chr(65) + chr(90)\nsay ord("Z", 0)' },
+  { name: 'list literal + index',    src: 'set xs to [10, 20, 30, 40]\nsay xs[0]\nsay xs[1]\nsay xs[3]' },
+  { name: 'list literal length',     src: 'set xs to [7, 7, 7, 7, 7]\nsay length(xs)' },
+  { name: 'index in expr',           src: 'set xs to [1, 2, 3, 4, 5]\nsay xs[2] * xs[4] + xs[0]' },
+  { name: 'set xs[i] to v',          src: 'set xs to mklist(4)\nset xs[0] to 100\nset xs[1] to 200\nset xs[2] to xs[0] + xs[1]\nsay xs[2]' },
+  { name: 'index in while',          src: 'set xs to [3, 1, 4, 1, 5, 9]\nset i to 0\nset s to 0\nwhile i < length(xs)\nset s to s + xs[i]\nset i to i + 1\nend\nsay s' },
+  { name: 'empty string',            src: 'set s to ""\nsay length(s)' },
+  { name: 'string in fn',            src: 'to greet with name\nreturn "hi " + name\nend\nsay greet("world")' },
 ];
 
 let failed = 0;
