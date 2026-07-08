@@ -18,7 +18,10 @@ const SOURCES: DocSource[] = [
   { id: 'book-en',     title: 'The sdev Book (EN)',          url: '/sdev-book-en.md',            icon: BookOpen },
   { id: 'book-bg',     title: 'Книгата за sdev (BG)',        url: '/sdev-book-bg.md',            icon: BookOpen },
   { id: 'reference',   title: 'Full Language Reference',     url: '/SDEV_DOCUMENTATION.md',      icon: Library },
+  { id: 'v2',          title: 'sdev v2 "Prism" Guide',       url: '/SDEV_V2_DOCUMENTATION.md',   icon: ScrollText },
   { id: 'leaflet',     title: 'Leaflet & GIS Reference',     url: '/SDEV_LEAFLET_DOCUMENTATION.md', icon: ScrollText },
+  { id: 'hardware',    title: 'Hardware & Boards',           url: '/SDEV_HARDWARE_DOCUMENTATION.md', icon: ScrollText },
+  { id: 'internals',   title: 'Compiler & VM Internals',     url: '/SDEV_INTERNALS.md',          icon: Library },
 ];
 
 function slugify(s: string) {
