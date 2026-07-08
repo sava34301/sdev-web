@@ -403,23 +403,14 @@ to parse_atom with pos
     set expr_type[0] to 0
     return pos + 1
   end
-  # String literal: build the string at runtime with LNEW + CHR/STRCAT.
-  # We don't share the JS bootstrap's string pool, so every literal turns
-  # into an empty heap-string plus one CHR/STRCAT per byte.
+  # String literal (Milestone 5k): intern into the shared string pool and
+  # emit PUSH_STR (0x02) + u16 pool offset, matching the JS bootstrap.
   if tk_kind[pos] is 3
     set s to tk_txt[pos]
-    set slen to length(s)
-    emit_byte(1)
-    emit_i32(0)
-    emit_byte(137)
-    set i to 0
-    while i < slen
-      emit_byte(1)
-      emit_i32(ord(s, i))
-      emit_byte(136)
-      emit_byte(145)
-      set i to i + 1
-    end
+    set off to intern_str(s)
+    emit_byte(2)
+    emit_byte(off % 256)
+    emit_byte((off / 256) % 256)
     set expr_type[0] to 1
     return pos + 1
   end
