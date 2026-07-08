@@ -78,6 +78,22 @@ const cases = [
     src: `set n to "sdev"\nsay "hi " + n + "!"`,
     expect: ['hi sdev!'],
   },
+  // ---- Milestone 5a: byte-level string primitives ----
+  {
+    name: 'ord + chr roundtrip',
+    src: `set s to "ABC"\nsay ord(s, 0)\nsay ord(s, 2)\nsay chr(65) + chr(66) + chr(67)`,
+    expect: ['65', '67', 'ABC'],
+  },
+  {
+    name: 'int to string (positive, zero, negative)',
+    src: `say str(0)\nsay str(1234)\nsay str(0 - 42)\nsay "n=" + str(7)`,
+    expect: ['0', '1234', '-42', 'n=7'],
+  },
+  {
+    name: 'byte-level string build (uppercase via chr/ord)',
+    src: `set s to "abc"\nset i to 0\nset out to ""\nwhile i < length(s)\nset out to out + chr(ord(s, i) - 32)\nset i to i + 1\nend\nsay out`,
+    expect: ['ABC'],
+  },
 ];
 
 let failed = 0;
