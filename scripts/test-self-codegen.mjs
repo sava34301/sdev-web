@@ -121,6 +121,18 @@ set bc to mklist(8000)
 set bc[0] to 0
 set sym_names to mklist(256)
 set sym_names[0] to 0
+set loc_names to mklist(256)
+set loc_names[0] to 0
+set fn_names to mklist(256)
+set fn_names[0] to 0
+set fn_offsets to mklist(256)
+set fn_offsets[0] to 0
+set fn_arities to mklist(256)
+set fn_arities[0] to 0
+set in_func to mklist(2)
+set in_func[0] to 0
+set scratch to mklist(4)
+set scratch[0] to 0
 
 set pos to 0
 set going to 1
