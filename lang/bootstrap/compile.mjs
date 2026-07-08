@@ -22,12 +22,20 @@
 import { tokenize, SdevError } from '../runtime/v2.js';
 
 const OP = {
-  PUSH_I32: 0x01, PUSH_STR: 0x02, LOAD: 0x03, STORE: 0x04,
+  PUSH_I32: 0x01, PUSH_STR: 0x02, LOAD: 0x03, STORE: 0x04, POP: 0x05,
   ADD: 0x10, SUB: 0x11, MUL: 0x12, DIV: 0x13, MOD: 0x14,
   EQ: 0x20, NE: 0x21, LT: 0x22, GT: 0x23, LE: 0x24, GE: 0x25,
   NOT: 0x30, JMP: 0x40, JZ: 0x41, SAY_I32: 0x50, SAY_STR: 0x51,
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
+  ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83, STRCAT: 0x91,
   HALT: 0xFF,
+};
+
+// Builtins available as function-call syntax. Each maps to a single opcode
+// sequence emitted inline. Arity is checked at compile time.
+const BUILTINS = {
+  length:  { arity: 1, emit: (em) => em.emit(OP.LEN) },
+  concat:  { arity: 2, emit: (em) => em.emit(OP.STRCAT) },
 };
 
 class Emitter {
@@ -37,6 +45,7 @@ class Emitter {
     this.poolNext = 0;
     this.strings = new Map();
     this.globals = new Map();               // name → global slot
+    this.globalTypes = new Map();            // name → 'int' | 'str'
     this.functions = new Map();              // name → { arity, offset, patchSites: [] }
   }
   emit(b) { this.bytes.push(b & 0xff); }
@@ -66,6 +75,15 @@ class Emitter {
   }
 }
 
+// Per-scope type tracking. Keyed by the locals Map identity; null → globals.
+const _scopeTypes = new WeakMap();
+function scopeTypes(locals, em) {
+  if (!locals) return em.globalTypes;
+  let m = _scopeTypes.get(locals);
+  if (!m) { m = new Map(); _scopeTypes.set(locals, m); }
+  return m;
+}
+
 // ---------------- Parser (bootstrap subset) ----------------
 export function parse(source) { return parseProgram(tokenize(source)); }
 function parseProgram(tokens) {
@@ -89,7 +107,20 @@ function parseProgram(tokens) {
     const t = peek();
     if (t.type === 'KW') {
       if (t.value === 'say')    { p++; return { k: 'say', expr: expr(), line: t.line }; }
-      if (t.value === 'set')    { p++; const name = eat('IDENT').value; eat('KW', 'to'); return { k: 'set', name, expr: expr(), line: t.line }; }
+      if (t.value === 'set')    {
+        p++;
+        const name = eat('IDENT').value;
+        // `set xs[i] to v`  → index-assignment
+        if (peek().type === 'OP' && peek().value === '[') {
+          p++;
+          const idx = expr();
+          eat('OP', ']');
+          eat('KW', 'to');
+          return { k: 'setIndex', name, idx, expr: expr(), line: t.line };
+        }
+        eat('KW', 'to');
+        return { k: 'set', name, expr: expr(), line: t.line };
+      }
       if (t.value === 'if')     return ifStmt();
       if (t.value === 'while')  return whileStmt();
       if (t.value === 'to')     return funcDecl();
@@ -144,7 +175,7 @@ function parseProgram(tokens) {
   function mul_() { let l = un_();  while (peek().type === 'OP' && (peek().value === '*' || peek().value === '/' || peek().value === '%')) { const op = peek().value; p++; l = { k: 'bin', op, l, r: un_() }; } return l; }
   function un_()  { if (peek().type === 'OP' && peek().value === '-') { p++; return { k: 'un', op: '-', x: un_() }; } return callOrAtom(); }
   function callOrAtom() {
-    const a = atom();
+    let a = atom();
     // fn(a, b) call form
     if (a.k === 'ident' && peek().type === 'OP' && peek().value === '(') {
       p++;
@@ -154,20 +185,27 @@ function parseProgram(tokens) {
         while (peek().type === 'OP' && peek().value === ',') { p++; args.push(expr()); }
       }
       eat('OP', ')');
-      return { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args };
     }
     // `fn with a b` call form (space-separated single atoms)
-    if (a.k === 'ident' && peek().type === 'KW' && peek().value === 'with') {
+    else if (a.k === 'ident' && peek().type === 'KW' && peek().value === 'with') {
       p++;
       const args = [];
       while (canStartAtom(peek())) args.push(atom());
-      return { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args };
+    }
+    // postfix indexing: x[i][j]...
+    while (peek().type === 'OP' && peek().value === '[') {
+      p++;
+      const idx = expr();
+      eat('OP', ']');
+      a = { k: 'index', target: a, idx };
     }
     return a;
   }
   function canStartAtom(t) {
     return t.type === 'NUM' || t.type === 'STR' || t.type === 'IDENT'
-      || (t.type === 'OP' && t.value === '(');
+      || (t.type === 'OP' && (t.value === '(' || t.value === '['));
   }
   function atom() {
     const t = peek();
@@ -175,6 +213,17 @@ function parseProgram(tokens) {
     if (t.type === 'STR') { p++; return { k: 'str', v: t.value }; }
     if (t.type === 'IDENT') { p++; return { k: 'ident', name: t.value }; }
     if (t.type === 'OP' && t.value === '(') { p++; const e = expr(); eat('OP', ')'); return e; }
+    // list literal: [a, b, c]
+    if (t.type === 'OP' && t.value === '[') {
+      p++;
+      const items = [];
+      if (!(peek().type === 'OP' && peek().value === ']')) {
+        items.push(expr());
+        while (peek().type === 'OP' && peek().value === ',') { p++; items.push(expr()); }
+      }
+      eat('OP', ']');
+      return { k: 'list', items, line: t.line };
+    }
     throw new SdevError(`bootstrap: unexpected ${t.type}:${t.value}`, t.line);
   }
 }
@@ -231,7 +280,7 @@ function emit(stmts, em) {
 
 function collectSets(body, locals) {
   for (const s of body) {
-    if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
+    if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
   }
@@ -241,9 +290,11 @@ function emitExpr(e, em, locals) {
   switch (e.k) {
     case 'num':   em.emit(OP.PUSH_I32); em.emitI32(e.v); return 'int';
     case 'str':   em.emit(OP.PUSH_STR); { const off = em.intern(e.v); em.emit(off & 0xff); em.emit((off >> 8) & 0xff); } return 'str';
-    case 'ident':
-      if (locals && locals.has(e.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(e.name)); return 'int'; }
-      em.emit(OP.LOAD); em.emit(em.globalSlot(e.name)); return 'int';
+    case 'ident': {
+      const t = scopeTypes(locals, em).get(e.name) || 'int';
+      if (locals && locals.has(e.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(e.name)); return t; }
+      em.emit(OP.LOAD); em.emit(em.globalSlot(e.name)); return t;
+    }
     case 'un':
       if (e.op === '-') { em.emit(OP.PUSH_I32); em.emitI32(0); emitExpr(e.x, em, locals); em.emit(OP.SUB); return 'int'; }
       if (e.op === 'not') { emitExpr(e.x, em, locals); em.emit(OP.NOT); return 'int'; }
@@ -251,7 +302,10 @@ function emitExpr(e, em, locals) {
     case 'bin': {
       if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
       if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
-      emitExpr(e.l, em, locals); emitExpr(e.r, em, locals);
+      const lk = emitExpr(e.l, em, locals);
+      const rk = emitExpr(e.r, em, locals);
+      // Promote `+` to STRCAT when either operand is a string literal.
+      if (e.op === '+' && (lk === 'str' || rk === 'str')) { em.emit(OP.STRCAT); return 'str'; }
       switch (e.op) {
         case '+': em.emit(OP.ADD); return 'int';
         case '-': em.emit(OP.SUB); return 'int';
@@ -267,7 +321,26 @@ function emitExpr(e, em, locals) {
       }
       break;
     }
+    case 'list': {
+      if (e.items.length > 0xffff) throw new SdevError('list literal too large', 0);
+      for (const it of e.items) emitExpr(it, em, locals);
+      em.emit(OP.NEWLIST); em.emitU16(e.items.length);
+      return 'int';
+    }
+    case 'index': {
+      emitExpr(e.target, em, locals);
+      emitExpr(e.idx,    em, locals);
+      em.emit(OP.LGET);
+      return 'int';
+    }
     case 'call': {
+      const bi = BUILTINS[e.name];
+      if (bi) {
+        if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, 0);
+        for (const a of e.args) emitExpr(a, em, locals);
+        bi.emit(em);
+        return e.name === 'concat' ? 'str' : 'int';
+      }
       const info = em.functions.get(e.name);
       if (!info) throw new SdevError(`unknown function ${e.name}`, 0);
       if (e.args.length !== info.arity) throw new SdevError(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, 0);
@@ -291,9 +364,19 @@ function emitStmt(s, em, locals) {
       return;
     }
     case 'set': {
-      emitExpr(s.expr, em, locals);
+      const kind = emitExpr(s.expr, em, locals);
+      scopeTypes(locals, em).set(s.name, kind);
       if (locals && locals.has(s.name)) { em.emit(OP.STORE_LOC); em.emit(locals.get(s.name)); }
       else { em.emit(OP.STORE); em.emit(em.globalSlot(s.name)); }
+      return;
+    }
+    case 'setIndex': {
+      // push arr, idx, val, then LSET
+      if (locals && locals.has(s.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(s.name)); }
+      else { em.emit(OP.LOAD); em.emit(em.globalSlot(s.name)); }
+      emitExpr(s.idx, em, locals);
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.LSET);
       return;
     }
     case 'if': {
@@ -327,10 +410,9 @@ function emitStmt(s, em, locals) {
       return;
     }
     case 'exprStmt': {
-      // Discard result (functions with side effects, e.g. say inside).
+      // Discard result.
       emitExpr(s.expr, em, locals);
-      // Pop the result — no explicit POP opcode yet, so store into a scratch global.
-      em.emit(OP.STORE); em.emit(em.globalSlot('__scratch'));
+      em.emit(OP.POP);
       return;
     }
   }

@@ -52,6 +52,32 @@ const cases = [
     src: `to fact with n\nif n <= 1\nreturn 1\nend\nreturn n * fact(n - 1)\nend\nsay fact(6)`,
     expect: ['720'],
   },
+  // ---- Milestone 4: heap, lists, strings ----
+  {
+    name: 'list literal + indexing + length',
+    src: `set xs to [10, 20, 30]\nsay length(xs)\nsay xs[0]\nsay xs[2]`,
+    expect: ['3', '10', '30'],
+  },
+  {
+    name: 'list mutation (set xs[i] to v)',
+    src: `set xs to [1, 2, 3]\nset xs[1] to 99\nsay xs[0]\nsay xs[1]\nsay xs[2]`,
+    expect: ['1', '99', '3'],
+  },
+  {
+    name: 'list sum loop',
+    src: `set xs to [4, 5, 6, 7]\nset i to 0\nset total to 0\nwhile i < length(xs)\nset total to total + xs[i]\nset i to i + 1\nend\nsay total`,
+    expect: ['22'],
+  },
+  {
+    name: 'string concat + length',
+    src: `set g to concat("hello, ", "world")\nsay g\nsay length(g)`,
+    expect: ['hello, world', '12'],
+  },
+  {
+    name: 'string concat via +',
+    src: `set n to "sdev"\nsay "hi " + n + "!"`,
+    expect: ['hi sdev!'],
+  },
 ];
 
 let failed = 0;
