@@ -247,7 +247,21 @@ function emit(stmts, em) {
   // Register functions (name → arity) up front so recursive calls resolve.
   for (const f of funcs) {
     if (em.functions.has(f.name)) throw new SdevError(`duplicate function ${f.name}`, f.line);
-    em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [] });
+    em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [], retType: 'int' });
+  }
+
+  // Infer return types by fixed-point iteration BEFORE emitting bodies, so
+  // that `say fn()` and `str + fn()` pick SAY_STR / STRCAT correctly even
+  // when the callee is defined later or is (mutually) recursive.
+  let changed = true;
+  let guard = 0;
+  while (changed && guard++ < funcs.length + 2) {
+    changed = false;
+    for (const f of funcs) {
+      const info = em.functions.get(f.name);
+      const t = inferReturnTypeOf(f, em.functions);
+      if (t !== info.retType) { info.retType = t; changed = true; }
+    }
   }
 
   // Leading JMP to main (patched later)
