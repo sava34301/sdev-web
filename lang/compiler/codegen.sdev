@@ -97,6 +97,25 @@ to emit_i32 with v
   return 0
 end
 
+# ---- symbol table (global variable slots, stored in sym_names/sym_count) --
+#
+# The bootstrap seed VM uses u8 slot indices for LOAD/STORE, so we cap the
+# table at 256 entries. sym_names is a list of interned identifier strings,
+# and the slot for a name is its index in that list.
+
+to intern_name with name
+  set k to 0
+  while k < sym_count
+    if str_eq(sym_names[k], name)
+      return k
+    end
+    set k to k + 1
+  end
+  set sym_names[sym_count] to name
+  set sym_count to sym_count + 1
+  return sym_count - 1
+end
+
 # ---- recursive-descent parser that emits stack-VM bytecode as it goes ----
 
 to is_op_c with pos c
@@ -115,6 +134,12 @@ to parse_atom with pos
   if tk_kind[pos] is 1
     emit_byte(1)
     emit_i32(tk_num[pos])
+    return pos + 1
+  end
+  if tk_kind[pos] is 2
+    set slot to intern_name(tk_txt[pos])
+    emit_byte(3)
+    emit_byte(slot)
     return pos + 1
   end
   if is_op_c(pos, 40)
