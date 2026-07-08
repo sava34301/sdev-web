@@ -250,18 +250,6 @@ function emit(stmts, em) {
     em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [] });
   }
 
-  // Pre-register top-level globals so functions can distinguish them from
-  // locals (a function that `set g_x to v` on a name already known as a
-  // global writes to the global, not to a shadowing local).
-  function scanGlobals(stmts) {
-    for (const s of stmts) {
-      if ((s.k === 'set' || s.k === 'setIndex') && !em.globals.has(s.name)) em.globalSlot(s.name);
-      if (s.k === 'if') { scanGlobals(s.then_); if (s.else_) scanGlobals(s.else_); }
-      if (s.k === 'while') scanGlobals(s.body);
-    }
-  }
-  scanGlobals(main);
-
   // Leading JMP to main (patched later)
   em.emit(OP.JMP);
   const jmpToMainPos = em.placeholder16();
