@@ -344,7 +344,7 @@ function emitExpr(e, em, locals) {
         if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, 0);
         for (const a of e.args) emitExpr(a, em, locals);
         bi.emit(em);
-        return e.name === 'concat' ? 'str' : 'int';
+        return bi.ret;
       }
       const info = em.functions.get(e.name);
       if (!info) throw new SdevError(`unknown function ${e.name}`, 0);
