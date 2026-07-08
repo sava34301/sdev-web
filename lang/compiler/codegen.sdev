@@ -91,11 +91,59 @@ to str_eq with a b
 end
 
 # ---- byte emitter (writes into the global `bc` list, count at bc[0]) -----
+#
+# Milestone 5k: emit_byte is gated on `emit_enabled[0]`. Pass 1 (the
+# collect + return-type inference walk) runs with emit_enabled = 0 so it
+# advances token position without producing bytecode; pass 2 (the real
+# emit) runs with emit_enabled = 1.
 
 to emit_byte with b
+  if emit_enabled[0] is 0
+    return 0
+  end
   set bc[bc[0] + 1] to b
   set bc[0] to bc[0] + 1
   return 0
+end
+
+# ---- string pool (Milestone 5k) -----------------------------------------
+#
+# Matches the JS bootstrap's shared string pool byte-for-byte. Each unique
+# literal is written as `[u32 len][utf8 bytes...]` starting at
+# `pool_bytes[1]`. `intern_str(s)` returns the offset of `s` within the
+# pool, adding it (and its length prefix) if not seen. Called only during
+# pass 2 (emit_enabled = 1) to avoid double-appending across pass 1.
+
+to intern_str with s
+  if emit_enabled[0] is 0
+    return 0
+  end
+  set n to pool_keys[0]
+  set k to 1
+  while k <= n
+    if str_eq(pool_keys[k], s)
+      return pool_offs[k]
+    end
+    set k to k + 1
+  end
+  set off to pool_bytes[0]
+  set slen to length(s)
+  set pool_bytes[off + 1] to slen % 256
+  set pool_bytes[off + 2] to (slen / 256) % 256
+  set pool_bytes[off + 3] to (slen / 65536) % 256
+  set pool_bytes[off + 4] to (slen / 16777216) % 256
+  set pool_bytes[0] to off + 4
+  set i to 0
+  while i < slen
+    set pool_bytes[pool_bytes[0] + 1] to ord(s, i)
+    set pool_bytes[0] to pool_bytes[0] + 1
+    set i to i + 1
+  end
+  set pool_keys[n + 1] to s
+  set pool_offs[n + 1] to off
+  set pool_keys[0] to n + 1
+  set pool_offs[0] to n + 1
+  return off
 end
 
 to emit_i32 with v
