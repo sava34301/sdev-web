@@ -397,10 +397,9 @@ function emitStmt(s, em, locals) {
       return;
     }
     case 'exprStmt': {
-      // Discard result (functions with side effects, e.g. say inside).
+      // Discard result.
       emitExpr(s.expr, em, locals);
-      // Pop the result — no explicit POP opcode yet, so store into a scratch global.
-      em.emit(OP.STORE); em.emit(em.globalSlot('__scratch'));
+      em.emit(OP.POP);
       return;
     }
   }
