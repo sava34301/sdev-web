@@ -284,18 +284,11 @@ function emit(stmts, em) {
   }
 }
 
-function collectSets(body, locals, em) {
+function collectSets(body, locals) {
   for (const s of body) {
-    // A `set name to ...` inside a function normally introduces a local.
-    // BUT: if `name` is already a top-level global (declared before this
-    // function was defined), keep it global. This lets self-hosted compiler
-    // passes update shared buffers like `bc_count` from inside functions.
-    if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)
-        && !(em && em.globals.has(s.name))) {
-      locals.set(s.name, locals.size);
-    }
-    if (s.k === 'if') { collectSets(s.then_, locals, em); if (s.else_) collectSets(s.else_, locals, em); }
-    if (s.k === 'while') collectSets(s.body, locals, em);
+    if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)) locals.set(s.name, locals.size);
+    if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
+    if (s.k === 'while') collectSets(s.body, locals);
   }
 }
 
