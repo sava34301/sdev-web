@@ -250,6 +250,11 @@ function emit(stmts, em) {
     em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [] });
   }
 
+  // Pre-scan top-level `set` targets so functions know which names are
+  // globals — otherwise a `set count to count + 1` inside a function would
+  // shadow the top-level `count` with a fresh local.
+  const globals = collectGlobalNames(main);
+
   // Leading JMP to main (patched later)
   em.emit(OP.JMP);
   const jmpToMainPos = em.placeholder16();
@@ -263,7 +268,7 @@ function emit(stmts, em) {
     const locals = new Map();
     f.params.forEach((p, i) => locals.set(p, i));
     // Scan for `set` and function params to determine extra locals.
-    collectSets(f.body, locals);
+    collectSets(f.body, locals, globals);
     const extra = locals.size - f.params.length;
     if (extra > 0) { em.emit(OP.ENTER); em.emit(extra); }
     for (const s of f.body) emitStmt(s, em, locals);
@@ -284,15 +289,25 @@ function emit(stmts, em) {
   }
 }
 
-function collectSets(body, locals) {
+function collectGlobalNames(body, out = new Set()) {
+  for (const s of body) {
+    if (s.k === 'set' || s.k === 'setIndex') out.add(s.name);
+    if (s.k === 'if') { collectGlobalNames(s.then_, out); if (s.else_) collectGlobalNames(s.else_, out); }
+    if (s.k === 'while') collectGlobalNames(s.body, out);
+  }
+  return out;
+}
+
+function collectSets(body, locals, globals = new Set()) {
   for (const s of body) {
     // Only plain `set x to v` introduces a new binding. `set x[i] to v` is
     // a mutation of an existing binding (must already be a local or global)
     // so it never creates a local — that would shadow the very list it's
-    // trying to mutate.
-    if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
-    if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
-    if (s.k === 'while') collectSets(s.body, locals);
+    // trying to mutate. Names already bound as top-level globals also stay
+    // global to preserve cross-function shared state.
+    if (s.k === 'set' && !locals.has(s.name) && !globals.has(s.name)) locals.set(s.name, locals.size);
+    if (s.k === 'if') { collectSets(s.then_, locals, globals); if (s.else_) collectSets(s.else_, locals, globals); }
+    if (s.k === 'while') collectSets(s.body, locals, globals);
   }
 }
 
