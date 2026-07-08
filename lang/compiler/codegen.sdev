@@ -232,6 +232,12 @@ to emit_store_ident with name
 end
 
 # ---- call emission (built-ins first, then user functions) ----------------
+#
+# Milestone 5i: unresolved user-function calls emit a CALL with a zero
+# target and record the patch position + name in the pending-calls tables.
+# After the whole program parses, `resolve_pending_calls` walks the tables
+# and back-patches each u16 target. This unblocks mutual recursion and any
+# forward reference — a call site may appear before its callee's `to …`.
 
 to emit_call with name nargs
   if str_eq(name, "length")
@@ -264,14 +270,46 @@ to emit_call with name nargs
     set expr_type[0] to 0
     return 0
   end
+  # User function — resolved-now or deferred to the patch pass.
   set idx to find_fn(name)
+  emit_byte(96)
+  set patch_pos to bc[0]
   if idx >= 0
     set target to fn_offsets[idx + 1]
-    emit_byte(96)
     emit_byte(target % 256)
     emit_byte((target / 256) % 256)
-    emit_byte(nargs)
+    set expr_type[0] to fn_ret_types[idx + 1]
+  else
+    # Placeholder target; resolved after parsing completes.
+    emit_byte(0)
+    emit_byte(0)
+    set pend_names[pend_names[0] + 1] to name
+    set pend_pos[pend_names[0] + 1] to patch_pos
+    set pend_names[0] to pend_names[0] + 1
+    set pend_pos[0] to pend_pos[0] + 1
+    # Return type is unknown at this point; default to int. Forward
+    # calls whose result flows into `say` will print as SAY_I32 — the
+    # driver either defines string-returning helpers before their use
+    # or wraps the result with `str(...)` if needed.
     set expr_type[0] to 0
+  end
+  emit_byte(nargs)
+  return 0
+end
+
+# Back-patch every deferred CALL now that all function offsets are known.
+to resolve_pending_calls
+  set r to 1
+  set rstop to pend_names[0] + 1
+  while r < rstop
+    set idx to find_fn(pend_names[r])
+    if idx >= 0
+      set target to fn_offsets[idx + 1]
+      set pos to pend_pos[r]
+      set bc[pos + 1] to target % 256
+      set bc[pos + 2] to (target / 256) % 256
+    end
+    set r to r + 1
   end
   return 0
 end
