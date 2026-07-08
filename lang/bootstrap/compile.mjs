@@ -290,7 +290,10 @@ function emitExpr(e, em, locals) {
     case 'bin': {
       if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
       if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
-      emitExpr(e.l, em, locals); emitExpr(e.r, em, locals);
+      const lk = emitExpr(e.l, em, locals);
+      const rk = emitExpr(e.r, em, locals);
+      // Promote `+` to STRCAT when either operand is a string literal.
+      if (e.op === '+' && (lk === 'str' || rk === 'str')) { em.emit(OP.STRCAT); return 'str'; }
       switch (e.op) {
         case '+': em.emit(OP.ADD); return 'int';
         case '-': em.emit(OP.SUB); return 'int';
@@ -306,7 +309,26 @@ function emitExpr(e, em, locals) {
       }
       break;
     }
+    case 'list': {
+      if (e.items.length > 0xffff) throw new SdevError('list literal too large', 0);
+      for (const it of e.items) emitExpr(it, em, locals);
+      em.emit(OP.NEWLIST); em.emitU16(e.items.length);
+      return 'int';
+    }
+    case 'index': {
+      emitExpr(e.target, em, locals);
+      emitExpr(e.idx,    em, locals);
+      em.emit(OP.LGET);
+      return 'int';
+    }
     case 'call': {
+      const bi = BUILTINS[e.name];
+      if (bi) {
+        if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, 0);
+        for (const a of e.args) emitExpr(a, em, locals);
+        bi.emit(em);
+        return e.name === 'concat' ? 'str' : 'int';
+      }
       const info = em.functions.get(e.name);
       if (!info) throw new SdevError(`unknown function ${e.name}`, 0);
       if (e.args.length !== info.arity) throw new SdevError(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, 0);
