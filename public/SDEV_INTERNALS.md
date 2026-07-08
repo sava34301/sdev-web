@@ -57,14 +57,25 @@ the same lexer, parser, and language semantics.
   list-sum loops, in-place mutation, and multi-way string concat. All
   pass entirely inside WAT-authored WebAssembly.
 
+**Milestone 5a (byte-level string primitives) — shipped:**
+- Seed VM gained three opcodes: `SGET` (byte read), `CHR` (byte → 1-char
+  string on the heap), `I2S` (int → decimal-string on the heap). Together
+  with `LEN` and `STRCAT` this is the minimum surface a self-hosted lexer
+  needs to slice source text.
+- Bootstrap compiler exposes them as builtins `ord(s, i)`, `chr(n)`, and
+  `str(n)`. Builtins now carry a `ret` type so scope typing propagates
+  string-ness through nested calls (e.g. `"n=" + str(7)` promotes `+` to
+  `STRCAT`).
+- Regression suite grew to 13 programs, including a byte-level uppercase
+  loop that only uses `ord` + `chr` + `+` to build the result.
+
 **Milestone 5 (full self-host) — next chunk:**
-- Add heap allocator, arrays, and string manipulation opcodes to the seed
-  VM (the current VM handles strings as immutable pool handles only).
-- Port `lang/bootstrap/compile.mjs` to `lang/compiler/*.sdev`. Compile it
-  with the seed → produce `dist/sdev-core.wasm`. Recompile itself with
-  that binary → verify byte-identical output. At that point the bootstrap
-  JS compiler AND the JS reference runtime are both deleted, and SDEV
-  compiles SDEV all the way down.
+- Port `lang/bootstrap/compile.mjs` to `lang/compiler/*.sdev` (lexer first,
+  then parser, then codegen). Compile it with the seed → produce
+  `dist/sdev-core.wasm`. Recompile itself with that binary → verify
+  byte-identical output. At that point the bootstrap JS compiler AND the
+  JS reference runtime are both deleted, and SDEV compiles SDEV all the
+  way down.
 
 ## Where we're going (Milestone 2 — post-launch)
 
