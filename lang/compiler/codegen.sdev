@@ -727,12 +727,16 @@ to parse_stmt with pos
       emit_i32(0)
       set expr_type[0] to 0
     end
-    # Record this return's type against the enclosing function. `str`
-    # wins over `int`: any string-typed return promotes the whole
-    # function's declared return type.
+    # Record this return's type against the currently-parsing function.
+    # `cur_fn[0]` is a 1-indexed slot into fn_ret_types (0 = "none"). Any
+    # string return promotes the function's declared return type — the
+    # value survives across pass 1 iterations and drives SAY_STR / STRCAT
+    # selection on all call sites in pass 2.
     if in_func[0] is 1
       if expr_type[0] is 1
-        set fn_ret_types[fn_names[0]] to 1
+        if cur_fn[0] > 0
+          set fn_ret_types[cur_fn[0]] to 1
+        end
       end
     end
     emit_byte(97)
