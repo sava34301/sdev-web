@@ -45,6 +45,7 @@
 ;;   0x84 SGET                      pop idx, pop str, push byte at bytes[idx]
 ;;   0x87 I2S                       pop int, push decimal-string blob
 ;;   0x88 CHR                       pop byte, push new 1-char string blob
+;;   0x89 LNEW                      pop n, alloc zeroed list [n | n cells]
 ;;   0x91 STRCAT                    pop b, pop a, allocate new pool-shaped blob, push handle
 ;;   0xFF HALT
 ;;
@@ -459,6 +460,30 @@
             (local.set $dst (call $alloc (i32.const 5)))
             (i32.store (local.get $dst) (i32.const 1))
             (i32.store8 (i32.add (local.get $dst) (i32.const 4)) (local.get $a))
+            (i32.store (local.get $sp) (local.get $dst))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- LNEW (0x89) --- pop n, alloc zeroed list [n | n*4 zero bytes]
+        (if (i32.eq (local.get $op) (i32.const 0x89))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $n (i32.load (local.get $sp)))
+            (local.set $dst (call $alloc
+              (i32.add (i32.const 4) (i32.mul (local.get $n) (i32.const 4)))))
+            (i32.store (local.get $dst) (local.get $n))
+            ;; zero the cells (heap is not pre-zeroed after first bump reuse
+            ;; would matter, but WebAssembly linear memory IS zero-initialized
+            ;; on first touch; the bump allocator never revisits, so writes
+            ;; here are only needed if the program has already used those
+            ;; bytes as a longer temp allocation. Zero defensively for safety.)
+            (local.set $addr (i32.add (local.get $dst) (i32.const 4)))
+            (block $dz (loop $lz
+              (br_if $dz (i32.eqz (local.get $n)))
+              (i32.store (local.get $addr) (i32.const 0))
+              (local.set $addr (i32.add (local.get $addr) (i32.const 4)))
+              (local.set $n    (i32.sub (local.get $n)    (i32.const 1)))
+              (br $lz)))
             (i32.store (local.get $sp) (local.get $dst))
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))

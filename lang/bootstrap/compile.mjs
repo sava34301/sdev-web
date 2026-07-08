@@ -28,7 +28,7 @@ const OP = {
   NOT: 0x30, JMP: 0x40, JZ: 0x41, SAY_I32: 0x50, SAY_STR: 0x51,
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
   ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83,
-  SGET: 0x84, I2S: 0x87, CHR: 0x88, STRCAT: 0x91,
+  SGET: 0x84, I2S: 0x87, CHR: 0x88, LNEW: 0x89, STRCAT: 0x91,
   HALT: 0xFF,
 };
 
@@ -41,6 +41,7 @@ const BUILTINS = {
   ord:     { arity: 2, ret: 'int', emit: (em) => em.emit(OP.SGET) },
   chr:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.CHR) },
   str:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
+  mklist:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LNEW) },
 };
 
 class Emitter {

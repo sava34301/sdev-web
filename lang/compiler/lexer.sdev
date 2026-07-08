@@ -1,0 +1,152 @@
+# SDEV lexer, written in SDEV.
+#
+# This is the first piece of the Milestone-5 self-hosted compiler.
+# The bootstrap JS compiler (lang/bootstrap/compile.mjs) still compiles
+# this file to bytecode for now; once the parser + codegen are also ported,
+# the JS compiler is deleted.
+#
+# The lexer streams tokens straight to stdout via `say`, one per line, in a
+# stable text format:
+#
+#   N=<int>      integer literal
+#   I=<ident>    identifier or keyword
+#   S=<text>     string literal (contents only, no quotes)
+#   P=<char>     single-char punctuation
+#   NL           newline
+#   EOF          end of source
+#
+# The `scripts/test-self-lexer.mjs` driver splices a `set src to "..."`
+# stub in front of this file and diffs the output against a JS reference
+# lexer built from the same rules.
+
+to is_digit with c
+  if c < 48
+    return 0
+  end
+  if c > 57
+    return 0
+  end
+  return 1
+end
+
+to is_alpha with c
+  if c is 95
+    return 1
+  end
+  if c >= 65
+    if c <= 90
+      return 1
+    end
+  end
+  if c >= 97
+    if c <= 122
+      return 1
+    end
+  end
+  return 0
+end
+
+to is_alnum with c
+  if is_digit(c)
+    return 1
+  end
+  return is_alpha(c)
+end
+
+to slice with src i j
+  set out to ""
+  while i < j
+    set out to out + chr(ord(src, i))
+    set i to i + 1
+  end
+  return out
+end
+
+to lex with src
+  set n to length(src)
+  set i to 0
+  while i < n
+    set c to ord(src, i)
+    if c is 32
+      set i to i + 1
+    else
+      if c is 9
+        set i to i + 1
+      else
+        if c is 13
+          set i to i + 1
+        else
+          if c is 10
+            say "NL"
+            set i to i + 1
+          else
+            if is_digit(c)
+              set j to i
+              set cont to 1
+              while cont
+                if j >= n
+                  set cont to 0
+                else
+                  if is_digit(ord(src, j))
+                    set j to j + 1
+                  else
+                    set cont to 0
+                  end
+                end
+              end
+              set v to 0
+              set k to i
+              while k < j
+                set v to v * 10 + ord(src, k) - 48
+                set k to k + 1
+              end
+              say "N=" + str(v)
+              set i to j
+            else
+              if is_alpha(c)
+                set j to i
+                set cont to 1
+                while cont
+                  if j >= n
+                    set cont to 0
+                  else
+                    if is_alnum(ord(src, j))
+                      set j to j + 1
+                    else
+                      set cont to 0
+                    end
+                  end
+                end
+                say "I=" + slice(src, i, j)
+                set i to j
+              else
+                if c is 34
+                  set j to i + 1
+                  set cont to 1
+                  while cont
+                    if j >= n
+                      set cont to 0
+                    else
+                      if ord(src, j) is 34
+                        set cont to 0
+                      else
+                        set j to j + 1
+                      end
+                    end
+                  end
+                  say "S=" + slice(src, i + 1, j)
+                  set i to j + 1
+                else
+                  say "P=" + chr(c)
+                  set i to i + 1
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  say "EOF"
+  return 0
+end
