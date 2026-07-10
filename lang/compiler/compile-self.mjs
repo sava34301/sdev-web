@@ -43,6 +43,20 @@ while _i < _srclen
           set tk_count to tk_count + 1
           set _i to _i + 1
         else
+          if _c is 35
+            set _going to 1
+            while _going
+              if _i >= _srclen
+                set _going to 0
+              else
+                if ord(src, _i) is 10
+                  set _going to 0
+                else
+                  set _i to _i + 1
+                end
+              end
+            end
+          else
           if is_digit(_c)
             set _j to _i
             set _going to 1
