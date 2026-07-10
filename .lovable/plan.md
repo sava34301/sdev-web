@@ -1,55 +1,71 @@
-# Milestone 5m — Widen self-hosted codegen to compile the toolchain
+# Milestone 5n — widen the seed VM so codegen.sdev round-trips through the shim
 
-Goal: extend `lang/compiler/codegen.sdev` so it can compile the full
-`lang/compiler/lexer.sdev`, `parser.sdev`, and its own source byte-identically
-to `lang/bootstrap/compile.mjs`. Once achieved, `compile-self.mjs` becomes a
-drop-in replacement everywhere, and `lang/bootstrap/compile.mjs` can be
-deleted.
+Goal: get `lang/compiler/codegen.sdev` to compile byte-identically to the JS
+bootstrap through `lang/compiler/compile-self.mjs`, matching what
+`lexer.sdev` and `parser.sdev` already do (see 5m). Once achieved,
+`compile-self.mjs` is a drop-in replacement everywhere and
+`lang/bootstrap/compile.mjs` can be deleted.
 
 ## Current gap (measured)
 
-Probe: compile the self-hosted lexer driver through `compile-self.mjs` vs the
-JS bootstrap on the same input program:
+`scripts/test-self-toolchain.mjs` reports:
 
 ```
-JS bootstrap : bc=758  pool=50
-Self-hosted  : bc=9    pool=9
+✓ lang/compiler/lexer.sdev   byte-identical (bc=746, pool=41)
+✓ lang/compiler/parser.sdev  byte-identical (bc=380, pool=38)
+⚠ lang/compiler/codegen.sdev self-hosted compile threw
+                              ([sdev v2] line 0: string pool overflow)
 ```
 
-The self-hosted codegen bails silently on features `lexer.sdev` uses that the
-5k feature set doesn't cover. Enumerate them, add them one at a time, gate
-each with a new case in `test-self-codegen.mjs`.
+The overflow is in the **JS bootstrap** while it compiles the shim's
+driver program, not in the self-hosted codegen. The driver embeds the
+entire user source as a compile-time string literal
+(`set src to "<escaped codegen.sdev>"`), and codegen.sdev is ~15 KB —
+larger than the seed VM's 8 KiB pool.
 
-## Suspected missing features (verify by inspecting `lexer.sdev` + `parser.sdev`)
+## Plan of attack (pick one; option B preferred)
 
-- Multi-line `to NAME with a b c ...` functions with 3+ params.
-- `continue` / early return patterns inside nested loops.
-- String builtins beyond `chr/ord/str`: `slice`, `is_digit`, `is_alpha`,
-  `is_alnum` (need to confirm they're inline builtins in codegen).
-- Bounded list writes through computed indices in nested `if` chains.
-- Any operator or keyword the 43-case suite doesn't exercise.
+### A. Widen the seed VM
 
-## Plan of attack
+1. Edit `lang/bootstrap/seed.wat` to raise `$VAR_BASE`, `$STACK_BASE`,
+   `$CALL_BASE`, `$CODE_BASE` so the pool region grows from 8 KiB to
+   at least 64 KiB. Rebuild `public/wasm/sdev-seed.wasm` (wat2wasm).
+2. Raise `stringPool` size in `lang/bootstrap/compile.mjs` to match
+   (`new Uint8Array(0x10000)`).
+3. Re-run all gates.
 
-1. Add a `probe` script that compiles `lexer.sdev` through the shim and prints
-   the first bytecode divergence offset vs the JS bootstrap.
-2. Bisect: shrink the program by hand until a minimal reproducer emerges.
-3. Add that reproducer as a new byte-identity case in `test-self-codegen.mjs`.
-4. Fix `codegen.sdev` (and possibly the inline lex in the driver) to emit
-   identically. Re-run the shim fixed-point gate.
-5. Repeat until `lexer.sdev`, `parser.sdev`, and `codegen.sdev` all round-trip
-   byte-identically.
+Downside: touches the seed WASM and every downstream consumer that
+assumes 4 pages / 0x2000 pool.
 
-## Retirement (final step)
+### B. Inject user source outside the pool (preferred)
 
-Once round-trip byte-identity holds for all three self-hosted sources:
+Keep the seed VM intact; change the shim driver so it no longer embeds
+the user source as a compile-time string literal:
+
+1. Driver prefix becomes `set src to ""` (tiny pool cost), which reserves
+   global slot 0 for `src`.
+2. After `bootstrapCompile(driverProgram)` returns, before `run()`:
+   - Write `[u32 srclen][utf8 bytes]` into WASM memory at a fixed high
+     offset (e.g. the top of the heap region, or expose a new
+     `write_src(offset)` export in seed.wat).
+   - Overwrite global slot 0 (memory `VAR_BASE + 0`) with that offset.
+3. All `ord(src, i)` / `length(src)` / `slice(src, i, j)` calls in
+   codegen.sdev see the injected blob and work unchanged.
+
+Downside: places src in a memory region the bump allocator could reach
+if the compile is very large. Mitigation: place src at
+`memory.buffer.byteLength - srclen - 4` and periodically check the
+allocator's high-water mark.
+
+## Retirement (final step, once codegen.sdev round-trips)
 
 1. Replace `bootstrapCompile` in `src/lang-bridge/wasm-runtime.ts` with a
    browser build of `compile-self.mjs` (Vite `?raw` import for
-   `codegen.sdev`, plus the seed WASM already served at `/wasm/sdev-seed.wasm`).
-2. Replace `bootstrapCompile` in `test-self-lexer.mjs`, `test-self-parser.mjs`,
-   and `test-wasm-runtime.mjs`.
-3. Keep the JS bootstrap only as the diff oracle in `test-self-codegen.mjs`
-   until we're happy freezing a golden-bytes fixture instead.
+   `codegen.sdev`, plus `/wasm/sdev-seed.wasm` already served).
+2. Replace `bootstrapCompile` in `test-self-lexer.mjs`,
+   `test-self-parser.mjs`, and `test-wasm-runtime.mjs`.
+3. Keep the JS bootstrap only as the diff oracle in
+   `test-self-codegen.mjs` until we're happy freezing a golden-bytes
+   fixture instead.
 4. Delete `lang/bootstrap/compile.mjs`, `src/lang-bridge/bootstrap.d.ts`,
    and their imports.
