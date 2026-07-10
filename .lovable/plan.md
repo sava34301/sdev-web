@@ -1,94 +1,55 @@
-# Milestone 5k — Byte-Identity Cleanup
+# Milestone 5m — Widen self-hosted codegen to compile the toolchain
 
-Goal: make `lang/compiler/codegen.sdev` emit bytecode **byte-for-byte identical** to `lang/bootstrap/compile.mjs` across all 50 cases in `scripts/test-self-codegen.mjs`. Once 50/50 cases go from `~` to `≡`, the JS bootstrap and JS reference runtime can be deleted.
+Goal: extend `lang/compiler/codegen.sdev` so it can compile the full
+`lang/compiler/lexer.sdev`, `parser.sdev`, and its own source byte-identically
+to `lang/bootstrap/compile.mjs`. Once achieved, `compile-self.mjs` becomes a
+drop-in replacement everywhere, and `lang/bootstrap/compile.mjs` can be
+deleted.
 
-## The four divergences to close
+## Current gap (measured)
 
-1. **String encoding.** Bootstrap folds literals into a shared `stringPool` and emits `LSTR` (opcode `0x02`, u16 pool offset). Self-hosted builds each literal at runtime via `LNEW(0)` + one `LI32/CHR/STRCAT` per byte.
-2. **Function placement.** Bootstrap emits `JMP → main` first, then all function bodies contiguously, then main, then `HALT`. Self-hosted emits in source order with a per-function `JMP-over-body`.
-3. **ENTER elision.** Bootstrap emits `ENTER n_extras` only when `n_extras > 0`. Self-hosted always emits `ENTER 0` for zero-local functions.
-4. **Return-type inference.** Bootstrap runs a fixed-point pre-pass over all functions before emitting bodies. Self-hosted only records return types as bodies are parsed, so forward calls to string-returning fns pick `SAY_I32` instead of `SAY_STR`.
+Probe: compile the self-hosted lexer driver through `compile-self.mjs` vs the
+JS bootstrap on the same input program:
 
-## Implementation plan
-
-### Part A — Two-pass emission in `codegen.sdev`
-
-Restructure the top-level parse loop into three phases:
-
-```text
-Phase 1 (collect):   walk tokens, register every `to NAME with …` in fn tables
-                     (name, arity, body-start-token, body-end-token). Skip bodies.
-Phase 2 (hoist):     emit JMP<placeholder>, then loop functions and emit each body
-                     (reparse from stored token range, set in_func, ENTER only if
-                     extras>0, implicit `return 0` guard). Record fn_offsets.
-Phase 3 (main):      patch leading JMP to `here`. Emit remaining top-level stmts.
-                     Emit HALT (0xff). Run resolve_pending_calls.
+```
+JS bootstrap : bc=758  pool=50
+Self-hosted  : bc=9    pool=9
 ```
 
-Token-range storage: two new parallel globals `fn_body_start[i]` / `fn_body_end[i]` (list cells).
+The self-hosted codegen bails silently on features `lexer.sdev` uses that the
+5k feature set doesn't cover. Enumerate them, add them one at a time, gate
+each with a new case in `test-self-codegen.mjs`.
 
-To emit each body a second time, add a helper `emit_fn_body(i)` that saves `pos`, jumps to `fn_body_start[i]`, calls `parse_block`, restores `pos`. Requires making `parse_block` respect an explicit end index rather than only the `else`/`end` keywords — add a global `block_stop_pos` that halts parsing early.
+## Suspected missing features (verify by inspecting `lexer.sdev` + `parser.sdev`)
 
-### Part B — String pool
+- Multi-line `to NAME with a b c ...` functions with 3+ params.
+- `continue` / early return patterns inside nested loops.
+- String builtins beyond `chr/ord/str`: `slice`, `is_digit`, `is_alpha`,
+  `is_alnum` (need to confirm they're inline builtins in codegen).
+- Bounded list writes through computed indices in nested `if` chains.
+- Any operator or keyword the 43-case suite doesn't exercise.
 
-Add two new globals in the driver setup:
-- `pool_bytes` — list of bytes forming `[u32 len][utf8...]` records
-- `pool_map_keys` / `pool_map_offs` — parallel lists mapping literal → offset (linear scan; 50 cases have few unique strings)
+## Plan of attack
 
-New helpers in `codegen.sdev`:
-- `intern_str(s)` — search `pool_map_keys`; if absent, append `[len_u32, bytes…]` to `pool_bytes`, record offset, return offset.
-- `parse_atom` string-literal branch replaced with: `intern_str(s)` → emit `0x02` + `emit_i16(offset)`. Set `expr_type[0] = 1`.
+1. Add a `probe` script that compiles `lexer.sdev` through the shim and prints
+   the first bytecode divergence offset vs the JS bootstrap.
+2. Bisect: shrink the program by hand until a minimal reproducer emerges.
+3. Add that reproducer as a new byte-identity case in `test-self-codegen.mjs`.
+4. Fix `codegen.sdev` (and possibly the inline lex in the driver) to emit
+   identically. Re-run the shim fixed-point gate.
+5. Repeat until `lexer.sdev`, `parser.sdev`, and `codegen.sdev` all round-trip
+   byte-identically.
 
-Driver (`test-self-codegen.mjs`) changes:
-- After codegen runs, `bc[0]` count is followed by pool. Convention: after `emit_byte(255)` (HALT), dump `pool_bytes` length + bytes via `say`.
-- The driver reads bytecode array, then string-pool array, and installs the pool at memory offset 0 (same as `runOne` does with the JS bootstrap's `stringPool`).
+## Retirement (final step)
 
-### Part C — ENTER elision
+Once round-trip byte-identity holds for all three self-hosted sources:
 
-Change the function-body emission block:
-```text
-# was: always emit ENTER + placeholder byte, backpatch with extras
-# now: parse body into a scratch buffer; count extras; if extras>0 emit ENTER extras
-```
-Simpler alternative avoiding buffer split: pre-scan the body's tokens for `set IDENT` (not `set IDENT[`) that don't match a param name — mirror bootstrap's `collectSets`. Add helper `count_extra_locals(start, end, n_params)`.
-
-### Part D — Fixed-point return-type inference
-
-Before Phase 2 (hoist), run:
-```text
-loop until stable (bounded by fn_names[0] + 2 iters):
-  for each fn i:
-    walk its token range looking for `return EXPR`
-    determine expr's string-ness using current fn_ret_types + sym_types
-    if any return is str → set fn_ret_types[i] to 1
-```
-Reuse a lightweight "type-only" walker (no bytecode emission). Cheapest approach: run parse_block twice per fn during Phase 2 — first with a global `emit_enabled = 0` (short-circuits every `emit_byte`), just to populate `fn_ret_types`, then re-run with emit enabled. Iterate until `fn_ret_types` is stable.
-
-### Part E — Regression coverage
-
-`scripts/test-self-codegen.mjs`:
-- Keep 50 semantic cases, plus new byte-identity assertion becomes a **failure** (not informational). Success bar: `byteMatches === 50 && failed === 0`.
-- Add a targeted case per divergence: (a) fn defined after call using string return, (b) zero-local fn (ENTER absent), (c) repeated same string literal (pool interning), (d) top-level mixed with fns.
-
-### Part F — Documentation + bootstrap retirement decision
-
-Update `public/SDEV_INTERNALS.md`:
-- Mark 5k as shipped, all 50/50 byte-identical.
-- Note that JS bootstrap and reference runtime are retained one more milestone for CI cross-check but are queued for deletion in a follow-up housekeeping pass (removing them touches `src/lang-bridge/bridge.ts`, `scripts/build-compiler.ts`, and the IDE — out of scope for this milestone).
-
-## Files touched
-
-- `lang/compiler/codegen.sdev` (major: phases, string pool, ENTER elision, RT inference)
-- `scripts/test-self-codegen.mjs` (driver: pool ingest, strict byte assertion, new cases)
-- `public/SDEV_INTERNALS.md` (roadmap: 5k shipped, deletion queued)
-
-## Risk / order of operations
-
-Ship in this exact order, verifying `node scripts/test-self-codegen.mjs` after each:
-1. ENTER elision — smallest diff, unblocks 2 fn cases.
-2. Function hoisting — unblocks all forward-ref and fn cases.
-3. String pool — unblocks all string cases.
-4. Fixed-point RT inference — unblocks string-returning forward calls.
-5. Byte assertion flip + new targeted cases.
-
-Estimated new self-hosted SDEV code: ~150 lines. No changes to the seed VM (`seed.wat`) — every opcode already exists.
+1. Replace `bootstrapCompile` in `src/lang-bridge/wasm-runtime.ts` with a
+   browser build of `compile-self.mjs` (Vite `?raw` import for
+   `codegen.sdev`, plus the seed WASM already served at `/wasm/sdev-seed.wasm`).
+2. Replace `bootstrapCompile` in `test-self-lexer.mjs`, `test-self-parser.mjs`,
+   and `test-wasm-runtime.mjs`.
+3. Keep the JS bootstrap only as the diff oracle in `test-self-codegen.mjs`
+   until we're happy freezing a golden-bytes fixture instead.
+4. Delete `lang/bootstrap/compile.mjs`, `src/lang-bridge/bootstrap.d.ts`,
+   and their imports.

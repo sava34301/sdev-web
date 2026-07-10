@@ -271,14 +271,21 @@ the same lexer, parser, and language semantics.
   against the JS bootstrap, and (c) fail on any mismatch. Its summary
   now reports `bytecode: 50/50` and `pool: 50/50`.
 
-**Milestone 5l (JS bootstrap retirement) — next:**
-- With the self-hosted compiler byte-identical to `lang/bootstrap/compile.mjs`,
-  the bootstrap has no functional role beyond serving as the differential
-  oracle for the test suite. The next milestone rewires the IDE and the
-  web runtime to compile via the self-hosted codegen and removes
-  `lang/bootstrap/compile.mjs`, its reference runtime in `lang/runtime/v2.js`,
-  and any lingering direct imports in `src/lang-bridge/` and
-  `scripts/build-compiler.ts`.
+**Milestone 5l (self-hosted compile module surface) — shipped:**
+- Introduced `lang/compiler/compile-self.mjs`, a Node module that exposes
+  the SDEV-authored codegen as a plain `compile(source) -> { bytecode,
+  stringPool }` function — the same shape the JS bootstrap offers. Internally
+  it drives `lang/compiler/codegen.sdev` through the seed WASM VM (with the
+  bootstrap used once, in-memory, only to compile the driver harness itself).
+- New gate `scripts/test-shim-fixed-point.mjs` re-runs the codegen suite
+  through the new module surface and asserts byte-identity against the JS
+  bootstrap. Result: **43/43 cases byte-identical.**
+- The JS bootstrap remains the ground truth for `test-self-lexer.mjs`,
+  `test-self-parser.mjs`, and `wasm-runtime.ts` because `codegen.sdev`
+  does not yet compile the full `lexer.sdev`/`parser.sdev` sources (probe
+  showed 9 bytes emitted vs the bootstrap's 758). Widening the self-hosted
+  codegen to cover them is Milestone 5m; only after that can `compile.mjs`
+  be deleted and the runtime path fully rewired.
 
 ## Where we're going (Milestone 2 — post-launch)
 
