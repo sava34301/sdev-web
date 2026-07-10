@@ -281,11 +281,41 @@ the same lexer, parser, and language semantics.
   through the new module surface and asserts byte-identity against the JS
   bootstrap. Result: **43/43 cases byte-identical.**
 - The JS bootstrap remains the ground truth for `test-self-lexer.mjs`,
-  `test-self-parser.mjs`, and `wasm-runtime.ts` because `codegen.sdev`
-  does not yet compile the full `lexer.sdev`/`parser.sdev` sources (probe
-  showed 9 bytes emitted vs the bootstrap's 758). Widening the self-hosted
-  codegen to cover them is Milestone 5m; only after that can `compile.mjs`
-  be deleted and the runtime path fully rewired.
+  `test-self-parser.mjs`, and `wasm-runtime.ts` until the shim can compile
+  the entire toolchain. Widening the self-hosted codegen to cover
+  `lexer.sdev` / `parser.sdev` / `codegen.sdev` is Milestone 5m; only
+  after that can `compile.mjs` be deleted and the runtime path fully
+  rewired.
+
+**Milestone 5m (toolchain round-trip through the shim) — partial:**
+- Added a `#`-comment branch to the inline lexer in `compile-self.mjs`.
+  With that single fix, the self-hosted codegen now compiles the real
+  `lang/compiler/lexer.sdev` **byte-identically** to the JS bootstrap
+  (`bc=746, pool=41`) and the real `lang/compiler/parser.sdev`
+  **byte-identically** (`bc=380, pool=38`).
+- New gate `scripts/test-self-toolchain.mjs` diffs each toolchain source
+  through the shim and hard-fails on required-target mismatches. Current
+  status: **lexer ✓, parser ✓, codegen ⚠** — the third one throws
+  `string pool overflow` inside the JS bootstrap that compiles the shim
+  driver, because embedding `codegen.sdev` itself as a `set src to "…"`
+  string literal blows past the seed VM's 8 KiB pool region.
+- Probe script `scripts/probe-self-lexer.mjs` reports the first diverging
+  bytecode / pool offset for any input, making the next regression easy
+  to bisect.
+
+**Milestone 5n (widen seed pool / driver plumbing) — next:**
+- Either bump `seed.wat` memory layout (raise `VAR_BASE`, `STACK_BASE`,
+  `CALL_BASE`, `CODE_BASE`, extend the pool past 8 KiB) and rebuild
+  `public/wasm/sdev-seed.wasm`, or teach `compile-self.mjs` to inject
+  the user source directly into WASM memory (bypassing the driver's
+  compile-time string pool). Either path unblocks the codegen.sdev
+  round-trip.
+- Once codegen.sdev round-trips, rewire `wasm-runtime.ts`,
+  `test-self-lexer.mjs`, `test-self-parser.mjs`, and
+  `test-wasm-runtime.mjs` to `compile-self.mjs`, keep the JS bootstrap
+  only as the diff oracle in `test-self-codegen.mjs`, then delete
+  `lang/bootstrap/compile.mjs` and `src/lang-bridge/bootstrap.d.ts`.
+
 
 ## Where we're going (Milestone 2 — post-launch)
 
