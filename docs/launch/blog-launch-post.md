@@ -90,7 +90,7 @@ No signup needed to run code. Signup is only for saving files and publishing Gis
 
 ## One more thing
 
-For the next 48 hours, there's a launch contest. Publish anything you build with sdev as a public Gist, tag it `sdev-launch-2026`, and the best submission gets named in the README plus a lifetime pro tier once we ship one.
+For the next 30 days, there's a launch contest. Publish anything you build with sdev as a public Gist, tag it `sdev-launch-2026`, and the best submission gets named in the README plus a lifetime pro tier once we ship one.
 
 If you build with sdev — or if you have opinions about the syntax, the compiler pipeline, or the whole premise — I want to hear about it. Twitter, LinkedIn, Instagram, or the IDE's built-in AI assistant. My DMs are open.
 
