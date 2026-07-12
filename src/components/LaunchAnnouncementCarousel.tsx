@@ -80,7 +80,7 @@ end`}
   },
   {
     icon: Globe2,
-    eyebrow: 'What's next',
+    eyebrow: "What's next",
     title: 'This is day one.',
     body: (
       <ul className="text-left text-sm space-y-2 max-w-md mx-auto">
