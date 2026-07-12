@@ -26,6 +26,7 @@ import { Environment } from '@/lang/environment';
 import { createBuiltins } from '@/lang/builtins';
 import { SdevError } from '@/lang/errors';
 import sdevLogo from '@/assets/sdev-logo.png';
+import { LaunchAnnouncementCarousel } from '@/components/LaunchAnnouncementCarousel';
 
 const DEFAULT_CODE = `// Welcome to sdev!
 // A unique, expressive programming language
@@ -190,6 +191,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative">
+      <LaunchAnnouncementCarousel />
       <SEO title="sdev — A modern programming language with web IDE" description="Try sdev in your browser: a unique programming language with dual Python/JS runtimes, built-in graphics, and live code execution. No install required." path="/" />
       {/* Subtle background gradient */}
       <div className="fixed inset-0 pointer-events-none">
