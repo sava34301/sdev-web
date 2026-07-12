@@ -96,4 +96,4 @@ If you build with sdev — or if you have opinions about the syntax, the compile
 
 Thanks for being here on day one.
 
-— <your name>
+— Sava Milanov
