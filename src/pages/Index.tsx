@@ -26,6 +26,7 @@ import { Environment } from '@/lang/environment';
 import { createBuiltins } from '@/lang/builtins';
 import { SdevError } from '@/lang/errors';
 import sdevLogo from '@/assets/sdev-logo.png';
+import { LaunchAnnouncementCarousel } from '@/components/LaunchAnnouncementCarousel';
 
 const DEFAULT_CODE = `// Welcome to sdev!
 // A unique, expressive programming language

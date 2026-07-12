@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getGoogleCalendarUrl, getIcsDataUrl } from '@/lib/googleCalendar';
 import { redeemInviteCode, hasInviteAccess } from '@/lib/inviteCode';
 import { toast } from 'sonner';
+import { LaunchAnnouncementCarousel } from '@/components/LaunchAnnouncementCarousel';
 
 function diff(target: Date) {
   const ms = Math.max(0, target.getTime() - Date.now());
@@ -58,6 +59,7 @@ export default function Launch() {
 
   return (
     <main className="min-h-screen bg-background text-foreground relative overflow-hidden flex items-center justify-center px-4 py-12 sky-backdrop">
+      <LaunchAnnouncementCarousel />
       <SEO
         title="sdev — Launching July 12, 2026"
         description="sdev officially launches on July 12, 2026. Sign in for early access."
