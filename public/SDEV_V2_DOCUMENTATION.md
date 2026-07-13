@@ -40,13 +40,13 @@ set age to age + 1
 
 ## Values
 
-| Kind    | Example                     |
-| ------- | --------------------------- |
-| number  | `42`, `3.14`, `-7`          |
-| text    | `"hello"` or `'hello'`      |
-| truth   | `true`, `false`             |
-| nothing | `nothing`                   |
-| list    | `[1, 2, 3]`, `["a", "b"]`   |
+| Kind    | Example                   |
+| ------- | ------------------------- |
+| number  | `42`, `3.14`, `-7`        |
+| text    | `"hello"` or `'hello'`    |
+| truth   | `true`, `false`           |
+| nothing | `nothing`                 |
+| list    | `[1, 2, 3]`, `["a", "b"]` |
 
 ## If / else
 
@@ -156,13 +156,13 @@ say length("hello")            # 5
 Byte-level primitives are available when you need to slice or build text
 character by character:
 
-| Builtin      | Meaning                                              |
-| ------------ | ---------------------------------------------------- |
-| `length(x)`  | length of a list **or** a string                     |
-| `concat(a,b)`| concatenate two strings                              |
-| `ord(s, i)`  | byte value of `s` at index `i` (e.g. `ord("A",0)` → 65) |
-| `chr(n)`     | 1-character string from a byte value (`chr(65)` → `"A"`) |
-| `str(n)`     | integer → decimal string (`str(-42)` → `"-42"`)       |
+| Builtin       | Meaning                                                  |
+| ------------- | -------------------------------------------------------- |
+| `length(x)`   | length of a list **or** a string                         |
+| `concat(a,b)` | concatenate two strings                                  |
+| `ord(s, i)`   | byte value of `s` at index `i` (e.g. `ord("A",0)` → 65)  |
+| `chr(n)`      | 1-character string from a byte value (`chr(65)` → `"A"`) |
+| `str(n)`      | integer → decimal string (`str(-42)` → `"-42"`)          |
 
 ```sdev
 # uppercase a string one byte at a time
@@ -187,10 +187,10 @@ say out             # ABC
 SDEV v2 ships with **two independent backends** — pick the one that fits
 where your program runs.
 
-| Runtime         | Where it runs         | How it executes                          |
-| --------------- | --------------------- | ---------------------------------------- |
-| **WASM (web)**  | The browser IDE       | A hand-written WebAssembly stack VM (`lang/bootstrap/seed.wat` → `public/wasm/sdev-seed.wasm`) executes bytecode emitted by the bootstrap compiler. Zero TypeScript in the language core. |
-| **Native ASM** (desktop) | Linux / macOS CLI + Electron | The same AST is emitted as x86-64 GAS assembly (`lang/native/codegen-x64.mjs`), then assembled with `as` and linked with `ld` into a standalone static ELF. No libc dependency. |
+| Runtime                  | Where it runs                | How it executes                                                                                                                                                                           |
+| ------------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WASM (web)**           | The browser IDE              | A hand-written WebAssembly stack VM (`lang/bootstrap/seed.wat` → `public/wasm/sdev-seed.wasm`) executes bytecode emitted by the bootstrap compiler. Zero TypeScript in the language core. |
+| **Native ASM** (desktop) | Linux / macOS CLI + Electron | The same AST is emitted as x86-64 GAS assembly (`lang/native/codegen-x64.mjs`), then assembled with `as` and linked with `ld` into a standalone static ELF. No libc dependency.           |
 
 Both backends share the same lexer/parser (`lang/bootstrap/compile.mjs`)
 so a program that compiles on one side compiles on the other, as long as
@@ -206,7 +206,6 @@ node scripts/sdev-native.mjs hello.sdev -o hello
 
 Or use the Electron desktop IDE — the "Build Native" / "Build & Run"
 buttons call the same pipeline (`electron/README.md`).
-
 
 ## Opt-in power (advanced)
 
@@ -254,22 +253,16 @@ See `SDEV_HARDWARE_DOCUMENTATION.md` for the full board reference.
 
 ## v1 → v2 cheat sheet
 
-| v1                          | v2                          |
-| --------------------------- | --------------------------- |
-| `forge x be 10`             | `set x to 10`               |
-| `speak("hi")`               | `say "hi"`                  |
-| `conjure add(a, b) :: … ;;` | `to add with a b … end`     |
-| `ponder x > 0 :: … ;;`      | `if x > 0 … end`            |
-| `iterate n through xs :: … ;;` | `for each n in xs … end`  |
-| `cycle x < 10 :: … ;;`      | `while x < 10 … end`        |
-| `yield x`                   | `return x`                  |
-| `yep` / `nope` / `void`     | `true` / `false` / `nothing`|
+| v1                             | v2                           |
+| ------------------------------ | ---------------------------- |
+| `forge x be 10`                | `set x to 10`                |
+| `speak("hi")`                  | `say "hi"`                   |
+| `conjure add(a, b) :: … ;;`    | `to add with a b … end`      |
+| `ponder x > 0 :: … ;;`         | `if x > 0 … end`             |
+| `iterate n through xs :: … ;;` | `for each n in xs … end`     |
+| `cycle x < 10 :: … ;;`         | `while x < 10 … end`         |
+| `yield x`                      | `return x`                   |
+| `yep` / `nope` / `void`        | `true` / `false` / `nothing` |
 
 To port a v1 file, either rewrite it or just add `#!sdev v1` on line 1 and
 keep the old syntax working forever.
-
-## Why v2 exists
-
-The full "why we're rebuilding SDEV" — self-hosted compiler, WASM output,
-zero TypeScript in the language core — lives in `.lovable/plan.md`.
-This document only teaches the *language*.
