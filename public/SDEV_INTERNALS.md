@@ -303,18 +303,44 @@ the same lexer, parser, and language semantics.
   bytecode / pool offset for any input, making the next regression easy
   to bisect.
 
-**Milestone 5n (widen seed pool / driver plumbing) — next:**
-- Either bump `seed.wat` memory layout (raise `VAR_BASE`, `STACK_BASE`,
-  `CALL_BASE`, `CODE_BASE`, extend the pool past 8 KiB) and rebuild
-  `public/wasm/sdev-seed.wasm`, or teach `compile-self.mjs` to inject
-  the user source directly into WASM memory (bypassing the driver's
-  compile-time string pool). Either path unblocks the codegen.sdev
-  round-trip.
-- Once codegen.sdev round-trips, rewire `wasm-runtime.ts`,
-  `test-self-lexer.mjs`, `test-self-parser.mjs`, and
-  `test-wasm-runtime.mjs` to `compile-self.mjs`, keep the JS bootstrap
-  only as the diff oracle in `test-self-codegen.mjs`, then delete
-  `lang/bootstrap/compile.mjs` and `src/lang-bridge/bootstrap.d.ts`.
+**Milestone 5n (widen seed pool / driver plumbing) — shipped:**
+- Bumped `seed.wat` memory layout: string pool grew from 8 KiB to
+  **64 KiB** (0x00000..0x0FFFF), and every downstream region moved up in
+  lockstep — `VAR_BASE=0x10000`, `STACK_BASE=0x14000`,
+  `CALL_BASE=0x18000`, `CODE_BASE=0x1C000`, `HEAP_BASE=0x30000`. Linear
+  memory grew from 4 → 32 pages (256 KiB → 2 MiB) so the heap has room
+  for the driver's larger scratch lists. u16 `PUSH_STR` offsets still
+  fit (max 0xFFFF) so no opcode changes.
+- Bumped the bootstrap emitter's compile-time pool buffer in lockstep
+  (`lang/bootstrap/compile.mjs`: `0x2000 → 0x10000`) so it can intern
+  the ~21 KiB `codegen.sdev` source literal that the shim driver embeds.
+- Widened the driver's inline scratch lists in `compile-self.mjs`
+  (`tk_kind/tk_num/tk_txt` 2000 → 20000, `bc` 16384 → 65536,
+  `pool_bytes` 8192 → 32768) so the self-hosted codegen can process a
+  20 KiB+ source without silently overflowing heap allocations.
+- Result: `test-self-toolchain.mjs` now runs codegen.sdev through the
+  shim end-to-end without throwing. Lexer + parser still byte-identical
+  (`bc=746/pool=41`, `bc=380/pool=38`); codegen.sdev now diverges
+  *semantically* (self=486B / ref=5620B) — function bodies aren't being
+  emitted — instead of failing at the seed VM boundary. That's the
+  Milestone 5o gap, not 5n's.
+
+**Milestone 5o (self-hosted codegen self-compile) — next:**
+- Diagnose why `codegen.sdev` compiles itself to only 486 bytes: the
+  driver emits the top-level jump + entrypoint tail correctly, but
+  every function body is missing. First hypothesis: `parse_stmt` inside
+  codegen.sdev doesn't recognize one of its own top-level constructs
+  (e.g. `to name with a b c d`, multi-word `set … to …` targets, or
+  the `#`-only-on-own-line comment pattern used heavily in the file).
+  Second: pending-call resolution runs before all function offsets are
+  known when the driver's function-registration pass misses entries.
+- Once codegen.sdev round-trips byte-identically, rewire
+  `wasm-runtime.ts`, `test-self-lexer.mjs`, `test-self-parser.mjs`,
+  and `test-wasm-runtime.mjs` to `compile-self.mjs`, keep the JS
+  bootstrap only as the diff oracle in `test-self-codegen.mjs`, then
+  delete `lang/bootstrap/compile.mjs` and
+  `src/lang-bridge/bootstrap.d.ts`.
+
 
 
 ## Where we're going (Milestone 2 — post-launch)
