@@ -10,13 +10,13 @@
 ;; lang/compiler/*.sdev) is complete, the bootstrap compiler is discarded
 ;; and SDEV compiles SDEV all the way down.
 ;;
-;; Memory layout (linear memory, 4 pages = 256 KiB):
-;;   0x00000..0x01FFF  string pool  (utf-8 blobs, length-prefixed u32)
-;;   0x02000..0x03FFF  global variable slots (256 slots × 4 bytes)
-;;   0x04000..0x05FFF  operand stack (u32 cells; sp grows up)
-;;   0x06000..0x07FFF  call stack (frames of ret_ip, saved_fp, locals…)
-;;   0x08000..0x0FFFF  bytecode program (u8 stream)
-;;   0x10000..0x3FFFF  bump-pointer heap  (lists, dynamic strings)
+;; Memory layout (linear memory, 8 pages = 512 KiB — widened in Milestone 5n):
+;;   0x00000..0x0FFFF  string pool  (utf-8 blobs, length-prefixed u32; 64 KiB)
+;;   0x10000..0x13FFF  global variable slots (256 slots × 4 bytes → rounded)
+;;   0x14000..0x17FFF  operand stack (u32 cells; sp grows up)
+;;   0x18000..0x1BFFF  call stack (frames of ret_ip, saved_fp, locals…)
+;;   0x1C000..0x2FFFF  bytecode program (u8 stream, up to 80 KiB)
+;;   0x30000..0x7FFFF  bump-pointer heap  (lists, dynamic strings; 320 KiB)
 ;;
 ;; Opcodes (single byte, may be followed by inline operands):
 ;;   0x01 PUSH_I32 <i32 LE>         push signed 32-bit constant
