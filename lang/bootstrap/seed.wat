@@ -57,7 +57,7 @@
 (module
   (import "env" "host_say_i32" (func $say_i32 (param i32)))
   (import "env" "host_say_str" (func $say_str (param i32 i32)))
-  (memory (export "memory") 8)
+  (memory (export "memory") 32)
 
 
   ;; ---- constants ---------------------------------------------------------
