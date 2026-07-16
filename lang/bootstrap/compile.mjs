@@ -47,7 +47,7 @@ const BUILTINS = {
 class Emitter {
   constructor() {
     this.bytes = [];
-    this.stringPool = new Uint8Array(0x2000);
+    this.stringPool = new Uint8Array(0x10000);
     this.poolNext = 0;
     this.strings = new Map();
     this.globals = new Map();               // name → global slot
