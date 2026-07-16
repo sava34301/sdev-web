@@ -57,20 +57,24 @@
 (module
   (import "env" "host_say_i32" (func $say_i32 (param i32)))
   (import "env" "host_say_str" (func $say_str (param i32 i32)))
-  (memory (export "memory") 4)
+  (memory (export "memory") 8)
 
 
   ;; ---- constants ---------------------------------------------------------
-  (global $VAR_BASE   i32 (i32.const 0x2000))
-  (global $STACK_BASE i32 (i32.const 0x4000))
-  (global $CALL_BASE  i32 (i32.const 0x6000))
-  (global $CODE_BASE  i32 (i32.const 0x8000))
-  (global $HEAP_BASE  i32 (i32.const 0x10000))
+  ;; Milestone 5n: pool widened from 8 KiB to 64 KiB so the self-hosted
+  ;; driver can embed codegen.sdev (~21 KiB) as a `set src to "..."`
+  ;; literal without overflowing. u16 PUSH_STR offsets still fit
+  ;; (max 0xFFFF), and everything downstream is bumped in lockstep.
+  (global $VAR_BASE   i32 (i32.const 0x10000))
+  (global $STACK_BASE i32 (i32.const 0x14000))
+  (global $CALL_BASE  i32 (i32.const 0x18000))
+  (global $CODE_BASE  i32 (i32.const 0x1C000))
+  (global $HEAP_BASE  i32 (i32.const 0x30000))
 
   ;; ---- call-frame registers ---------------------------------------------
-  (global $fp  (mut i32) (i32.const 0x6000))  ;; current frame base
-  (global $csp (mut i32) (i32.const 0x6000))  ;; call-stack tip
-  (global $hp  (mut i32) (i32.const 0x10000)) ;; heap bump pointer
+  (global $fp  (mut i32) (i32.const 0x18000))  ;; current frame base
+  (global $csp (mut i32) (i32.const 0x18000))  ;; call-stack tip
+  (global $hp  (mut i32) (i32.const 0x30000))  ;; heap bump pointer
 
   ;; ---- program length (set by host before calling run) -------------------
   (global $prog_len (mut i32) (i32.const 0))
