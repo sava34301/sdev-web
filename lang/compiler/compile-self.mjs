@@ -21,9 +21,9 @@ const decoder = new TextDecoder();
 // Inline lexer stub — same one the self-codegen test uses. Emits into
 // tk_kind/tk_num/tk_txt/tk_count globals that codegen.sdev consumes.
 const INLINE_LEX = `
-set tk_kind to mklist(2000)
-set tk_num  to mklist(2000)
-set tk_txt  to mklist(2000)
+set tk_kind to mklist(20000)
+set tk_num  to mklist(20000)
+set tk_txt  to mklist(20000)
 set tk_count to 0
 set _srclen to length(src)
 set _i to 0
@@ -153,7 +153,7 @@ end
 `;
 
 const DRIVE_CODEGEN = `
-set bc to mklist(16384)
+set bc to mklist(65536)
 set bc[0] to 0
 set sym_names to mklist(256)
 set sym_names[0] to 0
@@ -191,7 +191,7 @@ set emit_enabled to mklist(2)
 set emit_enabled[0] to 0
 set skip_fn_defs to mklist(2)
 set skip_fn_defs[0] to 0
-set pool_bytes to mklist(8192)
+set pool_bytes to mklist(32768)
 set pool_bytes[0] to 0
 set pool_keys to mklist(256)
 set pool_keys[0] to 0
