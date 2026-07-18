@@ -858,5 +858,14 @@ to parse_stmt with pos
     end
     return pos
   end
+  # Expression statement (e.g. bare function call). Only start if the
+  # current token is an identifier — otherwise leave pos alone so the
+  # driver's outer loop terminates cleanly.
+  if tk_kind[pos] is 2
+    set pos to parse_cmp(pos)
+    emit_byte(5)
+    set expr_type[0] to 0
+    return pos
+  end
   return pos
 end
