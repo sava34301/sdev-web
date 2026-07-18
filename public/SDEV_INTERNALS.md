@@ -325,21 +325,31 @@ the same lexer, parser, and language semantics.
   emitted — instead of failing at the seed VM boundary. That's the
   Milestone 5o gap, not 5n's.
 
-**Milestone 5o (self-hosted codegen self-compile) — next:**
-- Diagnose why `codegen.sdev` compiles itself to only 486 bytes: the
-  driver emits the top-level jump + entrypoint tail correctly, but
-  every function body is missing. First hypothesis: `parse_stmt` inside
-  codegen.sdev doesn't recognize one of its own top-level constructs
-  (e.g. `to name with a b c d`, multi-word `set … to …` targets, or
-  the `#`-only-on-own-line comment pattern used heavily in the file).
-  Second: pending-call resolution runs before all function offsets are
-  known when the driver's function-registration pass misses entries.
-- Once codegen.sdev round-trips byte-identically, rewire
-  `wasm-runtime.ts`, `test-self-lexer.mjs`, `test-self-parser.mjs`,
-  and `test-wasm-runtime.mjs` to `compile-self.mjs`, keep the JS
-  bootstrap only as the diff oracle in `test-self-codegen.mjs`, then
-  delete `lang/bootstrap/compile.mjs` and
-  `src/lang-bridge/bootstrap.d.ts`.
+**Milestone 5o (self-hosted codegen self-compile) — shipped:**
+- Diagnosed the 486 B divergence: `codegen.sdev`'s own parser was
+  missing two things it needed to parse itself. First, `parse_mul` did
+  not recognize `%` (MOD, opcode `0x14`), so `emit_i32`'s body — which
+  chains `v % 256` twice — halted mid-function. Second, `parse_stmt`
+  had no expression-statement fallthrough, so bare calls like
+  `emit_byte(x)` (used ~200 times throughout the compiler) fell through
+  every keyword branch and returned `pos` unchanged, stopping the pass-1
+  walk at the first such call.
+- Fixed both: `parse_mul` now emits opcode `0x14` on `%`, and
+  `parse_stmt` finishes with an "identifier ⇒ parse expression + POP"
+  branch that mirrors `exprStmt` in the JS bootstrap. Both changes are
+  strict supersets — no existing case regresses.
+- Result: `test-self-toolchain.mjs` now reports **codegen.sdev
+  byte-identical (bc=5730, pool=136)** through the shim. All three
+  toolchain sources (lexer, parser, codegen) round-trip byte-for-byte
+  through the self-hosted compiler.
+
+**Milestone 5p (retire the JS bootstrap) — next:**
+- Rewire `wasm-runtime.ts`, `test-self-lexer.mjs`, `test-self-parser.mjs`,
+  and `test-wasm-runtime.mjs` to `compile-self.mjs`. Keep the JS
+  bootstrap only as the diff oracle in `test-self-codegen.mjs` and
+  `test-self-toolchain.mjs`, then delete `lang/bootstrap/compile.mjs`
+  and `src/lang-bridge/bootstrap.d.ts` once no non-test caller remains.
+
 
 
 
