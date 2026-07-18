@@ -517,7 +517,14 @@ to parse_mul with pos
         emit_byte(19)
         set expr_type[0] to 0
       else
-        set going to 0
+        if is_op_c(pos, 37)
+          set pos to parse_atom(pos + 1)
+          set pos to parse_postfix(pos)
+          emit_byte(20)
+          set expr_type[0] to 0
+        else
+          set going to 0
+        end
       end
     end
   end
