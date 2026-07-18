@@ -21,8 +21,21 @@ function escapeForSdev(s) {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t');
 }
 
-// Modified driver: dump diagnostic markers BEFORE the bc/pool dump
-const diagDrive = drive.replace(
+// Instrument the pass-1 loop so we can see exactly where parse_stmt gives up.
+let diagDrive = drive.replace(
+  /if pos >= tk_count\n      set going to 0\n    end\n  end\n  set _iter/,
+  `if pos >= tk_count
+      set going to 0
+    end
+  end
+  say 900010
+  say pos
+  say 900011
+  say tk_kind[pos]
+  say tk_num[pos]
+  set _iter`
+);
+diagDrive = diagDrive.replace(
   /say bc\[0\]/,
   `say 900001
 say tk_count
