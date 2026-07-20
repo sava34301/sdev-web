@@ -29,8 +29,15 @@ const OP = {
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
   ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83,
   SGET: 0x84, I2S: 0x87, CHR: 0x88, LNEW: 0x89, STRCAT: 0x91,
+  // Milestone 6 — boxed f64 floats
+  PUSH_F64: 0xA0, FADD: 0xA1, FSUB: 0xA2, FMUL: 0xA3, FDIV: 0xA4,
+  FLT: 0xA5, FGT: 0xA6, FEQ: 0xA7, I2F: 0xA8, F2I: 0xA9,
+  FNEG: 0xAA, FABS: 0xAB, FSQRT: 0xAC, SAY_F64: 0xAD, FMATH: 0xAE,
   HALT: 0xFF,
 };
+
+// Transcendental math op codes for the FMATH opcode.
+const FMATH_OP = { sin: 0, cos: 1, tan: 2, exp: 3, log: 4, pow: 5 };
 
 // Builtins available as function-call syntax. Each maps to a single opcode
 // sequence emitted inline. Arity is checked at compile time.
@@ -42,6 +49,21 @@ const BUILTINS = {
   chr:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.CHR) },
   str:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
   mklist:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LNEW) },
+  // --- Milestone 6: floats ---
+  // Explicit int↔float conversion.
+  i2f:     { arity: 1, ret: 'float', emit: (em) => em.emit(OP.I2F) },
+  f2i:     { arity: 1, ret: 'int',   emit: (em) => em.emit(OP.F2I) },
+  // Unary float math.
+  fneg:    { arity: 1, ret: 'float', emit: (em) => em.emit(OP.FNEG) },
+  fabs:    { arity: 1, ret: 'float', emit: (em) => em.emit(OP.FABS) },
+  fsqrt:   { arity: 1, ret: 'float', emit: (em) => em.emit(OP.FSQRT) },
+  // Transcendentals via host.
+  fsin:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.sin); } },
+  fcos:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.cos); } },
+  ftan:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.tan); } },
+  fexp:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.exp); } },
+  flog:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.log); } },
+  fpow:    { arity: 2, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.pow); } },
 };
 
 class Emitter {
