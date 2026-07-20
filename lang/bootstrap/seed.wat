@@ -69,6 +69,8 @@
 (module
   (import "env" "host_say_i32" (func $say_i32 (param i32)))
   (import "env" "host_say_str" (func $say_str (param i32 i32)))
+  (import "env" "host_say_f64" (func $say_f64 (param f64)))
+  (import "env" "host_fmath"   (func $fmath (param i32 f64 f64) (result f64)))
   (memory (export "memory") 32)
 
 
