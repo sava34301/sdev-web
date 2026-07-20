@@ -457,16 +457,17 @@ function inferBody(body, localTypes, fnTypes) {
 function inferExpr(e, localTypes, fnTypes) {
   switch (e.k) {
     case 'num':   return 'int';
+    case 'fnum':  return 'float';
     case 'str':   return 'str';
     case 'ident': return localTypes.get(e.name) || 'int';
     case 'un':    return 'int';
-    case 'bin':
-      if (e.op === '+') {
-        const l = inferExpr(e.l, localTypes, fnTypes);
-        const r = inferExpr(e.r, localTypes, fnTypes);
-        if (l === 'str' || r === 'str') return 'str';
-      }
+    case 'bin': {
+      const l = inferExpr(e.l, localTypes, fnTypes);
+      const r = inferExpr(e.r, localTypes, fnTypes);
+      if (e.op === '+' && (l === 'str' || r === 'str')) return 'str';
+      if (['+', '-', '*', '/'].includes(e.op) && l === 'float' && r === 'float') return 'float';
       return 'int';
+    }
     case 'list':  return 'int';
     case 'index': return 'int';
     case 'call': {
