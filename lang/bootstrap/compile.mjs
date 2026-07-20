@@ -29,8 +29,15 @@ const OP = {
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
   ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83,
   SGET: 0x84, I2S: 0x87, CHR: 0x88, LNEW: 0x89, STRCAT: 0x91,
+  // Milestone 6 — boxed f64 floats
+  PUSH_F64: 0xA0, FADD: 0xA1, FSUB: 0xA2, FMUL: 0xA3, FDIV: 0xA4,
+  FLT: 0xA5, FGT: 0xA6, FEQ: 0xA7, I2F: 0xA8, F2I: 0xA9,
+  FNEG: 0xAA, FABS: 0xAB, FSQRT: 0xAC, SAY_F64: 0xAD, FMATH: 0xAE,
   HALT: 0xFF,
 };
+
+// Transcendental math op codes for the FMATH opcode.
+const FMATH_OP = { sin: 0, cos: 1, tan: 2, exp: 3, log: 4, pow: 5 };
 
 // Builtins available as function-call syntax. Each maps to a single opcode
 // sequence emitted inline. Arity is checked at compile time.
@@ -42,6 +49,21 @@ const BUILTINS = {
   chr:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.CHR) },
   str:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
   mklist:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LNEW) },
+  // --- Milestone 6: floats ---
+  // Explicit int↔float conversion.
+  i2f:     { arity: 1, ret: 'float', emit: (em) => em.emit(OP.I2F) },
+  f2i:     { arity: 1, ret: 'int',   emit: (em) => em.emit(OP.F2I) },
+  // Unary float math.
+  fneg:    { arity: 1, ret: 'float', emit: (em) => em.emit(OP.FNEG) },
+  fabs:    { arity: 1, ret: 'float', emit: (em) => em.emit(OP.FABS) },
+  fsqrt:   { arity: 1, ret: 'float', emit: (em) => em.emit(OP.FSQRT) },
+  // Transcendentals via host.
+  fsin:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.sin); } },
+  fcos:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.cos); } },
+  ftan:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.tan); } },
+  fexp:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.exp); } },
+  flog:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.log); } },
+  fpow:    { arity: 2, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.pow); } },
 };
 
 class Emitter {
@@ -56,6 +78,12 @@ class Emitter {
   }
   emit(b) { this.bytes.push(b & 0xff); }
   emitI32(v) { this.emit(v); this.emit(v >> 8); this.emit(v >> 16); this.emit(v >> 24); }
+  emitF64(v) {
+    const buf = new ArrayBuffer(8);
+    new DataView(buf).setFloat64(0, v, true);
+    const b = new Uint8Array(buf);
+    for (let i = 0; i < 8; i++) this.emit(b[i]);
+  }
   emitU16(v) { this.emit(v); this.emit(v >> 8); }
   patchI16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
   patchU16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
@@ -215,7 +243,14 @@ function parseProgram(tokens) {
   }
   function atom() {
     const t = peek();
-    if (t.type === 'NUM') { p++; if (!Number.isInteger(t.value)) throw new SdevError('bootstrap subset supports integers only', t.line); return { k: 'num', v: t.value }; }
+    if (t.type === 'NUM') {
+      p++;
+      // Number literals with a fractional part become boxed f64 floats.
+      // Integers stay in the fast i32 path.
+      if (t.isFloat) return { k: 'fnum', v: t.value };
+      if (Number.isInteger(t.value)) return { k: 'num', v: t.value };
+      return { k: 'fnum', v: t.value };
+    }
     if (t.type === 'STR') { p++; return { k: 'str', v: t.value }; }
     if (t.type === 'IDENT') { p++; return { k: 'ident', name: t.value }; }
     if (t.type === 'OP' && t.value === '(') { p++; const e = expr(); eat('OP', ')'); return e; }
@@ -313,6 +348,7 @@ function collectSets(body, locals) {
 function emitExpr(e, em, locals) {
   switch (e.k) {
     case 'num':   em.emit(OP.PUSH_I32); em.emitI32(e.v); return 'int';
+    case 'fnum':  em.emit(OP.PUSH_F64); em.emitF64(e.v); return 'float';
     case 'str':   em.emit(OP.PUSH_STR); { const off = em.intern(e.v); em.emit(off & 0xff); em.emit((off >> 8) & 0xff); } return 'str';
     case 'ident': {
       const t = scopeTypes(locals, em).get(e.name) || 'int';
@@ -330,6 +366,19 @@ function emitExpr(e, em, locals) {
       const rk = emitExpr(e.r, em, locals);
       // Promote `+` to STRCAT when either operand is a string literal.
       if (e.op === '+' && (lk === 'str' || rk === 'str')) { em.emit(OP.STRCAT); return 'str'; }
+      // Float arithmetic when BOTH sides are floats. Mixed int/float requires
+      // an explicit i2f() — keeps codegen deterministic given emission order.
+      if (lk === 'float' && rk === 'float') {
+        switch (e.op) {
+          case '+': em.emit(OP.FADD); return 'float';
+          case '-': em.emit(OP.FSUB); return 'float';
+          case '*': em.emit(OP.FMUL); return 'float';
+          case '/': em.emit(OP.FDIV); return 'float';
+          case '<':  em.emit(OP.FLT); return 'int';
+          case '>':  em.emit(OP.FGT); return 'int';
+          case 'is': em.emit(OP.FEQ); return 'int';
+        }
+      }
       switch (e.op) {
         case '+': em.emit(OP.ADD); return 'int';
         case '-': em.emit(OP.SUB); return 'int';
@@ -409,16 +458,17 @@ function inferBody(body, localTypes, fnTypes) {
 function inferExpr(e, localTypes, fnTypes) {
   switch (e.k) {
     case 'num':   return 'int';
+    case 'fnum':  return 'float';
     case 'str':   return 'str';
     case 'ident': return localTypes.get(e.name) || 'int';
     case 'un':    return 'int';
-    case 'bin':
-      if (e.op === '+') {
-        const l = inferExpr(e.l, localTypes, fnTypes);
-        const r = inferExpr(e.r, localTypes, fnTypes);
-        if (l === 'str' || r === 'str') return 'str';
-      }
+    case 'bin': {
+      const l = inferExpr(e.l, localTypes, fnTypes);
+      const r = inferExpr(e.r, localTypes, fnTypes);
+      if (e.op === '+' && (l === 'str' || r === 'str')) return 'str';
+      if (['+', '-', '*', '/'].includes(e.op) && l === 'float' && r === 'float') return 'float';
       return 'int';
+    }
     case 'list':  return 'int';
     case 'index': return 'int';
     case 'call': {
@@ -435,7 +485,7 @@ function emitStmt(s, em, locals) {
   switch (s.k) {
     case 'say': {
       const kind = emitExpr(s.expr, em, locals);
-      em.emit(kind === 'str' ? OP.SAY_STR : OP.SAY_I32);
+      em.emit(kind === 'str' ? OP.SAY_STR : kind === 'float' ? OP.SAY_F64 : OP.SAY_I32);
       return;
     }
     case 'set': {

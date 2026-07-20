@@ -58,6 +58,18 @@ export async function runWasm(source: string): Promise<{ success: boolean; outpu
         const bytes = new Uint8Array(mem.buffer, ptr, len);
         output.push(decoder.decode(bytes));
       },
+      host_say_f64: (x: number) => output.push(String(x)),
+      host_fmath: (op: number, a: number, b: number): number => {
+        switch (op) {
+          case 0: return Math.sin(a);
+          case 1: return Math.cos(a);
+          case 2: return Math.tan(a);
+          case 3: return Math.exp(a);
+          case 4: return Math.log(a);
+          case 5: return Math.pow(a, b);
+          default: return NaN;
+        }
+      },
     },
   });
 
@@ -85,7 +97,7 @@ export async function runWasm(source: string): Promise<{ success: boolean; outpu
 export async function seedVersion(): Promise<number> {
   const mod = await loadSeed();
   const inst = await WebAssembly.instantiate(mod, {
-    env: { host_say_i32: () => {}, host_say_str: () => {} },
+    env: { host_say_i32: () => {}, host_say_str: () => {}, host_say_f64: () => {}, host_fmath: () => 0 },
   });
   return (inst.exports as unknown as SeedExports).sdev_version();
 }

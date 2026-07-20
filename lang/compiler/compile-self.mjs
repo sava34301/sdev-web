@@ -324,6 +324,8 @@ export async function compile(userSrc) {
     env: {
       host_say_i32: (n) => dumped.push(String(n)),
       host_say_str: (ptr, len) => dumped.push(decoder.decode(new Uint8Array(mem.buffer, ptr, len))),
+      host_say_f64: (x) => {},
+      host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
     },
   });
   mem = inst.exports.memory;
