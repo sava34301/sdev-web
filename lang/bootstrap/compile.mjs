@@ -347,6 +347,7 @@ function collectSets(body, locals) {
 function emitExpr(e, em, locals) {
   switch (e.k) {
     case 'num':   em.emit(OP.PUSH_I32); em.emitI32(e.v); return 'int';
+    case 'fnum':  em.emit(OP.PUSH_F64); em.emitF64(e.v); return 'float';
     case 'str':   em.emit(OP.PUSH_STR); { const off = em.intern(e.v); em.emit(off & 0xff); em.emit((off >> 8) & 0xff); } return 'str';
     case 'ident': {
       const t = scopeTypes(locals, em).get(e.name) || 'int';
