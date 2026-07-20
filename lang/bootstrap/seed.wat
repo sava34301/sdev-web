@@ -565,6 +565,118 @@
             (br $dispatch)))
 
 
+        ;; ============================================================
+        ;; --- Milestone 6: floats ------------------------------------
+        ;; ============================================================
+
+        ;; --- PUSH_F64 (0xA0) <f64 LE> --- box literal, push addr
+        (if (i32.eq (local.get $op) (i32.const 0xA0))
+          (then
+            (i32.store (local.get $sp) (call $box_f (call $read_f64 (local.get $ip))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 8)))
+            (br $dispatch)))
+
+        ;; --- FADD..FDIV (0xA1..0xA4) ---
+        (if (i32.and (i32.ge_u (local.get $op) (i32.const 0xA1))
+                     (i32.le_u (local.get $op) (i32.const 0xA4)))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $fb (f64.load (i32.load (local.get $sp))))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $fa (f64.load (i32.load (local.get $sp))))
+            (if (i32.eq (local.get $op) (i32.const 0xA1))
+              (then (i32.store (local.get $sp) (call $box_f (f64.add (local.get $fa) (local.get $fb))))))
+            (if (i32.eq (local.get $op) (i32.const 0xA2))
+              (then (i32.store (local.get $sp) (call $box_f (f64.sub (local.get $fa) (local.get $fb))))))
+            (if (i32.eq (local.get $op) (i32.const 0xA3))
+              (then (i32.store (local.get $sp) (call $box_f (f64.mul (local.get $fa) (local.get $fb))))))
+            (if (i32.eq (local.get $op) (i32.const 0xA4))
+              (then (i32.store (local.get $sp) (call $box_f (f64.div (local.get $fa) (local.get $fb))))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- FLT/FGT/FEQ (0xA5..0xA7) --- result is i32 boolean
+        (if (i32.and (i32.ge_u (local.get $op) (i32.const 0xA5))
+                     (i32.le_u (local.get $op) (i32.const 0xA7)))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $fb (f64.load (i32.load (local.get $sp))))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $fa (f64.load (i32.load (local.get $sp))))
+            (if (i32.eq (local.get $op) (i32.const 0xA5))
+              (then (i32.store (local.get $sp) (f64.lt (local.get $fa) (local.get $fb)))))
+            (if (i32.eq (local.get $op) (i32.const 0xA6))
+              (then (i32.store (local.get $sp) (f64.gt (local.get $fa) (local.get $fb)))))
+            (if (i32.eq (local.get $op) (i32.const 0xA7))
+              (then (i32.store (local.get $sp) (f64.eq (local.get $fa) (local.get $fb)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- I2F (0xA8) --- pop int, push boxed float
+        (if (i32.eq (local.get $op) (i32.const 0xA8))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp)
+              (call $box_f (f64.convert_i32_s (i32.load (local.get $sp)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- F2I (0xA9) --- pop float addr, push i32 truncation
+        (if (i32.eq (local.get $op) (i32.const 0xA9))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp)
+              (i32.trunc_f64_s (f64.load (i32.load (local.get $sp)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- FNEG/FABS/FSQRT (0xAA..0xAC) ---
+        (if (i32.and (i32.ge_u (local.get $op) (i32.const 0xAA))
+                     (i32.le_u (local.get $op) (i32.const 0xAC)))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $fa (f64.load (i32.load (local.get $sp))))
+            (if (i32.eq (local.get $op) (i32.const 0xAA))
+              (then (i32.store (local.get $sp) (call $box_f (f64.neg (local.get $fa))))))
+            (if (i32.eq (local.get $op) (i32.const 0xAB))
+              (then (i32.store (local.get $sp) (call $box_f (f64.abs (local.get $fa))))))
+            (if (i32.eq (local.get $op) (i32.const 0xAC))
+              (then (i32.store (local.get $sp) (call $box_f (f64.sqrt (local.get $fa))))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- SAY_F64 (0xAD) ---
+        (if (i32.eq (local.get $op) (i32.const 0xAD))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (call $say_f64 (f64.load (i32.load (local.get $sp))))
+            (br $dispatch)))
+
+        ;; --- FMATH (0xAE) <u8 op> --- transcendentals via host
+        ;; op: 0 sin, 1 cos, 2 tan, 3 exp, 4 log (all unary; b unused=0)
+        ;;     5 pow (binary; pops two)
+        (if (i32.eq (local.get $op) (i32.const 0xAE))
+          (then
+            (local.set $a (call $read_u8 (local.get $ip)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+            (if (i32.eq (local.get $a) (i32.const 5))
+              (then
+                (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+                (local.set $fb (f64.load (i32.load (local.get $sp))))
+                (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+                (local.set $fa (f64.load (i32.load (local.get $sp))))
+                (i32.store (local.get $sp)
+                  (call $box_f (call $fmath (local.get $a) (local.get $fa) (local.get $fb))))
+                (local.set $sp (i32.add (local.get $sp) (i32.const 4))))
+              (else
+                (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+                (local.set $fa (f64.load (i32.load (local.get $sp))))
+                (i32.store (local.get $sp)
+                  (call $box_f (call $fmath (local.get $a) (local.get $fa) (f64.const 0))))
+                (local.set $sp (i32.add (local.get $sp) (i32.const 4)))))
+            (br $dispatch)))
+
         ;; unknown opcode → halt
         (br $exit)
       )
