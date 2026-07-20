@@ -350,6 +350,57 @@ the same lexer, parser, and language semantics.
   `test-self-toolchain.mjs`, then delete `lang/bootstrap/compile.mjs`
   and `src/lang-bridge/bootstrap.d.ts` once no non-test caller remains.
 
+**Milestone 6 (floats + math opcodes) — shipped:**
+- **Representation:** boxed f64. A float lives on the heap as an 8-byte
+  cell; the stack cell holds the pointer. Existing i32 opcodes are
+  untouched, so int-only programs pay zero cost.
+- **New seed opcodes** (`seed.wat`):
+  `PUSH_F64 0xA0` (with 8-byte little-endian payload),
+  `FADD/FSUB/FMUL/FDIV 0xA1..0xA4`,
+  `FLT/FGT/FEQ 0xA5..0xA7` (result is i32 boolean),
+  `I2F/F2I 0xA8..0xA9`, `FNEG/FABS/FSQRT 0xAA..0xAC`,
+  `SAY_F64 0xAD`, and `FMATH 0xAE <u8 op>` for transcendentals
+  (`0 sin, 1 cos, 2 tan, 3 exp, 4 log, 5 pow`).
+- **Two new host imports:** `env.host_say_f64(f64)` and
+  `env.host_fmath(op:i32, a:f64, b:f64) -> f64`. Every wrapper
+  (`wasm-runtime.ts`, all test scripts, and `compile-self.mjs`) provides
+  them; the JS side delegates to `Math.sin/cos/tan/exp/log/pow`.
+- **Compiler (`compile.mjs`):**
+  - Tokenizer now flags any number containing `.` as `isFloat`; the
+    bootstrap parser turns those into `fnum` AST nodes and emits
+    `PUSH_F64` with the correct 8-byte payload.
+  - Mixed-type arithmetic requires an explicit `i2f()` / `f2i()`
+    coercion — codegen is single-pass, so we can't retroactively
+    promote the already-emitted left operand. If BOTH sides are
+    `float`, `+ - * /` become `FADD/FSUB/FMUL/FDIV` and `< > is`
+    become `FLT/FGT/FEQ`.
+  - `say <float>` picks `SAY_F64` automatically via the same
+    type-tracking used for `SAY_STR`.
+  - `inferReturnTypeOf` learned about `float`, so a function that
+    returns `2.5 + x` propagates its float type across call sites.
+- **New builtins:** `i2f, f2i, fneg, fabs, fsqrt` (single-opcode) and
+  `fsin, fcos, ftan, fexp, flog, fpow` (via `FMATH`).
+- **Tests:** `test-wasm-runtime.mjs` grew 5 float cases (literals +
+  arithmetic; `fsqrt/fabs/fneg`; `i2f/f2i` round-trip; comparisons;
+  transcendentals). Full self-hosted toolchain still 100%
+  byte-identical — 50/50 codegen, 6/6 lexer, 7/7 parser.
+- **Why boxed and not stack-widened:** every existing opcode
+  (LOAD/STORE, JZ, CALL frames, list cells, string handles, etc.)
+  assumes 4-byte stack slots. Widening the operand stack to 8 bytes
+  would touch every dispatch arm and every codegen path in
+  `lang/compiler/codegen.sdev`. Boxing pays one heap allocation per
+  produced float in exchange for a strictly additive change — this
+  is the correct trade-off for a bootstrap VM. If tensor math shows
+  it's a bottleneck, the ML stdlib will store contiguous `f64`
+  buffers directly on the heap (as list-of-bytes) and index them via
+  new `TENSOR_*` opcodes, bypassing per-value boxing entirely.
+
+**Milestone 7 (networking) — next:**
+- Host imports for `net_get(url) → bytes` and `net_post(url, body) → bytes`.
+- In the browser: `fetch()` proxied through the WASM host.
+- On the desktop track: a small runtime.s shim that calls `libcurl`
+  (or a hand-rolled `socket/connect/write/read` sequence).
+
 
 
 
