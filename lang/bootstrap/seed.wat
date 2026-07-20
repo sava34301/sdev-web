@@ -140,6 +140,8 @@
     (local $n  i32)
     (local $dst i32)
     (local $tmp i32)
+    (local $fa f64)
+    (local $fb f64)
 
     (local.set $ip (i32.const 0))
     (local.set $sp (global.get $STACK_BASE))
