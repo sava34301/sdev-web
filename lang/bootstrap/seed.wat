@@ -47,11 +47,23 @@
 ;;   0x88 CHR                       pop byte, push new 1-char string blob
 ;;   0x89 LNEW                      pop n, alloc zeroed list [n | n cells]
 ;;   0x91 STRCAT                    pop b, pop a, allocate new pool-shaped blob, push handle
+;;   ; --- Milestone 6: floats (boxed f64 on the heap; stack cell holds addr) ---
+;;   0xA0 PUSH_F64 <f64 LE>         alloc 8-byte cell, store f64, push addr
+;;   0xA1 FADD  0xA2 FSUB  0xA3 FMUL  0xA4 FDIV
+;;   0xA5 FLT   0xA6 FGT   0xA7 FEQ   (result is i32 boolean)
+;;   0xA8 I2F                       pop int; box as f64 and push
+;;   0xA9 F2I                       pop float; push i32 truncation
+;;   0xAA FNEG  0xAB FABS  0xAC FSQRT
+;;   0xAD SAY_F64                   pop float addr; host prints it
+;;   0xAE FMATH <u8 op>             pop f64; call host_fmath(op,x); push new boxed result
+;;                                  ops: 0=sin 1=cos 2=tan 3=exp 4=log 5=pow(a,b: pops two)
 ;;   0xFF HALT
 ;;
-;; The host provides two imports:
+;; The host provides these imports:
 ;;   env.host_say_i32(i32)
 ;;   env.host_say_str(offset:i32, length:i32)
+;;   env.host_say_f64(f64)
+;;   env.host_fmath(op:i32, a:f64, b:f64) -> f64
 ;; ============================================================================
 
 (module
