@@ -14,7 +14,7 @@ async function runProgram(src) {
     env: {
       host_say_i32: (n) => output.push(String(n)),
       host_say_str: (ptr, len) => output.push(decoder.decode(new Uint8Array(mem.buffer, ptr, len))),
-      host_say_f64: (x) => {},
+      host_say_f64: (x) => output.push(String(x)),
       host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
     },
   });
