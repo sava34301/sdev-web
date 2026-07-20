@@ -247,6 +247,7 @@ function parseProgram(tokens) {
       p++;
       // Number literals with a fractional part become boxed f64 floats.
       // Integers stay in the fast i32 path.
+      if (t.isFloat) return { k: 'fnum', v: t.value };
       if (Number.isInteger(t.value)) return { k: 'num', v: t.value };
       return { k: 'fnum', v: t.value };
     }
