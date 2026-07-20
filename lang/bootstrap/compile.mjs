@@ -365,6 +365,19 @@ function emitExpr(e, em, locals) {
       const rk = emitExpr(e.r, em, locals);
       // Promote `+` to STRCAT when either operand is a string literal.
       if (e.op === '+' && (lk === 'str' || rk === 'str')) { em.emit(OP.STRCAT); return 'str'; }
+      // Float arithmetic when BOTH sides are floats. Mixed int/float requires
+      // an explicit i2f() — keeps codegen deterministic given emission order.
+      if (lk === 'float' && rk === 'float') {
+        switch (e.op) {
+          case '+': em.emit(OP.FADD); return 'float';
+          case '-': em.emit(OP.FSUB); return 'float';
+          case '*': em.emit(OP.FMUL); return 'float';
+          case '/': em.emit(OP.FDIV); return 'float';
+          case '<':  em.emit(OP.FLT); return 'int';
+          case '>':  em.emit(OP.FGT); return 'int';
+          case 'is': em.emit(OP.FEQ); return 'int';
+        }
+      }
       switch (e.op) {
         case '+': em.emit(OP.ADD); return 'int';
         case '-': em.emit(OP.SUB); return 'int';
