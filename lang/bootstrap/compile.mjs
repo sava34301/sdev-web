@@ -483,7 +483,7 @@ function emitStmt(s, em, locals) {
   switch (s.k) {
     case 'say': {
       const kind = emitExpr(s.expr, em, locals);
-      em.emit(kind === 'str' ? OP.SAY_STR : OP.SAY_I32);
+      em.emit(kind === 'str' ? OP.SAY_STR : kind === 'float' ? OP.SAY_F64 : OP.SAY_I32);
       return;
     }
     case 'set': {
