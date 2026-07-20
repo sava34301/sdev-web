@@ -120,6 +120,15 @@
                (i32.const 16))
       (i32.const 16)))
 
+  (func $read_f64 (param $ip i32) (result f64)
+    (f64.load (i32.add (global.get $CODE_BASE) (local.get $ip))))
+
+  ;; Box an f64 onto the heap; returns the pointer.
+  (func $box_f (param $x f64) (result i32) (local $p i32)
+    (local.set $p (call $alloc (i32.const 8)))
+    (f64.store (local.get $p) (local.get $x))
+    (local.get $p))
+
   ;; ---- main interpreter loop --------------------------------------------
   (func (export "run") (result i32)
     (local $ip i32)         ;; instruction pointer (relative to CODE_BASE)
