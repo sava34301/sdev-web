@@ -97,7 +97,7 @@ export async function runWasm(source: string): Promise<{ success: boolean; outpu
 export async function seedVersion(): Promise<number> {
   const mod = await loadSeed();
   const inst = await WebAssembly.instantiate(mod, {
-    env: { host_say_i32: () => {}, host_say_str: () => {} },
+    env: { host_say_i32: () => {}, host_say_str: () => {}, host_say_f64: () => {}, host_fmath: () => 0 },
   });
   return (inst.exports as unknown as SeedExports).sdev_version();
 }
