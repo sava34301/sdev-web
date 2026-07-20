@@ -78,6 +78,12 @@ class Emitter {
   }
   emit(b) { this.bytes.push(b & 0xff); }
   emitI32(v) { this.emit(v); this.emit(v >> 8); this.emit(v >> 16); this.emit(v >> 24); }
+  emitF64(v) {
+    const buf = new ArrayBuffer(8);
+    new DataView(buf).setFloat64(0, v, true);
+    const b = new Uint8Array(buf);
+    for (let i = 0; i < 8; i++) this.emit(b[i]);
+  }
   emitU16(v) { this.emit(v); this.emit(v >> 8); }
   patchI16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
   patchU16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
