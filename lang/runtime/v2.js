@@ -49,7 +49,9 @@ function tokenize(src) {
     if (/[0-9]/.test(c)) {
       let s = '';
       while (i < src.length && /[0-9.]/.test(src[i])) { s += src[i++]; col++; }
-      push('NUM', parseFloat(s)); continue;
+      const tok = { type: 'NUM', value: parseFloat(s), line, col, isFloat: s.includes('.') };
+      tokens.push(tok);
+      continue;
     }
 
     // Strings
