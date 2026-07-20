@@ -243,7 +243,13 @@ function parseProgram(tokens) {
   }
   function atom() {
     const t = peek();
-    if (t.type === 'NUM') { p++; if (!Number.isInteger(t.value)) throw new SdevError('bootstrap subset supports integers only', t.line); return { k: 'num', v: t.value }; }
+    if (t.type === 'NUM') {
+      p++;
+      // Number literals with a fractional part become boxed f64 floats.
+      // Integers stay in the fast i32 path.
+      if (Number.isInteger(t.value)) return { k: 'num', v: t.value };
+      return { k: 'fnum', v: t.value };
+    }
     if (t.type === 'STR') { p++; return { k: 'str', v: t.value }; }
     if (t.type === 'IDENT') { p++; return { k: 'ident', name: t.value }; }
     if (t.type === 'OP' && t.value === '(') { p++; const e = expr(); eat('OP', ')'); return e; }
