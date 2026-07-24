@@ -160,6 +160,17 @@ const cases = [
     src: `say fpow(2.0, 10.0)\nsay flog(fexp(1.0))\nsay fcos(0.0)\nsay fsin(0.0)`,
     expect: ['1024', '1', '1', '0'],
   },
+  // ---- Milestone 7: file I/O ----
+  {
+    name: 'write_file + read_file round-trip',
+    src: `set path to "/tmp/sdev-m7.txt"\nset status to write_file(path, "hello sdev")\nsay status\nsay read_file(path)`,
+    expect: ['0', 'hello sdev'],
+  },
+  {
+    name: 'read_file of missing path returns empty handle-safe path',
+    src: `set s to read_file("/tmp/does-not-exist-sdev.xxx")\nsay length(s)`,
+    expect: ['0'],
+  },
 ];
 
 let failed = 0;
