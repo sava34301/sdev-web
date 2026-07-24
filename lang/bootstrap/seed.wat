@@ -57,6 +57,10 @@
 ;;   0xAD SAY_F64                   pop float addr; host prints it
 ;;   0xAE FMATH <u8 op>             pop f64; call host_fmath(op,x); push new boxed result
 ;;                                  ops: 0=sin 1=cos 2=tan 3=exp 4=log 5=pow(a,b: pops two)
+;;   ; --- Milestone 7: file I/O + networking (host-mediated) ---
+;;   0xB0 READFILE                  pop path handle; push content handle (0 on error)
+;;   0xB1 WRITEFILE                 pop data, pop path; push i32 status (0 ok, -1 err)
+;;   0xB2 HTTPGET                   pop url handle; push response body handle (0 err)
 ;;   0xFF HALT
 ;;
 ;; The host provides these imports:
@@ -64,6 +68,13 @@
 ;;   env.host_say_str(offset:i32, length:i32)
 ;;   env.host_say_f64(f64)
 ;;   env.host_fmath(op:i32, a:f64, b:f64) -> f64
+;;   env.host_read_file(path_ptr:i32, path_len:i32) -> i32   (blob handle or 0)
+;;   env.host_write_file(path_ptr, path_len, data_ptr, data_len) -> i32
+;;   env.host_http_get(url_ptr:i32, url_len:i32) -> i32       (blob handle or 0)
+;;
+;; The VM exports `alloc_str(n) -> ptr` so hosts can materialise a fresh
+;; length-prefixed string blob and write bytes into ptr+4 before returning
+;; ptr as a handle.
 ;; ============================================================================
 
 (module
