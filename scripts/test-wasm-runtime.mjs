@@ -25,7 +25,10 @@ async function runProgram(src) {
       const dst = alloc_str(buf.length);
       new Uint8Array(mem.buffer, dst + 4, buf.length).set(buf);
       return dst;
-    } catch { return 0; }
+    } catch {
+      // Return an empty length-prefixed blob so `length()` reports 0.
+      return alloc_str(0);
+    }
   };
   const host_write_file = (pPtr, pLen, dPtr, dLen) => {
     try {
