@@ -57,6 +57,10 @@
 ;;   0xAD SAY_F64                   pop float addr; host prints it
 ;;   0xAE FMATH <u8 op>             pop f64; call host_fmath(op,x); push new boxed result
 ;;                                  ops: 0=sin 1=cos 2=tan 3=exp 4=log 5=pow(a,b: pops two)
+;;   ; --- Milestone 7: file I/O + networking (host-mediated) ---
+;;   0xB0 READFILE                  pop path handle; push content handle (0 on error)
+;;   0xB1 WRITEFILE                 pop data, pop path; push i32 status (0 ok, -1 err)
+;;   0xB2 HTTPGET                   pop url handle; push response body handle (0 err)
 ;;   0xFF HALT
 ;;
 ;; The host provides these imports:
@@ -64,6 +68,13 @@
 ;;   env.host_say_str(offset:i32, length:i32)
 ;;   env.host_say_f64(f64)
 ;;   env.host_fmath(op:i32, a:f64, b:f64) -> f64
+;;   env.host_read_file(path_ptr:i32, path_len:i32) -> i32   (blob handle or 0)
+;;   env.host_write_file(path_ptr, path_len, data_ptr, data_len) -> i32
+;;   env.host_http_get(url_ptr:i32, url_len:i32) -> i32       (blob handle or 0)
+;;
+;; The VM exports `alloc_str(n) -> ptr` so hosts can materialise a fresh
+;; length-prefixed string blob and write bytes into ptr+4 before returning
+;; ptr as a handle.
 ;; ============================================================================
 
 (module
@@ -71,6 +82,9 @@
   (import "env" "host_say_str" (func $say_str (param i32 i32)))
   (import "env" "host_say_f64" (func $say_f64 (param f64)))
   (import "env" "host_fmath"   (func $fmath (param i32 f64 f64) (result f64)))
+  (import "env" "host_read_file"  (func $host_read_file  (param i32 i32) (result i32)))
+  (import "env" "host_write_file" (func $host_write_file (param i32 i32 i32 i32) (result i32)))
+  (import "env" "host_http_get"   (func $host_http_get   (param i32 i32) (result i32)))
   (memory (export "memory") 32)
 
 
@@ -95,6 +109,13 @@
   (func (export "set_prog_len") (param $n i32) (global.set $prog_len (local.get $n)))
   (func (export "code_base")  (result i32) (global.get $CODE_BASE))
   (func (export "sdev_version") (result i32) (i32.const 400))
+
+  ;; Milestone 7: exported allocator so hosts can materialise a fresh
+  ;; length-prefixed string blob and write bytes into ptr+4.
+  (func (export "alloc_str") (param $n i32) (result i32) (local $p i32)
+    (local.set $p (call $alloc (i32.add (local.get $n) (i32.const 4))))
+    (i32.store (local.get $p) (local.get $n))
+    (local.get $p))
 
   ;; ---- heap: bump-pointer allocator (returns 4-byte aligned addr) --------
   (func $alloc (param $n i32) (result i32) (local $ret i32)
@@ -675,6 +696,44 @@
                 (i32.store (local.get $sp)
                   (call $box_f (call $fmath (local.get $a) (local.get $fa) (f64.const 0))))
                 (local.set $sp (i32.add (local.get $sp) (i32.const 4)))))
+            (br $dispatch)))
+
+        ;; --- READFILE (0xB0) --- pop path handle, push content handle
+        (if (i32.eq (local.get $op) (i32.const 0xB0))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (call $host_read_file
+                (i32.add (local.get $a) (i32.const 4))
+                (i32.load (local.get $a))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- WRITEFILE (0xB1) --- pop data, pop path, push status
+        (if (i32.eq (local.get $op) (i32.const 0xB1))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (call $host_write_file
+                (i32.add (local.get $a) (i32.const 4)) (i32.load (local.get $a))
+                (i32.add (local.get $b) (i32.const 4)) (i32.load (local.get $b))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- HTTPGET (0xB2) --- pop URL handle, push body handle
+        (if (i32.eq (local.get $op) (i32.const 0xB2))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (call $host_http_get
+                (i32.add (local.get $a) (i32.const 4))
+                (i32.load (local.get $a))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
         ;; unknown opcode → halt

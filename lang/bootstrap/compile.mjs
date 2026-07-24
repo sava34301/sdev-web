@@ -33,6 +33,8 @@ const OP = {
   PUSH_F64: 0xA0, FADD: 0xA1, FSUB: 0xA2, FMUL: 0xA3, FDIV: 0xA4,
   FLT: 0xA5, FGT: 0xA6, FEQ: 0xA7, I2F: 0xA8, F2I: 0xA9,
   FNEG: 0xAA, FABS: 0xAB, FSQRT: 0xAC, SAY_F64: 0xAD, FMATH: 0xAE,
+  // Milestone 7 — host-mediated file I/O + networking
+  READFILE: 0xB0, WRITEFILE: 0xB1, HTTPGET: 0xB2,
   HALT: 0xFF,
 };
 
@@ -64,6 +66,10 @@ const BUILTINS = {
   fexp:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.exp); } },
   flog:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.log); } },
   fpow:    { arity: 2, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.pow); } },
+  // --- Milestone 7: file I/O + networking (host-mediated) ---
+  read_file:  { arity: 1, ret: 'str', emit: (em) => em.emit(OP.READFILE)  },
+  write_file: { arity: 2, ret: 'int', emit: (em) => em.emit(OP.WRITEFILE) },
+  http_get:   { arity: 1, ret: 'str', emit: (em) => em.emit(OP.HTTPGET)   },
 };
 
 class Emitter {

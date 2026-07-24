@@ -31,6 +31,9 @@ async function runLexer(source) {
       host_say_str: (ptr, len) => output.push(decoder.decode(new Uint8Array(mem.buffer, ptr, len))),
       host_say_f64: (x) => output.push(String(x)),
       host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
+      host_read_file: () => 0,
+      host_write_file: () => -1,
+      host_http_get: () => 0,
     },
   });
   mem = inst.exports.memory;
