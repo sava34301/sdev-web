@@ -21,6 +21,7 @@ interface SeedExports {
   set_prog_len: (n: number) => void;
   run: () => number;
   sdev_version: () => number;
+  alloc_str: (n: number) => number;
 }
 
 let cached: Promise<WebAssembly.Module> | null = null;
