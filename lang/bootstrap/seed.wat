@@ -110,6 +110,13 @@
   (func (export "code_base")  (result i32) (global.get $CODE_BASE))
   (func (export "sdev_version") (result i32) (i32.const 400))
 
+  ;; Milestone 7: exported allocator so hosts can materialise a fresh
+  ;; length-prefixed string blob and write bytes into ptr+4.
+  (func (export "alloc_str") (param $n i32) (result i32) (local $p i32)
+    (local.set $p (call $alloc (i32.add (local.get $n) (i32.const 4))))
+    (i32.store (local.get $p) (local.get $n))
+    (local.get $p))
+
   ;; ---- heap: bump-pointer allocator (returns 4-byte aligned addr) --------
   (func $alloc (param $n i32) (result i32) (local $ret i32)
     (local.set $ret (global.get $hp))
