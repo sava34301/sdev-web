@@ -82,6 +82,9 @@
   (import "env" "host_say_str" (func $say_str (param i32 i32)))
   (import "env" "host_say_f64" (func $say_f64 (param f64)))
   (import "env" "host_fmath"   (func $fmath (param i32 f64 f64) (result f64)))
+  (import "env" "host_read_file"  (func $host_read_file  (param i32 i32) (result i32)))
+  (import "env" "host_write_file" (func $host_write_file (param i32 i32 i32 i32) (result i32)))
+  (import "env" "host_http_get"   (func $host_http_get   (param i32 i32) (result i32)))
   (memory (export "memory") 32)
 
 
