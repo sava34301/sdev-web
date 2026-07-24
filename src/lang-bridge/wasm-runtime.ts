@@ -50,7 +50,31 @@ export async function runWasm(source: string): Promise<{ success: boolean; outpu
 
   const module = await loadSeed();
   let mem!: WebAssembly.Memory;
+  let allocStr!: (n: number) => number;
   const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  // Browser file I/O maps onto localStorage under an "sdev:file:" namespace,
+  // so the same read_file/write_file builtins work in the IDE without
+  // dragging in a proper virtual filesystem yet.
+  const readVfs = (path: string): Uint8Array | null => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('sdev:file:' + path) : null;
+      return raw == null ? null : encoder.encode(raw);
+    } catch { return null; }
+  };
+  const writeVfs = (path: string, bytes: Uint8Array): boolean => {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      localStorage.setItem('sdev:file:' + path, decoder.decode(bytes));
+      return true;
+    } catch { return false; }
+  };
+  const putBlob = (bytes: Uint8Array): number => {
+    const dst = allocStr(bytes.length);
+    new Uint8Array(mem.buffer, dst + 4, bytes.length).set(bytes);
+    return dst;
+  };
 
   const instance = await WebAssembly.instantiate(module, {
     env: {
@@ -71,11 +95,29 @@ export async function runWasm(source: string): Promise<{ success: boolean; outpu
           default: return NaN;
         }
       },
+      host_read_file: (ptr: number, len: number): number => {
+        const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+        const bytes = readVfs(path) ?? new Uint8Array(0);
+        return putBlob(bytes);
+      },
+      host_write_file: (pPtr: number, pLen: number, dPtr: number, dLen: number): number => {
+        const path = decoder.decode(new Uint8Array(mem.buffer, pPtr, pLen));
+        const data = new Uint8Array(mem.buffer, dPtr, dLen).slice();
+        return writeVfs(path, data) ? 0 : -1;
+      },
+      // Networking in the browser is best-effort and gated on CORS. Fetch is
+      // async; the seed VM is synchronous, so we degrade to an empty blob
+      // and log a hint. Programs that need HTTP should run under Node.
+      host_http_get: (_ptr: number, _len: number): number => {
+        console.warn('[sdev] http_get is unavailable in the browser runtime; use the Node CLI.');
+        return putBlob(new Uint8Array(0));
+      },
     },
   });
 
   const exports = instance.exports as unknown as SeedExports;
   mem = exports.memory;
+  allocStr = exports.alloc_str;
 
   // Load string pool into 0x0000..0x1FFF and bytecode into code_base()
   const memU8 = new Uint8Array(mem.buffer);
