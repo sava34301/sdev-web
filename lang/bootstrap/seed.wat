@@ -698,6 +698,44 @@
                 (local.set $sp (i32.add (local.get $sp) (i32.const 4)))))
             (br $dispatch)))
 
+        ;; --- READFILE (0xB0) --- pop path handle, push content handle
+        (if (i32.eq (local.get $op) (i32.const 0xB0))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (call $host_read_file
+                (i32.add (local.get $a) (i32.const 4))
+                (i32.load (local.get $a))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- WRITEFILE (0xB1) --- pop data, pop path, push status
+        (if (i32.eq (local.get $op) (i32.const 0xB1))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (call $host_write_file
+                (i32.add (local.get $a) (i32.const 4)) (i32.load (local.get $a))
+                (i32.add (local.get $b) (i32.const 4)) (i32.load (local.get $b))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- HTTPGET (0xB2) --- pop URL handle, push body handle
+        (if (i32.eq (local.get $op) (i32.const 0xB2))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (call $host_http_get
+                (i32.add (local.get $a) (i32.const 4))
+                (i32.load (local.get $a))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
         ;; unknown opcode → halt
         (br $exit)
       )
