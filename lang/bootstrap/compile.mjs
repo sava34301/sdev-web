@@ -66,6 +66,10 @@ const BUILTINS = {
   fexp:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.exp); } },
   flog:    { arity: 1, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.log); } },
   fpow:    { arity: 2, ret: 'float', emit: (em) => { em.emit(OP.FMATH); em.emit(FMATH_OP.pow); } },
+  // --- Milestone 7: file I/O + networking (host-mediated) ---
+  read_file:  { arity: 1, ret: 'str', emit: (em) => em.emit(OP.READFILE)  },
+  write_file: { arity: 2, ret: 'int', emit: (em) => em.emit(OP.WRITEFILE) },
+  http_get:   { arity: 1, ret: 'str', emit: (em) => em.emit(OP.HTTPGET)   },
 };
 
 class Emitter {
