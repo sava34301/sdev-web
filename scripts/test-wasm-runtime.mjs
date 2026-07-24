@@ -1,24 +1,62 @@
 // Standalone Node harness: compile + run via the seed WASM. No browser.
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, readFile as fsReadFile } from 'node:fs/promises';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { compile } from '../lang/bootstrap/compile.mjs';
 
 const wasmBytes = await readFile('./public/wasm/sdev-seed.wasm');
 const module = await WebAssembly.compile(wasmBytes);
 
 const decoder = new TextDecoder();
+const encoder = new TextEncoder();
+
 async function runProgram(src) {
   const { bytecode, stringPool } = compile(src);
   const output = [];
   let mem;
+  let alloc_str;
+
+  // Host: read a file synchronously and materialise its bytes as a
+  // length-prefixed blob inside VM memory.
+  const host_read_file = (ptr, len) => {
+    try {
+      const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+      const buf = readFileSync(path);
+      const dst = alloc_str(buf.length);
+      new Uint8Array(mem.buffer, dst + 4, buf.length).set(buf);
+      return dst;
+    } catch { return 0; }
+  };
+  const host_write_file = (pPtr, pLen, dPtr, dLen) => {
+    try {
+      const path = decoder.decode(new Uint8Array(mem.buffer, pPtr, pLen));
+      const data = new Uint8Array(mem.buffer, dPtr, dLen).slice();
+      writeFileSync(path, data);
+      return 0;
+    } catch { return -1; }
+  };
+  const host_http_get = (ptr, len) => {
+    try {
+      const url = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+      // Use curl as a sync HTTP client; skipped in offline test envs.
+      const out = execFileSync('curl', ['-sSL', '--max-time', '10', url], { maxBuffer: 8 * 1024 * 1024 });
+      const dst = alloc_str(out.length);
+      new Uint8Array(mem.buffer, dst + 4, out.length).set(out);
+      return dst;
+    } catch { return 0; }
+  };
+
   const inst = await WebAssembly.instantiate(module, {
     env: {
       host_say_i32: (n) => output.push(String(n)),
       host_say_str: (ptr, len) => output.push(decoder.decode(new Uint8Array(mem.buffer, ptr, len))),
       host_say_f64: (x) => output.push(String(x)),
       host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
+      host_read_file, host_write_file, host_http_get,
     },
   });
   mem = inst.exports.memory;
+  alloc_str = inst.exports.alloc_str;
   const memU8 = new Uint8Array(mem.buffer);
   memU8.set(stringPool, 0);
   const codeBase = inst.exports.code_base();
