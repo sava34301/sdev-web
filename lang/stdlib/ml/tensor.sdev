@@ -1,0 +1,194 @@
+// ============================================================
+// sdev ML Stdlib — Tensor Core (Milestone 8)
+// ============================================================
+// A tensor is a tome: { data: [f64...], shape: [int...], grad: [f64...] | void, requires_grad: bool }
+// All ops are pure by default; autograd tape is opt-in per tensor.
+// Fully written in sdev — runs on both the WASM and Native ASM tracks.
+
+conjure tensor(data, shape) ::
+    yield { data: data, shape: shape, grad: void, requires_grad: nope }
+;;
+
+conjure tensor_grad(data, shape) ::
+    forge n be measure(data)
+    forge g be gather()
+    forge i be 0
+    cycle i < n ::
+        pluck(g, 0.0)
+        be i be i + 1
+    ;;
+    yield { data: data, shape: shape, grad: g, requires_grad: yep }
+;;
+
+conjure zeros(shape) ::
+    forge n be shape_size(shape)
+    forge d be gather()
+    forge i be 0
+    cycle i < n :: pluck(d, 0.0) be i be i + 1 ;;
+    yield tensor(d, shape)
+;;
+
+conjure ones(shape) ::
+    forge n be shape_size(shape)
+    forge d be gather()
+    forge i be 0
+    cycle i < n :: pluck(d, 1.0) be i be i + 1 ;;
+    yield tensor(d, shape)
+;;
+
+conjure randn(shape) ::
+    // Box–Muller normal from two uniforms
+    forge n be shape_size(shape)
+    forge d be gather()
+    forge i be 0
+    cycle i < n ::
+        forge u1 be rand()
+        forge u2 be rand()
+        forge z be root(0.0 - 2.0 * ln(u1)) * cos(TAU * u2)
+        pluck(d, z)
+        be i be i + 1
+    ;;
+    yield tensor(d, shape)
+;;
+
+conjure shape_size(shape) ::
+    forge n be 1
+    forge i be 0
+    cycle i < measure(shape) ::
+        be n be n * shape[i]
+        be i be i + 1
+    ;;
+    yield n
+;;
+
+// ---------- element-wise ops ----------
+conjure t_add(a, b) ::
+    forge n be measure(a.data)
+    forge d be gather()
+    forge i be 0
+    cycle i < n :: pluck(d, a.data[i] + b.data[i]) be i be i + 1 ;;
+    yield tensor(d, a.shape)
+;;
+
+conjure t_sub(a, b) ::
+    forge n be measure(a.data)
+    forge d be gather()
+    forge i be 0
+    cycle i < n :: pluck(d, a.data[i] - b.data[i]) be i be i + 1 ;;
+    yield tensor(d, a.shape)
+;;
+
+conjure t_mul(a, b) ::
+    forge n be measure(a.data)
+    forge d be gather()
+    forge i be 0
+    cycle i < n :: pluck(d, a.data[i] * b.data[i]) be i be i + 1 ;;
+    yield tensor(d, a.shape)
+;;
+
+conjure t_scale(a, k) ::
+    forge n be measure(a.data)
+    forge d be gather()
+    forge i be 0
+    cycle i < n :: pluck(d, a.data[i] * k) be i be i + 1 ;;
+    yield tensor(d, a.shape)
+;;
+
+// ---------- 2-D matmul (rows x cols) ----------
+conjure matmul(a, b) ::
+    forge m be a.shape[0]
+    forge k be a.shape[1]
+    forge n be b.shape[1]
+    forge d be gather()
+    forge i be 0
+    cycle i < m * n :: pluck(d, 0.0) be i be i + 1 ;;
+    forge r be 0
+    cycle r < m ::
+        forge c be 0
+        cycle c < n ::
+            forge s be 0.0
+            forge j be 0
+            cycle j < k ::
+                be s be s + a.data[r * k + j] * b.data[j * n + c]
+                be j be j + 1
+            ;;
+            set d[r * n + c] to s
+            be c be c + 1
+        ;;
+        be r be r + 1
+    ;;
+    yield tensor(d, [m, n])
+;;
+
+// ---------- activations ----------
+conjure relu(a) ::
+    forge n be measure(a.data)
+    forge d be gather()
+    forge i be 0
+    cycle i < n ::
+        forge v be a.data[i]
+        either v > 0.0 :: pluck(d, v) ;; otherwise :: pluck(d, 0.0) ;;
+        be i be i + 1
+    ;;
+    yield tensor(d, a.shape)
+;;
+
+conjure sigmoid(a) ::
+    forge n be measure(a.data)
+    forge d be gather()
+    forge i be 0
+    cycle i < n ::
+        pluck(d, 1.0 / (1.0 + exp(0.0 - a.data[i])))
+        be i be i + 1
+    ;;
+    yield tensor(d, a.shape)
+;;
+
+conjure softmax(a) ::
+    forge n be measure(a.data)
+    forge mx be a.data[0]
+    forge i be 1
+    cycle i < n ::
+        either a.data[i] > mx :: be mx be a.data[i] ;;
+        be i be i + 1
+    ;;
+    forge d be gather()
+    forge s be 0.0
+    be i be 0
+    cycle i < n ::
+        forge e be exp(a.data[i] - mx)
+        pluck(d, e)
+        be s be s + e
+        be i be i + 1
+    ;;
+    be i be 0
+    cycle i < n :: set d[i] to d[i] / s be i be i + 1 ;;
+    yield tensor(d, a.shape)
+;;
+
+// ---------- losses ----------
+conjure mse(pred, target) ::
+    forge n be measure(pred.data)
+    forge s be 0.0
+    forge i be 0
+    cycle i < n ::
+        forge d be pred.data[i] - target.data[i]
+        be s be s + d * d
+        be i be i + 1
+    ;;
+    yield s / n
+;;
+
+conjure cross_entropy(pred, target) ::
+    // pred = softmax probs, target = one-hot
+    forge n be measure(pred.data)
+    forge s be 0.0
+    forge i be 0
+    cycle i < n ::
+        either target.data[i] > 0.0 ::
+            be s be s - ln(pred.data[i] + 0.000000001)
+        ;;
+        be i be i + 1
+    ;;
+    yield s
+;;
