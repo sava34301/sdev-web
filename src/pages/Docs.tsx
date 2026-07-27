@@ -22,6 +22,7 @@ const SOURCES: DocSource[] = [
   { id: 'leaflet',     title: 'Leaflet & GIS Reference',     url: '/SDEV_LEAFLET_DOCUMENTATION.md', icon: ScrollText },
   { id: 'hardware',    title: 'Hardware & Boards',           url: '/SDEV_HARDWARE_DOCUMENTATION.md', icon: ScrollText },
   { id: 'internals',   title: 'Compiler & VM Internals',     url: '/SDEV_INTERNALS.md',          icon: Library },
+  { id: 'ml',          title: 'ML & LLM Stdlib',             url: '/SDEV_ML_DOCUMENTATION.md',   icon: Library },
 ];
 
 function slugify(s: string) {
