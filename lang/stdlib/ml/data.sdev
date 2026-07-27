@@ -1,0 +1,106 @@
+// ============================================================
+// sdev ML Stdlib — Data & Web (Milestone 8e)
+// ============================================================
+// Dataset loaders, web scraping, and LLM-distillation utilities.
+// Uses host builtins: read_file, write_file, http_get.
+
+link "tensor.sdev"
+
+// ---------- text I/O ----------
+conjure load_text(path) ::
+    yield read_file(path)
+;;
+
+conjure save_text(path, s) ::
+    write_file(path, s)
+;;
+
+// ---------- byte-pair-ish tokenizer (char level) ----------
+conjure char_vocab(text) ::
+    forge seen be {}
+    forge order be gather()
+    forge i be 0
+    cycle i < measure(text) ::
+        forge c be ord(text, i)
+        either seen[str(c)] equals void ::
+            set seen[str(c)] to measure(order)
+            pluck(order, c)
+        ;;
+        be i be i + 1
+    ;;
+    yield { size: measure(order), stoi: seen, itos: order }
+;;
+
+conjure encode(vocab, text) ::
+    forge out be gather()
+    forge i be 0
+    cycle i < measure(text) ::
+        forge c be ord(text, i)
+        pluck(out, 1.0 * vocab.stoi[str(c)])
+        be i be i + 1
+    ;;
+    yield out
+;;
+
+conjure decode(vocab, ids) ::
+    forge s be ""
+    forge i be 0
+    cycle i < measure(ids) ::
+        be s be s + chr(vocab.itos[ground(ids[i])])
+        be i be i + 1
+    ;;
+    yield s
+;;
+
+// ---------- web crawler ----------
+conjure crawl(url) ::
+    yield http_get(url)
+;;
+
+conjure crawl_many(urls) ::
+    forge out be gather()
+    forge i be 0
+    cycle i < measure(urls) ::
+        pluck(out, http_get(urls[i]))
+        be i be i + 1
+    ;;
+    yield out
+;;
+
+// ---------- teacher-model distillation ----------
+// Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a
+// prompt, receive logits/text, and train the local sdev model
+// to imitate the teacher's outputs.
+conjure teacher_query(endpoint, api_key, prompt) ::
+    forge url be endpoint + "?key=" + api_key + "&q=" + prompt
+    yield http_get(url)
+;;
+
+conjure distill_batch(endpoint, key, prompts) ::
+    forge pairs be gather()
+    forge i be 0
+    cycle i < measure(prompts) ::
+        forge reply be teacher_query(endpoint, key, prompts[i])
+        pluck(pairs, { prompt: prompts[i], target: reply })
+        be i be i + 1
+    ;;
+    yield pairs
+;;
+
+// ---------- checkpointing ----------
+conjure save_model(path, model) ::
+    forge s be ""
+    forge i be 0
+    cycle i < measure(model.params) ::
+        forge p be model.params[i]
+        be s be s + str(measure(p.data)) + "|"
+        forge j be 0
+        cycle j < measure(p.data) ::
+            be s be s + str(p.data[j]) + ","
+            be j be j + 1
+        ;;
+        be s be s + "\n"
+        be i be i + 1
+    ;;
+    write_file(path, s)
+;;

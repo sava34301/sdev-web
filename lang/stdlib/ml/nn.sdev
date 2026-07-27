@@ -1,0 +1,87 @@
+// ============================================================
+// sdev ML Stdlib — Neural Network Layers (Milestone 8c)
+// ============================================================
+// High-level layer builders. Each layer returns a tome exposing
+// { params: [tensors...], forward: conjure(x) }.
+
+link "autograd.sdev"
+
+conjure linear(in_features, out_features) ::
+    forge scale be 1.0 / root(1.0 * in_features)
+    forge w be randn([in_features, out_features])
+    forge b be zeros([1, out_features])
+    forge i be 0
+    cycle i < measure(w.data) :: set w.data[i] to w.data[i] * scale be i be i + 1 ;;
+    forge wg be tensor_grad(w.data, w.shape)
+    forge bg be tensor_grad(b.data, b.shape)
+    yield {
+        params: [wg, bg],
+        forward: (x) -> d_add(d_matmul(x, wg), broadcast_row(bg, x.shape[0]))
+    }
+;;
+
+conjure broadcast_row(row, rows) ::
+    forge cols be row.shape[1]
+    forge d be gather()
+    forge r be 0
+    cycle r < rows ::
+        forge c be 0
+        cycle c < cols :: pluck(d, row.data[c]) be c be c + 1 ;;
+        be r be r + 1
+    ;;
+    forge t be tensor_grad(d, [rows, cols])
+    yield t
+;;
+
+conjure sequential(layers) ::
+    forge params be gather()
+    forge i be 0
+    cycle i < measure(layers) ::
+        forge lp be layers[i].params
+        forge j be 0
+        cycle j < measure(lp) :: pluck(params, lp[j]) be j be j + 1 ;;
+        be i be i + 1
+    ;;
+    yield {
+        params: params,
+        forward: (x) -> seq_forward(layers, x)
+    }
+;;
+
+conjure seq_forward(layers, x) ::
+    forge cur be x
+    forge i be 0
+    cycle i < measure(layers) ::
+        be cur be layers[i].forward(cur)
+        be i be i + 1
+    ;;
+    yield cur
+;;
+
+conjure relu_layer() ::
+    yield { params: gather(), forward: (x) -> d_relu(x) }
+;;
+
+// ---------- training loop ----------
+conjure train_step(model, x, y, lr) ::
+    tape_reset()
+    forge pred be model.forward(x)
+    forge loss be d_mse(pred, y)
+    backward(loss)
+    sgd_step(model.params, lr)
+    yield loss.data[0]
+;;
+
+conjure fit(model, xs, ys, epochs, lr) ::
+    forge e be 0
+    cycle e < epochs ::
+        forge total be 0.0
+        forge i be 0
+        cycle i < measure(xs) ::
+            be total be total + train_step(model, xs[i], ys[i], lr)
+            be i be i + 1
+        ;;
+        speak("epoch " + str(e) + " loss=" + str(total / measure(xs)))
+        be e be e + 1
+    ;;
+;;

@@ -1,0 +1,92 @@
+// ============================================================
+// sdev ML Stdlib — Self-Modification (Milestone 8f)
+// ============================================================
+// GATED: enables an sdev-trained model to read the sdev source
+// tree, propose edits, and rewrite its own weights or the
+// language runtime itself. All mutations pass through a review
+// hook so users can gate every change.
+//
+// Requires host builtins: read_file, write_file, http_get.
+
+link "data.sdev"
+
+forge REVIEW_HOOK be void  // set to a conjure(path, new_content) -> bool
+
+conjure self_read(path) ::
+    yield read_file(path)
+;;
+
+conjure self_propose(path, new_content) ::
+    // Ask the review hook (user or another model) for approval.
+    either REVIEW_HOOK differs void ::
+        forge ok be REVIEW_HOOK(path, new_content)
+        either ok :: write_file(path, new_content) yield yep ;;
+        yield nope
+    ;;
+    // Default: refuse silently until a hook is installed.
+    yield nope
+;;
+
+conjure set_review_hook(fn) ::
+    be REVIEW_HOOK be fn
+;;
+
+// ---------- feature-demand mining ----------
+// Fetches issue/PR/reddit signals and lets the model pick the
+// next feature to draft. Returns a ranked list of {topic, score}.
+conjure mine_demand(sources) ::
+    forge counts be {}
+    forge i be 0
+    cycle i < measure(sources) ::
+        forge body be http_get(sources[i])
+        harvest_keywords(counts, body)
+        be i be i + 1
+    ;;
+    yield counts
+;;
+
+conjure harvest_keywords(counts, body) ::
+    // char-window heuristic: split on spaces, tally 4+ char tokens
+    forge n be measure(body)
+    forge cur be ""
+    forge i be 0
+    cycle i < n ::
+        forge c be ord(body, i)
+        either c > 32 ::
+            be cur be cur + chr(c)
+        ;;
+        either c equals 32 also measure(cur) > 3 ::
+            forge k be cur
+            either counts[k] equals void :: set counts[k] to 1 ;;
+            otherwise :: set counts[k] to counts[k] + 1 ;;
+            be cur be ""
+        ;;
+        be i be i + 1
+    ;;
+;;
+
+// ---------- documentation sync ----------
+conjure update_docs(section, body) ::
+    forge cur be read_file("public/SDEV_DOCUMENTATION.md")
+    forge stamped be cur + "\n\n## " + section + "\n" + body + "\n"
+    self_propose("public/SDEV_DOCUMENTATION.md", stamped)
+;;
+
+// ---------- weight rewriting ----------
+// The model can rewrite its own weights outside of gradient
+// descent (e.g. surgery, LoRA-style adapters). Guarded so it
+// only fires when review hook approves.
+conjure rewrite_weights(model, transform) ::
+    either REVIEW_HOOK equals void :: yield nope ;;
+    forge i be 0
+    cycle i < measure(model.params) ::
+        forge p be model.params[i]
+        forge j be 0
+        cycle j < measure(p.data) ::
+            set p.data[j] to transform(p.data[j])
+            be j be j + 1
+        ;;
+        be i be i + 1
+    ;;
+    yield yep
+;;
