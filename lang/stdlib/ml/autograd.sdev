@@ -1,0 +1,180 @@
+// ============================================================
+// sdev ML Stdlib — Autograd Tape (Milestone 8b)
+// ============================================================
+// Reverse-mode automatic differentiation implemented as a global
+// operation tape. Each recorded op stores its inputs, output, and
+// a "kind" tag; `backward(out)` walks the tape in reverse and
+// accumulates gradients into each tensor's `grad` list.
+
+link "tensor.sdev"
+
+forge TAPE be gather()
+
+conjure tape_reset() ::
+    be TAPE be gather()
+;;
+
+conjure record(kind, inputs, out) ::
+    pluck(TAPE, { kind: kind, inputs: inputs, out: out })
+;;
+
+// ---------- differentiable ops ----------
+conjure d_add(a, b) ::
+    forge o be tensor_grad(t_add(a, b).data, a.shape)
+    record("add", [a, b], o)
+    yield o
+;;
+
+conjure d_mul(a, b) ::
+    forge o be tensor_grad(t_mul(a, b).data, a.shape)
+    record("mul", [a, b], o)
+    yield o
+;;
+
+conjure d_matmul(a, b) ::
+    forge r be matmul(a, b)
+    forge o be tensor_grad(r.data, r.shape)
+    record("matmul", [a, b], o)
+    yield o
+;;
+
+conjure d_relu(a) ::
+    forge r be relu(a)
+    forge o be tensor_grad(r.data, r.shape)
+    record("relu", [a], o)
+    yield o
+;;
+
+conjure d_mse(pred, target) ::
+    forge n be measure(pred.data)
+    forge s be 0.0
+    forge i be 0
+    cycle i < n ::
+        forge d be pred.data[i] - target.data[i]
+        be s be s + d * d
+        be i be i + 1
+    ;;
+    forge o be tensor_grad([s / n], [1])
+    record("mse", [pred, target], o)
+    yield o
+;;
+
+// ---------- backward pass ----------
+conjure backward(out) ::
+    // seed the output gradient to 1
+    set out.grad[0] to 1.0
+    forge k be measure(TAPE) - 1
+    cycle k >= 0 ::
+        forge e be TAPE[k]
+        either e.kind equals "add" :: bw_add(e) ;;
+        either e.kind equals "mul" :: bw_mul(e) ;;
+        either e.kind equals "matmul" :: bw_matmul(e) ;;
+        either e.kind equals "relu" :: bw_relu(e) ;;
+        either e.kind equals "mse" :: bw_mse(e) ;;
+        be k be k - 1
+    ;;
+;;
+
+conjure bw_add(e) ::
+    forge a be e.inputs[0]
+    forge b be e.inputs[1]
+    forge n be measure(e.out.grad)
+    forge i be 0
+    cycle i < n ::
+        set a.grad[i] to a.grad[i] + e.out.grad[i]
+        set b.grad[i] to b.grad[i] + e.out.grad[i]
+        be i be i + 1
+    ;;
+;;
+
+conjure bw_mul(e) ::
+    forge a be e.inputs[0]
+    forge b be e.inputs[1]
+    forge n be measure(e.out.grad)
+    forge i be 0
+    cycle i < n ::
+        set a.grad[i] to a.grad[i] + e.out.grad[i] * b.data[i]
+        set b.grad[i] to b.grad[i] + e.out.grad[i] * a.data[i]
+        be i be i + 1
+    ;;
+;;
+
+conjure bw_matmul(e) ::
+    forge a be e.inputs[0]
+    forge b be e.inputs[1]
+    forge m be a.shape[0]
+    forge k be a.shape[1]
+    forge n be b.shape[1]
+    // dA = dOut · B^T
+    forge r be 0
+    cycle r < m ::
+        forge j be 0
+        cycle j < k ::
+            forge s be 0.0
+            forge c be 0
+            cycle c < n ::
+                be s be s + e.out.grad[r * n + c] * b.data[j * n + c]
+                be c be c + 1
+            ;;
+            set a.grad[r * k + j] to a.grad[r * k + j] + s
+            be j be j + 1
+        ;;
+        be r be r + 1
+    ;;
+    // dB = A^T · dOut
+    forge j2 be 0
+    cycle j2 < k ::
+        forge c2 be 0
+        cycle c2 < n ::
+            forge s2 be 0.0
+            forge r2 be 0
+            cycle r2 < m ::
+                be s2 be s2 + a.data[r2 * k + j2] * e.out.grad[r2 * n + c2]
+                be r2 be r2 + 1
+            ;;
+            set b.grad[j2 * n + c2] to b.grad[j2 * n + c2] + s2
+            be c2 be c2 + 1
+        ;;
+        be j2 be j2 + 1
+    ;;
+;;
+
+conjure bw_relu(e) ::
+    forge a be e.inputs[0]
+    forge n be measure(a.data)
+    forge i be 0
+    cycle i < n ::
+        either a.data[i] > 0.0 ::
+            set a.grad[i] to a.grad[i] + e.out.grad[i]
+        ;;
+        be i be i + 1
+    ;;
+;;
+
+conjure bw_mse(e) ::
+    forge p be e.inputs[0]
+    forge t be e.inputs[1]
+    forge n be measure(p.data)
+    forge scale be 2.0 / n * e.out.grad[0]
+    forge i be 0
+    cycle i < n ::
+        set p.grad[i] to p.grad[i] + scale * (p.data[i] - t.data[i])
+        be i be i + 1
+    ;;
+;;
+
+// ---------- optimizers ----------
+conjure sgd_step(params, lr) ::
+    forge i be 0
+    cycle i < measure(params) ::
+        forge p be params[i]
+        forge n be measure(p.data)
+        forge j be 0
+        cycle j < n ::
+            set p.data[j] to p.data[j] - lr * p.grad[j]
+            set p.grad[j] to 0.0
+            be j be j + 1
+        ;;
+        be i be i + 1
+    ;;
+;;
