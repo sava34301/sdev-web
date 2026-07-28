@@ -1,0 +1,170 @@
+// ============================================================
+// sdev Stdlib — Foreign Function Interface (Milestone 9)
+// ============================================================
+// Call into native shared libraries (.so / .dylib / .dll) from
+// sdev. This is the bridge that lets the ML stdlib reach BLAS,
+// libcudart, cuBLAS, cuDNN, and any other C ABI library the
+// host system exposes.
+//
+// Requires host builtins provided by the native runtime:
+//   ffi_open(path)                  -> lib handle (int)   or void on error
+//   ffi_sym(lib, name)              -> fn handle (int)    or void on error
+//   ffi_call(fn, ret_kind, args)    -> result (kind-typed)
+//   ffi_close(lib)                  -> yep/nope
+//   ffi_buf(size)                   -> raw byte buffer addr (int)
+//   ffi_read_f64(buf, i) / ffi_write_f64(buf, i, x)
+//   ffi_read_i32(buf, i) / ffi_write_i32(buf, i, n)
+//
+// The browser WASM runtime stubs these to void — FFI only runs
+// on the native/Node track. The interpreter's `advanced.ts`
+// wires the Node side via `koffi` when installed.
+//
+// Type kinds are small ints so the host can dispatch fast:
+//   0 void   1 i32   2 i64   3 f32   4 f64
+//   5 ptr    6 cstr  7 buf   8 bool
+
+link "data.sdev"
+
+forge FFI_VOID  be 0
+forge FFI_I32   be 1
+forge FFI_I64   be 2
+forge FFI_F32   be 3
+forge FFI_F64   be 4
+forge FFI_PTR   be 5
+forge FFI_CSTR  be 6
+forge FFI_BUF   be 7
+forge FFI_BOOL  be 8
+
+// ---------- library handle wrapper ----------
+conjure Library(path) ::
+    forge h be ffi_open(path)
+    either h equals void ::
+        yield { ok: nope, path: path, handle: void, err: "cannot open " + path }
+    ;;
+    yield { ok: yep, path: path, handle: h, err: "" }
+;;
+
+conjure lib_close(lib) ::
+    either lib.handle differs void :: ffi_close(lib.handle) ;;
+    set lib.handle to void
+    yield yep
+;;
+
+// ---------- function binding ----------
+// bind(lib, "matmul_f64", FFI_VOID, [FFI_PTR, FFI_PTR, FFI_PTR, FFI_I32, FFI_I32, FFI_I32])
+conjure bind(lib, name, ret_kind, arg_kinds) ::
+    either lib.ok equals nope :: yield void ;;
+    forge fn be ffi_sym(lib.handle, name)
+    either fn equals void :: yield void ;;
+    yield {
+        lib: lib,
+        name: name,
+        fn: fn,
+        ret: ret_kind,
+        args: arg_kinds
+    }
+;;
+
+conjure invoke(binding, argv) ::
+    either binding equals void :: yield void ;;
+    yield ffi_call(binding.fn, binding.ret, binding.args, argv)
+;;
+
+// ---------- raw buffers (for passing float arrays) ----------
+conjure buf_f64(n) ::
+    forge b be ffi_buf(n * 8)
+    yield { addr: b, len: n, kind: FFI_F64 }
+;;
+
+conjure buf_from_list(xs) ::
+    forge n be measure(xs)
+    forge b be buf_f64(n)
+    forge i be 0
+    cycle i < n ::
+        ffi_write_f64(b.addr, i, xs[i])
+        be i be i + 1
+    ;;
+    yield b
+;;
+
+conjure buf_to_list(b) ::
+    forge out be gather()
+    forge i be 0
+    cycle i < b.len ::
+        pluck(out, ffi_read_f64(b.addr, i))
+        be i be i + 1
+    ;;
+    yield out
+;;
+
+// ---------- BLAS-style convenience wrappers ----------
+// Open an OpenBLAS-compatible library and bind the two calls
+// the ML stdlib actually needs for accelerated matmul.
+conjure open_blas(path) ::
+    forge lib be Library(path)
+    either lib.ok equals nope :: yield void ;;
+    forge dgemm be bind(
+        lib, "cblas_dgemm",
+        FFI_VOID,
+        [FFI_I32, FFI_I32, FFI_I32,  // order, transA, transB
+         FFI_I32, FFI_I32, FFI_I32,  // M, N, K
+         FFI_F64,                    // alpha
+         FFI_PTR, FFI_I32,           // A, lda
+         FFI_PTR, FFI_I32,           // B, ldb
+         FFI_F64,                    // beta
+         FFI_PTR, FFI_I32]           // C, ldc
+    )
+    forge daxpy be bind(
+        lib, "cblas_daxpy",
+        FFI_VOID,
+        [FFI_I32, FFI_F64, FFI_PTR, FFI_I32, FFI_PTR, FFI_I32]
+    )
+    yield { lib: lib, dgemm: dgemm, daxpy: daxpy }
+;;
+
+// BLAS-accelerated matmul that plugs straight into ml/tensor.sdev.
+// Falls back to the pure-sdev matmul when the binding is void.
+conjure blas_matmul(blas, a, b) ::
+    either blas equals void :: yield matmul(a, b) ;;
+    either blas.dgemm equals void :: yield matmul(a, b) ;;
+    forge m be a.shape[0]
+    forge k be a.shape[1]
+    forge n be b.shape[1]
+    forge ba be buf_from_list(a.data)
+    forge bb be buf_from_list(b.data)
+    forge bc be buf_f64(m * n)
+    // CblasRowMajor=101, CblasNoTrans=111
+    invoke(blas.dgemm, [101, 111, 111, m, n, k, 1.0,
+                       ba.addr, k, bb.addr, n, 0.0, bc.addr, n])
+    yield tensor(buf_to_list(bc), [m, n])
+;;
+
+// ---------- CUDA fast path ----------
+// Open libcudart + libcublas and expose the handful of symbols
+// the ML stdlib needs for GPU-accelerated training.
+conjure open_cuda(cudart_path, cublas_path) ::
+    forge rt be Library(cudart_path)
+    forge bl be Library(cublas_path)
+    either rt.ok equals nope :: yield void ;;
+    either bl.ok equals nope :: yield void ;;
+    yield {
+        rt: rt,
+        bl: bl,
+        malloc:  bind(rt, "cudaMalloc",   FFI_I32, [FFI_PTR, FFI_I64]),
+        free:    bind(rt, "cudaFree",     FFI_I32, [FFI_PTR]),
+        memcpy:  bind(rt, "cudaMemcpy",   FFI_I32, [FFI_PTR, FFI_PTR, FFI_I64, FFI_I32]),
+        sync:    bind(rt, "cudaDeviceSynchronize", FFI_I32, []),
+        create:  bind(bl, "cublasCreate_v2",  FFI_I32, [FFI_PTR]),
+        destroy: bind(bl, "cublasDestroy_v2", FFI_I32, [FFI_PTR]),
+        dgemm:   bind(bl, "cublasDgemm_v2",
+                      FFI_I32,
+                      [FFI_PTR, FFI_I32, FFI_I32, FFI_I32, FFI_I32, FFI_I32,
+                       FFI_PTR, FFI_PTR, FFI_I32, FFI_PTR, FFI_I32,
+                       FFI_PTR, FFI_PTR, FFI_I32])
+    }
+;;
+
+conjure cuda_ok(cuda) ::
+    either cuda equals void :: yield nope ;;
+    yield yep
+;;
