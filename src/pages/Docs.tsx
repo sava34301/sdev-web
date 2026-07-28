@@ -24,6 +24,7 @@ const SOURCES: DocSource[] = [
   { id: 'internals',   title: 'Compiler & VM Internals',     url: '/SDEV_INTERNALS.md',          icon: Library },
   { id: 'ml',          title: 'ML & LLM Stdlib',             url: '/SDEV_ML_DOCUMENTATION.md',   icon: Library },
   { id: 'ffi',         title: 'FFI & Native Acceleration',   url: '/SDEV_FFI_DOCUMENTATION.md',  icon: Library },
+  { id: 'webgpu',      title: 'WebGPU Acceleration',         url: '/SDEV_WEBGPU_DOCUMENTATION.md', icon: Library },
 ];
 
 function slugify(s: string) {
