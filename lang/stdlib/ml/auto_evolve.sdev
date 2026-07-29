@@ -1,0 +1,166 @@
+// ============================================================
+// sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12)
+// ============================================================
+// Wires the ML stack into sdev's own source tree. A trained sdev
+// model reads demand signals, drafts patches to the language,
+// runs them through a review hook, and — on approval — commits
+// them to disk. The same loop can also fine-tune the model on
+// fresh distilled data or teacher outputs.
+//
+// Nothing here writes to disk unless `set_review_hook(...)` has
+// been called with a function that returns `yep`. That is the
+// single gate protecting the entire pipeline.
+
+link "self_modify.sdev"
+link "data.sdev"
+link "nn.sdev"
+link "transformer.sdev"
+
+// ---------- source-tree map ----------
+// The files the loop is allowed to touch. Anything not listed is
+// off-limits even if the review hook approves.
+forge SDEV_SOURCE_FILES be [
+    "lang/runtime/v2.js",
+    "lang/compiler/lexer.sdev",
+    "lang/compiler/parser.sdev",
+    "lang/compiler/codegen.sdev",
+    "lang/stdlib/ml/tensor.sdev",
+    "lang/stdlib/ml/nn.sdev",
+    "lang/stdlib/ml/transformer.sdev",
+    "public/SDEV_DOCUMENTATION.md",
+    "public/SDEV_ML_DOCUMENTATION.md"
+]
+
+conjure is_allowed(path) ::
+    forge i be 0
+    cycle i < measure(SDEV_SOURCE_FILES) ::
+        either SDEV_SOURCE_FILES[i] equals path :: yield yep ;;
+        be i be i + 1
+    ;;
+    yield nope
+;;
+
+// ---------- proposal record ----------
+conjure make_proposal(path, old_body, new_body, reason) ::
+    yield {
+        path: path,
+        old: old_body,
+        new: new_body,
+        reason: reason,
+        applied: nope
+    }
+;;
+
+conjure apply_proposal(p) ::
+    either is_allowed(p.path) equals nope :: yield nope ;;
+    forge ok be self_propose(p.path, p.new)
+    set p.applied to ok
+    yield ok
+;;
+
+// ---------- demand → proposal ----------
+// Given a ranked demand map from `mine_demand`, ask the model to
+// draft a patch for the top topic. `model` is any sdev model
+// exposing `generate(model, prompt, max_new)`.
+conjure draft_from_demand(model, demand, target_path) ::
+    forge top be top_topic(demand)
+    either top equals void :: yield void ;;
+    forge cur be self_read(target_path)
+    forge prompt be "Improve sdev to better support: " + top +
+                    "\nCurrent file:\n" + cur +
+                    "\nReturn the full updated file."
+    forge patched be generate(model, prompt, 4096)
+    yield make_proposal(target_path, cur, patched,
+                        "demand-driven: " + top)
+;;
+
+conjure top_topic(counts) ::
+    forge best_k be void
+    forge best_v be 0
+    forge keys be tome_keys(counts)
+    forge i be 0
+    cycle i < measure(keys) ::
+        forge k be keys[i]
+        forge v be counts[k]
+        either v > best_v :: set best_v to v set best_k to k ;;
+        be i be i + 1
+    ;;
+    yield best_k
+;;
+
+// ---------- fine-tune on live distillation ----------
+// Pulls prompt/answer pairs from a teacher endpoint and runs a
+// short SGD pass so the local model tracks the frontier without
+// leaving the sdev runtime.
+conjure evolve_weights(model, teacher_url, teacher_key, prompts, epochs, lr) ::
+    forge pairs be distill_batch(teacher_url, teacher_key, prompts)
+    forge xs be gather()
+    forge ys be gather()
+    forge i be 0
+    cycle i < measure(pairs) ::
+        pluck(xs, encode_prompt(model, pairs[i].prompt))
+        pluck(ys, encode_prompt(model, pairs[i].target))
+        be i be i + 1
+    ;;
+    fit(model, xs, ys, epochs, lr)
+    yield measure(pairs)
+;;
+
+// ---------- the loop ----------
+// One tick: mine demand → draft → review → apply → fine-tune.
+// Returns a report tome so the caller can log or throttle.
+conjure evolve_tick(model, sources, teacher_url, teacher_key) ::
+    forge demand be mine_demand(sources)
+    forge target be pick_target(demand)
+    forge prop be draft_from_demand(model, demand, target)
+    forge applied be nope
+    either prop differs void :: be applied be apply_proposal(prop) ;;
+    forge trained be evolve_weights(
+        model, teacher_url, teacher_key,
+        prompt_pool(demand), 1, 0.001
+    )
+    yield {
+        target: target,
+        applied: applied,
+        distilled: trained,
+        reason: either prop differs void :: prop.reason ;; otherwise :: "" ;;
+    }
+;;
+
+conjure pick_target(demand) ::
+    // Route "syntax"/"parser" topics into the compiler; docs
+    // topics into the docs file; everything else into the ML
+    // stdlib so the model can grow its own capabilities.
+    forge k be top_topic(demand)
+    either k equals void :: yield "public/SDEV_ML_DOCUMENTATION.md" ;;
+    either contains(k, "parse") also yep :: yield "lang/compiler/parser.sdev" ;;
+    either contains(k, "lex")   also yep :: yield "lang/compiler/lexer.sdev" ;;
+    either contains(k, "doc")   also yep :: yield "public/SDEV_DOCUMENTATION.md" ;;
+    yield "lang/stdlib/ml/nn.sdev"
+;;
+
+conjure prompt_pool(demand) ::
+    // Use the top topics as prompts for the next distillation
+    // round — the model literally trains on what people are
+    // asking for.
+    forge out be gather()
+    forge keys be tome_keys(demand)
+    forge i be 0
+    cycle i < measure(keys) also i < 8 ::
+        pluck(out, "Explain how sdev should handle: " + keys[i])
+        be i be i + 1
+    ;;
+    yield out
+;;
+
+// ---------- long-running driver ----------
+conjure evolve_forever(model, sources, teacher_url, teacher_key, ticks) ::
+    forge t be 0
+    cycle t < ticks ::
+        forge rep be evolve_tick(model, sources, teacher_url, teacher_key)
+        speak("evolve[" + str(t) + "] target=" + rep.target +
+              " applied=" + str(rep.applied) +
+              " distilled=" + str(rep.distilled))
+        be t be t + 1
+    ;;
+;;

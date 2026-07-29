@@ -26,6 +26,7 @@ const SOURCES: DocSource[] = [
   { id: 'ffi',         title: 'FFI & Native Acceleration',   url: '/SDEV_FFI_DOCUMENTATION.md',  icon: Library },
   { id: 'webgpu',      title: 'WebGPU Acceleration',         url: '/SDEV_WEBGPU_DOCUMENTATION.md', icon: Library },
   { id: 'cuda',        title: 'CUDA Fast Path',              url: '/SDEV_CUDA_DOCUMENTATION.md', icon: Library },
+  { id: 'autoevolve',  title: 'Autonomous Evolution',        url: '/SDEV_AUTOEVOLVE_DOCUMENTATION.md', icon: Library },
 ];
 
 function slugify(s: string) {
