@@ -1,0 +1,136 @@
+// ============================================================
+// sdev ML Stdlib — CUDA Fast Path (Milestone 11)
+// ============================================================
+// Thin sdev-native layer over the FFI cuBLAS/cudart bindings in
+// ffi.sdev. Gives the ML stack a real GPU matmul + training loop
+// when the process is on a CUDA-capable box, and transparently
+// falls back to the pure-sdev tensor ops otherwise so the same
+// program keeps running in the browser IDE.
+//
+// Everything here is sdev source that runs on both interpreter
+// tracks. The native/Node runtime wires the FFI symbols; the
+// browser stubs them to void, which forces `cuda_ok(...)` to
+// nope and every helper below to take the CPU path.
+
+link "ffi.sdev"
+link "ml/tensor.sdev"
+
+// ---------- device handle ----------
+// A "device" bundles the loaded cuBLAS/cudart bindings with a
+// live cublasHandle_t. We keep it as a tome so callers can pass
+// it around like any other sdev value.
+conjure cuda_device(cudart_path, cublas_path) ::
+    forge cu be open_cuda(cudart_path, cublas_path)
+    either cuda_ok(cu) equals nope ::
+        yield { ok: nope, cu: void, handle: void, err: "cuda unavailable" }
+    ;;
+    // cublasCreate_v2 wants a pointer-to-handle out param.
+    forge hbuf be ffi_buf(8)
+    invoke(cu.create, [hbuf])
+    forge h be ffi_read_i32(hbuf, 0)
+    yield { ok: yep, cu: cu, handle: h, err: "" }
+;;
+
+conjure cuda_device_default() ::
+    // Sensible Linux defaults; callers on other OSes pass paths.
+    yield cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",
+                      "/usr/lib/x86_64-linux-gnu/libcublas.so")
+;;
+
+conjure cuda_free_device(dev) ::
+    either dev.ok equals nope :: yield nope ;;
+    invoke(dev.cu.destroy, [dev.handle])
+    lib_close(dev.cu.rt.lib)
+    lib_close(dev.cu.bl.lib)
+    set dev.ok to nope
+    yield yep
+;;
+
+// ---------- device memory ----------
+// A cuda_buf is host-visible metadata around a device pointer.
+conjure cuda_alloc(dev, n_f64) ::
+    forge nbytes be n_f64 * 8
+    forge pbuf be ffi_buf(8)
+    invoke(dev.cu.malloc, [pbuf, nbytes])
+    yield { dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }
+;;
+
+conjure cuda_free(dev, b) ::
+    invoke(dev.cu.free, [b.dptr])
+    set b.dptr to 0
+    yield yep
+;;
+
+// cudaMemcpyKind: HostToDevice=1, DeviceToHost=2
+conjure cuda_upload(dev, host_list) ::
+    forge n be measure(host_list)
+    forge db be cuda_alloc(dev, n)
+    forge hb be buf_from_list(host_list)
+    invoke(dev.cu.memcpy, [db.dptr, hb.addr, n * 8, 1])
+    yield db
+;;
+
+conjure cuda_download(dev, db) ::
+    forge hb be buf_f64(db.n)
+    invoke(dev.cu.memcpy, [hb.addr, db.dptr, db.n * 8, 2])
+    yield buf_to_list(hb)
+;;
+
+// ---------- accelerated ops ----------
+// Row-major C = A · B via cublasDgemm. cuBLAS is column-major,
+// so we compute Bᵀ · Aᵀ under the hood and interpret the result
+// as row-major C — same trick numpy's cublas backend uses.
+conjure cuda_matmul(dev, a, b) ::
+    either dev.ok equals nope :: yield matmul(a, b) ;;
+    forge m be a.shape[0]
+    forge k be a.shape[1]
+    forge n be b.shape[1]
+
+    forge da be cuda_upload(dev, a.data)
+    forge db be cuda_upload(dev, b.data)
+    forge dc be cuda_alloc(dev, m * n)
+
+    // alpha/beta live on the host as f64 buffers per cuBLAS ABI.
+    forge alpha be ffi_buf(8) ffi_write_f64(alpha, 0, 1.0)
+    forge beta  be ffi_buf(8) ffi_write_f64(beta,  0, 0.0)
+
+    // CUBLAS_OP_N = 0. Swapped operands + leading dims for the
+    // column-major → row-major reinterpretation.
+    invoke(dev.cu.dgemm, [
+        dev.handle, 0, 0, n, m, k,
+        alpha, db.dptr, n, da.dptr, k,
+        beta,  dc.dptr, n
+    ])
+    invoke(dev.cu.sync, [])
+
+    forge out be cuda_download(dev, dc)
+    cuda_free(dev, da) cuda_free(dev, db) cuda_free(dev, dc)
+    yield tensor(out, [m, n])
+;;
+
+// Convenience: pick the fastest available matmul path.
+// Priority: CUDA → BLAS → pure sdev.
+conjure best_matmul(dev, blas, a, b) ::
+    either dev differs void ::
+        either dev.ok equals yep :: yield cuda_matmul(dev, a, b) ;;
+    ;;
+    either blas differs void :: yield blas_matmul(blas, a, b) ;;
+    yield matmul(a, b)
+;;
+
+// ---------- training-loop hook ----------
+// Drop-in replacement for nn.fit's inner matmul step. The rest of
+// the training loop (loss, autograd tape, optimizer) stays pure
+// sdev — only the hot kernel moves to the GPU.
+conjure cuda_forward_linear(dev, x, w, bias) ::
+    forge y be cuda_matmul(dev, x, w)
+    yield t_add(y, bias)
+;;
+
+// ---------- diagnostics ----------
+conjure cuda_report(dev) ::
+    either dev.ok equals nope ::
+        yield "CUDA: unavailable (running on CPU fallback)"
+    ;;
+    yield "CUDA: ready — cublas handle " + morph(dev.handle, "string")
+;;
