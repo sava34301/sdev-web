@@ -115,6 +115,8 @@ conjure evolve_tick(model, sources, teacher_url, teacher_key) ::
     forge prop be draft_from_demand(model, demand, target)
     forge applied be nope
     either prop differs void :: be applied be apply_proposal(prop) ;;
+    forge reason be ""
+    either prop differs void :: be reason be prop.reason ;;
     forge trained be evolve_weights(
         model, teacher_url, teacher_key,
         prompt_pool(demand), 1, 0.001
@@ -123,8 +125,9 @@ conjure evolve_tick(model, sources, teacher_url, teacher_key) ::
         target: target,
         applied: applied,
         distilled: trained,
-        reason: either prop differs void :: prop.reason ;; otherwise :: "" ;;
+        reason: reason
     }
+
 ;;
 
 conjure pick_target(demand) ::
