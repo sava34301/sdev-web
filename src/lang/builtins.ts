@@ -1527,11 +1527,15 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
   builtins.set('ord', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      if (args.length !== 1) throw new SdevError('ord() takes 1 argument', line);
+      if (args.length < 1 || args.length > 2) throw new SdevError('ord() takes 1 or 2 arguments', line);
       if (typeof args[0] !== 'string' || args[0].length === 0) throw new SdevError('Argument must be a non-empty string', line);
-      return args[0].charCodeAt(0);
+      // ord(s) → first char code; ord(s, i) → char code at index i (ML stdlib form)
+      const idx = args.length === 2 ? Number(args[1]) : 0;
+      if (idx < 0 || idx >= args[0].length) return 0;
+      return args[0].charCodeAt(idx);
     },
   });
+
 
   // ============= Number Base Conversion =============
 
