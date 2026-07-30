@@ -2464,8 +2464,83 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
     },
   });
 
+  // ============= ML host bindings (Milestone 13) =============
+  // The ML stdlib (lang/stdlib/ml/*.sdev) is written entirely in sdev but
+  // needs a handful of host primitives. A host (Node harness, Electron shell)
+  // may override any of them via `globalThis.__sdevHost`; the browser falls
+  // back to localStorage-backed files and a synchronous XHR fetch.
+  type SdevHost = {
+    readFile?: (path: string) => string;
+    writeFile?: (path: string, content: string) => void;
+    httpGet?: (url: string) => string;
+  };
+  const host = (): SdevHost => ((globalThis as unknown as { __sdevHost?: SdevHost }).__sdevHost ?? {});
+
+  builtins.set('rand', { type: 'builtin', call: () => Math.random() });
+  builtins.set('ln', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => Math.log(toNumber(args[0], line)),
+  });
+
+  builtins.set('tome_keys', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const t = args[0];
+      if (t === null || typeof t !== 'object' || Array.isArray(t)) {
+        throw new SdevError('tome_keys() takes a tome', line);
+      }
+      return Object.keys(t as Record<string, unknown>);
+    },
+  });
+
+  builtins.set('read_file', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const path = String(args[0] ?? '');
+      if (!path) throw new SdevError('read_file() takes a path', line);
+      const h = host();
+      if (h.readFile) return h.readFile(path);
+      if (typeof localStorage !== 'undefined') return localStorage.getItem(`sdev:file:${path}`) ?? '';
+      throw new SdevError(`read_file("${path}") — no host file system available`, line);
+    },
+  });
+
+  builtins.set('write_file', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const path = String(args[0] ?? '');
+      const content = String(args[1] ?? '');
+      if (!path) throw new SdevError('write_file() takes a path and content', line);
+      const h = host();
+      if (h.writeFile) { h.writeFile(path, content); return true; }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`sdev:file:${path}`, content);
+        return true;
+      }
+      throw new SdevError(`write_file("${path}") — no host file system available`, line);
+    },
+  });
+
+  builtins.set('http_get', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const url = String(args[0] ?? '');
+      if (!url) throw new SdevError('http_get() takes a url', line);
+      const h = host();
+      if (h.httpGet) return h.httpGet(url);
+      if (typeof XMLHttpRequest !== 'undefined') {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, false); // sdev evaluation is synchronous
+        xhr.send(null);
+        return xhr.responseText ?? '';
+      }
+      throw new SdevError(`http_get("${url}") — no host network available`, line);
+    },
+  });
+
   return builtins;
 }
+
 
 export function stringify(value: unknown): string {
   if (value === null) return 'void';
