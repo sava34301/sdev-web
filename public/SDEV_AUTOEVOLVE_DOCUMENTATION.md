@@ -27,7 +27,7 @@ Even with a hook, only files in `SDEV_SOURCE_FILES` are eligible —
 | Function | Purpose |
 | --- | --- |
 | `is_allowed(path)` | Whitelist check. |
-| `make_proposal(path, old, new, reason)` | Build a patch record. |
+| `make_proposal(path, old, new_body, reason)` | Build a patch record; fields are `path`, `old`, `updated`, `reason`, `applied`. |
 | `apply_proposal(p)` | Route through the review hook and write. |
 | `draft_from_demand(model, demand, path)` | Ask the model to rewrite a file toward the top demand topic. |
 | `evolve_weights(model, url, key, prompts, epochs, lr)` | Distill a teacher model and SGD-step on the pairs. |
