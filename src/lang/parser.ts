@@ -50,7 +50,7 @@ export class Parser {
   /** Lookahead: does this `set ...` line contain a `to` before the statement ends? */
   private isSetToStatement(): boolean {
     let depth = 0;
-    for (let i = this.current + 1; i < this.tokens.length; i++) {
+    for (let i = this.pos + 1; i < this.tokens.length; i++) {
       const t = this.tokens[i];
       if (t.type === TokenType.LPAREN || t.type === TokenType.LBRACKET || t.type === TokenType.LBRACE) depth++;
       else if (t.type === TokenType.RPAREN || t.type === TokenType.RBRACKET || t.type === TokenType.RBRACE) depth--;
