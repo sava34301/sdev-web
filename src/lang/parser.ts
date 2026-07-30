@@ -261,21 +261,24 @@ export class Parser {
   private parseExpressionStatement(): AST.ExpressionStatement | AST.AssignStatement | AST.IndexAssignStatement | AST.MemberAssignStatement {
     const expr = this.parseExpression();
     
-    // Check for assignment with 'be'
-    if (this.match(TokenType.BE)) {
+    // Check for assignment with 'be'. Only assignable targets consume the
+    // 'be' — otherwise the token belongs to a following `be x be ...`
+    // statement on the next line.
+    const assignable =
+      expr.type === 'Identifier' || expr.type === 'IndexExpr' || expr.type === 'MemberExpr';
+    if (assignable && this.check(TokenType.BE)) {
+      this.advance();
       const value = this.parseExpression();
-      
+
       if (expr.type === 'Identifier') {
         return { type: 'AssignStatement', name: expr.name, value, line: expr.line };
       }
       if (expr.type === 'IndexExpr') {
         return { type: 'IndexAssignStatement', object: expr.object, index: expr.index, value, line: expr.line };
       }
-      if (expr.type === 'MemberExpr') {
-        return { type: 'MemberAssignStatement', object: expr.object, property: expr.property, value, line: expr.line };
-      }
-      throw new SdevError('Invalid assignment target', expr.line);
+      return { type: 'MemberAssignStatement', object: expr.object, property: expr.property, value, line: expr.line };
     }
+
     
     return { type: 'ExpressionStatement', expression: expr, line: expr.line };
   }
