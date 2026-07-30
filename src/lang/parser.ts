@@ -37,6 +37,10 @@ export class Parser {
     //   set x to value       (ML/v2 form, 'set'/'to' are contextual)
     if (this.check(TokenType.BE)) return this.parseLeadingBeStatement();
     if (this.checkIdentifierValue('set') && this.isSetToStatement()) return this.parseSetToStatement();
+    // `either cond :: ... ;; otherwise :: ... ;;` — guard form used by the stdlib.
+    // In expression position 'either' stays a binary operator.
+    if (this.check(TokenType.EITHER)) return this.parseEitherStatement();
+
     if (this.check(TokenType.DOUBLE_COLON)) return this.parseBlockStatement();
     return this.parseExpressionStatement();
   }
