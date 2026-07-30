@@ -32,9 +32,77 @@ export class Parser {
     if (this.check(TokenType.ATTEMPT)) return this.parseAttemptStatement();
     // 'essence' is a contextual keyword - check by value
     if (this.checkIdentifierValue('essence')) return this.parseEssenceDeclaration();
+    // Reassignment dialects used by the sdev stdlib:
+    //   be x be value        (leading-'be' form)
+    //   set x to value       (ML/v2 form, 'set'/'to' are contextual)
+    if (this.check(TokenType.BE)) return this.parseLeadingBeStatement();
+    if (this.checkIdentifierValue('set') && this.isSetToStatement()) return this.parseSetToStatement();
+    // `either cond :: ... ;; otherwise :: ... ;;` — guard form used by the stdlib.
+    // In expression position 'either' stays a binary operator.
+    if (this.check(TokenType.EITHER)) return this.parseEitherStatement();
+
     if (this.check(TokenType.DOUBLE_COLON)) return this.parseBlockStatement();
     return this.parseExpressionStatement();
   }
+
+  // be target be value  — same targets as `target be value`
+  private parseLeadingBeStatement(): AST.ASTNode {
+    this.consume(TokenType.BE, "Expected 'be'");
+    return this.parseExpressionStatement();
+  }
+
+  // either condition :: body ;; [otherwise :: body ;; | otherwise either ...]
+  private parseEitherStatement(): AST.IfStatement {
+    const eitherToken = this.consume(TokenType.EITHER, "Expected 'either'");
+    const condition = this.parseExpression();
+    const thenBranch = this.parseBlockStatement();
+
+    let elseBranch: AST.BlockStatement | AST.IfStatement | undefined;
+    if (this.match(TokenType.OTHERWISE)) {
+      if (this.check(TokenType.EITHER)) elseBranch = this.parseEitherStatement();
+      else elseBranch = this.parseBlockStatement();
+    }
+
+    return { type: 'IfStatement', condition, thenBranch, elseBranch, line: eitherToken.line };
+  }
+
+
+
+  /** Lookahead: does this `set ...` line contain a `to` before the statement ends? */
+  private isSetToStatement(): boolean {
+    let depth = 0;
+    for (let i = this.pos + 1; i < this.tokens.length; i++) {
+      const t = this.tokens[i];
+      if (t.type === TokenType.LPAREN || t.type === TokenType.LBRACKET || t.type === TokenType.LBRACE) depth++;
+      else if (t.type === TokenType.RPAREN || t.type === TokenType.RBRACKET || t.type === TokenType.RBRACE) depth--;
+      else if (depth === 0 && t.type === TokenType.IDENTIFIER && t.value === 'to') return true;
+      else if (depth === 0 && (t.type === TokenType.DOUBLE_COLON || t.type === TokenType.DOUBLE_SEMI || t.type === TokenType.EOF)) return false;
+    }
+    return false;
+  }
+
+  // set target to value
+  private parseSetToStatement(): AST.ASTNode {
+    const setToken = this.advance(); // 'set'
+    const target = this.parseExpression();
+    const toToken = this.peek();
+    if (!(toToken.type === TokenType.IDENTIFIER && toToken.value === 'to')) {
+      throw new SdevError("Expected 'to' in set statement", setToken.line);
+    }
+    this.advance();
+    const value = this.parseExpression();
+    if (target.type === 'Identifier') {
+      return { type: 'AssignStatement', name: target.name, value, line: setToken.line };
+    }
+    if (target.type === 'IndexExpr') {
+      return { type: 'IndexAssignStatement', object: target.object, index: target.index, value, line: setToken.line };
+    }
+    if (target.type === 'MemberExpr') {
+      return { type: 'MemberAssignStatement', object: target.object, property: target.property, value, line: setToken.line };
+    }
+    throw new SdevError('Invalid assignment target', setToken.line);
+  }
+
 
   // forge name be value
   private parseForgeStatement(): AST.LetStatement {
@@ -214,21 +282,24 @@ export class Parser {
   private parseExpressionStatement(): AST.ExpressionStatement | AST.AssignStatement | AST.IndexAssignStatement | AST.MemberAssignStatement {
     const expr = this.parseExpression();
     
-    // Check for assignment with 'be'
-    if (this.match(TokenType.BE)) {
+    // Check for assignment with 'be'. Only assignable targets consume the
+    // 'be' — otherwise the token belongs to a following `be x be ...`
+    // statement on the next line.
+    const assignable =
+      expr.type === 'Identifier' || expr.type === 'IndexExpr' || expr.type === 'MemberExpr';
+    if (assignable && this.check(TokenType.BE)) {
+      this.advance();
       const value = this.parseExpression();
-      
+
       if (expr.type === 'Identifier') {
         return { type: 'AssignStatement', name: expr.name, value, line: expr.line };
       }
       if (expr.type === 'IndexExpr') {
         return { type: 'IndexAssignStatement', object: expr.object, index: expr.index, value, line: expr.line };
       }
-      if (expr.type === 'MemberExpr') {
-        return { type: 'MemberAssignStatement', object: expr.object, property: expr.property, value, line: expr.line };
-      }
-      throw new SdevError('Invalid assignment target', expr.line);
+      return { type: 'MemberAssignStatement', object: expr.object, property: expr.property, value, line: expr.line };
     }
+
     
     return { type: 'ExpressionStatement', expression: expr, line: expr.line };
   }
@@ -273,12 +344,17 @@ export class Parser {
 
   private parseOr(): AST.ASTNode {
     let left = this.parseAnd();
-    while (this.match(TokenType.EITHER)) {
+    // `either` is the OR operator, but it also opens a guard statement. Only
+    // continue the expression when the token sits on the same line as the
+    // operand — a leading `either` on a new line starts a statement.
+    while (this.check(TokenType.EITHER) && this.peek().line === this.previous().line) {
+      this.advance();
       const right = this.parseAnd();
       left = { type: 'BinaryExpr', operator: 'either', left, right, line: left.line };
     }
     return left;
   }
+
 
   private parseAnd(): AST.ASTNode {
     let left = this.parseEquality();

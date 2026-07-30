@@ -104,10 +104,10 @@ conjure attn_forward(x, wq, wk, wv, wo, dim) ::
     // flow through matmul chain via autograd).
     forge scale be 1.0 / root(1.0 * dim)
     forge kt be transpose(k)
-    forge scores be t_scale(matmul(q.data ? q : q, kt), scale)
+    forge scores be t_scale(matmul(q, kt), scale)
     // NOTE: greedy softmax + matmul(v) — see docs for full masking.
     forge attn be softmax(scores)
-    forge ctx be matmul(attn, v.data ? v : v)
+    forge ctx be matmul(attn, v)
     yield wo.forward(tensor_grad(ctx.data, ctx.shape))
 ;;
 

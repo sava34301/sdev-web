@@ -168,7 +168,10 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
   builtins.set('gather', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      if (args.length !== 2) throw new SdevError('gather() takes 2 arguments', line);
+      // gather()        → new empty list (stdlib/ML dialect)
+      // gather(list, v) → append v to list
+      if (args.length === 0) return [];
+      if (args.length !== 2) throw new SdevError('gather() takes 0 or 2 arguments', line);
       const arr = args[0];
       if (!Array.isArray(arr)) throw new SdevError('First argument must be a list', line);
       arr.push(args[1]);
@@ -176,17 +179,22 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
     },
   });
 
-  // pluck - pop from list
+  // pluck - pop from list, or append when given a value (stdlib/ML dialect)
   builtins.set('pluck', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      if (args.length !== 1) throw new SdevError('pluck() takes 1 argument', line);
+      if (args.length < 1 || args.length > 2) throw new SdevError('pluck() takes 1 or 2 arguments', line);
       const arr = args[0];
       if (!Array.isArray(arr)) throw new SdevError('Argument must be a list', line);
+      if (args.length === 2) {
+        arr.push(args[1]);
+        return arr;
+      }
       if (arr.length === 0) throw new SdevError('Cannot pluck from empty list', line);
       return arr.pop();
     },
   });
+
 
   // slice - get portion
   builtins.set('portion', {
@@ -1527,11 +1535,15 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
   builtins.set('ord', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      if (args.length !== 1) throw new SdevError('ord() takes 1 argument', line);
+      if (args.length < 1 || args.length > 2) throw new SdevError('ord() takes 1 or 2 arguments', line);
       if (typeof args[0] !== 'string' || args[0].length === 0) throw new SdevError('Argument must be a non-empty string', line);
-      return args[0].charCodeAt(0);
+      // ord(s) → first char code; ord(s, i) → char code at index i (ML stdlib form)
+      const idx = args.length === 2 ? Number(args[1]) : 0;
+      if (idx < 0 || idx >= args[0].length) return 0;
+      return args[0].charCodeAt(idx);
     },
   });
+
 
   // ============= Number Base Conversion =============
 
@@ -2460,8 +2472,83 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
     },
   });
 
+  // ============= ML host bindings (Milestone 13) =============
+  // The ML stdlib (lang/stdlib/ml/*.sdev) is written entirely in sdev but
+  // needs a handful of host primitives. A host (Node harness, Electron shell)
+  // may override any of them via `globalThis.__sdevHost`; the browser falls
+  // back to localStorage-backed files and a synchronous XHR fetch.
+  type SdevHost = {
+    readFile?: (path: string) => string;
+    writeFile?: (path: string, content: string) => void;
+    httpGet?: (url: string) => string;
+  };
+  const host = (): SdevHost => ((globalThis as unknown as { __sdevHost?: SdevHost }).__sdevHost ?? {});
+
+  builtins.set('rand', { type: 'builtin', call: () => Math.random() });
+  builtins.set('ln', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => Math.log(toNumber(args[0], line)),
+  });
+
+  builtins.set('tome_keys', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const t = args[0];
+      if (t === null || typeof t !== 'object' || Array.isArray(t)) {
+        throw new SdevError('tome_keys() takes a tome', line);
+      }
+      return Object.keys(t as Record<string, unknown>);
+    },
+  });
+
+  builtins.set('read_file', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const path = String(args[0] ?? '');
+      if (!path) throw new SdevError('read_file() takes a path', line);
+      const h = host();
+      if (h.readFile) return h.readFile(path);
+      if (typeof localStorage !== 'undefined') return localStorage.getItem(`sdev:file:${path}`) ?? '';
+      throw new SdevError(`read_file("${path}") — no host file system available`, line);
+    },
+  });
+
+  builtins.set('write_file', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const path = String(args[0] ?? '');
+      const content = String(args[1] ?? '');
+      if (!path) throw new SdevError('write_file() takes a path and content', line);
+      const h = host();
+      if (h.writeFile) { h.writeFile(path, content); return true; }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`sdev:file:${path}`, content);
+        return true;
+      }
+      throw new SdevError(`write_file("${path}") — no host file system available`, line);
+    },
+  });
+
+  builtins.set('http_get', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const url = String(args[0] ?? '');
+      if (!url) throw new SdevError('http_get() takes a url', line);
+      const h = host();
+      if (h.httpGet) return h.httpGet(url);
+      if (typeof XMLHttpRequest !== 'undefined') {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, false); // sdev evaluation is synchronous
+        xhr.send(null);
+        return xhr.responseText ?? '';
+      }
+      throw new SdevError(`http_get("${url}") — no host network available`, line);
+    },
+  });
+
   return builtins;
 }
+
 
 export function stringify(value: unknown): string {
   if (value === null) return 'void';
