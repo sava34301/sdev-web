@@ -344,12 +344,17 @@ export class Parser {
 
   private parseOr(): AST.ASTNode {
     let left = this.parseAnd();
-    while (this.match(TokenType.EITHER)) {
+    // `either` is the OR operator, but it also opens a guard statement. Only
+    // continue the expression when the token sits on the same line as the
+    // operand — a leading `either` on a new line starts a statement.
+    while (this.check(TokenType.EITHER) && this.peek().line === this.previous().line) {
+      this.advance();
       const right = this.parseAnd();
       left = { type: 'BinaryExpr', operator: 'either', left, right, line: left.line };
     }
     return left;
   }
+
 
   private parseAnd(): AST.ASTNode {
     let left = this.parseEquality();
