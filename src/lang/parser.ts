@@ -51,6 +51,23 @@ export class Parser {
     return this.parseExpressionStatement();
   }
 
+  // either condition :: body ;; [otherwise :: body ;; | otherwise either ...]
+  private parseEitherStatement(): AST.IfStatement {
+    const eitherToken = this.consume(TokenType.EITHER, "Expected 'either'");
+    const condition = this.parseExpression();
+    const thenBranch = this.parseBlockStatement();
+
+    let elseBranch: AST.BlockStatement | AST.IfStatement | undefined;
+    if (this.match(TokenType.OTHERWISE)) {
+      if (this.check(TokenType.EITHER)) elseBranch = this.parseEitherStatement();
+      else elseBranch = this.parseBlockStatement();
+    }
+
+    return { type: 'IfStatement', condition, thenBranch, elseBranch, line: eitherToken.line };
+  }
+
+
+
   /** Lookahead: does this `set ...` line contain a `to` before the statement ends? */
   private isSetToStatement(): boolean {
     let depth = 0;
