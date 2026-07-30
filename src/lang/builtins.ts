@@ -168,7 +168,10 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
   builtins.set('gather', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      if (args.length !== 2) throw new SdevError('gather() takes 2 arguments', line);
+      // gather()        → new empty list (stdlib/ML dialect)
+      // gather(list, v) → append v to list
+      if (args.length === 0) return [];
+      if (args.length !== 2) throw new SdevError('gather() takes 0 or 2 arguments', line);
       const arr = args[0];
       if (!Array.isArray(arr)) throw new SdevError('First argument must be a list', line);
       arr.push(args[1]);
@@ -176,17 +179,22 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
     },
   });
 
-  // pluck - pop from list
+  // pluck - pop from list, or append when given a value (stdlib/ML dialect)
   builtins.set('pluck', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      if (args.length !== 1) throw new SdevError('pluck() takes 1 argument', line);
+      if (args.length < 1 || args.length > 2) throw new SdevError('pluck() takes 1 or 2 arguments', line);
       const arr = args[0];
       if (!Array.isArray(arr)) throw new SdevError('Argument must be a list', line);
+      if (args.length === 2) {
+        arr.push(args[1]);
+        return arr;
+      }
       if (arr.length === 0) throw new SdevError('Cannot pluck from empty list', line);
       return arr.pop();
     },
   });
+
 
   // slice - get portion
   builtins.set('portion', {
