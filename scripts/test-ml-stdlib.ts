@@ -28,7 +28,6 @@ const files: LinkableFile[] = [
   ...readdirSync(ML_DIR)
     .filter((f) => f.endsWith('.sdev'))
     .map((f) => ({ name: f, content: readFileSync(join(ML_DIR, f), 'utf8') })),
-  { name: 'webgpu.sdev', content: readFileSync('lang/stdlib/webgpu.sdev', 'utf8') },
   { name: 'ffi.sdev', content: readFileSync('lang/stdlib/ffi.sdev', 'utf8') },
 ];
 
@@ -189,9 +188,8 @@ speak(str(measure(out)))`,
 
 // 11. Accelerators degrade gracefully when no GPU/driver is present
 run(
-  'accelerators: cuda + webgpu report unavailable instead of crashing',
+  'accelerators: cuda reports unavailable instead of crashing',
   `link "cuda.sdev"
-link "webgpu.sdev"
 forge dev be cuda_device_default()
 speak(str(dev.ok))`,
   (out) => (out[0] === 'nope' || out[0] === 'false' || out[0] === 'yep' || out[0] === 'true'
