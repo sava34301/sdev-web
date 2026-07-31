@@ -136,5 +136,68 @@ speak(str(is_allowed("lang/runtime/v2.js")) + "|" + str(is_allowed("/etc/passwd"
   }
 );
 
+// 7. Tokenizer round-trip: encode → decode must be the identity
+run(
+  'data: char vocab encode/decode round-trip',
+  `link "data.sdev"
+forge text be "hello sdev"
+forge v be char_vocab(text)
+forge ids be encode(v, text)
+speak(decode(v, ids) + "|" + str(v.size))`,
+  (out) => {
+    const [round, size] = String(out[0] ?? '').split('|');
+    if (round !== 'hello sdev') return `round-trip broke: ${round}`;
+    return Number(size) === 8 ? null : `expected 8 distinct chars, got ${size}`;
+  }
+);
+
+// 8. Softmax is a probability distribution
+run(
+  'tensor: softmax sums to 1',
+  `link "tensor.sdev"
+forge p be softmax(tensor([1.0, 2.0, 3.0, 4.0], [1, 4]))
+forge s be 0.0
+forge i be 0
+cycle i < 4 :: be s be s + p.data[i] be i be i + 1 ;;
+speak(str(s))`,
+  (out) => (near(Number(out[0]), 1, 1e-9) ? null : `expected 1, got ${out[0]}`)
+);
+
+// 9. Transformer forward pass produces [tokens x vocab] logits
+run(
+  'transformer: gpt forward shape',
+  `link "transformer.sdev"
+forge m be gpt(8, 4, 8, 1)
+forge logits be m.forward(tensor([1.0, 2.0, 3.0], [3]))
+speak(str(logits.shape[0]) + "x" + str(logits.shape[1]) + "|" + str(measure(m.params) > 0))`,
+  (out) => {
+    const [shape, hasParams] = String(out[0] ?? '').split('|');
+    if (shape !== '3x8') return `expected 3x8 logits, got ${shape}`;
+    return hasParams === 'yep' || hasParams === 'true' ? null : 'model exposes no params';
+  }
+);
+
+// 10. Sampling + generation extend the sequence deterministically in length
+run(
+  'transformer: generate extends the sequence',
+  `link "transformer.sdev"
+forge m be gpt(6, 4, 8, 1)
+forge out be generate(m, [1.0, 2.0], 3)
+speak(str(measure(out)))`,
+  (out) => (Number(out[0]) === 5 ? null : `expected 5 tokens, got ${out[0]}`)
+);
+
+// 11. Accelerators degrade gracefully when no GPU/driver is present
+run(
+  'accelerators: cuda + webgpu report unavailable instead of crashing',
+  `link "cuda.sdev"
+link "webgpu.sdev"
+forge dev be cuda_device_default()
+speak(str(dev.ok))`,
+  (out) => (out[0] === 'nope' || out[0] === 'false' || out[0] === 'yep' || out[0] === 'true'
+    ? null
+    : `expected a boolean availability flag, got ${out[0]}`)
+);
+
 console.log(failures === 0 ? '\nAll ML stdlib checks passed.' : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);
