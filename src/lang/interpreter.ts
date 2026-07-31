@@ -382,8 +382,11 @@ export class Interpreter {
 
     if (obj && typeof obj === 'object') {
       const key = stringify(index);
-      return (obj as Record<string, unknown>)[key];
+      const val = (obj as Record<string, unknown>)[key];
+      // Missing tome keys read as `void` so `tome[k] equals void` works.
+      return val === undefined ? null : val;
     }
+
 
     throw new SdevError('Cannot index this type', node.line);
   }
