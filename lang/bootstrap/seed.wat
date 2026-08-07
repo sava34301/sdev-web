@@ -739,8 +739,28 @@
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
+        ;; --- FBYTE (0xB4) --- pop idx, pop float addr, push IEEE-754 LE byte
+        ;; Lets the self-hosted codegen materialise PUSH_F64 operands without
+        ;; needing bitwise integer ops in the source language.
+        (if (i32.eq (local.get $op) (i32.const 0xB4))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (i32.and
+                (i32.wrap_i64
+                  (i64.shr_u
+                    (i64.reinterpret_f64 (f64.load (local.get $a)))
+                    (i64.extend_i32_u (i32.mul (local.get $b) (i32.const 8)))))
+                (i32.const 0xff)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
         ;; unknown opcode → halt
         (br $exit)
+
       )
     )
     (local.get $sp)
