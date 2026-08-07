@@ -28,6 +28,8 @@ const encoder = new TextEncoder();
 const INLINE_LEX = `
 set tk_kind to mklist(20000)
 set tk_num  to mklist(20000)
+set tk_num2 to mklist(20000)
+
 set tk_txt  to mklist(20000)
 set tk_count to 0
 set _srclen to length(src)
