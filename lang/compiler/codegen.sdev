@@ -75,7 +75,20 @@ to slice with src i j
   return out
 end
 
+# Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float
+# arithmetic only kicks in when BOTH operands are floats (mixed arithmetic
+# requires an explicit i2f), matching the bootstrap oracle exactly.
+to both_float with a b
+  if a is 2
+    if b is 2
+      return 1
+    end
+  end
+  return 0
+end
+
 to str_eq with a b
+
   set la to length(a)
   if la is not length(b)
     return 0
