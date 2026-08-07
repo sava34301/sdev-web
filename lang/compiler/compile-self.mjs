@@ -294,49 +294,81 @@ while k < stop
 end
 `;
 
-function escapeForSdev(s) {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t');
+// The exact driver program whose bytecode is baked into
+// `driver-artifact.mjs`. Source-independent: the user program arrives via
+// `read_file("<stdin>")`, answered by the host below.
+export function driverProgram(codegenSrc) {
+  return 'set src to read_file("<stdin>")\n' +
+    codegenSrc + '\n' +
+    INLINE_LEX + '\n' +
+    DRIVE_CODEGEN + '\n';
+}
+
+function b64ToBytes(b64) {
+  if (typeof atob === 'function') {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  return new Uint8Array(Buffer.from(b64, 'base64'));
 }
 
 let cached = null;
+let seedLoader = null;
+
+// Hosts can override how the seed VM binary is obtained (the browser
+// bridge hands us a fetch-based loader).
+export function setSeedLoader(fn) { seedLoader = fn; cached = null; }
+
+async function defaultSeedBytes() {
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    const { readFile } = await import('node:fs/promises');
+    return readFile(new URL('../../public/wasm/sdev-seed.wasm', import.meta.url));
+  }
+  const res = await fetch('/wasm/sdev-seed.wasm');
+  if (!res.ok) throw new Error(`fetch sdev-seed.wasm: ${res.status}`);
+  return new Uint8Array(await res.arrayBuffer());
+}
 
 async function init() {
   if (cached) return cached;
-  const [wasmBytes, codegenSrc] = await Promise.all([
-    readFile(new URL('../../public/wasm/sdev-seed.wasm', import.meta.url)),
-    readFile(new URL('./codegen.sdev', import.meta.url), 'utf8'),
-  ]);
-  const wasmModule = await WebAssembly.compile(wasmBytes);
-  cached = { wasmModule, codegenSrc };
+  const wasmBytes = await (seedLoader ? seedLoader() : defaultSeedBytes());
+  cached = {
+    wasmModule: await WebAssembly.compile(wasmBytes),
+    driverBc: b64ToBytes(DRIVER_BYTECODE_B64),
+    driverPool: b64ToBytes(DRIVER_POOL_B64),
+  };
   return cached;
 }
 
 // Compile any SDEV source through the self-hosted codegen. Returns
 // `{ bytecode, stringPool }` — same shape as the JS bootstrap.
 export async function compile(userSrc) {
-  const { wasmModule, codegenSrc } = await init();
-  const driverProgram =
-    `set src to "${escapeForSdev(userSrc)}"\n` +
-    codegenSrc + '\n' +
-    INLINE_LEX + '\n' +
-    DRIVE_CODEGEN + '\n';
-
-  // Bootstrap once to run the driver on the seed VM.
-  const { bytecode: driverBc, stringPool: driverPool } = bootstrapCompile(driverProgram);
+  const { wasmModule, driverBc, driverPool } = await init();
+  const srcBytes = encoder.encode(userSrc);
   const dumped = [];
   let mem;
+  let allocStr;
   const inst = await WebAssembly.instantiate(wasmModule, {
     env: {
       host_say_i32: (n) => dumped.push(String(n)),
       host_say_str: (ptr, len) => dumped.push(decoder.decode(new Uint8Array(mem.buffer, ptr, len))),
       host_say_f64: (x) => {},
       host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
-      host_read_file: () => 0,
+      // Any read serves the program under compilation — the driver only
+      // ever asks for "<stdin>".
+      host_read_file: () => {
+        const dst = allocStr(srcBytes.length);
+        new Uint8Array(mem.buffer, dst + 4, srcBytes.length).set(srcBytes);
+        return dst;
+      },
       host_write_file: () => -1,
       host_http_get: () => 0,
     },
   });
   mem = inst.exports.memory;
+  allocStr = inst.exports.alloc_str;
   new Uint8Array(mem.buffer).set(driverPool, 0);
   const codeBase = inst.exports.code_base();
   new Uint8Array(mem.buffer).set(driverBc, codeBase);
@@ -352,6 +384,7 @@ export async function compile(userSrc) {
   for (let i = 0; i < poolCount; i++) stringPool[i] = parseInt(dumped[cursor++], 10) & 0xff;
   return { bytecode, stringPool };
 }
+
 
 // Sync-shape alias for callers that already `await` the result.
 export default { compile };
