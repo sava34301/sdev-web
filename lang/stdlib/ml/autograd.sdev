@@ -240,3 +240,79 @@ conjure sgd_step(params, lr) ::
         be i be i + 1
     ;;
 ;;
+
+conjure zero_grads(params) ::
+    forge i be 0
+    cycle i < measure(params) ::
+        forge p be params[i]
+        forge j be 0
+        cycle j < measure(p.grad) :: set p.grad[j] to 0.0 be j be j + 1 ;;
+        be i be i + 1
+    ;;
+;;
+
+// Global-norm gradient clipping — keeps LM training from exploding.
+conjure clip_grads(params, max_norm) ::
+    forge total be 0.0
+    forge i be 0
+    cycle i < measure(params) ::
+        forge p be params[i]
+        forge j be 0
+        cycle j < measure(p.grad) :: be total be total + p.grad[j] * p.grad[j] be j be j + 1 ;;
+        be i be i + 1
+    ;;
+    forge norm be root(total)
+    either norm > max_norm ::
+        forge k be max_norm / (norm + 0.000000001)
+        be i be 0
+        cycle i < measure(params) ::
+            forge p2 be params[i]
+            forge j2 be 0
+            cycle j2 < measure(p2.grad) :: set p2.grad[j2] to p2.grad[j2] * k be j2 be j2 + 1 ;;
+            be i be i + 1
+        ;;
+    ;;
+    yield norm
+;;
+
+// ---------- Adam ----------
+conjure adam_new(params) ::
+    forge m be gather()
+    forge v be gather()
+    forge i be 0
+    cycle i < measure(params) ::
+        forge n be measure(params[i].data)
+        forge mi be gather()
+        forge vi be gather()
+        forge j be 0
+        cycle j < n :: pluck(mi, 0.0) pluck(vi, 0.0) be j be j + 1 ;;
+        pluck(m, mi)
+        pluck(v, vi)
+        be i be i + 1
+    ;;
+    yield { m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }
+;;
+
+conjure adam_step(opt, params, lr) ::
+    set opt.t to opt.t + 1
+    forge bc1 be 1.0 - pow(opt.b1, opt.t)
+    forge bc2 be 1.0 - pow(opt.b2, opt.t)
+    forge i be 0
+    cycle i < measure(params) ::
+        forge p be params[i]
+        forge mi be opt.m[i]
+        forge vi be opt.v[i]
+        forge j be 0
+        cycle j < measure(p.data) ::
+            forge g be p.grad[j]
+            set mi[j] to opt.b1 * mi[j] + (1.0 - opt.b1) * g
+            set vi[j] to opt.b2 * vi[j] + (1.0 - opt.b2) * g * g
+            forge mh be mi[j] / bc1
+            forge vh be vi[j] / bc2
+            set p.data[j] to p.data[j] - lr * mh / (root(vh) + opt.eps)
+            set p.grad[j] to 0.0
+            be j be j + 1
+        ;;
+        be i be i + 1
+    ;;
+;;
