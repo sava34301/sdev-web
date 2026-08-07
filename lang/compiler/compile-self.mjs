@@ -321,15 +321,22 @@ let seedLoader = null;
 // bridge hands us a fetch-based loader).
 export function setSeedLoader(fn) { seedLoader = fn; cached = null; }
 
+// The seed binary is a static asset served from `public/wasm/`. It is never
+// imported — the browser fetches it by URL, Node reads it off disk at
+// runtime — so no bundler ever pulls the binary into a JS chunk.
+const SEED_ASSET_PATH = '/wasm/sdev-seed' + '.wasm';
+
 async function defaultSeedBytes() {
   if (typeof process !== 'undefined' && process.versions?.node) {
     const { readFile } = await import('node:fs/promises');
-    return readFile(new URL('../../public/wasm/sdev-seed.wasm', import.meta.url));
+    const base = new URL('../../public', import.meta.url).href.replace(/\/$/, '');
+    return readFile(new URL(base + SEED_ASSET_PATH));
   }
-  const res = await fetch('/wasm/sdev-seed.wasm');
-  if (!res.ok) throw new Error(`fetch sdev-seed.wasm: ${res.status}`);
+  const res = await fetch(SEED_ASSET_PATH);
+  if (!res.ok) throw new Error(`fetch seed VM: ${res.status}`);
   return new Uint8Array(await res.arrayBuffer());
 }
+
 
 async function init() {
   if (cached) return cached;
