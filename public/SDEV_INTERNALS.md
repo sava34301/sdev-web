@@ -458,8 +458,38 @@ the same lexer, parser, and language semantics.
   never leak, checkpoints must round-trip. 15/15 ML checks green with the
   self-hosted toolchain still byte-identical.
 
-**Milestone 5p (retire the JS bootstrap) — next:**
-- See the 5-series section above; this is the remaining bootstrap task.
+**Milestone 5p (retire the JS bootstrap from the runtime path) — shipped:**
+- The driver program is now **source-independent**: instead of embedding the
+  user program as a string literal, it does `set src to read_file("<stdin>")`
+  and the host answers with the program bytes via `alloc_str`.
+- Because the driver no longer varies per input, its bytecode is compiled
+  **once** by `scripts/build-driver.mjs` and checked in as
+  `lang/compiler/driver-artifact.mjs` (base64, bc=7741, pool=147).
+  `compile-self.mjs` imports that artifact and no longer imports the
+  bootstrap at all.
+- `src/lang-bridge/wasm-runtime.ts` now compiles through the self-hosted
+  shim (`setSeedLoader` lets the browser hand it a `fetch`-based loader).
+  `src/lang-bridge/bootstrap.d.ts` is deleted; `compile-self.d.ts` replaces it.
+- `scripts/test-wasm-runtime.mjs` runs on the shim too. Cases tagged
+  `compiler: 'bootstrap'` (floats + host I/O) are the honest remainder —
+  see 5q.
+- New gate: `node scripts/test-driver-artifact.mjs` re-derives the driver
+  from the bootstrap oracle and fails if the checked-in bytes drift, then
+  compiles four programs through the bootstrap-free shim.
+- The JS bootstrap now exists **only** as a build/test-time oracle
+  (`build-driver.mjs`, `test-self-codegen.mjs`, `test-self-toolchain.mjs`,
+  and the float/I/O cases in `test-wasm-runtime.mjs`).
+
+**Milestone 5q (floats + host I/O in the self-hosted codegen) — next:**
+- `codegen.sdev` and the inline lexer only know integers, strings, and lists,
+  so `PUSH_F64`, `FADD…FMATH`, `READFILE`, `WRITEFILE`, and `HTTPGET` are
+  still emitted only by the bootstrap.
+- The browser bridge detects those constructs (`NOT_YET_SELF_HOSTED`) and
+  falls back to the JS reference runtime rather than emitting a silently
+  wrong program.
+- 5q adds float literal lexing, the `float` type in the codegen's
+  type-tracking, and the three I/O builtins — after which the bootstrap can
+  be deleted outright.
 
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
@@ -576,11 +606,13 @@ The gates that run today:
    fixed point against the JS bootstrap oracle.
 3. `node scripts/test-wasm-runtime.mjs` — seed VM opcode suite (ints, call
    frames, heap/lists, strings, floats + transcendentals).
-4. `node scripts/test-native.mjs` — Track B x86-64 emission and linking.
-5. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd,
+4. `node scripts/test-driver-artifact.mjs` — the checked-in driver bytecode
+   matches a fresh bootstrap build, and the bootstrap-free shim compiles.
+5. `node scripts/test-native.mjs` — Track B x86-64 emission and linking.
+6. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd,
    tokenizers, transformer shapes, LM training, sampling, checkpoints, and
    accelerator fallback.
-6. `bun run scripts/test-translator.ts` — 26-language keyword translation.
+7. `bun run scripts/test-translator.ts` — 26-language keyword translation.
 
 Planned additions: `test-v2-goldens.mjs` (docs examples diffed against a
 recorded transcript), `test-v1-parity.mjs`, `test-hardware.mjs` (`board`
