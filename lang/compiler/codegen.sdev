@@ -409,6 +409,30 @@ to parse_atom with pos
     set expr_type[0] to 0
     return pos + 1
   end
+  # Float literal (Milestone 5q). The lexer hands us the mantissa as an
+  # integer plus the number of fractional digits, so the value is exactly
+  # mantissa / 10^scale. Both operands are exactly representable for the
+  # sizes we accept, so a single IEEE division is correctly rounded — the
+  # same double JS's parser produces. FBYTE then peels off the eight
+  # little-endian bytes for the PUSH_F64 operand.
+  if tk_kind[pos] is 6
+    set fscale to tk_num2[pos]
+    set fdiv to 1
+    while fscale > 0
+      set fdiv to fdiv * 10
+      set fscale to fscale - 1
+    end
+    set fval to i2f(tk_num[pos]) / i2f(fdiv)
+    emit_byte(160)
+    set fb to 0
+    while fb < 8
+      emit_byte(fbyte(fval, fb))
+      set fb to fb + 1
+    end
+    set expr_type[0] to 2
+    return pos + 1
+  end
+
   # String literal (Milestone 5k): intern into the shared string pool and
   # emit PUSH_STR (0x02) + u16 pool offset, matching the JS bootstrap.
   if tk_kind[pos] is 3
