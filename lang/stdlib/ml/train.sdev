@@ -196,7 +196,7 @@ conjure load_checkpoint(path, model) ::
                 forge j be 0
                 cycle j < measure(p.data) ::
                     either j < measure(nums) ::
-                        set p.data[j] to decimal(nums[j])
+                        set p.data[j] to morph(nums[j], "number")
                     ;;
                     be j be j + 1
                 ;;
@@ -211,23 +211,18 @@ conjure load_checkpoint(path, model) ::
 conjure split_text(s, sep) ::
     forge out be gather()
     forge cur be ""
-    forge i be 0
     forge sepc be ord(sep, 0)
+    forge i be 0
     cycle i < measure(s) ::
         forge c be ord(s, i)
         either c equals sepc ::
             pluck(out, cur)
             be cur be ""
+        ;; otherwise ::
+            be cur be cur + chr(c)
         ;;
-        either c equals sepc :: be i be i + 1 ;;
-        either c equals sepc :: continue_marker() ;;
-        be cur be cur + chr(c)
         be i be i + 1
     ;;
     pluck(out, cur)
     yield out
-;;
-
-conjure continue_marker() ::
-    yield 0
 ;;
