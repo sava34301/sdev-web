@@ -613,16 +613,30 @@ to parse_mul with pos
   set going to 1
   while going
     if is_op_c(pos, 42)
+      set lk to expr_type[0]
       set pos to parse_atom(pos + 1)
       set pos to parse_postfix(pos)
-      emit_byte(18)
-      set expr_type[0] to 0
+      set rk to expr_type[0]
+      if both_float(lk, rk)
+        emit_byte(163)
+        set expr_type[0] to 2
+      else
+        emit_byte(18)
+        set expr_type[0] to 0
+      end
     else
       if is_op_c(pos, 47)
+        set lk to expr_type[0]
         set pos to parse_atom(pos + 1)
         set pos to parse_postfix(pos)
-        emit_byte(19)
-        set expr_type[0] to 0
+        set rk to expr_type[0]
+        if both_float(lk, rk)
+          emit_byte(164)
+          set expr_type[0] to 2
+        else
+          emit_byte(19)
+          set expr_type[0] to 0
+        end
       else
         if is_op_c(pos, 37)
           set pos to parse_atom(pos + 1)
@@ -637,6 +651,7 @@ to parse_mul with pos
   end
   return pos
 end
+
 
 to parse_add with pos
   set pos to parse_mul(pos)
