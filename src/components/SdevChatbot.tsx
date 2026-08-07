@@ -121,7 +121,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
       // Self-test loop: check generated code and auto-fix
       let fixAttempt = 0;
       while (fixAttempt < MAX_FIX_ATTEMPTS) {
-        const errors = testCodeBlocks(assistantContent);
+        const errors = await testCodeBlocks(assistantContent);
         if (errors.length === 0) break;
 
         fixAttempt++;
@@ -156,7 +156,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
       }
 
       // Final validation badge
-      const finalErrors = testCodeBlocks(assistantContent);
+      const finalErrors = await testCodeBlocks(assistantContent);
       const badge = finalErrors.length === 0
         ? '\n\n> ✅ *Code tested and verified!*'
         : '\n\n> ⚠️ *Code may still have issues — please review manually.*';
