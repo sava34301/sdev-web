@@ -16,6 +16,10 @@ import { compile as selfCompile, setSeedLoader } from '../../lang/compiler/compi
 
 export class WasmSubsetError extends Error {}
 
+/** Float literals and host-I/O builtins: bootstrap-only for now. */
+const NOT_YET_SELF_HOSTED =
+  /\d\.\d|\b(read_file|write_file|http_get|i2f|f2i|fsqrt|fabs|fneg|fsin|fcos|ftan|fexp|flog|fpow)\s*\(/;
+
 interface SeedExports {
   memory: WebAssembly.Memory;
   code_base: () => number;
@@ -47,6 +51,13 @@ async function loadSeed(): Promise<WebAssembly.Module> {
 
 export async function runWasm(source: string): Promise<{ success: boolean; output: string[]; error: string | null }> {
   const output: string[] = [];
+
+  // The self-hosted codegen does not speak floats or host I/O yet
+  // (Milestone 5q). Detect those up front and fall back to the JS reference
+  // runtime rather than emitting a silently wrong program.
+  if (NOT_YET_SELF_HOSTED.test(source)) {
+    throw new WasmSubsetError('uses floats or host I/O — not in the stage-0 subset yet');
+  }
 
   // Compile source to bytecode via the self-hosted compiler shim.
   setSeedLoader(loadSeedBytes);
