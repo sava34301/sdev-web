@@ -395,11 +395,78 @@ the same lexer, parser, and language semantics.
   buffers directly on the heap (as list-of-bytes) and index them via
   new `TENSOR_*` opcodes, bypassing per-value boxing entirely.
 
-**Milestone 7 (networking) — next:**
-- Host imports for `net_get(url) → bytes` and `net_post(url, body) → bytes`.
-- In the browser: `fetch()` proxied through the WASM host.
-- On the desktop track: a small runtime.s shim that calls `libcurl`
-  (or a hand-rolled `socket/connect/write/read` sequence).
+**Milestone 7 (file I/O + networking) — shipped:**
+- Host imports for `read_file`, `write_file`, and `http_get(url) → text`.
+- In the browser these are stubs (sync HTTP is unavailable in-page) and
+  return `void`; the Node/Electron and Native tracks do the real work.
+- This is what lets the ML stack read a corpus, write checkpoints, and
+  crawl training data without leaving sdev.
+
+**Milestone 8 (ML stdlib — tensors + autograd) — shipped:**
+- `lang/stdlib/ml/tensor.sdev`: flat `data` + `shape` tensors, element-wise
+  ops, `matmul`, `transpose`, `softmax`, `cross_entropy`.
+- `lang/stdlib/ml/autograd.sdev`: reverse-mode AD over a global tape
+  (`record` / `backward`), rules for `add`, `mul`, `matmul`, `relu`, `mse`.
+- `lang/stdlib/ml/nn.sdev`: `linear`, `sequential`, parameter collection,
+  `sgd_step`.
+
+**Milestone 9 (FFI) — shipped:**
+- `lang/stdlib/ffi.sdev` plus a host bridge in `src/lang/builtins.ts`:
+  `ffi_buf`, `ffi_write_f64`, `ffi_read_f64` are pure JS (`DataView`) so
+  they work in the browser; `ffi_open` / `ffi_sym` / `ffi_call` /
+  `ffi_close` are gated to native hosts and degrade gracefully.
+- Targets OpenBLAS and cuBLAS symbol signatures for `matmul` fast paths.
+
+**Milestone 10 (WebGPU) — shipped:**
+- `lang/stdlib/webgpu.sdev` dispatches tensor kernels through
+  `navigator.gpu` when present, falling back to the scalar path otherwise.
+
+**Milestone 11 (CUDA) — shipped:**
+- `lang/stdlib/ml/cuda.sdev` binds cuBLAS through the M9 FFI layer.
+  `cuda_device_default()` reports availability instead of crashing, so the
+  same program runs on a laptop and on a GPU box.
+
+**Milestone 12 (transformers, data, self-modification) — shipped:**
+- `transformer.sdev`: `embedding`, `layer_norm`, `attention_head`,
+  `transformer_block`, `gpt(vocab, dim, hidden, layers)`, `generate`.
+- `data.sdev`: `char_vocab` / `encode` / `decode`, corpus loading, web
+  crawling, and teacher-model distillation helpers.
+- `self_modify.sdev` + `auto_evolve.sdev`: the model can read the real
+  source tree and propose patches, but every write goes through a review
+  hook and a path whitelist — both off by default.
+
+**Milestone 13 (ML host bindings) — shipped:**
+- `src/lang/builtins.ts` gained `ord(s, i)`, `rand`, `ln`, `read_file`,
+  `write_file`, `http_get`, and the FFI buffer family.
+- `executeIndex` in `src/lang/interpreter.ts` now yields `void` (not
+  `undefined`) for a missing tome key, so `tome[k] equals void` holds.
+- `scripts/test-ml-stdlib.ts` runs the whole ML stack on the v1
+  interpreter as a regression gate.
+
+**Milestone 14 (end-to-end LM training) — shipped:**
+- `autograd.sdev`: `d_softmax_ce(logits, targets)` with its `bw_sce`
+  backward rule (row-wise softmax, then `probs − onehot` scaled by the
+  batch size), `zero_grads`, `clip_grads(params, max_norm)` global-norm
+  clipping, and `adam_new` / `adam_step` with bias correction.
+- `lang/stdlib/ml/train.sdev` (new): `lm_batches` sliding-window pairs,
+  `lm_step`, `lm_fit(model, ids, block, epochs, lr)`, `lm_loss`,
+  `perplexity`, `sample_topk(logits, temperature, k)`, `lm_generate`,
+  `lm_complete`, and plain-text `save_checkpoint` / `load_checkpoint`
+  (`shape|values`, one parameter tensor per line).
+- Tests: cross-entropy gradient checked against the analytic rule,
+  `lm_fit` must lower loss on a repeating corpus, top-1 sampling must
+  never leak, checkpoints must round-trip. 15/15 ML checks green with the
+  self-hosted toolchain still byte-identical.
+
+**Milestone 5p (retire the JS bootstrap) — next:**
+- See the 5-series section above; this is the remaining bootstrap task.
+
+**Milestone 15 (training at scale) — planned:**
+- Batched (multi-sequence) forward passes instead of one context at a time.
+- Route `matmul` through the M10/M11 accelerators inside the training loop.
+- Binary checkpoints (length-prefixed f64 blocks) to replace the text format.
+
+
 
 
 
