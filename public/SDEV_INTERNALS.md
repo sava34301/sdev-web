@@ -395,11 +395,78 @@ the same lexer, parser, and language semantics.
   buffers directly on the heap (as list-of-bytes) and index them via
   new `TENSOR_*` opcodes, bypassing per-value boxing entirely.
 
-**Milestone 7 (networking) — next:**
-- Host imports for `net_get(url) → bytes` and `net_post(url, body) → bytes`.
-- In the browser: `fetch()` proxied through the WASM host.
-- On the desktop track: a small runtime.s shim that calls `libcurl`
-  (or a hand-rolled `socket/connect/write/read` sequence).
+**Milestone 7 (file I/O + networking) — shipped:**
+- Host imports for `read_file`, `write_file`, and `http_get(url) → text`.
+- In the browser these are stubs (sync HTTP is unavailable in-page) and
+  return `void`; the Node/Electron and Native tracks do the real work.
+- This is what lets the ML stack read a corpus, write checkpoints, and
+  crawl training data without leaving sdev.
+
+**Milestone 8 (ML stdlib — tensors + autograd) — shipped:**
+- `lang/stdlib/ml/tensor.sdev`: flat `data` + `shape` tensors, element-wise
+  ops, `matmul`, `transpose`, `softmax`, `cross_entropy`.
+- `lang/stdlib/ml/autograd.sdev`: reverse-mode AD over a global tape
+  (`record` / `backward`), rules for `add`, `mul`, `matmul`, `relu`, `mse`.
+- `lang/stdlib/ml/nn.sdev`: `linear`, `sequential`, parameter collection,
+  `sgd_step`.
+
+**Milestone 9 (FFI) — shipped:**
+- `lang/stdlib/ffi.sdev` plus a host bridge in `src/lang/builtins.ts`:
+  `ffi_buf`, `ffi_write_f64`, `ffi_read_f64` are pure JS (`DataView`) so
+  they work in the browser; `ffi_open` / `ffi_sym` / `ffi_call` /
+  `ffi_close` are gated to native hosts and degrade gracefully.
+- Targets OpenBLAS and cuBLAS symbol signatures for `matmul` fast paths.
+
+**Milestone 10 (WebGPU) — shipped:**
+- `lang/stdlib/webgpu.sdev` dispatches tensor kernels through
+  `navigator.gpu` when present, falling back to the scalar path otherwise.
+
+**Milestone 11 (CUDA) — shipped:**
+- `lang/stdlib/ml/cuda.sdev` binds cuBLAS through the M9 FFI layer.
+  `cuda_device_default()` reports availability instead of crashing, so the
+  same program runs on a laptop and on a GPU box.
+
+**Milestone 12 (transformers, data, self-modification) — shipped:**
+- `transformer.sdev`: `embedding`, `layer_norm`, `attention_head`,
+  `transformer_block`, `gpt(vocab, dim, hidden, layers)`, `generate`.
+- `data.sdev`: `char_vocab` / `encode` / `decode`, corpus loading, web
+  crawling, and teacher-model distillation helpers.
+- `self_modify.sdev` + `auto_evolve.sdev`: the model can read the real
+  source tree and propose patches, but every write goes through a review
+  hook and a path whitelist — both off by default.
+
+**Milestone 13 (ML host bindings) — shipped:**
+- `src/lang/builtins.ts` gained `ord(s, i)`, `rand`, `ln`, `read_file`,
+  `write_file`, `http_get`, and the FFI buffer family.
+- `executeIndex` in `src/lang/interpreter.ts` now yields `void` (not
+  `undefined`) for a missing tome key, so `tome[k] equals void` holds.
+- `scripts/test-ml-stdlib.ts` runs the whole ML stack on the v1
+  interpreter as a regression gate.
+
+**Milestone 14 (end-to-end LM training) — shipped:**
+- `autograd.sdev`: `d_softmax_ce(logits, targets)` with its `bw_sce`
+  backward rule (row-wise softmax, then `probs − onehot` scaled by the
+  batch size), `zero_grads`, `clip_grads(params, max_norm)` global-norm
+  clipping, and `adam_new` / `adam_step` with bias correction.
+- `lang/stdlib/ml/train.sdev` (new): `lm_batches` sliding-window pairs,
+  `lm_step`, `lm_fit(model, ids, block, epochs, lr)`, `lm_loss`,
+  `perplexity`, `sample_topk(logits, temperature, k)`, `lm_generate`,
+  `lm_complete`, and plain-text `save_checkpoint` / `load_checkpoint`
+  (`shape|values`, one parameter tensor per line).
+- Tests: cross-entropy gradient checked against the analytic rule,
+  `lm_fit` must lower loss on a repeating corpus, top-1 sampling must
+  never leak, checkpoints must round-trip. 15/15 ML checks green with the
+  self-hosted toolchain still byte-identical.
+
+**Milestone 5p (retire the JS bootstrap) — next:**
+- See the 5-series section above; this is the remaining bootstrap task.
+
+**Milestone 15 (training at scale) — planned:**
+- Batched (multi-sequence) forward passes instead of one context at a time.
+- Route `matmul` through the M10/M11 accelerators inside the training loop.
+- Binary checkpoints (length-prefixed f64 blocks) to replace the text format.
+
+
 
 
 
@@ -463,16 +530,31 @@ lang/
     seed.wat            # hand-written WAT (stage 0 source)
     seed.wasm           # built artifact — CI regenerates via wat2wasm
     stage1.wasm         # built artifact — CI regenerates by running seed
-  compiler/             # .sdev sources: lexer, parser, typecheck, ir, codegen
+  compiler/             # .sdev sources: lexer, parser, codegen + compile-self.mjs
+  native/               # Track B: x86-64 GAS codegen, runtime.s, linker
+  stdlib/
+    ffi.sdev            # M9 — native library binding
+    webgpu.sdev         # M10 — browser GPU compute
+    ml/
+      tensor.sdev       # M8 — tensors + shape ops
+      autograd.sdev     # M8/M14 — reverse-mode AD, losses, Adam
+      nn.sdev           # M8 — layers, parameter collection
+      transformer.sdev  # M12 — decoder-only GPT
+      train.sdev        # M14 — LM training, sampling, checkpoints
+      data.sdev         # M12 — tokenizers, crawling, distillation
+      cuda.sdev         # M11 — cuBLAS fast paths
+      self_modify.sdev  # M12 — gated source rewriting
+      auto_evolve.sdev  # M12 — whitelisted evolution loop
   runtime/
     v2.js               # Milestone 1 reference runtime (pure JS)
     vm.sdev             # Milestone 2 VM
     kernel.sdev         # tasks, syscalls, GC
-    std/                # standard library modules (.sdev)
   paradigms/            # functional, systems, data, hardware — .sdev
   translator/           # 26-language keyword tables + engine — .sdev
   legacy/
     v1_frontend.sdev    # refine mode: parses forge/conjure/:: /;; into v2 AST
+
+electron/               # desktop IDE shell (Track B host: build + run native)
 
 src/lang-bridge/        # thin TS glue — the ONLY TS in the exec path
   bridge.ts             # picks runtime and dispatches
@@ -482,18 +564,29 @@ dist/
   sdev-core.wasm        # shipped artifact (Milestone 2)
 ```
 
+
 ## Verification
 
-Before every launch:
+The gates that run today:
 
-1. `scripts/test-v2-goldens.mjs` — every example in `SDEV_V2_DOCUMENTATION.md`
-   runs; stdout is diffed against a recorded transcript.
-2. `scripts/test-v1-parity.mjs` — every legacy `.sdev` file runs under refine
-   mode; stdout must match the TS interpreter byte-for-byte.
-3. `scripts/test-hardware.mjs` — every `board` block transpiles; output is
-   diffed against a checked-in `.ino` snapshot.
-4. Playwright smoke — open `/ide`, load `blink.sdev`, click Run, verify
-   the canvas and output panels render.
+1. `node scripts/test-self-toolchain.mjs` — `lexer.sdev`, `parser.sdev`, and
+   `codegen.sdev` must all round-trip **byte-identical** through the
+   self-hosted compiler (currently bc=746/380/5730).
+2. `node scripts/test-shim-fixed-point.mjs` — the compile shim reaches a
+   fixed point against the JS bootstrap oracle.
+3. `node scripts/test-wasm-runtime.mjs` — seed VM opcode suite (ints, call
+   frames, heap/lists, strings, floats + transcendentals).
+4. `node scripts/test-native.mjs` — Track B x86-64 emission and linking.
+5. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd,
+   tokenizers, transformer shapes, LM training, sampling, checkpoints, and
+   accelerator fallback.
+6. `bun run scripts/test-translator.ts` — 26-language keyword translation.
+
+Planned additions: `test-v2-goldens.mjs` (docs examples diffed against a
+recorded transcript), `test-v1-parity.mjs`, `test-hardware.mjs` (`board`
+blocks vs. checked-in `.ino` snapshots), and a Playwright smoke test that
+opens `/ide`, runs `blink.sdev`, and verifies the canvas + output panels.
+
 
 ## Why not just keep the TypeScript interpreter?
 
