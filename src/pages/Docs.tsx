@@ -24,6 +24,8 @@ const SOURCES: DocSource[] = [
   { id: 'leaflet',     title: 'Leaflet & GIS Reference',     url: '/SDEV_LEAFLET_DOCUMENTATION.md', icon: ScrollText },
   { id: 'hardware',    title: 'Hardware & Boards',           url: '/SDEV_HARDWARE_DOCUMENTATION.md', icon: ScrollText },
   { id: 'internals',   title: 'Compiler & VM Internals',     url: '/SDEV_INTERNALS.md',          icon: Library },
+  { id: 'parity',      title: 'Track Parity Matrix',         url: '/SDEV_PARITY_DOCUMENTATION.md', icon: Library },
+
   { id: 'ml',          title: 'ML & LLM Stdlib',             url: '/SDEV_ML_DOCUMENTATION.md',   icon: Library },
   { id: 'ffi',         title: 'FFI & Native Acceleration',   url: '/SDEV_FFI_DOCUMENTATION.md',  icon: Library },
   { id: 'webgpu',      title: 'WebGPU Acceleration',         url: '/SDEV_WEBGPU_DOCUMENTATION.md', icon: Library },
