@@ -2,7 +2,11 @@
 import { readFile, writeFile, readFile as fsReadFile } from 'node:fs/promises';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { compile } from '../lang/bootstrap/compile.mjs';
+import { compile as selfCompile } from '../lang/compiler/compile-self.mjs';
+// The JS bootstrap survives ONLY as a build/test tool: the self-hosted
+// codegen does not speak floats or host I/O yet (Milestone 5q). Cases
+// tagged `compiler: 'bootstrap'` still exercise those seed VM opcodes.
+import { compile as bootstrapCompile } from '../lang/bootstrap/compile.mjs';
 
 const wasmBytes = await readFile('./public/wasm/sdev-seed.wasm');
 const module = await WebAssembly.compile(wasmBytes);
@@ -10,8 +14,9 @@ const module = await WebAssembly.compile(wasmBytes);
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
-async function runProgram(src) {
-  const { bytecode, stringPool } = compile(src);
+async function runProgram(src, which = 'self') {
+  const { bytecode, stringPool } =
+    which === 'bootstrap' ? bootstrapCompile(src) : await selfCompile(src);
   const output = [];
   let mem;
   let alloc_str;
@@ -140,37 +145,44 @@ const cases = [
   // ---- Milestone 6: floats ----
   {
     name: 'float literal + arithmetic',
+    compiler: 'bootstrap',
     src: `say 0.5 + 0.25\nsay 3.0 * 2.5\nsay 10.0 / 4.0\nsay 1.0 - 0.5`,
     expect: ['0.75', '7.5', '2.5', '0.5'],
   },
   {
     name: 'float builtins: fsqrt, fabs, fneg',
+    compiler: 'bootstrap',
     src: `say fsqrt(16.0)\nsay fabs(0.0 - 3.5)\nsay fneg(2.5)`,
     expect: ['4', '3.5', '-2.5'],
   },
   {
     name: 'i2f / f2i round-trip',
+    compiler: 'bootstrap',
     src: `set x to i2f(7)\nsay x + 0.5\nsay f2i(x + 0.9)`,
     expect: ['7.5', '7'],
   },
   {
     name: 'float comparisons',
+    compiler: 'bootstrap',
     src: `if 0.5 < 1.0\nsay "lt"\nend\nif 2.0 > 1.5\nsay "gt"\nend\nif 1.0 is 1.0\nsay "eq"\nend`,
     expect: ['lt', 'gt', 'eq'],
   },
   {
     name: 'transcendentals: sin/cos/exp/log/pow',
+    compiler: 'bootstrap',
     src: `say fpow(2.0, 10.0)\nsay flog(fexp(1.0))\nsay fcos(0.0)\nsay fsin(0.0)`,
     expect: ['1024', '1', '1', '0'],
   },
   // ---- Milestone 7: file I/O ----
   {
     name: 'write_file + read_file round-trip',
+    compiler: 'bootstrap',
     src: `set path to "/tmp/sdev-m7.txt"\nset status to write_file(path, "hello sdev")\nsay status\nsay read_file(path)`,
     expect: ['0', 'hello sdev'],
   },
   {
     name: 'read_file of missing path returns empty handle-safe path',
+    compiler: 'bootstrap',
     src: `set s to read_file("/tmp/does-not-exist-sdev.xxx")\nsay length(s)`,
     expect: ['0'],
   },
@@ -179,9 +191,9 @@ const cases = [
 let failed = 0;
 for (const c of cases) {
   try {
-    const out = await runProgram(c.src);
+    const out = await runProgram(c.src, c.compiler);
     const ok = JSON.stringify(out) === JSON.stringify(c.expect);
-    console.log(`${ok ? '✓' : '✗'} ${c.name}`);
+    console.log(`${ok ? '✓' : '✗'} ${c.name}${c.compiler === 'bootstrap' ? '  [bootstrap]' : ''}`);
     if (!ok) { failed++; console.log('   expected:', c.expect); console.log('   got:     ', out); }
   } catch (e) {
     failed++;

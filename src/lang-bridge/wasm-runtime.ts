@@ -2,18 +2,23 @@
  * WASM stage-0 runtime for SDEV v2.
  *
  * Loads the hand-written seed VM (public/wasm/sdev-seed.wasm), compiles the
- * source via the bootstrap compiler, streams bytecode + string pool into WASM
+ * source via the SELF-HOSTED compiler shim (Milestone 5p — the JS bootstrap
+ * is no longer in this path), streams bytecode + string pool into WASM
  * linear memory, and invokes `run`. Host imports print into an output buffer.
  *
  * If compilation fails because the source uses a feature outside the
- * bootstrap subset (lists, functions, pipelines, etc.), `runWasm` throws
+ * stage-0 subset (lists, functions, pipelines, etc.), `runWasm` throws
  * `WasmSubsetError` so callers can fall back to the JS reference runtime.
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain JS module
-import { compile as bootstrapCompile } from '../../lang/bootstrap/compile.mjs';
+import { compile as selfCompile, setSeedLoader } from '../../lang/compiler/compile-self.mjs';
 
 export class WasmSubsetError extends Error {}
+
+/** Float literals and host-I/O builtins: bootstrap-only for now. */
+const NOT_YET_SELF_HOSTED =
+  /\d\.\d|\b(read_file|write_file|http_get|i2f|f2i|fsqrt|fabs|fneg|fsin|fcos|ftan|fexp|flog|fpow)\s*\(/;
 
 interface SeedExports {
   memory: WebAssembly.Memory;
@@ -25,6 +30,15 @@ interface SeedExports {
 }
 
 let cached: Promise<WebAssembly.Module> | null = null;
+let cachedBytes: Promise<ArrayBuffer> | null = null;
+
+async function loadSeedBytes(): Promise<ArrayBuffer> {
+  if (!cachedBytes) {
+    cachedBytes = fetch('/wasm/sdev-seed.wasm')
+      .then(r => { if (!r.ok) throw new Error(`fetch sdev-seed.wasm: ${r.status}`); return r.arrayBuffer(); });
+  }
+  return cachedBytes;
+}
 
 async function loadSeed(): Promise<WebAssembly.Module> {
   if (!cached) {
@@ -38,13 +52,22 @@ async function loadSeed(): Promise<WebAssembly.Module> {
 export async function runWasm(source: string): Promise<{ success: boolean; output: string[]; error: string | null }> {
   const output: string[] = [];
 
-  // Compile source to bytecode via the bootstrap compiler.
+  // The self-hosted codegen does not speak floats or host I/O yet
+  // (Milestone 5q). Detect those up front and fall back to the JS reference
+  // runtime rather than emitting a silently wrong program.
+  if (NOT_YET_SELF_HOSTED.test(source)) {
+    throw new WasmSubsetError('uses floats or host I/O — not in the stage-0 subset yet');
+  }
+
+  // Compile source to bytecode via the self-hosted compiler shim.
+  setSeedLoader(loadSeedBytes);
   let program: { bytecode: Uint8Array; stringPool: Uint8Array };
   try {
-    program = bootstrapCompile(source);
+    program = await selfCompile(source);
+    if (program.bytecode.length === 0) throw new Error('stage-0 compiler produced no bytecode');
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    // Signal "not in bootstrap subset" so the dispatcher can fall back to JS v2.
+    // Signal "not in stage-0 subset" so the dispatcher can fall back to JS v2.
     throw new WasmSubsetError(msg);
   }
 

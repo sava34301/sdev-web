@@ -1,22 +1,27 @@
-// Self-hosted SDEV compiler shim — Milestone 5l.
+// Self-hosted SDEV compiler shim — Milestone 5p.
 //
 // Exposes a `compile(source)` function with the same shape as the JS
 // bootstrap (`lang/bootstrap/compile.mjs`), but drives the SDEV-authored
 // codegen (`lang/compiler/codegen.sdev`) through the seed WASM VM.
 //
-// One-time init: the seed VM + codegen driver program are compiled with
-// the JS bootstrap and cached. Subsequent `compile(src)` calls only pay
-// for a fresh WASM instantiation per source. When the self-hosted
-// pipeline can compile itself in-tree (Milestone 5m — "delete the
-// oracle"), this shim will drop the bootstrap dependency entirely.
+// Milestone 5p removed the bootstrap from this path entirely. The driver
+// program (codegen.sdev + inline lexer + drive block) no longer embeds the
+// user source as a literal — it reads it with `read_file("<stdin>")`, which
+// the host answers from memory. That makes the driver bytecode
+// source-independent, so it is compiled ONCE by
+// `scripts/build-driver.mjs` and checked in as `driver-artifact.mjs`.
+// `scripts/test-driver-artifact.mjs` re-derives it from the bootstrap and
+// fails if the checked-in bytes drift.
 //
 // The seed VM stores the string pool at memory offset 0 (below
 // `code_base()`), so pool size is bounded by the seed's layout (0x2000).
 
-import { readFile } from 'node:fs/promises';
-import { compile as bootstrapCompile } from '../bootstrap/compile.mjs';
+import { DRIVER_BYTECODE_B64, DRIVER_POOL_B64 } from './driver-artifact.mjs';
 
 const decoder = new TextDecoder();
+const encoder = new TextEncoder();
+
+
 
 // Inline lexer stub — same one the self-codegen test uses. Emits into
 // tk_kind/tk_num/tk_txt/tk_count globals that codegen.sdev consumes.
@@ -289,49 +294,88 @@ while k < stop
 end
 `;
 
-function escapeForSdev(s) {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t');
+// The exact driver program whose bytecode is baked into
+// `driver-artifact.mjs`. Source-independent: the user program arrives via
+// `read_file("<stdin>")`, answered by the host below.
+export function driverProgram(codegenSrc) {
+  return 'set src to read_file("<stdin>")\n' +
+    codegenSrc + '\n' +
+    INLINE_LEX + '\n' +
+    DRIVE_CODEGEN + '\n';
+}
+
+function b64ToBytes(b64) {
+  if (typeof atob === 'function') {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  return new Uint8Array(Buffer.from(b64, 'base64'));
 }
 
 let cached = null;
+let seedLoader = null;
+
+// Hosts can override how the seed VM binary is obtained (the browser
+// bridge hands us a fetch-based loader).
+export function setSeedLoader(fn) { seedLoader = fn; cached = null; }
+
+// The seed binary is a static asset served from `public/wasm/`. It is never
+// imported — the browser fetches it by URL, Node reads it off disk at
+// runtime — so no bundler ever pulls the binary into a JS chunk.
+const SEED_ASSET_PATH = '/wasm/sdev-seed' + '.wasm';
+
+async function defaultSeedBytes() {
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    const { readFile } = await import('node:fs/promises');
+    const base = new URL('../../public', import.meta.url).href.replace(/\/$/, '');
+    return readFile(new URL(base + SEED_ASSET_PATH));
+  }
+  const res = await fetch(SEED_ASSET_PATH);
+  if (!res.ok) throw new Error(`fetch seed VM: ${res.status}`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
 
 async function init() {
   if (cached) return cached;
-  const [wasmBytes, codegenSrc] = await Promise.all([
-    readFile(new URL('../../public/wasm/sdev-seed.wasm', import.meta.url)),
-    readFile(new URL('./codegen.sdev', import.meta.url), 'utf8'),
-  ]);
-  const wasmModule = await WebAssembly.compile(wasmBytes);
-  cached = { wasmModule, codegenSrc };
+  const wasmBytes = await (seedLoader ? seedLoader() : defaultSeedBytes());
+  cached = {
+    wasmModule: await WebAssembly.compile(wasmBytes),
+    driverBc: b64ToBytes(DRIVER_BYTECODE_B64),
+    driverPool: b64ToBytes(DRIVER_POOL_B64),
+  };
   return cached;
 }
 
 // Compile any SDEV source through the self-hosted codegen. Returns
 // `{ bytecode, stringPool }` — same shape as the JS bootstrap.
 export async function compile(userSrc) {
-  const { wasmModule, codegenSrc } = await init();
-  const driverProgram =
-    `set src to "${escapeForSdev(userSrc)}"\n` +
-    codegenSrc + '\n' +
-    INLINE_LEX + '\n' +
-    DRIVE_CODEGEN + '\n';
-
-  // Bootstrap once to run the driver on the seed VM.
-  const { bytecode: driverBc, stringPool: driverPool } = bootstrapCompile(driverProgram);
+  const { wasmModule, driverBc, driverPool } = await init();
+  const srcBytes = encoder.encode(userSrc);
   const dumped = [];
   let mem;
+  let allocStr;
   const inst = await WebAssembly.instantiate(wasmModule, {
     env: {
       host_say_i32: (n) => dumped.push(String(n)),
       host_say_str: (ptr, len) => dumped.push(decoder.decode(new Uint8Array(mem.buffer, ptr, len))),
       host_say_f64: (x) => {},
       host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
-      host_read_file: () => 0,
+      // Any read serves the program under compilation — the driver only
+      // ever asks for "<stdin>".
+      host_read_file: () => {
+        const dst = allocStr(srcBytes.length);
+        new Uint8Array(mem.buffer, dst + 4, srcBytes.length).set(srcBytes);
+        return dst;
+      },
       host_write_file: () => -1,
       host_http_get: () => 0,
     },
   });
   mem = inst.exports.memory;
+  allocStr = inst.exports.alloc_str;
   new Uint8Array(mem.buffer).set(driverPool, 0);
   const codeBase = inst.exports.code_base();
   new Uint8Array(mem.buffer).set(driverBc, codeBase);
@@ -347,6 +391,7 @@ export async function compile(userSrc) {
   for (let i = 0; i < poolCount; i++) stringPool[i] = parseInt(dumped[cursor++], 10) & 0xff;
   return { bytecode, stringPool };
 }
+
 
 // Sync-shape alias for callers that already `await` the result.
 export default { compile };
