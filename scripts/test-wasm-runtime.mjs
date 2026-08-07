@@ -2,7 +2,7 @@
 import { readFile, writeFile, readFile as fsReadFile } from 'node:fs/promises';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { compile } from '../lang/bootstrap/compile.mjs';
+import { compile } from '../lang/compiler/compile-self.mjs';
 
 const wasmBytes = await readFile('./public/wasm/sdev-seed.wasm');
 const module = await WebAssembly.compile(wasmBytes);
@@ -11,7 +11,7 @@ const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
 async function runProgram(src) {
-  const { bytecode, stringPool } = compile(src);
+  const { bytecode, stringPool } = await compile(src);
   const output = [];
   let mem;
   let alloc_str;
