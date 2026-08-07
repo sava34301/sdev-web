@@ -1,0 +1,316 @@
+// ============================================================
+// sdev Parity Agent — written in sdev, runs on sdev
+// ============================================================
+// Phase 0/1 of the v1 <-> v2 parity plan.
+//
+// The agent is the machine that keeps every sdev track honest:
+//   1. loads the canonical registry (lang/parity/features.json),
+//   2. loads the source of every track listed in that registry,
+//   3. probes each track for each feature,
+//   4. prints a gap report and writes lang/parity/report.json,
+//   5. regenerates the parity matrix inside the documentation, between
+//      <!-- PARITY:BEGIN --> / <!-- PARITY:END --> markers,
+//   6. reports how many `must` features are missing so CI can fail.
+//
+// Adding a track = one entry in the registry. The agent needs no change.
+//
+// Host builtins used: read_file, write_file.
+
+// ---------- tiny helpers ----------
+
+conjure unquote(s) ::
+    forge t be trim(s)
+    either endswith(t, ",") ::
+        be t be portion(t, 0, measure(t) - 1)
+    ;;
+    be t be trim(t)
+    either startswith(t, "\"") ::
+        be t be portion(t, 1, measure(t))
+    ;;
+    either endswith(t, "\"") ::
+        be t be portion(t, 0, measure(t) - 1)
+    ;;
+    yield t
+;;
+
+// Split a `"key": "value"` line. Values may contain colons, so only the
+// first colon separates; the rest is re-joined.
+conjure field_key(line) ::
+    forge parts be shatter(line, ":")
+    yield unquote(parts[0])
+;;
+
+conjure field_value(line) ::
+    forge parts be shatter(line, ":")
+    either measure(parts) < 2 ::
+        yield ""
+    ;;
+    forge rest be weave(portion(parts, 1, measure(parts)), ":")
+    yield unquote(rest)
+;;
+
+// ---------- registry loading ----------
+//
+// features.json is generated one field per line, which lets the agent parse
+// it without a full JSON reader. The shape is fixed and validated by
+// scripts/test-parity.ts, which parses the same file with a real JSON parser
+// and compares the record count.
+
+conjure load_registry(path) ::
+    forge text be read_file(path)
+    forge lines be shatter(text, "\n")
+    forge tracks be gather()
+    forge features be gather()
+    forge section be ""
+    forge cur be {}
+    forge open be 0
+    forge i be 0
+    cycle i < measure(lines) ::
+        forge line be trim(lines[i])
+        either contains(line, "\"tracks\"") ::
+            be section be "tracks"
+        ;;
+        either contains(line, "\"features\"") ::
+            be section be "features"
+        ;;
+        either line equals "{" ::
+            be cur be {}
+            be open be 1
+        ;;
+        either startswith(line, "}") also open equals 1 ::
+            be open be 0
+            either section equals "tracks" ::
+                pluck(tracks, cur)
+            ;;
+            either section equals "features" ::
+                pluck(features, cur)
+            ;;
+        ;;
+        either open equals 1 also contains(line, ":") also startswith(line, "\"") ::
+            set cur[field_key(line)] to field_value(line)
+        ;;
+        be i be i + 1
+    ;;
+    yield { tracks: tracks, features: features }
+;;
+
+// ---------- track sources ----------
+
+conjure load_track_source(spec) ::
+    forge paths be shatter(spec, ",")
+    forge out be ""
+    forge i be 0
+    cycle i < measure(paths) ::
+        be out be out + read_file(trim(paths[i])) + "\n"
+        be i be i + 1
+    ;;
+    yield out
+;;
+
+// A feature is present on a track when its track-local name appears as a
+// quoted token in that track's source — the shape every implementation uses
+// for keyword tables and builtin dispatch.
+conjure probe(src, name) ::
+    either name equals "" ::
+        yield nope
+    ;;
+    either contains(src, "\"" + name + "\"") ::
+        yield yep
+    ;;
+    either contains(src, "'" + name + "'") ::
+        yield yep
+    ;;
+    yield nope
+;;
+
+// ---------- reporting ----------
+
+conjure mark(level, present) ::
+    either level equals "n/a" ::
+        yield "n/a"
+    ;;
+    either present ::
+        yield "yes"
+    ;;
+    yield "MISSING"
+;;
+
+conjure audit(registry) ::
+    forge tracks be registry.tracks
+    forge features be registry.features
+    forge sources be gather()
+    forge t be 0
+    cycle t < measure(tracks) ::
+        pluck(sources, load_track_source(tracks[t].sources))
+        be t be t + 1
+    ;;
+
+    forge rows be gather()
+    forge must_missing be gather()
+    forge should_missing be gather()
+
+    forge f be 0
+    cycle f < measure(features) ::
+        forge feat be features[f]
+        forge cells be gather()
+        be t be 0
+        cycle t < measure(tracks) ::
+            forge id be tracks[t].id
+            forge level be feat[id]
+            forge local be feat[id + "_name"]
+            forge present be probe(sources[t], local)
+            forge state be mark(level, present)
+            pluck(cells, { track: id, level: level, name: local, state: state })
+            either state equals "MISSING" ::
+                either level equals "must" ::
+                    pluck(must_missing, feat.name + " @ " + id)
+                ;;
+                either level equals "should" ::
+                    pluck(should_missing, feat.name + " @ " + id)
+                ;;
+            ;;
+            be t be t + 1
+        ;;
+        pluck(rows, { name: feat.name, area: feat.area, kind: feat.kind, sig: feat.sig, cells: cells })
+        be f be f + 1
+    ;;
+
+    yield { tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }
+;;
+
+// ---------- markdown matrix ----------
+
+conjure matrix_markdown(report) ::
+    forge tracks be report.tracks
+    forge head be "| Feature | Area |"
+    forge sep be "| --- | --- |"
+    forge t be 0
+    cycle t < measure(tracks) ::
+        be head be head + " " + tracks[t].label + " |"
+        be sep be sep + " --- |"
+        be t be t + 1
+    ;;
+    forge out be head + "\n" + sep + "\n"
+    forge r be 0
+    cycle r < measure(report.rows) ::
+        forge row be report.rows[r]
+        forge line be "| `" + row.name + "` | " + row.area + " |"
+        be t be 0
+        cycle t < measure(row.cells) ::
+            forge c be row.cells[t]
+            forge txt be "—"
+            either c.state equals "yes" ::
+                be txt be "`" + c.name + "`"
+            ;;
+            either c.state equals "MISSING" ::
+                be txt be "gap (" + c.level + ")"
+            ;;
+            be line be line + " " + txt + " |"
+            be t be t + 1
+        ;;
+        be out be out + line + "\n"
+        be r be r + 1
+    ;;
+    yield out
+;;
+
+// ---------- report.json ----------
+
+conjure report_json(report) ::
+    forge out be "{\n  \"must_missing\": ["
+    forge i be 0
+    cycle i < measure(report.must_missing) ::
+        either i > 0 ::
+            be out be out + ","
+        ;;
+        be out be out + "\n    \"" + report.must_missing[i] + "\""
+        be i be i + 1
+    ;;
+    be out be out + "\n  ],\n  \"should_missing\": ["
+    be i be 0
+    cycle i < measure(report.should_missing) ::
+        either i > 0 ::
+            be out be out + ","
+        ;;
+        be out be out + "\n    \"" + report.should_missing[i] + "\""
+        be i be i + 1
+    ;;
+    be out be out + "\n  ],\n  \"features\": ["
+    be i be 0
+    cycle i < measure(report.rows) ::
+        forge row be report.rows[i]
+        either i > 0 ::
+            be out be out + ","
+        ;;
+        be out be out + "\n    { \"name\": \"" + row.name + "\", \"area\": \"" + row.area + "\", \"tracks\": {"
+        forge t be 0
+        cycle t < measure(row.cells) ::
+            forge c be row.cells[t]
+            either t > 0 ::
+                be out be out + ","
+            ;;
+            be out be out + " \"" + c.track + "\": \"" + c.state + "\""
+            be t be t + 1
+        ;;
+        be out be out + " } }"
+        be i be i + 1
+    ;;
+    be out be out + "\n  ]\n}\n"
+    yield out
+;;
+
+// ---------- documentation sync ----------
+//
+// Replaces everything between the markers, leaving hand-written prose alone.
+
+conjure sync_doc(path, block) ::
+    forge begin be "<!-- PARITY:BEGIN -->"
+    forge finish be "<!-- PARITY:END -->"
+    forge text be read_file(path)
+    either nope contains(text, begin) ::
+        yield 0
+    ;;
+    forge head be shatter(text, begin)[0]
+    forge tailparts be shatter(text, finish)
+    forge tail be tailparts[measure(tailparts) - 1]
+    write_file(path, head + begin + "\n\n" + block + "\n" + finish + tail)
+    yield 1
+;;
+
+// ---------- entry point ----------
+
+conjure run_parity_agent(registry_path, doc_paths) ::
+    forge registry be load_registry(registry_path)
+    forge report be audit(registry)
+
+    speak("sdev parity agent")
+    speak("  features: " + str(measure(report.rows)))
+    speak("  tracks:   " + str(measure(report.tracks)))
+    speak("  must gaps:   " + str(measure(report.must_missing)))
+    speak("  should gaps: " + str(measure(report.should_missing)))
+
+    forge i be 0
+    cycle i < measure(report.must_missing) ::
+        speak("  MUST  " + report.must_missing[i])
+        be i be i + 1
+    ;;
+    be i be 0
+    cycle i < measure(report.should_missing) ::
+        speak("  gap   " + report.should_missing[i])
+        be i be i + 1
+    ;;
+
+    write_file("lang/parity/report.json", report_json(report))
+
+    forge block be matrix_markdown(report)
+    be i be 0
+    cycle i < measure(doc_paths) ::
+        forge ok be sync_doc(doc_paths[i], block)
+        either ok equals 1 ::
+            speak("  synced " + doc_paths[i])
+        ;;
+        be i be i + 1
+    ;;
+
+    yield measure(report.must_missing)
+;;
