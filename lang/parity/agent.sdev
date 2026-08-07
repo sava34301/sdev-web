@@ -267,7 +267,7 @@ conjure sync_doc(path, block) ::
     forge begin be "<!-- PARITY:BEGIN -->"
     forge finish be "<!-- PARITY:END -->"
     forge text be read_file(path)
-    either nope contains(text, begin) ::
+    either contains(text, begin) equals nope ::
         yield 0
     ;;
     forge head be shatter(text, begin)[0]
@@ -275,6 +275,7 @@ conjure sync_doc(path, block) ::
     forge tail be tailparts[measure(tailparts) - 1]
     write_file(path, head + begin + "\n\n" + block + "\n" + finish + tail)
     yield 1
+
 ;;
 
 // ---------- entry point ----------
