@@ -35,7 +35,7 @@ const files: LinkableFile[] = [
 ];
 
 const program = `link "agent.sdev"
-forge docs be gather(${DOCS.map((d) => JSON.stringify(d)).join(', ')})
+forge docs be [${DOCS.map((d) => JSON.stringify(d)).join(', ')}]
 forge missing be run_parity_agent(${JSON.stringify(REGISTRY)}, docs)
 speak("MUST_MISSING=" + str(missing))
 `;
