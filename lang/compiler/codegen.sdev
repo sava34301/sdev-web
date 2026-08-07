@@ -318,6 +318,89 @@ to emit_call with name nargs
     set expr_type[0] to 0
     return 0
   end
+  # --- Milestone 5q: floats + host I/O builtins -----------------------------
+  if str_eq(name, "i2f")
+    emit_byte(168)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "f2i")
+    emit_byte(169)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "fneg")
+    emit_byte(170)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fabs")
+    emit_byte(171)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fsqrt")
+    emit_byte(172)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fsin")
+    emit_byte(174)
+    emit_byte(0)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fcos")
+    emit_byte(174)
+    emit_byte(1)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "ftan")
+    emit_byte(174)
+    emit_byte(2)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fexp")
+    emit_byte(174)
+    emit_byte(3)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "flog")
+    emit_byte(174)
+    emit_byte(4)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fpow")
+    emit_byte(174)
+    emit_byte(5)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fbyte")
+    emit_byte(180)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "read_file")
+    emit_byte(176)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "write_file")
+    emit_byte(177)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "http_get")
+    emit_byte(178)
+    set expr_type[0] to 1
+    return 0
+  end
+
   # User function. After pass 1, `idx` almost always resolves — but the
   # target offset may not yet be known if this call sits inside a fn
   # body that gets emitted before its callee (e.g. mutually recursive
