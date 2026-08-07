@@ -1,0 +1,233 @@
+// ============================================================
+// sdev ML Stdlib — Language-Model Training (Milestone 14)
+// ============================================================
+// End-to-end training for the decoder-only model in transformer.sdev:
+// batching, next-token cross-entropy, Adam + gradient clipping,
+// temperature / top-k sampling, checkpoint save + load, and an
+// evaluation loop. Written entirely in sdev.
+
+link "transformer.sdev"
+link "data.sdev"
+
+// ---------- batching ----------
+// Cut a flat token stream into (context, next-token) pairs of length `block`.
+conjure lm_batches(ids, block) ::
+    forge xs be gather()
+    forge ys be gather()
+    forge i be 0
+    cycle i + block < measure(ids) ::
+        forge ctx be gather()
+        forge tgt be gather()
+        forge k be 0
+        cycle k < block ::
+            pluck(ctx, ids[i + k])
+            pluck(tgt, ids[i + k + 1])
+            be k be k + 1
+        ;;
+        pluck(xs, ctx)
+        pluck(ys, tgt)
+        be i be i + 1
+    ;;
+    yield { xs: xs, ys: ys, block: block, count: measure(xs) }
+;;
+
+// ---------- one optimisation step ----------
+conjure lm_step(model, opt, ctx, targets, lr) ::
+    tape_reset()
+    zero_grads(model.params)
+    forge logits be model.forward(tensor(ctx, [measure(ctx)]))
+    forge loss be d_softmax_ce(logits, targets)
+    backward(loss)
+    clip_grads(model.params, 1.0)
+    adam_step(opt, model.params, lr)
+    yield loss.data[0]
+;;
+
+// ---------- full training loop ----------
+conjure lm_fit(model, ids, block, epochs, lr) ::
+    forge batches be lm_batches(ids, block)
+    forge opt be adam_new(model.params)
+    forge history be gather()
+    forge e be 0
+    cycle e < epochs ::
+        forge total be 0.0
+        forge i be 0
+        cycle i < batches.count ::
+            be total be total + lm_step(model, opt, batches.xs[i], batches.ys[i], lr)
+            be i be i + 1
+        ;;
+        pluck(history, total / batches.count)
+        be e be e + 1
+    ;;
+    yield { history: history, final: history[measure(history) - 1], opt: opt }
+;;
+
+// ---------- evaluation ----------
+conjure lm_loss(model, ids, block) ::
+    forge batches be lm_batches(ids, block)
+    forge total be 0.0
+    forge i be 0
+    cycle i < batches.count ::
+        tape_reset()
+        forge logits be model.forward(tensor(batches.xs[i], [block]))
+        be total be total + d_softmax_ce(logits, batches.ys[i]).data[0]
+        be i be i + 1
+    ;;
+    yield total / batches.count
+;;
+
+// Perplexity = e^(mean NLL). Lower is better.
+conjure perplexity(model, ids, block) ::
+    yield exp(lm_loss(model, ids, block))
+;;
+
+// ---------- sampling ----------
+conjure last_logits(model, ids) ::
+    forge logits be model.forward(tensor(ids, [measure(ids)]))
+    forge vocab be logits.shape[1]
+    forge rows be logits.shape[0]
+    forge row be gather()
+    forge c be 0
+    cycle c < vocab ::
+        pluck(row, logits.data[(rows - 1) * vocab + c])
+        be c be c + 1
+    ;;
+    yield tensor(row, [vocab])
+;;
+
+// Temperature + top-k filtering, then multinomial draw.
+conjure sample_topk(logits, temperature, k) ::
+    forge n be measure(logits.data)
+    forge scaled be gather()
+    forge i be 0
+    cycle i < n ::
+        pluck(scaled, logits.data[i] / (temperature + 0.000001))
+        be i be i + 1
+    ;;
+    // find the k-th largest value as the cutoff
+    forge sorted be gather()
+    be i be 0
+    cycle i < n :: pluck(sorted, scaled[i]) be i be i + 1 ;;
+    forge a be 0
+    cycle a < n ::
+        forge b be a + 1
+        cycle b < n ::
+            either sorted[b] > sorted[a] ::
+                forge tmp be sorted[a]
+                set sorted[a] to sorted[b]
+                set sorted[b] to tmp
+            ;;
+            be b be b + 1
+        ;;
+        be a be a + 1
+    ;;
+    forge limit be k
+    either limit > n :: be limit be n ;;
+    forge cutoff be sorted[limit - 1]
+    be i be 0
+    cycle i < n ::
+        either scaled[i] < cutoff :: set scaled[i] to -1000000.0 ;;
+        be i be i + 1
+    ;;
+    yield sample_next(tensor(scaled, [n]))
+;;
+
+conjure lm_generate(model, prompt_ids, max_new, temperature, k) ::
+    forge out be gather()
+    forge i be 0
+    cycle i < measure(prompt_ids) :: pluck(out, prompt_ids[i]) be i be i + 1 ;;
+    forge s be 0
+    cycle s < max_new ::
+        forge tok be sample_topk(last_logits(model, out), temperature, k)
+        pluck(out, 1.0 * tok)
+        be s be s + 1
+    ;;
+    yield out
+;;
+
+conjure lm_complete(model, vocab, prompt, max_new, temperature, k) ::
+    forge ids be encode(vocab, prompt)
+    yield decode(vocab, lm_generate(model, ids, max_new, temperature, k))
+;;
+
+// ---------- checkpoints ----------
+// Flat text format: one parameter tensor per line, "shape|values".
+conjure checkpoint_text(model) ::
+    forge s be ""
+    forge i be 0
+    cycle i < measure(model.params) ::
+        forge p be model.params[i]
+        forge line be ""
+        forge j be 0
+        cycle j < measure(p.shape) ::
+            either j > 0 :: be line be line + "," ;;
+            be line be line + str(p.shape[j])
+            be j be j + 1
+        ;;
+        be line be line + "|"
+        be j be 0
+        cycle j < measure(p.data) ::
+            either j > 0 :: be line be line + "," ;;
+            be line be line + str(p.data[j])
+            be j be j + 1
+        ;;
+        be s be s + line + "\n"
+        be i be i + 1
+    ;;
+    yield s
+;;
+
+conjure save_checkpoint(path, model) ::
+    write_file(path, checkpoint_text(model))
+    yield measure(model.params)
+;;
+
+// Loads weights back into an identically-shaped model.
+conjure load_checkpoint(path, model) ::
+    forge text be read_file(path)
+    forge lines be split_text(text, "\n")
+    forge i be 0
+    cycle i < measure(model.params) ::
+        either i < measure(lines) ::
+            forge parts be split_text(lines[i], "|")
+            either measure(parts) equals 2 ::
+                forge nums be split_text(parts[1], ",")
+                forge p be model.params[i]
+                forge j be 0
+                cycle j < measure(p.data) ::
+                    either j < measure(nums) ::
+                        set p.data[j] to decimal(nums[j])
+                    ;;
+                    be j be j + 1
+                ;;
+            ;;
+        ;;
+        be i be i + 1
+    ;;
+    yield measure(model.params)
+;;
+
+// Small split helper so checkpoints need no host support beyond file I/O.
+conjure split_text(s, sep) ::
+    forge out be gather()
+    forge cur be ""
+    forge i be 0
+    forge sepc be ord(sep, 0)
+    cycle i < measure(s) ::
+        forge c be ord(s, i)
+        either c equals sepc ::
+            pluck(out, cur)
+            be cur be ""
+        ;;
+        either c equals sepc :: be i be i + 1 ;;
+        either c equals sepc :: continue_marker() ;;
+        be cur be cur + chr(c)
+        be i be i + 1
+    ;;
+    pluck(out, cur)
+    yield out
+;;
+
+conjure continue_marker() ::
+    yield 0
+;;
