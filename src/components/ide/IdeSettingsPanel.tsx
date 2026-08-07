@@ -111,17 +111,18 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
         {/* Language runtime */}
         <div>
           <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Language Runtime</label>
-          <div className="grid grid-cols-4 gap-1">
-            {(['auto', 'v1', 'v2', 'v2-wasm'] as const).map(id => {
-              const current = (typeof localStorage !== 'undefined' && (localStorage.getItem('sdev_runtime') as 'v1' | 'v2' | 'v2-wasm' | null)) || 'auto';
+          <div className="grid grid-cols-3 gap-1">
+            {(['auto', 'v1', 'v2'] as const).map(id => {
+              const stored = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'auto';
+              const current = stored === 'v2-wasm' ? 'v2' : stored;
               const active = current === id;
               const titles: Record<string, string> = {
-                auto: 'Per-file (#!sdev v2 / v2-wasm / v1 header) or default v1',
+                auto: 'Per-file (#!sdev v2 / #!sdev v1 header) or default v1',
                 v1: 'Legacy runtime (forge / conjure / :: / ;;)',
-                v2: 'New easy-syntax runtime (pure JavaScript)',
-                'v2-wasm': "Real WebAssembly — the browser's native assembly. Runs SDEV through a hand-written WAT VM.",
+                v2: 'Self-hosted: the sdev compiler written in sdev, running on the seed VM. No JavaScript.',
               };
-              const labels: Record<string, string> = { auto: 'AUTO', v1: 'V1', v2: 'V2', 'v2-wasm': 'WASM' };
+              const labels: Record<string, string> = { auto: 'AUTO', v1: 'V1', v2: 'V2 · SELF-HOSTED' };
+
               return (
                 <button
                   key={id}
