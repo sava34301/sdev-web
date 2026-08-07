@@ -156,32 +156,27 @@ const cases = [
   },
   {
     name: 'i2f / f2i round-trip',
-    compiler: 'bootstrap',
     src: `set x to i2f(7)\nsay x + 0.5\nsay f2i(x + 0.9)`,
     expect: ['7.5', '7'],
   },
   {
     name: 'float comparisons',
-    compiler: 'bootstrap',
     src: `if 0.5 < 1.0\nsay "lt"\nend\nif 2.0 > 1.5\nsay "gt"\nend\nif 1.0 is 1.0\nsay "eq"\nend`,
     expect: ['lt', 'gt', 'eq'],
   },
   {
     name: 'transcendentals: sin/cos/exp/log/pow',
-    compiler: 'bootstrap',
     src: `say fpow(2.0, 10.0)\nsay flog(fexp(1.0))\nsay fcos(0.0)\nsay fsin(0.0)`,
     expect: ['1024', '1', '1', '0'],
   },
   // ---- Milestone 7: file I/O ----
   {
     name: 'write_file + read_file round-trip',
-    compiler: 'bootstrap',
     src: `set path to "/tmp/sdev-m7.txt"\nset status to write_file(path, "hello sdev")\nsay status\nsay read_file(path)`,
     expect: ['0', 'hello sdev'],
   },
   {
     name: 'read_file of missing path returns empty handle-safe path',
-    compiler: 'bootstrap',
     src: `set s to read_file("/tmp/does-not-exist-sdev.xxx")\nsay length(s)`,
     expect: ['0'],
   },
