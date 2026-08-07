@@ -61,7 +61,10 @@
 ;;   0xB0 READFILE                  pop path handle; push content handle (0 on error)
 ;;   0xB1 WRITEFILE                 pop data, pop path; push i32 status (0 ok, -1 err)
 ;;   0xB2 HTTPGET                   pop url handle; push response body handle (0 err)
+;;   ; --- Milestone 5q: float bit inspection (self-hosted codegen needs it) ---
+;;   0xB4 FBYTE                     pop idx (0..7), pop float; push IEEE-754 LE byte
 ;;   0xFF HALT
+
 ;;
 ;; The host provides these imports:
 ;;   env.host_say_i32(i32)
