@@ -82,10 +82,42 @@ while _i < _srclen
               set _v to _v * 10 + ord(src, _k) - 48
               set _k to _k + 1
             end
-            set tk_kind[tk_count] to 1
+            set _scale to 0
+            set _isf to 0
+            if _j < _srclen
+              if ord(src, _j) is 46
+                if _j + 1 < _srclen
+                  if is_digit(ord(src, _j + 1))
+                    set _isf to 1
+                    set _j to _j + 1
+                    set _going to 1
+                    while _going
+                      if _j >= _srclen
+                        set _going to 0
+                      else
+                        if is_digit(ord(src, _j))
+                          set _v to _v * 10 + ord(src, _j) - 48
+                          set _scale to _scale + 1
+                          set _j to _j + 1
+                        else
+                          set _going to 0
+                        end
+                      end
+                    end
+                  end
+                end
+              end
+            end
+            if _isf is 1
+              set tk_kind[tk_count] to 6
+            else
+              set tk_kind[tk_count] to 1
+            end
             set tk_num[tk_count] to _v
+            set tk_num2[tk_count] to _scale
             set tk_count to tk_count + 1
             set _i to _j
+
           else
             if _c is 34
               set _j to _i + 1
