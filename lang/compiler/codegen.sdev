@@ -847,10 +847,15 @@ to parse_stmt with pos
     if expr_type[0] is 1
       emit_byte(81)
     else
-      emit_byte(80)
+      if expr_type[0] is 2
+        emit_byte(173)
+      else
+        emit_byte(80)
+      end
     end
     return pos
   end
+
   if is_ident_word(pos, "set")
     set pos to pos + 1
     set name to tk_txt[pos]
