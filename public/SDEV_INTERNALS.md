@@ -530,16 +530,31 @@ lang/
     seed.wat            # hand-written WAT (stage 0 source)
     seed.wasm           # built artifact — CI regenerates via wat2wasm
     stage1.wasm         # built artifact — CI regenerates by running seed
-  compiler/             # .sdev sources: lexer, parser, typecheck, ir, codegen
+  compiler/             # .sdev sources: lexer, parser, codegen + compile-self.mjs
+  native/               # Track B: x86-64 GAS codegen, runtime.s, linker
+  stdlib/
+    ffi.sdev            # M9 — native library binding
+    webgpu.sdev         # M10 — browser GPU compute
+    ml/
+      tensor.sdev       # M8 — tensors + shape ops
+      autograd.sdev     # M8/M14 — reverse-mode AD, losses, Adam
+      nn.sdev           # M8 — layers, parameter collection
+      transformer.sdev  # M12 — decoder-only GPT
+      train.sdev        # M14 — LM training, sampling, checkpoints
+      data.sdev         # M12 — tokenizers, crawling, distillation
+      cuda.sdev         # M11 — cuBLAS fast paths
+      self_modify.sdev  # M12 — gated source rewriting
+      auto_evolve.sdev  # M12 — whitelisted evolution loop
   runtime/
     v2.js               # Milestone 1 reference runtime (pure JS)
     vm.sdev             # Milestone 2 VM
     kernel.sdev         # tasks, syscalls, GC
-    std/                # standard library modules (.sdev)
   paradigms/            # functional, systems, data, hardware — .sdev
   translator/           # 26-language keyword tables + engine — .sdev
   legacy/
     v1_frontend.sdev    # refine mode: parses forge/conjure/:: /;; into v2 AST
+
+electron/               # desktop IDE shell (Track B host: build + run native)
 
 src/lang-bridge/        # thin TS glue — the ONLY TS in the exec path
   bridge.ts             # picks runtime and dispatches
@@ -548,6 +563,7 @@ src/lang-bridge/        # thin TS glue — the ONLY TS in the exec path
 dist/
   sdev-core.wasm        # shipped artifact (Milestone 2)
 ```
+
 
 ## Verification
 
