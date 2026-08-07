@@ -343,12 +343,10 @@ the same lexer, parser, and language semantics.
   toolchain sources (lexer, parser, codegen) round-trip byte-for-byte
   through the self-hosted compiler.
 
-**Milestone 5p (retire the JS bootstrap) — next:**
-- Rewire `wasm-runtime.ts`, `test-self-lexer.mjs`, `test-self-parser.mjs`,
-  and `test-wasm-runtime.mjs` to `compile-self.mjs`. Keep the JS
-  bootstrap only as the diff oracle in `test-self-codegen.mjs` and
-  `test-self-toolchain.mjs`, then delete `lang/bootstrap/compile.mjs`
-  and `src/lang-bridge/bootstrap.d.ts` once no non-test caller remains.
+(Milestone 5p — retiring the JS bootstrap — is documented after Milestone 14,
+in milestone order.)
+
+
 
 **Milestone 6 (floats + math opcodes) — shipped:**
 - **Representation:** boxed f64. A float lives on the heap as an 8-byte
