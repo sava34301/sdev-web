@@ -145,13 +145,12 @@ const cases = [
   // ---- Milestone 6: floats ----
   {
     name: 'float literal + arithmetic',
-    compiler: 'bootstrap',
+    // Milestone 5q: floats + host I/O now compile through the self-hosted path.
     src: `say 0.5 + 0.25\nsay 3.0 * 2.5\nsay 10.0 / 4.0\nsay 1.0 - 0.5`,
     expect: ['0.75', '7.5', '2.5', '0.5'],
   },
   {
     name: 'float builtins: fsqrt, fabs, fneg',
-    compiler: 'bootstrap',
     src: `say fsqrt(16.0)\nsay fabs(0.0 - 3.5)\nsay fneg(2.5)`,
     expect: ['4', '3.5', '-2.5'],
   },
