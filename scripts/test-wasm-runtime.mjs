@@ -2,7 +2,11 @@
 import { readFile, writeFile, readFile as fsReadFile } from 'node:fs/promises';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { compile } from '../lang/compiler/compile-self.mjs';
+import { compile as selfCompile } from '../lang/compiler/compile-self.mjs';
+// The JS bootstrap survives ONLY as a build/test tool: the self-hosted
+// codegen does not speak floats or host I/O yet (Milestone 5q). Cases
+// tagged `compiler: 'bootstrap'` still exercise those seed VM opcodes.
+import { compile as bootstrapCompile } from '../lang/bootstrap/compile.mjs';
 
 const wasmBytes = await readFile('./public/wasm/sdev-seed.wasm');
 const module = await WebAssembly.compile(wasmBytes);
@@ -10,8 +14,9 @@ const module = await WebAssembly.compile(wasmBytes);
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
-async function runProgram(src) {
-  const { bytecode, stringPool } = await compile(src);
+async function runProgram(src, which = 'self') {
+  const { bytecode, stringPool } =
+    which === 'bootstrap' ? bootstrapCompile(src) : await selfCompile(src);
   const output = [];
   let mem;
   let alloc_str;
@@ -179,9 +184,9 @@ const cases = [
 let failed = 0;
 for (const c of cases) {
   try {
-    const out = await runProgram(c.src);
+    const out = await runProgram(c.src, c.compiler);
     const ok = JSON.stringify(out) === JSON.stringify(c.expect);
-    console.log(`${ok ? '✓' : '✗'} ${c.name}`);
+    console.log(`${ok ? '✓' : '✗'} ${c.name}${c.compiler === 'bootstrap' ? '  [bootstrap]' : ''}`);
     if (!ok) { failed++; console.log('   expected:', c.expect); console.log('   got:     ', out); }
   } catch (e) {
     failed++;
