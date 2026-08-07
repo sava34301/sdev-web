@@ -480,6 +480,7 @@ accelerator fallback.
 | 11 | CUDA fast path |
 | 12 | Autonomous evolution loop |
 | 13 | ML host bindings; the stack actually executes on the interpreter |
+| 14 | LM training: softmax cross-entropy autograd, Adam + clipping, top-k sampling, checkpoints (`train.sdev`) |
 
 Alongside those: the native x86-64 track, the Electron desktop IDE, the
 launch site and carousel, and the two-minute Remotion pitch video.

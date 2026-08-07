@@ -13,6 +13,7 @@ floats, Milestone 7 file I/O + `http_get`).
 | `autograd.sdev` | Reverse-mode autograd. Global tape, differentiable ops (`d_add`, `d_mul`, `d_matmul`, `d_relu`, `d_mse`), `backward(out)`, `sgd_step(params, lr)`. |
 | `nn.sdev` | High-level layers (`linear`, `relu_layer`, `sequential`) and a `fit(model, xs, ys, epochs, lr)` training loop. |
 | `transformer.sdev` | Decoder-only transformer: `embedding`, `layer_norm`, `attention_head`, `transformer_block`, `gpt(vocab, dim, hidden, layers)`, plus `generate(model, prompt, max_new)` for autoregressive sampling. |
+| `train.sdev` | Language-model training (M14): `lm_batches`, `lm_step`, `lm_fit`, `lm_loss`, `perplexity`, `sample_topk`, `lm_generate`, `lm_complete`, `save_checkpoint` / `load_checkpoint`. |
 | `data.sdev` | Dataset I/O (`load_text`, `save_text`), char-level tokenizer (`char_vocab`, `encode`, `decode`), web crawler (`crawl`, `crawl_many`), teacher-model distillation helpers, and `save_model`. |
 | `self_modify.sdev` | Gated self-modification: `self_read`, `self_propose` (routes through a review hook), `mine_demand` for feature-demand scraping, `update_docs`, and `rewrite_weights` for out-of-band parameter surgery. |
 
@@ -105,3 +106,41 @@ add hardware backends without changing the sdev API surface:
 - `http_get` in the browser runtime is a stub (sync HTTP is unavailable
   in-page); use the Native/Electron builds for live training data.
 - Weights are stored in host memory only — no telemetry, no upload.
+
+## Training a language model end to end (M14)
+
+`train.sdev` closes the loop: real next-token cross-entropy with a proper
+backward pass, Adam with global-norm gradient clipping, temperature/top-k
+sampling, evaluation, and plain-text checkpoints.
+
+```sdev
+link "stdlib/ml/train.sdev"
+
+forge text be load_text("corpus.txt")
+forge v be char_vocab(text)
+forge ids be encode(v, text)
+
+forge model be gpt(v.size, 32, 64, 2)
+forge result be lm_fit(model, ids, 16, 20, 0.01)   // block, epochs, lr
+speak("final loss: " + str(result.final))
+speak("perplexity: " + str(perplexity(model, ids, 16)))
+
+save_checkpoint("model.ckpt", model)
+speak(lm_complete(model, v, "hello", 40, 0.8, 5))  // prompt, tokens, temp, k
+```
+
+### API
+
+- `lm_batches(ids, block)` → `{ xs, ys, block, count }` sliding-window pairs.
+- `lm_step(model, opt, ctx, targets, lr)` → scalar loss for one update.
+- `lm_fit(model, ids, block, epochs, lr)` → `{ history, final, opt }`.
+- `lm_loss(model, ids, block)` / `perplexity(model, ids, block)` — evaluation.
+- `sample_topk(logits, temperature, k)` → token id.
+- `lm_generate(model, prompt_ids, max_new, temperature, k)` → token list.
+- `lm_complete(model, vocab, prompt, max_new, temperature, k)` → text.
+- `save_checkpoint(path, model)` / `load_checkpoint(path, model)` — one
+  parameter tensor per line as `shape|values`; requires host file I/O.
+
+Autograd gained the pieces this needs: `d_softmax_ce(logits, targets)` with
+its `bw_sce` backward rule, `zero_grads`, `clip_grads(params, max_norm)`,
+and `adam_new` / `adam_step`.
