@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, Send, X, Bot, User, Loader2, Copy, Check, Sparkles, FlaskConical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { execute } from '@/lang';
+import { execute, executeAsync } from '@/lang';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -95,11 +95,11 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     return assistantContent;
   }, []);
 
-  const testCodeBlocks = (content: string): { code: string; error: string }[] => {
+  const testCodeBlocks = async (content: string): Promise<{ code: string; error: string }[]> => {
     const blocks = extractCodeBlocks(content);
     const errors: { code: string; error: string }[] = [];
     for (const code of blocks) {
-      const result = execute(code);
+      const result = await executeAsync(code);
       if (!result.success && result.error) {
         errors.push({ code, error: result.error });
       }
@@ -121,7 +121,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
       // Self-test loop: check generated code and auto-fix
       let fixAttempt = 0;
       while (fixAttempt < MAX_FIX_ATTEMPTS) {
-        const errors = testCodeBlocks(assistantContent);
+        const errors = await testCodeBlocks(assistantContent);
         if (errors.length === 0) break;
 
         fixAttempt++;
@@ -156,7 +156,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
       }
 
       // Final validation badge
-      const finalErrors = testCodeBlocks(assistantContent);
+      const finalErrors = await testCodeBlocks(assistantContent);
       const badge = finalErrors.length === 0
         ? '\n\n> ✅ *Code tested and verified!*'
         : '\n\n> ⚠️ *Code may still have issues — please review manually.*';

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Upload, Wand2, Copy, Check, Zap, FlaskConical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { execute } from '@/lang';
+import { execute, executeAsync } from '@/lang';
 
 const LANGUAGES = [
   { value: 'html-css-js', label: 'HTML/CSS/JS Website', extensions: ['.html', '.htm'] },
@@ -104,7 +104,7 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
       // Self-test loop
       for (let attempt = 0; attempt < MAX_FIX_ATTEMPTS; attempt++) {
         setTestStatus('testing');
-        const result = execute(translated);
+        const result = await executeAsync(translated);
         
         if (result.success) {
           setTestStatus('passed');
@@ -128,7 +128,7 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
       }
 
       // Final check after all attempts
-      const finalResult = execute(translated);
+      const finalResult = await executeAsync(translated);
       if (finalResult.success) {
         setTestStatus('passed');
         toast({ title: "✅ Translation complete & verified!" });

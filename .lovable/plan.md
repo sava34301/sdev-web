@@ -59,7 +59,14 @@ Every v2 feature must be self-hosted: written in sdev, compiled by the
 sdev-written compiler, executed on the seed VM. `lang/runtime/v2.js` is
 demoted to a **conformance oracle** — it keeps running only so the parity
 agent can diff its answers against the self-hosted result. It receives no new
-features, and the IDE stops falling back to it once a feature is self-hosted.
+features and is no longer reachable from the app.
+
+**Already done (this turn):** the IDE, the language bridge and every caller
+now route v2 exclusively to the self-hosted compiler on the seed VM. The
+JavaScript fallback is gone: a program the self-hosted compiler cannot compile
+yet reports exactly that instead of quietly running on a different engine.
+
+
 
 The parity surface needs language power the self-hosted compiler does not have
 yet, so it is built first, in `lexer.sdev` / `parser.sdev` / `codegen.sdev`
