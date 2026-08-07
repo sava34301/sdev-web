@@ -247,7 +247,7 @@
       "docs": "#abs",
       "v1": "must",
       "v1_name": "abs",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "fabs",
       "native": "should",
       "native_name": "abs"
@@ -286,7 +286,7 @@
       "docs": "#floor",
       "v1": "must",
       "v1_name": "ground",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "f2i",
       "native": "n/a",
       "native_name": "floor"
@@ -325,7 +325,7 @@
       "docs": "#sqrt",
       "v1": "must",
       "v1_name": "root",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "fsqrt",
       "native": "n/a",
       "native_name": "sqrt"
@@ -338,7 +338,7 @@
       "docs": "#pow",
       "v1": "must",
       "v1_name": "pow",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "fpow",
       "native": "n/a",
       "native_name": "pow"
@@ -351,7 +351,7 @@
       "docs": "#sin",
       "v1": "must",
       "v1_name": "sin",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "fsin",
       "native": "n/a",
       "native_name": "sin"
@@ -364,7 +364,7 @@
       "docs": "#cos",
       "v1": "must",
       "v1_name": "cos",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "fcos",
       "native": "n/a",
       "native_name": "cos"
@@ -377,7 +377,7 @@
       "docs": "#exp",
       "v1": "must",
       "v1_name": "exp",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "fexp",
       "native": "n/a",
       "native_name": "exp"
@@ -390,7 +390,7 @@
       "docs": "#log",
       "v1": "must",
       "v1_name": "ln",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "flog",
       "native": "n/a",
       "native_name": "log"
@@ -649,7 +649,7 @@
       "sig": "anonymous function",
       "docs": "#lambda",
       "v1": "must",
-      "v1_name": "->",
+      "v1_name": "ARROW",
       "v2": "should",
       "v2_name": "lambda",
       "native": "n/a",
@@ -910,7 +910,7 @@
       "docs": "#float",
       "v1": "must",
       "v1_name": "num",
-      "v2": "must",
+      "v2": "should",
       "v2_name": "i2f",
       "native": "n/a",
       "native_name": "float"
