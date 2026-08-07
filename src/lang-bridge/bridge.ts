@@ -3,24 +3,23 @@
  *
  * The bridge is the ONLY TypeScript file in the language execution path.
  * It routes source code to either:
- *   - the new v2 runtime (pure JavaScript, see lang/runtime/v2.js), or
- *   - the legacy v1 TypeScript runtime (src/lang/*), used as the refine-mode
- *     fallback so every existing .sdev file keeps working.
+ *   - sdev v2: the SELF-HOSTED toolchain — the compiler is written in sdev
+ *     (lang/compiler/lexer.sdev, parser.sdev, codegen.sdev), compiles itself
+ *     byte-identically, and its bytecode runs on the hand-written seed VM
+ *     (lang/bootstrap/seed.wat). No JavaScript interpreter participates.
+ *   - the legacy v1 TypeScript runtime (src/lang/*), kept so every existing
+ *     .sdev file keeps working.
  *
  * Selection rules:
- *   - If the source starts with `#!sdev v1`, use the v1 runtime.
- *   - If the source starts with `#!sdev v2`, use the v2 runtime.
- *   - Otherwise, use whichever runtime is configured via
- *     `localStorage.sdev_runtime` ("v1" | "v2"). Default: "v1" until v2 is
- *     feature-complete for the launch smoke tests.
+ *   - `#!sdev v1` → v1, `#!sdev v2` → v2.
+ *   - Otherwise `localStorage.sdev_runtime` ("v1" | "v2"). Default: "v1"
+ *     until the self-hosted compiler covers the full v2 surface.
  *
- * The long-term plan (see .lovable/plan.md) is to replace lang/runtime/v2.js
- * with a self-hosted WASM module compiled from .sdev sources. This bridge
- * will then load that .wasm binary and expose the same `execute()` surface.
+ * Because the self-hosted path must fetch and instantiate the seed VM, v2
+ * execution is asynchronous: use `executeAsync`. The synchronous `execute`
+ * remains for v1 only.
  */
-// Plain JS module, no .d.ts — declared ambiently below.
-import { run as runV2, VERSION as V2_VERSION } from '../../lang/runtime/v2.js';
-import { execute as executeV1 } from '@/lang';
+import { execute as executeV1, executeAsync as executeAnyAsync } from '@/lang';
 import type { ExecuteOptions, ExecutionResult } from '@/lang';
 
 export type RuntimeChoice = 'v1' | 'v2' | 'auto';
@@ -30,6 +29,7 @@ const RUNTIME_KEY = 'sdev_runtime';
 export function getRuntimeChoice(): RuntimeChoice {
   if (typeof localStorage === 'undefined') return 'auto';
   const v = localStorage.getItem(RUNTIME_KEY);
+  if (v === 'v2-wasm') return 'v2';
   return v === 'v1' || v === 'v2' ? v : 'auto';
 }
 
@@ -45,25 +45,29 @@ function pickRuntime(source: string): 'v1' | 'v2' {
   if (firstLine.startsWith('#!sdev v2')) return 'v2';
   const choice = getRuntimeChoice();
   if (choice === 'v1' || choice === 'v2') return choice;
-  // Default: v1 stays authoritative until every v1 example passes on v2.
+  // Default: v1 stays authoritative until the self-hosted compiler is complete.
   return 'v1';
 }
 
+/** v1 only. v2 is self-hosted and therefore async — see `executeAsync`. */
 export function execute(source: string, options: ExecuteOptions = {}): ExecutionResult {
-  const runtime = pickRuntime(source);
-  if (runtime === 'v2') {
-    const out: string[] = [];
-    const result = runV2(source, { onOutput: (line: string) => out.push(line) });
+  if (pickRuntime(source) === 'v2') {
     return {
-      success: result.success,
-      output: result.output.length ? result.output : out,
-      error: result.error ?? undefined,
+      success: false,
+      output: [],
+      error: 'sdev v2 runs only on the self-hosted compiler (async). Use executeAsync().',
       detectedLanguage: null,
     };
   }
   return executeV1(source, options);
 }
 
-export const SDEV_V2_VERSION: string = V2_VERSION;
+export function executeAsync(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
+  return executeAnyAsync(source, options);
+}
+
+/** Version reported by the self-hosted seed VM (`sdev_version()`). */
+export const SDEV_V2_VERSION = '2.0-selfhosted';
 
 export * from '@/lang';
+
