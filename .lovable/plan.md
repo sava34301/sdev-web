@@ -53,44 +53,80 @@ This file becomes the single source of truth for both the agent and the docs.
 New tracks (a v3, another backend) are added by appending a column to the
 registry — the agent picks them up with no code change.
 
-### Phase 2 — Close the v2 reference-runtime gap (the big one)
-`lang/runtime/v2.js` gains v1's whole *portable* surface, in v2 naming, with
-v1 names kept as aliases so v1 code keeps working:
-- strings (~30), lists (~40), tomes (~12), math + bitwise + bases (~50),
-  time, functional, type predicates, JSON, base64, random.
-- Syntax: `try`/`catch`, `break`, `continue`, dict literals + iteration,
-  lambdas, ternary, `match`, classes with inheritance, `summon`.
+### Phase 2 — Grow the self-hosted language, not the JS runtime
 
-### Phase 3 — Host-backed areas without reimplementation
-Graphics, UI, web builder, kernel, matrix, FFI and hardware are already
-environment-driven modules in `src/lang/`. Instead of rewriting them, v2 gets
-a thin adapter that registers the *same* modules into the v2 environment, so
-both versions share one implementation and can never drift.
+Every v2 feature must be self-hosted: written in sdev, compiled by the
+sdev-written compiler, executed on the seed VM. `lang/runtime/v2.js` is
+demoted to a **conformance oracle** — it keeps running only so the parity
+agent can diff its answers against the self-hosted result. It receives no new
+features, and the IDE stops falling back to it once a feature is self-hosted.
 
-### Phase 4 — Compiled tracks
-Registry-driven, in the existing milestone order: 5q (floats + host I/O in the
-self-hosted codegen), then lists/builtins in the native x86-64 backend. Every
-step is gated by the parity report rather than by hand-written checklists.
+The parity surface needs language power the self-hosted compiler does not have
+yet, so it is built first, in `lexer.sdev` / `parser.sdev` / `codegen.sdev`
+plus new seed VM opcodes, each step preserving the byte-identical fixed point:
 
-### Phase 5 — Documentation
-The agent regenerates the parity matrix into `SDEV_DOCUMENTATION.md`,
-`SDEV_V2_DOCUMENTATION.md`, `SDEV_FULL_DOCUMENTATION.md` and a new
-`SDEV_PARITY_DOCUMENTATION.md` (registered on `/docs`), plus a per-feature
-reference table generated from the registry so docs can no longer fall behind
-the implementation.
+| Step | Adds |
+|---|---|
+| 5q | float literals + float typing, `read_file` / `write_file` / `http_get` |
+| 5r | `and` / `or` / `not`, unary minus, `true` / `false` / `nothing` |
+| 5s | `break`, `continue`, `for each … in`, `else if` |
+| 5t | tomes (dict literal, `k: v` access, key iteration) — new heap shape + opcodes |
+| 5u | closures and lambdas (`->`) — upvalue capture, first-class functions |
+| 5v | `try` / `catch` + `throw` — VM unwind opcodes |
+| 5w | classes: `essence` / `extend` / `new` / `self` / `super` — vtable on the heap |
+| 5x | varargs and default parameters, `|>` pipeline, ternary, `match` |
+
+### Phase 3 — The stdlib itself, in sdev
+
+With the language capable, v1's portable surface is written **in sdev** under
+`lang/stdlib/v2/`, one module per area, compiled through the self-hosted
+compiler and shipped as bytecode artifacts the way the driver already is:
+
+```text
+lang/stdlib/v2/  text.sdev  list.sdev  tome.sdev  math.sdev  bits.sdev
+                 time.sdev  func.sdev  json.sdev  types.sdev  random.sdev
+```
+
+No JavaScript implementations, no aliasing shims in the host — v1 names are
+provided as sdev-level aliases inside these modules.
+
+### Phase 4 — Host boundary for the things sdev cannot do alone
+
+Canvas pixels, DOM, sockets and devices live outside the VM by nature. Rather
+than reimplementing them in JS per version, the VM gets **one** generic
+`SYSCALL` opcode (id + argument list) and a small documented syscall table.
+Graphics, UI, web, kernel, matrix, FFI and hardware then become sdev libraries
+in `lang/stdlib/v2/` that call syscalls — the logic is self-hosted, only the
+raw effect crosses the boundary.
+
+### Phase 5 — Native backend and documentation
+
+The x86-64 backend is brought up to the same registry level (lists, strings,
+builtins, floats) so a self-hosted program behaves identically compiled or
+interpreted. The agent then regenerates the parity matrix into
+`SDEV_DOCUMENTATION.md`, `SDEV_V2_DOCUMENTATION.md`,
+`SDEV_FULL_DOCUMENTATION.md` and a new `SDEV_PARITY_DOCUMENTATION.md`
+(registered on `/docs`), including a per-feature table generated from the
+registry.
 
 ## Technical notes
 
 - The registry is data, not code: adding a builtin means one JSON entry plus
-  the implementation; the agent proves it landed on every required track.
-- The agent runs on the v1 interpreter through the existing sdev runner, the
-  same way `lang/stdlib/ml/*.sdev` already does.
-- Alias policy: v1 names never break; v2 names are the documented ones.
+  the sdev implementation; the agent proves it landed on every required track.
+- The agent runs on sdev. It targets the self-hosted toolchain and uses the JS
+  runtime only as the differential oracle it compares against.
+- Self-hosting invariant: after every step the compiler must still compile
+  itself byte-identically, so each language addition is proved by the existing
+  fixed-point gate before the stdlib depends on it.
+- Seed VM memory (2 MiB, 32-bit cells) grows as tomes, closures and exceptions
+  land; heap layout changes are documented in `SDEV_INTERNALS.md`.
 - Existing gates (`test-self-toolchain`, `test-shim-fixed-point`,
   `test-driver-artifact`, `test-wasm-runtime`, `test-native`, `test-ml-stdlib`)
   must stay green throughout; `test-parity` joins them.
 
 ## Scale
 
-Phases 0–2 are the bulk of the user-visible parity and land first. Phases 3–5
-follow in the same working style as the previous milestones.
+This is a long series of milestones, not one change. Phases 0–1 land first and
+make the remaining gap measurable; Phase 2 then proceeds one language step at
+a time, each one shippable and each one keeping the fixed point intact.
+
