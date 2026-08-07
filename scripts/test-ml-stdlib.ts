@@ -197,5 +197,70 @@ speak(str(dev.ok))`,
     : `expected a boolean availability flag, got ${out[0]}`)
 );
 
+// 12. Cross-entropy gradient matches the analytic softmax−onehot rule
+run(
+  'autograd: softmax cross-entropy gradient',
+  `link "autograd.sdev"
+tape_reset()
+forge logits be tensor_grad([0.0, 0.0], [1, 2])
+forge loss be d_softmax_ce(logits, [0.0])
+backward(loss)
+speak(str(loss.data[0]) + "|" + str(logits.grad[0]) + "|" + str(logits.grad[1]))`,
+  (out) => {
+    const [loss, g0, g1] = String(out[0] ?? '').split('|').map(Number);
+    if (!near(loss, Math.log(2), 1e-6)) return `expected ln2 loss, got ${loss}`;
+    if (!near(g0, -0.5, 1e-6) || !near(g1, 0.5, 1e-6)) return `bad grads ${g0}, ${g1}`;
+    return null;
+  }
+);
+
+// 13. Full LM training loop must reduce loss on a repeating pattern
+run(
+  'train: lm_fit lowers loss',
+  `link "train.sdev"
+forge v be char_vocab("abab")
+forge ids be encode(v, "ababababab")
+forge m be gpt(v.size, 4, 8, 1)
+forge before be lm_loss(m, ids, 3)
+forge r be lm_fit(m, ids, 3, 6, 0.05)
+speak(str(before) + "|" + str(r.final))`,
+  (out) => {
+    const [before, after] = String(out[0] ?? '').split('|').map(Number);
+    if (!Number.isFinite(before) || !Number.isFinite(after)) return 'non-finite loss';
+    return after < before ? null : `loss did not improve: ${before} -> ${after}`;
+  }
+);
+
+// 14. Sampling honours top-k filtering
+run(
+  'train: top-k sampling stays inside the allowed set',
+  `link "train.sdev"
+forge logits be tensor([0.0, 0.0, 9.0, 0.0], [4])
+forge hits be 0
+forge i be 0
+cycle i < 20 ::
+    either sample_topk(logits, 1.0, 1) equals 2 :: be hits be hits + 1 ;;
+    be i be i + 1
+;;
+speak(str(hits))`,
+  (out) => (Number(out[0]) === 20 ? null : `top-1 leaked: ${out[0]}/20`)
+);
+
+// 15. Checkpoints round-trip weights through the file system
+run(
+  'train: checkpoint save + load round-trip',
+  `link "train.sdev"
+forge m be gpt(5, 4, 8, 1)
+save_checkpoint("/tmp/sdev-ckpt.txt", m)
+forge original be m.params[0].data[0]
+set m.params[0].data[0] to 123.5
+load_checkpoint("/tmp/sdev-ckpt.txt", m)
+speak(str(original) + "|" + str(m.params[0].data[0]))`,
+  (out) => {
+    const [a, b] = String(out[0] ?? '').split('|').map(Number);
+    return near(a, b, 1e-9) ? null : `checkpoint mismatch: ${a} vs ${b}`;
+  }
+);
+
 console.log(failures === 0 ? '\nAll ML stdlib checks passed.' : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);
