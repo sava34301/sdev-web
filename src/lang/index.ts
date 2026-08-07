@@ -3,10 +3,6 @@ import { Parser } from './parser';
 import { Interpreter } from './interpreter';
 import { SdevError } from './errors';
 import { stripBoardBlocks } from './hardware/strip';
-// v2 runtime — pure JavaScript, zero TypeScript. See lang/README.md.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore — plain JS module, ambient types in src/lang-bridge/v2.d.ts
-import { run as runV2 } from '../../lang/runtime/v2.js';
 
 export interface ExecutionResult {
   success: boolean;
@@ -30,23 +26,53 @@ function pickRuntime(source: string): 'v1' | 'v2' {
   }
   if (typeof localStorage !== 'undefined') {
     const pref = localStorage.getItem('sdev_runtime');
-    if (pref === 'v2' || pref === 'v1') return pref;
+    if (pref === 'v2' || pref === 'v2-wasm') return 'v2';
+    if (pref === 'v1') return 'v1';
   }
   return 'v1';
+}
+
+/**
+ * Run sdev v2 source. v2 has ONE implementation: the sdev-written compiler
+ * (lang/compiler/*.sdev) executing on the seed VM. No JavaScript interpreter.
+ */
+export async function executeV2(source: string): Promise<ExecutionResult> {
+  const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
+  try {
+    const r = await runWasm(source);
+    return { success: r.success, output: r.output, error: r.error ?? undefined, detectedLanguage: null };
+  } catch (e) {
+    const notYet = e instanceof WasmSubsetError;
+    return {
+      success: false,
+      output: [],
+      error: notYet
+        ? `the self-hosted sdev compiler cannot compile this yet: ${(e as Error).message}`
+        : e instanceof Error ? e.message : String(e),
+      detectedLanguage: null,
+    };
+  }
+}
+
+/** Async entry point: v2 goes to the self-hosted toolchain, v1 to the interpreter. */
+export async function executeAsync(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
+  if (pickRuntime(source) === 'v2') return executeV2(source);
+  return execute(source, options);
 }
 
 export function execute(source: string, options: ExecuteOptions = {}): ExecutionResult {
   const output: string[] = [];
 
   if (pickRuntime(source) === 'v2') {
-    const result = runV2(source, { onOutput: (line: string) => output.push(line) });
     return {
-      success: result.success,
-      output: result.output.length ? result.output : output,
-      error: result.error ?? undefined,
+      success: false,
+      output,
+      error: 'sdev v2 runs only on the self-hosted compiler (async). Use executeAsync().',
       detectedLanguage: null,
     };
   }
+
+
 
   try {
     const cleaned = stripBoardBlocks(source);
