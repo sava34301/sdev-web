@@ -1,22 +1,27 @@
-// Self-hosted SDEV compiler shim — Milestone 5l.
+// Self-hosted SDEV compiler shim — Milestone 5p.
 //
 // Exposes a `compile(source)` function with the same shape as the JS
 // bootstrap (`lang/bootstrap/compile.mjs`), but drives the SDEV-authored
 // codegen (`lang/compiler/codegen.sdev`) through the seed WASM VM.
 //
-// One-time init: the seed VM + codegen driver program are compiled with
-// the JS bootstrap and cached. Subsequent `compile(src)` calls only pay
-// for a fresh WASM instantiation per source. When the self-hosted
-// pipeline can compile itself in-tree (Milestone 5m — "delete the
-// oracle"), this shim will drop the bootstrap dependency entirely.
+// Milestone 5p removed the bootstrap from this path entirely. The driver
+// program (codegen.sdev + inline lexer + drive block) no longer embeds the
+// user source as a literal — it reads it with `read_file("<stdin>")`, which
+// the host answers from memory. That makes the driver bytecode
+// source-independent, so it is compiled ONCE by
+// `scripts/build-driver.mjs` and checked in as `driver-artifact.mjs`.
+// `scripts/test-driver-artifact.mjs` re-derives it from the bootstrap and
+// fails if the checked-in bytes drift.
 //
 // The seed VM stores the string pool at memory offset 0 (below
 // `code_base()`), so pool size is bounded by the seed's layout (0x2000).
 
-import { readFile } from 'node:fs/promises';
-import { compile as bootstrapCompile } from '../bootstrap/compile.mjs';
+import { DRIVER_BYTECODE_B64, DRIVER_POOL_B64 } from './driver-artifact.mjs';
 
 const decoder = new TextDecoder();
+const encoder = new TextEncoder();
+
+
 
 // Inline lexer stub — same one the self-codegen test uses. Emits into
 // tk_kind/tk_num/tk_txt/tk_count globals that codegen.sdev consumes.
