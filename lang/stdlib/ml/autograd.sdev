@@ -59,6 +59,45 @@ conjure d_mse(pred, target) ::
     yield o
 ;;
 
+// Row-wise softmax + cross-entropy over next-token targets.
+// logits: [rows, vocab]; targets: list of `rows` class ids.
+// Returns the mean negative log-likelihood as a 1-element tensor.
+conjure d_softmax_ce(logits, targets) ::
+    forge rows be logits.shape[0]
+    forge vocab be logits.shape[1]
+    forge probs be gather()
+    forge total be 0.0
+    forge r be 0
+    cycle r < rows ::
+        forge base be r * vocab
+        forge mx be logits.data[base]
+        forge c be 1
+        cycle c < vocab ::
+            either logits.data[base + c] > mx :: be mx be logits.data[base + c] ;;
+            be c be c + 1
+        ;;
+        forge s be 0.0
+        be c be 0
+        cycle c < vocab ::
+            forge e be exp(logits.data[base + c] - mx)
+            pluck(probs, e)
+            be s be s + e
+            be c be c + 1
+        ;;
+        be c be 0
+        cycle c < vocab ::
+            set probs[base + c] to probs[base + c] / s
+            be c be c + 1
+        ;;
+        forge tgt be ground(targets[r])
+        be total be total - ln(probs[base + tgt] + 0.000000001)
+        be r be r + 1
+    ;;
+    forge o be tensor_grad([total / rows], [1])
+    record("sce", [logits, { data: probs, targets: targets }], o)
+    yield o
+;;
+
 // ---------- backward pass ----------
 conjure backward(out) ::
     // seed the output gradient to 1
@@ -71,9 +110,32 @@ conjure backward(out) ::
         either e.kind equals "matmul" :: bw_matmul(e) ;;
         either e.kind equals "relu" :: bw_relu(e) ;;
         either e.kind equals "mse" :: bw_mse(e) ;;
+        either e.kind equals "sce" :: bw_sce(e) ;;
         be k be k - 1
     ;;
 ;;
+
+conjure bw_sce(e) ::
+    forge logits be e.inputs[0]
+    forge cache be e.inputs[1]
+    forge rows be logits.shape[0]
+    forge vocab be logits.shape[1]
+    forge scale be e.out.grad[0] / rows
+    forge r be 0
+    cycle r < rows ::
+        forge base be r * vocab
+        forge tgt be ground(cache.targets[r])
+        forge c be 0
+        cycle c < vocab ::
+            forge p be cache.data[base + c]
+            either c equals tgt :: be p be p - 1.0 ;;
+            set logits.grad[base + c] to logits.grad[base + c] + scale * p
+            be c be c + 1
+        ;;
+        be r be r + 1
+    ;;
+;;
+
 
 conjure bw_add(e) ::
     forge a be e.inputs[0]
