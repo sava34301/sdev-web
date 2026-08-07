@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, Send, X, Bot, User, Loader2, Copy, Check, Sparkles, FlaskConical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { execute } from '@/lang';
+import { execute, executeAsync } from '@/lang';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -99,7 +99,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     const blocks = extractCodeBlocks(content);
     const errors: { code: string; error: string }[] = [];
     for (const code of blocks) {
-      const result = execute(code);
+      const result = await executeAsync(code);
       if (!result.success && result.error) {
         errors.push({ code, error: result.error });
       }
