@@ -672,14 +672,26 @@ to parse_add with pos
         emit_byte(145)
         set expr_type[0] to 1
       else
-        emit_byte(16)
-        set expr_type[0] to 0
+        if both_float(lk, rk)
+          emit_byte(161)
+          set expr_type[0] to 2
+        else
+          emit_byte(16)
+          set expr_type[0] to 0
+        end
       end
     else
       if is_op_c(pos, 45)
+        set lk to expr_type[0]
         set pos to parse_mul(pos + 1)
-        emit_byte(17)
-        set expr_type[0] to 0
+        set rk to expr_type[0]
+        if both_float(lk, rk)
+          emit_byte(162)
+          set expr_type[0] to 2
+        else
+          emit_byte(17)
+          set expr_type[0] to 0
+        end
       else
         set going to 0
       end
@@ -690,10 +702,12 @@ end
 
 # Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=`
 # are pre-folded by the driver's lexer into sentinel punctuation codes
-# 300 / 301. Every comparison yields an int (0 / 1).
+# 300 / 301. Every comparison yields an int (0 / 1). When both operands are
+# floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes.
 to parse_cmp with pos
   set pos to parse_add(pos)
   if is_ident_word(pos, "is")
+    set lk to expr_type[0]
     set pos to pos + 1
     set neg to 0
     if is_ident_word(pos, "not")
@@ -701,26 +715,44 @@ to parse_cmp with pos
       set pos to pos + 1
     end
     set pos to parse_add(pos)
+    set rk to expr_type[0]
     if neg
       emit_byte(33)
     else
-      emit_byte(32)
+      if both_float(lk, rk)
+        emit_byte(167)
+      else
+        emit_byte(32)
+      end
     end
     set expr_type[0] to 0
     return pos
   end
   if is_op_c(pos, 60)
+    set lk to expr_type[0]
     set pos to parse_add(pos + 1)
-    emit_byte(34)
+    set rk to expr_type[0]
+    if both_float(lk, rk)
+      emit_byte(165)
+    else
+      emit_byte(34)
+    end
     set expr_type[0] to 0
     return pos
   end
   if is_op_c(pos, 62)
+    set lk to expr_type[0]
     set pos to parse_add(pos + 1)
-    emit_byte(35)
+    set rk to expr_type[0]
+    if both_float(lk, rk)
+      emit_byte(166)
+    else
+      emit_byte(35)
+    end
     set expr_type[0] to 0
     return pos
   end
+
   if is_op_c(pos, 300)
     set pos to parse_add(pos + 1)
     emit_byte(36)
