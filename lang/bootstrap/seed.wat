@@ -61,7 +61,10 @@
 ;;   0xB0 READFILE                  pop path handle; push content handle (0 on error)
 ;;   0xB1 WRITEFILE                 pop data, pop path; push i32 status (0 ok, -1 err)
 ;;   0xB2 HTTPGET                   pop url handle; push response body handle (0 err)
+;;   ; --- Milestone 5q: float bit inspection (self-hosted codegen needs it) ---
+;;   0xB4 FBYTE                     pop idx (0..7), pop float; push IEEE-754 LE byte
 ;;   0xFF HALT
+
 ;;
 ;; The host provides these imports:
 ;;   env.host_say_i32(i32)
@@ -736,8 +739,28 @@
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
+        ;; --- FBYTE (0xB4) --- pop idx, pop float addr, push IEEE-754 LE byte
+        ;; Lets the self-hosted codegen materialise PUSH_F64 operands without
+        ;; needing bitwise integer ops in the source language.
+        (if (i32.eq (local.get $op) (i32.const 0xB4))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (i32.and
+                (i32.wrap_i64
+                  (i64.shr_u
+                    (i64.reinterpret_f64 (f64.load (local.get $a)))
+                    (i64.extend_i32_u (i32.mul (local.get $b) (i32.const 8)))))
+                (i32.const 0xff)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
         ;; unknown opcode → halt
         (br $exit)
+
       )
     )
     (local.get $sp)

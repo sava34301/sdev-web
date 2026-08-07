@@ -35,7 +35,10 @@ const OP = {
   FNEG: 0xAA, FABS: 0xAB, FSQRT: 0xAC, SAY_F64: 0xAD, FMATH: 0xAE,
   // Milestone 7 — host-mediated file I/O + networking
   READFILE: 0xB0, WRITEFILE: 0xB1, HTTPGET: 0xB2,
+  // Milestone 5q — float bit inspection (used by the self-hosted codegen)
+  FBYTE: 0xB4,
   HALT: 0xFF,
+
 };
 
 // Transcendental math op codes for the FMATH opcode.
@@ -70,7 +73,12 @@ const BUILTINS = {
   read_file:  { arity: 1, ret: 'str', emit: (em) => em.emit(OP.READFILE)  },
   write_file: { arity: 2, ret: 'int', emit: (em) => em.emit(OP.WRITEFILE) },
   http_get:   { arity: 1, ret: 'str', emit: (em) => em.emit(OP.HTTPGET)   },
+  // --- Milestone 5q: float bit inspection ---
+  // fbyte(x, i) → the i-th little-endian IEEE-754 byte of the double x.
+  // The self-hosted codegen uses it to emit PUSH_F64 operands.
+  fbyte:      { arity: 2, ret: 'int', emit: (em) => em.emit(OP.FBYTE)     },
 };
+
 
 class Emitter {
   constructor() {
