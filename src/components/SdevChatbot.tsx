@@ -95,7 +95,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     return assistantContent;
   }, []);
 
-  const testCodeBlocks = (content: string): { code: string; error: string }[] => {
+  const testCodeBlocks = async (content: string): Promise<{ code: string; error: string }[]> => {
     const blocks = extractCodeBlocks(content);
     const errors: { code: string; error: string }[] = [];
     for (const code of blocks) {
