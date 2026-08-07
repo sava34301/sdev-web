@@ -468,26 +468,36 @@ in milestone order.)
 - `src/lang-bridge/wasm-runtime.ts` now compiles through the self-hosted
   shim (`setSeedLoader` lets the browser hand it a `fetch`-based loader).
   `src/lang-bridge/bootstrap.d.ts` is deleted; `compile-self.d.ts` replaces it.
-- `scripts/test-wasm-runtime.mjs` runs on the shim too. Cases tagged
-  `compiler: 'bootstrap'` (floats + host I/O) are the honest remainder —
-  see 5q.
+- `scripts/test-wasm-runtime.mjs` runs on the shim too.
 - New gate: `node scripts/test-driver-artifact.mjs` re-derives the driver
   from the bootstrap oracle and fails if the checked-in bytes drift, then
   compiles four programs through the bootstrap-free shim.
 - The JS bootstrap now exists **only** as a build/test-time oracle
-  (`build-driver.mjs`, `test-self-codegen.mjs`, `test-self-toolchain.mjs`,
-  and the float/I/O cases in `test-wasm-runtime.mjs`).
+  (`build-driver.mjs`, `test-self-codegen.mjs`, `test-self-toolchain.mjs`).
 
-**Milestone 5q (floats + host I/O in the self-hosted codegen) — next:**
-- `codegen.sdev` and the inline lexer only know integers, strings, and lists,
-  so `PUSH_F64`, `FADD…FMATH`, `READFILE`, `WRITEFILE`, and `HTTPGET` are
-  still emitted only by the bootstrap.
-- The browser bridge detects those constructs (`NOT_YET_SELF_HOSTED`) and
-  falls back to the JS reference runtime rather than emitting a silently
-  wrong program.
-- 5q adds float literal lexing, the `float` type in the codegen's
-  type-tracking, and the three I/O builtins — after which the bootstrap can
-  be deleted outright.
+**Milestone 5q (floats + host I/O in the self-hosted codegen) — shipped:**
+- **New seed opcode** `0xB4 FBYTE`: pops an index `0..7` and a boxed float,
+  pushes that little-endian IEEE-754 byte. This is the one primitive the
+  self-hosted codegen needed to materialise a `PUSH_F64` operand without
+  bitwise integer ops in the source language. Exposed to programs as the
+  builtin `fbyte(x, i)` (bootstrap and self-hosted alike).
+- **Lexer**: the inline driver lexer now recognises `123.456`, emitting
+  token kind `6` with the mantissa in `tk_num` and the fractional-digit
+  count in the new `tk_num2` table. The value is reconstructed as
+  `i2f(mantissa) / i2f(10^scale)` — a single correctly-rounded IEEE
+  division, so it lands on exactly the double the JS oracle parses.
+- **Codegen**: `expr_type` grew a third state (`0` int, `1` str, `2` float).
+  `both_float()` gates `FADD/FSUB/FMUL/FDIV` and `FEQ/FLT/FGT`; `say` picks
+  `SAY_F64`; mixed int/float still requires an explicit `i2f`, matching the
+  oracle. `emit_call` learned `i2f`, `f2i`, `fneg`, `fabs`, `fsqrt`,
+  `fsin/fcos/ftan/fexp/flog/fpow`, `fbyte`, `read_file`, `write_file`,
+  and `http_get`.
+- The browser bridge's `NOT_YET_SELF_HOSTED` carve-out is **deleted**: every
+  v2 program in the IDE, floats and host I/O included, compiles through the
+  self-hosted codegen running on the seed VM.
+- All float and I/O cases in `test-wasm-runtime.mjs` now run self-hosted, and
+  float programs compile **byte-identically** to the bootstrap oracle.
+
 
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
