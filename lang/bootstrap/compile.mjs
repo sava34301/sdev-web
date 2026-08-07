@@ -35,7 +35,10 @@ const OP = {
   FNEG: 0xAA, FABS: 0xAB, FSQRT: 0xAC, SAY_F64: 0xAD, FMATH: 0xAE,
   // Milestone 7 — host-mediated file I/O + networking
   READFILE: 0xB0, WRITEFILE: 0xB1, HTTPGET: 0xB2,
+  // Milestone 5q — float bit inspection (used by the self-hosted codegen)
+  FBYTE: 0xB4,
   HALT: 0xFF,
+
 };
 
 // Transcendental math op codes for the FMATH opcode.
