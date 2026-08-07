@@ -567,16 +567,26 @@ dist/
 
 ## Verification
 
-Before every launch:
+The gates that run today:
 
-1. `scripts/test-v2-goldens.mjs` — every example in `SDEV_V2_DOCUMENTATION.md`
-   runs; stdout is diffed against a recorded transcript.
-2. `scripts/test-v1-parity.mjs` — every legacy `.sdev` file runs under refine
-   mode; stdout must match the TS interpreter byte-for-byte.
-3. `scripts/test-hardware.mjs` — every `board` block transpiles; output is
-   diffed against a checked-in `.ino` snapshot.
-4. Playwright smoke — open `/ide`, load `blink.sdev`, click Run, verify
-   the canvas and output panels render.
+1. `node scripts/test-self-toolchain.mjs` — `lexer.sdev`, `parser.sdev`, and
+   `codegen.sdev` must all round-trip **byte-identical** through the
+   self-hosted compiler (currently bc=746/380/5730).
+2. `node scripts/test-shim-fixed-point.mjs` — the compile shim reaches a
+   fixed point against the JS bootstrap oracle.
+3. `node scripts/test-wasm-runtime.mjs` — seed VM opcode suite (ints, call
+   frames, heap/lists, strings, floats + transcendentals).
+4. `node scripts/test-native.mjs` — Track B x86-64 emission and linking.
+5. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd,
+   tokenizers, transformer shapes, LM training, sampling, checkpoints, and
+   accelerator fallback.
+6. `bun run scripts/test-translator.ts` — 26-language keyword translation.
+
+Planned additions: `test-v2-goldens.mjs` (docs examples diffed against a
+recorded transcript), `test-v1-parity.mjs`, `test-hardware.mjs` (`board`
+blocks vs. checked-in `.ino` snapshots), and a Playwright smoke test that
+opens `/ide`, runs `blink.sdev`, and verifies the canvas + output panels.
+
 
 ## Why not just keep the TypeScript interpreter?
 
