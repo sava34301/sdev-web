@@ -73,7 +73,12 @@ const BUILTINS = {
   read_file:  { arity: 1, ret: 'str', emit: (em) => em.emit(OP.READFILE)  },
   write_file: { arity: 2, ret: 'int', emit: (em) => em.emit(OP.WRITEFILE) },
   http_get:   { arity: 1, ret: 'str', emit: (em) => em.emit(OP.HTTPGET)   },
+  // --- Milestone 5q: float bit inspection ---
+  // fbyte(x, i) → the i-th little-endian IEEE-754 byte of the double x.
+  // The self-hosted codegen uses it to emit PUSH_F64 operands.
+  fbyte:      { arity: 2, ret: 'int', emit: (em) => em.emit(OP.FBYTE)     },
 };
+
 
 class Emitter {
   constructor() {
