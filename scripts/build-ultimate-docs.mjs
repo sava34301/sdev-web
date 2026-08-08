@@ -226,6 +226,8 @@ const BUILTIN_DOCS = {
   'web.ts:title': 'Sets the document title in the generated page head.',
 };
 
+/** Placeholder names used when rendering an inferred argument list. */
+const ARGNAMES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 
 /**
