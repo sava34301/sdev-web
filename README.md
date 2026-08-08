@@ -7853,4 +7853,3 @@ The generator reads every guide under `public/` plus the READMEs, then derives
 the reference tables straight from `src/lang/`, `lang/`, and `scripts/`. If a
 builtin is added or an opcode changes, re-running the generator is the only
 step required to bring this document back in sync.
-
