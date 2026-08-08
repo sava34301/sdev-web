@@ -8009,36 +8009,36 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_digit` | `c` | Part of the character-class helpers section of this module. | `0` | 35 |
-| `is_alpha` | `c` | Part of the character-class helpers section of this module. | `1` | 45 |
-| `is_alnum` | `c` | Part of the character-class helpers section of this module. | `1` | 62 |
-| `slice` | `src i j` | Part of the character-class helpers section of this module. | `out` | 69 |
+| `is_digit` | `c` | True when the byte at the given index is an ASCII digit 0-9. | `0` | 35 |
+| `is_alpha` | `c` | True when the byte is an ASCII letter or underscore — the start of an identifier. | `1` | 45 |
+| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 62 |
+| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 69 |
 | `both_float` | `a b` | Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float arithmetic only kicks in when BOTH operands are floats (mixed arithmetic requires an explicit i2f), matching the bootstrap oracle exactly. | `1` | 81 |
-| `str_eq` | `a b` | Part of the character-class helpers section of this module. | `0` | 90 |
-| `emit_byte` | `b` | Part of the byte emitter (writes into the global `bc` list, count at bc[0]) section of this module. | `0` | 113 |
-| `intern_str` | `s` | Part of the string pool (Milestone 5k) section of this module. | `0` | 130 |
-| `emit_i32` | `v` | Part of the string pool (Milestone 5k) section of this module. | `0` | 162 |
+| `str_eq` | `a b` | Byte-exact string comparison, used instead of host equality so both tracks agree. | `0` | 90 |
+| `emit_byte` | `b` | Appends one byte to the bytecode buffer being built. | `0` | 113 |
+| `intern_str` | `s` | Interns a string literal into the pool and returns its handle, reusing duplicates. | `0` | 130 |
+| `emit_i32` | `v` | Appends a little-endian 32-bit operand to the bytecode buffer. | `0` | 162 |
 | `placeholder16` | _none_ | Reserve a two-byte i16 placeholder and return the byte offset at which it starts (0-indexed, list cell = pos + 1). | `p` | 175 |
 | `patch_i16` | `pos target` | Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte offset `target`. Offsets are relative to the end of the instruction (pos + 2). Negative offsets get two's-complement 16-bit encoding. | `0` | 185 |
-| `intern_name` | `name` | Part of the symbol tables section of this module. | `k - 1` | 208 |
-| `find_local` | `name` | Part of the symbol tables section of this module. | `k - 1` | 222 |
-| `add_local` | `name` | Part of the symbol tables section of this module. | `loc_names[0] - 1` | 234 |
-| `find_fn` | `name` | Part of the symbol tables section of this module. | `k - 1` | 240 |
-| `emit_load_ident` | `name` | Part of the variable load / store dispatch section of this module. | `0` | 259 |
-| `emit_store_ident` | `name` | Part of the variable load / store dispatch section of this module. | `0` | 276 |
-| `emit_call` | `name nargs` | Part of the call emission (built-ins first, then user functions) section of this module. | `0` | 303 |
+| `intern_name` | `name` | Interns an identifier and returns its global slot index, allocating on first sight. | `k - 1` | 208 |
+| `find_local` | `name` | Looks up a local variable in the current frame, returning its slot or -1. | `k - 1` | 222 |
+| `add_local` | `name` | Allocates a new local slot in the current function frame. | `loc_names[0] - 1` | 234 |
+| `find_fn` | `name` | Looks up a declared function by name, returning its index or -1. | `k - 1` | 240 |
+| `emit_load_ident` | `name` | Emits `LOAD_LOC` for a local or `LOAD` for a global, whichever the name resolves to. | `0` | 259 |
+| `emit_store_ident` | `name` | Emits `STORE_LOC` or `STORE` for an assignment target. | `0` | 276 |
+| `emit_call` | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call. | `0` | 303 |
 | `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 454 |
-| `is_op_c` | `pos c` | Part of the token classifiers section of this module. | `0` | 472 |
-| `is_ident_word` | `pos w` | Part of the token classifiers section of this module. | `0` | 484 |
-| `parse_atom` | `pos` | Part of the recursive-descent parser section of this module. | `pos + 1` | 501 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 472 |
+| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 484 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 501 |
 | `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 605 |
-| `parse_mul` | `pos` | Part of the recursive-descent parser section of this module. | `pos` | 623 |
-| `parse_add` | `pos` | Part of the recursive-descent parser section of this module. | `pos` | 669 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 623 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 669 |
 | `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 720 |
-| `skip_nl` | `pos` | Computes and yields `pos`. | `pos` | 784 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 784 |
 | `parse_block` | `pos` | Parse a sequence of statements until `else`, `end`, or EOF. | `pos` | 801 |
 | `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 831 |
-| `parse_stmt` | `pos` | Computes and yields `pos`. | `pos` | 853 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 853 |
 
 #### `lang/compiler/lexer.sdev`
 
@@ -8048,11 +8048,11 @@ SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hos
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_digit` | `c` | Computes and yields `0`. | `0` | 22 |
-| `is_alpha` | `c` | Computes and yields `1`. | `1` | 32 |
-| `is_alnum` | `c` | Computes and yields `1`. | `1` | 49 |
-| `slice` | `src i j` | Computes and yields `out`. | `out` | 56 |
-| `lex` | `src` | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 65 |
+| `is_digit` | `c` | True when the byte at the given index is an ASCII digit 0-9. | `0` | 22 |
+| `is_alpha` | `c` | True when the byte is an ASCII letter or underscore — the start of an identifier. | `1` | 32 |
+| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 49 |
+| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 56 |
+| `lex` | `src` | Turns source text into the token stream: kinds, lexemes, and line numbers. | _no explicit yield_ | 65 |
 
 #### `lang/compiler/parser.sdev`
 
@@ -8062,10 +8062,10 @@ SDEV expression parser, written in SDEV. This is the second slice of Milestone 5
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_op_c` | `pos c` | Part of the helpers section of this module. | `0` | 22 |
-| `parse_atom` | `pos` | Part of the recursive-descent core section of this module. | `pos + 1` | 37 |
-| `parse_mul` | `pos` | Part of the recursive-descent core section of this module. | `pos` | 54 |
-| `parse_add` | `pos` | Part of the recursive-descent core section of this module. | `pos` | 73 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 22 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 37 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 54 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 73 |
 
 #### `lang/parity/agent.sdev`
 
@@ -8075,18 +8075,18 @@ sdev Parity Agent — written in sdev, runs on sdev Phase 0/1 of the v1 <-> v2 p
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `unquote` | `s` | Part of the tiny helpers section of this module. | `t` | 21 |
+| `unquote` | `s` | Strips the surrounding quotes from a JSON string value. | `t` | 21 |
 | `field_key` | `line` | Split a `"key": "value"` line. Values may contain colons, so only the first colon separates; the rest is re-joined. | `unquote(parts[0])` | 38 |
-| `field_value` | `line` | Part of the tiny helpers section of this module. | `""` | 43 |
-| `load_registry` | `path` | Part of the registry loading section of this module. | `{ tracks: tracks, features: features }` | 59 |
-| `load_track_source` | `spec` | Part of the track sources section of this module. | `out` | 99 |
+| `field_value` | `line` | Reads one field out of a JSON object, without a full JSON parser. | `""` | 43 |
+| `load_registry` | `path` | Reads `lang/parity/features.json` into memory as the canonical feature list. | `{ tracks: tracks, features: features }` | 59 |
+| `load_track_source` | `spec` | Loads the implementation source for one track so it can be probed for a feature. | `out` | 99 |
 | `probe` | `src, name` | A feature is present on a track when its track-local name appears as a quoted token in that track's source — the shape every implementation uses for keyword tables and builtin dispatch. | `nope` | 113 |
-| `mark` | `level, present` | Part of the reporting section of this module. | `"n/a"` | 128 |
-| `audit` | `registry` | Part of the reporting section of this module. | `{ tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }` | 138 |
-| `matrix_markdown` | `report` | Part of the markdown matrix section of this module. | `out` | 183 |
-| `report_json` | `report` | Part of the report.json section of this module. | `out` | 219 |
-| `sync_doc` | `path, block` | Part of the documentation sync section of this module. | `0` | 266 |
-| `run_parity_agent` | `registry_path, doc_paths` | Part of the entry point section of this module. | `measure(report.must_missing)` | 283 |
+| `mark` | `level, present` | Records the support verdict for one feature on one track. | `"n/a"` | 128 |
+| `audit` | `registry` | Probes every feature against every track and builds the full verdict table. | `{ tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }` | 138 |
+| `matrix_markdown` | `report` | Renders the audit result as the markdown parity matrix. | `out` | 183 |
+| `report_json` | `report` | Serialises the audit result to `lang/parity/report.json`. | `out` | 219 |
+| `sync_doc` | `path, block` | Rewrites the parity matrix block inside the parity documentation in place. | `0` | 266 |
+| `run_parity_agent` | `registry_path, doc_paths` | Entry point: audit, then write both the JSON report and the documentation. | `measure(report.must_missing)` | 283 |
 
 #### `lang/stdlib/ffi.sdev`
 
@@ -8097,16 +8097,16 @@ sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `Library` | `path` | library handle wrapper | `{ ok: nope, path: path, handle: void, err: "cannot open " + path }` | 39 |
-| `lib_close` | `lib` | Part of the library handle wrapper section of this module. | `yep` | 47 |
+| `lib_close` | `lib` | Closes a loaded native library handle. | `yep` | 47 |
 | `bind` | `lib, name, ret_kind, arg_kinds` | function binding bind(lib, "matmul_f64", FFI_VOID, [FFI_PTR, FFI_PTR, FFI_PTR, FFI_I32, FFI_I32, FFI_I32]) | `{` | 55 |
-| `invoke` | `binding, argv` | Part of the function binding section of this module. | `ffi_call(binding.fn, binding.ret, binding.args, argv)` | 68 |
+| `invoke` | `binding, argv` | Calls a native symbol with marshalled arguments and returns the marshalled result. | `ffi_call(binding.fn, binding.ret, binding.args, argv)` | 68 |
 | `buf_f64` | `n` | raw buffers (for passing float arrays) | `{ addr: b, len: n, kind: FFI_F64 }` | 74 |
-| `buf_from_list` | `xs` | Part of the raw buffers (for passing float arrays) section of this module. | `b` | 79 |
-| `buf_to_list` | `b` | Part of the raw buffers (for passing float arrays) section of this module. | `out` | 90 |
+| `buf_from_list` | `xs` | Packs a list of numbers into a raw FFI byte buffer. | `b` | 79 |
+| `buf_to_list` | `b` | Unpacks a raw FFI byte buffer back into a list of numbers. | `out` | 90 |
 | `open_blas` | `path` | BLAS-style convenience wrappers Open an OpenBLAS-compatible library and bind the two calls the ML stdlib actually needs for accelerated matmul. | `{ lib: lib, dgemm: dgemm, daxpy: daxpy }` | 103 |
 | `blas_matmul` | `blas, a, b` | BLAS-accelerated matmul that plugs straight into ml/tensor.sdev. Falls back to the pure-sdev matmul when the binding is void. | `tensor(buf_to_list(bc), [m, n])` | 127 |
 | `open_cuda` | `cudart_path, cublas_path` | CUDA fast path Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training. | `{` | 145 |
-| `cuda_ok` | `cuda` | Part of the CUDA fast path section of this module. | `yep` | 167 |
+| `cuda_ok` | `cuda` | True when a CUDA runtime and device are reachable from this host. | `yep` | 167 |
 
 #### `lang/stdlib/ml/auto_evolve.sdev`
 
@@ -8116,15 +8116,15 @@ sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12) Wires the ML stack i
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_allowed` | `path` | Part of the source-tree map section of this module. | `nope` | 34 |
+| `is_allowed` | `path` | Guards the evolution loop: true only for paths the policy permits editing. | `nope` | 34 |
 | `make_proposal` | `path, old_body, new_body, reason` | proposal record | `{` | 44 |
-| `apply_proposal` | `p` | Part of the proposal record section of this module. | `ok` | 54 |
+| `apply_proposal` | `p` | Applies an approved proposal to the source tree and records it in the log. | `ok` | 54 |
 | `draft_from_demand` | `model, demand, target_path` | demand → proposal Given a ranked demand map from `mine_demand`, ask the model to draft a patch for the top topic. `model` is any sdev model exposing `generate(model, prompt, max_new)`. | `make_proposal(target_path, cur, patched,` | 65 |
-| `top_topic` | `counts` | Part of the demand → proposal section of this module. | `best_k` | 77 |
+| `top_topic` | `counts` | Picks the most-requested topic out of the harvested demand signals. | `best_k` | 77 |
 | `evolve_weights` | `model, teacher_url, teacher_key, prompts, epochs, lr` | fine-tune on live distillation Pulls prompt/answer pairs from a teacher endpoint and runs a short SGD pass so the local model tracks the frontier without leaving the sdev runtime. | `measure(pairs)` | 95 |
 | `evolve_tick` | `model, sources, teacher_url, teacher_key` | the loop One tick: mine demand → draft → review → apply → fine-tune. Returns a report tome so the caller can log or throttle. | `{` | 112 |
-| `pick_target` | `demand` | Part of the the loop section of this module. | `"lang/stdlib/ml/nn.sdev"` | 133 |
-| `prompt_pool` | `demand` | Part of the the loop section of this module. | `out` | 145 |
+| `pick_target` | `demand` | Chooses which file the next evolution step should modify. | `"lang/stdlib/ml/nn.sdev"` | 133 |
+| `prompt_pool` | `demand` | Builds the prompt set handed to the teacher model for the next round. | `out` | 145 |
 | `evolve_forever` | `model, sources, teacher_url, teacher_key, ticks` | long-running driver | _no explicit yield_ | 160 |
 
 #### `lang/stdlib/ml/autograd.sdev`
@@ -8135,26 +8135,26 @@ sdev ML Stdlib — Autograd Tape (Milestone 8b) Reverse-mode automatic different
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `tape_reset` | _none_ | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 13 |
-| `record` | `kind, inputs, out` | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 17 |
+| `tape_reset` | _none_ | Clears the global autograd tape before a new forward pass. | _no explicit yield_ | 13 |
+| `record` | `kind, inputs, out` | Appends one operation and its inputs to the autograd tape. | _no explicit yield_ | 17 |
 | `d_add` | `a, b` | differentiable ops | `o` | 22 |
-| `d_mul` | `a, b` | Part of the differentiable ops section of this module. | `o` | 28 |
-| `d_matmul` | `a, b` | Part of the differentiable ops section of this module. | `o` | 34 |
-| `d_relu` | `a` | Part of the differentiable ops section of this module. | `o` | 41 |
-| `d_mse` | `pred, target` | Part of the differentiable ops section of this module. | `o` | 48 |
+| `d_mul` | `a, b` | Local derivative rule for element-wise multiplication. | `o` | 28 |
+| `d_matmul` | `a, b` | Local derivative rule for matrix multiplication. | `o` | 34 |
+| `d_relu` | `a` | Local derivative rule for ReLU: pass gradient where the input was positive. | `o` | 41 |
+| `d_mse` | `pred, target` | Local derivative rule for mean squared error. | `o` | 48 |
 | `d_softmax_ce` | `logits, targets` | Row-wise softmax + cross-entropy over next-token targets. logits: [rows, vocab]; targets: list of `rows` class ids. Returns the mean negative log-likelihood as a 1-element tensor. | `o` | 65 |
 | `backward` | `out` | backward pass | _no explicit yield_ | 102 |
-| `bw_sce` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 118 |
-| `bw_add` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 140 |
-| `bw_mul` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 152 |
-| `bw_matmul` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 164 |
-| `bw_relu` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 204 |
-| `bw_mse` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 216 |
+| `bw_sce` | `e` | Backward pass for softmax cross-entropy, fused for numerical stability. | _no explicit yield_ | 118 |
+| `bw_add` | `e` | Backward pass for addition: routes the incoming gradient to both operands. | _no explicit yield_ | 140 |
+| `bw_mul` | `e` | Backward pass for element-wise multiplication. | _no explicit yield_ | 152 |
+| `bw_matmul` | `e` | Backward pass for matrix multiplication, producing both operand gradients. | _no explicit yield_ | 164 |
+| `bw_relu` | `e` | Backward pass for ReLU. | _no explicit yield_ | 204 |
+| `bw_mse` | `e` | Backward pass for mean squared error. | _no explicit yield_ | 216 |
 | `sgd_step` | `params, lr` | optimizers | _no explicit yield_ | 229 |
-| `zero_grads` | `params` | Part of the optimizers section of this module. | _no explicit yield_ | 244 |
+| `zero_grads` | `params` | Resets every parameter gradient to zero before the next backward pass. | _no explicit yield_ | 244 |
 | `clip_grads` | `params, max_norm` | Global-norm gradient clipping — keeps LM training from exploding. | `norm` | 255 |
 | `adam_new` | `params` | Adam | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279 |
-| `adam_step` | `opt, params, lr` | Part of the Adam section of this module. | _no explicit yield_ | 296 |
+| `adam_step` | `opt, params, lr` | Applies one Adam optimiser update using the stored moment estimates. | _no explicit yield_ | 296 |
 
 #### `lang/stdlib/ml/cuda.sdev`
 
@@ -8165,12 +8165,12 @@ sdev ML Stdlib — CUDA Fast Path (Milestone 11) Thin sdev-native layer over the
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `cuda_device` | `cudart_path, cublas_path` | device handle A "device" bundles the loaded cuBLAS/cudart bindings with a live cublasHandle_t. We keep it as a tome so callers can pass it around like any other sdev value. | `{ ok: nope, cu: void, handle: void, err: "cuda unavailable" }` | 22 |
-| `cuda_device_default` | _none_ | Part of the device handle section of this module. | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",` | 34 |
-| `cuda_free_device` | `dev` | Part of the device handle section of this module. | `yep` | 40 |
+| `cuda_device_default` | _none_ | Returns the default CUDA device handle, initialising the runtime if needed. | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",` | 34 |
+| `cuda_free_device` | `dev` | Releases a CUDA device handle. | `yep` | 40 |
 | `cuda_alloc` | `dev, n_f64` | device memory A cuda_buf is host-visible metadata around a device pointer. | `{ dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }` | 51 |
-| `cuda_free` | `dev, b` | Part of the device memory section of this module. | `yep` | 58 |
+| `cuda_free` | `dev, b` | Frees a device-side allocation. | `yep` | 58 |
 | `cuda_upload` | `dev, host_list` | cudaMemcpyKind: HostToDevice=1, DeviceToHost=2 | `db` | 65 |
-| `cuda_download` | `dev, db` | Part of the device memory section of this module. | `buf_to_list(hb)` | 73 |
+| `cuda_download` | `dev, db` | Copies a buffer from device memory back to host memory. | `buf_to_list(hb)` | 73 |
 | `cuda_matmul` | `dev, a, b` | accelerated ops Row-major C = A · B via cublasDgemm. cuBLAS is column-major, so we compute Bᵀ · Aᵀ under the hood and interpret the result as row-major C — same trick numpy's cublas backend uses. | `tensor(out, [m, n])` | 83 |
 | `best_matmul` | `dev, blas, a, b` | Convenience: pick the fastest available matmul path. Priority: CUDA → BLAS → pure sdev. | `matmul(a, b)` | 113 |
 | `cuda_forward_linear` | `dev, x, w, bias` | training-loop hook Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU. | `t_add(y, bias)` | 125 |
@@ -8185,14 +8185,14 @@ sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `load_text` | `path` | text I/O | `read_file(path)` | 10 |
-| `save_text` | `path, s` | Part of the text I/O section of this module. | _no explicit yield_ | 14 |
+| `save_text` | `path, s` | Writes a text corpus to disk for later training runs. | _no explicit yield_ | 14 |
 | `char_vocab` | `text` | byte-pair-ish tokenizer (char level) | `{ size: measure(order), stoi: seen, itos: order }` | 19 |
-| `encode` | `vocab, text` | Part of the byte-pair-ish tokenizer (char level) section of this module. | `out` | 34 |
-| `decode` | `vocab, ids` | Part of the byte-pair-ish tokenizer (char level) section of this module. | `s` | 45 |
+| `encode` | `vocab, text` | Turns text into a list of token ids using the active vocabulary. | `out` | 34 |
+| `decode` | `vocab, ids` | Turns a list of token ids back into text. | `s` | 45 |
 | `crawl` | `url` | web crawler | `http_get(url)` | 56 |
-| `crawl_many` | `urls` | Part of the web crawler section of this module. | `out` | 60 |
+| `crawl_many` | `urls` | Fetches a list of URLs and returns their extracted text bodies. | `out` | 60 |
 | `teacher_query` | `endpoint, api_key, prompt` | teacher-model distillation Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a prompt, receive logits/text, and train the local sdev model to imitate the teacher's outputs. | `http_get(url)` | 74 |
-| `distill_batch` | `endpoint, key, prompts` | Part of the teacher-model distillation section of this module. | `pairs` | 79 |
+| `distill_batch` | `endpoint, key, prompts` | Queries a teacher model for a batch of examples so a smaller model can learn from them. | `pairs` | 79 |
 | `save_model` | `path, model` | checkpointing | _no explicit yield_ | 91 |
 
 #### `lang/stdlib/ml/nn.sdev`
@@ -8203,13 +8203,13 @@ sdev ML Stdlib — Neural Network Layers (Milestone 8c) High-level layer builder
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `linear` | `in_features, out_features` | Computes and yields `{`. | `{` | 9 |
-| `broadcast_row` | `row, rows` | Computes and yields `t`. | `t` | 23 |
-| `sequential` | `layers` | Computes and yields `{`. | `{` | 36 |
-| `seq_forward` | `layers, x` | Computes and yields `cur`. | `cur` | 51 |
-| `relu_layer` | _none_ | Computes and yields `{ params: gather(), forward: (x) -> d_relu(x) }`. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
+| `linear` | `in_features, out_features` | Creates a dense layer with a weight matrix and bias vector. | `{` | 9 |
+| `broadcast_row` | `row, rows` | Adds a bias row to every row of a matrix. | `t` | 23 |
+| `sequential` | `layers` | Chains layers into a single model whose forward pass runs them in order. | `{` | 36 |
+| `seq_forward` | `layers, x` | Runs the forward pass of a sequential model. | `cur` | 51 |
+| `relu_layer` | _none_ | A layer that applies ReLU element-wise. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
 | `train_step` | `model, x, y, lr` | training loop | `loss.data[0]` | 66 |
-| `fit` | `model, xs, ys, epochs, lr` | Part of the training loop section of this module. | _no explicit yield_ | 75 |
+| `fit` | `model, xs, ys, epochs, lr` | Trains a model over a dataset for the given epochs, reporting loss per epoch. | _no explicit yield_ | 75 |
 
 #### `lang/stdlib/ml/self_modify.sdev`
 
@@ -8219,11 +8219,11 @@ sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-train
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `self_read` | `path` | Computes and yields `read_file(path)`. | `read_file(path)` | 15 |
-| `self_propose` | `path, new_content` | Computes and yields `nope`. | `nope` | 19 |
-| `set_review_hook` | `fn` | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 30 |
+| `self_read` | `path` | Reads a file from the sdev source tree so the model can inspect its own code. | `read_file(path)` | 15 |
+| `self_propose` | `path, new_content` | Produces a proposed source change as a structured, reviewable patch. | `nope` | 19 |
+| `set_review_hook` | `fn` | Installs the callback that must approve a proposal before it is applied. | _no explicit yield_ | 30 |
 | `mine_demand` | `sources` | feature-demand mining Fetches issue/PR/reddit signals and lets the model pick the next feature to draft. Returns a ranked list of {topic, score}. | `counts` | 37 |
-| `harvest_keywords` | `counts, body` | Part of the feature-demand mining section of this module. | _no explicit yield_ | 48 |
+| `harvest_keywords` | `counts, body` | Mines demand signals for language features from collected text. | _no explicit yield_ | 48 |
 | `update_docs` | `section, body` | documentation sync | _no explicit yield_ | 69 |
 | `rewrite_weights` | `model, transform` | weight rewriting The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep` | 79 |
 
@@ -8235,22 +8235,22 @@ sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: [f64...
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `tensor` | `data, shape` | Computes and yields `{ data: data, shape: shape, grad: void, requires_grad: nope }`. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
-| `tensor_grad` | `data, shape` | Computes and yields `{ data: data, shape: shape, grad: g, requires_grad: yep }`. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
-| `zeros` | `shape` | Computes and yields `tensor(d, shape)`. | `tensor(d, shape)` | 23 |
-| `ones` | `shape` | Computes and yields `tensor(d, shape)`. | `tensor(d, shape)` | 31 |
-| `randn` | `shape` | Computes and yields `tensor(d, shape)`. | `tensor(d, shape)` | 39 |
-| `shape_size` | `shape` | Computes and yields `n`. | `n` | 54 |
+| `tensor` | `data, shape` | Builds a tensor from flat data plus a shape, with autograd off. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
+| `tensor_grad` | `data, shape` | Builds a tensor with a zeroed gradient buffer and autograd enabled. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
+| `zeros` | `shape` | A tensor of the given shape filled with 0.0. | `tensor(d, shape)` | 23 |
+| `ones` | `shape` | A tensor of the given shape filled with 1.0. | `tensor(d, shape)` | 31 |
+| `randn` | `shape` | A tensor of the given shape sampled from a standard normal (Box–Muller). | `tensor(d, shape)` | 39 |
+| `shape_size` | `shape` | The total element count implied by a shape — the product of its dimensions. | `n` | 54 |
 | `t_add` | `a, b` | element-wise ops | `tensor(d, a.shape)` | 65 |
-| `t_sub` | `a, b` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 73 |
-| `t_mul` | `a, b` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 81 |
-| `t_scale` | `a, k` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 89 |
+| `t_sub` | `a, b` | Element-wise subtraction of two tensors of the same shape. | `tensor(d, a.shape)` | 73 |
+| `t_mul` | `a, b` | Element-wise multiplication of two tensors of the same shape. | `tensor(d, a.shape)` | 81 |
+| `t_scale` | `a, k` | Multiplies every element of a tensor by a scalar. | `tensor(d, a.shape)` | 89 |
 | `matmul` | `a, b` | 2-D matmul (rows x cols) | `tensor(d, [m, n])` | 98 |
 | `relu` | `a` | activations | `tensor(d, a.shape)` | 124 |
-| `sigmoid` | `a` | Part of the activations section of this module. | `tensor(d, a.shape)` | 136 |
-| `softmax` | `a` | Part of the activations section of this module. | `tensor(d, a.shape)` | 147 |
+| `sigmoid` | `a` | Element-wise logistic sigmoid. | `tensor(d, a.shape)` | 136 |
+| `softmax` | `a` | Row-wise softmax, shifted by the row maximum for numerical stability. | `tensor(d, a.shape)` | 147 |
 | `mse` | `pred, target` | losses | `s / n` | 170 |
-| `cross_entropy` | `pred, target` | Part of the losses section of this module. | `s` | 182 |
+| `cross_entropy` | `pred, target` | Mean cross-entropy loss between predicted probabilities and target labels. | `s` | 182 |
 
 #### `lang/stdlib/ml/train.sdev`
 
@@ -8267,10 +8267,10 @@ sdev ML Stdlib — Language-Model Training (Milestone 14) End-to-end training fo
 | `perplexity` | `model, ids, block` | Perplexity = e^(mean NLL). Lower is better. | `exp(lm_loss(model, ids, block))` | 80 |
 | `last_logits` | `model, ids` | sampling | `tensor(row, [vocab])` | 85 |
 | `sample_topk` | `logits, temperature, k` | Temperature + top-k filtering, then multinomial draw. | `sample_next(tensor(scaled, [n]))` | 99 |
-| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Part of the sampling section of this module. | `out` | 135 |
-| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Part of the sampling section of this module. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
+| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Generates a continuation from a trained language model. | `out` | 135 |
+| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Convenience wrapper: encode a prompt, generate, and decode the result. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
 | `checkpoint_text` | `model` | checkpoints Flat text format: one parameter tensor per line, "shape\|values". | `s` | 155 |
-| `save_checkpoint` | `path, model` | Part of the checkpoints section of this module. | `measure(model.params)` | 180 |
+| `save_checkpoint` | `path, model` | Serialises every model parameter to a checkpoint file. | `measure(model.params)` | 180 |
 | `load_checkpoint` | `path, model` | Loads weights back into an identically-shaped model. | `measure(model.params)` | 186 |
 | `split_text` | `s, sep` | Small split helper so checkpoints need no host support beyond file I/O. | `out` | 211 |
 
@@ -8282,19 +8282,19 @@ sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only 
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `embedding` | `vocab, dim` | Computes and yields `{`. | `{` | 10 |
-| `embed_lookup` | `w, ids` | Computes and yields `tensor_grad(d, [n, dim])`. | `tensor_grad(d, [n, dim])` | 21 |
-| `layer_norm` | `dim` | Computes and yields `{`. | `{` | 38 |
-| `ln_apply` | `x, g, b` | Computes and yields `tensor_grad(d, x.shape)`. | `tensor_grad(d, x.shape)` | 49 |
+| `embedding` | `vocab, dim` | Creates a learnable token embedding table. | `{` | 10 |
+| `embed_lookup` | `w, ids` | Gathers embedding rows for a sequence of token ids. | `tensor_grad(d, [n, dim])` | 21 |
+| `layer_norm` | `dim` | Creates a layer-norm block with learnable gain and bias. | `{` | 38 |
+| `ln_apply` | `x, g, b` | Normalises each row to zero mean and unit variance, then scales and shifts it. | `tensor_grad(d, x.shape)` | 49 |
 | `attention_head` | `dim` | attention (single head, causal) | `{` | 79 |
-| `attn_forward` | `x, wq, wk, wv, wo, dim` | Part of the attention (single head, causal) section of this module. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
-| `transpose` | `a` | Part of the attention (single head, causal) section of this module. | `tensor(d, [c, r])` | 114 |
+| `attn_forward` | `x, wq, wk, wv, wo, dim` | Scaled dot-product self-attention with causal masking. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
+| `transpose` | `a` | Swaps the two dimensions of a 2-D tensor. | `tensor(d, [c, r])` | 114 |
 | `transformer_block` | `dim, hidden` | transformer block | `{` | 133 |
-| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | Part of the transformer block section of this module. | `d_add(x1, f)` | 154 |
+| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | One transformer block: attention, residual, feed-forward, residual. | `d_add(x1, f)` | 154 |
 | `gpt` | `vocab, dim, hidden, layers` | decoder-only LM | `{` | 162 |
-| `gpt_forward` | `ids, emb, blocks, head, layers` | Part of the decoder-only LM section of this module. | `head.forward(x)` | 187 |
+| `gpt_forward` | `ids, emb, blocks, head, layers` | Full model forward pass: embed, run every block, project to vocabulary logits. | `head.forward(x)` | 187 |
 | `sample_next` | `logits` | sampling | `n - 1` | 198 |
-| `generate` | `model, prompt_ids, max_new` | Part of the sampling section of this module. | `out` | 212 |
+| `generate` | `model, prompt_ids, max_new` | Samples tokens autoregressively from the model until the length limit. | `out` | 212 |
 
 #### `lang/stdlib/webgpu.sdev`
 

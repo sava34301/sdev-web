@@ -312,6 +312,121 @@ const BUILTIN_DOCS = {
 };
 
 
+/** Hand-written meanings for sdev-written functions that carry no comment. */
+const SDEV_FN_DOCS = {
+  // self-hosted compiler (lexer / parser / codegen)
+  is_digit: 'True when the byte at the given index is an ASCII digit 0-9.',
+  is_alpha: 'True when the byte is an ASCII letter or underscore — the start of an identifier.',
+  is_alnum: 'True when the byte may continue an identifier: a letter, digit, or underscore.',
+  slice: 'Extracts the substring between two byte offsets, byte by byte.',
+  str_eq: 'Byte-exact string comparison, used instead of host equality so both tracks agree.',
+  lex: 'Turns source text into the token stream: kinds, lexemes, and line numbers.',
+  emit_byte: 'Appends one byte to the bytecode buffer being built.',
+  emit_i32: 'Appends a little-endian 32-bit operand to the bytecode buffer.',
+  intern_str: 'Interns a string literal into the pool and returns its handle, reusing duplicates.',
+  intern_name: 'Interns an identifier and returns its global slot index, allocating on first sight.',
+  find_local: 'Looks up a local variable in the current frame, returning its slot or -1.',
+  add_local: 'Allocates a new local slot in the current function frame.',
+  find_fn: 'Looks up a declared function by name, returning its index or -1.',
+  emit_load_ident: 'Emits `LOAD_LOC` for a local or `LOAD` for a global, whichever the name resolves to.',
+  emit_store_ident: 'Emits `STORE_LOC` or `STORE` for an assignment target.',
+  emit_call: 'Emits the argument pushes plus the `CALL` instruction for a function call.',
+  is_op_c: 'True when the character can begin an operator token.',
+  is_ident_word: 'True when the token text is a plain identifier rather than a keyword.',
+  parse_atom: 'Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group.',
+  parse_mul: 'Parses the multiplication / division / modulo precedence level.',
+  parse_add: 'Parses the addition / subtraction precedence level.',
+  skip_nl: 'Advances the cursor past newline tokens so statements may be separated freely.',
+  parse_stmt: 'Parses one statement and emits its bytecode: binding, assignment, control flow, or expression.',
+  // parity agent
+  unquote: 'Strips the surrounding quotes from a JSON string value.',
+  field_value: 'Reads one field out of a JSON object, without a full JSON parser.',
+  load_registry: 'Reads `lang/parity/features.json` into memory as the canonical feature list.',
+  load_track_source: 'Loads the implementation source for one track so it can be probed for a feature.',
+  mark: 'Records the support verdict for one feature on one track.',
+  audit: 'Probes every feature against every track and builds the full verdict table.',
+  matrix_markdown: 'Renders the audit result as the markdown parity matrix.',
+  report_json: 'Serialises the audit result to `lang/parity/report.json`.',
+  sync_doc: 'Rewrites the parity matrix block inside the parity documentation in place.',
+  run_parity_agent: 'Entry point: audit, then write both the JSON report and the documentation.',
+  // FFI
+  lib_close: 'Closes a loaded native library handle.',
+  invoke: 'Calls a native symbol with marshalled arguments and returns the marshalled result.',
+  buf_from_list: 'Packs a list of numbers into a raw FFI byte buffer.',
+  buf_to_list: 'Unpacks a raw FFI byte buffer back into a list of numbers.',
+  cuda_ok: 'True when a CUDA runtime and device are reachable from this host.',
+  // CUDA
+  cuda_device_default: 'Returns the default CUDA device handle, initialising the runtime if needed.',
+  cuda_free_device: 'Releases a CUDA device handle.',
+  cuda_free: 'Frees a device-side allocation.',
+  cuda_download: 'Copies a buffer from device memory back to host memory.',
+  // data pipeline
+  save_text: 'Writes a text corpus to disk for later training runs.',
+  encode: 'Turns text into a list of token ids using the active vocabulary.',
+  decode: 'Turns a list of token ids back into text.',
+  crawl_many: 'Fetches a list of URLs and returns their extracted text bodies.',
+  distill_batch: 'Queries a teacher model for a batch of examples so a smaller model can learn from them.',
+  // autograd
+  tape_reset: 'Clears the global autograd tape before a new forward pass.',
+  record: 'Appends one operation and its inputs to the autograd tape.',
+  d_mul: 'Local derivative rule for element-wise multiplication.',
+  d_matmul: 'Local derivative rule for matrix multiplication.',
+  d_relu: 'Local derivative rule for ReLU: pass gradient where the input was positive.',
+  d_mse: 'Local derivative rule for mean squared error.',
+  bw_add: 'Backward pass for addition: routes the incoming gradient to both operands.',
+  bw_mul: 'Backward pass for element-wise multiplication.',
+  bw_matmul: 'Backward pass for matrix multiplication, producing both operand gradients.',
+  bw_relu: 'Backward pass for ReLU.',
+  bw_mse: 'Backward pass for mean squared error.',
+  bw_sce: 'Backward pass for softmax cross-entropy, fused for numerical stability.',
+  zero_grads: 'Resets every parameter gradient to zero before the next backward pass.',
+  adam_step: 'Applies one Adam optimiser update using the stored moment estimates.',
+  // neural network layers
+  linear: 'Creates a dense layer with a weight matrix and bias vector.',
+  broadcast_row: 'Adds a bias row to every row of a matrix.',
+  sequential: 'Chains layers into a single model whose forward pass runs them in order.',
+  seq_forward: 'Runs the forward pass of a sequential model.',
+  relu_layer: 'A layer that applies ReLU element-wise.',
+  fit: 'Trains a model over a dataset for the given epochs, reporting loss per epoch.',
+  // tensors
+  tensor: 'Builds a tensor from flat data plus a shape, with autograd off.',
+  tensor_grad: 'Builds a tensor with a zeroed gradient buffer and autograd enabled.',
+  zeros: 'A tensor of the given shape filled with 0.0.',
+  ones: 'A tensor of the given shape filled with 1.0.',
+  randn: 'A tensor of the given shape sampled from a standard normal (Box–Muller).',
+  shape_size: 'The total element count implied by a shape — the product of its dimensions.',
+  t_sub: 'Element-wise subtraction of two tensors of the same shape.',
+  t_mul: 'Element-wise multiplication of two tensors of the same shape.',
+  t_scale: 'Multiplies every element of a tensor by a scalar.',
+  sigmoid: 'Element-wise logistic sigmoid.',
+  softmax: 'Row-wise softmax, shifted by the row maximum for numerical stability.',
+  cross_entropy: 'Mean cross-entropy loss between predicted probabilities and target labels.',
+  // transformer
+  embedding: 'Creates a learnable token embedding table.',
+  embed_lookup: 'Gathers embedding rows for a sequence of token ids.',
+  layer_norm: 'Creates a layer-norm block with learnable gain and bias.',
+  ln_apply: 'Normalises each row to zero mean and unit variance, then scales and shifts it.',
+  attn_forward: 'Scaled dot-product self-attention with causal masking.',
+  transpose: 'Swaps the two dimensions of a 2-D tensor.',
+  block_forward: 'One transformer block: attention, residual, feed-forward, residual.',
+  gpt_forward: 'Full model forward pass: embed, run every block, project to vocabulary logits.',
+  generate: 'Samples tokens autoregressively from the model until the length limit.',
+  // training
+  lm_generate: 'Generates a continuation from a trained language model.',
+  lm_complete: 'Convenience wrapper: encode a prompt, generate, and decode the result.',
+  save_checkpoint: 'Serialises every model parameter to a checkpoint file.',
+  // self-modification / evolution
+  self_read: 'Reads a file from the sdev source tree so the model can inspect its own code.',
+  self_propose: 'Produces a proposed source change as a structured, reviewable patch.',
+  set_review_hook: 'Installs the callback that must approve a proposal before it is applied.',
+  harvest_keywords: 'Mines demand signals for language features from collected text.',
+  is_allowed: 'Guards the evolution loop: true only for paths the policy permits editing.',
+  apply_proposal: 'Applies an approved proposal to the source tree and records it in the log.',
+  top_topic: 'Picks the most-requested topic out of the harvested demand signals.',
+  pick_target: 'Chooses which file the next evolution step should modify.',
+  prompt_pool: 'Builds the prompt set handed to the teacher model for the next round.',
+};
+
 /** Placeholder names used when rendering an inferred argument list. */
 const ARGNAMES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -612,9 +727,10 @@ function sdevIndex(dirs) {
     out += `${records.length} functions.\n\n`;
     out += '| Function | Parameters | What it does | Returns | Line |\n| --- | --- | --- | --- | --- |\n';
     for (const r of records) {
-      const fallback = r.section
+      const curated = SDEV_FN_DOCS[`${f.split('/').pop()}:${r.name}`] || SDEV_FN_DOCS[r.name] || '';
+      const fallback = curated || (r.section
         ? `Part of the ${r.section} section of this module.`
-        : (r.ret ? `Computes and yields \`${r.ret}\`.` : 'Performs a step of this module\'s pipeline; the result is produced through its side effects.');
+        : (r.ret ? `Computes and yields \`${r.ret}\`.` : 'Performs a step of this module\'s pipeline; the result is produced through its side effects.'));
       const desc = (r.doc || fallback).replace(/\|/g, '\\|');
       out += `| \`${r.name}\` | ${r.params ? '`' + r.params.replace(/\|/g, '\\|') + '`' : '_none_'} | ${desc} | ${r.ret ? '`' + r.ret + '`' : '_no explicit yield_'} | ${r.line} |\n`;
     }
