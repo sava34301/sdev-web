@@ -7398,15 +7398,15 @@ the module that installs it.
 | `__tryCatch(a, b)` | __tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue. | __tryCatch requires 2 function arguments | `builtins.ts:2460` |
 | `abs(a)` | abs alias. | abs() takes 1 argument | `builtins.ts:2418` |
 | `acos(a)` | Evaluates `Math.acos(a)`. | — | `builtins.ts:1014` |
-| `all(a, b)` | List Operations operation. | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:851` |
-| `any(a, b)` | List Operations operation. | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:864` |
+| `all(a, b)` | True when every element of the list is truthy (or satisfies the given predicate). | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:851` |
+| `any(a, b)` | True when at least one element of the list is truthy (or satisfies the given predicate). | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:864` |
 | `appendFile(a, b)` | Convenience aliases. | appendFile() takes 2 arguments | `builtins.ts:2357` |
 | `asin(a)` | More trig. | — | `builtins.ts:1013` |
 | `atan(a)` | Evaluates `Math.atan(a)`. | — | `builtins.ts:1015` |
 | `atan2(a, b)` | Evaluates `Math.atan2(a, b)`. | — | `builtins.ts:1016` |
-| `average(a)` | List Operations operation. | average() takes 1 argument; Argument must be a list | `builtins.ts:790` |
-| `base64decode(a)` | Base64 operation. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1870` |
-| `base64encode(a)` | Base64 operation. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1861` |
+| `average(a)` | Arithmetic mean of a list of numbers. | average() takes 1 argument; Argument must be a list | `builtins.ts:790` |
+| `base64decode(a)` | Decodes Base64 text back into a string. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1870` |
+| `base64encode(a)` | Encodes a string or byte buffer as Base64 text. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1861` |
 | `bin(a)` | bin(n) - number to binary string. | bin() takes 1 argument; Argument must be a number | `builtins.ts:1571` |
 | `bitAnd(a, b)` | Bitwise Operations operation. | bitAnd() takes 2 arguments | `builtins.ts:1811` |
 | `bitNot(a)` | Bitwise Operations operation. | bitNot() takes 1 argument | `builtins.ts:1835` |
@@ -7418,7 +7418,7 @@ the module that installs it.
 | `capitalize(a)` | capitalize(s) - first char uppercase. | capitalize() takes 1 argument; Argument must be text | `builtins.ts:1647` |
 | `ceil(a)` | Evaluates `Math.ceil(a)`. | — | `builtins.ts:2428` |
 | `center(…)` | center(s, width, char?) - center-pad string. | center() takes 2-3 arguments; First argument must be text | `builtins.ts:1667` |
-| `chaos()` | Runtime primitive. | — | `builtins.ts:328` |
+| `chaos()` | Random number generator with seedable, reproducible output. | — | `builtins.ts:328` |
 | `charAt(a, b)` | String Operations operation. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:580` |
 | `chars(a)` | chars(s) - string to char list. | chars() takes 1 argument; Argument must be text | `builtins.ts:1172` |
 | `chr(a)` | chr(n) - number to character. | chr() takes 1 argument; Argument must be a number | `builtins.ts:1525` |
@@ -7426,46 +7426,46 @@ the module that installs it.
 | `clamp(a, b, c)` | ============= Math Utilities =============. | clamp() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:956` |
 | `clone(a)` | clone(list) - deep copy. | clone() takes 1 argument | `builtins.ts:1259` |
 | `compose(…)` | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)). | compose() takes at least 2 arguments; All arguments must be functions | `builtins.ts:1932` |
-| `concat(…)` | List Operations operation. | concat() takes at least 2 arguments; All arguments must be lists | `builtins.ts:651` |
+| `concat(…)` | Joins two lists (or two strings) into a new one; the inputs are not modified. | concat() takes at least 2 arguments; All arguments must be lists | `builtins.ts:651` |
 | `constrain(a, b, c)` | constrain(v, min, max) - alias for clamp. | constrain() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:1330` |
-| `contains(a, b)` | Runtime primitive. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:397` |
-| `contents(a)` | Runtime primitive. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:346` |
+| `contains(a, b)` | True when the collection holds the given value, or the string holds the substring. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:397` |
+| `contents(a)` | Returns the values of a tome as a list. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:346` |
 | `cos(a)` | Evaluates `Math.cos(a)`. | — | `builtins.ts:455` |
 | `cosh(a)` | Evaluates `Math.cosh(a)`. | — | `builtins.ts:1021` |
-| `count(a, b)` | List Operations operation. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:841` |
+| `count(a, b)` | How many times a value occurs in a list or a substring occurs in a string. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:841` |
 | `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins.ts:1969` |
 | `degrees(a)` | degrees(rad) - radians to degrees. | degrees() takes 1 argument; Argument must be a number | `builtins.ts:1366` |
-| `del(a, b)` | Tome (Dict) Operations operation. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1081` |
+| `del(a, b)` | Deletes a key from a tome or an index from a list, in place. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1081` |
 | `delay()` | delay(ms) - no-op in synchronous context. | — | `builtins.ts:1425` |
 | `deleteFile(a)` | Misc Missing operation. | deleteFile() takes 1 argument | `builtins.ts:2374` |
 | `difference(a, b)` | difference(a, b) - set difference. | difference() takes 2 arguments; Arguments must be lists | `builtins.ts:1270` |
 | `dist(a, b, c, d)` | dist(x1, y1, x2, y2) - distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers | `builtins.ts:1343` |
-| `drop(a, b)` | List Operations operation. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:755` |
+| `drop(a, b)` | Returns a copy of the list without its first `n` elements. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:755` |
 | `E()` | Constants. | — | `builtins.ts:1027` |
 | `each(a, b)` | map over array with lambda. | each() takes 2 arguments (list, transform); First argument must be a list | `builtins.ts:116` |
-| `elevate(a)` | Runtime primitive. | elevate() takes 1 argument | `builtins.ts:312` |
+| `elevate(a)` | Requests elevated host privileges for the following operation. | elevate() takes 1 argument | `builtins.ts:312` |
 | `ends(a, b)` | ends(s, suffix) - alias for endswith. | ends() takes 2 arguments; Arguments must be text | `builtins.ts:1151` |
-| `endswith(a, b)` | String Operations operation. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:537` |
-| `entries(a)` | Tome (Dict) Operations operation. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1111` |
+| `endswith(a, b)` | True when the string ends with the given suffix. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:537` |
+| `entries(a)` | Returns a tome as a list of `[key, value]` pairs. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1111` |
 | `enumerate(a)` | enumerate(list) - [[index, item], ...]. | enumerate() takes 1 argument; Argument must be a list | `builtins.ts:1320` |
 | `essence(a)` | get type. | essence() takes 1 argument | `builtins.ts:243` |
 | `etch(a)` | JSON. | — | `builtins.ts:505` |
 | `every(a, b)` | every(list, predicate) - alias for all. | every() takes 2 arguments; First argument must be a list | `builtins.ts:1296` |
 | `exit(…)` | exit(code?) - terminate program. | Program exited with code ${code} | `builtins.ts:1496` |
 | `exp(a)` | Evaluates `Math.exp(a)`. | — | `builtins.ts:458` |
-| `ffi_buf(a)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | ffi_buf() takes a positive byte size | `builtins.ts:2569` |
-| `ffi_call(a, b, c, d)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | ffi_call() — no native FFI host available | `builtins.ts:2616` |
-| `ffi_close(a)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | Expected number, got ${typeof value} | `builtins.ts:2624` |
+| `ffi_buf(a)` | Allocates a raw byte buffer usable as an FFI argument. | ffi_buf() takes a positive byte size | `builtins.ts:2569` |
+| `ffi_call(a, b, c, d)` | Calls a symbol in a loaded native library with the given arguments. | ffi_call() — no native FFI host available | `builtins.ts:2616` |
+| `ffi_close(a)` | Unloads a native library handle opened with `ffi_open`. | Expected number, got ${typeof value} | `builtins.ts:2624` |
 | `ffi_open(a)` | Evaluates `ffiHost().open?.(String(a ?? '')) ?? null`. | — | `builtins.ts:2607` |
 | `ffi_read_f64(a, b)` | Evaluates `bufOf(a, line).getFloat64(Number(b) * 8, true)`. | — | `builtins.ts:2589` |
 | `ffi_read_i32(a, b)` | Evaluates `bufOf(a, line).getInt32(Number(b) * 4, true)`. | — | `builtins.ts:2601` |
 | `ffi_sym(a, b)` | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`. | — | `builtins.ts:2611` |
-| `ffi_write_f64(a, b, c)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | — | `builtins.ts:2582` |
-| `ffi_write_i32(a, b, c)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | — | `builtins.ts:2594` |
+| `ffi_write_f64(a, b, c)` | Writes a 64-bit float into an FFI buffer at a byte offset. | — | `builtins.ts:2582` |
+| `ffi_write_i32(a, b, c)` | Writes a 32-bit integer into an FFI buffer at a byte offset. | — | `builtins.ts:2594` |
 | `fileExists(a)` | Misc Missing operation. | fileExists() takes 1 argument | `builtins.ts:2366` |
-| `find(a, b)` | List Operations operation. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:877` |
-| `first(a)` | List Operations operation. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:714` |
-| `flatten(a)` | List Operations operation. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:668` |
+| `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:877` |
+| `first(a)` | The first element of a list or the first character of a string. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:714` |
+| `flatten(a)` | Collapses nested lists into a single flat list. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:668` |
 | `floor(a)` | floor/ceil/round aliases. | — | `builtins.ts:2427` |
 | `fold(a, b, c)` | reduce array. | fold() takes 3 arguments (list, initial, reducer); First argument must be a list | `builtins.ts:149` |
 | `format(…)` | format(template, ...args) - string formatting with {} placeholders. | format() takes at least 1 argument; First argument must be text | `builtins.ts:1182` |
@@ -7473,15 +7473,15 @@ the module that installs it.
 | `freeze(a)` | freeze(obj) - make object immutable (shallow). | freeze() takes 1 argument | `builtins.ts:2109` |
 | `fromEntries(a)` | Tome (Dict) Operations operation. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1122` |
 | `gather(a, b)` | push to list. | gather() takes 0 or 2 arguments; First argument must be a list | `builtins.ts:168` |
-| `get(…)` | Tome (Dict) Operations operation. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1054` |
+| `get(…)` | Reads a key from a tome with an optional default when the key is missing. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1054` |
 | `gettype(a)` | get the type of a value (avoids 'essence' keyword clash). | gettype() takes 1 argument | `builtins.ts:432` |
-| `greatest(…)` | Runtime primitive. | greatest() takes at least 1 argument | `builtins.ts:285` |
-| `ground(a)` | Runtime primitive. | ground() takes 1 argument | `builtins.ts:304` |
+| `greatest(…)` | The largest of the supplied numbers (or of a list). | greatest() takes at least 1 argument | `builtins.ts:285` |
+| `ground(a)` | Rounds a number down to the nearest integer (floor). | ground() takes 1 argument | `builtins.ts:304` |
 | `groupBy(a, b)` | groupBy(list, fn) - group list elements by function result. | groupBy() takes 2 arguments; First argument must be a list | `builtins.ts:2129` |
 | `has(a, b)` | ============= Tome (Dict) Operations =============. | has() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1042` |
-| `hash(a)` | Hash operation. | hash() takes 1 argument | `builtins.ts:1882` |
+| `hash(a)` | Deterministic hash of a value, returned as a number or hex string. | hash() takes 1 argument | `builtins.ts:1882` |
 | `hex(a)` | hex(n) - number to hex string. | hex() takes 1 argument; Argument must be a number | `builtins.ts:1551` |
-| `http_get(a)` | ML host bindings (Milestone 13) operation. | http_get() takes a url; http_get( | `builtins.ts:2532` |
+| `http_get(a)` | Performs an HTTP GET and returns the response body as text. | http_get() takes a url; http_get( | `builtins.ts:2532` |
 | `indexOf(a, b)` | String Operations operation. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:592` |
 | `INFINITY()` | Math Utilities operation. | — | `builtins.ts:1028` |
 | `input(…)` | input(prompt?) - uses browser prompt() for real input. | — | `builtins.ts:1405` |
@@ -7506,92 +7506,92 @@ the module that installs it.
 | `isUpper(a)` | isUpper(s) - check if all uppercase. | isUpper() takes 1 argument; Argument must be text | `builtins.ts:1704` |
 | `isVoid(a)` | Type Checking operation. | isVoid() takes 1 argument | `builtins.ts:934` |
 | `keys(a)` | keys(tome) - alias for inscriptions. | keys() takes 1 argument; Argument must be a tome | `builtins.ts:2089` |
-| `last(a)` | List Operations operation. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:724` |
+| `last(a)` | The final element of a list or the final character of a string. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:724` |
 | `lastIndexOf(a, b)` | String Operations operation. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:608` |
-| `least(…)` | Runtime primitive. | least() takes at least 1 argument | `builtins.ts:274` |
+| `least(…)` | The smallest of the supplied numbers (or of a list). | least() takes at least 1 argument | `builtins.ts:274` |
 | `len(a)` | alias for measure (used internally by compiler forEach). | len() takes 1 argument; len() argument must be string, list, or dict | `builtins.ts:419` |
-| `lerp(a, b, c)` | Math Utilities operation. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:968` |
+| `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:968` |
 | `LinkedList(a)` | LinkedList() - doubly linked list. | Index out of bounds; LinkedList is empty | `builtins.ts:2322` |
 | `listDir()` | Misc Missing operation. | — | `builtins.ts:2382` |
 | `ln(a)` | Evaluates `Math.log(toNumber(a, line))`. | — | `builtins.ts:2488` |
 | `locate(a, b)` | locate(s, sub) - find index of substring. | locate() takes 2 arguments; First argument must be text or list | `builtins.ts:1161` |
-| `log(a)` | Evaluates `Math.log(a)`. | — | `builtins.ts:457` |
-| `log10(a)` | Evaluates `Math.log10(a)`. | — | `builtins.ts:1023` |
-| `log2(a)` | Math Utilities operation. | — | `builtins.ts:1024` |
-| `lower(a)` | Runtime primitive. | lower() takes 1 argument; Argument must be text | `builtins.ts:368` |
+| `log(a)` | Natural logarithm. | — | `builtins.ts:457` |
+| `log10(a)` | Base-10 logarithm. | — | `builtins.ts:1023` |
+| `log2(a)` | Base-2 logarithm. | — | `builtins.ts:1024` |
+| `lower(a)` | Lowercases every character in the string. | lower() takes 1 argument; Argument must be text | `builtins.ts:368` |
 | `magnitude(a)` | Math operations with unique names. | magnitude() takes 1 argument | `builtins.ts:266` |
 | `Map(a, b)` | Map() - map data structure. | — | `builtins.ts:2268` |
 | `mapRange(a, b, c, d, e)` | Math Utilities operation. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:980` |
 | `match(a, b)` | match(text, pattern) - regex match, returns list of matches or null. | match() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1766` |
 | `matchAll(a, b)` | matchAll(text, pattern) - all regex matches. | matchAll() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1777` |
-| `max(a)` | Misc Missing operation. | max() takes at least 1 argument | `builtins.ts:2408` |
+| `max(a)` | The largest of the supplied numbers (or of a list). | max() takes at least 1 argument | `builtins.ts:2408` |
 | `mean(a)` | mean(list) - alias for average. | mean() takes 1 argument; Argument must be a list | `builtins.ts:1390` |
 | `measure(a)` | get length. | measure() takes exactly 1 argument; measure() argument must be string, list, or dict | `builtins.ts:44` |
 | `memoize(a)` | memoize(fn) - memoization. | memoize() takes 1 argument; Argument must be a function | `builtins.ts:1989` |
-| `merge(…)` | Tome (Dict) Operations operation. | merge() takes at least 2 arguments; All arguments must be tomes | `builtins.ts:1096` |
+| `merge(…)` | Combines two tomes into a new one; keys on the right win. | merge() takes at least 2 arguments; All arguments must be tomes | `builtins.ts:1096` |
 | `min(a)` | min/max aliases. | min() takes at least 1 argument | `builtins.ts:2399` |
 | `morph(a, b)` | type conversion. | morph() takes 2 arguments (value, type); Second argument must be type name | `builtins.ts:59` |
-| `nearby(a)` | Runtime primitive. | nearby() takes 1 argument | `builtins.ts:320` |
+| `nearby(a)` | True when two floating-point numbers are equal within a small tolerance. | nearby() takes 1 argument | `builtins.ts:320` |
 | `now()` | ============= Time =============. | — | `builtins.ts:1031` |
 | `num(a)` | Misc Missing operation. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2449` |
 | `oct(a)` | oct(n) - number to octal string. | oct() takes 1 argument; Argument must be a number | `builtins.ts:1561` |
 | `ord(…)` | ord(char) - character to number. | ord() takes 1 or 2 arguments; Argument must be a non-empty string | `builtins.ts:1535` |
-| `padleft(…)` | String Operations operation. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:558` |
+| `padleft(…)` | Pads the string on the left with a fill character until it reaches the target width. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:558` |
 | `padLeft(…)` | padLeft(s, width, char?) - alias PascalCase. | padLeft() takes 2-3 arguments; First argument must be text | `builtins.ts:1198` |
-| `padright(…)` | String Operations operation. | padright() takes 2-3 arguments; First argument must be text | `builtins.ts:569` |
+| `padright(…)` | Pads the string on the right with a fill character until it reaches the target width. | padright() takes 2-3 arguments; First argument must be text | `builtins.ts:569` |
 | `padRight(…)` | padRight(s, width, char?) - alias PascalCase. | padRight() takes 2-3 arguments; First argument must be text | `builtins.ts:1210` |
 | `panic(…)` | panic(message) - fatal error. | PANIC: ${msg} | `builtins.ts:1505` |
 | `parseNum(…)` | parseNum(str, base?) - parse string to number with optional base. | parseNum() takes 1-2 arguments; First argument must be text | `builtins.ts:1581` |
 | `PI()` | Runtime primitive. | — | `builtins.ts:459` |
-| `pick(a)` | Runtime primitive. | pick() takes 1 argument; Argument must be a list | `builtins.ts:479` |
+| `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `builtins.ts:479` |
 | `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins.ts:1954` |
 | `pluck(…)` | pop from list, or append when given a value (stdlib/ML dialect). | pluck() takes 1 or 2 arguments; Argument must be a list | `builtins.ts:183` |
 | `pointer(a, b)` | pointer(buffer, offset) - create a reference to a buffer position. | pointer() takes 2 arguments (buffer, offset); First argument must be a buffer | `builtins.ts:2061` |
 | `portion(…)` | slice - get portion. | portion() takes 2 or 3 arguments; First argument must be a list or string | `builtins.ts:200` |
-| `pow(a, b)` | Math Utilities operation. | pow() takes 2 arguments (base, exponent); Arguments must be numbers | `builtins.ts:1001` |
+| `pow(a, b)` | Raises the first number to the power of the second. | pow() takes 2 arguments (base, exponent); Arguments must be numbers | `builtins.ts:1001` |
 | `print(…)` | print() - alias for speak. | — | `builtins.ts:1439` |
 | `println(…)` | println() - print with newline (same as print in this context). | — | `builtins.ts:1449` |
-| `product(a)` | List Operations operation. | product() takes 1 argument; Argument must be a list | `builtins.ts:778` |
+| `product(a)` | Multiplies every number in a list together. | product() takes 1 argument; Argument must be a list | `builtins.ts:778` |
 | `Queue(a)` | Queue() - FIFO queue. | Queue is empty | `builtins.ts:2288` |
 | `radians(a)` | radians(deg) - degrees to radians. | radians() takes 1 argument; Argument must be a number | `builtins.ts:1356` |
-| `rand()` | ML host bindings (Milestone 13) operation. | — | `builtins.ts:2487` |
+| `rand()` | Random floating-point number; with arguments, a random value in the range. | — | `builtins.ts:2487` |
 | `randint(a, b)` | Random utilities. | randint() takes 2 arguments | `builtins.ts:469` |
 | `random()` | random() alias for chaos(). | — | `builtins.ts:463` |
 | `range(…)` | range() - alias for sequence. | range() takes 1-3 arguments; range() step cannot be 0 | `builtins.ts:1459` |
-| `read_file(a)` | ML host bindings (Milestone 13) operation. | read_file() takes a path; read_file( | `builtins.ts:2504` |
-| `remove(a, b)` | List Operations operation. | remove() takes 2 arguments (list, index); First argument must be a list | `builtins.ts:638` |
-| `repeat(a, b)` | String Operations operation. | repeat() takes 2 arguments (text, count); First argument must be text | `builtins.ts:548` |
+| `read_file(a)` | Reads a file from the host filesystem and returns its text. | read_file() takes a path; read_file( | `builtins.ts:2504` |
+| `remove(a, b)` | Removes the first occurrence of a value from a list, in place. | remove() takes 2 arguments (list, index); First argument must be a list | `builtins.ts:638` |
+| `repeat(a, b)` | Builds a list (or string) by repeating a value `n` times. | repeat() takes 2 arguments (text, count); First argument must be text | `builtins.ts:548` |
 | `replace(a, b, c)` | ============= String Operations =============. | replace() takes 3 arguments (text, search, replacement); First argument must be text | `builtins.ts:515` |
 | `replaceRegex(a, b, c)` | replaceRegex(text, pattern, replacement) - regex replace. | replaceRegex() takes 3 arguments; Arguments must be text | `builtins.ts:1788` |
-| `rest(a)` | List Operations operation. | rest() takes 1 argument; Argument must be a list or text | `builtins.ts:734` |
-| `reverse(a)` | Runtime primitive. | reverse() takes 1 argument; Argument must be text or list | `builtins.ts:386` |
-| `root(a)` | Runtime primitive. | root() takes 1 argument | `builtins.ts:296` |
+| `rest(a)` | Everything after the first element of a list. | rest() takes 1 argument; Argument must be a list or text | `builtins.ts:734` |
+| `reverse(a)` | Returns the list or string in reverse order. | reverse() takes 1 argument; Argument must be text or list | `builtins.ts:386` |
+| `root(a)` | Square root (alias kept for readability). | root() takes 1 argument | `builtins.ts:296` |
 | `round(a)` | Evaluates `Math.round(a)`. | — | `builtins.ts:2429` |
 | `seek(a, b)` | seek(list, predicate) - alias for find. | seek() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:1281` |
 | `sequence(…)` | conjure a sequence. | sequence() takes 1 to 3 arguments; sequence() step cannot be 0 | `builtins.ts:87` |
-| `set(a, b, c)` | Tome (Dict) Operations operation. | set() takes 3 arguments (tome, key, value); First argument must be a tome | `builtins.ts:1068` |
+| `set(a, b, c)` | Writes a value at a key or index inside a tome or list. | set() takes 3 arguments (tome, key, value); First argument must be a tome | `builtins.ts:1068` |
 | `Set(a)` | Set() - set data structure. | — | `builtins.ts:2248` |
 | `shatter(a, b)` | split string to list. | shatter() takes 2 arguments; First argument must be a string | `builtins.ts:230` |
 | `shout(…)` | output in uppercase. | — | `builtins.ts:34` |
-| `shuffle(a)` | Runtime primitive. | shuffle() takes 1 argument; Argument must be a list | `builtins.ts:489` |
+| `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `builtins.ts:489` |
 | `sift(a, b)` | filter array. | sift() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:134` |
-| `sign(a)` | Math Utilities operation. | sign() takes 1 argument; Argument must be a number | `builtins.ts:992` |
+| `sign(a)` | Returns -1, 0, or 1 depending on the sign of the number. | sign() takes 1 argument; Argument must be a number | `builtins.ts:992` |
 | `sin(a)` | Advanced math. | — | `builtins.ts:454` |
 | `sinh(a)` | Evaluates `Math.sinh(a)`. | — | `builtins.ts:1020` |
 | `sleep()` | sleep(ms) - alias for delay. | — | `builtins.ts:1431` |
 | `snatch(…)` | snatch(str_or_list, start, end?) - substring OR remove at index from list. | snatch() takes 2-3 arguments; Second argument must be a number | `builtins.ts:1222` |
 | `some(a, b)` | some(list, predicate) - alias for any. | some() takes 2 arguments; First argument must be a list | `builtins.ts:1308` |
-| `sort(…)` | List Operations operation. | sort() takes 1-2 arguments; First argument must be a list | `builtins.ts:804` |
+| `sort(…)` | Returns the list sorted ascending, or by the supplied comparison function. | sort() takes 1-2 arguments; First argument must be a list | `builtins.ts:804` |
 | `sortDesc(a)` | sortDesc(list) - sort descending. | sortDesc() takes 1 argument; Argument must be a list | `builtins.ts:1246` |
 | `spawn(a)` | spawn (run function, synchronous in browser). | spawn() requires a function | `builtins.ts:2388` |
 | `speak(…)` | output to console. | — | `builtins.ts:14` |
-| `sqrt(a)` | Misc Missing operation. | — | `builtins.ts:2430` |
+| `sqrt(a)` | Square root. | — | `builtins.ts:2430` |
 | `Stack(a)` | Stack() - LIFO stack. | Stack is empty | `builtins.ts:2305` |
 | `starts(a, b)` | starts(s, prefix) - alias for startswith. | starts() takes 2 arguments; Arguments must be text | `builtins.ts:1141` |
-| `startswith(a, b)` | String Operations operation. | startswith() takes 2 arguments; Arguments must be text | `builtins.ts:526` |
+| `startswith(a, b)` | True when the string begins with the given prefix. | startswith() takes 2 arguments; Arguments must be text | `builtins.ts:526` |
 | `str(a)` | str alias for morph to text. | — | `builtins.ts:2433` |
-| `sum(a)` | List Operations operation. | sum() takes 1 argument; Argument must be a list | `builtins.ts:766` |
-| `take(a, b)` | List Operations operation. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:744` |
+| `sum(a)` | Adds every number in a list together. | sum() takes 1 argument; Argument must be a list | `builtins.ts:766` |
+| `take(a, b)` | Returns the first `n` elements of a list. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:744` |
 | `tan(a)` | Evaluates `Math.tan(a)`. | — | `builtins.ts:456` |
 | `tanh(a)` | Evaluates `Math.tanh(a)`. | — | `builtins.ts:1022` |
 | `tap(a, b)` | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function | `builtins.ts:2164` |
@@ -7600,25 +7600,25 @@ the module that installs it.
 | `throw(…)` | throw(message) - throw error. | — | `builtins.ts:1514` |
 | `time()` | time() - current time as tome. | — | `builtins.ts:1900` |
 | `times(a, b)` | repeat(fn, n) - call function n times, return list of results. | times() takes 2 arguments (count, fn); First argument must be a number | `builtins.ts:2176` |
-| `timestamp()` | Time operation. | — | `builtins.ts:1036` |
+| `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `builtins.ts:1036` |
 | `title(a)` | title(s) - title case. | title() takes 1 argument; Argument must be text | `builtins.ts:1657` |
 | `toFixed(a, b)` | toFixed(n, digits) - format to fixed decimal places. | toFixed() takes 2 arguments (number, digits); First argument must be a number | `builtins.ts:1596` |
-| `tome_keys(a)` | ML host bindings (Milestone 13) operation. | tome_keys() takes a tome | `builtins.ts:2493` |
+| `tome_keys(a)` | Returns the keys of a tome as a list. | tome_keys() takes a tome | `builtins.ts:2493` |
 | `toPrecision(a, b)` | toPrecision(n, precision) - format to precision. | toPrecision() takes 2 arguments; First argument must be a number | `builtins.ts:1607` |
-| `trim(a)` | Runtime primitive. | trim() takes 1 argument; Argument must be text | `builtins.ts:377` |
+| `trim(a)` | Removes leading and trailing whitespace. | trim() takes 1 argument; Argument must be text | `builtins.ts:377` |
 | `trimLeft(a)` | trimLeft(s) / trimRight(s). | trimLeft() takes 1 argument; Argument must be text | `builtins.ts:1685` |
 | `trimRight(a)` | String Checking operation. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1694` |
 | `typeof(a)` | typeof() - alias for gettype. | typeof() takes 1 argument | `builtins.ts:1476` |
-| `unetch(a)` | Runtime primitive. | Invalid JSON | `builtins.ts:506` |
-| `unique(a)` | List Operations operation. | unique() takes 1 argument; Argument must be a list | `builtins.ts:826` |
-| `unzip(a)` | List Operations operation. | unzip() takes 1 argument; Argument must be a list | `builtins.ts:694` |
+| `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | Invalid JSON | `builtins.ts:506` |
+| `unique(a)` | Removes duplicate values, preserving first-seen order. | unique() takes 1 argument; Argument must be a list | `builtins.ts:826` |
+| `unzip(a)` | Splits a list of pairs into two parallel lists. | unzip() takes 1 argument; Argument must be a list | `builtins.ts:694` |
 | `upper(a)` | String operations. | upper() takes 1 argument; Argument must be text | `builtins.ts:359` |
 | `values(a)` | values(tome) - alias for contents. | values() takes 1 argument; Argument must be a tome | `builtins.ts:2099` |
 | `Vec2(a, b)` | Vec2(x, y) - 2D vector. | Vec2() takes 2 arguments (x, y) | `builtins.ts:2192` |
 | `weave(a, b)` | join list to string. | weave() takes 2 arguments; First argument must be a list | `builtins.ts:217` |
 | `whisper(…)` | output without newline concept (same as speak in this context). | — | `builtins.ts:24` |
-| `write_file(a, b)` | ML host bindings (Milestone 13) operation. | write_file() takes a path and content; write_file( | `builtins.ts:2516` |
-| `zip(…)` | List Operations operation. | zip() takes at least 2 arguments; Argument ${i + 1} must be a list | `builtins.ts:677` |
+| `write_file(a, b)` | Writes text to a file on the host filesystem, creating or truncating it. | write_file() takes a path and content; write_file( | `builtins.ts:2516` |
+| `zip(…)` | Pairs up two lists element by element into a list of pairs. | zip() takes at least 2 arguments; Argument ${i + 1} must be a list | `builtins.ts:677` |
 
 #### `src/lang/advanced.ts` — Pro layer — file I/O, hashing, base64, JSON, async, OS glue, buffers, FFI bridge
 
@@ -7629,36 +7629,36 @@ the module that installs it.
 | `acos(a)` | Advanced Math operation. | acos() takes 1 argument | `advanced.ts:175` |
 | `asin(a)` | Advanced Math operation. | asin() takes 1 argument | `advanced.ts:167` |
 | `assert(…)` | ============= Assertions (for testing) =============. | assert() takes at least 1 argument | `advanced.ts:361` |
-| `asserteq(a, b)` | Assertions (for testing) operation. | asserteq() takes 2 arguments; Assertion failed: ${a} differs ${b} | `advanced.ts:374` |
+| `asserteq(a, b)` | Throws when the two values differ — the built-in test assertion. | asserteq() takes 2 arguments; Assertion failed: ${a} differs ${b} | `advanced.ts:374` |
 | `atan(a)` | Advanced Math operation. | atan() takes 1 argument | `advanced.ts:183` |
 | `atan2(a, b)` | Advanced Math operation. | atan2() takes 2 arguments (y, x) | `advanced.ts:191` |
 | `cos(a)` | Advanced Math operation. | cos() takes 1 argument | `advanced.ts:151` |
-| `decipher(a)` | File I/O (Browser simulation) operation. | decipher() takes 1 argument (path); File not found: ${path} | `advanced.ts:45` |
+| `decipher(a)` | Parses a string back into a structured value (numbers, lists, tomes). | decipher() takes 1 argument (path); File not found: ${path} | `advanced.ts:45` |
 | `E()` | Advanced Math operation. | — | `advanced.ts:229` |
 | `erase(a, b)` | handles both tome key deletion and virtual file deletion. | erase() takes 1 argument (path) or 2 arguments (tome, key) | `advanced.ts:59` |
 | `etch(a)` | ============= JSON Operations =============. | etch() takes 1 argument | `advanced.ts:10` |
 | `exp(a)` | Advanced Math operation. | exp() takes 1 argument | `advanced.ts:215` |
-| `find(a, b)` | Sorting & Searching operation. | find() takes 2 arguments (list, predicate); First argument must be a list | `advanced.ts:263` |
-| `inscribe(a, b)` | File I/O (Browser simulation) operation. | inscribe() takes 2 arguments (path, content) | `advanced.ts:33` |
-| `intersect(a, b)` | Set Operations operation. | intersect() takes 2 arguments; Arguments must be lists | `advanced.ts:311` |
+| `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `advanced.ts:263` |
+| `inscribe(a, b)` | Formats values into a template string and returns the result. | inscribe() takes 2 arguments (path, content) | `advanced.ts:33` |
+| `intersect(a, b)` | The set intersection of two lists — values present in both. | intersect() takes 2 arguments; Arguments must be lists | `advanced.ts:311` |
 | `invoke(…)` | ============= HTTP/Networking (async simulation) =============. | invoke() takes at least 1 argument (url); Network error: ${e} | `advanced.ts:89` |
-| `log(a)` | Advanced Math operation. | log() takes 1 argument | `advanced.ts:199` |
-| `log10(a)` | Advanced Math operation. | log10() takes 1 argument | `advanced.ts:207` |
+| `log(a)` | Natural logarithm. | log() takes 1 argument | `advanced.ts:199` |
+| `log10(a)` | Base-10 logarithm. | log10() takes 1 argument | `advanced.ts:207` |
 | `now()` | ============= Time Operations =============. | — | `advanced.ts:123` |
-| `pause(a)` | Time Operations operation. | pause() takes 1 argument (ms) | `advanced.ts:133` |
+| `pause(a)` | Blocks or awaits for the given number of milliseconds. | pause() takes 1 argument (ms) | `advanced.ts:133` |
 | `PI()` | Constants. | — | `advanced.ts:224` |
-| `pick(a)` | Random operation. | pick() takes 1 argument; Argument must be a list | `advanced.ts:334` |
-| `position(a, b)` | Sorting & Searching operation. | position() takes 2 arguments; First argument must be a list | `advanced.ts:277` |
+| `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `advanced.ts:334` |
+| `position(a, b)` | The index at which a value or substring first appears. | position() takes 2 arguments; First argument must be a list | `advanced.ts:277` |
 | `randint(a, b)` | ============= Random =============. | randint() takes 2 arguments (min, max) | `advanced.ts:324` |
-| `scroll()` | File I/O (Browser simulation) operation. | — | `advanced.ts:81` |
-| `shuffle(a)` | Random operation. | shuffle() takes 1 argument; Argument must be a list | `advanced.ts:345` |
+| `scroll()` | Scrolls the rendered output or a target element. | — | `advanced.ts:81` |
+| `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `advanced.ts:345` |
 | `sin(a)` | ============= Advanced Math =============. | sin() takes 1 argument | `advanced.ts:143` |
 | `sort(…)` | ============= Sorting & Searching =============. | sort() takes at least 1 argument; First argument must be a list | `advanced.ts:240` |
 | `tan(a)` | Advanced Math operation. | tan() takes 1 argument | `advanced.ts:159` |
 | `TAU()` | Advanced Math operation. | — | `advanced.ts:234` |
-| `timestamp()` | Time Operations operation. | — | `advanced.ts:128` |
-| `unetch(a)` | JSON Operations operation. | unetch() takes 1 argument; Invalid JSON | `advanced.ts:18` |
-| `union(a, b)` | Set Operations operation. | union() takes 2 arguments; Arguments must be lists | `advanced.ts:299` |
+| `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `advanced.ts:128` |
+| `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | unetch() takes 1 argument; Invalid JSON | `advanced.ts:18` |
+| `union(a, b)` | The set union of two lists — every distinct value from either side. | union() takes 2 arguments; Arguments must be lists | `advanced.ts:299` |
 | `unique(a)` | ============= Set Operations =============. | unique() takes 1 argument; Argument must be a list | `advanced.ts:289` |
 
 #### `src/lang/matrix.ts` — Matrix and linear algebra
@@ -7671,11 +7671,11 @@ the module that installs it.
 | `flatten(a)` | Flatten. | flatten() takes 1 argument | `matrix.ts:155` |
 | `identity(a)` | Identity matrix. | identity() takes 1 argument (size) | `matrix.ts:26` |
 | `matadd(a, b)` | Element-wise operations. | matadd() takes 2 arguments | `matrix.ts:115` |
-| `matmean(a)` | Runtime primitive. | matmean() takes 1 argument; Arguments must be 2D lists | `matrix.ts:209` |
+| `matmean(a)` | Mean of every element in a matrix. | matmean() takes 1 argument; Arguments must be 2D lists | `matrix.ts:209` |
 | `matmul(a, b)` | Matrix multiplication. | matmul() takes 2 arguments; Arguments must be 2D lists | `matrix.ts:83` |
 | `matrix(…)` | Create a matrix. | matrix() takes at least 2 arguments (rows, cols, fill?) | `matrix.ts:10` |
-| `matscale(a, b)` | Runtime primitive. | matscale() takes 2 arguments (matrix, scalar) | `matrix.ts:131` |
-| `matsub(a, b)` | Runtime primitive. | matsub() takes 2 arguments | `matrix.ts:123` |
+| `matscale(a, b)` | Multiplies every element of a matrix by a scalar. | matscale() takes 2 arguments (matrix, scalar) | `matrix.ts:131` |
+| `matsub(a, b)` | Element-wise subtraction of two matrices of the same shape. | matsub() takes 2 arguments | `matrix.ts:123` |
 | `matsum(a)` | Sum/mean. | matsum() takes 1 argument | `matrix.ts:198` |
 | `reshape(a, b, c)` | Reshape. | reshape() takes 3 arguments (list, rows, cols); First argument must be a list | `matrix.ts:177` |
 | `shape(a)` | Shape. | shape() takes 1 argument | `matrix.ts:142` |
@@ -7687,36 +7687,36 @@ the module that installs it.
 
 | Call | What it does | Rules | Source |
 | --- | --- | --- | --- |
-| `alpha(a)` | Drawing State operation. | alpha() takes 1 argument (0-1) | `graphics.ts:136` |
-| `arc(…)` | Basic Shapes operation. | arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?) | `graphics.ts:196` |
-| `background(…)` | Canvas Setup operation. | background() takes at least 1 argument | `graphics.ts:65` |
-| `backward(a)` | Turtle Graphics operation. | backward() takes 1 argument (distance) | `graphics.ts:546` |
+| `alpha(a)` | Sets the global drawing opacity for subsequent canvas operations. | alpha() takes 1 argument (0-1) | `graphics.ts:136` |
+| `arc(…)` | Draws a circular arc from a start angle to an end angle. | arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?) | `graphics.ts:196` |
+| `background(…)` | Fills the whole canvas with a colour, clearing what was drawn. | background() takes at least 1 argument | `graphics.ts:65` |
+| `backward(a)` | Moves the turtle backwards by the given distance, drawing if the pen is down. | backward() takes 1 argument (distance) | `graphics.ts:546` |
 | `beginPath()` | ========== Path Drawing ==========. | — | `graphics.ts:374` |
 | `bezierTo(a, b, c, d, e, f)` | Path Drawing operation. | bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y) | `graphics.ts:408` |
 | `canvas(a, b)` | ========== Canvas Setup ==========. | canvas() takes 2 arguments (width, height) | `graphics.ts:45` |
-| `circle(a, b, c)` | Basic Shapes operation. | circle() takes 3 arguments (x, y, radius) | `graphics.ts:178` |
-| `clear(a)` | Canvas Setup operation. | — | `graphics.ts:56` |
+| `circle(a, b, c)` | Draws a circle at a centre point with the given radius. | circle() takes 3 arguments (x, y, radius) | `graphics.ts:178` |
+| `clear(a)` | Erases the canvas contents. | — | `graphics.ts:56` |
 | `closePath()` | Path Drawing operation. | — | `graphics.ts:382` |
-| `constrain(a, b, c)` | Math Utilities for Graphics operation. | constrain() takes 3 arguments (value, min, max) | `graphics.ts:811` |
+| `constrain(a, b, c)` | Clamps a number into the inclusive range `[low, high]`. | constrain() takes 3 arguments (value, min, max) | `graphics.ts:811` |
 | `createSprite(…)` | ========== Sprite System ==========. | createSprite() takes 4-5 arguments (x, y, width, height, color?) | `graphics.ts:443` |
-| `degrees(a)` | Math Utilities for Graphics operation. | degrees() takes 1 argument (radians) | `graphics.ts:779` |
-| `dist(a, b, c, d)` | Math Utilities for Graphics operation. | dist() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:822` |
-| `dot(a, b)` | Turtle Graphics operation. | — | `graphics.ts:706` |
+| `degrees(a)` | Converts radians to degrees. | degrees() takes 1 argument (radians) | `graphics.ts:779` |
+| `dist(a, b, c, d)` | Euclidean distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:822` |
+| `dot(a, b)` | Dot product of two vectors. | — | `graphics.ts:706` |
 | `drawSprite(a)` | Sprite System operation. | drawSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:467` |
-| `ellipse(…)` | Basic Shapes operation. | ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?) | `graphics.ts:187` |
+| `ellipse(…)` | Draws an ellipse with independent width and height radii. | ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?) | `graphics.ts:187` |
 | `fill(a)` | ========== Drawing State ==========. | fill() takes 1 argument (color) | `graphics.ts:75` |
 | `fillPath()` | Path Drawing operation. | — | `graphics.ts:426` |
-| `font(…)` | Text operation. | font() takes 1-2 arguments (fontFamily, style?) | `graphics.ts:291` |
-| `forward(a)` | Turtle Graphics operation. | forward() takes 1 argument (distance) | `graphics.ts:528` |
-| `goto(a, b)` | Turtle Graphics operation. | goto() takes 2 arguments (x, y) | `graphics.ts:622` |
-| `heading()` | Turtle Graphics operation. | — | `graphics.ts:663` |
-| `heart(a, b, c)` | Basic Shapes operation. | heart() takes 3 arguments (x, y, size) | `graphics.ts:263` |
-| `home()` | Turtle Graphics operation. | — | `graphics.ts:638` |
-| `hsla(a, b, c, d)` | Color Helpers operation. | hsla() takes 4 arguments (h, s, l, a) | `graphics.ts:754` |
+| `font(…)` | Sets the font family and size used by text drawing. | font() takes 1-2 arguments (fontFamily, style?) | `graphics.ts:291` |
+| `forward(a)` | Moves the turtle forwards by the given distance, drawing if the pen is down. | forward() takes 1 argument (distance) | `graphics.ts:528` |
+| `goto(a, b)` | Moves the turtle straight to an absolute canvas coordinate. | goto() takes 2 arguments (x, y) | `graphics.ts:622` |
+| `heading()` | The turtle's current facing angle in degrees. | — | `graphics.ts:663` |
+| `heart(a, b, c)` | Draws a heart shape at the given position and size. | heart() takes 3 arguments (x, y, size) | `graphics.ts:263` |
+| `home()` | Returns the turtle to the canvas centre facing its default direction. | — | `graphics.ts:638` |
+| `hsla(a, b, c, d)` | Builds a colour from hue, saturation, lightness, and alpha. | hsla() takes 4 arguments (h, s, l, a) | `graphics.ts:754` |
 | `hue(…)` | ========== Color Helpers ==========. | hue() takes 1-3 arguments (h, s?, l?) | `graphics.ts:727` |
-| `left(a)` | Turtle Graphics operation. | left() takes 1 argument (degrees) | `graphics.ts:564` |
-| `lerp(a, b, c)` | Math Utilities for Graphics operation. | lerp() takes 3 arguments (a, b, t) | `graphics.ts:787` |
-| `line(a, b, c, d)` | Basic Shapes operation. | line() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:211` |
+| `left(a)` | Turns the turtle counter-clockwise by the given angle. | left() takes 1 argument (degrees) | `graphics.ts:564` |
+| `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (a, b, t) | `graphics.ts:787` |
+| `line(a, b, c, d)` | Draws a straight line between two points. | line() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:211` |
 | `linearGradient(…)` | ========== Gradients ==========. | linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops) | `graphics.ts:301` |
 | `lineCap(a)` | Drawing State operation. | lineCap() takes 1 argument (round, square, butt) | `graphics.ts:118` |
 | `lineJoin(a)` | Drawing State operation. | lineJoin() takes 1 argument (round, bevel, miter) | `graphics.ts:127` |
@@ -7728,37 +7728,37 @@ the module that installs it.
 | `noFill()` | Drawing State operation. | — | `graphics.ts:84` |
 | `noShadow()` | Drawing State operation. | — | `graphics.ts:160` |
 | `noStroke()` | Drawing State operation. | — | `graphics.ts:101` |
-| `pencolor(a)` | Turtle Graphics operation. | pencolor() takes 1 argument (color) | `graphics.ts:604` |
-| `pendown()` | Turtle Graphics operation. | — | `graphics.ts:596` |
-| `penup()` | Turtle Graphics operation. | — | `graphics.ts:588` |
-| `penwidth(a)` | Turtle Graphics operation. | penwidth() takes 1 argument (width) | `graphics.ts:613` |
-| `point(…)` | Basic Shapes operation. | point() takes 2-3 arguments (x, y, size?) | `graphics.ts:220` |
-| `polygon(…)` | Basic Shapes operation. | polygon() takes points [[x,y], ...]; polygon() argument must be a list of points | `graphics.ts:238` |
-| `pos()` | Turtle Graphics operation. | — | `graphics.ts:671` |
+| `pencolor(a)` | Sets the stroke colour used by the turtle and shape outlines. | pencolor() takes 1 argument (color) | `graphics.ts:604` |
+| `pendown()` | Lowers the pen so turtle movement draws. | — | `graphics.ts:596` |
+| `penup()` | Raises the pen so turtle movement does not draw. | — | `graphics.ts:588` |
+| `penwidth(a)` | Sets the stroke width in pixels. | penwidth() takes 1 argument (width) | `graphics.ts:613` |
+| `point(…)` | Draws a single pixel-sized dot. | point() takes 2-3 arguments (x, y, size?) | `graphics.ts:220` |
+| `polygon(…)` | Draws a regular polygon with the given number of sides. | polygon() takes points [[x,y], ...]; polygon() argument must be a list of points | `graphics.ts:238` |
+| `pos()` | The turtle's current `[x, y]` position. | — | `graphics.ts:671` |
 | `quadraticTo(a, b, c, d)` | Path Drawing operation. | quadraticTo() takes 4 arguments (cpx, cpy, x, y) | `graphics.ts:417` |
 | `radialGradient(…)` | Gradients operation. | radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops) | `graphics.ts:311` |
 | `radians(a)` | ========== Math Utilities for Graphics ==========. | radians() takes 1 argument (degrees) | `graphics.ts:771` |
 | `randomColor()` | Color Helpers operation. | — | `graphics.ts:762` |
 | `rect(…)` | ========== Basic Shapes ==========. | rect() takes 4-5 arguments (x, y, w, h, radius?) | `graphics.ts:169` |
 | `resetTransform()` | Transformations operation. | — | `graphics.ts:365` |
-| `restore()` | Transformations operation. | — | `graphics.ts:357` |
-| `rgb(a, b, c)` | Color Helpers operation. | rgb() takes 3 arguments (r, g, b) | `graphics.ts:738` |
-| `rgba(a, b, c, d)` | Color Helpers operation. | rgba() takes 4 arguments (r, g, b, a) | `graphics.ts:746` |
-| `right(a)` | Turtle Graphics operation. | right() takes 1 argument (degrees) | `graphics.ts:576` |
-| `rotate(a)` | Transformations operation. | rotate() takes 1 argument (angle in radians) | `graphics.ts:331` |
-| `save()` | Transformations operation. | — | `graphics.ts:349` |
-| `scale(…)` | Transformations operation. | scale() takes 1-2 arguments (x, y?) | `graphics.ts:340` |
-| `setheading(a)` | Turtle Graphics operation. | setheading() takes 1 argument (angle) | `graphics.ts:651` |
-| `shadow(…)` | Drawing State operation. | shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?) | `graphics.ts:145` |
+| `restore()` | Pops the last saved canvas transform and style state. | — | `graphics.ts:357` |
+| `rgb(a, b, c)` | Builds an opaque colour from red, green, and blue channels. | rgb() takes 3 arguments (r, g, b) | `graphics.ts:738` |
+| `rgba(a, b, c, d)` | Builds a colour from red, green, blue, and alpha channels. | rgba() takes 4 arguments (r, g, b, a) | `graphics.ts:746` |
+| `right(a)` | Turns the turtle clockwise by the given angle. | right() takes 1 argument (degrees) | `graphics.ts:576` |
+| `rotate(a)` | Rotates the canvas coordinate system by an angle. | rotate() takes 1 argument (angle in radians) | `graphics.ts:331` |
+| `save()` | Pushes the current canvas transform and style state onto a stack. | — | `graphics.ts:349` |
+| `scale(…)` | Scales the canvas coordinate system on the x and y axes. | scale() takes 1-2 arguments (x, y?) | `graphics.ts:340` |
+| `setheading(a)` | Points the turtle at an absolute angle in degrees. | setheading() takes 1 argument (angle) | `graphics.ts:651` |
+| `shadow(…)` | Configures the drop shadow applied to subsequent drawing. | shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?) | `graphics.ts:145` |
 | `spriteCollides(a, b)` | Sprite System operation. | spriteCollides() takes 2 arguments (sprite1, sprite2); Invalid sprites | `graphics.ts:502` |
-| `stamp()` | Turtle Graphics operation. | — | `graphics.ts:717` |
-| `star(…)` | Basic Shapes operation. | star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?) | `graphics.ts:249` |
-| `stroke(…)` | Drawing State operation. | stroke() takes 1-2 arguments (color, width?) | `graphics.ts:92` |
+| `stamp()` | Imprints the turtle's current shape onto the canvas without moving it. | — | `graphics.ts:717` |
+| `star(…)` | Draws a star with the given number of points. | star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?) | `graphics.ts:249` |
+| `stroke(…)` | Strokes the current path with the active pen colour and width. | stroke() takes 1-2 arguments (color, width?) | `graphics.ts:92` |
 | `strokePath()` | Path Drawing operation. | — | `graphics.ts:434` |
 | `text(…)` | ========== Text ==========. | text() takes 3-4 arguments (str, x, y, size?) | `graphics.ts:273` |
 | `textAlign(…)` | Text operation. | textAlign() takes 1-2 arguments (horizontal, vertical?) | `graphics.ts:282` |
 | `translate(a, b)` | ========== Transformations ==========. | translate() takes 2 arguments (x, y) | `graphics.ts:322` |
-| `triangle(a, b, c, d, e, f)` | Basic Shapes operation. | triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3) | `graphics.ts:229` |
+| `triangle(a, b, c, d, e, f)` | Draws a triangle through three points. | triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3) | `graphics.ts:229` |
 | `turtle()` | ========== Turtle Graphics ==========. | — | `graphics.ts:519` |
 | `turtleCircle(…)` | Turtle Graphics operation. | turtleCircle() takes 1-2 arguments (radius, steps?) | `graphics.ts:679` |
 | `updateSprite(a)` | Sprite System operation. | updateSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:490` |
@@ -7771,36 +7771,36 @@ the module that installs it.
 | --- | --- | --- | --- |
 | `alert(a)` | Programmatic dialog. | — | `ui.ts:283` |
 | `button(a, b, c)` | ───────────────────────── Interactive widgets ─────────────────────────. | — | `ui.ts:183` |
-| `checkbox(a, b)` | Runtime primitive. | — | `ui.ts:209` |
-| `column()` | Runtime primitive. | — | `ui.ts:108` |
-| `divider()` | Runtime primitive. | — | `ui.ts:165` |
-| `endcolumn()` | Runtime primitive. | — | `ui.ts:109` |
-| `endgroup()` | Runtime primitive. | — | `ui.ts:115` |
-| `endmenu()` | Runtime primitive. | — | `ui.ts:249` |
-| `endrow()` | Runtime primitive. | — | `ui.ts:107` |
-| `endtab()` | Runtime primitive. | — | `ui.ts:123` |
-| `endtabs()` | Runtime primitive. | — | `ui.ts:118` |
-| `endwindow()` | Runtime primitive. | — | `ui.ts:104` |
-| `group(a)` | Runtime primitive. | — | `ui.ts:111` |
-| `heading(a, b)` | Runtime primitive. | — | `ui.ts:142` |
-| `image(a, b, c, d)` | Runtime primitive. | — | `ui.ts:160` |
-| `input(a, b)` | Runtime primitive. | — | `ui.ts:192` |
-| `label(a)` | Runtime primitive. | — | `ui.ts:148` |
+| `checkbox(a, b)` | Adds a checkbox widget bound to a named state key. | — | `ui.ts:209` |
+| `column()` | Starts a vertical layout column; close it with `endcolumn`. | — | `ui.ts:108` |
+| `divider()` | Draws a horizontal separator line between widgets. | — | `ui.ts:165` |
+| `endcolumn()` | Closes the column opened by `column`. | — | `ui.ts:109` |
+| `endgroup()` | Closes the group opened by `group`. | — | `ui.ts:115` |
+| `endmenu()` | Closes the menu opened by `menu`. | — | `ui.ts:249` |
+| `endrow()` | Closes the row opened by `row`. | — | `ui.ts:107` |
+| `endtab()` | Closes the tab opened by `tab`. | — | `ui.ts:123` |
+| `endtabs()` | Closes the tab strip opened by `tabs`. | — | `ui.ts:118` |
+| `endwindow()` | Closes the window opened by `window`. | — | `ui.ts:104` |
+| `group(a)` | Starts a labelled group box; close it with `endgroup`. | — | `ui.ts:111` |
+| `heading(a, b)` | Renders a heading-styled text widget. | — | `ui.ts:142` |
+| `image(a, b, c, d)` | Renders an image widget from a URL or data URI. | — | `ui.ts:160` |
+| `input(a, b)` | Adds a single-line text input bound to a state key. | — | `ui.ts:192` |
+| `label(a)` | Renders a short static text label. | — | `ui.ts:148` |
 | `menu(a)` | ───────────────────────── Menu ─────────────────────────. | — | `ui.ts:245` |
-| `menuitem(a, b)` | Runtime primitive. | — | `ui.ts:250` |
-| `paragraph(a)` | Runtime primitive. | — | `ui.ts:154` |
-| `progress(a, b)` | Runtime primitive. | — | `ui.ts:168` |
-| `row()` | Runtime primitive. | — | `ui.ts:106` |
-| `select(a, b)` | Runtime primitive. | — | `ui.ts:227` |
+| `menuitem(a, b)` | Adds one clickable entry to the current menu. | — | `ui.ts:250` |
+| `paragraph(a)` | Renders a block of body text. | — | `ui.ts:154` |
+| `progress(a, b)` | Renders a progress bar for a value between 0 and 1. | — | `ui.ts:168` |
+| `row()` | Starts a horizontal layout row; close it with `endrow`. | — | `ui.ts:106` |
+| `select(a, b)` | Adds a drop-down list bound to a state key. | — | `ui.ts:227` |
 | `show()` | Show window (re-emit in case). | — | `ui.ts:280` |
-| `slider(a, b, c, d)` | Runtime primitive. | — | `ui.ts:217` |
+| `slider(a, b, c, d)` | Adds a numeric slider with a range bound to a state key. | — | `ui.ts:217` |
 | `spacer(a)` | Evaluates `{ pushNode('spacer', { size: asNumber(a, 8) }); return null; }`. | — | `ui.ts:166` |
-| `tab(a)` | Runtime primitive. | — | `ui.ts:119` |
+| `tab(a)` | Declares one tab inside a `tabs` container. | — | `ui.ts:119` |
 | `table(a, b)` | ───────────────────────── Tables ─────────────────────────. | — | `ui.ts:236` |
-| `tabs()` | Runtime primitive. | — | `ui.ts:117` |
-| `textarea(a, b, c)` | Runtime primitive. | — | `ui.ts:200` |
+| `tabs()` | Starts a tab strip; close it with `endtabs`. | — | `ui.ts:117` |
+| `textarea(a, b, c)` | Adds a multi-line text input bound to a state key. | — | `ui.ts:200` |
 | `uiget(a)` | ───────────────────────── Reactive value helpers ─────────────────────────. | — | `ui.ts:260` |
-| `uiset(a, b)` | Runtime primitive. | — | `ui.ts:264` |
+| `uiset(a, b)` | Writes a value into the app widget state store, re-rendering the UI. | — | `ui.ts:264` |
 | `window(a, b, c)` | ───────────────────────── Containers ─────────────────────────. | — | `ui.ts:90` |
 
 #### `src/lang/web.ts` — Web DSL — HTML tags, CSS, JS hooks, raw passthrough
@@ -7809,22 +7809,22 @@ the module that installs it.
 
 | Call | What it does | Rules | Source |
 | --- | --- | --- | --- |
-| `close()` | Runtime primitive. | — | `web.ts:227` |
-| `endpage()` | Runtime primitive. | — | `web.ts:191` |
-| `keyframes(a, b)` | Runtime primitive. | — | `web.ts:244` |
-| `link(a, b)` | Runtime primitive. | — | `web.ts:207` |
-| `meta(a)` | Runtime primitive. | — | `web.ts:202` |
+| `close()` | Closes an open handle (file, socket, page, or window) and releases it. | — | `web.ts:227` |
+| `endpage()` | Closes the document opened by `page`. | — | `web.ts:191` |
+| `keyframes(a, b)` | Emits a CSS `@keyframes` animation block. | — | `web.ts:244` |
+| `link(a, b)` | Emits a `<link>` tag — typically a stylesheet or icon. | — | `web.ts:207` |
+| `meta(a)` | Emits a `<meta>` tag into the document head. | — | `web.ts:202` |
 | `on(a, b, c)` | on("input", "#id", "...")  — generic event. | — | `web.ts:269` |
 | `onclick(a, b)` | onclick("#id", "alert('hi')"). | — | `web.ts:261` |
 | `open(…)` | open(name, attrs?)  /  close(). | — | `web.ts:222` |
-| `page(a)` | Runtime primitive. | — | `web.ts:180` |
+| `page(a)` | Opens an HTML document; close it with `endpage`. | — | `web.ts:180` |
 | `raw_css(a)` | Evaluates `{ state.css.push(asStr(a)); mark(); return null; }`. | — | `web.ts:280` |
 | `raw_html(a)` | Evaluates `{ push(asStr(a)); mark(); return null; }`. | — | `web.ts:279` |
-| `raw_js(a)` | Runtime primitive. | — | `web.ts:281` |
-| `script(a)` | Runtime primitive. | — | `web.ts:256` |
+| `raw_js(a)` | Injects raw JavaScript into the generated page untouched. | — | `web.ts:281` |
+| `script(a)` | Emits a `<script>` tag with the given source or URL. | — | `web.ts:256` |
 | `style(a, b)` | style(selector, props_dict)  — or  style(raw_css_string). | — | `web.ts:232` |
 | `tag(…)` | tag(name, text?, attrs?)  — works for any HTML tag, even ones we didn't list. | — | `web.ts:215` |
-| `title(a)` | Runtime primitive. | — | `web.ts:198` |
+| `title(a)` | Sets the document title in the generated page head. | — | `web.ts:198` |
 
 #### `src/lang/kernel.ts` — Virtual kernel — tasks, syscalls, IPC, GC, process table
 
@@ -7840,8 +7840,8 @@ the module that installs it.
 | `deviceStatus(a)` | Create Kernel Builtins operation. | deviceStatus() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:970` |
 | `deviceWrite(a, b)` | Create Kernel Builtins operation. | deviceWrite() takes 2 arguments; Device not found: ${args[0]} | `kernel.ts:959` |
 | `emitEvent(…)` | Create Kernel Builtins operation. | emitEvent() takes at least 1 argument | `kernel.ts:1067` |
-| `f32()` | Create Kernel Builtins operation. | — | `kernel.ts:1048` |
-| `f64()` | Create Kernel Builtins operation. | — | `kernel.ts:1049` |
+| `f32()` | FFI type tag: 32-bit float. | — | `kernel.ts:1048` |
+| `f64()` | FFI type tag: 64-bit float. | — | `kernel.ts:1049` |
 | `fsAppend(a, b)` | Create Kernel Builtins operation. | fsAppend() takes 2 arguments | `kernel.ts:809` |
 | `fsDelete(a)` | Create Kernel Builtins operation. | fsDelete() takes 1 argument | `kernel.ts:785` |
 | `fsExists(a)` | Create Kernel Builtins operation. | fsExists() takes 1 argument | `kernel.ts:793` |
@@ -7850,7 +7850,7 @@ the module that installs it.
 | `fsRead(a)` | VFS shortcuts. | fsRead() takes 1 argument | `kernel.ts:751` |
 | `fsStat(a)` | Create Kernel Builtins operation. | fsStat() takes 1 argument | `kernel.ts:801` |
 | `fsWrite(a, b)` | Create Kernel Builtins operation. | fsWrite() takes 2 arguments (path, content) | `kernel.ts:759` |
-| `gc()` | Create Kernel Builtins operation. | — | `kernel.ts:893` |
+| `gc()` | Runs the virtual kernel's mark-and-sweep collector immediately. | — | `kernel.ts:893` |
 | `getPrivilege()` | Privilege. | — | `kernel.ts:1003` |
 | `getTime()` | getTime. | — | `kernel.ts:1095` |
 | `heapAlloc(a)` | Heap. | heapAlloc() takes 1 argument (size) | `kernel.ts:854` |
@@ -7858,9 +7858,9 @@ the module that installs it.
 | `heapLoad(a)` | Create Kernel Builtins operation. | heapLoad() takes 1 argument (address) | `kernel.ts:871` |
 | `heapStats()` | Create Kernel Builtins operation. | — | `kernel.ts:888` |
 | `heapStore(a, b)` | Create Kernel Builtins operation. | heapStore() takes 2 arguments (address, value) | `kernel.ts:879` |
-| `i16()` | Create Kernel Builtins operation. | — | `kernel.ts:1046` |
-| `i32()` | Create Kernel Builtins operation. | — | `kernel.ts:1047` |
-| `i8()` | Create Kernel Builtins operation. | — | `kernel.ts:1045` |
+| `i16()` | FFI type tag: signed 16-bit integer. | — | `kernel.ts:1046` |
+| `i32()` | FFI type tag: signed 32-bit integer. | — | `kernel.ts:1047` |
+| `i8()` | FFI type tag: signed 8-bit integer. | — | `kernel.ts:1045` |
 | `kernelBoot()` | Boot. | — | `kernel.ts:745` |
 | `killTask(a)` | Create Kernel Builtins operation. | killTask() takes 1 argument | `kernel.ts:828` |
 | `loadModule(a)` | Module loader (simulated). | loadModule() takes 1 argument (path); Module not found: ${path} | `kernel.ts:1082` |
@@ -7873,9 +7873,9 @@ the module that installs it.
 | `syscall(…)` | syscall(name, ...args). | syscall() requires at least 1 argument (name) | `kernel.ts:735` |
 | `taskList()` | Create Kernel Builtins operation. | — | `kernel.ts:841` |
 | `triggerInterrupt(a)` | Create Kernel Builtins operation. | triggerInterrupt() takes 1 argument | `kernel.ts:992` |
-| `u16()` | Create Kernel Builtins operation. | — | `kernel.ts:1043` |
-| `u32()` | Create Kernel Builtins operation. | — | `kernel.ts:1044` |
-| `u8()` | Create Kernel Builtins operation. | — | `kernel.ts:1042` |
+| `u16()` | FFI type tag: unsigned 16-bit integer. | — | `kernel.ts:1043` |
+| `u32()` | FFI type tag: unsigned 32-bit integer. | — | `kernel.ts:1044` |
+| `u8()` | FFI type tag: unsigned 8-bit integer. | — | `kernel.ts:1042` |
 | `windowList()` | Create Kernel Builtins operation. | — | `kernel.ts:936` |
 | `yieldTask()` | Create Kernel Builtins operation. | — | `kernel.ts:836` |
 
