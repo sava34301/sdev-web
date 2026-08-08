@@ -8096,16 +8096,16 @@ sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `Library` | `path` | ---------- library handle wrapper ---------- | `{ ok: nope, path: path, handle: void, err: "cannot open " + path }` | 39 |
+| `Library` | `path` | library handle wrapper | `{ ok: nope, path: path, handle: void, err: "cannot open " + path }` | 39 |
 | `lib_close` | `lib` | Part of the library handle wrapper section of this module. | `yep` | 47 |
-| `bind` | `lib, name, ret_kind, arg_kinds` | ---------- function binding ---------- bind(lib, "matmul_f64", FFI_VOID, [FFI_PTR, FFI_PTR, FFI_PTR, FFI_I32, FFI_I32, FFI_I32]) | `{` | 55 |
+| `bind` | `lib, name, ret_kind, arg_kinds` | function binding bind(lib, "matmul_f64", FFI_VOID, [FFI_PTR, FFI_PTR, FFI_PTR, FFI_I32, FFI_I32, FFI_I32]) | `{` | 55 |
 | `invoke` | `binding, argv` | Part of the function binding section of this module. | `ffi_call(binding.fn, binding.ret, binding.args, argv)` | 68 |
-| `buf_f64` | `n` | ---------- raw buffers (for passing float arrays) ---------- | `{ addr: b, len: n, kind: FFI_F64 }` | 74 |
+| `buf_f64` | `n` | raw buffers (for passing float arrays) | `{ addr: b, len: n, kind: FFI_F64 }` | 74 |
 | `buf_from_list` | `xs` | Part of the raw buffers (for passing float arrays) section of this module. | `b` | 79 |
 | `buf_to_list` | `b` | Part of the raw buffers (for passing float arrays) section of this module. | `out` | 90 |
-| `open_blas` | `path` | ---------- BLAS-style convenience wrappers ---------- Open an OpenBLAS-compatible library and bind the two calls the ML stdlib actually needs for accelerated matmul. | `{ lib: lib, dgemm: dgemm, daxpy: daxpy }` | 103 |
+| `open_blas` | `path` | BLAS-style convenience wrappers Open an OpenBLAS-compatible library and bind the two calls the ML stdlib actually needs for accelerated matmul. | `{ lib: lib, dgemm: dgemm, daxpy: daxpy }` | 103 |
 | `blas_matmul` | `blas, a, b` | BLAS-accelerated matmul that plugs straight into ml/tensor.sdev. Falls back to the pure-sdev matmul when the binding is void. | `tensor(buf_to_list(bc), [m, n])` | 127 |
-| `open_cuda` | `cudart_path, cublas_path` | ---------- CUDA fast path ---------- Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training. | `{` | 145 |
+| `open_cuda` | `cudart_path, cublas_path` | CUDA fast path Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training. | `{` | 145 |
 | `cuda_ok` | `cuda` | Part of the CUDA fast path section of this module. | `yep` | 167 |
 
 #### `lang/stdlib/ml/auto_evolve.sdev`
@@ -8117,15 +8117,15 @@ sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12) Wires the ML stack i
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `is_allowed` | `path` | Part of the source-tree map section of this module. | `nope` | 34 |
-| `make_proposal` | `path, old_body, new_body, reason` | ---------- proposal record ---------- | `{` | 44 |
+| `make_proposal` | `path, old_body, new_body, reason` | proposal record | `{` | 44 |
 | `apply_proposal` | `p` | Part of the proposal record section of this module. | `ok` | 54 |
-| `draft_from_demand` | `model, demand, target_path` | ---------- demand → proposal ---------- Given a ranked demand map from `mine_demand`, ask the model to draft a patch for the top topic. `model` is any sdev model exposing `generate(model, prompt, max_new)`. | `make_proposal(target_path, cur, patched,` | 65 |
+| `draft_from_demand` | `model, demand, target_path` | demand → proposal Given a ranked demand map from `mine_demand`, ask the model to draft a patch for the top topic. `model` is any sdev model exposing `generate(model, prompt, max_new)`. | `make_proposal(target_path, cur, patched,` | 65 |
 | `top_topic` | `counts` | Part of the demand → proposal section of this module. | `best_k` | 77 |
-| `evolve_weights` | `model, teacher_url, teacher_key, prompts, epochs, lr` | ---------- fine-tune on live distillation ---------- Pulls prompt/answer pairs from a teacher endpoint and runs a short SGD pass so the local model tracks the frontier without leaving the sdev runtime. | `measure(pairs)` | 95 |
-| `evolve_tick` | `model, sources, teacher_url, teacher_key` | ---------- the loop ---------- One tick: mine demand → draft → review → apply → fine-tune. Returns a report tome so the caller can log or throttle. | `{` | 112 |
+| `evolve_weights` | `model, teacher_url, teacher_key, prompts, epochs, lr` | fine-tune on live distillation Pulls prompt/answer pairs from a teacher endpoint and runs a short SGD pass so the local model tracks the frontier without leaving the sdev runtime. | `measure(pairs)` | 95 |
+| `evolve_tick` | `model, sources, teacher_url, teacher_key` | the loop One tick: mine demand → draft → review → apply → fine-tune. Returns a report tome so the caller can log or throttle. | `{` | 112 |
 | `pick_target` | `demand` | Part of the the loop section of this module. | `"lang/stdlib/ml/nn.sdev"` | 133 |
 | `prompt_pool` | `demand` | Part of the the loop section of this module. | `out` | 145 |
-| `evolve_forever` | `model, sources, teacher_url, teacher_key, ticks` | ---------- long-running driver ---------- | _no explicit yield_ | 160 |
+| `evolve_forever` | `model, sources, teacher_url, teacher_key, ticks` | long-running driver | _no explicit yield_ | 160 |
 
 #### `lang/stdlib/ml/autograd.sdev`
 
@@ -8135,25 +8135,25 @@ sdev ML Stdlib — Autograd Tape (Milestone 8b) Reverse-mode automatic different
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `tape_reset` | _none_ | Part of the = section of this module. | _no explicit yield_ | 13 |
-| `record` | `kind, inputs, out` | Part of the = section of this module. | _no explicit yield_ | 17 |
-| `d_add` | `a, b` | ---------- differentiable ops ---------- | `o` | 22 |
+| `tape_reset` | _none_ | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 13 |
+| `record` | `kind, inputs, out` | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 17 |
+| `d_add` | `a, b` | differentiable ops | `o` | 22 |
 | `d_mul` | `a, b` | Part of the differentiable ops section of this module. | `o` | 28 |
 | `d_matmul` | `a, b` | Part of the differentiable ops section of this module. | `o` | 34 |
 | `d_relu` | `a` | Part of the differentiable ops section of this module. | `o` | 41 |
 | `d_mse` | `pred, target` | Part of the differentiable ops section of this module. | `o` | 48 |
 | `d_softmax_ce` | `logits, targets` | Row-wise softmax + cross-entropy over next-token targets. logits: [rows, vocab]; targets: list of `rows` class ids. Returns the mean negative log-likelihood as a 1-element tensor. | `o` | 65 |
-| `backward` | `out` | ---------- backward pass ---------- | _no explicit yield_ | 102 |
+| `backward` | `out` | backward pass | _no explicit yield_ | 102 |
 | `bw_sce` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 118 |
 | `bw_add` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 140 |
 | `bw_mul` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 152 |
 | `bw_matmul` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 164 |
 | `bw_relu` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 204 |
 | `bw_mse` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 216 |
-| `sgd_step` | `params, lr` | ---------- optimizers ---------- | _no explicit yield_ | 229 |
+| `sgd_step` | `params, lr` | optimizers | _no explicit yield_ | 229 |
 | `zero_grads` | `params` | Part of the optimizers section of this module. | _no explicit yield_ | 244 |
 | `clip_grads` | `params, max_norm` | Global-norm gradient clipping — keeps LM training from exploding. | `norm` | 255 |
-| `adam_new` | `params` | ---------- Adam ---------- | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279 |
+| `adam_new` | `params` | Adam | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279 |
 | `adam_step` | `opt, params, lr` | Part of the Adam section of this module. | _no explicit yield_ | 296 |
 
 #### `lang/stdlib/ml/cuda.sdev`
@@ -8164,17 +8164,17 @@ sdev ML Stdlib — CUDA Fast Path (Milestone 11) Thin sdev-native layer over the
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `cuda_device` | `cudart_path, cublas_path` | ---------- device handle ---------- A "device" bundles the loaded cuBLAS/cudart bindings with a live cublasHandle_t. We keep it as a tome so callers can pass it around like any other sdev value. | `{ ok: nope, cu: void, handle: void, err: "cuda unavailable" }` | 22 |
+| `cuda_device` | `cudart_path, cublas_path` | device handle A "device" bundles the loaded cuBLAS/cudart bindings with a live cublasHandle_t. We keep it as a tome so callers can pass it around like any other sdev value. | `{ ok: nope, cu: void, handle: void, err: "cuda unavailable" }` | 22 |
 | `cuda_device_default` | _none_ | Part of the device handle section of this module. | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",` | 34 |
 | `cuda_free_device` | `dev` | Part of the device handle section of this module. | `yep` | 40 |
-| `cuda_alloc` | `dev, n_f64` | ---------- device memory ---------- A cuda_buf is host-visible metadata around a device pointer. | `{ dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }` | 51 |
+| `cuda_alloc` | `dev, n_f64` | device memory A cuda_buf is host-visible metadata around a device pointer. | `{ dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }` | 51 |
 | `cuda_free` | `dev, b` | Part of the device memory section of this module. | `yep` | 58 |
 | `cuda_upload` | `dev, host_list` | cudaMemcpyKind: HostToDevice=1, DeviceToHost=2 | `db` | 65 |
 | `cuda_download` | `dev, db` | Part of the device memory section of this module. | `buf_to_list(hb)` | 73 |
-| `cuda_matmul` | `dev, a, b` | ---------- accelerated ops ---------- Row-major C = A · B via cublasDgemm. cuBLAS is column-major, so we compute Bᵀ · Aᵀ under the hood and interpret the result as row-major C — same trick numpy's cublas backend uses. | `tensor(out, [m, n])` | 83 |
+| `cuda_matmul` | `dev, a, b` | accelerated ops Row-major C = A · B via cublasDgemm. cuBLAS is column-major, so we compute Bᵀ · Aᵀ under the hood and interpret the result as row-major C — same trick numpy's cublas backend uses. | `tensor(out, [m, n])` | 83 |
 | `best_matmul` | `dev, blas, a, b` | Convenience: pick the fastest available matmul path. Priority: CUDA → BLAS → pure sdev. | `matmul(a, b)` | 113 |
-| `cuda_forward_linear` | `dev, x, w, bias` | ---------- training-loop hook ---------- Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU. | `t_add(y, bias)` | 125 |
-| `cuda_report` | `dev` | ---------- diagnostics ---------- | `"CUDA: unavailable (running on CPU fallback)"` | 131 |
+| `cuda_forward_linear` | `dev, x, w, bias` | training-loop hook Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU. | `t_add(y, bias)` | 125 |
+| `cuda_report` | `dev` | diagnostics | `"CUDA: unavailable (running on CPU fallback)"` | 131 |
 
 #### `lang/stdlib/ml/data.sdev`
 
@@ -8184,16 +8184,16 @@ sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and 
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `load_text` | `path` | ---------- text I/O ---------- | `read_file(path)` | 10 |
+| `load_text` | `path` | text I/O | `read_file(path)` | 10 |
 | `save_text` | `path, s` | Part of the text I/O section of this module. | _no explicit yield_ | 14 |
-| `char_vocab` | `text` | ---------- byte-pair-ish tokenizer (char level) ---------- | `{ size: measure(order), stoi: seen, itos: order }` | 19 |
+| `char_vocab` | `text` | byte-pair-ish tokenizer (char level) | `{ size: measure(order), stoi: seen, itos: order }` | 19 |
 | `encode` | `vocab, text` | Part of the byte-pair-ish tokenizer (char level) section of this module. | `out` | 34 |
 | `decode` | `vocab, ids` | Part of the byte-pair-ish tokenizer (char level) section of this module. | `s` | 45 |
-| `crawl` | `url` | ---------- web crawler ---------- | `http_get(url)` | 56 |
+| `crawl` | `url` | web crawler | `http_get(url)` | 56 |
 | `crawl_many` | `urls` | Part of the web crawler section of this module. | `out` | 60 |
-| `teacher_query` | `endpoint, api_key, prompt` | ---------- teacher-model distillation ---------- Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a prompt, receive logits/text, and train the local sdev model to imitate the teacher's outputs. | `http_get(url)` | 74 |
+| `teacher_query` | `endpoint, api_key, prompt` | teacher-model distillation Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a prompt, receive logits/text, and train the local sdev model to imitate the teacher's outputs. | `http_get(url)` | 74 |
 | `distill_batch` | `endpoint, key, prompts` | Part of the teacher-model distillation section of this module. | `pairs` | 79 |
-| `save_model` | `path, model` | ---------- checkpointing ---------- | _no explicit yield_ | 91 |
+| `save_model` | `path, model` | checkpointing | _no explicit yield_ | 91 |
 
 #### `lang/stdlib/ml/nn.sdev`
 
@@ -8203,12 +8203,12 @@ sdev ML Stdlib — Neural Network Layers (Milestone 8c) High-level layer builder
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `linear` | `in_features, out_features` | Part of the = section of this module. | `{` | 9 |
-| `broadcast_row` | `row, rows` | Part of the = section of this module. | `t` | 23 |
-| `sequential` | `layers` | Part of the = section of this module. | `{` | 36 |
-| `seq_forward` | `layers, x` | Part of the = section of this module. | `cur` | 51 |
-| `relu_layer` | _none_ | Part of the = section of this module. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
-| `train_step` | `model, x, y, lr` | ---------- training loop ---------- | `loss.data[0]` | 66 |
+| `linear` | `in_features, out_features` | Computes and yields `{`. | `{` | 9 |
+| `broadcast_row` | `row, rows` | Computes and yields `t`. | `t` | 23 |
+| `sequential` | `layers` | Computes and yields `{`. | `{` | 36 |
+| `seq_forward` | `layers, x` | Computes and yields `cur`. | `cur` | 51 |
+| `relu_layer` | _none_ | Computes and yields `{ params: gather(), forward: (x) -> d_relu(x) }`. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
+| `train_step` | `model, x, y, lr` | training loop | `loss.data[0]` | 66 |
 | `fit` | `model, xs, ys, epochs, lr` | Part of the training loop section of this module. | _no explicit yield_ | 75 |
 
 #### `lang/stdlib/ml/self_modify.sdev`
@@ -8219,13 +8219,13 @@ sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-train
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `self_read` | `path` | Part of the = section of this module. | `read_file(path)` | 15 |
-| `self_propose` | `path, new_content` | Part of the = section of this module. | `nope` | 19 |
-| `set_review_hook` | `fn` | Part of the = section of this module. | _no explicit yield_ | 30 |
-| `mine_demand` | `sources` | ---------- feature-demand mining ---------- Fetches issue/PR/reddit signals and lets the model pick the next feature to draft. Returns a ranked list of {topic, score}. | `counts` | 37 |
+| `self_read` | `path` | Computes and yields `read_file(path)`. | `read_file(path)` | 15 |
+| `self_propose` | `path, new_content` | Computes and yields `nope`. | `nope` | 19 |
+| `set_review_hook` | `fn` | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 30 |
+| `mine_demand` | `sources` | feature-demand mining Fetches issue/PR/reddit signals and lets the model pick the next feature to draft. Returns a ranked list of {topic, score}. | `counts` | 37 |
 | `harvest_keywords` | `counts, body` | Part of the feature-demand mining section of this module. | _no explicit yield_ | 48 |
-| `update_docs` | `section, body` | ---------- documentation sync ---------- | _no explicit yield_ | 69 |
-| `rewrite_weights` | `model, transform` | ---------- weight rewriting ---------- The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep` | 79 |
+| `update_docs` | `section, body` | documentation sync | _no explicit yield_ | 69 |
+| `rewrite_weights` | `model, transform` | weight rewriting The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep` | 79 |
 
 #### `lang/stdlib/ml/tensor.sdev`
 
@@ -8235,21 +8235,21 @@ sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: [f64...
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `tensor` | `data, shape` | Part of the = section of this module. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
-| `tensor_grad` | `data, shape` | Part of the = section of this module. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
-| `zeros` | `shape` | Part of the = section of this module. | `tensor(d, shape)` | 23 |
-| `ones` | `shape` | Part of the = section of this module. | `tensor(d, shape)` | 31 |
-| `randn` | `shape` | Part of the = section of this module. | `tensor(d, shape)` | 39 |
-| `shape_size` | `shape` | Part of the = section of this module. | `n` | 54 |
-| `t_add` | `a, b` | ---------- element-wise ops ---------- | `tensor(d, a.shape)` | 65 |
+| `tensor` | `data, shape` | Computes and yields `{ data: data, shape: shape, grad: void, requires_grad: nope }`. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
+| `tensor_grad` | `data, shape` | Computes and yields `{ data: data, shape: shape, grad: g, requires_grad: yep }`. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
+| `zeros` | `shape` | Computes and yields `tensor(d, shape)`. | `tensor(d, shape)` | 23 |
+| `ones` | `shape` | Computes and yields `tensor(d, shape)`. | `tensor(d, shape)` | 31 |
+| `randn` | `shape` | Computes and yields `tensor(d, shape)`. | `tensor(d, shape)` | 39 |
+| `shape_size` | `shape` | Computes and yields `n`. | `n` | 54 |
+| `t_add` | `a, b` | element-wise ops | `tensor(d, a.shape)` | 65 |
 | `t_sub` | `a, b` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 73 |
 | `t_mul` | `a, b` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 81 |
 | `t_scale` | `a, k` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 89 |
-| `matmul` | `a, b` | ---------- 2-D matmul (rows x cols) ---------- | `tensor(d, [m, n])` | 98 |
-| `relu` | `a` | ---------- activations ---------- | `tensor(d, a.shape)` | 124 |
+| `matmul` | `a, b` | 2-D matmul (rows x cols) | `tensor(d, [m, n])` | 98 |
+| `relu` | `a` | activations | `tensor(d, a.shape)` | 124 |
 | `sigmoid` | `a` | Part of the activations section of this module. | `tensor(d, a.shape)` | 136 |
 | `softmax` | `a` | Part of the activations section of this module. | `tensor(d, a.shape)` | 147 |
-| `mse` | `pred, target` | ---------- losses ---------- | `s / n` | 170 |
+| `mse` | `pred, target` | losses | `s / n` | 170 |
 | `cross_entropy` | `pred, target` | Part of the losses section of this module. | `s` | 182 |
 
 #### `lang/stdlib/ml/train.sdev`
@@ -8260,16 +8260,16 @@ sdev ML Stdlib — Language-Model Training (Milestone 14) End-to-end training fo
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `lm_batches` | `ids, block` | ---------- batching ---------- Cut a flat token stream into (context, next-token) pairs of length `block`. | `{ xs: xs, ys: ys, block: block, count: measure(xs) }` | 14 |
-| `lm_step` | `model, opt, ctx, targets, lr` | ---------- one optimisation step ---------- | `loss.data[0]` | 35 |
-| `lm_fit` | `model, ids, block, epochs, lr` | ---------- full training loop ---------- | `{ history: history, final: history[measure(history) - 1], opt: opt }` | 47 |
-| `lm_loss` | `model, ids, block` | ---------- evaluation ---------- | `total / batches.count` | 66 |
+| `lm_batches` | `ids, block` | batching Cut a flat token stream into (context, next-token) pairs of length `block`. | `{ xs: xs, ys: ys, block: block, count: measure(xs) }` | 14 |
+| `lm_step` | `model, opt, ctx, targets, lr` | one optimisation step | `loss.data[0]` | 35 |
+| `lm_fit` | `model, ids, block, epochs, lr` | full training loop | `{ history: history, final: history[measure(history) - 1], opt: opt }` | 47 |
+| `lm_loss` | `model, ids, block` | evaluation | `total / batches.count` | 66 |
 | `perplexity` | `model, ids, block` | Perplexity = e^(mean NLL). Lower is better. | `exp(lm_loss(model, ids, block))` | 80 |
-| `last_logits` | `model, ids` | ---------- sampling ---------- | `tensor(row, [vocab])` | 85 |
+| `last_logits` | `model, ids` | sampling | `tensor(row, [vocab])` | 85 |
 | `sample_topk` | `logits, temperature, k` | Temperature + top-k filtering, then multinomial draw. | `sample_next(tensor(scaled, [n]))` | 99 |
 | `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Part of the sampling section of this module. | `out` | 135 |
 | `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Part of the sampling section of this module. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
-| `checkpoint_text` | `model` | ---------- checkpoints ---------- Flat text format: one parameter tensor per line, "shape\|values". | `s` | 155 |
+| `checkpoint_text` | `model` | checkpoints Flat text format: one parameter tensor per line, "shape\|values". | `s` | 155 |
 | `save_checkpoint` | `path, model` | Part of the checkpoints section of this module. | `measure(model.params)` | 180 |
 | `load_checkpoint` | `path, model` | Loads weights back into an identically-shaped model. | `measure(model.params)` | 186 |
 | `split_text` | `s, sep` | Small split helper so checkpoints need no host support beyond file I/O. | `out` | 211 |
@@ -8282,18 +8282,18 @@ sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only 
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `embedding` | `vocab, dim` | Part of the = section of this module. | `{` | 10 |
-| `embed_lookup` | `w, ids` | Part of the = section of this module. | `tensor_grad(d, [n, dim])` | 21 |
-| `layer_norm` | `dim` | Part of the = section of this module. | `{` | 38 |
-| `ln_apply` | `x, g, b` | Part of the = section of this module. | `tensor_grad(d, x.shape)` | 49 |
-| `attention_head` | `dim` | ---------- attention (single head, causal) ---------- | `{` | 79 |
+| `embedding` | `vocab, dim` | Computes and yields `{`. | `{` | 10 |
+| `embed_lookup` | `w, ids` | Computes and yields `tensor_grad(d, [n, dim])`. | `tensor_grad(d, [n, dim])` | 21 |
+| `layer_norm` | `dim` | Computes and yields `{`. | `{` | 38 |
+| `ln_apply` | `x, g, b` | Computes and yields `tensor_grad(d, x.shape)`. | `tensor_grad(d, x.shape)` | 49 |
+| `attention_head` | `dim` | attention (single head, causal) | `{` | 79 |
 | `attn_forward` | `x, wq, wk, wv, wo, dim` | Part of the attention (single head, causal) section of this module. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
 | `transpose` | `a` | Part of the attention (single head, causal) section of this module. | `tensor(d, [c, r])` | 114 |
-| `transformer_block` | `dim, hidden` | ---------- transformer block ---------- | `{` | 133 |
+| `transformer_block` | `dim, hidden` | transformer block | `{` | 133 |
 | `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | Part of the transformer block section of this module. | `d_add(x1, f)` | 154 |
-| `gpt` | `vocab, dim, hidden, layers` | ---------- decoder-only LM ---------- | `{` | 162 |
+| `gpt` | `vocab, dim, hidden, layers` | decoder-only LM | `{` | 162 |
 | `gpt_forward` | `ids, emb, blocks, head, layers` | Part of the decoder-only LM section of this module. | `head.forward(x)` | 187 |
-| `sample_next` | `logits` | ---------- sampling ---------- | `n - 1` | 198 |
+| `sample_next` | `logits` | sampling | `n - 1` | 198 |
 | `generate` | `model, prompt_ids, max_new` | Part of the sampling section of this module. | `out` | 212 |
 
 #### `lang/stdlib/webgpu.sdev`

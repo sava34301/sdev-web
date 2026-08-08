@@ -576,15 +576,18 @@ function sdevIndex(dirs) {
         if (!c) break;
         const text = c[1].trim();
         if (/^[=\-*]{3,}$/.test(text)) break;
-        doc.unshift(text);
+        const clean = text.replace(/^[=\-*\s]+/, '').replace(/[=\-*\s]+$/, '').trim();
+        if (!clean) break;
+        doc.unshift(clean);
       }
       // Nearest banner comment above → the section this function belongs to.
       let section = '';
       for (let j = i - 1; j >= 0 && j > i - 200; j--) {
-        const b = /^\s*(?:#|\/\/)+\s*[=\-*]{2,}\s*(.+?)\s*[=\-*]{2,}\s*$/.exec(lines[j]);
-        if (b) { section = b[1].trim(); break; }
-        const b2 = /^\s*(?:#|\/\/)+\s*---+\s*(.+?)\s*$/.exec(lines[j]);
-        if (b2) { section = b2[1].trim(); break; }
+        const b = /^\s*(?:#|\/\/)+\s*(.+?)\s*$/.exec(lines[j]);
+        if (!b) continue;
+        const t = b[1].replace(/^[=\-*\s]+/, '').replace(/[=\-*\s]+$/, '').trim();
+        if (!t || !/[A-Za-z]/.test(t)) continue;
+        if (/^[=\-*]/.test(b[1]) || /[=\-*]$/.test(b[1])) { section = t; break; }
       }
       // First `yield` inside the body describes the result.
       let ret = '';
