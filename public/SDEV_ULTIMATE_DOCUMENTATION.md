@@ -8009,36 +8009,36 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_digit` | `c` | Helper used by this module. | `0` | 35 |
-| `is_alpha` | `c` | Helper used by this module. | `1` | 45 |
-| `is_alnum` | `c` | Helper used by this module. | `1` | 62 |
-| `slice` | `src i j` | Helper used by this module. | `out` | 69 |
+| `is_digit` | `c` | Part of the character-class helpers section of this module. | `0` | 35 |
+| `is_alpha` | `c` | Part of the character-class helpers section of this module. | `1` | 45 |
+| `is_alnum` | `c` | Part of the character-class helpers section of this module. | `1` | 62 |
+| `slice` | `src i j` | Part of the character-class helpers section of this module. | `out` | 69 |
 | `both_float` | `a b` | Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float arithmetic only kicks in when BOTH operands are floats (mixed arithmetic requires an explicit i2f), matching the bootstrap oracle exactly. | `1` | 81 |
-| `str_eq` | `a b` | Helper used by this module. | `0` | 90 |
-| `emit_byte` | `b` | Helper used by this module. | `0` | 113 |
-| `intern_str` | `s` | Helper used by this module. | `0` | 130 |
-| `emit_i32` | `v` | Helper used by this module. | `0` | 162 |
+| `str_eq` | `a b` | Part of the character-class helpers section of this module. | `0` | 90 |
+| `emit_byte` | `b` | Part of the byte emitter (writes into the global `bc` list, count at bc[0]) section of this module. | `0` | 113 |
+| `intern_str` | `s` | Part of the string pool (Milestone 5k) section of this module. | `0` | 130 |
+| `emit_i32` | `v` | Part of the string pool (Milestone 5k) section of this module. | `0` | 162 |
 | `placeholder16` | _none_ | Reserve a two-byte i16 placeholder and return the byte offset at which it starts (0-indexed, list cell = pos + 1). | `p` | 175 |
 | `patch_i16` | `pos target` | Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte offset `target`. Offsets are relative to the end of the instruction (pos + 2). Negative offsets get two's-complement 16-bit encoding. | `0` | 185 |
-| `intern_name` | `name` | Helper used by this module. | `k - 1` | 208 |
-| `find_local` | `name` | Helper used by this module. | `k - 1` | 222 |
-| `add_local` | `name` | Helper used by this module. | `loc_names[0] - 1` | 234 |
-| `find_fn` | `name` | Helper used by this module. | `k - 1` | 240 |
-| `emit_load_ident` | `name` | Helper used by this module. | `0` | 259 |
-| `emit_store_ident` | `name` | Helper used by this module. | `0` | 276 |
-| `emit_call` | `name nargs` | Helper used by this module. | `0` | 303 |
+| `intern_name` | `name` | Part of the symbol tables section of this module. | `k - 1` | 208 |
+| `find_local` | `name` | Part of the symbol tables section of this module. | `k - 1` | 222 |
+| `add_local` | `name` | Part of the symbol tables section of this module. | `loc_names[0] - 1` | 234 |
+| `find_fn` | `name` | Part of the symbol tables section of this module. | `k - 1` | 240 |
+| `emit_load_ident` | `name` | Part of the variable load / store dispatch section of this module. | `0` | 259 |
+| `emit_store_ident` | `name` | Part of the variable load / store dispatch section of this module. | `0` | 276 |
+| `emit_call` | `name nargs` | Part of the call emission (built-ins first, then user functions) section of this module. | `0` | 303 |
 | `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 454 |
-| `is_op_c` | `pos c` | Helper used by this module. | `0` | 472 |
-| `is_ident_word` | `pos w` | Helper used by this module. | `0` | 484 |
-| `parse_atom` | `pos` | Helper used by this module. | `pos + 1` | 501 |
+| `is_op_c` | `pos c` | Part of the token classifiers section of this module. | `0` | 472 |
+| `is_ident_word` | `pos w` | Part of the token classifiers section of this module. | `0` | 484 |
+| `parse_atom` | `pos` | Part of the recursive-descent parser section of this module. | `pos + 1` | 501 |
 | `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 605 |
-| `parse_mul` | `pos` | Helper used by this module. | `pos` | 623 |
-| `parse_add` | `pos` | Helper used by this module. | `pos` | 669 |
+| `parse_mul` | `pos` | Part of the recursive-descent parser section of this module. | `pos` | 623 |
+| `parse_add` | `pos` | Part of the recursive-descent parser section of this module. | `pos` | 669 |
 | `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 720 |
-| `skip_nl` | `pos` | Helper used by this module. | `pos` | 784 |
+| `skip_nl` | `pos` | Computes and yields `pos`. | `pos` | 784 |
 | `parse_block` | `pos` | Parse a sequence of statements until `else`, `end`, or EOF. | `pos` | 801 |
 | `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 831 |
-| `parse_stmt` | `pos` | Helper used by this module. | `pos` | 853 |
+| `parse_stmt` | `pos` | Computes and yields `pos`. | `pos` | 853 |
 
 #### `lang/compiler/lexer.sdev`
 
@@ -8048,11 +8048,11 @@ SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hos
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_digit` | `c` | Helper used by this module. | `0` | 22 |
-| `is_alpha` | `c` | Helper used by this module. | `1` | 32 |
-| `is_alnum` | `c` | Helper used by this module. | `1` | 49 |
-| `slice` | `src i j` | Helper used by this module. | `out` | 56 |
-| `lex` | `src` | Helper used by this module. | _no explicit yield_ | 65 |
+| `is_digit` | `c` | Computes and yields `0`. | `0` | 22 |
+| `is_alpha` | `c` | Computes and yields `1`. | `1` | 32 |
+| `is_alnum` | `c` | Computes and yields `1`. | `1` | 49 |
+| `slice` | `src i j` | Computes and yields `out`. | `out` | 56 |
+| `lex` | `src` | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 65 |
 
 #### `lang/compiler/parser.sdev`
 
@@ -8062,10 +8062,10 @@ SDEV expression parser, written in SDEV. This is the second slice of Milestone 5
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_op_c` | `pos c` | Helper used by this module. | `0` | 22 |
-| `parse_atom` | `pos` | Helper used by this module. | `pos + 1` | 37 |
-| `parse_mul` | `pos` | Helper used by this module. | `pos` | 54 |
-| `parse_add` | `pos` | Helper used by this module. | `pos` | 73 |
+| `is_op_c` | `pos c` | Part of the helpers section of this module. | `0` | 22 |
+| `parse_atom` | `pos` | Part of the recursive-descent core section of this module. | `pos + 1` | 37 |
+| `parse_mul` | `pos` | Part of the recursive-descent core section of this module. | `pos` | 54 |
+| `parse_add` | `pos` | Part of the recursive-descent core section of this module. | `pos` | 73 |
 
 #### `lang/parity/agent.sdev`
 
@@ -8075,18 +8075,18 @@ sdev Parity Agent — written in sdev, runs on sdev Phase 0/1 of the v1 <-> v2 p
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `unquote` | `s` | Helper used by this module. | `t` | 21 |
+| `unquote` | `s` | Part of the tiny helpers section of this module. | `t` | 21 |
 | `field_key` | `line` | Split a `"key": "value"` line. Values may contain colons, so only the first colon separates; the rest is re-joined. | `unquote(parts[0])` | 38 |
-| `field_value` | `line` | Helper used by this module. | `""` | 43 |
-| `load_registry` | `path` | Helper used by this module. | `{ tracks: tracks, features: features }` | 59 |
-| `load_track_source` | `spec` | Helper used by this module. | `out` | 99 |
+| `field_value` | `line` | Part of the tiny helpers section of this module. | `""` | 43 |
+| `load_registry` | `path` | Part of the registry loading section of this module. | `{ tracks: tracks, features: features }` | 59 |
+| `load_track_source` | `spec` | Part of the track sources section of this module. | `out` | 99 |
 | `probe` | `src, name` | A feature is present on a track when its track-local name appears as a quoted token in that track's source — the shape every implementation uses for keyword tables and builtin dispatch. | `nope` | 113 |
-| `mark` | `level, present` | Helper used by this module. | `"n/a"` | 128 |
-| `audit` | `registry` | Helper used by this module. | `{ tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }` | 138 |
-| `matrix_markdown` | `report` | Helper used by this module. | `out` | 183 |
-| `report_json` | `report` | Helper used by this module. | `out` | 219 |
-| `sync_doc` | `path, block` | Helper used by this module. | `0` | 266 |
-| `run_parity_agent` | `registry_path, doc_paths` | Helper used by this module. | `measure(report.must_missing)` | 283 |
+| `mark` | `level, present` | Part of the reporting section of this module. | `"n/a"` | 128 |
+| `audit` | `registry` | Part of the reporting section of this module. | `{ tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }` | 138 |
+| `matrix_markdown` | `report` | Part of the markdown matrix section of this module. | `out` | 183 |
+| `report_json` | `report` | Part of the report.json section of this module. | `out` | 219 |
+| `sync_doc` | `path, block` | Part of the documentation sync section of this module. | `0` | 266 |
+| `run_parity_agent` | `registry_path, doc_paths` | Part of the entry point section of this module. | `measure(report.must_missing)` | 283 |
 
 #### `lang/stdlib/ffi.sdev`
 
@@ -8097,16 +8097,16 @@ sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `Library` | `path` | ---------- library handle wrapper ---------- | `{ ok: nope, path: path, handle: void, err: "cannot open " + path }` | 39 |
-| `lib_close` | `lib` | Helper used by this module. | `yep` | 47 |
+| `lib_close` | `lib` | Part of the library handle wrapper section of this module. | `yep` | 47 |
 | `bind` | `lib, name, ret_kind, arg_kinds` | ---------- function binding ---------- bind(lib, "matmul_f64", FFI_VOID, [FFI_PTR, FFI_PTR, FFI_PTR, FFI_I32, FFI_I32, FFI_I32]) | `{` | 55 |
-| `invoke` | `binding, argv` | Helper used by this module. | `ffi_call(binding.fn, binding.ret, binding.args, argv)` | 68 |
+| `invoke` | `binding, argv` | Part of the function binding section of this module. | `ffi_call(binding.fn, binding.ret, binding.args, argv)` | 68 |
 | `buf_f64` | `n` | ---------- raw buffers (for passing float arrays) ---------- | `{ addr: b, len: n, kind: FFI_F64 }` | 74 |
-| `buf_from_list` | `xs` | Helper used by this module. | `b` | 79 |
-| `buf_to_list` | `b` | Helper used by this module. | `out` | 90 |
+| `buf_from_list` | `xs` | Part of the raw buffers (for passing float arrays) section of this module. | `b` | 79 |
+| `buf_to_list` | `b` | Part of the raw buffers (for passing float arrays) section of this module. | `out` | 90 |
 | `open_blas` | `path` | ---------- BLAS-style convenience wrappers ---------- Open an OpenBLAS-compatible library and bind the two calls the ML stdlib actually needs for accelerated matmul. | `{ lib: lib, dgemm: dgemm, daxpy: daxpy }` | 103 |
 | `blas_matmul` | `blas, a, b` | BLAS-accelerated matmul that plugs straight into ml/tensor.sdev. Falls back to the pure-sdev matmul when the binding is void. | `tensor(buf_to_list(bc), [m, n])` | 127 |
 | `open_cuda` | `cudart_path, cublas_path` | ---------- CUDA fast path ---------- Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training. | `{` | 145 |
-| `cuda_ok` | `cuda` | Helper used by this module. | `yep` | 167 |
+| `cuda_ok` | `cuda` | Part of the CUDA fast path section of this module. | `yep` | 167 |
 
 #### `lang/stdlib/ml/auto_evolve.sdev`
 
@@ -8116,15 +8116,15 @@ sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12) Wires the ML stack i
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `is_allowed` | `path` | Helper used by this module. | `nope` | 34 |
+| `is_allowed` | `path` | Part of the source-tree map section of this module. | `nope` | 34 |
 | `make_proposal` | `path, old_body, new_body, reason` | ---------- proposal record ---------- | `{` | 44 |
-| `apply_proposal` | `p` | Helper used by this module. | `ok` | 54 |
+| `apply_proposal` | `p` | Part of the proposal record section of this module. | `ok` | 54 |
 | `draft_from_demand` | `model, demand, target_path` | ---------- demand → proposal ---------- Given a ranked demand map from `mine_demand`, ask the model to draft a patch for the top topic. `model` is any sdev model exposing `generate(model, prompt, max_new)`. | `make_proposal(target_path, cur, patched,` | 65 |
-| `top_topic` | `counts` | Helper used by this module. | `best_k` | 77 |
+| `top_topic` | `counts` | Part of the demand → proposal section of this module. | `best_k` | 77 |
 | `evolve_weights` | `model, teacher_url, teacher_key, prompts, epochs, lr` | ---------- fine-tune on live distillation ---------- Pulls prompt/answer pairs from a teacher endpoint and runs a short SGD pass so the local model tracks the frontier without leaving the sdev runtime. | `measure(pairs)` | 95 |
 | `evolve_tick` | `model, sources, teacher_url, teacher_key` | ---------- the loop ---------- One tick: mine demand → draft → review → apply → fine-tune. Returns a report tome so the caller can log or throttle. | `{` | 112 |
-| `pick_target` | `demand` | Helper used by this module. | `"lang/stdlib/ml/nn.sdev"` | 133 |
-| `prompt_pool` | `demand` | Helper used by this module. | `out` | 145 |
+| `pick_target` | `demand` | Part of the the loop section of this module. | `"lang/stdlib/ml/nn.sdev"` | 133 |
+| `prompt_pool` | `demand` | Part of the the loop section of this module. | `out` | 145 |
 | `evolve_forever` | `model, sources, teacher_url, teacher_key, ticks` | ---------- long-running driver ---------- | _no explicit yield_ | 160 |
 
 #### `lang/stdlib/ml/autograd.sdev`
@@ -8135,26 +8135,26 @@ sdev ML Stdlib — Autograd Tape (Milestone 8b) Reverse-mode automatic different
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `tape_reset` | _none_ | Helper used by this module. | _no explicit yield_ | 13 |
-| `record` | `kind, inputs, out` | Helper used by this module. | _no explicit yield_ | 17 |
+| `tape_reset` | _none_ | Part of the = section of this module. | _no explicit yield_ | 13 |
+| `record` | `kind, inputs, out` | Part of the = section of this module. | _no explicit yield_ | 17 |
 | `d_add` | `a, b` | ---------- differentiable ops ---------- | `o` | 22 |
-| `d_mul` | `a, b` | Helper used by this module. | `o` | 28 |
-| `d_matmul` | `a, b` | Helper used by this module. | `o` | 34 |
-| `d_relu` | `a` | Helper used by this module. | `o` | 41 |
-| `d_mse` | `pred, target` | Helper used by this module. | `o` | 48 |
+| `d_mul` | `a, b` | Part of the differentiable ops section of this module. | `o` | 28 |
+| `d_matmul` | `a, b` | Part of the differentiable ops section of this module. | `o` | 34 |
+| `d_relu` | `a` | Part of the differentiable ops section of this module. | `o` | 41 |
+| `d_mse` | `pred, target` | Part of the differentiable ops section of this module. | `o` | 48 |
 | `d_softmax_ce` | `logits, targets` | Row-wise softmax + cross-entropy over next-token targets. logits: [rows, vocab]; targets: list of `rows` class ids. Returns the mean negative log-likelihood as a 1-element tensor. | `o` | 65 |
 | `backward` | `out` | ---------- backward pass ---------- | _no explicit yield_ | 102 |
-| `bw_sce` | `e` | Helper used by this module. | _no explicit yield_ | 118 |
-| `bw_add` | `e` | Helper used by this module. | _no explicit yield_ | 140 |
-| `bw_mul` | `e` | Helper used by this module. | _no explicit yield_ | 152 |
-| `bw_matmul` | `e` | Helper used by this module. | _no explicit yield_ | 164 |
-| `bw_relu` | `e` | Helper used by this module. | _no explicit yield_ | 204 |
-| `bw_mse` | `e` | Helper used by this module. | _no explicit yield_ | 216 |
+| `bw_sce` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 118 |
+| `bw_add` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 140 |
+| `bw_mul` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 152 |
+| `bw_matmul` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 164 |
+| `bw_relu` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 204 |
+| `bw_mse` | `e` | Part of the backward pass section of this module. | _no explicit yield_ | 216 |
 | `sgd_step` | `params, lr` | ---------- optimizers ---------- | _no explicit yield_ | 229 |
-| `zero_grads` | `params` | Helper used by this module. | _no explicit yield_ | 244 |
+| `zero_grads` | `params` | Part of the optimizers section of this module. | _no explicit yield_ | 244 |
 | `clip_grads` | `params, max_norm` | Global-norm gradient clipping — keeps LM training from exploding. | `norm` | 255 |
 | `adam_new` | `params` | ---------- Adam ---------- | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279 |
-| `adam_step` | `opt, params, lr` | Helper used by this module. | _no explicit yield_ | 296 |
+| `adam_step` | `opt, params, lr` | Part of the Adam section of this module. | _no explicit yield_ | 296 |
 
 #### `lang/stdlib/ml/cuda.sdev`
 
@@ -8165,12 +8165,12 @@ sdev ML Stdlib — CUDA Fast Path (Milestone 11) Thin sdev-native layer over the
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `cuda_device` | `cudart_path, cublas_path` | ---------- device handle ---------- A "device" bundles the loaded cuBLAS/cudart bindings with a live cublasHandle_t. We keep it as a tome so callers can pass it around like any other sdev value. | `{ ok: nope, cu: void, handle: void, err: "cuda unavailable" }` | 22 |
-| `cuda_device_default` | _none_ | Helper used by this module. | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",` | 34 |
-| `cuda_free_device` | `dev` | Helper used by this module. | `yep` | 40 |
+| `cuda_device_default` | _none_ | Part of the device handle section of this module. | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",` | 34 |
+| `cuda_free_device` | `dev` | Part of the device handle section of this module. | `yep` | 40 |
 | `cuda_alloc` | `dev, n_f64` | ---------- device memory ---------- A cuda_buf is host-visible metadata around a device pointer. | `{ dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }` | 51 |
-| `cuda_free` | `dev, b` | Helper used by this module. | `yep` | 58 |
+| `cuda_free` | `dev, b` | Part of the device memory section of this module. | `yep` | 58 |
 | `cuda_upload` | `dev, host_list` | cudaMemcpyKind: HostToDevice=1, DeviceToHost=2 | `db` | 65 |
-| `cuda_download` | `dev, db` | Helper used by this module. | `buf_to_list(hb)` | 73 |
+| `cuda_download` | `dev, db` | Part of the device memory section of this module. | `buf_to_list(hb)` | 73 |
 | `cuda_matmul` | `dev, a, b` | ---------- accelerated ops ---------- Row-major C = A · B via cublasDgemm. cuBLAS is column-major, so we compute Bᵀ · Aᵀ under the hood and interpret the result as row-major C — same trick numpy's cublas backend uses. | `tensor(out, [m, n])` | 83 |
 | `best_matmul` | `dev, blas, a, b` | Convenience: pick the fastest available matmul path. Priority: CUDA → BLAS → pure sdev. | `matmul(a, b)` | 113 |
 | `cuda_forward_linear` | `dev, x, w, bias` | ---------- training-loop hook ---------- Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU. | `t_add(y, bias)` | 125 |
@@ -8185,14 +8185,14 @@ sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `load_text` | `path` | ---------- text I/O ---------- | `read_file(path)` | 10 |
-| `save_text` | `path, s` | Helper used by this module. | _no explicit yield_ | 14 |
+| `save_text` | `path, s` | Part of the text I/O section of this module. | _no explicit yield_ | 14 |
 | `char_vocab` | `text` | ---------- byte-pair-ish tokenizer (char level) ---------- | `{ size: measure(order), stoi: seen, itos: order }` | 19 |
-| `encode` | `vocab, text` | Helper used by this module. | `out` | 34 |
-| `decode` | `vocab, ids` | Helper used by this module. | `s` | 45 |
+| `encode` | `vocab, text` | Part of the byte-pair-ish tokenizer (char level) section of this module. | `out` | 34 |
+| `decode` | `vocab, ids` | Part of the byte-pair-ish tokenizer (char level) section of this module. | `s` | 45 |
 | `crawl` | `url` | ---------- web crawler ---------- | `http_get(url)` | 56 |
-| `crawl_many` | `urls` | Helper used by this module. | `out` | 60 |
+| `crawl_many` | `urls` | Part of the web crawler section of this module. | `out` | 60 |
 | `teacher_query` | `endpoint, api_key, prompt` | ---------- teacher-model distillation ---------- Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a prompt, receive logits/text, and train the local sdev model to imitate the teacher's outputs. | `http_get(url)` | 74 |
-| `distill_batch` | `endpoint, key, prompts` | Helper used by this module. | `pairs` | 79 |
+| `distill_batch` | `endpoint, key, prompts` | Part of the teacher-model distillation section of this module. | `pairs` | 79 |
 | `save_model` | `path, model` | ---------- checkpointing ---------- | _no explicit yield_ | 91 |
 
 #### `lang/stdlib/ml/nn.sdev`
@@ -8203,13 +8203,13 @@ sdev ML Stdlib — Neural Network Layers (Milestone 8c) High-level layer builder
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `linear` | `in_features, out_features` | Helper used by this module. | `{` | 9 |
-| `broadcast_row` | `row, rows` | Helper used by this module. | `t` | 23 |
-| `sequential` | `layers` | Helper used by this module. | `{` | 36 |
-| `seq_forward` | `layers, x` | Helper used by this module. | `cur` | 51 |
-| `relu_layer` | _none_ | Helper used by this module. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
+| `linear` | `in_features, out_features` | Part of the = section of this module. | `{` | 9 |
+| `broadcast_row` | `row, rows` | Part of the = section of this module. | `t` | 23 |
+| `sequential` | `layers` | Part of the = section of this module. | `{` | 36 |
+| `seq_forward` | `layers, x` | Part of the = section of this module. | `cur` | 51 |
+| `relu_layer` | _none_ | Part of the = section of this module. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
 | `train_step` | `model, x, y, lr` | ---------- training loop ---------- | `loss.data[0]` | 66 |
-| `fit` | `model, xs, ys, epochs, lr` | Helper used by this module. | _no explicit yield_ | 75 |
+| `fit` | `model, xs, ys, epochs, lr` | Part of the training loop section of this module. | _no explicit yield_ | 75 |
 
 #### `lang/stdlib/ml/self_modify.sdev`
 
@@ -8219,11 +8219,11 @@ sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-train
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `self_read` | `path` | Helper used by this module. | `read_file(path)` | 15 |
-| `self_propose` | `path, new_content` | Helper used by this module. | `nope` | 19 |
-| `set_review_hook` | `fn` | Helper used by this module. | _no explicit yield_ | 30 |
+| `self_read` | `path` | Part of the = section of this module. | `read_file(path)` | 15 |
+| `self_propose` | `path, new_content` | Part of the = section of this module. | `nope` | 19 |
+| `set_review_hook` | `fn` | Part of the = section of this module. | _no explicit yield_ | 30 |
 | `mine_demand` | `sources` | ---------- feature-demand mining ---------- Fetches issue/PR/reddit signals and lets the model pick the next feature to draft. Returns a ranked list of {topic, score}. | `counts` | 37 |
-| `harvest_keywords` | `counts, body` | Helper used by this module. | _no explicit yield_ | 48 |
+| `harvest_keywords` | `counts, body` | Part of the feature-demand mining section of this module. | _no explicit yield_ | 48 |
 | `update_docs` | `section, body` | ---------- documentation sync ---------- | _no explicit yield_ | 69 |
 | `rewrite_weights` | `model, transform` | ---------- weight rewriting ---------- The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep` | 79 |
 
@@ -8235,22 +8235,22 @@ sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: [f64...
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `tensor` | `data, shape` | Helper used by this module. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
-| `tensor_grad` | `data, shape` | Helper used by this module. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
-| `zeros` | `shape` | Helper used by this module. | `tensor(d, shape)` | 23 |
-| `ones` | `shape` | Helper used by this module. | `tensor(d, shape)` | 31 |
-| `randn` | `shape` | Helper used by this module. | `tensor(d, shape)` | 39 |
-| `shape_size` | `shape` | Helper used by this module. | `n` | 54 |
+| `tensor` | `data, shape` | Part of the = section of this module. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
+| `tensor_grad` | `data, shape` | Part of the = section of this module. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
+| `zeros` | `shape` | Part of the = section of this module. | `tensor(d, shape)` | 23 |
+| `ones` | `shape` | Part of the = section of this module. | `tensor(d, shape)` | 31 |
+| `randn` | `shape` | Part of the = section of this module. | `tensor(d, shape)` | 39 |
+| `shape_size` | `shape` | Part of the = section of this module. | `n` | 54 |
 | `t_add` | `a, b` | ---------- element-wise ops ---------- | `tensor(d, a.shape)` | 65 |
-| `t_sub` | `a, b` | Helper used by this module. | `tensor(d, a.shape)` | 73 |
-| `t_mul` | `a, b` | Helper used by this module. | `tensor(d, a.shape)` | 81 |
-| `t_scale` | `a, k` | Helper used by this module. | `tensor(d, a.shape)` | 89 |
+| `t_sub` | `a, b` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 73 |
+| `t_mul` | `a, b` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 81 |
+| `t_scale` | `a, k` | Part of the element-wise ops section of this module. | `tensor(d, a.shape)` | 89 |
 | `matmul` | `a, b` | ---------- 2-D matmul (rows x cols) ---------- | `tensor(d, [m, n])` | 98 |
 | `relu` | `a` | ---------- activations ---------- | `tensor(d, a.shape)` | 124 |
-| `sigmoid` | `a` | Helper used by this module. | `tensor(d, a.shape)` | 136 |
-| `softmax` | `a` | Helper used by this module. | `tensor(d, a.shape)` | 147 |
+| `sigmoid` | `a` | Part of the activations section of this module. | `tensor(d, a.shape)` | 136 |
+| `softmax` | `a` | Part of the activations section of this module. | `tensor(d, a.shape)` | 147 |
 | `mse` | `pred, target` | ---------- losses ---------- | `s / n` | 170 |
-| `cross_entropy` | `pred, target` | Helper used by this module. | `s` | 182 |
+| `cross_entropy` | `pred, target` | Part of the losses section of this module. | `s` | 182 |
 
 #### `lang/stdlib/ml/train.sdev`
 
@@ -8267,10 +8267,10 @@ sdev ML Stdlib — Language-Model Training (Milestone 14) End-to-end training fo
 | `perplexity` | `model, ids, block` | Perplexity = e^(mean NLL). Lower is better. | `exp(lm_loss(model, ids, block))` | 80 |
 | `last_logits` | `model, ids` | ---------- sampling ---------- | `tensor(row, [vocab])` | 85 |
 | `sample_topk` | `logits, temperature, k` | Temperature + top-k filtering, then multinomial draw. | `sample_next(tensor(scaled, [n]))` | 99 |
-| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Helper used by this module. | `out` | 135 |
-| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Helper used by this module. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
+| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Part of the sampling section of this module. | `out` | 135 |
+| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Part of the sampling section of this module. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
 | `checkpoint_text` | `model` | ---------- checkpoints ---------- Flat text format: one parameter tensor per line, "shape\|values". | `s` | 155 |
-| `save_checkpoint` | `path, model` | Helper used by this module. | `measure(model.params)` | 180 |
+| `save_checkpoint` | `path, model` | Part of the checkpoints section of this module. | `measure(model.params)` | 180 |
 | `load_checkpoint` | `path, model` | Loads weights back into an identically-shaped model. | `measure(model.params)` | 186 |
 | `split_text` | `s, sep` | Small split helper so checkpoints need no host support beyond file I/O. | `out` | 211 |
 
@@ -8282,19 +8282,19 @@ sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only 
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `embedding` | `vocab, dim` | Helper used by this module. | `{` | 10 |
-| `embed_lookup` | `w, ids` | Helper used by this module. | `tensor_grad(d, [n, dim])` | 21 |
-| `layer_norm` | `dim` | Helper used by this module. | `{` | 38 |
-| `ln_apply` | `x, g, b` | Helper used by this module. | `tensor_grad(d, x.shape)` | 49 |
+| `embedding` | `vocab, dim` | Part of the = section of this module. | `{` | 10 |
+| `embed_lookup` | `w, ids` | Part of the = section of this module. | `tensor_grad(d, [n, dim])` | 21 |
+| `layer_norm` | `dim` | Part of the = section of this module. | `{` | 38 |
+| `ln_apply` | `x, g, b` | Part of the = section of this module. | `tensor_grad(d, x.shape)` | 49 |
 | `attention_head` | `dim` | ---------- attention (single head, causal) ---------- | `{` | 79 |
-| `attn_forward` | `x, wq, wk, wv, wo, dim` | Helper used by this module. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
-| `transpose` | `a` | Helper used by this module. | `tensor(d, [c, r])` | 114 |
+| `attn_forward` | `x, wq, wk, wv, wo, dim` | Part of the attention (single head, causal) section of this module. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
+| `transpose` | `a` | Part of the attention (single head, causal) section of this module. | `tensor(d, [c, r])` | 114 |
 | `transformer_block` | `dim, hidden` | ---------- transformer block ---------- | `{` | 133 |
-| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | Helper used by this module. | `d_add(x1, f)` | 154 |
+| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | Part of the transformer block section of this module. | `d_add(x1, f)` | 154 |
 | `gpt` | `vocab, dim, hidden, layers` | ---------- decoder-only LM ---------- | `{` | 162 |
-| `gpt_forward` | `ids, emb, blocks, head, layers` | Helper used by this module. | `head.forward(x)` | 187 |
+| `gpt_forward` | `ids, emb, blocks, head, layers` | Part of the decoder-only LM section of this module. | `head.forward(x)` | 187 |
 | `sample_next` | `logits` | ---------- sampling ---------- | `n - 1` | 198 |
-| `generate` | `model, prompt_ids, max_new` | Helper used by this module. | `out` | 212 |
+| `generate` | `model, prompt_ids, max_new` | Part of the sampling section of this module. | `out` | 212 |
 
 #### `lang/stdlib/webgpu.sdev`
 
