@@ -7397,13 +7397,13 @@ the module that installs it.
 | --- | --- | --- | --- |
 | `__tryCatch(a, b)` | __tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue. | __tryCatch requires 2 function arguments | `builtins.ts:2460` |
 | `abs(a)` | abs alias. | abs() takes 1 argument | `builtins.ts:2418` |
-| `acos(a)` | Evaluates `Math.acos(a)`. | — | `builtins.ts:1014` |
+| `acos(a)` | Inverse cosine, in radians. | — | `builtins.ts:1014` |
 | `all(a, b)` | True when every element of the list is truthy (or satisfies the given predicate). | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:851` |
 | `any(a, b)` | True when at least one element of the list is truthy (or satisfies the given predicate). | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:864` |
 | `appendFile(a, b)` | Convenience aliases. | appendFile() takes 2 arguments | `builtins.ts:2357` |
 | `asin(a)` | More trig. | — | `builtins.ts:1013` |
-| `atan(a)` | Evaluates `Math.atan(a)`. | — | `builtins.ts:1015` |
-| `atan2(a, b)` | Evaluates `Math.atan2(a, b)`. | — | `builtins.ts:1016` |
+| `atan(a)` | Inverse tangent, in radians. | — | `builtins.ts:1015` |
+| `atan2(a, b)` | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | — | `builtins.ts:1016` |
 | `average(a)` | Arithmetic mean of a list of numbers. | average() takes 1 argument; Argument must be a list | `builtins.ts:790` |
 | `base64decode(a)` | Decodes Base64 text back into a string. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1870` |
 | `base64encode(a)` | Encodes a string or byte buffer as Base64 text. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1861` |
@@ -7430,7 +7430,7 @@ the module that installs it.
 | `constrain(a, b, c)` | constrain(v, min, max) - alias for clamp. | constrain() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:1330` |
 | `contains(a, b)` | True when the collection holds the given value, or the string holds the substring. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:397` |
 | `contents(a)` | Returns the values of a tome as a list. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:346` |
-| `cos(a)` | Evaluates `Math.cos(a)`. | — | `builtins.ts:455` |
+| `cos(a)` | Cosine of an angle in radians. | — | `builtins.ts:455` |
 | `cosh(a)` | Evaluates `Math.cosh(a)`. | — | `builtins.ts:1021` |
 | `count(a, b)` | How many times a value occurs in a list or a substring occurs in a string. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:841` |
 | `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins.ts:1969` |
@@ -7443,7 +7443,7 @@ the module that installs it.
 | `drop(a, b)` | Returns a copy of the list without its first `n` elements. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:755` |
 | `E()` | Constants. | — | `builtins.ts:1027` |
 | `each(a, b)` | map over array with lambda. | each() takes 2 arguments (list, transform); First argument must be a list | `builtins.ts:116` |
-| `elevate(a)` | Requests elevated host privileges for the following operation. | elevate() takes 1 argument | `builtins.ts:312` |
+| `elevate(a)` | Raises the current task to a privileged mode so it may use restricted syscalls. | elevate() takes 1 argument | `builtins.ts:312` |
 | `ends(a, b)` | ends(s, suffix) - alias for endswith. | ends() takes 2 arguments; Arguments must be text | `builtins.ts:1151` |
 | `endswith(a, b)` | True when the string ends with the given suffix. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:537` |
 | `entries(a)` | Returns a tome as a list of `[key, value]` pairs. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1111` |
@@ -7452,7 +7452,7 @@ the module that installs it.
 | `etch(a)` | JSON. | — | `builtins.ts:505` |
 | `every(a, b)` | every(list, predicate) - alias for all. | every() takes 2 arguments; First argument must be a list | `builtins.ts:1296` |
 | `exit(…)` | exit(code?) - terminate program. | Program exited with code ${code} | `builtins.ts:1496` |
-| `exp(a)` | Evaluates `Math.exp(a)`. | — | `builtins.ts:458` |
+| `exp(a)` | e raised to the given power. | — | `builtins.ts:458` |
 | `ffi_buf(a)` | Allocates a raw byte buffer usable as an FFI argument. | ffi_buf() takes a positive byte size | `builtins.ts:2569` |
 | `ffi_call(a, b, c, d)` | Calls a symbol in a loaded native library with the given arguments. | ffi_call() — no native FFI host available | `builtins.ts:2616` |
 | `ffi_close(a)` | Unloads a native library handle opened with `ffi_open`. | Expected number, got ${typeof value} | `builtins.ts:2624` |
@@ -7495,24 +7495,24 @@ the module that installs it.
 | `isFrozen(a)` | isFrozen(obj). | isFrozen() takes 1 argument | `builtins.ts:2119` |
 | `isFunc(a)` | Type Checking operation. | isFunc() takes 1 argument | `builtins.ts:942` |
 | `isInteger(a)` | isInteger(v) - check if integer. | isInteger() takes 1 argument | `builtins.ts:1636` |
-| `isList(a)` | Type Checking operation. | isList() takes 1 argument | `builtins.ts:910` |
+| `isList(a)` | True when the value is a list. | isList() takes 1 argument | `builtins.ts:910` |
 | `isLower(a)` | isLower(s) - check if all lowercase. | isLower() takes 1 argument; Argument must be text | `builtins.ts:1714` |
 | `isNaN(a)` | isNaN(v) - check if NaN. | isNaN() takes 1 argument | `builtins.ts:1618` |
 | `isNum(a)` | ============= Type Checking =============. | isNum() takes 1 argument | `builtins.ts:894` |
 | `isSpace(a)` | isSpace(s) - check if all whitespace. | isSpace() takes 1 argument; Argument must be text | `builtins.ts:1754` |
-| `isText(a)` | Type Checking operation. | isText() takes 1 argument | `builtins.ts:902` |
-| `isTome(a)` | Type Checking operation. | isTome() takes 1 argument | `builtins.ts:918` |
-| `isTruth(a)` | Type Checking operation. | isTruth() takes 1 argument | `builtins.ts:926` |
+| `isText(a)` | True when the value is a string. | isText() takes 1 argument | `builtins.ts:902` |
+| `isTome(a)` | True when the value is a tome (dictionary). | isTome() takes 1 argument | `builtins.ts:918` |
+| `isTruth(a)` | True when the value is a boolean. | isTruth() takes 1 argument | `builtins.ts:926` |
 | `isUpper(a)` | isUpper(s) - check if all uppercase. | isUpper() takes 1 argument; Argument must be text | `builtins.ts:1704` |
-| `isVoid(a)` | Type Checking operation. | isVoid() takes 1 argument | `builtins.ts:934` |
+| `isVoid(a)` | True when the value is `void` (absent). | isVoid() takes 1 argument | `builtins.ts:934` |
 | `keys(a)` | keys(tome) - alias for inscriptions. | keys() takes 1 argument; Argument must be a tome | `builtins.ts:2089` |
 | `last(a)` | The final element of a list or the final character of a string. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:724` |
-| `lastIndexOf(a, b)` | String Operations operation. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:608` |
+| `lastIndexOf(a, b)` | Index of the final occurrence of a substring, or -1 when absent. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:608` |
 | `least(…)` | The smallest of the supplied numbers (or of a list). | least() takes at least 1 argument | `builtins.ts:274` |
 | `len(a)` | alias for measure (used internally by compiler forEach). | len() takes 1 argument; len() argument must be string, list, or dict | `builtins.ts:419` |
 | `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:968` |
 | `LinkedList(a)` | LinkedList() - doubly linked list. | Index out of bounds; LinkedList is empty | `builtins.ts:2322` |
-| `listDir()` | Misc Missing operation. | — | `builtins.ts:2382` |
+| `listDir()` | Lists the entries of a host directory. | — | `builtins.ts:2382` |
 | `ln(a)` | Evaluates `Math.log(toNumber(a, line))`. | — | `builtins.ts:2488` |
 | `locate(a, b)` | locate(s, sub) - find index of substring. | locate() takes 2 arguments; First argument must be text or list | `builtins.ts:1161` |
 | `log(a)` | Natural logarithm. | — | `builtins.ts:457` |
@@ -7521,7 +7521,7 @@ the module that installs it.
 | `lower(a)` | Lowercases every character in the string. | lower() takes 1 argument; Argument must be text | `builtins.ts:368` |
 | `magnitude(a)` | Math operations with unique names. | magnitude() takes 1 argument | `builtins.ts:266` |
 | `Map(a, b)` | Map() - map data structure. | — | `builtins.ts:2268` |
-| `mapRange(a, b, c, d, e)` | Math Utilities operation. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:980` |
+| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:980` |
 | `match(a, b)` | match(text, pattern) - regex match, returns list of matches or null. | match() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1766` |
 | `matchAll(a, b)` | matchAll(text, pattern) - all regex matches. | matchAll() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1777` |
 | `max(a)` | The largest of the supplied numbers (or of a list). | max() takes at least 1 argument | `builtins.ts:2408` |
@@ -7533,7 +7533,7 @@ the module that installs it.
 | `morph(a, b)` | type conversion. | morph() takes 2 arguments (value, type); Second argument must be type name | `builtins.ts:59` |
 | `nearby(a)` | True when two floating-point numbers are equal within a small tolerance. | nearby() takes 1 argument | `builtins.ts:320` |
 | `now()` | ============= Time =============. | — | `builtins.ts:1031` |
-| `num(a)` | Misc Missing operation. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2449` |
+| `num(a)` | Converts a value to a number, or `void` when it cannot be parsed. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2449` |
 | `oct(a)` | oct(n) - number to octal string. | oct() takes 1 argument; Argument must be a number | `builtins.ts:1561` |
 | `ord(…)` | ord(char) - character to number. | ord() takes 1 or 2 arguments; Argument must be a non-empty string | `builtins.ts:1535` |
 | `padleft(…)` | Pads the string on the left with a fill character until it reaches the target width. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:558` |
@@ -7542,7 +7542,7 @@ the module that installs it.
 | `padRight(…)` | padRight(s, width, char?) - alias PascalCase. | padRight() takes 2-3 arguments; First argument must be text | `builtins.ts:1210` |
 | `panic(…)` | panic(message) - fatal error. | PANIC: ${msg} | `builtins.ts:1505` |
 | `parseNum(…)` | parseNum(str, base?) - parse string to number with optional base. | parseNum() takes 1-2 arguments; First argument must be text | `builtins.ts:1581` |
-| `PI()` | Runtime primitive. | — | `builtins.ts:459` |
+| `PI()` | The constant π (3.14159…). | — | `builtins.ts:459` |
 | `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `builtins.ts:479` |
 | `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins.ts:1954` |
 | `pluck(…)` | pop from list, or append when given a value (stdlib/ML dialect). | pluck() takes 1 or 2 arguments; Argument must be a list | `builtins.ts:183` |
@@ -7592,10 +7592,10 @@ the module that installs it.
 | `str(a)` | str alias for morph to text. | — | `builtins.ts:2433` |
 | `sum(a)` | Adds every number in a list together. | sum() takes 1 argument; Argument must be a list | `builtins.ts:766` |
 | `take(a, b)` | Returns the first `n` elements of a list. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:744` |
-| `tan(a)` | Evaluates `Math.tan(a)`. | — | `builtins.ts:456` |
+| `tan(a)` | Tangent of an angle in radians. | — | `builtins.ts:456` |
 | `tanh(a)` | Evaluates `Math.tanh(a)`. | — | `builtins.ts:1022` |
 | `tap(a, b)` | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function | `builtins.ts:2164` |
-| `TAU()` | Runtime primitive. | — | `builtins.ts:460` |
+| `TAU()` | The constant τ — a full turn in radians, equal to 2π. | — | `builtins.ts:460` |
 | `test(a, b)` | test(text, pattern) - test if regex matches. | test() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1800` |
 | `throw(…)` | throw(message) - throw error. | — | `builtins.ts:1514` |
 | `time()` | time() - current time as tome. | — | `builtins.ts:1900` |
@@ -7607,7 +7607,7 @@ the module that installs it.
 | `toPrecision(a, b)` | toPrecision(n, precision) - format to precision. | toPrecision() takes 2 arguments; First argument must be a number | `builtins.ts:1607` |
 | `trim(a)` | Removes leading and trailing whitespace. | trim() takes 1 argument; Argument must be text | `builtins.ts:377` |
 | `trimLeft(a)` | trimLeft(s) / trimRight(s). | trimLeft() takes 1 argument; Argument must be text | `builtins.ts:1685` |
-| `trimRight(a)` | String Checking operation. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1694` |
+| `trimRight(a)` | Removes trailing whitespace only. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1694` |
 | `typeof(a)` | typeof() - alias for gettype. | typeof() takes 1 argument | `builtins.ts:1476` |
 | `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | Invalid JSON | `builtins.ts:506` |
 | `unique(a)` | Removes duplicate values, preserving first-seen order. | unique() takes 1 argument; Argument must be a list | `builtins.ts:826` |
@@ -7626,18 +7626,18 @@ the module that installs it.
 
 | Call | What it does | Rules | Source |
 | --- | --- | --- | --- |
-| `acos(a)` | Advanced Math operation. | acos() takes 1 argument | `advanced.ts:175` |
-| `asin(a)` | Advanced Math operation. | asin() takes 1 argument | `advanced.ts:167` |
+| `acos(a)` | Inverse cosine, in radians. | acos() takes 1 argument | `advanced.ts:175` |
+| `asin(a)` | Inverse sine, in radians. | asin() takes 1 argument | `advanced.ts:167` |
 | `assert(…)` | ============= Assertions (for testing) =============. | assert() takes at least 1 argument | `advanced.ts:361` |
 | `asserteq(a, b)` | Throws when the two values differ — the built-in test assertion. | asserteq() takes 2 arguments; Assertion failed: ${a} differs ${b} | `advanced.ts:374` |
-| `atan(a)` | Advanced Math operation. | atan() takes 1 argument | `advanced.ts:183` |
-| `atan2(a, b)` | Advanced Math operation. | atan2() takes 2 arguments (y, x) | `advanced.ts:191` |
-| `cos(a)` | Advanced Math operation. | cos() takes 1 argument | `advanced.ts:151` |
+| `atan(a)` | Inverse tangent, in radians. | atan() takes 1 argument | `advanced.ts:183` |
+| `atan2(a, b)` | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | atan2() takes 2 arguments (y, x) | `advanced.ts:191` |
+| `cos(a)` | Cosine of an angle in radians. | cos() takes 1 argument | `advanced.ts:151` |
 | `decipher(a)` | Parses a string back into a structured value (numbers, lists, tomes). | decipher() takes 1 argument (path); File not found: ${path} | `advanced.ts:45` |
-| `E()` | Advanced Math operation. | — | `advanced.ts:229` |
+| `E()` | Euler's number, the base of the natural logarithm. | — | `advanced.ts:229` |
 | `erase(a, b)` | handles both tome key deletion and virtual file deletion. | erase() takes 1 argument (path) or 2 arguments (tome, key) | `advanced.ts:59` |
 | `etch(a)` | ============= JSON Operations =============. | etch() takes 1 argument | `advanced.ts:10` |
-| `exp(a)` | Advanced Math operation. | exp() takes 1 argument | `advanced.ts:215` |
+| `exp(a)` | e raised to the given power. | exp() takes 1 argument | `advanced.ts:215` |
 | `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `advanced.ts:263` |
 | `inscribe(a, b)` | Formats values into a template string and returns the result. | inscribe() takes 2 arguments (path, content) | `advanced.ts:33` |
 | `intersect(a, b)` | The set intersection of two lists — values present in both. | intersect() takes 2 arguments; Arguments must be lists | `advanced.ts:311` |
@@ -7654,8 +7654,8 @@ the module that installs it.
 | `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `advanced.ts:345` |
 | `sin(a)` | ============= Advanced Math =============. | sin() takes 1 argument | `advanced.ts:143` |
 | `sort(…)` | ============= Sorting & Searching =============. | sort() takes at least 1 argument; First argument must be a list | `advanced.ts:240` |
-| `tan(a)` | Advanced Math operation. | tan() takes 1 argument | `advanced.ts:159` |
-| `TAU()` | Advanced Math operation. | — | `advanced.ts:234` |
+| `tan(a)` | Tangent of an angle in radians. | tan() takes 1 argument | `advanced.ts:159` |
+| `TAU()` | The constant τ — a full turn in radians, equal to 2π. | — | `advanced.ts:234` |
 | `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `advanced.ts:128` |
 | `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | unetch() takes 1 argument; Invalid JSON | `advanced.ts:18` |
 | `union(a, b)` | The set union of two lists — every distinct value from either side. | union() takes 2 arguments; Arguments must be lists | `advanced.ts:299` |
@@ -7692,20 +7692,20 @@ the module that installs it.
 | `background(…)` | Fills the whole canvas with a colour, clearing what was drawn. | background() takes at least 1 argument | `graphics.ts:65` |
 | `backward(a)` | Moves the turtle backwards by the given distance, drawing if the pen is down. | backward() takes 1 argument (distance) | `graphics.ts:546` |
 | `beginPath()` | ========== Path Drawing ==========. | — | `graphics.ts:374` |
-| `bezierTo(a, b, c, d, e, f)` | Path Drawing operation. | bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y) | `graphics.ts:408` |
+| `bezierTo(a, b, c, d, e, f)` | Adds a cubic Bézier segment using two control points. | bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y) | `graphics.ts:408` |
 | `canvas(a, b)` | ========== Canvas Setup ==========. | canvas() takes 2 arguments (width, height) | `graphics.ts:45` |
 | `circle(a, b, c)` | Draws a circle at a centre point with the given radius. | circle() takes 3 arguments (x, y, radius) | `graphics.ts:178` |
 | `clear(a)` | Erases the canvas contents. | — | `graphics.ts:56` |
-| `closePath()` | Path Drawing operation. | — | `graphics.ts:382` |
+| `closePath()` | Closes the current path back to its starting point. | — | `graphics.ts:382` |
 | `constrain(a, b, c)` | Clamps a number into the inclusive range `[low, high]`. | constrain() takes 3 arguments (value, min, max) | `graphics.ts:811` |
 | `createSprite(…)` | ========== Sprite System ==========. | createSprite() takes 4-5 arguments (x, y, width, height, color?) | `graphics.ts:443` |
 | `degrees(a)` | Converts radians to degrees. | degrees() takes 1 argument (radians) | `graphics.ts:779` |
 | `dist(a, b, c, d)` | Euclidean distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:822` |
 | `dot(a, b)` | Dot product of two vectors. | — | `graphics.ts:706` |
-| `drawSprite(a)` | Sprite System operation. | drawSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:467` |
+| `drawSprite(a)` | Renders a sprite at its current position and frame. | drawSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:467` |
 | `ellipse(…)` | Draws an ellipse with independent width and height radii. | ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?) | `graphics.ts:187` |
 | `fill(a)` | ========== Drawing State ==========. | fill() takes 1 argument (color) | `graphics.ts:75` |
-| `fillPath()` | Path Drawing operation. | — | `graphics.ts:426` |
+| `fillPath()` | Fills the current path with the active fill colour. | — | `graphics.ts:426` |
 | `font(…)` | Sets the font family and size used by text drawing. | font() takes 1-2 arguments (fontFamily, style?) | `graphics.ts:291` |
 | `forward(a)` | Moves the turtle forwards by the given distance, drawing if the pen is down. | forward() takes 1 argument (distance) | `graphics.ts:528` |
 | `goto(a, b)` | Moves the turtle straight to an absolute canvas coordinate. | goto() takes 2 arguments (x, y) | `graphics.ts:622` |
@@ -7718,16 +7718,16 @@ the module that installs it.
 | `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (a, b, t) | `graphics.ts:787` |
 | `line(a, b, c, d)` | Draws a straight line between two points. | line() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:211` |
 | `linearGradient(…)` | ========== Gradients ==========. | linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops) | `graphics.ts:301` |
-| `lineCap(a)` | Drawing State operation. | lineCap() takes 1 argument (round, square, butt) | `graphics.ts:118` |
-| `lineJoin(a)` | Drawing State operation. | lineJoin() takes 1 argument (round, bevel, miter) | `graphics.ts:127` |
-| `lineTo(a, b)` | Path Drawing operation. | lineTo() takes 2 arguments (x, y) | `graphics.ts:399` |
-| `lineWidth(a)` | Drawing State operation. | lineWidth() takes 1 argument | `graphics.ts:109` |
-| `mapRange(a, b, c, d, e)` | Math Utilities for Graphics operation. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax) | `graphics.ts:798` |
-| `moveSprite(a, b, c)` | Sprite System operation. | moveSprite() takes 3 arguments (sprite, dx, dy); Invalid sprite | `graphics.ts:478` |
-| `moveTo(a, b)` | Path Drawing operation. | moveTo() takes 2 arguments (x, y) | `graphics.ts:390` |
-| `noFill()` | Drawing State operation. | — | `graphics.ts:84` |
-| `noShadow()` | Drawing State operation. | — | `graphics.ts:160` |
-| `noStroke()` | Drawing State operation. | — | `graphics.ts:101` |
+| `lineCap(a)` | Sets how stroked line ends are drawn: `butt`, `round`, or `square`. | lineCap() takes 1 argument (round, square, butt) | `graphics.ts:118` |
+| `lineJoin(a)` | Sets how stroked corners join: `miter`, `round`, or `bevel`. | lineJoin() takes 1 argument (round, bevel, miter) | `graphics.ts:127` |
+| `lineTo(a, b)` | Adds a straight segment from the current path point to the given point. | lineTo() takes 2 arguments (x, y) | `graphics.ts:399` |
+| `lineWidth(a)` | Sets stroke thickness in pixels. | lineWidth() takes 1 argument | `graphics.ts:109` |
+| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax) | `graphics.ts:798` |
+| `moveSprite(a, b, c)` | Moves a sprite to a new position. | moveSprite() takes 3 arguments (sprite, dx, dy); Invalid sprite | `graphics.ts:478` |
+| `moveTo(a, b)` | Starts a new path segment at the given point without drawing. | moveTo() takes 2 arguments (x, y) | `graphics.ts:390` |
+| `noFill()` | Turns off filling for subsequent shapes. | — | `graphics.ts:84` |
+| `noShadow()` | Clears any configured drop shadow. | — | `graphics.ts:160` |
+| `noStroke()` | Turns off outlining for subsequent shapes. | — | `graphics.ts:101` |
 | `pencolor(a)` | Sets the stroke colour used by the turtle and shape outlines. | pencolor() takes 1 argument (color) | `graphics.ts:604` |
 | `pendown()` | Lowers the pen so turtle movement draws. | — | `graphics.ts:596` |
 | `penup()` | Raises the pen so turtle movement does not draw. | — | `graphics.ts:588` |
@@ -7735,12 +7735,12 @@ the module that installs it.
 | `point(…)` | Draws a single pixel-sized dot. | point() takes 2-3 arguments (x, y, size?) | `graphics.ts:220` |
 | `polygon(…)` | Draws a regular polygon with the given number of sides. | polygon() takes points [[x,y], ...]; polygon() argument must be a list of points | `graphics.ts:238` |
 | `pos()` | The turtle's current `[x, y]` position. | — | `graphics.ts:671` |
-| `quadraticTo(a, b, c, d)` | Path Drawing operation. | quadraticTo() takes 4 arguments (cpx, cpy, x, y) | `graphics.ts:417` |
-| `radialGradient(…)` | Gradients operation. | radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops) | `graphics.ts:311` |
+| `quadraticTo(a, b, c, d)` | Adds a quadratic Bézier segment using one control point. | quadraticTo() takes 4 arguments (cpx, cpy, x, y) | `graphics.ts:417` |
+| `radialGradient(…)` | Creates a radial gradient fill between two circles and colour stops. | radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops) | `graphics.ts:311` |
 | `radians(a)` | ========== Math Utilities for Graphics ==========. | radians() takes 1 argument (degrees) | `graphics.ts:771` |
-| `randomColor()` | Color Helpers operation. | — | `graphics.ts:762` |
+| `randomColor()` | Returns a random colour value. | — | `graphics.ts:762` |
 | `rect(…)` | ========== Basic Shapes ==========. | rect() takes 4-5 arguments (x, y, w, h, radius?) | `graphics.ts:169` |
-| `resetTransform()` | Transformations operation. | — | `graphics.ts:365` |
+| `resetTransform()` | Restores the canvas coordinate system to its identity state. | — | `graphics.ts:365` |
 | `restore()` | Pops the last saved canvas transform and style state. | — | `graphics.ts:357` |
 | `rgb(a, b, c)` | Builds an opaque colour from red, green, and blue channels. | rgb() takes 3 arguments (r, g, b) | `graphics.ts:738` |
 | `rgba(a, b, c, d)` | Builds a colour from red, green, blue, and alpha channels. | rgba() takes 4 arguments (r, g, b, a) | `graphics.ts:746` |
@@ -7750,18 +7750,18 @@ the module that installs it.
 | `scale(…)` | Scales the canvas coordinate system on the x and y axes. | scale() takes 1-2 arguments (x, y?) | `graphics.ts:340` |
 | `setheading(a)` | Points the turtle at an absolute angle in degrees. | setheading() takes 1 argument (angle) | `graphics.ts:651` |
 | `shadow(…)` | Configures the drop shadow applied to subsequent drawing. | shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?) | `graphics.ts:145` |
-| `spriteCollides(a, b)` | Sprite System operation. | spriteCollides() takes 2 arguments (sprite1, sprite2); Invalid sprites | `graphics.ts:502` |
+| `spriteCollides(a, b)` | True when two sprites' bounding boxes overlap. | spriteCollides() takes 2 arguments (sprite1, sprite2); Invalid sprites | `graphics.ts:502` |
 | `stamp()` | Imprints the turtle's current shape onto the canvas without moving it. | — | `graphics.ts:717` |
 | `star(…)` | Draws a star with the given number of points. | star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?) | `graphics.ts:249` |
 | `stroke(…)` | Strokes the current path with the active pen colour and width. | stroke() takes 1-2 arguments (color, width?) | `graphics.ts:92` |
-| `strokePath()` | Path Drawing operation. | — | `graphics.ts:434` |
+| `strokePath()` | Strokes the current path outline with the active pen. | — | `graphics.ts:434` |
 | `text(…)` | ========== Text ==========. | text() takes 3-4 arguments (str, x, y, size?) | `graphics.ts:273` |
-| `textAlign(…)` | Text operation. | textAlign() takes 1-2 arguments (horizontal, vertical?) | `graphics.ts:282` |
+| `textAlign(…)` | Sets horizontal (and optionally vertical) alignment for drawn text. | textAlign() takes 1-2 arguments (horizontal, vertical?) | `graphics.ts:282` |
 | `translate(a, b)` | ========== Transformations ==========. | translate() takes 2 arguments (x, y) | `graphics.ts:322` |
 | `triangle(a, b, c, d, e, f)` | Draws a triangle through three points. | triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3) | `graphics.ts:229` |
 | `turtle()` | ========== Turtle Graphics ==========. | — | `graphics.ts:519` |
-| `turtleCircle(…)` | Turtle Graphics operation. | turtleCircle() takes 1-2 arguments (radius, steps?) | `graphics.ts:679` |
-| `updateSprite(a)` | Sprite System operation. | updateSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:490` |
+| `turtleCircle(…)` | Drives the turtle around a circle of the given radius, drawing as it goes. | turtleCircle() takes 1-2 arguments (radius, steps?) | `graphics.ts:679` |
+| `updateSprite(a)` | Advances a sprite's animation and physics by one step. | updateSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:490` |
 
 #### `src/lang/ui.ts` — App widget runtime used by the IDE App preview
 
@@ -7832,52 +7832,52 @@ the module that installs it.
 
 | Call | What it does | Rules | Source |
 | --- | --- | --- | --- |
-| `closeWindow(a)` | Create Kernel Builtins operation. | closeWindow() takes 1 argument | `kernel.ts:910` |
+| `closeWindow(a)` | Closes a virtual window and frees its resources. | closeWindow() takes 1 argument | `kernel.ts:910` |
 | `createTask(a, b, c)` | Task shortcuts. | createTask() requires a function | `kernel.ts:819` |
 | `createWindow(a, b, c, d, e)` | Window manager. | — | `kernel.ts:899` |
 | `deviceList()` | HAL. | — | `kernel.ts:944` |
-| `deviceRead(a)` | Create Kernel Builtins operation. | deviceRead() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:949` |
-| `deviceStatus(a)` | Create Kernel Builtins operation. | deviceStatus() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:970` |
-| `deviceWrite(a, b)` | Create Kernel Builtins operation. | deviceWrite() takes 2 arguments; Device not found: ${args[0]} | `kernel.ts:959` |
-| `emitEvent(…)` | Create Kernel Builtins operation. | emitEvent() takes at least 1 argument | `kernel.ts:1067` |
+| `deviceRead(a)` | Reads from a virtual device by name. | deviceRead() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:949` |
+| `deviceStatus(a)` | Reports whether a virtual device is attached and ready. | deviceStatus() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:970` |
+| `deviceWrite(a, b)` | Writes a value to a virtual device by name. | deviceWrite() takes 2 arguments; Device not found: ${args[0]} | `kernel.ts:959` |
+| `emitEvent(…)` | Fires a named kernel event, invoking every registered handler. | emitEvent() takes at least 1 argument | `kernel.ts:1067` |
 | `f32()` | FFI type tag: 32-bit float. | — | `kernel.ts:1048` |
 | `f64()` | FFI type tag: 64-bit float. | — | `kernel.ts:1049` |
-| `fsAppend(a, b)` | Create Kernel Builtins operation. | fsAppend() takes 2 arguments | `kernel.ts:809` |
-| `fsDelete(a)` | Create Kernel Builtins operation. | fsDelete() takes 1 argument | `kernel.ts:785` |
-| `fsExists(a)` | Create Kernel Builtins operation. | fsExists() takes 1 argument | `kernel.ts:793` |
-| `fsList(a)` | Create Kernel Builtins operation. | fsList() takes 1 argument | `kernel.ts:768` |
-| `fsMkdir(a)` | Create Kernel Builtins operation. | fsMkdir() takes 1 argument | `kernel.ts:776` |
+| `fsAppend(a, b)` | Appends text to the end of a virtual filesystem file. | fsAppend() takes 2 arguments | `kernel.ts:809` |
+| `fsDelete(a)` | Deletes a virtual filesystem entry. | fsDelete() takes 1 argument | `kernel.ts:785` |
+| `fsExists(a)` | True when the path exists in the virtual filesystem. | fsExists() takes 1 argument | `kernel.ts:793` |
+| `fsList(a)` | Lists the children of a virtual filesystem directory. | fsList() takes 1 argument | `kernel.ts:768` |
+| `fsMkdir(a)` | Creates a directory in the virtual filesystem. | fsMkdir() takes 1 argument | `kernel.ts:776` |
 | `fsRead(a)` | VFS shortcuts. | fsRead() takes 1 argument | `kernel.ts:751` |
-| `fsStat(a)` | Create Kernel Builtins operation. | fsStat() takes 1 argument | `kernel.ts:801` |
-| `fsWrite(a, b)` | Create Kernel Builtins operation. | fsWrite() takes 2 arguments (path, content) | `kernel.ts:759` |
+| `fsStat(a)` | Returns metadata (size, kind, timestamps) for a virtual filesystem entry. | fsStat() takes 1 argument | `kernel.ts:801` |
+| `fsWrite(a, b)` | Writes text to a path in the virtual filesystem, creating it if needed. | fsWrite() takes 2 arguments (path, content) | `kernel.ts:759` |
 | `gc()` | Runs the virtual kernel's mark-and-sweep collector immediately. | — | `kernel.ts:893` |
 | `getPrivilege()` | Privilege. | — | `kernel.ts:1003` |
 | `getTime()` | getTime. | — | `kernel.ts:1095` |
 | `heapAlloc(a)` | Heap. | heapAlloc() takes 1 argument (size) | `kernel.ts:854` |
-| `heapFree(a)` | Create Kernel Builtins operation. | heapFree() takes 1 argument (address) | `kernel.ts:862` |
-| `heapLoad(a)` | Create Kernel Builtins operation. | heapLoad() takes 1 argument (address) | `kernel.ts:871` |
-| `heapStats()` | Create Kernel Builtins operation. | — | `kernel.ts:888` |
-| `heapStore(a, b)` | Create Kernel Builtins operation. | heapStore() takes 2 arguments (address, value) | `kernel.ts:879` |
+| `heapFree(a)` | Releases a kernel heap handle so the collector can reclaim it. | heapFree() takes 1 argument (address) | `kernel.ts:862` |
+| `heapLoad(a)` | Reads the value behind a kernel heap handle. | heapLoad() takes 1 argument (address) | `kernel.ts:871` |
+| `heapStats()` | Returns live/free counts and totals for the kernel heap. | — | `kernel.ts:888` |
+| `heapStore(a, b)` | Allocates a value on the kernel heap and returns its handle. | heapStore() takes 2 arguments (address, value) | `kernel.ts:879` |
 | `i16()` | FFI type tag: signed 16-bit integer. | — | `kernel.ts:1046` |
 | `i32()` | FFI type tag: signed 32-bit integer. | — | `kernel.ts:1047` |
 | `i8()` | FFI type tag: signed 8-bit integer. | — | `kernel.ts:1045` |
 | `kernelBoot()` | Boot. | — | `kernel.ts:745` |
-| `killTask(a)` | Create Kernel Builtins operation. | killTask() takes 1 argument | `kernel.ts:828` |
+| `killTask(a)` | Terminates the task with the given id. | killTask() takes 1 argument | `kernel.ts:828` |
 | `loadModule(a)` | Module loader (simulated). | loadModule() takes 1 argument (path); Module not found: ${path} | `kernel.ts:1082` |
-| `moveWindow(a, b, c)` | Create Kernel Builtins operation. | moveWindow() takes 3 arguments (id, x, y) | `kernel.ts:918` |
-| `onEvent(a, b)` | Create Kernel Builtins operation. | onEvent() takes 2 arguments (event, handler); Second argument must be a function | `kernel.ts:1054` |
+| `moveWindow(a, b, c)` | Moves a virtual window to new coordinates. | moveWindow() takes 3 arguments (id, x, y) | `kernel.ts:918` |
+| `onEvent(a, b)` | Registers a handler to run when a named kernel event fires. | onEvent() takes 2 arguments (event, handler); Second argument must be a function | `kernel.ts:1054` |
 | `onInterrupt(a, b)` | Interrupt registration. | onInterrupt() takes 2 arguments (num, handler); Second argument must be a function | `kernel.ts:981` |
-| `resizeWindow(a, b, c)` | Create Kernel Builtins operation. | resizeWindow() takes 3 arguments (id, w, h) | `kernel.ts:927` |
-| `runTasks()` | Create Kernel Builtins operation. | — | `kernel.ts:848` |
-| `setPrivilege(a)` | Create Kernel Builtins operation. | Invalid privilege level; Permission denied | `kernel.ts:1008` |
+| `resizeWindow(a, b, c)` | Resizes a virtual window. | resizeWindow() takes 3 arguments (id, w, h) | `kernel.ts:927` |
+| `runTasks()` | Runs the scheduler until every ready task has had a turn. | — | `kernel.ts:848` |
+| `setPrivilege(a)` | Sets the privilege ring of the current task. | Invalid privilege level; Permission denied | `kernel.ts:1008` |
 | `syscall(…)` | syscall(name, ...args). | syscall() requires at least 1 argument (name) | `kernel.ts:735` |
-| `taskList()` | Create Kernel Builtins operation. | — | `kernel.ts:841` |
-| `triggerInterrupt(a)` | Create Kernel Builtins operation. | triggerInterrupt() takes 1 argument | `kernel.ts:992` |
+| `taskList()` | Returns the process table as a list of task records. | — | `kernel.ts:841` |
+| `triggerInterrupt(a)` | Raises a virtual interrupt, invoking its registered handler. | triggerInterrupt() takes 1 argument | `kernel.ts:992` |
 | `u16()` | FFI type tag: unsigned 16-bit integer. | — | `kernel.ts:1043` |
 | `u32()` | FFI type tag: unsigned 32-bit integer. | — | `kernel.ts:1044` |
 | `u8()` | FFI type tag: unsigned 8-bit integer. | — | `kernel.ts:1042` |
-| `windowList()` | Create Kernel Builtins operation. | — | `kernel.ts:936` |
-| `yieldTask()` | Create Kernel Builtins operation. | — | `kernel.ts:836` |
+| `windowList()` | Lists the windows currently open in the virtual desktop. | — | `kernel.ts:936` |
+| `yieldTask()` | Voluntarily gives up the rest of the current task's time slice. | — | `kernel.ts:836` |
 
 
 ### Keyword table — v1 lexer
