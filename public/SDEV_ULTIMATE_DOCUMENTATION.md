@@ -7408,18 +7408,18 @@ the module that installs it.
 | `base64decode(a)` | Decodes Base64 text back into a string. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1870` |
 | `base64encode(a)` | Encodes a string or byte buffer as Base64 text. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1861` |
 | `bin(a)` | bin(n) - number to binary string. | bin() takes 1 argument; Argument must be a number | `builtins.ts:1571` |
-| `bitAnd(a, b)` | Bitwise Operations operation. | bitAnd() takes 2 arguments | `builtins.ts:1811` |
-| `bitNot(a)` | Bitwise Operations operation. | bitNot() takes 1 argument | `builtins.ts:1835` |
-| `bitOr(a, b)` | Bitwise Operations operation. | bitOr() takes 2 arguments | `builtins.ts:1819` |
-| `bitShiftLeft(a, b)` | Bitwise Operations operation. | bitShiftLeft() takes 2 arguments | `builtins.ts:1843` |
-| `bitShiftRight(a, b)` | Bitwise Operations operation. | bitShiftRight() takes 2 arguments | `builtins.ts:1851` |
-| `bitXor(a, b)` | Bitwise Operations operation. | bitXor() takes 2 arguments | `builtins.ts:1827` |
+| `bitAnd(a, b)` | Bitwise AND of two integers. | bitAnd() takes 2 arguments | `builtins.ts:1811` |
+| `bitNot(a)` | Bitwise complement of an integer. | bitNot() takes 1 argument | `builtins.ts:1835` |
+| `bitOr(a, b)` | Bitwise OR of two integers. | bitOr() takes 2 arguments | `builtins.ts:1819` |
+| `bitShiftLeft(a, b)` | Shifts the bits of an integer left by n places. | bitShiftLeft() takes 2 arguments | `builtins.ts:1843` |
+| `bitShiftRight(a, b)` | Shifts the bits of an integer right by n places. | bitShiftRight() takes 2 arguments | `builtins.ts:1851` |
+| `bitXor(a, b)` | Bitwise exclusive OR of two integers. | bitXor() takes 2 arguments | `builtins.ts:1827` |
 | `buffer(a)` | buffer(size) - create a byte buffer. | buffer() takes 1 argument (size); Argument must be a number | `builtins.ts:2012` |
 | `capitalize(a)` | capitalize(s) - first char uppercase. | capitalize() takes 1 argument; Argument must be text | `builtins.ts:1647` |
 | `ceil(a)` | Evaluates `Math.ceil(a)`. | — | `builtins.ts:2428` |
 | `center(…)` | center(s, width, char?) - center-pad string. | center() takes 2-3 arguments; First argument must be text | `builtins.ts:1667` |
 | `chaos()` | Random number generator with seedable, reproducible output. | — | `builtins.ts:328` |
-| `charAt(a, b)` | String Operations operation. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:580` |
+| `charAt(a, b)` | The character at a zero-based index in a string. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:580` |
 | `chars(a)` | chars(s) - string to char list. | chars() takes 1 argument; Argument must be text | `builtins.ts:1172` |
 | `chr(a)` | chr(n) - number to character. | chr() takes 1 argument; Argument must be a number | `builtins.ts:1525` |
 | `chunk(a, b)` | chunk(list, size) - split list into chunks. | chunk() takes 2 arguments (list, size); First argument must be a list | `builtins.ts:2147` |
@@ -7437,7 +7437,7 @@ the module that installs it.
 | `degrees(a)` | degrees(rad) - radians to degrees. | degrees() takes 1 argument; Argument must be a number | `builtins.ts:1366` |
 | `del(a, b)` | Deletes a key from a tome or an index from a list, in place. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1081` |
 | `delay()` | delay(ms) - no-op in synchronous context. | — | `builtins.ts:1425` |
-| `deleteFile(a)` | Misc Missing operation. | deleteFile() takes 1 argument | `builtins.ts:2374` |
+| `deleteFile(a)` | Deletes a file from the host filesystem. | deleteFile() takes 1 argument | `builtins.ts:2374` |
 | `difference(a, b)` | difference(a, b) - set difference. | difference() takes 2 arguments; Arguments must be lists | `builtins.ts:1270` |
 | `dist(a, b, c, d)` | dist(x1, y1, x2, y2) - distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers | `builtins.ts:1343` |
 | `drop(a, b)` | Returns a copy of the list without its first `n` elements. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:755` |
@@ -7462,7 +7462,7 @@ the module that installs it.
 | `ffi_sym(a, b)` | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`. | — | `builtins.ts:2611` |
 | `ffi_write_f64(a, b, c)` | Writes a 64-bit float into an FFI buffer at a byte offset. | — | `builtins.ts:2582` |
 | `ffi_write_i32(a, b, c)` | Writes a 32-bit integer into an FFI buffer at a byte offset. | — | `builtins.ts:2594` |
-| `fileExists(a)` | Misc Missing operation. | fileExists() takes 1 argument | `builtins.ts:2366` |
+| `fileExists(a)` | True when the given host filesystem path exists. | fileExists() takes 1 argument | `builtins.ts:2366` |
 | `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:877` |
 | `first(a)` | The first element of a list or the first character of a string. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:714` |
 | `flatten(a)` | Collapses nested lists into a single flat list. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:668` |
@@ -7471,7 +7471,7 @@ the module that installs it.
 | `format(…)` | format(template, ...args) - string formatting with {} placeholders. | format() takes at least 1 argument; First argument must be text | `builtins.ts:1182` |
 | `formatTime(…)` | formatTime(ms, format?) - format milliseconds. | formatTime() takes at least 1 argument; First argument must be a number (ms) | `builtins.ts:1919` |
 | `freeze(a)` | freeze(obj) - make object immutable (shallow). | freeze() takes 1 argument | `builtins.ts:2109` |
-| `fromEntries(a)` | Tome (Dict) Operations operation. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1122` |
+| `fromEntries(a)` | Builds a tome from a list of `[key, value]` pairs. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1122` |
 | `gather(a, b)` | push to list. | gather() takes 0 or 2 arguments; First argument must be a list | `builtins.ts:168` |
 | `get(…)` | Reads a key from a tome with an optional default when the key is missing. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1054` |
 | `gettype(a)` | get the type of a value (avoids 'essence' keyword clash). | gettype() takes 1 argument | `builtins.ts:432` |
@@ -7482,8 +7482,8 @@ the module that installs it.
 | `hash(a)` | Deterministic hash of a value, returned as a number or hex string. | hash() takes 1 argument | `builtins.ts:1882` |
 | `hex(a)` | hex(n) - number to hex string. | hex() takes 1 argument; Argument must be a number | `builtins.ts:1551` |
 | `http_get(a)` | Performs an HTTP GET and returns the response body as text. | http_get() takes a url; http_get( | `builtins.ts:2532` |
-| `indexOf(a, b)` | String Operations operation. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:592` |
-| `INFINITY()` | Math Utilities operation. | — | `builtins.ts:1028` |
+| `indexOf(a, b)` | Index of the first occurrence of a substring, or -1 when absent. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:592` |
+| `INFINITY()` | The floating-point positive infinity constant. | — | `builtins.ts:1028` |
 | `input(…)` | input(prompt?) - uses browser prompt() for real input. | — | `builtins.ts:1405` |
 | `inscriptions(a)` | Dict operations. | inscriptions() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:334` |
 | `insert(a, b, c)` | ============= List Operations =============. | insert() takes 3 arguments (list, index, value); First argument must be a list | `builtins.ts:626` |
@@ -7493,7 +7493,7 @@ the module that installs it.
 | `isDigit(a)` | isDigit(s) - check if all digits. | isDigit() takes 1 argument; Argument must be text | `builtins.ts:1724` |
 | `isFinite(a)` | isFinite(v) - check if finite. | isFinite() takes 1 argument | `builtins.ts:1627` |
 | `isFrozen(a)` | isFrozen(obj). | isFrozen() takes 1 argument | `builtins.ts:2119` |
-| `isFunc(a)` | Type Checking operation. | isFunc() takes 1 argument | `builtins.ts:942` |
+| `isFunc(a)` | True when the value is callable (a function, lambda, or builtin). | isFunc() takes 1 argument | `builtins.ts:942` |
 | `isInteger(a)` | isInteger(v) - check if integer. | isInteger() takes 1 argument | `builtins.ts:1636` |
 | `isList(a)` | True when the value is a list. | isList() takes 1 argument | `builtins.ts:910` |
 | `isLower(a)` | isLower(s) - check if all lowercase. | isLower() takes 1 argument; Argument must be text | `builtins.ts:1714` |
