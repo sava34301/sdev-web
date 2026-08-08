@@ -15,6 +15,7 @@ interface Heading { id: string; text: string; level: number }
 interface DocSource { id: string; title: string; url: string; icon: React.ComponentType<{ className?: string }> }
 
 const SOURCES: DocSource[] = [
+  { id: 'ultimate',   title: 'Ultimate Documentation (everything)', url: '/SDEV_ULTIMATE_DOCUMENTATION.md', icon: Library },
   { id: 'book-en',     title: 'The sdev Book (EN)',          url: '/sdev-book-en.md',            icon: BookOpen },
   { id: 'book-bg',     title: 'Книгата за sdev (BG)',        url: '/sdev-book-bg.md',            icon: BookOpen },
   { id: 'full',        title: 'Complete Documentation',      url: '/SDEV_FULL_DOCUMENTATION.md', icon: Library },
