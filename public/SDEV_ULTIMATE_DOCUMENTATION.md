@@ -7391,80 +7391,531 @@ the module that installs it.
 
 #### `src/lang/builtins.ts` — Core standard library — I/O, types, math, collections, strings, regex, time
 
-224 builtins.
+224 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-`E` · `INFINITY` · `LinkedList` · `Map` · `PI` · `Queue` · `Set` · `Stack` · `TAU` · `Vec2` · `__tryCatch` · `abs` · `acos` · `all` · `any` · `appendFile` · `asin` · `atan` · `atan2` · `average` · `base64decode` · `base64encode` · `bin` · `bitAnd` · `bitNot` · `bitOr` · `bitShiftLeft` · `bitShiftRight` · `bitXor` · `buffer` · `capitalize` · `ceil` · `center` · `chaos` · `charAt` · `chars` · `chr` · `chunk` · `clamp` · `clone` · `compose` · `concat` · `constrain` · `contains` · `contents` · `cos` · `cosh` · `count` · `curry` · `degrees` · `del` · `delay` · `deleteFile` · `difference` · `dist` · `drop` · `each` · `elevate` · `ends` · `endswith` · `entries` · `enumerate` · `essence` · `etch` · `every` · `exit` · `exp` · `ffi_buf` · `ffi_call` · `ffi_close` · `ffi_open` · `ffi_read_f64` · `ffi_read_i32` · `ffi_sym` · `ffi_write_f64` · `ffi_write_i32` · `fileExists` · `find` · `first` · `flatten` · `floor` · `fold` · `format` · `formatTime` · `freeze` · `fromEntries` · `gather` · `get` · `gettype` · `greatest` · `ground` · `groupBy` · `has` · `hash` · `hex` · `http_get` · `indexOf` · `input` · `inscriptions` · `insert` · `int` · `isAlpha` · `isAlphaNum` · `isDigit` · `isFinite` · `isFrozen` · `isFunc` · `isInteger` · `isList` · `isLower` · `isNaN` · `isNum` · `isSpace` · `isText` · `isTome` · `isTruth` · `isUpper` · `isVoid` · `keys` · `last` · `lastIndexOf` · `least` · `len` · `lerp` · `listDir` · `ln` · `locate` · `log` · `log10` · `log2` · `lower` · `magnitude` · `mapRange` · `match` · `matchAll` · `max` · `mean` · `measure` · `memoize` · `merge` · `min` · `morph` · `nearby` · `now` · `num` · `oct` · `ord` · `padLeft` · `padRight` · `padleft` · `padright` · `panic` · `parseNum` · `pick` · `pipe` · `pluck` · `pointer` · `portion` · `pow` · `print` · `println` · `product` · `radians` · `rand` · `randint` · `random` · `range` · `read_file` · `remove` · `repeat` · `replace` · `replaceRegex` · `rest` · `reverse` · `root` · `round` · `seek` · `sequence` · `set` · `shatter` · `shout` · `shuffle` · `sift` · `sign` · `sin` · `sinh` · `sleep` · `snatch` · `some` · `sort` · `sortDesc` · `spawn` · `speak` · `sqrt` · `starts` · `startswith` · `str` · `sum` · `take` · `tan` · `tanh` · `tap` · `test` · `throw` · `time` · `times` · `timestamp` · `title` · `toFixed` · `toPrecision` · `tome_keys` · `trim` · `trimLeft` · `trimRight` · `typeof` · `unetch` · `unique` · `unzip` · `upper` · `values` · `weave` · `whisper` · `write_file` · `zip`
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `__tryCatch(a, b)` | __tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue. | __tryCatch requires 2 function arguments | `builtins.ts:2460` |
+| `abs(a)` | abs alias. | abs() takes 1 argument | `builtins.ts:2418` |
+| `acos(a)` | Evaluates `Math.acos(a)`. | — | `builtins.ts:1014` |
+| `all(a, b)` | List Operations operation. | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:851` |
+| `any(a, b)` | List Operations operation. | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:864` |
+| `appendFile(a, b)` | Convenience aliases. | appendFile() takes 2 arguments | `builtins.ts:2357` |
+| `asin(a)` | More trig. | — | `builtins.ts:1013` |
+| `atan(a)` | Evaluates `Math.atan(a)`. | — | `builtins.ts:1015` |
+| `atan2(a, b)` | Evaluates `Math.atan2(a, b)`. | — | `builtins.ts:1016` |
+| `average(a)` | List Operations operation. | average() takes 1 argument; Argument must be a list | `builtins.ts:790` |
+| `base64decode(a)` | Base64 operation. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1870` |
+| `base64encode(a)` | Base64 operation. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1861` |
+| `bin(a)` | bin(n) - number to binary string. | bin() takes 1 argument; Argument must be a number | `builtins.ts:1571` |
+| `bitAnd(a, b)` | Bitwise Operations operation. | bitAnd() takes 2 arguments | `builtins.ts:1811` |
+| `bitNot(a)` | Bitwise Operations operation. | bitNot() takes 1 argument | `builtins.ts:1835` |
+| `bitOr(a, b)` | Bitwise Operations operation. | bitOr() takes 2 arguments | `builtins.ts:1819` |
+| `bitShiftLeft(a, b)` | Bitwise Operations operation. | bitShiftLeft() takes 2 arguments | `builtins.ts:1843` |
+| `bitShiftRight(a, b)` | Bitwise Operations operation. | bitShiftRight() takes 2 arguments | `builtins.ts:1851` |
+| `bitXor(a, b)` | Bitwise Operations operation. | bitXor() takes 2 arguments | `builtins.ts:1827` |
+| `buffer(a)` | buffer(size) - create a byte buffer. | buffer() takes 1 argument (size); Argument must be a number | `builtins.ts:2012` |
+| `capitalize(a)` | capitalize(s) - first char uppercase. | capitalize() takes 1 argument; Argument must be text | `builtins.ts:1647` |
+| `ceil(a)` | Evaluates `Math.ceil(a)`. | — | `builtins.ts:2428` |
+| `center(…)` | center(s, width, char?) - center-pad string. | center() takes 2-3 arguments; First argument must be text | `builtins.ts:1667` |
+| `chaos()` | Runtime primitive. | — | `builtins.ts:328` |
+| `charAt(a, b)` | String Operations operation. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:580` |
+| `chars(a)` | chars(s) - string to char list. | chars() takes 1 argument; Argument must be text | `builtins.ts:1172` |
+| `chr(a)` | chr(n) - number to character. | chr() takes 1 argument; Argument must be a number | `builtins.ts:1525` |
+| `chunk(a, b)` | chunk(list, size) - split list into chunks. | chunk() takes 2 arguments (list, size); First argument must be a list | `builtins.ts:2147` |
+| `clamp(a, b, c)` | ============= Math Utilities =============. | clamp() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:956` |
+| `clone(a)` | clone(list) - deep copy. | clone() takes 1 argument | `builtins.ts:1259` |
+| `compose(…)` | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)). | compose() takes at least 2 arguments; All arguments must be functions | `builtins.ts:1932` |
+| `concat(…)` | List Operations operation. | concat() takes at least 2 arguments; All arguments must be lists | `builtins.ts:651` |
+| `constrain(a, b, c)` | constrain(v, min, max) - alias for clamp. | constrain() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:1330` |
+| `contains(a, b)` | Runtime primitive. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:397` |
+| `contents(a)` | Runtime primitive. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:346` |
+| `cos(a)` | Evaluates `Math.cos(a)`. | — | `builtins.ts:455` |
+| `cosh(a)` | Evaluates `Math.cosh(a)`. | — | `builtins.ts:1021` |
+| `count(a, b)` | List Operations operation. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:841` |
+| `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins.ts:1969` |
+| `degrees(a)` | degrees(rad) - radians to degrees. | degrees() takes 1 argument; Argument must be a number | `builtins.ts:1366` |
+| `del(a, b)` | Tome (Dict) Operations operation. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1081` |
+| `delay()` | delay(ms) - no-op in synchronous context. | — | `builtins.ts:1425` |
+| `deleteFile(a)` | Misc Missing operation. | deleteFile() takes 1 argument | `builtins.ts:2374` |
+| `difference(a, b)` | difference(a, b) - set difference. | difference() takes 2 arguments; Arguments must be lists | `builtins.ts:1270` |
+| `dist(a, b, c, d)` | dist(x1, y1, x2, y2) - distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers | `builtins.ts:1343` |
+| `drop(a, b)` | List Operations operation. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:755` |
+| `E()` | Constants. | — | `builtins.ts:1027` |
+| `each(a, b)` | map over array with lambda. | each() takes 2 arguments (list, transform); First argument must be a list | `builtins.ts:116` |
+| `elevate(a)` | Runtime primitive. | elevate() takes 1 argument | `builtins.ts:312` |
+| `ends(a, b)` | ends(s, suffix) - alias for endswith. | ends() takes 2 arguments; Arguments must be text | `builtins.ts:1151` |
+| `endswith(a, b)` | String Operations operation. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:537` |
+| `entries(a)` | Tome (Dict) Operations operation. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1111` |
+| `enumerate(a)` | enumerate(list) - [[index, item], ...]. | enumerate() takes 1 argument; Argument must be a list | `builtins.ts:1320` |
+| `essence(a)` | get type. | essence() takes 1 argument | `builtins.ts:243` |
+| `etch(a)` | JSON. | — | `builtins.ts:505` |
+| `every(a, b)` | every(list, predicate) - alias for all. | every() takes 2 arguments; First argument must be a list | `builtins.ts:1296` |
+| `exit(…)` | exit(code?) - terminate program. | Program exited with code ${code} | `builtins.ts:1496` |
+| `exp(a)` | Evaluates `Math.exp(a)`. | — | `builtins.ts:458` |
+| `ffi_buf(a)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | ffi_buf() takes a positive byte size | `builtins.ts:2569` |
+| `ffi_call(a, b, c, d)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | ffi_call() — no native FFI host available | `builtins.ts:2616` |
+| `ffi_close(a)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | Expected number, got ${typeof value} | `builtins.ts:2624` |
+| `ffi_open(a)` | Evaluates `ffiHost().open?.(String(a ?? '')) ?? null`. | — | `builtins.ts:2607` |
+| `ffi_read_f64(a, b)` | Evaluates `bufOf(a, line).getFloat64(Number(b) * 8, true)`. | — | `builtins.ts:2589` |
+| `ffi_read_i32(a, b)` | Evaluates `bufOf(a, line).getInt32(Number(b) * 4, true)`. | — | `builtins.ts:2601` |
+| `ffi_sym(a, b)` | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`. | — | `builtins.ts:2611` |
+| `ffi_write_f64(a, b, c)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | — | `builtins.ts:2582` |
+| `ffi_write_i32(a, b, c)` | FFI host bridge (lang/stdlib/ffi.sdev) operation. | — | `builtins.ts:2594` |
+| `fileExists(a)` | Misc Missing operation. | fileExists() takes 1 argument | `builtins.ts:2366` |
+| `find(a, b)` | List Operations operation. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:877` |
+| `first(a)` | List Operations operation. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:714` |
+| `flatten(a)` | List Operations operation. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:668` |
+| `floor(a)` | floor/ceil/round aliases. | — | `builtins.ts:2427` |
+| `fold(a, b, c)` | reduce array. | fold() takes 3 arguments (list, initial, reducer); First argument must be a list | `builtins.ts:149` |
+| `format(…)` | format(template, ...args) - string formatting with {} placeholders. | format() takes at least 1 argument; First argument must be text | `builtins.ts:1182` |
+| `formatTime(…)` | formatTime(ms, format?) - format milliseconds. | formatTime() takes at least 1 argument; First argument must be a number (ms) | `builtins.ts:1919` |
+| `freeze(a)` | freeze(obj) - make object immutable (shallow). | freeze() takes 1 argument | `builtins.ts:2109` |
+| `fromEntries(a)` | Tome (Dict) Operations operation. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1122` |
+| `gather(a, b)` | push to list. | gather() takes 0 or 2 arguments; First argument must be a list | `builtins.ts:168` |
+| `get(…)` | Tome (Dict) Operations operation. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1054` |
+| `gettype(a)` | get the type of a value (avoids 'essence' keyword clash). | gettype() takes 1 argument | `builtins.ts:432` |
+| `greatest(…)` | Runtime primitive. | greatest() takes at least 1 argument | `builtins.ts:285` |
+| `ground(a)` | Runtime primitive. | ground() takes 1 argument | `builtins.ts:304` |
+| `groupBy(a, b)` | groupBy(list, fn) - group list elements by function result. | groupBy() takes 2 arguments; First argument must be a list | `builtins.ts:2129` |
+| `has(a, b)` | ============= Tome (Dict) Operations =============. | has() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1042` |
+| `hash(a)` | Hash operation. | hash() takes 1 argument | `builtins.ts:1882` |
+| `hex(a)` | hex(n) - number to hex string. | hex() takes 1 argument; Argument must be a number | `builtins.ts:1551` |
+| `http_get(a)` | ML host bindings (Milestone 13) operation. | http_get() takes a url; http_get( | `builtins.ts:2532` |
+| `indexOf(a, b)` | String Operations operation. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:592` |
+| `INFINITY()` | Math Utilities operation. | — | `builtins.ts:1028` |
+| `input(…)` | input(prompt?) - uses browser prompt() for real input. | — | `builtins.ts:1405` |
+| `inscriptions(a)` | Dict operations. | inscriptions() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:334` |
+| `insert(a, b, c)` | ============= List Operations =============. | insert() takes 3 arguments (list, index, value); First argument must be a list | `builtins.ts:626` |
+| `int(a)` | int / num aliases. | int() takes 1 argument; Cannot convert to integer: ${stringify(args[0])} | `builtins.ts:2439` |
+| `isAlpha(a)` | isAlpha(s) - check if all alphabetic. | isAlpha() takes 1 argument; Argument must be text | `builtins.ts:1734` |
+| `isAlphaNum(a)` | isAlphaNum(s) - check if all alphanumeric. | isAlphaNum() takes 1 argument; Argument must be text | `builtins.ts:1744` |
+| `isDigit(a)` | isDigit(s) - check if all digits. | isDigit() takes 1 argument; Argument must be text | `builtins.ts:1724` |
+| `isFinite(a)` | isFinite(v) - check if finite. | isFinite() takes 1 argument | `builtins.ts:1627` |
+| `isFrozen(a)` | isFrozen(obj). | isFrozen() takes 1 argument | `builtins.ts:2119` |
+| `isFunc(a)` | Type Checking operation. | isFunc() takes 1 argument | `builtins.ts:942` |
+| `isInteger(a)` | isInteger(v) - check if integer. | isInteger() takes 1 argument | `builtins.ts:1636` |
+| `isList(a)` | Type Checking operation. | isList() takes 1 argument | `builtins.ts:910` |
+| `isLower(a)` | isLower(s) - check if all lowercase. | isLower() takes 1 argument; Argument must be text | `builtins.ts:1714` |
+| `isNaN(a)` | isNaN(v) - check if NaN. | isNaN() takes 1 argument | `builtins.ts:1618` |
+| `isNum(a)` | ============= Type Checking =============. | isNum() takes 1 argument | `builtins.ts:894` |
+| `isSpace(a)` | isSpace(s) - check if all whitespace. | isSpace() takes 1 argument; Argument must be text | `builtins.ts:1754` |
+| `isText(a)` | Type Checking operation. | isText() takes 1 argument | `builtins.ts:902` |
+| `isTome(a)` | Type Checking operation. | isTome() takes 1 argument | `builtins.ts:918` |
+| `isTruth(a)` | Type Checking operation. | isTruth() takes 1 argument | `builtins.ts:926` |
+| `isUpper(a)` | isUpper(s) - check if all uppercase. | isUpper() takes 1 argument; Argument must be text | `builtins.ts:1704` |
+| `isVoid(a)` | Type Checking operation. | isVoid() takes 1 argument | `builtins.ts:934` |
+| `keys(a)` | keys(tome) - alias for inscriptions. | keys() takes 1 argument; Argument must be a tome | `builtins.ts:2089` |
+| `last(a)` | List Operations operation. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:724` |
+| `lastIndexOf(a, b)` | String Operations operation. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:608` |
+| `least(…)` | Runtime primitive. | least() takes at least 1 argument | `builtins.ts:274` |
+| `len(a)` | alias for measure (used internally by compiler forEach). | len() takes 1 argument; len() argument must be string, list, or dict | `builtins.ts:419` |
+| `lerp(a, b, c)` | Math Utilities operation. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:968` |
+| `LinkedList(a)` | LinkedList() - doubly linked list. | Index out of bounds; LinkedList is empty | `builtins.ts:2322` |
+| `listDir()` | Misc Missing operation. | — | `builtins.ts:2382` |
+| `ln(a)` | Evaluates `Math.log(toNumber(a, line))`. | — | `builtins.ts:2488` |
+| `locate(a, b)` | locate(s, sub) - find index of substring. | locate() takes 2 arguments; First argument must be text or list | `builtins.ts:1161` |
+| `log(a)` | Evaluates `Math.log(a)`. | — | `builtins.ts:457` |
+| `log10(a)` | Evaluates `Math.log10(a)`. | — | `builtins.ts:1023` |
+| `log2(a)` | Math Utilities operation. | — | `builtins.ts:1024` |
+| `lower(a)` | Runtime primitive. | lower() takes 1 argument; Argument must be text | `builtins.ts:368` |
+| `magnitude(a)` | Math operations with unique names. | magnitude() takes 1 argument | `builtins.ts:266` |
+| `Map(a, b)` | Map() - map data structure. | — | `builtins.ts:2268` |
+| `mapRange(a, b, c, d, e)` | Math Utilities operation. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:980` |
+| `match(a, b)` | match(text, pattern) - regex match, returns list of matches or null. | match() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1766` |
+| `matchAll(a, b)` | matchAll(text, pattern) - all regex matches. | matchAll() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1777` |
+| `max(a)` | Misc Missing operation. | max() takes at least 1 argument | `builtins.ts:2408` |
+| `mean(a)` | mean(list) - alias for average. | mean() takes 1 argument; Argument must be a list | `builtins.ts:1390` |
+| `measure(a)` | get length. | measure() takes exactly 1 argument; measure() argument must be string, list, or dict | `builtins.ts:44` |
+| `memoize(a)` | memoize(fn) - memoization. | memoize() takes 1 argument; Argument must be a function | `builtins.ts:1989` |
+| `merge(…)` | Tome (Dict) Operations operation. | merge() takes at least 2 arguments; All arguments must be tomes | `builtins.ts:1096` |
+| `min(a)` | min/max aliases. | min() takes at least 1 argument | `builtins.ts:2399` |
+| `morph(a, b)` | type conversion. | morph() takes 2 arguments (value, type); Second argument must be type name | `builtins.ts:59` |
+| `nearby(a)` | Runtime primitive. | nearby() takes 1 argument | `builtins.ts:320` |
+| `now()` | ============= Time =============. | — | `builtins.ts:1031` |
+| `num(a)` | Misc Missing operation. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2449` |
+| `oct(a)` | oct(n) - number to octal string. | oct() takes 1 argument; Argument must be a number | `builtins.ts:1561` |
+| `ord(…)` | ord(char) - character to number. | ord() takes 1 or 2 arguments; Argument must be a non-empty string | `builtins.ts:1535` |
+| `padleft(…)` | String Operations operation. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:558` |
+| `padLeft(…)` | padLeft(s, width, char?) - alias PascalCase. | padLeft() takes 2-3 arguments; First argument must be text | `builtins.ts:1198` |
+| `padright(…)` | String Operations operation. | padright() takes 2-3 arguments; First argument must be text | `builtins.ts:569` |
+| `padRight(…)` | padRight(s, width, char?) - alias PascalCase. | padRight() takes 2-3 arguments; First argument must be text | `builtins.ts:1210` |
+| `panic(…)` | panic(message) - fatal error. | PANIC: ${msg} | `builtins.ts:1505` |
+| `parseNum(…)` | parseNum(str, base?) - parse string to number with optional base. | parseNum() takes 1-2 arguments; First argument must be text | `builtins.ts:1581` |
+| `PI()` | Runtime primitive. | — | `builtins.ts:459` |
+| `pick(a)` | Runtime primitive. | pick() takes 1 argument; Argument must be a list | `builtins.ts:479` |
+| `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins.ts:1954` |
+| `pluck(…)` | pop from list, or append when given a value (stdlib/ML dialect). | pluck() takes 1 or 2 arguments; Argument must be a list | `builtins.ts:183` |
+| `pointer(a, b)` | pointer(buffer, offset) - create a reference to a buffer position. | pointer() takes 2 arguments (buffer, offset); First argument must be a buffer | `builtins.ts:2061` |
+| `portion(…)` | slice - get portion. | portion() takes 2 or 3 arguments; First argument must be a list or string | `builtins.ts:200` |
+| `pow(a, b)` | Math Utilities operation. | pow() takes 2 arguments (base, exponent); Arguments must be numbers | `builtins.ts:1001` |
+| `print(…)` | print() - alias for speak. | — | `builtins.ts:1439` |
+| `println(…)` | println() - print with newline (same as print in this context). | — | `builtins.ts:1449` |
+| `product(a)` | List Operations operation. | product() takes 1 argument; Argument must be a list | `builtins.ts:778` |
+| `Queue(a)` | Queue() - FIFO queue. | Queue is empty | `builtins.ts:2288` |
+| `radians(a)` | radians(deg) - degrees to radians. | radians() takes 1 argument; Argument must be a number | `builtins.ts:1356` |
+| `rand()` | ML host bindings (Milestone 13) operation. | — | `builtins.ts:2487` |
+| `randint(a, b)` | Random utilities. | randint() takes 2 arguments | `builtins.ts:469` |
+| `random()` | random() alias for chaos(). | — | `builtins.ts:463` |
+| `range(…)` | range() - alias for sequence. | range() takes 1-3 arguments; range() step cannot be 0 | `builtins.ts:1459` |
+| `read_file(a)` | ML host bindings (Milestone 13) operation. | read_file() takes a path; read_file( | `builtins.ts:2504` |
+| `remove(a, b)` | List Operations operation. | remove() takes 2 arguments (list, index); First argument must be a list | `builtins.ts:638` |
+| `repeat(a, b)` | String Operations operation. | repeat() takes 2 arguments (text, count); First argument must be text | `builtins.ts:548` |
+| `replace(a, b, c)` | ============= String Operations =============. | replace() takes 3 arguments (text, search, replacement); First argument must be text | `builtins.ts:515` |
+| `replaceRegex(a, b, c)` | replaceRegex(text, pattern, replacement) - regex replace. | replaceRegex() takes 3 arguments; Arguments must be text | `builtins.ts:1788` |
+| `rest(a)` | List Operations operation. | rest() takes 1 argument; Argument must be a list or text | `builtins.ts:734` |
+| `reverse(a)` | Runtime primitive. | reverse() takes 1 argument; Argument must be text or list | `builtins.ts:386` |
+| `root(a)` | Runtime primitive. | root() takes 1 argument | `builtins.ts:296` |
+| `round(a)` | Evaluates `Math.round(a)`. | — | `builtins.ts:2429` |
+| `seek(a, b)` | seek(list, predicate) - alias for find. | seek() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:1281` |
+| `sequence(…)` | conjure a sequence. | sequence() takes 1 to 3 arguments; sequence() step cannot be 0 | `builtins.ts:87` |
+| `set(a, b, c)` | Tome (Dict) Operations operation. | set() takes 3 arguments (tome, key, value); First argument must be a tome | `builtins.ts:1068` |
+| `Set(a)` | Set() - set data structure. | — | `builtins.ts:2248` |
+| `shatter(a, b)` | split string to list. | shatter() takes 2 arguments; First argument must be a string | `builtins.ts:230` |
+| `shout(…)` | output in uppercase. | — | `builtins.ts:34` |
+| `shuffle(a)` | Runtime primitive. | shuffle() takes 1 argument; Argument must be a list | `builtins.ts:489` |
+| `sift(a, b)` | filter array. | sift() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:134` |
+| `sign(a)` | Math Utilities operation. | sign() takes 1 argument; Argument must be a number | `builtins.ts:992` |
+| `sin(a)` | Advanced math. | — | `builtins.ts:454` |
+| `sinh(a)` | Evaluates `Math.sinh(a)`. | — | `builtins.ts:1020` |
+| `sleep()` | sleep(ms) - alias for delay. | — | `builtins.ts:1431` |
+| `snatch(…)` | snatch(str_or_list, start, end?) - substring OR remove at index from list. | snatch() takes 2-3 arguments; Second argument must be a number | `builtins.ts:1222` |
+| `some(a, b)` | some(list, predicate) - alias for any. | some() takes 2 arguments; First argument must be a list | `builtins.ts:1308` |
+| `sort(…)` | List Operations operation. | sort() takes 1-2 arguments; First argument must be a list | `builtins.ts:804` |
+| `sortDesc(a)` | sortDesc(list) - sort descending. | sortDesc() takes 1 argument; Argument must be a list | `builtins.ts:1246` |
+| `spawn(a)` | spawn (run function, synchronous in browser). | spawn() requires a function | `builtins.ts:2388` |
+| `speak(…)` | output to console. | — | `builtins.ts:14` |
+| `sqrt(a)` | Misc Missing operation. | — | `builtins.ts:2430` |
+| `Stack(a)` | Stack() - LIFO stack. | Stack is empty | `builtins.ts:2305` |
+| `starts(a, b)` | starts(s, prefix) - alias for startswith. | starts() takes 2 arguments; Arguments must be text | `builtins.ts:1141` |
+| `startswith(a, b)` | String Operations operation. | startswith() takes 2 arguments; Arguments must be text | `builtins.ts:526` |
+| `str(a)` | str alias for morph to text. | — | `builtins.ts:2433` |
+| `sum(a)` | List Operations operation. | sum() takes 1 argument; Argument must be a list | `builtins.ts:766` |
+| `take(a, b)` | List Operations operation. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:744` |
+| `tan(a)` | Evaluates `Math.tan(a)`. | — | `builtins.ts:456` |
+| `tanh(a)` | Evaluates `Math.tanh(a)`. | — | `builtins.ts:1022` |
+| `tap(a, b)` | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function | `builtins.ts:2164` |
+| `TAU()` | Runtime primitive. | — | `builtins.ts:460` |
+| `test(a, b)` | test(text, pattern) - test if regex matches. | test() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1800` |
+| `throw(…)` | throw(message) - throw error. | — | `builtins.ts:1514` |
+| `time()` | time() - current time as tome. | — | `builtins.ts:1900` |
+| `times(a, b)` | repeat(fn, n) - call function n times, return list of results. | times() takes 2 arguments (count, fn); First argument must be a number | `builtins.ts:2176` |
+| `timestamp()` | Time operation. | — | `builtins.ts:1036` |
+| `title(a)` | title(s) - title case. | title() takes 1 argument; Argument must be text | `builtins.ts:1657` |
+| `toFixed(a, b)` | toFixed(n, digits) - format to fixed decimal places. | toFixed() takes 2 arguments (number, digits); First argument must be a number | `builtins.ts:1596` |
+| `tome_keys(a)` | ML host bindings (Milestone 13) operation. | tome_keys() takes a tome | `builtins.ts:2493` |
+| `toPrecision(a, b)` | toPrecision(n, precision) - format to precision. | toPrecision() takes 2 arguments; First argument must be a number | `builtins.ts:1607` |
+| `trim(a)` | Runtime primitive. | trim() takes 1 argument; Argument must be text | `builtins.ts:377` |
+| `trimLeft(a)` | trimLeft(s) / trimRight(s). | trimLeft() takes 1 argument; Argument must be text | `builtins.ts:1685` |
+| `trimRight(a)` | String Checking operation. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1694` |
+| `typeof(a)` | typeof() - alias for gettype. | typeof() takes 1 argument | `builtins.ts:1476` |
+| `unetch(a)` | Runtime primitive. | Invalid JSON | `builtins.ts:506` |
+| `unique(a)` | List Operations operation. | unique() takes 1 argument; Argument must be a list | `builtins.ts:826` |
+| `unzip(a)` | List Operations operation. | unzip() takes 1 argument; Argument must be a list | `builtins.ts:694` |
+| `upper(a)` | String operations. | upper() takes 1 argument; Argument must be text | `builtins.ts:359` |
+| `values(a)` | values(tome) - alias for contents. | values() takes 1 argument; Argument must be a tome | `builtins.ts:2099` |
+| `Vec2(a, b)` | Vec2(x, y) - 2D vector. | Vec2() takes 2 arguments (x, y) | `builtins.ts:2192` |
+| `weave(a, b)` | join list to string. | weave() takes 2 arguments; First argument must be a list | `builtins.ts:217` |
+| `whisper(…)` | output without newline concept (same as speak in this context). | — | `builtins.ts:24` |
+| `write_file(a, b)` | ML host bindings (Milestone 13) operation. | write_file() takes a path and content; write_file( | `builtins.ts:2516` |
+| `zip(…)` | List Operations operation. | zip() takes at least 2 arguments; Argument ${i + 1} must be a list | `builtins.ts:677` |
 
 #### `src/lang/advanced.ts` — Pro layer — file I/O, hashing, base64, JSON, async, OS glue, buffers, FFI bridge
 
-34 builtins.
+34 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-`E` · `PI` · `TAU` · `acos` · `asin` · `assert` · `asserteq` · `atan` · `atan2` · `cos` · `decipher` · `erase` · `etch` · `exp` · `find` · `inscribe` · `intersect` · `invoke` · `log` · `log10` · `now` · `pause` · `pick` · `position` · `randint` · `scroll` · `shuffle` · `sin` · `sort` · `tan` · `timestamp` · `unetch` · `union` · `unique`
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `acos(a)` | Advanced Math operation. | acos() takes 1 argument | `advanced.ts:175` |
+| `asin(a)` | Advanced Math operation. | asin() takes 1 argument | `advanced.ts:167` |
+| `assert(…)` | ============= Assertions (for testing) =============. | assert() takes at least 1 argument | `advanced.ts:361` |
+| `asserteq(a, b)` | Assertions (for testing) operation. | asserteq() takes 2 arguments; Assertion failed: ${a} differs ${b} | `advanced.ts:374` |
+| `atan(a)` | Advanced Math operation. | atan() takes 1 argument | `advanced.ts:183` |
+| `atan2(a, b)` | Advanced Math operation. | atan2() takes 2 arguments (y, x) | `advanced.ts:191` |
+| `cos(a)` | Advanced Math operation. | cos() takes 1 argument | `advanced.ts:151` |
+| `decipher(a)` | File I/O (Browser simulation) operation. | decipher() takes 1 argument (path); File not found: ${path} | `advanced.ts:45` |
+| `E()` | Advanced Math operation. | — | `advanced.ts:229` |
+| `erase(a, b)` | handles both tome key deletion and virtual file deletion. | erase() takes 1 argument (path) or 2 arguments (tome, key) | `advanced.ts:59` |
+| `etch(a)` | ============= JSON Operations =============. | etch() takes 1 argument | `advanced.ts:10` |
+| `exp(a)` | Advanced Math operation. | exp() takes 1 argument | `advanced.ts:215` |
+| `find(a, b)` | Sorting & Searching operation. | find() takes 2 arguments (list, predicate); First argument must be a list | `advanced.ts:263` |
+| `inscribe(a, b)` | File I/O (Browser simulation) operation. | inscribe() takes 2 arguments (path, content) | `advanced.ts:33` |
+| `intersect(a, b)` | Set Operations operation. | intersect() takes 2 arguments; Arguments must be lists | `advanced.ts:311` |
+| `invoke(…)` | ============= HTTP/Networking (async simulation) =============. | invoke() takes at least 1 argument (url); Network error: ${e} | `advanced.ts:89` |
+| `log(a)` | Advanced Math operation. | log() takes 1 argument | `advanced.ts:199` |
+| `log10(a)` | Advanced Math operation. | log10() takes 1 argument | `advanced.ts:207` |
+| `now()` | ============= Time Operations =============. | — | `advanced.ts:123` |
+| `pause(a)` | Time Operations operation. | pause() takes 1 argument (ms) | `advanced.ts:133` |
+| `PI()` | Constants. | — | `advanced.ts:224` |
+| `pick(a)` | Random operation. | pick() takes 1 argument; Argument must be a list | `advanced.ts:334` |
+| `position(a, b)` | Sorting & Searching operation. | position() takes 2 arguments; First argument must be a list | `advanced.ts:277` |
+| `randint(a, b)` | ============= Random =============. | randint() takes 2 arguments (min, max) | `advanced.ts:324` |
+| `scroll()` | File I/O (Browser simulation) operation. | — | `advanced.ts:81` |
+| `shuffle(a)` | Random operation. | shuffle() takes 1 argument; Argument must be a list | `advanced.ts:345` |
+| `sin(a)` | ============= Advanced Math =============. | sin() takes 1 argument | `advanced.ts:143` |
+| `sort(…)` | ============= Sorting & Searching =============. | sort() takes at least 1 argument; First argument must be a list | `advanced.ts:240` |
+| `tan(a)` | Advanced Math operation. | tan() takes 1 argument | `advanced.ts:159` |
+| `TAU()` | Advanced Math operation. | — | `advanced.ts:234` |
+| `timestamp()` | Time Operations operation. | — | `advanced.ts:128` |
+| `unetch(a)` | JSON Operations operation. | unetch() takes 1 argument; Invalid JSON | `advanced.ts:18` |
+| `union(a, b)` | Set Operations operation. | union() takes 2 arguments; Arguments must be lists | `advanced.ts:299` |
+| `unique(a)` | ============= Set Operations =============. | unique() takes 1 argument; Argument must be a list | `advanced.ts:289` |
 
 #### `src/lang/matrix.ts` — Matrix and linear algebra
 
-13 builtins.
+13 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-`dot` · `flatten` · `identity` · `matadd` · `matmean` · `matmul` · `matrix` · `matscale` · `matsub` · `matsum` · `reshape` · `shape` · `transpose`
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `dot(a, b)` | Dot product. | dot() takes 2 arguments; Arguments must be lists | `matrix.ts:64` |
+| `flatten(a)` | Flatten. | flatten() takes 1 argument | `matrix.ts:155` |
+| `identity(a)` | Identity matrix. | identity() takes 1 argument (size) | `matrix.ts:26` |
+| `matadd(a, b)` | Element-wise operations. | matadd() takes 2 arguments | `matrix.ts:115` |
+| `matmean(a)` | Runtime primitive. | matmean() takes 1 argument; Arguments must be 2D lists | `matrix.ts:209` |
+| `matmul(a, b)` | Matrix multiplication. | matmul() takes 2 arguments; Arguments must be 2D lists | `matrix.ts:83` |
+| `matrix(…)` | Create a matrix. | matrix() takes at least 2 arguments (rows, cols, fill?) | `matrix.ts:10` |
+| `matscale(a, b)` | Runtime primitive. | matscale() takes 2 arguments (matrix, scalar) | `matrix.ts:131` |
+| `matsub(a, b)` | Runtime primitive. | matsub() takes 2 arguments | `matrix.ts:123` |
+| `matsum(a)` | Sum/mean. | matsum() takes 1 argument | `matrix.ts:198` |
+| `reshape(a, b, c)` | Reshape. | reshape() takes 3 arguments (list, rows, cols); First argument must be a list | `matrix.ts:177` |
+| `shape(a)` | Shape. | shape() takes 1 argument | `matrix.ts:142` |
+| `transpose(a)` | Transpose matrix. | transpose() takes 1 argument; Argument must be a 2D list | `matrix.ts:42` |
 
 #### `src/lang/graphics.ts` — Canvas 2D drawing and turtle graphics
 
-75 builtins.
+75 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-`alpha` · `arc` · `background` · `backward` · `beginPath` · `bezierTo` · `canvas` · `circle` · `clear` · `closePath` · `constrain` · `createSprite` · `degrees` · `dist` · `dot` · `drawSprite` · `ellipse` · `fill` · `fillPath` · `font` · `forward` · `goto` · `heading` · `heart` · `home` · `hsla` · `hue` · `left` · `lerp` · `line` · `lineCap` · `lineJoin` · `lineTo` · `lineWidth` · `linearGradient` · `mapRange` · `moveSprite` · `moveTo` · `noFill` · `noShadow` · `noStroke` · `pencolor` · `pendown` · `penup` · `penwidth` · `point` · `polygon` · `pos` · `quadraticTo` · `radialGradient` · `radians` · `randomColor` · `rect` · `resetTransform` · `restore` · `rgb` · `rgba` · `right` · `rotate` · `save` · `scale` · `setheading` · `shadow` · `spriteCollides` · `stamp` · `star` · `stroke` · `strokePath` · `text` · `textAlign` · `translate` · `triangle` · `turtle` · `turtleCircle` · `updateSprite`
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `alpha(a)` | Drawing State operation. | alpha() takes 1 argument (0-1) | `graphics.ts:136` |
+| `arc(…)` | Basic Shapes operation. | arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?) | `graphics.ts:196` |
+| `background(…)` | Canvas Setup operation. | background() takes at least 1 argument | `graphics.ts:65` |
+| `backward(a)` | Turtle Graphics operation. | backward() takes 1 argument (distance) | `graphics.ts:546` |
+| `beginPath()` | ========== Path Drawing ==========. | — | `graphics.ts:374` |
+| `bezierTo(a, b, c, d, e, f)` | Path Drawing operation. | bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y) | `graphics.ts:408` |
+| `canvas(a, b)` | ========== Canvas Setup ==========. | canvas() takes 2 arguments (width, height) | `graphics.ts:45` |
+| `circle(a, b, c)` | Basic Shapes operation. | circle() takes 3 arguments (x, y, radius) | `graphics.ts:178` |
+| `clear(a)` | Canvas Setup operation. | — | `graphics.ts:56` |
+| `closePath()` | Path Drawing operation. | — | `graphics.ts:382` |
+| `constrain(a, b, c)` | Math Utilities for Graphics operation. | constrain() takes 3 arguments (value, min, max) | `graphics.ts:811` |
+| `createSprite(…)` | ========== Sprite System ==========. | createSprite() takes 4-5 arguments (x, y, width, height, color?) | `graphics.ts:443` |
+| `degrees(a)` | Math Utilities for Graphics operation. | degrees() takes 1 argument (radians) | `graphics.ts:779` |
+| `dist(a, b, c, d)` | Math Utilities for Graphics operation. | dist() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:822` |
+| `dot(a, b)` | Turtle Graphics operation. | — | `graphics.ts:706` |
+| `drawSprite(a)` | Sprite System operation. | drawSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:467` |
+| `ellipse(…)` | Basic Shapes operation. | ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?) | `graphics.ts:187` |
+| `fill(a)` | ========== Drawing State ==========. | fill() takes 1 argument (color) | `graphics.ts:75` |
+| `fillPath()` | Path Drawing operation. | — | `graphics.ts:426` |
+| `font(…)` | Text operation. | font() takes 1-2 arguments (fontFamily, style?) | `graphics.ts:291` |
+| `forward(a)` | Turtle Graphics operation. | forward() takes 1 argument (distance) | `graphics.ts:528` |
+| `goto(a, b)` | Turtle Graphics operation. | goto() takes 2 arguments (x, y) | `graphics.ts:622` |
+| `heading()` | Turtle Graphics operation. | — | `graphics.ts:663` |
+| `heart(a, b, c)` | Basic Shapes operation. | heart() takes 3 arguments (x, y, size) | `graphics.ts:263` |
+| `home()` | Turtle Graphics operation. | — | `graphics.ts:638` |
+| `hsla(a, b, c, d)` | Color Helpers operation. | hsla() takes 4 arguments (h, s, l, a) | `graphics.ts:754` |
+| `hue(…)` | ========== Color Helpers ==========. | hue() takes 1-3 arguments (h, s?, l?) | `graphics.ts:727` |
+| `left(a)` | Turtle Graphics operation. | left() takes 1 argument (degrees) | `graphics.ts:564` |
+| `lerp(a, b, c)` | Math Utilities for Graphics operation. | lerp() takes 3 arguments (a, b, t) | `graphics.ts:787` |
+| `line(a, b, c, d)` | Basic Shapes operation. | line() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:211` |
+| `linearGradient(…)` | ========== Gradients ==========. | linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops) | `graphics.ts:301` |
+| `lineCap(a)` | Drawing State operation. | lineCap() takes 1 argument (round, square, butt) | `graphics.ts:118` |
+| `lineJoin(a)` | Drawing State operation. | lineJoin() takes 1 argument (round, bevel, miter) | `graphics.ts:127` |
+| `lineTo(a, b)` | Path Drawing operation. | lineTo() takes 2 arguments (x, y) | `graphics.ts:399` |
+| `lineWidth(a)` | Drawing State operation. | lineWidth() takes 1 argument | `graphics.ts:109` |
+| `mapRange(a, b, c, d, e)` | Math Utilities for Graphics operation. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax) | `graphics.ts:798` |
+| `moveSprite(a, b, c)` | Sprite System operation. | moveSprite() takes 3 arguments (sprite, dx, dy); Invalid sprite | `graphics.ts:478` |
+| `moveTo(a, b)` | Path Drawing operation. | moveTo() takes 2 arguments (x, y) | `graphics.ts:390` |
+| `noFill()` | Drawing State operation. | — | `graphics.ts:84` |
+| `noShadow()` | Drawing State operation. | — | `graphics.ts:160` |
+| `noStroke()` | Drawing State operation. | — | `graphics.ts:101` |
+| `pencolor(a)` | Turtle Graphics operation. | pencolor() takes 1 argument (color) | `graphics.ts:604` |
+| `pendown()` | Turtle Graphics operation. | — | `graphics.ts:596` |
+| `penup()` | Turtle Graphics operation. | — | `graphics.ts:588` |
+| `penwidth(a)` | Turtle Graphics operation. | penwidth() takes 1 argument (width) | `graphics.ts:613` |
+| `point(…)` | Basic Shapes operation. | point() takes 2-3 arguments (x, y, size?) | `graphics.ts:220` |
+| `polygon(…)` | Basic Shapes operation. | polygon() takes points [[x,y], ...]; polygon() argument must be a list of points | `graphics.ts:238` |
+| `pos()` | Turtle Graphics operation. | — | `graphics.ts:671` |
+| `quadraticTo(a, b, c, d)` | Path Drawing operation. | quadraticTo() takes 4 arguments (cpx, cpy, x, y) | `graphics.ts:417` |
+| `radialGradient(…)` | Gradients operation. | radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops) | `graphics.ts:311` |
+| `radians(a)` | ========== Math Utilities for Graphics ==========. | radians() takes 1 argument (degrees) | `graphics.ts:771` |
+| `randomColor()` | Color Helpers operation. | — | `graphics.ts:762` |
+| `rect(…)` | ========== Basic Shapes ==========. | rect() takes 4-5 arguments (x, y, w, h, radius?) | `graphics.ts:169` |
+| `resetTransform()` | Transformations operation. | — | `graphics.ts:365` |
+| `restore()` | Transformations operation. | — | `graphics.ts:357` |
+| `rgb(a, b, c)` | Color Helpers operation. | rgb() takes 3 arguments (r, g, b) | `graphics.ts:738` |
+| `rgba(a, b, c, d)` | Color Helpers operation. | rgba() takes 4 arguments (r, g, b, a) | `graphics.ts:746` |
+| `right(a)` | Turtle Graphics operation. | right() takes 1 argument (degrees) | `graphics.ts:576` |
+| `rotate(a)` | Transformations operation. | rotate() takes 1 argument (angle in radians) | `graphics.ts:331` |
+| `save()` | Transformations operation. | — | `graphics.ts:349` |
+| `scale(…)` | Transformations operation. | scale() takes 1-2 arguments (x, y?) | `graphics.ts:340` |
+| `setheading(a)` | Turtle Graphics operation. | setheading() takes 1 argument (angle) | `graphics.ts:651` |
+| `shadow(…)` | Drawing State operation. | shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?) | `graphics.ts:145` |
+| `spriteCollides(a, b)` | Sprite System operation. | spriteCollides() takes 2 arguments (sprite1, sprite2); Invalid sprites | `graphics.ts:502` |
+| `stamp()` | Turtle Graphics operation. | — | `graphics.ts:717` |
+| `star(…)` | Basic Shapes operation. | star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?) | `graphics.ts:249` |
+| `stroke(…)` | Drawing State operation. | stroke() takes 1-2 arguments (color, width?) | `graphics.ts:92` |
+| `strokePath()` | Path Drawing operation. | — | `graphics.ts:434` |
+| `text(…)` | ========== Text ==========. | text() takes 3-4 arguments (str, x, y, size?) | `graphics.ts:273` |
+| `textAlign(…)` | Text operation. | textAlign() takes 1-2 arguments (horizontal, vertical?) | `graphics.ts:282` |
+| `translate(a, b)` | ========== Transformations ==========. | translate() takes 2 arguments (x, y) | `graphics.ts:322` |
+| `triangle(a, b, c, d, e, f)` | Basic Shapes operation. | triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3) | `graphics.ts:229` |
+| `turtle()` | ========== Turtle Graphics ==========. | — | `graphics.ts:519` |
+| `turtleCircle(…)` | Turtle Graphics operation. | turtleCircle() takes 1-2 arguments (radius, steps?) | `graphics.ts:679` |
+| `updateSprite(a)` | Sprite System operation. | updateSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:490` |
 
 #### `src/lang/ui.ts` — App widget runtime used by the IDE App preview
 
-33 builtins.
+33 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-`alert` · `button` · `checkbox` · `column` · `divider` · `endcolumn` · `endgroup` · `endmenu` · `endrow` · `endtab` · `endtabs` · `endwindow` · `group` · `heading` · `image` · `input` · `label` · `menu` · `menuitem` · `paragraph` · `progress` · `row` · `select` · `show` · `slider` · `spacer` · `tab` · `table` · `tabs` · `textarea` · `uiget` · `uiset` · `window`
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `alert(a)` | Programmatic dialog. | — | `ui.ts:283` |
+| `button(a, b, c)` | ───────────────────────── Interactive widgets ─────────────────────────. | — | `ui.ts:183` |
+| `checkbox(a, b)` | Runtime primitive. | — | `ui.ts:209` |
+| `column()` | Runtime primitive. | — | `ui.ts:108` |
+| `divider()` | Runtime primitive. | — | `ui.ts:165` |
+| `endcolumn()` | Runtime primitive. | — | `ui.ts:109` |
+| `endgroup()` | Runtime primitive. | — | `ui.ts:115` |
+| `endmenu()` | Runtime primitive. | — | `ui.ts:249` |
+| `endrow()` | Runtime primitive. | — | `ui.ts:107` |
+| `endtab()` | Runtime primitive. | — | `ui.ts:123` |
+| `endtabs()` | Runtime primitive. | — | `ui.ts:118` |
+| `endwindow()` | Runtime primitive. | — | `ui.ts:104` |
+| `group(a)` | Runtime primitive. | — | `ui.ts:111` |
+| `heading(a, b)` | Runtime primitive. | — | `ui.ts:142` |
+| `image(a, b, c, d)` | Runtime primitive. | — | `ui.ts:160` |
+| `input(a, b)` | Runtime primitive. | — | `ui.ts:192` |
+| `label(a)` | Runtime primitive. | — | `ui.ts:148` |
+| `menu(a)` | ───────────────────────── Menu ─────────────────────────. | — | `ui.ts:245` |
+| `menuitem(a, b)` | Runtime primitive. | — | `ui.ts:250` |
+| `paragraph(a)` | Runtime primitive. | — | `ui.ts:154` |
+| `progress(a, b)` | Runtime primitive. | — | `ui.ts:168` |
+| `row()` | Runtime primitive. | — | `ui.ts:106` |
+| `select(a, b)` | Runtime primitive. | — | `ui.ts:227` |
+| `show()` | Show window (re-emit in case). | — | `ui.ts:280` |
+| `slider(a, b, c, d)` | Runtime primitive. | — | `ui.ts:217` |
+| `spacer(a)` | Evaluates `{ pushNode('spacer', { size: asNumber(a, 8) }); return null; }`. | — | `ui.ts:166` |
+| `tab(a)` | Runtime primitive. | — | `ui.ts:119` |
+| `table(a, b)` | ───────────────────────── Tables ─────────────────────────. | — | `ui.ts:236` |
+| `tabs()` | Runtime primitive. | — | `ui.ts:117` |
+| `textarea(a, b, c)` | Runtime primitive. | — | `ui.ts:200` |
+| `uiget(a)` | ───────────────────────── Reactive value helpers ─────────────────────────. | — | `ui.ts:260` |
+| `uiset(a, b)` | Runtime primitive. | — | `ui.ts:264` |
+| `window(a, b, c)` | ───────────────────────── Containers ─────────────────────────. | — | `ui.ts:90` |
 
 #### `src/lang/web.ts` — Web DSL — HTML tags, CSS, JS hooks, raw passthrough
 
-16 builtins.
+16 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-`close` · `endpage` · `keyframes` · `link` · `meta` · `on` · `onclick` · `open` · `page` · `raw_css` · `raw_html` · `raw_js` · `script` · `style` · `tag` · `title`
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `close()` | Runtime primitive. | — | `web.ts:227` |
+| `endpage()` | Runtime primitive. | — | `web.ts:191` |
+| `keyframes(a, b)` | Runtime primitive. | — | `web.ts:244` |
+| `link(a, b)` | Runtime primitive. | — | `web.ts:207` |
+| `meta(a)` | Runtime primitive. | — | `web.ts:202` |
+| `on(a, b, c)` | on("input", "#id", "...")  — generic event. | — | `web.ts:269` |
+| `onclick(a, b)` | onclick("#id", "alert('hi')"). | — | `web.ts:261` |
+| `open(…)` | open(name, attrs?)  /  close(). | — | `web.ts:222` |
+| `page(a)` | Runtime primitive. | — | `web.ts:180` |
+| `raw_css(a)` | Evaluates `{ state.css.push(asStr(a)); mark(); return null; }`. | — | `web.ts:280` |
+| `raw_html(a)` | Evaluates `{ push(asStr(a)); mark(); return null; }`. | — | `web.ts:279` |
+| `raw_js(a)` | Runtime primitive. | — | `web.ts:281` |
+| `script(a)` | Runtime primitive. | — | `web.ts:256` |
+| `style(a, b)` | style(selector, props_dict)  — or  style(raw_css_string). | — | `web.ts:232` |
+| `tag(…)` | tag(name, text?, attrs?)  — works for any HTML tag, even ones we didn't list. | — | `web.ts:215` |
+| `title(a)` | Runtime primitive. | — | `web.ts:198` |
 
 #### `src/lang/kernel.ts` — Virtual kernel — tasks, syscalls, IPC, GC, process table
 
-46 builtins.
+46 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-`closeWindow` · `createTask` · `createWindow` · `deviceList` · `deviceRead` · `deviceStatus` · `deviceWrite` · `emitEvent` · `f32` · `f64` · `fsAppend` · `fsDelete` · `fsExists` · `fsList` · `fsMkdir` · `fsRead` · `fsStat` · `fsWrite` · `gc` · `getPrivilege` · `getTime` · `heapAlloc` · `heapFree` · `heapLoad` · `heapStats` · `heapStore` · `i16` · `i32` · `i8` · `kernelBoot` · `killTask` · `loadModule` · `moveWindow` · `onEvent` · `onInterrupt` · `resizeWindow` · `runTasks` · `setPrivilege` · `syscall` · `taskList` · `triggerInterrupt` · `u16` · `u32` · `u8` · `windowList` · `yieldTask`
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `closeWindow(a)` | Create Kernel Builtins operation. | closeWindow() takes 1 argument | `kernel.ts:910` |
+| `createTask(a, b, c)` | Task shortcuts. | createTask() requires a function | `kernel.ts:819` |
+| `createWindow(a, b, c, d, e)` | Window manager. | — | `kernel.ts:899` |
+| `deviceList()` | HAL. | — | `kernel.ts:944` |
+| `deviceRead(a)` | Create Kernel Builtins operation. | deviceRead() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:949` |
+| `deviceStatus(a)` | Create Kernel Builtins operation. | deviceStatus() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:970` |
+| `deviceWrite(a, b)` | Create Kernel Builtins operation. | deviceWrite() takes 2 arguments; Device not found: ${args[0]} | `kernel.ts:959` |
+| `emitEvent(…)` | Create Kernel Builtins operation. | emitEvent() takes at least 1 argument | `kernel.ts:1067` |
+| `f32()` | Create Kernel Builtins operation. | — | `kernel.ts:1048` |
+| `f64()` | Create Kernel Builtins operation. | — | `kernel.ts:1049` |
+| `fsAppend(a, b)` | Create Kernel Builtins operation. | fsAppend() takes 2 arguments | `kernel.ts:809` |
+| `fsDelete(a)` | Create Kernel Builtins operation. | fsDelete() takes 1 argument | `kernel.ts:785` |
+| `fsExists(a)` | Create Kernel Builtins operation. | fsExists() takes 1 argument | `kernel.ts:793` |
+| `fsList(a)` | Create Kernel Builtins operation. | fsList() takes 1 argument | `kernel.ts:768` |
+| `fsMkdir(a)` | Create Kernel Builtins operation. | fsMkdir() takes 1 argument | `kernel.ts:776` |
+| `fsRead(a)` | VFS shortcuts. | fsRead() takes 1 argument | `kernel.ts:751` |
+| `fsStat(a)` | Create Kernel Builtins operation. | fsStat() takes 1 argument | `kernel.ts:801` |
+| `fsWrite(a, b)` | Create Kernel Builtins operation. | fsWrite() takes 2 arguments (path, content) | `kernel.ts:759` |
+| `gc()` | Create Kernel Builtins operation. | — | `kernel.ts:893` |
+| `getPrivilege()` | Privilege. | — | `kernel.ts:1003` |
+| `getTime()` | getTime. | — | `kernel.ts:1095` |
+| `heapAlloc(a)` | Heap. | heapAlloc() takes 1 argument (size) | `kernel.ts:854` |
+| `heapFree(a)` | Create Kernel Builtins operation. | heapFree() takes 1 argument (address) | `kernel.ts:862` |
+| `heapLoad(a)` | Create Kernel Builtins operation. | heapLoad() takes 1 argument (address) | `kernel.ts:871` |
+| `heapStats()` | Create Kernel Builtins operation. | — | `kernel.ts:888` |
+| `heapStore(a, b)` | Create Kernel Builtins operation. | heapStore() takes 2 arguments (address, value) | `kernel.ts:879` |
+| `i16()` | Create Kernel Builtins operation. | — | `kernel.ts:1046` |
+| `i32()` | Create Kernel Builtins operation. | — | `kernel.ts:1047` |
+| `i8()` | Create Kernel Builtins operation. | — | `kernel.ts:1045` |
+| `kernelBoot()` | Boot. | — | `kernel.ts:745` |
+| `killTask(a)` | Create Kernel Builtins operation. | killTask() takes 1 argument | `kernel.ts:828` |
+| `loadModule(a)` | Module loader (simulated). | loadModule() takes 1 argument (path); Module not found: ${path} | `kernel.ts:1082` |
+| `moveWindow(a, b, c)` | Create Kernel Builtins operation. | moveWindow() takes 3 arguments (id, x, y) | `kernel.ts:918` |
+| `onEvent(a, b)` | Create Kernel Builtins operation. | onEvent() takes 2 arguments (event, handler); Second argument must be a function | `kernel.ts:1054` |
+| `onInterrupt(a, b)` | Interrupt registration. | onInterrupt() takes 2 arguments (num, handler); Second argument must be a function | `kernel.ts:981` |
+| `resizeWindow(a, b, c)` | Create Kernel Builtins operation. | resizeWindow() takes 3 arguments (id, w, h) | `kernel.ts:927` |
+| `runTasks()` | Create Kernel Builtins operation. | — | `kernel.ts:848` |
+| `setPrivilege(a)` | Create Kernel Builtins operation. | Invalid privilege level; Permission denied | `kernel.ts:1008` |
+| `syscall(…)` | syscall(name, ...args). | syscall() requires at least 1 argument (name) | `kernel.ts:735` |
+| `taskList()` | Create Kernel Builtins operation. | — | `kernel.ts:841` |
+| `triggerInterrupt(a)` | Create Kernel Builtins operation. | triggerInterrupt() takes 1 argument | `kernel.ts:992` |
+| `u16()` | Create Kernel Builtins operation. | — | `kernel.ts:1043` |
+| `u32()` | Create Kernel Builtins operation. | — | `kernel.ts:1044` |
+| `u8()` | Create Kernel Builtins operation. | — | `kernel.ts:1042` |
+| `windowList()` | Create Kernel Builtins operation. | — | `kernel.ts:936` |
+| `yieldTask()` | Create Kernel Builtins operation. | — | `kernel.ts:836` |
 
 
 ### Keyword table — v1 lexer
 
-| Keyword | Token | Note |
-| --- | --- | --- |
-| `forge` | FORGE |  |
-| `conjure` | CONJURE |  |
-| `ponder` | PONDER |  |
-| `otherwise` | OTHERWISE |  |
-| `cycle` | CYCLE |  |
-| `iterate` | ITERATE |  |
-| `through` | THROUGH |  |
-| `within` | WITHIN |  |
-| `be` | BE |  |
-| `yield` | YIELD |  |
-| `yeet` | YEET |  |
-| `skip` | SKIP |  |
-| `yep` | YEP |  |
-| `nope` | NOPE |  |
-| `void` | VOID |  |
-| `also` | ALSO |  |
-| `either` | EITHER |  |
-| `isnt` | ISNT |  |
-| `equals` | EQUALS |  |
-| `differs` | DIFFERS |  |
-| `summon` | SUMMON |  |
-| `attempt` | ATTEMPT |  |
-| `rescue` | RESCUE |  |
-| `extend` | EXTEND |  |
-| `new` | NEW |  |
-| `self` | SELF |  |
-| `super` | SUPER |  |
-| `async` | ASYNC |  |
-| `await` | AWAIT | NOTE: 'essence' is intentionally NOT a keyword here so it can be used as |
+Every reserved word the v1 lexer recognises, what it means, and the
+shortest example that uses it correctly.
+
+| Keyword | Token | Meaning | Example |
+| --- | --- | --- | --- | 
+| `forge` | FORGE | Declare and bind a new variable in the current scope. | `forge score be 10` |
+| `conjure` | CONJURE | Declare a function. The body runs between `::` and `;;`. | `conjure add(a, b) :: yield a + b ;;` |
+| `ponder` | PONDER | Conditional. Runs its block when the condition is truthy. | `ponder score > 9 :: speak("high") ;;` |
+| `otherwise` | OTHERWISE | The else branch of a `ponder`; may be chained as `otherwise ponder`. | `otherwise :: speak("low") ;;` |
+| `cycle` | CYCLE | While-loop. Repeats its block while the condition holds. | `cycle i < 10 :: be i be i + 1 ;;` |
+| `iterate` | ITERATE | For-each loop header; pairs with `through` (lists) or `within` (ranges). | `iterate n through nums :: speak(n) ;;` |
+| `through` | THROUGH | Loop source operator: iterate over the elements of a list, string, or tome. | `iterate ch through "abc"` |
+| `within` | WITHIN | Loop source operator: iterate over a numeric range or a container membership test. | `iterate i within sequence(0, 5)` |
+| `be` | BE | Assignment to an existing binding, and the binder used after `forge`. | `be score be score + 1` |
+| `yield` | YIELD | Return a value from a function and stop executing it. | `yield a + b` |
+| `yeet` | YEET | Break out of the innermost loop immediately. | `ponder done :: yeet ;;` |
+| `skip` | SKIP | Continue: abandon this iteration and start the next one. | `ponder n < 0 :: skip ;;` |
+| `yep` | YEP | Boolean true literal. | `forge ok be yep` |
+| `nope` | NOPE | Boolean false literal. | `forge ok be nope` |
+| `void` | VOID | The null / absent value. Uninitialised fields read as `void`. | `forge nothing be void` |
+| `also` | ALSO | Logical AND with short-circuit evaluation. | `ponder a > 0 also b > 0` |
+| `either` | EITHER | Logical OR with short-circuit evaluation. | `ponder a > 0 either b > 0` |
+| `isnt` | ISNT | Logical NOT of the following expression. | `ponder isnt found` |
+| `equals` | EQUALS | Value equality comparison (same as `==`). | `ponder name equals "sava"` |
+| `differs` | DIFFERS | Value inequality comparison (same as `!=`). | `ponder name differs "sava"` |
+| `summon` | SUMMON | Import a module: a local file, a bundled stdlib name, or a GitHub Gist package. | `summon "gist:abc123/math.sdev"` |
+| `attempt` | ATTEMPT | Begin a protected block whose runtime errors are catchable. | `attempt :: risky() ;;` |
+| `rescue` | RESCUE | Handle an error raised inside the preceding `attempt`, binding the error value. | `rescue err :: speak(err) ;;` |
+| `extend` | EXTEND | Declare inheritance from a parent essence (class). | `essence Dog extend Animal ::` |
+| `new` | NEW | Instantiate an essence, invoking its constructor. | `forge d be new Dog("rex")` |
+| `self` | SELF | Inside a method, the receiving instance. | `be self.name be name` |
+| `super` | SUPER | Inside a method, dispatch to the parent essence implementation. | `super.speak()` |
+| `async` | ASYNC | Mark a function as asynchronous so it returns a promise-like value. | `async conjure fetchAll() ::` |
+| `await` | AWAIT | Suspend until an async value resolves, then produce it. | `forge data be await fetchAll()` |
 
 
 ### Seed VM memory map
@@ -7481,36 +7932,40 @@ the module that installs it.
 
 ### Seed VM opcode table
 
-| Opcode | Mnemonic | Operands / meaning |
+The seed VM is a stack machine: every instruction consumes operands from the
+operand stack and pushes its result back. Inline operands are little-endian and
+follow the opcode byte directly in the bytecode stream.
+
+| Opcode | Mnemonic | Behaviour |
 | --- | --- | --- |
-| `0x01` | `PUSH_I32` | `<i32 LE>` — push signed 32-bit constant |
-| `0x02` | `PUSH_STR` | `<u16 idx LE>` — push interned string handle (pool offset) |
-| `0x03` | `LOAD` | `<u8 slot>` — push global variable value |
-| `0x04` | `STORE` | `<u8 slot>` — pop into global variable |
+| `0x01` | `PUSH_I32` | Operands `<i32 LE>`. push signed 32-bit constant |
+| `0x02` | `PUSH_STR` | Operands `<u16 idx LE>`. push interned string handle (pool offset) |
+| `0x03` | `LOAD` | Operands `<u8 slot>`. push global variable value |
+| `0x04` | `STORE` | Operands `<u8 slot>`. pop into global variable |
 | `0x05` | `POP` | drop top of stack |
-| `0x10` | `ADD` | |
-| `0x11` | `SUB` | |
-| `0x12` | `MUL` | |
-| `0x13` | `DIV` | |
-| `0x14` | `MOD` | |
-| `0x20` | `EQ` | |
-| `0x21` | `NE` | |
-| `0x22` | `LT` | |
-| `0x23` | `GT` | |
-| `0x24` | `LE` | |
-| `0x25` | `GE` | |
-| `0x30` | `NOT` |  |
-| `0x40` | `JMP` | `<i16 off LE>` — unconditional relative jump |
-| `0x41` | `JZ` | `<i16 off LE>` — pop; jump if zero |
+| `0x10` | `ADD` | Pop b, pop a, push a + b (signed 32-bit wrap). |
+| `0x11` | `SUB` | Pop b, pop a, push a - b. |
+| `0x12` | `MUL` | Pop b, pop a, push a * b. |
+| `0x13` | `DIV` | Pop b, pop a, push the truncated quotient a / b. |
+| `0x14` | `MOD` | Pop b, pop a, push the remainder a % b. |
+| `0x20` | `EQ` | Pop b, pop a, push 1 when a == b else 0. |
+| `0x21` | `NE` | Pop b, pop a, push 1 when a != b else 0. |
+| `0x22` | `LT` | Pop b, pop a, push 1 when a < b else 0. |
+| `0x23` | `GT` | Pop b, pop a, push 1 when a > b else 0. |
+| `0x24` | `LE` | Pop b, pop a, push 1 when a <= b else 0. |
+| `0x25` | `GE` | Pop b, pop a, push 1 when a >= b else 0. |
+| `0x30` | `NOT` | Seed VM instruction. |
+| `0x40` | `JMP` | Operands `<i16 off LE>`. unconditional relative jump |
+| `0x41` | `JZ` | Operands `<i16 off LE>`. pop; jump if zero |
 | `0x50` | `SAY_I32` | pop int; host prints it |
 | `0x51` | `SAY_STR` | pop string handle; host prints pool[handle] |
-| `0x60` | `CALL` | `<u16 target>` — <u8 n_args>   allocate frame, copy args, jump |
+| `0x60` | `CALL` | Operands `<u16 target>`. <u8 n_args>   allocate frame, copy args, jump |
 | `0x61` | `RET` | pop retval, restore ip+fp, push retval |
-| `0x62` | `ENTER` | `<u8 n_locals>` — reserve additional local slots |
-| `0x63` | `LOAD_LOC` | `<u8 slot>` — push local (0..n_args-1 = args) |
-| `0x64` | `STORE_LOC` | `<u8 slot>` — pop into local |
+| `0x62` | `ENTER` | Operands `<u8 n_locals>`. reserve additional local slots |
+| `0x63` | `LOAD_LOC` | Operands `<u8 slot>`. push local (0..n_args-1 = args) |
+| `0x64` | `STORE_LOC` | Operands `<u8 slot>`. pop into local |
 | `0x70` | `ALLOC` | pop size, bump HP by (size+3 & ~3), push old HP |
-| `0x80` | `NEWLIST` | `<u16 n>` — pop n items (right→left in memory), push arr addr |
+| `0x80` | `NEWLIST` | Operands `<u16 n>`. pop n items (right→left in memory), push arr addr |
 | `0x81` | `LGET` | pop idx, pop arr, push arr[idx] |
 | `0x82` | `LSET` | pop val, pop idx, pop arr, arr[idx]=val |
 | `0x83` | `LEN` | pop addr, push u32 at addr (length header) |
@@ -7519,26 +7974,26 @@ the module that installs it.
 | `0x88` | `CHR` | pop byte, push new 1-char string blob |
 | `0x89` | `LNEW` | pop n, alloc zeroed list [n | n cells] |
 | `0x91` | `STRCAT` | pop b, pop a, allocate new pool-shaped blob, push handle |
-| `0xA0` | `PUSH_F64` | `<f64 LE>` — alloc 8-byte cell, store f64, push addr |
-| `0xA1` | `FADD` | |
-| `0xA2` | `FSUB` | |
-| `0xA3` | `FMUL` | |
-| `0xA4` | `FDIV` | |
-| `0xA5` | `FLT` | |
-| `0xA6` | `FGT` | |
-| `0xA7` | `FEQ` | |
+| `0xA0` | `PUSH_F64` | Operands `<f64 LE>`. alloc 8-byte cell, store f64, push addr |
+| `0xA1` | `FADD` | Pop two boxed f64 addresses, push a newly boxed a + b. |
+| `0xA2` | `FSUB` | Pop two boxed f64 addresses, push a newly boxed a - b. |
+| `0xA3` | `FMUL` | Pop two boxed f64 addresses, push a newly boxed a * b. |
+| `0xA4` | `FDIV` | Pop two boxed f64 addresses, push a newly boxed a / b. |
+| `0xA5` | `FLT` | Pop two boxed f64 addresses, push the i32 boolean a < b. |
+| `0xA6` | `FGT` | Pop two boxed f64 addresses, push the i32 boolean a > b. |
+| `0xA7` | `FEQ` | Pop two boxed f64 addresses, push the i32 boolean a == b. |
 | `0xA8` | `I2F` | pop int; box as f64 and push |
 | `0xA9` | `F2I` | pop float; push i32 truncation |
-| `0xAA` | `FNEG` | |
-| `0xAB` | `FABS` | |
-| `0xAC` | `FSQRT` | |
+| `0xAA` | `FNEG` | Pop a boxed f64, push a newly boxed negation. |
+| `0xAB` | `FABS` | Pop a boxed f64, push a newly boxed absolute value. |
+| `0xAC` | `FSQRT` | Pop a boxed f64, push a newly boxed square root. |
 | `0xAD` | `SAY_F64` | pop float addr; host prints it |
-| `0xAE` | `FMATH` | `<u8 op>` — pop f64; call host_fmath(op,x); push new boxed result |
+| `0xAE` | `FMATH` | Operands `<u8 op>`. pop f64; call host_fmath(op,x); push new boxed result |
 | `0xB0` | `READFILE` | pop path handle; push content handle (0 on error) |
 | `0xB1` | `WRITEFILE` | pop data, pop path; push i32 status (0 ok, -1 err) |
 | `0xB2` | `HTTPGET` | pop url handle; push response body handle (0 err) |
 | `0xB4` | `FBYTE` | pop idx (0..7), pop float; push IEEE-754 LE byte |
-| `0xFF` | `HALT` |  |
+| `0xFF` | `HALT` | Seed VM instruction. |
 
 
 ### sdev-written source index (15 files, 169 functions)
@@ -7546,65 +8001,306 @@ the module that installs it.
 Every function defined in sdev itself — the self-hosted compiler, the parity
 agent, and the standard library.
 
-#### `lang/compiler/codegen.sdev` — SDEV self-hosted codegen (Milestone 5g).
+#### `lang/compiler/codegen.sdev`
 
-30 functions: `is_digit` · `is_alpha` · `is_alnum` · `slice` · `both_float` · `str_eq` · `emit_byte` · `intern_str` · `emit_i32` · `placeholder16` · `patch_i16` · `intern_name` · `find_local` · `add_local` · `find_fn` · `emit_load_ident` · `emit_store_ident` · `emit_call` · `resolve_pending_calls` · `is_op_c` · `is_ident_word` · `parse_atom` · `parse_postfix` · `parse_mul` · `parse_add` · `parse_cmp` · `skip_nl` · `parse_block` · `parse_params` · `parse_stmt`
+SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits the byte stream to a global buffer `bc` whose cell 0 holds the current byte count and cells 1..count hold the bytes. The scripts/test-self- codegen.mjs driver harvests the buffer via `say`, reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance, and verifies the executed output matches the JS bootstrap compiler's output. Grammar this milestone covers: program := stmt* stmt    := 'say' expr | 'set' IDENT 'to' expr | 'if' expr NL block ('else' NL block)? 'end' | 'while' expr NL block 'end' | 'to' IDENT ('with' IDENT*)? NL block 'end' | 'return' expr? block   := stmt*                              (until 'else' or 'end') expr    := cmp cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )? add     := mul (('+'|'-') mul)* mul     := atom (('*'|'/') atom)* atom    := INT | IDENT                              (variable load) | IDENT '(' args? ')'                (function call / builtin) | '(' expr ')' Restriction: functions must be defined before their call sites — the self-hosted compiler emits function bodies inline, bracketed by a JMP that skips over them, and records each body's byte offset in a global table. Forward references / mutual recursion land in a later milestone.
 
-#### `lang/compiler/lexer.sdev` — SDEV lexer, written in SDEV.
+30 functions.
 
-5 functions: `is_digit` · `is_alpha` · `is_alnum` · `slice` · `lex`
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_digit` | `c` | Helper used by this module. | `0` | 35 |
+| `is_alpha` | `c` | Helper used by this module. | `1` | 45 |
+| `is_alnum` | `c` | Helper used by this module. | `1` | 62 |
+| `slice` | `src i j` | Helper used by this module. | `out` | 69 |
+| `both_float` | `a b` | Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float arithmetic only kicks in when BOTH operands are floats (mixed arithmetic requires an explicit i2f), matching the bootstrap oracle exactly. | `1` | 81 |
+| `str_eq` | `a b` | Helper used by this module. | `0` | 90 |
+| `emit_byte` | `b` | Helper used by this module. | `0` | 113 |
+| `intern_str` | `s` | Helper used by this module. | `0` | 130 |
+| `emit_i32` | `v` | Helper used by this module. | `0` | 162 |
+| `placeholder16` | _none_ | Reserve a two-byte i16 placeholder and return the byte offset at which it starts (0-indexed, list cell = pos + 1). | `p` | 175 |
+| `patch_i16` | `pos target` | Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte offset `target`. Offsets are relative to the end of the instruction (pos + 2). Negative offsets get two's-complement 16-bit encoding. | `0` | 185 |
+| `intern_name` | `name` | Helper used by this module. | `k - 1` | 208 |
+| `find_local` | `name` | Helper used by this module. | `k - 1` | 222 |
+| `add_local` | `name` | Helper used by this module. | `loc_names[0] - 1` | 234 |
+| `find_fn` | `name` | Helper used by this module. | `k - 1` | 240 |
+| `emit_load_ident` | `name` | Helper used by this module. | `0` | 259 |
+| `emit_store_ident` | `name` | Helper used by this module. | `0` | 276 |
+| `emit_call` | `name nargs` | Helper used by this module. | `0` | 303 |
+| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 454 |
+| `is_op_c` | `pos c` | Helper used by this module. | `0` | 472 |
+| `is_ident_word` | `pos w` | Helper used by this module. | `0` | 484 |
+| `parse_atom` | `pos` | Helper used by this module. | `pos + 1` | 501 |
+| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 605 |
+| `parse_mul` | `pos` | Helper used by this module. | `pos` | 623 |
+| `parse_add` | `pos` | Helper used by this module. | `pos` | 669 |
+| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 720 |
+| `skip_nl` | `pos` | Helper used by this module. | `pos` | 784 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `end`, or EOF. | `pos` | 801 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 831 |
+| `parse_stmt` | `pos` | Helper used by this module. | `pos` | 853 |
 
-#### `lang/compiler/parser.sdev` — SDEV expression parser, written in SDEV.
+#### `lang/compiler/lexer.sdev`
 
-4 functions: `is_op_c` · `parse_atom` · `parse_mul` · `parse_add`
+SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hosted compiler. The bootstrap JS compiler (lang/bootstrap/compile.mjs) still compiles this file to bytecode for now; once the parser + codegen are also ported, the JS compiler is deleted. The lexer streams tokens straight to stdout via `say`, one per line, in a stable text format: N=<int>      integer literal I=<ident>    identifier or keyword S=<text>     string literal (contents only, no quotes) P=<char>     single-char punctuation NL           newline EOF          end of source The `scripts/test-self-lexer.mjs` driver splices a `set src to "..."` stub in front of this file and diffs the output against a JS reference lexer built from the same rules.
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_digit` | `c` | Helper used by this module. | `0` | 22 |
+| `is_alpha` | `c` | Helper used by this module. | `1` | 32 |
+| `is_alnum` | `c` | Helper used by this module. | `1` | 49 |
+| `slice` | `src i j` | Helper used by this module. | `out` | 56 |
+| `lex` | `src` | Helper used by this module. | _no explicit yield_ | 65 |
+
+#### `lang/compiler/parser.sdev`
+
+SDEV expression parser, written in SDEV. This is the second slice of Milestone 5 (self-hosted compiler). It sits on top of the lexer (lang/compiler/lexer.sdev) and, for now, handles arithmetic expressions with correct precedence: expr  := add add   := mul (('+' | '-') mul)* mul   := atom (('*' | '/') atom)* atom  := NUM | '(' expr ')' The parser reads tokens from globals populated by an inlined top-level lex loop (see scripts/test-self-parser.mjs for the harness). It streams the parse in reverse-Polish form via `say`, one atom or operator per line — that's easy to diff against a JS reference implementation. The full statement parser lands next; this file exercises recursion, global-buffer reads, and function-return threading of the cursor.
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_op_c` | `pos c` | Helper used by this module. | `0` | 22 |
+| `parse_atom` | `pos` | Helper used by this module. | `pos + 1` | 37 |
+| `parse_mul` | `pos` | Helper used by this module. | `pos` | 54 |
+| `parse_add` | `pos` | Helper used by this module. | `pos` | 73 |
 
 #### `lang/parity/agent.sdev`
 
-12 functions: `unquote` · `field_key` · `field_value` · `load_registry` · `load_track_source` · `probe` · `mark` · `audit` · `matrix_markdown` · `report_json` · `sync_doc` · `run_parity_agent`
+sdev Parity Agent — written in sdev, runs on sdev Phase 0/1 of the v1 <-> v2 parity plan. The agent is the machine that keeps every sdev track honest: 1. loads the canonical registry (lang/parity/features.json), 2. loads the source of every track listed in that registry, 3. probes each track for each feature, 4. prints a gap report and writes lang/parity/report.json, 5. regenerates the parity matrix inside the documentation, between <!-- PARITY:BEGIN --> / <!-- PARITY:END --> markers, 6. reports how many `must` features are missing so CI can fail. Adding a track = one entry in the registry. The agent needs no change. Host builtins used: read_file, write_file.
+
+12 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `unquote` | `s` | Helper used by this module. | `t` | 21 |
+| `field_key` | `line` | Split a `"key": "value"` line. Values may contain colons, so only the first colon separates; the rest is re-joined. | `unquote(parts[0])` | 38 |
+| `field_value` | `line` | Helper used by this module. | `""` | 43 |
+| `load_registry` | `path` | Helper used by this module. | `{ tracks: tracks, features: features }` | 59 |
+| `load_track_source` | `spec` | Helper used by this module. | `out` | 99 |
+| `probe` | `src, name` | A feature is present on a track when its track-local name appears as a quoted token in that track's source — the shape every implementation uses for keyword tables and builtin dispatch. | `nope` | 113 |
+| `mark` | `level, present` | Helper used by this module. | `"n/a"` | 128 |
+| `audit` | `registry` | Helper used by this module. | `{ tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }` | 138 |
+| `matrix_markdown` | `report` | Helper used by this module. | `out` | 183 |
+| `report_json` | `report` | Helper used by this module. | `out` | 219 |
+| `sync_doc` | `path, block` | Helper used by this module. | `0` | 266 |
+| `run_parity_agent` | `registry_path, doc_paths` | Helper used by this module. | `measure(report.must_missing)` | 283 |
 
 #### `lang/stdlib/ffi.sdev`
 
-11 functions: `Library` · `lib_close` · `bind` · `invoke` · `buf_f64` · `buf_from_list` · `buf_to_list` · `open_blas` · `blas_matmul` · `open_cuda` · `cuda_ok`
+sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared libraries (.so / .dylib / .dll) from sdev. This is the bridge that lets the ML stdlib reach BLAS, libcudart, cuBLAS, cuDNN, and any other C ABI library the host system exposes. Requires host builtins provided by the native runtime: ffi_open(path)                  -> lib handle (int)   or void on error ffi_sym(lib, name)              -> fn handle (int)    or void on error ffi_call(fn, ret_kind, args)    -> result (kind-typed) ffi_close(lib)                  -> yep/nope ffi_buf(size)                   -> raw byte buffer addr (int) ffi_read_f64(buf, i) / ffi_write_f64(buf, i, x) ffi_read_i32(buf, i) / ffi_write_i32(buf, i, n) The browser WASM runtime stubs these to void — FFI only runs on the native/Node track. The interpreter's `advanced.ts` wires the Node side via `koffi` when installed. Type kinds are small ints so the host can dispatch fast: 0 void   1 i32   2 i64   3 f32   4 f64 5 ptr    6 cstr  7 buf   8 bool
+
+11 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `Library` | `path` | ---------- library handle wrapper ---------- | `{ ok: nope, path: path, handle: void, err: "cannot open " + path }` | 39 |
+| `lib_close` | `lib` | Helper used by this module. | `yep` | 47 |
+| `bind` | `lib, name, ret_kind, arg_kinds` | ---------- function binding ---------- bind(lib, "matmul_f64", FFI_VOID, [FFI_PTR, FFI_PTR, FFI_PTR, FFI_I32, FFI_I32, FFI_I32]) | `{` | 55 |
+| `invoke` | `binding, argv` | Helper used by this module. | `ffi_call(binding.fn, binding.ret, binding.args, argv)` | 68 |
+| `buf_f64` | `n` | ---------- raw buffers (for passing float arrays) ---------- | `{ addr: b, len: n, kind: FFI_F64 }` | 74 |
+| `buf_from_list` | `xs` | Helper used by this module. | `b` | 79 |
+| `buf_to_list` | `b` | Helper used by this module. | `out` | 90 |
+| `open_blas` | `path` | ---------- BLAS-style convenience wrappers ---------- Open an OpenBLAS-compatible library and bind the two calls the ML stdlib actually needs for accelerated matmul. | `{ lib: lib, dgemm: dgemm, daxpy: daxpy }` | 103 |
+| `blas_matmul` | `blas, a, b` | BLAS-accelerated matmul that plugs straight into ml/tensor.sdev. Falls back to the pure-sdev matmul when the binding is void. | `tensor(buf_to_list(bc), [m, n])` | 127 |
+| `open_cuda` | `cudart_path, cublas_path` | ---------- CUDA fast path ---------- Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training. | `{` | 145 |
+| `cuda_ok` | `cuda` | Helper used by this module. | `yep` | 167 |
 
 #### `lang/stdlib/ml/auto_evolve.sdev`
 
-10 functions: `is_allowed` · `make_proposal` · `apply_proposal` · `draft_from_demand` · `top_topic` · `evolve_weights` · `evolve_tick` · `pick_target` · `prompt_pool` · `evolve_forever`
+sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12) Wires the ML stack into sdev's own source tree. A trained sdev model reads demand signals, drafts patches to the language, runs them through a review hook, and — on approval — commits them to disk. The same loop can also fine-tune the model on fresh distilled data or teacher outputs. Nothing here writes to disk unless `set_review_hook(...)` has been called with a function that returns `yep`. That is the single gate protecting the entire pipeline.
+
+10 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_allowed` | `path` | Helper used by this module. | `nope` | 34 |
+| `make_proposal` | `path, old_body, new_body, reason` | ---------- proposal record ---------- | `{` | 44 |
+| `apply_proposal` | `p` | Helper used by this module. | `ok` | 54 |
+| `draft_from_demand` | `model, demand, target_path` | ---------- demand → proposal ---------- Given a ranked demand map from `mine_demand`, ask the model to draft a patch for the top topic. `model` is any sdev model exposing `generate(model, prompt, max_new)`. | `make_proposal(target_path, cur, patched,` | 65 |
+| `top_topic` | `counts` | Helper used by this module. | `best_k` | 77 |
+| `evolve_weights` | `model, teacher_url, teacher_key, prompts, epochs, lr` | ---------- fine-tune on live distillation ---------- Pulls prompt/answer pairs from a teacher endpoint and runs a short SGD pass so the local model tracks the frontier without leaving the sdev runtime. | `measure(pairs)` | 95 |
+| `evolve_tick` | `model, sources, teacher_url, teacher_key` | ---------- the loop ---------- One tick: mine demand → draft → review → apply → fine-tune. Returns a report tome so the caller can log or throttle. | `{` | 112 |
+| `pick_target` | `demand` | Helper used by this module. | `"lang/stdlib/ml/nn.sdev"` | 133 |
+| `prompt_pool` | `demand` | Helper used by this module. | `out` | 145 |
+| `evolve_forever` | `model, sources, teacher_url, teacher_key, ticks` | ---------- long-running driver ---------- | _no explicit yield_ | 160 |
 
 #### `lang/stdlib/ml/autograd.sdev`
 
-20 functions: `tape_reset` · `record` · `d_add` · `d_mul` · `d_matmul` · `d_relu` · `d_mse` · `d_softmax_ce` · `backward` · `bw_sce` · `bw_add` · `bw_mul` · `bw_matmul` · `bw_relu` · `bw_mse` · `sgd_step` · `zero_grads` · `clip_grads` · `adam_new` · `adam_step`
+sdev ML Stdlib — Autograd Tape (Milestone 8b) Reverse-mode automatic differentiation implemented as a global operation tape. Each recorded op stores its inputs, output, and a "kind" tag; `backward(out)` walks the tape in reverse and accumulates gradients into each tensor's `grad` list.
+
+20 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `tape_reset` | _none_ | Helper used by this module. | _no explicit yield_ | 13 |
+| `record` | `kind, inputs, out` | Helper used by this module. | _no explicit yield_ | 17 |
+| `d_add` | `a, b` | ---------- differentiable ops ---------- | `o` | 22 |
+| `d_mul` | `a, b` | Helper used by this module. | `o` | 28 |
+| `d_matmul` | `a, b` | Helper used by this module. | `o` | 34 |
+| `d_relu` | `a` | Helper used by this module. | `o` | 41 |
+| `d_mse` | `pred, target` | Helper used by this module. | `o` | 48 |
+| `d_softmax_ce` | `logits, targets` | Row-wise softmax + cross-entropy over next-token targets. logits: [rows, vocab]; targets: list of `rows` class ids. Returns the mean negative log-likelihood as a 1-element tensor. | `o` | 65 |
+| `backward` | `out` | ---------- backward pass ---------- | _no explicit yield_ | 102 |
+| `bw_sce` | `e` | Helper used by this module. | _no explicit yield_ | 118 |
+| `bw_add` | `e` | Helper used by this module. | _no explicit yield_ | 140 |
+| `bw_mul` | `e` | Helper used by this module. | _no explicit yield_ | 152 |
+| `bw_matmul` | `e` | Helper used by this module. | _no explicit yield_ | 164 |
+| `bw_relu` | `e` | Helper used by this module. | _no explicit yield_ | 204 |
+| `bw_mse` | `e` | Helper used by this module. | _no explicit yield_ | 216 |
+| `sgd_step` | `params, lr` | ---------- optimizers ---------- | _no explicit yield_ | 229 |
+| `zero_grads` | `params` | Helper used by this module. | _no explicit yield_ | 244 |
+| `clip_grads` | `params, max_norm` | Global-norm gradient clipping — keeps LM training from exploding. | `norm` | 255 |
+| `adam_new` | `params` | ---------- Adam ---------- | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279 |
+| `adam_step` | `opt, params, lr` | Helper used by this module. | _no explicit yield_ | 296 |
 
 #### `lang/stdlib/ml/cuda.sdev`
 
-11 functions: `cuda_device` · `cuda_device_default` · `cuda_free_device` · `cuda_alloc` · `cuda_free` · `cuda_upload` · `cuda_download` · `cuda_matmul` · `best_matmul` · `cuda_forward_linear` · `cuda_report`
+sdev ML Stdlib — CUDA Fast Path (Milestone 11) Thin sdev-native layer over the FFI cuBLAS/cudart bindings in ffi.sdev. Gives the ML stack a real GPU matmul + training loop when the process is on a CUDA-capable box, and transparently falls back to the pure-sdev tensor ops otherwise so the same program keeps running in the browser IDE. Everything here is sdev source that runs on both interpreter tracks. The native/Node runtime wires the FFI symbols; the browser stubs them to void, which forces `cuda_ok(...)` to nope and every helper below to take the CPU path.
+
+11 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `cuda_device` | `cudart_path, cublas_path` | ---------- device handle ---------- A "device" bundles the loaded cuBLAS/cudart bindings with a live cublasHandle_t. We keep it as a tome so callers can pass it around like any other sdev value. | `{ ok: nope, cu: void, handle: void, err: "cuda unavailable" }` | 22 |
+| `cuda_device_default` | _none_ | Helper used by this module. | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",` | 34 |
+| `cuda_free_device` | `dev` | Helper used by this module. | `yep` | 40 |
+| `cuda_alloc` | `dev, n_f64` | ---------- device memory ---------- A cuda_buf is host-visible metadata around a device pointer. | `{ dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }` | 51 |
+| `cuda_free` | `dev, b` | Helper used by this module. | `yep` | 58 |
+| `cuda_upload` | `dev, host_list` | cudaMemcpyKind: HostToDevice=1, DeviceToHost=2 | `db` | 65 |
+| `cuda_download` | `dev, db` | Helper used by this module. | `buf_to_list(hb)` | 73 |
+| `cuda_matmul` | `dev, a, b` | ---------- accelerated ops ---------- Row-major C = A · B via cublasDgemm. cuBLAS is column-major, so we compute Bᵀ · Aᵀ under the hood and interpret the result as row-major C — same trick numpy's cublas backend uses. | `tensor(out, [m, n])` | 83 |
+| `best_matmul` | `dev, blas, a, b` | Convenience: pick the fastest available matmul path. Priority: CUDA → BLAS → pure sdev. | `matmul(a, b)` | 113 |
+| `cuda_forward_linear` | `dev, x, w, bias` | ---------- training-loop hook ---------- Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU. | `t_add(y, bias)` | 125 |
+| `cuda_report` | `dev` | ---------- diagnostics ---------- | `"CUDA: unavailable (running on CPU fallback)"` | 131 |
 
 #### `lang/stdlib/ml/data.sdev`
 
-10 functions: `load_text` · `save_text` · `char_vocab` · `encode` · `decode` · `crawl` · `crawl_many` · `teacher_query` · `distill_batch` · `save_model`
+sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and LLM-distillation utilities. Uses host builtins: read_file, write_file, http_get.
+
+10 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `load_text` | `path` | ---------- text I/O ---------- | `read_file(path)` | 10 |
+| `save_text` | `path, s` | Helper used by this module. | _no explicit yield_ | 14 |
+| `char_vocab` | `text` | ---------- byte-pair-ish tokenizer (char level) ---------- | `{ size: measure(order), stoi: seen, itos: order }` | 19 |
+| `encode` | `vocab, text` | Helper used by this module. | `out` | 34 |
+| `decode` | `vocab, ids` | Helper used by this module. | `s` | 45 |
+| `crawl` | `url` | ---------- web crawler ---------- | `http_get(url)` | 56 |
+| `crawl_many` | `urls` | Helper used by this module. | `out` | 60 |
+| `teacher_query` | `endpoint, api_key, prompt` | ---------- teacher-model distillation ---------- Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a prompt, receive logits/text, and train the local sdev model to imitate the teacher's outputs. | `http_get(url)` | 74 |
+| `distill_batch` | `endpoint, key, prompts` | Helper used by this module. | `pairs` | 79 |
+| `save_model` | `path, model` | ---------- checkpointing ---------- | _no explicit yield_ | 91 |
 
 #### `lang/stdlib/ml/nn.sdev`
 
-7 functions: `linear` · `broadcast_row` · `sequential` · `seq_forward` · `relu_layer` · `train_step` · `fit`
+sdev ML Stdlib — Neural Network Layers (Milestone 8c) High-level layer builders. Each layer returns a tome exposing { params: [tensors...], forward: conjure(x) }.
+
+7 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `linear` | `in_features, out_features` | Helper used by this module. | `{` | 9 |
+| `broadcast_row` | `row, rows` | Helper used by this module. | `t` | 23 |
+| `sequential` | `layers` | Helper used by this module. | `{` | 36 |
+| `seq_forward` | `layers, x` | Helper used by this module. | `cur` | 51 |
+| `relu_layer` | _none_ | Helper used by this module. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
+| `train_step` | `model, x, y, lr` | ---------- training loop ---------- | `loss.data[0]` | 66 |
+| `fit` | `model, xs, ys, epochs, lr` | Helper used by this module. | _no explicit yield_ | 75 |
 
 #### `lang/stdlib/ml/self_modify.sdev`
 
-7 functions: `self_read` · `self_propose` · `set_review_hook` · `mine_demand` · `harvest_keywords` · `update_docs` · `rewrite_weights`
+sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-trained model to read the sdev source tree, propose edits, and rewrite its own weights or the language runtime itself. All mutations pass through a review hook so users can gate every change. Requires host builtins: read_file, write_file, http_get.
+
+7 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `self_read` | `path` | Helper used by this module. | `read_file(path)` | 15 |
+| `self_propose` | `path, new_content` | Helper used by this module. | `nope` | 19 |
+| `set_review_hook` | `fn` | Helper used by this module. | _no explicit yield_ | 30 |
+| `mine_demand` | `sources` | ---------- feature-demand mining ---------- Fetches issue/PR/reddit signals and lets the model pick the next feature to draft. Returns a ranked list of {topic, score}. | `counts` | 37 |
+| `harvest_keywords` | `counts, body` | Helper used by this module. | _no explicit yield_ | 48 |
+| `update_docs` | `section, body` | ---------- documentation sync ---------- | _no explicit yield_ | 69 |
+| `rewrite_weights` | `model, transform` | ---------- weight rewriting ---------- The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep` | 79 |
 
 #### `lang/stdlib/ml/tensor.sdev`
 
-16 functions: `tensor` · `tensor_grad` · `zeros` · `ones` · `randn` · `shape_size` · `t_add` · `t_sub` · `t_mul` · `t_scale` · `matmul` · `relu` · `sigmoid` · `softmax` · `mse` · `cross_entropy`
+sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: [f64...], shape: [int...], grad: [f64...] | void, requires_grad: bool } All ops are pure by default; autograd tape is opt-in per tensor. Fully written in sdev — runs on both the WASM and Native ASM tracks.
+
+16 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `tensor` | `data, shape` | Helper used by this module. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
+| `tensor_grad` | `data, shape` | Helper used by this module. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
+| `zeros` | `shape` | Helper used by this module. | `tensor(d, shape)` | 23 |
+| `ones` | `shape` | Helper used by this module. | `tensor(d, shape)` | 31 |
+| `randn` | `shape` | Helper used by this module. | `tensor(d, shape)` | 39 |
+| `shape_size` | `shape` | Helper used by this module. | `n` | 54 |
+| `t_add` | `a, b` | ---------- element-wise ops ---------- | `tensor(d, a.shape)` | 65 |
+| `t_sub` | `a, b` | Helper used by this module. | `tensor(d, a.shape)` | 73 |
+| `t_mul` | `a, b` | Helper used by this module. | `tensor(d, a.shape)` | 81 |
+| `t_scale` | `a, k` | Helper used by this module. | `tensor(d, a.shape)` | 89 |
+| `matmul` | `a, b` | ---------- 2-D matmul (rows x cols) ---------- | `tensor(d, [m, n])` | 98 |
+| `relu` | `a` | ---------- activations ---------- | `tensor(d, a.shape)` | 124 |
+| `sigmoid` | `a` | Helper used by this module. | `tensor(d, a.shape)` | 136 |
+| `softmax` | `a` | Helper used by this module. | `tensor(d, a.shape)` | 147 |
+| `mse` | `pred, target` | ---------- losses ---------- | `s / n` | 170 |
+| `cross_entropy` | `pred, target` | Helper used by this module. | `s` | 182 |
 
 #### `lang/stdlib/ml/train.sdev`
 
-13 functions: `lm_batches` · `lm_step` · `lm_fit` · `lm_loss` · `perplexity` · `last_logits` · `sample_topk` · `lm_generate` · `lm_complete` · `checkpoint_text` · `save_checkpoint` · `load_checkpoint` · `split_text`
+sdev ML Stdlib — Language-Model Training (Milestone 14) End-to-end training for the decoder-only model in transformer.sdev: batching, next-token cross-entropy, Adam + gradient clipping, temperature / top-k sampling, checkpoint save + load, and an evaluation loop. Written entirely in sdev.
+
+13 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `lm_batches` | `ids, block` | ---------- batching ---------- Cut a flat token stream into (context, next-token) pairs of length `block`. | `{ xs: xs, ys: ys, block: block, count: measure(xs) }` | 14 |
+| `lm_step` | `model, opt, ctx, targets, lr` | ---------- one optimisation step ---------- | `loss.data[0]` | 35 |
+| `lm_fit` | `model, ids, block, epochs, lr` | ---------- full training loop ---------- | `{ history: history, final: history[measure(history) - 1], opt: opt }` | 47 |
+| `lm_loss` | `model, ids, block` | ---------- evaluation ---------- | `total / batches.count` | 66 |
+| `perplexity` | `model, ids, block` | Perplexity = e^(mean NLL). Lower is better. | `exp(lm_loss(model, ids, block))` | 80 |
+| `last_logits` | `model, ids` | ---------- sampling ---------- | `tensor(row, [vocab])` | 85 |
+| `sample_topk` | `logits, temperature, k` | Temperature + top-k filtering, then multinomial draw. | `sample_next(tensor(scaled, [n]))` | 99 |
+| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Helper used by this module. | `out` | 135 |
+| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Helper used by this module. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
+| `checkpoint_text` | `model` | ---------- checkpoints ---------- Flat text format: one parameter tensor per line, "shape\|values". | `s` | 155 |
+| `save_checkpoint` | `path, model` | Helper used by this module. | `measure(model.params)` | 180 |
+| `load_checkpoint` | `path, model` | Loads weights back into an identically-shaped model. | `measure(model.params)` | 186 |
+| `split_text` | `s, sep` | Small split helper so checkpoints need no host support beyond file I/O. | `out` | 211 |
 
 #### `lang/stdlib/ml/transformer.sdev`
 
-13 functions: `embedding` · `embed_lookup` · `layer_norm` · `ln_apply` · `attention_head` · `attn_forward` · `transpose` · `transformer_block` · `block_forward` · `gpt` · `gpt_forward` · `sample_next` · `generate`
+sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only transformer written in sdev. Enough to build small language models; scales up with CUDA/WebGPU backends in later milestones.
 
-#### `lang/stdlib/webgpu.sdev` — =====================================================================
+13 functions.
 
-_no top-level functions_
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `embedding` | `vocab, dim` | Helper used by this module. | `{` | 10 |
+| `embed_lookup` | `w, ids` | Helper used by this module. | `tensor_grad(d, [n, dim])` | 21 |
+| `layer_norm` | `dim` | Helper used by this module. | `{` | 38 |
+| `ln_apply` | `x, g, b` | Helper used by this module. | `tensor_grad(d, x.shape)` | 49 |
+| `attention_head` | `dim` | ---------- attention (single head, causal) ---------- | `{` | 79 |
+| `attn_forward` | `x, wq, wk, wv, wo, dim` | Helper used by this module. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
+| `transpose` | `a` | Helper used by this module. | `tensor(d, [c, r])` | 114 |
+| `transformer_block` | `dim, hidden` | ---------- transformer block ---------- | `{` | 133 |
+| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | Helper used by this module. | `d_add(x1, f)` | 154 |
+| `gpt` | `vocab, dim, hidden, layers` | ---------- decoder-only LM ---------- | `{` | 162 |
+| `gpt_forward` | `ids, emb, blocks, head, layers` | Helper used by this module. | `head.forward(x)` | 187 |
+| `sample_next` | `logits` | ---------- sampling ---------- | `n - 1` | 198 |
+| `generate` | `model, prompt_ids, max_new` | Helper used by this module. | `out` | 212 |
+
+#### `lang/stdlib/webgpu.sdev`
+
+lang/stdlib/webgpu.sdev Milestone 10 — WebGPU acceleration for the browser IDE Provides a thin, sdev-native wrapper over the host's WebGPU bindings. The runtime exposes a handful of host calls (`__wgpu_*`) that the browser build implements through `navigator.gpu`. On Node/native builds without a GPU adapter, every entry point falls back to the pure-sdev CPU tensor kernels so user code stays portable. This module is written entirely in sdev and is compiled by the self-hosted compiler like the rest of the stdlib.
+
+_No top-level functions — this file is a script or data module._
 
 
 ### Parity matrix
