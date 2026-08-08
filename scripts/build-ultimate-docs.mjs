@@ -100,8 +100,10 @@ function parseBuiltins(src, file) {
     const errs = [...body.matchAll(/SdevError\(\s*[`'"]([^`'"]+)[`'"]/g)]
       .map((m) => m[1]).filter((e, i2, arr) => arr.indexOf(e) === i2).slice(0, 2);
 
-    // Description: explicit comment wins; otherwise derive from the body.
+    // Description: explicit comment wins, then the curated dictionary, then a
+    // derivation from the implementation itself.
     let desc = doc.join(' ').replace(new RegExp(`^${name}\\s*[-–—:]\\s*`, 'i'), '').trim();
+    if (!desc) desc = BUILTIN_DOCS[`${file}:${name}`] || BUILTIN_DOCS[name] || '';
     if (!desc) {
       const oneLiner = /call:\s*\(args[^)]*\)\s*=>\s*([^\n]+?),?\s*\}\s*\);?\s*$/.exec(body.trim());
       if (oneLiner) {
@@ -115,6 +117,7 @@ function parseBuiltins(src, file) {
         desc = 'Runtime primitive.';
       }
     }
+
     if (!/[.!?]$/.test(desc)) desc += '.';
     out.push({ name, sig, desc, errs, line: line + 1, file, section });
   }
