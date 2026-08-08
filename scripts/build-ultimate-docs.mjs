@@ -148,43 +148,108 @@ function builtinIndex() {
 // ---------------------------------------------------------------------------
 // Generated appendix: keyword table (v1 lexer)
 // ---------------------------------------------------------------------------
+/** Hand-written meaning for every v1 keyword, keyed by the keyword itself. */
+const KEYWORD_DOCS = {
+  forge: ['Declare and bind a new variable in the current scope.', 'forge score be 10'],
+  conjure: ['Declare a function. The body runs between `::` and `;;`.', 'conjure add(a, b) :: yield a + b ;;'],
+  ponder: ['Conditional. Runs its block when the condition is truthy.', 'ponder score > 9 :: speak("high") ;;'],
+  otherwise: ['The else branch of a `ponder`; may be chained as `otherwise ponder`.', 'otherwise :: speak("low") ;;'],
+  cycle: ['While-loop. Repeats its block while the condition holds.', 'cycle i < 10 :: be i be i + 1 ;;'],
+  iterate: ['For-each loop header; pairs with `through` (lists) or `within` (ranges).', 'iterate n through nums :: speak(n) ;;'],
+  through: ['Loop source operator: iterate over the elements of a list, string, or tome.', 'iterate ch through "abc"'],
+  within: ['Loop source operator: iterate over a numeric range or a container membership test.', 'iterate i within sequence(0, 5)'],
+  be: ['Assignment to an existing binding, and the binder used after `forge`.', 'be score be score + 1'],
+  yield: ['Return a value from a function and stop executing it.', 'yield a + b'],
+  yeet: ['Break out of the innermost loop immediately.', 'ponder done :: yeet ;;'],
+  skip: ['Continue: abandon this iteration and start the next one.', 'ponder n < 0 :: skip ;;'],
+  yep: ['Boolean true literal.', 'forge ok be yep'],
+  nope: ['Boolean false literal.', 'forge ok be nope'],
+  void: ['The null / absent value. Uninitialised fields read as `void`.', 'forge nothing be void'],
+  also: ['Logical AND with short-circuit evaluation.', 'ponder a > 0 also b > 0'],
+  either: ['Logical OR with short-circuit evaluation.', 'ponder a > 0 either b > 0'],
+  isnt: ['Logical NOT of the following expression.', 'ponder isnt found'],
+  equals: ['Value equality comparison (same as `==`).', 'ponder name equals "sava"'],
+  differs: ['Value inequality comparison (same as `!=`).', 'ponder name differs "sava"'],
+  summon: ['Import a module: a local file, a bundled stdlib name, or a GitHub Gist package.', 'summon "gist:abc123/math.sdev"'],
+  attempt: ['Begin a protected block whose runtime errors are catchable.', 'attempt :: risky() ;;'],
+  rescue: ['Handle an error raised inside the preceding `attempt`, binding the error value.', 'rescue err :: speak(err) ;;'],
+  extend: ['Declare inheritance from a parent essence (class).', 'essence Dog extend Animal ::'],
+  new: ['Instantiate an essence, invoking its constructor.', 'forge d be new Dog("rex")'],
+  self: ['Inside a method, the receiving instance.', 'be self.name be name'],
+  super: ['Inside a method, dispatch to the parent essence implementation.', 'super.speak()'],
+  async: ['Mark a function as asynchronous so it returns a promise-like value.', 'async conjure fetchAll() ::'],
+  await: ['Suspend until an async value resolves, then produce it.', 'forge data be await fetchAll()'],
+};
+
 function keywordTable() {
   const src = read('src/lang/tokens.ts');
   const block = /export const KEYWORDS[^{]*{([\s\S]*?)\n};/.exec(src);
   if (!block) return '';
   const rows = [...block[1].matchAll(/^\s*'?([A-Za-z_][\w]*)'?\s*:\s*TokenType\.([A-Z_]+),?\s*(?:\/\/\s*(.*))?$/gm)]
-    .map((m) => `| \`${m[1]}\` | ${m[2]} | ${(m[3] || '').trim()} |`);
-  return `\n| Keyword | Token | Note |\n| --- | --- | --- |\n${rows.join('\n')}\n`;
+    .map((m) => {
+      const [meaning, example] = KEYWORD_DOCS[m[1]] || [(m[3] || '').trim() || 'Reserved word.', ''];
+      return `| \`${m[1]}\` | ${m[2]} | ${meaning} | ${example ? '`' + example + '`' : '—'} |`;
+    });
+  return `\nEvery reserved word the v1 lexer recognises, what it means, and the\nshortest example that uses it correctly.\n\n| Keyword | Token | Meaning | Example |\n| --- | --- | --- | --- | \n${rows.join('\n')}\n`;
 }
 
 // ---------------------------------------------------------------------------
 // Generated appendix: seed VM opcode table
 // ---------------------------------------------------------------------------
+/** Meanings for opcodes that the seed VM header packs several-per-line. */
+const OPCODE_DOCS = {
+  ADD: 'Pop b, pop a, push a + b (signed 32-bit wrap).',
+  SUB: 'Pop b, pop a, push a - b.',
+  MUL: 'Pop b, pop a, push a * b.',
+  DIV: 'Pop b, pop a, push the truncated quotient a / b.',
+  MOD: 'Pop b, pop a, push the remainder a % b.',
+  EQ: 'Pop b, pop a, push 1 when a == b else 0.',
+  NE: 'Pop b, pop a, push 1 when a != b else 0.',
+  LT: 'Pop b, pop a, push 1 when a < b else 0.',
+  GT: 'Pop b, pop a, push 1 when a > b else 0.',
+  LE: 'Pop b, pop a, push 1 when a <= b else 0.',
+  GE: 'Pop b, pop a, push 1 when a >= b else 0.',
+  FADD: 'Pop two boxed f64 addresses, push a newly boxed a + b.',
+  FSUB: 'Pop two boxed f64 addresses, push a newly boxed a - b.',
+  FMUL: 'Pop two boxed f64 addresses, push a newly boxed a * b.',
+  FDIV: 'Pop two boxed f64 addresses, push a newly boxed a / b.',
+  FLT: 'Pop two boxed f64 addresses, push the i32 boolean a < b.',
+  FGT: 'Pop two boxed f64 addresses, push the i32 boolean a > b.',
+  FEQ: 'Pop two boxed f64 addresses, push the i32 boolean a == b.',
+  FNEG: 'Pop a boxed f64, push a newly boxed negation.',
+  FABS: 'Pop a boxed f64, push a newly boxed absolute value.',
+  FSQRT: 'Pop a boxed f64, push a newly boxed square root.',
+};
+
 function opcodeTable() {
   const src = read('lang/bootstrap/seed.wat');
   const lines = src.split('\n');
   const rows = [];
+  const addRow = (code, name, meaning) => {
+    rows.push(`| \`${code}\` | \`${name}\` | ${meaning || OPCODE_DOCS[name] || 'Seed VM instruction.'} |`);
+  };
   for (const line of lines) {
     const m = /^;;\s+(0x[0-9A-Fa-f]{2})\s+(.*)$/.exec(line.trim());
     if (!m) continue;
     const rest = m[2].trim();
     // Some lines pack several opcodes: "0x10 ADD  0x11 SUB  ..."
-    const packed = [...('0x' + '').length ? rest.matchAll(/0x[0-9A-Fa-f]{2}\s+[A-Z_0-9]+/g) : []];
+    const packed = [...rest.matchAll(/0x[0-9A-Fa-f]{2}\s+[A-Z_0-9]+/g)];
     if (packed.length) {
       const parts = [m[1] + ' ' + rest.split(/\s+/)[0], ...packed.map((p) => p[0])];
       for (const p of parts) {
         const [code, name] = p.split(/\s+/);
-        if (code && name) rows.push(`| \`${code}\` | \`${name}\` | |`);
+        if (code && name) addRow(code, name);
       }
       continue;
     }
     const sm = /^([A-Z_0-9]+)\s*(<[^>]*>)?\s*(.*)$/.exec(rest);
     if (!sm) continue;
-    rows.push(`| \`${m[1]}\` | \`${sm[1]}\` | ${(sm[2] ? '`' + sm[2] + '` — ' : '') + (sm[3] || '')} |`);
+    const meaning = (sm[2] ? 'Operands `' + sm[2] + '`. ' : '') + (sm[3] || OPCODE_DOCS[sm[1]] || '');
+    addRow(m[1], sm[1], meaning.trim());
   }
   const seen = new Set();
   const uniq = rows.filter((r) => { const k = r.split('|')[1]; if (seen.has(k)) return false; seen.add(k); return true; });
-  return `\n| Opcode | Mnemonic | Operands / meaning |\n| --- | --- | --- |\n${uniq.join('\n')}\n`;
+  return `\nThe seed VM is a stack machine: every instruction consumes operands from the\noperand stack and pushes its result back. Inline operands are little-endian and\nfollow the opcode byte directly in the bytecode stream.\n\n| Opcode | Mnemonic | Behaviour |\n| --- | --- | --- |\n${uniq.join('\n')}\n`;
 }
 
 function memoryMap() {
@@ -208,23 +273,72 @@ function walk(dir, acc = []) {
   return acc;
 }
 
+/**
+ * Document every function written in sdev: its exact signature, the comment
+ * block above it, what it returns, and where it lives.
+ */
 function sdevIndex(dirs) {
   let out = '';
   let total = 0;
   const files = dirs.flatMap((d) => walk(d)).filter((f) => f.endsWith('.sdev')).sort();
   for (const f of files) {
     const src = read(f);
-    const fns = [...src.matchAll(/^\s*(?:to|conjure)\s+([A-Za-z_][\w]*)/gm)].map((m) => m[1]);
-    const uniq = [...new Set(fns)];
-    total += uniq.length;
-    const firstComment = (/^#\s*(.+)$/m.exec(src) || [, ''])[1];
-    out += `\n#### \`${f}\`${firstComment ? ` — ${firstComment}` : ''}\n\n`;
-    out += uniq.length
-      ? `${uniq.length} functions: ` + uniq.map((n) => '`' + n + '`').join(' · ') + '\n'
-      : '_no top-level functions_\n';
+    const lines = src.split('\n');
+    // File-level summary: the leading comment block (# or //).
+    const header = [];
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) { if (header.length) break; continue; }
+      const c = /^(?:#|\/\/)+\s?(.*)$/.exec(t);
+      if (!c) break;
+      const text = c[1].trim();
+      if (!/^[=\-*]{3,}$/.test(text) && text) header.push(text);
+    }
+    const records = [];
+    const seen = new Set();
+    lines.forEach((line, i) => {
+      const m = /^\s*(?:to|conjure)\s+([A-Za-z_][\w]*)\s*(\(([^)]*)\)|with\s+([^:\n]*))?/.exec(line);
+      if (!m || seen.has(m[1])) return;
+      seen.add(m[1]);
+      const params = (m[3] ?? m[4] ?? '').trim();
+      const doc = [];
+      for (let j = i - 1; j >= 0; j--) {
+        const t = lines[j].trim();
+        const c = /^(?:#|\/\/)+\s?(.*)$/.exec(t);
+        if (!c) break;
+        const text = c[1].trim();
+        if (/^[=\-*]{3,}$/.test(text)) break;
+        doc.unshift(text);
+      }
+      // First `yield` inside the body describes the result.
+      let ret = '';
+      for (let j = i + 1; j < Math.min(lines.length, i + 60); j++) {
+        if (/^\s*(?:to|conjure)\s/.test(lines[j])) break;
+        const y = /^\s*(?:yield|return)\s+(.+?)\s*$/.exec(lines[j]);
+        if (y) { ret = y[1].replace(/\|/g, '\\|').slice(0, 90); break; }
+      }
+      records.push({
+        name: m[1],
+        params: params || '',
+        doc: doc.join(' ') || '',
+        ret,
+        line: i + 1,
+      });
+    });
+    total += records.length;
+    out += `\n#### \`${f}\`\n\n`;
+    out += header.length ? `${header.join(' ')}\n\n` : '';
+    if (!records.length) { out += '_No top-level functions — this file is a script or data module._\n'; continue; }
+    out += `${records.length} functions.\n\n`;
+    out += '| Function | Parameters | What it does | Returns | Line |\n| --- | --- | --- | --- | --- |\n';
+    for (const r of records) {
+      const desc = (r.doc || 'Helper used by this module.').replace(/\|/g, '\\|');
+      out += `| \`${r.name}\` | ${r.params ? '`' + r.params.replace(/\|/g, '\\|') + '`' : '_none_'} | ${desc} | ${r.ret ? '`' + r.ret + '`' : '_no explicit yield_'} | ${r.line} |\n`;
+    }
   }
   return { text: out, total, count: files.length };
 }
+
 
 // ---------------------------------------------------------------------------
 // Generated appendix: parity matrix (from the registry + agent report)
