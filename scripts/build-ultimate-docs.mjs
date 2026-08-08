@@ -48,21 +48,102 @@ const BUILTIN_MODULES = [
   ['kernel.ts', 'Virtual kernel — tasks, syscalls, IPC, GC, process table'],
 ];
 
+/** Prettify an inferred argument list: a, b, c… */
+const ARGNAMES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+/**
+ * Slice a module into one record per `builtins.set(...)` call so each builtin
+ * can be documented individually: name, inferred signature, prose description,
+ * declared constraints, and source location.
+ */
+function parseBuiltins(src, file) {
+  const lines = src.split('\n');
+  const marks = [];
+  lines.forEach((line, i) => {
+    const m = /builtins\.set\(\s*['"]([A-Za-z_][A-Za-z_0-9]*)['"]/.exec(line);
+    if (m) marks.push({ name: m[1], line: i });
+  });
+  const out = [];
+  let section = '';
+  for (let k = 0; k < marks.length; k++) {
+    const { name, line } = marks[k];
+    const end = k + 1 < marks.length ? marks[k + 1].line : lines.length;
+    const body = lines.slice(line, end).join('\n');
+
+    // Contiguous `//` comment block directly above the registration.
+    const doc = [];
+    for (let j = line - 1; j >= 0; j--) {
+      const t = lines[j].trim();
+      if (!t.startsWith('//')) break;
+      const text = t.replace(/^\/\/+\s?/, '');
+      if (/^[=\-*]{3,}$/.test(text)) break;
+      doc.unshift(text);
+    }
+    // Nearest banner comment above (`// ===== Graphics =====`) → category.
+    for (let j = line - 1; j >= 0 && j > line - 400; j--) {
+      const t = lines[j].trim();
+      const b = /^\/\/\s*[=\-*]{2,}\s*(.+?)\s*[=\-*]{2,}$/.exec(t);
+      if (b) { section = b[1]; break; }
+    }
+
+    // Arity: highest `args[N]` referenced, plus spread/variadic detection.
+    const idx = [...body.matchAll(/args\[(\d+)\]/g)].map((m) => Number(m[1]));
+    const variadic = /args\.map|args\.join|\.\.\.args|args\.slice|args\.forEach|args\.length\s*[><]/.test(body);
+    const arity = idx.length ? Math.max(...idx) + 1 : 0;
+    const exact = /args\.length\s*!==\s*(\d+)/.exec(body);
+    const count = exact ? Number(exact[1]) : arity;
+    const sig = variadic && !exact
+      ? `${name}(…)`
+      : `${name}(${ARGNAMES.slice(0, count).join(', ')})`;
+
+    // Declared constraints — the runtime's own error messages are the spec.
+    const errs = [...body.matchAll(/SdevError\(\s*[`'"]([^`'"]+)[`'"]/g)]
+      .map((m) => m[1]).filter((e, i2, arr) => arr.indexOf(e) === i2).slice(0, 2);
+
+    // Description: explicit comment wins; otherwise derive from the body.
+    let desc = doc.join(' ').replace(new RegExp(`^${name}\\s*[-–—:]\\s*`, 'i'), '').trim();
+    if (!desc) {
+      const oneLiner = /call:\s*\(args[^)]*\)\s*=>\s*([^\n]+?),?\s*\}\s*\);?\s*$/.exec(body.trim());
+      if (oneLiner) {
+        const expr = oneLiner[1].replace(/\s*as\s+\w+(\[\])?/g, '')
+          .replace(/args\[(\d+)\]/g, (_, n) => ARGNAMES[Number(n)] || `arg${n}`)
+          .replace(/\s+/g, ' ').trim();
+        desc = `Evaluates \`${expr}\`.`;
+      } else if (section) {
+        desc = `${section} operation.`;
+      } else {
+        desc = 'Runtime primitive.';
+      }
+    }
+    if (!/[.!?]$/.test(desc)) desc += '.';
+    out.push({ name, sig, desc, errs, line: line + 1, file, section });
+  }
+  return out;
+}
+
 function builtinIndex() {
   let out = '';
   let total = 0;
   for (const [file, desc] of BUILTIN_MODULES) {
     const src = read(`src/lang/${file}`);
     if (!src) continue;
-    const names = [...src.matchAll(/builtins\.set\(\s*['"]([A-Za-z_][A-Za-z_0-9]*)['"]/g)].map((m) => m[1]);
-    const uniq = [...new Set(names)].sort();
+    const recs = parseBuiltins(src, file);
+    const seen = new Set();
+    const uniq = recs.filter((r) => (seen.has(r.name) ? false : seen.add(r.name)));
+    uniq.sort((x, y) => x.name.localeCompare(y.name));
     total += uniq.length;
     out += `\n#### \`src/lang/${file}\` — ${desc}\n\n`;
-    out += `${uniq.length} builtins.\n\n`;
-    out += uniq.map((n) => '`' + n + '`').join(' · ') + '\n';
+    out += `${uniq.length} builtins. Signatures are inferred from the implementation; `;
+    out += `"Rules" lists the constraints the runtime enforces at call time.\n\n`;
+    out += '| Call | What it does | Rules | Source |\n| --- | --- | --- | --- |\n';
+    for (const r of uniq) {
+      const rules = r.errs.length ? r.errs.map((e) => e.replace(/\|/g, '\\|')).join('; ') : '—';
+      out += `| \`${r.sig}\` | ${r.desc.replace(/\|/g, '\\|')} | ${rules} | \`${file}:${r.line}\` |\n`;
+    }
   }
   return { text: out, total };
 }
+
 
 // ---------------------------------------------------------------------------
 // Generated appendix: keyword table (v1 lexer)
