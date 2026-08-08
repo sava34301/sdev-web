@@ -578,6 +578,14 @@ function sdevIndex(dirs) {
         if (/^[=\-*]{3,}$/.test(text)) break;
         doc.unshift(text);
       }
+      // Nearest banner comment above → the section this function belongs to.
+      let section = '';
+      for (let j = i - 1; j >= 0 && j > i - 200; j--) {
+        const b = /^\s*(?:#|\/\/)+\s*[=\-*]{2,}\s*(.+?)\s*[=\-*]{2,}\s*$/.exec(lines[j]);
+        if (b) { section = b[1].trim(); break; }
+        const b2 = /^\s*(?:#|\/\/)+\s*---+\s*(.+?)\s*$/.exec(lines[j]);
+        if (b2) { section = b2[1].trim(); break; }
+      }
       // First `yield` inside the body describes the result.
       let ret = '';
       for (let j = i + 1; j < Math.min(lines.length, i + 60); j++) {
@@ -589,6 +597,7 @@ function sdevIndex(dirs) {
         name: m[1],
         params: params || '',
         doc: doc.join(' ') || '',
+        section,
         ret,
         line: i + 1,
       });
@@ -600,9 +609,13 @@ function sdevIndex(dirs) {
     out += `${records.length} functions.\n\n`;
     out += '| Function | Parameters | What it does | Returns | Line |\n| --- | --- | --- | --- | --- |\n';
     for (const r of records) {
-      const desc = (r.doc || 'Helper used by this module.').replace(/\|/g, '\\|');
+      const fallback = r.section
+        ? `Part of the ${r.section} section of this module.`
+        : (r.ret ? `Computes and yields \`${r.ret}\`.` : 'Performs a step of this module\'s pipeline; the result is produced through its side effects.');
+      const desc = (r.doc || fallback).replace(/\|/g, '\\|');
       out += `| \`${r.name}\` | ${r.params ? '`' + r.params.replace(/\|/g, '\\|') + '`' : '_none_'} | ${desc} | ${r.ret ? '`' + r.ret + '`' : '_no explicit yield_'} | ${r.line} |\n`;
     }
+
   }
   return { text: out, total, count: files.length };
 }
