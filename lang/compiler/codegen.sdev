@@ -540,8 +540,29 @@ to parse_atom with pos
     set expr_type[0] to 1
     return pos + 1
   end
+  # Milestone 5r: boolean / nothing literals compile to plain ints, the
+  # same way the bootstrap oracle lowers them (true → 1, false/nothing → 0).
+  if is_ident_word(pos, "true")
+    emit_byte(1)
+    emit_i32(1)
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  if is_ident_word(pos, "false")
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  if is_ident_word(pos, "nothing")
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    return pos + 1
+  end
   if tk_kind[pos] is 2
     set name to tk_txt[pos]
+
     # Function/builtin call?  IDENT '(' args ')'
     if pos + 1 < tk_count
       if is_op_c(pos + 1, 40)
@@ -550,10 +571,10 @@ to parse_atom with pos
         if is_op_c(pos, 41)
           set pos to pos + 1
         else
-          set pos to parse_cmp(pos)
+          set pos to parse_expr(pos)
           set nargs to 1
           while is_op_c(pos, 44)
-            set pos to parse_cmp(pos + 1)
+            set pos to parse_expr(pos + 1)
             set nargs to nargs + 1
           end
           if is_op_c(pos, 41)
@@ -568,7 +589,7 @@ to parse_atom with pos
     return pos + 1
   end
   if is_op_c(pos, 40)
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     if is_op_c(pos, 41)
       return pos + 1
     end
@@ -581,10 +602,10 @@ to parse_atom with pos
     if is_op_c(pos, 93)
       set pos to pos + 1
     else
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       set n to 1
       while is_op_c(pos, 44)
-        set pos to parse_cmp(pos + 1)
+        set pos to parse_expr(pos + 1)
         set n to n + 1
       end
       if is_op_c(pos, 93)
@@ -607,7 +628,7 @@ to parse_postfix with pos
   while going
     if is_op_c(pos, 91)
       set pos to pos + 1
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       if is_op_c(pos, 93)
         set pos to pos + 1
       end
@@ -620,15 +641,30 @@ to parse_postfix with pos
   return pos
 end
 
-to parse_mul with pos
+# Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap
+# oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is
+# preserved. Postfix indexing binds tighter than the unary minus.
+to parse_unary with pos
+  if is_op_c(pos, 45)
+    emit_byte(1)
+    emit_i32(0)
+    set pos to parse_unary(pos + 1)
+    emit_byte(17)
+    set expr_type[0] to 0
+    return pos
+  end
   set pos to parse_atom(pos)
   set pos to parse_postfix(pos)
+  return pos
+end
+
+to parse_mul with pos
+  set pos to parse_unary(pos)
   set going to 1
   while going
     if is_op_c(pos, 42)
       set lk to expr_type[0]
-      set pos to parse_atom(pos + 1)
-      set pos to parse_postfix(pos)
+      set pos to parse_unary(pos + 1)
       set rk to expr_type[0]
       if both_float(lk, rk)
         emit_byte(163)
@@ -640,8 +676,7 @@ to parse_mul with pos
     else
       if is_op_c(pos, 47)
         set lk to expr_type[0]
-        set pos to parse_atom(pos + 1)
-        set pos to parse_postfix(pos)
+        set pos to parse_unary(pos + 1)
         set rk to expr_type[0]
         if both_float(lk, rk)
           emit_byte(164)
@@ -652,8 +687,7 @@ to parse_mul with pos
         end
       else
         if is_op_c(pos, 37)
-          set pos to parse_atom(pos + 1)
-          set pos to parse_postfix(pos)
+          set pos to parse_unary(pos + 1)
           emit_byte(20)
           set expr_type[0] to 0
         else
@@ -664,6 +698,7 @@ to parse_mul with pos
   end
   return pos
 end
+
 
 
 to parse_add with pos
@@ -781,6 +816,68 @@ to parse_cmp with pos
   return pos
 end
 
+# ---- Milestone 5r: boolean tier -------------------------------------------
+#
+#   expr := or
+#   or   := and ('or' and)*
+#   and  := not ('and' not)*
+#   not  := 'not' not | cmp
+#
+# `and` short-circuits with JZ over the right operand; `or` inverts the
+# left value first (NOT, then JZ), mirroring the bootstrap oracle's
+# emission order byte-for-byte. Both yield an int.
+
+to parse_not with pos
+  if is_ident_word(pos, "not")
+    set pos to parse_not(pos + 1)
+    emit_byte(48)
+    set expr_type[0] to 0
+    return pos
+  end
+  return parse_cmp(pos)
+end
+
+to parse_and with pos
+  set pos to parse_not(pos)
+  set going to 1
+  while going
+    if is_ident_word(pos, "and")
+      emit_byte(65)
+      set fx to placeholder16()
+      set pos to parse_not(pos + 1)
+      patch_i16(fx, bc[0])
+      set expr_type[0] to 0
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to parse_or with pos
+  set pos to parse_and(pos)
+  set going to 1
+  while going
+    if is_ident_word(pos, "or")
+      emit_byte(48)
+      emit_byte(65)
+      set fx to placeholder16()
+      set pos to parse_and(pos + 1)
+      patch_i16(fx, bc[0])
+      set expr_type[0] to 0
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to parse_expr with pos
+  return parse_or(pos)
+end
+
+
+
 to skip_nl with pos
   set going to 1
   while going
@@ -856,7 +953,7 @@ to parse_stmt with pos
     return pos
   end
   if is_ident_word(pos, "say")
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     if expr_type[0] is 1
       emit_byte(81)
     else
@@ -877,14 +974,14 @@ to parse_stmt with pos
     if is_op_c(pos, 91)
       emit_load_ident(name)
       set pos to pos + 1
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       if is_op_c(pos, 93)
         set pos to pos + 1
       end
       if is_ident_word(pos, "to")
         set pos to pos + 1
       end
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       emit_byte(130)
       set expr_type[0] to 0
       return pos
@@ -893,7 +990,7 @@ to parse_stmt with pos
     if is_ident_word(pos, "to")
       set pos to pos + 1
     end
-    set pos to parse_cmp(pos)
+    set pos to parse_expr(pos)
     emit_store_ident(name)
     return pos
   end
@@ -906,7 +1003,7 @@ to parse_stmt with pos
       end
     end
     if has_value is 1
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
     else
       emit_byte(1)
       emit_i32(0)
@@ -928,7 +1025,7 @@ to parse_stmt with pos
     return pos
   end
   if is_ident_word(pos, "if")
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     emit_byte(65)
     set jz to placeholder16()
     set pos to parse_block(pos)
@@ -949,7 +1046,7 @@ to parse_stmt with pos
   end
   if is_ident_word(pos, "while")
     set loop_top to bc[0]
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     emit_byte(65)
     set jz to placeholder16()
     set pos to parse_block(pos)
@@ -1034,7 +1131,7 @@ to parse_stmt with pos
   # current token is an identifier — otherwise leave pos alone so the
   # driver's outer loop terminates cleanly.
   if tk_kind[pos] is 2
-    set pos to parse_cmp(pos)
+    set pos to parse_expr(pos)
     emit_byte(5)
     set expr_type[0] to 0
     return pos

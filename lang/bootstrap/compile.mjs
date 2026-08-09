@@ -253,6 +253,7 @@ function parseProgram(tokens) {
   }
   function canStartAtom(t) {
     return t.type === 'NUM' || t.type === 'STR' || t.type === 'IDENT'
+      || (t.type === 'KW' && (t.value === 'true' || t.value === 'false' || t.value === 'nothing'))
       || (t.type === 'OP' && (t.value === '(' || t.value === '['));
   }
   function atom() {
@@ -266,6 +267,10 @@ function parseProgram(tokens) {
       return { k: 'fnum', v: t.value };
     }
     if (t.type === 'STR') { p++; return { k: 'str', v: t.value }; }
+    // Milestone 5r: boolean / nothing literals lower to plain ints.
+    if (t.type === 'KW' && t.value === 'true')    { p++; return { k: 'num', v: 1 }; }
+    if (t.type === 'KW' && t.value === 'false')   { p++; return { k: 'num', v: 0 }; }
+    if (t.type === 'KW' && t.value === 'nothing') { p++; return { k: 'num', v: 0 }; }
     if (t.type === 'IDENT') { p++; return { k: 'ident', name: t.value }; }
     if (t.type === 'OP' && t.value === '(') { p++; const e = expr(); eat('OP', ')'); return e; }
     // list literal: [a, b, c]

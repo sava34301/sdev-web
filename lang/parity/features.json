@@ -14,7 +14,7 @@
     {
       "id": "native",
       "label": "native x86-64 backend",
-      "sources": "lang/native/codegen-x64.mjs"
+      "sources": "lang/native/codegen-x64.mjs,lang/bootstrap/compile.mjs"
     }
   ],
   "features": [
@@ -768,9 +768,9 @@
       "v1": "must",
       "v1_name": "also",
       "v2": "should",
-      "v2_name": "logic_and",
+      "v2_name": "and",
       "native": "should",
-      "native_name": "logic_and"
+      "native_name": "and"
     },
     {
       "name": "logic_or",
@@ -781,9 +781,9 @@
       "v1": "must",
       "v1_name": "within",
       "v2": "should",
-      "v2_name": "logic_or",
+      "v2_name": "or",
       "native": "should",
-      "native_name": "logic_or"
+      "native_name": "or"
     },
     {
       "name": "logic_not",
@@ -833,9 +833,9 @@
       "v1": "must",
       "v1_name": "yep",
       "v2": "should",
-      "v2_name": "bool_true",
+      "v2_name": "true",
       "native": "should",
-      "native_name": "bool_true"
+      "native_name": "true"
     },
     {
       "name": "bool_false",
@@ -846,9 +846,9 @@
       "v1": "must",
       "v1_name": "nope",
       "v2": "should",
-      "v2_name": "bool_false",
+      "v2_name": "false",
       "native": "should",
-      "native_name": "bool_false"
+      "native_name": "false"
     },
     {
       "name": "nothing",
@@ -859,7 +859,7 @@
       "v1": "must",
       "v1_name": "void",
       "v2": "must",
-      "v2_name": "none",
+      "v2_name": "nothing",
       "native": "should",
       "native_name": "nothing"
     },
