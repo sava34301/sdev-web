@@ -550,10 +550,10 @@ to parse_atom with pos
         if is_op_c(pos, 41)
           set pos to pos + 1
         else
-          set pos to parse_cmp(pos)
+          set pos to parse_expr(pos)
           set nargs to 1
           while is_op_c(pos, 44)
-            set pos to parse_cmp(pos + 1)
+            set pos to parse_expr(pos + 1)
             set nargs to nargs + 1
           end
           if is_op_c(pos, 41)
@@ -568,7 +568,7 @@ to parse_atom with pos
     return pos + 1
   end
   if is_op_c(pos, 40)
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     if is_op_c(pos, 41)
       return pos + 1
     end
@@ -581,10 +581,10 @@ to parse_atom with pos
     if is_op_c(pos, 93)
       set pos to pos + 1
     else
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       set n to 1
       while is_op_c(pos, 44)
-        set pos to parse_cmp(pos + 1)
+        set pos to parse_expr(pos + 1)
         set n to n + 1
       end
       if is_op_c(pos, 93)
@@ -607,7 +607,7 @@ to parse_postfix with pos
   while going
     if is_op_c(pos, 91)
       set pos to pos + 1
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       if is_op_c(pos, 93)
         set pos to pos + 1
       end
@@ -856,7 +856,7 @@ to parse_stmt with pos
     return pos
   end
   if is_ident_word(pos, "say")
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     if expr_type[0] is 1
       emit_byte(81)
     else
@@ -877,14 +877,14 @@ to parse_stmt with pos
     if is_op_c(pos, 91)
       emit_load_ident(name)
       set pos to pos + 1
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       if is_op_c(pos, 93)
         set pos to pos + 1
       end
       if is_ident_word(pos, "to")
         set pos to pos + 1
       end
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
       emit_byte(130)
       set expr_type[0] to 0
       return pos
@@ -893,7 +893,7 @@ to parse_stmt with pos
     if is_ident_word(pos, "to")
       set pos to pos + 1
     end
-    set pos to parse_cmp(pos)
+    set pos to parse_expr(pos)
     emit_store_ident(name)
     return pos
   end
@@ -906,7 +906,7 @@ to parse_stmt with pos
       end
     end
     if has_value is 1
-      set pos to parse_cmp(pos)
+      set pos to parse_expr(pos)
     else
       emit_byte(1)
       emit_i32(0)
@@ -928,7 +928,7 @@ to parse_stmt with pos
     return pos
   end
   if is_ident_word(pos, "if")
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     emit_byte(65)
     set jz to placeholder16()
     set pos to parse_block(pos)
@@ -949,7 +949,7 @@ to parse_stmt with pos
   end
   if is_ident_word(pos, "while")
     set loop_top to bc[0]
-    set pos to parse_cmp(pos + 1)
+    set pos to parse_expr(pos + 1)
     emit_byte(65)
     set jz to placeholder16()
     set pos to parse_block(pos)
@@ -1034,7 +1034,7 @@ to parse_stmt with pos
   # current token is an identifier — otherwise leave pos alone so the
   # driver's outer loop terminates cleanly.
   if tk_kind[pos] is 2
-    set pos to parse_cmp(pos)
+    set pos to parse_expr(pos)
     emit_byte(5)
     set expr_type[0] to 0
     return pos
