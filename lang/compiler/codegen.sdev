@@ -795,6 +795,68 @@ to parse_cmp with pos
   return pos
 end
 
+# ---- Milestone 5r: boolean tier -------------------------------------------
+#
+#   expr := or
+#   or   := and ('or' and)*
+#   and  := not ('and' not)*
+#   not  := 'not' not | cmp
+#
+# `and` short-circuits with JZ over the right operand; `or` inverts the
+# left value first (NOT, then JZ), mirroring the bootstrap oracle's
+# emission order byte-for-byte. Both yield an int.
+
+to parse_not with pos
+  if is_ident_word(pos, "not")
+    set pos to parse_not(pos + 1)
+    emit_byte(48)
+    set expr_type[0] to 0
+    return pos
+  end
+  return parse_cmp(pos)
+end
+
+to parse_and with pos
+  set pos to parse_not(pos)
+  set going to 1
+  while going
+    if is_ident_word(pos, "and")
+      emit_byte(65)
+      set fx to placeholder16()
+      set pos to parse_not(pos + 1)
+      patch_i16(fx, bc[0])
+      set expr_type[0] to 0
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to parse_or with pos
+  set pos to parse_and(pos)
+  set going to 1
+  while going
+    if is_ident_word(pos, "or")
+      emit_byte(48)
+      emit_byte(65)
+      set fx to placeholder16()
+      set pos to parse_and(pos + 1)
+      patch_i16(fx, bc[0])
+      set expr_type[0] to 0
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to parse_expr with pos
+  return parse_or(pos)
+end
+
+
+
 to skip_nl with pos
   set going to 1
   while going
