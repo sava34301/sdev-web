@@ -540,8 +540,29 @@ to parse_atom with pos
     set expr_type[0] to 1
     return pos + 1
   end
+  # Milestone 5r: boolean / nothing literals compile to plain ints, the
+  # same way the bootstrap oracle lowers them (true → 1, false/nothing → 0).
+  if is_ident_word(pos, "true")
+    emit_byte(1)
+    emit_i32(1)
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  if is_ident_word(pos, "false")
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  if is_ident_word(pos, "nothing")
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    return pos + 1
+  end
   if tk_kind[pos] is 2
     set name to tk_txt[pos]
+
     # Function/builtin call?  IDENT '(' args ')'
     if pos + 1 < tk_count
       if is_op_c(pos + 1, 40)
