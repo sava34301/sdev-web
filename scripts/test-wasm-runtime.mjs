@@ -180,7 +180,23 @@ const cases = [
     src: `set s to read_file("/tmp/does-not-exist-sdev.xxx")\nsay length(s)`,
     expect: ['0'],
   },
+  {
+    name: 'Milestone 5r: and / or / not short-circuit',
+    src: `set a to 1\nset b to 0\nif a and not b\n  say 11\nend\nif b or a\n  say 22\nend\nif not a\n  say 99\nend\nsay 5 > 1 and 5 < 10`,
+    expect: ['11', '22', '1'],
+  },
+  {
+    name: 'Milestone 5r: unary minus',
+    src: `set x to 7\nsay -x\nsay 0 - -7\nsay -(2 * 3)\nsay -3 + 10`,
+    expect: ['-7', '7', '-6', '7'],
+  },
+  {
+    name: 'Milestone 5r: true / false / nothing literals',
+    src: `set t to true\nset f to false\nset n to nothing\nsay t\nsay f\nsay n\nif t\n  say 1\nend\nif f\n  say 0\nend`,
+    expect: ['1', '0', '0', '1'],
+  },
 ];
+
 
 let failed = 0;
 for (const c of cases) {
