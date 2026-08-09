@@ -620,15 +620,30 @@ to parse_postfix with pos
   return pos
 end
 
-to parse_mul with pos
+# Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap
+# oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is
+# preserved. Postfix indexing binds tighter than the unary minus.
+to parse_unary with pos
+  if is_op_c(pos, 45)
+    emit_byte(1)
+    emit_i32(0)
+    set pos to parse_unary(pos + 1)
+    emit_byte(17)
+    set expr_type[0] to 0
+    return pos
+  end
   set pos to parse_atom(pos)
   set pos to parse_postfix(pos)
+  return pos
+end
+
+to parse_mul with pos
+  set pos to parse_unary(pos)
   set going to 1
   while going
     if is_op_c(pos, 42)
       set lk to expr_type[0]
-      set pos to parse_atom(pos + 1)
-      set pos to parse_postfix(pos)
+      set pos to parse_unary(pos + 1)
       set rk to expr_type[0]
       if both_float(lk, rk)
         emit_byte(163)
@@ -640,8 +655,7 @@ to parse_mul with pos
     else
       if is_op_c(pos, 47)
         set lk to expr_type[0]
-        set pos to parse_atom(pos + 1)
-        set pos to parse_postfix(pos)
+        set pos to parse_unary(pos + 1)
         set rk to expr_type[0]
         if both_float(lk, rk)
           emit_byte(164)
@@ -652,8 +666,7 @@ to parse_mul with pos
         end
       else
         if is_op_c(pos, 37)
-          set pos to parse_atom(pos + 1)
-          set pos to parse_postfix(pos)
+          set pos to parse_unary(pos + 1)
           emit_byte(20)
           set expr_type[0] to 0
         else
@@ -664,6 +677,7 @@ to parse_mul with pos
   end
   return pos
 end
+
 
 
 to parse_add with pos
