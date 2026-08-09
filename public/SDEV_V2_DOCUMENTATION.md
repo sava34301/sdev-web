@@ -69,6 +69,13 @@ if age is 18 or more and country is "US"
 end
 ```
 
+`and` and `or` short-circuit: the right-hand side only runs when the result
+still depends on it. `not` may be stacked (`not not x`), and unary minus works
+on any expression (`-x`, `-(a * b)`, `0 - -7`). `true`, `false` and `nothing`
+are compiled values, so they can be stored, passed and tested like any other.
+All of this is compiled by the self-hosted sdev compiler on the seed VM —
+no JavaScript fallback (Milestone 5r).
+
 ## Loops
 
 ```sdev
