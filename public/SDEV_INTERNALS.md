@@ -498,6 +498,31 @@ in milestone order.)
 - All float and I/O cases in `test-wasm-runtime.mjs` now run self-hosted, and
   float programs compile **byte-identically** to the bootstrap oracle.
 
+**Milestone 5r (booleans, `not`, unary minus, `true`/`false`/`nothing`) — shipped:**
+- **New expression tiers in `codegen.sdev`**: `parse_expr → parse_or →
+  parse_and → parse_not → parse_cmp`. Every former `parse_cmp` entry point
+  (statements, call arguments, list items, parenthesised groups, index
+  expressions) now enters at `parse_expr`, so boolean operators are legal
+  anywhere an expression is.
+- **Short-circuiting** mirrors the oracle byte-for-byte: `a and b` emits
+  `a`, `JZ →end`, `b`; `a or b` emits `a`, `NOT`, `JZ →end`, `b`. Both tiers
+  are left-associative loops and always yield an int.
+- **`not x`** is right-recursive (`not not x` is legal) and emits `NOT`.
+- **Unary minus** got its own tier between `mul` and the atom/postfix pair:
+  `-x` emits `PUSH_I32 0`, the operand, then `SUB`, exactly as the bootstrap
+  does. Postfix indexing still binds tighter, so `-xs[0]` negates the element.
+- **`true` / `false` / `nothing`** lower to plain integers (`1` / `0` / `0`)
+  in both the self-hosted codegen and the bootstrap oracle, keeping the two
+  emitters identical. The oracle's `canStartAtom` accepts them too, so they
+  work as arguments in the `f with a b` call form.
+- Three new cases in `scripts/test-wasm-runtime.mjs` cover short-circuiting,
+  unary minus, and the literals; the byte-identity, shim fixed-point, and
+  driver-artifact gates all stay green (driver artifact rebuilt: bc=9739).
+- Parity registry updated: `logic_and`, `logic_or`, `bool_true`, `bool_false`
+  and `nothing` are no longer v2 gaps, and the native track now declares the
+  shared bootstrap parser among its sources.
+
+
 
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
