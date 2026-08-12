@@ -65,6 +65,17 @@ const cases = [
   'set i to 0\nwhile i < 10\nset i to i + 1\nif i is 3\ncontinue\nend\nif i > 5\nbreak\nend\nsay i\nend',
   'set a to 5\nif a is 1\nsay 100\nelse if a is 5\nsay 55\nelse\nsay 0\nend\nsay 7',
   'to total with xs\nset t to 0\nfor each v in xs\nset t to t + v\nend\nreturn t\nend\nsay total([1, 2, 3, 4])',
+  // Milestone 5t — tomes
+  'set t to {"a": 1, "b": 2}\nsay t["a"]\nsay t["b"]\nsay length(t)',
+  'set t to {name: "sdev", kind: "lang"}\nsay t["name"]\nsay t["kind"]',
+  'set t to {}\nset t["x"] to 9\nsay t["x"]\nsay length(t)',
+  'set t to {"a": 1, "b": 2}\nfor each k in keys(t)\nsay k\nend',
+  'set t to {"a": "x", "b": "y"}\nfor each v in values(t)\nsay v\nend',
+  'set t to {"a": 1}\nsay has(t, "a")\nsay has(t, "z")',
+  'set t to {"a": 1, "b": 2}\nfor each k in keys(t)\nsay k + "=" + str(t[k])\nend',
+  'to lookup with t k\nreturn t[k]\nend\nset t to {"q": 42}\nsay lookup(t, "q")',
+  'set t to {"n": {"deep": 7}}\nsay length(t)',
+  'set t to {}\nset i to 0\nwhile i < 12\nset t[str(i)] to i * i\nset i to i + 1\nend\nsay length(t)\nsay t["11"]',
 ];
 
 
