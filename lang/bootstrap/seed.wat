@@ -46,7 +46,16 @@
 ;;   0x87 I2S                       pop int, push decimal-string blob
 ;;   0x88 CHR                       pop byte, push new 1-char string blob
 ;;   0x89 LNEW                      pop n, alloc zeroed list [n | n cells]
+;;   ; --- Milestone 5t: tomes (string-keyed dictionaries) ---
+;;   ;; layout: [count | cap | entriesPtr]; entries = cap * (keyPtr, valCell)
+;;   0x8A TNEW <u16 cap>            allocate an empty tome with room for cap pairs
+;;   0x8B TSET                      pop val, pop key, peek tome; store; leaves tome
+;;   0x8C TGET                      pop key, pop tome, push value (0 when absent)
+;;   0x8D THAS                      pop key, pop tome, push 1/0
+;;   0x8E TKEYS                     pop tome, push list of key handles
+;;   0x8F TVALS                     pop tome, push list of values
 ;;   0x91 STRCAT                    pop b, pop a, allocate new pool-shaped blob, push handle
+
 ;;   ; --- Milestone 6: floats (boxed f64 on the heap; stack cell holds addr) ---
 ;;   0xA0 PUSH_F64 <f64 LE>         alloc 8-byte cell, store f64, push addr
 ;;   0xA1 FADD  0xA2 FSUB  0xA3 FMUL  0xA4 FDIV
