@@ -29,6 +29,8 @@ const OP = {
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
   ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83,
   SGET: 0x84, I2S: 0x87, CHR: 0x88, LNEW: 0x89, STRCAT: 0x91,
+  // Milestone 5t — tomes (string-keyed dictionaries)
+  TNEW: 0x8A, TSET: 0x8B, TGET: 0x8C, THAS: 0x8D, TKEYS: 0x8E, TVALS: 0x8F,
   // Milestone 6 — boxed f64 floats
   PUSH_F64: 0xA0, FADD: 0xA1, FSUB: 0xA2, FMUL: 0xA3, FDIV: 0xA4,
   FLT: 0xA5, FGT: 0xA6, FEQ: 0xA7, I2F: 0xA8, F2I: 0xA9,
@@ -54,6 +56,12 @@ const BUILTINS = {
   chr:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.CHR) },
   str:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
   mklist:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LNEW) },
+  // --- Milestone 5t: tomes ---
+  // `keys(t)` yields a list of string handles; `values(t)` a list whose
+  // element kind is decided at the call site from the tome's value kind.
+  keys:    { arity: 1, ret: 'liststr', emit: (em) => em.emit(OP.TKEYS) },
+  values:  { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.TVALS) },
+  has:     { arity: 2, ret: 'int',     emit: (em) => em.emit(OP.THAS)  },
   // --- Milestone 6: floats ---
   // Explicit int↔float conversion.
   i2f:     { arity: 1, ret: 'float', emit: (em) => em.emit(OP.I2F) },
@@ -314,7 +322,35 @@ function parseProgram(tokens) {
       eat('OP', ']');
       return { k: 'list', items, line: t.line };
     }
+    // Milestone 5t — tome literal: { "k": v, name: v2 }
+    if (t.type === 'OP' && t.value === '{') {
+      p++;
+      const pairs = [];
+      skipNL();
+      if (!(peek().type === 'OP' && peek().value === '}')) {
+        pairs.push(tomePair());
+        while (peek().type === 'OP' && peek().value === ',') { p++; skipNL(); pairs.push(tomePair()); }
+      }
+      skipNL();
+      eat('OP', '}');
+      return { k: 'tome', pairs, line: t.line };
+    }
     throw new SdevError(`bootstrap: unexpected ${t.type}:${t.value}`, t.line);
+  }
+  // A tome entry: `<key>: <value>`. A bare identifier key is sugar for the
+  // string of the same name, matching v1's `{name: "x"}` form.
+  function tomePair() {
+    skipNL();
+    let key;
+    if (peek().type === 'IDENT' && tokens[p + 1] && tokens[p + 1].type === 'OP' && tokens[p + 1].value === ':') {
+      key = { k: 'str', v: eat('IDENT').value };
+    } else {
+      key = expr();
+    }
+    eat('OP', ':');
+    const val = expr();
+    skipNL();
+    return { key, val };
   }
 }
 
@@ -474,18 +510,37 @@ function emitExpr(e, em, locals) {
       em.emit(OP.NEWLIST); em.emitU16(e.items.length);
       return 'int';
     }
+    case 'tome': {
+      if (e.pairs.length > 0xffff) throw new SdevError('tome literal too large', 0);
+      em.emit(OP.TNEW); em.emitU16(e.pairs.length);
+      let vk = 'int';
+      for (const pr of e.pairs) {
+        emitExpr(pr.key, em, locals);
+        const k = emitExpr(pr.val, em, locals);
+        if (k === 'str') vk = 'str';
+        em.emit(OP.TSET);
+      }
+      return vk === 'str' ? 'tomestr' : 'tome';
+    }
     case 'index': {
-      emitExpr(e.target, em, locals);
+      const tk = emitExpr(e.target, em, locals);
       emitExpr(e.idx,    em, locals);
+      if (tk === 'tome' || tk === 'tomestr') {
+        em.emit(OP.TGET);
+        return tk === 'tomestr' ? 'str' : 'int';
+      }
       em.emit(OP.LGET);
-      return 'int';
+      return tk === 'liststr' ? 'str' : 'int';
     }
     case 'call': {
       const bi = BUILTINS[e.name];
       if (bi) {
         if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, 0);
-        for (const a of e.args) emitExpr(a, em, locals);
+        let argKind = 'int';
+        for (const a of e.args) argKind = emitExpr(a, em, locals);
         bi.emit(em);
+        // `values(t)` mirrors the tome's value kind onto the produced list.
+        if (e.name === 'values') return argKind === 'tomestr' ? 'liststr' : 'int';
         return bi.ret;
       }
       const info = em.functions.get(e.name);
@@ -527,7 +582,8 @@ function inferBody(body, localTypes, fnTypes) {
       if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
     }
     else if (s.k === 'foreach') {
-      localTypes.set(s.name, 'int');
+      const ik = inferExpr(s.iter, localTypes, fnTypes);
+      localTypes.set(s.name, ik === 'liststr' ? 'str' : 'int');
       if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
     }
 
@@ -549,10 +605,24 @@ function inferExpr(e, localTypes, fnTypes) {
       return 'int';
     }
     case 'list':  return 'int';
-    case 'index': return 'int';
+    case 'tome': {
+      for (const pr of e.pairs) {
+        if (inferExpr(pr.val, localTypes, fnTypes) === 'str') return 'tomestr';
+      }
+      return 'tome';
+    }
+    case 'index': {
+      const tk = inferExpr(e.target, localTypes, fnTypes);
+      return (tk === 'tomestr' || tk === 'liststr') ? 'str' : 'int';
+    }
     case 'call': {
       const bi = BUILTINS[e.name];
-      if (bi) return bi.ret;
+      if (bi) {
+        if (e.name === 'values') {
+          return inferExpr(e.args[0], localTypes, fnTypes) === 'tomestr' ? 'liststr' : 'int';
+        }
+        return bi.ret;
+      }
       const info = fnTypes.get(e.name);
       return info ? (info.retType || 'int') : 'int';
     }
@@ -575,12 +645,20 @@ function emitStmt(s, em, locals) {
       return;
     }
     case 'setIndex': {
-      // push arr, idx, val, then LSET
+      // push arr, idx, val, then LSET (tomes: TSET, which leaves the tome).
+      const tk = scopeTypes(locals, em).get(s.name) || 'int';
       if (locals && locals.has(s.name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(s.name)); }
       else { em.emit(OP.LOAD); em.emit(em.globalSlot(s.name)); }
       emitExpr(s.idx, em, locals);
-      emitExpr(s.expr, em, locals);
-      em.emit(OP.LSET);
+      const vk = emitExpr(s.expr, em, locals);
+      if (tk === 'tome' || tk === 'tomestr') {
+        em.emit(OP.TSET);
+        em.emit(OP.POP);
+        // A string value promotes the variable's tome kind for later reads.
+        if (vk === 'str' && tk === 'tome') scopeTypes(locals, em).set(s.name, 'tomestr');
+      } else {
+        em.emit(OP.LSET);
+      }
       return;
     }
     case 'if': {
@@ -628,7 +706,7 @@ function emitStmt(s, em, locals) {
       emitLoadName(ln, em, locals);
       emitLoadName(iv, em, locals);
       em.emit(OP.LGET);
-      emitStoreName(s.name, em, locals, 'int');
+      emitStoreName(s.name, em, locals, kind === 'liststr' ? 'str' : 'int');
       const ctx = { breaks: [], conts: [] };
       (em.loops ||= []).push(ctx);
       s.body.forEach(x => emitStmt(x, em, locals));
