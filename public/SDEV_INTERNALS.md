@@ -559,6 +559,43 @@ in milestone order.)
   and parity gates all green; `for_each`, `break` and `continue` are no
   longer v2 parity gaps.
 
+
+
+**Milestone 5t (tomes — string-keyed dictionaries) — shipped:**
+- **Heap shape.** A tome is a 16-byte header `[MAGIC | count | cap |
+  entriesPtr]` plus a separate entries block of `cap` `(keyPtr, value)` i32
+  pairs, so growth reallocates only the entries block and every existing
+  handle to the tome stays valid. `MAGIC` is `0x7FED10E5` — a length no list
+  can legitimately have — which lets the VM recognise a tome from its
+  pointer alone.
+- **New seed opcodes** (`lang/bootstrap/seed.wat`): `TNEW (0x8A) <u16 cap>`,
+  `TSET (0x8B)` (pops value + key, leaves the tome on the stack so a literal
+  is a single expression), `TGET (0x8C)`, `THAS (0x8D)`, `TKEYS (0x8E)` and
+  `TVALS (0x8F)`. Lookup is a linear scan with byte-wise key comparison
+  (`$streq`); note that pool offset 0 is a legal string handle, so a zero
+  pointer must not be read as "absent".
+- **Run-time dispatch.** `LGET`, `LSET` and `LEN` check the magic word first:
+  on a tome they perform a key read / key write / entry count, on anything
+  else the original list behaviour. That is what makes a tome passed into a
+  function work without a type annotation, since the single-pass compiler
+  types parameters as opaque ints.
+- **Compile-time kinds.** Both emitters extend the kind lattice with
+  `tome` (int-valued), `tomestr` (string-valued) and `liststr` (the list
+  `keys()` returns), so `say t[k]`, `k + "="` and `for each v in values(t)`
+  pick `SAY_STR` / `STRCAT` correctly. The self-hosted codegen encodes them
+  as 3, 4 and 5 alongside 0/1/2 for int/str/float. Because TNEW's count
+  operand precedes the entries in the byte stream, the streaming compiler
+  reserves the u16 and back-patches it once the literal closes.
+- **Syntax.** `{ "k": v, name: v2 }`, with newlines allowed between entries;
+  a bare identifier key is sugar for the string of the same name, matching
+  v1's `{name: "x"}` form.
+- Nine new cases in `scripts/test-wasm-runtime.mjs` and ten more in
+  `scripts/test-shim-fixed-point.mjs` (now 59/59 byte-identical). Driver
+  artifact rebuilt: bc=12261, pool=408. The seed VM is now built by
+  `scripts/build-seed-wasm.mjs` (wabt, no system toolchain). Toolchain,
+  driver-artifact, native and parity gates all green; `tome_literal`,
+  `keys`, `values` and `has` are no longer v2 parity gaps.
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.
