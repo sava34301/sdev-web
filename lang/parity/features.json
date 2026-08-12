@@ -442,7 +442,7 @@
       "docs": "#keys",
       "v1": "must",
       "v1_name": "tome_keys",
-      "v2": "should",
+      "v2": "must",
       "v2_name": "keys",
       "native": "n/a",
       "native_name": "keys"
@@ -884,7 +884,7 @@
       "docs": "#tome_literal",
       "v1": "must",
       "v1_name": "tome_keys",
-      "v2": "should",
+      "v2": "must",
       "v2_name": "tome_literal",
       "native": "n/a",
       "native_name": "tome_literal"
@@ -927,6 +927,32 @@
       "v2_name": "str",
       "native": "must",
       "native_name": "str"
+    },
+    {
+      "name": "values",
+      "area": "tome",
+      "kind": "builtin",
+      "sig": "values(t) -> list",
+      "docs": "#values",
+      "v1": "must",
+      "v1_name": "values",
+      "v2": "must",
+      "v2_name": "values",
+      "native": "n/a",
+      "native_name": "values"
+    },
+    {
+      "name": "has",
+      "area": "tome",
+      "kind": "builtin",
+      "sig": "has(t, key) -> bool",
+      "docs": "#has",
+      "v1": "must",
+      "v1_name": "has",
+      "v2": "must",
+      "v2_name": "has",
+      "native": "n/a",
+      "native_name": "has"
     }
   ]
 }

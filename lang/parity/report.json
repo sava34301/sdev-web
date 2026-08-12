@@ -25,7 +25,6 @@
     "random @ v2",
     "range @ v2",
     "sum @ v2",
-    "keys @ v2",
     "lambda @ v2",
     "class @ v2",
     "inherit @ v2",
@@ -36,7 +35,6 @@
     "rescue @ v2",
     "throw @ v2",
     "list_literal @ native",
-    "tome_literal @ v2",
     "import @ v2"
   ],
   "features": [
@@ -72,7 +70,7 @@
     { "name": "random", "area": "math", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
     { "name": "range", "area": "list", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
     { "name": "sum", "area": "list", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
-    { "name": "keys", "area": "tome", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
+    { "name": "keys", "area": "tome", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "read_file", "area": "io", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "write_file", "area": "io", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "http_get", "area": "net", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
@@ -106,9 +104,11 @@
     { "name": "bool_false", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "nothing", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "list_literal", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "MISSING" } },
-    { "name": "tome_literal", "area": "types", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
+    { "name": "tome_literal", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "import", "area": "modules", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
     { "name": "float", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
-    { "name": "string", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } }
+    { "name": "string", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
+    { "name": "values", "area": "tome", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
+    { "name": "has", "area": "tome", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } }
   ]
 }

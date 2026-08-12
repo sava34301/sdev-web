@@ -127,6 +127,63 @@ sdev compiler on the seed VM — byte-identical to the reference oracle
 (Milestone 5s).
 
 
+## Tomes
+
+A tome is a string-keyed dictionary. Write one with braces; keys may be string
+literals or bare identifiers (the identifier is used as the key text):
+
+```sdev
+set config to { "host": "localhost", port: 8080 }
+say config["host"]        # localhost
+say length(config)        # 2
+```
+
+Read and write entries by key. Writing a key that does not exist yet adds it,
+and a tome grows on demand:
+
+```sdev
+set scores to {}
+set scores["ada"] to 10
+set scores["alan"] to 7
+set scores["ada"] to 12       # overwrites
+say scores["ada"]             # 12
+say scores["nobody"]          # 0 — a missing key reads as nothing
+```
+
+Three builtins go with tomes:
+
+| Call | Result |
+|---|---|
+| `keys(t)` | list of the tome's keys, in insertion order |
+| `values(t)` | list of the tome's values, in insertion order |
+| `has(t, k)` | `1` when the key exists, `0` otherwise |
+
+`length(t)` reports the entry count, so tomes iterate the same way lists do:
+
+```sdev
+set t to { "a": 1, "b": 2 }
+for each k in keys(t)
+  say k + "=" + str(t[k])
+end
+# a=1
+# b=2
+```
+
+Tomes are ordinary values: they can be stored in variables, passed to
+functions and returned from them. Indexing dispatches on the value itself at
+run time, so a tome received as an untyped parameter still reads by key:
+
+```sdev
+to lookup with t k
+  return t[k]
+end
+say lookup({ "q": 42 }, "q")   # 42
+```
+
+Tomes are compiled by the self-hosted sdev compiler on the seed VM —
+byte-identical to the reference oracle (Milestone 5t).
+
+
 ## Functions
 
 Define with `to <name>`, receive arguments with `with`:

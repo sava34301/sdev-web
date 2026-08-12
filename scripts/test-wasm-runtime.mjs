@@ -226,6 +226,52 @@ const cases = [
     src: `to total with xs\n  set t to 0\n  for each v in xs\n    set t to t + v\n  end\n  return t\nend\nsay total([1, 2, 3, 4])`,
     expect: ['10'],
   },
+  // ---- Milestone 5t: tomes ----
+  {
+    name: 'Milestone 5t: tome literal + string-key lookup',
+    src: `set t to {"a": 1, "b": 2}\nsay t["a"]\nsay t["b"]\nsay length(t)`,
+    expect: ['1', '2', '2'],
+  },
+  {
+    name: 'Milestone 5t: bare identifier keys + string values',
+    src: `set t to {name: "sdev", kind: "lang"}\nsay t["name"]\nsay t["kind"]`,
+    expect: ['sdev', 'lang'],
+  },
+  {
+    name: 'Milestone 5t: insert into an empty tome',
+    src: `set t to {}\nset t["x"] to 9\nsay t["x"]\nsay length(t)`,
+    expect: ['9', '1'],
+  },
+  {
+    name: 'Milestone 5t: overwrite an existing key',
+    src: `set t to {"a": 1}\nset t["a"] to 5\nsay t["a"]\nsay length(t)`,
+    expect: ['5', '1'],
+  },
+  {
+    name: 'Milestone 5t: keys() iteration',
+    src: `set t to {"a": 1, "b": 2}\nfor each k in keys(t)\n  say k + "=" + str(t[k])\nend`,
+    expect: ['a=1', 'b=2'],
+  },
+  {
+    name: 'Milestone 5t: values() of a string-valued tome',
+    src: `set t to {"a": "x", "b": "y"}\nfor each v in values(t)\n  say v\nend`,
+    expect: ['x', 'y'],
+  },
+  {
+    name: 'Milestone 5t: has() membership',
+    src: `set t to {"a": 1}\nsay has(t, "a")\nsay has(t, "z")\nsay t["z"]`,
+    expect: ['1', '0', '0'],
+  },
+  {
+    name: 'Milestone 5t: tome passed through a function',
+    src: `to lookup with t k\n  return t[k]\nend\nset t to {"q": 42}\nsay lookup(t, "q")`,
+    expect: ['42'],
+  },
+  {
+    name: 'Milestone 5t: growth past the initial capacity',
+    src: `set t to {}\nset i to 0\nwhile i < 12\n  set t[str(i)] to i * i\n  set i to i + 1\nend\nsay length(t)\nsay t["11"]\nsay t["7"]`,
+    expect: ['12', '121', '49'],
+  },
 ];
 
 
