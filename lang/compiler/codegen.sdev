@@ -292,6 +292,22 @@ to emit_store_ident with name
   return 0
 end
 
+# Milestone 5t: retype an existing variable without emitting anything —
+# used when `set t[k] to "s"` promotes a tome from int-valued to
+# string-valued so later reads pick SAY_STR.
+to set_ident_type with name t
+  if in_func[0] is 1
+    set slot to find_local(name)
+    if slot >= 0
+      set loc_types[slot + 1] to t
+      return 0
+    end
+  end
+  set slot to intern_name(name)
+  set sym_types[slot + 1] to t
+  return 0
+end
+
 # ---- call emission (built-ins first, then user functions) ----------------
 #
 # Milestone 5i: unresolved user-function calls emit a CALL with a zero
@@ -301,6 +317,29 @@ end
 # forward reference — a call site may appear before its callee's `to …`.
 
 to emit_call with name nargs
+  # The kind of the last argument pushed — `values(t)` needs it to decide
+  # whether the produced list holds strings.
+  set argk to expr_type[0]
+  # --- Milestone 5t: tome builtins ---
+  if str_eq(name, "keys")
+    emit_byte(142)
+    set expr_type[0] to 5
+    return 0
+  end
+  if str_eq(name, "values")
+    emit_byte(143)
+    if argk is 4
+      set expr_type[0] to 5
+    else
+      set expr_type[0] to 0
+    end
+    return 0
+  end
+  if str_eq(name, "has")
+    emit_byte(141)
+    set expr_type[0] to 0
+    return 0
+  end
   if str_eq(name, "length")
     emit_byte(131)
     set expr_type[0] to 0
@@ -681,6 +720,74 @@ to parse_atom with pos
     set expr_type[0] to 0
     return pos
   end
+  # Milestone 5t — tome literal: { "k": v, name: v2 }
+  #
+  # TNEW carries the pair count as a u16 operand, but this compiler is a
+  # single streaming pass, so the operand is reserved and back-patched once
+  # the entries have been parsed. Each entry emits key, value, TSET; TSET
+  # leaves the tome on the stack so the whole literal is one value.
+  if is_op_c(pos, 123)
+    set pos to pos + 1
+    emit_byte(138)
+    set cap_pos to bc[0]
+    emit_byte(0)
+    emit_byte(0)
+    set n to 0
+    set vk to 0
+    set pos to skip_nl(pos)
+    set going to 1
+    if is_op_c(pos, 125)
+      set going to 0
+    end
+    while going
+      set pos to skip_nl(pos)
+      # A bare identifier key is sugar for the string of the same name.
+      set bare to 0
+      if tk_kind[pos] is 2
+        if is_op_c(pos + 1, 58)
+          set bare to 1
+        end
+      end
+      if bare is 1
+        set koff to intern_str(tk_txt[pos])
+        emit_byte(2)
+        emit_byte(koff % 256)
+        emit_byte((koff / 256) % 256)
+        set pos to pos + 1
+      else
+        set pos to parse_expr(pos)
+      end
+      if is_op_c(pos, 58)
+        set pos to pos + 1
+      end
+      set pos to parse_expr(pos)
+      if expr_type[0] is 1
+        set vk to 1
+      end
+      emit_byte(139)
+      set n to n + 1
+      set pos to skip_nl(pos)
+      if is_op_c(pos, 44)
+        set pos to pos + 1
+      else
+        set going to 0
+      end
+    end
+    set pos to skip_nl(pos)
+    if is_op_c(pos, 125)
+      set pos to pos + 1
+    end
+    if emit_enabled[0] is 1
+      set bc[cap_pos + 1] to n % 256
+      set bc[cap_pos + 2] to (n / 256) % 256
+    end
+    if vk is 1
+      set expr_type[0] to 4
+    else
+      set expr_type[0] to 3
+    end
+    return pos
+  end
   return pos
 end
 
@@ -690,13 +797,31 @@ to parse_postfix with pos
   set going to 1
   while going
     if is_op_c(pos, 91)
+      # Capture the target's kind before the index expression clobbers it:
+      # tomes read with TGET, lists with LGET, and a string-valued
+      # container yields a string.
+      set tk to expr_type[0]
       set pos to pos + 1
       set pos to parse_expr(pos)
       if is_op_c(pos, 93)
         set pos to pos + 1
       end
-      emit_byte(129)
-      set expr_type[0] to 0
+      if tk is 3
+        emit_byte(140)
+        set expr_type[0] to 0
+      else
+        if tk is 4
+          emit_byte(140)
+          set expr_type[0] to 1
+        else
+          emit_byte(129)
+          if tk is 5
+            set expr_type[0] to 1
+          else
+            set expr_type[0] to 0
+          end
+        end
+      end
     else
       set going to 0
     end
@@ -1036,6 +1161,7 @@ to parse_stmt with pos
     # Index-assignment form: set NAME [ EXPR ] to EXPR
     if is_op_c(pos, 91)
       emit_load_ident(name)
+      set tk to expr_type[0]
       set pos to pos + 1
       set pos to parse_expr(pos)
       if is_op_c(pos, 93)
@@ -1045,7 +1171,27 @@ to parse_stmt with pos
         set pos to pos + 1
       end
       set pos to parse_expr(pos)
-      emit_byte(130)
+      set vk to expr_type[0]
+      set is_tome to 0
+      if tk is 3
+        set is_tome to 1
+      end
+      if tk is 4
+        set is_tome to 1
+      end
+      if is_tome is 1
+        # TSET leaves the tome on the stack; drop it. A string value
+        # promotes the variable to the string-valued tome kind.
+        emit_byte(139)
+        emit_byte(5)
+        if vk is 1
+          if tk is 3
+            set_ident_type(name, 4)
+          end
+        end
+      else
+        emit_byte(130)
+      end
       set expr_type[0] to 0
       return pos
     end
@@ -1180,6 +1326,7 @@ to parse_stmt with pos
     set lname to "_fe_l" + str(fe_depth[0])
     set iname to "_fe_i" + str(fe_depth[0])
     set pos to parse_expr(pos)
+    set iter_kind to expr_type[0]
     emit_store_ident(lname)
     emit_byte(1)
     emit_i32(0)
@@ -1195,7 +1342,11 @@ to parse_stmt with pos
     emit_load_ident(lname)
     emit_load_ident(iname)
     emit_byte(129)
-    set expr_type[0] to 0
+    if iter_kind is 5
+      set expr_type[0] to 1
+    else
+      set expr_type[0] to 0
+    end
     emit_store_ident(vname)
     set loop_depth[0] to loop_depth[0] + 1
     set pos to parse_block(pos)
