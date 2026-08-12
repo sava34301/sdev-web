@@ -653,6 +653,73 @@
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
+        ;; --- TNEW (0x8A) <u16 cap> --- push a fresh empty tome
+        (if (i32.eq (local.get $op) (i32.const 0x8A))
+          (then
+            (local.set $n (i32.load16_u (i32.add (global.get $CODE_BASE) (local.get $ip))))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 2)))
+            (i32.store (local.get $sp) (call $tnew (local.get $n)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- TSET (0x8B) --- pop val, pop key; tome stays on the stack
+        (if (i32.eq (local.get $op) (i32.const 0x8B))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $n (i32.load (local.get $sp)))          ;; value
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))          ;; key
+            (local.set $a (i32.load (i32.sub (local.get $sp) (i32.const 4))))
+            (call $tset (local.get $a) (local.get $b) (local.get $n))
+            (br $dispatch)))
+
+        ;; --- TGET (0x8C) --- pop key, pop tome, push value (0 if absent)
+        (if (i32.eq (local.get $op) (i32.const 0x8C))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (local.set $tmp (call $tfind (local.get $a) (local.get $b)))
+            (i32.store (local.get $sp)
+              (select
+                (i32.load offset=4
+                  (i32.add (i32.load offset=8 (local.get $a))
+                           (i32.mul (local.get $tmp) (i32.const 8))))
+                (i32.const 0)
+                (i32.ge_s (local.get $tmp) (i32.const 0))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- THAS (0x8D) --- pop key, pop tome, push 1/0
+        (if (i32.eq (local.get $op) (i32.const 0x8D))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (i32.ge_s (call $tfind (local.get $a) (local.get $b)) (i32.const 0)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- TKEYS (0x8E) / TVALS (0x8F) --- pop tome, push a list
+        (if (i32.eq (local.get $op) (i32.const 0x8E))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp)
+              (call $tcollect (i32.load (local.get $sp)) (i32.const 0)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+        (if (i32.eq (local.get $op) (i32.const 0x8F))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp)
+              (call $tcollect (i32.load (local.get $sp)) (i32.const 4)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+
         ;; --- I2S (0x87) --- pop int, push decimal-string blob [len|utf-8]
         (if (i32.eq (local.get $op) (i32.const 0x87))
           (then
