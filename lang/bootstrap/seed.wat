@@ -162,6 +162,109 @@
     (f64.store (local.get $p) (local.get $x))
     (local.get $p))
 
+  ;; ---- Milestone 5t: tomes (string-keyed dictionaries) -------------------
+  ;; A tome is a 12-byte header [count | cap | entriesPtr]. The entries block
+  ;; holds `cap` (keyPtr, value) i32 pairs; keys are string blobs [len|bytes].
+  ;; Lookup is a linear scan with byte-wise key comparison — small, obvious
+  ;; and enough for the compiler-sized tomes the language uses today.
+
+  ;; Byte-wise string blob equality.
+  (func $streq (param $a i32) (param $b i32) (result i32) (local $n i32)
+    (if (i32.eq (local.get $a) (local.get $b)) (then (return (i32.const 1))))
+    (if (i32.or (i32.eqz (local.get $a)) (i32.eqz (local.get $b)))
+      (then (return (i32.const 0))))
+    (local.set $n (i32.load (local.get $a)))
+    (if (i32.ne (local.get $n) (i32.load (local.get $b)))
+      (then (return (i32.const 0))))
+    (local.set $a (i32.add (local.get $a) (i32.const 4)))
+    (local.set $b (i32.add (local.get $b) (i32.const 4)))
+    (block $done (loop $cmp
+      (br_if $done (i32.eqz (local.get $n)))
+      (if (i32.ne (i32.load8_u (local.get $a)) (i32.load8_u (local.get $b)))
+        (then (return (i32.const 0))))
+      (local.set $a (i32.add (local.get $a) (i32.const 1)))
+      (local.set $b (i32.add (local.get $b) (i32.const 1)))
+      (local.set $n (i32.sub (local.get $n) (i32.const 1)))
+      (br $cmp)))
+    (i32.const 1))
+
+  (func $tnew (param $cap i32) (result i32) (local $t i32)
+    (if (i32.lt_s (local.get $cap) (i32.const 4))
+      (then (local.set $cap (i32.const 4))))
+    (local.set $t (call $alloc (i32.const 12)))
+    (i32.store (local.get $t) (i32.const 0))
+    (i32.store offset=4 (local.get $t) (local.get $cap))
+    (i32.store offset=8 (local.get $t)
+      (call $alloc (i32.mul (local.get $cap) (i32.const 8))))
+    (local.get $t))
+
+  ;; Index of key in tome, or -1.
+  (func $tfind (param $t i32) (param $k i32) (result i32)
+    (local $i i32) (local $n i32) (local $e i32)
+    (local.set $n (i32.load (local.get $t)))
+    (local.set $e (i32.load offset=8 (local.get $t)))
+    (local.set $i (i32.const 0))
+    (block $done (loop $scan
+      (br_if $done (i32.ge_s (local.get $i) (local.get $n)))
+      (if (call $streq
+            (i32.load (i32.add (local.get $e) (i32.mul (local.get $i) (i32.const 8))))
+            (local.get $k))
+        (then (return (local.get $i))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $scan)))
+    (i32.const -1))
+
+  (func $tset (param $t i32) (param $k i32) (param $v i32)
+    (local $i i32) (local $n i32) (local $cap i32)
+    (local $e i32) (local $ne i32) (local $j i32)
+    (local.set $i (call $tfind (local.get $t) (local.get $k)))
+    (if (i32.ge_s (local.get $i) (i32.const 0))
+      (then
+        (i32.store offset=4
+          (i32.add (i32.load offset=8 (local.get $t))
+                   (i32.mul (local.get $i) (i32.const 8)))
+          (local.get $v))
+        (return)))
+    (local.set $n   (i32.load (local.get $t)))
+    (local.set $cap (i32.load offset=4 (local.get $t)))
+    (if (i32.ge_s (local.get $n) (local.get $cap))
+      (then
+        ;; grow: fresh entries block of double the capacity, copy pairs over
+        (local.set $e  (i32.load offset=8 (local.get $t)))
+        (local.set $ne (call $alloc (i32.mul (local.get $cap) (i32.const 16))))
+        (local.set $j (i32.const 0))
+        (block $dc (loop $cp
+          (br_if $dc (i32.ge_s (local.get $j) (i32.mul (local.get $n) (i32.const 2))))
+          (i32.store (i32.add (local.get $ne) (i32.mul (local.get $j) (i32.const 4)))
+                     (i32.load (i32.add (local.get $e) (i32.mul (local.get $j) (i32.const 4)))))
+          (local.set $j (i32.add (local.get $j) (i32.const 1)))
+          (br $cp)))
+        (i32.store offset=4 (local.get $t) (i32.mul (local.get $cap) (i32.const 2)))
+        (i32.store offset=8 (local.get $t) (local.get $ne))))
+    (local.set $e (i32.load offset=8 (local.get $t)))
+    (i32.store          (i32.add (local.get $e) (i32.mul (local.get $n) (i32.const 8))) (local.get $k))
+    (i32.store offset=4 (i32.add (local.get $e) (i32.mul (local.get $n) (i32.const 8))) (local.get $v))
+    (i32.store (local.get $t) (i32.add (local.get $n) (i32.const 1))))
+
+  ;; Materialise the keys (which=0) or values (which=4) of a tome as a list.
+  (func $tcollect (param $t i32) (param $which i32) (result i32)
+    (local $i i32) (local $n i32) (local $e i32) (local $out i32)
+    (local.set $n (i32.load (local.get $t)))
+    (local.set $e (i32.load offset=8 (local.get $t)))
+    (local.set $out (call $alloc (i32.add (i32.const 4) (i32.mul (local.get $n) (i32.const 4)))))
+    (i32.store (local.get $out) (local.get $n))
+    (local.set $i (i32.const 0))
+    (block $done (loop $cp
+      (br_if $done (i32.ge_s (local.get $i) (local.get $n)))
+      (i32.store
+        (i32.add (local.get $out) (i32.add (i32.const 4) (i32.mul (local.get $i) (i32.const 4))))
+        (i32.load (i32.add (local.get $e)
+                    (i32.add (local.get $which) (i32.mul (local.get $i) (i32.const 8))))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $cp)))
+    (local.get $out))
+
+
   ;; ---- main interpreter loop --------------------------------------------
   (func (export "run") (result i32)
     (local $ip i32)         ;; instruction pointer (relative to CODE_BASE)
