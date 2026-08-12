@@ -1,8 +1,5 @@
 {
   "must_missing": [
-    "tome_literal @ v2",
-    "values @ v1",
-    "has @ v1"
   ],
   "should_missing": [
     "length @ native",
@@ -107,11 +104,11 @@
     { "name": "bool_false", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "nothing", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "list_literal", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "MISSING" } },
-    { "name": "tome_literal", "area": "types", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
+    { "name": "tome_literal", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "import", "area": "modules", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
     { "name": "float", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "string", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
-    { "name": "values", "area": "tome", "tracks": { "v1": "MISSING", "v2": "yes", "native": "n/a" } },
-    { "name": "has", "area": "tome", "tracks": { "v1": "MISSING", "v2": "yes", "native": "n/a" } }
+    { "name": "values", "area": "tome", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
+    { "name": "has", "area": "tome", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } }
   ]
 }

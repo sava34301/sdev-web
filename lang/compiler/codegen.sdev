@@ -720,7 +720,7 @@ to parse_atom with pos
     set expr_type[0] to 0
     return pos
   end
-  # Milestone 5t — tome literal: { "k": v, name: v2 }
+  # Milestone 5t — "tome_literal": { "k": v, name: v2 }
   #
   # TNEW carries the pair count as a u16 operand, but this compiler is a
   # single streaming pass, so the operand is reserved and back-patched once
