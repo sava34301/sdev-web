@@ -94,6 +94,39 @@ while i < 5
 end
 ```
 
+`for each` walks any list left to right, binding the loop variable on every
+turn. Both loop forms accept `break` (leave the loop now) and `continue`
+(jump to the next iteration):
+
+```sdev
+for each x in [1, 2, 3, 4, 5]
+  if x is 2
+    continue
+  end
+  if x is 4
+    break
+  end
+  say x            # 1 3
+end
+```
+
+Conditions can chain with `else if`, as deeply as you like:
+
+```sdev
+if score is 10
+  say "perfect"
+else if score >= 5
+  say "good"
+else
+  say "keep going"
+end
+```
+
+`for each`, `break`, `continue` and `else if` are compiled by the self-hosted
+sdev compiler on the seed VM — byte-identical to the reference oracle
+(Milestone 5s).
+
+
 ## Functions
 
 Define with `to <name>`, receive arguments with `with`:
