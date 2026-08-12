@@ -236,6 +236,18 @@ set pool_keys to mklist(256)
 set pool_keys[0] to 0
 set pool_offs to mklist(256)
 set pool_offs[0] to 0
+set brk_pos to mklist(256)
+set brk_pos[0] to 0
+set brk_dep to mklist(256)
+set brk_dep[0] to 0
+set cnt_pos to mklist(256)
+set cnt_pos[0] to 0
+set cnt_dep to mklist(256)
+set cnt_dep[0] to 0
+set loop_depth to mklist(2)
+set loop_depth[0] to 0
+set fe_depth to mklist(2)
+set fe_depth[0] to 0
 
 set emit_enabled[0] to 0
 set skip_fn_defs[0] to 0

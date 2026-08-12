@@ -195,6 +195,37 @@ const cases = [
     src: `set t to true\nset f to false\nset n to nothing\nsay t\nsay f\nsay n\nif t\n  say 1\nend\nif f\n  say 0\nend`,
     expect: ['1', '0', '0', '1'],
   },
+  // ---- Milestone 5s: for each / break / continue / else if ----
+  {
+    name: 'Milestone 5s: for each over a list literal',
+    src: `for each x in [10, 20, 30]\n  say x\nend`,
+    expect: ['10', '20', '30'],
+  },
+  {
+    name: 'Milestone 5s: for each with break and continue',
+    src: `set xs to [1, 2, 3, 4, 5]\nfor each x in xs\n  if x is 2\n    continue\n  end\n  if x is 4\n    break\n  end\n  say x\nend\nsay 99`,
+    expect: ['1', '3', '99'],
+  },
+  {
+    name: 'Milestone 5s: nested for each',
+    src: `for each a in [1, 2]\n  for each b in [10, 20]\n    say a * b\n  end\nend`,
+    expect: ['10', '20', '20', '40'],
+  },
+  {
+    name: 'Milestone 5s: break / continue inside while',
+    src: `set i to 0\nwhile i < 10\n  set i to i + 1\n  if i is 3\n    continue\n  end\n  if i > 5\n    break\n  end\n  say i\nend`,
+    expect: ['1', '2', '4', '5'],
+  },
+  {
+    name: 'Milestone 5s: else if chain',
+    src: `set a to 5\nif a is 1\n  say 100\nelse if a is 5\n  say 55\nelse\n  say 0\nend\nsay 7`,
+    expect: ['55', '7'],
+  },
+  {
+    name: 'Milestone 5s: for each inside a function',
+    src: `to total with xs\n  set t to 0\n  for each v in xs\n    set t to t + v\n  end\n  return t\nend\nsay total([1, 2, 3, 4])`,
+    expect: ['10'],
+  },
 ];
 
 

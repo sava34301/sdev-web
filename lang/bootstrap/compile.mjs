@@ -145,6 +145,8 @@ function parseProgram(tokens) {
     p++; return t;
   };
   const skipNL = () => { while (peek().type === 'NL') p++; };
+  let feDepth = 0;             // Milestone 5s: foreach nesting depth
+
 
   const stmts = [];
   skipNL();
@@ -153,6 +155,9 @@ function parseProgram(tokens) {
 
   function statement() {
     const t = peek();
+    // Milestone 5s: `break` / `continue` are plain identifiers in the lexer.
+    if (t.type === 'IDENT' && t.value === 'break')    { p++; return { k: 'break', line: t.line }; }
+    if (t.type === 'IDENT' && t.value === 'continue') { p++; return { k: 'continue', line: t.line }; }
     if (t.type === 'KW') {
       if (t.value === 'say')    { p++; return { k: 'say', expr: expr(), line: t.line }; }
       if (t.value === 'set')    {
@@ -171,6 +176,7 @@ function parseProgram(tokens) {
       }
       if (t.value === 'if')     return ifStmt();
       if (t.value === 'while')  return whileStmt();
+      if (t.value === 'for')    return forEachStmt();
       if (t.value === 'to')     return funcDecl();
       if (t.value === 'return') { p++; return { k: 'return', expr: peek().type === 'NL' ? null : expr(), line: t.line }; }
     }
@@ -182,8 +188,14 @@ function parseProgram(tokens) {
     const t = eat('KW', 'if'); const cond = expr(); skipNL();
     const then_ = []; while (!(peek().type === 'KW' && (peek().value === 'else' || peek().value === 'end'))) { then_.push(statement()); skipNL(); }
     let else_ = null;
-    if (peek().type === 'KW' && peek().value === 'else') { p++; skipNL(); else_ = []; while (!(peek().type === 'KW' && peek().value === 'end')) { else_.push(statement()); skipNL(); } }
-    eat('KW', 'end');
+    let chained = false;
+    if (peek().type === 'KW' && peek().value === 'else') {
+      p++;
+      // Milestone 5s: `else if` chains — the nested `if` consumes the `end`.
+      if (peek().type === 'KW' && peek().value === 'if') { else_ = [ifStmt()]; chained = true; }
+      else { skipNL(); else_ = []; while (!(peek().type === 'KW' && peek().value === 'end')) { else_.push(statement()); skipNL(); } }
+    }
+    if (!chained) eat('KW', 'end');
     return { k: 'if', cond, then_, else_, line: t.line };
   }
   function whileStmt() {
@@ -191,6 +203,23 @@ function parseProgram(tokens) {
     const body = []; while (!(peek().type === 'KW' && peek().value === 'end')) { body.push(statement()); skipNL(); }
     eat('KW', 'end');
     return { k: 'while', cond, body, line: t.line };
+  }
+  // Milestone 5s: `for each NAME in EXPR ... end`, desugared at emit time to
+  // an index loop over two hidden variables named after the loop's lexical
+  // foreach-nesting depth (so the self-hosted compiler can name them the
+  // same way without an AST).
+  function forEachStmt() {
+    const t = eat('KW', 'for');
+    if (peek().type === 'KW' && peek().value === 'each') p++;
+    const name = eat('IDENT').value;
+    if (peek().type === 'KW' && peek().value === 'in') p++;
+    const iter = expr(); skipNL();
+    feDepth++;
+    const d = feDepth;
+    const body = []; while (!(peek().type === 'KW' && peek().value === 'end')) { body.push(statement()); skipNL(); }
+    eat('KW', 'end');
+    feDepth--;
+    return { k: 'foreach', name, iter, body, d, line: t.line };
   }
   function funcDecl() {
     const t = eat('KW', 'to');
@@ -205,6 +234,7 @@ function parseProgram(tokens) {
     eat('KW', 'end');
     return { k: 'func', name, params, body, line: t.line };
   }
+
   function expr() { return or_(); }
   function or_() { let l = and_(); while (peek().type === 'KW' && peek().value === 'or') { p++; l = { k: 'bin', op: 'or', l, r: and_() }; } return l; }
   function and_() { let l = not_(); while (peek().type === 'KW' && peek().value === 'and') { p++; l = { k: 'bin', op: 'and', l, r: not_() }; } return l; }
@@ -361,8 +391,33 @@ function collectSets(body, locals) {
     if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
+    // Milestone 5s: a foreach introduces two hidden bindings (list + index)
+    // and the loop variable, registered in emission order.
+    if (s.k === 'foreach') {
+      for (const n of [feList(s.d), feIdx(s.d), s.name]) {
+        if (!locals.has(n)) locals.set(n, locals.size);
+      }
+      collectSets(s.body, locals);
+    }
+
   }
 }
+
+// Milestone 5s: hidden foreach bindings, named by lexical nesting depth so
+// the self-hosted single-pass compiler can derive the same names.
+const feList = (d) => `_fe_l${d}`;
+const feIdx  = (d) => `_fe_i${d}`;
+
+function emitLoadName(name, em, locals) {
+  if (locals && locals.has(name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(name)); }
+  else { em.emit(OP.LOAD); em.emit(em.globalSlot(name)); }
+}
+function emitStoreName(name, em, locals, kind) {
+  scopeTypes(locals, em).set(name, kind);
+  if (locals && locals.has(name)) { em.emit(OP.STORE_LOC); em.emit(locals.get(name)); }
+  else { em.emit(OP.STORE); em.emit(em.globalSlot(name)); }
+}
+
 
 function emitExpr(e, em, locals) {
   switch (e.k) {
@@ -471,6 +526,11 @@ function inferBody(body, localTypes, fnTypes) {
     else if (s.k === 'while') {
       if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
     }
+    else if (s.k === 'foreach') {
+      localTypes.set(s.name, 'int');
+      if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
+    }
+
   }
   return ret;
 }
@@ -541,12 +601,59 @@ function emitStmt(s, em, locals) {
       const top = em.here();
       emitExpr(s.cond, em, locals);
       em.emit(OP.JZ); const jzPos = em.placeholder16(); const afterJZ = em.here();
+      const ctx = { breaks: [], conts: [] };
+      (em.loops ||= []).push(ctx);
       s.body.forEach(x => emitStmt(x, em, locals));
+      em.loops.pop();
+      for (const c of ctx.conts) em.patchI16(c.pos, top - c.after);
       em.emit(OP.JMP); const jmpPos = em.placeholder16(); const afterJmp = em.here();
       em.patchI16(jmpPos, top - afterJmp);
       em.patchI16(jzPos, em.here() - afterJZ);
+      for (const b of ctx.breaks) em.patchI16(b.pos, em.here() - b.after);
       return;
     }
+    // Milestone 5s: `for each x in xs` → hidden index loop.
+    case 'foreach': {
+      const ln = feList(s.d), iv = feIdx(s.d);
+      const kind = emitExpr(s.iter, em, locals);
+      emitStoreName(ln, em, locals, kind);
+      em.emit(OP.PUSH_I32); em.emitI32(0);
+      emitStoreName(iv, em, locals, 'int');
+      const top = em.here();
+      emitLoadName(iv, em, locals);
+      emitLoadName(ln, em, locals);
+      em.emit(OP.LEN);
+      em.emit(OP.LT);
+      em.emit(OP.JZ); const jzPos = em.placeholder16(); const afterJZ = em.here();
+      emitLoadName(ln, em, locals);
+      emitLoadName(iv, em, locals);
+      em.emit(OP.LGET);
+      emitStoreName(s.name, em, locals, 'int');
+      const ctx = { breaks: [], conts: [] };
+      (em.loops ||= []).push(ctx);
+      s.body.forEach(x => emitStmt(x, em, locals));
+      em.loops.pop();
+      const cont = em.here();
+      for (const c of ctx.conts) em.patchI16(c.pos, cont - c.after);
+      emitLoadName(iv, em, locals);
+      em.emit(OP.PUSH_I32); em.emitI32(1);
+      em.emit(OP.ADD);
+      emitStoreName(iv, em, locals, 'int');
+      em.emit(OP.JMP); const jmpPos = em.placeholder16(); const afterJmp = em.here();
+      em.patchI16(jmpPos, top - afterJmp);
+      em.patchI16(jzPos, em.here() - afterJZ);
+      for (const b of ctx.breaks) em.patchI16(b.pos, em.here() - b.after);
+      return;
+    }
+    case 'break':
+    case 'continue': {
+      const ctx = (em.loops || [])[(em.loops || []).length - 1];
+      if (!ctx) throw new SdevError(`${s.k} outside of a loop`, s.line);
+      em.emit(OP.JMP); const pos = em.placeholder16(); const after = em.here();
+      (s.k === 'break' ? ctx.breaks : ctx.conts).push({ pos, after });
+      return;
+    }
+
     case 'return': {
       if (s.expr) emitExpr(s.expr, em, locals);
       else { em.emit(OP.PUSH_I32); em.emitI32(0); }

@@ -560,7 +560,7 @@
       "v1": "must",
       "v1_name": "iterate",
       "v2": "should",
-      "v2_name": "for_each",
+      "v2_name": "each",
       "native": "n/a",
       "native_name": "for_each"
     },
