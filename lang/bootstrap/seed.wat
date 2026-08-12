@@ -47,7 +47,10 @@
 ;;   0x88 CHR                       pop byte, push new 1-char string blob
 ;;   0x89 LNEW                      pop n, alloc zeroed list [n | n cells]
 ;;   ; --- Milestone 5t: tomes (string-keyed dictionaries) ---
-;;   ;; layout: [count | cap | entriesPtr]; entries = cap * (keyPtr, valCell)
+;;   ;; layout: [MAGIC | count | cap | entriesPtr]; entries = cap * (key, val)
+;;   ;; The leading magic word lets LGET / LSET / LEN dispatch on the value's
+;;   ;; shape at run time, so a tome behaves like a tome even when the
+;;   ;; compiler only knows it as an opaque parameter.
 ;;   0x8A TNEW <u16 cap>            allocate an empty tome with room for cap pairs
 ;;   0x8B TSET                      pop val, pop key, peek tome; store; leaves tome
 ;;   0x8C TGET                      pop key, pop tome, push value (0 when absent)
@@ -188,21 +191,29 @@
       (br $cmp)))
     (i32.const 1))
 
+  ;; Sentinel stored in word 0 of every tome. No list can legitimately have
+  ;; this length (it would need 8 GiB), so the check is unambiguous.
+  (global $TOME_MAGIC i32 (i32.const 0x7FED10E5))
+
+  (func $is_tome (param $p i32) (result i32)
+    (i32.eq (i32.load (local.get $p)) (global.get $TOME_MAGIC)))
+
   (func $tnew (param $cap i32) (result i32) (local $t i32)
     (if (i32.lt_s (local.get $cap) (i32.const 4))
       (then (local.set $cap (i32.const 4))))
-    (local.set $t (call $alloc (i32.const 12)))
-    (i32.store (local.get $t) (i32.const 0))
-    (i32.store offset=4 (local.get $t) (local.get $cap))
-    (i32.store offset=8 (local.get $t)
+    (local.set $t (call $alloc (i32.const 16)))
+    (i32.store          (local.get $t) (global.get $TOME_MAGIC))
+    (i32.store offset=4 (local.get $t) (i32.const 0))
+    (i32.store offset=8 (local.get $t) (local.get $cap))
+    (i32.store offset=12 (local.get $t)
       (call $alloc (i32.mul (local.get $cap) (i32.const 8))))
     (local.get $t))
 
   ;; Index of key in tome, or -1.
   (func $tfind (param $t i32) (param $k i32) (result i32)
     (local $i i32) (local $n i32) (local $e i32)
-    (local.set $n (i32.load (local.get $t)))
-    (local.set $e (i32.load offset=8 (local.get $t)))
+    (local.set $n (i32.load offset=4 (local.get $t)))
+    (local.set $e (i32.load offset=12 (local.get $t)))
     (local.set $i (i32.const 0))
     (block $done (loop $scan
       (br_if $done (i32.ge_s (local.get $i) (local.get $n)))
@@ -221,16 +232,16 @@
     (if (i32.ge_s (local.get $i) (i32.const 0))
       (then
         (i32.store offset=4
-          (i32.add (i32.load offset=8 (local.get $t))
+          (i32.add (i32.load offset=12 (local.get $t))
                    (i32.mul (local.get $i) (i32.const 8)))
           (local.get $v))
         (return)))
-    (local.set $n   (i32.load (local.get $t)))
-    (local.set $cap (i32.load offset=4 (local.get $t)))
+    (local.set $n   (i32.load offset=4 (local.get $t)))
+    (local.set $cap (i32.load offset=8 (local.get $t)))
     (if (i32.ge_s (local.get $n) (local.get $cap))
       (then
         ;; grow: fresh entries block of double the capacity, copy pairs over
-        (local.set $e  (i32.load offset=8 (local.get $t)))
+        (local.set $e  (i32.load offset=12 (local.get $t)))
         (local.set $ne (call $alloc (i32.mul (local.get $cap) (i32.const 16))))
         (local.set $j (i32.const 0))
         (block $dc (loop $cp
@@ -239,18 +250,18 @@
                      (i32.load (i32.add (local.get $e) (i32.mul (local.get $j) (i32.const 4)))))
           (local.set $j (i32.add (local.get $j) (i32.const 1)))
           (br $cp)))
-        (i32.store offset=4 (local.get $t) (i32.mul (local.get $cap) (i32.const 2)))
-        (i32.store offset=8 (local.get $t) (local.get $ne))))
-    (local.set $e (i32.load offset=8 (local.get $t)))
+        (i32.store offset=8  (local.get $t) (i32.mul (local.get $cap) (i32.const 2)))
+        (i32.store offset=12 (local.get $t) (local.get $ne))))
+    (local.set $e (i32.load offset=12 (local.get $t)))
     (i32.store          (i32.add (local.get $e) (i32.mul (local.get $n) (i32.const 8))) (local.get $k))
     (i32.store offset=4 (i32.add (local.get $e) (i32.mul (local.get $n) (i32.const 8))) (local.get $v))
-    (i32.store (local.get $t) (i32.add (local.get $n) (i32.const 1))))
+    (i32.store offset=4 (local.get $t) (i32.add (local.get $n) (i32.const 1))))
 
   ;; Materialise the keys (which=0) or values (which=4) of a tome as a list.
   (func $tcollect (param $t i32) (param $which i32) (result i32)
     (local $i i32) (local $n i32) (local $e i32) (local $out i32)
-    (local.set $n (i32.load (local.get $t)))
-    (local.set $e (i32.load offset=8 (local.get $t)))
+    (local.set $n (i32.load offset=4 (local.get $t)))
+    (local.set $e (i32.load offset=12 (local.get $t)))
     (local.set $out (call $alloc (i32.add (i32.const 4) (i32.mul (local.get $n) (i32.const 4)))))
     (i32.store (local.get $out) (local.get $n))
     (local.set $i (i32.const 0))
@@ -541,6 +552,19 @@
             (local.set $b (i32.load (local.get $sp)))                ;; idx
             (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
             (local.set $a (i32.load (local.get $sp)))                ;; arr addr
+            ;; Milestone 5t: a tome indexed with LGET behaves as a key read.
+            (if (call $is_tome (local.get $a))
+              (then
+                (local.set $tmp (call $tfind (local.get $a) (local.get $b)))
+                (i32.store (local.get $sp)
+                  (select
+                    (i32.load offset=4
+                      (i32.add (i32.load offset=12 (local.get $a))
+                               (i32.mul (local.get $tmp) (i32.const 8))))
+                    (i32.const 0)
+                    (i32.ge_s (local.get $tmp) (i32.const 0))))
+                (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+                (br $dispatch)))
             (i32.store (local.get $sp)
               (i32.load (i32.add (local.get $a)
                 (i32.add (i32.const 4) (i32.mul (local.get $b) (i32.const 4))))))
@@ -556,6 +580,11 @@
             (local.set $b (i32.load (local.get $sp)))               ;; idx
             (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
             (local.set $a (i32.load (local.get $sp)))               ;; arr
+            ;; Milestone 5t: LSET on a tome is a key write.
+            (if (call $is_tome (local.get $a))
+              (then
+                (call $tset (local.get $a) (local.get $b) (local.get $n))
+                (br $dispatch)))
             (i32.store (i32.add (local.get $a)
               (i32.add (i32.const 4) (i32.mul (local.get $b) (i32.const 4))))
               (local.get $n))
@@ -565,7 +594,12 @@
         (if (i32.eq (local.get $op) (i32.const 0x83))
           (then
             (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
-            (i32.store (local.get $sp) (i32.load (i32.load (local.get $sp))))
+            (local.set $a (i32.load (local.get $sp)))
+            ;; Milestone 5t: a tome reports its entry count, not its magic.
+            (i32.store (local.get $sp)
+              (select (i32.load offset=4 (local.get $a))
+                      (i32.load (local.get $a))
+                      (call $is_tome (local.get $a))))
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
@@ -684,7 +718,7 @@
             (i32.store (local.get $sp)
               (select
                 (i32.load offset=4
-                  (i32.add (i32.load offset=8 (local.get $a))
+                  (i32.add (i32.load offset=12 (local.get $a))
                            (i32.mul (local.get $tmp) (i32.const 8))))
                 (i32.const 0)
                 (i32.ge_s (local.get $tmp) (i32.const 0))))
