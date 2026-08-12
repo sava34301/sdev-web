@@ -170,9 +170,9 @@
 
   ;; Byte-wise string blob equality.
   (func $streq (param $a i32) (param $b i32) (result i32) (local $n i32)
+    ;; NB: address 0 is a legal string handle (the pool starts at offset 0),
+    ;; so a zero pointer must NOT be treated as "no string".
     (if (i32.eq (local.get $a) (local.get $b)) (then (return (i32.const 1))))
-    (if (i32.or (i32.eqz (local.get $a)) (i32.eqz (local.get $b)))
-      (then (return (i32.const 0))))
     (local.set $n (i32.load (local.get $a)))
     (if (i32.ne (local.get $n) (i32.load (local.get $b)))
       (then (return (i32.const 0))))
