@@ -467,7 +467,70 @@ to resolve_pending_calls
   return 0
 end
 
+# ---- Milestone 5s: loop-exit patch tables --------------------------------
+#
+# `break` / `continue` emit a JMP with an unresolved two-byte target and
+# record (placeholder position, loop depth) in a pending table. When the
+# enclosing loop finishes emitting, `patch_breaks` / `patch_conts` fill in
+# the real byte offsets and pop the entries again (loops nest properly, so
+# the resolved entries always sit at the tail of the table).
+
+to patch_breaks with target
+  set d to loop_depth[0]
+  set k to 1
+  set stop to brk_pos[0] + 1
+  while k < stop
+    if brk_dep[k] is d
+      patch_i16(brk_pos[k], target)
+      set brk_dep[k] to 0 - 1
+    end
+    set k to k + 1
+  end
+  set going to 1
+  while going
+    if brk_pos[0] > 0
+      if brk_dep[brk_pos[0]] is 0 - 1
+        set brk_pos[0] to brk_pos[0] - 1
+        set brk_dep[0] to brk_dep[0] - 1
+      else
+        set going to 0
+      end
+    else
+      set going to 0
+    end
+  end
+  return 0
+end
+
+to patch_conts with target
+  set d to loop_depth[0]
+  set k to 1
+  set stop to cnt_pos[0] + 1
+  while k < stop
+    if cnt_dep[k] is d
+      patch_i16(cnt_pos[k], target)
+      set cnt_dep[k] to 0 - 1
+    end
+    set k to k + 1
+  end
+  set going to 1
+  while going
+    if cnt_pos[0] > 0
+      if cnt_dep[cnt_pos[0]] is 0 - 1
+        set cnt_pos[0] to cnt_pos[0] - 1
+        set cnt_dep[0] to cnt_dep[0] - 1
+      else
+        set going to 0
+      end
+    else
+      set going to 0
+    end
+  end
+  return 0
+end
+
 # ---- token classifiers ---------------------------------------------------
+
 
 to is_op_c with pos c
   if pos >= tk_count
@@ -1024,6 +1087,26 @@ to parse_stmt with pos
     emit_byte(97)
     return pos
   end
+  # Milestone 5s: `break` / `continue` are ordinary identifiers in the
+  # lexer, so they are matched before the expression-statement fallback.
+  if is_ident_word(pos, "break")
+    emit_byte(64)
+    set bp to placeholder16()
+    set brk_pos[brk_pos[0] + 1] to bp
+    set brk_dep[brk_pos[0] + 1] to loop_depth[0]
+    set brk_pos[0] to brk_pos[0] + 1
+    set brk_dep[0] to brk_dep[0] + 1
+    return pos + 1
+  end
+  if is_ident_word(pos, "continue")
+    emit_byte(64)
+    set cp to placeholder16()
+    set cnt_pos[cnt_pos[0] + 1] to cp
+    set cnt_dep[cnt_pos[0] + 1] to loop_depth[0]
+    set cnt_pos[0] to cnt_pos[0] + 1
+    set cnt_dep[0] to cnt_dep[0] + 1
+    return pos + 1
+  end
   if is_ident_word(pos, "if")
     set pos to parse_expr(pos + 1)
     emit_byte(65)
@@ -1031,11 +1114,24 @@ to parse_stmt with pos
     set pos to parse_block(pos)
     if is_ident_word(pos, "else")
       set pos to pos + 1
+      # `else if` chains: the nested `if` statement consumes its own `end`,
+      # so this level must not eat one afterwards.
+      set chained to 0
+      if is_ident_word(pos, "if")
+        set chained to 1
+      end
       emit_byte(64)
       set jmp to placeholder16()
       patch_i16(jz, bc[0])
-      set pos to parse_block(pos)
+      if chained is 1
+        set pos to parse_stmt(pos)
+      else
+        set pos to parse_block(pos)
+      end
       patch_i16(jmp, bc[0])
+      if chained is 1
+        return pos
+      end
     else
       patch_i16(jz, bc[0])
     end
@@ -1049,16 +1145,80 @@ to parse_stmt with pos
     set pos to parse_expr(pos + 1)
     emit_byte(65)
     set jz to placeholder16()
+    set loop_depth[0] to loop_depth[0] + 1
     set pos to parse_block(pos)
+    patch_conts(loop_top)
     emit_byte(64)
     set back to placeholder16()
     patch_i16(back, loop_top)
     patch_i16(jz, bc[0])
+    patch_breaks(bc[0])
+    set loop_depth[0] to loop_depth[0] - 1
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+
+    return pos
+  end
+  # Milestone 5s: `for each NAME in EXPR ... end`.
+  #
+  # Desugars to an index loop over two hidden variables whose names encode
+  # the lexical foreach-nesting depth (`_fe_l1` / `_fe_i1`, `_fe_l2` / …),
+  # which is exactly how the bootstrap oracle names them — so the byte
+  # stream stays identical even though this compiler has no AST.
+  if is_ident_word(pos, "for")
+    set pos to pos + 1
+    if is_ident_word(pos, "each")
+      set pos to pos + 1
+    end
+    set vname to tk_txt[pos]
+    set pos to pos + 1
+    if is_ident_word(pos, "in")
+      set pos to pos + 1
+    end
+    set fe_depth[0] to fe_depth[0] + 1
+    set lname to "_fe_l" + str(fe_depth[0])
+    set iname to "_fe_i" + str(fe_depth[0])
+    set pos to parse_expr(pos)
+    emit_store_ident(lname)
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    emit_store_ident(iname)
+    set loop_top to bc[0]
+    emit_load_ident(iname)
+    emit_load_ident(lname)
+    emit_byte(131)
+    emit_byte(34)
+    emit_byte(65)
+    set jz to placeholder16()
+    emit_load_ident(lname)
+    emit_load_ident(iname)
+    emit_byte(129)
+    set expr_type[0] to 0
+    emit_store_ident(vname)
+    set loop_depth[0] to loop_depth[0] + 1
+    set pos to parse_block(pos)
+    patch_conts(bc[0])
+    emit_load_ident(iname)
+    emit_byte(1)
+    emit_i32(1)
+    emit_byte(16)
+    set expr_type[0] to 0
+    emit_store_ident(iname)
+    emit_byte(64)
+    set back to placeholder16()
+    patch_i16(back, loop_top)
+    patch_i16(jz, bc[0])
+    patch_breaks(bc[0])
+    set loop_depth[0] to loop_depth[0] - 1
+    set fe_depth[0] to fe_depth[0] - 1
     if is_ident_word(pos, "end")
       set pos to pos + 1
     end
     return pos
   end
+
   # Milestone 5k: `to NAME with params NL body end`.
   #
   # This handler runs in two very different modes:

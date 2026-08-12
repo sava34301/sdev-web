@@ -58,7 +58,15 @@ const cases = [
   'to double with x\nreturn x * 2\nend\nsay double(3) + double(4)',
   'to hi\nreturn "hello"\nend\nsay hi()',
   'to hi\nreturn "hi "\nend\nto you\nreturn "you"\nend\nsay hi() + you()',
+  // Milestone 5s — for each / break / continue / else if
+  'for each x in [10, 20, 30]\nsay x\nend',
+  'set xs to [1, 2, 3, 4, 5]\nfor each x in xs\nif x is 2\ncontinue\nend\nif x is 4\nbreak\nend\nsay x\nend',
+  'for each a in [1, 2]\nfor each b in [10, 20]\nsay a * b\nend\nend',
+  'set i to 0\nwhile i < 10\nset i to i + 1\nif i is 3\ncontinue\nend\nif i > 5\nbreak\nend\nsay i\nend',
+  'set a to 5\nif a is 1\nsay 100\nelse if a is 5\nsay 55\nelse\nsay 0\nend\nsay 7',
+  'to total with xs\nset t to 0\nfor each v in xs\nset t to t + v\nend\nreturn t\nend\nsay total([1, 2, 3, 4])',
 ];
+
 
 function bytesEqual(a, b) {
   if (a.length !== b.length) return false;
