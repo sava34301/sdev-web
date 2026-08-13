@@ -285,7 +285,7 @@ echo  [8/8] Optional: install VS Code extension if 'code' is on PATH...
 where code >nul 2>nul && (
   powershell -NoProfile -Command ^
     "[Net.ServicePointManager]::SecurityProtocol='Tls12';" ^
-    "try { Invoke-WebRequest -Uri '%BASEURL%/sdev-language-1.0.0.vsix' -OutFile '%ROOT%\\sdev-language.vsix'; code --install-extension '%ROOT%\\sdev-language.vsix' } catch { Write-Host 'VS Code extension install skipped.' }"
+    "try { Invoke-WebRequest -Uri '%BASEURL%/sdev-language-1.2.0.vsix' -OutFile '%ROOT%\\sdev-language.vsix'; code --install-extension '%ROOT%\\sdev-language.vsix' } catch { Write-Host 'VS Code extension install skipped.' }"
 )
 
 echo.
@@ -387,12 +387,12 @@ exit /b 0
   };
 
   const downloadVsix = () => {
-    fetch('/sdev-language-1.0.0.vsix')
+    fetch('/sdev-language-1.2.0.vsix')
       .then((res) => { if (!res.ok) throw new Error(`Download failed: ${res.status}`); return res.blob(); })
       .then((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = 'sdev-language-1.0.0.vsix'; a.click();
+        a.href = url; a.download = 'sdev-language-1.2.0.vsix'; a.click();
         URL.revokeObjectURL(url);
         toast.success('Downloaded VS Code extension (.vsix)', {
           description: 'In VS Code: Extensions ⋯ → Install from VSIX…',
