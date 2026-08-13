@@ -93,6 +93,51 @@ async function runSource(context, source, label) {
   }
 }
 
+/** Run a file through the bundled v2 toolchain (self-hosted compiler + seed VM). */
+async function runV2(context, file) {
+  const out = getOutput();
+  out.show(true);
+  out.appendLine(`──── sdev v2: ${path.basename(file)} ────`);
+  const node = getConfig().get('nodePath', 'node');
+  const cli = path.join(context.extensionPath, 'interpreter', 'sdev-v2.cjs');
+  if (!fs.existsSync(cli)) {
+    vscode.window.showErrorMessage('Bundled v2 runtime is missing from the extension package.');
+    return;
+  }
+  const start = Date.now();
+  const child = spawn(node, [cli, file], { shell: false });
+  child.stdout.on('data', (c) => out.append(c.toString()));
+  child.stderr.on('data', (c) => out.append(c.toString()));
+  child.on('error', (err) => out.appendLine(`\n✗ Failed to start '${node}': ${err.message}`));
+  child.on('close', (code) => out.appendLine(`\n${code === 0 ? '✓' : '✗'} Exit ${code} · ${Date.now() - start}ms`));
+}
+
+/** Compile a file to a native x86-64 executable with the bundled backend. */
+async function buildNative(context, file) {
+  const cfg = getConfig();
+  const out = getOutput();
+  out.show(true);
+  out.appendLine(`──── sdev native: ${path.basename(file)} ────`);
+  const node = cfg.get('nodePath', 'node');
+  const cli = path.join(context.extensionPath, 'interpreter', 'sdev-native.cjs');
+  if (!fs.existsSync(cli)) {
+    vscode.window.showErrorMessage('Bundled native backend is missing from the extension package.');
+    return;
+  }
+  const outDir = cfg.get('native.outputDir', '') || path.dirname(file);
+  const target = path.join(outDir, path.basename(file).replace(/\.(sdev|sdv)$/, ''));
+  const args = [cli, file, '-o', target, '--as', cfg.get('native.assembler', 'as'), '--ld', cfg.get('native.linker', 'ld')];
+  const env = { ...process.env, SDEV_RUNTIME_S: path.join(context.extensionPath, 'interpreter', 'runtime.s') };
+  const child = spawn(node, args, { shell: false, env });
+  child.stdout.on('data', (c) => out.append(c.toString()));
+  child.stderr.on('data', (c) => out.append(c.toString()));
+  child.on('error', (err) => out.appendLine(`\n✗ ${err.message}`));
+  child.on('close', (code) => {
+    out.appendLine(`\n${code === 0 ? `✓ built ${target}` : `✗ Exit ${code}`}`);
+    if (code === 0) vscode.window.showInformationMessage(`sdev: built native executable ${target}`);
+  });
+}
+
 function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand('sdev.run', async () => {
@@ -103,7 +148,31 @@ function activate(context) {
       }
       // Save first so the on-disk file matches what we run.
       if (editor.document.isDirty) await editor.document.save();
+      if (getConfig().get('dialect', 'v1') === 'v2') {
+        await runV2(context, editor.document.fileName);
+        return;
+      }
       await runSource(context, editor.document.getText(), `Run ${path.basename(editor.document.fileName)}`);
+    }),
+
+    vscode.commands.registerCommand('sdev.runV2', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== 'sdev') {
+        vscode.window.showWarningMessage('Open an .sdev file to run it.');
+        return;
+      }
+      if (editor.document.isDirty) await editor.document.save();
+      await runV2(context, editor.document.fileName);
+    }),
+
+    vscode.commands.registerCommand('sdev.buildNative', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== 'sdev') {
+        vscode.window.showWarningMessage('Open an .sdev file to build it.');
+        return;
+      }
+      if (editor.document.isDirty) await editor.document.save();
+      await buildNative(context, editor.document.fileName);
     }),
 
     vscode.commands.registerCommand('sdev.runSelection', async () => {
@@ -119,6 +188,10 @@ function activate(context) {
 
     vscode.commands.registerCommand('sdev.openPlayground', () => {
       vscode.env.openExternal(vscode.Uri.parse('https://s-dev.lovable.app'));
+    }),
+
+    vscode.commands.registerCommand('sdev.openDocs', () => {
+      vscode.env.openExternal(vscode.Uri.parse('https://s-dev.lovable.app/docs'));
     }),
   );
 
