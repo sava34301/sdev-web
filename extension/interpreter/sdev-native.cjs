@@ -728,7 +728,15 @@ var import_node_child_process = require("node:child_process");
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_meta = {};
-var RUNTIME_S = (0, import_node_path.resolve)(new URL("./runtime.s", import_meta.url).pathname);
+var RUNTIME_S = (() => {
+  if (process.env.SDEV_RUNTIME_S) return (0, import_node_path.resolve)(process.env.SDEV_RUNTIME_S);
+  try {
+    const u = import_meta.url;
+    if (u) return (0, import_node_path.resolve)(new URL("./runtime.s", u).pathname);
+  } catch {
+  }
+  return (0, import_node_path.resolve)(typeof __dirname !== "undefined" ? __dirname : ".", "runtime.s");
+})();
 function run(cmd, args, opts = {}) {
   const r = (0, import_node_child_process.spawnSync)(cmd, args, { encoding: "utf8", ...opts });
   if (r.status !== 0) {
