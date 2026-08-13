@@ -1,7 +1,9 @@
 {
   "Variable declaration": {
     "prefix": "forge",
-    "body": ["forge ${1:name} be ${2:value}"],
+    "body": [
+      "forge ${1:name} be ${2:value}"
+    ],
     "description": "Declare a variable with `forge … be …`"
   },
   "Function declaration": {
@@ -89,23 +91,33 @@
   },
   "Print": {
     "prefix": "speak",
-    "body": ["speak($0)"]
+    "body": [
+      "speak($0)"
+    ]
   },
   "Lambda / arrow": {
     "prefix": "lambda",
-    "body": ["${1:x} -> ${0:expr}"]
+    "body": [
+      "${1:x} -> ${0:expr}"
+    ]
   },
   "Ternary": {
     "prefix": "ternary",
-    "body": ["${1:cond} ~ ${2:then} : ${0:else}"]
+    "body": [
+      "${1:cond} ~ ${2:then} : ${0:else}"
+    ]
   },
   "Pipe": {
     "prefix": "pipe",
-    "body": ["${1:value} |> ${0:fn}"]
+    "body": [
+      "${1:value} |> ${0:fn}"
+    ]
   },
   "Import / summon": {
     "prefix": "summon",
-    "body": ["summon \"${1:path}\""]
+    "body": [
+      "summon \"${1:path}\""
+    ]
   },
   "Hello, World!": {
     "prefix": "hello",
@@ -134,5 +146,165 @@
       "  onclick(\"#btn\", \"const el=document.querySelector('#label'); const n=(+el.textContent.match(/\\\\d+/)[0])+1; el.textContent='Count: '+n;\")",
       "endpage()"
     ]
+  },
+  "v2: say": {
+    "prefix": "say",
+    "body": [
+      "say ${0:\"hello\"}"
+    ],
+    "description": "sdev v2 — print a value"
+  },
+  "v2: set": {
+    "prefix": "set",
+    "body": [
+      "set ${1:name} to ${0:value}"
+    ],
+    "description": "sdev v2 — bind a variable"
+  },
+  "v2: if": {
+    "prefix": "if",
+    "body": [
+      "if ${1:cond}",
+      "  $0",
+      "end"
+    ],
+    "description": "sdev v2 — conditional"
+  },
+  "v2: if / else": {
+    "prefix": "ifelse",
+    "body": [
+      "if ${1:cond}",
+      "  $2",
+      "else if ${3:other}",
+      "  $4",
+      "else",
+      "  $0",
+      "end"
+    ],
+    "description": "sdev v2 — if / else if / else"
+  },
+  "v2: while": {
+    "prefix": "while",
+    "body": [
+      "while ${1:cond}",
+      "  $0",
+      "end"
+    ],
+    "description": "sdev v2 — while loop"
+  },
+  "v2: for each": {
+    "prefix": "foreach",
+    "body": [
+      "for each ${1:item} in ${2:list}",
+      "  $0",
+      "end"
+    ],
+    "description": "sdev v2 — iterate a list"
+  },
+  "v2: function": {
+    "prefix": "to",
+    "body": [
+      "to ${1:name} with ${2:a}",
+      "  return ${0:a}",
+      "end"
+    ],
+    "description": "sdev v2 — function definition"
+  },
+  "v2: list": {
+    "prefix": "list",
+    "body": [
+      "set ${1:xs} to [${0:1, 2, 3}]"
+    ],
+    "description": "sdev v2 — list literal"
+  },
+  "v2: tome (dictionary)": {
+    "prefix": "tome",
+    "body": [
+      "set ${1:t} to { ${2:name}: ${3:\"value\"} }",
+      "say ${1:t}[\"${2:name}\"]"
+    ],
+    "description": "sdev v2 — string-keyed dictionary"
+  },
+  "v2: tome iteration": {
+    "prefix": "tomeeach",
+    "body": [
+      "for each k in keys(${1:t})",
+      "  say concat(concat(k, \" = \"), str(${1:t}[k]))",
+      "end"
+    ],
+    "description": "sdev v2 — walk a tome"
+  },
+  "v2: file I/O": {
+    "prefix": "file",
+    "body": [
+      "set data to read_file(\"${1:input.txt}\")",
+      "write_file(\"${2:output.txt}\", data)"
+    ],
+    "description": "sdev v2 — host file I/O"
+  },
+  "v2: http get": {
+    "prefix": "http",
+    "body": [
+      "set body to http_get(\"${1:https://example.com}\")",
+      "say length(body)"
+    ],
+    "description": "sdev v2 — fetch a URL"
+  },
+  "JavaScript interop block": {
+    "prefix": "js",
+    "body": [
+      "js {",
+      "  ${0:// raw JavaScript here}",
+      "}"
+    ],
+    "description": "Run raw JavaScript from sdev"
+  },
+  "Hardware: board block": {
+    "prefix": "board",
+    "body": [
+      "board \"${1:uno}\" {",
+      "  pin ${2:13} as output",
+      "  setup {",
+      "    $0",
+      "  }",
+      "  loop {",
+      "    write ${2:13} high",
+      "    delay 500",
+      "    write ${2:13} low",
+      "    delay 500",
+      "  }",
+      "}"
+    ],
+    "description": "Arduino-style hardware sketch"
+  },
+  "ML: tensor": {
+    "prefix": "tensor",
+    "body": [
+      "set ${1:x} to randn([${2:2}, ${3:3}])",
+      "say ${1:x}"
+    ],
+    "description": "Create a random tensor"
+  },
+  "ML: training loop": {
+    "prefix": "train",
+    "body": [
+      "set model to transformer_block(${1:dim}, ${2:heads})",
+      "set opt to adam(model, ${3:0.0003})",
+      "for each batch in dataset(\"${4:data.txt}\")",
+      "  set loss to cross_entropy(model, batch)",
+      "  backward(loss)",
+      "  adam_step(opt)",
+      "end",
+      "checkpoint_save(model, \"${5:model.ckpt}\")"
+    ],
+    "description": "End-to-end LM training loop"
+  },
+  "Self-modification agent": {
+    "prefix": "evolve",
+    "body": [
+      "set plan to auto_evolve(\"${1:add a feature}\")",
+      "self_modify(plan)"
+    ],
+    "description": "Model-driven source evolution"
   }
 }

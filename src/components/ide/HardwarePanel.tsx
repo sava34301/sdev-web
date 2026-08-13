@@ -18,6 +18,20 @@ interface Props {
 
 type Status = 'idle' | 'busy' | 'ok' | 'error';
 
+interface CompileResult {
+  ok?: boolean;
+  reason?: string;
+  message?: string;
+  error?: string;
+  log?: string;
+  hex?: string;
+  format?: string;
+  ino?: string;
+}
+
+const DEFAULT_BUILD_URL = 'http://localhost:8765';
+
+
 export function HardwarePanel({ source, onAppendLog }: Props) {
   const [boardId, setBoardId] = useState<string>(() => localStorage.getItem('sdev.hw.board') ?? 'uno');
   const [port, setPort] = useState<WebSerialPort | null>(null);
@@ -29,12 +43,17 @@ export function HardwarePanel({ source, onAppendLog }: Props) {
   const monitorAbort = useRef<AbortController | null>(null);
   const [baud, setBaud] = useState(9600);
   const [librariesOpen, setLibrariesOpen] = useState(false);
+  const [buildUrl, setBuildUrl] = useState<string>(() => localStorage.getItem('sdev.hw.buildUrl') ?? DEFAULT_BUILD_URL);
+  const [buildOk, setBuildOk] = useState<boolean | null>(null);
+
 
   const board = useMemo(() => findBoardById(boardId)!, [boardId]);
   const block = useMemo(() => extractBoardBlock(source), [source]);
   const transpiled = useMemo(() => block ? transpileBoard(block, board) : null, [block, board]);
 
   useEffect(() => { localStorage.setItem('sdev.hw.board', boardId); }, [boardId]);
+  useEffect(() => { localStorage.setItem('sdev.hw.buildUrl', buildUrl); setBuildOk(null); }, [buildUrl]);
+
 
   // Try to re-attach a previously granted port on mount.
   useEffect(() => {
@@ -70,16 +89,47 @@ export function HardwarePanel({ source, onAppendLog }: Props) {
     }
   }, []);
 
+  /** Try the user's own build server (localhost or self-hosted) first. */
+  const compileViaBuildServer = useCallback(async (url: string): Promise<CompileResult> => {
+    const res = await fetch(url.replace(/\/+$/, '') + '/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fqbn: board.fqbn, ino: transpiled!.ino, libraries: transpiled!.libraries }),
+    });
+    return (await res.json()) as CompileResult;
+  }, [board, transpiled]);
+
   const compile = useCallback(async (): Promise<string | null> => {
     if (!transpiled) { toast.error('No `board "<id>" { ... }` block found in this file.'); return null; }
     setStatus('busy');
     onAppendLog(`[hw] compiling for ${board.fqbn}…`);
+
+    // 1) Local / self-hosted arduino-cli bridge.
+    if (buildUrl.trim()) {
+      try {
+        const r = await compileViaBuildServer(buildUrl.trim());
+        if (r.ok && r.hex) {
+          setHexCache(r.hex); setStatus('ok');
+          onAppendLog(`[hw] compiled OK via ${buildUrl} (${r.hex.length} bytes ${r.format})`);
+          return r.hex;
+        }
+        setStatus('error');
+        onAppendLog(`[hw] build server error: ${r.error ?? r.message ?? 'unknown'}`);
+        if (r.log) onAppendLog(r.log);
+        toast.error(r.error ?? r.message ?? 'Build failed');
+        return null;
+      } catch (e) {
+        onAppendLog(`[hw] build server unreachable at ${buildUrl} (${(e as Error).message}) — trying hosted builder…`);
+      }
+    }
+
+    // 2) Hosted builder via the backend function.
     try {
       const { data, error } = await supabase.functions.invoke('compile-firmware', {
         body: { fqbn: board.fqbn, ino: transpiled.ino, libraries: transpiled.libraries },
       });
       if (error) throw new Error(error.message);
-      const r = data as { ok?: boolean; reason?: string; message?: string; hex?: string; format?: string; ino?: string };
+      const r = data as CompileResult;
       if (r.ok && r.hex) {
         setHexCache(r.hex); setStatus('ok');
         onAppendLog(`[hw] compiled OK (${r.hex.length} bytes ${r.format})`);
@@ -87,19 +137,36 @@ export function HardwarePanel({ source, onAppendLog }: Props) {
       }
       if (r.reason === 'build_unavailable') {
         setStatus('error');
-        onAppendLog(`[hw] ${r.message}`);
-        toast.message('Build server not configured — .ino downloaded so you can build locally.');
+        onAppendLog('[hw] No build server reachable. Start the local one:');
+        onAppendLog('[hw]   node tools/arduino-build-server/server.mjs   (needs arduino-cli)');
+        onAppendLog('[hw] then set its URL in Hardware → Build server. The .ino was downloaded meanwhile.');
+        toast.error('No build server reachable — see the log for the one-line setup.');
         downloadText(`${board.id}.ino`, r.ino ?? transpiled.ino);
         return null;
       }
-      throw new Error(r.message || 'compile failed');
+      throw new Error(r.message || r.error || 'compile failed');
     } catch (e) {
       setStatus('error');
       onAppendLog(`[hw] compile error: ${(e as Error).message}`);
       toast.error((e as Error).message);
       return null;
     }
-  }, [transpiled, board, onAppendLog]);
+  }, [transpiled, board, onAppendLog, buildUrl, compileViaBuildServer]);
+
+  const testBuildServer = useCallback(async () => {
+    if (!buildUrl.trim()) { toast.error('Enter a build server URL first.'); return; }
+    try {
+      const res = await fetch(buildUrl.replace(/\/+$/, '') + '/');
+      const j = await res.json() as { ok?: boolean; arduinoCli?: string; error?: string };
+      if (j.ok) { setBuildOk(true); toast.success(`Build server ready — ${j.arduinoCli}`); onAppendLog(`[hw] build server OK: ${j.arduinoCli}`); }
+      else { setBuildOk(false); toast.error(j.error ?? 'Build server not ready'); onAppendLog(`[hw] ${j.error}`); }
+    } catch (e) {
+      setBuildOk(false);
+      toast.error('Build server unreachable — run: node tools/arduino-build-server/server.mjs');
+      onAppendLog(`[hw] build server unreachable: ${(e as Error).message}`);
+    }
+  }, [buildUrl, onAppendLog]);
+
 
   const upload = useCallback(async () => {
     if (!port) { toast.error('No port — click Detect Board first.'); return; }
@@ -207,6 +274,27 @@ export function HardwarePanel({ source, onAppendLog }: Props) {
             <Download className="w-3 h-3" /> Export .ino
           </Button>
         </section>
+
+        <section className="space-y-1.5">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Build server</label>
+          <div className="flex gap-1.5">
+            <input
+              value={buildUrl}
+              onChange={(e) => setBuildUrl(e.target.value)}
+              placeholder={DEFAULT_BUILD_URL}
+              spellCheck={false}
+              className="h-7 flex-1 rounded border border-border/60 bg-background px-2 text-[11px] font-mono outline-none focus:border-primary"
+            />
+            <Button size="sm" variant="outline" onClick={testBuildServer} className="h-7 px-2 text-xs">Test</Button>
+          </div>
+          <p className={`text-[10px] ${buildOk === true ? 'text-emerald-400' : buildOk === false ? 'text-red-400' : 'text-muted-foreground'}`}>
+            {buildOk === true
+              ? 'arduino-cli bridge reachable — Compile & Upload are live.'
+              : <>Run <code className="font-mono">node tools/arduino-build-server/server.mjs</code> locally (needs arduino-cli), or point this at a hosted bridge.</>}
+          </p>
+        </section>
+
+
 
         <section className="space-y-1.5">
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Serial monitor</label>
