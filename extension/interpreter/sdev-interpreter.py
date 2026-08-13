@@ -175,11 +175,672 @@ class ContinueException(Exception):
     """Used to implement continue statements"""
     pass
 
+# ============================================================
+# Built-in language translator (parity with sdev-interpreter.js)
+# 25 supported languages. Synchronous, deterministic, no network.
+# ============================================================
+
+KEYWORD_TABLES = {
+  "Spanish": {
+    "forjar": "forge", "ser": "be", "conjurar": "conjure", "rendir": "yield",
+    "ponderar": "ponder", "sino": "otherwise", "ciclo": "cycle", "iterar": "iterate",
+    "través": "through", "por": "through", "dentro": "within", "lanzar": "yeet",
+    "saltar": "skip", "hablar": "speak", "mostrar": "speak", "decir": "speak",
+    "esencia": "essence", "extender": "extend", "propio": "self", "padre": "super",
+    "nuevo": "new", "intento": "attempt", "intentar": "attempt", "rescatar": "rescue",
+    "también": "also", "cualquiera": "either", "o": "either",
+    "no_es": "isnt", "igual": "equals", "difiere": "differs", "sí": "yep",
+    "no": "nope", "vacío": "void", "invocar": "summon", "asíncrono": "async",
+    "esperar": "await", "generar": "spawn", "verdadero": "yep", "falso": "nope",
+    "nulo": "void", "clase": "essence", "retornar": "yield", "devolver": "yield",
+    "mientras": "cycle", "para": "iterate", "si": "ponder",
+    "romper": "yeet", "continuar": "skip", "y": "also", "importar": "summon",
+    "función": "conjure", "crear": "new",
+  },
+  "French": {
+    "forger": "forge", "être": "be", "est": "be", "évoquer": "conjure",
+    "rendre": "yield", "retourner": "yield", "réfléchir": "ponder", "si": "ponder",
+    "sinon": "otherwise", "boucle": "cycle", "tantque": "cycle", "itérer": "iterate",
+    "pour": "iterate", "à_travers": "through", "dans": "within", "jeter": "yeet",
+    "sauter": "skip", "parler": "speak", "dire": "speak", "afficher": "speak",
+    "classe": "essence", "étendre": "extend", "soi": "self",
+    "parent": "super", "nouveau": "new", "essayer": "attempt", "tenter": "attempt",
+    "secourir": "rescue", "attraper": "rescue", "aussi": "also", "et": "also",
+    "soit": "either", "ou": "either", "nest_pas": "isnt", "pas": "isnt",
+    "égal": "equals", "diffère": "differs", "oui": "yep", "vrai": "yep",
+    "non": "nope", "faux": "nope", "vide": "void", "nul": "void",
+    "invoquer": "summon", "importer": "summon", "asynchrone": "async",
+    "attendre": "await", "engendrer": "spawn", "fonction": "conjure", "créer": "new",
+  },
+  "German": {
+    "schmieden": "forge", "erstellen": "forge", "sein": "be", "ist": "be",
+    "beschwören": "conjure", "funktion": "conjure", "ergeben": "yield",
+    "zurückgeben": "yield", "überlegen": "ponder", "wenn": "ponder",
+    "sonst": "otherwise", "ansonsten": "otherwise", "schleife": "cycle",
+    "solange": "cycle", "iterieren": "iterate", "für": "iterate",
+    "durch": "through", "innerhalb": "within",
+    "werfen": "yeet", "überspringen": "skip", "sprechen": "speak",
+    "sagen": "speak", "ausgeben": "speak", "zeigen": "speak",
+    "wesen": "essence", "klasse": "essence", "erweitern": "extend",
+    "selbst": "self", "eltern": "super", "neu": "new",
+    "versuch": "attempt", "versuchen": "attempt", "retten": "rescue",
+    "fangen": "rescue", "auch": "also", "und": "also", "oder": "either",
+    "nicht": "isnt", "gleich": "equals", "unterscheidet": "differs",
+    "ja": "yep", "wahr": "yep", "nein": "nope", "falsch": "nope",
+    "leer": "void", "null": "void", "herbeirufen": "summon",
+    "importieren": "summon", "asynchron": "async", "warten": "await",
+    "erzeugen": "spawn",
+  },
+  "Portuguese": {
+    "forjar": "forge", "criar": "forge", "ser": "be", "é": "be",
+    "conjurar": "conjure", "função": "conjure", "render": "yield",
+    "retornar": "yield", "devolver": "yield", "ponderar": "ponder",
+    "se": "ponder", "senão": "otherwise", "ciclo": "cycle",
+    "enquanto": "cycle", "iterar": "iterate", "para": "iterate",
+    "através": "through", "dentro": "within", "em": "within",
+    "lançar": "yeet", "pular": "skip", "falar": "speak",
+    "mostrar": "speak", "exibir": "speak", "dizer": "speak",
+    "essência": "essence", "classe": "essence", "estender": "extend",
+    "próprio": "self", "pai": "super", "novo": "new",
+    "tentar": "attempt", "resgatar": "rescue", "capturar": "rescue",
+    "também": "also", "e": "also", "ou": "either", "não_é": "isnt",
+    "igual": "equals", "difere": "differs", "sim": "yep",
+    "verdadeiro": "yep", "não": "nope", "falso": "nope",
+    "vazio": "void", "nulo": "void", "invocar": "summon",
+    "importar": "summon", "assíncrono": "async", "aguardar": "await",
+    "gerar": "spawn",
+  },
+  "Italian": {
+    "forgiare": "forge", "creare": "forge", "essere": "be", "è": "be",
+    "evocare": "conjure", "funzione": "conjure", "cedere": "yield",
+    "restituire": "yield", "ritornare": "yield", "ponderare": "ponder",
+    "se": "ponder", "altrimenti": "otherwise", "ciclo": "cycle",
+    "mentre": "cycle", "iterare": "iterate", "per": "iterate",
+    "attraverso": "through", "dentro": "within", "in": "within",
+    "lanciare": "yeet", "saltare": "skip", "parlare": "speak",
+    "mostrare": "speak", "dire": "speak", "stampare": "speak",
+    "essenza": "essence", "classe": "essence", "estendere": "extend",
+    "sé": "self", "genitore": "super", "nuovo": "new",
+    "tentare": "attempt", "provare": "attempt", "salvare": "rescue",
+    "catturare": "rescue", "anche": "also", "e": "also",
+    "oppure": "either", "o": "either", "non_è": "isnt",
+    "uguale": "equals", "diverso": "differs", "sì": "yep",
+    "vero": "yep", "no": "nope", "falso": "nope", "vuoto": "void",
+    "nullo": "void", "invocare": "summon", "importare": "summon",
+    "asincrono": "async", "attendere": "await", "generare": "spawn",
+  },
+  "Dutch": {
+    "smeden": "forge", "maken": "forge", "zijn": "be", "is": "be",
+    "oproepen": "conjure", "functie": "conjure", "opleveren": "yield",
+    "teruggeven": "yield", "overdenken": "ponder", "als": "ponder",
+    "anders": "otherwise", "lus": "cycle", "zolang": "cycle",
+    "itereren": "iterate", "voor": "iterate", "door": "through",
+    "binnen": "within", "in": "within", "gooien": "yeet",
+    "overslaan": "skip", "spreken": "speak", "zeggen": "speak",
+    "tonen": "speak", "wezen": "essence", "klasse": "essence",
+    "uitbreiden": "extend", "zelf": "self", "ouder": "super",
+    "nieuw": "new", "proberen": "attempt", "redden": "rescue",
+    "vangen": "rescue", "ook": "also", "en": "also", "of": "either",
+    "niet": "isnt", "gelijk": "equals", "verschilt": "differs",
+    "ja": "yep", "waar": "yep", "nee": "nope", "onwaar": "nope",
+    "leeg": "void", "nul": "void", "aanroepen": "summon",
+    "importeren": "summon", "asynchroon": "async", "wachten": "await",
+    "voortbrengen": "spawn",
+  },
+  "Russian": {
+    "ковать": "forge", "создать": "forge", "быть": "be", "есть": "be",
+    "вызвать": "conjure", "функция": "conjure", "вернуть": "yield",
+    "обдумать": "ponder", "если": "ponder", "иначе": "otherwise",
+    "цикл": "cycle", "пока": "cycle", "перебрать": "iterate",
+    "для": "iterate", "через": "through", "внутри": "within",
+    "в": "within", "бросить": "yeet", "пропустить": "skip",
+    "сказать": "speak", "говорить": "speak", "показать": "speak",
+    "вывести": "speak", "печать": "speak",
+    "сущность": "essence", "класс": "essence", "расширить": "extend",
+    "себя": "self", "предок": "super", "родитель": "super",
+    "новый": "new", "попытка": "attempt", "попробовать": "attempt",
+    "спасти": "rescue", "поймать": "rescue", "также": "also",
+    "и": "also", "или": "either", "не": "isnt",
+    "равно": "equals", "отличается": "differs", "да": "yep",
+    "истина": "yep", "нет": "nope", "ложь": "nope",
+    "пусто": "void", "ничто": "void", "призвать": "summon",
+    "импорт": "summon", "асинхронный": "async", "ждать": "await",
+    "породить": "spawn",
+  },
+  "Chinese": {
+    "铸造": "forge", "创建": "forge", "是": "be", "赋值": "be",
+    "召唤": "conjure", "函数": "conjure", "产出": "yield",
+    "返回": "yield", "思考": "ponder", "如果": "ponder",
+    "否则": "otherwise", "循环": "cycle", "当": "cycle",
+    "遍历": "iterate", "为": "iterate", "通过": "through",
+    "在内": "within", "在": "within", "抛出": "yeet",
+    "跳过": "skip", "说": "speak", "输出": "speak",
+    "打印": "speak", "显示": "speak",
+    "本质": "essence", "类": "essence", "扩展": "extend",
+    "自己": "self", "父类": "super", "新": "new",
+    "尝试": "attempt", "拯救": "rescue", "捕获": "rescue",
+    "并且": "also", "和": "also", "或者": "either", "或": "either",
+    "不是": "isnt", "等于": "equals", "不同": "differs",
+    "是的": "yep", "真": "yep", "不": "nope", "假": "nope",
+    "空": "void", "无": "void", "导入": "summon",
+    "异步": "async", "等待": "await", "生成": "spawn",
+  },
+  "Japanese": {
+    "鍛造": "forge", "作成": "forge", "である": "be", "は": "be",
+    "召喚": "conjure", "関数": "conjure", "返す": "yield",
+    "考える": "ponder", "もし": "ponder", "それ以外": "otherwise",
+    "ループ": "cycle", "間": "cycle", "反復": "iterate",
+    "繰り返す": "iterate", "通して": "through", "の中で": "within",
+    "投げる": "yeet", "スキップ": "skip", "言う": "speak",
+    "表示": "speak", "出力": "speak", "印刷": "speak",
+    "本質": "essence", "クラス": "essence", "拡張": "extend",
+    "自分": "self", "親": "super", "新しい": "new",
+    "試す": "attempt", "救出": "rescue", "また": "also",
+    "かつ": "also", "または": "either", "ではない": "isnt",
+    "等しい": "equals", "異なる": "differs", "はい": "yep",
+    "真": "yep", "いいえ": "nope", "偽": "nope",
+    "空": "void", "インポート": "summon", "非同期": "async",
+    "待つ": "await", "生成": "spawn",
+  },
+  "Korean": {
+    "단조": "forge", "만들다": "forge", "이다": "be",
+    "소환": "conjure", "함수": "conjure", "반환": "yield",
+    "돌려주다": "yield", "생각": "ponder", "만약": "ponder",
+    "아니면": "otherwise", "순환": "cycle", "동안": "cycle",
+    "반복": "iterate", "위해": "iterate", "통해": "through",
+    "안에서": "within", "던지다": "yeet", "건너뛰기": "skip",
+    "말하다": "speak", "출력": "speak", "보여주다": "speak",
+    "본질": "essence", "클래스": "essence", "확장": "extend",
+    "자신": "self", "부모": "super", "새": "new", "새로운": "new",
+    "시도": "attempt", "구출": "rescue", "그리고": "also",
+    "또는": "either", "아니다": "isnt", "같다": "equals",
+    "다르다": "differs", "예": "yep", "참": "yep",
+    "아니오": "nope", "거짓": "nope", "비어있다": "void",
+    "가져오기": "summon", "비동기": "async", "기다리다": "await",
+    "생성": "spawn",
+  },
+  "Arabic": {
+    "صنع": "forge", "إنشاء": "forge", "يكون": "be", "هو": "be",
+    "استدعاء": "conjure", "دالة": "conjure", "إرجاع": "yield",
+    "رد": "yield", "تأمل": "ponder", "إذا": "ponder",
+    "وإلا": "otherwise", "خلاف": "otherwise", "حلقة": "cycle",
+    "طالما": "cycle", "تكرار": "iterate", "لكل": "iterate",
+    "عبر": "through", "خلال": "through", "داخل": "within",
+    "في": "within", "رمي": "yeet", "تخطي": "skip",
+    "قل": "speak", "تحدث": "speak", "اطبع": "speak", "اعرض": "speak",
+    "جوهر": "essence", "فئة": "essence", "صنف": "essence",
+    "توسيع": "extend", "ذات": "self", "نفس": "self",
+    "أب": "super", "جديد": "new", "محاولة": "attempt",
+    "حاول": "attempt", "إنقاذ": "rescue", "التقاط": "rescue",
+    "أيضا": "also", "و": "also", "أو": "either",
+    "ليس": "isnt", "يساوي": "equals", "يختلف": "differs",
+    "نعم": "yep", "صحيح": "yep", "لا": "nope", "خطأ": "nope",
+    "فارغ": "void", "عدم": "void", "استيراد": "summon",
+    "غير_متزامن": "async", "انتظار": "await", "توليد": "spawn",
+  },
+  "Hindi": {
+    "गढ़ना": "forge", "बनाना": "forge", "होना": "be", "है": "be",
+    "बुलाना": "conjure", "फलन": "conjure", "कार्य": "conjure",
+    "लौटाना": "yield", "वापसी": "yield", "सोचना": "ponder",
+    "अगर": "ponder", "यदि": "ponder", "वरना": "otherwise",
+    "अन्यथा": "otherwise", "चक्र": "cycle", "जबतक": "cycle",
+    "दोहराना": "iterate", "हेतु": "iterate", "द्वारा": "through",
+    "अंदर": "within", "में": "within", "फेंकना": "yeet",
+    "छोड़ना": "skip", "बोलना": "speak", "दिखाना": "speak",
+    "छापना": "speak", "सार": "essence", "वर्ग": "essence",
+    "विस्तार": "extend", "स्वयं": "self", "अभिभावक": "super",
+    "नया": "new", "प्रयास": "attempt", "कोशिश": "attempt",
+    "बचाना": "rescue", "पकड़ना": "rescue", "भी": "also",
+    "और": "also", "या": "either", "नहीं": "isnt",
+    "बराबर": "equals", "भिन्न": "differs", "हां": "yep",
+    "सत्य": "yep", "असत्य": "nope",
+    "रिक्त": "void", "शून्य": "void", "आयात": "summon",
+    "असमकालिक": "async", "प्रतीक्षा": "await", "उत्पन्न": "spawn",
+  },
+  "Turkish": {
+    "dövmek": "forge", "oluştur": "forge", "olmak": "be", "olsun": "be",
+    "çağır": "conjure", "fonksiyon": "conjure", "işlev": "conjure",
+    "döndür": "yield", "ver": "yield", "düşün": "ponder",
+    "eğer": "ponder", "yoksa": "otherwise", "değilse": "otherwise",
+    "döngü": "cycle", "iken": "cycle", "tekrarla": "iterate",
+    "için": "iterate", "boyunca": "through", "içinde": "within",
+    "at": "yeet", "atla": "skip", "söyle": "speak", "göster": "speak",
+    "yazdır": "speak", "öz": "essence", "sınıf": "essence",
+    "genişlet": "extend", "kendi": "self", "üst": "super",
+    "yeni": "new", "dene": "attempt", "kurtar": "rescue",
+    "yakala": "rescue", "da": "also", "ve": "also", "veya": "either",
+    "değil": "isnt", "eşit": "equals", "farklı": "differs",
+    "evet": "yep", "doğru": "yep", "hayır": "nope", "yanlış": "nope",
+    "boş": "void", "çağırmak": "summon", "içeaktar": "summon",
+    "eşzamansız": "async", "bekle": "await", "üret": "spawn",
+  },
+  "Polish": {
+    "kuć": "forge", "utwórz": "forge", "być": "be", "jest": "be",
+    "przywołaj": "summon", "funkcja": "conjure", "zwróć": "yield",
+    "oddaj": "yield", "rozważ": "ponder", "jeśli": "ponder",
+    "jeżeli": "ponder", "inaczej": "otherwise", "pętla": "cycle",
+    "dopóki": "cycle", "iteruj": "iterate", "dla": "iterate",
+    "przez": "through", "wewnątrz": "within", "w": "within",
+    "rzuć": "yeet", "pomiń": "skip", "mów": "speak",
+    "powiedz": "speak", "pokaż": "speak", "wypisz": "speak",
+    "istota": "essence", "klasa": "essence", "rozszerz": "extend",
+    "sam": "self", "rodzic": "super", "nowy": "new", "nowe": "new",
+    "próbuj": "attempt", "spróbuj": "attempt", "ratuj": "rescue",
+    "złap": "rescue", "też": "also", "i": "also", "lub": "either",
+    "albo": "either", "nie": "isnt", "równe": "equals",
+    "różni": "differs", "tak": "yep", "prawda": "yep",
+    "fałsz": "nope", "pusty": "void",
+    "importuj": "summon", "asynchroniczny": "async",
+    "czekaj": "await", "stwórz": "spawn",
+  },
+  "Swedish": {
+    "smida": "forge", "skapa": "forge", "vara": "be", "är": "be",
+    "framkalla": "conjure", "funktion": "conjure", "ge": "yield",
+    "returnera": "yield", "fundera": "ponder", "om": "ponder",
+    "annars": "otherwise", "slinga": "cycle", "medan": "cycle",
+    "iterera": "iterate", "för": "iterate", "genom": "through",
+    "inom": "within", "i": "within", "kasta": "yeet",
+    "hoppa": "skip", "tala": "speak", "visa": "speak",
+    "skriv": "speak", "väsen": "essence", "klass": "essence",
+    "utöka": "extend", "själv": "self", "förälder": "super",
+    "ny": "new", "försök": "attempt", "rädda": "rescue",
+    "fånga": "rescue", "också": "also", "och": "also",
+    "eller": "either", "inte": "isnt", "lika": "equals",
+    "skiljer": "differs", "ja": "yep", "sant": "yep",
+    "nej": "nope", "falskt": "nope", "tom": "void",
+    "åkalla": "summon", "importera": "summon", "asynkron": "async",
+    "vänta": "await", "skapa_process": "spawn",
+  },
+  "Norwegian": {
+    "smi": "forge", "lage": "forge", "være": "be", "er": "be",
+    "fremkalle": "conjure", "funksjon": "conjure", "gi": "yield",
+    "returnere": "yield", "tenke": "ponder", "hvis": "ponder",
+    "ellers": "otherwise", "sløyfe": "cycle", "mens": "cycle",
+    "iterere": "iterate", "for": "iterate", "gjennom": "through",
+    "innen": "within", "i": "within", "kaste": "yeet",
+    "hoppe": "skip", "snakke": "speak", "vise": "speak",
+    "skriv": "speak", "vesen": "essence", "klasse": "essence",
+    "utvide": "extend", "selv": "self", "forelder": "super",
+    "ny": "new", "forsøk": "attempt", "redde": "rescue",
+    "fange": "rescue", "også": "also", "og": "also",
+    "eller": "either", "ikke": "isnt", "lik": "equals",
+    "forskjellig": "differs", "ja": "yep", "sant": "yep",
+    "nei": "nope", "usant": "nope", "tom": "void",
+    "påkalle": "summon", "importere": "summon", "asynkron": "async",
+    "vente": "await", "starte": "spawn",
+  },
+  "Danish": {
+    "smede": "forge", "skabe": "forge", "være": "be", "er": "be",
+    "fremkalde": "conjure", "funktion": "conjure", "give": "yield",
+    "returnere": "yield", "overveje": "ponder", "hvis": "ponder",
+    "ellers": "otherwise", "sløjfe": "cycle", "mens": "cycle",
+    "iterere": "iterate", "for": "iterate", "igennem": "through",
+    "inden": "within", "i": "within", "kaste": "yeet",
+    "springe": "skip", "tale": "speak", "vise": "speak",
+    "skriv": "speak", "væsen": "essence", "klasse": "essence",
+    "udvide": "extend", "selv": "self", "forælder": "super",
+    "ny": "new", "forsøg": "attempt", "redde": "rescue",
+    "fange": "rescue", "også": "also", "og": "also",
+    "eller": "either", "ikke": "isnt", "lig": "equals",
+    "anderledes": "differs", "ja": "yep", "sand": "yep",
+    "nej": "nope", "falsk": "nope", "tom": "void",
+    "påkalde": "summon", "importere": "summon", "asynkron": "async",
+    "vente": "await", "starte": "spawn",
+  },
+  "Finnish": {
+    "takoa": "forge", "luoda": "forge", "olla": "be", "on": "be",
+    "loitsia": "conjure", "funktio": "conjure", "tuottaa": "yield",
+    "palauttaa": "yield", "pohtia": "ponder", "jos": "ponder",
+    "muuten": "otherwise", "silmukka": "cycle", "kun": "cycle",
+    "iteroida": "iterate", "jokaiselle": "iterate", "läpi": "through",
+    "sisällä": "within", "kohdassa": "within", "heittää": "yeet",
+    "ohittaa": "skip", "puhua": "speak", "näyttää": "speak",
+    "tulostaa": "speak", "olemus": "essence", "luokka": "essence",
+    "laajentaa": "extend", "itse": "self", "ylempi": "super",
+    "uusi": "new", "yritä": "attempt", "pelasta": "rescue",
+    "kiinni": "rescue", "myös": "also", "ja": "also",
+    "tai": "either", "ei": "isnt", "yhtäsuuri": "equals",
+    "eroaa": "differs", "kyllä": "yep", "tosi": "yep",
+    "epätosi": "nope", "tyhjä": "void",
+    "kutsu": "summon", "tuo": "summon", "asynkroninen": "async",
+    "odota": "await", "synnytä": "spawn",
+  },
+  "Greek": {
+    "σφυρηλατώ": "forge", "δημιουργώ": "forge", "είναι": "be",
+    "καλώ": "conjure", "συνάρτηση": "conjure", "επιστρέφω": "yield",
+    "σκέφτομαι": "ponder", "αν": "ponder", "αλλιώς": "otherwise",
+    "βρόχος": "cycle", "όσο": "cycle", "επαναλαμβάνω": "iterate",
+    "για": "iterate", "μέσω": "through", "μέσα": "within",
+    "σε": "within", "πετάω": "yeet", "παρακάμπτω": "skip",
+    "μιλάω": "speak", "εμφάνισε": "speak", "τύπωσε": "speak",
+    "ουσία": "essence", "κλάση": "essence", "επεκτείνω": "extend",
+    "εαυτός": "self", "γονέας": "super", "νέο": "new",
+    "δοκιμή": "attempt", "σώζω": "rescue", "πιάνω": "rescue",
+    "επίσης": "also", "και": "also", "ή": "either",
+    "δεν": "isnt", "ίσο": "equals", "διαφέρει": "differs",
+    "ναι": "yep", "αληθές": "yep", "όχι": "nope",
+    "ψευδές": "nope", "κενό": "void", "εισαγωγή": "summon",
+    "ασύγχρονο": "async", "περιμένω": "await", "παράγω": "spawn",
+  },
+  "Hebrew": {
+    "לחשל": "forge", "ליצור": "forge", "להיות": "be", "הוא": "be",
+    "לזמן": "conjure", "פונקציה": "conjure", "להחזיר": "yield",
+    "לחשוב": "ponder", "אם": "ponder", "אחרת": "otherwise",
+    "לולאה": "cycle", "כלעוד": "cycle", "לחזור": "iterate",
+    "לכל": "iterate", "דרך": "through", "בתוך": "within",
+    "לזרוק": "yeet", "לדלג": "skip", "לדבר": "speak",
+    "להציג": "speak", "להדפיס": "speak", "מהות": "essence",
+    "מחלקה": "essence", "להרחיב": "extend", "עצמי": "self",
+    "הורה": "super", "חדש": "new", "לנסות": "attempt",
+    "להציל": "rescue", "לתפוס": "rescue", "גם": "also",
+    "ו": "also", "או": "either", "לא": "isnt",
+    "שווה": "equals", "שונה": "differs", "כן": "yep",
+    "אמת": "yep", "שקר": "nope",
+    "ריק": "void", "לייבא": "summon", "אסינכרוני": "async",
+    "לחכות": "await", "להוליד": "spawn",
+  },
+  "Ukrainian": {
+    "кувати": "forge", "створити": "forge", "бути": "be", "є": "be",
+    "викликати": "conjure", "функція": "conjure", "повернути": "yield",
+    "обміркувати": "ponder", "якщо": "ponder", "інакше": "otherwise",
+    "цикл": "cycle", "поки": "cycle", "перебрати": "iterate",
+    "для": "iterate", "через": "through", "всередині": "within",
+    "в": "within", "кинути": "yeet", "пропустити": "skip",
+    "сказати": "speak", "показати": "speak", "вивести": "speak",
+    "сутність": "essence", "клас": "essence", "розширити": "extend",
+    "себе": "self", "батько": "super", "новий": "new",
+    "спроба": "attempt", "спробувати": "attempt", "врятувати": "rescue",
+    "зловити": "rescue", "також": "also", "і": "also",
+    "або": "either", "не": "isnt", "дорівнює": "equals",
+    "відрізняється": "differs", "так": "yep", "істина": "yep",
+    "ні": "nope", "хиба": "nope", "порожньо": "void",
+    "призвати": "summon", "імпорт": "summon", "асинхронний": "async",
+    "чекати": "await", "породити": "spawn",
+  },
+  "Czech": {
+    "kovat": "forge", "vytvořit": "forge", "být": "be", "je": "be",
+    "vyvolat": "conjure", "funkce": "conjure", "vrátit": "yield",
+    "uvážit": "ponder", "pokud": "ponder", "jinak": "otherwise",
+    "smyčka": "cycle", "dokud": "cycle", "iterovat": "iterate",
+    "pro": "iterate", "skrz": "through", "uvnitř": "within",
+    "v": "within", "hodit": "yeet", "přeskočit": "skip",
+    "říci": "speak", "zobrazit": "speak", "vytisknout": "speak",
+    "podstata": "essence", "třída": "essence", "rozšířit": "extend",
+    "sám": "self", "rodič": "super", "nový": "new",
+    "zkusit": "attempt", "zachránit": "rescue", "chytit": "rescue",
+    "také": "also", "a": "also", "nebo": "either",
+    "není": "isnt", "rovná": "equals", "liší": "differs",
+    "ano": "yep", "pravda": "yep", "ne": "nope",
+    "nepravda": "nope", "prázdný": "void", "importovat": "summon",
+    "asynchronní": "async", "čekat": "await", "vytvořit_proces": "spawn",
+  },
+  "Romanian": {
+    "forja": "forge", "crea": "forge", "fi": "be", "este": "be",
+    "evoca": "conjure", "funcție": "conjure", "funcția": "conjure",
+    "întoarce": "yield", "returna": "yield", "gândi": "ponder",
+    "dacă": "ponder", "altfel": "otherwise", "buclă": "cycle",
+    "câttimp": "cycle", "itera": "iterate", "pentru": "iterate",
+    "prin": "through", "în_interior": "within", "în": "within",
+    "arunca": "yeet", "sări": "skip", "spune": "speak",
+    "arată": "speak", "afișează": "speak", "esență": "essence",
+    "clasă": "essence", "extinde": "extend", "sine": "self",
+    "părinte": "super", "nou": "new", "încearcă": "attempt",
+    "salvează": "rescue", "prinde": "rescue", "de_asemenea": "also",
+    "și": "also", "sau": "either", "nu_este": "isnt",
+    "egal": "equals", "diferă": "differs", "da": "yep",
+    "adevărat": "yep", "nu": "nope", "fals": "nope",
+    "gol": "void", "importa": "summon", "asincron": "async",
+    "așteaptă": "await", "genera": "spawn",
+  },
+  "Hungarian": {
+    "kovácsol": "forge", "létrehoz": "forge", "lenni": "be", "legyen": "be",
+    "idéz": "conjure", "függvény": "conjure", "visszaad": "yield",
+    "fontol": "ponder", "ha": "ponder", "különben": "otherwise",
+    "ciklus": "cycle", "amíg": "cycle", "iterál": "iterate",
+    "minden": "iterate", "keresztül": "through", "belül": "within",
+    "ban": "within", "dob": "yeet", "átugor": "skip",
+    "mond": "speak", "mutat": "speak", "kiír": "speak",
+    "lényeg": "essence", "osztály": "essence", "bővít": "extend",
+    "maga": "self", "szülő": "super", "új": "new",
+    "próba": "attempt", "megpróbál": "attempt", "ment": "rescue",
+    "elkap": "rescue", "is": "also", "és": "also",
+    "vagy": "either", "nem": "isnt", "egyenlő": "equals",
+    "különbözik": "differs", "igen": "yep", "igaz": "yep",
+    "hamis": "nope", "üres": "void",
+    "behív": "summon", "importál": "summon", "aszinkron": "async",
+    "vár": "await", "indít": "spawn",
+  },
+  "Bulgarian": {
+    # forge — create / declare a variable. Accept many natural verbs.
+    "изкова": "forge", "изковай": "forge", "създай": "forge", "създам": "forge",
+    "създавам": "forge", "създаване": "forge", "направи": "forge", "направя": "forge",
+    "правя": "forge", "нека": "forge", "дефинирай": "forge", "дефиниция": "forge",
+    "обяви": "forge", "обявявам": "forge", "приеми": "forge", "вземи": "forge",
+    "имаме": "forge", "имам": "forge",
+    # be — assignment / equality binding
+    "бъде": "be", "да_бъде": "be", "бъда": "be", "е": "be", "да_е": "be",
+    "са": "be", "става": "be", "да_стане": "be", "стане": "be",
+    "равняване": "be", "присвой": "be", "присвоявам": "be",
+    "със_стойност": "be",
+    # conjure — function / method definition
+    "извикай": "conjure", "извикване": "conjure", "функция": "conjure",
+    "метод": "conjure", "процедура": "conjure",
+    "конструирай": "conjure",
+    # yield — return value
+    "върни": "yield", "връщам": "yield", "връщай": "yield",
+    "отговори": "yield", "дай": "yield",
+    # ponder — if / conditional
+    "обмисли": "ponder", "ако": "ponder", "когато": "ponder", "в_случай": "ponder",
+    "при_условие": "ponder", "провери": "ponder",
+    # otherwise — else
+    "иначе": "otherwise", "в_противен_случай": "otherwise", "иначе_ако": "otherwise",
+    "обратно": "otherwise", "ако_не": "otherwise",
+    # cycle — while loop
+    "цикъл": "cycle", "докато": "cycle", "повтаряй": "cycle", "повтори": "cycle",
+    "продължавай": "cycle", "върти": "cycle", "върти_се": "cycle",
+    # iterate — for loop
+    "обходи": "iterate", "обхождай": "iterate", "за_всеки": "iterate", "за": "iterate",
+    "всеки": "iterate", "итерирай": "iterate", "минавай_през": "iterate",
+    # through — over a collection
+    "през": "through", "по": "through", "над": "through",
+    # within — in / inside
+    "вътре": "within", "вътре_в": "within", "в": "within", "сред": "within",
+    # yeet — throw / break
+    "хвърли": "yeet", "хвърлям": "yeet", "счупи": "yeet", "прекъсни": "yeet",
+    "спри": "yeet", "излез": "yeet", "край": "yeet",
+    # skip — continue
+    "прескочи": "skip", "пропусни": "skip", "продължи": "skip", "следващ": "skip",
+    # speak — print / output
+    "кажи": "speak", "казвай": "speak", "изкрещи": "speak", "покажи": "speak",
+    "показвай": "speak", "изведи": "speak", "извеждай": "speak",
+    "отпечатай": "speak", "печатай": "speak", "изпиши": "speak", "пиши": "speak",
+    "напиши": "speak", "принтирай": "speak", "принт": "speak",
+    "логни": "speak", "съобщи": "speak",
+    # essence — class
+    "същност": "essence", "клас": "essence",
+    "структура": "essence",
+    # extend — inherit
+    "разшири": "extend", "разширяване": "extend", "наследи": "extend",
+    "наследяване": "extend", "произлиза": "extend",
+    # self / super
+    "себе_си": "self", "себе": "self", "този": "self", "тази": "self",
+    "родител": "super", "родителят": "super", "наследник": "super", "баща": "super",
+    # new — instantiate
+    "нов": "new", "ново": "new", "нова": "new", "създай_нов": "new", "инстанция": "new",
+    # attempt / rescue
+    "опитай": "attempt", "опитвай": "attempt", "пробвай": "attempt",
+    "опит_за": "attempt",
+    "спаси": "rescue", "хвани": "rescue", "прихвани": "rescue",
+    "при_грешка": "rescue", "ако_грешка": "rescue", "улови": "rescue",
+    # logical
+    "също": "also", "и": "also", "както_и": "also",
+    "или": "either", "било_то": "either",
+    "не_е": "isnt", "не": "isnt",
+    "равно": "equals", "равно_на": "equals", "еднакво": "equals", "същото": "equals",
+    "различно": "differs", "различно_от": "differs", "не_равно": "differs",
+    # booleans
+    "да": "yep", "вярно": "yep", "истина": "yep", "истинно": "yep", "истинско": "yep",
+    "невярно": "nope", "лъжа": "nope", "грешно": "nope", "неистина": "nope",
+    # void / null
+    "празно": "void", "нищо": "void", "нула": "void", "нулева": "void", "липсва": "void",
+    # summon — import
+    "призови": "summon", "импортирай": "summon", "внеси": "summon", "вкарай": "summon",
+    "включи": "summon", "зареди": "summon", "използвай": "summon",
+    # async / await / spawn
+    "асинхронен": "async", "асинхронно": "async", "паралелно": "async",
+    "изчакай": "await", "чакай": "await", "почакай": "await",
+    "породи": "spawn", "стартирай": "spawn", "пусни": "spawn", "изпълни": "spawn",
+  },
+}
+
+SUPPORTED_LANGUAGES = list(KEYWORD_TABLES.keys())
+
+_COMPILED_REPLACERS = {}
+_PHRASE_NORMS = {}
+
+def _build_phrase_norms(lang):
+    if lang in _PHRASE_NORMS:
+        return _PHRASE_NORMS[lang]
+    table = KEYWORD_TABLES.get(lang, {})
+    out = []
+    for k in table.keys():
+        if '_' in k:
+            spaced = re.sub(r'_', r'\\s+', re.escape(k))
+            # NB: re.escape escapes underscores too on older Pythons; keep \s+ replacement after escape
+            spaced = spaced.replace(r'\_', '_').replace('_', r'\s+')
+            pat = re.compile(r'(^|[^\w])' + spaced + r'(?=$|[^\w])', re.UNICODE)
+            out.append((pat, k))
+    _PHRASE_NORMS[lang] = out
+    return out
+
+def _compile_replacer(lang):
+    if lang in _COMPILED_REPLACERS:
+        return _COMPILED_REPLACERS[lang]
+    table = KEYWORD_TABLES.get(lang, {})
+    if not table:
+        fn = lambda s: s
+        _COMPILED_REPLACERS[lang] = fn
+        return fn
+    entries = sorted(table.items(), key=lambda kv: -len(kv[0]))
+    pattern = '|'.join(re.escape(k) for k, _ in entries)
+    if not pattern:
+        fn = lambda s: s
+        _COMPILED_REPLACERS[lang] = fn
+        return fn
+    regex = re.compile(r'(^|[^\w])(' + pattern + r')(?=$|[^\w])', re.UNICODE)
+    mapping = dict(entries)
+    def fn(src, _regex=regex, _map=mapping):
+        return _regex.sub(lambda m: m.group(1) + _map.get(m.group(2), m.group(2)), src)
+    _COMPILED_REPLACERS[lang] = fn
+    return fn
+
+def _segment_source(source):
+    segs = []
+    i = 0
+    buf = []
+    def flush(code):
+        if buf:
+            segs.append((code, ''.join(buf)))
+            buf.clear()
+    n = len(source)
+    while i < n:
+        c = source[i]
+        # Line comments  // ...  or  # ...
+        if (c == '/' and i + 1 < n and source[i+1] == '/') or c == '#':
+            flush(True)
+            end = source.find('\n', i)
+            stop = n if end == -1 else end
+            segs.append((False, source[i:stop]))
+            i = stop
+            continue
+        if c in ('"', "'", '`'):
+            flush(True)
+            quote = c
+            j = i + 1
+            while j < n:
+                if source[j] == '\\':
+                    j += 2
+                    continue
+                if source[j] == quote:
+                    j += 1
+                    break
+                j += 1
+            segs.append((False, source[i:j]))
+            i = j
+            continue
+        buf.append(c)
+        i += 1
+    flush(True)
+    return segs
+
+def has_non_ascii(code):
+    return any(ord(ch) > 127 for ch in code)
+
+_ENGLISH_RE = re.compile(r'\b(forge|be|conjure|ponder|cycle|speak|yield)\b')
+
+def detect_language(source):
+    english_hits = len(_ENGLISH_RE.findall(source))
+    best_lang = None
+    best_score = 0
+    for lang in SUPPORTED_LANGUAGES:
+        table = KEYWORD_TABLES[lang]
+        score = 0
+        for word in table.keys():
+            if word in source:
+                score += 1
+        if score > best_score:
+            best_score = score
+            best_lang = lang
+    if best_score >= 2 and best_score > english_hits:
+        return best_lang
+    return None
+
+def translate_source(source, source_language='auto'):
+    """Returns (translated_source, detected_language_or_None)."""
+    if not source:
+        return source, None
+    lang = source_language
+    if lang == 'English':
+        return source, 'English'
+    if not lang or lang == 'auto':
+        if not has_non_ascii(source):
+            lang = detect_language(source)
+            if not lang:
+                return source, None
+        else:
+            lang = detect_language(source)
+            if not lang:
+                return source, None
+    if lang not in KEYWORD_TABLES:
+        return source, None
+    replace = _compile_replacer(lang)
+    phrase_norms = _build_phrase_norms(lang)
+    out_parts = []
+    for code, text in _segment_source(source):
+        if not code:
+            out_parts.append(text)
+            continue
+        t = text
+        for pat, repl in phrase_norms:
+            t = pat.sub(lambda m, r=repl: m.group(1) + r, t)
+        t = replace(t)
+        # Context fix: "forge name(" -> "conjure name(" (function decl).
+        t = re.sub(r'\bforge(\s+[^\W\d]\w*\s*\()', r'conjure\1', t, flags=re.UNICODE)
+        out_parts.append(t)
+    return ''.join(out_parts), lang
+
+
 # ============= Lexer =============
 
 class Lexer:
-    def __init__(self, source: str):
-        self.source = source
+    def __init__(self, source: str, source_language: str = 'auto', translate: bool = True):
+        if translate and source_language != 'English' and source_language is not None:
+            translated, detected = translate_source(source, source_language)
+            self.source = translated
+            self.detected_language = detected
+        else:
+            self.source = source
+            self.detected_language = None
         self.pos = 0
         self.line = 1
         self.column = 1
@@ -3223,7 +3884,99 @@ class Interpreter:
             p.resolved = True
             return p
         builtins['Promise'] = SdevBuiltin('Promise', promise, 0, 1)
-        
+
+        # ───────── UI Toolkit (CLI: logs declarative commands) ─────────
+        ui_values: Dict[str, Any] = {}
+        def _s(v, fb=''):
+            if v is None: return fb
+            return v if isinstance(v, str) else str(v)
+        def _log(msg): self.output('[ui] ' + msg)
+        def _simple(fmt):
+            return lambda args: (_log(fmt(args)) or None)
+        ui_defs = {
+            'window':    (lambda a: f'window("{_s(a[0] if a else "sdev App")}", {a[1] if len(a)>1 else 480}, {a[2] if len(a)>2 else 600})', 0, 3),
+            'endwindow': (lambda a: 'endwindow', 0, 0),
+            'row':       (lambda a: 'row', 0, 0), 'endrow': (lambda a: 'endrow', 0, 0),
+            'column':    (lambda a: 'column', 0, 0), 'endcolumn': (lambda a: 'endcolumn', 0, 0),
+            'group':     (lambda a: f'group("{_s(a[0] if a else "")}")', 0, 1), 'endgroup': (lambda a: 'endgroup', 0, 0),
+            'tabs':      (lambda a: 'tabs', 0, 0), 'endtabs': (lambda a: 'endtabs', 0, 0),
+            'tab':       (lambda a: f'tab("{_s(a[0] if a else "Tab")}")', 0, 1), 'endtab': (lambda a: 'endtab', 0, 0),
+            'heading':   (lambda a: f'heading("{_s(a[0] if a else "")}", {a[1] if len(a)>1 else 1})', 1, 2),
+            'label':     (lambda a: f'label("{_s(a[0] if a else "")}")', 1, 1),
+            'paragraph': (lambda a: f'paragraph("{_s(a[0] if a else "")}")', 1, 1),
+            'image':     (lambda a: f'image("{_s(a[0] if a else "")}")', 1, 4),
+            'divider':   (lambda a: 'divider', 0, 0),
+            'spacer':    (lambda a: f'spacer({a[0] if a else 8})', 0, 1),
+            'progress':  (lambda a: f'progress({a[0] if a else 0}/{a[1] if len(a)>1 else 100})', 1, 2),
+            'menu':      (lambda a: f'menu("{_s(a[0] if a else "Menu")}")', 0, 1), 'endmenu': (lambda a: 'endmenu', 0, 0),
+            'show':      (lambda a: 'show()', 0, 0),
+        }
+        for nm, (fmt, mn, mx) in ui_defs.items():
+            builtins[nm] = SdevBuiltin(nm, _simple(fmt), mn, mx)
+        def _btn(args):
+            label = _s(args[0] if args else 'Button')
+            variant = _s(args[2] if len(args) > 2 else 'default')
+            _log(f'button("{label}", variant="{variant}")')
+            return None
+        builtins['button'] = SdevBuiltin('button', _btn, 1, 3)
+        def _menuitem(args):
+            _log(f'menuitem("{_s(args[0] if args else "")}")')
+            return None
+        builtins['menuitem'] = SdevBuiltin('menuitem', _menuitem, 1, 2)
+        def _input(args):
+            k = _s(args[0] if args else '')
+            if k and k not in ui_values: ui_values[k] = ''
+            _log(f'input(bind="{k}", placeholder="{_s(args[1] if len(args)>1 else "")}")')
+            return None
+        builtins['input'] = SdevBuiltin('input', _input, 1, 2)
+        def _textarea(args):
+            k = _s(args[0] if args else '')
+            if k and k not in ui_values: ui_values[k] = ''
+            _log(f'textarea(bind="{k}", rows={args[2] if len(args)>2 else 4})')
+            return None
+        builtins['textarea'] = SdevBuiltin('textarea', _textarea, 1, 3)
+        def _checkbox(args):
+            k = _s(args[0] if args else '')
+            if k and k not in ui_values: ui_values[k] = False
+            _log(f'checkbox(bind="{k}", label="{_s(args[1] if len(args)>1 else "")}")')
+            return None
+        builtins['checkbox'] = SdevBuiltin('checkbox', _checkbox, 1, 2)
+        def _slider(args):
+            k = _s(args[0] if args else '')
+            mn_ = args[1] if len(args) > 1 else 0
+            mx_ = args[2] if len(args) > 2 else 100
+            st_ = args[3] if len(args) > 3 else 1
+            if k and k not in ui_values: ui_values[k] = mn_
+            _log(f'slider(bind="{k}", {mn_}..{mx_} step {st_})')
+            return None
+        builtins['slider'] = SdevBuiltin('slider', _slider, 1, 4)
+        def _select(args):
+            k = _s(args[0] if args else '')
+            opts = args[1] if (len(args) > 1 and isinstance(args[1], list)) else []
+            opts = [str(o) for o in opts]
+            if k and k not in ui_values: ui_values[k] = opts[0] if opts else ''
+            _log(f'select(bind="{k}", options={opts})')
+            return None
+        builtins['select'] = SdevBuiltin('select', _select, 1, 2)
+        def _table(args):
+            headers = args[0] if (args and isinstance(args[0], list)) else []
+            rows = args[1] if (len(args) > 1 and isinstance(args[1], list)) else []
+            _log(f'table({headers}, rows={len(rows)})')
+            return None
+        builtins['table'] = SdevBuiltin('table', _table, 1, 2)
+        def _uiget(args):
+            k = _s(args[0] if args else '')
+            return ui_values.get(k)
+        builtins['uiget'] = SdevBuiltin('uiget', _uiget, 1, 1)
+        def _uiset(args):
+            ui_values[_s(args[0])] = args[1] if len(args) > 1 else None
+            return None
+        builtins['uiset'] = SdevBuiltin('uiset', _uiset, 2, 2)
+        def _alert(args):
+            self.output('[alert] ' + _s(args[0] if args else ''))
+            return None
+        builtins['alert'] = SdevBuiltin('alert', _alert, 1, 1)
+
         return builtins
     
     def _get_type(self, value: Any) -> str:
@@ -3932,9 +4685,10 @@ class Interpreter:
 
 # ============= Public API =============
 
-def execute(source: str, output_callback: Callable[[str], None] = print) -> Any:
-    """Execute sdev source code and return the result"""
-    lexer = Lexer(source)
+def execute(source: str, output_callback: Callable[[str], None] = print,
+            source_language: str = 'auto') -> Any:
+    """Execute sdev source code (auto-translated from any of 25 supported languages)."""
+    lexer = Lexer(source, source_language=source_language)
     tokens = lexer.tokenize()
     parser = Parser(tokens)
     program = parser.parse()
@@ -3993,8 +4747,67 @@ def repl() -> None:
 
 # ============= Main Entry Point =============
 
+def _print_help():
+    print("""sdev interpreter v{v}
+
+Usage:
+  sdev-interpreter.py [options] [file.sdev]
+
+Options:
+  --lang <Name>     Force source language (e.g. Spanish, Bulgarian). Default: auto.
+  --translate-only  Print the translated English sdev source and exit.
+  --languages       List the {n} supported source languages.
+  --version         Print version and exit.
+  -h, --help        Show this help.
+
+If no file is given, an interactive REPL is started.
+""".format(v=__version__, n=len(SUPPORTED_LANGUAGES)))
+
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        run_file(sys.argv[1])
+    args = sys.argv[1:]
+    lang = 'auto'
+    translate_only = False
+    file_arg = None
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a in ('-h', '--help'):
+            _print_help(); sys.exit(0)
+        elif a == '--version':
+            print('sdev', __version__); sys.exit(0)
+        elif a == '--languages':
+            print('Supported source languages ({n}):'.format(n=len(SUPPORTED_LANGUAGES)))
+            for L in SUPPORTED_LANGUAGES:
+                print('  -', L)
+            sys.exit(0)
+        elif a == '--lang' and i + 1 < len(args):
+            lang = args[i+1]; i += 2; continue
+        elif a == '--translate-only':
+            translate_only = True
+        elif a.startswith('-'):
+            print('Unknown option:', a); _print_help(); sys.exit(2)
+        else:
+            file_arg = a
+        i += 1
+
+    if translate_only:
+        if not file_arg:
+            print('--translate-only requires a file argument'); sys.exit(2)
+        with open(file_arg, 'r', encoding='utf-8') as f:
+            text = f.read()
+        out, detected = translate_source(text, lang)
+        if detected:
+            sys.stderr.write('[detected language: %s]\n' % detected)
+        sys.stdout.write(out)
+    elif file_arg:
+        # run_file uses default execute(); honor --lang via custom path
+        try:
+            with open(file_arg, 'r', encoding='utf-8') as f:
+                src_text = f.read()
+            execute(src_text, source_language=lang)
+        except FileNotFoundError:
+            print('Error: File not found:', file_arg); sys.exit(1)
+        except SdevError as e:
+            print('Error:', e); sys.exit(1)
     else:
         repl()

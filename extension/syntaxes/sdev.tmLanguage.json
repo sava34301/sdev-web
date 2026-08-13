@@ -5,13 +5,18 @@
   "fileTypes": ["sdev", "sdv"],
   "patterns": [
     { "include": "#comment" },
+    { "include": "#js-block" },
+    { "include": "#board-block" },
     { "include": "#string" },
     { "include": "#number" },
+    { "include": "#keyword-v2" },
     { "include": "#keyword" },
     { "include": "#constant" },
+    { "include": "#builtin" },
     { "include": "#operator" },
     { "include": "#class-decl" },
     { "include": "#function-decl" },
+    { "include": "#function-decl-v2" },
     { "include": "#function-call" },
     { "include": "#identifier" },
     { "include": "#block" }
@@ -23,6 +28,22 @@
         { "name": "comment.line.number-sign.sdev",  "match": "#.*$" },
         { "name": "comment.block.sdev", "begin": "/\\*", "end": "\\*/" }
       ]
+    },
+    "js-block": {
+      "comment": "Raw JavaScript interop: js { ... }",
+      "begin": "\\b(js)\\s*\\{",
+      "end": "\\}",
+      "beginCaptures": { "1": { "name": "keyword.control.interop.sdev" } },
+      "contentName": "meta.embedded.block.javascript",
+      "patterns": [{ "include": "source.js" }]
+    },
+    "board-block": {
+      "comment": "Hardware sketch: board \"uno\" { ... }",
+      "match": "\\b(board)\\s+(\"[^\"]*\")",
+      "captures": {
+        "1": { "name": "keyword.control.hardware.sdev" },
+        "2": { "name": "string.quoted.double.sdev" }
+      }
     },
     "string": {
       "patterns": [
@@ -51,6 +72,23 @@
         { "name": "constant.numeric.integer.sdev",    "match": "\\b\\d+\\b" }
       ]
     },
+    "keyword-v2": {
+      "comment": "sdev v2 (self-hosted track) keywords",
+      "patterns": [
+        {
+          "name": "keyword.control.v2.sdev",
+          "match": "\\b(if|else|end|while|for|each|in|return|break|continue|match)\\b"
+        },
+        {
+          "name": "keyword.declaration.v2.sdev",
+          "match": "\\b(set|to|with|say|ask)\\b"
+        },
+        {
+          "name": "keyword.operator.word.v2.sdev",
+          "match": "\\b(is|not|and|or|more|less)\\b"
+        }
+      ]
+    },
     "keyword": {
       "patterns": [
         {
@@ -73,9 +111,33 @@
     },
     "constant": {
       "patterns": [
-        { "name": "constant.language.boolean.sdev", "match": "\\b(yep|nope)\\b" },
-        { "name": "constant.language.null.sdev",    "match": "\\bvoid\\b" },
+        { "name": "constant.language.boolean.sdev", "match": "\\b(yep|nope|true|false)\\b" },
+        { "name": "constant.language.null.sdev",    "match": "\\b(void|nothing)\\b" },
         { "name": "constant.language.math.sdev",    "match": "\\b(PI|TAU|E|INFINITY)\\b" }
+      ]
+    },
+    "builtin": {
+      "patterns": [
+        {
+          "comment": "v1 standard library",
+          "name": "support.function.builtin.sdev",
+          "match": "\\b(speak|print|input|wait|random|floor|ground|ceil|round|abs|root|pow|min|max|sin|cos|tan|log|morph|type|measure|upper|lower|trim|split|join|replace|includes|startsWith|endsWith|gather|append|remove|sort|reverse|slice|map|filter)\\b"
+        },
+        {
+          "comment": "v2 core builtins (seed VM opcodes)",
+          "name": "support.function.builtin.v2.sdev",
+          "match": "\\b(length|concat|ord|chr|str|mklist|keys|values|has|i2f|f2i|fneg|fabs|fsqrt|fsin|fcos|ftan|fexp|flog|fpow|fbyte|read_file|write_file|http_get)\\b"
+        },
+        {
+          "comment": "ML / LLM stdlib",
+          "name": "support.function.ml.sdev",
+          "match": "\\b(tensor|zeros|ones|randn|matmul|transpose|softmax|relu|gelu|layernorm|embedding|attention|transformer_block|cross_entropy|adam_step|backward|train|checkpoint_save|checkpoint_load|tokenize_bpe|crawl|dataset|self_modify|auto_evolve)\\b"
+        },
+        {
+          "comment": "GPU / FFI",
+          "name": "support.function.accel.sdev",
+          "match": "\\b(ffi_open|ffi_call|cuda_init|cuda_alloc|cuda_memcpy|cuda_matmul|webgpu_init|webgpu_dispatch)\\b"
+        }
       ]
     },
     "operator": {
@@ -99,6 +161,14 @@
       "match": "\\b(conjure)\\s+([A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
         "1": { "name": "keyword.declaration.sdev" },
+        "2": { "name": "entity.name.function.sdev" }
+      }
+    },
+    "function-decl-v2": {
+      "comment": "v2: to name with a b ... end",
+      "match": "^\\s*(to)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.declaration.v2.sdev" },
         "2": { "name": "entity.name.function.sdev" }
       }
     },

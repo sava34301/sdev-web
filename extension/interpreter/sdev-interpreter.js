@@ -2103,6 +2103,43 @@ class Interpreter {
     // Graphics
     this.registerGraphicsBuiltins(builtins);
 
+    // ───────── UI Toolkit (CLI: logs declarative commands) ─────────
+    const uiState = { values: new Map(), nodes: [] };
+    const uiLog = (msg) => self.output('[ui] ' + msg);
+    const stringifyArg = (v) => v === null || v === undefined ? '' : (typeof v === 'string' ? v : stringify(v));
+    const uiHandlers = new Map(); let nextHandler = 1;
+    const wrapHandler = (fn) => {
+      if (!fn || typeof fn !== 'object' || typeof fn.call !== 'function') return null;
+      const id = nextHandler++; uiHandlers.set(id, fn); return id;
+    };
+    const uiSimple = (name, fmt) => builtins.set(name, { type: 'builtin', call: (args) => { uiLog(fmt(args)); return null; }});
+    uiSimple('window', (a) => `window("${stringifyArg(a[0]||'sdev App')}", ${a[1]||480}, ${a[2]||600})`);
+    uiSimple('endwindow', () => 'endwindow');
+    uiSimple('row', () => 'row'); uiSimple('endrow', () => 'endrow');
+    uiSimple('column', () => 'column'); uiSimple('endcolumn', () => 'endcolumn');
+    uiSimple('group', (a) => `group("${stringifyArg(a[0])}")`); uiSimple('endgroup', () => 'endgroup');
+    uiSimple('tabs', () => 'tabs'); uiSimple('endtabs', () => 'endtabs');
+    uiSimple('tab', (a) => `tab("${stringifyArg(a[0])}")`); uiSimple('endtab', () => 'endtab');
+    uiSimple('heading', (a) => `heading("${stringifyArg(a[0])}", ${a[1]||1})`);
+    uiSimple('label', (a) => `label("${stringifyArg(a[0])}")`);
+    uiSimple('paragraph', (a) => `paragraph("${stringifyArg(a[0])}")`);
+    uiSimple('image', (a) => `image("${stringifyArg(a[0])}", ${a[1]||0}, ${a[2]||0})`);
+    uiSimple('divider', () => 'divider'); uiSimple('spacer', (a) => `spacer(${a[0]||8})`);
+    uiSimple('progress', (a) => `progress(${a[0]||0}/${a[1]||100})`);
+    uiSimple('table', (a) => `table(${JSON.stringify(a[0]||[])}, rows=${(Array.isArray(a[1])?a[1].length:0)})`);
+    uiSimple('menu', (a) => `menu("${stringifyArg(a[0])}")`); uiSimple('endmenu', () => 'endmenu');
+    builtins.set('button', { type: 'builtin', call: (a) => { wrapHandler(a[1]); uiLog(`button("${stringifyArg(a[0]||'Button')}", variant="${stringifyArg(a[2]||'default')}")`); return null; }});
+    builtins.set('menuitem', { type: 'builtin', call: (a) => { wrapHandler(a[1]); uiLog(`menuitem("${stringifyArg(a[0])}")`); return null; }});
+    builtins.set('input', { type: 'builtin', call: (a) => { const k = stringifyArg(a[0]); if(k && !uiState.values.has(k)) uiState.values.set(k, ''); uiLog(`input(bind="${k}", placeholder="${stringifyArg(a[1])}")`); return null; }});
+    builtins.set('textarea', { type: 'builtin', call: (a) => { const k = stringifyArg(a[0]); if(k && !uiState.values.has(k)) uiState.values.set(k, ''); uiLog(`textarea(bind="${k}", rows=${a[2]||4})`); return null; }});
+    builtins.set('checkbox', { type: 'builtin', call: (a) => { const k = stringifyArg(a[0]); if(k && !uiState.values.has(k)) uiState.values.set(k, false); uiLog(`checkbox(bind="${k}", label="${stringifyArg(a[1])}")`); return null; }});
+    builtins.set('slider', { type: 'builtin', call: (a) => { const k = stringifyArg(a[0]); const min=Number(a[1])||0; if(k && !uiState.values.has(k)) uiState.values.set(k, min); uiLog(`slider(bind="${k}", ${min}..${Number(a[2])||100} step ${Number(a[3])||1})`); return null; }});
+    builtins.set('select', { type: 'builtin', call: (a) => { const k = stringifyArg(a[0]); const opts = Array.isArray(a[1]) ? a[1].map(String) : []; if(k && !uiState.values.has(k)) uiState.values.set(k, opts[0]||''); uiLog(`select(bind="${k}", options=${JSON.stringify(opts)})`); return null; }});
+    builtins.set('uiget', { type: 'builtin', call: (a) => uiState.values.has(stringifyArg(a[0])) ? uiState.values.get(stringifyArg(a[0])) : null });
+    builtins.set('uiset', { type: 'builtin', call: (a) => { uiState.values.set(stringifyArg(a[0]), a[1]); return null; }});
+    builtins.set('show', { type: 'builtin', call: () => { uiLog('show()'); return null; }});
+    builtins.set('alert', { type: 'builtin', call: (a) => { self.output('[alert] ' + stringifyArg(a[0])); return null; }});
+
     return builtins;
   }
 
