@@ -39,6 +39,11 @@ const OP = {
   READFILE: 0xB0, WRITEFILE: 0xB1, HTTPGET: 0xB2,
   // Milestone 5q — float bit inspection (used by the self-hosted codegen)
   FBYTE: 0xB4,
+  // Milestone 5u — string + numeric standard library
+  UPPER: 0x92, LOWER: 0x93, TRIM: 0x94, SUBSTR: 0x95, FIND: 0x96,
+  SPLIT: 0x97, JOIN: 0x98, REPLACE: 0x99, S2I: 0x9A,
+  IABS: 0x9B, IMIN: 0x9C, IMAX: 0x9D, RANGE: 0x9E, SUM: 0x9F,
+  FCEIL: 0xB5, FFLOOR: 0xB6, FROUND: 0xB7, RANDINT: 0xB8,
   HALT: 0xFF,
 
 };
@@ -85,6 +90,27 @@ const BUILTINS = {
   // fbyte(x, i) → the i-th little-endian IEEE-754 byte of the double x.
   // The self-hosted codegen uses it to emit PUSH_F64 operands.
   fbyte:      { arity: 2, ret: 'int', emit: (em) => em.emit(OP.FBYTE)     },
+  // --- Milestone 5u: string + numeric standard library ---
+  upper:    { arity: 1, ret: 'str',     emit: (em) => em.emit(OP.UPPER)   },
+  lower:    { arity: 1, ret: 'str',     emit: (em) => em.emit(OP.LOWER)   },
+  trim:     { arity: 1, ret: 'str',     emit: (em) => em.emit(OP.TRIM)    },
+  substr:   { arity: 3, ret: 'str',     emit: (em) => em.emit(OP.SUBSTR)  },
+  find:     { arity: 2, ret: 'int',     emit: (em) => em.emit(OP.FIND)    },
+  contains: { arity: 2, ret: 'int',     emit: (em) => {
+                em.emit(OP.FIND); em.emit(OP.PUSH_I32); em.emitI32(0); em.emit(OP.GE); } },
+  split:    { arity: 2, ret: 'liststr', emit: (em) => em.emit(OP.SPLIT)   },
+  join:     { arity: 2, ret: 'str',     emit: (em) => em.emit(OP.JOIN)    },
+  replace:  { arity: 3, ret: 'str',     emit: (em) => em.emit(OP.REPLACE) },
+  int:      { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.S2I)     },
+  abs:      { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.IABS)    },
+  min:      { arity: 2, ret: 'int',     emit: (em) => em.emit(OP.IMIN)    },
+  max:      { arity: 2, ret: 'int',     emit: (em) => em.emit(OP.IMAX)    },
+  range:    { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.RANGE)   },
+  sum:      { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.SUM)     },
+  random:   { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.RANDINT) },
+  fceil:    { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FCEIL)   },
+  ffloor:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FFLOOR)  },
+  fround:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FROUND)  },
 };
 
 

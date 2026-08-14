@@ -276,7 +276,282 @@
     (local.get $out))
 
 
+  ;; ---- Milestone 5u: string + numeric library helpers --------------------
+  ;; All string results are freshly allocated [len|bytes] blobs on the heap,
+  ;; the same shape the pool uses, so they are interchangeable with literals.
+
+  ;; substring, with clamping: bytes [start, start+len) of s.
+  (func $substr (param $s i32) (param $start i32) (param $len i32) (result i32)
+    (local $n i32) (local $dst i32) (local $i i32)
+    (local.set $n (i32.load (local.get $s)))
+    (if (i32.lt_s (local.get $start) (i32.const 0)) (then (local.set $start (i32.const 0))))
+    (if (i32.gt_s (local.get $start) (local.get $n)) (then (local.set $start (local.get $n))))
+    (if (i32.lt_s (local.get $len) (i32.const 0)) (then (local.set $len (i32.const 0))))
+    (if (i32.gt_s (i32.add (local.get $start) (local.get $len)) (local.get $n))
+      (then (local.set $len (i32.sub (local.get $n) (local.get $start)))))
+    (local.set $dst (call $alloc (i32.add (local.get $len) (i32.const 4))))
+    (i32.store (local.get $dst) (local.get $len))
+    (local.set $i (i32.const 0))
+    (block $done (loop $cp
+      (br_if $done (i32.ge_s (local.get $i) (local.get $len)))
+      (i32.store8
+        (i32.add (local.get $dst) (i32.add (i32.const 4) (local.get $i)))
+        (i32.load8_u (i32.add (local.get $s)
+          (i32.add (i32.const 4) (i32.add (local.get $start) (local.get $i))))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $cp)))
+    (local.get $dst))
+
+  ;; byte index of `needle` inside `hay`, or -1. Empty needle → 0.
+  (func $find (param $hay i32) (param $needle i32) (result i32)
+    (local $hn i32) (local $nn i32) (local $i i32) (local $j i32)
+    (local.set $hn (i32.load (local.get $hay)))
+    (local.set $nn (i32.load (local.get $needle)))
+    (if (i32.eqz (local.get $nn)) (then (return (i32.const 0))))
+    (local.set $i (i32.const 0))
+    (block $outer (loop $scan
+      (br_if $outer (i32.gt_s (i32.add (local.get $i) (local.get $nn)) (local.get $hn)))
+      (local.set $j (i32.const 0))
+      (block $mismatch
+        (block $matched (loop $cmp
+          (br_if $matched (i32.ge_s (local.get $j) (local.get $nn)))
+          (br_if $mismatch (i32.ne
+            (i32.load8_u (i32.add (local.get $hay)
+              (i32.add (i32.const 4) (i32.add (local.get $i) (local.get $j)))))
+            (i32.load8_u (i32.add (local.get $needle)
+              (i32.add (i32.const 4) (local.get $j))))))
+          (local.set $j (i32.add (local.get $j) (i32.const 1)))
+          (br $cmp)))
+        (return (local.get $i)))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $scan)))
+    (i32.const -1))
+
+  ;; ASCII case fold. up=1 → upper, up=0 → lower.
+  (func $case_fold (param $s i32) (param $up i32) (result i32)
+    (local $n i32) (local $dst i32) (local $i i32) (local $c i32)
+    (local.set $n (i32.load (local.get $s)))
+    (local.set $dst (call $alloc (i32.add (local.get $n) (i32.const 4))))
+    (i32.store (local.get $dst) (local.get $n))
+    (local.set $i (i32.const 0))
+    (block $done (loop $cp
+      (br_if $done (i32.ge_s (local.get $i) (local.get $n)))
+      (local.set $c (i32.load8_u
+        (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+      (if (local.get $up)
+        (then (if (i32.and (i32.ge_u (local.get $c) (i32.const 97))
+                           (i32.le_u (local.get $c) (i32.const 122)))
+                (then (local.set $c (i32.sub (local.get $c) (i32.const 32))))))
+        (else (if (i32.and (i32.ge_u (local.get $c) (i32.const 65))
+                           (i32.le_u (local.get $c) (i32.const 90)))
+                (then (local.set $c (i32.add (local.get $c) (i32.const 32)))))))
+      (i32.store8 (i32.add (local.get $dst) (i32.add (i32.const 4) (local.get $i)))
+                  (local.get $c))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $cp)))
+    (local.get $dst))
+
+  (func $is_space (param $c i32) (result i32)
+    (i32.or (i32.eq (local.get $c) (i32.const 32))
+      (i32.or (i32.eq (local.get $c) (i32.const 9))
+        (i32.or (i32.eq (local.get $c) (i32.const 10))
+                (i32.eq (local.get $c) (i32.const 13))))))
+
+  (func $trim (param $s i32) (result i32)
+    (local $n i32) (local $a i32) (local $b i32)
+    (local.set $n (i32.load (local.get $s)))
+    (local.set $a (i32.const 0))
+    (local.set $b (local.get $n))
+    (block $d1 (loop $l1
+      (br_if $d1 (i32.ge_s (local.get $a) (local.get $b)))
+      (br_if $d1 (i32.eqz (call $is_space (i32.load8_u
+        (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $a)))))))
+      (local.set $a (i32.add (local.get $a) (i32.const 1)))
+      (br $l1)))
+    (block $d2 (loop $l2
+      (br_if $d2 (i32.ge_s (local.get $a) (local.get $b)))
+      (br_if $d2 (i32.eqz (call $is_space (i32.load8_u
+        (i32.add (local.get $s) (i32.add (i32.const 3) (local.get $b)))))))
+      (local.set $b (i32.sub (local.get $b) (i32.const 1)))
+      (br $l2)))
+    (call $substr (local.get $s) (local.get $a) (i32.sub (local.get $b) (local.get $a))))
+
+  ;; split s by sep → list of blobs. Empty sep splits into single bytes.
+  (func $split (param $s i32) (param $sep i32) (result i32)
+    (local $n i32) (local $sn i32) (local $count i32) (local $i i32)
+    (local $start i32) (local $hit i32) (local $out i32) (local $rest i32)
+    (local.set $n  (i32.load (local.get $s)))
+    (local.set $sn (i32.load (local.get $sep)))
+    (if (i32.eqz (local.get $sn))
+      (then
+        (local.set $out (call $alloc (i32.add (i32.const 4) (i32.mul (local.get $n) (i32.const 4)))))
+        (i32.store (local.get $out) (local.get $n))
+        (local.set $i (i32.const 0))
+        (block $d (loop $l
+          (br_if $d (i32.ge_s (local.get $i) (local.get $n)))
+          (i32.store (i32.add (local.get $out) (i32.add (i32.const 4) (i32.mul (local.get $i) (i32.const 4))))
+                     (call $substr (local.get $s) (local.get $i) (i32.const 1)))
+          (local.set $i (i32.add (local.get $i) (i32.const 1)))
+          (br $l)))
+        (return (local.get $out))))
+    ;; pass 1: count pieces
+    (local.set $count (i32.const 1))
+    (local.set $i (i32.const 0))
+    (block $dc (loop $lc
+      (br_if $dc (i32.gt_s (i32.add (local.get $i) (local.get $sn)) (local.get $n)))
+      (local.set $rest (call $substr (local.get $s) (local.get $i) (local.get $sn)))
+      (if (call $streq (local.get $rest) (local.get $sep))
+        (then
+          (local.set $count (i32.add (local.get $count) (i32.const 1)))
+          (local.set $i (i32.add (local.get $i) (local.get $sn))))
+        (else (local.set $i (i32.add (local.get $i) (i32.const 1)))))
+      (br $lc)))
+    ;; pass 2: materialise
+    (local.set $out (call $alloc (i32.add (i32.const 4) (i32.mul (local.get $count) (i32.const 4)))))
+    (i32.store (local.get $out) (local.get $count))
+    (local.set $hit (i32.const 0))
+    (local.set $start (i32.const 0))
+    (local.set $i (i32.const 0))
+    (block $dp (loop $lp
+      (if (i32.gt_s (i32.add (local.get $i) (local.get $sn)) (local.get $n))
+        (then
+          (i32.store (i32.add (local.get $out) (i32.add (i32.const 4) (i32.mul (local.get $hit) (i32.const 4))))
+            (call $substr (local.get $s) (local.get $start) (i32.sub (local.get $n) (local.get $start))))
+          (br $dp)))
+      (local.set $rest (call $substr (local.get $s) (local.get $i) (local.get $sn)))
+      (if (call $streq (local.get $rest) (local.get $sep))
+        (then
+          (i32.store (i32.add (local.get $out) (i32.add (i32.const 4) (i32.mul (local.get $hit) (i32.const 4))))
+            (call $substr (local.get $s) (local.get $start) (i32.sub (local.get $i) (local.get $start))))
+          (local.set $hit (i32.add (local.get $hit) (i32.const 1)))
+          (local.set $i (i32.add (local.get $i) (local.get $sn)))
+          (local.set $start (local.get $i)))
+        (else (local.set $i (i32.add (local.get $i) (i32.const 1)))))
+      (br $lp)))
+    (local.get $out))
+
+  ;; join a list of string blobs with sep.
+  (func $join (param $list i32) (param $sep i32) (result i32)
+    (local $n i32) (local $i i32) (local $total i32) (local $dst i32)
+    (local $p i32) (local $src i32) (local $len i32) (local $k i32)
+    (local.set $n (i32.load (local.get $list)))
+    (local.set $total (i32.const 0))
+    (local.set $i (i32.const 0))
+    (block $d (loop $l
+      (br_if $d (i32.ge_s (local.get $i) (local.get $n)))
+      (local.set $total (i32.add (local.get $total)
+        (i32.load (i32.load (i32.add (local.get $list)
+          (i32.add (i32.const 4) (i32.mul (local.get $i) (i32.const 4))))))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l)))
+    (if (i32.gt_s (local.get $n) (i32.const 0))
+      (then (local.set $total (i32.add (local.get $total)
+        (i32.mul (i32.sub (local.get $n) (i32.const 1)) (i32.load (local.get $sep)))))))
+    (local.set $dst (call $alloc (i32.add (local.get $total) (i32.const 4))))
+    (i32.store (local.get $dst) (local.get $total))
+    (local.set $p (i32.add (local.get $dst) (i32.const 4)))
+    (local.set $i (i32.const 0))
+    (block $d2 (loop $l2
+      (br_if $d2 (i32.ge_s (local.get $i) (local.get $n)))
+      (if (i32.gt_s (local.get $i) (i32.const 0))
+        (then
+          (local.set $src (i32.add (local.get $sep) (i32.const 4)))
+          (local.set $len (i32.load (local.get $sep)))
+          (local.set $k (i32.const 0))
+          (block $ds (loop $ls
+            (br_if $ds (i32.ge_s (local.get $k) (local.get $len)))
+            (i32.store8 (local.get $p) (i32.load8_u (i32.add (local.get $src) (local.get $k))))
+            (local.set $p (i32.add (local.get $p) (i32.const 1)))
+            (local.set $k (i32.add (local.get $k) (i32.const 1)))
+            (br $ls)))))
+      (local.set $src (i32.load (i32.add (local.get $list)
+        (i32.add (i32.const 4) (i32.mul (local.get $i) (i32.const 4))))))
+      (local.set $len (i32.load (local.get $src)))
+      (local.set $src (i32.add (local.get $src) (i32.const 4)))
+      (local.set $k (i32.const 0))
+      (block $de (loop $le
+        (br_if $de (i32.ge_s (local.get $k) (local.get $len)))
+        (i32.store8 (local.get $p) (i32.load8_u (i32.add (local.get $src) (local.get $k))))
+        (local.set $p (i32.add (local.get $p) (i32.const 1)))
+        (local.set $k (i32.add (local.get $k) (i32.const 1)))
+        (br $le)))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l2)))
+    (local.get $dst))
+
+  ;; replace every occurrence of `old` in s with `new`. Empty old → s.
+  (func $replace (param $s i32) (param $old i32) (param $new i32) (result i32)
+    (if (i32.eqz (i32.load (local.get $old))) (then (return (local.get $s))))
+    (call $join (call $split (local.get $s) (local.get $old)) (local.get $new)))
+
+  ;; decimal string → int (leading '-' allowed, non-digits stop the scan).
+  (func $s2i (param $s i32) (result i32)
+    (local $n i32) (local $i i32) (local $c i32) (local $sign i32) (local $acc i32)
+    (local.set $n (i32.load (local.get $s)))
+    (local.set $i (i32.const 0))
+    (local.set $sign (i32.const 1))
+    (local.set $acc (i32.const 0))
+    (block $d (loop $l
+      (br_if $d (i32.ge_s (local.get $i) (local.get $n)))
+      (br_if $d (i32.eqz (call $is_space (i32.load8_u
+        (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l)))
+    (if (i32.and (i32.lt_s (local.get $i) (local.get $n))
+          (i32.eq (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i))))
+                  (i32.const 45)))
+      (then
+        (local.set $sign (i32.const -1))
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))))
+    (block $d2 (loop $l2
+      (br_if $d2 (i32.ge_s (local.get $i) (local.get $n)))
+      (local.set $c (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+      (br_if $d2 (i32.or (i32.lt_u (local.get $c) (i32.const 48))
+                         (i32.gt_u (local.get $c) (i32.const 57))))
+      (local.set $acc (i32.add (i32.mul (local.get $acc) (i32.const 10))
+                               (i32.sub (local.get $c) (i32.const 48))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l2)))
+    (i32.mul (local.get $acc) (local.get $sign)))
+
+  ;; range(n) → list [0, 1, … n-1]
+  (func $range (param $n i32) (result i32)
+    (local $out i32) (local $i i32)
+    (if (i32.lt_s (local.get $n) (i32.const 0)) (then (local.set $n (i32.const 0))))
+    (local.set $out (call $alloc (i32.add (i32.const 4) (i32.mul (local.get $n) (i32.const 4)))))
+    (i32.store (local.get $out) (local.get $n))
+    (local.set $i (i32.const 0))
+    (block $d (loop $l
+      (br_if $d (i32.ge_s (local.get $i) (local.get $n)))
+      (i32.store (i32.add (local.get $out) (i32.add (i32.const 4) (i32.mul (local.get $i) (i32.const 4))))
+                 (local.get $i))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l)))
+    (local.get $out))
+
+  (func $sum (param $list i32) (result i32)
+    (local $n i32) (local $i i32) (local $acc i32)
+    (local.set $n (i32.load (local.get $list)))
+    (local.set $i (i32.const 0))
+    (block $d (loop $l
+      (br_if $d (i32.ge_s (local.get $i) (local.get $n)))
+      (local.set $acc (i32.add (local.get $acc)
+        (i32.load (i32.add (local.get $list)
+          (i32.add (i32.const 4) (i32.mul (local.get $i) (i32.const 4)))))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l)))
+    (local.get $acc))
+
+  ;; Deterministic xorshift32 PRNG — no host import, so every runtime agrees.
+  (global $rng (mut i32) (i32.const 0x2545F491))
+  (func $rand_next (result i32)
+    (global.set $rng (i32.xor (global.get $rng) (i32.shl (global.get $rng) (i32.const 13))))
+    (global.set $rng (i32.xor (global.get $rng) (i32.shr_u (global.get $rng) (i32.const 17))))
+    (global.set $rng (i32.xor (global.get $rng) (i32.shl (global.get $rng) (i32.const 5))))
+    (i32.and (global.get $rng) (i32.const 0x7fffffff)))
+
   ;; ---- main interpreter loop --------------------------------------------
+
   (func (export "run") (result i32)
     (local $ip i32)         ;; instruction pointer (relative to CODE_BASE)
     (local $sp i32)         ;; stack pointer (absolute address)
@@ -971,7 +1246,181 @@
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
+        ;; ================= Milestone 5u: string + numeric library ==========
+
+        ;; --- UPPER (0x92) / LOWER (0x93) / TRIM (0x94) --- pop str, push str
+        (if (i32.eq (local.get $op) (i32.const 0x92))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $case_fold (i32.load (local.get $sp)) (i32.const 1)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+        (if (i32.eq (local.get $op) (i32.const 0x93))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $case_fold (i32.load (local.get $sp)) (i32.const 0)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+        (if (i32.eq (local.get $op) (i32.const 0x94))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $trim (i32.load (local.get $sp))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- SUBSTR (0x95) --- pop len, pop start, pop str, push str
+        (if (i32.eq (local.get $op) (i32.const 0x95))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $n (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp) (call $substr (local.get $a) (local.get $b) (local.get $n)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- FIND (0x96) --- pop needle, pop hay, push index or -1
+        (if (i32.eq (local.get $op) (i32.const 0x96))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp) (call $find (local.get $a) (local.get $b)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- SPLIT (0x97) --- pop sep, pop str, push list of strings
+        (if (i32.eq (local.get $op) (i32.const 0x97))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp) (call $split (local.get $a) (local.get $b)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- JOIN (0x98) --- pop sep, pop list, push string
+        (if (i32.eq (local.get $op) (i32.const 0x98))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp) (call $join (local.get $a) (local.get $b)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- REPLACE (0x99) --- pop new, pop old, pop str, push string
+        (if (i32.eq (local.get $op) (i32.const 0x99))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $n (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp) (call $replace (local.get $a) (local.get $b) (local.get $n)))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- S2I (0x9A) --- pop string, push int
+        (if (i32.eq (local.get $op) (i32.const 0x9A))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $s2i (i32.load (local.get $sp))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- IABS (0x9B) --- pop int, push |int|
+        (if (i32.eq (local.get $op) (i32.const 0x9B))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (select (i32.sub (i32.const 0) (local.get $a)) (local.get $a)
+                      (i32.lt_s (local.get $a) (i32.const 0))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- IMIN (0x9C) / IMAX (0x9D) --- pop b, pop a, push chosen int
+        (if (i32.eq (local.get $op) (i32.const 0x9C))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (select (local.get $a) (local.get $b) (i32.lt_s (local.get $a) (local.get $b))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+        (if (i32.eq (local.get $op) (i32.const 0x9D))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp)
+              (select (local.get $a) (local.get $b) (i32.gt_s (local.get $a) (local.get $b))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- RANGE (0x9E) --- pop n, push [0 … n-1]
+        (if (i32.eq (local.get $op) (i32.const 0x9E))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $range (i32.load (local.get $sp))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- SUM (0x9F) --- pop list, push total
+        (if (i32.eq (local.get $op) (i32.const 0x9F))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $sum (i32.load (local.get $sp))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- FCEIL (0xB5) / FFLOOR (0xB6) / FROUND (0xB7) --- float in/out
+        (if (i32.eq (local.get $op) (i32.const 0xB5))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp)
+              (call $box_f (f64.ceil (f64.load (i32.load (local.get $sp))))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+        (if (i32.eq (local.get $op) (i32.const 0xB6))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp)
+              (call $box_f (f64.floor (f64.load (i32.load (local.get $sp))))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+        (if (i32.eq (local.get $op) (i32.const 0xB7))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp)
+              (call $box_f (f64.nearest (f64.load (i32.load (local.get $sp))))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- RANDINT (0xB8) --- pop n, push a pseudo-random int in [0, n)
+        (if (i32.eq (local.get $op) (i32.const 0xB8))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (if (i32.le_s (local.get $a) (i32.const 0))
+              (then (i32.store (local.get $sp) (i32.const 0)))
+              (else (i32.store (local.get $sp)
+                      (i32.rem_s (call $rand_next) (local.get $a)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
         ;; unknown opcode → halt
+
         (br $exit)
 
       )

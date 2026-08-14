@@ -300,7 +300,7 @@
       "v1": "must",
       "v1_name": "elevate",
       "v2": "should",
-      "v2_name": "ceil",
+      "v2_name": "fceil",
       "native": "n/a",
       "native_name": "ceil"
     },
@@ -313,7 +313,7 @@
       "v1": "must",
       "v1_name": "nearby",
       "v2": "should",
-      "v2_name": "round",
+      "v2_name": "fround",
       "native": "n/a",
       "native_name": "round"
     },

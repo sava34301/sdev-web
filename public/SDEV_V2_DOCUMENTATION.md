@@ -184,6 +184,48 @@ Tomes are compiled by the self-hosted sdev compiler on the seed VM —
 byte-identical to the reference oracle (Milestone 5t).
 
 
+## Standard library (Milestone 5u)
+
+Strings:
+
+| Call | Result |
+|---|---|
+| `upper(s)` / `lower(s)` | ASCII case fold |
+| `trim(s)` | strip leading/trailing whitespace |
+| `substr(s, start, len)` | clamped substring |
+| `find(hay, needle)` | byte index, or `-1` |
+| `contains(hay, needle)` | `1` / `0` |
+| `split(s, sep)` | list of pieces (empty `sep` splits into bytes) |
+| `join(list, sep)` | glue a list of strings |
+| `replace(s, old, new)` | replace every occurrence |
+| `int(s)` | decimal string to int (`-` allowed) |
+
+Numbers:
+
+| Call | Result |
+|---|---|
+| `abs(n)`, `min(a, b)`, `max(a, b)` | integer helpers |
+| `range(n)` | list `[0 … n-1]` |
+| `sum(list)` | total of an int list |
+| `random(n)` | deterministic pseudo-random int in `[0, n)` |
+| `fceil(x)`, `ffloor(x)`, `fround(x)` | float rounding |
+
+```sdev
+set parts to split("a=1,b=2", ",")
+set t to {}
+for each p in parts
+  set t[substr(p, 0, 1)] to int(substr(p, 2, 1))
+end
+say join(keys(t), "-")        # a-b
+say sum(range(5))             # 10
+say upper(trim("  sdev  "))   # SDEV
+```
+
+`random(n)` uses an in-VM xorshift generator rather than a host call, so the
+same program prints the same sequence in the browser, in Node and in the
+VS Code extension.
+
+
 ## Functions
 
 Define with `to <name>`, receive arguments with `with`:
