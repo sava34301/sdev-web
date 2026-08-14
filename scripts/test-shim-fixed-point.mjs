@@ -76,6 +76,14 @@ const cases = [
   'to lookup with t k\nreturn t[k]\nend\nset t to {"q": 42}\nsay lookup(t, "q")',
   'set t to {"n": {"deep": 7}}\nsay length(t)',
   'set t to {}\nset i to 0\nwhile i < 12\nset t[str(i)] to i * i\nset i to i + 1\nend\nsay length(t)\nsay t["11"]',
+  // Milestone 5u — string + numeric standard library
+  'say upper("abC")\nsay lower("AbC")\nsay trim("  hi  ") + "|"',
+  'say substr("hello world", 6, 5)\nsay find("hello", "ll")\nsay contains("hello", "ell")',
+  'for each p in split("a,b,c", ",")\nsay p\nend',
+  'say join(split("a,b,c", ","), "-")\nsay replace("a-b-a", "a", "X")',
+  'say int("42") + 1\nsay abs(0 - 5)\nsay min(3, 9)\nsay max(3, 9)',
+  'say sum(range(5))\nfor each i in range(3)\nsay i\nend',
+  'say fceil(1.2)\nsay ffloor(1.8)\nsay fround(1.5)',
 ];
 
 
