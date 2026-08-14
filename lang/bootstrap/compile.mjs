@@ -90,6 +90,27 @@ const BUILTINS = {
   // fbyte(x, i) → the i-th little-endian IEEE-754 byte of the double x.
   // The self-hosted codegen uses it to emit PUSH_F64 operands.
   fbyte:      { arity: 2, ret: 'int', emit: (em) => em.emit(OP.FBYTE)     },
+  // --- Milestone 5u: string + numeric standard library ---
+  upper:    { arity: 1, ret: 'str',     emit: (em) => em.emit(OP.UPPER)   },
+  lower:    { arity: 1, ret: 'str',     emit: (em) => em.emit(OP.LOWER)   },
+  trim:     { arity: 1, ret: 'str',     emit: (em) => em.emit(OP.TRIM)    },
+  substr:   { arity: 3, ret: 'str',     emit: (em) => em.emit(OP.SUBSTR)  },
+  find:     { arity: 2, ret: 'int',     emit: (em) => em.emit(OP.FIND)    },
+  contains: { arity: 2, ret: 'int',     emit: (em) => {
+                em.emit(OP.FIND); em.emit(OP.PUSH_I32); em.emitI32(0); em.emit(OP.GE); } },
+  split:    { arity: 2, ret: 'liststr', emit: (em) => em.emit(OP.SPLIT)   },
+  join:     { arity: 2, ret: 'str',     emit: (em) => em.emit(OP.JOIN)    },
+  replace:  { arity: 3, ret: 'str',     emit: (em) => em.emit(OP.REPLACE) },
+  int:      { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.S2I)     },
+  abs:      { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.IABS)    },
+  min:      { arity: 2, ret: 'int',     emit: (em) => em.emit(OP.IMIN)    },
+  max:      { arity: 2, ret: 'int',     emit: (em) => em.emit(OP.IMAX)    },
+  range:    { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.RANGE)   },
+  sum:      { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.SUM)     },
+  random:   { arity: 1, ret: 'int',     emit: (em) => em.emit(OP.RANDINT) },
+  fceil:    { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FCEIL)   },
+  ffloor:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FFLOOR)  },
+  fround:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FROUND)  },
 };
 
 
