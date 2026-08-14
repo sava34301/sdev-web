@@ -272,6 +272,42 @@ const cases = [
     src: `set t to {}\nset i to 0\nwhile i < 12\n  set t[str(i)] to i * i\n  set i to i + 1\nend\nsay length(t)\nsay t["11"]\nsay t["7"]`,
     expect: ['12', '121', '49'],
   },
+  // ---- Milestone 5u: string + numeric standard library ----
+  {
+    name: 'Milestone 5u: upper / lower / trim',
+    src: `say upper("abC")\nsay lower("AbC")\nsay trim("  hi  ") + "|"`,
+    expect: ['ABC', 'abc', 'hi|'],
+  },
+  {
+    name: 'Milestone 5u: substr / find / contains',
+    src: `say substr("hello world", 6, 5)\nsay find("hello", "ll")\nsay find("hello", "z")\nsay contains("hello", "ell")`,
+    expect: ['world', '2', '-1', '1'],
+  },
+  {
+    name: 'Milestone 5u: split / join',
+    src: `for each p in split("a,b,c", ",")\n  say p\nend\nsay join(split("a,b,c", ","), "-")`,
+    expect: ['a', 'b', 'c', 'a-b-c'],
+  },
+  {
+    name: 'Milestone 5u: replace / int',
+    src: `say replace("a-b-a", "a", "X")\nsay int("42") + 1\nsay int("-7")`,
+    expect: ['X-b-X', '43', '-7'],
+  },
+  {
+    name: 'Milestone 5u: abs / min / max / sum / range',
+    src: `say abs(0 - 5)\nsay min(3, 9)\nsay max(3, 9)\nsay sum(range(5))\nsay length(range(4))`,
+    expect: ['5', '3', '9', '10', '4'],
+  },
+  {
+    name: 'Milestone 5u: fceil / ffloor / fround / random',
+    src: `say fceil(1.2)\nsay ffloor(1.8)\nsay fround(1.5)\nset r to random(10)\nif r < 10\n  say "ok"\nend`,
+    expect: ['2', '1', '2', 'ok'],
+  },
+  {
+    name: 'Milestone 5u: split pieces feed a tome',
+    src: `set t to {}\nfor each p in split("a=1,b=2", ",")\n  set t[substr(p, 0, 1)] to int(substr(p, 2, 1))\nend\nsay t["a"]\nsay t["b"]`,
+    expect: ['1', '2'],
+  },
 ];
 
 
