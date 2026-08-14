@@ -596,6 +596,35 @@ in milestone order.)
   driver-artifact, native and parity gates all green; `tome_literal`,
   `keys`, `values` and `has` are no longer v2 parity gaps.
 
+**Milestone 5u (string + numeric standard library) — shipped:**
+- **New seed opcodes** (`lang/bootstrap/seed.wat`): `UPPER (0x92)`,
+  `LOWER (0x93)`, `TRIM (0x94)`, `SUBSTR (0x95)`, `FIND (0x96)`,
+  `SPLIT (0x97)`, `JOIN (0x98)`, `REPLACE (0x99)`, `S2I (0x9A)`,
+  `IABS (0x9B)`, `IMIN (0x9C)`, `IMAX (0x9D)`, `RANGE (0x9E)`,
+  `SUM (0x9F)`, `FCEIL (0xB5)`, `FFLOOR (0xB6)`, `FROUND (0xB7)` and
+  `RANDINT (0xB8)`.
+- **All results are ordinary blobs.** Every string op allocates a fresh
+  `[len|bytes]` blob with the same shape the string pool uses, so computed
+  strings and literals are indistinguishable downstream. `split` returns a
+  regular list of blobs, which means `for each p in split(s, ",")` and
+  `length(split(...))` work with no extra machinery; `replace` is literally
+  `join(split(s, old), new)` inside the VM.
+- **No new host imports.** `ceil`/`floor`/`round` use the WebAssembly
+  `f64.ceil` / `f64.floor` / `f64.nearest` instructions, and `random(n)` is a
+  deterministic in-VM xorshift32 so every host (browser, Node, extension)
+  observes the same sequence. That keeps the four host functions of Milestone
+  7 as the complete host surface.
+- **Both compilers.** The bootstrap oracle gains a `BUILTINS` entry per call
+  and the self-hosted `emit_call` in `lang/compiler/codegen.sdev` gains the
+  matching opcode branch plus its result kind, so `say upper(x)` still picks
+  `SAY_STR` and `split()` is typed `liststr`. `contains(h, n)` is sugar,
+  emitted as `FIND; PUSH_I32 0; GE`.
+- Seven new fixed-point cases (66/66 byte-identical) and seven new runtime
+  cases (45/45 passing). Driver artifact rebuilt: bc=13070, pool=575.
+  `upper`, `lower`, `trim`, `contains`, `replace`, `split`, `join`, `int`,
+  `abs`, `min`, `max`, `ceil` and `round` are no longer v2 parity gaps; only
+  `num`, closures/classes, exceptions and `import` remain.
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.
