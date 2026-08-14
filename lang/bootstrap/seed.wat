@@ -1412,10 +1412,10 @@
           (then
             (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
             (local.set $a (i32.load (local.get $sp)))
-            (i32.store (local.get $sp)
-              (select (i32.const 0)
-                      (i32.rem_s (call $rand_next) (local.get $a))
-                      (i32.le_s (local.get $a) (i32.const 0))))
+            (if (i32.le_s (local.get $a) (i32.const 0))
+              (then (i32.store (local.get $sp) (i32.const 0)))
+              (else (i32.store (local.get $sp)
+                      (i32.rem_s (call $rand_next) (local.get $a)))))
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
