@@ -39,6 +39,11 @@ const OP = {
   READFILE: 0xB0, WRITEFILE: 0xB1, HTTPGET: 0xB2,
   // Milestone 5q — float bit inspection (used by the self-hosted codegen)
   FBYTE: 0xB4,
+  // Milestone 5u — string + numeric standard library
+  UPPER: 0x92, LOWER: 0x93, TRIM: 0x94, SUBSTR: 0x95, FIND: 0x96,
+  SPLIT: 0x97, JOIN: 0x98, REPLACE: 0x99, S2I: 0x9A,
+  IABS: 0x9B, IMIN: 0x9C, IMAX: 0x9D, RANGE: 0x9E, SUM: 0x9F,
+  FCEIL: 0xB5, FFLOOR: 0xB6, FROUND: 0xB7, RANDINT: 0xB8,
   HALT: 0xFF,
 
 };
