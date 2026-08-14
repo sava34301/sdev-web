@@ -453,6 +453,107 @@ to emit_call with name nargs
     return 0
   end
 
+  # --- Milestone 5u: string + numeric standard library ----------------------
+  if str_eq(name, "upper")
+    emit_byte(146)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "lower")
+    emit_byte(147)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "trim")
+    emit_byte(148)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "substr")
+    emit_byte(149)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "find")
+    emit_byte(150)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "contains")
+    emit_byte(150)
+    emit_byte(1)
+    emit_i32(0)
+    emit_byte(37)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "split")
+    emit_byte(151)
+    set expr_type[0] to 5
+    return 0
+  end
+  if str_eq(name, "join")
+    emit_byte(152)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "replace")
+    emit_byte(153)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "int")
+    emit_byte(154)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "abs")
+    emit_byte(155)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "min")
+    emit_byte(156)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "max")
+    emit_byte(157)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "range")
+    emit_byte(158)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "sum")
+    emit_byte(159)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "random")
+    emit_byte(184)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "fceil")
+    emit_byte(181)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "ffloor")
+    emit_byte(182)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fround")
+    emit_byte(183)
+    set expr_type[0] to 2
+    return 0
+  end
+
+
   # User function. After pass 1, `idx` almost always resolves — but the
   # target offset may not yet be known if this call sits inside a fn
   # body that gets emitted before its callee (e.g. mutually recursive
