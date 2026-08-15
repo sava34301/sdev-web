@@ -91,28 +91,9 @@ const cases = [
   'to f\nthrow "deep"\nreturn 0\nend\nattempt\nsay f()\nrescue e\nsay e\nend',
   'say num("3.5") + 0.5\nsay f2i(num("42.9"))',
   // Milestone 5w: first-class function values
-  'to twice with n
-return n * 2
-end
-set f to ref twice
-say call f(21)',
-  'to inc with n
-return n + 1
-end
-to ap with fn v
-return call fn(v)
-end
-say ap(ref inc, 5)',
-  'to a
-return 1
-end
-to b
-return 2
-end
-set xs to [ref a, ref b]
-for each g in xs
-say call g()
-end',
+  'to twice with n\nreturn n * 2\nend\nset f to ref twice\nsay call f(21)',
+  'to inc with n\nreturn n + 1\nend\nto ap with fn v\nreturn call fn(v)\nend\nsay ap(ref inc, 5)',
+  'to a\nreturn 1\nend\nto b\nreturn 2\nend\nset xs to [ref a, ref b]\nfor each g in xs\nsay call g()\nend',
 ];
 
 
