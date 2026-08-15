@@ -632,6 +632,8 @@
 
     (local.set $ip (i32.const 0))
     (local.set $sp (global.get $STACK_BASE))
+    (global.set $hsp (global.get $HANDLER_BASE))
+
 
     (block $exit
       (loop $dispatch
