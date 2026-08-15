@@ -560,7 +560,62 @@
     (global.set $rng (i32.xor (global.get $rng) (i32.shl (global.get $rng) (i32.const 5))))
     (i32.and (global.get $rng) (i32.const 0x7fffffff)))
 
+  ;; ---- Milestone 5v: string → float (`num`) ------------------------------
+  ;; Parses [+-]?digits[.digits] — anything else stops the scan and the
+  ;; digits seen so far win (so num("abc") is 0.0, matching int("abc") = 0).
+  (func $s2f (param $s i32) (result f64)
+    (local $n i32) (local $i i32) (local $c i32)
+    (local $sign f64) (local $acc f64) (local $scale f64)
+    (local.set $n (i32.load (local.get $s)))
+    (local.set $i (i32.const 0))
+    (local.set $sign (f64.const 1))
+    (local.set $acc (f64.const 0))
+    (block $d0 (loop $l0
+      (br_if $d0 (i32.ge_s (local.get $i) (local.get $n)))
+      (br_if $d0 (i32.eqz (call $is_space (i32.load8_u
+        (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l0)))
+    (if (i32.lt_s (local.get $i) (local.get $n))
+      (then
+        (local.set $c (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+        (if (i32.eq (local.get $c) (i32.const 45))
+          (then
+            (local.set $sign (f64.const -1))
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))))
+        (if (i32.eq (local.get $c) (i32.const 43))
+          (then (local.set $i (i32.add (local.get $i) (i32.const 1)))))))
+    (block $d1 (loop $l1
+      (br_if $d1 (i32.ge_s (local.get $i) (local.get $n)))
+      (local.set $c (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+      (br_if $d1 (i32.or (i32.lt_u (local.get $c) (i32.const 48))
+                         (i32.gt_u (local.get $c) (i32.const 57))))
+      (local.set $acc (f64.add (f64.mul (local.get $acc) (f64.const 10))
+                               (f64.convert_i32_s (i32.sub (local.get $c) (i32.const 48)))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l1)))
+    (if (i32.lt_s (local.get $i) (local.get $n))
+      (then
+        (if (i32.eq (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i))))
+                    (i32.const 46))
+          (then
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (local.set $scale (f64.const 0.1))
+            (block $d2 (loop $l2
+              (br_if $d2 (i32.ge_s (local.get $i) (local.get $n)))
+              (local.set $c (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+              (br_if $d2 (i32.or (i32.lt_u (local.get $c) (i32.const 48))
+                                 (i32.gt_u (local.get $c) (i32.const 57))))
+              (local.set $acc (f64.add (local.get $acc)
+                (f64.mul (local.get $scale)
+                         (f64.convert_i32_s (i32.sub (local.get $c) (i32.const 48))))))
+              (local.set $scale (f64.mul (local.get $scale) (f64.const 0.1)))
+              (local.set $i (i32.add (local.get $i) (i32.const 1)))
+              (br $l2)))))))
+    (f64.mul (local.get $sign) (local.get $acc)))
+
   ;; ---- main interpreter loop --------------------------------------------
+
 
   (func (export "run") (result i32)
     (local $ip i32)         ;; instruction pointer (relative to CODE_BASE)
