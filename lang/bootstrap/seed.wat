@@ -75,6 +75,11 @@
 ;;   0xB2 HTTPGET                   pop url handle; push response body handle (0 err)
 ;;   ; --- Milestone 5q: float bit inspection (self-hosted codegen needs it) ---
 ;;   0xB4 FBYTE                     pop idx (0..7), pop float; push IEEE-754 LE byte
+;;   ; --- Milestone 5v: error handling + string→float ---
+;;   0xC0 TRY <i16 rel>             push handler record [handler_ip, sp, fp, csp]
+;;   0xC1 ENDTRY                    pop the newest handler record
+;;   0xC2 THROW                     pop message handle; unwind to handler (or halt)
+;;   0xC3 S2F                       pop string handle; push boxed f64 (`num`)
 ;;   0xFF HALT
 
 ;;
