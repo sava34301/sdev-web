@@ -1486,7 +1486,58 @@
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
+        ;; --- Milestone 5v: error handling -----------------------------------
+        ;; --- TRY (0xC0) <i16 rel> --- push a handler record
+        (if (i32.eq (local.get $op) (i32.const 0xC0))
+          (then
+            (local.set $a (call $read_i16 (local.get $ip)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 2)))
+            (i32.store (global.get $hsp) (i32.add (local.get $ip) (local.get $a)))
+            (i32.store (i32.add (global.get $hsp) (i32.const 4))  (local.get $sp))
+            (i32.store (i32.add (global.get $hsp) (i32.const 8))  (global.get $fp))
+            (i32.store (i32.add (global.get $hsp) (i32.const 12)) (global.get $csp))
+            (global.set $hsp (i32.add (global.get $hsp) (i32.const 16)))
+            (br $dispatch)))
+
+        ;; --- ENDTRY (0xC1) --- pop the newest handler record
+        (if (i32.eq (local.get $op) (i32.const 0xC1))
+          (then
+            (if (i32.gt_u (global.get $hsp) (global.get $HANDLER_BASE))
+              (then (global.set $hsp (i32.sub (global.get $hsp) (i32.const 16)))))
+            (br $dispatch)))
+
+        ;; --- THROW (0xC2) --- pop message handle, unwind to the handler
+        (if (i32.eq (local.get $op) (i32.const 0xC2))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $addr (i32.load (local.get $sp)))
+            (if (i32.le_u (global.get $hsp) (global.get $HANDLER_BASE))
+              (then
+                ;; Uncaught: print the message and stop the program.
+                (call $say_str
+                  (i32.add (local.get $addr) (i32.const 4))
+                  (i32.load (local.get $addr)))
+                (br $exit)))
+            (global.set $hsp (i32.sub (global.get $hsp) (i32.const 16)))
+            (local.set $tmp (global.get $hsp))
+            (local.set $sp (i32.load (i32.add (local.get $tmp) (i32.const 4))))
+            (global.set $fp  (i32.load (i32.add (local.get $tmp) (i32.const 8))))
+            (global.set $csp (i32.load (i32.add (local.get $tmp) (i32.const 12))))
+            (i32.store (local.get $sp) (local.get $addr))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (local.set $ip (i32.load (local.get $tmp)))
+            (br $dispatch)))
+
+        ;; --- S2F (0xC3) --- pop string handle, push a float box (`num`)
+        (if (i32.eq (local.get $op) (i32.const 0xC3))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $box_f (call $s2f (i32.load (local.get $sp)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
         ;; unknown opcode → halt
+
 
         (br $exit)
 
