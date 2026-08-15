@@ -198,8 +198,12 @@ function parseProgram(tokens) {
     // Milestone 5s: `break` / `continue` are plain identifiers in the lexer.
     if (t.type === 'IDENT' && t.value === 'break')    { p++; return { k: 'break', line: t.line }; }
     if (t.type === 'IDENT' && t.value === 'continue') { p++; return { k: 'continue', line: t.line }; }
+    // Milestone 5v: `attempt` / `rescue` / `throw` are plain identifiers too.
+    if (t.type === 'IDENT' && t.value === 'attempt')   return attemptStmt();
+    if (t.type === 'IDENT' && t.value === 'throw')     { p++; return { k: 'throw', expr: expr(), line: t.line }; }
     if (t.type === 'KW') {
       if (t.value === 'say')    { p++; return { k: 'say', expr: expr(), line: t.line }; }
+
       if (t.value === 'set')    {
         p++;
         const name = eat('IDENT').value;
