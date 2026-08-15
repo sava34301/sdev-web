@@ -437,6 +437,13 @@ to emit_call with name nargs
     set expr_type[0] to 0
     return 0
   end
+  # Milestone 5v: num(s) parses a string into a float.
+  if str_eq(name, "num")
+    emit_byte(195)
+    set expr_type[0] to 2
+    return 0
+  end
+
   if str_eq(name, "read_file")
     emit_byte(176)
     set expr_type[0] to 1
