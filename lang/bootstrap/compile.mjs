@@ -238,7 +238,28 @@ function parseProgram(tokens) {
       // Milestone 5s: `else if` chains — the nested `if` consumes the `end`.
       if (peek().type === 'KW' && peek().value === 'if') { else_ = [ifStmt()]; chained = true; }
       else { skipNL(); else_ = []; while (!(peek().type === 'KW' && peek().value === 'end')) { else_.push(statement()); skipNL(); } }
+  }
+  // Milestone 5v: `attempt ... rescue [err] ... end`.
+  function attemptStmt() {
+    const t = peek(); p++; skipNL();
+    const atEnd = () => (peek().type === 'KW' && peek().value === 'end')
+      || (peek().type === 'IDENT' && peek().value === 'rescue')
+      || peek().type === 'EOF';
+    const body = []; while (!atEnd()) { body.push(statement()); skipNL(); }
+    let errName = null;
+    const rescue_ = [];
+    if (peek().type === 'IDENT' && peek().value === 'rescue') {
+      p++;
+      if (peek().type === 'IDENT') errName = eat('IDENT').value;
+      skipNL();
+      while (!(peek().type === 'KW' && peek().value === 'end') && peek().type !== 'EOF') {
+        rescue_.push(statement()); skipNL();
+      }
     }
+    eat('KW', 'end');
+    return { k: 'attempt', body, errName, rescue_, line: t.line };
+  }
+
     if (!chained) eat('KW', 'end');
     return { k: 'if', cond, then_, else_, line: t.line };
   }
