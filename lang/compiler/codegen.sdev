@@ -437,6 +437,13 @@ to emit_call with name nargs
     set expr_type[0] to 0
     return 0
   end
+  # Milestone 5v: num(s) parses a string into a float.
+  if str_eq(name, "num")
+    emit_byte(195)
+    set expr_type[0] to 2
+    return 0
+  end
+
   if str_eq(name, "read_file")
     emit_byte(176)
     set expr_type[0] to 1
@@ -1183,7 +1190,7 @@ to skip_nl with pos
   return pos
 end
 
-# Parse a sequence of statements until `else`, `end`, or EOF.
+# Parse a sequence of statements until `else`, `rescue`, `end`, or EOF.
 to parse_block with pos
   set going to 1
   while going
@@ -1194,14 +1201,18 @@ to parse_block with pos
       if is_ident_word(pos, "else")
         set going to 0
       else
-        if is_ident_word(pos, "end")
+        if is_ident_word(pos, "rescue")
           set going to 0
         else
-          set new_pos to parse_stmt(pos)
-          if new_pos is pos
+          if is_ident_word(pos, "end")
             set going to 0
           else
-            set pos to new_pos
+            set new_pos to parse_stmt(pos)
+            if new_pos is pos
+              set going to 0
+            else
+              set pos to new_pos
+            end
           end
         end
       end
@@ -1209,6 +1220,7 @@ to parse_block with pos
   end
   return pos
 end
+
 
 # Parse the parameter list of a `to NAME with p1 p2 ...` declaration and
 # push each param into loc_names. Returns (new_pos, n_params) packed into
@@ -1354,7 +1366,48 @@ to parse_stmt with pos
     set cnt_dep[0] to cnt_dep[0] + 1
     return pos + 1
   end
+  # Milestone 5v: `throw EXPR` and `attempt … rescue [err] … end`.
+  if is_ident_word(pos, "throw")
+    set pos to parse_expr(pos + 1)
+    emit_byte(194)
+    return pos
+  end
+  if is_ident_word(pos, "attempt")
+    set pos to pos + 1
+    emit_byte(192)
+    set tryp to placeholder16()
+    set pos to parse_block(pos)
+    emit_byte(193)
+    emit_byte(64)
+    set overp to placeholder16()
+    patch_i16(tryp, bc[0])
+    if is_ident_word(pos, "rescue")
+      set pos to pos + 1
+      set ename to ""
+      if pos < tk_count
+        if tk_kind[pos] is 2
+          set ename to tk_txt[pos]
+          set pos to pos + 1
+        end
+      end
+      if length(ename) > 0
+        set expr_type[0] to 1
+        emit_store_ident(ename)
+      else
+        emit_byte(5)
+      end
+      set pos to parse_block(pos)
+    else
+      emit_byte(5)
+    end
+    patch_i16(overp, bc[0])
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
+  end
   if is_ident_word(pos, "if")
+
     set pos to parse_expr(pos + 1)
     emit_byte(65)
     set jz to placeholder16()

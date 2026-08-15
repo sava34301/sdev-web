@@ -188,9 +188,11 @@ _Source: `public/SDEV_V2_DOCUMENTATION.md`_
 20. [Under the Hood (Self-Hosting)](#under-the-hood-self-hosting)
 21. [Opt-in Power (Advanced)](#opt-in-power-advanced)
 22. [Examples & Recipes](#examples--recipes)
-23. [Not Yet in v2](#not-yet-in-v2)
-24. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
-25. [Complete Reference Card](#complete-reference-card)
+23. [Error Handling](#error-handling)
+24. [Not Yet in v2](#not-yet-in-v2)
+25. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
+26. [Complete Reference Card](#complete-reference-card)
+
 
 ---
 
@@ -1289,6 +1291,76 @@ say fround(area(2.5))
 
 ---
 
+#### Error Handling
+
+Wrap risky work in `attempt … end`. A `throw` inside the block — at any call
+depth — jumps to the matching `rescue`, which may bind the message.
+
+```sdev
+attempt
+  say "working"
+  throw "disk is on fire"
+  say "never runs"
+rescue e
+  say "caught: " + e
+end
+say "carrying on"
+```
+
+```
+working
+caught: disk is on fire
+carrying on
+```
+
+- `rescue` may omit the binding: `rescue` alone discards the message.
+- `attempt` blocks nest; a `throw` inside a `rescue` propagates outward.
+- A `throw` with no enclosing `attempt` prints the message and stops the
+  program.
+- Messages are ordinary strings, so build them with `+` and `str()`:
+  `throw "bad index " + str(i)`.
+
+```sdev
+to parse_port with s
+  set p to int(s)
+  if p < 1
+    throw "not a port: " + s
+  end
+  return p
+end
+
+attempt
+  say parse_port("8080")
+  say parse_port("nope")
+rescue why
+  say why
+end
+```
+
+```
+8080
+not a port: nope
+```
+
+##### Converting text to numbers
+
+`int(s)` yields an integer, `num(s)` a float. Neither raises — unparseable
+text becomes `0` / `0.0`, so validate and `throw` yourself when it matters.
+
+```sdev
+say int("42") + 1
+say num("3.5") + 0.5
+say f2i(num("42.9"))
+```
+
+```
+43
+4
+42
+```
+
+---
+
 #### Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1299,13 +1371,12 @@ machine-checked list is `lang/parity/report.json`.
 |---------|----|----|-------|
 | Classes (`essence`, `extend`, `self`, `super`, `new`) | yes | planned | OOP milestone |
 | Lambdas / closures (`(x) -> x * 2`) | yes | planned | |
-| Try / rescue / throw | yes | planned | |
 | Imports (`summon` from Gist) | yes | planned | |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |
-| Float parsing from text (`num`) | yes | planned | `int(s)` exists |
 | Sets, Maps, Queues, Stacks, LinkedList | yes | build from lists / tomes | |
 | Matrix & graphics APIs | yes | v1 track | canvas and turtle stay in v1 |
+
 
 ---
 
@@ -1332,6 +1403,9 @@ machine-checked list is `lang/parity/report.json`.
 | `snatch(s, a, b)` | `substr(s, start, len)` |
 | `inscriptions(t)` / `contents(t)` | `keys(t)` / `values(t)` |
 | `:: "k": 1 ;;` | `{ "k": 1 }` |
+| `attempt :: … ;; rescue e :: … ;;` | `attempt … rescue e … end` |
+| `throw "msg"` | `throw "msg"` |
+| `num("3.5")` | `num("3.5")` |
 
 To port a v1 file, either rewrite it or just add `#!sdev v1` on line 1 and keep
 the old syntax working forever.
@@ -5678,6 +5752,31 @@ in milestone order.)
   `abs`, `min`, `max`, `ceil` and `round` are no longer v2 parity gaps; only
   `num`, closures/classes, exceptions and `import` remain.
 
+**Milestone 5v (error handling + `num`) — shipped:**
+- **New seed opcodes**: `TRY (0xC0) <i16 rel>`, `ENDTRY (0xC1)`,
+  `THROW (0xC2)` and `S2F (0xC3)`.
+- **Handler stack.** A 16-byte record `[handler_ip | sp | fp | csp]` is pushed
+  by `TRY` into a dedicated region at `0x13000` (between the global slots and
+  the operand stack). `ENDTRY` pops it. `THROW` pops the message handle,
+  unwinds to the newest record — restoring the operand stack, frame pointer
+  and call-stack tip — and re-pushes the message so the handler can bind it.
+  A throw with no live handler prints the message and halts the program.
+- **Surface syntax**: `attempt … rescue [err] … end` and `throw EXPR`. The
+  rescue binding is an ordinary local (typed `str`); `rescue` with no name
+  drops the message with a `POP`. Because the unwind restores `fp`/`csp`, a
+  `throw` from arbitrarily deep inside nested calls lands in the right handler.
+- **`num(s)`** parses `[+-]?digits[.digits]` into a boxed f64 via `S2F`,
+  mirroring `int(s)`: unparseable input yields `0.0`.
+- **Both compilers.** The bootstrap oracle parses `attempt`/`rescue`/`throw`
+  as plain identifiers (no new lexer keywords, so `lexer.sdev` is untouched),
+  and `codegen.sdev` gained the same emitter plus a `rescue` block terminator.
+- Five new fixed-point cases (71/71 byte-identical) and six new runtime cases
+  (51/51 passing). Driver artifact rebuilt: bc=13431, pool=612. `try_catch`,
+  `rescue`, `throw` and `num` are no longer v2 parity gaps; only
+  closures/classes and `import` remain.
+
+
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.
@@ -5830,7 +5929,7 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `chr` | text | `chr` | `chr` | gap (should) |
 | `str` | text | `str` | `str` | `str` |
 | `int` | types | `int` | `int` | `int` |
-| `num` | types | `num` | gap (should) | — |
+| `num` | types | `num` | `num` | — |
 | `list_new` | list | `gather` | `mklist` | gap (should) |
 | `list_get` | list | `pluck` | `mklist` | gap (should) |
 | `upper` | text | `upper` | `upper` | — |
@@ -5877,9 +5976,9 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `self` | oop | `self` | gap (should) | — |
 | `super` | oop | `super` | gap (should) | — |
 | `instantiate` | oop | `new` | gap (should) | — |
-| `try_catch` | errors | `attempt` | gap (should) | — |
-| `rescue` | errors | `rescue` | gap (should) | — |
-| `throw` | errors | `throw` | gap (should) | — |
+| `try_catch` | errors | `attempt` | `attempt` | — |
+| `rescue` | errors | `rescue` | `rescue` | — |
+| `throw` | errors | `throw` | `throw` | — |
 | `logic_and` | syntax | `also` | `and` | `and` |
 | `logic_or` | syntax | `within` | `or` | `or` |
 | `logic_not` | syntax | `nope` | `not` | `un` |
@@ -6139,7 +6238,7 @@ The table below is generated by the agent. Do not edit it by hand.
 | `chr` | text | `chr` | `chr` | gap (should) |
 | `str` | text | `str` | `str` | `str` |
 | `int` | types | `int` | `int` | `int` |
-| `num` | types | `num` | gap (should) | — |
+| `num` | types | `num` | `num` | — |
 | `list_new` | list | `gather` | `mklist` | gap (should) |
 | `list_get` | list | `pluck` | `mklist` | gap (should) |
 | `upper` | text | `upper` | `upper` | — |
@@ -6186,9 +6285,9 @@ The table below is generated by the agent. Do not edit it by hand.
 | `self` | oop | `self` | gap (should) | — |
 | `super` | oop | `super` | gap (should) | — |
 | `instantiate` | oop | `new` | gap (should) | — |
-| `try_catch` | errors | `attempt` | gap (should) | — |
-| `rescue` | errors | `rescue` | gap (should) | — |
-| `throw` | errors | `throw` | gap (should) | — |
+| `try_catch` | errors | `attempt` | `attempt` | — |
+| `rescue` | errors | `rescue` | `rescue` | — |
+| `throw` | errors | `throw` | `throw` | — |
 | `logic_and` | syntax | `also` | `and` | `and` |
 | `logic_or` | syntax | `within` | `or` | `or` |
 | `logic_not` | syntax | `nope` | `not` | `un` |
@@ -9155,6 +9254,10 @@ follow the opcode byte directly in the bytecode stream.
 | `0xB1` | `WRITEFILE` | pop data, pop path; push i32 status (0 ok, -1 err) |
 | `0xB2` | `HTTPGET` | pop url handle; push response body handle (0 err) |
 | `0xB4` | `FBYTE` | pop idx (0..7), pop float; push IEEE-754 LE byte |
+| `0xC0` | `TRY` | Operands `<i16 rel>`. push handler record [handler_ip, sp, fp, csp] |
+| `0xC1` | `ENDTRY` | pop the newest handler record |
+| `0xC2` | `THROW` | pop message handle; unwind to handler (or halt) |
+| `0xC3` | `S2F` | pop string handle; push boxed f64 (`num`) |
 | `0xFF` | `HALT` | Seed VM instruction. |
 
 
@@ -9190,25 +9293,25 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 | `emit_store_ident` | `name` | Emits `STORE_LOC` or `STORE` for an assignment target. | `0` | 276 |
 | `set_ident_type` | `name t` | Milestone 5t: retype an existing variable without emitting anything — used when `set t[k] to "s"` promotes a tome from int-valued to string-valued so later reads pick SAY_STR. | `0` | 298 |
 | `emit_call` | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call. | `0` | 319 |
-| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 594 |
-| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 618 |
-| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 645 |
-| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 675 |
-| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 687 |
-| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 704 |
-| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 897 |
-| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 936 |
-| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 950 |
-| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 993 |
-| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1044 |
-| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1119 |
-| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1129 |
-| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1146 |
-| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1164 |
-| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1170 |
-| `parse_block` | `pos` | Parse a sequence of statements until `else`, `end`, or EOF. | `pos` | 1187 |
-| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1217 |
-| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1239 |
+| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 601 |
+| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 625 |
+| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 652 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 682 |
+| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 694 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 711 |
+| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 904 |
+| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 943 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 957 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1000 |
+| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1051 |
+| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1126 |
+| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1136 |
+| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1153 |
+| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1171 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1177 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1194 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1229 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1251 |
 
 #### `lang/compiler/lexer.sdev`
 
@@ -9486,7 +9589,7 @@ Registry: **72 features** across **3 tracks**.
 | `chr` | text | `chr` | `chr` | gap (should) |
 | `str` | text | `str` | `str` | `str` |
 | `int` | types | `int` | `int` | `int` |
-| `num` | types | `num` | gap (should) | — |
+| `num` | types | `num` | `num` | — |
 | `list_new` | list | `gather` | `mklist` | gap (should) |
 | `list_get` | list | `pluck` | `mklist` | gap (should) |
 | `upper` | text | `upper` | `upper` | — |
@@ -9533,9 +9636,9 @@ Registry: **72 features** across **3 tracks**.
 | `self` | oop | `self` | gap (should) | — |
 | `super` | oop | `super` | gap (should) | — |
 | `instantiate` | oop | `new` | gap (should) | — |
-| `try_catch` | errors | `attempt` | gap (should) | — |
-| `rescue` | errors | `rescue` | gap (should) | — |
-| `throw` | errors | `throw` | gap (should) | — |
+| `try_catch` | errors | `attempt` | `attempt` | — |
+| `rescue` | errors | `rescue` | `rescue` | — |
+| `throw` | errors | `throw` | `throw` | — |
 | `logic_and` | syntax | `also` | `and` | `and` |
 | `logic_or` | syntax | `within` | `or` | `or` |
 | `logic_not` | syntax | `nope` | `not` | `un` |

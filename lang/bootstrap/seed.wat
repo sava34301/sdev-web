@@ -75,6 +75,11 @@
 ;;   0xB2 HTTPGET                   pop url handle; push response body handle (0 err)
 ;;   ; --- Milestone 5q: float bit inspection (self-hosted codegen needs it) ---
 ;;   0xB4 FBYTE                     pop idx (0..7), pop float; push IEEE-754 LE byte
+;;   ; --- Milestone 5v: error handling + string→float ---
+;;   0xC0 TRY <i16 rel>             push handler record [handler_ip, sp, fp, csp]
+;;   0xC1 ENDTRY                    pop the newest handler record
+;;   0xC2 THROW                     pop message handle; unwind to handler (or halt)
+;;   0xC3 S2F                       pop string handle; push boxed f64 (`num`)
 ;;   0xFF HALT
 
 ;;
@@ -118,6 +123,16 @@
   (global $fp  (mut i32) (i32.const 0x18000))  ;; current frame base
   (global $csp (mut i32) (i32.const 0x18000))  ;; call-stack tip
   (global $hp  (mut i32) (i32.const 0x30000))  ;; heap bump pointer
+
+  ;; ---- Milestone 5v: error handling -------------------------------------
+  ;; A handler stack of 16-byte records [handler_ip | sp | fp | csp] lives in
+  ;; the gap between the global-variable slots (0x10000..0x103FF) and the
+  ;; operand stack. TRY pushes a record, ENDTRY pops one, THROW unwinds to
+  ;; the newest record — restoring the operand stack, frame pointer and
+  ;; call-stack tip so a throw from inside nested calls lands cleanly.
+  (global $HANDLER_BASE i32 (i32.const 0x13000))
+  (global $hsp (mut i32) (i32.const 0x13000))
+
 
   ;; ---- program length (set by host before calling run) -------------------
   (global $prog_len (mut i32) (i32.const 0))
@@ -550,7 +565,62 @@
     (global.set $rng (i32.xor (global.get $rng) (i32.shl (global.get $rng) (i32.const 5))))
     (i32.and (global.get $rng) (i32.const 0x7fffffff)))
 
+  ;; ---- Milestone 5v: string → float (`num`) ------------------------------
+  ;; Parses [+-]?digits[.digits] — anything else stops the scan and the
+  ;; digits seen so far win (so num("abc") is 0.0, matching int("abc") = 0).
+  (func $s2f (param $s i32) (result f64)
+    (local $n i32) (local $i i32) (local $c i32)
+    (local $sign f64) (local $acc f64) (local $scale f64)
+    (local.set $n (i32.load (local.get $s)))
+    (local.set $i (i32.const 0))
+    (local.set $sign (f64.const 1))
+    (local.set $acc (f64.const 0))
+    (block $d0 (loop $l0
+      (br_if $d0 (i32.ge_s (local.get $i) (local.get $n)))
+      (br_if $d0 (i32.eqz (call $is_space (i32.load8_u
+        (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l0)))
+    (if (i32.lt_s (local.get $i) (local.get $n))
+      (then
+        (local.set $c (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+        (if (i32.eq (local.get $c) (i32.const 45))
+          (then
+            (local.set $sign (f64.const -1))
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))))
+        (if (i32.eq (local.get $c) (i32.const 43))
+          (then (local.set $i (i32.add (local.get $i) (i32.const 1)))))))
+    (block $d1 (loop $l1
+      (br_if $d1 (i32.ge_s (local.get $i) (local.get $n)))
+      (local.set $c (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+      (br_if $d1 (i32.or (i32.lt_u (local.get $c) (i32.const 48))
+                         (i32.gt_u (local.get $c) (i32.const 57))))
+      (local.set $acc (f64.add (f64.mul (local.get $acc) (f64.const 10))
+                               (f64.convert_i32_s (i32.sub (local.get $c) (i32.const 48)))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $l1)))
+    (if (i32.lt_s (local.get $i) (local.get $n))
+      (then
+        (if (i32.eq (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i))))
+                    (i32.const 46))
+          (then
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (local.set $scale (f64.const 0.1))
+            (block $d2 (loop $l2
+              (br_if $d2 (i32.ge_s (local.get $i) (local.get $n)))
+              (local.set $c (i32.load8_u (i32.add (local.get $s) (i32.add (i32.const 4) (local.get $i)))))
+              (br_if $d2 (i32.or (i32.lt_u (local.get $c) (i32.const 48))
+                                 (i32.gt_u (local.get $c) (i32.const 57))))
+              (local.set $acc (f64.add (local.get $acc)
+                (f64.mul (local.get $scale)
+                         (f64.convert_i32_s (i32.sub (local.get $c) (i32.const 48))))))
+              (local.set $scale (f64.mul (local.get $scale) (f64.const 0.1)))
+              (local.set $i (i32.add (local.get $i) (i32.const 1)))
+              (br $l2)))))))
+    (f64.mul (local.get $sign) (local.get $acc)))
+
   ;; ---- main interpreter loop --------------------------------------------
+
 
   (func (export "run") (result i32)
     (local $ip i32)         ;; instruction pointer (relative to CODE_BASE)
@@ -567,6 +637,8 @@
 
     (local.set $ip (i32.const 0))
     (local.set $sp (global.get $STACK_BASE))
+    (global.set $hsp (global.get $HANDLER_BASE))
+
 
     (block $exit
       (loop $dispatch
@@ -1419,7 +1491,58 @@
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
+        ;; --- Milestone 5v: error handling -----------------------------------
+        ;; --- TRY (0xC0) <i16 rel> --- push a handler record
+        (if (i32.eq (local.get $op) (i32.const 0xC0))
+          (then
+            (local.set $a (call $read_i16 (local.get $ip)))
+            (local.set $ip (i32.add (local.get $ip) (i32.const 2)))
+            (i32.store (global.get $hsp) (i32.add (local.get $ip) (local.get $a)))
+            (i32.store (i32.add (global.get $hsp) (i32.const 4))  (local.get $sp))
+            (i32.store (i32.add (global.get $hsp) (i32.const 8))  (global.get $fp))
+            (i32.store (i32.add (global.get $hsp) (i32.const 12)) (global.get $csp))
+            (global.set $hsp (i32.add (global.get $hsp) (i32.const 16)))
+            (br $dispatch)))
+
+        ;; --- ENDTRY (0xC1) --- pop the newest handler record
+        (if (i32.eq (local.get $op) (i32.const 0xC1))
+          (then
+            (if (i32.gt_u (global.get $hsp) (global.get $HANDLER_BASE))
+              (then (global.set $hsp (i32.sub (global.get $hsp) (i32.const 16)))))
+            (br $dispatch)))
+
+        ;; --- THROW (0xC2) --- pop message handle, unwind to the handler
+        (if (i32.eq (local.get $op) (i32.const 0xC2))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $addr (i32.load (local.get $sp)))
+            (if (i32.le_u (global.get $hsp) (global.get $HANDLER_BASE))
+              (then
+                ;; Uncaught: print the message and stop the program.
+                (call $say_str
+                  (i32.add (local.get $addr) (i32.const 4))
+                  (i32.load (local.get $addr)))
+                (br $exit)))
+            (global.set $hsp (i32.sub (global.get $hsp) (i32.const 16)))
+            (local.set $tmp (global.get $hsp))
+            (local.set $sp (i32.load (i32.add (local.get $tmp) (i32.const 4))))
+            (global.set $fp  (i32.load (i32.add (local.get $tmp) (i32.const 8))))
+            (global.set $csp (i32.load (i32.add (local.get $tmp) (i32.const 12))))
+            (i32.store (local.get $sp) (local.get $addr))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (local.set $ip (i32.load (local.get $tmp)))
+            (br $dispatch)))
+
+        ;; --- S2F (0xC3) --- pop string handle, push a float box (`num`)
+        (if (i32.eq (local.get $op) (i32.const 0xC3))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (i32.store (local.get $sp) (call $box_f (call $s2f (i32.load (local.get $sp)))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
         ;; unknown opcode → halt
+
 
         (br $exit)
 

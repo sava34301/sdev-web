@@ -729,7 +729,7 @@
       "v1": "must",
       "v1_name": "attempt",
       "v2": "should",
-      "v2_name": "try_catch",
+      "v2_name": "attempt",
       "native": "n/a",
       "native_name": "try_catch"
     },

@@ -44,7 +44,10 @@ const OP = {
   SPLIT: 0x97, JOIN: 0x98, REPLACE: 0x99, S2I: 0x9A,
   IABS: 0x9B, IMIN: 0x9C, IMAX: 0x9D, RANGE: 0x9E, SUM: 0x9F,
   FCEIL: 0xB5, FFLOOR: 0xB6, FROUND: 0xB7, RANDINT: 0xB8,
+  // Milestone 5v — error handling + string→float
+  TRY: 0xC0, ENDTRY: 0xC1, THROW: 0xC2, S2F: 0xC3,
   HALT: 0xFF,
+
 
 };
 
@@ -111,6 +114,9 @@ const BUILTINS = {
   fceil:    { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FCEIL)   },
   ffloor:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FFLOOR)  },
   fround:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FROUND)  },
+  // --- Milestone 5v: string → float ---
+  num:      { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.S2F)     },
+
 };
 
 
@@ -192,8 +198,12 @@ function parseProgram(tokens) {
     // Milestone 5s: `break` / `continue` are plain identifiers in the lexer.
     if (t.type === 'IDENT' && t.value === 'break')    { p++; return { k: 'break', line: t.line }; }
     if (t.type === 'IDENT' && t.value === 'continue') { p++; return { k: 'continue', line: t.line }; }
+    // Milestone 5v: `attempt` / `rescue` / `throw` are plain identifiers too.
+    if (t.type === 'IDENT' && t.value === 'attempt')   return attemptStmt();
+    if (t.type === 'IDENT' && t.value === 'throw')     { p++; return { k: 'throw', expr: expr(), line: t.line }; }
     if (t.type === 'KW') {
       if (t.value === 'say')    { p++; return { k: 'say', expr: expr(), line: t.line }; }
+
       if (t.value === 'set')    {
         p++;
         const name = eat('IDENT').value;
@@ -232,6 +242,27 @@ function parseProgram(tokens) {
     if (!chained) eat('KW', 'end');
     return { k: 'if', cond, then_, else_, line: t.line };
   }
+  // Milestone 5v: `attempt ... rescue [err] ... end`.
+  function attemptStmt() {
+    const t = peek(); p++; skipNL();
+    const atEnd = () => (peek().type === 'KW' && peek().value === 'end')
+      || (peek().type === 'IDENT' && peek().value === 'rescue')
+      || peek().type === 'EOF';
+    const body = []; while (!atEnd()) { body.push(statement()); skipNL(); }
+    let errName = null;
+    const rescue_ = [];
+    if (peek().type === 'IDENT' && peek().value === 'rescue') {
+      p++;
+      if (peek().type === 'IDENT') errName = eat('IDENT').value;
+      skipNL();
+      while (!(peek().type === 'KW' && peek().value === 'end') && peek().type !== 'EOF') {
+        rescue_.push(statement()); skipNL();
+      }
+    }
+    eat('KW', 'end');
+    return { k: 'attempt', body, errName, rescue_, line: t.line };
+  }
+
   function whileStmt() {
     const t = eat('KW', 'while'); const cond = expr(); skipNL();
     const body = []; while (!(peek().type === 'KW' && peek().value === 'end')) { body.push(statement()); skipNL(); }
@@ -453,6 +484,13 @@ function collectSets(body, locals) {
     if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
+    // Milestone 5v: the rescue binding is a local, as are both sub-blocks.
+    if (s.k === 'attempt') {
+      collectSets(s.body, locals);
+      if (s.errName && !locals.has(s.errName)) locals.set(s.errName, locals.size);
+      collectSets(s.rescue_, locals);
+    }
+
     // Milestone 5s: a foreach introduces two hidden bindings (list + index)
     // and the loop variable, registered in emission order.
     if (s.k === 'foreach') {
@@ -607,6 +645,12 @@ function inferBody(body, localTypes, fnTypes) {
     else if (s.k === 'while') {
       if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
     }
+    else if (s.k === 'attempt') {
+      if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
+      if (s.errName) localTypes.set(s.errName, 'str');
+      if (inferBody(s.rescue_, localTypes, fnTypes) === 'str') ret = 'str';
+    }
+
     else if (s.k === 'foreach') {
       const ik = inferExpr(s.iter, localTypes, fnTypes);
       localTypes.set(s.name, ik === 'liststr' ? 'str' : 'int');
@@ -749,7 +793,27 @@ function emitStmt(s, em, locals) {
       for (const b of ctx.breaks) em.patchI16(b.pos, em.here() - b.after);
       return;
     }
+    // Milestone 5v: attempt / rescue / throw.
+    case 'attempt': {
+      em.emit(OP.TRY); const tryPos = em.placeholder16(); const afterTry = em.here();
+      s.body.forEach(x => emitStmt(x, em, locals));
+      em.emit(OP.ENDTRY);
+      em.emit(OP.JMP); const overPos = em.placeholder16(); const afterOver = em.here();
+      em.patchI16(tryPos, em.here() - afterTry);
+      // Handler entry: the thrown message sits on top of the operand stack.
+      if (s.errName) emitStoreName(s.errName, em, locals, 'str');
+      else em.emit(OP.POP);
+      s.rescue_.forEach(x => emitStmt(x, em, locals));
+      em.patchI16(overPos, em.here() - afterOver);
+      return;
+    }
+    case 'throw': {
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.THROW);
+      return;
+    }
     case 'break':
+
     case 'continue': {
       const ctx = (em.loops || [])[(em.loops || []).length - 1];
       if (!ctx) throw new SdevError(`${s.k} outside of a loop`, s.line);
