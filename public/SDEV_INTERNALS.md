@@ -625,6 +625,31 @@ in milestone order.)
   `abs`, `min`, `max`, `ceil` and `round` are no longer v2 parity gaps; only
   `num`, closures/classes, exceptions and `import` remain.
 
+**Milestone 5v (error handling + `num`) — shipped:**
+- **New seed opcodes**: `TRY (0xC0) <i16 rel>`, `ENDTRY (0xC1)`,
+  `THROW (0xC2)` and `S2F (0xC3)`.
+- **Handler stack.** A 16-byte record `[handler_ip | sp | fp | csp]` is pushed
+  by `TRY` into a dedicated region at `0x13000` (between the global slots and
+  the operand stack). `ENDTRY` pops it. `THROW` pops the message handle,
+  unwinds to the newest record — restoring the operand stack, frame pointer
+  and call-stack tip — and re-pushes the message so the handler can bind it.
+  A throw with no live handler prints the message and halts the program.
+- **Surface syntax**: `attempt … rescue [err] … end` and `throw EXPR`. The
+  rescue binding is an ordinary local (typed `str`); `rescue` with no name
+  drops the message with a `POP`. Because the unwind restores `fp`/`csp`, a
+  `throw` from arbitrarily deep inside nested calls lands in the right handler.
+- **`num(s)`** parses `[+-]?digits[.digits]` into a boxed f64 via `S2F`,
+  mirroring `int(s)`: unparseable input yields `0.0`.
+- **Both compilers.** The bootstrap oracle parses `attempt`/`rescue`/`throw`
+  as plain identifiers (no new lexer keywords, so `lexer.sdev` is untouched),
+  and `codegen.sdev` gained the same emitter plus a `rescue` block terminator.
+- Five new fixed-point cases (71/71 byte-identical) and six new runtime cases
+  (51/51 passing). Driver artifact rebuilt: bc=13431, pool=612. `try_catch`,
+  `rescue`, `throw` and `num` are no longer v2 parity gaps; only
+  closures/classes and `import` remain.
+
+
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.
