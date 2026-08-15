@@ -189,9 +189,10 @@ _Source: `public/SDEV_V2_DOCUMENTATION.md`_
 21. [Opt-in Power (Advanced)](#opt-in-power-advanced)
 22. [Examples & Recipes](#examples--recipes)
 23. [Error Handling](#error-handling)
-24. [Not Yet in v2](#not-yet-in-v2)
-25. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
-26. [Complete Reference Card](#complete-reference-card)
+24. [Function Values](#function-values)
+25. [Not Yet in v2](#not-yet-in-v2)
+26. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
+27. [Complete Reference Card](#complete-reference-card)
 
 
 ---
@@ -1361,6 +1362,73 @@ say f2i(num("42.9"))
 
 ---
 
+#### Function Values
+
+`ref NAME` turns a declared function into a value; `call TARGET(args)` runs
+one. Function values are ordinary values — store them in variables, lists and
+tomes, or pass them to other functions.
+
+```sdev
+to twice with n
+  return n * 2
+end
+
+set f to ref twice
+say call f(21)
+```
+
+```
+42
+```
+
+Passing behaviour into a function:
+
+```sdev
+to inc with n
+  return n + 1
+end
+to apply_twice with fn v
+  return call fn(call fn(v))
+end
+say apply_twice(ref inc, 5)
+```
+
+```
+7
+```
+
+A dispatch table built from a tome:
+
+```sdev
+to add with a b
+  return a + b
+end
+to mul with a b
+  return a * b
+end
+
+set ops to {"add": ref add, "mul": ref mul}
+for each k in keys(ops)
+  set op to ops[k]
+  say k + " -> " + str(call op(3, 4))
+end
+```
+
+```
+add -> 7
+mul -> 12
+```
+
+Notes:
+- `ref` only names top-level functions; there are no closures yet, so a
+  function value captures nothing — pass state in as arguments.
+- The call target must be a variable holding a function value:
+  `set op to ops[k]` first, then `call op(...)`.
+- Arity is not checked on indirect calls; pass the number of arguments the
+  target declares.
+
+---
+
 #### Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1370,7 +1438,7 @@ machine-checked list is `lang/parity/report.json`.
 | Feature | v1 | v2 | Notes |
 |---------|----|----|-------|
 | Classes (`essence`, `extend`, `self`, `super`, `new`) | yes | planned | OOP milestone |
-| Lambdas / closures (`(x) -> x * 2`) | yes | planned | |
+| Lambdas / closures (`(x) -> x * 2`) | yes | planned | `ref` / `call` cover function values |
 | Imports (`summon` from Gist) | yes | planned | |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |
@@ -5777,6 +5845,24 @@ in milestone order.)
 
 
 
+**Milestone 5w (first-class function values) — shipped:**
+- **New seed opcode**: `CALLV (0xC4) <u8 n_args>` — identical to `CALL`
+  except the target code offset is popped off the operand stack instead of
+  read from a u16 immediate, so the frame/arg-copy path is shared.
+- **Surface syntax**: `ref NAME` evaluates to a function value (the callee's
+  byte offset, an ordinary int), and `call TARGET(args)` invokes one. Both
+  words stay plain identifiers, so the lexer is untouched.
+- **Patching.** `ref` emits `PUSH_I32` with a zero placeholder; forward and
+  mutually-recursive references reuse the existing pending-call table. The
+  resolver distinguishes the two site shapes by reading the opcode byte in
+  front of the patch position: `0x60` → u16 target, otherwise `0x01` → i32.
+- Function values are plain ints, so they compose with everything: store them
+  in lists and tomes, pass them to functions, build dispatch tables. There is
+  no capture — a `ref` closes over nothing, which keeps the calling
+  convention identical to a direct `CALL`.
+- Three new fixed-point cases (74/74 byte-identical) and four new runtime
+  cases (55/55 passing). Driver artifact rebuilt: bc=14025, pool=627.
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.
@@ -9258,10 +9344,11 @@ follow the opcode byte directly in the bytecode stream.
 | `0xC1` | `ENDTRY` | pop the newest handler record |
 | `0xC2` | `THROW` | pop message handle; unwind to handler (or halt) |
 | `0xC3` | `S2F` | pop string handle; push boxed f64 (`num`) |
+| `0xC4` | `CALLV` | Operands `<u8 n_args>`. pop code offset from the stack; call it |
 | `0xFF` | `HALT` | Seed VM instruction. |
 
 
-### sdev-written source index (15 files, 177 functions)
+### sdev-written source index (15 files, 178 functions)
 
 Every function defined in sdev itself — the self-hosted compiler, the parity
 agent, and the standard library.
@@ -9270,7 +9357,7 @@ agent, and the standard library.
 
 SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits the byte stream to a global buffer `bc` whose cell 0 holds the current byte count and cells 1..count hold the bytes. The scripts/test-self- codegen.mjs driver harvests the buffer via `say`, reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance, and verifies the executed output matches the JS bootstrap compiler's output. Grammar this milestone covers: program := stmt* stmt    := 'say' expr | 'set' IDENT 'to' expr | 'if' expr NL block ('else' NL block)? 'end' | 'while' expr NL block 'end' | 'to' IDENT ('with' IDENT*)? NL block 'end' | 'return' expr? block   := stmt*                              (until 'else' or 'end') expr    := cmp cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )? add     := mul (('+'|'-') mul)* mul     := atom (('*'|'/') atom)* atom    := INT | IDENT                              (variable load) | IDENT '(' args? ')'                (function call / builtin) | '(' expr ')' Restriction: functions must be defined before their call sites — the self-hosted compiler emits function bodies inline, bracketed by a JMP that skips over them, and records each body's byte offset in a global table. Forward references / mutual recursion land in a later milestone.
 
-38 functions.
+39 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
@@ -9293,25 +9380,26 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 | `emit_store_ident` | `name` | Emits `STORE_LOC` or `STORE` for an assignment target. | `0` | 276 |
 | `set_ident_type` | `name t` | Milestone 5t: retype an existing variable without emitting anything — used when `set t[k] to "s"` promotes a tome from int-valued to string-valued so later reads pick SAY_STR. | `0` | 298 |
 | `emit_call` | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call. | `0` | 319 |
-| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 601 |
-| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 625 |
-| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 652 |
-| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 682 |
-| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 694 |
-| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 711 |
-| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 904 |
-| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 943 |
-| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 957 |
-| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1000 |
-| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1051 |
-| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1126 |
-| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1136 |
-| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1153 |
-| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1171 |
-| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1177 |
-| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1194 |
-| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1229 |
-| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1251 |
+| `emit_ref` | `name` | Milestone 5w: `ref NAME` pushes a function value — the callee's code offset as a plain i32. Unknown offsets reuse the pending-call table; the resolver tells the two site shapes apart by looking at the opcode byte that precedes the patch position (0x60 CALL → u16 target, otherwise 0x01 PUSH_I32 → i32 target). | `0` | 605 |
+| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 629 |
+| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 657 |
+| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 684 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 714 |
+| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 726 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 743 |
+| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 976 |
+| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1015 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1029 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1072 |
+| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1123 |
+| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1198 |
+| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1208 |
+| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1225 |
+| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1243 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1249 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1266 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1301 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1323 |
 
 #### `lang/compiler/lexer.sdev`
 
