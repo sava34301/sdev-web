@@ -1190,7 +1190,7 @@ to skip_nl with pos
   return pos
 end
 
-# Parse a sequence of statements until `else`, `end`, or EOF.
+# Parse a sequence of statements until `else`, `rescue`, `end`, or EOF.
 to parse_block with pos
   set going to 1
   while going
@@ -1201,14 +1201,18 @@ to parse_block with pos
       if is_ident_word(pos, "else")
         set going to 0
       else
-        if is_ident_word(pos, "end")
+        if is_ident_word(pos, "rescue")
           set going to 0
         else
-          set new_pos to parse_stmt(pos)
-          if new_pos is pos
+          if is_ident_word(pos, "end")
             set going to 0
           else
-            set pos to new_pos
+            set new_pos to parse_stmt(pos)
+            if new_pos is pos
+              set going to 0
+            else
+              set pos to new_pos
+            end
           end
         end
       end
@@ -1216,6 +1220,7 @@ to parse_block with pos
   end
   return pos
 end
+
 
 # Parse the parameter list of a `to NAME with p1 p2 ...` declaration and
 # push each param into loc_names. Returns (new_pos, n_params) packed into
