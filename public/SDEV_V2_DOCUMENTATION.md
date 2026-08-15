@@ -1243,6 +1243,9 @@ machine-checked list is `lang/parity/report.json`.
 | `snatch(s, a, b)` | `substr(s, start, len)` |
 | `inscriptions(t)` / `contents(t)` | `keys(t)` / `values(t)` |
 | `:: "k": 1 ;;` | `{ "k": 1 }` |
+| `attempt :: … ;; rescue e :: … ;;` | `attempt … rescue e … end` |
+| `throw "msg"` | `throw "msg"` |
+| `num("3.5")` | `num("3.5")` |
 
 To port a v1 file, either rewrite it or just add `#!sdev v1` on line 1 and keep
 the old syntax working forever.
