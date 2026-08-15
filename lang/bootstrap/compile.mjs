@@ -645,6 +645,12 @@ function inferBody(body, localTypes, fnTypes) {
     else if (s.k === 'while') {
       if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
     }
+    else if (s.k === 'attempt') {
+      if (inferBody(s.body, localTypes, fnTypes) === 'str') ret = 'str';
+      if (s.errName) localTypes.set(s.errName, 'str');
+      if (inferBody(s.rescue_, localTypes, fnTypes) === 'str') ret = 'str';
+    }
+
     else if (s.k === 'foreach') {
       const ik = inferExpr(s.iter, localTypes, fnTypes);
       localTypes.set(s.name, ik === 'liststr' ? 'str' : 'int');
