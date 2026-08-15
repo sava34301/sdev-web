@@ -1129,6 +1129,76 @@ say fround(area(2.5))
 
 ---
 
+## Error Handling
+
+Wrap risky work in `attempt … end`. A `throw` inside the block — at any call
+depth — jumps to the matching `rescue`, which may bind the message.
+
+```sdev
+attempt
+  say "working"
+  throw "disk is on fire"
+  say "never runs"
+rescue e
+  say "caught: " + e
+end
+say "carrying on"
+```
+
+```
+working
+caught: disk is on fire
+carrying on
+```
+
+- `rescue` may omit the binding: `rescue` alone discards the message.
+- `attempt` blocks nest; a `throw` inside a `rescue` propagates outward.
+- A `throw` with no enclosing `attempt` prints the message and stops the
+  program.
+- Messages are ordinary strings, so build them with `+` and `str()`:
+  `throw "bad index " + str(i)`.
+
+```sdev
+to parse_port with s
+  set p to int(s)
+  if p < 1
+    throw "not a port: " + s
+  end
+  return p
+end
+
+attempt
+  say parse_port("8080")
+  say parse_port("nope")
+rescue why
+  say why
+end
+```
+
+```
+8080
+not a port: nope
+```
+
+### Converting text to numbers
+
+`int(s)` yields an integer, `num(s)` a float. Neither raises — unparseable
+text becomes `0` / `0.0`, so validate and `throw` yourself when it matters.
+
+```sdev
+say int("42") + 1
+say num("3.5") + 0.5
+say f2i(num("42.9"))
+```
+
+```
+43
+4
+42
+```
+
+---
+
 ## Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1139,13 +1209,12 @@ machine-checked list is `lang/parity/report.json`.
 |---------|----|----|-------|
 | Classes (`essence`, `extend`, `self`, `super`, `new`) | yes | planned | OOP milestone |
 | Lambdas / closures (`(x) -> x * 2`) | yes | planned | |
-| Try / rescue / throw | yes | planned | |
 | Imports (`summon` from Gist) | yes | planned | |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |
-| Float parsing from text (`num`) | yes | planned | `int(s)` exists |
 | Sets, Maps, Queues, Stacks, LinkedList | yes | build from lists / tomes | |
 | Matrix & graphics APIs | yes | v1 track | canvas and turtle stay in v1 |
+
 
 ---
 
