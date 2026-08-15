@@ -339,9 +339,55 @@ const cases = [
     src: `say num("3.5") + 0.5\nsay num("-2.25")\nsay num("7")\nsay f2i(num("42.9"))`,
     expect: ['4', '-2.25', '7', '42'],
   },
+  // ---- Milestone 5w: first-class function values ----
+  {
+    name: 'Milestone 5w: ref + call through a variable',
+    src: `to twice with n
+  return n * 2
+end
+set f to ref twice
+say call f(21)`,
+    expect: ['42'],
+  },
+  {
+    name: 'Milestone 5w: function value passed as an argument',
+    src: `to inc with n
+  return n + 1
+end
+to apply2 with fn v
+  return call fn(call fn(v))
+end
+say apply2(ref inc, 5)`,
+    expect: ['7'],
+  },
+  {
+    name: 'Milestone 5w: dispatch table of function values',
+    src: `to add with a b
+  return a + b
+end
+to mul with a b
+  return a * b
+end
+set ops to {"add": ref add, "mul": ref mul}
+for each k in keys(ops)
+  set fn to ops[k]
+  say call fn(3, 4)
+end`,
+    expect: ['7', '12'],
+  },
+  {
+    name: 'Milestone 5w: recursion through a function value',
+    src: `to fact with n
+  if n <= 1
+    return 1
+  end
+  set f to ref fact
+  return n * call f(n - 1)
+end
+say fact(5)`,
+    expect: ['120'],
+  },
 ];
-
-
 
 let failed = 0;
 for (const c of cases) {
