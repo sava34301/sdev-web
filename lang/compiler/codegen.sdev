@@ -597,6 +597,34 @@ to emit_call with name nargs
   return 0
 end
 
+# Milestone 5w: `ref NAME` pushes a function value — the callee's code
+# offset as a plain i32. Unknown offsets reuse the pending-call table; the
+# resolver tells the two site shapes apart by looking at the opcode byte
+# that precedes the patch position (0x60 CALL → u16 target, otherwise
+# 0x01 PUSH_I32 → i32 target).
+to emit_ref with name
+  emit_byte(1)
+  set patch_pos to bc[0]
+  set idx to find_fn(name)
+  set target to 0
+  if idx >= 0
+    set target to fn_offsets[idx + 1]
+  end
+  if target > 0
+    emit_i32(target)
+  else
+    emit_i32(0)
+    if emit_enabled[0] is 1
+      set pend_names[pend_names[0] + 1] to name
+      set pend_pos[pend_names[0] + 1] to patch_pos
+      set pend_names[0] to pend_names[0] + 1
+      set pend_pos[0] to pend_pos[0] + 1
+    end
+  end
+  set expr_type[0] to 0
+  return 0
+end
+
 # Back-patch every deferred CALL now that all function offsets are known.
 to resolve_pending_calls
   set r to 1
@@ -608,6 +636,10 @@ to resolve_pending_calls
       set pos to pend_pos[r]
       set bc[pos + 1] to target % 256
       set bc[pos + 2] to (target / 256) % 256
+      if bc[pos] is not 96
+        set bc[pos + 3] to (target / 65536) % 256
+        set bc[pos + 4] to (target / 16777216) % 256
+      end
     end
     set r to r + 1
   end
@@ -772,6 +804,46 @@ to parse_atom with pos
   end
   if tk_kind[pos] is 2
     set name to tk_txt[pos]
+
+    # Milestone 5w: `ref NAME` — a first-class function value.
+    if str_eq(name, "ref")
+      if pos + 1 < tk_count
+        if tk_kind[pos + 1] is 2
+          emit_ref(tk_txt[pos + 1])
+          return pos + 2
+        end
+      end
+    end
+    # Milestone 5w: `call TARGET(args)` — indirect call through a value.
+    if str_eq(name, "call")
+      if pos + 1 < tk_count
+        if tk_kind[pos + 1] is 2
+          set fname to tk_txt[pos + 1]
+          if is_op_c(pos + 2, 40)
+            set pos to pos + 3
+            set nargs to 0
+            if is_op_c(pos, 41)
+              set pos to pos + 1
+            else
+              set pos to parse_expr(pos)
+              set nargs to 1
+              while is_op_c(pos, 44)
+                set pos to parse_expr(pos + 1)
+                set nargs to nargs + 1
+              end
+              if is_op_c(pos, 41)
+                set pos to pos + 1
+              end
+            end
+            emit_load_ident(fname)
+            emit_byte(196)
+            emit_byte(nargs)
+            set expr_type[0] to 0
+            return pos
+          end
+        end
+      end
+    end
 
     # Function/builtin call?  IDENT '(' args ')'
     if pos + 1 < tk_count
