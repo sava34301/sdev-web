@@ -793,7 +793,27 @@ function emitStmt(s, em, locals) {
       for (const b of ctx.breaks) em.patchI16(b.pos, em.here() - b.after);
       return;
     }
+    // Milestone 5v: attempt / rescue / throw.
+    case 'attempt': {
+      em.emit(OP.TRY); const tryPos = em.placeholder16(); const afterTry = em.here();
+      s.body.forEach(x => emitStmt(x, em, locals));
+      em.emit(OP.ENDTRY);
+      em.emit(OP.JMP); const overPos = em.placeholder16(); const afterOver = em.here();
+      em.patchI16(tryPos, em.here() - afterTry);
+      // Handler entry: the thrown message sits on top of the operand stack.
+      if (s.errName) emitStoreName(s.errName, em, locals, 'str');
+      else em.emit(OP.POP);
+      s.rescue_.forEach(x => emitStmt(x, em, locals));
+      em.patchI16(overPos, em.here() - afterOver);
+      return;
+    }
+    case 'throw': {
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.THROW);
+      return;
+    }
     case 'break':
+
     case 'continue': {
       const ctx = (em.loops || [])[(em.loops || []).length - 1];
       if (!ctx) throw new SdevError(`${s.k} outside of a loop`, s.line);
