@@ -119,6 +119,16 @@
   (global $csp (mut i32) (i32.const 0x18000))  ;; call-stack tip
   (global $hp  (mut i32) (i32.const 0x30000))  ;; heap bump pointer
 
+  ;; ---- Milestone 5v: error handling -------------------------------------
+  ;; A handler stack of 16-byte records [handler_ip | sp | fp | csp] lives in
+  ;; the gap between the global-variable slots (0x10000..0x103FF) and the
+  ;; operand stack. TRY pushes a record, ENDTRY pops one, THROW unwinds to
+  ;; the newest record — restoring the operand stack, frame pointer and
+  ;; call-stack tip so a throw from inside nested calls lands cleanly.
+  (global $HANDLER_BASE i32 (i32.const 0x13000))
+  (global $hsp (mut i32) (i32.const 0x13000))
+
+
   ;; ---- program length (set by host before calling run) -------------------
   (global $prog_len (mut i32) (i32.const 0))
   (func (export "set_prog_len") (param $n i32) (global.set $prog_len (local.get $n)))
