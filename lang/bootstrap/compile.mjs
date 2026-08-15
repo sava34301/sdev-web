@@ -114,6 +114,9 @@ const BUILTINS = {
   fceil:    { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FCEIL)   },
   ffloor:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FFLOOR)  },
   fround:   { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.FROUND)  },
+  // --- Milestone 5v: string → float ---
+  num:      { arity: 1, ret: 'float',   emit: (em) => em.emit(OP.S2F)     },
+
 };
 
 
