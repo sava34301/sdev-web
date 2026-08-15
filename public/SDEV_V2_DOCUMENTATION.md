@@ -28,9 +28,11 @@
 20. [Under the Hood (Self-Hosting)](#under-the-hood-self-hosting)
 21. [Opt-in Power (Advanced)](#opt-in-power-advanced)
 22. [Examples & Recipes](#examples--recipes)
-23. [Not Yet in v2](#not-yet-in-v2)
-24. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
-25. [Complete Reference Card](#complete-reference-card)
+23. [Error Handling](#error-handling)
+24. [Not Yet in v2](#not-yet-in-v2)
+25. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
+26. [Complete Reference Card](#complete-reference-card)
+
 
 ---
 
