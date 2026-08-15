@@ -308,7 +308,39 @@ const cases = [
     src: `set t to {}\nfor each p in split("a=1,b=2", ",")\n  set t[substr(p, 0, 1)] to int(substr(p, 2, 1))\nend\nsay t["a"]\nsay t["b"]`,
     expect: ['1', '2'],
   },
+  // ---- Milestone 5v: error handling + num() ----
+  {
+    name: 'Milestone 5v: attempt / rescue catches a throw',
+    src: `attempt\n  say "before"\n  throw "boom"\n  say "unreached"\nrescue e\n  say "caught: " + e\nend\nsay "after"`,
+    expect: ['before', 'caught: boom', 'after'],
+  },
+  {
+    name: 'Milestone 5v: attempt with no throw skips the rescue',
+    src: `attempt\n  say 1\nrescue e\n  say 99\nend\nsay 2`,
+    expect: ['1', '2'],
+  },
+  {
+    name: 'Milestone 5v: throw unwinds out of nested calls',
+    src: `to inner\n  throw "deep"\n  return 0\nend\nto outer\n  return inner()\nend\nattempt\n  say outer()\nrescue e\n  say e\nend\nsay "done"`,
+    expect: ['deep', 'done'],
+  },
+  {
+    name: 'Milestone 5v: rescue without a binding',
+    src: `attempt\n  throw "x"\nrescue\n  say "handled"\nend`,
+    expect: ['handled'],
+  },
+  {
+    name: 'Milestone 5v: nested attempt blocks',
+    src: `attempt\n  attempt\n    throw "inner"\n  rescue a\n    say "in:" + a\n    throw "outer"\n  end\nrescue b\n  say "out:" + b\nend`,
+    expect: ['in:inner', 'out:outer'],
+  },
+  {
+    name: 'Milestone 5v: num() string → float',
+    src: `say num("3.5") + 0.5\nsay num("-2.25")\nsay num("7")\nsay f2i(num("42.9"))`,
+    expect: ['4', '-2.25', '7', '42'],
+  },
 ];
+
 
 
 let failed = 0;
