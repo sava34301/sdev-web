@@ -29,9 +29,10 @@
 21. [Opt-in Power (Advanced)](#opt-in-power-advanced)
 22. [Examples & Recipes](#examples--recipes)
 23. [Error Handling](#error-handling)
-24. [Not Yet in v2](#not-yet-in-v2)
-25. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
-26. [Complete Reference Card](#complete-reference-card)
+24. [Function Values](#function-values)
+25. [Not Yet in v2](#not-yet-in-v2)
+26. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
+27. [Complete Reference Card](#complete-reference-card)
 
 
 ---
@@ -1201,6 +1202,73 @@ say f2i(num("42.9"))
 
 ---
 
+## Function Values
+
+`ref NAME` turns a declared function into a value; `call TARGET(args)` runs
+one. Function values are ordinary values — store them in variables, lists and
+tomes, or pass them to other functions.
+
+```sdev
+to twice with n
+  return n * 2
+end
+
+set f to ref twice
+say call f(21)
+```
+
+```
+42
+```
+
+Passing behaviour into a function:
+
+```sdev
+to inc with n
+  return n + 1
+end
+to apply_twice with fn v
+  return call fn(call fn(v))
+end
+say apply_twice(ref inc, 5)
+```
+
+```
+7
+```
+
+A dispatch table built from a tome:
+
+```sdev
+to add with a b
+  return a + b
+end
+to mul with a b
+  return a * b
+end
+
+set ops to {"add": ref add, "mul": ref mul}
+for each k in keys(ops)
+  set op to ops[k]
+  say k + " -> " + str(call op(3, 4))
+end
+```
+
+```
+add -> 7
+mul -> 12
+```
+
+Notes:
+- `ref` only names top-level functions; there are no closures yet, so a
+  function value captures nothing — pass state in as arguments.
+- The call target must be a variable holding a function value:
+  `set op to ops[k]` first, then `call op(...)`.
+- Arity is not checked on indirect calls; pass the number of arguments the
+  target declares.
+
+---
+
 ## Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1210,7 +1278,7 @@ machine-checked list is `lang/parity/report.json`.
 | Feature | v1 | v2 | Notes |
 |---------|----|----|-------|
 | Classes (`essence`, `extend`, `self`, `super`, `new`) | yes | planned | OOP milestone |
-| Lambdas / closures (`(x) -> x * 2`) | yes | planned | |
+| Lambdas / closures (`(x) -> x * 2`) | yes | planned | `ref` / `call` cover function values |
 | Imports (`summon` from Gist) | yes | planned | |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |

@@ -80,6 +80,7 @@
 ;;   0xC1 ENDTRY                    pop the newest handler record
 ;;   0xC2 THROW                     pop message handle; unwind to handler (or halt)
 ;;   0xC3 S2F                       pop string handle; push boxed f64 (`num`)
+;;   0xC4 CALLV <u8 n_args>        pop code offset from the stack; call it
 ;;   0xFF HALT
 
 ;;
@@ -1539,6 +1540,35 @@
             (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
             (i32.store (local.get $sp) (call $box_f (call $s2f (i32.load (local.get $sp)))))
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- CALLV (0xC4) <u8 n_args> --- indirect call.
+        ;; Identical to CALL except the target comes off the operand stack
+        ;; (pushed by `ref NAME`) instead of a u16 immediate.
+        (if (i32.eq (local.get $op) (i32.const 0xC4))
+          (then
+            (local.set $n (call $read_u8 (local.get $ip)))                                   ;; n_args
+            (local.set $ip (i32.add (local.get $ip) (i32.const 1)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))                                        ;; target
+            (local.set $b (local.get $n))
+            (i32.store (global.get $csp) (local.get $ip))                                    ;; ret_ip
+            (i32.store (i32.add (global.get $csp) (i32.const 4)) (global.get $fp))           ;; saved_fp
+            (global.set $fp (global.get $csp))
+            (global.set $csp (i32.add (global.get $csp) (i32.const 8)))
+            (local.set $addr (i32.sub (local.get $sp) (i32.mul (local.get $b) (i32.const 4))))
+            (block $vdone
+              (loop $vcopy
+                (br_if $vdone (i32.eqz (local.get $b)))
+                (i32.store (global.get $csp) (i32.load (local.get $addr)))
+                (global.set $csp (i32.add (global.get $csp) (i32.const 4)))
+                (local.set $addr (i32.add (local.get $addr) (i32.const 4)))
+                (local.set $b    (i32.sub (local.get $b)    (i32.const 1)))
+                (br $vcopy)
+              )
+            )
+            (local.set $sp (i32.sub (local.get $sp) (i32.mul (local.get $n) (i32.const 4))))
+            (local.set $ip (local.get $a))
             (br $dispatch)))
 
         ;; unknown opcode → halt

@@ -650,6 +650,24 @@ in milestone order.)
 
 
 
+**Milestone 5w (first-class function values) — shipped:**
+- **New seed opcode**: `CALLV (0xC4) <u8 n_args>` — identical to `CALL`
+  except the target code offset is popped off the operand stack instead of
+  read from a u16 immediate, so the frame/arg-copy path is shared.
+- **Surface syntax**: `ref NAME` evaluates to a function value (the callee's
+  byte offset, an ordinary int), and `call TARGET(args)` invokes one. Both
+  words stay plain identifiers, so the lexer is untouched.
+- **Patching.** `ref` emits `PUSH_I32` with a zero placeholder; forward and
+  mutually-recursive references reuse the existing pending-call table. The
+  resolver distinguishes the two site shapes by reading the opcode byte in
+  front of the patch position: `0x60` → u16 target, otherwise `0x01` → i32.
+- Function values are plain ints, so they compose with everything: store them
+  in lists and tomes, pass them to functions, build dispatch tables. There is
+  no capture — a `ref` closes over nothing, which keeps the calling
+  convention identical to a direct `CALL`.
+- Three new fixed-point cases (74/74 byte-identical) and four new runtime
+  cases (55/55 passing). Driver artifact rebuilt: bc=14025, pool=627.
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.

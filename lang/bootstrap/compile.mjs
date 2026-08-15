@@ -26,6 +26,7 @@ const OP = {
   ADD: 0x10, SUB: 0x11, MUL: 0x12, DIV: 0x13, MOD: 0x14,
   EQ: 0x20, NE: 0x21, LT: 0x22, GT: 0x23, LE: 0x24, GE: 0x25,
   NOT: 0x30, JMP: 0x40, JZ: 0x41, SAY_I32: 0x50, SAY_STR: 0x51,
+  CALLV: 0xC4,
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
   ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83,
   SGET: 0x84, I2S: 0x87, CHR: 0x88, LNEW: 0x89, STRCAT: 0x91,
@@ -139,6 +140,10 @@ class Emitter {
     for (let i = 0; i < 8; i++) this.emit(b[i]);
   }
   emitU16(v) { this.emit(v); this.emit(v >> 8); }
+  patchI32(pos, v) {
+    this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff;
+    this.bytes[pos + 2] = (v >> 16) & 0xff; this.bytes[pos + 3] = (v >> 24) & 0xff;
+  }
   patchI16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
   patchU16(pos, v) { this.bytes[pos] = v & 0xff; this.bytes[pos + 1] = (v >> 8) & 0xff; }
   placeholder16() { this.emit(0); this.emit(0); return this.bytes.length - 2; }
@@ -366,6 +371,23 @@ function parseProgram(tokens) {
     if (t.type === 'KW' && t.value === 'true')    { p++; return { k: 'num', v: 1 }; }
     if (t.type === 'KW' && t.value === 'false')   { p++; return { k: 'num', v: 0 }; }
     if (t.type === 'KW' && t.value === 'nothing') { p++; return { k: 'num', v: 0 }; }
+    // Milestone 5w: `ref NAME` → a first-class function value (its code offset).
+    if (t.type === 'IDENT' && t.value === 'ref' && peek(1) && peek(1).type === 'IDENT') {
+      p++; const name = eat('IDENT').value;
+      return { k: 'ref', name, line: t.line };
+    }
+    // Milestone 5w: `call TARGET(args)` → indirect call through a function value.
+    if (t.type === 'IDENT' && t.value === 'call' && peek(1) && peek(1).type === 'IDENT') {
+      p++; const target = { k: 'ident', name: eat('IDENT').value };
+      eat('OP', '(');
+      const args = [];
+      if (!(peek().type === 'OP' && peek().value === ')')) {
+        args.push(expr());
+        while (peek().type === 'OP' && peek().value === ',') { p++; args.push(expr()); }
+      }
+      eat('OP', ')');
+      return { k: 'callv', target, args, line: t.line };
+    }
     if (t.type === 'IDENT') { p++; return { k: 'ident', name: t.value }; }
     if (t.type === 'OP' && t.value === '(') { p++; const e = expr(); eat('OP', ')'); return e; }
     // list literal: [a, b, c]
@@ -424,7 +446,7 @@ function emit(stmts, em) {
   // Register functions (name → arity) up front so recursive calls resolve.
   for (const f of funcs) {
     if (em.functions.has(f.name)) throw new SdevError(`duplicate function ${f.name}`, f.line);
-    em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [], retType: 'int' });
+    em.functions.set(f.name, { arity: f.params.length, offset: -1, patchSites: [], refSites: [], retType: 'int' });
   }
 
   // Infer return types by fixed-point iteration BEFORE emitting bodies, so
@@ -472,6 +494,7 @@ function emit(stmts, em) {
   // Patch all CALL sites now that function offsets are known.
   for (const info of em.functions.values()) {
     for (const site of info.patchSites) em.patchU16(site, info.offset);
+    for (const site of info.refSites)   em.patchI32(site, info.offset);
   }
 }
 
@@ -595,6 +618,23 @@ function emitExpr(e, em, locals) {
       }
       em.emit(OP.LGET);
       return tk === 'liststr' ? 'str' : 'int';
+    }
+    // Milestone 5w: function value — PUSH_I32 with the callee's code offset.
+    case 'ref': {
+      const info = em.functions.get(e.name);
+      if (!info) throw new SdevError(`unknown function ${e.name}`, 0);
+      em.emit(OP.PUSH_I32);
+      const site = em.here();
+      em.emitI32(0);
+      info.refSites.push(site);
+      return 'int';
+    }
+    case 'callv': {
+      for (const a of e.args) emitExpr(a, em, locals);
+      emitExpr(e.target, em, locals);
+      em.emit(OP.CALLV);
+      em.emit(e.args.length);
+      return 'int';
     }
     case 'call': {
       const bi = BUILTINS[e.name];

@@ -90,6 +90,10 @@ const cases = [
   'attempt\nattempt\nthrow "i"\nrescue a\nsay a\nthrow "o"\nend\nrescue b\nsay b\nend',
   'to f\nthrow "deep"\nreturn 0\nend\nattempt\nsay f()\nrescue e\nsay e\nend',
   'say num("3.5") + 0.5\nsay f2i(num("42.9"))',
+  // Milestone 5w: first-class function values
+  'to twice with n\nreturn n * 2\nend\nset f to ref twice\nsay call f(21)',
+  'to inc with n\nreturn n + 1\nend\nto ap with fn v\nreturn call fn(v)\nend\nsay ap(ref inc, 5)',
+  'to a\nreturn 1\nend\nto b\nreturn 2\nend\nset xs to [ref a, ref b]\nfor each g in xs\nsay call g()\nend',
 ];
 
 
