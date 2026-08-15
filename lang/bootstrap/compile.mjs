@@ -484,6 +484,13 @@ function collectSets(body, locals) {
     if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
+    // Milestone 5v: the rescue binding is a local, as are both sub-blocks.
+    if (s.k === 'attempt') {
+      collectSets(s.body, locals);
+      if (s.errName && !locals.has(s.errName)) locals.set(s.errName, locals.size);
+      collectSets(s.rescue_, locals);
+    }
+
     // Milestone 5s: a foreach introduces two hidden bindings (list + index)
     // and the loop variable, registered in emission order.
     if (s.k === 'foreach') {
