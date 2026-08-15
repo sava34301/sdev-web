@@ -84,7 +84,14 @@ const cases = [
   'say int("42") + 1\nsay abs(0 - 5)\nsay min(3, 9)\nsay max(3, 9)',
   'say sum(range(5))\nfor each i in range(3)\nsay i\nend',
   'say fceil(1.2)\nsay ffloor(1.8)\nsay fround(1.5)',
+  // Milestone 5v: error handling + num()
+  'attempt\nsay "a"\nthrow "boom"\nrescue e\nsay e\nend\nsay "z"',
+  'attempt\nsay 1\nrescue\nsay 2\nend',
+  'attempt\nattempt\nthrow "i"\nrescue a\nsay a\nthrow "o"\nend\nrescue b\nsay b\nend',
+  'to f\nthrow "deep"\nreturn 0\nend\nattempt\nsay f()\nrescue e\nsay e\nend',
+  'say num("3.5") + 0.5\nsay f2i(num("42.9"))',
 ];
+
 
 
 function bytesEqual(a, b) {
