@@ -80,7 +80,14 @@
 ;;   0xC1 ENDTRY                    pop the newest handler record
 ;;   0xC2 THROW                     pop message handle; unwind to handler (or halt)
 ;;   0xC3 S2F                       pop string handle; push boxed f64 (`num`)
-;;   0xC4 CALLV <u8 n_args>        pop code offset from the stack; call it
+;;   0xC4 CALLV <u8 n_args>        pop callee (code offset OR closure) and call it
+;;   ; --- Milestone 5x: closures (lambdas that capture by value) ---
+;;   0xC5 CLOSURE <u16 target> <u8 ncaps>
+;;                                 pop ncaps captured values (left→right in
+;;                                 memory), allocate [MAGIC|target|ncaps|caps…]
+;;                                 on the heap, push its address. CALLV copies
+;;                                 the captures into locals[n_args…] so the
+;;                                 body reads them as ordinary local slots.
 ;;   0xFF HALT
 
 ;;
@@ -210,6 +217,16 @@
   ;; Sentinel stored in word 0 of every tome. No list can legitimately have
   ;; this length (it would need 8 GiB), so the check is unambiguous.
   (global $TOME_MAGIC i32 (i32.const 0x7FED10E5))
+
+  ;; Milestone 5x: closure objects. [MAGIC | code target | ncaps | caps…].
+  ;; The magic word lets CALLV tell a closure handle apart from the plain
+  ;; code offset that `ref NAME` produces.
+  (global $CLOS_MAGIC i32 (i32.const 0x7FC10.5E))
+
+  (func $is_closure (param $p i32) (result i32)
+    (if (i32.lt_u (local.get $p) (global.get $HEAP_BASE)) (then (return (i32.const 0))))
+    (if (i32.ge_u (local.get $p) (global.get $hp)) (then (return (i32.const 0))))
+    (i32.eq (i32.load (local.get $p)) (global.get $CLOS_MAGIC)))
 
   (func $is_tome (param $p i32) (result i32)
     (i32.eq (i32.load (local.get $p)) (global.get $TOME_MAGIC)))
