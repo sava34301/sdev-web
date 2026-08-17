@@ -48,9 +48,9 @@ export default function Unsubscribe() {
 
   return (
     <main className="min-h-screen bg-background flex items-center justify-center p-4">
-      <SEO title="Unsubscribe — SDEV" description="Manage your SDEV email subscription." path="/unsubscribe" />
+      <SEO title="Unsubscribe — SDEV" description="Manage your SDEV email subscription: confirm unsubscribe from sdev product updates, launch news, and release announcements, or re-subscribe anytime." path="/unsubscribe" />
       <Card className="w-full max-w-md p-8 border-border/50 text-center">
-        {state === 'validating' && (<><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" /><p className="text-muted-foreground">Checking your link…</p></>)}
+        {state === 'validating' && (<><h1 className="text-2xl font-bold mb-2">Unsubscribe from SDEV emails</h1><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" /><p className="text-muted-foreground">Checking your link…</p></>)}
         {state === 'ready' && (
           <>
             <h1 className="text-2xl font-bold mb-2">Unsubscribe from SDEV emails?</h1>
