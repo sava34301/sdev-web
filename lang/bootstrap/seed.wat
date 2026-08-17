@@ -1585,7 +1585,54 @@
               )
             )
             (local.set $sp (i32.sub (local.get $sp) (i32.mul (local.get $n) (i32.const 4))))
+            ;; Milestone 5x: when the callee is a closure handle, append its
+            ;; captured values as extra locals right after the arguments and
+            ;; jump to the closure's code target instead.
+            (if (call $is_closure (local.get $a))
+              (then
+                (local.set $tmp (i32.load (i32.add (local.get $a) (i32.const 8))))   ;; ncaps
+                (local.set $addr (i32.add (local.get $a) (i32.const 12)))
+                (block $cdone
+                  (loop $ccopy
+                    (br_if $cdone (i32.eqz (local.get $tmp)))
+                    (i32.store (global.get $csp) (i32.load (local.get $addr)))
+                    (global.set $csp (i32.add (global.get $csp) (i32.const 4)))
+                    (local.set $addr (i32.add (local.get $addr) (i32.const 4)))
+                    (local.set $tmp  (i32.sub (local.get $tmp)  (i32.const 1)))
+                    (br $ccopy)
+                  )
+                )
+                (local.set $a (i32.load (i32.add (local.get $a) (i32.const 4))))))
             (local.set $ip (local.get $a))
+            (br $dispatch)))
+
+        ;; --- CLOSURE (0xC5) <u16 target> <u8 ncaps> --- build a closure.
+        ;; Pops ncaps values (pushed left→right) and copies them into a heap
+        ;; object [MAGIC | target | ncaps | caps…]; pushes the object address.
+        (if (i32.eq (local.get $op) (i32.const 0xC5))
+          (then
+            (local.set $a (i32.load16_u (i32.add (global.get $CODE_BASE) (local.get $ip))))  ;; target
+            (local.set $n (call $read_u8 (i32.add (local.get $ip) (i32.const 2))))           ;; ncaps
+            (local.set $ip (i32.add (local.get $ip) (i32.const 3)))
+            (local.set $tmp (call $alloc (i32.add (i32.const 12) (i32.mul (local.get $n) (i32.const 4)))))
+            (i32.store (local.get $tmp) (global.get $CLOS_MAGIC))
+            (i32.store (i32.add (local.get $tmp) (i32.const 4)) (local.get $a))
+            (i32.store (i32.add (local.get $tmp) (i32.const 8)) (local.get $n))
+            (local.set $addr (i32.sub (local.get $sp) (i32.mul (local.get $n) (i32.const 4))))
+            (local.set $b (i32.add (local.get $tmp) (i32.const 12)))
+            (block $kdone
+              (loop $kcopy
+                (br_if $kdone (i32.eqz (local.get $n)))
+                (i32.store (local.get $b) (i32.load (local.get $addr)))
+                (local.set $b    (i32.add (local.get $b)    (i32.const 4)))
+                (local.set $addr (i32.add (local.get $addr) (i32.const 4)))
+                (local.set $n    (i32.sub (local.get $n)    (i32.const 1)))
+                (br $kcopy)
+              )
+            )
+            (local.set $sp (local.get $addr))
+            (i32.store (local.get $sp) (local.get $tmp))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 
         ;; unknown opcode → halt
