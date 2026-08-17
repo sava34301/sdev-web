@@ -214,6 +214,14 @@ set fn_extras to mklist(256)
 set fn_extras[0] to 0
 set fn_body_start to mklist(256)
 set fn_body_start[0] to 0
+set lam_names to mklist(64)
+set lam_names[0] to 0
+set lam_caps to mklist(64)
+set lam_caps[0] to 0
+set lsav_names to mklist(256)
+set lsav_names[0] to 0
+set lsav_types to mklist(256)
+set lsav_types[0] to 0
 set cur_fn to mklist(2)
 set cur_fn[0] to 0
 set pend_names to mklist(512)

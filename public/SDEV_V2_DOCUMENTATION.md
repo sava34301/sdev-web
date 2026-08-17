@@ -1260,12 +1260,98 @@ mul -> 12
 ```
 
 Notes:
-- `ref` only names top-level functions; there are no closures yet, so a
-  function value captures nothing — pass state in as arguments.
+- `ref` only names top-level functions. For anonymous functions that remember
+  surrounding state, use `make` (below).
 - The call target must be a variable holding a function value:
   `set op to ops[k]` first, then `call op(...)`.
 - Arity is not checked on indirect calls; pass the number of arguments the
   target declares.
+
+---
+
+## Closures — `make`
+
+`make` builds an anonymous function value inline. It takes an optional
+parameter list (`with a b`) and an optional capture list (`capture n k`), a
+newline, a body, and `end`. Call it exactly like any other function value,
+with `call`.
+
+```sdev
+set f to make with a
+  return a + 1
+end
+say call f(41)
+```
+
+```
+42
+```
+
+Captures are listed explicitly and copied **by value** when the closure is
+created — later changes to the outer variable do not affect it:
+
+```sdev
+set n to 10
+set add_n to make with a capture n
+  return a + n
+end
+say call add_n(5)
+set n to 99
+say call add_n(5)
+```
+
+```
+15
+15
+```
+
+Closures are ordinary values, so they can be returned from functions — the
+classic factory:
+
+```sdev
+to adder with n
+  return make with x capture n
+    return x + n
+  end
+end
+
+set a5 to adder(5)
+set a9 to adder(9)
+say call a5(1)
+say call a9(1)
+```
+
+```
+6
+10
+```
+
+…and passed straight into higher-order functions:
+
+```sdev
+to apply with g v
+  return call g(v)
+end
+set b to 7
+say apply(make with x capture b
+  return x + b
+end, 5)
+```
+
+```
+12
+```
+
+Notes:
+- Captures must be named. A bare outer variable used inside a `make` body
+  without appearing in `capture` is not in scope.
+- Capture is by value at creation time; there is no shared mutable cell.
+- A closure body has its own locals; `set` inside the body never touches the
+  enclosing scope.
+- Closures do not nest inside another `make` body yet.
+- Under the hood a closure is a heap object holding the code offset, the
+  capture count and the captured values (opcode `CLOSURE` 0xC5); `call`
+  (`CALLV` 0xC4) appends the captures after the arguments as extra locals.
 
 ---
 

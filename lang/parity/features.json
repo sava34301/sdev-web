@@ -651,7 +651,7 @@
       "v1": "must",
       "v1_name": "ARROW",
       "v2": "should",
-      "v2_name": "lambda",
+      "v2_name": "make",
       "native": "n/a",
       "native_name": "lambda"
     },

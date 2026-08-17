@@ -47,6 +47,8 @@ const OP = {
   FCEIL: 0xB5, FFLOOR: 0xB6, FROUND: 0xB7, RANDINT: 0xB8,
   // Milestone 5v — error handling + string→float
   TRY: 0xC0, ENDTRY: 0xC1, THROW: 0xC2, S2F: 0xC3,
+  // Milestone 5x — closures (lambdas capturing by value)
+  CLOSURE: 0xC5,
   HALT: 0xFF,
 
 
@@ -371,6 +373,25 @@ function parseProgram(tokens) {
     if (t.type === 'KW' && t.value === 'true')    { p++; return { k: 'num', v: 1 }; }
     if (t.type === 'KW' && t.value === 'false')   { p++; return { k: 'num', v: 0 }; }
     if (t.type === 'KW' && t.value === 'nothing') { p++; return { k: 'num', v: 0 }; }
+    // Milestone 5x: `make [with p...] [capture c...] NL body end` → closure.
+    if (t.type === 'IDENT' && t.value === 'make') {
+      p++;
+      const params = [];
+      if (peek().type === 'KW' && peek().value === 'with') {
+        p++;
+        while (peek().type === 'IDENT' && peek().value !== 'capture') params.push(eat('IDENT').value);
+      }
+      const caps = [];
+      if (peek().type === 'IDENT' && peek().value === 'capture') {
+        p++;
+        while (peek().type === 'IDENT') caps.push(eat('IDENT').value);
+      }
+      skipNL();
+      const body = [];
+      while (!(peek().type === 'KW' && peek().value === 'end')) { body.push(statement()); skipNL(); }
+      eat('KW', 'end');
+      return { k: 'lambda', params, caps, body, line: t.line };
+    }
     // Milestone 5w: `ref NAME` → a first-class function value (its code offset).
     if (t.type === 'IDENT' && t.value === 'ref' && peek(1) && peek(1).type === 'IDENT') {
       p++; const name = eat('IDENT').value;
@@ -618,6 +639,25 @@ function emitExpr(e, em, locals) {
       }
       em.emit(OP.LGET);
       return tk === 'liststr' ? 'str' : 'int';
+    }
+    // Milestone 5x: closure — captures are loaded in the *enclosing* scope,
+    // the body is emitted inline behind a JMP, then CLOSURE boxes the pair.
+    case 'lambda': {
+      for (const c of e.caps) emitLoadName(c, em, locals);
+      em.emit(OP.JMP); const overPos = em.placeholder16(); const afterOver = em.here();
+      const bodyOff = em.here();
+      const lLocals = new Map();
+      for (const n of e.params) if (!lLocals.has(n)) lLocals.set(n, lLocals.size);
+      for (const n of e.caps)   if (!lLocals.has(n)) lLocals.set(n, lLocals.size);
+      const fixed = lLocals.size;
+      collectSets(e.body, lLocals);
+      const extra = lLocals.size - fixed;
+      if (extra > 0) { em.emit(OP.ENTER); em.emit(extra); }
+      for (const s of e.body) emitStmt(s, em, lLocals);
+      em.emit(OP.PUSH_I32); em.emitI32(0); em.emit(OP.RET);
+      em.patchI16(overPos, em.here() - afterOver);
+      em.emit(OP.CLOSURE); em.emitU16(bodyOff); em.emit(e.caps.length);
+      return 'int';
     }
     // Milestone 5w: function value — PUSH_I32 with the callee's code offset.
     case 'ref': {
