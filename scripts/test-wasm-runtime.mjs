@@ -387,6 +387,61 @@ end
 say fact(5)`,
     expect: ['120'],
   },
+
+  // ---- Milestone 5x: closures ----
+  {
+    name: 'Milestone 5x: closure with no captures',
+    src: `set f to make with a
+  return a + 1
+end
+say call f(41)`,
+    expect: ['42'],
+  },
+  {
+    name: 'Milestone 5x: capture by value',
+    src: `set n to 10
+set add to make with a capture n
+  return a + n
+end
+say call add(5)
+set n to 99
+say call add(5)`,
+    expect: ['15', '15'],
+  },
+  {
+    name: 'Milestone 5x: closure with its own locals',
+    src: `set k to 3
+set f to make with x capture k
+  set t to x * k
+  return t + 1
+end
+say call f(4)`,
+    expect: ['13'],
+  },
+  {
+    name: 'Milestone 5x: closure passed to a function',
+    src: `to ap with g v
+  return call g(v)
+end
+set b to 7
+say ap(make with x capture b
+  return x + b
+end, 5)`,
+    expect: ['12'],
+  },
+  {
+    name: 'Milestone 5x: closure factory',
+    src: `to adder with n
+  return make with x capture n
+    return x + n
+  end
+end
+set a5 to adder(5)
+set a9 to adder(9)
+say call a5(1)
+say call a9(1)`,
+    expect: ['6', '10'],
+  },
 ];
 
 let failed = 0;

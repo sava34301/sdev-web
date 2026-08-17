@@ -94,6 +94,11 @@ const cases = [
   'to twice with n\nreturn n * 2\nend\nset f to ref twice\nsay call f(21)',
   'to inc with n\nreturn n + 1\nend\nto ap with fn v\nreturn call fn(v)\nend\nsay ap(ref inc, 5)',
   'to a\nreturn 1\nend\nto b\nreturn 2\nend\nset xs to [ref a, ref b]\nfor each g in xs\nsay call g()\nend',
+  // Milestone 5x: closures
+  'set f to make with a\nreturn a + 1\nend\nsay call f(41)',
+  'set n to 10\nset add to make with a capture n\nreturn a + n\nend\nsay call add(5)',
+  'set k to 2\nset f to make with x capture k\nset t to x * k\nreturn t + 1\nend\nsay call f(20)',
+  'to ap with g v\nreturn call g(v)\nend\nset b to 3\nsay ap(make with x capture b\nreturn x + b\nend, 4)',
 ];
 
 
