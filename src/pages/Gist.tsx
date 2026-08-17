@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SEO } from '@/components/SEO';
+import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -92,6 +93,23 @@ export default function Gist() {
   return (
     <div className="min-h-screen bg-background">
       <SEO title={`${gist.title} — sdev gist`} description={gist.description || `View and run "${gist.title}", a public sdev code gist shared by the community.`} path={`/g/${gist.slug}`} />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareSourceCode",
+          name: gist.title,
+          headline: gist.title,
+          description: gist.description || `A public sdev code gist: ${gist.title}.`,
+          programmingLanguage: gist.language || "sdev",
+          codeSampleType: "full solution",
+          text: gist.content?.slice(0, 5000),
+          dateCreated: gist.created_at,
+          url: `https://web.sdev.codes/g/${gist.slug}`,
+          mainEntityOfPage: `https://web.sdev.codes/g/${gist.slug}`,
+          author: { "@type": "Organization", name: "sdev" },
+          publisher: { "@type": "Organization", name: "sdev" }
+        })}</script>
+      </Helmet>
       <header className="border-b border-border/50">
         <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
