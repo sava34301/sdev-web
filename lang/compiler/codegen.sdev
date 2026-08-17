@@ -805,6 +805,121 @@ to parse_atom with pos
   if tk_kind[pos] is 2
     set name to tk_txt[pos]
 
+    # Milestone 5x: `make [with p...] [capture c...] NL body end` — a
+    # closure. Captures are loaded in the ENCLOSING scope, the body is
+    # emitted inline behind a JMP, and CLOSURE (197) boxes code + captures.
+    # The body's locals are params, then captures, then its own `set`s, so
+    # CALLV can append the captures straight after the arguments.
+    if str_eq(name, "make")
+      set lpos to pos + 1
+      set lam_names[0] to 0
+      set lam_caps[0] to 0
+      if is_ident_word(lpos, "with")
+        set lpos to lpos + 1
+        set lgo to 1
+        while lgo
+          if lpos >= tk_count
+            set lgo to 0
+          else
+            if tk_kind[lpos] is 2
+              if str_eq(tk_txt[lpos], "capture")
+                set lgo to 0
+              else
+                set lam_names[lam_names[0] + 1] to tk_txt[lpos]
+                set lam_names[0] to lam_names[0] + 1
+                set lpos to lpos + 1
+              end
+            else
+              set lgo to 0
+            end
+          end
+        end
+      end
+      set lnparams to lam_names[0]
+      if is_ident_word(lpos, "capture")
+        set lpos to lpos + 1
+        set lgo to 1
+        while lgo
+          if lpos >= tk_count
+            set lgo to 0
+          else
+            if tk_kind[lpos] is 2
+              set lam_caps[lam_caps[0] + 1] to tk_txt[lpos]
+              set lam_caps[0] to lam_caps[0] + 1
+              set lpos to lpos + 1
+            else
+              set lgo to 0
+            end
+          end
+        end
+      end
+      set lncaps to lam_caps[0]
+      set lci to 1
+      while lci <= lncaps
+        emit_load_ident(lam_caps[lci])
+        set lci to lci + 1
+      end
+      emit_byte(64)
+      set lover to placeholder16()
+      set lbody_off to bc[0]
+      set lsav_names[0] to loc_names[0]
+      set lsav_types[0] to loc_names[0]
+      set lsi to 1
+      while lsi <= lsav_names[0]
+        set lsav_names[lsi] to loc_names[lsi]
+        set lsav_types[lsi] to loc_types[lsi]
+        set lsi to lsi + 1
+      end
+      set lsave_in to in_func[0]
+      set loc_names[0] to 0
+      set loc_types[0] to 0
+      set lci to 1
+      while lci <= lnparams
+        add_local(lam_names[lci])
+        set lci to lci + 1
+      end
+      set lci to 1
+      while lci <= lncaps
+        add_local(lam_caps[lci])
+        set lci to lci + 1
+      end
+      set lfixed to loc_names[0]
+      set lbody_start to lpos
+      set lsave_emit to emit_enabled[0]
+      set emit_enabled[0] to 0
+      set in_func[0] to 1
+      set ltmp to parse_block(lbody_start)
+      set lextras to loc_names[0] - lfixed
+      set emit_enabled[0] to lsave_emit
+      set loc_names[0] to lfixed
+      if lextras > 0
+        emit_byte(98)
+        emit_byte(lextras)
+      end
+      set pos to parse_block(lbody_start)
+      emit_byte(1)
+      emit_i32(0)
+      emit_byte(97)
+      patch_i16(lover, bc[0])
+      emit_byte(197)
+      emit_byte(lbody_off % 256)
+      emit_byte((lbody_off / 256) % 256)
+      emit_byte(lncaps)
+      set loc_names[0] to lsav_names[0]
+      set loc_types[0] to lsav_types[0]
+      set lsi to 1
+      while lsi <= lsav_names[0]
+        set loc_names[lsi] to lsav_names[lsi]
+        set loc_types[lsi] to lsav_types[lsi]
+        set lsi to lsi + 1
+      end
+      set in_func[0] to lsave_in
+      if is_ident_word(pos, "end")
+        set pos to pos + 1
+      end
+      set expr_type[0] to 0
+      return pos
+    end
     # Milestone 5w: `ref NAME` — a first-class function value.
     if str_eq(name, "ref")
       if pos + 1 < tk_count
