@@ -221,7 +221,7 @@
   ;; Milestone 5x: closure objects. [MAGIC | code target | ncaps | caps…].
   ;; The magic word lets CALLV tell a closure handle apart from the plain
   ;; code offset that `ref NAME` produces.
-  (global $CLOS_MAGIC i32 (i32.const 0x7FC10.5E))
+  (global $CLOS_MAGIC i32 (i32.const 0x7FC105E5))
 
   (func $is_closure (param $p i32) (result i32)
     (if (i32.lt_u (local.get $p) (global.get $HEAP_BASE)) (then (return (i32.const 0))))
