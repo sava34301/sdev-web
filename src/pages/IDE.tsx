@@ -1491,6 +1491,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
             {sidePanel && (
               <>
                 <ResizablePanel defaultSize={18} minSize={12} maxSize={35} className="ide-sidepanel flex min-h-0 flex-col">
+                  <h2 className="sr-only">Workspace files and tools</h2>
                   {sidePanel === 'explorer' && (
                     <IdeFileTree
                       files={files}
@@ -1667,12 +1668,15 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   </div>
 
                   {bottomPanel === 'terminal' && (
+                    <>
+                    <h2 className="sr-only">Terminal output</h2>
                     <IdeTerminal
                       lines={output}
                       error={error}
                       execTime={execTime}
                       onClear={() => { setOutput([]); setError(undefined); setExecTime(null); }}
                     />
+                    </>
                   )}
                   {bottomPanel === 'canvas' && showCanvas && (
                     <div className="h-full overflow-auto p-2 bg-background/30">
