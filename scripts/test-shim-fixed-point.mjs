@@ -99,6 +99,12 @@ const cases = [
   'set n to 10\nset add to make with a capture n\nreturn a + n\nend\nsay call add(5)',
   'set k to 2\nset f to make with x capture k\nset t to x * k\nreturn t + 1\nend\nsay call f(20)',
   'to ap with g v\nreturn call g(v)\nend\nset b to 3\nsay ap(make with x capture b\nreturn x + b\nend, 4)',
+  // Milestone 5y: kinds (classes)
+  'kind Box\nto put with self v\nset self.v to v\nreturn 0\nend\nto get with self\nreturn self.v\nend\nend\nset b to new Box()\nb.put(9)\nsay b.get()',
+  'kind P\nto init with self x y\nset self.x to x\nset self.y to y\nreturn 0\nend\nto sum with self\nreturn self.x + self.y\nend\nend\nset p to new P\np.init(3, 4)\nsay p.sum()\nsay p.x',
+  'kind Greeter\nto hello with self who\nreturn "hi " + who\nend\nend\nset g to new Greeter()\nsay g.hello("sdev")',
+  'kind Counter\nto step with self\nset self.n to self.n + 1\nif self.n > 2\nreturn 100\nelse if self.n > 1\nreturn 10\nelse\nreturn 1\nend\nend\nend\nset c to new Counter()\nset c.n to 0\nsay c.step()\nsay c.step()\nsay c.step()',
+  'kind A\nto one with self\nreturn 1\nend\nend\nkind B\nto two with self\nreturn 2\nend\nend\nset a to new A()\nset b to new B()\nsay a.one() + b.two()',
 ];
 
 

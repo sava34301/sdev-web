@@ -179,8 +179,70 @@ function scopeTypes(locals, em) {
   return m;
 }
 
+
+// ---------------- Milestone 5y: kinds (classes) ----------------
+//
+// `kind Name` … `end` is desugared at the TOKEN level, before parsing, in
+// both compilers: the header and the class-closing `end` are blanked to
+// newlines and every method's name is rewritten to `Name_method`, so what
+// the parser sees is an ordinary run of top-level `to …` declarations.
+// The registry returned here maps a class name to its methods in
+// declaration order; `new Name` uses it to build the object tome.
+export function desugarKinds(tokens) {
+  const classes = new Map();
+  const blank = (i) => { tokens[i] = { type: 'NL', value: '\n', line: tokens[i].line }; };
+  const isEnd = (t) => t.type === 'KW' && t.value === 'end';
+  const opener = (i) => {
+    const t = tokens[i];
+    // `to` is also the infix word in `set x to v`, so it only opens a block
+    // when it starts a statement (previous token is a newline).
+    if (t.type === 'KW' && t.value === 'to') return i === 0 || tokens[i - 1].type === 'NL';
+    if (t.type === 'KW' && (t.value === 'while' || t.value === 'for')) return true;
+    if (t.type === 'KW' && t.value === 'if') {
+      // `else if` chains share the outer `end`, so the nested `if` is not
+      // an extra opener as far as block balancing is concerned.
+      let k = i - 1;
+      while (k >= 0 && tokens[k].type === 'NL') k--;
+      return !(k >= 0 && tokens[k].type === 'KW' && tokens[k].value === 'else');
+    }
+    if (t.type === 'IDENT' && (t.value === 'attempt' || t.value === 'make' || t.value === 'kind')) return true;
+    return false;
+  };
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t.type === 'IDENT' && t.value === 'kind' && tokens[i + 1] && tokens[i + 1].type === 'IDENT') {
+      const cname = tokens[i + 1].value;
+      const methods = [];
+      classes.set(cname, methods);
+      blank(i); blank(i + 1);
+      let j = i + 2, depth = 0;
+      while (j < tokens.length && tokens[j].type !== 'EOF') {
+        if (isEnd(tokens[j])) {
+          if (depth === 0) { blank(j); j++; break; }
+          depth--; j++; continue;
+        }
+        if (opener(j)) {
+          if (depth === 0 && tokens[j].type === 'KW' && tokens[j].value === 'to'
+              && tokens[j + 1] && tokens[j + 1].type === 'IDENT') {
+            const m = tokens[j + 1].value;
+            const fn = cname + '_' + m;
+            tokens[j + 1] = { ...tokens[j + 1], value: fn };
+            methods.push({ key: m, fn });
+          }
+          depth++; j++; continue;
+        }
+        j++;
+      }
+      i = j; continue;
+    }
+    i++;
+  }
+  return classes;
+}
+
 // ---------------- Parser (bootstrap subset) ----------------
-export function parse(source) { return parseProgram(tokenize(source)); }
+export function parse(source) { const t = tokenize(source); desugarKinds(t); return parseProgram(t); }
 function parseProgram(tokens) {
   let p = 0;
   const peek = (n = 0) => tokens[p + n];
@@ -214,6 +276,13 @@ function parseProgram(tokens) {
       if (t.value === 'set')    {
         p++;
         const name = eat('IDENT').value;
+        // Milestone 5y: `set obj.field to v` → tome write on the object.
+        if (peek().type === 'OP' && peek().value === '.') {
+          p++;
+          const field = eat('IDENT').value;
+          eat('KW', 'to');
+          return { k: 'setField', name, field, expr: expr(), line: t.line };
+        }
         // `set xs[i] to v`  → index-assignment
         if (peek().type === 'OP' && peek().value === '[') {
           p++;
@@ -344,12 +413,34 @@ function parseProgram(tokens) {
       while (canStartAtom(peek())) args.push(atom());
       a = { k: 'call', name: a.name, args };
     }
-    // postfix indexing: x[i][j]...
-    while (peek().type === 'OP' && peek().value === '[') {
-      p++;
-      const idx = expr();
-      eat('OP', ']');
-      a = { k: 'index', target: a, idx };
+    // postfix indexing: x[i][j]...  and Milestone 5y member access x.f / x.m()
+    while (true) {
+      if (peek().type === 'OP' && peek().value === '[') {
+        p++;
+        const idx = expr();
+        eat('OP', ']');
+        a = { k: 'index', target: a, idx };
+        continue;
+      }
+      if (peek().type === 'OP' && peek().value === '.' && peek(1) && peek(1).type === 'IDENT') {
+        p++;
+        const nm = eat('IDENT').value;
+        if (peek().type === 'OP' && peek().value === '(') {
+          if (a.k !== 'ident') throw new SdevError('method call needs a variable receiver', 0);
+          p++;
+          const args = [];
+          if (!(peek().type === 'OP' && peek().value === ')')) {
+            args.push(expr());
+            while (peek().type === 'OP' && peek().value === ',') { p++; args.push(expr()); }
+          }
+          eat('OP', ')');
+          a = { k: 'mcall', recv: a.name, m: nm, args };
+        } else {
+          a = { k: 'field', target: a, name: nm };
+        }
+        continue;
+      }
+      break;
     }
     return a;
   }
@@ -408,6 +499,13 @@ function parseProgram(tokens) {
       }
       eat('OP', ')');
       return { k: 'callv', target, args, line: t.line };
+    }
+    // Milestone 5y: `new NAME` / `new NAME()` — instantiate a kind.
+    if (t.type === 'IDENT' && t.value === 'new' && peek(1) && peek(1).type === 'IDENT') {
+      p++;
+      const cls = eat('IDENT').value;
+      if (peek().type === 'OP' && peek().value === '(') { p++; eat('OP', ')'); }
+      return { k: 'new', cls, line: t.line };
     }
     if (t.type === 'IDENT') { p++; return { k: 'ident', name: t.value }; }
     if (t.type === 'OP' && t.value === '(') { p++; const e = expr(); eat('OP', ')'); return e; }
@@ -552,6 +650,22 @@ function collectSets(body, locals) {
 const feList = (d) => `_fe_l${d}`;
 const feIdx  = (d) => `_fe_i${d}`;
 
+// Milestone 5y: a method call is string-typed when ANY kind declares a
+// method of that name returning a string — the receiver's class is not
+// tracked statically, so the rule is deliberately name-based (and the
+// self-hosted codegen applies exactly the same rule).
+function methodRetType(classes, functions, key) {
+  if (!classes) return 'int';
+  for (const ms of classes.values()) {
+    for (const mm of ms) {
+      if (mm.key !== key) continue;
+      const info = functions.get(mm.fn);
+      if (info && info.retType === 'str') return 'str';
+    }
+  }
+  return 'int';
+}
+
 function emitLoadName(name, em, locals) {
   if (locals && locals.has(name)) { em.emit(OP.LOAD_LOC); em.emit(locals.get(name)); }
   else { em.emit(OP.LOAD); em.emit(em.globalSlot(name)); }
@@ -659,6 +773,48 @@ function emitExpr(e, em, locals) {
       em.emit(OP.CLOSURE); em.emitU16(bodyOff); em.emit(e.caps.length);
       return 'int';
     }
+    // Milestone 5y: `new NAME` — an object is a tome whose entries are the
+    // class's methods, each stored as a function value.
+    case 'new': {
+      const ms = em.classes ? em.classes.get(e.cls) : null;
+      if (!ms) throw new SdevError(`unknown kind ${e.cls}`, e.line);
+      em.emit(OP.TNEW); em.emitU16(ms.length);
+      for (const mm of ms) {
+        em.emit(OP.PUSH_STR);
+        const off = em.intern(mm.key);
+        em.emit(off & 0xff); em.emit((off >> 8) & 0xff);
+        const info = em.functions.get(mm.fn);
+        if (!info) throw new SdevError(`kind ${e.cls}: missing method ${mm.key}`, e.line);
+        em.emit(OP.PUSH_I32);
+        const site = em.here();
+        em.emitI32(0);
+        info.refSites.push(site);
+        em.emit(OP.TSET);
+      }
+      return 'tome';
+    }
+    case 'field': {
+      emitExpr(e.target, em, locals);
+      em.emit(OP.PUSH_STR);
+      const off = em.intern(e.name);
+      em.emit(off & 0xff); em.emit((off >> 8) & 0xff);
+      em.emit(OP.TGET);
+      return 'int';
+    }
+    // `obj.method(a, b)` — the receiver is passed as the first argument and
+    // the target is read out of the object's tome, then called indirectly.
+    case 'mcall': {
+      emitLoadName(e.recv, em, locals);
+      for (const a of e.args) emitExpr(a, em, locals);
+      emitLoadName(e.recv, em, locals);
+      em.emit(OP.PUSH_STR);
+      const off = em.intern(e.m);
+      em.emit(off & 0xff); em.emit((off >> 8) & 0xff);
+      em.emit(OP.TGET);
+      em.emit(OP.CALLV);
+      em.emit(e.args.length + 1);
+      return methodRetType(em.classes, em.functions, e.m);
+    }
     // Milestone 5w: function value — PUSH_I32 with the callee's code offset.
     case 'ref': {
       const info = em.functions.get(e.name);
@@ -755,6 +911,9 @@ function inferExpr(e, localTypes, fnTypes) {
       return 'int';
     }
     case 'list':  return 'int';
+    case 'new':   return 'tome';
+    case 'field': return 'int';
+    case 'mcall': return methodRetType(fnTypes._classes, fnTypes, e.m);
     case 'tome': {
       for (const pr of e.pairs) {
         if (inferExpr(pr.val, localTypes, fnTypes) === 'str') return 'tomestr';
@@ -809,6 +968,17 @@ function emitStmt(s, em, locals) {
       } else {
         em.emit(OP.LSET);
       }
+      return;
+    }
+    // Milestone 5y: `set obj.field to v`.
+    case 'setField': {
+      emitLoadName(s.name, em, locals);
+      em.emit(OP.PUSH_STR);
+      const off = em.intern(s.field);
+      em.emit(off & 0xff); em.emit((off >> 8) & 0xff);
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.TSET);
+      em.emit(OP.POP);
       return;
     }
     case 'if': {
@@ -919,8 +1089,11 @@ function emitStmt(s, em, locals) {
 
 export function compile(source) {
   const tokens = tokenize(source);
+  const classes = desugarKinds(tokens);
   const ast = parseProgram(tokens);
   const em = new Emitter();
+  em.classes = classes;
+  em.functions._classes = classes;   // read by the inference pass
   emit(ast, em);
   return {
     bytecode: new Uint8Array(em.bytes),

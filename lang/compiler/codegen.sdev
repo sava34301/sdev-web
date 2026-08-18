@@ -708,6 +708,215 @@ to patch_conts with target
   return 0
 end
 
+# ---- Milestone 5y: kinds (classes) ---------------------------------------
+#
+# `kind Name … end` is desugared at the TOKEN level before either pass
+# runs, exactly the way the bootstrap oracle does it: the header and the
+# class-closing `end` are blanked to newlines, and each method name is
+# rewritten in place to `Name_method`, so the parser only ever sees plain
+# top-level `to …` declarations. The class registry (cls_names plus the
+# flat mth_cls / mth_key / mth_fn triple) is what `new Name` reads to
+# build the object tome.
+
+to blank_tok with i
+  set tk_kind[i] to 5
+  return 0
+end
+
+to prev_word_is with j w
+  set k to j - 1
+  set going to 1
+  while going
+    if k < 0
+      set going to 0
+    else
+      if tk_kind[k] is 5
+        set k to k - 1
+      else
+        set going to 0
+      end
+    end
+  end
+  if k < 0
+    return 0
+  end
+  return is_ident_word(k, w)
+end
+
+to is_kind_opener with j
+  if tk_kind[j] is not 2
+    return 0
+  end
+  set w to tk_txt[j]
+  if str_eq(w, "to")
+    # `to` is also the infix word of `set x to v`; only a statement-leading
+    # `to` opens a block.
+    if j is 0
+      return 1
+    end
+    if tk_kind[j - 1] is 5
+      return 1
+    end
+    return 0
+  end
+  if str_eq(w, "while")
+    return 1
+  end
+  if str_eq(w, "for")
+    return 1
+  end
+  if str_eq(w, "attempt")
+    return 1
+  end
+  if str_eq(w, "make")
+    return 1
+  end
+  if str_eq(w, "kind")
+    return 1
+  end
+  if str_eq(w, "if")
+    # `else if` chains share the outer `end`.
+    if prev_word_is(j, "else")
+      return 0
+    end
+    return 1
+  end
+  return 0
+end
+
+to desugar_kinds
+  set i to 0
+  while i < tk_count
+    set matched to 0
+    if is_ident_word(i, "kind")
+      if i + 1 < tk_count
+        if tk_kind[i + 1] is 2
+          set matched to 1
+        end
+      end
+    end
+    if matched is 1
+      set cname to tk_txt[i + 1]
+      set cls_names[cls_names[0] + 1] to cname
+      set cls_names[0] to cls_names[0] + 1
+      set cidx to cls_names[0]
+      blank_tok(i)
+      blank_tok(i + 1)
+      set j to i + 2
+      set depth to 0
+      set going to 1
+      while going
+        if j >= tk_count
+          set going to 0
+        else
+          if is_ident_word(j, "end")
+            if depth is 0
+              blank_tok(j)
+              set j to j + 1
+              set going to 0
+            else
+              set depth to depth - 1
+              set j to j + 1
+            end
+          else
+            if is_kind_opener(j)
+              if depth is 0
+                if is_ident_word(j, "to")
+                  set mname to tk_txt[j + 1]
+                  set mfn to cname + "_" + mname
+                  set tk_txt[j + 1] to mfn
+                  set mth_cls[mth_cls[0] + 1] to cidx
+                  set mth_key[mth_key[0] + 1] to mname
+                  set mth_fn[mth_fn[0] + 1] to mfn
+                  set mth_cls[0] to mth_cls[0] + 1
+                  set mth_key[0] to mth_key[0] + 1
+                  set mth_fn[0] to mth_fn[0] + 1
+                end
+              end
+              set depth to depth + 1
+              set j to j + 1
+            else
+              set j to j + 1
+            end
+          end
+        end
+      end
+      set i to j
+    else
+      set i to i + 1
+    end
+  end
+  return 0
+end
+
+# `new NAME` — TNEW sized to the method count, then one
+# PUSH_STR / function value / TSET triple per method, in declaration order.
+to emit_new with cname
+  set ci to 0
+  set k to 1
+  set cstop to cls_names[0] + 1
+  while k < cstop
+    if str_eq(cls_names[k], cname)
+      set ci to k
+    end
+    set k to k + 1
+  end
+  set n to 0
+  set m to 1
+  set mstop to mth_cls[0] + 1
+  while m < mstop
+    if mth_cls[m] is ci
+      set n to n + 1
+    end
+    set m to m + 1
+  end
+  emit_byte(138)
+  emit_byte(n % 256)
+  emit_byte((n / 256) % 256)
+  set m to 1
+  while m < mstop
+    if mth_cls[m] is ci
+      set koff to intern_str(mth_key[m])
+      emit_byte(2)
+      emit_byte(koff % 256)
+      emit_byte((koff / 256) % 256)
+      emit_ref(mth_fn[m])
+      emit_byte(139)
+    end
+    set m to m + 1
+  end
+  set expr_type[0] to 3
+  return 0
+end
+
+# A method call is string-typed when ANY kind declares a method of that
+# name returning a string — mirrors the bootstrap oracle's name-based rule.
+to method_ret_type with name
+  set m to 1
+  set mstop to mth_key[0] + 1
+  while m < mstop
+    if str_eq(mth_key[m], name)
+      set fi to find_fn(mth_fn[m])
+      if fi >= 0
+        if fn_ret_types[fi + 1] is 1
+          return 1
+        end
+      end
+    end
+    set m to m + 1
+  end
+  return 0
+end
+
+# Emit PUSH_STR for a member name (shared by field reads, writes and calls).
+to emit_member_key with name
+  set moff to intern_str(name)
+  emit_byte(2)
+  emit_byte(moff % 256)
+  emit_byte((moff / 256) % 256)
+  return 0
+end
+
 # ---- token classifiers ---------------------------------------------------
 
 
@@ -920,6 +1129,23 @@ to parse_atom with pos
       set expr_type[0] to 0
       return pos
     end
+    # Milestone 5y: `new NAME` / `new NAME()` — instantiate a kind.
+    if str_eq(name, "new")
+      if pos + 1 < tk_count
+        if tk_kind[pos + 1] is 2
+          set cn to tk_txt[pos + 1]
+          set pos to pos + 2
+          if is_op_c(pos, 40)
+            set pos to pos + 1
+            if is_op_c(pos, 41)
+              set pos to pos + 1
+            end
+          end
+          emit_new(cn)
+          return pos
+        end
+      end
+    end
     # Milestone 5w: `ref NAME` — a first-class function value.
     if str_eq(name, "ref")
       if pos + 1 < tk_count
@@ -982,6 +1208,7 @@ to parse_atom with pos
         return pos
       end
     end
+    set last_id[0] to name
     emit_load_ident(name)
     return pos + 1
   end
@@ -1118,7 +1345,43 @@ to parse_postfix with pos
         end
       end
     else
-      set going to 0
+      if is_op_c(pos, 46)
+        # Milestone 5y: `obj.field` reads a tome entry; `obj.method(a…)`
+        # loads the target out of the object and calls it with the receiver
+        # threaded in as the first argument (already on the stack).
+        set mname to tk_txt[pos + 1]
+        set recv to last_id[0]
+        if is_op_c(pos + 2, 40)
+          set pos to pos + 3
+          set nargs to 0
+          if is_op_c(pos, 41)
+            set pos to pos + 1
+          else
+            set pos to parse_expr(pos)
+            set nargs to 1
+            while is_op_c(pos, 44)
+              set pos to parse_expr(pos + 1)
+              set nargs to nargs + 1
+            end
+            if is_op_c(pos, 41)
+              set pos to pos + 1
+            end
+          end
+          emit_load_ident(recv)
+          emit_member_key(mname)
+          emit_byte(140)
+          emit_byte(196)
+          emit_byte(nargs + 1)
+          set expr_type[0] to method_ret_type(mname)
+        else
+          emit_member_key(mname)
+          emit_byte(140)
+          set expr_type[0] to 0
+          set pos to pos + 2
+        end
+      else
+        set going to 0
+      end
     end
   end
   return pos
@@ -1458,6 +1721,20 @@ to parse_stmt with pos
     set pos to pos + 1
     set name to tk_txt[pos]
     set pos to pos + 1
+    # Milestone 5y: member-assignment form: set NAME . FIELD to EXPR
+    if is_op_c(pos, 46)
+      emit_load_ident(name)
+      emit_member_key(tk_txt[pos + 1])
+      set pos to pos + 2
+      if is_ident_word(pos, "to")
+        set pos to pos + 1
+      end
+      set pos to parse_expr(pos)
+      emit_byte(139)
+      emit_byte(5)
+      set expr_type[0] to 0
+      return pos
+    end
     # Index-assignment form: set NAME [ EXPR ] to EXPR
     if is_op_c(pos, 91)
       emit_load_ident(name)
