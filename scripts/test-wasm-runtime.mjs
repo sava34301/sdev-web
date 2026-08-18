@@ -442,6 +442,94 @@ say call a5(1)
 say call a9(1)`,
     expect: ['6', '10'],
   },
+  // ---- Milestone 5y: kinds (classes) ----
+  {
+    name: 'Milestone 5y: kind with state and methods',
+    src: `kind Counter
+  to start with self n
+    set self.n to n
+    return 0
+  end
+  to bump with self
+    set self.n to self.n + 1
+    return self.n
+  end
+  to show with self label
+    say label + str(self.n)
+    return 0
+  end
+end
+set c to new Counter()
+c.start(5)
+say c.bump()
+say c.bump()
+c.show("count=")
+say c.n`,
+    expect: ['6', '7', 'count=7', '7'],
+  },
+  {
+    name: 'Milestone 5y: two kinds, independent instances',
+    src: `kind Dog
+  to speak with self
+    return "woof"
+  end
+end
+kind Cat
+  to speak with self
+    return "meow"
+  end
+end
+set d to new Dog
+set k to new Cat
+say d.speak()
+say k.speak()`,
+    expect: ['woof', 'meow'],
+  },
+  {
+    name: 'Milestone 5y: methods calling methods on self',
+    src: `kind Rect
+  to size with self w h
+    set self.w to w
+    set self.h to h
+    return 0
+  end
+  to area with self
+    return self.w * self.h
+  end
+  to describe with self
+    return "area=" + str(self.area())
+  end
+end
+set r to new Rect()
+r.size(4, 5)
+say r.area()
+say r.describe()`,
+    expect: ['20', 'area=20'],
+  },
+  {
+    name: 'Milestone 5y: objects in a list',
+    src: `kind Item
+  to init with self v
+    set self.v to v
+    return 0
+  end
+  to value with self
+    return self.v
+  end
+end
+set a to new Item()
+a.init(2)
+set b to new Item()
+b.init(40)
+set xs to [a, b]
+set total to 0
+for each it in xs
+  set total to total + it.v
+end
+say total
+say a.value()`,
+    expect: ['42', '2'],
+  },
 ];
 
 let failed = 0;

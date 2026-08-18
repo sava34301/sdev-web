@@ -256,6 +256,18 @@ set loop_depth to mklist(2)
 set loop_depth[0] to 0
 set fe_depth to mklist(2)
 set fe_depth[0] to 0
+set cls_names to mklist(64)
+set cls_names[0] to 0
+set mth_cls to mklist(256)
+set mth_cls[0] to 0
+set mth_key to mklist(256)
+set mth_key[0] to 0
+set mth_fn to mklist(256)
+set mth_fn[0] to 0
+set last_id to mklist(2)
+set last_id[0] to ""
+
+desugar_kinds()
 
 set emit_enabled[0] to 0
 set skip_fn_defs[0] to 0

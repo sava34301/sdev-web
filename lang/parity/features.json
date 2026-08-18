@@ -664,7 +664,7 @@
       "v1": "must",
       "v1_name": "essence",
       "v2": "should",
-      "v2_name": "class",
+      "v2_name": "kind",
       "native": "n/a",
       "native_name": "class"
     },
@@ -689,7 +689,7 @@
       "docs": "#self",
       "v1": "must",
       "v1_name": "self",
-      "v2": "should",
+      "v2": "n/a",
       "v2_name": "self",
       "native": "n/a",
       "native_name": "self"
@@ -716,7 +716,7 @@
       "v1": "must",
       "v1_name": "new",
       "v2": "should",
-      "v2_name": "instantiate",
+      "v2_name": "new",
       "native": "n/a",
       "native_name": "instantiate"
     },

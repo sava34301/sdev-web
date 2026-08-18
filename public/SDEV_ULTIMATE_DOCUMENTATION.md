@@ -4,7 +4,7 @@
 > machine, native backend, standard library, machine-learning stack, hardware,
 > GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-08-17 by
+> Created by **Sava Milanov**. Generated on 2026-08-18 by
 > `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
 > guides or the implementation and re-run the generator.
 
@@ -1515,6 +1515,67 @@ Notes:
 
 ---
 
+#### Kinds — objects and methods
+
+A **kind** is v2's class. It groups methods; an instance is a tome whose
+entries are those methods, so fields are just tome keys you set at runtime.
+
+```sdev
+kind Counter
+  to start with self n
+    set self.n to n
+    return 0
+  end
+  to bump with self
+    set self.n to self.n + 1
+    return self.n
+  end
+  to show with self label
+    say label + str(self.n)
+    return 0
+  end
+end
+
+set c to new Counter()
+c.start(5)
+say c.bump()      # 6
+say c.bump()      # 7
+c.show("count=")  # count=7
+say c.n           # 7
+```
+
+Rules:
+- `kind Name` … `end` declares the kind. Inside it, every method is an
+  ordinary `to NAME with …` block whose **first parameter is the receiver**.
+  Call it `self` by convention — it is a plain parameter, not a keyword.
+- `new Name` (parentheses optional, no constructor arguments) creates an
+  instance. Initialise it by calling a method: `c.start(5)`.
+- `obj.field` reads a field, `set obj.field to v` writes one. Fields spring
+  into existence on first write, exactly like tome keys.
+- `obj.method(a, b)` calls a method; the receiver is passed automatically as
+  the first argument. The receiver must be a variable, not an expression.
+- Methods may call other methods on the same object: `self.area()`.
+- Objects are ordinary values: store them in lists and tomes, pass them to
+  functions, return them.
+
+Typing note: a method call is treated as returning text when **any** kind
+declares a method of that name that returns text; otherwise it is a number.
+Field reads are numbers, so print a text field with `say str(obj.f)` only
+when it really is a number — a text field prints correctly with
+`say obj.f` only if you keep it in a variable typed by a text-returning
+method. When in doubt, expose text through a method.
+
+Not yet: inheritance (`extend`) and `super`. Those land in the next
+milestone.
+
+Under the hood: `kind` is desugared before parsing — the header and closing
+`end` disappear and each method becomes a top-level function named
+`Kind_method`. `new` emits a `TNEW` sized to the method count plus one
+`PUSH_STR` / function value / `TSET` triple per method; `obj.m(a)` reads the
+target with `TGET` and calls it with `CALLV`.
+
+---
+
 #### Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1523,8 +1584,9 @@ machine-checked list is `lang/parity/report.json`.
 
 | Feature | v1 | v2 | Notes |
 |---------|----|----|-------|
-| Classes (`essence`, `extend`, `self`, `super`, `new`) | yes | planned | OOP milestone |
-| Lambdas / closures (`(x) -> x * 2`) | yes | planned | `ref` / `call` cover function values |
+| Classes (`essence` / `new`) | yes | `kind` / `new` | see "Kinds" above |
+| Inheritance (`extend`, `super`) | yes | planned | next OOP milestone |
+| Lambdas / closures (`(x) -> x * 2`) | yes | `make … capture … end` | plus `ref` / `call` function values |
 | Imports (`summon` from Gist) | yes | planned | |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |
@@ -1558,6 +1620,8 @@ machine-checked list is `lang/parity/report.json`.
 | `inscriptions(t)` / `contents(t)` | `keys(t)` / `values(t)` |
 | `:: "k": 1 ;;` | `{ "k": 1 }` |
 | `attempt :: … ;; rescue e :: … ;;` | `attempt … rescue e … end` |
+| `essence Point :: … ;;` | `kind Point … end` |
+| `new Point()` / `obj.field` | `new Point` / `obj.field` |
 | `throw "msg"` | `throw "msg"` |
 | `num("3.5")` | `num("3.5")` |
 
@@ -5971,6 +6035,34 @@ in milestone order.)
   cases (60/60 passing). Driver artifact rebuilt: bc=15085, pool=646.
 - Parity registry updated: `lambda` is now present on v2 as `make`.
 
+**Milestone 5y (kinds — objects and methods) — shipped:**
+- **No VM change.** A kind is pure compiler sugar over tomes + function
+  values, so `seed.wat` is byte-for-byte the same as after 5x.
+- **Desugaring pre-pass** (`desugarKinds` in `compile.mjs`, `desugar_kinds`
+  in `codegen.sdev`, run identically from `compile-self.mjs`): the
+  `kind Name` header and its closing `end` are blanked out, and each nested
+  `to m with self …` becomes a top-level function `Name_m`. Line count is
+  preserved so error lines stay accurate. The pass records, per class, the
+  ordered list of `(method key, mangled function name)` pairs.
+- **`new Name`** (parentheses optional) emits `TNEW` sized to the method
+  count, then one `PUSH_STR key` + function-value push + `TSET` per method.
+  An instance is therefore an ordinary tome; fields are keys created on
+  first write.
+- **Member access**: `obj.f` → `PUSH_STR "f"` + `TGET`; `set obj.f to v` →
+  `TSET`; `obj.m(a, b)` → receiver, args, then receiver + `PUSH_STR "m"` +
+  `TGET` and `CALLV nargs+1`, so the receiver is the implicit first
+  argument.
+- **Return typing**: the receiver's class is not tracked statically, so a
+  method call is string-typed when *any* declared method of that name
+  returns a string (`methodRetType` / `method_ret_type`). Both compilers
+  apply the identical rule, which is what keeps them byte-identical.
+- Five new fixed-point cases (83/83 byte-identical) and four new runtime
+  cases (64/64 passing). Driver artifact rebuilt: bc=17153, pool=666.
+  `codegen.sdev` still compiles itself byte-identically.
+- Parity registry: `class` → `kind`, `instantiate` → `new` on v2; `self` is
+  marked n/a there because it is a plain parameter, not a keyword.
+  `inherit` / `super` remain the open v2 OOP gaps.
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.
@@ -6165,11 +6257,11 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `params` | syntax | `conjure` | `with` | `call` |
 | `recursion` | syntax | `conjure` | `to` | `call` |
 | `lambda` | syntax | `ARROW` | `make` | — |
-| `class` | oop | `essence` | gap (should) | — |
+| `class` | oop | `essence` | `kind` | — |
 | `inherit` | oop | `extend` | gap (should) | — |
-| `self` | oop | `self` | gap (should) | — |
+| `self` | oop | `self` | — | — |
 | `super` | oop | `super` | gap (should) | — |
-| `instantiate` | oop | `new` | gap (should) | — |
+| `instantiate` | oop | `new` | `new` | — |
 | `try_catch` | errors | `attempt` | `attempt` | — |
 | `rescue` | errors | `rescue` | `rescue` | — |
 | `throw` | errors | `throw` | `throw` | — |
@@ -6474,11 +6566,11 @@ The table below is generated by the agent. Do not edit it by hand.
 | `params` | syntax | `conjure` | `with` | `call` |
 | `recursion` | syntax | `conjure` | `to` | `call` |
 | `lambda` | syntax | `ARROW` | `make` | — |
-| `class` | oop | `essence` | gap (should) | — |
+| `class` | oop | `essence` | `kind` | — |
 | `inherit` | oop | `extend` | gap (should) | — |
-| `self` | oop | `self` | gap (should) | — |
+| `self` | oop | `self` | — | — |
 | `super` | oop | `super` | gap (should) | — |
-| `instantiate` | oop | `new` | gap (should) | — |
+| `instantiate` | oop | `new` | `new` | — |
 | `try_catch` | errors | `attempt` | `attempt` | — |
 | `rescue` | errors | `rescue` | `rescue` | — |
 | `throw` | errors | `throw` | `throw` | — |
@@ -9457,7 +9549,7 @@ follow the opcode byte directly in the bytecode stream.
 | `0xFF` | `HALT` | Seed VM instruction. |
 
 
-### sdev-written source index (15 files, 178 functions)
+### sdev-written source index (15 files, 185 functions)
 
 Every function defined in sdev itself — the self-hosted compiler, the parity
 agent, and the standard library.
@@ -9466,7 +9558,7 @@ agent, and the standard library.
 
 SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits the byte stream to a global buffer `bc` whose cell 0 holds the current byte count and cells 1..count hold the bytes. The scripts/test-self- codegen.mjs driver harvests the buffer via `say`, reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance, and verifies the executed output matches the JS bootstrap compiler's output. Grammar this milestone covers: program := stmt* stmt    := 'say' expr | 'set' IDENT 'to' expr | 'if' expr NL block ('else' NL block)? 'end' | 'while' expr NL block 'end' | 'to' IDENT ('with' IDENT*)? NL block 'end' | 'return' expr? block   := stmt*                              (until 'else' or 'end') expr    := cmp cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )? add     := mul (('+'|'-') mul)* mul     := atom (('*'|'/') atom)* atom    := INT | IDENT                              (variable load) | IDENT '(' args? ')'                (function call / builtin) | '(' expr ')' Restriction: functions must be defined before their call sites — the self-hosted compiler emits function bodies inline, bracketed by a JMP that skips over them, and records each body's byte offset in a global table. Forward references / mutual recursion land in a later milestone.
 
-39 functions.
+46 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
@@ -9493,22 +9585,29 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 | `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 629 |
 | `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 657 |
 | `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 684 |
-| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 714 |
-| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 726 |
-| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 743 |
-| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | `pos` | 1091 |
-| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1130 |
-| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1144 |
-| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1187 |
-| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1238 |
-| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1313 |
-| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1323 |
-| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1340 |
-| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1358 |
-| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1364 |
-| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1381 |
-| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1416 |
-| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1438 |
+| `blank_tok` | `i` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 721 |
+| `prev_word_is` | `j w` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 726 |
+| `is_kind_opener` | `j` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 746 |
+| `desugar_kinds` | _none_ | Part of the Milestone 5y: kinds (classes) section of this module. | _no explicit yield_ | 787 |
+| `emit_new` | `cname` | `new NAME` — TNEW sized to the method count, then one PUSH_STR / function value / TSET triple per method, in declaration order. | `0` | 854 |
+| `method_ret_type` | `name` | A method call is string-typed when ANY kind declares a method of that name returning a string — mirrors the bootstrap oracle's name-based rule. | `1` | 894 |
+| `emit_member_key` | `name` | Emit PUSH_STR for a member name (shared by field reads, writes and calls). | `0` | 912 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 923 |
+| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 935 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 952 |
+| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | _no explicit yield_ | 1318 |
+| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1393 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1407 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1450 |
+| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1501 |
+| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1576 |
+| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1586 |
+| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1603 |
+| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1621 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1627 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1644 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1679 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1701 |
 
 #### `lang/compiler/lexer.sdev`
 
@@ -9828,11 +9927,11 @@ Registry: **72 features** across **3 tracks**.
 | `params` | syntax | `conjure` | `with` | `call` |
 | `recursion` | syntax | `conjure` | `to` | `call` |
 | `lambda` | syntax | `ARROW` | `make` | — |
-| `class` | oop | `essence` | gap (should) | — |
+| `class` | oop | `essence` | `kind` | — |
 | `inherit` | oop | `extend` | gap (should) | — |
-| `self` | oop | `self` | gap (should) | — |
+| `self` | oop | `self` | — | — |
 | `super` | oop | `super` | gap (should) | — |
-| `instantiate` | oop | `new` | gap (should) | — |
+| `instantiate` | oop | `new` | `new` | — |
 | `try_catch` | errors | `attempt` | `attempt` | — |
 | `rescue` | errors | `rescue` | `rescue` | — |
 | `throw` | errors | `throw` | `throw` | — |
