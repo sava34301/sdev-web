@@ -1355,6 +1355,67 @@ Notes:
 
 ---
 
+## Kinds — objects and methods
+
+A **kind** is v2's class. It groups methods; an instance is a tome whose
+entries are those methods, so fields are just tome keys you set at runtime.
+
+```sdev
+kind Counter
+  to start with self n
+    set self.n to n
+    return 0
+  end
+  to bump with self
+    set self.n to self.n + 1
+    return self.n
+  end
+  to show with self label
+    say label + str(self.n)
+    return 0
+  end
+end
+
+set c to new Counter()
+c.start(5)
+say c.bump()      # 6
+say c.bump()      # 7
+c.show("count=")  # count=7
+say c.n           # 7
+```
+
+Rules:
+- `kind Name` … `end` declares the kind. Inside it, every method is an
+  ordinary `to NAME with …` block whose **first parameter is the receiver**.
+  Call it `self` by convention — it is a plain parameter, not a keyword.
+- `new Name` (parentheses optional, no constructor arguments) creates an
+  instance. Initialise it by calling a method: `c.start(5)`.
+- `obj.field` reads a field, `set obj.field to v` writes one. Fields spring
+  into existence on first write, exactly like tome keys.
+- `obj.method(a, b)` calls a method; the receiver is passed automatically as
+  the first argument. The receiver must be a variable, not an expression.
+- Methods may call other methods on the same object: `self.area()`.
+- Objects are ordinary values: store them in lists and tomes, pass them to
+  functions, return them.
+
+Typing note: a method call is treated as returning text when **any** kind
+declares a method of that name that returns text; otherwise it is a number.
+Field reads are numbers, so print a text field with `say str(obj.f)` only
+when it really is a number — a text field prints correctly with
+`say obj.f` only if you keep it in a variable typed by a text-returning
+method. When in doubt, expose text through a method.
+
+Not yet: inheritance (`extend`) and `super`. Those land in the next
+milestone.
+
+Under the hood: `kind` is desugared before parsing — the header and closing
+`end` disappear and each method becomes a top-level function named
+`Kind_method`. `new` emits a `TNEW` sized to the method count plus one
+`PUSH_STR` / function value / `TSET` triple per method; `obj.m(a)` reads the
+target with `TGET` and calls it with `CALLV`.
+
+---
+
 ## Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1363,8 +1424,9 @@ machine-checked list is `lang/parity/report.json`.
 
 | Feature | v1 | v2 | Notes |
 |---------|----|----|-------|
-| Classes (`essence`, `extend`, `self`, `super`, `new`) | yes | planned | OOP milestone |
-| Lambdas / closures (`(x) -> x * 2`) | yes | planned | `ref` / `call` cover function values |
+| Classes (`essence` / `new`) | yes | `kind` / `new` | see "Kinds" above |
+| Inheritance (`extend`, `super`) | yes | planned | next OOP milestone |
+| Lambdas / closures (`(x) -> x * 2`) | yes | `make … capture … end` | plus `ref` / `call` function values |
 | Imports (`summon` from Gist) | yes | planned | |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |
@@ -1398,6 +1460,8 @@ machine-checked list is `lang/parity/report.json`.
 | `inscriptions(t)` / `contents(t)` | `keys(t)` / `values(t)` |
 | `:: "k": 1 ;;` | `{ "k": 1 }` |
 | `attempt :: … ;; rescue e :: … ;;` | `attempt … rescue e … end` |
+| `essence Point :: … ;;` | `kind Point … end` |
+| `new Point()` / `obj.field` | `new Point` / `obj.field` |
 | `throw "msg"` | `throw "msg"` |
 | `num("3.5")` | `num("3.5")` |
 
