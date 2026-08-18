@@ -84,6 +84,7 @@ export default function Launch() {
 
         {!launched && (
           <div className="grid grid-cols-4 gap-3 sm:gap-6 max-w-2xl mx-auto">
+            <h2 className="sr-only col-span-4">Countdown to launch</h2>
             {([
               [time.days, t.days],
               [time.hours, t.hours],
@@ -106,6 +107,7 @@ export default function Launch() {
         )}
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+          <h2 className="sr-only w-full">Get early access</h2>
           {user || launched || alreadyInvited ? (
             <Button size="lg" onClick={() => navigate('/home')} className="gap-2">
               {t.enter} <ArrowRight className="h-4 w-4" />
