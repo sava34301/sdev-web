@@ -10,7 +10,6 @@
     "list_get @ native",
     "abs @ native",
     "inherit @ v2",
-    "self @ v2",
     "super @ v2",
     "list_literal @ native",
     "import @ v2"
@@ -67,7 +66,7 @@
     { "name": "lambda", "area": "syntax", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "class", "area": "oop", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "inherit", "area": "oop", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
-    { "name": "self", "area": "oop", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
+    { "name": "self", "area": "oop", "tracks": { "v1": "yes", "v2": "n/a", "native": "n/a" } },
     { "name": "super", "area": "oop", "tracks": { "v1": "yes", "v2": "MISSING", "native": "n/a" } },
     { "name": "instantiate", "area": "oop", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "try_catch", "area": "errors", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
