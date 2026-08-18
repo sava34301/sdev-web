@@ -1676,6 +1676,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                       execTime={execTime}
                       onClear={() => { setOutput([]); setError(undefined); setExecTime(null); }}
                     />
+                    </>
                   )}
                   {bottomPanel === 'canvas' && showCanvas && (
                     <div className="h-full overflow-auto p-2 bg-background/30">
