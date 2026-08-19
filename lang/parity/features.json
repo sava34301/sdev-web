@@ -898,7 +898,7 @@
       "v1": "must",
       "v1_name": "summon",
       "v2": "should",
-      "v2_name": "import",
+      "v2_name": "use",
       "native": "n/a",
       "native_name": "import"
     },
