@@ -539,14 +539,14 @@ say a.value()`,
   // --- Milestone 5z: modules (`use "path"`) ---
   {
     name: 'Milestone 5z: use pulls in a module',
-    src: `use "${'${MOD_A}'}"
+    src: `use "${MOD_A}"
 say triple(14)`,
     expect: ['42'],
   },
   {
     name: 'Milestone 5z: nested + duplicate use included once',
-    src: `use "${'${MOD_B}'}"
-use "${'${MOD_A}'}"
+    src: `use "${MOD_B}"
+use "${MOD_A}"
 say triple(1) + bump(1)`,
     expect: ['5'],
   },
