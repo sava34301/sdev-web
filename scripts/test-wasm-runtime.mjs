@@ -74,6 +74,12 @@ async function runProgram(src, which = 'self') {
   return output;
 }
 
+// Module fixtures for the Milestone 5z `use` tests.
+const MOD_A = '/tmp/sdev-mod-a.sdev';
+const MOD_B = '/tmp/sdev-mod-b.sdev';
+writeFileSync(MOD_A, 'to triple with n\n  return n * 3\nend\n');
+writeFileSync(MOD_B, `use "${MOD_A}"\nto bump with n\n  return triple(n) - 1\nend\n`);
+
 const cases = [
   {
     name: 'basic + strings',
@@ -529,6 +535,20 @@ end
 say total
 say a.value()`,
     expect: ['42', '2'],
+  },
+  // --- Milestone 5z: modules (`use "path"`) ---
+  {
+    name: 'Milestone 5z: use pulls in a module',
+    src: `use "${MOD_A}"
+say triple(14)`,
+    expect: ['42'],
+  },
+  {
+    name: 'Milestone 5z: nested + duplicate use included once',
+    src: `use "${MOD_B}"
+use "${MOD_A}"
+say triple(1) + bump(1)`,
+    expect: ['5'],
   },
 ];
 
