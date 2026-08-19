@@ -718,6 +718,29 @@ in milestone order.)
   marked n/a there because it is a plain parameter, not a keyword.
   `inherit` / `super` remain the open v2 OOP gaps.
 
+**Milestone 5z (modules — `use "path"`) — shipped:**
+- **No VM change.** Modules are a source→source prelink pass that runs
+  before lexing, so the seed VM is untouched since 5x.
+- **Pass**: `prelink()` in `lang/bootstrap/compile.mjs` and
+  `prelink_source` in `lang/compiler/codegen.sdev` implement the identical
+  algorithm — walk the source line by line, and when a trimmed line is
+  exactly `use "path"`, splice in the recursively prelinked text of that
+  file followed by a newline; every other line is copied verbatim with its
+  newline. Include-once is tracked by path (a `Set` in JS, a `|`-delimited
+  global string in sdev), so diamond dependencies emit a module once.
+- **Resolution is the host's job**: the self-hosted compiler reads modules
+  with `read_file(path)`. `compile-self.mjs` now answers `<stdin>` with the
+  program under compilation and any other path from an optional module map,
+  falling back to disk under Node. The driver program gained a single line,
+  `set src to prelink_source(src)`, between the codegen and the inline
+  lexer.
+- **Bootstrap API**: `compile(source, { readModule })`; `setModuleReader()`
+  lets a host (browser IDE) override resolution globally.
+- Two new runtime cases (66/66 passing), 83/83 fixed-point cases still
+  byte-identical, driver artifact rebuilt: bc=17475, pool=683.
+- Parity: `import` on v2 is now `use`; `inherit` / `super` are the last two
+  v2 gaps in the registry.
+
 **Milestone 15 (training at scale) — planned:**
 - Batched (multi-sequence) forward passes instead of one context at a time.
 - Route `matmul` through the M10/M11 accelerators inside the training loop.

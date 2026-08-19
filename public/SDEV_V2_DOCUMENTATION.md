@@ -30,9 +30,10 @@
 22. [Examples & Recipes](#examples--recipes)
 23. [Error Handling](#error-handling)
 24. [Function Values](#function-values)
-25. [Not Yet in v2](#not-yet-in-v2)
-26. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
-27. [Complete Reference Card](#complete-reference-card)
+25. [Modules — `use`](#modules--use)
+26. [Not Yet in v2](#not-yet-in-v2)
+27. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
+28. [Complete Reference Card](#complete-reference-card)
 
 
 ---
@@ -1416,6 +1417,48 @@ target with `TGET` and calls it with `CALLV`.
 
 ---
 
+## Modules — `use`
+
+Split a program across files. A line whose only content is `use "path"`
+is replaced by the contents of that file before anything else happens.
+
+`math.sdev`:
+
+```
+to triple with n
+  return n * 3
+end
+```
+
+`main.sdev`:
+
+```
+use "math.sdev"
+say triple(14)      # 42
+```
+
+Rules:
+
+- The directive must be the whole line: `use "path"` (double quotes).
+- Paths are resolved by the host — the CLI and desktop IDE read them from
+  disk relative to the working directory; the browser IDE resolves them
+  against your workspace files.
+- Modules may `use` other modules; nesting is unlimited.
+- **Include-once**: a path already pulled in is skipped the second time, so
+  diamond dependencies (`a` uses `c`, `b` uses `c`, main uses both) are
+  safe and `c` is emitted exactly once.
+- There is no namespacing yet: everything a module defines lands in the
+  same global scope, so prefix names you intend to export.
+- Line numbers stay honest — each directive contributes the module text
+  followed by a newline, so errors inside a module point at the module.
+
+Under the hood this is a source→source prelink pass that exists twice, in
+lockstep: `prelink()` in the JS bootstrap and `prelink_source` in
+`lang/compiler/codegen.sdev`, both producing byte-identical text so the
+self-hosted compiler stays a fixed point.
+
+---
+
 ## Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1427,7 +1470,7 @@ machine-checked list is `lang/parity/report.json`.
 | Classes (`essence` / `new`) | yes | `kind` / `new` | see "Kinds" above |
 | Inheritance (`extend`, `super`) | yes | planned | next OOP milestone |
 | Lambdas / closures (`(x) -> x * 2`) | yes | `make … capture … end` | plus `ref` / `call` function values |
-| Imports (`summon` from Gist) | yes | planned | |
+| Imports | `summon` (Gist) | `use "path"` | see "Modules" above; no Gist fetch in v2 yet |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |
 | Sets, Maps, Queues, Stacks, LinkedList | yes | build from lists / tomes | |
