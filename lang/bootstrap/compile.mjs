@@ -204,6 +204,9 @@ export function setModuleReader(fn) { moduleReader = fn; }
 
 function defaultReadModule(path) {
   if (moduleReader) return moduleReader(path) ?? '';
+  // Synchronous fallback for the very first call, before the lazy
+  // `import('node:fs')` above has settled (Node 22+ only; harmless elsewhere).
+  if (!nodeFs) { try { nodeFs = globalThis.process?.getBuiltinModule?.('fs') ?? null; } catch { /* browser */ } }
   if (nodeFs) {
     try { return nodeFs.readFileSync(path, 'utf8'); } catch { return ''; }
   }
