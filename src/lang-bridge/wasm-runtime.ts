@@ -45,7 +45,10 @@ async function loadSeed(): Promise<WebAssembly.Module> {
   return cached;
 }
 
-export async function runWasm(source: string): Promise<{ success: boolean; output: string[]; error: string | null }> {
+export async function runWasm(
+  source: string,
+  modules?: Record<string, string>,
+): Promise<{ success: boolean; output: string[]; error: string | null }> {
   const output: string[] = [];
 
   // Milestone 5q: floats and host I/O are compiled by the self-hosted
@@ -54,7 +57,7 @@ export async function runWasm(source: string): Promise<{ success: boolean; outpu
   setSeedLoader(loadSeedBytes);
   let program: { bytecode: Uint8Array; stringPool: Uint8Array };
   try {
-    program = await selfCompile(source);
+    program = await selfCompile(source, modules ?? null);
     if (program.bytecode.length === 0) throw new Error('stage-0 compiler produced no bytecode');
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -632,7 +632,13 @@ export default function IDEPage() {
       try {
         const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
         try {
-          const r = await runWasm(rawSrc);
+          // Milestone 5z: `use "path"` resolves against the workspace files.
+          const moduleMap: Record<string, string> = {};
+          for (const f of files) {
+            moduleMap[f.name] = f.content;
+            moduleMap['./' + f.name] = f.content;
+          }
+          const r = await runWasm(rawSrc, moduleMap);
           setOutput(r.output);
           setStatusMsg(r.success ? 'Done (v2 · self-hosted)' : `✗ ${r.error ?? 'error'}`);
         } catch (e) {
