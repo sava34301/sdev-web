@@ -129,9 +129,13 @@ to prelink_source with s
     set t to trim(line)
     set is_use to 0
     if length(t) > 5
-      if str_eq(substr(t, 0, 5), "use \"")
-        if ord(t, length(t) - 1) is 34
-          set is_use to 1
+      if str_eq(substr(t, 0, 3), "use")
+        if ord(t, 3) is 32
+          if ord(t, 4) is 34
+            if ord(t, length(t) - 1) is 34
+              set is_use to 1
+            end
+          end
         end
       end
     end
