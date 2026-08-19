@@ -187,17 +187,18 @@ function scopeTypes(locals, em) {
 // source→source pass and is mirrored byte-for-byte by `prelink_source` in
 // `lang/compiler/codegen.sdev`.
 let moduleReader = null;
+let nodeFs = null;
+if (typeof process !== 'undefined' && process.versions?.node) {
+  nodeFs = (await import('node:fs')).default;
+}
 
 // Hosts (browser IDE, CLI) can override how module paths are resolved.
 export function setModuleReader(fn) { moduleReader = fn; }
 
 function defaultReadModule(path) {
   if (moduleReader) return moduleReader(path) ?? '';
-  if (typeof process !== 'undefined' && process.versions?.node) {
-    try {
-      // eslint-disable-next-line no-undef
-      return require('node:fs').readFileSync(path, 'utf8');
-    } catch { return ''; }
+  if (nodeFs) {
+    try { return nodeFs.readFileSync(path, 'utf8'); } catch { return ''; }
   }
   return '';
 }
