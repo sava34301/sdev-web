@@ -188,15 +188,25 @@ function scopeTypes(locals, em) {
 // `lang/compiler/codegen.sdev`.
 let moduleReader = null;
 let nodeFs = null;
-if (typeof process !== 'undefined' && process.versions?.node) {
-  nodeFs = (await import('node:fs')).default;
+async function ensureNodeFs() {
+  if (nodeFs) return nodeFs;
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    nodeFs = (await import(/* @vite-ignore */ 'node:fs')).default;
+  }
+  return nodeFs;
 }
+
+// Eagerly warm the Node resolver where possible (no-op in the browser).
+ensureNodeFs();
 
 // Hosts (browser IDE, CLI) can override how module paths are resolved.
 export function setModuleReader(fn) { moduleReader = fn; }
 
 function defaultReadModule(path) {
   if (moduleReader) return moduleReader(path) ?? '';
+  // Synchronous fallback for the very first call, before the lazy
+  // `import('node:fs')` above has settled (Node 22+ only; harmless elsewhere).
+  if (!nodeFs) { try { nodeFs = globalThis.process?.getBuiltinModule?.('fs') ?? null; } catch { /* browser */ } }
   if (nodeFs) {
     try { return nodeFs.readFileSync(path, 'utf8'); } catch { return ''; }
   }

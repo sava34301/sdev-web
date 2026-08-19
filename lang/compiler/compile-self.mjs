@@ -21,8 +21,12 @@ import { DRIVER_BYTECODE_B64, DRIVER_POOL_B64 } from './driver-artifact.mjs';
 const decoder = new TextDecoder();
 // Node-only module resolution for the prelink pass; absent in the browser.
 let nodeFs = null;
-if (typeof process !== 'undefined' && process.versions?.node) {
-  nodeFs = (await import('node:fs')).default;
+async function ensureNodeFs() {
+  if (nodeFs) return nodeFs;
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    nodeFs = (await import(/* @vite-ignore */ 'node:fs')).default;
+  }
+  return nodeFs;
 }
 const encoder = new TextEncoder();
 
@@ -424,6 +428,7 @@ async function init() {
 // Compile any SDEV source through the self-hosted codegen. Returns
 // `{ bytecode, stringPool }` — same shape as the JS bootstrap.
 export async function compile(userSrc, modules = null) {
+  await ensureNodeFs();
   const { wasmModule, driverBc, driverPool } = await init();
   const srcBytes = encoder.encode(userSrc);
   const dumped = [];
