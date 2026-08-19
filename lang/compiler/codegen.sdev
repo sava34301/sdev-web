@@ -103,6 +103,53 @@ to str_eq with a b
   return 1
 end
 
+# ---- Milestone 5z: modules (`use "path"`) --------------------------------
+#
+# Source-level prelink pass, byte-identical to the JS bootstrap's
+# `prelink()`. Every line whose trimmed form is `use "path"` is replaced by
+# the (recursively prelinked) text of that file, read through the host's
+# read_file. Each path is included at most once; the global `pre_seen`
+# string holds the already-included paths between `|` separators.
+
+set pre_seen to "|"
+
+to prelink_source with s
+  set out to ""
+  set n to length(s)
+  set i to 0
+  while i < n + 1
+    set j to i
+    while j < n
+      if ord(s, j) is 10
+        break
+      end
+      set j to j + 1
+    end
+    set line to slice(s, i, j)
+    set t to trim(line)
+    set is_use to 0
+    if length(t) > 5
+      if str_eq(substr(t, 0, 5), "use \"")
+        if ord(t, length(t) - 1) is 34
+          set is_use to 1
+        end
+      end
+    end
+    if is_use
+      set path to substr(t, 5, length(t) - 6)
+      if find(pre_seen, "|" + path + "|") < 0
+        set pre_seen to pre_seen + path + "|"
+        set out to out + prelink_source(read_file(path))
+      end
+      set out to out + "\n"
+    else
+      set out to out + line + "\n"
+    end
+    set i to j + 1
+  end
+  return out
+end
+
 # ---- byte emitter (writes into the global `bc` list, count at bc[0]) -----
 #
 # Milestone 5k: emit_byte is gated on `emit_enabled[0]`. Pass 1 (the
