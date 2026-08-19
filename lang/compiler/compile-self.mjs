@@ -19,6 +19,11 @@
 import { DRIVER_BYTECODE_B64, DRIVER_POOL_B64 } from './driver-artifact.mjs';
 
 const decoder = new TextDecoder();
+// Node-only module resolution for the prelink pass; absent in the browser.
+let nodeFs = null;
+if (typeof process !== 'undefined' && process.versions?.node) {
+  nodeFs = (await import('node:fs')).default;
+}
 const encoder = new TextEncoder();
 
 
@@ -366,6 +371,7 @@ end
 export function driverProgram(codegenSrc) {
   return 'set src to read_file("<stdin>")\n' +
     codegenSrc + '\n' +
+    'set src to prelink_source(src)\n' +
     INLINE_LEX + '\n' +
     DRIVE_CODEGEN + '\n';
 }
@@ -417,7 +423,7 @@ async function init() {
 
 // Compile any SDEV source through the self-hosted codegen. Returns
 // `{ bytecode, stringPool }` — same shape as the JS bootstrap.
-export async function compile(userSrc) {
+export async function compile(userSrc, modules = null) {
   const { wasmModule, driverBc, driverPool } = await init();
   const srcBytes = encoder.encode(userSrc);
   const dumped = [];
@@ -431,9 +437,21 @@ export async function compile(userSrc) {
       host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
       // Any read serves the program under compilation — the driver only
       // ever asks for "<stdin>".
-      host_read_file: () => {
-        const dst = allocStr(srcBytes.length);
-        new Uint8Array(mem.buffer, dst + 4, srcBytes.length).set(srcBytes);
+      // "<stdin>" is the program under compilation; any other path is a
+      // module requested by the prelink pass (Milestone 5z).
+      host_read_file: (ptr, len) => {
+        const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+        let bytes = srcBytes;
+        if (path !== '<stdin>') {
+          let text = modules && Object.prototype.hasOwnProperty.call(modules, path)
+            ? modules[path] : null;
+          if (text == null && typeof process !== 'undefined' && process.versions?.node) {
+            try { text = nodeFs.readFileSync(path, 'utf8'); } catch { text = ''; }
+          }
+          bytes = encoder.encode(text ?? '');
+        }
+        const dst = allocStr(bytes.length);
+        new Uint8Array(mem.buffer, dst + 4, bytes.length).set(bytes);
         return dst;
       },
       host_write_file: () => -1,

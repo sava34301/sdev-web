@@ -180,6 +180,46 @@ function scopeTypes(locals, em) {
 }
 
 
+// ---------------- Milestone 5z: modules (`use "path"`) ----------------
+//
+// A line whose trimmed form is `use "path"` is replaced by the recursively
+// prelinked text of that file. Include-once per path. This is a pure
+// source→source pass and is mirrored byte-for-byte by `prelink_source` in
+// `lang/compiler/codegen.sdev`.
+let moduleReader = null;
+
+// Hosts (browser IDE, CLI) can override how module paths are resolved.
+export function setModuleReader(fn) { moduleReader = fn; }
+
+function defaultReadModule(path) {
+  if (moduleReader) return moduleReader(path) ?? '';
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    try {
+      // eslint-disable-next-line no-undef
+      return require('node:fs').readFileSync(path, 'utf8');
+    } catch { return ''; }
+  }
+  return '';
+}
+
+export function prelink(source, readModule = defaultReadModule, seen = new Set()) {
+  let out = '';
+  for (const line of source.split('\n')) {
+    const t = line.trim();
+    if (t.length > 5 && t.startsWith('use "') && t.endsWith('"')) {
+      const path = t.slice(5, -1);
+      if (!seen.has(path)) {
+        seen.add(path);
+        out += prelink(readModule(path) ?? '', readModule, seen);
+      }
+      out += '\n';
+      continue;
+    }
+    out += line + '\n';
+  }
+  return out;
+}
+
 // ---------------- Milestone 5y: kinds (classes) ----------------
 //
 // `kind Name` … `end` is desugared at the TOKEN level, before parsing, in
@@ -242,7 +282,7 @@ export function desugarKinds(tokens) {
 }
 
 // ---------------- Parser (bootstrap subset) ----------------
-export function parse(source) { const t = tokenize(source); desugarKinds(t); return parseProgram(t); }
+export function parse(source) { const t = tokenize(prelink(source)); desugarKinds(t); return parseProgram(t); }
 function parseProgram(tokens) {
   let p = 0;
   const peek = (n = 0) => tokens[p + n];
@@ -1087,8 +1127,9 @@ function emitStmt(s, em, locals) {
   }
 }
 
-export function compile(source) {
-  const tokens = tokenize(source);
+export function compile(source, opts = {}) {
+  const src = prelink(source, opts.readModule ?? defaultReadModule);
+  const tokens = tokenize(src);
   const classes = desugarKinds(tokens);
   const ast = parseProgram(tokens);
   const em = new Emitter();
