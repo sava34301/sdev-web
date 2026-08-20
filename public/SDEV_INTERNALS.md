@@ -739,6 +739,29 @@ in milestone order.)
 - Parity registry: `inherit` → `extends` on v2; the v2 OOP column is now
   complete.
 
+**Milestone 6c (native strings, lists and builtins) — shipped:**
+- **Heap.** `runtime.s` gained `sdev_alloc`: a bump allocator over one 64 MiB
+  anonymous `mmap` region, no free (native runs are short-lived). Two heap
+  shapes share a header word: a string is `[i64 byte-len][bytes]` and a list
+  is `[i64 count][i64 words]`, so `length(x)` is one load either way.
+- **New runtime entry points**: `sdev_concat` (joins two strings into a fresh
+  allocation), `sdev_chr` (one-byte string), `sdev_str_int` (decimal text for
+  an int64, sign included).
+- **Static value kinds** in `codegen-x64.mjs` (`typeOf` + `inferFnTypes`):
+  every word is classified `int` / `str` / `list` at compile time, mirroring
+  the WASM codegen's rule set. `say` picks `sdev_say_str` vs `sdev_say_int`
+  from the inferred kind instead of "is this a literal", `+` lowers to
+  `sdev_concat` when either operand is text (ints are coerced through
+  `sdev_str_int`), and user function return kinds are inferred in two passes
+  so `to greet with n / return "hi " + str(n)` prints as text.
+- **Builtins**: `length`, `abs`, `ord(s, i)`, `chr(n)`, `str(v)`,
+  `list_new(n)` / `mklist(n)`, plus list literals `[a, b, c]`, indexing
+  `xs[i]` and indexed assignment `set xs[i] to v` — all emitted inline.
+- Eleven new cases in `scripts/test-native.mjs` (17/17 passing against real
+  `as` + `ld` ELFs).
+- Parity registry: the eight remaining native `should` gaps are closed —
+  **must gaps 0, should gaps 0 across all three tracks.**
+
 **Milestone 5z (modules — `use "path"`) — shipped:**
 - **No VM change.** Modules are a source→source prelink pass that runs
   before lexing, so the seed VM is untouched since 5x.
