@@ -278,14 +278,15 @@ export function desugarKinds(tokens) {
       }
       let depth = 0;
       while (j < tokens.length && tokens[j].type !== 'EOF') {
-        // Milestone 6b: `super.m(...)` → `self.super_m(...)`. Every class with
-        // a parent also carries `super_<key>` entries bound to the parent's
-        // implementation, so the rewrite needs no token insertion.
+        // Milestone 6b: `super.m(...)` → `self.super_<Class>_m(...)`. Every
+        // class with a parent carries class-qualified `super_` entries bound
+        // to the parent's implementation, so super is statically bound to the
+        // lexical class (not the receiver) and needs no token insertion.
         if (tokens[j].type === 'IDENT' && tokens[j].value === 'super'
             && tokens[j + 1] && tokens[j + 1].type === 'OP' && tokens[j + 1].value === '.'
             && tokens[j + 2] && tokens[j + 2].type === 'IDENT') {
           tokens[j] = { ...tokens[j], value: 'self' };
-          tokens[j + 2] = { ...tokens[j + 2], value: 'super_' + tokens[j + 2].value };
+          tokens[j + 2] = { ...tokens[j + 2], value: 'super_' + cname + '_' + tokens[j + 2].value };
           j += 3; continue;
         }
         if (isEnd(tokens[j])) {
@@ -311,11 +312,11 @@ export function desugarKinds(tokens) {
         if (!pm) throw new SdevError(`unknown parent kind ${parent}`, t.line);
         const ownStop = methods.length;
         for (const e of pm) {
-          if (e.sup) continue;
+          if (e.sup) { methods.push({ key: e.key, fn: e.fn, sup: true }); continue; }
           let own = false;
           for (let q = 0; q < ownStop; q++) if (!methods[q].sup && methods[q].key === e.key) own = true;
           if (!own) methods.push({ key: e.key, fn: e.fn });
-          methods.push({ key: 'super_' + e.key, fn: e.fn, sup: true });
+          methods.push({ key: 'super_' + cname + '_' + e.key, fn: e.fn, sup: true });
         }
       }
       i = j; continue;
