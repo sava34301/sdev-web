@@ -718,6 +718,27 @@ in milestone order.)
   marked n/a there because it is a plain parameter, not a keyword.
   `inherit` / `super` remain the open v2 OOP gaps.
 
+**Milestone 6b (inheritance — `extends` + `super`) — shipped:**
+- **No VM change.** Inheritance, like kinds, is compiler sugar over tomes.
+- **Desugaring**: `kind Child extends Parent` blanks the two extra header
+  tokens and records the parent index. After the child's own methods are
+  collected, the parent's entries are merged in: every parent method the
+  child does not override is copied under its own key, and each one also
+  gets a class-qualified alias `super_<Child>_<key>` bound to the parent's
+  mangled function. Aliases inherited from grandparents are copied verbatim,
+  so a `C → B → A` chain carries `super_C_tag` and `super_B_tag`.
+- **`super.m(...)`** is rewritten at the token level to
+  `self.super_<Class>_m(...)` — three tokens in, three tokens out, so no
+  insertion is needed and both compilers stay in lockstep. Because the key
+  is qualified with the *lexical* class, super is statically bound and deep
+  chains terminate instead of recursing on the receiver's override.
+- Registry arrays gained `mth_sup` (alias flag) in `compile-self.mjs`, and
+  the JS oracle's method records gained the matching `sup` field.
+- Four new fixed-point cases (87/87 byte-identical) and four new runtime
+  cases. Driver artifact rebuilt: bc=18576, pool=721.
+- Parity registry: `inherit` → `extends` on v2; the v2 OOP column is now
+  complete.
+
 **Milestone 5z (modules — `use "path"`) — shipped:**
 - **No VM change.** Modules are a source→source prelink pass that runs
   before lexing, so the seed VM is untouched since 5x.

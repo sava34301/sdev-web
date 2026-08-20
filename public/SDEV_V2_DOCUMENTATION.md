@@ -1406,14 +1406,53 @@ when it really is a number — a text field prints correctly with
 `say obj.f` only if you keep it in a variable typed by a text-returning
 method. When in doubt, expose text through a method.
 
-Not yet: inheritance (`extend`) and `super`. Those land in the next
-milestone.
+### Inheritance — `extends` and `super`
+
+A kind can extend another kind declared earlier in the file:
+
+```sdev
+kind Animal
+  to legs with self
+    return 4
+  end
+  to name with self
+    return "animal"
+  end
+  to intro with self
+    return "I am a " + self.name()
+  end
+end
+
+kind Dog extends Animal
+  to name with self
+    return "dog/" + super.name()
+  end
+end
+
+set d to new Dog()
+say d.legs()     # 4      — inherited unchanged
+say d.name()     # dog/animal
+say d.intro()    # I am a dog/animal — inherited method, child override
+```
+
+Rules:
+- `kind Child extends Parent` — the parent must already be declared.
+- The child inherits every parent method it does not declare itself.
+- Declaring a method with the same name overrides the parent's.
+- `super.m(args)` inside a child method calls the **parent's** version, with
+  the current receiver passed automatically. `super` is bound to the class
+  the method is written in, not to the receiver's class, so a three-level
+  chain (`C` → `B` → `A`) walks up one level at a time instead of looping.
+- Chains are unlimited in depth; multiple inheritance is not supported.
 
 Under the hood: `kind` is desugared before parsing — the header and closing
 `end` disappear and each method becomes a top-level function named
 `Kind_method`. `new` emits a `TNEW` sized to the method count plus one
 `PUSH_STR` / function value / `TSET` triple per method; `obj.m(a)` reads the
-target with `TGET` and calls it with `CALLV`.
+target with `TGET` and calls it with `CALLV`. Inheritance copies the parent's
+entries into the child's table, and `super.m()` is rewritten to a call on a
+class-qualified hidden key (`super_Child_m`) bound to the parent's function,
+which is what makes super resolution static.
 
 ---
 
