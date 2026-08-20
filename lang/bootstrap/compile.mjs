@@ -309,10 +309,11 @@ export function desugarKinds(tokens) {
       if (parent !== null) {
         const pm = classes.get(parent);
         if (!pm) throw new SdevError(`unknown parent kind ${parent}`, t.line);
+        const ownStop = methods.length;
         for (const e of pm) {
           if (e.sup) continue;
           let own = false;
-          for (const x of methods) if (!x.sup && x.key === e.key) own = true;
+          for (let q = 0; q < ownStop; q++) if (!methods[q].sup && methods[q].key === e.key) own = true;
           if (!own) methods.push({ key: e.key, fn: e.fn });
           methods.push({ key: 'super_' + e.key, fn: e.fn, sup: true });
         }
