@@ -880,7 +880,8 @@ to desugar_kinds
         if j >= tk_count
           set going to 0
         else
-          # Milestone 6b: `super.m(...)` → `self.super_m(...)`.
+          # Milestone 6b: `super.m(...)` → `self.super_<Class>_m(...)`,
+          # statically bound to the lexical class via a qualified tome key.
           set sup_hit to 0
           if is_ident_word(j, "super")
             if is_op_c(j + 1, 46)
@@ -893,7 +894,7 @@ to desugar_kinds
           end
           if sup_hit is 1
             set tk_txt[j] to "self"
-            set tk_txt[j + 2] to "super_" + tk_txt[j + 2]
+            set tk_txt[j + 2] to "super_" + cname + "_" + tk_txt[j + 2]
             set j to j + 3
           else
             if is_ident_word(j, "end")
@@ -938,46 +939,51 @@ to desugar_kinds
         set m to 1
         set mstop2 to mth_cls[0] + 1
         while m < mstop2
-          set take to 0
           if mth_cls[m] is pidx
-            if mth_sup[m] is 0
-              set take to 1
-            end
-          end
-          if take is 1
             set pkey to mth_key[m]
             set pfn to mth_fn[m]
-            set own to 0
-            set q to 1
-            set qstop to own_stop + 1
-            while q < qstop
-              if mth_cls[q] is cidx
-                if mth_sup[q] is 0
-                  if str_eq(mth_key[q], pkey)
-                    set own to 1
-                  end
-                end
-              end
-              set q to q + 1
-            end
-            if own is 0
+            if mth_sup[m] is 1
               set mth_cls[mth_cls[0] + 1] to cidx
               set mth_key[mth_key[0] + 1] to pkey
               set mth_fn[mth_fn[0] + 1] to pfn
-              set mth_sup[mth_sup[0] + 1] to 0
+              set mth_sup[mth_sup[0] + 1] to 1
+              set mth_cls[0] to mth_cls[0] + 1
+              set mth_key[0] to mth_key[0] + 1
+              set mth_fn[0] to mth_fn[0] + 1
+              set mth_sup[0] to mth_sup[0] + 1
+            else
+              set own to 0
+              set q to 1
+              set qstop to own_stop + 1
+              while q < qstop
+                if mth_cls[q] is cidx
+                  if mth_sup[q] is 0
+                    if str_eq(mth_key[q], pkey)
+                      set own to 1
+                    end
+                  end
+                end
+                set q to q + 1
+              end
+              if own is 0
+                set mth_cls[mth_cls[0] + 1] to cidx
+                set mth_key[mth_key[0] + 1] to pkey
+                set mth_fn[mth_fn[0] + 1] to pfn
+                set mth_sup[mth_sup[0] + 1] to 0
+                set mth_cls[0] to mth_cls[0] + 1
+                set mth_key[0] to mth_key[0] + 1
+                set mth_fn[0] to mth_fn[0] + 1
+                set mth_sup[0] to mth_sup[0] + 1
+              end
+              set mth_cls[mth_cls[0] + 1] to cidx
+              set mth_key[mth_key[0] + 1] to "super_" + cname + "_" + pkey
+              set mth_fn[mth_fn[0] + 1] to pfn
+              set mth_sup[mth_sup[0] + 1] to 1
               set mth_cls[0] to mth_cls[0] + 1
               set mth_key[0] to mth_key[0] + 1
               set mth_fn[0] to mth_fn[0] + 1
               set mth_sup[0] to mth_sup[0] + 1
             end
-            set mth_cls[mth_cls[0] + 1] to cidx
-            set mth_key[mth_key[0] + 1] to "super_" + pkey
-            set mth_fn[mth_fn[0] + 1] to pfn
-            set mth_sup[mth_sup[0] + 1] to 1
-            set mth_cls[0] to mth_cls[0] + 1
-            set mth_key[0] to mth_key[0] + 1
-            set mth_fn[0] to mth_fn[0] + 1
-            set mth_sup[0] to mth_sup[0] + 1
           end
           set m to m + 1
         end
