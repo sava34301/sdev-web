@@ -2,8 +2,6 @@
   "must_missing": [
   ],
   "should_missing": [
-    "list_get @ native",
-    "list_literal @ native"
   ],
   "features": [
     { "name": "say", "area": "io", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
@@ -15,7 +13,7 @@
     { "name": "int", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "num", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "list_new", "area": "list", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
-    { "name": "list_get", "area": "list", "tracks": { "v1": "yes", "v2": "yes", "native": "MISSING" } },
+    { "name": "list_get", "area": "list", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "upper", "area": "text", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "lower", "area": "text", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "trim", "area": "text", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
@@ -71,7 +69,7 @@
     { "name": "bool_true", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "bool_false", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "nothing", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
-    { "name": "list_literal", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "MISSING" } },
+    { "name": "list_literal", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "yes" } },
     { "name": "tome_literal", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "import", "area": "modules", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
     { "name": "float", "area": "types", "tracks": { "v1": "yes", "v2": "yes", "native": "n/a" } },
