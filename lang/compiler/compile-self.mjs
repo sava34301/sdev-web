@@ -273,6 +273,8 @@ set mth_key to mklist(256)
 set mth_key[0] to 0
 set mth_fn to mklist(256)
 set mth_fn[0] to 0
+set mth_sup to mklist(256)
+set mth_sup[0] to 0
 set last_id to mklist(2)
 set last_id[0] to ""
 
