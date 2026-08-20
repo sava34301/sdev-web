@@ -130,7 +130,7 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       }
       break;
     case 'list': {
-      // [a, b, c] → alloc(8 + 8n), store count, then fill.
+      // list_literal: [a, b, c] → alloc(8 + 8n), store count, then fill.
       em.L(`    movq $${8 + 8 * e.items.length}, %rdi`);
       em.L('    call sdev_alloc');
       em.L(`    movq $${e.items.length}, (%rax)`);
@@ -144,6 +144,7 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       return;
     }
     case 'index': {
+      // list_get: xs[i] → load the i-th word past the count header.
       emitExpr(e.target, em, locals, tys, fnTypes);
       em.L('    pushq %rax');
       emitExpr(e.idx, em, locals, tys, fnTypes);
