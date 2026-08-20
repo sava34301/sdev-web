@@ -105,6 +105,11 @@ const cases = [
   'kind Greeter\nto hello with self who\nreturn "hi " + who\nend\nend\nset g to new Greeter()\nsay g.hello("sdev")',
   'kind Counter\nto step with self\nset self.n to self.n + 1\nif self.n > 2\nreturn 100\nelse if self.n > 1\nreturn 10\nelse\nreturn 1\nend\nend\nend\nset c to new Counter()\nset c.n to 0\nsay c.step()\nsay c.step()\nsay c.step()',
   'kind A\nto one with self\nreturn 1\nend\nend\nkind B\nto two with self\nreturn 2\nend\nend\nset a to new A()\nset b to new B()\nsay a.one() + b.two()',
+  // Milestone 6b: inheritance (`extends` + `super`)
+  'kind Animal\nto legs with self\nreturn 4\nend\nend\nkind Dog extends Animal\nto name with self\nreturn "dog"\nend\nend\nset d to new Dog()\nsay d.legs()\nsay d.name()',
+  'kind Animal\nto name with self\nreturn "animal"\nend\nend\nkind Dog extends Animal\nto name with self\nreturn "dog/" + super.name()\nend\nend\nset d to new Dog()\nsay d.name()',
+  'kind A\nto tag with self\nreturn "A"\nend\nend\nkind B extends A\nto tag with self\nreturn "B" + super.tag()\nend\nend\nkind C extends B\nto tag with self\nreturn "C" + super.tag()\nend\nend\nset c to new C()\nsay c.tag()',
+  'kind Base\nto init with self v\nset self.v to v\nreturn 0\nend\nto show with self\nreturn self.v\nend\nend\nkind Sub extends Base\nto show with self\nreturn super.show() * 2\nend\nend\nset s to new Sub()\ns.init(21)\nsay s.show()',
 ];
 
 
