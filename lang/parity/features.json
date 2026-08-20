@@ -677,7 +677,7 @@
       "v1": "must",
       "v1_name": "extend",
       "v2": "should",
-      "v2_name": "inherit",
+      "v2_name": "extends",
       "native": "n/a",
       "native_name": "inherit"
     },
