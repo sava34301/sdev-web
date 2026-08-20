@@ -17,6 +17,67 @@ import { parse } from '../bootstrap/compile.mjs';
 
 const LOCAL_SLOTS = 16;
 
+// ---------------------------------------------------------------------------
+// Milestone 6c — static value kinds.
+//
+// Native values are all 64-bit words. A word is either an integer, a pointer
+// to a heap string ([i64 len][bytes]) or a pointer to a heap list
+// ([i64 count][words]). Which one it is has to be decided at compile time,
+// exactly like the WASM codegen does, so `say` can pick say_str vs say_int
+// and `+` can pick addq vs sdev_concat.
+// ---------------------------------------------------------------------------
+
+const STR_BUILTINS = new Set(['concat', 'chr', 'str']);
+const INT_BUILTINS = new Set(['length', 'ord', 'abs']);
+const LIST_BUILTINS = new Set(['list_new', 'mklist']);
+
+function typeOf(e, tys, fnTypes) {
+  switch (e.k) {
+    case 'str': return 'str';
+    case 'list': return 'list';
+    case 'ident': return tys.get(e.name) || 'int';
+    case 'index': return 'int';
+    case 'un': return 'int';
+    case 'bin':
+      if (e.op === '+') {
+        if (typeOf(e.l, tys, fnTypes) === 'str' || typeOf(e.r, tys, fnTypes) === 'str') return 'str';
+      }
+      return 'int';
+    case 'call':
+      if (STR_BUILTINS.has(e.name)) return 'str';
+      if (LIST_BUILTINS.has(e.name)) return 'list';
+      if (INT_BUILTINS.has(e.name)) return 'int';
+      return (fnTypes && fnTypes.get(e.name)) || 'int';
+    default: return 'int';
+  }
+}
+
+// Return type of each user function: the join of its `return` expressions,
+// evaluated with the types known for its own assignments. Params are ints.
+function inferFnTypes(funcs) {
+  const fnTypes = new Map();
+  for (let pass = 0; pass < 2; pass++) {
+    for (const f of funcs) {
+      const tys = new Map();
+      let t = 'int';
+      const walk = (body) => {
+        for (const s of body) {
+          if (s.k === 'set') tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+          if (s.k === 'if') { walk(s.then_); if (s.else_) walk(s.else_); }
+          if (s.k === 'while') walk(s.body);
+          if (s.k === 'return' && s.expr) {
+            const rt = typeOf(s.expr, tys, fnTypes);
+            if (rt !== 'int') t = rt;
+          }
+        }
+      };
+      walk(f.body);
+      fnTypes.set(f.name, t);
+    }
+  }
+  return fnTypes;
+}
+
 class NativeEmitter {
   constructor() {
     this.lines = [];
@@ -39,7 +100,7 @@ class NativeEmitter {
   }
 }
 
-function emitExpr(e, em, locals) {
+function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
   // Every expression leaves its value in %rax.
   switch (e.k) {
     case 'num':
@@ -59,28 +120,59 @@ function emitExpr(e, em, locals) {
       }
       return;
     case 'un':
-      if (e.op === '-') { emitExpr(e.x, em, locals); em.L('    negq %rax'); return; }
+      if (e.op === '-') { emitExpr(e.x, em, locals, tys, fnTypes); em.L('    negq %rax'); return; }
       if (e.op === 'not') {
-        emitExpr(e.x, em, locals);
+        emitExpr(e.x, em, locals, tys, fnTypes);
         em.L('    testq %rax, %rax');
         em.L('    sete %al');
         em.L('    movzbq %al, %rax');
         return;
       }
       break;
+    case 'list': {
+      // [a, b, c] → alloc(8 + 8n), store count, then fill.
+      em.L(`    movq $${8 + 8 * e.items.length}, %rdi`);
+      em.L('    call sdev_alloc');
+      em.L(`    movq $${e.items.length}, (%rax)`);
+      em.L('    pushq %rax');
+      e.items.forEach((it, i) => {
+        emitExpr(it, em, locals, tys, fnTypes);
+        em.L('    movq (%rsp), %rcx');
+        em.L(`    movq %rax, ${8 + 8 * i}(%rcx)`);
+      });
+      em.L('    popq %rax');
+      return;
+    }
+    case 'index': {
+      emitExpr(e.target, em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(e.idx, em, locals, tys, fnTypes);
+      em.L('    popq %rcx');
+      em.L('    movq 8(%rcx,%rax,8), %rax');
+      return;
+    }
     case 'bin': {
+      if (e.op === '+' && typeOf(e, tys, fnTypes) === 'str') {
+        emitStrExpr(e.l, em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+        emitStrExpr(e.r, em, locals, tys, fnTypes);
+        em.L('    movq %rax, %rsi');
+        em.L('    popq %rdi');
+        em.L('    call sdev_concat');
+        return;
+      }
       if (e.op === 'and' || e.op === 'or') {
         const short = em.gensym(e.op);
-        emitExpr(e.l, em, locals);
+        emitExpr(e.l, em, locals, tys, fnTypes);
         em.L('    testq %rax, %rax');
         em.L(`    ${e.op === 'and' ? 'jz' : 'jnz'} ${short}`);
-        emitExpr(e.r, em, locals);
+        emitExpr(e.r, em, locals, tys, fnTypes);
         em.L(`${short}:`);
         return;
       }
-      emitExpr(e.l, em, locals);
+      emitExpr(e.l, em, locals, tys, fnTypes);
       em.L('    pushq %rax');
-      emitExpr(e.r, em, locals);
+      emitExpr(e.r, em, locals, tys, fnTypes);
       em.L('    movq %rax, %rcx');
       em.L('    popq %rax');            // %rax = L, %rcx = R
       switch (e.op) {
@@ -99,12 +191,13 @@ function emitExpr(e, em, locals) {
       break;
     }
     case 'call': {
+      if (emitBuiltin(e, em, locals, tys, fnTypes)) return;
       const info = em.functions.get(e.name);
       if (!info) throw new Error(`native: unknown function ${e.name}`);
       if (e.args.length !== info.arity) throw new Error(`native: ${e.name} arity`);
       // Push args right-to-left (SysV-ish, but our own convention).
       for (let i = e.args.length - 1; i >= 0; i--) {
-        emitExpr(e.args[i], em, locals);
+        emitExpr(e.args[i], em, locals, tys, fnTypes);
         em.L('    pushq %rax');
       }
       em.L(`    call ${info.label}`);
@@ -113,6 +206,63 @@ function emitExpr(e, em, locals) {
     }
   }
   throw new Error(`native: cannot compile ${e.k}`);
+}
+
+// Evaluate `e` and leave a *string pointer* in %rax, converting ints on the
+// fly. This is what makes `"n=" + 3` work natively.
+function emitStrExpr(e, em, locals, tys, fnTypes) {
+  emitExpr(e, em, locals, tys, fnTypes);
+  if (typeOf(e, tys, fnTypes) !== 'str') {
+    em.L('    movq %rax, %rdi');
+    em.L('    call sdev_str_int');
+  }
+}
+
+// Milestone 6c builtins. Returns true when it handled the call.
+function emitBuiltin(e, em, locals, tys, fnTypes) {
+  const n = e.name;
+  const a = e.args;
+  const one = () => emitExpr(a[0], em, locals, tys, fnTypes);
+  switch (n) {
+    case 'length':            // length(x) — strings and lists share the header
+      one();
+      em.L('    movq (%rax), %rax');
+      return true;
+    case 'abs':
+      one();
+      em.L('    movq %rax, %rcx');
+      em.L('    sarq $63, %rcx');
+      em.L('    xorq %rcx, %rax');
+      em.L('    subq %rcx, %rax');
+      return true;
+    case 'ord':               // ord(s, i) — byte at index i
+      one();
+      em.L('    pushq %rax');
+      emitExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    popq %rcx');
+      em.L('    movzbq 8(%rcx,%rax,1), %rax');
+      return true;
+    case 'chr':
+      one();
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_chr');
+      return true;
+    case 'str':
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      return true;
+    case 'list_new':
+    case 'mklist': {          // list_new(n) — n zeroed slots
+      one();
+      em.L('    pushq %rax');
+      em.L('    leaq 8(,%rax,8), %rdi');
+      em.L('    call sdev_alloc');
+      em.L('    popq %rcx');
+      em.L('    movq %rcx, (%rax)');
+      return true;
+    }
+    default:
+      return false;
+  }
 }
 
 function emitCmp(em, setInstr) {
