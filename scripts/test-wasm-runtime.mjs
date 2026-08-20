@@ -550,6 +550,85 @@ use "${MOD_A}"
 say triple(1) + bump(1)`,
     expect: ['5'],
   },
+  // --- Milestone 6b: inheritance (`extends` + `super`) ---
+  {
+    name: 'Milestone 6b: child inherits parent methods',
+    src: `kind Animal
+  to legs with self
+    return 4
+  end
+  to name with self
+    return "animal"
+  end
+end
+kind Dog extends Animal
+  to name with self
+    return "dog"
+  end
+end
+set d to new Dog()
+say d.legs()
+say d.name()`,
+    expect: ['4', 'dog'],
+  },
+  {
+    name: 'Milestone 6b: super reaches the overridden method',
+    src: `kind Animal
+  to name with self
+    return "animal"
+  end
+end
+kind Dog extends Animal
+  to name with self
+    return "dog/" + super.name()
+  end
+end
+set d to new Dog()
+say d.name()`,
+    expect: ['dog/animal'],
+  },
+  {
+    name: 'Milestone 6b: inherited method sees the child override',
+    src: `kind Animal
+  to name with self
+    return "animal"
+  end
+  to intro with self
+    return "I am a " + self.name()
+  end
+end
+kind Dog extends Animal
+  to name with self
+    return "dog"
+  end
+end
+set a to new Animal()
+set d to new Dog()
+say a.intro()
+say d.intro()`,
+    expect: ['I am a animal', 'I am a dog'],
+  },
+  {
+    name: 'Milestone 6b: three-level chain',
+    src: `kind A
+  to tag with self
+    return "A"
+  end
+end
+kind B extends A
+  to tag with self
+    return "B" + super.tag()
+  end
+end
+kind C extends B
+  to tag with self
+    return "C" + super.tag()
+  end
+end
+set c to new C()
+say c.tag()`,
+    expect: ['CBA'],
+  },
 ];
 
 let failed = 0;
