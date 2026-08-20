@@ -267,8 +267,27 @@ export function desugarKinds(tokens) {
       const methods = [];
       classes.set(cname, methods);
       blank(i); blank(i + 1);
-      let j = i + 2, depth = 0;
+      // Milestone 6b: `kind Child extends Parent`.
+      let parent = null;
+      let j = i + 2;
+      if (tokens[i + 2] && tokens[i + 2].type === 'IDENT' && tokens[i + 2].value === 'extends'
+          && tokens[i + 3] && tokens[i + 3].type === 'IDENT') {
+        parent = tokens[i + 3].value;
+        blank(i + 2); blank(i + 3);
+        j = i + 4;
+      }
+      let depth = 0;
       while (j < tokens.length && tokens[j].type !== 'EOF') {
+        // Milestone 6b: `super.m(...)` → `self.super_m(...)`. Every class with
+        // a parent also carries `super_<key>` entries bound to the parent's
+        // implementation, so the rewrite needs no token insertion.
+        if (tokens[j].type === 'IDENT' && tokens[j].value === 'super'
+            && tokens[j + 1] && tokens[j + 1].type === 'OP' && tokens[j + 1].value === '.'
+            && tokens[j + 2] && tokens[j + 2].type === 'IDENT') {
+          tokens[j] = { ...tokens[j], value: 'self' };
+          tokens[j + 2] = { ...tokens[j + 2], value: 'super_' + tokens[j + 2].value };
+          j += 3; continue;
+        }
         if (isEnd(tokens[j])) {
           if (depth === 0) { blank(j); j++; break; }
           depth--; j++; continue;
@@ -284,6 +303,19 @@ export function desugarKinds(tokens) {
           depth++; j++; continue;
         }
         j++;
+      }
+      // Inherit: parent entries the child does not override, plus a
+      // `super_`-prefixed alias for every parent entry.
+      if (parent !== null) {
+        const pm = classes.get(parent);
+        if (!pm) throw new SdevError(`unknown parent kind ${parent}`, t.line);
+        for (const e of pm) {
+          if (e.sup) continue;
+          let own = false;
+          for (const x of methods) if (!x.sup && x.key === e.key) own = true;
+          if (!own) methods.push({ key: e.key, fn: e.fn });
+          methods.push({ key: 'super_' + e.key, fn: e.fn, sup: true });
+        }
       }
       i = j; continue;
     }
