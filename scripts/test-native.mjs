@@ -16,6 +16,18 @@ const CASES = [
   { name: 'while',     src: `set i to 0\nwhile i < 3\n  say i\n  set i to i + 1\nend`, out: '0\n1\n2\n' },
   { name: 'fib10',     src: `to fib with n\n  if n < 2\n    return n\n  end\n  return fib(n - 1) + fib(n - 2)\nend\nsay fib(10)`, out: '55\n' },
   { name: 'say-str',   src: `say "hello"`, out: 'hello\n' },
+  // Milestone 6c: strings, lists and builtins on the native track.
+  { name: 'concat',    src: `say "a" + "b" + "c"`, out: 'abc\n' },
+  { name: 'str-int',   src: `say "n=" + 7`, out: 'n=7\n' },
+  { name: 'str-neg',   src: `say str(0 - 42)`, out: '-42\n' },
+  { name: 'chr-ord',   src: `say chr(65)\nsay ord("AB", 1)`, out: 'A\n66\n' },
+  { name: 'abs',       src: `say abs(0 - 5)\nsay abs(5)`, out: '5\n5\n' },
+  { name: 'list-lit',  src: `set xs to [10, 20, 30]\nsay length(xs)\nsay xs[2]`, out: '3\n30\n' },
+  { name: 'list-new',  src: `set xs to list_new(3)\nset xs[1] to 7\nsay xs[0]\nsay xs[1]\nsay length(xs)`, out: '0\n7\n3\n' },
+  { name: 'str-len',   src: `say length("hello")`, out: '5\n' },
+  { name: 'str-var',   src: `set s to "hi"\nset s to s + "!"\nsay s`, out: 'hi!\n' },
+  { name: 'str-fn',    src: `to greet with n\n  return "hi " + str(n)\nend\nsay greet(3)`, out: 'hi 3\n' },
+  { name: 'list-loop', src: `set xs to [1, 2, 3]\nset i to 0\nset t to 0\nwhile i < length(xs)\n  set t to t + xs[i]\n  set i to i + 1\nend\nsay t`, out: '6\n' },
 ];
 
 // Resolve `as`/`ld`: prefer PATH, else nix run nixpkgs#binutils.

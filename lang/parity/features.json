@@ -146,7 +146,7 @@
       "v2": "must",
       "v2_name": "mklist",
       "native": "should",
-      "native_name": "list_get"
+      "native_name": "index"
     },
     {
       "name": "upper",
@@ -874,7 +874,7 @@
       "v2": "must",
       "v2_name": "mklist",
       "native": "should",
-      "native_name": "list_literal"
+      "native_name": "list"
     },
     {
       "name": "tome_literal",
