@@ -27,16 +27,22 @@ const LOCAL_SLOTS = 16;
 // and `+` can pick addq vs sdev_concat.
 // ---------------------------------------------------------------------------
 
-const STR_BUILTINS = new Set(['concat', 'chr', 'str']);
-const INT_BUILTINS = new Set(['length', 'ord', 'abs']);
-const LIST_BUILTINS = new Set(['list_new', 'mklist']);
+const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'join']);
+const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max']);
+const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values']);
+const TOME_BUILTINS = new Set(['tome_new', 'tset']);
 
 function typeOf(e, tys, fnTypes) {
   switch (e.k) {
     case 'str': return 'str';
     case 'list': return 'list';
+    case 'tome': return 'tome';
     case 'ident': return tys.get(e.name) || 'int';
-    case 'index': return 'int';
+    case 'index':
+      // Milestone 6d: a string-keyed read of a tome yields whatever was put
+      // there; we conservatively call it a string when the key is a literal
+      // string and the container is a known tome.
+      return typeOf(e.target, tys, fnTypes) === 'tome' ? (tys.get(tomeValKey(e)) || 'int') : 'int';
     case 'un': return 'int';
     case 'bin':
       if (e.op === '+') {
@@ -46,11 +52,21 @@ function typeOf(e, tys, fnTypes) {
     case 'call':
       if (STR_BUILTINS.has(e.name)) return 'str';
       if (LIST_BUILTINS.has(e.name)) return 'list';
+      if (TOME_BUILTINS.has(e.name)) return 'tome';
       if (INT_BUILTINS.has(e.name)) return 'int';
       return (fnTypes && fnTypes.get(e.name)) || 'int';
     default: return 'int';
   }
 }
+
+// Key under which the value kind of `t["k"]` is remembered, so
+// `set t["name"] to "ada"` followed by `say t["name"]` prints text.
+function tomeValKey(e) {
+  const base = e.target.k === 'ident' ? e.target.name : '?';
+  const k = e.idx && e.idx.k === 'str' ? e.idx.v : '?';
+  return `@tome:${base}:${k}`;
+}
+
 
 // Return type of each user function: the join of its `return` expressions,
 // evaluated with the types known for its own assignments. Params are ints.
