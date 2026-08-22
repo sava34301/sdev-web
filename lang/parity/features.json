@@ -158,7 +158,7 @@
       "v1_name": "upper",
       "v2": "should",
       "v2_name": "upper",
-      "native": "n/a",
+      "native": "should",
       "native_name": "upper"
     },
     {
@@ -171,7 +171,7 @@
       "v1_name": "lower",
       "v2": "should",
       "v2_name": "lower",
-      "native": "n/a",
+      "native": "should",
       "native_name": "lower"
     },
     {
@@ -184,7 +184,7 @@
       "v1_name": "trim",
       "v2": "should",
       "v2_name": "trim",
-      "native": "n/a",
+      "native": "should",
       "native_name": "trim"
     },
     {
@@ -197,7 +197,7 @@
       "v1_name": "contains",
       "v2": "should",
       "v2_name": "contains",
-      "native": "n/a",
+      "native": "should",
       "native_name": "contains"
     },
     {
@@ -210,7 +210,7 @@
       "v1_name": "replace",
       "v2": "should",
       "v2_name": "replace",
-      "native": "n/a",
+      "native": "should",
       "native_name": "replace"
     },
     {
@@ -223,7 +223,7 @@
       "v1_name": "shatter",
       "v2": "should",
       "v2_name": "split",
-      "native": "n/a",
+      "native": "should",
       "native_name": "split"
     },
     {
@@ -236,7 +236,7 @@
       "v1_name": "weave",
       "v2": "should",
       "v2_name": "join",
-      "native": "n/a",
+      "native": "should",
       "native_name": "join"
     },
     {
@@ -262,7 +262,7 @@
       "v1_name": "least",
       "v2": "should",
       "v2_name": "min",
-      "native": "n/a",
+      "native": "should",
       "native_name": "min"
     },
     {
@@ -275,7 +275,7 @@
       "v1_name": "greatest",
       "v2": "should",
       "v2_name": "max",
-      "native": "n/a",
+      "native": "should",
       "native_name": "max"
     },
     {
@@ -444,7 +444,7 @@
       "v1_name": "tome_keys",
       "v2": "must",
       "v2_name": "keys",
-      "native": "n/a",
+      "native": "should",
       "native_name": "keys"
     },
     {
@@ -561,8 +561,8 @@
       "v1_name": "iterate",
       "v2": "should",
       "v2_name": "each",
-      "native": "n/a",
-      "native_name": "for_each"
+      "native": "should",
+      "native_name": "foreach"
     },
     {
       "name": "break",
@@ -886,8 +886,8 @@
       "v1_name": "tome_keys",
       "v2": "must",
       "v2_name": "tome_literal",
-      "native": "n/a",
-      "native_name": "tome_literal"
+      "native": "should",
+      "native_name": "tome"
     },
     {
       "name": "import",
@@ -938,7 +938,7 @@
       "v1_name": "values",
       "v2": "must",
       "v2_name": "values",
-      "native": "n/a",
+      "native": "should",
       "native_name": "values"
     },
     {
@@ -951,7 +951,7 @@
       "v1_name": "has",
       "v2": "must",
       "v2_name": "has",
-      "native": "n/a",
+      "native": "should",
       "native_name": "has"
     }
   ]
