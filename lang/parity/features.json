@@ -119,7 +119,7 @@
       "v1_name": "num",
       "v2": "should",
       "v2_name": "num",
-      "native": "n/a",
+      "native": "should",
       "native_name": "num"
     },
     {
@@ -288,7 +288,7 @@
       "v1_name": "ground",
       "v2": "should",
       "v2_name": "f2i",
-      "native": "n/a",
+      "native": "should",
       "native_name": "floor"
     },
     {
@@ -301,7 +301,7 @@
       "v1_name": "elevate",
       "v2": "should",
       "v2_name": "fceil",
-      "native": "n/a",
+      "native": "should",
       "native_name": "ceil"
     },
     {
@@ -314,7 +314,7 @@
       "v1_name": "nearby",
       "v2": "should",
       "v2_name": "fround",
-      "native": "n/a",
+      "native": "should",
       "native_name": "round"
     },
     {
@@ -327,7 +327,7 @@
       "v1_name": "root",
       "v2": "should",
       "v2_name": "fsqrt",
-      "native": "n/a",
+      "native": "should",
       "native_name": "sqrt"
     },
     {
@@ -340,7 +340,7 @@
       "v1_name": "pow",
       "v2": "should",
       "v2_name": "fpow",
-      "native": "n/a",
+      "native": "should",
       "native_name": "pow"
     },
     {
@@ -353,7 +353,7 @@
       "v1_name": "sin",
       "v2": "should",
       "v2_name": "fsin",
-      "native": "n/a",
+      "native": "should",
       "native_name": "sin"
     },
     {
@@ -366,7 +366,7 @@
       "v1_name": "cos",
       "v2": "should",
       "v2_name": "fcos",
-      "native": "n/a",
+      "native": "should",
       "native_name": "cos"
     },
     {
@@ -379,7 +379,7 @@
       "v1_name": "exp",
       "v2": "should",
       "v2_name": "fexp",
-      "native": "n/a",
+      "native": "should",
       "native_name": "exp"
     },
     {
@@ -392,7 +392,7 @@
       "v1_name": "ln",
       "v2": "should",
       "v2_name": "flog",
-      "native": "n/a",
+      "native": "should",
       "native_name": "log"
     },
     {
@@ -405,7 +405,7 @@
       "v1_name": "rand",
       "v2": "should",
       "v2_name": "random",
-      "native": "n/a",
+      "native": "should",
       "native_name": "random"
     },
     {
@@ -912,7 +912,7 @@
       "v1_name": "num",
       "v2": "should",
       "v2_name": "i2f",
-      "native": "n/a",
+      "native": "should",
       "native_name": "float"
     },
     {
