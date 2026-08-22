@@ -762,6 +762,39 @@ in milestone order.)
 - Parity registry: the eight remaining native `should` gaps are closed —
   **must gaps 0, should gaps 0 across all three tracks.**
 
+**Milestone 6e (native floats and math) — shipped:**
+- **Representation.** A float is the raw IEEE-754 bit pattern in a 64-bit
+  word — no tag, no box. The compiler already tracks kinds statically, so
+  `float` simply joins `int` / `str` / `list` / `tome` and decides which
+  instruction family to emit. Float literals become `movabsq $<bits>, %rax`.
+- **Arithmetic.** `+ - * /` and all six comparisons emit SSE2
+  (`addsd`/`subsd`/`mulsd`/`divsd`, `ucomisd` + `seta/setb/...`) whenever
+  either operand's kind is `float`; integer operands are widened inline with
+  `cvtsi2sdq`, so `1 + 0.5` and `3.0 * 2` work without explicit casts.
+  Unary minus flips the sign bit rather than calling `negq`.
+- **Printing.** `sdev_str_float` formats a double by hand: sign extraction,
+  `cvttsd2si` for the integer part, ×10^6 + rounding for the fraction,
+  trailing-zero trimming (always at least one digit, so `3.0` prints as
+  `3.0`), then reuse of `sdev_str_int` / `sdev_concat` / `sdev_chr`.
+  `say` dispatches to `sdev_say_float`, and `"pi=" + 3.25` coerces through
+  the same formatter.
+- **Math in assembly.** `sqrt` is `sqrtsd`; `floor` / `ceil` / `round` are
+  built from `cvttsd2si` plus a correction step (no SSE4.1 dependency);
+  `sin` / `cos` use x87 `fsin` / `fcos`; `log` is `fldln2` + `fyl2x`; `exp`
+  and `pow` share the classic `frndint` / `f2xm1` / `fscale` sequence.
+  `random()` is the same xorshift32 generator the seed VM uses, divided by
+  2^32 to land in `[0, 1)`. `num("3.5")` is a hand-written decimal parser and
+  `int(x)` truncates toward zero.
+- **Parameter kinds from call sites.** `inferFnTypes` now walks every call in
+  the program and records `@param:<fn>:<i>`, so `to half with n / return n /
+  2.0` compiles `n` as a float when it is only ever called with floats.
+- Fifteen new cases in `scripts/test-native.mjs` (47/47 passing against real
+  `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
+- Parity registry: twelve former native `n/a` entries (`num`, `floor`,
+  `ceil`, `round`, `sqrt`, `pow`, `sin`, `cos`, `exp`, `log`, `random`,
+  `float`) became `should` and are satisfied — **must gaps 0, should gaps 0
+  across all three tracks.**
+
 **Milestone 6d (native strings, tomes and for-each) — shipped:**
 - **Runtime (`lang/native/runtime.s`)** gained a hand-written string library:
   `sdev_str_eq`, `sdev_index_of`, `sdev_contains`, `sdev_substr`,
