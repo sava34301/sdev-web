@@ -801,10 +801,317 @@ sdev_tvals:
     popq %rbp
     ret
 
+
+# ===========================================================================
+# Milestone 6e — floats.
+#
+# A float value is simply the raw IEEE-754 bit pattern in a 64-bit word; the
+# compiler knows statically which words are floats, so no runtime tag is
+# needed. Every helper below takes and returns those bit patterns in general
+# registers.
+# ===========================================================================
+
+    .section .rodata
+    .align 8
+.LFhalf:  .double 0.5
+.LF1:     .double 1.0
+.LF10:    .double 10.0
+.LF1e6:   .double 1000000.0
+.LF2p32:  .double 4294967296.0
+    .text
+
+# ---- sdev_str_float(bits) -> string, 1..6 fraction digits ----
+    .globl sdev_str_float
+sdev_str_float:
+    pushq %rbp
+    movq %rsp, %rbp
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+    subq $32, %rsp
+    movq %rdi, %xmm0
+    xorq %r12, %r12
+    xorpd %xmm1, %xmm1
+    ucomisd %xmm0, %xmm1        # flags: 0 ? x
+    jbe 1f
+    movq $1, %r12
+    subsd %xmm0, %xmm1
+    movapd %xmm1, %xmm0
+1:  cvttsd2si %xmm0, %rbx       # integer part
+    cvtsi2sdq %rbx, %xmm2
+    subsd %xmm2, %xmm0          # fraction
+    mulsd .LF1e6(%rip), %xmm0
+    addsd .LFhalf(%rip), %xmm0
+    cvttsd2si %xmm0, %r13
+    cmpq $1000000, %r13
+    jl 3f
+    xorq %r13, %r13
+    incq %rbx
+3:  movq %r13, %rax
+    movq $5, %rcx
+    movq $10, %r8
+4:  xorq %rdx, %rdx
+    divq %r8
+    addb $'0', %dl
+    movb %dl, (%rsp,%rcx,1)
+    decq %rcx
+    jns 4b
+    movq $6, %r14
+5:  cmpq $1, %r14
+    jle 6f
+    movq %r14, %rcx
+    decq %rcx
+    cmpb $'0', (%rsp,%rcx,1)
+    jne 6f
+    decq %r14
+    jmp 5b
+6:  leaq 9(%r14), %rdi
+    call sdev_alloc
+    movq %rax, %r15
+    movq %r14, %rcx
+    incq %rcx
+    movq %rcx, (%r15)
+    movb $'.', 8(%r15)
+    leaq 9(%r15), %rdi
+    movq %rsp, %rsi
+    movq %r14, %rcx
+7:  movb (%rsi), %dl
+    movb %dl, (%rdi)
+    incq %rsi
+    incq %rdi
+    decq %rcx
+    jnz 7b
+    movq %rbx, %rdi
+    call sdev_str_int
+    movq %rax, %rdi
+    movq %r15, %rsi
+    call sdev_concat
+    movq %rax, %r15
+    testq %r12, %r12
+    jz 8f
+    movq $45, %rdi
+    call sdev_chr
+    movq %rax, %rdi
+    movq %r15, %rsi
+    call sdev_concat
+    movq %rax, %r15
+8:  movq %r15, %rax
+    addq $32, %rsp
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    popq %rbp
+    ret
+
+# ---- sdev_say_float(bits) ----
+    .globl sdev_say_float
+sdev_say_float:
+    pushq %rbp
+    movq %rsp, %rbp
+    call sdev_str_float
+    movq %rax, %rdi
+    call sdev_say_str
+    popq %rbp
+    ret
+
+# ---- sdev_fsqrt / sdev_ffloor / sdev_fceil / sdev_fround ----
+    .globl sdev_fsqrt
+sdev_fsqrt:
+    movq %rdi, %xmm0
+    sqrtsd %xmm0, %xmm0
+    movq %xmm0, %rax
+    ret
+
+    .globl sdev_ffloor
+sdev_ffloor:
+    movq %rdi, %xmm0
+    cvttsd2si %xmm0, %rax       # truncation is toward zero
+    cvtsi2sdq %rax, %xmm1
+    ucomisd %xmm0, %xmm1        # trunc ? x
+    jbe 1f
+    decq %rax
+1:  cvtsi2sdq %rax, %xmm0
+    movq %xmm0, %rax
+    ret
+
+    .globl sdev_fceil
+sdev_fceil:
+    movq %rdi, %xmm0
+    cvttsd2si %xmm0, %rax
+    cvtsi2sdq %rax, %xmm1
+    ucomisd %xmm1, %xmm0        # x ? trunc
+    jbe 1f
+    incq %rax
+1:  cvtsi2sdq %rax, %xmm0
+    movq %xmm0, %rax
+    ret
+
+    .globl sdev_fround
+sdev_fround:
+    movq %rdi, %xmm0
+    addsd .LFhalf(%rip), %xmm0
+    movq %xmm0, %rdi
+    jmp sdev_ffloor
+
+# ---- sdev_fsin / sdev_fcos / sdev_flog / sdev_fexp / sdev_fpow ----
+    .globl sdev_fsin
+sdev_fsin:
+    pushq %rdi
+    fldl (%rsp)
+    fsin
+    fstpl (%rsp)
+    popq %rax
+    ret
+
+    .globl sdev_fcos
+sdev_fcos:
+    pushq %rdi
+    fldl (%rsp)
+    fcos
+    fstpl (%rsp)
+    popq %rax
+    ret
+
+    .globl sdev_flog
+sdev_flog:
+    pushq %rdi
+    fldln2
+    fldl (%rsp)
+    fyl2x                       # ln2 * log2(x) = ln x
+    fstpl (%rsp)
+    popq %rax
+    ret
+
+    .globl sdev_fexp
+sdev_fexp:
+    pushq %rdi
+    fldl (%rsp)
+    fldl2e
+    fmulp %st, %st(1)           # y = x * log2(e)
+    fld %st(0)
+    frndint                     # i
+    fxch %st(1)
+    fsub %st(1), %st            # f = y - i, |f| <= 0.5
+    f2xm1
+    fld1
+    faddp %st, %st(1)           # 2^f
+    fscale                      # 2^f * 2^i
+    fstp %st(1)
+    fstpl (%rsp)
+    popq %rax
+    ret
+
+    .globl sdev_fpow
+sdev_fpow:
+    pushq %rsi                  # exponent
+    pushq %rdi                  # base
+    fldl 8(%rsp)
+    fldl (%rsp)
+    fyl2x                       # y * log2(x)
+    fld %st(0)
+    frndint
+    fxch %st(1)
+    fsub %st(1), %st
+    f2xm1
+    fld1
+    faddp %st, %st(1)
+    fscale
+    fstp %st(1)
+    fstpl (%rsp)
+    popq %rax
+    addq $8, %rsp
+    ret
+
+# ---- sdev_random() -> float in [0, 1) — xorshift32, matching the seed VM ----
+    .globl sdev_random
+sdev_random:
+    movl sdev_rng(%rip), %eax
+    testl %eax, %eax
+    jnz 1f
+    movl $2463534242, %eax
+1:  movl %eax, %ecx
+    shll $13, %ecx
+    xorl %ecx, %eax
+    movl %eax, %ecx
+    shrl $17, %ecx
+    xorl %ecx, %eax
+    movl %eax, %ecx
+    shll $5, %ecx
+    xorl %ecx, %eax
+    movl %eax, sdev_rng(%rip)
+    movl %eax, %ecx
+    cvtsi2sdq %rcx, %xmm0
+    divsd .LF2p32(%rip), %xmm0
+    movq %xmm0, %rax
+    ret
+
+# ---- sdev_num(str) -> float bits ----
+    .globl sdev_num
+sdev_num:
+    movq (%rdi), %rcx
+    leaq 8(%rdi), %rsi
+    xorq %r8, %r8
+    xorq %r9, %r9
+    pxor %xmm0, %xmm0
+    testq %rcx, %rcx
+    jz 7f
+    movzbq (%rsi), %rax
+    cmpq $45, %rax
+    jne 1f
+    movq $1, %r9
+    incq %r8
+1:  cmpq %rcx, %r8
+    jge 3f
+    movzbq (%rsi,%r8,1), %rax
+    cmpq $48, %rax
+    jb 3f
+    cmpq $57, %rax
+    ja 3f
+    subq $48, %rax
+    mulsd .LF10(%rip), %xmm0
+    cvtsi2sdq %rax, %xmm1
+    addsd %xmm1, %xmm0
+    incq %r8
+    jmp 1b
+3:  cmpq %rcx, %r8
+    jge 6f
+    movzbq (%rsi,%r8,1), %rax
+    cmpq $46, %rax
+    jne 6f
+    incq %r8
+    movsd .LF1(%rip), %xmm4
+4:  cmpq %rcx, %r8
+    jge 6f
+    movzbq (%rsi,%r8,1), %rax
+    cmpq $48, %rax
+    jb 6f
+    cmpq $57, %rax
+    ja 6f
+    subq $48, %rax
+    divsd .LF10(%rip), %xmm4
+    cvtsi2sdq %rax, %xmm1
+    mulsd %xmm4, %xmm1
+    addsd %xmm1, %xmm0
+    incq %r8
+    jmp 4b
+6:  testq %r9, %r9
+    jz 7f
+    pxor %xmm1, %xmm1
+    subsd %xmm0, %xmm1
+    movapd %xmm1, %xmm0
+7:  movq %xmm0, %rax
+    ret
+
     .bss
     .align 8
 sdev_heap_ptr:
     .quad 0
+sdev_rng:
+    .long 0
 
     .section .rodata
 nl: .byte 10
