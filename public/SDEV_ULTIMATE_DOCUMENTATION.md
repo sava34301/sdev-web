@@ -4,7 +4,7 @@
 > machine, native backend, standard library, machine-learning stack, hardware,
 > GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-08-20 by
+> Created by **Sava Milanov**. Generated on 2026-08-22 by
 > `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
 > guides or the implementation and re-run the generator.
 
@@ -6189,6 +6189,72 @@ in milestone order.)
 - Parity registry: the eight remaining native `should` gaps are closed —
   **must gaps 0, should gaps 0 across all three tracks.**
 
+**Milestone 6e (native floats and math) — shipped:**
+- **Representation.** A float is the raw IEEE-754 bit pattern in a 64-bit
+  word — no tag, no box. The compiler already tracks kinds statically, so
+  `float` simply joins `int` / `str` / `list` / `tome` and decides which
+  instruction family to emit. Float literals become `movabsq $<bits>, %rax`.
+- **Arithmetic.** `+ - * /` and all six comparisons emit SSE2
+  (`addsd`/`subsd`/`mulsd`/`divsd`, `ucomisd` + `seta/setb/...`) whenever
+  either operand's kind is `float`; integer operands are widened inline with
+  `cvtsi2sdq`, so `1 + 0.5` and `3.0 * 2` work without explicit casts.
+  Unary minus flips the sign bit rather than calling `negq`.
+- **Printing.** `sdev_str_float` formats a double by hand: sign extraction,
+  `cvttsd2si` for the integer part, ×10^6 + rounding for the fraction,
+  trailing-zero trimming (always at least one digit, so `3.0` prints as
+  `3.0`), then reuse of `sdev_str_int` / `sdev_concat` / `sdev_chr`.
+  `say` dispatches to `sdev_say_float`, and `"pi=" + 3.25` coerces through
+  the same formatter.
+- **Math in assembly.** `sqrt` is `sqrtsd`; `floor` / `ceil` / `round` are
+  built from `cvttsd2si` plus a correction step (no SSE4.1 dependency);
+  `sin` / `cos` use x87 `fsin` / `fcos`; `log` is `fldln2` + `fyl2x`; `exp`
+  and `pow` share the classic `frndint` / `f2xm1` / `fscale` sequence.
+  `random()` is the same xorshift32 generator the seed VM uses, divided by
+  2^32 to land in `[0, 1)`. `num("3.5")` is a hand-written decimal parser and
+  `int(x)` truncates toward zero.
+- **Parameter kinds from call sites.** `inferFnTypes` now walks every call in
+  the program and records `@param:<fn>:<i>`, so `to half with n / return n /
+  2.0` compiles `n` as a float when it is only ever called with floats.
+- Fifteen new cases in `scripts/test-native.mjs` (47/47 passing against real
+  `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
+- Parity registry: twelve former native `n/a` entries (`num`, `floor`,
+  `ceil`, `round`, `sqrt`, `pow`, `sin`, `cos`, `exp`, `log`, `random`,
+  `float`) became `should` and are satisfied — **must gaps 0, should gaps 0
+  across all three tracks.**
+
+**Milestone 6d (native strings, tomes and for-each) — shipped:**
+- **Runtime (`lang/native/runtime.s`)** gained a hand-written string library:
+  `sdev_str_eq`, `sdev_index_of`, `sdev_contains`, `sdev_substr`,
+  `sdev_upper`, `sdev_lower`, `sdev_trim`, `sdev_replace`, `sdev_split`
+  (returns a heap list of pieces), `sdev_join` and `sdev_empty`. `replace`
+  and `split` are built out of `index_of` + `substr` + `concat`, so there is
+  one matching algorithm rather than three.
+- **Tomes natively.** A tome is `[i64 count][i64 cap][cap × (key-ptr, value)]`
+  with `cap = 64`, so `length(t)` still reads the header word exactly like
+  strings and lists. `sdev_tnew` / `sdev_tfind` / `sdev_tset` / `sdev_tget` /
+  `sdev_thas` / `sdev_tkeys` / `sdev_tvals` implement association-list
+  lookup keyed by `sdev_str_eq` (value equality, not pointer equality).
+- **Codegen (`codegen-x64.mjs`)**: tome literals `{ k: v }` lower to `tnew`
+  plus one `tset` per pair; `t["k"]` and `set t["k"] to v` dispatch to
+  `tget`/`tset` when the container's inferred kind is `tome`, and stay
+  list-indexing otherwise. `is` / `is not` compare text by value when either
+  side is a string.
+- **Kind inference widened**: a fourth kind `tome` joins `int` / `str` /
+  `list`; per-key value kinds are remembered as `@tome:<var>:<key>` and list
+  element kinds as `@elem:<var>`, so `say parts[1]` after `split` prints
+  text instead of a pointer.
+- **`for each x in xs … end`** is lowered natively to a counted index loop
+  over two hidden slots named by the loop's foreach depth (`@fe_i<d>`,
+  `@fe_s<d>`, sanitised for asm labels); iterating a tome walks its keys.
+  Local frames grew from 16 to 32 slots to make room.
+- **Builtins added**: `upper`, `lower`, `trim`, `contains`, `index_of`,
+  `substring`, `replace`, `split`, `join`, `min`, `max`, `tome_new`, `keys`,
+  `values`, `has`.
+- Fifteen new cases in `scripts/test-native.mjs` (32/32 passing against real
+  `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
+- Parity registry: fourteen former native `n/a` entries became `should` and
+  are satisfied — **must gaps 0, should gaps 0 across all three tracks.**
+
 **Milestone 5z (modules — `use "path"`) — shipped:**
 - **No VM change.** Modules are a source→source prelink pass that runs
   before lexing, so the seed VM is untouched since 5x.
@@ -6364,32 +6430,32 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `chr` | text | `chr` | `chr` | `chr` |
 | `str` | text | `str` | `str` | `str` |
 | `int` | types | `int` | `int` | `int` |
-| `num` | types | `num` | `num` | — |
+| `num` | types | `num` | `num` | `num` |
 | `list_new` | list | `gather` | `mklist` | `list_new` |
 | `list_get` | list | `pluck` | `mklist` | `index` |
-| `upper` | text | `upper` | `upper` | — |
-| `lower` | text | `lower` | `lower` | — |
-| `trim` | text | `trim` | `trim` | — |
-| `contains` | text | `contains` | `contains` | — |
-| `replace` | text | `replace` | `replace` | — |
-| `split` | text | `shatter` | `split` | — |
-| `join` | text | `weave` | `join` | — |
+| `upper` | text | `upper` | `upper` | `upper` |
+| `lower` | text | `lower` | `lower` | `lower` |
+| `trim` | text | `trim` | `trim` | `trim` |
+| `contains` | text | `contains` | `contains` | `contains` |
+| `replace` | text | `replace` | `replace` | `replace` |
+| `split` | text | `shatter` | `split` | `split` |
+| `join` | text | `weave` | `join` | `join` |
 | `abs` | math | `abs` | `fabs` | `abs` |
-| `min` | math | `least` | `min` | — |
-| `max` | math | `greatest` | `max` | — |
-| `floor` | math | `ground` | `f2i` | — |
-| `ceil` | math | `elevate` | `fceil` | — |
-| `round` | math | `nearby` | `fround` | — |
-| `sqrt` | math | `root` | `fsqrt` | — |
-| `pow` | math | `pow` | `fpow` | — |
-| `sin` | math | `sin` | `fsin` | — |
-| `cos` | math | `cos` | `fcos` | — |
-| `exp` | math | `exp` | `fexp` | — |
-| `log` | math | `ln` | `flog` | — |
-| `random` | math | `rand` | `random` | — |
+| `min` | math | `least` | `min` | `min` |
+| `max` | math | `greatest` | `max` | `max` |
+| `floor` | math | `ground` | `f2i` | `floor` |
+| `ceil` | math | `elevate` | `fceil` | `ceil` |
+| `round` | math | `nearby` | `fround` | `round` |
+| `sqrt` | math | `root` | `fsqrt` | `sqrt` |
+| `pow` | math | `pow` | `fpow` | `pow` |
+| `sin` | math | `sin` | `fsin` | `sin` |
+| `cos` | math | `cos` | `fcos` | `cos` |
+| `exp` | math | `exp` | `fexp` | `exp` |
+| `log` | math | `ln` | `flog` | `log` |
+| `random` | math | `rand` | `random` | `random` |
 | `range` | list | `range` | `range` | — |
 | `sum` | list | `sum` | `sum` | — |
-| `keys` | tome | `tome_keys` | `keys` | — |
+| `keys` | tome | `tome_keys` | `keys` | `keys` |
 | `read_file` | io | `read_file` | `read_file` | — |
 | `write_file` | io | `write_file` | `write_file` | — |
 | `http_get` | net | `http_get` | `http_get` | — |
@@ -6398,7 +6464,7 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `if` | syntax | `either` | `if` | `if` |
 | `else` | syntax | `otherwise` | `else` | `else` |
 | `while` | syntax | `cycle` | `while` | `while` |
-| `for_each` | syntax | `iterate` | `each` | — |
+| `for_each` | syntax | `iterate` | `each` | `foreach` |
 | `break` | syntax | `yeet` | `break` | `break` |
 | `continue` | syntax | `skip` | `continue` | `continue` |
 | `function` | syntax | `conjure` | `to` | `call` |
@@ -6423,12 +6489,12 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `bool_false` | types | `nope` | `false` | `false` |
 | `nothing` | types | `void` | `nothing` | `nothing` |
 | `list_literal` | types | `gather` | `mklist` | `list` |
-| `tome_literal` | types | `tome_keys` | `tome_literal` | — |
+| `tome_literal` | types | `tome_keys` | `tome_literal` | `tome` |
 | `import` | modules | `summon` | `use` | — |
-| `float` | types | `num` | `i2f` | — |
+| `float` | types | `num` | `i2f` | `float` |
 | `string` | types | `str` | `str` | `str` |
-| `values` | tome | `values` | `values` | — |
-| `has` | tome | `has` | `has` | — |
+| `values` | tome | `values` | `values` | `values` |
+| `has` | tome | `has` | `has` | `has` |
 
 <!-- PARITY:END -->
 
@@ -6673,32 +6739,32 @@ The table below is generated by the agent. Do not edit it by hand.
 | `chr` | text | `chr` | `chr` | `chr` |
 | `str` | text | `str` | `str` | `str` |
 | `int` | types | `int` | `int` | `int` |
-| `num` | types | `num` | `num` | — |
+| `num` | types | `num` | `num` | `num` |
 | `list_new` | list | `gather` | `mklist` | `list_new` |
 | `list_get` | list | `pluck` | `mklist` | `index` |
-| `upper` | text | `upper` | `upper` | — |
-| `lower` | text | `lower` | `lower` | — |
-| `trim` | text | `trim` | `trim` | — |
-| `contains` | text | `contains` | `contains` | — |
-| `replace` | text | `replace` | `replace` | — |
-| `split` | text | `shatter` | `split` | — |
-| `join` | text | `weave` | `join` | — |
+| `upper` | text | `upper` | `upper` | `upper` |
+| `lower` | text | `lower` | `lower` | `lower` |
+| `trim` | text | `trim` | `trim` | `trim` |
+| `contains` | text | `contains` | `contains` | `contains` |
+| `replace` | text | `replace` | `replace` | `replace` |
+| `split` | text | `shatter` | `split` | `split` |
+| `join` | text | `weave` | `join` | `join` |
 | `abs` | math | `abs` | `fabs` | `abs` |
-| `min` | math | `least` | `min` | — |
-| `max` | math | `greatest` | `max` | — |
-| `floor` | math | `ground` | `f2i` | — |
-| `ceil` | math | `elevate` | `fceil` | — |
-| `round` | math | `nearby` | `fround` | — |
-| `sqrt` | math | `root` | `fsqrt` | — |
-| `pow` | math | `pow` | `fpow` | — |
-| `sin` | math | `sin` | `fsin` | — |
-| `cos` | math | `cos` | `fcos` | — |
-| `exp` | math | `exp` | `fexp` | — |
-| `log` | math | `ln` | `flog` | — |
-| `random` | math | `rand` | `random` | — |
+| `min` | math | `least` | `min` | `min` |
+| `max` | math | `greatest` | `max` | `max` |
+| `floor` | math | `ground` | `f2i` | `floor` |
+| `ceil` | math | `elevate` | `fceil` | `ceil` |
+| `round` | math | `nearby` | `fround` | `round` |
+| `sqrt` | math | `root` | `fsqrt` | `sqrt` |
+| `pow` | math | `pow` | `fpow` | `pow` |
+| `sin` | math | `sin` | `fsin` | `sin` |
+| `cos` | math | `cos` | `fcos` | `cos` |
+| `exp` | math | `exp` | `fexp` | `exp` |
+| `log` | math | `ln` | `flog` | `log` |
+| `random` | math | `rand` | `random` | `random` |
 | `range` | list | `range` | `range` | — |
 | `sum` | list | `sum` | `sum` | — |
-| `keys` | tome | `tome_keys` | `keys` | — |
+| `keys` | tome | `tome_keys` | `keys` | `keys` |
 | `read_file` | io | `read_file` | `read_file` | — |
 | `write_file` | io | `write_file` | `write_file` | — |
 | `http_get` | net | `http_get` | `http_get` | — |
@@ -6707,7 +6773,7 @@ The table below is generated by the agent. Do not edit it by hand.
 | `if` | syntax | `either` | `if` | `if` |
 | `else` | syntax | `otherwise` | `else` | `else` |
 | `while` | syntax | `cycle` | `while` | `while` |
-| `for_each` | syntax | `iterate` | `each` | — |
+| `for_each` | syntax | `iterate` | `each` | `foreach` |
 | `break` | syntax | `yeet` | `break` | `break` |
 | `continue` | syntax | `skip` | `continue` | `continue` |
 | `function` | syntax | `conjure` | `to` | `call` |
@@ -6732,12 +6798,12 @@ The table below is generated by the agent. Do not edit it by hand.
 | `bool_false` | types | `nope` | `false` | `false` |
 | `nothing` | types | `void` | `nothing` | `nothing` |
 | `list_literal` | types | `gather` | `mklist` | `list` |
-| `tome_literal` | types | `tome_keys` | `tome_literal` | — |
+| `tome_literal` | types | `tome_keys` | `tome_literal` | `tome` |
 | `import` | modules | `summon` | `use` | — |
-| `float` | types | `num` | `i2f` | — |
+| `float` | types | `num` | `i2f` | `float` |
 | `string` | types | `str` | `str` | `str` |
-| `values` | tome | `values` | `values` | — |
-| `has` | tome | `has` | `has` | — |
+| `values` | tome | `values` | `values` | `values` |
+| `has` | tome | `has` | `has` | `has` |
 
 <!-- PARITY:END -->
 
@@ -10035,32 +10101,32 @@ Registry: **72 features** across **3 tracks**.
 | `chr` | text | `chr` | `chr` | `chr` |
 | `str` | text | `str` | `str` | `str` |
 | `int` | types | `int` | `int` | `int` |
-| `num` | types | `num` | `num` | — |
+| `num` | types | `num` | `num` | `num` |
 | `list_new` | list | `gather` | `mklist` | `list_new` |
 | `list_get` | list | `pluck` | `mklist` | `index` |
-| `upper` | text | `upper` | `upper` | — |
-| `lower` | text | `lower` | `lower` | — |
-| `trim` | text | `trim` | `trim` | — |
-| `contains` | text | `contains` | `contains` | — |
-| `replace` | text | `replace` | `replace` | — |
-| `split` | text | `shatter` | `split` | — |
-| `join` | text | `weave` | `join` | — |
+| `upper` | text | `upper` | `upper` | `upper` |
+| `lower` | text | `lower` | `lower` | `lower` |
+| `trim` | text | `trim` | `trim` | `trim` |
+| `contains` | text | `contains` | `contains` | `contains` |
+| `replace` | text | `replace` | `replace` | `replace` |
+| `split` | text | `shatter` | `split` | `split` |
+| `join` | text | `weave` | `join` | `join` |
 | `abs` | math | `abs` | `fabs` | `abs` |
-| `min` | math | `least` | `min` | — |
-| `max` | math | `greatest` | `max` | — |
-| `floor` | math | `ground` | `f2i` | — |
-| `ceil` | math | `elevate` | `fceil` | — |
-| `round` | math | `nearby` | `fround` | — |
-| `sqrt` | math | `root` | `fsqrt` | — |
-| `pow` | math | `pow` | `fpow` | — |
-| `sin` | math | `sin` | `fsin` | — |
-| `cos` | math | `cos` | `fcos` | — |
-| `exp` | math | `exp` | `fexp` | — |
-| `log` | math | `ln` | `flog` | — |
-| `random` | math | `rand` | `random` | — |
+| `min` | math | `least` | `min` | `min` |
+| `max` | math | `greatest` | `max` | `max` |
+| `floor` | math | `ground` | `f2i` | `floor` |
+| `ceil` | math | `elevate` | `fceil` | `ceil` |
+| `round` | math | `nearby` | `fround` | `round` |
+| `sqrt` | math | `root` | `fsqrt` | `sqrt` |
+| `pow` | math | `pow` | `fpow` | `pow` |
+| `sin` | math | `sin` | `fsin` | `sin` |
+| `cos` | math | `cos` | `fcos` | `cos` |
+| `exp` | math | `exp` | `fexp` | `exp` |
+| `log` | math | `ln` | `flog` | `log` |
+| `random` | math | `rand` | `random` | `random` |
 | `range` | list | `range` | `range` | — |
 | `sum` | list | `sum` | `sum` | — |
-| `keys` | tome | `tome_keys` | `keys` | — |
+| `keys` | tome | `tome_keys` | `keys` | `keys` |
 | `read_file` | io | `read_file` | `read_file` | — |
 | `write_file` | io | `write_file` | `write_file` | — |
 | `http_get` | net | `http_get` | `http_get` | — |
@@ -10069,7 +10135,7 @@ Registry: **72 features** across **3 tracks**.
 | `if` | syntax | `either` | `if` | `if` |
 | `else` | syntax | `otherwise` | `else` | `else` |
 | `while` | syntax | `cycle` | `while` | `while` |
-| `for_each` | syntax | `iterate` | `each` | — |
+| `for_each` | syntax | `iterate` | `each` | `foreach` |
 | `break` | syntax | `yeet` | `break` | `break` |
 | `continue` | syntax | `skip` | `continue` | `continue` |
 | `function` | syntax | `conjure` | `to` | `call` |
@@ -10094,12 +10160,12 @@ Registry: **72 features** across **3 tracks**.
 | `bool_false` | types | `nope` | `false` | `false` |
 | `nothing` | types | `void` | `nothing` | `nothing` |
 | `list_literal` | types | `gather` | `mklist` | `list` |
-| `tome_literal` | types | `tome_keys` | `tome_literal` | — |
+| `tome_literal` | types | `tome_keys` | `tome_literal` | `tome` |
 | `import` | modules | `summon` | `use` | — |
-| `float` | types | `num` | `i2f` | — |
+| `float` | types | `num` | `i2f` | `float` |
 | `string` | types | `str` | `str` | `str` |
-| `values` | tome | `values` | `values` | — |
-| `has` | tome | `has` | `has` | — |
+| `values` | tome | `values` | `values` | `values` |
+| `has` | tome | `has` | `has` | `has` |
 
 
 ### Repository map
