@@ -170,7 +170,7 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       for (const pr of e.pairs) {
         emitExpr(pr.key, em, locals, tys, fnTypes);
         em.L('    pushq %rax');
-        emitStrExpr(pr.val, em, locals, tys, fnTypes);
+        emitExpr(pr.val, em, locals, tys, fnTypes);
         em.L('    movq %rax, %rdx');
         em.L('    popq %rsi');
         em.L('    movq (%rsp), %rdi');
@@ -489,6 +489,15 @@ function emitStmt(s, em, locals, ctx) {
     }
     case 'set': {
       tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+      if (s.expr.k === 'tome') {
+        // Remember the kind of every literal entry so `say t["name"]` can
+        // pick say_str vs say_int.
+        for (const pr of s.expr.pairs) {
+          if (pr.key.k === 'str') {
+            tys.set(`@tome:${s.name}:${pr.key.v}`, typeOf(pr.val, tys, fnTypes));
+          }
+        }
+      }
       emitExpr(s.expr, em, locals, tys, fnTypes);
       if (locals && locals.has(s.name)) {
         const slot = locals.get(s.name);
