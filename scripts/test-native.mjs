@@ -27,6 +27,22 @@ const CASES = [
   { name: 'str-len',   src: `say length("hello")`, out: '5\n' },
   { name: 'str-var',   src: `set s to "hi"\nset s to s + "!"\nsay s`, out: 'hi!\n' },
   { name: 'str-fn',    src: `to greet with n\n  return "hi " + str(n)\nend\nsay greet(3)`, out: 'hi 3\n' },
+  // Milestone 6d: string library, tomes and for-each on the native track.
+  { name: 'upper-lower', src: `say upper("abC")\nsay lower("AbC")`, out: 'ABC\nabc\n' },
+  { name: 'trim',        src: `say trim("  hi  ") + "|"`, out: 'hi|\n' },
+  { name: 'contains',    src: `say contains("hello", "ell")\nsay contains("hello", "zz")`, out: '1\n0\n' },
+  { name: 'index-of',    src: `say index_of("hello", "l")\nsay index_of("hello", "z")`, out: '2\n-1\n' },
+  { name: 'substring',   src: `say substring("hello", 1, 3)`, out: 'ell\n' },
+  { name: 'replace',     src: `say replace("a-b-c", "-", "+")`, out: 'a+b+c\n' },
+  { name: 'split-join',  src: `set parts to split("a,b,c", ",")\nsay length(parts)\nsay parts[1]\nsay join(parts, "-")`, out: '3\nb\na-b-c\n' },
+  { name: 'str-eq',      src: `set s to "ab"\nif s is "ab"\n  say 1\nend\nif s is not "ac"\n  say 2\nend`, out: '1\n2\n' },
+  { name: 'min-max',     src: `say min(3, 7)\nsay max(3, 7)\nsay min(0 - 2, 5)`, out: '3\n7\n-2\n' },
+  { name: 'tome-lit',    src: `set t to { name: "ada", age: 36 }\nsay t["name"]\nsay t["age"]\nsay length(t)`, out: 'ada\n36\n3\n' },
+  { name: 'tome-set',    src: `set t to tome_new()\nset t["a"] to 1\nset t["a"] to 2\nsay t["a"]\nsay length(t)\nsay has(t, "a")\nsay has(t, "b")`, out: '2\n1\n1\n0\n' },
+  { name: 'tome-keys',   src: `set t to { a: 1, b: 2 }\nsay join(keys(t), ",")\nset vs to values(t)\nsay vs[1]`, out: 'a,b\n2\n' },
+  { name: 'foreach',     src: `set total to 0\nfor each x in [1, 2, 3]\n  set total to total + x\nend\nsay total`, out: '6\n' },
+  { name: 'foreach-str', src: `for each w in split("a b", " ")\n  say w\nend`, out: 'a\nb\n' },
+  { name: 'foreach-tome',src: `set t to { a: 1, b: 2 }\nfor each k in t\n  say k\nend`, out: 'a\nb\n' },
   { name: 'list-loop', src: `set xs to [1, 2, 3]\nset i to 0\nset t to 0\nwhile i < length(xs)\n  set t to t + xs[i]\n  set i to i + 1\nend\nsay t`, out: '6\n' },
 ];
 
