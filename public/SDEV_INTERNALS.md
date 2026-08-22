@@ -762,6 +762,39 @@ in milestone order.)
 - Parity registry: the eight remaining native `should` gaps are closed —
   **must gaps 0, should gaps 0 across all three tracks.**
 
+**Milestone 6d (native strings, tomes and for-each) — shipped:**
+- **Runtime (`lang/native/runtime.s`)** gained a hand-written string library:
+  `sdev_str_eq`, `sdev_index_of`, `sdev_contains`, `sdev_substr`,
+  `sdev_upper`, `sdev_lower`, `sdev_trim`, `sdev_replace`, `sdev_split`
+  (returns a heap list of pieces), `sdev_join` and `sdev_empty`. `replace`
+  and `split` are built out of `index_of` + `substr` + `concat`, so there is
+  one matching algorithm rather than three.
+- **Tomes natively.** A tome is `[i64 count][i64 cap][cap × (key-ptr, value)]`
+  with `cap = 64`, so `length(t)` still reads the header word exactly like
+  strings and lists. `sdev_tnew` / `sdev_tfind` / `sdev_tset` / `sdev_tget` /
+  `sdev_thas` / `sdev_tkeys` / `sdev_tvals` implement association-list
+  lookup keyed by `sdev_str_eq` (value equality, not pointer equality).
+- **Codegen (`codegen-x64.mjs`)**: tome literals `{ k: v }` lower to `tnew`
+  plus one `tset` per pair; `t["k"]` and `set t["k"] to v` dispatch to
+  `tget`/`tset` when the container's inferred kind is `tome`, and stay
+  list-indexing otherwise. `is` / `is not` compare text by value when either
+  side is a string.
+- **Kind inference widened**: a fourth kind `tome` joins `int` / `str` /
+  `list`; per-key value kinds are remembered as `@tome:<var>:<key>` and list
+  element kinds as `@elem:<var>`, so `say parts[1]` after `split` prints
+  text instead of a pointer.
+- **`for each x in xs … end`** is lowered natively to a counted index loop
+  over two hidden slots named by the loop's foreach depth (`@fe_i<d>`,
+  `@fe_s<d>`, sanitised for asm labels); iterating a tome walks its keys.
+  Local frames grew from 16 to 32 slots to make room.
+- **Builtins added**: `upper`, `lower`, `trim`, `contains`, `index_of`,
+  `substring`, `replace`, `split`, `join`, `min`, `max`, `tome_new`, `keys`,
+  `values`, `has`.
+- Fifteen new cases in `scripts/test-native.mjs` (32/32 passing against real
+  `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
+- Parity registry: fourteen former native `n/a` entries became `should` and
+  are satisfied — **must gaps 0, should gaps 0 across all three tracks.**
+
 **Milestone 5z (modules — `use "path"`) — shipped:**
 - **No VM change.** Modules are a source→source prelink pass that runs
   before lexing, so the seed VM is untouched since 5x.
