@@ -38,11 +38,14 @@ function typeOf(e, tys, fnTypes) {
     case 'list': return 'list';
     case 'tome': return 'tome';
     case 'ident': return tys.get(e.name) || 'int';
-    case 'index':
-      // Milestone 6d: a string-keyed read of a tome yields whatever was put
-      // there; we conservatively call it a string when the key is a literal
-      // string and the container is a known tome.
-      return typeOf(e.target, tys, fnTypes) === 'tome' ? (tys.get(tomeValKey(e)) || 'int') : 'int';
+    case 'index': {
+      // Milestone 6d: a tome read yields the kind stored under that key; a
+      // list read yields the list's recorded element kind.
+      const tt = typeOf(e.target, tys, fnTypes);
+      if (tt === 'tome') return tys.get(tomeValKey(e)) || 'int';
+      const base = e.target.k === 'ident' ? e.target.name : null;
+      return (base && tys.get(`@elem:${base}`)) || 'int';
+    }
     case 'un': return 'int';
     case 'bin':
       if (e.op === '+') {
@@ -57,6 +60,15 @@ function typeOf(e, tys, fnTypes) {
       return (fnTypes && fnTypes.get(e.name)) || 'int';
     default: return 'int';
   }
+}
+
+// The kind of the elements a list-valued expression holds, as far as the
+// compiler can tell statically.
+function elemTypeOf(e, tys, fnTypes) {
+  if (e.k === 'list') return e.items.length ? typeOf(e.items[0], tys, fnTypes) : 'int';
+  if (e.k === 'call' && (e.name === 'split' || e.name === 'keys')) return 'str';
+  if (e.k === 'ident') return tys.get(`@elem:${e.name}`) || 'int';
+  return 'int';
 }
 
 // Key under which the value kind of `t["k"]` is remembered, so
@@ -489,6 +501,9 @@ function emitStmt(s, em, locals, ctx) {
     }
     case 'set': {
       tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+      if (typeOf(s.expr, tys, fnTypes) === 'list') {
+        tys.set(`@elem:${s.name}`, elemTypeOf(s.expr, tys, fnTypes));
+      }
       if (s.expr.k === 'tome') {
         // Remember the kind of every literal entry so `say t["name"]` can
         // pick say_str vs say_int.

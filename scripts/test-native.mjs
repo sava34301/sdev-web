@@ -37,7 +37,7 @@ const CASES = [
   { name: 'split-join',  src: `set parts to split("a,b,c", ",")\nsay length(parts)\nsay parts[1]\nsay join(parts, "-")`, out: '3\nb\na-b-c\n' },
   { name: 'str-eq',      src: `set s to "ab"\nif s is "ab"\n  say 1\nend\nif s is not "ac"\n  say 2\nend`, out: '1\n2\n' },
   { name: 'min-max',     src: `say min(3, 7)\nsay max(3, 7)\nsay min(0 - 2, 5)`, out: '3\n7\n-2\n' },
-  { name: 'tome-lit',    src: `set t to { name: "ada", age: 36 }\nsay t["name"]\nsay t["age"]\nsay length(t)`, out: 'ada\n36\n3\n' },
+  { name: 'tome-lit',    src: `set t to { name: "ada", age: 36 }\nsay t["name"]\nsay t["age"]\nsay length(t)`, out: 'ada\n36\n2\n' },
   { name: 'tome-set',    src: `set t to tome_new()\nset t["a"] to 1\nset t["a"] to 2\nsay t["a"]\nsay length(t)\nsay has(t, "a")\nsay has(t, "b")`, out: '2\n1\n1\n0\n' },
   { name: 'tome-keys',   src: `set t to { a: 1, b: 2 }\nsay join(keys(t), ",")\nset vs to values(t)\nsay vs[1]`, out: 'a,b\n2\n' },
   { name: 'foreach',     src: `set total to 0\nfor each x in [1, 2, 3]\n  set total to total + x\nend\nsay total`, out: '6\n' },
