@@ -28,12 +28,23 @@ const LOCAL_SLOTS = 32;
 // ---------------------------------------------------------------------------
 
 const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'join']);
-const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max']);
+const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max', 'int']);
 const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values']);
 const TOME_BUILTINS = new Set(['tome_new', 'tset']);
+// Milestone 6e — builtins that yield an IEEE-754 double (raw bits in a word).
+const FLOAT_BUILTINS = new Set(['sqrt', 'floor', 'ceil', 'round', 'sin', 'cos',
+  'exp', 'log', 'pow', 'random', 'num']);
+
+// The 64-bit pattern of a double, as an unsigned decimal for `movabsq`.
+function f64bits(v) {
+  const b = new DataView(new ArrayBuffer(8));
+  b.setFloat64(0, v, true);
+  return b.getBigUint64(0, true).toString();
+}
 
 function typeOf(e, tys, fnTypes) {
   switch (e.k) {
+    case 'fnum': return 'float';
     case 'str': return 'str';
     case 'list': return 'list';
     case 'tome': return 'tome';
@@ -46,13 +57,16 @@ function typeOf(e, tys, fnTypes) {
       const base = e.target.k === 'ident' ? e.target.name : null;
       return (base && tys.get(`@elem:${base}`)) || 'int';
     }
-    case 'un': return 'int';
+    case 'un': return e.op === '-' ? typeOf(e.x, tys, fnTypes) : 'int';
     case 'bin':
       if (e.op === '+') {
         if (typeOf(e.l, tys, fnTypes) === 'str' || typeOf(e.r, tys, fnTypes) === 'str') return 'str';
       }
+      if ('+-*/'.includes(e.op) && e.op.length === 1 &&
+          (typeOf(e.l, tys, fnTypes) === 'float' || typeOf(e.r, tys, fnTypes) === 'float')) return 'float';
       return 'int';
     case 'call':
+      if (FLOAT_BUILTINS.has(e.name)) return 'float';
       if (STR_BUILTINS.has(e.name)) return 'str';
       if (LIST_BUILTINS.has(e.name)) return 'list';
       if (TOME_BUILTINS.has(e.name)) return 'tome';
@@ -82,14 +96,41 @@ function tomeValKey(e) {
 
 // Return type of each user function: the join of its `return` expressions,
 // evaluated with the types known for its own assignments. Params are ints.
-function inferFnTypes(funcs) {
+function inferFnTypes(funcs, mainBody = []) {
   const fnTypes = new Map();
-  for (let pass = 0; pass < 2; pass++) {
-    for (const f of funcs) {
+  const byName = new Map(funcs.map(f => [f.name, f]));
+  // Milestone 6e: parameter kinds are inferred from call sites, so a function
+  // that is only ever called with floats treats its parameter as a float.
+  const noteCalls = (e, tys) => {
+    if (!e || typeof e !== 'object') return;
+    if (e.k === 'call') {
+      const f = byName.get(e.name);
+      if (f) {
+        e.args.forEach((arg, i) => {
+          const t = typeOf(arg, tys, fnTypes);
+          const key = `@param:${e.name}:${i}`;
+          if (t !== 'int' && !fnTypes.has(key)) fnTypes.set(key, t);
+        });
+      }
+      (e.args || []).forEach(a => noteCalls(a, tys));
+      return;
+    }
+    for (const v of Object.values(e)) {
+      if (Array.isArray(v)) v.forEach(x => noteCalls(x, tys));
+      else if (v && typeof v === 'object') noteCalls(v, tys);
+    }
+  };
+  for (let pass = 0; pass < 3; pass++) {
+    for (const f of [...funcs, { name: null, params: [], body: mainBody }]) {
       const tys = new Map();
+      for (const [i, p] of (f.params || []).entries()) {
+        const t = f.name && fnTypes.get(`@param:${f.name}:${i}`);
+        if (t) tys.set(p, t);
+      }
       let t = 'int';
       const walk = (body) => {
         for (const s of body) {
+          noteCalls(s, tys);
           if (s.k === 'set') tys.set(s.name, typeOf(s.expr, tys, fnTypes));
           if (s.k === 'if') { walk(s.then_); if (s.else_) walk(s.else_); }
           if (s.k === 'while') walk(s.body);
@@ -101,7 +142,7 @@ function inferFnTypes(funcs) {
         }
       };
       walk(f.body);
-      fnTypes.set(f.name, t);
+      if (f.name) fnTypes.set(f.name, t);
     }
   }
   return fnTypes;
@@ -138,6 +179,9 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
     case 'num':
       em.L(`    movq $${e.v|0}, %rax`);
       return;
+    case 'fnum':
+      em.L(`    movabsq $${f64bits(e.v)}, %rax`);
+      return;
     case 'str': {
       const lbl = em.strLabel(e.v);
       em.L(`    leaq ${lbl}(%rip), %rax`);
@@ -152,7 +196,17 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       }
       return;
     case 'un':
-      if (e.op === '-') { emitExpr(e.x, em, locals, tys, fnTypes); em.L('    negq %rax'); return; }
+      if (e.op === '-') {
+        emitExpr(e.x, em, locals, tys, fnTypes);
+        if (typeOf(e.x, tys, fnTypes) === 'float') {
+          // Flip the IEEE-754 sign bit.
+          em.L('    movabsq $-9223372036854775808, %rcx');
+          em.L('    xorq %rcx, %rax');
+        } else {
+          em.L('    negq %rax');
+        }
+        return;
+      }
       if (e.op === 'not') {
         emitExpr(e.x, em, locals, tys, fnTypes);
         em.L('    testq %rax, %rax');
@@ -234,6 +288,29 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
         }
         return;
       }
+      {
+        const lf = typeOf(e.l, tys, fnTypes) === 'float';
+        const rf = typeOf(e.r, tys, fnTypes) === 'float';
+        const FOPS = { '+': 'addsd', '-': 'subsd', '*': 'mulsd', '/': 'divsd' };
+        const FCMP = { 'is': 'sete', 'isnot': 'setne', '<': 'setb', '>': 'seta', '<=': 'setbe', '>=': 'setae' };
+        if ((lf || rf) && (FOPS[e.op] || FCMP[e.op])) {
+          emitFloatExpr(e.l, em, locals, tys, fnTypes);
+          em.L('    pushq %rax');
+          emitFloatExpr(e.r, em, locals, tys, fnTypes);
+          em.L('    movq %rax, %xmm1');
+          em.L('    popq %rax');
+          em.L('    movq %rax, %xmm0');
+          if (FOPS[e.op]) {
+            em.L(`    ${FOPS[e.op]} %xmm1, %xmm0`);
+            em.L('    movq %xmm0, %rax');
+          } else {
+            em.L('    ucomisd %xmm1, %xmm0');
+            em.L(`    ${FCMP[e.op]} %al`);
+            em.L('    movzbq %al, %rax');
+          }
+          return;
+        }
+      }
       if (e.op === 'and' || e.op === 'or') {
         const short = em.gensym(e.op);
         emitExpr(e.l, em, locals, tys, fnTypes);
@@ -285,9 +362,19 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
 // fly. This is what makes `"n=" + 3` work natively.
 function emitStrExpr(e, em, locals, tys, fnTypes) {
   emitExpr(e, em, locals, tys, fnTypes);
-  if (typeOf(e, tys, fnTypes) !== 'str') {
+  const t = typeOf(e, tys, fnTypes);
+  if (t !== 'str') {
     em.L('    movq %rax, %rdi');
-    em.L('    call sdev_str_int');
+    em.L(`    call ${t === 'float' ? 'sdev_str_float' : 'sdev_str_int'}`);
+  }
+}
+
+// Evaluate `e` and leave *double bits* in %rax, widening integers on the fly.
+function emitFloatExpr(e, em, locals, tys, fnTypes) {
+  emitExpr(e, em, locals, tys, fnTypes);
+  if (typeOf(e, tys, fnTypes) !== 'float') {
+    em.L('    cvtsi2sdq %rax, %xmm0');
+    em.L('    movq %xmm0, %rax');
   }
 }
 
@@ -323,6 +410,37 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case 'str':
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       return true;
+    // ---- Milestone 6e: floats ----
+    case 'sqrt': case 'floor': case 'ceil': case 'round':
+    case 'sin': case 'cos': case 'exp': case 'log': {
+      emitFloatExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_f${n}`);
+      return true;
+    }
+    case 'pow': {
+      emitFloatExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitFloatExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_fpow');
+      return true;
+    }
+    case 'random':
+      em.L('    call sdev_random');
+      return true;
+    case 'num':
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_num');
+      return true;
+    case 'int': {                   // int(f) — truncate a float toward zero
+      emitFloatExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %xmm0');
+      em.L('    cvttsd2si %xmm0, %rax');
+      return true;
+    }
     case 'list_new':
     case 'mklist': {          // list_new(n) — n zeroed slots
       one();
@@ -433,10 +551,10 @@ function emitStmt(s, em, locals, ctx) {
     case 'say': {
       // Milestone 6c: pick say_str vs say_int from the inferred value kind,
       // not just from "is this a literal".
-      const isStr = typeOf(s.expr, tys, fnTypes) === 'str';
+      const st = typeOf(s.expr, tys, fnTypes);
       emitExpr(s.expr, em, locals, tys, fnTypes);
       em.L(`    movq %rax, %rdi`);
-      em.L(`    call ${isStr ? 'sdev_say_str' : 'sdev_say_int'}`);
+      em.L(`    call ${st === 'str' ? 'sdev_say_str' : st === 'float' ? 'sdev_say_float' : 'sdev_say_int'}`);
       return;
     }
     case 'setIndex': {
@@ -584,7 +702,7 @@ export function generateAsm(source) {
   for (const f of funcs) {
     em.functions.set(f.name, { arity: f.params.length, label: `sdev_fn_${f.name}` });
   }
-  em.fnTypes = inferFnTypes(funcs);
+  em.fnTypes = inferFnTypes(funcs, main);
 
   em.L('# Generated by lang/native/codegen-x64.mjs — do not edit by hand.');
   em.L('    .text');
@@ -608,7 +726,12 @@ export function generateAsm(source) {
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
     });
     const epilogue = em.gensym('ret');
-    const ctx = { epilogue, tys: new Map(), fnTypes: em.fnTypes };
+    const ptys = new Map();
+    f.params.forEach((p, i) => {
+      const t = em.fnTypes.get(`@param:${f.name}:${i}`);
+      if (t) ptys.set(p, t);
+    });
+    const ctx = { epilogue, tys: ptys, fnTypes: em.fnTypes };
     f.body.forEach(s => emitStmt(s, em, locals, ctx));
     // Implicit return 0
     em.L('    xorq %rax, %rax');
