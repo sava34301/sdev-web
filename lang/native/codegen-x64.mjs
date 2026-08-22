@@ -81,6 +81,7 @@ function inferFnTypes(funcs) {
           if (s.k === 'set') tys.set(s.name, typeOf(s.expr, tys, fnTypes));
           if (s.k === 'if') { walk(s.then_); if (s.else_) walk(s.else_); }
           if (s.k === 'while') walk(s.body);
+          if (s.k === 'foreach') walk(s.body);
           if (s.k === 'return' && s.expr) {
             const rt = typeOf(s.expr, tys, fnTypes);
             if (rt !== 'int') t = rt;
@@ -159,13 +160,37 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       em.L('    popq %rax');
       return;
     }
+    case 'tome': {
+      // Milestone 6d: { k: v, ... } → tnew + one tset per pair.
+      em.L('    call sdev_tnew');
+      em.L('    pushq %rax');
+      for (const pr of e.pairs) {
+        emitExpr(pr.k, em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+        emitExpr(pr.v, em, locals, tys, fnTypes);
+        em.L('    movq %rax, %rdx');
+        em.L('    popq %rsi');
+        em.L('    movq 8(%rsp), %rdi');
+        em.L('    call sdev_tset');
+      }
+      em.L('    popq %rax');
+      return;
+    }
     case 'index': {
-      // list_get: xs[i] → load the i-th word past the count header.
+      const isTome = typeOf(e.target, tys, fnTypes) === 'tome';
       emitExpr(e.target, em, locals, tys, fnTypes);
       em.L('    pushq %rax');
       emitExpr(e.idx, em, locals, tys, fnTypes);
       em.L('    popq %rcx');
-      em.L('    movq 8(%rcx,%rax,8), %rax');
+      if (isTome) {
+        // tome_get: string key lookup.
+        em.L('    movq %rcx, %rdi');
+        em.L('    movq %rax, %rsi');
+        em.L('    call sdev_tget');
+      } else {
+        // list_get: load the i-th word past the count header.
+        em.L('    movq 8(%rcx,%rax,8), %rax');
+      }
       return;
     }
     case 'bin': {
@@ -176,6 +201,22 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
         em.L('    movq %rax, %rsi');
         em.L('    popq %rdi');
         em.L('    call sdev_concat');
+        return;
+      }
+      if ((e.op === 'is' || e.op === 'isnot') &&
+          (typeOf(e.l, tys, fnTypes) === 'str' || typeOf(e.r, tys, fnTypes) === 'str')) {
+        // Milestone 6d: text compares by value, not by pointer.
+        emitStrExpr(e.l, em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+        emitStrExpr(e.r, em, locals, tys, fnTypes);
+        em.L('    movq %rax, %rsi');
+        em.L('    popq %rdi');
+        em.L('    call sdev_str_eq');
+        if (e.op === 'isnot') {
+          em.L('    testq %rax, %rax');
+          em.L('    sete %al');
+          em.L('    movzbq %al, %rax');
+        }
         return;
       }
       if (e.op === 'and' || e.op === 'or') {
@@ -277,6 +318,88 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L('    movq %rcx, (%rax)');
       return true;
     }
+    // ---- Milestone 6d: strings ----
+    case 'upper':
+    case 'lower':
+    case 'trim':
+      one();
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_${n}`);
+      return true;
+    case 'contains':
+    case 'index_of':
+    case 'split': {
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitStrExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L(`    call sdev_${n === 'index_of' ? 'index_of' : n}`);
+      return true;
+    }
+    case 'join': {
+      emitExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitStrExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_join');
+      return true;
+    }
+    case 'replace': {
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitStrExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitStrExpr(a[2], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdx');
+      em.L('    popq %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_replace');
+      return true;
+    }
+    case 'substring': {
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(a[2], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdx');
+      em.L('    popq %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_substr');
+      return true;
+    }
+    // ---- Milestone 6d: integer math ----
+    case 'min':
+    case 'max': {
+      emitExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    popq %rcx');
+      em.L('    cmpq %rax, %rcx');
+      em.L(`    ${n === 'min' ? 'cmovlq' : 'cmovgq'} %rcx, %rax`);
+      return true;
+    }
+    // ---- Milestone 6d: tomes ----
+    case 'tome_new':
+      em.L('    call sdev_tnew');
+      return true;
+    case 'keys':
+    case 'values':
+      one();
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_t${n === 'keys' ? 'keys' : 'vals'}`);
+      return true;
+    case 'has': {
+      emitExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitStrExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_thas');
+      return true;
+    }
     default:
       return false;
   }
@@ -302,14 +425,63 @@ function emitStmt(s, em, locals, ctx) {
       return;
     }
     case 'setIndex': {
-      emitExpr({ k: 'ident', name: s.name }, em, locals, tys, fnTypes);
+      const target = { k: 'ident', name: s.name };
+      const isTome = typeOf(target, tys, fnTypes) === 'tome';
+      if (isTome) {
+        tys.set(tomeValKey({ target, idx: s.idx }), typeOf(s.expr, tys, fnTypes));
+      }
+      emitExpr(target, em, locals, tys, fnTypes);
       em.L('    pushq %rax');
       emitExpr(s.idx, em, locals, tys, fnTypes);
       em.L('    pushq %rax');
       emitExpr(s.expr, em, locals, tys, fnTypes);
-      em.L('    popq %rdx');            // index
-      em.L('    popq %rcx');            // list
-      em.L('    movq %rax, 8(%rcx,%rdx,8)');
+      if (isTome) {
+        em.L('    movq %rax, %rdx');    // value
+        em.L('    popq %rsi');          // key
+        em.L('    popq %rdi');          // tome
+        em.L('    call sdev_tset');
+      } else {
+        em.L('    popq %rdx');          // index
+        em.L('    popq %rcx');          // list
+        em.L('    movq %rax, 8(%rcx,%rdx,8)');
+      }
+      return;
+    }
+    case 'foreach': {
+      // Milestone 6d: `for each x in xs ... end` over a list (or a tome's
+      // keys), lowered to a counted index loop over two hidden slots.
+      const iterTy = typeOf(s.iter, tys, fnTypes);
+      const idxName = `@fe_i${s.d}`;
+      const seqName = `@fe_s${s.d}`;
+      const seqExpr = iterTy === 'tome'
+        ? { k: 'call', name: 'keys', args: [s.iter] }
+        : s.iter;
+      emitStmt({ k: 'set', name: seqName, expr: seqExpr }, em, locals, ctx);
+      emitStmt({ k: 'set', name: idxName, expr: { k: 'num', v: 0 } }, em, locals, ctx);
+      const top = em.gensym('fetop');
+      const end = em.gensym('feend');
+      em.L(`${top}:`);
+      emitExpr({ k: 'ident', name: idxName }, em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr({ k: 'call', name: 'length', args: [{ k: 'ident', name: seqName }] }, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rcx');
+      em.L('    popq %rax');
+      em.L('    cmpq %rcx, %rax');
+      em.L(`    jge ${end}`);
+      emitStmt({
+        k: 'set',
+        name: s.name,
+        expr: { k: 'index', target: { k: 'ident', name: seqName }, idx: { k: 'ident', name: idxName } },
+      }, em, locals, ctx);
+      if (iterTy === 'tome') tys.set(s.name, 'str');
+      s.body.forEach(x => emitStmt(x, em, locals, ctx));
+      emitStmt({
+        k: 'set',
+        name: idxName,
+        expr: { k: 'bin', op: '+', l: { k: 'ident', name: idxName }, r: { k: 'num', v: 1 } },
+      }, em, locals, ctx);
+      em.L(`    jmp ${top}`);
+      em.L(`${end}:`);
       return;
     }
     case 'set': {
@@ -366,6 +538,12 @@ function collectSets(body, locals) {
     if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
+    if (s.k === 'foreach') {
+      for (const nm of [s.name, `@fe_i${s.d}`, `@fe_s${s.d}`]) {
+        if (!locals.has(nm)) locals.set(nm, locals.size);
+      }
+      collectSets(s.body, locals);
+    }
   }
 }
 
