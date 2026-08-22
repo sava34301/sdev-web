@@ -15,7 +15,7 @@
 
 import { parse } from '../bootstrap/compile.mjs';
 
-const LOCAL_SLOTS = 16;
+const LOCAL_SLOTS = 32;
 
 // ---------------------------------------------------------------------------
 // Milestone 6c — static value kinds.
@@ -112,7 +112,10 @@ class NativeEmitter {
     return lbl;
   }
   globalLabel(name) {
-    if (!this.globals.has(name)) this.globals.set(name, `sdev_g_${name}`);
+    if (!this.globals.has(name)) {
+      // Hidden loop variables use '@' in their names; asm labels cannot.
+      this.globals.set(name, `sdev_g_${name.replace(/[^A-Za-z0-9_]/g, '_')}`);
+    }
     return this.globals.get(name);
   }
 }
@@ -165,12 +168,12 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       em.L('    call sdev_tnew');
       em.L('    pushq %rax');
       for (const pr of e.pairs) {
-        emitExpr(pr.k, em, locals, tys, fnTypes);
+        emitExpr(pr.key, em, locals, tys, fnTypes);
         em.L('    pushq %rax');
-        emitExpr(pr.v, em, locals, tys, fnTypes);
+        emitStrExpr(pr.val, em, locals, tys, fnTypes);
         em.L('    movq %rax, %rdx');
         em.L('    popq %rsi');
-        em.L('    movq 8(%rsp), %rdi');
+        em.L('    movq (%rsp), %rdi');
         em.L('    call sdev_tset');
       }
       em.L('    popq %rax');
