@@ -49,6 +49,11 @@ function typeOf(e, tys, fnTypes) {
     case 'str': return 'str';
     case 'list': return 'list';
     case 'tome': return 'tome';
+    // Milestone 6f: an object is a tome; a function value is an opaque word.
+    case 'new': return 'tome';
+    case 'ref': case 'lambda': case 'callv': return 'int';
+    case 'field': return (fnTypes && fnTypes.get(`@field:${e.name}`)) || 'int';
+    case 'mcall': return methodRetType(fnTypes, e.m);
     case 'ident': return tys.get(e.name) || 'int';
     case 'index': {
       // Milestone 6d: a tome read yields the kind stored under that key; a
@@ -76,6 +81,24 @@ function typeOf(e, tys, fnTypes) {
     default: return 'int';
   }
 }
+
+// Milestone 6f — a method call is typed by name, exactly like the WASM
+// backend: the receiver's class is not tracked statically, so any declared
+// method of that name that returns text makes the call string-typed.
+function methodRetType(fnTypes, key) {
+  if (!fnTypes) return 'int';
+  const classes = fnTypes._classes;
+  if (!classes) return 'int';
+  for (const ms of classes.values()) {
+    for (const mm of ms) {
+      if (mm.key !== key) continue;
+      const t = fnTypes.get(mm.fn);
+      if (t && t !== 'int') return t;
+    }
+  }
+  return 'int';
+}
+
 
 // The kind of the elements a list-valued expression holds, as far as the
 // compiler can tell statically.
