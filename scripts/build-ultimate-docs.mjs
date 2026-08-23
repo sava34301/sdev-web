@@ -971,6 +971,9 @@ const GUIDES = [
     ['lang/native/README.md', 'Native x86-64 backend'],
     ['electron/README.md', 'Desktop IDE shell'],
   ]],
+  ['Part V — Python parity', [
+    ['public/SDEV_PYTHON_PARITY_DOCUMENTATION.md', 'Python feature-parity reference'],
+  ]],
   ['Part V — Track parity', [
     ['public/SDEV_PARITY_DOCUMENTATION.md', 'Parity registry, agent and matrix'],
   ]],
