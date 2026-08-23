@@ -157,13 +157,20 @@ export interface DictLiteral {
 export interface LambdaExpr {
   type: 'LambdaExpr';
   params: string[];
+  /** Rich parameter info (defaults, *rest, **named, annotations). */
+  paramSpecs?: Param[];
   body: ASTNode;
+  isAsync?: boolean;
+  isGenerator?: boolean;
   line: number;
 }
 
 export interface LetStatement {
   type: 'LetStatement';
   name: string;
+  /** Destructuring targets: `forge a, b be pair`. */
+  targets?: string[];
+  annotation?: ASTNode;
   value: ASTNode;
   line: number;
 }
@@ -195,14 +202,19 @@ export interface WhileStatement {
   type: 'WhileStatement';
   condition: ASTNode;
   body: BlockStatement;
+  elseBlock?: BlockStatement;
   line: number;
 }
 
 export interface ForEachStatement {
   type: 'ForEachStatement';
   variable: string;
+  /** Tuple unpacking targets: `iterate k, v through pairs`. */
+  variables?: string[];
   iterable: ASTNode;
   body: BlockStatement;
+  elseBlock?: BlockStatement;
+  isAsync?: boolean;
   line: number;
 }
 
@@ -218,6 +230,12 @@ export interface FuncDeclaration {
   type: 'FuncDeclaration';
   name: string;
   params: string[];
+  paramSpecs?: Param[];
+  decorators?: ASTNode[];
+  isAsync?: boolean;
+  isGenerator?: boolean;
+  returnType?: ASTNode;
+  docstring?: string;
   body: BlockStatement;
   line: number;
 }
@@ -241,8 +259,13 @@ export interface ContinueStatement {
 export interface TryStatement {
   type: 'TryStatement';
   tryBlock: BlockStatement;
+  /** Legacy single-handler form. */
   errorVar: string;
   catchBlock: BlockStatement;
+  /** Typed handler chain (`rescue ValueError as e`). */
+  handlers?: ExceptHandler[];
+  elseBlock?: BlockStatement;
+  finallyBlock?: BlockStatement;
   line: number;
 }
 
@@ -250,6 +273,13 @@ export interface ClassDeclaration {
   type: 'ClassDeclaration';
   name: string;
   superClass?: string;
+  /** Full base list for multiple inheritance / C3 linearisation. */
+  superClasses?: string[];
+  decorators?: ASTNode[];
+  /** Class-level attributes declared with `forge`. */
+  fields?: LetStatement[];
+  metaclass?: string;
+  docstring?: string;
   methods: FuncDeclaration[];
   line: number;
 }
@@ -298,7 +328,7 @@ export interface Param {
 export interface FStringExpr {
   type: 'FStringExpr';
   /** Alternating literal chunks and embedded expressions. */
-  parts: { kind: 'text'; value: string }[] | FStringPart[];
+  parts: FStringPart[];
   line: number;
 }
 
