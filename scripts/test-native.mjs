@@ -63,9 +63,9 @@ const CASES = [
   // Milestone 6f: function values, closures, kinds, errors, break/continue.
   { name: 'ref-call',    src: `to twice with n\n  return n * 2\nend\nset f to ref twice\nsay call f(21)`, out: '42\n' },
   { name: 'ref-str',     src: `to hi with n\n  return "hi " + str(n)\nend\nset f to ref hi\nsay call f(3)`, out: 'hi 3\n' },
-  { name: 'lambda',      src: `set add to make a b\n  return a + b\nend\nsay call add(2, 3)`, out: '5\n' },
-  { name: 'closure',     src: `set n to 10\nset addn to make x capture n\n  return x + n\nend\nsay call addn(5)`, out: '15\n' },
-  { name: 'closure-two', src: `set p to 2\nset q to 3\nset f to make x capture p q\n  return x * p + q\nend\nsay call f(4)`, out: '11\n' },
+  { name: 'lambda',      src: `set add to make with a b\n  return a + b\nend\nsay call add(2, 3)`, out: '5\n' },
+  { name: 'closure',     src: `set n to 10\nset addn to make with x capture n\n  return x + n\nend\nsay call addn(5)`, out: '15\n' },
+  { name: 'closure-two', src: `set p to 2\nset q to 3\nset f to make with x capture p q\n  return x * p + q\nend\nsay call f(4)`, out: '11\n' },
   { name: 'kind-basic',  src: `kind Counter\n  to bump with self\n    set self.n to self.n + 1\n    return self.n\n  end\nend\nset c to new Counter\nset c.n to 0\nsay c.bump()\nsay c.bump()`, out: '1\n2\n' },
   { name: 'kind-str',    src: `kind Greeter\n  to greet with self\n    return "hello " + self.who\n  end\nend\nset g to new Greeter\nset g.who to "ada"\nsay g.greet()`, out: 'hello ada\n' },
   { name: 'kind-args',   src: `kind Adder\n  to plus with self a b\n    return a + b\n  end\nend\nset a to new Adder\nsay a.plus(2, 5)`, out: '7\n' },
