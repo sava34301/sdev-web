@@ -209,6 +209,9 @@ export class Lexer {
       if (this.peek() === ':') {
         this.advance();
         this.addToken(TokenType.DOUBLE_COLON, '::', startColumn);
+      } else if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.WALRUS, ':=', startColumn);
       } else {
         this.addToken(TokenType.COLON, ':', startColumn);
       }
@@ -232,9 +235,25 @@ export class Lexer {
         }
         return;
       }
+      if (this.peek() === '*') {
+        // Block comment
+        this.advance();
+        while (!this.isAtEnd() && !(this.peek() === '*' && this.peekNext() === '/')) {
+          if (this.peek() === '\n') { this.line++; this.column = 0; }
+          this.advance();
+        }
+        if (!this.isAtEnd()) { this.advance(); this.advance(); }
+        return;
+      }
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '/=', startColumn);
+        return;
+      }
       this.addToken(TokenType.SLASH, char, startColumn);
       return;
     }
+
 
     if (char === '#') {
       // Python-style comment - skip to end of line
