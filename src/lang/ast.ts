@@ -31,7 +31,29 @@ export type ASTNode =
   | NewExpr
   | BlockStatement
   | ExpressionStatement
-  | Program;
+  | Program
+  // --- Python-parity nodes ---
+  | FStringExpr
+  | BytesLiteral
+  | EllipsisLiteral
+  | TupleLiteral
+  | SetLiteral
+  | SliceExpr
+  | StarExpr
+  | KeywordArg
+  | WalrusExpr
+  | ComprehensionExpr
+  | EmitExpr
+  | WithStatement
+  | MatchStatement
+  | RaiseStatement
+  | AssertStatement
+  | DelStatement
+  | ScopeStatement
+  | PassStatement
+  | ImportStatement
+  | AugAssignStatement
+  | PatternNode;
 
 export interface NumberLiteral {
   type: 'NumberLiteral';
@@ -258,3 +280,199 @@ export interface Program {
 }
 
 export type ExpressionNode = Exclude<ASTNode, Program>;
+
+
+// ============================================================
+// Python-parity AST nodes
+// ============================================================
+
+/** A single parameter in a function / lambda / method signature. */
+export interface Param {
+  name: string;
+  /** 'normal' | 'rest' (*args) | 'named' (**kwargs) | 'kwonly' | 'posonly' */
+  kind: 'normal' | 'rest' | 'named' | 'kwonly' | 'posonly';
+  default?: ASTNode;
+  annotation?: ASTNode;
+}
+
+export interface FStringExpr {
+  type: 'FStringExpr';
+  /** Alternating literal chunks and embedded expressions. */
+  parts: { kind: 'text'; value: string }[] | FStringPart[];
+  line: number;
+}
+
+export type FStringPart =
+  | { kind: 'text'; value: string }
+  | { kind: 'expr'; expr: ASTNode; spec?: string; conv?: string; debug?: string };
+
+export interface BytesLiteral {
+  type: 'BytesLiteral';
+  value: string;
+  line: number;
+}
+
+export interface EllipsisLiteral {
+  type: 'EllipsisLiteral';
+  line: number;
+}
+
+export interface TupleLiteral {
+  type: 'TupleLiteral';
+  elements: ASTNode[];
+  line: number;
+}
+
+export interface SetLiteral {
+  type: 'SetLiteral';
+  elements: ASTNode[];
+  frozen?: boolean;
+  line: number;
+}
+
+export interface SliceExpr {
+  type: 'SliceExpr';
+  object: ASTNode;
+  start?: ASTNode;
+  stop?: ASTNode;
+  step?: ASTNode;
+  line: number;
+}
+
+export interface StarExpr {
+  type: 'StarExpr';
+  operand: ASTNode;
+  double: boolean;
+  line: number;
+}
+
+export interface KeywordArg {
+  type: 'KeywordArg';
+  name: string;
+  value: ASTNode;
+  line: number;
+}
+
+export interface WalrusExpr {
+  type: 'WalrusExpr';
+  name: string;
+  value: ASTNode;
+  line: number;
+}
+
+export interface ComprehensionClause {
+  variable: string | string[];
+  iterable: ASTNode;
+  conditions: ASTNode[];
+  isAsync?: boolean;
+}
+
+export interface ComprehensionExpr {
+  type: 'ComprehensionExpr';
+  form: 'list' | 'set' | 'dict' | 'gen';
+  element: ASTNode;
+  valueExpr?: ASTNode; // dict comprehension value
+  clauses: ComprehensionClause[];
+  line: number;
+}
+
+export interface EmitExpr {
+  type: 'EmitExpr';
+  value?: ASTNode;
+  delegate: boolean;
+  line: number;
+}
+
+export interface WithItem {
+  expr: ASTNode;
+  alias?: string;
+}
+
+export interface WithStatement {
+  type: 'WithStatement';
+  items: WithItem[];
+  body: BlockStatement;
+  isAsync?: boolean;
+  line: number;
+}
+
+export type PatternNode =
+  | { type: 'PatWildcard'; line: number }
+  | { type: 'PatCapture'; name: string; pattern?: PatternNode; line: number }
+  | { type: 'PatLiteral'; value: ASTNode; line: number }
+  | { type: 'PatValue'; expr: ASTNode; line: number }
+  | { type: 'PatSequence'; elements: PatternNode[]; restIndex?: number; restName?: string; line: number }
+  | { type: 'PatMapping'; entries: { key: ASTNode; pattern: PatternNode }[]; restName?: string; line: number }
+  | { type: 'PatClass'; className: string; positional: PatternNode[]; keywords: { name: string; pattern: PatternNode }[]; line: number }
+  | { type: 'PatOr'; options: PatternNode[]; line: number };
+
+export interface MatchCase {
+  pattern: PatternNode;
+  guard?: ASTNode;
+  body: BlockStatement;
+}
+
+export interface MatchStatement {
+  type: 'MatchStatement';
+  subject: ASTNode;
+  cases: MatchCase[];
+  line: number;
+}
+
+export interface RaiseStatement {
+  type: 'RaiseStatement';
+  error?: ASTNode;
+  cause?: ASTNode;
+  line: number;
+}
+
+export interface AssertStatement {
+  type: 'AssertStatement';
+  condition: ASTNode;
+  message?: ASTNode;
+  line: number;
+}
+
+export interface DelStatement {
+  type: 'DelStatement';
+  targets: ASTNode[];
+  line: number;
+}
+
+export interface ScopeStatement {
+  type: 'ScopeStatement';
+  scope: 'global' | 'nonlocal';
+  names: string[];
+  line: number;
+}
+
+export interface PassStatement {
+  type: 'PassStatement';
+  line: number;
+}
+
+export interface ImportStatement {
+  type: 'ImportStatement';
+  module: string;
+  alias?: string;
+  /** `from mod import a as b, c` */
+  names?: { name: string; alias?: string }[];
+  isFrom: boolean;
+  line: number;
+}
+
+export interface AugAssignStatement {
+  type: 'AugAssignStatement';
+  target: ASTNode;
+  operator: string;
+  value: ASTNode;
+  line: number;
+}
+
+export interface ExceptHandler {
+  types: ASTNode[];
+  alias?: string;
+  body: BlockStatement;
+  /** except* group handler */
+  star?: boolean;
+}
