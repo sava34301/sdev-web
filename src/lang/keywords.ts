@@ -28,7 +28,7 @@ export interface KeywordSpec {
 export const KEYWORD_SPECS: KeywordSpec[] = [
   // ---- declarations -------------------------------------------------
   { token: 'FORGE', mystic: 'forge', plain: 'let', aliases: ['var'], about: 'variable declaration' },
-  { token: 'CONJURE', mystic: 'conjure', plain: 'fn', aliases: ['def'], about: 'function declaration' },
+  { token: 'CONJURE', mystic: 'conjure', plain: 'func', aliases: ['def'], about: 'function declaration' },
   { token: 'ESSENCE_KW', mystic: 'essence', plain: 'kind', aliases: ['class'], about: 'class declaration' },
   { token: 'EXTEND', mystic: 'extend', plain: 'extends', about: 'inheritance' },
   { token: 'BE', mystic: 'be', plain: 'be', about: 'assignment' },
@@ -59,7 +59,7 @@ export const KEYWORD_SPECS: KeywordSpec[] = [
 
   // ---- context managers / scope -------------------------------------
   { token: 'WITH', mystic: 'weave', plain: 'with', about: 'context manager block' },
-  { token: 'AS', mystic: 'bind', plain: 'as', about: 'binding name (with / import / except)' },
+  { token: 'AS', mystic: 'alias', plain: 'as', about: 'binding name (with / import / except)' },
   { token: 'GLOBAL', mystic: 'worldly', plain: 'global', about: 'global scope declaration' },
   { token: 'NONLOCAL', mystic: 'outer', plain: 'nonlocal', about: 'enclosing scope declaration' },
   { token: 'DEL', mystic: 'banish', plain: 'del', about: 'delete a binding, item or attribute' },
@@ -84,7 +84,7 @@ export const KEYWORD_SPECS: KeywordSpec[] = [
   // ---- literals -----------------------------------------------------
   { token: 'YEP', mystic: 'yep', plain: 'true', about: 'boolean true' },
   { token: 'NOPE', mystic: 'nope', plain: 'false', about: 'boolean false' },
-  { token: 'VOID', mystic: 'void', plain: 'none', aliases: ['null', 'nothing'], about: 'the empty value' },
+  { token: 'VOID', mystic: 'void', plain: 'none', aliases: ['null'], about: 'the empty value' },
 
   // ---- operators ----------------------------------------------------
   { token: 'ALSO', mystic: 'also', plain: 'and', about: 'logical and' },
