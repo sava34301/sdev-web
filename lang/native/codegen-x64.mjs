@@ -13,9 +13,10 @@
 // cleans up. Return value in %rax. All values are 64-bit signed integers.
 // Local slot N lives at -8*(N+1)(%rbp). We reserve up to 16 locals per fn.
 
-import { parse } from '../bootstrap/compile.mjs';
+import { parseWithKinds } from '../bootstrap/compile.mjs';
 
 const LOCAL_SLOTS = 32;
+
 
 // ---------------------------------------------------------------------------
 // Milestone 6c — static value kinds.
