@@ -16,6 +16,7 @@ sdev features a radically unique syntax (keywords like `forge`, `be`, `conjure`)
 
 - [Ultimate Documentation](/SDEV_ULTIMATE_DOCUMENTATION.md): Everything about sdev in one file — language, runtimes, compiler, VM, native backend, stdlib, ML stack, hardware, GIS, and generated reference tables.
 - [Language Reference](/SDEV_DOCUMENTATION.md): Full syntax, keywords, OOP, concurrency, and standard library reference.
+- [Python Parity Reference](/SDEV_PYTHON_PARITY_DOCUMENTATION.md): Every Python feature and its sdev equivalent, with side-by-side examples and per-track status.
 - [Leaflet & GIS Reference](/SDEV_LEAFLET_DOCUMENTATION.md): Mapping, geospatial, and Leaflet interop documentation.
 - [The sdev Book (EN)](/sdev-book-en.md): Long-form tutorial and language guide in English.
 - [Книгата за sdev (BG)](/sdev-book-bg.md): Long-form tutorial and language guide in Bulgarian.
