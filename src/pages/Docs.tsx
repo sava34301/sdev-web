@@ -26,6 +26,7 @@ const SOURCES: DocSource[] = [
   { id: 'hardware',    title: 'Hardware & Boards',           url: '/SDEV_HARDWARE_DOCUMENTATION.md', icon: ScrollText },
   { id: 'internals',   title: 'Compiler & VM Internals',     url: '/SDEV_INTERNALS.md',          icon: Library },
   { id: 'parity',      title: 'Track Parity Matrix',         url: '/SDEV_PARITY_DOCUMENTATION.md', icon: Library },
+  { id: 'python',      title: 'Python Parity Reference',     url: '/SDEV_PYTHON_PARITY_DOCUMENTATION.md', icon: Library },
 
   { id: 'ml',          title: 'ML & LLM Stdlib',             url: '/SDEV_ML_DOCUMENTATION.md',   icon: Library },
   { id: 'ffi',         title: 'FFI & Native Acceleration',   url: '/SDEV_FFI_DOCUMENTATION.md',  icon: Library },
