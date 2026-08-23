@@ -57,7 +57,8 @@ export class Lexer {
       ')': TokenType.RPAREN,
       '[': TokenType.LBRACKET,
       ']': TokenType.RBRACKET,
-      ')': TokenType.RPAREN,
+      ':': TokenType.COLON,
+
       ',': TokenType.COMMA,
       '~': TokenType.TILDE,
       '&': TokenType.AMP,
