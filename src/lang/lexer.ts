@@ -57,20 +57,122 @@ export class Lexer {
       ')': TokenType.RPAREN,
       '[': TokenType.LBRACKET,
       ']': TokenType.RBRACKET,
-      '{': TokenType.LBRACE,
-      '}': TokenType.RBRACE,
+      ')': TokenType.RPAREN,
       ',': TokenType.COMMA,
-
-      '.': TokenType.DOT,
-      '+': TokenType.PLUS,
-      '*': TokenType.STAR,
-      '%': TokenType.PERCENT,
-      '^': TokenType.CARET,
       '~': TokenType.TILDE,
+      '&': TokenType.AMP,
     };
 
     if (singleTokens[char]) {
       this.addToken(singleTokens[char], char, startColumn);
+      return;
+    }
+
+    // '{' may open a dict literal or a set literal '{|'
+    if (char === '{') {
+      if (this.peek() === '|') {
+        this.advance();
+        this.addToken(TokenType.LSET, '{|', startColumn);
+      } else {
+        this.addToken(TokenType.LBRACE, '{', startColumn);
+      }
+      return;
+    }
+    if (char === '}') {
+      this.addToken(TokenType.RBRACE, '}', startColumn);
+      return;
+    }
+
+    // '.' or '...'
+    if (char === '.') {
+      if (this.peek() === '.' && this.peekNext() === '.') {
+        this.advance();
+        this.advance();
+        this.addToken(TokenType.ELLIPSIS, '...', startColumn);
+      } else {
+        this.addToken(TokenType.DOT, '.', startColumn);
+      }
+      return;
+    }
+
+    // Augmentable arithmetic operators
+    if (char === '+' || char === '%' || char === '^') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, char + '=', startColumn);
+      } else {
+        const map: Record<string, TokenType> = {
+          '+': TokenType.PLUS,
+          '%': TokenType.PERCENT,
+          '^': TokenType.CARET,
+        };
+        this.addToken(map[char], char, startColumn);
+      }
+      return;
+    }
+
+    if (char === '*') {
+      if (this.peek() === '*') {
+        this.advance();
+        if (this.peek() === '=') {
+          this.advance();
+          this.addToken(TokenType.AUGASSIGN, '**=', startColumn);
+        } else {
+          this.addToken(TokenType.STARSTAR, '**', startColumn);
+        }
+      } else if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '*=', startColumn);
+      } else {
+        this.addToken(TokenType.STAR, '*', startColumn);
+      }
+      return;
+    }
+
+    // '\' floor division (and '\=')
+    if (char === '\\') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '\\=', startColumn);
+      } else {
+        this.addToken(TokenType.BACKSLASH, '\\', startColumn);
+      }
+      return;
+    }
+
+    // '@' decorator (statement position) / matrix multiply (expression)
+    if (char === '@') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '@=', startColumn);
+      } else {
+        this.addToken(TokenType.AT, '@', startColumn);
+      }
+      return;
+    }
+
+    // '=' assignment alias, '==' equality, '=>' match arrow
+    if (char === '=') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.EQUALS, '==', startColumn);
+      } else if (this.peek() === '>') {
+        this.advance();
+        this.addToken(TokenType.FATARROW, '=>', startColumn);
+      } else {
+        this.addToken(TokenType.BE, '=', startColumn);
+      }
+      return;
+    }
+
+    // '!' logical not, '!=' inequality
+    if (char === '!') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.DIFFERS, '!=', startColumn);
+      } else {
+        this.addToken(TokenType.ISNT, '!', startColumn);
+      }
       return;
     }
 
@@ -79,6 +181,9 @@ export class Lexer {
       if (this.peek() === '>') {
         this.advance();
         this.addToken(TokenType.ARROW, '->', startColumn);
+      } else if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '-=', startColumn);
       } else {
         this.addToken(TokenType.MINUS, char, startColumn);
       }
@@ -89,11 +194,15 @@ export class Lexer {
       if (this.peek() === '>') {
         this.advance();
         this.addToken(TokenType.PIPE, '|>', startColumn);
+      } else if (this.peek() === '}') {
+        this.advance();
+        this.addToken(TokenType.RSET, '|}', startColumn);
       } else {
-        throw new SdevError(`Unexpected character: '${char}'`, this.line, startColumn);
+        this.addToken(TokenType.BAR, '|', startColumn);
       }
       return;
     }
+
 
     if (char === ':') {
       if (this.peek() === ':') {
