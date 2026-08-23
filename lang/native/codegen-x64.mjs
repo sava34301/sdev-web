@@ -955,6 +955,40 @@ export function generateAsm(source) {
   em.L('    popq %rbp');
   em.L('    ret');
 
+  // Milestone 6f — closure bodies. Params arrive on the stack like any other
+  // function; captures are copied out of the closure pointer in %r10, which
+  // the call site loaded just before `call *code`.
+  for (let li = 0; li < em.lambdas.length; li++) {
+    const lam = em.lambdas[li];
+    em.L(`${lam.label}:`);
+    em.L('    pushq %rbp');
+    em.L('    movq %rsp, %rbp');
+    em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
+    const locals = new Map();
+    lam.params.forEach((p, i) => locals.set(p, i));
+    lam.caps.forEach((c) => { if (!locals.has(c)) locals.set(c, locals.size); });
+    collectSets(lam.body, locals);
+    lam.params.forEach((_p, i) => {
+      em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
+      em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
+    });
+    lam.caps.forEach((c, i) => {
+      em.L(`    movq ${16 + 8 * i}(%r10), %rax`);
+      em.L(`    movq %rax, -${8 * (locals.get(c) + 1)}(%rbp)`);
+    });
+    const epilogue = em.gensym('lamret');
+    const ltys = new Map(lam.tys);
+    const ctx = { epilogue, tys: ltys, fnTypes: em.fnTypes };
+    lam.body.forEach(s => emitStmt(s, em, locals, ctx));
+    em.L('    xorq %rax, %rax');
+    em.L(`${epilogue}:`);
+    em.L('    movq %rbp, %rsp');
+    em.L('    popq %rbp');
+    em.L('    ret');
+  }
+
+
+
   // .rodata for string literals
   em.L('    .section .rodata');
   for (const [lit, lbl] of em.strings) {
