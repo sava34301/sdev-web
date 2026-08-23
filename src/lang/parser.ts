@@ -1528,7 +1528,7 @@ export class Parser {
   }
 
   private lexTemplate(source: string, line: number): Token[] {
-    const tokens = new Lexer(source, { translate: false }).tokenize();
+    const tokens = new Lexer(source, { sourceLanguage: null }).tokenize();
     return tokens.map((t) => ({ ...t, line }));
   }
 
