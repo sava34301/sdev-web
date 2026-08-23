@@ -740,7 +740,11 @@ function emitStmt(s, em, locals, ctx) {
         expr: { k: 'index', target: { k: 'ident', name: seqName }, idx: { k: 'ident', name: idxName } },
       }, em, locals, ctx);
       if (iterTy === 'tome') tys.set(s.name, 'str');
+      const cont = em.gensym('fecont');
+      (ctx.loops ||= []).push({ brk: end, cont });
       s.body.forEach(x => emitStmt(x, em, locals, ctx));
+      ctx.loops.pop();
+      em.L(`${cont}:`);
       emitStmt({
         k: 'set',
         name: idxName,
@@ -750,6 +754,7 @@ function emitStmt(s, em, locals, ctx) {
       em.L(`${end}:`);
       return;
     }
+
     case 'set': {
       tys.set(s.name, typeOf(s.expr, tys, fnTypes));
       if (typeOf(s.expr, tys, fnTypes) === 'list') {
