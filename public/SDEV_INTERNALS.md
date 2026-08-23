@@ -828,6 +828,37 @@ in milestone order.)
 - Parity registry: fourteen former native `n/a` entries became `should` and
   are satisfied — **must gaps 0, should gaps 0 across all three tracks.**
 
+**Milestone 6f (native closures, objects, errors, break/continue) — shipped:**
+- **Codegen** now parses through `parseWithKinds()` (exported from
+  `lang/bootstrap/compile.mjs`), so the x86-64 backend sees the same
+  desugared kind/method registry as the WASM track.
+- **Function values.** `ref f` allocates a 16-byte block
+  `[code-ptr][ncaps]`; `make with p… capture c… end` allocates
+  `[code-ptr][ncaps][cap₀…]` and stores each captured value from the
+  enclosing frame. `call f(args)` pushes arguments right→left, loads the
+  closure pointer into `%r10`, and does `call *(%r10)`; the callee copies
+  params from `16(%rbp)…` and captures from `16(%r10)…` into local slots.
+  Lambda bodies are emitted after `sdev_main` from a pending queue, so
+  nested lambdas are handled by index growth during the emit loop.
+- **Objects.** `new K` builds a tome and binds each method as a closure;
+  `o.field` and `o.field to v` compile to `sdev_tget`/`sdev_tset`, and
+  `o.m(...)` loads the method closure and binds the receiver in `%r10`.
+  Inheritance and `super` come for free from the shared desugaring.
+- **Errors.** `runtime.s` gained a 64-deep handler stack of
+  `(handler, %rsp, %rbp)` triples with `sdev_try_push`, `sdev_try_pop` and
+  `sdev_throw`; a throw restores the saved stack registers and jumps to the
+  handler with the message pointer in `%rax`. Uncaught throws print
+  `uncaught: <msg>` and exit 1.
+- **Control flow.** `break`/`continue` use a loop-label stack in the emit
+  context; `continue` in `for each` targets the index increment.
+- **Return-kind tracking** for function values: `@fnval:<var>` records what
+  a `ref`/lambda bound to a variable returns, so `say call f(x)` selects
+  `sdev_say_str` vs `sdev_say_int` correctly.
+- Tests: 62/62 in `scripts/test-native.mjs`; 87/87 fixed-point cases still
+  byte-identical.
+
+
+
 **Milestone 5z (modules — `use "path"`) — shipped:**
 - **No VM change.** Modules are a source→source prelink pass that runs
   before lexing, so the seed VM is untouched since 5x.
