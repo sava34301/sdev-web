@@ -33,8 +33,21 @@ function splitKwargs(args: unknown[]): { pos: unknown[]; kw: Record<string, unkn
   return { pos: args, kw: {} };
 }
 
+/**
+ * Hook installed by the interpreter so user objects implementing
+ * `on_repr` / `__repr__` control their own repr form.
+ */
+let objectReprHook: ((value: unknown) => string | undefined) | null = null;
+export function setObjectReprHook(hook: ((value: unknown) => string | undefined) | null): void {
+  objectReprHook = hook;
+}
+
 /** Python's `repr()`. */
 export function repr(value: unknown): string {
+  if (value && typeof value === 'object' && objectReprHook) {
+    const custom = objectReprHook(value);
+    if (custom !== undefined) return custom;
+  }
   if (value === null || value === undefined) return 'void';
   if (typeof value === 'string') return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   if (typeof value === 'boolean') return value ? 'yep' : 'nope';

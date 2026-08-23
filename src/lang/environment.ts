@@ -12,6 +12,10 @@ export class Environment {
     this.values.set(name, value);
   }
 
+  hasOwn(name: string): boolean {
+    return this.values.has(name);
+  }
+
   get(name: string, line: number): unknown {
     if (this.values.has(name)) {
       return this.values.get(name);

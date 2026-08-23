@@ -1,13 +1,13 @@
 import * as AST from './ast';
 import { Environment } from './environment';
 import { SdevError, ReturnException } from './errors';
-import { createBuiltins, SdevFunction, isTruthy, stringify, OutputCallback } from './builtins';
+import { createBuiltins, SdevFunction, isTruthy, stringify, OutputCallback, setObjectTextHook } from './builtins';
 import { createAdvancedBuiltins } from './advanced';
 import { createMatrixBuiltins } from './matrix';
-import { createParityBuiltins, formatValue } from './pyparity';
+import { createParityBuiltins, formatValue, setObjectReprHook } from './pyparity';
 import {
   SdevRaise, SdevSet, keyOf, makeTuple, isTuple, makeGenerator, isGenerator,
-  isFunction, SdevGenerator, PROTOCOL_SLOTS, REFLECTED_SLOTS,
+  isFunction, SdevGenerator, PROTOCOL_SLOTS, REFLECTED_SLOTS, dunderAlias,
 } from './runtime-values';
 
 // Special signals for break/continue
@@ -77,7 +77,15 @@ export class Interpreter {
       truthy: (v) => this.truthy(v),
       equal: (a, b) => this.isEqual(a, b),
     });
-    parity.forEach((fn, name) => this.globalEnv.define(name, fn));
+    // Backward compatibility: existing v1 builtins win. Where a name already
+    // exists, the Python-parity variant stays reachable as `py_<name>`.
+    parity.forEach((fn, name) => {
+      if (this.globalEnv.hasOwn(name)) {
+        this.globalEnv.define(`py_${name}`, fn);
+      } else {
+        this.globalEnv.define(name, fn);
+      }
+    });
 
     this.globalEnv.define('PI', Math.PI);
     this.globalEnv.define('TAU', Math.PI * 2);
@@ -85,6 +93,17 @@ export class Interpreter {
     this.globalEnv.define('INFINITY', Infinity);
     this.globalEnv.define('NAN', NaN);
     this.globalEnv.define('Ellipsis', '...');
+
+    // Objects with `on_text` / `__str__` (and `on_repr` / `__repr__`)
+    // render through their own protocol methods everywhere.
+    setObjectTextHook((value) => {
+      const m = this.protocolMethod(value, 'on_text');
+      return m ? stringify(m.call([], 0)) : undefined;
+    });
+    setObjectReprHook((value) => {
+      const m = this.protocolMethod(value, 'on_repr') ?? this.protocolMethod(value, 'on_text');
+      return m ? stringify(m.call([], 0)) : undefined;
+    });
   }
 
   getGlobalEnv(): Environment {
@@ -546,9 +565,15 @@ export class Interpreter {
   getMember(obj: unknown, property: string, line: number): unknown {
     if (typeof obj === 'string') {
       if (property === 'length') return obj.length;
+      const bound = this.boundBuiltin(obj, property);
+      if (bound) return bound;
     }
     if (Array.isArray(obj) && property === 'length') return obj.length;
     if (obj instanceof SdevSet && property === 'length') return obj.size;
+    if (Array.isArray(obj) || obj instanceof SdevSet) {
+      const bound = this.boundBuiltin(obj, property);
+      if (bound) return bound;
+    }
     if (obj && typeof obj === 'object') {
       const klass = (obj as { __class__?: SdevClass }).__class__;
       if (klass) {
@@ -559,9 +584,36 @@ export class Interpreter {
       if (val !== undefined) return val;
       const getattr = this.protocolMethod(obj, 'on_getattr');
       if (getattr) return getattr.call([property], line);
+      if (!klass) {
+        // Python method syntax on plain values: `d.items()`, `s.upper()`,
+        // `xs.append(v)` — bind the receiver to the same-named builtin.
+        const bound = this.boundBuiltin(obj, property);
+        if (bound) return bound;
+      }
       return null;
     }
+    if (typeof obj === 'number') {
+      const bound = this.boundBuiltin(obj, property);
+      if (bound) return bound;
+    }
     throw new SdevError(`Cannot access property '${property}' on this type`, line);
+  }
+
+  /**
+   * Method-call sugar: `value.name(args)` resolves to the global builtin
+   * `name(value, args)` when no attribute of that name exists.
+   */
+  private boundBuiltin(receiver: unknown, name: string): SdevFunction | undefined {
+    if (!this.globalEnv.hasOwn(name) && !this.globalEnv.hasOwn(`py_${name}`)) return undefined;
+    const candidate = this.globalEnv.hasOwn(`py_${name}`)
+      ? this.globalEnv.get(`py_${name}`, 0)
+      : this.globalEnv.get(name, 0);
+    if (!isFunction(candidate)) return undefined;
+    const target = candidate as SdevFunction;
+    return {
+      type: 'builtin',
+      call: (args: unknown[], line: number) => target.call([receiver, ...args], line),
+    } as SdevFunction;
   }
 
   // ----------------------------------------------------------
@@ -654,7 +706,17 @@ export class Interpreter {
     const value = yield* this.ev(node.value, env);
     if (node.targets && node.targets.length > 1) {
       const items = [...this.iterableOf(value, node.line)];
-      node.targets.forEach((name, i) => env.define(name, items[i] === undefined ? null : items[i]));
+      const star = node.starIndex;
+      if (star === undefined) {
+        node.targets.forEach((name, i) => env.define(name, items[i] === undefined ? null : items[i]));
+      } else {
+        const after = node.targets.length - star - 1;
+        node.targets.forEach((name, i) => {
+          if (i < star) env.define(name, items[i] === undefined ? null : items[i]);
+          else if (i === star) env.define(name, items.slice(star, items.length - after));
+          else env.define(name, items[items.length - (node.targets!.length - i)] ?? null);
+        });
+      }
       return value;
     }
     env.define(node.name, value);
@@ -1187,6 +1249,10 @@ export class Interpreter {
         fn = this.callValue(decorator, [fn], method.line);
       }
       klass.methods.set(method.name, fn as SdevFunction);
+      // Python dunder spellings alias onto sdev's `on_*` protocol slots
+      // (and vice-versa), so both styles dispatch identically.
+      const alias = dunderAlias(method.name);
+      if (alias && !klass.methods.has(alias)) klass.methods.set(alias, fn as SdevFunction);
     }
 
     // `essence` is also a value, so metaclasses / decorators can transform it

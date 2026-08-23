@@ -170,3 +170,87 @@ export const REFLECTED_SLOTS: Record<string, string> = {
   '%': 'on_rmod',
   '^': 'on_rpow',
 };
+
+// ============================================================
+// Python dunder <-> sdev protocol slot aliasing
+// ------------------------------------------------------------
+// A class may spell a protocol method either way; both names are
+// registered on the class so dispatch is identical.
+// ============================================================
+export const DUNDER_TO_SLOT: Record<string, string> = {
+  __init__: 'on_init',
+  __new__: 'on_new',
+  __del__: 'on_del',
+  __str__: 'on_text',
+  __repr__: 'on_repr',
+  __format__: 'on_format',
+  __bool__: 'on_truth',
+  __hash__: 'on_hash',
+  __len__: 'on_len',
+  __iter__: 'on_iter',
+  __next__: 'on_next',
+  __call__: 'on_call',
+  __getitem__: 'on_get',
+  __setitem__: 'on_set',
+  __delitem__: 'on_delitem',
+  __getattr__: 'on_getattr',
+  __setattr__: 'on_setattr',
+  __delattr__: 'on_delattr',
+  __contains__: 'on_contains',
+  __enter__: 'on_enter',
+  __exit__: 'on_exit',
+  __aenter__: 'on_aenter',
+  __aexit__: 'on_aexit',
+  __aiter__: 'on_aiter',
+  __anext__: 'on_anext',
+  __await__: 'on_await',
+  __add__: 'on_add',
+  __sub__: 'on_sub',
+  __mul__: 'on_mul',
+  __truediv__: 'on_div',
+  __div__: 'on_div',
+  __floordiv__: 'on_floordiv',
+  __mod__: 'on_mod',
+  __pow__: 'on_pow',
+  __matmul__: 'on_matmul',
+  __and__: 'on_bitand',
+  __or__: 'on_bitor',
+  __xor__: 'on_bitxor',
+  __invert__: 'on_invert',
+  __lshift__: 'on_shl',
+  __rshift__: 'on_shr',
+  __radd__: 'on_radd',
+  __rsub__: 'on_rsub',
+  __rmul__: 'on_rmul',
+  __rtruediv__: 'on_rdiv',
+  __rmod__: 'on_rmod',
+  __rpow__: 'on_rpow',
+  __neg__: 'on_neg',
+  __pos__: 'on_pos',
+  __abs__: 'on_abs',
+  __eq__: 'on_eq',
+  __ne__: 'on_ne',
+  __lt__: 'on_lt',
+  __le__: 'on_le',
+  __gt__: 'on_gt',
+  __ge__: 'on_ge',
+  __index__: 'on_index',
+  __int__: 'on_int',
+  __float__: 'on_float',
+  __round__: 'on_round',
+  __copy__: 'on_copy',
+  __reversed__: 'on_reversed',
+};
+
+export const SLOT_TO_DUNDER: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  for (const [dunder, slot] of Object.entries(DUNDER_TO_SLOT)) {
+    if (!(slot in map)) map[slot] = dunder;
+  }
+  return map;
+})();
+
+/** Given either spelling of a protocol method, return the other one. */
+export function dunderAlias(name: string): string | undefined {
+  return DUNDER_TO_SLOT[name] ?? SLOT_TO_DUNDER[name];
+}

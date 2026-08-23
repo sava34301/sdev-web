@@ -170,6 +170,8 @@ export interface LetStatement {
   name: string;
   /** Destructuring targets: `forge a, b be pair`. */
   targets?: string[];
+  /** Index of a starred target (`forge a, *rest be xs`), if any. */
+  starIndex?: number;
   annotation?: ASTNode;
   value: ASTNode;
   line: number;
