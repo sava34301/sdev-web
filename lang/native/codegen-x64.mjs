@@ -51,7 +51,10 @@ function typeOf(e, tys, fnTypes) {
     case 'tome': return 'tome';
     // Milestone 6f: an object is a tome; a function value is an opaque word.
     case 'new': return 'tome';
-    case 'ref': case 'lambda': case 'callv': return 'int';
+    case 'ref': case 'lambda': return 'int';
+    case 'callv':
+      return (e.target.k === 'ident' && tys.get(`@fnval:${e.target.name}`)) || 'int';
+
     case 'field': return (fnTypes && fnTypes.get(`@field:${e.name}`)) || 'int';
     case 'mcall': return methodRetType(fnTypes, e.m);
     case 'ident': return tys.get(e.name) || 'int';
