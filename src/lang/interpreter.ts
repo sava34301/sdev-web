@@ -587,6 +587,8 @@ export class Interpreter {
       const self = this;
       const iter = (function* (): Generator<unknown, unknown, unknown> {
         yield* self.comprehensionWalk(node, env, 0, (value) => value);
+        return null;
+
       })();
       return makeGenerator(iter as Iterator<unknown, unknown, unknown>);
     }
