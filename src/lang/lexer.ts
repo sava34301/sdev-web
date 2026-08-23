@@ -323,11 +323,28 @@ export class Lexer {
     throw new SdevError(`Unexpected character: '${char}'`, this.line, startColumn);
   }
 
-  private scanString(quote: string, startColumn: number): void {
+  private scanString(quote: string, startColumn: number, prefix: string = ''): void {
+    // Triple quoted strings: """ ... """ / ''' ... '''
+    let triple = false;
+    if (this.peek() === quote && this.peekNext() === quote) {
+      this.advance();
+      this.advance();
+      triple = true;
+    }
+
+    const raw = prefix === 'r';
     let value = '';
-    while (!this.isAtEnd() && this.peek() !== quote) {
+
+    const atTerminator = (): boolean => {
+      if (triple) {
+        return this.peek() === quote && this.peekNext() === quote && this.source[this.pos + 2] === quote;
+      }
+      return this.peek() === quote;
+    };
+
+    while (!this.isAtEnd() && !atTerminator()) {
       if (this.peek() === '\n') {
-        if (quote === '`') {
+        if (quote === '`' || triple) {
           value += this.advance();
           this.line++;
           this.column = 1;
@@ -335,19 +352,41 @@ export class Lexer {
         }
         throw new SdevError('Unterminated string', this.line, startColumn);
       }
-      if (this.peek() === '\\') {
+      if (this.peek() === '\\' && !raw) {
         this.advance();
         const escaped = this.advance();
         const escapes: Record<string, string> = {
           'n': '\n',
           't': '\t',
           'r': '\r',
+          '0': '\0',
+          'a': '\x07',
+          'b': '\b',
+          'f': '\f',
+          'v': '\v',
           '\\': '\\',
           '"': '"',
           "'": "'",
           '`': '`',
         };
+        if (escaped === 'u' && this.peek() === '{') {
+          this.advance();
+          let hex = '';
+          while (!this.isAtEnd() && this.peek() !== '}') hex += this.advance();
+          this.advance();
+          value += String.fromCodePoint(parseInt(hex, 16) || 0);
+          continue;
+        }
+        if (escaped === 'x') {
+          let hex = '';
+          for (let i = 0; i < 2 && this.isHexDigit(this.peek()); i++) hex += this.advance();
+          value += String.fromCharCode(parseInt(hex, 16) || 0);
+          continue;
+        }
         value += escapes[escaped] ?? escaped;
+      } else if (this.peek() === '\\' && raw) {
+        value += this.advance();
+        if (!this.isAtEnd()) value += this.advance();
       } else {
         value += this.advance();
       }
@@ -356,43 +395,59 @@ export class Lexer {
       throw new SdevError('Unterminated string', this.line, startColumn);
     }
     this.advance(); // closing quote
-    this.addToken(TokenType.STRING, value, startColumn);
+    if (triple) {
+      this.advance();
+      this.advance();
+    }
+
+    if (prefix === 'f') {
+      this.addToken(TokenType.FSTRING, value, startColumn);
+    } else if (prefix === 'b') {
+      this.addToken(TokenType.BYTES, value, startColumn);
+    } else {
+      this.addToken(TokenType.STRING, value, startColumn);
+    }
   }
 
   private scanNumber(first: string, startColumn: number): void {
     let value = first;
 
-    // Hex literals: 0x... or 0X...
-    if (first === '0' && (this.peek() === 'x' || this.peek() === 'X')) {
-      value += this.advance(); // x
-      while (this.isHexDigit(this.peek())) {
-        value += this.advance();
+    // Radix literals: 0x / 0b / 0o (underscores allowed as separators)
+    if (first === '0' && /[xXbBoO]/.test(this.peek())) {
+      const marker = this.advance().toLowerCase();
+      let raw = '';
+      while (this.isHexDigit(this.peek()) || this.peek() === '_') {
+        const c = this.advance();
+        if (c !== '_') raw += c;
       }
-      this.addToken(TokenType.NUMBER, String(parseInt(value, 16)), startColumn);
+      const radix = marker === 'x' ? 16 : marker === 'b' ? 2 : 8;
+      this.addToken(TokenType.NUMBER, String(parseInt(raw, radix)), startColumn);
       return;
     }
 
-    while (this.isDigit(this.peek())) {
-      value += this.advance();
-    }
+    const digits = (): void => {
+      while (this.isDigit(this.peek()) || (this.peek() === '_' && this.isDigit(this.peekNext()))) {
+        const c = this.advance();
+        if (c !== '_') value += c;
+      }
+    };
+
+    digits();
     // Handle decimal point
     if (this.peek() === '.' && this.isDigit(this.peekNext())) {
       value += this.advance(); // the dot
-      while (this.isDigit(this.peek())) {
-        value += this.advance();
-      }
+      digits();
     }
     // Handle scientific notation (e.g. 1.5e10)
-    if ((this.peek() === 'e' || this.peek() === 'E') && 
+    if ((this.peek() === 'e' || this.peek() === 'E') &&
         (this.isDigit(this.peekNext()) || this.peekNext() === '+' || this.peekNext() === '-')) {
       value += this.advance(); // e
       if (this.peek() === '+' || this.peek() === '-') {
         value += this.advance();
       }
-      while (this.isDigit(this.peek())) {
-        value += this.advance();
-      }
+      digits();
     }
+
     this.addToken(TokenType.NUMBER, value, startColumn);
   }
 
