@@ -798,9 +798,63 @@ function emitStmt(s, em, locals, ctx) {
       emitExpr(s.cond, em, locals, tys, fnTypes);
       em.L('    testq %rax, %rax');
       em.L(`    jz ${end}`);
+      (ctx.loops ||= []).push({ brk: end, cont: top });
       s.body.forEach(x => emitStmt(x, em, locals, ctx));
+      ctx.loops.pop();
       em.L(`    jmp ${top}`);
       em.L(`${end}:`);
+      return;
+    }
+    // ---- Milestone 6f ----
+    case 'break':
+    case 'continue': {
+      const loop = (ctx.loops || [])[(ctx.loops || []).length - 1];
+      if (!loop) throw new Error(`native: ${s.k} outside of a loop`);
+      em.L(`    jmp ${s.k === 'break' ? loop.brk : loop.cont}`);
+      return;
+    }
+    case 'setField': {
+      const ft = typeOf(s.expr, tys, fnTypes);
+      if (ft !== 'int') fnTypes.set(`@field:${s.field}`, ft);
+      emitExpr({ k: 'ident', name: s.name }, em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(s.expr, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdx');
+      em.L(`    leaq ${em.strLabel(s.field)}(%rip), %rsi`);
+      em.L('    popq %rdi');
+      em.L('    call sdev_tset');
+      return;
+    }
+    // `attempt … rescue err … end` — the handler stack lives in the runtime;
+    // a throw restores the saved %rsp/%rbp and jumps straight to the handler
+    // with the message in %rax.
+    case 'attempt': {
+      const handler = em.gensym('rescue');
+      const over = em.gensym('endtry');
+      em.L(`    leaq ${handler}(%rip), %rdi`);
+      em.L('    movq %rsp, %rsi');
+      em.L('    movq %rbp, %rdx');
+      em.L('    call sdev_try_push');
+      s.body.forEach(x => emitStmt(x, em, locals, ctx));
+      em.L('    call sdev_try_pop');
+      em.L(`    jmp ${over}`);
+      em.L(`${handler}:`);
+      if (s.errName) {
+        tys.set(s.errName, 'str');
+        if (locals && locals.has(s.errName)) {
+          em.L(`    movq %rax, -${8 * (locals.get(s.errName) + 1)}(%rbp)`);
+        } else {
+          em.L(`    movq %rax, ${em.globalLabel(s.errName)}(%rip)`);
+        }
+      }
+      s.rescue_.forEach(x => emitStmt(x, em, locals, ctx));
+      em.L(`${over}:`);
+      return;
+    }
+    case 'throw': {
+      emitStrExpr(s.expr, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_throw');
       return;
     }
     case 'return': {
@@ -821,6 +875,11 @@ function collectSets(body, locals) {
     if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
+    if (s.k === 'attempt') {
+      collectSets(s.body, locals);
+      if (s.errName && !locals.has(s.errName)) locals.set(s.errName, locals.size);
+      collectSets(s.rescue_, locals);
+    }
     if (s.k === 'foreach') {
       for (const nm of [s.name, `@fe_i${s.d}`, `@fe_s${s.d}`]) {
         if (!locals.has(nm)) locals.set(nm, locals.size);
@@ -828,6 +887,7 @@ function collectSets(body, locals) {
       collectSets(s.body, locals);
     }
   }
+
 }
 
 export function generateAsm(source) {
