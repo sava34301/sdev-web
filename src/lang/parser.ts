@@ -1,4 +1,5 @@
 import { Token, TokenType } from './tokens';
+import { Lexer } from './lexer';
 import * as AST from './ast';
 import { SdevError } from './errors';
 
@@ -1527,9 +1528,6 @@ export class Parser {
   }
 
   private lexTemplate(source: string, line: number): Token[] {
-    // Lazily imported to avoid a cyclic module dependency at load time.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Lexer } = require('./lexer') as typeof import('./lexer');
     const tokens = new Lexer(source, { translate: false }).tokenize();
     return tokens.map((t) => ({ ...t, line }));
   }
