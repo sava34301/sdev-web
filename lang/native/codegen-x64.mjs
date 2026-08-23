@@ -395,9 +395,101 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       if (e.args.length > 0) em.L(`    addq $${e.args.length * 8}, %rsp`);
       return;
     }
+    // ---- Milestone 6f: first-class functions, closures, objects ----
+    //
+    // A function value is a heap closure: [i64 code ptr][i64 ncaps][caps...].
+    // Calls through a value put the closure pointer in %r10; a lambda body
+    // copies its captures out of %r10 in its prologue, so the argument
+    // convention (args pushed right-to-left) is unchanged.
+    case 'ref': {
+      const info = em.functions.get(e.name);
+      if (!info) throw new Error(`native: unknown function ${e.name}`);
+      em.L('    movq $16, %rdi');
+      em.L('    call sdev_alloc');
+      em.L(`    leaq ${info.label}(%rip), %rcx`);
+      em.L('    movq %rcx, (%rax)');
+      em.L('    movq $0, 8(%rax)');
+      return;
+    }
+    case 'lambda': {
+      const label = `sdev_lam_${em.lambdas.length}`;
+      em.lambdas.push({ label, params: e.params, caps: e.caps, body: e.body, tys: new Map(tys) });
+      em.L(`    movq $${16 + 8 * e.caps.length}, %rdi`);
+      em.L('    call sdev_alloc');
+      em.L(`    leaq ${label}(%rip), %rcx`);
+      em.L('    movq %rcx, (%rax)');
+      em.L(`    movq $${e.caps.length}, 8(%rax)`);
+      em.L('    pushq %rax');
+      e.caps.forEach((c, i) => {
+        emitExpr({ k: 'ident', name: c }, em, locals, tys, fnTypes);
+        em.L('    movq (%rsp), %rcx');
+        em.L(`    movq %rax, ${16 + 8 * i}(%rcx)`);
+      });
+      em.L('    popq %rax');
+      return;
+    }
+    case 'callv': {
+      for (let i = e.args.length - 1; i >= 0; i--) {
+        emitExpr(e.args[i], em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+      }
+      emitExpr(e.target, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %r10');
+      em.L('    movq (%r10), %rax');
+      em.L('    call *%rax');
+      if (e.args.length > 0) em.L(`    addq $${e.args.length * 8}, %rsp`);
+      return;
+    }
+    case 'new': {
+      const ms = em.classes.get(e.cls);
+      if (!ms) throw new Error(`native: unknown kind ${e.cls}`);
+      em.L('    call sdev_tnew');
+      em.L('    pushq %rax');
+      for (const mm of ms) {
+        const info = em.functions.get(mm.fn);
+        if (!info) throw new Error(`native: kind ${e.cls} missing method ${mm.key}`);
+        em.L('    movq $16, %rdi');
+        em.L('    call sdev_alloc');
+        em.L(`    leaq ${info.label}(%rip), %rcx`);
+        em.L('    movq %rcx, (%rax)');
+        em.L('    movq $0, 8(%rax)');
+        em.L('    movq %rax, %rdx');
+        em.L(`    leaq ${em.strLabel(mm.key)}(%rip), %rsi`);
+        em.L('    movq (%rsp), %rdi');
+        em.L('    call sdev_tset');
+      }
+      em.L('    popq %rax');
+      return;
+    }
+    case 'field': {
+      emitExpr(e.target, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    leaq ${em.strLabel(e.name)}(%rip), %rsi`);
+      em.L('    call sdev_tget');
+      return;
+    }
+    case 'mcall': {
+      // Push args right-to-left, then the receiver, so `self` is arg 0.
+      for (let i = e.args.length - 1; i >= 0; i--) {
+        emitExpr(e.args[i], em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+      }
+      emitExpr({ k: 'ident', name: e.recv }, em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr({ k: 'ident', name: e.recv }, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    leaq ${em.strLabel(e.m)}(%rip), %rsi`);
+      em.L('    call sdev_tget');
+      em.L('    movq %rax, %r10');
+      em.L('    movq (%r10), %rax');
+      em.L('    call *%rax');
+      em.L(`    addq $${(e.args.length + 1) * 8}, %rsp`);
+      return;
+    }
   }
   throw new Error(`native: cannot compile ${e.k}`);
 }
+
 
 // Evaluate `e` and leave a *string pointer* in %rax, converting ints on the
 // fly. This is what makes `"n=" + 3` work natively.
