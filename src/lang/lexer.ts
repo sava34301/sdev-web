@@ -270,6 +270,9 @@ export class Lexer {
       } else if (this.peek() === '=') {
         this.advance();
         this.addToken(TokenType.ATMOST, '<=', startColumn);
+      } else if (this.peek() === '<') {
+        this.advance();
+        this.addToken(TokenType.SHL, '<<', startColumn);
       } else {
         this.addToken(TokenType.LESS, '<', startColumn);
       }
@@ -280,9 +283,21 @@ export class Lexer {
       if (this.peek() === '=') {
         this.advance();
         this.addToken(TokenType.ATLEAST, '>=', startColumn);
+      } else if (this.peek() === '>') {
+        this.advance();
+        this.addToken(TokenType.SHR, '>>', startColumn);
       } else {
         this.addToken(TokenType.MORE, '>', startColumn);
       }
+      return;
+    }
+
+    // String prefixes: f"" (format), r"" (raw), b"" (bytes), and combinations
+    if ((char === 'f' || char === 'F' || char === 'r' || char === 'R' || char === 'b' || char === 'B') &&
+        (this.peek() === '"' || this.peek() === "'" || this.peek() === '`')) {
+      const prefix = char.toLowerCase();
+      const quote = this.advance();
+      this.scanString(quote, startColumn, prefix);
       return;
     }
 
@@ -303,6 +318,7 @@ export class Lexer {
       this.scanIdentifier(char, startColumn);
       return;
     }
+
 
     throw new SdevError(`Unexpected character: '${char}'`, this.line, startColumn);
   }
