@@ -192,8 +192,11 @@ class NativeEmitter {
     this.strings = new Map();   // literal → label
     this.globals = new Map();   // name → .bss label
     this.functions = new Map(); // name → { arity, label }
+    this.classes = new Map();   // Milestone 6f: kind name → methods
+    this.lambdas = [];          // Milestone 6f: pending closure bodies
     this.labelSeq = 0;
   }
+
   L(s = '') { this.lines.push(s); }
   gensym(prefix) { return `.L${prefix}${this.labelSeq++}`; }
   strLabel(s) {
