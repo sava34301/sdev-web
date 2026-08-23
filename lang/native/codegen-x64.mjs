@@ -759,7 +759,19 @@ function emitStmt(s, em, locals, ctx) {
     }
 
     case 'set': {
+      // Milestone 6f: remember what a function value returns so `call f(...)`
+      // can pick the right printer.
+      if (s.expr.k === 'ref') {
+        tys.set(`@fnval:${s.name}`, fnTypes.get(s.expr.name) || 'int');
+      } else if (s.expr.k === 'lambda') {
+        let rt = 'int';
+        for (const st of s.expr.body) {
+          if (st.k === 'return' && st.expr) { rt = typeOf(st.expr, tys, fnTypes); break; }
+        }
+        tys.set(`@fnval:${s.name}`, rt);
+      }
       tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+
       if (typeOf(s.expr, tys, fnTypes) === 'list') {
         tys.set(`@elem:${s.name}`, elemTypeOf(s.expr, tys, fnTypes));
       }
