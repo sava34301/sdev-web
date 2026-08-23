@@ -127,7 +127,10 @@ export interface Token {
 export const KEYWORDS: Record<string, TokenType> = (() => {
   const map: Record<string, TokenType> = {};
   for (const [word, token] of Object.entries(KEYWORD_TOKEN_BY_WORD)) {
-    if (word === 'essence') continue; // contextual for backwards compatibility
+    // Contextual for backwards compatibility: `essence(x)` is a builtin and
+    // `kind` is a common variable name in existing sdev sources. Both are
+    // recognised as class declarations by the parser when followed by a name.
+    if (word === 'essence' || word === 'kind') continue;
     const tt = (TokenType as unknown as Record<string, TokenType>)[token];
     if (tt) map[word] = tt;
   }

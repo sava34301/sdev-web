@@ -4,7 +4,7 @@
     {
       "id": "v1",
       "label": "sdev v1 (TypeScript interpreter)",
-      "sources": "src/lang/tokens.ts,src/lang/builtins.ts"
+      "sources": "src/lang/keywords.ts,src/lang/tokens.ts,src/lang/builtins.ts,src/lang/pyparity.ts"
     },
     {
       "id": "v2",

@@ -56,7 +56,7 @@ export class Parser {
     if (this.check(TokenType.FROM)) return this.parseFromImportStatement();
     if (this.check(TokenType.ESSENCE_KW)) return this.parseEssenceDeclaration();
     // 'essence' stays a contextual keyword - check by value
-    if (this.checkIdentifierValue('essence')) return this.parseEssenceDeclaration();
+    if (this.isContextualClassStart()) return this.parseEssenceDeclaration();
     // Reassignment dialects used by the sdev stdlib:
     //   be x be value        (leading-'be' form)
     //   set x to value       (ML/v2 form, 'set'/'to' are contextual)
@@ -103,7 +103,7 @@ export class Parser {
       fn.decorators = decorators;
       return fn;
     }
-    if (this.check(TokenType.ESSENCE_KW) || this.checkIdentifierValue('essence')) {
+    if (this.check(TokenType.ESSENCE_KW) || this.isContextualClassStart()) {
       const cls = this.parseEssenceDeclaration();
       cls.decorators = decorators;
       return cls;
@@ -186,11 +186,18 @@ export class Parser {
       return { type: 'MemberAssignStatement', object: target.object, property: target.property, value, line };
     }
     if (target.type === 'TupleLiteral' || target.type === 'ArrayLiteral') {
-      const names = (target.elements as AST.ASTNode[]).map((e) => {
+      let starIndex: number | undefined;
+      const names = (target.elements as AST.ASTNode[]).map((e, i) => {
+        if (e.type === 'StarExpr') {
+          starIndex = i;
+          const target = (e as AST.StarExpr).operand;
+          if (!target || target.type !== 'Identifier') throw new SdevError('Invalid destructuring target', line);
+          return target.name;
+        }
         if (e.type !== 'Identifier') throw new SdevError('Invalid destructuring target', line);
         return e.name;
       });
-      return { type: 'LetStatement', name: names[0], targets: names, value, line };
+      return { type: 'LetStatement', name: names[0], targets: names, starIndex, value, line };
     }
     throw new SdevError('Invalid assignment target', line);
   }
@@ -198,15 +205,25 @@ export class Parser {
   // forge name[: Type] be value    |    forge a, b be pair
   private parseForgeStatement(): AST.LetStatement {
     const forgeToken = this.consume(TokenType.FORGE, "Expected 'forge'");
-    const names: string[] = [this.consumeName("Expected variable name")];
-    while (this.match(TokenType.COMMA)) names.push(this.consumeName('Expected variable name'));
+    // A target list may contain one starred name: `forge a, *rest be xs`.
+    let starIndex: number | undefined;
+    const readTarget = (): string => {
+      if (this.check(TokenType.STAR)) {
+        this.advance();
+        starIndex = names.length;
+      }
+      return this.consumeName('Expected variable name');
+    };
+    const names: string[] = [];
+    names.push(readTarget());
+    while (this.match(TokenType.COMMA)) names.push(readTarget());
 
     let annotation: AST.ASTNode | undefined;
     if (this.match(TokenType.COLON)) annotation = this.parseTypeExpr();
 
     // Declaration without initialiser: `forge x: Int`
     if (!this.check(TokenType.BE)) {
-      return { type: 'LetStatement', name: names[0], targets: names.length > 1 ? names : undefined, annotation, value: { type: 'NullLiteral', line: forgeToken.line }, line: forgeToken.line };
+      return { type: 'LetStatement', name: names[0], targets: names.length > 1 ? names : undefined, starIndex, annotation, value: { type: 'NullLiteral', line: forgeToken.line }, line: forgeToken.line };
     }
     this.consume(TokenType.BE, "Expected 'be'");
     const value = this.parseExpressionOrTuple();
@@ -214,6 +231,7 @@ export class Parser {
       type: 'LetStatement',
       name: names[0],
       targets: names.length > 1 ? names : undefined,
+      starIndex,
       annotation,
       value,
       line: forgeToken.line,
@@ -798,14 +816,16 @@ export class Parser {
       const save = this.pos;
       const names = [expr.name];
       let ok = true;
+      let starIndex: number | undefined;
       while (this.match(TokenType.COMMA)) {
+        if (this.check(TokenType.STAR)) { this.advance(); starIndex = names.length; }
         if (!this.check(TokenType.IDENTIFIER)) { ok = false; break; }
         names.push(this.advance().value);
       }
       if (ok && this.check(TokenType.BE)) {
         this.advance();
         const value = this.parseExpressionOrTuple();
-        return { type: 'LetStatement', name: names[0], targets: names, value, line: expr.line };
+        return { type: 'LetStatement', name: names[0], targets: names, starIndex, value, line: expr.line };
       }
       this.pos = save;
     }
@@ -1441,9 +1461,11 @@ export class Parser {
         }
         // Allow bare identifier keys (treated as string)
         let key: AST.ASTNode;
+        let bareKeyToken: { value: string; line: number } | undefined;
         const t = this.peek();
         if (t.type === TokenType.IDENTIFIER && this.tokens[this.pos + 1]?.type === TokenType.COLON) {
           this.advance();
+          bareKeyToken = { value: t.value, line: t.line };
           key = { type: 'StringLiteral', value: t.value, line: t.line };
         } else {
           key = this.parseExpression();
@@ -1451,7 +1473,12 @@ export class Parser {
         this.consume(TokenType.COLON, "Expected ':'");
         const value = this.parseExpression();
         if (first && this.check(TokenType.ITERATE)) {
-          const comp = this.finishComprehension(key, 'dict', value, line);
+          // In a comprehension a bare identifier key is an expression,
+          // not the shorthand string key used by dict literals.
+          const compKey: AST.ASTNode = bareKeyToken
+            ? { type: 'Identifier', name: bareKeyToken.value, line: bareKeyToken.line }
+            : key;
+          const comp = this.finishComprehension(compKey, 'dict', value, line);
           this.consume(TokenType.RBRACE, "Expected '}'");
           return comp;
         }
@@ -1559,6 +1586,16 @@ export class Parser {
   }
 
   /** Check if current token is IDENTIFIER with a specific value */
+  /**
+   * `essence` and `kind` are contextual: they begin a class declaration only
+   * when a class name follows. Everywhere else they stay plain identifiers.
+   */
+  private isContextualClassStart(): boolean {
+    if (!this.checkIdentifierValue('essence') && !this.checkIdentifierValue('kind')) return false;
+    const next = this.tokens[this.pos + 1];
+    return !!next && next.type === TokenType.IDENTIFIER;
+  }
+
   private checkIdentifierValue(value: string): boolean {
     if (this.isAtEnd()) return false;
     const t = this.peek();

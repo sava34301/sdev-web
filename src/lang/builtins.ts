@@ -423,7 +423,19 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
       const arg = args[0];
       if (typeof arg === 'string') return arg.length;
       if (Array.isArray(arg)) return arg.length;
-      if (arg && typeof arg === 'object') return Object.keys(arg as Record<string, unknown>).length;
+      if (arg instanceof Set) return arg.size;
+      if (arg instanceof Map) return arg.size;
+      if (arg && typeof arg === 'object') {
+        // Sets, and any object exposing a `size()` / `length()` protocol.
+        const sized = arg as { size?: unknown; values?: unknown };
+        if (typeof sized.size === 'function') return (sized.size as () => number)();
+        if (typeof sized.size === 'number') return sized.size;
+        if (typeof sized.values === 'function') {
+          const vals = (sized.values as () => unknown)();
+          if (Array.isArray(vals)) return vals.length;
+        }
+        return Object.keys(arg as Record<string, unknown>).length;
+      }
       throw new SdevError('len() argument must be string, list, or dict', line);
     },
   });
@@ -2631,10 +2643,29 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
 }
 
 
+
+/**
+ * Hook installed by the interpreter so that user objects implementing the
+ * `on_text` / `__str__` protocol control their own textual form.
+ * Returns undefined when the value has no such protocol.
+ */
+let objectTextHook: ((value: unknown) => string | undefined) | null = null;
+export function setObjectTextHook(hook: ((value: unknown) => string | undefined) | null): void {
+  objectTextHook = hook;
+}
+
 export function stringify(value: unknown): string {
   if (value === null) return 'void';
   if (typeof value === 'boolean') return value ? 'yep' : 'nope';
   if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && (value as { __error__?: boolean }).__error__) {
+    // Python's `str(exception)` yields just the message.
+    return String((value as { message?: unknown }).message ?? '');
+  }
+  if (value && typeof value === 'object' && objectTextHook) {
+    const custom = objectTextHook(value);
+    if (custom !== undefined) return custom;
+  }
   if (typeof value === 'number') {
     if (value === Infinity) return 'inf';
     if (value === -Infinity) return '-inf';

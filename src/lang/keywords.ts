@@ -58,14 +58,14 @@ export const KEYWORD_SPECS: KeywordSpec[] = [
   { token: 'ASSERT', mystic: 'insist', plain: 'assert', about: 'assertion' },
 
   // ---- context managers / scope -------------------------------------
-  { token: 'WITH', mystic: 'weave', plain: 'with', about: 'context manager block' },
+  { token: 'WITH', mystic: 'enfold', plain: 'with', about: 'context manager block' },
   { token: 'AS', mystic: 'alias', plain: 'as', about: 'binding name (with / import / except)' },
   { token: 'GLOBAL', mystic: 'worldly', plain: 'global', about: 'global scope declaration' },
   { token: 'NONLOCAL', mystic: 'outer', plain: 'nonlocal', about: 'enclosing scope declaration' },
   { token: 'DEL', mystic: 'banish', plain: 'del', about: 'delete a binding, item or attribute' },
 
   // ---- pattern matching ---------------------------------------------
-  { token: 'MATCH', mystic: 'sift', plain: 'match', about: 'structural pattern match' },
+  { token: 'MATCH', mystic: 'discern', plain: 'match', about: 'structural pattern match' },
   { token: 'CASE', mystic: 'omen', plain: 'case', about: 'a single match arm' },
   { token: 'WHEN', mystic: 'when', plain: 'when', aliases: ['guard'], about: 'pattern guard' },
 
