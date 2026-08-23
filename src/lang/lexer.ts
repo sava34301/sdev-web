@@ -57,20 +57,123 @@ export class Lexer {
       ')': TokenType.RPAREN,
       '[': TokenType.LBRACKET,
       ']': TokenType.RBRACKET,
-      '{': TokenType.LBRACE,
-      '}': TokenType.RBRACE,
-      ',': TokenType.COMMA,
+      
 
-      '.': TokenType.DOT,
-      '+': TokenType.PLUS,
-      '*': TokenType.STAR,
-      '%': TokenType.PERCENT,
-      '^': TokenType.CARET,
+      ',': TokenType.COMMA,
       '~': TokenType.TILDE,
+      '&': TokenType.AMP,
     };
 
     if (singleTokens[char]) {
       this.addToken(singleTokens[char], char, startColumn);
+      return;
+    }
+
+    // '{' may open a dict literal or a set literal '{|'
+    if (char === '{') {
+      if (this.peek() === '|') {
+        this.advance();
+        this.addToken(TokenType.LSET, '{|', startColumn);
+      } else {
+        this.addToken(TokenType.LBRACE, '{', startColumn);
+      }
+      return;
+    }
+    if (char === '}') {
+      this.addToken(TokenType.RBRACE, '}', startColumn);
+      return;
+    }
+
+    // '.' or '...'
+    if (char === '.') {
+      if (this.peek() === '.' && this.peekNext() === '.') {
+        this.advance();
+        this.advance();
+        this.addToken(TokenType.ELLIPSIS, '...', startColumn);
+      } else {
+        this.addToken(TokenType.DOT, '.', startColumn);
+      }
+      return;
+    }
+
+    // Augmentable arithmetic operators
+    if (char === '+' || char === '%' || char === '^') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, char + '=', startColumn);
+      } else {
+        const map: Record<string, TokenType> = {
+          '+': TokenType.PLUS,
+          '%': TokenType.PERCENT,
+          '^': TokenType.CARET,
+        };
+        this.addToken(map[char], char, startColumn);
+      }
+      return;
+    }
+
+    if (char === '*') {
+      if (this.peek() === '*') {
+        this.advance();
+        if (this.peek() === '=') {
+          this.advance();
+          this.addToken(TokenType.AUGASSIGN, '**=', startColumn);
+        } else {
+          this.addToken(TokenType.STARSTAR, '**', startColumn);
+        }
+      } else if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '*=', startColumn);
+      } else {
+        this.addToken(TokenType.STAR, '*', startColumn);
+      }
+      return;
+    }
+
+    // '\' floor division (and '\=')
+    if (char === '\\') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '\\=', startColumn);
+      } else {
+        this.addToken(TokenType.BACKSLASH, '\\', startColumn);
+      }
+      return;
+    }
+
+    // '@' decorator (statement position) / matrix multiply (expression)
+    if (char === '@') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '@=', startColumn);
+      } else {
+        this.addToken(TokenType.AT, '@', startColumn);
+      }
+      return;
+    }
+
+    // '=' assignment alias, '==' equality, '=>' match arrow
+    if (char === '=') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.EQUALS, '==', startColumn);
+      } else if (this.peek() === '>') {
+        this.advance();
+        this.addToken(TokenType.FATARROW, '=>', startColumn);
+      } else {
+        this.addToken(TokenType.BE, '=', startColumn);
+      }
+      return;
+    }
+
+    // '!' logical not, '!=' inequality
+    if (char === '!') {
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.DIFFERS, '!=', startColumn);
+      } else {
+        this.addToken(TokenType.ISNT, '!', startColumn);
+      }
       return;
     }
 
@@ -79,6 +182,9 @@ export class Lexer {
       if (this.peek() === '>') {
         this.advance();
         this.addToken(TokenType.ARROW, '->', startColumn);
+      } else if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '-=', startColumn);
       } else {
         this.addToken(TokenType.MINUS, char, startColumn);
       }
@@ -89,16 +195,23 @@ export class Lexer {
       if (this.peek() === '>') {
         this.advance();
         this.addToken(TokenType.PIPE, '|>', startColumn);
+      } else if (this.peek() === '}') {
+        this.advance();
+        this.addToken(TokenType.RSET, '|}', startColumn);
       } else {
-        throw new SdevError(`Unexpected character: '${char}'`, this.line, startColumn);
+        this.addToken(TokenType.BAR, '|', startColumn);
       }
       return;
     }
+
 
     if (char === ':') {
       if (this.peek() === ':') {
         this.advance();
         this.addToken(TokenType.DOUBLE_COLON, '::', startColumn);
+      } else if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.WALRUS, ':=', startColumn);
       } else {
         this.addToken(TokenType.COLON, ':', startColumn);
       }
@@ -122,9 +235,25 @@ export class Lexer {
         }
         return;
       }
+      if (this.peek() === '*') {
+        // Block comment
+        this.advance();
+        while (!this.isAtEnd() && !(this.peek() === '*' && this.peekNext() === '/')) {
+          if (this.peek() === '\n') { this.line++; this.column = 0; }
+          this.advance();
+        }
+        if (!this.isAtEnd()) { this.advance(); this.advance(); }
+        return;
+      }
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(TokenType.AUGASSIGN, '/=', startColumn);
+        return;
+      }
       this.addToken(TokenType.SLASH, char, startColumn);
       return;
     }
+
 
     if (char === '#') {
       // Python-style comment - skip to end of line
@@ -141,6 +270,9 @@ export class Lexer {
       } else if (this.peek() === '=') {
         this.advance();
         this.addToken(TokenType.ATMOST, '<=', startColumn);
+      } else if (this.peek() === '<') {
+        this.advance();
+        this.addToken(TokenType.SHL, '<<', startColumn);
       } else {
         this.addToken(TokenType.LESS, '<', startColumn);
       }
@@ -151,9 +283,21 @@ export class Lexer {
       if (this.peek() === '=') {
         this.advance();
         this.addToken(TokenType.ATLEAST, '>=', startColumn);
+      } else if (this.peek() === '>') {
+        this.advance();
+        this.addToken(TokenType.SHR, '>>', startColumn);
       } else {
         this.addToken(TokenType.MORE, '>', startColumn);
       }
+      return;
+    }
+
+    // String prefixes: f"" (format), r"" (raw), b"" (bytes), and combinations
+    if ((char === 'f' || char === 'F' || char === 'r' || char === 'R' || char === 'b' || char === 'B') &&
+        (this.peek() === '"' || this.peek() === "'" || this.peek() === '`')) {
+      const prefix = char.toLowerCase();
+      const quote = this.advance();
+      this.scanString(quote, startColumn, prefix);
       return;
     }
 
@@ -175,14 +319,32 @@ export class Lexer {
       return;
     }
 
+
     throw new SdevError(`Unexpected character: '${char}'`, this.line, startColumn);
   }
 
-  private scanString(quote: string, startColumn: number): void {
+  private scanString(quote: string, startColumn: number, prefix: string = ''): void {
+    // Triple quoted strings: """ ... """ / ''' ... '''
+    let triple = false;
+    if (this.peek() === quote && this.peekNext() === quote) {
+      this.advance();
+      this.advance();
+      triple = true;
+    }
+
+    const raw = prefix === 'r';
     let value = '';
-    while (!this.isAtEnd() && this.peek() !== quote) {
+
+    const atTerminator = (): boolean => {
+      if (triple) {
+        return this.peek() === quote && this.peekNext() === quote && this.source[this.pos + 2] === quote;
+      }
+      return this.peek() === quote;
+    };
+
+    while (!this.isAtEnd() && !atTerminator()) {
       if (this.peek() === '\n') {
-        if (quote === '`') {
+        if (quote === '`' || triple) {
           value += this.advance();
           this.line++;
           this.column = 1;
@@ -190,19 +352,41 @@ export class Lexer {
         }
         throw new SdevError('Unterminated string', this.line, startColumn);
       }
-      if (this.peek() === '\\') {
+      if (this.peek() === '\\' && !raw) {
         this.advance();
         const escaped = this.advance();
         const escapes: Record<string, string> = {
           'n': '\n',
           't': '\t',
           'r': '\r',
+          '0': '\0',
+          'a': '\x07',
+          'b': '\b',
+          'f': '\f',
+          'v': '\v',
           '\\': '\\',
           '"': '"',
           "'": "'",
           '`': '`',
         };
+        if (escaped === 'u' && this.peek() === '{') {
+          this.advance();
+          let hex = '';
+          while (!this.isAtEnd() && this.peek() !== '}') hex += this.advance();
+          this.advance();
+          value += String.fromCodePoint(parseInt(hex, 16) || 0);
+          continue;
+        }
+        if (escaped === 'x') {
+          let hex = '';
+          for (let i = 0; i < 2 && this.isHexDigit(this.peek()); i++) hex += this.advance();
+          value += String.fromCharCode(parseInt(hex, 16) || 0);
+          continue;
+        }
         value += escapes[escaped] ?? escaped;
+      } else if (this.peek() === '\\' && raw) {
+        value += this.advance();
+        if (!this.isAtEnd()) value += this.advance();
       } else {
         value += this.advance();
       }
@@ -211,43 +395,59 @@ export class Lexer {
       throw new SdevError('Unterminated string', this.line, startColumn);
     }
     this.advance(); // closing quote
-    this.addToken(TokenType.STRING, value, startColumn);
+    if (triple) {
+      this.advance();
+      this.advance();
+    }
+
+    if (prefix === 'f') {
+      this.addToken(TokenType.FSTRING, value, startColumn);
+    } else if (prefix === 'b') {
+      this.addToken(TokenType.BYTES, value, startColumn);
+    } else {
+      this.addToken(TokenType.STRING, value, startColumn);
+    }
   }
 
   private scanNumber(first: string, startColumn: number): void {
     let value = first;
 
-    // Hex literals: 0x... or 0X...
-    if (first === '0' && (this.peek() === 'x' || this.peek() === 'X')) {
-      value += this.advance(); // x
-      while (this.isHexDigit(this.peek())) {
-        value += this.advance();
+    // Radix literals: 0x / 0b / 0o (underscores allowed as separators)
+    if (first === '0' && /[xXbBoO]/.test(this.peek())) {
+      const marker = this.advance().toLowerCase();
+      let raw = '';
+      while (this.isHexDigit(this.peek()) || this.peek() === '_') {
+        const c = this.advance();
+        if (c !== '_') raw += c;
       }
-      this.addToken(TokenType.NUMBER, String(parseInt(value, 16)), startColumn);
+      const radix = marker === 'x' ? 16 : marker === 'b' ? 2 : 8;
+      this.addToken(TokenType.NUMBER, String(parseInt(raw, radix)), startColumn);
       return;
     }
 
-    while (this.isDigit(this.peek())) {
-      value += this.advance();
-    }
+    const digits = (): void => {
+      while (this.isDigit(this.peek()) || (this.peek() === '_' && this.isDigit(this.peekNext()))) {
+        const c = this.advance();
+        if (c !== '_') value += c;
+      }
+    };
+
+    digits();
     // Handle decimal point
     if (this.peek() === '.' && this.isDigit(this.peekNext())) {
       value += this.advance(); // the dot
-      while (this.isDigit(this.peek())) {
-        value += this.advance();
-      }
+      digits();
     }
     // Handle scientific notation (e.g. 1.5e10)
-    if ((this.peek() === 'e' || this.peek() === 'E') && 
+    if ((this.peek() === 'e' || this.peek() === 'E') &&
         (this.isDigit(this.peekNext()) || this.peekNext() === '+' || this.peekNext() === '-')) {
       value += this.advance(); // e
       if (this.peek() === '+' || this.peek() === '-') {
         value += this.advance();
       }
-      while (this.isDigit(this.peek())) {
-        value += this.advance();
-      }
+      digits();
     }
+
     this.addToken(TokenType.NUMBER, value, startColumn);
   }
 
