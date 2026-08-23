@@ -158,15 +158,27 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
         for (const s of body) {
           noteCalls(s, tys);
           if (s.k === 'set') tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+          // Milestone 6f: remember the kind written into each field name, so
+          // `say p.name` picks say_str.
+          if (s.k === 'setField') {
+            const ft = typeOf(s.expr, tys, fnTypes);
+            if (ft !== 'int') fnTypes.set(`@field:${s.field}`, ft);
+          }
           if (s.k === 'if') { walk(s.then_); if (s.else_) walk(s.else_); }
           if (s.k === 'while') walk(s.body);
           if (s.k === 'foreach') walk(s.body);
+          if (s.k === 'attempt') {
+            walk(s.body);
+            if (s.errName) tys.set(s.errName, 'str');
+            walk(s.rescue_);
+          }
           if (s.k === 'return' && s.expr) {
             const rt = typeOf(s.expr, tys, fnTypes);
             if (rt !== 'int') t = rt;
           }
         }
       };
+
       walk(f.body);
       if (f.name) fnTypes.set(f.name, t);
     }
