@@ -1106,12 +1106,78 @@ sdev_num:
 7:  movq %xmm0, %rax
     ret
 
+# ---- Milestone 6f: error handling ------------------------------------------
+# A handler stack of (handler label, saved %rsp, saved %rbp) triples, pushed
+# by `attempt` and popped on normal exit. `throw` unwinds to the innermost
+# entry by restoring the saved stack registers and jumping to the handler
+# with the message pointer in %rax.
+
+# ---- sdev_try_push(handler, rsp, rbp) ----
+    .globl sdev_try_push
+sdev_try_push:
+    movq sdev_hdepth(%rip), %rax
+    cmpq $64, %rax
+    jge 1f
+    leaq sdev_hstack(%rip), %rcx
+    imulq $24, %rax, %r8
+    addq %r8, %rcx
+    movq %rdi, (%rcx)
+    movq %rsi, 8(%rcx)
+    movq %rdx, 16(%rcx)
+    incq %rax
+    movq %rax, sdev_hdepth(%rip)
+1:  ret
+
+# ---- sdev_try_pop() ----
+    .globl sdev_try_pop
+sdev_try_pop:
+    movq sdev_hdepth(%rip), %rax
+    testq %rax, %rax
+    jle 1f
+    decq %rax
+    movq %rax, sdev_hdepth(%rip)
+1:  ret
+
+# ---- sdev_throw(msg) ----
+    .globl sdev_throw
+sdev_throw:
+    movq sdev_hdepth(%rip), %rax
+    testq %rax, %rax
+    jle 2f
+    decq %rax
+    movq %rax, sdev_hdepth(%rip)
+    leaq sdev_hstack(%rip), %rcx
+    imulq $24, %rax, %r8
+    addq %r8, %rcx
+    movq %rdi, %rax             # message lands in %rax for the handler
+    movq 8(%rcx), %rsp
+    movq 16(%rcx), %rbp
+    jmpq *(%rcx)
+2:  # uncaught: print "uncaught: <msg>" and exit(1)
+    movq %rdi, %rsi
+    leaq .Luncaught(%rip), %rdi
+    call sdev_concat
+    movq %rax, %rdi
+    call sdev_say_str
+    movq $60, %rax
+    movq $1, %rdi
+    syscall
+
     .bss
     .align 8
 sdev_heap_ptr:
     .quad 0
+sdev_hdepth:
+    .quad 0
+sdev_hstack:
+    .space 1536
 sdev_rng:
     .long 0
 
     .section .rodata
 nl: .byte 10
+.Luncaught:
+    .quad 10
+    .ascii "uncaught: "
+    .byte 0
+
