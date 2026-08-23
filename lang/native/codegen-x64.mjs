@@ -120,9 +120,11 @@ function tomeValKey(e) {
 
 // Return type of each user function: the join of its `return` expressions,
 // evaluated with the types known for its own assignments. Params are ints.
-function inferFnTypes(funcs, mainBody = []) {
+function inferFnTypes(funcs, mainBody = [], classes = null) {
   const fnTypes = new Map();
+  fnTypes._classes = classes;
   const byName = new Map(funcs.map(f => [f.name, f]));
+
   // Milestone 6e: parameter kinds are inferred from call sites, so a function
   // that is only ever called with floats treats its parameter as a float.
   const noteCalls = (e, tys) => {
