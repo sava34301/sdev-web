@@ -328,6 +328,14 @@ export function desugarKinds(tokens) {
 
 // ---------------- Parser (bootstrap subset) ----------------
 export function parse(source) { const t = tokenize(prelink(source)); desugarKinds(t); return parseProgram(t); }
+// Milestone 6f: the native backend needs the kind registry too (it builds
+// objects out of it), so expose the same pipeline with the registry kept.
+export function parseWithKinds(source, readModule = defaultReadModule) {
+  const t = tokenize(prelink(source, readModule));
+  const classes = desugarKinds(t);
+  return { ast: parseProgram(t), classes };
+}
+
 function parseProgram(tokens) {
   let p = 0;
   const peek = (n = 0) => tokens[p + n];

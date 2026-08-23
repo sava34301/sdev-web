@@ -60,6 +60,23 @@ const CASES = [
   { name: 'foreach-str', src: `for each w in split("a b", " ")\n  say w\nend`, out: 'a\nb\n' },
   { name: 'foreach-tome',src: `set t to { a: 1, b: 2 }\nfor each k in t\n  say k\nend`, out: 'a\nb\n' },
   { name: 'list-loop', src: `set xs to [1, 2, 3]\nset i to 0\nset t to 0\nwhile i < length(xs)\n  set t to t + xs[i]\n  set i to i + 1\nend\nsay t`, out: '6\n' },
+  // Milestone 6f: function values, closures, kinds, errors, break/continue.
+  { name: 'ref-call',    src: `to twice with n\n  return n * 2\nend\nset f to ref twice\nsay call f(21)`, out: '42\n' },
+  { name: 'ref-str',     src: `to hi with n\n  return "hi " + str(n)\nend\nset f to ref hi\nsay call f(3)`, out: 'hi 3\n' },
+  { name: 'lambda',      src: `set add to make with a b\n  return a + b\nend\nsay call add(2, 3)`, out: '5\n' },
+  { name: 'closure',     src: `set n to 10\nset addn to make with x capture n\n  return x + n\nend\nsay call addn(5)`, out: '15\n' },
+  { name: 'closure-two', src: `set p to 2\nset q to 3\nset f to make with x capture p q\n  return x * p + q\nend\nsay call f(4)`, out: '11\n' },
+  { name: 'kind-basic',  src: `kind Counter\n  to bump with self\n    set self.n to self.n + 1\n    return self.n\n  end\nend\nset c to new Counter\nset c.n to 0\nsay c.bump()\nsay c.bump()`, out: '1\n2\n' },
+  { name: 'kind-str',    src: `kind Greeter\n  to greet with self\n    return "hello " + self.who\n  end\nend\nset g to new Greeter\nset g.who to "ada"\nsay g.greet()`, out: 'hello ada\n' },
+  { name: 'kind-args',   src: `kind Adder\n  to plus with self a b\n    return a + b\n  end\nend\nset a to new Adder\nsay a.plus(2, 5)`, out: '7\n' },
+  { name: 'inherit',     src: `kind Animal\n  to speak with self\n    return "..."\n  end\n  to tag with self\n    return "animal"\n  end\nend\nkind Dog extends Animal\n  to speak with self\n    return "woof"\n  end\nend\nset d to new Dog\nsay d.speak()\nsay d.tag()`, out: 'woof\nanimal\n' },
+  { name: 'super',       src: `kind A\n  to name with self\n    return "A"\n  end\nend\nkind B extends A\n  to name with self\n    return "B<" + super.name() + ">"\n  end\nend\nset b to new B\nsay b.name()`, out: 'B<A>\n' },
+  { name: 'attempt',     src: `attempt\n  throw "boom"\n  say "unreachable"\nrescue err\n  say "caught " + err\nend\nsay "after"`, out: 'caught boom\nafter\n' },
+  { name: 'attempt-ok',  src: `attempt\n  say "body"\nrescue err\n  say "no"\nend\nsay "done"`, out: 'body\ndone\n' },
+  { name: 'throw-fn',    src: `to boom with n\n  throw "bad " + str(n)\nend\nattempt\n  say boom(7)\nrescue e\n  say e\nend`, out: 'bad 7\n' },
+  { name: 'break',       src: `set i to 0\nwhile i < 10\n  if i is 3\n    break\n  end\n  say i\n  set i to i + 1\nend`, out: '0\n1\n2\n' },
+  { name: 'continue',    src: `for each x in [1, 2, 3, 4]\n  if x is 2\n    continue\n  end\n  say x\nend`, out: '1\n3\n4\n' },
+
 ];
 
 // Resolve `as`/`ld`: prefer PATH, else nix run nixpkgs#binutils.

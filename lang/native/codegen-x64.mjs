@@ -13,9 +13,10 @@
 // cleans up. Return value in %rax. All values are 64-bit signed integers.
 // Local slot N lives at -8*(N+1)(%rbp). We reserve up to 16 locals per fn.
 
-import { parse } from '../bootstrap/compile.mjs';
+import { parseWithKinds } from '../bootstrap/compile.mjs';
 
 const LOCAL_SLOTS = 32;
+
 
 // ---------------------------------------------------------------------------
 // Milestone 6c — static value kinds.
@@ -48,6 +49,14 @@ function typeOf(e, tys, fnTypes) {
     case 'str': return 'str';
     case 'list': return 'list';
     case 'tome': return 'tome';
+    // Milestone 6f: an object is a tome; a function value is an opaque word.
+    case 'new': return 'tome';
+    case 'ref': case 'lambda': return 'int';
+    case 'callv':
+      return (e.target.k === 'ident' && tys.get(`@fnval:${e.target.name}`)) || 'int';
+
+    case 'field': return (fnTypes && fnTypes.get(`@field:${e.name}`)) || 'int';
+    case 'mcall': return methodRetType(fnTypes, e.m);
     case 'ident': return tys.get(e.name) || 'int';
     case 'index': {
       // Milestone 6d: a tome read yields the kind stored under that key; a
@@ -76,6 +85,24 @@ function typeOf(e, tys, fnTypes) {
   }
 }
 
+// Milestone 6f — a method call is typed by name, exactly like the WASM
+// backend: the receiver's class is not tracked statically, so any declared
+// method of that name that returns text makes the call string-typed.
+function methodRetType(fnTypes, key) {
+  if (!fnTypes) return 'int';
+  const classes = fnTypes._classes;
+  if (!classes) return 'int';
+  for (const ms of classes.values()) {
+    for (const mm of ms) {
+      if (mm.key !== key) continue;
+      const t = fnTypes.get(mm.fn);
+      if (t && t !== 'int') return t;
+    }
+  }
+  return 'int';
+}
+
+
 // The kind of the elements a list-valued expression holds, as far as the
 // compiler can tell statically.
 function elemTypeOf(e, tys, fnTypes) {
@@ -96,9 +123,11 @@ function tomeValKey(e) {
 
 // Return type of each user function: the join of its `return` expressions,
 // evaluated with the types known for its own assignments. Params are ints.
-function inferFnTypes(funcs, mainBody = []) {
+function inferFnTypes(funcs, mainBody = [], classes = null) {
   const fnTypes = new Map();
+  fnTypes._classes = classes;
   const byName = new Map(funcs.map(f => [f.name, f]));
+
   // Milestone 6e: parameter kinds are inferred from call sites, so a function
   // that is only ever called with floats treats its parameter as a float.
   const noteCalls = (e, tys) => {
@@ -132,15 +161,27 @@ function inferFnTypes(funcs, mainBody = []) {
         for (const s of body) {
           noteCalls(s, tys);
           if (s.k === 'set') tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+          // Milestone 6f: remember the kind written into each field name, so
+          // `say p.name` picks say_str.
+          if (s.k === 'setField') {
+            const ft = typeOf(s.expr, tys, fnTypes);
+            if (ft !== 'int') fnTypes.set(`@field:${s.field}`, ft);
+          }
           if (s.k === 'if') { walk(s.then_); if (s.else_) walk(s.else_); }
           if (s.k === 'while') walk(s.body);
           if (s.k === 'foreach') walk(s.body);
+          if (s.k === 'attempt') {
+            walk(s.body);
+            if (s.errName) tys.set(s.errName, 'str');
+            walk(s.rescue_);
+          }
           if (s.k === 'return' && s.expr) {
             const rt = typeOf(s.expr, tys, fnTypes);
             if (rt !== 'int') t = rt;
           }
         }
       };
+
       walk(f.body);
       if (f.name) fnTypes.set(f.name, t);
     }
@@ -154,8 +195,11 @@ class NativeEmitter {
     this.strings = new Map();   // literal → label
     this.globals = new Map();   // name → .bss label
     this.functions = new Map(); // name → { arity, label }
+    this.classes = new Map();   // Milestone 6f: kind name → methods
+    this.lambdas = [];          // Milestone 6f: pending closure bodies
     this.labelSeq = 0;
   }
+
   L(s = '') { this.lines.push(s); }
   gensym(prefix) { return `.L${prefix}${this.labelSeq++}`; }
   strLabel(s) {
@@ -354,9 +398,101 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       if (e.args.length > 0) em.L(`    addq $${e.args.length * 8}, %rsp`);
       return;
     }
+    // ---- Milestone 6f: first-class functions, closures, objects ----
+    //
+    // A function value is a heap closure: [i64 code ptr][i64 ncaps][caps...].
+    // Calls through a value put the closure pointer in %r10; a lambda body
+    // copies its captures out of %r10 in its prologue, so the argument
+    // convention (args pushed right-to-left) is unchanged.
+    case 'ref': {
+      const info = em.functions.get(e.name);
+      if (!info) throw new Error(`native: unknown function ${e.name}`);
+      em.L('    movq $16, %rdi');
+      em.L('    call sdev_alloc');
+      em.L(`    leaq ${info.label}(%rip), %rcx`);
+      em.L('    movq %rcx, (%rax)');
+      em.L('    movq $0, 8(%rax)');
+      return;
+    }
+    case 'lambda': {
+      const label = `sdev_lam_${em.lambdas.length}`;
+      em.lambdas.push({ label, params: e.params, caps: e.caps, body: e.body, tys: new Map(tys) });
+      em.L(`    movq $${16 + 8 * e.caps.length}, %rdi`);
+      em.L('    call sdev_alloc');
+      em.L(`    leaq ${label}(%rip), %rcx`);
+      em.L('    movq %rcx, (%rax)');
+      em.L(`    movq $${e.caps.length}, 8(%rax)`);
+      em.L('    pushq %rax');
+      e.caps.forEach((c, i) => {
+        emitExpr({ k: 'ident', name: c }, em, locals, tys, fnTypes);
+        em.L('    movq (%rsp), %rcx');
+        em.L(`    movq %rax, ${16 + 8 * i}(%rcx)`);
+      });
+      em.L('    popq %rax');
+      return;
+    }
+    case 'callv': {
+      for (let i = e.args.length - 1; i >= 0; i--) {
+        emitExpr(e.args[i], em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+      }
+      emitExpr(e.target, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %r10');
+      em.L('    movq (%r10), %rax');
+      em.L('    call *%rax');
+      if (e.args.length > 0) em.L(`    addq $${e.args.length * 8}, %rsp`);
+      return;
+    }
+    case 'new': {
+      const ms = em.classes.get(e.cls);
+      if (!ms) throw new Error(`native: unknown kind ${e.cls}`);
+      em.L('    call sdev_tnew');
+      em.L('    pushq %rax');
+      for (const mm of ms) {
+        const info = em.functions.get(mm.fn);
+        if (!info) throw new Error(`native: kind ${e.cls} missing method ${mm.key}`);
+        em.L('    movq $16, %rdi');
+        em.L('    call sdev_alloc');
+        em.L(`    leaq ${info.label}(%rip), %rcx`);
+        em.L('    movq %rcx, (%rax)');
+        em.L('    movq $0, 8(%rax)');
+        em.L('    movq %rax, %rdx');
+        em.L(`    leaq ${em.strLabel(mm.key)}(%rip), %rsi`);
+        em.L('    movq (%rsp), %rdi');
+        em.L('    call sdev_tset');
+      }
+      em.L('    popq %rax');
+      return;
+    }
+    case 'field': {
+      emitExpr(e.target, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    leaq ${em.strLabel(e.name)}(%rip), %rsi`);
+      em.L('    call sdev_tget');
+      return;
+    }
+    case 'mcall': {
+      // Push args right-to-left, then the receiver, so `self` is arg 0.
+      for (let i = e.args.length - 1; i >= 0; i--) {
+        emitExpr(e.args[i], em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+      }
+      emitExpr({ k: 'ident', name: e.recv }, em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr({ k: 'ident', name: e.recv }, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    leaq ${em.strLabel(e.m)}(%rip), %rsi`);
+      em.L('    call sdev_tget');
+      em.L('    movq %rax, %r10');
+      em.L('    movq (%r10), %rax');
+      em.L('    call *%rax');
+      em.L(`    addq $${(e.args.length + 1) * 8}, %rsp`);
+      return;
+    }
   }
   throw new Error(`native: cannot compile ${e.k}`);
 }
+
 
 // Evaluate `e` and leave a *string pointer* in %rax, converting ints on the
 // fly. This is what makes `"n=" + 3` work natively.
@@ -607,7 +743,11 @@ function emitStmt(s, em, locals, ctx) {
         expr: { k: 'index', target: { k: 'ident', name: seqName }, idx: { k: 'ident', name: idxName } },
       }, em, locals, ctx);
       if (iterTy === 'tome') tys.set(s.name, 'str');
+      const cont = em.gensym('fecont');
+      (ctx.loops ||= []).push({ brk: end, cont });
       s.body.forEach(x => emitStmt(x, em, locals, ctx));
+      ctx.loops.pop();
+      em.L(`${cont}:`);
       emitStmt({
         k: 'set',
         name: idxName,
@@ -617,8 +757,21 @@ function emitStmt(s, em, locals, ctx) {
       em.L(`${end}:`);
       return;
     }
+
     case 'set': {
+      // Milestone 6f: remember what a function value returns so `call f(...)`
+      // can pick the right printer.
+      if (s.expr.k === 'ref') {
+        tys.set(`@fnval:${s.name}`, fnTypes.get(s.expr.name) || 'int');
+      } else if (s.expr.k === 'lambda') {
+        let rt = 'int';
+        for (const st of s.expr.body) {
+          if (st.k === 'return' && st.expr) { rt = typeOf(st.expr, tys, fnTypes); break; }
+        }
+        tys.set(`@fnval:${s.name}`, rt);
+      }
       tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+
       if (typeOf(s.expr, tys, fnTypes) === 'list') {
         tys.set(`@elem:${s.name}`, elemTypeOf(s.expr, tys, fnTypes));
       }
@@ -660,9 +813,63 @@ function emitStmt(s, em, locals, ctx) {
       emitExpr(s.cond, em, locals, tys, fnTypes);
       em.L('    testq %rax, %rax');
       em.L(`    jz ${end}`);
+      (ctx.loops ||= []).push({ brk: end, cont: top });
       s.body.forEach(x => emitStmt(x, em, locals, ctx));
+      ctx.loops.pop();
       em.L(`    jmp ${top}`);
       em.L(`${end}:`);
+      return;
+    }
+    // ---- Milestone 6f ----
+    case 'break':
+    case 'continue': {
+      const loop = (ctx.loops || [])[(ctx.loops || []).length - 1];
+      if (!loop) throw new Error(`native: ${s.k} outside of a loop`);
+      em.L(`    jmp ${s.k === 'break' ? loop.brk : loop.cont}`);
+      return;
+    }
+    case 'setField': {
+      const ft = typeOf(s.expr, tys, fnTypes);
+      if (ft !== 'int') fnTypes.set(`@field:${s.field}`, ft);
+      emitExpr({ k: 'ident', name: s.name }, em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(s.expr, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdx');
+      em.L(`    leaq ${em.strLabel(s.field)}(%rip), %rsi`);
+      em.L('    popq %rdi');
+      em.L('    call sdev_tset');
+      return;
+    }
+    // `attempt … rescue err … end` — the handler stack lives in the runtime;
+    // a throw restores the saved %rsp/%rbp and jumps straight to the handler
+    // with the message in %rax.
+    case 'attempt': {
+      const handler = em.gensym('rescue');
+      const over = em.gensym('endtry');
+      em.L(`    leaq ${handler}(%rip), %rdi`);
+      em.L('    movq %rsp, %rsi');
+      em.L('    movq %rbp, %rdx');
+      em.L('    call sdev_try_push');
+      s.body.forEach(x => emitStmt(x, em, locals, ctx));
+      em.L('    call sdev_try_pop');
+      em.L(`    jmp ${over}`);
+      em.L(`${handler}:`);
+      if (s.errName) {
+        tys.set(s.errName, 'str');
+        if (locals && locals.has(s.errName)) {
+          em.L(`    movq %rax, -${8 * (locals.get(s.errName) + 1)}(%rbp)`);
+        } else {
+          em.L(`    movq %rax, ${em.globalLabel(s.errName)}(%rip)`);
+        }
+      }
+      s.rescue_.forEach(x => emitStmt(x, em, locals, ctx));
+      em.L(`${over}:`);
+      return;
+    }
+    case 'throw': {
+      emitStrExpr(s.expr, em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_throw');
       return;
     }
     case 'return': {
@@ -683,6 +890,11 @@ function collectSets(body, locals) {
     if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
+    if (s.k === 'attempt') {
+      collectSets(s.body, locals);
+      if (s.errName && !locals.has(s.errName)) locals.set(s.errName, locals.size);
+      collectSets(s.rescue_, locals);
+    }
     if (s.k === 'foreach') {
       for (const nm of [s.name, `@fe_i${s.d}`, `@fe_s${s.d}`]) {
         if (!locals.has(nm)) locals.set(nm, locals.size);
@@ -690,11 +902,13 @@ function collectSets(body, locals) {
       collectSets(s.body, locals);
     }
   }
+
 }
 
 export function generateAsm(source) {
-  const ast = parse(source);
+  const { ast, classes } = parseWithKinds(source);
   const em = new NativeEmitter();
+  em.classes = classes;
 
   const funcs = ast.filter(s => s.k === 'func');
   const main  = ast.filter(s => s.k !== 'func');
@@ -702,7 +916,8 @@ export function generateAsm(source) {
   for (const f of funcs) {
     em.functions.set(f.name, { arity: f.params.length, label: `sdev_fn_${f.name}` });
   }
-  em.fnTypes = inferFnTypes(funcs, main);
+  em.fnTypes = inferFnTypes(funcs, main, classes);
+
 
   em.L('# Generated by lang/native/codegen-x64.mjs — do not edit by hand.');
   em.L('    .text');
@@ -754,6 +969,40 @@ export function generateAsm(source) {
   em.L('    movq %rbp, %rsp');
   em.L('    popq %rbp');
   em.L('    ret');
+
+  // Milestone 6f — closure bodies. Params arrive on the stack like any other
+  // function; captures are copied out of the closure pointer in %r10, which
+  // the call site loaded just before `call *code`.
+  for (let li = 0; li < em.lambdas.length; li++) {
+    const lam = em.lambdas[li];
+    em.L(`${lam.label}:`);
+    em.L('    pushq %rbp');
+    em.L('    movq %rsp, %rbp');
+    em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
+    const locals = new Map();
+    lam.params.forEach((p, i) => locals.set(p, i));
+    lam.caps.forEach((c) => { if (!locals.has(c)) locals.set(c, locals.size); });
+    collectSets(lam.body, locals);
+    lam.params.forEach((_p, i) => {
+      em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
+      em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
+    });
+    lam.caps.forEach((c, i) => {
+      em.L(`    movq ${16 + 8 * i}(%r10), %rax`);
+      em.L(`    movq %rax, -${8 * (locals.get(c) + 1)}(%rbp)`);
+    });
+    const epilogue = em.gensym('lamret');
+    const ltys = new Map(lam.tys);
+    const ctx = { epilogue, tys: ltys, fnTypes: em.fnTypes };
+    lam.body.forEach(s => emitStmt(s, em, locals, ctx));
+    em.L('    xorq %rax, %rax');
+    em.L(`${epilogue}:`);
+    em.L('    movq %rbp, %rsp');
+    em.L('    popq %rbp');
+    em.L('    ret');
+  }
+
+
 
   // .rodata for string literals
   em.L('    .section .rodata');
