@@ -286,15 +286,16 @@ const Index = () => {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border text-xs text-muted-foreground font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />
-              v. ALPHA
+              v2 “Prism” — out now
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.1]">
               SDEV — Code becomes{' '}
               <span className="gradient-text">poetry.</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-              SDEV is a programming language designed for clarity and creativity.
-              Expressive syntax, built-in graphics, a full compiler — and you can write it in any human language.
+              A programming language with a self-hosted compiler, two runtimes — WebAssembly in the browser
+              and real x86-64 assembly on the desktop — Python-level standard library parity, and a machine
+              learning stack written entirely in sdev.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
