@@ -330,7 +330,7 @@ const Index = () => {
 
           {/* Right: hero code preview */}
           <div className="relative">
-            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-2xl shadow-brand-cyan/5">
+            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-2xl shadow-primary/10">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-brand-rose/60" />
@@ -341,13 +341,13 @@ const Index = () => {
               </div>
               <pre className="p-5 text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
 <span className="text-muted-foreground">// A taste of sdev</span>
-{'\n'}<span className="text-brand-cyan">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
-{'\n'}  <span className="text-brand-cyan">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
+{'\n'}<span className="text-brand-periwinkle">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
+{'\n'}  <span className="text-brand-periwinkle">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
 {'\n'}<span className="text-muted-foreground">;;</span>
 {'\n'}
-{'\n'}<span className="text-brand-cyan">forge</span> names <span className="text-brand-cyan">be</span> [<span className="text-brand-green">"Ada"</span>, <span className="text-brand-green">"Alan"</span>, <span className="text-brand-green">"Grace"</span>]
+{'\n'}<span className="text-brand-periwinkle">forge</span> names <span className="text-brand-cyan">be</span> [<span className="text-brand-green">"Ada"</span>, <span className="text-brand-green">"Alan"</span>, <span className="text-brand-green">"Grace"</span>]
 {'\n'}
-{'\n'}<span className="text-brand-cyan">iterate</span> name <span className="text-brand-cyan">through</span> names <span className="text-muted-foreground">::</span>
+{'\n'}<span className="text-brand-periwinkle">iterate</span> name <span className="text-brand-periwinkle">through</span> names <span className="text-muted-foreground">::</span>
 {'\n'}  <span className="text-brand-amber">speak</span>(<span className="text-brand-amber">greet</span>(name))
 {'\n'}<span className="text-muted-foreground">;;</span>
               </pre>
@@ -371,9 +371,9 @@ const Index = () => {
       <section className="border-t border-border bg-muted/20">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-display font-bold tracking-tight">Why sdev?</h2>
+            <h2 className="text-3xl md:text-4xl font-display font-bold tracking-tight">What makes sdev different</h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              A language built for humans first, with powerful tools for developers.
+              Not another syntax. A toolchain that compiles itself, targets two kinds of machine, and can edit its own source.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -596,12 +596,12 @@ const Index = () => {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <button onClick={() => navigate('/ide')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
-              <MonitorDot className="w-5 h-5 text-brand-cyan mb-3" />
+              <MonitorDot className="w-5 h-5 text-brand-periwinkle mb-3" />
               <h3 className="font-semibold mb-1">Browser IDE</h3>
               <p className="text-sm text-muted-foreground">File tree, terminal, debugger, AI assistant and live preview.</p>
             </button>
             <button onClick={() => navigate('/docs')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
-              <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
+              <BookOpen className="w-5 h-5 text-brand-violet mb-3" />
               <h3 className="font-semibold mb-1">Documentation</h3>
               <p className="text-sm text-muted-foreground">The sdev Book, Ultimate reference, internals and parity matrices.</p>
             </button>
@@ -626,7 +626,7 @@ const Index = () => {
           <div className="flex items-center gap-3">
             <Zap className="w-4 h-4 text-primary" />
             <span className="font-display font-semibold text-foreground">sdev</span>
-            <span className="text-sm text-muted-foreground">— where code becomes poetry</span>
+            <span className="text-sm text-muted-foreground">— a language that builds itself</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
             <button onClick={() => navigate('/docs')} className="hover:text-foreground transition-colors">Docs</button>
