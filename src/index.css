@@ -195,8 +195,8 @@
   /* Signature gradient — indigo → periwinkle → violet */
   .gradient-text {
     background: linear-gradient(110deg,
-      hsl(var(--brand-indigo)) 0%,
-      hsl(var(--brand-periwinkle)) 45%,
+      hsl(var(--brand-periwinkle)) 0%,
+      hsl(var(--brand-mist)) 40%,
       hsl(var(--brand-violet)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
