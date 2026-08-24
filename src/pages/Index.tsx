@@ -40,32 +40,53 @@ speak(message)
 const FEATURES = [
   {
     icon: Rocket,
-    title: 'Expressive Syntax',
-    description: 'Write code that reads like poetry. No curly braces, no semicolons — just clean, intuitive blocks.',
+    title: 'Expressive syntax',
+    description: 'forge, be, conjure, iterate — blocks instead of braces. Code that reads like a sentence and still compiles to bytecode.',
     color: 'text-brand-cyan',
     bg: 'bg-brand-cyan/10',
   },
   {
-    icon: Shield,
-    title: 'Built-in Graphics',
-    description: 'Turtle graphics, 2D canvas, 3D rendering — all built into the language with zero setup.',
+    icon: Code2,
+    title: 'Self-hosted compiler',
+    description: 'The lexer, parser and code generator are written in sdev itself, and rebuild themselves byte-identically on every run.',
     color: 'text-brand-purple',
     bg: 'bg-brand-purple/10',
   },
   {
+    icon: Shield,
+    title: 'Python-level standard library',
+    description: 'Decorators, generators, comprehensions, pattern matching, async/await, sets, tuples and dunder protocols — 200+ parity features.',
+    color: 'text-brand-sky',
+    bg: 'bg-brand-sky/10',
+  },
+  {
+    icon: Cpu,
+    title: 'ML & LLM stack in sdev',
+    description: 'Tensors, autograd, transformers, training loops and checkpoints — with FFI, CUDA and WebGPU fast paths.',
+    color: 'text-brand-rose',
+    bg: 'bg-brand-rose/10',
+  },
+  {
     icon: Globe2,
-    title: 'Write in Any Language',
-    description: 'Code in Bulgarian, Japanese, Spanish, or 25+ other languages. AI translates your keywords seamlessly.',
+    title: 'Write in any human language',
+    description: 'Keywords in 26 languages — Bulgarian, Japanese, Spanish and more — detected and translated automatically.',
     color: 'text-brand-amber',
     bg: 'bg-brand-amber/10',
   },
   {
-    icon: Layers,
-    title: 'Compiler + VM',
-    description: 'Full bytecode compiler with a virtual machine. Compile to IR, inspect disassembly, run at speed.',
+    icon: Box,
+    title: 'Graphics, GIS & hardware',
+    description: 'Turtle and 2D canvas, Leaflet mapping primitives, and firmware upload to real microcontroller boards.',
     color: 'text-brand-green',
     bg: 'bg-brand-green/10',
   },
+];
+
+const STATS = [
+  { value: '2', label: 'runtimes — WASM & native x86-64' },
+  { value: '200+', label: 'Python parity features' },
+  { value: '26', label: 'human keyword languages' },
+  { value: '100%', label: 'self-hosted compiler' },
 ];
 
 const Index = () => {
@@ -165,7 +186,7 @@ const Index = () => {
 
   const handleShare = useCallback(() => {
     const encoded = btoa(encodeURIComponent(code));
-    const url = `${window.location.origin}/home?code=${encoded}`;
+    const url = `${window.location.origin}/?code=${encoded}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -192,7 +213,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <LaunchAnnouncementCarousel />
-      <SEO title="sdev — A modern programming language with web IDE" description="Try sdev in your browser: a unique programming language with dual Python/JS runtimes, built-in graphics, and live code execution. No install required." path="/home" />
+      <SEO title="sdev — Programming language with a web IDE and native compiler" description="sdev is a programming language with a self-hosted compiler, WebAssembly and x86-64 native runtimes, Python-level standard library parity, and an ML stack written in sdev. Try it in the browser." path="/" />
       {/* Subtle background gradient */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/3 w-[600px] h-[600px] bg-brand-cyan/[0.03] rounded-full blur-[150px]" />
@@ -265,15 +286,16 @@ const Index = () => {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border text-xs text-muted-foreground font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />
-              v. ALPHA
+              v2 “Prism” — out now
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.1]">
               SDEV — Code becomes{' '}
               <span className="gradient-text">poetry.</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-              SDEV is a programming language designed for clarity and creativity.
-              Expressive syntax, built-in graphics, a full compiler — and you can write it in any human language.
+              A programming language with a self-hosted compiler, two runtimes — WebAssembly in the browser
+              and real x86-64 assembly on the desktop — Python-level standard library parity, and a machine
+              learning stack written entirely in sdev.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
@@ -344,11 +366,11 @@ const Index = () => {
               A language built for humans first, with powerful tools for developers.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="group p-6 rounded-xl border border-border bg-card hover:border-primary/20 transition-all"
+                className="group p-6 rounded-xl border border-border bg-card hover:border-primary/20 hover-lift transition-all"
               >
                 <div className={`w-10 h-10 rounded-lg ${f.bg} flex items-center justify-center mb-4`}>
                   <f.icon className={`w-5 h-5 ${f.color}`} />
@@ -358,6 +380,18 @@ const Index = () => {
               </div>
             ))}
           </div>
+
+          <dl className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {STATS.map((s) => (
+              <div key={s.label} className="rounded-xl border border-border bg-card/60 px-5 py-6 text-center">
+                <dt className="sr-only">{s.label}</dt>
+                <dd>
+                  <span className="block font-display text-3xl font-bold gradient-text">{s.value}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground leading-snug">{s.label}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
@@ -541,6 +575,40 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ===== ECOSYSTEM ===== */}
+      <section className="border-t border-border bg-muted/20">
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">The whole toolchain</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Everything around the language — editor, docs, packages and hardware — ships with sdev.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <button onClick={() => navigate('/ide')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
+              <MonitorDot className="w-5 h-5 text-brand-cyan mb-3" />
+              <h3 className="font-semibold mb-1">Browser IDE</h3>
+              <p className="text-sm text-muted-foreground">File tree, terminal, debugger, AI assistant and live preview.</p>
+            </button>
+            <button onClick={() => navigate('/docs')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
+              <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
+              <h3 className="font-semibold mb-1">Documentation</h3>
+              <p className="text-sm text-muted-foreground">The sdev Book, Ultimate reference, internals and parity matrices.</p>
+            </button>
+            <div className="rounded-xl border border-border bg-card p-6">
+              <Terminal className="w-5 h-5 text-brand-amber mb-3" />
+              <h3 className="font-semibold mb-1">CLI, VS Code & desktop</h3>
+              <p className="text-sm text-muted-foreground">npm CLI, a VS Code extension, and a desktop IDE that builds native binaries.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-6">
+              <Box className="w-5 h-5 text-brand-green mb-3" />
+              <h3 className="font-semibold mb-1">Packages & hardware</h3>
+              <p className="text-sm text-muted-foreground">Decentralized <code className="font-mono text-xs">summon</code> packages and firmware upload to real boards.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-border bg-card/50">
 
@@ -550,10 +618,13 @@ const Index = () => {
             <span className="font-display font-semibold text-foreground">sdev</span>
             <span className="text-sm text-muted-foreground">— where code becomes poetry</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
             <button onClick={() => navigate('/docs')} className="hover:text-foreground transition-colors">Docs</button>
             <button onClick={() => navigate('/ide')} className="hover:text-foreground transition-colors">IDE</button>
-            <span className="font-mono text-xs">v1.0.0</span>
+            <button onClick={() => navigate('/account')} className="hover:text-foreground transition-colors">Account</button>
+            <button onClick={() => navigate('/privacy')} className="hover:text-foreground transition-colors">Privacy</button>
+            <button onClick={() => navigate('/terms')} className="hover:text-foreground transition-colors">Terms</button>
+            <span className="font-mono text-xs">v2.0.0</span>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 pb-6 text-center text-xs text-muted-foreground">

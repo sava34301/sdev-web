@@ -49,7 +49,7 @@ export default function Launch() {
     setRedeeming(false);
     if (res.ok) {
       toast.success(t.inviteValid);
-      navigate('/home');
+      navigate('/');
     } else {
       toast.error(t.inviteInvalid);
     }
@@ -109,7 +109,7 @@ export default function Launch() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
           <h2 className="sr-only w-full">Get early access</h2>
           {user || launched || alreadyInvited ? (
-            <Button size="lg" onClick={() => navigate('/home')} className="gap-2">
+            <Button size="lg" onClick={() => navigate('/')} className="gap-2">
               {t.enter} <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
