@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Archivo+Black&family=Hind:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -13,155 +13,149 @@
 
 @layer base {
   :root {
-    /* SDEV — Slate & Electric Blue */
-    --background: 220 23% 5%;
-    --foreground: 220 33% 93%;
+    /* SDEV — Midnight Indigo */
+    --background: 240 44% 6%;
+    --foreground: 230 30% 96%;
 
-    --card: 217 24% 11%;
-    --card-foreground: 220 33% 93%;
+    --card: 240 40% 9%;
+    --card-foreground: 230 30% 96%;
 
-    --popover: 217 26% 13%;
-    --popover-foreground: 220 33% 93%;
+    --popover: 240 40% 10%;
+    --popover-foreground: 230 30% 96%;
 
-    --primary: 217 91% 60%;
+    --primary: 243 75% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 199 89% 60%;
-    --secondary-foreground: 220 23% 5%;
+    --secondary: 239 84% 74%;
+    --secondary-foreground: 240 44% 6%;
 
-    --muted: 217 22% 16%;
-    --muted-foreground: 218 14% 62%;
+    --muted: 240 30% 14%;
+    --muted-foreground: 232 16% 66%;
 
-    --accent: 199 89% 60%;
-    --accent-foreground: 220 23% 5%;
+    --accent: 268 82% 70%;
+    --accent-foreground: 240 44% 6%;
 
-    --destructive: 0 72% 58%;
+    --destructive: 356 78% 62%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 20% 20%;
-    --input: 217 24% 13%;
-    --ring: 217 91% 60%;
+    --border: 240 28% 18%;
+    --input: 240 30% 12%;
+    --ring: 243 75% 60%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* Brand tokens */
-    --brand-blue: 217 91% 60%;
-    --brand-sky: 199 89% 60%;
-    --brand-slate: 218 14% 62%;
-    --brand-steel: 214 32% 78%;
-    --brand-cyan: 187 85% 55%;
-    --brand-indigo: 226 71% 62%;
-    --brand-violet: 258 70% 68%;
-    --brand-periwinkle: 222 80% 72%;
-    --brand-mist: 214 32% 86%;
-    --brand-purple: 258 70% 68%;
-    --brand-rose: 350 75% 62%;
-    --brand-amber: 38 92% 58%;
-    --brand-orange: 22 90% 58%;
-    --brand-green: 152 62% 48%;
+    --brand-indigo: 243 75% 60%;
+    --brand-violet: 268 82% 70%;
+    --brand-periwinkle: 239 84% 74%;
+    --brand-mist: 232 40% 82%;
+    --brand-cyan: 190 88% 62%;
+    --brand-sky: 214 90% 64%;
+    --brand-purple: 268 82% 70%;
+    --brand-rose: 340 78% 66%;
+    --brand-amber: 40 92% 62%;
+    --brand-orange: 24 90% 62%;
+    --brand-green: 158 68% 52%;
 
     /* Sidebar */
-    --sidebar-background: 218 24% 8%;
-    --sidebar-foreground: 220 33% 93%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-background: 240 42% 7%;
+    --sidebar-foreground: 230 30% 96%;
+    --sidebar-primary: 243 75% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 22% 14%;
-    --sidebar-accent-foreground: 220 33% 93%;
-    --sidebar-border: 217 20% 18%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 240 30% 12%;
+    --sidebar-accent-foreground: 230 30% 96%;
+    --sidebar-border: 240 28% 16%;
+    --sidebar-ring: 243 75% 60%;
 
     /* Legacy aliases kept for backward compat */
-    --neon-cyan: 187 85% 55%;
-    --neon-magenta: 350 75% 62%;
-    --neon-violet: 258 70% 68%;
-    --neon-green: 152 62% 48%;
-    --neon-orange: 22 90% 58%;
+    --neon-cyan: 190 88% 62%;
+    --neon-magenta: 340 78% 66%;
+    --neon-violet: 268 82% 70%;
+    --neon-green: 158 68% 52%;
+    --neon-orange: 24 90% 62%;
   }
 
   .dark { /* dark mirrors :root */
-    --background: 220 23% 5%;
-    --foreground: 220 33% 93%;
-    --card: 217 24% 11%;
-    --card-foreground: 220 33% 93%;
-    --popover: 217 26% 13%;
-    --popover-foreground: 220 33% 93%;
-    --primary: 217 91% 60%;
+    --background: 240 44% 6%;
+    --foreground: 230 30% 96%;
+    --card: 240 40% 9%;
+    --card-foreground: 230 30% 96%;
+    --popover: 240 40% 10%;
+    --popover-foreground: 230 30% 96%;
+    --primary: 243 75% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 199 89% 60%;
-    --secondary-foreground: 220 23% 5%;
-    --muted: 217 22% 16%;
-    --muted-foreground: 218 14% 62%;
-    --accent: 199 89% 60%;
-    --accent-foreground: 220 23% 5%;
-    --destructive: 0 72% 58%;
+    --secondary: 239 84% 74%;
+    --secondary-foreground: 240 44% 6%;
+    --muted: 240 30% 14%;
+    --muted-foreground: 232 16% 66%;
+    --accent: 268 82% 70%;
+    --accent-foreground: 240 44% 6%;
+    --destructive: 356 78% 62%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 20% 20%;
-    --input: 217 24% 13%;
-    --ring: 217 91% 60%;
+    --border: 240 28% 18%;
+    --input: 240 30% 12%;
+    --ring: 243 75% 60%;
   }
-
 
   /* ── IDE THEMES (scoped — only apply inside the IDE container) ───────── */
 
   .ide-theme-dark {
-    --background: 220 23% 5%;
-    --foreground: 220 33% 93%;
-    --card: 217 24% 11%;
-    --muted: 217 22% 16%;
-    --border: 217 20% 20%;
-    --primary: 217 91% 60%;
-    --accent: 199 89% 60%;
+    --background: 240 44% 6%;
+    --foreground: 230 30% 96%;
+    --card: 240 40% 9%;
+    --muted: 240 30% 14%;
+    --border: 240 28% 18%;
+    --primary: 243 75% 60%;
+    --accent: 268 82% 70%;
   }
   .ide-theme-midnight {
-    --background: 222 32% 3%;
-    --foreground: 220 30% 92%;
-    --card: 220 28% 8%;
-    --muted: 220 24% 13%;
-    --border: 220 22% 17%;
-    --primary: 217 91% 64%;
-    --accent: 187 85% 55%;
+    --background: 236 48% 4%;
+    --foreground: 228 28% 94%;
+    --card: 236 44% 7%;
+    --muted: 236 32% 12%;
+    --border: 236 30% 16%;
+    --primary: 239 84% 70%;
+    --accent: 190 88% 62%;
   }
   .ide-theme-sky {
-    --background: 214 40% 8%;
+    --background: 214 60% 9%;
     --foreground: 210 35% 97%;
-    --card: 214 34% 12%;
-    --muted: 214 28% 17%;
-    --border: 214 26% 23%;
-    --primary: 199 89% 58%;
-    --secondary: 187 85% 58%;
-    --accent: 217 91% 62%;
+    --card: 214 50% 13%;
+    --muted: 214 40% 17%;
+    --border: 214 40% 23%;
+    --primary: 205 92% 62%;
+    --secondary: 190 88% 64%;
+    --accent: 268 82% 72%;
   }
   .ide-theme-sunset {
-    --background: 20 18% 6%;
-    --foreground: 30 25% 95%;
-    --card: 20 16% 10%;
-    --muted: 20 14% 15%;
-    --border: 20 14% 19%;
-    --primary: 22 90% 58%;
-    --secondary: 38 92% 58%;
-    --accent: 350 75% 62%;
+    --background: 280 30% 7%;
+    --foreground: 30 30% 96%;
+    --card: 280 28% 10%;
+    --muted: 280 22% 15%;
+    --border: 280 24% 19%;
+    --primary: 24 92% 62%;
+    --secondary: 340 78% 66%;
+    --accent: 268 82% 72%;
   }
-
   .ide-theme-light {
-    --background: 210 30% 98%;
-    --foreground: 217 30% 12%;
+    --background: 240 40% 98%;
+    --foreground: 240 35% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 217 30% 12%;
+    --card-foreground: 240 35% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 217 30% 12%;
-    --muted: 214 28% 94%;
-    --muted-foreground: 217 12% 42%;
-    --border: 214 22% 86%;
-    --input: 214 28% 96%;
-    --primary: 217 88% 52%;
+    --popover-foreground: 240 35% 12%;
+    --muted: 240 30% 94%;
+    --muted-foreground: 240 12% 42%;
+    --border: 240 22% 86%;
+    --input: 240 30% 96%;
+    --primary: 243 70% 54%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 199 85% 44%;
+    --secondary: 268 70% 58%;
     --secondary-foreground: 0 0% 100%;
-    --accent: 217 88% 52%;
+    --accent: 243 70% 54%;
     --accent-foreground: 0 0% 100%;
-    --ring: 217 88% 52%;
+    --ring: 243 70% 54%;
   }
-
 }
 
 
@@ -172,11 +166,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Hind', system-ui, sans-serif;
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
   }
 
-  h1, h2, h3, h4 { font-family: 'Archivo Black', system-ui, sans-serif; letter-spacing: -0.03em; font-weight: 400; }
-
+  h1, h2, h3, h4 { font-family: 'Sora', system-ui, sans-serif; letter-spacing: -0.02em; }
 
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -196,14 +190,14 @@
   }
 
   .font-mono   { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-  .font-display{ font-family: 'Archivo Black', system-ui, sans-serif; letter-spacing: -0.03em; font-weight: 400; }
+  .font-display{ font-family: 'Sora', system-ui, sans-serif; letter-spacing: -0.02em; }
 
-  /* Signature gradient — steel → electric blue → sky */
+  /* Signature gradient — indigo → periwinkle → violet */
   .gradient-text {
-    background: linear-gradient(100deg,
-      hsl(var(--brand-mist)) 0%,
-      hsl(var(--brand-blue)) 55%,
-      hsl(var(--brand-sky)) 100%);
+    background: linear-gradient(110deg,
+      hsl(var(--brand-periwinkle)) 0%,
+      hsl(var(--brand-mist)) 40%,
+      hsl(var(--brand-violet)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -220,53 +214,27 @@
     inset: -1px;
     border-radius: calc(var(--radius) + 1px);
     background: linear-gradient(135deg,
-      hsl(var(--brand-blue) / 0.6),
-      hsl(var(--brand-sky) / 0.45));
+      hsl(var(--brand-indigo) / 0.6),
+      hsl(var(--brand-periwinkle) / 0.5),
+      hsl(var(--brand-violet) / 0.55));
     z-index: -1;
     opacity: 0.5;
   }
 
-  /* Ambient backdrops */
+  /* Ambient aurora backdrop */
   .sky-backdrop {
     background:
-      radial-gradient(ellipse 80% 60% at 50% 0%,   hsl(var(--brand-blue) / 0.20), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 90% 80%,  hsl(var(--brand-sky) / 0.12), transparent 65%);
+      radial-gradient(ellipse 80% 60% at 50% 0%,   hsl(var(--brand-indigo) / 0.22), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 80%,  hsl(var(--brand-violet) / 0.16), transparent 65%),
+      radial-gradient(ellipse 70% 55% at 10% 95%,  hsl(var(--brand-periwinkle) / 0.14), transparent 65%);
   }
 
   .aurora {
     background:
-      radial-gradient(58rem 28rem at 12% -12%, hsl(var(--brand-blue) / 0.18), transparent 62%),
-      radial-gradient(46rem 24rem at 92% 4%, hsl(var(--brand-sky) / 0.12), transparent 62%);
+      radial-gradient(60rem 30rem at 15% -10%, hsl(var(--brand-indigo) / 0.20), transparent 60%),
+      radial-gradient(50rem 26rem at 90% 10%, hsl(var(--brand-violet) / 0.16), transparent 60%),
+      radial-gradient(40rem 24rem at 50% 100%, hsl(var(--brand-periwinkle) / 0.10), transparent 65%);
   }
-
-  /* Bento tile */
-  .bento {
-    position: relative;
-    background:
-      linear-gradient(180deg, hsl(var(--card) / 0.9), hsl(var(--card) / 0.6));
-    border: 1px solid hsl(var(--border) / 0.8);
-    border-radius: 14px;
-    overflow: hidden;
-    transition: border-color .2s ease, transform .2s ease, background-color .2s ease;
-  }
-  .bento::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(140deg, hsl(var(--primary) / 0.10), transparent 45%);
-    opacity: 0; transition: opacity .25s ease;
-    pointer-events: none;
-  }
-  .bento:hover { border-color: hsl(var(--primary) / 0.45); transform: translateY(-2px); }
-  .bento:hover::before { opacity: 1; }
-
-  .rule-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: hsl(var(--muted-foreground));
-  }
-
 
   .dot-grid {
     background-image: radial-gradient(hsl(var(--border) / 0.9) 1px, transparent 1px);
@@ -312,7 +280,7 @@
     content: '';
     position: absolute; bottom: -2px; left: 0;
     width: 0; height: 2px;
-    background: linear-gradient(90deg, hsl(var(--brand-blue)), hsl(var(--brand-sky)));
+    background: linear-gradient(90deg, hsl(var(--brand-indigo)), hsl(var(--brand-violet)));
     transition: width 0.3s ease;
   }
   .animated-underline:hover::after { width: 100%; }
@@ -390,7 +358,7 @@
   .ide-tab[data-active="true"]::after {
     content: ''; position: absolute; left: 0; right: 0; top: 0;
     height: 2px; border-radius: 0 0 2px 2px;
-    background: linear-gradient(90deg, hsl(var(--brand-blue)), hsl(var(--brand-sky)));
+    background: linear-gradient(90deg, hsl(var(--brand-indigo)), hsl(var(--brand-violet)));
   }
 
   .ide-statusbar {

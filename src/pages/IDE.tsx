@@ -3,7 +3,7 @@ import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { IdeFileTree } from '@/components/ide/IdeFileTree';
-import { CodeMirrorEditor as IdeEditor, type IdeEditorHandle } from '@/components/ide/CodeMirrorEditor';
+import { IdeEditor, type IdeEditorHandle } from '@/components/ide/IdeEditor';
 import { IdeTabs } from '@/components/ide/IdeTabs';
 import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
@@ -1584,7 +1584,6 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                               key={activeFile.id + '-translated'}
                               value={lastResult.translated}
                               onChange={() => {}}
-                              readOnly
                               fileName={activeFile.name}
                               settings={settings}
                             />
@@ -1600,7 +1599,6 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                               onRun={runCode}
                               onFormat={formatCurrent}
                               fileName={activeFile.name}
-                              problems={problems}
                               settings={settings}
                               onCursorChange={setCursor}
                               onSelectionChange={setSelection}
