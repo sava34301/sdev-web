@@ -186,7 +186,7 @@ const Index = () => {
 
   const handleShare = useCallback(() => {
     const encoded = btoa(encodeURIComponent(code));
-    const url = `${window.location.origin}/home?code=${encoded}`;
+    const url = `${window.location.origin}/?code=${encoded}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
