@@ -39,44 +39,44 @@ speak(message)
 
 const FEATURES = [
   {
-    icon: Rocket,
-    title: 'Expressive syntax',
-    description: 'forge, be, conjure, iterate — blocks instead of braces. Code that reads like a sentence and still compiles to bytecode.',
-    color: 'text-brand-cyan',
-    bg: 'bg-brand-cyan/10',
-  },
-  {
     icon: Code2,
-    title: 'Self-hosted compiler',
-    description: 'The lexer, parser and code generator are written in sdev itself, and rebuild themselves byte-identically on every run.',
-    color: 'text-brand-purple',
-    bg: 'bg-brand-purple/10',
+    title: 'Compiler written in sdev',
+    description: 'Lexer, parser and code generator are sdev source. The toolchain rebuilds itself byte-identically on every run — a verified fixed point, not a claim.',
+    color: 'text-brand-indigo',
+    bg: 'bg-brand-indigo/10',
   },
   {
-    icon: Shield,
-    title: 'Python-level standard library',
-    description: 'Decorators, generators, comprehensions, pattern matching, async/await, sets, tuples and dunder protocols — 200+ parity features.',
-    color: 'text-brand-sky',
-    bg: 'bg-brand-sky/10',
+    icon: Layers,
+    title: 'One language, two metals',
+    description: 'The same program runs on a hand-written WebAssembly seed VM in the browser and compiles to real x86-64 assembly, linked to a static binary with no libc.',
+    color: 'text-brand-violet',
+    bg: 'bg-brand-violet/10',
   },
   {
     icon: Cpu,
-    title: 'ML & LLM stack in sdev',
-    description: 'Tensors, autograd, transformers, training loops and checkpoints — with FFI, CUDA and WebGPU fast paths.',
+    title: 'Machine learning, in sdev',
+    description: 'Tensors, autograd, transformers, training loops and checkpoints — written in sdev, with FFI, CUDA and WebGPU fast paths underneath.',
+    color: 'text-brand-periwinkle',
+    bg: 'bg-brand-periwinkle/10',
+  },
+  {
+    icon: Rocket,
+    title: 'Programs that rewrite programs',
+    description: 'sdev can read, edit and recompile its own source tree — models trained in sdev can propose and land changes to the language itself.',
     color: 'text-brand-rose',
     bg: 'bg-brand-rose/10',
   },
   {
     icon: Globe2,
-    title: 'Write in any human language',
-    description: 'Keywords in 26 languages — Bulgarian, Japanese, Spanish and more — detected and translated automatically.',
+    title: 'Write in your own language',
+    description: 'Keywords exist in 26 human languages — Bulgarian, Japanese, Spanish and more — auto-detected and normalised before a single token is parsed.',
     color: 'text-brand-amber',
     bg: 'bg-brand-amber/10',
   },
   {
     icon: Box,
-    title: 'Graphics, GIS & hardware',
-    description: 'Turtle and 2D canvas, Leaflet mapping primitives, and firmware upload to real microcontroller boards.',
+    title: 'Drawing, maps and hardware',
+    description: 'Turtle and 2D canvas, Leaflet mapping primitives, decentralised `summon` packages, and firmware flashed straight onto real boards.',
     color: 'text-brand-green',
     bg: 'bg-brand-green/10',
   },
@@ -84,10 +84,11 @@ const FEATURES = [
 
 const STATS = [
   { value: '2', label: 'runtimes — WASM & native x86-64' },
-  { value: '200+', label: 'Python parity features' },
+  { value: '100%', label: 'self-hosted, byte-identical rebuild' },
   { value: '26', label: 'human keyword languages' },
-  { value: '100%', label: 'self-hosted compiler' },
+  { value: '0', label: 'libc dependencies in native builds' },
 ];
+
 
 const Index = () => {
   const navigate = useNavigate();
