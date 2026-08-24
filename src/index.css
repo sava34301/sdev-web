@@ -280,10 +280,11 @@
     content: '';
     position: absolute; bottom: -2px; left: 0;
     width: 0; height: 2px;
-    background: linear-gradient(90deg, hsl(var(--brand-sky)), hsl(var(--brand-orange)));
+    background: linear-gradient(90deg, hsl(var(--brand-indigo)), hsl(var(--brand-violet)));
     transition: width 0.3s ease;
   }
   .animated-underline:hover::after { width: 100%; }
+
 
   .shadow-neon-cyan   { box-shadow: 0 0 24px hsl(var(--brand-cyan) / 0.22); }
   .shadow-neon-violet { box-shadow: 0 0 24px hsl(var(--brand-sky) / 0.22); }
