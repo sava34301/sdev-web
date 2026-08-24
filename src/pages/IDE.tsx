@@ -1669,7 +1669,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     </button>
                     <div className="flex-1" />
                     {showCanvas && (
-                      <button onClick={() => setShowCanvas(false)} aria-label="Close canvas" className="p-1 mr-1 text-muted-foreground hover:text-foreground transition-colors rounded">
+                      <button onClick={() => setShowCanvas(false)} className="p-1 mr-1 text-muted-foreground hover:text-foreground transition-colors rounded">
                         <X className="w-3 h-3" />
                       </button>
                     )}

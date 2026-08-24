@@ -77,7 +77,7 @@ export default function Launch() {
 
         <div className="space-y-4">
           <h1 className="text-5xl sm:text-7xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-            {launched ? `${t.launched} — sdev` : 'sdev — A new programming language for the modern web'}
+            {launched ? t.launched : t.title}
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">{t.subtitle}</p>
         </div>

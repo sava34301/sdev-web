@@ -153,7 +153,7 @@ const Index = () => {
         <nav className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <a href="/" className="flex items-center gap-2.5 group">
-              <img src={sdevLogo} alt="sdev" className="w-7 h-7 object-contain" />
+              <img src={sdevLogo} alt="sdev logo" className="w-7 h-7 object-contain" />
               <span className="text-lg font-display tracking-tight text-foreground">sdev</span>
               <span className="rule-label border border-border rounded px-1.5 py-0.5 leading-none">v2</span>
             </a>
