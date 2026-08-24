@@ -190,14 +190,14 @@
   }
 
   .font-mono   { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-  .font-display{ font-family: 'Space Grotesk', system-ui, sans-serif; }
+  .font-display{ font-family: 'Sora', system-ui, sans-serif; letter-spacing: -0.02em; }
 
-  /* Signature gradient — sky blue → cyan → orange (from cover art) */
+  /* Signature gradient — indigo → periwinkle → violet */
   .gradient-text {
     background: linear-gradient(110deg,
-      hsl(var(--brand-sky)) 0%,
-      hsl(var(--brand-cyan)) 45%,
-      hsl(var(--brand-orange)) 100%);
+      hsl(var(--brand-indigo)) 0%,
+      hsl(var(--brand-periwinkle)) 45%,
+      hsl(var(--brand-violet)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -214,20 +214,32 @@
     inset: -1px;
     border-radius: calc(var(--radius) + 1px);
     background: linear-gradient(135deg,
-      hsl(var(--brand-sky) / 0.6),
-      hsl(var(--brand-cyan) / 0.5),
-      hsl(var(--brand-orange) / 0.55));
+      hsl(var(--brand-indigo) / 0.6),
+      hsl(var(--brand-periwinkle) / 0.5),
+      hsl(var(--brand-violet) / 0.55));
     z-index: -1;
     opacity: 0.5;
   }
 
-  /* Hero sky backdrop — soft luminous clouds + warm horizon */
+  /* Ambient aurora backdrop */
   .sky-backdrop {
     background:
-      radial-gradient(ellipse 80% 60% at 50% 0%,   hsl(var(--brand-mist) / 0.22), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 90% 80%,  hsl(var(--brand-orange) / 0.18), transparent 65%),
-      radial-gradient(ellipse 70% 55% at 10% 95%,  hsl(var(--brand-cyan) / 0.18), transparent 65%),
-      linear-gradient(180deg, hsl(var(--brand-sky) / 0.18) 0%, transparent 70%);
+      radial-gradient(ellipse 80% 60% at 50% 0%,   hsl(var(--brand-indigo) / 0.22), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 80%,  hsl(var(--brand-violet) / 0.16), transparent 65%),
+      radial-gradient(ellipse 70% 55% at 10% 95%,  hsl(var(--brand-periwinkle) / 0.14), transparent 65%);
+  }
+
+  .aurora {
+    background:
+      radial-gradient(60rem 30rem at 15% -10%, hsl(var(--brand-indigo) / 0.20), transparent 60%),
+      radial-gradient(50rem 26rem at 90% 10%, hsl(var(--brand-violet) / 0.16), transparent 60%),
+      radial-gradient(40rem 24rem at 50% 100%, hsl(var(--brand-periwinkle) / 0.10), transparent 65%);
+  }
+
+  .dot-grid {
+    background-image: radial-gradient(hsl(var(--border) / 0.9) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
   }
 
   .cyber-grid {
@@ -236,6 +248,7 @@
       linear-gradient(90deg, hsl(var(--border) / 0.18) 1px, transparent 1px);
     background-size: 60px 60px;
   }
+
 
   .neon-glow-cyan    { box-shadow: 0 0 24px hsl(var(--brand-cyan) / 0.25); }
   .neon-glow-magenta { box-shadow: 0 0 24px hsl(var(--brand-orange) / 0.25); }
