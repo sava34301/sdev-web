@@ -26,7 +26,6 @@ import { Environment } from '@/lang/environment';
 import { createBuiltins } from '@/lang/builtins';
 import { SdevError } from '@/lang/errors';
 import sdevLogo from '@/assets/sdev-logo.png';
-import { LaunchAnnouncementCarousel } from '@/components/LaunchAnnouncementCarousel';
 
 const DEFAULT_CODE = `// Welcome to sdev!
 
@@ -142,7 +141,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative">
-      <LaunchAnnouncementCarousel />
       <SEO
         title="sdev — a language whose compiler is written in itself"
         description="sdev compiles itself byte-identically, runs on a hand-written WebAssembly VM in the browser, emits real x86-64 assembly on your machine, and carries a machine-learning stack written in sdev."
