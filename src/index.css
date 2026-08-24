@@ -172,11 +172,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Manrope', system-ui, sans-serif;
-    font-feature-settings: 'ss01', 'cv11';
+    font-family: 'Hind', system-ui, sans-serif;
   }
 
-  h1, h2, h3, h4 { font-family: 'Sora', system-ui, sans-serif; letter-spacing: -0.02em; }
+  h1, h2, h3, h4 { font-family: 'Archivo Black', system-ui, sans-serif; letter-spacing: -0.03em; font-weight: 400; }
+
 
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
