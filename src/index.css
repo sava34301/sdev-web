@@ -312,7 +312,7 @@
     content: '';
     position: absolute; bottom: -2px; left: 0;
     width: 0; height: 2px;
-    background: linear-gradient(90deg, hsl(var(--brand-indigo)), hsl(var(--brand-violet)));
+    background: linear-gradient(90deg, hsl(var(--brand-blue)), hsl(var(--brand-sky)));
     transition: width 0.3s ease;
   }
   .animated-underline:hover::after { width: 100%; }
@@ -390,7 +390,7 @@
   .ide-tab[data-active="true"]::after {
     content: ''; position: absolute; left: 0; right: 0; top: 0;
     height: 2px; border-radius: 0 0 2px 2px;
-    background: linear-gradient(90deg, hsl(var(--brand-indigo)), hsl(var(--brand-violet)));
+    background: linear-gradient(90deg, hsl(var(--brand-blue)), hsl(var(--brand-sky)));
   }
 
   .ide-statusbar {
