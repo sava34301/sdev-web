@@ -366,11 +366,11 @@ const Index = () => {
               A language built for humans first, with powerful tools for developers.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="group p-6 rounded-xl border border-border bg-card hover:border-primary/20 transition-all"
+                className="group p-6 rounded-xl border border-border bg-card hover:border-primary/20 hover-lift transition-all"
               >
                 <div className={`w-10 h-10 rounded-lg ${f.bg} flex items-center justify-center mb-4`}>
                   <f.icon className={`w-5 h-5 ${f.color}`} />
@@ -380,6 +380,18 @@ const Index = () => {
               </div>
             ))}
           </div>
+
+          <dl className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {STATS.map((s) => (
+              <div key={s.label} className="rounded-xl border border-border bg-card/60 px-5 py-6 text-center">
+                <dt className="sr-only">{s.label}</dt>
+                <dd>
+                  <span className="block font-display text-3xl font-bold gradient-text">{s.value}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground leading-snug">{s.label}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
