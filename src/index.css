@@ -13,147 +13,151 @@
 
 @layer base {
   :root {
-    /* SDEV — Sky Identity (dark base, bright sky-blue + warm orange accents) */
-    --background: 212 45% 6%;
-    --foreground: 200 25% 96%;
+    /* SDEV — Midnight Indigo */
+    --background: 240 44% 6%;
+    --foreground: 230 30% 96%;
 
-    --card: 212 40% 9%;
-    --card-foreground: 200 25% 96%;
+    --card: 240 40% 9%;
+    --card-foreground: 230 30% 96%;
 
-    --popover: 212 40% 10%;
-    --popover-foreground: 200 25% 96%;
+    --popover: 240 40% 10%;
+    --popover-foreground: 230 30% 96%;
 
-    --primary: 205 90% 58%;
-    --primary-foreground: 212 45% 6%;
+    --primary: 243 75% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 188 78% 60%;
-    --secondary-foreground: 212 45% 6%;
+    --secondary: 239 84% 74%;
+    --secondary-foreground: 240 44% 6%;
 
-    --muted: 212 30% 14%;
-    --muted-foreground: 210 18% 65%;
+    --muted: 240 30% 14%;
+    --muted-foreground: 232 16% 66%;
 
-    --accent: 25 92% 58%;
-    --accent-foreground: 212 45% 6%;
+    --accent: 268 82% 70%;
+    --accent-foreground: 240 44% 6%;
 
-    --destructive: 0 78% 60%;
+    --destructive: 356 78% 62%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 212 30% 18%;
-    --input: 212 30% 12%;
-    --ring: 205 90% 58%;
+    --border: 240 28% 18%;
+    --input: 240 30% 12%;
+    --ring: 243 75% 60%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
-    /* Brand tokens — directly from the SDEV launch art */
-    --brand-sky: 205 90% 58%;        /* primary sky blue */
-    --brand-cyan: 188 78% 60%;       /* turquoise highlight */
-    --brand-mist: 200 70% 78%;       /* pale cloud */
-    --brand-orange: 25 92% 58%;      /* sunset accent */
-    --brand-amber: 38 92% 60%;
-    --brand-purple: 248 70% 66%;     /* violet drift from cover art */
-    --brand-rose: 350 75% 62%;
-    --brand-green: 162 65% 50%;
+    /* Brand tokens */
+    --brand-indigo: 243 75% 60%;
+    --brand-violet: 268 82% 70%;
+    --brand-periwinkle: 239 84% 74%;
+    --brand-mist: 232 40% 82%;
+    --brand-cyan: 190 88% 62%;
+    --brand-sky: 214 90% 64%;
+    --brand-purple: 268 82% 70%;
+    --brand-rose: 340 78% 66%;
+    --brand-amber: 40 92% 62%;
+    --brand-orange: 24 90% 62%;
+    --brand-green: 158 68% 52%;
 
     /* Sidebar */
-    --sidebar-background: 212 42% 7%;
-    --sidebar-foreground: 200 25% 96%;
-    --sidebar-primary: 205 90% 58%;
-    --sidebar-primary-foreground: 212 45% 6%;
-    --sidebar-accent: 212 30% 12%;
-    --sidebar-accent-foreground: 200 25% 96%;
-    --sidebar-border: 212 30% 16%;
-    --sidebar-ring: 205 90% 58%;
+    --sidebar-background: 240 42% 7%;
+    --sidebar-foreground: 230 30% 96%;
+    --sidebar-primary: 243 75% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 30% 12%;
+    --sidebar-accent-foreground: 230 30% 96%;
+    --sidebar-border: 240 28% 16%;
+    --sidebar-ring: 243 75% 60%;
 
     /* Legacy aliases kept for backward compat */
-    --neon-cyan: 188 78% 60%;
-    --neon-magenta: 350 75% 62%;
-    --neon-violet: 248 70% 66%;
-    --neon-green: 162 65% 50%;
-    --neon-orange: 25 92% 58%;
+    --neon-cyan: 190 88% 62%;
+    --neon-magenta: 340 78% 66%;
+    --neon-violet: 268 82% 70%;
+    --neon-green: 158 68% 52%;
+    --neon-orange: 24 90% 62%;
   }
 
   .dark { /* dark mirrors :root */
-    --background: 212 45% 6%;
-    --foreground: 200 25% 96%;
-    --card: 212 40% 9%;
-    --card-foreground: 200 25% 96%;
-    --popover: 212 40% 10%;
-    --popover-foreground: 200 25% 96%;
-    --primary: 205 90% 58%;
-    --primary-foreground: 212 45% 6%;
-    --secondary: 188 78% 60%;
-    --secondary-foreground: 212 45% 6%;
-    --muted: 212 30% 14%;
-    --muted-foreground: 210 18% 65%;
-    --accent: 25 92% 58%;
-    --accent-foreground: 212 45% 6%;
-    --destructive: 0 78% 60%;
+    --background: 240 44% 6%;
+    --foreground: 230 30% 96%;
+    --card: 240 40% 9%;
+    --card-foreground: 230 30% 96%;
+    --popover: 240 40% 10%;
+    --popover-foreground: 230 30% 96%;
+    --primary: 243 75% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 239 84% 74%;
+    --secondary-foreground: 240 44% 6%;
+    --muted: 240 30% 14%;
+    --muted-foreground: 232 16% 66%;
+    --accent: 268 82% 70%;
+    --accent-foreground: 240 44% 6%;
+    --destructive: 356 78% 62%;
     --destructive-foreground: 0 0% 100%;
-    --border: 212 30% 18%;
-    --input: 212 30% 12%;
-    --ring: 205 90% 58%;
+    --border: 240 28% 18%;
+    --input: 240 30% 12%;
+    --ring: 243 75% 60%;
   }
 
   /* ── IDE THEMES (scoped — only apply inside the IDE container) ───────── */
 
   .ide-theme-dark {
-    --background: 212 45% 6%;
-    --foreground: 200 25% 96%;
-    --card: 212 40% 9%;
-    --muted: 212 30% 14%;
-    --border: 212 30% 18%;
-    --primary: 205 90% 58%;
-    --accent: 25 92% 58%;
+    --background: 240 44% 6%;
+    --foreground: 230 30% 96%;
+    --card: 240 40% 9%;
+    --muted: 240 30% 14%;
+    --border: 240 28% 18%;
+    --primary: 243 75% 60%;
+    --accent: 268 82% 70%;
   }
   .ide-theme-midnight {
-    --background: 230 45% 5%;
-    --foreground: 220 25% 94%;
-    --card: 230 42% 8%;
-    --muted: 230 32% 13%;
-    --border: 230 32% 17%;
-    --primary: 248 75% 66%;
-    --accent: 195 90% 62%;
+    --background: 236 48% 4%;
+    --foreground: 228 28% 94%;
+    --card: 236 44% 7%;
+    --muted: 236 32% 12%;
+    --border: 236 30% 16%;
+    --primary: 239 84% 70%;
+    --accent: 190 88% 62%;
   }
   .ide-theme-sky {
-    --background: 205 80% 10%;
-    --foreground: 200 35% 97%;
-    --card: 205 65% 14%;
-    --muted: 205 50% 18%;
-    --border: 205 50% 24%;
-    --primary: 195 95% 62%;
-    --secondary: 188 85% 65%;
-    --accent: 25 95% 62%;
+    --background: 214 60% 9%;
+    --foreground: 210 35% 97%;
+    --card: 214 50% 13%;
+    --muted: 214 40% 17%;
+    --border: 214 40% 23%;
+    --primary: 205 92% 62%;
+    --secondary: 190 88% 64%;
+    --accent: 268 82% 72%;
   }
   .ide-theme-sunset {
-    --background: 18 35% 8%;
-    --foreground: 35 35% 96%;
-    --card: 18 32% 11%;
-    --muted: 18 25% 16%;
-    --border: 18 28% 20%;
-    --primary: 25 95% 62%;
-    --secondary: 350 80% 65%;
-    --accent: 205 90% 62%;
+    --background: 280 30% 7%;
+    --foreground: 30 30% 96%;
+    --card: 280 28% 10%;
+    --muted: 280 22% 15%;
+    --border: 280 24% 19%;
+    --primary: 24 92% 62%;
+    --secondary: 340 78% 66%;
+    --accent: 268 82% 72%;
   }
   .ide-theme-light {
-    --background: 205 60% 97%;
-    --foreground: 215 35% 14%;
+    --background: 240 40% 98%;
+    --foreground: 240 35% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 215 35% 14%;
+    --card-foreground: 240 35% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 35% 14%;
-    --muted: 205 35% 92%;
-    --muted-foreground: 215 20% 40%;
-    --border: 205 30% 84%;
-    --input: 205 40% 95%;
-    --primary: 205 88% 48%;
+    --popover-foreground: 240 35% 12%;
+    --muted: 240 30% 94%;
+    --muted-foreground: 240 12% 42%;
+    --border: 240 22% 86%;
+    --input: 240 30% 96%;
+    --primary: 243 70% 54%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 188 75% 45%;
+    --secondary: 268 70% 58%;
     --secondary-foreground: 0 0% 100%;
-    --accent: 22 92% 52%;
+    --accent: 243 70% 54%;
     --accent-foreground: 0 0% 100%;
-    --ring: 205 88% 48%;
+    --ring: 243 70% 54%;
   }
 }
+
 
 @layer base {
   * { @apply border-border; }
