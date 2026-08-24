@@ -288,23 +288,23 @@ const Index = () => {
               <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />
               v2 “Prism” — out now
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.1]">
-              SDEV — Code becomes{' '}
-              <span className="gradient-text">poetry.</span>
+            <h1 className="text-4xl md:text-5xl lg:text-[4.25rem] font-display font-extrabold tracking-tight leading-[1.05]">
+              A language that{' '}
+              <span className="gradient-text">builds itself.</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-              A programming language with a self-hosted compiler, two runtimes — WebAssembly in the browser
-              and real x86-64 assembly on the desktop — Python-level standard library parity, and a machine
-              learning stack written entirely in sdev.
+              sdev's compiler is written in sdev. It runs on a hand-written WebAssembly VM in your browser,
+              compiles to real x86-64 assembly on your machine, and carries a machine-learning stack written
+              in the language it trains.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
-                onClick={() => window.open('https://web.sdev.codes/docs', '_blank')}
+                onClick={scrollToPlayground}
                 size="lg"
                 className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12 px-6"
               >
-                View Docs
-                <ArrowRight className="w-4 h-4" />
+                <Play className="w-4 h-4" />
+                Run sdev now
               </Button>
               <Button
                 onClick={() => navigate('/ide')}
@@ -315,7 +315,17 @@ const Index = () => {
                 <MonitorDot className="w-4 h-4" />
                 Open IDE
               </Button>
+              <Button
+                onClick={() => navigate('/docs')}
+                variant="ghost"
+                size="lg"
+                className="gap-2 h-12 px-5 text-muted-foreground hover:text-foreground"
+              >
+                Docs
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             </div>
+
           </div>
 
           {/* Right: hero code preview */}
