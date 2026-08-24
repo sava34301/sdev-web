@@ -65,7 +65,11 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         brand: {
+          blue: "hsl(var(--brand-blue))",
+          slate: "hsl(var(--brand-slate))",
+          steel: "hsl(var(--brand-steel))",
           indigo: "hsl(var(--brand-indigo))",
+
           violet: "hsl(var(--brand-violet))",
           periwinkle: "hsl(var(--brand-periwinkle))",
           sky: "hsl(var(--brand-sky))",
