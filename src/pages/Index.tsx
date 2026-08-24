@@ -182,8 +182,8 @@ const Index = () => {
           <div className="max-w-4xl">
             <div className="rule-label mb-5">A self-hosting language · released 2026</div>
             <h1 className="font-display text-[2.75rem] leading-[0.95] sm:text-6xl lg:text-[5.5rem] tracking-[-0.04em]">
-              The compiler is<br />
-              <span className="gradient-text">written in sdev.</span>
+              This is<br />
+              <span className="gradient-text">SDEV.</span>
             </h1>
             <p className="mt-7 text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed">
               Lexer, parser and code generator are sdev source files. The toolchain rebuilds itself
