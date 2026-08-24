@@ -40,32 +40,53 @@ speak(message)
 const FEATURES = [
   {
     icon: Rocket,
-    title: 'Expressive Syntax',
-    description: 'Write code that reads like poetry. No curly braces, no semicolons — just clean, intuitive blocks.',
+    title: 'Expressive syntax',
+    description: 'forge, be, conjure, iterate — blocks instead of braces. Code that reads like a sentence and still compiles to bytecode.',
     color: 'text-brand-cyan',
     bg: 'bg-brand-cyan/10',
   },
   {
-    icon: Shield,
-    title: 'Built-in Graphics',
-    description: 'Turtle graphics, 2D canvas, 3D rendering — all built into the language with zero setup.',
+    icon: Code2,
+    title: 'Self-hosted compiler',
+    description: 'The lexer, parser and code generator are written in sdev itself, and rebuild themselves byte-identically on every run.',
     color: 'text-brand-purple',
     bg: 'bg-brand-purple/10',
   },
   {
+    icon: Shield,
+    title: 'Python-level standard library',
+    description: 'Decorators, generators, comprehensions, pattern matching, async/await, sets, tuples and dunder protocols — 200+ parity features.',
+    color: 'text-brand-sky',
+    bg: 'bg-brand-sky/10',
+  },
+  {
+    icon: Cpu,
+    title: 'ML & LLM stack in sdev',
+    description: 'Tensors, autograd, transformers, training loops and checkpoints — with FFI, CUDA and WebGPU fast paths.',
+    color: 'text-brand-rose',
+    bg: 'bg-brand-rose/10',
+  },
+  {
     icon: Globe2,
-    title: 'Write in Any Language',
-    description: 'Code in Bulgarian, Japanese, Spanish, or 25+ other languages. AI translates your keywords seamlessly.',
+    title: 'Write in any human language',
+    description: 'Keywords in 26 languages — Bulgarian, Japanese, Spanish and more — detected and translated automatically.',
     color: 'text-brand-amber',
     bg: 'bg-brand-amber/10',
   },
   {
-    icon: Layers,
-    title: 'Compiler + VM',
-    description: 'Full bytecode compiler with a virtual machine. Compile to IR, inspect disassembly, run at speed.',
+    icon: Box,
+    title: 'Graphics, GIS & hardware',
+    description: 'Turtle and 2D canvas, Leaflet mapping primitives, and firmware upload to real microcontroller boards.',
     color: 'text-brand-green',
     bg: 'bg-brand-green/10',
   },
+];
+
+const STATS = [
+  { value: '2', label: 'runtimes — WASM & native x86-64' },
+  { value: '200+', label: 'Python parity features' },
+  { value: '26', label: 'human keyword languages' },
+  { value: '100%', label: 'self-hosted compiler' },
 ];
 
 const Index = () => {
