@@ -143,24 +143,25 @@
   }
 
   .ide-theme-light {
-    --background: 240 40% 98%;
-    --foreground: 240 35% 12%;
+    --background: 210 30% 98%;
+    --foreground: 217 30% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 240 35% 12%;
+    --card-foreground: 217 30% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 35% 12%;
-    --muted: 240 30% 94%;
-    --muted-foreground: 240 12% 42%;
-    --border: 240 22% 86%;
-    --input: 240 30% 96%;
-    --primary: 243 70% 54%;
+    --popover-foreground: 217 30% 12%;
+    --muted: 214 28% 94%;
+    --muted-foreground: 217 12% 42%;
+    --border: 214 22% 86%;
+    --input: 214 28% 96%;
+    --primary: 217 88% 52%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 268 70% 58%;
+    --secondary: 199 85% 44%;
     --secondary-foreground: 0 0% 100%;
-    --accent: 243 70% 54%;
+    --accent: 217 88% 52%;
     --accent-foreground: 0 0% 100%;
-    --ring: 243 70% 54%;
+    --ring: 217 88% 52%;
   }
+
 }
 
 
