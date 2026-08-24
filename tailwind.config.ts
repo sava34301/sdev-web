@@ -14,10 +14,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Manrope', 'system-ui', 'sans-serif'],
+        sans: ['Hind', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
-        display: ['Sora', 'system-ui', 'sans-serif'],
+        display: ['Archivo Black', 'system-ui', 'sans-serif'],
       },
+
 
       colors: {
         border: "hsl(var(--border))",
@@ -64,7 +65,11 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         brand: {
+          blue: "hsl(var(--brand-blue))",
+          slate: "hsl(var(--brand-slate))",
+          steel: "hsl(var(--brand-steel))",
           indigo: "hsl(var(--brand-indigo))",
+
           violet: "hsl(var(--brand-violet))",
           periwinkle: "hsl(var(--brand-periwinkle))",
           sky: "hsl(var(--brand-sky))",
