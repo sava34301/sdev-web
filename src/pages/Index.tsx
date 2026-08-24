@@ -214,12 +214,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <LaunchAnnouncementCarousel />
-      <SEO title="sdev — Programming language with a web IDE and native compiler" description="sdev is a programming language with a self-hosted compiler, WebAssembly and x86-64 native runtimes, Python-level standard library parity, and an ML stack written in sdev. Try it in the browser." path="/" />
-      {/* Subtle background gradient */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/3 w-[600px] h-[600px] bg-brand-cyan/[0.03] rounded-full blur-[150px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-purple/[0.03] rounded-full blur-[150px]" />
-      </div>
+      <SEO title="sdev — a self-hosted language with a web IDE and native compiler" description="sdev is a programming language whose compiler is written in sdev. Run it on WebAssembly in the browser or compile it to real x86-64 assembly, and build machine learning entirely in the language." path="/" />
+      {/* Ambient backdrop */}
+      <div className="fixed inset-0 pointer-events-none aurora" />
+      <div className="fixed inset-0 pointer-events-none dot-grid opacity-40" />
+
 
       {/* ===== NAVIGATION ===== */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
