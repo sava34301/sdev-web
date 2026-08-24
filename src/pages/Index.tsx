@@ -142,8 +142,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <SEO
-        title="sdev — a language whose compiler is written in itself"
-        description="sdev compiles itself byte-identically, runs on a hand-written WebAssembly VM in the browser, emits real x86-64 assembly on your machine, and carries a machine-learning stack written in sdev."
+        title="sdev — Self-Hosted Language, WebAssembly + Native"
+        description="sdev is a self-hosted programming language with a browser IDE, WebAssembly runtime, native x86-64 compiler, and built-in machine learning stack."
         path="/"
       />
       <div className="fixed inset-0 pointer-events-none aurora" />
