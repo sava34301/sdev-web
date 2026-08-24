@@ -196,14 +196,14 @@
   }
 
   .font-mono   { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-  .font-display{ font-family: 'Sora', system-ui, sans-serif; letter-spacing: -0.02em; }
+  .font-display{ font-family: 'Archivo Black', system-ui, sans-serif; letter-spacing: -0.03em; font-weight: 400; }
 
-  /* Signature gradient — indigo → periwinkle → violet */
+  /* Signature gradient — steel → electric blue → sky */
   .gradient-text {
-    background: linear-gradient(110deg,
-      hsl(var(--brand-periwinkle)) 0%,
-      hsl(var(--brand-mist)) 40%,
-      hsl(var(--brand-violet)) 100%);
+    background: linear-gradient(100deg,
+      hsl(var(--brand-mist)) 0%,
+      hsl(var(--brand-blue)) 55%,
+      hsl(var(--brand-sky)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -220,27 +220,53 @@
     inset: -1px;
     border-radius: calc(var(--radius) + 1px);
     background: linear-gradient(135deg,
-      hsl(var(--brand-indigo) / 0.6),
-      hsl(var(--brand-periwinkle) / 0.5),
-      hsl(var(--brand-violet) / 0.55));
+      hsl(var(--brand-blue) / 0.6),
+      hsl(var(--brand-sky) / 0.45));
     z-index: -1;
     opacity: 0.5;
   }
 
-  /* Ambient aurora backdrop */
+  /* Ambient backdrops */
   .sky-backdrop {
     background:
-      radial-gradient(ellipse 80% 60% at 50% 0%,   hsl(var(--brand-indigo) / 0.22), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 90% 80%,  hsl(var(--brand-violet) / 0.16), transparent 65%),
-      radial-gradient(ellipse 70% 55% at 10% 95%,  hsl(var(--brand-periwinkle) / 0.14), transparent 65%);
+      radial-gradient(ellipse 80% 60% at 50% 0%,   hsl(var(--brand-blue) / 0.20), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 80%,  hsl(var(--brand-sky) / 0.12), transparent 65%);
   }
 
   .aurora {
     background:
-      radial-gradient(60rem 30rem at 15% -10%, hsl(var(--brand-indigo) / 0.20), transparent 60%),
-      radial-gradient(50rem 26rem at 90% 10%, hsl(var(--brand-violet) / 0.16), transparent 60%),
-      radial-gradient(40rem 24rem at 50% 100%, hsl(var(--brand-periwinkle) / 0.10), transparent 65%);
+      radial-gradient(58rem 28rem at 12% -12%, hsl(var(--brand-blue) / 0.18), transparent 62%),
+      radial-gradient(46rem 24rem at 92% 4%, hsl(var(--brand-sky) / 0.12), transparent 62%);
   }
+
+  /* Bento tile */
+  .bento {
+    position: relative;
+    background:
+      linear-gradient(180deg, hsl(var(--card) / 0.9), hsl(var(--card) / 0.6));
+    border: 1px solid hsl(var(--border) / 0.8);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color .2s ease, transform .2s ease, background-color .2s ease;
+  }
+  .bento::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(140deg, hsl(var(--primary) / 0.10), transparent 45%);
+    opacity: 0; transition: opacity .25s ease;
+    pointer-events: none;
+  }
+  .bento:hover { border-color: hsl(var(--primary) / 0.45); transform: translateY(-2px); }
+  .bento:hover::before { opacity: 1; }
+
+  .rule-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
 
   .dot-grid {
     background-image: radial-gradient(hsl(var(--border) / 0.9) 1px, transparent 1px);
