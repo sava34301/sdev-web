@@ -179,30 +179,57 @@ const Index = () => {
       <main id="main">
         {/* ===== HERO ===== */}
         <section className="relative max-w-[1400px] mx-auto px-6 pt-16 pb-10 md:pt-24 md:pb-14">
-          <div className="max-w-4xl">
-            <div className="rule-label mb-5">A self-hosting language · released 2026</div>
-            <h1 className="font-display text-[2.75rem] leading-[0.95] sm:text-6xl lg:text-[5.5rem] tracking-[-0.04em]">
-              This is<br />
-              <span className="gradient-text">SDEV.</span>
-            </h1>
-            <p className="mt-7 text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed">
-              Lexer, parser and code generator are sdev source files. The toolchain rebuilds itself
-              and the output is byte-for-byte identical every time — a fixed point you can verify,
-              not a claim you have to trust.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button onClick={scrollToPlayground} size="lg" className="gap-2 h-12 px-6 font-semibold">
-                <Play className="w-4 h-4" /> Run it in the browser
-              </Button>
-              <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6">
-                Read the docs <ArrowRight className="w-4 h-4" />
-              </Button>
-              <code className="hidden lg:inline-flex items-center h-12 px-4 rounded-md border border-border bg-card/60 font-mono text-sm text-muted-foreground">
-                <span className="text-primary mr-2">$</span> npm i -g sdev-lang
-              </code>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
+            <div className="max-w-2xl">
+              <div className="rule-label mb-5">A self-hosting language · released 2026</div>
+              <h1 className="font-display text-[2.75rem] leading-[0.95] sm:text-6xl lg:text-[5rem] tracking-[-0.04em]">
+                This is<br />
+                <span className="gradient-text">SDEV.</span>
+              </h1>
+              <p className="mt-7 text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed">
+                Lexer, parser and code generator are sdev source files. The toolchain rebuilds itself
+                and the output is byte-for-byte identical every time — a fixed point you can verify,
+                not a claim you have to trust.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Button onClick={scrollToPlayground} size="lg" className="gap-2 h-12 px-6 font-semibold">
+                  <Play className="w-4 h-4" /> Run it in the browser
+                </Button>
+                <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6">
+                  Read the docs <ArrowRight className="w-4 h-4" />
+                </Button>
+                <code className="hidden lg:inline-flex items-center h-12 px-4 rounded-md border border-border bg-card/60 font-mono text-sm text-muted-foreground">
+                  <span className="text-primary mr-2">$</span> npm i -g sdev-lang
+                </code>
+              </div>
+            </div>
+
+            {/* Code specimen */}
+            <div className="bento p-0 overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/70 bg-background/40">
+                <div className="flex gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-brand-rose/60" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-brand-amber/60" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-brand-green/60" />
+                </div>
+                <span className="text-xs font-mono text-muted-foreground ml-2">example.sdev</span>
+              </div>
+              <pre className="p-5 text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
+<span className="text-muted-foreground">// a taste of sdev</span>
+{'\n'}<span className="text-brand-sky">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
+{'\n'}  <span className="text-brand-sky">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
+{'\n'}<span className="text-muted-foreground">;;</span>
+{'\n'}
+{'\n'}<span className="text-brand-sky">forge</span> names <span className="text-primary">be</span> [<span className="text-brand-green">"Ada"</span>, <span className="text-brand-green">"Grace"</span>]
+{'\n'}
+{'\n'}<span className="text-brand-sky">iterate</span> name <span className="text-brand-sky">through</span> names <span className="text-muted-foreground">::</span>
+{'\n'}  <span className="text-brand-amber">speak</span>(<span className="text-brand-amber">greet</span>(name))
+{'\n'}<span className="text-muted-foreground">;;</span>
+              </pre>
             </div>
           </div>
         </section>
+
 
         {/* ===== BENTO ===== */}
         <section className="max-w-[1400px] mx-auto px-6 pb-20">
@@ -289,32 +316,9 @@ const Index = () => {
               </dl>
             </article>
 
-            {/* Code specimen */}
-            <article className="bento md:col-span-3 p-0 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/70 bg-background/40">
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-rose/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-amber/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-green/60" />
-                </div>
-                <span className="text-xs font-mono text-muted-foreground ml-2">example.sdev</span>
-              </div>
-              <pre className="p-5 text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
-<span className="text-muted-foreground">// a taste of sdev</span>
-{'\n'}<span className="text-brand-sky">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
-{'\n'}  <span className="text-brand-sky">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
-{'\n'}<span className="text-muted-foreground">;;</span>
-{'\n'}
-{'\n'}<span className="text-brand-sky">forge</span> names <span className="text-primary">be</span> [<span className="text-brand-green">"Ada"</span>, <span className="text-brand-green">"Grace"</span>]
-{'\n'}
-{'\n'}<span className="text-brand-sky">iterate</span> name <span className="text-brand-sky">through</span> names <span className="text-muted-foreground">::</span>
-{'\n'}  <span className="text-brand-amber">speak</span>(<span className="text-brand-amber">greet</span>(name))
-{'\n'}<span className="text-muted-foreground">;;</span>
-              </pre>
-            </article>
-
             {/* Toolchain links */}
-            <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="md:col-span-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
               <button onClick={() => navigate('/ide')} className="bento p-6 text-left">
                 <MonitorDot className="w-5 h-5 text-primary mb-3" />
                 <h3 className="text-base mb-1">Browser IDE</h3>
