@@ -575,6 +575,40 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ===== ECOSYSTEM ===== */}
+      <section className="border-t border-border bg-muted/20">
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">The whole toolchain</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Everything around the language — editor, docs, packages and hardware — ships with sdev.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <button onClick={() => navigate('/ide')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
+              <MonitorDot className="w-5 h-5 text-brand-cyan mb-3" />
+              <h3 className="font-semibold mb-1">Browser IDE</h3>
+              <p className="text-sm text-muted-foreground">File tree, terminal, debugger, AI assistant and live preview.</p>
+            </button>
+            <button onClick={() => navigate('/docs')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
+              <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
+              <h3 className="font-semibold mb-1">Documentation</h3>
+              <p className="text-sm text-muted-foreground">The sdev Book, Ultimate reference, internals and parity matrices.</p>
+            </button>
+            <div className="rounded-xl border border-border bg-card p-6">
+              <Terminal className="w-5 h-5 text-brand-amber mb-3" />
+              <h3 className="font-semibold mb-1">CLI, VS Code & desktop</h3>
+              <p className="text-sm text-muted-foreground">npm CLI, a VS Code extension, and a desktop IDE that builds native binaries.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-6">
+              <Box className="w-5 h-5 text-brand-green mb-3" />
+              <h3 className="font-semibold mb-1">Packages & hardware</h3>
+              <p className="text-sm text-muted-foreground">Decentralized <code className="font-mono text-xs">summon</code> packages and firmware upload to real boards.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-border bg-card/50">
 
@@ -584,10 +618,13 @@ const Index = () => {
             <span className="font-display font-semibold text-foreground">sdev</span>
             <span className="text-sm text-muted-foreground">— where code becomes poetry</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
             <button onClick={() => navigate('/docs')} className="hover:text-foreground transition-colors">Docs</button>
             <button onClick={() => navigate('/ide')} className="hover:text-foreground transition-colors">IDE</button>
-            <span className="font-mono text-xs">v1.0.0</span>
+            <button onClick={() => navigate('/account')} className="hover:text-foreground transition-colors">Account</button>
+            <button onClick={() => navigate('/privacy')} className="hover:text-foreground transition-colors">Privacy</button>
+            <button onClick={() => navigate('/terms')} className="hover:text-foreground transition-colors">Terms</button>
+            <span className="font-mono text-xs">v2.0.0</span>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 pb-6 text-center text-xs text-muted-foreground">
