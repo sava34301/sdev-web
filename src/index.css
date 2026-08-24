@@ -13,89 +13,93 @@
 
 @layer base {
   :root {
-    /* SDEV — Midnight Indigo */
-    --background: 240 44% 6%;
-    --foreground: 230 30% 96%;
+    /* SDEV — Slate & Electric Blue */
+    --background: 220 23% 5%;
+    --foreground: 220 33% 93%;
 
-    --card: 240 40% 9%;
-    --card-foreground: 230 30% 96%;
+    --card: 217 24% 11%;
+    --card-foreground: 220 33% 93%;
 
-    --popover: 240 40% 10%;
-    --popover-foreground: 230 30% 96%;
+    --popover: 217 26% 13%;
+    --popover-foreground: 220 33% 93%;
 
-    --primary: 243 75% 60%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 239 84% 74%;
-    --secondary-foreground: 240 44% 6%;
+    --secondary: 199 89% 60%;
+    --secondary-foreground: 220 23% 5%;
 
-    --muted: 240 30% 14%;
-    --muted-foreground: 232 16% 66%;
+    --muted: 217 22% 16%;
+    --muted-foreground: 218 14% 62%;
 
-    --accent: 268 82% 70%;
-    --accent-foreground: 240 44% 6%;
+    --accent: 199 89% 60%;
+    --accent-foreground: 220 23% 5%;
 
-    --destructive: 356 78% 62%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 28% 18%;
-    --input: 240 30% 12%;
-    --ring: 243 75% 60%;
+    --border: 217 20% 20%;
+    --input: 217 24% 13%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     /* Brand tokens */
-    --brand-indigo: 243 75% 60%;
-    --brand-violet: 268 82% 70%;
-    --brand-periwinkle: 239 84% 74%;
-    --brand-mist: 232 40% 82%;
-    --brand-cyan: 190 88% 62%;
-    --brand-sky: 214 90% 64%;
-    --brand-purple: 268 82% 70%;
-    --brand-rose: 340 78% 66%;
-    --brand-amber: 40 92% 62%;
-    --brand-orange: 24 90% 62%;
-    --brand-green: 158 68% 52%;
+    --brand-blue: 217 91% 60%;
+    --brand-sky: 199 89% 60%;
+    --brand-slate: 218 14% 62%;
+    --brand-steel: 214 32% 78%;
+    --brand-cyan: 187 85% 55%;
+    --brand-indigo: 226 71% 62%;
+    --brand-violet: 258 70% 68%;
+    --brand-periwinkle: 222 80% 72%;
+    --brand-mist: 214 32% 86%;
+    --brand-purple: 258 70% 68%;
+    --brand-rose: 350 75% 62%;
+    --brand-amber: 38 92% 58%;
+    --brand-orange: 22 90% 58%;
+    --brand-green: 152 62% 48%;
 
     /* Sidebar */
-    --sidebar-background: 240 42% 7%;
-    --sidebar-foreground: 230 30% 96%;
-    --sidebar-primary: 243 75% 60%;
+    --sidebar-background: 218 24% 8%;
+    --sidebar-foreground: 220 33% 93%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 30% 12%;
-    --sidebar-accent-foreground: 230 30% 96%;
-    --sidebar-border: 240 28% 16%;
-    --sidebar-ring: 243 75% 60%;
+    --sidebar-accent: 217 22% 14%;
+    --sidebar-accent-foreground: 220 33% 93%;
+    --sidebar-border: 217 20% 18%;
+    --sidebar-ring: 217 91% 60%;
 
     /* Legacy aliases kept for backward compat */
-    --neon-cyan: 190 88% 62%;
-    --neon-magenta: 340 78% 66%;
-    --neon-violet: 268 82% 70%;
-    --neon-green: 158 68% 52%;
-    --neon-orange: 24 90% 62%;
+    --neon-cyan: 187 85% 55%;
+    --neon-magenta: 350 75% 62%;
+    --neon-violet: 258 70% 68%;
+    --neon-green: 152 62% 48%;
+    --neon-orange: 22 90% 58%;
   }
 
   .dark { /* dark mirrors :root */
-    --background: 240 44% 6%;
-    --foreground: 230 30% 96%;
-    --card: 240 40% 9%;
-    --card-foreground: 230 30% 96%;
-    --popover: 240 40% 10%;
-    --popover-foreground: 230 30% 96%;
-    --primary: 243 75% 60%;
+    --background: 220 23% 5%;
+    --foreground: 220 33% 93%;
+    --card: 217 24% 11%;
+    --card-foreground: 220 33% 93%;
+    --popover: 217 26% 13%;
+    --popover-foreground: 220 33% 93%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 239 84% 74%;
-    --secondary-foreground: 240 44% 6%;
-    --muted: 240 30% 14%;
-    --muted-foreground: 232 16% 66%;
-    --accent: 268 82% 70%;
-    --accent-foreground: 240 44% 6%;
-    --destructive: 356 78% 62%;
+    --secondary: 199 89% 60%;
+    --secondary-foreground: 220 23% 5%;
+    --muted: 217 22% 16%;
+    --muted-foreground: 218 14% 62%;
+    --accent: 199 89% 60%;
+    --accent-foreground: 220 23% 5%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 28% 18%;
-    --input: 240 30% 12%;
-    --ring: 243 75% 60%;
+    --border: 217 20% 20%;
+    --input: 217 24% 13%;
+    --ring: 217 91% 60%;
   }
+
 
   /* ── IDE THEMES (scoped — only apply inside the IDE container) ───────── */
 
