@@ -302,16 +302,18 @@
     background: hsl(var(--background));
   }
   .ide-titlebar {
-    background: hsl(var(--card));
-    border-bottom: 1px solid hsl(var(--border) / 0.5);
+    background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.85));
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+    box-shadow: 0 1px 0 hsl(var(--foreground) / 0.03) inset;
   }
   .ide-activitybar {
-    background: hsl(var(--card));
-    border-right: 1px solid hsl(var(--border) / 0.4);
+    background: hsl(var(--card) / 0.75);
+    border-right: 1px solid hsl(var(--border) / 0.5);
+    backdrop-filter: blur(12px);
   }
   .ide-activity-btn {
     position: relative;
-    width: 40px; height: 40px;
+    width: 38px; height: 38px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 10px;
     color: hsl(var(--muted-foreground));
@@ -319,40 +321,46 @@
   }
   .ide-activity-btn:hover {
     color: hsl(var(--foreground));
-    background: hsl(var(--muted) / 0.35);
+    background: hsl(var(--muted) / 0.5);
   }
   .ide-activity-btn[data-active="true"] {
-    color: hsl(var(--primary-foreground));
+    color: hsl(var(--primary));
+    background: hsl(var(--primary) / 0.14);
+  }
+  .ide-activity-btn[data-active="true"]::before {
+    content: ''; position: absolute; left: -7px; top: 9px; bottom: 9px;
+    width: 2px; border-radius: 2px;
     background: hsl(var(--primary));
   }
   .ide-sidepanel {
-    background: hsl(var(--card));
-    border-right: 1px solid hsl(var(--border) / 0.4);
+    background: hsl(var(--card) / 0.6);
+    border-right: 1px solid hsl(var(--border) / 0.5);
   }
   .ide-tabsbar {
-    background: hsl(var(--card));
-    border-bottom: 1px solid hsl(var(--border) / 0.4);
+    background: hsl(var(--card) / 0.7);
+    border-bottom: 1px solid hsl(var(--border) / 0.5);
   }
   .ide-tab {
     position: relative;
     display: inline-flex; align-items: center; gap: .5rem;
     height: 30px; padding: 0 .5rem 0 .75rem;
-    border-radius: 8px;
+    border-radius: 8px 8px 0 0;
     font-size: 12px; font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     color: hsl(var(--muted-foreground));
     transition: background-color .15s ease, color .15s ease;
     cursor: pointer; user-select: none;
   }
-  .ide-tab:hover { color: hsl(var(--foreground)); background: hsl(var(--muted) / 0.3); }
+  .ide-tab:hover { color: hsl(var(--foreground)); background: hsl(var(--muted) / 0.4); }
   .ide-tab[data-active="true"] {
     color: hsl(var(--foreground));
     background: hsl(var(--background));
   }
   .ide-tab[data-active="true"]::after {
-    content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px;
-    height: 2px; border-radius: 2px;
-    background: hsl(var(--primary));
+    content: ''; position: absolute; left: 0; right: 0; top: 0;
+    height: 2px; border-radius: 0 0 2px 2px;
+    background: linear-gradient(90deg, hsl(var(--brand-indigo)), hsl(var(--brand-violet)));
   }
+
   .ide-statusbar {
     height: 26px;
     background: hsl(var(--card));
