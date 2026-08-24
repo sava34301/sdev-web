@@ -104,43 +104,44 @@
   /* ── IDE THEMES (scoped — only apply inside the IDE container) ───────── */
 
   .ide-theme-dark {
-    --background: 240 44% 6%;
-    --foreground: 230 30% 96%;
-    --card: 240 40% 9%;
-    --muted: 240 30% 14%;
-    --border: 240 28% 18%;
-    --primary: 243 75% 60%;
-    --accent: 268 82% 70%;
+    --background: 220 23% 5%;
+    --foreground: 220 33% 93%;
+    --card: 217 24% 11%;
+    --muted: 217 22% 16%;
+    --border: 217 20% 20%;
+    --primary: 217 91% 60%;
+    --accent: 199 89% 60%;
   }
   .ide-theme-midnight {
-    --background: 236 48% 4%;
-    --foreground: 228 28% 94%;
-    --card: 236 44% 7%;
-    --muted: 236 32% 12%;
-    --border: 236 30% 16%;
-    --primary: 239 84% 70%;
-    --accent: 190 88% 62%;
+    --background: 222 32% 3%;
+    --foreground: 220 30% 92%;
+    --card: 220 28% 8%;
+    --muted: 220 24% 13%;
+    --border: 220 22% 17%;
+    --primary: 217 91% 64%;
+    --accent: 187 85% 55%;
   }
   .ide-theme-sky {
-    --background: 214 60% 9%;
+    --background: 214 40% 8%;
     --foreground: 210 35% 97%;
-    --card: 214 50% 13%;
-    --muted: 214 40% 17%;
-    --border: 214 40% 23%;
-    --primary: 205 92% 62%;
-    --secondary: 190 88% 64%;
-    --accent: 268 82% 72%;
+    --card: 214 34% 12%;
+    --muted: 214 28% 17%;
+    --border: 214 26% 23%;
+    --primary: 199 89% 58%;
+    --secondary: 187 85% 58%;
+    --accent: 217 91% 62%;
   }
   .ide-theme-sunset {
-    --background: 280 30% 7%;
-    --foreground: 30 30% 96%;
-    --card: 280 28% 10%;
-    --muted: 280 22% 15%;
-    --border: 280 24% 19%;
-    --primary: 24 92% 62%;
-    --secondary: 340 78% 66%;
-    --accent: 268 82% 72%;
+    --background: 20 18% 6%;
+    --foreground: 30 25% 95%;
+    --card: 20 16% 10%;
+    --muted: 20 14% 15%;
+    --border: 20 14% 19%;
+    --primary: 22 90% 58%;
+    --secondary: 38 92% 58%;
+    --accent: 350 75% 62%;
   }
+
   .ide-theme-light {
     --background: 240 40% 98%;
     --foreground: 240 35% 12%;
