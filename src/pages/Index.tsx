@@ -39,44 +39,44 @@ speak(message)
 
 const FEATURES = [
   {
-    icon: Rocket,
-    title: 'Expressive syntax',
-    description: 'forge, be, conjure, iterate — blocks instead of braces. Code that reads like a sentence and still compiles to bytecode.',
-    color: 'text-brand-cyan',
-    bg: 'bg-brand-cyan/10',
-  },
-  {
     icon: Code2,
-    title: 'Self-hosted compiler',
-    description: 'The lexer, parser and code generator are written in sdev itself, and rebuild themselves byte-identically on every run.',
-    color: 'text-brand-purple',
-    bg: 'bg-brand-purple/10',
+    title: 'Compiler written in sdev',
+    description: 'Lexer, parser and code generator are sdev source. The toolchain rebuilds itself byte-identically on every run — a verified fixed point, not a claim.',
+    color: 'text-brand-indigo',
+    bg: 'bg-brand-indigo/10',
   },
   {
-    icon: Shield,
-    title: 'Python-level standard library',
-    description: 'Decorators, generators, comprehensions, pattern matching, async/await, sets, tuples and dunder protocols — 200+ parity features.',
-    color: 'text-brand-sky',
-    bg: 'bg-brand-sky/10',
+    icon: Layers,
+    title: 'One language, two metals',
+    description: 'The same program runs on a hand-written WebAssembly seed VM in the browser and compiles to real x86-64 assembly, linked to a static binary with no libc.',
+    color: 'text-brand-violet',
+    bg: 'bg-brand-violet/10',
   },
   {
     icon: Cpu,
-    title: 'ML & LLM stack in sdev',
-    description: 'Tensors, autograd, transformers, training loops and checkpoints — with FFI, CUDA and WebGPU fast paths.',
+    title: 'Machine learning, in sdev',
+    description: 'Tensors, autograd, transformers, training loops and checkpoints — written in sdev, with FFI, CUDA and WebGPU fast paths underneath.',
+    color: 'text-brand-periwinkle',
+    bg: 'bg-brand-periwinkle/10',
+  },
+  {
+    icon: Rocket,
+    title: 'Programs that rewrite programs',
+    description: 'sdev can read, edit and recompile its own source tree — models trained in sdev can propose and land changes to the language itself.',
     color: 'text-brand-rose',
     bg: 'bg-brand-rose/10',
   },
   {
     icon: Globe2,
-    title: 'Write in any human language',
-    description: 'Keywords in 26 languages — Bulgarian, Japanese, Spanish and more — detected and translated automatically.',
+    title: 'Write in your own language',
+    description: 'Keywords exist in 26 human languages — Bulgarian, Japanese, Spanish and more — auto-detected and normalised before a single token is parsed.',
     color: 'text-brand-amber',
     bg: 'bg-brand-amber/10',
   },
   {
     icon: Box,
-    title: 'Graphics, GIS & hardware',
-    description: 'Turtle and 2D canvas, Leaflet mapping primitives, and firmware upload to real microcontroller boards.',
+    title: 'Drawing, maps and hardware',
+    description: 'Turtle and 2D canvas, Leaflet mapping primitives, decentralised `summon` packages, and firmware flashed straight onto real boards.',
     color: 'text-brand-green',
     bg: 'bg-brand-green/10',
   },
@@ -84,10 +84,11 @@ const FEATURES = [
 
 const STATS = [
   { value: '2', label: 'runtimes — WASM & native x86-64' },
-  { value: '200+', label: 'Python parity features' },
+  { value: '100%', label: 'self-hosted, byte-identical rebuild' },
   { value: '26', label: 'human keyword languages' },
-  { value: '100%', label: 'self-hosted compiler' },
+  { value: '0', label: 'libc dependencies in native builds' },
 ];
+
 
 const Index = () => {
   const navigate = useNavigate();
@@ -213,12 +214,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <LaunchAnnouncementCarousel />
-      <SEO title="sdev — Programming language with a web IDE and native compiler" description="sdev is a programming language with a self-hosted compiler, WebAssembly and x86-64 native runtimes, Python-level standard library parity, and an ML stack written in sdev. Try it in the browser." path="/" />
-      {/* Subtle background gradient */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/3 w-[600px] h-[600px] bg-brand-cyan/[0.03] rounded-full blur-[150px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-purple/[0.03] rounded-full blur-[150px]" />
-      </div>
+      <SEO title="sdev — a self-hosted language with a web IDE and native compiler" description="sdev is a programming language whose compiler is written in sdev. Run it on WebAssembly in the browser or compile it to real x86-64 assembly, and build machine learning entirely in the language." path="/" />
+      {/* Ambient backdrop */}
+      <div className="fixed inset-0 pointer-events-none aurora" />
+      <div className="fixed inset-0 pointer-events-none dot-grid opacity-40" />
+
 
       {/* ===== NAVIGATION ===== */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -288,23 +288,23 @@ const Index = () => {
               <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />
               v2 “Prism” — out now
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-[1.1]">
-              SDEV — Code becomes{' '}
-              <span className="gradient-text">poetry.</span>
+            <h1 className="text-4xl md:text-5xl lg:text-[4.25rem] font-display font-extrabold tracking-tight leading-[1.05]">
+              A language that{' '}
+              <span className="gradient-text">builds itself.</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-              A programming language with a self-hosted compiler, two runtimes — WebAssembly in the browser
-              and real x86-64 assembly on the desktop — Python-level standard library parity, and a machine
-              learning stack written entirely in sdev.
+              sdev's compiler is written in sdev. It runs on a hand-written WebAssembly VM in your browser,
+              compiles to real x86-64 assembly on your machine, and carries a machine-learning stack written
+              in the language it trains.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
-                onClick={() => window.open('https://web.sdev.codes/docs', '_blank')}
+                onClick={scrollToPlayground}
                 size="lg"
                 className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12 px-6"
               >
-                View Docs
-                <ArrowRight className="w-4 h-4" />
+                <Play className="w-4 h-4" />
+                Run sdev now
               </Button>
               <Button
                 onClick={() => navigate('/ide')}
@@ -315,12 +315,22 @@ const Index = () => {
                 <MonitorDot className="w-4 h-4" />
                 Open IDE
               </Button>
+              <Button
+                onClick={() => navigate('/docs')}
+                variant="ghost"
+                size="lg"
+                className="gap-2 h-12 px-5 text-muted-foreground hover:text-foreground"
+              >
+                Docs
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             </div>
+
           </div>
 
           {/* Right: hero code preview */}
           <div className="relative">
-            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-2xl shadow-brand-cyan/5">
+            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-2xl shadow-primary/10">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-brand-rose/60" />
@@ -331,13 +341,13 @@ const Index = () => {
               </div>
               <pre className="p-5 text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
 <span className="text-muted-foreground">// A taste of sdev</span>
-{'\n'}<span className="text-brand-cyan">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
-{'\n'}  <span className="text-brand-cyan">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
+{'\n'}<span className="text-brand-periwinkle">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
+{'\n'}  <span className="text-brand-periwinkle">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
 {'\n'}<span className="text-muted-foreground">;;</span>
 {'\n'}
-{'\n'}<span className="text-brand-cyan">forge</span> names <span className="text-brand-cyan">be</span> [<span className="text-brand-green">"Ada"</span>, <span className="text-brand-green">"Alan"</span>, <span className="text-brand-green">"Grace"</span>]
+{'\n'}<span className="text-brand-periwinkle">forge</span> names <span className="text-brand-cyan">be</span> [<span className="text-brand-green">"Ada"</span>, <span className="text-brand-green">"Alan"</span>, <span className="text-brand-green">"Grace"</span>]
 {'\n'}
-{'\n'}<span className="text-brand-cyan">iterate</span> name <span className="text-brand-cyan">through</span> names <span className="text-muted-foreground">::</span>
+{'\n'}<span className="text-brand-periwinkle">iterate</span> name <span className="text-brand-periwinkle">through</span> names <span className="text-muted-foreground">::</span>
 {'\n'}  <span className="text-brand-amber">speak</span>(<span className="text-brand-amber">greet</span>(name))
 {'\n'}<span className="text-muted-foreground">;;</span>
               </pre>
@@ -361,9 +371,9 @@ const Index = () => {
       <section className="border-t border-border bg-muted/20">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-display font-bold tracking-tight">Why sdev?</h2>
+            <h2 className="text-3xl md:text-4xl font-display font-bold tracking-tight">What makes sdev different</h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              A language built for humans first, with powerful tools for developers.
+              Not another syntax. A toolchain that compiles itself, targets two kinds of machine, and can edit its own source.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -586,12 +596,12 @@ const Index = () => {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <button onClick={() => navigate('/ide')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
-              <MonitorDot className="w-5 h-5 text-brand-cyan mb-3" />
+              <MonitorDot className="w-5 h-5 text-brand-periwinkle mb-3" />
               <h3 className="font-semibold mb-1">Browser IDE</h3>
               <p className="text-sm text-muted-foreground">File tree, terminal, debugger, AI assistant and live preview.</p>
             </button>
             <button onClick={() => navigate('/docs')} className="text-left rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover-lift transition-all">
-              <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
+              <BookOpen className="w-5 h-5 text-brand-violet mb-3" />
               <h3 className="font-semibold mb-1">Documentation</h3>
               <p className="text-sm text-muted-foreground">The sdev Book, Ultimate reference, internals and parity matrices.</p>
             </button>
@@ -616,7 +626,7 @@ const Index = () => {
           <div className="flex items-center gap-3">
             <Zap className="w-4 h-4 text-primary" />
             <span className="font-display font-semibold text-foreground">sdev</span>
-            <span className="text-sm text-muted-foreground">— where code becomes poetry</span>
+            <span className="text-sm text-muted-foreground">— a language that builds itself</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
             <button onClick={() => navigate('/docs')} className="hover:text-foreground transition-colors">Docs</button>

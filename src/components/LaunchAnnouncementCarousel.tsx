@@ -20,9 +20,10 @@ const SLIDES: Slide[] = [
     title: 'sdev is here.',
     body: (
       <p>
-        A new programming language. Runs in your browser, in a full IDE, with no install. Syntax
-        nothing like Python or JavaScript — and a compiler written in itself.
+        A new programming language. Runs in your browser, in a full IDE, with no install — and its
+        compiler is written in itself.
       </p>
+
     ),
   },
   {
