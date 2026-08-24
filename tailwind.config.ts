@@ -64,6 +64,9 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         brand: {
+          indigo: "hsl(var(--brand-indigo))",
+          violet: "hsl(var(--brand-violet))",
+          periwinkle: "hsl(var(--brand-periwinkle))",
           sky: "hsl(var(--brand-sky))",
           cyan: "hsl(var(--brand-cyan))",
           mist: "hsl(var(--brand-mist))",
@@ -73,6 +76,7 @@ export default {
           rose: "hsl(var(--brand-rose))",
           green: "hsl(var(--brand-green))",
         },
+
         // Legacy neon aliases
         neon: {
           cyan: "hsl(var(--neon-cyan))",
