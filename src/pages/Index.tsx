@@ -213,7 +213,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <LaunchAnnouncementCarousel />
-      <SEO title="sdev — A modern programming language with web IDE" description="Try sdev in your browser: a unique programming language with dual Python/JS runtimes, built-in graphics, and live code execution. No install required." path="/home" />
+      <SEO title="sdev — Programming language with a web IDE and native compiler" description="sdev is a programming language with a self-hosted compiler, WebAssembly and x86-64 native runtimes, Python-level standard library parity, and an ML stack written in sdev. Try it in the browser." path="/" />
       {/* Subtle background gradient */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/3 w-[600px] h-[600px] bg-brand-cyan/[0.03] rounded-full blur-[150px]" />
