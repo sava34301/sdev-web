@@ -927,8 +927,13 @@ function collectSets(body, locals) {
 
 }
 
-export function generateAsm(source) {
-  const { ast, classes } = parseWithKinds(source);
+export function generateAsm(source, opts = {}) {
+  // Milestone 6g: modules (`use "path"`) are prelinked by the shared pass;
+  // a host may supply its own resolver (the CLI resolves relative to the
+  // source file's directory).
+  const { ast, classes } = opts.readModule
+    ? parseWithKinds(source, opts.readModule)
+    : parseWithKinds(source);
   const em = new NativeEmitter();
   em.classes = classes;
 
