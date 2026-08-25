@@ -77,6 +77,14 @@ const CASES = [
   { name: 'break',       src: `set i to 0\nwhile i < 10\n  if i is 3\n    break\n  end\n  say i\n  set i to i + 1\nend`, out: '0\n1\n2\n' },
   { name: 'continue',    src: `for each x in [1, 2, 3, 4]\n  if x is 2\n    continue\n  end\n  say x\nend`, out: '1\n3\n4\n' },
 
+
+  // Milestone 6g: host file I/O and modules on the native track.
+  { name: 'file-io',      src: `say write_file("t.txt", "hello")\nsay read_file("t.txt")\nsay length(read_file("t.txt"))`, out: '1\nhello\n5\n' },
+  { name: 'file-missing', src: `say length(read_file("nope.txt"))\nsay file_exists("nope.txt")`, out: '0\n0\n' },
+  { name: 'file-exists',  src: `set ok to write_file("a.txt", "x")\nsay file_exists("a.txt")`, out: '1\n' },
+  { name: 'file-roundtrip', src: `set body to "line1\\nline2"\nsay write_file("b.txt", body)\nfor each l in split(read_file("b.txt"), "\\n")\n  say l\nend`, out: '1\nline1\nline2\n' },
+  { name: 'stdin-input',  src: `set name to input()\nsay "hi " + name`, stdin: 'ada\n', out: 'hi ada\n' },
+  { name: 'use-module',   src: `use "m.sdev"\nsay double(21)`, mods: { 'm.sdev': 'to double with n\n  return n * 2\nend\n' }, out: '42\n' },
 ];
 
 // Resolve `as`/`ld`: prefer PATH, else nix run nixpkgs#binutils.
@@ -100,10 +108,12 @@ async function main() {
     const dir = mkdtempSync(join(tmpdir(), 'sdev-native-'));
     const bin = join(dir, c.name);
     try {
-      const asm = generateAsm(c.src);
+      const asm = generateAsm(c.src, c.mods
+        ? { readModule: (path) => { if (!(path in c.mods)) throw new Error(`no module ${path}`); return c.mods[path]; } }
+        : {});
       link(asm, bin, { as: bins.as, ld: bins.ld, tmpDir: dir });
       chmodSync(bin, 0o755);
-      const r = spawnSync(bin, [], { encoding: 'utf8' });
+      const r = spawnSync(bin, [], { encoding: 'utf8', cwd: dir, input: c.stdin ?? '' });
       if (r.status !== 0) throw new Error(`${c.name} exit ${r.status}: ${r.stderr}`);
       if (r.stdout !== c.out) {
         throw new Error(`${c.name} stdout mismatch\n  expected: ${JSON.stringify(c.out)}\n  got:      ${JSON.stringify(r.stdout)}`);

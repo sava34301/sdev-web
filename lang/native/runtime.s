@@ -1163,6 +1163,204 @@ sdev_throw:
     movq $1, %rdi
     syscall
 
+# ===========================================================================
+# Milestone 6g — host file I/O on the native track.
+#
+#   sdev_cstr(str)              -> null-terminated copy of a heap string
+#   sdev_read_file(path)        -> heap string with the file's bytes ("" on error)
+#   sdev_write_file(path, data) -> 1 on success, 0 on error
+#   sdev_file_exists(path)      -> 1/0 (access(F_OK))
+#   sdev_input()                -> one line from stdin, newline stripped
+#
+# All paths go through sdev_cstr because Linux syscalls want NUL-terminated
+# strings while SDEV strings are length-prefixed.
+# ===========================================================================
+
+# ---- sdev_cstr(ptr) -> ptr (NUL-terminated bytes, no length header) ----
+    .globl sdev_cstr
+sdev_cstr:
+    pushq %rbx
+    movq %rdi, %rbx
+    movq (%rbx), %rdi
+    incq %rdi
+    call sdev_alloc
+    movq (%rbx), %rcx
+    xorq %rdx, %rdx
+.Lcstr_loop:
+    cmpq %rcx, %rdx
+    jge .Lcstr_done
+    movzbq 8(%rbx,%rdx,1), %r8
+    movb %r8b, (%rax,%rdx,1)
+    incq %rdx
+    jmp .Lcstr_loop
+.Lcstr_done:
+    movb $0, (%rax,%rdx,1)
+    popq %rbx
+    ret
+
+# ---- sdev_read_file(path) -> str ----
+    .globl sdev_read_file
+sdev_read_file:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    call sdev_cstr
+    movq %rax, %rbx
+    movq $2, %rax                   # sys_open
+    movq %rbx, %rdi
+    xorq %rsi, %rsi                 # O_RDONLY
+    xorq %rdx, %rdx
+    syscall
+    testq %rax, %rax
+    js .Lrf_fail
+    movq %rax, %r12                 # fd
+    movq $8, %rax                   # sys_lseek(fd, 0, SEEK_END)
+    movq %r12, %rdi
+    xorq %rsi, %rsi
+    movq $2, %rdx
+    syscall
+    testq %rax, %rax
+    js .Lrf_close_fail
+    movq %rax, %r13                 # size
+    movq $8, %rax                   # rewind
+    movq %r12, %rdi
+    xorq %rsi, %rsi
+    xorq %rdx, %rdx
+    syscall
+    leaq 8(%r13), %rdi
+    call sdev_alloc
+    movq %rax, %rbx
+    movq %r13, (%rbx)
+    xorq %r14, %r14
+.Lrf_loop:
+    cmpq %r13, %r14
+    jge .Lrf_done
+    movq $0, %rax                   # sys_read
+    movq %r12, %rdi
+    leaq 8(%rbx,%r14,1), %rsi
+    movq %r13, %rdx
+    subq %r14, %rdx
+    syscall
+    testq %rax, %rax
+    jle .Lrf_done
+    addq %rax, %r14
+    jmp .Lrf_loop
+.Lrf_done:
+    movq %r14, (%rbx)
+    movq $3, %rax                   # sys_close
+    movq %r12, %rdi
+    syscall
+    movq %rbx, %rax
+    jmp .Lrf_ret
+.Lrf_close_fail:
+    movq $3, %rax
+    movq %r12, %rdi
+    syscall
+.Lrf_fail:
+    call sdev_empty
+.Lrf_ret:
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---- sdev_write_file(path, data) -> 1/0 ----
+    .globl sdev_write_file
+sdev_write_file:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    movq %rsi, %r13                 # data
+    call sdev_cstr                  # %rdi = path
+    movq %rax, %rbx
+    movq $2, %rax                   # sys_open
+    movq %rbx, %rdi
+    movq $577, %rsi                 # O_WRONLY|O_CREAT|O_TRUNC
+    movq $420, %rdx                 # 0644
+    syscall
+    testq %rax, %rax
+    js .Lwf_fail
+    movq %rax, %r12                 # fd
+    xorq %r14, %r14
+.Lwf_loop:
+    cmpq (%r13), %r14
+    jge .Lwf_done
+    movq $1, %rax                   # sys_write
+    movq %r12, %rdi
+    leaq 8(%r13,%r14,1), %rsi
+    movq (%r13), %rdx
+    subq %r14, %rdx
+    syscall
+    testq %rax, %rax
+    jle .Lwf_done
+    addq %rax, %r14
+    jmp .Lwf_loop
+.Lwf_done:
+    movq $3, %rax                   # sys_close
+    movq %r12, %rdi
+    syscall
+    movq $1, %rax
+    jmp .Lwf_ret
+.Lwf_fail:
+    xorq %rax, %rax
+.Lwf_ret:
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---- sdev_file_exists(path) -> 1/0 ----
+    .globl sdev_file_exists
+sdev_file_exists:
+    pushq %rbx
+    call sdev_cstr
+    movq %rax, %rdi
+    movq $21, %rax                  # sys_access
+    xorq %rsi, %rsi                 # F_OK
+    syscall
+    xorq %rcx, %rcx
+    testq %rax, %rax
+    sete %cl
+    movq %rcx, %rax
+    popq %rbx
+    ret
+
+# ---- sdev_input() -> str (one line from stdin, newline stripped) ----
+    .globl sdev_input
+sdev_input:
+    pushq %rbx
+    pushq %r12
+    movq $4096, %rdi
+    call sdev_alloc
+    movq %rax, %rbx
+    xorq %r12, %r12
+.Lin_loop:
+    cmpq $4088, %r12
+    jge .Lin_done
+    movq $0, %rax                   # sys_read(stdin, buf+8+n, 1)
+    xorq %rdi, %rdi
+    leaq 8(%rbx,%r12,1), %rsi
+    movq $1, %rdx
+    syscall
+    cmpq $1, %rax
+    jne .Lin_done
+    movzbq 8(%rbx,%r12,1), %rcx
+    cmpq $10, %rcx
+    je .Lin_done
+    incq %r12
+    jmp .Lin_loop
+.Lin_done:
+    movq %r12, (%rbx)
+    movq %rbx, %rax
+    popq %r12
+    popq %rbx
+    ret
+
+
     .bss
     .align 8
 sdev_heap_ptr:

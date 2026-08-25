@@ -28,8 +28,11 @@ const LOCAL_SLOTS = 32;
 // and `+` can pick addq vs sdev_concat.
 // ---------------------------------------------------------------------------
 
-const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'join']);
-const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max', 'int']);
+const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'join',
+  // Milestone 6g — host I/O
+  'read_file', 'input']);
+const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max', 'int',
+  'write_file', 'file_exists']);
 const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values']);
 const TOME_BUILTINS = new Set(['tome_new', 'tset']);
 // Milestone 6e — builtins that yield an IEEE-754 double (raw bits in a word).
@@ -660,6 +663,25 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L('    movq %rax, %rdi');
       em.L(`    call sdev_t${n === 'keys' ? 'keys' : 'vals'}`);
       return true;
+    // ---- Milestone 6g: host file I/O ----
+    case 'read_file':
+    case 'file_exists':
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_${n}`);
+      return true;
+    case 'write_file': {
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitStrExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_write_file');
+      return true;
+    }
+    case 'input':
+      em.L('    call sdev_input');
+      return true;
     case 'has': {
       emitExpr(a[0], em, locals, tys, fnTypes);
       em.L('    pushq %rax');
@@ -905,8 +927,13 @@ function collectSets(body, locals) {
 
 }
 
-export function generateAsm(source) {
-  const { ast, classes } = parseWithKinds(source);
+export function generateAsm(source, opts = {}) {
+  // Milestone 6g: modules (`use "path"`) are prelinked by the shared pass;
+  // a host may supply its own resolver (the CLI resolves relative to the
+  // source file's directory).
+  const { ast, classes } = opts.readModule
+    ? parseWithKinds(source, opts.readModule)
+    : parseWithKinds(source);
   const em = new NativeEmitter();
   em.classes = classes;
 

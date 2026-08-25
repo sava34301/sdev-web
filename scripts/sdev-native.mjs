@@ -7,8 +7,8 @@
 // lang/native/codegen-x64.mjs, and (unless --emit-asm) assembles + links
 // it into a static ELF using lang/native/link.mjs.
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve, basename, dirname } from 'node:path';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { resolve, basename, dirname, isAbsolute } from 'node:path';
 import { generateAsm } from '../lang/native/codegen-x64.mjs';
 import { link } from '../lang/native/link.mjs';
 
@@ -33,7 +33,15 @@ function main() {
   if (!src) usage();
 
   const source = readFileSync(src, 'utf8');
-  const asm = generateAsm(source);
+  // Milestone 6g: `use "path"` resolves relative to the importing file first,
+  // then relative to the process CWD.
+  const srcDir = dirname(resolve(src));
+  const readModule = (p) => {
+    const candidates = isAbsolute(p) ? [p] : [resolve(srcDir, p), resolve(p)];
+    for (const c of candidates) if (existsSync(c)) return readFileSync(c, 'utf8');
+    throw new Error(`sdev-native: cannot resolve module "${p}"`);
+  };
+  const asm = generateAsm(source, { readModule });
 
   const base = basename(src).replace(/\.sdev$/, '');
   const outBin = out || resolve(dirname(src), base);
