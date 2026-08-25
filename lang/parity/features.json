@@ -457,7 +457,7 @@
       "v1_name": "read_file",
       "v2": "should",
       "v2_name": "read_file",
-      "native": "n/a",
+      "native": "should",
       "native_name": "read_file"
     },
     {
@@ -470,7 +470,7 @@
       "v1_name": "write_file",
       "v2": "should",
       "v2_name": "write_file",
-      "native": "n/a",
+      "native": "should",
       "native_name": "write_file"
     },
     {
