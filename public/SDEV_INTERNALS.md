@@ -859,6 +859,24 @@ in milestone order.)
 
 
 
+**Milestone 6g (native host I/O and modules) — shipped:**
+- **`runtime.s`** gained a small POSIX layer, all direct syscalls, no libc:
+  `sdev_cstr` (NUL-terminated copy of a length-prefixed string),
+  `sdev_read_file` (open/lseek/read loop, returns `""` on any error),
+  `sdev_write_file` (`O_WRONLY|O_CREAT|O_TRUNC`, mode 0644, returns 1/0),
+  `sdev_file_exists` (`access(F_OK)`), and `sdev_input`
+  (byte-at-a-time read from stdin up to a newline, 4088-byte cap).
+- **Codegen**: `read_file`/`input` join the string-typed builtins,
+  `write_file`/`file_exists` the int-typed ones, so `say read_file(p)`
+  selects `sdev_say_str` automatically.
+- **Modules**: `generateAsm(source, { readModule })` threads a resolver into
+  the shared `prelink` pass; `scripts/sdev-native.mjs` resolves `use "path"`
+  relative to the importing file first, then the CWD.
+- Tests: six new cases (68/68 in `scripts/test-native.mjs`, run in a temp
+  cwd with stdin piped); 87/87 fixed-point cases still byte-identical.
+- Parity: `read_file` / `write_file` moved from `n/a` to `should` on the
+  native track — **must gaps 0, should gaps 0.**
+
 **Milestone 5z (modules — `use "path"`) — shipped:**
 - **No VM change.** Modules are a source→source prelink pass that runs
   before lexing, so the seed VM is untouched since 5x.
