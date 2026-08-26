@@ -84,6 +84,14 @@ const CASES = [
   { name: 'file-exists',  src: `set ok to write_file("a.txt", "x")\nsay file_exists("a.txt")`, out: '1\n' },
   { name: 'file-roundtrip', src: `set body to "line1\\nline2"\nsay write_file("b.txt", body)\nfor each l in split(read_file("b.txt"), "\\n")\n  say l\nend`, out: '1\nline1\nline2\n' },
   { name: 'stdin-input',  src: `set name to input()\nsay "hi " + name`, stdin: 'ada\n', out: 'hi ada\n' },
+  // Milestone 6h: process / OS layer on the native track.
+  { name: 'args',        src: `set a to args()\nsay length(a)\nfor each x in a\n  say x\nend`, argv: ['one', 'two'], out: '2\none\ntwo\n' },
+  { name: 'env-var',     src: `say env("SDEV_TEST_VAR")\nsay length(env("SDEV_NOPE_VAR"))`, env: { SDEV_TEST_VAR: 'hello' }, out: 'hello\n0\n' },
+  { name: 'exit-code',   src: `say "bye"\nexit(3)\nsay "never"`, status: 3, out: 'bye\n' },
+  { name: 'now-ms',      src: `set t to now_ms()\nif t > 1000000000000\n  say "ok"\nend`, out: 'ok\n' },
+  { name: 'sleep-ms',    src: `set a to now_ms()\nsleep_ms(30)\nif now_ms() - a >= 25\n  say "slept"\nend`, out: 'slept\n' },
+  { name: 'append-file', src: `say write_file("c.txt", "a")\nsay append_file("c.txt", "b")\nsay read_file("c.txt")`, out: '1\n1\nab\n' },
+  { name: 'say-err',     src: `say_err("warn")\nsay "out"`, out: 'out\n', stderr: 'warn\n' },
   { name: 'use-module',   src: `use "m.sdev"\nsay double(21)`, mods: { 'm.sdev': 'to double with n\n  return n * 2\nend\n' }, out: '42\n' },
 ];
 
@@ -113,8 +121,15 @@ async function main() {
         : {});
       link(asm, bin, { as: bins.as, ld: bins.ld, tmpDir: dir });
       chmodSync(bin, 0o755);
-      const r = spawnSync(bin, [], { encoding: 'utf8', cwd: dir, input: c.stdin ?? '' });
-      if (r.status !== 0) throw new Error(`${c.name} exit ${r.status}: ${r.stderr}`);
+      const r = spawnSync(bin, c.argv ?? [], {
+        encoding: 'utf8', cwd: dir, input: c.stdin ?? '',
+        env: { ...process.env, ...(c.env ?? {}) },
+      });
+      const wantStatus = c.status ?? 0;
+      if (r.status !== wantStatus) throw new Error(`${c.name} exit ${r.status} (want ${wantStatus}): ${r.stderr}`);
+      if (c.stderr !== undefined && r.stderr !== c.stderr) {
+        throw new Error(`${c.name} stderr mismatch\n  expected: ${JSON.stringify(c.stderr)}\n  got:      ${JSON.stringify(r.stderr)}`);
+      }
       if (r.stdout !== c.out) {
         throw new Error(`${c.name} stdout mismatch\n  expected: ${JSON.stringify(c.out)}\n  got:      ${JSON.stringify(r.stdout)}`);
       }

@@ -2643,6 +2643,97 @@
       "v2_name": "",
       "native": "n/a",
       "native_name": ""
+    },
+    {
+      "name": "args",
+      "area": "os",
+      "kind": "builtin",
+      "sig": "args() -> list",
+      "docs": "#args",
+      "v1": "n/a",
+      "v1_name": "args",
+      "v2": "n/a",
+      "v2_name": "args",
+      "native": "should",
+      "native_name": "args"
+    },
+    {
+      "name": "env",
+      "area": "os",
+      "kind": "builtin",
+      "sig": "env(name) -> str",
+      "docs": "#env",
+      "v1": "n/a",
+      "v1_name": "env",
+      "v2": "n/a",
+      "v2_name": "env",
+      "native": "should",
+      "native_name": "env"
+    },
+    {
+      "name": "exit",
+      "area": "os",
+      "kind": "builtin",
+      "sig": "exit(code)",
+      "docs": "#exit",
+      "v1": "n/a",
+      "v1_name": "exit",
+      "v2": "n/a",
+      "v2_name": "exit",
+      "native": "should",
+      "native_name": "exit"
+    },
+    {
+      "name": "now_ms",
+      "area": "os",
+      "kind": "builtin",
+      "sig": "now_ms() -> int",
+      "docs": "#now_ms",
+      "v1": "n/a",
+      "v1_name": "now_ms",
+      "v2": "n/a",
+      "v2_name": "now_ms",
+      "native": "should",
+      "native_name": "now_ms"
+    },
+    {
+      "name": "sleep_ms",
+      "area": "os",
+      "kind": "builtin",
+      "sig": "sleep_ms(ms)",
+      "docs": "#sleep_ms",
+      "v1": "n/a",
+      "v1_name": "sleep_ms",
+      "v2": "n/a",
+      "v2_name": "sleep_ms",
+      "native": "should",
+      "native_name": "sleep_ms"
+    },
+    {
+      "name": "append_file",
+      "area": "io",
+      "kind": "builtin",
+      "sig": "append_file(path data) -> int",
+      "docs": "#append_file",
+      "v1": "n/a",
+      "v1_name": "append_file",
+      "v2": "n/a",
+      "v2_name": "append_file",
+      "native": "should",
+      "native_name": "append_file"
+    },
+    {
+      "name": "say_err",
+      "area": "io",
+      "kind": "builtin",
+      "sig": "say_err(s)",
+      "docs": "#say_err",
+      "v1": "n/a",
+      "v1_name": "say_err",
+      "v2": "n/a",
+      "v2_name": "say_err",
+      "native": "should",
+      "native_name": "say_err"
     }
   ]
 }
