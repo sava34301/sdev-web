@@ -205,6 +205,13 @@
     { "name": "pysyn_false", "area": "python-syntax", "tracks": { "v1": "yes", "v2": "n/a", "native": "n/a" } },
     { "name": "pysyn_none", "area": "python-syntax", "tracks": { "v1": "yes", "v2": "n/a", "native": "n/a" } },
     { "name": "pysyn_and", "area": "python-syntax", "tracks": { "v1": "yes", "v2": "n/a", "native": "n/a" } },
-    { "name": "pysyn_or", "area": "python-syntax", "tracks": { "v1": "yes", "v2": "n/a", "native": "n/a" } }
+    { "name": "pysyn_or", "area": "python-syntax", "tracks": { "v1": "yes", "v2": "n/a", "native": "n/a" } },
+    { "name": "args", "area": "os", "tracks": { "v1": "n/a", "v2": "n/a", "native": "yes" } },
+    { "name": "env", "area": "os", "tracks": { "v1": "n/a", "v2": "n/a", "native": "yes" } },
+    { "name": "exit", "area": "os", "tracks": { "v1": "n/a", "v2": "n/a", "native": "yes" } },
+    { "name": "now_ms", "area": "os", "tracks": { "v1": "n/a", "v2": "n/a", "native": "yes" } },
+    { "name": "sleep_ms", "area": "os", "tracks": { "v1": "n/a", "v2": "n/a", "native": "yes" } },
+    { "name": "append_file", "area": "io", "tracks": { "v1": "n/a", "v2": "n/a", "native": "yes" } },
+    { "name": "say_err", "area": "io", "tracks": { "v1": "n/a", "v2": "n/a", "native": "yes" } }
   ]
 }
