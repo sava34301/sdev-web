@@ -110,7 +110,7 @@ function methodRetType(fnTypes, key) {
 // compiler can tell statically.
 function elemTypeOf(e, tys, fnTypes) {
   if (e.k === 'list') return e.items.length ? typeOf(e.items[0], tys, fnTypes) : 'int';
-  if (e.k === 'call' && (e.name === 'split' || e.name === 'keys')) return 'str';
+  if (e.k === 'call' && (e.name === 'split' || e.name === 'keys' || e.name === 'args')) return 'str';
   if (e.k === 'ident') return tys.get(`@elem:${e.name}`) || 'int';
   return 'int';
 }
