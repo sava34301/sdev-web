@@ -22,6 +22,13 @@
     .globl _start
 
 _start:
+    movq (%rsp), %rax               # argc
+    movq %rax, sdev_argc(%rip)
+    leaq 8(%rsp), %rcx              # argv
+    movq %rcx, sdev_argv(%rip)
+    incq %rax                       # skip argv[0..argc-1] + NULL
+    leaq (%rcx,%rax,8), %rcx
+    movq %rcx, sdev_envp(%rip)
     call sdev_main
     movq $60, %rax          # sys_exit
     xorq %rdi, %rdi
@@ -1361,9 +1368,244 @@ sdev_input:
     ret
 
 
+# ================= Milestone 6h: process / OS layer =================
+
+# ---- sdev_from_cstr(char *) -> str ----
+    .globl sdev_from_cstr
+sdev_from_cstr:
+    pushq %rbx
+    pushq %r12
+    movq %rdi, %rbx
+    xorq %r12, %r12
+.Lfc_len:
+    cmpb $0, (%rbx,%r12,1)
+    je .Lfc_have
+    incq %r12
+    jmp .Lfc_len
+.Lfc_have:
+    leaq 8(%r12), %rdi
+    call sdev_alloc
+    movq %r12, (%rax)
+    xorq %rcx, %rcx
+.Lfc_copy:
+    cmpq %r12, %rcx
+    jge .Lfc_done
+    movzbq (%rbx,%rcx,1), %rdx
+    movb %dl, 8(%rax,%rcx,1)
+    incq %rcx
+    jmp .Lfc_copy
+.Lfc_done:
+    popq %r12
+    popq %rbx
+    ret
+
+# ---- sdev_args() -> list of strings (argv[1..]) ----
+    .globl sdev_args
+sdev_args:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    movq sdev_argc(%rip), %r13
+    decq %r13
+    testq %r13, %r13
+    jns .Largs_ok
+    xorq %r13, %r13
+.Largs_ok:
+    movq %r13, %rdi
+    shlq $3, %rdi
+    addq $8, %rdi
+    call sdev_alloc
+    movq %rax, %rbx
+    movq %r13, (%rbx)
+    xorq %r12, %r12
+.Largs_loop:
+    cmpq %r13, %r12
+    jge .Largs_done
+    movq sdev_argv(%rip), %rcx
+    movq 8(%rcx,%r12,8), %rdi       # argv[i+1]
+    call sdev_from_cstr
+    movq %rax, 8(%rbx,%r12,8)
+    incq %r12
+    jmp .Largs_loop
+.Largs_done:
+    movq %rbx, %rax
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---- sdev_env(str name) -> str value ("" when unset) ----
+    .globl sdev_env
+sdev_env:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    call sdev_cstr
+    movq %rax, %rbx                 # name as C string
+    movq sdev_envp(%rip), %r12
+.Lenv_next:
+    movq (%r12), %r13               # entry
+    testq %r13, %r13
+    jz .Lenv_miss
+    xorq %r14, %r14
+.Lenv_cmp:
+    movzbq (%rbx,%r14,1), %rax
+    testq %rax, %rax
+    jz .Lenv_name_end
+    movzbq (%r13,%r14,1), %rcx
+    cmpq %rcx, %rax
+    jne .Lenv_advance
+    incq %r14
+    jmp .Lenv_cmp
+.Lenv_name_end:
+    cmpb $61, (%r13,%r14,1)         # '='
+    jne .Lenv_advance
+    leaq 1(%r13,%r14,1), %rdi
+    call sdev_from_cstr
+    jmp .Lenv_ret
+.Lenv_advance:
+    addq $8, %r12
+    jmp .Lenv_next
+.Lenv_miss:
+    call sdev_empty
+.Lenv_ret:
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---- sdev_exit(i64 code) — never returns ----
+    .globl sdev_exit
+sdev_exit:
+    movq $60, %rax
+    syscall
+    hlt
+
+# ---- sdev_now_ms() -> i64 milliseconds since the epoch ----
+    .globl sdev_now_ms
+sdev_now_ms:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $32, %rsp
+    movq $228, %rax                 # sys_clock_gettime
+    xorq %rdi, %rdi                 # CLOCK_REALTIME
+    leaq -16(%rbp), %rsi
+    syscall
+    movq -16(%rbp), %rax            # seconds
+    movq $1000, %rcx
+    imulq %rcx, %rax
+    movq -8(%rbp), %rdx             # nanoseconds
+    pushq %rax
+    movq %rdx, %rax
+    xorq %rdx, %rdx
+    movq $1000000, %rcx
+    divq %rcx
+    movq %rax, %rcx
+    popq %rax
+    addq %rcx, %rax
+    movq %rbp, %rsp
+    popq %rbp
+    ret
+
+# ---- sdev_sleep_ms(i64 ms) ----
+    .globl sdev_sleep_ms
+sdev_sleep_ms:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $32, %rsp
+    movq %rdi, %rax
+    testq %rax, %rax
+    jle .Lsleep_done
+    xorq %rdx, %rdx
+    movq $1000, %rcx
+    divq %rcx                       # rax = seconds, rdx = remainder ms
+    movq %rax, -16(%rbp)
+    movq $1000000, %rcx
+    imulq %rcx, %rdx
+    movq %rdx, -8(%rbp)
+    movq $35, %rax                  # sys_nanosleep
+    leaq -16(%rbp), %rdi
+    xorq %rsi, %rsi
+    syscall
+.Lsleep_done:
+    movq %rbp, %rsp
+    popq %rbp
+    ret
+
+# ---- sdev_append_file(path, data) -> 1/0 ----
+    .globl sdev_append_file
+sdev_append_file:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    movq %rsi, %r13
+    call sdev_cstr
+    movq %rax, %rbx
+    movq $2, %rax                   # sys_open
+    movq %rbx, %rdi
+    movq $1089, %rsi                # O_WRONLY|O_CREAT|O_APPEND
+    movq $420, %rdx
+    syscall
+    testq %rax, %rax
+    js .Laf_fail
+    movq %rax, %r12
+    xorq %r14, %r14
+.Laf_loop:
+    cmpq (%r13), %r14
+    jge .Laf_done
+    movq $1, %rax
+    movq %r12, %rdi
+    leaq 8(%r13,%r14,1), %rsi
+    movq (%r13), %rdx
+    subq %r14, %rdx
+    syscall
+    testq %rax, %rax
+    jle .Laf_done
+    addq %rax, %r14
+    jmp .Laf_loop
+.Laf_done:
+    movq $3, %rax
+    movq %r12, %rdi
+    syscall
+    movq $1, %rax
+    jmp .Laf_ret
+.Laf_fail:
+    xorq %rax, %rax
+.Laf_ret:
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---- sdev_say_err(str) — write to stderr with newline ----
+    .globl sdev_say_err
+sdev_say_err:
+    movq (%rdi), %rdx
+    leaq 8(%rdi), %rsi
+    movq $1, %rax
+    movq $2, %rdi
+    syscall
+    movq $1, %rax
+    movq $2, %rdi
+    leaq nl(%rip), %rsi
+    movq $1, %rdx
+    syscall
+    ret
+
+
     .bss
     .align 8
 sdev_heap_ptr:
+    .quad 0
+sdev_argc:
+    .quad 0
+sdev_argv:
+    .quad 0
+sdev_envp:
     .quad 0
 sdev_hdepth:
     .quad 0
