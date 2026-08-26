@@ -30,10 +30,10 @@ const LOCAL_SLOTS = 32;
 
 const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'join',
   // Milestone 6g — host I/O
-  'read_file', 'input']);
+  'read_file', 'input', 'env']);
 const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max', 'int',
-  'write_file', 'file_exists']);
-const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values']);
+  'write_file', 'file_exists', 'append_file', 'now_ms']);
+const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values', 'args']);
 const TOME_BUILTINS = new Set(['tome_new', 'tset']);
 // Milestone 6e — builtins that yield an IEEE-754 double (raw bits in a word).
 const FLOAT_BUILTINS = new Set(['sqrt', 'floor', 'ceil', 'round', 'sin', 'cos',
@@ -682,6 +682,38 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case 'input':
       em.L('    call sdev_input');
       return true;
+    // ---- Milestone 6h: process / OS layer ----
+    case 'args':
+      em.L('    call sdev_args');
+      return true;
+    case 'now_ms':
+      em.L('    call sdev_now_ms');
+      return true;
+    case 'env':
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_env');
+      return true;
+    case 'exit':
+    case 'sleep_ms':
+      emitExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_${n === 'exit' ? 'exit' : 'sleep_ms'}`);
+      return true;
+    case 'say_err':
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_say_err');
+      return true;
+    case 'append_file': {
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitStrExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_append_file');
+      return true;
+    }
     case 'has': {
       emitExpr(a[0], em, locals, tys, fnTypes);
       em.L('    pushq %rax');
