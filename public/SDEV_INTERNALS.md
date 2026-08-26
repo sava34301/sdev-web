@@ -859,6 +859,22 @@ in milestone order.)
 
 
 
+**Milestone 6h (native process / OS layer) — shipped:**
+- **`_start`** now captures `argc`, `argv` and `envp` from the initial stack
+  into `sdev_argc` / `sdev_argv` / `sdev_envp` before calling `sdev_main`.
+- **`runtime.s`** gained: `sdev_from_cstr` (length-prefixed copy of a NUL
+  terminated string), `sdev_args` (list of `argv[1..]`), `sdev_env` (linear
+  scan of `envp` for `NAME=`, `""` when unset), `sdev_exit` (`sys_exit`),
+  `sdev_now_ms` (`clock_gettime(CLOCK_REALTIME)` folded to milliseconds),
+  `sdev_sleep_ms` (`sys_nanosleep`), `sdev_append_file`
+  (`O_WRONLY|O_CREAT|O_APPEND`) and `sdev_say_err` (write to fd 2).
+- **Codegen**: `env` is string-typed, `args` list-typed with `str` elements
+  (so `for each a in args()` prints text), `append_file`/`now_ms` int-typed;
+  `exit`, `sleep_ms` and `say_err` are statement-style calls.
+- Tests: seven new cases (75/75 in `scripts/test-native.mjs`, which now
+  drives argv, a custom env, exit status and stderr); 87/87 fixed-point
+  cases still byte-identical.
+
 **Milestone 6g (native host I/O and modules) — shipped:**
 - **`runtime.s`** gained a small POSIX layer, all direct syscalls, no libc:
   `sdev_cstr` (NUL-terminated copy of a length-prefixed string),
