@@ -93,7 +93,16 @@ const CASES = [
   { name: 'append-file', src: `say write_file("c.txt", "a")\nsay append_file("c.txt", "b")\nsay read_file("c.txt")`, out: '1\n1\nab\n' },
   { name: 'say-err',     src: `say_err("warn")\nsay "out"`, out: 'out\n', stderr: 'warn\n' },
   { name: 'use-module',   src: `use "m.sdev"\nsay double(21)`, mods: { 'm.sdev': 'to double with n\n  return n * 2\nend\n' }, out: '42\n' },
+
+  // Milestone 6i: sequence + numeric library on the native track.
+  { name: 'range',       src: `set r to range(4)\nsay length(r)\nfor each i in r\n  say i\nend`, out: '4\n0\n1\n2\n3\n' },
+  { name: 'sum',         src: `say sum(range(5))\nsay sum([3, 4, 5])`, out: '10\n12\n' },
+  { name: 'i2f-f2i',     src: `say i2f(7)\nsay f2i(3.9)\nsay f2i(-3.9)`, out: '7.0\n3\n-3\n' },
+  { name: 'fabs-fneg',   src: `say fabs(-2.5)\nsay fneg(2.5)\nsay fabs(2.5)`, out: '2.5\n-2.5\n2.5\n' },
+  { name: 'tan',         src: `set t to tan(0.0)\nsay t`, out: '0.0\n' },
+  { name: 'fbyte',       src: `say fbyte(1.0, 7)\nsay fbyte(1.0, 0)`, out: '63\n0\n' },
 ];
+
 
 // Resolve `as`/`ld`: prefer PATH, else nix run nixpkgs#binutils.
 function findBintools() {
