@@ -574,6 +574,36 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case 'random':
       em.L('    call sdev_random');
       return true;
+    // ---- Milestone 6i: sequence + numeric library ----
+    case 'range':             // range(n) -> [0 .. n-1]
+    case 'sum':               // sum(list) -> int
+    case 'f2i':
+      one();
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_${n}`);
+      return true;
+    case 'i2f':
+      one();
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_i2f');
+      return true;
+    case 'tan':
+    case 'fabs':
+    case 'fneg':
+      emitFloatExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_${n === 'tan' ? 'ftan' : n}`);
+      return true;
+    case 'fbyte': {           // fbyte(x, i) -> i-th little-endian byte of x
+      emitFloatExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_fbyte');
+      return true;
+    }
+
     case 'num':
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       em.L('    movq %rax, %rdi');
