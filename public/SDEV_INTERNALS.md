@@ -859,7 +859,24 @@ in milestone order.)
 
 
 
+**Milestone 6i (native sequence + numeric library) — shipped:**
+- **`runtime.s`** gained `sdev_range` (list `[0 .. n-1]`, negative clamped to
+  empty), `sdev_sum` (linear add over a list's payload words), `sdev_ftan`
+  (`fptan`, discarding the pushed 1.0), `sdev_fabs` / `sdev_fneg` (`btrq` /
+  `btcq` on bit 63 of the raw double word), `sdev_i2f` (`cvtsi2sdq`),
+  `sdev_f2i` (`cvttsd2si`, truncating toward zero) and `sdev_fbyte`
+  (little-endian byte `i` of a double, 0 outside 0..7).
+- **Codegen**: `range` joins the list-typed builtins, `sum`/`f2i`/`fbyte` the
+  int-typed ones, and `tan`/`fabs`/`fneg`/`i2f` the float-typed ones, so
+  `say` keeps picking `sdev_say_int` vs `sdev_say_float` correctly and
+  `for each i in range(n)` iterates ints.
+- Tests: six new cases (81/81 in `scripts/test-native.mjs`); 87/87
+  fixed-point cases still byte-identical.
+- Parity: `range` and `sum` moved from `n/a` to `should` on the native
+  track — **must gaps 0, should gaps 0.**
+
 **Milestone 6h (native process / OS layer) — shipped:**
+
 - **`_start`** now captures `argc`, `argv` and `envp` from the initial stack
   into `sdev_argc` / `sdev_argv` / `sdev_envp` before calling `sdev_main`.
 - **`runtime.s`** gained: `sdev_from_cstr` (length-prefixed copy of a NUL
