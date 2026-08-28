@@ -32,12 +32,17 @@ const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 
   // Milestone 6g — host I/O
   'read_file', 'input', 'env']);
 const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max', 'int',
-  'write_file', 'file_exists', 'append_file', 'now_ms']);
-const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values', 'args']);
+  'write_file', 'file_exists', 'append_file', 'now_ms',
+  // Milestone 6i — sequence + numeric library
+  'sum', 'f2i', 'fbyte']);
+const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values', 'args', 'range']);
 const TOME_BUILTINS = new Set(['tome_new', 'tset']);
 // Milestone 6e — builtins that yield an IEEE-754 double (raw bits in a word).
 const FLOAT_BUILTINS = new Set(['sqrt', 'floor', 'ceil', 'round', 'sin', 'cos',
-  'exp', 'log', 'pow', 'random', 'num']);
+  'exp', 'log', 'pow', 'random', 'num',
+  // Milestone 6i
+  'tan', 'fabs', 'fneg', 'i2f']);
+
 
 // The 64-bit pattern of a double, as an unsigned decimal for `movabsq`.
 function f64bits(v) {
