@@ -1596,6 +1596,108 @@ sdev_say_err:
     syscall
     ret
 
+# ---- Milestone 6i: sequence + numeric library ----
+
+# ---- sdev_range(int n) -> list [0, 1, ... n-1] ----
+    .globl sdev_range
+sdev_range:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    movq %rdi, %r13
+    testq %r13, %r13
+    jns .Lrange_ok
+    xorq %r13, %r13
+.Lrange_ok:
+    movq %r13, %rdi
+    shlq $3, %rdi
+    addq $8, %rdi
+    call sdev_alloc
+    movq %rax, %rbx
+    movq %r13, (%rbx)
+    xorq %r12, %r12
+.Lrange_loop:
+    cmpq %r13, %r12
+    jge .Lrange_done
+    movq %r12, 8(%rbx,%r12,8)
+    incq %r12
+    jmp .Lrange_loop
+.Lrange_done:
+    movq %rbx, %rax
+    popq %r13
+    popq %r12
+    popq %rbx
+    ret
+
+# ---- sdev_sum(list) -> int ----
+    .globl sdev_sum
+sdev_sum:
+    movq (%rdi), %rcx
+    xorq %rax, %rax
+    xorq %rdx, %rdx
+.Lsum_loop:
+    cmpq %rcx, %rdx
+    jge .Lsum_done
+    addq 8(%rdi,%rdx,8), %rax
+    incq %rdx
+    jmp .Lsum_loop
+.Lsum_done:
+    ret
+
+# ---- sdev_ftan(double bits) -> double bits ----
+    .globl sdev_ftan
+sdev_ftan:
+    pushq %rdi
+    fldl (%rsp)
+    fptan
+    fstp %st(0)                 # discard the 1.0 fptan pushes
+    fstpl (%rsp)
+    popq %rax
+    ret
+
+# ---- sdev_fabs / sdev_fneg — sign-bit maths on the raw double word ----
+    .globl sdev_fabs
+sdev_fabs:
+    movq %rdi, %rax
+    btrq $63, %rax
+    ret
+
+    .globl sdev_fneg
+sdev_fneg:
+    movq %rdi, %rax
+    btcq $63, %rax
+    ret
+
+# ---- sdev_i2f(int) -> double bits ----
+    .globl sdev_i2f
+sdev_i2f:
+    cvtsi2sdq %rdi, %xmm0
+    movq %xmm0, %rax
+    ret
+
+# ---- sdev_f2i(double bits) -> int (truncate toward zero) ----
+    .globl sdev_f2i
+sdev_f2i:
+    movq %rdi, %xmm0
+    cvttsd2si %xmm0, %rax
+    ret
+
+# ---- sdev_fbyte(double bits, int i) -> the i-th little-endian byte ----
+    .globl sdev_fbyte
+sdev_fbyte:
+    xorq %rax, %rax
+    cmpq $0, %rsi
+    jl 1f
+    cmpq $7, %rsi
+    jg 1f
+    movq %rsi, %rcx
+    shlq $3, %rcx
+    shrq %cl, %rdi
+    movzbq %dil, %rax
+1:  ret
+
+
+
 
     .bss
     .align 8

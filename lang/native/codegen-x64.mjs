@@ -32,12 +32,17 @@ const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 
   // Milestone 6g — host I/O
   'read_file', 'input', 'env']);
 const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max', 'int',
-  'write_file', 'file_exists', 'append_file', 'now_ms']);
-const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values', 'args']);
+  'write_file', 'file_exists', 'append_file', 'now_ms',
+  // Milestone 6i — sequence + numeric library
+  'sum', 'f2i', 'fbyte']);
+const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values', 'args', 'range']);
 const TOME_BUILTINS = new Set(['tome_new', 'tset']);
 // Milestone 6e — builtins that yield an IEEE-754 double (raw bits in a word).
 const FLOAT_BUILTINS = new Set(['sqrt', 'floor', 'ceil', 'round', 'sin', 'cos',
-  'exp', 'log', 'pow', 'random', 'num']);
+  'exp', 'log', 'pow', 'random', 'num',
+  // Milestone 6i
+  'tan', 'fabs', 'fneg', 'i2f']);
+
 
 // The 64-bit pattern of a double, as an unsigned decimal for `movabsq`.
 function f64bits(v) {
@@ -569,6 +574,36 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case 'random':
       em.L('    call sdev_random');
       return true;
+    // ---- Milestone 6i: sequence + numeric library ----
+    case 'range':             // range(n) -> [0 .. n-1]
+    case 'sum':               // sum(list) -> int
+    case 'f2i':
+      one();
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_${n}`);
+      return true;
+    case 'i2f':
+      one();
+      em.L('    movq %rax, %rdi');
+      em.L('    call sdev_i2f');
+      return true;
+    case 'tan':
+    case 'fabs':
+    case 'fneg':
+      emitFloatExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rdi');
+      em.L(`    call sdev_${n === 'tan' ? 'ftan' : n}`);
+      return true;
+    case 'fbyte': {           // fbyte(x, i) -> i-th little-endian byte of x
+      emitFloatExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    pushq %rax');
+      emitExpr(a[1], em, locals, tys, fnTypes);
+      em.L('    movq %rax, %rsi');
+      em.L('    popq %rdi');
+      em.L('    call sdev_fbyte');
+      return true;
+    }
+
     case 'num':
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       em.L('    movq %rax, %rdi');
