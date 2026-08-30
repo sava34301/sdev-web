@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Zap, Cpu, AlertTriangle, CheckCircle2, Clock, GitBranch, Wifi } from 'lucide-react';
 import type { IdeFile, RunMode } from './types';
 
@@ -11,9 +12,11 @@ interface Props {
   selection: number;
   execTime: number | null;
   error: boolean;
+  /** extra segments rendered on the right, e.g. the dialect switcher */
+  extra?: ReactNode;
 }
 
-export function IdeStatusBar({ statusMsg, runMode, activeFile, lines, chars, cursor, selection, execTime, error }: Props) {
+export function IdeStatusBar({ statusMsg, runMode, activeFile, lines, chars, cursor, selection, execTime, error, extra }: Props) {
   return (
     <div
       className="ide-statusbar flex items-center justify-between flex-shrink-0 font-mono select-none"
