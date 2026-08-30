@@ -17,6 +17,7 @@ import { CATALOG, GROUP_LABELS, type CatalogGroup } from '@/lang/dialect/catalog
 import { validateDialect, type DialectSpec } from '@/lang/dialect/spec';
 import { dialectize } from '@/lang/dialect/canonicalize';
 import { SAMPLE } from '@/lang/dialect/sample';
+import { generateDialectDocs } from '@/lang/dialect/docs';
 
 const GROUP_ORDER: CatalogGroup[] = ['core', 'control', 'functions', 'errors', 'objects', 'modules', 'literals', 'operators', 'builtins'];
 
@@ -84,6 +85,18 @@ export default function Dialects() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `${draft.meta.slug}.dialect.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /** Living documentation: the core reference, rendered in this dialect's words. */
+  const handleDocs = () => {
+    if (!draft) return;
+    const blob = new Blob([generateDialectDocs(draft)], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${draft.meta.slug}.documentation.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
