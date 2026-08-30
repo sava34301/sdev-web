@@ -1,13 +1,5 @@
 /** The canonical program the Dialect Studio previews live. */
-export const PREVIEW_SAMPLE = [
-  '# a small tour of sdev',
-  'set name to "world"',
-  '',
-  'to greet with who',
-  '  say "hello, " + who',
-  'end',
-',',
-].join('\n');
+
 
 export const SAMPLE = [
   '# a small tour of sdev',
