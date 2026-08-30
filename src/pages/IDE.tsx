@@ -642,10 +642,13 @@ export default function IDEPage() {
         const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
         try {
           // Milestone 5z: `use "path"` resolves against the workspace files.
-          const moduleMap: Record<string, string> = {};
+          // Personal SDEV: `use "@user/lib@1.2.0"` resolves through the
+          // library registry (cached locally, so it also works offline).
+          const moduleMap: Record<string, string> = await resolveLibraries(rawSrc);
           for (const f of files) {
-            moduleMap[f.name] = f.content;
-            moduleMap['./' + f.name] = f.content;
+            const source = activeDialect ? canonicalize(stripSignature(f.content), activeDialect).source : stripSignature(f.content);
+            moduleMap[f.name] = source;
+            moduleMap['./' + f.name] = source;
           }
           const r = await runWasm(rawSrc, moduleMap);
           setOutput(r.output);
