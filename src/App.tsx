@@ -43,6 +43,7 @@ const App = () => (
           <Route path="/ide" element={<IDEPage />} />
           <Route path="/dialects" element={<Dialects />} />
           <Route path="/libraries" element={<Libraries />} />
+          <Route path="/extensions" element={<Extensions />} />
           <Route path="/account" element={<Account />} />
           <Route path="/g/:slug" element={<Gist />} />
           <Route path="/docs" element={<Docs />} />
