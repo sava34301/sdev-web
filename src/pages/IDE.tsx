@@ -7,6 +7,10 @@ import { CodeMirrorEditor as IdeEditor, type IdeEditorHandle } from '@/component
 import { IdeTabs } from '@/components/ide/IdeTabs';
 import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
+import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
+import { getActiveDialect } from '@/hooks/useDialects';
+import { canonicalize } from '@/lang/dialect/canonicalize';
+import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
 import { IdeCommandPalette } from '@/components/ide/IdeCommandPalette';
 import { IdeSearchPanel } from '@/components/ide/IdeSearchPanel';
 import { IdeSettingsPanel } from '@/components/ide/IdeSettingsPanel';
