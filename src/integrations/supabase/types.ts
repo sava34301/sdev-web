@@ -18,12 +18,16 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          dialect_slug: string | null
+          dialect_version: string | null
           folder_id: string | null
           id: string
           is_active: boolean
           is_open: boolean
           language: string
+          lib_pins: string[] | null
           name: string
+          runtime: string | null
           sort_order: number
           updated_at: string
           user_id: string
@@ -31,12 +35,16 @@ export type Database = {
         Insert: {
           content?: string
           created_at?: string
+          dialect_slug?: string | null
+          dialect_version?: string | null
           folder_id?: string | null
           id?: string
           is_active?: boolean
           is_open?: boolean
           language?: string
+          lib_pins?: string[] | null
           name: string
+          runtime?: string | null
           sort_order?: number
           updated_at?: string
           user_id: string
@@ -44,12 +52,16 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          dialect_slug?: string | null
+          dialect_version?: string | null
           folder_id?: string | null
           id?: string
           is_active?: boolean
           is_open?: boolean
           language?: string
+          lib_pins?: string[] | null
           name?: string
+          runtime?: string | null
           sort_order?: number
           updated_at?: string
           user_id?: string
@@ -63,6 +75,168 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      core_requests: {
+        Row: {
+          created_at: string
+          extension_id: string | null
+          id: string
+          rationale: string | null
+          source: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          extension_id?: string | null
+          id?: string
+          rationale?: string | null
+          source: string
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          extension_id?: string | null
+          id?: string
+          rationale?: string | null
+          source?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_requests_extension_id_fkey"
+            columns: ["extension_id"]
+            isOneToOne: false
+            referencedRelation: "sdev_extensions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dialect_docs: {
+        Row: {
+          content: string
+          created_at: string
+          dialect_id: string
+          dialect_version: string
+          id: string
+          stale: boolean
+          template_version: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          dialect_id: string
+          dialect_version: string
+          id?: string
+          stale?: boolean
+          template_version: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          dialect_id?: string
+          dialect_version?: string
+          id?: string
+          stale?: boolean
+          template_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dialect_docs_dialect_id_fkey"
+            columns: ["dialect_id"]
+            isOneToOne: false
+            referencedRelation: "dialects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dialect_versions: {
+        Row: {
+          created_at: string
+          dialect_id: string
+          id: string
+          spec: Json
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          dialect_id: string
+          id?: string
+          spec: Json
+          version: string
+        }
+        Update: {
+          created_at?: string
+          dialect_id?: string
+          id?: string
+          spec?: Json
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dialect_versions_dialect_id_fkey"
+            columns: ["dialect_id"]
+            isOneToOne: false
+            referencedRelation: "dialects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dialects: {
+        Row: {
+          created_at: string
+          description: string | null
+          extends_slug: string | null
+          id: string
+          install_count: number
+          languages: string[]
+          latest_version: string
+          name: string
+          share_code: string
+          slug: string
+          spec: Json
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          extends_slug?: string | null
+          id?: string
+          install_count?: number
+          languages?: string[]
+          latest_version?: string
+          name: string
+          share_code?: string
+          slug: string
+          spec: Json
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          extends_slug?: string | null
+          id?: string
+          install_count?: number
+          languages?: string[]
+          latest_version?: string
+          name?: string
+          share_code?: string
+          slug?: string
+          spec?: Json
+          updated_at?: string
+          user_id?: string
+          visibility?: string
+        }
+        Relationships: []
       }
       email_send_log: {
         Row: {
@@ -255,6 +429,80 @@ export type Database = {
         }
         Relationships: []
       }
+      libraries: {
+        Row: {
+          created_at: string
+          description: string | null
+          download_count: number
+          id: string
+          latest_version: string
+          name: string
+          slug: string
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          download_count?: number
+          id?: string
+          latest_version?: string
+          name: string
+          slug: string
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          download_count?: number
+          id?: string
+          latest_version?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+          user_id?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
+      library_versions: {
+        Row: {
+          created_at: string
+          id: string
+          library_id: string
+          manifest: Json
+          modules: Json
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          library_id: string
+          manifest?: Json
+          modules: Json
+          version: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          library_id?: string
+          manifest?: Json
+          modules?: Json
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_versions_library_id_fkey"
+            columns: ["library_id"]
+            isOneToOne: false
+            referencedRelation: "libraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -318,6 +566,48 @@ export type Database = {
           output?: string | null
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      sdev_extensions: {
+        Row: {
+          about: string | null
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          precedence: number | null
+          source: string
+          symbol: string | null
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          about?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          precedence?: number | null
+          source: string
+          symbol?: string | null
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          about?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          precedence?: number | null
+          source?: string
+          symbol?: string | null
+          updated_at?: string
+          user_id?: string
+          visibility?: string
         }
         Relationships: []
       }
@@ -392,6 +682,24 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      usernames: {
+        Row: {
+          created_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+          username?: string
         }
         Relationships: []
       }
