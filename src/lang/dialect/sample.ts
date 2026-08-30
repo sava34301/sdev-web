@@ -1,0 +1,35 @@
+/** The canonical program the Dialect Studio previews live. */
+export const PREVIEW_SAMPLE = [
+  '# a small tour of sdev',
+  'set name to "world"',
+  '',
+  'to greet with who',
+  '  say "hello, " + who',
+  'end',
+',',
+].join('\n');
+
+export const SAMPLE = [
+  '# a small tour of sdev',
+  'set name to "world"',
+  '',
+  'to greet with who',
+  '  say "hello, " + who',
+  'end',
+  '',
+  'greet with name',
+  '',
+  'for each n in range(3)',
+  '  if n is 1',
+  '    say "one"',
+  '  else',
+  '    say n',
+  '  end',
+  'end',
+  '',
+  'attempt',
+  '  throw "boom"',
+  'rescue e',
+  '  say "caught " + text(e)',
+  'end',
+].join('\n');
