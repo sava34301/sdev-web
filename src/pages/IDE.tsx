@@ -1589,7 +1589,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   {sidePanel === 'personal' && (
                     <PersonalPanel
                       content={activeFile?.content}
-                      onReplaceContent={(next) => activeFile && updateFileContent(activeFile.id, next)}
+                      onReplaceContent={updateActiveContent}
                     />
                   )}
                   {sidePanel === 'settings' && (
