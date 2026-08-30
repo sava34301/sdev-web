@@ -39,6 +39,8 @@ const App = () => (
           <Route path="/unsubscribe" element={<Unsubscribe />} />
 
           <Route path="/ide" element={<IDEPage />} />
+          <Route path="/dialects" element={<Dialects />} />
+          <Route path="/libraries" element={<Libraries />} />
           <Route path="/account" element={<Account />} />
           <Route path="/g/:slug" element={<Gist />} />
           <Route path="/docs" element={<Docs />} />
