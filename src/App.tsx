@@ -7,6 +7,7 @@ import Launch from "./pages/Launch";
 import Index from "./pages/Index";
 import IDEPage from "./pages/IDE";
 import Dialects from "./pages/Dialects";
+import Libraries from "./pages/Libraries";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Gist from "./pages/Gist";
