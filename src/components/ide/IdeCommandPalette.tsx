@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileCode, Play, Plus, FolderOpen, Search, Settings, BookOpen, Zap, Cpu, Command } from 'lucide-react';
+import { FileCode, Play, Plus, FolderOpen, Search, Settings, BookOpen, Zap, Cpu, Command, Languages, Package, Blocks } from 'lucide-react';
 import type { IdeFile, SidePanel } from './types';
 
 interface Props {
@@ -33,7 +33,11 @@ export function IdeCommandPalette({ files, onClose, onSelectFile, onNewFile, onR
     { id: 'explorer', label: 'Toggle Explorer', description: 'Show/hide file explorer', icon: FolderOpen, action: () => onTogglePanel('explorer'), shortcut: '⌃B', category: 'View' },
     { id: 'search', label: 'Toggle Search', description: 'Search across files', icon: Search, action: () => onTogglePanel('search'), shortcut: '⌃F', category: 'View' },
     { id: 'settings', label: 'Open Settings', description: 'Editor preferences', icon: Settings, action: () => onTogglePanel('settings'), category: 'View' },
-    { id: 'docs', label: 'Open Documentation', description: 'View sdev language reference', icon: BookOpen, action: () => window.open('/SDEV_DOCUMENTATION.md', '_blank'), category: 'Help' },
+    { id: 'personal', label: 'Personal sdev', description: 'Dialects, libraries and extensions', icon: Languages, action: () => onTogglePanel('personal'), category: 'View' },
+    { id: 'studio', label: 'Open Dialect Studio', description: 'Build sdev in your own words', icon: Languages, action: () => window.open('/dialects', '_blank'), category: 'Personal' },
+    { id: 'registry', label: 'Open Library Registry', description: 'Browse and install sdev libraries', icon: Package, action: () => window.open('/libraries', '_blank'), category: 'Personal' },
+    { id: 'extensions', label: 'Open Extensions', description: 'Add functions and operators to sdev', icon: Blocks, action: () => window.open('/extensions', '_blank'), category: 'Personal' },
+    { id: 'docs', label: 'Open Documentation', description: 'View sdev language reference', icon: BookOpen, action: () => window.open('/docs', '_blank'), category: 'Help' },
     ...files.map(f => ({
       id: `file-${f.id}`, label: f.name, description: `Open ${f.name}`, icon: FileCode,
       action: () => onSelectFile(f.id), category: 'Files'
