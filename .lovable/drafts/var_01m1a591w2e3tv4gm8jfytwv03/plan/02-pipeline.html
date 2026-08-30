@@ -1,0 +1,53 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dialect source is canonicalized into sdev v2, then compiled by the existing pipeline">
+<style>
+text{font-family:var(--font-sans);fill:hsl(var(--foreground));font-size:14px;font-weight:480}
+.s{font-size:12px;fill:hsl(var(--muted-foreground));font-weight:400}
+.m{font-family:var(--font-mono);font-size:12px;fill:hsl(var(--muted-foreground))}
+.b{fill:none;stroke:hsl(var(--muted-foreground));stroke-width:1}
+.z{fill:none;stroke:hsl(var(--border));stroke-width:1;stroke-dasharray:4 3}
+.w{stroke:hsl(var(--muted-foreground));stroke-width:1;fill:none}
+.a{fill:none;stroke:hsl(var(--accent));stroke-width:1}
+</style>
+<defs><marker id="c" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6" fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1"/></marker></defs>
+
+<rect class="b" x="8" y="60" width="126" height="66" rx="8"/>
+<text x="71" y="86" text-anchor="middle">source file</text>
+<text class="m" x="71" y="106" text-anchor="middle">кажи "здравей"</text>
+
+<rect class="a" x="168" y="52" width="140" height="82" rx="8"/>
+<circle cx="182" cy="42" r="9" fill="hsl(var(--accent))"/>
+<text x="182" y="46" text-anchor="middle" font-size="11" fill="hsl(var(--accent-foreground))">1</text>
+<text x="238" y="80" text-anchor="middle">canonicalizer</text>
+<text class="s" x="238" y="100" text-anchor="middle">names · style</text>
+<text class="s" x="238" y="116" text-anchor="middle">constructs → prelude</text>
+
+<rect class="b" x="342" y="60" width="126" height="66" rx="8"/>
+<text x="405" y="86" text-anchor="middle">sdev v2</text>
+<text class="m" x="405" y="106" text-anchor="middle">say "здравей"</text>
+
+<rect class="z" x="498" y="34" width="132" height="118" rx="8"/>
+<text class="s" x="508" y="52">existing, unchanged</text>
+<rect class="b" x="512" y="62" width="104" height="26" rx="8"/><text x="564" y="79" text-anchor="middle" font-size="13">lexer · parser</text>
+<rect class="b" x="512" y="96" width="104" height="26" rx="8"/><text x="564" y="113" text-anchor="middle" font-size="13">codegen</text>
+<text class="s" x="564" y="142" text-anchor="middle">wasm · x86-64</text>
+
+<path class="w" d="M136 93 H164" marker-end="url(#c)"/>
+<path class="w" d="M310 93 H338" marker-end="url(#c)"/>
+<path class="w" d="M470 93 H508" marker-end="url(#c)"/>
+
+<rect class="b" x="168" y="196" width="140" height="56" rx="8"/>
+<text x="238" y="219" text-anchor="middle">dialect spec</text>
+<text class="m" x="238" y="238" text-anchor="middle">@sava/bulgarski</text>
+<path class="w" d="M238 194 V138" marker-end="url(#c)"/>
+
+<rect class="b" x="8" y="196" width="126" height="56" rx="8"/>
+<text x="71" y="219" text-anchor="middle">file signature</text>
+<text class="s" x="71" y="238" text-anchor="middle">names the dialect</text>
+<path class="w" d="M136 224 H164" marker-end="url(#c)"/>
+<path class="w" d="M71 194 V130" marker-end="url(#c)"/>
+
+<rect class="b" x="342" y="196" width="288" height="56" rx="8"/>
+<text x="486" y="219" text-anchor="middle">reverse canonicalizer</text>
+<text class="s" x="486" y="238" text-anchor="middle">open any file in your own dialect — same spec, run backwards</text>
+<path class="w" d="M310 224 H338" marker-end="url(#c)"/>
+</svg>
