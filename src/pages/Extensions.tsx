@@ -26,13 +26,13 @@ interface Extension {
   visibility: 'private' | 'unlisted' | 'public';
 }
 
-const BLANK = {
+const BLANK: { name: string; kind: 'function' | 'operator'; symbol: string; about: string; source: string; visibility: 'private' | 'unlisted' | 'public' } = {
   name: '',
-  kind: 'function' as const,
+  kind: 'function',
   symbol: '',
   about: '',
   source: 'to twice with n\n  return n * 2\nend\n',
-  visibility: 'private' as const,
+  visibility: 'private',
 };
 
 export default function Extensions() {
