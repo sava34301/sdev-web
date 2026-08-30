@@ -130,26 +130,46 @@ export interface CanonicalizeResult {
   prelude: string;
 }
 
+const PLACEHOLDER = '\u0000';
+
+/** Replace strings with placeholders so line-level rules never touch literals. */
+function mask(segs: Seg[]): { line: string; strings: string[]; comment: string | null } {
+  const strings: string[] = [];
+  let comment: string | null = null;
+  let line = '';
+  for (const seg of segs) {
+    if (seg.kind === 'string') {
+      line += `${PLACEHOLDER}${strings.length}${PLACEHOLDER}`;
+      strings.push(seg.text);
+    } else if (seg.kind === 'comment') {
+      comment = seg.text;
+    } else {
+      line += seg.text;
+    }
+  }
+  return { line, strings, comment };
+}
+
+function unmask(line: string, strings: string[]): string {
+  return line.replace(/\u0000(\d+)\u0000/g, (_m, i) => strings[Number(i)]);
+}
+
+const BLOCK_OPENERS = /^\s*(if|else|for|while|to|kind|does|attempt|rescue|make)\b/;
+
 /** dialect surface -> canonical sdev v2. */
 export function canonicalize(source: string, spec: DialectSpec, opts: { withPrelude?: boolean } = {}): CanonicalizeResult {
   const marker = spec.style.commentMarker || DEFAULT_STYLE.commentMarker;
   const dict = forwardDict(spec);
   const braces = spec.style.blockStyle === 'braces';
 
-  const lines = source.split('\n').map((line) => {
-    const segs = splitLine(line, marker);
-    return segs
-      .map((seg) => {
-        if (seg.kind === 'string') return seg.text;
-        if (seg.kind === 'comment') return '#' + seg.text.slice(marker.length);
-        let code = mapWords(seg.text, dict);
-        if (spec.constructs.operators.length) code = desugarOperators(code, spec);
-        if (braces) code = code.replace(/\{\s*$/, '').replace(/^(\s*)\}\s*$/, '$1end');
-        code = rewriteAssignmentForward(code, spec);
-        return code;
-      })
-      .join('')
-      .replace(/\s+$/, '');
+  const lines = source.split('\n').map((raw) => {
+    const { line, strings, comment } = mask(splitLine(raw, marker));
+    let code = mapWords(line, dict);
+    if (spec.constructs.operators.length) code = desugarOperators(code, spec);
+    if (braces) code = code.replace(/\s*\{\s*$/, '').replace(/^(\s*)\}\s*$/, '$1end');
+    code = rewriteAssignmentForward(code, spec);
+    const canonicalComment = comment === null ? '' : '#' + comment.slice(marker.length);
+    return (unmask(code, strings) + canonicalComment).replace(/\s+$/, '');
   });
 
   const prelude = opts.withPrelude === false ? '' : preludeSource(spec);
@@ -165,18 +185,16 @@ export function dialectize(source: string, spec: DialectSpec): string {
 
   return source
     .split('\n')
-    .map((line) => {
-      const segs = splitLine(line, '#');
-      return segs
-        .map((seg) => {
-          if (seg.kind === 'string') return seg.text;
-          if (seg.kind === 'comment') return marker + seg.text.slice(1);
-          let code = rewriteAssignmentReverse(seg.text, spec);
-          if (braces) code = code.replace(/^(\s*)end\s*$/, '$1}');
-          return mapWords(code, dict);
-        })
-        .join('')
-        .replace(/\s+$/, '');
+    .map((raw) => {
+      const { line, strings, comment } = mask(splitLine(raw, '#'));
+      let code = rewriteAssignmentReverse(line, spec);
+      if (braces) {
+        if (/^\s*end\s*$/.test(code)) code = code.replace(/^(\s*)end\s*$/, '$1}');
+        else if (BLOCK_OPENERS.test(code)) code = `${code.replace(/\s+$/, '')} {`;
+      }
+      code = mapWords(code, dict);
+      const dialectComment = comment === null ? '' : marker + comment.slice(1);
+      return (unmask(code, strings) + dialectComment).replace(/\s+$/, '');
     })
     .join('\n');
 }
@@ -185,3 +203,4 @@ export function dialectize(source: string, spec: DialectSpec): string {
 export function translateDialect(source: string, from: DialectSpec, to: DialectSpec): string {
   return dialectize(canonicalize(source, from, { withPrelude: false }).source, to);
 }
+
