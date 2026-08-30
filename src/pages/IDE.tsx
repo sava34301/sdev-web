@@ -8,6 +8,7 @@ import { IdeTabs } from '@/components/ide/IdeTabs';
 import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
 import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
+import { PersonalPanel } from '@/components/ide/PersonalPanel';
 import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
@@ -1118,6 +1119,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
     { id: 'problems' as SidePanel, icon: AlertCircle, label: `Problems (${problems.length})` },
     { id: 'assistant' as SidePanel, icon: Sparkles,  label: 'AI Doctor — fix & explain' },
     { id: 'hardware' as SidePanel, icon: Usb,       label: 'Hardware — boards & uploader' },
+    { id: 'personal' as SidePanel, icon: Languages, label: 'Personal sdev — dialects, libraries, extensions' },
     { id: 'settings' as SidePanel, icon: Settings,  label: 'Settings' },
   ];
 
@@ -1582,6 +1584,12 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     <HardwarePanel
                       source={activeFile?.content ?? ''}
                       onAppendLog={(line) => setOutput(prev => [...prev, line])}
+                    />
+                  )}
+                  {sidePanel === 'personal' && (
+                    <PersonalPanel
+                      content={activeFile?.content}
+                      onReplaceContent={(next) => activeFile && updateFileContent(activeFile.id, next)}
                     />
                   )}
                   {sidePanel === 'settings' && (
