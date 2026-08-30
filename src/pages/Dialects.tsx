@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, Download, Loader2, Plus, Share2, Sparkles, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Download, Loader2, Plus, Share2, Sparkles, Trash2, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDialects } from '@/hooks/useDialects';
 import { CATALOG, GROUP_LABELS, type CatalogGroup } from '@/lang/dialect/catalog';
@@ -179,6 +179,7 @@ export default function Dialects() {
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <h2 className="text-xl font-semibold tracking-tight">Editing {draft.meta.name}</h2>
               <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleDocs}><BookOpen className="h-4 w-4 mr-1.5" />Docs</Button>
                 <Button size="sm" variant="outline" onClick={handleExport}><Share2 className="h-4 w-4 mr-1.5" />Export</Button>
                 <Button size="sm" variant="outline" onClick={handlePublish} disabled={errors.length > 0}><Upload className="h-4 w-4 mr-1.5" />Publish</Button>
                 <Button size="sm" onClick={handleSave} disabled={saving}>
