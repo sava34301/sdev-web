@@ -107,7 +107,7 @@ export default function Libraries() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO title="Libraries — sdev registry" description="Publish sdev libraries, import them with use \"@user/lib\", and download an offline bundle for the native CLI and desktop IDE." path="/libraries" />
+      <SEO title="Libraries — sdev registry" description={'Publish sdev libraries, import them with use "@user/lib", and download an offline bundle for the native CLI and desktop IDE.'} path="/libraries" />
 
       <header className="border-b border-border/50">
         <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
