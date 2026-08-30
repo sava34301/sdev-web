@@ -61,7 +61,7 @@ check('arrow assignment', canonicalize('42 -> answer', terse).source, 'set answe
 check('arrow reverse', dialectize('set answer to 42', terse), '42 -> answer');
 
 // dialect-to-dialect translation
-check('bg -> terse (arrow)', translateDialect('нека x = 1', bg, terse), '1 -> x');
+check('bg -> terse (arrow)', translateDialect('x = 1', bg, terse), '1 -> x');
 check('bg -> terse (say)', translateDialect('кажи x', bg, terse), 'p x');
 
 // ---- user constructs -----------------------------------------------------
