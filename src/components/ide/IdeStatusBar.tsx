@@ -54,6 +54,7 @@ export function IdeStatusBar({ statusMsg, runMode, activeFile, lines, chars, cur
             <span className="ide-status-seg font-semibold ide-status-accent">sdev</span>
           </>
         )}
+        {extra}
         <span className="ide-status-seg">
           <Wifi className="w-3 h-3" /> Online
         </span>

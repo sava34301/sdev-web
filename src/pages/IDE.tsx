@@ -1760,6 +1760,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           selection={selection}
           execTime={execTime}
           error={!!error}
+          extra={<DialectSwitcher />}
         />
 
         {/* Command Palette */}
