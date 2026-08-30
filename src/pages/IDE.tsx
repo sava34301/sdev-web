@@ -11,6 +11,7 @@ import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
 import { getActiveDialect } from '@/hooks/useDialects';
 import { canonicalize } from '@/lang/dialect/canonicalize';
 import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
+import { resolveLibraries } from '@/lang/dialect/registry';
 import { IdeCommandPalette } from '@/components/ide/IdeCommandPalette';
 import { IdeSearchPanel } from '@/components/ide/IdeSearchPanel';
 import { IdeSettingsPanel } from '@/components/ide/IdeSettingsPanel';
