@@ -945,7 +945,18 @@ export default function IDEPage() {
 
   const downloadCurrentFile = () => {
     if (!activeFile) return;
-    const blob = new Blob([activeFile.content], { type: 'text/plain' });
+    // Exported files carry (or keep) their hidden signature so any IDE can
+    // tell which runtime, dialect and libraries they were written against.
+    const dialect = getActiveDialect();
+    const existing = readSignature(activeFile.content);
+    const signed = writeSignature(activeFile.content, {
+      rt: (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1',
+      dialect: dialect ? dialect.meta.slug : existing?.dialect ?? null,
+      dialectVersion: dialect ? dialect.meta.version : existing?.dialectVersion ?? null,
+      libs: existing?.libs ?? [],
+      origin: existing?.origin ?? null,
+    });
+    const blob = new Blob([signed], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = activeFile.name; a.click();
