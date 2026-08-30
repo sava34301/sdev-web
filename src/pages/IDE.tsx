@@ -1075,7 +1075,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           let content = raw;
           let note = '';
           if (sig?.dialect && sig.dialect !== (active?.meta.slug ?? null)) {
-            const source = getDialectBySlug(sig.dialect);
+            const source = findLocalDialect(sig.dialect);
             if (source) {
               content = active
                 ? translateDialect(stripSignature(raw), source, active)
