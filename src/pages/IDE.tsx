@@ -7,6 +7,11 @@ import { CodeMirrorEditor as IdeEditor, type IdeEditorHandle } from '@/component
 import { IdeTabs } from '@/components/ide/IdeTabs';
 import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
+import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
+import { getActiveDialect } from '@/hooks/useDialects';
+import { canonicalize } from '@/lang/dialect/canonicalize';
+import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
+import { resolveLibraries } from '@/lang/dialect/registry';
 import { IdeCommandPalette } from '@/components/ide/IdeCommandPalette';
 import { IdeSearchPanel } from '@/components/ide/IdeSearchPanel';
 import { IdeSettingsPanel } from '@/components/ide/IdeSettingsPanel';
@@ -616,7 +621,12 @@ export default function IDEPage() {
     // interpreter is involved — if a program uses a feature the self-hosted
     // compiler cannot compile yet, we say so instead of silently switching
     // to a different implementation.
-    const rawSrc = activeFile.content;
+    // The file's hidden signature never reaches the compiler, and a dialect
+    // source is canonicalized to plain sdev v2 first — the toolchain itself
+    // is untouched by dialects.
+    const activeDialect = getActiveDialect();
+    const strippedSrc = stripSignature(activeFile.content);
+    const rawSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
     const head10 = rawSrc.split('\n', 10).map(l => l.trim());
     const shebangV2Wasm = head10.some(l => l.startsWith('#!sdev v2-wasm'));
     const shebangV2 = head10.some(l => l.startsWith('#!sdev v2') && !l.startsWith('#!sdev v2-wasm'));
@@ -633,10 +643,13 @@ export default function IDEPage() {
         const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
         try {
           // Milestone 5z: `use "path"` resolves against the workspace files.
-          const moduleMap: Record<string, string> = {};
+          // Personal SDEV: `use "@user/lib@1.2.0"` resolves through the
+          // library registry (cached locally, so it also works offline).
+          const moduleMap: Record<string, string> = await resolveLibraries(rawSrc);
           for (const f of files) {
-            moduleMap[f.name] = f.content;
-            moduleMap['./' + f.name] = f.content;
+            const source = activeDialect ? canonicalize(stripSignature(f.content), activeDialect).source : stripSignature(f.content);
+            moduleMap[f.name] = source;
+            moduleMap['./' + f.name] = source;
           }
           const r = await runWasm(rawSrc, moduleMap);
           setOutput(r.output);
@@ -661,7 +674,7 @@ export default function IDEPage() {
 
 
 
-    let code = stripBoardBlocks(activeFile.content);
+    let code = stripBoardBlocks(rawSrc);
     const outputLines: string[] = [];
     const commands: GraphicsCommand[] = [];
     let turtleState: TurtleState = { x: 200, y: 200, angle: -90, penDown: true, color: '#00ff88', width: 2 };
@@ -936,7 +949,18 @@ export default function IDEPage() {
 
   const downloadCurrentFile = () => {
     if (!activeFile) return;
-    const blob = new Blob([activeFile.content], { type: 'text/plain' });
+    // Exported files carry (or keep) their hidden signature so any IDE can
+    // tell which runtime, dialect and libraries they were written against.
+    const dialect = getActiveDialect();
+    const existing = readSignature(activeFile.content);
+    const signed = writeSignature(activeFile.content, {
+      rt: (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1',
+      dialect: dialect ? dialect.meta.slug : existing?.dialect ?? null,
+      dialectVersion: dialect ? dialect.meta.version : existing?.dialectVersion ?? null,
+      libs: existing?.libs ?? [],
+      origin: existing?.origin ?? null,
+    });
+    const blob = new Blob([signed], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = activeFile.name; a.click();
@@ -1740,6 +1764,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           selection={selection}
           execTime={execTime}
           error={!!error}
+          extra={<DialectSwitcher />}
         />
 
         {/* Command Palette */}

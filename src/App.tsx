@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Launch from "./pages/Launch";
 import Index from "./pages/Index";
 import IDEPage from "./pages/IDE";
+import Dialects from "./pages/Dialects";
+import Libraries from "./pages/Libraries";
+import Extensions from "./pages/Extensions";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Gist from "./pages/Gist";
@@ -38,6 +41,9 @@ const App = () => (
           <Route path="/unsubscribe" element={<Unsubscribe />} />
 
           <Route path="/ide" element={<IDEPage />} />
+          <Route path="/dialects" element={<Dialects />} />
+          <Route path="/libraries" element={<Libraries />} />
+          <Route path="/extensions" element={<Extensions />} />
           <Route path="/account" element={<Account />} />
           <Route path="/g/:slug" element={<Gist />} />
           <Route path="/docs" element={<Docs />} />
