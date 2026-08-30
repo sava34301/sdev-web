@@ -8,7 +8,7 @@ import { ArrowRightLeft, Blocks, BookOpen, Check, Download, ExternalLink, Langua
 import { useDialects } from '@/hooks/useDialects';
 import { cachedLibraries, fetchLibrary, forgetBundle, type LibraryBundle } from '@/lang/dialect/registry';
 import { parseAddress } from '@/lang/dialect/address';
-import { translateDialect } from '@/lang/dialect/canonicalize';
+import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { generateDialectDocs } from '@/lang/dialect/docs';
 import type { DialectSpec } from '@/lang/dialect/spec';
 
@@ -58,17 +58,12 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
     } finally { setBusy(false); }
   };
 
+  /** Rewrite the open file: dialect -> dialect, or dialect -> canonical sdev. */
   const translateTo = (target: DialectSpec | null) => {
-    if (!content || !onReplaceContent) return;
-    const from = active;
-    if (!from && !target) return;
-    const canonical: DialectSpec | null = null;
-    const next = from && target
-      ? translateDialect(content, from, target)
-      : from
-        ? translateDialect(content, from, from) && translateDialect(content, from, from)
-        : content;
-    void canonical;
+    if (!content || !onReplaceContent || !active) return;
+    const next = target
+      ? translateDialect(content, active, target)
+      : canonicalize(content, active, { withPrelude: false }).source;
     onReplaceContent(next);
     toast.success(target ? `Rewritten in ${target.meta.name}` : 'Rewritten in canonical sdev');
   };
