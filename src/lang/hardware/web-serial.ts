@@ -36,7 +36,13 @@ export async function requestSerialPort(filters?: { vid: number; pid?: number }[
 
 export async function getGrantedPorts(): Promise<WebSerialPort[]> {
   if (!isWebSerialSupported()) return [];
-  return (navigator as unknown as NavWithSerial).serial.getPorts();
+  try {
+    // Embedded previews disallow the "serial" permission policy; treat that
+    // as "no ports granted" rather than letting it surface as a crash.
+    return await (navigator as unknown as NavWithSerial).serial.getPorts();
+  } catch {
+    return [];
+  }
 }
 
 // --------------------------------------------------------------

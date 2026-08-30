@@ -1067,12 +1067,30 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
       Array.from(inputEl.files || []).forEach(file => {
         const reader = new FileReader();
         reader.onload = (ev) => {
+          const raw = (ev.target?.result as string) ?? '';
+          // Signature-aware open: a file remembers the dialect it was written
+          // in, so we can show it in the words this IDE is currently using.
+          const sig = readSignature(raw);
+          const active = getActiveDialect();
+          let content = raw;
+          let note = '';
+          if (sig?.dialect && sig.dialect !== (active?.meta.slug ?? null)) {
+            const source = getDialectBySlug(sig.dialect);
+            if (source) {
+              content = active
+                ? translateDialect(stripSignature(raw), source, active)
+                : canonicalize(stripSignature(raw), source, { withPrelude: false }).source;
+              note = ` · translated from ${source.meta.name}`;
+            } else {
+              note = ` · written in dialect "${sig.dialect}" (not installed)`;
+            }
+          }
           const id = String(++fileIdCounter);
-          const newFile: IdeFile = { id, name: file.name, content: ev.target?.result as string };
+          const newFile: IdeFile = { id, name: file.name, content };
           setFiles(prev => [...prev, newFile]);
           setOpenIds(prev => [...prev, id]);
           setActiveId(id);
-          toast.success(`Opened ${file.name}`);
+          toast.success(`Opened ${file.name}${note}`);
         };
         reader.readAsText(file);
       });
