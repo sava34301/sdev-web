@@ -8,8 +8,9 @@ import { IdeTabs } from '@/components/ide/IdeTabs';
 import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
 import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
-import { getActiveDialect } from '@/hooks/useDialects';
-import { canonicalize } from '@/lang/dialect/canonicalize';
+import { PersonalPanel } from '@/components/ide/PersonalPanel';
+import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
+import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
 import { resolveLibraries } from '@/lang/dialect/registry';
 import { IdeCommandPalette } from '@/components/ide/IdeCommandPalette';
@@ -1067,12 +1068,30 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
       Array.from(inputEl.files || []).forEach(file => {
         const reader = new FileReader();
         reader.onload = (ev) => {
+          const raw = (ev.target?.result as string) ?? '';
+          // Signature-aware open: a file remembers the dialect it was written
+          // in, so we can show it in the words this IDE is currently using.
+          const sig = readSignature(raw);
+          const active = getActiveDialect();
+          let content = raw;
+          let note = '';
+          if (sig?.dialect && sig.dialect !== (active?.meta.slug ?? null)) {
+            const source = findLocalDialect(sig.dialect);
+            if (source) {
+              content = active
+                ? translateDialect(stripSignature(raw), source, active)
+                : canonicalize(stripSignature(raw), source, { withPrelude: false }).source;
+              note = ` · translated from ${source.meta.name}`;
+            } else {
+              note = ` · written in dialect "${sig.dialect}" (not installed)`;
+            }
+          }
           const id = String(++fileIdCounter);
-          const newFile: IdeFile = { id, name: file.name, content: ev.target?.result as string };
+          const newFile: IdeFile = { id, name: file.name, content };
           setFiles(prev => [...prev, newFile]);
           setOpenIds(prev => [...prev, id]);
           setActiveId(id);
-          toast.success(`Opened ${file.name}`);
+          toast.success(`Opened ${file.name}${note}`);
         };
         reader.readAsText(file);
       });
@@ -1100,6 +1119,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
     { id: 'problems' as SidePanel, icon: AlertCircle, label: `Problems (${problems.length})` },
     { id: 'assistant' as SidePanel, icon: Sparkles,  label: 'AI Doctor — fix & explain' },
     { id: 'hardware' as SidePanel, icon: Usb,       label: 'Hardware — boards & uploader' },
+    { id: 'personal' as SidePanel, icon: Languages, label: 'Personal sdev — dialects, libraries, extensions' },
     { id: 'settings' as SidePanel, icon: Settings,  label: 'Settings' },
   ];
 
@@ -1564,6 +1584,12 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     <HardwarePanel
                       source={activeFile?.content ?? ''}
                       onAppendLog={(line) => setOutput(prev => [...prev, line])}
+                    />
+                  )}
+                  {sidePanel === 'personal' && (
+                    <PersonalPanel
+                      content={activeFile?.content}
+                      onReplaceContent={updateActiveContent}
                     />
                   )}
                   {sidePanel === 'settings' && (
