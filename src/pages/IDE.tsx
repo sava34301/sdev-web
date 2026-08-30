@@ -616,7 +616,12 @@ export default function IDEPage() {
     // interpreter is involved — if a program uses a feature the self-hosted
     // compiler cannot compile yet, we say so instead of silently switching
     // to a different implementation.
-    const rawSrc = activeFile.content;
+    // The file's hidden signature never reaches the compiler, and a dialect
+    // source is canonicalized to plain sdev v2 first — the toolchain itself
+    // is untouched by dialects.
+    const activeDialect = getActiveDialect();
+    const strippedSrc = stripSignature(activeFile.content);
+    const rawSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
     const head10 = rawSrc.split('\n', 10).map(l => l.trim());
     const shebangV2Wasm = head10.some(l => l.startsWith('#!sdev v2-wasm'));
     const shebangV2 = head10.some(l => l.startsWith('#!sdev v2') && !l.startsWith('#!sdev v2-wasm'));
@@ -661,7 +666,7 @@ export default function IDEPage() {
 
 
 
-    let code = stripBoardBlocks(activeFile.content);
+    let code = stripBoardBlocks(rawSrc);
     const outputLines: string[] = [];
     const commands: GraphicsCommand[] = [];
     let turtleState: TurtleState = { x: 200, y: 200, angle: -90, penDown: true, color: '#00ff88', width: 2 };
