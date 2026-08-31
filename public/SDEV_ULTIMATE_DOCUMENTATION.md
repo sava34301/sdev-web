@@ -1,65 +1,88 @@
 # The Ultimate sdev Documentation
 
-> **Everything about sdev in one file.** Language, runtimes, compiler, virtual machine, native backend, standard library, machine-learning stack, hardware, GIS, tooling, and the full generated reference tables.
+> **Everything about sdev in one file.** Language, runtimes, compiler, virtual
+> machine, native backend, standard library, machine-learning stack, hardware,
+> GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-08-23 by `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source guides or the implementation and re-run the generator.
+> Created by **Sava Milanov**. Generated on 2026-08-23 by
+> `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
+> guides or the implementation and re-run the generator.
 
-***
+---
 
 ## How to read this document
 
 This book has three layers.
 
-1. **Part I — Orientation.** What sdev is, why it exists, how the pieces fit together. Read this once, top to bottom.
-2. **Parts II–VIII — The guides.** Every hand-written sdev guide, inlined verbatim and re-levelled so the table of contents stays flat. Nothing was summarised or dropped.
-3. **Part IX — Generated reference.** Tables extracted directly from the implementation: every builtin, every opcode, every keyword, every stdlib function, the parity matrix, the repository map, and the toolchain.
+1. **Part I — Orientation.** What sdev is, why it exists, how the pieces fit
+   together. Read this once, top to bottom.
+2. **Parts II–VIII — The guides.** Every hand-written sdev guide, inlined
+   verbatim and re-levelled so the table of contents stays flat. Nothing was
+   summarised or dropped.
+3. **Part IX — Generated reference.** Tables extracted directly from the
+   implementation: every builtin, every opcode, every keyword, every stdlib
+   function, the parity matrix, the repository map, and the toolchain.
 
-Anything in Part IX is machine-derived, so it is correct by construction for the commit that produced this file.
+Anything in Part IX is machine-derived, so it is correct by construction for
+the commit that produced this file.
 
-***
+---
 
 ## Part I — Orientation
 
 ### What sdev is
 
-sdev is a programming language with two surface dialects and three execution tracks.
+sdev is a programming language with two surface dialects and three execution
+tracks.
 
-|                | Dialect                      | Idea                                                                                       |
-| -------------- | ---------------------------- | ------------------------------------------------------------------------------------------ |
-| **v1**         | `forge x be 10` / `speak(x)` | The original expressive dialect: unique keywords, classes, closures, canvas, web DSL, GIS. |
-| **v2 "Prism"** | `set x to 10` / `say x`      | The beginner-first dialect: English words, no sigils, same power behind opt-in blocks.     |
+| | Dialect | Idea |
+| --- | --- | --- |
+| **v1** | `forge x be 10` / `speak(x)` | The original expressive dialect: unique keywords, classes, closures, canvas, web DSL, GIS. |
+| **v2 "Prism"** | `set x to 10` / `say x` | The beginner-first dialect: English words, no sigils, same power behind opt-in blocks. |
 
-| Track                         | Where it runs                           | How it executes                                                                                             |
-| ----------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **v1 TypeScript interpreter** | Browser IDE, Node CLI                   | Lexer → parser → tree-walking interpreter, with a bytecode compiler + stack VM alongside.                   |
-| **v2 self-hosted compiler**   | Browser IDE (WASM)                      | sdev source compiled by a compiler _written in sdev_, executing on a hand-written WebAssembly seed VM.      |
-| **native x86-64 backend**     | Linux / macOS CLI, Electron desktop IDE | The same AST emitted as GAS assembly, assembled with `as`, linked with `ld` into a static ELF with no libc. |
+| Track | Where it runs | How it executes |
+| --- | --- | --- |
+| **v1 TypeScript interpreter** | Browser IDE, Node CLI | Lexer → parser → tree-walking interpreter, with a bytecode compiler + stack VM alongside. |
+| **v2 self-hosted compiler** | Browser IDE (WASM) | sdev source compiled by a compiler *written in sdev*, executing on a hand-written WebAssembly seed VM. |
+| **native x86-64 backend** | Linux / macOS CLI, Electron desktop IDE | The same AST emitted as GAS assembly, assembled with `as`, linked with `ld` into a static ELF with no libc. |
 
-All three tracks are measured against one canonical feature registry. See _Part IX — Parity matrix_.
+All three tracks are measured against one canonical feature registry. See
+*Part IX — Parity matrix*.
 
 ### Why it exists
 
 Three reasons, in order of weight.
 
-1. **Readability first.** Most languages ask a beginner to memorise punctuation before they can print a line. v2 asks for English: `say "hello"`. If a ten-year-old can guess what a line does, the keyword was chosen correctly.
-2. **No ceiling.** Readability usually costs power. sdev keeps the power behind opt-in blocks — `systems` for pointers and FFI, `match` for algebraic pattern matching, query syntax for data, `board` for hardware — so a beginner never sees them and an expert never hits a wall.
-3. **Own the whole stack.** The compiler is written in sdev. The VM is hand-written WebAssembly. The native backend emits raw assembly. There is no hidden layer someone else controls.
+1. **Readability first.** Most languages ask a beginner to memorise
+   punctuation before they can print a line. v2 asks for English:
+   `say "hello"`. If a ten-year-old can guess what a line does, the keyword
+   was chosen correctly.
+2. **No ceiling.** Readability usually costs power. sdev keeps the power
+   behind opt-in blocks — `systems` for pointers and FFI, `match` for
+   algebraic pattern matching, query syntax for data, `board` for hardware —
+   so a beginner never sees them and an expert never hits a wall.
+3. **Own the whole stack.** The compiler is written in sdev. The VM is
+   hand-written WebAssembly. The native backend emits raw assembly. There is
+   no hidden layer someone else controls.
 
 ### The self-hosting fixed point
 
 The property the whole project is organised around:
 
-```
+```text
   compiler.sdev  --compiled by-->  JS bootstrap  -->  bytecode A
   compiler.sdev  --compiled by-->  bytecode A    -->  bytecode B
   assert A == B          (byte-identical, not merely equivalent)
 ```
 
-When A equals B byte for byte, the JavaScript bootstrap is no longer part of the language — it is only a build-time oracle. sdev compiles sdev. The gate that enforces this lives in `scripts/test-self-toolchain.mjs` and runs in CI on every change.
+When A equals B byte for byte, the JavaScript bootstrap is no longer part of
+the language — it is only a build-time oracle. sdev compiles sdev. The gate
+that enforces this lives in `scripts/test-self-toolchain.mjs` and runs in CI
+on every change.
 
 ### The layer cake
 
-```
+```text
    your program (.sdev)
         │
         ├── v1 path ──► lexer.ts → parser.ts → interpreter.ts        (tree walk)
@@ -87,7 +110,8 @@ set x to 10
 say x
 ```
 
-Globally, in the IDE: **Settings → Runtime**. Without a shebang the default is **v1**.
+Globally, in the IDE: **Settings → Runtime**. Without a shebang the default is
+**v1**.
 
 ### Sixty-second tour
 
@@ -125,73 +149,87 @@ iterate n through nums ::
 ;;
 ```
 
-***
+---
+
 
 ## Part II — The language
+
 
 ### sdev v2 "Prism" — language guide
 
 _Source: `public/SDEV_V2_DOCUMENTATION.md`_
 
+
 #### Complete Documentation, Tutorial & Reference Guide
 
-***
+---
 
 #### Table of Contents
 
-1. [Introduction](SDEV_ULTIMATE_DOCUMENTATION.md#introduction)
-2. [Getting Started](SDEV_ULTIMATE_DOCUMENTATION.md#getting-started)
-3. [Syntax Overview](SDEV_ULTIMATE_DOCUMENTATION.md#syntax-overview)
-4. [Variables](SDEV_ULTIMATE_DOCUMENTATION.md#variables)
-5. [Data Types](SDEV_ULTIMATE_DOCUMENTATION.md#data-types)
-6. [Operators](SDEV_ULTIMATE_DOCUMENTATION.md#operators)
-7. [String Operations](SDEV_ULTIMATE_DOCUMENTATION.md#string-operations)
-8. [Control Flow](SDEV_ULTIMATE_DOCUMENTATION.md#control-flow)
-9. [Functions](SDEV_ULTIMATE_DOCUMENTATION.md#functions)
-10. [Lists](SDEV_ULTIMATE_DOCUMENTATION.md#lists)
-11. [Tomes (Dictionaries)](SDEV_ULTIMATE_DOCUMENTATION.md#tomes-dictionaries)
-12. [Built-in Output Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-output-functions)
-13. [Built-in Number & Float Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-number--float-functions)
-14. [Built-in String Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-string-functions)
-15. [Built-in List Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-list-functions)
-16. [Built-in Tome Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-tome-functions)
-17. [File I/O](SDEV_ULTIMATE_DOCUMENTATION.md#file-io)
-18. [Networking](SDEV_ULTIMATE_DOCUMENTATION.md#networking)
-19. [Runtimes & Toolchain](SDEV_ULTIMATE_DOCUMENTATION.md#runtimes--toolchain)
-20. [Under the Hood (Self-Hosting)](SDEV_ULTIMATE_DOCUMENTATION.md#under-the-hood-self-hosting)
-21. [Opt-in Power (Advanced)](SDEV_ULTIMATE_DOCUMENTATION.md#opt-in-power-advanced)
-22. [Examples & Recipes](SDEV_ULTIMATE_DOCUMENTATION.md#examples--recipes)
-23. [Error Handling](SDEV_ULTIMATE_DOCUMENTATION.md#error-handling)
-24. [Function Values](SDEV_ULTIMATE_DOCUMENTATION.md#function-values)
-25. [Modules — `use`](SDEV_ULTIMATE_DOCUMENTATION.md#modules--use)
-26. [Not Yet in v2](SDEV_ULTIMATE_DOCUMENTATION.md#not-yet-in-v2)
-27. [v1 → v2 Cheat Sheet](SDEV_ULTIMATE_DOCUMENTATION.md#v1--v2-cheat-sheet)
-28. [Complete Reference Card](SDEV_ULTIMATE_DOCUMENTATION.md#complete-reference-card)
+1. [Introduction](#introduction)
+2. [Getting Started](#getting-started)
+3. [Syntax Overview](#syntax-overview)
+4. [Variables](#variables)
+5. [Data Types](#data-types)
+6. [Operators](#operators)
+7. [String Operations](#string-operations)
+8. [Control Flow](#control-flow)
+9. [Functions](#functions)
+10. [Lists](#lists)
+11. [Tomes (Dictionaries)](#tomes-dictionaries)
+12. [Built-in Output Functions](#built-in-output-functions)
+13. [Built-in Number & Float Functions](#built-in-number--float-functions)
+14. [Built-in String Functions](#built-in-string-functions)
+15. [Built-in List Functions](#built-in-list-functions)
+16. [Built-in Tome Functions](#built-in-tome-functions)
+17. [File I/O](#file-io)
+18. [Networking](#networking)
+19. [Runtimes & Toolchain](#runtimes--toolchain)
+20. [Under the Hood (Self-Hosting)](#under-the-hood-self-hosting)
+21. [Opt-in Power (Advanced)](#opt-in-power-advanced)
+22. [Examples & Recipes](#examples--recipes)
+23. [Error Handling](#error-handling)
+24. [Function Values](#function-values)
+25. [Modules — `use`](#modules--use)
+26. [Not Yet in v2](#not-yet-in-v2)
+27. [v1 → v2 Cheat Sheet](#v1--v2-cheat-sheet)
+28. [Complete Reference Card](#complete-reference-card)
 
-***
+
+---
 
 #### Introduction
 
-**sdev v2 "Prism"** is the plain-English dialect of sdev. Where v1 uses a deliberately unique vocabulary (`forge`, `conjure`, `ponder`, `::` / `;;`), v2 has one guiding rule: **easy to read**. No sigils to memorize, no type annotations required, English words wherever possible. If a ten-year-old can guess what a line does, we picked the right word.
+**sdev v2 "Prism"** is the plain-English dialect of sdev. Where v1 uses a
+deliberately unique vocabulary (`forge`, `conjure`, `ponder`, `::` / `;;`),
+v2 has one guiding rule: **easy to read**. No sigils to memorize, no type
+annotations required, English words wherever possible. If a ten-year-old can
+guess what a line does, we picked the right word.
 
 v2 supports:
 
-* **English keywords** — `set`, `to`, `if`, `else`, `while`, `for each`, `return`, `break`, `continue`, `end`
-* **Indentation-friendly blocks** — every block closes with `end`, no braces
-* **Integers, floats, text, truth values, lists and tomes** as first-class values
-* **A real standard library** — 19 string/number builtins plus a full float math family
-* **File I/O and HTTP** — `read_file`, `write_file`, `http_get`
-* **Pipe operator** — `|>` for clean left-to-right composition
-* **Two backends** — a WebAssembly seed VM in the browser, and native x86-64 assembly on the desktop
-* **Self-hosted** — the v2 lexer, parser and code generator are written in sdev itself and verified byte-identical against a reference oracle
+- **English keywords** — `set`, `to`, `if`, `else`, `while`, `for each`,
+  `return`, `break`, `continue`, `end`
+- **Indentation-friendly blocks** — every block closes with `end`, no braces
+- **Integers, floats, text, truth values, lists and tomes** as first-class values
+- **A real standard library** — 19 string/number builtins plus a full float
+  math family
+- **File I/O and HTTP** — `read_file`, `write_file`, `http_get`
+- **Pipe operator** — `|>` for clean left-to-right composition
+- **Two backends** — a WebAssembly seed VM in the browser, and native
+  x86-64 assembly on the desktop
+- **Self-hosted** — the v2 lexer, parser and code generator are written in
+  sdev itself and verified byte-identical against a reference oracle
 
-v2 runs in the browser IDE (`/ide`), in the Playground (`/`), in the Electron desktop app, in the VS Code extension, and from the Node CLI. v1 remains the default — v2 is opt-in per file.
+v2 runs in the browser IDE (`/ide`), in the Playground (`/`), in the Electron
+desktop app, in the VS Code extension, and from the Node CLI.
+v1 remains the default — v2 is opt-in per file.
 
-***
+---
 
 #### Getting Started
 
-**Opting in to v2**
+##### Opting in to v2
 
 Add a shebang-style version line as the **first line** of your file:
 
@@ -201,22 +239,25 @@ say "hello, world"
 ```
 
 Output:
-
 ```
 hello, world
 ```
 
-Alternatively, set the runtime to **V2** in IDE **Settings** and every file in the session compiles as v2. Files that begin with `#!sdev v1` (or no marker at all) keep using v1 forever.
+Alternatively, set the runtime to **V2** in IDE **Settings** and every file in
+the session compiles as v2. Files that begin with `#!sdev v1` (or no marker at
+all) keep using v1 forever.
 
-**Running in the IDE**
+##### Running in the IDE
 
-Open the sdev IDE at `/ide`. Press **Ctrl+Enter** (or the **Run** button) to execute your program. Output appears in the **OUTPUT** panel at the bottom.
+Open the sdev IDE at `/ide`. Press **Ctrl+Enter** (or the **Run** button) to
+execute your program. Output appears in the **OUTPUT** panel at the bottom.
 
-**Running in the Playground**
+##### Running in the Playground
 
-Go to the main Playground at `/`. Type or paste v2 code in the editor, then click **Run**.
+Go to the main Playground at `/`. Type or paste v2 code in the editor, then
+click **Run**.
 
-**Running from the command line**
+##### Running from the command line
 
 ```bash
 # run on the seed VM
@@ -227,20 +268,21 @@ node scripts/sdev-native.mjs hello.sdev -o hello
 ./hello
 ```
 
-**Running in the desktop app**
+##### Running in the desktop app
 
-The Electron IDE ships **Build Native** and **Build & Run** buttons that call the same native pipeline. See `electron/README.md`.
+The Electron IDE ships **Build Native** and **Build & Run** buttons that call
+the same native pipeline. See `electron/README.md`.
 
-**Running in VS Code**
+##### Running in VS Code
 
 The sdev extension (v1.2.0+) provides:
 
-| Command            | Purpose                                     |
-| ------------------ | ------------------------------------------- |
-| `sdev.runV2`       | Run the current file on the v2 seed VM      |
+| Command | Purpose |
+|---------|---------|
+| `sdev.runV2` | Run the current file on the v2 seed VM |
 | `sdev.buildNative` | Compile the current file to a native binary |
 
-**Your First Program**
+##### Your First Program
 
 ```sdev
 #!sdev v2
@@ -259,7 +301,6 @@ say greet(name, "Welcome")
 ```
 
 Output:
-
 ```
 Name: Alice
 Age: 30
@@ -267,20 +308,21 @@ In 10 years: 40
 Welcome, Alice!
 ```
 
-***
+---
 
 #### Syntax Overview
 
-**Comments**
+##### Comments
 
 ```sdev
 # This is a single-line comment
 say "hi"    # comments may trail a statement
 ```
 
-**Blocks**
+##### Blocks
 
-Every block opens with its keyword and closes with `end`. There are no braces and no `::` / `;;` delimiters:
+Every block opens with its keyword and closes with `end`. There are no braces
+and no `::` / `;;` delimiters:
 
 ```sdev
 if x > 0
@@ -296,27 +338,30 @@ to add with a b
 end
 ```
 
-**No Semicolons Required**
+##### No Semicolons Required
 
 One statement per line. Semicolons are not part of the language.
 
-**Indentation**
+##### Indentation
 
-Indentation is **style, not syntax** — `end` decides where blocks close. Two spaces per level is the convention used throughout this guide and in every sample file.
+Indentation is **style, not syntax** — `end` decides where blocks close. Two
+spaces per level is the convention used throughout this guide and in every
+sample file.
 
-**The version line**
+##### The version line
 
 ```sdev
 #!sdev v2
 ```
 
-Must be the first line. It is a comment to every other tool, so a v2 file is still a valid text file everywhere else.
+Must be the first line. It is a comment to every other tool, so a v2 file is
+still a valid text file everywhere else.
 
-***
+---
 
 #### Variables
 
-**Declaring and assigning**
+##### Declaring and assigning
 
 One form does both:
 
@@ -327,14 +372,15 @@ set age to age + 1     # reassignment uses the same syntax
 ```
 
 Output of `say age`:
-
 ```
 31
 ```
 
-**Scope**
+##### Scope
 
-A name first assigned at the top level lives for the whole program. A name first assigned inside `to … end` is a **local** of that function and disappears when the function returns. Parameters are locals too.
+A name first assigned at the top level lives for the whole program. A name
+first assigned inside `to … end` is a **local** of that function and disappears
+when the function returns. Parameters are locals too.
 
 ```sdev
 set counter to 0
@@ -344,9 +390,10 @@ to bump
 end
 ```
 
-**Constants**
+##### Constants
 
-v2 has no separate constant keyword — a value you never reassign _is_ the constant. Well-known math values are written literally:
+v2 has no separate constant keyword — a value you never reassign *is* the
+constant. Well-known math values are written literally:
 
 ```sdev
 set PI to 3.141592653589793
@@ -354,7 +401,7 @@ set TAU to 6.283185307179586
 set E  to 2.718281828459045
 ```
 
-***
+---
 
 #### Data Types
 
@@ -368,9 +415,10 @@ set E  to 2.718281828459045
 | list    | `[1, 2, 3]`, `["a", "b"]`   | growable, indexed from `0`              |
 | tome    | `{ "host": "x", port: 80 }` | string-keyed dictionary                 |
 
-**Numbers**
+##### Numbers
 
-Integer literals are 32-bit signed. All of `+ - * / %` work on them, and `/` is integer division:
+Integer literals are 32-bit signed. All of `+ - * / %` work on them, and `/`
+is integer division:
 
 ```sdev
 say 7 / 2        # 3
@@ -378,9 +426,11 @@ say 7 % 2        # 1
 say -7 + 3       # -4
 ```
 
-**Floats**
+##### Floats
 
-A literal with a decimal point is a double. Float math has its own explicit builtin family (`fsqrt`, `fpow`, …) so the compiler always knows which kind of number it is holding:
+A literal with a decimal point is a double. Float math has its own explicit
+builtin family (`fsqrt`, `fpow`, …) so the compiler always knows which kind of
+number it is holding:
 
 ```sdev
 set r to 2.5
@@ -394,7 +444,7 @@ Convert between the two with `i2f` and `f2i`:
 say f2i(fround(i2f(7) / 2.0))
 ```
 
-**Text (Strings)**
+##### Text (Strings)
 
 ```sdev
 set greeting to "hello"
@@ -403,7 +453,7 @@ say greeting + ", world"      # hello, world
 say length(greeting)          # 5
 ```
 
-**Truth (Booleans)**
+##### Truth (Booleans)
 
 ```sdev
 set ok to true
@@ -413,7 +463,7 @@ if ok and not bad
 end
 ```
 
-**Nothing**
+##### Nothing
 
 ```sdev
 set missing to nothing
@@ -421,7 +471,7 @@ set missing to nothing
 
 Reading a tome key that does not exist also yields nothing.
 
-**Lists**
+##### Lists
 
 ```sdev
 set xs to [10, 20, 30]
@@ -430,47 +480,47 @@ set xs[1] to 99
 say length(xs)       # 3
 ```
 
-**Tomes**
+##### Tomes
 
 ```sdev
 set config to { "host": "localhost", port: 8080 }
 say config["host"]   # localhost
 ```
 
-***
+---
 
 #### Operators
 
-**Arithmetic Operators**
+##### Arithmetic Operators
 
-| Operator | Meaning                      | Example                                  |
-| -------- | ---------------------------- | ---------------------------------------- |
-| `+`      | Add (also concatenates text) | `2 + 3` → `5`                            |
-| `-`      | Subtract / negate            | `5 - 2` → `3`, `-x`                      |
-| `*`      | Multiply                     | `4 * 3` → `12`                           |
-| `/`      | Divide                       | `7 / 2` → `3` (int), `7.0 / 2.0` → `3.5` |
-| `%`      | Remainder                    | `7 % 2` → `1`                            |
+| Operator | Meaning | Example |
+|----------|---------|---------|
+| `+` | Add (also concatenates text) | `2 + 3` → `5` |
+| `-` | Subtract / negate | `5 - 2` → `3`, `-x` |
+| `*` | Multiply | `4 * 3` → `12` |
+| `/` | Divide | `7 / 2` → `3` (int), `7.0 / 2.0` → `3.5` |
+| `%` | Remainder | `7 % 2` → `1` |
 
-**Comparison Operators**
+##### Comparison Operators
 
-| Operator       | Meaning               | Example             |
-| -------------- | --------------------- | ------------------- |
-| `is`           | Equal                 | `x is 10`           |
-| `is not`       | Not equal             | `x is not 10`       |
-| `<`            | Less than             | `x < 10`            |
-| `>`            | Greater than          | `x > 10`            |
-| `<=`           | Less than or equal    | `x <= 10`           |
-| `>=`           | Greater than or equal | `x >= 10`           |
-| `is N or more` | Natural `>=`          | `age is 18 or more` |
-| `is N or less` | Natural `<=`          | `age is 12 or less` |
+| Operator | Meaning | Example |
+|----------|---------|---------|
+| `is` | Equal | `x is 10` |
+| `is not` | Not equal | `x is not 10` |
+| `<` | Less than | `x < 10` |
+| `>` | Greater than | `x > 10` |
+| `<=` | Less than or equal | `x <= 10` |
+| `>=` | Greater than or equal | `x >= 10` |
+| `is N or more` | Natural `>=` | `age is 18 or more` |
+| `is N or less` | Natural `<=` | `age is 12 or less` |
 
-**Logical Operators**
+##### Logical Operators
 
-| Operator | Meaning     | Notes                       |
-| -------- | ----------- | --------------------------- |
-| `and`    | Logical AND | short-circuits              |
-| `or`     | Logical OR  | short-circuits              |
-| `not`    | Logical NOT | may be stacked: `not not x` |
+| Operator | Meaning | Notes |
+|----------|---------|-------|
+| `and` | Logical AND | short-circuits |
+| `or` | Logical OR | short-circuits |
+| `not` | Logical NOT | may be stacked: `not not x` |
 
 ```sdev
 if age is 18 or more and country is "US"
@@ -478,16 +528,17 @@ if age is 18 or more and country is "US"
 end
 ```
 
-Short-circuiting means the right-hand side only runs when the result still depends on it.
+Short-circuiting means the right-hand side only runs when the result still
+depends on it.
 
-**String & List Concatenation**
+##### String & List Concatenation
 
 ```sdev
 say "a" + "b"                # ab
 say concat("hello, ", "you") # hello, you
 ```
 
-**Pipe Operator `|>`**
+##### Pipe Operator `|>`
 
 Feed a value into a function, left to right:
 
@@ -496,7 +547,7 @@ set nums to [1, 2, 3, 4, 5]
 say nums |> sum              # 15
 ```
 
-**Operator Precedence (high to low)**
+##### Operator Precedence (high to low)
 
 1. Grouping `( )`, indexing `x[i]`, calls `f(a, b)`
 2. Unary `-`, `not`
@@ -508,7 +559,7 @@ say nums |> sum              # 15
 8. `or`
 9. `|>`
 
-***
+---
 
 #### String Operations
 
@@ -526,7 +577,8 @@ say substr("hello", 1, 3)         # ell
 say int("-42") + 1                # -41
 ```
 
-Byte-level primitives are there when you need to build text character by character:
+Byte-level primitives are there when you need to build text character by
+character:
 
 ```sdev
 # uppercase a string one byte at a time
@@ -549,18 +601,17 @@ end
 ```
 
 Output:
-
 ```
 a
 b
 c
 ```
 
-***
+---
 
 #### Control Flow
 
-**If / Else — `if` / `else`**
+##### If / Else — `if` / `else`
 
 ```sdev
 if age is 18 or more
@@ -570,7 +621,7 @@ else
 end
 ```
 
-**Else If**
+##### Else If
 
 Conditions chain as deeply as you like:
 
@@ -584,7 +635,7 @@ else
 end
 ```
 
-**While Loop — `while`**
+##### While Loop — `while`
 
 ```sdev
 set i to 0
@@ -595,7 +646,6 @@ end
 ```
 
 Output:
-
 ```
 0
 1
@@ -604,7 +654,7 @@ Output:
 4
 ```
 
-**For-Each Loop — `for each … in`**
+##### For-Each Loop — `for each … in`
 
 Walks any list left to right, binding the loop variable on every turn:
 
@@ -628,15 +678,15 @@ end
 ```
 
 Output:
-
 ```
 a=1
 b=2
 ```
 
-**Loop Control — `break` / `continue`**
+##### Loop Control — `break` / `continue`
 
-Both loop forms accept `break` (leave the loop now) and `continue` (jump to the next iteration), at any nesting depth:
+Both loop forms accept `break` (leave the loop now) and `continue` (jump to the
+next iteration), at any nesting depth:
 
 ```sdev
 for each x in [1, 2, 3, 4, 5]
@@ -650,7 +700,7 @@ for each x in [1, 2, 3, 4, 5]
 end
 ```
 
-**Nested Loops**
+##### Nested Loops
 
 `break` and `continue` always apply to the innermost enclosing loop:
 
@@ -665,11 +715,11 @@ for each i in range(3)
 end
 ```
 
-***
+---
 
 #### Functions
 
-**Basic Functions — `to`**
+##### Basic Functions — `to`
 
 Define with `to <name>`, receive arguments with `with`:
 
@@ -683,13 +733,12 @@ greet("Ada")            # parens form works too
 ```
 
 Output:
-
 ```
 hello, world
 hello, Ada
 ```
 
-**Return Values — `return`**
+##### Return Values — `return`
 
 ```sdev
 to double with n
@@ -702,7 +751,7 @@ say double(21)          # 42
 
 A function without `return` yields nothing.
 
-**Multiple Parameters**
+##### Multiple Parameters
 
 Parameters are listed after `with`, separated by spaces:
 
@@ -713,9 +762,10 @@ end
 say add(2, 3)           # 5
 ```
 
-**Forward References**
+##### Forward References
 
-Functions may be called before they are defined — calls are patched at the end of compilation:
+Functions may be called before they are defined — calls are patched at the end
+of compilation:
 
 ```sdev
 say later(3)
@@ -725,7 +775,7 @@ to later with n
 end
 ```
 
-**Recursive Functions**
+##### Recursive Functions
 
 ```sdev
 to fib with n
@@ -737,9 +787,10 @@ end
 say fib(20)             # 6765
 ```
 
-**Functions over Lists and Tomes**
+##### Functions over Lists and Tomes
 
-Values are polymorphic at run time, so an untyped parameter still indexes correctly:
+Values are polymorphic at run time, so an untyped parameter still indexes
+correctly:
 
 ```sdev
 to lookup with t k
@@ -749,14 +800,14 @@ say lookup({ "q": 42 }, "q")    # 42
 say lookup([9, 8, 7], 1)        # 8
 ```
 
-**Pipelines**
+##### Pipelines
 
 ```sdev
 set nums to [1, 2, 3, 4, 5]
 say nums |> sum         # 15
 ```
 
-***
+---
 
 #### Lists
 
@@ -780,7 +831,8 @@ end
 say total
 ```
 
-Because `range(n)` builds `[0 … n-1]` and `sum(list)` totals an integer list, most of that is one line:
+Because `range(n)` builds `[0 … n-1]` and `sum(list)` totals an integer list,
+most of that is one line:
 
 ```sdev
 say sum(range(5))   # 10
@@ -794,16 +846,16 @@ say join(names, ", ")
 ```
 
 Output:
-
 ```
 ada, alan, grace
 ```
 
-***
+---
 
 #### Tomes (Dictionaries)
 
-A tome is a string-keyed dictionary. Keys may be string literals or bare identifiers (the identifier is used as the key text):
+A tome is a string-keyed dictionary. Keys may be string literals or bare
+identifiers (the identifier is used as the key text):
 
 ```sdev
 set config to { "host": "localhost", port: 8080 }
@@ -822,7 +874,8 @@ say scores["ada"]             # 12
 say scores["nobody"]          # 0 — a missing key reads as nothing
 ```
 
-`length(t)` reports the entry count, and `keys` / `values` return lists in insertion order, so tomes iterate exactly like lists:
+`length(t)` reports the entry count, and `keys` / `values` return lists in
+insertion order, so tomes iterate exactly like lists:
 
 ```sdev
 set t to { "a": 1, "b": 2 }
@@ -832,23 +885,23 @@ end
 ```
 
 Output:
-
 ```
 1
 2
 ```
 
-Indexing dispatches on the value at run time, so lists and tomes can flow through the same helper functions.
+Indexing dispatches on the value at run time, so lists and tomes can flow
+through the same helper functions.
 
-***
+---
 
 #### Built-in Output Functions
 
-| Function        | Description                                                            |
-| --------------- | ---------------------------------------------------------------------- |
-| `say <expr>`    | Print a value followed by a newline (statement form, no parens needed) |
-| `say(<expr>)`   | Same, parenthesised                                                    |
-| `print(<expr>)` | Alias of `say`                                                         |
+| Function | Description |
+|----------|-------------|
+| `say <expr>` | Print a value followed by a newline (statement form, no parens needed) |
+| `say(<expr>)` | Same, parenthesised |
+| `print(<expr>)` | Alias of `say` |
 
 ```sdev
 say "hello"
@@ -857,47 +910,49 @@ say [1, 2, 3]
 say { "k": 1 }
 ```
 
-***
+---
 
 #### Built-in Number & Float Functions
 
-**Integer helpers**
+##### Integer helpers
 
-| Function    | Description                   | Example                |
-| ----------- | ----------------------------- | ---------------------- |
-| `abs(n)`    | Absolute value                | `abs(-5)` → `5`        |
-| `min(a, b)` | Smaller of two                | `min(3, 9)` → `3`      |
-| `max(a, b)` | Larger of two                 | `max(3, 9)` → `9`      |
-| `range(n)`  | List `[0 … n-1]`              | `range(3)` → `[0,1,2]` |
-| `sum(list)` | Total of an int list          | `sum([1,2,3])` → `6`   |
-| `random(n)` | Pseudo-random int in `[0, n)` | `random(6)`            |
-| `int(s)`    | Decimal text → int            | `int("-42")` → `-42`   |
-| `str(n)`    | Int → decimal text            | `str(-42)` → `"-42"`   |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `abs(n)` | Absolute value | `abs(-5)` → `5` |
+| `min(a, b)` | Smaller of two | `min(3, 9)` → `3` |
+| `max(a, b)` | Larger of two | `max(3, 9)` → `9` |
+| `range(n)` | List `[0 … n-1]` | `range(3)` → `[0,1,2]` |
+| `sum(list)` | Total of an int list | `sum([1,2,3])` → `6` |
+| `random(n)` | Pseudo-random int in `[0, n)` | `random(6)` |
+| `int(s)` | Decimal text → int | `int("-42")` → `-42` |
+| `str(n)` | Int → decimal text | `str(-42)` → `"-42"` |
 
-`random(n)` uses an in-VM xorshift generator rather than a host call, so the same program prints the same sequence in the browser, in Node and in the VS Code extension.
+`random(n)` uses an in-VM xorshift generator rather than a host call, so the
+same program prints the same sequence in the browser, in Node and in the
+VS Code extension.
 
-**Conversion**
+##### Conversion
 
-| Function | Description                 |
-| -------- | --------------------------- |
-| `i2f(n)` | Integer → float             |
+| Function | Description |
+|----------|-------------|
+| `i2f(n)` | Integer → float |
 | `f2i(x)` | Float → integer (truncates) |
 
-**Float math**
+##### Float math
 
-| Function                        | Description                                  |
-| ------------------------------- | -------------------------------------------- |
-| `fneg(x)`                       | Negate                                       |
-| `fabs(x)`                       | Absolute value                               |
-| `fsqrt(x)`                      | Square root                                  |
-| `fsin(x)`, `fcos(x)`, `ftan(x)` | Trigonometry                                 |
-| `fexp(x)`                       | e^x                                          |
-| `flog(x)`                       | Natural logarithm                            |
-| `fpow(a, b)`                    | a^b                                          |
-| `fceil(x)`                      | Round up                                     |
-| `ffloor(x)`                     | Round down                                   |
-| `fround(x)`                     | Round to nearest                             |
-| `fbyte(x, i)`                   | i-th little-endian IEEE-754 byte of a double |
+| Function | Description |
+|----------|-------------|
+| `fneg(x)` | Negate |
+| `fabs(x)` | Absolute value |
+| `fsqrt(x)` | Square root |
+| `fsin(x)`, `fcos(x)`, `ftan(x)` | Trigonometry |
+| `fexp(x)` | e^x |
+| `flog(x)` | Natural logarithm |
+| `fpow(a, b)` | a^b |
+| `fceil(x)` | Round up |
+| `ffloor(x)` | Round down |
+| `fround(x)` | Round to nearest |
+| `fbyte(x, i)` | i-th little-endian IEEE-754 byte of a double |
 
 ```sdev
 set r to 2.5
@@ -905,57 +960,58 @@ say fround(fpow(r, 2.0) * 3.14159)
 say fsqrt(2.0)
 ```
 
-`fbyte` is what the self-hosted compiler itself uses to emit float constants — the language can describe its own literals.
+`fbyte` is what the self-hosted compiler itself uses to emit float constants —
+the language can describe its own literals.
 
-***
+---
 
 #### Built-in String Functions
 
-| Function                | Description                             | Example                            |
-| ----------------------- | --------------------------------------- | ---------------------------------- |
-| `length(s)`             | String length in bytes                  | `length("hello")` → `5`            |
-| `concat(a, b)`          | Concatenate two strings                 | `concat("a","b")` → `"ab"`         |
-| `upper(s)`              | ASCII uppercase                         | `upper("hi")` → `"HI"`             |
-| `lower(s)`              | ASCII lowercase                         | `lower("HI")` → `"hi"`             |
-| `trim(s)`               | Strip surrounding whitespace            | `trim(" hi ")` → `"hi"`            |
-| `substr(s, start, len)` | Clamped substring                       | `substr("hello",1,3)` → `"ell"`    |
-| `find(hay, needle)`     | Byte index, `-1` when absent            | `find("hello","l")` → `2`          |
-| `contains(hay, needle)` | `1` / `0`                               | `contains("hello","ell")` → `1`    |
-| `split(s, sep)`         | Split into a list (empty `sep` → bytes) | `split("a,b",",")` → `["a","b"]`   |
-| `join(list, sep)`       | Join a list of strings                  | `join(["a","b"],"-")` → `"a-b"`    |
-| `replace(s, old, new)`  | Replace every occurrence                | `replace("aaa","a","b")` → `"bbb"` |
-| `ord(s, i)`             | Byte value at index                     | `ord("A",0)` → `65`                |
-| `chr(n)`                | 1-character string from byte            | `chr(65)` → `"A"`                  |
-| `int(s)`                | Parse decimal text                      | `int("42")` → `42`                 |
-| `str(n)`                | Format an integer                       | `str(42)` → `"42"`                 |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `length(s)` | String length in bytes | `length("hello")` → `5` |
+| `concat(a, b)` | Concatenate two strings | `concat("a","b")` → `"ab"` |
+| `upper(s)` | ASCII uppercase | `upper("hi")` → `"HI"` |
+| `lower(s)` | ASCII lowercase | `lower("HI")` → `"hi"` |
+| `trim(s)` | Strip surrounding whitespace | `trim("  hi  ")` → `"hi"` |
+| `substr(s, start, len)` | Clamped substring | `substr("hello",1,3)` → `"ell"` |
+| `find(hay, needle)` | Byte index, `-1` when absent | `find("hello","l")` → `2` |
+| `contains(hay, needle)` | `1` / `0` | `contains("hello","ell")` → `1` |
+| `split(s, sep)` | Split into a list (empty `sep` → bytes) | `split("a,b",",")` → `["a","b"]` |
+| `join(list, sep)` | Join a list of strings | `join(["a","b"],"-")` → `"a-b"` |
+| `replace(s, old, new)` | Replace every occurrence | `replace("aaa","a","b")` → `"bbb"` |
+| `ord(s, i)` | Byte value at index | `ord("A",0)` → `65` |
+| `chr(n)` | 1-character string from byte | `chr(65)` → `"A"` |
+| `int(s)` | Parse decimal text | `int("42")` → `42` |
+| `str(n)` | Format an integer | `str(42)` → `"42"` |
 
-***
+---
 
 #### Built-in List Functions
 
-| Function           | Description                  | Example                          |
-| ------------------ | ---------------------------- | -------------------------------- |
-| `length(list)`     | Number of elements           | `length([1,2,3])` → `3`          |
-| `list[i]`          | Read element                 | `[1,2,3][0]` → `1`               |
-| `set list[i] to v` | Write element                | —                                |
-| `range(n)`         | Build `[0 … n-1]`            | `range(3)` → `[0,1,2]`           |
-| `sum(list)`        | Total of an int list         | `sum([1,2,3])` → `6`             |
-| `join(list, sep)`  | Join a list of strings       | `join(["a","b"],"+")` → `"a+b"`  |
-| `split(s, sep)`    | Produce a list from text     | `split("a b"," ")` → `["a","b"]` |
-| `mklist(n)`        | Allocate a list of `n` slots | `mklist(4)`                      |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `length(list)` | Number of elements | `length([1,2,3])` → `3` |
+| `list[i]` | Read element | `[1,2,3][0]` → `1` |
+| `set list[i] to v` | Write element | — |
+| `range(n)` | Build `[0 … n-1]` | `range(3)` → `[0,1,2]` |
+| `sum(list)` | Total of an int list | `sum([1,2,3])` → `6` |
+| `join(list, sep)` | Join a list of strings | `join(["a","b"],"+")` → `"a+b"` |
+| `split(s, sep)` | Produce a list from text | `split("a b"," ")` → `["a","b"]` |
+| `mklist(n)` | Allocate a list of `n` slots | `mklist(4)` |
 
-***
+---
 
 #### Built-in Tome Functions
 
-| Function        | Description                            |
-| --------------- | -------------------------------------- |
-| `keys(t)`       | List of keys, in insertion order       |
-| `values(t)`     | List of values, in insertion order     |
-| `has(t, k)`     | `1` when the key exists, `0` otherwise |
-| `length(t)`     | Number of entries                      |
-| `t[k]`          | Read a value (missing key → nothing)   |
-| `set t[k] to v` | Write or insert a value                |
+| Function | Description |
+|----------|-------------|
+| `keys(t)` | List of keys, in insertion order |
+| `values(t)` | List of values, in insertion order |
+| `has(t, k)` | `1` when the key exists, `0` otherwise |
+| `length(t)` | Number of entries |
+| `t[k]` | Read a value (missing key → nothing) |
+| `set t[k] to v` | Write or insert a value |
 
 ```sdev
 set a to { "x": 1, "y": 2 }
@@ -964,13 +1020,13 @@ say has(a, "z")        # 0
 say join(keys(a), ",") # x,y
 ```
 
-***
+---
 
 #### File I/O
 
-| Function              | Description                       |
-| --------------------- | --------------------------------- |
-| `read_file(path)`     | File contents as text             |
+| Function | Description |
+|----------|-------------|
+| `read_file(path)` | File contents as text |
 | `write_file(path, s)` | Write text, returns bytes written |
 
 ```sdev
@@ -979,14 +1035,16 @@ say read_file("notes.txt")
 say length(read_file("notes.txt"))
 ```
 
-In Node, the CLI and the desktop IDE these hit the real filesystem. In the browser they map to the IDE's in-memory virtual filesystem, so the same program runs everywhere.
+In Node, the CLI and the desktop IDE these hit the real filesystem. In the
+browser they map to the IDE's in-memory virtual filesystem, so the same
+program runs everywhere.
 
-***
+---
 
 #### Networking
 
-| Function        | Description                          |
-| --------------- | ------------------------------------ |
+| Function | Description |
+|----------|-------------|
 | `http_get(url)` | Fetch a URL, return the body as text |
 
 ```sdev
@@ -995,20 +1053,26 @@ write_file("page.html", page)
 say length(page)
 ```
 
-In the browser `http_get` uses `fetch`, so it is subject to CORS. On the desktop and CLI it performs a plain HTTP request.
+In the browser `http_get` uses `fetch`, so it is subject to CORS. On the
+desktop and CLI it performs a plain HTTP request.
 
-***
+---
 
 #### Runtimes & Toolchain
 
-v2 ships with **two independent backends** — pick the one that fits where your program runs.
+v2 ships with **two independent backends** — pick the one that fits where your
+program runs.
 
-| Runtime                  | Where it runs                        | How it executes                                                                                                                                                                             |
-| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **WASM (web)**           | Browser IDE, Playground              | A hand-written WebAssembly stack VM (`lang/bootstrap/seed.wat` → `public/wasm/sdev-seed.wasm`) executes bytecode emitted by the self-hosted compiler. Zero TypeScript in the language core. |
-| **Native ASM (desktop)** | Linux / macOS CLI, Electron, VS Code | The same AST is emitted as x86-64 GAS assembly (`lang/native/codegen-x64.mjs`), assembled with `as` and linked with `ld` into a standalone static ELF. No libc dependency.                  |
+| Runtime | Where it runs | How it executes |
+|---------|---------------|-----------------|
+| **WASM (web)** | Browser IDE, Playground | A hand-written WebAssembly stack VM (`lang/bootstrap/seed.wat` → `public/wasm/sdev-seed.wasm`) executes bytecode emitted by the self-hosted compiler. Zero TypeScript in the language core. |
+| **Native ASM (desktop)** | Linux / macOS CLI, Electron, VS Code | The same AST is emitted as x86-64 GAS assembly (`lang/native/codegen-x64.mjs`), assembled with `as` and linked with `ld` into a standalone static ELF. No libc dependency. |
 
-Both backends share the same front end, so a program compiles on either side as long as you stay inside the shared subset (integers, strings, lists, `if` / `while`, functions, recursion, and the core builtins). Tomes, floats and the newer string library are seed-VM only for now; `lang/parity/report.json` is the authoritative gap list.
+Both backends share the same front end, so a program compiles on either side as
+long as you stay inside the shared subset (integers, strings, lists, `if` /
+`while`, functions, recursion, and the core builtins). Tomes, floats and the
+newer string library are seed-VM only for now;
+`lang/parity/report.json` is the authoritative gap list.
 
 Useful scripts:
 
@@ -1019,13 +1083,13 @@ node scripts/test-shim-fixed-point.mjs             # byte-identity vs the oracle
 node scripts/test-parity.ts                        # v1/v2/native feature audit
 ```
 
-***
+---
 
 #### Under the Hood (Self-Hosting)
 
 v2 compiles itself. The pipeline is:
 
-```
+```text
 source.sdev
    → lang/compiler/lexer.sdev     (tokens)
    → lang/compiler/parser.sdev    (AST)
@@ -1033,22 +1097,31 @@ source.sdev
    → seed VM (WASM)  or  lang/native/codegen-x64.mjs (x86-64 assembly)
 ```
 
-The compiler is itself compiled by a pre-built artifact (`lang/compiler/driver-artifact.mjs`), so the JavaScript bootstrap (`lang/bootstrap/compile.mjs`) is no longer on the runtime path — it survives only as the **oracle** used in testing.
+The compiler is itself compiled by a pre-built artifact
+(`lang/compiler/driver-artifact.mjs`), so the JavaScript bootstrap
+(`lang/bootstrap/compile.mjs`) is no longer on the runtime path — it survives
+only as the **oracle** used in testing.
 
 Two invariants are enforced on every change:
 
-* **Semantic fixed point** — programs compiled by the self-hosted compiler behave exactly as when compiled by the oracle.
-* **Byte-identity fixed point** — the two compilers emit the _same bytes_, currently across 66 cases, alongside 45 runtime regression cases.
+- **Semantic fixed point** — programs compiled by the self-hosted compiler
+  behave exactly as when compiled by the oracle.
+- **Byte-identity fixed point** — the two compilers emit the *same bytes*,
+  currently across 66 cases, alongside 45 runtime regression cases.
 
-Feature coverage across v1, v2 and the native track is declared in `lang/parity/features.json` and audited by the sdev-written agent in `lang/parity/agent.sdev`. Opcode tables, memory layout and the full milestone log live in `SDEV_INTERNALS.md`; the parity matrix lives in `SDEV_PARITY_DOCUMENTATION.md`.
+Feature coverage across v1, v2 and the native track is declared in
+`lang/parity/features.json` and audited by the sdev-written agent in
+`lang/parity/agent.sdev`. Opcode tables, memory layout and the full milestone
+log live in `SDEV_INTERNALS.md`; the parity matrix lives in
+`SDEV_PARITY_DOCUMENTATION.md`.
 
-***
+---
 
 #### Opt-in Power (Advanced)
 
 Beginners can ignore this section entirely.
 
-**Pattern matching (functional)**
+##### Pattern matching (functional)
 
 ```sdev
 match result
@@ -1057,7 +1130,7 @@ match result
 end
 ```
 
-**Systems block (manual memory, pointers, FFI)**
+##### Systems block (manual memory, pointers, FFI)
 
 ```sdev
 systems
@@ -1066,13 +1139,13 @@ systems
 end
 ```
 
-**Data query (SQL-ish over any list or table)**
+##### Data query (SQL-ish over any list or table)
 
 ```sdev
 set adults to from u in users where u.age >= 18 take u.name
 ```
 
-**Hardware (`board` block)**
+##### Hardware (`board` block)
 
 ```sdev
 board "uno"
@@ -1084,13 +1157,14 @@ board "uno"
 end
 ```
 
-See `SDEV_HARDWARE_DOCUMENTATION.md` for the full board reference, and `SDEV_ML_DOCUMENTATION.md` for the tensor / transformer / self-evolution stack.
+See `SDEV_HARDWARE_DOCUMENTATION.md` for the full board reference, and
+`SDEV_ML_DOCUMENTATION.md` for the tensor / transformer / self-evolution stack.
 
-***
+---
 
 #### Examples & Recipes
 
-**FizzBuzz**
+##### FizzBuzz
 
 ```sdev
 #!sdev v2
@@ -1108,7 +1182,7 @@ for each n in range(20)
 end
 ```
 
-**Fibonacci**
+##### Fibonacci
 
 ```sdev
 to fib with n
@@ -1123,7 +1197,7 @@ for each n in range(10)
 end
 ```
 
-**Word frequency counter**
+##### Word frequency counter
 
 ```sdev
 set text to "the quick brown fox jumps over the lazy dog the fox"
@@ -1140,7 +1214,7 @@ for each k in keys(counts)
 end
 ```
 
-**Caesar cipher**
+##### Caesar cipher
 
 ```sdev
 to shift with s n
@@ -1160,7 +1234,7 @@ end
 say shift("hello world", 3)
 ```
 
-**Prime sieve**
+##### Prime sieve
 
 ```sdev
 to primes with limit
@@ -1187,7 +1261,7 @@ end
 say join(["primes:", str(length(primes(50)))], " ")
 ```
 
-**CSV-ish parsing into a tome**
+##### CSV-ish parsing into a tome
 
 ```sdev
 set parts to split("a=1,b=2,c=3", ",")
@@ -1200,7 +1274,7 @@ say join(keys(t), "-")     # a-b-c
 say sum(values(t))         # 6
 ```
 
-**Download a page and save it**
+##### Download a page and save it
 
 ```sdev
 set page to http_get("https://example.com")
@@ -1208,7 +1282,7 @@ write_file("page.html", page)
 say "saved " + str(length(page)) + " bytes"
 ```
 
-**Circle area (floats)**
+##### Circle area (floats)
 
 ```sdev
 to area with r
@@ -1217,11 +1291,12 @@ end
 say fround(area(2.5))
 ```
 
-***
+---
 
 #### Error Handling
 
-Wrap risky work in `attempt … end`. A `throw` inside the block — at any call depth — jumps to the matching `rescue`, which may bind the message.
+Wrap risky work in `attempt … end`. A `throw` inside the block — at any call
+depth — jumps to the matching `rescue`, which may bind the message.
 
 ```sdev
 attempt
@@ -1240,10 +1315,12 @@ caught: disk is on fire
 carrying on
 ```
 
-* `rescue` may omit the binding: `rescue` alone discards the message.
-* `attempt` blocks nest; a `throw` inside a `rescue` propagates outward.
-* A `throw` with no enclosing `attempt` prints the message and stops the program.
-* Messages are ordinary strings, so build them with `+` and `str()`: `throw "bad index " + str(i)`.
+- `rescue` may omit the binding: `rescue` alone discards the message.
+- `attempt` blocks nest; a `throw` inside a `rescue` propagates outward.
+- A `throw` with no enclosing `attempt` prints the message and stops the
+  program.
+- Messages are ordinary strings, so build them with `+` and `str()`:
+  `throw "bad index " + str(i)`.
 
 ```sdev
 to parse_port with s
@@ -1267,9 +1344,10 @@ end
 not a port: nope
 ```
 
-**Converting text to numbers**
+##### Converting text to numbers
 
-`int(s)` yields an integer, `num(s)` a float. Neither raises — unparseable text becomes `0` / `0.0`, so validate and `throw` yourself when it matters.
+`int(s)` yields an integer, `num(s)` a float. Neither raises — unparseable
+text becomes `0` / `0.0`, so validate and `throw` yourself when it matters.
 
 ```sdev
 say int("42") + 1
@@ -1283,11 +1361,13 @@ say f2i(num("42.9"))
 42
 ```
 
-***
+---
 
 #### Function Values
 
-`ref NAME` turns a declared function into a value; `call TARGET(args)` runs one. Function values are ordinary values — store them in variables, lists and tomes, or pass them to other functions.
+`ref NAME` turns a declared function into a value; `call TARGET(args)` runs
+one. Function values are ordinary values — store them in variables, lists and
+tomes, or pass them to other functions.
 
 ```sdev
 to twice with n
@@ -1341,16 +1421,21 @@ mul -> 12
 ```
 
 Notes:
+- `ref` only names top-level functions. For anonymous functions that remember
+  surrounding state, use `make` (below).
+- The call target must be a variable holding a function value:
+  `set op to ops[k]` first, then `call op(...)`.
+- Arity is not checked on indirect calls; pass the number of arguments the
+  target declares.
 
-* `ref` only names top-level functions. For anonymous functions that remember surrounding state, use `make` (below).
-* The call target must be a variable holding a function value: `set op to ops[k]` first, then `call op(...)`.
-* Arity is not checked on indirect calls; pass the number of arguments the target declares.
-
-***
+---
 
 #### Closures — `make`
 
-`make` builds an anonymous function value inline. It takes an optional parameter list (`with a b`) and an optional capture list (`capture n k`), a newline, a body, and `end`. Call it exactly like any other function value, with `call`.
+`make` builds an anonymous function value inline. It takes an optional
+parameter list (`with a b`) and an optional capture list (`capture n k`), a
+newline, a body, and `end`. Call it exactly like any other function value,
+with `call`.
 
 ```sdev
 set f to make with a
@@ -1363,7 +1448,8 @@ say call f(41)
 42
 ```
 
-Captures are listed explicitly and copied **by value** when the closure is created — later changes to the outer variable do not affect it:
+Captures are listed explicitly and copied **by value** when the closure is
+created — later changes to the outer variable do not affect it:
 
 ```sdev
 set n to 10
@@ -1380,7 +1466,8 @@ say call add_n(5)
 15
 ```
 
-Closures are ordinary values, so they can be returned from functions — the classic factory:
+Closures are ordinary values, so they can be returned from functions — the
+classic factory:
 
 ```sdev
 to adder with n
@@ -1417,18 +1504,22 @@ end, 5)
 ```
 
 Notes:
+- Captures must be named. A bare outer variable used inside a `make` body
+  without appearing in `capture` is not in scope.
+- Capture is by value at creation time; there is no shared mutable cell.
+- A closure body has its own locals; `set` inside the body never touches the
+  enclosing scope.
+- Closures do not nest inside another `make` body yet.
+- Under the hood a closure is a heap object holding the code offset, the
+  capture count and the captured values (opcode `CLOSURE` 0xC5); `call`
+  (`CALLV` 0xC4) appends the captures after the arguments as extra locals.
 
-* Captures must be named. A bare outer variable used inside a `make` body without appearing in `capture` is not in scope.
-* Capture is by value at creation time; there is no shared mutable cell.
-* A closure body has its own locals; `set` inside the body never touches the enclosing scope.
-* Closures do not nest inside another `make` body yet.
-* Under the hood a closure is a heap object holding the code offset, the capture count and the captured values (opcode `CLOSURE` 0xC5); `call` (`CALLV` 0xC4) appends the captures after the arguments as extra locals.
-
-***
+---
 
 #### Kinds — objects and methods
 
-A **kind** is v2's class. It groups methods; an instance is a tome whose entries are those methods, so fields are just tome keys you set at runtime.
+A **kind** is v2's class. It groups methods; an instance is a tome whose
+entries are those methods, so fields are just tome keys you set at runtime.
 
 ```sdev
 kind Counter
@@ -1455,17 +1546,27 @@ say c.n           # 7
 ```
 
 Rules:
+- `kind Name` … `end` declares the kind. Inside it, every method is an
+  ordinary `to NAME with …` block whose **first parameter is the receiver**.
+  Call it `self` by convention — it is a plain parameter, not a keyword.
+- `new Name` (parentheses optional, no constructor arguments) creates an
+  instance. Initialise it by calling a method: `c.start(5)`.
+- `obj.field` reads a field, `set obj.field to v` writes one. Fields spring
+  into existence on first write, exactly like tome keys.
+- `obj.method(a, b)` calls a method; the receiver is passed automatically as
+  the first argument. The receiver must be a variable, not an expression.
+- Methods may call other methods on the same object: `self.area()`.
+- Objects are ordinary values: store them in lists and tomes, pass them to
+  functions, return them.
 
-* `kind Name` … `end` declares the kind. Inside it, every method is an ordinary `to NAME with …` block whose **first parameter is the receiver**. Call it `self` by convention — it is a plain parameter, not a keyword.
-* `new Name` (parentheses optional, no constructor arguments) creates an instance. Initialise it by calling a method: `c.start(5)`.
-* `obj.field` reads a field, `set obj.field to v` writes one. Fields spring into existence on first write, exactly like tome keys.
-* `obj.method(a, b)` calls a method; the receiver is passed automatically as the first argument. The receiver must be a variable, not an expression.
-* Methods may call other methods on the same object: `self.area()`.
-* Objects are ordinary values: store them in lists and tomes, pass them to functions, return them.
+Typing note: a method call is treated as returning text when **any** kind
+declares a method of that name that returns text; otherwise it is a number.
+Field reads are numbers, so print a text field with `say str(obj.f)` only
+when it really is a number — a text field prints correctly with
+`say obj.f` only if you keep it in a variable typed by a text-returning
+method. When in doubt, expose text through a method.
 
-Typing note: a method call is treated as returning text when **any** kind declares a method of that name that returns text; otherwise it is a number. Field reads are numbers, so print a text field with `say str(obj.f)` only when it really is a number — a text field prints correctly with `say obj.f` only if you keep it in a variable typed by a text-returning method. When in doubt, expose text through a method.
-
-**Inheritance — `extends` and `super`**
+##### Inheritance — `extends` and `super`
 
 A kind can extend another kind declared earlier in the file:
 
@@ -1495,20 +1596,30 @@ say d.intro()    # I am a dog/animal — inherited method, child override
 ```
 
 Rules:
+- `kind Child extends Parent` — the parent must already be declared.
+- The child inherits every parent method it does not declare itself.
+- Declaring a method with the same name overrides the parent's.
+- `super.m(args)` inside a child method calls the **parent's** version, with
+  the current receiver passed automatically. `super` is bound to the class
+  the method is written in, not to the receiver's class, so a three-level
+  chain (`C` → `B` → `A`) walks up one level at a time instead of looping.
+- Chains are unlimited in depth; multiple inheritance is not supported.
 
-* `kind Child extends Parent` — the parent must already be declared.
-* The child inherits every parent method it does not declare itself.
-* Declaring a method with the same name overrides the parent's.
-* `super.m(args)` inside a child method calls the **parent's** version, with the current receiver passed automatically. `super` is bound to the class the method is written in, not to the receiver's class, so a three-level chain (`C` → `B` → `A`) walks up one level at a time instead of looping.
-* Chains are unlimited in depth; multiple inheritance is not supported.
+Under the hood: `kind` is desugared before parsing — the header and closing
+`end` disappear and each method becomes a top-level function named
+`Kind_method`. `new` emits a `TNEW` sized to the method count plus one
+`PUSH_STR` / function value / `TSET` triple per method; `obj.m(a)` reads the
+target with `TGET` and calls it with `CALLV`. Inheritance copies the parent's
+entries into the child's table, and `super.m()` is rewritten to a call on a
+class-qualified hidden key (`super_Child_m`) bound to the parent's function,
+which is what makes super resolution static.
 
-Under the hood: `kind` is desugared before parsing — the header and closing `end` disappear and each method becomes a top-level function named `Kind_method`. `new` emits a `TNEW` sized to the method count plus one `PUSH_STR` / function value / `TSET` triple per method; `obj.m(a)` reads the target with `TGET` and calls it with `CALLV`. Inheritance copies the parent's entries into the child's table, and `super.m()` is rewritten to a call on a class-qualified hidden key (`super_Child_m`) bound to the parent's function, which is what makes super resolution static.
-
-***
+---
 
 #### Modules — `use`
 
-Split a program across files. A line whose only content is `use "path"` is replaced by the contents of that file before anything else happens.
+Split a program across files. A line whose only content is `use "path"`
+is replaced by the contents of that file before anything else happens.
 
 `math.sdev`:
 
@@ -1527,119 +1638,134 @@ say triple(14)      # 42
 
 Rules:
 
-* The directive must be the whole line: `use "path"` (double quotes).
-* Paths are resolved by the host — the CLI and desktop IDE read them from disk relative to the working directory; the browser IDE resolves them against your workspace files.
-* Modules may `use` other modules; nesting is unlimited.
-* **Include-once**: a path already pulled in is skipped the second time, so diamond dependencies (`a` uses `c`, `b` uses `c`, main uses both) are safe and `c` is emitted exactly once.
-* There is no namespacing yet: everything a module defines lands in the same global scope, so prefix names you intend to export.
-* Line numbers stay honest — each directive contributes the module text followed by a newline, so errors inside a module point at the module.
+- The directive must be the whole line: `use "path"` (double quotes).
+- Paths are resolved by the host — the CLI and desktop IDE read them from
+  disk relative to the working directory; the browser IDE resolves them
+  against your workspace files.
+- Modules may `use` other modules; nesting is unlimited.
+- **Include-once**: a path already pulled in is skipped the second time, so
+  diamond dependencies (`a` uses `c`, `b` uses `c`, main uses both) are
+  safe and `c` is emitted exactly once.
+- There is no namespacing yet: everything a module defines lands in the
+  same global scope, so prefix names you intend to export.
+- Line numbers stay honest — each directive contributes the module text
+  followed by a newline, so errors inside a module point at the module.
 
-Under the hood this is a source→source prelink pass that exists twice, in lockstep: `prelink()` in the JS bootstrap and `prelink_source` in `lang/compiler/codegen.sdev`, both producing byte-identical text so the self-hosted compiler stays a fixed point.
+Under the hood this is a source→source prelink pass that exists twice, in
+lockstep: `prelink()` in the JS bootstrap and `prelink_source` in
+`lang/compiler/codegen.sdev`, both producing byte-identical text so the
+self-hosted compiler stays a fixed point.
 
-***
+---
 
 #### Not Yet in v2
 
-v2 is the newer track; some v1 features have not landed yet. Use v1 (or the mixed workflow: `#!sdev v1` for those files) until they do. The authoritative, machine-checked list is `lang/parity/report.json`.
+v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
+mixed workflow: `#!sdev v1` for those files) until they do. The authoritative,
+machine-checked list is `lang/parity/report.json`.
 
-| Feature                                | v1              | v2                       | Notes                                        |
-| -------------------------------------- | --------------- | ------------------------ | -------------------------------------------- |
-| Classes (`essence` / `new`)            | yes             | `kind` / `new`           | see "Kinds" above                            |
-| Inheritance (`extend`, `super`)        | yes             | planned                  | next OOP milestone                           |
-| Lambdas / closures (`(x) -> x * 2`)    | yes             | `make … capture … end`   | plus `ref` / `call` function values          |
-| Imports                                | `summon` (Gist) | `use "path"`             | see "Modules" above; no Gist fetch in v2 yet |
-| Async / await / spawn                  | yes             | planned                  |                                              |
-| Ternary `~`                            | yes             | use `if` / `else`        |                                              |
-| Sets, Maps, Queues, Stacks, LinkedList | yes             | build from lists / tomes |                                              |
-| Matrix & graphics APIs                 | yes             | v1 track                 | canvas and turtle stay in v1                 |
+| Feature | v1 | v2 | Notes |
+|---------|----|----|-------|
+| Classes (`essence` / `new`) | yes | `kind` / `new` | see "Kinds" above |
+| Inheritance (`extend`, `super`) | yes | planned | next OOP milestone |
+| Lambdas / closures (`(x) -> x * 2`) | yes | `make … capture … end` | plus `ref` / `call` function values |
+| Imports | `summon` (Gist) | `use "path"` | see "Modules" above; no Gist fetch in v2 yet |
+| Async / await / spawn | yes | planned | |
+| Ternary `~` | yes | use `if` / `else` | |
+| Sets, Maps, Queues, Stacks, LinkedList | yes | build from lists / tomes | |
+| Matrix & graphics APIs | yes | v1 track | canvas and turtle stay in v1 |
 
-***
+
+---
 
 #### v1 → v2 Cheat Sheet
 
-| v1                                  | v2                               |
-| ----------------------------------- | -------------------------------- |
-| `forge x be 10`                     | `set x to 10`                    |
-| `speak("hi")`                       | `say "hi"`                       |
-| `conjure add(a, b) :: … ;;`         | `to add with a b … end`          |
-| `yield x`                           | `return x`                       |
-| `ponder x > 0 :: … ;;`              | `if x > 0 … end`                 |
-| `otherwise :: … ;;`                 | `else … end`                     |
-| `cycle x < 10 :: … ;;`              | `while x < 10 … end`             |
-| `iterate n through xs :: … ;;`      | `for each n in xs … end`         |
-| `yeet` / `skip`                     | `break` / `continue`             |
-| `yep` / `nope` / `void`             | `true` / `false` / `nothing`     |
-| `also` / `either` / `isnt`          | `and` / `or` / `not`             |
-| `equals` / `differs`                | `is` / `is not`                  |
-| `measure(x)`                        | `length(x)`                      |
-| `etch(a, b)`                        | `concat(a, b)`                   |
+| v1 | v2 |
+|----|----|
+| `forge x be 10` | `set x to 10` |
+| `speak("hi")` | `say "hi"` |
+| `conjure add(a, b) :: … ;;` | `to add with a b … end` |
+| `yield x` | `return x` |
+| `ponder x > 0 :: … ;;` | `if x > 0 … end` |
+| `otherwise :: … ;;` | `else … end` |
+| `cycle x < 10 :: … ;;` | `while x < 10 … end` |
+| `iterate n through xs :: … ;;` | `for each n in xs … end` |
+| `yeet` / `skip` | `break` / `continue` |
+| `yep` / `nope` / `void` | `true` / `false` / `nothing` |
+| `also` / `either` / `isnt` | `and` / `or` / `not` |
+| `equals` / `differs` | `is` / `is not` |
+| `measure(x)` | `length(x)` |
+| `etch(a, b)` | `concat(a, b)` |
 | `shatter(s, sep)` / `weave(l, sep)` | `split(s, sep)` / `join(l, sep)` |
-| `locate(s, sub)`                    | `find(s, sub)`                   |
-| `snatch(s, a, b)`                   | `substr(s, start, len)`          |
-| `inscriptions(t)` / `contents(t)`   | `keys(t)` / `values(t)`          |
-| `:: "k": 1 ;;`                      | `{ "k": 1 }`                     |
-| `attempt :: … ;; rescue e :: … ;;`  | `attempt … rescue e … end`       |
-| `essence Point :: … ;;`             | `kind Point … end`               |
-| `new Point()` / `obj.field`         | `new Point` / `obj.field`        |
-| `throw "msg"`                       | `throw "msg"`                    |
-| `num("3.5")`                        | `num("3.5")`                     |
+| `locate(s, sub)` | `find(s, sub)` |
+| `snatch(s, a, b)` | `substr(s, start, len)` |
+| `inscriptions(t)` / `contents(t)` | `keys(t)` / `values(t)` |
+| `:: "k": 1 ;;` | `{ "k": 1 }` |
+| `attempt :: … ;; rescue e :: … ;;` | `attempt … rescue e … end` |
+| `essence Point :: … ;;` | `kind Point … end` |
+| `new Point()` / `obj.field` | `new Point` / `obj.field` |
+| `throw "msg"` | `throw "msg"` |
+| `num("3.5")` | `num("3.5")` |
 
-To port a v1 file, either rewrite it or just add `#!sdev v1` on line 1 and keep the old syntax working forever.
+To port a v1 file, either rewrite it or just add `#!sdev v1` on line 1 and keep
+the old syntax working forever.
 
-***
+---
 
 #### Complete Reference Card
 
-**Keywords**
+##### Keywords
 
-| Keyword          | Purpose                                               |
-| ---------------- | ----------------------------------------------------- |
-| `set`            | Assign (declare or reassign) a variable               |
-| `to`             | Introduce the target of `set`, and declare a function |
-| `with`           | Introduce function parameters / call arguments        |
-| `return`         | Return a value from a function                        |
-| `if`             | Conditional                                           |
-| `else`           | Else clause (`else if` chains)                        |
-| `while`          | While loop                                            |
-| `for each`       | For-each loop over a list                             |
-| `in`             | Used with `for each`                                  |
-| `break`          | Exit the innermost loop                               |
-| `continue`       | Skip to the next iteration                            |
-| `end`            | Close any block                                       |
-| `and`            | Logical AND (short-circuit)                           |
-| `or`             | Logical OR (short-circuit)                            |
-| `not`            | Logical NOT                                           |
-| `is` / `is not`  | Equality / inequality                                 |
-| `true` / `false` | Boolean values                                        |
-| `nothing`        | Empty value                                           |
-| `say`            | Print statement                                       |
+| Keyword | Purpose |
+|---------|---------|
+| `set` | Assign (declare or reassign) a variable |
+| `to` | Introduce the target of `set`, and declare a function |
+| `with` | Introduce function parameters / call arguments |
+| `return` | Return a value from a function |
+| `if` | Conditional |
+| `else` | Else clause (`else if` chains) |
+| `while` | While loop |
+| `for each` | For-each loop over a list |
+| `in` | Used with `for each` |
+| `break` | Exit the innermost loop |
+| `continue` | Skip to the next iteration |
+| `end` | Close any block |
+| `and` | Logical AND (short-circuit) |
+| `or` | Logical OR (short-circuit) |
+| `not` | Logical NOT |
+| `is` / `is not` | Equality / inequality |
+| `true` / `false` | Boolean values |
+| `nothing` | Empty value |
+| `say` | Print statement |
 
-**Special Symbols**
+##### Special Symbols
 
-| Symbol      | Purpose                     |
-| ----------- | --------------------------- |
-| `#`         | Line comment                |
+| Symbol | Purpose |
+|--------|---------|
+| `#` | Line comment |
 | `#!sdev v2` | Version marker (first line) |
-| `[ ]`       | List literal / indexing     |
-| `{ }`       | Tome literal                |
-| `( )`       | Grouping and call arguments |
-| `\|>`       | Pipe operator               |
-| `+ - * / %` | Arithmetic                  |
-| `< > <= >=` | Comparison                  |
-| `"` / `'`   | String delimiters           |
+| `[ ]` | List literal / indexing |
+| `{ }` | Tome literal |
+| `( )` | Grouping and call arguments |
+| `\|>` | Pipe operator |
+| `+ - * / %` | Arithmetic |
+| `< > <= >=` | Comparison |
+| `"` / `'` | String delimiters |
 
-**All builtins at a glance**
+##### All builtins at a glance
 
-* **Output:** `say`, `print`
-* **Core:** `length`
-* **Text:** `concat`, `ord`, `chr`, `str`, `upper`, `lower`, `trim`, `substr`, `find`, `contains`, `split`, `join`, `replace`
-* **Numbers:** `int`, `abs`, `min`, `max`, `range`, `sum`, `random`
-* **Floats:** `i2f`, `f2i`, `fneg`, `fabs`, `fsqrt`, `fsin`, `fcos`, `ftan`, `fexp`, `flog`, `fpow`, `fceil`, `ffloor`, `fround`, `fbyte`
-* **Lists:** `mklist`, plus `[…]` literals and `x[i]` indexing
-* **Tomes:** `keys`, `values`, `has`, plus `{…}` literals and `t[k]`
-* **Host I/O:** `read_file`, `write_file`, `http_get`
+- **Output:** `say`, `print`
+- **Core:** `length`
+- **Text:** `concat`, `ord`, `chr`, `str`, `upper`, `lower`, `trim`, `substr`,
+  `find`, `contains`, `split`, `join`, `replace`
+- **Numbers:** `int`, `abs`, `min`, `max`, `range`, `sum`, `random`
+- **Floats:** `i2f`, `f2i`, `fneg`, `fabs`, `fsqrt`, `fsin`, `fcos`, `ftan`,
+  `fexp`, `flog`, `fpow`, `fceil`, `ffloor`, `fround`, `fbyte`
+- **Lists:** `mklist`, plus `[…]` literals and `x[i]` indexing
+- **Tomes:** `keys`, `values`, `has`, plus `{…}` literals and `t[k]`
+- **Host I/O:** `read_file`, `write_file`, `http_get`
 
-**Quick Reference Examples**
+##### Quick Reference Examples
 
 ```sdev
 #!sdev v2
@@ -1701,79 +1827,81 @@ write_file("out.txt", "hi")
 say read_file("out.txt")
 ```
 
-***
+---
+
 
 ### Full v1 language reference
 
 _Source: `public/SDEV_DOCUMENTATION.md`_
 
+
 #### Complete Documentation, Tutorial & Reference Guide
 
-***
+---
 
 #### Table of Contents
 
-1. [Introduction](SDEV_ULTIMATE_DOCUMENTATION.md#introduction)
-2. [Getting Started](SDEV_ULTIMATE_DOCUMENTATION.md#getting-started)
-3. [Syntax Overview](SDEV_ULTIMATE_DOCUMENTATION.md#syntax-overview)
-4. [Variables & Constants](SDEV_ULTIMATE_DOCUMENTATION.md#variables--constants)
-5. [Data Types](SDEV_ULTIMATE_DOCUMENTATION.md#data-types)
-6. [Operators](SDEV_ULTIMATE_DOCUMENTATION.md#operators)
-7. [String Operations](SDEV_ULTIMATE_DOCUMENTATION.md#string-operations)
-8. [Control Flow](SDEV_ULTIMATE_DOCUMENTATION.md#control-flow)
-9. [Functions](SDEV_ULTIMATE_DOCUMENTATION.md#functions)
-10. [Object-Oriented Programming](SDEV_ULTIMATE_DOCUMENTATION.md#object-oriented-programming)
-11. [Error Handling](SDEV_ULTIMATE_DOCUMENTATION.md#error-handling)
-12. [Async & Concurrency](SDEV_ULTIMATE_DOCUMENTATION.md#async--concurrency)
-13. [Built-in Output Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-output-functions)
-14. [Built-in Math Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-math-functions)
-15. [Built-in String Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-string-functions)
-16. [Built-in List Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-list-functions)
-17. [Built-in Tome (Dict) Functions](SDEV_ULTIMATE_DOCUMENTATION.md#built-in-tome-dict-functions)
-18. [Higher-Order Functions](SDEV_ULTIMATE_DOCUMENTATION.md#higher-order-functions)
-19. [Type System & Conversion](SDEV_ULTIMATE_DOCUMENTATION.md#type-system--conversion)
-20. [Collections: Set, Map, Queue, Stack, LinkedList](SDEV_ULTIMATE_DOCUMENTATION.md#collections)
-21. [Matrix Operations](SDEV_ULTIMATE_DOCUMENTATION.md#matrix-operations)
-22. [Graphics & Game Development](SDEV_ULTIMATE_DOCUMENTATION.md#graphics--game-development)
-23. [File I/O](SDEV_ULTIMATE_DOCUMENTATION.md#file-io)
-24. [Networking](SDEV_ULTIMATE_DOCUMENTATION.md#networking)
-25. [Examples & Recipes](SDEV_ULTIMATE_DOCUMENTATION.md#examples--recipes)
-26. [JavaScript Interop](SDEV_ULTIMATE_DOCUMENTATION.md#javascript-interop-js-interpreter-only)
-27. [Complete Reference Card](SDEV_ULTIMATE_DOCUMENTATION.md#complete-reference-card)
+1. [Introduction](#introduction)
+2. [Getting Started](#getting-started)
+3. [Syntax Overview](#syntax-overview)
+4. [Variables & Constants](#variables--constants)
+5. [Data Types](#data-types)
+6. [Operators](#operators)
+7. [String Operations](#string-operations)
+8. [Control Flow](#control-flow)
+9. [Functions](#functions)
+10. [Object-Oriented Programming](#object-oriented-programming)
+11. [Error Handling](#error-handling)
+12. [Async & Concurrency](#async--concurrency)
+13. [Built-in Output Functions](#built-in-output-functions)
+14. [Built-in Math Functions](#built-in-math-functions)
+15. [Built-in String Functions](#built-in-string-functions)
+16. [Built-in List Functions](#built-in-list-functions)
+17. [Built-in Tome (Dict) Functions](#built-in-tome-dict-functions)
+18. [Higher-Order Functions](#higher-order-functions)
+19. [Type System & Conversion](#type-system--conversion)
+20. [Collections: Set, Map, Queue, Stack, LinkedList](#collections)
+21. [Matrix Operations](#matrix-operations)
+22. [Graphics & Game Development](#graphics--game-development)
+23. [File I/O](#file-io)
+24. [Networking](#networking)
+25. [Examples & Recipes](#examples--recipes)
+26. [JavaScript Interop](#javascript-interop-js-interpreter-only)
+27. [Complete Reference Card](#complete-reference-card)
 
-***
+---
 
 #### Introduction
 
 **sdev** is an expressive, full-featured programming language with a deliberately unique syntax designed to feel fresh and readable. It supports:
 
-* **Unique English-inspired keywords** — `forge`, `conjure`, `ponder`, `cycle`, `iterate`, `yield`, `yeet`, `skip`
-* **Block delimiters** — `::` to open a block and `;;` to close it — no curly braces
-* **First-class functions and lambdas** — `(x) -> x * 2`
-* **Pipe operator** — `|>` for clean functional composition
-* **Full OOP** — `essence` (classes), `extend` (inheritance), `self`, `super`, `new`
-* **Error handling** — `attempt :: ... ;; rescue err :: ... ;;`
-* **Built-in data structures** — Set, Map, Queue, Stack, LinkedList
-* **Matrix math** — `matmul`, `transpose`, `dot`, `reshape`, etc.
-* **2D Graphics & Turtle API** — canvas drawing, shapes, gradients, turtle graphics, sprites
-* **Async / concurrency** — `async conjure`, `await`, `spawn`
-* **JavaScript interop** — `js` keyword for seamless JS integration
+- **Unique English-inspired keywords** — `forge`, `conjure`, `ponder`, `cycle`, `iterate`, `yield`, `yeet`, `skip`
+- **Block delimiters** — `::` to open a block and `;;` to close it — no curly braces
+- **First-class functions and lambdas** — `(x) -> x * 2`
+- **Pipe operator** — `|>` for clean functional composition
+- **Full OOP** — `essence` (classes), `extend` (inheritance), `self`, `super`, `new`
+- **Error handling** — `attempt :: ... ;; rescue err :: ... ;;`
+- **Built-in data structures** — Set, Map, Queue, Stack, LinkedList
+- **Matrix math** — `matmul`, `transpose`, `dot`, `reshape`, etc.
+- **2D Graphics & Turtle API** — canvas drawing, shapes, gradients, turtle graphics, sprites
+- **Async / concurrency** — `async conjure`, `await`, `spawn`
+- **JavaScript interop** — `js` keyword for seamless JS integration
 
 sdev runs in the browser-based IDE (at `/ide`), in the Playground (`/`), and as a downloadable Electron desktop application.
 
-***
+---
 
 #### Getting Started
 
-**Running in the IDE**
+##### Running in the IDE
 
 Open the sdev IDE at `/ide`. Press **Ctrl+Enter** (or the **Run** button) to execute your program. Output appears in the **OUTPUT** panel at the bottom.
 
-**Running in the Playground**
+##### Running in the Playground
 
 Go to the main Playground at `/`. Type or paste sdev code in the editor, then click **Run**.
 
-**Downloading the Desktop App**
+##### Downloading the Desktop App
 
 In the IDE, go to the **Download** button → **Electron Desktop App**. This gives you three files:
 
@@ -1792,7 +1920,7 @@ npm start
 
 This opens sdev IDE as a native desktop window that wraps the full web IDE.
 
-**Your First Program**
+##### Your First Program
 
 ```sdev
 // hello.sdev
@@ -1800,7 +1928,6 @@ speak("Hello, World!")
 ```
 
 Output:
-
 ```
 Hello, World!
 ```
@@ -1823,7 +1950,6 @@ speak(greet(name, "Welcome"))
 ```
 
 Output:
-
 ```
 Name: Alice
 Age: 30
@@ -1831,18 +1957,18 @@ In 10 years: 40
 Welcome, Alice!
 ```
 
-***
+---
 
 #### Syntax Overview
 
-**Comments**
+##### Comments
 
 ```sdev
 // This is a single-line comment
 # This is also a single-line comment (Python style)
 ```
 
-**Blocks**
+##### Blocks
 
 sdev uses `::` to start a block and `;;` to end it — never curly braces `{}`:
 
@@ -1862,7 +1988,7 @@ Blocks can also be written inline for short single-statement bodies:
 ponder x > 5 :: speak("big") ;;
 ```
 
-**No Semicolons Required**
+##### No Semicolons Required
 
 Statements are separated by newlines. You do NOT need `;` at the end of lines.
 
@@ -1873,15 +1999,15 @@ forge c be a + b
 speak(c)
 ```
 
-**Indentation**
+##### Indentation
 
 Indentation is cosmetic but strongly recommended. The language uses `::` and `;;` for block structure, not whitespace.
 
-***
+---
 
 #### Variables & Constants
 
-**Declaring Variables**
+##### Declaring Variables
 
 Use `forge` to declare a new variable and `be` to assign its value:
 
@@ -1892,7 +2018,7 @@ forge isActive be yep
 forge score be 0.0
 ```
 
-**Reassigning Variables**
+##### Reassigning Variables
 
 Just use `be` without `forge`:
 
@@ -1902,7 +2028,7 @@ count be count + 1
 count be 10
 ```
 
-**Compound Assignment (shorthand patterns)**
+##### Compound Assignment (shorthand patterns)
 
 ```sdev
 forge x be 10
@@ -1912,7 +2038,7 @@ x be x - 10   // x = 20
 x be x / 4    // x = 5
 ```
 
-**Built-in Constants**
+##### Built-in Constants
 
 sdev provides these constants directly:
 
@@ -1923,7 +2049,7 @@ speak(E)         // 2.718281828459045
 speak(INFINITY)  // Infinity
 ```
 
-**Multiple Variables**
+##### Multiple Variables
 
 ```sdev
 forge x be 10
@@ -1936,24 +2062,24 @@ x be y
 y be temp
 ```
 
-***
+---
 
 #### Data Types
 
 sdev has six core types:
 
-| sdev Type | Description      | Literal Example              |
-| --------- | ---------------- | ---------------------------- |
-| `number`  | Integer or float | `42`, `3.14`, `-7`, `1.5e10` |
-| `text`    | Strings          | `"hello"`, `'world'`         |
-| `truth`   | Booleans         | `yep`, `nope`                |
-| `void`    | Null / absent    | `void`                       |
-| `list`    | Arrays           | `[1, 2, 3]`                  |
-| `tome`    | Dictionaries     | `:: "key": "value" ;;`       |
+| sdev Type | Description | Literal Example |
+|-----------|-------------|-----------------|
+| `number` | Integer or float | `42`, `3.14`, `-7`, `1.5e10` |
+| `text` | Strings | `"hello"`, `'world'` |
+| `truth` | Booleans | `yep`, `nope` |
+| `void` | Null / absent | `void` |
+| `list` | Arrays | `[1, 2, 3]` |
+| `tome` | Dictionaries | `:: "key": "value" ;;` |
 
 Functions and class instances are also first-class values.
 
-**Numbers**
+##### Numbers
 
 ```sdev
 forge integer be 42
@@ -1971,7 +2097,7 @@ speak(10 % 3)   // 1
 speak(7 / 2)    // 3.5
 ```
 
-**Text (Strings)**
+##### Text (Strings)
 
 ```sdev
 forge single be 'Hello'
@@ -1993,7 +2119,7 @@ speak("hello"[0])   // h
 speak("hello"[-1])  // o (last character)
 ```
 
-**Truth (Booleans)**
+##### Truth (Booleans)
 
 ```sdev
 forge t be yep    // true
@@ -2007,7 +2133,7 @@ speak(yep either nope) // yep
 speak(isnt nope)       // yep
 ```
 
-**Void (Null)**
+##### Void (Null)
 
 ```sdev
 forge nothing be void
@@ -2016,7 +2142,7 @@ ponder nothing equals void ::
 ;;
 ```
 
-**Lists**
+##### Lists
 
 ```sdev
 forge nums be [1, 2, 3, 4, 5]
@@ -2041,7 +2167,7 @@ speak(portion(nums, 1, 3))  // [2, 3]
 speak(portion(nums, 2))     // [3, 4, 5]
 ```
 
-**Tomes (Dictionaries)**
+##### Tomes (Dictionaries)
 
 Tomes are key-value stores. Keys are strings.
 
@@ -2070,45 +2196,45 @@ speak(contents(person))      // ["Alice", 31, yep, "New York"]
 speak(entries(person))       // [["name","Alice"], ...]
 ```
 
-***
+---
 
 #### Operators
 
-**Arithmetic Operators**
+##### Arithmetic Operators
 
-| Operator | Description    | Example  | Result |
-| -------- | -------------- | -------- | ------ |
-| `+`      | Addition       | `5 + 3`  | `8`    |
-| `-`      | Subtraction    | `10 - 4` | `6`    |
-| `*`      | Multiplication | `4 * 3`  | `12`   |
-| `/`      | Division       | `7 / 2`  | `3.5`  |
-| `%`      | Modulo         | `10 % 3` | `1`    |
-| `^`      | Power          | `2 ^ 8`  | `256`  |
-| `-x`     | Negation       | `-5`     | `-5`   |
+| Operator | Description | Example | Result |
+|----------|-------------|---------|--------|
+| `+` | Addition | `5 + 3` | `8` |
+| `-` | Subtraction | `10 - 4` | `6` |
+| `*` | Multiplication | `4 * 3` | `12` |
+| `/` | Division | `7 / 2` | `3.5` |
+| `%` | Modulo | `10 % 3` | `1` |
+| `^` | Power | `2 ^ 8` | `256` |
+| `-x` | Negation | `-5` | `-5` |
 
-**Comparison Operators**
+##### Comparison Operators
 
-| Operator  | Description      | Example       | Result |
-| --------- | ---------------- | ------------- | ------ |
-| `equals`  | Equal to         | `5 equals 5`  | `yep`  |
-| `differs` | Not equal        | `5 differs 3` | `yep`  |
-| `<>`      | Not equal (alt)  | `5 <> 3`      | `yep`  |
-| `<`       | Less than        | `3 < 5`       | `yep`  |
-| `>`       | Greater than     | `5 > 3`       | `yep`  |
-| `<=`      | Less or equal    | `3 <= 3`      | `yep`  |
-| `>=`      | Greater or equal | `5 >= 5`      | `yep`  |
+| Operator | Description | Example | Result |
+|----------|-------------|---------|--------|
+| `equals` | Equal to | `5 equals 5` | `yep` |
+| `differs` | Not equal | `5 differs 3` | `yep` |
+| `<>` | Not equal (alt) | `5 <> 3` | `yep` |
+| `<` | Less than | `3 < 5` | `yep` |
+| `>` | Greater than | `5 > 3` | `yep` |
+| `<=` | Less or equal | `3 <= 3` | `yep` |
+| `>=` | Greater or equal | `5 >= 5` | `yep` |
 
-**Logical Operators**
+##### Logical Operators
 
-| Operator | Meaning | Example                   |
-| -------- | ------- | ------------------------- |
-| `also`   | AND     | `yep also yep` → `yep`    |
-| `either` | OR      | `nope either yep` → `yep` |
-| `isnt`   | NOT     | `isnt nope` → `yep`       |
+| Operator | Meaning | Example |
+|----------|---------|---------|
+| `also` | AND | `yep also yep` → `yep` |
+| `either` | OR | `nope either yep` → `yep` |
+| `isnt` | NOT | `isnt nope` → `yep` |
 
 Short-circuit evaluation applies: `also` stops at first `nope`, `either` stops at first `yep`.
 
-**String & List Concatenation**
+##### String & List Concatenation
 
 ```sdev
 "Hello" + " World"    // "Hello World"
@@ -2117,7 +2243,7 @@ Short-circuit evaluation applies: `also` stops at first `nope`, `either` stops a
 [0] * 5               // [0, 0, 0, 0, 0]
 ```
 
-**Pipe Operator `|>`**
+##### Pipe Operator `|>`
 
 The pipe operator passes the left-hand value as the first argument to the right-hand function:
 
@@ -2133,7 +2259,7 @@ forge result be [1, 2, 3, 4, 5]
 speak(result)  // "6, 8, 10"
 ```
 
-**Ternary Operator `~`**
+##### Ternary Operator `~`
 
 Inline if/else expression:
 
@@ -2151,7 +2277,7 @@ forge letter be grade >= 90 ~ "A" : grade >= 80 ~ "B" : grade >= 70 ~ "C" : "F"
 speak(letter)  // "B"
 ```
 
-**Operator Precedence (high to low)**
+##### Operator Precedence (high to low)
 
 1. `^` (power)
 2. Unary `-`, `isnt`
@@ -2164,7 +2290,7 @@ speak(letter)  // "B"
 9. `~` (ternary)
 10. `|>` (pipe)
 
-***
+---
 
 #### String Operations
 
@@ -2221,11 +2347,11 @@ speak(repeat("ab", 3))   // "ababab"
 speak(snatch("hello world", 6, 11))  // "world"
 ```
 
-***
+---
 
 #### Control Flow
 
-**If / Else — `ponder` / `otherwise`**
+##### If / Else — `ponder` / `otherwise`
 
 ```sdev
 forge score be 87
@@ -2249,7 +2375,7 @@ Inline (for short bodies):
 ponder x > 0 :: speak("positive") ;; otherwise :: speak("non-positive") ;;
 ```
 
-**While Loop — `cycle`**
+##### While Loop — `cycle`
 
 ```sdev
 forge n be 1
@@ -2269,7 +2395,7 @@ cycle yep ::
 ;;
 ```
 
-**For-Each Loop — `iterate through`**
+##### For-Each Loop — `iterate through`
 
 ```sdev
 forge fruits be ["apple", "banana", "cherry"]
@@ -2282,7 +2408,7 @@ iterate fruit through fruits ::
 // cherry
 ```
 
-**For-In Loop — `within`**
+##### For-In Loop — `within`
 
 ```sdev
 // Iterate over a list
@@ -2304,9 +2430,9 @@ within i be sequence(0, 20, 5) ::
 ;;
 ```
 
-**Loop Control**
+##### Loop Control
 
-**`yeet` — Break**
+###### `yeet` — Break
 
 Exit the nearest enclosing loop immediately:
 
@@ -2320,7 +2446,7 @@ within i be sequence(100) ::
 // 0 1 2 3 4 5
 ```
 
-**`skip` — Continue**
+###### `skip` — Continue
 
 Skip the rest of the current iteration and go to the next:
 
@@ -2333,7 +2459,7 @@ within i be sequence(10) ::
 ;;
 ```
 
-**Nested Loops**
+##### Nested Loops
 
 ```sdev
 within i be sequence(1, 4) ::
@@ -2343,11 +2469,11 @@ within i be sequence(1, 4) ::
 ;;
 ```
 
-***
+---
 
 #### Functions
 
-**Basic Functions — `conjure`**
+##### Basic Functions — `conjure`
 
 ```sdev
 conjure greet(name) ::
@@ -2358,7 +2484,7 @@ greet("Alice")
 greet("World")
 ```
 
-**Return Values — `yield`**
+##### Return Values — `yield`
 
 ```sdev
 conjure add(a, b) ::
@@ -2375,7 +2501,7 @@ speak(sum)         // 30
 speak(max(5, 9))   // 9
 ```
 
-**Default Parameters**
+##### Default Parameters
 
 ```sdev
 conjure greet(name, greeting) ::
@@ -2387,7 +2513,7 @@ speak(greet("Alice"))           // Hello, Alice!
 speak(greet("Bob", "Welcome"))  // Welcome, Bob!
 ```
 
-**Lambda Functions (Arrow Syntax)**
+##### Lambda Functions (Arrow Syntax)
 
 Single expression, one parameter:
 
@@ -2423,7 +2549,7 @@ forge process be x -> ::
 speak(process(5))   // 20
 ```
 
-**Closures**
+##### Closures
 
 Functions capture variables from their enclosing scope:
 
@@ -2451,7 +2577,7 @@ c.reset()
 speak(c.next())   // 1
 ```
 
-**Recursive Functions**
+##### Recursive Functions
 
 ```sdev
 conjure factorial(n) ::
@@ -2476,7 +2602,7 @@ speak(isEven(4))   // yep
 speak(isOdd(7))    // yep
 ```
 
-**Higher-Order Functions as Parameters**
+##### Higher-Order Functions as Parameters
 
 ```sdev
 conjure applyTwice(f, x) ::
@@ -2496,7 +2622,7 @@ forge addOneThenTriple be compose(triple, addOne)
 speak(addOneThenTriple(4))   // 15
 ```
 
-**Variadic-style Functions**
+##### Variadic-style Functions
 
 Use lists to simulate variadic arguments:
 
@@ -2508,13 +2634,13 @@ conjure sumAll(nums) ::
 speak(sumAll([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))   // 55
 ```
 
-***
+---
 
 #### Object-Oriented Programming
 
 sdev has full class-based OOP using `essence` for class definitions, `new` for instantiation, `self` for the instance reference, `super` for parent class access, and `extend` for inheritance.
 
-**Defining a Class — `essence`**
+##### Defining a Class — `essence`
 
 ```sdev
 essence Person ::
@@ -2538,7 +2664,7 @@ essence Person ::
 ;;
 ```
 
-**Creating Instances — `new`**
+##### Creating Instances — `new`
 
 ```sdev
 forge alice be new Person("Alice", 30)
@@ -2553,7 +2679,7 @@ speak(alice.age)   // 31
 speak(alice.toString())  // Person(Alice, 31)
 ```
 
-**Inheritance — `extend`**
+##### Inheritance — `extend`
 
 ```sdev
 essence Animal ::
@@ -2612,7 +2738,7 @@ rex.showTricks()               // Rex can do: sit, shake, roll over
 rex.status()                   // Rex | Energy: 120
 ```
 
-**Multi-level Inheritance**
+##### Multi-level Inheritance
 
 ```sdev
 essence Vehicle ::
@@ -2661,7 +2787,7 @@ tesla.honk()              // Tesla Model 3: Beep beep!
 tesla.charge()            // Tesla Model 3 fully charged!
 ```
 
-**Properties and Computed Properties**
+##### Properties and Computed Properties
 
 ```sdev
 essence Circle ::
@@ -2695,11 +2821,11 @@ c.scale(2)
 speak(c.toString())   // Circle(r=10)
 ```
 
-***
+---
 
 #### Error Handling
 
-**Try / Rescue — `attempt` / `rescue`**
+##### Try / Rescue — `attempt` / `rescue`
 
 Use `attempt` to try code that might fail, and `rescue` to catch errors:
 
@@ -2721,7 +2847,7 @@ attempt ::
 ;;
 ```
 
-**Nested Error Handling**
+##### Nested Error Handling
 
 ```sdev
 conjure safeDivide(a, b) ::
@@ -2741,7 +2867,7 @@ speak(safeDivide(10, 2))   // 5
 speak(safeDivide(10, 0))   // Error: division by zero
 ```
 
-**Assertion**
+##### Assertion
 
 ```sdev
 conjure validateAge(age) ::
@@ -2762,11 +2888,11 @@ conjure validateAge(age) ::
 ;;
 ```
 
-***
+---
 
 #### Async & Concurrency
 
-**Async Functions**
+##### Async Functions
 
 Use `async conjure` to define an asynchronous function:
 
@@ -2777,7 +2903,7 @@ async conjure fetchData(url) ::
 ;;
 ```
 
-**Await**
+##### Await
 
 Use `await` inside `async` functions to wait for asynchronous operations:
 
@@ -2793,7 +2919,7 @@ async conjure loadUserProfile(id) ::
 ;;
 ```
 
-**Spawn (Concurrent Execution)**
+##### Spawn (Concurrent Execution)
 
 Use `spawn` to run functions concurrently without waiting for them:
 
@@ -2809,7 +2935,7 @@ spawn worker("Task C", 1000)
 // Task B completes first, then C, then A
 ```
 
-**Delay**
+##### Delay
 
 Pause execution for a number of milliseconds:
 
@@ -2821,15 +2947,15 @@ delay(2000)
 speak("Three seconds total")
 ```
 
-***
+---
 
 #### Built-in Output Functions
 
-| Function       | Description                           | Example                       |
-| -------------- | ------------------------------------- | ----------------------------- |
-| `speak(...)`   | Print values with spaces between them | `speak("x =", 42)` → `x = 42` |
-| `whisper(...)` | Print values concatenated (no spaces) | `whisper("a", "b")` → `ab`    |
-| `shout(...)`   | Print values uppercased               | `shout("hello")` → `HELLO`    |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `speak(...)` | Print values with spaces between them | `speak("x =", 42)` → `x = 42` |
+| `whisper(...)` | Print values concatenated (no spaces) | `whisper("a", "b")` → `ab` |
+| `shout(...)` | Print values uppercased | `shout("hello")` → `HELLO` |
 
 ```sdev
 forge x be 42
@@ -2841,65 +2967,65 @@ whisper("[", x, "]")             // [42]
 shout("warning: low battery")    // WARNING: LOW BATTERY
 ```
 
-***
+---
 
 #### Built-in Math Functions
 
-**Core Math**
+##### Core Math
 
-| Function        | Description          | Example                      |
-| --------------- | -------------------- | ---------------------------- |
-| `magnitude(x)`  | Absolute value       | `magnitude(-5)` → `5`        |
-| `root(x)`       | Square root          | `root(16)` → `4`             |
-| `ground(x)`     | Floor (round down)   | `ground(3.7)` → `3`          |
-| `elevate(x)`    | Ceiling (round up)   | `elevate(3.2)` → `4`         |
-| `nearby(x)`     | Round to nearest int | `nearby(3.5)` → `4`          |
-| `least(...)`    | Minimum value        | `least(3, 1, 4, 1)` → `1`    |
-| `greatest(...)` | Maximum value        | `greatest(3, 1, 4, 1)` → `4` |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `magnitude(x)` | Absolute value | `magnitude(-5)` → `5` |
+| `root(x)` | Square root | `root(16)` → `4` |
+| `ground(x)` | Floor (round down) | `ground(3.7)` → `3` |
+| `elevate(x)` | Ceiling (round up) | `elevate(3.2)` → `4` |
+| `nearby(x)` | Round to nearest int | `nearby(3.5)` → `4` |
+| `least(...)` | Minimum value | `least(3, 1, 4, 1)` → `1` |
+| `greatest(...)` | Maximum value | `greatest(3, 1, 4, 1)` → `4` |
 
-**Trigonometry**
+##### Trigonometry
 
-| Function       | Description                |
-| -------------- | -------------------------- |
-| `sin(x)`       | Sine (radians)             |
-| `cos(x)`       | Cosine (radians)           |
-| `tan(x)`       | Tangent (radians)          |
-| `asin(x)`      | Arcsine                    |
-| `acos(x)`      | Arccosine                  |
-| `atan(x)`      | Arctangent                 |
-| `atan2(y, x)`  | Two-argument arctangent    |
+| Function | Description |
+|----------|-------------|
+| `sin(x)` | Sine (radians) |
+| `cos(x)` | Cosine (radians) |
+| `tan(x)` | Tangent (radians) |
+| `asin(x)` | Arcsine |
+| `acos(x)` | Arccosine |
+| `atan(x)` | Arctangent |
+| `atan2(y, x)` | Two-argument arctangent |
 | `radians(deg)` | Convert degrees to radians |
 | `degrees(rad)` | Convert radians to degrees |
 
-**Logarithms & Exponentials**
+##### Logarithms & Exponentials
 
-| Function   | Description       |
-| ---------- | ----------------- |
-| `log(x)`   | Natural logarithm |
+| Function | Description |
+|----------|-------------|
+| `log(x)` | Natural logarithm |
 | `log10(x)` | Base-10 logarithm |
-| `log2(x)`  | Base-2 logarithm  |
-| `exp(x)`   | e^x               |
+| `log2(x)` | Base-2 logarithm |
+| `exp(x)` | e^x |
 
-**Advanced Math**
+##### Advanced Math
 
-| Function                                  | Description                 | Example                              |
-| ----------------------------------------- | --------------------------- | ------------------------------------ |
-| `clamp(v, min, max)`                      | Constrain value to range    | `clamp(150, 0, 100)` → `100`         |
-| `lerp(a, b, t)`                           | Linear interpolation        | `lerp(0, 100, 0.3)` → `30`           |
-| `mapRange(v, fromLo, fromHi, toLo, toHi)` | Map value between ranges    | `mapRange(50, 0, 100, 0, 1)` → `0.5` |
-| `sum(list)`                               | Sum all elements of a list  | `sum([1,2,3,4])` → `10`              |
-| `average(list)`                           | Mean value of a list        | `average([1,2,3,4])` → `2.5`         |
-| `sign(x)`                                 | Sign: -1, 0, or 1           | `sign(-5)` → `-1`                    |
-| `dist(x1, y1, x2, y2)`                    | Distance between two points | `dist(0,0,3,4)` → `5`                |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `clamp(v, min, max)` | Constrain value to range | `clamp(150, 0, 100)` → `100` |
+| `lerp(a, b, t)` | Linear interpolation | `lerp(0, 100, 0.3)` → `30` |
+| `mapRange(v, fromLo, fromHi, toLo, toHi)` | Map value between ranges | `mapRange(50, 0, 100, 0, 1)` → `0.5` |
+| `sum(list)` | Sum all elements of a list | `sum([1,2,3,4])` → `10` |
+| `average(list)` | Mean value of a list | `average([1,2,3,4])` → `2.5` |
+| `sign(x)` | Sign: -1, 0, or 1 | `sign(-5)` → `-1` |
+| `dist(x1, y1, x2, y2)` | Distance between two points | `dist(0,0,3,4)` → `5` |
 
-**Random**
+##### Random
 
-| Function            | Description                | Example                        |
-| ------------------- | -------------------------- | ------------------------------ |
-| `chaos()`           | Random float 0-1           | `chaos()` → `0.7234`           |
-| `randint(min, max)` | Random integer (inclusive) | `randint(1, 6)` → `4`          |
-| `pick(list)`        | Random element from list   | `pick(["a","b","c"])` → `"b"`  |
-| `shuffle(list)`     | Shuffle a copy of list     | `shuffle([1,2,3])` → `[3,1,2]` |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `chaos()` | Random float 0-1 | `chaos()` → `0.7234` |
+| `randint(min, max)` | Random integer (inclusive) | `randint(1, 6)` → `4` |
+| `pick(list)` | Random element from list | `pick(["a","b","c"])` → `"b"` |
+| `shuffle(list)` | Shuffle a copy of list | `shuffle([1,2,3])` → `[3,1,2]` |
 
 ```sdev
 // Dice rolling
@@ -2914,66 +3040,66 @@ speak("d20:", rollDice(20))
 speak(chaos() > 0.5 ~ "Heads" : "Tails")
 ```
 
-***
+---
 
 #### Built-in String Functions
 
-| Function                 | Description                          | Signature                               |
-| ------------------------ | ------------------------------------ | --------------------------------------- |
-| `upper(s)`               | Uppercase                            | `upper("hi")` → `"HI"`                  |
-| `lower(s)`               | Lowercase                            | `lower("HI")` → `"hi"`                  |
-| `trim(s)`                | Remove surrounding whitespace        | `trim(" hi ")` → `"hi"`                 |
-| `reverse(s)`             | Reverse string                       | `reverse("abc")` → `"cba"`              |
-| `measure(s)`             | String length                        | `measure("hello")` → `5`                |
-| `contains(s, sub)`       | Check substring                      | `contains("hello", "ell")` → `yep`      |
-| `startswith(s, prefix)`  | Starts with                          | `startswith("hello", "he")` → `yep`     |
-| `endswith(s, suffix)`    | Ends with                            | `endswith("hello", "lo")` → `yep`       |
-| `replace(s, old, new)`   | Replace all occurrences              | `replace("aaa", "a", "b")` → `"bbb"`    |
-| `locate(s, sub)`         | Index of substring (-1 if not found) | `locate("hello", "l")` → `2`            |
-| `shatter(s, sep)`        | Split string into list               | `shatter("a,b", ",")` → `["a","b"]`     |
-| `chars(s)`               | Split into list of characters        | `chars("abc")` → `["a","b","c"]`        |
-| `weave(list, sep)`       | Join list with separator             | `weave(["a","b"], "-")` → `"a-b"`       |
-| `padLeft(s, w, c)`       | Pad left to width                    | `padLeft("5", 3, "0")` → `"005"`        |
-| `padRight(s, w, c)`      | Pad right to width                   | `padRight("hi", 5, ".")` → `"hi..."`    |
-| `format(s, ...)`         | Substitute `{}` placeholders         | `format("Hi {}!", "Bob")` → `"Hi Bob!"` |
-| `repeat(s, n)`           | Repeat string n times                | `repeat("ab", 3)` → `"ababab"`          |
-| `snatch(s, start, end?)` | Substring by index                   | `snatch("hello", 1, 3)` → `"el"`        |
+| Function | Description | Signature |
+|----------|-------------|-----------|
+| `upper(s)` | Uppercase | `upper("hi")` → `"HI"` |
+| `lower(s)` | Lowercase | `lower("HI")` → `"hi"` |
+| `trim(s)` | Remove surrounding whitespace | `trim("  hi  ")` → `"hi"` |
+| `reverse(s)` | Reverse string | `reverse("abc")` → `"cba"` |
+| `measure(s)` | String length | `measure("hello")` → `5` |
+| `contains(s, sub)` | Check substring | `contains("hello", "ell")` → `yep` |
+| `startswith(s, prefix)` | Starts with | `startswith("hello", "he")` → `yep` |
+| `endswith(s, suffix)` | Ends with | `endswith("hello", "lo")` → `yep` |
+| `replace(s, old, new)` | Replace all occurrences | `replace("aaa", "a", "b")` → `"bbb"` |
+| `locate(s, sub)` | Index of substring (-1 if not found) | `locate("hello", "l")` → `2` |
+| `shatter(s, sep)` | Split string into list | `shatter("a,b", ",")` → `["a","b"]` |
+| `chars(s)` | Split into list of characters | `chars("abc")` → `["a","b","c"]` |
+| `weave(list, sep)` | Join list with separator | `weave(["a","b"], "-")` → `"a-b"` |
+| `padLeft(s, w, c)` | Pad left to width | `padLeft("5", 3, "0")` → `"005"` |
+| `padRight(s, w, c)` | Pad right to width | `padRight("hi", 5, ".")` → `"hi..."` |
+| `format(s, ...)` | Substitute `{}` placeholders | `format("Hi {}!", "Bob")` → `"Hi Bob!"` |
+| `repeat(s, n)` | Repeat string n times | `repeat("ab", 3)` → `"ababab"` |
+| `snatch(s, start, end?)` | Substring by index | `snatch("hello", 1, 3)` → `"el"` |
 
-***
+---
 
 #### Built-in List Functions
 
-| Function                     | Description                 | Example                                |
-| ---------------------------- | --------------------------- | -------------------------------------- |
-| `measure(list)`              | Length of list              | `measure([1,2,3])` → `3`               |
-| `gather(list, item)`         | Append item (mutates)       | `gather([1,2], 3)` → `[1,2,3]`         |
-| `pluck(list)`                | Remove and return last item | `pluck([1,2,3])` → `3`                 |
-| `snatch(list, idx)`          | Remove item at index        | `snatch([1,2,3], 1)` → removes `2`     |
-| `insert(list, idx, item)`    | Insert at index             | `insert([1,3], 1, 2)` → `[1,2,3]`      |
-| `portion(list, start, end?)` | Slice                       | `portion([1,2,3,4], 1, 3)` → `[2,3]`   |
-| `reverse(list)`              | Return reversed copy        | `reverse([1,2,3])` → `[3,2,1]`         |
-| `sort(list)`                 | Sort ascending copy         | `sort([3,1,2])` → `[1,2,3]`            |
-| `sortDesc(list)`             | Sort descending copy        | `sortDesc([1,3,2])` → `[3,2,1]`        |
-| `unique(list)`               | Remove duplicates           | `unique([1,1,2,2,3])` → `[1,2,3]`      |
-| `flatten(list)`              | Flatten nested lists        | `flatten([[1,2],[3,4]])` → `[1,2,3,4]` |
-| `concat(a, b)`               | Concatenate two lists       | `concat([1,2],[3,4])` → `[1,2,3,4]`    |
-| `contains(list, item)`       | Check membership            | `contains([1,2,3], 2)` → `yep`         |
-| `first(list)`                | First element               | `first([1,2,3])` → `1`                 |
-| `last(list)`                 | Last element                | `last([1,2,3])` → `3`                  |
-| `clone(list)`                | Deep copy                   | `clone([1,[2,3]])`                     |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `measure(list)` | Length of list | `measure([1,2,3])` → `3` |
+| `gather(list, item)` | Append item (mutates) | `gather([1,2], 3)` → `[1,2,3]` |
+| `pluck(list)` | Remove and return last item | `pluck([1,2,3])` → `3` |
+| `snatch(list, idx)` | Remove item at index | `snatch([1,2,3], 1)` → removes `2` |
+| `insert(list, idx, item)` | Insert at index | `insert([1,3], 1, 2)` → `[1,2,3]` |
+| `portion(list, start, end?)` | Slice | `portion([1,2,3,4], 1, 3)` → `[2,3]` |
+| `reverse(list)` | Return reversed copy | `reverse([1,2,3])` → `[3,2,1]` |
+| `sort(list)` | Sort ascending copy | `sort([3,1,2])` → `[1,2,3]` |
+| `sortDesc(list)` | Sort descending copy | `sortDesc([1,3,2])` → `[3,2,1]` |
+| `unique(list)` | Remove duplicates | `unique([1,1,2,2,3])` → `[1,2,3]` |
+| `flatten(list)` | Flatten nested lists | `flatten([[1,2],[3,4]])` → `[1,2,3,4]` |
+| `concat(a, b)` | Concatenate two lists | `concat([1,2],[3,4])` → `[1,2,3,4]` |
+| `contains(list, item)` | Check membership | `contains([1,2,3], 2)` → `yep` |
+| `first(list)` | First element | `first([1,2,3])` → `1` |
+| `last(list)` | Last element | `last([1,2,3])` → `3` |
+| `clone(list)` | Deep copy | `clone([1,[2,3]])` |
 
-***
+---
 
 #### Built-in Tome (Dict) Functions
 
-| Function              | Description                           |
-| --------------------- | ------------------------------------- |
-| `inscriptions(tome)`  | Get all keys as a list                |
-| `contents(tome)`      | Get all values as a list              |
-| `entries(tome)`       | Get `[[key, value], ...]` pairs       |
-| `contains(tome, key)` | Check if key exists                   |
-| `merge(t1, t2, ...)`  | Merge dicts (later overrides earlier) |
-| `erase(tome, key)`    | Remove key                            |
+| Function | Description |
+|----------|-------------|
+| `inscriptions(tome)` | Get all keys as a list |
+| `contents(tome)` | Get all values as a list |
+| `entries(tome)` | Get `[[key, value], ...]` pairs |
+| `contains(tome, key)` | Check if key exists |
+| `merge(t1, t2, ...)` | Merge dicts (later overrides earlier) |
+| `erase(tome, key)` | Remove key |
 
 ```sdev
 forge a be :: "x": 1, "y": 2 ;;
@@ -2982,11 +3108,11 @@ forge c be merge(a, b)
 speak(c)  // {"x": 1, "y": 99, "z": 3}
 ```
 
-***
+---
 
 #### Input / Output
 
-**`input(prompt?)` — Read User Input**
+##### `input(prompt?)` — Read User Input
 
 Prompts the user for input and returns the entered text:
 
@@ -2998,7 +3124,7 @@ forge age be morph(input("Enter your age: "), "number")
 speak("You are " + age + " years old")
 ```
 
-**`print(...)` / `println(...)` — Print (Aliases)**
+##### `print(...)` / `println(...)` — Print (Aliases)
 
 Standard aliases for `speak()`:
 
@@ -3007,12 +3133,12 @@ print("Hello")
 println("World")
 ```
 
-***
+---
 
 #### Character & Code Point Functions
 
-| Function | Description         | Example           |
-| -------- | ------------------- | ----------------- |
+| Function | Description | Example |
+|----------|-------------|---------|
 | `chr(n)` | Number to character | `chr(65)` → `"A"` |
 | `ord(c)` | Character to number | `ord("A")` → `65` |
 
@@ -3032,15 +3158,15 @@ conjure encrypt(text, shift) ::
 speak(encrypt("ABC", 3))  // "DEF"
 ```
 
-***
+---
 
 #### Number Base Conversion
 
-| Function               | Description            | Example                      |
-| ---------------------- | ---------------------- | ---------------------------- |
-| `hex(n)`               | Number to hex string   | `hex(255)` → `"0xFF"`        |
-| `oct(n)`               | Number to octal        | `oct(8)` → `"0o10"`          |
-| `bin(n)`               | Number to binary       | `bin(10)` → `"0b1010"`       |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `hex(n)` | Number to hex string | `hex(255)` → `"0xFF"` |
+| `oct(n)` | Number to octal | `oct(8)` → `"0o10"` |
+| `bin(n)` | Number to binary | `bin(10)` → `"0b1010"` |
 | `parseNum(str, base?)` | Parse string with base | `parseNum("FF", 16)` → `255` |
 
 ```sdev
@@ -3051,17 +3177,17 @@ speak(parseNum("1010", 2))  // 10
 speak(parseNum("FF", 16))   // 255
 ```
 
-***
+---
 
 #### Number Formatting & Checking
 
-| Function             | Description           | Example                               |
-| -------------------- | --------------------- | ------------------------------------- |
-| `toFixed(n, digits)` | Format decimal places | `toFixed(3.14159, 2)` → `"3.14"`      |
-| `toPrecision(n, p)`  | Format to precision   | `toPrecision(123.456, 4)` → `"123.5"` |
-| `isNaN(v)`           | Check if NaN          | `isNaN(0/0)` → `yep`                  |
-| `isFinite(v)`        | Check if finite       | `isFinite(INFINITY)` → `nope`         |
-| `isInteger(v)`       | Check if integer      | `isInteger(3.0)` → `yep`              |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `toFixed(n, digits)` | Format decimal places | `toFixed(3.14159, 2)` → `"3.14"` |
+| `toPrecision(n, p)` | Format to precision | `toPrecision(123.456, 4)` → `"123.5"` |
+| `isNaN(v)` | Check if NaN | `isNaN(0/0)` → `yep` |
+| `isFinite(v)` | Check if finite | `isFinite(INFINITY)` → `nope` |
+| `isInteger(v)` | Check if integer | `isInteger(3.0)` → `yep` |
 
 ```sdev
 forge pi be 3.14159265
@@ -3071,23 +3197,23 @@ speak(isInteger(42))       // yep
 speak(isFinite(1/0))       // nope
 ```
 
-***
+---
 
 #### String Checking Functions
 
-| Function                  | Description           | Example                                  |
-| ------------------------- | --------------------- | ---------------------------------------- |
-| `capitalize(s)`           | First char uppercase  | `capitalize("hello")` → `"Hello"`        |
-| `title(s)`                | Title Case            | `title("hello world")` → `"Hello World"` |
-| `center(s, width, char?)` | Center-pad            | `center("hi", 10, "-")` → `"----hi----"` |
-| `trimLeft(s)`             | Trim left whitespace  | `trimLeft(" hi")` → `"hi"`               |
-| `trimRight(s)`            | Trim right whitespace | `trimRight("hi ")` → `"hi"`              |
-| `isUpper(s)`              | All uppercase?        | `isUpper("ABC")` → `yep`                 |
-| `isLower(s)`              | All lowercase?        | `isLower("abc")` → `yep`                 |
-| `isDigit(s)`              | All digits?           | `isDigit("123")` → `yep`                 |
-| `isAlpha(s)`              | All alphabetic?       | `isAlpha("abc")` → `yep`                 |
-| `isAlphaNum(s)`           | All alphanumeric?     | `isAlphaNum("abc123")` → `yep`           |
-| `isSpace(s)`              | All whitespace?       | `isSpace(" ")` → `yep`                   |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `capitalize(s)` | First char uppercase | `capitalize("hello")` → `"Hello"` |
+| `title(s)` | Title Case | `title("hello world")` → `"Hello World"` |
+| `center(s, width, char?)` | Center-pad | `center("hi", 10, "-")` → `"----hi----"` |
+| `trimLeft(s)` | Trim left whitespace | `trimLeft("  hi")` → `"hi"` |
+| `trimRight(s)` | Trim right whitespace | `trimRight("hi  ")` → `"hi"` |
+| `isUpper(s)` | All uppercase? | `isUpper("ABC")` → `yep` |
+| `isLower(s)` | All lowercase? | `isLower("abc")` → `yep` |
+| `isDigit(s)` | All digits? | `isDigit("123")` → `yep` |
+| `isAlpha(s)` | All alphabetic? | `isAlpha("abc")` → `yep` |
+| `isAlphaNum(s)` | All alphanumeric? | `isAlphaNum("abc123")` → `yep` |
+| `isSpace(s)` | All whitespace? | `isSpace("  ")` → `yep` |
 
 ```sdev
 speak(capitalize("hello world"))  // "Hello world"
@@ -3097,16 +3223,16 @@ speak(isDigit("42"))   // yep
 speak(isAlpha("hello"))  // yep
 ```
 
-***
+---
 
 #### Regex / Pattern Matching
 
-| Function                                   | Description                              |
-| ------------------------------------------ | ---------------------------------------- |
-| `match(text, pattern)`                     | First regex match (returns list or void) |
-| `matchAll(text, pattern)`                  | All regex matches                        |
-| `replaceRegex(text, pattern, replacement)` | Regex replace (global)                   |
-| `test(text, pattern)`                      | Test if pattern matches                  |
+| Function | Description |
+|----------|-------------|
+| `match(text, pattern)` | First regex match (returns list or void) |
+| `matchAll(text, pattern)` | All regex matches |
+| `replaceRegex(text, pattern, replacement)` | Regex replace (global) |
+| `test(text, pattern)` | Test if pattern matches |
 
 ```sdev
 forge text be "Hello 123 World 456"
@@ -3122,17 +3248,17 @@ conjure isEmail(s) ::
 speak(isEmail("user@example.com"))  // yep
 ```
 
-***
+---
 
 #### Bitwise Operations
 
-| Function              | Description | Example                     |
-| --------------------- | ----------- | --------------------------- |
-| `bitAnd(a, b)`        | Bitwise AND | `bitAnd(5, 3)` → `1`        |
-| `bitOr(a, b)`         | Bitwise OR  | `bitOr(5, 3)` → `7`         |
-| `bitXor(a, b)`        | Bitwise XOR | `bitXor(5, 3)` → `6`        |
-| `bitNot(a)`           | Bitwise NOT | `bitNot(0)` → `-1`          |
-| `bitShiftLeft(a, n)`  | Left shift  | `bitShiftLeft(1, 3)` → `8`  |
+| Function | Description | Example |
+|----------|-------------|---------|
+| `bitAnd(a, b)` | Bitwise AND | `bitAnd(5, 3)` → `1` |
+| `bitOr(a, b)` | Bitwise OR | `bitOr(5, 3)` → `7` |
+| `bitXor(a, b)` | Bitwise XOR | `bitXor(5, 3)` → `6` |
+| `bitNot(a)` | Bitwise NOT | `bitNot(0)` → `-1` |
+| `bitShiftLeft(a, n)` | Left shift | `bitShiftLeft(1, 3)` → `8` |
 | `bitShiftRight(a, n)` | Right shift | `bitShiftRight(8, 2)` → `2` |
 
 ```sdev
@@ -3146,12 +3272,12 @@ speak(bitAnd(perms, READ) > 0)     // yep (has read)
 speak(bitAnd(perms, EXEC) > 0)     // nope (no exec)
 ```
 
-***
+---
 
 #### Base64 Encoding
 
-| Function             | Description           |
-| -------------------- | --------------------- |
+| Function | Description |
+|----------|-------------|
 | `base64encode(text)` | Encode text to base64 |
 | `base64decode(text)` | Decode base64 to text |
 
@@ -3161,7 +3287,7 @@ speak(encoded)  // "SGVsbG8sIFdvcmxkIQ=="
 speak(base64decode(encoded))  // "Hello, World!"
 ```
 
-***
+---
 
 #### Hash Function
 
@@ -3170,16 +3296,16 @@ speak(hash("hello"))     // deterministic 32-bit integer hash
 speak(hash([1, 2, 3]))   // works on any value
 ```
 
-***
+---
 
 #### Time & Date
 
-| Function         | Description                                    |
-| ---------------- | ---------------------------------------------- |
-| `now()`          | Current timestamp in milliseconds              |
-| `timestamp()`    | ISO 8601 string                                |
-| `time()`         | Detailed time tome with year, month, day, etc. |
-| `formatTime(ms)` | Format milliseconds to ISO string              |
+| Function | Description |
+|----------|-------------|
+| `now()` | Current timestamp in milliseconds |
+| `timestamp()` | ISO 8601 string |
+| `time()` | Detailed time tome with year, month, day, etc. |
+| `formatTime(ms)` | Format milliseconds to ISO string |
 
 ```sdev
 forge t be time()
@@ -3195,20 +3321,20 @@ forge elapsed be now() - start
 speak("Took " + elapsed + "ms")
 ```
 
-***
+---
 
 #### Functional Programming
 
-| Function                 | Description                         |
-| ------------------------ | ----------------------------------- |
-| `compose(f, g, ...)`     | Right-to-left function composition  |
-| `pipe(value, f, g, ...)` | Left-to-right value piping          |
-| `curry(fn, arity)`       | Currying                            |
-| `memoize(fn)`            | Cache function results              |
-| `tap(value, fn)`         | Execute fn with value, return value |
-| `times(n, fn)`           | Call fn n times with index          |
-| `groupBy(list, fn)`      | Group elements by key function      |
-| `chunk(list, size)`      | Split list into chunks              |
+| Function | Description |
+|----------|-------------|
+| `compose(f, g, ...)` | Right-to-left function composition |
+| `pipe(value, f, g, ...)` | Left-to-right value piping |
+| `curry(fn, arity)` | Currying |
+| `memoize(fn)` | Cache function results |
+| `tap(value, fn)` | Execute fn with value, return value |
+| `times(n, fn)` | Call fn n times with index |
+| `groupBy(list, fn)` | Group elements by key function |
+| `chunk(list, size)` | Split list into chunks |
 
 ```sdev
 // Compose
@@ -3240,13 +3366,13 @@ speak(chunk([1,2,3,4,5,6,7], 3))  // [[1,2,3], [4,5,6], [7]]
 speak(times(5, i -> i * i))  // [0, 1, 4, 9, 16]
 ```
 
-***
+---
 
 #### Buffer / Memory Operations
 
 sdev provides low-level byte buffer operations for systems programming:
 
-**`buffer(size)` — Create Byte Buffer**
+##### `buffer(size)` — Create Byte Buffer
 
 ```sdev
 forge mem be buffer(1024)
@@ -3257,21 +3383,21 @@ speak(mem.get(1))    // 128
 speak(mem.size())    // 1024
 ```
 
-**Buffer Methods**
+##### Buffer Methods
 
-| Method                  | Description                  |
-| ----------------------- | ---------------------------- |
-| `buf.get(index)`        | Read byte at index           |
-| `buf.set(index, value)` | Write byte at index (0-255)  |
-| `buf.fill(value)`       | Fill entire buffer           |
-| `buf.slice(start, end)` | Get portion as list          |
-| `buf.toList()`          | Convert to list of numbers   |
-| `buf.toText()`          | Decode as UTF-8 text         |
-| `buf.fromString(text)`  | Write UTF-8 text into buffer |
-| `buf.copyTo(target)`    | Copy data to another buffer  |
-| `buf.size()`            | Get buffer size              |
+| Method | Description |
+|--------|-------------|
+| `buf.get(index)` | Read byte at index |
+| `buf.set(index, value)` | Write byte at index (0-255) |
+| `buf.fill(value)` | Fill entire buffer |
+| `buf.slice(start, end)` | Get portion as list |
+| `buf.toList()` | Convert to list of numbers |
+| `buf.toText()` | Decode as UTF-8 text |
+| `buf.fromString(text)` | Write UTF-8 text into buffer |
+| `buf.copyTo(target)` | Copy data to another buffer |
+| `buf.size()` | Get buffer size |
 
-**`pointer(buffer, offset)` — Memory Pointer**
+##### `pointer(buffer, offset)` — Memory Pointer
 
 ```sdev
 forge mem be buffer(256)
@@ -3287,27 +3413,27 @@ ptr2.writeU32(0xDEADBEEF)
 speak(hex(ptr2.readU32()))  // "0xDEADBEEF"
 ```
 
-**Pointer Methods**
+##### Pointer Methods
 
-| Method            | Description                          |
-| ----------------- | ------------------------------------ |
-| `ptr.read()`      | Read byte                            |
-| `ptr.write(v)`    | Write byte                           |
-| `ptr.advance(n?)` | Return new pointer at offset+n       |
-| `ptr.readU16()`   | Read 16-bit unsigned (little-endian) |
-| `ptr.readU32()`   | Read 32-bit unsigned (little-endian) |
-| `ptr.writeU16(v)` | Write 16-bit unsigned                |
-| `ptr.writeU32(v)` | Write 32-bit unsigned                |
+| Method | Description |
+|--------|-------------|
+| `ptr.read()` | Read byte |
+| `ptr.write(v)` | Write byte |
+| `ptr.advance(n?)` | Return new pointer at offset+n |
+| `ptr.readU16()` | Read 16-bit unsigned (little-endian) |
+| `ptr.readU32()` | Read 32-bit unsigned (little-endian) |
+| `ptr.writeU16(v)` | Write 16-bit unsigned |
+| `ptr.writeU32(v)` | Write 32-bit unsigned |
 
-***
+---
 
 #### Error Handling & Control Flow
 
-| Function         | Description                      |
-| ---------------- | -------------------------------- |
-| `exit(code?)`    | Terminate program with exit code |
-| `panic(message)` | Fatal error (kernel panic)       |
-| `throw(message)` | Throw custom error               |
+| Function | Description |
+|----------|-------------|
+| `exit(code?)` | Terminate program with exit code |
+| `panic(message)` | Fatal error (kernel panic) |
+| `throw(message)` | Throw custom error |
 
 ```sdev
 // Throw and catch
@@ -3328,27 +3454,27 @@ ponder badCondition ::
 ;;
 ```
 
-***
+---
 
 #### Additional Aliases
 
-| Alias           | Original         | Description              |
-| --------------- | ---------------- | ------------------------ |
-| `print()`       | `speak()`        | Standard print           |
-| `range()`       | `sequence()`     | Standard range           |
-| `typeof()`      | `gettype()`      | Type checking            |
-| `sleep()`       | `delay()`        | Pause (no-op in browser) |
-| `keys()`        | `inscriptions()` | Dict keys                |
-| `values()`      | `contents()`     | Dict values              |
-| `freeze(obj)`   | —                | Make object immutable    |
-| `isFrozen(obj)` | —                | Check if frozen          |
-| `hash(value)`   | —                | 32-bit hash code         |
+| Alias | Original | Description |
+|-------|----------|-------------|
+| `print()` | `speak()` | Standard print |
+| `range()` | `sequence()` | Standard range |
+| `typeof()` | `gettype()` | Type checking |
+| `sleep()` | `delay()` | Pause (no-op in browser) |
+| `keys()` | `inscriptions()` | Dict keys |
+| `values()` | `contents()` | Dict values |
+| `freeze(obj)` | — | Make object immutable |
+| `isFrozen(obj)` | — | Check if frozen |
+| `hash(value)` | — | 32-bit hash code |
 
-***
+---
 
 #### Higher-Order Functions
 
-**`each` — Transform (Map)**
+##### `each` — Transform (Map)
 
 Apply a function to every element and return a new list:
 
@@ -3359,7 +3485,7 @@ speak(each(nums, (x, i) -> x + i))     // [1, 3, 5, 7, 9]  (value + index)
 speak(each(["a","b","c"], upper))       // ["A", "B", "C"]
 ```
 
-**`sift` — Filter**
+##### `sift` — Filter
 
 Keep only elements where the predicate returns `yep`:
 
@@ -3370,7 +3496,7 @@ speak(sift(nums, x -> x > 5))                // [6, 7, 8, 9, 10]
 speak(sift(["", "hi", "", "world"], x -> measure(x) > 0))  // ["hi", "world"]
 ```
 
-**`fold` — Reduce**
+##### `fold` — Reduce
 
 Reduce a list to a single value using an accumulator:
 
@@ -3386,7 +3512,7 @@ speak(fold(["a","b","c"], "", (acc, x) -> acc + x + "-"))  // "a-b-c-"
 speak(fold(nums, nums[0], (a, b) -> a > b ~ a : b))   // 5
 ```
 
-**`seek` — Find First**
+##### `seek` — Find First
 
 Return the first element matching a predicate, or `void`:
 
@@ -3404,7 +3530,7 @@ forge nobody be seek(people, p -> p.age > 100)
 speak(nobody)   // void
 ```
 
-**`every` — All Match**
+##### `every` — All Match
 
 Returns `yep` if ALL elements satisfy the predicate:
 
@@ -3414,7 +3540,7 @@ speak(every([1,2,3], x -> x > 0))             // yep
 speak(every([1,-2,3], x -> x > 0))            // nope
 ```
 
-**`some` — Any Match**
+##### `some` — Any Match
 
 Returns `yep` if ANY element satisfies the predicate:
 
@@ -3423,7 +3549,7 @@ speak(some([1,3,5,6], x -> x % 2 equals 0))  // yep (6 is even)
 speak(some([1,3,5,7], x -> x % 2 equals 0))  // nope
 ```
 
-**`enumerate` — Index + Value**
+##### `enumerate` — Index + Value
 
 Pairs each element with its index:
 
@@ -3439,7 +3565,7 @@ within pair be enumerate(["red","green","blue"]) ::
 // 2: blue
 ```
 
-**`zip` — Pair Two Lists**
+##### `zip` — Pair Two Lists
 
 Combine two lists element-by-element:
 
@@ -3450,11 +3576,11 @@ speak(zip(keys, vals))
 // [["name","Alice"], ["age",30], ["city","NYC"]]
 ```
 
-***
+---
 
 #### Type System & Conversion
 
-**Getting Type — `essence()`**
+##### Getting Type — `essence()`
 
 Returns the type name as a string:
 
@@ -3467,7 +3593,7 @@ speak(essence([1,2,3]))    // "list"
 speak(essence(::;;))       // "tome"
 ```
 
-**Converting Types — `morph()`**
+##### Converting Types — `morph()`
 
 ```sdev
 speak(morph("42", "number"))     // 42
@@ -3477,7 +3603,7 @@ speak(morph(0, "truth"))         // nope
 speak(morph("3.14", "number"))   // 3.14
 ```
 
-**Type Checking Helpers**
+##### Type Checking Helpers
 
 ```sdev
 speak(essence(x) equals "number")      // Check if number
@@ -3487,11 +3613,11 @@ speak(essence(x) equals "tome")        // Check if dict
 speak(x equals void)                   // Check if null
 ```
 
-***
+---
 
 #### Collections
 
-**Set**
+##### Set
 
 A collection of unique elements. Duplicate additions are silently ignored.
 
@@ -3517,7 +3643,7 @@ speak(s.isEmpty())  // yep
 
 **Set methods:** `add(v)`, `remove(v)`, `has(v)`, `values()`, `size()`, `isEmpty()`, `clear()`, `toList()`
 
-**Map**
+##### Map
 
 A key-value store where keys can be any type (including objects):
 
@@ -3541,7 +3667,7 @@ m.clear()
 
 **Map methods:** `set(k, v)`, `get(k)`, `has(k)`, `delete(k)`, `keys()`, `values()`, `entries()`, `size()`, `isEmpty()`, `clear()`
 
-**Queue (FIFO)**
+##### Queue (FIFO)
 
 First-in, first-out data structure:
 
@@ -3560,7 +3686,7 @@ speak(q.isEmpty())   // nope
 
 **Queue methods:** `enqueue(v)`, `dequeue()`, `peek()`, `size()`, `isEmpty()`, `clear()`, `toList()`
 
-**Stack (LIFO)**
+##### Stack (LIFO)
 
 Last-in, first-out data structure:
 
@@ -3587,7 +3713,7 @@ speak("Undoing:", history.pop())  // action2
 
 **Stack methods:** `push(v)`, `pop()`, `peek()`, `size()`, `isEmpty()`, `clear()`, `toList()`
 
-**LinkedList**
+##### LinkedList
 
 A doubly-linked list with O(1) front/back operations:
 
@@ -3611,13 +3737,13 @@ speak(list.tail())     // 3
 
 **LinkedList methods:** `append(v)`, `prepend(v)`, `remove(v)`, `get(idx)`, `size()`, `head()`, `tail()`, `toList()`, `clear()`
 
-***
+---
 
 #### Matrix Operations
 
 sdev has a comprehensive built-in matrix math library useful for data science and machine learning.
 
-**Creating Matrices**
+##### Creating Matrices
 
 ```sdev
 // Matrix filled with a value
@@ -3636,7 +3762,7 @@ forge m be reshape([1,2,3,4,5,6], 2, 3)
 // [[1,2,3], [4,5,6]]
 ```
 
-**Matrix Arithmetic**
+##### Matrix Arithmetic
 
 ```sdev
 forge a be [[1, 2], [3, 4]]
@@ -3657,7 +3783,7 @@ speak(transpose(a))
 // [[1,3], [2,4]]
 ```
 
-**Vector Operations**
+##### Vector Operations
 
 ```sdev
 forge v1 be [1, 2, 3]
@@ -3671,25 +3797,25 @@ forge elem be each(v1, (x, i) -> x * v2[i])
 speak(elem)   // [4, 10, 18]
 ```
 
-**Matrix Utilities**
+##### Matrix Utilities
 
-| Function                    | Description                  |
-| --------------------------- | ---------------------------- |
-| `matrix(rows, cols, fill)`  | Create filled matrix         |
-| `identity(n)`               | Create n×n identity matrix   |
-| `transpose(m)`              | Transpose rows and columns   |
-| `matmul(a, b)`              | Matrix multiplication        |
-| `matadd(a, b)`              | Element-wise addition        |
-| `matsub(a, b)`              | Element-wise subtraction     |
-| `matscale(m, s)`            | Scalar multiplication        |
-| `dot(a, b)`                 | Dot product of two vectors   |
-| `reshape(list, rows, cols)` | Reshape list to 2D matrix    |
-| `flatten(m)`                | Flatten 2D matrix to 1D list |
-| `shape(m)`                  | Get `[rows, cols]` of matrix |
-| `sum(m)`                    | Sum all elements             |
-| `mean(list)`                | Mean of a 1D list            |
+| Function | Description |
+|----------|-------------|
+| `matrix(rows, cols, fill)` | Create filled matrix |
+| `identity(n)` | Create n×n identity matrix |
+| `transpose(m)` | Transpose rows and columns |
+| `matmul(a, b)` | Matrix multiplication |
+| `matadd(a, b)` | Element-wise addition |
+| `matsub(a, b)` | Element-wise subtraction |
+| `matscale(m, s)` | Scalar multiplication |
+| `dot(a, b)` | Dot product of two vectors |
+| `reshape(list, rows, cols)` | Reshape list to 2D matrix |
+| `flatten(m)` | Flatten 2D matrix to 1D list |
+| `shape(m)` | Get `[rows, cols]` of matrix |
+| `sum(m)` | Sum all elements |
+| `mean(list)` | Mean of a 1D list |
 
-**Neural Network Example**
+##### Neural Network Example
 
 ```sdev
 // Sigmoid activation function
@@ -3714,20 +3840,20 @@ forge output be layer(input, w1, b1)
 speak("Layer output:", output)
 ```
 
-***
+---
 
 #### Graphics & Game Development
 
 sdev has a built-in 2D graphics and turtle graphics API. Graphics commands render to the Canvas panel in the IDE.
 
-**Canvas Setup**
+##### Canvas Setup
 
 ```sdev
 canvas(800, 600)    // Set canvas dimensions (width, height)
 clear("#1a1a2e")    // Clear with a background color
 ```
 
-**Fill and Stroke**
+##### Fill and Stroke
 
 ```sdev
 fill("blue")          // Set fill color
@@ -3740,7 +3866,7 @@ lineCap("round")      // Line cap: "round", "square", "butt"
 lineJoin("round")     // Line join: "round", "bevel", "miter"
 ```
 
-**Basic Shapes**
+##### Basic Shapes
 
 ```sdev
 // Rectangle: rect(x, y, width, height, cornerRadius?)
@@ -3788,7 +3914,7 @@ point(100, 100)
 point(150, 100, 8)
 ```
 
-**Text Drawing**
+##### Text Drawing
 
 ```sdev
 fill("white")
@@ -3800,7 +3926,7 @@ font("Arial", "bold")                     // Set font family and style
 textAlign("center", "middle")             // Horizontal: left/center/right; Vertical: top/middle/bottom
 ```
 
-**Gradients**
+##### Gradients
 
 ```sdev
 // Linear gradient: fill with gradient from (x1,y1) to (x2,y2)
@@ -3813,7 +3939,7 @@ radialGradient(200, 200, 0, 200, 200, 150, [0, "white"], [0.5, "cyan"], [1, "nav
 circle(200, 200, 150)
 ```
 
-**Shadows**
+##### Shadows
 
 ```sdev
 shadow("rgba(0,0,0,0.5)", 15, 5, 5)   // color, blur, offsetX, offsetY
@@ -3822,7 +3948,7 @@ circle(200, 200, 80)
 noShadow()
 ```
 
-**Transformations**
+##### Transformations
 
 ```sdev
 save()                // Push current state
@@ -3835,7 +3961,7 @@ restore()             // Pop saved state
 resetTransform()      // Reset all transforms to identity
 ```
 
-**Path Drawing**
+##### Path Drawing
 
 ```sdev
 // Custom polygon path
@@ -3864,7 +3990,7 @@ quadraticTo(200, 350, 300, 400)           // cpx, cpy, x, y
 strokePath()
 ```
 
-**Turtle Graphics**
+##### Turtle Graphics
 
 The turtle graphics API lets you draw by commanding a turtle that moves and draws lines as it goes.
 
@@ -3917,7 +4043,7 @@ within i be sequence(0, 300) ::
 ;;
 ```
 
-**Sprites & Game Objects**
+##### Sprites & Game Objects
 
 ```sdev
 // Create sprite: createSprite(x, y, width, height, color?)
@@ -3945,7 +4071,7 @@ ponder spriteCollides(player, enemy) ::
 moveSprite(player, 10, 5)
 ```
 
-**Color Functions**
+##### Color Functions
 
 ```sdev
 // CSS color names work directly
@@ -3972,7 +4098,7 @@ within i be sequence(360) ::
 fill(randomColor())
 ```
 
-**Graphics Math**
+##### Graphics Math
 
 ```sdev
 // Convert degrees/radians
@@ -3992,7 +4118,7 @@ forge safe be clamp(150, 0, 100)   // 100
 speak(dist(0, 0, 3, 4))   // 5
 ```
 
-**Complete 2D Graphics Example — Starfield**
+##### Complete 2D Graphics Example — Starfield
 
 ```sdev
 canvas(800, 600)
@@ -4022,13 +4148,13 @@ radialGradient(400, 300, 0, 400, 300, 200,
 circle(400, 300, 200)
 ```
 
-***
+---
 
 #### File I/O
 
 > **Note:** File I/O is available in the Python standalone interpreter and native desktop builds. In the browser-based IDE, these functions are simulated.
 
-**Reading Files**
+##### Reading Files
 
 ```sdev
 // Read entire file as text
@@ -4041,7 +4167,7 @@ speak(config.version)
 speak(config.name)
 ```
 
-**Writing Files**
+##### Writing Files
 
 ```sdev
 // Write text file
@@ -4052,31 +4178,31 @@ forge data be :: "score": 100, "name": "Alice", "level": 5 ;;
 inscribe("save.json", etch(data))
 ```
 
-**Append to File**
+##### Append to File
 
 ```sdev
 appendFile("log.txt", "User logged in\n")
 appendFile("log.txt", "User viewed dashboard\n")
 ```
 
-**File Utilities**
+##### File Utilities
 
-| Function                    | Description                    |
-| --------------------------- | ------------------------------ |
-| `decipher(path)`            | Read file as text              |
-| `inscribe(path, content)`   | Write text to file             |
-| `appendFile(path, content)` | Append to file                 |
-| `fileExists(path)`          | Returns `yep`/`nope`           |
-| `deleteFile(path)`          | Delete a file                  |
-| `listDir(path)`             | Get list of files in directory |
+| Function | Description |
+|----------|-------------|
+| `decipher(path)` | Read file as text |
+| `inscribe(path, content)` | Write text to file |
+| `appendFile(path, content)` | Append to file |
+| `fileExists(path)` | Returns `yep`/`nope` |
+| `deleteFile(path)` | Delete a file |
+| `listDir(path)` | Get list of files in directory |
 
-***
+---
 
 #### Networking
 
 > **Note:** Network functions are available in async contexts. In the browser they use `fetch`. In native builds they use Node.js http.
 
-**HTTP GET**
+##### HTTP GET
 
 ```sdev
 async conjure getUsers() ::
@@ -4085,7 +4211,7 @@ async conjure getUsers() ::
 ;;
 ```
 
-**HTTP POST**
+##### HTTP POST
 
 ```sdev
 async conjure createUser(name, email) ::
@@ -4098,11 +4224,11 @@ async conjure createUser(name, email) ::
 ;;
 ```
 
-***
+---
 
 #### Examples & Recipes
 
-**FizzBuzz**
+##### FizzBuzz
 
 ```sdev
 within i be sequence(1, 101) ::
@@ -4118,7 +4244,7 @@ within i be sequence(1, 101) ::
 ;;
 ```
 
-**Fibonacci (Memoized)**
+##### Fibonacci (Memoized)
 
 ```sdev
 forge memo be :: ;;
@@ -4138,7 +4264,7 @@ within i be sequence(0, 30) ::
 ;;
 ```
 
-**Binary Search**
+##### Binary Search
 
 ```sdev
 conjure binarySearch(arr, target) ::
@@ -4164,7 +4290,7 @@ speak(binarySearch(sorted, 23))   // 5
 speak(binarySearch(sorted, 50))   // -1
 ```
 
-**Quicksort**
+##### Quicksort
 
 ```sdev
 conjure quicksort(arr) ::
@@ -4182,7 +4308,7 @@ speak(quicksort([3, 6, 8, 10, 1, 2, 1]))
 // [1, 1, 2, 3, 6, 8, 10]
 ```
 
-**Stack-Based Calculator**
+##### Stack-Based Calculator
 
 ```sdev
 conjure calculate(expression) ::
@@ -4218,7 +4344,7 @@ speak(calculate("3 4 + 2 *"))    // (3+4)*2 = 14
 speak(calculate("5 1 2 + 4 * + 3 -"))  // 5+(1+2)*4-3 = 14
 ```
 
-**Caesar Cipher**
+##### Caesar Cipher
 
 ```sdev
 conjure caesarEncode(text, shift) ::
@@ -4239,7 +4365,7 @@ speak(caesarEncode("HELLO WORLD", 3))   // KHOOR ZRUOG
 speak(caesarEncode("KHOOR ZRUOG", 23))  // HELLO WORLD (decode with 26-3=23)
 ```
 
-**Word Frequency Counter**
+##### Word Frequency Counter
 
 ```sdev
 conjure wordFrequency(text) ::
@@ -4267,7 +4393,7 @@ speak(freq)
 forge sorted be sort(inscriptions(freq), k -> -freq[k])
 ```
 
-**Prime Sieve**
+##### Prime Sieve
 
 ```sdev
 conjure sieve(limit) ::
@@ -4287,7 +4413,7 @@ speak(sieve(50))
 // [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
 ```
 
-**Linked-List Graph Traversal (BFS)**
+##### Linked-List Graph Traversal (BFS)
 
 ```sdev
 // BFS using a Queue
@@ -4326,7 +4452,7 @@ forge graph be ::
 speak(bfs(graph, "A"))  // ["A", "B", "C", "D", "E", "F"]
 ```
 
-**Turtle Mandala**
+##### Turtle Mandala
 
 ```sdev
 canvas(600, 600)
@@ -4350,13 +4476,13 @@ within i be sequence(petals) ::
 ;;
 ```
 
-***
+---
 
 #### JavaScript Interop (JS Interpreter Only)
 
 The browser-based interpreter includes a special `js` keyword for calling JavaScript functions directly from sdev code. This allows integration with browser APIs, DOM manipulation, and third-party JS libraries.
 
-**Three Syntax Forms**
+##### Three Syntax Forms
 
 ```sdev
 // 1. Single-line expression
@@ -4373,7 +4499,7 @@ js {
 }
 ```
 
-**Basic Examples**
+##### Basic Examples
 
 ```sdev
 // Browser dialog
@@ -4392,7 +4518,7 @@ forge angle be js Math.PI / 6
 forge result be js Math.sin(0.5)
 ```
 
-**Object Literals**
+##### Object Literals
 
 ```sdev
 // Use parenthesized form for object literals
@@ -4412,7 +4538,7 @@ forge config be js ({
 })
 ```
 
-**Arrow Functions**
+##### Arrow Functions
 
 ```sdev
 // Map/filter in JS
@@ -4429,7 +4555,7 @@ forge multiplier be 5
 forge result be js [1, 2, 3].map(x => x * multiplier)
 ```
 
-**Multi-line JS Blocks**
+##### Multi-line JS Blocks
 
 ```sdev
 js {
@@ -4447,7 +4573,7 @@ js {
 }
 ```
 
-**Leaflet Map Integration**
+##### Leaflet Map Integration
 
 ```sdev
 // Initialize a Leaflet map
@@ -4467,71 +4593,71 @@ addMarker(48.8566, 2.3522, "Paris, France")
 addMarker(52.52, 13.405, "Berlin, Germany")
 ```
 
-***
+---
 
 #### Complete Reference Card
 
-**Keywords**
+##### Keywords
 
-| Keyword     | Purpose                                  |
-| ----------- | ---------------------------------------- |
-| `forge`     | Declare a variable                       |
-| `be`        | Assign a value                           |
-| `conjure`   | Declare a function                       |
-| `yield`     | Return a value from a function           |
-| `ponder`    | `if` statement                           |
-| `otherwise` | `else` clause                            |
-| `cycle`     | `while` loop                             |
-| `iterate`   | `for-each` loop (iterate x through list) |
-| `through`   | Used with iterate                        |
-| `within`    | `for-in` loop (within x be list)         |
-| `yeet`      | `break` — exit loop                      |
-| `skip`      | `continue` — skip iteration              |
-| `attempt`   | `try` block                              |
-| `rescue`    | `catch` block                            |
-| `yep`       | Boolean `true`                           |
-| `nope`      | Boolean `false`                          |
-| `void`      | Null / absent value                      |
-| `also`      | Logical AND                              |
-| `either`    | Logical OR                               |
-| `isnt`      | Logical NOT                              |
-| `equals`    | Equality comparison                      |
-| `differs`   | Inequality comparison                    |
-| `essence`   | Define a class                           |
-| `extend`    | Class inheritance                        |
-| `self`      | Instance reference inside class methods  |
-| `super`     | Parent class reference                   |
-| `new`       | Create class instance                    |
-| `summon`    | Import from Gist                         |
-| `async`     | Mark function as async                   |
-| `await`     | Wait for async operation                 |
-| `spawn`     | Run function concurrently                |
+| Keyword | Purpose |
+|---------|---------|
+| `forge` | Declare a variable |
+| `be` | Assign a value |
+| `conjure` | Declare a function |
+| `yield` | Return a value from a function |
+| `ponder` | `if` statement |
+| `otherwise` | `else` clause |
+| `cycle` | `while` loop |
+| `iterate` | `for-each` loop (iterate x through list) |
+| `through` | Used with iterate |
+| `within` | `for-in` loop (within x be list) |
+| `yeet` | `break` — exit loop |
+| `skip` | `continue` — skip iteration |
+| `attempt` | `try` block |
+| `rescue` | `catch` block |
+| `yep` | Boolean `true` |
+| `nope` | Boolean `false` |
+| `void` | Null / absent value |
+| `also` | Logical AND |
+| `either` | Logical OR |
+| `isnt` | Logical NOT |
+| `equals` | Equality comparison |
+| `differs` | Inequality comparison |
+| `essence` | Define a class |
+| `extend` | Class inheritance |
+| `self` | Instance reference inside class methods |
+| `super` | Parent class reference |
+| `new` | Create class instance |
+| `summon` | Import from Gist |
+| `async` | Mark function as async |
+| `await` | Wait for async operation |
+| `spawn` | Run function concurrently |
 
-**Special Symbols**
+##### Special Symbols
 
-| Symbol | Purpose                                 |
-| ------ | --------------------------------------- |
-| `::`   | Start a block                           |
-| `;;`   | End a block                             |
-| `->`   | Lambda arrow                            |
-| `\|>`  | Pipe operator                           |
-| `~`    | Ternary condition operator              |
-| `:`    | Ternary else / dict key-value separator |
-| `//`   | Line comment                            |
-| `#`    | Line comment (Python style)             |
-| `^`    | Power operator                          |
-| `<>`   | Inequality (alternative to `differs`)   |
+| Symbol | Purpose |
+|--------|---------|
+| `::` | Start a block |
+| `;;` | End a block |
+| `->` | Lambda arrow |
+| `\|>` | Pipe operator |
+| `~` | Ternary condition operator |
+| `:` | Ternary else / dict key-value separator |
+| `//` | Line comment |
+| `#` | Line comment (Python style) |
+| `^` | Power operator |
+| `<>` | Inequality (alternative to `differs`) |
 
-**Built-in Constants**
+##### Built-in Constants
 
-| Constant   | Value             |
-| ---------- | ----------------- |
-| `PI`       | 3.141592653589793 |
-| `TAU`      | 6.283185307179586 |
-| `E`        | 2.718281828459045 |
-| `INFINITY` | Infinity          |
+| Constant | Value |
+|----------|-------|
+| `PI` | 3.141592653589793 |
+| `TAU` | 6.283185307179586 |
+| `E` | 2.718281828459045 |
+| `INFINITY` | Infinity |
 
-**Quick Reference Examples**
+##### Quick Reference Examples
 
 ```sdev
 // ── Variables ──
@@ -4625,31 +4751,40 @@ within i be sequence(4) ::
 ;;
 ```
 
-***
+---
 
 #### Web Building (HTML / CSS / JavaScript)
 
-sdev ships a full Web DSL: any program that calls `page(...)` produces a real HTML document that opens in the IDE's **WEB** preview panel (with Reload, Download as `.html`, and Open in new tab). You can mix the high-level DSL with raw HTML/CSS/JS passthrough — everything HTML, CSS, and JavaScript can do is available.
+sdev ships a full Web DSL: any program that calls `page(...)` produces a real
+HTML document that opens in the IDE's **WEB** preview panel (with Reload,
+Download as `.html`, and Open in new tab). You can mix the high-level DSL with
+raw HTML/CSS/JS passthrough — everything HTML, CSS, and JavaScript can do is
+available.
 
-> Web builtins are part of the **JavaScript runtime** (web IDE and bundled JS interpreter). The Python/desktop CLI focuses on terminal output.
+> Web builtins are part of the **JavaScript runtime** (web IDE and bundled
+> JS interpreter). The Python/desktop CLI focuses on terminal output.
 
-**Page lifecycle**
+##### Page lifecycle
 
-| Builtin           | Purpose                                                          |
-| ----------------- | ---------------------------------------------------------------- |
-| `page(title)`     | Start a new HTML document. Auto-switches the IDE to the WEB tab. |
-| `endpage()`       | Finalize the page; auto-closes any still-open containers.        |
-| `title(text)`     | Set/update the `<title>`.                                        |
-| `meta({...})`     | Append a `<meta>` to `<head>`.                                   |
-| `link(rel, href)` | Append a `<link>` (stylesheet, icon, …) to `<head>`.             |
+| Builtin            | Purpose                                                           |
+|--------------------|-------------------------------------------------------------------|
+| `page(title)`      | Start a new HTML document. Auto-switches the IDE to the WEB tab.  |
+| `endpage()`        | Finalize the page; auto-closes any still-open containers.         |
+| `title(text)`      | Set/update the `<title>`.                                         |
+| `meta({...})`      | Append a `<meta>` to `<head>`.                                    |
+| `link(rel, href)`  | Append a `<link>` (stylesheet, icon, …) to `<head>`.              |
 
-**Elements**
+##### Elements
 
 Every HTML5 tag is available in three forms:
 
-* **Self-closing helper:** `h1("Hello")`, `p("text", {class:"lead"})`, `a("Click", {href:"/x"})`, `img({src:"a.png", alt:"a"})`
-* **Unambiguous form:** `html_div(...)`, `html_button(...)`, `html_input(...)` — use these when a tag name (e.g. `button`, `input`, `label`, `table`, `form`) collides with sdev's UI toolkit.
-* **Containers:** `open_<tag>({attrs})` … nested children … `end_<tag>()` (e.g. `open_div`, `open_section`, `open_ul`, `open_form`).
+- **Self-closing helper:** `h1("Hello")`, `p("text", {class:"lead"})`,
+  `a("Click", {href:"/x"})`, `img({src:"a.png", alt:"a"})`
+- **Unambiguous form:** `html_div(...)`, `html_button(...)`, `html_input(...)` —
+  use these when a tag name (e.g. `button`, `input`, `label`, `table`, `form`)
+  collides with sdev's UI toolkit.
+- **Containers:** `open_<tag>({attrs})` … nested children … `end_<tag>()`
+  (e.g. `open_div`, `open_section`, `open_ul`, `open_form`).
 
 Generic builders cover everything else:
 
@@ -4660,7 +4795,7 @@ open("nav", { class: "top" })
 close()
 ```
 
-**CSS**
+##### CSS
 
 ```sdev
 style("body", { background: "#0b1220", color: "white", font_family: "system-ui" })
@@ -4676,9 +4811,10 @@ keyframes("spin", {
 raw_css(".grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }")
 ```
 
-Property names use `snake_case` and are auto-converted to `kebab-case` (`font_size` → `font-size`).
+Property names use `snake_case` and are auto-converted to `kebab-case`
+(`font_size` → `font-size`).
 
-**JavaScript**
+##### JavaScript
 
 ```sdev
 onclick("#go",       "alert('hello from sdev')")
@@ -4687,7 +4823,7 @@ script("window.addEventListener('load', () => console.log('ready'))")
 raw_js("fetch('/api').then(r => r.json()).then(console.log)")
 ```
 
-**Raw passthrough**
+##### Raw passthrough
 
 When the DSL doesn't cover something, drop straight to source:
 
@@ -4697,7 +4833,7 @@ raw_css("@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }")
 raw_js("document.title = 'updated from sdev'")
 ```
 
-**Full example**
+##### Full example
 
 ```sdev
 page("Counter")
@@ -4718,9 +4854,10 @@ page("Counter")
 endpage()
 ```
 
-Click **Run** → the WEB tab opens with a live, interactive page. Use **Open in new tab** to pop it out, or **Download** to save the `.html` file.
+Click **Run** → the WEB tab opens with a live, interactive page.
+Use **Open in new tab** to pop it out, or **Download** to save the `.html` file.
 
-***
+---
 
 #### Hardware / Microcontrollers
 
@@ -4745,59 +4882,67 @@ board "uno" {
 Open the IDE's Hardware panel (USB icon in the left sidebar) → **Detect Board** → **Upload**. Supports the full Arduino library ecosystem via the built-in Library Manager (backed by Arduino's official index).
 
 Highlights added in this release:
+- `board "<target>" { setup(), loop() }` blocks — targets: `uno`, `nano`, `nano-old`, `mega`, `leonardo`, `micro`, `esp32`, `esp32-s3`, `esp8266`, `pico`, `teensy41`.
+- Hardware statements: `pin N be output|input|input_pullup`, `pin N write high|low`, `pin N read`, `analog N read/write`, `wait`, `wait_us`, `now()`, `serial begin/print/println/read/avail`, `tone`, `notone`, `pulsein`, `shiftout`, `attach`/`detach`.
+- `use "LibraryName"` for any Arduino C++ library.
+- `cpp { ... }` raw C++ escape hatch.
+- Web Serial-based board detection (USB VID/PID lookup), STK500v1 flasher for AVR, `esptool-js` for ESP, UF2 drop for RP2040.
+- Serial Monitor with baud selector (300 – 2 000 000).
+- Library Manager mirroring `downloads.arduino.cc/libraries/library_index.json`.
 
-* `board "<target>" { setup(), loop() }` blocks — targets: `uno`, `nano`, `nano-old`, `mega`, `leonardo`, `micro`, `esp32`, `esp32-s3`, `esp8266`, `pico`, `teensy41`.
-* Hardware statements: `pin N be output|input|input_pullup`, `pin N write high|low`, `pin N read`, `analog N read/write`, `wait`, `wait_us`, `now()`, `serial begin/print/println/read/avail`, `tone`, `notone`, `pulsein`, `shiftout`, `attach`/`detach`.
-* `use "LibraryName"` for any Arduino C++ library.
-* `cpp { ... }` raw C++ escape hatch.
-* Web Serial-based board detection (USB VID/PID lookup), STK500v1 flasher for AVR, `esptool-js` for ESP, UF2 drop for RP2040.
-* Serial Monitor with baud selector (300 – 2 000 000).
-* Library Manager mirroring `downloads.arduino.cc/libraries/library_index.json`.
-
-**Bytecode compiler upgrades**
+##### Bytecode compiler upgrades
 
 Shipped alongside the hardware layer:
+- Proper `break` / `continue` in `cycle` (while) and `iterate` (forEach / forIn) loops via a shared `LoopContext` stack — these previously compiled to `NOP`.
+- Bitwise opcodes (`BIT_AND`/`OR`/`XOR`/`NOT`/`SHL`/`SHR`) for register-level firmware work.
+- Systems opcodes: `SYSCALL`, `ALLOC`, `FREE`, `HEAP_LOAD`, `HEAP_STORE`, `INTERRUPT`.
+- Task opcodes: `TASK_CREATE`, `TASK_YIELD`, `TASK_KILL`.
+- Binary chunk format v2: `magic "SDEV" | version | len | JSON payload` (`serializeChunk` / `deserializeChunk`).
 
-* Proper `break` / `continue` in `cycle` (while) and `iterate` (forEach / forIn) loops via a shared `LoopContext` stack — these previously compiled to `NOP`.
-* Bitwise opcodes (`BIT_AND`/`OR`/`XOR`/`NOT`/`SHL`/`SHR`) for register-level firmware work.
-* Systems opcodes: `SYSCALL`, `ALLOC`, `FREE`, `HEAP_LOAD`, `HEAP_STORE`, `INTERRUPT`.
-* Task opcodes: `TASK_CREATE`, `TASK_YIELD`, `TASK_KILL`.
-* Binary chunk format v2: `magic "SDEV" | version | len | JSON payload` (`serializeChunk` / `deserializeChunk`).
+---
 
-***
+*This documentation covers sdev version 1.x. For the latest updates and additional examples, visit the sdev IDE.*
 
-_This documentation covers sdev version 1.x. For the latest updates and additional examples, visit the sdev IDE._
+---
 
-***
 
 ## Part III — The complete narrative guide
+
 
 ### Complete documentation (architecture to evolution loop)
 
 _Source: `public/SDEV_FULL_DOCUMENTATION.md`_
 
-Everything sdev is, in one document: the language, both runtimes, the self-hosted compiler, the native assembly backend, the desktop IDE, the machine-learning stack, the acceleration layers, and the autonomous evolution loop.
 
-Created by **Sava Milanov**. This document is the single source of truth that ties together all of the focused guides:
+Everything sdev is, in one document: the language, both runtimes, the
+self-hosted compiler, the native assembly backend, the desktop IDE, the
+machine-learning stack, the acceleration layers, and the autonomous
+evolution loop.
 
-| Focused guide                      | Covers                                    |
-| ---------------------------------- | ----------------------------------------- |
-| `SDEV_DOCUMENTATION.md`            | v1 language reference                     |
-| `SDEV_V2_DOCUMENTATION.md`         | v2 "Prism" beginner surface               |
-| `SDEV_INTERNALS.md`                | Compiler, VM, bootstrap, native backend   |
-| `SDEV_ML_DOCUMENTATION.md`         | Tensors, autograd, nn, transformers, data |
-| `SDEV_FFI_DOCUMENTATION.md`        | Native library binding                    |
-| `SDEV_WEBGPU_DOCUMENTATION.md`     | Browser GPU compute                       |
-| `SDEV_CUDA_DOCUMENTATION.md`       | cuBLAS fast path                          |
-| `SDEV_AUTOEVOLVE_DOCUMENTATION.md` | Self-modification loop                    |
-| `SDEV_LEAFLET_DOCUMENTATION.md`    | Mapping / GIS DSL                         |
-| `SDEV_HARDWARE_DOCUMENTATION.md`   | Boards and firmware                       |
+Created by **Sava Milanov**. This document is the single source of truth
+that ties together all of the focused guides:
 
-***
+| Focused guide | Covers |
+| --- | --- |
+| `SDEV_DOCUMENTATION.md` | v1 language reference |
+| `SDEV_V2_DOCUMENTATION.md` | v2 "Prism" beginner surface |
+| `SDEV_INTERNALS.md` | Compiler, VM, bootstrap, native backend |
+| `SDEV_ML_DOCUMENTATION.md` | Tensors, autograd, nn, transformers, data |
+| `SDEV_FFI_DOCUMENTATION.md` | Native library binding |
+| `SDEV_WEBGPU_DOCUMENTATION.md` | Browser GPU compute |
+| `SDEV_CUDA_DOCUMENTATION.md` | cuBLAS fast path |
+| `SDEV_AUTOEVOLVE_DOCUMENTATION.md` | Self-modification loop |
+| `SDEV_LEAFLET_DOCUMENTATION.md` | Mapping / GIS DSL |
+| `SDEV_HARDWARE_DOCUMENTATION.md` | Boards and firmware |
+
+---
 
 #### 1. What sdev is
 
-sdev is a programming language with a deliberately unfamiliar surface syntax. It does not borrow keywords from Python, JavaScript, Go, or C. Declaration is `forge`, assignment is `be`, functions are `conjure`, returning is `yield`, blocks open with `::` and close with `;;`.
+sdev is a programming language with a deliberately unfamiliar surface
+syntax. It does not borrow keywords from Python, JavaScript, Go, or C.
+Declaration is `forge`, assignment is `be`, functions are `conjure`,
+returning is `yield`, blocks open with `::` and close with `;;`.
 
 ```sdev
 conjure fib(n) ::
@@ -4814,10 +4959,15 @@ cycle i < 10 ::
 
 There are two surface dialects:
 
-* **v1** — the full professional language (`forge`, `conjure`, `::`/`;;`, classes, dict "tomes", the whole standard library). Everything in the ML stack is written in v1.
-* **v2 "Prism"** — a beginner-first surface (`set … to`, `say`, `if/else/end`, `for each … in … end`) implemented in `lang/runtime/v2.js` as dependency-free plain JavaScript.
+- **v1** — the full professional language (`forge`, `conjure`, `::`/`;;`,
+  classes, dict "tomes", the whole standard library). Everything in the
+  ML stack is written in v1.
+- **v2 "Prism"** — a beginner-first surface (`set … to`, `say`,
+  `if/else/end`, `for each … in … end`) implemented in
+  `lang/runtime/v2.js` as dependency-free plain JavaScript.
 
-Pick per file with a shebang, or globally with `localStorage.sdev_runtime = "v2"`:
+Pick per file with a shebang, or globally with
+`localStorage.sdev_runtime = "v2"`:
 
 ```
 #!sdev v1
@@ -4831,26 +4981,27 @@ set x to 10
 say x
 ```
 
-`src/lang-bridge/bridge.ts` is the only TypeScript left in the v2 execution path; it chooses the runtime and delegates.
+`src/lang-bridge/bridge.ts` is the only TypeScript left in the v2
+execution path; it chooses the runtime and delegates.
 
-***
+---
 
 #### 2. Language reference (v1)
 
-**2.1 Values**
+##### 2.1 Values
 
-| Kind           | Literal                   | Notes                                   |
-| -------------- | ------------------------- | --------------------------------------- |
-| Number         | `42`, `3.14`, `1e-9`      | IEEE-754 doubles                        |
-| String         | `"hello"`                 | Immutable, `+` concatenates and coerces |
-| Boolean        | `yep` / `nope`            |                                         |
-| Nothing        | `void`                    | Missing tome keys also read as `void`   |
-| List           | `[1, 2, 3]`               | Reference type                          |
-| Tome (dict)    | `{ a: 1, "b": 2 }`        | `{ }` is _only_ dict literals           |
-| Function       | `conjure` / `(x) -> expr` | Closures capture lexically              |
-| Class instance | `new Name(args)`          |                                         |
+| Kind | Literal | Notes |
+| --- | --- | --- |
+| Number | `42`, `3.14`, `1e-9` | IEEE-754 doubles |
+| String | `"hello"` | Immutable, `+` concatenates and coerces |
+| Boolean | `yep` / `nope` | |
+| Nothing | `void` | Missing tome keys also read as `void` |
+| List | `[1, 2, 3]` | Reference type |
+| Tome (dict) | `{ a: 1, "b": 2 }` | `{ }` is *only* dict literals |
+| Function | `conjure` / `(x) -> expr` | Closures capture lexically |
+| Class instance | `new Name(args)` | |
 
-**2.2 Statements**
+##### 2.2 Statements
 
 ```sdev
 forge x be 10            // declare
@@ -4860,7 +5011,7 @@ set tome["k"] to 5       // index assign
 set obj.field to 5       // member assign
 ```
 
-**2.3 Control flow**
+##### 2.3 Control flow
 
 ```sdev
 either cond ::
@@ -4875,9 +5026,11 @@ iterate i through 0, 10 :: ... ;;// counted for
 each item in list :: ... ;;      // for-each
 ```
 
-`either` doubles as the short-circuit OR operator inside an expression; as a statement head it is a guard. `also` is AND, `isnt` is NOT, `equals` / `differs` are deep equality.
+`either` doubles as the short-circuit OR operator inside an expression;
+as a statement head it is a guard. `also` is AND, `isnt` is NOT,
+`equals` / `differs` are deep equality.
 
-**2.4 Functions and classes**
+##### 2.4 Functions and classes
 
 ```sdev
 conjure area(w, h) :: yield w * h ;;
@@ -4896,11 +5049,13 @@ forge p be new Point(1, 2)
 p.move(3, 4)
 ```
 
-**2.5 Operator precedence (low → high)**
+##### 2.5 Operator precedence (low → high)
 
-ternary `? :` → `either` → `also` → equality (`equals`, `differs`, `<>`) → comparison → additive → multiplicative → power `^` (right-assoc) → unary (`-`, `isnt`) → call / index / member → primary.
+ternary `? :` → `either` → `also` → equality (`equals`, `differs`, `<>`)
+→ comparison → additive → multiplicative → power `^` (right-assoc) →
+unary (`-`, `isnt`) → call / index / member → primary.
 
-**2.6 Modules**
+##### 2.6 Modules
 
 ```sdev
 link "math.sdev"                 // inline
@@ -4909,29 +5064,33 @@ link add, sub from "math.sdev"   // sugar for the inline form
 summon "GIST_ID"                 // fetch a GitHub Gist package
 ```
 
-The linker resolves names case-insensitively, supports nesting, and reports cycles with a clear error.
+The linker resolves names case-insensitively, supports nesting, and
+reports cycles with a clear error.
 
-**2.7 Standard library highlights**
+##### 2.7 Standard library highlights
 
-* **I/O** — `speak`, `whisper`, `shout`, `input`
-* **Types** — `essence`, `morph`, `str`
-* **Math** — `root`, `ground`, `elevate`, `magnitude`, `ln`, `exp`, `cos`, `rand`, `PI`, `TAU`, `E`, `INFINITY`
-* **Collections** — `measure`, `gather`, `pluck`, `sort`, `sift`, `each`, `fold`, `find`, `sum`, `reverse`, `unique`, `join`, `split`, `tome_keys`
-* **Strings/bytes** — `ord(s, i)`, `chr(n)`, regex, base conversion
-* **Host** — `read_file`, `write_file`, `http_get`
-* **Graphics** — canvas + turtle (`canvas`, `rect`, `circle`, `hue`, …)
-* **UI** — `app`, `button`, `slider`, `label`, …
-* **Web** — one builtin per HTML5 tag, `style`, `on`, `page()`
-* **Matrix** — transpose, multiply, determinant, inverse
-* **FFI/GPU** — see sections 6–8
+- **I/O** — `speak`, `whisper`, `shout`, `input`
+- **Types** — `essence`, `morph`, `str`
+- **Math** — `root`, `ground`, `elevate`, `magnitude`, `ln`, `exp`,
+  `cos`, `rand`, `PI`, `TAU`, `E`, `INFINITY`
+- **Collections** — `measure`, `gather`, `pluck`, `sort`, `sift`, `each`,
+  `fold`, `find`, `sum`, `reverse`, `unique`, `join`, `split`,
+  `tome_keys`
+- **Strings/bytes** — `ord(s, i)`, `chr(n)`, regex, base conversion
+- **Host** — `read_file`, `write_file`, `http_get`
+- **Graphics** — canvas + turtle (`canvas`, `rect`, `circle`, `hue`, …)
+- **UI** — `app`, `button`, `slider`, `label`, …
+- **Web** — one builtin per HTML5 tag, `style`, `on`, `page()`
+- **Matrix** — transpose, multiply, determinant, inverse
+- **FFI/GPU** — see sections 6–8
 
-***
+---
 
 #### 3. Architecture: two tracks
 
 sdev deliberately runs on two independent execution tracks.
 
-```
+```text
           ┌──────────────── Track A: browser ────────────────┐
 source ─► lexer ─► parser ─► interpreter ──────► IDE panels
                          └─► compiler ─► bytecode ─► seed VM (WASM)
@@ -4940,56 +5099,67 @@ source ─► lexer ─► parser ─► interpreter ──────► IDE p
 source ─► lexer ─► parser ─► codegen-x64 ─► .s ─► as/ld ─► binary
 ```
 
-**Track A (browser IDE)** runs entirely on WebAssembly. The hand-written seed VM lives in `lang/bootstrap/seed.wat`, and `lang/bootstrap/compile.mjs` is the bootstrap compiler that feeds it.
+**Track A (browser IDE)** runs entirely on WebAssembly. The hand-written
+seed VM lives in `lang/bootstrap/seed.wat`, and `lang/bootstrap/compile.mjs`
+is the bootstrap compiler that feeds it.
 
-**Track B (native)** emits real x86-64 GAS/AT\&T assembly — not WASM — for Linux and macOS:
+**Track B (native)** emits real x86-64 GAS/AT&T assembly — not WASM —
+for Linux and macOS:
 
-* `lang/native/codegen-x64.mjs` — instruction selection and emission
-* `lang/native/runtime.s` — the assembly runtime (entry, syscalls, heap)
-* `lang/native/link.mjs` — assembles and links with the system toolchain
-* `scripts/sdev-native.mjs` — the CLI driver
-* `scripts/test-native.mjs` — the regression suite
+- `lang/native/codegen-x64.mjs` — instruction selection and emission
+- `lang/native/runtime.s` — the assembly runtime (entry, syscalls, heap)
+- `lang/native/link.mjs` — assembles and links with the system toolchain
+- `scripts/sdev-native.mjs` — the CLI driver
+- `scripts/test-native.mjs` — the regression suite
 
 ```bash
 node scripts/sdev-native.mjs build program.sdev -o program
 ./program
 ```
 
-***
+---
 
 #### 4. The seed VM and bootstrap compiler
 
-The seed VM is a small stack machine written by hand in WebAssembly text format. It grew milestone by milestone:
+The seed VM is a small stack machine written by hand in WebAssembly text
+format. It grew milestone by milestone:
 
-| Milestone | Capability added                                                            |
-| --------- | --------------------------------------------------------------------------- |
-| M1–M2     | Arithmetic, globals, jumps                                                  |
-| M3        | Call frames and recursion — `CALL`, `RET`, `ENTER`, `LOAD_LOC`, `STORE_LOC` |
-| M4        | Heap, lists, strings — `ALLOC`, `NEWLIST`, `LGET`, `LSET`, `LEN`, `STRCAT`  |
-| M5a       | Byte primitives — `ord`, `chr`, `str`                                       |
-| M5b       | `LNEW` + `mklist` builtin                                                   |
-| M6        | Boxed `f64` floats — 15 float opcodes plus host math imports                |
-| M7        | Host-mediated I/O — `READFILE`, `WRITEFILE`, `HTTPGET`                      |
-| M5n       | Widened VM and constant-pool regions for large sources                      |
+| Milestone | Capability added |
+| --- | --- |
+| M1–M2 | Arithmetic, globals, jumps |
+| M3 | Call frames and recursion — `CALL`, `RET`, `ENTER`, `LOAD_LOC`, `STORE_LOC` |
+| M4 | Heap, lists, strings — `ALLOC`, `NEWLIST`, `LGET`, `LSET`, `LEN`, `STRCAT` |
+| M5a | Byte primitives — `ord`, `chr`, `str` |
+| M5b | `LNEW` + `mklist` builtin |
+| M6 | Boxed `f64` floats — 15 float opcodes plus host math imports |
+| M7 | Host-mediated I/O — `READFILE`, `WRITEFILE`, `HTTPGET` |
+| M5n | Widened VM and constant-pool regions for large sources |
 
-The bootstrap compiler `lang/bootstrap/compile.mjs` is a two-pass emitter (pass 1 resolves labels and symbol tables, pass 2 emits bytes) producing a `{ bytecode, stringPool }` pair.
+The bootstrap compiler `lang/bootstrap/compile.mjs` is a two-pass emitter
+(pass 1 resolves labels and symbol tables, pass 2 emits bytes) producing a
+`{ bytecode, stringPool }` pair.
 
-Host I/O is provided by the embedder: Node uses `fs` and `curl`; the browser falls back to `localStorage` and `XMLHttpRequest`.
+Host I/O is provided by the embedder: Node uses `fs` and `curl`; the
+browser falls back to `localStorage` and `XMLHttpRequest`.
 
-***
+---
 
 #### 5. The self-hosted compiler
 
-sdev compiles sdev. `lang/compiler/` contains the pipeline written entirely in sdev:
+sdev compiles sdev. `lang/compiler/` contains the pipeline written
+entirely in sdev:
 
-* `lexer.sdev` — tokenizer
-* `parser.sdev` — precedence-climbing parser producing the AST
-* `codegen.sdev` — two-pass bytecode emitter with a shared string pool
-* `compile-self.mjs` — Node shim that drives the sdev codegen through the seed VM
+- `lexer.sdev` — tokenizer
+- `parser.sdev` — precedence-climbing parser producing the AST
+- `codegen.sdev` — two-pass bytecode emitter with a shared string pool
+- `compile-self.mjs` — Node shim that drives the sdev codegen through the
+  seed VM
 
-**5.1 Fixed point**
+##### 5.1 Fixed point
 
-The milestone sequence 5c → 5n drove the compiler to a **byte-identical fixed point**: compiling the compiler with itself produces the exact same bytes as the JavaScript bootstrap.
+The milestone sequence 5c → 5n drove the compiler to a **byte-identical
+fixed point**: compiling the compiler with itself produces the exact same
+bytes as the JavaScript bootstrap.
 
 ```bash
 node scripts/test-self-toolchain.mjs
@@ -5001,26 +5171,29 @@ node scripts/test-shim-fixed-point.mjs
 # ✓ shim fixed-point: 43/43 cases byte-identical
 ```
 
-Reaching that point required forward references, return-type tracking, modulo, expression-statements, and a shared string pool between passes.
+Reaching that point required forward references, return-type tracking,
+modulo, expression-statements, and a shared string pool between passes.
 
-***
+---
 
 #### 6. Machine learning stack
 
-Every module below is written in sdev and runs on sdev. Nothing is implemented in TypeScript or Python.
+Every module below is written in sdev and runs on sdev. Nothing is
+implemented in TypeScript or Python.
 
-**6.1 `tensor.sdev` — the core**
+##### 6.1 `tensor.sdev` — the core
 
-A tensor is a tome: `{ data: [f64…], shape: [int…], grad: [f64…] | void, requires_grad: bool }`.
+A tensor is a tome:
+`{ data: [f64…], shape: [int…], grad: [f64…] | void, requires_grad: bool }`.
 
-| Function                                           | Purpose                   |
-| -------------------------------------------------- | ------------------------- |
-| `tensor(data, shape)` / `tensor_grad(data, shape)` | Construct                 |
-| `zeros(shape)` / `ones(shape)` / `randn(shape)`    | Fill (Box–Muller normals) |
-| `t_add` `t_sub` `t_mul` `t_scale`                  | Element-wise              |
-| `matmul(a, b)`                                     | 2-D matrix multiply       |
-| `relu` `sigmoid` `softmax`                         | Activations               |
-| `mse` `cross_entropy`                              | Losses                    |
+| Function | Purpose |
+| --- | --- |
+| `tensor(data, shape)` / `tensor_grad(data, shape)` | Construct |
+| `zeros(shape)` / `ones(shape)` / `randn(shape)` | Fill (Box–Muller normals) |
+| `t_add` `t_sub` `t_mul` `t_scale` | Element-wise |
+| `matmul(a, b)` | 2-D matrix multiply |
+| `relu` `sigmoid` `softmax` | Activations |
+| `mse` `cross_entropy` | Losses |
 
 ```sdev
 link "stdlib/ml/tensor.sdev"
@@ -5029,9 +5202,10 @@ forge b be tensor([1.0, 0.0, 0.0, 1.0, 1.0, 1.0], [3, 2])
 speak(matmul(a, b).data)      // 4, 5, 10, 11
 ```
 
-**6.2 `autograd.sdev` — reverse-mode differentiation**
+##### 6.2 `autograd.sdev` — reverse-mode differentiation
 
-A global tape records differentiable ops. `backward(y)` walks it in reverse and accumulates into each tensor's `grad`.
+A global tape records differentiable ops. `backward(y)` walks it in
+reverse and accumulates into each tensor's `grad`.
 
 ```sdev
 tape_reset()
@@ -5041,18 +5215,22 @@ backward(y)
 speak(x.grad[0])              // 6
 ```
 
-**6.3 `nn.sdev` — layers and training**
+##### 6.3 `nn.sdev` — layers and training
 
-`linear(in, out)`, `relu_layer()`, `sequential(layers)`, `seq_forward(layers, x)`, `train_step(model, x, y, lr)`, `fit(model, xs, ys, epochs, lr)`.
+`linear(in, out)`, `relu_layer()`, `sequential(layers)`,
+`seq_forward(layers, x)`, `train_step(model, x, y, lr)`,
+`fit(model, xs, ys, epochs, lr)`.
 
 ```sdev
 forge model be sequential([linear(4, 16), relu_layer(), linear(16, 1)])
 fit(model, xs, ys, 100, 0.01)
 ```
 
-**6.4 `transformer.sdev` — decoder-only LMs**
+##### 6.4 `transformer.sdev` — decoder-only LMs
 
-`embedding`, `layer_norm`, `attention_head`, `attn_forward`, `transformer_block`, `gpt(vocab, dim, hidden, layers)`, `gpt_forward`, `sample_next(logits)`, `generate(model, prompt_ids, max_new)`.
+`embedding`, `layer_norm`, `attention_head`, `attn_forward`,
+`transformer_block`, `gpt(vocab, dim, hidden, layers)`, `gpt_forward`,
+`sample_next(logits)`, `generate(model, prompt_ids, max_new)`.
 
 ```sdev
 forge m be gpt(256, 64, 128, 2)
@@ -5060,13 +5238,16 @@ forge out be generate(m, encode(vocab, "hello"), 64)
 speak(decode(vocab, out))
 ```
 
-**6.5 `data.sdev` — datasets, the web, distillation**
+##### 6.5 `data.sdev` — datasets, the web, distillation
 
-`load_text` / `save_text`, `char_vocab(text)`, `encode` / `decode`, `crawl(url)` / `crawl_many(urls)`, `teacher_query(endpoint, key, prompt)`, `distill_batch(endpoint, key, prompts)`, `save_model(path, model)`.
+`load_text` / `save_text`, `char_vocab(text)`, `encode` / `decode`,
+`crawl(url)` / `crawl_many(urls)`, `teacher_query(endpoint, key, prompt)`,
+`distill_batch(endpoint, key, prompts)`, `save_model(path, model)`.
 
-`teacher_query` lets a stronger model (for example through the Lovable AI gateway) generate the supervision signal for a local sdev model.
+`teacher_query` lets a stronger model (for example through the Lovable AI
+gateway) generate the supervision signal for a local sdev model.
 
-***
+---
 
 #### 7. FFI and native acceleration
 
@@ -5079,56 +5260,71 @@ forge gemm be bind(lib, "cblas_dgemm", "void", ["i32", "ptr", "ptr", "ptr"])
 invoke(gemm, [ ... ])
 ```
 
-Host primitives: `ffi_open`, `ffi_sym`, `ffi_call`, `ffi_close`, `ffi_buf`, `ffi_read_f64` / `ffi_write_f64`, `ffi_read_i32` / `ffi_write_i32`. Typed buffers (`buf_f64`) shuttle large arrays without per-element heap boxing.
+Host primitives: `ffi_open`, `ffi_sym`, `ffi_call`, `ffi_close`,
+`ffi_buf`, `ffi_read_f64` / `ffi_write_f64`, `ffi_read_i32` /
+`ffi_write_i32`. Typed buffers (`buf_f64`) shuttle large arrays without
+per-element heap boxing.
 
-Buffers work everywhere, including the browser. Library loading requires a native host; without one `ffi_open` returns `void`, so guarded sdev code falls back to the pure-sdev path instead of crashing.
+Buffers work everywhere, including the browser. Library loading requires
+a native host; without one `ffi_open` returns `void`, so guarded sdev code
+falls back to the pure-sdev path instead of crashing.
 
 Convenience wrappers: `blas_matmul(...)` and `open_cuda(...)`.
 
-***
+---
 
 #### 8. GPU acceleration
 
-**8.1 WebGPU (browser)**
+##### 8.1 WebGPU (browser)
 
-`lang/stdlib/webgpu.sdev` wraps the host `__wgpu_*` calls: adapter probing, device init, buffer upload/download, a WGSL shader cache, and tuned `matmul`, `add`, and `relu` kernels. A heartbeat detects device loss and falls back to CPU.
+`lang/stdlib/webgpu.sdev` wraps the host `__wgpu_*` calls: adapter
+probing, device init, buffer upload/download, a WGSL shader cache, and
+tuned `matmul`, `add`, and `relu` kernels. A heartbeat detects device
+loss and falls back to CPU.
 
-**8.2 CUDA (native)**
+##### 8.2 CUDA (native)
 
-`lang/stdlib/ml/cuda.sdev` rides the FFI layer onto cudart + cuBLAS: `cuda_device(...)`, `cuda_device_default()`, `cuda_alloc`, `cuda_upload`, `cuda_download`, `cuda_matmul` (via `cublasDgemm`), `cuda_report`.
+`lang/stdlib/ml/cuda.sdev` rides the FFI layer onto cudart + cuBLAS:
+`cuda_device(...)`, `cuda_device_default()`, `cuda_alloc`, `cuda_upload`,
+`cuda_download`, `cuda_matmul` (via `cublasDgemm`), `cuda_report`.
 
 `best_matmul(dev, blas, a, b)` picks the fastest available path:
 
-```
+```text
 CUDA  →  BLAS  →  pure-sdev CPU
 ```
 
-When no driver is present, `cuda_device_default().ok` is `nope` and the chain degrades silently.
+When no driver is present, `cuda_device_default().ok` is `nope` and the
+chain degrades silently.
 
-***
+---
 
 #### 9. Self-modification and autonomous evolution
 
-**9.1 `self_modify.sdev`**
+##### 9.1 `self_modify.sdev`
 
-Gated APIs for a model to read and rewrite sdev's own source: `self_read(path)`, `self_propose(path, body)`, `set_review_hook(fn)`, plus feature-demand mining and weight surgery.
+Gated APIs for a model to read and rewrite sdev's own source:
+`self_read(path)`, `self_propose(path, body)`, `set_review_hook(fn)`,
+plus feature-demand mining and weight surgery.
 
-**Writes are refused until a review hook is installed.** That is the one gate protecting the entire pipeline.
+**Writes are refused until a review hook is installed.** That is the one
+gate protecting the entire pipeline.
 
-**9.2 `auto_evolve.sdev`**
+##### 9.2 `auto_evolve.sdev`
 
 The loop: mine demand → draft a patch → review → apply → fine-tune.
 
-| Function                                               | Purpose                                     |
-| ------------------------------------------------------ | ------------------------------------------- |
-| `is_allowed(path)`                                     | Whitelist check against `SDEV_SOURCE_FILES` |
-| `make_proposal(path, old, new_body, reason)`           | Patch record                                |
-| `apply_proposal(p)`                                    | Route through the review hook and write     |
-| `draft_from_demand(model, demand, path)`               | Model rewrites a file toward the top topic  |
-| `evolve_weights(model, url, key, prompts, epochs, lr)` | Distill and SGD-step                        |
-| `evolve_tick(...)` / `evolve_forever(...)`             | One tick / long-running driver              |
+| Function | Purpose |
+| --- | --- |
+| `is_allowed(path)` | Whitelist check against `SDEV_SOURCE_FILES` |
+| `make_proposal(path, old, new_body, reason)` | Patch record |
+| `apply_proposal(p)` | Route through the review hook and write |
+| `draft_from_demand(model, demand, path)` | Model rewrites a file toward the top topic |
+| `evolve_weights(model, url, key, prompts, epochs, lr)` | Distill and SGD-step |
+| `evolve_tick(...)` / `evolve_forever(...)` | One tick / long-running driver |
 
-Routing: `parse*` → `parser.sdev`, `lex*` → `lexer.sdev`, `doc*` → `SDEV_DOCUMENTATION.md`, everything else → `nn.sdev`.
+Routing: `parse*` → `parser.sdev`, `lex*` → `lexer.sdev`, `doc*` →
+`SDEV_DOCUMENTATION.md`, everything else → `nn.sdev`.
 
 ```sdev
 link "stdlib/ml/auto_evolve.sdev"
@@ -5136,25 +5332,26 @@ set_review_hook(conjure(path, body) :: yield confirm("Apply " + path + "?") ;;)
 evolve_forever(model, sources, "https://ai.gateway.lovable.dev/v1/chat", "$KEY", 24)
 ```
 
-Two independent barriers: the path whitelist runs _before_ the hook, and the hook must explicitly return `yep`.
+Two independent barriers: the path whitelist runs *before* the hook, and
+the hook must explicitly return `yep`.
 
-***
+---
 
 #### 10. Tooling and distribution
 
-| Surface                        | Where                                                                                                |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| Browser IDE                    | `src/pages/IDE.tsx` — editor, terminal, canvas, app and web preview, problems panel, command palette |
-| Playground                     | `src/pages/Index.tsx` — shareable `?code=` links                                                     |
-| Desktop IDE                    | `electron/main.cjs` + `preload.cjs`, with Build Native / Run Native IPC                              |
-| VS Code extension              | `extension/` — grammar, snippets, bundled interpreter                                                |
-| npm CLI                        | published via `.github/workflows/npm-publish.yml`                                                    |
-| Windows installer              | standalone batch installer with bundled editor                                                       |
-| Single-file HTML               | `public/sdev-interpreter.js`                                                                         |
-| Gist packages                  | `summon "GIST_ID"`                                                                                   |
-| 26-language keyword translator | `src/lang/translator.ts`, 500+ mappings                                                              |
+| Surface | Where |
+| --- | --- |
+| Browser IDE | `src/pages/IDE.tsx` — editor, terminal, canvas, app and web preview, problems panel, command palette |
+| Playground | `src/pages/Index.tsx` — shareable `?code=` links |
+| Desktop IDE | `electron/main.cjs` + `preload.cjs`, with Build Native / Run Native IPC |
+| VS Code extension | `extension/` — grammar, snippets, bundled interpreter |
+| npm CLI | published via `.github/workflows/npm-publish.yml` |
+| Windows installer | standalone batch installer with bundled editor |
+| Single-file HTML | `public/sdev-interpreter.js` |
+| Gist packages | `summon "GIST_ID"` |
+| 26-language keyword translator | `src/lang/translator.ts`, 500+ mappings |
 
-***
+---
 
 #### 11. Test suites
 
@@ -5170,406 +5367,931 @@ bunx tsx scripts/test-ml-stdlib.ts      # ML stack executed end to end
 bunx tsx scripts/test-translator.ts     # 26-language translation
 ```
 
-`test-ml-stdlib.ts` runs real programs — matmul, the gradient of x², a linear layer whose loss must decrease, tokenizer round-trip, softmax summing to 1, a GPT forward pass with the right logits shape, generation length, the self-modification gate, the evolution whitelist, and graceful accelerator fallback.
+`test-ml-stdlib.ts` runs real programs — matmul, the gradient of x²,
+a linear layer whose loss must decrease, tokenizer round-trip, softmax
+summing to 1, a GPT forward pass with the right logits shape, generation
+length, the self-modification gate, the evolution whitelist, and graceful
+accelerator fallback.
 
-***
+---
 
 #### 12. Milestone history
 
-| #     | Milestone                                                                                                |
-| ----- | -------------------------------------------------------------------------------------------------------- |
-| 1     | v2 "Prism" runtime in pure JS; lang-bridge                                                               |
-| 2     | Bootstrap scaffolding: seed WASM, compiler skeleton                                                      |
-| 3     | Call frames and recursion in the seed VM                                                                 |
-| 4     | Heap, lists, string concatenation                                                                        |
-| 5a–5b | Byte primitives; `mklist`; self-hosted lexer                                                             |
-| 5c–5g | Self-hosted parser, codegen, globals, control flow, functions                                            |
-| 5h–5n | Semantic then byte-identical fixed point; compile-self shim; widened regions                             |
-| 6     | Boxed f64 floating point                                                                                 |
-| 7     | Host file I/O and networking                                                                             |
-| 8     | ML stdlib: tensor, autograd, nn, transformer, data, self\_modify                                         |
-| 9     | FFI with BLAS/cuBLAS wrappers                                                                            |
-| 10    | WebGPU acceleration                                                                                      |
-| 11    | CUDA fast path                                                                                           |
-| 12    | Autonomous evolution loop                                                                                |
-| 13    | ML host bindings; the stack actually executes on the interpreter                                         |
-| 14    | LM training: softmax cross-entropy autograd, Adam + clipping, top-k sampling, checkpoints (`train.sdev`) |
+| # | Milestone |
+| --- | --- |
+| 1 | v2 "Prism" runtime in pure JS; lang-bridge |
+| 2 | Bootstrap scaffolding: seed WASM, compiler skeleton |
+| 3 | Call frames and recursion in the seed VM |
+| 4 | Heap, lists, string concatenation |
+| 5a–5b | Byte primitives; `mklist`; self-hosted lexer |
+| 5c–5g | Self-hosted parser, codegen, globals, control flow, functions |
+| 5h–5n | Semantic then byte-identical fixed point; compile-self shim; widened regions |
+| 6 | Boxed f64 floating point |
+| 7 | Host file I/O and networking |
+| 8 | ML stdlib: tensor, autograd, nn, transformer, data, self_modify |
+| 9 | FFI with BLAS/cuBLAS wrappers |
+| 10 | WebGPU acceleration |
+| 11 | CUDA fast path |
+| 12 | Autonomous evolution loop |
+| 13 | ML host bindings; the stack actually executes on the interpreter |
+| 14 | LM training: softmax cross-entropy autograd, Adam + clipping, top-k sampling, checkpoints (`train.sdev`) |
 
-Alongside those: the native x86-64 track, the Electron desktop IDE, the launch site and carousel, and the two-minute Remotion pitch video.
+Alongside those: the native x86-64 track, the Electron desktop IDE, the
+launch site and carousel, and the two-minute Remotion pitch video.
 
-***
+---
 
 #### 13. Design principles
 
-1. **Radically unique syntax.** `forge`, `be`, `conjure`, `::`/`;;`. Never converge on Python or JavaScript spelling.
-2. **Two runtimes, strict parity.** Browser WASM and native assembly must behave identically.
-3. **Self-hosting is the proof.** Byte-identical fixed point or it does not count.
-4. **Written in sdev.** The ML stack, the compiler, and the evolution loop are sdev programs — not host-language libraries with an sdev veneer.
-5. **Degrade, never crash.** Absent GPU, driver, network, or file system, every layer falls back to a pure-sdev path.
-6. **Self-modification is gated by default.** Whitelist first, human review hook second.
+1. **Radically unique syntax.** `forge`, `be`, `conjure`, `::`/`;;`.
+   Never converge on Python or JavaScript spelling.
+2. **Two runtimes, strict parity.** Browser WASM and native assembly must
+   behave identically.
+3. **Self-hosting is the proof.** Byte-identical fixed point or it does
+   not count.
+4. **Written in sdev.** The ML stack, the compiler, and the evolution loop
+   are sdev programs — not host-language libraries with an sdev veneer.
+5. **Degrade, never crash.** Absent GPU, driver, network, or file system,
+   every layer falls back to a pure-sdev path.
+6. **Self-modification is gated by default.** Whitelist first, human
+   review hook second.
 
-***
+---
+
 
 ## Part IV — Implementation internals
+
 
 ### Compiler, VM, kernel and roadmap internals
 
 _Source: `public/SDEV_INTERNALS.md`_
 
-This is a contributor document. If you just want to write SDEV, read `SDEV_V2_DOCUMENTATION.md` instead.
+
+This is a contributor document. If you just want to write SDEV, read
+`SDEV_V2_DOCUMENTATION.md` instead.
 
 #### Two backends, one language
 
 SDEV ships **two** code-generators from the same parser:
 
-| Target      | Backend                         | Runs where      | Emits                     |
-| ----------- | ------------------------------- | --------------- | ------------------------- |
-| **Web IDE** | `lang/bootstrap/` (WAT seed VM) | Any browser     | WebAssembly bytecode      |
-| **Desktop** | `lang/native/codegen-x64.mjs`   | Linux/macOS CLI | x86-64 GAS assembly → ELF |
+| Target        | Backend                     | Runs where                | Emits              |
+| ------------- | --------------------------- | ------------------------- | ------------------ |
+| **Web IDE**   | `lang/bootstrap/` (WAT seed VM) | Any browser              | WebAssembly bytecode |
+| **Desktop**   | `lang/native/codegen-x64.mjs` | Linux/macOS CLI          | x86-64 GAS assembly → ELF |
 
-The browser can only execute JS and WASM, so the web IDE stays on WebAssembly — the browser's _native_ assembly. For an actual on-disk executable you can `objdump -d` and `strace`, use the native backend (`node scripts/sdev-native.mjs prog.sdev -o prog`). Both backends share the same lexer, parser, and language semantics.
+The browser can only execute JS and WASM, so the web IDE stays on
+WebAssembly — the browser's *native* assembly. For an actual on-disk
+executable you can `objdump -d` and `strace`, use the native backend
+(`node scripts/sdev-native.mjs prog.sdev -o prog`). Both backends share
+the same lexer, parser, and language semantics.
+
 
 #### Where we are today
 
 **Milestone 1 (launch) — shipped:**
-
-* `lang/runtime/v2.js` — full v2 language in pure JavaScript (zero TypeScript in the language execution path).
+- `lang/runtime/v2.js` — full v2 language in pure JavaScript (zero TypeScript
+  in the language execution path).
 
 **Milestone 2 (WASM stage-0) — shipped:**
-
-* `lang/bootstrap/seed.wat` — hand-written WebAssembly Text stack VM, compiled to `public/wasm/sdev-seed.wasm`.
-* `lang/bootstrap/compile.mjs` — bootstrap compiler: SDEV v2 source → VM bytecode.
-* `src/lang-bridge/wasm-runtime.ts` — browser loader with automatic JS fallback for out-of-subset features.
+- `lang/bootstrap/seed.wat` — hand-written WebAssembly Text stack VM,
+  compiled to `public/wasm/sdev-seed.wasm`.
+- `lang/bootstrap/compile.mjs` — bootstrap compiler: SDEV v2 source → VM
+  bytecode.
+- `src/lang-bridge/wasm-runtime.ts` — browser loader with automatic JS
+  fallback for out-of-subset features.
 
 **Milestone 3 (call frames + recursion) — shipped:**
-
-* Seed VM expanded with five new opcodes: `CALL`, `RET`, `ENTER`, `LOAD_LOC`, `STORE_LOC`. Proper call-stack with per-frame return IP, saved FP, and per-frame locals — full recursion and mutual recursion.
-* Bootstrap compiler upgraded to a two-pass emitter with a symbol table (globals vs locals), function decls (`to name with p1 p2 … end`), `return`, and both `fn(a, b)` and `fn with a b` call forms.
+- Seed VM expanded with five new opcodes: `CALL`, `RET`, `ENTER`,
+  `LOAD_LOC`, `STORE_LOC`. Proper call-stack with per-frame return IP,
+  saved FP, and per-frame locals — full recursion and mutual recursion.
+- Bootstrap compiler upgraded to a two-pass emitter with a symbol table
+  (globals vs locals), function decls (`to name with p1 p2 … end`),
+  `return`, and both `fn(a, b)` and `fn with a b` call forms.
 
 **Milestone 4 (heap, lists, string manipulation) — shipped:**
-
-* Seed VM memory grown to 4 pages (256 KiB) with a bump-pointer heap at `0x10000..0x40000`. New opcodes: `POP`, `ALLOC`, `NEWLIST`, `LGET`, `LSET`, `LEN`, `STRCAT`. Lists are heap blocks laid out as `[u32 length | u32 items…]`; dynamic strings use the same `[u32 length | utf-8 bytes]` shape as the interned pool, so `SAY_STR` handles both transparently.
-* Bootstrap compiler grew list literals `[a, b, c]`, index reads `xs[i]`, index assignment `set xs[i] to v`, per-scope type tracking, and two polymorphic builtins: `length(x)` (lists or strings) and `concat(a, b)`. The `+` operator promotes to `STRCAT` when either operand is string-typed.
-* `scripts/test-wasm-runtime.mjs` now covers 10 programs including list-sum loops, in-place mutation, and multi-way string concat. All pass entirely inside WAT-authored WebAssembly.
+- Seed VM memory grown to 4 pages (256 KiB) with a bump-pointer heap at
+  `0x10000..0x40000`. New opcodes: `POP`, `ALLOC`, `NEWLIST`, `LGET`,
+  `LSET`, `LEN`, `STRCAT`. Lists are heap blocks laid out as
+  `[u32 length | u32 items…]`; dynamic strings use the same
+  `[u32 length | utf-8 bytes]` shape as the interned pool, so `SAY_STR`
+  handles both transparently.
+- Bootstrap compiler grew list literals `[a, b, c]`, index reads
+  `xs[i]`, index assignment `set xs[i] to v`, per-scope type tracking,
+  and two polymorphic builtins: `length(x)` (lists or strings) and
+  `concat(a, b)`. The `+` operator promotes to `STRCAT` when either
+  operand is string-typed.
+- `scripts/test-wasm-runtime.mjs` now covers 10 programs including
+  list-sum loops, in-place mutation, and multi-way string concat. All
+  pass entirely inside WAT-authored WebAssembly.
 
 **Milestone 5a (byte-level string primitives) — shipped:**
-
-* Seed VM gained three opcodes: `SGET` (byte read), `CHR` (byte → 1-char string on the heap), `I2S` (int → decimal-string on the heap). Together with `LEN` and `STRCAT` this is the minimum surface a self-hosted lexer needs to slice source text.
-* Bootstrap compiler exposes them as builtins `ord(s, i)`, `chr(n)`, and `str(n)`. Builtins now carry a `ret` type so scope typing propagates string-ness through nested calls (e.g. `"n=" + str(7)` promotes `+` to `STRCAT`).
-* Regression suite grew to 13 programs, including a byte-level uppercase loop that only uses `ord` + `chr` + `+` to build the result.
+- Seed VM gained three opcodes: `SGET` (byte read), `CHR` (byte → 1-char
+  string on the heap), `I2S` (int → decimal-string on the heap). Together
+  with `LEN` and `STRCAT` this is the minimum surface a self-hosted lexer
+  needs to slice source text.
+- Bootstrap compiler exposes them as builtins `ord(s, i)`, `chr(n)`, and
+  `str(n)`. Builtins now carry a `ret` type so scope typing propagates
+  string-ness through nested calls (e.g. `"n=" + str(7)` promotes `+` to
+  `STRCAT`).
+- Regression suite grew to 13 programs, including a byte-level uppercase
+  loop that only uses `ord` + `chr` + `+` to build the result.
 
 **Milestone 5b (self-hosted lexer) — shipped:**
-
-* `lang/compiler/lexer.sdev` is written entirely in SDEV. It tokenizes integers, identifiers, string literals, single-char punctuation, and newlines by walking a source string byte-by-byte with `ord`/`chr`/`str`.
-* New seed opcode `LNEW` (allocate zeroed n-cell list) landed in `seed.wat` — the parser milestone will use it for a growable token buffer; the lexer itself streams tokens with `say` for now.
-* `scripts/test-self-lexer.mjs` runs the SDEV lexer through the WAT VM on 6 sample programs and diffs the token stream against a JS reference implementation of the same rules. All 6 match byte-for-byte. No lexer logic remains in JavaScript.
+- `lang/compiler/lexer.sdev` is written entirely in SDEV. It tokenizes
+  integers, identifiers, string literals, single-char punctuation, and
+  newlines by walking a source string byte-by-byte with `ord`/`chr`/`str`.
+- New seed opcode `LNEW` (allocate zeroed n-cell list) landed in
+  `seed.wat` — the parser milestone will use it for a growable token
+  buffer; the lexer itself streams tokens with `say` for now.
+- `scripts/test-self-lexer.mjs` runs the SDEV lexer through the WAT VM
+  on 6 sample programs and diffs the token stream against a JS reference
+  implementation of the same rules. All 6 match byte-for-byte. No lexer
+  logic remains in JavaScript.
 
 **Milestone 5c (self-hosted expression parser) — shipped:**
-
-* `lang/compiler/parser.sdev` is a mutually-recursive precedence-climbing parser written in SDEV. It reads tokens from global buffers (`tk_kind`, `tk_num`, `tk_count`) that a top-level lex loop fills, and streams the parse in reverse-Polish form via `say`. Handles `+ - * /`, parenthesized sub-expressions, and correct left-associativity.
-* `scripts/test-self-parser.mjs` diffs the SDEV parser's RPN against a JS reference on 7 expression shapes (single atom, precedence, nested parens, mixed operators). All match byte-for-byte.
-* Together with the M5b lexer, the front-end for arithmetic expressions now lives entirely in SDEV — the JS bootstrap only bytes-compiles it.
+- `lang/compiler/parser.sdev` is a mutually-recursive precedence-climbing
+  parser written in SDEV. It reads tokens from global buffers (`tk_kind`,
+  `tk_num`, `tk_count`) that a top-level lex loop fills, and streams the
+  parse in reverse-Polish form via `say`. Handles `+ - * /`, parenthesized
+  sub-expressions, and correct left-associativity.
+- `scripts/test-self-parser.mjs` diffs the SDEV parser's RPN against a JS
+  reference on 7 expression shapes (single atom, precedence, nested
+  parens, mixed operators). All match byte-for-byte.
+- Together with the M5b lexer, the front-end for arithmetic expressions
+  now lives entirely in SDEV — the JS bootstrap only bytes-compiles it.
 
 **Milestone 5d (self-hosted codegen — first end-to-end) — shipped:**
-
-* `lang/compiler/codegen.sdev` is a compiler pass written in SDEV. It emits real seed-VM bytecode (PUSH\_I32, ADD/SUB/MUL/DIV, SAY\_I32, HALT) into a global `bc` buffer, using `bc[0]` as the byte count so the whole compiler can update the count via list mutation from inside functions without needing global writes.
-* `scripts/test-self-codegen.mjs` runs the SDEV compiler through the seed WASM VM on 6 source programs, harvests the emitted bytes, executes them in a _fresh_ seed WASM instance, and diffs the output against what the JS bootstrap compiler produces for the same source. All 6 match.
-* Bootstrap compiler tweak: `set x[i] to v` is now correctly treated as a mutation of an existing binding (never introduces a shadowing local), which unblocks self-hosted compiler passes that write into global heap buffers from inside functions.
+- `lang/compiler/codegen.sdev` is a compiler pass written in SDEV. It
+  emits real seed-VM bytecode (PUSH_I32, ADD/SUB/MUL/DIV, SAY_I32, HALT)
+  into a global `bc` buffer, using `bc[0]` as the byte count so the whole
+  compiler can update the count via list mutation from inside functions
+  without needing global writes.
+- `scripts/test-self-codegen.mjs` runs the SDEV compiler through the seed
+  WASM VM on 6 source programs, harvests the emitted bytes, executes them
+  in a *fresh* seed WASM instance, and diffs the output against what the
+  JS bootstrap compiler produces for the same source. All 6 match.
+- Bootstrap compiler tweak: `set x[i] to v` is now correctly treated as a
+  mutation of an existing binding (never introduces a shadowing local),
+  which unblocks self-hosted compiler passes that write into global heap
+  buffers from inside functions.
 
 **Milestone 5e (variables in the self-hosted compiler) — shipped:**
-
-* `codegen.sdev` grew a symbol table: `sym_names` is a list whose cell 0 holds the interned-name count and whose cells 1..count hold the names. A new `intern_name(name)` function returns the u8 slot index the seed VM uses for `LOAD` / `STORE`, adding the name on first sight. All mutation goes through index-assignment on `sym_names` so it survives the bootstrap's "plain `set` inside a function creates a fresh local" rule.
-* Parser: identifier atoms emit `LOAD <slot>`; the driver recognises `set NAME to EXPR` and emits the expression followed by `STORE <slot>`.
-* `scripts/test-self-codegen.mjs` now runs 10 cases including `set + read`, reused reads, an in-place accumulator, and multi-var expressions. Self-compiled output matches the JS bootstrap byte-for-byte on every one.
+- `codegen.sdev` grew a symbol table: `sym_names` is a list whose cell 0
+  holds the interned-name count and whose cells 1..count hold the names.
+  A new `intern_name(name)` function returns the u8 slot index the seed VM
+  uses for `LOAD` / `STORE`, adding the name on first sight. All mutation
+  goes through index-assignment on `sym_names` so it survives the
+  bootstrap's "plain `set` inside a function creates a fresh local" rule.
+- Parser: identifier atoms emit `LOAD <slot>`; the driver recognises
+  `set NAME to EXPR` and emits the expression followed by `STORE <slot>`.
+- `scripts/test-self-codegen.mjs` now runs 10 cases including
+  `set + read`, reused reads, an in-place accumulator, and multi-var
+  expressions. Self-compiled output matches the JS bootstrap byte-for-byte
+  on every one.
 
 **Milestone 5f (control flow + comparisons) — shipped:**
-
-* `codegen.sdev` gained a real `parse_stmt` / `parse_block` mutual-recursion pair. Statements now cover `say`, `set NAME to EXPR`, `if EXPR … end`, `if EXPR … else … end`, and `while EXPR … end`. Blocks nest arbitrarily.
-* The expression grammar grew a `parse_cmp` layer: `is`, `is not`, `<`, `>`, `<=`, `>=` emit `EQ`/`NE`/`LT`/`GT`/`LE`/`GE`. The driver's inline lexer now peeks one byte ahead to fold `<=` / `>=` into single tokens (sentinel punctuation codes 300 / 301).
-* Two new SDEV helpers, `placeholder16` and `patch_i16`, handle forward and backward `JZ`/`JMP` offsets — including proper two's-complement encoding for negative offsets that back-edges of `while` loops need.
-* `scripts/test-self-codegen.mjs` grew to 21 cases: comparisons in every direction, `if`/`else` with both branches, `while` counting and summation, and nested `if` inside `while` (a fizzbuzz-flavoured shape). Every case matches the JS bootstrap byte-for-byte.
+- `codegen.sdev` gained a real `parse_stmt` / `parse_block` mutual-recursion
+  pair. Statements now cover `say`, `set NAME to EXPR`, `if EXPR … end`,
+  `if EXPR … else … end`, and `while EXPR … end`. Blocks nest arbitrarily.
+- The expression grammar grew a `parse_cmp` layer: `is`, `is not`, `<`,
+  `>`, `<=`, `>=` emit `EQ`/`NE`/`LT`/`GT`/`LE`/`GE`. The driver's inline
+  lexer now peeks one byte ahead to fold `<=` / `>=` into single tokens
+  (sentinel punctuation codes 300 / 301).
+- Two new SDEV helpers, `placeholder16` and `patch_i16`, handle forward
+  and backward `JZ`/`JMP` offsets — including proper two's-complement
+  encoding for negative offsets that back-edges of `while` loops need.
+- `scripts/test-self-codegen.mjs` grew to 21 cases: comparisons in every
+  direction, `if`/`else` with both branches, `while` counting and
+  summation, and nested `if` inside `while` (a fizzbuzz-flavoured shape).
+  Every case matches the JS bootstrap byte-for-byte.
 
 **Milestone 5g (functions in the self-hosted compiler) — shipped:**
-
-* `codegen.sdev` gained function declarations (`to NAME with p1 p2 … end`), `return EXPR?`, and call-syntax atoms (`NAME(a, b)`).
-* Function bodies are emitted inline, bracketed by a `JMP` that skips over them so top-level flow doesn't fall in. Each body's byte offset, arity, and name go into three parallel global tables (`fn_names` / `fn_offsets` / `fn_arities`) so subsequent `CALL` sites resolve directly — no patch pass yet, so callers must appear after their callee. Recursive `fact` / `fib` work because a function can call itself once its own offset has been recorded.
-* Locals get their own scope: a per-function `loc_names` list is reset on every `to`, params occupy slots 0..n-1, and any `set NAME` inside the body allocates a fresh local slot. `emit_load_ident` / `emit_store_ident` dispatch to `LOAD_LOC` / `STORE_LOC` while `in_func[0]` is 1 and fall back to the global table otherwise.
-* Six builtins compile to single opcodes: `length` → `LEN`, `concat` → `STRCAT`, `ord` → `SGET`, `chr` → `CHR`, `str` → `I2S`, `mklist` → `LNEW`.
-* `scripts/test-self-codegen.mjs` grew to 31 cases covering zero/one/two argument functions, functions using locals + `while` loops, functions calling other functions, recursive factorial, recursive `fib(10)`, and the `mklist`/`length` builtins. Every case matches the JS bootstrap byte-for-byte.
+- `codegen.sdev` gained function declarations (`to NAME with p1 p2 …
+  end`), `return EXPR?`, and call-syntax atoms (`NAME(a, b)`).
+- Function bodies are emitted inline, bracketed by a `JMP` that skips
+  over them so top-level flow doesn't fall in. Each body's byte offset,
+  arity, and name go into three parallel global tables
+  (`fn_names` / `fn_offsets` / `fn_arities`) so subsequent `CALL` sites
+  resolve directly — no patch pass yet, so callers must appear after
+  their callee. Recursive `fact` / `fib` work because a function can
+  call itself once its own offset has been recorded.
+- Locals get their own scope: a per-function `loc_names` list is reset
+  on every `to`, params occupy slots 0..n-1, and any `set NAME` inside
+  the body allocates a fresh local slot. `emit_load_ident` /
+  `emit_store_ident` dispatch to `LOAD_LOC` / `STORE_LOC` while
+  `in_func[0]` is 1 and fall back to the global table otherwise.
+- Six builtins compile to single opcodes: `length` → `LEN`,
+  `concat` → `STRCAT`, `ord` → `SGET`, `chr` → `CHR`, `str` → `I2S`,
+  `mklist` → `LNEW`.
+- `scripts/test-self-codegen.mjs` grew to 31 cases covering zero/one/two
+  argument functions, functions using locals + `while` loops, functions
+  calling other functions, recursive factorial, recursive `fib(10)`, and
+  the `mklist`/`length` builtins. Every case matches the JS bootstrap
+  byte-for-byte.
 
 **Milestone 5h (strings, lists, and indexing in the self-hosted compiler) — shipped:**
-
-* `codegen.sdev` grew expression-type tracking: a global `expr_type[0]` set by every parse\_\* to 0 (int) or 1 (str). Two parallel tables, `sym_types` and `loc_types`, remember the type of every stored global and local so later loads restore it. `say` now picks `SAY_I32` vs `SAY_STR` from `expr_type[0]`, and `+` promotes to `STRCAT` when either operand is string-typed.
-* String literals `"…"` are compiled without a shared string pool (the self-hosted bytecode runs in a fresh WASM instance with an empty pool). Each literal is built at runtime as `LNEW(0)` + one `PUSH_I32 c; CHR; STRCAT` per byte, yielding a heap-string block that `SAY_STR` handles transparently. Empty strings compile to a bare `LNEW(0)`.
-* List literals `[a, b, c]` emit each element then `NEWLIST <u16 n>`. Postfix indexing `x[i]` chains any number of `LGET`s after an atom via a new `parse_postfix` helper wired into `parse_mul`. Index assignment `set xs[i] to v` emits `LOAD xs; expr(i); expr(v); LSET`.
-* Driver upgrades in `scripts/test-self-codegen.mjs`: the inline lexer now tokenizes `"…"` as string tokens (kind 3), and the driver seeds the new type tables. The suite grew from 31 to 43 test cases, adding literals, concat, `chr`/`ord`, list literals + reads, in-place list mutation via `set xs[i] to v`, and string-aware `+` — all match the JS bootstrap's output byte-for-byte.
+- `codegen.sdev` grew expression-type tracking: a global `expr_type[0]`
+  set by every parse_* to 0 (int) or 1 (str). Two parallel tables,
+  `sym_types` and `loc_types`, remember the type of every stored global
+  and local so later loads restore it. `say` now picks `SAY_I32` vs
+  `SAY_STR` from `expr_type[0]`, and `+` promotes to `STRCAT` when
+  either operand is string-typed.
+- String literals `"…"` are compiled without a shared string pool
+  (the self-hosted bytecode runs in a fresh WASM instance with an empty
+  pool). Each literal is built at runtime as `LNEW(0)` + one
+  `PUSH_I32 c; CHR; STRCAT` per byte, yielding a heap-string block that
+  `SAY_STR` handles transparently. Empty strings compile to a bare
+  `LNEW(0)`.
+- List literals `[a, b, c]` emit each element then `NEWLIST <u16 n>`.
+  Postfix indexing `x[i]` chains any number of `LGET`s after an atom via
+  a new `parse_postfix` helper wired into `parse_mul`. Index assignment
+  `set xs[i] to v` emits `LOAD xs; expr(i); expr(v); LSET`.
+- Driver upgrades in `scripts/test-self-codegen.mjs`: the inline lexer
+  now tokenizes `"…"` as string tokens (kind 3), and the driver seeds
+  the new type tables. The suite grew from 31 to 43 test cases, adding
+  literals, concat, `chr`/`ord`, list literals + reads, in-place list
+  mutation via `set xs[i] to v`, and string-aware `+` — all match the
+  JS bootstrap's output byte-for-byte.
 
 **Milestone 5i (forward references + return types) — shipped:**
-
-* `codegen.sdev` gained a pending-calls patch table: unresolved `CALL`s now emit a zero u16 target and record the patch position in two parallel globals (`pend_names` / `pend_pos`). After the whole program parses, `resolve_pending_calls` walks the table and back-patches every site once all `fn_offsets` are known. Forward references and mutual recursion (`is_even ↔ is_odd`) compile without reordering.
-* Function return types are tracked in a new `fn_ret_types` table parallel to `fn_names`. Every `return EXPR` inside a body upgrades the current function's slot to `str` if the returned expression is string-typed; `emit_call` writes that recorded type into `expr_type[0]` so `say greet("world")` picks `SAY_STR` and `"hi " + greet(name)` promotes to `STRCAT`.
-* The JS bootstrap now runs a matching fixed-point return-type inference pass (`inferReturnTypeOf`) before emitting bodies, so its `call` emitter agrees with the self-hosted compiler on every case in the suite — 50/50 tests pass byte-for-byte.
-* `scripts/test-self-codegen.mjs` grew seven new cases: forward calls, forward calls inside expressions, mutual `is_even`/`is_odd` recursion, zero-arg string-returning fns, string-fn concat, string-fn with a string parameter, and a fn returning `str` down every branch.
+- `codegen.sdev` gained a pending-calls patch table: unresolved `CALL`s
+  now emit a zero u16 target and record the patch position in two
+  parallel globals (`pend_names` / `pend_pos`). After the whole program
+  parses, `resolve_pending_calls` walks the table and back-patches every
+  site once all `fn_offsets` are known. Forward references and mutual
+  recursion (`is_even ↔ is_odd`) compile without reordering.
+- Function return types are tracked in a new `fn_ret_types` table
+  parallel to `fn_names`. Every `return EXPR` inside a body upgrades the
+  current function's slot to `str` if the returned expression is
+  string-typed; `emit_call` writes that recorded type into
+  `expr_type[0]` so `say greet("world")` picks `SAY_STR` and
+  `"hi " + greet(name)` promotes to `STRCAT`.
+- The JS bootstrap now runs a matching fixed-point return-type inference
+  pass (`inferReturnTypeOf`) before emitting bodies, so its `call`
+  emitter agrees with the self-hosted compiler on every case in the
+  suite — 50/50 tests pass byte-for-byte.
+- `scripts/test-self-codegen.mjs` grew seven new cases: forward calls,
+  forward calls inside expressions, mutual `is_even`/`is_odd` recursion,
+  zero-arg string-returning fns, string-fn concat, string-fn with a
+  string parameter, and a fn returning `str` down every branch.
 
 **Milestone 5j (semantic fixed-point self-compile) — shipped:**
-
-* `scripts/test-self-codegen.mjs` now diffs the self-hosted compiler against the JS bootstrap on two axes: (1) runtime output equivalence and (2) byte-for-byte bytecode identity. All 50/50 cases achieve output equivalence — the self-hosted codegen is a semantic fixed point of the JS bootstrap.
-* Byte-for-byte identity currently holds on 2/50 trivial cases. Two architectural divergences account for every remaining mismatch, both semantics-preserving:
-  * **String encoding.** The JS bootstrap folds every string literal into a shared string pool and emits `LSTR` (opcode `0x02`) with a pool index. The self-hosted compiler has no pool: literals compile to `LNEW(0)` plus one `LI32/CHR/STRCAT` per byte.
-  * **Function placement.** The JS bootstrap pre-scans and lifts every `to …` definition ahead of top-level code, so a program that calls a function before defining it produces the same layout as one that defines it first. The self-hosted compiler emits in source order, with a `JMP` over each body where it appears; forward references are patched by `resolve_pending_calls` (see Milestone 5i).
-* Both divergences are tracked as the "byte-identity cleanup" pass that precedes deletion of the JS bootstrap. Reaching byte identity requires either teaching the self-hosted compiler to build a string pool + hoist function definitions, or removing those features from the JS bootstrap. Milestone 5k will pick one direction and land it.
+- `scripts/test-self-codegen.mjs` now diffs the self-hosted compiler
+  against the JS bootstrap on two axes: (1) runtime output equivalence
+  and (2) byte-for-byte bytecode identity. All 50/50 cases achieve
+  output equivalence — the self-hosted codegen is a semantic fixed point
+  of the JS bootstrap.
+- Byte-for-byte identity currently holds on 2/50 trivial cases. Two
+  architectural divergences account for every remaining mismatch, both
+  semantics-preserving:
+  - **String encoding.** The JS bootstrap folds every string literal
+    into a shared string pool and emits `LSTR` (opcode `0x02`) with a
+    pool index. The self-hosted compiler has no pool: literals compile
+    to `LNEW(0)` plus one `LI32/CHR/STRCAT` per byte.
+  - **Function placement.** The JS bootstrap pre-scans and lifts every
+    `to …` definition ahead of top-level code, so a program that calls
+    a function before defining it produces the same layout as one that
+    defines it first. The self-hosted compiler emits in source order,
+    with a `JMP` over each body where it appears; forward references
+    are patched by `resolve_pending_calls` (see Milestone 5i).
+- Both divergences are tracked as the "byte-identity cleanup" pass that
+  precedes deletion of the JS bootstrap. Reaching byte identity requires
+  either teaching the self-hosted compiler to build a string pool +
+  hoist function definitions, or removing those features from the JS
+  bootstrap. Milestone 5k will pick one direction and land it.
 
 **Milestone 5k (byte-identity fixed point) — shipped:**
-
-* `lang/compiler/codegen.sdev` now converges on the JS bootstrap's exact wire format. All 50/50 test cases produce byte-identical bytecode **and** a byte-identical string pool. The `≡` marker replaces `~` across the entire suite.
-* Four architectural pieces landed together:
-  * **Two-pass compilation.** `emit_byte` is gated on `emit_enabled[0]`. Pass 1 runs `parse_stmt` twice with emit disabled: it registers each function (name, arity, body-start token index, extras count) and lets `return EXPR` statements populate `fn_ret_types[i]` to fixed point. Pass 2 resets globals and emits for real.
-  * **Function hoisting.** Pass 2 emits a leading `JMP → main` placeholder, then walks the registered functions in registration order — each body is re-parsed from `fn_body_start[i]` and emitted contiguously. The leading `JMP` is back-patched once every body is laid down, then main is emitted with `skip_fn_defs[0]=1` so `parse_stmt` silently consumes any `to … end` block it encounters.
-  * **ENTER elision.** `fn_extras[i]` is measured during pass 1 by reading `loc_names[0] - n_params` after the walk. Pass 2 emits `ENTER extras` only when `extras > 0`, matching the JS bootstrap's zero-locals shortcut.
-  * **Shared string pool.** New helper `intern_str(s)` builds a pool matching the bootstrap's `[u32 len][utf8…]` records. `parse_atom`'s string branch now emits `PUSH_STR` (`0x02`) + u16 pool offset instead of the runtime `LNEW/CHR/STRCAT` sequence. The test driver ingests the pool from a trailing `say` dump and installs it at memory offset 0 for execution.
-* One `emit_call` refinement was needed for byte identity: mutually recursive calls (like `is_even ↔ is_odd`) can hit a callee whose offset is not yet set even though its name resolves. `emit_call` now treats any `fn_offsets[idx+1] == 0` as a deferred call and records a patch site; `resolve_pending_calls` fills in the u16 target after every body is emitted.
-* `scripts/test-self-codegen.mjs` was reworked to (a) receive both a bytecode stream and a string pool from the codegen, (b) diff both against the JS bootstrap, and (c) fail on any mismatch. Its summary now reports `bytecode: 50/50` and `pool: 50/50`.
+- `lang/compiler/codegen.sdev` now converges on the JS bootstrap's exact
+  wire format. All 50/50 test cases produce byte-identical bytecode **and**
+  a byte-identical string pool. The `≡` marker replaces `~` across the
+  entire suite.
+- Four architectural pieces landed together:
+  - **Two-pass compilation.** `emit_byte` is gated on `emit_enabled[0]`.
+    Pass 1 runs `parse_stmt` twice with emit disabled: it registers each
+    function (name, arity, body-start token index, extras count) and lets
+    `return EXPR` statements populate `fn_ret_types[i]` to fixed point.
+    Pass 2 resets globals and emits for real.
+  - **Function hoisting.** Pass 2 emits a leading `JMP → main`
+    placeholder, then walks the registered functions in registration
+    order — each body is re-parsed from `fn_body_start[i]` and emitted
+    contiguously. The leading `JMP` is back-patched once every body is
+    laid down, then main is emitted with `skip_fn_defs[0]=1` so
+    `parse_stmt` silently consumes any `to … end` block it encounters.
+  - **ENTER elision.** `fn_extras[i]` is measured during pass 1 by
+    reading `loc_names[0] - n_params` after the walk. Pass 2 emits
+    `ENTER extras` only when `extras > 0`, matching the JS bootstrap's
+    zero-locals shortcut.
+  - **Shared string pool.** New helper `intern_str(s)` builds a pool
+    matching the bootstrap's `[u32 len][utf8…]` records. `parse_atom`'s
+    string branch now emits `PUSH_STR` (`0x02`) + u16 pool offset
+    instead of the runtime `LNEW/CHR/STRCAT` sequence. The test driver
+    ingests the pool from a trailing `say` dump and installs it at
+    memory offset 0 for execution.
+- One `emit_call` refinement was needed for byte identity: mutually
+  recursive calls (like `is_even ↔ is_odd`) can hit a callee whose
+  offset is not yet set even though its name resolves. `emit_call` now
+  treats any `fn_offsets[idx+1] == 0` as a deferred call and records a
+  patch site; `resolve_pending_calls` fills in the u16 target after
+  every body is emitted.
+- `scripts/test-self-codegen.mjs` was reworked to (a) receive both a
+  bytecode stream and a string pool from the codegen, (b) diff both
+  against the JS bootstrap, and (c) fail on any mismatch. Its summary
+  now reports `bytecode: 50/50` and `pool: 50/50`.
 
 **Milestone 5l (self-hosted compile module surface) — shipped:**
-
-* Introduced `lang/compiler/compile-self.mjs`, a Node module that exposes the SDEV-authored codegen as a plain `compile(source) -> { bytecode, stringPool }` function — the same shape the JS bootstrap offers. Internally it drives `lang/compiler/codegen.sdev` through the seed WASM VM (with the bootstrap used once, in-memory, only to compile the driver harness itself).
-* New gate `scripts/test-shim-fixed-point.mjs` re-runs the codegen suite through the new module surface and asserts byte-identity against the JS bootstrap. Result: **43/43 cases byte-identical.**
-* The JS bootstrap remains the ground truth for `test-self-lexer.mjs`, `test-self-parser.mjs`, and `wasm-runtime.ts` until the shim can compile the entire toolchain. Widening the self-hosted codegen to cover `lexer.sdev` / `parser.sdev` / `codegen.sdev` is Milestone 5m; only after that can `compile.mjs` be deleted and the runtime path fully rewired.
+- Introduced `lang/compiler/compile-self.mjs`, a Node module that exposes
+  the SDEV-authored codegen as a plain `compile(source) -> { bytecode,
+  stringPool }` function — the same shape the JS bootstrap offers. Internally
+  it drives `lang/compiler/codegen.sdev` through the seed WASM VM (with the
+  bootstrap used once, in-memory, only to compile the driver harness itself).
+- New gate `scripts/test-shim-fixed-point.mjs` re-runs the codegen suite
+  through the new module surface and asserts byte-identity against the JS
+  bootstrap. Result: **43/43 cases byte-identical.**
+- The JS bootstrap remains the ground truth for `test-self-lexer.mjs`,
+  `test-self-parser.mjs`, and `wasm-runtime.ts` until the shim can compile
+  the entire toolchain. Widening the self-hosted codegen to cover
+  `lexer.sdev` / `parser.sdev` / `codegen.sdev` is Milestone 5m; only
+  after that can `compile.mjs` be deleted and the runtime path fully
+  rewired.
 
 **Milestone 5m (toolchain round-trip through the shim) — partial:**
-
-* Added a `#`-comment branch to the inline lexer in `compile-self.mjs`. With that single fix, the self-hosted codegen now compiles the real `lang/compiler/lexer.sdev` **byte-identically** to the JS bootstrap (`bc=746, pool=41`) and the real `lang/compiler/parser.sdev` **byte-identically** (`bc=380, pool=38`).
-* New gate `scripts/test-self-toolchain.mjs` diffs each toolchain source through the shim and hard-fails on required-target mismatches. Current status: **lexer ✓, parser ✓, codegen ⚠** — the third one throws `string pool overflow` inside the JS bootstrap that compiles the shim driver, because embedding `codegen.sdev` itself as a `set src to "…"` string literal blows past the seed VM's 8 KiB pool region.
-* Probe script `scripts/probe-self-lexer.mjs` reports the first diverging bytecode / pool offset for any input, making the next regression easy to bisect.
+- Added a `#`-comment branch to the inline lexer in `compile-self.mjs`.
+  With that single fix, the self-hosted codegen now compiles the real
+  `lang/compiler/lexer.sdev` **byte-identically** to the JS bootstrap
+  (`bc=746, pool=41`) and the real `lang/compiler/parser.sdev`
+  **byte-identically** (`bc=380, pool=38`).
+- New gate `scripts/test-self-toolchain.mjs` diffs each toolchain source
+  through the shim and hard-fails on required-target mismatches. Current
+  status: **lexer ✓, parser ✓, codegen ⚠** — the third one throws
+  `string pool overflow` inside the JS bootstrap that compiles the shim
+  driver, because embedding `codegen.sdev` itself as a `set src to "…"`
+  string literal blows past the seed VM's 8 KiB pool region.
+- Probe script `scripts/probe-self-lexer.mjs` reports the first diverging
+  bytecode / pool offset for any input, making the next regression easy
+  to bisect.
 
 **Milestone 5n (widen seed pool / driver plumbing) — shipped:**
-
-* Bumped `seed.wat` memory layout: string pool grew from 8 KiB to **64 KiB** (0x00000..0x0FFFF), and every downstream region moved up in lockstep — `VAR_BASE=0x10000`, `STACK_BASE=0x14000`, `CALL_BASE=0x18000`, `CODE_BASE=0x1C000`, `HEAP_BASE=0x30000`. Linear memory grew from 4 → 32 pages (256 KiB → 2 MiB) so the heap has room for the driver's larger scratch lists. u16 `PUSH_STR` offsets still fit (max 0xFFFF) so no opcode changes.
-* Bumped the bootstrap emitter's compile-time pool buffer in lockstep (`lang/bootstrap/compile.mjs`: `0x2000 → 0x10000`) so it can intern the \~21 KiB `codegen.sdev` source literal that the shim driver embeds.
-* Widened the driver's inline scratch lists in `compile-self.mjs` (`tk_kind/tk_num/tk_txt` 2000 → 20000, `bc` 16384 → 65536, `pool_bytes` 8192 → 32768) so the self-hosted codegen can process a 20 KiB+ source without silently overflowing heap allocations.
-* Result: `test-self-toolchain.mjs` now runs codegen.sdev through the shim end-to-end without throwing. Lexer + parser still byte-identical (`bc=746/pool=41`, `bc=380/pool=38`); codegen.sdev now diverges _semantically_ (self=486B / ref=5620B) — function bodies aren't being emitted — instead of failing at the seed VM boundary. That's the Milestone 5o gap, not 5n's.
+- Bumped `seed.wat` memory layout: string pool grew from 8 KiB to
+  **64 KiB** (0x00000..0x0FFFF), and every downstream region moved up in
+  lockstep — `VAR_BASE=0x10000`, `STACK_BASE=0x14000`,
+  `CALL_BASE=0x18000`, `CODE_BASE=0x1C000`, `HEAP_BASE=0x30000`. Linear
+  memory grew from 4 → 32 pages (256 KiB → 2 MiB) so the heap has room
+  for the driver's larger scratch lists. u16 `PUSH_STR` offsets still
+  fit (max 0xFFFF) so no opcode changes.
+- Bumped the bootstrap emitter's compile-time pool buffer in lockstep
+  (`lang/bootstrap/compile.mjs`: `0x2000 → 0x10000`) so it can intern
+  the ~21 KiB `codegen.sdev` source literal that the shim driver embeds.
+- Widened the driver's inline scratch lists in `compile-self.mjs`
+  (`tk_kind/tk_num/tk_txt` 2000 → 20000, `bc` 16384 → 65536,
+  `pool_bytes` 8192 → 32768) so the self-hosted codegen can process a
+  20 KiB+ source without silently overflowing heap allocations.
+- Result: `test-self-toolchain.mjs` now runs codegen.sdev through the
+  shim end-to-end without throwing. Lexer + parser still byte-identical
+  (`bc=746/pool=41`, `bc=380/pool=38`); codegen.sdev now diverges
+  *semantically* (self=486B / ref=5620B) — function bodies aren't being
+  emitted — instead of failing at the seed VM boundary. That's the
+  Milestone 5o gap, not 5n's.
 
 **Milestone 5o (self-hosted codegen self-compile) — shipped:**
+- Diagnosed the 486 B divergence: `codegen.sdev`'s own parser was
+  missing two things it needed to parse itself. First, `parse_mul` did
+  not recognize `%` (MOD, opcode `0x14`), so `emit_i32`'s body — which
+  chains `v % 256` twice — halted mid-function. Second, `parse_stmt`
+  had no expression-statement fallthrough, so bare calls like
+  `emit_byte(x)` (used ~200 times throughout the compiler) fell through
+  every keyword branch and returned `pos` unchanged, stopping the pass-1
+  walk at the first such call.
+- Fixed both: `parse_mul` now emits opcode `0x14` on `%`, and
+  `parse_stmt` finishes with an "identifier ⇒ parse expression + POP"
+  branch that mirrors `exprStmt` in the JS bootstrap. Both changes are
+  strict supersets — no existing case regresses.
+- Result: `test-self-toolchain.mjs` now reports **codegen.sdev
+  byte-identical (bc=5730, pool=136)** through the shim. All three
+  toolchain sources (lexer, parser, codegen) round-trip byte-for-byte
+  through the self-hosted compiler.
 
-* Diagnosed the 486 B divergence: `codegen.sdev`'s own parser was missing two things it needed to parse itself. First, `parse_mul` did not recognize `%` (MOD, opcode `0x14`), so `emit_i32`'s body — which chains `v % 256` twice — halted mid-function. Second, `parse_stmt` had no expression-statement fallthrough, so bare calls like `emit_byte(x)` (used \~200 times throughout the compiler) fell through every keyword branch and returned `pos` unchanged, stopping the pass-1 walk at the first such call.
-* Fixed both: `parse_mul` now emits opcode `0x14` on `%`, and `parse_stmt` finishes with an "identifier ⇒ parse expression + POP" branch that mirrors `exprStmt` in the JS bootstrap. Both changes are strict supersets — no existing case regresses.
-* Result: `test-self-toolchain.mjs` now reports **codegen.sdev byte-identical (bc=5730, pool=136)** through the shim. All three toolchain sources (lexer, parser, codegen) round-trip byte-for-byte through the self-hosted compiler.
+(Milestone 5p — retiring the JS bootstrap — is documented after Milestone 14,
+in milestone order.)
 
-(Milestone 5p — retiring the JS bootstrap — is documented after Milestone 14, in milestone order.)
+
 
 **Milestone 6 (floats + math opcodes) — shipped:**
-
-* **Representation:** boxed f64. A float lives on the heap as an 8-byte cell; the stack cell holds the pointer. Existing i32 opcodes are untouched, so int-only programs pay zero cost.
-* **New seed opcodes** (`seed.wat`): `PUSH_F64 0xA0` (with 8-byte little-endian payload), `FADD/FSUB/FMUL/FDIV 0xA1..0xA4`, `FLT/FGT/FEQ 0xA5..0xA7` (result is i32 boolean), `I2F/F2I 0xA8..0xA9`, `FNEG/FABS/FSQRT 0xAA..0xAC`, `SAY_F64 0xAD`, and `FMATH 0xAE <u8 op>` for transcendentals (`0 sin, 1 cos, 2 tan, 3 exp, 4 log, 5 pow`).
-* **Two new host imports:** `env.host_say_f64(f64)` and `env.host_fmath(op:i32, a:f64, b:f64) -> f64`. Every wrapper (`wasm-runtime.ts`, all test scripts, and `compile-self.mjs`) provides them; the JS side delegates to `Math.sin/cos/tan/exp/log/pow`.
-* **Compiler (`compile.mjs`):**
-  * Tokenizer now flags any number containing `.` as `isFloat`; the bootstrap parser turns those into `fnum` AST nodes and emits `PUSH_F64` with the correct 8-byte payload.
-  * Mixed-type arithmetic requires an explicit `i2f()` / `f2i()` coercion — codegen is single-pass, so we can't retroactively promote the already-emitted left operand. If BOTH sides are `float`, `+ - * /` become `FADD/FSUB/FMUL/FDIV` and `< > is` become `FLT/FGT/FEQ`.
-  * `say <float>` picks `SAY_F64` automatically via the same type-tracking used for `SAY_STR`.
-  * `inferReturnTypeOf` learned about `float`, so a function that returns `2.5 + x` propagates its float type across call sites.
-* **New builtins:** `i2f, f2i, fneg, fabs, fsqrt` (single-opcode) and `fsin, fcos, ftan, fexp, flog, fpow` (via `FMATH`).
-* **Tests:** `test-wasm-runtime.mjs` grew 5 float cases (literals + arithmetic; `fsqrt/fabs/fneg`; `i2f/f2i` round-trip; comparisons; transcendentals). Full self-hosted toolchain still 100% byte-identical — 50/50 codegen, 6/6 lexer, 7/7 parser.
-* **Why boxed and not stack-widened:** every existing opcode (LOAD/STORE, JZ, CALL frames, list cells, string handles, etc.) assumes 4-byte stack slots. Widening the operand stack to 8 bytes would touch every dispatch arm and every codegen path in `lang/compiler/codegen.sdev`. Boxing pays one heap allocation per produced float in exchange for a strictly additive change — this is the correct trade-off for a bootstrap VM. If tensor math shows it's a bottleneck, the ML stdlib will store contiguous `f64` buffers directly on the heap (as list-of-bytes) and index them via new `TENSOR_*` opcodes, bypassing per-value boxing entirely.
+- **Representation:** boxed f64. A float lives on the heap as an 8-byte
+  cell; the stack cell holds the pointer. Existing i32 opcodes are
+  untouched, so int-only programs pay zero cost.
+- **New seed opcodes** (`seed.wat`):
+  `PUSH_F64 0xA0` (with 8-byte little-endian payload),
+  `FADD/FSUB/FMUL/FDIV 0xA1..0xA4`,
+  `FLT/FGT/FEQ 0xA5..0xA7` (result is i32 boolean),
+  `I2F/F2I 0xA8..0xA9`, `FNEG/FABS/FSQRT 0xAA..0xAC`,
+  `SAY_F64 0xAD`, and `FMATH 0xAE <u8 op>` for transcendentals
+  (`0 sin, 1 cos, 2 tan, 3 exp, 4 log, 5 pow`).
+- **Two new host imports:** `env.host_say_f64(f64)` and
+  `env.host_fmath(op:i32, a:f64, b:f64) -> f64`. Every wrapper
+  (`wasm-runtime.ts`, all test scripts, and `compile-self.mjs`) provides
+  them; the JS side delegates to `Math.sin/cos/tan/exp/log/pow`.
+- **Compiler (`compile.mjs`):**
+  - Tokenizer now flags any number containing `.` as `isFloat`; the
+    bootstrap parser turns those into `fnum` AST nodes and emits
+    `PUSH_F64` with the correct 8-byte payload.
+  - Mixed-type arithmetic requires an explicit `i2f()` / `f2i()`
+    coercion — codegen is single-pass, so we can't retroactively
+    promote the already-emitted left operand. If BOTH sides are
+    `float`, `+ - * /` become `FADD/FSUB/FMUL/FDIV` and `< > is`
+    become `FLT/FGT/FEQ`.
+  - `say <float>` picks `SAY_F64` automatically via the same
+    type-tracking used for `SAY_STR`.
+  - `inferReturnTypeOf` learned about `float`, so a function that
+    returns `2.5 + x` propagates its float type across call sites.
+- **New builtins:** `i2f, f2i, fneg, fabs, fsqrt` (single-opcode) and
+  `fsin, fcos, ftan, fexp, flog, fpow` (via `FMATH`).
+- **Tests:** `test-wasm-runtime.mjs` grew 5 float cases (literals +
+  arithmetic; `fsqrt/fabs/fneg`; `i2f/f2i` round-trip; comparisons;
+  transcendentals). Full self-hosted toolchain still 100%
+  byte-identical — 50/50 codegen, 6/6 lexer, 7/7 parser.
+- **Why boxed and not stack-widened:** every existing opcode
+  (LOAD/STORE, JZ, CALL frames, list cells, string handles, etc.)
+  assumes 4-byte stack slots. Widening the operand stack to 8 bytes
+  would touch every dispatch arm and every codegen path in
+  `lang/compiler/codegen.sdev`. Boxing pays one heap allocation per
+  produced float in exchange for a strictly additive change — this
+  is the correct trade-off for a bootstrap VM. If tensor math shows
+  it's a bottleneck, the ML stdlib will store contiguous `f64`
+  buffers directly on the heap (as list-of-bytes) and index them via
+  new `TENSOR_*` opcodes, bypassing per-value boxing entirely.
 
 **Milestone 7 (file I/O + networking) — shipped:**
-
-* Host imports for `read_file`, `write_file`, and `http_get(url) → text`.
-* In the browser these are stubs (sync HTTP is unavailable in-page) and return `void`; the Node/Electron and Native tracks do the real work.
-* This is what lets the ML stack read a corpus, write checkpoints, and crawl training data without leaving sdev.
+- Host imports for `read_file`, `write_file`, and `http_get(url) → text`.
+- In the browser these are stubs (sync HTTP is unavailable in-page) and
+  return `void`; the Node/Electron and Native tracks do the real work.
+- This is what lets the ML stack read a corpus, write checkpoints, and
+  crawl training data without leaving sdev.
 
 **Milestone 8 (ML stdlib — tensors + autograd) — shipped:**
-
-* `lang/stdlib/ml/tensor.sdev`: flat `data` + `shape` tensors, element-wise ops, `matmul`, `transpose`, `softmax`, `cross_entropy`.
-* `lang/stdlib/ml/autograd.sdev`: reverse-mode AD over a global tape (`record` / `backward`), rules for `add`, `mul`, `matmul`, `relu`, `mse`.
-* `lang/stdlib/ml/nn.sdev`: `linear`, `sequential`, parameter collection, `sgd_step`.
+- `lang/stdlib/ml/tensor.sdev`: flat `data` + `shape` tensors, element-wise
+  ops, `matmul`, `transpose`, `softmax`, `cross_entropy`.
+- `lang/stdlib/ml/autograd.sdev`: reverse-mode AD over a global tape
+  (`record` / `backward`), rules for `add`, `mul`, `matmul`, `relu`, `mse`.
+- `lang/stdlib/ml/nn.sdev`: `linear`, `sequential`, parameter collection,
+  `sgd_step`.
 
 **Milestone 9 (FFI) — shipped:**
-
-* `lang/stdlib/ffi.sdev` plus a host bridge in `src/lang/builtins.ts`: `ffi_buf`, `ffi_write_f64`, `ffi_read_f64` are pure JS (`DataView`) so they work in the browser; `ffi_open` / `ffi_sym` / `ffi_call` / `ffi_close` are gated to native hosts and degrade gracefully.
-* Targets OpenBLAS and cuBLAS symbol signatures for `matmul` fast paths.
+- `lang/stdlib/ffi.sdev` plus a host bridge in `src/lang/builtins.ts`:
+  `ffi_buf`, `ffi_write_f64`, `ffi_read_f64` are pure JS (`DataView`) so
+  they work in the browser; `ffi_open` / `ffi_sym` / `ffi_call` /
+  `ffi_close` are gated to native hosts and degrade gracefully.
+- Targets OpenBLAS and cuBLAS symbol signatures for `matmul` fast paths.
 
 **Milestone 10 (WebGPU) — shipped:**
-
-* `lang/stdlib/webgpu.sdev` dispatches tensor kernels through `navigator.gpu` when present, falling back to the scalar path otherwise.
+- `lang/stdlib/webgpu.sdev` dispatches tensor kernels through
+  `navigator.gpu` when present, falling back to the scalar path otherwise.
 
 **Milestone 11 (CUDA) — shipped:**
-
-* `lang/stdlib/ml/cuda.sdev` binds cuBLAS through the M9 FFI layer. `cuda_device_default()` reports availability instead of crashing, so the same program runs on a laptop and on a GPU box.
+- `lang/stdlib/ml/cuda.sdev` binds cuBLAS through the M9 FFI layer.
+  `cuda_device_default()` reports availability instead of crashing, so the
+  same program runs on a laptop and on a GPU box.
 
 **Milestone 12 (transformers, data, self-modification) — shipped:**
-
-* `transformer.sdev`: `embedding`, `layer_norm`, `attention_head`, `transformer_block`, `gpt(vocab, dim, hidden, layers)`, `generate`.
-* `data.sdev`: `char_vocab` / `encode` / `decode`, corpus loading, web crawling, and teacher-model distillation helpers.
-* `self_modify.sdev` + `auto_evolve.sdev`: the model can read the real source tree and propose patches, but every write goes through a review hook and a path whitelist — both off by default.
+- `transformer.sdev`: `embedding`, `layer_norm`, `attention_head`,
+  `transformer_block`, `gpt(vocab, dim, hidden, layers)`, `generate`.
+- `data.sdev`: `char_vocab` / `encode` / `decode`, corpus loading, web
+  crawling, and teacher-model distillation helpers.
+- `self_modify.sdev` + `auto_evolve.sdev`: the model can read the real
+  source tree and propose patches, but every write goes through a review
+  hook and a path whitelist — both off by default.
 
 **Milestone 13 (ML host bindings) — shipped:**
-
-* `src/lang/builtins.ts` gained `ord(s, i)`, `rand`, `ln`, `read_file`, `write_file`, `http_get`, and the FFI buffer family.
-* `executeIndex` in `src/lang/interpreter.ts` now yields `void` (not `undefined`) for a missing tome key, so `tome[k] equals void` holds.
-* `scripts/test-ml-stdlib.ts` runs the whole ML stack on the v1 interpreter as a regression gate.
+- `src/lang/builtins.ts` gained `ord(s, i)`, `rand`, `ln`, `read_file`,
+  `write_file`, `http_get`, and the FFI buffer family.
+- `executeIndex` in `src/lang/interpreter.ts` now yields `void` (not
+  `undefined`) for a missing tome key, so `tome[k] equals void` holds.
+- `scripts/test-ml-stdlib.ts` runs the whole ML stack on the v1
+  interpreter as a regression gate.
 
 **Milestone 14 (end-to-end LM training) — shipped:**
-
-* `autograd.sdev`: `d_softmax_ce(logits, targets)` with its `bw_sce` backward rule (row-wise softmax, then `probs − onehot` scaled by the batch size), `zero_grads`, `clip_grads(params, max_norm)` global-norm clipping, and `adam_new` / `adam_step` with bias correction.
-* `lang/stdlib/ml/train.sdev` (new): `lm_batches` sliding-window pairs, `lm_step`, `lm_fit(model, ids, block, epochs, lr)`, `lm_loss`, `perplexity`, `sample_topk(logits, temperature, k)`, `lm_generate`, `lm_complete`, and plain-text `save_checkpoint` / `load_checkpoint` (`shape|values`, one parameter tensor per line).
-* Tests: cross-entropy gradient checked against the analytic rule, `lm_fit` must lower loss on a repeating corpus, top-1 sampling must never leak, checkpoints must round-trip. 15/15 ML checks green with the self-hosted toolchain still byte-identical.
+- `autograd.sdev`: `d_softmax_ce(logits, targets)` with its `bw_sce`
+  backward rule (row-wise softmax, then `probs − onehot` scaled by the
+  batch size), `zero_grads`, `clip_grads(params, max_norm)` global-norm
+  clipping, and `adam_new` / `adam_step` with bias correction.
+- `lang/stdlib/ml/train.sdev` (new): `lm_batches` sliding-window pairs,
+  `lm_step`, `lm_fit(model, ids, block, epochs, lr)`, `lm_loss`,
+  `perplexity`, `sample_topk(logits, temperature, k)`, `lm_generate`,
+  `lm_complete`, and plain-text `save_checkpoint` / `load_checkpoint`
+  (`shape|values`, one parameter tensor per line).
+- Tests: cross-entropy gradient checked against the analytic rule,
+  `lm_fit` must lower loss on a repeating corpus, top-1 sampling must
+  never leak, checkpoints must round-trip. 15/15 ML checks green with the
+  self-hosted toolchain still byte-identical.
 
 **Milestone 5p (retire the JS bootstrap from the runtime path) — shipped:**
-
-* The driver program is now **source-independent**: instead of embedding the user program as a string literal, it does `set src to read_file("<stdin>")` and the host answers with the program bytes via `alloc_str`.
-* Because the driver no longer varies per input, its bytecode is compiled **once** by `scripts/build-driver.mjs` and checked in as `lang/compiler/driver-artifact.mjs` (base64, bc=7741, pool=147). `compile-self.mjs` imports that artifact and no longer imports the bootstrap at all.
-* `src/lang-bridge/wasm-runtime.ts` now compiles through the self-hosted shim (`setSeedLoader` lets the browser hand it a `fetch`-based loader). `src/lang-bridge/bootstrap.d.ts` is deleted; `compile-self.d.ts` replaces it.
-* `scripts/test-wasm-runtime.mjs` runs on the shim too.
-* New gate: `node scripts/test-driver-artifact.mjs` re-derives the driver from the bootstrap oracle and fails if the checked-in bytes drift, then compiles four programs through the bootstrap-free shim.
-* The JS bootstrap now exists **only** as a build/test-time oracle (`build-driver.mjs`, `test-self-codegen.mjs`, `test-self-toolchain.mjs`).
+- The driver program is now **source-independent**: instead of embedding the
+  user program as a string literal, it does `set src to read_file("<stdin>")`
+  and the host answers with the program bytes via `alloc_str`.
+- Because the driver no longer varies per input, its bytecode is compiled
+  **once** by `scripts/build-driver.mjs` and checked in as
+  `lang/compiler/driver-artifact.mjs` (base64, bc=7741, pool=147).
+  `compile-self.mjs` imports that artifact and no longer imports the
+  bootstrap at all.
+- `src/lang-bridge/wasm-runtime.ts` now compiles through the self-hosted
+  shim (`setSeedLoader` lets the browser hand it a `fetch`-based loader).
+  `src/lang-bridge/bootstrap.d.ts` is deleted; `compile-self.d.ts` replaces it.
+- `scripts/test-wasm-runtime.mjs` runs on the shim too.
+- New gate: `node scripts/test-driver-artifact.mjs` re-derives the driver
+  from the bootstrap oracle and fails if the checked-in bytes drift, then
+  compiles four programs through the bootstrap-free shim.
+- The JS bootstrap now exists **only** as a build/test-time oracle
+  (`build-driver.mjs`, `test-self-codegen.mjs`, `test-self-toolchain.mjs`).
 
 **Milestone 5q (floats + host I/O in the self-hosted codegen) — shipped:**
-
-* **New seed opcode** `0xB4 FBYTE`: pops an index `0..7` and a boxed float, pushes that little-endian IEEE-754 byte. This is the one primitive the self-hosted codegen needed to materialise a `PUSH_F64` operand without bitwise integer ops in the source language. Exposed to programs as the builtin `fbyte(x, i)` (bootstrap and self-hosted alike).
-* **Lexer**: the inline driver lexer now recognises `123.456`, emitting token kind `6` with the mantissa in `tk_num` and the fractional-digit count in the new `tk_num2` table. The value is reconstructed as `i2f(mantissa) / i2f(10^scale)` — a single correctly-rounded IEEE division, so it lands on exactly the double the JS oracle parses.
-* **Codegen**: `expr_type` grew a third state (`0` int, `1` str, `2` float). `both_float()` gates `FADD/FSUB/FMUL/FDIV` and `FEQ/FLT/FGT`; `say` picks `SAY_F64`; mixed int/float still requires an explicit `i2f`, matching the oracle. `emit_call` learned `i2f`, `f2i`, `fneg`, `fabs`, `fsqrt`, `fsin/fcos/ftan/fexp/flog/fpow`, `fbyte`, `read_file`, `write_file`, and `http_get`.
-* The browser bridge's `NOT_YET_SELF_HOSTED` carve-out is **deleted**: every v2 program in the IDE, floats and host I/O included, compiles through the self-hosted codegen running on the seed VM.
-* All float and I/O cases in `test-wasm-runtime.mjs` now run self-hosted, and float programs compile **byte-identically** to the bootstrap oracle.
+- **New seed opcode** `0xB4 FBYTE`: pops an index `0..7` and a boxed float,
+  pushes that little-endian IEEE-754 byte. This is the one primitive the
+  self-hosted codegen needed to materialise a `PUSH_F64` operand without
+  bitwise integer ops in the source language. Exposed to programs as the
+  builtin `fbyte(x, i)` (bootstrap and self-hosted alike).
+- **Lexer**: the inline driver lexer now recognises `123.456`, emitting
+  token kind `6` with the mantissa in `tk_num` and the fractional-digit
+  count in the new `tk_num2` table. The value is reconstructed as
+  `i2f(mantissa) / i2f(10^scale)` — a single correctly-rounded IEEE
+  division, so it lands on exactly the double the JS oracle parses.
+- **Codegen**: `expr_type` grew a third state (`0` int, `1` str, `2` float).
+  `both_float()` gates `FADD/FSUB/FMUL/FDIV` and `FEQ/FLT/FGT`; `say` picks
+  `SAY_F64`; mixed int/float still requires an explicit `i2f`, matching the
+  oracle. `emit_call` learned `i2f`, `f2i`, `fneg`, `fabs`, `fsqrt`,
+  `fsin/fcos/ftan/fexp/flog/fpow`, `fbyte`, `read_file`, `write_file`,
+  and `http_get`.
+- The browser bridge's `NOT_YET_SELF_HOSTED` carve-out is **deleted**: every
+  v2 program in the IDE, floats and host I/O included, compiles through the
+  self-hosted codegen running on the seed VM.
+- All float and I/O cases in `test-wasm-runtime.mjs` now run self-hosted, and
+  float programs compile **byte-identically** to the bootstrap oracle.
 
 **Milestone 5r (booleans, `not`, unary minus, `true`/`false`/`nothing`) — shipped:**
+- **New expression tiers in `codegen.sdev`**: `parse_expr → parse_or →
+  parse_and → parse_not → parse_cmp`. Every former `parse_cmp` entry point
+  (statements, call arguments, list items, parenthesised groups, index
+  expressions) now enters at `parse_expr`, so boolean operators are legal
+  anywhere an expression is.
+- **Short-circuiting** mirrors the oracle byte-for-byte: `a and b` emits
+  `a`, `JZ →end`, `b`; `a or b` emits `a`, `NOT`, `JZ →end`, `b`. Both tiers
+  are left-associative loops and always yield an int.
+- **`not x`** is right-recursive (`not not x` is legal) and emits `NOT`.
+- **Unary minus** got its own tier between `mul` and the atom/postfix pair:
+  `-x` emits `PUSH_I32 0`, the operand, then `SUB`, exactly as the bootstrap
+  does. Postfix indexing still binds tighter, so `-xs[0]` negates the element.
+- **`true` / `false` / `nothing`** lower to plain integers (`1` / `0` / `0`)
+  in both the self-hosted codegen and the bootstrap oracle, keeping the two
+  emitters identical. The oracle's `canStartAtom` accepts them too, so they
+  work as arguments in the `f with a b` call form.
+- Three new cases in `scripts/test-wasm-runtime.mjs` cover short-circuiting,
+  unary minus, and the literals; the byte-identity, shim fixed-point, and
+  driver-artifact gates all stay green (driver artifact rebuilt: bc=9739).
+- Parity registry updated: `logic_and`, `logic_or`, `bool_true`, `bool_false`
+  and `nothing` are no longer v2 gaps, and the native track now declares the
+  shared bootstrap parser among its sources.
 
-* **New expression tiers in `codegen.sdev`**: `parse_expr → parse_or → parse_and → parse_not → parse_cmp`. Every former `parse_cmp` entry point (statements, call arguments, list items, parenthesised groups, index expressions) now enters at `parse_expr`, so boolean operators are legal anywhere an expression is.
-* **Short-circuiting** mirrors the oracle byte-for-byte: `a and b` emits `a`, `JZ →end`, `b`; `a or b` emits `a`, `NOT`, `JZ →end`, `b`. Both tiers are left-associative loops and always yield an int.
-* **`not x`** is right-recursive (`not not x` is legal) and emits `NOT`.
-* **Unary minus** got its own tier between `mul` and the atom/postfix pair: `-x` emits `PUSH_I32 0`, the operand, then `SUB`, exactly as the bootstrap does. Postfix indexing still binds tighter, so `-xs[0]` negates the element.
-* **`true` / `false` / `nothing`** lower to plain integers (`1` / `0` / `0`) in both the self-hosted codegen and the bootstrap oracle, keeping the two emitters identical. The oracle's `canStartAtom` accepts them too, so they work as arguments in the `f with a b` call form.
-* Three new cases in `scripts/test-wasm-runtime.mjs` cover short-circuiting, unary minus, and the literals; the byte-identity, shim fixed-point, and driver-artifact gates all stay green (driver artifact rebuilt: bc=9739).
-* Parity registry updated: `logic_and`, `logic_or`, `bool_true`, `bool_false` and `nothing` are no longer v2 gaps, and the native track now declares the shared bootstrap parser among its sources.
+
 
 **Milestone 5s (`break`, `continue`, `for each … in`, `else if`) — shipped:**
+- **`for each NAME in EXPR ... end`** is desugared, in both emitters, to an
+  index loop over two hidden variables named after the loop's lexical
+  foreach-nesting depth (`_fe_l1` / `_fe_i1`, `_fe_l2` / `_fe_i2`, …). Depth
+  naming is what lets the single-pass self-hosted compiler pick the same
+  names as the AST-based oracle without a desugaring pass:
 
-*   **`for each NAME in EXPR ... end`** is desugared, in both emitters, to an index loop over two hidden variables named after the loop's lexical foreach-nesting depth (`_fe_l1` / `_fe_i1`, `_fe_l2` / `_fe_i2`, …). Depth naming is what lets the single-pass self-hosted compiler pick the same names as the AST-based oracle without a desugaring pass:
+  ```text
+  EXPR ; STORE _fe_lD ; PUSH_I32 0 ; STORE _fe_iD
+  top: LOAD _fe_iD ; LOAD _fe_lD ; LEN ; LT ; JZ →exit
+       LOAD _fe_lD ; LOAD _fe_iD ; LGET ; STORE NAME
+       <body>
+  cont: LOAD _fe_iD ; PUSH_I32 1 ; ADD ; STORE _fe_iD ; JMP →top
+  exit:
+  ```
 
-    ```
-    EXPR ; STORE _fe_lD ; PUSH_I32 0 ; STORE _fe_iD
-    top: LOAD _fe_iD ; LOAD _fe_lD ; LEN ; LT ; JZ →exit
-         LOAD _fe_lD ; LOAD _fe_iD ; LGET ; STORE NAME
-         <body>
-    cont: LOAD _fe_iD ; PUSH_I32 1 ; ADD ; STORE _fe_iD ; JMP →top
-    exit:
-    ```
+  The bootstrap's `collectSets` registers the two hidden bindings and the
+  loop variable in exactly that order, so local slot numbers agree.
+- **`break` / `continue`** emit a `JMP` with an unresolved target. The
+  self-hosted codegen records `(placeholder, loop_depth)` in the `brk_*` /
+  `cnt_*` tables and resolves them in `patch_breaks` / `patch_conts` when the
+  enclosing loop closes (breaks → loop exit, continues → the `while` header
+  or the foreach increment). The oracle does the same with a loop-context
+  stack on the emitter. Both keywords lex as plain identifiers, so they are
+  matched ahead of the expression-statement fallback.
+- **`else if`** chains: after `else`, a following `if` is parsed as a nested
+  statement that consumes its own `end`, so the outer level does not eat one.
+  Emission order (`cond, JZ, then, JMP, patch JZ, else-branch, patch JMP`) is
+  unchanged, which keeps chains byte-identical to the oracle.
+- Six new cases in `scripts/test-wasm-runtime.mjs` and six more in
+  `scripts/test-shim-fixed-point.mjs` (now 49/49 byte-identical). Driver
+  artifact rebuilt: bc=11215, pool=383. Toolchain, driver-artifact, native
+  and parity gates all green; `for_each`, `break` and `continue` are no
+  longer v2 parity gaps.
 
-    The bootstrap's `collectSets` registers the two hidden bindings and the loop variable in exactly that order, so local slot numbers agree.
-* **`break` / `continue`** emit a `JMP` with an unresolved target. The self-hosted codegen records `(placeholder, loop_depth)` in the `brk_*` / `cnt_*` tables and resolves them in `patch_breaks` / `patch_conts` when the enclosing loop closes (breaks → loop exit, continues → the `while` header or the foreach increment). The oracle does the same with a loop-context stack on the emitter. Both keywords lex as plain identifiers, so they are matched ahead of the expression-statement fallback.
-* **`else if`** chains: after `else`, a following `if` is parsed as a nested statement that consumes its own `end`, so the outer level does not eat one. Emission order (`cond, JZ, then, JMP, patch JZ, else-branch, patch JMP`) is unchanged, which keeps chains byte-identical to the oracle.
-* Six new cases in `scripts/test-wasm-runtime.mjs` and six more in `scripts/test-shim-fixed-point.mjs` (now 49/49 byte-identical). Driver artifact rebuilt: bc=11215, pool=383. Toolchain, driver-artifact, native and parity gates all green; `for_each`, `break` and `continue` are no longer v2 parity gaps.
+
 
 **Milestone 5t (tomes — string-keyed dictionaries) — shipped:**
-
-* **Heap shape.** A tome is a 16-byte header `[MAGIC | count | cap | entriesPtr]` plus a separate entries block of `cap` `(keyPtr, value)` i32 pairs, so growth reallocates only the entries block and every existing handle to the tome stays valid. `MAGIC` is `0x7FED10E5` — a length no list can legitimately have — which lets the VM recognise a tome from its pointer alone.
-* **New seed opcodes** (`lang/bootstrap/seed.wat`): `TNEW (0x8A) <u16 cap>`, `TSET (0x8B)` (pops value + key, leaves the tome on the stack so a literal is a single expression), `TGET (0x8C)`, `THAS (0x8D)`, `TKEYS (0x8E)` and `TVALS (0x8F)`. Lookup is a linear scan with byte-wise key comparison (`$streq`); note that pool offset 0 is a legal string handle, so a zero pointer must not be read as "absent".
-* **Run-time dispatch.** `LGET`, `LSET` and `LEN` check the magic word first: on a tome they perform a key read / key write / entry count, on anything else the original list behaviour. That is what makes a tome passed into a function work without a type annotation, since the single-pass compiler types parameters as opaque ints.
-* **Compile-time kinds.** Both emitters extend the kind lattice with `tome` (int-valued), `tomestr` (string-valued) and `liststr` (the list `keys()` returns), so `say t[k]`, `k + "="` and `for each v in values(t)` pick `SAY_STR` / `STRCAT` correctly. The self-hosted codegen encodes them as 3, 4 and 5 alongside 0/1/2 for int/str/float. Because TNEW's count operand precedes the entries in the byte stream, the streaming compiler reserves the u16 and back-patches it once the literal closes.
-* **Syntax.** `{ "k": v, name: v2 }`, with newlines allowed between entries; a bare identifier key is sugar for the string of the same name, matching v1's `{name: "x"}` form.
-* Nine new cases in `scripts/test-wasm-runtime.mjs` and ten more in `scripts/test-shim-fixed-point.mjs` (now 59/59 byte-identical). Driver artifact rebuilt: bc=12261, pool=408. The seed VM is now built by `scripts/build-seed-wasm.mjs` (wabt, no system toolchain). Toolchain, driver-artifact, native and parity gates all green; `tome_literal`, `keys`, `values` and `has` are no longer v2 parity gaps.
+- **Heap shape.** A tome is a 16-byte header `[MAGIC | count | cap |
+  entriesPtr]` plus a separate entries block of `cap` `(keyPtr, value)` i32
+  pairs, so growth reallocates only the entries block and every existing
+  handle to the tome stays valid. `MAGIC` is `0x7FED10E5` — a length no list
+  can legitimately have — which lets the VM recognise a tome from its
+  pointer alone.
+- **New seed opcodes** (`lang/bootstrap/seed.wat`): `TNEW (0x8A) <u16 cap>`,
+  `TSET (0x8B)` (pops value + key, leaves the tome on the stack so a literal
+  is a single expression), `TGET (0x8C)`, `THAS (0x8D)`, `TKEYS (0x8E)` and
+  `TVALS (0x8F)`. Lookup is a linear scan with byte-wise key comparison
+  (`$streq`); note that pool offset 0 is a legal string handle, so a zero
+  pointer must not be read as "absent".
+- **Run-time dispatch.** `LGET`, `LSET` and `LEN` check the magic word first:
+  on a tome they perform a key read / key write / entry count, on anything
+  else the original list behaviour. That is what makes a tome passed into a
+  function work without a type annotation, since the single-pass compiler
+  types parameters as opaque ints.
+- **Compile-time kinds.** Both emitters extend the kind lattice with
+  `tome` (int-valued), `tomestr` (string-valued) and `liststr` (the list
+  `keys()` returns), so `say t[k]`, `k + "="` and `for each v in values(t)`
+  pick `SAY_STR` / `STRCAT` correctly. The self-hosted codegen encodes them
+  as 3, 4 and 5 alongside 0/1/2 for int/str/float. Because TNEW's count
+  operand precedes the entries in the byte stream, the streaming compiler
+  reserves the u16 and back-patches it once the literal closes.
+- **Syntax.** `{ "k": v, name: v2 }`, with newlines allowed between entries;
+  a bare identifier key is sugar for the string of the same name, matching
+  v1's `{name: "x"}` form.
+- Nine new cases in `scripts/test-wasm-runtime.mjs` and ten more in
+  `scripts/test-shim-fixed-point.mjs` (now 59/59 byte-identical). Driver
+  artifact rebuilt: bc=12261, pool=408. The seed VM is now built by
+  `scripts/build-seed-wasm.mjs` (wabt, no system toolchain). Toolchain,
+  driver-artifact, native and parity gates all green; `tome_literal`,
+  `keys`, `values` and `has` are no longer v2 parity gaps.
 
 **Milestone 5u (string + numeric standard library) — shipped:**
-
-* **New seed opcodes** (`lang/bootstrap/seed.wat`): `UPPER (0x92)`, `LOWER (0x93)`, `TRIM (0x94)`, `SUBSTR (0x95)`, `FIND (0x96)`, `SPLIT (0x97)`, `JOIN (0x98)`, `REPLACE (0x99)`, `S2I (0x9A)`, `IABS (0x9B)`, `IMIN (0x9C)`, `IMAX (0x9D)`, `RANGE (0x9E)`, `SUM (0x9F)`, `FCEIL (0xB5)`, `FFLOOR (0xB6)`, `FROUND (0xB7)` and `RANDINT (0xB8)`.
-* **All results are ordinary blobs.** Every string op allocates a fresh `[len|bytes]` blob with the same shape the string pool uses, so computed strings and literals are indistinguishable downstream. `split` returns a regular list of blobs, which means `for each p in split(s, ",")` and `length(split(...))` work with no extra machinery; `replace` is literally `join(split(s, old), new)` inside the VM.
-* **No new host imports.** `ceil`/`floor`/`round` use the WebAssembly `f64.ceil` / `f64.floor` / `f64.nearest` instructions, and `random(n)` is a deterministic in-VM xorshift32 so every host (browser, Node, extension) observes the same sequence. That keeps the four host functions of Milestone 7 as the complete host surface.
-* **Both compilers.** The bootstrap oracle gains a `BUILTINS` entry per call and the self-hosted `emit_call` in `lang/compiler/codegen.sdev` gains the matching opcode branch plus its result kind, so `say upper(x)` still picks `SAY_STR` and `split()` is typed `liststr`. `contains(h, n)` is sugar, emitted as `FIND; PUSH_I32 0; GE`.
-* Seven new fixed-point cases (66/66 byte-identical) and seven new runtime cases (45/45 passing). Driver artifact rebuilt: bc=13070, pool=575. `upper`, `lower`, `trim`, `contains`, `replace`, `split`, `join`, `int`, `abs`, `min`, `max`, `ceil` and `round` are no longer v2 parity gaps; only `num`, closures/classes, exceptions and `import` remain.
+- **New seed opcodes** (`lang/bootstrap/seed.wat`): `UPPER (0x92)`,
+  `LOWER (0x93)`, `TRIM (0x94)`, `SUBSTR (0x95)`, `FIND (0x96)`,
+  `SPLIT (0x97)`, `JOIN (0x98)`, `REPLACE (0x99)`, `S2I (0x9A)`,
+  `IABS (0x9B)`, `IMIN (0x9C)`, `IMAX (0x9D)`, `RANGE (0x9E)`,
+  `SUM (0x9F)`, `FCEIL (0xB5)`, `FFLOOR (0xB6)`, `FROUND (0xB7)` and
+  `RANDINT (0xB8)`.
+- **All results are ordinary blobs.** Every string op allocates a fresh
+  `[len|bytes]` blob with the same shape the string pool uses, so computed
+  strings and literals are indistinguishable downstream. `split` returns a
+  regular list of blobs, which means `for each p in split(s, ",")` and
+  `length(split(...))` work with no extra machinery; `replace` is literally
+  `join(split(s, old), new)` inside the VM.
+- **No new host imports.** `ceil`/`floor`/`round` use the WebAssembly
+  `f64.ceil` / `f64.floor` / `f64.nearest` instructions, and `random(n)` is a
+  deterministic in-VM xorshift32 so every host (browser, Node, extension)
+  observes the same sequence. That keeps the four host functions of Milestone
+  7 as the complete host surface.
+- **Both compilers.** The bootstrap oracle gains a `BUILTINS` entry per call
+  and the self-hosted `emit_call` in `lang/compiler/codegen.sdev` gains the
+  matching opcode branch plus its result kind, so `say upper(x)` still picks
+  `SAY_STR` and `split()` is typed `liststr`. `contains(h, n)` is sugar,
+  emitted as `FIND; PUSH_I32 0; GE`.
+- Seven new fixed-point cases (66/66 byte-identical) and seven new runtime
+  cases (45/45 passing). Driver artifact rebuilt: bc=13070, pool=575.
+  `upper`, `lower`, `trim`, `contains`, `replace`, `split`, `join`, `int`,
+  `abs`, `min`, `max`, `ceil` and `round` are no longer v2 parity gaps; only
+  `num`, closures/classes, exceptions and `import` remain.
 
 **Milestone 5v (error handling + `num`) — shipped:**
+- **New seed opcodes**: `TRY (0xC0) <i16 rel>`, `ENDTRY (0xC1)`,
+  `THROW (0xC2)` and `S2F (0xC3)`.
+- **Handler stack.** A 16-byte record `[handler_ip | sp | fp | csp]` is pushed
+  by `TRY` into a dedicated region at `0x13000` (between the global slots and
+  the operand stack). `ENDTRY` pops it. `THROW` pops the message handle,
+  unwinds to the newest record — restoring the operand stack, frame pointer
+  and call-stack tip — and re-pushes the message so the handler can bind it.
+  A throw with no live handler prints the message and halts the program.
+- **Surface syntax**: `attempt … rescue [err] … end` and `throw EXPR`. The
+  rescue binding is an ordinary local (typed `str`); `rescue` with no name
+  drops the message with a `POP`. Because the unwind restores `fp`/`csp`, a
+  `throw` from arbitrarily deep inside nested calls lands in the right handler.
+- **`num(s)`** parses `[+-]?digits[.digits]` into a boxed f64 via `S2F`,
+  mirroring `int(s)`: unparseable input yields `0.0`.
+- **Both compilers.** The bootstrap oracle parses `attempt`/`rescue`/`throw`
+  as plain identifiers (no new lexer keywords, so `lexer.sdev` is untouched),
+  and `codegen.sdev` gained the same emitter plus a `rescue` block terminator.
+- Five new fixed-point cases (71/71 byte-identical) and six new runtime cases
+  (51/51 passing). Driver artifact rebuilt: bc=13431, pool=612. `try_catch`,
+  `rescue`, `throw` and `num` are no longer v2 parity gaps; only
+  closures/classes and `import` remain.
 
-* **New seed opcodes**: `TRY (0xC0) <i16 rel>`, `ENDTRY (0xC1)`, `THROW (0xC2)` and `S2F (0xC3)`.
-* **Handler stack.** A 16-byte record `[handler_ip | sp | fp | csp]` is pushed by `TRY` into a dedicated region at `0x13000` (between the global slots and the operand stack). `ENDTRY` pops it. `THROW` pops the message handle, unwinds to the newest record — restoring the operand stack, frame pointer and call-stack tip — and re-pushes the message so the handler can bind it. A throw with no live handler prints the message and halts the program.
-* **Surface syntax**: `attempt … rescue [err] … end` and `throw EXPR`. The rescue binding is an ordinary local (typed `str`); `rescue` with no name drops the message with a `POP`. Because the unwind restores `fp`/`csp`, a `throw` from arbitrarily deep inside nested calls lands in the right handler.
-* **`num(s)`** parses `[+-]?digits[.digits]` into a boxed f64 via `S2F`, mirroring `int(s)`: unparseable input yields `0.0`.
-* **Both compilers.** The bootstrap oracle parses `attempt`/`rescue`/`throw` as plain identifiers (no new lexer keywords, so `lexer.sdev` is untouched), and `codegen.sdev` gained the same emitter plus a `rescue` block terminator.
-* Five new fixed-point cases (71/71 byte-identical) and six new runtime cases (51/51 passing). Driver artifact rebuilt: bc=13431, pool=612. `try_catch`, `rescue`, `throw` and `num` are no longer v2 parity gaps; only closures/classes and `import` remain.
+
 
 **Milestone 5w (first-class function values) — shipped:**
-
-* **New seed opcode**: `CALLV (0xC4) <u8 n_args>` — identical to `CALL` except the target code offset is popped off the operand stack instead of read from a u16 immediate, so the frame/arg-copy path is shared.
-* **Surface syntax**: `ref NAME` evaluates to a function value (the callee's byte offset, an ordinary int), and `call TARGET(args)` invokes one. Both words stay plain identifiers, so the lexer is untouched.
-* **Patching.** `ref` emits `PUSH_I32` with a zero placeholder; forward and mutually-recursive references reuse the existing pending-call table. The resolver distinguishes the two site shapes by reading the opcode byte in front of the patch position: `0x60` → u16 target, otherwise `0x01` → i32.
-* Function values are plain ints, so they compose with everything: store them in lists and tomes, pass them to functions, build dispatch tables. There is no capture — a `ref` closes over nothing, which keeps the calling convention identical to a direct `CALL`.
-* Three new fixed-point cases (74/74 byte-identical) and four new runtime cases (55/55 passing). Driver artifact rebuilt: bc=14025, pool=627.
+- **New seed opcode**: `CALLV (0xC4) <u8 n_args>` — identical to `CALL`
+  except the target code offset is popped off the operand stack instead of
+  read from a u16 immediate, so the frame/arg-copy path is shared.
+- **Surface syntax**: `ref NAME` evaluates to a function value (the callee's
+  byte offset, an ordinary int), and `call TARGET(args)` invokes one. Both
+  words stay plain identifiers, so the lexer is untouched.
+- **Patching.** `ref` emits `PUSH_I32` with a zero placeholder; forward and
+  mutually-recursive references reuse the existing pending-call table. The
+  resolver distinguishes the two site shapes by reading the opcode byte in
+  front of the patch position: `0x60` → u16 target, otherwise `0x01` → i32.
+- Function values are plain ints, so they compose with everything: store them
+  in lists and tomes, pass them to functions, build dispatch tables. There is
+  no capture — a `ref` closes over nothing, which keeps the calling
+  convention identical to a direct `CALL`.
+- Three new fixed-point cases (74/74 byte-identical) and four new runtime
+  cases (55/55 passing). Driver artifact rebuilt: bc=14025, pool=627.
 
 **Milestone 5x (lambdas + closures) — shipped:**
-
-* **New seed opcodes**: `CLOSURE (0xC5) <u16 code_off> <u8 ncaps>` pops `ncaps` values and allocates a heap blob `[CLOS_MAGIC 0x7FC105E5][code_off][ncaps][cap0..capN]`; `CALLV (0xC4)` now inspects its target — a raw offset (from `ref`) calls directly, a closure handle first copies the captured values into the new frame right after the arguments, so captures are just trailing locals.
-* **Surface syntax**: `make [with p1 p2…] [capture c1 c2…]` NL body `end`. Both words stay plain identifiers; the lexer is untouched.
-* **Emission order** (identical in `compile.mjs` and `codegen.sdev`): load each capture in the _enclosing_ scope → `JMP` over the body → body at `body_off` with a fresh local scope (params, then captures, then the body's own `set`s, sized by an `ENTER`) → `PUSH_I32 0` + `RET` → patch the jump → `CLOSURE body_off ncaps`.
-* The self-hosted codegen counts the body's extra locals with a non-emitting pre-pass over `parse_block`, mirroring the bootstrap's `collectSets`, which is what keeps the two byte-identical.
-* Capture is by value at creation time. `make` bodies do not nest yet.
-* Four new fixed-point cases (78/78 byte-identical) and five new runtime cases (60/60 passing). Driver artifact rebuilt: bc=15085, pool=646.
-* Parity registry updated: `lambda` is now present on v2 as `make`.
+- **New seed opcodes**: `CLOSURE (0xC5) <u16 code_off> <u8 ncaps>` pops
+  `ncaps` values and allocates a heap blob
+  `[CLOS_MAGIC 0x7FC105E5][code_off][ncaps][cap0..capN]`; `CALLV (0xC4)`
+  now inspects its target — a raw offset (from `ref`) calls directly, a
+  closure handle first copies the captured values into the new frame right
+  after the arguments, so captures are just trailing locals.
+- **Surface syntax**: `make [with p1 p2…] [capture c1 c2…]` NL body `end`.
+  Both words stay plain identifiers; the lexer is untouched.
+- **Emission order** (identical in `compile.mjs` and `codegen.sdev`):
+  load each capture in the *enclosing* scope → `JMP` over the body →
+  body at `body_off` with a fresh local scope (params, then captures, then
+  the body's own `set`s, sized by an `ENTER`) → `PUSH_I32 0` + `RET` →
+  patch the jump → `CLOSURE body_off ncaps`.
+- The self-hosted codegen counts the body's extra locals with a
+  non-emitting pre-pass over `parse_block`, mirroring the bootstrap's
+  `collectSets`, which is what keeps the two byte-identical.
+- Capture is by value at creation time. `make` bodies do not nest yet.
+- Four new fixed-point cases (78/78 byte-identical) and five new runtime
+  cases (60/60 passing). Driver artifact rebuilt: bc=15085, pool=646.
+- Parity registry updated: `lambda` is now present on v2 as `make`.
 
 **Milestone 5y (kinds — objects and methods) — shipped:**
-
-* **No VM change.** A kind is pure compiler sugar over tomes + function values, so `seed.wat` is byte-for-byte the same as after 5x.
-* **Desugaring pre-pass** (`desugarKinds` in `compile.mjs`, `desugar_kinds` in `codegen.sdev`, run identically from `compile-self.mjs`): the `kind Name` header and its closing `end` are blanked out, and each nested `to m with self …` becomes a top-level function `Name_m`. Line count is preserved so error lines stay accurate. The pass records, per class, the ordered list of `(method key, mangled function name)` pairs.
-* **`new Name`** (parentheses optional) emits `TNEW` sized to the method count, then one `PUSH_STR key` + function-value push + `TSET` per method. An instance is therefore an ordinary tome; fields are keys created on first write.
-* **Member access**: `obj.f` → `PUSH_STR "f"` + `TGET`; `set obj.f to v` → `TSET`; `obj.m(a, b)` → receiver, args, then receiver + `PUSH_STR "m"` + `TGET` and `CALLV nargs+1`, so the receiver is the implicit first argument.
-* **Return typing**: the receiver's class is not tracked statically, so a method call is string-typed when _any_ declared method of that name returns a string (`methodRetType` / `method_ret_type`). Both compilers apply the identical rule, which is what keeps them byte-identical.
-* Five new fixed-point cases (83/83 byte-identical) and four new runtime cases (64/64 passing). Driver artifact rebuilt: bc=17153, pool=666. `codegen.sdev` still compiles itself byte-identically.
-* Parity registry: `class` → `kind`, `instantiate` → `new` on v2; `self` is marked n/a there because it is a plain parameter, not a keyword. `inherit` / `super` remain the open v2 OOP gaps.
+- **No VM change.** A kind is pure compiler sugar over tomes + function
+  values, so `seed.wat` is byte-for-byte the same as after 5x.
+- **Desugaring pre-pass** (`desugarKinds` in `compile.mjs`, `desugar_kinds`
+  in `codegen.sdev`, run identically from `compile-self.mjs`): the
+  `kind Name` header and its closing `end` are blanked out, and each nested
+  `to m with self …` becomes a top-level function `Name_m`. Line count is
+  preserved so error lines stay accurate. The pass records, per class, the
+  ordered list of `(method key, mangled function name)` pairs.
+- **`new Name`** (parentheses optional) emits `TNEW` sized to the method
+  count, then one `PUSH_STR key` + function-value push + `TSET` per method.
+  An instance is therefore an ordinary tome; fields are keys created on
+  first write.
+- **Member access**: `obj.f` → `PUSH_STR "f"` + `TGET`; `set obj.f to v` →
+  `TSET`; `obj.m(a, b)` → receiver, args, then receiver + `PUSH_STR "m"` +
+  `TGET` and `CALLV nargs+1`, so the receiver is the implicit first
+  argument.
+- **Return typing**: the receiver's class is not tracked statically, so a
+  method call is string-typed when *any* declared method of that name
+  returns a string (`methodRetType` / `method_ret_type`). Both compilers
+  apply the identical rule, which is what keeps them byte-identical.
+- Five new fixed-point cases (83/83 byte-identical) and four new runtime
+  cases (64/64 passing). Driver artifact rebuilt: bc=17153, pool=666.
+  `codegen.sdev` still compiles itself byte-identically.
+- Parity registry: `class` → `kind`, `instantiate` → `new` on v2; `self` is
+  marked n/a there because it is a plain parameter, not a keyword.
+  `inherit` / `super` remain the open v2 OOP gaps.
 
 **Milestone 6b (inheritance — `extends` + `super`) — shipped:**
-
-* **No VM change.** Inheritance, like kinds, is compiler sugar over tomes.
-* **Desugaring**: `kind Child extends Parent` blanks the two extra header tokens and records the parent index. After the child's own methods are collected, the parent's entries are merged in: every parent method the child does not override is copied under its own key, and each one also gets a class-qualified alias `super_<Child>_<key>` bound to the parent's mangled function. Aliases inherited from grandparents are copied verbatim, so a `C → B → A` chain carries `super_C_tag` and `super_B_tag`.
-* **`super.m(...)`** is rewritten at the token level to `self.super_<Class>_m(...)` — three tokens in, three tokens out, so no insertion is needed and both compilers stay in lockstep. Because the key is qualified with the _lexical_ class, super is statically bound and deep chains terminate instead of recursing on the receiver's override.
-* Registry arrays gained `mth_sup` (alias flag) in `compile-self.mjs`, and the JS oracle's method records gained the matching `sup` field.
-* Four new fixed-point cases (87/87 byte-identical) and four new runtime cases. Driver artifact rebuilt: bc=18576, pool=721.
-* Parity registry: `inherit` → `extends` on v2; the v2 OOP column is now complete.
+- **No VM change.** Inheritance, like kinds, is compiler sugar over tomes.
+- **Desugaring**: `kind Child extends Parent` blanks the two extra header
+  tokens and records the parent index. After the child's own methods are
+  collected, the parent's entries are merged in: every parent method the
+  child does not override is copied under its own key, and each one also
+  gets a class-qualified alias `super_<Child>_<key>` bound to the parent's
+  mangled function. Aliases inherited from grandparents are copied verbatim,
+  so a `C → B → A` chain carries `super_C_tag` and `super_B_tag`.
+- **`super.m(...)`** is rewritten at the token level to
+  `self.super_<Class>_m(...)` — three tokens in, three tokens out, so no
+  insertion is needed and both compilers stay in lockstep. Because the key
+  is qualified with the *lexical* class, super is statically bound and deep
+  chains terminate instead of recursing on the receiver's override.
+- Registry arrays gained `mth_sup` (alias flag) in `compile-self.mjs`, and
+  the JS oracle's method records gained the matching `sup` field.
+- Four new fixed-point cases (87/87 byte-identical) and four new runtime
+  cases. Driver artifact rebuilt: bc=18576, pool=721.
+- Parity registry: `inherit` → `extends` on v2; the v2 OOP column is now
+  complete.
 
 **Milestone 6c (native strings, lists and builtins) — shipped:**
-
-* **Heap.** `runtime.s` gained `sdev_alloc`: a bump allocator over one 64 MiB anonymous `mmap` region, no free (native runs are short-lived). Two heap shapes share a header word: a string is `[i64 byte-len][bytes]` and a list is `[i64 count][i64 words]`, so `length(x)` is one load either way.
-* **New runtime entry points**: `sdev_concat` (joins two strings into a fresh allocation), `sdev_chr` (one-byte string), `sdev_str_int` (decimal text for an int64, sign included).
-* **Static value kinds** in `codegen-x64.mjs` (`typeOf` + `inferFnTypes`): every word is classified `int` / `str` / `list` at compile time, mirroring the WASM codegen's rule set. `say` picks `sdev_say_str` vs `sdev_say_int` from the inferred kind instead of "is this a literal", `+` lowers to `sdev_concat` when either operand is text (ints are coerced through `sdev_str_int`), and user function return kinds are inferred in two passes so `to greet with n / return "hi " + str(n)` prints as text.
-* **Builtins**: `length`, `abs`, `ord(s, i)`, `chr(n)`, `str(v)`, `list_new(n)` / `mklist(n)`, plus list literals `[a, b, c]`, indexing `xs[i]` and indexed assignment `set xs[i] to v` — all emitted inline.
-* Eleven new cases in `scripts/test-native.mjs` (17/17 passing against real `as` + `ld` ELFs).
-* Parity registry: the eight remaining native `should` gaps are closed — **must gaps 0, should gaps 0 across all three tracks.**
+- **Heap.** `runtime.s` gained `sdev_alloc`: a bump allocator over one 64 MiB
+  anonymous `mmap` region, no free (native runs are short-lived). Two heap
+  shapes share a header word: a string is `[i64 byte-len][bytes]` and a list
+  is `[i64 count][i64 words]`, so `length(x)` is one load either way.
+- **New runtime entry points**: `sdev_concat` (joins two strings into a fresh
+  allocation), `sdev_chr` (one-byte string), `sdev_str_int` (decimal text for
+  an int64, sign included).
+- **Static value kinds** in `codegen-x64.mjs` (`typeOf` + `inferFnTypes`):
+  every word is classified `int` / `str` / `list` at compile time, mirroring
+  the WASM codegen's rule set. `say` picks `sdev_say_str` vs `sdev_say_int`
+  from the inferred kind instead of "is this a literal", `+` lowers to
+  `sdev_concat` when either operand is text (ints are coerced through
+  `sdev_str_int`), and user function return kinds are inferred in two passes
+  so `to greet with n / return "hi " + str(n)` prints as text.
+- **Builtins**: `length`, `abs`, `ord(s, i)`, `chr(n)`, `str(v)`,
+  `list_new(n)` / `mklist(n)`, plus list literals `[a, b, c]`, indexing
+  `xs[i]` and indexed assignment `set xs[i] to v` — all emitted inline.
+- Eleven new cases in `scripts/test-native.mjs` (17/17 passing against real
+  `as` + `ld` ELFs).
+- Parity registry: the eight remaining native `should` gaps are closed —
+  **must gaps 0, should gaps 0 across all three tracks.**
 
 **Milestone 6e (native floats and math) — shipped:**
-
-* **Representation.** A float is the raw IEEE-754 bit pattern in a 64-bit word — no tag, no box. The compiler already tracks kinds statically, so `float` simply joins `int` / `str` / `list` / `tome` and decides which instruction family to emit. Float literals become `movabsq $<bits>, %rax`.
-* **Arithmetic.** `+ - * /` and all six comparisons emit SSE2 (`addsd`/`subsd`/`mulsd`/`divsd`, `ucomisd` + `seta/setb/...`) whenever either operand's kind is `float`; integer operands are widened inline with `cvtsi2sdq`, so `1 + 0.5` and `3.0 * 2` work without explicit casts. Unary minus flips the sign bit rather than calling `negq`.
-* **Printing.** `sdev_str_float` formats a double by hand: sign extraction, `cvttsd2si` for the integer part, ×10^6 + rounding for the fraction, trailing-zero trimming (always at least one digit, so `3.0` prints as `3.0`), then reuse of `sdev_str_int` / `sdev_concat` / `sdev_chr`. `say` dispatches to `sdev_say_float`, and `"pi=" + 3.25` coerces through the same formatter.
-* **Math in assembly.** `sqrt` is `sqrtsd`; `floor` / `ceil` / `round` are built from `cvttsd2si` plus a correction step (no SSE4.1 dependency); `sin` / `cos` use x87 `fsin` / `fcos`; `log` is `fldln2` + `fyl2x`; `exp` and `pow` share the classic `frndint` / `f2xm1` / `fscale` sequence. `random()` is the same xorshift32 generator the seed VM uses, divided by 2^32 to land in `[0, 1)`. `num("3.5")` is a hand-written decimal parser and `int(x)` truncates toward zero.
-* **Parameter kinds from call sites.** `inferFnTypes` now walks every call in the program and records `@param:<fn>:<i>`, so `to half with n / return n / 2.0` compiles `n` as a float when it is only ever called with floats.
-* Fifteen new cases in `scripts/test-native.mjs` (47/47 passing against real `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
-* Parity registry: twelve former native `n/a` entries (`num`, `floor`, `ceil`, `round`, `sqrt`, `pow`, `sin`, `cos`, `exp`, `log`, `random`, `float`) became `should` and are satisfied — **must gaps 0, should gaps 0 across all three tracks.**
+- **Representation.** A float is the raw IEEE-754 bit pattern in a 64-bit
+  word — no tag, no box. The compiler already tracks kinds statically, so
+  `float` simply joins `int` / `str` / `list` / `tome` and decides which
+  instruction family to emit. Float literals become `movabsq $<bits>, %rax`.
+- **Arithmetic.** `+ - * /` and all six comparisons emit SSE2
+  (`addsd`/`subsd`/`mulsd`/`divsd`, `ucomisd` + `seta/setb/...`) whenever
+  either operand's kind is `float`; integer operands are widened inline with
+  `cvtsi2sdq`, so `1 + 0.5` and `3.0 * 2` work without explicit casts.
+  Unary minus flips the sign bit rather than calling `negq`.
+- **Printing.** `sdev_str_float` formats a double by hand: sign extraction,
+  `cvttsd2si` for the integer part, ×10^6 + rounding for the fraction,
+  trailing-zero trimming (always at least one digit, so `3.0` prints as
+  `3.0`), then reuse of `sdev_str_int` / `sdev_concat` / `sdev_chr`.
+  `say` dispatches to `sdev_say_float`, and `"pi=" + 3.25` coerces through
+  the same formatter.
+- **Math in assembly.** `sqrt` is `sqrtsd`; `floor` / `ceil` / `round` are
+  built from `cvttsd2si` plus a correction step (no SSE4.1 dependency);
+  `sin` / `cos` use x87 `fsin` / `fcos`; `log` is `fldln2` + `fyl2x`; `exp`
+  and `pow` share the classic `frndint` / `f2xm1` / `fscale` sequence.
+  `random()` is the same xorshift32 generator the seed VM uses, divided by
+  2^32 to land in `[0, 1)`. `num("3.5")` is a hand-written decimal parser and
+  `int(x)` truncates toward zero.
+- **Parameter kinds from call sites.** `inferFnTypes` now walks every call in
+  the program and records `@param:<fn>:<i>`, so `to half with n / return n /
+  2.0` compiles `n` as a float when it is only ever called with floats.
+- Fifteen new cases in `scripts/test-native.mjs` (47/47 passing against real
+  `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
+- Parity registry: twelve former native `n/a` entries (`num`, `floor`,
+  `ceil`, `round`, `sqrt`, `pow`, `sin`, `cos`, `exp`, `log`, `random`,
+  `float`) became `should` and are satisfied — **must gaps 0, should gaps 0
+  across all three tracks.**
 
 **Milestone 6d (native strings, tomes and for-each) — shipped:**
-
-* **Runtime (`lang/native/runtime.s`)** gained a hand-written string library: `sdev_str_eq`, `sdev_index_of`, `sdev_contains`, `sdev_substr`, `sdev_upper`, `sdev_lower`, `sdev_trim`, `sdev_replace`, `sdev_split` (returns a heap list of pieces), `sdev_join` and `sdev_empty`. `replace` and `split` are built out of `index_of` + `substr` + `concat`, so there is one matching algorithm rather than three.
-* **Tomes natively.** A tome is `[i64 count][i64 cap][cap × (key-ptr, value)]` with `cap = 64`, so `length(t)` still reads the header word exactly like strings and lists. `sdev_tnew` / `sdev_tfind` / `sdev_tset` / `sdev_tget` / `sdev_thas` / `sdev_tkeys` / `sdev_tvals` implement association-list lookup keyed by `sdev_str_eq` (value equality, not pointer equality).
-* **Codegen (`codegen-x64.mjs`)**: tome literals `{ k: v }` lower to `tnew` plus one `tset` per pair; `t["k"]` and `set t["k"] to v` dispatch to `tget`/`tset` when the container's inferred kind is `tome`, and stay list-indexing otherwise. `is` / `is not` compare text by value when either side is a string.
-* **Kind inference widened**: a fourth kind `tome` joins `int` / `str` / `list`; per-key value kinds are remembered as `@tome:<var>:<key>` and list element kinds as `@elem:<var>`, so `say parts[1]` after `split` prints text instead of a pointer.
-* **`for each x in xs … end`** is lowered natively to a counted index loop over two hidden slots named by the loop's foreach depth (`@fe_i<d>`, `@fe_s<d>`, sanitised for asm labels); iterating a tome walks its keys. Local frames grew from 16 to 32 slots to make room.
-* **Builtins added**: `upper`, `lower`, `trim`, `contains`, `index_of`, `substring`, `replace`, `split`, `join`, `min`, `max`, `tome_new`, `keys`, `values`, `has`.
-* Fifteen new cases in `scripts/test-native.mjs` (32/32 passing against real `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
-* Parity registry: fourteen former native `n/a` entries became `should` and are satisfied — **must gaps 0, should gaps 0 across all three tracks.**
+- **Runtime (`lang/native/runtime.s`)** gained a hand-written string library:
+  `sdev_str_eq`, `sdev_index_of`, `sdev_contains`, `sdev_substr`,
+  `sdev_upper`, `sdev_lower`, `sdev_trim`, `sdev_replace`, `sdev_split`
+  (returns a heap list of pieces), `sdev_join` and `sdev_empty`. `replace`
+  and `split` are built out of `index_of` + `substr` + `concat`, so there is
+  one matching algorithm rather than three.
+- **Tomes natively.** A tome is `[i64 count][i64 cap][cap × (key-ptr, value)]`
+  with `cap = 64`, so `length(t)` still reads the header word exactly like
+  strings and lists. `sdev_tnew` / `sdev_tfind` / `sdev_tset` / `sdev_tget` /
+  `sdev_thas` / `sdev_tkeys` / `sdev_tvals` implement association-list
+  lookup keyed by `sdev_str_eq` (value equality, not pointer equality).
+- **Codegen (`codegen-x64.mjs`)**: tome literals `{ k: v }` lower to `tnew`
+  plus one `tset` per pair; `t["k"]` and `set t["k"] to v` dispatch to
+  `tget`/`tset` when the container's inferred kind is `tome`, and stay
+  list-indexing otherwise. `is` / `is not` compare text by value when either
+  side is a string.
+- **Kind inference widened**: a fourth kind `tome` joins `int` / `str` /
+  `list`; per-key value kinds are remembered as `@tome:<var>:<key>` and list
+  element kinds as `@elem:<var>`, so `say parts[1]` after `split` prints
+  text instead of a pointer.
+- **`for each x in xs … end`** is lowered natively to a counted index loop
+  over two hidden slots named by the loop's foreach depth (`@fe_i<d>`,
+  `@fe_s<d>`, sanitised for asm labels); iterating a tome walks its keys.
+  Local frames grew from 16 to 32 slots to make room.
+- **Builtins added**: `upper`, `lower`, `trim`, `contains`, `index_of`,
+  `substring`, `replace`, `split`, `join`, `min`, `max`, `tome_new`, `keys`,
+  `values`, `has`.
+- Fifteen new cases in `scripts/test-native.mjs` (32/32 passing against real
+  `as` + `ld` ELFs); 87/87 fixed-point cases still byte-identical.
+- Parity registry: fourteen former native `n/a` entries became `should` and
+  are satisfied — **must gaps 0, should gaps 0 across all three tracks.**
 
 **Milestone 5z (modules — `use "path"`) — shipped:**
-
-* **No VM change.** Modules are a source→source prelink pass that runs before lexing, so the seed VM is untouched since 5x.
-* **Pass**: `prelink()` in `lang/bootstrap/compile.mjs` and `prelink_source` in `lang/compiler/codegen.sdev` implement the identical algorithm — walk the source line by line, and when a trimmed line is exactly `use "path"`, splice in the recursively prelinked text of that file followed by a newline; every other line is copied verbatim with its newline. Include-once is tracked by path (a `Set` in JS, a `|`-delimited global string in sdev), so diamond dependencies emit a module once.
-* **Resolution is the host's job**: the self-hosted compiler reads modules with `read_file(path)`. `compile-self.mjs` now answers `<stdin>` with the program under compilation and any other path from an optional module map, falling back to disk under Node. The driver program gained a single line, `set src to prelink_source(src)`, between the codegen and the inline lexer.
-* **Bootstrap API**: `compile(source, { readModule })`; `setModuleReader()` lets a host (browser IDE) override resolution globally.
-* Two new runtime cases (66/66 passing), 83/83 fixed-point cases still byte-identical, driver artifact rebuilt: bc=17475, pool=683.
-* Parity: `import` on v2 is now `use`; `inherit` / `super` are the last two v2 gaps in the registry.
+- **No VM change.** Modules are a source→source prelink pass that runs
+  before lexing, so the seed VM is untouched since 5x.
+- **Pass**: `prelink()` in `lang/bootstrap/compile.mjs` and
+  `prelink_source` in `lang/compiler/codegen.sdev` implement the identical
+  algorithm — walk the source line by line, and when a trimmed line is
+  exactly `use "path"`, splice in the recursively prelinked text of that
+  file followed by a newline; every other line is copied verbatim with its
+  newline. Include-once is tracked by path (a `Set` in JS, a `|`-delimited
+  global string in sdev), so diamond dependencies emit a module once.
+- **Resolution is the host's job**: the self-hosted compiler reads modules
+  with `read_file(path)`. `compile-self.mjs` now answers `<stdin>` with the
+  program under compilation and any other path from an optional module map,
+  falling back to disk under Node. The driver program gained a single line,
+  `set src to prelink_source(src)`, between the codegen and the inline
+  lexer.
+- **Bootstrap API**: `compile(source, { readModule })`; `setModuleReader()`
+  lets a host (browser IDE) override resolution globally.
+- Two new runtime cases (66/66 passing), 83/83 fixed-point cases still
+  byte-identical, driver artifact rebuilt: bc=17475, pool=683.
+- Parity: `import` on v2 is now `use`; `inherit` / `super` are the last two
+  v2 gaps in the registry.
 
 **Milestone 15 (training at scale) — planned:**
+- Batched (multi-sequence) forward passes instead of one context at a time.
+- Route `matmul` through the M10/M11 accelerators inside the training loop.
+- Binary checkpoints (length-prefixed f64 blocks) to replace the text format.
 
-* Batched (multi-sequence) forward passes instead of one context at a time.
-* Route `matmul` through the M10/M11 accelerators inside the training loop.
-* Binary checkpoints (length-prefixed f64 blocks) to replace the text format.
+
+
+
+
 
 #### Where we're going (Milestone 2 — post-launch)
 
-Three-stage bootstrap. Every stage builds the next; the seed is only needed once, to rebuild from absolute zero.
+Three-stage bootstrap. Every stage builds the next; the seed is only
+needed once, to rebuild from absolute zero.
 
 ```
 lang/bootstrap/seed.wat        (hand-written WebAssembly Text)
@@ -5586,33 +6308,36 @@ lang/bootstrap/stage1.wasm     runs full SDEV, emits WASM
 dist/sdev-core.wasm            self-hosting. Recompiles itself, byte-identical.
 ```
 
-**Sub-language `sdev-min`**
+##### Sub-language `sdev-min`
 
 The stage-0 seed only understands a strict subset:
 
-* Integers, strings, booleans, `nothing`.
-* Lists (indexed, appendable). No dicts.
-* `set … to`, `if / else / end`, `while / end`, `to / end` (no `for each`).
-* Function calls, `return`.
-* One built-in call table: `print`, `read_file`, `write_file`, `error`, and the WASM emit primitives (`emit_byte`, `emit_u32`, `emit_leb128`, `patch_u32`).
+- Integers, strings, booleans, `nothing`.
+- Lists (indexed, appendable). No dicts.
+- `set … to`, `if / else / end`, `while / end`, `to / end` (no `for each`).
+- Function calls, `return`.
+- One built-in call table: `print`, `read_file`, `write_file`, `error`,
+  and the WASM emit primitives (`emit_byte`, `emit_u32`, `emit_leb128`,
+  `patch_u32`).
 
 That's enough to write a lexer, a parser, and a WASM code generator.
 
-**WASM ABI**
+##### WASM ABI
 
 `sdev-core.wasm` exports:
 
-| export                 | signature                             | purpose                        |
-| ---------------------- | ------------------------------------- | ------------------------------ |
-| `sdev_version`         | `() -> i32`                           | ABI + language version         |
-| `sdev_compile`         | `(src_ptr, src_len) -> module_handle` | source → WASM module bytes     |
-| `sdev_run`             | `(module_handle) -> exit_code`        | execute a compiled module      |
-| `sdev_step`            | `(module_handle) -> state`            | single-step (for the IDE)      |
-| `sdev_emit_graphics`   | `(handle) -> cmd_buffer`              | drain graphics commands        |
-| `sdev_translate`       | `(src_ptr, lang_code) -> out`         | run the 26-language translator |
-| `sdev_transpile_board` | `(src_ptr) -> ino_bytes`              | board { } → Arduino .ino       |
+| export                    | signature                             | purpose                    |
+| ------------------------- | ------------------------------------- | -------------------------- |
+| `sdev_version`            | `() -> i32`                           | ABI + language version     |
+| `sdev_compile`            | `(src_ptr, src_len) -> module_handle` | source → WASM module bytes |
+| `sdev_run`                | `(module_handle) -> exit_code`        | execute a compiled module  |
+| `sdev_step`               | `(module_handle) -> state`            | single-step (for the IDE)  |
+| `sdev_emit_graphics`      | `(handle) -> cmd_buffer`              | drain graphics commands    |
+| `sdev_translate`          | `(src_ptr, lang_code) -> out`         | run the 26-language translator |
+| `sdev_transpile_board`    | `(src_ptr) -> ino_bytes`              | board { } → Arduino .ino   |
 
-Memory layout: linear memory starts with a 64 KB scratch region, then a freelist-managed heap. Strings are UTF-8, length-prefixed.
+Memory layout: linear memory starts with a 64 KB scratch region, then a
+freelist-managed heap. Strings are UTF-8, length-prefixed.
 
 #### Repository layout
 
@@ -5656,256 +6381,286 @@ dist/
   sdev-core.wasm        # shipped artifact (Milestone 2)
 ```
 
+
 #### Verification
 
 The gates that run today:
 
-1. `node scripts/test-self-toolchain.mjs` — `lexer.sdev`, `parser.sdev`, and `codegen.sdev` must all round-trip **byte-identical** through the self-hosted compiler (currently bc=746/380/5730).
-2. `node scripts/test-shim-fixed-point.mjs` — the compile shim reaches a fixed point against the JS bootstrap oracle.
-3. `node scripts/test-wasm-runtime.mjs` — seed VM opcode suite (ints, call frames, heap/lists, strings, floats + transcendentals).
-4. `node scripts/test-driver-artifact.mjs` — the checked-in driver bytecode matches a fresh bootstrap build, and the bootstrap-free shim compiles.
+1. `node scripts/test-self-toolchain.mjs` — `lexer.sdev`, `parser.sdev`, and
+   `codegen.sdev` must all round-trip **byte-identical** through the
+   self-hosted compiler (currently bc=746/380/5730).
+2. `node scripts/test-shim-fixed-point.mjs` — the compile shim reaches a
+   fixed point against the JS bootstrap oracle.
+3. `node scripts/test-wasm-runtime.mjs` — seed VM opcode suite (ints, call
+   frames, heap/lists, strings, floats + transcendentals).
+4. `node scripts/test-driver-artifact.mjs` — the checked-in driver bytecode
+   matches a fresh bootstrap build, and the bootstrap-free shim compiles.
 5. `node scripts/test-native.mjs` — Track B x86-64 emission and linking.
-6. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd, tokenizers, transformer shapes, LM training, sampling, checkpoints, and accelerator fallback.
+6. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd,
+   tokenizers, transformer shapes, LM training, sampling, checkpoints, and
+   accelerator fallback.
 7. `bun run scripts/test-translator.ts` — 26-language keyword translation.
 
-Planned additions: `test-v2-goldens.mjs` (docs examples diffed against a recorded transcript), `test-v1-parity.mjs`, `test-hardware.mjs` (`board` blocks vs. checked-in `.ino` snapshots), and a Playwright smoke test that opens `/ide`, runs `blink.sdev`, and verifies the canvas + output panels.
+Planned additions: `test-v2-goldens.mjs` (docs examples diffed against a
+recorded transcript), `test-v1-parity.mjs`, `test-hardware.mjs` (`board`
+blocks vs. checked-in `.ino` snapshots), and a Playwright smoke test that
+opens `/ide`, runs `blink.sdev`, and verifies the canvas + output panels.
+
 
 #### Why not just keep the TypeScript interpreter?
 
-Because SDEV wants to be a real language, not a project's DSL. Every serious language is written in itself. Self-hosting proves the design is complete enough to describe itself, and gives the community a single artifact (`sdev-core.wasm`) that runs the same anywhere WebAssembly runs — browser, Node, Deno, Bun, wasmtime, a microcontroller with a WASM interpreter.
+Because SDEV wants to be a real language, not a project's DSL. Every serious
+language is written in itself. Self-hosting proves the design is complete
+enough to describe itself, and gives the community a single artifact
+(`sdev-core.wasm`) that runs the same anywhere WebAssembly runs — browser,
+Node, Deno, Bun, wasmtime, a microcontroller with a WASM interpreter.
 
 #### Parity matrix
 
 Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 
-| Feature                   | Area          | sdev v1 (TypeScript interpreter) | sdev v2 (self-hosted compiler on the seed VM) | native x86-64 backend |
-| ------------------------- | ------------- | -------------------------------- | --------------------------------------------- | --------------------- |
-| `say`                     | io            | `speak`                          | `say`                                         | `say`                 |
-| `length`                  | core          | `measure`                        | `length`                                      | `length`              |
-| `concat`                  | text          | `etch`                           | `concat`                                      | `concat`              |
-| `ord`                     | text          | `ord`                            | `ord`                                         | `ord`                 |
-| `chr`                     | text          | `chr`                            | `chr`                                         | `chr`                 |
-| `str`                     | text          | `str`                            | `str`                                         | `str`                 |
-| `int`                     | types         | `int`                            | `int`                                         | `int`                 |
-| `num`                     | types         | `num`                            | `num`                                         | `num`                 |
-| `list_new`                | list          | `gather`                         | `mklist`                                      | `list_new`            |
-| `list_get`                | list          | `pluck`                          | `mklist`                                      | `index`               |
-| `upper`                   | text          | `upper`                          | `upper`                                       | `upper`               |
-| `lower`                   | text          | `lower`                          | `lower`                                       | `lower`               |
-| `trim`                    | text          | `trim`                           | `trim`                                        | `trim`                |
-| `contains`                | text          | `contains`                       | `contains`                                    | `contains`            |
-| `replace`                 | text          | `replace`                        | `replace`                                     | `replace`             |
-| `split`                   | text          | `shatter`                        | `split`                                       | `split`               |
-| `join`                    | text          | `weave`                          | `join`                                        | `join`                |
-| `abs`                     | math          | `abs`                            | `fabs`                                        | `abs`                 |
-| `min`                     | math          | `least`                          | `min`                                         | `min`                 |
-| `max`                     | math          | `greatest`                       | `max`                                         | `max`                 |
-| `floor`                   | math          | `ground`                         | `f2i`                                         | `floor`               |
-| `ceil`                    | math          | `elevate`                        | `fceil`                                       | `ceil`                |
-| `round`                   | math          | `nearby`                         | `fround`                                      | `round`               |
-| `sqrt`                    | math          | `root`                           | `fsqrt`                                       | `sqrt`                |
-| `pow`                     | math          | `pow`                            | `fpow`                                        | `pow`                 |
-| `sin`                     | math          | `sin`                            | `fsin`                                        | `sin`                 |
-| `cos`                     | math          | `cos`                            | `fcos`                                        | `cos`                 |
-| `exp`                     | math          | `exp`                            | `fexp`                                        | `exp`                 |
-| `log`                     | math          | `ln`                             | `flog`                                        | `log`                 |
-| `random`                  | math          | `rand`                           | `random`                                      | `random`              |
-| `range`                   | list          | `range`                          | `range`                                       | —                     |
-| `sum`                     | list          | `sum`                            | `sum`                                         | —                     |
-| `keys`                    | tome          | `tome_keys`                      | `keys`                                        | `keys`                |
-| `read_file`               | io            | `read_file`                      | `read_file`                                   | —                     |
-| `write_file`              | io            | `write_file`                     | `write_file`                                  | —                     |
-| `http_get`                | net           | `http_get`                       | `http_get`                                    | —                     |
-| `var_decl`                | syntax        | `forge`                          | `set`                                         | `set`                 |
-| `assign`                  | syntax        | `be`                             | `set`                                         | `set`                 |
-| `if`                      | syntax        | `either`                         | `if`                                          | `if`                  |
-| `else`                    | syntax        | `otherwise`                      | `else`                                        | `else`                |
-| `while`                   | syntax        | `cycle`                          | `while`                                       | `while`               |
-| `for_each`                | syntax        | `iterate`                        | `each`                                        | `foreach`             |
-| `break`                   | syntax        | `yeet`                           | `break`                                       | `break`               |
-| `continue`                | syntax        | `skip`                           | `continue`                                    | `continue`            |
-| `function`                | syntax        | `conjure`                        | `to`                                          | `call`                |
-| `return`                  | syntax        | `yield`                          | `return`                                      | `return`              |
-| `params`                  | syntax        | `conjure`                        | `with`                                        | `call`                |
-| `recursion`               | syntax        | `conjure`                        | `to`                                          | `call`                |
-| `lambda`                  | syntax        | `ARROW`                          | `make`                                        | —                     |
-| `class`                   | oop           | `essence`                        | `kind`                                        | —                     |
-| `inherit`                 | oop           | `extend`                         | `extends`                                     | —                     |
-| `self`                    | oop           | `self`                           | —                                             | —                     |
-| `super`                   | oop           | `super`                          | `super`                                       | —                     |
-| `instantiate`             | oop           | `new`                            | `new`                                         | —                     |
-| `try_catch`               | errors        | `attempt`                        | `attempt`                                     | —                     |
-| `rescue`                  | errors        | `rescue`                         | `rescue`                                      | —                     |
-| `throw`                   | errors        | `throw`                          | `throw`                                       | —                     |
-| `logic_and`               | syntax        | `also`                           | `and`                                         | `and`                 |
-| `logic_or`                | syntax        | `within`                         | `or`                                          | `or`                  |
-| `logic_not`               | syntax        | `nope`                           | `not`                                         | `un`                  |
-| `equality`                | syntax        | `equals`                         | `is`                                          | `is`                  |
-| `inequality`              | syntax        | `differs`                        | `not`                                         | `isnot`               |
-| `bool_true`               | types         | `yep`                            | `true`                                        | `true`                |
-| `bool_false`              | types         | `nope`                           | `false`                                       | `false`               |
-| `nothing`                 | types         | `void`                           | `nothing`                                     | `nothing`             |
-| `list_literal`            | types         | `gather`                         | `mklist`                                      | `list`                |
-| `tome_literal`            | types         | `tome_keys`                      | `tome_literal`                                | `tome`                |
-| `import`                  | modules       | `summon`                         | `use`                                         | —                     |
-| `float`                   | types         | `num`                            | `i2f`                                         | `float`               |
-| `string`                  | types         | `str`                            | `str`                                         | `str`                 |
-| `values`                  | tome          | `values`                         | `values`                                      | `values`              |
-| `has`                     | tome          | `has`                            | `has`                                         | `has`                 |
-| `py_print`                | python        | `print`                          | —                                             | —                     |
-| `py_str`                  | python        | `str`                            | —                                             | —                     |
-| `py_repr`                 | python        | `repr`                           | —                                             | —                     |
-| `py_int`                  | python        | `int`                            | —                                             | —                     |
-| `py_float`                | python        | `float`                          | —                                             | —                     |
-| `py_bool`                 | python        | `bool`                           | —                                             | —                     |
-| `py_complexish`           | python        | `complexish`                     | —                                             | —                     |
-| `py_bytes`                | python        | `bytes`                          | —                                             | —                     |
-| `py_list`                 | python        | `list`                           | —                                             | —                     |
-| `py_tuple`                | python        | `tuple`                          | —                                             | —                     |
-| `py_set`                  | python        | `set`                            | —                                             | —                     |
-| `py_frozenset`            | python        | `frozenset`                      | —                                             | —                     |
-| `py_dict`                 | python        | `dict`                           | —                                             | —                     |
-| `py_len`                  | python        | `len`                            | —                                             | —                     |
-| `py_range`                | python        | `range`                          | —                                             | —                     |
-| `py_enumerate`            | python        | `enumerate`                      | —                                             | —                     |
-| `py_zip`                  | python        | `zip`                            | —                                             | —                     |
-| `py_zip_longest`          | python        | `zip_longest`                    | —                                             | —                     |
-| `py_map`                  | python        | `map`                            | —                                             | —                     |
-| `py_filter`               | python        | `filter`                         | —                                             | —                     |
-| `py_any`                  | python        | `any`                            | —                                             | —                     |
-| `py_all`                  | python        | `all`                            | —                                             | —                     |
-| `py_sorted`               | python        | `sorted`                         | —                                             | —                     |
-| `py_reversed`             | python        | `reversed`                       | —                                             | —                     |
-| `py_min`                  | python        | `min`                            | —                                             | —                     |
-| `py_max`                  | python        | `max`                            | —                                             | —                     |
-| `py_sum`                  | python        | `sum`                            | —                                             | —                     |
-| `py_abs`                  | python        | `abs`                            | —                                             | —                     |
-| `py_round`                | python        | `round`                          | —                                             | —                     |
-| `py_pow`                  | python        | `pow`                            | —                                             | —                     |
-| `py_divmod`               | python        | `divmod`                         | —                                             | —                     |
-| `py_bin`                  | python        | `bin`                            | —                                             | —                     |
-| `py_oct`                  | python        | `oct`                            | —                                             | —                     |
-| `py_hex`                  | python        | `hex`                            | —                                             | —                     |
-| `py_type`                 | python        | `type`                           | —                                             | —                     |
-| `py_isinstance`           | python        | `isinstance`                     | —                                             | —                     |
-| `py_issubclass`           | python        | `issubclass`                     | —                                             | —                     |
-| `py_getattr`              | python        | `getattr`                        | —                                             | —                     |
-| `py_setattr`              | python        | `setattr`                        | —                                             | —                     |
-| `py_hasattr`              | python        | `hasattr`                        | —                                             | —                     |
-| `py_delattr`              | python        | `delattr`                        | —                                             | —                     |
-| `py_vars`                 | python        | `vars`                           | —                                             | —                     |
-| `py_dir`                  | python        | `dir`                            | —                                             | —                     |
-| `py_callable`             | python        | `callable`                       | —                                             | —                     |
-| `py_id`                   | python        | `id`                             | —                                             | —                     |
-| `py_hash`                 | python        | `hash`                           | —                                             | —                     |
-| `py_format`               | python        | `format`                         | —                                             | —                     |
-| `py_iter`                 | python        | `iter`                           | —                                             | —                     |
-| `py_next`                 | python        | `next`                           | —                                             | —                     |
-| `py_send`                 | python        | `send`                           | —                                             | —                     |
-| `py_close`                | python        | `close`                          | —                                             | —                     |
-| `py_collect`              | python        | `collect`                        | —                                             | —                     |
-| `py_property`             | python        | `property`                       | —                                             | —                     |
-| `py_staticmethod`         | python        | `staticmethod`                   | —                                             | —                     |
-| `py_classmethod`          | python        | `classmethod`                    | —                                             | —                     |
-| `py_wraps`                | python        | `wraps`                          | —                                             | —                     |
-| `py_cache`                | python        | `cache`                          | —                                             | —                     |
-| `py_partial`              | python        | `partial`                        | —                                             | —                     |
-| `py_reduce`               | python        | `reduce`                         | —                                             | —                     |
-| `py_dataclass`            | python        | `dataclass`                      | —                                             | —                     |
-| `py_count`                | python        | `count`                          | —                                             | —                     |
-| `py_cycle`                | python        | `cycle`                          | —                                             | —                     |
-| `py_repeat`               | python        | `repeat`                         | —                                             | —                     |
-| `py_chain`                | python        | `chain`                          | —                                             | —                     |
-| `py_islice`               | python        | `islice`                         | —                                             | —                     |
-| `py_product`              | python        | `product`                        | —                                             | —                     |
-| `py_permutations`         | python        | `permutations`                   | —                                             | —                     |
-| `py_combinations`         | python        | `combinations`                   | —                                             | —                     |
-| `py_accumulate`           | python        | `accumulate`                     | —                                             | —                     |
-| `py_groupby`              | python        | `groupby`                        | —                                             | —                     |
-| `py_Counter`              | python        | `Counter`                        | —                                             | —                     |
-| `py_defaultdict`          | python        | `defaultdict`                    | —                                             | —                     |
-| `py_namedtuple`           | python        | `namedtuple`                     | —                                             | —                     |
-| `py_deque`                | python        | `deque`                          | —                                             | —                     |
-| `py_OrderedDict`          | python        | `OrderedDict`                    | —                                             | —                     |
-| `py_union`                | python        | `union`                          | —                                             | —                     |
-| `py_intersection`         | python        | `intersection`                   | —                                             | —                     |
-| `py_difference`           | python        | `difference`                     | —                                             | —                     |
-| `py_symmetric_difference` | python        | `symmetric_difference`           | —                                             | —                     |
-| `py_issubset`             | python        | `issubset`                       | —                                             | —                     |
-| `py_set_add`              | python        | `set_add`                        | —                                             | —                     |
-| `py_set_remove`           | python        | `set_remove`                     | —                                             | —                     |
-| `py_keys`                 | python        | `keys`                           | —                                             | —                     |
-| `py_values`               | python        | `values`                         | —                                             | —                     |
-| `py_items`                | python        | `items`                          | —                                             | —                     |
-| `py_get`                  | python        | `get`                            | —                                             | —                     |
-| `py_setdefault`           | python        | `setdefault`                     | —                                             | —                     |
-| `py_update`               | python        | `update`                         | —                                             | —                     |
-| `py_pop`                  | python        | `pop`                            | —                                             | —                     |
-| `py_slice_assign`         | python        | `slice_assign`                   | —                                             | —                     |
-| `py_module`               | python        | `module`                         | —                                             | —                     |
-| `py_truthy`               | python        | `truthy`                         | —                                             | —                     |
-| `py_is_generator`         | python        | `is_generator`                   | —                                             | —                     |
-| `py_freeze`               | python        | `freeze`                         | —                                             | —                     |
-| `py_ascii`                | python        | `ascii`                          | —                                             | —                     |
-| `pysyn_generator`         | python-syntax | `generator`                      | —                                             | —                     |
-| `pysyn_with`              | python-syntax | `with`                           | —                                             | —                     |
-| `pysyn_as`                | python-syntax | `as`                             | —                                             | —                     |
-| `pysyn_match`             | python-syntax | `match`                          | —                                             | —                     |
-| `pysyn_case`              | python-syntax | `case`                           | —                                             | —                     |
-| `pysyn_async`             | python-syntax | `async`                          | —                                             | —                     |
-| `pysyn_await`             | python-syntax | `await`                          | —                                             | —                     |
-| `pysyn_lambda`            | python-syntax | `lambda`                         | —                                             | —                     |
-| `pysyn_assert`            | python-syntax | `assert`                         | —                                             | —                     |
-| `pysyn_del`               | python-syntax | `del`                            | —                                             | —                     |
-| `pysyn_global`            | python-syntax | `global`                         | —                                             | —                     |
-| `pysyn_nonlocal`          | python-syntax | `nonlocal`                       | —                                             | —                     |
-| `pysyn_pass`              | python-syntax | `pass`                           | —                                             | —                     |
-| `pysyn_raise`             | python-syntax | `raise`                          | —                                             | —                     |
-| `pysyn_from`              | python-syntax | `from`                           | —                                             | —                     |
-| `pysyn_finally`           | python-syntax | `finally`                        | —                                             | —                     |
-| `pysyn_in`                | python-syntax | `in`                             | —                                             | —                     |
-| `pysyn_not`               | python-syntax | `not`                            | —                                             | —                     |
-| `pysyn_is`                | python-syntax | `is`                             | —                                             | —                     |
-| `pysyn_elif`              | python-syntax | `elif`                           | —                                             | —                     |
-| `pysyn_try`               | python-syntax | `try`                            | —                                             | —                     |
-| `pysyn_except`            | python-syntax | `except`                         | —                                             | —                     |
-| `pysyn_class`             | python-syntax | `class`                          | —                                             | —                     |
-| `pysyn_def`               | python-syntax | `def`                            | —                                             | —                     |
-| `pysyn_import`            | python-syntax | `import`                         | —                                             | —                     |
-| `pysyn_return`            | python-syntax | `return`                         | —                                             | —                     |
-| `pysyn_while`             | python-syntax | `while`                          | —                                             | —                     |
-| `pysyn_for`               | python-syntax | `for`                            | —                                             | —                     |
-| `pysyn_break`             | python-syntax | `break`                          | —                                             | —                     |
-| `pysyn_continue`          | python-syntax | `continue`                       | —                                             | —                     |
-| `pysyn_true`              | python-syntax | `true`                           | —                                             | —                     |
-| `pysyn_false`             | python-syntax | `false`                          | —                                             | —                     |
-| `pysyn_none`              | python-syntax | `none`                           | —                                             | —                     |
-| `pysyn_and`               | python-syntax | `and`                            | —                                             | —                     |
-| `pysyn_or`                | python-syntax | `or`                             | —                                             | —                     |
+<!-- PARITY:BEGIN -->
 
-***
+| Feature | Area | sdev v1 (TypeScript interpreter) | sdev v2 (self-hosted compiler on the seed VM) | native x86-64 backend |
+| --- | --- | --- | --- | --- |
+| `say` | io | `speak` | `say` | `say` |
+| `length` | core | `measure` | `length` | `length` |
+| `concat` | text | `etch` | `concat` | `concat` |
+| `ord` | text | `ord` | `ord` | `ord` |
+| `chr` | text | `chr` | `chr` | `chr` |
+| `str` | text | `str` | `str` | `str` |
+| `int` | types | `int` | `int` | `int` |
+| `num` | types | `num` | `num` | `num` |
+| `list_new` | list | `gather` | `mklist` | `list_new` |
+| `list_get` | list | `pluck` | `mklist` | `index` |
+| `upper` | text | `upper` | `upper` | `upper` |
+| `lower` | text | `lower` | `lower` | `lower` |
+| `trim` | text | `trim` | `trim` | `trim` |
+| `contains` | text | `contains` | `contains` | `contains` |
+| `replace` | text | `replace` | `replace` | `replace` |
+| `split` | text | `shatter` | `split` | `split` |
+| `join` | text | `weave` | `join` | `join` |
+| `abs` | math | `abs` | `fabs` | `abs` |
+| `min` | math | `least` | `min` | `min` |
+| `max` | math | `greatest` | `max` | `max` |
+| `floor` | math | `ground` | `f2i` | `floor` |
+| `ceil` | math | `elevate` | `fceil` | `ceil` |
+| `round` | math | `nearby` | `fround` | `round` |
+| `sqrt` | math | `root` | `fsqrt` | `sqrt` |
+| `pow` | math | `pow` | `fpow` | `pow` |
+| `sin` | math | `sin` | `fsin` | `sin` |
+| `cos` | math | `cos` | `fcos` | `cos` |
+| `exp` | math | `exp` | `fexp` | `exp` |
+| `log` | math | `ln` | `flog` | `log` |
+| `random` | math | `rand` | `random` | `random` |
+| `range` | list | `range` | `range` | — |
+| `sum` | list | `sum` | `sum` | — |
+| `keys` | tome | `tome_keys` | `keys` | `keys` |
+| `read_file` | io | `read_file` | `read_file` | — |
+| `write_file` | io | `write_file` | `write_file` | — |
+| `http_get` | net | `http_get` | `http_get` | — |
+| `var_decl` | syntax | `forge` | `set` | `set` |
+| `assign` | syntax | `be` | `set` | `set` |
+| `if` | syntax | `either` | `if` | `if` |
+| `else` | syntax | `otherwise` | `else` | `else` |
+| `while` | syntax | `cycle` | `while` | `while` |
+| `for_each` | syntax | `iterate` | `each` | `foreach` |
+| `break` | syntax | `yeet` | `break` | `break` |
+| `continue` | syntax | `skip` | `continue` | `continue` |
+| `function` | syntax | `conjure` | `to` | `call` |
+| `return` | syntax | `yield` | `return` | `return` |
+| `params` | syntax | `conjure` | `with` | `call` |
+| `recursion` | syntax | `conjure` | `to` | `call` |
+| `lambda` | syntax | `ARROW` | `make` | — |
+| `class` | oop | `essence` | `kind` | — |
+| `inherit` | oop | `extend` | `extends` | — |
+| `self` | oop | `self` | — | — |
+| `super` | oop | `super` | `super` | — |
+| `instantiate` | oop | `new` | `new` | — |
+| `try_catch` | errors | `attempt` | `attempt` | — |
+| `rescue` | errors | `rescue` | `rescue` | — |
+| `throw` | errors | `throw` | `throw` | — |
+| `logic_and` | syntax | `also` | `and` | `and` |
+| `logic_or` | syntax | `within` | `or` | `or` |
+| `logic_not` | syntax | `nope` | `not` | `un` |
+| `equality` | syntax | `equals` | `is` | `is` |
+| `inequality` | syntax | `differs` | `not` | `isnot` |
+| `bool_true` | types | `yep` | `true` | `true` |
+| `bool_false` | types | `nope` | `false` | `false` |
+| `nothing` | types | `void` | `nothing` | `nothing` |
+| `list_literal` | types | `gather` | `mklist` | `list` |
+| `tome_literal` | types | `tome_keys` | `tome_literal` | `tome` |
+| `import` | modules | `summon` | `use` | — |
+| `float` | types | `num` | `i2f` | `float` |
+| `string` | types | `str` | `str` | `str` |
+| `values` | tome | `values` | `values` | `values` |
+| `has` | tome | `has` | `has` | `has` |
+| `py_print` | python | `print` | — | — |
+| `py_str` | python | `str` | — | — |
+| `py_repr` | python | `repr` | — | — |
+| `py_int` | python | `int` | — | — |
+| `py_float` | python | `float` | — | — |
+| `py_bool` | python | `bool` | — | — |
+| `py_complexish` | python | `complexish` | — | — |
+| `py_bytes` | python | `bytes` | — | — |
+| `py_list` | python | `list` | — | — |
+| `py_tuple` | python | `tuple` | — | — |
+| `py_set` | python | `set` | — | — |
+| `py_frozenset` | python | `frozenset` | — | — |
+| `py_dict` | python | `dict` | — | — |
+| `py_len` | python | `len` | — | — |
+| `py_range` | python | `range` | — | — |
+| `py_enumerate` | python | `enumerate` | — | — |
+| `py_zip` | python | `zip` | — | — |
+| `py_zip_longest` | python | `zip_longest` | — | — |
+| `py_map` | python | `map` | — | — |
+| `py_filter` | python | `filter` | — | — |
+| `py_any` | python | `any` | — | — |
+| `py_all` | python | `all` | — | — |
+| `py_sorted` | python | `sorted` | — | — |
+| `py_reversed` | python | `reversed` | — | — |
+| `py_min` | python | `min` | — | — |
+| `py_max` | python | `max` | — | — |
+| `py_sum` | python | `sum` | — | — |
+| `py_abs` | python | `abs` | — | — |
+| `py_round` | python | `round` | — | — |
+| `py_pow` | python | `pow` | — | — |
+| `py_divmod` | python | `divmod` | — | — |
+| `py_bin` | python | `bin` | — | — |
+| `py_oct` | python | `oct` | — | — |
+| `py_hex` | python | `hex` | — | — |
+| `py_type` | python | `type` | — | — |
+| `py_isinstance` | python | `isinstance` | — | — |
+| `py_issubclass` | python | `issubclass` | — | — |
+| `py_getattr` | python | `getattr` | — | — |
+| `py_setattr` | python | `setattr` | — | — |
+| `py_hasattr` | python | `hasattr` | — | — |
+| `py_delattr` | python | `delattr` | — | — |
+| `py_vars` | python | `vars` | — | — |
+| `py_dir` | python | `dir` | — | — |
+| `py_callable` | python | `callable` | — | — |
+| `py_id` | python | `id` | — | — |
+| `py_hash` | python | `hash` | — | — |
+| `py_format` | python | `format` | — | — |
+| `py_iter` | python | `iter` | — | — |
+| `py_next` | python | `next` | — | — |
+| `py_send` | python | `send` | — | — |
+| `py_close` | python | `close` | — | — |
+| `py_collect` | python | `collect` | — | — |
+| `py_property` | python | `property` | — | — |
+| `py_staticmethod` | python | `staticmethod` | — | — |
+| `py_classmethod` | python | `classmethod` | — | — |
+| `py_wraps` | python | `wraps` | — | — |
+| `py_cache` | python | `cache` | — | — |
+| `py_partial` | python | `partial` | — | — |
+| `py_reduce` | python | `reduce` | — | — |
+| `py_dataclass` | python | `dataclass` | — | — |
+| `py_count` | python | `count` | — | — |
+| `py_cycle` | python | `cycle` | — | — |
+| `py_repeat` | python | `repeat` | — | — |
+| `py_chain` | python | `chain` | — | — |
+| `py_islice` | python | `islice` | — | — |
+| `py_product` | python | `product` | — | — |
+| `py_permutations` | python | `permutations` | — | — |
+| `py_combinations` | python | `combinations` | — | — |
+| `py_accumulate` | python | `accumulate` | — | — |
+| `py_groupby` | python | `groupby` | — | — |
+| `py_Counter` | python | `Counter` | — | — |
+| `py_defaultdict` | python | `defaultdict` | — | — |
+| `py_namedtuple` | python | `namedtuple` | — | — |
+| `py_deque` | python | `deque` | — | — |
+| `py_OrderedDict` | python | `OrderedDict` | — | — |
+| `py_union` | python | `union` | — | — |
+| `py_intersection` | python | `intersection` | — | — |
+| `py_difference` | python | `difference` | — | — |
+| `py_symmetric_difference` | python | `symmetric_difference` | — | — |
+| `py_issubset` | python | `issubset` | — | — |
+| `py_set_add` | python | `set_add` | — | — |
+| `py_set_remove` | python | `set_remove` | — | — |
+| `py_keys` | python | `keys` | — | — |
+| `py_values` | python | `values` | — | — |
+| `py_items` | python | `items` | — | — |
+| `py_get` | python | `get` | — | — |
+| `py_setdefault` | python | `setdefault` | — | — |
+| `py_update` | python | `update` | — | — |
+| `py_pop` | python | `pop` | — | — |
+| `py_slice_assign` | python | `slice_assign` | — | — |
+| `py_module` | python | `module` | — | — |
+| `py_truthy` | python | `truthy` | — | — |
+| `py_is_generator` | python | `is_generator` | — | — |
+| `py_freeze` | python | `freeze` | — | — |
+| `py_ascii` | python | `ascii` | — | — |
+| `pysyn_generator` | python-syntax | `generator` | — | — |
+| `pysyn_with` | python-syntax | `with` | — | — |
+| `pysyn_as` | python-syntax | `as` | — | — |
+| `pysyn_match` | python-syntax | `match` | — | — |
+| `pysyn_case` | python-syntax | `case` | — | — |
+| `pysyn_async` | python-syntax | `async` | — | — |
+| `pysyn_await` | python-syntax | `await` | — | — |
+| `pysyn_lambda` | python-syntax | `lambda` | — | — |
+| `pysyn_assert` | python-syntax | `assert` | — | — |
+| `pysyn_del` | python-syntax | `del` | — | — |
+| `pysyn_global` | python-syntax | `global` | — | — |
+| `pysyn_nonlocal` | python-syntax | `nonlocal` | — | — |
+| `pysyn_pass` | python-syntax | `pass` | — | — |
+| `pysyn_raise` | python-syntax | `raise` | — | — |
+| `pysyn_from` | python-syntax | `from` | — | — |
+| `pysyn_finally` | python-syntax | `finally` | — | — |
+| `pysyn_in` | python-syntax | `in` | — | — |
+| `pysyn_not` | python-syntax | `not` | — | — |
+| `pysyn_is` | python-syntax | `is` | — | — |
+| `pysyn_elif` | python-syntax | `elif` | — | — |
+| `pysyn_try` | python-syntax | `try` | — | — |
+| `pysyn_except` | python-syntax | `except` | — | — |
+| `pysyn_class` | python-syntax | `class` | — | — |
+| `pysyn_def` | python-syntax | `def` | — | — |
+| `pysyn_import` | python-syntax | `import` | — | — |
+| `pysyn_return` | python-syntax | `return` | — | — |
+| `pysyn_while` | python-syntax | `while` | — | — |
+| `pysyn_for` | python-syntax | `for` | — | — |
+| `pysyn_break` | python-syntax | `break` | — | — |
+| `pysyn_continue` | python-syntax | `continue` | — | — |
+| `pysyn_true` | python-syntax | `true` | — | — |
+| `pysyn_false` | python-syntax | `false` | — | — |
+| `pysyn_none` | python-syntax | `none` | — | — |
+| `pysyn_and` | python-syntax | `and` | — | — |
+| `pysyn_or` | python-syntax | `or` | — | — |
+
+<!-- PARITY:END -->
+
+---
+
 
 ### lang/ — language sources overview
 
 _Source: `lang/README.md`_
+
 
 This directory holds the SDEV language itself. It is **not** application code.
 
 #### Status
 
 Milestone 1 (this launch) — **shipped**:
-
-* `runtime/v2.js` — the v2 "Prism" runtime, written in **pure JavaScript** with zero TypeScript and zero external dependencies. Implements the full beginner-first v2 surface syntax (`say`, `set … to`, `if/else/end`, `for each … in … end`, `while … end`, `to <name> with … end`, pipelines, lists, comparisons, boolean logic, arithmetic).
-* `src/lang-bridge/bridge.ts` — the _only_ remaining TypeScript file in the execution path. It picks v1 or v2 per file and delegates.
+- `runtime/v2.js` — the v2 "Prism" runtime, written in **pure JavaScript** with
+  zero TypeScript and zero external dependencies. Implements the full
+  beginner-first v2 surface syntax (`say`, `set … to`, `if/else/end`,
+  `for each … in … end`, `while … end`, `to <name> with … end`, pipelines,
+  lists, comparisons, boolean logic, arithmetic).
+- `src/lang-bridge/bridge.ts` — the *only* remaining TypeScript file in the
+  execution path. It picks v1 or v2 per file and delegates.
 
 Milestone 2 (post-launch) — **scaffolded**:
-
-* `bootstrap/` — hand-written WebAssembly seed that will execute a minimal SDEV subset (`sdev-min`). No TypeScript, no other host language.
-* `compiler/` — the real compiler, written in SDEV, compiled by the seed.
-* `runtime/vm.sdev`, `runtime/kernel.sdev`, `runtime/std/` — VM + kernel + standard library, written in SDEV.
-* `paradigms/` — opt-in blocks: functional (`match`, ADTs, pipelines), systems (pointers, structs, FFI), data (SQL-ish queries), hardware (`board` → C++).
-* `translator/` — the 26-language keyword translator, written in SDEV.
-* `legacy/v1_frontend.sdev` — refine-mode: parses v1 keywords (`forge`, `conjure`, `::`, `;;`) into the v2 AST.
+- `bootstrap/` — hand-written WebAssembly seed that will execute a minimal
+  SDEV subset (`sdev-min`). No TypeScript, no other host language.
+- `compiler/` — the real compiler, written in SDEV, compiled by the seed.
+- `runtime/vm.sdev`, `runtime/kernel.sdev`, `runtime/std/` — VM + kernel +
+  standard library, written in SDEV.
+- `paradigms/` — opt-in blocks: functional (`match`, ADTs, pipelines),
+  systems (pointers, structs, FFI), data (SQL-ish queries), hardware
+  (`board` → C++).
+- `translator/` — the 26-language keyword translator, written in SDEV.
+- `legacy/v1_frontend.sdev` — refine-mode: parses v1 keywords
+  (`forge`, `conjure`, `::`, `;;`) into the v2 AST.
 
 #### Runtime selection (today)
 
@@ -5936,19 +6691,23 @@ node build/build.mjs           # runs stage0 → stage1 → stage2
 
 The Milestone 2 plan is in `.lovable/plan.md` (approved by the user).
 
-***
+---
+
 
 ### Native x86-64 backend
 
 _Source: `lang/native/README.md`_
 
-The **browser IDE** runs SDEV on WebAssembly (see `lang/bootstrap/`). This directory is the **desktop** backend: it compiles SDEV to real x86-64 assembly (GAS/AT\&T syntax) and links it into a static Linux ELF.
+
+The **browser IDE** runs SDEV on WebAssembly (see `lang/bootstrap/`).
+This directory is the **desktop** backend: it compiles SDEV to real
+x86-64 assembly (GAS/AT&T syntax) and links it into a static Linux ELF.
 
 #### Files
 
-* `codegen-x64.mjs` — SDEV AST → `.s` (System V AMD64, no libc).
-* `runtime.s` — hand-written asm: `_start`, `sdev_say_int`, `sdev_say_str`.
-* `link.mjs` — spawns `as` + `ld` to produce an ELF binary.
+- `codegen-x64.mjs` — SDEV AST → `.s` (System V AMD64, no libc).
+- `runtime.s` — hand-written asm: `_start`, `sdev_say_int`, `sdev_say_str`.
+- `link.mjs` — spawns `as` + `ld` to produce an ELF binary.
 
 #### Usage (CLI)
 
@@ -5961,45 +6720,55 @@ The compiler will:
 
 1. parse `prog.sdev` using the same parser the browser uses,
 2. emit `prog.s` next to `prog`,
-3. assemble + link into `prog` (static ELF, no libc, \~1 KB).
+3. assemble + link into `prog` (static ELF, no libc, ~1 KB).
 
 #### Supported subset (matches WASM seed)
 
-* `set … to`, `if / else / end`, `while / end`
-* `to name with p1 p2 … end`, `return`, full recursion
-* 64-bit signed integers, string _literals_ (immutable)
-* `say <expr>` — prints int or string + newline
+- `set … to`, `if / else / end`, `while / end`
+- `to name with p1 p2 … end`, `return`, full recursion
+- 64-bit signed integers, string *literals* (immutable)
+- `say <expr>` — prints int or string + newline
 
-Not yet: lists, dynamic strings, canvas/graphics, hardware. Those stay browser-only until we port them to the native backend.
+Not yet: lists, dynamic strings, canvas/graphics, hardware. Those stay
+browser-only until we port them to the native backend.
 
 #### Prerequisites
 
-* GNU binutils (`as`, `ld`). On Linux they ship in every distro.
-* On this sandbox we pull them via `nix run nixpkgs#binutils`.
-* macOS: install `binutils` via Homebrew (`brew install binutils`) — this gives you `x86_64-linux-gnu-as`; pass paths through `link()`'s `opts`.
-* Windows: assemble the emitted `.s` with MASM/NASM or run under WSL.
+- GNU binutils (`as`, `ld`). On Linux they ship in every distro.
+- On this sandbox we pull them via `nix run nixpkgs#binutils`.
+- macOS: install `binutils` via Homebrew (`brew install binutils`) — this
+  gives you `x86_64-linux-gnu-as`; pass paths through `link()`'s `opts`.
+- Windows: assemble the emitted `.s` with MASM/NASM or run under WSL.
 
 #### Why two backends?
 
-Browsers don't execute x86 machine code — they only run JS and WASM. So the web IDE stays on WebAssembly (which _is_ the browser's native assembly). For real desktop CLI use where you want an actual ELF you can `strace` or `objdump -d`, use this backend.
+Browsers don't execute x86 machine code — they only run JS and WASM.
+So the web IDE stays on WebAssembly (which *is* the browser's native
+assembly). For real desktop CLI use where you want an actual ELF you can
+`strace` or `objdump -d`, use this backend.
 
-***
+---
+
 
 ### Desktop IDE shell
 
 _Source: `electron/README.md`_
 
-A real, out-of-browser SDEV IDE. It bundles the same UI as the web IDE (`/ide`) and adds a native-assembly compile path:
 
-* **Web IDE** → runs SDEV inside WebAssembly (browser's own assembly).
-* **Desktop IDE** → same UI, plus **"Build Native"** which pipes your program through `lang/native/codegen-x64.mjs` + `as` + `ld` and produces a real x86-64 Linux ELF you can execute on your machine.
+A real, out-of-browser SDEV IDE. It bundles the same UI as the web IDE
+(`/ide`) and adds a native-assembly compile path:
+
+- **Web IDE** → runs SDEV inside WebAssembly (browser's own assembly).
+- **Desktop IDE** → same UI, plus **"Build Native"** which pipes your
+  program through `lang/native/codegen-x64.mjs` + `as` + `ld` and produces
+  a real x86-64 Linux ELF you can execute on your machine.
 
 #### Requirements on the host
-
-* Node.js 20+
-* `binutils` on `PATH` (`as`, `ld`) for the native backend
-  * Linux: `sudo apt install binutils` / `pacman -S binutils`
-  * macOS: `xcode-select --install` (uses `as`/`ld64`, Linux ELF target needs a cross-binutils; see `lang/native/README.md`)
+- Node.js 20+
+- `binutils` on `PATH` (`as`, `ld`) for the native backend
+  - Linux: `sudo apt install binutils` / `pacman -S binutils`
+  - macOS: `xcode-select --install` (uses `as`/`ld64`, Linux ELF target
+    needs a cross-binutils; see `lang/native/README.md`)
 
 #### Dev loop
 
@@ -6025,7 +6794,8 @@ npx @electron/packager . "SDEV" \
   --ignore='^/src' --ignore='^/public' --ignore='^/electron-release'
 ```
 
-The output at `electron-release/SDEV-linux-x64/SDEV` is a standalone desktop program. Ship it as a `.tar.gz`:
+The output at `electron-release/SDEV-linux-x64/SDEV` is a standalone
+desktop program. Ship it as a `.tar.gz`:
 
 ```bash
 tar czf SDEV-linux-x64.tar.gz -C electron-release SDEV-linux-x64/
@@ -6035,60 +6805,70 @@ tar czf SDEV-linux-x64.tar.gz -C electron-release SDEV-linux-x64/
 
 Inside the app, `window.sdevDesktop` exposes:
 
-| method                              | purpose                                |
-| ----------------------------------- | -------------------------------------- |
-| `platform()`                        | `{platform, arch, version}`            |
-| `openFile()`                        | native open dialog → `{path, content}` |
-| `saveFile({path, content})`         | native save dialog / overwrite         |
-| `compileNative({source, outPath?})` | SDEV → x86-64 → ELF via `as`+`ld`      |
-| `runNative({outPath})`              | spawn the produced binary, capture I/O |
+| method                                | purpose                                 |
+| ------------------------------------- | --------------------------------------- |
+| `platform()`                          | `{platform, arch, version}`             |
+| `openFile()`                          | native open dialog → `{path, content}`  |
+| `saveFile({path, content})`           | native save dialog / overwrite          |
+| `compileNative({source, outPath?})`   | SDEV → x86-64 → ELF via `as`+`ld`       |
+| `runNative({outPath})`                | spawn the produced binary, capture I/O  |
 
-The web build does not define `window.sdevDesktop`, so any UI that gates on it stays hidden in the browser.
+The web build does not define `window.sdevDesktop`, so any UI that gates
+on it stays hidden in the browser.
 
-***
+---
+
 
 ## Part V — Python parity
+
 
 ### Python feature-parity reference
 
 _Source: `public/SDEV_PYTHON_PARITY_DOCUMENTATION.md`_
 
-> Status: living document. Every feature listed here is implemented in the sdev v1 interpreter (`src/lang/`) and exercised by the parity smoke tests. sdev keeps two spellings for every keyword: the **mystic** v1 spelling (`forge`, `conjure`, `either`) and the **plain** v2/Python-like spelling (`let`, `def`, `if`). Both compile to the same tokens.
 
-***
+> Status: living document. Every feature listed here is implemented in the
+> sdev v1 interpreter (`src/lang/`) and exercised by the parity smoke tests.
+> sdev keeps two spellings for every keyword: the **mystic** v1 spelling
+> (`forge`, `conjure`, `either`) and the **plain** v2/Python-like spelling
+> (`let`, `def`, `if`). Both compile to the same tokens.
+
+---
 
 #### 1. Keyword map
 
-| Python                       | sdev plain                   | sdev mystic                         | Notes                                                               |
-| ---------------------------- | ---------------------------- | ----------------------------------- | ------------------------------------------------------------------- |
-| `=` (binding)                | `let`                        | `forge`                             | `forge x be 1`                                                      |
-| `=` (rebind)                 | `set`                        | `be`                                | `be x be 2`                                                         |
-| `def`                        | `def`                        | `conjure`                           |                                                                     |
-| `return`                     | `return`                     | `yield`                             | `yield` as generator uses `emit` (see §6)                           |
-| `class`                      | `class` / `kind`             | `essence`                           | `essence` and `kind` are _contextual_ — still usable as identifiers |
-| `if` / `elif` / `else`       | `if` / `elif` / `else`       | `either` / `elsewise` / `otherwise` |                                                                     |
-| `while`                      | `while`                      | `cycle`                             |                                                                     |
-| `for x in xs`                | `for x in xs`                | `iterate x through xs`              |                                                                     |
-| `break` / `continue`         | `break` / `continue`         | `yeet` / `skip`                     |                                                                     |
-| `pass`                       | `pass`                       | `idle`                              |                                                                     |
-| `try` / `except` / `finally` | `try` / `except` / `finally` | `attempt` / `rescue` / `ensure`     |                                                                     |
-| `raise`                      | `raise` / `throw`            | `hurl`                              |                                                                     |
-| `assert`                     | `assert`                     | `insist`                            |                                                                     |
-| `with`                       | `with`                       | `enfold`                            | `weave` stays the list-join builtin                                 |
-| `match`                      | `match`                      | `discern`                           | `sift` stays the filter builtin                                     |
-| `import` / `from`            | `import` / `from`            | `summon` / `from`                   |                                                                     |
-| `as`                         | `as`                         | `alias`                             |                                                                     |
-| `global` / `nonlocal`        | `global` / `nonlocal`        | `worldly` / `outer`                 |                                                                     |
-| `del`                        | `del`                        | `banish`                            |                                                                     |
-| `lambda`                     | `lambda`                     | `spell`                             |                                                                     |
-| `async` / `await`            | `async` / `await`            | `async` / `await`                   |                                                                     |
-| `True` / `False` / `None`    | `true` / `false` / `null`    | `yep` / `nope` / `void`             |                                                                     |
-| `and` / `or` / `not`         | `and` / `or` / `not`         | `also` / `either`-form / `isnt`     |                                                                     |
-| `==` / `!=` / `is`           | `==` / `!=` / `is`           | `equals` / `differs` / `same`       |                                                                     |
+| Python | sdev plain | sdev mystic | Notes |
+| --- | --- | --- | --- |
+| `=` (binding) | `let` | `forge` | `forge x be 1` |
+| `=` (rebind) | `set` | `be` | `be x be 2` |
+| `def` | `def` | `conjure` | |
+| `return` | `return` | `yield` | `yield` as generator uses `emit` (see §6) |
+| `class` | `class` / `kind` | `essence` | `essence` and `kind` are *contextual* — still usable as identifiers |
+| `if` / `elif` / `else` | `if` / `elif` / `else` | `either` / `elsewise` / `otherwise` | |
+| `while` | `while` | `cycle` | |
+| `for x in xs` | `for x in xs` | `iterate x through xs` | |
+| `break` / `continue` | `break` / `continue` | `yeet` / `skip` | |
+| `pass` | `pass` | `idle` | |
+| `try` / `except` / `finally` | `try` / `except` / `finally` | `attempt` / `rescue` / `ensure` | |
+| `raise` | `raise` / `throw` | `hurl` | |
+| `assert` | `assert` | `insist` | |
+| `with` | `with` | `enfold` | `weave` stays the list-join builtin |
+| `match` | `match` | `discern` | `sift` stays the filter builtin |
+| `import` / `from` | `import` / `from` | `summon` / `from` | |
+| `as` | `as` | `alias` | |
+| `global` / `nonlocal` | `global` / `nonlocal` | `worldly` / `outer` | |
+| `del` | `del` | `banish` | |
+| `lambda` | `lambda` | `spell` | |
+| `async` / `await` | `async` / `await` | `async` / `await` | |
+| `True` / `False` / `None` | `true` / `false` / `null` | `yep` / `nope` / `void` | |
+| `and` / `or` / `not` | `and` / `or` / `not` | `also` / `either`-form / `isnt` | |
+| `==` / `!=` / `is` | `==` / `!=` / `is` | `equals` / `differs` / `same` | |
 
-Contextual keywords (`essence`, `kind`) are only treated as class declarations when a name follows them, so legacy programs that use `kind` as a variable keep working.
+Contextual keywords (`essence`, `kind`) are only treated as class
+declarations when a name follows them, so legacy programs that use `kind`
+as a variable keep working.
 
-***
+---
 
 #### 2. Literals and data types
 
@@ -6104,13 +6884,19 @@ forge d be {"a": 1, "b": 2}   // dict
 forge n be null               // None
 ```
 
-Supported literal forms: underscores in numbers (`1_000_000`), hex/octal/binary (`0xff`, `0o17`, `0b1010`), complex-free float exponents (`1e-9`), raw strings (`r"\d+"`), f-strings with `{expr}`, `{expr!r}`, `{expr:spec}` and `{expr=}` debug output, and triple-quoted multiline strings.
+Supported literal forms: underscores in numbers (`1_000_000`), hex/octal/binary
+(`0xff`, `0o17`, `0b1010`), complex-free float exponents (`1e-9`),
+raw strings (`r"\d+"`), f-strings with `{expr}`, `{expr!r}`, `{expr:spec}`
+and `{expr=}` debug output, and triple-quoted multiline strings.
 
-***
+---
 
 #### 3. Operators
 
-Arithmetic `+ - * / // % **`, bitwise `& | ^ ~ << >>`, comparison `< <= > >= == != is is not in not in`, boolean `and or not`, ternary `a if cond else b`, walrus `:=`, chained comparisons (`0 < x < 10`), augmented assignment (`+= -= *= /= //= %= **= &= |= ^= <<= >>=`).
+Arithmetic `+ - * / // % **`, bitwise `& | ^ ~ << >>`, comparison
+`< <= > >= == != is is not in not in`, boolean `and or not`, ternary
+`a if cond else b`, walrus `:=`, chained comparisons (`0 < x < 10`),
+augmented assignment (`+= -= *= /= //= %= **= &= |= ^= <<= >>=`).
 
 Slicing follows Python exactly, negative indices included:
 
@@ -6118,7 +6904,7 @@ Slicing follows Python exactly, negative indices included:
 xs[1:]        xs[:3]        xs[::2]       xs[::-1]      xs[-2:]
 ```
 
-***
+---
 
 #### 4. Destructuring
 
@@ -6129,7 +6915,7 @@ forge *init, last be [1, 2, 3]        // init == [1, 2]
 iterate k, v through d.items() :: speak(k) ;;
 ```
 
-***
+---
 
 #### 5. Functions
 
@@ -6139,7 +6925,10 @@ conjure greet(name, greeting be "hi", *args, **kwargs) ::
 ;;
 ```
 
-Supported: positional/keyword arguments, defaults, `*args`, `**kwargs`, keyword-only parameters after `*`, unpacking at call sites (`f(*xs, **kw)`), nested functions, closures, recursion, decorators (stacked and parameterised), and first-class function values.
+Supported: positional/keyword arguments, defaults, `*args`, `**kwargs`,
+keyword-only parameters after `*`, unpacking at call sites (`f(*xs, **kw)`),
+nested functions, closures, recursion, decorators (stacked and
+parameterised), and first-class function values.
 
 ```sdev
 conjure twice(fn) ::
@@ -6152,7 +6941,7 @@ conjure inc(x) :: yield x + 1 ;;
 speak(inc(1))   // 3
 ```
 
-***
+---
 
 #### 6. Generators, iterators, async
 
@@ -6168,9 +6957,11 @@ conjure counter(n) ::
 iterate v through counter(3) :: speak(v) ;;
 ```
 
-`emit from` delegates (Python `yield from`). `async conjure` + `await` drive the same generator machinery; `await` suspends and resumes on promise settlement.
+`emit from` delegates (Python `yield from`). `async conjure` + `await`
+drive the same generator machinery; `await` suspends and resumes on
+promise settlement.
 
-***
+---
 
 #### 7. Classes and protocols
 
@@ -6185,11 +6976,17 @@ essence Point ::
 ;;
 ```
 
-Dunder methods are automatically aliased onto sdev's native protocol slots (`__init__` ↔ `on_create`, `__add__` ↔ `on_add`, `__str__` ↔ `on_text`, `__repr__` ↔ `on_repr`, `__len__` ↔ `size`, `__iter__`, `__getitem__`, `__setitem__`, `__call__`, `__eq__`, `__lt__`, `__contains__`, `__enter__`, `__exit__`, …). Writing either spelling works.
+Dunder methods are automatically aliased onto sdev's native protocol slots
+(`__init__` ↔ `on_create`, `__add__` ↔ `on_add`, `__str__` ↔ `on_text`,
+`__repr__` ↔ `on_repr`, `__len__` ↔ `size`, `__iter__`, `__getitem__`,
+`__setitem__`, `__call__`, `__eq__`, `__lt__`, `__contains__`, `__enter__`,
+`__exit__`, …). Writing either spelling works.
 
-Multiple inheritance resolves via **C3 linearization**, matching Python's MRO. `super()` walks the linearised chain. `@staticmethod`, `@classmethod`, `@property` and metaclasses are supported.
+Multiple inheritance resolves via **C3 linearization**, matching Python's
+MRO. `super()` walks the linearised chain. `@staticmethod`,
+`@classmethod`, `@property` and metaclasses are supported.
 
-***
+---
 
 #### 8. Exceptions
 
@@ -6203,9 +7000,13 @@ ensure ::
 ;;
 ```
 
-Built-in exception hierarchy: `Exception`, `ValueError`, `TypeError`, `KeyError`, `IndexError`, `AttributeError`, `ZeroDivisionError`, `StopIteration`, `RuntimeError`, `NotImplementedError`, `AssertionError`, `OSError` and friends. Multiple `rescue` clauses, tuple-of-types clauses, bare `rescue`, and `else` blocks all behave as in Python.
+Built-in exception hierarchy: `Exception`, `ValueError`, `TypeError`,
+`KeyError`, `IndexError`, `AttributeError`, `ZeroDivisionError`,
+`StopIteration`, `RuntimeError`, `NotImplementedError`, `AssertionError`,
+`OSError` and friends. Multiple `rescue` clauses, tuple-of-types clauses,
+bare `rescue`, and `else` blocks all behave as in Python.
 
-***
+---
 
 #### 9. Comprehensions
 
@@ -6216,9 +7017,11 @@ Built-in exception hierarchy: `Exception`, `ValueError`, `TypeError`, `KeyError`
 (x for x in xs)                        // generator expression
 ```
 
-Nested clauses and multiple `if` filters are supported. Inside a dict comprehension the key is always evaluated as an expression — the bare-identifier shorthand only applies to dict _literals_.
+Nested clauses and multiple `if` filters are supported. Inside a dict
+comprehension the key is always evaluated as an expression — the
+bare-identifier shorthand only applies to dict *literals*.
 
-***
+---
 
 #### 10. Context managers
 
@@ -6228,9 +7031,10 @@ enfold open("f.txt") alias fh ::
 ;;
 ```
 
-`__enter__` / `__exit__` (or the mystic `on_enter` / `on_exit`) are called, and `__exit__` still runs when the body raises.
+`__enter__` / `__exit__` (or the mystic `on_enter` / `on_exit`) are called,
+and `__exit__` still runs when the body raises.
 
-***
+---
 
 #### 11. Pattern matching
 
@@ -6244,15 +7048,23 @@ discern value ::
 ;;
 ```
 
-Literal, capture, wildcard, sequence, mapping, class and or-patterns (`when 1 | 2 | 3`) with guards (`when x if x > 10`).
+Literal, capture, wildcard, sequence, mapping, class and or-patterns
+(`when 1 | 2 | 3`) with guards (`when x if x > 10`).
 
-***
+---
 
 #### 12. Builtins
 
-All Python builtins are available. Where a name would shadow an existing sdev v1 builtin, the Python version is exposed with a `py_` prefix (for example `py_sum`, `py_map`, `py_filter`); non-colliding names are global.
+All Python builtins are available. Where a name would shadow an existing
+sdev v1 builtin, the Python version is exposed with a `py_` prefix
+(for example `py_sum`, `py_map`, `py_filter`); non-colliding names are
+global.
 
-`abs any all ascii bin bool bytes callable chr dict dir divmod enumerate eval filter float format frozenset getattr hasattr hash hex id input int isinstance issubclass iter len list map max min next object oct ord pow print range repr reversed round set setattr slice sorted str sum tuple type vars zip`
+`abs any all ascii bin bool bytes callable chr dict dir divmod enumerate
+eval filter float format frozenset getattr hasattr hash hex id input int
+isinstance issubclass iter len list map max min next object oct ord pow
+print range repr reversed round set setattr slice sorted str sum tuple
+type vars zip`
 
 Method-call sugar works on plain values, so both spellings are valid:
 
@@ -6262,11 +7074,17 @@ d.items()           // same as items(d)
 "a,b".split(",")    // same as split("a,b", ",")
 ```
 
-String methods: `upper lower strip lstrip rstrip split rsplit splitlines join replace find rfind index startswith endswith count center ljust rjust zfill title capitalize swapcase encode format isdigit isalpha isalnum isspace islower isupper partition removeprefix removesuffix`.
+String methods: `upper lower strip lstrip rstrip split rsplit splitlines
+join replace find rfind index startswith endswith count center ljust
+rjust zfill title capitalize swapcase encode format isdigit isalpha
+isalnum isspace islower isupper partition removeprefix removesuffix`.
 
-List methods: `append extend insert remove pop clear index count sort reverse copy`. Dict methods: `keys values items get pop popitem setdefault update clear copy`. Set methods: `add discard remove union intersection difference symmetric_difference issubset issuperset`.
+List methods: `append extend insert remove pop clear index count sort
+reverse copy`. Dict methods: `keys values items get pop popitem setdefault
+update clear copy`. Set methods: `add discard remove union intersection
+difference symmetric_difference issubset issuperset`.
 
-***
+---
 
 #### 13. Modules
 
@@ -6275,273 +7093,307 @@ summon math
 from collections summon Counter alias Bag
 ```
 
-Bundled parity modules: `math`, `random`, `json`, `re`, `time`, `datetime`, `itertools`, `functools`, `collections`, `string`, `os.path`, `sys`, `statistics`, `decimal`-lite, `textwrap`, `heapq`, `bisect`.
+Bundled parity modules: `math`, `random`, `json`, `re`, `time`, `datetime`,
+`itertools`, `functools`, `collections`, `string`, `os.path`, `sys`,
+`statistics`, `decimal`-lite, `textwrap`, `heapq`, `bisect`.
 
-***
+---
 
 #### 14. Track coverage
 
-The Python-parity surface described here is implemented on the **v1 interpreter track** (browser IDE and Node CLI). The self-hosted v2 compiler and the native x86-64 backend track the core language subset listed in the [Track Parity Matrix](../docs); the parity agent (`lang/parity/agent.sdev`) fails CI whenever a required feature regresses on any track.
+The Python-parity surface described here is implemented on the **v1
+interpreter track** (browser IDE and Node CLI). The self-hosted v2
+compiler and the native x86-64 backend track the core language subset
+listed in the [Track Parity Matrix](/docs?doc=parity); the parity agent
+(`lang/parity/agent.sdev`) fails CI whenever a required feature regresses
+on any track.
 
-***
+---
+
 
 ## Part V — Track parity
+
 
 ### Parity registry, agent and matrix
 
 _Source: `public/SDEV_PARITY_DOCUMENTATION.md`_
 
-Every sdev track — the v1 TypeScript interpreter, the self-hosted v2 compiler running on the seed VM, and the native x86-64 backend — is measured against a single canonical feature registry: `lang/parity/features.json`.
+
+Every sdev track — the v1 TypeScript interpreter, the self-hosted v2 compiler
+running on the seed VM, and the native x86-64 backend — is measured against a
+single canonical feature registry: `lang/parity/features.json`.
 
 #### How parity is enforced
 
-1. `lang/parity/features.json` lists every feature once: its name, area, kind, signature, and the required support level per track (`must`, `should`, `n/a`), plus the track-local name (v1's `measure` is v2's `length`).
-2. `lang/parity/agent.sdev` — the parity agent, itself written in sdev and executed on sdev — loads the registry, reads each track's source, probes every feature, writes `lang/parity/report.json`, and regenerates the matrix below.
-3. `scripts/test-parity.ts` runs the agent in CI. A missing `must` feature is a build failure; a missing `should` feature is a reported gap.
+1. `lang/parity/features.json` lists every feature once: its name, area, kind,
+   signature, and the required support level per track (`must`, `should`,
+   `n/a`), plus the track-local name (v1's `measure` is v2's `length`).
+2. `lang/parity/agent.sdev` — the parity agent, itself written in sdev and
+   executed on sdev — loads the registry, reads each track's source, probes
+   every feature, writes `lang/parity/report.json`, and regenerates the matrix
+   below.
+3. `scripts/test-parity.ts` runs the agent in CI. A missing `must` feature is a
+   build failure; a missing `should` feature is a reported gap.
 
-Adding a new track (a v3, another backend) means appending one entry to the registry's `tracks` array — the agent picks it up with no code change.
+Adding a new track (a v3, another backend) means appending one entry to the
+registry's `tracks` array — the agent picks it up with no code change.
 
 #### Levels
 
-| Level    | Meaning                                                                                            |
-| -------- | -------------------------------------------------------------------------------------------------- |
-| `must`   | The track is broken without it. Missing = red build.                                               |
-| `should` | Expected; the gap is a tracked bug, not a build failure.                                           |
-| `n/a`    | Physically impossible on that track (canvas on the seed VM, floats in the current native backend). |
+| Level | Meaning |
+| --- | --- |
+| `must` | The track is broken without it. Missing = red build. |
+| `should` | Expected; the gap is a tracked bug, not a build failure. |
+| `n/a` | Physically impossible on that track (canvas on the seed VM, floats in the current native backend). |
 
 #### Parity matrix
 
 The table below is generated by the agent. Do not edit it by hand.
 
-| Feature                   | Area          | sdev v1 (TypeScript interpreter) | sdev v2 (self-hosted compiler on the seed VM) | native x86-64 backend |
-| ------------------------- | ------------- | -------------------------------- | --------------------------------------------- | --------------------- |
-| `say`                     | io            | `speak`                          | `say`                                         | `say`                 |
-| `length`                  | core          | `measure`                        | `length`                                      | `length`              |
-| `concat`                  | text          | `etch`                           | `concat`                                      | `concat`              |
-| `ord`                     | text          | `ord`                            | `ord`                                         | `ord`                 |
-| `chr`                     | text          | `chr`                            | `chr`                                         | `chr`                 |
-| `str`                     | text          | `str`                            | `str`                                         | `str`                 |
-| `int`                     | types         | `int`                            | `int`                                         | `int`                 |
-| `num`                     | types         | `num`                            | `num`                                         | `num`                 |
-| `list_new`                | list          | `gather`                         | `mklist`                                      | `list_new`            |
-| `list_get`                | list          | `pluck`                          | `mklist`                                      | `index`               |
-| `upper`                   | text          | `upper`                          | `upper`                                       | `upper`               |
-| `lower`                   | text          | `lower`                          | `lower`                                       | `lower`               |
-| `trim`                    | text          | `trim`                           | `trim`                                        | `trim`                |
-| `contains`                | text          | `contains`                       | `contains`                                    | `contains`            |
-| `replace`                 | text          | `replace`                        | `replace`                                     | `replace`             |
-| `split`                   | text          | `shatter`                        | `split`                                       | `split`               |
-| `join`                    | text          | `weave`                          | `join`                                        | `join`                |
-| `abs`                     | math          | `abs`                            | `fabs`                                        | `abs`                 |
-| `min`                     | math          | `least`                          | `min`                                         | `min`                 |
-| `max`                     | math          | `greatest`                       | `max`                                         | `max`                 |
-| `floor`                   | math          | `ground`                         | `f2i`                                         | `floor`               |
-| `ceil`                    | math          | `elevate`                        | `fceil`                                       | `ceil`                |
-| `round`                   | math          | `nearby`                         | `fround`                                      | `round`               |
-| `sqrt`                    | math          | `root`                           | `fsqrt`                                       | `sqrt`                |
-| `pow`                     | math          | `pow`                            | `fpow`                                        | `pow`                 |
-| `sin`                     | math          | `sin`                            | `fsin`                                        | `sin`                 |
-| `cos`                     | math          | `cos`                            | `fcos`                                        | `cos`                 |
-| `exp`                     | math          | `exp`                            | `fexp`                                        | `exp`                 |
-| `log`                     | math          | `ln`                             | `flog`                                        | `log`                 |
-| `random`                  | math          | `rand`                           | `random`                                      | `random`              |
-| `range`                   | list          | `range`                          | `range`                                       | —                     |
-| `sum`                     | list          | `sum`                            | `sum`                                         | —                     |
-| `keys`                    | tome          | `tome_keys`                      | `keys`                                        | `keys`                |
-| `read_file`               | io            | `read_file`                      | `read_file`                                   | —                     |
-| `write_file`              | io            | `write_file`                     | `write_file`                                  | —                     |
-| `http_get`                | net           | `http_get`                       | `http_get`                                    | —                     |
-| `var_decl`                | syntax        | `forge`                          | `set`                                         | `set`                 |
-| `assign`                  | syntax        | `be`                             | `set`                                         | `set`                 |
-| `if`                      | syntax        | `either`                         | `if`                                          | `if`                  |
-| `else`                    | syntax        | `otherwise`                      | `else`                                        | `else`                |
-| `while`                   | syntax        | `cycle`                          | `while`                                       | `while`               |
-| `for_each`                | syntax        | `iterate`                        | `each`                                        | `foreach`             |
-| `break`                   | syntax        | `yeet`                           | `break`                                       | `break`               |
-| `continue`                | syntax        | `skip`                           | `continue`                                    | `continue`            |
-| `function`                | syntax        | `conjure`                        | `to`                                          | `call`                |
-| `return`                  | syntax        | `yield`                          | `return`                                      | `return`              |
-| `params`                  | syntax        | `conjure`                        | `with`                                        | `call`                |
-| `recursion`               | syntax        | `conjure`                        | `to`                                          | `call`                |
-| `lambda`                  | syntax        | `ARROW`                          | `make`                                        | —                     |
-| `class`                   | oop           | `essence`                        | `kind`                                        | —                     |
-| `inherit`                 | oop           | `extend`                         | `extends`                                     | —                     |
-| `self`                    | oop           | `self`                           | —                                             | —                     |
-| `super`                   | oop           | `super`                          | `super`                                       | —                     |
-| `instantiate`             | oop           | `new`                            | `new`                                         | —                     |
-| `try_catch`               | errors        | `attempt`                        | `attempt`                                     | —                     |
-| `rescue`                  | errors        | `rescue`                         | `rescue`                                      | —                     |
-| `throw`                   | errors        | `throw`                          | `throw`                                       | —                     |
-| `logic_and`               | syntax        | `also`                           | `and`                                         | `and`                 |
-| `logic_or`                | syntax        | `within`                         | `or`                                          | `or`                  |
-| `logic_not`               | syntax        | `nope`                           | `not`                                         | `un`                  |
-| `equality`                | syntax        | `equals`                         | `is`                                          | `is`                  |
-| `inequality`              | syntax        | `differs`                        | `not`                                         | `isnot`               |
-| `bool_true`               | types         | `yep`                            | `true`                                        | `true`                |
-| `bool_false`              | types         | `nope`                           | `false`                                       | `false`               |
-| `nothing`                 | types         | `void`                           | `nothing`                                     | `nothing`             |
-| `list_literal`            | types         | `gather`                         | `mklist`                                      | `list`                |
-| `tome_literal`            | types         | `tome_keys`                      | `tome_literal`                                | `tome`                |
-| `import`                  | modules       | `summon`                         | `use`                                         | —                     |
-| `float`                   | types         | `num`                            | `i2f`                                         | `float`               |
-| `string`                  | types         | `str`                            | `str`                                         | `str`                 |
-| `values`                  | tome          | `values`                         | `values`                                      | `values`              |
-| `has`                     | tome          | `has`                            | `has`                                         | `has`                 |
-| `py_print`                | python        | `print`                          | —                                             | —                     |
-| `py_str`                  | python        | `str`                            | —                                             | —                     |
-| `py_repr`                 | python        | `repr`                           | —                                             | —                     |
-| `py_int`                  | python        | `int`                            | —                                             | —                     |
-| `py_float`                | python        | `float`                          | —                                             | —                     |
-| `py_bool`                 | python        | `bool`                           | —                                             | —                     |
-| `py_complexish`           | python        | `complexish`                     | —                                             | —                     |
-| `py_bytes`                | python        | `bytes`                          | —                                             | —                     |
-| `py_list`                 | python        | `list`                           | —                                             | —                     |
-| `py_tuple`                | python        | `tuple`                          | —                                             | —                     |
-| `py_set`                  | python        | `set`                            | —                                             | —                     |
-| `py_frozenset`            | python        | `frozenset`                      | —                                             | —                     |
-| `py_dict`                 | python        | `dict`                           | —                                             | —                     |
-| `py_len`                  | python        | `len`                            | —                                             | —                     |
-| `py_range`                | python        | `range`                          | —                                             | —                     |
-| `py_enumerate`            | python        | `enumerate`                      | —                                             | —                     |
-| `py_zip`                  | python        | `zip`                            | —                                             | —                     |
-| `py_zip_longest`          | python        | `zip_longest`                    | —                                             | —                     |
-| `py_map`                  | python        | `map`                            | —                                             | —                     |
-| `py_filter`               | python        | `filter`                         | —                                             | —                     |
-| `py_any`                  | python        | `any`                            | —                                             | —                     |
-| `py_all`                  | python        | `all`                            | —                                             | —                     |
-| `py_sorted`               | python        | `sorted`                         | —                                             | —                     |
-| `py_reversed`             | python        | `reversed`                       | —                                             | —                     |
-| `py_min`                  | python        | `min`                            | —                                             | —                     |
-| `py_max`                  | python        | `max`                            | —                                             | —                     |
-| `py_sum`                  | python        | `sum`                            | —                                             | —                     |
-| `py_abs`                  | python        | `abs`                            | —                                             | —                     |
-| `py_round`                | python        | `round`                          | —                                             | —                     |
-| `py_pow`                  | python        | `pow`                            | —                                             | —                     |
-| `py_divmod`               | python        | `divmod`                         | —                                             | —                     |
-| `py_bin`                  | python        | `bin`                            | —                                             | —                     |
-| `py_oct`                  | python        | `oct`                            | —                                             | —                     |
-| `py_hex`                  | python        | `hex`                            | —                                             | —                     |
-| `py_type`                 | python        | `type`                           | —                                             | —                     |
-| `py_isinstance`           | python        | `isinstance`                     | —                                             | —                     |
-| `py_issubclass`           | python        | `issubclass`                     | —                                             | —                     |
-| `py_getattr`              | python        | `getattr`                        | —                                             | —                     |
-| `py_setattr`              | python        | `setattr`                        | —                                             | —                     |
-| `py_hasattr`              | python        | `hasattr`                        | —                                             | —                     |
-| `py_delattr`              | python        | `delattr`                        | —                                             | —                     |
-| `py_vars`                 | python        | `vars`                           | —                                             | —                     |
-| `py_dir`                  | python        | `dir`                            | —                                             | —                     |
-| `py_callable`             | python        | `callable`                       | —                                             | —                     |
-| `py_id`                   | python        | `id`                             | —                                             | —                     |
-| `py_hash`                 | python        | `hash`                           | —                                             | —                     |
-| `py_format`               | python        | `format`                         | —                                             | —                     |
-| `py_iter`                 | python        | `iter`                           | —                                             | —                     |
-| `py_next`                 | python        | `next`                           | —                                             | —                     |
-| `py_send`                 | python        | `send`                           | —                                             | —                     |
-| `py_close`                | python        | `close`                          | —                                             | —                     |
-| `py_collect`              | python        | `collect`                        | —                                             | —                     |
-| `py_property`             | python        | `property`                       | —                                             | —                     |
-| `py_staticmethod`         | python        | `staticmethod`                   | —                                             | —                     |
-| `py_classmethod`          | python        | `classmethod`                    | —                                             | —                     |
-| `py_wraps`                | python        | `wraps`                          | —                                             | —                     |
-| `py_cache`                | python        | `cache`                          | —                                             | —                     |
-| `py_partial`              | python        | `partial`                        | —                                             | —                     |
-| `py_reduce`               | python        | `reduce`                         | —                                             | —                     |
-| `py_dataclass`            | python        | `dataclass`                      | —                                             | —                     |
-| `py_count`                | python        | `count`                          | —                                             | —                     |
-| `py_cycle`                | python        | `cycle`                          | —                                             | —                     |
-| `py_repeat`               | python        | `repeat`                         | —                                             | —                     |
-| `py_chain`                | python        | `chain`                          | —                                             | —                     |
-| `py_islice`               | python        | `islice`                         | —                                             | —                     |
-| `py_product`              | python        | `product`                        | —                                             | —                     |
-| `py_permutations`         | python        | `permutations`                   | —                                             | —                     |
-| `py_combinations`         | python        | `combinations`                   | —                                             | —                     |
-| `py_accumulate`           | python        | `accumulate`                     | —                                             | —                     |
-| `py_groupby`              | python        | `groupby`                        | —                                             | —                     |
-| `py_Counter`              | python        | `Counter`                        | —                                             | —                     |
-| `py_defaultdict`          | python        | `defaultdict`                    | —                                             | —                     |
-| `py_namedtuple`           | python        | `namedtuple`                     | —                                             | —                     |
-| `py_deque`                | python        | `deque`                          | —                                             | —                     |
-| `py_OrderedDict`          | python        | `OrderedDict`                    | —                                             | —                     |
-| `py_union`                | python        | `union`                          | —                                             | —                     |
-| `py_intersection`         | python        | `intersection`                   | —                                             | —                     |
-| `py_difference`           | python        | `difference`                     | —                                             | —                     |
-| `py_symmetric_difference` | python        | `symmetric_difference`           | —                                             | —                     |
-| `py_issubset`             | python        | `issubset`                       | —                                             | —                     |
-| `py_set_add`              | python        | `set_add`                        | —                                             | —                     |
-| `py_set_remove`           | python        | `set_remove`                     | —                                             | —                     |
-| `py_keys`                 | python        | `keys`                           | —                                             | —                     |
-| `py_values`               | python        | `values`                         | —                                             | —                     |
-| `py_items`                | python        | `items`                          | —                                             | —                     |
-| `py_get`                  | python        | `get`                            | —                                             | —                     |
-| `py_setdefault`           | python        | `setdefault`                     | —                                             | —                     |
-| `py_update`               | python        | `update`                         | —                                             | —                     |
-| `py_pop`                  | python        | `pop`                            | —                                             | —                     |
-| `py_slice_assign`         | python        | `slice_assign`                   | —                                             | —                     |
-| `py_module`               | python        | `module`                         | —                                             | —                     |
-| `py_truthy`               | python        | `truthy`                         | —                                             | —                     |
-| `py_is_generator`         | python        | `is_generator`                   | —                                             | —                     |
-| `py_freeze`               | python        | `freeze`                         | —                                             | —                     |
-| `py_ascii`                | python        | `ascii`                          | —                                             | —                     |
-| `pysyn_generator`         | python-syntax | `generator`                      | —                                             | —                     |
-| `pysyn_with`              | python-syntax | `with`                           | —                                             | —                     |
-| `pysyn_as`                | python-syntax | `as`                             | —                                             | —                     |
-| `pysyn_match`             | python-syntax | `match`                          | —                                             | —                     |
-| `pysyn_case`              | python-syntax | `case`                           | —                                             | —                     |
-| `pysyn_async`             | python-syntax | `async`                          | —                                             | —                     |
-| `pysyn_await`             | python-syntax | `await`                          | —                                             | —                     |
-| `pysyn_lambda`            | python-syntax | `lambda`                         | —                                             | —                     |
-| `pysyn_assert`            | python-syntax | `assert`                         | —                                             | —                     |
-| `pysyn_del`               | python-syntax | `del`                            | —                                             | —                     |
-| `pysyn_global`            | python-syntax | `global`                         | —                                             | —                     |
-| `pysyn_nonlocal`          | python-syntax | `nonlocal`                       | —                                             | —                     |
-| `pysyn_pass`              | python-syntax | `pass`                           | —                                             | —                     |
-| `pysyn_raise`             | python-syntax | `raise`                          | —                                             | —                     |
-| `pysyn_from`              | python-syntax | `from`                           | —                                             | —                     |
-| `pysyn_finally`           | python-syntax | `finally`                        | —                                             | —                     |
-| `pysyn_in`                | python-syntax | `in`                             | —                                             | —                     |
-| `pysyn_not`               | python-syntax | `not`                            | —                                             | —                     |
-| `pysyn_is`                | python-syntax | `is`                             | —                                             | —                     |
-| `pysyn_elif`              | python-syntax | `elif`                           | —                                             | —                     |
-| `pysyn_try`               | python-syntax | `try`                            | —                                             | —                     |
-| `pysyn_except`            | python-syntax | `except`                         | —                                             | —                     |
-| `pysyn_class`             | python-syntax | `class`                          | —                                             | —                     |
-| `pysyn_def`               | python-syntax | `def`                            | —                                             | —                     |
-| `pysyn_import`            | python-syntax | `import`                         | —                                             | —                     |
-| `pysyn_return`            | python-syntax | `return`                         | —                                             | —                     |
-| `pysyn_while`             | python-syntax | `while`                          | —                                             | —                     |
-| `pysyn_for`               | python-syntax | `for`                            | —                                             | —                     |
-| `pysyn_break`             | python-syntax | `break`                          | —                                             | —                     |
-| `pysyn_continue`          | python-syntax | `continue`                       | —                                             | —                     |
-| `pysyn_true`              | python-syntax | `true`                           | —                                             | —                     |
-| `pysyn_false`             | python-syntax | `false`                          | —                                             | —                     |
-| `pysyn_none`              | python-syntax | `none`                           | —                                             | —                     |
-| `pysyn_and`               | python-syntax | `and`                            | —                                             | —                     |
-| `pysyn_or`                | python-syntax | `or`                             | —                                             | —                     |
+<!-- PARITY:BEGIN -->
+
+| Feature | Area | sdev v1 (TypeScript interpreter) | sdev v2 (self-hosted compiler on the seed VM) | native x86-64 backend |
+| --- | --- | --- | --- | --- |
+| `say` | io | `speak` | `say` | `say` |
+| `length` | core | `measure` | `length` | `length` |
+| `concat` | text | `etch` | `concat` | `concat` |
+| `ord` | text | `ord` | `ord` | `ord` |
+| `chr` | text | `chr` | `chr` | `chr` |
+| `str` | text | `str` | `str` | `str` |
+| `int` | types | `int` | `int` | `int` |
+| `num` | types | `num` | `num` | `num` |
+| `list_new` | list | `gather` | `mklist` | `list_new` |
+| `list_get` | list | `pluck` | `mklist` | `index` |
+| `upper` | text | `upper` | `upper` | `upper` |
+| `lower` | text | `lower` | `lower` | `lower` |
+| `trim` | text | `trim` | `trim` | `trim` |
+| `contains` | text | `contains` | `contains` | `contains` |
+| `replace` | text | `replace` | `replace` | `replace` |
+| `split` | text | `shatter` | `split` | `split` |
+| `join` | text | `weave` | `join` | `join` |
+| `abs` | math | `abs` | `fabs` | `abs` |
+| `min` | math | `least` | `min` | `min` |
+| `max` | math | `greatest` | `max` | `max` |
+| `floor` | math | `ground` | `f2i` | `floor` |
+| `ceil` | math | `elevate` | `fceil` | `ceil` |
+| `round` | math | `nearby` | `fround` | `round` |
+| `sqrt` | math | `root` | `fsqrt` | `sqrt` |
+| `pow` | math | `pow` | `fpow` | `pow` |
+| `sin` | math | `sin` | `fsin` | `sin` |
+| `cos` | math | `cos` | `fcos` | `cos` |
+| `exp` | math | `exp` | `fexp` | `exp` |
+| `log` | math | `ln` | `flog` | `log` |
+| `random` | math | `rand` | `random` | `random` |
+| `range` | list | `range` | `range` | — |
+| `sum` | list | `sum` | `sum` | — |
+| `keys` | tome | `tome_keys` | `keys` | `keys` |
+| `read_file` | io | `read_file` | `read_file` | — |
+| `write_file` | io | `write_file` | `write_file` | — |
+| `http_get` | net | `http_get` | `http_get` | — |
+| `var_decl` | syntax | `forge` | `set` | `set` |
+| `assign` | syntax | `be` | `set` | `set` |
+| `if` | syntax | `either` | `if` | `if` |
+| `else` | syntax | `otherwise` | `else` | `else` |
+| `while` | syntax | `cycle` | `while` | `while` |
+| `for_each` | syntax | `iterate` | `each` | `foreach` |
+| `break` | syntax | `yeet` | `break` | `break` |
+| `continue` | syntax | `skip` | `continue` | `continue` |
+| `function` | syntax | `conjure` | `to` | `call` |
+| `return` | syntax | `yield` | `return` | `return` |
+| `params` | syntax | `conjure` | `with` | `call` |
+| `recursion` | syntax | `conjure` | `to` | `call` |
+| `lambda` | syntax | `ARROW` | `make` | — |
+| `class` | oop | `essence` | `kind` | — |
+| `inherit` | oop | `extend` | `extends` | — |
+| `self` | oop | `self` | — | — |
+| `super` | oop | `super` | `super` | — |
+| `instantiate` | oop | `new` | `new` | — |
+| `try_catch` | errors | `attempt` | `attempt` | — |
+| `rescue` | errors | `rescue` | `rescue` | — |
+| `throw` | errors | `throw` | `throw` | — |
+| `logic_and` | syntax | `also` | `and` | `and` |
+| `logic_or` | syntax | `within` | `or` | `or` |
+| `logic_not` | syntax | `nope` | `not` | `un` |
+| `equality` | syntax | `equals` | `is` | `is` |
+| `inequality` | syntax | `differs` | `not` | `isnot` |
+| `bool_true` | types | `yep` | `true` | `true` |
+| `bool_false` | types | `nope` | `false` | `false` |
+| `nothing` | types | `void` | `nothing` | `nothing` |
+| `list_literal` | types | `gather` | `mklist` | `list` |
+| `tome_literal` | types | `tome_keys` | `tome_literal` | `tome` |
+| `import` | modules | `summon` | `use` | — |
+| `float` | types | `num` | `i2f` | `float` |
+| `string` | types | `str` | `str` | `str` |
+| `values` | tome | `values` | `values` | `values` |
+| `has` | tome | `has` | `has` | `has` |
+| `py_print` | python | `print` | — | — |
+| `py_str` | python | `str` | — | — |
+| `py_repr` | python | `repr` | — | — |
+| `py_int` | python | `int` | — | — |
+| `py_float` | python | `float` | — | — |
+| `py_bool` | python | `bool` | — | — |
+| `py_complexish` | python | `complexish` | — | — |
+| `py_bytes` | python | `bytes` | — | — |
+| `py_list` | python | `list` | — | — |
+| `py_tuple` | python | `tuple` | — | — |
+| `py_set` | python | `set` | — | — |
+| `py_frozenset` | python | `frozenset` | — | — |
+| `py_dict` | python | `dict` | — | — |
+| `py_len` | python | `len` | — | — |
+| `py_range` | python | `range` | — | — |
+| `py_enumerate` | python | `enumerate` | — | — |
+| `py_zip` | python | `zip` | — | — |
+| `py_zip_longest` | python | `zip_longest` | — | — |
+| `py_map` | python | `map` | — | — |
+| `py_filter` | python | `filter` | — | — |
+| `py_any` | python | `any` | — | — |
+| `py_all` | python | `all` | — | — |
+| `py_sorted` | python | `sorted` | — | — |
+| `py_reversed` | python | `reversed` | — | — |
+| `py_min` | python | `min` | — | — |
+| `py_max` | python | `max` | — | — |
+| `py_sum` | python | `sum` | — | — |
+| `py_abs` | python | `abs` | — | — |
+| `py_round` | python | `round` | — | — |
+| `py_pow` | python | `pow` | — | — |
+| `py_divmod` | python | `divmod` | — | — |
+| `py_bin` | python | `bin` | — | — |
+| `py_oct` | python | `oct` | — | — |
+| `py_hex` | python | `hex` | — | — |
+| `py_type` | python | `type` | — | — |
+| `py_isinstance` | python | `isinstance` | — | — |
+| `py_issubclass` | python | `issubclass` | — | — |
+| `py_getattr` | python | `getattr` | — | — |
+| `py_setattr` | python | `setattr` | — | — |
+| `py_hasattr` | python | `hasattr` | — | — |
+| `py_delattr` | python | `delattr` | — | — |
+| `py_vars` | python | `vars` | — | — |
+| `py_dir` | python | `dir` | — | — |
+| `py_callable` | python | `callable` | — | — |
+| `py_id` | python | `id` | — | — |
+| `py_hash` | python | `hash` | — | — |
+| `py_format` | python | `format` | — | — |
+| `py_iter` | python | `iter` | — | — |
+| `py_next` | python | `next` | — | — |
+| `py_send` | python | `send` | — | — |
+| `py_close` | python | `close` | — | — |
+| `py_collect` | python | `collect` | — | — |
+| `py_property` | python | `property` | — | — |
+| `py_staticmethod` | python | `staticmethod` | — | — |
+| `py_classmethod` | python | `classmethod` | — | — |
+| `py_wraps` | python | `wraps` | — | — |
+| `py_cache` | python | `cache` | — | — |
+| `py_partial` | python | `partial` | — | — |
+| `py_reduce` | python | `reduce` | — | — |
+| `py_dataclass` | python | `dataclass` | — | — |
+| `py_count` | python | `count` | — | — |
+| `py_cycle` | python | `cycle` | — | — |
+| `py_repeat` | python | `repeat` | — | — |
+| `py_chain` | python | `chain` | — | — |
+| `py_islice` | python | `islice` | — | — |
+| `py_product` | python | `product` | — | — |
+| `py_permutations` | python | `permutations` | — | — |
+| `py_combinations` | python | `combinations` | — | — |
+| `py_accumulate` | python | `accumulate` | — | — |
+| `py_groupby` | python | `groupby` | — | — |
+| `py_Counter` | python | `Counter` | — | — |
+| `py_defaultdict` | python | `defaultdict` | — | — |
+| `py_namedtuple` | python | `namedtuple` | — | — |
+| `py_deque` | python | `deque` | — | — |
+| `py_OrderedDict` | python | `OrderedDict` | — | — |
+| `py_union` | python | `union` | — | — |
+| `py_intersection` | python | `intersection` | — | — |
+| `py_difference` | python | `difference` | — | — |
+| `py_symmetric_difference` | python | `symmetric_difference` | — | — |
+| `py_issubset` | python | `issubset` | — | — |
+| `py_set_add` | python | `set_add` | — | — |
+| `py_set_remove` | python | `set_remove` | — | — |
+| `py_keys` | python | `keys` | — | — |
+| `py_values` | python | `values` | — | — |
+| `py_items` | python | `items` | — | — |
+| `py_get` | python | `get` | — | — |
+| `py_setdefault` | python | `setdefault` | — | — |
+| `py_update` | python | `update` | — | — |
+| `py_pop` | python | `pop` | — | — |
+| `py_slice_assign` | python | `slice_assign` | — | — |
+| `py_module` | python | `module` | — | — |
+| `py_truthy` | python | `truthy` | — | — |
+| `py_is_generator` | python | `is_generator` | — | — |
+| `py_freeze` | python | `freeze` | — | — |
+| `py_ascii` | python | `ascii` | — | — |
+| `pysyn_generator` | python-syntax | `generator` | — | — |
+| `pysyn_with` | python-syntax | `with` | — | — |
+| `pysyn_as` | python-syntax | `as` | — | — |
+| `pysyn_match` | python-syntax | `match` | — | — |
+| `pysyn_case` | python-syntax | `case` | — | — |
+| `pysyn_async` | python-syntax | `async` | — | — |
+| `pysyn_await` | python-syntax | `await` | — | — |
+| `pysyn_lambda` | python-syntax | `lambda` | — | — |
+| `pysyn_assert` | python-syntax | `assert` | — | — |
+| `pysyn_del` | python-syntax | `del` | — | — |
+| `pysyn_global` | python-syntax | `global` | — | — |
+| `pysyn_nonlocal` | python-syntax | `nonlocal` | — | — |
+| `pysyn_pass` | python-syntax | `pass` | — | — |
+| `pysyn_raise` | python-syntax | `raise` | — | — |
+| `pysyn_from` | python-syntax | `from` | — | — |
+| `pysyn_finally` | python-syntax | `finally` | — | — |
+| `pysyn_in` | python-syntax | `in` | — | — |
+| `pysyn_not` | python-syntax | `not` | — | — |
+| `pysyn_is` | python-syntax | `is` | — | — |
+| `pysyn_elif` | python-syntax | `elif` | — | — |
+| `pysyn_try` | python-syntax | `try` | — | — |
+| `pysyn_except` | python-syntax | `except` | — | — |
+| `pysyn_class` | python-syntax | `class` | — | — |
+| `pysyn_def` | python-syntax | `def` | — | — |
+| `pysyn_import` | python-syntax | `import` | — | — |
+| `pysyn_return` | python-syntax | `return` | — | — |
+| `pysyn_while` | python-syntax | `while` | — | — |
+| `pysyn_for` | python-syntax | `for` | — | — |
+| `pysyn_break` | python-syntax | `break` | — | — |
+| `pysyn_continue` | python-syntax | `continue` | — | — |
+| `pysyn_true` | python-syntax | `true` | — | — |
+| `pysyn_false` | python-syntax | `false` | — | — |
+| `pysyn_none` | python-syntax | `none` | — | — |
+| `pysyn_and` | python-syntax | `and` | — | — |
+| `pysyn_or` | python-syntax | `or` | — | — |
+
+<!-- PARITY:END -->
 
 #### Reading a gap
 
-A cell reading `gap (should)` means the registry expects the feature on that track but the probe did not find it. That is the working list for the self-hosting milestones (5q–5x): floats and host I/O, logical operators, `break`/`continue`/`for each`, tomes, closures, `try`/`catch`, classes, and the remaining sugar — each one landing in `lang/compiler/*.sdev` plus the seed VM, and each one preserving the byte-identical self-compilation fixed point.
+A cell reading `gap (should)` means the registry expects the feature on that
+track but the probe did not find it. That is the working list for the
+self-hosting milestones (5q–5x): floats and host I/O, logical operators,
+`break`/`continue`/`for each`, tomes, closures, `try`/`catch`, classes, and the
+remaining sugar — each one landing in `lang/compiler/*.sdev` plus the seed VM,
+and each one preserving the byte-identical self-compilation fixed point.
 
-***
+---
+
 
 ## Part VI — Machine learning and LLMs
+
 
 ### ML & LLM standard library
 
 _Source: `public/SDEV_ML_DOCUMENTATION.md`_
 
-A complete ML/LLM stack written in sdev itself. Everything lives under `lang/stdlib/ml/` and runs on both the WASM (browser) and Native ASM (desktop CLI) tracks, gated on the Phase-A prerequisites (Milestone 6 floats, Milestone 7 file I/O + `http_get`).
+
+A complete ML/LLM stack written in sdev itself. Everything lives under
+`lang/stdlib/ml/` and runs on both the WASM (browser) and Native ASM
+(desktop CLI) tracks, gated on the Phase-A prerequisites (Milestone 6
+floats, Milestone 7 file I/O + `http_get`).
 
 #### Modules
 
-| File               | Purpose                                                                                                                                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tensor.sdev`      | Core tensor primitive (data + shape), element-wise ops, `matmul`, activations (`relu`, `sigmoid`, `softmax`), losses (`mse`, `cross_entropy`), initializers (`zeros`, `ones`, `randn`).                 |
-| `autograd.sdev`    | Reverse-mode autograd. Global tape, differentiable ops (`d_add`, `d_mul`, `d_matmul`, `d_relu`, `d_mse`), `backward(out)`, `sgd_step(params, lr)`.                                                      |
-| `nn.sdev`          | High-level layers (`linear`, `relu_layer`, `sequential`) and a `fit(model, xs, ys, epochs, lr)` training loop.                                                                                          |
-| `transformer.sdev` | Decoder-only transformer: `embedding`, `layer_norm`, `attention_head`, `transformer_block`, `gpt(vocab, dim, hidden, layers)`, plus `generate(model, prompt, max_new)` for autoregressive sampling.     |
-| `train.sdev`       | Language-model training (M14): `lm_batches`, `lm_step`, `lm_fit`, `lm_loss`, `perplexity`, `sample_topk`, `lm_generate`, `lm_complete`, `save_checkpoint` / `load_checkpoint`.                          |
-| `data.sdev`        | Dataset I/O (`load_text`, `save_text`), char-level tokenizer (`char_vocab`, `encode`, `decode`), web crawler (`crawl`, `crawl_many`), teacher-model distillation helpers, and `save_model`.             |
+| File | Purpose |
+| --- | --- |
+| `tensor.sdev` | Core tensor primitive (data + shape), element-wise ops, `matmul`, activations (`relu`, `sigmoid`, `softmax`), losses (`mse`, `cross_entropy`), initializers (`zeros`, `ones`, `randn`). |
+| `autograd.sdev` | Reverse-mode autograd. Global tape, differentiable ops (`d_add`, `d_mul`, `d_matmul`, `d_relu`, `d_mse`), `backward(out)`, `sgd_step(params, lr)`. |
+| `nn.sdev` | High-level layers (`linear`, `relu_layer`, `sequential`) and a `fit(model, xs, ys, epochs, lr)` training loop. |
+| `transformer.sdev` | Decoder-only transformer: `embedding`, `layer_norm`, `attention_head`, `transformer_block`, `gpt(vocab, dim, hidden, layers)`, plus `generate(model, prompt, max_new)` for autoregressive sampling. |
+| `train.sdev` | Language-model training (M14): `lm_batches`, `lm_step`, `lm_fit`, `lm_loss`, `perplexity`, `sample_topk`, `lm_generate`, `lm_complete`, `save_checkpoint` / `load_checkpoint`. |
+| `data.sdev` | Dataset I/O (`load_text`, `save_text`), char-level tokenizer (`char_vocab`, `encode`, `decode`), web crawler (`crawl`, `crawl_many`), teacher-model distillation helpers, and `save_model`. |
 | `self_modify.sdev` | Gated self-modification: `self_read`, `self_propose` (routes through a review hook), `mine_demand` for feature-demand scraping, `update_docs`, and `rewrite_weights` for out-of-band parameter surgery. |
 
 #### Quick start
@@ -6619,21 +7471,26 @@ forge topics be mine_demand([
 
 #### Backend acceleration
 
-The ML stdlib runs unaccelerated on the seed VM today. Later milestones add hardware backends without changing the sdev API surface:
+The ML stdlib runs unaccelerated on the seed VM today. Later milestones
+add hardware backends without changing the sdev API surface:
 
-* **M9 — FFI:** call `libcudart`, `libc`, and Metal from the Native track.
-* **M10 — WebGPU:** browser tensors dispatch through `navigator.gpu`.
-* **M11 — CUDA:** `matmul` / `attention` fast paths bind to cuBLAS + FlashAttention.
+- **M9 — FFI:** call `libcudart`, `libc`, and Metal from the Native track.
+- **M10 — WebGPU:** browser tensors dispatch through `navigator.gpu`.
+- **M11 — CUDA:** `matmul` / `attention` fast paths bind to cuBLAS + FlashAttention.
 
 #### Safety notes
 
-* `self_modify.sdev` is off by default. Nothing writes to disk until `set_review_hook` is called with a function that returns `yep`.
-* `http_get` in the browser runtime is a stub (sync HTTP is unavailable in-page); use the Native/Electron builds for live training data.
-* Weights are stored in host memory only — no telemetry, no upload.
+- `self_modify.sdev` is off by default. Nothing writes to disk until
+  `set_review_hook` is called with a function that returns `yep`.
+- `http_get` in the browser runtime is a stub (sync HTTP is unavailable
+  in-page); use the Native/Electron builds for live training data.
+- Weights are stored in host memory only — no telemetry, no upload.
 
 #### Training a language model end to end (M14)
 
-`train.sdev` closes the loop: real next-token cross-entropy with a proper backward pass, Adam with global-norm gradient clipping, temperature/top-k sampling, evaluation, and plain-text checkpoints.
+`train.sdev` closes the loop: real next-token cross-entropy with a proper
+backward pass, Adam with global-norm gradient clipping, temperature/top-k
+sampling, evaluation, and plain-text checkpoints.
 
 ```sdev
 link "stdlib/ml/train.sdev"
@@ -6651,26 +7508,34 @@ save_checkpoint("model.ckpt", model)
 speak(lm_complete(model, v, "hello", 40, 0.8, 5))  // prompt, tokens, temp, k
 ```
 
-**API**
+##### API
 
-* `lm_batches(ids, block)` → `{ xs, ys, block, count }` sliding-window pairs.
-* `lm_step(model, opt, ctx, targets, lr)` → scalar loss for one update.
-* `lm_fit(model, ids, block, epochs, lr)` → `{ history, final, opt }`.
-* `lm_loss(model, ids, block)` / `perplexity(model, ids, block)` — evaluation.
-* `sample_topk(logits, temperature, k)` → token id.
-* `lm_generate(model, prompt_ids, max_new, temperature, k)` → token list.
-* `lm_complete(model, vocab, prompt, max_new, temperature, k)` → text.
-* `save_checkpoint(path, model)` / `load_checkpoint(path, model)` — one parameter tensor per line as `shape|values`; requires host file I/O.
+- `lm_batches(ids, block)` → `{ xs, ys, block, count }` sliding-window pairs.
+- `lm_step(model, opt, ctx, targets, lr)` → scalar loss for one update.
+- `lm_fit(model, ids, block, epochs, lr)` → `{ history, final, opt }`.
+- `lm_loss(model, ids, block)` / `perplexity(model, ids, block)` — evaluation.
+- `sample_topk(logits, temperature, k)` → token id.
+- `lm_generate(model, prompt_ids, max_new, temperature, k)` → token list.
+- `lm_complete(model, vocab, prompt, max_new, temperature, k)` → text.
+- `save_checkpoint(path, model)` / `load_checkpoint(path, model)` — one
+  parameter tensor per line as `shape|values`; requires host file I/O.
 
-Autograd gained the pieces this needs: `d_softmax_ce(logits, targets)` with its `bw_sce` backward rule, `zero_grads`, `clip_grads(params, max_norm)`, and `adam_new` / `adam_step`.
+Autograd gained the pieces this needs: `d_softmax_ce(logits, targets)` with
+its `bw_sce` backward rule, `zero_grads`, `clip_grads(params, max_norm)`,
+and `adam_new` / `adam_step`.
 
-***
+---
+
 
 ### Autonomous evolution loop
 
 _Source: `public/SDEV_AUTOEVOLVE_DOCUMENTATION.md`_
 
-The final piece of the ML stack: a loop that lets an sdev-trained model read demand signals, patch sdev's own source, and fine-tune itself on fresh teacher data — all written in sdev, all gated behind a single review hook.
+
+The final piece of the ML stack: a loop that lets an sdev-trained
+model read demand signals, patch sdev's own source, and fine-tune
+itself on fresh teacher data — all written in sdev, all gated
+behind a single review hook.
 
 Lives in `lang/stdlib/ml/auto_evolve.sdev`.
 
@@ -6685,19 +7550,21 @@ set_review_hook(conjure(path, body) ::
 ;;)
 ```
 
-Without a hook, `apply_proposal(...)` silently returns `nope`. Even with a hook, only files in `SDEV_SOURCE_FILES` are eligible — `is_allowed(path)` rejects anything else before the hook ever sees it.
+Without a hook, `apply_proposal(...)` silently returns `nope`.
+Even with a hook, only files in `SDEV_SOURCE_FILES` are eligible —
+`is_allowed(path)` rejects anything else before the hook ever sees it.
 
 #### API
 
-| Function                                               | Purpose                                                                         |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| `is_allowed(path)`                                     | Whitelist check.                                                                |
-| `make_proposal(path, old, new_body, reason)`           | Build a patch record; fields are `path`, `old`, `updated`, `reason`, `applied`. |
-| `apply_proposal(p)`                                    | Route through the review hook and write.                                        |
-| `draft_from_demand(model, demand, path)`               | Ask the model to rewrite a file toward the top demand topic.                    |
-| `evolve_weights(model, url, key, prompts, epochs, lr)` | Distill a teacher model and SGD-step on the pairs.                              |
-| `evolve_tick(model, sources, url, key)`                | One full loop: mine → draft → apply → train.                                    |
-| `evolve_forever(model, sources, url, key, ticks)`      | Long-running driver.                                                            |
+| Function | Purpose |
+| --- | --- |
+| `is_allowed(path)` | Whitelist check. |
+| `make_proposal(path, old, new_body, reason)` | Build a patch record; fields are `path`, `old`, `updated`, `reason`, `applied`. |
+| `apply_proposal(p)` | Route through the review hook and write. |
+| `draft_from_demand(model, demand, path)` | Ask the model to rewrite a file toward the top demand topic. |
+| `evolve_weights(model, url, key, prompts, epochs, lr)` | Distill a teacher model and SGD-step on the pairs. |
+| `evolve_tick(model, sources, url, key)` | One full loop: mine → draft → apply → train. |
+| `evolve_forever(model, sources, url, key, ticks)` | Long-running driver. |
 
 #### Example
 
@@ -6725,24 +7592,34 @@ evolve_forever(
 
 `pick_target` picks the file to patch based on top-topic keywords:
 
-* `parse*` → `lang/compiler/parser.sdev`
-* `lex*` → `lang/compiler/lexer.sdev`
-* `doc*` → `public/SDEV_DOCUMENTATION.md`
-* everything else → `lang/stdlib/ml/nn.sdev`
+- `parse*` → `lang/compiler/parser.sdev`
+- `lex*` → `lang/compiler/lexer.sdev`
+- `doc*` → `public/SDEV_DOCUMENTATION.md`
+- everything else → `lang/stdlib/ml/nn.sdev`
 
-Extend `SDEV_SOURCE_FILES` and `pick_target` to widen or narrow what the loop is allowed to touch.
+Extend `SDEV_SOURCE_FILES` and `pick_target` to widen or narrow
+what the loop is allowed to touch.
 
-***
+---
+
 
 ## Part VII — Acceleration and interop
+
 
 ### FFI and native acceleration
 
 _Source: `public/SDEV_FFI_DOCUMENTATION.md`_
 
-sdev now speaks the C ABI. The `ffi.sdev` stdlib lets any sdev program open a shared library (`.so`, `.dylib`, `.dll`), resolve symbols, and call them with typed arguments — which is the foundation the ML stdlib uses to reach BLAS, cuBLAS, cuDNN, and anything else the host exposes.
 
-FFI runs on the **native / Node** track. In the browser IDE the calls are stubbed to `void` so the same program can be edited safely; run it through the desktop IDE or `scripts/sdev-native.mjs` to actually cross the boundary.
+sdev now speaks the C ABI. The `ffi.sdev` stdlib lets any sdev program
+open a shared library (`.so`, `.dylib`, `.dll`), resolve symbols, and
+call them with typed arguments — which is the foundation the ML stdlib
+uses to reach BLAS, cuBLAS, cuDNN, and anything else the host exposes.
+
+FFI runs on the **native / Node** track. In the browser IDE the calls
+are stubbed to `void` so the same program can be edited safely; run it
+through the desktop IDE or `scripts/sdev-native.mjs` to actually cross
+the boundary.
 
 #### Quick tour
 
@@ -6757,21 +7634,24 @@ lib_close(lib)
 
 #### Type kinds
 
-| Constant   | Meaning                      |
-| ---------- | ---------------------------- |
-| `FFI_VOID` | no value                     |
-| `FFI_I32`  | 32-bit signed int            |
-| `FFI_I64`  | 64-bit signed int            |
-| `FFI_F32`  | 32-bit float                 |
-| `FFI_F64`  | 64-bit float                 |
-| `FFI_PTR`  | opaque pointer (buffer addr) |
-| `FFI_CSTR` | NUL-terminated UTF-8         |
-| `FFI_BUF`  | length-carrying byte buffer  |
-| `FFI_BOOL` | 0 / 1                        |
+| Constant   | Meaning                     |
+| ---------- | --------------------------- |
+| `FFI_VOID` | no value                    |
+| `FFI_I32`  | 32-bit signed int           |
+| `FFI_I64`  | 64-bit signed int           |
+| `FFI_F32`  | 32-bit float                |
+| `FFI_F64`  | 64-bit float                |
+| `FFI_PTR`  | opaque pointer (buffer addr)|
+| `FFI_CSTR` | NUL-terminated UTF-8        |
+| `FFI_BUF`  | length-carrying byte buffer |
+| `FFI_BOOL` | 0 / 1                       |
 
 #### Buffers
 
-`buf_f64(n)` allocates a native f64 array. `buf_from_list(xs)` and `buf_to_list(b)` shuttle sdev lists across the boundary. Buffers are the standard way to hand large tensors to BLAS or CUDA without going through the boxed-float heap.
+`buf_f64(n)` allocates a native f64 array. `buf_from_list(xs)` and
+`buf_to_list(b)` shuttle sdev lists across the boundary. Buffers are
+the standard way to hand large tensors to BLAS or CUDA without going
+through the boxed-float heap.
 
 #### BLAS matmul (drop-in acceleration for `ml/tensor.sdev`)
 
@@ -6785,7 +7665,8 @@ forge b be tensor([5.0,6.0,7.0,8.0], [2,2])
 forge c be blas_matmul(blas, a, b)   // uses cblas_dgemm when available
 ```
 
-`blas_matmul` transparently falls back to the pure-sdev `matmul` when the library isn't installed, so the ML stdlib keeps running everywhere.
+`blas_matmul` transparently falls back to the pure-sdev `matmul` when
+the library isn't installed, so the ML stdlib keeps running everywhere.
 
 #### CUDA fast path
 
@@ -6796,11 +7677,15 @@ either cuda_ok(cuda) ::
 ;;
 ```
 
-The `open_cuda` helper binds the minimal cuBLAS surface the training loop needs (`Create/Destroy`, `Dgemm`, `Malloc/Free/Memcpy/Sync`). Higher-level kernels can be added by binding whatever additional symbols your build of libcublas / libcudnn exports.
+The `open_cuda` helper binds the minimal cuBLAS surface the training
+loop needs (`Create/Destroy`, `Dgemm`, `Malloc/Free/Memcpy/Sync`).
+Higher-level kernels can be added by binding whatever additional
+symbols your build of libcublas / libcudnn exports.
 
 #### Host builtins the FFI stdlib expects
 
-The native runtime provides these (Node CLI wires them through `koffi` when installed; the browser stubs them to `void`):
+The native runtime provides these (Node CLI wires them through
+`koffi` when installed; the browser stubs them to `void`):
 
 ```
 ffi_open(path)               -> lib handle | void
@@ -6814,15 +7699,24 @@ ffi_read_i32(buf, i)  / ffi_write_i32(buf, i, n)
 
 #### Safety
 
-FFI bypasses sdev's runtime checks — a wrong signature crashes the process. Keep bindings in one module per library, treat every pointer as untrusted, and always `lib_close` on shutdown.
+FFI bypasses sdev's runtime checks — a wrong signature crashes the
+process. Keep bindings in one module per library, treat every pointer
+as untrusted, and always `lib_close` on shutdown.
 
-***
+---
+
 
 ### WebGPU compute
 
 _Source: `public/SDEV_WEBGPU_DOCUMENTATION.md`_
 
-The `webgpu` stdlib module gives sdev programs GPU acceleration inside the browser IDE — no toolchain, no plugins — while transparently falling back to the pure-sdev CPU kernels when a GPU adapter is not available (e.g. Node CLI, the sandbox preview, or a browser without WebGPU support). It sits alongside `ffi.sdev` (CPU BLAS / cuBLAS) so `ml/*` code can pick whichever backend the host offers.
+
+The `webgpu` stdlib module gives sdev programs GPU acceleration inside
+the browser IDE — no toolchain, no plugins — while transparently
+falling back to the pure-sdev CPU kernels when a GPU adapter is not
+available (e.g. Node CLI, the sandbox preview, or a browser without
+WebGPU support). It sits alongside `ffi.sdev` (CPU BLAS / cuBLAS) so
+`ml/*` code can pick whichever backend the host offers.
 
 ```sdev
 use "lang/stdlib/webgpu.sdev" as gpu
@@ -6837,35 +7731,41 @@ let c = gpu.matmul(a, b)     # runs on the GPU if available, CPU otherwise
 
 #### Availability
 
-| Environment                 | GPU path | Notes                             |
-| --------------------------- | -------- | --------------------------------- |
-| Chrome / Edge (WebGPU on)   | Yes      | Native adapter                    |
-| Safari 17+ (feature flag)   | Yes      |                                   |
-| Firefox Nightly             | Partial  | Falls back where features missing |
-| Lovable preview sandbox     | No       | Auto CPU fallback                 |
-| Node CLI / Electron desktop | Optional | Uses Dawn if bundled, else CPU    |
+| Environment                 | GPU path      | Notes                              |
+| --------------------------- | ------------- | ---------------------------------- |
+| Chrome / Edge (WebGPU on)   | Yes           | Native adapter                     |
+| Safari 17+ (feature flag)   | Yes           |                                    |
+| Firefox Nightly             | Partial       | Falls back where features missing  |
+| Lovable preview sandbox     | No            | Auto CPU fallback                  |
+| Node CLI / Electron desktop | Optional      | Uses Dawn if bundled, else CPU     |
 
-`gpu.is_available()` returns `true` only when both `navigator.gpu` exists **and** `requestAdapter()` returned a real adapter — matching the platform notes.
+`gpu.is_available()` returns `true` only when both `navigator.gpu`
+exists **and** `requestAdapter()` returned a real adapter — matching
+the platform notes.
 
 #### API
 
-| Function                           | Description                                |
-| ---------------------------------- | ------------------------------------------ |
-| `is_available()`                   | Probe for a working WebGPU adapter         |
-| `init()`                           | Lazy device request; returns 0 on fallback |
-| `device_info()`                    | Adapter / vendor string for logging        |
-| `upload(t)` / `download(g)`        | Move a tensor to / from GPU memory         |
-| `free(g)`                          | Release a GPU buffer                       |
-| `matmul(a, b)`                     | Batched f32 matmul (8x8 workgroups)        |
-| `add(a, b)`                        | Element-wise add (64-wide workgroups)      |
-| `relu(x)`                          | In-place ReLU                              |
-| `kernel(name, wgsl)`               | Register a custom WGSL compute shader      |
-| `run(pipe, bufs, uniforms, x,y,z)` | Dispatch a registered kernel               |
-| `heartbeat()`                      | Re-initialise after a device-lost event    |
+| Function                          | Description                                      |
+| --------------------------------- | ------------------------------------------------ |
+| `is_available()`                  | Probe for a working WebGPU adapter               |
+| `init()`                          | Lazy device request; returns 0 on fallback       |
+| `device_info()`                   | Adapter / vendor string for logging              |
+| `upload(t)` / `download(g)`       | Move a tensor to / from GPU memory               |
+| `free(g)`                         | Release a GPU buffer                             |
+| `matmul(a, b)`                    | Batched f32 matmul (8x8 workgroups)              |
+| `add(a, b)`                       | Element-wise add (64-wide workgroups)            |
+| `relu(x)`                         | In-place ReLU                                    |
+| `kernel(name, wgsl)`              | Register a custom WGSL compute shader            |
+| `run(pipe, bufs, uniforms, x,y,z)`| Dispatch a registered kernel                     |
+| `heartbeat()`                     | Re-initialise after a device-lost event          |
 
 #### Writing custom WGSL
 
-The runtime keeps bindings tight (≤ 3 storage buffers by default) so shaders compile under the standard `maxStorageBuffersPerShaderStage` limit of 8. Use `f32` for numeric payloads and pad `vec3<f32>` to 16 bytes — WGSL enforces the alignment rules called out in the platform notes.
+The runtime keeps bindings tight (≤ 3 storage buffers by default) so
+shaders compile under the standard `maxStorageBuffersPerShaderStage`
+limit of 8. Use `f32` for numeric payloads and pad `vec3<f32>` to 16
+bytes — WGSL enforces the alignment rules called out in the platform
+notes.
 
 ```sdev
 let src = "
@@ -6885,29 +7785,44 @@ print(T.data(gpu.download(g))[0..8])
 gpu.free(g)
 ```
 
-**Reserved-word gotchas**
+##### Reserved-word gotchas
 
-WGSL reserves `meta`, `target`, `type`, `namespace`, and others. Using them as identifiers causes silent shader compilation failure. Prefer `info`, `dest`, etc.
+WGSL reserves `meta`, `target`, `type`, `namespace`, and others. Using
+them as identifiers causes silent shader compilation failure. Prefer
+`info`, `dest`, etc.
 
-**Device loss**
+##### Device loss
 
-Call `gpu.heartbeat()` between training steps in long loops. When the adapter is lost (driver reset, tab suspension), the module drops its cached device and pipelines and reinitialises on the next call.
+Call `gpu.heartbeat()` between training steps in long loops. When the
+adapter is lost (driver reset, tab suspension), the module drops its
+cached device and pipelines and reinitialises on the next call.
 
 #### Integration with the ML stdlib
 
-`ml/tensor.sdev` inspects `gpu.is_available()` at import time and routes `matmul`, `add`, and `relu` through this module when a GPU is present. Training loops in `ml/nn.sdev` therefore accelerate automatically — no code changes required.
+`ml/tensor.sdev` inspects `gpu.is_available()` at import time and
+routes `matmul`, `add`, and `relu` through this module when a GPU is
+present. Training loops in `ml/nn.sdev` therefore accelerate
+automatically — no code changes required.
 
 #### Limits and next steps
 
-Milestone 10 delivers f32 kernels and manual custom-shader dispatch. Milestone 11 (CUDA) will provide the same surface for cuBLAS / cuDNN via the FFI layer so large-model training on desktop GPUs works through the exact same tensor API.
+Milestone 10 delivers f32 kernels and manual custom-shader dispatch.
+Milestone 11 (CUDA) will provide the same surface for cuBLAS / cuDNN
+via the FFI layer so large-model training on desktop GPUs works
+through the exact same tensor API.
 
-***
+---
+
 
 ### CUDA fast path
 
 _Source: `public/SDEV_CUDA_DOCUMENTATION.md`_
 
-`ml/cuda.sdev` puts the sdev ML stack on the GPU. It sits on top of `ffi.sdev`'s cuBLAS/cudart bindings, hides the C ABI awkwardness, and transparently falls back to the pure-sdev tensor ops when CUDA isn't present — so the same program still runs in the browser IDE.
+
+`ml/cuda.sdev` puts the sdev ML stack on the GPU. It sits on top of
+`ffi.sdev`'s cuBLAS/cudart bindings, hides the C ABI awkwardness, and
+transparently falls back to the pure-sdev tensor ops when CUDA isn't
+present — so the same program still runs in the browser IDE.
 
 #### Quick start
 
@@ -6927,60 +7842,80 @@ cuda_free_device(dev)
 
 #### Device handle
 
-* `cuda_device(cudart_path, cublas_path)` — open explicit shared libs.
-* `cuda_device_default()` — Debian/Ubuntu paths under `/usr/lib/x86_64-linux-gnu/`. Override for macOS, WSL, or custom CUDA toolkit installs.
-* `cuda_free_device(dev)` — destroy the cublas handle and close both libraries. Always call before process exit.
-* `cuda_report(dev)` — one-line status string for logs.
+- `cuda_device(cudart_path, cublas_path)` — open explicit shared libs.
+- `cuda_device_default()` — Debian/Ubuntu paths under
+  `/usr/lib/x86_64-linux-gnu/`. Override for macOS, WSL, or custom
+  CUDA toolkit installs.
+- `cuda_free_device(dev)` — destroy the cublas handle and close both
+  libraries. Always call before process exit.
+- `cuda_report(dev)` — one-line status string for logs.
 
-The returned tome carries `ok`, the loaded `cu` bindings, and a live `cublasHandle_t`. When `ok` is `nope`, every helper falls back to CPU.
+The returned tome carries `ok`, the loaded `cu` bindings, and a live
+`cublasHandle_t`. When `ok` is `nope`, every helper falls back to CPU.
 
 #### Device memory
 
-* `cuda_alloc(dev, n_f64)` → `{ dptr, n, bytes }`
-* `cuda_upload(dev, list)` — host list → device buffer.
-* `cuda_download(dev, buf)` — device buffer → host list.
-* `cuda_free(dev, buf)` — free device memory.
+- `cuda_alloc(dev, n_f64)` → `{ dptr, n, bytes }`
+- `cuda_upload(dev, list)` — host list → device buffer.
+- `cuda_download(dev, buf)` — device buffer → host list.
+- `cuda_free(dev, buf)` — free device memory.
 
-Use these directly only when writing custom kernels. `cuda_matmul` and `cuda_forward_linear` handle the upload/compute/download cycle for you.
+Use these directly only when writing custom kernels. `cuda_matmul`
+and `cuda_forward_linear` handle the upload/compute/download cycle
+for you.
 
 #### Accelerated ops
 
-* `cuda_matmul(dev, a, b)` — row-major matmul via `cublasDgemm`. The wrapper swaps operands under the hood to reinterpret cuBLAS's column-major output as row-major, matching `ml/tensor.sdev`'s layout.
-* `cuda_forward_linear(dev, x, w, bias)` — one linear layer forward pass, ready to slot into `nn.fit`.
-* `best_matmul(dev, blas, a, b)` — pick the fastest available backend: CUDA → BLAS → pure sdev.
+- `cuda_matmul(dev, a, b)` — row-major matmul via `cublasDgemm`. The
+  wrapper swaps operands under the hood to reinterpret cuBLAS's
+  column-major output as row-major, matching `ml/tensor.sdev`'s layout.
+- `cuda_forward_linear(dev, x, w, bias)` — one linear layer forward
+  pass, ready to slot into `nn.fit`.
+- `best_matmul(dev, blas, a, b)` — pick the fastest available backend:
+  CUDA → BLAS → pure sdev.
 
 #### Fallback semantics
 
-Every helper checks `dev.ok` (and, for `best_matmul`, the BLAS handle) before touching FFI. In the browser IDE the FFI builtins are stubbed to `void`, so `cuda_device_default()` returns `{ ok: nope, ... }` and `cuda_matmul` calls straight through to `matmul(a, b)`. Programs authored on a workstation run unchanged in the web playground.
+Every helper checks `dev.ok` (and, for `best_matmul`, the BLAS handle)
+before touching FFI. In the browser IDE the FFI builtins are stubbed
+to `void`, so `cuda_device_default()` returns `{ ok: nope, ... }` and
+`cuda_matmul` calls straight through to `matmul(a, b)`. Programs
+authored on a workstation run unchanged in the web playground.
 
 #### Safety notes
 
-* Always pair `cuda_alloc` with `cuda_free` and `cuda_device*` with `cuda_free_device`. FFI leaks bypass sdev's runtime accounting.
-* cuBLAS handles are not thread-safe across sdev tasks — use one device per task, or serialize access at the caller.
-* `cuda_matmul` synchronizes with `cudaDeviceSynchronize` before downloading results. Skip the sync only if you chain multiple GPU ops and download once at the end.
+- Always pair `cuda_alloc` with `cuda_free` and `cuda_device*` with
+  `cuda_free_device`. FFI leaks bypass sdev's runtime accounting.
+- cuBLAS handles are not thread-safe across sdev tasks — use one
+  device per task, or serialize access at the caller.
+- `cuda_matmul` synchronizes with `cudaDeviceSynchronize` before
+  downloading results. Skip the sync only if you chain multiple GPU
+  ops and download once at the end.
 
-***
+---
+
 
 ## Part VIII — Domains
+
 
 ### Hardware and boards
 
 _Source: `public/SDEV_HARDWARE_DOCUMENTATION.md`_
 
+
 Program microcontrollers (Arduino, ESP32, ESP8266, Raspberry Pi Pico, Teensy, and more) directly in sdev. This document covers the `board { }` DSL, the compiler/uploader pipeline, the Hardware panel in the IDE, and the Arduino Library Manager integration.
 
-***
+---
 
 #### 1. Overview
 
 sdev's hardware layer lets you write firmware in sdev syntax that transpiles to Arduino-compatible C++ and is uploaded to a physical board over Web Serial. Everything Arduino's C++ ecosystem supports — libraries, sensors, actuators, protocols — is available, because the underlying compilation path is real `arduino-cli`.
 
 Two ways to run hardware code:
-
 1. **Real board** — write a `board { }` block, hit Upload, sdev transpiles → `.ino` → `arduino-cli` compiles → firmware flashed over USB.
 2. **Simulation (roadmap)** — future in-browser simulator that runs `board { }` blocks in the IDE's Canvas panel.
 
-***
+---
 
 #### 2. The `board { }` block
 
@@ -7002,62 +7937,58 @@ board "uno" {
 }
 ```
 
-**Board targets**
+##### Board targets
 
 The string after `board` selects the target. Supported ids:
 
-| Id         | Board              | MCU        | Uploader    |
-| ---------- | ------------------ | ---------- | ----------- |
-| `uno`      | Arduino Uno R3     | ATmega328P | STK500      |
-| `nano`     | Arduino Nano       | ATmega328P | STK500      |
-| `nano-old` | Arduino Nano (168) | ATmega168  | STK500      |
-| `mega`     | Arduino Mega 2560  | ATmega2560 | STK500      |
-| `leonardo` | Arduino Leonardo   | ATmega32U4 | STK500      |
-| `micro`    | Arduino Micro      | ATmega32U4 | STK500      |
-| `esp32`    | ESP32 DevKit       | ESP32      | esptool     |
-| `esp32-s3` | ESP32-S3 DevKit    | ESP32-S3   | esptool     |
-| `esp8266`  | NodeMCU            | ESP8266    | esptool     |
-| `pico`     | Raspberry Pi Pico  | RP2040     | UF2 drop    |
-| `teensy41` | Teensy 4.1         | iMXRT1062  | arduino-cli |
+| Id | Board | MCU | Uploader |
+|----|-------|-----|----------|
+| `uno` | Arduino Uno R3 | ATmega328P | STK500 |
+| `nano` | Arduino Nano | ATmega328P | STK500 |
+| `nano-old` | Arduino Nano (168) | ATmega168 | STK500 |
+| `mega` | Arduino Mega 2560 | ATmega2560 | STK500 |
+| `leonardo` | Arduino Leonardo | ATmega32U4 | STK500 |
+| `micro` | Arduino Micro | ATmega32U4 | STK500 |
+| `esp32` | ESP32 DevKit | ESP32 | esptool |
+| `esp32-s3` | ESP32-S3 DevKit | ESP32-S3 | esptool |
+| `esp8266` | NodeMCU | ESP8266 | esptool |
+| `pico` | Raspberry Pi Pico | RP2040 | UF2 drop |
+| `teensy41` | Teensy 4.1 | iMXRT1062 | arduino-cli |
 
-**Required entry points**
+##### Required entry points
 
-* `setup()` — runs once at boot.
-* `loop()` — runs forever after `setup()` returns.
+- `setup()` — runs once at boot.
+- `loop()` — runs forever after `setup()` returns.
 
 Both are declared with `conjure` like any other sdev function.
 
-***
+---
 
 #### 3. Hardware statements
 
 Inside a `board { }` block, the following sdev statements transpile to Arduino C++:
 
-**Pin configuration**
-
+##### Pin configuration
 ```
 pin 13 be output       // pinMode(13, OUTPUT);
 pin 2  be input        // pinMode(2,  INPUT);
 pin 2  be input_pullup // pinMode(2,  INPUT_PULLUP);
 ```
 
-**Digital I/O**
-
+##### Digital I/O
 ```
 pin 13 write high      // digitalWrite(13, HIGH);
 pin 13 write low       // digitalWrite(13, LOW);
 forge v be pin 2 read  // int v = digitalRead(2);
 ```
 
-**Analog I/O**
-
+##### Analog I/O
 ```
 forge x be analog 0 read       // analogRead(A0);
 analog 9 write 128             // analogWrite(9, 128);  (PWM, 0-255)
 ```
 
-**Timing**
-
+##### Timing
 ```
 wait 500          // delay(500);
 wait_us 100       // delayMicroseconds(100);
@@ -7065,8 +7996,7 @@ forge t be now()  // millis();
 forge u be nowus() // micros();
 ```
 
-**Serial**
-
+##### Serial
 ```
 serial begin 9600         // Serial.begin(9600);
 serial print "hello"      // Serial.print("hello");
@@ -7075,8 +8005,7 @@ forge b be serial read    // Serial.read();
 forge n be serial avail   // Serial.available();
 ```
 
-**Advanced (pass-through emitted verbatim)**
-
+##### Advanced (pass-through emitted verbatim)
 ```
 tone 8 440 200
 notone 8
@@ -7086,7 +8015,7 @@ attach 0 rising conjure()  ISR
 detach 0
 ```
 
-**Library includes**
+##### Library includes
 
 Any Arduino C++ library becomes usable with `use`:
 
@@ -7103,8 +8032,7 @@ board "uno" {
 
 `use "X"` emits `#include <X.h>` and marks the library as required so the Library Manager materialises it into the sketchbook before `arduino-cli compile` runs.
 
-**Raw C++ escape hatch**
-
+##### Raw C++ escape hatch
 ```
 cpp {
   Servo s;
@@ -7112,69 +8040,60 @@ cpp {
   s.write(90);
 }
 ```
-
 Everything inside `cpp { ... }` is copied byte-for-byte into the generated `.ino`. Use it for anything the DSL doesn't cover natively.
 
-***
+---
 
 #### 4. The Hardware panel (IDE)
 
 Open the IDE's left sidebar and click the **USB** icon to reveal the Hardware panel. It contains:
 
-**4.1 Board picker**
-
+##### 4.1 Board picker
 Dropdown of every board in the catalogue. The selection is written into the transpiled sketch as the target FQBN (fully qualified board name). Auto-populated after **Detect Board** succeeds.
 
-**4.2 Detect Board**
-
+##### 4.2 Detect Board
 Requests a Web Serial port. The USB VID/PID reported by the port is matched against `src/lang/hardware/board-db.ts` to auto-identify:
 
-* Arduino VIDs `0x2341`, `0x2A03`
-* CH340 clones `0x1A86:0x7523`
-* CP210x clones `0x10C4:0xEA60`
-* FTDI `0x0403:0x6001`
-* ESP32-S3 native USB `0x303A:0x1001`
-* Raspberry Pi Pico `0x2E8A`
-* Teensy `0x16C0`
+- Arduino VIDs `0x2341`, `0x2A03`
+- CH340 clones `0x1A86:0x7523`
+- CP210x clones `0x10C4:0xEA60`
+- FTDI `0x0403:0x6001`
+- ESP32-S3 native USB `0x303A:0x1001`
+- Raspberry Pi Pico `0x2E8A`
+- Teensy `0x16C0`
 
 If the VID/PID isn't recognised, you can still pick the board manually.
 
-**4.3 Compile**
-
+##### 4.3 Compile
 Sends the current file to the `compile-firmware` edge function, which:
-
 1. Extracts and transpiles the `board { }` block to `.ino`.
 2. Merges the selected library set into the `arduino-cli` sketchbook.
 3. Runs `arduino-cli compile --fqbn <FQBN>` and returns the resulting `.hex` (AVR), `.bin` (ESP), or `.uf2` (RP2040).
 
 If no build server is configured (`ARDUINO_BUILD_URL` unset), the function returns the generated `.ino` so you can build it locally in the Arduino IDE.
 
-**4.4 Upload**
-
+##### 4.4 Upload
 Compiles (if not already), then flashes the firmware over the selected Web Serial port:
 
-* **AVR (Uno / Nano / Mega / Leonardo / Micro)** — bundled JS implementation of the STK500v1 bootloader protocol (`src/lang/hardware/web-serial.ts`).
-* **ESP32 / ESP8266** — hands the `.bin` to `esptool-js`.
-* **RP2040 Pico** — downloads the `.uf2` and prompts you to drop it on the `RPI-RP2` mass-storage volume.
+- **AVR (Uno / Nano / Mega / Leonardo / Micro)** — bundled JS implementation of the STK500v1 bootloader protocol (`src/lang/hardware/web-serial.ts`).
+- **ESP32 / ESP8266** — hands the `.bin` to `esptool-js`.
+- **RP2040 Pico** — downloads the `.uf2` and prompts you to drop it on the `RPI-RP2` mass-storage volume.
 
-**4.5 Serial Monitor**
-
+##### 4.5 Serial Monitor
 After upload, reopens the same port at the chosen baud rate and streams I/O into the panel. Includes a send-line input and a baud selector (300 – 2 000 000).
 
-**4.6 Library Manager**
-
+##### 4.6 Library Manager
 Backed by Arduino's official index (`https://downloads.arduino.cc/libraries/library_index.json`). Search, install, uninstall, version-pin. Installed libraries live per-user under `~/libraries/<name>@<version>/`.
 
-Because the firmware path is real C++, **every** Arduino library works unchanged — Servo, Adafruit\_NeoPixel, FastLED, PubSubClient, Wire, SPI, ArduinoJson, LiquidCrystal, DHT sensor, all of them.
+Because the firmware path is real C++, **every** Arduino library works unchanged — Servo, Adafruit_NeoPixel, FastLED, PubSubClient, Wire, SPI, ArduinoJson, LiquidCrystal, DHT sensor, all of them.
 
-***
+---
 
 #### 5. Bytecode compiler additions
 
 The bytecode compiler (`src/lang/compiler.ts` → `src/lang/vm.ts`) was brought up to interpreter parity as part of the hardware work. What changed:
 
-**5.1 Loop control**
-
+##### 5.1 Loop control
 `while`, `iterate ... through` (forEach), and `iterate ... in` (forIn) now compile through a shared `compileIndexedForLoop` helper that maintains a `LoopContext` stack:
 
 ```ts
@@ -7184,47 +8103,45 @@ interface LoopContext {
 }
 ```
 
-* `break` — emits `JUMP -1`, index recorded in the current loop's `breakJumps`, patched to the instruction after the loop.
-* `continue` — emits `JUMP -1`, recorded in `continueJumps`, patched to the loop's step/condition instruction.
+- `break`   — emits `JUMP -1`, index recorded in the current loop's `breakJumps`, patched to the instruction after the loop.
+- `continue` — emits `JUMP -1`, recorded in `continueJumps`, patched to the loop's step/condition instruction.
 
 Previously these compiled to `NOP` and silently did nothing.
 
-**5.2 New / clarified opcodes**
+##### 5.2 New / clarified opcodes
 
 See `src/lang/bytecode.ts` for the full list. Highlights:
 
-* **Control flow patching**: `JUMP`, `JUMP_IF_FALSE`, `JUMP_IF_TRUE` all support post-hoc target patching via `patchJump()` / `patchJumpTo()`.
-* **Bitwise**: `BIT_AND`, `BIT_OR`, `BIT_XOR`, `BIT_NOT`, `BIT_SHL`, `BIT_SHR` — needed for register-level firmware work.
-* **Systems**: `SYSCALL`, `ALLOC`, `FREE`, `HEAP_LOAD`, `HEAP_STORE`, `INTERRUPT`.
-* **Tasks**: `TASK_CREATE`, `TASK_YIELD`, `TASK_KILL`.
+- **Control flow patching**: `JUMP`, `JUMP_IF_FALSE`, `JUMP_IF_TRUE` all support post-hoc target patching via `patchJump()` / `patchJumpTo()`.
+- **Bitwise**: `BIT_AND`, `BIT_OR`, `BIT_XOR`, `BIT_NOT`, `BIT_SHL`, `BIT_SHR` — needed for register-level firmware work.
+- **Systems**: `SYSCALL`, `ALLOC`, `FREE`, `HEAP_LOAD`, `HEAP_STORE`, `INTERRUPT`.
+- **Tasks**: `TASK_CREATE`, `TASK_YIELD`, `TASK_KILL`.
 
-**5.3 Binary format**
+##### 5.3 Binary format
 
 `serializeChunk()` / `deserializeChunk()` in `src/lang/bytecode.ts`:
-
 ```
 magic (u32 LE) | version (u32 LE) | payloadLen (u32 LE) | payload (JSON)
 ```
-
 Magic is `0x53444556` ("SDEV"). Current `BYTECODE_VERSION = 2`.
 
-***
+---
 
 #### 6. Runtime files added / touched
 
-| File                                           | Purpose                                                                                         |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `src/lang/hardware/strip.ts`                   | Removes `board { }` blocks before the sdev interpreter runs.                                    |
-| `src/lang/hardware/transpile.ts`               | sdev → `.ino` C++ transpiler.                                                                   |
-| `src/lang/hardware/board-db.ts`                | Board catalogue + USB VID/PID lookup.                                                           |
-| `src/lang/hardware/web-serial.ts`              | Web Serial wrapper, Intel HEX parser, STK500v1 flasher, serial monitor helper.                  |
-| `src/components/ide/HardwarePanel.tsx`         | UI: board picker, detect, compile, upload, serial monitor, library manager.                     |
+| File | Purpose |
+|------|---------|
+| `src/lang/hardware/strip.ts` | Removes `board { }` blocks before the sdev interpreter runs. |
+| `src/lang/hardware/transpile.ts` | sdev → `.ino` C++ transpiler. |
+| `src/lang/hardware/board-db.ts` | Board catalogue + USB VID/PID lookup. |
+| `src/lang/hardware/web-serial.ts` | Web Serial wrapper, Intel HEX parser, STK500v1 flasher, serial monitor helper. |
+| `src/components/ide/HardwarePanel.tsx` | UI: board picker, detect, compile, upload, serial monitor, library manager. |
 | `supabase/functions/compile-firmware/index.ts` | Edge proxy to `arduino-cli`; falls back to returning `.ino` when no build server is configured. |
-| `src/pages/IDE.tsx`                            | Registers the Hardware sidebar tab and ships a `blink.sdev` starter file.                       |
-| `src/lang/compiler.ts`                         | Loop context stack, `break` / `continue` patching.                                              |
-| `src/lang/index.ts`                            | Calls `stripBoardBlocks()` before lex/parse.                                                    |
+| `src/pages/IDE.tsx` | Registers the Hardware sidebar tab and ships a `blink.sdev` starter file. |
+| `src/lang/compiler.ts` | Loop context stack, `break` / `continue` patching. |
+| `src/lang/index.ts` | Calls `stripBoardBlocks()` before lex/parse. |
 
-***
+---
 
 #### 7. Quick reference: the blink starter
 
@@ -7244,60 +8161,61 @@ board "uno" {
 ```
 
 Steps:
-
 1. Plug in an Uno.
 2. Hardware panel → **Detect Board** → confirm "Arduino Uno".
 3. **Upload** → LED on pin 13 blinks at 1 Hz.
 
-***
+---
 
 #### 8. Browser support
 
 Web Serial is Chromium-only (Chrome, Edge, Opera, Brave, Arc) on desktop. Firefox and Safari will see a "Web Serial not supported" notice; use Chromium for uploading. The rest of the IDE works everywhere.
 
-***
+---
 
 #### 9. Security notes
 
-* Web Serial requires an explicit user gesture and per-origin permission. sdev never opens a port without you clicking **Detect** or **Upload**.
-* The `compile-firmware` edge function validates the incoming source length and rejects payloads over the configured cap.
-* No library binaries are ever executed in the browser — Arduino libraries only run on the target MCU after flashing.
+- Web Serial requires an explicit user gesture and per-origin permission. sdev never opens a port without you clicking **Detect** or **Upload**.
+- The `compile-firmware` edge function validates the incoming source length and rejects payloads over the configured cap.
+- No library binaries are ever executed in the browser — Arduino libraries only run on the target MCU after flashing.
 
-***
+---
 
-_Hardware support is additive. Non-hardware sdev programs are unaffected; the `board { }` block is invisible to the standard interpreter and VM._
+*Hardware support is additive. Non-hardware sdev programs are unaffected; the `board { }` block is invisible to the standard interpreter and VM.*
 
-***
+---
+
 
 ### Leaflet, mapping and GIS
 
 _Source: `public/SDEV_LEAFLET_DOCUMENTATION.md`_
 
+
 #### Interactive Maps for sdev
 
 The sdev Leaflet module provides powerful geographic mapping capabilities, allowing you to create interactive maps, markers, shapes, and more using the familiar sdev syntax.
 
-***
+---
 
 #### Table of Contents
 
-1. [Getting Started](SDEV_ULTIMATE_DOCUMENTATION.md#getting-started)
-2. [Map Creation](SDEV_ULTIMATE_DOCUMENTATION.md#map-creation)
-3. [Markers & Popups](SDEV_ULTIMATE_DOCUMENTATION.md#markers--popups)
-4. [Shapes](SDEV_ULTIMATE_DOCUMENTATION.md#shapes)
-5. [Polylines & Polygons](SDEV_ULTIMATE_DOCUMENTATION.md#polylines--polygons)
-6. [Layers](SDEV_ULTIMATE_DOCUMENTATION.md#layers)
-7. [Events](SDEV_ULTIMATE_DOCUMENTATION.md#events)
-8. [Controls](SDEV_ULTIMATE_DOCUMENTATION.md#controls)
-9. [GeoJSON](SDEV_ULTIMATE_DOCUMENTATION.md#geojson)
-10. [Utilities](SDEV_ULTIMATE_DOCUMENTATION.md#utilities)
-11. [Complete Examples](SDEV_ULTIMATE_DOCUMENTATION.md#complete-examples)
+1. [Getting Started](#getting-started)
+2. [Map Creation](#map-creation)
+3. [Markers & Popups](#markers--popups)
+4. [Shapes](#shapes)
+5. [Polylines & Polygons](#polylines--polygons)
+6. [Layers](#layers)
+7. [Events](#events)
+8. [Controls](#controls)
+9. [GeoJSON](#geojson)
+10. [Utilities](#utilities)
+11. [Complete Examples](#complete-examples)
 
-***
+---
 
 #### Getting Started
 
-**Basic Setup**
+##### Basic Setup
 
 To use Leaflet features in sdev, first create a map container:
 
@@ -7306,7 +8224,7 @@ To use Leaflet features in sdev, first create a map container:
 forge myMap be createMap("map-container", 51.505, -0.09, 13)
 ```
 
-**HTML Setup**
+##### HTML Setup
 
 Your HTML page needs a container div and Leaflet CSS/JS:
 
@@ -7334,20 +8252,20 @@ Your HTML page needs a container div and Leaflet CSS/JS:
 </html>
 ```
 
-***
+---
 
 #### Map Creation
 
-**createMap(containerId, lat, lng, zoom)**
+##### createMap(containerId, lat, lng, zoom)
 
 Creates a new Leaflet map instance.
 
-| Parameter   | Type   | Description                      |
-| ----------- | ------ | -------------------------------- |
-| containerId | text   | ID of the HTML container element |
-| lat         | number | Initial latitude center          |
-| lng         | number | Initial longitude center         |
-| zoom        | number | Initial zoom level (1-18)        |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| containerId | text | ID of the HTML container element |
+| lat | number | Initial latitude center |
+| lng | number | Initial longitude center |
+| zoom | number | Initial zoom level (1-18) |
 
 ```sdev
 // Create a map of London
@@ -7357,7 +8275,7 @@ forge londonMap be createMap("map", 51.505, -0.09, 13)
 forge nyMap be createMap("nyc-map", 40.7128, -74.0060, 12)
 ```
 
-**setMapView(map, lat, lng, zoom)**
+##### setMapView(map, lat, lng, zoom)
 
 Changes the map's center and zoom level.
 
@@ -7368,7 +8286,7 @@ forge map be createMap("map", 0, 0, 2)
 setMapView(map, 48.8566, 2.3522, 14)
 ```
 
-**getMapCenter(map)**
+##### getMapCenter(map)
 
 Returns the current center coordinates as a tome (dictionary).
 
@@ -7378,7 +8296,7 @@ speak("Lat: " + morph(center["lat"], "text"))
 speak("Lng: " + morph(center["lng"], "text"))
 ```
 
-**getMapZoom(map)**
+##### getMapZoom(map)
 
 Returns the current zoom level.
 
@@ -7387,7 +8305,7 @@ forge zoom be getMapZoom(map)
 speak("Current zoom: " + morph(zoom, "text"))
 ```
 
-**getMapBounds(map)**
+##### getMapBounds(map)
 
 Returns the visible map bounds.
 
@@ -7396,11 +8314,11 @@ forge bounds be getMapBounds(map)
 // bounds contains: north, south, east, west
 ```
 
-***
+---
 
 #### Markers & Popups
 
-**addMarker(map, lat, lng, popupText?)**
+##### addMarker(map, lat, lng, popupText?)
 
 Adds a marker to the map with an optional popup.
 
@@ -7414,14 +8332,14 @@ forge marker1 be addMarker(map, 51.505, -0.09)
 forge marker2 be addMarker(map, 51.51, -0.08, "Click me!")
 ```
 
-**addMarkerIcon(map, lat, lng, iconUrl, iconSize, popupText?)**
+##### addMarkerIcon(map, lat, lng, iconUrl, iconSize, popupText?)
 
 Adds a marker with a custom icon.
 
-| Parameter | Type | Description                |
-| --------- | ---- | -------------------------- |
-| iconUrl   | text | URL to the icon image      |
-| iconSize  | list | \[width, height] in pixels |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| iconUrl | text | URL to the icon image |
+| iconSize | list | [width, height] in pixels |
 
 ```sdev
 forge map be createMap("map", 51.505, -0.09, 13)
@@ -7436,7 +8354,7 @@ forge customMarker be addMarkerIcon(
 )
 ```
 
-**removeMarker(map, marker)**
+##### removeMarker(map, marker)
 
 Removes a marker from the map.
 
@@ -7446,7 +8364,7 @@ forge marker be addMarker(map, 51.505, -0.09, "Temporary")
 removeMarker(map, marker)
 ```
 
-**setMarkerPosition(marker, lat, lng)**
+##### setMarkerPosition(marker, lat, lng)
 
 Moves an existing marker to new coordinates.
 
@@ -7462,7 +8380,7 @@ cycle i < 100 ::
 ;;
 ```
 
-**bindPopup(marker, content)**
+##### bindPopup(marker, content)
 
 Attaches a popup to an existing marker.
 
@@ -7471,7 +8389,7 @@ forge marker be addMarker(map, 51.505, -0.09)
 bindPopup(marker, "<b>Bold text!</b><br>HTML works here")
 ```
 
-**bindTooltip(marker, content)**
+##### bindTooltip(marker, content)
 
 Attaches a tooltip (shows on hover) to a marker.
 
@@ -7480,7 +8398,7 @@ forge marker be addMarker(map, 51.505, -0.09)
 bindTooltip(marker, "Hover tooltip")
 ```
 
-**openPopup(marker)**
+##### openPopup(marker)
 
 Programmatically opens the marker's popup.
 
@@ -7489,18 +8407,18 @@ forge marker be addMarker(map, 51.505, -0.09, "Hello!")
 openPopup(marker)
 ```
 
-***
+---
 
 #### Shapes
 
-**addCircle(map, lat, lng, radius, options?)**
+##### addCircle(map, lat, lng, radius, options?)
 
 Adds a circle to the map.
 
-| Parameter | Type   | Description              |
-| --------- | ------ | ------------------------ |
-| radius    | number | Radius in meters         |
-| options   | tome   | Style options (optional) |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| radius | number | Radius in meters |
+| options | tome | Style options (optional) |
 
 ```sdev
 forge map be createMap("map", 51.505, -0.09, 13)
@@ -7518,7 +8436,7 @@ forge options be ::
 forge circle2 be addCircle(map, 51.51, -0.08, 300, options)
 ```
 
-**addCircleMarker(map, lat, lng, radius, options?)**
+##### addCircleMarker(map, lat, lng, radius, options?)
 
 Adds a circle marker (radius in pixels, not meters).
 
@@ -7530,7 +8448,7 @@ forge dot be addCircleMarker(map, 51.505, -0.09, 10, ::
 ;;)
 ```
 
-**addRectangle(map, lat1, lng1, lat2, lng2, options?)**
+##### addRectangle(map, lat1, lng1, lat2, lng2, options?)
 
 Adds a rectangle defined by opposite corners.
 
@@ -7543,18 +8461,18 @@ forge rect be addRectangle(
 )
 ```
 
-***
+---
 
 #### Polylines & Polygons
 
-**addPolyline(map, points, options?)**
+##### addPolyline(map, points, options?)
 
 Draws a line through multiple points.
 
-| Parameter | Type | Description                          |
-| --------- | ---- | ------------------------------------ |
-| points    | list | List of \[lat, lng] coordinate pairs |
-| options   | tome | Style options                        |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| points | list | List of [lat, lng] coordinate pairs |
+| options | tome | Style options |
 
 ```sdev
 forge map be createMap("map", 51.505, -0.09, 13)
@@ -7574,7 +8492,7 @@ forge line be addPolyline(map, route, ::
 ;;)
 ```
 
-**addPolygon(map, points, options?)**
+##### addPolygon(map, points, options?)
 
 Creates a closed polygon shape.
 
@@ -7592,7 +8510,7 @@ forge poly be addPolygon(map, triangle, ::
 ;;)
 ```
 
-**addMultiPolygon(map, polygons, options?)**
+##### addMultiPolygon(map, polygons, options?)
 
 Creates multiple polygons as a single layer.
 
@@ -7607,11 +8525,11 @@ forge multiPoly be addMultiPolygon(map, shapes, ::
 ;;)
 ```
 
-***
+---
 
 #### Layers
 
-**addTileLayer(map, urlTemplate, options?)**
+##### addTileLayer(map, urlTemplate, options?)
 
 Adds a custom tile layer (base map).
 
@@ -7629,7 +8547,7 @@ addTileLayer(map, "https://server.arcgisonline.com/ArcGIS/rest/services/World_Im
 ;;)
 ```
 
-**createLayerGroup()**
+##### createLayerGroup()
 
 Creates an empty layer group for organizing layers.
 
@@ -7640,7 +8558,7 @@ addMarker(markers, 51.51, -0.08, "Marker 2")
 addLayerToMap(map, markers)
 ```
 
-**addLayerToMap(map, layer)**
+##### addLayerToMap(map, layer)
 
 Adds a layer or layer group to the map.
 
@@ -7650,7 +8568,7 @@ forge group be createLayerGroup()
 addLayerToMap(map, group)
 ```
 
-**removeLayerFromMap(map, layer)**
+##### removeLayerFromMap(map, layer)
 
 Removes a layer from the map.
 
@@ -7658,7 +8576,7 @@ Removes a layer from the map.
 removeLayerFromMap(map, markers)
 ```
 
-**clearLayer(layer)**
+##### clearLayer(layer)
 
 Removes all items from a layer group.
 
@@ -7666,11 +8584,11 @@ Removes all items from a layer group.
 clearLayer(markers)
 ```
 
-***
+---
 
 #### Events
 
-**onMapClick(map, callback)**
+##### onMapClick(map, callback)
 
 Handles map click events.
 
@@ -7684,7 +8602,7 @@ onMapClick(map, (event) -> ::
 ;;)
 ```
 
-**onMapZoom(map, callback)**
+##### onMapZoom(map, callback)
 
 Handles zoom changes.
 
@@ -7695,7 +8613,7 @@ onMapZoom(map, (event) -> ::
 ;;)
 ```
 
-**onMapMove(map, callback)**
+##### onMapMove(map, callback)
 
 Handles map movement (pan).
 
@@ -7706,7 +8624,7 @@ onMapMove(map, (event) -> ::
 ;;)
 ```
 
-**onMarkerClick(marker, callback)**
+##### onMarkerClick(marker, callback)
 
 Handles marker click events.
 
@@ -7718,7 +8636,7 @@ onMarkerClick(marker, (event) -> ::
 ;;)
 ```
 
-**onMarkerDrag(marker, callback)**
+##### onMarkerDrag(marker, callback)
 
 Handles marker drag events (marker must be draggable).
 
@@ -7732,26 +8650,26 @@ onMarkerDrag(marker, (event) -> ::
 ;;)
 ```
 
-***
+---
 
 #### Controls
 
-**addZoomControl(map, position?)**
+##### addZoomControl(map, position?)
 
 Adds zoom controls to the map.
 
-| Position      | Description         |
-| ------------- | ------------------- |
-| "topleft"     | Top left corner     |
-| "topright"    | Top right corner    |
-| "bottomleft"  | Bottom left corner  |
+| Position | Description |
+|----------|-------------|
+| "topleft" | Top left corner |
+| "topright" | Top right corner |
+| "bottomleft" | Bottom left corner |
 | "bottomright" | Bottom right corner |
 
 ```sdev
 addZoomControl(map, "bottomright")
 ```
 
-**addScaleControl(map, options?)**
+##### addScaleControl(map, options?)
 
 Adds a scale indicator.
 
@@ -7763,7 +8681,7 @@ addScaleControl(map, ::
 ;;)
 ```
 
-**addAttributionControl(map, prefix?)**
+##### addAttributionControl(map, prefix?)
 
 Adds attribution text.
 
@@ -7771,7 +8689,7 @@ Adds attribution text.
 addAttributionControl(map, "Powered by sdev")
 ```
 
-**addLayerControl(map, baseLayers, overlays)**
+##### addLayerControl(map, baseLayers, overlays)
 
 Adds a layer switcher control.
 
@@ -7792,11 +8710,11 @@ forge overlays be ::
 addLayerControl(map, bases, overlays)
 ```
 
-***
+---
 
 #### GeoJSON
 
-**addGeoJSON(map, geoJsonData, options?)**
+##### addGeoJSON(map, geoJsonData, options?)
 
 Adds GeoJSON data to the map.
 
@@ -7825,7 +8743,7 @@ forge layer be addGeoJSON(map, geojson, ::
 ;;)
 ```
 
-**geoJSONStyle(feature)**
+##### geoJSONStyle(feature)
 
 Custom style function for GeoJSON features.
 
@@ -7842,11 +8760,11 @@ forge layer be addGeoJSON(map, geojson, ::
 ;;)
 ```
 
-***
+---
 
 #### Utilities
 
-**latLng(lat, lng)**
+##### latLng(lat, lng)
 
 Creates a coordinate object.
 
@@ -7855,7 +8773,7 @@ forge coord be latLng(51.505, -0.09)
 speak("Latitude: " + morph(coord["lat"], "text"))
 ```
 
-**distance(lat1, lng1, lat2, lng2)**
+##### distance(lat1, lng1, lat2, lng2)
 
 Calculates distance between two points in meters.
 
@@ -7864,7 +8782,7 @@ forge dist be distance(51.505, -0.09, 51.51, -0.08)
 speak("Distance: " + morph(dist, "text") + " meters")
 ```
 
-**boundsContains(bounds, lat, lng)**
+##### boundsContains(bounds, lat, lng)
 
 Checks if a point is within bounds.
 
@@ -7876,7 +8794,7 @@ ponder inside ::
 ;;
 ```
 
-**fitBounds(map, lat1, lng1, lat2, lng2)**
+##### fitBounds(map, lat1, lng1, lat2, lng2)
 
 Adjusts the map view to fit the given bounds.
 
@@ -7884,7 +8802,7 @@ Adjusts the map view to fit the given bounds.
 fitBounds(map, 51.49, -0.12, 51.52, -0.05)
 ```
 
-**invalidateSize(map)**
+##### invalidateSize(map)
 
 Recalculates map size (use after container resize).
 
@@ -7892,11 +8810,11 @@ Recalculates map size (use after container resize).
 invalidateSize(map)
 ```
 
-***
+---
 
 #### Navigation & Animation
 
-**panTo(map, lat, lng, options?)**
+##### panTo(map, lat, lng, options?)
 
 Smoothly pans the map to a new center.
 
@@ -7904,7 +8822,7 @@ Smoothly pans the map to a new center.
 panTo(map, 48.8566, 2.3522)
 ```
 
-**panBy(map, x, y)**
+##### panBy(map, x, y)
 
 Pans the map by a given number of pixels.
 
@@ -7912,7 +8830,7 @@ Pans the map by a given number of pixels.
 panBy(map, 100, 50)  // Pan right 100px, down 50px
 ```
 
-**flyTo(map, lat, lng, zoom, options?)**
+##### flyTo(map, lat, lng, zoom, options?)
 
 Animates the map to a new position with a smooth flying effect.
 
@@ -7920,7 +8838,7 @@ Animates the map to a new position with a smooth flying effect.
 flyTo(map, 40.7128, -74.0060, 14)  // Fly to New York
 ```
 
-**flyToBounds(map, lat1, lng1, lat2, lng2, options?)**
+##### flyToBounds(map, lat1, lng1, lat2, lng2, options?)
 
 Animates to fit the given bounds.
 
@@ -7928,7 +8846,7 @@ Animates to fit the given bounds.
 flyToBounds(map, 51.49, -0.12, 51.52, -0.05)
 ```
 
-**zoomIn(map, delta?)**
+##### zoomIn(map, delta?)
 
 Increases the zoom level by delta (default 1).
 
@@ -7937,7 +8855,7 @@ zoomIn(map)        // Zoom in by 1
 zoomIn(map, 2)     // Zoom in by 2
 ```
 
-**zoomOut(map, delta?)**
+##### zoomOut(map, delta?)
 
 Decreases the zoom level by delta (default 1).
 
@@ -7945,7 +8863,7 @@ Decreases the zoom level by delta (default 1).
 zoomOut(map)
 ```
 
-**setZoom(map, zoom)**
+##### setZoom(map, zoom)
 
 Sets the zoom level directly.
 
@@ -7953,7 +8871,7 @@ Sets the zoom level directly.
 setZoom(map, 15)
 ```
 
-**setMinZoom(map, zoom) / setMaxZoom(map, zoom)**
+##### setMinZoom(map, zoom) / setMaxZoom(map, zoom)
 
 Sets zoom constraints.
 
@@ -7962,7 +8880,7 @@ setMinZoom(map, 5)
 setMaxZoom(map, 18)
 ```
 
-**getMinZoom(map) / getMaxZoom(map)**
+##### getMinZoom(map) / getMaxZoom(map)
 
 Gets the current zoom constraints.
 
@@ -7971,7 +8889,7 @@ forge minZ be getMinZoom(map)
 forge maxZ be getMaxZoom(map)
 ```
 
-**setMaxBounds(map, lat1, lng1, lat2, lng2)**
+##### setMaxBounds(map, lat1, lng1, lat2, lng2)
 
 Restricts the map to a given geographical area.
 
@@ -7979,11 +8897,11 @@ Restricts the map to a given geographical area.
 setMaxBounds(map, 51.0, -0.5, 52.0, 0.5)  // Lock to London area
 ```
 
-***
+---
 
 #### Popup & Tooltip Control
 
-**closePopup(marker)**
+##### closePopup(marker)
 
 Closes an open popup.
 
@@ -7991,7 +8909,7 @@ Closes an open popup.
 closePopup(marker)
 ```
 
-**openTooltip(marker) / closeTooltip(marker)**
+##### openTooltip(marker) / closeTooltip(marker)
 
 Opens or closes a marker's tooltip.
 
@@ -8000,7 +8918,7 @@ openTooltip(marker)
 closeTooltip(marker)
 ```
 
-**setPopupContent(marker, content)**
+##### setPopupContent(marker, content)
 
 Updates popup content dynamically.
 
@@ -8008,7 +8926,7 @@ Updates popup content dynamically.
 setPopupContent(marker, "Updated content!")
 ```
 
-**setTooltipContent(marker, content)**
+##### setTooltipContent(marker, content)
 
 Updates tooltip content dynamically.
 
@@ -8016,11 +8934,11 @@ Updates tooltip content dynamically.
 setTooltipContent(marker, "New tooltip text")
 ```
 
-***
+---
 
 #### Layer Styling
 
-**setMarkerIcon(marker, iconUrl, iconSize)**
+##### setMarkerIcon(marker, iconUrl, iconSize)
 
 Changes a marker's icon.
 
@@ -8028,7 +8946,7 @@ Changes a marker's icon.
 setMarkerIcon(marker, "https://example.com/new-icon.png", [32, 32])
 ```
 
-**setMarkerOpacity(marker, opacity)**
+##### setMarkerOpacity(marker, opacity)
 
 Sets marker transparency (0-1).
 
@@ -8036,7 +8954,7 @@ Sets marker transparency (0-1).
 setMarkerOpacity(marker, 0.5)
 ```
 
-**setMarkerZIndex(marker, zIndex)**
+##### setMarkerZIndex(marker, zIndex)
 
 Controls marker stacking order.
 
@@ -8044,7 +8962,7 @@ Controls marker stacking order.
 setMarkerZIndex(marker, 1000)
 ```
 
-**setCircleRadius(circle, radius)**
+##### setCircleRadius(circle, radius)
 
 Updates a circle's radius in meters.
 
@@ -8052,7 +8970,7 @@ Updates a circle's radius in meters.
 setCircleRadius(myCircle, 750)
 ```
 
-**setCircleStyle(circle, options) / setPolylineStyle / setPolygonStyle**
+##### setCircleStyle(circle, options) / setPolylineStyle / setPolygonStyle
 
 Updates styling of shapes.
 
@@ -8062,7 +8980,7 @@ setPolylineStyle(myLine, :: "color": "#00ff00", "weight": 5 ;;)
 setPolygonStyle(myPoly, :: "fillColor": "#0000ff" ;;)
 ```
 
-**getPolylineLatLngs(polyline)**
+##### getPolylineLatLngs(polyline)
 
 Gets all points of a polyline.
 
@@ -8070,7 +8988,7 @@ Gets all points of a polyline.
 forge points be getPolylineLatLngs(myRoute)
 ```
 
-**setPolylineLatLngs(polyline, points)**
+##### setPolylineLatLngs(polyline, points)
 
 Replaces all points of a polyline.
 
@@ -8078,7 +8996,7 @@ Replaces all points of a polyline.
 setPolylineLatLngs(myRoute, [[51.5, -0.1], [51.6, -0.05]])
 ```
 
-**addLatLng(polyline, lat, lng)**
+##### addLatLng(polyline, lat, lng)
 
 Adds a point to a polyline.
 
@@ -8086,7 +9004,7 @@ Adds a point to a polyline.
 addLatLng(myRoute, 51.52, -0.08)
 ```
 
-**bringToFront(layer) / bringToBack(layer)**
+##### bringToFront(layer) / bringToBack(layer)
 
 Controls layer z-ordering.
 
@@ -8095,11 +9013,11 @@ bringToFront(importantLayer)
 bringToBack(backgroundLayer)
 ```
 
-***
+---
 
 #### Additional Events
 
-**onLayerClick(layer, callback)**
+##### onLayerClick(layer, callback)
 
 Handles click events on any layer.
 
@@ -8109,7 +9027,7 @@ onLayerClick(myCircle, (e) -> ::
 ;;)
 ```
 
-**onLayerMouseover(layer, callback) / onLayerMouseout(layer, callback)**
+##### onLayerMouseover(layer, callback) / onLayerMouseout(layer, callback)
 
 Handles hover events.
 
@@ -8123,7 +9041,7 @@ onLayerMouseout(myPolygon, (e) -> ::
 ;;)
 ```
 
-**onMapDoubleClick(map, callback)**
+##### onMapDoubleClick(map, callback)
 
 Handles double-click events.
 
@@ -8133,7 +9051,7 @@ onMapDoubleClick(map, (e) -> ::
 ;;)
 ```
 
-**onMapRightClick(map, callback)**
+##### onMapRightClick(map, callback)
 
 Handles right-click (context menu) events.
 
@@ -8143,7 +9061,7 @@ onMapRightClick(map, (e) -> ::
 ;;)
 ```
 
-**onMapMousemove(map, callback)**
+##### onMapMousemove(map, callback)
 
 Tracks mouse movement over the map.
 
@@ -8153,11 +9071,11 @@ onMapMousemove(map, (e) -> ::
 ;;)
 ```
 
-***
+---
 
 #### Geolocation
 
-**locate(map, options?)**
+##### locate(map, options?)
 
 Starts browser geolocation.
 
@@ -8165,7 +9083,7 @@ Starts browser geolocation.
 locate(map, :: "setView": yep, "maxZoom": 16 ;;)
 ```
 
-**onLocationFound(map, callback)**
+##### onLocationFound(map, callback)
 
 Handles successful location.
 
@@ -8176,7 +9094,7 @@ onLocationFound(map, (e) -> ::
 ;;)
 ```
 
-**onLocationError(map, callback)**
+##### onLocationError(map, callback)
 
 Handles geolocation errors.
 
@@ -8186,7 +9104,7 @@ onLocationError(map, (e) -> ::
 ;;)
 ```
 
-**stopLocate(map)**
+##### stopLocate(map)
 
 Stops continuous location updates.
 
@@ -8194,11 +9112,11 @@ Stops continuous location updates.
 stopLocate(map)
 ```
 
-***
+---
 
 #### Overlays
 
-**addImageOverlay(map, imageUrl, lat1, lng1, lat2, lng2, options?)**
+##### addImageOverlay(map, imageUrl, lat1, lng1, lat2, lng2, options?)
 
 Adds an image overlay to the map.
 
@@ -8206,7 +9124,7 @@ Adds an image overlay to the map.
 forge overlay be addImageOverlay(map, "historical-map.jpg", 51.4, -0.2, 51.6, 0.1)
 ```
 
-**addVideoOverlay(map, videoUrl, lat1, lng1, lat2, lng2, options?)**
+##### addVideoOverlay(map, videoUrl, lat1, lng1, lat2, lng2, options?)
 
 Adds a video overlay.
 
@@ -8214,7 +9132,7 @@ Adds a video overlay.
 forge video be addVideoOverlay(map, "timelapse.mp4", 51.4, -0.2, 51.6, 0.1)
 ```
 
-**setImageOpacity(overlay, opacity)**
+##### setImageOpacity(overlay, opacity)
 
 Sets overlay transparency.
 
@@ -8222,7 +9140,7 @@ Sets overlay transparency.
 setImageOpacity(overlay, 0.7)
 ```
 
-**setImageUrl(overlay, url)**
+##### setImageUrl(overlay, url)
 
 Changes the overlay image.
 
@@ -8230,7 +9148,7 @@ Changes the overlay image.
 setImageUrl(overlay, "new-image.jpg")
 ```
 
-**setBounds(overlay, lat1, lng1, lat2, lng2)**
+##### setBounds(overlay, lat1, lng1, lat2, lng2)
 
 Repositions an overlay.
 
@@ -8238,11 +9156,11 @@ Repositions an overlay.
 setBounds(overlay, 51.3, -0.3, 51.7, 0.2)
 ```
 
-***
+---
 
 #### Feature Groups
 
-**createFeatureGroup()**
+##### createFeatureGroup()
 
 Creates a feature group (like layer group but with bounds).
 
@@ -8250,7 +9168,7 @@ Creates a feature group (like layer group but with bounds).
 forge group be createFeatureGroup()
 ```
 
-**addToFeatureGroup(featureGroup, layer)**
+##### addToFeatureGroup(featureGroup, layer)
 
 Adds a layer to the feature group.
 
@@ -8259,7 +9177,7 @@ addToFeatureGroup(group, myMarker)
 addToFeatureGroup(group, myCircle)
 ```
 
-**removeFromFeatureGroup(featureGroup, layer)**
+##### removeFromFeatureGroup(featureGroup, layer)
 
 Removes a layer from the feature group.
 
@@ -8267,7 +9185,7 @@ Removes a layer from the feature group.
 removeFromFeatureGroup(group, myMarker)
 ```
 
-**getFeatureGroupBounds(featureGroup)**
+##### getFeatureGroupBounds(featureGroup)
 
 Gets the combined bounds of all layers.
 
@@ -8275,7 +9193,7 @@ Gets the combined bounds of all layers.
 forge bounds be getFeatureGroupBounds(group)
 ```
 
-**fitFeatureGroup(map, featureGroup, options?)**
+##### fitFeatureGroup(map, featureGroup, options?)
 
 Zooms the map to fit all layers in the group.
 
@@ -8283,7 +9201,7 @@ Zooms the map to fit all layers in the group.
 fitFeatureGroup(map, group)
 ```
 
-**eachLayer(layerGroup, callback)**
+##### eachLayer(layerGroup, callback)
 
 Iterates over all layers in a group.
 
@@ -8293,7 +9211,7 @@ eachLayer(group, (layer) -> ::
 ;;)
 ```
 
-**getLayers(layerGroup)**
+##### getLayers(layerGroup)
 
 Returns all layers as a list.
 
@@ -8301,7 +9219,7 @@ Returns all layers as a list.
 forge layers be getLayers(group)
 ```
 
-**hasLayer(layerGroup, layer)**
+##### hasLayer(layerGroup, layer)
 
 Checks if a layer exists in the group.
 
@@ -8311,11 +9229,11 @@ ponder hasLayer(group, myMarker) ::
 ;;
 ```
 
-***
+---
 
 #### Custom Markers
 
-**addDivIcon(map, lat, lng, html, className, size)**
+##### addDivIcon(map, lat, lng, html, className, size)
 
 Creates a marker with custom HTML content.
 
@@ -8323,11 +9241,11 @@ Creates a marker with custom HTML content.
 forge customMarker be addDivIcon(map, 51.505, -0.09, "<div class='pulse'>🎯</div>", "custom-marker", [40, 40])
 ```
 
-***
+---
 
 #### Coordinate Utilities
 
-**getSize(map)**
+##### getSize(map)
 
 Gets map container size in pixels.
 
@@ -8336,7 +9254,7 @@ forge size be getSize(map)
 speak("Width: " + morph(size["width"], "text") + ", Height: " + morph(size["height"], "text"))
 ```
 
-**latLngToContainerPoint(map, lat, lng)**
+##### latLngToContainerPoint(map, lat, lng)
 
 Converts coordinates to pixel position.
 
@@ -8345,7 +9263,7 @@ forge pixel be latLngToContainerPoint(map, 51.505, -0.09)
 speak("Pixel X: " + morph(pixel["x"], "text"))
 ```
 
-**containerPointToLatLng(map, x, y)**
+##### containerPointToLatLng(map, x, y)
 
 Converts pixel position to coordinates.
 
@@ -8353,7 +9271,7 @@ Converts pixel position to coordinates.
 forge coord be containerPointToLatLng(map, 200, 150)
 ```
 
-**wrapLng(lng)**
+##### wrapLng(lng)
 
 Wraps longitude to -180 to 180.
 
@@ -8361,7 +9279,7 @@ Wraps longitude to -180 to 180.
 forge wrapped be wrapLng(370)  // Returns 10
 ```
 
-**wrapLat(lat)**
+##### wrapLat(lat)
 
 Clamps latitude to -90 to 90.
 
@@ -8369,7 +9287,7 @@ Clamps latitude to -90 to 90.
 forge clamped be wrapLat(95)  // Returns 90
 ```
 
-**degreesToDMS(degrees)**
+##### degreesToDMS(degrees)
 
 Converts decimal degrees to DMS string.
 
@@ -8377,7 +9295,7 @@ Converts decimal degrees to DMS string.
 forge dms be degreesToDMS(51.5074)  // "51° 30' 26.64""
 ```
 
-**DMSToDegrees(d, m, s)**
+##### DMSToDegrees(d, m, s)
 
 Converts DMS to decimal degrees.
 
@@ -8385,7 +9303,7 @@ Converts DMS to decimal degrees.
 forge deg be DMSToDegrees(51, 30, 26.64)  // 51.5074
 ```
 
-**metersToPixels(map, meters, lat)**
+##### metersToPixels(map, meters, lat)
 
 Converts meters to pixels at the current zoom.
 
@@ -8393,7 +9311,7 @@ Converts meters to pixels at the current zoom.
 forge px be metersToPixels(map, 1000, 51.505)
 ```
 
-**pixelsToMeters(map, pixels, lat)**
+##### pixelsToMeters(map, pixels, lat)
 
 Converts pixels to meters at the current zoom.
 
@@ -8401,11 +9319,11 @@ Converts pixels to meters at the current zoom.
 forge m be pixelsToMeters(map, 100, 51.505)
 ```
 
-***
+---
 
 #### GIS Analysis Functions
 
-**bearing(lat1, lng1, lat2, lng2)**
+##### bearing(lat1, lng1, lat2, lng2)
 
 Calculates bearing between two points (0-360 degrees).
 
@@ -8414,7 +9332,7 @@ forge b be bearing(51.5, -0.1, 48.8, 2.3)  // London to Paris
 speak("Bearing: " + morph(b, "text") + "°")
 ```
 
-**midpoint(lat1, lng1, lat2, lng2)**
+##### midpoint(lat1, lng1, lat2, lng2)
 
 Calculates the midpoint between two coordinates.
 
@@ -8423,7 +9341,7 @@ forge mid be midpoint(51.5, -0.1, 48.8, 2.3)
 addMarker(map, mid["lat"], mid["lng"], "Midpoint")
 ```
 
-**destination(lat, lng, bearing, distance)**
+##### destination(lat, lng, bearing, distance)
 
 Calculates destination point given bearing and distance.
 
@@ -8432,7 +9350,7 @@ forge dest be destination(51.5, -0.1, 90, 50000)  // 50km east of London
 addMarker(map, dest["lat"], dest["lng"], "Destination")
 ```
 
-**area(points)**
+##### area(points)
 
 Calculates polygon area in square meters.
 
@@ -8442,7 +9360,7 @@ forge sqMeters be area(polygon)
 speak("Area: " + morph(ground(sqMeters / 1000000), "text") + " km²")
 ```
 
-**length(points)**
+##### length(points)
 
 Calculates polyline length in meters.
 
@@ -8452,7 +9370,7 @@ forge len be length(route)
 speak("Route length: " + morph(ground(len), "text") + " meters")
 ```
 
-**centroid(points)**
+##### centroid(points)
 
 Calculates the center point of a polygon.
 
@@ -8461,7 +9379,7 @@ forge center be centroid(polygon)
 addMarker(map, center["lat"], center["lng"], "Center")
 ```
 
-**isPointInPolygon(lat, lng, points)**
+##### isPointInPolygon(lat, lng, points)
 
 Checks if a point is inside a polygon.
 
@@ -8473,7 +9391,7 @@ ponder isPointInPolygon(51.45, -0.05, polygon) ::
 ;;
 ```
 
-**simplify(points, tolerance)**
+##### simplify(points, tolerance)
 
 Simplifies a polyline using Douglas-Peucker algorithm.
 
@@ -8481,7 +9399,7 @@ Simplifies a polyline using Douglas-Peucker algorithm.
 forge simplified be simplify(complexRoute, 0.0001)
 ```
 
-**interpolateAlong(points, fraction)**
+##### interpolateAlong(points, fraction)
 
 Gets a point at a fraction (0-1) along a polyline.
 
@@ -8490,11 +9408,11 @@ forge halfway be interpolateAlong(route, 0.5)
 addMarker(map, halfway["lat"], halfway["lng"], "Halfway point")
 ```
 
-***
+---
 
 #### Layer Visibility
 
-**getLayerType(layer)**
+##### getLayerType(layer)
 
 Gets the type of a layer.
 
@@ -8502,7 +9420,7 @@ Gets the type of a layer.
 forge type be getLayerType(myLayer)  // "marker", "circle", etc.
 ```
 
-**isLayerVisible(layer)**
+##### isLayerVisible(layer)
 
 Checks if a layer is currently on the map.
 
@@ -8512,7 +9430,7 @@ ponder isLayerVisible(myMarker) ::
 ;;
 ```
 
-**showLayer(map, layer) / hideLayer(map, layer)**
+##### showLayer(map, layer) / hideLayer(map, layer)
 
 Shows or hides a layer.
 
@@ -8522,7 +9440,7 @@ hideLayer(map, secretMarker)
 showLayer(map, secretMarker)
 ```
 
-**toggleLayer(map, layer)**
+##### toggleLayer(map, layer)
 
 Toggles layer visibility.
 
@@ -8530,11 +9448,11 @@ Toggles layer visibility.
 toggleLayer(map, myLayer)
 ```
 
-***
+---
 
 #### Complete Examples
 
-**Interactive City Markers**
+##### Interactive City Markers
 
 ```sdev
 // Create a world map with major cities
@@ -8561,7 +9479,7 @@ onMapClick(map, (e) -> ::
 ;;)
 ```
 
-**Route Visualization**
+##### Route Visualization
 
 ```sdev
 // Visualize a hiking route
@@ -8607,7 +9525,7 @@ cycle i < measure(trailPoints) ::
 speak("Total distance: " + morph(ground(totalDist), "text") + " meters")
 ```
 
-**Heatmap Zones**
+##### Heatmap Zones
 
 ```sdev
 // Create density visualization with circles
@@ -8639,7 +9557,7 @@ each(hotspots, (spot) -> ::
 ;;)
 ```
 
-**Layer Toggle System**
+##### Layer Toggle System
 
 ```sdev
 // Multi-layer map with toggle controls
@@ -8678,7 +9596,7 @@ forge overlays be ::
 addLayerControl(map, ::;;, overlays)
 ```
 
-**Animated Marker**
+##### Animated Marker
 
 ```sdev
 // Animate a marker along a path
@@ -8714,34 +9632,34 @@ conjure animateMarker(marker, points, index) ::
 animateMarker(mover, path, 0)
 ```
 
-***
+---
 
 #### Style Reference
 
-**Common Style Options**
+##### Common Style Options
 
-| Property    | Type   | Description                |
-| ----------- | ------ | -------------------------- |
-| color       | text   | Stroke color (hex or name) |
-| weight      | number | Stroke width in pixels     |
-| opacity     | number | Stroke opacity (0-1)       |
-| fillColor   | text   | Fill color                 |
-| fillOpacity | number | Fill opacity (0-1)         |
-| dashArray   | text   | Stroke dash pattern        |
-| lineCap     | text   | Line cap style             |
-| lineJoin    | text   | Line join style            |
+| Property | Type | Description |
+|----------|------|-------------|
+| color | text | Stroke color (hex or name) |
+| weight | number | Stroke width in pixels |
+| opacity | number | Stroke opacity (0-1) |
+| fillColor | text | Fill color |
+| fillOpacity | number | Fill opacity (0-1) |
+| dashArray | text | Stroke dash pattern |
+| lineCap | text | Line cap style |
+| lineJoin | text | Line join style |
 
-**Icon Options**
+##### Icon Options
 
-| Property    | Type | Description          |
-| ----------- | ---- | -------------------- |
-| iconUrl     | text | URL to icon image    |
-| iconSize    | list | \[width, height]     |
-| iconAnchor  | list | \[x, y] anchor point |
-| popupAnchor | list | \[x, y] popup offset |
-| shadowUrl   | text | URL to shadow image  |
+| Property | Type | Description |
+|----------|------|-------------|
+| iconUrl | text | URL to icon image |
+| iconSize | list | [width, height] |
+| iconAnchor | list | [x, y] anchor point |
+| popupAnchor | list | [x, y] popup offset |
+| shadowUrl | text | URL to shadow image |
 
-***
+---
 
 #### Tips & Best Practices
 
@@ -8751,7 +9669,7 @@ animateMarker(mover, path, 0)
 4. **Clustering**: For 100+ markers, consider marker clustering
 5. **Tile Caching**: Custom tile layers can be cached for offline use
 
-***
+---
 
 #### Error Handling
 
@@ -8763,11 +9681,12 @@ attempt ::
 ;;
 ```
 
-***
+---
 
-_sdev Leaflet Module — Mapping made magical_ ✨🗺️
+*sdev Leaflet Module — Mapping made magical* ✨🗺️
 
-***
+---
+
 
 ## Part IX — Generated reference
 
@@ -8775,713 +9694,721 @@ Everything below is extracted from the implementation at build time.
 
 ### Builtin index — v1 runtime (441 builtins)
 
-Every function registered into the interpreter's global environment, grouped by the module that installs it.
+Every function registered into the interpreter's global environment, grouped by
+the module that installs it.
 
 #### `src/lang/builtins.ts` — Core standard library — I/O, types, math, collections, strings, regex, time
 
 224 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-| Call                      | What it does                                                                                                                                   | Rules                                                                                             | Source             |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------ |
-| `__tryCatch(a, b)`        | \_\_tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue.                                                                            | \_\_tryCatch requires 2 function arguments                                                        | `builtins.ts:2472` |
-| `abs(a)`                  | abs alias.                                                                                                                                     | abs() takes 1 argument                                                                            | `builtins.ts:2430` |
-| `acos(a)`                 | Inverse cosine, in radians.                                                                                                                    | —                                                                                                 | `builtins.ts:1026` |
-| `all(a, b)`               | True when every element of the list is truthy (or satisfies the given predicate).                                                              | all() takes 2 arguments (list, predicate); First argument must be a list                          | `builtins.ts:863`  |
-| `any(a, b)`               | True when at least one element of the list is truthy (or satisfies the given predicate).                                                       | any() takes 2 arguments (list, predicate); First argument must be a list                          | `builtins.ts:876`  |
-| `appendFile(a, b)`        | Convenience aliases.                                                                                                                           | appendFile() takes 2 arguments                                                                    | `builtins.ts:2369` |
-| `asin(a)`                 | More trig.                                                                                                                                     | —                                                                                                 | `builtins.ts:1025` |
-| `atan(a)`                 | Inverse tangent, in radians.                                                                                                                   | —                                                                                                 | `builtins.ts:1027` |
-| `atan2(a, b)`             | Angle in radians from the origin to the point (b, a), correct in all four quadrants.                                                           | —                                                                                                 | `builtins.ts:1028` |
-| `average(a)`              | Arithmetic mean of a list of numbers.                                                                                                          | average() takes 1 argument; Argument must be a list                                               | `builtins.ts:802`  |
-| `base64decode(a)`         | Decodes Base64 text back into a string.                                                                                                        | base64decode() takes 1 argument; Argument must be text                                            | `builtins.ts:1882` |
-| `base64encode(a)`         | Encodes a string or byte buffer as Base64 text.                                                                                                | base64encode() takes 1 argument; Argument must be text                                            | `builtins.ts:1873` |
-| `bin(a)`                  | bin(n) - number to binary string.                                                                                                              | bin() takes 1 argument; Argument must be a number                                                 | `builtins.ts:1583` |
-| `bitAnd(a, b)`            | Bitwise AND of two integers.                                                                                                                   | bitAnd() takes 2 arguments                                                                        | `builtins.ts:1823` |
-| `bitNot(a)`               | Bitwise complement of an integer.                                                                                                              | bitNot() takes 1 argument                                                                         | `builtins.ts:1847` |
-| `bitOr(a, b)`             | Bitwise OR of two integers.                                                                                                                    | bitOr() takes 2 arguments                                                                         | `builtins.ts:1831` |
-| `bitShiftLeft(a, b)`      | Shifts the bits of an integer left by n places.                                                                                                | bitShiftLeft() takes 2 arguments                                                                  | `builtins.ts:1855` |
-| `bitShiftRight(a, b)`     | Shifts the bits of an integer right by n places.                                                                                               | bitShiftRight() takes 2 arguments                                                                 | `builtins.ts:1863` |
-| `bitXor(a, b)`            | Bitwise exclusive OR of two integers.                                                                                                          | bitXor() takes 2 arguments                                                                        | `builtins.ts:1839` |
-| `buffer(a)`               | buffer(size) - create a byte buffer.                                                                                                           | buffer() takes 1 argument (size); Argument must be a number                                       | `builtins.ts:2024` |
-| `capitalize(a)`           | capitalize(s) - first char uppercase.                                                                                                          | capitalize() takes 1 argument; Argument must be text                                              | `builtins.ts:1659` |
-| `ceil(a)`                 | Evaluates `Math.ceil(a)`.                                                                                                                      | —                                                                                                 | `builtins.ts:2440` |
-| `center(…)`               | center(s, width, char?) - center-pad string.                                                                                                   | center() takes 2-3 arguments; First argument must be text                                         | `builtins.ts:1679` |
-| `chaos()`                 | Random number generator with seedable, reproducible output.                                                                                    | —                                                                                                 | `builtins.ts:328`  |
-| `charAt(a, b)`            | The character at a zero-based index in a string.                                                                                               | charAt() takes 2 arguments (text, index); First argument must be text                             | `builtins.ts:592`  |
-| `chars(a)`                | chars(s) - string to char list.                                                                                                                | chars() takes 1 argument; Argument must be text                                                   | `builtins.ts:1184` |
-| `chr(a)`                  | chr(n) - number to character.                                                                                                                  | chr() takes 1 argument; Argument must be a number                                                 | `builtins.ts:1537` |
-| `chunk(a, b)`             | chunk(list, size) - split list into chunks.                                                                                                    | chunk() takes 2 arguments (list, size); First argument must be a list                             | `builtins.ts:2159` |
-| `clamp(a, b, c)`          | ============= Math Utilities =============.                                                                                                    | clamp() takes 3 arguments (value, min, max); All arguments must be numbers                        | `builtins.ts:968`  |
-| `clone(a)`                | clone(list) - deep copy.                                                                                                                       | clone() takes 1 argument                                                                          | `builtins.ts:1271` |
-| `compose(…)`              | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)).                                                                              | compose() takes at least 2 arguments; All arguments must be functions                             | `builtins.ts:1944` |
-| `concat(…)`               | Joins two lists (or two strings) into a new one; the inputs are not modified.                                                                  | concat() takes at least 2 arguments; All arguments must be lists                                  | `builtins.ts:663`  |
-| `constrain(a, b, c)`      | constrain(v, min, max) - alias for clamp.                                                                                                      | constrain() takes 3 arguments (value, min, max); All arguments must be numbers                    | `builtins.ts:1342` |
-| `contains(a, b)`          | True when the collection holds the given value, or the string holds the substring.                                                             | contains() takes 2 arguments; First argument must be text, list, or tome                          | `builtins.ts:397`  |
-| `contents(a)`             | Returns the values of a tome as a list.                                                                                                        | contents() takes 1 argument; Argument must be a tome (dict)                                       | `builtins.ts:346`  |
-| `cos(a)`                  | Cosine of an angle in radians.                                                                                                                 | —                                                                                                 | `builtins.ts:467`  |
-| `cosh(a)`                 | Evaluates `Math.cosh(a)`.                                                                                                                      | —                                                                                                 | `builtins.ts:1033` |
-| `count(a, b)`             | How many times a value occurs in a list or a substring occurs in a string.                                                                     | count() takes 2 arguments (list, value); First argument must be a list                            | `builtins.ts:853`  |
-| `curry(a, b)`             | curry(fn, arity) - currying.                                                                                                                   | curry() takes 2 arguments (fn, arity); First argument must be a function                          | `builtins.ts:1981` |
-| `degrees(a)`              | degrees(rad) - radians to degrees.                                                                                                             | degrees() takes 1 argument; Argument must be a number                                             | `builtins.ts:1378` |
-| `del(a, b)`               | Deletes a key from a tome or an index from a list, in place.                                                                                   | del() takes 2 arguments (tome, key); First argument must be a tome                                | `builtins.ts:1093` |
-| `delay()`                 | delay(ms) - no-op in synchronous context.                                                                                                      | —                                                                                                 | `builtins.ts:1437` |
-| `deleteFile(a)`           | Deletes a file from the host filesystem.                                                                                                       | deleteFile() takes 1 argument                                                                     | `builtins.ts:2386` |
-| `difference(a, b)`        | difference(a, b) - set difference.                                                                                                             | difference() takes 2 arguments; Arguments must be lists                                           | `builtins.ts:1282` |
-| `dist(a, b, c, d)`        | dist(x1, y1, x2, y2) - distance between two points.                                                                                            | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers                          | `builtins.ts:1355` |
-| `drop(a, b)`              | Returns a copy of the list without its first `n` elements.                                                                                     | drop() takes 2 arguments (list, count); Second argument must be a number                          | `builtins.ts:767`  |
-| `E()`                     | Constants.                                                                                                                                     | —                                                                                                 | `builtins.ts:1039` |
-| `each(a, b)`              | map over array with lambda.                                                                                                                    | each() takes 2 arguments (list, transform); First argument must be a list                         | `builtins.ts:116`  |
-| `elevate(a)`              | Raises the current task to a privileged mode so it may use restricted syscalls.                                                                | elevate() takes 1 argument                                                                        | `builtins.ts:312`  |
-| `ends(a, b)`              | ends(s, suffix) - alias for endswith.                                                                                                          | ends() takes 2 arguments; Arguments must be text                                                  | `builtins.ts:1163` |
-| `endswith(a, b)`          | True when the string ends with the given suffix.                                                                                               | endswith() takes 2 arguments; Arguments must be text                                              | `builtins.ts:549`  |
-| `entries(a)`              | Returns a tome as a list of `[key, value]` pairs.                                                                                              | entries() takes 1 argument; Argument must be a tome                                               | `builtins.ts:1123` |
-| `enumerate(a)`            | enumerate(list) - \[\[index, item], ...].                                                                                                      | enumerate() takes 1 argument; Argument must be a list                                             | `builtins.ts:1332` |
-| `essence(a)`              | get type.                                                                                                                                      | essence() takes 1 argument                                                                        | `builtins.ts:243`  |
-| `etch(a)`                 | JSON.                                                                                                                                          | —                                                                                                 | `builtins.ts:517`  |
-| `every(a, b)`             | every(list, predicate) - alias for all.                                                                                                        | every() takes 2 arguments; First argument must be a list                                          | `builtins.ts:1308` |
-| `exit(…)`                 | exit(code?) - terminate program.                                                                                                               | Program exited with code ${code}                                                                  | `builtins.ts:1508` |
-| `exp(a)`                  | e raised to the given power.                                                                                                                   | —                                                                                                 | `builtins.ts:470`  |
-| `ffi_buf(a)`              | Allocates a raw byte buffer usable as an FFI argument.                                                                                         | ffi\_buf() takes a positive byte size                                                             | `builtins.ts:2581` |
-| `ffi_call(a, b, c, d)`    | Calls a symbol in a loaded native library with the given arguments.                                                                            | ffi\_call() — no native FFI host available                                                        | `builtins.ts:2628` |
-| `ffi_close(a)`            | Unloads a native library handle opened with `ffi_open`.                                                                                        | Expected number, got ${typeof value}                                                              | `builtins.ts:2636` |
-| `ffi_open(a)`             | Evaluates `ffiHost().open?.(String(a ?? '')) ?? null`.                                                                                         | —                                                                                                 | `builtins.ts:2619` |
-| `ffi_read_f64(a, b)`      | Evaluates `bufOf(a, line).getFloat64(Number(b) * 8, true)`.                                                                                    | —                                                                                                 | `builtins.ts:2601` |
-| `ffi_read_i32(a, b)`      | Evaluates `bufOf(a, line).getInt32(Number(b) * 4, true)`.                                                                                      | —                                                                                                 | `builtins.ts:2613` |
-| `ffi_sym(a, b)`           | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`.                                                                               | —                                                                                                 | `builtins.ts:2623` |
-| `ffi_write_f64(a, b, c)`  | Writes a 64-bit float into an FFI buffer at a byte offset.                                                                                     | —                                                                                                 | `builtins.ts:2594` |
-| `ffi_write_i32(a, b, c)`  | Writes a 32-bit integer into an FFI buffer at a byte offset.                                                                                   | —                                                                                                 | `builtins.ts:2606` |
-| `fileExists(a)`           | True when the given host filesystem path exists.                                                                                               | fileExists() takes 1 argument                                                                     | `builtins.ts:2378` |
-| `find(a, b)`              | Returns the index of the first matching element, or -1 when nothing matches.                                                                   | find() takes 2 arguments (list, predicate); First argument must be a list                         | `builtins.ts:889`  |
-| `first(a)`                | The first element of a list or the first character of a string.                                                                                | first() takes 1 argument; Argument must be a list or text                                         | `builtins.ts:726`  |
-| `flatten(a)`              | Collapses nested lists into a single flat list.                                                                                                | flatten() takes 1 argument; Argument must be a list                                               | `builtins.ts:680`  |
-| `floor(a)`                | floor/ceil/round aliases.                                                                                                                      | —                                                                                                 | `builtins.ts:2439` |
-| `fold(a, b, c)`           | reduce array.                                                                                                                                  | fold() takes 3 arguments (list, initial, reducer); First argument must be a list                  | `builtins.ts:149`  |
-| `format(…)`               | format(template, ...args) - string formatting with {} placeholders.                                                                            | format() takes at least 1 argument; First argument must be text                                   | `builtins.ts:1194` |
-| `formatTime(…)`           | formatTime(ms, format?) - format milliseconds.                                                                                                 | formatTime() takes at least 1 argument; First argument must be a number (ms)                      | `builtins.ts:1931` |
-| `freeze(a)`               | freeze(obj) - make object immutable (shallow).                                                                                                 | freeze() takes 1 argument                                                                         | `builtins.ts:2121` |
-| `fromEntries(a)`          | Builds a tome from a list of `[key, value]` pairs.                                                                                             | fromEntries() takes 1 argument; Argument must be a list                                           | `builtins.ts:1134` |
-| `gather(a, b)`            | push to list.                                                                                                                                  | gather() takes 0 or 2 arguments; First argument must be a list                                    | `builtins.ts:168`  |
-| `get(…)`                  | Reads a key from a tome with an optional default when the key is missing.                                                                      | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome                    | `builtins.ts:1066` |
-| `gettype(a)`              | get the type of a value (avoids 'essence' keyword clash).                                                                                      | gettype() takes 1 argument                                                                        | `builtins.ts:444`  |
-| `greatest(…)`             | The largest of the supplied numbers (or of a list).                                                                                            | greatest() takes at least 1 argument                                                              | `builtins.ts:285`  |
-| `ground(a)`               | Rounds a number down to the nearest integer (floor).                                                                                           | ground() takes 1 argument                                                                         | `builtins.ts:304`  |
-| `groupBy(a, b)`           | groupBy(list, fn) - group list elements by function result.                                                                                    | groupBy() takes 2 arguments; First argument must be a list                                        | `builtins.ts:2141` |
-| `has(a, b)`               | ============= Tome (Dict) Operations =============.                                                                                            | has() takes 2 arguments (tome, key); First argument must be a tome                                | `builtins.ts:1054` |
-| `hash(a)`                 | Deterministic hash of a value, returned as a number or hex string.                                                                             | hash() takes 1 argument                                                                           | `builtins.ts:1894` |
-| `hex(a)`                  | hex(n) - number to hex string.                                                                                                                 | hex() takes 1 argument; Argument must be a number                                                 | `builtins.ts:1563` |
-| `http_get(a)`             | Performs an HTTP GET and returns the response body as text.                                                                                    | http\_get() takes a url; http\_get(                                                               | `builtins.ts:2544` |
-| `indexOf(a, b)`           | Index of the first occurrence of a substring, or -1 when absent.                                                                               | indexOf() takes 2 arguments; First argument must be text or list                                  | `builtins.ts:604`  |
-| `INFINITY()`              | The floating-point positive infinity constant.                                                                                                 | —                                                                                                 | `builtins.ts:1040` |
-| `input(…)`                | input(prompt?) - uses browser prompt() for real input.                                                                                         | —                                                                                                 | `builtins.ts:1417` |
-| `inscriptions(a)`         | Dict operations.                                                                                                                               | inscriptions() takes 1 argument; Argument must be a tome (dict)                                   | `builtins.ts:334`  |
-| `insert(a, b, c)`         | ============= List Operations =============.                                                                                                   | insert() takes 3 arguments (list, index, value); First argument must be a list                    | `builtins.ts:638`  |
-| `int(a)`                  | int / num aliases.                                                                                                                             | int() takes 1 argument; Cannot convert to integer: ${stringify(args\[0])}                         | `builtins.ts:2451` |
-| `isAlpha(a)`              | isAlpha(s) - check if all alphabetic.                                                                                                          | isAlpha() takes 1 argument; Argument must be text                                                 | `builtins.ts:1746` |
-| `isAlphaNum(a)`           | isAlphaNum(s) - check if all alphanumeric.                                                                                                     | isAlphaNum() takes 1 argument; Argument must be text                                              | `builtins.ts:1756` |
-| `isDigit(a)`              | isDigit(s) - check if all digits.                                                                                                              | isDigit() takes 1 argument; Argument must be text                                                 | `builtins.ts:1736` |
-| `isFinite(a)`             | isFinite(v) - check if finite.                                                                                                                 | isFinite() takes 1 argument                                                                       | `builtins.ts:1639` |
-| `isFrozen(a)`             | isFrozen(obj).                                                                                                                                 | isFrozen() takes 1 argument                                                                       | `builtins.ts:2131` |
-| `isFunc(a)`               | True when the value is callable (a function, lambda, or builtin).                                                                              | isFunc() takes 1 argument                                                                         | `builtins.ts:954`  |
-| `isInteger(a)`            | isInteger(v) - check if integer.                                                                                                               | isInteger() takes 1 argument                                                                      | `builtins.ts:1648` |
-| `isList(a)`               | True when the value is a list.                                                                                                                 | isList() takes 1 argument                                                                         | `builtins.ts:922`  |
-| `isLower(a)`              | isLower(s) - check if all lowercase.                                                                                                           | isLower() takes 1 argument; Argument must be text                                                 | `builtins.ts:1726` |
-| `isNaN(a)`                | isNaN(v) - check if NaN.                                                                                                                       | isNaN() takes 1 argument                                                                          | `builtins.ts:1630` |
-| `isNum(a)`                | ============= Type Checking =============.                                                                                                     | isNum() takes 1 argument                                                                          | `builtins.ts:906`  |
-| `isSpace(a)`              | isSpace(s) - check if all whitespace.                                                                                                          | isSpace() takes 1 argument; Argument must be text                                                 | `builtins.ts:1766` |
-| `isText(a)`               | True when the value is a string.                                                                                                               | isText() takes 1 argument                                                                         | `builtins.ts:914`  |
-| `isTome(a)`               | True when the value is a tome (dictionary).                                                                                                    | isTome() takes 1 argument                                                                         | `builtins.ts:930`  |
-| `isTruth(a)`              | True when the value is a boolean.                                                                                                              | isTruth() takes 1 argument                                                                        | `builtins.ts:938`  |
-| `isUpper(a)`              | isUpper(s) - check if all uppercase.                                                                                                           | isUpper() takes 1 argument; Argument must be text                                                 | `builtins.ts:1716` |
-| `isVoid(a)`               | True when the value is `void` (absent).                                                                                                        | isVoid() takes 1 argument                                                                         | `builtins.ts:946`  |
-| `keys(a)`                 | keys(tome) - alias for inscriptions.                                                                                                           | keys() takes 1 argument; Argument must be a tome                                                  | `builtins.ts:2101` |
-| `last(a)`                 | The final element of a list or the final character of a string.                                                                                | last() takes 1 argument; Argument must be a list or text                                          | `builtins.ts:736`  |
-| `lastIndexOf(a, b)`       | Index of the final occurrence of a substring, or -1 when absent.                                                                               | lastIndexOf() takes 2 arguments; First argument must be text or list                              | `builtins.ts:620`  |
-| `least(…)`                | The smallest of the supplied numbers (or of a list).                                                                                           | least() takes at least 1 argument                                                                 | `builtins.ts:274`  |
-| `len(a)`                  | alias for measure (used internally by compiler forEach).                                                                                       | len() takes 1 argument; len() argument must be string, list, or dict                              | `builtins.ts:419`  |
-| `lerp(a, b, c)`           | Linear interpolation between two values by a factor in 0..1.                                                                                   | lerp() takes 3 arguments (start, end, t); All arguments must be numbers                           | `builtins.ts:980`  |
-| `LinkedList(a)`           | LinkedList() - doubly linked list.                                                                                                             | Index out of bounds; LinkedList is empty                                                          | `builtins.ts:2334` |
-| `listDir()`               | Lists the entries of a host directory.                                                                                                         | —                                                                                                 | `builtins.ts:2394` |
-| `ln(a)`                   | Evaluates `Math.log(toNumber(a, line))`.                                                                                                       | —                                                                                                 | `builtins.ts:2500` |
-| `locate(a, b)`            | locate(s, sub) - find index of substring.                                                                                                      | locate() takes 2 arguments; First argument must be text or list                                   | `builtins.ts:1173` |
-| `log(a)`                  | Natural logarithm.                                                                                                                             | —                                                                                                 | `builtins.ts:469`  |
-| `log10(a)`                | Base-10 logarithm.                                                                                                                             | —                                                                                                 | `builtins.ts:1035` |
-| `log2(a)`                 | Base-2 logarithm.                                                                                                                              | —                                                                                                 | `builtins.ts:1036` |
-| `lower(a)`                | Lowercases every character in the string.                                                                                                      | lower() takes 1 argument; Argument must be text                                                   | `builtins.ts:368`  |
-| `magnitude(a)`            | Math operations with unique names.                                                                                                             | magnitude() takes 1 argument                                                                      | `builtins.ts:266`  |
-| `Map(a, b)`               | Map() - map data structure.                                                                                                                    | —                                                                                                 | `builtins.ts:2280` |
-| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally.                                                                          | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:992`  |
-| `match(a, b)`             | match(text, pattern) - regex match, returns list of matches or null.                                                                           | match() takes 2 arguments (text, pattern); Arguments must be text                                 | `builtins.ts:1778` |
-| `matchAll(a, b)`          | matchAll(text, pattern) - all regex matches.                                                                                                   | matchAll() takes 2 arguments (text, pattern); Arguments must be text                              | `builtins.ts:1789` |
-| `max(a)`                  | The largest of the supplied numbers (or of a list).                                                                                            | max() takes at least 1 argument                                                                   | `builtins.ts:2420` |
-| `mean(a)`                 | mean(list) - alias for average.                                                                                                                | mean() takes 1 argument; Argument must be a list                                                  | `builtins.ts:1402` |
-| `measure(a)`              | get length.                                                                                                                                    | measure() takes exactly 1 argument; measure() argument must be string, list, or dict              | `builtins.ts:44`   |
-| `memoize(a)`              | memoize(fn) - memoization.                                                                                                                     | memoize() takes 1 argument; Argument must be a function                                           | `builtins.ts:2001` |
-| `merge(…)`                | Combines two tomes into a new one; keys on the right win.                                                                                      | merge() takes at least 2 arguments; All arguments must be tomes                                   | `builtins.ts:1108` |
-| `min(a)`                  | min/max aliases.                                                                                                                               | min() takes at least 1 argument                                                                   | `builtins.ts:2411` |
-| `morph(a, b)`             | type conversion.                                                                                                                               | morph() takes 2 arguments (value, type); Second argument must be type name                        | `builtins.ts:59`   |
-| `nearby(a)`               | True when two floating-point numbers are equal within a small tolerance.                                                                       | nearby() takes 1 argument                                                                         | `builtins.ts:320`  |
-| `now()`                   | ============= Time =============.                                                                                                              | —                                                                                                 | `builtins.ts:1043` |
-| `num(a)`                  | Converts a value to a number, or `void` when it cannot be parsed.                                                                              | num() takes 1 argument; Cannot convert to number: ${stringify(args\[0])}                          | `builtins.ts:2461` |
-| `oct(a)`                  | oct(n) - number to octal string.                                                                                                               | oct() takes 1 argument; Argument must be a number                                                 | `builtins.ts:1573` |
-| `ord(…)`                  | ord(char) - character to number.                                                                                                               | ord() takes 1 or 2 arguments; Argument must be a non-empty string                                 | `builtins.ts:1547` |
-| `padleft(…)`              | Pads the string on the left with a fill character until it reaches the target width.                                                           | padleft() takes 2-3 arguments; First argument must be text                                        | `builtins.ts:570`  |
-| `padLeft(…)`              | padLeft(s, width, char?) - alias PascalCase.                                                                                                   | padLeft() takes 2-3 arguments; First argument must be text                                        | `builtins.ts:1210` |
-| `padright(…)`             | Pads the string on the right with a fill character until it reaches the target width.                                                          | padright() takes 2-3 arguments; First argument must be text                                       | `builtins.ts:581`  |
-| `padRight(…)`             | padRight(s, width, char?) - alias PascalCase.                                                                                                  | padRight() takes 2-3 arguments; First argument must be text                                       | `builtins.ts:1222` |
-| `panic(…)`                | panic(message) - fatal error.                                                                                                                  | PANIC: ${msg}                                                                                     | `builtins.ts:1517` |
-| `parseNum(…)`             | parseNum(str, base?) - parse string to number with optional base.                                                                              | parseNum() takes 1-2 arguments; First argument must be text                                       | `builtins.ts:1593` |
-| `PI()`                    | The constant π (3.14159…).                                                                                                                     | —                                                                                                 | `builtins.ts:471`  |
-| `pick(a)`                 | Returns one element chosen at random from a list.                                                                                              | pick() takes 1 argument; Argument must be a list                                                  | `builtins.ts:491`  |
-| `pipe(…)`                 | pipe(value, ...fns) - pipe value through functions.                                                                                            | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions        | `builtins.ts:1966` |
-| `pluck(…)`                | pop from list, or append when given a value (stdlib/ML dialect).                                                                               | pluck() takes 1 or 2 arguments; Argument must be a list                                           | `builtins.ts:183`  |
-| `pointer(a, b)`           | pointer(buffer, offset) - create a reference to a buffer position.                                                                             | pointer() takes 2 arguments (buffer, offset); First argument must be a buffer                     | `builtins.ts:2073` |
-| `portion(…)`              | slice - get portion.                                                                                                                           | portion() takes 2 or 3 arguments; First argument must be a list or string                         | `builtins.ts:200`  |
-| `pow(a, b)`               | Raises the first number to the power of the second.                                                                                            | pow() takes 2 arguments (base, exponent); Arguments must be numbers                               | `builtins.ts:1013` |
-| `print(…)`                | print() - alias for speak.                                                                                                                     | —                                                                                                 | `builtins.ts:1451` |
-| `println(…)`              | println() - print with newline (same as print in this context).                                                                                | —                                                                                                 | `builtins.ts:1461` |
-| `product(a)`              | Multiplies every number in a list together.                                                                                                    | product() takes 1 argument; Argument must be a list                                               | `builtins.ts:790`  |
-| `Queue(a)`                | Queue() - FIFO queue.                                                                                                                          | Queue is empty                                                                                    | `builtins.ts:2300` |
-| `radians(a)`              | radians(deg) - degrees to radians.                                                                                                             | radians() takes 1 argument; Argument must be a number                                             | `builtins.ts:1368` |
-| `rand()`                  | Random floating-point number; with arguments, a random value in the range.                                                                     | —                                                                                                 | `builtins.ts:2499` |
-| `randint(a, b)`           | Random utilities.                                                                                                                              | randint() takes 2 arguments                                                                       | `builtins.ts:481`  |
-| `random()`                | random() alias for chaos().                                                                                                                    | —                                                                                                 | `builtins.ts:475`  |
-| `range(…)`                | range() - alias for sequence.                                                                                                                  | range() takes 1-3 arguments; range() step cannot be 0                                             | `builtins.ts:1471` |
-| `read_file(a)`            | Reads a file from the host filesystem and returns its text.                                                                                    | read\_file() takes a path; read\_file(                                                            | `builtins.ts:2516` |
-| `remove(a, b)`            | Removes the first occurrence of a value from a list, in place.                                                                                 | remove() takes 2 arguments (list, index); First argument must be a list                           | `builtins.ts:650`  |
-| `repeat(a, b)`            | Builds a list (or string) by repeating a value `n` times.                                                                                      | repeat() takes 2 arguments (text, count); First argument must be text                             | `builtins.ts:560`  |
-| `replace(a, b, c)`        | ============= String Operations =============.                                                                                                 | replace() takes 3 arguments (text, search, replacement); First argument must be text              | `builtins.ts:527`  |
-| `replaceRegex(a, b, c)`   | replaceRegex(text, pattern, replacement) - regex replace.                                                                                      | replaceRegex() takes 3 arguments; Arguments must be text                                          | `builtins.ts:1800` |
-| `rest(a)`                 | Everything after the first element of a list.                                                                                                  | rest() takes 1 argument; Argument must be a list or text                                          | `builtins.ts:746`  |
-| `reverse(a)`              | Returns the list or string in reverse order.                                                                                                   | reverse() takes 1 argument; Argument must be text or list                                         | `builtins.ts:386`  |
-| `root(a)`                 | Square root (alias kept for readability).                                                                                                      | root() takes 1 argument                                                                           | `builtins.ts:296`  |
-| `round(a)`                | Evaluates `Math.round(a)`.                                                                                                                     | —                                                                                                 | `builtins.ts:2441` |
-| `seek(a, b)`              | seek(list, predicate) - alias for find.                                                                                                        | seek() takes 2 arguments (list, predicate); First argument must be a list                         | `builtins.ts:1293` |
-| `sequence(…)`             | conjure a sequence.                                                                                                                            | sequence() takes 1 to 3 arguments; sequence() step cannot be 0                                    | `builtins.ts:87`   |
-| `set(a, b, c)`            | Writes a value at a key or index inside a tome or list.                                                                                        | set() takes 3 arguments (tome, key, value); First argument must be a tome                         | `builtins.ts:1080` |
-| `Set(a)`                  | Set() - set data structure.                                                                                                                    | —                                                                                                 | `builtins.ts:2260` |
-| `shatter(a, b)`           | split string to list.                                                                                                                          | shatter() takes 2 arguments; First argument must be a string                                      | `builtins.ts:230`  |
-| `shout(…)`                | output in uppercase.                                                                                                                           | —                                                                                                 | `builtins.ts:34`   |
-| `shuffle(a)`              | Returns the list in a random order (Fisher–Yates).                                                                                             | shuffle() takes 1 argument; Argument must be a list                                               | `builtins.ts:501`  |
-| `sift(a, b)`              | filter array.                                                                                                                                  | sift() takes 2 arguments (list, predicate); First argument must be a list                         | `builtins.ts:134`  |
-| `sign(a)`                 | Returns -1, 0, or 1 depending on the sign of the number.                                                                                       | sign() takes 1 argument; Argument must be a number                                                | `builtins.ts:1004` |
-| `sin(a)`                  | Advanced math.                                                                                                                                 | —                                                                                                 | `builtins.ts:466`  |
-| `sinh(a)`                 | Evaluates `Math.sinh(a)`.                                                                                                                      | —                                                                                                 | `builtins.ts:1032` |
-| `sleep()`                 | sleep(ms) - alias for delay.                                                                                                                   | —                                                                                                 | `builtins.ts:1443` |
-| `snatch(…)`               | snatch(str\_or\_list, start, end?) - substring OR remove at index from list.                                                                   | snatch() takes 2-3 arguments; Second argument must be a number                                    | `builtins.ts:1234` |
-| `some(a, b)`              | some(list, predicate) - alias for any.                                                                                                         | some() takes 2 arguments; First argument must be a list                                           | `builtins.ts:1320` |
-| `sort(…)`                 | Returns the list sorted ascending, or by the supplied comparison function.                                                                     | sort() takes 1-2 arguments; First argument must be a list                                         | `builtins.ts:816`  |
-| `sortDesc(a)`             | sortDesc(list) - sort descending.                                                                                                              | sortDesc() takes 1 argument; Argument must be a list                                              | `builtins.ts:1258` |
-| `spawn(a)`                | spawn (run function, synchronous in browser).                                                                                                  | spawn() requires a function                                                                       | `builtins.ts:2400` |
-| `speak(…)`                | output to console.                                                                                                                             | —                                                                                                 | `builtins.ts:14`   |
-| `sqrt(a)`                 | Square root.                                                                                                                                   | —                                                                                                 | `builtins.ts:2442` |
-| `Stack(a)`                | Stack() - LIFO stack.                                                                                                                          | Stack is empty                                                                                    | `builtins.ts:2317` |
-| `starts(a, b)`            | starts(s, prefix) - alias for startswith.                                                                                                      | starts() takes 2 arguments; Arguments must be text                                                | `builtins.ts:1153` |
-| `startswith(a, b)`        | True when the string begins with the given prefix.                                                                                             | startswith() takes 2 arguments; Arguments must be text                                            | `builtins.ts:538`  |
-| `str(a)`                  | str alias for morph to text.                                                                                                                   | —                                                                                                 | `builtins.ts:2445` |
-| `sum(a)`                  | Adds every number in a list together.                                                                                                          | sum() takes 1 argument; Argument must be a list                                                   | `builtins.ts:778`  |
-| `take(a, b)`              | Returns the first `n` elements of a list.                                                                                                      | take() takes 2 arguments (list, count); Second argument must be a number                          | `builtins.ts:756`  |
-| `tan(a)`                  | Tangent of an angle in radians.                                                                                                                | —                                                                                                 | `builtins.ts:468`  |
-| `tanh(a)`                 | Evaluates `Math.tanh(a)`.                                                                                                                      | —                                                                                                 | `builtins.ts:1034` |
-| `tap(a, b)`               | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function                           | `builtins.ts:2176` |
-| `TAU()`                   | The constant τ — a full turn in radians, equal to 2π.                                                                                          | —                                                                                                 | `builtins.ts:472`  |
-| `test(a, b)`              | test(text, pattern) - test if regex matches.                                                                                                   | test() takes 2 arguments (text, pattern); Arguments must be text                                  | `builtins.ts:1812` |
-| `throw(…)`                | throw(message) - throw error.                                                                                                                  | —                                                                                                 | `builtins.ts:1526` |
-| `time()`                  | time() - current time as tome.                                                                                                                 | —                                                                                                 | `builtins.ts:1912` |
-| `times(a, b)`             | repeat(fn, n) - call function n times, return list of results.                                                                                 | times() takes 2 arguments (count, fn); First argument must be a number                            | `builtins.ts:2188` |
-| `timestamp()`             | Current time in milliseconds since the Unix epoch.                                                                                             | —                                                                                                 | `builtins.ts:1048` |
-| `title(a)`                | title(s) - title case.                                                                                                                         | title() takes 1 argument; Argument must be text                                                   | `builtins.ts:1669` |
-| `toFixed(a, b)`           | toFixed(n, digits) - format to fixed decimal places.                                                                                           | toFixed() takes 2 arguments (number, digits); First argument must be a number                     | `builtins.ts:1608` |
-| `tome_keys(a)`            | Returns the keys of a tome as a list.                                                                                                          | tome\_keys() takes a tome                                                                         | `builtins.ts:2505` |
-| `toPrecision(a, b)`       | toPrecision(n, precision) - format to precision.                                                                                               | toPrecision() takes 2 arguments; First argument must be a number                                  | `builtins.ts:1619` |
-| `trim(a)`                 | Removes leading and trailing whitespace.                                                                                                       | trim() takes 1 argument; Argument must be text                                                    | `builtins.ts:377`  |
-| `trimLeft(a)`             | trimLeft(s) / trimRight(s).                                                                                                                    | trimLeft() takes 1 argument; Argument must be text                                                | `builtins.ts:1697` |
-| `trimRight(a)`            | Removes trailing whitespace only.                                                                                                              | trimRight() takes 1 argument; Argument must be text                                               | `builtins.ts:1706` |
-| `typeof(a)`               | typeof() - alias for gettype.                                                                                                                  | typeof() takes 1 argument                                                                         | `builtins.ts:1488` |
-| `unetch(a)`               | The inverse of `etch`: decodes an encoded string back to its original value.                                                                   | Invalid JSON                                                                                      | `builtins.ts:518`  |
-| `unique(a)`               | Removes duplicate values, preserving first-seen order.                                                                                         | unique() takes 1 argument; Argument must be a list                                                | `builtins.ts:838`  |
-| `unzip(a)`                | Splits a list of pairs into two parallel lists.                                                                                                | unzip() takes 1 argument; Argument must be a list                                                 | `builtins.ts:706`  |
-| `upper(a)`                | String operations.                                                                                                                             | upper() takes 1 argument; Argument must be text                                                   | `builtins.ts:359`  |
-| `values(a)`               | values(tome) - alias for contents.                                                                                                             | values() takes 1 argument; Argument must be a tome                                                | `builtins.ts:2111` |
-| `Vec2(a, b)`              | Vec2(x, y) - 2D vector.                                                                                                                        | Vec2() takes 2 arguments (x, y)                                                                   | `builtins.ts:2204` |
-| `weave(a, b)`             | join list to string.                                                                                                                           | weave() takes 2 arguments; First argument must be a list                                          | `builtins.ts:217`  |
-| `whisper(…)`              | output without newline concept (same as speak in this context).                                                                                | —                                                                                                 | `builtins.ts:24`   |
-| `write_file(a, b)`        | Writes text to a file on the host filesystem, creating or truncating it.                                                                       | write\_file() takes a path and content; write\_file(                                              | `builtins.ts:2528` |
-| `zip(…)`                  | Pairs up two lists element by element into a list of pairs.                                                                                    | zip() takes at least 2 arguments; Argument ${i + 1} must be a list                                | `builtins.ts:689`  |
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `__tryCatch(a, b)` | __tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue. | __tryCatch requires 2 function arguments | `builtins.ts:2472` |
+| `abs(a)` | abs alias. | abs() takes 1 argument | `builtins.ts:2430` |
+| `acos(a)` | Inverse cosine, in radians. | — | `builtins.ts:1026` |
+| `all(a, b)` | True when every element of the list is truthy (or satisfies the given predicate). | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:863` |
+| `any(a, b)` | True when at least one element of the list is truthy (or satisfies the given predicate). | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:876` |
+| `appendFile(a, b)` | Convenience aliases. | appendFile() takes 2 arguments | `builtins.ts:2369` |
+| `asin(a)` | More trig. | — | `builtins.ts:1025` |
+| `atan(a)` | Inverse tangent, in radians. | — | `builtins.ts:1027` |
+| `atan2(a, b)` | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | — | `builtins.ts:1028` |
+| `average(a)` | Arithmetic mean of a list of numbers. | average() takes 1 argument; Argument must be a list | `builtins.ts:802` |
+| `base64decode(a)` | Decodes Base64 text back into a string. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1882` |
+| `base64encode(a)` | Encodes a string or byte buffer as Base64 text. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1873` |
+| `bin(a)` | bin(n) - number to binary string. | bin() takes 1 argument; Argument must be a number | `builtins.ts:1583` |
+| `bitAnd(a, b)` | Bitwise AND of two integers. | bitAnd() takes 2 arguments | `builtins.ts:1823` |
+| `bitNot(a)` | Bitwise complement of an integer. | bitNot() takes 1 argument | `builtins.ts:1847` |
+| `bitOr(a, b)` | Bitwise OR of two integers. | bitOr() takes 2 arguments | `builtins.ts:1831` |
+| `bitShiftLeft(a, b)` | Shifts the bits of an integer left by n places. | bitShiftLeft() takes 2 arguments | `builtins.ts:1855` |
+| `bitShiftRight(a, b)` | Shifts the bits of an integer right by n places. | bitShiftRight() takes 2 arguments | `builtins.ts:1863` |
+| `bitXor(a, b)` | Bitwise exclusive OR of two integers. | bitXor() takes 2 arguments | `builtins.ts:1839` |
+| `buffer(a)` | buffer(size) - create a byte buffer. | buffer() takes 1 argument (size); Argument must be a number | `builtins.ts:2024` |
+| `capitalize(a)` | capitalize(s) - first char uppercase. | capitalize() takes 1 argument; Argument must be text | `builtins.ts:1659` |
+| `ceil(a)` | Evaluates `Math.ceil(a)`. | — | `builtins.ts:2440` |
+| `center(…)` | center(s, width, char?) - center-pad string. | center() takes 2-3 arguments; First argument must be text | `builtins.ts:1679` |
+| `chaos()` | Random number generator with seedable, reproducible output. | — | `builtins.ts:328` |
+| `charAt(a, b)` | The character at a zero-based index in a string. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:592` |
+| `chars(a)` | chars(s) - string to char list. | chars() takes 1 argument; Argument must be text | `builtins.ts:1184` |
+| `chr(a)` | chr(n) - number to character. | chr() takes 1 argument; Argument must be a number | `builtins.ts:1537` |
+| `chunk(a, b)` | chunk(list, size) - split list into chunks. | chunk() takes 2 arguments (list, size); First argument must be a list | `builtins.ts:2159` |
+| `clamp(a, b, c)` | ============= Math Utilities =============. | clamp() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:968` |
+| `clone(a)` | clone(list) - deep copy. | clone() takes 1 argument | `builtins.ts:1271` |
+| `compose(…)` | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)). | compose() takes at least 2 arguments; All arguments must be functions | `builtins.ts:1944` |
+| `concat(…)` | Joins two lists (or two strings) into a new one; the inputs are not modified. | concat() takes at least 2 arguments; All arguments must be lists | `builtins.ts:663` |
+| `constrain(a, b, c)` | constrain(v, min, max) - alias for clamp. | constrain() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:1342` |
+| `contains(a, b)` | True when the collection holds the given value, or the string holds the substring. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:397` |
+| `contents(a)` | Returns the values of a tome as a list. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:346` |
+| `cos(a)` | Cosine of an angle in radians. | — | `builtins.ts:467` |
+| `cosh(a)` | Evaluates `Math.cosh(a)`. | — | `builtins.ts:1033` |
+| `count(a, b)` | How many times a value occurs in a list or a substring occurs in a string. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:853` |
+| `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins.ts:1981` |
+| `degrees(a)` | degrees(rad) - radians to degrees. | degrees() takes 1 argument; Argument must be a number | `builtins.ts:1378` |
+| `del(a, b)` | Deletes a key from a tome or an index from a list, in place. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1093` |
+| `delay()` | delay(ms) - no-op in synchronous context. | — | `builtins.ts:1437` |
+| `deleteFile(a)` | Deletes a file from the host filesystem. | deleteFile() takes 1 argument | `builtins.ts:2386` |
+| `difference(a, b)` | difference(a, b) - set difference. | difference() takes 2 arguments; Arguments must be lists | `builtins.ts:1282` |
+| `dist(a, b, c, d)` | dist(x1, y1, x2, y2) - distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers | `builtins.ts:1355` |
+| `drop(a, b)` | Returns a copy of the list without its first `n` elements. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:767` |
+| `E()` | Constants. | — | `builtins.ts:1039` |
+| `each(a, b)` | map over array with lambda. | each() takes 2 arguments (list, transform); First argument must be a list | `builtins.ts:116` |
+| `elevate(a)` | Raises the current task to a privileged mode so it may use restricted syscalls. | elevate() takes 1 argument | `builtins.ts:312` |
+| `ends(a, b)` | ends(s, suffix) - alias for endswith. | ends() takes 2 arguments; Arguments must be text | `builtins.ts:1163` |
+| `endswith(a, b)` | True when the string ends with the given suffix. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:549` |
+| `entries(a)` | Returns a tome as a list of `[key, value]` pairs. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1123` |
+| `enumerate(a)` | enumerate(list) - [[index, item], ...]. | enumerate() takes 1 argument; Argument must be a list | `builtins.ts:1332` |
+| `essence(a)` | get type. | essence() takes 1 argument | `builtins.ts:243` |
+| `etch(a)` | JSON. | — | `builtins.ts:517` |
+| `every(a, b)` | every(list, predicate) - alias for all. | every() takes 2 arguments; First argument must be a list | `builtins.ts:1308` |
+| `exit(…)` | exit(code?) - terminate program. | Program exited with code ${code} | `builtins.ts:1508` |
+| `exp(a)` | e raised to the given power. | — | `builtins.ts:470` |
+| `ffi_buf(a)` | Allocates a raw byte buffer usable as an FFI argument. | ffi_buf() takes a positive byte size | `builtins.ts:2581` |
+| `ffi_call(a, b, c, d)` | Calls a symbol in a loaded native library with the given arguments. | ffi_call() — no native FFI host available | `builtins.ts:2628` |
+| `ffi_close(a)` | Unloads a native library handle opened with `ffi_open`. | Expected number, got ${typeof value} | `builtins.ts:2636` |
+| `ffi_open(a)` | Evaluates `ffiHost().open?.(String(a ?? '')) ?? null`. | — | `builtins.ts:2619` |
+| `ffi_read_f64(a, b)` | Evaluates `bufOf(a, line).getFloat64(Number(b) * 8, true)`. | — | `builtins.ts:2601` |
+| `ffi_read_i32(a, b)` | Evaluates `bufOf(a, line).getInt32(Number(b) * 4, true)`. | — | `builtins.ts:2613` |
+| `ffi_sym(a, b)` | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`. | — | `builtins.ts:2623` |
+| `ffi_write_f64(a, b, c)` | Writes a 64-bit float into an FFI buffer at a byte offset. | — | `builtins.ts:2594` |
+| `ffi_write_i32(a, b, c)` | Writes a 32-bit integer into an FFI buffer at a byte offset. | — | `builtins.ts:2606` |
+| `fileExists(a)` | True when the given host filesystem path exists. | fileExists() takes 1 argument | `builtins.ts:2378` |
+| `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:889` |
+| `first(a)` | The first element of a list or the first character of a string. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:726` |
+| `flatten(a)` | Collapses nested lists into a single flat list. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:680` |
+| `floor(a)` | floor/ceil/round aliases. | — | `builtins.ts:2439` |
+| `fold(a, b, c)` | reduce array. | fold() takes 3 arguments (list, initial, reducer); First argument must be a list | `builtins.ts:149` |
+| `format(…)` | format(template, ...args) - string formatting with {} placeholders. | format() takes at least 1 argument; First argument must be text | `builtins.ts:1194` |
+| `formatTime(…)` | formatTime(ms, format?) - format milliseconds. | formatTime() takes at least 1 argument; First argument must be a number (ms) | `builtins.ts:1931` |
+| `freeze(a)` | freeze(obj) - make object immutable (shallow). | freeze() takes 1 argument | `builtins.ts:2121` |
+| `fromEntries(a)` | Builds a tome from a list of `[key, value]` pairs. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1134` |
+| `gather(a, b)` | push to list. | gather() takes 0 or 2 arguments; First argument must be a list | `builtins.ts:168` |
+| `get(…)` | Reads a key from a tome with an optional default when the key is missing. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1066` |
+| `gettype(a)` | get the type of a value (avoids 'essence' keyword clash). | gettype() takes 1 argument | `builtins.ts:444` |
+| `greatest(…)` | The largest of the supplied numbers (or of a list). | greatest() takes at least 1 argument | `builtins.ts:285` |
+| `ground(a)` | Rounds a number down to the nearest integer (floor). | ground() takes 1 argument | `builtins.ts:304` |
+| `groupBy(a, b)` | groupBy(list, fn) - group list elements by function result. | groupBy() takes 2 arguments; First argument must be a list | `builtins.ts:2141` |
+| `has(a, b)` | ============= Tome (Dict) Operations =============. | has() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1054` |
+| `hash(a)` | Deterministic hash of a value, returned as a number or hex string. | hash() takes 1 argument | `builtins.ts:1894` |
+| `hex(a)` | hex(n) - number to hex string. | hex() takes 1 argument; Argument must be a number | `builtins.ts:1563` |
+| `http_get(a)` | Performs an HTTP GET and returns the response body as text. | http_get() takes a url; http_get( | `builtins.ts:2544` |
+| `indexOf(a, b)` | Index of the first occurrence of a substring, or -1 when absent. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:604` |
+| `INFINITY()` | The floating-point positive infinity constant. | — | `builtins.ts:1040` |
+| `input(…)` | input(prompt?) - uses browser prompt() for real input. | — | `builtins.ts:1417` |
+| `inscriptions(a)` | Dict operations. | inscriptions() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:334` |
+| `insert(a, b, c)` | ============= List Operations =============. | insert() takes 3 arguments (list, index, value); First argument must be a list | `builtins.ts:638` |
+| `int(a)` | int / num aliases. | int() takes 1 argument; Cannot convert to integer: ${stringify(args[0])} | `builtins.ts:2451` |
+| `isAlpha(a)` | isAlpha(s) - check if all alphabetic. | isAlpha() takes 1 argument; Argument must be text | `builtins.ts:1746` |
+| `isAlphaNum(a)` | isAlphaNum(s) - check if all alphanumeric. | isAlphaNum() takes 1 argument; Argument must be text | `builtins.ts:1756` |
+| `isDigit(a)` | isDigit(s) - check if all digits. | isDigit() takes 1 argument; Argument must be text | `builtins.ts:1736` |
+| `isFinite(a)` | isFinite(v) - check if finite. | isFinite() takes 1 argument | `builtins.ts:1639` |
+| `isFrozen(a)` | isFrozen(obj). | isFrozen() takes 1 argument | `builtins.ts:2131` |
+| `isFunc(a)` | True when the value is callable (a function, lambda, or builtin). | isFunc() takes 1 argument | `builtins.ts:954` |
+| `isInteger(a)` | isInteger(v) - check if integer. | isInteger() takes 1 argument | `builtins.ts:1648` |
+| `isList(a)` | True when the value is a list. | isList() takes 1 argument | `builtins.ts:922` |
+| `isLower(a)` | isLower(s) - check if all lowercase. | isLower() takes 1 argument; Argument must be text | `builtins.ts:1726` |
+| `isNaN(a)` | isNaN(v) - check if NaN. | isNaN() takes 1 argument | `builtins.ts:1630` |
+| `isNum(a)` | ============= Type Checking =============. | isNum() takes 1 argument | `builtins.ts:906` |
+| `isSpace(a)` | isSpace(s) - check if all whitespace. | isSpace() takes 1 argument; Argument must be text | `builtins.ts:1766` |
+| `isText(a)` | True when the value is a string. | isText() takes 1 argument | `builtins.ts:914` |
+| `isTome(a)` | True when the value is a tome (dictionary). | isTome() takes 1 argument | `builtins.ts:930` |
+| `isTruth(a)` | True when the value is a boolean. | isTruth() takes 1 argument | `builtins.ts:938` |
+| `isUpper(a)` | isUpper(s) - check if all uppercase. | isUpper() takes 1 argument; Argument must be text | `builtins.ts:1716` |
+| `isVoid(a)` | True when the value is `void` (absent). | isVoid() takes 1 argument | `builtins.ts:946` |
+| `keys(a)` | keys(tome) - alias for inscriptions. | keys() takes 1 argument; Argument must be a tome | `builtins.ts:2101` |
+| `last(a)` | The final element of a list or the final character of a string. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:736` |
+| `lastIndexOf(a, b)` | Index of the final occurrence of a substring, or -1 when absent. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:620` |
+| `least(…)` | The smallest of the supplied numbers (or of a list). | least() takes at least 1 argument | `builtins.ts:274` |
+| `len(a)` | alias for measure (used internally by compiler forEach). | len() takes 1 argument; len() argument must be string, list, or dict | `builtins.ts:419` |
+| `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:980` |
+| `LinkedList(a)` | LinkedList() - doubly linked list. | Index out of bounds; LinkedList is empty | `builtins.ts:2334` |
+| `listDir()` | Lists the entries of a host directory. | — | `builtins.ts:2394` |
+| `ln(a)` | Evaluates `Math.log(toNumber(a, line))`. | — | `builtins.ts:2500` |
+| `locate(a, b)` | locate(s, sub) - find index of substring. | locate() takes 2 arguments; First argument must be text or list | `builtins.ts:1173` |
+| `log(a)` | Natural logarithm. | — | `builtins.ts:469` |
+| `log10(a)` | Base-10 logarithm. | — | `builtins.ts:1035` |
+| `log2(a)` | Base-2 logarithm. | — | `builtins.ts:1036` |
+| `lower(a)` | Lowercases every character in the string. | lower() takes 1 argument; Argument must be text | `builtins.ts:368` |
+| `magnitude(a)` | Math operations with unique names. | magnitude() takes 1 argument | `builtins.ts:266` |
+| `Map(a, b)` | Map() - map data structure. | — | `builtins.ts:2280` |
+| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:992` |
+| `match(a, b)` | match(text, pattern) - regex match, returns list of matches or null. | match() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1778` |
+| `matchAll(a, b)` | matchAll(text, pattern) - all regex matches. | matchAll() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1789` |
+| `max(a)` | The largest of the supplied numbers (or of a list). | max() takes at least 1 argument | `builtins.ts:2420` |
+| `mean(a)` | mean(list) - alias for average. | mean() takes 1 argument; Argument must be a list | `builtins.ts:1402` |
+| `measure(a)` | get length. | measure() takes exactly 1 argument; measure() argument must be string, list, or dict | `builtins.ts:44` |
+| `memoize(a)` | memoize(fn) - memoization. | memoize() takes 1 argument; Argument must be a function | `builtins.ts:2001` |
+| `merge(…)` | Combines two tomes into a new one; keys on the right win. | merge() takes at least 2 arguments; All arguments must be tomes | `builtins.ts:1108` |
+| `min(a)` | min/max aliases. | min() takes at least 1 argument | `builtins.ts:2411` |
+| `morph(a, b)` | type conversion. | morph() takes 2 arguments (value, type); Second argument must be type name | `builtins.ts:59` |
+| `nearby(a)` | True when two floating-point numbers are equal within a small tolerance. | nearby() takes 1 argument | `builtins.ts:320` |
+| `now()` | ============= Time =============. | — | `builtins.ts:1043` |
+| `num(a)` | Converts a value to a number, or `void` when it cannot be parsed. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2461` |
+| `oct(a)` | oct(n) - number to octal string. | oct() takes 1 argument; Argument must be a number | `builtins.ts:1573` |
+| `ord(…)` | ord(char) - character to number. | ord() takes 1 or 2 arguments; Argument must be a non-empty string | `builtins.ts:1547` |
+| `padleft(…)` | Pads the string on the left with a fill character until it reaches the target width. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:570` |
+| `padLeft(…)` | padLeft(s, width, char?) - alias PascalCase. | padLeft() takes 2-3 arguments; First argument must be text | `builtins.ts:1210` |
+| `padright(…)` | Pads the string on the right with a fill character until it reaches the target width. | padright() takes 2-3 arguments; First argument must be text | `builtins.ts:581` |
+| `padRight(…)` | padRight(s, width, char?) - alias PascalCase. | padRight() takes 2-3 arguments; First argument must be text | `builtins.ts:1222` |
+| `panic(…)` | panic(message) - fatal error. | PANIC: ${msg} | `builtins.ts:1517` |
+| `parseNum(…)` | parseNum(str, base?) - parse string to number with optional base. | parseNum() takes 1-2 arguments; First argument must be text | `builtins.ts:1593` |
+| `PI()` | The constant π (3.14159…). | — | `builtins.ts:471` |
+| `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `builtins.ts:491` |
+| `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins.ts:1966` |
+| `pluck(…)` | pop from list, or append when given a value (stdlib/ML dialect). | pluck() takes 1 or 2 arguments; Argument must be a list | `builtins.ts:183` |
+| `pointer(a, b)` | pointer(buffer, offset) - create a reference to a buffer position. | pointer() takes 2 arguments (buffer, offset); First argument must be a buffer | `builtins.ts:2073` |
+| `portion(…)` | slice - get portion. | portion() takes 2 or 3 arguments; First argument must be a list or string | `builtins.ts:200` |
+| `pow(a, b)` | Raises the first number to the power of the second. | pow() takes 2 arguments (base, exponent); Arguments must be numbers | `builtins.ts:1013` |
+| `print(…)` | print() - alias for speak. | — | `builtins.ts:1451` |
+| `println(…)` | println() - print with newline (same as print in this context). | — | `builtins.ts:1461` |
+| `product(a)` | Multiplies every number in a list together. | product() takes 1 argument; Argument must be a list | `builtins.ts:790` |
+| `Queue(a)` | Queue() - FIFO queue. | Queue is empty | `builtins.ts:2300` |
+| `radians(a)` | radians(deg) - degrees to radians. | radians() takes 1 argument; Argument must be a number | `builtins.ts:1368` |
+| `rand()` | Random floating-point number; with arguments, a random value in the range. | — | `builtins.ts:2499` |
+| `randint(a, b)` | Random utilities. | randint() takes 2 arguments | `builtins.ts:481` |
+| `random()` | random() alias for chaos(). | — | `builtins.ts:475` |
+| `range(…)` | range() - alias for sequence. | range() takes 1-3 arguments; range() step cannot be 0 | `builtins.ts:1471` |
+| `read_file(a)` | Reads a file from the host filesystem and returns its text. | read_file() takes a path; read_file( | `builtins.ts:2516` |
+| `remove(a, b)` | Removes the first occurrence of a value from a list, in place. | remove() takes 2 arguments (list, index); First argument must be a list | `builtins.ts:650` |
+| `repeat(a, b)` | Builds a list (or string) by repeating a value `n` times. | repeat() takes 2 arguments (text, count); First argument must be text | `builtins.ts:560` |
+| `replace(a, b, c)` | ============= String Operations =============. | replace() takes 3 arguments (text, search, replacement); First argument must be text | `builtins.ts:527` |
+| `replaceRegex(a, b, c)` | replaceRegex(text, pattern, replacement) - regex replace. | replaceRegex() takes 3 arguments; Arguments must be text | `builtins.ts:1800` |
+| `rest(a)` | Everything after the first element of a list. | rest() takes 1 argument; Argument must be a list or text | `builtins.ts:746` |
+| `reverse(a)` | Returns the list or string in reverse order. | reverse() takes 1 argument; Argument must be text or list | `builtins.ts:386` |
+| `root(a)` | Square root (alias kept for readability). | root() takes 1 argument | `builtins.ts:296` |
+| `round(a)` | Evaluates `Math.round(a)`. | — | `builtins.ts:2441` |
+| `seek(a, b)` | seek(list, predicate) - alias for find. | seek() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:1293` |
+| `sequence(…)` | conjure a sequence. | sequence() takes 1 to 3 arguments; sequence() step cannot be 0 | `builtins.ts:87` |
+| `set(a, b, c)` | Writes a value at a key or index inside a tome or list. | set() takes 3 arguments (tome, key, value); First argument must be a tome | `builtins.ts:1080` |
+| `Set(a)` | Set() - set data structure. | — | `builtins.ts:2260` |
+| `shatter(a, b)` | split string to list. | shatter() takes 2 arguments; First argument must be a string | `builtins.ts:230` |
+| `shout(…)` | output in uppercase. | — | `builtins.ts:34` |
+| `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `builtins.ts:501` |
+| `sift(a, b)` | filter array. | sift() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:134` |
+| `sign(a)` | Returns -1, 0, or 1 depending on the sign of the number. | sign() takes 1 argument; Argument must be a number | `builtins.ts:1004` |
+| `sin(a)` | Advanced math. | — | `builtins.ts:466` |
+| `sinh(a)` | Evaluates `Math.sinh(a)`. | — | `builtins.ts:1032` |
+| `sleep()` | sleep(ms) - alias for delay. | — | `builtins.ts:1443` |
+| `snatch(…)` | snatch(str_or_list, start, end?) - substring OR remove at index from list. | snatch() takes 2-3 arguments; Second argument must be a number | `builtins.ts:1234` |
+| `some(a, b)` | some(list, predicate) - alias for any. | some() takes 2 arguments; First argument must be a list | `builtins.ts:1320` |
+| `sort(…)` | Returns the list sorted ascending, or by the supplied comparison function. | sort() takes 1-2 arguments; First argument must be a list | `builtins.ts:816` |
+| `sortDesc(a)` | sortDesc(list) - sort descending. | sortDesc() takes 1 argument; Argument must be a list | `builtins.ts:1258` |
+| `spawn(a)` | spawn (run function, synchronous in browser). | spawn() requires a function | `builtins.ts:2400` |
+| `speak(…)` | output to console. | — | `builtins.ts:14` |
+| `sqrt(a)` | Square root. | — | `builtins.ts:2442` |
+| `Stack(a)` | Stack() - LIFO stack. | Stack is empty | `builtins.ts:2317` |
+| `starts(a, b)` | starts(s, prefix) - alias for startswith. | starts() takes 2 arguments; Arguments must be text | `builtins.ts:1153` |
+| `startswith(a, b)` | True when the string begins with the given prefix. | startswith() takes 2 arguments; Arguments must be text | `builtins.ts:538` |
+| `str(a)` | str alias for morph to text. | — | `builtins.ts:2445` |
+| `sum(a)` | Adds every number in a list together. | sum() takes 1 argument; Argument must be a list | `builtins.ts:778` |
+| `take(a, b)` | Returns the first `n` elements of a list. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:756` |
+| `tan(a)` | Tangent of an angle in radians. | — | `builtins.ts:468` |
+| `tanh(a)` | Evaluates `Math.tanh(a)`. | — | `builtins.ts:1034` |
+| `tap(a, b)` | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function | `builtins.ts:2176` |
+| `TAU()` | The constant τ — a full turn in radians, equal to 2π. | — | `builtins.ts:472` |
+| `test(a, b)` | test(text, pattern) - test if regex matches. | test() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1812` |
+| `throw(…)` | throw(message) - throw error. | — | `builtins.ts:1526` |
+| `time()` | time() - current time as tome. | — | `builtins.ts:1912` |
+| `times(a, b)` | repeat(fn, n) - call function n times, return list of results. | times() takes 2 arguments (count, fn); First argument must be a number | `builtins.ts:2188` |
+| `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `builtins.ts:1048` |
+| `title(a)` | title(s) - title case. | title() takes 1 argument; Argument must be text | `builtins.ts:1669` |
+| `toFixed(a, b)` | toFixed(n, digits) - format to fixed decimal places. | toFixed() takes 2 arguments (number, digits); First argument must be a number | `builtins.ts:1608` |
+| `tome_keys(a)` | Returns the keys of a tome as a list. | tome_keys() takes a tome | `builtins.ts:2505` |
+| `toPrecision(a, b)` | toPrecision(n, precision) - format to precision. | toPrecision() takes 2 arguments; First argument must be a number | `builtins.ts:1619` |
+| `trim(a)` | Removes leading and trailing whitespace. | trim() takes 1 argument; Argument must be text | `builtins.ts:377` |
+| `trimLeft(a)` | trimLeft(s) / trimRight(s). | trimLeft() takes 1 argument; Argument must be text | `builtins.ts:1697` |
+| `trimRight(a)` | Removes trailing whitespace only. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1706` |
+| `typeof(a)` | typeof() - alias for gettype. | typeof() takes 1 argument | `builtins.ts:1488` |
+| `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | Invalid JSON | `builtins.ts:518` |
+| `unique(a)` | Removes duplicate values, preserving first-seen order. | unique() takes 1 argument; Argument must be a list | `builtins.ts:838` |
+| `unzip(a)` | Splits a list of pairs into two parallel lists. | unzip() takes 1 argument; Argument must be a list | `builtins.ts:706` |
+| `upper(a)` | String operations. | upper() takes 1 argument; Argument must be text | `builtins.ts:359` |
+| `values(a)` | values(tome) - alias for contents. | values() takes 1 argument; Argument must be a tome | `builtins.ts:2111` |
+| `Vec2(a, b)` | Vec2(x, y) - 2D vector. | Vec2() takes 2 arguments (x, y) | `builtins.ts:2204` |
+| `weave(a, b)` | join list to string. | weave() takes 2 arguments; First argument must be a list | `builtins.ts:217` |
+| `whisper(…)` | output without newline concept (same as speak in this context). | — | `builtins.ts:24` |
+| `write_file(a, b)` | Writes text to a file on the host filesystem, creating or truncating it. | write_file() takes a path and content; write_file( | `builtins.ts:2528` |
+| `zip(…)` | Pairs up two lists element by element into a list of pairs. | zip() takes at least 2 arguments; Argument ${i + 1} must be a list | `builtins.ts:689` |
 
 #### `src/lang/advanced.ts` — Pro layer — file I/O, hashing, base64, JSON, async, OS glue, buffers, FFI bridge
 
 34 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-| Call              | What it does                                                                         | Rules                                                                     | Source            |
-| ----------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------- |
-| `acos(a)`         | Inverse cosine, in radians.                                                          | acos() takes 1 argument                                                   | `advanced.ts:175` |
-| `asin(a)`         | Inverse sine, in radians.                                                            | asin() takes 1 argument                                                   | `advanced.ts:167` |
-| `assert(…)`       | ============= Assertions (for testing) =============.                                | assert() takes at least 1 argument                                        | `advanced.ts:361` |
-| `asserteq(a, b)`  | Throws when the two values differ — the built-in test assertion.                     | asserteq() takes 2 arguments; Assertion failed: ${a} differs ${b}         | `advanced.ts:374` |
-| `atan(a)`         | Inverse tangent, in radians.                                                         | atan() takes 1 argument                                                   | `advanced.ts:183` |
-| `atan2(a, b)`     | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | atan2() takes 2 arguments (y, x)                                          | `advanced.ts:191` |
-| `cos(a)`          | Cosine of an angle in radians.                                                       | cos() takes 1 argument                                                    | `advanced.ts:151` |
-| `decipher(a)`     | Parses a string back into a structured value (numbers, lists, tomes).                | decipher() takes 1 argument (path); File not found: ${path}               | `advanced.ts:45`  |
-| `E()`             | Euler's number, the base of the natural logarithm.                                   | —                                                                         | `advanced.ts:229` |
-| `erase(a, b)`     | handles both tome key deletion and virtual file deletion.                            | erase() takes 1 argument (path) or 2 arguments (tome, key)                | `advanced.ts:59`  |
-| `etch(a)`         | ============= JSON Operations =============.                                         | etch() takes 1 argument                                                   | `advanced.ts:10`  |
-| `exp(a)`          | e raised to the given power.                                                         | exp() takes 1 argument                                                    | `advanced.ts:215` |
-| `find(a, b)`      | Returns the index of the first matching element, or -1 when nothing matches.         | find() takes 2 arguments (list, predicate); First argument must be a list | `advanced.ts:263` |
-| `inscribe(a, b)`  | Formats values into a template string and returns the result.                        | inscribe() takes 2 arguments (path, content)                              | `advanced.ts:33`  |
-| `intersect(a, b)` | The set intersection of two lists — values present in both.                          | intersect() takes 2 arguments; Arguments must be lists                    | `advanced.ts:311` |
-| `invoke(…)`       | ============= HTTP/Networking (async simulation) =============.                      | invoke() takes at least 1 argument (url); Network error: ${e}             | `advanced.ts:89`  |
-| `log(a)`          | Natural logarithm.                                                                   | log() takes 1 argument                                                    | `advanced.ts:199` |
-| `log10(a)`        | Base-10 logarithm.                                                                   | log10() takes 1 argument                                                  | `advanced.ts:207` |
-| `now()`           | ============= Time Operations =============.                                         | —                                                                         | `advanced.ts:123` |
-| `pause(a)`        | Blocks or awaits for the given number of milliseconds.                               | pause() takes 1 argument (ms)                                             | `advanced.ts:133` |
-| `PI()`            | Constants.                                                                           | —                                                                         | `advanced.ts:224` |
-| `pick(a)`         | Returns one element chosen at random from a list.                                    | pick() takes 1 argument; Argument must be a list                          | `advanced.ts:334` |
-| `position(a, b)`  | The index at which a value or substring first appears.                               | position() takes 2 arguments; First argument must be a list               | `advanced.ts:277` |
-| `randint(a, b)`   | ============= Random =============.                                                  | randint() takes 2 arguments (min, max)                                    | `advanced.ts:324` |
-| `scroll()`        | Scrolls the rendered output or a target element.                                     | —                                                                         | `advanced.ts:81`  |
-| `shuffle(a)`      | Returns the list in a random order (Fisher–Yates).                                   | shuffle() takes 1 argument; Argument must be a list                       | `advanced.ts:345` |
-| `sin(a)`          | ============= Advanced Math =============.                                           | sin() takes 1 argument                                                    | `advanced.ts:143` |
-| `sort(…)`         | ============= Sorting & Searching =============.                                     | sort() takes at least 1 argument; First argument must be a list           | `advanced.ts:240` |
-| `tan(a)`          | Tangent of an angle in radians.                                                      | tan() takes 1 argument                                                    | `advanced.ts:159` |
-| `TAU()`           | The constant τ — a full turn in radians, equal to 2π.                                | —                                                                         | `advanced.ts:234` |
-| `timestamp()`     | Current time in milliseconds since the Unix epoch.                                   | —                                                                         | `advanced.ts:128` |
-| `unetch(a)`       | The inverse of `etch`: decodes an encoded string back to its original value.         | unetch() takes 1 argument; Invalid JSON                                   | `advanced.ts:18`  |
-| `union(a, b)`     | The set union of two lists — every distinct value from either side.                  | union() takes 2 arguments; Arguments must be lists                        | `advanced.ts:299` |
-| `unique(a)`       | ============= Set Operations =============.                                          | unique() takes 1 argument; Argument must be a list                        | `advanced.ts:289` |
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `acos(a)` | Inverse cosine, in radians. | acos() takes 1 argument | `advanced.ts:175` |
+| `asin(a)` | Inverse sine, in radians. | asin() takes 1 argument | `advanced.ts:167` |
+| `assert(…)` | ============= Assertions (for testing) =============. | assert() takes at least 1 argument | `advanced.ts:361` |
+| `asserteq(a, b)` | Throws when the two values differ — the built-in test assertion. | asserteq() takes 2 arguments; Assertion failed: ${a} differs ${b} | `advanced.ts:374` |
+| `atan(a)` | Inverse tangent, in radians. | atan() takes 1 argument | `advanced.ts:183` |
+| `atan2(a, b)` | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | atan2() takes 2 arguments (y, x) | `advanced.ts:191` |
+| `cos(a)` | Cosine of an angle in radians. | cos() takes 1 argument | `advanced.ts:151` |
+| `decipher(a)` | Parses a string back into a structured value (numbers, lists, tomes). | decipher() takes 1 argument (path); File not found: ${path} | `advanced.ts:45` |
+| `E()` | Euler's number, the base of the natural logarithm. | — | `advanced.ts:229` |
+| `erase(a, b)` | handles both tome key deletion and virtual file deletion. | erase() takes 1 argument (path) or 2 arguments (tome, key) | `advanced.ts:59` |
+| `etch(a)` | ============= JSON Operations =============. | etch() takes 1 argument | `advanced.ts:10` |
+| `exp(a)` | e raised to the given power. | exp() takes 1 argument | `advanced.ts:215` |
+| `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `advanced.ts:263` |
+| `inscribe(a, b)` | Formats values into a template string and returns the result. | inscribe() takes 2 arguments (path, content) | `advanced.ts:33` |
+| `intersect(a, b)` | The set intersection of two lists — values present in both. | intersect() takes 2 arguments; Arguments must be lists | `advanced.ts:311` |
+| `invoke(…)` | ============= HTTP/Networking (async simulation) =============. | invoke() takes at least 1 argument (url); Network error: ${e} | `advanced.ts:89` |
+| `log(a)` | Natural logarithm. | log() takes 1 argument | `advanced.ts:199` |
+| `log10(a)` | Base-10 logarithm. | log10() takes 1 argument | `advanced.ts:207` |
+| `now()` | ============= Time Operations =============. | — | `advanced.ts:123` |
+| `pause(a)` | Blocks or awaits for the given number of milliseconds. | pause() takes 1 argument (ms) | `advanced.ts:133` |
+| `PI()` | Constants. | — | `advanced.ts:224` |
+| `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `advanced.ts:334` |
+| `position(a, b)` | The index at which a value or substring first appears. | position() takes 2 arguments; First argument must be a list | `advanced.ts:277` |
+| `randint(a, b)` | ============= Random =============. | randint() takes 2 arguments (min, max) | `advanced.ts:324` |
+| `scroll()` | Scrolls the rendered output or a target element. | — | `advanced.ts:81` |
+| `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `advanced.ts:345` |
+| `sin(a)` | ============= Advanced Math =============. | sin() takes 1 argument | `advanced.ts:143` |
+| `sort(…)` | ============= Sorting & Searching =============. | sort() takes at least 1 argument; First argument must be a list | `advanced.ts:240` |
+| `tan(a)` | Tangent of an angle in radians. | tan() takes 1 argument | `advanced.ts:159` |
+| `TAU()` | The constant τ — a full turn in radians, equal to 2π. | — | `advanced.ts:234` |
+| `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `advanced.ts:128` |
+| `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | unetch() takes 1 argument; Invalid JSON | `advanced.ts:18` |
+| `union(a, b)` | The set union of two lists — every distinct value from either side. | union() takes 2 arguments; Arguments must be lists | `advanced.ts:299` |
+| `unique(a)` | ============= Set Operations =============. | unique() takes 1 argument; Argument must be a list | `advanced.ts:289` |
 
 #### `src/lang/matrix.ts` — Matrix and linear algebra
 
 13 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-| Call               | What it does                                                | Rules                                                                         | Source          |
-| ------------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------- |
-| `dot(a, b)`        | Dot product.                                                | dot() takes 2 arguments; Arguments must be lists                              | `matrix.ts:64`  |
-| `flatten(a)`       | Flatten.                                                    | flatten() takes 1 argument                                                    | `matrix.ts:155` |
-| `identity(a)`      | Identity matrix.                                            | identity() takes 1 argument (size)                                            | `matrix.ts:26`  |
-| `matadd(a, b)`     | Element-wise operations.                                    | matadd() takes 2 arguments                                                    | `matrix.ts:115` |
-| `matmean(a)`       | Mean of every element in a matrix.                          | matmean() takes 1 argument; Arguments must be 2D lists                        | `matrix.ts:209` |
-| `matmul(a, b)`     | Matrix multiplication.                                      | matmul() takes 2 arguments; Arguments must be 2D lists                        | `matrix.ts:83`  |
-| `matrix(…)`        | Create a matrix.                                            | matrix() takes at least 2 arguments (rows, cols, fill?)                       | `matrix.ts:10`  |
-| `matscale(a, b)`   | Multiplies every element of a matrix by a scalar.           | matscale() takes 2 arguments (matrix, scalar)                                 | `matrix.ts:131` |
-| `matsub(a, b)`     | Element-wise subtraction of two matrices of the same shape. | matsub() takes 2 arguments                                                    | `matrix.ts:123` |
-| `matsum(a)`        | Sum/mean.                                                   | matsum() takes 1 argument                                                     | `matrix.ts:198` |
-| `reshape(a, b, c)` | Reshape.                                                    | reshape() takes 3 arguments (list, rows, cols); First argument must be a list | `matrix.ts:177` |
-| `shape(a)`         | Shape.                                                      | shape() takes 1 argument                                                      | `matrix.ts:142` |
-| `transpose(a)`     | Transpose matrix.                                           | transpose() takes 1 argument; Argument must be a 2D list                      | `matrix.ts:42`  |
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `dot(a, b)` | Dot product. | dot() takes 2 arguments; Arguments must be lists | `matrix.ts:64` |
+| `flatten(a)` | Flatten. | flatten() takes 1 argument | `matrix.ts:155` |
+| `identity(a)` | Identity matrix. | identity() takes 1 argument (size) | `matrix.ts:26` |
+| `matadd(a, b)` | Element-wise operations. | matadd() takes 2 arguments | `matrix.ts:115` |
+| `matmean(a)` | Mean of every element in a matrix. | matmean() takes 1 argument; Arguments must be 2D lists | `matrix.ts:209` |
+| `matmul(a, b)` | Matrix multiplication. | matmul() takes 2 arguments; Arguments must be 2D lists | `matrix.ts:83` |
+| `matrix(…)` | Create a matrix. | matrix() takes at least 2 arguments (rows, cols, fill?) | `matrix.ts:10` |
+| `matscale(a, b)` | Multiplies every element of a matrix by a scalar. | matscale() takes 2 arguments (matrix, scalar) | `matrix.ts:131` |
+| `matsub(a, b)` | Element-wise subtraction of two matrices of the same shape. | matsub() takes 2 arguments | `matrix.ts:123` |
+| `matsum(a)` | Sum/mean. | matsum() takes 1 argument | `matrix.ts:198` |
+| `reshape(a, b, c)` | Reshape. | reshape() takes 3 arguments (list, rows, cols); First argument must be a list | `matrix.ts:177` |
+| `shape(a)` | Shape. | shape() takes 1 argument | `matrix.ts:142` |
+| `transpose(a)` | Transpose matrix. | transpose() takes 1 argument; Argument must be a 2D list | `matrix.ts:42` |
 
 #### `src/lang/graphics.ts` — Canvas 2D drawing and turtle graphics
 
 75 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-| Call                         | What it does                                                                  | Rules                                                                              | Source            |
-| ---------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------- |
-| `alpha(a)`                   | Sets the global drawing opacity for subsequent canvas operations.             | alpha() takes 1 argument (0-1)                                                     | `graphics.ts:136` |
-| `arc(…)`                     | Draws a circular arc from a start angle to an end angle.                      | arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?)     | `graphics.ts:196` |
-| `background(…)`              | Fills the whole canvas with a colour, clearing what was drawn.                | background() takes at least 1 argument                                             | `graphics.ts:65`  |
-| `backward(a)`                | Moves the turtle backwards by the given distance, drawing if the pen is down. | backward() takes 1 argument (distance)                                             | `graphics.ts:546` |
-| `beginPath()`                | ========== Path Drawing ==========.                                           | —                                                                                  | `graphics.ts:374` |
-| `bezierTo(a, b, c, d, e, f)` | Adds a cubic Bézier segment using two control points.                         | bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y)                        | `graphics.ts:408` |
-| `canvas(a, b)`               | ========== Canvas Setup ==========.                                           | canvas() takes 2 arguments (width, height)                                         | `graphics.ts:45`  |
-| `circle(a, b, c)`            | Draws a circle at a centre point with the given radius.                       | circle() takes 3 arguments (x, y, radius)                                          | `graphics.ts:178` |
-| `clear(a)`                   | Erases the canvas contents.                                                   | —                                                                                  | `graphics.ts:56`  |
-| `closePath()`                | Closes the current path back to its starting point.                           | —                                                                                  | `graphics.ts:382` |
-| `constrain(a, b, c)`         | Clamps a number into the inclusive range `[low, high]`.                       | constrain() takes 3 arguments (value, min, max)                                    | `graphics.ts:811` |
-| `createSprite(…)`            | ========== Sprite System ==========.                                          | createSprite() takes 4-5 arguments (x, y, width, height, color?)                   | `graphics.ts:443` |
-| `degrees(a)`                 | Converts radians to degrees.                                                  | degrees() takes 1 argument (radians)                                               | `graphics.ts:779` |
-| `dist(a, b, c, d)`           | Euclidean distance between two points.                                        | dist() takes 4 arguments (x1, y1, x2, y2)                                          | `graphics.ts:822` |
-| `dot(a, b)`                  | Dot product of two vectors.                                                   | —                                                                                  | `graphics.ts:706` |
-| `drawSprite(a)`              | Renders a sprite at its current position and frame.                           | drawSprite() takes 1 argument (sprite); Invalid sprite                             | `graphics.ts:467` |
-| `ellipse(…)`                 | Draws an ellipse with independent width and height radii.                     | ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?)                            | `graphics.ts:187` |
-| `fill(a)`                    | ========== Drawing State ==========.                                          | fill() takes 1 argument (color)                                                    | `graphics.ts:75`  |
-| `fillPath()`                 | Fills the current path with the active fill colour.                           | —                                                                                  | `graphics.ts:426` |
-| `font(…)`                    | Sets the font family and size used by text drawing.                           | font() takes 1-2 arguments (fontFamily, style?)                                    | `graphics.ts:291` |
-| `forward(a)`                 | Moves the turtle forwards by the given distance, drawing if the pen is down.  | forward() takes 1 argument (distance)                                              | `graphics.ts:528` |
-| `goto(a, b)`                 | Moves the turtle straight to an absolute canvas coordinate.                   | goto() takes 2 arguments (x, y)                                                    | `graphics.ts:622` |
-| `heading()`                  | The turtle's current facing angle in degrees.                                 | —                                                                                  | `graphics.ts:663` |
-| `heart(a, b, c)`             | Draws a heart shape at the given position and size.                           | heart() takes 3 arguments (x, y, size)                                             | `graphics.ts:263` |
-| `home()`                     | Returns the turtle to the canvas centre facing its default direction.         | —                                                                                  | `graphics.ts:638` |
-| `hsla(a, b, c, d)`           | Builds a colour from hue, saturation, lightness, and alpha.                   | hsla() takes 4 arguments (h, s, l, a)                                              | `graphics.ts:754` |
-| `hue(…)`                     | ========== Color Helpers ==========.                                          | hue() takes 1-3 arguments (h, s?, l?)                                              | `graphics.ts:727` |
-| `left(a)`                    | Turns the turtle counter-clockwise by the given angle.                        | left() takes 1 argument (degrees)                                                  | `graphics.ts:564` |
-| `lerp(a, b, c)`              | Linear interpolation between two values by a factor in 0..1.                  | lerp() takes 3 arguments (a, b, t)                                                 | `graphics.ts:787` |
-| `line(a, b, c, d)`           | Draws a straight line between two points.                                     | line() takes 4 arguments (x1, y1, x2, y2)                                          | `graphics.ts:211` |
-| `linearGradient(…)`          | ========== Gradients ==========.                                              | linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops)                | `graphics.ts:301` |
-| `lineCap(a)`                 | Sets how stroked line ends are drawn: `butt`, `round`, or `square`.           | lineCap() takes 1 argument (round, square, butt)                                   | `graphics.ts:118` |
-| `lineJoin(a)`                | Sets how stroked corners join: `miter`, `round`, or `bevel`.                  | lineJoin() takes 1 argument (round, bevel, miter)                                  | `graphics.ts:127` |
-| `lineTo(a, b)`               | Adds a straight segment from the current path point to the given point.       | lineTo() takes 2 arguments (x, y)                                                  | `graphics.ts:399` |
-| `lineWidth(a)`               | Sets stroke thickness in pixels.                                              | lineWidth() takes 1 argument                                                       | `graphics.ts:109` |
-| `mapRange(a, b, c, d, e)`    | Re-maps a number from one numeric range into another, proportionally.         | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax)                 | `graphics.ts:798` |
-| `moveSprite(a, b, c)`        | Moves a sprite to a new position.                                             | moveSprite() takes 3 arguments (sprite, dx, dy); Invalid sprite                    | `graphics.ts:478` |
-| `moveTo(a, b)`               | Starts a new path segment at the given point without drawing.                 | moveTo() takes 2 arguments (x, y)                                                  | `graphics.ts:390` |
-| `noFill()`                   | Turns off filling for subsequent shapes.                                      | —                                                                                  | `graphics.ts:84`  |
-| `noShadow()`                 | Clears any configured drop shadow.                                            | —                                                                                  | `graphics.ts:160` |
-| `noStroke()`                 | Turns off outlining for subsequent shapes.                                    | —                                                                                  | `graphics.ts:101` |
-| `pencolor(a)`                | Sets the stroke colour used by the turtle and shape outlines.                 | pencolor() takes 1 argument (color)                                                | `graphics.ts:604` |
-| `pendown()`                  | Lowers the pen so turtle movement draws.                                      | —                                                                                  | `graphics.ts:596` |
-| `penup()`                    | Raises the pen so turtle movement does not draw.                              | —                                                                                  | `graphics.ts:588` |
-| `penwidth(a)`                | Sets the stroke width in pixels.                                              | penwidth() takes 1 argument (width)                                                | `graphics.ts:613` |
-| `point(…)`                   | Draws a single pixel-sized dot.                                               | point() takes 2-3 arguments (x, y, size?)                                          | `graphics.ts:220` |
-| `polygon(…)`                 | Draws a regular polygon with the given number of sides.                       | polygon() takes points \[\[x,y], ...]; polygon() argument must be a list of points | `graphics.ts:238` |
-| `pos()`                      | The turtle's current `[x, y]` position.                                       | —                                                                                  | `graphics.ts:671` |
-| `quadraticTo(a, b, c, d)`    | Adds a quadratic Bézier segment using one control point.                      | quadraticTo() takes 4 arguments (cpx, cpy, x, y)                                   | `graphics.ts:417` |
-| `radialGradient(…)`          | Creates a radial gradient fill between two circles and colour stops.          | radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops)        | `graphics.ts:311` |
-| `radians(a)`                 | ========== Math Utilities for Graphics ==========.                            | radians() takes 1 argument (degrees)                                               | `graphics.ts:771` |
-| `randomColor()`              | Returns a random colour value.                                                | —                                                                                  | `graphics.ts:762` |
-| `rect(…)`                    | ========== Basic Shapes ==========.                                           | rect() takes 4-5 arguments (x, y, w, h, radius?)                                   | `graphics.ts:169` |
-| `resetTransform()`           | Restores the canvas coordinate system to its identity state.                  | —                                                                                  | `graphics.ts:365` |
-| `restore()`                  | Pops the last saved canvas transform and style state.                         | —                                                                                  | `graphics.ts:357` |
-| `rgb(a, b, c)`               | Builds an opaque colour from red, green, and blue channels.                   | rgb() takes 3 arguments (r, g, b)                                                  | `graphics.ts:738` |
-| `rgba(a, b, c, d)`           | Builds a colour from red, green, blue, and alpha channels.                    | rgba() takes 4 arguments (r, g, b, a)                                              | `graphics.ts:746` |
-| `right(a)`                   | Turns the turtle clockwise by the given angle.                                | right() takes 1 argument (degrees)                                                 | `graphics.ts:576` |
-| `rotate(a)`                  | Rotates the canvas coordinate system by an angle.                             | rotate() takes 1 argument (angle in radians)                                       | `graphics.ts:331` |
-| `save()`                     | Pushes the current canvas transform and style state onto a stack.             | —                                                                                  | `graphics.ts:349` |
-| `scale(…)`                   | Scales the canvas coordinate system on the x and y axes.                      | scale() takes 1-2 arguments (x, y?)                                                | `graphics.ts:340` |
-| `setheading(a)`              | Points the turtle at an absolute angle in degrees.                            | setheading() takes 1 argument (angle)                                              | `graphics.ts:651` |
-| `shadow(…)`                  | Configures the drop shadow applied to subsequent drawing.                     | shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?)                      | `graphics.ts:145` |
-| `spriteCollides(a, b)`       | True when two sprites' bounding boxes overlap.                                | spriteCollides() takes 2 arguments (sprite1, sprite2); Invalid sprites             | `graphics.ts:502` |
-| `stamp()`                    | Imprints the turtle's current shape onto the canvas without moving it.        | —                                                                                  | `graphics.ts:717` |
-| `star(…)`                    | Draws a star with the given number of points.                                 | star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?)               | `graphics.ts:249` |
-| `stroke(…)`                  | Strokes the current path with the active pen colour and width.                | stroke() takes 1-2 arguments (color, width?)                                       | `graphics.ts:92`  |
-| `strokePath()`               | Strokes the current path outline with the active pen.                         | —                                                                                  | `graphics.ts:434` |
-| `text(…)`                    | ========== Text ==========.                                                   | text() takes 3-4 arguments (str, x, y, size?)                                      | `graphics.ts:273` |
-| `textAlign(…)`               | Sets horizontal (and optionally vertical) alignment for drawn text.           | textAlign() takes 1-2 arguments (horizontal, vertical?)                            | `graphics.ts:282` |
-| `translate(a, b)`            | ========== Transformations ==========.                                        | translate() takes 2 arguments (x, y)                                               | `graphics.ts:322` |
-| `triangle(a, b, c, d, e, f)` | Draws a triangle through three points.                                        | triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3)                              | `graphics.ts:229` |
-| `turtle()`                   | ========== Turtle Graphics ==========.                                        | —                                                                                  | `graphics.ts:519` |
-| `turtleCircle(…)`            | Drives the turtle around a circle of the given radius, drawing as it goes.    | turtleCircle() takes 1-2 arguments (radius, steps?)                                | `graphics.ts:679` |
-| `updateSprite(a)`            | Advances a sprite's animation and physics by one step.                        | updateSprite() takes 1 argument (sprite); Invalid sprite                           | `graphics.ts:490` |
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `alpha(a)` | Sets the global drawing opacity for subsequent canvas operations. | alpha() takes 1 argument (0-1) | `graphics.ts:136` |
+| `arc(…)` | Draws a circular arc from a start angle to an end angle. | arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?) | `graphics.ts:196` |
+| `background(…)` | Fills the whole canvas with a colour, clearing what was drawn. | background() takes at least 1 argument | `graphics.ts:65` |
+| `backward(a)` | Moves the turtle backwards by the given distance, drawing if the pen is down. | backward() takes 1 argument (distance) | `graphics.ts:546` |
+| `beginPath()` | ========== Path Drawing ==========. | — | `graphics.ts:374` |
+| `bezierTo(a, b, c, d, e, f)` | Adds a cubic Bézier segment using two control points. | bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y) | `graphics.ts:408` |
+| `canvas(a, b)` | ========== Canvas Setup ==========. | canvas() takes 2 arguments (width, height) | `graphics.ts:45` |
+| `circle(a, b, c)` | Draws a circle at a centre point with the given radius. | circle() takes 3 arguments (x, y, radius) | `graphics.ts:178` |
+| `clear(a)` | Erases the canvas contents. | — | `graphics.ts:56` |
+| `closePath()` | Closes the current path back to its starting point. | — | `graphics.ts:382` |
+| `constrain(a, b, c)` | Clamps a number into the inclusive range `[low, high]`. | constrain() takes 3 arguments (value, min, max) | `graphics.ts:811` |
+| `createSprite(…)` | ========== Sprite System ==========. | createSprite() takes 4-5 arguments (x, y, width, height, color?) | `graphics.ts:443` |
+| `degrees(a)` | Converts radians to degrees. | degrees() takes 1 argument (radians) | `graphics.ts:779` |
+| `dist(a, b, c, d)` | Euclidean distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:822` |
+| `dot(a, b)` | Dot product of two vectors. | — | `graphics.ts:706` |
+| `drawSprite(a)` | Renders a sprite at its current position and frame. | drawSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:467` |
+| `ellipse(…)` | Draws an ellipse with independent width and height radii. | ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?) | `graphics.ts:187` |
+| `fill(a)` | ========== Drawing State ==========. | fill() takes 1 argument (color) | `graphics.ts:75` |
+| `fillPath()` | Fills the current path with the active fill colour. | — | `graphics.ts:426` |
+| `font(…)` | Sets the font family and size used by text drawing. | font() takes 1-2 arguments (fontFamily, style?) | `graphics.ts:291` |
+| `forward(a)` | Moves the turtle forwards by the given distance, drawing if the pen is down. | forward() takes 1 argument (distance) | `graphics.ts:528` |
+| `goto(a, b)` | Moves the turtle straight to an absolute canvas coordinate. | goto() takes 2 arguments (x, y) | `graphics.ts:622` |
+| `heading()` | The turtle's current facing angle in degrees. | — | `graphics.ts:663` |
+| `heart(a, b, c)` | Draws a heart shape at the given position and size. | heart() takes 3 arguments (x, y, size) | `graphics.ts:263` |
+| `home()` | Returns the turtle to the canvas centre facing its default direction. | — | `graphics.ts:638` |
+| `hsla(a, b, c, d)` | Builds a colour from hue, saturation, lightness, and alpha. | hsla() takes 4 arguments (h, s, l, a) | `graphics.ts:754` |
+| `hue(…)` | ========== Color Helpers ==========. | hue() takes 1-3 arguments (h, s?, l?) | `graphics.ts:727` |
+| `left(a)` | Turns the turtle counter-clockwise by the given angle. | left() takes 1 argument (degrees) | `graphics.ts:564` |
+| `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (a, b, t) | `graphics.ts:787` |
+| `line(a, b, c, d)` | Draws a straight line between two points. | line() takes 4 arguments (x1, y1, x2, y2) | `graphics.ts:211` |
+| `linearGradient(…)` | ========== Gradients ==========. | linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops) | `graphics.ts:301` |
+| `lineCap(a)` | Sets how stroked line ends are drawn: `butt`, `round`, or `square`. | lineCap() takes 1 argument (round, square, butt) | `graphics.ts:118` |
+| `lineJoin(a)` | Sets how stroked corners join: `miter`, `round`, or `bevel`. | lineJoin() takes 1 argument (round, bevel, miter) | `graphics.ts:127` |
+| `lineTo(a, b)` | Adds a straight segment from the current path point to the given point. | lineTo() takes 2 arguments (x, y) | `graphics.ts:399` |
+| `lineWidth(a)` | Sets stroke thickness in pixels. | lineWidth() takes 1 argument | `graphics.ts:109` |
+| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax) | `graphics.ts:798` |
+| `moveSprite(a, b, c)` | Moves a sprite to a new position. | moveSprite() takes 3 arguments (sprite, dx, dy); Invalid sprite | `graphics.ts:478` |
+| `moveTo(a, b)` | Starts a new path segment at the given point without drawing. | moveTo() takes 2 arguments (x, y) | `graphics.ts:390` |
+| `noFill()` | Turns off filling for subsequent shapes. | — | `graphics.ts:84` |
+| `noShadow()` | Clears any configured drop shadow. | — | `graphics.ts:160` |
+| `noStroke()` | Turns off outlining for subsequent shapes. | — | `graphics.ts:101` |
+| `pencolor(a)` | Sets the stroke colour used by the turtle and shape outlines. | pencolor() takes 1 argument (color) | `graphics.ts:604` |
+| `pendown()` | Lowers the pen so turtle movement draws. | — | `graphics.ts:596` |
+| `penup()` | Raises the pen so turtle movement does not draw. | — | `graphics.ts:588` |
+| `penwidth(a)` | Sets the stroke width in pixels. | penwidth() takes 1 argument (width) | `graphics.ts:613` |
+| `point(…)` | Draws a single pixel-sized dot. | point() takes 2-3 arguments (x, y, size?) | `graphics.ts:220` |
+| `polygon(…)` | Draws a regular polygon with the given number of sides. | polygon() takes points [[x,y], ...]; polygon() argument must be a list of points | `graphics.ts:238` |
+| `pos()` | The turtle's current `[x, y]` position. | — | `graphics.ts:671` |
+| `quadraticTo(a, b, c, d)` | Adds a quadratic Bézier segment using one control point. | quadraticTo() takes 4 arguments (cpx, cpy, x, y) | `graphics.ts:417` |
+| `radialGradient(…)` | Creates a radial gradient fill between two circles and colour stops. | radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops) | `graphics.ts:311` |
+| `radians(a)` | ========== Math Utilities for Graphics ==========. | radians() takes 1 argument (degrees) | `graphics.ts:771` |
+| `randomColor()` | Returns a random colour value. | — | `graphics.ts:762` |
+| `rect(…)` | ========== Basic Shapes ==========. | rect() takes 4-5 arguments (x, y, w, h, radius?) | `graphics.ts:169` |
+| `resetTransform()` | Restores the canvas coordinate system to its identity state. | — | `graphics.ts:365` |
+| `restore()` | Pops the last saved canvas transform and style state. | — | `graphics.ts:357` |
+| `rgb(a, b, c)` | Builds an opaque colour from red, green, and blue channels. | rgb() takes 3 arguments (r, g, b) | `graphics.ts:738` |
+| `rgba(a, b, c, d)` | Builds a colour from red, green, blue, and alpha channels. | rgba() takes 4 arguments (r, g, b, a) | `graphics.ts:746` |
+| `right(a)` | Turns the turtle clockwise by the given angle. | right() takes 1 argument (degrees) | `graphics.ts:576` |
+| `rotate(a)` | Rotates the canvas coordinate system by an angle. | rotate() takes 1 argument (angle in radians) | `graphics.ts:331` |
+| `save()` | Pushes the current canvas transform and style state onto a stack. | — | `graphics.ts:349` |
+| `scale(…)` | Scales the canvas coordinate system on the x and y axes. | scale() takes 1-2 arguments (x, y?) | `graphics.ts:340` |
+| `setheading(a)` | Points the turtle at an absolute angle in degrees. | setheading() takes 1 argument (angle) | `graphics.ts:651` |
+| `shadow(…)` | Configures the drop shadow applied to subsequent drawing. | shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?) | `graphics.ts:145` |
+| `spriteCollides(a, b)` | True when two sprites' bounding boxes overlap. | spriteCollides() takes 2 arguments (sprite1, sprite2); Invalid sprites | `graphics.ts:502` |
+| `stamp()` | Imprints the turtle's current shape onto the canvas without moving it. | — | `graphics.ts:717` |
+| `star(…)` | Draws a star with the given number of points. | star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?) | `graphics.ts:249` |
+| `stroke(…)` | Strokes the current path with the active pen colour and width. | stroke() takes 1-2 arguments (color, width?) | `graphics.ts:92` |
+| `strokePath()` | Strokes the current path outline with the active pen. | — | `graphics.ts:434` |
+| `text(…)` | ========== Text ==========. | text() takes 3-4 arguments (str, x, y, size?) | `graphics.ts:273` |
+| `textAlign(…)` | Sets horizontal (and optionally vertical) alignment for drawn text. | textAlign() takes 1-2 arguments (horizontal, vertical?) | `graphics.ts:282` |
+| `translate(a, b)` | ========== Transformations ==========. | translate() takes 2 arguments (x, y) | `graphics.ts:322` |
+| `triangle(a, b, c, d, e, f)` | Draws a triangle through three points. | triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3) | `graphics.ts:229` |
+| `turtle()` | ========== Turtle Graphics ==========. | — | `graphics.ts:519` |
+| `turtleCircle(…)` | Drives the turtle around a circle of the given radius, drawing as it goes. | turtleCircle() takes 1-2 arguments (radius, steps?) | `graphics.ts:679` |
+| `updateSprite(a)` | Advances a sprite's animation and physics by one step. | updateSprite() takes 1 argument (sprite); Invalid sprite | `graphics.ts:490` |
 
 #### `src/lang/ui.ts` — App widget runtime used by the IDE App preview
 
 33 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-| Call                 | What it does                                                                | Rules | Source      |
-| -------------------- | --------------------------------------------------------------------------- | ----- | ----------- |
-| `alert(a)`           | Programmatic dialog.                                                        | —     | `ui.ts:283` |
-| `button(a, b, c)`    | ───────────────────────── Interactive widgets ─────────────────────────.    | —     | `ui.ts:183` |
-| `checkbox(a, b)`     | Adds a checkbox widget bound to a named state key.                          | —     | `ui.ts:209` |
-| `column()`           | Starts a vertical layout column; close it with `endcolumn`.                 | —     | `ui.ts:108` |
-| `divider()`          | Draws a horizontal separator line between widgets.                          | —     | `ui.ts:165` |
-| `endcolumn()`        | Closes the column opened by `column`.                                       | —     | `ui.ts:109` |
-| `endgroup()`         | Closes the group opened by `group`.                                         | —     | `ui.ts:115` |
-| `endmenu()`          | Closes the menu opened by `menu`.                                           | —     | `ui.ts:249` |
-| `endrow()`           | Closes the row opened by `row`.                                             | —     | `ui.ts:107` |
-| `endtab()`           | Closes the tab opened by `tab`.                                             | —     | `ui.ts:123` |
-| `endtabs()`          | Closes the tab strip opened by `tabs`.                                      | —     | `ui.ts:118` |
-| `endwindow()`        | Closes the window opened by `window`.                                       | —     | `ui.ts:104` |
-| `group(a)`           | Starts a labelled group box; close it with `endgroup`.                      | —     | `ui.ts:111` |
-| `heading(a, b)`      | Renders a heading-styled text widget.                                       | —     | `ui.ts:142` |
-| `image(a, b, c, d)`  | Renders an image widget from a URL or data URI.                             | —     | `ui.ts:160` |
-| `input(a, b)`        | Adds a single-line text input bound to a state key.                         | —     | `ui.ts:192` |
-| `label(a)`           | Renders a short static text label.                                          | —     | `ui.ts:148` |
-| `menu(a)`            | ───────────────────────── Menu ─────────────────────────.                   | —     | `ui.ts:245` |
-| `menuitem(a, b)`     | Adds one clickable entry to the current menu.                               | —     | `ui.ts:250` |
-| `paragraph(a)`       | Renders a block of body text.                                               | —     | `ui.ts:154` |
-| `progress(a, b)`     | Renders a progress bar for a value between 0 and 1.                         | —     | `ui.ts:168` |
-| `row()`              | Starts a horizontal layout row; close it with `endrow`.                     | —     | `ui.ts:106` |
-| `select(a, b)`       | Adds a drop-down list bound to a state key.                                 | —     | `ui.ts:227` |
-| `show()`             | Show window (re-emit in case).                                              | —     | `ui.ts:280` |
-| `slider(a, b, c, d)` | Adds a numeric slider with a range bound to a state key.                    | —     | `ui.ts:217` |
-| `spacer(a)`          | Evaluates `{ pushNode('spacer', { size: asNumber(a, 8) }); return null; }`. | —     | `ui.ts:166` |
-| `tab(a)`             | Declares one tab inside a `tabs` container.                                 | —     | `ui.ts:119` |
-| `table(a, b)`        | ───────────────────────── Tables ─────────────────────────.                 | —     | `ui.ts:236` |
-| `tabs()`             | Starts a tab strip; close it with `endtabs`.                                | —     | `ui.ts:117` |
-| `textarea(a, b, c)`  | Adds a multi-line text input bound to a state key.                          | —     | `ui.ts:200` |
-| `uiget(a)`           | ───────────────────────── Reactive value helpers ─────────────────────────. | —     | `ui.ts:260` |
-| `uiset(a, b)`        | Writes a value into the app widget state store, re-rendering the UI.        | —     | `ui.ts:264` |
-| `window(a, b, c)`    | ───────────────────────── Containers ─────────────────────────.             | —     | `ui.ts:90`  |
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `alert(a)` | Programmatic dialog. | — | `ui.ts:283` |
+| `button(a, b, c)` | ───────────────────────── Interactive widgets ─────────────────────────. | — | `ui.ts:183` |
+| `checkbox(a, b)` | Adds a checkbox widget bound to a named state key. | — | `ui.ts:209` |
+| `column()` | Starts a vertical layout column; close it with `endcolumn`. | — | `ui.ts:108` |
+| `divider()` | Draws a horizontal separator line between widgets. | — | `ui.ts:165` |
+| `endcolumn()` | Closes the column opened by `column`. | — | `ui.ts:109` |
+| `endgroup()` | Closes the group opened by `group`. | — | `ui.ts:115` |
+| `endmenu()` | Closes the menu opened by `menu`. | — | `ui.ts:249` |
+| `endrow()` | Closes the row opened by `row`. | — | `ui.ts:107` |
+| `endtab()` | Closes the tab opened by `tab`. | — | `ui.ts:123` |
+| `endtabs()` | Closes the tab strip opened by `tabs`. | — | `ui.ts:118` |
+| `endwindow()` | Closes the window opened by `window`. | — | `ui.ts:104` |
+| `group(a)` | Starts a labelled group box; close it with `endgroup`. | — | `ui.ts:111` |
+| `heading(a, b)` | Renders a heading-styled text widget. | — | `ui.ts:142` |
+| `image(a, b, c, d)` | Renders an image widget from a URL or data URI. | — | `ui.ts:160` |
+| `input(a, b)` | Adds a single-line text input bound to a state key. | — | `ui.ts:192` |
+| `label(a)` | Renders a short static text label. | — | `ui.ts:148` |
+| `menu(a)` | ───────────────────────── Menu ─────────────────────────. | — | `ui.ts:245` |
+| `menuitem(a, b)` | Adds one clickable entry to the current menu. | — | `ui.ts:250` |
+| `paragraph(a)` | Renders a block of body text. | — | `ui.ts:154` |
+| `progress(a, b)` | Renders a progress bar for a value between 0 and 1. | — | `ui.ts:168` |
+| `row()` | Starts a horizontal layout row; close it with `endrow`. | — | `ui.ts:106` |
+| `select(a, b)` | Adds a drop-down list bound to a state key. | — | `ui.ts:227` |
+| `show()` | Show window (re-emit in case). | — | `ui.ts:280` |
+| `slider(a, b, c, d)` | Adds a numeric slider with a range bound to a state key. | — | `ui.ts:217` |
+| `spacer(a)` | Evaluates `{ pushNode('spacer', { size: asNumber(a, 8) }); return null; }`. | — | `ui.ts:166` |
+| `tab(a)` | Declares one tab inside a `tabs` container. | — | `ui.ts:119` |
+| `table(a, b)` | ───────────────────────── Tables ─────────────────────────. | — | `ui.ts:236` |
+| `tabs()` | Starts a tab strip; close it with `endtabs`. | — | `ui.ts:117` |
+| `textarea(a, b, c)` | Adds a multi-line text input bound to a state key. | — | `ui.ts:200` |
+| `uiget(a)` | ───────────────────────── Reactive value helpers ─────────────────────────. | — | `ui.ts:260` |
+| `uiset(a, b)` | Writes a value into the app widget state store, re-rendering the UI. | — | `ui.ts:264` |
+| `window(a, b, c)` | ───────────────────────── Containers ─────────────────────────. | — | `ui.ts:90` |
 
 #### `src/lang/web.ts` — Web DSL — HTML tags, CSS, JS hooks, raw passthrough
 
 16 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-| Call              | What it does                                                                 | Rules | Source       |
-| ----------------- | ---------------------------------------------------------------------------- | ----- | ------------ |
-| `close()`         | Closes an open handle (file, socket, page, or window) and releases it.       | —     | `web.ts:227` |
-| `endpage()`       | Closes the document opened by `page`.                                        | —     | `web.ts:191` |
-| `keyframes(a, b)` | Emits a CSS `@keyframes` animation block.                                    | —     | `web.ts:244` |
-| `link(a, b)`      | Emits a `<link>` tag — typically a stylesheet or icon.                       | —     | `web.ts:207` |
-| `meta(a)`         | Emits a `<meta>` tag into the document head.                                 | —     | `web.ts:202` |
-| `on(a, b, c)`     | on("input", "#id", "...") — generic event.                                   | —     | `web.ts:269` |
-| `onclick(a, b)`   | onclick("#id", "alert('hi')").                                               | —     | `web.ts:261` |
-| `open(…)`         | open(name, attrs?) / close().                                                | —     | `web.ts:222` |
-| `page(a)`         | Opens an HTML document; close it with `endpage`.                             | —     | `web.ts:180` |
-| `raw_css(a)`      | Evaluates `{ state.css.push(asStr(a)); mark(); return null; }`.              | —     | `web.ts:280` |
-| `raw_html(a)`     | Evaluates `{ push(asStr(a)); mark(); return null; }`.                        | —     | `web.ts:279` |
-| `raw_js(a)`       | Injects raw JavaScript into the generated page untouched.                    | —     | `web.ts:281` |
-| `script(a)`       | Emits a `<script>` tag with the given source or URL.                         | —     | `web.ts:256` |
-| `style(a, b)`     | style(selector, props\_dict) — or style(raw\_css\_string).                   | —     | `web.ts:232` |
-| `tag(…)`          | tag(name, text?, attrs?) — works for any HTML tag, even ones we didn't list. | —     | `web.ts:215` |
-| `title(a)`        | Sets the document title in the generated page head.                          | —     | `web.ts:198` |
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `close()` | Closes an open handle (file, socket, page, or window) and releases it. | — | `web.ts:227` |
+| `endpage()` | Closes the document opened by `page`. | — | `web.ts:191` |
+| `keyframes(a, b)` | Emits a CSS `@keyframes` animation block. | — | `web.ts:244` |
+| `link(a, b)` | Emits a `<link>` tag — typically a stylesheet or icon. | — | `web.ts:207` |
+| `meta(a)` | Emits a `<meta>` tag into the document head. | — | `web.ts:202` |
+| `on(a, b, c)` | on("input", "#id", "...")  — generic event. | — | `web.ts:269` |
+| `onclick(a, b)` | onclick("#id", "alert('hi')"). | — | `web.ts:261` |
+| `open(…)` | open(name, attrs?)  /  close(). | — | `web.ts:222` |
+| `page(a)` | Opens an HTML document; close it with `endpage`. | — | `web.ts:180` |
+| `raw_css(a)` | Evaluates `{ state.css.push(asStr(a)); mark(); return null; }`. | — | `web.ts:280` |
+| `raw_html(a)` | Evaluates `{ push(asStr(a)); mark(); return null; }`. | — | `web.ts:279` |
+| `raw_js(a)` | Injects raw JavaScript into the generated page untouched. | — | `web.ts:281` |
+| `script(a)` | Emits a `<script>` tag with the given source or URL. | — | `web.ts:256` |
+| `style(a, b)` | style(selector, props_dict)  — or  style(raw_css_string). | — | `web.ts:232` |
+| `tag(…)` | tag(name, text?, attrs?)  — works for any HTML tag, even ones we didn't list. | — | `web.ts:215` |
+| `title(a)` | Sets the document title in the generated page head. | — | `web.ts:198` |
 
 #### `src/lang/kernel.ts` — Virtual kernel — tasks, syscalls, IPC, GC, process table
 
 46 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
-| Call                          | What it does                                                              | Rules                                                                              | Source           |
-| ----------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------- |
-| `closeWindow(a)`              | Closes a virtual window and frees its resources.                          | closeWindow() takes 1 argument                                                     | `kernel.ts:910`  |
-| `createTask(a, b, c)`         | Task shortcuts.                                                           | createTask() requires a function                                                   | `kernel.ts:819`  |
-| `createWindow(a, b, c, d, e)` | Window manager.                                                           | —                                                                                  | `kernel.ts:899`  |
-| `deviceList()`                | HAL.                                                                      | —                                                                                  | `kernel.ts:944`  |
-| `deviceRead(a)`               | Reads from a virtual device by name.                                      | deviceRead() takes 1 argument; Device not found: ${args\[0]}                       | `kernel.ts:949`  |
-| `deviceStatus(a)`             | Reports whether a virtual device is attached and ready.                   | deviceStatus() takes 1 argument; Device not found: ${args\[0]}                     | `kernel.ts:970`  |
-| `deviceWrite(a, b)`           | Writes a value to a virtual device by name.                               | deviceWrite() takes 2 arguments; Device not found: ${args\[0]}                     | `kernel.ts:959`  |
-| `emitEvent(…)`                | Fires a named kernel event, invoking every registered handler.            | emitEvent() takes at least 1 argument                                              | `kernel.ts:1067` |
-| `f32()`                       | FFI type tag: 32-bit float.                                               | —                                                                                  | `kernel.ts:1048` |
-| `f64()`                       | FFI type tag: 64-bit float.                                               | —                                                                                  | `kernel.ts:1049` |
-| `fsAppend(a, b)`              | Appends text to the end of a virtual filesystem file.                     | fsAppend() takes 2 arguments                                                       | `kernel.ts:809`  |
-| `fsDelete(a)`                 | Deletes a virtual filesystem entry.                                       | fsDelete() takes 1 argument                                                        | `kernel.ts:785`  |
-| `fsExists(a)`                 | True when the path exists in the virtual filesystem.                      | fsExists() takes 1 argument                                                        | `kernel.ts:793`  |
-| `fsList(a)`                   | Lists the children of a virtual filesystem directory.                     | fsList() takes 1 argument                                                          | `kernel.ts:768`  |
-| `fsMkdir(a)`                  | Creates a directory in the virtual filesystem.                            | fsMkdir() takes 1 argument                                                         | `kernel.ts:776`  |
-| `fsRead(a)`                   | VFS shortcuts.                                                            | fsRead() takes 1 argument                                                          | `kernel.ts:751`  |
-| `fsStat(a)`                   | Returns metadata (size, kind, timestamps) for a virtual filesystem entry. | fsStat() takes 1 argument                                                          | `kernel.ts:801`  |
-| `fsWrite(a, b)`               | Writes text to a path in the virtual filesystem, creating it if needed.   | fsWrite() takes 2 arguments (path, content)                                        | `kernel.ts:759`  |
-| `gc()`                        | Runs the virtual kernel's mark-and-sweep collector immediately.           | —                                                                                  | `kernel.ts:893`  |
-| `getPrivilege()`              | Privilege.                                                                | —                                                                                  | `kernel.ts:1003` |
-| `getTime()`                   | getTime.                                                                  | —                                                                                  | `kernel.ts:1095` |
-| `heapAlloc(a)`                | Heap.                                                                     | heapAlloc() takes 1 argument (size)                                                | `kernel.ts:854`  |
-| `heapFree(a)`                 | Releases a kernel heap handle so the collector can reclaim it.            | heapFree() takes 1 argument (address)                                              | `kernel.ts:862`  |
-| `heapLoad(a)`                 | Reads the value behind a kernel heap handle.                              | heapLoad() takes 1 argument (address)                                              | `kernel.ts:871`  |
-| `heapStats()`                 | Returns live/free counts and totals for the kernel heap.                  | —                                                                                  | `kernel.ts:888`  |
-| `heapStore(a, b)`             | Allocates a value on the kernel heap and returns its handle.              | heapStore() takes 2 arguments (address, value)                                     | `kernel.ts:879`  |
-| `i16()`                       | FFI type tag: signed 16-bit integer.                                      | —                                                                                  | `kernel.ts:1046` |
-| `i32()`                       | FFI type tag: signed 32-bit integer.                                      | —                                                                                  | `kernel.ts:1047` |
-| `i8()`                        | FFI type tag: signed 8-bit integer.                                       | —                                                                                  | `kernel.ts:1045` |
-| `kernelBoot()`                | Boot.                                                                     | —                                                                                  | `kernel.ts:745`  |
-| `killTask(a)`                 | Terminates the task with the given id.                                    | killTask() takes 1 argument                                                        | `kernel.ts:828`  |
-| `loadModule(a)`               | Module loader (simulated).                                                | loadModule() takes 1 argument (path); Module not found: ${path}                    | `kernel.ts:1082` |
-| `moveWindow(a, b, c)`         | Moves a virtual window to new coordinates.                                | moveWindow() takes 3 arguments (id, x, y)                                          | `kernel.ts:918`  |
-| `onEvent(a, b)`               | Registers a handler to run when a named kernel event fires.               | onEvent() takes 2 arguments (event, handler); Second argument must be a function   | `kernel.ts:1054` |
-| `onInterrupt(a, b)`           | Interrupt registration.                                                   | onInterrupt() takes 2 arguments (num, handler); Second argument must be a function | `kernel.ts:981`  |
-| `resizeWindow(a, b, c)`       | Resizes a virtual window.                                                 | resizeWindow() takes 3 arguments (id, w, h)                                        | `kernel.ts:927`  |
-| `runTasks()`                  | Runs the scheduler until every ready task has had a turn.                 | —                                                                                  | `kernel.ts:848`  |
-| `setPrivilege(a)`             | Sets the privilege ring of the current task.                              | Invalid privilege level; Permission denied                                         | `kernel.ts:1008` |
-| `syscall(…)`                  | syscall(name, ...args).                                                   | syscall() requires at least 1 argument (name)                                      | `kernel.ts:735`  |
-| `taskList()`                  | Returns the process table as a list of task records.                      | —                                                                                  | `kernel.ts:841`  |
-| `triggerInterrupt(a)`         | Raises a virtual interrupt, invoking its registered handler.              | triggerInterrupt() takes 1 argument                                                | `kernel.ts:992`  |
-| `u16()`                       | FFI type tag: unsigned 16-bit integer.                                    | —                                                                                  | `kernel.ts:1043` |
-| `u32()`                       | FFI type tag: unsigned 32-bit integer.                                    | —                                                                                  | `kernel.ts:1044` |
-| `u8()`                        | FFI type tag: unsigned 8-bit integer.                                     | —                                                                                  | `kernel.ts:1042` |
-| `windowList()`                | Lists the windows currently open in the virtual desktop.                  | —                                                                                  | `kernel.ts:936`  |
-| `yieldTask()`                 | Voluntarily gives up the rest of the current task's time slice.           | —                                                                                  | `kernel.ts:836`  |
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `closeWindow(a)` | Closes a virtual window and frees its resources. | closeWindow() takes 1 argument | `kernel.ts:910` |
+| `createTask(a, b, c)` | Task shortcuts. | createTask() requires a function | `kernel.ts:819` |
+| `createWindow(a, b, c, d, e)` | Window manager. | — | `kernel.ts:899` |
+| `deviceList()` | HAL. | — | `kernel.ts:944` |
+| `deviceRead(a)` | Reads from a virtual device by name. | deviceRead() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:949` |
+| `deviceStatus(a)` | Reports whether a virtual device is attached and ready. | deviceStatus() takes 1 argument; Device not found: ${args[0]} | `kernel.ts:970` |
+| `deviceWrite(a, b)` | Writes a value to a virtual device by name. | deviceWrite() takes 2 arguments; Device not found: ${args[0]} | `kernel.ts:959` |
+| `emitEvent(…)` | Fires a named kernel event, invoking every registered handler. | emitEvent() takes at least 1 argument | `kernel.ts:1067` |
+| `f32()` | FFI type tag: 32-bit float. | — | `kernel.ts:1048` |
+| `f64()` | FFI type tag: 64-bit float. | — | `kernel.ts:1049` |
+| `fsAppend(a, b)` | Appends text to the end of a virtual filesystem file. | fsAppend() takes 2 arguments | `kernel.ts:809` |
+| `fsDelete(a)` | Deletes a virtual filesystem entry. | fsDelete() takes 1 argument | `kernel.ts:785` |
+| `fsExists(a)` | True when the path exists in the virtual filesystem. | fsExists() takes 1 argument | `kernel.ts:793` |
+| `fsList(a)` | Lists the children of a virtual filesystem directory. | fsList() takes 1 argument | `kernel.ts:768` |
+| `fsMkdir(a)` | Creates a directory in the virtual filesystem. | fsMkdir() takes 1 argument | `kernel.ts:776` |
+| `fsRead(a)` | VFS shortcuts. | fsRead() takes 1 argument | `kernel.ts:751` |
+| `fsStat(a)` | Returns metadata (size, kind, timestamps) for a virtual filesystem entry. | fsStat() takes 1 argument | `kernel.ts:801` |
+| `fsWrite(a, b)` | Writes text to a path in the virtual filesystem, creating it if needed. | fsWrite() takes 2 arguments (path, content) | `kernel.ts:759` |
+| `gc()` | Runs the virtual kernel's mark-and-sweep collector immediately. | — | `kernel.ts:893` |
+| `getPrivilege()` | Privilege. | — | `kernel.ts:1003` |
+| `getTime()` | getTime. | — | `kernel.ts:1095` |
+| `heapAlloc(a)` | Heap. | heapAlloc() takes 1 argument (size) | `kernel.ts:854` |
+| `heapFree(a)` | Releases a kernel heap handle so the collector can reclaim it. | heapFree() takes 1 argument (address) | `kernel.ts:862` |
+| `heapLoad(a)` | Reads the value behind a kernel heap handle. | heapLoad() takes 1 argument (address) | `kernel.ts:871` |
+| `heapStats()` | Returns live/free counts and totals for the kernel heap. | — | `kernel.ts:888` |
+| `heapStore(a, b)` | Allocates a value on the kernel heap and returns its handle. | heapStore() takes 2 arguments (address, value) | `kernel.ts:879` |
+| `i16()` | FFI type tag: signed 16-bit integer. | — | `kernel.ts:1046` |
+| `i32()` | FFI type tag: signed 32-bit integer. | — | `kernel.ts:1047` |
+| `i8()` | FFI type tag: signed 8-bit integer. | — | `kernel.ts:1045` |
+| `kernelBoot()` | Boot. | — | `kernel.ts:745` |
+| `killTask(a)` | Terminates the task with the given id. | killTask() takes 1 argument | `kernel.ts:828` |
+| `loadModule(a)` | Module loader (simulated). | loadModule() takes 1 argument (path); Module not found: ${path} | `kernel.ts:1082` |
+| `moveWindow(a, b, c)` | Moves a virtual window to new coordinates. | moveWindow() takes 3 arguments (id, x, y) | `kernel.ts:918` |
+| `onEvent(a, b)` | Registers a handler to run when a named kernel event fires. | onEvent() takes 2 arguments (event, handler); Second argument must be a function | `kernel.ts:1054` |
+| `onInterrupt(a, b)` | Interrupt registration. | onInterrupt() takes 2 arguments (num, handler); Second argument must be a function | `kernel.ts:981` |
+| `resizeWindow(a, b, c)` | Resizes a virtual window. | resizeWindow() takes 3 arguments (id, w, h) | `kernel.ts:927` |
+| `runTasks()` | Runs the scheduler until every ready task has had a turn. | — | `kernel.ts:848` |
+| `setPrivilege(a)` | Sets the privilege ring of the current task. | Invalid privilege level; Permission denied | `kernel.ts:1008` |
+| `syscall(…)` | syscall(name, ...args). | syscall() requires at least 1 argument (name) | `kernel.ts:735` |
+| `taskList()` | Returns the process table as a list of task records. | — | `kernel.ts:841` |
+| `triggerInterrupt(a)` | Raises a virtual interrupt, invoking its registered handler. | triggerInterrupt() takes 1 argument | `kernel.ts:992` |
+| `u16()` | FFI type tag: unsigned 16-bit integer. | — | `kernel.ts:1043` |
+| `u32()` | FFI type tag: unsigned 32-bit integer. | — | `kernel.ts:1044` |
+| `u8()` | FFI type tag: unsigned 8-bit integer. | — | `kernel.ts:1042` |
+| `windowList()` | Lists the windows currently open in the virtual desktop. | — | `kernel.ts:936` |
+| `yieldTask()` | Voluntarily gives up the rest of the current task's time slice. | — | `kernel.ts:836` |
+
 
 ### Keyword table — v1 lexer
 
+
 ### Seed VM memory map
 
-| Range              | Region                                                 |
-| ------------------ | ------------------------------------------------------ |
-| `0x00000..0x0FFFF` | string pool (utf-8 blobs, length-prefixed u32; 64 KiB) |
-| `0x10000..0x13FFF` | global variable slots (256 slots × 4 bytes → rounded)  |
-| `0x14000..0x17FFF` | operand stack (u32 cells; sp grows up)                 |
-| `0x18000..0x1BFFF` | call stack (frames of ret\_ip, saved\_fp, locals…)     |
-| `0x1C000..0x2FFFF` | bytecode program (u8 stream, up to 80 KiB)             |
-| `0x30000..0x7FFFF` | bump-pointer heap (lists, dynamic strings; 320 KiB)    |
+| Range | Region |
+| --- | --- |
+| `0x00000..0x0FFFF` | string pool  (utf-8 blobs, length-prefixed u32; 64 KiB) |
+| `0x10000..0x13FFF` | global variable slots (256 slots × 4 bytes → rounded) |
+| `0x14000..0x17FFF` | operand stack (u32 cells; sp grows up) |
+| `0x18000..0x1BFFF` | call stack (frames of ret_ip, saved_fp, locals…) |
+| `0x1C000..0x2FFFF` | bytecode program (u8 stream, up to 80 KiB) |
+| `0x30000..0x7FFFF` | bump-pointer heap  (lists, dynamic strings; 320 KiB) |
+
 
 ### Seed VM opcode table
 
-The seed VM is a stack machine: every instruction consumes operands from the operand stack and pushes its result back. Inline operands are little-endian and follow the opcode byte directly in the bytecode stream.
+The seed VM is a stack machine: every instruction consumes operands from the
+operand stack and pushes its result back. Inline operands are little-endian and
+follow the opcode byte directly in the bytecode stream.
 
-| Opcode | Mnemonic    | Behaviour                                                                  |
-| ------ | ----------- | -------------------------------------------------------------------------- |
-| `0x01` | `PUSH_I32`  | Operands `<i32 LE>`. push signed 32-bit constant                           |
-| `0x02` | `PUSH_STR`  | Operands `<u16 idx LE>`. push interned string handle (pool offset)         |
-| `0x03` | `LOAD`      | Operands `<u8 slot>`. push global variable value                           |
-| `0x04` | `STORE`     | Operands `<u8 slot>`. pop into global variable                             |
-| `0x05` | `POP`       | drop top of stack                                                          |
-| `0x10` | `ADD`       | Pop b, pop a, push a + b (signed 32-bit wrap).                             |
-| `0x11` | `SUB`       | Pop b, pop a, push a - b.                                                  |
-| `0x12` | `MUL`       | Pop b, pop a, push a \* b.                                                 |
-| `0x13` | `DIV`       | Pop b, pop a, push the truncated quotient a / b.                           |
-| `0x14` | `MOD`       | Pop b, pop a, push the remainder a % b.                                    |
-| `0x20` | `EQ`        | Pop b, pop a, push 1 when a == b else 0.                                   |
-| `0x21` | `NE`        | Pop b, pop a, push 1 when a != b else 0.                                   |
-| `0x22` | `LT`        | Pop b, pop a, push 1 when a < b else 0.                                    |
-| `0x23` | `GT`        | Pop b, pop a, push 1 when a > b else 0.                                    |
-| `0x24` | `LE`        | Pop b, pop a, push 1 when a <= b else 0.                                   |
-| `0x25` | `GE`        | Pop b, pop a, push 1 when a >= b else 0.                                   |
-| `0x30` | `NOT`       | Seed VM instruction.                                                       |
-| `0x40` | `JMP`       | Operands `<i16 off LE>`. unconditional relative jump                       |
-| `0x41` | `JZ`        | Operands `<i16 off LE>`. pop; jump if zero                                 |
-| `0x50` | `SAY_I32`   | pop int; host prints it                                                    |
-| `0x51` | `SAY_STR`   | pop string handle; host prints pool\[handle]                               |
-| `0x60` | `CALL`      | Operands `<u16 target>`. allocate frame, copy args, jump                   |
-| `0x61` | `RET`       | pop retval, restore ip+fp, push retval                                     |
-| `0x62` | `ENTER`     | Operands `<u8 n_locals>`. reserve additional local slots                   |
-| `0x63` | `LOAD_LOC`  | Operands `<u8 slot>`. push local (0..n\_args-1 = args)                     |
-| `0x64` | `STORE_LOC` | Operands `<u8 slot>`. pop into local                                       |
-| `0x70` | `ALLOC`     | pop size, bump HP by (size+3 & \~3), push old HP                           |
-| `0x80` | `NEWLIST`   | Operands `<u16 n>`. pop n items (right→left in memory), push arr addr      |
-| `0x81` | `LGET`      | pop idx, pop arr, push arr\[idx]                                           |
-| `0x82` | `LSET`      | pop val, pop idx, pop arr, arr\[idx]=val                                   |
-| `0x83` | `LEN`       | pop addr, push u32 at addr (length header)                                 |
-| `0x84` | `SGET`      | pop idx, pop str, push byte at bytes\[idx]                                 |
-| `0x87` | `I2S`       | pop int, push decimal-string blob                                          |
-| `0x88` | `CHR`       | pop byte, push new 1-char string blob                                      |
-| `0x89` | `LNEW`      | pop n, alloc zeroed list \[n                                               |
-| `0x8A` | `TNEW`      | Operands `<u16 cap>`. allocate an empty tome with room for cap pairs       |
-| `0x8B` | `TSET`      | pop val, pop key, peek tome; store; leaves tome                            |
-| `0x8C` | `TGET`      | pop key, pop tome, push value (0 when absent)                              |
-| `0x8D` | `THAS`      | pop key, pop tome, push 1/0                                                |
-| `0x8E` | `TKEYS`     | pop tome, push list of key handles                                         |
-| `0x8F` | `TVALS`     | pop tome, push list of values                                              |
-| `0x91` | `STRCAT`    | pop b, pop a, allocate new pool-shaped blob, push handle                   |
-| `0xA0` | `PUSH_F64`  | Operands `<f64 LE>`. alloc 8-byte cell, store f64, push addr               |
-| `0xA1` | `FADD`      | Pop two boxed f64 addresses, push a newly boxed a + b.                     |
-| `0xA2` | `FSUB`      | Pop two boxed f64 addresses, push a newly boxed a - b.                     |
-| `0xA3` | `FMUL`      | Pop two boxed f64 addresses, push a newly boxed a \* b.                    |
-| `0xA4` | `FDIV`      | Pop two boxed f64 addresses, push a newly boxed a / b.                     |
-| `0xA5` | `FLT`       | Pop two boxed f64 addresses, push the i32 boolean a < b.                   |
-| `0xA6` | `FGT`       | Pop two boxed f64 addresses, push the i32 boolean a > b.                   |
-| `0xA7` | `FEQ`       | Pop two boxed f64 addresses, push the i32 boolean a == b.                  |
-| `0xA8` | `I2F`       | pop int; box as f64 and push                                               |
-| `0xA9` | `F2I`       | pop float; push i32 truncation                                             |
-| `0xAA` | `FNEG`      | Pop a boxed f64, push a newly boxed negation.                              |
-| `0xAB` | `FABS`      | Pop a boxed f64, push a newly boxed absolute value.                        |
-| `0xAC` | `FSQRT`     | Pop a boxed f64, push a newly boxed square root.                           |
-| `0xAD` | `SAY_F64`   | pop float addr; host prints it                                             |
-| `0xAE` | `FMATH`     | Operands `<u8 op>`. pop f64; call host\_fmath(op,x); push new boxed result |
-| `0xB0` | `READFILE`  | pop path handle; push content handle (0 on error)                          |
-| `0xB1` | `WRITEFILE` | pop data, pop path; push i32 status (0 ok, -1 err)                         |
-| `0xB2` | `HTTPGET`   | pop url handle; push response body handle (0 err)                          |
-| `0xB4` | `FBYTE`     | pop idx (0..7), pop float; push IEEE-754 LE byte                           |
-| `0xC0` | `TRY`       | Operands `<i16 rel>`. push handler record \[handler\_ip, sp, fp, csp]      |
-| `0xC1` | `ENDTRY`    | pop the newest handler record                                              |
-| `0xC2` | `THROW`     | pop message handle; unwind to handler (or halt)                            |
-| `0xC3` | `S2F`       | pop string handle; push boxed f64 (`num`)                                  |
-| `0xC4` | `CALLV`     | Operands `<u8 n_args>`. pop callee (code offset OR closure) and call it    |
-| `0xC5` | `CLOSURE`   | Operands `<u16 target>`.                                                   |
-| `0xFF` | `HALT`      | Seed VM instruction.                                                       |
+| Opcode | Mnemonic | Behaviour |
+| --- | --- | --- |
+| `0x01` | `PUSH_I32` | Operands `<i32 LE>`. push signed 32-bit constant |
+| `0x02` | `PUSH_STR` | Operands `<u16 idx LE>`. push interned string handle (pool offset) |
+| `0x03` | `LOAD` | Operands `<u8 slot>`. push global variable value |
+| `0x04` | `STORE` | Operands `<u8 slot>`. pop into global variable |
+| `0x05` | `POP` | drop top of stack |
+| `0x10` | `ADD` | Pop b, pop a, push a + b (signed 32-bit wrap). |
+| `0x11` | `SUB` | Pop b, pop a, push a - b. |
+| `0x12` | `MUL` | Pop b, pop a, push a * b. |
+| `0x13` | `DIV` | Pop b, pop a, push the truncated quotient a / b. |
+| `0x14` | `MOD` | Pop b, pop a, push the remainder a % b. |
+| `0x20` | `EQ` | Pop b, pop a, push 1 when a == b else 0. |
+| `0x21` | `NE` | Pop b, pop a, push 1 when a != b else 0. |
+| `0x22` | `LT` | Pop b, pop a, push 1 when a < b else 0. |
+| `0x23` | `GT` | Pop b, pop a, push 1 when a > b else 0. |
+| `0x24` | `LE` | Pop b, pop a, push 1 when a <= b else 0. |
+| `0x25` | `GE` | Pop b, pop a, push 1 when a >= b else 0. |
+| `0x30` | `NOT` | Seed VM instruction. |
+| `0x40` | `JMP` | Operands `<i16 off LE>`. unconditional relative jump |
+| `0x41` | `JZ` | Operands `<i16 off LE>`. pop; jump if zero |
+| `0x50` | `SAY_I32` | pop int; host prints it |
+| `0x51` | `SAY_STR` | pop string handle; host prints pool[handle] |
+| `0x60` | `CALL` | Operands `<u16 target>`. <u8 n_args>   allocate frame, copy args, jump |
+| `0x61` | `RET` | pop retval, restore ip+fp, push retval |
+| `0x62` | `ENTER` | Operands `<u8 n_locals>`. reserve additional local slots |
+| `0x63` | `LOAD_LOC` | Operands `<u8 slot>`. push local (0..n_args-1 = args) |
+| `0x64` | `STORE_LOC` | Operands `<u8 slot>`. pop into local |
+| `0x70` | `ALLOC` | pop size, bump HP by (size+3 & ~3), push old HP |
+| `0x80` | `NEWLIST` | Operands `<u16 n>`. pop n items (right→left in memory), push arr addr |
+| `0x81` | `LGET` | pop idx, pop arr, push arr[idx] |
+| `0x82` | `LSET` | pop val, pop idx, pop arr, arr[idx]=val |
+| `0x83` | `LEN` | pop addr, push u32 at addr (length header) |
+| `0x84` | `SGET` | pop idx, pop str, push byte at bytes[idx] |
+| `0x87` | `I2S` | pop int, push decimal-string blob |
+| `0x88` | `CHR` | pop byte, push new 1-char string blob |
+| `0x89` | `LNEW` | pop n, alloc zeroed list [n | n cells] |
+| `0x8A` | `TNEW` | Operands `<u16 cap>`. allocate an empty tome with room for cap pairs |
+| `0x8B` | `TSET` | pop val, pop key, peek tome; store; leaves tome |
+| `0x8C` | `TGET` | pop key, pop tome, push value (0 when absent) |
+| `0x8D` | `THAS` | pop key, pop tome, push 1/0 |
+| `0x8E` | `TKEYS` | pop tome, push list of key handles |
+| `0x8F` | `TVALS` | pop tome, push list of values |
+| `0x91` | `STRCAT` | pop b, pop a, allocate new pool-shaped blob, push handle |
+| `0xA0` | `PUSH_F64` | Operands `<f64 LE>`. alloc 8-byte cell, store f64, push addr |
+| `0xA1` | `FADD` | Pop two boxed f64 addresses, push a newly boxed a + b. |
+| `0xA2` | `FSUB` | Pop two boxed f64 addresses, push a newly boxed a - b. |
+| `0xA3` | `FMUL` | Pop two boxed f64 addresses, push a newly boxed a * b. |
+| `0xA4` | `FDIV` | Pop two boxed f64 addresses, push a newly boxed a / b. |
+| `0xA5` | `FLT` | Pop two boxed f64 addresses, push the i32 boolean a < b. |
+| `0xA6` | `FGT` | Pop two boxed f64 addresses, push the i32 boolean a > b. |
+| `0xA7` | `FEQ` | Pop two boxed f64 addresses, push the i32 boolean a == b. |
+| `0xA8` | `I2F` | pop int; box as f64 and push |
+| `0xA9` | `F2I` | pop float; push i32 truncation |
+| `0xAA` | `FNEG` | Pop a boxed f64, push a newly boxed negation. |
+| `0xAB` | `FABS` | Pop a boxed f64, push a newly boxed absolute value. |
+| `0xAC` | `FSQRT` | Pop a boxed f64, push a newly boxed square root. |
+| `0xAD` | `SAY_F64` | pop float addr; host prints it |
+| `0xAE` | `FMATH` | Operands `<u8 op>`. pop f64; call host_fmath(op,x); push new boxed result |
+| `0xB0` | `READFILE` | pop path handle; push content handle (0 on error) |
+| `0xB1` | `WRITEFILE` | pop data, pop path; push i32 status (0 ok, -1 err) |
+| `0xB2` | `HTTPGET` | pop url handle; push response body handle (0 err) |
+| `0xB4` | `FBYTE` | pop idx (0..7), pop float; push IEEE-754 LE byte |
+| `0xC0` | `TRY` | Operands `<i16 rel>`. push handler record [handler_ip, sp, fp, csp] |
+| `0xC1` | `ENDTRY` | pop the newest handler record |
+| `0xC2` | `THROW` | pop message handle; unwind to handler (or halt) |
+| `0xC3` | `S2F` | pop string handle; push boxed f64 (`num`) |
+| `0xC4` | `CALLV` | Operands `<u8 n_args>`. pop callee (code offset OR closure) and call it |
+| `0xC5` | `CLOSURE` | Operands `<u16 target>`. <u8 ncaps> |
+| `0xFF` | `HALT` | Seed VM instruction. |
+
 
 ### sdev-written source index (15 files, 186 functions)
 
-Every function defined in sdev itself — the self-hosted compiler, the parity agent, and the standard library.
+Every function defined in sdev itself — the self-hosted compiler, the parity
+agent, and the standard library.
 
 #### `lang/compiler/codegen.sdev`
 
-SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits the byte stream to a global buffer `bc` whose cell 0 holds the current byte count and cells 1..count hold the bytes. The scripts/test-self- codegen.mjs driver harvests the buffer via `say`, reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance, and verifies the executed output matches the JS bootstrap compiler's output. Grammar this milestone covers: program := stmt\* stmt := 'say' expr | 'set' IDENT 'to' expr | 'if' expr NL block ('else' NL block)? 'end' | 'while' expr NL block 'end' | 'to' IDENT ('with' IDENT\*)? NL block 'end' | 'return' expr? block := stmt\* (until 'else' or 'end') expr := cmp cmp := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )? add := mul (('+'|'-') mul)\* mul := atom (('_'|'/') atom)_ atom := INT | IDENT (variable load) | IDENT '(' args? ')' (function call / builtin) | '(' expr ')' Restriction: functions must be defined before their call sites — the self-hosted compiler emits function bodies inline, bracketed by a JMP that skips over them, and records each body's byte offset in a global table. Forward references / mutual recursion land in a later milestone.
+SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits the byte stream to a global buffer `bc` whose cell 0 holds the current byte count and cells 1..count hold the bytes. The scripts/test-self- codegen.mjs driver harvests the buffer via `say`, reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance, and verifies the executed output matches the JS bootstrap compiler's output. Grammar this milestone covers: program := stmt* stmt    := 'say' expr | 'set' IDENT 'to' expr | 'if' expr NL block ('else' NL block)? 'end' | 'while' expr NL block 'end' | 'to' IDENT ('with' IDENT*)? NL block 'end' | 'return' expr? block   := stmt*                              (until 'else' or 'end') expr    := cmp cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )? add     := mul (('+'|'-') mul)* mul     := atom (('*'|'/') atom)* atom    := INT | IDENT                              (variable load) | IDENT '(' args? ')'                (function call / builtin) | '(' expr ')' Restriction: functions must be defined before their call sites — the self-hosted compiler emits function bodies inline, bracketed by a JMP that skips over them, and records each body's byte offset in a global table. Forward references / mutual recursion land in a later milestone.
 
 47 functions.
 
-| Function                | Parameters   | What it does                                                                                                                                                                                                                                                                                                           | Returns             | Line |
-| ----------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---- |
-| `is_digit`              | `c`          | True when the byte at the given index is an ASCII digit 0-9.                                                                                                                                                                                                                                                           | `0`                 | 35   |
-| `is_alpha`              | `c`          | True when the byte is an ASCII letter or underscore — the start of an identifier.                                                                                                                                                                                                                                      | `1`                 | 45   |
-| `is_alnum`              | `c`          | True when the byte may continue an identifier: a letter, digit, or underscore.                                                                                                                                                                                                                                         | `1`                 | 62   |
-| `slice`                 | `src i j`    | Extracts the substring between two byte offsets, byte by byte.                                                                                                                                                                                                                                                         | `out`               | 69   |
-| `both_float`            | `a b`        | Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float arithmetic only kicks in when BOTH operands are floats (mixed arithmetic requires an explicit i2f), matching the bootstrap oracle exactly.                                                                                                       | `1`                 | 81   |
-| `str_eq`                | `a b`        | Byte-exact string comparison, used instead of host equality so both tracks agree.                                                                                                                                                                                                                                      | `0`                 | 90   |
-| `prelink_source`        | `s`          | Part of the Milestone 5z: modules (`use "path"`) section of this module.                                                                                                                                                                                                                                               | `out`               | 116  |
-| `emit_byte`             | `b`          | Appends one byte to the bytecode buffer being built.                                                                                                                                                                                                                                                                   | `0`                 | 164  |
-| `intern_str`            | `s`          | Interns a string literal into the pool and returns its handle, reusing duplicates.                                                                                                                                                                                                                                     | `0`                 | 181  |
-| `emit_i32`              | `v`          | Appends a little-endian 32-bit operand to the bytecode buffer.                                                                                                                                                                                                                                                         | `0`                 | 213  |
-| `placeholder16`         | _none_       | Reserve a two-byte i16 placeholder and return the byte offset at which it starts (0-indexed, list cell = pos + 1).                                                                                                                                                                                                     | `p`                 | 226  |
-| `patch_i16`             | `pos target` | Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte offset `target`. Offsets are relative to the end of the instruction (pos + 2). Negative offsets get two's-complement 16-bit encoding.                                                                                                              | `0`                 | 236  |
-| `intern_name`           | `name`       | Interns an identifier and returns its global slot index, allocating on first sight.                                                                                                                                                                                                                                    | `k - 1`             | 259  |
-| `find_local`            | `name`       | Looks up a local variable in the current frame, returning its slot or -1.                                                                                                                                                                                                                                              | `k - 1`             | 273  |
-| `add_local`             | `name`       | Allocates a new local slot in the current function frame.                                                                                                                                                                                                                                                              | `loc_names[0] - 1`  | 285  |
-| `find_fn`               | `name`       | Looks up a declared function by name, returning its index or -1.                                                                                                                                                                                                                                                       | `k - 1`             | 291  |
-| `emit_load_ident`       | `name`       | Emits `LOAD_LOC` for a local or `LOAD` for a global, whichever the name resolves to.                                                                                                                                                                                                                                   | `0`                 | 310  |
-| `emit_store_ident`      | `name`       | Emits `STORE_LOC` or `STORE` for an assignment target.                                                                                                                                                                                                                                                                 | `0`                 | 327  |
-| `set_ident_type`        | `name t`     | Milestone 5t: retype an existing variable without emitting anything — used when `set t[k] to "s"` promotes a tome from int-valued to string-valued so later reads pick SAY\_STR.                                                                                                                                       | `0`                 | 349  |
-| `emit_call`             | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call.                                                                                                                                                                                                                                             | `0`                 | 370  |
-| `emit_ref`              | `name`       | Milestone 5w: `ref NAME` pushes a function value — the callee's code offset as a plain i32. Unknown offsets reuse the pending-call table; the resolver tells the two site shapes apart by looking at the opcode byte that precedes the patch position (0x60 CALL → u16 target, otherwise 0x01 PUSH\_I32 → i32 target). | `0`                 | 656  |
-| `resolve_pending_calls` | _none_       | Back-patch every deferred CALL now that all function offsets are known.                                                                                                                                                                                                                                                | `0`                 | 680  |
-| `patch_breaks`          | `target`     | Part of the Milestone 5s: loop-exit patch tables section of this module.                                                                                                                                                                                                                                               | `0`                 | 708  |
-| `patch_conts`           | `target`     | Part of the Milestone 5s: loop-exit patch tables section of this module.                                                                                                                                                                                                                                               | `0`                 | 735  |
-| `blank_tok`             | `i`          | Part of the Milestone 5y: kinds (classes) section of this module.                                                                                                                                                                                                                                                      | `0`                 | 772  |
-| `prev_word_is`          | `j w`        | Part of the Milestone 5y: kinds (classes) section of this module.                                                                                                                                                                                                                                                      | `0`                 | 777  |
-| `is_kind_opener`        | `j`          | Part of the Milestone 5y: kinds (classes) section of this module.                                                                                                                                                                                                                                                      | `0`                 | 797  |
-| `desugar_kinds`         | _none_       | Part of the Milestone 5y: kinds (classes) section of this module.                                                                                                                                                                                                                                                      | _no explicit yield_ | 838  |
-| `emit_new`              | `cname`      | `new NAME` — TNEW sized to the method count, then one PUSH\_STR / function value / TSET triple per method, in declaration order.                                                                                                                                                                                       | `0`                 | 1002 |
-| `method_ret_type`       | `name`       | A method call is string-typed when ANY kind declares a method of that name returning a string — mirrors the bootstrap oracle's name-based rule.                                                                                                                                                                        | `1`                 | 1042 |
-| `emit_member_key`       | `name`       | Emit PUSH\_STR for a member name (shared by field reads, writes and calls).                                                                                                                                                                                                                                            | `0`                 | 1060 |
-| `is_op_c`               | `pos c`      | True when the character can begin an operator token.                                                                                                                                                                                                                                                                   | `0`                 | 1071 |
-| `is_ident_word`         | `pos w`      | True when the token text is a plain identifier rather than a keyword.                                                                                                                                                                                                                                                  | `0`                 | 1083 |
-| `parse_atom`            | `pos`        | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group.                                                                                                                                                                                                                      | `pos + 1`           | 1100 |
-| `parse_postfix`         | `pos`        | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET.                                                                                                                                                                                                                          | _no explicit yield_ | 1466 |
-| `parse_unary`           | `pos`        | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH\_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus.                                                                                                             | `pos`               | 1541 |
-| `parse_mul`             | `pos`        | Parses the multiplication / division / modulo precedence level.                                                                                                                                                                                                                                                        | `pos`               | 1555 |
-| `parse_add`             | `pos`        | Parses the addition / subtraction precedence level.                                                                                                                                                                                                                                                                    | `pos`               | 1598 |
-| `parse_cmp`             | `pos`        | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes.                                      | `pos`               | 1649 |
-| `parse_not`             | `pos`        | Part of the and := not ('and' not) section of this module.                                                                                                                                                                                                                                                             | `pos`               | 1724 |
-| `parse_and`             | `pos`        | Part of the and := not ('and' not) section of this module.                                                                                                                                                                                                                                                             | `pos`               | 1734 |
-| `parse_or`              | `pos`        | Part of the and := not ('and' not) section of this module.                                                                                                                                                                                                                                                             | `pos`               | 1751 |
-| `parse_expr`            | `pos`        | Part of the and := not ('and' not) section of this module.                                                                                                                                                                                                                                                             | `parse_or(pos)`     | 1769 |
-| `skip_nl`               | `pos`        | Advances the cursor past newline tokens so statements may be separated freely.                                                                                                                                                                                                                                         | `pos`               | 1775 |
-| `parse_block`           | `pos`        | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF.                                                                                                                                                                                                                                                  | `pos`               | 1792 |
-| `parse_params`          | `pos`        | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc\_names. Returns (new\_pos, n\_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new\_pos and stash n\_params in a global scratch cell.                            | `pos`               | 1827 |
-| `parse_stmt`            | `pos`        | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression.                                                                                                                                                                                                                         | `pos`               | 1849 |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_digit` | `c` | True when the byte at the given index is an ASCII digit 0-9. | `0` | 35 |
+| `is_alpha` | `c` | True when the byte is an ASCII letter or underscore — the start of an identifier. | `1` | 45 |
+| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 62 |
+| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 69 |
+| `both_float` | `a b` | Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float arithmetic only kicks in when BOTH operands are floats (mixed arithmetic requires an explicit i2f), matching the bootstrap oracle exactly. | `1` | 81 |
+| `str_eq` | `a b` | Byte-exact string comparison, used instead of host equality so both tracks agree. | `0` | 90 |
+| `prelink_source` | `s` | Part of the Milestone 5z: modules (`use "path"`) section of this module. | `out` | 116 |
+| `emit_byte` | `b` | Appends one byte to the bytecode buffer being built. | `0` | 164 |
+| `intern_str` | `s` | Interns a string literal into the pool and returns its handle, reusing duplicates. | `0` | 181 |
+| `emit_i32` | `v` | Appends a little-endian 32-bit operand to the bytecode buffer. | `0` | 213 |
+| `placeholder16` | _none_ | Reserve a two-byte i16 placeholder and return the byte offset at which it starts (0-indexed, list cell = pos + 1). | `p` | 226 |
+| `patch_i16` | `pos target` | Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte offset `target`. Offsets are relative to the end of the instruction (pos + 2). Negative offsets get two's-complement 16-bit encoding. | `0` | 236 |
+| `intern_name` | `name` | Interns an identifier and returns its global slot index, allocating on first sight. | `k - 1` | 259 |
+| `find_local` | `name` | Looks up a local variable in the current frame, returning its slot or -1. | `k - 1` | 273 |
+| `add_local` | `name` | Allocates a new local slot in the current function frame. | `loc_names[0] - 1` | 285 |
+| `find_fn` | `name` | Looks up a declared function by name, returning its index or -1. | `k - 1` | 291 |
+| `emit_load_ident` | `name` | Emits `LOAD_LOC` for a local or `LOAD` for a global, whichever the name resolves to. | `0` | 310 |
+| `emit_store_ident` | `name` | Emits `STORE_LOC` or `STORE` for an assignment target. | `0` | 327 |
+| `set_ident_type` | `name t` | Milestone 5t: retype an existing variable without emitting anything — used when `set t[k] to "s"` promotes a tome from int-valued to string-valued so later reads pick SAY_STR. | `0` | 349 |
+| `emit_call` | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call. | `0` | 370 |
+| `emit_ref` | `name` | Milestone 5w: `ref NAME` pushes a function value — the callee's code offset as a plain i32. Unknown offsets reuse the pending-call table; the resolver tells the two site shapes apart by looking at the opcode byte that precedes the patch position (0x60 CALL → u16 target, otherwise 0x01 PUSH_I32 → i32 target). | `0` | 656 |
+| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 680 |
+| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 708 |
+| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 735 |
+| `blank_tok` | `i` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 772 |
+| `prev_word_is` | `j w` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 777 |
+| `is_kind_opener` | `j` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 797 |
+| `desugar_kinds` | _none_ | Part of the Milestone 5y: kinds (classes) section of this module. | _no explicit yield_ | 838 |
+| `emit_new` | `cname` | `new NAME` — TNEW sized to the method count, then one PUSH_STR / function value / TSET triple per method, in declaration order. | `0` | 1002 |
+| `method_ret_type` | `name` | A method call is string-typed when ANY kind declares a method of that name returning a string — mirrors the bootstrap oracle's name-based rule. | `1` | 1042 |
+| `emit_member_key` | `name` | Emit PUSH_STR for a member name (shared by field reads, writes and calls). | `0` | 1060 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 1071 |
+| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 1083 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 1100 |
+| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | _no explicit yield_ | 1466 |
+| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1541 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1555 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1598 |
+| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1649 |
+| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1724 |
+| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1734 |
+| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1751 |
+| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1769 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1775 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1792 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1827 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1849 |
 
 #### `lang/compiler/lexer.sdev`
 
-SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hosted compiler. The bootstrap JS compiler (lang/bootstrap/compile.mjs) still compiles this file to bytecode for now; once the parser + codegen are also ported, the JS compiler is deleted. The lexer streams tokens straight to stdout via `say`, one per line, in a stable text format: N= integer literal I= identifier or keyword S= string literal (contents only, no quotes) P= single-char punctuation NL newline EOF end of source The `scripts/test-self-lexer.mjs` driver splices a `set src to "..."` stub in front of this file and diffs the output against a JS reference lexer built from the same rules.
+SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hosted compiler. The bootstrap JS compiler (lang/bootstrap/compile.mjs) still compiles this file to bytecode for now; once the parser + codegen are also ported, the JS compiler is deleted. The lexer streams tokens straight to stdout via `say`, one per line, in a stable text format: N=<int>      integer literal I=<ident>    identifier or keyword S=<text>     string literal (contents only, no quotes) P=<char>     single-char punctuation NL           newline EOF          end of source The `scripts/test-self-lexer.mjs` driver splices a `set src to "..."` stub in front of this file and diffs the output against a JS reference lexer built from the same rules.
 
 5 functions.
 
-| Function   | Parameters | What it does                                                                      | Returns             | Line |
-| ---------- | ---------- | --------------------------------------------------------------------------------- | ------------------- | ---- |
-| `is_digit` | `c`        | True when the byte at the given index is an ASCII digit 0-9.                      | `0`                 | 22   |
-| `is_alpha` | `c`        | True when the byte is an ASCII letter or underscore — the start of an identifier. | `1`                 | 32   |
-| `is_alnum` | `c`        | True when the byte may continue an identifier: a letter, digit, or underscore.    | `1`                 | 49   |
-| `slice`    | `src i j`  | Extracts the substring between two byte offsets, byte by byte.                    | `out`               | 56   |
-| `lex`      | `src`      | Turns source text into the token stream: kinds, lexemes, and line numbers.        | _no explicit yield_ | 65   |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_digit` | `c` | True when the byte at the given index is an ASCII digit 0-9. | `0` | 22 |
+| `is_alpha` | `c` | True when the byte is an ASCII letter or underscore — the start of an identifier. | `1` | 32 |
+| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 49 |
+| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 56 |
+| `lex` | `src` | Turns source text into the token stream: kinds, lexemes, and line numbers. | _no explicit yield_ | 65 |
 
 #### `lang/compiler/parser.sdev`
 
-SDEV expression parser, written in SDEV. This is the second slice of Milestone 5 (self-hosted compiler). It sits on top of the lexer (lang/compiler/lexer.sdev) and, for now, handles arithmetic expressions with correct precedence: expr := add add := mul (('+' | '-') mul)\* mul := atom (('_' | '/') atom)_ atom := NUM | '(' expr ')' The parser reads tokens from globals populated by an inlined top-level lex loop (see scripts/test-self-parser.mjs for the harness). It streams the parse in reverse-Polish form via `say`, one atom or operator per line — that's easy to diff against a JS reference implementation. The full statement parser lands next; this file exercises recursion, global-buffer reads, and function-return threading of the cursor.
+SDEV expression parser, written in SDEV. This is the second slice of Milestone 5 (self-hosted compiler). It sits on top of the lexer (lang/compiler/lexer.sdev) and, for now, handles arithmetic expressions with correct precedence: expr  := add add   := mul (('+' | '-') mul)* mul   := atom (('*' | '/') atom)* atom  := NUM | '(' expr ')' The parser reads tokens from globals populated by an inlined top-level lex loop (see scripts/test-self-parser.mjs for the harness). It streams the parse in reverse-Polish form via `say`, one atom or operator per line — that's easy to diff against a JS reference implementation. The full statement parser lands next; this file exercises recursion, global-buffer reads, and function-return threading of the cursor.
 
 4 functions.
 
-| Function     | Parameters | What it does                                                                                      | Returns   | Line |
-| ------------ | ---------- | ------------------------------------------------------------------------------------------------- | --------- | ---- |
-| `is_op_c`    | `pos c`    | True when the character can begin an operator token.                                              | `0`       | 22   |
-| `parse_atom` | `pos`      | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 37   |
-| `parse_mul`  | `pos`      | Parses the multiplication / division / modulo precedence level.                                   | `pos`     | 54   |
-| `parse_add`  | `pos`      | Parses the addition / subtraction precedence level.                                               | `pos`     | 73   |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 22 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 37 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 54 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 73 |
 
 #### `lang/parity/agent.sdev`
 
-sdev Parity Agent — written in sdev, runs on sdev Phase 0/1 of the v1 <-> v2 parity plan. The agent is the machine that keeps every sdev track honest: 1. loads the canonical registry (lang/parity/features.json), 2. loads the source of every track listed in that registry, 3. probes each track for each feature, 4. prints a gap report and writes lang/parity/report.json, 5. regenerates the parity matrix inside the documentation, between / markers, 6. reports how many `must` features are missing so CI can fail. Adding a track = one entry in the registry. The agent needs no change. Host builtins used: read\_file, write\_file.
+sdev Parity Agent — written in sdev, runs on sdev Phase 0/1 of the v1 <-> v2 parity plan. The agent is the machine that keeps every sdev track honest: 1. loads the canonical registry (lang/parity/features.json), 2. loads the source of every track listed in that registry, 3. probes each track for each feature, 4. prints a gap report and writes lang/parity/report.json, 5. regenerates the parity matrix inside the documentation, between <!-- PARITY:BEGIN --> / <!-- PARITY:END --> markers, 6. reports how many `must` features are missing so CI can fail. Adding a track = one entry in the registry. The agent needs no change. Host builtins used: read_file, write_file.
 
 12 functions.
 
-| Function            | Parameters                 | What it does                                                                                                                                                                              | Returns                                                                                      | Line |
-| ------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---- |
-| `unquote`           | `s`                        | Strips the surrounding quotes from a JSON string value.                                                                                                                                   | `t`                                                                                          | 21   |
-| `field_key`         | `line`                     | Split a `"key": "value"` line. Values may contain colons, so only the first colon separates; the rest is re-joined.                                                                       | `unquote(parts[0])`                                                                          | 38   |
-| `field_value`       | `line`                     | Reads one field out of a JSON object, without a full JSON parser.                                                                                                                         | `""`                                                                                         | 43   |
-| `load_registry`     | `path`                     | Reads `lang/parity/features.json` into memory as the canonical feature list.                                                                                                              | `{ tracks: tracks, features: features }`                                                     | 59   |
-| `load_track_source` | `spec`                     | Loads the implementation source for one track so it can be probed for a feature.                                                                                                          | `out`                                                                                        | 99   |
-| `probe`             | `src, name`                | A feature is present on a track when its track-local name appears as a quoted token in that track's source — the shape every implementation uses for keyword tables and builtin dispatch. | `nope`                                                                                       | 113  |
-| `mark`              | `level, present`           | Records the support verdict for one feature on one track.                                                                                                                                 | `"n/a"`                                                                                      | 128  |
-| `audit`             | `registry`                 | Probes every feature against every track and builds the full verdict table.                                                                                                               | `{ tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }` | 138  |
-| `matrix_markdown`   | `report`                   | Renders the audit result as the markdown parity matrix.                                                                                                                                   | `out`                                                                                        | 183  |
-| `report_json`       | `report`                   | Serialises the audit result to `lang/parity/report.json`.                                                                                                                                 | `out`                                                                                        | 219  |
-| `sync_doc`          | `path, block`              | Rewrites the parity matrix block inside the parity documentation in place.                                                                                                                | `0`                                                                                          | 266  |
-| `run_parity_agent`  | `registry_path, doc_paths` | Entry point: audit, then write both the JSON report and the documentation.                                                                                                                | `measure(report.must_missing)`                                                               | 283  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `unquote` | `s` | Strips the surrounding quotes from a JSON string value. | `t` | 21 |
+| `field_key` | `line` | Split a `"key": "value"` line. Values may contain colons, so only the first colon separates; the rest is re-joined. | `unquote(parts[0])` | 38 |
+| `field_value` | `line` | Reads one field out of a JSON object, without a full JSON parser. | `""` | 43 |
+| `load_registry` | `path` | Reads `lang/parity/features.json` into memory as the canonical feature list. | `{ tracks: tracks, features: features }` | 59 |
+| `load_track_source` | `spec` | Loads the implementation source for one track so it can be probed for a feature. | `out` | 99 |
+| `probe` | `src, name` | A feature is present on a track when its track-local name appears as a quoted token in that track's source — the shape every implementation uses for keyword tables and builtin dispatch. | `nope` | 113 |
+| `mark` | `level, present` | Records the support verdict for one feature on one track. | `"n/a"` | 128 |
+| `audit` | `registry` | Probes every feature against every track and builds the full verdict table. | `{ tracks: tracks, rows: rows, must_missing: must_missing, should_missing: should_missing }` | 138 |
+| `matrix_markdown` | `report` | Renders the audit result as the markdown parity matrix. | `out` | 183 |
+| `report_json` | `report` | Serialises the audit result to `lang/parity/report.json`. | `out` | 219 |
+| `sync_doc` | `path, block` | Rewrites the parity matrix block inside the parity documentation in place. | `0` | 266 |
+| `run_parity_agent` | `registry_path, doc_paths` | Entry point: audit, then write both the JSON report and the documentation. | `measure(report.must_missing)` | 283 |
 
 #### `lang/stdlib/ffi.sdev`
 
-sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared libraries (.so / .dylib / .dll) from sdev. This is the bridge that lets the ML stdlib reach BLAS, libcudart, cuBLAS, cuDNN, and any other C ABI library the host system exposes. Requires host builtins provided by the native runtime: ffi\_open(path) -> lib handle (int) or void on error ffi\_sym(lib, name) -> fn handle (int) or void on error ffi\_call(fn, ret\_kind, args) -> result (kind-typed) ffi\_close(lib) -> yep/nope ffi\_buf(size) -> raw byte buffer addr (int) ffi\_read\_f64(buf, i) / ffi\_write\_f64(buf, i, x) ffi\_read\_i32(buf, i) / ffi\_write\_i32(buf, i, n) The browser WASM runtime stubs these to void — FFI only runs on the native/Node track. The interpreter's `advanced.ts` wires the Node side via `koffi` when installed. Type kinds are small ints so the host can dispatch fast: 0 void 1 i32 2 i64 3 f32 4 f64 5 ptr 6 cstr 7 buf 8 bool
+sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared libraries (.so / .dylib / .dll) from sdev. This is the bridge that lets the ML stdlib reach BLAS, libcudart, cuBLAS, cuDNN, and any other C ABI library the host system exposes. Requires host builtins provided by the native runtime: ffi_open(path)                  -> lib handle (int)   or void on error ffi_sym(lib, name)              -> fn handle (int)    or void on error ffi_call(fn, ret_kind, args)    -> result (kind-typed) ffi_close(lib)                  -> yep/nope ffi_buf(size)                   -> raw byte buffer addr (int) ffi_read_f64(buf, i) / ffi_write_f64(buf, i, x) ffi_read_i32(buf, i) / ffi_write_i32(buf, i, n) The browser WASM runtime stubs these to void — FFI only runs on the native/Node track. The interpreter's `advanced.ts` wires the Node side via `koffi` when installed. Type kinds are small ints so the host can dispatch fast: 0 void   1 i32   2 i64   3 f32   4 f64 5 ptr    6 cstr  7 buf   8 bool
 
 11 functions.
 
-| Function        | Parameters                       | What it does                                                                                                                                    | Returns                                                              | Line |
-| --------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---- |
-| `Library`       | `path`                           | library handle wrapper                                                                                                                          | `{ ok: nope, path: path, handle: void, err: "cannot open " + path }` | 39   |
-| `lib_close`     | `lib`                            | Closes a loaded native library handle.                                                                                                          | `yep`                                                                | 47   |
-| `bind`          | `lib, name, ret_kind, arg_kinds` | function binding bind(lib, "matmul\_f64", FFI\_VOID, \[FFI\_PTR, FFI\_PTR, FFI\_PTR, FFI\_I32, FFI\_I32, FFI\_I32])                             | `{`                                                                  | 55   |
-| `invoke`        | `binding, argv`                  | Calls a native symbol with marshalled arguments and returns the marshalled result.                                                              | `ffi_call(binding.fn, binding.ret, binding.args, argv)`              | 68   |
-| `buf_f64`       | `n`                              | raw buffers (for passing float arrays)                                                                                                          | `{ addr: b, len: n, kind: FFI_F64 }`                                 | 74   |
-| `buf_from_list` | `xs`                             | Packs a list of numbers into a raw FFI byte buffer.                                                                                             | `b`                                                                  | 79   |
-| `buf_to_list`   | `b`                              | Unpacks a raw FFI byte buffer back into a list of numbers.                                                                                      | `out`                                                                | 90   |
-| `open_blas`     | `path`                           | BLAS-style convenience wrappers Open an OpenBLAS-compatible library and bind the two calls the ML stdlib actually needs for accelerated matmul. | `{ lib: lib, dgemm: dgemm, daxpy: daxpy }`                           | 103  |
-| `blas_matmul`   | `blas, a, b`                     | BLAS-accelerated matmul that plugs straight into ml/tensor.sdev. Falls back to the pure-sdev matmul when the binding is void.                   | `tensor(buf_to_list(bc), [m, n])`                                    | 127  |
-| `open_cuda`     | `cudart_path, cublas_path`       | CUDA fast path Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training.                   | `{`                                                                  | 145  |
-| `cuda_ok`       | `cuda`                           | True when a CUDA runtime and device are reachable from this host.                                                                               | `yep`                                                                | 167  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `Library` | `path` | library handle wrapper | `{ ok: nope, path: path, handle: void, err: "cannot open " + path }` | 39 |
+| `lib_close` | `lib` | Closes a loaded native library handle. | `yep` | 47 |
+| `bind` | `lib, name, ret_kind, arg_kinds` | function binding bind(lib, "matmul_f64", FFI_VOID, [FFI_PTR, FFI_PTR, FFI_PTR, FFI_I32, FFI_I32, FFI_I32]) | `{` | 55 |
+| `invoke` | `binding, argv` | Calls a native symbol with marshalled arguments and returns the marshalled result. | `ffi_call(binding.fn, binding.ret, binding.args, argv)` | 68 |
+| `buf_f64` | `n` | raw buffers (for passing float arrays) | `{ addr: b, len: n, kind: FFI_F64 }` | 74 |
+| `buf_from_list` | `xs` | Packs a list of numbers into a raw FFI byte buffer. | `b` | 79 |
+| `buf_to_list` | `b` | Unpacks a raw FFI byte buffer back into a list of numbers. | `out` | 90 |
+| `open_blas` | `path` | BLAS-style convenience wrappers Open an OpenBLAS-compatible library and bind the two calls the ML stdlib actually needs for accelerated matmul. | `{ lib: lib, dgemm: dgemm, daxpy: daxpy }` | 103 |
+| `blas_matmul` | `blas, a, b` | BLAS-accelerated matmul that plugs straight into ml/tensor.sdev. Falls back to the pure-sdev matmul when the binding is void. | `tensor(buf_to_list(bc), [m, n])` | 127 |
+| `open_cuda` | `cudart_path, cublas_path` | CUDA fast path Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training. | `{` | 145 |
+| `cuda_ok` | `cuda` | True when a CUDA runtime and device are reachable from this host. | `yep` | 167 |
 
 #### `lang/stdlib/ml/auto_evolve.sdev`
 
@@ -9489,18 +10416,18 @@ sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12) Wires the ML stack i
 
 10 functions.
 
-| Function            | Parameters                                             | What it does                                                                                                                                                                             | Returns                                    | Line |
-| ------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ---- |
-| `is_allowed`        | `path`                                                 | Guards the evolution loop: true only for paths the policy permits editing.                                                                                                               | `nope`                                     | 34   |
-| `make_proposal`     | `path, old_body, new_body, reason`                     | proposal record                                                                                                                                                                          | `{`                                        | 44   |
-| `apply_proposal`    | `p`                                                    | Applies an approved proposal to the source tree and records it in the log.                                                                                                               | `ok`                                       | 54   |
-| `draft_from_demand` | `model, demand, target_path`                           | demand → proposal Given a ranked demand map from `mine_demand`, ask the model to draft a patch for the top topic. `model` is any sdev model exposing `generate(model, prompt, max_new)`. | `make_proposal(target_path, cur, patched,` | 65   |
-| `top_topic`         | `counts`                                               | Picks the most-requested topic out of the harvested demand signals.                                                                                                                      | `best_k`                                   | 77   |
-| `evolve_weights`    | `model, teacher_url, teacher_key, prompts, epochs, lr` | fine-tune on live distillation Pulls prompt/answer pairs from a teacher endpoint and runs a short SGD pass so the local model tracks the frontier without leaving the sdev runtime.      | `measure(pairs)`                           | 95   |
-| `evolve_tick`       | `model, sources, teacher_url, teacher_key`             | the loop One tick: mine demand → draft → review → apply → fine-tune. Returns a report tome so the caller can log or throttle.                                                            | `{`                                        | 112  |
-| `pick_target`       | `demand`                                               | Chooses which file the next evolution step should modify.                                                                                                                                | `"lang/stdlib/ml/nn.sdev"`                 | 133  |
-| `prompt_pool`       | `demand`                                               | Builds the prompt set handed to the teacher model for the next round.                                                                                                                    | `out`                                      | 145  |
-| `evolve_forever`    | `model, sources, teacher_url, teacher_key, ticks`      | long-running driver                                                                                                                                                                      | _no explicit yield_                        | 160  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `is_allowed` | `path` | Guards the evolution loop: true only for paths the policy permits editing. | `nope` | 34 |
+| `make_proposal` | `path, old_body, new_body, reason` | proposal record | `{` | 44 |
+| `apply_proposal` | `p` | Applies an approved proposal to the source tree and records it in the log. | `ok` | 54 |
+| `draft_from_demand` | `model, demand, target_path` | demand → proposal Given a ranked demand map from `mine_demand`, ask the model to draft a patch for the top topic. `model` is any sdev model exposing `generate(model, prompt, max_new)`. | `make_proposal(target_path, cur, patched,` | 65 |
+| `top_topic` | `counts` | Picks the most-requested topic out of the harvested demand signals. | `best_k` | 77 |
+| `evolve_weights` | `model, teacher_url, teacher_key, prompts, epochs, lr` | fine-tune on live distillation Pulls prompt/answer pairs from a teacher endpoint and runs a short SGD pass so the local model tracks the frontier without leaving the sdev runtime. | `measure(pairs)` | 95 |
+| `evolve_tick` | `model, sources, teacher_url, teacher_key` | the loop One tick: mine demand → draft → review → apply → fine-tune. Returns a report tome so the caller can log or throttle. | `{` | 112 |
+| `pick_target` | `demand` | Chooses which file the next evolution step should modify. | `"lang/stdlib/ml/nn.sdev"` | 133 |
+| `prompt_pool` | `demand` | Builds the prompt set handed to the teacher model for the next round. | `out` | 145 |
+| `evolve_forever` | `model, sources, teacher_url, teacher_key, ticks` | long-running driver | _no explicit yield_ | 160 |
 
 #### `lang/stdlib/ml/autograd.sdev`
 
@@ -9508,28 +10435,28 @@ sdev ML Stdlib — Autograd Tape (Milestone 8b) Reverse-mode automatic different
 
 20 functions.
 
-| Function       | Parameters          | What it does                                                                                                                                                                         | Returns                                                     | Line |
-| -------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | ---- |
-| `tape_reset`   | _none_              | Clears the global autograd tape before a new forward pass.                                                                                                                           | _no explicit yield_                                         | 13   |
-| `record`       | `kind, inputs, out` | Appends one operation and its inputs to the autograd tape.                                                                                                                           | _no explicit yield_                                         | 17   |
-| `d_add`        | `a, b`              | differentiable ops                                                                                                                                                                   | `o`                                                         | 22   |
-| `d_mul`        | `a, b`              | Local derivative rule for element-wise multiplication.                                                                                                                               | `o`                                                         | 28   |
-| `d_matmul`     | `a, b`              | Local derivative rule for matrix multiplication.                                                                                                                                     | `o`                                                         | 34   |
-| `d_relu`       | `a`                 | Local derivative rule for ReLU: pass gradient where the input was positive.                                                                                                          | `o`                                                         | 41   |
-| `d_mse`        | `pred, target`      | Local derivative rule for mean squared error.                                                                                                                                        | `o`                                                         | 48   |
-| `d_softmax_ce` | `logits, targets`   | Row-wise softmax + cross-entropy over next-token targets. logits: \[rows, vocab]; targets: list of `rows` class ids. Returns the mean negative log-likelihood as a 1-element tensor. | `o`                                                         | 65   |
-| `backward`     | `out`               | backward pass                                                                                                                                                                        | _no explicit yield_                                         | 102  |
-| `bw_sce`       | `e`                 | Backward pass for softmax cross-entropy, fused for numerical stability.                                                                                                              | _no explicit yield_                                         | 118  |
-| `bw_add`       | `e`                 | Backward pass for addition: routes the incoming gradient to both operands.                                                                                                           | _no explicit yield_                                         | 140  |
-| `bw_mul`       | `e`                 | Backward pass for element-wise multiplication.                                                                                                                                       | _no explicit yield_                                         | 152  |
-| `bw_matmul`    | `e`                 | Backward pass for matrix multiplication, producing both operand gradients.                                                                                                           | _no explicit yield_                                         | 164  |
-| `bw_relu`      | `e`                 | Backward pass for ReLU.                                                                                                                                                              | _no explicit yield_                                         | 204  |
-| `bw_mse`       | `e`                 | Backward pass for mean squared error.                                                                                                                                                | _no explicit yield_                                         | 216  |
-| `sgd_step`     | `params, lr`        | optimizers                                                                                                                                                                           | _no explicit yield_                                         | 229  |
-| `zero_grads`   | `params`            | Resets every parameter gradient to zero before the next backward pass.                                                                                                               | _no explicit yield_                                         | 244  |
-| `clip_grads`   | `params, max_norm`  | Global-norm gradient clipping — keeps LM training from exploding.                                                                                                                    | `norm`                                                      | 255  |
-| `adam_new`     | `params`            | Adam                                                                                                                                                                                 | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279  |
-| `adam_step`    | `opt, params, lr`   | Applies one Adam optimiser update using the stored moment estimates.                                                                                                                 | _no explicit yield_                                         | 296  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `tape_reset` | _none_ | Clears the global autograd tape before a new forward pass. | _no explicit yield_ | 13 |
+| `record` | `kind, inputs, out` | Appends one operation and its inputs to the autograd tape. | _no explicit yield_ | 17 |
+| `d_add` | `a, b` | differentiable ops | `o` | 22 |
+| `d_mul` | `a, b` | Local derivative rule for element-wise multiplication. | `o` | 28 |
+| `d_matmul` | `a, b` | Local derivative rule for matrix multiplication. | `o` | 34 |
+| `d_relu` | `a` | Local derivative rule for ReLU: pass gradient where the input was positive. | `o` | 41 |
+| `d_mse` | `pred, target` | Local derivative rule for mean squared error. | `o` | 48 |
+| `d_softmax_ce` | `logits, targets` | Row-wise softmax + cross-entropy over next-token targets. logits: [rows, vocab]; targets: list of `rows` class ids. Returns the mean negative log-likelihood as a 1-element tensor. | `o` | 65 |
+| `backward` | `out` | backward pass | _no explicit yield_ | 102 |
+| `bw_sce` | `e` | Backward pass for softmax cross-entropy, fused for numerical stability. | _no explicit yield_ | 118 |
+| `bw_add` | `e` | Backward pass for addition: routes the incoming gradient to both operands. | _no explicit yield_ | 140 |
+| `bw_mul` | `e` | Backward pass for element-wise multiplication. | _no explicit yield_ | 152 |
+| `bw_matmul` | `e` | Backward pass for matrix multiplication, producing both operand gradients. | _no explicit yield_ | 164 |
+| `bw_relu` | `e` | Backward pass for ReLU. | _no explicit yield_ | 204 |
+| `bw_mse` | `e` | Backward pass for mean squared error. | _no explicit yield_ | 216 |
+| `sgd_step` | `params, lr` | optimizers | _no explicit yield_ | 229 |
+| `zero_grads` | `params` | Resets every parameter gradient to zero before the next backward pass. | _no explicit yield_ | 244 |
+| `clip_grads` | `params, max_norm` | Global-norm gradient clipping — keeps LM training from exploding. | `norm` | 255 |
+| `adam_new` | `params` | Adam | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279 |
+| `adam_step` | `opt, params, lr` | Applies one Adam optimiser update using the stored moment estimates. | _no explicit yield_ | 296 |
 
 #### `lang/stdlib/ml/cuda.sdev`
 
@@ -9537,95 +10464,95 @@ sdev ML Stdlib — CUDA Fast Path (Milestone 11) Thin sdev-native layer over the
 
 11 functions.
 
-| Function              | Parameters                 | What it does                                                                                                                                                                                        | Returns                                                         | Line |
-| --------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---- |
-| `cuda_device`         | `cudart_path, cublas_path` | device handle A "device" bundles the loaded cuBLAS/cudart bindings with a live cublasHandle\_t. We keep it as a tome so callers can pass it around like any other sdev value.                       | `{ ok: nope, cu: void, handle: void, err: "cuda unavailable" }` | 22   |
-| `cuda_device_default` | _none_                     | Returns the default CUDA device handle, initialising the runtime if needed.                                                                                                                         | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",`         | 34   |
-| `cuda_free_device`    | `dev`                      | Releases a CUDA device handle.                                                                                                                                                                      | `yep`                                                           | 40   |
-| `cuda_alloc`          | `dev, n_f64`               | device memory A cuda\_buf is host-visible metadata around a device pointer.                                                                                                                         | `{ dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }`      | 51   |
-| `cuda_free`           | `dev, b`                   | Frees a device-side allocation.                                                                                                                                                                     | `yep`                                                           | 58   |
-| `cuda_upload`         | `dev, host_list`           | cudaMemcpyKind: HostToDevice=1, DeviceToHost=2                                                                                                                                                      | `db`                                                            | 65   |
-| `cuda_download`       | `dev, db`                  | Copies a buffer from device memory back to host memory.                                                                                                                                             | `buf_to_list(hb)`                                               | 73   |
-| `cuda_matmul`         | `dev, a, b`                | accelerated ops Row-major C = A · B via cublasDgemm. cuBLAS is column-major, so we compute Bᵀ · Aᵀ under the hood and interpret the result as row-major C — same trick numpy's cublas backend uses. | `tensor(out, [m, n])`                                           | 83   |
-| `best_matmul`         | `dev, blas, a, b`          | Convenience: pick the fastest available matmul path. Priority: CUDA → BLAS → pure sdev.                                                                                                             | `matmul(a, b)`                                                  | 113  |
-| `cuda_forward_linear` | `dev, x, w, bias`          | training-loop hook Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU.       | `t_add(y, bias)`                                                | 125  |
-| `cuda_report`         | `dev`                      | diagnostics                                                                                                                                                                                         | `"CUDA: unavailable (running on CPU fallback)"`                 | 131  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `cuda_device` | `cudart_path, cublas_path` | device handle A "device" bundles the loaded cuBLAS/cudart bindings with a live cublasHandle_t. We keep it as a tome so callers can pass it around like any other sdev value. | `{ ok: nope, cu: void, handle: void, err: "cuda unavailable" }` | 22 |
+| `cuda_device_default` | _none_ | Returns the default CUDA device handle, initialising the runtime if needed. | `cuda_device("/usr/lib/x86_64-linux-gnu/libcudart.so",` | 34 |
+| `cuda_free_device` | `dev` | Releases a CUDA device handle. | `yep` | 40 |
+| `cuda_alloc` | `dev, n_f64` | device memory A cuda_buf is host-visible metadata around a device pointer. | `{ dptr: ffi_read_i32(pbuf, 0), n: n_f64, bytes: nbytes }` | 51 |
+| `cuda_free` | `dev, b` | Frees a device-side allocation. | `yep` | 58 |
+| `cuda_upload` | `dev, host_list` | cudaMemcpyKind: HostToDevice=1, DeviceToHost=2 | `db` | 65 |
+| `cuda_download` | `dev, db` | Copies a buffer from device memory back to host memory. | `buf_to_list(hb)` | 73 |
+| `cuda_matmul` | `dev, a, b` | accelerated ops Row-major C = A · B via cublasDgemm. cuBLAS is column-major, so we compute Bᵀ · Aᵀ under the hood and interpret the result as row-major C — same trick numpy's cublas backend uses. | `tensor(out, [m, n])` | 83 |
+| `best_matmul` | `dev, blas, a, b` | Convenience: pick the fastest available matmul path. Priority: CUDA → BLAS → pure sdev. | `matmul(a, b)` | 113 |
+| `cuda_forward_linear` | `dev, x, w, bias` | training-loop hook Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU. | `t_add(y, bias)` | 125 |
+| `cuda_report` | `dev` | diagnostics | `"CUDA: unavailable (running on CPU fallback)"` | 131 |
 
 #### `lang/stdlib/ml/data.sdev`
 
-sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and LLM-distillation utilities. Uses host builtins: read\_file, write\_file, http\_get.
+sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and LLM-distillation utilities. Uses host builtins: read_file, write_file, http_get.
 
 10 functions.
 
-| Function        | Parameters                  | What it does                                                                                                                                                                        | Returns                                             | Line |
-| --------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---- |
-| `load_text`     | `path`                      | text I/O                                                                                                                                                                            | `read_file(path)`                                   | 10   |
-| `save_text`     | `path, s`                   | Writes a text corpus to disk for later training runs.                                                                                                                               | _no explicit yield_                                 | 14   |
-| `char_vocab`    | `text`                      | byte-pair-ish tokenizer (char level)                                                                                                                                                | `{ size: measure(order), stoi: seen, itos: order }` | 19   |
-| `encode`        | `vocab, text`               | Turns text into a list of token ids using the active vocabulary.                                                                                                                    | `out`                                               | 34   |
-| `decode`        | `vocab, ids`                | Turns a list of token ids back into text.                                                                                                                                           | `s`                                                 | 45   |
-| `crawl`         | `url`                       | web crawler                                                                                                                                                                         | `http_get(url)`                                     | 56   |
-| `crawl_many`    | `urls`                      | Fetches a list of URLs and returns their extracted text bodies.                                                                                                                     | `out`                                               | 60   |
-| `teacher_query` | `endpoint, api_key, prompt` | teacher-model distillation Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a prompt, receive logits/text, and train the local sdev model to imitate the teacher's outputs. | `http_get(url)`                                     | 74   |
-| `distill_batch` | `endpoint, key, prompts`    | Queries a teacher model for a batch of examples so a smaller model can learn from them.                                                                                             | `pairs`                                             | 79   |
-| `save_model`    | `path, model`               | checkpointing                                                                                                                                                                       | _no explicit yield_                                 | 91   |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `load_text` | `path` | text I/O | `read_file(path)` | 10 |
+| `save_text` | `path, s` | Writes a text corpus to disk for later training runs. | _no explicit yield_ | 14 |
+| `char_vocab` | `text` | byte-pair-ish tokenizer (char level) | `{ size: measure(order), stoi: seen, itos: order }` | 19 |
+| `encode` | `vocab, text` | Turns text into a list of token ids using the active vocabulary. | `out` | 34 |
+| `decode` | `vocab, ids` | Turns a list of token ids back into text. | `s` | 45 |
+| `crawl` | `url` | web crawler | `http_get(url)` | 56 |
+| `crawl_many` | `urls` | Fetches a list of URLs and returns their extracted text bodies. | `out` | 60 |
+| `teacher_query` | `endpoint, api_key, prompt` | teacher-model distillation Uses a remote LLM (Gemini, GPT, etc.) as a teacher: send a prompt, receive logits/text, and train the local sdev model to imitate the teacher's outputs. | `http_get(url)` | 74 |
+| `distill_batch` | `endpoint, key, prompts` | Queries a teacher model for a batch of examples so a smaller model can learn from them. | `pairs` | 79 |
+| `save_model` | `path, model` | checkpointing | _no explicit yield_ | 91 |
 
 #### `lang/stdlib/ml/nn.sdev`
 
-sdev ML Stdlib — Neural Network Layers (Milestone 8c) High-level layer builders. Each layer returns a tome exposing { params: \[tensors...], forward: conjure(x) }.
+sdev ML Stdlib — Neural Network Layers (Milestone 8c) High-level layer builders. Each layer returns a tome exposing { params: [tensors...], forward: conjure(x) }.
 
 7 functions.
 
-| Function        | Parameters                  | What it does                                                                  | Returns                                           | Line |
-| --------------- | --------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------- | ---- |
-| `linear`        | `in_features, out_features` | Creates a dense layer with a weight matrix and bias vector.                   | `{`                                               | 9    |
-| `broadcast_row` | `row, rows`                 | Adds a bias row to every row of a matrix.                                     | `t`                                               | 23   |
-| `sequential`    | `layers`                    | Chains layers into a single model whose forward pass runs them in order.      | `{`                                               | 36   |
-| `seq_forward`   | `layers, x`                 | Runs the forward pass of a sequential model.                                  | `cur`                                             | 51   |
-| `relu_layer`    | _none_                      | A layer that applies ReLU element-wise.                                       | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61   |
-| `train_step`    | `model, x, y, lr`           | training loop                                                                 | `loss.data[0]`                                    | 66   |
-| `fit`           | `model, xs, ys, epochs, lr` | Trains a model over a dataset for the given epochs, reporting loss per epoch. | _no explicit yield_                               | 75   |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `linear` | `in_features, out_features` | Creates a dense layer with a weight matrix and bias vector. | `{` | 9 |
+| `broadcast_row` | `row, rows` | Adds a bias row to every row of a matrix. | `t` | 23 |
+| `sequential` | `layers` | Chains layers into a single model whose forward pass runs them in order. | `{` | 36 |
+| `seq_forward` | `layers, x` | Runs the forward pass of a sequential model. | `cur` | 51 |
+| `relu_layer` | _none_ | A layer that applies ReLU element-wise. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
+| `train_step` | `model, x, y, lr` | training loop | `loss.data[0]` | 66 |
+| `fit` | `model, xs, ys, epochs, lr` | Trains a model over a dataset for the given epochs, reporting loss per epoch. | _no explicit yield_ | 75 |
 
 #### `lang/stdlib/ml/self_modify.sdev`
 
-sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-trained model to read the sdev source tree, propose edits, and rewrite its own weights or the language runtime itself. All mutations pass through a review hook so users can gate every change. Requires host builtins: read\_file, write\_file, http\_get.
+sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-trained model to read the sdev source tree, propose edits, and rewrite its own weights or the language runtime itself. All mutations pass through a review hook so users can gate every change. Requires host builtins: read_file, write_file, http_get.
 
 7 functions.
 
-| Function           | Parameters          | What it does                                                                                                                                                                | Returns             | Line |
-| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---- |
-| `self_read`        | `path`              | Reads a file from the sdev source tree so the model can inspect its own code.                                                                                               | `read_file(path)`   | 15   |
-| `self_propose`     | `path, new_content` | Produces a proposed source change as a structured, reviewable patch.                                                                                                        | `nope`              | 19   |
-| `set_review_hook`  | `fn`                | Installs the callback that must approve a proposal before it is applied.                                                                                                    | _no explicit yield_ | 30   |
-| `mine_demand`      | `sources`           | feature-demand mining Fetches issue/PR/reddit signals and lets the model pick the next feature to draft. Returns a ranked list of {topic, score}.                           | `counts`            | 37   |
-| `harvest_keywords` | `counts, body`      | Mines demand signals for language features from collected text.                                                                                                             | _no explicit yield_ | 48   |
-| `update_docs`      | `section, body`     | documentation sync                                                                                                                                                          | _no explicit yield_ | 69   |
-| `rewrite_weights`  | `model, transform`  | weight rewriting The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep`               | 79   |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `self_read` | `path` | Reads a file from the sdev source tree so the model can inspect its own code. | `read_file(path)` | 15 |
+| `self_propose` | `path, new_content` | Produces a proposed source change as a structured, reviewable patch. | `nope` | 19 |
+| `set_review_hook` | `fn` | Installs the callback that must approve a proposal before it is applied. | _no explicit yield_ | 30 |
+| `mine_demand` | `sources` | feature-demand mining Fetches issue/PR/reddit signals and lets the model pick the next feature to draft. Returns a ranked list of {topic, score}. | `counts` | 37 |
+| `harvest_keywords` | `counts, body` | Mines demand signals for language features from collected text. | _no explicit yield_ | 48 |
+| `update_docs` | `section, body` | documentation sync | _no explicit yield_ | 69 |
+| `rewrite_weights` | `model, transform` | weight rewriting The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep` | 79 |
 
 #### `lang/stdlib/ml/tensor.sdev`
 
-sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: \[f64...], shape: \[int...], grad: \[f64...] | void, requires\_grad: bool } All ops are pure by default; autograd tape is opt-in per tensor. Fully written in sdev — runs on both the WASM and Native ASM tracks.
+sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: [f64...], shape: [int...], grad: [f64...] | void, requires_grad: bool } All ops are pure by default; autograd tape is opt-in per tensor. Fully written in sdev — runs on both the WASM and Native ASM tracks.
 
 16 functions.
 
-| Function        | Parameters     | What it does                                                                | Returns                                                         | Line |
-| --------------- | -------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- | ---- |
-| `tensor`        | `data, shape`  | Builds a tensor from flat data plus a shape, with autograd off.             | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8    |
-| `tensor_grad`   | `data, shape`  | Builds a tensor with a zeroed gradient buffer and autograd enabled.         | `{ data: data, shape: shape, grad: g, requires_grad: yep }`     | 12   |
-| `zeros`         | `shape`        | A tensor of the given shape filled with 0.0.                                | `tensor(d, shape)`                                              | 23   |
-| `ones`          | `shape`        | A tensor of the given shape filled with 1.0.                                | `tensor(d, shape)`                                              | 31   |
-| `randn`         | `shape`        | A tensor of the given shape sampled from a standard normal (Box–Muller).    | `tensor(d, shape)`                                              | 39   |
-| `shape_size`    | `shape`        | The total element count implied by a shape — the product of its dimensions. | `n`                                                             | 54   |
-| `t_add`         | `a, b`         | element-wise ops                                                            | `tensor(d, a.shape)`                                            | 65   |
-| `t_sub`         | `a, b`         | Element-wise subtraction of two tensors of the same shape.                  | `tensor(d, a.shape)`                                            | 73   |
-| `t_mul`         | `a, b`         | Element-wise multiplication of two tensors of the same shape.               | `tensor(d, a.shape)`                                            | 81   |
-| `t_scale`       | `a, k`         | Multiplies every element of a tensor by a scalar.                           | `tensor(d, a.shape)`                                            | 89   |
-| `matmul`        | `a, b`         | 2-D matmul (rows x cols)                                                    | `tensor(d, [m, n])`                                             | 98   |
-| `relu`          | `a`            | activations                                                                 | `tensor(d, a.shape)`                                            | 124  |
-| `sigmoid`       | `a`            | Element-wise logistic sigmoid.                                              | `tensor(d, a.shape)`                                            | 136  |
-| `softmax`       | `a`            | Row-wise softmax, shifted by the row maximum for numerical stability.       | `tensor(d, a.shape)`                                            | 147  |
-| `mse`           | `pred, target` | losses                                                                      | `s / n`                                                         | 170  |
-| `cross_entropy` | `pred, target` | Mean cross-entropy loss between predicted probabilities and target labels.  | `s`                                                             | 182  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `tensor` | `data, shape` | Builds a tensor from flat data plus a shape, with autograd off. | `{ data: data, shape: shape, grad: void, requires_grad: nope }` | 8 |
+| `tensor_grad` | `data, shape` | Builds a tensor with a zeroed gradient buffer and autograd enabled. | `{ data: data, shape: shape, grad: g, requires_grad: yep }` | 12 |
+| `zeros` | `shape` | A tensor of the given shape filled with 0.0. | `tensor(d, shape)` | 23 |
+| `ones` | `shape` | A tensor of the given shape filled with 1.0. | `tensor(d, shape)` | 31 |
+| `randn` | `shape` | A tensor of the given shape sampled from a standard normal (Box–Muller). | `tensor(d, shape)` | 39 |
+| `shape_size` | `shape` | The total element count implied by a shape — the product of its dimensions. | `n` | 54 |
+| `t_add` | `a, b` | element-wise ops | `tensor(d, a.shape)` | 65 |
+| `t_sub` | `a, b` | Element-wise subtraction of two tensors of the same shape. | `tensor(d, a.shape)` | 73 |
+| `t_mul` | `a, b` | Element-wise multiplication of two tensors of the same shape. | `tensor(d, a.shape)` | 81 |
+| `t_scale` | `a, k` | Multiplies every element of a tensor by a scalar. | `tensor(d, a.shape)` | 89 |
+| `matmul` | `a, b` | 2-D matmul (rows x cols) | `tensor(d, [m, n])` | 98 |
+| `relu` | `a` | activations | `tensor(d, a.shape)` | 124 |
+| `sigmoid` | `a` | Element-wise logistic sigmoid. | `tensor(d, a.shape)` | 136 |
+| `softmax` | `a` | Row-wise softmax, shifted by the row maximum for numerical stability. | `tensor(d, a.shape)` | 147 |
+| `mse` | `pred, target` | losses | `s / n` | 170 |
+| `cross_entropy` | `pred, target` | Mean cross-entropy loss between predicted probabilities and target labels. | `s` | 182 |
 
 #### `lang/stdlib/ml/train.sdev`
 
@@ -9633,21 +10560,21 @@ sdev ML Stdlib — Language-Model Training (Milestone 14) End-to-end training fo
 
 13 functions.
 
-| Function          | Parameters                                      | What it does                                                                         | Returns                                                                | Line |
-| ----------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ---- |
-| `lm_batches`      | `ids, block`                                    | batching Cut a flat token stream into (context, next-token) pairs of length `block`. | `{ xs: xs, ys: ys, block: block, count: measure(xs) }`                 | 14   |
-| `lm_step`         | `model, opt, ctx, targets, lr`                  | one optimisation step                                                                | `loss.data[0]`                                                         | 35   |
-| `lm_fit`          | `model, ids, block, epochs, lr`                 | full training loop                                                                   | `{ history: history, final: history[measure(history) - 1], opt: opt }` | 47   |
-| `lm_loss`         | `model, ids, block`                             | evaluation                                                                           | `total / batches.count`                                                | 66   |
-| `perplexity`      | `model, ids, block`                             | Perplexity = e^(mean NLL). Lower is better.                                          | `exp(lm_loss(model, ids, block))`                                      | 80   |
-| `last_logits`     | `model, ids`                                    | sampling                                                                             | `tensor(row, [vocab])`                                                 | 85   |
-| `sample_topk`     | `logits, temperature, k`                        | Temperature + top-k filtering, then multinomial draw.                                | `sample_next(tensor(scaled, [n]))`                                     | 99   |
-| `lm_generate`     | `model, prompt_ids, max_new, temperature, k`    | Generates a continuation from a trained language model.                              | `out`                                                                  | 135  |
-| `lm_complete`     | `model, vocab, prompt, max_new, temperature, k` | Convenience wrapper: encode a prompt, generate, and decode the result.               | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))`      | 148  |
-| `checkpoint_text` | `model`                                         | checkpoints Flat text format: one parameter tensor per line, "shape\|values".        | `s`                                                                    | 155  |
-| `save_checkpoint` | `path, model`                                   | Serialises every model parameter to a checkpoint file.                               | `measure(model.params)`                                                | 180  |
-| `load_checkpoint` | `path, model`                                   | Loads weights back into an identically-shaped model.                                 | `measure(model.params)`                                                | 186  |
-| `split_text`      | `s, sep`                                        | Small split helper so checkpoints need no host support beyond file I/O.              | `out`                                                                  | 211  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `lm_batches` | `ids, block` | batching Cut a flat token stream into (context, next-token) pairs of length `block`. | `{ xs: xs, ys: ys, block: block, count: measure(xs) }` | 14 |
+| `lm_step` | `model, opt, ctx, targets, lr` | one optimisation step | `loss.data[0]` | 35 |
+| `lm_fit` | `model, ids, block, epochs, lr` | full training loop | `{ history: history, final: history[measure(history) - 1], opt: opt }` | 47 |
+| `lm_loss` | `model, ids, block` | evaluation | `total / batches.count` | 66 |
+| `perplexity` | `model, ids, block` | Perplexity = e^(mean NLL). Lower is better. | `exp(lm_loss(model, ids, block))` | 80 |
+| `last_logits` | `model, ids` | sampling | `tensor(row, [vocab])` | 85 |
+| `sample_topk` | `logits, temperature, k` | Temperature + top-k filtering, then multinomial draw. | `sample_next(tensor(scaled, [n]))` | 99 |
+| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Generates a continuation from a trained language model. | `out` | 135 |
+| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Convenience wrapper: encode a prompt, generate, and decode the result. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
+| `checkpoint_text` | `model` | checkpoints Flat text format: one parameter tensor per line, "shape\|values". | `s` | 155 |
+| `save_checkpoint` | `path, model` | Serialises every model parameter to a checkpoint file. | `measure(model.params)` | 180 |
+| `load_checkpoint` | `path, model` | Loads weights back into an identically-shaped model. | `measure(model.params)` | 186 |
+| `split_text` | `s, sep` | Small split helper so checkpoints need no host support beyond file I/O. | `out` | 211 |
 
 #### `lang/stdlib/ml/transformer.sdev`
 
@@ -9655,21 +10582,21 @@ sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only 
 
 13 functions.
 
-| Function            | Parameters                       | What it does                                                                   | Returns                                        | Line |
-| ------------------- | -------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------- | ---- |
-| `embedding`         | `vocab, dim`                     | Creates a learnable token embedding table.                                     | `{`                                            | 10   |
-| `embed_lookup`      | `w, ids`                         | Gathers embedding rows for a sequence of token ids.                            | `tensor_grad(d, [n, dim])`                     | 21   |
-| `layer_norm`        | `dim`                            | Creates a layer-norm block with learnable gain and bias.                       | `{`                                            | 38   |
-| `ln_apply`          | `x, g, b`                        | Normalises each row to zero mean and unit variance, then scales and shifts it. | `tensor_grad(d, x.shape)`                      | 49   |
-| `attention_head`    | `dim`                            | attention (single head, causal)                                                | `{`                                            | 79   |
-| `attn_forward`      | `x, wq, wk, wv, wo, dim`         | Scaled dot-product self-attention with causal masking.                         | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99   |
-| `transpose`         | `a`                              | Swaps the two dimensions of a 2-D tensor.                                      | `tensor(d, [c, r])`                            | 114  |
-| `transformer_block` | `dim, hidden`                    | transformer block                                                              | `{`                                            | 133  |
-| `block_forward`     | `x, ln1, attn, ln2, ff1, ff2`    | One transformer block: attention, residual, feed-forward, residual.            | `d_add(x1, f)`                                 | 154  |
-| `gpt`               | `vocab, dim, hidden, layers`     | decoder-only LM                                                                | `{`                                            | 162  |
-| `gpt_forward`       | `ids, emb, blocks, head, layers` | Full model forward pass: embed, run every block, project to vocabulary logits. | `head.forward(x)`                              | 187  |
-| `sample_next`       | `logits`                         | sampling                                                                       | `n - 1`                                        | 198  |
-| `generate`          | `model, prompt_ids, max_new`     | Samples tokens autoregressively from the model until the length limit.         | `out`                                          | 212  |
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `embedding` | `vocab, dim` | Creates a learnable token embedding table. | `{` | 10 |
+| `embed_lookup` | `w, ids` | Gathers embedding rows for a sequence of token ids. | `tensor_grad(d, [n, dim])` | 21 |
+| `layer_norm` | `dim` | Creates a layer-norm block with learnable gain and bias. | `{` | 38 |
+| `ln_apply` | `x, g, b` | Normalises each row to zero mean and unit variance, then scales and shifts it. | `tensor_grad(d, x.shape)` | 49 |
+| `attention_head` | `dim` | attention (single head, causal) | `{` | 79 |
+| `attn_forward` | `x, wq, wk, wv, wo, dim` | Scaled dot-product self-attention with causal masking. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
+| `transpose` | `a` | Swaps the two dimensions of a 2-D tensor. | `tensor(d, [c, r])` | 114 |
+| `transformer_block` | `dim, hidden` | transformer block | `{` | 133 |
+| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | One transformer block: attention, residual, feed-forward, residual. | `d_add(x1, f)` | 154 |
+| `gpt` | `vocab, dim, hidden, layers` | decoder-only LM | `{` | 162 |
+| `gpt_forward` | `ids, emb, blocks, head, layers` | Full model forward pass: embed, run every block, project to vocabulary logits. | `head.forward(x)` | 187 |
+| `sample_next` | `logits` | sampling | `n - 1` | 198 |
+| `generate` | `model, prompt_ids, max_new` | Samples tokens autoregressively from the model until the length limit. | `out` | 212 |
 
 #### `lang/stdlib/webgpu.sdev`
 
@@ -9677,377 +10604,381 @@ lang/stdlib/webgpu.sdev Milestone 10 — WebGPU acceleration for the browser IDE
 
 _No top-level functions — this file is a script or data module._
 
+
 ### Parity matrix
 
 Registry: **202 features** across **3 tracks**.
 
-| Feature                   | Area          | sdev v1 (TypeScript interpreter) | sdev v2 (self-hosted compiler on the seed VM) | native x86-64 backend |
-| ------------------------- | ------------- | -------------------------------- | --------------------------------------------- | --------------------- |
-| `say`                     | io            | `speak`                          | `say`                                         | `say`                 |
-| `length`                  | core          | `measure`                        | `length`                                      | `length`              |
-| `concat`                  | text          | `etch`                           | `concat`                                      | `concat`              |
-| `ord`                     | text          | `ord`                            | `ord`                                         | `ord`                 |
-| `chr`                     | text          | `chr`                            | `chr`                                         | `chr`                 |
-| `str`                     | text          | `str`                            | `str`                                         | `str`                 |
-| `int`                     | types         | `int`                            | `int`                                         | `int`                 |
-| `num`                     | types         | `num`                            | `num`                                         | `num`                 |
-| `list_new`                | list          | `gather`                         | `mklist`                                      | `list_new`            |
-| `list_get`                | list          | `pluck`                          | `mklist`                                      | `index`               |
-| `upper`                   | text          | `upper`                          | `upper`                                       | `upper`               |
-| `lower`                   | text          | `lower`                          | `lower`                                       | `lower`               |
-| `trim`                    | text          | `trim`                           | `trim`                                        | `trim`                |
-| `contains`                | text          | `contains`                       | `contains`                                    | `contains`            |
-| `replace`                 | text          | `replace`                        | `replace`                                     | `replace`             |
-| `split`                   | text          | `shatter`                        | `split`                                       | `split`               |
-| `join`                    | text          | `weave`                          | `join`                                        | `join`                |
-| `abs`                     | math          | `abs`                            | `fabs`                                        | `abs`                 |
-| `min`                     | math          | `least`                          | `min`                                         | `min`                 |
-| `max`                     | math          | `greatest`                       | `max`                                         | `max`                 |
-| `floor`                   | math          | `ground`                         | `f2i`                                         | `floor`               |
-| `ceil`                    | math          | `elevate`                        | `fceil`                                       | `ceil`                |
-| `round`                   | math          | `nearby`                         | `fround`                                      | `round`               |
-| `sqrt`                    | math          | `root`                           | `fsqrt`                                       | `sqrt`                |
-| `pow`                     | math          | `pow`                            | `fpow`                                        | `pow`                 |
-| `sin`                     | math          | `sin`                            | `fsin`                                        | `sin`                 |
-| `cos`                     | math          | `cos`                            | `fcos`                                        | `cos`                 |
-| `exp`                     | math          | `exp`                            | `fexp`                                        | `exp`                 |
-| `log`                     | math          | `ln`                             | `flog`                                        | `log`                 |
-| `random`                  | math          | `rand`                           | `random`                                      | `random`              |
-| `range`                   | list          | `range`                          | `range`                                       | —                     |
-| `sum`                     | list          | `sum`                            | `sum`                                         | —                     |
-| `keys`                    | tome          | `tome_keys`                      | `keys`                                        | `keys`                |
-| `read_file`               | io            | `read_file`                      | `read_file`                                   | —                     |
-| `write_file`              | io            | `write_file`                     | `write_file`                                  | —                     |
-| `http_get`                | net           | `http_get`                       | `http_get`                                    | —                     |
-| `var_decl`                | syntax        | `forge`                          | `set`                                         | `set`                 |
-| `assign`                  | syntax        | `be`                             | `set`                                         | `set`                 |
-| `if`                      | syntax        | `either`                         | `if`                                          | `if`                  |
-| `else`                    | syntax        | `otherwise`                      | `else`                                        | `else`                |
-| `while`                   | syntax        | `cycle`                          | `while`                                       | `while`               |
-| `for_each`                | syntax        | `iterate`                        | `each`                                        | `foreach`             |
-| `break`                   | syntax        | `yeet`                           | `break`                                       | `break`               |
-| `continue`                | syntax        | `skip`                           | `continue`                                    | `continue`            |
-| `function`                | syntax        | `conjure`                        | `to`                                          | `call`                |
-| `return`                  | syntax        | `yield`                          | `return`                                      | `return`              |
-| `params`                  | syntax        | `conjure`                        | `with`                                        | `call`                |
-| `recursion`               | syntax        | `conjure`                        | `to`                                          | `call`                |
-| `lambda`                  | syntax        | `ARROW`                          | `make`                                        | —                     |
-| `class`                   | oop           | `essence`                        | `kind`                                        | —                     |
-| `inherit`                 | oop           | `extend`                         | `extends`                                     | —                     |
-| `self`                    | oop           | `self`                           | —                                             | —                     |
-| `super`                   | oop           | `super`                          | `super`                                       | —                     |
-| `instantiate`             | oop           | `new`                            | `new`                                         | —                     |
-| `try_catch`               | errors        | `attempt`                        | `attempt`                                     | —                     |
-| `rescue`                  | errors        | `rescue`                         | `rescue`                                      | —                     |
-| `throw`                   | errors        | `throw`                          | `throw`                                       | —                     |
-| `logic_and`               | syntax        | `also`                           | `and`                                         | `and`                 |
-| `logic_or`                | syntax        | `within`                         | `or`                                          | `or`                  |
-| `logic_not`               | syntax        | `nope`                           | `not`                                         | `un`                  |
-| `equality`                | syntax        | `equals`                         | `is`                                          | `is`                  |
-| `inequality`              | syntax        | `differs`                        | `not`                                         | `isnot`               |
-| `bool_true`               | types         | `yep`                            | `true`                                        | `true`                |
-| `bool_false`              | types         | `nope`                           | `false`                                       | `false`               |
-| `nothing`                 | types         | `void`                           | `nothing`                                     | `nothing`             |
-| `list_literal`            | types         | `gather`                         | `mklist`                                      | `list`                |
-| `tome_literal`            | types         | `tome_keys`                      | `tome_literal`                                | `tome`                |
-| `import`                  | modules       | `summon`                         | `use`                                         | —                     |
-| `float`                   | types         | `num`                            | `i2f`                                         | `float`               |
-| `string`                  | types         | `str`                            | `str`                                         | `str`                 |
-| `values`                  | tome          | `values`                         | `values`                                      | `values`              |
-| `has`                     | tome          | `has`                            | `has`                                         | `has`                 |
-| `py_print`                | python        | `print`                          | —                                             | —                     |
-| `py_str`                  | python        | `str`                            | —                                             | —                     |
-| `py_repr`                 | python        | `repr`                           | —                                             | —                     |
-| `py_int`                  | python        | `int`                            | —                                             | —                     |
-| `py_float`                | python        | `float`                          | —                                             | —                     |
-| `py_bool`                 | python        | `bool`                           | —                                             | —                     |
-| `py_complexish`           | python        | `complexish`                     | —                                             | —                     |
-| `py_bytes`                | python        | `bytes`                          | —                                             | —                     |
-| `py_list`                 | python        | `list`                           | —                                             | —                     |
-| `py_tuple`                | python        | `tuple`                          | —                                             | —                     |
-| `py_set`                  | python        | `set`                            | —                                             | —                     |
-| `py_frozenset`            | python        | `frozenset`                      | —                                             | —                     |
-| `py_dict`                 | python        | `dict`                           | —                                             | —                     |
-| `py_len`                  | python        | `len`                            | —                                             | —                     |
-| `py_range`                | python        | `range`                          | —                                             | —                     |
-| `py_enumerate`            | python        | `enumerate`                      | —                                             | —                     |
-| `py_zip`                  | python        | `zip`                            | —                                             | —                     |
-| `py_zip_longest`          | python        | `zip_longest`                    | —                                             | —                     |
-| `py_map`                  | python        | `map`                            | —                                             | —                     |
-| `py_filter`               | python        | `filter`                         | —                                             | —                     |
-| `py_any`                  | python        | `any`                            | —                                             | —                     |
-| `py_all`                  | python        | `all`                            | —                                             | —                     |
-| `py_sorted`               | python        | `sorted`                         | —                                             | —                     |
-| `py_reversed`             | python        | `reversed`                       | —                                             | —                     |
-| `py_min`                  | python        | `min`                            | —                                             | —                     |
-| `py_max`                  | python        | `max`                            | —                                             | —                     |
-| `py_sum`                  | python        | `sum`                            | —                                             | —                     |
-| `py_abs`                  | python        | `abs`                            | —                                             | —                     |
-| `py_round`                | python        | `round`                          | —                                             | —                     |
-| `py_pow`                  | python        | `pow`                            | —                                             | —                     |
-| `py_divmod`               | python        | `divmod`                         | —                                             | —                     |
-| `py_bin`                  | python        | `bin`                            | —                                             | —                     |
-| `py_oct`                  | python        | `oct`                            | —                                             | —                     |
-| `py_hex`                  | python        | `hex`                            | —                                             | —                     |
-| `py_type`                 | python        | `type`                           | —                                             | —                     |
-| `py_isinstance`           | python        | `isinstance`                     | —                                             | —                     |
-| `py_issubclass`           | python        | `issubclass`                     | —                                             | —                     |
-| `py_getattr`              | python        | `getattr`                        | —                                             | —                     |
-| `py_setattr`              | python        | `setattr`                        | —                                             | —                     |
-| `py_hasattr`              | python        | `hasattr`                        | —                                             | —                     |
-| `py_delattr`              | python        | `delattr`                        | —                                             | —                     |
-| `py_vars`                 | python        | `vars`                           | —                                             | —                     |
-| `py_dir`                  | python        | `dir`                            | —                                             | —                     |
-| `py_callable`             | python        | `callable`                       | —                                             | —                     |
-| `py_id`                   | python        | `id`                             | —                                             | —                     |
-| `py_hash`                 | python        | `hash`                           | —                                             | —                     |
-| `py_format`               | python        | `format`                         | —                                             | —                     |
-| `py_iter`                 | python        | `iter`                           | —                                             | —                     |
-| `py_next`                 | python        | `next`                           | —                                             | —                     |
-| `py_send`                 | python        | `send`                           | —                                             | —                     |
-| `py_close`                | python        | `close`                          | —                                             | —                     |
-| `py_collect`              | python        | `collect`                        | —                                             | —                     |
-| `py_property`             | python        | `property`                       | —                                             | —                     |
-| `py_staticmethod`         | python        | `staticmethod`                   | —                                             | —                     |
-| `py_classmethod`          | python        | `classmethod`                    | —                                             | —                     |
-| `py_wraps`                | python        | `wraps`                          | —                                             | —                     |
-| `py_cache`                | python        | `cache`                          | —                                             | —                     |
-| `py_partial`              | python        | `partial`                        | —                                             | —                     |
-| `py_reduce`               | python        | `reduce`                         | —                                             | —                     |
-| `py_dataclass`            | python        | `dataclass`                      | —                                             | —                     |
-| `py_count`                | python        | `count`                          | —                                             | —                     |
-| `py_cycle`                | python        | `cycle`                          | —                                             | —                     |
-| `py_repeat`               | python        | `repeat`                         | —                                             | —                     |
-| `py_chain`                | python        | `chain`                          | —                                             | —                     |
-| `py_islice`               | python        | `islice`                         | —                                             | —                     |
-| `py_product`              | python        | `product`                        | —                                             | —                     |
-| `py_permutations`         | python        | `permutations`                   | —                                             | —                     |
-| `py_combinations`         | python        | `combinations`                   | —                                             | —                     |
-| `py_accumulate`           | python        | `accumulate`                     | —                                             | —                     |
-| `py_groupby`              | python        | `groupby`                        | —                                             | —                     |
-| `py_Counter`              | python        | `Counter`                        | —                                             | —                     |
-| `py_defaultdict`          | python        | `defaultdict`                    | —                                             | —                     |
-| `py_namedtuple`           | python        | `namedtuple`                     | —                                             | —                     |
-| `py_deque`                | python        | `deque`                          | —                                             | —                     |
-| `py_OrderedDict`          | python        | `OrderedDict`                    | —                                             | —                     |
-| `py_union`                | python        | `union`                          | —                                             | —                     |
-| `py_intersection`         | python        | `intersection`                   | —                                             | —                     |
-| `py_difference`           | python        | `difference`                     | —                                             | —                     |
-| `py_symmetric_difference` | python        | `symmetric_difference`           | —                                             | —                     |
-| `py_issubset`             | python        | `issubset`                       | —                                             | —                     |
-| `py_set_add`              | python        | `set_add`                        | —                                             | —                     |
-| `py_set_remove`           | python        | `set_remove`                     | —                                             | —                     |
-| `py_keys`                 | python        | `keys`                           | —                                             | —                     |
-| `py_values`               | python        | `values`                         | —                                             | —                     |
-| `py_items`                | python        | `items`                          | —                                             | —                     |
-| `py_get`                  | python        | `get`                            | —                                             | —                     |
-| `py_setdefault`           | python        | `setdefault`                     | —                                             | —                     |
-| `py_update`               | python        | `update`                         | —                                             | —                     |
-| `py_pop`                  | python        | `pop`                            | —                                             | —                     |
-| `py_slice_assign`         | python        | `slice_assign`                   | —                                             | —                     |
-| `py_module`               | python        | `module`                         | —                                             | —                     |
-| `py_truthy`               | python        | `truthy`                         | —                                             | —                     |
-| `py_is_generator`         | python        | `is_generator`                   | —                                             | —                     |
-| `py_freeze`               | python        | `freeze`                         | —                                             | —                     |
-| `py_ascii`                | python        | `ascii`                          | —                                             | —                     |
-| `pysyn_generator`         | python-syntax | `generator`                      | —                                             | —                     |
-| `pysyn_with`              | python-syntax | `with`                           | —                                             | —                     |
-| `pysyn_as`                | python-syntax | `as`                             | —                                             | —                     |
-| `pysyn_match`             | python-syntax | `match`                          | —                                             | —                     |
-| `pysyn_case`              | python-syntax | `case`                           | —                                             | —                     |
-| `pysyn_async`             | python-syntax | `async`                          | —                                             | —                     |
-| `pysyn_await`             | python-syntax | `await`                          | —                                             | —                     |
-| `pysyn_lambda`            | python-syntax | `lambda`                         | —                                             | —                     |
-| `pysyn_assert`            | python-syntax | `assert`                         | —                                             | —                     |
-| `pysyn_del`               | python-syntax | `del`                            | —                                             | —                     |
-| `pysyn_global`            | python-syntax | `global`                         | —                                             | —                     |
-| `pysyn_nonlocal`          | python-syntax | `nonlocal`                       | —                                             | —                     |
-| `pysyn_pass`              | python-syntax | `pass`                           | —                                             | —                     |
-| `pysyn_raise`             | python-syntax | `raise`                          | —                                             | —                     |
-| `pysyn_from`              | python-syntax | `from`                           | —                                             | —                     |
-| `pysyn_finally`           | python-syntax | `finally`                        | —                                             | —                     |
-| `pysyn_in`                | python-syntax | `in`                             | —                                             | —                     |
-| `pysyn_not`               | python-syntax | `not`                            | —                                             | —                     |
-| `pysyn_is`                | python-syntax | `is`                             | —                                             | —                     |
-| `pysyn_elif`              | python-syntax | `elif`                           | —                                             | —                     |
-| `pysyn_try`               | python-syntax | `try`                            | —                                             | —                     |
-| `pysyn_except`            | python-syntax | `except`                         | —                                             | —                     |
-| `pysyn_class`             | python-syntax | `class`                          | —                                             | —                     |
-| `pysyn_def`               | python-syntax | `def`                            | —                                             | —                     |
-| `pysyn_import`            | python-syntax | `import`                         | —                                             | —                     |
-| `pysyn_return`            | python-syntax | `return`                         | —                                             | —                     |
-| `pysyn_while`             | python-syntax | `while`                          | —                                             | —                     |
-| `pysyn_for`               | python-syntax | `for`                            | —                                             | —                     |
-| `pysyn_break`             | python-syntax | `break`                          | —                                             | —                     |
-| `pysyn_continue`          | python-syntax | `continue`                       | —                                             | —                     |
-| `pysyn_true`              | python-syntax | `true`                           | —                                             | —                     |
-| `pysyn_false`             | python-syntax | `false`                          | —                                             | —                     |
-| `pysyn_none`              | python-syntax | `none`                           | —                                             | —                     |
-| `pysyn_and`               | python-syntax | `and`                            | —                                             | —                     |
-| `pysyn_or`                | python-syntax | `or`                             | —                                             | —                     |
+| Feature | Area | sdev v1 (TypeScript interpreter) | sdev v2 (self-hosted compiler on the seed VM) | native x86-64 backend |
+| --- | --- | --- | --- | --- |
+| `say` | io | `speak` | `say` | `say` |
+| `length` | core | `measure` | `length` | `length` |
+| `concat` | text | `etch` | `concat` | `concat` |
+| `ord` | text | `ord` | `ord` | `ord` |
+| `chr` | text | `chr` | `chr` | `chr` |
+| `str` | text | `str` | `str` | `str` |
+| `int` | types | `int` | `int` | `int` |
+| `num` | types | `num` | `num` | `num` |
+| `list_new` | list | `gather` | `mklist` | `list_new` |
+| `list_get` | list | `pluck` | `mklist` | `index` |
+| `upper` | text | `upper` | `upper` | `upper` |
+| `lower` | text | `lower` | `lower` | `lower` |
+| `trim` | text | `trim` | `trim` | `trim` |
+| `contains` | text | `contains` | `contains` | `contains` |
+| `replace` | text | `replace` | `replace` | `replace` |
+| `split` | text | `shatter` | `split` | `split` |
+| `join` | text | `weave` | `join` | `join` |
+| `abs` | math | `abs` | `fabs` | `abs` |
+| `min` | math | `least` | `min` | `min` |
+| `max` | math | `greatest` | `max` | `max` |
+| `floor` | math | `ground` | `f2i` | `floor` |
+| `ceil` | math | `elevate` | `fceil` | `ceil` |
+| `round` | math | `nearby` | `fround` | `round` |
+| `sqrt` | math | `root` | `fsqrt` | `sqrt` |
+| `pow` | math | `pow` | `fpow` | `pow` |
+| `sin` | math | `sin` | `fsin` | `sin` |
+| `cos` | math | `cos` | `fcos` | `cos` |
+| `exp` | math | `exp` | `fexp` | `exp` |
+| `log` | math | `ln` | `flog` | `log` |
+| `random` | math | `rand` | `random` | `random` |
+| `range` | list | `range` | `range` | — |
+| `sum` | list | `sum` | `sum` | — |
+| `keys` | tome | `tome_keys` | `keys` | `keys` |
+| `read_file` | io | `read_file` | `read_file` | — |
+| `write_file` | io | `write_file` | `write_file` | — |
+| `http_get` | net | `http_get` | `http_get` | — |
+| `var_decl` | syntax | `forge` | `set` | `set` |
+| `assign` | syntax | `be` | `set` | `set` |
+| `if` | syntax | `either` | `if` | `if` |
+| `else` | syntax | `otherwise` | `else` | `else` |
+| `while` | syntax | `cycle` | `while` | `while` |
+| `for_each` | syntax | `iterate` | `each` | `foreach` |
+| `break` | syntax | `yeet` | `break` | `break` |
+| `continue` | syntax | `skip` | `continue` | `continue` |
+| `function` | syntax | `conjure` | `to` | `call` |
+| `return` | syntax | `yield` | `return` | `return` |
+| `params` | syntax | `conjure` | `with` | `call` |
+| `recursion` | syntax | `conjure` | `to` | `call` |
+| `lambda` | syntax | `ARROW` | `make` | — |
+| `class` | oop | `essence` | `kind` | — |
+| `inherit` | oop | `extend` | `extends` | — |
+| `self` | oop | `self` | — | — |
+| `super` | oop | `super` | `super` | — |
+| `instantiate` | oop | `new` | `new` | — |
+| `try_catch` | errors | `attempt` | `attempt` | — |
+| `rescue` | errors | `rescue` | `rescue` | — |
+| `throw` | errors | `throw` | `throw` | — |
+| `logic_and` | syntax | `also` | `and` | `and` |
+| `logic_or` | syntax | `within` | `or` | `or` |
+| `logic_not` | syntax | `nope` | `not` | `un` |
+| `equality` | syntax | `equals` | `is` | `is` |
+| `inequality` | syntax | `differs` | `not` | `isnot` |
+| `bool_true` | types | `yep` | `true` | `true` |
+| `bool_false` | types | `nope` | `false` | `false` |
+| `nothing` | types | `void` | `nothing` | `nothing` |
+| `list_literal` | types | `gather` | `mklist` | `list` |
+| `tome_literal` | types | `tome_keys` | `tome_literal` | `tome` |
+| `import` | modules | `summon` | `use` | — |
+| `float` | types | `num` | `i2f` | `float` |
+| `string` | types | `str` | `str` | `str` |
+| `values` | tome | `values` | `values` | `values` |
+| `has` | tome | `has` | `has` | `has` |
+| `py_print` | python | `print` | — | — |
+| `py_str` | python | `str` | — | — |
+| `py_repr` | python | `repr` | — | — |
+| `py_int` | python | `int` | — | — |
+| `py_float` | python | `float` | — | — |
+| `py_bool` | python | `bool` | — | — |
+| `py_complexish` | python | `complexish` | — | — |
+| `py_bytes` | python | `bytes` | — | — |
+| `py_list` | python | `list` | — | — |
+| `py_tuple` | python | `tuple` | — | — |
+| `py_set` | python | `set` | — | — |
+| `py_frozenset` | python | `frozenset` | — | — |
+| `py_dict` | python | `dict` | — | — |
+| `py_len` | python | `len` | — | — |
+| `py_range` | python | `range` | — | — |
+| `py_enumerate` | python | `enumerate` | — | — |
+| `py_zip` | python | `zip` | — | — |
+| `py_zip_longest` | python | `zip_longest` | — | — |
+| `py_map` | python | `map` | — | — |
+| `py_filter` | python | `filter` | — | — |
+| `py_any` | python | `any` | — | — |
+| `py_all` | python | `all` | — | — |
+| `py_sorted` | python | `sorted` | — | — |
+| `py_reversed` | python | `reversed` | — | — |
+| `py_min` | python | `min` | — | — |
+| `py_max` | python | `max` | — | — |
+| `py_sum` | python | `sum` | — | — |
+| `py_abs` | python | `abs` | — | — |
+| `py_round` | python | `round` | — | — |
+| `py_pow` | python | `pow` | — | — |
+| `py_divmod` | python | `divmod` | — | — |
+| `py_bin` | python | `bin` | — | — |
+| `py_oct` | python | `oct` | — | — |
+| `py_hex` | python | `hex` | — | — |
+| `py_type` | python | `type` | — | — |
+| `py_isinstance` | python | `isinstance` | — | — |
+| `py_issubclass` | python | `issubclass` | — | — |
+| `py_getattr` | python | `getattr` | — | — |
+| `py_setattr` | python | `setattr` | — | — |
+| `py_hasattr` | python | `hasattr` | — | — |
+| `py_delattr` | python | `delattr` | — | — |
+| `py_vars` | python | `vars` | — | — |
+| `py_dir` | python | `dir` | — | — |
+| `py_callable` | python | `callable` | — | — |
+| `py_id` | python | `id` | — | — |
+| `py_hash` | python | `hash` | — | — |
+| `py_format` | python | `format` | — | — |
+| `py_iter` | python | `iter` | — | — |
+| `py_next` | python | `next` | — | — |
+| `py_send` | python | `send` | — | — |
+| `py_close` | python | `close` | — | — |
+| `py_collect` | python | `collect` | — | — |
+| `py_property` | python | `property` | — | — |
+| `py_staticmethod` | python | `staticmethod` | — | — |
+| `py_classmethod` | python | `classmethod` | — | — |
+| `py_wraps` | python | `wraps` | — | — |
+| `py_cache` | python | `cache` | — | — |
+| `py_partial` | python | `partial` | — | — |
+| `py_reduce` | python | `reduce` | — | — |
+| `py_dataclass` | python | `dataclass` | — | — |
+| `py_count` | python | `count` | — | — |
+| `py_cycle` | python | `cycle` | — | — |
+| `py_repeat` | python | `repeat` | — | — |
+| `py_chain` | python | `chain` | — | — |
+| `py_islice` | python | `islice` | — | — |
+| `py_product` | python | `product` | — | — |
+| `py_permutations` | python | `permutations` | — | — |
+| `py_combinations` | python | `combinations` | — | — |
+| `py_accumulate` | python | `accumulate` | — | — |
+| `py_groupby` | python | `groupby` | — | — |
+| `py_Counter` | python | `Counter` | — | — |
+| `py_defaultdict` | python | `defaultdict` | — | — |
+| `py_namedtuple` | python | `namedtuple` | — | — |
+| `py_deque` | python | `deque` | — | — |
+| `py_OrderedDict` | python | `OrderedDict` | — | — |
+| `py_union` | python | `union` | — | — |
+| `py_intersection` | python | `intersection` | — | — |
+| `py_difference` | python | `difference` | — | — |
+| `py_symmetric_difference` | python | `symmetric_difference` | — | — |
+| `py_issubset` | python | `issubset` | — | — |
+| `py_set_add` | python | `set_add` | — | — |
+| `py_set_remove` | python | `set_remove` | — | — |
+| `py_keys` | python | `keys` | — | — |
+| `py_values` | python | `values` | — | — |
+| `py_items` | python | `items` | — | — |
+| `py_get` | python | `get` | — | — |
+| `py_setdefault` | python | `setdefault` | — | — |
+| `py_update` | python | `update` | — | — |
+| `py_pop` | python | `pop` | — | — |
+| `py_slice_assign` | python | `slice_assign` | — | — |
+| `py_module` | python | `module` | — | — |
+| `py_truthy` | python | `truthy` | — | — |
+| `py_is_generator` | python | `is_generator` | — | — |
+| `py_freeze` | python | `freeze` | — | — |
+| `py_ascii` | python | `ascii` | — | — |
+| `pysyn_generator` | python-syntax | `generator` | — | — |
+| `pysyn_with` | python-syntax | `with` | — | — |
+| `pysyn_as` | python-syntax | `as` | — | — |
+| `pysyn_match` | python-syntax | `match` | — | — |
+| `pysyn_case` | python-syntax | `case` | — | — |
+| `pysyn_async` | python-syntax | `async` | — | — |
+| `pysyn_await` | python-syntax | `await` | — | — |
+| `pysyn_lambda` | python-syntax | `lambda` | — | — |
+| `pysyn_assert` | python-syntax | `assert` | — | — |
+| `pysyn_del` | python-syntax | `del` | — | — |
+| `pysyn_global` | python-syntax | `global` | — | — |
+| `pysyn_nonlocal` | python-syntax | `nonlocal` | — | — |
+| `pysyn_pass` | python-syntax | `pass` | — | — |
+| `pysyn_raise` | python-syntax | `raise` | — | — |
+| `pysyn_from` | python-syntax | `from` | — | — |
+| `pysyn_finally` | python-syntax | `finally` | — | — |
+| `pysyn_in` | python-syntax | `in` | — | — |
+| `pysyn_not` | python-syntax | `not` | — | — |
+| `pysyn_is` | python-syntax | `is` | — | — |
+| `pysyn_elif` | python-syntax | `elif` | — | — |
+| `pysyn_try` | python-syntax | `try` | — | — |
+| `pysyn_except` | python-syntax | `except` | — | — |
+| `pysyn_class` | python-syntax | `class` | — | — |
+| `pysyn_def` | python-syntax | `def` | — | — |
+| `pysyn_import` | python-syntax | `import` | — | — |
+| `pysyn_return` | python-syntax | `return` | — | — |
+| `pysyn_while` | python-syntax | `while` | — | — |
+| `pysyn_for` | python-syntax | `for` | — | — |
+| `pysyn_break` | python-syntax | `break` | — | — |
+| `pysyn_continue` | python-syntax | `continue` | — | — |
+| `pysyn_true` | python-syntax | `true` | — | — |
+| `pysyn_false` | python-syntax | `false` | — | — |
+| `pysyn_none` | python-syntax | `none` | — | — |
+| `pysyn_and` | python-syntax | `and` | — | — |
+| `pysyn_or` | python-syntax | `or` | — | — |
+
 
 ### Repository map
 
 #### `lang/bootstrap/` — JS bootstrap compiler + hand-written WebAssembly seed VM
 
-* `lang/bootstrap/compile.mjs`
-* `lang/bootstrap/seed.wat`
+- `lang/bootstrap/compile.mjs`
+- `lang/bootstrap/seed.wat`
 
 #### `lang/compiler/` — The self-hosted compiler, written in sdev
 
-* `lang/compiler/codegen.sdev`
-* `lang/compiler/compile-self.mjs`
-* `lang/compiler/driver-artifact.mjs`
-* `lang/compiler/lexer.sdev`
-* `lang/compiler/parser.sdev`
+- `lang/compiler/codegen.sdev`
+- `lang/compiler/compile-self.mjs`
+- `lang/compiler/driver-artifact.mjs`
+- `lang/compiler/lexer.sdev`
+- `lang/compiler/parser.sdev`
 
 #### `lang/native/` — x86-64 GAS backend, assembly runtime, linker driver
 
-* `lang/native/README.md`
-* `lang/native/codegen-x64.mjs`
-* `lang/native/link.mjs`
-* `lang/native/runtime.s`
+- `lang/native/README.md`
+- `lang/native/codegen-x64.mjs`
+- `lang/native/link.mjs`
+- `lang/native/runtime.s`
 
 #### `lang/runtime/` — v2 reference runtime (JS, legacy oracle)
 
-* `lang/runtime/v2.js`
+- `lang/runtime/v2.js`
 
 #### `lang/stdlib/` — Standard library written in sdev (ML, FFI, WebGPU, CUDA)
 
-* `lang/stdlib/ffi.sdev`
-* `lang/stdlib/ml/auto_evolve.sdev`
-* `lang/stdlib/ml/autograd.sdev`
-* `lang/stdlib/ml/cuda.sdev`
-* `lang/stdlib/ml/data.sdev`
-* `lang/stdlib/ml/nn.sdev`
-* `lang/stdlib/ml/self_modify.sdev`
-* `lang/stdlib/ml/tensor.sdev`
-* `lang/stdlib/ml/train.sdev`
-* `lang/stdlib/ml/transformer.sdev`
-* `lang/stdlib/webgpu.sdev`
+- `lang/stdlib/ffi.sdev`
+- `lang/stdlib/ml/auto_evolve.sdev`
+- `lang/stdlib/ml/autograd.sdev`
+- `lang/stdlib/ml/cuda.sdev`
+- `lang/stdlib/ml/data.sdev`
+- `lang/stdlib/ml/nn.sdev`
+- `lang/stdlib/ml/self_modify.sdev`
+- `lang/stdlib/ml/tensor.sdev`
+- `lang/stdlib/ml/train.sdev`
+- `lang/stdlib/ml/transformer.sdev`
+- `lang/stdlib/webgpu.sdev`
 
 #### `lang/parity/` — Feature registry, parity agent, generated report
 
-* `lang/parity/agent.sdev`
-* `lang/parity/features.json`
-* `lang/parity/report.json`
+- `lang/parity/agent.sdev`
+- `lang/parity/features.json`
+- `lang/parity/report.json`
 
 #### `src/lang/` — v1 TypeScript reference implementation
 
-* `src/lang/advanced.ts`
-* `src/lang/ast.ts`
-* `src/lang/builtins.ts`
-* `src/lang/bytecode.ts`
-* `src/lang/compiler.ts`
-* `src/lang/environment.ts`
-* `src/lang/errors.ts`
-* `src/lang/gist.ts`
-* `src/lang/graphics.ts`
-* `src/lang/hardware/board-db.ts`
-* `src/lang/hardware/strip.ts`
-* `src/lang/hardware/transpile.ts`
-* `src/lang/hardware/web-serial.ts`
-* `src/lang/index.ts`
-* `src/lang/interpreter.ts`
-* `src/lang/kernel.ts`
-* `src/lang/keywords.ts`
-* `src/lang/lexer.ts`
-* `src/lang/linker.ts`
-* `src/lang/matrix.ts`
-* `src/lang/parser.ts`
-* `src/lang/pyparity.ts`
-* `src/lang/runtime-values.ts`
-* `src/lang/tokens.ts`
-* `src/lang/translator.ts`
-* `src/lang/ui.ts`
-* `src/lang/vm.ts`
-* `src/lang/web.ts`
+- `src/lang/advanced.ts`
+- `src/lang/ast.ts`
+- `src/lang/builtins.ts`
+- `src/lang/bytecode.ts`
+- `src/lang/compiler.ts`
+- `src/lang/environment.ts`
+- `src/lang/errors.ts`
+- `src/lang/gist.ts`
+- `src/lang/graphics.ts`
+- `src/lang/hardware/board-db.ts`
+- `src/lang/hardware/strip.ts`
+- `src/lang/hardware/transpile.ts`
+- `src/lang/hardware/web-serial.ts`
+- `src/lang/index.ts`
+- `src/lang/interpreter.ts`
+- `src/lang/kernel.ts`
+- `src/lang/keywords.ts`
+- `src/lang/lexer.ts`
+- `src/lang/linker.ts`
+- `src/lang/matrix.ts`
+- `src/lang/parser.ts`
+- `src/lang/pyparity.ts`
+- `src/lang/runtime-values.ts`
+- `src/lang/tokens.ts`
+- `src/lang/translator.ts`
+- `src/lang/ui.ts`
+- `src/lang/vm.ts`
+- `src/lang/web.ts`
 
 #### `src/lang-bridge/` — Runtime selection + WASM bridge for the browser IDE
 
-* `src/lang-bridge/bridge.ts`
-* `src/lang-bridge/compile-self.d.ts`
-* `src/lang-bridge/v2.d.ts`
-* `src/lang-bridge/wasm-runtime.ts`
+- `src/lang-bridge/bridge.ts`
+- `src/lang-bridge/compile-self.d.ts`
+- `src/lang-bridge/v2.d.ts`
+- `src/lang-bridge/wasm-runtime.ts`
 
 #### `electron/` — Desktop IDE shell with native build/run IPC
 
-* `electron/README.md`
-* `electron/main.cjs`
-* `electron/preload.cjs`
+- `electron/README.md`
+- `electron/main.cjs`
+- `electron/preload.cjs`
 
 #### `scripts/` — Build drivers and the full test-gate suite
 
-* `scripts/_compiler-entry.ts`
-* `scripts/_ext-v2-cli.mjs`
-* `scripts/build-book-content.py`
-* `scripts/build-book-pdf.py`
-* `scripts/build-book.ts`
-* `scripts/build-compiler.ts`
-* `scripts/build-driver.mjs`
-* `scripts/build-seed-wasm.mjs`
-* `scripts/build-ultimate-docs.mjs`
-* `scripts/probe-self-codegen.mjs`
-* `scripts/probe-self-lexer.mjs`
-* `scripts/sdev-native.mjs`
-* `scripts/sdev-runtime-launcher.ts`
-* `scripts/test-bg.ts`
-* `scripts/test-driver-artifact.mjs`
-* `scripts/test-ml-stdlib.ts`
-* `scripts/test-native.mjs`
-* `scripts/test-parity.ts`
-* `scripts/test-self-codegen.mjs`
-* `scripts/test-self-lexer.mjs`
-* `scripts/test-self-parser.mjs`
-* `scripts/test-self-toolchain.mjs`
-* `scripts/test-shim-fixed-point.mjs`
-* `scripts/test-translator.ts`
-* `scripts/test-wasm-runtime.mjs`
+- `scripts/_compiler-entry.ts`
+- `scripts/_ext-v2-cli.mjs`
+- `scripts/build-book-content.py`
+- `scripts/build-book-pdf.py`
+- `scripts/build-book.ts`
+- `scripts/build-compiler.ts`
+- `scripts/build-driver.mjs`
+- `scripts/build-seed-wasm.mjs`
+- `scripts/build-ultimate-docs.mjs`
+- `scripts/probe-self-codegen.mjs`
+- `scripts/probe-self-lexer.mjs`
+- `scripts/sdev-native.mjs`
+- `scripts/sdev-runtime-launcher.ts`
+- `scripts/test-bg.ts`
+- `scripts/test-driver-artifact.mjs`
+- `scripts/test-ml-stdlib.ts`
+- `scripts/test-native.mjs`
+- `scripts/test-parity.ts`
+- `scripts/test-self-codegen.mjs`
+- `scripts/test-self-lexer.mjs`
+- `scripts/test-self-parser.mjs`
+- `scripts/test-self-toolchain.mjs`
+- `scripts/test-shim-fixed-point.mjs`
+- `scripts/test-translator.ts`
+- `scripts/test-wasm-runtime.mjs`
+
 
 ### Toolchain and test gates
 
-| Command                                  | Purpose                                                                    |
-| ---------------------------------------- | -------------------------------------------------------------------------- |
-| `node scripts/_compiler-entry.ts`        |                                                                            |
-| `node scripts/_ext-v2-cli.mjs`           | Entry point bundled into extension/interpreter/sdev-v2.cjs.                |
-| `node scripts/build-book-content.py`     | !/usr/bin/env python3                                                      |
-| `node scripts/build-book-pdf.py`         | !/usr/bin/env python3                                                      |
-| `node scripts/build-book.ts`             | Generates the giant sdev Book in English and Bulgarian.                    |
-| `node scripts/build-compiler.ts`         | Bundles the sdev compiler + VM + interpreter into a single Node.js CLI.    |
-| `node scripts/build-driver.mjs`          | Milestone 5p — bake the self-hosted driver bytecode.                       |
-| `node scripts/build-seed-wasm.mjs`       | Build the seed VM: lang/bootstrap/seed.wat → public/wasm/sdev-seed.wasm    |
-| `node scripts/build-ultimate-docs.mjs`   | Builds public/SDEV\_ULTIMATE\_DOCUMENTATION.md — the single, complete sdev |
-| `node scripts/probe-self-codegen.mjs`    | Probe: run the self-hosted codegen through the shim, but tap into what     |
-| `node scripts/probe-self-lexer.mjs`      | Milestone 5m probe — compile lexer.sdev through the self-hosted shim       |
-| `node scripts/sdev-native.mjs`           | SDEV native compiler CLI.                                                  |
-| `node scripts/sdev-runtime-launcher.ts`  |                                                                            |
-| `node scripts/test-bg.ts`                |                                                                            |
-| `node scripts/test-driver-artifact.mjs`  | Milestone 5p — the checked-in driver artifact must stay honest.            |
-| `node scripts/test-ml-stdlib.ts`         | ---- Node host bindings consumed by src/lang/builtins.ts ----              |
-| `node scripts/test-native.mjs`           | Regression suite for the native x86-64 backend.                            |
-| `node scripts/test-parity.ts`            | The agent parses the registry line-by-line. Validate the same file with a  |
-| `node scripts/test-self-codegen.mjs`     | Self-hosted codegen end-to-end test.                                       |
-| `node scripts/test-self-lexer.mjs`       | Runs the self-hosted lexer (lang/compiler/lexer.sdev) through the seed     |
-| `node scripts/test-self-parser.mjs`      | Runs the self-hosted expression parser through the seed WASM VM and        |
-| `node scripts/test-self-toolchain.mjs`   | Milestone 5m gate — self-hosted toolchain round-trip.                      |
-| `node scripts/test-shim-fixed-point.mjs` | Milestone 5l gate — shim fixed-point verification.                         |
-| `node scripts/test-translator.ts`        |                                                                            |
-| `node scripts/test-wasm-runtime.mjs`     | Standalone Node harness: compile + run via the seed WASM. No browser.      |
+| Command | Purpose |
+| --- | --- |
+| `node scripts/_compiler-entry.ts` |  |
+| `node scripts/_ext-v2-cli.mjs` | Entry point bundled into extension/interpreter/sdev-v2.cjs. |
+| `node scripts/build-book-content.py` | !/usr/bin/env python3 |
+| `node scripts/build-book-pdf.py` | !/usr/bin/env python3 |
+| `node scripts/build-book.ts` | Generates the giant sdev Book in English and Bulgarian. |
+| `node scripts/build-compiler.ts` | Bundles the sdev compiler + VM + interpreter into a single Node.js CLI. |
+| `node scripts/build-driver.mjs` | Milestone 5p — bake the self-hosted driver bytecode. |
+| `node scripts/build-seed-wasm.mjs` | Build the seed VM: lang/bootstrap/seed.wat → public/wasm/sdev-seed.wasm |
+| `node scripts/build-ultimate-docs.mjs` | Builds public/SDEV_ULTIMATE_DOCUMENTATION.md — the single, complete sdev |
+| `node scripts/probe-self-codegen.mjs` | Probe: run the self-hosted codegen through the shim, but tap into what |
+| `node scripts/probe-self-lexer.mjs` | Milestone 5m probe — compile lexer.sdev through the self-hosted shim |
+| `node scripts/sdev-native.mjs` | SDEV native compiler CLI. |
+| `node scripts/sdev-runtime-launcher.ts` |  |
+| `node scripts/test-bg.ts` |  |
+| `node scripts/test-driver-artifact.mjs` | Milestone 5p — the checked-in driver artifact must stay honest. |
+| `node scripts/test-ml-stdlib.ts` | ---- Node host bindings consumed by src/lang/builtins.ts ---- |
+| `node scripts/test-native.mjs` | Regression suite for the native x86-64 backend. |
+| `node scripts/test-parity.ts` | The agent parses the registry line-by-line. Validate the same file with a |
+| `node scripts/test-self-codegen.mjs` | Self-hosted codegen end-to-end test. |
+| `node scripts/test-self-lexer.mjs` | Runs the self-hosted lexer (lang/compiler/lexer.sdev) through the seed |
+| `node scripts/test-self-parser.mjs` | Runs the self-hosted expression parser through the seed WASM VM and |
+| `node scripts/test-self-toolchain.mjs` | Milestone 5m gate — self-hosted toolchain round-trip. |
+| `node scripts/test-shim-fixed-point.mjs` | Milestone 5l gate — shim fixed-point verification. |
+| `node scripts/test-translator.ts` |  |
+| `node scripts/test-wasm-runtime.mjs` | Standalone Node harness: compile + run via the seed WASM. No browser. |
 
-***
+
+---
 
 ## Appendix A — Glossary
 
-| Term                | Meaning                                                                                                                       |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **bootstrap**       | `lang/bootstrap/compile.mjs`, the JavaScript compiler used only to build the first self-hosted artifact and as a test oracle. |
-| **seed VM**         | `lang/bootstrap/seed.wat`, a hand-written WebAssembly stack machine that executes sdev bytecode in the browser.               |
-| **driver artifact** | `lang/compiler/driver-artifact.mjs`, the pre-compiled, source-independent self-hosted compiler baked in as Base64.            |
-| **fixed point**     | The state where the self-hosted compiler compiles itself to byte-identical output.                                            |
-| **track**           | One execution path: v1 interpreter, v2 self-hosted, or native x86-64.                                                         |
-| **parity agent**    | `lang/parity/agent.sdev`, written in sdev, that audits every track against the registry and regenerates the matrix.           |
-| **tome**            | sdev's dictionary / map type.                                                                                                 |
-| **summon**          | The decentralised package system that pulls modules from GitHub Gists.                                                        |
+| Term | Meaning |
+| --- | --- |
+| **bootstrap** | `lang/bootstrap/compile.mjs`, the JavaScript compiler used only to build the first self-hosted artifact and as a test oracle. |
+| **seed VM** | `lang/bootstrap/seed.wat`, a hand-written WebAssembly stack machine that executes sdev bytecode in the browser. |
+| **driver artifact** | `lang/compiler/driver-artifact.mjs`, the pre-compiled, source-independent self-hosted compiler baked in as Base64. |
+| **fixed point** | The state where the self-hosted compiler compiles itself to byte-identical output. |
+| **track** | One execution path: v1 interpreter, v2 self-hosted, or native x86-64. |
+| **parity agent** | `lang/parity/agent.sdev`, written in sdev, that audits every track against the registry and regenerates the matrix. |
+| **tome** | sdev's dictionary / map type. |
+| **summon** | The decentralised package system that pulls modules from GitHub Gists. |
 
 ## Appendix B — Regenerating this document
 
@@ -10055,4 +10986,7 @@ Registry: **202 features** across **3 tracks**.
 node scripts/build-ultimate-docs.mjs
 ```
 
-The generator reads every guide under `public/` plus the READMEs, then derives the reference tables straight from `src/lang/`, `lang/`, and `scripts/`. If a builtin is added or an opcode changes, re-running the generator is the only step required to bring this document back in sync.
+The generator reads every guide under `public/` plus the READMEs, then derives
+the reference tables straight from `src/lang/`, `lang/`, and `scripts/`. If a
+builtin is added or an opcode changes, re-running the generator is the only
+step required to bring this document back in sync.
