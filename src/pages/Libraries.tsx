@@ -25,6 +25,8 @@ interface PublicLibrary {
   description: string | null;
   latest_version: string;
   download_count: number;
+  /** owner handle, resolved separately — null when unknown */
+  username: string | null;
 }
 
 export default function Libraries() {
@@ -43,22 +45,29 @@ export default function Libraries() {
 
   const loadBrowse = useCallback(async () => {
     try {
-      const { data } = await db.from('libraries').select('id, slug, name, description, latest_version, download_count')
+      const { data } = await db.from('libraries').select('id, user_id, slug, name, description, latest_version, download_count')
         .eq('visibility', 'public').order('download_count', { ascending: false }).limit(50);
-      setBrowse(Array.isArray(data) ? data : []);
+      const rows = Array.isArray(data) ? data : [];
+      const ownerIds = [...new Set(rows.map((r: { user_id: string }) => r.user_id).filter(Boolean))];
+      let handles: Record<string, string> = {};
+      if (ownerIds.length) {
+        const { data: names } = await db.from('usernames').select('user_id, username').in('user_id', ownerIds);
+        handles = Object.fromEntries((Array.isArray(names) ? names : []).map((n: { user_id: string; username: string }) => [n.user_id, n.username]));
+      }
+      setBrowse(rows.map((r: PublicLibrary & { user_id: string }) => ({ ...r, username: handles[r.user_id] ?? null })));
     } catch { setBrowse([]); }
   }, []);
 
   useEffect(() => { loadBrowse(); }, [loadBrowse]);
 
-  const install = async () => {
-    const address = parseAddress(reference);
+  const install = async (ref?: string) => {
+    const address = parseAddress(ref ?? reference);
     if (!address) { toast.error('Use @username/library or @username/library@1.0.0'); return; }
     setBusy(true);
     try {
       const bundle = await fetchLibrary(address);
       setInstalled(cachedLibraries());
-      setReference('');
+      if (!ref) setReference('');
       toast.success(`Installed ${bundle.address}@${bundle.version}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not install');
@@ -116,7 +125,7 @@ export default function Libraries() {
           </Link>
           <div className="flex items-center gap-2">
             <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="@user/library" className="h-9 w-52 font-mono text-xs" />
-            <Button size="sm" variant="outline" onClick={install} disabled={busy || !reference.trim()}><Download className="h-4 w-4 mr-1.5" />Install</Button>
+            <Button size="sm" variant="outline" onClick={() => install()} disabled={busy || !reference.trim()}><Download className="h-4 w-4 mr-1.5" />Install</Button>
           </div>
         </div>
       </header>
@@ -139,9 +148,19 @@ export default function Libraries() {
               <Card key={l.id} className="p-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{l.name} <Badge variant="secondary" className="ml-1 font-mono">v{l.latest_version}</Badge></div>
+                  <div className="text-xs font-mono text-muted-foreground truncate">{l.username ? `@${l.username}/${l.slug}` : l.slug}</div>
                   <div className="text-xs text-muted-foreground truncate">{l.description || 'No description'} · {l.download_count} installs</div>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setReference(`@?/${l.slug}`)}>Copy slug</Button>
+                {l.username ? (
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="ghost" onClick={() => setReference(`@${l.username}/${l.slug}`)}>Copy address</Button>
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => install(`@${l.username}/${l.slug}`)}>
+                      <Download className="h-4 w-4 mr-1.5" />Install
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground shrink-0">Owner has no handle yet</span>
+                )}
               </Card>
             ))}
           </TabsContent>

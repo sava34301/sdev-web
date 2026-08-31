@@ -1073,7 +1073,8 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           // in, so we can show it in the words this IDE is currently using.
           const sig = readSignature(raw);
           const active = getActiveDialect();
-          let content = raw;
+          // The signature line is metadata, never editor content.
+          let content = stripSignature(raw);
           let note = '';
           if (sig?.dialect && sig.dialect !== (active?.meta.slug ?? null)) {
             const source = findLocalDialect(sig.dialect);
