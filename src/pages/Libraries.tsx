@@ -148,9 +148,19 @@ export default function Libraries() {
               <Card key={l.id} className="p-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{l.name} <Badge variant="secondary" className="ml-1 font-mono">v{l.latest_version}</Badge></div>
+                  <div className="text-xs font-mono text-muted-foreground truncate">{l.username ? `@${l.username}/${l.slug}` : l.slug}</div>
                   <div className="text-xs text-muted-foreground truncate">{l.description || 'No description'} · {l.download_count} installs</div>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setReference(`@?/${l.slug}`)}>Copy slug</Button>
+                {l.username ? (
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="ghost" onClick={() => setReference(`@${l.username}/${l.slug}`)}>Copy address</Button>
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => install(`@${l.username}/${l.slug}`)}>
+                      <Download className="h-4 w-4 mr-1.5" />Install
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground shrink-0">Owner has no handle yet</span>
+                )}
               </Card>
             ))}
           </TabsContent>
