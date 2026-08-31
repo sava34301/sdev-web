@@ -125,7 +125,7 @@ export default function Libraries() {
           </Link>
           <div className="flex items-center gap-2">
             <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="@user/library" className="h-9 w-52 font-mono text-xs" />
-            <Button size="sm" variant="outline" onClick={install} disabled={busy || !reference.trim()}><Download className="h-4 w-4 mr-1.5" />Install</Button>
+            <Button size="sm" variant="outline" onClick={() => install()} disabled={busy || !reference.trim()}><Download className="h-4 w-4 mr-1.5" />Install</Button>
           </div>
         </div>
       </header>
