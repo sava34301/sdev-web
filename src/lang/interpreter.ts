@@ -605,9 +605,11 @@ export class Interpreter {
    */
   private boundBuiltin(receiver: unknown, name: string): SdevFunction | undefined {
     if (!this.globalEnv.hasOwn(name) && !this.globalEnv.hasOwn(`py_${name}`)) return undefined;
-    const candidate = this.globalEnv.hasOwn(`py_${name}`)
-      ? this.globalEnv.get(`py_${name}`, 0)
-      : this.globalEnv.get(name, 0);
+    // Same precedence as global lookup: the v1 builtin wins, the parity
+    // variant is only used when no v1 builtin of that name exists.
+    const candidate = this.globalEnv.hasOwn(name)
+      ? this.globalEnv.get(name, 0)
+      : this.globalEnv.get(`py_${name}`, 0);
     if (!isFunction(candidate)) return undefined;
     const target = candidate as SdevFunction;
     return {
