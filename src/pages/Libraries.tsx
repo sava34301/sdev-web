@@ -25,6 +25,8 @@ interface PublicLibrary {
   description: string | null;
   latest_version: string;
   download_count: number;
+  /** owner handle, resolved separately — null when unknown */
+  username: string | null;
 }
 
 export default function Libraries() {
