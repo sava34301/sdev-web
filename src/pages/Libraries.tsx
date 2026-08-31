@@ -60,14 +60,14 @@ export default function Libraries() {
 
   useEffect(() => { loadBrowse(); }, [loadBrowse]);
 
-  const install = async () => {
-    const address = parseAddress(reference);
+  const install = async (ref?: string) => {
+    const address = parseAddress(ref ?? reference);
     if (!address) { toast.error('Use @username/library or @username/library@1.0.0'); return; }
     setBusy(true);
     try {
       const bundle = await fetchLibrary(address);
       setInstalled(cachedLibraries());
-      setReference('');
+      if (!ref) setReference('');
       toast.success(`Installed ${bundle.address}@${bundle.version}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not install');
