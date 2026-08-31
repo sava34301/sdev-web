@@ -45,9 +45,16 @@ export default function Libraries() {
 
   const loadBrowse = useCallback(async () => {
     try {
-      const { data } = await db.from('libraries').select('id, slug, name, description, latest_version, download_count')
+      const { data } = await db.from('libraries').select('id, user_id, slug, name, description, latest_version, download_count')
         .eq('visibility', 'public').order('download_count', { ascending: false }).limit(50);
-      setBrowse(Array.isArray(data) ? data : []);
+      const rows = Array.isArray(data) ? data : [];
+      const ownerIds = [...new Set(rows.map((r: { user_id: string }) => r.user_id).filter(Boolean))];
+      let handles: Record<string, string> = {};
+      if (ownerIds.length) {
+        const { data: names } = await db.from('usernames').select('user_id, username').in('user_id', ownerIds);
+        handles = Object.fromEntries((Array.isArray(names) ? names : []).map((n: { user_id: string; username: string }) => [n.user_id, n.username]));
+      }
+      setBrowse(rows.map((r: PublicLibrary & { user_id: string }) => ({ ...r, username: handles[r.user_id] ?? null })));
     } catch { setBrowse([]); }
   }, []);
 
