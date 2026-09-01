@@ -8,6 +8,7 @@ import { IdeTabs } from '@/components/ide/IdeTabs';
 import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
 import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
+import { FileInfoPopover } from '@/components/ide/FileInfoPopover';
 import { PersonalPanel } from '@/components/ide/PersonalPanel';
 import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
