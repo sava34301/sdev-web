@@ -8,6 +8,7 @@ import { IdeTabs } from '@/components/ide/IdeTabs';
 import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
 import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
+import { FileInfoPopover } from '@/components/ide/FileInfoPopover';
 import { PersonalPanel } from '@/components/ide/PersonalPanel';
 import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
@@ -1791,7 +1792,19 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           selection={selection}
           execTime={execTime}
           error={!!error}
-          extra={<DialectSwitcher />}
+          extra={
+            <>
+              {activeFile && (
+                <FileInfoPopover
+                  fileName={activeFile.name}
+                  content={activeFile.content}
+                  cloudId={cloudIds[activeFile.id] ?? activeFile.cloudId ?? null}
+                  runtime={runMode === 'vm' ? 'v2' : (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1'}
+                />
+              )}
+              <DialectSwitcher />
+            </>
+          }
         />
 
         {/* Command Palette */}
