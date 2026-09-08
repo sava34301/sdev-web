@@ -265,8 +265,17 @@ while _i < _fstop
     emit_byte(98)
     emit_byte(_extras)
   end
-  set in_func[0] to 1
   set cur_fn[0] to _i
+  # Milestone 6c: silent pre-walk registers every assigned name as a local
+  # in source order, so loads that precede the first assignment of a name
+  # resolve locally — matching the reference compiler's collect pass.
+  set _ppos to pos
+  set emit_enabled[0] to 0
+  set in_func[0] to 1
+  set _pend to parse_block(pos)
+  set emit_enabled[0] to 1
+  set pos to _ppos
+  set in_func[0] to 1
   set pos to parse_block(pos)
   # Fallthrough guard: implicit \`return 0\`.
   emit_byte(1)

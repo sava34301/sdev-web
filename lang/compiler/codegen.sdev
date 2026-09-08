@@ -2193,8 +2193,21 @@ to parse_stmt with pos
       set idx to fn_names[0] - 1
     end
     set cur_fn[0] to idx + 1
+    # Milestone 6c: pre-register every name the body assigns, in source
+    # order, before walking it for real. Without this a load that appears
+    # ahead of the name's first `set` inside the same function resolves to
+    # a global, while the reference compiler's collect pass makes it a
+    # local. The pre-walk emits nothing (emit_enabled is already 0 here).
+    set pre_pos to pos
+    set pre_emit to emit_enabled[0]
+    set emit_enabled[0] to 0
+    set in_func[0] to 1
+    set pre_end to parse_block(pos)
+    set emit_enabled[0] to pre_emit
+    set pos to pre_pos
     set in_func[0] to 1
     set pos to parse_block(pos)
+
     # After walking the body, loc_names[0] = n_params + n_extras.
     set fn_extras[idx + 1] to loc_names[0] - n_params
     set in_func[0] to 0
