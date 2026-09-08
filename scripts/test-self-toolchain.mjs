@@ -18,7 +18,7 @@ import { compile as selfCompile } from '../lang/compiler/compile-self.mjs';
 const TARGETS = [
   { path: 'lang/compiler/lexer.sdev',   required: true  },
   { path: 'lang/compiler/parser.sdev',  required: true  },
-  { path: 'lang/compiler/codegen.sdev', required: false },
+  { path: 'lang/compiler/codegen.sdev', required: true  },
 ];
 
 function bytesEqual(a, b) {
