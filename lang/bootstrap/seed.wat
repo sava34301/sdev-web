@@ -10,13 +10,15 @@
 ;; lang/compiler/*.sdev) is complete, the bootstrap compiler is discarded
 ;; and SDEV compiles SDEV all the way down.
 ;;
-;; Memory layout (linear memory, 8 pages = 512 KiB — widened in Milestone 5n):
+;; Memory layout (linear memory, 512 pages = 32 MiB — widened in Milestone 6c):
 ;;   0x00000..0x0FFFF  string pool  (utf-8 blobs, length-prefixed u32; 64 KiB)
 ;;   0x10000..0x13FFF  global variable slots (256 slots × 4 bytes → rounded)
 ;;   0x14000..0x17FFF  operand stack (u32 cells; sp grows up)
 ;;   0x18000..0x1BFFF  call stack (frames of ret_ip, saved_fp, locals…)
 ;;   0x1C000..0x2FFFF  bytecode program (u8 stream, up to 80 KiB)
-;;   0x30000..0x7FFFF  bump-pointer heap  (lists, dynamic strings; 320 KiB)
+;;   0x30000..0x1FFFFFF bump-pointer heap (lists, dynamic strings; ~31.8 MiB).
+;;   The heap is a bump allocator with no reclamation, so self-hosting the
+;;   full codegen (which churns string temporaries) needs the wide arena.
 ;;
 ;; Opcodes (single byte, may be followed by inline operands):
 ;;   0x01 PUSH_I32 <i32 LE>         push signed 32-bit constant
@@ -113,7 +115,7 @@
   (import "env" "host_read_file"  (func $host_read_file  (param i32 i32) (result i32)))
   (import "env" "host_write_file" (func $host_write_file (param i32 i32 i32 i32) (result i32)))
   (import "env" "host_http_get"   (func $host_http_get   (param i32 i32) (result i32)))
-  (memory (export "memory") 32)
+  (memory (export "memory") 512)  ;; grows on demand in $alloc
 
 
   ;; ---- constants ---------------------------------------------------------
@@ -146,6 +148,9 @@
   (global $prog_len (mut i32) (i32.const 0))
   (func (export "set_prog_len") (param $n i32) (global.set $prog_len (local.get $n)))
   (func (export "code_base")  (result i32) (global.get $CODE_BASE))
+  ;; Debug probes (host-side diagnostics only; no bytecode semantics).
+  (func (export "dbg_hp")  (result i32) (global.get $hp))
+  (func (export "dbg_csp") (result i32) (global.get $csp))
   (func (export "sdev_version") (result i32) (i32.const 400))
 
   ;; Milestone 7: exported allocator so hosts can materialise a fresh
@@ -156,13 +161,27 @@
     (local.get $p))
 
   ;; ---- heap: bump-pointer allocator (returns 4-byte aligned addr) --------
-  (func $alloc (param $n i32) (result i32) (local $ret i32)
+  ;; Milestone 6c: the arena grows on demand. There is no reclamation, so a
+  ;; long compile (self-hosting codegen.sdev churns tens of MiB of string
+  ;; temporaries) would otherwise run off the end of a fixed memory and trap.
+  ;; Whenever the bump pointer would pass the current memory limit we ask the
+  ;; engine for more pages, in 256-page (16 MiB) steps.
+  (func $alloc (param $n i32) (result i32) (local $ret i32) (local $need i32)
     (local.set $ret (global.get $hp))
     ;; round n up to multiple of 4
-    (global.set $hp
+    (local.set $need
       (i32.add (global.get $hp)
                (i32.and (i32.add (local.get $n) (i32.const 3))
                         (i32.const -4))))
+    (block $done
+      (loop $grow
+        (br_if $done (i32.le_u (local.get $need)
+                               (i32.mul (memory.size) (i32.const 65536))))
+        ;; grow failure returns -1; nothing sensible is left to do but trap
+        ;; on the next store, which is exactly the old behaviour.
+        (br_if $done (i32.eq (memory.grow (i32.const 256)) (i32.const -1)))
+        (br $grow)))
+    (global.set $hp (local.get $need))
     (local.get $ret))
 
   ;; ---- helpers -----------------------------------------------------------

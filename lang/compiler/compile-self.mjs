@@ -132,20 +132,42 @@ while _i < _srclen
           else
             if _c is 34
               set _j to _i + 1
+              set _sbuf to ""
               set _collecting to 1
               while _collecting
                 if _j >= _srclen
                   set _collecting to 0
                 else
-                  if ord(src, _j) is 34
+                  set _q to ord(src, _j)
+                  if _q is 34
                     set _collecting to 0
                   else
-                    set _j to _j + 1
+                    if _q is 92
+                      if _j + 1 < _srclen
+                        set _e to ord(src, _j + 1)
+                        if _e is 110
+                          set _sbuf to concat(_sbuf, chr(10))
+                        else
+                          if _e is 116
+                            set _sbuf to concat(_sbuf, chr(9))
+                          else
+                            set _sbuf to concat(_sbuf, chr(_e))
+                          end
+                        end
+                        set _j to _j + 2
+                      else
+                        set _sbuf to concat(_sbuf, chr(_q))
+                        set _j to _j + 1
+                      end
+                    else
+                      set _sbuf to concat(_sbuf, chr(_q))
+                      set _j to _j + 1
+                    end
                   end
                 end
               end
               set tk_kind[tk_count] to 3
-              set tk_txt[tk_count] to slice(src, _i + 1, _j)
+              set tk_txt[tk_count] to _sbuf
               set tk_count to tk_count + 1
               set _i to _j + 1
             else
@@ -325,8 +347,20 @@ while _i < _fstop
     emit_byte(98)
     emit_byte(_extras)
   end
-  set in_func[0] to 1
   set cur_fn[0] to _i
+  # Milestone 6c: silent pre-walk registers every assigned name as a local
+  # in source order, so loads that precede the first assignment of a name
+  # resolve locally — matching the reference compiler's collect pass.
+  set _ppos to pos
+  set _psyms to sym_names[0]
+  set emit_enabled[0] to 0
+  set in_func[0] to 1
+  set _pend to parse_block(pos)
+  set emit_enabled[0] to 1
+  set sym_names[0] to _psyms
+  set sym_types[0] to _psyms
+  set pos to _ppos
+  set in_func[0] to 1
   set pos to parse_block(pos)
   emit_byte(1)
   emit_i32(0)
