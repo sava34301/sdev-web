@@ -9,6 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
+    "cli:build": "node scripts/build-cli.mjs",
+    "sdev": "node bin/sdev.mjs",
     "desktop:dev": "SDEV_DESKTOP_DEV=1 electron electron/main.cjs",
     "desktop:build": "SDEV_ELECTRON=1 vite build",
     "desktop:package": "SDEV_ELECTRON=1 vite build && electron-packager . SDEV --platform=linux --arch=x64 --out=electron-release --overwrite --ignore=^/src --ignore=^/public --ignore=^/electron-release"
