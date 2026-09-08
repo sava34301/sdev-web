@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { getActiveDialect } from './useDialects';
+import { readSignature, stripSignature, writeSignature } from '@/lang/dialect/signature';
+
 
 export interface CloudFile {
   id: string;
@@ -28,7 +31,9 @@ export function useCloudFiles() {
       .order('updated_at', { ascending: false });
     setLoading(false);
     if (error) throw error;
-    const nextFiles = (data ?? []) as CloudFile[];
+    // The hidden signature line never reaches the editor buffer — it is
+    // re-stamped from the file's metadata on every save.
+    const nextFiles = ((data ?? []) as CloudFile[]).map((f) => ({ ...f, content: stripSignature(f.content ?? '') }));
     setFiles(nextFiles);
     return nextFiles;
   }, [user]);
@@ -39,10 +44,32 @@ export function useCloudFiles() {
 
   const saveFile = useCallback(async (name: string, content: string, id?: string) => {
     if (!user) return null;
+
+    // Stamp (or repair) the file signature on every save, and mirror the same
+    // fields onto the row so files can be searched and shared by dialect.
+    const dialect = getActiveDialect();
+    const previous = readSignature(content);
+    const runtime = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1';
+    const libs = [...(stripSignature(content).match(/use\s+"(@[^"]+)"/g) ?? [])]
+      .map((m) => m.replace(/^use\s+"/, '').replace(/"$/, ''));
+    const signed = writeSignature(content, {
+      rt: runtime,
+      dialect: dialect ? dialect.meta.slug : previous?.dialect ?? null,
+      dialectVersion: dialect ? dialect.meta.version : previous?.dialectVersion ?? null,
+      libs,
+      origin: previous?.origin ?? null,
+    });
+    const mirror = {
+      dialect_slug: dialect ? dialect.meta.slug : previous?.dialect ?? null,
+      dialect_version: dialect ? dialect.meta.version : previous?.dialectVersion ?? null,
+      runtime,
+      lib_pins: libs,
+    };
+
     if (id) {
       const { data, error } = await supabase
         .from('code_files')
-        .update({ name, content })
+        .update({ name, content: signed, ...mirror })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
@@ -55,13 +82,14 @@ export function useCloudFiles() {
     }
     const { data, error } = await supabase
       .from('code_files')
-      .insert({ user_id: user.id, name, content })
+      .insert({ user_id: user.id, name, content: signed, ...mirror })
       .select()
       .single();
     if (error) throw error;
     await refresh();
     return data;
   }, [user, refresh]);
+
 
   const deleteFile = useCallback(async (id: string) => {
     if (!user) return;

@@ -9,9 +9,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Plus, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Plus, Send, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { installExtension } from '@/lang/dialect/extensions';
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -142,11 +144,17 @@ export default function Extensions() {
           <div className="space-y-2">
             {publicOnes.map((ext) => (
               <Card key={ext.id} className="p-3">
-                <div className="text-sm font-medium">{ext.name} <Badge variant="secondary" className="ml-1">{ext.kind}</Badge></div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-medium">{ext.name} <Badge variant="secondary" className="ml-1">{ext.kind}</Badge></div>
+                  <Button size="sm" variant="outline" onClick={() => { installExtension(ext); toast.success(`${ext.name} enabled — it now runs with your code`); }}>
+                    <Download className="h-4 w-4 mr-1.5" />Install
+                  </Button>
+                </div>
                 <pre className="text-xs bg-muted/40 rounded p-2 mt-2 overflow-x-auto"><code>{ext.source}</code></pre>
               </Card>
             ))}
           </div>
+
         </section>
 
         <aside className="lg:sticky lg:top-6 self-start space-y-4">

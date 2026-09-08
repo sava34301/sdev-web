@@ -100,3 +100,53 @@ export interface DocFreshness {
 export function docFreshness(generatedFromTemplate: string): DocFreshness {
   return { templateVersion: TEMPLATE_VERSION, stale: generatedFromTemplate !== TEMPLATE_VERSION };
 }
+
+/* ------------------------------------------------------------------ cache --
+ * Generated docs are stored per dialect version + template version, so a
+ * reader gets the cached copy instantly and a copy made from an older core
+ * template is marked stale and regenerated on the next read.
+ */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Db = any;
+
+export interface CachedDocs {
+  content: string;
+  templateVersion: string;
+  stale: boolean;
+  regenerated: boolean;
+}
+
+/**
+ * Read the cached rendering of a dialect's documentation, regenerating it when
+ * it is missing or was made from an older core template. Falls back to a plain
+ * local render if the cache is unreachable.
+ */
+export async function getOrGenerateDocs(db: Db, spec: DialectSpec, dialectId?: string | null): Promise<CachedDocs> {
+  const fresh = () => ({ content: generateDialectDocs(spec), templateVersion: TEMPLATE_VERSION, stale: false, regenerated: true });
+  if (!dialectId) return fresh();
+  try {
+    const { data } = await db
+      .from('dialect_docs')
+      .select('content, template_version, stale')
+      .eq('dialect_id', dialectId)
+      .eq('dialect_version', spec.meta.version)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const row = Array.isArray(data) ? data[0] : null;
+    if (row && !row.stale && !docFreshness(row.template_version).stale) {
+      return { content: row.content, templateVersion: row.template_version, stale: false, regenerated: false };
+    }
+    // stale or absent: re-render from the current template and mark old rows stale
+    const content = generateDialectDocs(spec);
+    await db.from('dialect_docs').update({ stale: true }).eq('dialect_id', dialectId).neq('template_version', TEMPLATE_VERSION);
+    await db.from('dialect_docs').upsert(
+      { dialect_id: dialectId, dialect_version: spec.meta.version, template_version: TEMPLATE_VERSION, content, stale: false },
+      { onConflict: 'dialect_id,dialect_version,template_version' },
+    );
+    return { content, templateVersion: TEMPLATE_VERSION, stale: false, regenerated: true };
+  } catch {
+    return fresh();
+  }
+}
+

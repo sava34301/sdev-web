@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,11 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ArrowRightLeft, Blocks, BookOpen, Check, Download, ExternalLink, Languages, Package, Trash2 } from 'lucide-react';
 import { useDialects } from '@/hooks/useDialects';
+import { useAuth } from '@/hooks/useAuth';
 import { cachedLibraries, fetchLibrary, forgetBundle, type LibraryBundle } from '@/lang/dialect/registry';
+import { cachedExtensions, enabledIds, setExtensionEnabled, syncExtensions, type ExtensionRecord } from '@/lang/dialect/extensions';
 import { parseAddress } from '@/lang/dialect/address';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { generateDialectDocs } from '@/lang/dialect/docs';
 import type { DialectSpec } from '@/lang/dialect/spec';
+
 
 interface Props {
   /** current editor content, so the panel can translate it in place */
@@ -29,8 +32,16 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
   const [libRef, setLibRef] = useState('');
   const [libs, setLibs] = useState<LibraryBundle[]>(() => cachedLibraries());
   const [busy, setBusy] = useState(false);
+  const { user } = useAuth();
+  const [exts, setExts] = useState<ExtensionRecord[]>(() => cachedExtensions());
+  const [enabled, setEnabled] = useState<string[]>(() => enabledIds());
+
+  useEffect(() => {
+    syncExtensions(user?.id ?? null).then((rows) => { setExts(rows); setEnabled(enabledIds()); }).catch(() => undefined);
+  }, [user]);
 
   const active = useMemo(() => dialects.find((d) => d.meta.slug === activeSlug) ?? null, [dialects, activeSlug]);
+
 
   const installDialect = async () => {
     if (!reference.trim()) return;
@@ -157,9 +168,24 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
       {/* Extensions ----------------------------------------------------- */}
       <section className="p-3 space-y-2">
         <div className="flex items-center gap-1.5 text-muted-foreground"><Blocks className="h-3.5 w-3.5" /> Extensions</div>
-        <p className="text-muted-foreground">New functions and operators, written in sdev — private, shared, or proposed for the core language.</p>
+        <p className="text-muted-foreground">Enabled extensions run ahead of your program: their functions are in scope and their operators work in your code.</p>
+        {exts.length === 0 && <p className="text-muted-foreground">None yet.</p>}
+        {exts.map((ext) => {
+          const on = enabled.includes(ext.id);
+          return (
+            <button
+              key={ext.id}
+              onClick={() => { setExtensionEnabled(ext.id, !on); setEnabled(enabledIds()); }}
+              className={`w-full text-left rounded px-2 py-1.5 hover:bg-muted/60 flex items-center justify-between ${on ? 'bg-muted/70' : ''}`}
+            >
+              <span className="truncate font-mono">{ext.kind === 'operator' && ext.symbol ? ext.symbol : ext.name}</span>
+              {on ? <Check className="h-3.5 w-3.5 text-primary shrink-0" /> : <Badge variant="outline" className="text-[10px]">off</Badge>}
+            </button>
+          );
+        })}
         <Button asChild size="sm" variant="outline" className="h-7 w-full text-xs"><Link to="/extensions">Manage extensions</Link></Button>
       </section>
+
     </div>
   );
 }

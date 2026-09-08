@@ -17,7 +17,7 @@ import { CATALOG, GROUP_LABELS, type CatalogGroup } from '@/lang/dialect/catalog
 import { validateDialect, type DialectSpec } from '@/lang/dialect/spec';
 import { dialectize } from '@/lang/dialect/canonicalize';
 import { SAMPLE } from '@/lang/dialect/sample';
-import { generateDialectDocs } from '@/lang/dialect/docs';
+import { getOrGenerateDocs } from '@/lang/dialect/docs';
 
 const GROUP_ORDER: CatalogGroup[] = ['core', 'control', 'functions', 'errors', 'objects', 'modules', 'literals', 'operators', 'builtins'];
 
@@ -90,16 +90,31 @@ export default function Dialects() {
   };
 
   /** Living documentation: the core reference, rendered in this dialect's words. */
-  const handleDocs = () => {
+  const handleDocs = async () => {
     if (!draft) return;
-    const blob = new Blob([generateDialectDocs(draft)], { type: 'text/markdown' });
+    // Cached per dialect version + core template version; a copy made from an
+    // older core template is regenerated instead of served.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
+    let dialectId: string | null = null;
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth?.user) {
+        const { data } = await db.from('dialects').select('id').eq('user_id', auth.user.id).eq('slug', draft.meta.slug).maybeSingle();
+        dialectId = data?.id ?? null;
+      }
+    } catch { /* offline: render locally */ }
+    const docs = await getOrGenerateDocs(db, draft, dialectId);
+    const blob = new Blob([docs.content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${draft.meta.slug}.documentation.md`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success(docs.regenerated ? `Documentation regenerated from core template v${docs.templateVersion}` : 'Documentation ready');
   };
+
 
   const askAi = async () => {
     if (!draft || !aiRequest.trim()) return;

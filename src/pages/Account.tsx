@@ -12,6 +12,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, LogOut, Save, Trash2, Star, Clock, FileCode, Share2, Copy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCloudFiles } from '@/hooks/useCloudFiles';
+import { useUsername } from '@/hooks/useUsername';
+
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { AdminInviteCodes } from '@/components/AdminInviteCodes';
 import { Shield } from 'lucide-react';
@@ -55,6 +57,24 @@ export default function Account() {
   const { isAdmin } = useIsAdmin();
   const [profile, setProfile] = useState<Profile>({ display_name: '', avatar_url: '', bio: '', website: '' });
   const [savingProfile, setSavingProfile] = useState(false);
+  const { username, claim } = useUsername();
+  const [handleDraft, setHandleDraft] = useState('');
+  const [claiming, setClaiming] = useState(false);
+
+  useEffect(() => { if (username) setHandleDraft(username); }, [username]);
+
+  const saveHandle = async () => {
+    setClaiming(true);
+    try {
+      const next = await claim(handleDraft);
+      toast.success(`You are @${next}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not save that handle');
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   const [history, setHistory] = useState<RunRow[]>([]);
   const [gists, setGists] = useState<Gist[]>([]);
   const [stars, setStars] = useState<StarRow[]>([]);
@@ -163,6 +183,28 @@ export default function Account() {
 
 
           <TabsContent value="profile" className="mt-6">
+            <h2 className="text-xl font-semibold tracking-tight mb-3">Your handle</h2>
+            <Card className="p-6 space-y-3 max-w-xl mb-8">
+              <p className="text-sm text-muted-foreground">
+                Your handle is how people install what you publish: <code className="font-mono">@{username || 'you'}/my-library</code>.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={handleDraft}
+                  onChange={(e) => setHandleDraft(e.target.value.toLowerCase())}
+                  placeholder="your-handle"
+                  className="font-mono"
+                  aria-label="Handle"
+                />
+                <Button onClick={saveHandle} disabled={claiming || !handleDraft.trim()}>
+                  {claiming ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  {username ? 'Change' : 'Claim'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">2–32 characters: lowercase letters, numbers and dashes.</p>
+            </Card>
+
+
             <h2 className="text-xl font-semibold tracking-tight mb-3">Profile</h2>
             <Card className="p-6 space-y-4 max-w-xl">
               <div>
