@@ -267,6 +267,8 @@ to intern_name with name
   end
   set sym_names[sym_names[0] + 1] to name
   set sym_names[0] to sym_names[0] + 1
+  set sym_types[sym_names[0]] to 0
+  set sym_types[0] to sym_names[0]
   return sym_names[0] - 1
 end
 
@@ -285,6 +287,10 @@ end
 to add_local with name
   set loc_names[loc_names[0] + 1] to name
   set loc_names[0] to loc_names[0] + 1
+  # Fresh slots start int-typed; without this reset a slot reused by a
+  # later function inherits the previous function's type.
+  set loc_types[loc_names[0]] to 0
+  set loc_types[0] to loc_names[0]
   return loc_names[0] - 1
 end
 
@@ -1834,12 +1840,7 @@ to parse_params with pos
         set collecting to 0
       else
         if tk_kind[pos] is 2
-          set pslot to add_local(tk_txt[pos])
-          # Params are int-typed on entry (the reference compiler seeds its
-          # local type map the same way). Writing the slot explicitly also
-          # clears whatever the previous function left in it.
-          set loc_types[pslot + 1] to 0
-          set loc_types[0] to loc_names[0]
+          add_local(tk_txt[pos])
           set scratch[0] to scratch[0] + 1
           set pos to pos + 1
         else
@@ -2205,10 +2206,15 @@ to parse_stmt with pos
     # local. The pre-walk emits nothing (emit_enabled is already 0 here).
     set pre_pos to pos
     set pre_emit to emit_enabled[0]
+    set pre_syms to sym_names[0]
     set emit_enabled[0] to 0
     set in_func[0] to 1
     set pre_end to parse_block(pos)
     set emit_enabled[0] to pre_emit
+    # Drop globals the pre-walk interned for names that turned out to be
+    # locals; the real walk re-interns whatever is genuinely global.
+    set sym_names[0] to pre_syms
+    set sym_types[0] to pre_syms
     set pos to pre_pos
     set in_func[0] to 1
     set pos to parse_block(pos)

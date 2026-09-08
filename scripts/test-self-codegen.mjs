@@ -270,10 +270,13 @@ while _i < _fstop
   # in source order, so loads that precede the first assignment of a name
   # resolve locally — matching the reference compiler's collect pass.
   set _ppos to pos
+  set _psyms to sym_names[0]
   set emit_enabled[0] to 0
   set in_func[0] to 1
   set _pend to parse_block(pos)
   set emit_enabled[0] to 1
+  set sym_names[0] to _psyms
+  set sym_types[0] to _psyms
   set pos to _ppos
   set in_func[0] to 1
   set pos to parse_block(pos)
