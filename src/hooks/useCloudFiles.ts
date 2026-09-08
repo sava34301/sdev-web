@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { getActiveDialect } from './useDialects';
+import { readSignature, stripSignature, writeSignature } from '@/lang/dialect/signature';
+
 
 export interface CloudFile {
   id: string;
