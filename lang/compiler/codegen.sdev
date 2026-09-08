@@ -1834,7 +1834,12 @@ to parse_params with pos
         set collecting to 0
       else
         if tk_kind[pos] is 2
-          add_local(tk_txt[pos])
+          set pslot to add_local(tk_txt[pos])
+          # Params are int-typed on entry (the reference compiler seeds its
+          # local type map the same way). Writing the slot explicitly also
+          # clears whatever the previous function left in it.
+          set loc_types[pslot + 1] to 0
+          set loc_types[0] to loc_names[0]
           set scratch[0] to scratch[0] + 1
           set pos to pos + 1
         else
