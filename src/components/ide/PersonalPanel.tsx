@@ -32,8 +32,16 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
   const [libRef, setLibRef] = useState('');
   const [libs, setLibs] = useState<LibraryBundle[]>(() => cachedLibraries());
   const [busy, setBusy] = useState(false);
+  const { user } = useAuth();
+  const [exts, setExts] = useState<ExtensionRecord[]>(() => cachedExtensions());
+  const [enabled, setEnabled] = useState<string[]>(() => enabledIds());
+
+  useEffect(() => {
+    syncExtensions(user?.id ?? null).then((rows) => { setExts(rows); setEnabled(enabledIds()); }).catch(() => undefined);
+  }, [user]);
 
   const active = useMemo(() => dialects.find((d) => d.meta.slug === activeSlug) ?? null, [dialects, activeSlug]);
+
 
   const installDialect = async () => {
     if (!reference.trim()) return;
