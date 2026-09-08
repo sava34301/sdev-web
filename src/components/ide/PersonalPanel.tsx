@@ -157,9 +157,24 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
       {/* Extensions ----------------------------------------------------- */}
       <section className="p-3 space-y-2">
         <div className="flex items-center gap-1.5 text-muted-foreground"><Blocks className="h-3.5 w-3.5" /> Extensions</div>
-        <p className="text-muted-foreground">New functions and operators, written in sdev — private, shared, or proposed for the core language.</p>
+        <p className="text-muted-foreground">Enabled extensions run ahead of your program: their functions are in scope and their operators work in your code.</p>
+        {exts.length === 0 && <p className="text-muted-foreground">None yet.</p>}
+        {exts.map((ext) => {
+          const on = enabled.includes(ext.id);
+          return (
+            <button
+              key={ext.id}
+              onClick={() => { setExtensionEnabled(ext.id, !on); setEnabled(enabledIds()); }}
+              className={`w-full text-left rounded px-2 py-1.5 hover:bg-muted/60 flex items-center justify-between ${on ? 'bg-muted/70' : ''}`}
+            >
+              <span className="truncate font-mono">{ext.kind === 'operator' && ext.symbol ? ext.symbol : ext.name}</span>
+              {on ? <Check className="h-3.5 w-3.5 text-primary shrink-0" /> : <Badge variant="outline" className="text-[10px]">off</Badge>}
+            </button>
+          );
+        })}
         <Button asChild size="sm" variant="outline" className="h-7 w-full text-xs"><Link to="/extensions">Manage extensions</Link></Button>
       </section>
+
     </div>
   );
 }
