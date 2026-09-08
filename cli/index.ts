@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * sdev — the official command line for the sdev language.
  *
