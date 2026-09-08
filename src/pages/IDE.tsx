@@ -14,6 +14,8 @@ import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
 import { resolveLibraries } from '@/lang/dialect/registry';
+import { applyExtensions } from '@/lang/dialect/extensions';
+
 import { IdeCommandPalette } from '@/components/ide/IdeCommandPalette';
 import { IdeSearchPanel } from '@/components/ide/IdeSearchPanel';
 import { IdeSettingsPanel } from '@/components/ide/IdeSettingsPanel';
