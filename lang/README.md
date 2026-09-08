@@ -54,3 +54,25 @@ node build/build.mjs           # runs stage0 → stage1 → stage2
 ```
 
 The Milestone 2 plan is in `.lovable/plan.md` (approved by the user).
+
+## Self-hosting status
+
+`lang/compiler/{lexer,parser,codegen}.sdev` now compile **themselves** to
+byte-identical bytecode through the seed VM — verified by
+`scripts/test-self-toolchain.mjs` (all three targets required) and
+`scripts/test-self-codegen.mjs` (full case suite).
+
+Two rules the self-hosted codegen must keep in step with the reference
+compiler, both fixed while closing this milestone:
+
+1. Every name a function body assigns is a **local**, even when a load of
+   that name appears before its first assignment and a global of the same
+   name exists. A silent pre-walk of the body registers those locals in
+   source order; globals it interned along the way are rolled back so the
+   symbol table keeps the reference ordering.
+2. Fresh local and global slots are **int-typed**. Slot tables are reused
+   across functions, so a new slot must clear the previous occupant's type
+   or `+` mis-selects STRCAT over ADD.
+
+The JS bootstrap (`lang/bootstrap/compile.mjs`) is now redundant and is
+kept only as the differential oracle for the test suites.
