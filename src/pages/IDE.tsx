@@ -628,7 +628,11 @@ export default function IDEPage() {
     // is untouched by dialects.
     const activeDialect = getActiveDialect();
     const strippedSrc = stripSignature(activeFile.content);
-    const rawSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
+    const canonicalSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
+    // Enabled extensions are wired into the prelude: their operators are
+    // desugared to calls and their function bodies run ahead of the program.
+    const rawSrc = applyExtensions(canonicalSrc);
+
     const head10 = rawSrc.split('\n', 10).map(l => l.trim());
     const shebangV2Wasm = head10.some(l => l.startsWith('#!sdev v2-wasm'));
     const shebangV2 = head10.some(l => l.startsWith('#!sdev v2') && !l.startsWith('#!sdev v2-wasm'));
@@ -970,8 +974,20 @@ export default function IDEPage() {
   };
 
   const downloadAllFiles = () => {
+    const dialect = getActiveDialect();
+    const runtime = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1';
     files.forEach(file => {
-      const blob = new Blob([file.content], { type: 'text/plain' });
+      // Same signature the single-file export writes, so a whole workspace
+      // round-trips with its runtime, dialect and library pins intact.
+      const existing = readSignature(file.content);
+      const signed = writeSignature(file.content, {
+        rt: runtime,
+        dialect: dialect ? dialect.meta.slug : existing?.dialect ?? null,
+        dialectVersion: dialect ? dialect.meta.version : existing?.dialectVersion ?? null,
+        libs: existing?.libs ?? [],
+        origin: existing?.origin ?? null,
+      });
+      const blob = new Blob([signed], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = file.name; a.click();
@@ -979,6 +995,7 @@ export default function IDEPage() {
     });
     toast.success(`Downloaded ${files.length} files`);
   };
+
 
   const downloadElectron = () => {
     const pkg = JSON.stringify({
