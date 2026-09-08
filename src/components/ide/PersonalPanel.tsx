@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,11 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ArrowRightLeft, Blocks, BookOpen, Check, Download, ExternalLink, Languages, Package, Trash2 } from 'lucide-react';
 import { useDialects } from '@/hooks/useDialects';
+import { useAuth } from '@/hooks/useAuth';
 import { cachedLibraries, fetchLibrary, forgetBundle, type LibraryBundle } from '@/lang/dialect/registry';
+import { cachedExtensions, enabledIds, setExtensionEnabled, syncExtensions, type ExtensionRecord } from '@/lang/dialect/extensions';
 import { parseAddress } from '@/lang/dialect/address';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { generateDialectDocs } from '@/lang/dialect/docs';
 import type { DialectSpec } from '@/lang/dialect/spec';
+
 
 interface Props {
   /** current editor content, so the panel can translate it in place */
