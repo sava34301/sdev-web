@@ -904,9 +904,10 @@ export default function IDEPage() {
 
   const newFile = useCallback((folderId: string | null = null) => {
     const id = nextFileId();
-    const name = `untitled${fileIdCounter}.sdev`;
-    const file: IdeFile = { id, name, content: `// ${name}\n`, folderId };
-    setFiles(prev => [...prev, file]);
+    setFiles(prev => {
+      const name = uniqueUntitled(prev);
+      return [...prev, { id, name, content: `// ${name}\n`, folderId } as IdeFile];
+    });
     setOpenIds(prev => [...prev, id]);
     setActiveId(id);
   }, []);
