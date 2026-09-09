@@ -87,6 +87,11 @@ const cases = [
     expect: ['hello', '42'],
   },
   {
+    name: 'natural comparators: is N or more / or less',
+    src: `set age to 21\nif age is 18 or more\nsay "adult"\nend\nif age is 30 or less\nsay "young"\nend\nif age is 40 or more\nsay "nope"\nend`,
+    expect: ['adult', 'young'],
+  },
+  {
     name: 'if/else + while',
     src: `set x to 3\nif x is 3\nsay "three"\nelse\nsay "no"\nend\nset i to 0\nwhile i < 3\nsay i\nset i to i + 1\nend`,
     expect: ['three', '0', '1', '2'],
