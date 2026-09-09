@@ -635,7 +635,8 @@ export default function IDEPage() {
     // desugared to calls and their function bodies run ahead of the program.
     const rawSrc = applyExtensions(canonicalSrc);
 
-    const head10 = rawSrc.split('\n', 10).map(l => l.trim());
+    // Runtime is chosen from the user's own file, before the prelude is added.
+    const head10 = canonicalSrc.split('\n', 10).map(l => l.trim());
     const shebangV2Wasm = head10.some(l => l.startsWith('#!sdev v2-wasm'));
     const shebangV2 = head10.some(l => l.startsWith('#!sdev v2') && !l.startsWith('#!sdev v2-wasm'));
     const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
