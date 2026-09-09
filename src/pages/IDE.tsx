@@ -317,7 +317,17 @@ const SNIPPETS: Record<string, string> = {
   'class': 'essence $1 ::\n  conjure init(self) ::\n    $2\n  ;;\n;;\n',
 };
 
-let fileIdCounter = 10;
+/** Collision-proof file id: unique across reloads and restored workspaces. */
+let fileIdSeq = 0;
+const nextFileId = () => `n-${Date.now().toString(36)}-${(fileIdSeq++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+/** First "untitled<N>.sdev" that is not already taken. */
+function uniqueUntitled(existing: { name: string }[]): string {
+  const taken = new Set(existing.map(f => f.name));
+  let n = 1;
+  while (taken.has(`untitled${n}.sdev`)) n++;
+  return `untitled${n}.sdev`;
+}
 type BottomPanel = 'terminal' | 'canvas' | 'app' | 'web' | 'problems';
 
 const DEFAULT_SETTINGS: IdeSettings = {
