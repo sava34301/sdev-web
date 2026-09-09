@@ -1668,12 +1668,12 @@ to parse_cmp with pos
     set natcmp to 0 - 1
     if is_ident_word(pos, "or")
       if is_ident_word(pos + 1, "more")
-        set natcmp to 36
+        set natcmp to 37
         set pos to pos + 2
       end
       if natcmp is 0 - 1
         if is_ident_word(pos + 1, "less")
-          set natcmp to 37
+          set natcmp to 36
           set pos to pos + 2
         end
       end
