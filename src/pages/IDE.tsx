@@ -317,7 +317,17 @@ const SNIPPETS: Record<string, string> = {
   'class': 'essence $1 ::\n  conjure init(self) ::\n    $2\n  ;;\n;;\n',
 };
 
-let fileIdCounter = 10;
+/** Collision-proof file id: unique across reloads and restored workspaces. */
+let fileIdSeq = 0;
+const nextFileId = () => `n-${Date.now().toString(36)}-${(fileIdSeq++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+/** First "untitled<N>.sdev" that is not already taken. */
+function uniqueUntitled(existing: { name: string }[]): string {
+  const taken = new Set(existing.map(f => f.name));
+  let n = 1;
+  while (taken.has(`untitled${n}.sdev`)) n++;
+  return `untitled${n}.sdev`;
+}
 type BottomPanel = 'terminal' | 'canvas' | 'app' | 'web' | 'problems';
 
 const DEFAULT_SETTINGS: IdeSettings = {
@@ -508,7 +518,7 @@ export default function IDEPage() {
     if (imported) {
       sessionStorage.removeItem('sdev:imported_code');
       sessionStorage.removeItem('sdev:imported_name');
-      const id = String(++fileIdCounter);
+      const id = nextFileId();
       const name = (importedName || 'imported').replace(/[^\w.\-]/g, '_') + (importedName?.endsWith('.sdev') ? '' : '.sdev');
       const file: IdeFile = { id, name, content: imported };
       setFiles(prev => [...prev, file]);
@@ -525,7 +535,7 @@ export default function IDEPage() {
     (async () => {
       const { data } = await supabase.from('code_files').select('*').eq('id', cloudParam).maybeSingle();
       if (!data) return;
-      const id = String(++fileIdCounter);
+      const id = nextFileId();
       const file: IdeFile = { id, name: data.name, content: stripSignature(data.content ?? ''), cloudId: data.id };
       setFiles(prev => [...prev, file]);
       setOpenIds(prev => [...prev, id]);
@@ -893,10 +903,11 @@ export default function IDEPage() {
   }, [activeFile, runMode, selectedLanguage, recordRun, files]);
 
   const newFile = useCallback((folderId: string | null = null) => {
-    const id = String(++fileIdCounter);
-    const name = `untitled${fileIdCounter}.sdev`;
-    const file: IdeFile = { id, name, content: `// ${name}\n`, folderId };
-    setFiles(prev => [...prev, file]);
+    const id = nextFileId();
+    setFiles(prev => {
+      const name = uniqueUntitled(prev);
+      return [...prev, { id, name, content: `// ${name}\n`, folderId } as IdeFile];
+    });
     setOpenIds(prev => [...prev, id]);
     setActiveId(id);
   }, []);
@@ -1108,7 +1119,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
               note = ` · written in dialect "${sig.dialect}" (not installed)`;
             }
           }
-          const id = String(++fileIdCounter);
+          const id = nextFileId();
           const newFile: IdeFile = { id, name: file.name, content };
           setFiles(prev => [...prev, newFile]);
           setOpenIds(prev => [...prev, id]);
@@ -1488,7 +1499,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     setCloudIds(prev => ({ ...prev, [existing.id]: cid }));
                     return;
                   }
-                  const id = String(++fileIdCounter);
+                  const id = nextFileId();
                   // Tag the loaded file with its cloudId so workspace sync
                   // updates this row instead of inserting a duplicate.
                   const file: IdeFile = { id, name, content, cloudId: cid };
