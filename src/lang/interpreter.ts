@@ -606,8 +606,11 @@ export class Interpreter {
   private boundBuiltin(receiver: unknown, name: string): SdevFunction | undefined {
     if (!this.globalEnv.hasOwn(name) && !this.globalEnv.hasOwn(`py_${name}`)) return undefined;
     // Same precedence as global lookup: the v1 builtin wins, the parity
-    // variant is only used when no v1 builtin of that name exists.
-    const candidate = this.globalEnv.hasOwn(name)
+    // variant is only used when no v1 builtin of that name exists — except
+    // for set receivers, whose v1 namesakes (`union`, `difference`) only
+    // accept lists; the parity variants understand sets.
+    const preferParity = receiver instanceof SdevSet && this.globalEnv.hasOwn(`py_${name}`);
+    const candidate = this.globalEnv.hasOwn(name) && !preferParity
       ? this.globalEnv.get(name, 0)
       : this.globalEnv.get(`py_${name}`, 0);
     if (!isFunction(candidate)) return undefined;
