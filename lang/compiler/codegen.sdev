@@ -1664,6 +1664,25 @@ to parse_cmp with pos
     end
     set pos to parse_add(pos)
     set rk to expr_type[0]
+    # Natural comparators: `x is N or more` -> >=, `x is N or less` -> <=.
+    set natcmp to 0 - 1
+    if is_ident_word(pos, "or")
+      if is_ident_word(pos + 1, "more")
+        set natcmp to 36
+        set pos to pos + 2
+      end
+      if natcmp is 0 - 1
+        if is_ident_word(pos + 1, "less")
+          set natcmp to 37
+          set pos to pos + 2
+        end
+      end
+    end
+    if natcmp is not 0 - 1
+      emit_byte(natcmp)
+      set expr_type[0] to 0
+      return pos
+    end
     if neg
       emit_byte(33)
     else
