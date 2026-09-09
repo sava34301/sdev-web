@@ -16,6 +16,8 @@ export interface ExtensionRecord {
   about: string | null;
   source: string;
   visibility?: 'private' | 'unlisted' | 'public';
+  /** user id the record was synced from; absent for installed/local ones */
+  owner?: string;
 }
 
 const CACHE_KEY = 'sdev_extensions_cache';
@@ -58,20 +60,26 @@ export function isExtensionEnabled(id: string): boolean {
   return enabledIds().includes(id);
 }
 
-/** Pull the signed-in user's extensions (plus installed public ones) into the cache. */
+/** Pull the signed-in user's extensions into the cache, keeping installed
+ *  public ones and local (`sdev ext add`) ones — those live only in the cache. */
 export async function syncExtensions(userId: string | null): Promise<ExtensionRecord[]> {
   if (!userId) return cachedExtensions();
   try {
     const { data } = await db
       .from('sdev_extensions')
-      .select('id, name, kind, symbol, about, source, visibility')
+      .select('id, name, kind, symbol, about, source, visibility, user_id')
       .eq('user_id', userId);
     if (Array.isArray(data)) {
-      writeJson(CACHE_KEY, data);
-      // drop enabled ids that no longer exist
-      const live = new Set(data.map((e: ExtensionRecord) => e.id));
+      const own = (data as (ExtensionRecord & { user_id?: string })[]).map((e) => ({ ...e, owner: userId }));
+      const ownIds = new Set(own.map((e) => e.id));
+      // Keep everything not owned by this user (installed public / local);
+      // refresh own rows from the server and drop own rows deleted upstream.
+      const foreign = cachedExtensions().filter((e) => !ownIds.has(e.id) && e.owner !== userId);
+      const merged = [...foreign, ...own];
+      writeJson(CACHE_KEY, merged);
+      const live = new Set(merged.map((e) => e.id));
       writeJson(ENABLED_KEY, enabledIds().filter((id) => live.has(id)));
-      return data as ExtensionRecord[];
+      return merged;
     }
   } catch {
     /* offline: the cache is authoritative */
