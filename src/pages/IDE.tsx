@@ -526,7 +526,7 @@ export default function IDEPage() {
       const { data } = await supabase.from('code_files').select('*').eq('id', cloudParam).maybeSingle();
       if (!data) return;
       const id = String(++fileIdCounter);
-      const file: IdeFile = { id, name: data.name, content: data.content, cloudId: data.id };
+      const file: IdeFile = { id, name: data.name, content: stripSignature(data.content ?? ''), cloudId: data.id };
       setFiles(prev => [...prev, file]);
       setOpenIds(prev => [...prev, id]);
       setActiveId(id);
