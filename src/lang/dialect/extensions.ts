@@ -16,6 +16,8 @@ export interface ExtensionRecord {
   about: string | null;
   source: string;
   visibility?: 'private' | 'unlisted' | 'public';
+  /** user id the record was synced from; absent for installed/local ones */
+  owner?: string;
 }
 
 const CACHE_KEY = 'sdev_extensions_cache';
