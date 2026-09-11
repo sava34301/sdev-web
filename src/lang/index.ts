@@ -103,11 +103,17 @@ export { Interpreter } from './interpreter';
 export { SdevError } from './errors';
 export {
   translateSource,
+  translateForDialect,
   detectLanguage,
+  dialectWords,
+  dialectLanguageHint,
+  effectiveTable,
   hasNonAscii,
   SUPPORTED_LANGUAGES,
   KEYWORD_TABLES,
 } from './translator';
+export type { TranslateOptions, TranslationTarget, TranslatorDialect } from './translator';
+export { V1_TO_V2, V2_EXTRA, TAG_TO_LANGUAGE } from './translator-v2';
 export { resolveLinks } from './linker';
 export type { LinkableFile } from './linker';
 export * from './tokens';
