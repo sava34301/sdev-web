@@ -603,12 +603,13 @@ function buildPhraseNormalizations(lang: string, target: TranslationTarget = 'v1
 // Compiled per-language word→word replacer
 // ============================================================
 
-const COMPILED_REPLACERS: Record<string, (s: string) => string> = {};
+const COMPILED_REPLACERS: Record<string, (s: string, protect?: ReadonlySet<string>) => string> = {};
 
-function compileReplacer(lang: string): (s: string) => string {
-  if (COMPILED_REPLACERS[lang]) return COMPILED_REPLACERS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return (COMPILED_REPLACERS[lang] = (s) => s);
+function compileReplacer(lang: string, target: TranslationTarget = 'v1'): (s: string, protect?: ReadonlySet<string>) => string {
+  const key = `${lang}|${target}`;
+  if (COMPILED_REPLACERS[key]) return COMPILED_REPLACERS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return (COMPILED_REPLACERS[key] = (s) => s);
 
   // Sort by length DESC to avoid prefix-collision (e.g. "не" before "не_е").
   const entries = Object.entries(table).sort((a, b) => b[0].length - a[0].length);
@@ -618,20 +619,22 @@ function compileReplacer(lang: string): (s: string) => string {
 
   // Build one big alternation regex with Unicode word-boundary lookarounds.
   const pattern = entries.map(([k]) => escape(k)).join('|');
-  if (!pattern) return (COMPILED_REPLACERS[lang] = (s) => s);
+  if (!pattern) return (COMPILED_REPLACERS[key] = (s) => s);
 
   // (^|non-word)(KEYWORD)(?=$|non-word)
   // \p{L} covers letters in any script; \p{N} numbers. Underscore is also "word".
   const re = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, 'gu');
   const map = new Map(entries);
 
-  const fn = (src: string): string => {
+  const fn = (src: string, protect?: ReadonlySet<string>): string => {
     return src.replace(re, (_m, pre: string, word: string) => {
+      // A dialect already gave this word a meaning — never re-translate it.
+      if (protect?.has(word)) return pre + word;
       const repl = map.get(word) ?? word;
       return pre + repl;
     });
   };
-  COMPILED_REPLACERS[lang] = fn;
+  COMPILED_REPLACERS[key] = fn;
   return fn;
 }
 
