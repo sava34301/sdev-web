@@ -697,9 +697,11 @@ export function hasNonAscii(code: string): boolean {
  * Returns the language name (e.g. "Bulgarian") or null when unsure /
  * code is already English sdev.
  */
-export function detectLanguage(source: string): string | null {
-  // Quick English check — if it parses as English sdev keywords, skip detection.
-  const englishHits = (source.match(/\b(forge|be|conjure|ponder|cycle|speak|yield)\b/g) || []).length;
+export function detectLanguage(source: string, protect?: ReadonlySet<string>): string | null {
+  // Quick English check — hits on either surface mean the code is already sdev.
+  const englishHits = (source.match(
+    /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind)\b/g,
+  ) || []).length;
 
   let bestLang: string | null = null;
   let bestScore = 0;
@@ -708,7 +710,12 @@ export function detectLanguage(source: string): string | null {
     const table = KEYWORD_TABLES[lang];
     let score = 0;
     for (const word of Object.keys(table)) {
+      if (protect?.has(word)) continue;
       // Cheap substring count — good enough for heuristic detection.
+      if (source.includes(word)) score++;
+    }
+    for (const word of Object.keys(V2_EXTRA[lang] ?? {})) {
+      if (protect?.has(word)) continue;
       if (source.includes(word)) score++;
     }
     if (score > bestScore) {
@@ -722,42 +729,79 @@ export function detectLanguage(source: string): string | null {
   return null;
 }
 
+/** The bits of a dialect spec the translator needs (structural, no import cycle). */
+export interface TranslatorDialect {
+  meta?: { languages?: string[] };
+  names?: Record<string, string>;
+  synonyms?: Record<string, string[]>;
+  constructs?: { functions?: { name: string }[] };
+}
+
+export interface TranslateOptions {
+  /** Which sdev surface to translate INTO. Default: the classic v1 surface. */
+  target?: TranslationTarget;
+  /** Extra words that must survive untouched (identifiers, dialect words). */
+  protect?: Iterable<string>;
+  /**
+   * Active dialect. Its surface words are protected, and its declared
+   * languages act as a detection hint when `sourceLanguage` is "auto".
+   */
+  dialect?: TranslatorDialect | null;
+}
+
+/** Every word an active dialect owns — these are already meaningful sdev. */
+export function dialectWords(spec: TranslatorDialect | null | undefined): Set<string> {
+  const words = new Set<string>();
+  if (!spec) return words;
+  for (const w of Object.values(spec.names ?? {})) words.add(w);
+  for (const list of Object.values(spec.synonyms ?? {})) for (const w of list) words.add(w);
+  for (const fn of spec.constructs?.functions ?? []) words.add(fn.name);
+  return words;
+}
+
+/** The translator language a dialect implies, from its declared tags. */
+export function dialectLanguageHint(spec: TranslatorDialect | null | undefined): string | null {
+  for (const tag of spec?.meta?.languages ?? []) {
+    const name = TAG_TO_LANGUAGE[tag.toLowerCase().split('-')[0]];
+    if (name && name !== 'English' && KEYWORD_TABLES[name]) return name;
+  }
+  return null;
+}
+
 /**
  * Translate sdev source code from a given (or auto-detected) language
  * to canonical English sdev. Synchronous, deterministic, network-free.
  *
  *   - sourceLanguage: explicit language name, "auto" (detect), or
  *                     "English"/null (no-op).
+ *   - target: "v1" (forge/ponder/speak) or "v2" (set/if/say).
  *   - Strings and comments are never modified.
- *   - Identifiers that are not keywords are left untouched.
+ *   - Identifiers, and any word the active dialect owns, stay untouched.
  */
 export function translateSource(
   source: string,
-  sourceLanguage: string | null = 'auto'
+  sourceLanguage: string | null = 'auto',
+  options: TranslateOptions = {},
 ): { translated: string; detectedLanguage: string | null } {
   if (!source) return { translated: source, detectedLanguage: null };
+
+  const target: TranslationTarget = options.target ?? 'v1';
+  const protect = new Set<string>([...(options.protect ?? []), ...dialectWords(options.dialect)]);
 
   let lang = sourceLanguage;
   if (lang === 'English') return { translated: source, detectedLanguage: 'English' };
   if (!lang || lang === 'auto') {
-    // Skip entirely if pure ASCII AND no obvious foreign-language hits.
-    if (!hasNonAscii(source)) {
-      const detected = detectLanguage(source);
-      if (!detected) return { translated: source, detectedLanguage: null };
-      lang = detected;
-    } else {
-      lang = detectLanguage(source);
-      if (!lang) return { translated: source, detectedLanguage: null };
-    }
+    lang = detectLanguage(source, protect) ?? dialectLanguageHint(options.dialect);
+    if (!lang) return { translated: source, detectedLanguage: null };
   }
 
   if (!KEYWORD_TABLES[lang]) {
     return { translated: source, detectedLanguage: null };
   }
 
-  const replace = compileReplacer(lang);
-  const phraseNorms = buildPhraseNormalizations(lang);
-  const fuzzy = compileFuzzyReplacer(lang);
+  const replace = compileReplacer(lang, target);
+  const phraseNorms = buildPhraseNormalizations(lang, target);
+  const fuzzy = compileFuzzyReplacer(lang, target);
 
   const segments = segmentSource(source);
   const translated = segments
@@ -769,21 +813,38 @@ export function translateSource(
         t = t.replace(re, repl);
       }
       // Then exact word-by-word replacement.
-      t = replace(t);
+      t = replace(t, protect);
       // Finally, fuzzy match anything that looks like an unconverted foreign keyword.
-      t = fuzzy(t);
-      // Context fix: `forge name(` is really a method/function declaration in
-      // most natural languages where "create" covers both vars and functions
-      // (e.g. Bulgarian `създай`). Rewrite to `conjure name(`.
-      t = t.replace(
-        /\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu,
-        'conjure$1'
-      );
+      t = fuzzy(t, protect);
+      if (target === 'v1') {
+        // Context fix: `forge name(` is really a method/function declaration in
+        // most natural languages where "create" covers both vars and functions
+        // (e.g. Bulgarian `създай`). Rewrite to `conjure name(`.
+        t = t.replace(/\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, 'conjure$1');
+      } else {
+        // v2: `set name(` / `set name with` is a function declaration -> `to name`.
+        t = t.replace(/\bset(\s+[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, 'to$1');
+        // "or more" / "or less" comparators arrive as separate words already.
+        t = t.replace(/\bis\s+not\b/g, 'is not');
+      }
       return t;
     })
     .join('');
 
   return { translated, detectedLanguage: lang };
+}
+
+/**
+ * Canonical entry point for every runtime: dialect surface first, then the
+ * natural-language pass, producing canonical sdev on the requested surface.
+ */
+export function translateForDialect(
+  source: string,
+  sourceLanguage: string | null,
+  dialect: TranslatorDialect | null,
+  target: TranslationTarget = 'v2',
+): { translated: string; detectedLanguage: string | null } {
+  return translateSource(source, sourceLanguage, { target, dialect });
 }
 
 // ============================================================
