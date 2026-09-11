@@ -13,6 +13,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain JS module
 import { compile as selfCompile, setSeedLoader } from '../../lang/compiler/compile-self.mjs';
+import { translateSource, type TranslatorDialect } from '@/lang/translator';
 
 export class WasmSubsetError extends Error {}
 
