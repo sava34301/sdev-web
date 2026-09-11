@@ -162,6 +162,1913 @@ var init_errors = __esm({
   }
 });
 
+// src/lang/translator-v2.ts
+var V1_TO_V2, V2_EXTRA, TAG_TO_LANGUAGE;
+var init_translator_v2 = __esm({
+  "src/lang/translator-v2.ts"() {
+    V1_TO_V2 = {
+      forge: "set",
+      be: "to",
+      conjure: "to",
+      yield: "return",
+      ponder: "if",
+      otherwise: "else",
+      cycle: "while",
+      iterate: "for",
+      through: "in",
+      within: "in",
+      yeet: "break",
+      skip: "continue",
+      speak: "say",
+      essence: "kind",
+      extend: "extends",
+      also: "and",
+      either: "or",
+      isnt: "not",
+      equals: "is",
+      differs: "is not",
+      yep: "true",
+      nope: "false",
+      void: "nothing",
+      summon: "use",
+      // unchanged between surfaces
+      self: "self",
+      super: "super",
+      new: "new",
+      attempt: "attempt",
+      rescue: "rescue",
+      init: "init",
+      async: "async",
+      await: "await",
+      spawn: "spawn"
+    };
+    V2_EXTRA = {
+      Bulgarian: {
+        "\u043A\u0440\u0430\u0439": "end",
+        "\u043F\u0440\u0438\u043A\u043B\u044E\u0447\u0438": "end",
+        "\u0432\u0441\u0435\u043A\u0438": "each",
+        "\u0432\u0441\u044F\u043A\u043E": "each",
+        "\u0432\u0441\u0438\u0447\u043A\u0438": "each",
+        "\u0441": "with",
+        "\u0441\u044A\u0441": "with",
+        "\u0438\u043C\u0430": "has",
+        "\u0441\u044A\u0434\u044A\u0440\u0436\u0430": "has",
+        "\u043F\u0440\u0430\u0432\u0438": "does",
+        "\u0438\u0437\u043F\u044A\u043B\u043D\u044F\u0432\u0430": "does",
+        "\u043F\u0438\u0442\u0430\u0439": "ask",
+        "\u0432\u044A\u0432\u0435\u0434\u0438": "ask",
+        "\u0445\u0432\u044A\u0440\u043B\u0438": "throw",
+        "\u0445\u0432\u044A\u0440\u043B\u044F\u0439": "throw",
+        "\u043F\u043E\u0432\u0435\u0447\u0435": "more",
+        "\u043F\u043E_\u043C\u0430\u043B\u043A\u043E": "less",
+        "\u0441\u044A\u0432\u043F\u0430\u0434\u0430": "match",
+        "\u0438\u0437\u0432\u0438\u043A\u0432\u0430\u043D\u0435_\u043D\u0430": "call"
+      },
+      Spanish: {
+        "fin": "end",
+        "terminar": "end",
+        "cada": "each",
+        "con": "with",
+        "tiene": "has",
+        "hace": "does",
+        "preguntar": "ask",
+        "arrojar": "throw",
+        "m\xE1s": "more",
+        "menos": "less",
+        "coincide": "match",
+        "llamar": "call"
+      },
+      French: {
+        "fin": "end",
+        "terminer": "end",
+        "chaque": "each",
+        "avec": "with",
+        "poss\xE8de": "has",
+        "fait": "does",
+        "demander": "ask",
+        "lever": "throw",
+        "plus": "more",
+        "moins": "less",
+        "correspond": "match",
+        "appeler": "call"
+      },
+      German: {
+        "ende": "end",
+        "jedes": "each",
+        "jede": "each",
+        "mit": "with",
+        "hat": "has",
+        "macht": "does",
+        "fragen": "ask",
+        "werfen": "throw",
+        "mehr": "more",
+        "weniger": "less",
+        "abgleichen": "match",
+        "aufrufen": "call",
+        "abbrechen": "break",
+        "weiter": "continue"
+      },
+      Portuguese: {
+        "fim": "end",
+        "cada": "each",
+        "com": "with",
+        "tem": "has",
+        "faz": "does",
+        "perguntar": "ask",
+        "arremessar": "throw",
+        "mais": "more",
+        "menos": "less",
+        "corresponde": "match",
+        "chamar": "call"
+      },
+      Italian: {
+        "fine": "end",
+        "ogni": "each",
+        "con": "with",
+        "possiede": "has",
+        "esegue": "does",
+        "chiedere": "ask",
+        "sollevare": "throw",
+        "pi\xF9": "more",
+        "meno": "less",
+        "corrisponde": "match",
+        "chiamare": "call"
+      },
+      Dutch: {
+        "einde": "end",
+        "elke": "each",
+        "elk": "each",
+        "met": "with",
+        "heeft": "has",
+        "doet": "does",
+        "vragen": "ask",
+        "werpen": "throw",
+        "meer": "more",
+        "minder": "less",
+        "komt_overeen": "match",
+        "oproep": "call"
+      },
+      Russian: {
+        "\u043A\u043E\u043D\u0435\u0446": "end",
+        "\u043A\u0430\u0436\u0434\u044B\u0439": "each",
+        "\u043A\u0430\u0436\u0434\u043E\u0435": "each",
+        "\u0441": "with",
+        "\u0438\u043C\u0435\u0435\u0442": "has",
+        "\u0434\u0435\u043B\u0430\u0435\u0442": "does",
+        "\u0441\u043F\u0440\u043E\u0441\u0438\u0442\u044C": "ask",
+        "\u0432\u044B\u0431\u0440\u043E\u0441\u0438\u0442\u044C": "throw",
+        "\u0431\u043E\u043B\u044C\u0448\u0435": "more",
+        "\u043C\u0435\u043D\u044C\u0448\u0435": "less",
+        "\u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0435\u0442": "match",
+        "\u0432\u044B\u0437\u043E\u0432": "call"
+      }
+    };
+    TAG_TO_LANGUAGE = {
+      bg: "Bulgarian",
+      ru: "Russian",
+      es: "Spanish",
+      fr: "French",
+      de: "German",
+      pt: "Portuguese",
+      it: "Italian",
+      nl: "Dutch",
+      pl: "Polish",
+      uk: "Ukrainian",
+      tr: "Turkish",
+      ar: "Arabic",
+      hi: "Hindi",
+      ja: "Japanese",
+      zh: "Chinese",
+      ko: "Korean",
+      el: "Greek",
+      sv: "Swedish",
+      no: "Norwegian",
+      da: "Danish",
+      fi: "Finnish",
+      cs: "Czech",
+      ro: "Romanian",
+      hu: "Hungarian",
+      he: "Hebrew",
+      id: "Indonesian",
+      vi: "Vietnamese",
+      th: "Thai",
+      en: "English"
+    };
+  }
+});
+
+// src/lang/translator.ts
+function effectiveTable(lang, target = "v1") {
+  const base = KEYWORD_TABLES[lang];
+  if (!base) return null;
+  if (target === "v1") return base;
+  const key = `${lang}|v2`;
+  if (EFFECTIVE_TABLES[key]) return EFFECTIVE_TABLES[key];
+  const table = {};
+  for (const [foreign, canonical] of Object.entries(base)) {
+    table[foreign] = V1_TO_V2[canonical] ?? canonical;
+  }
+  Object.assign(table, V2_EXTRA[lang] ?? {});
+  EFFECTIVE_TABLES[key] = table;
+  return table;
+}
+function buildPhraseNormalizations(lang, target = "v1") {
+  const key = `${lang}|${target}`;
+  if (PHRASE_NORMALIZATIONS[key]) return PHRASE_NORMALIZATIONS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return PHRASE_NORMALIZATIONS[key] = [];
+  const phrases = Object.keys(table).filter((k) => k.includes("_"));
+  const result = phrases.map((p) => {
+    const spaced = p.replace(/_/g, "\\s+");
+    return [new RegExp(`(^|[^\\p{L}\\p{N}_])${spaced}(?=$|[^\\p{L}\\p{N}_])`, "gu"), `$1${p}`];
+  });
+  PHRASE_NORMALIZATIONS[key] = result;
+  return result;
+}
+function compileReplacer(lang, target = "v1") {
+  const key = `${lang}|${target}`;
+  if (COMPILED_REPLACERS[key]) return COMPILED_REPLACERS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return COMPILED_REPLACERS[key] = (s) => s;
+  const entries = Object.entries(table).sort((a, b) => b[0].length - a[0].length);
+  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = entries.map(([k]) => escape(k)).join("|");
+  if (!pattern) return COMPILED_REPLACERS[key] = (s) => s;
+  const re = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, "gu");
+  const map = new Map(entries);
+  const fn2 = (src, protect) => {
+    return src.replace(re, (_m, pre, word) => {
+      if (protect?.has(word)) return pre + word;
+      const repl = map.get(word) ?? word;
+      return pre + repl;
+    });
+  };
+  COMPILED_REPLACERS[key] = fn2;
+  return fn2;
+}
+function segmentSource(source) {
+  const segs = [];
+  let i = 0;
+  let buf = "";
+  const flush = (code) => {
+    if (buf) {
+      segs.push({ code, text: buf });
+      buf = "";
+    }
+  };
+  while (i < source.length) {
+    const c = source[i];
+    if (c === "/" && source[i + 1] === "/" || c === "#") {
+      flush(true);
+      const end = source.indexOf("\n", i);
+      const stop = end === -1 ? source.length : end;
+      segs.push({ code: false, text: source.slice(i, stop) });
+      i = stop;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      flush(true);
+      const quote = c;
+      let j = i + 1;
+      while (j < source.length) {
+        if (source[j] === "\\") {
+          j += 2;
+          continue;
+        }
+        if (source[j] === quote) {
+          j++;
+          break;
+        }
+        j++;
+      }
+      segs.push({ code: false, text: source.slice(i, j) });
+      i = j;
+      continue;
+    }
+    buf += c;
+    i++;
+  }
+  flush(true);
+  return segs;
+}
+function detectLanguage(source, protect) {
+  const englishHits = (source.match(
+    /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind)\b/g
+  ) || []).length;
+  let bestLang = null;
+  let bestScore = 0;
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const table = KEYWORD_TABLES[lang];
+    let score = 0;
+    for (const word of Object.keys(table)) {
+      if (protect?.has(word)) continue;
+      if (source.includes(word)) score++;
+    }
+    for (const word of Object.keys(V2_EXTRA[lang] ?? {})) {
+      if (protect?.has(word)) continue;
+      if (source.includes(word)) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestLang = lang;
+    }
+  }
+  if (bestScore >= 2 && bestScore > englishHits) return bestLang;
+  return null;
+}
+function dialectWords(spec) {
+  const words = /* @__PURE__ */ new Set();
+  if (!spec) return words;
+  for (const w of Object.values(spec.names ?? {})) words.add(w);
+  for (const list of Object.values(spec.synonyms ?? {})) for (const w of list) words.add(w);
+  for (const fn2 of spec.constructs?.functions ?? []) words.add(fn2.name);
+  return words;
+}
+function dialectLanguageHint(spec) {
+  for (const tag of spec?.meta?.languages ?? []) {
+    const name = TAG_TO_LANGUAGE[tag.toLowerCase().split("-")[0]];
+    if (name && name !== "English" && KEYWORD_TABLES[name]) return name;
+  }
+  return null;
+}
+function translateSource(source, sourceLanguage = "auto", options = {}) {
+  if (!source) return { translated: source, detectedLanguage: null };
+  const target = options.target ?? "v1";
+  const protect = /* @__PURE__ */ new Set([...options.protect ?? [], ...dialectWords(options.dialect)]);
+  let lang = sourceLanguage;
+  if (lang === "English") return { translated: source, detectedLanguage: "English" };
+  if (!lang || lang === "auto") {
+    lang = detectLanguage(source, protect) ?? dialectLanguageHint(options.dialect);
+    if (!lang) return { translated: source, detectedLanguage: null };
+  }
+  if (!KEYWORD_TABLES[lang]) {
+    return { translated: source, detectedLanguage: null };
+  }
+  const replace = compileReplacer(lang, target);
+  const phraseNorms = buildPhraseNormalizations(lang, target);
+  const fuzzy = compileFuzzyReplacer(lang, target);
+  const segments = segmentSource(source);
+  const translated = segments.map((seg) => {
+    if (!seg.code) return seg.text;
+    let t = seg.text;
+    for (const [re, repl] of phraseNorms) {
+      t = t.replace(re, repl);
+    }
+    t = replace(t, protect);
+    t = fuzzy(t, protect);
+    if (target === "v1") {
+      t = t.replace(/\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, "conjure$1");
+    } else {
+      t = t.replace(/\bset(\s+[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, "to$1");
+      t = t.split("\n").map(
+        (line) => /^\s*(if|while)\b/.test(line) ? line.replace(/(^\s*(?:if|while)\b[^\n]*?)\s+to\s+/, "$1 is ") : line
+      ).join("\n");
+    }
+    return t;
+  }).join("");
+  return { translated, detectedLanguage: lang };
+}
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const al = a.length, bl = b.length;
+  if (al === 0) return bl;
+  if (bl === 0) return al;
+  let prev = new Array(bl + 1);
+  let curr = new Array(bl + 1);
+  for (let j = 0; j <= bl; j++) prev[j] = j;
+  for (let i = 1; i <= al; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= bl; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[bl];
+}
+function compileFuzzyReplacer(lang, target = "v1") {
+  const cacheKey = `${lang}|${target}`;
+  if (FUZZY_REPLACERS[cacheKey]) return FUZZY_REPLACERS[cacheKey];
+  const table = effectiveTable(lang, target);
+  if (!table) return FUZZY_REPLACERS[cacheKey] = (s) => s;
+  const keys = Object.keys(table).filter((k) => !k.includes("_") && [...k].length >= 3);
+  const keysByFirstChar = /* @__PURE__ */ new Map();
+  for (const k of keys) {
+    const c = k[0].toLowerCase();
+    if (!keysByFirstChar.has(c)) keysByFirstChar.set(c, []);
+    keysByFirstChar.get(c).push(k);
+  }
+  const wordRe = /[\p{L}][\p{L}\p{N}_]*/gu;
+  const IDENT_INTRODUCERS = /* @__PURE__ */ new Set([
+    "forge",
+    "be",
+    "new",
+    "essence",
+    "conjure",
+    "extend",
+    "summon",
+    "within",
+    // v2 surface equivalents
+    "set",
+    "to",
+    "kind",
+    "use",
+    "in",
+    "extends",
+    "has",
+    "does"
+  ]);
+  const fn2 = (src, protect) => {
+    let prevToken = "";
+    return src.replace(wordRe, (word, offset) => {
+      if (/^[\x00-\x7F]+$/.test(word)) {
+        prevToken = word.toLowerCase();
+        return word;
+      }
+      if (protect?.has(word)) {
+        prevToken = word.toLowerCase();
+        return word;
+      }
+      const lower = word.toLowerCase();
+      if (table[lower]) {
+        const out = table[lower];
+        prevToken = out;
+        return out;
+      }
+      const prevChar = offset > 0 ? src[offset - 1] : "";
+      if (prevChar === "." || IDENT_INTRODUCERS.has(prevToken)) {
+        prevToken = lower;
+        return word;
+      }
+      if ([...lower].length < 4) {
+        prevToken = lower;
+        return word;
+      }
+      const threshold = [...lower].length >= 6 ? 2 : 1;
+      const candidates = keysByFirstChar.get(lower[0]) ?? [];
+      let best = null;
+      for (const k of candidates) {
+        if (Math.abs(k.length - lower.length) > threshold) continue;
+        const d = levenshtein(lower, k);
+        if (d <= threshold && (!best || d < best.dist)) {
+          best = { key: k, dist: d };
+          if (d === 0) break;
+        }
+      }
+      if (best) {
+        const out = table[best.key];
+        prevToken = out;
+        return out;
+      }
+      prevToken = lower;
+      return word;
+    });
+  };
+  FUZZY_REPLACERS[cacheKey] = fn2;
+  return fn2;
+}
+var KEYWORD_TABLES, SUPPORTED_LANGUAGES, EFFECTIVE_TABLES, PHRASE_NORMALIZATIONS, COMPILED_REPLACERS, FUZZY_REPLACERS;
+var init_translator = __esm({
+  "src/lang/translator.ts"() {
+    init_translator_v2();
+    KEYWORD_TABLES = {
+      Spanish: {
+        "forjar": "forge",
+        "ser": "be",
+        "conjurar": "conjure",
+        "rendir": "yield",
+        "ponderar": "ponder",
+        "sino": "otherwise",
+        "ciclo": "cycle",
+        "iterar": "iterate",
+        "trav\xE9s": "through",
+        "por": "through",
+        "dentro": "within",
+        "lanzar": "yeet",
+        "saltar": "skip",
+        "hablar": "speak",
+        "mostrar": "speak",
+        "decir": "speak",
+        "esencia": "essence",
+        "extender": "extend",
+        "propio": "self",
+        "padre": "super",
+        "nuevo": "new",
+        "intento": "attempt",
+        "intentar": "attempt",
+        "rescatar": "rescue",
+        "tambi\xE9n": "also",
+        "cualquiera": "either",
+        "o": "either",
+        "no_es": "isnt",
+        "igual": "equals",
+        "difiere": "differs",
+        "s\xED": "yep",
+        "no": "nope",
+        "vac\xEDo": "void",
+        "invocar": "summon",
+        "as\xEDncrono": "async",
+        "esperar": "await",
+        "generar": "spawn",
+        "verdadero": "yep",
+        "falso": "nope",
+        "nulo": "void",
+        "clase": "essence",
+        "retornar": "yield",
+        "devolver": "yield",
+        "mientras": "cycle",
+        "para": "iterate",
+        "si": "ponder",
+        "romper": "yeet",
+        "continuar": "skip",
+        "y": "also",
+        "importar": "summon",
+        "funci\xF3n": "conjure",
+        "crear": "new"
+      },
+      French: {
+        "forger": "forge",
+        "\xEAtre": "be",
+        "est": "be",
+        "\xE9voquer": "conjure",
+        "rendre": "yield",
+        "retourner": "yield",
+        "r\xE9fl\xE9chir": "ponder",
+        "si": "ponder",
+        "sinon": "otherwise",
+        "boucle": "cycle",
+        "tantque": "cycle",
+        "it\xE9rer": "iterate",
+        "pour": "iterate",
+        "\xE0_travers": "through",
+        "dans": "within",
+        "jeter": "yeet",
+        "sauter": "skip",
+        "parler": "speak",
+        "dire": "speak",
+        "afficher": "speak",
+        "classe": "essence",
+        "\xE9tendre": "extend",
+        "soi": "self",
+        "parent": "super",
+        "nouveau": "new",
+        "essayer": "attempt",
+        "tenter": "attempt",
+        "secourir": "rescue",
+        "attraper": "rescue",
+        "aussi": "also",
+        "et": "also",
+        "soit": "either",
+        "ou": "either",
+        "nest_pas": "isnt",
+        "pas": "isnt",
+        "\xE9gal": "equals",
+        "diff\xE8re": "differs",
+        "oui": "yep",
+        "vrai": "yep",
+        "non": "nope",
+        "faux": "nope",
+        "vide": "void",
+        "nul": "void",
+        "invoquer": "summon",
+        "importer": "summon",
+        "asynchrone": "async",
+        "attendre": "await",
+        "engendrer": "spawn",
+        "fonction": "conjure",
+        "cr\xE9er": "new"
+      },
+      German: {
+        "schmieden": "forge",
+        "erstellen": "forge",
+        "sein": "be",
+        "ist": "be",
+        "beschw\xF6ren": "conjure",
+        "funktion": "conjure",
+        "ergeben": "yield",
+        "zur\xFCckgeben": "yield",
+        "\xFCberlegen": "ponder",
+        "wenn": "ponder",
+        "sonst": "otherwise",
+        "ansonsten": "otherwise",
+        "schleife": "cycle",
+        "solange": "cycle",
+        "iterieren": "iterate",
+        "f\xFCr": "iterate",
+        "durch": "through",
+        "innerhalb": "within",
+        "werfen": "yeet",
+        "\xFCberspringen": "skip",
+        "sprechen": "speak",
+        "sagen": "speak",
+        "ausgeben": "speak",
+        "zeigen": "speak",
+        "wesen": "essence",
+        "klasse": "essence",
+        "erweitern": "extend",
+        "selbst": "self",
+        "eltern": "super",
+        "neu": "new",
+        "versuch": "attempt",
+        "versuchen": "attempt",
+        "retten": "rescue",
+        "fangen": "rescue",
+        "auch": "also",
+        "und": "also",
+        "oder": "either",
+        "nicht": "isnt",
+        "gleich": "equals",
+        "unterscheidet": "differs",
+        "ja": "yep",
+        "wahr": "yep",
+        "nein": "nope",
+        "falsch": "nope",
+        "leer": "void",
+        "null": "void",
+        "herbeirufen": "summon",
+        "importieren": "summon",
+        "asynchron": "async",
+        "warten": "await",
+        "erzeugen": "spawn"
+      },
+      Portuguese: {
+        "forjar": "forge",
+        "criar": "forge",
+        "ser": "be",
+        "\xE9": "be",
+        "conjurar": "conjure",
+        "fun\xE7\xE3o": "conjure",
+        "render": "yield",
+        "retornar": "yield",
+        "devolver": "yield",
+        "ponderar": "ponder",
+        "se": "ponder",
+        "sen\xE3o": "otherwise",
+        "ciclo": "cycle",
+        "enquanto": "cycle",
+        "iterar": "iterate",
+        "para": "iterate",
+        "atrav\xE9s": "through",
+        "dentro": "within",
+        "em": "within",
+        "lan\xE7ar": "yeet",
+        "pular": "skip",
+        "falar": "speak",
+        "mostrar": "speak",
+        "exibir": "speak",
+        "dizer": "speak",
+        "ess\xEAncia": "essence",
+        "classe": "essence",
+        "estender": "extend",
+        "pr\xF3prio": "self",
+        "pai": "super",
+        "novo": "new",
+        "tentar": "attempt",
+        "resgatar": "rescue",
+        "capturar": "rescue",
+        "tamb\xE9m": "also",
+        "e": "also",
+        "ou": "either",
+        "n\xE3o_\xE9": "isnt",
+        "igual": "equals",
+        "difere": "differs",
+        "sim": "yep",
+        "verdadeiro": "yep",
+        "n\xE3o": "nope",
+        "falso": "nope",
+        "vazio": "void",
+        "nulo": "void",
+        "invocar": "summon",
+        "importar": "summon",
+        "ass\xEDncrono": "async",
+        "aguardar": "await",
+        "gerar": "spawn"
+      },
+      Italian: {
+        "forgiare": "forge",
+        "creare": "forge",
+        "essere": "be",
+        "\xE8": "be",
+        "evocare": "conjure",
+        "funzione": "conjure",
+        "cedere": "yield",
+        "restituire": "yield",
+        "ritornare": "yield",
+        "ponderare": "ponder",
+        "se": "ponder",
+        "altrimenti": "otherwise",
+        "ciclo": "cycle",
+        "mentre": "cycle",
+        "iterare": "iterate",
+        "per": "iterate",
+        "attraverso": "through",
+        "dentro": "within",
+        "in": "within",
+        "lanciare": "yeet",
+        "saltare": "skip",
+        "parlare": "speak",
+        "mostrare": "speak",
+        "dire": "speak",
+        "stampare": "speak",
+        "essenza": "essence",
+        "classe": "essence",
+        "estendere": "extend",
+        "s\xE9": "self",
+        "genitore": "super",
+        "nuovo": "new",
+        "tentare": "attempt",
+        "provare": "attempt",
+        "salvare": "rescue",
+        "catturare": "rescue",
+        "anche": "also",
+        "e": "also",
+        "oppure": "either",
+        "o": "either",
+        "non_\xE8": "isnt",
+        "uguale": "equals",
+        "diverso": "differs",
+        "s\xEC": "yep",
+        "vero": "yep",
+        "no": "nope",
+        "falso": "nope",
+        "vuoto": "void",
+        "nullo": "void",
+        "invocare": "summon",
+        "importare": "summon",
+        "asincrono": "async",
+        "attendere": "await",
+        "generare": "spawn"
+      },
+      Dutch: {
+        "smeden": "forge",
+        "maken": "forge",
+        "zijn": "be",
+        "is": "be",
+        "oproepen": "conjure",
+        "functie": "conjure",
+        "opleveren": "yield",
+        "teruggeven": "yield",
+        "overdenken": "ponder",
+        "als": "ponder",
+        "anders": "otherwise",
+        "lus": "cycle",
+        "zolang": "cycle",
+        "itereren": "iterate",
+        "voor": "iterate",
+        "door": "through",
+        "binnen": "within",
+        "in": "within",
+        "gooien": "yeet",
+        "overslaan": "skip",
+        "spreken": "speak",
+        "zeggen": "speak",
+        "tonen": "speak",
+        "wezen": "essence",
+        "klasse": "essence",
+        "uitbreiden": "extend",
+        "zelf": "self",
+        "ouder": "super",
+        "nieuw": "new",
+        "proberen": "attempt",
+        "redden": "rescue",
+        "vangen": "rescue",
+        "ook": "also",
+        "en": "also",
+        "of": "either",
+        "niet": "isnt",
+        "gelijk": "equals",
+        "verschilt": "differs",
+        "ja": "yep",
+        "waar": "yep",
+        "nee": "nope",
+        "onwaar": "nope",
+        "leeg": "void",
+        "nul": "void",
+        "aanroepen": "summon",
+        "importeren": "summon",
+        "asynchroon": "async",
+        "wachten": "await",
+        "voortbrengen": "spawn"
+      },
+      Russian: {
+        "\u043A\u043E\u0432\u0430\u0442\u044C": "forge",
+        "\u0441\u043E\u0437\u0434\u0430\u0442\u044C": "forge",
+        "\u0431\u044B\u0442\u044C": "be",
+        "\u0435\u0441\u0442\u044C": "be",
+        "\u0432\u044B\u0437\u0432\u0430\u0442\u044C": "conjure",
+        "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
+        "\u0432\u0435\u0440\u043D\u0443\u0442\u044C": "yield",
+        "\u043E\u0431\u0434\u0443\u043C\u0430\u0442\u044C": "ponder",
+        "\u0435\u0441\u043B\u0438": "ponder",
+        "\u0438\u043D\u0430\u0447\u0435": "otherwise",
+        "\u0446\u0438\u043A\u043B": "cycle",
+        "\u043F\u043E\u043A\u0430": "cycle",
+        "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C": "iterate",
+        "\u0434\u043B\u044F": "iterate",
+        "\u0447\u0435\u0440\u0435\u0437": "through",
+        "\u0432\u043D\u0443\u0442\u0440\u0438": "within",
+        "\u0432": "within",
+        "\u0431\u0440\u043E\u0441\u0438\u0442\u044C": "yeet",
+        "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C": "skip",
+        "\u0441\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
+        "\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C": "speak",
+        "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
+        "\u0432\u044B\u0432\u0435\u0441\u0442\u0438": "speak",
+        "\u043F\u0435\u0447\u0430\u0442\u044C": "speak",
+        "\u0441\u0443\u0449\u043D\u043E\u0441\u0442\u044C": "essence",
+        "\u043A\u043B\u0430\u0441\u0441": "essence",
+        "\u0440\u0430\u0441\u0448\u0438\u0440\u0438\u0442\u044C": "extend",
+        "\u0441\u0435\u0431\u044F": "self",
+        "\u043F\u0440\u0435\u0434\u043E\u043A": "super",
+        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044C": "super",
+        "\u043D\u043E\u0432\u044B\u0439": "new",
+        "\u043F\u043E\u043F\u044B\u0442\u043A\u0430": "attempt",
+        "\u043F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C": "attempt",
+        "\u0441\u043F\u0430\u0441\u0442\u0438": "rescue",
+        "\u043F\u043E\u0439\u043C\u0430\u0442\u044C": "rescue",
+        "\u0442\u0430\u043A\u0436\u0435": "also",
+        "\u0438": "also",
+        "\u0438\u043B\u0438": "either",
+        "\u043D\u0435": "isnt",
+        "\u0440\u0430\u0432\u043D\u043E": "equals",
+        "\u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F": "differs",
+        "\u0434\u0430": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
+        "\u043D\u0435\u0442": "nope",
+        "\u043B\u043E\u0436\u044C": "nope",
+        "\u043F\u0443\u0441\u0442\u043E": "void",
+        "\u043D\u0438\u0447\u0442\u043E": "void",
+        "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u044C": "summon",
+        "\u0438\u043C\u043F\u043E\u0440\u0442": "summon",
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u044B\u0439": "async",
+        "\u0436\u0434\u0430\u0442\u044C": "await",
+        "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u044C": "spawn"
+      },
+      Chinese: {
+        "\u94F8\u9020": "forge",
+        "\u521B\u5EFA": "forge",
+        "\u662F": "be",
+        "\u8D4B\u503C": "be",
+        "\u53EC\u5524": "conjure",
+        "\u51FD\u6570": "conjure",
+        "\u4EA7\u51FA": "yield",
+        "\u8FD4\u56DE": "yield",
+        "\u601D\u8003": "ponder",
+        "\u5982\u679C": "ponder",
+        "\u5426\u5219": "otherwise",
+        "\u5FAA\u73AF": "cycle",
+        "\u5F53": "cycle",
+        "\u904D\u5386": "iterate",
+        "\u4E3A": "iterate",
+        "\u901A\u8FC7": "through",
+        "\u5728\u5185": "within",
+        "\u5728": "within",
+        "\u629B\u51FA": "yeet",
+        "\u8DF3\u8FC7": "skip",
+        "\u8BF4": "speak",
+        "\u8F93\u51FA": "speak",
+        "\u6253\u5370": "speak",
+        "\u663E\u793A": "speak",
+        "\u672C\u8D28": "essence",
+        "\u7C7B": "essence",
+        "\u6269\u5C55": "extend",
+        "\u81EA\u5DF1": "self",
+        "\u7236\u7C7B": "super",
+        "\u65B0": "new",
+        "\u5C1D\u8BD5": "attempt",
+        "\u62EF\u6551": "rescue",
+        "\u6355\u83B7": "rescue",
+        "\u5E76\u4E14": "also",
+        "\u548C": "also",
+        "\u6216\u8005": "either",
+        "\u6216": "either",
+        "\u4E0D\u662F": "isnt",
+        "\u7B49\u4E8E": "equals",
+        "\u4E0D\u540C": "differs",
+        "\u662F\u7684": "yep",
+        "\u771F": "yep",
+        "\u4E0D": "nope",
+        "\u5047": "nope",
+        "\u7A7A": "void",
+        "\u65E0": "void",
+        "\u5BFC\u5165": "summon",
+        "\u5F02\u6B65": "async",
+        "\u7B49\u5F85": "await",
+        "\u751F\u6210": "spawn"
+      },
+      Japanese: {
+        "\u935B\u9020": "forge",
+        "\u4F5C\u6210": "forge",
+        "\u3067\u3042\u308B": "be",
+        "\u306F": "be",
+        "\u53EC\u559A": "conjure",
+        "\u95A2\u6570": "conjure",
+        "\u8FD4\u3059": "yield",
+        "\u8003\u3048\u308B": "ponder",
+        "\u3082\u3057": "ponder",
+        "\u305D\u308C\u4EE5\u5916": "otherwise",
+        "\u30EB\u30FC\u30D7": "cycle",
+        "\u9593": "cycle",
+        "\u53CD\u5FA9": "iterate",
+        "\u7E70\u308A\u8FD4\u3059": "iterate",
+        "\u901A\u3057\u3066": "through",
+        "\u306E\u4E2D\u3067": "within",
+        "\u6295\u3052\u308B": "yeet",
+        "\u30B9\u30AD\u30C3\u30D7": "skip",
+        "\u8A00\u3046": "speak",
+        "\u8868\u793A": "speak",
+        "\u51FA\u529B": "speak",
+        "\u5370\u5237": "speak",
+        "\u672C\u8CEA": "essence",
+        "\u30AF\u30E9\u30B9": "essence",
+        "\u62E1\u5F35": "extend",
+        "\u81EA\u5206": "self",
+        "\u89AA": "super",
+        "\u65B0\u3057\u3044": "new",
+        "\u8A66\u3059": "attempt",
+        "\u6551\u51FA": "rescue",
+        "\u307E\u305F": "also",
+        "\u304B\u3064": "also",
+        "\u307E\u305F\u306F": "either",
+        "\u3067\u306F\u306A\u3044": "isnt",
+        "\u7B49\u3057\u3044": "equals",
+        "\u7570\u306A\u308B": "differs",
+        "\u306F\u3044": "yep",
+        "\u771F": "yep",
+        "\u3044\u3044\u3048": "nope",
+        "\u507D": "nope",
+        "\u7A7A": "void",
+        "\u30A4\u30F3\u30DD\u30FC\u30C8": "summon",
+        "\u975E\u540C\u671F": "async",
+        "\u5F85\u3064": "await",
+        "\u751F\u6210": "spawn"
+      },
+      Korean: {
+        "\uB2E8\uC870": "forge",
+        "\uB9CC\uB4E4\uB2E4": "forge",
+        "\uC774\uB2E4": "be",
+        "\uC18C\uD658": "conjure",
+        "\uD568\uC218": "conjure",
+        "\uBC18\uD658": "yield",
+        "\uB3CC\uB824\uC8FC\uB2E4": "yield",
+        "\uC0DD\uAC01": "ponder",
+        "\uB9CC\uC57D": "ponder",
+        "\uC544\uB2C8\uBA74": "otherwise",
+        "\uC21C\uD658": "cycle",
+        "\uB3D9\uC548": "cycle",
+        "\uBC18\uBCF5": "iterate",
+        "\uC704\uD574": "iterate",
+        "\uD1B5\uD574": "through",
+        "\uC548\uC5D0\uC11C": "within",
+        "\uB358\uC9C0\uB2E4": "yeet",
+        "\uAC74\uB108\uB6F0\uAE30": "skip",
+        "\uB9D0\uD558\uB2E4": "speak",
+        "\uCD9C\uB825": "speak",
+        "\uBCF4\uC5EC\uC8FC\uB2E4": "speak",
+        "\uBCF8\uC9C8": "essence",
+        "\uD074\uB798\uC2A4": "essence",
+        "\uD655\uC7A5": "extend",
+        "\uC790\uC2E0": "self",
+        "\uBD80\uBAA8": "super",
+        "\uC0C8": "new",
+        "\uC0C8\uB85C\uC6B4": "new",
+        "\uC2DC\uB3C4": "attempt",
+        "\uAD6C\uCD9C": "rescue",
+        "\uADF8\uB9AC\uACE0": "also",
+        "\uB610\uB294": "either",
+        "\uC544\uB2C8\uB2E4": "isnt",
+        "\uAC19\uB2E4": "equals",
+        "\uB2E4\uB974\uB2E4": "differs",
+        "\uC608": "yep",
+        "\uCC38": "yep",
+        "\uC544\uB2C8\uC624": "nope",
+        "\uAC70\uC9D3": "nope",
+        "\uBE44\uC5B4\uC788\uB2E4": "void",
+        "\uAC00\uC838\uC624\uAE30": "summon",
+        "\uBE44\uB3D9\uAE30": "async",
+        "\uAE30\uB2E4\uB9AC\uB2E4": "await",
+        "\uC0DD\uC131": "spawn"
+      },
+      Arabic: {
+        "\u0635\u0646\u0639": "forge",
+        "\u0625\u0646\u0634\u0627\u0621": "forge",
+        "\u064A\u0643\u0648\u0646": "be",
+        "\u0647\u0648": "be",
+        "\u0627\u0633\u062A\u062F\u0639\u0627\u0621": "conjure",
+        "\u062F\u0627\u0644\u0629": "conjure",
+        "\u0625\u0631\u062C\u0627\u0639": "yield",
+        "\u0631\u062F": "yield",
+        "\u062A\u0623\u0645\u0644": "ponder",
+        "\u0625\u0630\u0627": "ponder",
+        "\u0648\u0625\u0644\u0627": "otherwise",
+        "\u062E\u0644\u0627\u0641": "otherwise",
+        "\u062D\u0644\u0642\u0629": "cycle",
+        "\u0637\u0627\u0644\u0645\u0627": "cycle",
+        "\u062A\u0643\u0631\u0627\u0631": "iterate",
+        "\u0644\u0643\u0644": "iterate",
+        "\u0639\u0628\u0631": "through",
+        "\u062E\u0644\u0627\u0644": "through",
+        "\u062F\u0627\u062E\u0644": "within",
+        "\u0641\u064A": "within",
+        "\u0631\u0645\u064A": "yeet",
+        "\u062A\u062E\u0637\u064A": "skip",
+        "\u0642\u0644": "speak",
+        "\u062A\u062D\u062F\u062B": "speak",
+        "\u0627\u0637\u0628\u0639": "speak",
+        "\u0627\u0639\u0631\u0636": "speak",
+        "\u062C\u0648\u0647\u0631": "essence",
+        "\u0641\u0626\u0629": "essence",
+        "\u0635\u0646\u0641": "essence",
+        "\u062A\u0648\u0633\u064A\u0639": "extend",
+        "\u0630\u0627\u062A": "self",
+        "\u0646\u0641\u0633": "self",
+        "\u0623\u0628": "super",
+        "\u062C\u062F\u064A\u062F": "new",
+        "\u0645\u062D\u0627\u0648\u0644\u0629": "attempt",
+        "\u062D\u0627\u0648\u0644": "attempt",
+        "\u0625\u0646\u0642\u0627\u0630": "rescue",
+        "\u0627\u0644\u062A\u0642\u0627\u0637": "rescue",
+        "\u0623\u064A\u0636\u0627": "also",
+        "\u0648": "also",
+        "\u0623\u0648": "either",
+        "\u0644\u064A\u0633": "isnt",
+        "\u064A\u0633\u0627\u0648\u064A": "equals",
+        "\u064A\u062E\u062A\u0644\u0641": "differs",
+        "\u0646\u0639\u0645": "yep",
+        "\u0635\u062D\u064A\u062D": "yep",
+        "\u0644\u0627": "nope",
+        "\u062E\u0637\u0623": "nope",
+        "\u0641\u0627\u0631\u063A": "void",
+        "\u0639\u062F\u0645": "void",
+        "\u0627\u0633\u062A\u064A\u0631\u0627\u062F": "summon",
+        "\u063A\u064A\u0631_\u0645\u062A\u0632\u0627\u0645\u0646": "async",
+        "\u0627\u0646\u062A\u0638\u0627\u0631": "await",
+        "\u062A\u0648\u0644\u064A\u062F": "spawn"
+      },
+      Hindi: {
+        "\u0917\u0922\u093C\u0928\u093E": "forge",
+        "\u092C\u0928\u093E\u0928\u093E": "forge",
+        "\u0939\u094B\u0928\u093E": "be",
+        "\u0939\u0948": "be",
+        "\u092C\u0941\u0932\u093E\u0928\u093E": "conjure",
+        "\u092B\u0932\u0928": "conjure",
+        "\u0915\u093E\u0930\u094D\u092F": "conjure",
+        "\u0932\u094C\u091F\u093E\u0928\u093E": "yield",
+        "\u0935\u093E\u092A\u0938\u0940": "yield",
+        "\u0938\u094B\u091A\u0928\u093E": "ponder",
+        "\u0905\u0917\u0930": "ponder",
+        "\u092F\u0926\u093F": "ponder",
+        "\u0935\u0930\u0928\u093E": "otherwise",
+        "\u0905\u0928\u094D\u092F\u0925\u093E": "otherwise",
+        "\u091A\u0915\u094D\u0930": "cycle",
+        "\u091C\u092C\u0924\u0915": "cycle",
+        "\u0926\u094B\u0939\u0930\u093E\u0928\u093E": "iterate",
+        "\u0939\u0947\u0924\u0941": "iterate",
+        "\u0926\u094D\u0935\u093E\u0930\u093E": "through",
+        "\u0905\u0902\u0926\u0930": "within",
+        "\u092E\u0947\u0902": "within",
+        "\u092B\u0947\u0902\u0915\u0928\u093E": "yeet",
+        "\u091B\u094B\u0921\u093C\u0928\u093E": "skip",
+        "\u092C\u094B\u0932\u0928\u093E": "speak",
+        "\u0926\u093F\u0916\u093E\u0928\u093E": "speak",
+        "\u091B\u093E\u092A\u0928\u093E": "speak",
+        "\u0938\u093E\u0930": "essence",
+        "\u0935\u0930\u094D\u0917": "essence",
+        "\u0935\u093F\u0938\u094D\u0924\u093E\u0930": "extend",
+        "\u0938\u094D\u0935\u092F\u0902": "self",
+        "\u0905\u092D\u093F\u092D\u093E\u0935\u0915": "super",
+        "\u0928\u092F\u093E": "new",
+        "\u092A\u094D\u0930\u092F\u093E\u0938": "attempt",
+        "\u0915\u094B\u0936\u093F\u0936": "attempt",
+        "\u092C\u091A\u093E\u0928\u093E": "rescue",
+        "\u092A\u0915\u0921\u093C\u0928\u093E": "rescue",
+        "\u092D\u0940": "also",
+        "\u0914\u0930": "also",
+        "\u092F\u093E": "either",
+        "\u0928\u0939\u0940\u0902": "isnt",
+        "\u092C\u0930\u093E\u092C\u0930": "equals",
+        "\u092D\u093F\u0928\u094D\u0928": "differs",
+        "\u0939\u093E\u0902": "yep",
+        "\u0938\u0924\u094D\u092F": "yep",
+        "\u0905\u0938\u0924\u094D\u092F": "nope",
+        "\u0930\u093F\u0915\u094D\u0924": "void",
+        "\u0936\u0942\u0928\u094D\u092F": "void",
+        "\u0906\u092F\u093E\u0924": "summon",
+        "\u0905\u0938\u092E\u0915\u093E\u0932\u093F\u0915": "async",
+        "\u092A\u094D\u0930\u0924\u0940\u0915\u094D\u0937\u093E": "await",
+        "\u0909\u0924\u094D\u092A\u0928\u094D\u0928": "spawn"
+      },
+      Turkish: {
+        "d\xF6vmek": "forge",
+        "olu\u015Ftur": "forge",
+        "olmak": "be",
+        "olsun": "be",
+        "\xE7a\u011F\u0131r": "conjure",
+        "fonksiyon": "conjure",
+        "i\u015Flev": "conjure",
+        "d\xF6nd\xFCr": "yield",
+        "ver": "yield",
+        "d\xFC\u015F\xFCn": "ponder",
+        "e\u011Fer": "ponder",
+        "yoksa": "otherwise",
+        "de\u011Filse": "otherwise",
+        "d\xF6ng\xFC": "cycle",
+        "iken": "cycle",
+        "tekrarla": "iterate",
+        "i\xE7in": "iterate",
+        "boyunca": "through",
+        "i\xE7inde": "within",
+        "at": "yeet",
+        "atla": "skip",
+        "s\xF6yle": "speak",
+        "g\xF6ster": "speak",
+        "yazd\u0131r": "speak",
+        "\xF6z": "essence",
+        "s\u0131n\u0131f": "essence",
+        "geni\u015Flet": "extend",
+        "kendi": "self",
+        "\xFCst": "super",
+        "yeni": "new",
+        "dene": "attempt",
+        "kurtar": "rescue",
+        "yakala": "rescue",
+        "da": "also",
+        "ve": "also",
+        "veya": "either",
+        "de\u011Fil": "isnt",
+        "e\u015Fit": "equals",
+        "farkl\u0131": "differs",
+        "evet": "yep",
+        "do\u011Fru": "yep",
+        "hay\u0131r": "nope",
+        "yanl\u0131\u015F": "nope",
+        "bo\u015F": "void",
+        "\xE7a\u011F\u0131rmak": "summon",
+        "i\xE7eaktar": "summon",
+        "e\u015Fzamans\u0131z": "async",
+        "bekle": "await",
+        "\xFCret": "spawn"
+      },
+      Polish: {
+        "ku\u0107": "forge",
+        "utw\xF3rz": "forge",
+        "by\u0107": "be",
+        "jest": "be",
+        "przywo\u0142aj": "summon",
+        "funkcja": "conjure",
+        "zwr\xF3\u0107": "yield",
+        "oddaj": "yield",
+        "rozwa\u017C": "ponder",
+        "je\u015Bli": "ponder",
+        "je\u017Celi": "ponder",
+        "inaczej": "otherwise",
+        "p\u0119tla": "cycle",
+        "dop\xF3ki": "cycle",
+        "iteruj": "iterate",
+        "dla": "iterate",
+        "przez": "through",
+        "wewn\u0105trz": "within",
+        "w": "within",
+        "rzu\u0107": "yeet",
+        "pomi\u0144": "skip",
+        "m\xF3w": "speak",
+        "powiedz": "speak",
+        "poka\u017C": "speak",
+        "wypisz": "speak",
+        "istota": "essence",
+        "klasa": "essence",
+        "rozszerz": "extend",
+        "sam": "self",
+        "rodzic": "super",
+        "nowy": "new",
+        "nowe": "new",
+        "pr\xF3buj": "attempt",
+        "spr\xF3buj": "attempt",
+        "ratuj": "rescue",
+        "z\u0142ap": "rescue",
+        "te\u017C": "also",
+        "i": "also",
+        "lub": "either",
+        "albo": "either",
+        "nie": "isnt",
+        "r\xF3wne": "equals",
+        "r\xF3\u017Cni": "differs",
+        "tak": "yep",
+        "prawda": "yep",
+        "fa\u0142sz": "nope",
+        "pusty": "void",
+        "importuj": "summon",
+        "asynchroniczny": "async",
+        "czekaj": "await",
+        "stw\xF3rz": "spawn"
+      },
+      Swedish: {
+        "smida": "forge",
+        "skapa": "forge",
+        "vara": "be",
+        "\xE4r": "be",
+        "framkalla": "conjure",
+        "funktion": "conjure",
+        "ge": "yield",
+        "returnera": "yield",
+        "fundera": "ponder",
+        "om": "ponder",
+        "annars": "otherwise",
+        "slinga": "cycle",
+        "medan": "cycle",
+        "iterera": "iterate",
+        "f\xF6r": "iterate",
+        "genom": "through",
+        "inom": "within",
+        "i": "within",
+        "kasta": "yeet",
+        "hoppa": "skip",
+        "tala": "speak",
+        "visa": "speak",
+        "skriv": "speak",
+        "v\xE4sen": "essence",
+        "klass": "essence",
+        "ut\xF6ka": "extend",
+        "sj\xE4lv": "self",
+        "f\xF6r\xE4lder": "super",
+        "ny": "new",
+        "f\xF6rs\xF6k": "attempt",
+        "r\xE4dda": "rescue",
+        "f\xE5nga": "rescue",
+        "ocks\xE5": "also",
+        "och": "also",
+        "eller": "either",
+        "inte": "isnt",
+        "lika": "equals",
+        "skiljer": "differs",
+        "ja": "yep",
+        "sant": "yep",
+        "nej": "nope",
+        "falskt": "nope",
+        "tom": "void",
+        "\xE5kalla": "summon",
+        "importera": "summon",
+        "asynkron": "async",
+        "v\xE4nta": "await",
+        "skapa_process": "spawn"
+      },
+      Norwegian: {
+        "smi": "forge",
+        "lage": "forge",
+        "v\xE6re": "be",
+        "er": "be",
+        "fremkalle": "conjure",
+        "funksjon": "conjure",
+        "gi": "yield",
+        "returnere": "yield",
+        "tenke": "ponder",
+        "hvis": "ponder",
+        "ellers": "otherwise",
+        "sl\xF8yfe": "cycle",
+        "mens": "cycle",
+        "iterere": "iterate",
+        "for": "iterate",
+        "gjennom": "through",
+        "innen": "within",
+        "i": "within",
+        "kaste": "yeet",
+        "hoppe": "skip",
+        "snakke": "speak",
+        "vise": "speak",
+        "skriv": "speak",
+        "vesen": "essence",
+        "klasse": "essence",
+        "utvide": "extend",
+        "selv": "self",
+        "forelder": "super",
+        "ny": "new",
+        "fors\xF8k": "attempt",
+        "redde": "rescue",
+        "fange": "rescue",
+        "ogs\xE5": "also",
+        "og": "also",
+        "eller": "either",
+        "ikke": "isnt",
+        "lik": "equals",
+        "forskjellig": "differs",
+        "ja": "yep",
+        "sant": "yep",
+        "nei": "nope",
+        "usant": "nope",
+        "tom": "void",
+        "p\xE5kalle": "summon",
+        "importere": "summon",
+        "asynkron": "async",
+        "vente": "await",
+        "starte": "spawn"
+      },
+      Danish: {
+        "smede": "forge",
+        "skabe": "forge",
+        "v\xE6re": "be",
+        "er": "be",
+        "fremkalde": "conjure",
+        "funktion": "conjure",
+        "give": "yield",
+        "returnere": "yield",
+        "overveje": "ponder",
+        "hvis": "ponder",
+        "ellers": "otherwise",
+        "sl\xF8jfe": "cycle",
+        "mens": "cycle",
+        "iterere": "iterate",
+        "for": "iterate",
+        "igennem": "through",
+        "inden": "within",
+        "i": "within",
+        "kaste": "yeet",
+        "springe": "skip",
+        "tale": "speak",
+        "vise": "speak",
+        "skriv": "speak",
+        "v\xE6sen": "essence",
+        "klasse": "essence",
+        "udvide": "extend",
+        "selv": "self",
+        "for\xE6lder": "super",
+        "ny": "new",
+        "fors\xF8g": "attempt",
+        "redde": "rescue",
+        "fange": "rescue",
+        "ogs\xE5": "also",
+        "og": "also",
+        "eller": "either",
+        "ikke": "isnt",
+        "lig": "equals",
+        "anderledes": "differs",
+        "ja": "yep",
+        "sand": "yep",
+        "nej": "nope",
+        "falsk": "nope",
+        "tom": "void",
+        "p\xE5kalde": "summon",
+        "importere": "summon",
+        "asynkron": "async",
+        "vente": "await",
+        "starte": "spawn"
+      },
+      Finnish: {
+        "takoa": "forge",
+        "luoda": "forge",
+        "olla": "be",
+        "on": "be",
+        "loitsia": "conjure",
+        "funktio": "conjure",
+        "tuottaa": "yield",
+        "palauttaa": "yield",
+        "pohtia": "ponder",
+        "jos": "ponder",
+        "muuten": "otherwise",
+        "silmukka": "cycle",
+        "kun": "cycle",
+        "iteroida": "iterate",
+        "jokaiselle": "iterate",
+        "l\xE4pi": "through",
+        "sis\xE4ll\xE4": "within",
+        "kohdassa": "within",
+        "heitt\xE4\xE4": "yeet",
+        "ohittaa": "skip",
+        "puhua": "speak",
+        "n\xE4ytt\xE4\xE4": "speak",
+        "tulostaa": "speak",
+        "olemus": "essence",
+        "luokka": "essence",
+        "laajentaa": "extend",
+        "itse": "self",
+        "ylempi": "super",
+        "uusi": "new",
+        "yrit\xE4": "attempt",
+        "pelasta": "rescue",
+        "kiinni": "rescue",
+        "my\xF6s": "also",
+        "ja": "also",
+        "tai": "either",
+        "ei": "isnt",
+        "yht\xE4suuri": "equals",
+        "eroaa": "differs",
+        "kyll\xE4": "yep",
+        "tosi": "yep",
+        "ep\xE4tosi": "nope",
+        "tyhj\xE4": "void",
+        "kutsu": "summon",
+        "tuo": "summon",
+        "asynkroninen": "async",
+        "odota": "await",
+        "synnyt\xE4": "spawn"
+      },
+      Greek: {
+        "\u03C3\u03C6\u03C5\u03C1\u03B7\u03BB\u03B1\u03C4\u03CE": "forge",
+        "\u03B4\u03B7\u03BC\u03B9\u03BF\u03C5\u03C1\u03B3\u03CE": "forge",
+        "\u03B5\u03AF\u03BD\u03B1\u03B9": "be",
+        "\u03BA\u03B1\u03BB\u03CE": "conjure",
+        "\u03C3\u03C5\u03BD\u03AC\u03C1\u03C4\u03B7\u03C3\u03B7": "conjure",
+        "\u03B5\u03C0\u03B9\u03C3\u03C4\u03C1\u03AD\u03C6\u03C9": "yield",
+        "\u03C3\u03BA\u03AD\u03C6\u03C4\u03BF\u03BC\u03B1\u03B9": "ponder",
+        "\u03B1\u03BD": "ponder",
+        "\u03B1\u03BB\u03BB\u03B9\u03CE\u03C2": "otherwise",
+        "\u03B2\u03C1\u03CC\u03C7\u03BF\u03C2": "cycle",
+        "\u03CC\u03C3\u03BF": "cycle",
+        "\u03B5\u03C0\u03B1\u03BD\u03B1\u03BB\u03B1\u03BC\u03B2\u03AC\u03BD\u03C9": "iterate",
+        "\u03B3\u03B9\u03B1": "iterate",
+        "\u03BC\u03AD\u03C3\u03C9": "through",
+        "\u03BC\u03AD\u03C3\u03B1": "within",
+        "\u03C3\u03B5": "within",
+        "\u03C0\u03B5\u03C4\u03AC\u03C9": "yeet",
+        "\u03C0\u03B1\u03C1\u03B1\u03BA\u03AC\u03BC\u03C0\u03C4\u03C9": "skip",
+        "\u03BC\u03B9\u03BB\u03AC\u03C9": "speak",
+        "\u03B5\u03BC\u03C6\u03AC\u03BD\u03B9\u03C3\u03B5": "speak",
+        "\u03C4\u03CD\u03C0\u03C9\u03C3\u03B5": "speak",
+        "\u03BF\u03C5\u03C3\u03AF\u03B1": "essence",
+        "\u03BA\u03BB\u03AC\u03C3\u03B7": "essence",
+        "\u03B5\u03C0\u03B5\u03BA\u03C4\u03B5\u03AF\u03BD\u03C9": "extend",
+        "\u03B5\u03B1\u03C5\u03C4\u03CC\u03C2": "self",
+        "\u03B3\u03BF\u03BD\u03AD\u03B1\u03C2": "super",
+        "\u03BD\u03AD\u03BF": "new",
+        "\u03B4\u03BF\u03BA\u03B9\u03BC\u03AE": "attempt",
+        "\u03C3\u03CE\u03B6\u03C9": "rescue",
+        "\u03C0\u03B9\u03AC\u03BD\u03C9": "rescue",
+        "\u03B5\u03C0\u03AF\u03C3\u03B7\u03C2": "also",
+        "\u03BA\u03B1\u03B9": "also",
+        "\u03AE": "either",
+        "\u03B4\u03B5\u03BD": "isnt",
+        "\u03AF\u03C3\u03BF": "equals",
+        "\u03B4\u03B9\u03B1\u03C6\u03AD\u03C1\u03B5\u03B9": "differs",
+        "\u03BD\u03B1\u03B9": "yep",
+        "\u03B1\u03BB\u03B7\u03B8\u03AD\u03C2": "yep",
+        "\u03CC\u03C7\u03B9": "nope",
+        "\u03C8\u03B5\u03C5\u03B4\u03AD\u03C2": "nope",
+        "\u03BA\u03B5\u03BD\u03CC": "void",
+        "\u03B5\u03B9\u03C3\u03B1\u03B3\u03C9\u03B3\u03AE": "summon",
+        "\u03B1\u03C3\u03CD\u03B3\u03C7\u03C1\u03BF\u03BD\u03BF": "async",
+        "\u03C0\u03B5\u03C1\u03B9\u03BC\u03AD\u03BD\u03C9": "await",
+        "\u03C0\u03B1\u03C1\u03AC\u03B3\u03C9": "spawn"
+      },
+      Hebrew: {
+        "\u05DC\u05D7\u05E9\u05DC": "forge",
+        "\u05DC\u05D9\u05E6\u05D5\u05E8": "forge",
+        "\u05DC\u05D4\u05D9\u05D5\u05EA": "be",
+        "\u05D4\u05D5\u05D0": "be",
+        "\u05DC\u05D6\u05DE\u05DF": "conjure",
+        "\u05E4\u05D5\u05E0\u05E7\u05E6\u05D9\u05D4": "conjure",
+        "\u05DC\u05D4\u05D7\u05D6\u05D9\u05E8": "yield",
+        "\u05DC\u05D7\u05E9\u05D5\u05D1": "ponder",
+        "\u05D0\u05DD": "ponder",
+        "\u05D0\u05D7\u05E8\u05EA": "otherwise",
+        "\u05DC\u05D5\u05DC\u05D0\u05D4": "cycle",
+        "\u05DB\u05DC\u05E2\u05D5\u05D3": "cycle",
+        "\u05DC\u05D7\u05D6\u05D5\u05E8": "iterate",
+        "\u05DC\u05DB\u05DC": "iterate",
+        "\u05D3\u05E8\u05DA": "through",
+        "\u05D1\u05EA\u05D5\u05DA": "within",
+        "\u05DC\u05D6\u05E8\u05D5\u05E7": "yeet",
+        "\u05DC\u05D3\u05DC\u05D2": "skip",
+        "\u05DC\u05D3\u05D1\u05E8": "speak",
+        "\u05DC\u05D4\u05E6\u05D9\u05D2": "speak",
+        "\u05DC\u05D4\u05D3\u05E4\u05D9\u05E1": "speak",
+        "\u05DE\u05D4\u05D5\u05EA": "essence",
+        "\u05DE\u05D7\u05DC\u05E7\u05D4": "essence",
+        "\u05DC\u05D4\u05E8\u05D7\u05D9\u05D1": "extend",
+        "\u05E2\u05E6\u05DE\u05D9": "self",
+        "\u05D4\u05D5\u05E8\u05D4": "super",
+        "\u05D7\u05D3\u05E9": "new",
+        "\u05DC\u05E0\u05E1\u05D5\u05EA": "attempt",
+        "\u05DC\u05D4\u05E6\u05D9\u05DC": "rescue",
+        "\u05DC\u05EA\u05E4\u05D5\u05E1": "rescue",
+        "\u05D2\u05DD": "also",
+        "\u05D5": "also",
+        "\u05D0\u05D5": "either",
+        "\u05DC\u05D0": "isnt",
+        "\u05E9\u05D5\u05D5\u05D4": "equals",
+        "\u05E9\u05D5\u05E0\u05D4": "differs",
+        "\u05DB\u05DF": "yep",
+        "\u05D0\u05DE\u05EA": "yep",
+        "\u05E9\u05E7\u05E8": "nope",
+        "\u05E8\u05D9\u05E7": "void",
+        "\u05DC\u05D9\u05D9\u05D1\u05D0": "summon",
+        "\u05D0\u05E1\u05D9\u05E0\u05DB\u05E8\u05D5\u05E0\u05D9": "async",
+        "\u05DC\u05D7\u05DB\u05D5\u05EA": "await",
+        "\u05DC\u05D4\u05D5\u05DC\u05D9\u05D3": "spawn"
+      },
+      Ukrainian: {
+        "\u043A\u0443\u0432\u0430\u0442\u0438": "forge",
+        "\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438": "forge",
+        "\u0431\u0443\u0442\u0438": "be",
+        "\u0454": "be",
+        "\u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438": "conjure",
+        "\u0444\u0443\u043D\u043A\u0446\u0456\u044F": "conjure",
+        "\u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438": "yield",
+        "\u043E\u0431\u043C\u0456\u0440\u043A\u0443\u0432\u0430\u0442\u0438": "ponder",
+        "\u044F\u043A\u0449\u043E": "ponder",
+        "\u0456\u043D\u0430\u043A\u0448\u0435": "otherwise",
+        "\u0446\u0438\u043A\u043B": "cycle",
+        "\u043F\u043E\u043A\u0438": "cycle",
+        "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u0438": "iterate",
+        "\u0434\u043B\u044F": "iterate",
+        "\u0447\u0435\u0440\u0435\u0437": "through",
+        "\u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456": "within",
+        "\u0432": "within",
+        "\u043A\u0438\u043D\u0443\u0442\u0438": "yeet",
+        "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438": "skip",
+        "\u0441\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
+        "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
+        "\u0432\u0438\u0432\u0435\u0441\u0442\u0438": "speak",
+        "\u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C": "essence",
+        "\u043A\u043B\u0430\u0441": "essence",
+        "\u0440\u043E\u0437\u0448\u0438\u0440\u0438\u0442\u0438": "extend",
+        "\u0441\u0435\u0431\u0435": "self",
+        "\u0431\u0430\u0442\u044C\u043A\u043E": "super",
+        "\u043D\u043E\u0432\u0438\u0439": "new",
+        "\u0441\u043F\u0440\u043E\u0431\u0430": "attempt",
+        "\u0441\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u0442\u0438": "attempt",
+        "\u0432\u0440\u044F\u0442\u0443\u0432\u0430\u0442\u0438": "rescue",
+        "\u0437\u043B\u043E\u0432\u0438\u0442\u0438": "rescue",
+        "\u0442\u0430\u043A\u043E\u0436": "also",
+        "\u0456": "also",
+        "\u0430\u0431\u043E": "either",
+        "\u043D\u0435": "isnt",
+        "\u0434\u043E\u0440\u0456\u0432\u043D\u044E\u0454": "equals",
+        "\u0432\u0456\u0434\u0440\u0456\u0437\u043D\u044F\u0454\u0442\u044C\u0441\u044F": "differs",
+        "\u0442\u0430\u043A": "yep",
+        "\u0456\u0441\u0442\u0438\u043D\u0430": "yep",
+        "\u043D\u0456": "nope",
+        "\u0445\u0438\u0431\u0430": "nope",
+        "\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E": "void",
+        "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u0438": "summon",
+        "\u0456\u043C\u043F\u043E\u0440\u0442": "summon",
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u0438\u0439": "async",
+        "\u0447\u0435\u043A\u0430\u0442\u0438": "await",
+        "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u0438": "spawn"
+      },
+      Czech: {
+        "kovat": "forge",
+        "vytvo\u0159it": "forge",
+        "b\xFDt": "be",
+        "je": "be",
+        "vyvolat": "conjure",
+        "funkce": "conjure",
+        "vr\xE1tit": "yield",
+        "uv\xE1\u017Eit": "ponder",
+        "pokud": "ponder",
+        "jinak": "otherwise",
+        "smy\u010Dka": "cycle",
+        "dokud": "cycle",
+        "iterovat": "iterate",
+        "pro": "iterate",
+        "skrz": "through",
+        "uvnit\u0159": "within",
+        "v": "within",
+        "hodit": "yeet",
+        "p\u0159esko\u010Dit": "skip",
+        "\u0159\xEDci": "speak",
+        "zobrazit": "speak",
+        "vytisknout": "speak",
+        "podstata": "essence",
+        "t\u0159\xEDda": "essence",
+        "roz\u0161\xED\u0159it": "extend",
+        "s\xE1m": "self",
+        "rodi\u010D": "super",
+        "nov\xFD": "new",
+        "zkusit": "attempt",
+        "zachr\xE1nit": "rescue",
+        "chytit": "rescue",
+        "tak\xE9": "also",
+        "a": "also",
+        "nebo": "either",
+        "nen\xED": "isnt",
+        "rovn\xE1": "equals",
+        "li\u0161\xED": "differs",
+        "ano": "yep",
+        "pravda": "yep",
+        "ne": "nope",
+        "nepravda": "nope",
+        "pr\xE1zdn\xFD": "void",
+        "importovat": "summon",
+        "asynchronn\xED": "async",
+        "\u010Dekat": "await",
+        "vytvo\u0159it_proces": "spawn"
+      },
+      Romanian: {
+        "forja": "forge",
+        "crea": "forge",
+        "fi": "be",
+        "este": "be",
+        "evoca": "conjure",
+        "func\u021Bie": "conjure",
+        "func\u021Bia": "conjure",
+        "\xEEntoarce": "yield",
+        "returna": "yield",
+        "g\xE2ndi": "ponder",
+        "dac\u0103": "ponder",
+        "altfel": "otherwise",
+        "bucl\u0103": "cycle",
+        "c\xE2ttimp": "cycle",
+        "itera": "iterate",
+        "pentru": "iterate",
+        "prin": "through",
+        "\xEEn_interior": "within",
+        "\xEEn": "within",
+        "arunca": "yeet",
+        "s\u0103ri": "skip",
+        "spune": "speak",
+        "arat\u0103": "speak",
+        "afi\u0219eaz\u0103": "speak",
+        "esen\u021B\u0103": "essence",
+        "clas\u0103": "essence",
+        "extinde": "extend",
+        "sine": "self",
+        "p\u0103rinte": "super",
+        "nou": "new",
+        "\xEEncearc\u0103": "attempt",
+        "salveaz\u0103": "rescue",
+        "prinde": "rescue",
+        "de_asemenea": "also",
+        "\u0219i": "also",
+        "sau": "either",
+        "nu_este": "isnt",
+        "egal": "equals",
+        "difer\u0103": "differs",
+        "da": "yep",
+        "adev\u0103rat": "yep",
+        "nu": "nope",
+        "fals": "nope",
+        "gol": "void",
+        "importa": "summon",
+        "asincron": "async",
+        "a\u0219teapt\u0103": "await",
+        "genera": "spawn"
+      },
+      Hungarian: {
+        "kov\xE1csol": "forge",
+        "l\xE9trehoz": "forge",
+        "lenni": "be",
+        "legyen": "be",
+        "id\xE9z": "conjure",
+        "f\xFCggv\xE9ny": "conjure",
+        "visszaad": "yield",
+        "fontol": "ponder",
+        "ha": "ponder",
+        "k\xFCl\xF6nben": "otherwise",
+        "ciklus": "cycle",
+        "am\xEDg": "cycle",
+        "iter\xE1l": "iterate",
+        "minden": "iterate",
+        "kereszt\xFCl": "through",
+        "bel\xFCl": "within",
+        "ban": "within",
+        "dob": "yeet",
+        "\xE1tugor": "skip",
+        "mond": "speak",
+        "mutat": "speak",
+        "ki\xEDr": "speak",
+        "l\xE9nyeg": "essence",
+        "oszt\xE1ly": "essence",
+        "b\u0151v\xEDt": "extend",
+        "maga": "self",
+        "sz\xFCl\u0151": "super",
+        "\xFAj": "new",
+        "pr\xF3ba": "attempt",
+        "megpr\xF3b\xE1l": "attempt",
+        "ment": "rescue",
+        "elkap": "rescue",
+        "is": "also",
+        "\xE9s": "also",
+        "vagy": "either",
+        "nem": "isnt",
+        "egyenl\u0151": "equals",
+        "k\xFCl\xF6nb\xF6zik": "differs",
+        "igen": "yep",
+        "igaz": "yep",
+        "hamis": "nope",
+        "\xFCres": "void",
+        "beh\xEDv": "summon",
+        "import\xE1l": "summon",
+        "aszinkron": "async",
+        "v\xE1r": "await",
+        "ind\xEDt": "spawn"
+      },
+      Bulgarian: {
+        // forge — create / declare a variable. Accept many natural verbs.
+        "\u0438\u0437\u043A\u043E\u0432\u0430": "forge",
+        "\u0438\u0437\u043A\u043E\u0432\u0430\u0439": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u0439": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u043C": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043C": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435": "forge",
+        "\u043D\u0430\u043F\u0440\u0430\u0432\u0438": "forge",
+        "\u043D\u0430\u043F\u0440\u0430\u0432\u044F": "forge",
+        "\u043F\u0440\u0430\u0432\u044F": "forge",
+        "\u043D\u0435\u043A\u0430": "forge",
+        "\u0434\u0435\u0444\u0438\u043D\u0438\u0440\u0430\u0439": "forge",
+        "\u0434\u0435\u0444\u0438\u043D\u0438\u0446\u0438\u044F": "forge",
+        "\u043E\u0431\u044F\u0432\u0438": "forge",
+        "\u043E\u0431\u044F\u0432\u044F\u0432\u0430\u043C": "forge",
+        "\u043F\u0440\u0438\u0435\u043C\u0438": "forge",
+        "\u0432\u0437\u0435\u043C\u0438": "forge",
+        "\u0438\u043C\u0430\u043C\u0435": "forge",
+        "\u0438\u043C\u0430\u043C": "forge",
+        // be — assignment / equality binding
+        "\u0431\u044A\u0434\u0435": "be",
+        "\u0434\u0430_\u0431\u044A\u0434\u0435": "be",
+        "\u0431\u044A\u0434\u0430": "be",
+        "\u0435": "be",
+        "\u0434\u0430_\u0435": "be",
+        "\u0441\u0430": "be",
+        "\u0441\u0442\u0430\u0432\u0430": "be",
+        "\u0434\u0430_\u0441\u0442\u0430\u043D\u0435": "be",
+        "\u0441\u0442\u0430\u043D\u0435": "be",
+        "\u0440\u0430\u0432\u043D\u044F\u0432\u0430\u043D\u0435": "be",
+        "\u043F\u0440\u0438\u0441\u0432\u043E\u0439": "be",
+        "\u043F\u0440\u0438\u0441\u0432\u043E\u044F\u0432\u0430\u043C": "be",
+        "\u0441\u044A\u0441_\u0441\u0442\u043E\u0439\u043D\u043E\u0441\u0442": "be",
+        // conjure — function / method definition
+        "\u0438\u0437\u0432\u0438\u043A\u0430\u0439": "conjure",
+        "\u0438\u0437\u0432\u0438\u043A\u0432\u0430\u043D\u0435": "conjure",
+        "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
+        "\u043C\u0435\u0442\u043E\u0434": "conjure",
+        "\u043F\u0440\u043E\u0446\u0435\u0434\u0443\u0440\u0430": "conjure",
+        "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u0438\u0440\u0430\u0439": "conjure",
+        // yield — return value
+        "\u0432\u044A\u0440\u043D\u0438": "yield",
+        "\u0432\u0440\u044A\u0449\u0430\u043C": "yield",
+        "\u0432\u0440\u044A\u0449\u0430\u0439": "yield",
+        "\u043E\u0442\u0433\u043E\u0432\u043E\u0440\u0438": "yield",
+        "\u0434\u0430\u0439": "yield",
+        // ponder — if / conditional
+        "\u043E\u0431\u043C\u0438\u0441\u043B\u0438": "ponder",
+        "\u0430\u043A\u043E": "ponder",
+        "\u043A\u043E\u0433\u0430\u0442\u043E": "ponder",
+        "\u0432_\u0441\u043B\u0443\u0447\u0430\u0439": "ponder",
+        "\u043F\u0440\u0438_\u0443\u0441\u043B\u043E\u0432\u0438\u0435": "ponder",
+        "\u043F\u0440\u043E\u0432\u0435\u0440\u0438": "ponder",
+        // otherwise — else
+        "\u0438\u043D\u0430\u0447\u0435": "otherwise",
+        "\u0432_\u043F\u0440\u043E\u0442\u0438\u0432\u0435\u043D_\u0441\u043B\u0443\u0447\u0430\u0439": "otherwise",
+        "\u0438\u043D\u0430\u0447\u0435_\u0430\u043A\u043E": "otherwise",
+        "\u043E\u0431\u0440\u0430\u0442\u043D\u043E": "otherwise",
+        "\u0430\u043A\u043E_\u043D\u0435": "otherwise",
+        // cycle — while loop
+        "\u0446\u0438\u043A\u044A\u043B": "cycle",
+        "\u0434\u043E\u043A\u0430\u0442\u043E": "cycle",
+        "\u043F\u043E\u0432\u0442\u0430\u0440\u044F\u0439": "cycle",
+        "\u043F\u043E\u0432\u0442\u043E\u0440\u0438": "cycle",
+        "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0430\u0432\u0430\u0439": "cycle",
+        "\u0432\u044A\u0440\u0442\u0438": "cycle",
+        "\u0432\u044A\u0440\u0442\u0438_\u0441\u0435": "cycle",
+        // iterate — for loop
+        "\u043E\u0431\u0445\u043E\u0434\u0438": "iterate",
+        "\u043E\u0431\u0445\u043E\u0436\u0434\u0430\u0439": "iterate",
+        "\u0437\u0430_\u0432\u0441\u0435\u043A\u0438": "iterate",
+        "\u0437\u0430": "iterate",
+        "\u0432\u0441\u0435\u043A\u0438": "iterate",
+        "\u0438\u0442\u0435\u0440\u0438\u0440\u0430\u0439": "iterate",
+        "\u043C\u0438\u043D\u0430\u0432\u0430\u0439_\u043F\u0440\u0435\u0437": "iterate",
+        // through — over a collection
+        "\u043F\u0440\u0435\u0437": "through",
+        "\u043F\u043E": "through",
+        "\u043D\u0430\u0434": "through",
+        // within — in / inside
+        "\u0432\u044A\u0442\u0440\u0435": "within",
+        "\u0432\u044A\u0442\u0440\u0435_\u0432": "within",
+        "\u0432": "within",
+        "\u0441\u0440\u0435\u0434": "within",
+        // yeet — throw / break
+        "\u0445\u0432\u044A\u0440\u043B\u0438": "yeet",
+        "\u0445\u0432\u044A\u0440\u043B\u044F\u043C": "yeet",
+        "\u0441\u0447\u0443\u043F\u0438": "yeet",
+        "\u043F\u0440\u0435\u043A\u044A\u0441\u043D\u0438": "yeet",
+        "\u0441\u043F\u0440\u0438": "yeet",
+        "\u0438\u0437\u043B\u0435\u0437": "yeet",
+        "\u043A\u0440\u0430\u0439": "yeet",
+        // skip — continue
+        "\u043F\u0440\u0435\u0441\u043A\u043E\u0447\u0438": "skip",
+        "\u043F\u0440\u043E\u043F\u0443\u0441\u043D\u0438": "skip",
+        "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438": "skip",
+        "\u0441\u043B\u0435\u0434\u0432\u0430\u0449": "skip",
+        // speak — print / output
+        "\u043A\u0430\u0436\u0438": "speak",
+        "\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
+        "\u0438\u0437\u043A\u0440\u0435\u0449\u0438": "speak",
+        "\u043F\u043E\u043A\u0430\u0436\u0438": "speak",
+        "\u043F\u043E\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
+        "\u0438\u0437\u0432\u0435\u0434\u0438": "speak",
+        "\u0438\u0437\u0432\u0435\u0436\u0434\u0430\u0439": "speak",
+        "\u043E\u0442\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
+        "\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
+        "\u0438\u0437\u043F\u0438\u0448\u0438": "speak",
+        "\u043F\u0438\u0448\u0438": "speak",
+        "\u043D\u0430\u043F\u0438\u0448\u0438": "speak",
+        "\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439": "speak",
+        "\u043F\u0440\u0438\u043D\u0442": "speak",
+        "\u043B\u043E\u0433\u043D\u0438": "speak",
+        "\u0441\u044A\u043E\u0431\u0449\u0438": "speak",
+        // essence — class
+        "\u0441\u044A\u0449\u043D\u043E\u0441\u0442": "essence",
+        "\u043A\u043B\u0430\u0441": "essence",
+        "\u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430": "essence",
+        "\u0435\u0441\u0435\u043D\u0446\u0438\u044F": "essence",
+        "\u0435\u0441\u0435\u043D\u0446\u0438\u044F_\u043D\u0430": "essence",
+        // extend — inherit
+        "\u0440\u0430\u0437\u0448\u0438\u0440\u0438": "extend",
+        "\u0440\u0430\u0437\u0448\u0438\u0440\u044F\u0432\u0430\u043D\u0435": "extend",
+        "\u043D\u0430\u0441\u043B\u0435\u0434\u0438": "extend",
+        "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430\u043D\u0435": "extend",
+        "\u043F\u0440\u043E\u0438\u0437\u043B\u0438\u0437\u0430": "extend",
+        // self / super
+        "\u0441\u0435\u0431\u0435_\u0441\u0438": "self",
+        "\u0441\u0435\u0431\u0435": "self",
+        "\u0442\u043E\u0437\u0438": "self",
+        "\u0442\u0430\u0437\u0438": "self",
+        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B": "super",
+        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F\u0442": "super",
+        "\u043D\u0430\u0441\u043B\u0435\u0434\u043D\u0438\u043A": "super",
+        "\u0431\u0430\u0449\u0430": "super",
+        // new — instantiate
+        "\u043D\u043E\u0432": "new",
+        "\u043D\u043E\u0432\u043E": "new",
+        "\u043D\u043E\u0432\u0430": "new",
+        "\u0441\u044A\u0437\u0434\u0430\u0439_\u043D\u043E\u0432": "new",
+        "\u0438\u043D\u0441\u0442\u0430\u043D\u0446\u0438\u044F": "new",
+        // init — constructor method name (not a keyword, but the runtime looks for `init`)
+        "\u0438\u043D\u0438\u0442": "init",
+        "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440": "init",
+        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435_\u043D\u0430": "init",
+        "\u043D\u0430\u0447\u0430\u043B\u043E": "init",
+        // attempt / rescue
+        "\u043E\u043F\u0438\u0442\u0430\u0439": "attempt",
+        "\u043E\u043F\u0438\u0442\u0432\u0430\u0439": "attempt",
+        "\u043F\u0440\u043E\u0431\u0432\u0430\u0439": "attempt",
+        "\u043E\u043F\u0438\u0442_\u0437\u0430": "attempt",
+        "\u0441\u043F\u0430\u0441\u0438": "rescue",
+        "\u0445\u0432\u0430\u043D\u0438": "rescue",
+        "\u043F\u0440\u0438\u0445\u0432\u0430\u043D\u0438": "rescue",
+        "\u043F\u0440\u0438_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
+        "\u0430\u043A\u043E_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
+        "\u0443\u043B\u043E\u0432\u0438": "rescue",
+        // logical
+        "\u0441\u044A\u0449\u043E": "also",
+        "\u0438": "also",
+        "\u043A\u0430\u043A\u0442\u043E_\u0438": "also",
+        "\u0438\u043B\u0438": "either",
+        "\u0431\u0438\u043B\u043E_\u0442\u043E": "either",
+        "\u043D\u0435_\u0435": "isnt",
+        "\u043D\u0435": "isnt",
+        "\u0440\u0430\u0432\u043D\u043E": "equals",
+        "\u0440\u0430\u0432\u043D\u043E_\u043D\u0430": "equals",
+        "\u0435\u0434\u043D\u0430\u043A\u0432\u043E": "equals",
+        "\u0441\u044A\u0449\u043E\u0442\u043E": "equals",
+        "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E": "differs",
+        "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E_\u043E\u0442": "differs",
+        "\u043D\u0435_\u0440\u0430\u0432\u043D\u043E": "differs",
+        // booleans
+        "\u0434\u0430": "yep",
+        "\u0432\u044F\u0440\u043D\u043E": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u043D\u043E": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u0441\u043A\u043E": "yep",
+        "\u043D\u0435\u0432\u044F\u0440\u043D\u043E": "nope",
+        "\u043B\u044A\u0436\u0430": "nope",
+        "\u0433\u0440\u0435\u0448\u043D\u043E": "nope",
+        "\u043D\u0435\u0438\u0441\u0442\u0438\u043D\u0430": "nope",
+        // void / null
+        "\u043F\u0440\u0430\u0437\u043D\u043E": "void",
+        "\u043D\u0438\u0449\u043E": "void",
+        "\u043D\u0443\u043B\u0430": "void",
+        "\u043D\u0443\u043B\u0435\u0432\u0430": "void",
+        "\u043B\u0438\u043F\u0441\u0432\u0430": "void",
+        // summon — import
+        "\u043F\u0440\u0438\u0437\u043E\u0432\u0438": "summon",
+        "\u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u0430\u0439": "summon",
+        "\u0432\u043D\u0435\u0441\u0438": "summon",
+        "\u0432\u043A\u0430\u0440\u0430\u0439": "summon",
+        "\u0432\u043A\u043B\u044E\u0447\u0438": "summon",
+        "\u0437\u0430\u0440\u0435\u0434\u0438": "summon",
+        "\u0438\u0437\u043F\u043E\u043B\u0437\u0432\u0430\u0439": "summon",
+        // async / await / spawn
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0435\u043D": "async",
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u043E": "async",
+        "\u043F\u0430\u0440\u0430\u043B\u0435\u043B\u043D\u043E": "async",
+        "\u0438\u0437\u0447\u0430\u043A\u0430\u0439": "await",
+        "\u0447\u0430\u043A\u0430\u0439": "await",
+        "\u043F\u043E\u0447\u0430\u043A\u0430\u0439": "await",
+        "\u043F\u043E\u0440\u043E\u0434\u0438": "spawn",
+        "\u0441\u0442\u0430\u0440\u0442\u0438\u0440\u0430\u0439": "spawn",
+        "\u043F\u0443\u0441\u043D\u0438": "spawn",
+        "\u0438\u0437\u043F\u044A\u043B\u043D\u0438": "spawn"
+      }
+    };
+    SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
+    EFFECTIVE_TABLES = {};
+    PHRASE_NORMALIZATIONS = {};
+    COMPILED_REPLACERS = {};
+    FUZZY_REPLACERS = {};
+  }
+});
+
 // node_modules/tslib/tslib.es6.mjs
 var tslib_es6_exports = {};
 __export(tslib_es6_exports, {
@@ -8148,8 +10055,8 @@ var require_main3 = __commonJS({
 var DRIVER_BYTECODE_B64, DRIVER_POOL_B64;
 var init_driver_artifact = __esm({
   "lang/compiler/driver-artifact.mjs"() {
-    DRIVER_BYTECODE_B64 = "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";
-    DRIVER_POOL_B64 = "AAAAAAMAAAB1c2UBAAAAfAEAAAAKBAAAAGtleXMGAAAAdmFsdWVzAwAAAGhhcwYAAABsZW5ndGgGAAAAY29uY2F0AwAAAG9yZAMAAABjaHIDAAAAc3RyBgAAAG1rbGlzdAMAAABpMmYDAAAAZjJpBAAAAGZuZWcEAAAAZmFicwUAAABmc3FydAQAAABmc2luBAAAAGZjb3MEAAAAZnRhbgQAAABmZXhwBAAAAGZsb2cEAAAAZnBvdwUAAABmYnl0ZQMAAABudW0JAAAAcmVhZF9maWxlCgAAAHdyaXRlX2ZpbGUIAAAAaHR0cF9nZXQFAAAAdXBwZXIFAAAAbG93ZXIEAAAAdHJpbQYAAABzdWJzdHIEAAAAZmluZAgAAABjb250YWlucwUAAABzcGxpdAQAAABqb2luBwAAAHJlcGxhY2UDAAAAaW50AwAAAGFicwMAAABtaW4DAAAAbWF4BQAAAHJhbmdlAwAAAHN1bQYAAAByYW5kb20FAAAAZmNlaWwGAAAAZmZsb29yBgAAAGZyb3VuZAIAAAB0bwUAAAB3aGlsZQMAAABmb3IHAAAAYXR0ZW1wdAQAAABtYWtlBAAAAGtpbmQCAAAAaWYEAAAAZWxzZQcAAABleHRlbmRzBQAAAHN1cGVyBAAAAHNlbGYGAAAAc3VwZXJfAQAAAF8DAAAAZW5kBAAAAHRydWUFAAAAZmFsc2UHAAAAbm90aGluZwQAAAB3aXRoBwAAAGNhcHR1cmUDAAAAbmV3AwAAAHJlZgQAAABjYWxsAgAAAGlzAwAAAG5vdAMAAABhbmQCAAAAb3IGAAAAcmVzY3VlAwAAAHNheQMAAABzZXQGAAAAcmV0dXJuBQAAAGJyZWFrCAAAAGNvbnRpbnVlBQAAAHRocm93BAAAAGVhY2gCAAAAaW4FAAAAX2ZlX2wFAAAAX2ZlX2kHAAAAPHN0ZGluPg==";
+    DRIVER_BYTECODE_B64 = "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";
+    DRIVER_POOL_B64 = "AAAAAAMAAAB1c2UBAAAAfAEAAAAKBAAAAGtleXMGAAAAdmFsdWVzAwAAAGhhcwYAAABsZW5ndGgGAAAAY29uY2F0AwAAAG9yZAMAAABjaHIDAAAAc3RyBgAAAG1rbGlzdAMAAABpMmYDAAAAZjJpBAAAAGZuZWcEAAAAZmFicwUAAABmc3FydAQAAABmc2luBAAAAGZjb3MEAAAAZnRhbgQAAABmZXhwBAAAAGZsb2cEAAAAZnBvdwUAAABmYnl0ZQMAAABudW0JAAAAcmVhZF9maWxlCgAAAHdyaXRlX2ZpbGUIAAAAaHR0cF9nZXQFAAAAdXBwZXIFAAAAbG93ZXIEAAAAdHJpbQYAAABzdWJzdHIEAAAAZmluZAgAAABjb250YWlucwUAAABzcGxpdAQAAABqb2luBwAAAHJlcGxhY2UDAAAAaW50AwAAAGFicwMAAABtaW4DAAAAbWF4BQAAAHJhbmdlAwAAAHN1bQYAAAByYW5kb20FAAAAZmNlaWwGAAAAZmZsb29yBgAAAGZyb3VuZAIAAAB0bwUAAAB3aGlsZQMAAABmb3IHAAAAYXR0ZW1wdAQAAABtYWtlBAAAAGtpbmQCAAAAaWYEAAAAZWxzZQcAAABleHRlbmRzBQAAAHN1cGVyBAAAAHNlbGYGAAAAc3VwZXJfAQAAAF8DAAAAZW5kBAAAAHRydWUFAAAAZmFsc2UHAAAAbm90aGluZwQAAAB3aXRoBwAAAGNhcHR1cmUDAAAAbmV3AwAAAHJlZgQAAABjYWxsAgAAAGlzAwAAAG5vdAIAAABvcgQAAABtb3JlBAAAAGxlc3MDAAAAYW5kBgAAAHJlc2N1ZQMAAABzYXkDAAAAc2V0BgAAAHJldHVybgUAAABicmVhawgAAABjb250aW51ZQUAAAB0aHJvdwQAAABlYWNoAgAAAGluBQAAAF9mZV9sBQAAAF9mZV9pBwAAADxzdGRpbj4=";
   }
 });
 
@@ -8671,8 +10578,18 @@ async function loadSeed() {
   }
   return cached2;
 }
-async function runWasm(source, modules) {
+async function runWasm(source, modules, options = {}) {
   const output = [];
+  const lang = options.sourceLanguage ?? "auto";
+  if (lang !== "English" && lang !== null) {
+    const opts = { target: "v2", dialect: options.dialect ?? null };
+    source = translateSource(source, lang, opts).translated;
+    if (modules) {
+      modules = Object.fromEntries(
+        Object.entries(modules).map(([k, v]) => [k, translateSource(v, lang, opts).translated])
+      );
+    }
+  }
   setSeedLoader(loadSeedBytes);
   let program;
   try {
@@ -8786,6 +10703,7 @@ var WasmSubsetError, cached2, cachedBytes;
 var init_wasm_runtime = __esm({
   "src/lang-bridge/wasm-runtime.ts"() {
     init_compile_self();
+    init_translator();
     WasmSubsetError = class extends Error {
     };
     cached2 = null;
@@ -11371,1663 +13289,7 @@ var KEYWORDS = (() => {
 
 // src/lang/lexer.ts
 init_errors();
-
-// src/lang/translator.ts
-var KEYWORD_TABLES = {
-  Spanish: {
-    "forjar": "forge",
-    "ser": "be",
-    "conjurar": "conjure",
-    "rendir": "yield",
-    "ponderar": "ponder",
-    "sino": "otherwise",
-    "ciclo": "cycle",
-    "iterar": "iterate",
-    "trav\xE9s": "through",
-    "por": "through",
-    "dentro": "within",
-    "lanzar": "yeet",
-    "saltar": "skip",
-    "hablar": "speak",
-    "mostrar": "speak",
-    "decir": "speak",
-    "esencia": "essence",
-    "extender": "extend",
-    "propio": "self",
-    "padre": "super",
-    "nuevo": "new",
-    "intento": "attempt",
-    "intentar": "attempt",
-    "rescatar": "rescue",
-    "tambi\xE9n": "also",
-    "cualquiera": "either",
-    "o": "either",
-    "no_es": "isnt",
-    "igual": "equals",
-    "difiere": "differs",
-    "s\xED": "yep",
-    "no": "nope",
-    "vac\xEDo": "void",
-    "invocar": "summon",
-    "as\xEDncrono": "async",
-    "esperar": "await",
-    "generar": "spawn",
-    "verdadero": "yep",
-    "falso": "nope",
-    "nulo": "void",
-    "clase": "essence",
-    "retornar": "yield",
-    "devolver": "yield",
-    "mientras": "cycle",
-    "para": "iterate",
-    "si": "ponder",
-    "romper": "yeet",
-    "continuar": "skip",
-    "y": "also",
-    "importar": "summon",
-    "funci\xF3n": "conjure",
-    "crear": "new"
-  },
-  French: {
-    "forger": "forge",
-    "\xEAtre": "be",
-    "est": "be",
-    "\xE9voquer": "conjure",
-    "rendre": "yield",
-    "retourner": "yield",
-    "r\xE9fl\xE9chir": "ponder",
-    "si": "ponder",
-    "sinon": "otherwise",
-    "boucle": "cycle",
-    "tantque": "cycle",
-    "it\xE9rer": "iterate",
-    "pour": "iterate",
-    "\xE0_travers": "through",
-    "dans": "within",
-    "jeter": "yeet",
-    "sauter": "skip",
-    "parler": "speak",
-    "dire": "speak",
-    "afficher": "speak",
-    "classe": "essence",
-    "\xE9tendre": "extend",
-    "soi": "self",
-    "parent": "super",
-    "nouveau": "new",
-    "essayer": "attempt",
-    "tenter": "attempt",
-    "secourir": "rescue",
-    "attraper": "rescue",
-    "aussi": "also",
-    "et": "also",
-    "soit": "either",
-    "ou": "either",
-    "nest_pas": "isnt",
-    "pas": "isnt",
-    "\xE9gal": "equals",
-    "diff\xE8re": "differs",
-    "oui": "yep",
-    "vrai": "yep",
-    "non": "nope",
-    "faux": "nope",
-    "vide": "void",
-    "nul": "void",
-    "invoquer": "summon",
-    "importer": "summon",
-    "asynchrone": "async",
-    "attendre": "await",
-    "engendrer": "spawn",
-    "fonction": "conjure",
-    "cr\xE9er": "new"
-  },
-  German: {
-    "schmieden": "forge",
-    "erstellen": "forge",
-    "sein": "be",
-    "ist": "be",
-    "beschw\xF6ren": "conjure",
-    "funktion": "conjure",
-    "ergeben": "yield",
-    "zur\xFCckgeben": "yield",
-    "\xFCberlegen": "ponder",
-    "wenn": "ponder",
-    "sonst": "otherwise",
-    "ansonsten": "otherwise",
-    "schleife": "cycle",
-    "solange": "cycle",
-    "iterieren": "iterate",
-    "f\xFCr": "iterate",
-    "durch": "through",
-    "innerhalb": "within",
-    "werfen": "yeet",
-    "\xFCberspringen": "skip",
-    "sprechen": "speak",
-    "sagen": "speak",
-    "ausgeben": "speak",
-    "zeigen": "speak",
-    "wesen": "essence",
-    "klasse": "essence",
-    "erweitern": "extend",
-    "selbst": "self",
-    "eltern": "super",
-    "neu": "new",
-    "versuch": "attempt",
-    "versuchen": "attempt",
-    "retten": "rescue",
-    "fangen": "rescue",
-    "auch": "also",
-    "und": "also",
-    "oder": "either",
-    "nicht": "isnt",
-    "gleich": "equals",
-    "unterscheidet": "differs",
-    "ja": "yep",
-    "wahr": "yep",
-    "nein": "nope",
-    "falsch": "nope",
-    "leer": "void",
-    "null": "void",
-    "herbeirufen": "summon",
-    "importieren": "summon",
-    "asynchron": "async",
-    "warten": "await",
-    "erzeugen": "spawn"
-  },
-  Portuguese: {
-    "forjar": "forge",
-    "criar": "forge",
-    "ser": "be",
-    "\xE9": "be",
-    "conjurar": "conjure",
-    "fun\xE7\xE3o": "conjure",
-    "render": "yield",
-    "retornar": "yield",
-    "devolver": "yield",
-    "ponderar": "ponder",
-    "se": "ponder",
-    "sen\xE3o": "otherwise",
-    "ciclo": "cycle",
-    "enquanto": "cycle",
-    "iterar": "iterate",
-    "para": "iterate",
-    "atrav\xE9s": "through",
-    "dentro": "within",
-    "em": "within",
-    "lan\xE7ar": "yeet",
-    "pular": "skip",
-    "falar": "speak",
-    "mostrar": "speak",
-    "exibir": "speak",
-    "dizer": "speak",
-    "ess\xEAncia": "essence",
-    "classe": "essence",
-    "estender": "extend",
-    "pr\xF3prio": "self",
-    "pai": "super",
-    "novo": "new",
-    "tentar": "attempt",
-    "resgatar": "rescue",
-    "capturar": "rescue",
-    "tamb\xE9m": "also",
-    "e": "also",
-    "ou": "either",
-    "n\xE3o_\xE9": "isnt",
-    "igual": "equals",
-    "difere": "differs",
-    "sim": "yep",
-    "verdadeiro": "yep",
-    "n\xE3o": "nope",
-    "falso": "nope",
-    "vazio": "void",
-    "nulo": "void",
-    "invocar": "summon",
-    "importar": "summon",
-    "ass\xEDncrono": "async",
-    "aguardar": "await",
-    "gerar": "spawn"
-  },
-  Italian: {
-    "forgiare": "forge",
-    "creare": "forge",
-    "essere": "be",
-    "\xE8": "be",
-    "evocare": "conjure",
-    "funzione": "conjure",
-    "cedere": "yield",
-    "restituire": "yield",
-    "ritornare": "yield",
-    "ponderare": "ponder",
-    "se": "ponder",
-    "altrimenti": "otherwise",
-    "ciclo": "cycle",
-    "mentre": "cycle",
-    "iterare": "iterate",
-    "per": "iterate",
-    "attraverso": "through",
-    "dentro": "within",
-    "in": "within",
-    "lanciare": "yeet",
-    "saltare": "skip",
-    "parlare": "speak",
-    "mostrare": "speak",
-    "dire": "speak",
-    "stampare": "speak",
-    "essenza": "essence",
-    "classe": "essence",
-    "estendere": "extend",
-    "s\xE9": "self",
-    "genitore": "super",
-    "nuovo": "new",
-    "tentare": "attempt",
-    "provare": "attempt",
-    "salvare": "rescue",
-    "catturare": "rescue",
-    "anche": "also",
-    "e": "also",
-    "oppure": "either",
-    "o": "either",
-    "non_\xE8": "isnt",
-    "uguale": "equals",
-    "diverso": "differs",
-    "s\xEC": "yep",
-    "vero": "yep",
-    "no": "nope",
-    "falso": "nope",
-    "vuoto": "void",
-    "nullo": "void",
-    "invocare": "summon",
-    "importare": "summon",
-    "asincrono": "async",
-    "attendere": "await",
-    "generare": "spawn"
-  },
-  Dutch: {
-    "smeden": "forge",
-    "maken": "forge",
-    "zijn": "be",
-    "is": "be",
-    "oproepen": "conjure",
-    "functie": "conjure",
-    "opleveren": "yield",
-    "teruggeven": "yield",
-    "overdenken": "ponder",
-    "als": "ponder",
-    "anders": "otherwise",
-    "lus": "cycle",
-    "zolang": "cycle",
-    "itereren": "iterate",
-    "voor": "iterate",
-    "door": "through",
-    "binnen": "within",
-    "in": "within",
-    "gooien": "yeet",
-    "overslaan": "skip",
-    "spreken": "speak",
-    "zeggen": "speak",
-    "tonen": "speak",
-    "wezen": "essence",
-    "klasse": "essence",
-    "uitbreiden": "extend",
-    "zelf": "self",
-    "ouder": "super",
-    "nieuw": "new",
-    "proberen": "attempt",
-    "redden": "rescue",
-    "vangen": "rescue",
-    "ook": "also",
-    "en": "also",
-    "of": "either",
-    "niet": "isnt",
-    "gelijk": "equals",
-    "verschilt": "differs",
-    "ja": "yep",
-    "waar": "yep",
-    "nee": "nope",
-    "onwaar": "nope",
-    "leeg": "void",
-    "nul": "void",
-    "aanroepen": "summon",
-    "importeren": "summon",
-    "asynchroon": "async",
-    "wachten": "await",
-    "voortbrengen": "spawn"
-  },
-  Russian: {
-    "\u043A\u043E\u0432\u0430\u0442\u044C": "forge",
-    "\u0441\u043E\u0437\u0434\u0430\u0442\u044C": "forge",
-    "\u0431\u044B\u0442\u044C": "be",
-    "\u0435\u0441\u0442\u044C": "be",
-    "\u0432\u044B\u0437\u0432\u0430\u0442\u044C": "conjure",
-    "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
-    "\u0432\u0435\u0440\u043D\u0443\u0442\u044C": "yield",
-    "\u043E\u0431\u0434\u0443\u043C\u0430\u0442\u044C": "ponder",
-    "\u0435\u0441\u043B\u0438": "ponder",
-    "\u0438\u043D\u0430\u0447\u0435": "otherwise",
-    "\u0446\u0438\u043A\u043B": "cycle",
-    "\u043F\u043E\u043A\u0430": "cycle",
-    "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C": "iterate",
-    "\u0434\u043B\u044F": "iterate",
-    "\u0447\u0435\u0440\u0435\u0437": "through",
-    "\u0432\u043D\u0443\u0442\u0440\u0438": "within",
-    "\u0432": "within",
-    "\u0431\u0440\u043E\u0441\u0438\u0442\u044C": "yeet",
-    "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C": "skip",
-    "\u0441\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
-    "\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C": "speak",
-    "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
-    "\u0432\u044B\u0432\u0435\u0441\u0442\u0438": "speak",
-    "\u043F\u0435\u0447\u0430\u0442\u044C": "speak",
-    "\u0441\u0443\u0449\u043D\u043E\u0441\u0442\u044C": "essence",
-    "\u043A\u043B\u0430\u0441\u0441": "essence",
-    "\u0440\u0430\u0441\u0448\u0438\u0440\u0438\u0442\u044C": "extend",
-    "\u0441\u0435\u0431\u044F": "self",
-    "\u043F\u0440\u0435\u0434\u043E\u043A": "super",
-    "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044C": "super",
-    "\u043D\u043E\u0432\u044B\u0439": "new",
-    "\u043F\u043E\u043F\u044B\u0442\u043A\u0430": "attempt",
-    "\u043F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C": "attempt",
-    "\u0441\u043F\u0430\u0441\u0442\u0438": "rescue",
-    "\u043F\u043E\u0439\u043C\u0430\u0442\u044C": "rescue",
-    "\u0442\u0430\u043A\u0436\u0435": "also",
-    "\u0438": "also",
-    "\u0438\u043B\u0438": "either",
-    "\u043D\u0435": "isnt",
-    "\u0440\u0430\u0432\u043D\u043E": "equals",
-    "\u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F": "differs",
-    "\u0434\u0430": "yep",
-    "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
-    "\u043D\u0435\u0442": "nope",
-    "\u043B\u043E\u0436\u044C": "nope",
-    "\u043F\u0443\u0441\u0442\u043E": "void",
-    "\u043D\u0438\u0447\u0442\u043E": "void",
-    "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u044C": "summon",
-    "\u0438\u043C\u043F\u043E\u0440\u0442": "summon",
-    "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u044B\u0439": "async",
-    "\u0436\u0434\u0430\u0442\u044C": "await",
-    "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u044C": "spawn"
-  },
-  Chinese: {
-    "\u94F8\u9020": "forge",
-    "\u521B\u5EFA": "forge",
-    "\u662F": "be",
-    "\u8D4B\u503C": "be",
-    "\u53EC\u5524": "conjure",
-    "\u51FD\u6570": "conjure",
-    "\u4EA7\u51FA": "yield",
-    "\u8FD4\u56DE": "yield",
-    "\u601D\u8003": "ponder",
-    "\u5982\u679C": "ponder",
-    "\u5426\u5219": "otherwise",
-    "\u5FAA\u73AF": "cycle",
-    "\u5F53": "cycle",
-    "\u904D\u5386": "iterate",
-    "\u4E3A": "iterate",
-    "\u901A\u8FC7": "through",
-    "\u5728\u5185": "within",
-    "\u5728": "within",
-    "\u629B\u51FA": "yeet",
-    "\u8DF3\u8FC7": "skip",
-    "\u8BF4": "speak",
-    "\u8F93\u51FA": "speak",
-    "\u6253\u5370": "speak",
-    "\u663E\u793A": "speak",
-    "\u672C\u8D28": "essence",
-    "\u7C7B": "essence",
-    "\u6269\u5C55": "extend",
-    "\u81EA\u5DF1": "self",
-    "\u7236\u7C7B": "super",
-    "\u65B0": "new",
-    "\u5C1D\u8BD5": "attempt",
-    "\u62EF\u6551": "rescue",
-    "\u6355\u83B7": "rescue",
-    "\u5E76\u4E14": "also",
-    "\u548C": "also",
-    "\u6216\u8005": "either",
-    "\u6216": "either",
-    "\u4E0D\u662F": "isnt",
-    "\u7B49\u4E8E": "equals",
-    "\u4E0D\u540C": "differs",
-    "\u662F\u7684": "yep",
-    "\u771F": "yep",
-    "\u4E0D": "nope",
-    "\u5047": "nope",
-    "\u7A7A": "void",
-    "\u65E0": "void",
-    "\u5BFC\u5165": "summon",
-    "\u5F02\u6B65": "async",
-    "\u7B49\u5F85": "await",
-    "\u751F\u6210": "spawn"
-  },
-  Japanese: {
-    "\u935B\u9020": "forge",
-    "\u4F5C\u6210": "forge",
-    "\u3067\u3042\u308B": "be",
-    "\u306F": "be",
-    "\u53EC\u559A": "conjure",
-    "\u95A2\u6570": "conjure",
-    "\u8FD4\u3059": "yield",
-    "\u8003\u3048\u308B": "ponder",
-    "\u3082\u3057": "ponder",
-    "\u305D\u308C\u4EE5\u5916": "otherwise",
-    "\u30EB\u30FC\u30D7": "cycle",
-    "\u9593": "cycle",
-    "\u53CD\u5FA9": "iterate",
-    "\u7E70\u308A\u8FD4\u3059": "iterate",
-    "\u901A\u3057\u3066": "through",
-    "\u306E\u4E2D\u3067": "within",
-    "\u6295\u3052\u308B": "yeet",
-    "\u30B9\u30AD\u30C3\u30D7": "skip",
-    "\u8A00\u3046": "speak",
-    "\u8868\u793A": "speak",
-    "\u51FA\u529B": "speak",
-    "\u5370\u5237": "speak",
-    "\u672C\u8CEA": "essence",
-    "\u30AF\u30E9\u30B9": "essence",
-    "\u62E1\u5F35": "extend",
-    "\u81EA\u5206": "self",
-    "\u89AA": "super",
-    "\u65B0\u3057\u3044": "new",
-    "\u8A66\u3059": "attempt",
-    "\u6551\u51FA": "rescue",
-    "\u307E\u305F": "also",
-    "\u304B\u3064": "also",
-    "\u307E\u305F\u306F": "either",
-    "\u3067\u306F\u306A\u3044": "isnt",
-    "\u7B49\u3057\u3044": "equals",
-    "\u7570\u306A\u308B": "differs",
-    "\u306F\u3044": "yep",
-    "\u771F": "yep",
-    "\u3044\u3044\u3048": "nope",
-    "\u507D": "nope",
-    "\u7A7A": "void",
-    "\u30A4\u30F3\u30DD\u30FC\u30C8": "summon",
-    "\u975E\u540C\u671F": "async",
-    "\u5F85\u3064": "await",
-    "\u751F\u6210": "spawn"
-  },
-  Korean: {
-    "\uB2E8\uC870": "forge",
-    "\uB9CC\uB4E4\uB2E4": "forge",
-    "\uC774\uB2E4": "be",
-    "\uC18C\uD658": "conjure",
-    "\uD568\uC218": "conjure",
-    "\uBC18\uD658": "yield",
-    "\uB3CC\uB824\uC8FC\uB2E4": "yield",
-    "\uC0DD\uAC01": "ponder",
-    "\uB9CC\uC57D": "ponder",
-    "\uC544\uB2C8\uBA74": "otherwise",
-    "\uC21C\uD658": "cycle",
-    "\uB3D9\uC548": "cycle",
-    "\uBC18\uBCF5": "iterate",
-    "\uC704\uD574": "iterate",
-    "\uD1B5\uD574": "through",
-    "\uC548\uC5D0\uC11C": "within",
-    "\uB358\uC9C0\uB2E4": "yeet",
-    "\uAC74\uB108\uB6F0\uAE30": "skip",
-    "\uB9D0\uD558\uB2E4": "speak",
-    "\uCD9C\uB825": "speak",
-    "\uBCF4\uC5EC\uC8FC\uB2E4": "speak",
-    "\uBCF8\uC9C8": "essence",
-    "\uD074\uB798\uC2A4": "essence",
-    "\uD655\uC7A5": "extend",
-    "\uC790\uC2E0": "self",
-    "\uBD80\uBAA8": "super",
-    "\uC0C8": "new",
-    "\uC0C8\uB85C\uC6B4": "new",
-    "\uC2DC\uB3C4": "attempt",
-    "\uAD6C\uCD9C": "rescue",
-    "\uADF8\uB9AC\uACE0": "also",
-    "\uB610\uB294": "either",
-    "\uC544\uB2C8\uB2E4": "isnt",
-    "\uAC19\uB2E4": "equals",
-    "\uB2E4\uB974\uB2E4": "differs",
-    "\uC608": "yep",
-    "\uCC38": "yep",
-    "\uC544\uB2C8\uC624": "nope",
-    "\uAC70\uC9D3": "nope",
-    "\uBE44\uC5B4\uC788\uB2E4": "void",
-    "\uAC00\uC838\uC624\uAE30": "summon",
-    "\uBE44\uB3D9\uAE30": "async",
-    "\uAE30\uB2E4\uB9AC\uB2E4": "await",
-    "\uC0DD\uC131": "spawn"
-  },
-  Arabic: {
-    "\u0635\u0646\u0639": "forge",
-    "\u0625\u0646\u0634\u0627\u0621": "forge",
-    "\u064A\u0643\u0648\u0646": "be",
-    "\u0647\u0648": "be",
-    "\u0627\u0633\u062A\u062F\u0639\u0627\u0621": "conjure",
-    "\u062F\u0627\u0644\u0629": "conjure",
-    "\u0625\u0631\u062C\u0627\u0639": "yield",
-    "\u0631\u062F": "yield",
-    "\u062A\u0623\u0645\u0644": "ponder",
-    "\u0625\u0630\u0627": "ponder",
-    "\u0648\u0625\u0644\u0627": "otherwise",
-    "\u062E\u0644\u0627\u0641": "otherwise",
-    "\u062D\u0644\u0642\u0629": "cycle",
-    "\u0637\u0627\u0644\u0645\u0627": "cycle",
-    "\u062A\u0643\u0631\u0627\u0631": "iterate",
-    "\u0644\u0643\u0644": "iterate",
-    "\u0639\u0628\u0631": "through",
-    "\u062E\u0644\u0627\u0644": "through",
-    "\u062F\u0627\u062E\u0644": "within",
-    "\u0641\u064A": "within",
-    "\u0631\u0645\u064A": "yeet",
-    "\u062A\u062E\u0637\u064A": "skip",
-    "\u0642\u0644": "speak",
-    "\u062A\u062D\u062F\u062B": "speak",
-    "\u0627\u0637\u0628\u0639": "speak",
-    "\u0627\u0639\u0631\u0636": "speak",
-    "\u062C\u0648\u0647\u0631": "essence",
-    "\u0641\u0626\u0629": "essence",
-    "\u0635\u0646\u0641": "essence",
-    "\u062A\u0648\u0633\u064A\u0639": "extend",
-    "\u0630\u0627\u062A": "self",
-    "\u0646\u0641\u0633": "self",
-    "\u0623\u0628": "super",
-    "\u062C\u062F\u064A\u062F": "new",
-    "\u0645\u062D\u0627\u0648\u0644\u0629": "attempt",
-    "\u062D\u0627\u0648\u0644": "attempt",
-    "\u0625\u0646\u0642\u0627\u0630": "rescue",
-    "\u0627\u0644\u062A\u0642\u0627\u0637": "rescue",
-    "\u0623\u064A\u0636\u0627": "also",
-    "\u0648": "also",
-    "\u0623\u0648": "either",
-    "\u0644\u064A\u0633": "isnt",
-    "\u064A\u0633\u0627\u0648\u064A": "equals",
-    "\u064A\u062E\u062A\u0644\u0641": "differs",
-    "\u0646\u0639\u0645": "yep",
-    "\u0635\u062D\u064A\u062D": "yep",
-    "\u0644\u0627": "nope",
-    "\u062E\u0637\u0623": "nope",
-    "\u0641\u0627\u0631\u063A": "void",
-    "\u0639\u062F\u0645": "void",
-    "\u0627\u0633\u062A\u064A\u0631\u0627\u062F": "summon",
-    "\u063A\u064A\u0631_\u0645\u062A\u0632\u0627\u0645\u0646": "async",
-    "\u0627\u0646\u062A\u0638\u0627\u0631": "await",
-    "\u062A\u0648\u0644\u064A\u062F": "spawn"
-  },
-  Hindi: {
-    "\u0917\u0922\u093C\u0928\u093E": "forge",
-    "\u092C\u0928\u093E\u0928\u093E": "forge",
-    "\u0939\u094B\u0928\u093E": "be",
-    "\u0939\u0948": "be",
-    "\u092C\u0941\u0932\u093E\u0928\u093E": "conjure",
-    "\u092B\u0932\u0928": "conjure",
-    "\u0915\u093E\u0930\u094D\u092F": "conjure",
-    "\u0932\u094C\u091F\u093E\u0928\u093E": "yield",
-    "\u0935\u093E\u092A\u0938\u0940": "yield",
-    "\u0938\u094B\u091A\u0928\u093E": "ponder",
-    "\u0905\u0917\u0930": "ponder",
-    "\u092F\u0926\u093F": "ponder",
-    "\u0935\u0930\u0928\u093E": "otherwise",
-    "\u0905\u0928\u094D\u092F\u0925\u093E": "otherwise",
-    "\u091A\u0915\u094D\u0930": "cycle",
-    "\u091C\u092C\u0924\u0915": "cycle",
-    "\u0926\u094B\u0939\u0930\u093E\u0928\u093E": "iterate",
-    "\u0939\u0947\u0924\u0941": "iterate",
-    "\u0926\u094D\u0935\u093E\u0930\u093E": "through",
-    "\u0905\u0902\u0926\u0930": "within",
-    "\u092E\u0947\u0902": "within",
-    "\u092B\u0947\u0902\u0915\u0928\u093E": "yeet",
-    "\u091B\u094B\u0921\u093C\u0928\u093E": "skip",
-    "\u092C\u094B\u0932\u0928\u093E": "speak",
-    "\u0926\u093F\u0916\u093E\u0928\u093E": "speak",
-    "\u091B\u093E\u092A\u0928\u093E": "speak",
-    "\u0938\u093E\u0930": "essence",
-    "\u0935\u0930\u094D\u0917": "essence",
-    "\u0935\u093F\u0938\u094D\u0924\u093E\u0930": "extend",
-    "\u0938\u094D\u0935\u092F\u0902": "self",
-    "\u0905\u092D\u093F\u092D\u093E\u0935\u0915": "super",
-    "\u0928\u092F\u093E": "new",
-    "\u092A\u094D\u0930\u092F\u093E\u0938": "attempt",
-    "\u0915\u094B\u0936\u093F\u0936": "attempt",
-    "\u092C\u091A\u093E\u0928\u093E": "rescue",
-    "\u092A\u0915\u0921\u093C\u0928\u093E": "rescue",
-    "\u092D\u0940": "also",
-    "\u0914\u0930": "also",
-    "\u092F\u093E": "either",
-    "\u0928\u0939\u0940\u0902": "isnt",
-    "\u092C\u0930\u093E\u092C\u0930": "equals",
-    "\u092D\u093F\u0928\u094D\u0928": "differs",
-    "\u0939\u093E\u0902": "yep",
-    "\u0938\u0924\u094D\u092F": "yep",
-    "\u0905\u0938\u0924\u094D\u092F": "nope",
-    "\u0930\u093F\u0915\u094D\u0924": "void",
-    "\u0936\u0942\u0928\u094D\u092F": "void",
-    "\u0906\u092F\u093E\u0924": "summon",
-    "\u0905\u0938\u092E\u0915\u093E\u0932\u093F\u0915": "async",
-    "\u092A\u094D\u0930\u0924\u0940\u0915\u094D\u0937\u093E": "await",
-    "\u0909\u0924\u094D\u092A\u0928\u094D\u0928": "spawn"
-  },
-  Turkish: {
-    "d\xF6vmek": "forge",
-    "olu\u015Ftur": "forge",
-    "olmak": "be",
-    "olsun": "be",
-    "\xE7a\u011F\u0131r": "conjure",
-    "fonksiyon": "conjure",
-    "i\u015Flev": "conjure",
-    "d\xF6nd\xFCr": "yield",
-    "ver": "yield",
-    "d\xFC\u015F\xFCn": "ponder",
-    "e\u011Fer": "ponder",
-    "yoksa": "otherwise",
-    "de\u011Filse": "otherwise",
-    "d\xF6ng\xFC": "cycle",
-    "iken": "cycle",
-    "tekrarla": "iterate",
-    "i\xE7in": "iterate",
-    "boyunca": "through",
-    "i\xE7inde": "within",
-    "at": "yeet",
-    "atla": "skip",
-    "s\xF6yle": "speak",
-    "g\xF6ster": "speak",
-    "yazd\u0131r": "speak",
-    "\xF6z": "essence",
-    "s\u0131n\u0131f": "essence",
-    "geni\u015Flet": "extend",
-    "kendi": "self",
-    "\xFCst": "super",
-    "yeni": "new",
-    "dene": "attempt",
-    "kurtar": "rescue",
-    "yakala": "rescue",
-    "da": "also",
-    "ve": "also",
-    "veya": "either",
-    "de\u011Fil": "isnt",
-    "e\u015Fit": "equals",
-    "farkl\u0131": "differs",
-    "evet": "yep",
-    "do\u011Fru": "yep",
-    "hay\u0131r": "nope",
-    "yanl\u0131\u015F": "nope",
-    "bo\u015F": "void",
-    "\xE7a\u011F\u0131rmak": "summon",
-    "i\xE7eaktar": "summon",
-    "e\u015Fzamans\u0131z": "async",
-    "bekle": "await",
-    "\xFCret": "spawn"
-  },
-  Polish: {
-    "ku\u0107": "forge",
-    "utw\xF3rz": "forge",
-    "by\u0107": "be",
-    "jest": "be",
-    "przywo\u0142aj": "summon",
-    "funkcja": "conjure",
-    "zwr\xF3\u0107": "yield",
-    "oddaj": "yield",
-    "rozwa\u017C": "ponder",
-    "je\u015Bli": "ponder",
-    "je\u017Celi": "ponder",
-    "inaczej": "otherwise",
-    "p\u0119tla": "cycle",
-    "dop\xF3ki": "cycle",
-    "iteruj": "iterate",
-    "dla": "iterate",
-    "przez": "through",
-    "wewn\u0105trz": "within",
-    "w": "within",
-    "rzu\u0107": "yeet",
-    "pomi\u0144": "skip",
-    "m\xF3w": "speak",
-    "powiedz": "speak",
-    "poka\u017C": "speak",
-    "wypisz": "speak",
-    "istota": "essence",
-    "klasa": "essence",
-    "rozszerz": "extend",
-    "sam": "self",
-    "rodzic": "super",
-    "nowy": "new",
-    "nowe": "new",
-    "pr\xF3buj": "attempt",
-    "spr\xF3buj": "attempt",
-    "ratuj": "rescue",
-    "z\u0142ap": "rescue",
-    "te\u017C": "also",
-    "i": "also",
-    "lub": "either",
-    "albo": "either",
-    "nie": "isnt",
-    "r\xF3wne": "equals",
-    "r\xF3\u017Cni": "differs",
-    "tak": "yep",
-    "prawda": "yep",
-    "fa\u0142sz": "nope",
-    "pusty": "void",
-    "importuj": "summon",
-    "asynchroniczny": "async",
-    "czekaj": "await",
-    "stw\xF3rz": "spawn"
-  },
-  Swedish: {
-    "smida": "forge",
-    "skapa": "forge",
-    "vara": "be",
-    "\xE4r": "be",
-    "framkalla": "conjure",
-    "funktion": "conjure",
-    "ge": "yield",
-    "returnera": "yield",
-    "fundera": "ponder",
-    "om": "ponder",
-    "annars": "otherwise",
-    "slinga": "cycle",
-    "medan": "cycle",
-    "iterera": "iterate",
-    "f\xF6r": "iterate",
-    "genom": "through",
-    "inom": "within",
-    "i": "within",
-    "kasta": "yeet",
-    "hoppa": "skip",
-    "tala": "speak",
-    "visa": "speak",
-    "skriv": "speak",
-    "v\xE4sen": "essence",
-    "klass": "essence",
-    "ut\xF6ka": "extend",
-    "sj\xE4lv": "self",
-    "f\xF6r\xE4lder": "super",
-    "ny": "new",
-    "f\xF6rs\xF6k": "attempt",
-    "r\xE4dda": "rescue",
-    "f\xE5nga": "rescue",
-    "ocks\xE5": "also",
-    "och": "also",
-    "eller": "either",
-    "inte": "isnt",
-    "lika": "equals",
-    "skiljer": "differs",
-    "ja": "yep",
-    "sant": "yep",
-    "nej": "nope",
-    "falskt": "nope",
-    "tom": "void",
-    "\xE5kalla": "summon",
-    "importera": "summon",
-    "asynkron": "async",
-    "v\xE4nta": "await",
-    "skapa_process": "spawn"
-  },
-  Norwegian: {
-    "smi": "forge",
-    "lage": "forge",
-    "v\xE6re": "be",
-    "er": "be",
-    "fremkalle": "conjure",
-    "funksjon": "conjure",
-    "gi": "yield",
-    "returnere": "yield",
-    "tenke": "ponder",
-    "hvis": "ponder",
-    "ellers": "otherwise",
-    "sl\xF8yfe": "cycle",
-    "mens": "cycle",
-    "iterere": "iterate",
-    "for": "iterate",
-    "gjennom": "through",
-    "innen": "within",
-    "i": "within",
-    "kaste": "yeet",
-    "hoppe": "skip",
-    "snakke": "speak",
-    "vise": "speak",
-    "skriv": "speak",
-    "vesen": "essence",
-    "klasse": "essence",
-    "utvide": "extend",
-    "selv": "self",
-    "forelder": "super",
-    "ny": "new",
-    "fors\xF8k": "attempt",
-    "redde": "rescue",
-    "fange": "rescue",
-    "ogs\xE5": "also",
-    "og": "also",
-    "eller": "either",
-    "ikke": "isnt",
-    "lik": "equals",
-    "forskjellig": "differs",
-    "ja": "yep",
-    "sant": "yep",
-    "nei": "nope",
-    "usant": "nope",
-    "tom": "void",
-    "p\xE5kalle": "summon",
-    "importere": "summon",
-    "asynkron": "async",
-    "vente": "await",
-    "starte": "spawn"
-  },
-  Danish: {
-    "smede": "forge",
-    "skabe": "forge",
-    "v\xE6re": "be",
-    "er": "be",
-    "fremkalde": "conjure",
-    "funktion": "conjure",
-    "give": "yield",
-    "returnere": "yield",
-    "overveje": "ponder",
-    "hvis": "ponder",
-    "ellers": "otherwise",
-    "sl\xF8jfe": "cycle",
-    "mens": "cycle",
-    "iterere": "iterate",
-    "for": "iterate",
-    "igennem": "through",
-    "inden": "within",
-    "i": "within",
-    "kaste": "yeet",
-    "springe": "skip",
-    "tale": "speak",
-    "vise": "speak",
-    "skriv": "speak",
-    "v\xE6sen": "essence",
-    "klasse": "essence",
-    "udvide": "extend",
-    "selv": "self",
-    "for\xE6lder": "super",
-    "ny": "new",
-    "fors\xF8g": "attempt",
-    "redde": "rescue",
-    "fange": "rescue",
-    "ogs\xE5": "also",
-    "og": "also",
-    "eller": "either",
-    "ikke": "isnt",
-    "lig": "equals",
-    "anderledes": "differs",
-    "ja": "yep",
-    "sand": "yep",
-    "nej": "nope",
-    "falsk": "nope",
-    "tom": "void",
-    "p\xE5kalde": "summon",
-    "importere": "summon",
-    "asynkron": "async",
-    "vente": "await",
-    "starte": "spawn"
-  },
-  Finnish: {
-    "takoa": "forge",
-    "luoda": "forge",
-    "olla": "be",
-    "on": "be",
-    "loitsia": "conjure",
-    "funktio": "conjure",
-    "tuottaa": "yield",
-    "palauttaa": "yield",
-    "pohtia": "ponder",
-    "jos": "ponder",
-    "muuten": "otherwise",
-    "silmukka": "cycle",
-    "kun": "cycle",
-    "iteroida": "iterate",
-    "jokaiselle": "iterate",
-    "l\xE4pi": "through",
-    "sis\xE4ll\xE4": "within",
-    "kohdassa": "within",
-    "heitt\xE4\xE4": "yeet",
-    "ohittaa": "skip",
-    "puhua": "speak",
-    "n\xE4ytt\xE4\xE4": "speak",
-    "tulostaa": "speak",
-    "olemus": "essence",
-    "luokka": "essence",
-    "laajentaa": "extend",
-    "itse": "self",
-    "ylempi": "super",
-    "uusi": "new",
-    "yrit\xE4": "attempt",
-    "pelasta": "rescue",
-    "kiinni": "rescue",
-    "my\xF6s": "also",
-    "ja": "also",
-    "tai": "either",
-    "ei": "isnt",
-    "yht\xE4suuri": "equals",
-    "eroaa": "differs",
-    "kyll\xE4": "yep",
-    "tosi": "yep",
-    "ep\xE4tosi": "nope",
-    "tyhj\xE4": "void",
-    "kutsu": "summon",
-    "tuo": "summon",
-    "asynkroninen": "async",
-    "odota": "await",
-    "synnyt\xE4": "spawn"
-  },
-  Greek: {
-    "\u03C3\u03C6\u03C5\u03C1\u03B7\u03BB\u03B1\u03C4\u03CE": "forge",
-    "\u03B4\u03B7\u03BC\u03B9\u03BF\u03C5\u03C1\u03B3\u03CE": "forge",
-    "\u03B5\u03AF\u03BD\u03B1\u03B9": "be",
-    "\u03BA\u03B1\u03BB\u03CE": "conjure",
-    "\u03C3\u03C5\u03BD\u03AC\u03C1\u03C4\u03B7\u03C3\u03B7": "conjure",
-    "\u03B5\u03C0\u03B9\u03C3\u03C4\u03C1\u03AD\u03C6\u03C9": "yield",
-    "\u03C3\u03BA\u03AD\u03C6\u03C4\u03BF\u03BC\u03B1\u03B9": "ponder",
-    "\u03B1\u03BD": "ponder",
-    "\u03B1\u03BB\u03BB\u03B9\u03CE\u03C2": "otherwise",
-    "\u03B2\u03C1\u03CC\u03C7\u03BF\u03C2": "cycle",
-    "\u03CC\u03C3\u03BF": "cycle",
-    "\u03B5\u03C0\u03B1\u03BD\u03B1\u03BB\u03B1\u03BC\u03B2\u03AC\u03BD\u03C9": "iterate",
-    "\u03B3\u03B9\u03B1": "iterate",
-    "\u03BC\u03AD\u03C3\u03C9": "through",
-    "\u03BC\u03AD\u03C3\u03B1": "within",
-    "\u03C3\u03B5": "within",
-    "\u03C0\u03B5\u03C4\u03AC\u03C9": "yeet",
-    "\u03C0\u03B1\u03C1\u03B1\u03BA\u03AC\u03BC\u03C0\u03C4\u03C9": "skip",
-    "\u03BC\u03B9\u03BB\u03AC\u03C9": "speak",
-    "\u03B5\u03BC\u03C6\u03AC\u03BD\u03B9\u03C3\u03B5": "speak",
-    "\u03C4\u03CD\u03C0\u03C9\u03C3\u03B5": "speak",
-    "\u03BF\u03C5\u03C3\u03AF\u03B1": "essence",
-    "\u03BA\u03BB\u03AC\u03C3\u03B7": "essence",
-    "\u03B5\u03C0\u03B5\u03BA\u03C4\u03B5\u03AF\u03BD\u03C9": "extend",
-    "\u03B5\u03B1\u03C5\u03C4\u03CC\u03C2": "self",
-    "\u03B3\u03BF\u03BD\u03AD\u03B1\u03C2": "super",
-    "\u03BD\u03AD\u03BF": "new",
-    "\u03B4\u03BF\u03BA\u03B9\u03BC\u03AE": "attempt",
-    "\u03C3\u03CE\u03B6\u03C9": "rescue",
-    "\u03C0\u03B9\u03AC\u03BD\u03C9": "rescue",
-    "\u03B5\u03C0\u03AF\u03C3\u03B7\u03C2": "also",
-    "\u03BA\u03B1\u03B9": "also",
-    "\u03AE": "either",
-    "\u03B4\u03B5\u03BD": "isnt",
-    "\u03AF\u03C3\u03BF": "equals",
-    "\u03B4\u03B9\u03B1\u03C6\u03AD\u03C1\u03B5\u03B9": "differs",
-    "\u03BD\u03B1\u03B9": "yep",
-    "\u03B1\u03BB\u03B7\u03B8\u03AD\u03C2": "yep",
-    "\u03CC\u03C7\u03B9": "nope",
-    "\u03C8\u03B5\u03C5\u03B4\u03AD\u03C2": "nope",
-    "\u03BA\u03B5\u03BD\u03CC": "void",
-    "\u03B5\u03B9\u03C3\u03B1\u03B3\u03C9\u03B3\u03AE": "summon",
-    "\u03B1\u03C3\u03CD\u03B3\u03C7\u03C1\u03BF\u03BD\u03BF": "async",
-    "\u03C0\u03B5\u03C1\u03B9\u03BC\u03AD\u03BD\u03C9": "await",
-    "\u03C0\u03B1\u03C1\u03AC\u03B3\u03C9": "spawn"
-  },
-  Hebrew: {
-    "\u05DC\u05D7\u05E9\u05DC": "forge",
-    "\u05DC\u05D9\u05E6\u05D5\u05E8": "forge",
-    "\u05DC\u05D4\u05D9\u05D5\u05EA": "be",
-    "\u05D4\u05D5\u05D0": "be",
-    "\u05DC\u05D6\u05DE\u05DF": "conjure",
-    "\u05E4\u05D5\u05E0\u05E7\u05E6\u05D9\u05D4": "conjure",
-    "\u05DC\u05D4\u05D7\u05D6\u05D9\u05E8": "yield",
-    "\u05DC\u05D7\u05E9\u05D5\u05D1": "ponder",
-    "\u05D0\u05DD": "ponder",
-    "\u05D0\u05D7\u05E8\u05EA": "otherwise",
-    "\u05DC\u05D5\u05DC\u05D0\u05D4": "cycle",
-    "\u05DB\u05DC\u05E2\u05D5\u05D3": "cycle",
-    "\u05DC\u05D7\u05D6\u05D5\u05E8": "iterate",
-    "\u05DC\u05DB\u05DC": "iterate",
-    "\u05D3\u05E8\u05DA": "through",
-    "\u05D1\u05EA\u05D5\u05DA": "within",
-    "\u05DC\u05D6\u05E8\u05D5\u05E7": "yeet",
-    "\u05DC\u05D3\u05DC\u05D2": "skip",
-    "\u05DC\u05D3\u05D1\u05E8": "speak",
-    "\u05DC\u05D4\u05E6\u05D9\u05D2": "speak",
-    "\u05DC\u05D4\u05D3\u05E4\u05D9\u05E1": "speak",
-    "\u05DE\u05D4\u05D5\u05EA": "essence",
-    "\u05DE\u05D7\u05DC\u05E7\u05D4": "essence",
-    "\u05DC\u05D4\u05E8\u05D7\u05D9\u05D1": "extend",
-    "\u05E2\u05E6\u05DE\u05D9": "self",
-    "\u05D4\u05D5\u05E8\u05D4": "super",
-    "\u05D7\u05D3\u05E9": "new",
-    "\u05DC\u05E0\u05E1\u05D5\u05EA": "attempt",
-    "\u05DC\u05D4\u05E6\u05D9\u05DC": "rescue",
-    "\u05DC\u05EA\u05E4\u05D5\u05E1": "rescue",
-    "\u05D2\u05DD": "also",
-    "\u05D5": "also",
-    "\u05D0\u05D5": "either",
-    "\u05DC\u05D0": "isnt",
-    "\u05E9\u05D5\u05D5\u05D4": "equals",
-    "\u05E9\u05D5\u05E0\u05D4": "differs",
-    "\u05DB\u05DF": "yep",
-    "\u05D0\u05DE\u05EA": "yep",
-    "\u05E9\u05E7\u05E8": "nope",
-    "\u05E8\u05D9\u05E7": "void",
-    "\u05DC\u05D9\u05D9\u05D1\u05D0": "summon",
-    "\u05D0\u05E1\u05D9\u05E0\u05DB\u05E8\u05D5\u05E0\u05D9": "async",
-    "\u05DC\u05D7\u05DB\u05D5\u05EA": "await",
-    "\u05DC\u05D4\u05D5\u05DC\u05D9\u05D3": "spawn"
-  },
-  Ukrainian: {
-    "\u043A\u0443\u0432\u0430\u0442\u0438": "forge",
-    "\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438": "forge",
-    "\u0431\u0443\u0442\u0438": "be",
-    "\u0454": "be",
-    "\u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438": "conjure",
-    "\u0444\u0443\u043D\u043A\u0446\u0456\u044F": "conjure",
-    "\u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438": "yield",
-    "\u043E\u0431\u043C\u0456\u0440\u043A\u0443\u0432\u0430\u0442\u0438": "ponder",
-    "\u044F\u043A\u0449\u043E": "ponder",
-    "\u0456\u043D\u0430\u043A\u0448\u0435": "otherwise",
-    "\u0446\u0438\u043A\u043B": "cycle",
-    "\u043F\u043E\u043A\u0438": "cycle",
-    "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u0438": "iterate",
-    "\u0434\u043B\u044F": "iterate",
-    "\u0447\u0435\u0440\u0435\u0437": "through",
-    "\u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456": "within",
-    "\u0432": "within",
-    "\u043A\u0438\u043D\u0443\u0442\u0438": "yeet",
-    "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438": "skip",
-    "\u0441\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
-    "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
-    "\u0432\u0438\u0432\u0435\u0441\u0442\u0438": "speak",
-    "\u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C": "essence",
-    "\u043A\u043B\u0430\u0441": "essence",
-    "\u0440\u043E\u0437\u0448\u0438\u0440\u0438\u0442\u0438": "extend",
-    "\u0441\u0435\u0431\u0435": "self",
-    "\u0431\u0430\u0442\u044C\u043A\u043E": "super",
-    "\u043D\u043E\u0432\u0438\u0439": "new",
-    "\u0441\u043F\u0440\u043E\u0431\u0430": "attempt",
-    "\u0441\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u0442\u0438": "attempt",
-    "\u0432\u0440\u044F\u0442\u0443\u0432\u0430\u0442\u0438": "rescue",
-    "\u0437\u043B\u043E\u0432\u0438\u0442\u0438": "rescue",
-    "\u0442\u0430\u043A\u043E\u0436": "also",
-    "\u0456": "also",
-    "\u0430\u0431\u043E": "either",
-    "\u043D\u0435": "isnt",
-    "\u0434\u043E\u0440\u0456\u0432\u043D\u044E\u0454": "equals",
-    "\u0432\u0456\u0434\u0440\u0456\u0437\u043D\u044F\u0454\u0442\u044C\u0441\u044F": "differs",
-    "\u0442\u0430\u043A": "yep",
-    "\u0456\u0441\u0442\u0438\u043D\u0430": "yep",
-    "\u043D\u0456": "nope",
-    "\u0445\u0438\u0431\u0430": "nope",
-    "\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E": "void",
-    "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u0438": "summon",
-    "\u0456\u043C\u043F\u043E\u0440\u0442": "summon",
-    "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u0438\u0439": "async",
-    "\u0447\u0435\u043A\u0430\u0442\u0438": "await",
-    "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u0438": "spawn"
-  },
-  Czech: {
-    "kovat": "forge",
-    "vytvo\u0159it": "forge",
-    "b\xFDt": "be",
-    "je": "be",
-    "vyvolat": "conjure",
-    "funkce": "conjure",
-    "vr\xE1tit": "yield",
-    "uv\xE1\u017Eit": "ponder",
-    "pokud": "ponder",
-    "jinak": "otherwise",
-    "smy\u010Dka": "cycle",
-    "dokud": "cycle",
-    "iterovat": "iterate",
-    "pro": "iterate",
-    "skrz": "through",
-    "uvnit\u0159": "within",
-    "v": "within",
-    "hodit": "yeet",
-    "p\u0159esko\u010Dit": "skip",
-    "\u0159\xEDci": "speak",
-    "zobrazit": "speak",
-    "vytisknout": "speak",
-    "podstata": "essence",
-    "t\u0159\xEDda": "essence",
-    "roz\u0161\xED\u0159it": "extend",
-    "s\xE1m": "self",
-    "rodi\u010D": "super",
-    "nov\xFD": "new",
-    "zkusit": "attempt",
-    "zachr\xE1nit": "rescue",
-    "chytit": "rescue",
-    "tak\xE9": "also",
-    "a": "also",
-    "nebo": "either",
-    "nen\xED": "isnt",
-    "rovn\xE1": "equals",
-    "li\u0161\xED": "differs",
-    "ano": "yep",
-    "pravda": "yep",
-    "ne": "nope",
-    "nepravda": "nope",
-    "pr\xE1zdn\xFD": "void",
-    "importovat": "summon",
-    "asynchronn\xED": "async",
-    "\u010Dekat": "await",
-    "vytvo\u0159it_proces": "spawn"
-  },
-  Romanian: {
-    "forja": "forge",
-    "crea": "forge",
-    "fi": "be",
-    "este": "be",
-    "evoca": "conjure",
-    "func\u021Bie": "conjure",
-    "func\u021Bia": "conjure",
-    "\xEEntoarce": "yield",
-    "returna": "yield",
-    "g\xE2ndi": "ponder",
-    "dac\u0103": "ponder",
-    "altfel": "otherwise",
-    "bucl\u0103": "cycle",
-    "c\xE2ttimp": "cycle",
-    "itera": "iterate",
-    "pentru": "iterate",
-    "prin": "through",
-    "\xEEn_interior": "within",
-    "\xEEn": "within",
-    "arunca": "yeet",
-    "s\u0103ri": "skip",
-    "spune": "speak",
-    "arat\u0103": "speak",
-    "afi\u0219eaz\u0103": "speak",
-    "esen\u021B\u0103": "essence",
-    "clas\u0103": "essence",
-    "extinde": "extend",
-    "sine": "self",
-    "p\u0103rinte": "super",
-    "nou": "new",
-    "\xEEncearc\u0103": "attempt",
-    "salveaz\u0103": "rescue",
-    "prinde": "rescue",
-    "de_asemenea": "also",
-    "\u0219i": "also",
-    "sau": "either",
-    "nu_este": "isnt",
-    "egal": "equals",
-    "difer\u0103": "differs",
-    "da": "yep",
-    "adev\u0103rat": "yep",
-    "nu": "nope",
-    "fals": "nope",
-    "gol": "void",
-    "importa": "summon",
-    "asincron": "async",
-    "a\u0219teapt\u0103": "await",
-    "genera": "spawn"
-  },
-  Hungarian: {
-    "kov\xE1csol": "forge",
-    "l\xE9trehoz": "forge",
-    "lenni": "be",
-    "legyen": "be",
-    "id\xE9z": "conjure",
-    "f\xFCggv\xE9ny": "conjure",
-    "visszaad": "yield",
-    "fontol": "ponder",
-    "ha": "ponder",
-    "k\xFCl\xF6nben": "otherwise",
-    "ciklus": "cycle",
-    "am\xEDg": "cycle",
-    "iter\xE1l": "iterate",
-    "minden": "iterate",
-    "kereszt\xFCl": "through",
-    "bel\xFCl": "within",
-    "ban": "within",
-    "dob": "yeet",
-    "\xE1tugor": "skip",
-    "mond": "speak",
-    "mutat": "speak",
-    "ki\xEDr": "speak",
-    "l\xE9nyeg": "essence",
-    "oszt\xE1ly": "essence",
-    "b\u0151v\xEDt": "extend",
-    "maga": "self",
-    "sz\xFCl\u0151": "super",
-    "\xFAj": "new",
-    "pr\xF3ba": "attempt",
-    "megpr\xF3b\xE1l": "attempt",
-    "ment": "rescue",
-    "elkap": "rescue",
-    "is": "also",
-    "\xE9s": "also",
-    "vagy": "either",
-    "nem": "isnt",
-    "egyenl\u0151": "equals",
-    "k\xFCl\xF6nb\xF6zik": "differs",
-    "igen": "yep",
-    "igaz": "yep",
-    "hamis": "nope",
-    "\xFCres": "void",
-    "beh\xEDv": "summon",
-    "import\xE1l": "summon",
-    "aszinkron": "async",
-    "v\xE1r": "await",
-    "ind\xEDt": "spawn"
-  },
-  Bulgarian: {
-    // forge — create / declare a variable. Accept many natural verbs.
-    "\u0438\u0437\u043A\u043E\u0432\u0430": "forge",
-    "\u0438\u0437\u043A\u043E\u0432\u0430\u0439": "forge",
-    "\u0441\u044A\u0437\u0434\u0430\u0439": "forge",
-    "\u0441\u044A\u0437\u0434\u0430\u043C": "forge",
-    "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043C": "forge",
-    "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435": "forge",
-    "\u043D\u0430\u043F\u0440\u0430\u0432\u0438": "forge",
-    "\u043D\u0430\u043F\u0440\u0430\u0432\u044F": "forge",
-    "\u043F\u0440\u0430\u0432\u044F": "forge",
-    "\u043D\u0435\u043A\u0430": "forge",
-    "\u0434\u0435\u0444\u0438\u043D\u0438\u0440\u0430\u0439": "forge",
-    "\u0434\u0435\u0444\u0438\u043D\u0438\u0446\u0438\u044F": "forge",
-    "\u043E\u0431\u044F\u0432\u0438": "forge",
-    "\u043E\u0431\u044F\u0432\u044F\u0432\u0430\u043C": "forge",
-    "\u043F\u0440\u0438\u0435\u043C\u0438": "forge",
-    "\u0432\u0437\u0435\u043C\u0438": "forge",
-    "\u0438\u043C\u0430\u043C\u0435": "forge",
-    "\u0438\u043C\u0430\u043C": "forge",
-    // be — assignment / equality binding
-    "\u0431\u044A\u0434\u0435": "be",
-    "\u0434\u0430_\u0431\u044A\u0434\u0435": "be",
-    "\u0431\u044A\u0434\u0430": "be",
-    "\u0435": "be",
-    "\u0434\u0430_\u0435": "be",
-    "\u0441\u0430": "be",
-    "\u0441\u0442\u0430\u0432\u0430": "be",
-    "\u0434\u0430_\u0441\u0442\u0430\u043D\u0435": "be",
-    "\u0441\u0442\u0430\u043D\u0435": "be",
-    "\u0440\u0430\u0432\u043D\u044F\u0432\u0430\u043D\u0435": "be",
-    "\u043F\u0440\u0438\u0441\u0432\u043E\u0439": "be",
-    "\u043F\u0440\u0438\u0441\u0432\u043E\u044F\u0432\u0430\u043C": "be",
-    "\u0441\u044A\u0441_\u0441\u0442\u043E\u0439\u043D\u043E\u0441\u0442": "be",
-    // conjure — function / method definition
-    "\u0438\u0437\u0432\u0438\u043A\u0430\u0439": "conjure",
-    "\u0438\u0437\u0432\u0438\u043A\u0432\u0430\u043D\u0435": "conjure",
-    "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
-    "\u043C\u0435\u0442\u043E\u0434": "conjure",
-    "\u043F\u0440\u043E\u0446\u0435\u0434\u0443\u0440\u0430": "conjure",
-    "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u0438\u0440\u0430\u0439": "conjure",
-    // yield — return value
-    "\u0432\u044A\u0440\u043D\u0438": "yield",
-    "\u0432\u0440\u044A\u0449\u0430\u043C": "yield",
-    "\u0432\u0440\u044A\u0449\u0430\u0439": "yield",
-    "\u043E\u0442\u0433\u043E\u0432\u043E\u0440\u0438": "yield",
-    "\u0434\u0430\u0439": "yield",
-    // ponder — if / conditional
-    "\u043E\u0431\u043C\u0438\u0441\u043B\u0438": "ponder",
-    "\u0430\u043A\u043E": "ponder",
-    "\u043A\u043E\u0433\u0430\u0442\u043E": "ponder",
-    "\u0432_\u0441\u043B\u0443\u0447\u0430\u0439": "ponder",
-    "\u043F\u0440\u0438_\u0443\u0441\u043B\u043E\u0432\u0438\u0435": "ponder",
-    "\u043F\u0440\u043E\u0432\u0435\u0440\u0438": "ponder",
-    // otherwise — else
-    "\u0438\u043D\u0430\u0447\u0435": "otherwise",
-    "\u0432_\u043F\u0440\u043E\u0442\u0438\u0432\u0435\u043D_\u0441\u043B\u0443\u0447\u0430\u0439": "otherwise",
-    "\u0438\u043D\u0430\u0447\u0435_\u0430\u043A\u043E": "otherwise",
-    "\u043E\u0431\u0440\u0430\u0442\u043D\u043E": "otherwise",
-    "\u0430\u043A\u043E_\u043D\u0435": "otherwise",
-    // cycle — while loop
-    "\u0446\u0438\u043A\u044A\u043B": "cycle",
-    "\u0434\u043E\u043A\u0430\u0442\u043E": "cycle",
-    "\u043F\u043E\u0432\u0442\u0430\u0440\u044F\u0439": "cycle",
-    "\u043F\u043E\u0432\u0442\u043E\u0440\u0438": "cycle",
-    "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0430\u0432\u0430\u0439": "cycle",
-    "\u0432\u044A\u0440\u0442\u0438": "cycle",
-    "\u0432\u044A\u0440\u0442\u0438_\u0441\u0435": "cycle",
-    // iterate — for loop
-    "\u043E\u0431\u0445\u043E\u0434\u0438": "iterate",
-    "\u043E\u0431\u0445\u043E\u0436\u0434\u0430\u0439": "iterate",
-    "\u0437\u0430_\u0432\u0441\u0435\u043A\u0438": "iterate",
-    "\u0437\u0430": "iterate",
-    "\u0432\u0441\u0435\u043A\u0438": "iterate",
-    "\u0438\u0442\u0435\u0440\u0438\u0440\u0430\u0439": "iterate",
-    "\u043C\u0438\u043D\u0430\u0432\u0430\u0439_\u043F\u0440\u0435\u0437": "iterate",
-    // through — over a collection
-    "\u043F\u0440\u0435\u0437": "through",
-    "\u043F\u043E": "through",
-    "\u043D\u0430\u0434": "through",
-    // within — in / inside
-    "\u0432\u044A\u0442\u0440\u0435": "within",
-    "\u0432\u044A\u0442\u0440\u0435_\u0432": "within",
-    "\u0432": "within",
-    "\u0441\u0440\u0435\u0434": "within",
-    // yeet — throw / break
-    "\u0445\u0432\u044A\u0440\u043B\u0438": "yeet",
-    "\u0445\u0432\u044A\u0440\u043B\u044F\u043C": "yeet",
-    "\u0441\u0447\u0443\u043F\u0438": "yeet",
-    "\u043F\u0440\u0435\u043A\u044A\u0441\u043D\u0438": "yeet",
-    "\u0441\u043F\u0440\u0438": "yeet",
-    "\u0438\u0437\u043B\u0435\u0437": "yeet",
-    "\u043A\u0440\u0430\u0439": "yeet",
-    // skip — continue
-    "\u043F\u0440\u0435\u0441\u043A\u043E\u0447\u0438": "skip",
-    "\u043F\u0440\u043E\u043F\u0443\u0441\u043D\u0438": "skip",
-    "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438": "skip",
-    "\u0441\u043B\u0435\u0434\u0432\u0430\u0449": "skip",
-    // speak — print / output
-    "\u043A\u0430\u0436\u0438": "speak",
-    "\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
-    "\u0438\u0437\u043A\u0440\u0435\u0449\u0438": "speak",
-    "\u043F\u043E\u043A\u0430\u0436\u0438": "speak",
-    "\u043F\u043E\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
-    "\u0438\u0437\u0432\u0435\u0434\u0438": "speak",
-    "\u0438\u0437\u0432\u0435\u0436\u0434\u0430\u0439": "speak",
-    "\u043E\u0442\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
-    "\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
-    "\u0438\u0437\u043F\u0438\u0448\u0438": "speak",
-    "\u043F\u0438\u0448\u0438": "speak",
-    "\u043D\u0430\u043F\u0438\u0448\u0438": "speak",
-    "\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439": "speak",
-    "\u043F\u0440\u0438\u043D\u0442": "speak",
-    "\u043B\u043E\u0433\u043D\u0438": "speak",
-    "\u0441\u044A\u043E\u0431\u0449\u0438": "speak",
-    // essence — class
-    "\u0441\u044A\u0449\u043D\u043E\u0441\u0442": "essence",
-    "\u043A\u043B\u0430\u0441": "essence",
-    "\u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430": "essence",
-    "\u0435\u0441\u0435\u043D\u0446\u0438\u044F": "essence",
-    "\u0435\u0441\u0435\u043D\u0446\u0438\u044F_\u043D\u0430": "essence",
-    // extend — inherit
-    "\u0440\u0430\u0437\u0448\u0438\u0440\u0438": "extend",
-    "\u0440\u0430\u0437\u0448\u0438\u0440\u044F\u0432\u0430\u043D\u0435": "extend",
-    "\u043D\u0430\u0441\u043B\u0435\u0434\u0438": "extend",
-    "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430\u043D\u0435": "extend",
-    "\u043F\u0440\u043E\u0438\u0437\u043B\u0438\u0437\u0430": "extend",
-    // self / super
-    "\u0441\u0435\u0431\u0435_\u0441\u0438": "self",
-    "\u0441\u0435\u0431\u0435": "self",
-    "\u0442\u043E\u0437\u0438": "self",
-    "\u0442\u0430\u0437\u0438": "self",
-    "\u0440\u043E\u0434\u0438\u0442\u0435\u043B": "super",
-    "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F\u0442": "super",
-    "\u043D\u0430\u0441\u043B\u0435\u0434\u043D\u0438\u043A": "super",
-    "\u0431\u0430\u0449\u0430": "super",
-    // new — instantiate
-    "\u043D\u043E\u0432": "new",
-    "\u043D\u043E\u0432\u043E": "new",
-    "\u043D\u043E\u0432\u0430": "new",
-    "\u0441\u044A\u0437\u0434\u0430\u0439_\u043D\u043E\u0432": "new",
-    "\u0438\u043D\u0441\u0442\u0430\u043D\u0446\u0438\u044F": "new",
-    // init — constructor method name (not a keyword, but the runtime looks for `init`)
-    "\u0438\u043D\u0438\u0442": "init",
-    "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440": "init",
-    "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435_\u043D\u0430": "init",
-    "\u043D\u0430\u0447\u0430\u043B\u043E": "init",
-    // attempt / rescue
-    "\u043E\u043F\u0438\u0442\u0430\u0439": "attempt",
-    "\u043E\u043F\u0438\u0442\u0432\u0430\u0439": "attempt",
-    "\u043F\u0440\u043E\u0431\u0432\u0430\u0439": "attempt",
-    "\u043E\u043F\u0438\u0442_\u0437\u0430": "attempt",
-    "\u0441\u043F\u0430\u0441\u0438": "rescue",
-    "\u0445\u0432\u0430\u043D\u0438": "rescue",
-    "\u043F\u0440\u0438\u0445\u0432\u0430\u043D\u0438": "rescue",
-    "\u043F\u0440\u0438_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
-    "\u0430\u043A\u043E_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
-    "\u0443\u043B\u043E\u0432\u0438": "rescue",
-    // logical
-    "\u0441\u044A\u0449\u043E": "also",
-    "\u0438": "also",
-    "\u043A\u0430\u043A\u0442\u043E_\u0438": "also",
-    "\u0438\u043B\u0438": "either",
-    "\u0431\u0438\u043B\u043E_\u0442\u043E": "either",
-    "\u043D\u0435_\u0435": "isnt",
-    "\u043D\u0435": "isnt",
-    "\u0440\u0430\u0432\u043D\u043E": "equals",
-    "\u0440\u0430\u0432\u043D\u043E_\u043D\u0430": "equals",
-    "\u0435\u0434\u043D\u0430\u043A\u0432\u043E": "equals",
-    "\u0441\u044A\u0449\u043E\u0442\u043E": "equals",
-    "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E": "differs",
-    "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E_\u043E\u0442": "differs",
-    "\u043D\u0435_\u0440\u0430\u0432\u043D\u043E": "differs",
-    // booleans
-    "\u0434\u0430": "yep",
-    "\u0432\u044F\u0440\u043D\u043E": "yep",
-    "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
-    "\u0438\u0441\u0442\u0438\u043D\u043D\u043E": "yep",
-    "\u0438\u0441\u0442\u0438\u043D\u0441\u043A\u043E": "yep",
-    "\u043D\u0435\u0432\u044F\u0440\u043D\u043E": "nope",
-    "\u043B\u044A\u0436\u0430": "nope",
-    "\u0433\u0440\u0435\u0448\u043D\u043E": "nope",
-    "\u043D\u0435\u0438\u0441\u0442\u0438\u043D\u0430": "nope",
-    // void / null
-    "\u043F\u0440\u0430\u0437\u043D\u043E": "void",
-    "\u043D\u0438\u0449\u043E": "void",
-    "\u043D\u0443\u043B\u0430": "void",
-    "\u043D\u0443\u043B\u0435\u0432\u0430": "void",
-    "\u043B\u0438\u043F\u0441\u0432\u0430": "void",
-    // summon — import
-    "\u043F\u0440\u0438\u0437\u043E\u0432\u0438": "summon",
-    "\u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u0430\u0439": "summon",
-    "\u0432\u043D\u0435\u0441\u0438": "summon",
-    "\u0432\u043A\u0430\u0440\u0430\u0439": "summon",
-    "\u0432\u043A\u043B\u044E\u0447\u0438": "summon",
-    "\u0437\u0430\u0440\u0435\u0434\u0438": "summon",
-    "\u0438\u0437\u043F\u043E\u043B\u0437\u0432\u0430\u0439": "summon",
-    // async / await / spawn
-    "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0435\u043D": "async",
-    "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u043E": "async",
-    "\u043F\u0430\u0440\u0430\u043B\u0435\u043B\u043D\u043E": "async",
-    "\u0438\u0437\u0447\u0430\u043A\u0430\u0439": "await",
-    "\u0447\u0430\u043A\u0430\u0439": "await",
-    "\u043F\u043E\u0447\u0430\u043A\u0430\u0439": "await",
-    "\u043F\u043E\u0440\u043E\u0434\u0438": "spawn",
-    "\u0441\u0442\u0430\u0440\u0442\u0438\u0440\u0430\u0439": "spawn",
-    "\u043F\u0443\u0441\u043D\u0438": "spawn",
-    "\u0438\u0437\u043F\u044A\u043B\u043D\u0438": "spawn"
-  }
-};
-var SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
-var PHRASE_NORMALIZATIONS = {};
-function buildPhraseNormalizations(lang) {
-  if (PHRASE_NORMALIZATIONS[lang]) return PHRASE_NORMALIZATIONS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return PHRASE_NORMALIZATIONS[lang] = [];
-  const phrases = Object.keys(table).filter((k) => k.includes("_"));
-  const result = phrases.map((p) => {
-    const spaced = p.replace(/_/g, "\\s+");
-    return [new RegExp(`(^|[^\\p{L}\\p{N}_])${spaced}(?=$|[^\\p{L}\\p{N}_])`, "gu"), `$1${p}`];
-  });
-  PHRASE_NORMALIZATIONS[lang] = result;
-  return result;
-}
-var COMPILED_REPLACERS = {};
-function compileReplacer(lang) {
-  if (COMPILED_REPLACERS[lang]) return COMPILED_REPLACERS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return COMPILED_REPLACERS[lang] = (s) => s;
-  const entries = Object.entries(table).sort((a, b) => b[0].length - a[0].length);
-  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = entries.map(([k]) => escape(k)).join("|");
-  if (!pattern) return COMPILED_REPLACERS[lang] = (s) => s;
-  const re = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, "gu");
-  const map = new Map(entries);
-  const fn2 = (src) => {
-    return src.replace(re, (_m, pre, word) => {
-      const repl = map.get(word) ?? word;
-      return pre + repl;
-    });
-  };
-  COMPILED_REPLACERS[lang] = fn2;
-  return fn2;
-}
-function segmentSource(source) {
-  const segs = [];
-  let i = 0;
-  let buf = "";
-  const flush = (code) => {
-    if (buf) {
-      segs.push({ code, text: buf });
-      buf = "";
-    }
-  };
-  while (i < source.length) {
-    const c = source[i];
-    if (c === "/" && source[i + 1] === "/" || c === "#") {
-      flush(true);
-      const end = source.indexOf("\n", i);
-      const stop = end === -1 ? source.length : end;
-      segs.push({ code: false, text: source.slice(i, stop) });
-      i = stop;
-      continue;
-    }
-    if (c === '"' || c === "'" || c === "`") {
-      flush(true);
-      const quote = c;
-      let j = i + 1;
-      while (j < source.length) {
-        if (source[j] === "\\") {
-          j += 2;
-          continue;
-        }
-        if (source[j] === quote) {
-          j++;
-          break;
-        }
-        j++;
-      }
-      segs.push({ code: false, text: source.slice(i, j) });
-      i = j;
-      continue;
-    }
-    buf += c;
-    i++;
-  }
-  flush(true);
-  return segs;
-}
-function hasNonAscii(code) {
-  return /[^\x00-\x7F]/.test(code);
-}
-function detectLanguage(source) {
-  const englishHits = (source.match(/\b(forge|be|conjure|ponder|cycle|speak|yield)\b/g) || []).length;
-  let bestLang = null;
-  let bestScore = 0;
-  for (const lang of SUPPORTED_LANGUAGES) {
-    const table = KEYWORD_TABLES[lang];
-    let score = 0;
-    for (const word of Object.keys(table)) {
-      if (source.includes(word)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestLang = lang;
-    }
-  }
-  if (bestScore >= 2 && bestScore > englishHits) return bestLang;
-  return null;
-}
-function translateSource(source, sourceLanguage = "auto") {
-  if (!source) return { translated: source, detectedLanguage: null };
-  let lang = sourceLanguage;
-  if (lang === "English") return { translated: source, detectedLanguage: "English" };
-  if (!lang || lang === "auto") {
-    if (!hasNonAscii(source)) {
-      const detected = detectLanguage(source);
-      if (!detected) return { translated: source, detectedLanguage: null };
-      lang = detected;
-    } else {
-      lang = detectLanguage(source);
-      if (!lang) return { translated: source, detectedLanguage: null };
-    }
-  }
-  if (!KEYWORD_TABLES[lang]) {
-    return { translated: source, detectedLanguage: null };
-  }
-  const replace = compileReplacer(lang);
-  const phraseNorms = buildPhraseNormalizations(lang);
-  const fuzzy = compileFuzzyReplacer(lang);
-  const segments = segmentSource(source);
-  const translated = segments.map((seg) => {
-    if (!seg.code) return seg.text;
-    let t = seg.text;
-    for (const [re, repl] of phraseNorms) {
-      t = t.replace(re, repl);
-    }
-    t = replace(t);
-    t = fuzzy(t);
-    t = t.replace(
-      /\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu,
-      "conjure$1"
-    );
-    return t;
-  }).join("");
-  return { translated, detectedLanguage: lang };
-}
-function levenshtein(a, b) {
-  if (a === b) return 0;
-  const al = a.length, bl = b.length;
-  if (al === 0) return bl;
-  if (bl === 0) return al;
-  let prev = new Array(bl + 1);
-  let curr = new Array(bl + 1);
-  for (let j = 0; j <= bl; j++) prev[j] = j;
-  for (let i = 1; i <= al; i++) {
-    curr[0] = i;
-    for (let j = 1; j <= bl; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
-    }
-    [prev, curr] = [curr, prev];
-  }
-  return prev[bl];
-}
-var FUZZY_REPLACERS = {};
-function compileFuzzyReplacer(lang) {
-  if (FUZZY_REPLACERS[lang]) return FUZZY_REPLACERS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return FUZZY_REPLACERS[lang] = (s) => s;
-  const keys = Object.keys(table).filter((k) => !k.includes("_") && [...k].length >= 3);
-  const keysByFirstChar = /* @__PURE__ */ new Map();
-  for (const k of keys) {
-    const c = k[0].toLowerCase();
-    if (!keysByFirstChar.has(c)) keysByFirstChar.set(c, []);
-    keysByFirstChar.get(c).push(k);
-  }
-  const wordRe = /[\p{L}][\p{L}\p{N}_]*/gu;
-  const IDENT_INTRODUCERS = /* @__PURE__ */ new Set([
-    "forge",
-    "be",
-    "new",
-    "essence",
-    "conjure",
-    "extend",
-    "summon",
-    "within"
-  ]);
-  const fn2 = (src) => {
-    let prevToken = "";
-    return src.replace(wordRe, (word, offset) => {
-      if (/^[\x00-\x7F]+$/.test(word)) {
-        prevToken = word.toLowerCase();
-        return word;
-      }
-      const lower = word.toLowerCase();
-      if (table[lower]) {
-        const out = table[lower];
-        prevToken = out;
-        return out;
-      }
-      const prevChar = offset > 0 ? src[offset - 1] : "";
-      if (prevChar === "." || IDENT_INTRODUCERS.has(prevToken)) {
-        prevToken = lower;
-        return word;
-      }
-      if ([...lower].length < 4) {
-        prevToken = lower;
-        return word;
-      }
-      const threshold = [...lower].length >= 6 ? 2 : 1;
-      const candidates = keysByFirstChar.get(lower[0]) ?? [];
-      let best = null;
-      for (const k of candidates) {
-        if (Math.abs(k.length - lower.length) > threshold) continue;
-        const d = levenshtein(lower, k);
-        if (d <= threshold && (!best || d < best.dist)) {
-          best = { key: k, dist: d };
-          if (d === 0) break;
-        }
-      }
-      if (best) {
-        const out = table[best.key];
-        prevToken = out;
-        return out;
-      }
-      prevToken = lower;
-      return word;
-    });
-  };
-  FUZZY_REPLACERS[lang] = fn2;
-  return fn2;
-}
-
-// src/lang/lexer.ts
+init_translator();
 var Lexer = class {
   source;
   pos = 0;
@@ -13037,9 +13299,9 @@ var Lexer = class {
   /** Language detected (or used) by the built-in translator, if any. */
   detectedLanguage;
   constructor(source, options = {}) {
-    const { sourceLanguage = "auto", translate = true } = options;
+    const { sourceLanguage = "auto", translate = true, dialect = null } = options;
     if (translate && sourceLanguage !== "English" && sourceLanguage !== null) {
-      const result = translateSource(source, sourceLanguage);
+      const result = translateSource(source, sourceLanguage, { target: "v1", dialect });
       this.source = result.translated;
       this.detectedLanguage = result.detectedLanguage;
     } else {
@@ -13603,7 +13865,9 @@ var Parser = class _Parser {
     }
     this.advance();
     const value2 = this.parseExpression();
-    return this.makeAssignment(target, value2, setToken.line);
+    const node = this.makeAssignment(target, value2, setToken.line);
+    if (node.type === "AssignStatement") node.declare = true;
+    return node;
   }
   makeAssignment(target, value2, line) {
     if (target.type === "Identifier") {
@@ -14169,7 +14433,44 @@ var Parser = class _Parser {
     this.consume("DOUBLE_SEMI" /* DOUBLE_SEMI */, "Expected ';;'");
     return { type: "BlockStatement", statements, line: colonToken.line };
   }
+  /**
+   * Paren-less output commands: `say x`, `speak "hi"`, `shout a, b`.
+   * Only the output family is command-style, so ordinary expressions
+   * keep their existing meaning.
+   */
+  tryParseCommandCall() {
+    const COMMANDS = /* @__PURE__ */ new Set(["say", "speak", "whisper", "shout", "print"]);
+    const head2 = this.peek();
+    if (head2.type !== "IDENTIFIER" /* IDENTIFIER */ || !COMMANDS.has(head2.value)) return null;
+    const next = this.tokens[this.pos + 1];
+    if (!next || next.line !== head2.line) return null;
+    const STARTERS = /* @__PURE__ */ new Set([
+      "STRING" /* STRING */,
+      "NUMBER" /* NUMBER */,
+      "IDENTIFIER" /* IDENTIFIER */,
+      "LBRACKET" /* LBRACKET */,
+      "MINUS" /* MINUS */,
+      "YEP" /* YEP */,
+      "NOPE" /* NOPE */,
+      "VOID" /* VOID */,
+      "SELF" /* SELF */,
+      "ISNT" /* ISNT */
+    ]);
+    if (!STARTERS.has(next.type)) return null;
+    if (next.type === "IDENTIFIER" /* IDENTIFIER */ && (next.value === "to" || next.value === "be")) return null;
+    this.advance();
+    const args = [this.parseExpression()];
+    while (this.match("COMMA" /* COMMA */)) args.push(this.parseExpression());
+    return {
+      type: "CallExpr",
+      callee: { type: "Identifier", name: head2.value, line: head2.line },
+      args,
+      line: head2.line
+    };
+  }
   parseExpressionStatement() {
+    const command = this.tryParseCommandCall();
+    if (command) return command;
     const expr = this.parseExpression();
     if (this.check("AUGASSIGN" /* AUGASSIGN */)) {
       const op = this.advance().value.slice(0, -1);
@@ -14983,14 +15284,16 @@ init_errors();
 init_errors();
 function createBuiltins(output) {
   const builtins = /* @__PURE__ */ new Map();
-  builtins.set("speak", {
+  const speak = {
     type: "builtin",
     call: (args) => {
       const message = args.map(stringify).join(" ");
       output(message);
       return null;
     }
-  });
+  };
+  builtins.set("speak", speak);
+  builtins.set("say", speak);
   builtins.set("whisper", {
     type: "builtin",
     call: (args) => {
@@ -19142,7 +19445,8 @@ var Interpreter = class {
         return yield* this.evLet(node, env);
       case "AssignStatement": {
         const value2 = yield* this.ev(node.value, env);
-        env.set(node.name, value2, node.line);
+        if (node.declare && !env.has(node.name)) env.define(node.name, value2);
+        else env.set(node.name, value2, node.line);
         return value2;
       }
       case "AugAssignStatement":
@@ -19552,7 +19856,8 @@ var Interpreter = class {
    */
   boundBuiltin(receiver, name) {
     if (!this.globalEnv.hasOwn(name) && !this.globalEnv.hasOwn(`py_${name}`)) return void 0;
-    const candidate = this.globalEnv.hasOwn(name) ? this.globalEnv.get(name, 0) : this.globalEnv.get(`py_${name}`, 0);
+    const preferParity = receiver instanceof SdevSet && this.globalEnv.hasOwn(`py_${name}`);
+    const candidate = this.globalEnv.hasOwn(name) && !preferParity ? this.globalEnv.get(name, 0) : this.globalEnv.get(`py_${name}`, 0);
     if (!isFunction(candidate)) return void 0;
     const target = candidate;
     return {
@@ -20446,6 +20751,7 @@ var Interpreter = class {
 
 // cli/index.ts
 init_errors();
+init_translator();
 
 // src/components/ide/formatSdev.ts
 function formatSdev(code, indentSize = 2) {
@@ -25702,12 +26008,16 @@ function setExtensionEnabled(id, on) {
 async function syncExtensions(userId) {
   if (!userId) return cachedExtensions();
   try {
-    const { data } = await db2.from("sdev_extensions").select("id, name, kind, symbol, about, source, visibility").eq("user_id", userId);
+    const { data } = await db2.from("sdev_extensions").select("id, name, kind, symbol, about, source, visibility, user_id").eq("user_id", userId);
     if (Array.isArray(data)) {
-      writeJson(CACHE_KEY2, data);
-      const live = new Set(data.map((e) => e.id));
+      const own = data.map((e) => ({ ...e, owner: userId }));
+      const ownIds = new Set(own.map((e) => e.id));
+      const foreign = cachedExtensions().filter((e) => !ownIds.has(e.id) && e.owner !== userId);
+      const merged = [...foreign, ...own];
+      writeJson(CACHE_KEY2, merged);
+      const live = new Set(merged.map((e) => e.id));
       writeJson(ENABLED_KEY, enabledIds().filter((id) => live.has(id)));
-      return data;
+      return merged;
     }
   } catch {
   }
@@ -25940,7 +26250,10 @@ async function runPrepared(prepared, entryPath, opts = {}) {
       ...await resolveLibraries(prepared.code)
     };
     try {
-      const r = await runWasm2(prepared.code, modules);
+      const r = await runWasm2(prepared.code, modules, {
+        sourceLanguage: opts.lang ?? "auto",
+        dialect: prepared.dialect
+      });
       for (const line of r.output) say(line);
       return { success: r.success, error: r.error ?? void 0 };
     } catch (e) {
@@ -25952,7 +26265,10 @@ async function runPrepared(prepared, entryPath, opts = {}) {
     }
   }
   try {
-    const lexer = new Lexer(stripBoardBlocks(prepared.code), { sourceLanguage: opts.lang ?? "auto" });
+    const lexer = new Lexer(stripBoardBlocks(prepared.code), {
+      sourceLanguage: opts.lang ?? "auto",
+      dialect: prepared.dialect
+    });
     const ast = new Parser(lexer.tokenize()).parse();
     new Interpreter(say).interpret(ast);
     return { success: true };

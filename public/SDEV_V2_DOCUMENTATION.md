@@ -1498,6 +1498,51 @@ self-hosted compiler stays a fixed point.
 
 ---
 
+## Writing sdev in Your Own Language
+
+sdev is not English-only, and the translator is part of the language, not an
+editor add-on. Every entry point that reaches the toolchain — the IDE, the
+`sdev` CLI, and `runWasm` — translates the source onto the canonical v2
+surface before compiling.
+
+```sdev
+#!sdev v2
+нека възраст бъде 21
+ако възраст е 18 или повече
+  кажи("голям")
+край
+```
+
+```text
+голям
+```
+
+How it works:
+
+- **Detection** — `translateSource(src, 'auto', { target: 'v2' })` scores the
+  source against every keyword table and picks the language, or you pass one
+  (`--lang Bulgarian`, or the IDE's language picker).
+- **v2 surface** — each table entry is mapped through `V1_TO_V2`
+  (`forge → set`, `be → to`, `ponder → if`, `speak → say`, …) and extended with
+  v2-only words per language (`end`, `each`, `with`, `has`, `more`, `less`,
+  `match`, `call`). Classic v1 output is still available with `target: 'v1'`.
+- **Conditions** — languages that use one word for binding and comparison
+  (`е`, `es`, `ist`) resolve to `is` inside `if` / `while`, and to `to`
+  in `set`.
+- **Strings and comments** are never touched.
+- **Dialects** — words owned by the active dialect are protected from the
+  natural-language pass, then `canonicalize()` maps them to plain v2. So a
+  Bulgarian dialect and Bulgarian keywords can be used in the same file.
+- **Identifiers** may be written in any script. The self-hosted lexer treats
+  every UTF-8 byte as a letter, so `възраст`, `αριθμός`, and `名前` are names.
+
+```ts
+import { translateForDialect } from '@/lang';
+const { translated } = translateForDialect(src, 'auto', activeDialect, 'v2');
+```
+
+---
+
 ## Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the

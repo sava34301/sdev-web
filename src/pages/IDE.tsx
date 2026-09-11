@@ -670,7 +670,10 @@ export default function IDEPage() {
             moduleMap[f.name] = source;
             moduleMap['./' + f.name] = source;
           }
-          const r = await runWasm(rawSrc, moduleMap);
+          const r = await runWasm(rawSrc, moduleMap, {
+            sourceLanguage: selectedLanguage,
+            dialect: activeDialect,
+          });
           setOutput(r.output);
           setStatusMsg(r.success ? 'Done (v2 · self-hosted)' : `✗ ${r.error ?? 'error'}`);
         } catch (e) {
@@ -708,7 +711,7 @@ export default function IDEPage() {
     // only fires when foreign-script words remain after stage 1.
     try {
       const { translateSource } = await import('@/lang/translator');
-      const stage1 = translateSource(code, selectedLanguage);
+      const stage1 = translateSource(code, selectedLanguage, { target: 'v1', dialect: activeDialect });
       const stripped = stage1.translated
         .replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '')
         .replace(/(\/\/|#)[^\n]*/g, '');

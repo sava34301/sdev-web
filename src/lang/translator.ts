@@ -14,6 +14,7 @@
  * Multi-word phrases (e.g. "otherwise ponder", "da_bъde") are
  * supported via underscore-joined keys in the keyword tables.
  */
+import { V1_TO_V2, V2_EXTRA, TAG_TO_LANGUAGE } from './translator-v2';
 
 // ============================================================
 // Keyword tables — foreign word → canonical English sdev keyword
@@ -546,6 +547,33 @@ export const ENGLISH_KEYWORDS = new Set([
 export const SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
 
 // ============================================================
+// Surface targets — classic (v1) vs canonical sdev v2
+// ============================================================
+
+export type TranslationTarget = 'v1' | 'v2';
+
+const EFFECTIVE_TABLES: Record<string, Record<string, string>> = {};
+
+/**
+ * The keyword table actually used for a language + surface.
+ * v2 = every v1 entry mapped through V1_TO_V2, plus the v2-only extras.
+ */
+export function effectiveTable(lang: string, target: TranslationTarget = 'v1'): Record<string, string> | null {
+  const base = KEYWORD_TABLES[lang];
+  if (!base) return null;
+  if (target === 'v1') return base;
+  const key = `${lang}|v2`;
+  if (EFFECTIVE_TABLES[key]) return EFFECTIVE_TABLES[key];
+  const table: Record<string, string> = {};
+  for (const [foreign, canonical] of Object.entries(base)) {
+    table[foreign] = V1_TO_V2[canonical] ?? canonical;
+  }
+  Object.assign(table, V2_EXTRA[lang] ?? {});
+  EFFECTIVE_TABLES[key] = table;
+  return table;
+}
+
+// ============================================================
 // Multi-word phrase normalization
 // ------------------------------------------------------------
 // Some keywords are space-separated phrases (e.g. "в противен случай").
@@ -554,10 +582,11 @@ export const SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
 // ============================================================
 
 const PHRASE_NORMALIZATIONS: Record<string, [RegExp, string][]> = {};
-function buildPhraseNormalizations(lang: string): [RegExp, string][] {
-  if (PHRASE_NORMALIZATIONS[lang]) return PHRASE_NORMALIZATIONS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return (PHRASE_NORMALIZATIONS[lang] = []);
+function buildPhraseNormalizations(lang: string, target: TranslationTarget = 'v1'): [RegExp, string][] {
+  const key = `${lang}|${target}`;
+  if (PHRASE_NORMALIZATIONS[key]) return PHRASE_NORMALIZATIONS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return (PHRASE_NORMALIZATIONS[key] = []);
   const phrases = Object.keys(table).filter(k => k.includes('_'));
   // Convert "в_противен_случай" → matcher for "в противен случай"
   const result: [RegExp, string][] = phrases.map(p => {
@@ -566,7 +595,7 @@ function buildPhraseNormalizations(lang: string): [RegExp, string][] {
     // Negative lookarounds prevent partial-word matches inside identifiers.
     return [new RegExp(`(^|[^\\p{L}\\p{N}_])${spaced}(?=$|[^\\p{L}\\p{N}_])`, 'gu'), `$1${p}`];
   });
-  PHRASE_NORMALIZATIONS[lang] = result;
+  PHRASE_NORMALIZATIONS[key] = result;
   return result;
 }
 
@@ -574,12 +603,13 @@ function buildPhraseNormalizations(lang: string): [RegExp, string][] {
 // Compiled per-language word→word replacer
 // ============================================================
 
-const COMPILED_REPLACERS: Record<string, (s: string) => string> = {};
+const COMPILED_REPLACERS: Record<string, (s: string, protect?: ReadonlySet<string>) => string> = {};
 
-function compileReplacer(lang: string): (s: string) => string {
-  if (COMPILED_REPLACERS[lang]) return COMPILED_REPLACERS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return (COMPILED_REPLACERS[lang] = (s) => s);
+function compileReplacer(lang: string, target: TranslationTarget = 'v1'): (s: string, protect?: ReadonlySet<string>) => string {
+  const key = `${lang}|${target}`;
+  if (COMPILED_REPLACERS[key]) return COMPILED_REPLACERS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return (COMPILED_REPLACERS[key] = (s) => s);
 
   // Sort by length DESC to avoid prefix-collision (e.g. "не" before "не_е").
   const entries = Object.entries(table).sort((a, b) => b[0].length - a[0].length);
@@ -589,20 +619,22 @@ function compileReplacer(lang: string): (s: string) => string {
 
   // Build one big alternation regex with Unicode word-boundary lookarounds.
   const pattern = entries.map(([k]) => escape(k)).join('|');
-  if (!pattern) return (COMPILED_REPLACERS[lang] = (s) => s);
+  if (!pattern) return (COMPILED_REPLACERS[key] = (s) => s);
 
   // (^|non-word)(KEYWORD)(?=$|non-word)
   // \p{L} covers letters in any script; \p{N} numbers. Underscore is also "word".
   const re = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, 'gu');
   const map = new Map(entries);
 
-  const fn = (src: string): string => {
+  const fn = (src: string, protect?: ReadonlySet<string>): string => {
     return src.replace(re, (_m, pre: string, word: string) => {
+      // A dialect already gave this word a meaning — never re-translate it.
+      if (protect?.has(word)) return pre + word;
       const repl = map.get(word) ?? word;
       return pre + repl;
     });
   };
-  COMPILED_REPLACERS[lang] = fn;
+  COMPILED_REPLACERS[key] = fn;
   return fn;
 }
 
@@ -665,9 +697,11 @@ export function hasNonAscii(code: string): boolean {
  * Returns the language name (e.g. "Bulgarian") or null when unsure /
  * code is already English sdev.
  */
-export function detectLanguage(source: string): string | null {
-  // Quick English check — if it parses as English sdev keywords, skip detection.
-  const englishHits = (source.match(/\b(forge|be|conjure|ponder|cycle|speak|yield)\b/g) || []).length;
+export function detectLanguage(source: string, protect?: ReadonlySet<string>): string | null {
+  // Quick English check — hits on either surface mean the code is already sdev.
+  const englishHits = (source.match(
+    /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind)\b/g,
+  ) || []).length;
 
   let bestLang: string | null = null;
   let bestScore = 0;
@@ -676,7 +710,12 @@ export function detectLanguage(source: string): string | null {
     const table = KEYWORD_TABLES[lang];
     let score = 0;
     for (const word of Object.keys(table)) {
+      if (protect?.has(word)) continue;
       // Cheap substring count — good enough for heuristic detection.
+      if (source.includes(word)) score++;
+    }
+    for (const word of Object.keys(V2_EXTRA[lang] ?? {})) {
+      if (protect?.has(word)) continue;
       if (source.includes(word)) score++;
     }
     if (score > bestScore) {
@@ -690,42 +729,79 @@ export function detectLanguage(source: string): string | null {
   return null;
 }
 
+/** The bits of a dialect spec the translator needs (structural, no import cycle). */
+export interface TranslatorDialect {
+  meta?: { languages?: string[] };
+  names?: Record<string, string>;
+  synonyms?: Record<string, string[]>;
+  constructs?: { functions?: { name: string }[] };
+}
+
+export interface TranslateOptions {
+  /** Which sdev surface to translate INTO. Default: the classic v1 surface. */
+  target?: TranslationTarget;
+  /** Extra words that must survive untouched (identifiers, dialect words). */
+  protect?: Iterable<string>;
+  /**
+   * Active dialect. Its surface words are protected, and its declared
+   * languages act as a detection hint when `sourceLanguage` is "auto".
+   */
+  dialect?: TranslatorDialect | null;
+}
+
+/** Every word an active dialect owns — these are already meaningful sdev. */
+export function dialectWords(spec: TranslatorDialect | null | undefined): Set<string> {
+  const words = new Set<string>();
+  if (!spec) return words;
+  for (const w of Object.values(spec.names ?? {})) words.add(w);
+  for (const list of Object.values(spec.synonyms ?? {})) for (const w of list) words.add(w);
+  for (const fn of spec.constructs?.functions ?? []) words.add(fn.name);
+  return words;
+}
+
+/** The translator language a dialect implies, from its declared tags. */
+export function dialectLanguageHint(spec: TranslatorDialect | null | undefined): string | null {
+  for (const tag of spec?.meta?.languages ?? []) {
+    const name = TAG_TO_LANGUAGE[tag.toLowerCase().split('-')[0]];
+    if (name && name !== 'English' && KEYWORD_TABLES[name]) return name;
+  }
+  return null;
+}
+
 /**
  * Translate sdev source code from a given (or auto-detected) language
  * to canonical English sdev. Synchronous, deterministic, network-free.
  *
  *   - sourceLanguage: explicit language name, "auto" (detect), or
  *                     "English"/null (no-op).
+ *   - target: "v1" (forge/ponder/speak) or "v2" (set/if/say).
  *   - Strings and comments are never modified.
- *   - Identifiers that are not keywords are left untouched.
+ *   - Identifiers, and any word the active dialect owns, stay untouched.
  */
 export function translateSource(
   source: string,
-  sourceLanguage: string | null = 'auto'
+  sourceLanguage: string | null = 'auto',
+  options: TranslateOptions = {},
 ): { translated: string; detectedLanguage: string | null } {
   if (!source) return { translated: source, detectedLanguage: null };
+
+  const target: TranslationTarget = options.target ?? 'v1';
+  const protect = new Set<string>([...(options.protect ?? []), ...dialectWords(options.dialect)]);
 
   let lang = sourceLanguage;
   if (lang === 'English') return { translated: source, detectedLanguage: 'English' };
   if (!lang || lang === 'auto') {
-    // Skip entirely if pure ASCII AND no obvious foreign-language hits.
-    if (!hasNonAscii(source)) {
-      const detected = detectLanguage(source);
-      if (!detected) return { translated: source, detectedLanguage: null };
-      lang = detected;
-    } else {
-      lang = detectLanguage(source);
-      if (!lang) return { translated: source, detectedLanguage: null };
-    }
+    lang = detectLanguage(source, protect) ?? dialectLanguageHint(options.dialect);
+    if (!lang) return { translated: source, detectedLanguage: null };
   }
 
   if (!KEYWORD_TABLES[lang]) {
     return { translated: source, detectedLanguage: null };
   }
 
-  const replace = compileReplacer(lang);
-  const phraseNorms = buildPhraseNormalizations(lang);
-  const fuzzy = compileFuzzyReplacer(lang);
+  const replace = compileReplacer(lang, target);
+  const phraseNorms = buildPhraseNormalizations(lang, target);
+  const fuzzy = compileFuzzyReplacer(lang, target);
 
   const segments = segmentSource(source);
   const translated = segments
@@ -737,21 +813,46 @@ export function translateSource(
         t = t.replace(re, repl);
       }
       // Then exact word-by-word replacement.
-      t = replace(t);
+      t = replace(t, protect);
       // Finally, fuzzy match anything that looks like an unconverted foreign keyword.
-      t = fuzzy(t);
-      // Context fix: `forge name(` is really a method/function declaration in
-      // most natural languages where "create" covers both vars and functions
-      // (e.g. Bulgarian `създай`). Rewrite to `conjure name(`.
-      t = t.replace(
-        /\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu,
-        'conjure$1'
-      );
+      t = fuzzy(t, protect);
+      if (target === 'v1') {
+        // Context fix: `forge name(` is really a method/function declaration in
+        // most natural languages where "create" covers both vars and functions
+        // (e.g. Bulgarian `създай`). Rewrite to `conjure name(`.
+        t = t.replace(/\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, 'conjure$1');
+      } else {
+        // v2: `set name(` / `set name with` is a function declaration -> `to name`.
+        t = t.replace(/\bset(\s+[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, 'to$1');
+        // Many languages use one word ("е", "es", "ist") for both binding and
+        // comparison. Inside a condition it means `is`, not the `set … to` word.
+        t = t
+          .split('\n')
+          .map((line) =>
+            /^\s*(if|while)\b/.test(line)
+              ? line.replace(/(^\s*(?:if|while)\b[^\n]*?)\s+to\s+/, '$1 is ')
+              : line,
+          )
+          .join('\n');
+      }
       return t;
     })
     .join('');
 
   return { translated, detectedLanguage: lang };
+}
+
+/**
+ * Canonical entry point for every runtime: dialect surface first, then the
+ * natural-language pass, producing canonical sdev on the requested surface.
+ */
+export function translateForDialect(
+  source: string,
+  sourceLanguage: string | null,
+  dialect: TranslatorDialect | null,
+  target: TranslationTarget = 'v2',
+): { translated: string; detectedLanguage: string | null } {
+  return translateSource(source, sourceLanguage, { target, dialect });
 }
 
 // ============================================================
@@ -779,12 +880,13 @@ function levenshtein(a: string, b: string): number {
   return prev[bl];
 }
 
-const FUZZY_REPLACERS: Record<string, (s: string) => string> = {};
+const FUZZY_REPLACERS: Record<string, (s: string, protect?: ReadonlySet<string>) => string> = {};
 
-function compileFuzzyReplacer(lang: string): (s: string) => string {
-  if (FUZZY_REPLACERS[lang]) return FUZZY_REPLACERS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return (FUZZY_REPLACERS[lang] = (s) => s);
+function compileFuzzyReplacer(lang: string, target: TranslationTarget = 'v1'): (s: string, protect?: ReadonlySet<string>) => string {
+  const cacheKey = `${lang}|${target}`;
+  if (FUZZY_REPLACERS[cacheKey]) return FUZZY_REPLACERS[cacheKey];
+  const table = effectiveTable(lang, target);
+  if (!table) return (FUZZY_REPLACERS[cacheKey] = (s) => s);
 
   // Precompute keyword keys (only non-phrase, length ≥ 3 to avoid false positives).
   const keys = Object.keys(table).filter(k => !k.includes('_') && [...k].length >= 3);
@@ -803,15 +905,22 @@ function compileFuzzyReplacer(lang: string): (s: string) => string {
   // `съобщение` get rewritten to `speak`.
   const IDENT_INTRODUCERS = new Set([
     'forge', 'be', 'new', 'essence', 'conjure', 'extend', 'summon', 'within',
+    // v2 surface equivalents
+    'set', 'to', 'kind', 'use', 'in', 'extends', 'has', 'does',
   ]);
 
-  const fn = (src: string): string => {
+  const fn = (src: string, protect?: ReadonlySet<string>): string => {
     // Track the previous emitted token (post-translation) so we know whether
     // the current word is in identifier position.
     let prevToken = '';
     return src.replace(wordRe, (word, offset) => {
       // Skip pure ASCII — those are real identifiers or already-English keywords.
       if (/^[\x00-\x7F]+$/.test(word)) {
+        prevToken = word.toLowerCase();
+        return word;
+      }
+      // A dialect owns this word — leave it exactly as written.
+      if (protect?.has(word)) {
         prevToken = word.toLowerCase();
         return word;
       }
@@ -858,6 +967,6 @@ function compileFuzzyReplacer(lang: string): (s: string) => string {
       return word;
     });
   };
-  FUZZY_REPLACERS[lang] = fn;
+  FUZZY_REPLACERS[cacheKey] = fn;
   return fn;
 }

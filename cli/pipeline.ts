@@ -122,7 +122,10 @@ export async function runPrepared(
       ...(await resolveLibraries(prepared.code)),
     };
     try {
-      const r = await runWasm(prepared.code, modules);
+      const r = await runWasm(prepared.code, modules, {
+        sourceLanguage: opts.lang ?? 'auto',
+        dialect: prepared.dialect,
+      });
       for (const line of r.output) say(line);
       return { success: r.success, error: r.error ?? undefined };
     } catch (e) {
@@ -135,7 +138,10 @@ export async function runPrepared(
   }
 
   try {
-    const lexer = new Lexer(stripBoardBlocks(prepared.code), { sourceLanguage: opts.lang ?? 'auto' });
+    const lexer = new Lexer(stripBoardBlocks(prepared.code), {
+      sourceLanguage: opts.lang ?? 'auto',
+      dialect: prepared.dialect,
+    });
     const ast = new Parser(lexer.tokenize()).parse();
     new Interpreter(say).interpret(ast);
     return { success: true };

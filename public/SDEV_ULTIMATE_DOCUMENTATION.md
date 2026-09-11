@@ -4,7 +4,7 @@
 > machine, native backend, standard library, machine-learning stack, hardware,
 > GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-08-23 by
+> Created by **Sava Milanov**. Generated on 2026-09-11 by
 > `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
 > guides or the implementation and re-run the generator.
 
@@ -1655,6 +1655,51 @@ Under the hood this is a source→source prelink pass that exists twice, in
 lockstep: `prelink()` in the JS bootstrap and `prelink_source` in
 `lang/compiler/codegen.sdev`, both producing byte-identical text so the
 self-hosted compiler stays a fixed point.
+
+---
+
+#### Writing sdev in Your Own Language
+
+sdev is not English-only, and the translator is part of the language, not an
+editor add-on. Every entry point that reaches the toolchain — the IDE, the
+`sdev` CLI, and `runWasm` — translates the source onto the canonical v2
+surface before compiling.
+
+```sdev
+#!sdev v2
+нека възраст бъде 21
+ако възраст е 18 или повече
+  кажи("голям")
+край
+```
+
+```text
+голям
+```
+
+How it works:
+
+- **Detection** — `translateSource(src, 'auto', { target: 'v2' })` scores the
+  source against every keyword table and picks the language, or you pass one
+  (`--lang Bulgarian`, or the IDE's language picker).
+- **v2 surface** — each table entry is mapped through `V1_TO_V2`
+  (`forge → set`, `be → to`, `ponder → if`, `speak → say`, …) and extended with
+  v2-only words per language (`end`, `each`, `with`, `has`, `more`, `less`,
+  `match`, `call`). Classic v1 output is still available with `target: 'v1'`.
+- **Conditions** — languages that use one word for binding and comparison
+  (`е`, `es`, `ist`) resolve to `is` inside `if` / `while`, and to `to`
+  in `set`.
+- **Strings and comments** are never touched.
+- **Dialects** — words owned by the active dialect are protected from the
+  natural-language pass, then `canonicalize()` maps them to plain v2. So a
+  Bulgarian dialect and Bulgarian keywords can be used in the same file.
+- **Identifiers** may be written in any script. The self-hosted lexer treats
+  every UTF-8 byte as a letter, so `възраст`, `αριθμός`, and `名前` are names.
+
+```ts
+import { translateForDialect } from '@/lang';
+const { translated } = translateForDialect(src, 'auto', activeDialect, 'v2');
+```
 
 ---
 
@@ -6255,6 +6300,88 @@ in milestone order.)
 - Parity registry: fourteen former native `n/a` entries became `should` and
   are satisfied — **must gaps 0, should gaps 0 across all three tracks.**
 
+**Milestone 6f (native closures, objects, errors, break/continue) — shipped:**
+- **Codegen** now parses through `parseWithKinds()` (exported from
+  `lang/bootstrap/compile.mjs`), so the x86-64 backend sees the same
+  desugared kind/method registry as the WASM track.
+- **Function values.** `ref f` allocates a 16-byte block
+  `[code-ptr][ncaps]`; `make with p… capture c… end` allocates
+  `[code-ptr][ncaps][cap₀…]` and stores each captured value from the
+  enclosing frame. `call f(args)` pushes arguments right→left, loads the
+  closure pointer into `%r10`, and does `call *(%r10)`; the callee copies
+  params from `16(%rbp)…` and captures from `16(%r10)…` into local slots.
+  Lambda bodies are emitted after `sdev_main` from a pending queue, so
+  nested lambdas are handled by index growth during the emit loop.
+- **Objects.** `new K` builds a tome and binds each method as a closure;
+  `o.field` and `o.field to v` compile to `sdev_tget`/`sdev_tset`, and
+  `o.m(...)` loads the method closure and binds the receiver in `%r10`.
+  Inheritance and `super` come for free from the shared desugaring.
+- **Errors.** `runtime.s` gained a 64-deep handler stack of
+  `(handler, %rsp, %rbp)` triples with `sdev_try_push`, `sdev_try_pop` and
+  `sdev_throw`; a throw restores the saved stack registers and jumps to the
+  handler with the message pointer in `%rax`. Uncaught throws print
+  `uncaught: <msg>` and exit 1.
+- **Control flow.** `break`/`continue` use a loop-label stack in the emit
+  context; `continue` in `for each` targets the index increment.
+- **Return-kind tracking** for function values: `@fnval:<var>` records what
+  a `ref`/lambda bound to a variable returns, so `say call f(x)` selects
+  `sdev_say_str` vs `sdev_say_int` correctly.
+- Tests: 62/62 in `scripts/test-native.mjs`; 87/87 fixed-point cases still
+  byte-identical.
+
+
+
+**Milestone 6i (native sequence + numeric library) — shipped:**
+- **`runtime.s`** gained `sdev_range` (list `[0 .. n-1]`, negative clamped to
+  empty), `sdev_sum` (linear add over a list's payload words), `sdev_ftan`
+  (`fptan`, discarding the pushed 1.0), `sdev_fabs` / `sdev_fneg` (`btrq` /
+  `btcq` on bit 63 of the raw double word), `sdev_i2f` (`cvtsi2sdq`),
+  `sdev_f2i` (`cvttsd2si`, truncating toward zero) and `sdev_fbyte`
+  (little-endian byte `i` of a double, 0 outside 0..7).
+- **Codegen**: `range` joins the list-typed builtins, `sum`/`f2i`/`fbyte` the
+  int-typed ones, and `tan`/`fabs`/`fneg`/`i2f` the float-typed ones, so
+  `say` keeps picking `sdev_say_int` vs `sdev_say_float` correctly and
+  `for each i in range(n)` iterates ints.
+- Tests: six new cases (81/81 in `scripts/test-native.mjs`); 87/87
+  fixed-point cases still byte-identical.
+- Parity: `range` and `sum` moved from `n/a` to `should` on the native
+  track — **must gaps 0, should gaps 0.**
+
+**Milestone 6h (native process / OS layer) — shipped:**
+
+- **`_start`** now captures `argc`, `argv` and `envp` from the initial stack
+  into `sdev_argc` / `sdev_argv` / `sdev_envp` before calling `sdev_main`.
+- **`runtime.s`** gained: `sdev_from_cstr` (length-prefixed copy of a NUL
+  terminated string), `sdev_args` (list of `argv[1..]`), `sdev_env` (linear
+  scan of `envp` for `NAME=`, `""` when unset), `sdev_exit` (`sys_exit`),
+  `sdev_now_ms` (`clock_gettime(CLOCK_REALTIME)` folded to milliseconds),
+  `sdev_sleep_ms` (`sys_nanosleep`), `sdev_append_file`
+  (`O_WRONLY|O_CREAT|O_APPEND`) and `sdev_say_err` (write to fd 2).
+- **Codegen**: `env` is string-typed, `args` list-typed with `str` elements
+  (so `for each a in args()` prints text), `append_file`/`now_ms` int-typed;
+  `exit`, `sleep_ms` and `say_err` are statement-style calls.
+- Tests: seven new cases (75/75 in `scripts/test-native.mjs`, which now
+  drives argv, a custom env, exit status and stderr); 87/87 fixed-point
+  cases still byte-identical.
+
+**Milestone 6g (native host I/O and modules) — shipped:**
+- **`runtime.s`** gained a small POSIX layer, all direct syscalls, no libc:
+  `sdev_cstr` (NUL-terminated copy of a length-prefixed string),
+  `sdev_read_file` (open/lseek/read loop, returns `""` on any error),
+  `sdev_write_file` (`O_WRONLY|O_CREAT|O_TRUNC`, mode 0644, returns 1/0),
+  `sdev_file_exists` (`access(F_OK)`), and `sdev_input`
+  (byte-at-a-time read from stdin up to a newline, 4088-byte cap).
+- **Codegen**: `read_file`/`input` join the string-typed builtins,
+  `write_file`/`file_exists` the int-typed ones, so `say read_file(p)`
+  selects `sdev_say_str` automatically.
+- **Modules**: `generateAsm(source, { readModule })` threads a resolver into
+  the shared `prelink` pass; `scripts/sdev-native.mjs` resolves `use "path"`
+  relative to the importing file first, then the CWD.
+- Tests: six new cases (68/68 in `scripts/test-native.mjs`, run in a temp
+  cwd with stdin piped); 87/87 fixed-point cases still byte-identical.
+- Parity: `read_file` / `write_file` moved from `n/a` to `should` on the
+  native track — **must gaps 0, should gaps 0.**
+
 **Milestone 5z (modules — `use "path"`) — shipped:**
 - **No VM change.** Modules are a source→source prelink pass that runs
   before lexing, so the seed VM is untouched since 5x.
@@ -6453,11 +6580,11 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `exp` | math | `exp` | `fexp` | `exp` |
 | `log` | math | `ln` | `flog` | `log` |
 | `random` | math | `rand` | `random` | `random` |
-| `range` | list | `range` | `range` | — |
-| `sum` | list | `sum` | `sum` | — |
+| `range` | list | `range` | `range` | `range` |
+| `sum` | list | `sum` | `sum` | `sum` |
 | `keys` | tome | `tome_keys` | `keys` | `keys` |
-| `read_file` | io | `read_file` | `read_file` | — |
-| `write_file` | io | `write_file` | `write_file` | — |
+| `read_file` | io | `read_file` | `read_file` | `read_file` |
+| `write_file` | io | `write_file` | `write_file` | `write_file` |
 | `http_get` | net | `http_get` | `http_get` | — |
 | `var_decl` | syntax | `forge` | `set` | `set` |
 | `assign` | syntax | `be` | `set` | `set` |
@@ -6625,8 +6752,145 @@ Generated by `lang/parity/agent.sdev`. Do not edit by hand.
 | `pysyn_none` | python-syntax | `none` | — | — |
 | `pysyn_and` | python-syntax | `and` | — | — |
 | `pysyn_or` | python-syntax | `or` | — | — |
+| `args` | os | — | — | `args` |
+| `env` | os | — | — | `env` |
+| `exit` | os | — | — | `exit` |
+| `now_ms` | os | — | — | `now_ms` |
+| `sleep_ms` | os | — | — | `sleep_ms` |
+| `append_file` | io | — | — | `append_file` |
+| `say_err` | io | — | — | `say_err` |
 
 <!-- PARITY:END -->
+
+---
+
+### Personal SDEV internals — dialects, signatures, extensions, libraries
+
+This subsystem lets anyone run their own surface of the language without
+forking the compiler. **A dialect is data, not a compiler fork.** The
+self-hosted `lexer.sdev` / `parser.sdev` / `codegen.sdev` are never modified;
+a canonicalizer sits in front of them.
+
+```text
+dialect source ──canonicalize──▶ canonical sdev v2 ──▶ lexer ▶ parser ▶ codegen ▶ seed VM / x86-64
+        ▲                                   │
+        └──────────── dialectize ◀──────────┘   (lossless reverse)
+```
+
+#### 1. Dialect spec (`src/lang/dialect/spec.ts`)
+
+A `DialectSpec` has four parts:
+
+| Part | Contents |
+|---|---|
+| `meta` | slug, name, version, languages, visibility, `extends` |
+| `names` / `synonyms` | canonical word → this dialect's word(s), any script |
+| `style` | block style (`end` / braces), comment marker, string quote, argument separator, assignment form (`set-to` / `equals` / `arrow`) |
+| `constructs` | added functions (sdev source) and operators (`symbol` → `fn`) |
+
+`validateDialect` reports collisions, duplicate names, illegal operator
+symbols and reserved-word clashes; `isPublishable` gates publishing on zero
+errors. `preludeSource` renders the dialect's added functions.
+
+#### 2. Canonicalizer (`src/lang/dialect/canonicalize.ts`)
+
+A token-level rewriter, line by line:
+
+1. `splitLine` separates code, string literals and comments; strings are
+   masked with `\u0000n\u0000` placeholders so no rule can touch literal text.
+2. `mapWords` rewrites identifier-position words through the forward or
+   reverse dictionary built from `CATALOG_WORDS`.
+3. `desugarOperators` turns `a <sym> b` into `fn(a, b)` (longest symbol first,
+   up to 8 passes for chained operands).
+4. Style normalization: `{` / `}` become block open/`end`; `x = 1` and
+   `1 -> x` become `set x to 1`.
+5. The dialect prelude is prepended unless `withPrelude: false`.
+
+`dialectize` is the same pipeline in reverse, and `translateDialect(src, a, b)`
+is `dialectize(canonicalize(src, a), b)` — which is what makes dialect→dialect
+translation lossless by construction. Golden tests live in
+`scripts/test-dialect.ts`.
+
+#### 3. File signature (`src/lang/dialect/signature.ts`)
+
+One leading line per file:
+
+```text
+#⟨sdev⟩ <base64url payload>
+```
+
+The payload is `{ v, rt, dialect, dialectVersion, libs[], origin, sum, ts }`.
+`sum` is an FNV-1a hash of the body, so a damaged or hand-edited file is
+detected by `isSignatureStale` and re-stamped by `repairSignature`.
+
+Lifecycle:
+
+- **Read** — on import and on cloud load the line is parsed, then removed with
+  `stripSignature` so the editor buffer only ever holds the body.
+- **Retranslate on open** — if `sig.dialect` differs from the active dialect,
+  the body is translated into the reader's own words before it reaches the
+  editor (`src/pages/IDE.tsx`).
+- **Write** — `writeSignature` stamps the line on every cloud save
+  (`src/hooks/useCloudFiles.ts`) and on export (single file and "download
+  all"). The lexer treats it as an ordinary comment, so signed files run
+  anywhere.
+- **Mirror** — the same fields are written to `code_files.dialect_slug`,
+  `dialect_version`, `runtime` and `lib_pins` so files are searchable by
+  dialect; `lib_pins` is scraped from the file's `use "@user/lib"` lines.
+
+#### 4. Extensions (`src/lang/dialect/extensions.ts`)
+
+An extension is plain sdev source, private/unlisted/public per author. Enabled
+extensions are cached in `localStorage` (so they work offline) and wired into
+the run path:
+
+```text
+file body ─▶ canonicalize (dialect) ─▶ desugarExtensionOperators ─▶ prepend function bodies ─▶ toolchain
+```
+
+`applyExtensions(source)` performs the last two steps. Operator extensions
+desugar exactly like dialect operators. "Propose for core" files a row in
+`core_requests` — a review queue, never an automatic language change.
+
+#### 5. Library registry (`src/lang/dialect/registry.ts`)
+
+`use "@user/library@1.2.0"` is resolved before compilation:
+
+1. `parseAddress` (`address.ts`) matches `@username/slug[@version]`.
+2. `fetchLibrary` resolves the owner through `usernames`, then the pinned (or
+   latest) row in `library_versions`.
+3. Bundles are cached locally; `exportOfflineBundle` / `importOfflineBundle`
+   move them between machines with no network.
+4. `resolveLibraries(source)` returns a module map that is merged with the
+   workspace files and handed to the same `use`-resolution the compiler
+   already uses for local modules.
+
+#### 6. Living documentation (`src/lang/dialect/docs.ts`)
+
+The canonical reference is a template rendered per dialect: every keyword table
+is generated from `CATALOG`, the sample program is passed through `dialectize`,
+and added functions/operators are appended.
+
+`TEMPLATE_VERSION` stamps each rendering. `getOrGenerateDocs` reads the
+`dialect_docs` cache for `(dialect_id, dialect_version, template_version)`;
+when the cached copy came from an older core template, rows are marked `stale`
+and the docs are regenerated and re-cached. Offline, it falls back to a direct
+local render.
+
+#### 7. Data model
+
+| Table | Purpose |
+|---|---|
+| `usernames` | one handle per account; makes `@user/...` addresses resolvable |
+| `dialects` / `dialect_versions` | spec storage, share codes, published versions |
+| `sdev_extensions` / `core_requests` | authored extensions and the core-inclusion queue |
+| `libraries` / `library_versions` | the registry and its pinned versions |
+| `dialect_docs` | generated documentation cache with staleness flags |
+| `code_files.dialect_slug` / `dialect_version` / `runtime` / `lib_pins` | signature mirror for search and sharing |
+
+All tables are owner-scoped with public read where visibility allows, and every
+table carries explicit grants. Published specs are **data only** — no
+user-supplied executable host code — so opening someone else's dialect is safe.
 
 ---
 
@@ -6690,6 +6954,28 @@ node build/build.mjs           # runs stage0 → stage1 → stage2
 ```
 
 The Milestone 2 plan is in `.lovable/plan.md` (approved by the user).
+
+#### Self-hosting status
+
+`lang/compiler/{lexer,parser,codegen}.sdev` now compile **themselves** to
+byte-identical bytecode through the seed VM — verified by
+`scripts/test-self-toolchain.mjs` (all three targets required) and
+`scripts/test-self-codegen.mjs` (full case suite).
+
+Two rules the self-hosted codegen must keep in step with the reference
+compiler, both fixed while closing this milestone:
+
+1. Every name a function body assigns is a **local**, even when a load of
+   that name appears before its first assignment and a global of the same
+   name exists. A silent pre-walk of the body registers those locals in
+   source order; globals it interned along the way are rolled back so the
+   symbol table keeps the reference ordering.
+2. Fresh local and global slots are **int-typed**. Slot tables are reused
+   across functions, so a new slot must clear the previous occupant's type
+   or `+` mis-selects STRCAT over ADD.
+
+The JS bootstrap (`lang/bootstrap/compile.mjs`) is now redundant and is
+kept only as the differential oracle for the test suites.
 
 ---
 
@@ -7184,11 +7470,11 @@ The table below is generated by the agent. Do not edit it by hand.
 | `exp` | math | `exp` | `fexp` | `exp` |
 | `log` | math | `ln` | `flog` | `log` |
 | `random` | math | `rand` | `random` | `random` |
-| `range` | list | `range` | `range` | — |
-| `sum` | list | `sum` | `sum` | — |
+| `range` | list | `range` | `range` | `range` |
+| `sum` | list | `sum` | `sum` | `sum` |
 | `keys` | tome | `tome_keys` | `keys` | `keys` |
-| `read_file` | io | `read_file` | `read_file` | — |
-| `write_file` | io | `write_file` | `write_file` | — |
+| `read_file` | io | `read_file` | `read_file` | `read_file` |
+| `write_file` | io | `write_file` | `write_file` | `write_file` |
 | `http_get` | net | `http_get` | `http_get` | — |
 | `var_decl` | syntax | `forge` | `set` | `set` |
 | `assign` | syntax | `be` | `set` | `set` |
@@ -7356,6 +7642,13 @@ The table below is generated by the agent. Do not edit it by hand.
 | `pysyn_none` | python-syntax | `none` | — | — |
 | `pysyn_and` | python-syntax | `and` | — | — |
 | `pysyn_or` | python-syntax | `or` | — | — |
+| `args` | os | — | — | `args` |
+| `env` | os | — | — | `env` |
+| `exit` | os | — | — | `exit` |
+| `now_ms` | os | — | — | `now_ms` |
+| `sleep_ms` | os | — | — | `sleep_ms` |
+| `append_file` | io | — | — | `append_file` |
+| `say_err` | io | — | — | `say_err` |
 
 <!-- PARITY:END -->
 
@@ -9692,241 +9985,242 @@ attempt ::
 
 Everything below is extracted from the implementation at build time.
 
-### Builtin index — v1 runtime (441 builtins)
+### Builtin index — v1 runtime (442 builtins)
 
 Every function registered into the interpreter's global environment, grouped by
 the module that installs it.
 
 #### `src/lang/builtins.ts` — Core standard library — I/O, types, math, collections, strings, regex, time
 
-224 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
+225 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
 | Call | What it does | Rules | Source |
 | --- | --- | --- | --- |
-| `__tryCatch(a, b)` | __tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue. | __tryCatch requires 2 function arguments | `builtins.ts:2472` |
-| `abs(a)` | abs alias. | abs() takes 1 argument | `builtins.ts:2430` |
-| `acos(a)` | Inverse cosine, in radians. | — | `builtins.ts:1026` |
-| `all(a, b)` | True when every element of the list is truthy (or satisfies the given predicate). | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:863` |
-| `any(a, b)` | True when at least one element of the list is truthy (or satisfies the given predicate). | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:876` |
-| `appendFile(a, b)` | Convenience aliases. | appendFile() takes 2 arguments | `builtins.ts:2369` |
-| `asin(a)` | More trig. | — | `builtins.ts:1025` |
-| `atan(a)` | Inverse tangent, in radians. | — | `builtins.ts:1027` |
-| `atan2(a, b)` | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | — | `builtins.ts:1028` |
-| `average(a)` | Arithmetic mean of a list of numbers. | average() takes 1 argument; Argument must be a list | `builtins.ts:802` |
-| `base64decode(a)` | Decodes Base64 text back into a string. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1882` |
-| `base64encode(a)` | Encodes a string or byte buffer as Base64 text. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1873` |
-| `bin(a)` | bin(n) - number to binary string. | bin() takes 1 argument; Argument must be a number | `builtins.ts:1583` |
-| `bitAnd(a, b)` | Bitwise AND of two integers. | bitAnd() takes 2 arguments | `builtins.ts:1823` |
-| `bitNot(a)` | Bitwise complement of an integer. | bitNot() takes 1 argument | `builtins.ts:1847` |
-| `bitOr(a, b)` | Bitwise OR of two integers. | bitOr() takes 2 arguments | `builtins.ts:1831` |
-| `bitShiftLeft(a, b)` | Shifts the bits of an integer left by n places. | bitShiftLeft() takes 2 arguments | `builtins.ts:1855` |
-| `bitShiftRight(a, b)` | Shifts the bits of an integer right by n places. | bitShiftRight() takes 2 arguments | `builtins.ts:1863` |
-| `bitXor(a, b)` | Bitwise exclusive OR of two integers. | bitXor() takes 2 arguments | `builtins.ts:1839` |
-| `buffer(a)` | buffer(size) - create a byte buffer. | buffer() takes 1 argument (size); Argument must be a number | `builtins.ts:2024` |
-| `capitalize(a)` | capitalize(s) - first char uppercase. | capitalize() takes 1 argument; Argument must be text | `builtins.ts:1659` |
-| `ceil(a)` | Evaluates `Math.ceil(a)`. | — | `builtins.ts:2440` |
-| `center(…)` | center(s, width, char?) - center-pad string. | center() takes 2-3 arguments; First argument must be text | `builtins.ts:1679` |
-| `chaos()` | Random number generator with seedable, reproducible output. | — | `builtins.ts:328` |
-| `charAt(a, b)` | The character at a zero-based index in a string. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:592` |
-| `chars(a)` | chars(s) - string to char list. | chars() takes 1 argument; Argument must be text | `builtins.ts:1184` |
-| `chr(a)` | chr(n) - number to character. | chr() takes 1 argument; Argument must be a number | `builtins.ts:1537` |
-| `chunk(a, b)` | chunk(list, size) - split list into chunks. | chunk() takes 2 arguments (list, size); First argument must be a list | `builtins.ts:2159` |
-| `clamp(a, b, c)` | ============= Math Utilities =============. | clamp() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:968` |
-| `clone(a)` | clone(list) - deep copy. | clone() takes 1 argument | `builtins.ts:1271` |
-| `compose(…)` | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)). | compose() takes at least 2 arguments; All arguments must be functions | `builtins.ts:1944` |
-| `concat(…)` | Joins two lists (or two strings) into a new one; the inputs are not modified. | concat() takes at least 2 arguments; All arguments must be lists | `builtins.ts:663` |
-| `constrain(a, b, c)` | constrain(v, min, max) - alias for clamp. | constrain() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:1342` |
-| `contains(a, b)` | True when the collection holds the given value, or the string holds the substring. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:397` |
-| `contents(a)` | Returns the values of a tome as a list. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:346` |
-| `cos(a)` | Cosine of an angle in radians. | — | `builtins.ts:467` |
-| `cosh(a)` | Evaluates `Math.cosh(a)`. | — | `builtins.ts:1033` |
-| `count(a, b)` | How many times a value occurs in a list or a substring occurs in a string. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:853` |
-| `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins.ts:1981` |
-| `degrees(a)` | degrees(rad) - radians to degrees. | degrees() takes 1 argument; Argument must be a number | `builtins.ts:1378` |
-| `del(a, b)` | Deletes a key from a tome or an index from a list, in place. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1093` |
-| `delay()` | delay(ms) - no-op in synchronous context. | — | `builtins.ts:1437` |
-| `deleteFile(a)` | Deletes a file from the host filesystem. | deleteFile() takes 1 argument | `builtins.ts:2386` |
-| `difference(a, b)` | difference(a, b) - set difference. | difference() takes 2 arguments; Arguments must be lists | `builtins.ts:1282` |
-| `dist(a, b, c, d)` | dist(x1, y1, x2, y2) - distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers | `builtins.ts:1355` |
-| `drop(a, b)` | Returns a copy of the list without its first `n` elements. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:767` |
-| `E()` | Constants. | — | `builtins.ts:1039` |
-| `each(a, b)` | map over array with lambda. | each() takes 2 arguments (list, transform); First argument must be a list | `builtins.ts:116` |
-| `elevate(a)` | Raises the current task to a privileged mode so it may use restricted syscalls. | elevate() takes 1 argument | `builtins.ts:312` |
-| `ends(a, b)` | ends(s, suffix) - alias for endswith. | ends() takes 2 arguments; Arguments must be text | `builtins.ts:1163` |
-| `endswith(a, b)` | True when the string ends with the given suffix. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:549` |
-| `entries(a)` | Returns a tome as a list of `[key, value]` pairs. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1123` |
-| `enumerate(a)` | enumerate(list) - [[index, item], ...]. | enumerate() takes 1 argument; Argument must be a list | `builtins.ts:1332` |
-| `essence(a)` | get type. | essence() takes 1 argument | `builtins.ts:243` |
-| `etch(a)` | JSON. | — | `builtins.ts:517` |
-| `every(a, b)` | every(list, predicate) - alias for all. | every() takes 2 arguments; First argument must be a list | `builtins.ts:1308` |
-| `exit(…)` | exit(code?) - terminate program. | Program exited with code ${code} | `builtins.ts:1508` |
-| `exp(a)` | e raised to the given power. | — | `builtins.ts:470` |
-| `ffi_buf(a)` | Allocates a raw byte buffer usable as an FFI argument. | ffi_buf() takes a positive byte size | `builtins.ts:2581` |
-| `ffi_call(a, b, c, d)` | Calls a symbol in a loaded native library with the given arguments. | ffi_call() — no native FFI host available | `builtins.ts:2628` |
-| `ffi_close(a)` | Unloads a native library handle opened with `ffi_open`. | Expected number, got ${typeof value} | `builtins.ts:2636` |
-| `ffi_open(a)` | Evaluates `ffiHost().open?.(String(a ?? '')) ?? null`. | — | `builtins.ts:2619` |
-| `ffi_read_f64(a, b)` | Evaluates `bufOf(a, line).getFloat64(Number(b) * 8, true)`. | — | `builtins.ts:2601` |
-| `ffi_read_i32(a, b)` | Evaluates `bufOf(a, line).getInt32(Number(b) * 4, true)`. | — | `builtins.ts:2613` |
-| `ffi_sym(a, b)` | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`. | — | `builtins.ts:2623` |
-| `ffi_write_f64(a, b, c)` | Writes a 64-bit float into an FFI buffer at a byte offset. | — | `builtins.ts:2594` |
-| `ffi_write_i32(a, b, c)` | Writes a 32-bit integer into an FFI buffer at a byte offset. | — | `builtins.ts:2606` |
-| `fileExists(a)` | True when the given host filesystem path exists. | fileExists() takes 1 argument | `builtins.ts:2378` |
-| `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:889` |
-| `first(a)` | The first element of a list or the first character of a string. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:726` |
-| `flatten(a)` | Collapses nested lists into a single flat list. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:680` |
-| `floor(a)` | floor/ceil/round aliases. | — | `builtins.ts:2439` |
-| `fold(a, b, c)` | reduce array. | fold() takes 3 arguments (list, initial, reducer); First argument must be a list | `builtins.ts:149` |
-| `format(…)` | format(template, ...args) - string formatting with {} placeholders. | format() takes at least 1 argument; First argument must be text | `builtins.ts:1194` |
-| `formatTime(…)` | formatTime(ms, format?) - format milliseconds. | formatTime() takes at least 1 argument; First argument must be a number (ms) | `builtins.ts:1931` |
-| `freeze(a)` | freeze(obj) - make object immutable (shallow). | freeze() takes 1 argument | `builtins.ts:2121` |
-| `fromEntries(a)` | Builds a tome from a list of `[key, value]` pairs. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1134` |
-| `gather(a, b)` | push to list. | gather() takes 0 or 2 arguments; First argument must be a list | `builtins.ts:168` |
-| `get(…)` | Reads a key from a tome with an optional default when the key is missing. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1066` |
-| `gettype(a)` | get the type of a value (avoids 'essence' keyword clash). | gettype() takes 1 argument | `builtins.ts:444` |
-| `greatest(…)` | The largest of the supplied numbers (or of a list). | greatest() takes at least 1 argument | `builtins.ts:285` |
-| `ground(a)` | Rounds a number down to the nearest integer (floor). | ground() takes 1 argument | `builtins.ts:304` |
-| `groupBy(a, b)` | groupBy(list, fn) - group list elements by function result. | groupBy() takes 2 arguments; First argument must be a list | `builtins.ts:2141` |
-| `has(a, b)` | ============= Tome (Dict) Operations =============. | has() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1054` |
-| `hash(a)` | Deterministic hash of a value, returned as a number or hex string. | hash() takes 1 argument | `builtins.ts:1894` |
-| `hex(a)` | hex(n) - number to hex string. | hex() takes 1 argument; Argument must be a number | `builtins.ts:1563` |
-| `http_get(a)` | Performs an HTTP GET and returns the response body as text. | http_get() takes a url; http_get( | `builtins.ts:2544` |
-| `indexOf(a, b)` | Index of the first occurrence of a substring, or -1 when absent. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:604` |
-| `INFINITY()` | The floating-point positive infinity constant. | — | `builtins.ts:1040` |
-| `input(…)` | input(prompt?) - uses browser prompt() for real input. | — | `builtins.ts:1417` |
-| `inscriptions(a)` | Dict operations. | inscriptions() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:334` |
-| `insert(a, b, c)` | ============= List Operations =============. | insert() takes 3 arguments (list, index, value); First argument must be a list | `builtins.ts:638` |
-| `int(a)` | int / num aliases. | int() takes 1 argument; Cannot convert to integer: ${stringify(args[0])} | `builtins.ts:2451` |
-| `isAlpha(a)` | isAlpha(s) - check if all alphabetic. | isAlpha() takes 1 argument; Argument must be text | `builtins.ts:1746` |
-| `isAlphaNum(a)` | isAlphaNum(s) - check if all alphanumeric. | isAlphaNum() takes 1 argument; Argument must be text | `builtins.ts:1756` |
-| `isDigit(a)` | isDigit(s) - check if all digits. | isDigit() takes 1 argument; Argument must be text | `builtins.ts:1736` |
-| `isFinite(a)` | isFinite(v) - check if finite. | isFinite() takes 1 argument | `builtins.ts:1639` |
-| `isFrozen(a)` | isFrozen(obj). | isFrozen() takes 1 argument | `builtins.ts:2131` |
-| `isFunc(a)` | True when the value is callable (a function, lambda, or builtin). | isFunc() takes 1 argument | `builtins.ts:954` |
-| `isInteger(a)` | isInteger(v) - check if integer. | isInteger() takes 1 argument | `builtins.ts:1648` |
-| `isList(a)` | True when the value is a list. | isList() takes 1 argument | `builtins.ts:922` |
-| `isLower(a)` | isLower(s) - check if all lowercase. | isLower() takes 1 argument; Argument must be text | `builtins.ts:1726` |
-| `isNaN(a)` | isNaN(v) - check if NaN. | isNaN() takes 1 argument | `builtins.ts:1630` |
-| `isNum(a)` | ============= Type Checking =============. | isNum() takes 1 argument | `builtins.ts:906` |
-| `isSpace(a)` | isSpace(s) - check if all whitespace. | isSpace() takes 1 argument; Argument must be text | `builtins.ts:1766` |
-| `isText(a)` | True when the value is a string. | isText() takes 1 argument | `builtins.ts:914` |
-| `isTome(a)` | True when the value is a tome (dictionary). | isTome() takes 1 argument | `builtins.ts:930` |
-| `isTruth(a)` | True when the value is a boolean. | isTruth() takes 1 argument | `builtins.ts:938` |
-| `isUpper(a)` | isUpper(s) - check if all uppercase. | isUpper() takes 1 argument; Argument must be text | `builtins.ts:1716` |
-| `isVoid(a)` | True when the value is `void` (absent). | isVoid() takes 1 argument | `builtins.ts:946` |
-| `keys(a)` | keys(tome) - alias for inscriptions. | keys() takes 1 argument; Argument must be a tome | `builtins.ts:2101` |
-| `last(a)` | The final element of a list or the final character of a string. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:736` |
-| `lastIndexOf(a, b)` | Index of the final occurrence of a substring, or -1 when absent. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:620` |
-| `least(…)` | The smallest of the supplied numbers (or of a list). | least() takes at least 1 argument | `builtins.ts:274` |
-| `len(a)` | alias for measure (used internally by compiler forEach). | len() takes 1 argument; len() argument must be string, list, or dict | `builtins.ts:419` |
-| `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:980` |
-| `LinkedList(a)` | LinkedList() - doubly linked list. | Index out of bounds; LinkedList is empty | `builtins.ts:2334` |
-| `listDir()` | Lists the entries of a host directory. | — | `builtins.ts:2394` |
-| `ln(a)` | Evaluates `Math.log(toNumber(a, line))`. | — | `builtins.ts:2500` |
-| `locate(a, b)` | locate(s, sub) - find index of substring. | locate() takes 2 arguments; First argument must be text or list | `builtins.ts:1173` |
-| `log(a)` | Natural logarithm. | — | `builtins.ts:469` |
-| `log10(a)` | Base-10 logarithm. | — | `builtins.ts:1035` |
-| `log2(a)` | Base-2 logarithm. | — | `builtins.ts:1036` |
-| `lower(a)` | Lowercases every character in the string. | lower() takes 1 argument; Argument must be text | `builtins.ts:368` |
-| `magnitude(a)` | Math operations with unique names. | magnitude() takes 1 argument | `builtins.ts:266` |
-| `Map(a, b)` | Map() - map data structure. | — | `builtins.ts:2280` |
-| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:992` |
-| `match(a, b)` | match(text, pattern) - regex match, returns list of matches or null. | match() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1778` |
-| `matchAll(a, b)` | matchAll(text, pattern) - all regex matches. | matchAll() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1789` |
-| `max(a)` | The largest of the supplied numbers (or of a list). | max() takes at least 1 argument | `builtins.ts:2420` |
-| `mean(a)` | mean(list) - alias for average. | mean() takes 1 argument; Argument must be a list | `builtins.ts:1402` |
-| `measure(a)` | get length. | measure() takes exactly 1 argument; measure() argument must be string, list, or dict | `builtins.ts:44` |
-| `memoize(a)` | memoize(fn) - memoization. | memoize() takes 1 argument; Argument must be a function | `builtins.ts:2001` |
-| `merge(…)` | Combines two tomes into a new one; keys on the right win. | merge() takes at least 2 arguments; All arguments must be tomes | `builtins.ts:1108` |
-| `min(a)` | min/max aliases. | min() takes at least 1 argument | `builtins.ts:2411` |
-| `morph(a, b)` | type conversion. | morph() takes 2 arguments (value, type); Second argument must be type name | `builtins.ts:59` |
-| `nearby(a)` | True when two floating-point numbers are equal within a small tolerance. | nearby() takes 1 argument | `builtins.ts:320` |
-| `now()` | ============= Time =============. | — | `builtins.ts:1043` |
-| `num(a)` | Converts a value to a number, or `void` when it cannot be parsed. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2461` |
-| `oct(a)` | oct(n) - number to octal string. | oct() takes 1 argument; Argument must be a number | `builtins.ts:1573` |
-| `ord(…)` | ord(char) - character to number. | ord() takes 1 or 2 arguments; Argument must be a non-empty string | `builtins.ts:1547` |
-| `padleft(…)` | Pads the string on the left with a fill character until it reaches the target width. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:570` |
-| `padLeft(…)` | padLeft(s, width, char?) - alias PascalCase. | padLeft() takes 2-3 arguments; First argument must be text | `builtins.ts:1210` |
-| `padright(…)` | Pads the string on the right with a fill character until it reaches the target width. | padright() takes 2-3 arguments; First argument must be text | `builtins.ts:581` |
-| `padRight(…)` | padRight(s, width, char?) - alias PascalCase. | padRight() takes 2-3 arguments; First argument must be text | `builtins.ts:1222` |
-| `panic(…)` | panic(message) - fatal error. | PANIC: ${msg} | `builtins.ts:1517` |
-| `parseNum(…)` | parseNum(str, base?) - parse string to number with optional base. | parseNum() takes 1-2 arguments; First argument must be text | `builtins.ts:1593` |
-| `PI()` | The constant π (3.14159…). | — | `builtins.ts:471` |
-| `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `builtins.ts:491` |
-| `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins.ts:1966` |
-| `pluck(…)` | pop from list, or append when given a value (stdlib/ML dialect). | pluck() takes 1 or 2 arguments; Argument must be a list | `builtins.ts:183` |
-| `pointer(a, b)` | pointer(buffer, offset) - create a reference to a buffer position. | pointer() takes 2 arguments (buffer, offset); First argument must be a buffer | `builtins.ts:2073` |
-| `portion(…)` | slice - get portion. | portion() takes 2 or 3 arguments; First argument must be a list or string | `builtins.ts:200` |
-| `pow(a, b)` | Raises the first number to the power of the second. | pow() takes 2 arguments (base, exponent); Arguments must be numbers | `builtins.ts:1013` |
-| `print(…)` | print() - alias for speak. | — | `builtins.ts:1451` |
-| `println(…)` | println() - print with newline (same as print in this context). | — | `builtins.ts:1461` |
-| `product(a)` | Multiplies every number in a list together. | product() takes 1 argument; Argument must be a list | `builtins.ts:790` |
-| `Queue(a)` | Queue() - FIFO queue. | Queue is empty | `builtins.ts:2300` |
-| `radians(a)` | radians(deg) - degrees to radians. | radians() takes 1 argument; Argument must be a number | `builtins.ts:1368` |
-| `rand()` | Random floating-point number; with arguments, a random value in the range. | — | `builtins.ts:2499` |
-| `randint(a, b)` | Random utilities. | randint() takes 2 arguments | `builtins.ts:481` |
-| `random()` | random() alias for chaos(). | — | `builtins.ts:475` |
-| `range(…)` | range() - alias for sequence. | range() takes 1-3 arguments; range() step cannot be 0 | `builtins.ts:1471` |
-| `read_file(a)` | Reads a file from the host filesystem and returns its text. | read_file() takes a path; read_file( | `builtins.ts:2516` |
-| `remove(a, b)` | Removes the first occurrence of a value from a list, in place. | remove() takes 2 arguments (list, index); First argument must be a list | `builtins.ts:650` |
-| `repeat(a, b)` | Builds a list (or string) by repeating a value `n` times. | repeat() takes 2 arguments (text, count); First argument must be text | `builtins.ts:560` |
-| `replace(a, b, c)` | ============= String Operations =============. | replace() takes 3 arguments (text, search, replacement); First argument must be text | `builtins.ts:527` |
-| `replaceRegex(a, b, c)` | replaceRegex(text, pattern, replacement) - regex replace. | replaceRegex() takes 3 arguments; Arguments must be text | `builtins.ts:1800` |
-| `rest(a)` | Everything after the first element of a list. | rest() takes 1 argument; Argument must be a list or text | `builtins.ts:746` |
-| `reverse(a)` | Returns the list or string in reverse order. | reverse() takes 1 argument; Argument must be text or list | `builtins.ts:386` |
-| `root(a)` | Square root (alias kept for readability). | root() takes 1 argument | `builtins.ts:296` |
-| `round(a)` | Evaluates `Math.round(a)`. | — | `builtins.ts:2441` |
-| `seek(a, b)` | seek(list, predicate) - alias for find. | seek() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:1293` |
-| `sequence(…)` | conjure a sequence. | sequence() takes 1 to 3 arguments; sequence() step cannot be 0 | `builtins.ts:87` |
-| `set(a, b, c)` | Writes a value at a key or index inside a tome or list. | set() takes 3 arguments (tome, key, value); First argument must be a tome | `builtins.ts:1080` |
-| `Set(a)` | Set() - set data structure. | — | `builtins.ts:2260` |
-| `shatter(a, b)` | split string to list. | shatter() takes 2 arguments; First argument must be a string | `builtins.ts:230` |
-| `shout(…)` | output in uppercase. | — | `builtins.ts:34` |
-| `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `builtins.ts:501` |
-| `sift(a, b)` | filter array. | sift() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:134` |
-| `sign(a)` | Returns -1, 0, or 1 depending on the sign of the number. | sign() takes 1 argument; Argument must be a number | `builtins.ts:1004` |
-| `sin(a)` | Advanced math. | — | `builtins.ts:466` |
-| `sinh(a)` | Evaluates `Math.sinh(a)`. | — | `builtins.ts:1032` |
-| `sleep()` | sleep(ms) - alias for delay. | — | `builtins.ts:1443` |
-| `snatch(…)` | snatch(str_or_list, start, end?) - substring OR remove at index from list. | snatch() takes 2-3 arguments; Second argument must be a number | `builtins.ts:1234` |
-| `some(a, b)` | some(list, predicate) - alias for any. | some() takes 2 arguments; First argument must be a list | `builtins.ts:1320` |
-| `sort(…)` | Returns the list sorted ascending, or by the supplied comparison function. | sort() takes 1-2 arguments; First argument must be a list | `builtins.ts:816` |
-| `sortDesc(a)` | sortDesc(list) - sort descending. | sortDesc() takes 1 argument; Argument must be a list | `builtins.ts:1258` |
-| `spawn(a)` | spawn (run function, synchronous in browser). | spawn() requires a function | `builtins.ts:2400` |
-| `speak(…)` | output to console. | — | `builtins.ts:14` |
-| `sqrt(a)` | Square root. | — | `builtins.ts:2442` |
-| `Stack(a)` | Stack() - LIFO stack. | Stack is empty | `builtins.ts:2317` |
-| `starts(a, b)` | starts(s, prefix) - alias for startswith. | starts() takes 2 arguments; Arguments must be text | `builtins.ts:1153` |
-| `startswith(a, b)` | True when the string begins with the given prefix. | startswith() takes 2 arguments; Arguments must be text | `builtins.ts:538` |
-| `str(a)` | str alias for morph to text. | — | `builtins.ts:2445` |
-| `sum(a)` | Adds every number in a list together. | sum() takes 1 argument; Argument must be a list | `builtins.ts:778` |
-| `take(a, b)` | Returns the first `n` elements of a list. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:756` |
-| `tan(a)` | Tangent of an angle in radians. | — | `builtins.ts:468` |
-| `tanh(a)` | Evaluates `Math.tanh(a)`. | — | `builtins.ts:1034` |
-| `tap(a, b)` | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function | `builtins.ts:2176` |
-| `TAU()` | The constant τ — a full turn in radians, equal to 2π. | — | `builtins.ts:472` |
-| `test(a, b)` | test(text, pattern) - test if regex matches. | test() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1812` |
-| `throw(…)` | throw(message) - throw error. | — | `builtins.ts:1526` |
-| `time()` | time() - current time as tome. | — | `builtins.ts:1912` |
-| `times(a, b)` | repeat(fn, n) - call function n times, return list of results. | times() takes 2 arguments (count, fn); First argument must be a number | `builtins.ts:2188` |
-| `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `builtins.ts:1048` |
-| `title(a)` | title(s) - title case. | title() takes 1 argument; Argument must be text | `builtins.ts:1669` |
-| `toFixed(a, b)` | toFixed(n, digits) - format to fixed decimal places. | toFixed() takes 2 arguments (number, digits); First argument must be a number | `builtins.ts:1608` |
-| `tome_keys(a)` | Returns the keys of a tome as a list. | tome_keys() takes a tome | `builtins.ts:2505` |
-| `toPrecision(a, b)` | toPrecision(n, precision) - format to precision. | toPrecision() takes 2 arguments; First argument must be a number | `builtins.ts:1619` |
-| `trim(a)` | Removes leading and trailing whitespace. | trim() takes 1 argument; Argument must be text | `builtins.ts:377` |
-| `trimLeft(a)` | trimLeft(s) / trimRight(s). | trimLeft() takes 1 argument; Argument must be text | `builtins.ts:1697` |
-| `trimRight(a)` | Removes trailing whitespace only. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1706` |
-| `typeof(a)` | typeof() - alias for gettype. | typeof() takes 1 argument | `builtins.ts:1488` |
-| `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | Invalid JSON | `builtins.ts:518` |
-| `unique(a)` | Removes duplicate values, preserving first-seen order. | unique() takes 1 argument; Argument must be a list | `builtins.ts:838` |
-| `unzip(a)` | Splits a list of pairs into two parallel lists. | unzip() takes 1 argument; Argument must be a list | `builtins.ts:706` |
-| `upper(a)` | String operations. | upper() takes 1 argument; Argument must be text | `builtins.ts:359` |
-| `values(a)` | values(tome) - alias for contents. | values() takes 1 argument; Argument must be a tome | `builtins.ts:2111` |
-| `Vec2(a, b)` | Vec2(x, y) - 2D vector. | Vec2() takes 2 arguments (x, y) | `builtins.ts:2204` |
-| `weave(a, b)` | join list to string. | weave() takes 2 arguments; First argument must be a list | `builtins.ts:217` |
-| `whisper(…)` | output without newline concept (same as speak in this context). | — | `builtins.ts:24` |
-| `write_file(a, b)` | Writes text to a file on the host filesystem, creating or truncating it. | write_file() takes a path and content; write_file( | `builtins.ts:2528` |
-| `zip(…)` | Pairs up two lists element by element into a list of pairs. | zip() takes at least 2 arguments; Argument ${i + 1} must be a list | `builtins.ts:689` |
+| `__tryCatch(a, b)` | __tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue. | __tryCatch requires 2 function arguments | `builtins.ts:2475` |
+| `abs(a)` | abs alias. | abs() takes 1 argument | `builtins.ts:2433` |
+| `acos(a)` | Inverse cosine, in radians. | — | `builtins.ts:1029` |
+| `all(a, b)` | True when every element of the list is truthy (or satisfies the given predicate). | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:866` |
+| `any(a, b)` | True when at least one element of the list is truthy (or satisfies the given predicate). | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:879` |
+| `appendFile(a, b)` | Convenience aliases. | appendFile() takes 2 arguments | `builtins.ts:2372` |
+| `asin(a)` | More trig. | — | `builtins.ts:1028` |
+| `atan(a)` | Inverse tangent, in radians. | — | `builtins.ts:1030` |
+| `atan2(a, b)` | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | — | `builtins.ts:1031` |
+| `average(a)` | Arithmetic mean of a list of numbers. | average() takes 1 argument; Argument must be a list | `builtins.ts:805` |
+| `base64decode(a)` | Decodes Base64 text back into a string. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1885` |
+| `base64encode(a)` | Encodes a string or byte buffer as Base64 text. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1876` |
+| `bin(a)` | bin(n) - number to binary string. | bin() takes 1 argument; Argument must be a number | `builtins.ts:1586` |
+| `bitAnd(a, b)` | Bitwise AND of two integers. | bitAnd() takes 2 arguments | `builtins.ts:1826` |
+| `bitNot(a)` | Bitwise complement of an integer. | bitNot() takes 1 argument | `builtins.ts:1850` |
+| `bitOr(a, b)` | Bitwise OR of two integers. | bitOr() takes 2 arguments | `builtins.ts:1834` |
+| `bitShiftLeft(a, b)` | Shifts the bits of an integer left by n places. | bitShiftLeft() takes 2 arguments | `builtins.ts:1858` |
+| `bitShiftRight(a, b)` | Shifts the bits of an integer right by n places. | bitShiftRight() takes 2 arguments | `builtins.ts:1866` |
+| `bitXor(a, b)` | Bitwise exclusive OR of two integers. | bitXor() takes 2 arguments | `builtins.ts:1842` |
+| `buffer(a)` | buffer(size) - create a byte buffer. | buffer() takes 1 argument (size); Argument must be a number | `builtins.ts:2027` |
+| `capitalize(a)` | capitalize(s) - first char uppercase. | capitalize() takes 1 argument; Argument must be text | `builtins.ts:1662` |
+| `ceil(a)` | Evaluates `Math.ceil(a)`. | — | `builtins.ts:2443` |
+| `center(…)` | center(s, width, char?) - center-pad string. | center() takes 2-3 arguments; First argument must be text | `builtins.ts:1682` |
+| `chaos()` | Random number generator with seedable, reproducible output. | — | `builtins.ts:331` |
+| `charAt(a, b)` | The character at a zero-based index in a string. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:595` |
+| `chars(a)` | chars(s) - string to char list. | chars() takes 1 argument; Argument must be text | `builtins.ts:1187` |
+| `chr(a)` | chr(n) - number to character. | chr() takes 1 argument; Argument must be a number | `builtins.ts:1540` |
+| `chunk(a, b)` | chunk(list, size) - split list into chunks. | chunk() takes 2 arguments (list, size); First argument must be a list | `builtins.ts:2162` |
+| `clamp(a, b, c)` | ============= Math Utilities =============. | clamp() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:971` |
+| `clone(a)` | clone(list) - deep copy. | clone() takes 1 argument | `builtins.ts:1274` |
+| `compose(…)` | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)). | compose() takes at least 2 arguments; All arguments must be functions | `builtins.ts:1947` |
+| `concat(…)` | Joins two lists (or two strings) into a new one; the inputs are not modified. | concat() takes at least 2 arguments; All arguments must be lists | `builtins.ts:666` |
+| `constrain(a, b, c)` | constrain(v, min, max) - alias for clamp. | constrain() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:1345` |
+| `contains(a, b)` | True when the collection holds the given value, or the string holds the substring. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:400` |
+| `contents(a)` | Returns the values of a tome as a list. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:349` |
+| `cos(a)` | Cosine of an angle in radians. | — | `builtins.ts:470` |
+| `cosh(a)` | Evaluates `Math.cosh(a)`. | — | `builtins.ts:1036` |
+| `count(a, b)` | How many times a value occurs in a list or a substring occurs in a string. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:856` |
+| `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins.ts:1984` |
+| `degrees(a)` | degrees(rad) - radians to degrees. | degrees() takes 1 argument; Argument must be a number | `builtins.ts:1381` |
+| `del(a, b)` | Deletes a key from a tome or an index from a list, in place. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1096` |
+| `delay()` | delay(ms) - no-op in synchronous context. | — | `builtins.ts:1440` |
+| `deleteFile(a)` | Deletes a file from the host filesystem. | deleteFile() takes 1 argument | `builtins.ts:2389` |
+| `difference(a, b)` | difference(a, b) - set difference. | difference() takes 2 arguments; Arguments must be lists | `builtins.ts:1285` |
+| `dist(a, b, c, d)` | dist(x1, y1, x2, y2) - distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers | `builtins.ts:1358` |
+| `drop(a, b)` | Returns a copy of the list without its first `n` elements. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:770` |
+| `E()` | Constants. | — | `builtins.ts:1042` |
+| `each(a, b)` | map over array with lambda. | each() takes 2 arguments (list, transform); First argument must be a list | `builtins.ts:119` |
+| `elevate(a)` | Raises the current task to a privileged mode so it may use restricted syscalls. | elevate() takes 1 argument | `builtins.ts:315` |
+| `ends(a, b)` | ends(s, suffix) - alias for endswith. | ends() takes 2 arguments; Arguments must be text | `builtins.ts:1166` |
+| `endswith(a, b)` | True when the string ends with the given suffix. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:552` |
+| `entries(a)` | Returns a tome as a list of `[key, value]` pairs. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1126` |
+| `enumerate(a)` | enumerate(list) - [[index, item], ...]. | enumerate() takes 1 argument; Argument must be a list | `builtins.ts:1335` |
+| `essence(a)` | get type. | essence() takes 1 argument | `builtins.ts:246` |
+| `etch(a)` | JSON. | — | `builtins.ts:520` |
+| `every(a, b)` | every(list, predicate) - alias for all. | every() takes 2 arguments; First argument must be a list | `builtins.ts:1311` |
+| `exit(…)` | exit(code?) - terminate program. | Program exited with code ${code} | `builtins.ts:1511` |
+| `exp(a)` | e raised to the given power. | — | `builtins.ts:473` |
+| `ffi_buf(a)` | Allocates a raw byte buffer usable as an FFI argument. | ffi_buf() takes a positive byte size | `builtins.ts:2584` |
+| `ffi_call(a, b, c, d)` | Calls a symbol in a loaded native library with the given arguments. | ffi_call() — no native FFI host available | `builtins.ts:2631` |
+| `ffi_close(a)` | Unloads a native library handle opened with `ffi_open`. | Expected number, got ${typeof value} | `builtins.ts:2639` |
+| `ffi_open(a)` | Evaluates `ffiHost().open?.(String(a ?? '')) ?? null`. | — | `builtins.ts:2622` |
+| `ffi_read_f64(a, b)` | Evaluates `bufOf(a, line).getFloat64(Number(b) * 8, true)`. | — | `builtins.ts:2604` |
+| `ffi_read_i32(a, b)` | Evaluates `bufOf(a, line).getInt32(Number(b) * 4, true)`. | — | `builtins.ts:2616` |
+| `ffi_sym(a, b)` | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`. | — | `builtins.ts:2626` |
+| `ffi_write_f64(a, b, c)` | Writes a 64-bit float into an FFI buffer at a byte offset. | — | `builtins.ts:2597` |
+| `ffi_write_i32(a, b, c)` | Writes a 32-bit integer into an FFI buffer at a byte offset. | — | `builtins.ts:2609` |
+| `fileExists(a)` | True when the given host filesystem path exists. | fileExists() takes 1 argument | `builtins.ts:2381` |
+| `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:892` |
+| `first(a)` | The first element of a list or the first character of a string. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:729` |
+| `flatten(a)` | Collapses nested lists into a single flat list. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:683` |
+| `floor(a)` | floor/ceil/round aliases. | — | `builtins.ts:2442` |
+| `fold(a, b, c)` | reduce array. | fold() takes 3 arguments (list, initial, reducer); First argument must be a list | `builtins.ts:152` |
+| `format(…)` | format(template, ...args) - string formatting with {} placeholders. | format() takes at least 1 argument; First argument must be text | `builtins.ts:1197` |
+| `formatTime(…)` | formatTime(ms, format?) - format milliseconds. | formatTime() takes at least 1 argument; First argument must be a number (ms) | `builtins.ts:1934` |
+| `freeze(a)` | freeze(obj) - make object immutable (shallow). | freeze() takes 1 argument | `builtins.ts:2124` |
+| `fromEntries(a)` | Builds a tome from a list of `[key, value]` pairs. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1137` |
+| `gather(a, b)` | push to list. | gather() takes 0 or 2 arguments; First argument must be a list | `builtins.ts:171` |
+| `get(…)` | Reads a key from a tome with an optional default when the key is missing. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1069` |
+| `gettype(a)` | get the type of a value (avoids 'essence' keyword clash). | gettype() takes 1 argument | `builtins.ts:447` |
+| `greatest(…)` | The largest of the supplied numbers (or of a list). | greatest() takes at least 1 argument | `builtins.ts:288` |
+| `ground(a)` | Rounds a number down to the nearest integer (floor). | ground() takes 1 argument | `builtins.ts:307` |
+| `groupBy(a, b)` | groupBy(list, fn) - group list elements by function result. | groupBy() takes 2 arguments; First argument must be a list | `builtins.ts:2144` |
+| `has(a, b)` | ============= Tome (Dict) Operations =============. | has() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1057` |
+| `hash(a)` | Deterministic hash of a value, returned as a number or hex string. | hash() takes 1 argument | `builtins.ts:1897` |
+| `hex(a)` | hex(n) - number to hex string. | hex() takes 1 argument; Argument must be a number | `builtins.ts:1566` |
+| `http_get(a)` | Performs an HTTP GET and returns the response body as text. | http_get() takes a url; http_get( | `builtins.ts:2547` |
+| `indexOf(a, b)` | Index of the first occurrence of a substring, or -1 when absent. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:607` |
+| `INFINITY()` | The floating-point positive infinity constant. | — | `builtins.ts:1043` |
+| `input(…)` | input(prompt?) - uses browser prompt() for real input. | — | `builtins.ts:1420` |
+| `inscriptions(a)` | Dict operations. | inscriptions() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:337` |
+| `insert(a, b, c)` | ============= List Operations =============. | insert() takes 3 arguments (list, index, value); First argument must be a list | `builtins.ts:641` |
+| `int(a)` | int / num aliases. | int() takes 1 argument; Cannot convert to integer: ${stringify(args[0])} | `builtins.ts:2454` |
+| `isAlpha(a)` | isAlpha(s) - check if all alphabetic. | isAlpha() takes 1 argument; Argument must be text | `builtins.ts:1749` |
+| `isAlphaNum(a)` | isAlphaNum(s) - check if all alphanumeric. | isAlphaNum() takes 1 argument; Argument must be text | `builtins.ts:1759` |
+| `isDigit(a)` | isDigit(s) - check if all digits. | isDigit() takes 1 argument; Argument must be text | `builtins.ts:1739` |
+| `isFinite(a)` | isFinite(v) - check if finite. | isFinite() takes 1 argument | `builtins.ts:1642` |
+| `isFrozen(a)` | isFrozen(obj). | isFrozen() takes 1 argument | `builtins.ts:2134` |
+| `isFunc(a)` | True when the value is callable (a function, lambda, or builtin). | isFunc() takes 1 argument | `builtins.ts:957` |
+| `isInteger(a)` | isInteger(v) - check if integer. | isInteger() takes 1 argument | `builtins.ts:1651` |
+| `isList(a)` | True when the value is a list. | isList() takes 1 argument | `builtins.ts:925` |
+| `isLower(a)` | isLower(s) - check if all lowercase. | isLower() takes 1 argument; Argument must be text | `builtins.ts:1729` |
+| `isNaN(a)` | isNaN(v) - check if NaN. | isNaN() takes 1 argument | `builtins.ts:1633` |
+| `isNum(a)` | ============= Type Checking =============. | isNum() takes 1 argument | `builtins.ts:909` |
+| `isSpace(a)` | isSpace(s) - check if all whitespace. | isSpace() takes 1 argument; Argument must be text | `builtins.ts:1769` |
+| `isText(a)` | True when the value is a string. | isText() takes 1 argument | `builtins.ts:917` |
+| `isTome(a)` | True when the value is a tome (dictionary). | isTome() takes 1 argument | `builtins.ts:933` |
+| `isTruth(a)` | True when the value is a boolean. | isTruth() takes 1 argument | `builtins.ts:941` |
+| `isUpper(a)` | isUpper(s) - check if all uppercase. | isUpper() takes 1 argument; Argument must be text | `builtins.ts:1719` |
+| `isVoid(a)` | True when the value is `void` (absent). | isVoid() takes 1 argument | `builtins.ts:949` |
+| `keys(a)` | keys(tome) - alias for inscriptions. | keys() takes 1 argument; Argument must be a tome | `builtins.ts:2104` |
+| `last(a)` | The final element of a list or the final character of a string. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:739` |
+| `lastIndexOf(a, b)` | Index of the final occurrence of a substring, or -1 when absent. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:623` |
+| `least(…)` | The smallest of the supplied numbers (or of a list). | least() takes at least 1 argument | `builtins.ts:277` |
+| `len(a)` | alias for measure (used internally by compiler forEach). | len() takes 1 argument; len() argument must be string, list, or dict | `builtins.ts:422` |
+| `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:983` |
+| `LinkedList(a)` | LinkedList() - doubly linked list. | Index out of bounds; LinkedList is empty | `builtins.ts:2337` |
+| `listDir()` | Lists the entries of a host directory. | — | `builtins.ts:2397` |
+| `ln(a)` | Evaluates `Math.log(toNumber(a, line))`. | — | `builtins.ts:2503` |
+| `locate(a, b)` | locate(s, sub) - find index of substring. | locate() takes 2 arguments; First argument must be text or list | `builtins.ts:1176` |
+| `log(a)` | Natural logarithm. | — | `builtins.ts:472` |
+| `log10(a)` | Base-10 logarithm. | — | `builtins.ts:1038` |
+| `log2(a)` | Base-2 logarithm. | — | `builtins.ts:1039` |
+| `lower(a)` | Lowercases every character in the string. | lower() takes 1 argument; Argument must be text | `builtins.ts:371` |
+| `magnitude(a)` | Math operations with unique names. | magnitude() takes 1 argument | `builtins.ts:269` |
+| `Map(a, b)` | Map() - map data structure. | — | `builtins.ts:2283` |
+| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:995` |
+| `match(a, b)` | match(text, pattern) - regex match, returns list of matches or null. | match() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1781` |
+| `matchAll(a, b)` | matchAll(text, pattern) - all regex matches. | matchAll() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1792` |
+| `max(a)` | The largest of the supplied numbers (or of a list). | max() takes at least 1 argument | `builtins.ts:2423` |
+| `mean(a)` | mean(list) - alias for average. | mean() takes 1 argument; Argument must be a list | `builtins.ts:1405` |
+| `measure(a)` | get length. | measure() takes exactly 1 argument; measure() argument must be string, list, or dict | `builtins.ts:47` |
+| `memoize(a)` | memoize(fn) - memoization. | memoize() takes 1 argument; Argument must be a function | `builtins.ts:2004` |
+| `merge(…)` | Combines two tomes into a new one; keys on the right win. | merge() takes at least 2 arguments; All arguments must be tomes | `builtins.ts:1111` |
+| `min(a)` | min/max aliases. | min() takes at least 1 argument | `builtins.ts:2414` |
+| `morph(a, b)` | type conversion. | morph() takes 2 arguments (value, type); Second argument must be type name | `builtins.ts:62` |
+| `nearby(a)` | True when two floating-point numbers are equal within a small tolerance. | nearby() takes 1 argument | `builtins.ts:323` |
+| `now()` | ============= Time =============. | — | `builtins.ts:1046` |
+| `num(a)` | Converts a value to a number, or `void` when it cannot be parsed. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2464` |
+| `oct(a)` | oct(n) - number to octal string. | oct() takes 1 argument; Argument must be a number | `builtins.ts:1576` |
+| `ord(…)` | ord(char) - character to number. | ord() takes 1 or 2 arguments; Argument must be a non-empty string | `builtins.ts:1550` |
+| `padleft(…)` | Pads the string on the left with a fill character until it reaches the target width. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:573` |
+| `padLeft(…)` | padLeft(s, width, char?) - alias PascalCase. | padLeft() takes 2-3 arguments; First argument must be text | `builtins.ts:1213` |
+| `padright(…)` | Pads the string on the right with a fill character until it reaches the target width. | padright() takes 2-3 arguments; First argument must be text | `builtins.ts:584` |
+| `padRight(…)` | padRight(s, width, char?) - alias PascalCase. | padRight() takes 2-3 arguments; First argument must be text | `builtins.ts:1225` |
+| `panic(…)` | panic(message) - fatal error. | PANIC: ${msg} | `builtins.ts:1520` |
+| `parseNum(…)` | parseNum(str, base?) - parse string to number with optional base. | parseNum() takes 1-2 arguments; First argument must be text | `builtins.ts:1596` |
+| `PI()` | The constant π (3.14159…). | — | `builtins.ts:474` |
+| `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `builtins.ts:494` |
+| `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins.ts:1969` |
+| `pluck(…)` | pop from list, or append when given a value (stdlib/ML dialect). | pluck() takes 1 or 2 arguments; Argument must be a list | `builtins.ts:186` |
+| `pointer(a, b)` | pointer(buffer, offset) - create a reference to a buffer position. | pointer() takes 2 arguments (buffer, offset); First argument must be a buffer | `builtins.ts:2076` |
+| `portion(…)` | slice - get portion. | portion() takes 2 or 3 arguments; First argument must be a list or string | `builtins.ts:203` |
+| `pow(a, b)` | Raises the first number to the power of the second. | pow() takes 2 arguments (base, exponent); Arguments must be numbers | `builtins.ts:1016` |
+| `print(…)` | print() - alias for speak. | — | `builtins.ts:1454` |
+| `println(…)` | println() - print with newline (same as print in this context). | — | `builtins.ts:1464` |
+| `product(a)` | Multiplies every number in a list together. | product() takes 1 argument; Argument must be a list | `builtins.ts:793` |
+| `Queue(a)` | Queue() - FIFO queue. | Queue is empty | `builtins.ts:2303` |
+| `radians(a)` | radians(deg) - degrees to radians. | radians() takes 1 argument; Argument must be a number | `builtins.ts:1371` |
+| `rand()` | Random floating-point number; with arguments, a random value in the range. | — | `builtins.ts:2502` |
+| `randint(a, b)` | Random utilities. | randint() takes 2 arguments | `builtins.ts:484` |
+| `random()` | random() alias for chaos(). | — | `builtins.ts:478` |
+| `range(…)` | range() - alias for sequence. | range() takes 1-3 arguments; range() step cannot be 0 | `builtins.ts:1474` |
+| `read_file(a)` | Reads a file from the host filesystem and returns its text. | read_file() takes a path; read_file( | `builtins.ts:2519` |
+| `remove(a, b)` | Removes the first occurrence of a value from a list, in place. | remove() takes 2 arguments (list, index); First argument must be a list | `builtins.ts:653` |
+| `repeat(a, b)` | Builds a list (or string) by repeating a value `n` times. | repeat() takes 2 arguments (text, count); First argument must be text | `builtins.ts:563` |
+| `replace(a, b, c)` | ============= String Operations =============. | replace() takes 3 arguments (text, search, replacement); First argument must be text | `builtins.ts:530` |
+| `replaceRegex(a, b, c)` | replaceRegex(text, pattern, replacement) - regex replace. | replaceRegex() takes 3 arguments; Arguments must be text | `builtins.ts:1803` |
+| `rest(a)` | Everything after the first element of a list. | rest() takes 1 argument; Argument must be a list or text | `builtins.ts:749` |
+| `reverse(a)` | Returns the list or string in reverse order. | reverse() takes 1 argument; Argument must be text or list | `builtins.ts:389` |
+| `root(a)` | Square root (alias kept for readability). | root() takes 1 argument | `builtins.ts:299` |
+| `round(a)` | Evaluates `Math.round(a)`. | — | `builtins.ts:2444` |
+| `say()` | `say` is the v2 spelling — both runtimes must print the same way. | — | `builtins.ts:24` |
+| `seek(a, b)` | seek(list, predicate) - alias for find. | seek() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:1296` |
+| `sequence(…)` | conjure a sequence. | sequence() takes 1 to 3 arguments; sequence() step cannot be 0 | `builtins.ts:90` |
+| `set(a, b, c)` | Writes a value at a key or index inside a tome or list. | set() takes 3 arguments (tome, key, value); First argument must be a tome | `builtins.ts:1083` |
+| `Set(a)` | Set() - set data structure. | — | `builtins.ts:2263` |
+| `shatter(a, b)` | split string to list. | shatter() takes 2 arguments; First argument must be a string | `builtins.ts:233` |
+| `shout(…)` | output in uppercase. | — | `builtins.ts:37` |
+| `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `builtins.ts:504` |
+| `sift(a, b)` | filter array. | sift() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:137` |
+| `sign(a)` | Returns -1, 0, or 1 depending on the sign of the number. | sign() takes 1 argument; Argument must be a number | `builtins.ts:1007` |
+| `sin(a)` | Advanced math. | — | `builtins.ts:469` |
+| `sinh(a)` | Evaluates `Math.sinh(a)`. | — | `builtins.ts:1035` |
+| `sleep()` | sleep(ms) - alias for delay. | — | `builtins.ts:1446` |
+| `snatch(…)` | snatch(str_or_list, start, end?) - substring OR remove at index from list. | snatch() takes 2-3 arguments; Second argument must be a number | `builtins.ts:1237` |
+| `some(a, b)` | some(list, predicate) - alias for any. | some() takes 2 arguments; First argument must be a list | `builtins.ts:1323` |
+| `sort(…)` | Returns the list sorted ascending, or by the supplied comparison function. | sort() takes 1-2 arguments; First argument must be a list | `builtins.ts:819` |
+| `sortDesc(a)` | sortDesc(list) - sort descending. | sortDesc() takes 1 argument; Argument must be a list | `builtins.ts:1261` |
+| `spawn(a)` | spawn (run function, synchronous in browser). | spawn() requires a function | `builtins.ts:2403` |
+| `speak()` | Runtime primitive. | — | `builtins.ts:22` |
+| `sqrt(a)` | Square root. | — | `builtins.ts:2445` |
+| `Stack(a)` | Stack() - LIFO stack. | Stack is empty | `builtins.ts:2320` |
+| `starts(a, b)` | starts(s, prefix) - alias for startswith. | starts() takes 2 arguments; Arguments must be text | `builtins.ts:1156` |
+| `startswith(a, b)` | True when the string begins with the given prefix. | startswith() takes 2 arguments; Arguments must be text | `builtins.ts:541` |
+| `str(a)` | str alias for morph to text. | — | `builtins.ts:2448` |
+| `sum(a)` | Adds every number in a list together. | sum() takes 1 argument; Argument must be a list | `builtins.ts:781` |
+| `take(a, b)` | Returns the first `n` elements of a list. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:759` |
+| `tan(a)` | Tangent of an angle in radians. | — | `builtins.ts:471` |
+| `tanh(a)` | Evaluates `Math.tanh(a)`. | — | `builtins.ts:1037` |
+| `tap(a, b)` | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function | `builtins.ts:2179` |
+| `TAU()` | The constant τ — a full turn in radians, equal to 2π. | — | `builtins.ts:475` |
+| `test(a, b)` | test(text, pattern) - test if regex matches. | test() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1815` |
+| `throw(…)` | throw(message) - throw error. | — | `builtins.ts:1529` |
+| `time()` | time() - current time as tome. | — | `builtins.ts:1915` |
+| `times(a, b)` | repeat(fn, n) - call function n times, return list of results. | times() takes 2 arguments (count, fn); First argument must be a number | `builtins.ts:2191` |
+| `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `builtins.ts:1051` |
+| `title(a)` | title(s) - title case. | title() takes 1 argument; Argument must be text | `builtins.ts:1672` |
+| `toFixed(a, b)` | toFixed(n, digits) - format to fixed decimal places. | toFixed() takes 2 arguments (number, digits); First argument must be a number | `builtins.ts:1611` |
+| `tome_keys(a)` | Returns the keys of a tome as a list. | tome_keys() takes a tome | `builtins.ts:2508` |
+| `toPrecision(a, b)` | toPrecision(n, precision) - format to precision. | toPrecision() takes 2 arguments; First argument must be a number | `builtins.ts:1622` |
+| `trim(a)` | Removes leading and trailing whitespace. | trim() takes 1 argument; Argument must be text | `builtins.ts:380` |
+| `trimLeft(a)` | trimLeft(s) / trimRight(s). | trimLeft() takes 1 argument; Argument must be text | `builtins.ts:1700` |
+| `trimRight(a)` | Removes trailing whitespace only. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1709` |
+| `typeof(a)` | typeof() - alias for gettype. | typeof() takes 1 argument | `builtins.ts:1491` |
+| `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | Invalid JSON | `builtins.ts:521` |
+| `unique(a)` | Removes duplicate values, preserving first-seen order. | unique() takes 1 argument; Argument must be a list | `builtins.ts:841` |
+| `unzip(a)` | Splits a list of pairs into two parallel lists. | unzip() takes 1 argument; Argument must be a list | `builtins.ts:709` |
+| `upper(a)` | String operations. | upper() takes 1 argument; Argument must be text | `builtins.ts:362` |
+| `values(a)` | values(tome) - alias for contents. | values() takes 1 argument; Argument must be a tome | `builtins.ts:2114` |
+| `Vec2(a, b)` | Vec2(x, y) - 2D vector. | Vec2() takes 2 arguments (x, y) | `builtins.ts:2207` |
+| `weave(a, b)` | join list to string. | weave() takes 2 arguments; First argument must be a list | `builtins.ts:220` |
+| `whisper(…)` | output without newline concept (same as speak in this context). | — | `builtins.ts:27` |
+| `write_file(a, b)` | Writes text to a file on the host filesystem, creating or truncating it. | write_file() takes a path and content; write_file( | `builtins.ts:2531` |
+| `zip(…)` | Pairs up two lists element by element into a list of pairs. | zip() takes at least 2 arguments; Argument ${i + 1} must be a list | `builtins.ts:692` |
 
 #### `src/lang/advanced.ts` — Pro layer — file I/O, hashing, base64, JSON, async, OS glue, buffers, FFI bridge
 
@@ -10200,7 +10494,7 @@ the module that installs it.
 | `0x14000..0x17FFF` | operand stack (u32 cells; sp grows up) |
 | `0x18000..0x1BFFF` | call stack (frames of ret_ip, saved_fp, locals…) |
 | `0x1C000..0x2FFFF` | bytecode program (u8 stream, up to 80 KiB) |
-| `0x30000..0x7FFFF` | bump-pointer heap  (lists, dynamic strings; 320 KiB) |
+| `0x30000..0x1FFFFFF` | bump-pointer heap (lists, dynamic strings; ~31.8 MiB). |
 
 
 ### Seed VM opcode table
@@ -10296,51 +10590,51 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 | --- | --- | --- | --- | --- |
 | `is_digit` | `c` | True when the byte at the given index is an ASCII digit 0-9. | `0` | 35 |
 | `is_alpha` | `c` | True when the byte is an ASCII letter or underscore — the start of an identifier. | `1` | 45 |
-| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 62 |
-| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 69 |
-| `both_float` | `a b` | Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float arithmetic only kicks in when BOTH operands are floats (mixed arithmetic requires an explicit i2f), matching the bootstrap oracle exactly. | `1` | 81 |
-| `str_eq` | `a b` | Byte-exact string comparison, used instead of host equality so both tracks agree. | `0` | 90 |
-| `prelink_source` | `s` | Part of the Milestone 5z: modules (`use "path"`) section of this module. | `out` | 116 |
-| `emit_byte` | `b` | Appends one byte to the bytecode buffer being built. | `0` | 164 |
-| `intern_str` | `s` | Interns a string literal into the pool and returns its handle, reusing duplicates. | `0` | 181 |
-| `emit_i32` | `v` | Appends a little-endian 32-bit operand to the bytecode buffer. | `0` | 213 |
-| `placeholder16` | _none_ | Reserve a two-byte i16 placeholder and return the byte offset at which it starts (0-indexed, list cell = pos + 1). | `p` | 226 |
-| `patch_i16` | `pos target` | Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte offset `target`. Offsets are relative to the end of the instruction (pos + 2). Negative offsets get two's-complement 16-bit encoding. | `0` | 236 |
-| `intern_name` | `name` | Interns an identifier and returns its global slot index, allocating on first sight. | `k - 1` | 259 |
-| `find_local` | `name` | Looks up a local variable in the current frame, returning its slot or -1. | `k - 1` | 273 |
-| `add_local` | `name` | Allocates a new local slot in the current function frame. | `loc_names[0] - 1` | 285 |
-| `find_fn` | `name` | Looks up a declared function by name, returning its index or -1. | `k - 1` | 291 |
-| `emit_load_ident` | `name` | Emits `LOAD_LOC` for a local or `LOAD` for a global, whichever the name resolves to. | `0` | 310 |
-| `emit_store_ident` | `name` | Emits `STORE_LOC` or `STORE` for an assignment target. | `0` | 327 |
-| `set_ident_type` | `name t` | Milestone 5t: retype an existing variable without emitting anything — used when `set t[k] to "s"` promotes a tome from int-valued to string-valued so later reads pick SAY_STR. | `0` | 349 |
-| `emit_call` | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call. | `0` | 370 |
-| `emit_ref` | `name` | Milestone 5w: `ref NAME` pushes a function value — the callee's code offset as a plain i32. Unknown offsets reuse the pending-call table; the resolver tells the two site shapes apart by looking at the opcode byte that precedes the patch position (0x60 CALL → u16 target, otherwise 0x01 PUSH_I32 → i32 target). | `0` | 656 |
-| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 680 |
-| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 708 |
-| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 735 |
-| `blank_tok` | `i` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 772 |
-| `prev_word_is` | `j w` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 777 |
-| `is_kind_opener` | `j` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 797 |
-| `desugar_kinds` | _none_ | Part of the Milestone 5y: kinds (classes) section of this module. | _no explicit yield_ | 838 |
-| `emit_new` | `cname` | `new NAME` — TNEW sized to the method count, then one PUSH_STR / function value / TSET triple per method, in declaration order. | `0` | 1002 |
-| `method_ret_type` | `name` | A method call is string-typed when ANY kind declares a method of that name returning a string — mirrors the bootstrap oracle's name-based rule. | `1` | 1042 |
-| `emit_member_key` | `name` | Emit PUSH_STR for a member name (shared by field reads, writes and calls). | `0` | 1060 |
-| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 1071 |
-| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 1083 |
-| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 1100 |
-| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | _no explicit yield_ | 1466 |
-| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1541 |
-| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1555 |
-| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1598 |
-| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1649 |
-| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1724 |
-| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1734 |
-| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1751 |
-| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1769 |
-| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1775 |
-| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1792 |
-| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1827 |
-| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1849 |
+| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 66 |
+| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 73 |
+| `both_float` | `a b` | Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float arithmetic only kicks in when BOTH operands are floats (mixed arithmetic requires an explicit i2f), matching the bootstrap oracle exactly. | `1` | 85 |
+| `str_eq` | `a b` | Byte-exact string comparison, used instead of host equality so both tracks agree. | `0` | 94 |
+| `prelink_source` | `s` | Part of the Milestone 5z: modules (`use "path"`) section of this module. | `out` | 120 |
+| `emit_byte` | `b` | Appends one byte to the bytecode buffer being built. | `0` | 168 |
+| `intern_str` | `s` | Interns a string literal into the pool and returns its handle, reusing duplicates. | `0` | 185 |
+| `emit_i32` | `v` | Appends a little-endian 32-bit operand to the bytecode buffer. | `0` | 217 |
+| `placeholder16` | _none_ | Reserve a two-byte i16 placeholder and return the byte offset at which it starts (0-indexed, list cell = pos + 1). | `p` | 230 |
+| `patch_i16` | `pos target` | Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte offset `target`. Offsets are relative to the end of the instruction (pos + 2). Negative offsets get two's-complement 16-bit encoding. | `0` | 240 |
+| `intern_name` | `name` | Interns an identifier and returns its global slot index, allocating on first sight. | `k - 1` | 263 |
+| `find_local` | `name` | Looks up a local variable in the current frame, returning its slot or -1. | `k - 1` | 279 |
+| `add_local` | `name` | Allocates a new local slot in the current function frame. | `loc_names[0] - 1` | 291 |
+| `find_fn` | `name` | Looks up a declared function by name, returning its index or -1. | `k - 1` | 301 |
+| `emit_load_ident` | `name` | Emits `LOAD_LOC` for a local or `LOAD` for a global, whichever the name resolves to. | `0` | 320 |
+| `emit_store_ident` | `name` | Emits `STORE_LOC` or `STORE` for an assignment target. | `0` | 337 |
+| `set_ident_type` | `name t` | Milestone 5t: retype an existing variable without emitting anything — used when `set t[k] to "s"` promotes a tome from int-valued to string-valued so later reads pick SAY_STR. | `0` | 359 |
+| `emit_call` | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call. | `0` | 380 |
+| `emit_ref` | `name` | Milestone 5w: `ref NAME` pushes a function value — the callee's code offset as a plain i32. Unknown offsets reuse the pending-call table; the resolver tells the two site shapes apart by looking at the opcode byte that precedes the patch position (0x60 CALL → u16 target, otherwise 0x01 PUSH_I32 → i32 target). | `0` | 666 |
+| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 690 |
+| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 718 |
+| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 745 |
+| `blank_tok` | `i` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 782 |
+| `prev_word_is` | `j w` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 787 |
+| `is_kind_opener` | `j` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 807 |
+| `desugar_kinds` | _none_ | Part of the Milestone 5y: kinds (classes) section of this module. | _no explicit yield_ | 848 |
+| `emit_new` | `cname` | `new NAME` — TNEW sized to the method count, then one PUSH_STR / function value / TSET triple per method, in declaration order. | `0` | 1012 |
+| `method_ret_type` | `name` | A method call is string-typed when ANY kind declares a method of that name returning a string — mirrors the bootstrap oracle's name-based rule. | `1` | 1052 |
+| `emit_member_key` | `name` | Emit PUSH_STR for a member name (shared by field reads, writes and calls). | `0` | 1070 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 1081 |
+| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 1093 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 1110 |
+| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | _no explicit yield_ | 1476 |
+| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1551 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1565 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1608 |
+| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1659 |
+| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1753 |
+| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1763 |
+| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1780 |
+| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1798 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1804 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1821 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1856 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1878 |
 
 #### `lang/compiler/lexer.sdev`
 
@@ -10352,9 +10646,9 @@ SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hos
 | --- | --- | --- | --- | --- |
 | `is_digit` | `c` | True when the byte at the given index is an ASCII digit 0-9. | `0` | 22 |
 | `is_alpha` | `c` | True when the byte is an ASCII letter or underscore — the start of an identifier. | `1` | 32 |
-| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 49 |
-| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 56 |
-| `lex` | `src` | Turns source text into the token stream: kinds, lexemes, and line numbers. | _no explicit yield_ | 65 |
+| `is_alnum` | `c` | True when the byte may continue an identifier: a letter, digit, or underscore. | `1` | 54 |
+| `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 61 |
+| `lex` | `src` | Turns source text into the token stream: kinds, lexemes, and line numbers. | _no explicit yield_ | 70 |
 
 #### `lang/compiler/parser.sdev`
 
@@ -10607,7 +10901,7 @@ _No top-level functions — this file is a script or data module._
 
 ### Parity matrix
 
-Registry: **202 features** across **3 tracks**.
+Registry: **209 features** across **3 tracks**.
 
 | Feature | Area | sdev v1 (TypeScript interpreter) | sdev v2 (self-hosted compiler on the seed VM) | native x86-64 backend |
 | --- | --- | --- | --- | --- |
@@ -10641,11 +10935,11 @@ Registry: **202 features** across **3 tracks**.
 | `exp` | math | `exp` | `fexp` | `exp` |
 | `log` | math | `ln` | `flog` | `log` |
 | `random` | math | `rand` | `random` | `random` |
-| `range` | list | `range` | `range` | — |
-| `sum` | list | `sum` | `sum` | — |
+| `range` | list | `range` | `range` | `range` |
+| `sum` | list | `sum` | `sum` | `sum` |
 | `keys` | tome | `tome_keys` | `keys` | `keys` |
-| `read_file` | io | `read_file` | `read_file` | — |
-| `write_file` | io | `write_file` | `write_file` | — |
+| `read_file` | io | `read_file` | `read_file` | `read_file` |
+| `write_file` | io | `write_file` | `write_file` | `write_file` |
 | `http_get` | net | `http_get` | `http_get` | — |
 | `var_decl` | syntax | `forge` | `set` | `set` |
 | `assign` | syntax | `be` | `set` | `set` |
@@ -10813,6 +11107,13 @@ Registry: **202 features** across **3 tracks**.
 | `pysyn_none` | python-syntax | `none` | — | — |
 | `pysyn_and` | python-syntax | `and` | — | — |
 | `pysyn_or` | python-syntax | `or` | — | — |
+| `args` | os | — | — | `args` |
+| `env` | os | — | — | `env` |
+| `exit` | os | — | — | `exit` |
+| `now_ms` | os | — | — | `now_ms` |
+| `sleep_ms` | os | — | — | `sleep_ms` |
+| `append_file` | io | — | — | `append_file` |
+| `say_err` | io | — | — | `say_err` |
 
 
 ### Repository map
@@ -10868,6 +11169,16 @@ Registry: **202 features** across **3 tracks**.
 - `src/lang/builtins.ts`
 - `src/lang/bytecode.ts`
 - `src/lang/compiler.ts`
+- `src/lang/dialect/address.ts`
+- `src/lang/dialect/canonicalize.ts`
+- `src/lang/dialect/catalog.ts`
+- `src/lang/dialect/docs.ts`
+- `src/lang/dialect/extensions.ts`
+- `src/lang/dialect/index.ts`
+- `src/lang/dialect/registry.ts`
+- `src/lang/dialect/sample.ts`
+- `src/lang/dialect/signature.ts`
+- `src/lang/dialect/spec.ts`
 - `src/lang/environment.ts`
 - `src/lang/errors.ts`
 - `src/lang/gist.ts`
@@ -10887,6 +11198,7 @@ Registry: **202 features** across **3 tracks**.
 - `src/lang/pyparity.ts`
 - `src/lang/runtime-values.ts`
 - `src/lang/tokens.ts`
+- `src/lang/translator-v2.ts`
 - `src/lang/translator.ts`
 - `src/lang/ui.ts`
 - `src/lang/vm.ts`
@@ -10912,6 +11224,7 @@ Registry: **202 features** across **3 tracks**.
 - `scripts/build-book-content.py`
 - `scripts/build-book-pdf.py`
 - `scripts/build-book.ts`
+- `scripts/build-cli.mjs`
 - `scripts/build-compiler.ts`
 - `scripts/build-driver.mjs`
 - `scripts/build-seed-wasm.mjs`
@@ -10921,6 +11234,7 @@ Registry: **202 features** across **3 tracks**.
 - `scripts/sdev-native.mjs`
 - `scripts/sdev-runtime-launcher.ts`
 - `scripts/test-bg.ts`
+- `scripts/test-dialect.ts`
 - `scripts/test-driver-artifact.mjs`
 - `scripts/test-ml-stdlib.ts`
 - `scripts/test-native.mjs`
@@ -10943,6 +11257,7 @@ Registry: **202 features** across **3 tracks**.
 | `node scripts/build-book-content.py` | !/usr/bin/env python3 |
 | `node scripts/build-book-pdf.py` | !/usr/bin/env python3 |
 | `node scripts/build-book.ts` | Generates the giant sdev Book in English and Bulgarian. |
+| `node scripts/build-cli.mjs` | !/usr/bin/env node |
 | `node scripts/build-compiler.ts` | Bundles the sdev compiler + VM + interpreter into a single Node.js CLI. |
 | `node scripts/build-driver.mjs` | Milestone 5p — bake the self-hosted driver bytecode. |
 | `node scripts/build-seed-wasm.mjs` | Build the seed VM: lang/bootstrap/seed.wat → public/wasm/sdev-seed.wasm |
@@ -10952,6 +11267,7 @@ Registry: **202 features** across **3 tracks**.
 | `node scripts/sdev-native.mjs` | SDEV native compiler CLI. |
 | `node scripts/sdev-runtime-launcher.ts` |  |
 | `node scripts/test-bg.ts` |  |
+| `node scripts/test-dialect.ts` | ---- a Bulgarian dialect with braces and `=` assignment ------------------- |
 | `node scripts/test-driver-artifact.mjs` | Milestone 5p — the checked-in driver artifact must stay honest. |
 | `node scripts/test-ml-stdlib.ts` | ---- Node host bindings consumed by src/lang/builtins.ts ---- |
 | `node scripts/test-native.mjs` | Regression suite for the native x86-64 backend. |
@@ -10961,7 +11277,7 @@ Registry: **202 features** across **3 tracks**.
 | `node scripts/test-self-parser.mjs` | Runs the self-hosted expression parser through the seed WASM VM and |
 | `node scripts/test-self-toolchain.mjs` | Milestone 5m gate — self-hosted toolchain round-trip. |
 | `node scripts/test-shim-fixed-point.mjs` | Milestone 5l gate — shim fixed-point verification. |
-| `node scripts/test-translator.ts` |  |
+| `node scripts/test-translator.ts` | A Bulgarian dialect: `кажи` means say, `нека` means set. Those words are the |
 | `node scripts/test-wasm-runtime.mjs` | Standalone Node harness: compile + run via the seed WASM. No browser. |
 
 

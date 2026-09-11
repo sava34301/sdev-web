@@ -1,6 +1,6 @@
 import { Token, TokenType, KEYWORDS } from './tokens';
 import { SdevError } from './errors';
-import { translateSource } from './translator';
+import { translateSource, type TranslatorDialect } from './translator';
 
 export interface LexerOptions {
   /**
@@ -12,6 +12,8 @@ export interface LexerOptions {
   sourceLanguage?: string | null;
   /** Set false to disable the built-in translator entirely. */
   translate?: boolean;
+  /** Active dialect — its surface words are never re-translated. */
+  dialect?: TranslatorDialect | null;
 }
 
 export class Lexer {
@@ -25,9 +27,9 @@ export class Lexer {
   public readonly detectedLanguage: string | null;
 
   constructor(source: string, options: LexerOptions = {}) {
-    const { sourceLanguage = 'auto', translate = true } = options;
+    const { sourceLanguage = 'auto', translate = true, dialect = null } = options;
     if (translate && sourceLanguage !== 'English' && sourceLanguage !== null) {
-      const result = translateSource(source, sourceLanguage);
+      const result = translateSource(source, sourceLanguage, { target: 'v1', dialect });
       this.source = result.translated;
       this.detectedLanguage = result.detectedLanguage;
     } else {

@@ -13,6 +13,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain JS module
 import { compile as selfCompile, setSeedLoader } from '../../lang/compiler/compile-self.mjs';
+import { translateSource, type TranslatorDialect } from '@/lang/translator';
 
 export class WasmSubsetError extends Error {}
 
@@ -45,11 +46,34 @@ async function loadSeed(): Promise<WebAssembly.Module> {
   return cached;
 }
 
+export interface RunWasmOptions {
+  /** Natural language of the source: 'auto' (default), 'English', or a name. */
+  sourceLanguage?: string | null;
+  /** Active dialect — its words are already canonical and stay untouched. */
+  dialect?: TranslatorDialect | null;
+}
+
 export async function runWasm(
   source: string,
   modules?: Record<string, string>,
+  options: RunWasmOptions = {},
 ): Promise<{ success: boolean; output: string[]; error: string | null }> {
   const output: string[] = [];
+
+  // ── Built-in multilingual pass ──
+  // Part of the language, not the IDE: any entry point that reaches the
+  // self-hosted toolchain accepts sdev written in a supported human
+  // language, translated onto the canonical v2 surface first.
+  const lang = options.sourceLanguage ?? 'auto';
+  if (lang !== 'English' && lang !== null) {
+    const opts = { target: 'v2' as const, dialect: options.dialect ?? null };
+    source = translateSource(source, lang, opts).translated;
+    if (modules) {
+      modules = Object.fromEntries(
+        Object.entries(modules).map(([k, v]) => [k, translateSource(v, lang, opts).translated]),
+      );
+    }
+  }
 
   // Milestone 5q: floats and host I/O are compiled by the self-hosted
   // codegen itself, so there is no bootstrap-only carve-out left here.
