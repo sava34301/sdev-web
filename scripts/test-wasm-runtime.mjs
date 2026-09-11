@@ -634,6 +634,25 @@ set c to new C()
 say c.tag()`,
     expect: ['CBA'],
   },
+  {
+    // Identifiers are not English-only: any UTF-8 script is a valid name,
+    // which is what the translator relies on when it keeps foreign variables.
+    name: 'unicode identifiers (Cyrillic)',
+    src: `set възраст to 21
+if възраст is 18 or more
+  say "adult"
+end
+say възраст`,
+    expect: ['adult', '21'],
+  },
+  {
+    name: 'unicode identifiers (Greek + CJK)',
+    src: `set αριθμός to 4
+set 名前 to "sdev"
+say 名前
+say αριθμός * 2`,
+    expect: ['sdev', '8'],
+  },
 ];
 
 let failed = 0;
