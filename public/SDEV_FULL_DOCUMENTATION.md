@@ -248,7 +248,7 @@ fixed point**: compiling the compiler with itself produces the exact same
 bytes as the JavaScript bootstrap.
 
 ```bash
-node scripts/test-self-toolchain.mjs
+node bin/sdevhost.mjs scripts/test-self-toolchain.sdev
 # ✓ lang/compiler/lexer.sdev:   byte-identical  (bc=746,  pool=41)
 # ✓ lang/compiler/parser.sdev:  byte-identical  (bc=380,  pool=38)
 # ✓ lang/compiler/codegen.sdev: byte-identical  (bc=5730, pool=136)
@@ -447,7 +447,7 @@ node scripts/test-native.mjs            # x86-64 backend
 node scripts/test-self-lexer.mjs        # self-hosted lexer vs JS reference
 node scripts/test-self-parser.mjs       # self-hosted parser
 node scripts/test-self-codegen.mjs      # self-hosted codegen
-node scripts/test-self-toolchain.mjs    # byte-identity across the toolchain
+node bin/sdevhost.mjs scripts/test-self-toolchain.sdev    # byte-identity across the toolchain
 node scripts/test-shim-fixed-point.mjs  # 43-case fixed-point suite
 bunx tsx scripts/test-ml-stdlib.ts      # ML stack executed end to end
 bunx tsx scripts/test-translator.ts     # 26-language translation

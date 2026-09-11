@@ -293,13 +293,13 @@ the same lexer, parser, and language semantics.
   `lang/compiler/lexer.sdev` **byte-identically** to the JS bootstrap
   (`bc=746, pool=41`) and the real `lang/compiler/parser.sdev`
   **byte-identically** (`bc=380, pool=38`).
-- New gate `scripts/test-self-toolchain.mjs` diffs each toolchain source
+- New gate `scripts/test-self-toolchain.sdev` diffs each toolchain source
   through the shim and hard-fails on required-target mismatches. Current
   status: **lexer ✓, parser ✓, codegen ⚠** — the third one throws
   `string pool overflow` inside the JS bootstrap that compiles the shim
   driver, because embedding `codegen.sdev` itself as a `set src to "…"`
   string literal blows past the seed VM's 8 KiB pool region.
-- Probe script `scripts/probe-self-lexer.mjs` reports the first diverging
+- Probe script `scripts/probe-self-lexer.sdev` reports the first diverging
   bytecode / pool offset for any input, making the next regression easy
   to bisect.
 
@@ -469,7 +469,7 @@ in milestone order.)
   shim (`setSeedLoader` lets the browser hand it a `fetch`-based loader).
   `src/lang-bridge/bootstrap.d.ts` is deleted; `compile-self.d.ts` replaces it.
 - `scripts/test-wasm-runtime.mjs` runs on the shim too.
-- New gate: `node scripts/test-driver-artifact.mjs` re-derives the driver
+- New gate: `node bin/sdevhost.mjs scripts/test-driver-artifact.sdev` re-derives the driver
   from the bootstrap oracle and fails if the checked-in bytes drift, then
   compiles four programs through the bootstrap-free shim.
 - The JS bootstrap now exists **only** as a build/test-time oracle
@@ -1041,14 +1041,14 @@ dist/
 
 The gates that run today:
 
-1. `node scripts/test-self-toolchain.mjs` — `lexer.sdev`, `parser.sdev`, and
+1. `node bin/sdevhost.mjs scripts/test-self-toolchain.sdev` — `lexer.sdev`, `parser.sdev`, and
    `codegen.sdev` must all round-trip **byte-identical** through the
    self-hosted compiler (currently bc=746/380/5730).
 2. `node scripts/test-shim-fixed-point.mjs` — the compile shim reaches a
    fixed point against the JS bootstrap oracle.
 3. `node scripts/test-wasm-runtime.mjs` — seed VM opcode suite (ints, call
    frames, heap/lists, strings, floats + transcendentals).
-4. `node scripts/test-driver-artifact.mjs` — the checked-in driver bytecode
+4. `node bin/sdevhost.mjs scripts/test-driver-artifact.sdev` — the checked-in driver bytecode
    matches a fresh bootstrap build, and the bootstrap-free shim compiles.
 5. `node scripts/test-native.mjs` — Track B x86-64 emission and linking.
 6. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd,
