@@ -1,6 +1,6 @@
 import { Token, TokenType, KEYWORDS } from './tokens';
 import { SdevError } from './errors';
-import { translateSource } from './translator';
+import { translateSource, type TranslatorDialect } from './translator';
 
 export interface LexerOptions {
   /**
