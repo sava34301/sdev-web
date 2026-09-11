@@ -14,6 +14,7 @@
  * Multi-word phrases (e.g. "otherwise ponder", "da_bъde") are
  * supported via underscore-joined keys in the keyword tables.
  */
+import { V1_TO_V2, V2_EXTRA, TAG_TO_LANGUAGE } from './translator-v2';
 
 // ============================================================
 // Keyword tables — foreign word → canonical English sdev keyword
