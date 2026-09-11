@@ -35,7 +35,7 @@ to is_alpha with c
   end
   # Any UTF-8 continuation/lead byte counts as a letter, so identifiers may be
   # written in any script (Cyrillic, Greek, CJK) — sdev is not English-only.
-  if c is 128 or more
+  if c >= 128
     return 1
   end
   if c >= 65
