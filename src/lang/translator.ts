@@ -546,6 +546,33 @@ export const ENGLISH_KEYWORDS = new Set([
 export const SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
 
 // ============================================================
+// Surface targets — classic (v1) vs canonical sdev v2
+// ============================================================
+
+export type TranslationTarget = 'v1' | 'v2';
+
+const EFFECTIVE_TABLES: Record<string, Record<string, string>> = {};
+
+/**
+ * The keyword table actually used for a language + surface.
+ * v2 = every v1 entry mapped through V1_TO_V2, plus the v2-only extras.
+ */
+export function effectiveTable(lang: string, target: TranslationTarget = 'v1'): Record<string, string> | null {
+  const base = KEYWORD_TABLES[lang];
+  if (!base) return null;
+  if (target === 'v1') return base;
+  const key = `${lang}|v2`;
+  if (EFFECTIVE_TABLES[key]) return EFFECTIVE_TABLES[key];
+  const table: Record<string, string> = {};
+  for (const [foreign, canonical] of Object.entries(base)) {
+    table[foreign] = V1_TO_V2[canonical] ?? canonical;
+  }
+  Object.assign(table, V2_EXTRA[lang] ?? {});
+  EFFECTIVE_TABLES[key] = table;
+  return table;
+}
+
+// ============================================================
 // Multi-word phrase normalization
 // ------------------------------------------------------------
 // Some keywords are space-separated phrases (e.g. "в противен случай").
