@@ -172,7 +172,10 @@ export class Parser {
     }
     this.advance();
     const value = this.parseExpression();
-    return this.makeAssignment(target, value, setToken.line);
+    const node = this.makeAssignment(target, value, setToken.line);
+    // `set` both declares and assigns, matching the v2 compiler.
+    if (node.type === 'AssignStatement') node.declare = true;
+    return node;
   }
 
   private makeAssignment(target: AST.ASTNode, value: AST.ASTNode, line: number): AST.ASTNode {
