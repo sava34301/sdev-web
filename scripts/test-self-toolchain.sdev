@@ -1,58 +1,29 @@
-# Self-hosted toolchain round-trip — authored in SDEV, run by bin/sdevhost.mjs.
+# Self-hosted toolchain round-trip — authored in SDEV.
 #
 #   node bin/sdevhost.mjs scripts/test-self-toolchain.sdev
 #
-# Compiles every real toolchain source through BOTH the self-hosted compiler
-# and the bootstrap oracle, and demands byte identity.
+# Every real toolchain source is compiled through BOTH the self-hosted
+# compiler and the bootstrap oracle; the two artifacts must be identical.
 
-to str_same with a b
-  if length(a) is not length(b)
-    return 0
-  end
-  set i to 0
-  set same to 1
-  while i < length(a)
-    if ord(a, i) is ord(b, i)
-      set i to i + 1
-    else
-      set same to 0
-      set i to length(a)
-    end
-  end
-  return same
-end
+use "lang/stdlib/testkit.sdev"
 
 to check_target with path self_key boot_key
   set self_out to read_file(self_key)
   set boot_out to read_file(boot_key)
   if find(self_out, "error ") is 0
-    say concat(concat("FAIL ", path), ": self-hosted compile threw")
-    return 1
-  end
-  if str_same(self_out, boot_out)
-    say concat(concat("ok   ", path), ": byte-identical")
+    set _ to check(concat(path, " (self-hosted compile threw)"), 0)
     return 0
   end
-  say concat(concat("FAIL ", path), ": divergence")
-  set sp to split(self_out, " ")
-  set bp to split(boot_out, " ")
-  say concat("  self bc hex len ", str(length(sp[0])))
-  say concat("  boot bc hex len ", str(length(bp[0])))
-  say concat("  self pool hex len ", str(length(sp[1])))
-  say concat("  boot pool hex len ", str(length(bp[1])))
-  return 1
+  set ok to str_same(self_out, boot_out)
+  set _ to check(concat(path, ": byte-identical through the shim"), ok)
+  if ok is 0
+    say concat("     first differing byte: ", str(first_diff(self_out, boot_out)))
+  end
+  return 0
 end
 
-set failed to 0
+set _ to check_target("lang/compiler/lexer.sdev", "sdev:compile:self:lang/compiler/lexer.sdev", "sdev:compile:boot:lang/compiler/lexer.sdev")
+set _ to check_target("lang/compiler/parser.sdev", "sdev:compile:self:lang/compiler/parser.sdev", "sdev:compile:boot:lang/compiler/parser.sdev")
+set _ to check_target("lang/compiler/codegen.sdev", "sdev:compile:self:lang/compiler/codegen.sdev", "sdev:compile:boot:lang/compiler/codegen.sdev")
 
-set failed to failed + check_target("lang/compiler/lexer.sdev", "sdev:compile:self:lang/compiler/lexer.sdev", "sdev:compile:boot:lang/compiler/lexer.sdev")
-set failed to failed + check_target("lang/compiler/parser.sdev", "sdev:compile:self:lang/compiler/parser.sdev", "sdev:compile:boot:lang/compiler/parser.sdev")
-set failed to failed + check_target("lang/compiler/codegen.sdev", "sdev:compile:self:lang/compiler/codegen.sdev", "sdev:compile:boot:lang/compiler/codegen.sdev")
-
-if failed is 0
-  say "toolchain round-trip: all targets byte-identical"
-  set _ to write_file("sdev:exit:0", "")
-else
-  say concat(str(failed), " target(s) diverged")
-  set _ to write_file("sdev:exit:1", "")
-end
+set _ to tk_report("toolchain round-trip")
