@@ -12,7 +12,7 @@ to check_target with path self_key boot_key
     say concat(concat("FAIL ", path), ": self-hosted compile threw")
     return 1
   end
-  if str_eq(self_out, boot_out)
+  if self_out is boot_out
     say concat(concat("ok   ", path), ": byte-identical")
     return 0
   end
