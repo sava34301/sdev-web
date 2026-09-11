@@ -836,15 +836,22 @@ function compileFuzzyReplacer(lang: string, target: TranslationTarget = 'v1'): (
   // `съобщение` get rewritten to `speak`.
   const IDENT_INTRODUCERS = new Set([
     'forge', 'be', 'new', 'essence', 'conjure', 'extend', 'summon', 'within',
+    // v2 surface equivalents
+    'set', 'to', 'kind', 'use', 'in', 'extends', 'has', 'does',
   ]);
 
-  const fn = (src: string): string => {
+  const fn = (src: string, protect?: ReadonlySet<string>): string => {
     // Track the previous emitted token (post-translation) so we know whether
     // the current word is in identifier position.
     let prevToken = '';
     return src.replace(wordRe, (word, offset) => {
       // Skip pure ASCII — those are real identifiers or already-English keywords.
       if (/^[\x00-\x7F]+$/.test(word)) {
+        prevToken = word.toLowerCase();
+        return word;
+      }
+      // A dialect owns this word — leave it exactly as written.
+      if (protect?.has(word)) {
         prevToken = word.toLowerCase();
         return word;
       }
