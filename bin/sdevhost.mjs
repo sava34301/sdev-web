@@ -99,7 +99,10 @@ async function main() {
   const table = await prefetch(scriptSrc, args);
 
   const program = await selfCompile(scriptSrc);
-  const wasmBytes = readFileSync(new URL('../public/wasm/sdev-seed.wasm', import.meta.url));
+  // The seed VM is a static asset under public/wasm — read by path at
+  // runtime, never imported, so no bundler ever pulls the binary into a chunk.
+  const seedAssetPath = '../public/wasm/sdev-seed' + '.wasm';
+  const wasmBytes = readFileSync(new URL(seedAssetPath, import.meta.url));
   const module = await WebAssembly.compile(wasmBytes);
 
   let mem;
