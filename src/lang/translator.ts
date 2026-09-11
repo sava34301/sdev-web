@@ -824,8 +824,16 @@ export function translateSource(
       } else {
         // v2: `set name(` / `set name with` is a function declaration -> `to name`.
         t = t.replace(/\bset(\s+[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, 'to$1');
-        // "or more" / "or less" comparators arrive as separate words already.
-        t = t.replace(/\bis\s+not\b/g, 'is not');
+        // Many languages use one word ("е", "es", "ist") for both binding and
+        // comparison. Inside a condition it means `is`, not the `set … to` word.
+        t = t
+          .split('\n')
+          .map((line) =>
+            /^\s*(if|while)\b/.test(line)
+              ? line.replace(/(^\s*(?:if|while)\b[^\n]*?)\s+to\s+/, '$1 is ')
+              : line,
+          )
+          .join('\n');
       }
       return t;
     })
