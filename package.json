@@ -13,7 +13,11 @@
     "sdev": "node bin/sdev.mjs",
     "desktop:dev": "SDEV_DESKTOP_DEV=1 electron electron/main.cjs",
     "desktop:build": "SDEV_ELECTRON=1 vite build",
-    "desktop:package": "SDEV_ELECTRON=1 vite build && electron-packager . SDEV --platform=linux --arch=x64 --out=electron-release --overwrite --ignore=^/src --ignore=^/public --ignore=^/electron-release"
+    "desktop:package": "SDEV_ELECTRON=1 vite build && electron-packager . SDEV --platform=linux --arch=x64 --out=electron-release --overwrite --ignore=^/src --ignore=^/public --ignore=^/electron-release",
+    "sdev:host": "node bin/sdevhost.mjs",
+    "test:toolchain": "node bin/sdevhost.mjs scripts/test-self-toolchain.sdev",
+    "test:driver": "node bin/sdevhost.mjs scripts/test-driver-artifact.sdev",
+    "probe:lexer": "node bin/sdevhost.mjs scripts/probe-self-lexer.sdev"
   },
   "main": "electron/main.cjs",
   "dependencies": {
