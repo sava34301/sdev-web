@@ -12,6 +12,8 @@ export interface LexerOptions {
   sourceLanguage?: string | null;
   /** Set false to disable the built-in translator entirely. */
   translate?: boolean;
+  /** Active dialect — its surface words are never re-translated. */
+  dialect?: TranslatorDialect | null;
 }
 
 export class Lexer {
