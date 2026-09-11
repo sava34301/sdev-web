@@ -1,0 +1,29 @@
+# Self-hosted toolchain round-trip — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-self-toolchain.sdev
+#
+# Every real toolchain source is compiled through BOTH the self-hosted
+# compiler and the bootstrap oracle; the two artifacts must be identical.
+
+use "lang/stdlib/testkit.sdev"
+
+to check_target with path self_key boot_key
+  set self_out to read_file(self_key)
+  set boot_out to read_file(boot_key)
+  if find(self_out, "error ") is 0
+    set _ to check(concat(path, " (self-hosted compile threw)"), 0)
+    return 0
+  end
+  set ok to str_same(self_out, boot_out)
+  set _ to check(concat(path, ": byte-identical through the shim"), ok)
+  if ok is 0
+    say concat("     first differing byte: ", str(first_diff(self_out, boot_out)))
+  end
+  return 0
+end
+
+set _ to check_target("lang/compiler/lexer.sdev", "sdev:compile:self:lang/compiler/lexer.sdev", "sdev:compile:boot:lang/compiler/lexer.sdev")
+set _ to check_target("lang/compiler/parser.sdev", "sdev:compile:self:lang/compiler/parser.sdev", "sdev:compile:boot:lang/compiler/parser.sdev")
+set _ to check_target("lang/compiler/codegen.sdev", "sdev:compile:self:lang/compiler/codegen.sdev", "sdev:compile:boot:lang/compiler/codegen.sdev")
+
+set _ to tk_report("toolchain round-trip")

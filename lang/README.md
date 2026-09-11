@@ -59,7 +59,7 @@ The Milestone 2 plan is in `.lovable/plan.md` (approved by the user).
 
 `lang/compiler/{lexer,parser,codegen}.sdev` now compile **themselves** to
 byte-identical bytecode through the seed VM — verified by
-`scripts/test-self-toolchain.mjs` (all three targets required) and
+`scripts/test-self-toolchain.sdev` (all three targets required) and
 `scripts/test-self-codegen.mjs` (full case suite).
 
 Two rules the self-hosted codegen must keep in step with the reference
