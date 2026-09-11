@@ -670,7 +670,10 @@ export default function IDEPage() {
             moduleMap[f.name] = source;
             moduleMap['./' + f.name] = source;
           }
-          const r = await runWasm(rawSrc, moduleMap);
+          const r = await runWasm(rawSrc, moduleMap, {
+            sourceLanguage: selectedLanguage,
+            dialect: activeDialect,
+          });
           setOutput(r.output);
           setStatusMsg(r.success ? 'Done (v2 · self-hosted)' : `✗ ${r.error ?? 'error'}`);
         } catch (e) {
