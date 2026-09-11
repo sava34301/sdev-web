@@ -122,7 +122,10 @@ export async function runPrepared(
       ...(await resolveLibraries(prepared.code)),
     };
     try {
-      const r = await runWasm(prepared.code, modules);
+      const r = await runWasm(prepared.code, modules, {
+        sourceLanguage: opts.lang ?? 'auto',
+        dialect: prepared.dialect,
+      });
       for (const line of r.output) say(line);
       return { success: r.success, error: r.error ?? undefined };
     } catch (e) {
