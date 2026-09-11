@@ -11,14 +11,17 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
   const builtins = new Map<string, SdevFunction>();
 
   // speak - output to console
-  builtins.set('speak', {
+  const speak: SdevFunction = {
     type: 'builtin',
     call: (args: unknown[]) => {
       const message = args.map(stringify).join(' ');
       output(message);
       return null;
     },
-  });
+  };
+  builtins.set('speak', speak);
+  // `say` is the v2 spelling — both runtimes must print the same way.
+  builtins.set('say', speak);
 
   // whisper - output without newline concept (same as speak in this context)
   builtins.set('whisper', {

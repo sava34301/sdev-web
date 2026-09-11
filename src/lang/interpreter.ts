@@ -197,7 +197,8 @@ export class Interpreter {
       case 'LetStatement': return yield* this.evLet(node, env);
       case 'AssignStatement': {
         const value = yield* this.ev(node.value, env);
-        env.set(node.name, value, node.line);
+        if (node.declare && !env.has(node.name)) env.define(node.name, value);
+        else env.set(node.name, value, node.line);
         return value;
       }
       case 'AugAssignStatement': return yield* this.evAugAssign(node, env);

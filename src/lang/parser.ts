@@ -172,7 +172,10 @@ export class Parser {
     }
     this.advance();
     const value = this.parseExpression();
-    return this.makeAssignment(target, value, setToken.line);
+    const node = this.makeAssignment(target, value, setToken.line);
+    // `set` both declares and assigns, matching the v2 compiler.
+    if (node.type === 'AssignStatement') node.declare = true;
+    return node;
   }
 
   private makeAssignment(target: AST.ASTNode, value: AST.ASTNode, line: number): AST.ASTNode {
@@ -801,7 +804,46 @@ export class Parser {
     return { type: 'BlockStatement', statements, line: colonToken.line };
   }
 
+  /**
+   * Paren-less output commands: `say x`, `speak "hi"`, `shout a, b`.
+   * Only the output family is command-style, so ordinary expressions
+   * keep their existing meaning.
+   */
+  private tryParseCommandCall(): AST.ASTNode | null {
+    const COMMANDS = new Set(['say', 'speak', 'whisper', 'shout', 'print']);
+    const head = this.peek();
+    if (head.type !== TokenType.IDENTIFIER || !COMMANDS.has(head.value)) return null;
+    const next = this.tokens[this.pos + 1];
+    if (!next || next.line !== head.line) return null;
+    const STARTERS = new Set([
+      TokenType.STRING,
+      TokenType.NUMBER,
+      TokenType.IDENTIFIER,
+      TokenType.LBRACKET,
+      TokenType.MINUS,
+      TokenType.YEP,
+      TokenType.NOPE,
+      TokenType.VOID,
+      TokenType.SELF,
+      TokenType.ISNT,
+    ]);
+    if (!STARTERS.has(next.type)) return null;
+    // `say to ...` / `say be ...` are not calls; a following 'to' means a set-form.
+    if (next.type === TokenType.IDENTIFIER && (next.value === 'to' || next.value === 'be')) return null;
+    this.advance();
+    const args: AST.ASTNode[] = [this.parseExpression()];
+    while (this.match(TokenType.COMMA)) args.push(this.parseExpression());
+    return {
+      type: 'CallExpr',
+      callee: { type: 'Identifier', name: head.value, line: head.line },
+      args,
+      line: head.line,
+    } as AST.ASTNode;
+  }
+
   private parseExpressionStatement(): AST.ASTNode {
+    const command = this.tryParseCommandCall();
+    if (command) return command;
     const expr = this.parseExpression();
 
     // Augmented assignment: target += value
