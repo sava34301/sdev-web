@@ -1,0 +1,81 @@
+# testkit — assertions and host helpers for SDEV-authored build scripts.
+#
+#   use "lang/stdlib/testkit.sdev"
+#
+# Scripts written against this module run under the SDEV host:
+#   node bin/sdevhost.mjs scripts/<name>.sdev
+
+set tk_fail to mklist(2)
+set tk_fail[0] to 0
+set tk_pass to mklist(2)
+set tk_pass[0] to 0
+
+# Byte-wise string equality. The `is` operator compares handles, so two
+# separately built strings with the same bytes are not `is`-equal.
+to str_same with a b
+  if length(a) is not length(b)
+    return 0
+  end
+  set i to 0
+  set same to 1
+  while i < length(a)
+    if ord(a, i) is ord(b, i)
+      set i to i + 1
+    else
+      set same to 0
+      set i to length(a)
+    end
+  end
+  return same
+end
+
+# First differing byte offset, or -1 when the strings match.
+to first_diff with a b
+  set n to length(a)
+  if length(b) < n
+    set n to length(b)
+  end
+  set i to 0
+  while i < n
+    if ord(a, i) is not ord(b, i)
+      return i
+    end
+    set i to i + 1
+  end
+  if length(a) is length(b)
+    return 0 - 1
+  end
+  return n
+end
+
+to check with name ok
+  if ok
+    set tk_pass[0] to tk_pass[0] + 1
+    say concat("ok   ", name)
+  else
+    set tk_fail[0] to tk_fail[0] + 1
+    say concat("FAIL ", name)
+  end
+  return 0
+end
+
+to tk_report with title
+  say ""
+  say concat(concat(title, ": "), concat(str(tk_pass[0]), concat(" passed, ", concat(str(tk_fail[0]), " failed"))))
+  if tk_fail[0] is 0
+    set _ to write_file("sdev:exit:0", "")
+  else
+    set _ to write_file("sdev:exit:1", "")
+  end
+  return 0
+end
+
+# Host helpers ------------------------------------------------------------
+
+to host_args
+  return read_file("sdev:args")
+end
+
+to shell with cmd
+  return read_file(concat("sdev:exec:", cmd))
+end
