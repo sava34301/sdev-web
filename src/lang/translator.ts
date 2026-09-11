@@ -595,7 +595,7 @@ function buildPhraseNormalizations(lang: string, target: TranslationTarget = 'v1
     // Negative lookarounds prevent partial-word matches inside identifiers.
     return [new RegExp(`(^|[^\\p{L}\\p{N}_])${spaced}(?=$|[^\\p{L}\\p{N}_])`, 'gu'), `$1${p}`];
   });
-  PHRASE_NORMALIZATIONS[lang] = result;
+  PHRASE_NORMALIZATIONS[key] = result;
   return result;
 }
 
