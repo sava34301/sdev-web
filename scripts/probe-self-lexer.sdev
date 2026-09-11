@@ -1,0 +1,23 @@
+# Probe — compile a toolchain source through the self-hosted shim and the
+# bootstrap oracle, and report sizes plus the first divergence.
+#
+#   node bin/sdevhost.mjs scripts/probe-self-lexer.sdev
+#
+# host-prefetch: sdev:compile:self:lang/compiler/lexer.sdev
+# host-prefetch: sdev:compile:boot:lang/compiler/lexer.sdev
+
+use "lang/stdlib/testkit.sdev"
+
+set target to "lang/compiler/lexer.sdev"
+set self_out to read_file("sdev:compile:self:lang/compiler/lexer.sdev")
+set boot_out to read_file("sdev:compile:boot:lang/compiler/lexer.sdev")
+
+set sp to split(self_out, " ")
+set bp to split(boot_out, " ")
+
+say concat("target        : ", target)
+say concat("source bytes  : ", str(length(read_file(target))))
+say concat("bootstrap     : bc=", concat(str(length(bp[0]) / 2), concat("  pool=", str(length(bp[1]) / 2))))
+say concat("self-hosted   : bc=", concat(str(length(sp[0]) / 2), concat("  pool=", str(length(sp[1]) / 2))))
+say concat("bc first diff : ", str(first_diff(bp[0], sp[0]) / 2))
+say concat("pool first diff: ", str(first_diff(bp[1], sp[1]) / 2))
