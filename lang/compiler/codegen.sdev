@@ -46,6 +46,10 @@ to is_alpha with c
   if c is 95
     return 1
   end
+  # UTF-8 bytes are letters too: identifiers may be written in any script.
+  if c is 128 or more
+    return 1
+  end
   if c >= 65
     if c <= 90
       return 1
