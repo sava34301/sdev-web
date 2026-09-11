@@ -811,12 +811,13 @@ function levenshtein(a: string, b: string): number {
   return prev[bl];
 }
 
-const FUZZY_REPLACERS: Record<string, (s: string) => string> = {};
+const FUZZY_REPLACERS: Record<string, (s: string, protect?: ReadonlySet<string>) => string> = {};
 
-function compileFuzzyReplacer(lang: string): (s: string) => string {
-  if (FUZZY_REPLACERS[lang]) return FUZZY_REPLACERS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return (FUZZY_REPLACERS[lang] = (s) => s);
+function compileFuzzyReplacer(lang: string, target: TranslationTarget = 'v1'): (s: string, protect?: ReadonlySet<string>) => string {
+  const cacheKey = `${lang}|${target}`;
+  if (FUZZY_REPLACERS[cacheKey]) return FUZZY_REPLACERS[cacheKey];
+  const table = effectiveTable(lang, target);
+  if (!table) return (FUZZY_REPLACERS[cacheKey] = (s) => s);
 
   // Precompute keyword keys (only non-phrase, length ≥ 3 to avoid false positives).
   const keys = Object.keys(table).filter(k => !k.includes('_') && [...k].length >= 3);
