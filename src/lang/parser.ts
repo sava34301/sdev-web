@@ -805,6 +805,8 @@ export class Parser {
   }
 
   private parseExpressionStatement(): AST.ASTNode {
+    const command = this.tryParseCommandCall();
+    if (command) return command;
     const expr = this.parseExpression();
 
     // Augmented assignment: target += value
