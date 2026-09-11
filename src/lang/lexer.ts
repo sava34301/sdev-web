@@ -27,9 +27,9 @@ export class Lexer {
   public readonly detectedLanguage: string | null;
 
   constructor(source: string, options: LexerOptions = {}) {
-    const { sourceLanguage = 'auto', translate = true } = options;
+    const { sourceLanguage = 'auto', translate = true, dialect = null } = options;
     if (translate && sourceLanguage !== 'English' && sourceLanguage !== null) {
-      const result = translateSource(source, sourceLanguage);
+      const result = translateSource(source, sourceLanguage, { target: 'v1', dialect });
       this.source = result.translated;
       this.detectedLanguage = result.detectedLanguage;
     } else {
