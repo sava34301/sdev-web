@@ -898,6 +898,6 @@ function compileFuzzyReplacer(lang: string, target: TranslationTarget = 'v1'): (
       return word;
     });
   };
-  FUZZY_REPLACERS[lang] = fn;
+  FUZZY_REPLACERS[cacheKey] = fn;
   return fn;
 }
