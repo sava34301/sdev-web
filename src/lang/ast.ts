@@ -181,6 +181,8 @@ export interface AssignStatement {
   type: 'AssignStatement';
   name: string;
   value: ASTNode;
+  /** `set x to ...` declares the binding when it does not exist yet. */
+  declare?: boolean;
   line: number;
 }
 
