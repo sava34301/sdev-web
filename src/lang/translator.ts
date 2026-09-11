@@ -582,10 +582,11 @@ export function effectiveTable(lang: string, target: TranslationTarget = 'v1'): 
 // ============================================================
 
 const PHRASE_NORMALIZATIONS: Record<string, [RegExp, string][]> = {};
-function buildPhraseNormalizations(lang: string): [RegExp, string][] {
-  if (PHRASE_NORMALIZATIONS[lang]) return PHRASE_NORMALIZATIONS[lang];
-  const table = KEYWORD_TABLES[lang];
-  if (!table) return (PHRASE_NORMALIZATIONS[lang] = []);
+function buildPhraseNormalizations(lang: string, target: TranslationTarget = 'v1'): [RegExp, string][] {
+  const key = `${lang}|${target}`;
+  if (PHRASE_NORMALIZATIONS[key]) return PHRASE_NORMALIZATIONS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return (PHRASE_NORMALIZATIONS[key] = []);
   const phrases = Object.keys(table).filter(k => k.includes('_'));
   // Convert "в_противен_случай" → matcher for "в противен случай"
   const result: [RegExp, string][] = phrases.map(p => {
