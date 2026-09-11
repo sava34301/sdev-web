@@ -5,6 +5,23 @@
 # Compiles every real toolchain source through BOTH the self-hosted compiler
 # and the bootstrap oracle, and demands byte identity.
 
+to str_same with a b
+  if length(a) is not length(b)
+    return 0
+  end
+  set i to 0
+  set same to 1
+  while i < length(a)
+    if ord(a, i) is ord(b, i)
+      set i to i + 1
+    else
+      set same to 0
+      set i to length(a)
+    end
+  end
+  return same
+end
+
 to check_target with path self_key boot_key
   set self_out to read_file(self_key)
   set boot_out to read_file(boot_key)
@@ -12,7 +29,7 @@ to check_target with path self_key boot_key
     say concat(concat("FAIL ", path), ": self-hosted compile threw")
     return 1
   end
-  if self_out is boot_out
+  if str_same(self_out, boot_out)
     say concat(concat("ok   ", path), ": byte-identical")
     return 0
   end
