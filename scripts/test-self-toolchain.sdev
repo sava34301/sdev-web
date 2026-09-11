@@ -1,0 +1,41 @@
+# Self-hosted toolchain round-trip — authored in SDEV, run by bin/sdevhost.mjs.
+#
+#   node bin/sdevhost.mjs scripts/test-self-toolchain.sdev
+#
+# Compiles every real toolchain source through BOTH the self-hosted compiler
+# and the bootstrap oracle, and demands byte identity.
+
+to check_target with path self_key boot_key
+  set self_out to read_file(self_key)
+  set boot_out to read_file(boot_key)
+  if find(self_out, "error ") is 0
+    say concat(concat("FAIL ", path), ": self-hosted compile threw")
+    return 1
+  end
+  if str_eq(self_out, boot_out)
+    say concat(concat("ok   ", path), ": byte-identical")
+    return 0
+  end
+  say concat(concat("FAIL ", path), ": divergence")
+  set sp to split(self_out, " ")
+  set bp to split(boot_out, " ")
+  say concat("  self bc hex len ", str(length(sp[0])))
+  say concat("  boot bc hex len ", str(length(bp[0])))
+  say concat("  self pool hex len ", str(length(sp[1])))
+  say concat("  boot pool hex len ", str(length(bp[1])))
+  return 1
+end
+
+set failed to 0
+
+set failed to failed + check_target("lang/compiler/lexer.sdev", "sdev:compile:self:lang/compiler/lexer.sdev", "sdev:compile:boot:lang/compiler/lexer.sdev")
+set failed to failed + check_target("lang/compiler/parser.sdev", "sdev:compile:self:lang/compiler/parser.sdev", "sdev:compile:boot:lang/compiler/parser.sdev")
+set failed to failed + check_target("lang/compiler/codegen.sdev", "sdev:compile:self:lang/compiler/codegen.sdev", "sdev:compile:boot:lang/compiler/codegen.sdev")
+
+if failed is 0
+  say "toolchain round-trip: all targets byte-identical"
+  set _ to write_file("sdev:exit:0", "")
+else
+  say concat(str(failed), " target(s) diverged")
+  set _ to write_file("sdev:exit:1", "")
+end
