@@ -138,7 +138,10 @@ export async function runPrepared(
   }
 
   try {
-    const lexer = new Lexer(stripBoardBlocks(prepared.code), { sourceLanguage: opts.lang ?? 'auto' });
+    const lexer = new Lexer(stripBoardBlocks(prepared.code), {
+      sourceLanguage: opts.lang ?? 'auto',
+      dialect: prepared.dialect,
+    });
     const ast = new Parser(lexer.tokenize()).parse();
     new Interpreter(say).interpret(ast);
     return { success: true };
