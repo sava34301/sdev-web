@@ -6,6 +6,7 @@
  * what keeps the agent working offline and inside the compiler pipeline.
  */
 import {
+  VOCABULARY,
   ASSIGN_PHRASES,
   CANONICAL,
   COMPARISONS,
@@ -119,10 +120,20 @@ function numberWord(token: string): string | null {
   return String(total + current);
 }
 
+const LITERALS: Record<string, string> = (() => {
+  const out: Record<string, string> = {};
+  for (const w of VOCABULARY.nothing) out[w] = 'nothing';
+  for (const w of VOCABULARY.true) out[w] = 'true';
+  for (const w of VOCABULARY.false) out[w] = 'false';
+  return out;
+})();
+
 /** Turn a loose right-hand side into a canonical sdev expression. */
 function expression(rest: string, known: Set<string>): string {
   const trimmed = rest.trim();
   if (!trimmed) return 'nothing';
+  const literal = LITERALS[trimmed.toLowerCase()];
+  if (literal) return literal;
 
   // already an expression the compiler understands
   if (/^[\u0000\d(]/.test(trimmed) && !/\u0000\s+\u0000/.test(trimmed)) {
@@ -278,7 +289,9 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           const parts = wordsOf(rest);
           if (parts.length >= 2) {
             known.add(parts[0]);
-            rewritten.push(`set ${parts[0]} to ${expression(parts.slice(1).join(' '), known)}`);
+            const tail = parts.slice(1);
+            if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
+            rewritten.push(`set ${parts[0]} to ${expression(tail.join(' '), known)}`);
             continue;
           }
           rewritten.push(stmt);
@@ -311,7 +324,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
         }
         case 'return':
           learn(headKey, 'return');
-          rewritten.push(rest ? `return ${expression(rest, known)}` : 'return');
+          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ''), known)}` : 'return');
           continue;
         case 'break':
         case 'continue':
@@ -323,8 +336,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           const parts = wordsOf(rest.replace(/[:{]\s*$/, ''));
           if (!parts.length) { rewritten.push(stmt); continue; }
           const name = parts[0].replace(/\(.*$/, '');
-          const params = parts
-            .slice(1)
+          const inParens = parts[0].includes('(') ? [parts[0].slice(parts[0].indexOf('('))] : [];
+          const params = [...inParens, ...parts.slice(1)]
             .join(' ')
             .replace(/^\(|\)$/g, '')
             .replace(/,/g, ' ')
