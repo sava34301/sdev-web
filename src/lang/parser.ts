@@ -76,7 +76,12 @@ export class Parser {
   private isToDeclaration(): boolean {
     if (!this.checkIdentifierValue('to')) return false;
     const next = this.tokens[this.pos + 1];
-    return !!next && next.type === TokenType.IDENTIFIER && next.line === this.peek().line;
+    if (!next || next.type !== TokenType.IDENTIFIER || next.line !== this.peek().line) return false;
+    // `to name` must be followed by a parameter list or nothing else on the line,
+    // so ordinary phrases like `to terminal wednesday` stay expressions.
+    const after = this.tokens[this.pos + 2];
+    if (!after || after.line !== next.line) return true;
+    return after.type === TokenType.LPAREN || (after.type === TokenType.IDENTIFIER && after.value === 'with');
   }
 
   /** to name [with a b c] <block> end */

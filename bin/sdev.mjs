@@ -18313,7 +18313,10 @@ var Parser = class _Parser {
   isToDeclaration() {
     if (!this.checkIdentifierValue("to")) return false;
     const next = this.tokens[this.pos + 1];
-    return !!next && next.type === "IDENTIFIER" /* IDENTIFIER */ && next.line === this.peek().line;
+    if (!next || next.type !== "IDENTIFIER" /* IDENTIFIER */ || next.line !== this.peek().line) return false;
+    const after = this.tokens[this.pos + 2];
+    if (!after || after.line !== next.line) return true;
+    return after.type === "LPAREN" /* LPAREN */ || after.type === "IDENTIFIER" /* IDENTIFIER */ && after.value === "with";
   }
   /** to name [with a b c] <block> end */
   parseToDeclaration() {
