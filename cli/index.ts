@@ -138,7 +138,12 @@ LIBRARIES
   lib export <file> | lib import <file>
 
 CLOUD
-  auth login <email> | auth logout | auth whoami
+  auth login <email>      Email + password (--password, or $SDEV_PASSWORD)
+  auth code <email> [code] One-time code by email (no password needed)
+  auth signup <email>     Create an account
+  auth reset <email>      Send a password reset link
+  auth token <a> <r>      Sign in with an access + refresh token pair
+  auth status | whoami | refresh | logout
   cloud list | cloud pull [name] | cloud push <file>
 
 SETTINGS
