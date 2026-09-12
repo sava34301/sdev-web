@@ -97,6 +97,20 @@ export interface RepairResult {
   changed: boolean;
 }
 
+/** Polite sentence openers people write in front of a real statement. */
+const FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
+/** Words that carry no meaning inside a declaration. */
+const DECL_NOISE = /\b(?:called|named|name|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|input|inputs|that|which|takes|taking|accepts|of|value)\b/gi;
+/** Where output goes: the terminal, the screen, the console — always the same place. */
+const SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
+
+/** A name the compiler accepts. `11` becomes `n11`, `my name` becomes `my_name`. */
+function safeName(raw: string): string {
+  const cleaned = raw.replace(/[^\p{L}\p{N}_]/gu, '_').replace(/^_+|_+$/g, '');
+  if (!cleaned) return 'value';
+  return /^[\p{N}]/u.test(cleaned) ? 'n' + cleaned : cleaned;
+}
+
 function wordsOf(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
@@ -129,7 +143,10 @@ const LITERALS: Record<string, string> = (() => {
 })();
 
 /** Turn a loose right-hand side into a canonical sdev expression. */
-function expression(rest: string, known: Set<string>): string {
+function expression(rest: string, known: Set<string>, renames?: Map<string, string>): string {
+  if (renames?.size) {
+    rest = rest.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
+  }
   const trimmed = rest.trim();
   if (!trimmed) return 'nothing';
   const literal = LITERALS[trimmed.toLowerCase()];
