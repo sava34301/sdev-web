@@ -100,11 +100,8 @@ export function execute(source: string, options: ExecuteOptions = {}): Execution
 
   const plain = stripAgentDirectives(source);
   const agentOpts = options.agent === false ? null : { dialect: options.dialect ?? null, ...(options.agent ?? {}) };
-  // Run the file as written first; the agent steps in when that doesn't work.
-  // A file that already says what it means is never rewritten.
-  const eager = agentOpts?.mode === 'on' || agentOpts?.mode === 'strict';
   let understood = plain;
-  if (agentOpts && eager) {
+  if (agentOpts) {
     const result = understand(source, agentOpts);
     lastAgentRun = result;
     understood = result.source;
@@ -131,13 +128,10 @@ export function execute(source: string, options: ExecuteOptions = {}): Execution
   };
 
   const first = attempt(understood);
-  if (first.success || !agentOpts || eager) return first;
-
-  const result = understand(source, agentOpts);
-  lastAgentRun = result;
-  if (result.source === understood) return first;
-  const second = attempt(result.source);
-  return second.success ? second : first;
+  // If the agent's reading doesn't work out, the file as written wins.
+  if (first.success || understood === plain) return first;
+  const asWritten = attempt(plain);
+  return asWritten.success ? asWritten : first;
 }
 
 export { Lexer } from './lexer';
