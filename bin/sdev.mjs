@@ -26762,6 +26762,14 @@ var BUILTINS = /* @__PURE__ */ new Set([
   "sleep_ms",
   "say_err"
 ]);
+var FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
+var DECL_NOISE = /\b(?:called|named|name|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|input|inputs|that|which|takes|taking|accepts|of|value)\b/gi;
+var SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
+function safeName(raw) {
+  const cleaned = raw.replace(/[^\p{L}\p{N}_]/gu, "_").replace(/^_+|_+$/g, "");
+  if (!cleaned) return "value";
+  return /^[\p{N}]/u.test(cleaned) ? "n" + cleaned : cleaned;
+}
 function wordsOf(line) {
   return line.trim().split(/\s+/).filter(Boolean);
 }
@@ -26790,7 +26798,10 @@ var LITERALS = (() => {
   for (const w of VOCABULARY.false) out[w] = "false";
   return out;
 })();
-function expression(rest, known) {
+function expression(rest, known, renames) {
+  if (renames?.size) {
+    rest = rest.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
+  }
   const trimmed = rest.trim();
   if (!trimmed) return "nothing";
   const literal = LITERALS[trimmed.toLowerCase()];
@@ -26821,8 +26832,9 @@ function expression(rest, known) {
   if (allBare) return '"' + tokens.join(" ").replace(/"/g, '\\"') + '"';
   return tokens.map((t) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || RESERVED.has(t) || BUILTINS.has(t) || /[(.[]/.test(t) ? t : '"' + t + '"').join(" + ");
 }
-function condition(rest, known) {
+function condition(rest, known, renames) {
   let out = " " + rest.trim() + " ";
+  if (renames?.size) out = out.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
   for (const [re, to] of COMPARISONS) out = out.replace(re, to);
   out = out.replace(/\bthen\b/gi, " ").replace(/[:{]\s*$/, " ").replace(/\s*==\s*/g, " is ").replace(/\s*!=\s*/g, " is not ").replace(/\s*>=\s*/g, " is or more ").replace(/\s*<=\s*/g, " is or less ").replace(/\s+/g, " ").trim();
   out = out.split(" ").map((t) => !isMaskedString(t) && numberWord(t) !== null ? numberWord(t) : t).join(" ");
@@ -26871,6 +26883,7 @@ function repair(source, ctx = {}) {
   }
   const rawLines = source.split("\n");
   const known = collectNames(rawLines, words, ctx.knownNames);
+  const renames = /* @__PURE__ */ new Map();
   const notes = [];
   const learned = {};
   const unresolved = [];
@@ -26897,7 +26910,8 @@ function repair(source, ctx = {}) {
     }
     const statements = splitStatements(line);
     const rewritten = [];
-    for (const stmt of statements) {
+    for (const original of statements) {
+      const stmt = original.replace(FILLER_HEAD, "").trim() || original;
       const toks = wordsOf(stmt);
       if (!toks.length) continue;
       const head2 = toks[0];
@@ -26910,10 +26924,12 @@ function repair(source, ctx = {}) {
         continue;
       }
       switch (intent) {
-        case "say":
+        case "say": {
           learn(headKey, "say");
-          rewritten.push(`say ${expression(rest, known)}`);
+          const what = rest.replace(SAY_TARGET, "").trim() || rest;
+          rewritten.push(`say ${expression(what, known, renames)}`);
           continue;
+        }
         case "ask":
           learn(headKey, "ask");
           rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to ask` : "ask");
@@ -26922,8 +26938,10 @@ function repair(source, ctx = {}) {
           learn(headKey, "set");
           const m = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
           if (m) {
-            known.add(m[1]);
-            rewritten.push(`set ${m[1]} to ${expression(m[2], known)}`);
+            const name = safeName(m[1]);
+            if (name !== m[1]) renames.set(m[1], name);
+            known.add(name);
+            rewritten.push(`set ${name} to ${expression(m[2], known, renames)}`);
             continue;
           }
           const parts = wordsOf(rest);
@@ -26931,7 +26949,7 @@ function repair(source, ctx = {}) {
             known.add(parts[0]);
             const tail = parts.slice(1);
             if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
-            rewritten.push(`set ${parts[0]} to ${expression(tail.join(" "), known)}`);
+            rewritten.push(`set ${safeName(parts[0])} to ${expression(tail.join(" "), known, renames)}`);
             continue;
           }
           rewritten.push(stmt);
@@ -26939,7 +26957,7 @@ function repair(source, ctx = {}) {
         }
         case "if":
           learn(headKey, "if");
-          rewritten.push(`if ${condition(rest, known)}`);
+          rewritten.push(`if ${condition(rest, known, renames)}`);
           continue;
         case "else":
           learn(headKey, "else");
@@ -26947,7 +26965,7 @@ function repair(source, ctx = {}) {
           continue;
         case "while":
           learn(headKey, "while");
-          rewritten.push(`while ${condition(rest, known)}`);
+          rewritten.push(`while ${condition(rest, known, renames)}`);
           continue;
         case "for": {
           learn(headKey, "for");
@@ -26964,7 +26982,7 @@ function repair(source, ctx = {}) {
         }
         case "return":
           learn(headKey, "return");
-          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ""), known)}` : "return");
+          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ""), known, renames)}` : "return");
           continue;
         case "break":
         case "continue":
@@ -26973,14 +26991,21 @@ function repair(source, ctx = {}) {
           continue;
         case "function": {
           learn(headKey, "function");
-          const parts = wordsOf(rest.replace(/[:{]\s*$/, ""));
+          const cleanedDecl = rest.replace(/[:{]\s*$/, "").replace(DECL_NOISE, " ").replace(/\s+/g, " ").trim();
+          const parts = wordsOf(cleanedDecl);
           if (!parts.length) {
             rewritten.push(stmt);
             continue;
           }
-          const name = parts[0].replace(/\(.*$/, "");
+          const rawName = parts[0].replace(/\(.*$/, "");
+          const name = safeName(rawName);
+          if (name !== rawName) renames.set(rawName, name);
           const inParens = parts[0].includes("(") ? [parts[0].slice(parts[0].indexOf("("))] : [];
-          const params = [...inParens, ...parts.slice(1)].join(" ").replace(/^\(|\)$/g, "").replace(/,/g, " ").split(/\s+/).filter((p) => p && words.get(p.toLowerCase()) !== "in" && p !== "with");
+          const params = [...inParens, ...parts.slice(1)].join(" ").replace(/^\(|\)$/g, "").replace(/,/g, " ").split(/\s+/).filter((p) => p && words.get(p.toLowerCase()) !== "in" && p !== "with").map((p) => {
+            const safe = safeName(p);
+            if (safe !== p) renames.set(p, safe);
+            return safe;
+          });
           known.add(name);
           params.forEach((p) => known.add(p));
           rewritten.push(params.length ? `to ${name} with ${params.join(" ")}` : `to ${name}`);
@@ -26991,8 +27016,16 @@ function repair(source, ctx = {}) {
       }
       const assign = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
       if (assign && !words.has(assign[1].toLowerCase())) {
-        known.add(assign[1]);
-        rewritten.push(`set ${assign[1]} to ${expression(assign[2], known)}`);
+        const name = safeName(assign[1]);
+        if (name !== assign[1]) renames.set(assign[1], name);
+        known.add(name);
+        rewritten.push(`set ${name} to ${expression(assign[2], known, renames)}`);
+        continue;
+      }
+      if (/^(?:call|run|do|invoke|execute|use)$/i.test(headKey) && toks.length >= 2) {
+        const target = safeName(toks[1]);
+        const args = wordsOf(rest).slice(1).filter((t) => !/^(?:with|and|using|,)$/i.test(t)).map((t) => (renames.get(t) ?? t).replace(/,$/, ""));
+        rewritten.push(`${target}(${args.join(", ")})`);
         continue;
       }
       if (/^[\p{L}\p{N}_]+\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head2) || BUILTINS.has(headKey)) {
@@ -27017,6 +27050,33 @@ function repair(source, ctx = {}) {
     return result;
   });
   return { source: out.join("\n"), notes, learned, unresolved, changed };
+}
+var OPENS = /^\s*(?:to\s+[\p{L}\p{N}_]|if\b|while\b|for\s+each\b|kind\b|attempt\b|match\b)/u;
+var CLOSES = /^\s*end\b/;
+function closeBlocks(source) {
+  const lines = source.split("\n");
+  const out = [];
+  const stack = [];
+  const nextCode = (from) => {
+    for (let j = from; j < lines.length; j++) if (lines[j].trim()) return lines[j];
+    return null;
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) {
+      const next = nextCode(i + 1);
+      while (stack.length && next !== null && !/^\s*(?:else|end)\b/.test(next) && (next.match(/^\s*/)?.[0].length ?? 0) <= stack[stack.length - 1].length) {
+        out.push(stack.pop() + "end");
+      }
+      out.push(line);
+      continue;
+    }
+    if (CLOSES.test(line)) stack.pop();
+    else if (OPENS.test(line)) stack.push(line.match(/^\s*/)?.[0] ?? "");
+    out.push(line);
+  }
+  while (stack.length) out.push(stack.pop() + "end");
+  return out.join("\n");
 }
 
 // src/lang/agent/sense.ts
@@ -27277,7 +27337,12 @@ function runRules(prep, opts) {
     strict: prep.mode === "strict"
   });
   void opts;
-  return { done: false, source: result.source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
+  let source = result.source;
+  if (!parses(source)) {
+    const closed = closeBlocks(source);
+    if (closed !== source && parses(closed)) source = closed;
+  }
+  return { done: false, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
 }
 function finish(prep, source, learned) {
   if (!prep.learn) return;
