@@ -66,9 +66,30 @@ function skip(source: string, mode: AgentMode): UnderstandResult {
   return { source, changed: false, mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none' };
 }
 
+/** A dialect's own words are things the agent must also understand. */
+function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
+  const map = new Map<string, Intent>();
+  const canonicalToIntent = new Map<string, Intent>();
+  for (const [intent, word] of Object.entries(CANONICAL_WORDS) as [Intent, string][]) {
+    canonicalToIntent.set(word, intent);
+  }
+  const names = opts.dialect?.names ?? {};
+  const synonyms = opts.dialect?.synonyms ?? {};
+  for (const [canonical, word] of Object.entries(names)) {
+    const intent = canonicalToIntent.get(canonical);
+    if (intent && word) map.set(word.toLowerCase(), intent);
+  }
+  for (const [canonical, list] of Object.entries(synonyms)) {
+    const intent = canonicalToIntent.get(canonical);
+    if (!intent) continue;
+    for (const word of list ?? []) map.set(word.toLowerCase(), intent);
+  }
+  return map;
+}
+
 function runRules(prep: Prepared, opts: UnderstandOptions) {
   const { source: remembered } = applyMemoryLines(prep.stripped, prep.memory);
-  const extraWords = memoryWordMap(prep.memory);
+  const extraWords = new Map([...dialectWordMap(opts), ...memoryWordMap(prep.memory)]);
   const sense = senseFile(remembered, extraWords);
 
   if (!sense.suspicious && sense.parses) {
