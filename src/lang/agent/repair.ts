@@ -449,3 +449,44 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
 
   return { source: out.join('\n'), notes, learned, unresolved, changed };
 }
+
+const OPENS = /^\s*(?:to\s+[\p{L}\p{N}_]|if\b|while\b|for\s+each\b|kind\b|attempt\b|match\b)/u;
+const CLOSES = /^\s*end\b/;
+
+/**
+ * People often never write `end`. Close what they left open: a block is closed
+ * at the first blank line that is followed by a line at the same or shallower
+ * indentation, and anything still open is closed at the end of the file.
+ */
+export function closeBlocks(source: string): string {
+  const lines = source.split('\n');
+  const out: string[] = [];
+  const stack: string[] = [];
+
+  const nextCode = (from: number) => {
+    for (let j = from; j < lines.length; j++) if (lines[j].trim()) return lines[j];
+    return null;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) {
+      const next = nextCode(i + 1);
+      while (
+        stack.length &&
+        next !== null &&
+        !/^\s*(?:else|end)\b/.test(next) &&
+        (next.match(/^\s*/)?.[0].length ?? 0) <= (stack[stack.length - 1].length)
+      ) {
+        out.push(stack.pop()! + 'end');
+      }
+      out.push(line);
+      continue;
+    }
+    if (CLOSES.test(line)) stack.pop();
+    else if (OPENS.test(line)) stack.push(line.match(/^\s*/)?.[0] ?? '');
+    out.push(line);
+  }
+  while (stack.length) out.push(stack.pop()! + 'end');
+  return out.join('\n');
+}
