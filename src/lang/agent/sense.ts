@@ -47,6 +47,21 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
       reasons.push(`line ${i + 1}: looks like an assignment written another way`);
     }
     if (/;\s*\S/.test(line)) reasons.push(`line ${i + 1}: several statements on one line`);
+
+    // Plain English written as code: three or more bare words with no call,
+    // no quotes and no operators. It may parse, but it means nothing.
+    const known = baseWordMap().has(head) || extra?.has(head);
+    if (!known && /^[\p{L}_][\p{L}\p{N}_]*(?:\s+[\p{L}\p{N}_]+){2,}$/u.test(line)) {
+      reasons.push(`line ${i + 1}: reads like a sentence, not a statement`);
+    }
+    // "say to terminal x" — the destination is spelled out in words.
+    if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(line)) {
+      reasons.push(`line ${i + 1}: names the output destination in words`);
+    }
+    // "call greet with 2"
+    if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line)) {
+      reasons.push(`line ${i + 1}: a call written in words`);
+    }
   }
 
   const ok = parses(source);

@@ -11,7 +11,7 @@
  * `!#agent:local` / `!#agent:online`.
  */
 import { scanDirectives, type AgentMode, type BrainMode } from './directives';
-import { repair } from './repair';
+import { repair, closeBlocks } from './repair';
 import { senseFile, parses } from './sense';
 import { think, online } from './brain';
 import {
@@ -102,7 +102,12 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
     strict: prep.mode === 'strict',
   });
   void opts;
-  return { done: false as const, source: result.source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
+  // People rarely write `end`. If their file doesn't hang together without it,
+  // close what they left open — but only when that actually helps.
+  let source = result.source;
+  const closed = closeBlocks(source);
+  if (closed !== source && parses(closed)) source = closed;
+  return { done: false as const, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
 }
 
 function finish(prep: Prepared, source: string, learned: Record<string, Intent>): void {
