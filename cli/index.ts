@@ -37,7 +37,13 @@ import {
   listDialects, saveDialect, removeDialect, findDialect, newDialect,
   activeSlug, setActiveSlug, activeDialect, runtimePreference, setRuntimePreference,
 } from './store';
-import { db, currentUser, requireUser, signIn, signOut, myUsername } from './cloud';
+import { db, myUsername } from './cloud';
+import {
+  currentUser, requireUser, ensureSession, signOut, signInWithPassword, signUpWithPassword,
+  sendEmailCode, verifyEmailCode, signInWithTokens, sendPasswordReset, sessionFile, storedSummary,
+} from './auth';
+import { ask, password as readPassword } from './prompt';
+import { runEditor } from './editor';
 import { prepare, runPrepared, readSource, localModules, type PrepareOptions } from './pipeline';
 
 const VERSION = '5.0.0';
