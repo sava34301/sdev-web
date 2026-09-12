@@ -2188,11 +2188,11 @@ function __metadata(metadataKey, metadataValue) {
 }
 function __awaiter(thisArg, _arguments, P, generator) {
   function adopt(value2) {
-    return value2 instanceof P ? value2 : new P(function(resolve5) {
-      resolve5(value2);
+    return value2 instanceof P ? value2 : new P(function(resolve6) {
+      resolve6(value2);
     });
   }
-  return new (P || (P = Promise))(function(resolve5, reject) {
+  return new (P || (P = Promise))(function(resolve6, reject) {
     function fulfilled(value2) {
       try {
         step(generator.next(value2));
@@ -2208,7 +2208,7 @@ function __awaiter(thisArg, _arguments, P, generator) {
       }
     }
     function step(result) {
-      result.done ? resolve5(result.value) : adopt(result.value).then(fulfilled, rejected);
+      result.done ? resolve6(result.value) : adopt(result.value).then(fulfilled, rejected);
     }
     step((generator = generator.apply(thisArg, _arguments || [])).next());
   });
@@ -2399,14 +2399,14 @@ function __asyncValues(o) {
   }, i);
   function verb(n) {
     i[n] = o[n] && function(v) {
-      return new Promise(function(resolve5, reject) {
-        v = o[n](v), settle(resolve5, reject, v.done, v.value);
+      return new Promise(function(resolve6, reject) {
+        v = o[n](v), settle(resolve6, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve5, reject, d, v) {
+  function settle(resolve6, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve5({ value: v2, done: d });
+      resolve6({ value: v2, done: d });
     }, reject);
   }
 }
@@ -4048,15 +4048,15 @@ var require_RealtimeChannel = __commonJS({
             }
           }
         } else {
-          return new Promise((resolve5) => {
+          return new Promise((resolve6) => {
             var _a2, _b2, _c;
             const push = this._push(args.type, args, opts.timeout || this.timeout);
             if (args.type === "broadcast" && !((_c = (_b2 = (_a2 = this.params) === null || _a2 === void 0 ? void 0 : _a2.config) === null || _b2 === void 0 ? void 0 : _b2.broadcast) === null || _c === void 0 ? void 0 : _c.ack)) {
-              resolve5("ok");
+              resolve6("ok");
             }
-            push.receive("ok", () => resolve5("ok"));
-            push.receive("error", () => resolve5("error"));
-            push.receive("timeout", () => resolve5("timed out"));
+            push.receive("ok", () => resolve6("ok"));
+            push.receive("error", () => resolve6("error"));
+            push.receive("timeout", () => resolve6("timed out"));
           });
         }
       }
@@ -4084,16 +4084,16 @@ var require_RealtimeChannel = __commonJS({
         };
         this.joinPush.destroy();
         let leavePush = null;
-        return new Promise((resolve5) => {
+        return new Promise((resolve6) => {
           leavePush = new push_1.default(this, constants_1.CHANNEL_EVENTS.leave, {}, timeout);
           leavePush.receive("ok", () => {
             onClose();
-            resolve5("ok");
+            resolve6("ok");
           }).receive("timeout", () => {
             onClose();
-            resolve5("timed out");
+            resolve6("timed out");
           }).receive("error", () => {
-            resolve5("error");
+            resolve6("error");
           });
           leavePush.send();
           if (!this._canPush()) {
@@ -4172,8 +4172,8 @@ var require_RealtimeChannel = __commonJS({
       _trigger(type, payload, ref) {
         var _a, _b;
         const typeLower = type.toLocaleLowerCase();
-        const { close, error, leave, join: join2 } = constants_1.CHANNEL_EVENTS;
-        const events = [close, error, leave, join2];
+        const { close, error, leave, join: join3 } = constants_1.CHANNEL_EVENTS;
+        const events = [close, error, leave, join3];
         if (ref && events.indexOf(typeLower) >= 0 && ref !== this._joinRef()) {
           return;
         }
@@ -7753,7 +7753,7 @@ var require_GoTrueClient = __commonJS({
         try {
           let res;
           if ("email" in credentials) {
-            const { email, password, options } = credentials;
+            const { email, password: password2, options } = credentials;
             let codeChallenge = null;
             let codeChallengeMethod = null;
             if (this.flowType === "pkce") {
@@ -7765,7 +7765,7 @@ var require_GoTrueClient = __commonJS({
               redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo,
               body: {
                 email,
-                password,
+                password: password2,
                 data: (_a = options === null || options === void 0 ? void 0 : options.data) !== null && _a !== void 0 ? _a : {},
                 gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken },
                 code_challenge: codeChallenge,
@@ -7774,12 +7774,12 @@ var require_GoTrueClient = __commonJS({
               xform: fetch_1._sessionResponse
             });
           } else if ("phone" in credentials) {
-            const { phone, password, options } = credentials;
+            const { phone, password: password2, options } = credentials;
             res = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/signup`, {
               headers: this.headers,
               body: {
                 phone,
-                password,
+                password: password2,
                 data: (_b = options === null || options === void 0 ? void 0 : options.data) !== null && _b !== void 0 ? _b : {},
                 channel: (_c = options === null || options === void 0 ? void 0 : options.channel) !== null && _c !== void 0 ? _c : "sms",
                 gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
@@ -7821,23 +7821,23 @@ var require_GoTrueClient = __commonJS({
         try {
           let res;
           if ("email" in credentials) {
-            const { email, password, options } = credentials;
+            const { email, password: password2, options } = credentials;
             res = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
               headers: this.headers,
               body: {
                 email,
-                password,
+                password: password2,
                 gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
               },
               xform: fetch_1._sessionResponsePassword
             });
           } else if ("phone" in credentials) {
-            const { phone, password, options } = credentials;
+            const { phone, password: password2, options } = credentials;
             res = await (0, fetch_1._request)(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
               headers: this.headers,
               body: {
                 phone,
-                password,
+                password: password2,
                 gotrue_meta_security: { captcha_token: options === null || options === void 0 ? void 0 : options.captchaToken }
               },
               xform: fetch_1._sessionResponsePassword
@@ -11296,7 +11296,7 @@ function tokenize(src) {
         s += src[i++];
         col++;
       }
-      if (KEYWORDS2.has(s)) push("KW", s);
+      if (KEYWORDS3.has(s)) push("KW", s);
       else if (s === "yep" || s === "nope") push("KW", s === "yep" ? "true" : "false");
       else push("IDENT", s);
       continue;
@@ -11336,10 +11336,10 @@ function tokenize(src) {
   push("EOF", null);
   return tokens;
 }
-var KEYWORDS2, SdevError2;
+var KEYWORDS3, SdevError2;
 var init_v2 = __esm({
   "lang/runtime/v2.js"() {
-    KEYWORDS2 = /* @__PURE__ */ new Set([
+    KEYWORDS3 = /* @__PURE__ */ new Set([
       "say",
       "ask",
       "set",
@@ -13056,8 +13056,8 @@ __export(link_exports, {
   link: () => link
 });
 import { spawnSync } from "node:child_process";
-import { writeFileSync as writeFileSync2, mkdirSync as mkdirSync2 } from "node:fs";
-import { dirname as dirname3, resolve as resolve3 } from "node:path";
+import { writeFileSync as writeFileSync4, mkdirSync as mkdirSync3 } from "node:fs";
+import { dirname as dirname4, resolve as resolve4 } from "node:path";
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { encoding: "utf8", ...opts });
   if (r.status !== 0) {
@@ -13070,12 +13070,12 @@ ${r.stderr || r.stdout}`;
 function link(asmText, outPath, opts = {}) {
   const as = opts.as || "as";
   const ld = opts.ld || "ld";
-  const tmp = opts.tmpDir || dirname3(outPath);
-  mkdirSync2(tmp, { recursive: true });
-  const progS = resolve3(tmp, "_sdev_prog.s");
-  const progO = resolve3(tmp, "_sdev_prog.o");
-  const rtO = resolve3(tmp, "_sdev_runtime.o");
-  writeFileSync2(progS, asmText);
+  const tmp = opts.tmpDir || dirname4(outPath);
+  mkdirSync3(tmp, { recursive: true });
+  const progS = resolve4(tmp, "_sdev_prog.s");
+  const progO = resolve4(tmp, "_sdev_prog.o");
+  const rtO = resolve4(tmp, "_sdev_runtime.o");
+  writeFileSync4(progS, asmText);
   run(as, ["--64", "-o", progO, progS]);
   run(as, ["--64", "-o", rtO, RUNTIME_S]);
   run(ld, ["-o", outPath, rtO, progO]);
@@ -13085,13 +13085,13 @@ var RUNTIME_S;
 var init_link = __esm({
   "lang/native/link.mjs"() {
     RUNTIME_S = (() => {
-      if (process.env.SDEV_RUNTIME_S) return resolve3(process.env.SDEV_RUNTIME_S);
+      if (process.env.SDEV_RUNTIME_S) return resolve4(process.env.SDEV_RUNTIME_S);
       try {
         const u = import.meta.url;
-        if (u) return resolve3(new URL("./runtime.s", u).pathname);
+        if (u) return resolve4(new URL("./runtime.s", u).pathname);
       } catch {
       }
-      return resolve3(typeof __dirname !== "undefined" ? __dirname : ".", "runtime.s");
+      return resolve4(typeof __dirname !== "undefined" ? __dirname : ".", "runtime.s");
     })();
   }
 });
@@ -13099,9 +13099,9 @@ var init_link = __esm({
 // cli/index.ts
 init_env();
 init_env();
-import { writeFileSync as writeFileSync3, readFileSync as readFileSync3, mkdirSync as mkdirSync3, existsSync as existsSync3 } from "node:fs";
-import { resolve as resolve4, basename, dirname as dirname4, extname } from "node:path";
-import { createInterface } from "node:readline";
+import { writeFileSync as writeFileSync5, readFileSync as readFileSync5, mkdirSync as mkdirSync4, existsSync as existsSync5 } from "node:fs";
+import { resolve as resolve5, basename as basename2, dirname as dirname5, extname } from "node:path";
+import { createInterface as createInterface2 } from "node:readline";
 
 // src/lang/keywords.ts
 var KEYWORD_SPECS = [
@@ -23301,7 +23301,7 @@ var _getRequestParams = (method, options, parameters, body) => {
   return _objectSpread2(_objectSpread2({}, params), parameters);
 };
 async function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
-  return new Promise((resolve5, reject) => {
+  return new Promise((resolve6, reject) => {
     fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
       if (!result.ok) throw result;
       if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
@@ -23311,7 +23311,7 @@ async function _handleRequest(fetcher, method, url, options, parameters, body, n
         if (!contentType || !contentType.includes("application/json")) return {};
       }
       return result.json();
-    }).then((data) => resolve5(data)).catch((error) => handleError(error, reject, options, namespace));
+    }).then((data) => resolve6(data)).catch((error) => handleError(error, reject, options, namespace));
   });
 }
 function createFetchApi(namespace = "storage") {
@@ -25825,7 +25825,7 @@ function brokeredPreviewStorage() {
   const RESULT = "lovable-preview-auth:result";
   const TIMEOUT = 2e3;
   const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const request = (type, key, value2) => new Promise((resolve5) => {
+  const request = (type, key, value2) => new Promise((resolve6) => {
     const requestId = newId();
     let done = false;
     let timer;
@@ -25834,7 +25834,7 @@ function brokeredPreviewStorage() {
       done = true;
       clearTimeout(timer);
       window.removeEventListener("message", onMessage);
-      resolve5(r);
+      resolve6(r);
     };
     const onMessage = (e) => {
       if (editorOrigins.indexOf(e.origin) < 0) return;
@@ -26118,32 +26118,240 @@ function setRuntimePreference(rt) {
 
 // cli/cloud.ts
 init_env();
-var db3 = supabase;
+
+// cli/auth.ts
+init_env();
+init_env();
+import { readFileSync as readFileSync2, writeFileSync as writeFileSync2, existsSync as existsSync2, rmSync, chmodSync } from "node:fs";
+import { join as join2 } from "node:path";
+var SESSION_PATH = join2(SDEV_HOME, "session.json");
+function saveSession(session) {
+  if (!session) return clearSession();
+  const payload = {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_at: session.expires_at,
+    email: session.user?.email ?? null
+  };
+  writeFileSync2(SESSION_PATH, JSON.stringify(payload, null, 2));
+  try {
+    chmodSync(SESSION_PATH, 384);
+  } catch {
+  }
+}
+function clearSession() {
+  try {
+    if (existsSync2(SESSION_PATH)) rmSync(SESSION_PATH);
+  } catch {
+  }
+}
+function readStored() {
+  try {
+    const s = JSON.parse(readFileSync2(SESSION_PATH, "utf8"));
+    return s.access_token && s.refresh_token ? s : null;
+  } catch {
+    return null;
+  }
+}
+var restored = false;
+async function ensureSession() {
+  if (!restored) {
+    restored = true;
+    const stored = readStored();
+    const { data: data2 } = await supabase.auth.getSession();
+    if (!data2.session && stored) {
+      const { data: set } = await supabase.auth.setSession({
+        access_token: stored.access_token,
+        refresh_token: stored.refresh_token
+      });
+      if (set.session) saveSession(set.session);
+    }
+  }
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  if (!session) return null;
+  const expiresAt = (session.expires_at ?? 0) * 1e3;
+  if (expiresAt && expiresAt - Date.now() < 6e4) {
+    const { data: refreshed, error } = await supabase.auth.refreshSession();
+    if (error || !refreshed.session) {
+      clearSession();
+      return null;
+    }
+    saveSession(refreshed.session);
+    return refreshed.session;
+  }
+  return session;
+}
 async function currentUser() {
-  const { data } = await supabase.auth.getUser();
+  const session = await ensureSession();
+  if (!session) return null;
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    clearSession();
+    return null;
+  }
   return data.user ?? null;
 }
 async function requireUser() {
   const user = await currentUser();
-  if (!user) throw new Error("Not signed in. Run: sdev auth login <email>");
+  if (!user) {
+    throw new Error(
+      "Not signed in.\n  sdev auth login <email>   email and password\n  sdev auth code <email>    one-time code by email"
+    );
+  }
   return user;
 }
-async function signIn(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw new Error(error.message);
+function explain(message) {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login credentials")) {
+    return "That email and password combination was not accepted.\nIf you signed up with Google, set a password on the website first, or use: sdev auth code <email>";
+  }
+  if (m.includes("email not confirmed")) {
+    return "This account still needs email confirmation. Open the link we emailed you, then try again.";
+  }
+  if (m.includes("email logins are disabled") || m.includes("signups not allowed") || m.includes("email provider")) {
+    return "Password sign-in is not enabled for this account type. Try: sdev auth code <email>";
+  }
+  if (m.includes("token has expired") || m.includes("invalid token")) {
+    return "That code is no longer valid. Request a fresh one with: sdev auth code <email>";
+  }
+  if (m.includes("fetch failed") || m.includes("network") || m.includes("enotfound")) {
+    return "Could not reach the sdev backend. Check your internet connection or proxy settings.";
+  }
+  return message;
+}
+async function signInWithPassword(email, password2) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: password2 });
+  if (error) throw new Error(explain(error.message));
+  saveSession(data.session);
   return data.user;
 }
-async function signOut() {
-  await supabase.auth.signOut();
+async function signUpWithPassword(email, password2, displayName) {
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password: password2,
+    options: { data: { display_name: displayName || email.split("@")[0] } }
+  });
+  if (error) throw new Error(explain(error.message));
+  if (data.session) saveSession(data.session);
+  return { user: data.user, needsConfirmation: !data.session };
 }
+async function sendEmailCode(email, allowCreate) {
+  const { error } = await supabase.auth.signInWithOtp({
+    email: email.trim(),
+    options: { shouldCreateUser: allowCreate }
+  });
+  if (error) throw new Error(explain(error.message));
+}
+async function verifyEmailCode(email, code) {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: email.trim(),
+    token: code.trim(),
+    type: "email"
+  });
+  if (error) throw new Error(explain(error.message));
+  saveSession(data.session);
+  return data.user;
+}
+async function signInWithTokens(accessToken, refreshToken) {
+  const { data, error } = await supabase.auth.setSession({
+    access_token: accessToken.trim(),
+    refresh_token: refreshToken.trim()
+  });
+  if (error) throw new Error(explain(error.message));
+  saveSession(data.session);
+  return data.user;
+}
+async function sendPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: "https://web.sdev.codes/reset-password"
+  });
+  if (error) throw new Error(explain(error.message));
+}
+async function signOut() {
+  try {
+    await supabase.auth.signOut();
+  } catch {
+  }
+  clearSession();
+}
+function sessionFile() {
+  return SESSION_PATH;
+}
+function storedSummary() {
+  return readStored();
+}
+
+// cli/cloud.ts
+var db3 = supabase;
 async function myUsername(userId) {
   const { data } = await db3.from("usernames").select("username").eq("user_id", userId).maybeSingle();
   return data?.username ?? null;
 }
 
+// cli/prompt.ts
+import { createInterface } from "node:readline";
+function ask(question) {
+  return new Promise((res) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    rl.question(question, (answer) => {
+      rl.close();
+      res(answer.trim());
+    });
+  });
+}
+function askHidden(question) {
+  const stdin = process.stdin;
+  if (!stdin.isTTY) return ask(question);
+  return new Promise((res, rej) => {
+    process.stdout.write(question);
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+    let buffer = "";
+    const finish = (value2) => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdin.removeListener("data", onData);
+      process.stdout.write("\n");
+      if (value2 === null) rej(new Error("cancelled"));
+      else res(value2);
+    };
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") return finish(buffer);
+        if (ch === "") return finish(null);
+        if (ch === "\x7F" || ch === "\b") {
+          if (buffer.length) {
+            buffer = buffer.slice(0, -1);
+            process.stdout.write("\b \b");
+          }
+          continue;
+        }
+        if (ch < " ") continue;
+        buffer += ch;
+        process.stdout.write("*");
+      }
+    };
+    stdin.on("data", onData);
+  });
+}
+async function password(explicit, label = "password: ") {
+  if (explicit) return explicit;
+  if (process.env.SDEV_PASSWORD) return process.env.SDEV_PASSWORD;
+  const value2 = await askHidden(label);
+  if (!value2) throw new Error("no password entered");
+  return value2;
+}
+
+// cli/editor.ts
+init_env();
+import { readFileSync as readFileSync4, writeFileSync as writeFileSync3, existsSync as existsSync4, mkdirSync as mkdirSync2 } from "node:fs";
+import { resolve as resolve3, basename, dirname as dirname3 } from "node:path";
+
 // cli/pipeline.ts
 init_env();
-import { readFileSync as readFileSync2, existsSync as existsSync2 } from "node:fs";
+import { readFileSync as readFileSync3, existsSync as existsSync3 } from "node:fs";
 import { resolve as resolve2, dirname as dirname2, isAbsolute as isAbsolute2 } from "node:path";
 
 // src/lang/hardware/transpile.ts
@@ -26231,9 +26439,9 @@ function localModules(entryPath, source) {
       if (seen.has(spec)) continue;
       seen.add(spec);
       const candidates = isAbsolute2(spec) ? [spec] : [resolve2(dir, spec), resolve2(process.cwd(), spec)];
-      const hit = candidates.find((c) => existsSync2(c));
+      const hit = candidates.find((c) => existsSync3(c));
       if (!hit) continue;
-      const text = stripSignature(readFileSync2(hit, "utf8"));
+      const text = stripSignature(readFileSync3(hit, "utf8"));
       modules[spec] = text;
       walk(text);
     }
@@ -26278,8 +26486,357 @@ async function runPrepared(prepared, entryPath, opts = {}) {
 }
 function readSource(file) {
   const p = resolve2(process.cwd(), file);
-  if (!existsSync2(p)) throw new Error(`File not found: ${p}`);
-  return readFileSync2(p, "utf8");
+  if (!existsSync3(p)) throw new Error(`File not found: ${p}`);
+  return readFileSync3(p, "utf8");
+}
+
+// cli/editor.ts
+var C = {
+  reset: "\x1B[0m",
+  dim: "\x1B[2m",
+  gutter: "\x1B[38;5;240m",
+  keyword: "\x1B[38;5;75m",
+  string: "\x1B[38;5;150m",
+  number: "\x1B[38;5;215m",
+  comment: "\x1B[38;5;244m",
+  status: "\x1B[48;5;236m\x1B[38;5;253m",
+  accent: "\x1B[38;5;81m",
+  warn: "\x1B[38;5;215m"
+};
+var KEYWORDS2 = new Set(
+  KEYWORD_SPECS.flatMap((k) => [k.mystic, k.plain, ...k.aliases ?? []]).filter(Boolean)
+);
+function highlight(line) {
+  let out = "";
+  let i = 0;
+  while (i < line.length) {
+    const ch = line[i];
+    if (ch === "#" || ch === "/" && line[i + 1] === "/") {
+      return out + C.comment + line.slice(i) + C.reset;
+    }
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < line.length && line[j] !== ch) j += line[j] === "\\" ? 2 : 1;
+      out += C.string + line.slice(i, Math.min(j + 1, line.length)) + C.reset;
+      i = j + 1;
+      continue;
+    }
+    if (/[0-9]/.test(ch) && !/[A-Za-z_]/.test(line[i - 1] ?? "")) {
+      let j = i;
+      while (j < line.length && /[0-9._]/.test(line[j])) j++;
+      out += C.number + line.slice(i, j) + C.reset;
+      i = j;
+      continue;
+    }
+    if (/[A-Za-z_\u0080-\uffff]/.test(ch)) {
+      let j = i;
+      while (j < line.length && /[A-Za-z0-9_\u0080-\uffff]/.test(line[j])) j++;
+      const word = line.slice(i, j);
+      out += KEYWORDS2.has(word) ? C.keyword + word + C.reset : word;
+      i = j;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+async function runEditor(opts) {
+  const path = resolve3(process.cwd(), opts.path);
+  const existed = existsSync4(path);
+  const raw = existed ? readFileSync4(path, "utf8") : "";
+  let lines = stripSignature(raw).split("\n");
+  if (!lines.length) lines = [""];
+  let cy = 0, cx = 0, top = 0, left = 0;
+  let dirty = false;
+  let message = existed ? `opened ${basename(path)}` : `new file ${basename(path)}`;
+  let lastFind = "";
+  let quitConfirm = false;
+  const stdin = process.stdin;
+  const stdout = process.stdout;
+  if (!stdin.isTTY) throw new Error("sdev edit needs an interactive terminal");
+  const rows = () => Math.max(6, stdout.rows || 24);
+  const cols = () => Math.max(30, stdout.columns || 80);
+  const textRows = () => rows() - 2;
+  const gutterWidth = () => String(lines.length).length + 1;
+  const textCols = () => cols() - gutterWidth() - 1;
+  const clamp = () => {
+    cy = Math.max(0, Math.min(cy, lines.length - 1));
+    cx = Math.max(0, Math.min(cx, lines[cy].length));
+    if (cy < top) top = cy;
+    if (cy >= top + textRows()) top = cy - textRows() + 1;
+    if (cx < left) left = cx;
+    if (cx >= left + textCols()) left = cx - textCols() + 1;
+    if (left < 0) left = 0;
+  };
+  const draw = () => {
+    clamp();
+    const w = cols();
+    const gw = gutterWidth();
+    const parts = ["\x1B[?25l\x1B[H"];
+    for (let r = 0; r < textRows(); r++) {
+      const idx = top + r;
+      parts.push("\x1B[K");
+      if (idx < lines.length) {
+        const num = String(idx + 1).padStart(gw - 1, " ");
+        const slice = lines[idx].slice(left, left + textCols());
+        parts.push(C.gutter + num + " " + C.reset + highlight(slice));
+      } else {
+        parts.push(C.gutter + "~" + C.reset);
+      }
+      parts.push("\r\n");
+    }
+    const rt = opts.runtime ?? runtimePreference();
+    const dia = activeDialect();
+    const status = ` ${dirty ? "\u25CF" : " "} ${basename(path)}  ${lines.length} lines  ln ${cy + 1}, col ${cx + 1}  runtime ${rt}  dialect ${dia ? dia.meta.slug : "canonical"} `;
+    parts.push("\x1B[K" + C.status + status.padEnd(w).slice(0, w) + C.reset + "\r\n");
+    const help2 = message ? C.accent + " " + message : C.dim + " ^S save  ^R run  ^F find  ^G line  ^K cut  ^L format  ^Q quit";
+    parts.push("\x1B[K" + help2.slice(0, w + 20) + C.reset);
+    parts.push(`\x1B[${cy - top + 1};${cx - left + gw + 1}H\x1B[?25h`);
+    stdout.write(parts.join(""));
+  };
+  const enter = () => {
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+    stdout.write("\x1B[?1049h");
+  };
+  const leave = () => {
+    stdout.write("\x1B[?1049l\x1B[?25h");
+    stdin.setRawMode(false);
+    stdin.pause();
+  };
+  const save = () => {
+    mkdirSync2(dirname3(path), { recursive: true });
+    writeFileSync3(path, lines.join("\n"));
+    dirty = false;
+    message = `saved ${basename(path)}`;
+  };
+  const askInline = (question) => new Promise((res) => {
+    let buf = "";
+    const render = () => {
+      stdout.write(`\x1B[${rows()};1H\x1B[K` + C.accent + question + C.reset + buf);
+    };
+    render();
+    const onKey = (chunk) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") {
+          stdin.removeListener("data", onKey);
+          return res(buf);
+        }
+        if (ch === "\x1B" || ch === "") {
+          stdin.removeListener("data", onKey);
+          return res("");
+        }
+        if (ch === "\x7F" || ch === "\b") {
+          buf = buf.slice(0, -1);
+          render();
+          continue;
+        }
+        if (ch < " ") continue;
+        buf += ch;
+        render();
+      }
+    };
+    stdin.on("data", onKey);
+  });
+  const find = (needle, fromLine, fromCol) => {
+    for (let i = 0; i < lines.length; i++) {
+      const idx = (fromLine + i) % lines.length;
+      const start = i === 0 ? fromCol : 0;
+      const at = lines[idx].indexOf(needle, start);
+      if (at >= 0) {
+        cy = idx;
+        cx = at;
+        return true;
+      }
+    }
+    return false;
+  };
+  const run2 = async () => {
+    leave();
+    stdout.write("\x1B[2J\x1B[H" + C.accent + `running ${basename(path)}` + C.reset + "\n\n");
+    const started = Date.now();
+    try {
+      const prepared = prepare(lines.join("\n"), opts);
+      const outcome = await runPrepared(prepared, path, opts);
+      if (!outcome.success) stdout.write("\n" + C.warn + "error: " + (outcome.error ?? "program failed") + C.reset + "\n");
+    } catch (e) {
+      stdout.write("\n" + C.warn + "error: " + (e instanceof Error ? e.message : String(e)) + C.reset + "\n");
+    }
+    stdout.write("\n" + C.dim + `finished in ${Date.now() - started} ms \u2014 press any key to return` + C.reset + "\n");
+    await new Promise((res) => {
+      stdin.setRawMode(true);
+      stdin.resume();
+      stdin.once("data", () => res());
+    });
+    enter();
+  };
+  enter();
+  draw();
+  await new Promise((done) => {
+    const onData = async (chunk) => {
+      let redraw = true;
+      let keepMessage = false;
+      if (chunk.startsWith("\x1B[") || chunk.startsWith("\x1BO")) {
+        const seq = chunk.slice(2);
+        if (seq === "A") cy--;
+        else if (seq === "B") cy++;
+        else if (seq === "C") {
+          if (cx < lines[cy].length) cx++;
+          else if (cy < lines.length - 1) {
+            cy++;
+            cx = 0;
+          }
+        } else if (seq === "D") {
+          if (cx > 0) cx--;
+          else if (cy > 0) {
+            cy--;
+            cx = lines[cy].length;
+          }
+        } else if (seq === "H" || seq === "1~" || seq === "7~") cx = 0;
+        else if (seq === "F" || seq === "4~" || seq === "8~") cx = lines[cy].length;
+        else if (seq === "5~") {
+          cy -= textRows();
+          top -= textRows();
+        } else if (seq === "6~") {
+          cy += textRows();
+          top += textRows();
+        } else if (seq === "3~") {
+          if (cx < lines[cy].length) {
+            lines[cy] = lines[cy].slice(0, cx) + lines[cy].slice(cx + 1);
+            dirty = true;
+          } else if (cy < lines.length - 1) {
+            lines[cy] += lines[cy + 1];
+            lines.splice(cy + 1, 1);
+            dirty = true;
+          }
+        }
+        if (top < 0) top = 0;
+        if (redraw) {
+          if (!keepMessage) message = "";
+          draw();
+        }
+        return;
+      }
+      for (const ch of chunk) {
+        switch (ch) {
+          case "": {
+            if (dirty && !quitConfirm) {
+              quitConfirm = true;
+              message = "unsaved changes \u2014 press Ctrl+Q again to discard, Ctrl+S to save";
+              keepMessage = true;
+              break;
+            }
+            stdin.removeListener("data", onData);
+            leave();
+            return done();
+          }
+          case "":
+            save();
+            keepMessage = true;
+            break;
+          case "":
+            if (dirty) save();
+            stdin.removeListener("data", onData);
+            await run2();
+            stdin.on("data", onData);
+            message = "";
+            break;
+          case "\f":
+            lines = formatSdev(lines.join("\n")).split("\n");
+            dirty = true;
+            message = "formatted";
+            keepMessage = true;
+            break;
+          case "\v":
+            if (lines.length === 1) lines[0] = "";
+            else lines.splice(cy, 1);
+            cx = 0;
+            dirty = true;
+            break;
+          case "\x07": {
+            stdin.removeListener("data", onData);
+            const answer = await askInline("go to line: ");
+            stdin.on("data", onData);
+            const n = parseInt(answer, 10);
+            if (n > 0) {
+              cy = n - 1;
+              cx = 0;
+            }
+            break;
+          }
+          case "": {
+            stdin.removeListener("data", onData);
+            const answer = await askInline(`find${lastFind ? ` [${lastFind}]` : ""}: `);
+            stdin.on("data", onData);
+            const needle = answer || lastFind;
+            if (needle) {
+              lastFind = needle;
+              message = find(needle, cy, cx + 1) ? `found "${needle}"` : `"${needle}" not found`;
+              keepMessage = true;
+            }
+            break;
+          }
+          case "":
+            if (dirty && !quitConfirm) {
+              quitConfirm = true;
+              message = "unsaved changes \u2014 press Ctrl+C again to discard";
+              keepMessage = true;
+              break;
+            }
+            stdin.removeListener("data", onData);
+            leave();
+            return done();
+          case "\r":
+          case "\n": {
+            const rest = lines[cy].slice(cx);
+            const indent = (lines[cy].match(/^\s*/) ?? [""])[0];
+            lines[cy] = lines[cy].slice(0, cx);
+            lines.splice(cy + 1, 0, indent + rest);
+            cy++;
+            cx = indent.length;
+            dirty = true;
+            break;
+          }
+          case "\x7F":
+          case "\b":
+            if (cx > 0) {
+              lines[cy] = lines[cy].slice(0, cx - 1) + lines[cy].slice(cx);
+              cx--;
+            } else if (cy > 0) {
+              cx = lines[cy - 1].length;
+              lines[cy - 1] += lines[cy];
+              lines.splice(cy, 1);
+              cy--;
+            }
+            dirty = true;
+            break;
+          case "	":
+            lines[cy] = lines[cy].slice(0, cx) + "  " + lines[cy].slice(cx);
+            cx += 2;
+            dirty = true;
+            break;
+          default:
+            if (ch >= " ") {
+              lines[cy] = lines[cy].slice(0, cx) + ch + lines[cy].slice(cx);
+              cx++;
+              dirty = true;
+            } else {
+              redraw = false;
+            }
+        }
+        if (ch !== "" && ch !== "") quitConfirm = false;
+      }
+      if (redraw) {
+        if (!keepMessage) message = "";
+        draw();
+      }
+    };
+    stdin.on("data", onData);
+    stdout.on("resize", draw);
+  });
+  if (dirty) console.log(`discarded unsaved changes to ${basename(path)}`);
 }
 
 // cli/index.ts
@@ -26328,6 +26885,7 @@ USAGE
 
 RUNNING
   run <file>              Run a program (dialect + extensions + libraries applied)
+  edit <file>             Full-screen editor: ^S save, ^R run, ^F find, ^Q quit
   repl                    Interactive session
   check <file>            Parse only, report syntax errors
   ast <file>              Print the syntax tree as JSON
@@ -26368,7 +26926,12 @@ LIBRARIES
   lib export <file> | lib import <file>
 
 CLOUD
-  auth login <email> | auth logout | auth whoami
+  auth login <email>      Email + password (--password, or $SDEV_PASSWORD)
+  auth code <email> [code] One-time code by email (no password needed)
+  auth signup <email>     Create an account
+  auth reset <email>      Send a password reset link
+  auth token <a> <r>      Sign in with an access + refresh token pair
+  auth status | whoami | refresh | logout
   cloud list | cloud pull [name] | cloud push <file>
 
 SETTINGS
@@ -26402,7 +26965,7 @@ async function cmdRepl() {
   const dialect = activeDialect();
   console.log(`sdev ${VERSION} \xB7 runtime ${runtimePreference()} \xB7 dialect ${dialect ? dialect.meta.name : "canonical"}`);
   console.log(":q quit  :rt v1|v2  :dialect <slug|none>  :clear  :load <file>");
-  const rl = createInterface({ input: process.stdin, output: process.stdout, prompt: "sdev> " });
+  const rl = createInterface2({ input: process.stdin, output: process.stdout, prompt: "sdev> " });
   const interpreter = new Interpreter((m) => console.log(m));
   let buffer = "";
   rl.prompt();
@@ -26461,7 +27024,7 @@ async function cmdRepl() {
 }
 async function cmdWatch(file) {
   const { watch } = await import("node:fs");
-  const path = resolve4(process.cwd(), file);
+  const path = resolve5(process.cwd(), file);
   const once = async () => {
     console.log(`
 --- ${(/* @__PURE__ */ new Date()).toLocaleTimeString()} ---`);
@@ -26479,7 +27042,7 @@ async function cmdWatch(file) {
       void once();
     }, 80);
   });
-  console.log(`watching ${basename(path)} \u2014 Ctrl+C to stop`);
+  console.log(`watching ${basename2(path)} \u2014 Ctrl+C to stop`);
 }
 function cmdCompile(file) {
   const opts = runOptions();
@@ -26496,7 +27059,7 @@ function cmdCompile(file) {
   };
   const out = value("-o", "--out") ?? file.replace(/\.sdev$/, "") + ".sdevc";
   const json = JSON.stringify(container);
-  writeFileSync3(out, json);
+  writeFileSync5(out, json);
   console.log(`compiled -> ${out} (${(json.length / 1024).toFixed(2)} KB, ${detected}, runtime ${prepared.runtime})`);
 }
 function loadContainer(file) {
@@ -26523,7 +27086,7 @@ async function cmdDisasm(file) {
   if (prepared.runtime === "v2") {
     const { compile: compile2, setSeedLoader: setSeedLoader2 } = await Promise.resolve().then(() => (init_compile_self(), compile_self_exports));
     const { seedWasmPath: seedWasmPath2 } = await Promise.resolve().then(() => (init_env(), env_exports));
-    setSeedLoader2(async () => readFileSync3(seedWasmPath2()));
+    setSeedLoader2(async () => readFileSync5(seedWasmPath2()));
     const program = await compile2(prepared.code, localModules(file, prepared.code));
     text = hexdump(program.bytecode);
   } else {
@@ -26534,7 +27097,7 @@ async function cmdDisasm(file) {
   }
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync3(out, text);
+    writeFileSync5(out, text);
     console.log("wrote", out);
   } else console.log(text);
 }
@@ -26558,14 +27121,14 @@ async function cmdNative(file) {
       throw new Error(`cannot resolve module "${p}"`);
     }
   });
-  const outBin = value("-o", "--out") ?? resolve4(dirname4(resolve4(file)), basename(file).replace(/\.sdev$/, ""));
+  const outBin = value("-o", "--out") ?? resolve5(dirname5(resolve5(file)), basename2(file).replace(/\.sdev$/, ""));
   const asmPath = outBin + ".s";
-  writeFileSync3(asmPath, asm);
+  writeFileSync5(asmPath, asm);
   if (flag("--emit-asm")) {
     console.log("wrote", asmPath);
     return;
   }
-  link2(asm, outBin, { as: value("--as"), ld: value("--ld"), tmpDir: dirname4(outBin) });
+  link2(asm, outBin, { as: value("--as"), ld: value("--ld"), tmpDir: dirname5(outBin) });
   console.log("wrote", outBin);
 }
 function cmdInfo(file) {
@@ -26574,7 +27137,7 @@ function cmdInfo(file) {
   const body = stripSignature(raw);
   const dialect = sig?.dialect ? findDialect(sig.dialect.replace(/^@[^/]+\//, "")) : null;
   const rows = [
-    ["file", resolve4(process.cwd(), file)],
+    ["file", resolve5(process.cwd(), file)],
     ["size", `${Buffer.byteLength(body)} bytes \xB7 ${body.split("\n").length} lines`],
     ["signed", hasSignature(raw) ? "yes" : "no"],
     ["runtime", sig?.rt ?? `${runtimePreference()} (default)`],
@@ -26589,7 +27152,7 @@ function cmdInfo(file) {
   for (const [k, v] of rows) console.log(k.padEnd(width) + "  " + v);
 }
 function cmdSign(sub, file) {
-  const path = resolve4(process.cwd(), file);
+  const path = resolve5(process.cwd(), file);
   const raw = readSource(file);
   if (sub === "show") {
     const sig = readSignature(raw);
@@ -26597,7 +27160,7 @@ function cmdSign(sub, file) {
     return;
   }
   if (sub === "strip") {
-    writeFileSync3(path, stripSignature(raw));
+    writeFileSync5(path, stripSignature(raw));
     console.log("signature removed");
     return;
   }
@@ -26617,8 +27180,8 @@ function cmdSign(sub, file) {
       libs: libraryReferences(body).map(formatAddress),
       origin: previous?.origin ?? null
     });
-    writeFileSync3(path, signed);
-    console.log("stamped", basename(path));
+    writeFileSync5(path, signed);
+    console.log("stamped", basename2(path));
     return;
   }
   die("sign: use show | stamp | verify | strip");
@@ -26697,7 +27260,7 @@ async function cmdDialect(sub, rest) {
       const text = generateDialectDocs(spec);
       const out = value("-o", "--out");
       if (out) {
-        writeFileSync3(out, text);
+        writeFileSync5(out, text);
         console.log("wrote", out, `(template v${TEMPLATE_VERSION})`);
       } else console.log(text);
       return;
@@ -26780,7 +27343,7 @@ ${GROUP_LABELS[entry.group]}`);
     }
     case "export": {
       const out = value("-o", "--out") ?? rest[0] ?? "sdev-dialects.json";
-      writeFileSync3(out, JSON.stringify({ format: "sdev-dialects", version: 1, dialects: listDialects() }, null, 2));
+      writeFileSync5(out, JSON.stringify({ format: "sdev-dialects", version: 1, dialects: listDialects() }, null, 2));
       console.log("wrote", out);
       return;
     }
@@ -26841,7 +27404,7 @@ async function cmdExt(sub, rest) {
       const file = rest[0] ?? die("sdev ext add <file.sdev> --name <name> [--about text]");
       const record = {
         id: "local-" + checksum(file + Date.now()),
-        name: value("--name") ?? basename(file).replace(/\.sdev$/, ""),
+        name: value("--name") ?? basename2(file).replace(/\.sdev$/, ""),
         kind: value("--symbol") ? "operator" : "function",
         symbol: value("--symbol") ?? null,
         about: value("--about") ?? null,
@@ -26895,7 +27458,7 @@ async function cmdLib(sub, rest) {
     }
     case "export": {
       const out = value("-o", "--out") ?? rest[0] ?? "sdev-libraries.json";
-      writeFileSync3(out, exportOfflineBundle());
+      writeFileSync5(out, exportOfflineBundle());
       console.log("wrote", out);
       return;
     }
@@ -26907,25 +27470,76 @@ async function cmdLib(sub, rest) {
   }
 }
 async function cmdAuth(sub, rest) {
-  if (sub === "login") {
-    const email = rest[0] ?? die("sdev auth login <email>");
-    const password = await prompt("password: ", true);
-    const user = await signIn(email, password);
-    console.log("signed in as", user?.email);
-    return;
+  switch (sub) {
+    case "login": {
+      const email = rest[0] ?? await ask("email: ");
+      if (!email) die("sdev auth login <email>");
+      const pw = await password(value("--password"));
+      const user = await signInWithPassword(email, pw);
+      console.log("signed in as", user.email);
+      return;
+    }
+    case "signup": {
+      const email = rest[0] ?? await ask("email: ");
+      if (!email) die("sdev auth signup <email>");
+      const pw = await password(value("--password"), "choose a password: ");
+      if (pw.length < 6) die("use at least 6 characters");
+      const { needsConfirmation } = await signUpWithPassword(email, pw, value("--name"));
+      console.log(needsConfirmation ? `account created \u2014 open the confirmation link we emailed to ${email}, then: sdev auth login ${email}` : `signed in as ${email}`);
+      return;
+    }
+    case "code": {
+      const email = rest[0] ?? await ask("email: ");
+      if (!email) die("sdev auth code <email>");
+      await sendEmailCode(email, flag("--new"));
+      console.log(`a one-time code is on its way to ${email}`);
+      const code = rest[1] ?? await ask("code: ");
+      if (!code) return console.log(`when it arrives, run: sdev auth code ${email} <code>`);
+      const user = await verifyEmailCode(email, code);
+      console.log("signed in as", user.email);
+      return;
+    }
+    case "token": {
+      const access = rest[0] ?? await ask("access token: ");
+      const refresh = rest[1] ?? await ask("refresh token: ");
+      if (!access || !refresh) die("sdev auth token <access-token> <refresh-token>");
+      const user = await signInWithTokens(access, refresh);
+      console.log("signed in as", user.email);
+      return;
+    }
+    case "reset": {
+      const email = rest[0] ?? await ask("email: ");
+      if (!email) die("sdev auth reset <email>");
+      await sendPasswordReset(email);
+      console.log(`password reset link sent to ${email}`);
+      return;
+    }
+    case "refresh": {
+      const session = await ensureSession();
+      console.log(session ? "session refreshed for " + session.user.email : "not signed in");
+      return;
+    }
+    case "logout":
+      await signOut();
+      return console.log("signed out");
+    case "status":
+    case void 0:
+    case "whoami": {
+      const user = await currentUser();
+      if (!user) {
+        const stored = storedSummary();
+        console.log(stored ? `signed out \u2014 the saved session for ${stored.email ?? "your account"} expired.
+sign in again: sdev auth login ${stored.email ?? "<email>"}` : "not signed in \u2014 sdev auth login <email>  or  sdev auth code <email>");
+        return;
+      }
+      const handle = await myUsername(user.id);
+      console.log(`${user.email}${handle ? " \xB7 @" + handle : ""}`);
+      if (sub === "status") console.log("session file: " + sessionFile());
+      return;
+    }
+    default:
+      die("auth: use login | signup | code | token | reset | refresh | status | logout");
   }
-  if (sub === "logout") {
-    await signOut();
-    return console.log("signed out");
-  }
-  if (sub === "whoami") {
-    const user = await currentUser();
-    if (!user) return console.log("not signed in");
-    const handle = await myUsername(user.id);
-    console.log(`${user.email}${handle ? " \xB7 @" + handle : ""}`);
-    return;
-  }
-  die("auth: use login | logout | whoami");
 }
 async function cmdCloud(sub, rest) {
   const user = await requireUser();
@@ -26941,9 +27555,9 @@ async function cmdCloud(sub, rest) {
     const rows = (data ?? []).filter((f) => !wanted || f.name === wanted);
     if (!rows.length) die("nothing to pull");
     const dir = value("-o", "--out") ?? ".";
-    mkdirSync3(dir, { recursive: true });
+    mkdirSync4(dir, { recursive: true });
     for (const f of rows) {
-      writeFileSync3(resolve4(dir, f.name), stripSignature(f.content ?? ""));
+      writeFileSync5(resolve5(dir, f.name), stripSignature(f.content ?? ""));
       console.log("pulled", f.name);
     }
     return;
@@ -26961,7 +27575,7 @@ async function cmdCloud(sub, rest) {
       libs,
       origin: null
     });
-    const name = basename(file);
+    const name = basename2(file);
     const mirror = { dialect_slug: dialect?.meta.slug ?? null, dialect_version: dialect?.meta.version ?? null, runtime, lib_pins: libs };
     const { data: existing } = await db3.from("code_files").select("id").eq("user_id", user.id).eq("name", name).maybeSingle();
     if (existing?.id) await db3.from("code_files").update({ content: signed, ...mirror }).eq("id", existing.id).eq("user_id", user.id);
@@ -26974,29 +27588,13 @@ async function cmdCloud(sub, rest) {
 function emit(text) {
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync3(out, text);
+    writeFileSync5(out, text);
     console.log("wrote", out);
   } else process.stdout.write(text.endsWith("\n") ? text : text + "\n");
 }
-function prompt(question, hidden = false) {
-  return new Promise((res) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    if (hidden) {
-      const out = process.stdout;
-      rl._writeToOutput = (s) => {
-        if (!out.muted) process.stdout.write(s.includes(question) ? s : "*");
-      };
-      out.muted = false;
-      setTimeout(() => {
-        out.muted = false;
-      }, 0);
-    }
-    rl.question(question, (answer) => {
-      rl.close();
-      process.stdout.write("\n");
-      res(answer);
-    });
-  });
+async function cmdEdit(file) {
+  if (!file) die("sdev edit <file.sdev>");
+  await runEditor({ ...runOptions(), path: file });
 }
 async function main() {
   const pos = positionals();
@@ -27027,8 +27625,8 @@ async function main() {
       const formatted = formatSdev(stripSignature(raw));
       if (flag("-w", "--write")) {
         const sig = readSignature(raw);
-        writeFileSync3(resolve4(process.cwd(), file), sig ? repairSignature(raw.split("\n")[0] + "\n" + formatted) : formatted);
-        console.log("formatted", basename(file));
+        writeFileSync5(resolve5(process.cwd(), file), sig ? repairSignature(raw.split("\n")[0] + "\n" + formatted) : formatted);
+        console.log("formatted", basename2(file));
       } else process.stdout.write(formatted.endsWith("\n") ? formatted : formatted + "\n");
       return;
     }
@@ -27050,8 +27648,16 @@ async function main() {
       return cmdExt(pos[1], pos.slice(2));
     case "lib":
       return cmdLib(pos[1], pos.slice(2));
+    case "edit":
+    case "ide":
+      return cmdEdit(pos[1]);
     case "auth":
-      return cmdAuth(pos[1] ?? "whoami", pos.slice(2));
+    case "login":
+      return cmdAuth(cmd === "login" ? "login" : pos[1] ?? "whoami", cmd === "login" ? pos.slice(1) : pos.slice(2));
+    case "logout":
+      return cmdAuth("logout", []);
+    case "whoami":
+      return cmdAuth("whoami", []);
     case "cloud":
       return cmdCloud(pos[1], pos.slice(2));
     case "runtime": {
@@ -27082,7 +27688,7 @@ async function main() {
     case "help":
       return help();
     default: {
-      if (existsSync3(resolve4(process.cwd(), cmd))) return cmdRun(cmd);
+      if (existsSync5(resolve5(process.cwd(), cmd))) return cmdRun(cmd);
       console.error(`unknown command "${cmd}"`);
       help();
       process.exit(1);
