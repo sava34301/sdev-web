@@ -20,6 +20,7 @@ import { applyExtensions } from '@/lang/dialect/extensions';
 import { resolveLibraries } from '@/lang/dialect/registry';
 import { readSignature, stripSignature, type FileSignature } from '@/lang/dialect/signature';
 import type { DialectSpec } from '@/lang/dialect/spec';
+import { understand, understandAsync, type AgentMode, type BrainMode, type UnderstandResult } from '@/lang/agent';
 import { activeDialect, findDialect, runtimePreference } from './store';
 
 export interface PrepareOptions {
@@ -31,6 +32,12 @@ export interface PrepareOptions {
   lang?: string;
   /** force a runtime */
   runtime?: 'v1' | 'v2';
+  /** understanding agent: off | auto | on | strict */
+  agent?: AgentMode;
+  /** where the agent's AI brain runs */
+  brain?: BrainMode;
+  /** print what the agent understood */
+  explain?: boolean;
 }
 
 export interface Prepared {
