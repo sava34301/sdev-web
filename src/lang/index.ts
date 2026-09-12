@@ -3,6 +3,8 @@ import { Parser } from './parser';
 import { Interpreter } from './interpreter';
 import { SdevError } from './errors';
 import { stripBoardBlocks } from './hardware/strip';
+import { understand, understandAsync, stripAgentDirectives } from './agent';
+import type { UnderstandOptions, UnderstandResult } from './agent';
 
 export interface ExecutionResult {
   success: boolean;
@@ -12,7 +14,14 @@ export interface ExecutionResult {
   detectedLanguage?: string | null;
 }
 
-export interface ExecuteOptions extends LexerOptions {}
+export interface ExecuteOptions extends LexerOptions {
+  /**
+   * The understanding agent. Omit for the default (rules + memory, AI when
+   * the file still doesn't make sense), pass options to steer it, or `false`
+   * to run the source exactly as written.
+   */
+  agent?: UnderstandOptions | false;
+}
 
 function pickRuntime(source: string): 'v1' | 'v2' {
   // Scan the first ~10 lines for a #!sdev shebang. IDE may prepend a
@@ -36,10 +45,11 @@ function pickRuntime(source: string): 'v1' | 'v2' {
  * Run sdev v2 source. v2 has ONE implementation: the sdev-written compiler
  * (lang/compiler/*.sdev) executing on the seed VM. No JavaScript interpreter.
  */
-export async function executeV2(source: string): Promise<ExecutionResult> {
+export async function executeV2(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
   const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
   try {
-    const r = await runWasm(source);
+    const understood = await understandFor(source, options, true);
+    const r = await runWasm(understood);
     return { success: r.success, output: r.output, error: r.error ?? undefined, detectedLanguage: null };
   } catch (e) {
     const notYet = e instanceof WasmSubsetError;
@@ -54,10 +64,26 @@ export async function executeV2(source: string): Promise<ExecutionResult> {
   }
 }
 
+/**
+ * Run the understanding agent in front of the compiler. `!#agent:off` in the
+ * file, or `agent: false` here, skips it entirely.
+ */
+async function understandFor(source: string, options: ExecuteOptions, allowAI: boolean): Promise<string> {
+  if (options.agent === false) return stripAgentDirectives(source);
+  const opts = { dialect: options.dialect ?? null, ...(options.agent ?? {}) };
+  const result = allowAI ? await understandAsync(source, opts) : understand(source, opts);
+  lastAgentRun = result;
+  return result.source;
+}
+
+/** What the agent did on the most recent run — the IDE shows this. */
+export let lastAgentRun: UnderstandResult | null = null;
+
 /** Async entry point: v2 goes to the self-hosted toolchain, v1 to the interpreter. */
 export async function executeAsync(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
-  if (pickRuntime(source) === 'v2') return executeV2(source);
-  return execute(source, options);
+  if (pickRuntime(source) === 'v2') return executeV2(source, options);
+  const understood = await understandFor(source, options, true);
+  return execute(understood, { ...options, agent: false });
 }
 
 export function execute(source: string, options: ExecuteOptions = {}): ExecutionResult {
@@ -72,10 +98,19 @@ export function execute(source: string, options: ExecuteOptions = {}): Execution
     };
   }
 
+  const plain = stripAgentDirectives(source);
+  const agentOpts = options.agent === false ? null : { dialect: options.dialect ?? null, ...(options.agent ?? {}) };
+  let understood = plain;
+  if (agentOpts) {
+    const result = understand(source, agentOpts);
+    lastAgentRun = result;
+    understood = result.source;
+  }
 
-
+  const attempt = (src: string): ExecutionResult => {
+  const output: string[] = [];
   try {
-    const cleaned = stripBoardBlocks(source);
+    const cleaned = stripBoardBlocks(src);
     const lexer = new Lexer(cleaned, options);
     const tokens = lexer.tokenize();
 
@@ -87,14 +122,16 @@ export function execute(source: string, options: ExecuteOptions = {}): Execution
 
     return { success: true, output, detectedLanguage: lexer.detectedLanguage };
   } catch (e) {
-    if (e instanceof SdevError) {
-      return { success: false, output, error: e.message };
-    }
-    if (e instanceof Error) {
-      return { success: false, output, error: e.message };
-    }
+    if (e instanceof Error) return { success: false, output, error: e.message };
     return { success: false, output, error: String(e) };
   }
+  };
+
+  const first = attempt(understood);
+  // If the agent's reading doesn't work out, the file as written wins.
+  if (first.success || understood === plain) return first;
+  const asWritten = attempt(plain);
+  return asWritten.success ? asWritten : first;
 }
 
 export { Lexer } from './lexer';

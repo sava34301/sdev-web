@@ -17,7 +17,8 @@
     "sdev:host": "node bin/sdevhost.mjs",
     "test:toolchain": "node bin/sdevhost.mjs scripts/test-self-toolchain.sdev",
     "test:driver": "node bin/sdevhost.mjs scripts/test-driver-artifact.sdev",
-    "probe:lexer": "node bin/sdevhost.mjs scripts/probe-self-lexer.sdev"
+    "probe:lexer": "node bin/sdevhost.mjs scripts/probe-self-lexer.sdev",
+    "test:agent": "bun scripts/test-agent.ts"
   },
   "main": "electron/main.cjs",
   "dependencies": {

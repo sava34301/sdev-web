@@ -5,6 +5,8 @@ project_id = "ygzqjekxzvsrkhuqhqbp"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.sdev-agent]
+    verify_jwt = false
   [functions.sdev-chat]
     verify_jwt = false
   [functions.sdev-fix]

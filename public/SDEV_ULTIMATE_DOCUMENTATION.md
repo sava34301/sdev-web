@@ -4,7 +4,7 @@
 > machine, native backend, standard library, machine-learning stack, hardware,
 > GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-09-11 by
+> Created by **Sava Milanov**. Generated on 2026-09-12 by
 > `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
 > guides or the implementation and re-run the generator.
 
@@ -1871,6 +1871,68 @@ say fround(fsqrt(2.0) * 100.0)
 write_file("out.txt", "hi")
 say read_file("out.txt")
 ```
+
+#### The understanding agent
+
+sdev reads intent, not just syntax. Before the lexer, the parser or any code
+generation runs, the understanding agent reads the whole file and turns however
+you wrote it into canonical sdev:
+
+```
+output Hello
+out Nothing
+name1 will be Twenty
+terminal name1
+```
+
+becomes
+
+```
+say "Hello"
+say nothing
+set name1 to 20
+say name1
+```
+
+The agent works in three layers, in this order:
+
+1. **Rules** — a large built-in vocabulary of ways people write output,
+   assignment, conditions, loops, functions and comparisons. Offline, instant.
+2. **Memory** — every program you run teaches it your own words. The next file
+   that uses them needs no thinking at all.
+3. **AI brain** — only when lines still make no sense. Online it uses the
+   hosted brain; offline, or when you ask for it, a local brain at
+   `SDEV_AGENT_LOCAL_URL` (default `http://127.0.0.1:11434/sdev-agent`).
+
+Directives, written anywhere in the file:
+
+| Directive | Meaning |
+| --- | --- |
+| `!#agent:off` | Run the file exactly as written |
+| `!#agent:on` | Always understand, even if the file already parses |
+| `!#agent:auto` | Default: understand only when needed |
+| `!#agent:strict` | Rules and memory only — never guess |
+| `!#agent:local` | Keep the AI brain on this machine |
+| `!#agent:online` | Use the hosted brain |
+| `!#agent:learn:off` | Do not learn from this file |
+
+A file the agent's reading cannot run falls back to the file as written, so the
+agent can never make a working program stop working.
+
+From the command line:
+
+```
+sdev run app.sdev --explain      # show what it understood, line by line
+sdev agent status                # what it has learned from you
+sdev agent understand app.sdev   # print the canonical sdev
+sdev agent promote "My way"      # turn what it learned into a dialect
+sdev agent forget                # clear its memory
+sdev run app.sdev --no-agent     # off for this run
+```
+
+`sdev agent promote` writes a real dialect from your own words, so your way of
+writing becomes a first-class dialect you can share — but you never need one:
+the agent understands you without it.
 
 ---
 
@@ -5207,7 +5269,7 @@ fixed point**: compiling the compiler with itself produces the exact same
 bytes as the JavaScript bootstrap.
 
 ```bash
-node scripts/test-self-toolchain.mjs
+node bin/sdevhost.mjs scripts/test-self-toolchain.sdev
 # ✓ lang/compiler/lexer.sdev:   byte-identical  (bc=746,  pool=41)
 # ✓ lang/compiler/parser.sdev:  byte-identical  (bc=380,  pool=38)
 # ✓ lang/compiler/codegen.sdev: byte-identical  (bc=5730, pool=136)
@@ -5406,7 +5468,7 @@ node scripts/test-native.mjs            # x86-64 backend
 node scripts/test-self-lexer.mjs        # self-hosted lexer vs JS reference
 node scripts/test-self-parser.mjs       # self-hosted parser
 node scripts/test-self-codegen.mjs      # self-hosted codegen
-node scripts/test-self-toolchain.mjs    # byte-identity across the toolchain
+node bin/sdevhost.mjs scripts/test-self-toolchain.sdev    # byte-identity across the toolchain
 node scripts/test-shim-fixed-point.mjs  # 43-case fixed-point suite
 bunx tsx scripts/test-ml-stdlib.ts      # ML stack executed end to end
 bunx tsx scripts/test-translator.ts     # 26-language translation
@@ -5765,13 +5827,13 @@ the same lexer, parser, and language semantics.
   `lang/compiler/lexer.sdev` **byte-identically** to the JS bootstrap
   (`bc=746, pool=41`) and the real `lang/compiler/parser.sdev`
   **byte-identically** (`bc=380, pool=38`).
-- New gate `scripts/test-self-toolchain.mjs` diffs each toolchain source
+- New gate `scripts/test-self-toolchain.sdev` diffs each toolchain source
   through the shim and hard-fails on required-target mismatches. Current
   status: **lexer ✓, parser ✓, codegen ⚠** — the third one throws
   `string pool overflow` inside the JS bootstrap that compiles the shim
   driver, because embedding `codegen.sdev` itself as a `set src to "…"`
   string literal blows past the seed VM's 8 KiB pool region.
-- Probe script `scripts/probe-self-lexer.mjs` reports the first diverging
+- Probe script `scripts/probe-self-lexer.sdev` reports the first diverging
   bytecode / pool offset for any input, making the next regression easy
   to bisect.
 
@@ -5941,7 +6003,7 @@ in milestone order.)
   shim (`setSeedLoader` lets the browser hand it a `fetch`-based loader).
   `src/lang-bridge/bootstrap.d.ts` is deleted; `compile-self.d.ts` replaces it.
 - `scripts/test-wasm-runtime.mjs` runs on the shim too.
-- New gate: `node scripts/test-driver-artifact.mjs` re-derives the driver
+- New gate: `node bin/sdevhost.mjs scripts/test-driver-artifact.sdev` re-derives the driver
   from the bootstrap oracle and fails if the checked-in bytes drift, then
   compiles four programs through the bootstrap-free shim.
 - The JS bootstrap now exists **only** as a build/test-time oracle
@@ -6513,14 +6575,14 @@ dist/
 
 The gates that run today:
 
-1. `node scripts/test-self-toolchain.mjs` — `lexer.sdev`, `parser.sdev`, and
+1. `node bin/sdevhost.mjs scripts/test-self-toolchain.sdev` — `lexer.sdev`, `parser.sdev`, and
    `codegen.sdev` must all round-trip **byte-identical** through the
    self-hosted compiler (currently bc=746/380/5730).
 2. `node scripts/test-shim-fixed-point.mjs` — the compile shim reaches a
    fixed point against the JS bootstrap oracle.
 3. `node scripts/test-wasm-runtime.mjs` — seed VM opcode suite (ints, call
    frames, heap/lists, strings, floats + transcendentals).
-4. `node scripts/test-driver-artifact.mjs` — the checked-in driver bytecode
+4. `node bin/sdevhost.mjs scripts/test-driver-artifact.sdev` — the checked-in driver bytecode
    matches a fresh bootstrap build, and the bootstrap-free shim compiles.
 5. `node scripts/test-native.mjs` — Track B x86-64 emission and linking.
 6. `bun run scripts/test-ml-stdlib.ts` — 15 checks across tensors, autograd,
@@ -6959,7 +7021,7 @@ The Milestone 2 plan is in `.lovable/plan.md` (approved by the user).
 
 `lang/compiler/{lexer,parser,codegen}.sdev` now compile **themselves** to
 byte-identical bytecode through the seed VM — verified by
-`scripts/test-self-toolchain.mjs` (all three targets required) and
+`scripts/test-self-toolchain.sdev` (all three targets required) and
 `scripts/test-self-codegen.mjs` (full case suite).
 
 Two rules the self-hosted codegen must keep in step with the reference
@@ -10575,7 +10637,7 @@ follow the opcode byte directly in the bytecode stream.
 | `0xFF` | `HALT` | Seed VM instruction. |
 
 
-### sdev-written source index (15 files, 186 functions)
+### sdev-written source index (16 files, 192 functions)
 
 Every function defined in sdev itself — the self-hosted compiler, the parity
 agent, and the standard library.
@@ -10892,6 +10954,21 @@ sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only 
 | `sample_next` | `logits` | sampling | `n - 1` | 198 |
 | `generate` | `model, prompt_ids, max_new` | Samples tokens autoregressively from the model until the length limit. | `out` | 212 |
 
+#### `lang/stdlib/testkit.sdev`
+
+testkit — assertions and host helpers for SDEV-authored build scripts. use "lang/stdlib/testkit.sdev" Scripts written against this module run under the SDEV host: node bin/sdevhost.mjs scripts/<name>.sdev
+
+6 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `str_same` | `a b` | Byte-wise string equality. The `is` operator compares handles, so two separately built strings with the same bytes are not `is`-equal. | `0` | 15 |
+| `first_diff` | `a b` | First differing byte offset, or -1 when the strings match. | `i` | 33 |
+| `check` | `name ok` | Computes and yields `0`. | `0` | 51 |
+| `tk_report` | `title` | Computes and yields `0`. | `0` | 62 |
+| `host_args` | _none_ | Part of the Host helpers section of this module. | `read_file("sdev:args")` | 75 |
+| `shell` | `cmd` | Part of the Host helpers section of this module. | `read_file(concat("sdev:exec:", cmd))` | 79 |
+
 #### `lang/stdlib/webgpu.sdev`
 
 lang/stdlib/webgpu.sdev Milestone 10 — WebGPU acceleration for the browser IDE Provides a thin, sdev-native wrapper over the host's WebGPU bindings. The runtime exposes a handful of host calls (`__wgpu_*`) that the browser build implements through `navigator.gpu`. On Node/native builds without a GPU adapter, every entry point falls back to the pure-sdev CPU tensor kernels so user code stays portable. This module is written entirely in sdev and is compiled by the self-hosted compiler like the rest of the stdlib.
@@ -11154,6 +11231,7 @@ Registry: **209 features** across **3 tracks**.
 - `lang/stdlib/ml/tensor.sdev`
 - `lang/stdlib/ml/train.sdev`
 - `lang/stdlib/ml/transformer.sdev`
+- `lang/stdlib/testkit.sdev`
 - `lang/stdlib/webgpu.sdev`
 
 #### `lang/parity/` — Feature registry, parity agent, generated report
@@ -11165,6 +11243,15 @@ Registry: **209 features** across **3 tracks**.
 #### `src/lang/` — v1 TypeScript reference implementation
 
 - `src/lang/advanced.ts`
+- `src/lang/agent/brain.ts`
+- `src/lang/agent/directives.ts`
+- `src/lang/agent/index.ts`
+- `src/lang/agent/memory.ts`
+- `src/lang/agent/promote.ts`
+- `src/lang/agent/repair.ts`
+- `src/lang/agent/sense.ts`
+- `src/lang/agent/types.ts`
+- `src/lang/agent/vocabulary.ts`
 - `src/lang/ast.ts`
 - `src/lang/builtins.ts`
 - `src/lang/bytecode.ts`
@@ -11230,19 +11317,20 @@ Registry: **209 features** across **3 tracks**.
 - `scripts/build-seed-wasm.mjs`
 - `scripts/build-ultimate-docs.mjs`
 - `scripts/probe-self-codegen.mjs`
-- `scripts/probe-self-lexer.mjs`
+- `scripts/probe-self-lexer.sdev`
 - `scripts/sdev-native.mjs`
 - `scripts/sdev-runtime-launcher.ts`
+- `scripts/test-agent.ts`
 - `scripts/test-bg.ts`
 - `scripts/test-dialect.ts`
-- `scripts/test-driver-artifact.mjs`
+- `scripts/test-driver-artifact.sdev`
 - `scripts/test-ml-stdlib.ts`
 - `scripts/test-native.mjs`
 - `scripts/test-parity.ts`
 - `scripts/test-self-codegen.mjs`
 - `scripts/test-self-lexer.mjs`
 - `scripts/test-self-parser.mjs`
-- `scripts/test-self-toolchain.mjs`
+- `scripts/test-self-toolchain.sdev`
 - `scripts/test-shim-fixed-point.mjs`
 - `scripts/test-translator.ts`
 - `scripts/test-wasm-runtime.mjs`
@@ -11263,19 +11351,17 @@ Registry: **209 features** across **3 tracks**.
 | `node scripts/build-seed-wasm.mjs` | Build the seed VM: lang/bootstrap/seed.wat → public/wasm/sdev-seed.wasm |
 | `node scripts/build-ultimate-docs.mjs` | Builds public/SDEV_ULTIMATE_DOCUMENTATION.md — the single, complete sdev |
 | `node scripts/probe-self-codegen.mjs` | Probe: run the self-hosted codegen through the shim, but tap into what |
-| `node scripts/probe-self-lexer.mjs` | Milestone 5m probe — compile lexer.sdev through the self-hosted shim |
 | `node scripts/sdev-native.mjs` | SDEV native compiler CLI. |
 | `node scripts/sdev-runtime-launcher.ts` |  |
+| `node scripts/test-agent.ts` | ---- the user's own example ----------------------------------------- |
 | `node scripts/test-bg.ts` |  |
 | `node scripts/test-dialect.ts` | ---- a Bulgarian dialect with braces and `=` assignment ------------------- |
-| `node scripts/test-driver-artifact.mjs` | Milestone 5p — the checked-in driver artifact must stay honest. |
 | `node scripts/test-ml-stdlib.ts` | ---- Node host bindings consumed by src/lang/builtins.ts ---- |
 | `node scripts/test-native.mjs` | Regression suite for the native x86-64 backend. |
 | `node scripts/test-parity.ts` | The agent parses the registry line-by-line. Validate the same file with a |
 | `node scripts/test-self-codegen.mjs` | Self-hosted codegen end-to-end test. |
 | `node scripts/test-self-lexer.mjs` | Runs the self-hosted lexer (lang/compiler/lexer.sdev) through the seed |
 | `node scripts/test-self-parser.mjs` | Runs the self-hosted expression parser through the seed WASM VM and |
-| `node scripts/test-self-toolchain.mjs` | Milestone 5m gate — self-hosted toolchain round-trip. |
 | `node scripts/test-shim-fixed-point.mjs` | Milestone 5l gate — shim fixed-point verification. |
 | `node scripts/test-translator.ts` | A Bulgarian dialect: `кажи` means say, `нека` means set. Those words are the |
 | `node scripts/test-wasm-runtime.mjs` | Standalone Node harness: compile + run via the seed WASM. No browser. |
