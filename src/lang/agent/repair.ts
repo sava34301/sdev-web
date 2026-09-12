@@ -100,7 +100,7 @@ export interface RepairResult {
 /** Polite sentence openers people write in front of a real statement. */
 const FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
 /** Words that carry no meaning inside a declaration. */
-const DECL_NOISE = /\b(?:called|named|name|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|input|inputs|that|which|takes|taking|accepts|of|value)\b/gi;
+const DECL_NOISE = /\b(?:called|named|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
 /** Where output goes: the terminal, the screen, the console — always the same place. */
 const SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
 
