@@ -1,7 +1,11 @@
 /** Shared types for the understanding agent. */
 import type { AgentMode, BrainMode } from './directives';
 import type { Intent } from './vocabulary';
-import type { DialectSpec } from '@/lang/dialect/spec';
+/** Anything that carries dialect words — the full spec, or the lexer's view. */
+export interface DialectWords {
+  names?: Record<string, string>;
+  synonyms?: Record<string, string[]>;
+}
 
 export interface AgentNote {
   line: number;
