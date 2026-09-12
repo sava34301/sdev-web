@@ -58,7 +58,7 @@ function value(name: string, short?: string): string | undefined {
   const i = argv.findIndex((a) => a === name || (short && a === short));
   return i >= 0 && i + 1 < argv.length ? argv[i + 1] : undefined;
 }
-const FLAGS_WITH_VALUES = new Set(['--dialect', '--lang', '--to', '--from', '-o', '--out', '--as', '--ld', '--runtime', '--name', '--about']);
+const FLAGS_WITH_VALUES = new Set(['--dialect', '--lang', '--to', '--from', '-o', '--out', '--as', '--ld', '--runtime', '--name', '--about', '--agent', '--brain']);
 /** Positional arguments, in order, skipping flags and their values. */
 function positionals(): string[] {
   const out: string[] = [];
@@ -76,11 +76,27 @@ function positionals(): string[] {
 
 function runOptions(): PrepareOptions {
   const rt = value('--runtime');
+  const agentFlag = value('--agent');
+  const brainFlag = value('--brain');
+  const agent = flag('--no-agent')
+    ? 'off'
+    : agentFlag === 'off' || agentFlag === 'on' || agentFlag === 'auto' || agentFlag === 'strict'
+      ? agentFlag
+      : undefined;
+  const brain =
+    brainFlag === 'local' || brainFlag === 'online' || brainFlag === 'auto' || brainFlag === 'none'
+      ? brainFlag
+      : agentFlag === 'local' || agentFlag === 'online'
+        ? agentFlag
+        : undefined;
   return {
     dialect: value('--dialect'),
     noExt: flag('--no-ext'),
     lang: value('--lang'),
     runtime: rt === 'v1' || rt === 'v2' ? rt : undefined,
+    agent,
+    brain,
+    explain: flag('--explain'),
   };
 }
 
