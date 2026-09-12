@@ -49,5 +49,35 @@ Files: `info`, `sign show|stamp|verify|strip`
 Dialects: `dialect list|new|set|use|show|validate|docs|words|canon|surface|xlate|prelude|extend|install|publish|export|import|remove`
 Extensions: `ext list|enable|disable|add|sync|prelude`
 Libraries: `lib list|add|remove|pins|export|import`
-Cloud: `auth login|logout|whoami`, `cloud list|pull|push`
+Cloud: `auth login|signup|code|token|reset|refresh|status|whoami|logout`, `cloud list|pull|push`
 Settings: `runtime`, `languages`, `translate`, `home`, `version`
+
+## Signing in
+
+A terminal has no browser, so the CLI keeps its own session in
+`~/.sdev/session.json` (owner-readable only) and refreshes it automatically
+before every cloud command.
+
+```
+sdev auth login you@example.com          # password, typed masked
+sdev auth login you@example.com --password "$PW"   # or $SDEV_PASSWORD
+sdev auth code you@example.com           # emails a one-time code
+sdev auth code you@example.com 123456    # …then verify it
+sdev auth signup you@example.com
+sdev auth reset you@example.com
+sdev auth token <access> <refresh>       # paste a pair from the website
+sdev auth status                         # who you are + where the session lives
+```
+
+Accounts created with Google have no password: use `sdev auth code`.
+
+## The terminal editor
+
+```
+sdev edit hello.sdev        # alias: sdev ide hello.sdev
+```
+
+Syntax colouring, line numbers, and the status bar shows the runtime and the
+active dialect. `Ctrl+S` save, `Ctrl+R` save and run through the full
+pipeline, `Ctrl+F` find, `Ctrl+G` go to line, `Ctrl+K` cut line, `Ctrl+L`
+format, `Ctrl+Q` quit (asks once when there are unsaved changes).
