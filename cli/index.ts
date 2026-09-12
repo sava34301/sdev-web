@@ -667,22 +667,79 @@ async function cmdLib(sub: string, rest: string[]): Promise<void> {
 /* ------------------------------------------------------------------ */
 
 async function cmdAuth(sub: string, rest: string[]): Promise<void> {
-  if (sub === 'login') {
-    const email = rest[0] ?? die('sdev auth login <email>');
-    const password = await prompt('password: ', true);
-    const user = await signIn(email, password);
-    console.log('signed in as', user?.email);
-    return;
+  switch (sub) {
+    case 'login': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth login <email>');
+      const pw = await readPassword(value('--password'));
+      const user = await signInWithPassword(email, pw);
+      console.log('signed in as', user.email);
+      return;
+    }
+    case 'signup': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth signup <email>');
+      const pw = await readPassword(value('--password'), 'choose a password: ');
+      if (pw.length < 6) die('use at least 6 characters');
+      const { needsConfirmation } = await signUpWithPassword(email, pw, value('--name'));
+      console.log(needsConfirmation
+        ? `account created — open the confirmation link we emailed to ${email}, then: sdev auth login ${email}`
+        : `signed in as ${email}`);
+      return;
+    }
+    case 'code': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth code <email>');
+      await sendEmailCode(email, flag('--new'));
+      console.log(`a one-time code is on its way to ${email}`);
+      const code = rest[1] ?? (await ask('code: '));
+      if (!code) return console.log(`when it arrives, run: sdev auth code ${email} <code>`);
+      const user = await verifyEmailCode(email, code);
+      console.log('signed in as', user.email);
+      return;
+    }
+    case 'token': {
+      const access = rest[0] ?? (await ask('access token: '));
+      const refresh = rest[1] ?? (await ask('refresh token: '));
+      if (!access || !refresh) die('sdev auth token <access-token> <refresh-token>');
+      const user = await signInWithTokens(access, refresh);
+      console.log('signed in as', user.email);
+      return;
+    }
+    case 'reset': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth reset <email>');
+      await sendPasswordReset(email);
+      console.log(`password reset link sent to ${email}`);
+      return;
+    }
+    case 'refresh': {
+      const session = await ensureSession();
+      console.log(session ? 'session refreshed for ' + session.user.email : 'not signed in');
+      return;
+    }
+    case 'logout':
+      await signOut();
+      return console.log('signed out');
+    case 'status':
+    case undefined:
+    case 'whoami': {
+      const user = await currentUser();
+      if (!user) {
+        const stored = storedSummary();
+        console.log(stored
+          ? `signed out — the saved session for ${stored.email ?? 'your account'} expired.\nsign in again: sdev auth login ${stored.email ?? '<email>'}`
+          : 'not signed in — sdev auth login <email>  or  sdev auth code <email>');
+        return;
+      }
+      const handle = await myUsername(user.id);
+      console.log(`${user.email}${handle ? ' · @' + handle : ''}`);
+      if (sub === 'status') console.log('session file: ' + sessionFile());
+      return;
+    }
+    default:
+      die('auth: use login | signup | code | token | reset | refresh | status | logout');
   }
-  if (sub === 'logout') { await signOut(); return console.log('signed out'); }
-  if (sub === 'whoami') {
-    const user = await currentUser();
-    if (!user) return console.log('not signed in');
-    const handle = await myUsername(user.id);
-    console.log(`${user.email}${handle ? ' · @' + handle : ''}`);
-    return;
-  }
-  die('auth: use login | logout | whoami');
 }
 
 async function cmdCloud(sub: string, rest: string[]): Promise<void> {
