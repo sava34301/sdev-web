@@ -18305,8 +18305,49 @@ var Parser = class _Parser {
     if (this.check("BE" /* BE */)) return this.parseLeadingBeStatement();
     if (this.checkIdentifierValue("set") && this.isSetToStatement()) return this.parseSetToStatement();
     if (this.check("EITHER" /* EITHER */)) return this.parseEitherStatement();
+    if (this.isToDeclaration()) return this.parseToDeclaration();
     if (this.check("DOUBLE_COLON" /* DOUBLE_COLON */)) return this.parseBlockStatement();
     return this.parseExpressionStatement();
+  }
+  /** `to name ...` on its own line declares a function (v2 / natural form). */
+  isToDeclaration() {
+    if (!this.checkIdentifierValue("to")) return false;
+    const next = this.tokens[this.pos + 1];
+    return !!next && next.type === "IDENTIFIER" /* IDENTIFIER */ && next.line === this.peek().line;
+  }
+  /** to name [with a b c] <block> end */
+  parseToDeclaration() {
+    const toToken = this.advance();
+    const name = this.consumeName("Expected function name");
+    const params = [];
+    if (this.checkIdentifierValue("with")) {
+      this.advance();
+      while (this.check("IDENTIFIER" /* IDENTIFIER */) && this.peek().line === toToken.line) {
+        params.push(this.advance().value);
+        this.match("COMMA" /* COMMA */);
+      }
+    } else if (this.check("LPAREN" /* LPAREN */) && this.peek().line === toToken.line) {
+      this.advance();
+      while (!this.check("RPAREN" /* RPAREN */) && !this.isAtEnd()) {
+        params.push(this.consumeName("Expected parameter name"));
+        if (!this.match("COMMA" /* COMMA */)) break;
+      }
+      this.consume("RPAREN" /* RPAREN */, "Expected ')'");
+    }
+    const body = this.parseBlockStatement();
+    return {
+      type: "FuncDeclaration",
+      name,
+      params,
+      paramSpecs: params.map((n) => ({ name: n })),
+      isGenerator: this.blockEmits(body),
+      body,
+      line: toToken.line
+    };
+  }
+  /** `end` is a contextual block closer for the natural block form. */
+  checkEndWord() {
+    return this.checkIdentifierValue("end");
   }
   /** A '@' begins a decorator only when a declaration follows on a later token. */
   isDecoratorPosition() {
@@ -18962,6 +19003,15 @@ var Parser = class _Parser {
   }
   // :: statements ;;
   parseBlockStatement() {
+    if (!this.check("DOUBLE_COLON" /* DOUBLE_COLON */)) {
+      const start = this.peek();
+      const statements2 = [];
+      while (!this.isAtEnd() && !this.checkEndWord() && !this.check("DOUBLE_SEMI" /* DOUBLE_SEMI */) && !this.check("OTHERWISE" /* OTHERWISE */) && !this.checkIdentifierValue("else")) {
+        statements2.push(this.parseStatement());
+      }
+      if (this.checkEndWord()) this.advance();
+      return { type: "BlockStatement", statements: statements2, line: start.line };
+    }
     const colonToken = this.consume("DOUBLE_COLON" /* DOUBLE_COLON */, "Expected '::'");
     const statements = [];
     while (!this.check("DOUBLE_SEMI" /* DOUBLE_SEMI */) && !this.isAtEnd()) {
