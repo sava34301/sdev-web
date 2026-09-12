@@ -23,7 +23,7 @@ export interface UnderstandOptions {
   /** learn from this file */
   learn?: boolean;
   /** the dialect the file is written in, if any */
-  dialect?: DialectSpec | null;
+  dialect?: DialectWords | null;
   /** endpoint for the local brain (defaults to SDEV_AGENT_LOCAL_URL) */
   localUrl?: string;
   /** print what the agent changed */
