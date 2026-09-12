@@ -803,18 +803,9 @@ function emit(text: string): void {
   else process.stdout.write(text.endsWith('\n') ? text : text + '\n');
 }
 
-function prompt(question: string, hidden = false): Promise<string> {
-  return new Promise((res) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    if (hidden) {
-      const out = process.stdout as NodeJS.WriteStream & { muted?: boolean };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (rl as any)._writeToOutput = (s: string) => { if (!out.muted) process.stdout.write(s.includes(question) ? s : '*'); };
-      out.muted = false;
-      setTimeout(() => { out.muted = false; }, 0);
-    }
-    rl.question(question, (answer) => { rl.close(); process.stdout.write('\n'); res(answer); });
-  });
+async function cmdEdit(file: string | undefined): Promise<void> {
+  if (!file) die('sdev edit <file.sdev>');
+  await runEditor({ ...runOptions(), path: file });
 }
 
 /* ------------------------------------------------------------------ */
@@ -875,8 +866,16 @@ async function main(): Promise<void> {
       return cmdExt(pos[1], pos.slice(2));
     case 'lib':
       return cmdLib(pos[1], pos.slice(2));
+    case 'edit':
+    case 'ide':
+      return cmdEdit(pos[1]);
     case 'auth':
-      return cmdAuth(pos[1] ?? 'whoami', pos.slice(2));
+    case 'login':
+      return cmdAuth(cmd === 'login' ? 'login' : (pos[1] ?? 'whoami'), cmd === 'login' ? pos.slice(1) : pos.slice(2));
+    case 'logout':
+      return cmdAuth('logout', []);
+    case 'whoami':
+      return cmdAuth('whoami', []);
     case 'cloud':
       return cmdCloud(pos[1], pos.slice(2));
     case 'runtime': {
