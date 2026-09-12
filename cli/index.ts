@@ -44,7 +44,8 @@ import {
 } from './auth';
 import { ask, password as readPassword } from './prompt';
 import { runEditor } from './editor';
-import { prepare, runPrepared, readSource, localModules, type PrepareOptions } from './pipeline';
+import { prepare, prepareAsync, explainAgent, runPrepared, readSource, localModules, type PrepareOptions } from './pipeline';
+import { understandAsync, promoteToDialect, loadMemory } from '@/lang/agent';
 
 const VERSION = '5.0.0';
 const SDEVC_MAGIC = 'SDEVC4';
@@ -174,6 +175,10 @@ OPTIONS
   --runtime <v1|v2>       Override the runtime
   --no-ext                Ignore enabled extensions
   --lang <Language>       Source language for the lexer
+  --agent <mode>          off | auto | on | strict (or local / online)
+  --brain <where>         auto | local | online | none
+  --no-agent              Run the file exactly as written
+  --explain               Show what the agent understood
   -o, --out <file>        Output path
 `);
 }
@@ -184,7 +189,8 @@ OPTIONS
 
 async function cmdRun(file: string): Promise<void> {
   const opts = runOptions();
-  const prepared = prepare(readSource(file), opts);
+  const prepared = await prepareAsync(readSource(file), opts);
+  if (opts.explain) explainAgent(prepared.agent);
   const outcome = await runPrepared(prepared, file, opts);
   if (!outcome.success) die(outcome.error ?? 'program failed');
 }
