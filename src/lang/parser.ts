@@ -65,8 +65,54 @@ export class Parser {
     // `either cond :: ... ;; otherwise :: ... ;;` — guard form used by the stdlib.
     if (this.check(TokenType.EITHER)) return this.parseEitherStatement();
 
+    // v2 / natural function form: `to greet with name` ... `end`
+    if (this.isToDeclaration()) return this.parseToDeclaration();
+
     if (this.check(TokenType.DOUBLE_COLON)) return this.parseBlockStatement();
     return this.parseExpressionStatement();
+  }
+
+  /** `to name ...` on its own line declares a function (v2 / natural form). */
+  private isToDeclaration(): boolean {
+    if (!this.checkIdentifierValue('to')) return false;
+    const next = this.tokens[this.pos + 1];
+    return !!next && next.type === TokenType.IDENTIFIER && next.line === this.peek().line;
+  }
+
+  /** to name [with a b c] <block> end */
+  private parseToDeclaration(): AST.FuncDeclaration {
+    const toToken = this.advance();
+    const name = this.consumeName('Expected function name');
+    const params: string[] = [];
+    if (this.checkIdentifierValue('with')) {
+      this.advance();
+      while (this.check(TokenType.IDENTIFIER) && this.peek().line === toToken.line) {
+        params.push(this.advance().value);
+        this.match(TokenType.COMMA);
+      }
+    } else if (this.check(TokenType.LPAREN) && this.peek().line === toToken.line) {
+      this.advance();
+      while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
+        params.push(this.consumeName('Expected parameter name'));
+        if (!this.match(TokenType.COMMA)) break;
+      }
+      this.consume(TokenType.RPAREN, "Expected ')'");
+    }
+    const body = this.parseBlockStatement();
+    return {
+      type: 'FuncDeclaration',
+      name,
+      params,
+      paramSpecs: params.map((n) => ({ name: n })),
+      isGenerator: this.blockEmits(body),
+      body,
+      line: toToken.line,
+    } as AST.FuncDeclaration;
+  }
+
+  /** `end` is a contextual block closer for the natural block form. */
+  private checkEndWord(): boolean {
+    return this.checkIdentifierValue('end');
   }
 
   /** A '@' begins a decorator only when a declaration follows on a later token. */
@@ -795,6 +841,16 @@ export class Parser {
 
   // :: statements ;;
   private parseBlockStatement(): AST.BlockStatement {
+    // Natural block form: no `::`, statements run until `end` (or `else`).
+    if (!this.check(TokenType.DOUBLE_COLON)) {
+      const start = this.peek();
+      const statements: AST.ASTNode[] = [];
+      while (!this.isAtEnd() && !this.checkEndWord() && !this.check(TokenType.DOUBLE_SEMI) && !this.check(TokenType.OTHERWISE) && !this.checkIdentifierValue('else')) {
+        statements.push(this.parseStatement());
+      }
+      if (this.checkEndWord()) this.advance();
+      return { type: 'BlockStatement', statements, line: start.line };
+    }
     const colonToken = this.consume(TokenType.DOUBLE_COLON, "Expected '::'");
     const statements: AST.ASTNode[] = [];
     while (!this.check(TokenType.DOUBLE_SEMI) && !this.isAtEnd()) {
