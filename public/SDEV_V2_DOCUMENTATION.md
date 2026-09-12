@@ -1711,3 +1711,65 @@ say fround(fsqrt(2.0) * 100.0)
 write_file("out.txt", "hi")
 say read_file("out.txt")
 ```
+
+## The understanding agent
+
+sdev reads intent, not just syntax. Before the lexer, the parser or any code
+generation runs, the understanding agent reads the whole file and turns however
+you wrote it into canonical sdev:
+
+```
+output Hello
+out Nothing
+name1 will be Twenty
+terminal name1
+```
+
+becomes
+
+```
+say "Hello"
+say nothing
+set name1 to 20
+say name1
+```
+
+The agent works in three layers, in this order:
+
+1. **Rules** — a large built-in vocabulary of ways people write output,
+   assignment, conditions, loops, functions and comparisons. Offline, instant.
+2. **Memory** — every program you run teaches it your own words. The next file
+   that uses them needs no thinking at all.
+3. **AI brain** — only when lines still make no sense. Online it uses the
+   hosted brain; offline, or when you ask for it, a local brain at
+   `SDEV_AGENT_LOCAL_URL` (default `http://127.0.0.1:11434/sdev-agent`).
+
+Directives, written anywhere in the file:
+
+| Directive | Meaning |
+| --- | --- |
+| `!#agent:off` | Run the file exactly as written |
+| `!#agent:on` | Always understand, even if the file already parses |
+| `!#agent:auto` | Default: understand only when needed |
+| `!#agent:strict` | Rules and memory only — never guess |
+| `!#agent:local` | Keep the AI brain on this machine |
+| `!#agent:online` | Use the hosted brain |
+| `!#agent:learn:off` | Do not learn from this file |
+
+A file the agent's reading cannot run falls back to the file as written, so the
+agent can never make a working program stop working.
+
+From the command line:
+
+```
+sdev run app.sdev --explain      # show what it understood, line by line
+sdev agent status                # what it has learned from you
+sdev agent understand app.sdev   # print the canonical sdev
+sdev agent promote "My way"      # turn what it learned into a dialect
+sdev agent forget                # clear its memory
+sdev run app.sdev --no-agent     # off for this run
+```
+
+`sdev agent promote` writes a real dialect from your own words, so your way of
+writing becomes a first-class dialect you can share — but you never need one:
+the agent understands you without it.
