@@ -97,6 +97,7 @@ USAGE
 
 RUNNING
   run <file>              Run a program (dialect + extensions + libraries applied)
+  edit <file>             Full-screen editor: ^S save, ^R run, ^F find, ^Q quit
   repl                    Interactive session
   check <file>            Parse only, report syntax errors
   ast <file>              Print the syntax tree as JSON
