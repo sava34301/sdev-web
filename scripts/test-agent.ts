@@ -72,22 +72,20 @@ check('promoted synonym', (spec.synonyms['say'] ?? []).join(','), 'shout');
 const run = execute('output Hello\nname1 will be Twenty\nterminal name1');
 check('runs end to end', run.output.join('|'), 'Hello|20');
 
+// ---- sentence-style program from a real user session -------------------
+const sentences = understand([
+  'I want function called 11 with variable named tuesday',
+  'i need wednesday to be tuesday + 1',
+  'say to terminal wednesday',
+  '',
+  'call 11 with 2',
+].join('\n')).source;
+check('sentence function', sentences.split('\n')[0], 'to n11 with tuesday');
+check('sentence assignment', sentences.split('\n')[1].trim(), 'set wednesday to tuesday + 1');
+check('sentence say', sentences.split('\n')[2].trim(), 'say wednesday');
+check('sentence closes block', String(sentences.includes('end')), 'true');
+check('sentence call', String(sentences.includes('n11(2)')), 'true');
+check('sentence runs', execute(sentences).output.join('|'), '3');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
-
-// Sentence-style program from a real user session.
-check('whole sentences', () => {
-  const src = [
-    'I want function called 11 with variable named tuesday',
-    'i need wednesday to be tuesday + 1',
-    'say to terminal wednesday',
-    '',
-    'call 11 with 2',
-  ].join('\n');
-  const out = understand(src).source;
-  expect(out.includes('to n11 with tuesday'), out);
-  expect(out.includes('set wednesday to tuesday + 1'), out);
-  expect(out.includes('say wednesday'), out);
-  expect(out.includes('end'), out);
-  expect(out.includes('n11(2)'), out);
-});
