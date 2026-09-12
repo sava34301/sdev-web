@@ -259,6 +259,15 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
     const { line, strings, comment } = mask(raw);
     if (!line.trim()) return raw;
 
+    // Lines written in another natural language belong to the built-in
+    // translator, not to the agent — unless the agent recognises their
+    // leading word, guessing at them would only mangle them.
+    const firstWord = line.trim().split(/[\s(]+/)[0]?.toLowerCase() ?? '';
+    if (/[^\x00-\x7F]/.test(line) && !words.has(firstWord.replace(/[(:]$/, ''))) {
+      unresolved.push(lineNo);
+      return raw;
+    }
+
     const statements = splitStatements(line);
     const rewritten: string[] = [];
 
