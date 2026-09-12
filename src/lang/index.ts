@@ -36,10 +36,11 @@ function pickRuntime(source: string): 'v1' | 'v2' {
  * Run sdev v2 source. v2 has ONE implementation: the sdev-written compiler
  * (lang/compiler/*.sdev) executing on the seed VM. No JavaScript interpreter.
  */
-export async function executeV2(source: string): Promise<ExecutionResult> {
+export async function executeV2(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
   const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
   try {
-    const r = await runWasm(source);
+    const understood = await understandFor(source, options, true);
+    const r = await runWasm(understood);
     return { success: r.success, output: r.output, error: r.error ?? undefined, detectedLanguage: null };
   } catch (e) {
     const notYet = e instanceof WasmSubsetError;
@@ -54,10 +55,26 @@ export async function executeV2(source: string): Promise<ExecutionResult> {
   }
 }
 
+/**
+ * Run the understanding agent in front of the compiler. `!#agent:off` in the
+ * file, or `agent: false` here, skips it entirely.
+ */
+async function understandFor(source: string, options: ExecuteOptions, allowAI: boolean): Promise<string> {
+  if (options.agent === false) return stripAgentDirectives(source);
+  const opts = { dialect: options.dialect ?? null, ...(options.agent ?? {}) };
+  const result = allowAI ? await understandAsync(source, opts) : understand(source, opts);
+  lastAgentRun = result;
+  return result.source;
+}
+
+/** What the agent did on the most recent run — the IDE shows this. */
+export let lastAgentRun: UnderstandResult | null = null;
+
 /** Async entry point: v2 goes to the self-hosted toolchain, v1 to the interpreter. */
 export async function executeAsync(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
-  if (pickRuntime(source) === 'v2') return executeV2(source);
-  return execute(source, options);
+  if (pickRuntime(source) === 'v2') return executeV2(source, options);
+  const understood = await understandFor(source, options, true);
+  return execute(understood, { ...options, agent: false });
 }
 
 export function execute(source: string, options: ExecuteOptions = {}): ExecutionResult {
@@ -72,10 +89,17 @@ export function execute(source: string, options: ExecuteOptions = {}): Execution
     };
   }
 
-
+  let understood = source;
+  if (options.agent !== false) {
+    const result = understand(source, { dialect: options.dialect ?? null, ...(options.agent ?? {}) });
+    lastAgentRun = result;
+    understood = result.source;
+  } else {
+    understood = stripAgentDirectives(source);
+  }
 
   try {
-    const cleaned = stripBoardBlocks(source);
+    const cleaned = stripBoardBlocks(understood);
     const lexer = new Lexer(cleaned, options);
     const tokens = lexer.tokenize();
 
