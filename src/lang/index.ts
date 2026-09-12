@@ -3,6 +3,8 @@ import { Parser } from './parser';
 import { Interpreter } from './interpreter';
 import { SdevError } from './errors';
 import { stripBoardBlocks } from './hardware/strip';
+import { understand, understandAsync, stripAgentDirectives } from './agent';
+import type { UnderstandOptions, UnderstandResult } from './agent';
 
 export interface ExecutionResult {
   success: boolean;
@@ -12,7 +14,14 @@ export interface ExecutionResult {
   detectedLanguage?: string | null;
 }
 
-export interface ExecuteOptions extends LexerOptions {}
+export interface ExecuteOptions extends LexerOptions {
+  /**
+   * The understanding agent. Omit for the default (rules + memory, AI when
+   * the file still doesn't make sense), pass options to steer it, or `false`
+   * to run the source exactly as written.
+   */
+  agent?: UnderstandOptions | false;
+}
 
 function pickRuntime(source: string): 'v1' | 'v2' {
   // Scan the first ~10 lines for a #!sdev shebang. IDE may prepend a
