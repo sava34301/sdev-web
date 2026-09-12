@@ -105,10 +105,8 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
   // People rarely write `end`. If their file doesn't hang together without it,
   // close what they left open — but only when that actually helps.
   let source = result.source;
-  if (!parses(source)) {
-    const closed = closeBlocks(source);
-    if (closed !== source && parses(closed)) source = closed;
-  }
+  const closed = closeBlocks(source);
+  if (closed !== source && parses(closed)) source = closed;
   return { done: false as const, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
 }
 

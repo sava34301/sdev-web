@@ -27162,6 +27162,16 @@ function senseFile(source, extra) {
       reasons.push(`line ${i + 1}: looks like an assignment written another way`);
     }
     if (/;\s*\S/.test(line)) reasons.push(`line ${i + 1}: several statements on one line`);
+    const known = baseWordMap().has(head2) || extra?.has(head2);
+    if (!known && /^[\p{L}_][\p{L}\p{N}_]*(?:\s+[\p{L}\p{N}_]+){2,}$/u.test(line)) {
+      reasons.push(`line ${i + 1}: reads like a sentence, not a statement`);
+    }
+    if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(line)) {
+      reasons.push(`line ${i + 1}: names the output destination in words`);
+    }
+    if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line)) {
+      reasons.push(`line ${i + 1}: a call written in words`);
+    }
   }
   const ok = parses(source);
   return { parses: ok, suspicious: !ok || reasons.length > 0, reasons };
@@ -27391,10 +27401,8 @@ function runRules(prep, opts) {
   });
   void opts;
   let source = result.source;
-  if (!parses(source)) {
-    const closed = closeBlocks(source);
-    if (closed !== source && parses(closed)) source = closed;
-  }
+  const closed = closeBlocks(source);
+  if (closed !== source && parses(closed)) source = closed;
   return { done: false, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
 }
 function finish(prep, source, learned) {
