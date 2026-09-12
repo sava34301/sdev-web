@@ -2843,6 +2843,1224 @@ var require_main = __commonJS({
   }
 });
 
+// node_modules/@supabase/postgrest-js/dist/index.mjs
+var PostgrestError, PostgrestBuilder, PostgrestTransformBuilder, PostgrestReservedCharsRegexp, PostgrestFilterBuilder, PostgrestQueryBuilder, PostgrestClient;
+var init_dist = __esm({
+  "node_modules/@supabase/postgrest-js/dist/index.mjs"() {
+    PostgrestError = class extends Error {
+      /**
+      * @example
+      * ```ts
+      * import PostgrestError from '@supabase/postgrest-js'
+      *
+      * throw new PostgrestError({
+      *   message: 'Row level security prevented the request',
+      *   details: 'RLS denied the insert',
+      *   hint: 'Check your policies',
+      *   code: 'PGRST301',
+      * })
+      * ```
+      */
+      constructor(context) {
+        super(context.message);
+        this.name = "PostgrestError";
+        this.details = context.details;
+        this.hint = context.hint;
+        this.code = context.code;
+      }
+    };
+    PostgrestBuilder = class {
+      /**
+      * Creates a builder configured for a specific PostgREST request.
+      *
+      * @example
+      * ```ts
+      * import PostgrestQueryBuilder from '@supabase/postgrest-js'
+      *
+      * const builder = new PostgrestQueryBuilder(
+      *   new URL('https://xyzcompany.supabase.co/rest/v1/users'),
+      *   { headers: new Headers({ apikey: 'public-anon-key' }) }
+      * )
+      * ```
+      */
+      constructor(builder) {
+        var _builder$shouldThrowO, _builder$isMaybeSingl;
+        this.shouldThrowOnError = false;
+        this.method = builder.method;
+        this.url = builder.url;
+        this.headers = new Headers(builder.headers);
+        this.schema = builder.schema;
+        this.body = builder.body;
+        this.shouldThrowOnError = (_builder$shouldThrowO = builder.shouldThrowOnError) !== null && _builder$shouldThrowO !== void 0 ? _builder$shouldThrowO : false;
+        this.signal = builder.signal;
+        this.isMaybeSingle = (_builder$isMaybeSingl = builder.isMaybeSingle) !== null && _builder$isMaybeSingl !== void 0 ? _builder$isMaybeSingl : false;
+        if (builder.fetch) this.fetch = builder.fetch;
+        else this.fetch = fetch;
+      }
+      /**
+      * If there's an error with the query, throwOnError will reject the promise by
+      * throwing the error instead of returning it as part of a successful response.
+      *
+      * {@link https://github.com/supabase/supabase-js/issues/92}
+      */
+      throwOnError() {
+        this.shouldThrowOnError = true;
+        return this;
+      }
+      /**
+      * Set an HTTP header for the request.
+      */
+      setHeader(name, value2) {
+        this.headers = new Headers(this.headers);
+        this.headers.set(name, value2);
+        return this;
+      }
+      then(onfulfilled, onrejected) {
+        var _this = this;
+        if (this.schema === void 0) {
+        } else if (["GET", "HEAD"].includes(this.method)) this.headers.set("Accept-Profile", this.schema);
+        else this.headers.set("Content-Profile", this.schema);
+        if (this.method !== "GET" && this.method !== "HEAD") this.headers.set("Content-Type", "application/json");
+        const _fetch = this.fetch;
+        let res = _fetch(this.url.toString(), {
+          method: this.method,
+          headers: this.headers,
+          body: JSON.stringify(this.body),
+          signal: this.signal
+        }).then(async (res$1) => {
+          let error = null;
+          let data = null;
+          let count = null;
+          let status = res$1.status;
+          let statusText = res$1.statusText;
+          if (res$1.ok) {
+            var _this$headers$get2, _res$headers$get;
+            if (_this.method !== "HEAD") {
+              var _this$headers$get;
+              const body = await res$1.text();
+              if (body === "") {
+              } else if (_this.headers.get("Accept") === "text/csv") data = body;
+              else if (_this.headers.get("Accept") && ((_this$headers$get = _this.headers.get("Accept")) === null || _this$headers$get === void 0 ? void 0 : _this$headers$get.includes("application/vnd.pgrst.plan+text"))) data = body;
+              else data = JSON.parse(body);
+            }
+            const countHeader = (_this$headers$get2 = _this.headers.get("Prefer")) === null || _this$headers$get2 === void 0 ? void 0 : _this$headers$get2.match(/count=(exact|planned|estimated)/);
+            const contentRange = (_res$headers$get = res$1.headers.get("content-range")) === null || _res$headers$get === void 0 ? void 0 : _res$headers$get.split("/");
+            if (countHeader && contentRange && contentRange.length > 1) count = parseInt(contentRange[1]);
+            if (_this.isMaybeSingle && _this.method === "GET" && Array.isArray(data)) if (data.length > 1) {
+              error = {
+                code: "PGRST116",
+                details: `Results contain ${data.length} rows, application/vnd.pgrst.object+json requires 1 row`,
+                hint: null,
+                message: "JSON object requested, multiple (or no) rows returned"
+              };
+              data = null;
+              count = null;
+              status = 406;
+              statusText = "Not Acceptable";
+            } else if (data.length === 1) data = data[0];
+            else data = null;
+          } else {
+            var _error$details;
+            const body = await res$1.text();
+            try {
+              error = JSON.parse(body);
+              if (Array.isArray(error) && res$1.status === 404) {
+                data = [];
+                error = null;
+                status = 200;
+                statusText = "OK";
+              }
+            } catch (_unused) {
+              if (res$1.status === 404 && body === "") {
+                status = 204;
+                statusText = "No Content";
+              } else error = { message: body };
+            }
+            if (error && _this.isMaybeSingle && (error === null || error === void 0 || (_error$details = error.details) === null || _error$details === void 0 ? void 0 : _error$details.includes("0 rows"))) {
+              error = null;
+              status = 200;
+              statusText = "OK";
+            }
+            if (error && _this.shouldThrowOnError) throw new PostgrestError(error);
+          }
+          return {
+            error,
+            data,
+            count,
+            status,
+            statusText
+          };
+        });
+        if (!this.shouldThrowOnError) res = res.catch((fetchError) => {
+          var _fetchError$name2;
+          let errorDetails = "";
+          const cause = fetchError === null || fetchError === void 0 ? void 0 : fetchError.cause;
+          if (cause) {
+            var _cause$message, _cause$code, _fetchError$name, _cause$name;
+            const causeMessage = (_cause$message = cause === null || cause === void 0 ? void 0 : cause.message) !== null && _cause$message !== void 0 ? _cause$message : "";
+            const causeCode = (_cause$code = cause === null || cause === void 0 ? void 0 : cause.code) !== null && _cause$code !== void 0 ? _cause$code : "";
+            errorDetails = `${(_fetchError$name = fetchError === null || fetchError === void 0 ? void 0 : fetchError.name) !== null && _fetchError$name !== void 0 ? _fetchError$name : "FetchError"}: ${fetchError === null || fetchError === void 0 ? void 0 : fetchError.message}`;
+            errorDetails += `
+
+Caused by: ${(_cause$name = cause === null || cause === void 0 ? void 0 : cause.name) !== null && _cause$name !== void 0 ? _cause$name : "Error"}: ${causeMessage}`;
+            if (causeCode) errorDetails += ` (${causeCode})`;
+            if (cause === null || cause === void 0 ? void 0 : cause.stack) errorDetails += `
+${cause.stack}`;
+          } else {
+            var _fetchError$stack;
+            errorDetails = (_fetchError$stack = fetchError === null || fetchError === void 0 ? void 0 : fetchError.stack) !== null && _fetchError$stack !== void 0 ? _fetchError$stack : "";
+          }
+          return {
+            error: {
+              message: `${(_fetchError$name2 = fetchError === null || fetchError === void 0 ? void 0 : fetchError.name) !== null && _fetchError$name2 !== void 0 ? _fetchError$name2 : "FetchError"}: ${fetchError === null || fetchError === void 0 ? void 0 : fetchError.message}`,
+              details: errorDetails,
+              hint: "",
+              code: ""
+            },
+            data: null,
+            count: null,
+            status: 0,
+            statusText: ""
+          };
+        });
+        return res.then(onfulfilled, onrejected);
+      }
+      /**
+      * Override the type of the returned `data`.
+      *
+      * @typeParam NewResult - The new result type to override with
+      * @deprecated Use overrideTypes<yourType, { merge: false }>() method at the end of your call chain instead
+      */
+      returns() {
+        return this;
+      }
+      /**
+      * Override the type of the returned `data` field in the response.
+      *
+      * @typeParam NewResult - The new type to cast the response data to
+      * @typeParam Options - Optional type configuration (defaults to { merge: true })
+      * @typeParam Options.merge - When true, merges the new type with existing return type. When false, replaces the existing types entirely (defaults to true)
+      * @example
+      * ```typescript
+      * // Merge with existing types (default behavior)
+      * const query = supabase
+      *   .from('users')
+      *   .select()
+      *   .overrideTypes<{ custom_field: string }>()
+      *
+      * // Replace existing types completely
+      * const replaceQuery = supabase
+      *   .from('users')
+      *   .select()
+      *   .overrideTypes<{ id: number; name: string }, { merge: false }>()
+      * ```
+      * @returns A PostgrestBuilder instance with the new type
+      */
+      overrideTypes() {
+        return this;
+      }
+    };
+    PostgrestTransformBuilder = class extends PostgrestBuilder {
+      /**
+      * Perform a SELECT on the query result.
+      *
+      * By default, `.insert()`, `.update()`, `.upsert()`, and `.delete()` do not
+      * return modified rows. By calling this method, modified rows are returned in
+      * `data`.
+      *
+      * @param columns - The columns to retrieve, separated by commas
+      */
+      select(columns) {
+        let quoted = false;
+        const cleanedColumns = (columns !== null && columns !== void 0 ? columns : "*").split("").map((c) => {
+          if (/\s/.test(c) && !quoted) return "";
+          if (c === '"') quoted = !quoted;
+          return c;
+        }).join("");
+        this.url.searchParams.set("select", cleanedColumns);
+        this.headers.append("Prefer", "return=representation");
+        return this;
+      }
+      /**
+      * Order the query result by `column`.
+      *
+      * You can call this method multiple times to order by multiple columns.
+      *
+      * You can order referenced tables, but it only affects the ordering of the
+      * parent table if you use `!inner` in the query.
+      *
+      * @param column - The column to order by
+      * @param options - Named parameters
+      * @param options.ascending - If `true`, the result will be in ascending order
+      * @param options.nullsFirst - If `true`, `null`s appear first. If `false`,
+      * `null`s appear last.
+      * @param options.referencedTable - Set this to order a referenced table by
+      * its columns
+      * @param options.foreignTable - Deprecated, use `options.referencedTable`
+      * instead
+      */
+      order(column, { ascending = true, nullsFirst, foreignTable, referencedTable = foreignTable } = {}) {
+        const key = referencedTable ? `${referencedTable}.order` : "order";
+        const existingOrder = this.url.searchParams.get(key);
+        this.url.searchParams.set(key, `${existingOrder ? `${existingOrder},` : ""}${column}.${ascending ? "asc" : "desc"}${nullsFirst === void 0 ? "" : nullsFirst ? ".nullsfirst" : ".nullslast"}`);
+        return this;
+      }
+      /**
+      * Limit the query result by `count`.
+      *
+      * @param count - The maximum number of rows to return
+      * @param options - Named parameters
+      * @param options.referencedTable - Set this to limit rows of referenced
+      * tables instead of the parent table
+      * @param options.foreignTable - Deprecated, use `options.referencedTable`
+      * instead
+      */
+      limit(count, { foreignTable, referencedTable = foreignTable } = {}) {
+        const key = typeof referencedTable === "undefined" ? "limit" : `${referencedTable}.limit`;
+        this.url.searchParams.set(key, `${count}`);
+        return this;
+      }
+      /**
+      * Limit the query result by starting at an offset `from` and ending at the offset `to`.
+      * Only records within this range are returned.
+      * This respects the query order and if there is no order clause the range could behave unexpectedly.
+      * The `from` and `to` values are 0-based and inclusive: `range(1, 3)` will include the second, third
+      * and fourth rows of the query.
+      *
+      * @param from - The starting index from which to limit the result
+      * @param to - The last index to which to limit the result
+      * @param options - Named parameters
+      * @param options.referencedTable - Set this to limit rows of referenced
+      * tables instead of the parent table
+      * @param options.foreignTable - Deprecated, use `options.referencedTable`
+      * instead
+      */
+      range(from, to, { foreignTable, referencedTable = foreignTable } = {}) {
+        const keyOffset = typeof referencedTable === "undefined" ? "offset" : `${referencedTable}.offset`;
+        const keyLimit = typeof referencedTable === "undefined" ? "limit" : `${referencedTable}.limit`;
+        this.url.searchParams.set(keyOffset, `${from}`);
+        this.url.searchParams.set(keyLimit, `${to - from + 1}`);
+        return this;
+      }
+      /**
+      * Set the AbortSignal for the fetch request.
+      *
+      * @param signal - The AbortSignal to use for the fetch request
+      */
+      abortSignal(signal) {
+        this.signal = signal;
+        return this;
+      }
+      /**
+      * Return `data` as a single object instead of an array of objects.
+      *
+      * Query result must be one row (e.g. using `.limit(1)`), otherwise this
+      * returns an error.
+      */
+      single() {
+        this.headers.set("Accept", "application/vnd.pgrst.object+json");
+        return this;
+      }
+      /**
+      * Return `data` as a single object instead of an array of objects.
+      *
+      * Query result must be zero or one row (e.g. using `.limit(1)`), otherwise
+      * this returns an error.
+      */
+      maybeSingle() {
+        if (this.method === "GET") this.headers.set("Accept", "application/json");
+        else this.headers.set("Accept", "application/vnd.pgrst.object+json");
+        this.isMaybeSingle = true;
+        return this;
+      }
+      /**
+      * Return `data` as a string in CSV format.
+      */
+      csv() {
+        this.headers.set("Accept", "text/csv");
+        return this;
+      }
+      /**
+      * Return `data` as an object in [GeoJSON](https://geojson.org) format.
+      */
+      geojson() {
+        this.headers.set("Accept", "application/geo+json");
+        return this;
+      }
+      /**
+      * Return `data` as the EXPLAIN plan for the query.
+      *
+      * You need to enable the
+      * [db_plan_enabled](https://supabase.com/docs/guides/database/debugging-performance#enabling-explain)
+      * setting before using this method.
+      *
+      * @param options - Named parameters
+      *
+      * @param options.analyze - If `true`, the query will be executed and the
+      * actual run time will be returned
+      *
+      * @param options.verbose - If `true`, the query identifier will be returned
+      * and `data` will include the output columns of the query
+      *
+      * @param options.settings - If `true`, include information on configuration
+      * parameters that affect query planning
+      *
+      * @param options.buffers - If `true`, include information on buffer usage
+      *
+      * @param options.wal - If `true`, include information on WAL record generation
+      *
+      * @param options.format - The format of the output, can be `"text"` (default)
+      * or `"json"`
+      */
+      explain({ analyze = false, verbose = false, settings = false, buffers = false, wal = false, format = "text" } = {}) {
+        var _this$headers$get;
+        const options = [
+          analyze ? "analyze" : null,
+          verbose ? "verbose" : null,
+          settings ? "settings" : null,
+          buffers ? "buffers" : null,
+          wal ? "wal" : null
+        ].filter(Boolean).join("|");
+        const forMediatype = (_this$headers$get = this.headers.get("Accept")) !== null && _this$headers$get !== void 0 ? _this$headers$get : "application/json";
+        this.headers.set("Accept", `application/vnd.pgrst.plan+${format}; for="${forMediatype}"; options=${options};`);
+        if (format === "json") return this;
+        else return this;
+      }
+      /**
+      * Rollback the query.
+      *
+      * `data` will still be returned, but the query is not committed.
+      */
+      rollback() {
+        this.headers.append("Prefer", "tx=rollback");
+        return this;
+      }
+      /**
+      * Override the type of the returned `data`.
+      *
+      * @typeParam NewResult - The new result type to override with
+      * @deprecated Use overrideTypes<yourType, { merge: false }>() method at the end of your call chain instead
+      */
+      returns() {
+        return this;
+      }
+      /**
+      * Set the maximum number of rows that can be affected by the query.
+      * Only available in PostgREST v13+ and only works with PATCH and DELETE methods.
+      *
+      * @param value - The maximum number of rows that can be affected
+      */
+      maxAffected(value2) {
+        this.headers.append("Prefer", "handling=strict");
+        this.headers.append("Prefer", `max-affected=${value2}`);
+        return this;
+      }
+    };
+    PostgrestReservedCharsRegexp = /* @__PURE__ */ new RegExp("[,()]");
+    PostgrestFilterBuilder = class extends PostgrestTransformBuilder {
+      /**
+      * Match only rows where `column` is equal to `value`.
+      *
+      * To check if the value of `column` is NULL, you should use `.is()` instead.
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      eq(column, value2) {
+        this.url.searchParams.append(column, `eq.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` is not equal to `value`.
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      neq(column, value2) {
+        this.url.searchParams.append(column, `neq.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` is greater than `value`.
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      gt(column, value2) {
+        this.url.searchParams.append(column, `gt.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` is greater than or equal to `value`.
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      gte(column, value2) {
+        this.url.searchParams.append(column, `gte.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` is less than `value`.
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      lt(column, value2) {
+        this.url.searchParams.append(column, `lt.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` is less than or equal to `value`.
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      lte(column, value2) {
+        this.url.searchParams.append(column, `lte.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches `pattern` case-sensitively.
+      *
+      * @param column - The column to filter on
+      * @param pattern - The pattern to match with
+      */
+      like(column, pattern) {
+        this.url.searchParams.append(column, `like.${pattern}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches all of `patterns` case-sensitively.
+      *
+      * @param column - The column to filter on
+      * @param patterns - The patterns to match with
+      */
+      likeAllOf(column, patterns) {
+        this.url.searchParams.append(column, `like(all).{${patterns.join(",")}}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches any of `patterns` case-sensitively.
+      *
+      * @param column - The column to filter on
+      * @param patterns - The patterns to match with
+      */
+      likeAnyOf(column, patterns) {
+        this.url.searchParams.append(column, `like(any).{${patterns.join(",")}}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches `pattern` case-insensitively.
+      *
+      * @param column - The column to filter on
+      * @param pattern - The pattern to match with
+      */
+      ilike(column, pattern) {
+        this.url.searchParams.append(column, `ilike.${pattern}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches all of `patterns` case-insensitively.
+      *
+      * @param column - The column to filter on
+      * @param patterns - The patterns to match with
+      */
+      ilikeAllOf(column, patterns) {
+        this.url.searchParams.append(column, `ilike(all).{${patterns.join(",")}}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches any of `patterns` case-insensitively.
+      *
+      * @param column - The column to filter on
+      * @param patterns - The patterns to match with
+      */
+      ilikeAnyOf(column, patterns) {
+        this.url.searchParams.append(column, `ilike(any).{${patterns.join(",")}}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches the PostgreSQL regex `pattern`
+      * case-sensitively (using the `~` operator).
+      *
+      * @param column - The column to filter on
+      * @param pattern - The PostgreSQL regular expression pattern to match with
+      */
+      regexMatch(column, pattern) {
+        this.url.searchParams.append(column, `match.${pattern}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` matches the PostgreSQL regex `pattern`
+      * case-insensitively (using the `~*` operator).
+      *
+      * @param column - The column to filter on
+      * @param pattern - The PostgreSQL regular expression pattern to match with
+      */
+      regexIMatch(column, pattern) {
+        this.url.searchParams.append(column, `imatch.${pattern}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` IS `value`.
+      *
+      * For non-boolean columns, this is only relevant for checking if the value of
+      * `column` is NULL by setting `value` to `null`.
+      *
+      * For boolean columns, you can also set `value` to `true` or `false` and it
+      * will behave the same way as `.eq()`.
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      is(column, value2) {
+        this.url.searchParams.append(column, `is.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` IS DISTINCT FROM `value`.
+      *
+      * Unlike `.neq()`, this treats `NULL` as a comparable value. Two `NULL` values
+      * are considered equal (not distinct), and comparing `NULL` with any non-NULL
+      * value returns true (distinct).
+      *
+      * @param column - The column to filter on
+      * @param value - The value to filter with
+      */
+      isDistinct(column, value2) {
+        this.url.searchParams.append(column, `isdistinct.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` is included in the `values` array.
+      *
+      * @param column - The column to filter on
+      * @param values - The values array to filter with
+      */
+      in(column, values) {
+        const cleanedValues = Array.from(new Set(values)).map((s) => {
+          if (typeof s === "string" && PostgrestReservedCharsRegexp.test(s)) return `"${s}"`;
+          else return `${s}`;
+        }).join(",");
+        this.url.searchParams.append(column, `in.(${cleanedValues})`);
+        return this;
+      }
+      /**
+      * Match only rows where `column` is NOT included in the `values` array.
+      *
+      * @param column - The column to filter on
+      * @param values - The values array to filter with
+      */
+      notIn(column, values) {
+        const cleanedValues = Array.from(new Set(values)).map((s) => {
+          if (typeof s === "string" && PostgrestReservedCharsRegexp.test(s)) return `"${s}"`;
+          else return `${s}`;
+        }).join(",");
+        this.url.searchParams.append(column, `not.in.(${cleanedValues})`);
+        return this;
+      }
+      /**
+      * Only relevant for jsonb, array, and range columns. Match only rows where
+      * `column` contains every element appearing in `value`.
+      *
+      * @param column - The jsonb, array, or range column to filter on
+      * @param value - The jsonb, array, or range value to filter with
+      */
+      contains(column, value2) {
+        if (typeof value2 === "string") this.url.searchParams.append(column, `cs.${value2}`);
+        else if (Array.isArray(value2)) this.url.searchParams.append(column, `cs.{${value2.join(",")}}`);
+        else this.url.searchParams.append(column, `cs.${JSON.stringify(value2)}`);
+        return this;
+      }
+      /**
+      * Only relevant for jsonb, array, and range columns. Match only rows where
+      * every element appearing in `column` is contained by `value`.
+      *
+      * @param column - The jsonb, array, or range column to filter on
+      * @param value - The jsonb, array, or range value to filter with
+      */
+      containedBy(column, value2) {
+        if (typeof value2 === "string") this.url.searchParams.append(column, `cd.${value2}`);
+        else if (Array.isArray(value2)) this.url.searchParams.append(column, `cd.{${value2.join(",")}}`);
+        else this.url.searchParams.append(column, `cd.${JSON.stringify(value2)}`);
+        return this;
+      }
+      /**
+      * Only relevant for range columns. Match only rows where every element in
+      * `column` is greater than any element in `range`.
+      *
+      * @param column - The range column to filter on
+      * @param range - The range to filter with
+      */
+      rangeGt(column, range) {
+        this.url.searchParams.append(column, `sr.${range}`);
+        return this;
+      }
+      /**
+      * Only relevant for range columns. Match only rows where every element in
+      * `column` is either contained in `range` or greater than any element in
+      * `range`.
+      *
+      * @param column - The range column to filter on
+      * @param range - The range to filter with
+      */
+      rangeGte(column, range) {
+        this.url.searchParams.append(column, `nxl.${range}`);
+        return this;
+      }
+      /**
+      * Only relevant for range columns. Match only rows where every element in
+      * `column` is less than any element in `range`.
+      *
+      * @param column - The range column to filter on
+      * @param range - The range to filter with
+      */
+      rangeLt(column, range) {
+        this.url.searchParams.append(column, `sl.${range}`);
+        return this;
+      }
+      /**
+      * Only relevant for range columns. Match only rows where every element in
+      * `column` is either contained in `range` or less than any element in
+      * `range`.
+      *
+      * @param column - The range column to filter on
+      * @param range - The range to filter with
+      */
+      rangeLte(column, range) {
+        this.url.searchParams.append(column, `nxr.${range}`);
+        return this;
+      }
+      /**
+      * Only relevant for range columns. Match only rows where `column` is
+      * mutually exclusive to `range` and there can be no element between the two
+      * ranges.
+      *
+      * @param column - The range column to filter on
+      * @param range - The range to filter with
+      */
+      rangeAdjacent(column, range) {
+        this.url.searchParams.append(column, `adj.${range}`);
+        return this;
+      }
+      /**
+      * Only relevant for array and range columns. Match only rows where
+      * `column` and `value` have an element in common.
+      *
+      * @param column - The array or range column to filter on
+      * @param value - The array or range value to filter with
+      */
+      overlaps(column, value2) {
+        if (typeof value2 === "string") this.url.searchParams.append(column, `ov.${value2}`);
+        else this.url.searchParams.append(column, `ov.{${value2.join(",")}}`);
+        return this;
+      }
+      /**
+      * Only relevant for text and tsvector columns. Match only rows where
+      * `column` matches the query string in `query`.
+      *
+      * @param column - The text or tsvector column to filter on
+      * @param query - The query text to match with
+      * @param options - Named parameters
+      * @param options.config - The text search configuration to use
+      * @param options.type - Change how the `query` text is interpreted
+      */
+      textSearch(column, query, { config, type } = {}) {
+        let typePart = "";
+        if (type === "plain") typePart = "pl";
+        else if (type === "phrase") typePart = "ph";
+        else if (type === "websearch") typePart = "w";
+        const configPart = config === void 0 ? "" : `(${config})`;
+        this.url.searchParams.append(column, `${typePart}fts${configPart}.${query}`);
+        return this;
+      }
+      /**
+      * Match only rows where each column in `query` keys is equal to its
+      * associated value. Shorthand for multiple `.eq()`s.
+      *
+      * @param query - The object to filter with, with column names as keys mapped
+      * to their filter values
+      */
+      match(query) {
+        Object.entries(query).forEach(([column, value2]) => {
+          this.url.searchParams.append(column, `eq.${value2}`);
+        });
+        return this;
+      }
+      /**
+      * Match only rows which doesn't satisfy the filter.
+      *
+      * Unlike most filters, `opearator` and `value` are used as-is and need to
+      * follow [PostgREST
+      * syntax](https://postgrest.org/en/stable/api.html#operators). You also need
+      * to make sure they are properly sanitized.
+      *
+      * @param column - The column to filter on
+      * @param operator - The operator to be negated to filter with, following
+      * PostgREST syntax
+      * @param value - The value to filter with, following PostgREST syntax
+      */
+      not(column, operator, value2) {
+        this.url.searchParams.append(column, `not.${operator}.${value2}`);
+        return this;
+      }
+      /**
+      * Match only rows which satisfy at least one of the filters.
+      *
+      * Unlike most filters, `filters` is used as-is and needs to follow [PostgREST
+      * syntax](https://postgrest.org/en/stable/api.html#operators). You also need
+      * to make sure it's properly sanitized.
+      *
+      * It's currently not possible to do an `.or()` filter across multiple tables.
+      *
+      * @param filters - The filters to use, following PostgREST syntax
+      * @param options - Named parameters
+      * @param options.referencedTable - Set this to filter on referenced tables
+      * instead of the parent table
+      * @param options.foreignTable - Deprecated, use `referencedTable` instead
+      */
+      or(filters, { foreignTable, referencedTable = foreignTable } = {}) {
+        const key = referencedTable ? `${referencedTable}.or` : "or";
+        this.url.searchParams.append(key, `(${filters})`);
+        return this;
+      }
+      /**
+      * Match only rows which satisfy the filter. This is an escape hatch - you
+      * should use the specific filter methods wherever possible.
+      *
+      * Unlike most filters, `opearator` and `value` are used as-is and need to
+      * follow [PostgREST
+      * syntax](https://postgrest.org/en/stable/api.html#operators). You also need
+      * to make sure they are properly sanitized.
+      *
+      * @param column - The column to filter on
+      * @param operator - The operator to filter with, following PostgREST syntax
+      * @param value - The value to filter with, following PostgREST syntax
+      */
+      filter(column, operator, value2) {
+        this.url.searchParams.append(column, `${operator}.${value2}`);
+        return this;
+      }
+    };
+    PostgrestQueryBuilder = class {
+      /**
+      * Creates a query builder scoped to a Postgres table or view.
+      *
+      * @example
+      * ```ts
+      * import PostgrestQueryBuilder from '@supabase/postgrest-js'
+      *
+      * const query = new PostgrestQueryBuilder(
+      *   new URL('https://xyzcompany.supabase.co/rest/v1/users'),
+      *   { headers: { apikey: 'public-anon-key' } }
+      * )
+      * ```
+      */
+      constructor(url, { headers = {}, schema, fetch: fetch$1 }) {
+        this.url = url;
+        this.headers = new Headers(headers);
+        this.schema = schema;
+        this.fetch = fetch$1;
+      }
+      /**
+      * Clone URL and headers to prevent shared state between operations.
+      */
+      cloneRequestState() {
+        return {
+          url: new URL(this.url.toString()),
+          headers: new Headers(this.headers)
+        };
+      }
+      /**
+      * Perform a SELECT query on the table or view.
+      *
+      * @param columns - The columns to retrieve, separated by commas. Columns can be renamed when returned with `customName:columnName`
+      *
+      * @param options - Named parameters
+      *
+      * @param options.head - When set to `true`, `data` will not be returned.
+      * Useful if you only need the count.
+      *
+      * @param options.count - Count algorithm to use to count rows in the table or view.
+      *
+      * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
+      * hood.
+      *
+      * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
+      * statistics under the hood.
+      *
+      * `"estimated"`: Uses exact count for low numbers and planned count for high
+      * numbers.
+      *
+      * @remarks
+      * When using `count` with `.range()` or `.limit()`, the returned `count` is the total number of rows
+      * that match your filters, not the number of rows in the current page. Use this to build pagination UI.
+      */
+      select(columns, options) {
+        const { head: head2 = false, count } = options !== null && options !== void 0 ? options : {};
+        const method = head2 ? "HEAD" : "GET";
+        let quoted = false;
+        const cleanedColumns = (columns !== null && columns !== void 0 ? columns : "*").split("").map((c) => {
+          if (/\s/.test(c) && !quoted) return "";
+          if (c === '"') quoted = !quoted;
+          return c;
+        }).join("");
+        const { url, headers } = this.cloneRequestState();
+        url.searchParams.set("select", cleanedColumns);
+        if (count) headers.append("Prefer", `count=${count}`);
+        return new PostgrestFilterBuilder({
+          method,
+          url,
+          headers,
+          schema: this.schema,
+          fetch: this.fetch
+        });
+      }
+      /**
+      * Perform an INSERT into the table or view.
+      *
+      * By default, inserted rows are not returned. To return it, chain the call
+      * with `.select()`.
+      *
+      * @param values - The values to insert. Pass an object to insert a single row
+      * or an array to insert multiple rows.
+      *
+      * @param options - Named parameters
+      *
+      * @param options.count - Count algorithm to use to count inserted rows.
+      *
+      * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
+      * hood.
+      *
+      * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
+      * statistics under the hood.
+      *
+      * `"estimated"`: Uses exact count for low numbers and planned count for high
+      * numbers.
+      *
+      * @param options.defaultToNull - Make missing fields default to `null`.
+      * Otherwise, use the default value for the column. Only applies for bulk
+      * inserts.
+      */
+      insert(values, { count, defaultToNull = true } = {}) {
+        var _this$fetch;
+        const method = "POST";
+        const { url, headers } = this.cloneRequestState();
+        if (count) headers.append("Prefer", `count=${count}`);
+        if (!defaultToNull) headers.append("Prefer", `missing=default`);
+        if (Array.isArray(values)) {
+          const columns = values.reduce((acc, x) => acc.concat(Object.keys(x)), []);
+          if (columns.length > 0) {
+            const uniqueColumns = [...new Set(columns)].map((column) => `"${column}"`);
+            url.searchParams.set("columns", uniqueColumns.join(","));
+          }
+        }
+        return new PostgrestFilterBuilder({
+          method,
+          url,
+          headers,
+          schema: this.schema,
+          body: values,
+          fetch: (_this$fetch = this.fetch) !== null && _this$fetch !== void 0 ? _this$fetch : fetch
+        });
+      }
+      /**
+      * Perform an UPSERT on the table or view. Depending on the column(s) passed
+      * to `onConflict`, `.upsert()` allows you to perform the equivalent of
+      * `.insert()` if a row with the corresponding `onConflict` columns doesn't
+      * exist, or if it does exist, perform an alternative action depending on
+      * `ignoreDuplicates`.
+      *
+      * By default, upserted rows are not returned. To return it, chain the call
+      * with `.select()`.
+      *
+      * @param values - The values to upsert with. Pass an object to upsert a
+      * single row or an array to upsert multiple rows.
+      *
+      * @param options - Named parameters
+      *
+      * @param options.onConflict - Comma-separated UNIQUE column(s) to specify how
+      * duplicate rows are determined. Two rows are duplicates if all the
+      * `onConflict` columns are equal.
+      *
+      * @param options.ignoreDuplicates - If `true`, duplicate rows are ignored. If
+      * `false`, duplicate rows are merged with existing rows.
+      *
+      * @param options.count - Count algorithm to use to count upserted rows.
+      *
+      * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
+      * hood.
+      *
+      * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
+      * statistics under the hood.
+      *
+      * `"estimated"`: Uses exact count for low numbers and planned count for high
+      * numbers.
+      *
+      * @param options.defaultToNull - Make missing fields default to `null`.
+      * Otherwise, use the default value for the column. This only applies when
+      * inserting new rows, not when merging with existing rows under
+      * `ignoreDuplicates: false`. This also only applies when doing bulk upserts.
+      *
+      * @example Upsert a single row using a unique key
+      * ```ts
+      * // Upserting a single row, overwriting based on the 'username' unique column
+      * const { data, error } = await supabase
+      *   .from('users')
+      *   .upsert({ username: 'supabot' }, { onConflict: 'username' })
+      *
+      * // Example response:
+      * // {
+      * //   data: [
+      * //     { id: 4, message: 'bar', username: 'supabot' }
+      * //   ],
+      * //   error: null
+      * // }
+      * ```
+      *
+      * @example Upsert with conflict resolution and exact row counting
+      * ```ts
+      * // Upserting and returning exact count
+      * const { data, error, count } = await supabase
+      *   .from('users')
+      *   .upsert(
+      *     {
+      *       id: 3,
+      *       message: 'foo',
+      *       username: 'supabot'
+      *     },
+      *     {
+      *       onConflict: 'username',
+      *       count: 'exact'
+      *     }
+      *   )
+      *
+      * // Example response:
+      * // {
+      * //   data: [
+      * //     {
+      * //       id: 42,
+      * //       handle: "saoirse",
+      * //       display_name: "Saoirse"
+      * //     }
+      * //   ],
+      * //   count: 1,
+      * //   error: null
+      * // }
+      * ```
+      */
+      upsert(values, { onConflict, ignoreDuplicates = false, count, defaultToNull = true } = {}) {
+        var _this$fetch2;
+        const method = "POST";
+        const { url, headers } = this.cloneRequestState();
+        headers.append("Prefer", `resolution=${ignoreDuplicates ? "ignore" : "merge"}-duplicates`);
+        if (onConflict !== void 0) url.searchParams.set("on_conflict", onConflict);
+        if (count) headers.append("Prefer", `count=${count}`);
+        if (!defaultToNull) headers.append("Prefer", "missing=default");
+        if (Array.isArray(values)) {
+          const columns = values.reduce((acc, x) => acc.concat(Object.keys(x)), []);
+          if (columns.length > 0) {
+            const uniqueColumns = [...new Set(columns)].map((column) => `"${column}"`);
+            url.searchParams.set("columns", uniqueColumns.join(","));
+          }
+        }
+        return new PostgrestFilterBuilder({
+          method,
+          url,
+          headers,
+          schema: this.schema,
+          body: values,
+          fetch: (_this$fetch2 = this.fetch) !== null && _this$fetch2 !== void 0 ? _this$fetch2 : fetch
+        });
+      }
+      /**
+      * Perform an UPDATE on the table or view.
+      *
+      * By default, updated rows are not returned. To return it, chain the call
+      * with `.select()` after filters.
+      *
+      * @param values - The values to update with
+      *
+      * @param options - Named parameters
+      *
+      * @param options.count - Count algorithm to use to count updated rows.
+      *
+      * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
+      * hood.
+      *
+      * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
+      * statistics under the hood.
+      *
+      * `"estimated"`: Uses exact count for low numbers and planned count for high
+      * numbers.
+      */
+      update(values, { count } = {}) {
+        var _this$fetch3;
+        const method = "PATCH";
+        const { url, headers } = this.cloneRequestState();
+        if (count) headers.append("Prefer", `count=${count}`);
+        return new PostgrestFilterBuilder({
+          method,
+          url,
+          headers,
+          schema: this.schema,
+          body: values,
+          fetch: (_this$fetch3 = this.fetch) !== null && _this$fetch3 !== void 0 ? _this$fetch3 : fetch
+        });
+      }
+      /**
+      * Perform a DELETE on the table or view.
+      *
+      * By default, deleted rows are not returned. To return it, chain the call
+      * with `.select()` after filters.
+      *
+      * @param options - Named parameters
+      *
+      * @param options.count - Count algorithm to use to count deleted rows.
+      *
+      * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
+      * hood.
+      *
+      * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
+      * statistics under the hood.
+      *
+      * `"estimated"`: Uses exact count for low numbers and planned count for high
+      * numbers.
+      */
+      delete({ count } = {}) {
+        var _this$fetch4;
+        const method = "DELETE";
+        const { url, headers } = this.cloneRequestState();
+        if (count) headers.append("Prefer", `count=${count}`);
+        return new PostgrestFilterBuilder({
+          method,
+          url,
+          headers,
+          schema: this.schema,
+          fetch: (_this$fetch4 = this.fetch) !== null && _this$fetch4 !== void 0 ? _this$fetch4 : fetch
+        });
+      }
+    };
+    PostgrestClient = class PostgrestClient2 {
+      /**
+      * Creates a PostgREST client.
+      *
+      * @param url - URL of the PostgREST endpoint
+      * @param options - Named parameters
+      * @param options.headers - Custom headers
+      * @param options.schema - Postgres schema to switch to
+      * @param options.fetch - Custom fetch
+      * @example
+      * ```ts
+      * import PostgrestClient from '@supabase/postgrest-js'
+      *
+      * const postgrest = new PostgrestClient('https://xyzcompany.supabase.co/rest/v1', {
+      *   headers: { apikey: 'public-anon-key' },
+      *   schema: 'public',
+      * })
+      * ```
+      */
+      constructor(url, { headers = {}, schema, fetch: fetch$1 } = {}) {
+        this.url = url;
+        this.headers = new Headers(headers);
+        this.schemaName = schema;
+        this.fetch = fetch$1;
+      }
+      /**
+      * Perform a query on a table or a view.
+      *
+      * @param relation - The table or view name to query
+      */
+      from(relation) {
+        if (!relation || typeof relation !== "string" || relation.trim() === "") throw new Error("Invalid relation name: relation must be a non-empty string.");
+        return new PostgrestQueryBuilder(new URL(`${this.url}/${relation}`), {
+          headers: new Headers(this.headers),
+          schema: this.schemaName,
+          fetch: this.fetch
+        });
+      }
+      /**
+      * Select a schema to query or perform an function (rpc) call.
+      *
+      * The schema needs to be on the list of exposed schemas inside Supabase.
+      *
+      * @param schema - The schema to query
+      */
+      schema(schema) {
+        return new PostgrestClient2(this.url, {
+          headers: this.headers,
+          schema,
+          fetch: this.fetch
+        });
+      }
+      /**
+      * Perform a function call.
+      *
+      * @param fn - The function name to call
+      * @param args - The arguments to pass to the function call
+      * @param options - Named parameters
+      * @param options.head - When set to `true`, `data` will not be returned.
+      * Useful if you only need the count.
+      * @param options.get - When set to `true`, the function will be called with
+      * read-only access mode.
+      * @param options.count - Count algorithm to use to count rows returned by the
+      * function. Only applicable for [set-returning
+      * functions](https://www.postgresql.org/docs/current/functions-srf.html).
+      *
+      * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
+      * hood.
+      *
+      * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
+      * statistics under the hood.
+      *
+      * `"estimated"`: Uses exact count for low numbers and planned count for high
+      * numbers.
+      *
+      * @example
+      * ```ts
+      * // For cross-schema functions where type inference fails, use overrideTypes:
+      * const { data } = await supabase
+      *   .schema('schema_b')
+      *   .rpc('function_a', {})
+      *   .overrideTypes<{ id: string; user_id: string }[]>()
+      * ```
+      */
+      rpc(fn2, args = {}, { head: head2 = false, get: get2 = false, count } = {}) {
+        var _this$fetch;
+        let method;
+        const url = new URL(`${this.url}/rpc/${fn2}`);
+        let body;
+        const _isObject = (v) => v !== null && typeof v === "object" && (!Array.isArray(v) || v.some(_isObject));
+        const _hasObjectArg = head2 && Object.values(args).some(_isObject);
+        if (_hasObjectArg) {
+          method = "POST";
+          body = args;
+        } else if (head2 || get2) {
+          method = head2 ? "HEAD" : "GET";
+          Object.entries(args).filter(([_, value2]) => value2 !== void 0).map(([name, value2]) => [name, Array.isArray(value2) ? `{${value2.join(",")}}` : `${value2}`]).forEach(([name, value2]) => {
+            url.searchParams.append(name, value2);
+          });
+        } else {
+          method = "POST";
+          body = args;
+        }
+        const headers = new Headers(this.headers);
+        if (_hasObjectArg) headers.set("Prefer", count ? `count=${count},return=minimal` : "return=minimal");
+        else if (count) headers.set("Prefer", `count=${count}`);
+        return new PostgrestFilterBuilder({
+          method,
+          url,
+          headers,
+          schema: this.schemaName,
+          body,
+          fetch: (_this$fetch = this.fetch) !== null && _this$fetch !== void 0 ? _this$fetch : fetch
+        });
+      }
+    };
+  }
+});
+
 // node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js
 var require_websocket_factory = __commonJS({
   "node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js"(exports) {
@@ -5149,6 +6367,2870 @@ var require_main2 = __commonJS({
     } });
     var websocket_factory_1 = tslib_1.__importDefault(require_websocket_factory());
     exports.WebSocketFactory = websocket_factory_1.default;
+  }
+});
+
+// node_modules/iceberg-js/dist/index.mjs
+function buildUrl(baseUrl, path, query) {
+  const url = new URL(path, baseUrl);
+  if (query) {
+    for (const [key, value2] of Object.entries(query)) {
+      if (value2 !== void 0) {
+        url.searchParams.set(key, value2);
+      }
+    }
+  }
+  return url.toString();
+}
+async function buildAuthHeaders(auth) {
+  if (!auth || auth.type === "none") {
+    return {};
+  }
+  if (auth.type === "bearer") {
+    return { Authorization: `Bearer ${auth.token}` };
+  }
+  if (auth.type === "header") {
+    return { [auth.name]: auth.value };
+  }
+  if (auth.type === "custom") {
+    return await auth.getHeaders();
+  }
+  return {};
+}
+function createFetchClient(options) {
+  const fetchFn = options.fetchImpl ?? globalThis.fetch;
+  return {
+    async request({
+      method,
+      path,
+      query,
+      body,
+      headers
+    }) {
+      const url = buildUrl(options.baseUrl, path, query);
+      const authHeaders = await buildAuthHeaders(options.auth);
+      const res = await fetchFn(url, {
+        method,
+        headers: {
+          ...body ? { "Content-Type": "application/json" } : {},
+          ...authHeaders,
+          ...headers
+        },
+        body: body ? JSON.stringify(body) : void 0
+      });
+      const text = await res.text();
+      const isJson = (res.headers.get("content-type") || "").includes("application/json");
+      const data = isJson && text ? JSON.parse(text) : text;
+      if (!res.ok) {
+        const errBody = isJson ? data : void 0;
+        const errorDetail = errBody?.error;
+        throw new IcebergError(
+          errorDetail?.message ?? `Request failed with status ${res.status}`,
+          {
+            status: res.status,
+            icebergType: errorDetail?.type,
+            icebergCode: errorDetail?.code,
+            details: errBody
+          }
+        );
+      }
+      return { status: res.status, headers: res.headers, data };
+    }
+  };
+}
+function namespaceToPath(namespace) {
+  return namespace.join("");
+}
+function namespaceToPath2(namespace) {
+  return namespace.join("");
+}
+var IcebergError, NamespaceOperations, TableOperations, IcebergRestCatalog;
+var init_dist2 = __esm({
+  "node_modules/iceberg-js/dist/index.mjs"() {
+    IcebergError = class extends Error {
+      constructor(message, opts) {
+        super(message);
+        this.name = "IcebergError";
+        this.status = opts.status;
+        this.icebergType = opts.icebergType;
+        this.icebergCode = opts.icebergCode;
+        this.details = opts.details;
+        this.isCommitStateUnknown = opts.icebergType === "CommitStateUnknownException" || [500, 502, 504].includes(opts.status) && opts.icebergType?.includes("CommitState") === true;
+      }
+      /**
+       * Returns true if the error is a 404 Not Found error.
+       */
+      isNotFound() {
+        return this.status === 404;
+      }
+      /**
+       * Returns true if the error is a 409 Conflict error.
+       */
+      isConflict() {
+        return this.status === 409;
+      }
+      /**
+       * Returns true if the error is a 419 Authentication Timeout error.
+       */
+      isAuthenticationTimeout() {
+        return this.status === 419;
+      }
+    };
+    NamespaceOperations = class {
+      constructor(client, prefix = "") {
+        this.client = client;
+        this.prefix = prefix;
+      }
+      async listNamespaces(parent) {
+        const query = parent ? { parent: namespaceToPath(parent.namespace) } : void 0;
+        const response = await this.client.request({
+          method: "GET",
+          path: `${this.prefix}/namespaces`,
+          query
+        });
+        return response.data.namespaces.map((ns) => ({ namespace: ns }));
+      }
+      async createNamespace(id, metadata) {
+        const request = {
+          namespace: id.namespace,
+          properties: metadata?.properties
+        };
+        const response = await this.client.request({
+          method: "POST",
+          path: `${this.prefix}/namespaces`,
+          body: request
+        });
+        return response.data;
+      }
+      async dropNamespace(id) {
+        await this.client.request({
+          method: "DELETE",
+          path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
+        });
+      }
+      async loadNamespaceMetadata(id) {
+        const response = await this.client.request({
+          method: "GET",
+          path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
+        });
+        return {
+          properties: response.data.properties
+        };
+      }
+      async namespaceExists(id) {
+        try {
+          await this.client.request({
+            method: "HEAD",
+            path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
+          });
+          return true;
+        } catch (error) {
+          if (error instanceof IcebergError && error.status === 404) {
+            return false;
+          }
+          throw error;
+        }
+      }
+      async createNamespaceIfNotExists(id, metadata) {
+        try {
+          return await this.createNamespace(id, metadata);
+        } catch (error) {
+          if (error instanceof IcebergError && error.status === 409) {
+            return;
+          }
+          throw error;
+        }
+      }
+    };
+    TableOperations = class {
+      constructor(client, prefix = "", accessDelegation) {
+        this.client = client;
+        this.prefix = prefix;
+        this.accessDelegation = accessDelegation;
+      }
+      async listTables(namespace) {
+        const response = await this.client.request({
+          method: "GET",
+          path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`
+        });
+        return response.data.identifiers;
+      }
+      async createTable(namespace, request) {
+        const headers = {};
+        if (this.accessDelegation) {
+          headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+        }
+        const response = await this.client.request({
+          method: "POST",
+          path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`,
+          body: request,
+          headers
+        });
+        return response.data.metadata;
+      }
+      async updateTable(id, request) {
+        const response = await this.client.request({
+          method: "POST",
+          path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
+          body: request
+        });
+        return {
+          "metadata-location": response.data["metadata-location"],
+          metadata: response.data.metadata
+        };
+      }
+      async dropTable(id, options) {
+        await this.client.request({
+          method: "DELETE",
+          path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
+          query: { purgeRequested: String(options?.purge ?? false) }
+        });
+      }
+      async loadTable(id) {
+        const headers = {};
+        if (this.accessDelegation) {
+          headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+        }
+        const response = await this.client.request({
+          method: "GET",
+          path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
+          headers
+        });
+        return response.data.metadata;
+      }
+      async tableExists(id) {
+        const headers = {};
+        if (this.accessDelegation) {
+          headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
+        }
+        try {
+          await this.client.request({
+            method: "HEAD",
+            path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
+            headers
+          });
+          return true;
+        } catch (error) {
+          if (error instanceof IcebergError && error.status === 404) {
+            return false;
+          }
+          throw error;
+        }
+      }
+      async createTableIfNotExists(namespace, request) {
+        try {
+          return await this.createTable(namespace, request);
+        } catch (error) {
+          if (error instanceof IcebergError && error.status === 409) {
+            return await this.loadTable({ namespace: namespace.namespace, name: request.name });
+          }
+          throw error;
+        }
+      }
+    };
+    IcebergRestCatalog = class {
+      /**
+       * Creates a new Iceberg REST Catalog client.
+       *
+       * @param options - Configuration options for the catalog client
+       */
+      constructor(options) {
+        let prefix = "v1";
+        if (options.catalogName) {
+          prefix += `/${options.catalogName}`;
+        }
+        const baseUrl = options.baseUrl.endsWith("/") ? options.baseUrl : `${options.baseUrl}/`;
+        this.client = createFetchClient({
+          baseUrl,
+          auth: options.auth,
+          fetchImpl: options.fetch
+        });
+        this.accessDelegation = options.accessDelegation?.join(",");
+        this.namespaceOps = new NamespaceOperations(this.client, prefix);
+        this.tableOps = new TableOperations(this.client, prefix, this.accessDelegation);
+      }
+      /**
+       * Lists all namespaces in the catalog.
+       *
+       * @param parent - Optional parent namespace to list children under
+       * @returns Array of namespace identifiers
+       *
+       * @example
+       * ```typescript
+       * // List all top-level namespaces
+       * const namespaces = await catalog.listNamespaces();
+       *
+       * // List namespaces under a parent
+       * const children = await catalog.listNamespaces({ namespace: ['analytics'] });
+       * ```
+       */
+      async listNamespaces(parent) {
+        return this.namespaceOps.listNamespaces(parent);
+      }
+      /**
+       * Creates a new namespace in the catalog.
+       *
+       * @param id - Namespace identifier to create
+       * @param metadata - Optional metadata properties for the namespace
+       * @returns Response containing the created namespace and its properties
+       *
+       * @example
+       * ```typescript
+       * const response = await catalog.createNamespace(
+       *   { namespace: ['analytics'] },
+       *   { properties: { owner: 'data-team' } }
+       * );
+       * console.log(response.namespace); // ['analytics']
+       * console.log(response.properties); // { owner: 'data-team', ... }
+       * ```
+       */
+      async createNamespace(id, metadata) {
+        return this.namespaceOps.createNamespace(id, metadata);
+      }
+      /**
+       * Drops a namespace from the catalog.
+       *
+       * The namespace must be empty (contain no tables) before it can be dropped.
+       *
+       * @param id - Namespace identifier to drop
+       *
+       * @example
+       * ```typescript
+       * await catalog.dropNamespace({ namespace: ['analytics'] });
+       * ```
+       */
+      async dropNamespace(id) {
+        await this.namespaceOps.dropNamespace(id);
+      }
+      /**
+       * Loads metadata for a namespace.
+       *
+       * @param id - Namespace identifier to load
+       * @returns Namespace metadata including properties
+       *
+       * @example
+       * ```typescript
+       * const metadata = await catalog.loadNamespaceMetadata({ namespace: ['analytics'] });
+       * console.log(metadata.properties);
+       * ```
+       */
+      async loadNamespaceMetadata(id) {
+        return this.namespaceOps.loadNamespaceMetadata(id);
+      }
+      /**
+       * Lists all tables in a namespace.
+       *
+       * @param namespace - Namespace identifier to list tables from
+       * @returns Array of table identifiers
+       *
+       * @example
+       * ```typescript
+       * const tables = await catalog.listTables({ namespace: ['analytics'] });
+       * console.log(tables); // [{ namespace: ['analytics'], name: 'events' }, ...]
+       * ```
+       */
+      async listTables(namespace) {
+        return this.tableOps.listTables(namespace);
+      }
+      /**
+       * Creates a new table in the catalog.
+       *
+       * @param namespace - Namespace to create the table in
+       * @param request - Table creation request including name, schema, partition spec, etc.
+       * @returns Table metadata for the created table
+       *
+       * @example
+       * ```typescript
+       * const metadata = await catalog.createTable(
+       *   { namespace: ['analytics'] },
+       *   {
+       *     name: 'events',
+       *     schema: {
+       *       type: 'struct',
+       *       fields: [
+       *         { id: 1, name: 'id', type: 'long', required: true },
+       *         { id: 2, name: 'timestamp', type: 'timestamp', required: true }
+       *       ],
+       *       'schema-id': 0
+       *     },
+       *     'partition-spec': {
+       *       'spec-id': 0,
+       *       fields: [
+       *         { source_id: 2, field_id: 1000, name: 'ts_day', transform: 'day' }
+       *       ]
+       *     }
+       *   }
+       * );
+       * ```
+       */
+      async createTable(namespace, request) {
+        return this.tableOps.createTable(namespace, request);
+      }
+      /**
+       * Updates an existing table's metadata.
+       *
+       * Can update the schema, partition spec, or properties of a table.
+       *
+       * @param id - Table identifier to update
+       * @param request - Update request with fields to modify
+       * @returns Response containing the metadata location and updated table metadata
+       *
+       * @example
+       * ```typescript
+       * const response = await catalog.updateTable(
+       *   { namespace: ['analytics'], name: 'events' },
+       *   {
+       *     properties: { 'read.split.target-size': '134217728' }
+       *   }
+       * );
+       * console.log(response['metadata-location']); // s3://...
+       * console.log(response.metadata); // TableMetadata object
+       * ```
+       */
+      async updateTable(id, request) {
+        return this.tableOps.updateTable(id, request);
+      }
+      /**
+       * Drops a table from the catalog.
+       *
+       * @param id - Table identifier to drop
+       *
+       * @example
+       * ```typescript
+       * await catalog.dropTable({ namespace: ['analytics'], name: 'events' });
+       * ```
+       */
+      async dropTable(id, options) {
+        await this.tableOps.dropTable(id, options);
+      }
+      /**
+       * Loads metadata for a table.
+       *
+       * @param id - Table identifier to load
+       * @returns Table metadata including schema, partition spec, location, etc.
+       *
+       * @example
+       * ```typescript
+       * const metadata = await catalog.loadTable({ namespace: ['analytics'], name: 'events' });
+       * console.log(metadata.schema);
+       * console.log(metadata.location);
+       * ```
+       */
+      async loadTable(id) {
+        return this.tableOps.loadTable(id);
+      }
+      /**
+       * Checks if a namespace exists in the catalog.
+       *
+       * @param id - Namespace identifier to check
+       * @returns True if the namespace exists, false otherwise
+       *
+       * @example
+       * ```typescript
+       * const exists = await catalog.namespaceExists({ namespace: ['analytics'] });
+       * console.log(exists); // true or false
+       * ```
+       */
+      async namespaceExists(id) {
+        return this.namespaceOps.namespaceExists(id);
+      }
+      /**
+       * Checks if a table exists in the catalog.
+       *
+       * @param id - Table identifier to check
+       * @returns True if the table exists, false otherwise
+       *
+       * @example
+       * ```typescript
+       * const exists = await catalog.tableExists({ namespace: ['analytics'], name: 'events' });
+       * console.log(exists); // true or false
+       * ```
+       */
+      async tableExists(id) {
+        return this.tableOps.tableExists(id);
+      }
+      /**
+       * Creates a namespace if it does not exist.
+       *
+       * If the namespace already exists, returns void. If created, returns the response.
+       *
+       * @param id - Namespace identifier to create
+       * @param metadata - Optional metadata properties for the namespace
+       * @returns Response containing the created namespace and its properties, or void if it already exists
+       *
+       * @example
+       * ```typescript
+       * const response = await catalog.createNamespaceIfNotExists(
+       *   { namespace: ['analytics'] },
+       *   { properties: { owner: 'data-team' } }
+       * );
+       * if (response) {
+       *   console.log('Created:', response.namespace);
+       * } else {
+       *   console.log('Already exists');
+       * }
+       * ```
+       */
+      async createNamespaceIfNotExists(id, metadata) {
+        return this.namespaceOps.createNamespaceIfNotExists(id, metadata);
+      }
+      /**
+       * Creates a table if it does not exist.
+       *
+       * If the table already exists, returns its metadata instead.
+       *
+       * @param namespace - Namespace to create the table in
+       * @param request - Table creation request including name, schema, partition spec, etc.
+       * @returns Table metadata for the created or existing table
+       *
+       * @example
+       * ```typescript
+       * const metadata = await catalog.createTableIfNotExists(
+       *   { namespace: ['analytics'] },
+       *   {
+       *     name: 'events',
+       *     schema: {
+       *       type: 'struct',
+       *       fields: [
+       *         { id: 1, name: 'id', type: 'long', required: true },
+       *         { id: 2, name: 'timestamp', type: 'timestamp', required: true }
+       *       ],
+       *       'schema-id': 0
+       *     }
+       *   }
+       * );
+       * ```
+       */
+      async createTableIfNotExists(namespace, request) {
+        return this.tableOps.createTableIfNotExists(namespace, request);
+      }
+    };
+  }
+});
+
+// node_modules/@supabase/storage-js/dist/index.mjs
+function isStorageError(error) {
+  return typeof error === "object" && error !== null && "__isStorageError" in error;
+}
+function _typeof(o) {
+  "@babel/helpers - typeof";
+  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
+    return typeof o$1;
+  } : function(o$1) {
+    return o$1 && "function" == typeof Symbol && o$1.constructor === Symbol && o$1 !== Symbol.prototype ? "symbol" : typeof o$1;
+  }, _typeof(o);
+}
+function toPrimitive(t, r) {
+  if ("object" != _typeof(t) || !t) return t;
+  var e = t[Symbol.toPrimitive];
+  if (void 0 !== e) {
+    var i = e.call(t, r || "default");
+    if ("object" != _typeof(i)) return i;
+    throw new TypeError("@@toPrimitive must return a primitive value.");
+  }
+  return ("string" === r ? String : Number)(t);
+}
+function toPropertyKey(t) {
+  var i = toPrimitive(t, "string");
+  return "symbol" == _typeof(i) ? i : i + "";
+}
+function _defineProperty(e, r, t) {
+  return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: true,
+    configurable: true,
+    writable: true
+  }) : e[r] = t, e;
+}
+function ownKeys2(e, r) {
+  var t = Object.keys(e);
+  if (Object.getOwnPropertySymbols) {
+    var o = Object.getOwnPropertySymbols(e);
+    r && (o = o.filter(function(r$1) {
+      return Object.getOwnPropertyDescriptor(e, r$1).enumerable;
+    })), t.push.apply(t, o);
+  }
+  return t;
+}
+function _objectSpread2(e) {
+  for (var r = 1; r < arguments.length; r++) {
+    var t = null != arguments[r] ? arguments[r] : {};
+    r % 2 ? ownKeys2(Object(t), true).forEach(function(r$1) {
+      _defineProperty(e, r$1, t[r$1]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys2(Object(t)).forEach(function(r$1) {
+      Object.defineProperty(e, r$1, Object.getOwnPropertyDescriptor(t, r$1));
+    });
+  }
+  return e;
+}
+async function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
+  return new Promise((resolve6, reject) => {
+    fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
+      if (!result.ok) throw result;
+      if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
+      if (namespace === "vectors") {
+        const contentType = result.headers.get("content-type");
+        if (result.headers.get("content-length") === "0" || result.status === 204) return {};
+        if (!contentType || !contentType.includes("application/json")) return {};
+      }
+      return result.json();
+    }).then((data) => resolve6(data)).catch((error) => handleError(error, reject, options, namespace));
+  });
+}
+function createFetchApi(namespace = "storage") {
+  return {
+    get: async (fetcher, url, options, parameters) => {
+      return _handleRequest(fetcher, "GET", url, options, parameters, void 0, namespace);
+    },
+    post: async (fetcher, url, body, options, parameters) => {
+      return _handleRequest(fetcher, "POST", url, options, parameters, body, namespace);
+    },
+    put: async (fetcher, url, body, options, parameters) => {
+      return _handleRequest(fetcher, "PUT", url, options, parameters, body, namespace);
+    },
+    head: async (fetcher, url, options, parameters) => {
+      return _handleRequest(fetcher, "HEAD", url, _objectSpread2(_objectSpread2({}, options), {}, { noResolveJson: true }), parameters, void 0, namespace);
+    },
+    remove: async (fetcher, url, body, options, parameters) => {
+      return _handleRequest(fetcher, "DELETE", url, options, parameters, body, namespace);
+    }
+  };
+}
+var StorageError, StorageApiError, StorageUnknownError, resolveFetch, isPlainObject, recursiveToCamel, isValidBucketName, _getErrorMessage, handleError, _getRequestParams, defaultApi, get, post, put, head, remove, vectorsApi, BaseApiClient, StreamDownloadBuilder, _Symbol$toStringTag, BlobDownloadBuilder, DEFAULT_SEARCH_OPTIONS, DEFAULT_FILE_OPTIONS, StorageFileApi, version, DEFAULT_HEADERS, StorageBucketApi, StorageAnalyticsClient, VectorIndexApi, VectorDataApi, VectorBucketApi, StorageVectorsClient, VectorBucketScope, VectorIndexScope, StorageClient;
+var init_dist3 = __esm({
+  "node_modules/@supabase/storage-js/dist/index.mjs"() {
+    init_dist2();
+    StorageError = class extends Error {
+      constructor(message, namespace = "storage", status, statusCode) {
+        super(message);
+        this.__isStorageError = true;
+        this.namespace = namespace;
+        this.name = namespace === "vectors" ? "StorageVectorsError" : "StorageError";
+        this.status = status;
+        this.statusCode = statusCode;
+      }
+    };
+    StorageApiError = class extends StorageError {
+      constructor(message, status, statusCode, namespace = "storage") {
+        super(message, namespace, status, statusCode);
+        this.name = namespace === "vectors" ? "StorageVectorsApiError" : "StorageApiError";
+        this.status = status;
+        this.statusCode = statusCode;
+      }
+      toJSON() {
+        return {
+          name: this.name,
+          message: this.message,
+          status: this.status,
+          statusCode: this.statusCode
+        };
+      }
+    };
+    StorageUnknownError = class extends StorageError {
+      constructor(message, originalError, namespace = "storage") {
+        super(message, namespace);
+        this.name = namespace === "vectors" ? "StorageVectorsUnknownError" : "StorageUnknownError";
+        this.originalError = originalError;
+      }
+    };
+    resolveFetch = (customFetch) => {
+      if (customFetch) return (...args) => customFetch(...args);
+      return (...args) => fetch(...args);
+    };
+    isPlainObject = (value2) => {
+      if (typeof value2 !== "object" || value2 === null) return false;
+      const prototype = Object.getPrototypeOf(value2);
+      return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(Symbol.toStringTag in value2) && !(Symbol.iterator in value2);
+    };
+    recursiveToCamel = (item) => {
+      if (Array.isArray(item)) return item.map((el) => recursiveToCamel(el));
+      else if (typeof item === "function" || item !== Object(item)) return item;
+      const result = {};
+      Object.entries(item).forEach(([key, value2]) => {
+        const newKey = key.replace(/([-_][a-z])/gi, (c) => c.toUpperCase().replace(/[-_]/g, ""));
+        result[newKey] = recursiveToCamel(value2);
+      });
+      return result;
+    };
+    isValidBucketName = (bucketName) => {
+      if (!bucketName || typeof bucketName !== "string") return false;
+      if (bucketName.length === 0 || bucketName.length > 100) return false;
+      if (bucketName.trim() !== bucketName) return false;
+      if (bucketName.includes("/") || bucketName.includes("\\")) return false;
+      return /^[\w!.\*'() &$@=;:+,?-]+$/.test(bucketName);
+    };
+    _getErrorMessage = (err) => {
+      var _err$error;
+      return err.msg || err.message || err.error_description || (typeof err.error === "string" ? err.error : (_err$error = err.error) === null || _err$error === void 0 ? void 0 : _err$error.message) || JSON.stringify(err);
+    };
+    handleError = async (error, reject, options, namespace) => {
+      if (error && typeof error === "object" && "status" in error && "ok" in error && typeof error.status === "number" && !(options === null || options === void 0 ? void 0 : options.noResolveJson)) {
+        const responseError = error;
+        const status = responseError.status || 500;
+        if (typeof responseError.json === "function") responseError.json().then((err) => {
+          const statusCode = (err === null || err === void 0 ? void 0 : err.statusCode) || (err === null || err === void 0 ? void 0 : err.code) || status + "";
+          reject(new StorageApiError(_getErrorMessage(err), status, statusCode, namespace));
+        }).catch(() => {
+          if (namespace === "vectors") {
+            const statusCode = status + "";
+            reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
+          } else {
+            const statusCode = status + "";
+            reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
+          }
+        });
+        else {
+          const statusCode = status + "";
+          reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
+        }
+      } else reject(new StorageUnknownError(_getErrorMessage(error), error, namespace));
+    };
+    _getRequestParams = (method, options, parameters, body) => {
+      const params = {
+        method,
+        headers: (options === null || options === void 0 ? void 0 : options.headers) || {}
+      };
+      if (method === "GET" || method === "HEAD" || !body) return _objectSpread2(_objectSpread2({}, params), parameters);
+      if (isPlainObject(body)) {
+        params.headers = _objectSpread2({ "Content-Type": "application/json" }, options === null || options === void 0 ? void 0 : options.headers);
+        params.body = JSON.stringify(body);
+      } else params.body = body;
+      if (options === null || options === void 0 ? void 0 : options.duplex) params.duplex = options.duplex;
+      return _objectSpread2(_objectSpread2({}, params), parameters);
+    };
+    defaultApi = createFetchApi("storage");
+    ({ get, post, put, head, remove } = defaultApi);
+    vectorsApi = createFetchApi("vectors");
+    BaseApiClient = class {
+      /**
+      * Creates a new BaseApiClient instance
+      * @param url - Base URL for API requests
+      * @param headers - Default headers for API requests
+      * @param fetch - Optional custom fetch implementation
+      * @param namespace - Error namespace ('storage' or 'vectors')
+      */
+      constructor(url, headers = {}, fetch$1, namespace = "storage") {
+        this.shouldThrowOnError = false;
+        this.url = url;
+        this.headers = headers;
+        this.fetch = resolveFetch(fetch$1);
+        this.namespace = namespace;
+      }
+      /**
+      * Enable throwing errors instead of returning them.
+      * When enabled, errors are thrown instead of returned in { data, error } format.
+      *
+      * @returns this - For method chaining
+      */
+      throwOnError() {
+        this.shouldThrowOnError = true;
+        return this;
+      }
+      /**
+      * Handles API operation with standardized error handling
+      * Eliminates repetitive try-catch blocks across all API methods
+      *
+      * This wrapper:
+      * 1. Executes the operation
+      * 2. Returns { data, error: null } on success
+      * 3. Returns { data: null, error } on failure (if shouldThrowOnError is false)
+      * 4. Throws error on failure (if shouldThrowOnError is true)
+      *
+      * @typeParam T - The expected data type from the operation
+      * @param operation - Async function that performs the API call
+      * @returns Promise with { data, error } tuple
+      *
+      * @example
+      * ```typescript
+      * async listBuckets() {
+      *   return this.handleOperation(async () => {
+      *     return await get(this.fetch, `${this.url}/bucket`, {
+      *       headers: this.headers,
+      *     })
+      *   })
+      * }
+      * ```
+      */
+      async handleOperation(operation) {
+        var _this = this;
+        try {
+          return {
+            data: await operation(),
+            error: null
+          };
+        } catch (error) {
+          if (_this.shouldThrowOnError) throw error;
+          if (isStorageError(error)) return {
+            data: null,
+            error
+          };
+          throw error;
+        }
+      }
+    };
+    StreamDownloadBuilder = class {
+      constructor(downloadFn, shouldThrowOnError) {
+        this.downloadFn = downloadFn;
+        this.shouldThrowOnError = shouldThrowOnError;
+      }
+      then(onfulfilled, onrejected) {
+        return this.execute().then(onfulfilled, onrejected);
+      }
+      async execute() {
+        var _this = this;
+        try {
+          return {
+            data: (await _this.downloadFn()).body,
+            error: null
+          };
+        } catch (error) {
+          if (_this.shouldThrowOnError) throw error;
+          if (isStorageError(error)) return {
+            data: null,
+            error
+          };
+          throw error;
+        }
+      }
+    };
+    _Symbol$toStringTag = Symbol.toStringTag;
+    BlobDownloadBuilder = class {
+      constructor(downloadFn, shouldThrowOnError) {
+        this.downloadFn = downloadFn;
+        this.shouldThrowOnError = shouldThrowOnError;
+        this[_Symbol$toStringTag] = "BlobDownloadBuilder";
+        this.promise = null;
+      }
+      asStream() {
+        return new StreamDownloadBuilder(this.downloadFn, this.shouldThrowOnError);
+      }
+      then(onfulfilled, onrejected) {
+        return this.getPromise().then(onfulfilled, onrejected);
+      }
+      catch(onrejected) {
+        return this.getPromise().catch(onrejected);
+      }
+      finally(onfinally) {
+        return this.getPromise().finally(onfinally);
+      }
+      getPromise() {
+        if (!this.promise) this.promise = this.execute();
+        return this.promise;
+      }
+      async execute() {
+        var _this = this;
+        try {
+          return {
+            data: await (await _this.downloadFn()).blob(),
+            error: null
+          };
+        } catch (error) {
+          if (_this.shouldThrowOnError) throw error;
+          if (isStorageError(error)) return {
+            data: null,
+            error
+          };
+          throw error;
+        }
+      }
+    };
+    DEFAULT_SEARCH_OPTIONS = {
+      limit: 100,
+      offset: 0,
+      sortBy: {
+        column: "name",
+        order: "asc"
+      }
+    };
+    DEFAULT_FILE_OPTIONS = {
+      cacheControl: "3600",
+      contentType: "text/plain;charset=UTF-8",
+      upsert: false
+    };
+    StorageFileApi = class extends BaseApiClient {
+      constructor(url, headers = {}, bucketId, fetch$1) {
+        super(url, headers, fetch$1, "storage");
+        this.bucketId = bucketId;
+      }
+      /**
+      * Uploads a file to an existing bucket or replaces an existing file at the specified path with a new one.
+      *
+      * @param method HTTP method.
+      * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
+      * @param fileBody The body of the file to be stored in the bucket.
+      */
+      async uploadOrUpdate(method, path, fileBody, fileOptions) {
+        var _this = this;
+        return _this.handleOperation(async () => {
+          let body;
+          const options = _objectSpread2(_objectSpread2({}, DEFAULT_FILE_OPTIONS), fileOptions);
+          let headers = _objectSpread2(_objectSpread2({}, _this.headers), method === "POST" && { "x-upsert": String(options.upsert) });
+          const metadata = options.metadata;
+          if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
+            body = new FormData();
+            body.append("cacheControl", options.cacheControl);
+            if (metadata) body.append("metadata", _this.encodeMetadata(metadata));
+            body.append("", fileBody);
+          } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
+            body = fileBody;
+            if (!body.has("cacheControl")) body.append("cacheControl", options.cacheControl);
+            if (metadata && !body.has("metadata")) body.append("metadata", _this.encodeMetadata(metadata));
+          } else {
+            body = fileBody;
+            headers["cache-control"] = `max-age=${options.cacheControl}`;
+            headers["content-type"] = options.contentType;
+            if (metadata) headers["x-metadata"] = _this.toBase64(_this.encodeMetadata(metadata));
+            if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
+          }
+          if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) headers = _objectSpread2(_objectSpread2({}, headers), fileOptions.headers);
+          const cleanPath = _this._removeEmptyFolders(path);
+          const _path = _this._getFinalPath(cleanPath);
+          const data = await (method == "PUT" ? put : post)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread2({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
+          return {
+            path: cleanPath,
+            id: data.Id,
+            fullPath: data.Key
+          };
+        });
+      }
+      /**
+      * Uploads a file to an existing bucket.
+      *
+      * @category File Buckets
+      * @param path The file path, including the file name. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
+      * @param fileBody The body of the file to be stored in the bucket.
+      * @param fileOptions Optional file upload options including cacheControl, contentType, upsert, and metadata.
+      * @returns Promise with response containing file path, id, and fullPath or error
+      *
+      * @example Upload file
+      * ```js
+      * const avatarFile = event.target.files[0]
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .upload('public/avatar1.png', avatarFile, {
+      *     cacheControl: '3600',
+      *     upsert: false
+      *   })
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "path": "public/avatar1.png",
+      *     "fullPath": "avatars/public/avatar1.png"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      *
+      * @example Upload file using `ArrayBuffer` from base64 file data
+      * ```js
+      * import { decode } from 'base64-arraybuffer'
+      *
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .upload('public/avatar1.png', decode('base64FileData'), {
+      *     contentType: 'image/png'
+      *   })
+      * ```
+      */
+      async upload(path, fileBody, fileOptions) {
+        return this.uploadOrUpdate("POST", path, fileBody, fileOptions);
+      }
+      /**
+      * Upload a file with a token generated from `createSignedUploadUrl`.
+      *
+      * @category File Buckets
+      * @param path The file path, including the file name. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
+      * @param token The token generated from `createSignedUploadUrl`
+      * @param fileBody The body of the file to be stored in the bucket.
+      * @param fileOptions HTTP headers (cacheControl, contentType, etc.).
+      * **Note:** The `upsert` option has no effect here. To enable upsert behavior,
+      * pass `{ upsert: true }` when calling `createSignedUploadUrl()` instead.
+      * @returns Promise with response containing file path and fullPath or error
+      *
+      * @example Upload to a signed URL
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .uploadToSignedUrl('folder/cat.jpg', 'token-from-createSignedUploadUrl', file)
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "path": "folder/cat.jpg",
+      *     "fullPath": "avatars/folder/cat.jpg"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async uploadToSignedUrl(path, token, fileBody, fileOptions) {
+        var _this3 = this;
+        const cleanPath = _this3._removeEmptyFolders(path);
+        const _path = _this3._getFinalPath(cleanPath);
+        const url = new URL(_this3.url + `/object/upload/sign/${_path}`);
+        url.searchParams.set("token", token);
+        return _this3.handleOperation(async () => {
+          let body;
+          const options = _objectSpread2({ upsert: DEFAULT_FILE_OPTIONS.upsert }, fileOptions);
+          const headers = _objectSpread2(_objectSpread2({}, _this3.headers), { "x-upsert": String(options.upsert) });
+          if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
+            body = new FormData();
+            body.append("cacheControl", options.cacheControl);
+            body.append("", fileBody);
+          } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
+            body = fileBody;
+            body.append("cacheControl", options.cacheControl);
+          } else {
+            body = fileBody;
+            headers["cache-control"] = `max-age=${options.cacheControl}`;
+            headers["content-type"] = options.contentType;
+          }
+          return {
+            path: cleanPath,
+            fullPath: (await put(_this3.fetch, url.toString(), body, { headers })).Key
+          };
+        });
+      }
+      /**
+      * Creates a signed upload URL.
+      * Signed upload URLs can be used to upload files to the bucket without further authentication.
+      * They are valid for 2 hours.
+      *
+      * @category File Buckets
+      * @param path The file path, including the current file name. For example `folder/image.png`.
+      * @param options.upsert If set to true, allows the file to be overwritten if it already exists.
+      * @returns Promise with response containing signed upload URL, token, and path or error
+      *
+      * @example Create Signed Upload URL
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .createSignedUploadUrl('folder/cat.jpg')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "signedUrl": "https://example.supabase.co/storage/v1/object/upload/sign/avatars/folder/cat.jpg?token=<TOKEN>",
+      *     "path": "folder/cat.jpg",
+      *     "token": "<TOKEN>"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async createSignedUploadUrl(path, options) {
+        var _this4 = this;
+        return _this4.handleOperation(async () => {
+          let _path = _this4._getFinalPath(path);
+          const headers = _objectSpread2({}, _this4.headers);
+          if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
+          const data = await post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
+          const url = new URL(_this4.url + data.url);
+          const token = url.searchParams.get("token");
+          if (!token) throw new StorageError("No token returned by API");
+          return {
+            signedUrl: url.toString(),
+            path,
+            token
+          };
+        });
+      }
+      /**
+      * Replaces an existing file at the specified path with a new one.
+      *
+      * @category File Buckets
+      * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to update.
+      * @param fileBody The body of the file to be stored in the bucket.
+      * @param fileOptions Optional file upload options including cacheControl, contentType, upsert, and metadata.
+      * @returns Promise with response containing file path, id, and fullPath or error
+      *
+      * @example Update file
+      * ```js
+      * const avatarFile = event.target.files[0]
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .update('public/avatar1.png', avatarFile, {
+      *     cacheControl: '3600',
+      *     upsert: true
+      *   })
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "path": "public/avatar1.png",
+      *     "fullPath": "avatars/public/avatar1.png"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      *
+      * @example Update file using `ArrayBuffer` from base64 file data
+      * ```js
+      * import {decode} from 'base64-arraybuffer'
+      *
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .update('public/avatar1.png', decode('base64FileData'), {
+      *     contentType: 'image/png'
+      *   })
+      * ```
+      */
+      async update(path, fileBody, fileOptions) {
+        return this.uploadOrUpdate("PUT", path, fileBody, fileOptions);
+      }
+      /**
+      * Moves an existing file to a new path in the same bucket.
+      *
+      * @category File Buckets
+      * @param fromPath The original file path, including the current file name. For example `folder/image.png`.
+      * @param toPath The new file path, including the new file name. For example `folder/image-new.png`.
+      * @param options The destination options.
+      * @returns Promise with response containing success message or error
+      *
+      * @example Move file
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .move('public/avatar1.png', 'private/avatar2.png')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "message": "Successfully moved"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async move(fromPath, toPath, options) {
+        var _this6 = this;
+        return _this6.handleOperation(async () => {
+          return await post(_this6.fetch, `${_this6.url}/object/move`, {
+            bucketId: _this6.bucketId,
+            sourceKey: fromPath,
+            destinationKey: toPath,
+            destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
+          }, { headers: _this6.headers });
+        });
+      }
+      /**
+      * Copies an existing file to a new path in the same bucket.
+      *
+      * @category File Buckets
+      * @param fromPath The original file path, including the current file name. For example `folder/image.png`.
+      * @param toPath The new file path, including the new file name. For example `folder/image-copy.png`.
+      * @param options The destination options.
+      * @returns Promise with response containing copied file path or error
+      *
+      * @example Copy file
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .copy('public/avatar1.png', 'private/avatar2.png')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "path": "avatars/private/avatar2.png"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async copy(fromPath, toPath, options) {
+        var _this7 = this;
+        return _this7.handleOperation(async () => {
+          return { path: (await post(_this7.fetch, `${_this7.url}/object/copy`, {
+            bucketId: _this7.bucketId,
+            sourceKey: fromPath,
+            destinationKey: toPath,
+            destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
+          }, { headers: _this7.headers })).Key };
+        });
+      }
+      /**
+      * Creates a signed URL. Use a signed URL to share a file for a fixed amount of time.
+      *
+      * @category File Buckets
+      * @param path The file path, including the current file name. For example `folder/image.png`.
+      * @param expiresIn The number of seconds until the signed URL expires. For example, `60` for a URL which is valid for one minute.
+      * @param options.download triggers the file as a download if set to true. Set this parameter as the name of the file if you want to trigger the download with a different filename.
+      * @param options.transform Transform the asset before serving it to the client.
+      * @returns Promise with response containing signed URL or error
+      *
+      * @example Create Signed URL
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .createSignedUrl('folder/avatar1.png', 60)
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "signedUrl": "https://example.supabase.co/storage/v1/object/sign/avatars/folder/avatar1.png?token=<TOKEN>"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      *
+      * @example Create a signed URL for an asset with transformations
+      * ```js
+      * const { data } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .createSignedUrl('folder/avatar1.png', 60, {
+      *     transform: {
+      *       width: 100,
+      *       height: 100,
+      *     }
+      *   })
+      * ```
+      *
+      * @example Create a signed URL which triggers the download of the asset
+      * ```js
+      * const { data } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .createSignedUrl('folder/avatar1.png', 60, {
+      *     download: true,
+      *   })
+      * ```
+      */
+      async createSignedUrl(path, expiresIn, options) {
+        var _this8 = this;
+        return _this8.handleOperation(async () => {
+          let _path = _this8._getFinalPath(path);
+          let data = await post(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread2({ expiresIn }, (options === null || options === void 0 ? void 0 : options.transform) ? { transform: options.transform } : {}), { headers: _this8.headers });
+          const downloadQueryParam = (options === null || options === void 0 ? void 0 : options.download) ? `&download=${options.download === true ? "" : options.download}` : "";
+          return { signedUrl: encodeURI(`${_this8.url}${data.signedURL}${downloadQueryParam}`) };
+        });
+      }
+      /**
+      * Creates multiple signed URLs. Use a signed URL to share a file for a fixed amount of time.
+      *
+      * @category File Buckets
+      * @param paths The file paths to be downloaded, including the current file names. For example `['folder/image.png', 'folder2/image2.png']`.
+      * @param expiresIn The number of seconds until the signed URLs expire. For example, `60` for URLs which are valid for one minute.
+      * @param options.download triggers the file as a download if set to true. Set this parameter as the name of the file if you want to trigger the download with a different filename.
+      * @returns Promise with response containing array of objects with signedUrl, path, and error or error
+      *
+      * @example Create Signed URLs
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .createSignedUrls(['folder/avatar1.png', 'folder/avatar2.png'], 60)
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": [
+      *     {
+      *       "error": null,
+      *       "path": "folder/avatar1.png",
+      *       "signedURL": "/object/sign/avatars/folder/avatar1.png?token=<TOKEN>",
+      *       "signedUrl": "https://example.supabase.co/storage/v1/object/sign/avatars/folder/avatar1.png?token=<TOKEN>"
+      *     },
+      *     {
+      *       "error": null,
+      *       "path": "folder/avatar2.png",
+      *       "signedURL": "/object/sign/avatars/folder/avatar2.png?token=<TOKEN>",
+      *       "signedUrl": "https://example.supabase.co/storage/v1/object/sign/avatars/folder/avatar2.png?token=<TOKEN>"
+      *     }
+      *   ],
+      *   "error": null
+      * }
+      * ```
+      */
+      async createSignedUrls(paths, expiresIn, options) {
+        var _this9 = this;
+        return _this9.handleOperation(async () => {
+          const data = await post(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
+            expiresIn,
+            paths
+          }, { headers: _this9.headers });
+          const downloadQueryParam = (options === null || options === void 0 ? void 0 : options.download) ? `&download=${options.download === true ? "" : options.download}` : "";
+          return data.map((datum) => _objectSpread2(_objectSpread2({}, datum), {}, { signedUrl: datum.signedURL ? encodeURI(`${_this9.url}${datum.signedURL}${downloadQueryParam}`) : null }));
+        });
+      }
+      /**
+      * Downloads a file from a private bucket. For public buckets, make a request to the URL returned from `getPublicUrl` instead.
+      *
+      * @category File Buckets
+      * @param path The full path and file name of the file to be downloaded. For example `folder/image.png`.
+      * @param options.transform Transform the asset before serving it to the client.
+      * @returns BlobDownloadBuilder instance for downloading the file
+      *
+      * @example Download file
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .download('folder/avatar1.png')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": <BLOB>,
+      *   "error": null
+      * }
+      * ```
+      *
+      * @example Download file with transformations
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .download('folder/avatar1.png', {
+      *     transform: {
+      *       width: 100,
+      *       height: 100,
+      *       quality: 80
+      *     }
+      *   })
+      * ```
+      */
+      download(path, options) {
+        const renderPath = typeof (options === null || options === void 0 ? void 0 : options.transform) !== "undefined" ? "render/image/authenticated" : "object";
+        const transformationQuery = this.transformOptsToQueryString((options === null || options === void 0 ? void 0 : options.transform) || {});
+        const queryString = transformationQuery ? `?${transformationQuery}` : "";
+        const _path = this._getFinalPath(path);
+        const downloadFn = () => get(this.fetch, `${this.url}/${renderPath}/${_path}${queryString}`, {
+          headers: this.headers,
+          noResolveJson: true
+        });
+        return new BlobDownloadBuilder(downloadFn, this.shouldThrowOnError);
+      }
+      /**
+      * Retrieves the details of an existing file.
+      *
+      * @category File Buckets
+      * @param path The file path, including the file name. For example `folder/image.png`.
+      * @returns Promise with response containing file metadata or error
+      *
+      * @example Get file info
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .info('folder/avatar1.png')
+      * ```
+      */
+      async info(path) {
+        var _this10 = this;
+        const _path = _this10._getFinalPath(path);
+        return _this10.handleOperation(async () => {
+          return recursiveToCamel(await get(_this10.fetch, `${_this10.url}/object/info/${_path}`, { headers: _this10.headers }));
+        });
+      }
+      /**
+      * Checks the existence of a file.
+      *
+      * @category File Buckets
+      * @param path The file path, including the file name. For example `folder/image.png`.
+      * @returns Promise with response containing boolean indicating file existence or error
+      *
+      * @example Check file existence
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .exists('folder/avatar1.png')
+      * ```
+      */
+      async exists(path) {
+        var _this11 = this;
+        const _path = _this11._getFinalPath(path);
+        try {
+          await head(_this11.fetch, `${_this11.url}/object/${_path}`, { headers: _this11.headers });
+          return {
+            data: true,
+            error: null
+          };
+        } catch (error) {
+          if (_this11.shouldThrowOnError) throw error;
+          if (isStorageError(error) && error instanceof StorageUnknownError) {
+            const originalError = error.originalError;
+            if ([400, 404].includes(originalError === null || originalError === void 0 ? void 0 : originalError.status)) return {
+              data: false,
+              error
+            };
+          }
+          throw error;
+        }
+      }
+      /**
+      * A simple convenience function to get the URL for an asset in a public bucket. If you do not want to use this function, you can construct the public URL by concatenating the bucket URL with the path to the asset.
+      * This function does not verify if the bucket is public. If a public URL is created for a bucket which is not public, you will not be able to download the asset.
+      *
+      * @category File Buckets
+      * @param path The path and name of the file to generate the public URL for. For example `folder/image.png`.
+      * @param options.download Triggers the file as a download if set to true. Set this parameter as the name of the file if you want to trigger the download with a different filename.
+      * @param options.transform Transform the asset before serving it to the client.
+      * @returns Object with public URL
+      *
+      * @example Returns the URL for an asset in a public bucket
+      * ```js
+      * const { data } = supabase
+      *   .storage
+      *   .from('public-bucket')
+      *   .getPublicUrl('folder/avatar1.png')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "publicUrl": "https://example.supabase.co/storage/v1/object/public/public-bucket/folder/avatar1.png"
+      *   }
+      * }
+      * ```
+      *
+      * @example Returns the URL for an asset in a public bucket with transformations
+      * ```js
+      * const { data } = supabase
+      *   .storage
+      *   .from('public-bucket')
+      *   .getPublicUrl('folder/avatar1.png', {
+      *     transform: {
+      *       width: 100,
+      *       height: 100,
+      *     }
+      *   })
+      * ```
+      *
+      * @example Returns the URL which triggers the download of an asset in a public bucket
+      * ```js
+      * const { data } = supabase
+      *   .storage
+      *   .from('public-bucket')
+      *   .getPublicUrl('folder/avatar1.png', {
+      *     download: true,
+      *   })
+      * ```
+      */
+      getPublicUrl(path, options) {
+        const _path = this._getFinalPath(path);
+        const _queryString = [];
+        const downloadQueryParam = (options === null || options === void 0 ? void 0 : options.download) ? `download=${options.download === true ? "" : options.download}` : "";
+        if (downloadQueryParam !== "") _queryString.push(downloadQueryParam);
+        const renderPath = typeof (options === null || options === void 0 ? void 0 : options.transform) !== "undefined" ? "render/image" : "object";
+        const transformationQuery = this.transformOptsToQueryString((options === null || options === void 0 ? void 0 : options.transform) || {});
+        if (transformationQuery !== "") _queryString.push(transformationQuery);
+        let queryString = _queryString.join("&");
+        if (queryString !== "") queryString = `?${queryString}`;
+        return { data: { publicUrl: encodeURI(`${this.url}/${renderPath}/public/${_path}${queryString}`) } };
+      }
+      /**
+      * Deletes files within the same bucket
+      *
+      * @category File Buckets
+      * @param paths An array of files to delete, including the path and file name. For example [`'folder/image.png'`].
+      * @returns Promise with response containing array of deleted file objects or error
+      *
+      * @example Delete file
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .remove(['folder/avatar1.png'])
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": [],
+      *   "error": null
+      * }
+      * ```
+      */
+      async remove(paths) {
+        var _this12 = this;
+        return _this12.handleOperation(async () => {
+          return await remove(_this12.fetch, `${_this12.url}/object/${_this12.bucketId}`, { prefixes: paths }, { headers: _this12.headers });
+        });
+      }
+      /**
+      * Get file metadata
+      * @param id the file id to retrieve metadata
+      */
+      /**
+      * Update file metadata
+      * @param id the file id to update metadata
+      * @param meta the new file metadata
+      */
+      /**
+      * Lists all the files and folders within a path of the bucket.
+      *
+      * @category File Buckets
+      * @param path The folder path.
+      * @param options Search options including limit (defaults to 100), offset, sortBy, and search
+      * @param parameters Optional fetch parameters including signal for cancellation
+      * @returns Promise with response containing array of files or error
+      *
+      * @example List files in a bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .list('folder', {
+      *     limit: 100,
+      *     offset: 0,
+      *     sortBy: { column: 'name', order: 'asc' },
+      *   })
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": [
+      *     {
+      *       "name": "avatar1.png",
+      *       "id": "e668cf7f-821b-4a2f-9dce-7dfa5dd1cfd2",
+      *       "updated_at": "2024-05-22T23:06:05.580Z",
+      *       "created_at": "2024-05-22T23:04:34.443Z",
+      *       "last_accessed_at": "2024-05-22T23:04:34.443Z",
+      *       "metadata": {
+      *         "eTag": "\"c5e8c553235d9af30ef4f6e280790b92\"",
+      *         "size": 32175,
+      *         "mimetype": "image/png",
+      *         "cacheControl": "max-age=3600",
+      *         "lastModified": "2024-05-22T23:06:05.574Z",
+      *         "contentLength": 32175,
+      *         "httpStatusCode": 200
+      *       }
+      *     }
+      *   ],
+      *   "error": null
+      * }
+      * ```
+      *
+      * @example Search files in a bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .from('avatars')
+      *   .list('folder', {
+      *     limit: 100,
+      *     offset: 0,
+      *     sortBy: { column: 'name', order: 'asc' },
+      *     search: 'jon'
+      *   })
+      * ```
+      */
+      async list(path, options, parameters) {
+        var _this13 = this;
+        return _this13.handleOperation(async () => {
+          const body = _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_SEARCH_OPTIONS), options), {}, { prefix: path || "" });
+          return await post(_this13.fetch, `${_this13.url}/object/list/${_this13.bucketId}`, body, { headers: _this13.headers }, parameters);
+        });
+      }
+      /**
+      * @experimental this method signature might change in the future
+      *
+      * @category File Buckets
+      * @param options search options
+      * @param parameters
+      */
+      async listV2(options, parameters) {
+        var _this14 = this;
+        return _this14.handleOperation(async () => {
+          const body = _objectSpread2({}, options);
+          return await post(_this14.fetch, `${_this14.url}/object/list-v2/${_this14.bucketId}`, body, { headers: _this14.headers }, parameters);
+        });
+      }
+      encodeMetadata(metadata) {
+        return JSON.stringify(metadata);
+      }
+      toBase64(data) {
+        if (typeof Buffer !== "undefined") return Buffer.from(data).toString("base64");
+        return btoa(data);
+      }
+      _getFinalPath(path) {
+        return `${this.bucketId}/${path.replace(/^\/+/, "")}`;
+      }
+      _removeEmptyFolders(path) {
+        return path.replace(/^\/|\/$/g, "").replace(/\/+/g, "/");
+      }
+      transformOptsToQueryString(transform) {
+        const params = [];
+        if (transform.width) params.push(`width=${transform.width}`);
+        if (transform.height) params.push(`height=${transform.height}`);
+        if (transform.resize) params.push(`resize=${transform.resize}`);
+        if (transform.format) params.push(`format=${transform.format}`);
+        if (transform.quality) params.push(`quality=${transform.quality}`);
+        return params.join("&");
+      }
+    };
+    version = "2.93.3";
+    DEFAULT_HEADERS = { "X-Client-Info": `storage-js/${version}` };
+    StorageBucketApi = class extends BaseApiClient {
+      constructor(url, headers = {}, fetch$1, opts) {
+        const baseUrl = new URL(url);
+        if (opts === null || opts === void 0 ? void 0 : opts.useNewHostname) {
+          if (/supabase\.(co|in|red)$/.test(baseUrl.hostname) && !baseUrl.hostname.includes("storage.supabase.")) baseUrl.hostname = baseUrl.hostname.replace("supabase.", "storage.supabase.");
+        }
+        const finalUrl = baseUrl.href.replace(/\/$/, "");
+        const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), headers);
+        super(finalUrl, finalHeaders, fetch$1, "storage");
+      }
+      /**
+      * Retrieves the details of all Storage buckets within an existing project.
+      *
+      * @category File Buckets
+      * @param options Query parameters for listing buckets
+      * @param options.limit Maximum number of buckets to return
+      * @param options.offset Number of buckets to skip
+      * @param options.sortColumn Column to sort by ('id', 'name', 'created_at', 'updated_at')
+      * @param options.sortOrder Sort order ('asc' or 'desc')
+      * @param options.search Search term to filter bucket names
+      * @returns Promise with response containing array of buckets or error
+      *
+      * @example List buckets
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .listBuckets()
+      * ```
+      *
+      * @example List buckets with options
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .listBuckets({
+      *     limit: 10,
+      *     offset: 0,
+      *     sortColumn: 'created_at',
+      *     sortOrder: 'desc',
+      *     search: 'prod'
+      *   })
+      * ```
+      */
+      async listBuckets(options) {
+        var _this = this;
+        return _this.handleOperation(async () => {
+          const queryString = _this.listBucketOptionsToQueryString(options);
+          return await get(_this.fetch, `${_this.url}/bucket${queryString}`, { headers: _this.headers });
+        });
+      }
+      /**
+      * Retrieves the details of an existing Storage bucket.
+      *
+      * @category File Buckets
+      * @param id The unique identifier of the bucket you would like to retrieve.
+      * @returns Promise with response containing bucket details or error
+      *
+      * @example Get bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .getBucket('avatars')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "id": "avatars",
+      *     "name": "avatars",
+      *     "owner": "",
+      *     "public": false,
+      *     "file_size_limit": 1024,
+      *     "allowed_mime_types": [
+      *       "image/png"
+      *     ],
+      *     "created_at": "2024-05-22T22:26:05.100Z",
+      *     "updated_at": "2024-05-22T22:26:05.100Z"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async getBucket(id) {
+        var _this2 = this;
+        return _this2.handleOperation(async () => {
+          return await get(_this2.fetch, `${_this2.url}/bucket/${id}`, { headers: _this2.headers });
+        });
+      }
+      /**
+      * Creates a new Storage bucket
+      *
+      * @category File Buckets
+      * @param id A unique identifier for the bucket you are creating.
+      * @param options.public The visibility of the bucket. Public buckets don't require an authorization token to download objects, but still require a valid token for all other operations. By default, buckets are private.
+      * @param options.fileSizeLimit specifies the max file size in bytes that can be uploaded to this bucket.
+      * The global file size limit takes precedence over this value.
+      * The default value is null, which doesn't set a per bucket file size limit.
+      * @param options.allowedMimeTypes specifies the allowed mime types that this bucket can accept during upload.
+      * The default value is null, which allows files with all mime types to be uploaded.
+      * Each mime type specified can be a wildcard, e.g. image/*, or a specific mime type, e.g. image/png.
+      * @param options.type (private-beta) specifies the bucket type. see `BucketType` for more details.
+      *   - default bucket type is `STANDARD`
+      * @returns Promise with response containing newly created bucket name or error
+      *
+      * @example Create bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .createBucket('avatars', {
+      *     public: false,
+      *     allowedMimeTypes: ['image/png'],
+      *     fileSizeLimit: 1024
+      *   })
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "name": "avatars"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async createBucket(id, options = { public: false }) {
+        var _this3 = this;
+        return _this3.handleOperation(async () => {
+          return await post(_this3.fetch, `${_this3.url}/bucket`, {
+            id,
+            name: id,
+            type: options.type,
+            public: options.public,
+            file_size_limit: options.fileSizeLimit,
+            allowed_mime_types: options.allowedMimeTypes
+          }, { headers: _this3.headers });
+        });
+      }
+      /**
+      * Updates a Storage bucket
+      *
+      * @category File Buckets
+      * @param id A unique identifier for the bucket you are updating.
+      * @param options.public The visibility of the bucket. Public buckets don't require an authorization token to download objects, but still require a valid token for all other operations.
+      * @param options.fileSizeLimit specifies the max file size in bytes that can be uploaded to this bucket.
+      * The global file size limit takes precedence over this value.
+      * The default value is null, which doesn't set a per bucket file size limit.
+      * @param options.allowedMimeTypes specifies the allowed mime types that this bucket can accept during upload.
+      * The default value is null, which allows files with all mime types to be uploaded.
+      * Each mime type specified can be a wildcard, e.g. image/*, or a specific mime type, e.g. image/png.
+      * @returns Promise with response containing success message or error
+      *
+      * @example Update bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .updateBucket('avatars', {
+      *     public: false,
+      *     allowedMimeTypes: ['image/png'],
+      *     fileSizeLimit: 1024
+      *   })
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "message": "Successfully updated"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async updateBucket(id, options) {
+        var _this4 = this;
+        return _this4.handleOperation(async () => {
+          return await put(_this4.fetch, `${_this4.url}/bucket/${id}`, {
+            id,
+            name: id,
+            public: options.public,
+            file_size_limit: options.fileSizeLimit,
+            allowed_mime_types: options.allowedMimeTypes
+          }, { headers: _this4.headers });
+        });
+      }
+      /**
+      * Removes all objects inside a single bucket.
+      *
+      * @category File Buckets
+      * @param id The unique identifier of the bucket you would like to empty.
+      * @returns Promise with success message or error
+      *
+      * @example Empty bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .emptyBucket('avatars')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "message": "Successfully emptied"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async emptyBucket(id) {
+        var _this5 = this;
+        return _this5.handleOperation(async () => {
+          return await post(_this5.fetch, `${_this5.url}/bucket/${id}/empty`, {}, { headers: _this5.headers });
+        });
+      }
+      /**
+      * Deletes an existing bucket. A bucket can't be deleted with existing objects inside it.
+      * You must first `empty()` the bucket.
+      *
+      * @category File Buckets
+      * @param id The unique identifier of the bucket you would like to delete.
+      * @returns Promise with success message or error
+      *
+      * @example Delete bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .deleteBucket('avatars')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "message": "Successfully deleted"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async deleteBucket(id) {
+        var _this6 = this;
+        return _this6.handleOperation(async () => {
+          return await remove(_this6.fetch, `${_this6.url}/bucket/${id}`, {}, { headers: _this6.headers });
+        });
+      }
+      listBucketOptionsToQueryString(options) {
+        const params = {};
+        if (options) {
+          if ("limit" in options) params.limit = String(options.limit);
+          if ("offset" in options) params.offset = String(options.offset);
+          if (options.search) params.search = options.search;
+          if (options.sortColumn) params.sortColumn = options.sortColumn;
+          if (options.sortOrder) params.sortOrder = options.sortOrder;
+        }
+        return Object.keys(params).length > 0 ? "?" + new URLSearchParams(params).toString() : "";
+      }
+    };
+    StorageAnalyticsClient = class extends BaseApiClient {
+      /**
+      * @alpha
+      *
+      * Creates a new StorageAnalyticsClient instance
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Analytics Buckets
+      * @param url - The base URL for the storage API
+      * @param headers - HTTP headers to include in requests
+      * @param fetch - Optional custom fetch implementation
+      *
+      * @example
+      * ```typescript
+      * const client = new StorageAnalyticsClient(url, headers)
+      * ```
+      */
+      constructor(url, headers = {}, fetch$1) {
+        const finalUrl = url.replace(/\/$/, "");
+        const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), headers);
+        super(finalUrl, finalHeaders, fetch$1, "storage");
+      }
+      /**
+      * @alpha
+      *
+      * Creates a new analytics bucket using Iceberg tables
+      * Analytics buckets are optimized for analytical queries and data processing
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Analytics Buckets
+      * @param name A unique name for the bucket you are creating
+      * @returns Promise with response containing newly created analytics bucket or error
+      *
+      * @example Create analytics bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .analytics
+      *   .createBucket('analytics-data')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "name": "analytics-data",
+      *     "type": "ANALYTICS",
+      *     "format": "iceberg",
+      *     "created_at": "2024-05-22T22:26:05.100Z",
+      *     "updated_at": "2024-05-22T22:26:05.100Z"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async createBucket(name) {
+        var _this = this;
+        return _this.handleOperation(async () => {
+          return await post(_this.fetch, `${_this.url}/bucket`, { name }, { headers: _this.headers });
+        });
+      }
+      /**
+      * @alpha
+      *
+      * Retrieves the details of all Analytics Storage buckets within an existing project
+      * Only returns buckets of type 'ANALYTICS'
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Analytics Buckets
+      * @param options Query parameters for listing buckets
+      * @param options.limit Maximum number of buckets to return
+      * @param options.offset Number of buckets to skip
+      * @param options.sortColumn Column to sort by ('name', 'created_at', 'updated_at')
+      * @param options.sortOrder Sort order ('asc' or 'desc')
+      * @param options.search Search term to filter bucket names
+      * @returns Promise with response containing array of analytics buckets or error
+      *
+      * @example List analytics buckets
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .analytics
+      *   .listBuckets({
+      *     limit: 10,
+      *     offset: 0,
+      *     sortColumn: 'created_at',
+      *     sortOrder: 'desc'
+      *   })
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": [
+      *     {
+      *       "name": "analytics-data",
+      *       "type": "ANALYTICS",
+      *       "format": "iceberg",
+      *       "created_at": "2024-05-22T22:26:05.100Z",
+      *       "updated_at": "2024-05-22T22:26:05.100Z"
+      *     }
+      *   ],
+      *   "error": null
+      * }
+      * ```
+      */
+      async listBuckets(options) {
+        var _this2 = this;
+        return _this2.handleOperation(async () => {
+          const queryParams = new URLSearchParams();
+          if ((options === null || options === void 0 ? void 0 : options.limit) !== void 0) queryParams.set("limit", options.limit.toString());
+          if ((options === null || options === void 0 ? void 0 : options.offset) !== void 0) queryParams.set("offset", options.offset.toString());
+          if (options === null || options === void 0 ? void 0 : options.sortColumn) queryParams.set("sortColumn", options.sortColumn);
+          if (options === null || options === void 0 ? void 0 : options.sortOrder) queryParams.set("sortOrder", options.sortOrder);
+          if (options === null || options === void 0 ? void 0 : options.search) queryParams.set("search", options.search);
+          const queryString = queryParams.toString();
+          const url = queryString ? `${_this2.url}/bucket?${queryString}` : `${_this2.url}/bucket`;
+          return await get(_this2.fetch, url, { headers: _this2.headers });
+        });
+      }
+      /**
+      * @alpha
+      *
+      * Deletes an existing analytics bucket
+      * A bucket can't be deleted with existing objects inside it
+      * You must first empty the bucket before deletion
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Analytics Buckets
+      * @param bucketName The unique identifier of the bucket you would like to delete
+      * @returns Promise with response containing success message or error
+      *
+      * @example Delete analytics bucket
+      * ```js
+      * const { data, error } = await supabase
+      *   .storage
+      *   .analytics
+      *   .deleteBucket('analytics-data')
+      * ```
+      *
+      * Response:
+      * ```json
+      * {
+      *   "data": {
+      *     "message": "Successfully deleted"
+      *   },
+      *   "error": null
+      * }
+      * ```
+      */
+      async deleteBucket(bucketName) {
+        var _this3 = this;
+        return _this3.handleOperation(async () => {
+          return await remove(_this3.fetch, `${_this3.url}/bucket/${bucketName}`, {}, { headers: _this3.headers });
+        });
+      }
+      /**
+      * @alpha
+      *
+      * Get an Iceberg REST Catalog client configured for a specific analytics bucket
+      * Use this to perform advanced table and namespace operations within the bucket
+      * The returned client provides full access to the Apache Iceberg REST Catalog API
+      * with the Supabase `{ data, error }` pattern for consistent error handling on all operations.
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Analytics Buckets
+      * @param bucketName - The name of the analytics bucket (warehouse) to connect to
+      * @returns The wrapped Iceberg catalog client
+      * @throws {StorageError} If the bucket name is invalid
+      *
+      * @example Get catalog and create table
+      * ```js
+      * // First, create an analytics bucket
+      * const { data: bucket, error: bucketError } = await supabase
+      *   .storage
+      *   .analytics
+      *   .createBucket('analytics-data')
+      *
+      * // Get the Iceberg catalog for that bucket
+      * const catalog = supabase.storage.analytics.from('analytics-data')
+      *
+      * // Create a namespace
+      * const { error: nsError } = await catalog.createNamespace({ namespace: ['default'] })
+      *
+      * // Create a table with schema
+      * const { data: tableMetadata, error: tableError } = await catalog.createTable(
+      *   { namespace: ['default'] },
+      *   {
+      *     name: 'events',
+      *     schema: {
+      *       type: 'struct',
+      *       fields: [
+      *         { id: 1, name: 'id', type: 'long', required: true },
+      *         { id: 2, name: 'timestamp', type: 'timestamp', required: true },
+      *         { id: 3, name: 'user_id', type: 'string', required: false }
+      *       ],
+      *       'schema-id': 0,
+      *       'identifier-field-ids': [1]
+      *     },
+      *     'partition-spec': {
+      *       'spec-id': 0,
+      *       fields: []
+      *     },
+      *     'write-order': {
+      *       'order-id': 0,
+      *       fields: []
+      *     },
+      *     properties: {
+      *       'write.format.default': 'parquet'
+      *     }
+      *   }
+      * )
+      * ```
+      *
+      * @example List tables in namespace
+      * ```js
+      * const catalog = supabase.storage.analytics.from('analytics-data')
+      *
+      * // List all tables in the default namespace
+      * const { data: tables, error: listError } = await catalog.listTables({ namespace: ['default'] })
+      * if (listError) {
+      *   if (listError.isNotFound()) {
+      *     console.log('Namespace not found')
+      *   }
+      *   return
+      * }
+      * console.log(tables) // [{ namespace: ['default'], name: 'events' }]
+      * ```
+      *
+      * @example Working with namespaces
+      * ```js
+      * const catalog = supabase.storage.analytics.from('analytics-data')
+      *
+      * // List all namespaces
+      * const { data: namespaces } = await catalog.listNamespaces()
+      *
+      * // Create namespace with properties
+      * await catalog.createNamespace(
+      *   { namespace: ['production'] },
+      *   { properties: { owner: 'data-team', env: 'prod' } }
+      * )
+      * ```
+      *
+      * @example Cleanup operations
+      * ```js
+      * const catalog = supabase.storage.analytics.from('analytics-data')
+      *
+      * // Drop table with purge option (removes all data)
+      * const { error: dropError } = await catalog.dropTable(
+      *   { namespace: ['default'], name: 'events' },
+      *   { purge: true }
+      * )
+      *
+      * if (dropError?.isNotFound()) {
+      *   console.log('Table does not exist')
+      * }
+      *
+      * // Drop namespace (must be empty)
+      * await catalog.dropNamespace({ namespace: ['default'] })
+      * ```
+      *
+      * @remarks
+      * This method provides a bridge between Supabase's bucket management and the standard
+      * Apache Iceberg REST Catalog API. The bucket name maps to the Iceberg warehouse parameter.
+      * All authentication and configuration is handled automatically using your Supabase credentials.
+      *
+      * **Error Handling**: Invalid bucket names throw immediately. All catalog
+      * operations return `{ data, error }` where errors are `IcebergError` instances from iceberg-js.
+      * Use helper methods like `error.isNotFound()` or check `error.status` for specific error handling.
+      * Use `.throwOnError()` on the analytics client if you prefer exceptions for catalog operations.
+      *
+      * **Cleanup Operations**: When using `dropTable`, the `purge: true` option permanently
+      * deletes all table data. Without it, the table is marked as deleted but data remains.
+      *
+      * **Library Dependency**: The returned catalog wraps `IcebergRestCatalog` from iceberg-js.
+      * For complete API documentation and advanced usage, refer to the
+      * [iceberg-js documentation](https://supabase.github.io/iceberg-js/).
+      */
+      from(bucketName) {
+        var _this4 = this;
+        if (!isValidBucketName(bucketName)) throw new StorageError("Invalid bucket name: File, folder, and bucket names must follow AWS object key naming guidelines and should avoid the use of any other characters.");
+        const catalog = new IcebergRestCatalog({
+          baseUrl: this.url,
+          catalogName: bucketName,
+          auth: {
+            type: "custom",
+            getHeaders: async () => _this4.headers
+          },
+          fetch: this.fetch
+        });
+        const shouldThrowOnError = this.shouldThrowOnError;
+        return new Proxy(catalog, { get(target, prop) {
+          const value2 = target[prop];
+          if (typeof value2 !== "function") return value2;
+          return async (...args) => {
+            try {
+              return {
+                data: await value2.apply(target, args),
+                error: null
+              };
+            } catch (error) {
+              if (shouldThrowOnError) throw error;
+              return {
+                data: null,
+                error
+              };
+            }
+          };
+        } });
+      }
+    };
+    VectorIndexApi = class extends BaseApiClient {
+      /** Creates a new VectorIndexApi instance */
+      constructor(url, headers = {}, fetch$1) {
+        const finalUrl = url.replace(/\/$/, "");
+        const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), {}, { "Content-Type": "application/json" }, headers);
+        super(finalUrl, finalHeaders, fetch$1, "vectors");
+      }
+      /** Creates a new vector index within a bucket */
+      async createIndex(options) {
+        var _this = this;
+        return _this.handleOperation(async () => {
+          return await vectorsApi.post(_this.fetch, `${_this.url}/CreateIndex`, options, { headers: _this.headers }) || {};
+        });
+      }
+      /** Retrieves metadata for a specific vector index */
+      async getIndex(vectorBucketName, indexName) {
+        var _this2 = this;
+        return _this2.handleOperation(async () => {
+          return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetIndex`, {
+            vectorBucketName,
+            indexName
+          }, { headers: _this2.headers });
+        });
+      }
+      /** Lists vector indexes within a bucket with optional filtering and pagination */
+      async listIndexes(options) {
+        var _this3 = this;
+        return _this3.handleOperation(async () => {
+          return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListIndexes`, options, { headers: _this3.headers });
+        });
+      }
+      /** Deletes a vector index and all its data */
+      async deleteIndex(vectorBucketName, indexName) {
+        var _this4 = this;
+        return _this4.handleOperation(async () => {
+          return await vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteIndex`, {
+            vectorBucketName,
+            indexName
+          }, { headers: _this4.headers }) || {};
+        });
+      }
+    };
+    VectorDataApi = class extends BaseApiClient {
+      /** Creates a new VectorDataApi instance */
+      constructor(url, headers = {}, fetch$1) {
+        const finalUrl = url.replace(/\/$/, "");
+        const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), {}, { "Content-Type": "application/json" }, headers);
+        super(finalUrl, finalHeaders, fetch$1, "vectors");
+      }
+      /** Inserts or updates vectors in batch (1-500 per request) */
+      async putVectors(options) {
+        var _this = this;
+        if (options.vectors.length < 1 || options.vectors.length > 500) throw new Error("Vector batch size must be between 1 and 500 items");
+        return _this.handleOperation(async () => {
+          return await vectorsApi.post(_this.fetch, `${_this.url}/PutVectors`, options, { headers: _this.headers }) || {};
+        });
+      }
+      /** Retrieves vectors by their keys in batch */
+      async getVectors(options) {
+        var _this2 = this;
+        return _this2.handleOperation(async () => {
+          return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectors`, options, { headers: _this2.headers });
+        });
+      }
+      /** Lists vectors in an index with pagination */
+      async listVectors(options) {
+        var _this3 = this;
+        if (options.segmentCount !== void 0) {
+          if (options.segmentCount < 1 || options.segmentCount > 16) throw new Error("segmentCount must be between 1 and 16");
+          if (options.segmentIndex !== void 0) {
+            if (options.segmentIndex < 0 || options.segmentIndex >= options.segmentCount) throw new Error(`segmentIndex must be between 0 and ${options.segmentCount - 1}`);
+          }
+        }
+        return _this3.handleOperation(async () => {
+          return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectors`, options, { headers: _this3.headers });
+        });
+      }
+      /** Queries for similar vectors using approximate nearest neighbor search */
+      async queryVectors(options) {
+        var _this4 = this;
+        return _this4.handleOperation(async () => {
+          return await vectorsApi.post(_this4.fetch, `${_this4.url}/QueryVectors`, options, { headers: _this4.headers });
+        });
+      }
+      /** Deletes vectors by their keys in batch (1-500 per request) */
+      async deleteVectors(options) {
+        var _this5 = this;
+        if (options.keys.length < 1 || options.keys.length > 500) throw new Error("Keys batch size must be between 1 and 500 items");
+        return _this5.handleOperation(async () => {
+          return await vectorsApi.post(_this5.fetch, `${_this5.url}/DeleteVectors`, options, { headers: _this5.headers }) || {};
+        });
+      }
+    };
+    VectorBucketApi = class extends BaseApiClient {
+      /** Creates a new VectorBucketApi instance */
+      constructor(url, headers = {}, fetch$1) {
+        const finalUrl = url.replace(/\/$/, "");
+        const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), {}, { "Content-Type": "application/json" }, headers);
+        super(finalUrl, finalHeaders, fetch$1, "vectors");
+      }
+      /** Creates a new vector bucket */
+      async createBucket(vectorBucketName) {
+        var _this = this;
+        return _this.handleOperation(async () => {
+          return await vectorsApi.post(_this.fetch, `${_this.url}/CreateVectorBucket`, { vectorBucketName }, { headers: _this.headers }) || {};
+        });
+      }
+      /** Retrieves metadata for a specific vector bucket */
+      async getBucket(vectorBucketName) {
+        var _this2 = this;
+        return _this2.handleOperation(async () => {
+          return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectorBucket`, { vectorBucketName }, { headers: _this2.headers });
+        });
+      }
+      /** Lists vector buckets with optional filtering and pagination */
+      async listBuckets(options = {}) {
+        var _this3 = this;
+        return _this3.handleOperation(async () => {
+          return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectorBuckets`, options, { headers: _this3.headers });
+        });
+      }
+      /** Deletes a vector bucket (must be empty first) */
+      async deleteBucket(vectorBucketName) {
+        var _this4 = this;
+        return _this4.handleOperation(async () => {
+          return await vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteVectorBucket`, { vectorBucketName }, { headers: _this4.headers }) || {};
+        });
+      }
+    };
+    StorageVectorsClient = class extends VectorBucketApi {
+      /**
+      * @alpha
+      *
+      * Creates a StorageVectorsClient that can manage buckets, indexes, and vectors.
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param url - Base URL of the Storage Vectors REST API.
+      * @param options.headers - Optional headers (for example `Authorization`) applied to every request.
+      * @param options.fetch - Optional custom `fetch` implementation for non-browser runtimes.
+      *
+      * @example
+      * ```typescript
+      * const client = new StorageVectorsClient(url, options)
+      * ```
+      */
+      constructor(url, options = {}) {
+        super(url, options.headers || {}, options.fetch);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Access operations for a specific vector bucket
+      * Returns a scoped client for index and vector operations within the bucket
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param vectorBucketName - Name of the vector bucket
+      * @returns Bucket-scoped client with index and vector operations
+      *
+      * @example
+      * ```typescript
+      * const bucket = supabase.storage.vectors.from('embeddings-prod')
+      * ```
+      */
+      from(vectorBucketName) {
+        return new VectorBucketScope(this.url, this.headers, vectorBucketName, this.fetch);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Creates a new vector bucket
+      * Vector buckets are containers for vector indexes and their data
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param vectorBucketName - Unique name for the vector bucket
+      * @returns Promise with empty response on success or error
+      *
+      * @example
+      * ```typescript
+      * const { data, error } = await supabase
+      *   .storage
+      *   .vectors
+      *   .createBucket('embeddings-prod')
+      * ```
+      */
+      async createBucket(vectorBucketName) {
+        var _superprop_getCreateBucket = () => super.createBucket, _this = this;
+        return _superprop_getCreateBucket().call(_this, vectorBucketName);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Retrieves metadata for a specific vector bucket
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param vectorBucketName - Name of the vector bucket
+      * @returns Promise with bucket metadata or error
+      *
+      * @example
+      * ```typescript
+      * const { data, error } = await supabase
+      *   .storage
+      *   .vectors
+      *   .getBucket('embeddings-prod')
+      *
+      * console.log('Bucket created:', data?.vectorBucket.creationTime)
+      * ```
+      */
+      async getBucket(vectorBucketName) {
+        var _superprop_getGetBucket = () => super.getBucket, _this2 = this;
+        return _superprop_getGetBucket().call(_this2, vectorBucketName);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Lists all vector buckets with optional filtering and pagination
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Optional filters (prefix, maxResults, nextToken)
+      * @returns Promise with list of buckets or error
+      *
+      * @example
+      * ```typescript
+      * const { data, error } = await supabase
+      *   .storage
+      *   .vectors
+      *   .listBuckets({ prefix: 'embeddings-' })
+      *
+      * data?.vectorBuckets.forEach(bucket => {
+      *   console.log(bucket.vectorBucketName)
+      * })
+      * ```
+      */
+      async listBuckets(options = {}) {
+        var _superprop_getListBuckets = () => super.listBuckets, _this3 = this;
+        return _superprop_getListBuckets().call(_this3, options);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Deletes a vector bucket (bucket must be empty)
+      * All indexes must be deleted before deleting the bucket
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param vectorBucketName - Name of the vector bucket to delete
+      * @returns Promise with empty response on success or error
+      *
+      * @example
+      * ```typescript
+      * const { data, error } = await supabase
+      *   .storage
+      *   .vectors
+      *   .deleteBucket('embeddings-old')
+      * ```
+      */
+      async deleteBucket(vectorBucketName) {
+        var _superprop_getDeleteBucket = () => super.deleteBucket, _this4 = this;
+        return _superprop_getDeleteBucket().call(_this4, vectorBucketName);
+      }
+    };
+    VectorBucketScope = class extends VectorIndexApi {
+      /**
+      * @alpha
+      *
+      * Creates a helper that automatically scopes all index operations to the provided bucket.
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @example
+      * ```typescript
+      * const bucket = supabase.storage.vectors.from('embeddings-prod')
+      * ```
+      */
+      constructor(url, headers, vectorBucketName, fetch$1) {
+        super(url, headers, fetch$1);
+        this.vectorBucketName = vectorBucketName;
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Creates a new vector index in this bucket
+      * Convenience method that automatically includes the bucket name
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Index configuration (vectorBucketName is automatically set)
+      * @returns Promise with empty response on success or error
+      *
+      * @example
+      * ```typescript
+      * const bucket = supabase.storage.vectors.from('embeddings-prod')
+      * await bucket.createIndex({
+      *   indexName: 'documents-openai',
+      *   dataType: 'float32',
+      *   dimension: 1536,
+      *   distanceMetric: 'cosine',
+      *   metadataConfiguration: {
+      *     nonFilterableMetadataKeys: ['raw_text']
+      *   }
+      * })
+      * ```
+      */
+      async createIndex(options) {
+        var _superprop_getCreateIndex = () => super.createIndex, _this5 = this;
+        return _superprop_getCreateIndex().call(_this5, _objectSpread2(_objectSpread2({}, options), {}, { vectorBucketName: _this5.vectorBucketName }));
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Lists indexes in this bucket
+      * Convenience method that automatically includes the bucket name
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Listing options (vectorBucketName is automatically set)
+      * @returns Promise with response containing indexes array and pagination token or error
+      *
+      * @example
+      * ```typescript
+      * const bucket = supabase.storage.vectors.from('embeddings-prod')
+      * const { data } = await bucket.listIndexes({ prefix: 'documents-' })
+      * ```
+      */
+      async listIndexes(options = {}) {
+        var _superprop_getListIndexes = () => super.listIndexes, _this6 = this;
+        return _superprop_getListIndexes().call(_this6, _objectSpread2(_objectSpread2({}, options), {}, { vectorBucketName: _this6.vectorBucketName }));
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Retrieves metadata for a specific index in this bucket
+      * Convenience method that automatically includes the bucket name
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param indexName - Name of the index to retrieve
+      * @returns Promise with index metadata or error
+      *
+      * @example
+      * ```typescript
+      * const bucket = supabase.storage.vectors.from('embeddings-prod')
+      * const { data } = await bucket.getIndex('documents-openai')
+      * console.log('Dimension:', data?.index.dimension)
+      * ```
+      */
+      async getIndex(indexName) {
+        var _superprop_getGetIndex = () => super.getIndex, _this7 = this;
+        return _superprop_getGetIndex().call(_this7, _this7.vectorBucketName, indexName);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Deletes an index from this bucket
+      * Convenience method that automatically includes the bucket name
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param indexName - Name of the index to delete
+      * @returns Promise with empty response on success or error
+      *
+      * @example
+      * ```typescript
+      * const bucket = supabase.storage.vectors.from('embeddings-prod')
+      * await bucket.deleteIndex('old-index')
+      * ```
+      */
+      async deleteIndex(indexName) {
+        var _superprop_getDeleteIndex = () => super.deleteIndex, _this8 = this;
+        return _superprop_getDeleteIndex().call(_this8, _this8.vectorBucketName, indexName);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Access operations for a specific index within this bucket
+      * Returns a scoped client for vector data operations
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param indexName - Name of the index
+      * @returns Index-scoped client with vector data operations
+      *
+      * @example
+      * ```typescript
+      * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
+      *
+      * // Insert vectors
+      * await index.putVectors({
+      *   vectors: [
+      *     { key: 'doc-1', data: { float32: [...] }, metadata: { title: 'Intro' } }
+      *   ]
+      * })
+      *
+      * // Query similar vectors
+      * const { data } = await index.queryVectors({
+      *   queryVector: { float32: [...] },
+      *   topK: 5
+      * })
+      * ```
+      */
+      index(indexName) {
+        return new VectorIndexScope(this.url, this.headers, this.vectorBucketName, indexName, this.fetch);
+      }
+    };
+    VectorIndexScope = class extends VectorDataApi {
+      /**
+      *
+      * @alpha
+      *
+      * Creates a helper that automatically scopes all vector operations to the provided bucket/index names.
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @example
+      * ```typescript
+      * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
+      * ```
+      */
+      constructor(url, headers, vectorBucketName, indexName, fetch$1) {
+        super(url, headers, fetch$1);
+        this.vectorBucketName = vectorBucketName;
+        this.indexName = indexName;
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Inserts or updates vectors in this index
+      * Convenience method that automatically includes bucket and index names
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Vector insertion options (bucket and index names automatically set)
+      * @returns Promise with empty response on success or error
+      *
+      * @example
+      * ```typescript
+      * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
+      * await index.putVectors({
+      *   vectors: [
+      *     {
+      *       key: 'doc-1',
+      *       data: { float32: [0.1, 0.2, ...] },
+      *       metadata: { title: 'Introduction', page: 1 }
+      *     }
+      *   ]
+      * })
+      * ```
+      */
+      async putVectors(options) {
+        var _superprop_getPutVectors = () => super.putVectors, _this9 = this;
+        return _superprop_getPutVectors().call(_this9, _objectSpread2(_objectSpread2({}, options), {}, {
+          vectorBucketName: _this9.vectorBucketName,
+          indexName: _this9.indexName
+        }));
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Retrieves vectors by keys from this index
+      * Convenience method that automatically includes bucket and index names
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Vector retrieval options (bucket and index names automatically set)
+      * @returns Promise with response containing vectors array or error
+      *
+      * @example
+      * ```typescript
+      * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
+      * const { data } = await index.getVectors({
+      *   keys: ['doc-1', 'doc-2'],
+      *   returnMetadata: true
+      * })
+      * ```
+      */
+      async getVectors(options) {
+        var _superprop_getGetVectors = () => super.getVectors, _this10 = this;
+        return _superprop_getGetVectors().call(_this10, _objectSpread2(_objectSpread2({}, options), {}, {
+          vectorBucketName: _this10.vectorBucketName,
+          indexName: _this10.indexName
+        }));
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Lists vectors in this index with pagination
+      * Convenience method that automatically includes bucket and index names
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Listing options (bucket and index names automatically set)
+      * @returns Promise with response containing vectors array and pagination token or error
+      *
+      * @example
+      * ```typescript
+      * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
+      * const { data } = await index.listVectors({
+      *   maxResults: 500,
+      *   returnMetadata: true
+      * })
+      * ```
+      */
+      async listVectors(options = {}) {
+        var _superprop_getListVectors = () => super.listVectors, _this11 = this;
+        return _superprop_getListVectors().call(_this11, _objectSpread2(_objectSpread2({}, options), {}, {
+          vectorBucketName: _this11.vectorBucketName,
+          indexName: _this11.indexName
+        }));
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Queries for similar vectors in this index
+      * Convenience method that automatically includes bucket and index names
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Query options (bucket and index names automatically set)
+      * @returns Promise with response containing matches array of similar vectors ordered by distance or error
+      *
+      * @example
+      * ```typescript
+      * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
+      * const { data } = await index.queryVectors({
+      *   queryVector: { float32: [0.1, 0.2, ...] },
+      *   topK: 5,
+      *   filter: { category: 'technical' },
+      *   returnDistance: true,
+      *   returnMetadata: true
+      * })
+      * ```
+      */
+      async queryVectors(options) {
+        var _superprop_getQueryVectors = () => super.queryVectors, _this12 = this;
+        return _superprop_getQueryVectors().call(_this12, _objectSpread2(_objectSpread2({}, options), {}, {
+          vectorBucketName: _this12.vectorBucketName,
+          indexName: _this12.indexName
+        }));
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Deletes vectors by keys from this index
+      * Convenience method that automatically includes bucket and index names
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @param options - Deletion options (bucket and index names automatically set)
+      * @returns Promise with empty response on success or error
+      *
+      * @example
+      * ```typescript
+      * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
+      * await index.deleteVectors({
+      *   keys: ['doc-1', 'doc-2', 'doc-3']
+      * })
+      * ```
+      */
+      async deleteVectors(options) {
+        var _superprop_getDeleteVectors = () => super.deleteVectors, _this13 = this;
+        return _superprop_getDeleteVectors().call(_this13, _objectSpread2(_objectSpread2({}, options), {}, {
+          vectorBucketName: _this13.vectorBucketName,
+          indexName: _this13.indexName
+        }));
+      }
+    };
+    StorageClient = class extends StorageBucketApi {
+      /**
+      * Creates a client for Storage buckets, files, analytics, and vectors.
+      *
+      * @category File Buckets
+      * @example
+      * ```ts
+      * import { StorageClient } from '@supabase/storage-js'
+      *
+      * const storage = new StorageClient('https://xyzcompany.supabase.co/storage/v1', {
+      *   apikey: 'public-anon-key',
+      * })
+      * const avatars = storage.from('avatars')
+      * ```
+      */
+      constructor(url, headers = {}, fetch$1, opts) {
+        super(url, headers, fetch$1, opts);
+      }
+      /**
+      * Perform file operation in a bucket.
+      *
+      * @category File Buckets
+      * @param id The bucket id to operate on.
+      *
+      * @example
+      * ```typescript
+      * const avatars = supabase.storage.from('avatars')
+      * ```
+      */
+      from(id) {
+        return new StorageFileApi(this.url, this.headers, id, this.fetch);
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Access vector storage operations.
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Vector Buckets
+      * @returns A StorageVectorsClient instance configured with the current storage settings.
+      */
+      get vectors() {
+        return new StorageVectorsClient(this.url + "/vector", {
+          headers: this.headers,
+          fetch: this.fetch
+        });
+      }
+      /**
+      *
+      * @alpha
+      *
+      * Access analytics storage operations using Iceberg tables.
+      *
+      * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
+      *
+      * @category Analytics Buckets
+      * @returns A StorageAnalyticsClient instance configured with the current storage settings.
+      */
+      get analytics() {
+        return new StorageAnalyticsClient(this.url + "/iceberg", this.headers, this.fetch);
+      }
+    };
   }
 });
 
@@ -10051,6 +14133,461 @@ var require_main3 = __commonJS({
   }
 });
 
+// node_modules/@supabase/supabase-js/dist/index.mjs
+var dist_exports = {};
+__export(dist_exports, {
+  FunctionRegion: () => import_functions_js.FunctionRegion,
+  FunctionsError: () => import_functions_js.FunctionsError,
+  FunctionsFetchError: () => import_functions_js.FunctionsFetchError,
+  FunctionsHttpError: () => import_functions_js.FunctionsHttpError,
+  FunctionsRelayError: () => import_functions_js.FunctionsRelayError,
+  PostgrestError: () => PostgrestError,
+  SupabaseClient: () => SupabaseClient,
+  createClient: () => createClient
+});
+function _typeof2(o) {
+  "@babel/helpers - typeof";
+  return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
+    return typeof o$1;
+  } : function(o$1) {
+    return o$1 && "function" == typeof Symbol && o$1.constructor === Symbol && o$1 !== Symbol.prototype ? "symbol" : typeof o$1;
+  }, _typeof2(o);
+}
+function toPrimitive2(t, r) {
+  if ("object" != _typeof2(t) || !t) return t;
+  var e = t[Symbol.toPrimitive];
+  if (void 0 !== e) {
+    var i = e.call(t, r || "default");
+    if ("object" != _typeof2(i)) return i;
+    throw new TypeError("@@toPrimitive must return a primitive value.");
+  }
+  return ("string" === r ? String : Number)(t);
+}
+function toPropertyKey2(t) {
+  var i = toPrimitive2(t, "string");
+  return "symbol" == _typeof2(i) ? i : i + "";
+}
+function _defineProperty2(e, r, t) {
+  return (r = toPropertyKey2(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: true,
+    configurable: true,
+    writable: true
+  }) : e[r] = t, e;
+}
+function ownKeys3(e, r) {
+  var t = Object.keys(e);
+  if (Object.getOwnPropertySymbols) {
+    var o = Object.getOwnPropertySymbols(e);
+    r && (o = o.filter(function(r$1) {
+      return Object.getOwnPropertyDescriptor(e, r$1).enumerable;
+    })), t.push.apply(t, o);
+  }
+  return t;
+}
+function _objectSpread22(e) {
+  for (var r = 1; r < arguments.length; r++) {
+    var t = null != arguments[r] ? arguments[r] : {};
+    r % 2 ? ownKeys3(Object(t), true).forEach(function(r$1) {
+      _defineProperty2(e, r$1, t[r$1]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys3(Object(t)).forEach(function(r$1) {
+      Object.defineProperty(e, r$1, Object.getOwnPropertyDescriptor(t, r$1));
+    });
+  }
+  return e;
+}
+function ensureTrailingSlash(url) {
+  return url.endsWith("/") ? url : url + "/";
+}
+function applySettingDefaults(options, defaults) {
+  var _DEFAULT_GLOBAL_OPTIO, _globalOptions$header;
+  const { db: dbOptions, auth: authOptions, realtime: realtimeOptions, global: globalOptions } = options;
+  const { db: DEFAULT_DB_OPTIONS$1, auth: DEFAULT_AUTH_OPTIONS$1, realtime: DEFAULT_REALTIME_OPTIONS$1, global: DEFAULT_GLOBAL_OPTIONS$1 } = defaults;
+  const result = {
+    db: _objectSpread22(_objectSpread22({}, DEFAULT_DB_OPTIONS$1), dbOptions),
+    auth: _objectSpread22(_objectSpread22({}, DEFAULT_AUTH_OPTIONS$1), authOptions),
+    realtime: _objectSpread22(_objectSpread22({}, DEFAULT_REALTIME_OPTIONS$1), realtimeOptions),
+    storage: {},
+    global: _objectSpread22(_objectSpread22(_objectSpread22({}, DEFAULT_GLOBAL_OPTIONS$1), globalOptions), {}, { headers: _objectSpread22(_objectSpread22({}, (_DEFAULT_GLOBAL_OPTIO = DEFAULT_GLOBAL_OPTIONS$1 === null || DEFAULT_GLOBAL_OPTIONS$1 === void 0 ? void 0 : DEFAULT_GLOBAL_OPTIONS$1.headers) !== null && _DEFAULT_GLOBAL_OPTIO !== void 0 ? _DEFAULT_GLOBAL_OPTIO : {}), (_globalOptions$header = globalOptions === null || globalOptions === void 0 ? void 0 : globalOptions.headers) !== null && _globalOptions$header !== void 0 ? _globalOptions$header : {}) }),
+    accessToken: async () => ""
+  };
+  if (options.accessToken) result.accessToken = options.accessToken;
+  else delete result.accessToken;
+  return result;
+}
+function validateSupabaseUrl(supabaseUrl) {
+  const trimmedUrl = supabaseUrl === null || supabaseUrl === void 0 ? void 0 : supabaseUrl.trim();
+  if (!trimmedUrl) throw new Error("supabaseUrl is required.");
+  if (!trimmedUrl.match(/^https?:\/\//i)) throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.");
+  try {
+    return new URL(ensureTrailingSlash(trimmedUrl));
+  } catch (_unused) {
+    throw Error("Invalid supabaseUrl: Provided URL is malformed.");
+  }
+}
+function shouldShowDeprecationWarning() {
+  if (typeof window !== "undefined") return false;
+  const _process = globalThis["process"];
+  if (!_process) return false;
+  const processVersion = _process["version"];
+  if (processVersion === void 0 || processVersion === null) return false;
+  const versionMatch = processVersion.match(/^v(\d+)\./);
+  if (!versionMatch) return false;
+  return parseInt(versionMatch[1], 10) <= 18;
+}
+var import_functions_js, import_realtime_js, import_auth_js, version2, JS_ENV, DEFAULT_HEADERS2, DEFAULT_GLOBAL_OPTIONS, DEFAULT_DB_OPTIONS, DEFAULT_AUTH_OPTIONS, DEFAULT_REALTIME_OPTIONS, resolveFetch2, resolveHeadersConstructor, fetchWithAuth, SupabaseAuthClient, SupabaseClient, createClient;
+var init_dist4 = __esm({
+  "node_modules/@supabase/supabase-js/dist/index.mjs"() {
+    import_functions_js = __toESM(require_main(), 1);
+    init_dist();
+    import_realtime_js = __toESM(require_main2(), 1);
+    init_dist3();
+    import_auth_js = __toESM(require_main3(), 1);
+    __reExport(dist_exports, __toESM(require_main2(), 1));
+    __reExport(dist_exports, __toESM(require_main3(), 1));
+    version2 = "2.93.3";
+    JS_ENV = "";
+    if (typeof Deno !== "undefined") JS_ENV = "deno";
+    else if (typeof document !== "undefined") JS_ENV = "web";
+    else if (typeof navigator !== "undefined" && navigator.product === "ReactNative") JS_ENV = "react-native";
+    else JS_ENV = "node";
+    DEFAULT_HEADERS2 = { "X-Client-Info": `supabase-js-${JS_ENV}/${version2}` };
+    DEFAULT_GLOBAL_OPTIONS = { headers: DEFAULT_HEADERS2 };
+    DEFAULT_DB_OPTIONS = { schema: "public" };
+    DEFAULT_AUTH_OPTIONS = {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: "implicit"
+    };
+    DEFAULT_REALTIME_OPTIONS = {};
+    resolveFetch2 = (customFetch) => {
+      if (customFetch) return (...args) => customFetch(...args);
+      return (...args) => fetch(...args);
+    };
+    resolveHeadersConstructor = () => {
+      return Headers;
+    };
+    fetchWithAuth = (supabaseKey, getAccessToken, customFetch) => {
+      const fetch$1 = resolveFetch2(customFetch);
+      const HeadersConstructor = resolveHeadersConstructor();
+      return async (input, init2) => {
+        var _await$getAccessToken;
+        const accessToken = (_await$getAccessToken = await getAccessToken()) !== null && _await$getAccessToken !== void 0 ? _await$getAccessToken : supabaseKey;
+        let headers = new HeadersConstructor(init2 === null || init2 === void 0 ? void 0 : init2.headers);
+        if (!headers.has("apikey")) headers.set("apikey", supabaseKey);
+        if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${accessToken}`);
+        return fetch$1(input, _objectSpread22(_objectSpread22({}, init2), {}, { headers }));
+      };
+    };
+    SupabaseAuthClient = class extends import_auth_js.AuthClient {
+      constructor(options) {
+        super(options);
+      }
+    };
+    SupabaseClient = class {
+      /**
+      * Create a new client for use in the browser.
+      * @param supabaseUrl The unique Supabase URL which is supplied when you create a new project in your project dashboard.
+      * @param supabaseKey The unique Supabase Key which is supplied when you create a new project in your project dashboard.
+      * @param options.db.schema You can switch in between schemas. The schema needs to be on the list of exposed schemas inside Supabase.
+      * @param options.auth.autoRefreshToken Set to "true" if you want to automatically refresh the token before expiring.
+      * @param options.auth.persistSession Set to "true" if you want to automatically save the user session into local storage.
+      * @param options.auth.detectSessionInUrl Set to "true" if you want to automatically detects OAuth grants in the URL and signs in the user.
+      * @param options.realtime Options passed along to realtime-js constructor.
+      * @param options.storage Options passed along to the storage-js constructor.
+      * @param options.global.fetch A custom fetch implementation.
+      * @param options.global.headers Any additional headers to send with each network request.
+      * @example
+      * ```ts
+      * import { createClient } from '@supabase/supabase-js'
+      *
+      * const supabase = createClient('https://xyzcompany.supabase.co', 'public-anon-key')
+      * const { data } = await supabase.from('profiles').select('*')
+      * ```
+      */
+      constructor(supabaseUrl, supabaseKey, options) {
+        var _settings$auth$storag, _settings$global$head;
+        this.supabaseUrl = supabaseUrl;
+        this.supabaseKey = supabaseKey;
+        const baseUrl = validateSupabaseUrl(supabaseUrl);
+        if (!supabaseKey) throw new Error("supabaseKey is required.");
+        this.realtimeUrl = new URL("realtime/v1", baseUrl);
+        this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws");
+        this.authUrl = new URL("auth/v1", baseUrl);
+        this.storageUrl = new URL("storage/v1", baseUrl);
+        this.functionsUrl = new URL("functions/v1", baseUrl);
+        const defaultStorageKey = `sb-${baseUrl.hostname.split(".")[0]}-auth-token`;
+        const DEFAULTS = {
+          db: DEFAULT_DB_OPTIONS,
+          realtime: DEFAULT_REALTIME_OPTIONS,
+          auth: _objectSpread22(_objectSpread22({}, DEFAULT_AUTH_OPTIONS), {}, { storageKey: defaultStorageKey }),
+          global: DEFAULT_GLOBAL_OPTIONS
+        };
+        const settings = applySettingDefaults(options !== null && options !== void 0 ? options : {}, DEFAULTS);
+        this.storageKey = (_settings$auth$storag = settings.auth.storageKey) !== null && _settings$auth$storag !== void 0 ? _settings$auth$storag : "";
+        this.headers = (_settings$global$head = settings.global.headers) !== null && _settings$global$head !== void 0 ? _settings$global$head : {};
+        if (!settings.accessToken) {
+          var _settings$auth;
+          this.auth = this._initSupabaseAuthClient((_settings$auth = settings.auth) !== null && _settings$auth !== void 0 ? _settings$auth : {}, this.headers, settings.global.fetch);
+        } else {
+          this.accessToken = settings.accessToken;
+          this.auth = new Proxy({}, { get: (_, prop) => {
+            throw new Error(`@supabase/supabase-js: Supabase Client is configured with the accessToken option, accessing supabase.auth.${String(prop)} is not possible`);
+          } });
+        }
+        this.fetch = fetchWithAuth(supabaseKey, this._getAccessToken.bind(this), settings.global.fetch);
+        this.realtime = this._initRealtimeClient(_objectSpread22({
+          headers: this.headers,
+          accessToken: this._getAccessToken.bind(this)
+        }, settings.realtime));
+        if (this.accessToken) Promise.resolve(this.accessToken()).then((token) => this.realtime.setAuth(token)).catch((e) => console.warn("Failed to set initial Realtime auth token:", e));
+        this.rest = new PostgrestClient(new URL("rest/v1", baseUrl).href, {
+          headers: this.headers,
+          schema: settings.db.schema,
+          fetch: this.fetch
+        });
+        this.storage = new StorageClient(this.storageUrl.href, this.headers, this.fetch, options === null || options === void 0 ? void 0 : options.storage);
+        if (!settings.accessToken) this._listenForAuthEvents();
+      }
+      /**
+      * Supabase Functions allows you to deploy and invoke edge functions.
+      */
+      get functions() {
+        return new import_functions_js.FunctionsClient(this.functionsUrl.href, {
+          headers: this.headers,
+          customFetch: this.fetch
+        });
+      }
+      /**
+      * Perform a query on a table or a view.
+      *
+      * @param relation - The table or view name to query
+      */
+      from(relation) {
+        return this.rest.from(relation);
+      }
+      /**
+      * Select a schema to query or perform an function (rpc) call.
+      *
+      * The schema needs to be on the list of exposed schemas inside Supabase.
+      *
+      * @param schema - The schema to query
+      */
+      schema(schema) {
+        return this.rest.schema(schema);
+      }
+      /**
+      * Perform a function call.
+      *
+      * @param fn - The function name to call
+      * @param args - The arguments to pass to the function call
+      * @param options - Named parameters
+      * @param options.head - When set to `true`, `data` will not be returned.
+      * Useful if you only need the count.
+      * @param options.get - When set to `true`, the function will be called with
+      * read-only access mode.
+      * @param options.count - Count algorithm to use to count rows returned by the
+      * function. Only applicable for [set-returning
+      * functions](https://www.postgresql.org/docs/current/functions-srf.html).
+      *
+      * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
+      * hood.
+      *
+      * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
+      * statistics under the hood.
+      *
+      * `"estimated"`: Uses exact count for low numbers and planned count for high
+      * numbers.
+      */
+      rpc(fn2, args = {}, options = {
+        head: false,
+        get: false,
+        count: void 0
+      }) {
+        return this.rest.rpc(fn2, args, options);
+      }
+      /**
+      * Creates a Realtime channel with Broadcast, Presence, and Postgres Changes.
+      *
+      * @param {string} name - The name of the Realtime channel.
+      * @param {Object} opts - The options to pass to the Realtime channel.
+      *
+      */
+      channel(name, opts = { config: {} }) {
+        return this.realtime.channel(name, opts);
+      }
+      /**
+      * Returns all Realtime channels.
+      */
+      getChannels() {
+        return this.realtime.getChannels();
+      }
+      /**
+      * Unsubscribes and removes Realtime channel from Realtime client.
+      *
+      * @param {RealtimeChannel} channel - The name of the Realtime channel.
+      *
+      */
+      removeChannel(channel) {
+        return this.realtime.removeChannel(channel);
+      }
+      /**
+      * Unsubscribes and removes all Realtime channels from Realtime client.
+      */
+      removeAllChannels() {
+        return this.realtime.removeAllChannels();
+      }
+      async _getAccessToken() {
+        var _this = this;
+        var _data$session$access_, _data$session;
+        if (_this.accessToken) return await _this.accessToken();
+        const { data } = await _this.auth.getSession();
+        return (_data$session$access_ = (_data$session = data.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : _this.supabaseKey;
+      }
+      _initSupabaseAuthClient({ autoRefreshToken, persistSession, detectSessionInUrl, storage, userStorage, storageKey, flowType, lock, debug, throwOnError }, headers, fetch$1) {
+        const authHeaders = {
+          Authorization: `Bearer ${this.supabaseKey}`,
+          apikey: `${this.supabaseKey}`
+        };
+        return new SupabaseAuthClient({
+          url: this.authUrl.href,
+          headers: _objectSpread22(_objectSpread22({}, authHeaders), headers),
+          storageKey,
+          autoRefreshToken,
+          persistSession,
+          detectSessionInUrl,
+          storage,
+          userStorage,
+          flowType,
+          lock,
+          debug,
+          throwOnError,
+          fetch: fetch$1,
+          hasCustomAuthorizationHeader: Object.keys(this.headers).some((key) => key.toLowerCase() === "authorization")
+        });
+      }
+      _initRealtimeClient(options) {
+        return new import_realtime_js.RealtimeClient(this.realtimeUrl.href, _objectSpread22(_objectSpread22({}, options), {}, { params: _objectSpread22(_objectSpread22({}, { apikey: this.supabaseKey }), options === null || options === void 0 ? void 0 : options.params) }));
+      }
+      _listenForAuthEvents() {
+        return this.auth.onAuthStateChange((event, session) => {
+          this._handleTokenChanged(event, "CLIENT", session === null || session === void 0 ? void 0 : session.access_token);
+        });
+      }
+      _handleTokenChanged(event, source, token) {
+        if ((event === "TOKEN_REFRESHED" || event === "SIGNED_IN") && this.changedAccessToken !== token) {
+          this.changedAccessToken = token;
+          this.realtime.setAuth(token);
+        } else if (event === "SIGNED_OUT") {
+          this.realtime.setAuth();
+          if (source == "STORAGE") this.auth.signOut();
+          this.changedAccessToken = void 0;
+        }
+      }
+    };
+    createClient = (supabaseUrl, supabaseKey, options) => {
+      return new SupabaseClient(supabaseUrl, supabaseKey, options);
+    };
+    if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217");
+  }
+});
+
+// src/integrations/supabase/previewAuthStorage.ts
+function brokeredPreviewStorage() {
+  if (typeof window === "undefined") return void 0;
+  const host = location.hostname;
+  const PREVIEW_ZONES = ["lovableproject.com", "lovableproject-dev.com", "lovable.app", "gpt-eng.com", "gptengineer.run"];
+  const onPreviewZone = PREVIEW_ZONES.some((z) => host === z || host.endsWith("." + z));
+  const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+  const projectId = onPreviewZone ? host.match(new RegExp("^(?:id-preview(?:-[a-z0-9]+)?|project)--(" + UUID + ")(?:-dev)?(?=\\.|$)", "i"))?.[1] ?? host.match(new RegExp("^(" + UUID + ")(?=[.-])", "i"))?.[1] : void 0;
+  const framed = window.parent && window.parent !== window;
+  if (!projectId || !framed) return localStorage;
+  const dev = host.endsWith(".lovableproject-dev.com") || host.endsWith(".gpt-eng.com");
+  const EDITOR = dev ? /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$|^http:\/\/localhost:3000$/ : /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$/;
+  const ancestor = location.ancestorOrigins && location.ancestorOrigins[0] || (document.referrer ? new URL(document.referrer).origin : "");
+  const editorOrigins = ancestor && EDITOR.test(ancestor) ? [ancestor] : dev ? ["https://lovable.dev", "http://localhost:3000"] : ["https://lovable.dev"];
+  const RESULT = "lovable-preview-auth:result";
+  const TIMEOUT = 2e3;
+  const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const request = (type, key, value2) => new Promise((resolve6) => {
+    const requestId = newId();
+    let done = false;
+    let timer;
+    const finish2 = (r) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      window.removeEventListener("message", onMessage);
+      resolve6(r);
+    };
+    const onMessage = (e) => {
+      if (editorOrigins.indexOf(e.origin) < 0) return;
+      const d = e.data;
+      if (d && d.type === RESULT && d.requestId === requestId) finish2(d);
+    };
+    window.addEventListener("message", onMessage);
+    const msg = { type, requestId, projectId, key };
+    if (value2 !== void 0) msg["value"] = value2;
+    for (const origin of editorOrigins) window.parent.postMessage(msg, origin);
+    timer = setTimeout(() => finish2(null), TIMEOUT);
+  });
+  let firstGet = true;
+  const RETRY_DELAY = 250;
+  return {
+    getItem: async (key) => {
+      let res = await request("lovable-preview-auth:get", key);
+      if (!res && firstGet) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY));
+        res = await request("lovable-preview-auth:get", key);
+      }
+      firstGet = false;
+      if (res && res.ok && typeof res.value === "string") {
+        if (res.value === "") {
+          localStorage.removeItem(key);
+          return null;
+        }
+        return res.value;
+      }
+      return localStorage.getItem(key);
+    },
+    setItem: (key, value2) => {
+      localStorage.setItem(key, value2);
+      return request("lovable-preview-auth:set", key, value2).then(() => void 0);
+    },
+    removeItem: (key) => {
+      localStorage.removeItem(key);
+      return request("lovable-preview-auth:remove", key).then(() => void 0);
+    }
+  };
+}
+var init_previewAuthStorage = __esm({
+  "src/integrations/supabase/previewAuthStorage.ts"() {
+  }
+});
+
+// src/integrations/supabase/client.ts
+var client_exports = {};
+__export(client_exports, {
+  supabase: () => supabase
+});
+var SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, supabase;
+var init_client = __esm({
+  "src/integrations/supabase/client.ts"() {
+    init_dist4();
+    init_previewAuthStorage();
+    SUPABASE_URL = "https://ygzqjekxzvsrkhuqhqbp.supabase.co";
+    SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnenFqZWt4enZzcmtodXFocWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NzU1NDEsImV4cCI6MjA4NTQ1MTU0MX0.--CgBH0g9CJsHC_pRoaNp1nDDQ8cQ5m-gQ0w7zlnjiY";
+    supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        storage: brokeredPreviewStorage(),
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
+  }
+});
+
 // lang/compiler/driver-artifact.mjs
 var DRIVER_BYTECODE_B64, DRIVER_POOL_B64;
 var init_driver_artifact = __esm({
@@ -13834,14 +18371,14 @@ var Parser = class _Parser {
   // either condition :: body ;; [otherwise :: body ;; | otherwise either ...]
   parseEitherStatement() {
     const eitherToken = this.consume("EITHER" /* EITHER */, "Expected 'either'");
-    const condition = this.parseExpression();
+    const condition2 = this.parseExpression();
     const thenBranch = this.parseBlockStatement();
     let elseBranch;
     if (this.match("OTHERWISE" /* OTHERWISE */)) {
       if (this.check("EITHER" /* EITHER */)) elseBranch = this.parseEitherStatement();
       else elseBranch = this.parseBlockStatement();
     }
-    return { type: "IfStatement", condition, thenBranch, elseBranch, line: eitherToken.line };
+    return { type: "IfStatement", condition: condition2, thenBranch, elseBranch, line: eitherToken.line };
   }
   /** Lookahead: does this `set ...` line contain a `to` before the statement ends? */
   isSetToStatement() {
@@ -14076,7 +18613,7 @@ var Parser = class _Parser {
   // ponder condition :: body ;; [elsewise cond :: ;;] [otherwise :: body ;;]
   parsePonderStatement() {
     const ponderToken = this.consume("PONDER" /* PONDER */, "Expected 'ponder'");
-    const condition = this.parseExpression();
+    const condition2 = this.parseExpression();
     const thenBranch = this.parseBlockStatement();
     let elseBranch;
     if (this.check("ELIF" /* ELIF */)) {
@@ -14088,28 +18625,28 @@ var Parser = class _Parser {
         elseBranch = this.parseBlockStatement();
       }
     }
-    return { type: "IfStatement", condition, thenBranch, elseBranch, line: ponderToken.line };
+    return { type: "IfStatement", condition: condition2, thenBranch, elseBranch, line: ponderToken.line };
   }
   parseElifChain() {
     const t = this.consume("ELIF" /* ELIF */, "Expected 'elif'");
-    const condition = this.parseExpression();
+    const condition2 = this.parseExpression();
     const thenBranch = this.parseBlockStatement();
     let elseBranch;
     if (this.check("ELIF" /* ELIF */)) elseBranch = this.parseElifChain();
     else if (this.match("OTHERWISE" /* OTHERWISE */)) elseBranch = this.parseBlockStatement();
-    return { type: "IfStatement", condition, thenBranch, elseBranch, line: t.line };
+    return { type: "IfStatement", condition: condition2, thenBranch, elseBranch, line: t.line };
   }
   // cycle condition :: body ;; [otherwise :: body ;;]
   parseCycleStatement() {
     const cycleToken = this.consume("CYCLE" /* CYCLE */, "Expected 'cycle'");
-    const condition = this.parseExpression();
+    const condition2 = this.parseExpression();
     const body = this.parseBlockStatement();
     let elseBlock;
     if (this.check("OTHERWISE" /* OTHERWISE */) && this.tokens[this.pos + 1]?.type === "DOUBLE_COLON" /* DOUBLE_COLON */) {
       this.advance();
       elseBlock = this.parseBlockStatement();
     }
-    return { type: "WhileStatement", condition, body, elseBlock, line: cycleToken.line };
+    return { type: "WhileStatement", condition: condition2, body, elseBlock, line: cycleToken.line };
   }
   // iterate item[, item2] through list :: body ;; [otherwise :: ;;]
   parseIterateStatement() {
@@ -14290,10 +18827,10 @@ var Parser = class _Parser {
   // insist condition, "message"
   parseAssertStatement() {
     const t = this.consume("ASSERT" /* ASSERT */, "Expected 'assert'");
-    const condition = this.parseExpression();
+    const condition2 = this.parseExpression();
     let message;
     if (this.match("COMMA" /* COMMA */)) message = this.parseExpression();
-    return { type: "AssertStatement", condition, message, line: t.line };
+    return { type: "AssertStatement", condition: condition2, message, line: t.line };
   }
   // banish target[, target]
   parseDelStatement() {
@@ -17998,9 +22535,9 @@ function createAdvancedBuiltins(output) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 1) throw new SdevError("assert() takes at least 1 argument", line);
-      const condition = args[0];
+      const condition2 = args[0];
       const message = args[1] ?? "Assertion failed";
-      if (!condition) {
+      if (!condition2) {
         throw new SdevError(message, line);
       }
       return true;
@@ -21384,4511 +25921,8 @@ function parseReference(input) {
   return null;
 }
 
-// node_modules/@supabase/supabase-js/dist/index.mjs
-var dist_exports = {};
-__export(dist_exports, {
-  FunctionRegion: () => import_functions_js.FunctionRegion,
-  FunctionsError: () => import_functions_js.FunctionsError,
-  FunctionsFetchError: () => import_functions_js.FunctionsFetchError,
-  FunctionsHttpError: () => import_functions_js.FunctionsHttpError,
-  FunctionsRelayError: () => import_functions_js.FunctionsRelayError,
-  PostgrestError: () => PostgrestError,
-  SupabaseClient: () => SupabaseClient,
-  createClient: () => createClient
-});
-var import_functions_js = __toESM(require_main(), 1);
-
-// node_modules/@supabase/postgrest-js/dist/index.mjs
-var PostgrestError = class extends Error {
-  /**
-  * @example
-  * ```ts
-  * import PostgrestError from '@supabase/postgrest-js'
-  *
-  * throw new PostgrestError({
-  *   message: 'Row level security prevented the request',
-  *   details: 'RLS denied the insert',
-  *   hint: 'Check your policies',
-  *   code: 'PGRST301',
-  * })
-  * ```
-  */
-  constructor(context) {
-    super(context.message);
-    this.name = "PostgrestError";
-    this.details = context.details;
-    this.hint = context.hint;
-    this.code = context.code;
-  }
-};
-var PostgrestBuilder = class {
-  /**
-  * Creates a builder configured for a specific PostgREST request.
-  *
-  * @example
-  * ```ts
-  * import PostgrestQueryBuilder from '@supabase/postgrest-js'
-  *
-  * const builder = new PostgrestQueryBuilder(
-  *   new URL('https://xyzcompany.supabase.co/rest/v1/users'),
-  *   { headers: new Headers({ apikey: 'public-anon-key' }) }
-  * )
-  * ```
-  */
-  constructor(builder) {
-    var _builder$shouldThrowO, _builder$isMaybeSingl;
-    this.shouldThrowOnError = false;
-    this.method = builder.method;
-    this.url = builder.url;
-    this.headers = new Headers(builder.headers);
-    this.schema = builder.schema;
-    this.body = builder.body;
-    this.shouldThrowOnError = (_builder$shouldThrowO = builder.shouldThrowOnError) !== null && _builder$shouldThrowO !== void 0 ? _builder$shouldThrowO : false;
-    this.signal = builder.signal;
-    this.isMaybeSingle = (_builder$isMaybeSingl = builder.isMaybeSingle) !== null && _builder$isMaybeSingl !== void 0 ? _builder$isMaybeSingl : false;
-    if (builder.fetch) this.fetch = builder.fetch;
-    else this.fetch = fetch;
-  }
-  /**
-  * If there's an error with the query, throwOnError will reject the promise by
-  * throwing the error instead of returning it as part of a successful response.
-  *
-  * {@link https://github.com/supabase/supabase-js/issues/92}
-  */
-  throwOnError() {
-    this.shouldThrowOnError = true;
-    return this;
-  }
-  /**
-  * Set an HTTP header for the request.
-  */
-  setHeader(name, value2) {
-    this.headers = new Headers(this.headers);
-    this.headers.set(name, value2);
-    return this;
-  }
-  then(onfulfilled, onrejected) {
-    var _this = this;
-    if (this.schema === void 0) {
-    } else if (["GET", "HEAD"].includes(this.method)) this.headers.set("Accept-Profile", this.schema);
-    else this.headers.set("Content-Profile", this.schema);
-    if (this.method !== "GET" && this.method !== "HEAD") this.headers.set("Content-Type", "application/json");
-    const _fetch = this.fetch;
-    let res = _fetch(this.url.toString(), {
-      method: this.method,
-      headers: this.headers,
-      body: JSON.stringify(this.body),
-      signal: this.signal
-    }).then(async (res$1) => {
-      let error = null;
-      let data = null;
-      let count = null;
-      let status = res$1.status;
-      let statusText = res$1.statusText;
-      if (res$1.ok) {
-        var _this$headers$get2, _res$headers$get;
-        if (_this.method !== "HEAD") {
-          var _this$headers$get;
-          const body = await res$1.text();
-          if (body === "") {
-          } else if (_this.headers.get("Accept") === "text/csv") data = body;
-          else if (_this.headers.get("Accept") && ((_this$headers$get = _this.headers.get("Accept")) === null || _this$headers$get === void 0 ? void 0 : _this$headers$get.includes("application/vnd.pgrst.plan+text"))) data = body;
-          else data = JSON.parse(body);
-        }
-        const countHeader = (_this$headers$get2 = _this.headers.get("Prefer")) === null || _this$headers$get2 === void 0 ? void 0 : _this$headers$get2.match(/count=(exact|planned|estimated)/);
-        const contentRange = (_res$headers$get = res$1.headers.get("content-range")) === null || _res$headers$get === void 0 ? void 0 : _res$headers$get.split("/");
-        if (countHeader && contentRange && contentRange.length > 1) count = parseInt(contentRange[1]);
-        if (_this.isMaybeSingle && _this.method === "GET" && Array.isArray(data)) if (data.length > 1) {
-          error = {
-            code: "PGRST116",
-            details: `Results contain ${data.length} rows, application/vnd.pgrst.object+json requires 1 row`,
-            hint: null,
-            message: "JSON object requested, multiple (or no) rows returned"
-          };
-          data = null;
-          count = null;
-          status = 406;
-          statusText = "Not Acceptable";
-        } else if (data.length === 1) data = data[0];
-        else data = null;
-      } else {
-        var _error$details;
-        const body = await res$1.text();
-        try {
-          error = JSON.parse(body);
-          if (Array.isArray(error) && res$1.status === 404) {
-            data = [];
-            error = null;
-            status = 200;
-            statusText = "OK";
-          }
-        } catch (_unused) {
-          if (res$1.status === 404 && body === "") {
-            status = 204;
-            statusText = "No Content";
-          } else error = { message: body };
-        }
-        if (error && _this.isMaybeSingle && (error === null || error === void 0 || (_error$details = error.details) === null || _error$details === void 0 ? void 0 : _error$details.includes("0 rows"))) {
-          error = null;
-          status = 200;
-          statusText = "OK";
-        }
-        if (error && _this.shouldThrowOnError) throw new PostgrestError(error);
-      }
-      return {
-        error,
-        data,
-        count,
-        status,
-        statusText
-      };
-    });
-    if (!this.shouldThrowOnError) res = res.catch((fetchError) => {
-      var _fetchError$name2;
-      let errorDetails = "";
-      const cause = fetchError === null || fetchError === void 0 ? void 0 : fetchError.cause;
-      if (cause) {
-        var _cause$message, _cause$code, _fetchError$name, _cause$name;
-        const causeMessage = (_cause$message = cause === null || cause === void 0 ? void 0 : cause.message) !== null && _cause$message !== void 0 ? _cause$message : "";
-        const causeCode = (_cause$code = cause === null || cause === void 0 ? void 0 : cause.code) !== null && _cause$code !== void 0 ? _cause$code : "";
-        errorDetails = `${(_fetchError$name = fetchError === null || fetchError === void 0 ? void 0 : fetchError.name) !== null && _fetchError$name !== void 0 ? _fetchError$name : "FetchError"}: ${fetchError === null || fetchError === void 0 ? void 0 : fetchError.message}`;
-        errorDetails += `
-
-Caused by: ${(_cause$name = cause === null || cause === void 0 ? void 0 : cause.name) !== null && _cause$name !== void 0 ? _cause$name : "Error"}: ${causeMessage}`;
-        if (causeCode) errorDetails += ` (${causeCode})`;
-        if (cause === null || cause === void 0 ? void 0 : cause.stack) errorDetails += `
-${cause.stack}`;
-      } else {
-        var _fetchError$stack;
-        errorDetails = (_fetchError$stack = fetchError === null || fetchError === void 0 ? void 0 : fetchError.stack) !== null && _fetchError$stack !== void 0 ? _fetchError$stack : "";
-      }
-      return {
-        error: {
-          message: `${(_fetchError$name2 = fetchError === null || fetchError === void 0 ? void 0 : fetchError.name) !== null && _fetchError$name2 !== void 0 ? _fetchError$name2 : "FetchError"}: ${fetchError === null || fetchError === void 0 ? void 0 : fetchError.message}`,
-          details: errorDetails,
-          hint: "",
-          code: ""
-        },
-        data: null,
-        count: null,
-        status: 0,
-        statusText: ""
-      };
-    });
-    return res.then(onfulfilled, onrejected);
-  }
-  /**
-  * Override the type of the returned `data`.
-  *
-  * @typeParam NewResult - The new result type to override with
-  * @deprecated Use overrideTypes<yourType, { merge: false }>() method at the end of your call chain instead
-  */
-  returns() {
-    return this;
-  }
-  /**
-  * Override the type of the returned `data` field in the response.
-  *
-  * @typeParam NewResult - The new type to cast the response data to
-  * @typeParam Options - Optional type configuration (defaults to { merge: true })
-  * @typeParam Options.merge - When true, merges the new type with existing return type. When false, replaces the existing types entirely (defaults to true)
-  * @example
-  * ```typescript
-  * // Merge with existing types (default behavior)
-  * const query = supabase
-  *   .from('users')
-  *   .select()
-  *   .overrideTypes<{ custom_field: string }>()
-  *
-  * // Replace existing types completely
-  * const replaceQuery = supabase
-  *   .from('users')
-  *   .select()
-  *   .overrideTypes<{ id: number; name: string }, { merge: false }>()
-  * ```
-  * @returns A PostgrestBuilder instance with the new type
-  */
-  overrideTypes() {
-    return this;
-  }
-};
-var PostgrestTransformBuilder = class extends PostgrestBuilder {
-  /**
-  * Perform a SELECT on the query result.
-  *
-  * By default, `.insert()`, `.update()`, `.upsert()`, and `.delete()` do not
-  * return modified rows. By calling this method, modified rows are returned in
-  * `data`.
-  *
-  * @param columns - The columns to retrieve, separated by commas
-  */
-  select(columns) {
-    let quoted = false;
-    const cleanedColumns = (columns !== null && columns !== void 0 ? columns : "*").split("").map((c) => {
-      if (/\s/.test(c) && !quoted) return "";
-      if (c === '"') quoted = !quoted;
-      return c;
-    }).join("");
-    this.url.searchParams.set("select", cleanedColumns);
-    this.headers.append("Prefer", "return=representation");
-    return this;
-  }
-  /**
-  * Order the query result by `column`.
-  *
-  * You can call this method multiple times to order by multiple columns.
-  *
-  * You can order referenced tables, but it only affects the ordering of the
-  * parent table if you use `!inner` in the query.
-  *
-  * @param column - The column to order by
-  * @param options - Named parameters
-  * @param options.ascending - If `true`, the result will be in ascending order
-  * @param options.nullsFirst - If `true`, `null`s appear first. If `false`,
-  * `null`s appear last.
-  * @param options.referencedTable - Set this to order a referenced table by
-  * its columns
-  * @param options.foreignTable - Deprecated, use `options.referencedTable`
-  * instead
-  */
-  order(column, { ascending = true, nullsFirst, foreignTable, referencedTable = foreignTable } = {}) {
-    const key = referencedTable ? `${referencedTable}.order` : "order";
-    const existingOrder = this.url.searchParams.get(key);
-    this.url.searchParams.set(key, `${existingOrder ? `${existingOrder},` : ""}${column}.${ascending ? "asc" : "desc"}${nullsFirst === void 0 ? "" : nullsFirst ? ".nullsfirst" : ".nullslast"}`);
-    return this;
-  }
-  /**
-  * Limit the query result by `count`.
-  *
-  * @param count - The maximum number of rows to return
-  * @param options - Named parameters
-  * @param options.referencedTable - Set this to limit rows of referenced
-  * tables instead of the parent table
-  * @param options.foreignTable - Deprecated, use `options.referencedTable`
-  * instead
-  */
-  limit(count, { foreignTable, referencedTable = foreignTable } = {}) {
-    const key = typeof referencedTable === "undefined" ? "limit" : `${referencedTable}.limit`;
-    this.url.searchParams.set(key, `${count}`);
-    return this;
-  }
-  /**
-  * Limit the query result by starting at an offset `from` and ending at the offset `to`.
-  * Only records within this range are returned.
-  * This respects the query order and if there is no order clause the range could behave unexpectedly.
-  * The `from` and `to` values are 0-based and inclusive: `range(1, 3)` will include the second, third
-  * and fourth rows of the query.
-  *
-  * @param from - The starting index from which to limit the result
-  * @param to - The last index to which to limit the result
-  * @param options - Named parameters
-  * @param options.referencedTable - Set this to limit rows of referenced
-  * tables instead of the parent table
-  * @param options.foreignTable - Deprecated, use `options.referencedTable`
-  * instead
-  */
-  range(from, to, { foreignTable, referencedTable = foreignTable } = {}) {
-    const keyOffset = typeof referencedTable === "undefined" ? "offset" : `${referencedTable}.offset`;
-    const keyLimit = typeof referencedTable === "undefined" ? "limit" : `${referencedTable}.limit`;
-    this.url.searchParams.set(keyOffset, `${from}`);
-    this.url.searchParams.set(keyLimit, `${to - from + 1}`);
-    return this;
-  }
-  /**
-  * Set the AbortSignal for the fetch request.
-  *
-  * @param signal - The AbortSignal to use for the fetch request
-  */
-  abortSignal(signal) {
-    this.signal = signal;
-    return this;
-  }
-  /**
-  * Return `data` as a single object instead of an array of objects.
-  *
-  * Query result must be one row (e.g. using `.limit(1)`), otherwise this
-  * returns an error.
-  */
-  single() {
-    this.headers.set("Accept", "application/vnd.pgrst.object+json");
-    return this;
-  }
-  /**
-  * Return `data` as a single object instead of an array of objects.
-  *
-  * Query result must be zero or one row (e.g. using `.limit(1)`), otherwise
-  * this returns an error.
-  */
-  maybeSingle() {
-    if (this.method === "GET") this.headers.set("Accept", "application/json");
-    else this.headers.set("Accept", "application/vnd.pgrst.object+json");
-    this.isMaybeSingle = true;
-    return this;
-  }
-  /**
-  * Return `data` as a string in CSV format.
-  */
-  csv() {
-    this.headers.set("Accept", "text/csv");
-    return this;
-  }
-  /**
-  * Return `data` as an object in [GeoJSON](https://geojson.org) format.
-  */
-  geojson() {
-    this.headers.set("Accept", "application/geo+json");
-    return this;
-  }
-  /**
-  * Return `data` as the EXPLAIN plan for the query.
-  *
-  * You need to enable the
-  * [db_plan_enabled](https://supabase.com/docs/guides/database/debugging-performance#enabling-explain)
-  * setting before using this method.
-  *
-  * @param options - Named parameters
-  *
-  * @param options.analyze - If `true`, the query will be executed and the
-  * actual run time will be returned
-  *
-  * @param options.verbose - If `true`, the query identifier will be returned
-  * and `data` will include the output columns of the query
-  *
-  * @param options.settings - If `true`, include information on configuration
-  * parameters that affect query planning
-  *
-  * @param options.buffers - If `true`, include information on buffer usage
-  *
-  * @param options.wal - If `true`, include information on WAL record generation
-  *
-  * @param options.format - The format of the output, can be `"text"` (default)
-  * or `"json"`
-  */
-  explain({ analyze = false, verbose = false, settings = false, buffers = false, wal = false, format = "text" } = {}) {
-    var _this$headers$get;
-    const options = [
-      analyze ? "analyze" : null,
-      verbose ? "verbose" : null,
-      settings ? "settings" : null,
-      buffers ? "buffers" : null,
-      wal ? "wal" : null
-    ].filter(Boolean).join("|");
-    const forMediatype = (_this$headers$get = this.headers.get("Accept")) !== null && _this$headers$get !== void 0 ? _this$headers$get : "application/json";
-    this.headers.set("Accept", `application/vnd.pgrst.plan+${format}; for="${forMediatype}"; options=${options};`);
-    if (format === "json") return this;
-    else return this;
-  }
-  /**
-  * Rollback the query.
-  *
-  * `data` will still be returned, but the query is not committed.
-  */
-  rollback() {
-    this.headers.append("Prefer", "tx=rollback");
-    return this;
-  }
-  /**
-  * Override the type of the returned `data`.
-  *
-  * @typeParam NewResult - The new result type to override with
-  * @deprecated Use overrideTypes<yourType, { merge: false }>() method at the end of your call chain instead
-  */
-  returns() {
-    return this;
-  }
-  /**
-  * Set the maximum number of rows that can be affected by the query.
-  * Only available in PostgREST v13+ and only works with PATCH and DELETE methods.
-  *
-  * @param value - The maximum number of rows that can be affected
-  */
-  maxAffected(value2) {
-    this.headers.append("Prefer", "handling=strict");
-    this.headers.append("Prefer", `max-affected=${value2}`);
-    return this;
-  }
-};
-var PostgrestReservedCharsRegexp = /* @__PURE__ */ new RegExp("[,()]");
-var PostgrestFilterBuilder = class extends PostgrestTransformBuilder {
-  /**
-  * Match only rows where `column` is equal to `value`.
-  *
-  * To check if the value of `column` is NULL, you should use `.is()` instead.
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  eq(column, value2) {
-    this.url.searchParams.append(column, `eq.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` is not equal to `value`.
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  neq(column, value2) {
-    this.url.searchParams.append(column, `neq.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` is greater than `value`.
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  gt(column, value2) {
-    this.url.searchParams.append(column, `gt.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` is greater than or equal to `value`.
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  gte(column, value2) {
-    this.url.searchParams.append(column, `gte.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` is less than `value`.
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  lt(column, value2) {
-    this.url.searchParams.append(column, `lt.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` is less than or equal to `value`.
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  lte(column, value2) {
-    this.url.searchParams.append(column, `lte.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches `pattern` case-sensitively.
-  *
-  * @param column - The column to filter on
-  * @param pattern - The pattern to match with
-  */
-  like(column, pattern) {
-    this.url.searchParams.append(column, `like.${pattern}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches all of `patterns` case-sensitively.
-  *
-  * @param column - The column to filter on
-  * @param patterns - The patterns to match with
-  */
-  likeAllOf(column, patterns) {
-    this.url.searchParams.append(column, `like(all).{${patterns.join(",")}}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches any of `patterns` case-sensitively.
-  *
-  * @param column - The column to filter on
-  * @param patterns - The patterns to match with
-  */
-  likeAnyOf(column, patterns) {
-    this.url.searchParams.append(column, `like(any).{${patterns.join(",")}}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches `pattern` case-insensitively.
-  *
-  * @param column - The column to filter on
-  * @param pattern - The pattern to match with
-  */
-  ilike(column, pattern) {
-    this.url.searchParams.append(column, `ilike.${pattern}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches all of `patterns` case-insensitively.
-  *
-  * @param column - The column to filter on
-  * @param patterns - The patterns to match with
-  */
-  ilikeAllOf(column, patterns) {
-    this.url.searchParams.append(column, `ilike(all).{${patterns.join(",")}}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches any of `patterns` case-insensitively.
-  *
-  * @param column - The column to filter on
-  * @param patterns - The patterns to match with
-  */
-  ilikeAnyOf(column, patterns) {
-    this.url.searchParams.append(column, `ilike(any).{${patterns.join(",")}}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches the PostgreSQL regex `pattern`
-  * case-sensitively (using the `~` operator).
-  *
-  * @param column - The column to filter on
-  * @param pattern - The PostgreSQL regular expression pattern to match with
-  */
-  regexMatch(column, pattern) {
-    this.url.searchParams.append(column, `match.${pattern}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` matches the PostgreSQL regex `pattern`
-  * case-insensitively (using the `~*` operator).
-  *
-  * @param column - The column to filter on
-  * @param pattern - The PostgreSQL regular expression pattern to match with
-  */
-  regexIMatch(column, pattern) {
-    this.url.searchParams.append(column, `imatch.${pattern}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` IS `value`.
-  *
-  * For non-boolean columns, this is only relevant for checking if the value of
-  * `column` is NULL by setting `value` to `null`.
-  *
-  * For boolean columns, you can also set `value` to `true` or `false` and it
-  * will behave the same way as `.eq()`.
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  is(column, value2) {
-    this.url.searchParams.append(column, `is.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` IS DISTINCT FROM `value`.
-  *
-  * Unlike `.neq()`, this treats `NULL` as a comparable value. Two `NULL` values
-  * are considered equal (not distinct), and comparing `NULL` with any non-NULL
-  * value returns true (distinct).
-  *
-  * @param column - The column to filter on
-  * @param value - The value to filter with
-  */
-  isDistinct(column, value2) {
-    this.url.searchParams.append(column, `isdistinct.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` is included in the `values` array.
-  *
-  * @param column - The column to filter on
-  * @param values - The values array to filter with
-  */
-  in(column, values) {
-    const cleanedValues = Array.from(new Set(values)).map((s) => {
-      if (typeof s === "string" && PostgrestReservedCharsRegexp.test(s)) return `"${s}"`;
-      else return `${s}`;
-    }).join(",");
-    this.url.searchParams.append(column, `in.(${cleanedValues})`);
-    return this;
-  }
-  /**
-  * Match only rows where `column` is NOT included in the `values` array.
-  *
-  * @param column - The column to filter on
-  * @param values - The values array to filter with
-  */
-  notIn(column, values) {
-    const cleanedValues = Array.from(new Set(values)).map((s) => {
-      if (typeof s === "string" && PostgrestReservedCharsRegexp.test(s)) return `"${s}"`;
-      else return `${s}`;
-    }).join(",");
-    this.url.searchParams.append(column, `not.in.(${cleanedValues})`);
-    return this;
-  }
-  /**
-  * Only relevant for jsonb, array, and range columns. Match only rows where
-  * `column` contains every element appearing in `value`.
-  *
-  * @param column - The jsonb, array, or range column to filter on
-  * @param value - The jsonb, array, or range value to filter with
-  */
-  contains(column, value2) {
-    if (typeof value2 === "string") this.url.searchParams.append(column, `cs.${value2}`);
-    else if (Array.isArray(value2)) this.url.searchParams.append(column, `cs.{${value2.join(",")}}`);
-    else this.url.searchParams.append(column, `cs.${JSON.stringify(value2)}`);
-    return this;
-  }
-  /**
-  * Only relevant for jsonb, array, and range columns. Match only rows where
-  * every element appearing in `column` is contained by `value`.
-  *
-  * @param column - The jsonb, array, or range column to filter on
-  * @param value - The jsonb, array, or range value to filter with
-  */
-  containedBy(column, value2) {
-    if (typeof value2 === "string") this.url.searchParams.append(column, `cd.${value2}`);
-    else if (Array.isArray(value2)) this.url.searchParams.append(column, `cd.{${value2.join(",")}}`);
-    else this.url.searchParams.append(column, `cd.${JSON.stringify(value2)}`);
-    return this;
-  }
-  /**
-  * Only relevant for range columns. Match only rows where every element in
-  * `column` is greater than any element in `range`.
-  *
-  * @param column - The range column to filter on
-  * @param range - The range to filter with
-  */
-  rangeGt(column, range) {
-    this.url.searchParams.append(column, `sr.${range}`);
-    return this;
-  }
-  /**
-  * Only relevant for range columns. Match only rows where every element in
-  * `column` is either contained in `range` or greater than any element in
-  * `range`.
-  *
-  * @param column - The range column to filter on
-  * @param range - The range to filter with
-  */
-  rangeGte(column, range) {
-    this.url.searchParams.append(column, `nxl.${range}`);
-    return this;
-  }
-  /**
-  * Only relevant for range columns. Match only rows where every element in
-  * `column` is less than any element in `range`.
-  *
-  * @param column - The range column to filter on
-  * @param range - The range to filter with
-  */
-  rangeLt(column, range) {
-    this.url.searchParams.append(column, `sl.${range}`);
-    return this;
-  }
-  /**
-  * Only relevant for range columns. Match only rows where every element in
-  * `column` is either contained in `range` or less than any element in
-  * `range`.
-  *
-  * @param column - The range column to filter on
-  * @param range - The range to filter with
-  */
-  rangeLte(column, range) {
-    this.url.searchParams.append(column, `nxr.${range}`);
-    return this;
-  }
-  /**
-  * Only relevant for range columns. Match only rows where `column` is
-  * mutually exclusive to `range` and there can be no element between the two
-  * ranges.
-  *
-  * @param column - The range column to filter on
-  * @param range - The range to filter with
-  */
-  rangeAdjacent(column, range) {
-    this.url.searchParams.append(column, `adj.${range}`);
-    return this;
-  }
-  /**
-  * Only relevant for array and range columns. Match only rows where
-  * `column` and `value` have an element in common.
-  *
-  * @param column - The array or range column to filter on
-  * @param value - The array or range value to filter with
-  */
-  overlaps(column, value2) {
-    if (typeof value2 === "string") this.url.searchParams.append(column, `ov.${value2}`);
-    else this.url.searchParams.append(column, `ov.{${value2.join(",")}}`);
-    return this;
-  }
-  /**
-  * Only relevant for text and tsvector columns. Match only rows where
-  * `column` matches the query string in `query`.
-  *
-  * @param column - The text or tsvector column to filter on
-  * @param query - The query text to match with
-  * @param options - Named parameters
-  * @param options.config - The text search configuration to use
-  * @param options.type - Change how the `query` text is interpreted
-  */
-  textSearch(column, query, { config, type } = {}) {
-    let typePart = "";
-    if (type === "plain") typePart = "pl";
-    else if (type === "phrase") typePart = "ph";
-    else if (type === "websearch") typePart = "w";
-    const configPart = config === void 0 ? "" : `(${config})`;
-    this.url.searchParams.append(column, `${typePart}fts${configPart}.${query}`);
-    return this;
-  }
-  /**
-  * Match only rows where each column in `query` keys is equal to its
-  * associated value. Shorthand for multiple `.eq()`s.
-  *
-  * @param query - The object to filter with, with column names as keys mapped
-  * to their filter values
-  */
-  match(query) {
-    Object.entries(query).forEach(([column, value2]) => {
-      this.url.searchParams.append(column, `eq.${value2}`);
-    });
-    return this;
-  }
-  /**
-  * Match only rows which doesn't satisfy the filter.
-  *
-  * Unlike most filters, `opearator` and `value` are used as-is and need to
-  * follow [PostgREST
-  * syntax](https://postgrest.org/en/stable/api.html#operators). You also need
-  * to make sure they are properly sanitized.
-  *
-  * @param column - The column to filter on
-  * @param operator - The operator to be negated to filter with, following
-  * PostgREST syntax
-  * @param value - The value to filter with, following PostgREST syntax
-  */
-  not(column, operator, value2) {
-    this.url.searchParams.append(column, `not.${operator}.${value2}`);
-    return this;
-  }
-  /**
-  * Match only rows which satisfy at least one of the filters.
-  *
-  * Unlike most filters, `filters` is used as-is and needs to follow [PostgREST
-  * syntax](https://postgrest.org/en/stable/api.html#operators). You also need
-  * to make sure it's properly sanitized.
-  *
-  * It's currently not possible to do an `.or()` filter across multiple tables.
-  *
-  * @param filters - The filters to use, following PostgREST syntax
-  * @param options - Named parameters
-  * @param options.referencedTable - Set this to filter on referenced tables
-  * instead of the parent table
-  * @param options.foreignTable - Deprecated, use `referencedTable` instead
-  */
-  or(filters, { foreignTable, referencedTable = foreignTable } = {}) {
-    const key = referencedTable ? `${referencedTable}.or` : "or";
-    this.url.searchParams.append(key, `(${filters})`);
-    return this;
-  }
-  /**
-  * Match only rows which satisfy the filter. This is an escape hatch - you
-  * should use the specific filter methods wherever possible.
-  *
-  * Unlike most filters, `opearator` and `value` are used as-is and need to
-  * follow [PostgREST
-  * syntax](https://postgrest.org/en/stable/api.html#operators). You also need
-  * to make sure they are properly sanitized.
-  *
-  * @param column - The column to filter on
-  * @param operator - The operator to filter with, following PostgREST syntax
-  * @param value - The value to filter with, following PostgREST syntax
-  */
-  filter(column, operator, value2) {
-    this.url.searchParams.append(column, `${operator}.${value2}`);
-    return this;
-  }
-};
-var PostgrestQueryBuilder = class {
-  /**
-  * Creates a query builder scoped to a Postgres table or view.
-  *
-  * @example
-  * ```ts
-  * import PostgrestQueryBuilder from '@supabase/postgrest-js'
-  *
-  * const query = new PostgrestQueryBuilder(
-  *   new URL('https://xyzcompany.supabase.co/rest/v1/users'),
-  *   { headers: { apikey: 'public-anon-key' } }
-  * )
-  * ```
-  */
-  constructor(url, { headers = {}, schema, fetch: fetch$1 }) {
-    this.url = url;
-    this.headers = new Headers(headers);
-    this.schema = schema;
-    this.fetch = fetch$1;
-  }
-  /**
-  * Clone URL and headers to prevent shared state between operations.
-  */
-  cloneRequestState() {
-    return {
-      url: new URL(this.url.toString()),
-      headers: new Headers(this.headers)
-    };
-  }
-  /**
-  * Perform a SELECT query on the table or view.
-  *
-  * @param columns - The columns to retrieve, separated by commas. Columns can be renamed when returned with `customName:columnName`
-  *
-  * @param options - Named parameters
-  *
-  * @param options.head - When set to `true`, `data` will not be returned.
-  * Useful if you only need the count.
-  *
-  * @param options.count - Count algorithm to use to count rows in the table or view.
-  *
-  * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
-  * hood.
-  *
-  * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
-  * statistics under the hood.
-  *
-  * `"estimated"`: Uses exact count for low numbers and planned count for high
-  * numbers.
-  *
-  * @remarks
-  * When using `count` with `.range()` or `.limit()`, the returned `count` is the total number of rows
-  * that match your filters, not the number of rows in the current page. Use this to build pagination UI.
-  */
-  select(columns, options) {
-    const { head: head2 = false, count } = options !== null && options !== void 0 ? options : {};
-    const method = head2 ? "HEAD" : "GET";
-    let quoted = false;
-    const cleanedColumns = (columns !== null && columns !== void 0 ? columns : "*").split("").map((c) => {
-      if (/\s/.test(c) && !quoted) return "";
-      if (c === '"') quoted = !quoted;
-      return c;
-    }).join("");
-    const { url, headers } = this.cloneRequestState();
-    url.searchParams.set("select", cleanedColumns);
-    if (count) headers.append("Prefer", `count=${count}`);
-    return new PostgrestFilterBuilder({
-      method,
-      url,
-      headers,
-      schema: this.schema,
-      fetch: this.fetch
-    });
-  }
-  /**
-  * Perform an INSERT into the table or view.
-  *
-  * By default, inserted rows are not returned. To return it, chain the call
-  * with `.select()`.
-  *
-  * @param values - The values to insert. Pass an object to insert a single row
-  * or an array to insert multiple rows.
-  *
-  * @param options - Named parameters
-  *
-  * @param options.count - Count algorithm to use to count inserted rows.
-  *
-  * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
-  * hood.
-  *
-  * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
-  * statistics under the hood.
-  *
-  * `"estimated"`: Uses exact count for low numbers and planned count for high
-  * numbers.
-  *
-  * @param options.defaultToNull - Make missing fields default to `null`.
-  * Otherwise, use the default value for the column. Only applies for bulk
-  * inserts.
-  */
-  insert(values, { count, defaultToNull = true } = {}) {
-    var _this$fetch;
-    const method = "POST";
-    const { url, headers } = this.cloneRequestState();
-    if (count) headers.append("Prefer", `count=${count}`);
-    if (!defaultToNull) headers.append("Prefer", `missing=default`);
-    if (Array.isArray(values)) {
-      const columns = values.reduce((acc, x) => acc.concat(Object.keys(x)), []);
-      if (columns.length > 0) {
-        const uniqueColumns = [...new Set(columns)].map((column) => `"${column}"`);
-        url.searchParams.set("columns", uniqueColumns.join(","));
-      }
-    }
-    return new PostgrestFilterBuilder({
-      method,
-      url,
-      headers,
-      schema: this.schema,
-      body: values,
-      fetch: (_this$fetch = this.fetch) !== null && _this$fetch !== void 0 ? _this$fetch : fetch
-    });
-  }
-  /**
-  * Perform an UPSERT on the table or view. Depending on the column(s) passed
-  * to `onConflict`, `.upsert()` allows you to perform the equivalent of
-  * `.insert()` if a row with the corresponding `onConflict` columns doesn't
-  * exist, or if it does exist, perform an alternative action depending on
-  * `ignoreDuplicates`.
-  *
-  * By default, upserted rows are not returned. To return it, chain the call
-  * with `.select()`.
-  *
-  * @param values - The values to upsert with. Pass an object to upsert a
-  * single row or an array to upsert multiple rows.
-  *
-  * @param options - Named parameters
-  *
-  * @param options.onConflict - Comma-separated UNIQUE column(s) to specify how
-  * duplicate rows are determined. Two rows are duplicates if all the
-  * `onConflict` columns are equal.
-  *
-  * @param options.ignoreDuplicates - If `true`, duplicate rows are ignored. If
-  * `false`, duplicate rows are merged with existing rows.
-  *
-  * @param options.count - Count algorithm to use to count upserted rows.
-  *
-  * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
-  * hood.
-  *
-  * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
-  * statistics under the hood.
-  *
-  * `"estimated"`: Uses exact count for low numbers and planned count for high
-  * numbers.
-  *
-  * @param options.defaultToNull - Make missing fields default to `null`.
-  * Otherwise, use the default value for the column. This only applies when
-  * inserting new rows, not when merging with existing rows under
-  * `ignoreDuplicates: false`. This also only applies when doing bulk upserts.
-  *
-  * @example Upsert a single row using a unique key
-  * ```ts
-  * // Upserting a single row, overwriting based on the 'username' unique column
-  * const { data, error } = await supabase
-  *   .from('users')
-  *   .upsert({ username: 'supabot' }, { onConflict: 'username' })
-  *
-  * // Example response:
-  * // {
-  * //   data: [
-  * //     { id: 4, message: 'bar', username: 'supabot' }
-  * //   ],
-  * //   error: null
-  * // }
-  * ```
-  *
-  * @example Upsert with conflict resolution and exact row counting
-  * ```ts
-  * // Upserting and returning exact count
-  * const { data, error, count } = await supabase
-  *   .from('users')
-  *   .upsert(
-  *     {
-  *       id: 3,
-  *       message: 'foo',
-  *       username: 'supabot'
-  *     },
-  *     {
-  *       onConflict: 'username',
-  *       count: 'exact'
-  *     }
-  *   )
-  *
-  * // Example response:
-  * // {
-  * //   data: [
-  * //     {
-  * //       id: 42,
-  * //       handle: "saoirse",
-  * //       display_name: "Saoirse"
-  * //     }
-  * //   ],
-  * //   count: 1,
-  * //   error: null
-  * // }
-  * ```
-  */
-  upsert(values, { onConflict, ignoreDuplicates = false, count, defaultToNull = true } = {}) {
-    var _this$fetch2;
-    const method = "POST";
-    const { url, headers } = this.cloneRequestState();
-    headers.append("Prefer", `resolution=${ignoreDuplicates ? "ignore" : "merge"}-duplicates`);
-    if (onConflict !== void 0) url.searchParams.set("on_conflict", onConflict);
-    if (count) headers.append("Prefer", `count=${count}`);
-    if (!defaultToNull) headers.append("Prefer", "missing=default");
-    if (Array.isArray(values)) {
-      const columns = values.reduce((acc, x) => acc.concat(Object.keys(x)), []);
-      if (columns.length > 0) {
-        const uniqueColumns = [...new Set(columns)].map((column) => `"${column}"`);
-        url.searchParams.set("columns", uniqueColumns.join(","));
-      }
-    }
-    return new PostgrestFilterBuilder({
-      method,
-      url,
-      headers,
-      schema: this.schema,
-      body: values,
-      fetch: (_this$fetch2 = this.fetch) !== null && _this$fetch2 !== void 0 ? _this$fetch2 : fetch
-    });
-  }
-  /**
-  * Perform an UPDATE on the table or view.
-  *
-  * By default, updated rows are not returned. To return it, chain the call
-  * with `.select()` after filters.
-  *
-  * @param values - The values to update with
-  *
-  * @param options - Named parameters
-  *
-  * @param options.count - Count algorithm to use to count updated rows.
-  *
-  * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
-  * hood.
-  *
-  * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
-  * statistics under the hood.
-  *
-  * `"estimated"`: Uses exact count for low numbers and planned count for high
-  * numbers.
-  */
-  update(values, { count } = {}) {
-    var _this$fetch3;
-    const method = "PATCH";
-    const { url, headers } = this.cloneRequestState();
-    if (count) headers.append("Prefer", `count=${count}`);
-    return new PostgrestFilterBuilder({
-      method,
-      url,
-      headers,
-      schema: this.schema,
-      body: values,
-      fetch: (_this$fetch3 = this.fetch) !== null && _this$fetch3 !== void 0 ? _this$fetch3 : fetch
-    });
-  }
-  /**
-  * Perform a DELETE on the table or view.
-  *
-  * By default, deleted rows are not returned. To return it, chain the call
-  * with `.select()` after filters.
-  *
-  * @param options - Named parameters
-  *
-  * @param options.count - Count algorithm to use to count deleted rows.
-  *
-  * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
-  * hood.
-  *
-  * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
-  * statistics under the hood.
-  *
-  * `"estimated"`: Uses exact count for low numbers and planned count for high
-  * numbers.
-  */
-  delete({ count } = {}) {
-    var _this$fetch4;
-    const method = "DELETE";
-    const { url, headers } = this.cloneRequestState();
-    if (count) headers.append("Prefer", `count=${count}`);
-    return new PostgrestFilterBuilder({
-      method,
-      url,
-      headers,
-      schema: this.schema,
-      fetch: (_this$fetch4 = this.fetch) !== null && _this$fetch4 !== void 0 ? _this$fetch4 : fetch
-    });
-  }
-};
-var PostgrestClient = class PostgrestClient2 {
-  /**
-  * Creates a PostgREST client.
-  *
-  * @param url - URL of the PostgREST endpoint
-  * @param options - Named parameters
-  * @param options.headers - Custom headers
-  * @param options.schema - Postgres schema to switch to
-  * @param options.fetch - Custom fetch
-  * @example
-  * ```ts
-  * import PostgrestClient from '@supabase/postgrest-js'
-  *
-  * const postgrest = new PostgrestClient('https://xyzcompany.supabase.co/rest/v1', {
-  *   headers: { apikey: 'public-anon-key' },
-  *   schema: 'public',
-  * })
-  * ```
-  */
-  constructor(url, { headers = {}, schema, fetch: fetch$1 } = {}) {
-    this.url = url;
-    this.headers = new Headers(headers);
-    this.schemaName = schema;
-    this.fetch = fetch$1;
-  }
-  /**
-  * Perform a query on a table or a view.
-  *
-  * @param relation - The table or view name to query
-  */
-  from(relation) {
-    if (!relation || typeof relation !== "string" || relation.trim() === "") throw new Error("Invalid relation name: relation must be a non-empty string.");
-    return new PostgrestQueryBuilder(new URL(`${this.url}/${relation}`), {
-      headers: new Headers(this.headers),
-      schema: this.schemaName,
-      fetch: this.fetch
-    });
-  }
-  /**
-  * Select a schema to query or perform an function (rpc) call.
-  *
-  * The schema needs to be on the list of exposed schemas inside Supabase.
-  *
-  * @param schema - The schema to query
-  */
-  schema(schema) {
-    return new PostgrestClient2(this.url, {
-      headers: this.headers,
-      schema,
-      fetch: this.fetch
-    });
-  }
-  /**
-  * Perform a function call.
-  *
-  * @param fn - The function name to call
-  * @param args - The arguments to pass to the function call
-  * @param options - Named parameters
-  * @param options.head - When set to `true`, `data` will not be returned.
-  * Useful if you only need the count.
-  * @param options.get - When set to `true`, the function will be called with
-  * read-only access mode.
-  * @param options.count - Count algorithm to use to count rows returned by the
-  * function. Only applicable for [set-returning
-  * functions](https://www.postgresql.org/docs/current/functions-srf.html).
-  *
-  * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
-  * hood.
-  *
-  * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
-  * statistics under the hood.
-  *
-  * `"estimated"`: Uses exact count for low numbers and planned count for high
-  * numbers.
-  *
-  * @example
-  * ```ts
-  * // For cross-schema functions where type inference fails, use overrideTypes:
-  * const { data } = await supabase
-  *   .schema('schema_b')
-  *   .rpc('function_a', {})
-  *   .overrideTypes<{ id: string; user_id: string }[]>()
-  * ```
-  */
-  rpc(fn2, args = {}, { head: head2 = false, get: get2 = false, count } = {}) {
-    var _this$fetch;
-    let method;
-    const url = new URL(`${this.url}/rpc/${fn2}`);
-    let body;
-    const _isObject = (v) => v !== null && typeof v === "object" && (!Array.isArray(v) || v.some(_isObject));
-    const _hasObjectArg = head2 && Object.values(args).some(_isObject);
-    if (_hasObjectArg) {
-      method = "POST";
-      body = args;
-    } else if (head2 || get2) {
-      method = head2 ? "HEAD" : "GET";
-      Object.entries(args).filter(([_, value2]) => value2 !== void 0).map(([name, value2]) => [name, Array.isArray(value2) ? `{${value2.join(",")}}` : `${value2}`]).forEach(([name, value2]) => {
-        url.searchParams.append(name, value2);
-      });
-    } else {
-      method = "POST";
-      body = args;
-    }
-    const headers = new Headers(this.headers);
-    if (_hasObjectArg) headers.set("Prefer", count ? `count=${count},return=minimal` : "return=minimal");
-    else if (count) headers.set("Prefer", `count=${count}`);
-    return new PostgrestFilterBuilder({
-      method,
-      url,
-      headers,
-      schema: this.schemaName,
-      body,
-      fetch: (_this$fetch = this.fetch) !== null && _this$fetch !== void 0 ? _this$fetch : fetch
-    });
-  }
-};
-
-// node_modules/@supabase/supabase-js/dist/index.mjs
-var import_realtime_js = __toESM(require_main2(), 1);
-
-// node_modules/iceberg-js/dist/index.mjs
-var IcebergError = class extends Error {
-  constructor(message, opts) {
-    super(message);
-    this.name = "IcebergError";
-    this.status = opts.status;
-    this.icebergType = opts.icebergType;
-    this.icebergCode = opts.icebergCode;
-    this.details = opts.details;
-    this.isCommitStateUnknown = opts.icebergType === "CommitStateUnknownException" || [500, 502, 504].includes(opts.status) && opts.icebergType?.includes("CommitState") === true;
-  }
-  /**
-   * Returns true if the error is a 404 Not Found error.
-   */
-  isNotFound() {
-    return this.status === 404;
-  }
-  /**
-   * Returns true if the error is a 409 Conflict error.
-   */
-  isConflict() {
-    return this.status === 409;
-  }
-  /**
-   * Returns true if the error is a 419 Authentication Timeout error.
-   */
-  isAuthenticationTimeout() {
-    return this.status === 419;
-  }
-};
-function buildUrl(baseUrl, path, query) {
-  const url = new URL(path, baseUrl);
-  if (query) {
-    for (const [key, value2] of Object.entries(query)) {
-      if (value2 !== void 0) {
-        url.searchParams.set(key, value2);
-      }
-    }
-  }
-  return url.toString();
-}
-async function buildAuthHeaders(auth) {
-  if (!auth || auth.type === "none") {
-    return {};
-  }
-  if (auth.type === "bearer") {
-    return { Authorization: `Bearer ${auth.token}` };
-  }
-  if (auth.type === "header") {
-    return { [auth.name]: auth.value };
-  }
-  if (auth.type === "custom") {
-    return await auth.getHeaders();
-  }
-  return {};
-}
-function createFetchClient(options) {
-  const fetchFn = options.fetchImpl ?? globalThis.fetch;
-  return {
-    async request({
-      method,
-      path,
-      query,
-      body,
-      headers
-    }) {
-      const url = buildUrl(options.baseUrl, path, query);
-      const authHeaders = await buildAuthHeaders(options.auth);
-      const res = await fetchFn(url, {
-        method,
-        headers: {
-          ...body ? { "Content-Type": "application/json" } : {},
-          ...authHeaders,
-          ...headers
-        },
-        body: body ? JSON.stringify(body) : void 0
-      });
-      const text = await res.text();
-      const isJson = (res.headers.get("content-type") || "").includes("application/json");
-      const data = isJson && text ? JSON.parse(text) : text;
-      if (!res.ok) {
-        const errBody = isJson ? data : void 0;
-        const errorDetail = errBody?.error;
-        throw new IcebergError(
-          errorDetail?.message ?? `Request failed with status ${res.status}`,
-          {
-            status: res.status,
-            icebergType: errorDetail?.type,
-            icebergCode: errorDetail?.code,
-            details: errBody
-          }
-        );
-      }
-      return { status: res.status, headers: res.headers, data };
-    }
-  };
-}
-function namespaceToPath(namespace) {
-  return namespace.join("");
-}
-var NamespaceOperations = class {
-  constructor(client, prefix = "") {
-    this.client = client;
-    this.prefix = prefix;
-  }
-  async listNamespaces(parent) {
-    const query = parent ? { parent: namespaceToPath(parent.namespace) } : void 0;
-    const response = await this.client.request({
-      method: "GET",
-      path: `${this.prefix}/namespaces`,
-      query
-    });
-    return response.data.namespaces.map((ns) => ({ namespace: ns }));
-  }
-  async createNamespace(id, metadata) {
-    const request = {
-      namespace: id.namespace,
-      properties: metadata?.properties
-    };
-    const response = await this.client.request({
-      method: "POST",
-      path: `${this.prefix}/namespaces`,
-      body: request
-    });
-    return response.data;
-  }
-  async dropNamespace(id) {
-    await this.client.request({
-      method: "DELETE",
-      path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
-    });
-  }
-  async loadNamespaceMetadata(id) {
-    const response = await this.client.request({
-      method: "GET",
-      path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
-    });
-    return {
-      properties: response.data.properties
-    };
-  }
-  async namespaceExists(id) {
-    try {
-      await this.client.request({
-        method: "HEAD",
-        path: `${this.prefix}/namespaces/${namespaceToPath(id.namespace)}`
-      });
-      return true;
-    } catch (error) {
-      if (error instanceof IcebergError && error.status === 404) {
-        return false;
-      }
-      throw error;
-    }
-  }
-  async createNamespaceIfNotExists(id, metadata) {
-    try {
-      return await this.createNamespace(id, metadata);
-    } catch (error) {
-      if (error instanceof IcebergError && error.status === 409) {
-        return;
-      }
-      throw error;
-    }
-  }
-};
-function namespaceToPath2(namespace) {
-  return namespace.join("");
-}
-var TableOperations = class {
-  constructor(client, prefix = "", accessDelegation) {
-    this.client = client;
-    this.prefix = prefix;
-    this.accessDelegation = accessDelegation;
-  }
-  async listTables(namespace) {
-    const response = await this.client.request({
-      method: "GET",
-      path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`
-    });
-    return response.data.identifiers;
-  }
-  async createTable(namespace, request) {
-    const headers = {};
-    if (this.accessDelegation) {
-      headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
-    }
-    const response = await this.client.request({
-      method: "POST",
-      path: `${this.prefix}/namespaces/${namespaceToPath2(namespace.namespace)}/tables`,
-      body: request,
-      headers
-    });
-    return response.data.metadata;
-  }
-  async updateTable(id, request) {
-    const response = await this.client.request({
-      method: "POST",
-      path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-      body: request
-    });
-    return {
-      "metadata-location": response.data["metadata-location"],
-      metadata: response.data.metadata
-    };
-  }
-  async dropTable(id, options) {
-    await this.client.request({
-      method: "DELETE",
-      path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-      query: { purgeRequested: String(options?.purge ?? false) }
-    });
-  }
-  async loadTable(id) {
-    const headers = {};
-    if (this.accessDelegation) {
-      headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
-    }
-    const response = await this.client.request({
-      method: "GET",
-      path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-      headers
-    });
-    return response.data.metadata;
-  }
-  async tableExists(id) {
-    const headers = {};
-    if (this.accessDelegation) {
-      headers["X-Iceberg-Access-Delegation"] = this.accessDelegation;
-    }
-    try {
-      await this.client.request({
-        method: "HEAD",
-        path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-        headers
-      });
-      return true;
-    } catch (error) {
-      if (error instanceof IcebergError && error.status === 404) {
-        return false;
-      }
-      throw error;
-    }
-  }
-  async createTableIfNotExists(namespace, request) {
-    try {
-      return await this.createTable(namespace, request);
-    } catch (error) {
-      if (error instanceof IcebergError && error.status === 409) {
-        return await this.loadTable({ namespace: namespace.namespace, name: request.name });
-      }
-      throw error;
-    }
-  }
-};
-var IcebergRestCatalog = class {
-  /**
-   * Creates a new Iceberg REST Catalog client.
-   *
-   * @param options - Configuration options for the catalog client
-   */
-  constructor(options) {
-    let prefix = "v1";
-    if (options.catalogName) {
-      prefix += `/${options.catalogName}`;
-    }
-    const baseUrl = options.baseUrl.endsWith("/") ? options.baseUrl : `${options.baseUrl}/`;
-    this.client = createFetchClient({
-      baseUrl,
-      auth: options.auth,
-      fetchImpl: options.fetch
-    });
-    this.accessDelegation = options.accessDelegation?.join(",");
-    this.namespaceOps = new NamespaceOperations(this.client, prefix);
-    this.tableOps = new TableOperations(this.client, prefix, this.accessDelegation);
-  }
-  /**
-   * Lists all namespaces in the catalog.
-   *
-   * @param parent - Optional parent namespace to list children under
-   * @returns Array of namespace identifiers
-   *
-   * @example
-   * ```typescript
-   * // List all top-level namespaces
-   * const namespaces = await catalog.listNamespaces();
-   *
-   * // List namespaces under a parent
-   * const children = await catalog.listNamespaces({ namespace: ['analytics'] });
-   * ```
-   */
-  async listNamespaces(parent) {
-    return this.namespaceOps.listNamespaces(parent);
-  }
-  /**
-   * Creates a new namespace in the catalog.
-   *
-   * @param id - Namespace identifier to create
-   * @param metadata - Optional metadata properties for the namespace
-   * @returns Response containing the created namespace and its properties
-   *
-   * @example
-   * ```typescript
-   * const response = await catalog.createNamespace(
-   *   { namespace: ['analytics'] },
-   *   { properties: { owner: 'data-team' } }
-   * );
-   * console.log(response.namespace); // ['analytics']
-   * console.log(response.properties); // { owner: 'data-team', ... }
-   * ```
-   */
-  async createNamespace(id, metadata) {
-    return this.namespaceOps.createNamespace(id, metadata);
-  }
-  /**
-   * Drops a namespace from the catalog.
-   *
-   * The namespace must be empty (contain no tables) before it can be dropped.
-   *
-   * @param id - Namespace identifier to drop
-   *
-   * @example
-   * ```typescript
-   * await catalog.dropNamespace({ namespace: ['analytics'] });
-   * ```
-   */
-  async dropNamespace(id) {
-    await this.namespaceOps.dropNamespace(id);
-  }
-  /**
-   * Loads metadata for a namespace.
-   *
-   * @param id - Namespace identifier to load
-   * @returns Namespace metadata including properties
-   *
-   * @example
-   * ```typescript
-   * const metadata = await catalog.loadNamespaceMetadata({ namespace: ['analytics'] });
-   * console.log(metadata.properties);
-   * ```
-   */
-  async loadNamespaceMetadata(id) {
-    return this.namespaceOps.loadNamespaceMetadata(id);
-  }
-  /**
-   * Lists all tables in a namespace.
-   *
-   * @param namespace - Namespace identifier to list tables from
-   * @returns Array of table identifiers
-   *
-   * @example
-   * ```typescript
-   * const tables = await catalog.listTables({ namespace: ['analytics'] });
-   * console.log(tables); // [{ namespace: ['analytics'], name: 'events' }, ...]
-   * ```
-   */
-  async listTables(namespace) {
-    return this.tableOps.listTables(namespace);
-  }
-  /**
-   * Creates a new table in the catalog.
-   *
-   * @param namespace - Namespace to create the table in
-   * @param request - Table creation request including name, schema, partition spec, etc.
-   * @returns Table metadata for the created table
-   *
-   * @example
-   * ```typescript
-   * const metadata = await catalog.createTable(
-   *   { namespace: ['analytics'] },
-   *   {
-   *     name: 'events',
-   *     schema: {
-   *       type: 'struct',
-   *       fields: [
-   *         { id: 1, name: 'id', type: 'long', required: true },
-   *         { id: 2, name: 'timestamp', type: 'timestamp', required: true }
-   *       ],
-   *       'schema-id': 0
-   *     },
-   *     'partition-spec': {
-   *       'spec-id': 0,
-   *       fields: [
-   *         { source_id: 2, field_id: 1000, name: 'ts_day', transform: 'day' }
-   *       ]
-   *     }
-   *   }
-   * );
-   * ```
-   */
-  async createTable(namespace, request) {
-    return this.tableOps.createTable(namespace, request);
-  }
-  /**
-   * Updates an existing table's metadata.
-   *
-   * Can update the schema, partition spec, or properties of a table.
-   *
-   * @param id - Table identifier to update
-   * @param request - Update request with fields to modify
-   * @returns Response containing the metadata location and updated table metadata
-   *
-   * @example
-   * ```typescript
-   * const response = await catalog.updateTable(
-   *   { namespace: ['analytics'], name: 'events' },
-   *   {
-   *     properties: { 'read.split.target-size': '134217728' }
-   *   }
-   * );
-   * console.log(response['metadata-location']); // s3://...
-   * console.log(response.metadata); // TableMetadata object
-   * ```
-   */
-  async updateTable(id, request) {
-    return this.tableOps.updateTable(id, request);
-  }
-  /**
-   * Drops a table from the catalog.
-   *
-   * @param id - Table identifier to drop
-   *
-   * @example
-   * ```typescript
-   * await catalog.dropTable({ namespace: ['analytics'], name: 'events' });
-   * ```
-   */
-  async dropTable(id, options) {
-    await this.tableOps.dropTable(id, options);
-  }
-  /**
-   * Loads metadata for a table.
-   *
-   * @param id - Table identifier to load
-   * @returns Table metadata including schema, partition spec, location, etc.
-   *
-   * @example
-   * ```typescript
-   * const metadata = await catalog.loadTable({ namespace: ['analytics'], name: 'events' });
-   * console.log(metadata.schema);
-   * console.log(metadata.location);
-   * ```
-   */
-  async loadTable(id) {
-    return this.tableOps.loadTable(id);
-  }
-  /**
-   * Checks if a namespace exists in the catalog.
-   *
-   * @param id - Namespace identifier to check
-   * @returns True if the namespace exists, false otherwise
-   *
-   * @example
-   * ```typescript
-   * const exists = await catalog.namespaceExists({ namespace: ['analytics'] });
-   * console.log(exists); // true or false
-   * ```
-   */
-  async namespaceExists(id) {
-    return this.namespaceOps.namespaceExists(id);
-  }
-  /**
-   * Checks if a table exists in the catalog.
-   *
-   * @param id - Table identifier to check
-   * @returns True if the table exists, false otherwise
-   *
-   * @example
-   * ```typescript
-   * const exists = await catalog.tableExists({ namespace: ['analytics'], name: 'events' });
-   * console.log(exists); // true or false
-   * ```
-   */
-  async tableExists(id) {
-    return this.tableOps.tableExists(id);
-  }
-  /**
-   * Creates a namespace if it does not exist.
-   *
-   * If the namespace already exists, returns void. If created, returns the response.
-   *
-   * @param id - Namespace identifier to create
-   * @param metadata - Optional metadata properties for the namespace
-   * @returns Response containing the created namespace and its properties, or void if it already exists
-   *
-   * @example
-   * ```typescript
-   * const response = await catalog.createNamespaceIfNotExists(
-   *   { namespace: ['analytics'] },
-   *   { properties: { owner: 'data-team' } }
-   * );
-   * if (response) {
-   *   console.log('Created:', response.namespace);
-   * } else {
-   *   console.log('Already exists');
-   * }
-   * ```
-   */
-  async createNamespaceIfNotExists(id, metadata) {
-    return this.namespaceOps.createNamespaceIfNotExists(id, metadata);
-  }
-  /**
-   * Creates a table if it does not exist.
-   *
-   * If the table already exists, returns its metadata instead.
-   *
-   * @param namespace - Namespace to create the table in
-   * @param request - Table creation request including name, schema, partition spec, etc.
-   * @returns Table metadata for the created or existing table
-   *
-   * @example
-   * ```typescript
-   * const metadata = await catalog.createTableIfNotExists(
-   *   { namespace: ['analytics'] },
-   *   {
-   *     name: 'events',
-   *     schema: {
-   *       type: 'struct',
-   *       fields: [
-   *         { id: 1, name: 'id', type: 'long', required: true },
-   *         { id: 2, name: 'timestamp', type: 'timestamp', required: true }
-   *       ],
-   *       'schema-id': 0
-   *     }
-   *   }
-   * );
-   * ```
-   */
-  async createTableIfNotExists(namespace, request) {
-    return this.tableOps.createTableIfNotExists(namespace, request);
-  }
-};
-
-// node_modules/@supabase/storage-js/dist/index.mjs
-var StorageError = class extends Error {
-  constructor(message, namespace = "storage", status, statusCode) {
-    super(message);
-    this.__isStorageError = true;
-    this.namespace = namespace;
-    this.name = namespace === "vectors" ? "StorageVectorsError" : "StorageError";
-    this.status = status;
-    this.statusCode = statusCode;
-  }
-};
-function isStorageError(error) {
-  return typeof error === "object" && error !== null && "__isStorageError" in error;
-}
-var StorageApiError = class extends StorageError {
-  constructor(message, status, statusCode, namespace = "storage") {
-    super(message, namespace, status, statusCode);
-    this.name = namespace === "vectors" ? "StorageVectorsApiError" : "StorageApiError";
-    this.status = status;
-    this.statusCode = statusCode;
-  }
-  toJSON() {
-    return {
-      name: this.name,
-      message: this.message,
-      status: this.status,
-      statusCode: this.statusCode
-    };
-  }
-};
-var StorageUnknownError = class extends StorageError {
-  constructor(message, originalError, namespace = "storage") {
-    super(message, namespace);
-    this.name = namespace === "vectors" ? "StorageVectorsUnknownError" : "StorageUnknownError";
-    this.originalError = originalError;
-  }
-};
-var resolveFetch = (customFetch) => {
-  if (customFetch) return (...args) => customFetch(...args);
-  return (...args) => fetch(...args);
-};
-var isPlainObject = (value2) => {
-  if (typeof value2 !== "object" || value2 === null) return false;
-  const prototype = Object.getPrototypeOf(value2);
-  return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(Symbol.toStringTag in value2) && !(Symbol.iterator in value2);
-};
-var recursiveToCamel = (item) => {
-  if (Array.isArray(item)) return item.map((el) => recursiveToCamel(el));
-  else if (typeof item === "function" || item !== Object(item)) return item;
-  const result = {};
-  Object.entries(item).forEach(([key, value2]) => {
-    const newKey = key.replace(/([-_][a-z])/gi, (c) => c.toUpperCase().replace(/[-_]/g, ""));
-    result[newKey] = recursiveToCamel(value2);
-  });
-  return result;
-};
-var isValidBucketName = (bucketName) => {
-  if (!bucketName || typeof bucketName !== "string") return false;
-  if (bucketName.length === 0 || bucketName.length > 100) return false;
-  if (bucketName.trim() !== bucketName) return false;
-  if (bucketName.includes("/") || bucketName.includes("\\")) return false;
-  return /^[\w!.\*'() &$@=;:+,?-]+$/.test(bucketName);
-};
-function _typeof(o) {
-  "@babel/helpers - typeof";
-  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
-    return typeof o$1;
-  } : function(o$1) {
-    return o$1 && "function" == typeof Symbol && o$1.constructor === Symbol && o$1 !== Symbol.prototype ? "symbol" : typeof o$1;
-  }, _typeof(o);
-}
-function toPrimitive(t, r) {
-  if ("object" != _typeof(t) || !t) return t;
-  var e = t[Symbol.toPrimitive];
-  if (void 0 !== e) {
-    var i = e.call(t, r || "default");
-    if ("object" != _typeof(i)) return i;
-    throw new TypeError("@@toPrimitive must return a primitive value.");
-  }
-  return ("string" === r ? String : Number)(t);
-}
-function toPropertyKey(t) {
-  var i = toPrimitive(t, "string");
-  return "symbol" == _typeof(i) ? i : i + "";
-}
-function _defineProperty(e, r, t) {
-  return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
-    value: t,
-    enumerable: true,
-    configurable: true,
-    writable: true
-  }) : e[r] = t, e;
-}
-function ownKeys2(e, r) {
-  var t = Object.keys(e);
-  if (Object.getOwnPropertySymbols) {
-    var o = Object.getOwnPropertySymbols(e);
-    r && (o = o.filter(function(r$1) {
-      return Object.getOwnPropertyDescriptor(e, r$1).enumerable;
-    })), t.push.apply(t, o);
-  }
-  return t;
-}
-function _objectSpread2(e) {
-  for (var r = 1; r < arguments.length; r++) {
-    var t = null != arguments[r] ? arguments[r] : {};
-    r % 2 ? ownKeys2(Object(t), true).forEach(function(r$1) {
-      _defineProperty(e, r$1, t[r$1]);
-    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys2(Object(t)).forEach(function(r$1) {
-      Object.defineProperty(e, r$1, Object.getOwnPropertyDescriptor(t, r$1));
-    });
-  }
-  return e;
-}
-var _getErrorMessage = (err) => {
-  var _err$error;
-  return err.msg || err.message || err.error_description || (typeof err.error === "string" ? err.error : (_err$error = err.error) === null || _err$error === void 0 ? void 0 : _err$error.message) || JSON.stringify(err);
-};
-var handleError = async (error, reject, options, namespace) => {
-  if (error && typeof error === "object" && "status" in error && "ok" in error && typeof error.status === "number" && !(options === null || options === void 0 ? void 0 : options.noResolveJson)) {
-    const responseError = error;
-    const status = responseError.status || 500;
-    if (typeof responseError.json === "function") responseError.json().then((err) => {
-      const statusCode = (err === null || err === void 0 ? void 0 : err.statusCode) || (err === null || err === void 0 ? void 0 : err.code) || status + "";
-      reject(new StorageApiError(_getErrorMessage(err), status, statusCode, namespace));
-    }).catch(() => {
-      if (namespace === "vectors") {
-        const statusCode = status + "";
-        reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
-      } else {
-        const statusCode = status + "";
-        reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
-      }
-    });
-    else {
-      const statusCode = status + "";
-      reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
-    }
-  } else reject(new StorageUnknownError(_getErrorMessage(error), error, namespace));
-};
-var _getRequestParams = (method, options, parameters, body) => {
-  const params = {
-    method,
-    headers: (options === null || options === void 0 ? void 0 : options.headers) || {}
-  };
-  if (method === "GET" || method === "HEAD" || !body) return _objectSpread2(_objectSpread2({}, params), parameters);
-  if (isPlainObject(body)) {
-    params.headers = _objectSpread2({ "Content-Type": "application/json" }, options === null || options === void 0 ? void 0 : options.headers);
-    params.body = JSON.stringify(body);
-  } else params.body = body;
-  if (options === null || options === void 0 ? void 0 : options.duplex) params.duplex = options.duplex;
-  return _objectSpread2(_objectSpread2({}, params), parameters);
-};
-async function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
-  return new Promise((resolve6, reject) => {
-    fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
-      if (!result.ok) throw result;
-      if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
-      if (namespace === "vectors") {
-        const contentType = result.headers.get("content-type");
-        if (result.headers.get("content-length") === "0" || result.status === 204) return {};
-        if (!contentType || !contentType.includes("application/json")) return {};
-      }
-      return result.json();
-    }).then((data) => resolve6(data)).catch((error) => handleError(error, reject, options, namespace));
-  });
-}
-function createFetchApi(namespace = "storage") {
-  return {
-    get: async (fetcher, url, options, parameters) => {
-      return _handleRequest(fetcher, "GET", url, options, parameters, void 0, namespace);
-    },
-    post: async (fetcher, url, body, options, parameters) => {
-      return _handleRequest(fetcher, "POST", url, options, parameters, body, namespace);
-    },
-    put: async (fetcher, url, body, options, parameters) => {
-      return _handleRequest(fetcher, "PUT", url, options, parameters, body, namespace);
-    },
-    head: async (fetcher, url, options, parameters) => {
-      return _handleRequest(fetcher, "HEAD", url, _objectSpread2(_objectSpread2({}, options), {}, { noResolveJson: true }), parameters, void 0, namespace);
-    },
-    remove: async (fetcher, url, body, options, parameters) => {
-      return _handleRequest(fetcher, "DELETE", url, options, parameters, body, namespace);
-    }
-  };
-}
-var defaultApi = createFetchApi("storage");
-var { get, post, put, head, remove } = defaultApi;
-var vectorsApi = createFetchApi("vectors");
-var BaseApiClient = class {
-  /**
-  * Creates a new BaseApiClient instance
-  * @param url - Base URL for API requests
-  * @param headers - Default headers for API requests
-  * @param fetch - Optional custom fetch implementation
-  * @param namespace - Error namespace ('storage' or 'vectors')
-  */
-  constructor(url, headers = {}, fetch$1, namespace = "storage") {
-    this.shouldThrowOnError = false;
-    this.url = url;
-    this.headers = headers;
-    this.fetch = resolveFetch(fetch$1);
-    this.namespace = namespace;
-  }
-  /**
-  * Enable throwing errors instead of returning them.
-  * When enabled, errors are thrown instead of returned in { data, error } format.
-  *
-  * @returns this - For method chaining
-  */
-  throwOnError() {
-    this.shouldThrowOnError = true;
-    return this;
-  }
-  /**
-  * Handles API operation with standardized error handling
-  * Eliminates repetitive try-catch blocks across all API methods
-  *
-  * This wrapper:
-  * 1. Executes the operation
-  * 2. Returns { data, error: null } on success
-  * 3. Returns { data: null, error } on failure (if shouldThrowOnError is false)
-  * 4. Throws error on failure (if shouldThrowOnError is true)
-  *
-  * @typeParam T - The expected data type from the operation
-  * @param operation - Async function that performs the API call
-  * @returns Promise with { data, error } tuple
-  *
-  * @example
-  * ```typescript
-  * async listBuckets() {
-  *   return this.handleOperation(async () => {
-  *     return await get(this.fetch, `${this.url}/bucket`, {
-  *       headers: this.headers,
-  *     })
-  *   })
-  * }
-  * ```
-  */
-  async handleOperation(operation) {
-    var _this = this;
-    try {
-      return {
-        data: await operation(),
-        error: null
-      };
-    } catch (error) {
-      if (_this.shouldThrowOnError) throw error;
-      if (isStorageError(error)) return {
-        data: null,
-        error
-      };
-      throw error;
-    }
-  }
-};
-var StreamDownloadBuilder = class {
-  constructor(downloadFn, shouldThrowOnError) {
-    this.downloadFn = downloadFn;
-    this.shouldThrowOnError = shouldThrowOnError;
-  }
-  then(onfulfilled, onrejected) {
-    return this.execute().then(onfulfilled, onrejected);
-  }
-  async execute() {
-    var _this = this;
-    try {
-      return {
-        data: (await _this.downloadFn()).body,
-        error: null
-      };
-    } catch (error) {
-      if (_this.shouldThrowOnError) throw error;
-      if (isStorageError(error)) return {
-        data: null,
-        error
-      };
-      throw error;
-    }
-  }
-};
-var _Symbol$toStringTag;
-_Symbol$toStringTag = Symbol.toStringTag;
-var BlobDownloadBuilder = class {
-  constructor(downloadFn, shouldThrowOnError) {
-    this.downloadFn = downloadFn;
-    this.shouldThrowOnError = shouldThrowOnError;
-    this[_Symbol$toStringTag] = "BlobDownloadBuilder";
-    this.promise = null;
-  }
-  asStream() {
-    return new StreamDownloadBuilder(this.downloadFn, this.shouldThrowOnError);
-  }
-  then(onfulfilled, onrejected) {
-    return this.getPromise().then(onfulfilled, onrejected);
-  }
-  catch(onrejected) {
-    return this.getPromise().catch(onrejected);
-  }
-  finally(onfinally) {
-    return this.getPromise().finally(onfinally);
-  }
-  getPromise() {
-    if (!this.promise) this.promise = this.execute();
-    return this.promise;
-  }
-  async execute() {
-    var _this = this;
-    try {
-      return {
-        data: await (await _this.downloadFn()).blob(),
-        error: null
-      };
-    } catch (error) {
-      if (_this.shouldThrowOnError) throw error;
-      if (isStorageError(error)) return {
-        data: null,
-        error
-      };
-      throw error;
-    }
-  }
-};
-var DEFAULT_SEARCH_OPTIONS = {
-  limit: 100,
-  offset: 0,
-  sortBy: {
-    column: "name",
-    order: "asc"
-  }
-};
-var DEFAULT_FILE_OPTIONS = {
-  cacheControl: "3600",
-  contentType: "text/plain;charset=UTF-8",
-  upsert: false
-};
-var StorageFileApi = class extends BaseApiClient {
-  constructor(url, headers = {}, bucketId, fetch$1) {
-    super(url, headers, fetch$1, "storage");
-    this.bucketId = bucketId;
-  }
-  /**
-  * Uploads a file to an existing bucket or replaces an existing file at the specified path with a new one.
-  *
-  * @param method HTTP method.
-  * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
-  * @param fileBody The body of the file to be stored in the bucket.
-  */
-  async uploadOrUpdate(method, path, fileBody, fileOptions) {
-    var _this = this;
-    return _this.handleOperation(async () => {
-      let body;
-      const options = _objectSpread2(_objectSpread2({}, DEFAULT_FILE_OPTIONS), fileOptions);
-      let headers = _objectSpread2(_objectSpread2({}, _this.headers), method === "POST" && { "x-upsert": String(options.upsert) });
-      const metadata = options.metadata;
-      if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
-        body = new FormData();
-        body.append("cacheControl", options.cacheControl);
-        if (metadata) body.append("metadata", _this.encodeMetadata(metadata));
-        body.append("", fileBody);
-      } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
-        body = fileBody;
-        if (!body.has("cacheControl")) body.append("cacheControl", options.cacheControl);
-        if (metadata && !body.has("metadata")) body.append("metadata", _this.encodeMetadata(metadata));
-      } else {
-        body = fileBody;
-        headers["cache-control"] = `max-age=${options.cacheControl}`;
-        headers["content-type"] = options.contentType;
-        if (metadata) headers["x-metadata"] = _this.toBase64(_this.encodeMetadata(metadata));
-        if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
-      }
-      if (fileOptions === null || fileOptions === void 0 ? void 0 : fileOptions.headers) headers = _objectSpread2(_objectSpread2({}, headers), fileOptions.headers);
-      const cleanPath = _this._removeEmptyFolders(path);
-      const _path = _this._getFinalPath(cleanPath);
-      const data = await (method == "PUT" ? put : post)(_this.fetch, `${_this.url}/object/${_path}`, body, _objectSpread2({ headers }, (options === null || options === void 0 ? void 0 : options.duplex) ? { duplex: options.duplex } : {}));
-      return {
-        path: cleanPath,
-        id: data.Id,
-        fullPath: data.Key
-      };
-    });
-  }
-  /**
-  * Uploads a file to an existing bucket.
-  *
-  * @category File Buckets
-  * @param path The file path, including the file name. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
-  * @param fileBody The body of the file to be stored in the bucket.
-  * @param fileOptions Optional file upload options including cacheControl, contentType, upsert, and metadata.
-  * @returns Promise with response containing file path, id, and fullPath or error
-  *
-  * @example Upload file
-  * ```js
-  * const avatarFile = event.target.files[0]
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .upload('public/avatar1.png', avatarFile, {
-  *     cacheControl: '3600',
-  *     upsert: false
-  *   })
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "path": "public/avatar1.png",
-  *     "fullPath": "avatars/public/avatar1.png"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  *
-  * @example Upload file using `ArrayBuffer` from base64 file data
-  * ```js
-  * import { decode } from 'base64-arraybuffer'
-  *
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .upload('public/avatar1.png', decode('base64FileData'), {
-  *     contentType: 'image/png'
-  *   })
-  * ```
-  */
-  async upload(path, fileBody, fileOptions) {
-    return this.uploadOrUpdate("POST", path, fileBody, fileOptions);
-  }
-  /**
-  * Upload a file with a token generated from `createSignedUploadUrl`.
-  *
-  * @category File Buckets
-  * @param path The file path, including the file name. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
-  * @param token The token generated from `createSignedUploadUrl`
-  * @param fileBody The body of the file to be stored in the bucket.
-  * @param fileOptions HTTP headers (cacheControl, contentType, etc.).
-  * **Note:** The `upsert` option has no effect here. To enable upsert behavior,
-  * pass `{ upsert: true }` when calling `createSignedUploadUrl()` instead.
-  * @returns Promise with response containing file path and fullPath or error
-  *
-  * @example Upload to a signed URL
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .uploadToSignedUrl('folder/cat.jpg', 'token-from-createSignedUploadUrl', file)
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "path": "folder/cat.jpg",
-  *     "fullPath": "avatars/folder/cat.jpg"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async uploadToSignedUrl(path, token, fileBody, fileOptions) {
-    var _this3 = this;
-    const cleanPath = _this3._removeEmptyFolders(path);
-    const _path = _this3._getFinalPath(cleanPath);
-    const url = new URL(_this3.url + `/object/upload/sign/${_path}`);
-    url.searchParams.set("token", token);
-    return _this3.handleOperation(async () => {
-      let body;
-      const options = _objectSpread2({ upsert: DEFAULT_FILE_OPTIONS.upsert }, fileOptions);
-      const headers = _objectSpread2(_objectSpread2({}, _this3.headers), { "x-upsert": String(options.upsert) });
-      if (typeof Blob !== "undefined" && fileBody instanceof Blob) {
-        body = new FormData();
-        body.append("cacheControl", options.cacheControl);
-        body.append("", fileBody);
-      } else if (typeof FormData !== "undefined" && fileBody instanceof FormData) {
-        body = fileBody;
-        body.append("cacheControl", options.cacheControl);
-      } else {
-        body = fileBody;
-        headers["cache-control"] = `max-age=${options.cacheControl}`;
-        headers["content-type"] = options.contentType;
-      }
-      return {
-        path: cleanPath,
-        fullPath: (await put(_this3.fetch, url.toString(), body, { headers })).Key
-      };
-    });
-  }
-  /**
-  * Creates a signed upload URL.
-  * Signed upload URLs can be used to upload files to the bucket without further authentication.
-  * They are valid for 2 hours.
-  *
-  * @category File Buckets
-  * @param path The file path, including the current file name. For example `folder/image.png`.
-  * @param options.upsert If set to true, allows the file to be overwritten if it already exists.
-  * @returns Promise with response containing signed upload URL, token, and path or error
-  *
-  * @example Create Signed Upload URL
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .createSignedUploadUrl('folder/cat.jpg')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "signedUrl": "https://example.supabase.co/storage/v1/object/upload/sign/avatars/folder/cat.jpg?token=<TOKEN>",
-  *     "path": "folder/cat.jpg",
-  *     "token": "<TOKEN>"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async createSignedUploadUrl(path, options) {
-    var _this4 = this;
-    return _this4.handleOperation(async () => {
-      let _path = _this4._getFinalPath(path);
-      const headers = _objectSpread2({}, _this4.headers);
-      if (options === null || options === void 0 ? void 0 : options.upsert) headers["x-upsert"] = "true";
-      const data = await post(_this4.fetch, `${_this4.url}/object/upload/sign/${_path}`, {}, { headers });
-      const url = new URL(_this4.url + data.url);
-      const token = url.searchParams.get("token");
-      if (!token) throw new StorageError("No token returned by API");
-      return {
-        signedUrl: url.toString(),
-        path,
-        token
-      };
-    });
-  }
-  /**
-  * Replaces an existing file at the specified path with a new one.
-  *
-  * @category File Buckets
-  * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to update.
-  * @param fileBody The body of the file to be stored in the bucket.
-  * @param fileOptions Optional file upload options including cacheControl, contentType, upsert, and metadata.
-  * @returns Promise with response containing file path, id, and fullPath or error
-  *
-  * @example Update file
-  * ```js
-  * const avatarFile = event.target.files[0]
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .update('public/avatar1.png', avatarFile, {
-  *     cacheControl: '3600',
-  *     upsert: true
-  *   })
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "path": "public/avatar1.png",
-  *     "fullPath": "avatars/public/avatar1.png"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  *
-  * @example Update file using `ArrayBuffer` from base64 file data
-  * ```js
-  * import {decode} from 'base64-arraybuffer'
-  *
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .update('public/avatar1.png', decode('base64FileData'), {
-  *     contentType: 'image/png'
-  *   })
-  * ```
-  */
-  async update(path, fileBody, fileOptions) {
-    return this.uploadOrUpdate("PUT", path, fileBody, fileOptions);
-  }
-  /**
-  * Moves an existing file to a new path in the same bucket.
-  *
-  * @category File Buckets
-  * @param fromPath The original file path, including the current file name. For example `folder/image.png`.
-  * @param toPath The new file path, including the new file name. For example `folder/image-new.png`.
-  * @param options The destination options.
-  * @returns Promise with response containing success message or error
-  *
-  * @example Move file
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .move('public/avatar1.png', 'private/avatar2.png')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "message": "Successfully moved"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async move(fromPath, toPath, options) {
-    var _this6 = this;
-    return _this6.handleOperation(async () => {
-      return await post(_this6.fetch, `${_this6.url}/object/move`, {
-        bucketId: _this6.bucketId,
-        sourceKey: fromPath,
-        destinationKey: toPath,
-        destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
-      }, { headers: _this6.headers });
-    });
-  }
-  /**
-  * Copies an existing file to a new path in the same bucket.
-  *
-  * @category File Buckets
-  * @param fromPath The original file path, including the current file name. For example `folder/image.png`.
-  * @param toPath The new file path, including the new file name. For example `folder/image-copy.png`.
-  * @param options The destination options.
-  * @returns Promise with response containing copied file path or error
-  *
-  * @example Copy file
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .copy('public/avatar1.png', 'private/avatar2.png')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "path": "avatars/private/avatar2.png"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async copy(fromPath, toPath, options) {
-    var _this7 = this;
-    return _this7.handleOperation(async () => {
-      return { path: (await post(_this7.fetch, `${_this7.url}/object/copy`, {
-        bucketId: _this7.bucketId,
-        sourceKey: fromPath,
-        destinationKey: toPath,
-        destinationBucket: options === null || options === void 0 ? void 0 : options.destinationBucket
-      }, { headers: _this7.headers })).Key };
-    });
-  }
-  /**
-  * Creates a signed URL. Use a signed URL to share a file for a fixed amount of time.
-  *
-  * @category File Buckets
-  * @param path The file path, including the current file name. For example `folder/image.png`.
-  * @param expiresIn The number of seconds until the signed URL expires. For example, `60` for a URL which is valid for one minute.
-  * @param options.download triggers the file as a download if set to true. Set this parameter as the name of the file if you want to trigger the download with a different filename.
-  * @param options.transform Transform the asset before serving it to the client.
-  * @returns Promise with response containing signed URL or error
-  *
-  * @example Create Signed URL
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .createSignedUrl('folder/avatar1.png', 60)
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "signedUrl": "https://example.supabase.co/storage/v1/object/sign/avatars/folder/avatar1.png?token=<TOKEN>"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  *
-  * @example Create a signed URL for an asset with transformations
-  * ```js
-  * const { data } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .createSignedUrl('folder/avatar1.png', 60, {
-  *     transform: {
-  *       width: 100,
-  *       height: 100,
-  *     }
-  *   })
-  * ```
-  *
-  * @example Create a signed URL which triggers the download of the asset
-  * ```js
-  * const { data } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .createSignedUrl('folder/avatar1.png', 60, {
-  *     download: true,
-  *   })
-  * ```
-  */
-  async createSignedUrl(path, expiresIn, options) {
-    var _this8 = this;
-    return _this8.handleOperation(async () => {
-      let _path = _this8._getFinalPath(path);
-      let data = await post(_this8.fetch, `${_this8.url}/object/sign/${_path}`, _objectSpread2({ expiresIn }, (options === null || options === void 0 ? void 0 : options.transform) ? { transform: options.transform } : {}), { headers: _this8.headers });
-      const downloadQueryParam = (options === null || options === void 0 ? void 0 : options.download) ? `&download=${options.download === true ? "" : options.download}` : "";
-      return { signedUrl: encodeURI(`${_this8.url}${data.signedURL}${downloadQueryParam}`) };
-    });
-  }
-  /**
-  * Creates multiple signed URLs. Use a signed URL to share a file for a fixed amount of time.
-  *
-  * @category File Buckets
-  * @param paths The file paths to be downloaded, including the current file names. For example `['folder/image.png', 'folder2/image2.png']`.
-  * @param expiresIn The number of seconds until the signed URLs expire. For example, `60` for URLs which are valid for one minute.
-  * @param options.download triggers the file as a download if set to true. Set this parameter as the name of the file if you want to trigger the download with a different filename.
-  * @returns Promise with response containing array of objects with signedUrl, path, and error or error
-  *
-  * @example Create Signed URLs
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .createSignedUrls(['folder/avatar1.png', 'folder/avatar2.png'], 60)
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": [
-  *     {
-  *       "error": null,
-  *       "path": "folder/avatar1.png",
-  *       "signedURL": "/object/sign/avatars/folder/avatar1.png?token=<TOKEN>",
-  *       "signedUrl": "https://example.supabase.co/storage/v1/object/sign/avatars/folder/avatar1.png?token=<TOKEN>"
-  *     },
-  *     {
-  *       "error": null,
-  *       "path": "folder/avatar2.png",
-  *       "signedURL": "/object/sign/avatars/folder/avatar2.png?token=<TOKEN>",
-  *       "signedUrl": "https://example.supabase.co/storage/v1/object/sign/avatars/folder/avatar2.png?token=<TOKEN>"
-  *     }
-  *   ],
-  *   "error": null
-  * }
-  * ```
-  */
-  async createSignedUrls(paths, expiresIn, options) {
-    var _this9 = this;
-    return _this9.handleOperation(async () => {
-      const data = await post(_this9.fetch, `${_this9.url}/object/sign/${_this9.bucketId}`, {
-        expiresIn,
-        paths
-      }, { headers: _this9.headers });
-      const downloadQueryParam = (options === null || options === void 0 ? void 0 : options.download) ? `&download=${options.download === true ? "" : options.download}` : "";
-      return data.map((datum) => _objectSpread2(_objectSpread2({}, datum), {}, { signedUrl: datum.signedURL ? encodeURI(`${_this9.url}${datum.signedURL}${downloadQueryParam}`) : null }));
-    });
-  }
-  /**
-  * Downloads a file from a private bucket. For public buckets, make a request to the URL returned from `getPublicUrl` instead.
-  *
-  * @category File Buckets
-  * @param path The full path and file name of the file to be downloaded. For example `folder/image.png`.
-  * @param options.transform Transform the asset before serving it to the client.
-  * @returns BlobDownloadBuilder instance for downloading the file
-  *
-  * @example Download file
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .download('folder/avatar1.png')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": <BLOB>,
-  *   "error": null
-  * }
-  * ```
-  *
-  * @example Download file with transformations
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .download('folder/avatar1.png', {
-  *     transform: {
-  *       width: 100,
-  *       height: 100,
-  *       quality: 80
-  *     }
-  *   })
-  * ```
-  */
-  download(path, options) {
-    const renderPath = typeof (options === null || options === void 0 ? void 0 : options.transform) !== "undefined" ? "render/image/authenticated" : "object";
-    const transformationQuery = this.transformOptsToQueryString((options === null || options === void 0 ? void 0 : options.transform) || {});
-    const queryString = transformationQuery ? `?${transformationQuery}` : "";
-    const _path = this._getFinalPath(path);
-    const downloadFn = () => get(this.fetch, `${this.url}/${renderPath}/${_path}${queryString}`, {
-      headers: this.headers,
-      noResolveJson: true
-    });
-    return new BlobDownloadBuilder(downloadFn, this.shouldThrowOnError);
-  }
-  /**
-  * Retrieves the details of an existing file.
-  *
-  * @category File Buckets
-  * @param path The file path, including the file name. For example `folder/image.png`.
-  * @returns Promise with response containing file metadata or error
-  *
-  * @example Get file info
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .info('folder/avatar1.png')
-  * ```
-  */
-  async info(path) {
-    var _this10 = this;
-    const _path = _this10._getFinalPath(path);
-    return _this10.handleOperation(async () => {
-      return recursiveToCamel(await get(_this10.fetch, `${_this10.url}/object/info/${_path}`, { headers: _this10.headers }));
-    });
-  }
-  /**
-  * Checks the existence of a file.
-  *
-  * @category File Buckets
-  * @param path The file path, including the file name. For example `folder/image.png`.
-  * @returns Promise with response containing boolean indicating file existence or error
-  *
-  * @example Check file existence
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .exists('folder/avatar1.png')
-  * ```
-  */
-  async exists(path) {
-    var _this11 = this;
-    const _path = _this11._getFinalPath(path);
-    try {
-      await head(_this11.fetch, `${_this11.url}/object/${_path}`, { headers: _this11.headers });
-      return {
-        data: true,
-        error: null
-      };
-    } catch (error) {
-      if (_this11.shouldThrowOnError) throw error;
-      if (isStorageError(error) && error instanceof StorageUnknownError) {
-        const originalError = error.originalError;
-        if ([400, 404].includes(originalError === null || originalError === void 0 ? void 0 : originalError.status)) return {
-          data: false,
-          error
-        };
-      }
-      throw error;
-    }
-  }
-  /**
-  * A simple convenience function to get the URL for an asset in a public bucket. If you do not want to use this function, you can construct the public URL by concatenating the bucket URL with the path to the asset.
-  * This function does not verify if the bucket is public. If a public URL is created for a bucket which is not public, you will not be able to download the asset.
-  *
-  * @category File Buckets
-  * @param path The path and name of the file to generate the public URL for. For example `folder/image.png`.
-  * @param options.download Triggers the file as a download if set to true. Set this parameter as the name of the file if you want to trigger the download with a different filename.
-  * @param options.transform Transform the asset before serving it to the client.
-  * @returns Object with public URL
-  *
-  * @example Returns the URL for an asset in a public bucket
-  * ```js
-  * const { data } = supabase
-  *   .storage
-  *   .from('public-bucket')
-  *   .getPublicUrl('folder/avatar1.png')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "publicUrl": "https://example.supabase.co/storage/v1/object/public/public-bucket/folder/avatar1.png"
-  *   }
-  * }
-  * ```
-  *
-  * @example Returns the URL for an asset in a public bucket with transformations
-  * ```js
-  * const { data } = supabase
-  *   .storage
-  *   .from('public-bucket')
-  *   .getPublicUrl('folder/avatar1.png', {
-  *     transform: {
-  *       width: 100,
-  *       height: 100,
-  *     }
-  *   })
-  * ```
-  *
-  * @example Returns the URL which triggers the download of an asset in a public bucket
-  * ```js
-  * const { data } = supabase
-  *   .storage
-  *   .from('public-bucket')
-  *   .getPublicUrl('folder/avatar1.png', {
-  *     download: true,
-  *   })
-  * ```
-  */
-  getPublicUrl(path, options) {
-    const _path = this._getFinalPath(path);
-    const _queryString = [];
-    const downloadQueryParam = (options === null || options === void 0 ? void 0 : options.download) ? `download=${options.download === true ? "" : options.download}` : "";
-    if (downloadQueryParam !== "") _queryString.push(downloadQueryParam);
-    const renderPath = typeof (options === null || options === void 0 ? void 0 : options.transform) !== "undefined" ? "render/image" : "object";
-    const transformationQuery = this.transformOptsToQueryString((options === null || options === void 0 ? void 0 : options.transform) || {});
-    if (transformationQuery !== "") _queryString.push(transformationQuery);
-    let queryString = _queryString.join("&");
-    if (queryString !== "") queryString = `?${queryString}`;
-    return { data: { publicUrl: encodeURI(`${this.url}/${renderPath}/public/${_path}${queryString}`) } };
-  }
-  /**
-  * Deletes files within the same bucket
-  *
-  * @category File Buckets
-  * @param paths An array of files to delete, including the path and file name. For example [`'folder/image.png'`].
-  * @returns Promise with response containing array of deleted file objects or error
-  *
-  * @example Delete file
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .remove(['folder/avatar1.png'])
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": [],
-  *   "error": null
-  * }
-  * ```
-  */
-  async remove(paths) {
-    var _this12 = this;
-    return _this12.handleOperation(async () => {
-      return await remove(_this12.fetch, `${_this12.url}/object/${_this12.bucketId}`, { prefixes: paths }, { headers: _this12.headers });
-    });
-  }
-  /**
-  * Get file metadata
-  * @param id the file id to retrieve metadata
-  */
-  /**
-  * Update file metadata
-  * @param id the file id to update metadata
-  * @param meta the new file metadata
-  */
-  /**
-  * Lists all the files and folders within a path of the bucket.
-  *
-  * @category File Buckets
-  * @param path The folder path.
-  * @param options Search options including limit (defaults to 100), offset, sortBy, and search
-  * @param parameters Optional fetch parameters including signal for cancellation
-  * @returns Promise with response containing array of files or error
-  *
-  * @example List files in a bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .list('folder', {
-  *     limit: 100,
-  *     offset: 0,
-  *     sortBy: { column: 'name', order: 'asc' },
-  *   })
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": [
-  *     {
-  *       "name": "avatar1.png",
-  *       "id": "e668cf7f-821b-4a2f-9dce-7dfa5dd1cfd2",
-  *       "updated_at": "2024-05-22T23:06:05.580Z",
-  *       "created_at": "2024-05-22T23:04:34.443Z",
-  *       "last_accessed_at": "2024-05-22T23:04:34.443Z",
-  *       "metadata": {
-  *         "eTag": "\"c5e8c553235d9af30ef4f6e280790b92\"",
-  *         "size": 32175,
-  *         "mimetype": "image/png",
-  *         "cacheControl": "max-age=3600",
-  *         "lastModified": "2024-05-22T23:06:05.574Z",
-  *         "contentLength": 32175,
-  *         "httpStatusCode": 200
-  *       }
-  *     }
-  *   ],
-  *   "error": null
-  * }
-  * ```
-  *
-  * @example Search files in a bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .from('avatars')
-  *   .list('folder', {
-  *     limit: 100,
-  *     offset: 0,
-  *     sortBy: { column: 'name', order: 'asc' },
-  *     search: 'jon'
-  *   })
-  * ```
-  */
-  async list(path, options, parameters) {
-    var _this13 = this;
-    return _this13.handleOperation(async () => {
-      const body = _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_SEARCH_OPTIONS), options), {}, { prefix: path || "" });
-      return await post(_this13.fetch, `${_this13.url}/object/list/${_this13.bucketId}`, body, { headers: _this13.headers }, parameters);
-    });
-  }
-  /**
-  * @experimental this method signature might change in the future
-  *
-  * @category File Buckets
-  * @param options search options
-  * @param parameters
-  */
-  async listV2(options, parameters) {
-    var _this14 = this;
-    return _this14.handleOperation(async () => {
-      const body = _objectSpread2({}, options);
-      return await post(_this14.fetch, `${_this14.url}/object/list-v2/${_this14.bucketId}`, body, { headers: _this14.headers }, parameters);
-    });
-  }
-  encodeMetadata(metadata) {
-    return JSON.stringify(metadata);
-  }
-  toBase64(data) {
-    if (typeof Buffer !== "undefined") return Buffer.from(data).toString("base64");
-    return btoa(data);
-  }
-  _getFinalPath(path) {
-    return `${this.bucketId}/${path.replace(/^\/+/, "")}`;
-  }
-  _removeEmptyFolders(path) {
-    return path.replace(/^\/|\/$/g, "").replace(/\/+/g, "/");
-  }
-  transformOptsToQueryString(transform) {
-    const params = [];
-    if (transform.width) params.push(`width=${transform.width}`);
-    if (transform.height) params.push(`height=${transform.height}`);
-    if (transform.resize) params.push(`resize=${transform.resize}`);
-    if (transform.format) params.push(`format=${transform.format}`);
-    if (transform.quality) params.push(`quality=${transform.quality}`);
-    return params.join("&");
-  }
-};
-var version = "2.93.3";
-var DEFAULT_HEADERS = { "X-Client-Info": `storage-js/${version}` };
-var StorageBucketApi = class extends BaseApiClient {
-  constructor(url, headers = {}, fetch$1, opts) {
-    const baseUrl = new URL(url);
-    if (opts === null || opts === void 0 ? void 0 : opts.useNewHostname) {
-      if (/supabase\.(co|in|red)$/.test(baseUrl.hostname) && !baseUrl.hostname.includes("storage.supabase.")) baseUrl.hostname = baseUrl.hostname.replace("supabase.", "storage.supabase.");
-    }
-    const finalUrl = baseUrl.href.replace(/\/$/, "");
-    const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), headers);
-    super(finalUrl, finalHeaders, fetch$1, "storage");
-  }
-  /**
-  * Retrieves the details of all Storage buckets within an existing project.
-  *
-  * @category File Buckets
-  * @param options Query parameters for listing buckets
-  * @param options.limit Maximum number of buckets to return
-  * @param options.offset Number of buckets to skip
-  * @param options.sortColumn Column to sort by ('id', 'name', 'created_at', 'updated_at')
-  * @param options.sortOrder Sort order ('asc' or 'desc')
-  * @param options.search Search term to filter bucket names
-  * @returns Promise with response containing array of buckets or error
-  *
-  * @example List buckets
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .listBuckets()
-  * ```
-  *
-  * @example List buckets with options
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .listBuckets({
-  *     limit: 10,
-  *     offset: 0,
-  *     sortColumn: 'created_at',
-  *     sortOrder: 'desc',
-  *     search: 'prod'
-  *   })
-  * ```
-  */
-  async listBuckets(options) {
-    var _this = this;
-    return _this.handleOperation(async () => {
-      const queryString = _this.listBucketOptionsToQueryString(options);
-      return await get(_this.fetch, `${_this.url}/bucket${queryString}`, { headers: _this.headers });
-    });
-  }
-  /**
-  * Retrieves the details of an existing Storage bucket.
-  *
-  * @category File Buckets
-  * @param id The unique identifier of the bucket you would like to retrieve.
-  * @returns Promise with response containing bucket details or error
-  *
-  * @example Get bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .getBucket('avatars')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "id": "avatars",
-  *     "name": "avatars",
-  *     "owner": "",
-  *     "public": false,
-  *     "file_size_limit": 1024,
-  *     "allowed_mime_types": [
-  *       "image/png"
-  *     ],
-  *     "created_at": "2024-05-22T22:26:05.100Z",
-  *     "updated_at": "2024-05-22T22:26:05.100Z"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async getBucket(id) {
-    var _this2 = this;
-    return _this2.handleOperation(async () => {
-      return await get(_this2.fetch, `${_this2.url}/bucket/${id}`, { headers: _this2.headers });
-    });
-  }
-  /**
-  * Creates a new Storage bucket
-  *
-  * @category File Buckets
-  * @param id A unique identifier for the bucket you are creating.
-  * @param options.public The visibility of the bucket. Public buckets don't require an authorization token to download objects, but still require a valid token for all other operations. By default, buckets are private.
-  * @param options.fileSizeLimit specifies the max file size in bytes that can be uploaded to this bucket.
-  * The global file size limit takes precedence over this value.
-  * The default value is null, which doesn't set a per bucket file size limit.
-  * @param options.allowedMimeTypes specifies the allowed mime types that this bucket can accept during upload.
-  * The default value is null, which allows files with all mime types to be uploaded.
-  * Each mime type specified can be a wildcard, e.g. image/*, or a specific mime type, e.g. image/png.
-  * @param options.type (private-beta) specifies the bucket type. see `BucketType` for more details.
-  *   - default bucket type is `STANDARD`
-  * @returns Promise with response containing newly created bucket name or error
-  *
-  * @example Create bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .createBucket('avatars', {
-  *     public: false,
-  *     allowedMimeTypes: ['image/png'],
-  *     fileSizeLimit: 1024
-  *   })
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "name": "avatars"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async createBucket(id, options = { public: false }) {
-    var _this3 = this;
-    return _this3.handleOperation(async () => {
-      return await post(_this3.fetch, `${_this3.url}/bucket`, {
-        id,
-        name: id,
-        type: options.type,
-        public: options.public,
-        file_size_limit: options.fileSizeLimit,
-        allowed_mime_types: options.allowedMimeTypes
-      }, { headers: _this3.headers });
-    });
-  }
-  /**
-  * Updates a Storage bucket
-  *
-  * @category File Buckets
-  * @param id A unique identifier for the bucket you are updating.
-  * @param options.public The visibility of the bucket. Public buckets don't require an authorization token to download objects, but still require a valid token for all other operations.
-  * @param options.fileSizeLimit specifies the max file size in bytes that can be uploaded to this bucket.
-  * The global file size limit takes precedence over this value.
-  * The default value is null, which doesn't set a per bucket file size limit.
-  * @param options.allowedMimeTypes specifies the allowed mime types that this bucket can accept during upload.
-  * The default value is null, which allows files with all mime types to be uploaded.
-  * Each mime type specified can be a wildcard, e.g. image/*, or a specific mime type, e.g. image/png.
-  * @returns Promise with response containing success message or error
-  *
-  * @example Update bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .updateBucket('avatars', {
-  *     public: false,
-  *     allowedMimeTypes: ['image/png'],
-  *     fileSizeLimit: 1024
-  *   })
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "message": "Successfully updated"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async updateBucket(id, options) {
-    var _this4 = this;
-    return _this4.handleOperation(async () => {
-      return await put(_this4.fetch, `${_this4.url}/bucket/${id}`, {
-        id,
-        name: id,
-        public: options.public,
-        file_size_limit: options.fileSizeLimit,
-        allowed_mime_types: options.allowedMimeTypes
-      }, { headers: _this4.headers });
-    });
-  }
-  /**
-  * Removes all objects inside a single bucket.
-  *
-  * @category File Buckets
-  * @param id The unique identifier of the bucket you would like to empty.
-  * @returns Promise with success message or error
-  *
-  * @example Empty bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .emptyBucket('avatars')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "message": "Successfully emptied"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async emptyBucket(id) {
-    var _this5 = this;
-    return _this5.handleOperation(async () => {
-      return await post(_this5.fetch, `${_this5.url}/bucket/${id}/empty`, {}, { headers: _this5.headers });
-    });
-  }
-  /**
-  * Deletes an existing bucket. A bucket can't be deleted with existing objects inside it.
-  * You must first `empty()` the bucket.
-  *
-  * @category File Buckets
-  * @param id The unique identifier of the bucket you would like to delete.
-  * @returns Promise with success message or error
-  *
-  * @example Delete bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .deleteBucket('avatars')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "message": "Successfully deleted"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async deleteBucket(id) {
-    var _this6 = this;
-    return _this6.handleOperation(async () => {
-      return await remove(_this6.fetch, `${_this6.url}/bucket/${id}`, {}, { headers: _this6.headers });
-    });
-  }
-  listBucketOptionsToQueryString(options) {
-    const params = {};
-    if (options) {
-      if ("limit" in options) params.limit = String(options.limit);
-      if ("offset" in options) params.offset = String(options.offset);
-      if (options.search) params.search = options.search;
-      if (options.sortColumn) params.sortColumn = options.sortColumn;
-      if (options.sortOrder) params.sortOrder = options.sortOrder;
-    }
-    return Object.keys(params).length > 0 ? "?" + new URLSearchParams(params).toString() : "";
-  }
-};
-var StorageAnalyticsClient = class extends BaseApiClient {
-  /**
-  * @alpha
-  *
-  * Creates a new StorageAnalyticsClient instance
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Analytics Buckets
-  * @param url - The base URL for the storage API
-  * @param headers - HTTP headers to include in requests
-  * @param fetch - Optional custom fetch implementation
-  *
-  * @example
-  * ```typescript
-  * const client = new StorageAnalyticsClient(url, headers)
-  * ```
-  */
-  constructor(url, headers = {}, fetch$1) {
-    const finalUrl = url.replace(/\/$/, "");
-    const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), headers);
-    super(finalUrl, finalHeaders, fetch$1, "storage");
-  }
-  /**
-  * @alpha
-  *
-  * Creates a new analytics bucket using Iceberg tables
-  * Analytics buckets are optimized for analytical queries and data processing
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Analytics Buckets
-  * @param name A unique name for the bucket you are creating
-  * @returns Promise with response containing newly created analytics bucket or error
-  *
-  * @example Create analytics bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .analytics
-  *   .createBucket('analytics-data')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "name": "analytics-data",
-  *     "type": "ANALYTICS",
-  *     "format": "iceberg",
-  *     "created_at": "2024-05-22T22:26:05.100Z",
-  *     "updated_at": "2024-05-22T22:26:05.100Z"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async createBucket(name) {
-    var _this = this;
-    return _this.handleOperation(async () => {
-      return await post(_this.fetch, `${_this.url}/bucket`, { name }, { headers: _this.headers });
-    });
-  }
-  /**
-  * @alpha
-  *
-  * Retrieves the details of all Analytics Storage buckets within an existing project
-  * Only returns buckets of type 'ANALYTICS'
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Analytics Buckets
-  * @param options Query parameters for listing buckets
-  * @param options.limit Maximum number of buckets to return
-  * @param options.offset Number of buckets to skip
-  * @param options.sortColumn Column to sort by ('name', 'created_at', 'updated_at')
-  * @param options.sortOrder Sort order ('asc' or 'desc')
-  * @param options.search Search term to filter bucket names
-  * @returns Promise with response containing array of analytics buckets or error
-  *
-  * @example List analytics buckets
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .analytics
-  *   .listBuckets({
-  *     limit: 10,
-  *     offset: 0,
-  *     sortColumn: 'created_at',
-  *     sortOrder: 'desc'
-  *   })
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": [
-  *     {
-  *       "name": "analytics-data",
-  *       "type": "ANALYTICS",
-  *       "format": "iceberg",
-  *       "created_at": "2024-05-22T22:26:05.100Z",
-  *       "updated_at": "2024-05-22T22:26:05.100Z"
-  *     }
-  *   ],
-  *   "error": null
-  * }
-  * ```
-  */
-  async listBuckets(options) {
-    var _this2 = this;
-    return _this2.handleOperation(async () => {
-      const queryParams = new URLSearchParams();
-      if ((options === null || options === void 0 ? void 0 : options.limit) !== void 0) queryParams.set("limit", options.limit.toString());
-      if ((options === null || options === void 0 ? void 0 : options.offset) !== void 0) queryParams.set("offset", options.offset.toString());
-      if (options === null || options === void 0 ? void 0 : options.sortColumn) queryParams.set("sortColumn", options.sortColumn);
-      if (options === null || options === void 0 ? void 0 : options.sortOrder) queryParams.set("sortOrder", options.sortOrder);
-      if (options === null || options === void 0 ? void 0 : options.search) queryParams.set("search", options.search);
-      const queryString = queryParams.toString();
-      const url = queryString ? `${_this2.url}/bucket?${queryString}` : `${_this2.url}/bucket`;
-      return await get(_this2.fetch, url, { headers: _this2.headers });
-    });
-  }
-  /**
-  * @alpha
-  *
-  * Deletes an existing analytics bucket
-  * A bucket can't be deleted with existing objects inside it
-  * You must first empty the bucket before deletion
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Analytics Buckets
-  * @param bucketName The unique identifier of the bucket you would like to delete
-  * @returns Promise with response containing success message or error
-  *
-  * @example Delete analytics bucket
-  * ```js
-  * const { data, error } = await supabase
-  *   .storage
-  *   .analytics
-  *   .deleteBucket('analytics-data')
-  * ```
-  *
-  * Response:
-  * ```json
-  * {
-  *   "data": {
-  *     "message": "Successfully deleted"
-  *   },
-  *   "error": null
-  * }
-  * ```
-  */
-  async deleteBucket(bucketName) {
-    var _this3 = this;
-    return _this3.handleOperation(async () => {
-      return await remove(_this3.fetch, `${_this3.url}/bucket/${bucketName}`, {}, { headers: _this3.headers });
-    });
-  }
-  /**
-  * @alpha
-  *
-  * Get an Iceberg REST Catalog client configured for a specific analytics bucket
-  * Use this to perform advanced table and namespace operations within the bucket
-  * The returned client provides full access to the Apache Iceberg REST Catalog API
-  * with the Supabase `{ data, error }` pattern for consistent error handling on all operations.
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Analytics Buckets
-  * @param bucketName - The name of the analytics bucket (warehouse) to connect to
-  * @returns The wrapped Iceberg catalog client
-  * @throws {StorageError} If the bucket name is invalid
-  *
-  * @example Get catalog and create table
-  * ```js
-  * // First, create an analytics bucket
-  * const { data: bucket, error: bucketError } = await supabase
-  *   .storage
-  *   .analytics
-  *   .createBucket('analytics-data')
-  *
-  * // Get the Iceberg catalog for that bucket
-  * const catalog = supabase.storage.analytics.from('analytics-data')
-  *
-  * // Create a namespace
-  * const { error: nsError } = await catalog.createNamespace({ namespace: ['default'] })
-  *
-  * // Create a table with schema
-  * const { data: tableMetadata, error: tableError } = await catalog.createTable(
-  *   { namespace: ['default'] },
-  *   {
-  *     name: 'events',
-  *     schema: {
-  *       type: 'struct',
-  *       fields: [
-  *         { id: 1, name: 'id', type: 'long', required: true },
-  *         { id: 2, name: 'timestamp', type: 'timestamp', required: true },
-  *         { id: 3, name: 'user_id', type: 'string', required: false }
-  *       ],
-  *       'schema-id': 0,
-  *       'identifier-field-ids': [1]
-  *     },
-  *     'partition-spec': {
-  *       'spec-id': 0,
-  *       fields: []
-  *     },
-  *     'write-order': {
-  *       'order-id': 0,
-  *       fields: []
-  *     },
-  *     properties: {
-  *       'write.format.default': 'parquet'
-  *     }
-  *   }
-  * )
-  * ```
-  *
-  * @example List tables in namespace
-  * ```js
-  * const catalog = supabase.storage.analytics.from('analytics-data')
-  *
-  * // List all tables in the default namespace
-  * const { data: tables, error: listError } = await catalog.listTables({ namespace: ['default'] })
-  * if (listError) {
-  *   if (listError.isNotFound()) {
-  *     console.log('Namespace not found')
-  *   }
-  *   return
-  * }
-  * console.log(tables) // [{ namespace: ['default'], name: 'events' }]
-  * ```
-  *
-  * @example Working with namespaces
-  * ```js
-  * const catalog = supabase.storage.analytics.from('analytics-data')
-  *
-  * // List all namespaces
-  * const { data: namespaces } = await catalog.listNamespaces()
-  *
-  * // Create namespace with properties
-  * await catalog.createNamespace(
-  *   { namespace: ['production'] },
-  *   { properties: { owner: 'data-team', env: 'prod' } }
-  * )
-  * ```
-  *
-  * @example Cleanup operations
-  * ```js
-  * const catalog = supabase.storage.analytics.from('analytics-data')
-  *
-  * // Drop table with purge option (removes all data)
-  * const { error: dropError } = await catalog.dropTable(
-  *   { namespace: ['default'], name: 'events' },
-  *   { purge: true }
-  * )
-  *
-  * if (dropError?.isNotFound()) {
-  *   console.log('Table does not exist')
-  * }
-  *
-  * // Drop namespace (must be empty)
-  * await catalog.dropNamespace({ namespace: ['default'] })
-  * ```
-  *
-  * @remarks
-  * This method provides a bridge between Supabase's bucket management and the standard
-  * Apache Iceberg REST Catalog API. The bucket name maps to the Iceberg warehouse parameter.
-  * All authentication and configuration is handled automatically using your Supabase credentials.
-  *
-  * **Error Handling**: Invalid bucket names throw immediately. All catalog
-  * operations return `{ data, error }` where errors are `IcebergError` instances from iceberg-js.
-  * Use helper methods like `error.isNotFound()` or check `error.status` for specific error handling.
-  * Use `.throwOnError()` on the analytics client if you prefer exceptions for catalog operations.
-  *
-  * **Cleanup Operations**: When using `dropTable`, the `purge: true` option permanently
-  * deletes all table data. Without it, the table is marked as deleted but data remains.
-  *
-  * **Library Dependency**: The returned catalog wraps `IcebergRestCatalog` from iceberg-js.
-  * For complete API documentation and advanced usage, refer to the
-  * [iceberg-js documentation](https://supabase.github.io/iceberg-js/).
-  */
-  from(bucketName) {
-    var _this4 = this;
-    if (!isValidBucketName(bucketName)) throw new StorageError("Invalid bucket name: File, folder, and bucket names must follow AWS object key naming guidelines and should avoid the use of any other characters.");
-    const catalog = new IcebergRestCatalog({
-      baseUrl: this.url,
-      catalogName: bucketName,
-      auth: {
-        type: "custom",
-        getHeaders: async () => _this4.headers
-      },
-      fetch: this.fetch
-    });
-    const shouldThrowOnError = this.shouldThrowOnError;
-    return new Proxy(catalog, { get(target, prop) {
-      const value2 = target[prop];
-      if (typeof value2 !== "function") return value2;
-      return async (...args) => {
-        try {
-          return {
-            data: await value2.apply(target, args),
-            error: null
-          };
-        } catch (error) {
-          if (shouldThrowOnError) throw error;
-          return {
-            data: null,
-            error
-          };
-        }
-      };
-    } });
-  }
-};
-var VectorIndexApi = class extends BaseApiClient {
-  /** Creates a new VectorIndexApi instance */
-  constructor(url, headers = {}, fetch$1) {
-    const finalUrl = url.replace(/\/$/, "");
-    const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), {}, { "Content-Type": "application/json" }, headers);
-    super(finalUrl, finalHeaders, fetch$1, "vectors");
-  }
-  /** Creates a new vector index within a bucket */
-  async createIndex(options) {
-    var _this = this;
-    return _this.handleOperation(async () => {
-      return await vectorsApi.post(_this.fetch, `${_this.url}/CreateIndex`, options, { headers: _this.headers }) || {};
-    });
-  }
-  /** Retrieves metadata for a specific vector index */
-  async getIndex(vectorBucketName, indexName) {
-    var _this2 = this;
-    return _this2.handleOperation(async () => {
-      return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetIndex`, {
-        vectorBucketName,
-        indexName
-      }, { headers: _this2.headers });
-    });
-  }
-  /** Lists vector indexes within a bucket with optional filtering and pagination */
-  async listIndexes(options) {
-    var _this3 = this;
-    return _this3.handleOperation(async () => {
-      return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListIndexes`, options, { headers: _this3.headers });
-    });
-  }
-  /** Deletes a vector index and all its data */
-  async deleteIndex(vectorBucketName, indexName) {
-    var _this4 = this;
-    return _this4.handleOperation(async () => {
-      return await vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteIndex`, {
-        vectorBucketName,
-        indexName
-      }, { headers: _this4.headers }) || {};
-    });
-  }
-};
-var VectorDataApi = class extends BaseApiClient {
-  /** Creates a new VectorDataApi instance */
-  constructor(url, headers = {}, fetch$1) {
-    const finalUrl = url.replace(/\/$/, "");
-    const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), {}, { "Content-Type": "application/json" }, headers);
-    super(finalUrl, finalHeaders, fetch$1, "vectors");
-  }
-  /** Inserts or updates vectors in batch (1-500 per request) */
-  async putVectors(options) {
-    var _this = this;
-    if (options.vectors.length < 1 || options.vectors.length > 500) throw new Error("Vector batch size must be between 1 and 500 items");
-    return _this.handleOperation(async () => {
-      return await vectorsApi.post(_this.fetch, `${_this.url}/PutVectors`, options, { headers: _this.headers }) || {};
-    });
-  }
-  /** Retrieves vectors by their keys in batch */
-  async getVectors(options) {
-    var _this2 = this;
-    return _this2.handleOperation(async () => {
-      return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectors`, options, { headers: _this2.headers });
-    });
-  }
-  /** Lists vectors in an index with pagination */
-  async listVectors(options) {
-    var _this3 = this;
-    if (options.segmentCount !== void 0) {
-      if (options.segmentCount < 1 || options.segmentCount > 16) throw new Error("segmentCount must be between 1 and 16");
-      if (options.segmentIndex !== void 0) {
-        if (options.segmentIndex < 0 || options.segmentIndex >= options.segmentCount) throw new Error(`segmentIndex must be between 0 and ${options.segmentCount - 1}`);
-      }
-    }
-    return _this3.handleOperation(async () => {
-      return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectors`, options, { headers: _this3.headers });
-    });
-  }
-  /** Queries for similar vectors using approximate nearest neighbor search */
-  async queryVectors(options) {
-    var _this4 = this;
-    return _this4.handleOperation(async () => {
-      return await vectorsApi.post(_this4.fetch, `${_this4.url}/QueryVectors`, options, { headers: _this4.headers });
-    });
-  }
-  /** Deletes vectors by their keys in batch (1-500 per request) */
-  async deleteVectors(options) {
-    var _this5 = this;
-    if (options.keys.length < 1 || options.keys.length > 500) throw new Error("Keys batch size must be between 1 and 500 items");
-    return _this5.handleOperation(async () => {
-      return await vectorsApi.post(_this5.fetch, `${_this5.url}/DeleteVectors`, options, { headers: _this5.headers }) || {};
-    });
-  }
-};
-var VectorBucketApi = class extends BaseApiClient {
-  /** Creates a new VectorBucketApi instance */
-  constructor(url, headers = {}, fetch$1) {
-    const finalUrl = url.replace(/\/$/, "");
-    const finalHeaders = _objectSpread2(_objectSpread2({}, DEFAULT_HEADERS), {}, { "Content-Type": "application/json" }, headers);
-    super(finalUrl, finalHeaders, fetch$1, "vectors");
-  }
-  /** Creates a new vector bucket */
-  async createBucket(vectorBucketName) {
-    var _this = this;
-    return _this.handleOperation(async () => {
-      return await vectorsApi.post(_this.fetch, `${_this.url}/CreateVectorBucket`, { vectorBucketName }, { headers: _this.headers }) || {};
-    });
-  }
-  /** Retrieves metadata for a specific vector bucket */
-  async getBucket(vectorBucketName) {
-    var _this2 = this;
-    return _this2.handleOperation(async () => {
-      return await vectorsApi.post(_this2.fetch, `${_this2.url}/GetVectorBucket`, { vectorBucketName }, { headers: _this2.headers });
-    });
-  }
-  /** Lists vector buckets with optional filtering and pagination */
-  async listBuckets(options = {}) {
-    var _this3 = this;
-    return _this3.handleOperation(async () => {
-      return await vectorsApi.post(_this3.fetch, `${_this3.url}/ListVectorBuckets`, options, { headers: _this3.headers });
-    });
-  }
-  /** Deletes a vector bucket (must be empty first) */
-  async deleteBucket(vectorBucketName) {
-    var _this4 = this;
-    return _this4.handleOperation(async () => {
-      return await vectorsApi.post(_this4.fetch, `${_this4.url}/DeleteVectorBucket`, { vectorBucketName }, { headers: _this4.headers }) || {};
-    });
-  }
-};
-var StorageVectorsClient = class extends VectorBucketApi {
-  /**
-  * @alpha
-  *
-  * Creates a StorageVectorsClient that can manage buckets, indexes, and vectors.
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param url - Base URL of the Storage Vectors REST API.
-  * @param options.headers - Optional headers (for example `Authorization`) applied to every request.
-  * @param options.fetch - Optional custom `fetch` implementation for non-browser runtimes.
-  *
-  * @example
-  * ```typescript
-  * const client = new StorageVectorsClient(url, options)
-  * ```
-  */
-  constructor(url, options = {}) {
-    super(url, options.headers || {}, options.fetch);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Access operations for a specific vector bucket
-  * Returns a scoped client for index and vector operations within the bucket
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param vectorBucketName - Name of the vector bucket
-  * @returns Bucket-scoped client with index and vector operations
-  *
-  * @example
-  * ```typescript
-  * const bucket = supabase.storage.vectors.from('embeddings-prod')
-  * ```
-  */
-  from(vectorBucketName) {
-    return new VectorBucketScope(this.url, this.headers, vectorBucketName, this.fetch);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Creates a new vector bucket
-  * Vector buckets are containers for vector indexes and their data
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param vectorBucketName - Unique name for the vector bucket
-  * @returns Promise with empty response on success or error
-  *
-  * @example
-  * ```typescript
-  * const { data, error } = await supabase
-  *   .storage
-  *   .vectors
-  *   .createBucket('embeddings-prod')
-  * ```
-  */
-  async createBucket(vectorBucketName) {
-    var _superprop_getCreateBucket = () => super.createBucket, _this = this;
-    return _superprop_getCreateBucket().call(_this, vectorBucketName);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Retrieves metadata for a specific vector bucket
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param vectorBucketName - Name of the vector bucket
-  * @returns Promise with bucket metadata or error
-  *
-  * @example
-  * ```typescript
-  * const { data, error } = await supabase
-  *   .storage
-  *   .vectors
-  *   .getBucket('embeddings-prod')
-  *
-  * console.log('Bucket created:', data?.vectorBucket.creationTime)
-  * ```
-  */
-  async getBucket(vectorBucketName) {
-    var _superprop_getGetBucket = () => super.getBucket, _this2 = this;
-    return _superprop_getGetBucket().call(_this2, vectorBucketName);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Lists all vector buckets with optional filtering and pagination
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Optional filters (prefix, maxResults, nextToken)
-  * @returns Promise with list of buckets or error
-  *
-  * @example
-  * ```typescript
-  * const { data, error } = await supabase
-  *   .storage
-  *   .vectors
-  *   .listBuckets({ prefix: 'embeddings-' })
-  *
-  * data?.vectorBuckets.forEach(bucket => {
-  *   console.log(bucket.vectorBucketName)
-  * })
-  * ```
-  */
-  async listBuckets(options = {}) {
-    var _superprop_getListBuckets = () => super.listBuckets, _this3 = this;
-    return _superprop_getListBuckets().call(_this3, options);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Deletes a vector bucket (bucket must be empty)
-  * All indexes must be deleted before deleting the bucket
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param vectorBucketName - Name of the vector bucket to delete
-  * @returns Promise with empty response on success or error
-  *
-  * @example
-  * ```typescript
-  * const { data, error } = await supabase
-  *   .storage
-  *   .vectors
-  *   .deleteBucket('embeddings-old')
-  * ```
-  */
-  async deleteBucket(vectorBucketName) {
-    var _superprop_getDeleteBucket = () => super.deleteBucket, _this4 = this;
-    return _superprop_getDeleteBucket().call(_this4, vectorBucketName);
-  }
-};
-var VectorBucketScope = class extends VectorIndexApi {
-  /**
-  * @alpha
-  *
-  * Creates a helper that automatically scopes all index operations to the provided bucket.
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @example
-  * ```typescript
-  * const bucket = supabase.storage.vectors.from('embeddings-prod')
-  * ```
-  */
-  constructor(url, headers, vectorBucketName, fetch$1) {
-    super(url, headers, fetch$1);
-    this.vectorBucketName = vectorBucketName;
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Creates a new vector index in this bucket
-  * Convenience method that automatically includes the bucket name
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Index configuration (vectorBucketName is automatically set)
-  * @returns Promise with empty response on success or error
-  *
-  * @example
-  * ```typescript
-  * const bucket = supabase.storage.vectors.from('embeddings-prod')
-  * await bucket.createIndex({
-  *   indexName: 'documents-openai',
-  *   dataType: 'float32',
-  *   dimension: 1536,
-  *   distanceMetric: 'cosine',
-  *   metadataConfiguration: {
-  *     nonFilterableMetadataKeys: ['raw_text']
-  *   }
-  * })
-  * ```
-  */
-  async createIndex(options) {
-    var _superprop_getCreateIndex = () => super.createIndex, _this5 = this;
-    return _superprop_getCreateIndex().call(_this5, _objectSpread2(_objectSpread2({}, options), {}, { vectorBucketName: _this5.vectorBucketName }));
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Lists indexes in this bucket
-  * Convenience method that automatically includes the bucket name
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Listing options (vectorBucketName is automatically set)
-  * @returns Promise with response containing indexes array and pagination token or error
-  *
-  * @example
-  * ```typescript
-  * const bucket = supabase.storage.vectors.from('embeddings-prod')
-  * const { data } = await bucket.listIndexes({ prefix: 'documents-' })
-  * ```
-  */
-  async listIndexes(options = {}) {
-    var _superprop_getListIndexes = () => super.listIndexes, _this6 = this;
-    return _superprop_getListIndexes().call(_this6, _objectSpread2(_objectSpread2({}, options), {}, { vectorBucketName: _this6.vectorBucketName }));
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Retrieves metadata for a specific index in this bucket
-  * Convenience method that automatically includes the bucket name
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param indexName - Name of the index to retrieve
-  * @returns Promise with index metadata or error
-  *
-  * @example
-  * ```typescript
-  * const bucket = supabase.storage.vectors.from('embeddings-prod')
-  * const { data } = await bucket.getIndex('documents-openai')
-  * console.log('Dimension:', data?.index.dimension)
-  * ```
-  */
-  async getIndex(indexName) {
-    var _superprop_getGetIndex = () => super.getIndex, _this7 = this;
-    return _superprop_getGetIndex().call(_this7, _this7.vectorBucketName, indexName);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Deletes an index from this bucket
-  * Convenience method that automatically includes the bucket name
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param indexName - Name of the index to delete
-  * @returns Promise with empty response on success or error
-  *
-  * @example
-  * ```typescript
-  * const bucket = supabase.storage.vectors.from('embeddings-prod')
-  * await bucket.deleteIndex('old-index')
-  * ```
-  */
-  async deleteIndex(indexName) {
-    var _superprop_getDeleteIndex = () => super.deleteIndex, _this8 = this;
-    return _superprop_getDeleteIndex().call(_this8, _this8.vectorBucketName, indexName);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Access operations for a specific index within this bucket
-  * Returns a scoped client for vector data operations
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param indexName - Name of the index
-  * @returns Index-scoped client with vector data operations
-  *
-  * @example
-  * ```typescript
-  * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
-  *
-  * // Insert vectors
-  * await index.putVectors({
-  *   vectors: [
-  *     { key: 'doc-1', data: { float32: [...] }, metadata: { title: 'Intro' } }
-  *   ]
-  * })
-  *
-  * // Query similar vectors
-  * const { data } = await index.queryVectors({
-  *   queryVector: { float32: [...] },
-  *   topK: 5
-  * })
-  * ```
-  */
-  index(indexName) {
-    return new VectorIndexScope(this.url, this.headers, this.vectorBucketName, indexName, this.fetch);
-  }
-};
-var VectorIndexScope = class extends VectorDataApi {
-  /**
-  *
-  * @alpha
-  *
-  * Creates a helper that automatically scopes all vector operations to the provided bucket/index names.
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @example
-  * ```typescript
-  * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
-  * ```
-  */
-  constructor(url, headers, vectorBucketName, indexName, fetch$1) {
-    super(url, headers, fetch$1);
-    this.vectorBucketName = vectorBucketName;
-    this.indexName = indexName;
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Inserts or updates vectors in this index
-  * Convenience method that automatically includes bucket and index names
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Vector insertion options (bucket and index names automatically set)
-  * @returns Promise with empty response on success or error
-  *
-  * @example
-  * ```typescript
-  * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
-  * await index.putVectors({
-  *   vectors: [
-  *     {
-  *       key: 'doc-1',
-  *       data: { float32: [0.1, 0.2, ...] },
-  *       metadata: { title: 'Introduction', page: 1 }
-  *     }
-  *   ]
-  * })
-  * ```
-  */
-  async putVectors(options) {
-    var _superprop_getPutVectors = () => super.putVectors, _this9 = this;
-    return _superprop_getPutVectors().call(_this9, _objectSpread2(_objectSpread2({}, options), {}, {
-      vectorBucketName: _this9.vectorBucketName,
-      indexName: _this9.indexName
-    }));
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Retrieves vectors by keys from this index
-  * Convenience method that automatically includes bucket and index names
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Vector retrieval options (bucket and index names automatically set)
-  * @returns Promise with response containing vectors array or error
-  *
-  * @example
-  * ```typescript
-  * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
-  * const { data } = await index.getVectors({
-  *   keys: ['doc-1', 'doc-2'],
-  *   returnMetadata: true
-  * })
-  * ```
-  */
-  async getVectors(options) {
-    var _superprop_getGetVectors = () => super.getVectors, _this10 = this;
-    return _superprop_getGetVectors().call(_this10, _objectSpread2(_objectSpread2({}, options), {}, {
-      vectorBucketName: _this10.vectorBucketName,
-      indexName: _this10.indexName
-    }));
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Lists vectors in this index with pagination
-  * Convenience method that automatically includes bucket and index names
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Listing options (bucket and index names automatically set)
-  * @returns Promise with response containing vectors array and pagination token or error
-  *
-  * @example
-  * ```typescript
-  * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
-  * const { data } = await index.listVectors({
-  *   maxResults: 500,
-  *   returnMetadata: true
-  * })
-  * ```
-  */
-  async listVectors(options = {}) {
-    var _superprop_getListVectors = () => super.listVectors, _this11 = this;
-    return _superprop_getListVectors().call(_this11, _objectSpread2(_objectSpread2({}, options), {}, {
-      vectorBucketName: _this11.vectorBucketName,
-      indexName: _this11.indexName
-    }));
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Queries for similar vectors in this index
-  * Convenience method that automatically includes bucket and index names
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Query options (bucket and index names automatically set)
-  * @returns Promise with response containing matches array of similar vectors ordered by distance or error
-  *
-  * @example
-  * ```typescript
-  * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
-  * const { data } = await index.queryVectors({
-  *   queryVector: { float32: [0.1, 0.2, ...] },
-  *   topK: 5,
-  *   filter: { category: 'technical' },
-  *   returnDistance: true,
-  *   returnMetadata: true
-  * })
-  * ```
-  */
-  async queryVectors(options) {
-    var _superprop_getQueryVectors = () => super.queryVectors, _this12 = this;
-    return _superprop_getQueryVectors().call(_this12, _objectSpread2(_objectSpread2({}, options), {}, {
-      vectorBucketName: _this12.vectorBucketName,
-      indexName: _this12.indexName
-    }));
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Deletes vectors by keys from this index
-  * Convenience method that automatically includes bucket and index names
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @param options - Deletion options (bucket and index names automatically set)
-  * @returns Promise with empty response on success or error
-  *
-  * @example
-  * ```typescript
-  * const index = supabase.storage.vectors.from('embeddings-prod').index('documents-openai')
-  * await index.deleteVectors({
-  *   keys: ['doc-1', 'doc-2', 'doc-3']
-  * })
-  * ```
-  */
-  async deleteVectors(options) {
-    var _superprop_getDeleteVectors = () => super.deleteVectors, _this13 = this;
-    return _superprop_getDeleteVectors().call(_this13, _objectSpread2(_objectSpread2({}, options), {}, {
-      vectorBucketName: _this13.vectorBucketName,
-      indexName: _this13.indexName
-    }));
-  }
-};
-var StorageClient = class extends StorageBucketApi {
-  /**
-  * Creates a client for Storage buckets, files, analytics, and vectors.
-  *
-  * @category File Buckets
-  * @example
-  * ```ts
-  * import { StorageClient } from '@supabase/storage-js'
-  *
-  * const storage = new StorageClient('https://xyzcompany.supabase.co/storage/v1', {
-  *   apikey: 'public-anon-key',
-  * })
-  * const avatars = storage.from('avatars')
-  * ```
-  */
-  constructor(url, headers = {}, fetch$1, opts) {
-    super(url, headers, fetch$1, opts);
-  }
-  /**
-  * Perform file operation in a bucket.
-  *
-  * @category File Buckets
-  * @param id The bucket id to operate on.
-  *
-  * @example
-  * ```typescript
-  * const avatars = supabase.storage.from('avatars')
-  * ```
-  */
-  from(id) {
-    return new StorageFileApi(this.url, this.headers, id, this.fetch);
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Access vector storage operations.
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Vector Buckets
-  * @returns A StorageVectorsClient instance configured with the current storage settings.
-  */
-  get vectors() {
-    return new StorageVectorsClient(this.url + "/vector", {
-      headers: this.headers,
-      fetch: this.fetch
-    });
-  }
-  /**
-  *
-  * @alpha
-  *
-  * Access analytics storage operations using Iceberg tables.
-  *
-  * **Public alpha:** This API is part of a public alpha release and may not be available to your account type.
-  *
-  * @category Analytics Buckets
-  * @returns A StorageAnalyticsClient instance configured with the current storage settings.
-  */
-  get analytics() {
-    return new StorageAnalyticsClient(this.url + "/iceberg", this.headers, this.fetch);
-  }
-};
-
-// node_modules/@supabase/supabase-js/dist/index.mjs
-var import_auth_js = __toESM(require_main3(), 1);
-__reExport(dist_exports, __toESM(require_main2(), 1));
-__reExport(dist_exports, __toESM(require_main3(), 1));
-var version2 = "2.93.3";
-var JS_ENV = "";
-if (typeof Deno !== "undefined") JS_ENV = "deno";
-else if (typeof document !== "undefined") JS_ENV = "web";
-else if (typeof navigator !== "undefined" && navigator.product === "ReactNative") JS_ENV = "react-native";
-else JS_ENV = "node";
-var DEFAULT_HEADERS2 = { "X-Client-Info": `supabase-js-${JS_ENV}/${version2}` };
-var DEFAULT_GLOBAL_OPTIONS = { headers: DEFAULT_HEADERS2 };
-var DEFAULT_DB_OPTIONS = { schema: "public" };
-var DEFAULT_AUTH_OPTIONS = {
-  autoRefreshToken: true,
-  persistSession: true,
-  detectSessionInUrl: true,
-  flowType: "implicit"
-};
-var DEFAULT_REALTIME_OPTIONS = {};
-function _typeof2(o) {
-  "@babel/helpers - typeof";
-  return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o$1) {
-    return typeof o$1;
-  } : function(o$1) {
-    return o$1 && "function" == typeof Symbol && o$1.constructor === Symbol && o$1 !== Symbol.prototype ? "symbol" : typeof o$1;
-  }, _typeof2(o);
-}
-function toPrimitive2(t, r) {
-  if ("object" != _typeof2(t) || !t) return t;
-  var e = t[Symbol.toPrimitive];
-  if (void 0 !== e) {
-    var i = e.call(t, r || "default");
-    if ("object" != _typeof2(i)) return i;
-    throw new TypeError("@@toPrimitive must return a primitive value.");
-  }
-  return ("string" === r ? String : Number)(t);
-}
-function toPropertyKey2(t) {
-  var i = toPrimitive2(t, "string");
-  return "symbol" == _typeof2(i) ? i : i + "";
-}
-function _defineProperty2(e, r, t) {
-  return (r = toPropertyKey2(r)) in e ? Object.defineProperty(e, r, {
-    value: t,
-    enumerable: true,
-    configurable: true,
-    writable: true
-  }) : e[r] = t, e;
-}
-function ownKeys3(e, r) {
-  var t = Object.keys(e);
-  if (Object.getOwnPropertySymbols) {
-    var o = Object.getOwnPropertySymbols(e);
-    r && (o = o.filter(function(r$1) {
-      return Object.getOwnPropertyDescriptor(e, r$1).enumerable;
-    })), t.push.apply(t, o);
-  }
-  return t;
-}
-function _objectSpread22(e) {
-  for (var r = 1; r < arguments.length; r++) {
-    var t = null != arguments[r] ? arguments[r] : {};
-    r % 2 ? ownKeys3(Object(t), true).forEach(function(r$1) {
-      _defineProperty2(e, r$1, t[r$1]);
-    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys3(Object(t)).forEach(function(r$1) {
-      Object.defineProperty(e, r$1, Object.getOwnPropertyDescriptor(t, r$1));
-    });
-  }
-  return e;
-}
-var resolveFetch2 = (customFetch) => {
-  if (customFetch) return (...args) => customFetch(...args);
-  return (...args) => fetch(...args);
-};
-var resolveHeadersConstructor = () => {
-  return Headers;
-};
-var fetchWithAuth = (supabaseKey, getAccessToken, customFetch) => {
-  const fetch$1 = resolveFetch2(customFetch);
-  const HeadersConstructor = resolveHeadersConstructor();
-  return async (input, init2) => {
-    var _await$getAccessToken;
-    const accessToken = (_await$getAccessToken = await getAccessToken()) !== null && _await$getAccessToken !== void 0 ? _await$getAccessToken : supabaseKey;
-    let headers = new HeadersConstructor(init2 === null || init2 === void 0 ? void 0 : init2.headers);
-    if (!headers.has("apikey")) headers.set("apikey", supabaseKey);
-    if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${accessToken}`);
-    return fetch$1(input, _objectSpread22(_objectSpread22({}, init2), {}, { headers }));
-  };
-};
-function ensureTrailingSlash(url) {
-  return url.endsWith("/") ? url : url + "/";
-}
-function applySettingDefaults(options, defaults) {
-  var _DEFAULT_GLOBAL_OPTIO, _globalOptions$header;
-  const { db: dbOptions, auth: authOptions, realtime: realtimeOptions, global: globalOptions } = options;
-  const { db: DEFAULT_DB_OPTIONS$1, auth: DEFAULT_AUTH_OPTIONS$1, realtime: DEFAULT_REALTIME_OPTIONS$1, global: DEFAULT_GLOBAL_OPTIONS$1 } = defaults;
-  const result = {
-    db: _objectSpread22(_objectSpread22({}, DEFAULT_DB_OPTIONS$1), dbOptions),
-    auth: _objectSpread22(_objectSpread22({}, DEFAULT_AUTH_OPTIONS$1), authOptions),
-    realtime: _objectSpread22(_objectSpread22({}, DEFAULT_REALTIME_OPTIONS$1), realtimeOptions),
-    storage: {},
-    global: _objectSpread22(_objectSpread22(_objectSpread22({}, DEFAULT_GLOBAL_OPTIONS$1), globalOptions), {}, { headers: _objectSpread22(_objectSpread22({}, (_DEFAULT_GLOBAL_OPTIO = DEFAULT_GLOBAL_OPTIONS$1 === null || DEFAULT_GLOBAL_OPTIONS$1 === void 0 ? void 0 : DEFAULT_GLOBAL_OPTIONS$1.headers) !== null && _DEFAULT_GLOBAL_OPTIO !== void 0 ? _DEFAULT_GLOBAL_OPTIO : {}), (_globalOptions$header = globalOptions === null || globalOptions === void 0 ? void 0 : globalOptions.headers) !== null && _globalOptions$header !== void 0 ? _globalOptions$header : {}) }),
-    accessToken: async () => ""
-  };
-  if (options.accessToken) result.accessToken = options.accessToken;
-  else delete result.accessToken;
-  return result;
-}
-function validateSupabaseUrl(supabaseUrl) {
-  const trimmedUrl = supabaseUrl === null || supabaseUrl === void 0 ? void 0 : supabaseUrl.trim();
-  if (!trimmedUrl) throw new Error("supabaseUrl is required.");
-  if (!trimmedUrl.match(/^https?:\/\//i)) throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.");
-  try {
-    return new URL(ensureTrailingSlash(trimmedUrl));
-  } catch (_unused) {
-    throw Error("Invalid supabaseUrl: Provided URL is malformed.");
-  }
-}
-var SupabaseAuthClient = class extends import_auth_js.AuthClient {
-  constructor(options) {
-    super(options);
-  }
-};
-var SupabaseClient = class {
-  /**
-  * Create a new client for use in the browser.
-  * @param supabaseUrl The unique Supabase URL which is supplied when you create a new project in your project dashboard.
-  * @param supabaseKey The unique Supabase Key which is supplied when you create a new project in your project dashboard.
-  * @param options.db.schema You can switch in between schemas. The schema needs to be on the list of exposed schemas inside Supabase.
-  * @param options.auth.autoRefreshToken Set to "true" if you want to automatically refresh the token before expiring.
-  * @param options.auth.persistSession Set to "true" if you want to automatically save the user session into local storage.
-  * @param options.auth.detectSessionInUrl Set to "true" if you want to automatically detects OAuth grants in the URL and signs in the user.
-  * @param options.realtime Options passed along to realtime-js constructor.
-  * @param options.storage Options passed along to the storage-js constructor.
-  * @param options.global.fetch A custom fetch implementation.
-  * @param options.global.headers Any additional headers to send with each network request.
-  * @example
-  * ```ts
-  * import { createClient } from '@supabase/supabase-js'
-  *
-  * const supabase = createClient('https://xyzcompany.supabase.co', 'public-anon-key')
-  * const { data } = await supabase.from('profiles').select('*')
-  * ```
-  */
-  constructor(supabaseUrl, supabaseKey, options) {
-    var _settings$auth$storag, _settings$global$head;
-    this.supabaseUrl = supabaseUrl;
-    this.supabaseKey = supabaseKey;
-    const baseUrl = validateSupabaseUrl(supabaseUrl);
-    if (!supabaseKey) throw new Error("supabaseKey is required.");
-    this.realtimeUrl = new URL("realtime/v1", baseUrl);
-    this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws");
-    this.authUrl = new URL("auth/v1", baseUrl);
-    this.storageUrl = new URL("storage/v1", baseUrl);
-    this.functionsUrl = new URL("functions/v1", baseUrl);
-    const defaultStorageKey = `sb-${baseUrl.hostname.split(".")[0]}-auth-token`;
-    const DEFAULTS = {
-      db: DEFAULT_DB_OPTIONS,
-      realtime: DEFAULT_REALTIME_OPTIONS,
-      auth: _objectSpread22(_objectSpread22({}, DEFAULT_AUTH_OPTIONS), {}, { storageKey: defaultStorageKey }),
-      global: DEFAULT_GLOBAL_OPTIONS
-    };
-    const settings = applySettingDefaults(options !== null && options !== void 0 ? options : {}, DEFAULTS);
-    this.storageKey = (_settings$auth$storag = settings.auth.storageKey) !== null && _settings$auth$storag !== void 0 ? _settings$auth$storag : "";
-    this.headers = (_settings$global$head = settings.global.headers) !== null && _settings$global$head !== void 0 ? _settings$global$head : {};
-    if (!settings.accessToken) {
-      var _settings$auth;
-      this.auth = this._initSupabaseAuthClient((_settings$auth = settings.auth) !== null && _settings$auth !== void 0 ? _settings$auth : {}, this.headers, settings.global.fetch);
-    } else {
-      this.accessToken = settings.accessToken;
-      this.auth = new Proxy({}, { get: (_, prop) => {
-        throw new Error(`@supabase/supabase-js: Supabase Client is configured with the accessToken option, accessing supabase.auth.${String(prop)} is not possible`);
-      } });
-    }
-    this.fetch = fetchWithAuth(supabaseKey, this._getAccessToken.bind(this), settings.global.fetch);
-    this.realtime = this._initRealtimeClient(_objectSpread22({
-      headers: this.headers,
-      accessToken: this._getAccessToken.bind(this)
-    }, settings.realtime));
-    if (this.accessToken) Promise.resolve(this.accessToken()).then((token) => this.realtime.setAuth(token)).catch((e) => console.warn("Failed to set initial Realtime auth token:", e));
-    this.rest = new PostgrestClient(new URL("rest/v1", baseUrl).href, {
-      headers: this.headers,
-      schema: settings.db.schema,
-      fetch: this.fetch
-    });
-    this.storage = new StorageClient(this.storageUrl.href, this.headers, this.fetch, options === null || options === void 0 ? void 0 : options.storage);
-    if (!settings.accessToken) this._listenForAuthEvents();
-  }
-  /**
-  * Supabase Functions allows you to deploy and invoke edge functions.
-  */
-  get functions() {
-    return new import_functions_js.FunctionsClient(this.functionsUrl.href, {
-      headers: this.headers,
-      customFetch: this.fetch
-    });
-  }
-  /**
-  * Perform a query on a table or a view.
-  *
-  * @param relation - The table or view name to query
-  */
-  from(relation) {
-    return this.rest.from(relation);
-  }
-  /**
-  * Select a schema to query or perform an function (rpc) call.
-  *
-  * The schema needs to be on the list of exposed schemas inside Supabase.
-  *
-  * @param schema - The schema to query
-  */
-  schema(schema) {
-    return this.rest.schema(schema);
-  }
-  /**
-  * Perform a function call.
-  *
-  * @param fn - The function name to call
-  * @param args - The arguments to pass to the function call
-  * @param options - Named parameters
-  * @param options.head - When set to `true`, `data` will not be returned.
-  * Useful if you only need the count.
-  * @param options.get - When set to `true`, the function will be called with
-  * read-only access mode.
-  * @param options.count - Count algorithm to use to count rows returned by the
-  * function. Only applicable for [set-returning
-  * functions](https://www.postgresql.org/docs/current/functions-srf.html).
-  *
-  * `"exact"`: Exact but slow count algorithm. Performs a `COUNT(*)` under the
-  * hood.
-  *
-  * `"planned"`: Approximated but fast count algorithm. Uses the Postgres
-  * statistics under the hood.
-  *
-  * `"estimated"`: Uses exact count for low numbers and planned count for high
-  * numbers.
-  */
-  rpc(fn2, args = {}, options = {
-    head: false,
-    get: false,
-    count: void 0
-  }) {
-    return this.rest.rpc(fn2, args, options);
-  }
-  /**
-  * Creates a Realtime channel with Broadcast, Presence, and Postgres Changes.
-  *
-  * @param {string} name - The name of the Realtime channel.
-  * @param {Object} opts - The options to pass to the Realtime channel.
-  *
-  */
-  channel(name, opts = { config: {} }) {
-    return this.realtime.channel(name, opts);
-  }
-  /**
-  * Returns all Realtime channels.
-  */
-  getChannels() {
-    return this.realtime.getChannels();
-  }
-  /**
-  * Unsubscribes and removes Realtime channel from Realtime client.
-  *
-  * @param {RealtimeChannel} channel - The name of the Realtime channel.
-  *
-  */
-  removeChannel(channel) {
-    return this.realtime.removeChannel(channel);
-  }
-  /**
-  * Unsubscribes and removes all Realtime channels from Realtime client.
-  */
-  removeAllChannels() {
-    return this.realtime.removeAllChannels();
-  }
-  async _getAccessToken() {
-    var _this = this;
-    var _data$session$access_, _data$session;
-    if (_this.accessToken) return await _this.accessToken();
-    const { data } = await _this.auth.getSession();
-    return (_data$session$access_ = (_data$session = data.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : _this.supabaseKey;
-  }
-  _initSupabaseAuthClient({ autoRefreshToken, persistSession, detectSessionInUrl, storage, userStorage, storageKey, flowType, lock, debug, throwOnError }, headers, fetch$1) {
-    const authHeaders = {
-      Authorization: `Bearer ${this.supabaseKey}`,
-      apikey: `${this.supabaseKey}`
-    };
-    return new SupabaseAuthClient({
-      url: this.authUrl.href,
-      headers: _objectSpread22(_objectSpread22({}, authHeaders), headers),
-      storageKey,
-      autoRefreshToken,
-      persistSession,
-      detectSessionInUrl,
-      storage,
-      userStorage,
-      flowType,
-      lock,
-      debug,
-      throwOnError,
-      fetch: fetch$1,
-      hasCustomAuthorizationHeader: Object.keys(this.headers).some((key) => key.toLowerCase() === "authorization")
-    });
-  }
-  _initRealtimeClient(options) {
-    return new import_realtime_js.RealtimeClient(this.realtimeUrl.href, _objectSpread22(_objectSpread22({}, options), {}, { params: _objectSpread22(_objectSpread22({}, { apikey: this.supabaseKey }), options === null || options === void 0 ? void 0 : options.params) }));
-  }
-  _listenForAuthEvents() {
-    return this.auth.onAuthStateChange((event, session) => {
-      this._handleTokenChanged(event, "CLIENT", session === null || session === void 0 ? void 0 : session.access_token);
-    });
-  }
-  _handleTokenChanged(event, source, token) {
-    if ((event === "TOKEN_REFRESHED" || event === "SIGNED_IN") && this.changedAccessToken !== token) {
-      this.changedAccessToken = token;
-      this.realtime.setAuth(token);
-    } else if (event === "SIGNED_OUT") {
-      this.realtime.setAuth();
-      if (source == "STORAGE") this.auth.signOut();
-      this.changedAccessToken = void 0;
-    }
-  }
-};
-var createClient = (supabaseUrl, supabaseKey, options) => {
-  return new SupabaseClient(supabaseUrl, supabaseKey, options);
-};
-function shouldShowDeprecationWarning() {
-  if (typeof window !== "undefined") return false;
-  const _process = globalThis["process"];
-  if (!_process) return false;
-  const processVersion = _process["version"];
-  if (processVersion === void 0 || processVersion === null) return false;
-  const versionMatch = processVersion.match(/^v(\d+)\./);
-  if (!versionMatch) return false;
-  return parseInt(versionMatch[1], 10) <= 18;
-}
-if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217");
-
-// src/integrations/supabase/previewAuthStorage.ts
-function brokeredPreviewStorage() {
-  if (typeof window === "undefined") return void 0;
-  const host = location.hostname;
-  const PREVIEW_ZONES = ["lovableproject.com", "lovableproject-dev.com", "lovable.app", "gpt-eng.com", "gptengineer.run"];
-  const onPreviewZone = PREVIEW_ZONES.some((z) => host === z || host.endsWith("." + z));
-  const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-  const projectId = onPreviewZone ? host.match(new RegExp("^(?:id-preview(?:-[a-z0-9]+)?|project)--(" + UUID + ")(?:-dev)?(?=\\.|$)", "i"))?.[1] ?? host.match(new RegExp("^(" + UUID + ")(?=[.-])", "i"))?.[1] : void 0;
-  const framed = window.parent && window.parent !== window;
-  if (!projectId || !framed) return localStorage;
-  const dev = host.endsWith(".lovableproject-dev.com") || host.endsWith(".gpt-eng.com");
-  const EDITOR = dev ? /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$|^http:\/\/localhost:3000$/ : /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$/;
-  const ancestor = location.ancestorOrigins && location.ancestorOrigins[0] || (document.referrer ? new URL(document.referrer).origin : "");
-  const editorOrigins = ancestor && EDITOR.test(ancestor) ? [ancestor] : dev ? ["https://lovable.dev", "http://localhost:3000"] : ["https://lovable.dev"];
-  const RESULT = "lovable-preview-auth:result";
-  const TIMEOUT = 2e3;
-  const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const request = (type, key, value2) => new Promise((resolve6) => {
-    const requestId = newId();
-    let done = false;
-    let timer;
-    const finish = (r) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
-      resolve6(r);
-    };
-    const onMessage = (e) => {
-      if (editorOrigins.indexOf(e.origin) < 0) return;
-      const d = e.data;
-      if (d && d.type === RESULT && d.requestId === requestId) finish(d);
-    };
-    window.addEventListener("message", onMessage);
-    const msg = { type, requestId, projectId, key };
-    if (value2 !== void 0) msg["value"] = value2;
-    for (const origin of editorOrigins) window.parent.postMessage(msg, origin);
-    timer = setTimeout(() => finish(null), TIMEOUT);
-  });
-  let firstGet = true;
-  const RETRY_DELAY = 250;
-  return {
-    getItem: async (key) => {
-      let res = await request("lovable-preview-auth:get", key);
-      if (!res && firstGet) {
-        await new Promise((r) => setTimeout(r, RETRY_DELAY));
-        res = await request("lovable-preview-auth:get", key);
-      }
-      firstGet = false;
-      if (res && res.ok && typeof res.value === "string") {
-        if (res.value === "") {
-          localStorage.removeItem(key);
-          return null;
-        }
-        return res.value;
-      }
-      return localStorage.getItem(key);
-    },
-    setItem: (key, value2) => {
-      localStorage.setItem(key, value2);
-      return request("lovable-preview-auth:set", key, value2).then(() => void 0);
-    },
-    removeItem: (key) => {
-      localStorage.removeItem(key);
-      return request("lovable-preview-auth:remove", key).then(() => void 0);
-    }
-  };
-}
-
-// src/integrations/supabase/client.ts
-var SUPABASE_URL = "https://ygzqjekxzvsrkhuqhqbp.supabase.co";
-var SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnenFqZWt4enZzcmtodXFocWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NzU1NDEsImV4cCI6MjA4NTQ1MTU0MX0.--CgBH0g9CJsHC_pRoaNp1nDDQ8cQ5m-gQ0w7zlnjiY";
-var supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: brokeredPreviewStorage(),
-    persistSession: true,
-    autoRefreshToken: true
-  }
-});
-
 // src/lang/dialect/registry.ts
+init_client();
 var db = supabase;
 var CACHE_KEY = "sdev_library_cache";
 function readCache() {
@@ -25977,6 +26011,7 @@ function importOfflineBundle(json) {
 }
 
 // src/lang/dialect/extensions.ts
+init_client();
 var CACHE_KEY2 = "sdev_extensions_cache";
 var ENABLED_KEY = "sdev_extensions_enabled";
 var db2 = supabase;
@@ -26118,10 +26153,12 @@ function setRuntimePreference(rt) {
 
 // cli/cloud.ts
 init_env();
+init_client();
 
 // cli/auth.ts
 init_env();
 init_env();
+init_client();
 import { readFileSync as readFileSync2, writeFileSync as writeFileSync2, existsSync as existsSync2, rmSync, chmodSync } from "node:fs";
 import { join as join2 } from "node:path";
 var SESSION_PATH = join2(SDEV_HOME, "session.json");
@@ -26309,7 +26346,7 @@ function askHidden(question) {
     stdin.resume();
     stdin.setEncoding("utf8");
     let buffer = "";
-    const finish = (value2) => {
+    const finish2 = (value2) => {
       stdin.setRawMode(false);
       stdin.pause();
       stdin.removeListener("data", onData);
@@ -26319,8 +26356,8 @@ function askHidden(question) {
     };
     const onData = (chunk) => {
       for (const ch of chunk) {
-        if (ch === "\r" || ch === "\n") return finish(buffer);
-        if (ch === "") return finish(null);
+        if (ch === "\r" || ch === "\n") return finish2(buffer);
+        if (ch === "") return finish2(null);
         if (ch === "\x7F" || ch === "\b") {
           if (buffer.length) {
             buffer = buffer.slice(0, -1);
@@ -26395,7 +26432,926 @@ function stripBoardBlocks(source) {
   return out;
 }
 
+// src/lang/agent/directives.ts
+var DIRECTIVE_RE = /^\s*!#\s*agent\s*:\s*([a-z]+)(?:\s*:\s*([a-z]+))?\s*$/i;
+function scanDirectives(source) {
+  let mode = null;
+  let brain = null;
+  let learn = null;
+  let found = false;
+  const lines = source.split("\n").map((line) => {
+    const m = line.match(DIRECTIVE_RE);
+    if (!m) return line;
+    found = true;
+    const head2 = m[1].toLowerCase();
+    const tail = (m[2] ?? "").toLowerCase();
+    switch (head2) {
+      case "off":
+        mode = "off";
+        break;
+      case "on":
+        mode = mode === "off" ? "on" : mode ?? "on";
+        break;
+      case "auto":
+        mode = mode ?? "auto";
+        brain = "auto";
+        break;
+      case "strict":
+        mode = "strict";
+        break;
+      case "local":
+        brain = "local";
+        mode = mode ?? "on";
+        break;
+      case "online":
+        brain = "online";
+        mode = mode ?? "on";
+        break;
+      case "nobrain":
+      case "rules":
+        brain = "none";
+        break;
+      case "learn":
+        learn = tail !== "off" && tail !== "no";
+        break;
+      default:
+        break;
+    }
+    return "";
+  });
+  return { mode, brain, learn, found, source: lines.join("\n") };
+}
+
+// src/lang/agent/vocabulary.ts
+var VOCABULARY = {
+  say: [
+    "say",
+    "print",
+    "output",
+    "out",
+    "echo",
+    "show",
+    "display",
+    "write",
+    "log",
+    "puts",
+    "println",
+    "printf",
+    "terminal",
+    "console",
+    "speak",
+    "shout",
+    "whisper",
+    "tell",
+    "emitln",
+    "\u043F\u0435\u0447\u0430\u0442\u0430\u0439",
+    "\u0438\u0437\u0432\u0435\u0434\u0438",
+    "\u043A\u0430\u0436\u0438",
+    "imprimir",
+    "afficher",
+    "ausgeben",
+    "\u043F\u0435\u0447\u0430\u0442\u044C",
+    "\u6253\u5370",
+    "\u8F38\u51FA",
+    "\u0432\u044B\u0432\u043E\u0434"
+  ],
+  ask: ["ask", "input", "read", "prompt", "readline", "gets", "scan", "\u0432\u044A\u0432\u0435\u0434\u0438"],
+  set: [
+    "set",
+    "let",
+    "var",
+    "make",
+    "define",
+    "assign",
+    "forge",
+    "create",
+    "declare",
+    "const",
+    "dim",
+    "\u043D\u0435\u043A\u0430",
+    "\u0437\u0430\u0434\u0430\u0439"
+  ],
+  if: ["if", "when", "whenever", "ponder", "should", "\u0430\u043A\u043E", "si", "wenn"],
+  else: ["else", "otherwise", "elsewise", "orelse", "\u0438\u043D\u0430\u0447\u0435"],
+  end: ["end", "endif", "done", "fi", "esac", "endwhile", "endfor", "\u043A\u0440\u0430\u0439"],
+  while: ["while", "until", "cycle", "repeat", "loopwhile", "\u0434\u043E\u043A\u0430\u0442\u043E"],
+  for: ["for", "foreach", "iterate", "each", "loop", "walk", "\u0437\u0430"],
+  in: ["in", "through", "of", "over", "from", "\u0432"],
+  return: ["return", "yield", "give", "giveback", "result", "\u0432\u044A\u0440\u043D\u0438"],
+  function: ["to", "func", "function", "def", "fn", "conjure", "procedure", "sub", "method"],
+  break: ["break", "stop", "leave", "exitloop", "yeet"],
+  continue: ["continue", "next", "skip"],
+  true: ["true", "yes", "yep", "on", "\u0434\u0430"],
+  false: ["false", "no", "nope", "off", "\u043D\u0435"],
+  nothing: ["nothing", "none", "null", "nil", "void", "undefined", "empty"],
+  and: ["and", "also", "plusalso"],
+  or: ["or", "either"],
+  not: ["not", "isnt", "negate"]
+};
+var CANONICAL = {
+  say: "say",
+  ask: "ask",
+  set: "set",
+  if: "if",
+  else: "else",
+  end: "end",
+  while: "while",
+  for: "for",
+  in: "in",
+  return: "return",
+  function: "to",
+  break: "break",
+  continue: "continue",
+  true: "true",
+  false: "false",
+  nothing: "nothing",
+  and: "and",
+  or: "or",
+  not: "not"
+};
+function baseWordMap() {
+  const map = /* @__PURE__ */ new Map();
+  for (const [intent, words] of Object.entries(VOCABULARY)) {
+    for (const w of words) map.set(w.toLowerCase(), intent);
+  }
+  return map;
+}
+var ASSIGN_PHRASES = [
+  "will be",
+  "shall be",
+  "is set to",
+  "is now",
+  "should be",
+  "becomes",
+  "gets",
+  "equals",
+  "holds",
+  "to be",
+  "be",
+  "is",
+  "=",
+  ":=",
+  "<-",
+  "\u0435"
+];
+var NUMBER_WORDS = {
+  zero: 0,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
+  hundred: 100,
+  thousand: 1e3,
+  million: 1e6
+};
+var COMPARISONS = [
+  [/\bis\s+greater\s+than\s+or\s+equal\s+to\b/gi, " is or more "],
+  [/\bis\s+less\s+than\s+or\s+equal\s+to\b/gi, " is or less "],
+  [/\b(?:is\s+)?(?:greater|bigger|larger|more)\s+than\b/gi, " > "],
+  [/\b(?:is\s+)?(?:less|smaller|fewer)\s+than\b/gi, " < "],
+  [/\bat\s+least\b/gi, " is or more "],
+  [/\bat\s+most\b/gi, " is or less "],
+  [/\b(?:is\s+)?(?:equal\s+to|the\s+same\s+as)\b/gi, " is "],
+  [/\b(?:is\s+)?(?:not\s+equal\s+to|different\s+from)\b/gi, " is not "],
+  [/\bor\s+more\b/gi, " or more "],
+  [/\bor\s+less\b/gi, " or less "]
+];
+
+// src/lang/agent/repair.ts
+var PLACEHOLDER2 = "\0";
+function mask2(raw) {
+  const strings = [];
+  let line = "";
+  let comment = "";
+  let i = 0;
+  while (i < raw.length) {
+    const c = raw[i];
+    if (c === "#" || c === "/" && raw[i + 1] === "/") {
+      comment = " #" + raw.slice(i).replace(/^#|^\/\//, "");
+      break;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      let s = "";
+      i++;
+      while (i < raw.length && raw[i] !== quote) {
+        if (raw[i] === "\\" && i + 1 < raw.length) {
+          s += raw[i] + raw[i + 1];
+          i += 2;
+          continue;
+        }
+        s += raw[i];
+        i++;
+      }
+      i++;
+      line += `${PLACEHOLDER2}${strings.length}${PLACEHOLDER2}`;
+      strings.push('"' + s.replace(/"/g, '\\"') + '"');
+      continue;
+    }
+    line += c;
+    i++;
+  }
+  return { line, strings, comment };
+}
+function unmask2(line, strings) {
+  return line.replace(/\u0000(\d+)\u0000/g, (_m, i) => strings[Number(i)]);
+}
+function isMaskedString(token) {
+  return /^\u0000\d+\u0000$/.test(token);
+}
+var RESERVED = /* @__PURE__ */ new Set([
+  "say",
+  "ask",
+  "set",
+  "to",
+  "if",
+  "else",
+  "end",
+  "for",
+  "each",
+  "in",
+  "while",
+  "break",
+  "continue",
+  "with",
+  "return",
+  "make",
+  "capture",
+  "ref",
+  "call",
+  "attempt",
+  "rescue",
+  "throw",
+  "kind",
+  "has",
+  "does",
+  "new",
+  "self",
+  "extends",
+  "super",
+  "use",
+  "true",
+  "false",
+  "nothing",
+  "is",
+  "not",
+  "and",
+  "or",
+  "more",
+  "less",
+  "match"
+]);
+var BUILTINS = /* @__PURE__ */ new Set([
+  "range",
+  "len",
+  "sum",
+  "str",
+  "text",
+  "num",
+  "ord",
+  "chr",
+  "upper",
+  "lower",
+  "trim",
+  "split",
+  "join",
+  "find",
+  "replace",
+  "abs",
+  "min",
+  "max",
+  "floor",
+  "ceil",
+  "sqrt",
+  "pow",
+  "random",
+  "keys",
+  "values",
+  "read_file",
+  "write_file",
+  "append_file",
+  "file_exists",
+  "input",
+  "args",
+  "env",
+  "exit",
+  "now_ms",
+  "sleep_ms",
+  "say_err"
+]);
+function wordsOf(line) {
+  return line.trim().split(/\s+/).filter(Boolean);
+}
+function splitStatements(line) {
+  return line.split(";").map((s) => s.trim()).filter((s) => s.length > 0);
+}
+function numberWord(token) {
+  const parts = token.toLowerCase().split(/[\s-]+/);
+  if (!parts.every((p) => p in NUMBER_WORDS)) return null;
+  let total = 0;
+  let current = 0;
+  for (const p of parts) {
+    const v = NUMBER_WORDS[p];
+    if (v === 100) current = (current || 1) * 100;
+    else if (v >= 1e3) {
+      total += (current || 1) * v;
+      current = 0;
+    } else current += v;
+  }
+  return String(total + current);
+}
+var LITERALS = (() => {
+  const out = {};
+  for (const w of VOCABULARY.nothing) out[w] = "nothing";
+  for (const w of VOCABULARY.true) out[w] = "true";
+  for (const w of VOCABULARY.false) out[w] = "false";
+  return out;
+})();
+function expression(rest, known) {
+  const trimmed = rest.trim();
+  if (!trimmed) return "nothing";
+  const literal = LITERALS[trimmed.toLowerCase()];
+  if (literal) return literal;
+  if (/^[\u0000\d(]/.test(trimmed) && !/\u0000\s+\u0000/.test(trimmed)) {
+    if (isMaskedString(trimmed) || /^[\d.]+$/.test(trimmed) || trimmed.startsWith("(")) return trimmed;
+  }
+  const tokens = wordsOf(trimmed);
+  const numeric = numberWord(tokens.join(" "));
+  if (numeric !== null) return numeric;
+  const understood = tokens.every((t) => {
+    if (isMaskedString(t)) return true;
+    if (/^[\d.]+$/.test(t)) return true;
+    if (/^[-+*/%<>=!,()[\]]+$/.test(t)) return true;
+    const bare = t.replace(/[(),[\]]/g, "");
+    if (!bare) return true;
+    if (RESERVED.has(bare) || BUILTINS.has(bare)) return true;
+    if (known.has(bare)) return true;
+    if (/[(.[]/.test(t)) return true;
+    return false;
+  });
+  if (understood) return tokens.join(" ");
+  const words = tokens.map((t) => isMaskedString(t) ? t : t);
+  if (words.length === 1 && !isMaskedString(words[0]) && numberWord(words[0]) !== null) {
+    return numberWord(words[0]);
+  }
+  const allBare = tokens.every((t) => !isMaskedString(t));
+  if (allBare) return '"' + tokens.join(" ").replace(/"/g, '\\"') + '"';
+  return tokens.map((t) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || RESERVED.has(t) || BUILTINS.has(t) || /[(.[]/.test(t) ? t : '"' + t + '"').join(" + ");
+}
+function condition(rest, known) {
+  let out = " " + rest.trim() + " ";
+  for (const [re, to] of COMPARISONS) out = out.replace(re, to);
+  out = out.replace(/\bthen\b/gi, " ").replace(/[:{]\s*$/, " ").replace(/\s*==\s*/g, " is ").replace(/\s*!=\s*/g, " is not ").replace(/\s*>=\s*/g, " is or more ").replace(/\s*<=\s*/g, " is or less ").replace(/\s+/g, " ").trim();
+  out = out.split(" ").map((t) => !isMaskedString(t) && numberWord(t) !== null ? numberWord(t) : t).join(" ");
+  void known;
+  return out;
+}
+var ASSIGN_RE = new RegExp(
+  `^([\\p{L}\\p{N}_]+)\\s+(?:${ASSIGN_PHRASES.filter((p) => /^[a-zа-я ]+$/i.test(p)).sort((a, b) => b.length - a.length).join("|")})\\s+(.+)$`,
+  "iu"
+);
+var ASSIGN_SYMBOL_RE = /^([\p{L}\p{N}_]+)\s*(?::=|<-|=(?!=))\s*(.+)$/u;
+function collectNames(lines, words, seed) {
+  const names = new Set(seed ?? []);
+  for (const raw of lines) {
+    const { line } = mask2(raw);
+    for (const stmt of splitStatements(line)) {
+      const toks = wordsOf(stmt);
+      if (!toks.length) continue;
+      const head2 = words.get(toks[0].toLowerCase());
+      if (head2 === "set" && toks[1]) {
+        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
+        continue;
+      }
+      if (head2 === "function" && toks[1]) {
+        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
+        for (const p of toks.slice(2)) if (!words.has(p.toLowerCase()) && p !== "with") names.add(p);
+        continue;
+      }
+      if (head2 === "for") {
+        const each = toks.findIndex((t) => words.get(t.toLowerCase()) === "in");
+        if (each > 1) names.add(toks[each - 1]);
+        continue;
+      }
+      const m = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
+      if (m && !words.has(m[1].toLowerCase())) names.add(m[1]);
+    }
+  }
+  return names;
+}
+function repair(source, ctx = {}) {
+  const words = baseWordMap();
+  const ownWords = /* @__PURE__ */ new Set();
+  for (const [w, i] of ctx.extraWords ?? []) {
+    words.set(w.toLowerCase(), i);
+    ownWords.add(w.toLowerCase());
+  }
+  const rawLines = source.split("\n");
+  const known = collectNames(rawLines, words, ctx.knownNames);
+  const notes = [];
+  const learned = {};
+  const unresolved = [];
+  let changed = false;
+  const note = (line, from, to, why) => {
+    if (from.trim() === to.trim()) return;
+    changed = true;
+    notes.push({ line, from: from.trim(), to: to.trim(), why, source: "rules" });
+  };
+  const learn = (word, intent) => {
+    const lower = word.toLowerCase();
+    if (lower !== CANONICAL[intent]) learned[lower] = intent;
+  };
+  const out = rawLines.map((raw, index) => {
+    const lineNo = index + 1;
+    if (!raw.trim()) return raw;
+    const indent = raw.match(/^\s*/)?.[0] ?? "";
+    const { line, strings, comment } = mask2(raw);
+    if (!line.trim()) return raw;
+    const firstWord = line.trim().split(/[\s(]+/)[0]?.toLowerCase() ?? "";
+    if (/[^\x00-\x7F]/.test(line) && !ownWords.has(firstWord.replace(/[(:]$/, ""))) {
+      unresolved.push(lineNo);
+      return raw;
+    }
+    const statements = splitStatements(line);
+    const rewritten = [];
+    for (const stmt of statements) {
+      const toks = wordsOf(stmt);
+      if (!toks.length) continue;
+      const head2 = toks[0];
+      const headKey = head2.toLowerCase().replace(/[(:]$/, "");
+      const intent = words.get(headKey);
+      const rest = stmt.slice(stmt.indexOf(head2) + head2.length).trim().replace(/^\(|\)$/g, "").trim();
+      if (stmt === "}" || intent === "end") {
+        rewritten.push("end");
+        if (intent === "end") learn(headKey, "end");
+        continue;
+      }
+      switch (intent) {
+        case "say":
+          learn(headKey, "say");
+          rewritten.push(`say ${expression(rest, known)}`);
+          continue;
+        case "ask":
+          learn(headKey, "ask");
+          rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to ask` : "ask");
+          continue;
+        case "set": {
+          learn(headKey, "set");
+          const m = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
+          if (m) {
+            known.add(m[1]);
+            rewritten.push(`set ${m[1]} to ${expression(m[2], known)}`);
+            continue;
+          }
+          const parts = wordsOf(rest);
+          if (parts.length >= 2) {
+            known.add(parts[0]);
+            const tail = parts.slice(1);
+            if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
+            rewritten.push(`set ${parts[0]} to ${expression(tail.join(" "), known)}`);
+            continue;
+          }
+          rewritten.push(stmt);
+          continue;
+        }
+        case "if":
+          learn(headKey, "if");
+          rewritten.push(`if ${condition(rest, known)}`);
+          continue;
+        case "else":
+          learn(headKey, "else");
+          rewritten.push(rest ? `else ${condition(rest, known)}`.replace(/^else if/, "else if") : "else");
+          continue;
+        case "while":
+          learn(headKey, "while");
+          rewritten.push(`while ${condition(rest, known)}`);
+          continue;
+        case "for": {
+          learn(headKey, "for");
+          const parts = wordsOf(rest).filter((t) => words.get(t.toLowerCase()) !== "for");
+          const at = parts.findIndex((t) => words.get(t.toLowerCase()) === "in");
+          if (at > 0) {
+            const name = parts[at - 1];
+            known.add(name);
+            rewritten.push(`for each ${name} in ${parts.slice(at + 1).join(" ").replace(/[:{]\s*$/, "").trim()}`);
+            continue;
+          }
+          rewritten.push(`for ${rest}`);
+          continue;
+        }
+        case "return":
+          learn(headKey, "return");
+          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ""), known)}` : "return");
+          continue;
+        case "break":
+        case "continue":
+          learn(headKey, intent);
+          rewritten.push(CANONICAL[intent]);
+          continue;
+        case "function": {
+          learn(headKey, "function");
+          const parts = wordsOf(rest.replace(/[:{]\s*$/, ""));
+          if (!parts.length) {
+            rewritten.push(stmt);
+            continue;
+          }
+          const name = parts[0].replace(/\(.*$/, "");
+          const inParens = parts[0].includes("(") ? [parts[0].slice(parts[0].indexOf("("))] : [];
+          const params = [...inParens, ...parts.slice(1)].join(" ").replace(/^\(|\)$/g, "").replace(/,/g, " ").split(/\s+/).filter((p) => p && words.get(p.toLowerCase()) !== "in" && p !== "with");
+          known.add(name);
+          params.forEach((p) => known.add(p));
+          rewritten.push(params.length ? `to ${name} with ${params.join(" ")}` : `to ${name}`);
+          continue;
+        }
+        default:
+          break;
+      }
+      const assign = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
+      if (assign && !words.has(assign[1].toLowerCase())) {
+        known.add(assign[1]);
+        rewritten.push(`set ${assign[1]} to ${expression(assign[2], known)}`);
+        continue;
+      }
+      if (/^[\p{L}\p{N}_]+\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head2) || BUILTINS.has(headKey)) {
+        rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
+        continue;
+      }
+      if (ctx.strict) {
+        rewritten.push(stmt);
+        unresolved.push(lineNo);
+        continue;
+      }
+      if (toks.length === 1 && !isMaskedString(toks[0])) {
+        rewritten.push(`say "${toks[0]}"`);
+        continue;
+      }
+      rewritten.push(stmt);
+      unresolved.push(lineNo);
+    }
+    const joined = rewritten.join("\n" + indent);
+    const result = indent + unmask2(joined, strings) + comment;
+    note(lineNo, raw, result, "understood as canonical sdev");
+    return result;
+  });
+  return { source: out.join("\n"), notes, learned, unresolved, changed };
+}
+
+// src/lang/agent/sense.ts
+function parses(source) {
+  try {
+    new Parser(new Lexer(source).tokenize()).parse();
+    return true;
+  } catch {
+    return false;
+  }
+}
+var NON_CANONICAL_HEAD = (() => {
+  const map = baseWordMap();
+  const out = /* @__PURE__ */ new Map();
+  for (const [word, intent] of map) if (word !== CANONICAL[intent]) out.set(word, intent);
+  return out;
+})();
+function senseFile(source, extra) {
+  const reasons = [];
+  const lines = source.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.startsWith("#") || line.startsWith("//")) continue;
+    const head2 = line.split(/[\s(]+/)[0].toLowerCase();
+    if (NON_CANONICAL_HEAD.has(head2) || extra?.has(head2)) {
+      reasons.push(`line ${i + 1}: "${head2}" is not canonical sdev`);
+      continue;
+    }
+    if (/^[\p{L}\p{N}_]+\s+(?:will be|becomes|gets|is now|should be|shall be|=|:=|<-)\s+/iu.test(line)) {
+      reasons.push(`line ${i + 1}: looks like an assignment written another way`);
+    }
+    if (/;\s*\S/.test(line)) reasons.push(`line ${i + 1}: several statements on one line`);
+  }
+  const ok = parses(source);
+  return { parses: ok, suspicious: !ok || reasons.length > 0, reasons };
+}
+
+// src/lang/agent/brain.ts
+var DEFAULT_LOCAL_URL = "http://127.0.0.1:11434/sdev-agent";
+function localUrlFromEnv() {
+  try {
+    const env = globalThis.process?.env;
+    return env?.SDEV_AGENT_LOCAL_URL ?? null;
+  } catch {
+    return null;
+  }
+}
+function online() {
+  const nav = globalThis.navigator;
+  return nav?.onLine ?? true;
+}
+async function callLocal(req, url) {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req)
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return typeof json?.canonical === "string" ? json : null;
+  } catch {
+    return null;
+  }
+}
+async function callOnline(req) {
+  try {
+    const { supabase: supabase2 } = await Promise.resolve().then(() => (init_client(), client_exports));
+    const { data, error } = await supabase2.functions.invoke("sdev-agent", { body: req });
+    if (error) return null;
+    const reply = data;
+    return typeof reply?.canonical === "string" ? reply : null;
+  } catch {
+    return null;
+  }
+}
+async function think(req, mode, localUrl) {
+  if (mode === "none") return { reply: null, used: "none" };
+  const url = localUrl ?? localUrlFromEnv() ?? DEFAULT_LOCAL_URL;
+  if (mode === "local") {
+    const reply2 = await callLocal(req, url);
+    return { reply: reply2, used: reply2 ? "local" : "none" };
+  }
+  if (mode === "online") {
+    const reply2 = await callOnline(req);
+    return { reply: reply2, used: reply2 ? "online" : "none" };
+  }
+  if (online()) {
+    const reply2 = await callOnline(req);
+    if (reply2) return { reply: reply2, used: "online" };
+  }
+  const reply = await callLocal(req, url);
+  return { reply, used: reply ? "local" : "none" };
+}
+
+// src/lang/agent/memory.ts
+function emptyMemory() {
+  return { version: 1, words: {}, names: {}, lines: {}, programs: 0, updated: 0 };
+}
+var KEY = "sdev_agent_memory";
+function sane(value2) {
+  const m = value2;
+  if (!m || typeof m !== "object") return emptyMemory();
+  return {
+    version: 1,
+    words: m.words ?? {},
+    names: m.names ?? {},
+    lines: m.lines ?? {},
+    programs: m.programs ?? 0,
+    updated: m.updated ?? 0
+  };
+}
+var browserStore = {
+  load() {
+    try {
+      if (typeof localStorage === "undefined") return emptyMemory();
+      const raw = localStorage.getItem(KEY);
+      return raw ? sane(JSON.parse(raw)) : emptyMemory();
+    } catch {
+      return emptyMemory();
+    }
+  },
+  save(memory) {
+    try {
+      if (typeof localStorage === "undefined") return;
+      localStorage.setItem(KEY, JSON.stringify(memory));
+    } catch {
+    }
+  }
+};
+var active = browserStore;
+function loadMemory() {
+  return active.load();
+}
+function saveMemory(memory) {
+  memory.updated = Date.now();
+  active.save(memory);
+}
+var MAX_LINES = 500;
+function rememberWord(memory, word, intent) {
+  const key = word.toLowerCase();
+  const prev = memory.words[key];
+  memory.words[key] = { intent, hits: (prev?.intent === intent ? prev.hits : 0) + 1 };
+}
+function rememberName(memory, name) {
+  memory.names[name] = (memory.names[name] ?? 0) + 1;
+}
+function rememberLine(memory, original, canonical) {
+  const key = original.trim();
+  if (!key || key === canonical.trim()) return;
+  const prev = memory.lines[key];
+  memory.lines[key] = { canonical, hits: (prev?.hits ?? 0) + 1 };
+  const keys = Object.keys(memory.lines);
+  if (keys.length > MAX_LINES) {
+    keys.sort((a, b) => memory.lines[a].hits - memory.lines[b].hits).slice(0, keys.length - MAX_LINES).forEach((k) => delete memory.lines[k]);
+  }
+}
+function learnFromProgram(memory, canonical) {
+  memory.programs += 1;
+  const re = /^\s*set\s+([\p{L}\p{N}_]+)\s+to\b/gmu;
+  let m;
+  while (m = re.exec(canonical)) rememberName(memory, m[1]);
+  const fn2 = /^\s*to\s+([\p{L}\p{N}_]+)\b/gmu;
+  while (m = fn2.exec(canonical)) rememberName(memory, m[1]);
+}
+function memoryWordMap(memory) {
+  const map = /* @__PURE__ */ new Map();
+  for (const [word, entry] of Object.entries(memory.words)) {
+    if (entry.hits > 0) map.set(word, entry.intent);
+  }
+  return map;
+}
+
+// src/lang/agent/promote.ts
+function slugify(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "my-sdev";
+}
+function promoteToDialect(opts = {}) {
+  const name = opts.name ?? "My way of writing";
+  const spec = emptyDialect({ name, slug: opts.slug ?? slugify(name), description: "Learned by the understanding agent." });
+  const pairs = [
+    ...Object.entries(opts.used ?? {}).map(([w, i]) => [w, i]),
+    ...Object.entries(opts.memory?.words ?? {}).map(([w, e]) => [w, e.intent])
+  ];
+  const byCanonical = /* @__PURE__ */ new Map();
+  for (const [word, intent] of pairs) {
+    const canonical = CANONICAL[intent];
+    if (!canonical || word === canonical) continue;
+    if (!/^[\p{L}\p{N}_]+$/u.test(word)) continue;
+    if (!byCanonical.has(canonical)) byCanonical.set(canonical, /* @__PURE__ */ new Set());
+    byCanonical.get(canonical).add(word);
+  }
+  const taken = /* @__PURE__ */ new Set();
+  for (const [canonical, words] of byCanonical) {
+    const list = [...words].filter((w) => !taken.has(w));
+    if (!list.length) continue;
+    list.forEach((w) => taken.add(w));
+    spec.synonyms[canonical] = list;
+    if (opts.rename) spec.names[canonical] = list[0];
+  }
+  return spec;
+}
+
+// src/lang/agent/index.ts
+function knownNames(memory) {
+  return new Set(Object.keys(memory.names));
+}
+function applyMemoryLines(source, memory) {
+  let hit = false;
+  const out = source.split("\n").map((line) => {
+    const entry = memory.lines[line.trim()];
+    if (!entry) return line;
+    hit = true;
+    const indent = line.match(/^\s*/)?.[0] ?? "";
+    return indent + entry.canonical;
+  });
+  return { source: out.join("\n"), hit };
+}
+function begin(source, opts) {
+  const directives = scanDirectives(source);
+  const mode = directives.mode ?? opts.mode ?? "auto";
+  const brain = directives.brain ?? opts.brain ?? "auto";
+  const learn = directives.learn ?? opts.learn ?? true;
+  return { mode, brain, learn, stripped: directives.source, memory: loadMemory() };
+}
+function skip(source, mode) {
+  return { source, changed: false, mode, notes: [], learned: {}, unresolved: [], brainUsed: "none" };
+}
+function dialectWordMap(opts) {
+  const map = /* @__PURE__ */ new Map();
+  const canonicalToIntent = /* @__PURE__ */ new Map();
+  for (const [intent, word] of Object.entries(CANONICAL)) {
+    canonicalToIntent.set(word, intent);
+  }
+  const names = opts.dialect?.names ?? {};
+  const synonyms = opts.dialect?.synonyms ?? {};
+  for (const [canonical, word] of Object.entries(names)) {
+    const intent = canonicalToIntent.get(canonical);
+    if (intent && word) map.set(word.toLowerCase(), intent);
+  }
+  for (const [canonical, list] of Object.entries(synonyms)) {
+    const intent = canonicalToIntent.get(canonical);
+    if (!intent) continue;
+    for (const word of list ?? []) map.set(word.toLowerCase(), intent);
+  }
+  return map;
+}
+function runRules(prep, opts) {
+  const { source: remembered } = applyMemoryLines(prep.stripped, prep.memory);
+  const extraWords = new Map([...dialectWordMap(opts), ...memoryWordMap(prep.memory)]);
+  const sense = senseFile(remembered, extraWords);
+  if (!sense.suspicious && sense.parses) {
+    return { done: true, source: remembered, sense, learned: {}, notes: [], unresolved: [] };
+  }
+  const result = repair(remembered, {
+    extraWords,
+    knownNames: knownNames(prep.memory),
+    strict: prep.mode === "strict"
+  });
+  void opts;
+  return { done: false, source: result.source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
+}
+function finish(prep, source, learned) {
+  if (!prep.learn) return;
+  for (const [word, intent] of Object.entries(learned)) rememberWord(prep.memory, word, intent);
+  learnFromProgram(prep.memory, source);
+  saveMemory(prep.memory);
+}
+function understand(source, opts = {}) {
+  const prep = begin(source, opts);
+  if (prep.mode === "off") return skip(prep.stripped, "off");
+  const rules = runRules(prep, opts);
+  finish(prep, rules.source, rules.learned);
+  return {
+    source: rules.source,
+    changed: rules.source !== prep.stripped,
+    mode: prep.mode,
+    notes: rules.notes,
+    learned: rules.learned,
+    unresolved: rules.unresolved,
+    brainUsed: "none"
+  };
+}
+async function understandAsync(source, opts = {}) {
+  const prep = begin(source, opts);
+  if (prep.mode === "off") return skip(prep.stripped, "off");
+  const rules = runRules(prep, opts);
+  let current = rules.source;
+  let brainUsed = "none";
+  const notes = [...rules.notes];
+  const needsBrain = prep.brain !== "none" && !rules.done && (prep.mode === "on" || rules.unresolved.length > 0 || !parses(current));
+  if (needsBrain) {
+    const vocabulary = {};
+    for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
+    const { reply, used } = await think(
+      { source: prep.stripped, draft: current, unresolved: rules.unresolved, vocabulary },
+      prep.brain === "auto" && !online() ? "local" : prep.brain,
+      opts.localUrl
+    );
+    if (reply?.canonical && parses(reply.canonical)) {
+      const before = current.split("\n");
+      const after = reply.canonical.split("\n");
+      after.forEach((line, i) => {
+        if (before[i] !== void 0 && before[i].trim() !== line.trim()) {
+          notes.push({ line: i + 1, from: before[i].trim(), to: line.trim(), why: "understood by the AI", source: "brain" });
+          if (prep.learn) rememberLine(prep.memory, prep.stripped.split("\n")[i] ?? before[i], line.trim());
+        }
+      });
+      current = reply.canonical;
+      brainUsed = used;
+      for (const [word, intent] of Object.entries(reply.words ?? {})) {
+        if (prep.learn) rememberWord(prep.memory, word, intent);
+      }
+    }
+  }
+  finish(prep, current, rules.learned);
+  return {
+    source: current,
+    changed: current !== prep.stripped,
+    mode: prep.mode,
+    notes,
+    learned: rules.learned,
+    unresolved: brainUsed === "none" ? rules.unresolved : [],
+    brainUsed
+  };
+}
+
 // cli/pipeline.ts
+function explainAgent(result) {
+  if (!result || !result.notes.length) return;
+  process.stdout.write(`agent (${result.mode}${result.brainUsed !== "none" ? `, ${result.brainUsed} AI` : ""}) understood:
+`);
+  for (const n of result.notes) process.stdout.write(`  ${n.line}: ${n.from}  ->  ${n.to}
+`);
+}
 function shebangRuntime(source) {
   for (const raw of source.split("\n", 10)) {
     const line = raw.trim();
@@ -26423,9 +27379,22 @@ function prepare(rawSource, opts = {}) {
   const body = stripSignature(rawSource);
   const dialect = resolveDialect(signature, opts.dialect);
   let code = dialect ? canonicalize(body, dialect).source : body;
+  const agent = understand(code, { mode: opts.agent, brain: opts.brain, dialect });
+  code = agent.source;
   if (!opts.noExt) code = applyExtensions(code);
   const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === "v2" ? "v2" : null) ?? runtimePreference();
-  return { code, signature, dialect, runtime };
+  return { code, signature, dialect, runtime, agent };
+}
+async function prepareAsync(rawSource, opts = {}) {
+  const signature = readSignature(rawSource);
+  const body = stripSignature(rawSource);
+  const dialect = resolveDialect(signature, opts.dialect);
+  let code = dialect ? canonicalize(body, dialect).source : body;
+  const agent = await understandAsync(code, { mode: opts.agent, brain: opts.brain, dialect });
+  code = agent.source;
+  if (!opts.noExt) code = applyExtensions(code);
+  const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === "v2" ? "v2" : null) ?? runtimePreference();
+  return { code, signature, dialect, runtime, agent };
 }
 function localModules(entryPath, source) {
   const modules = {};
@@ -26850,7 +27819,7 @@ function value(name, short) {
   const i = argv.findIndex((a) => a === name || short && a === short);
   return i >= 0 && i + 1 < argv.length ? argv[i + 1] : void 0;
 }
-var FLAGS_WITH_VALUES = /* @__PURE__ */ new Set(["--dialect", "--lang", "--to", "--from", "-o", "--out", "--as", "--ld", "--runtime", "--name", "--about"]);
+var FLAGS_WITH_VALUES = /* @__PURE__ */ new Set(["--dialect", "--lang", "--to", "--from", "-o", "--out", "--as", "--ld", "--runtime", "--name", "--about", "--agent", "--brain"]);
 function positionals() {
   const out = [];
   for (let i = 0; i < argv.length; i++) {
@@ -26866,11 +27835,18 @@ function positionals() {
 }
 function runOptions() {
   const rt = value("--runtime");
+  const agentFlag = value("--agent");
+  const brainFlag = value("--brain");
+  const agent = flag("--no-agent") ? "off" : agentFlag === "off" || agentFlag === "on" || agentFlag === "auto" || agentFlag === "strict" ? agentFlag : void 0;
+  const brain = brainFlag === "local" || brainFlag === "online" || brainFlag === "auto" || brainFlag === "none" ? brainFlag : agentFlag === "local" || agentFlag === "online" ? agentFlag : void 0;
   return {
     dialect: value("--dialect"),
     noExt: flag("--no-ext"),
     lang: value("--lang"),
-    runtime: rt === "v1" || rt === "v2" ? rt : void 0
+    runtime: rt === "v1" || rt === "v2" ? rt : void 0,
+    agent,
+    brain,
+    explain: flag("--explain")
   };
 }
 function die(msg) {
@@ -26934,6 +27910,13 @@ CLOUD
   auth status | whoami | refresh | logout
   cloud list | cloud pull [name] | cloud push <file>
 
+AGENT (understands however you write)
+  agent status            What the agent has learned from your programs
+  agent explain <file>    Show what it understood, line by line
+  agent understand <file> Print the canonical sdev for a file [-o out]
+  agent promote <name>    Turn what it learned into a dialect [--rename]
+  agent forget            Clear the agent's memory
+
 SETTINGS
   runtime [v1|v2]         Show or set the default runtime
   languages               Natural languages the lexer understands
@@ -26946,12 +27929,70 @@ OPTIONS
   --runtime <v1|v2>       Override the runtime
   --no-ext                Ignore enabled extensions
   --lang <Language>       Source language for the lexer
+  --agent <mode>          off | auto | on | strict (or local / online)
+  --brain <where>         auto | local | online | none
+  --no-agent              Run the file exactly as written
+  --explain               Show what the agent understood
   -o, --out <file>        Output path
 `);
 }
+async function cmdAgent(sub, rest) {
+  const memory = loadMemory();
+  switch (sub ?? "status") {
+    case "status": {
+      const words = Object.entries(memory.words);
+      console.log(`programs learned from : ${memory.programs}`);
+      console.log(`words learned         : ${words.length}`);
+      console.log(`line rewrites cached  : ${Object.keys(memory.lines).length}`);
+      if (words.length) {
+        console.log("\nyour words:");
+        for (const [word, e] of words.sort((a, b) => b[1].hits - a[1].hits).slice(0, 40)) {
+          console.log(`  ${word.padEnd(16)} -> ${e.intent}  (${e.hits})`);
+        }
+      }
+      return;
+    }
+    case "explain": {
+      const file = rest[0] ?? die("sdev agent explain <file>");
+      const opts = runOptions();
+      const prepared = await prepareAsync(readSource(file), opts);
+      explainAgent(prepared.agent);
+      console.log("\n--- canonical sdev ---");
+      console.log(prepared.code);
+      return;
+    }
+    case "understand": {
+      const file = rest[0] ?? die("sdev agent understand <file>");
+      const result = await understandAsync(readSource(file), { mode: "on" });
+      const out = value("-o", "--out");
+      if (out) {
+        writeFileSync5(resolve5(process.cwd(), out), result.source);
+        console.log("written:", out);
+      } else console.log(result.source);
+      return;
+    }
+    case "promote": {
+      const name = rest.join(" ") || "My way of writing";
+      const spec = promoteToDialect({ name, memory, rename: flag("--rename") });
+      saveDialect(spec);
+      const learned = Object.keys(spec.synonyms).length;
+      console.log(`dialect "${spec.meta.name}" (${spec.meta.slug}) created from ${learned} learned word groups.`);
+      console.log(`activate it with: sdev dialect use ${spec.meta.slug}`);
+      return;
+    }
+    case "forget": {
+      localStorage.removeItem("sdev_agent_memory");
+      console.log("the agent forgot everything it learned.");
+      return;
+    }
+    default:
+      die("sdev agent <status|explain|understand|promote|forget>");
+  }
+}
 async function cmdRun(file) {
   const opts = runOptions();
-  const prepared = prepare(readSource(file), opts);
+  const prepared = await prepareAsync(readSource(file), opts);
+  if (opts.explain) explainAgent(prepared.agent);
   const outcome = await runPrepared(prepared, file, opts);
   if (!outcome.success) die(outcome.error ?? "program failed");
 }
@@ -27642,6 +28683,8 @@ async function main() {
       return cmdInfo(pos[1] ?? die("sdev info <file>"));
     case "sign":
       return cmdSign(pos[1] ?? "show", pos[2] ?? die("sdev sign <show|stamp|verify|strip> <file>"));
+    case "agent":
+      return cmdAgent(pos[1], pos.slice(2));
     case "dialect":
       return cmdDialect(pos[1], pos.slice(2));
     case "ext":
