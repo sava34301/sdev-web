@@ -19,7 +19,7 @@ import {
   learnFromProgram, type AgentMemory,
 } from './memory';
 import type { UnderstandOptions, UnderstandResult } from './types';
-import type { Intent } from './vocabulary';
+import { CANONICAL as CANONICAL_WORDS, type Intent } from './vocabulary';
 
 export * from './types';
 export * from './directives';
