@@ -640,7 +640,17 @@ export default function IDEPage() {
     // is untouched by dialects.
     const activeDialect = getActiveDialect();
     const strippedSrc = stripSignature(activeFile.content);
-    const canonicalSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
+    const dialectSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
+    // The understanding agent reads the whole file and turns however the user
+    // writes into canonical sdev — before any runtime or codegen sees it.
+    // `!#agent:off` in the file switches it off; `!#agent: local|online`
+    // chooses where its AI brain runs.
+    const { understandAsync } = await import('@/lang/agent');
+    const understood = await understandAsync(dialectSrc, { dialect: activeDialect });
+    const canonicalSrc = understood.source;
+    if (understood.notes.length) {
+      setStatusMsg(`Agent understood ${understood.notes.length} line${understood.notes.length === 1 ? '' : 's'}`);
+    }
     // Enabled extensions are wired into the prelude: their operators are
     // desugared to calls and their function bodies run ahead of the program.
     const rawSrc = applyExtensions(canonicalSrc);
