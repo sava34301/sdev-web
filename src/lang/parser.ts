@@ -81,7 +81,7 @@ export class Parser {
     // so ordinary phrases like `to terminal wednesday` stay expressions.
     const after = this.tokens[this.pos + 2];
     if (!after || after.line !== next.line) return true;
-    return after.type === TokenType.LPAREN || (after.type === TokenType.IDENTIFIER && after.value === 'with');
+    return after.type === TokenType.LPAREN || after.type === TokenType.WITH || (after.type === TokenType.IDENTIFIER && after.value === 'with');
   }
 
   /** to name [with a b c] <block> end */
@@ -89,7 +89,7 @@ export class Parser {
     const toToken = this.advance();
     const name = this.consumeName('Expected function name');
     const params: string[] = [];
-    if (this.checkIdentifierValue('with')) {
+    if (this.check(TokenType.WITH) || this.checkIdentifierValue('with')) {
       this.advance();
       while (this.check(TokenType.IDENTIFIER) && this.peek().line === toToken.line) {
         params.push(this.advance().value);

@@ -18316,14 +18316,14 @@ var Parser = class _Parser {
     if (!next || next.type !== "IDENTIFIER" /* IDENTIFIER */ || next.line !== this.peek().line) return false;
     const after = this.tokens[this.pos + 2];
     if (!after || after.line !== next.line) return true;
-    return after.type === "LPAREN" /* LPAREN */ || after.type === "IDENTIFIER" /* IDENTIFIER */ && after.value === "with";
+    return after.type === "LPAREN" /* LPAREN */ || after.type === "WITH" /* WITH */ || after.type === "IDENTIFIER" /* IDENTIFIER */ && after.value === "with";
   }
   /** to name [with a b c] <block> end */
   parseToDeclaration() {
     const toToken = this.advance();
     const name = this.consumeName("Expected function name");
     const params = [];
-    if (this.checkIdentifierValue("with")) {
+    if (this.check("WITH" /* WITH */) || this.checkIdentifierValue("with")) {
       this.advance();
       while (this.check("IDENTIFIER" /* IDENTIFIER */) && this.peek().line === toToken.line) {
         params.push(this.advance().value);
