@@ -74,3 +74,20 @@ check('runs end to end', run.output.join('|'), 'Hello|20');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+
+// Sentence-style program from a real user session.
+check('whole sentences', () => {
+  const src = [
+    'I want function called 11 with variable named tuesday',
+    'i need wednesday to be tuesday + 1',
+    'say to terminal wednesday',
+    '',
+    'call 11 with 2',
+  ].join('\n');
+  const out = understand(src).source;
+  expect(out.includes('to n11 with tuesday'), out);
+  expect(out.includes('set wednesday to tuesday + 1'), out);
+  expect(out.includes('say wednesday'), out);
+  expect(out.includes('end'), out);
+  expect(out.includes('n11(2)'), out);
+});
