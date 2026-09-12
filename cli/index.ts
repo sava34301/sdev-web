@@ -37,7 +37,13 @@ import {
   listDialects, saveDialect, removeDialect, findDialect, newDialect,
   activeSlug, setActiveSlug, activeDialect, runtimePreference, setRuntimePreference,
 } from './store';
-import { db, currentUser, requireUser, signIn, signOut, myUsername } from './cloud';
+import { db, myUsername } from './cloud';
+import {
+  currentUser, requireUser, ensureSession, signOut, signInWithPassword, signUpWithPassword,
+  sendEmailCode, verifyEmailCode, signInWithTokens, sendPasswordReset, sessionFile, storedSummary,
+} from './auth';
+import { ask, password as readPassword } from './prompt';
+import { runEditor } from './editor';
 import { prepare, runPrepared, readSource, localModules, type PrepareOptions } from './pipeline';
 
 const VERSION = '5.0.0';
@@ -91,6 +97,7 @@ USAGE
 
 RUNNING
   run <file>              Run a program (dialect + extensions + libraries applied)
+  edit <file>             Full-screen editor: ^S save, ^R run, ^F find, ^Q quit
   repl                    Interactive session
   check <file>            Parse only, report syntax errors
   ast <file>              Print the syntax tree as JSON
@@ -131,7 +138,12 @@ LIBRARIES
   lib export <file> | lib import <file>
 
 CLOUD
-  auth login <email> | auth logout | auth whoami
+  auth login <email>      Email + password (--password, or $SDEV_PASSWORD)
+  auth code <email> [code] One-time code by email (no password needed)
+  auth signup <email>     Create an account
+  auth reset <email>      Send a password reset link
+  auth token <a> <r>      Sign in with an access + refresh token pair
+  auth status | whoami | refresh | logout
   cloud list | cloud pull [name] | cloud push <file>
 
 SETTINGS
@@ -667,22 +679,79 @@ async function cmdLib(sub: string, rest: string[]): Promise<void> {
 /* ------------------------------------------------------------------ */
 
 async function cmdAuth(sub: string, rest: string[]): Promise<void> {
-  if (sub === 'login') {
-    const email = rest[0] ?? die('sdev auth login <email>');
-    const password = await prompt('password: ', true);
-    const user = await signIn(email, password);
-    console.log('signed in as', user?.email);
-    return;
+  switch (sub) {
+    case 'login': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth login <email>');
+      const pw = await readPassword(value('--password'));
+      const user = await signInWithPassword(email, pw);
+      console.log('signed in as', user.email);
+      return;
+    }
+    case 'signup': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth signup <email>');
+      const pw = await readPassword(value('--password'), 'choose a password: ');
+      if (pw.length < 6) die('use at least 6 characters');
+      const { needsConfirmation } = await signUpWithPassword(email, pw, value('--name'));
+      console.log(needsConfirmation
+        ? `account created — open the confirmation link we emailed to ${email}, then: sdev auth login ${email}`
+        : `signed in as ${email}`);
+      return;
+    }
+    case 'code': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth code <email>');
+      await sendEmailCode(email, flag('--new'));
+      console.log(`a one-time code is on its way to ${email}`);
+      const code = rest[1] ?? (await ask('code: '));
+      if (!code) return console.log(`when it arrives, run: sdev auth code ${email} <code>`);
+      const user = await verifyEmailCode(email, code);
+      console.log('signed in as', user.email);
+      return;
+    }
+    case 'token': {
+      const access = rest[0] ?? (await ask('access token: '));
+      const refresh = rest[1] ?? (await ask('refresh token: '));
+      if (!access || !refresh) die('sdev auth token <access-token> <refresh-token>');
+      const user = await signInWithTokens(access, refresh);
+      console.log('signed in as', user.email);
+      return;
+    }
+    case 'reset': {
+      const email = rest[0] ?? (await ask('email: '));
+      if (!email) die('sdev auth reset <email>');
+      await sendPasswordReset(email);
+      console.log(`password reset link sent to ${email}`);
+      return;
+    }
+    case 'refresh': {
+      const session = await ensureSession();
+      console.log(session ? 'session refreshed for ' + session.user.email : 'not signed in');
+      return;
+    }
+    case 'logout':
+      await signOut();
+      return console.log('signed out');
+    case 'status':
+    case undefined:
+    case 'whoami': {
+      const user = await currentUser();
+      if (!user) {
+        const stored = storedSummary();
+        console.log(stored
+          ? `signed out — the saved session for ${stored.email ?? 'your account'} expired.\nsign in again: sdev auth login ${stored.email ?? '<email>'}`
+          : 'not signed in — sdev auth login <email>  or  sdev auth code <email>');
+        return;
+      }
+      const handle = await myUsername(user.id);
+      console.log(`${user.email}${handle ? ' · @' + handle : ''}`);
+      if (sub === 'status') console.log('session file: ' + sessionFile());
+      return;
+    }
+    default:
+      die('auth: use login | signup | code | token | reset | refresh | status | logout');
   }
-  if (sub === 'logout') { await signOut(); return console.log('signed out'); }
-  if (sub === 'whoami') {
-    const user = await currentUser();
-    if (!user) return console.log('not signed in');
-    const handle = await myUsername(user.id);
-    console.log(`${user.email}${handle ? ' · @' + handle : ''}`);
-    return;
-  }
-  die('auth: use login | logout | whoami');
 }
 
 async function cmdCloud(sub: string, rest: string[]): Promise<void> {
@@ -740,18 +809,9 @@ function emit(text: string): void {
   else process.stdout.write(text.endsWith('\n') ? text : text + '\n');
 }
 
-function prompt(question: string, hidden = false): Promise<string> {
-  return new Promise((res) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    if (hidden) {
-      const out = process.stdout as NodeJS.WriteStream & { muted?: boolean };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (rl as any)._writeToOutput = (s: string) => { if (!out.muted) process.stdout.write(s.includes(question) ? s : '*'); };
-      out.muted = false;
-      setTimeout(() => { out.muted = false; }, 0);
-    }
-    rl.question(question, (answer) => { rl.close(); process.stdout.write('\n'); res(answer); });
-  });
+async function cmdEdit(file: string | undefined): Promise<void> {
+  if (!file) die('sdev edit <file.sdev>');
+  await runEditor({ ...runOptions(), path: file });
 }
 
 /* ------------------------------------------------------------------ */
@@ -812,8 +872,16 @@ async function main(): Promise<void> {
       return cmdExt(pos[1], pos.slice(2));
     case 'lib':
       return cmdLib(pos[1], pos.slice(2));
+    case 'edit':
+    case 'ide':
+      return cmdEdit(pos[1]);
     case 'auth':
-      return cmdAuth(pos[1] ?? 'whoami', pos.slice(2));
+    case 'login':
+      return cmdAuth(cmd === 'login' ? 'login' : (pos[1] ?? 'whoami'), cmd === 'login' ? pos.slice(1) : pos.slice(2));
+    case 'logout':
+      return cmdAuth('logout', []);
+    case 'whoami':
+      return cmdAuth('whoami', []);
     case 'cloud':
       return cmdCloud(pos[1], pos.slice(2));
     case 'runtime': {
