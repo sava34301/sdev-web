@@ -191,8 +191,9 @@ function expression(rest: string, known: Set<string>, renames?: Map<string, stri
     .join(' + ');
 }
 
-function condition(rest: string, known: Set<string>): string {
+function condition(rest: string, known: Set<string>, renames?: Map<string, string>): string {
   let out = ' ' + rest.trim() + ' ';
+  if (renames?.size) out = out.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
   for (const [re, to] of COMPARISONS) out = out.replace(re, to);
   out = out
     .replace(/\bthen\b/gi, ' ')
@@ -255,6 +256,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
 
   const rawLines = source.split('\n');
   const known = collectNames(rawLines, words, ctx.knownNames);
+  /** names the user wrote that the compiler can't take, and what they became */
+  const renames = new Map<string, string>();
   const notes: AgentNote[] = [];
   const learned: Record<string, Intent> = {};
   const unresolved: number[] = [];
@@ -290,7 +293,9 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
     const statements = splitStatements(line);
     const rewritten: string[] = [];
 
-    for (const stmt of statements) {
+    for (const original of statements) {
+      // "I want ...", "please ...", "let's ..." — the sentence around the statement.
+      const stmt = original.replace(FILLER_HEAD, '').trim() || original;
       const toks = wordsOf(stmt);
       if (!toks.length) continue;
       const head = toks[0];
@@ -302,10 +307,13 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       if (stmt === '}' || intent === 'end') { rewritten.push('end'); if (intent === 'end') learn(headKey, 'end'); continue; }
 
       switch (intent) {
-        case 'say':
+        case 'say': {
           learn(headKey, 'say');
-          rewritten.push(`say ${expression(rest, known)}`);
+          // "say to terminal x", "print out x", "show on screen x"
+          const what = rest.replace(SAY_TARGET, '').trim() || rest;
+          rewritten.push(`say ${expression(what, known, renames)}`);
           continue;
+        }
         case 'ask':
           learn(headKey, 'ask');
           rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to ask` : 'ask');
@@ -313,13 +321,19 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
         case 'set': {
           learn(headKey, 'set');
           const m = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
-          if (m) { known.add(m[1]); rewritten.push(`set ${m[1]} to ${expression(m[2], known)}`); continue; }
+          if (m) {
+            const name = safeName(m[1]);
+            if (name !== m[1]) renames.set(m[1], name);
+            known.add(name);
+            rewritten.push(`set ${name} to ${expression(m[2], known, renames)}`);
+            continue;
+          }
           const parts = wordsOf(rest);
           if (parts.length >= 2) {
             known.add(parts[0]);
             const tail = parts.slice(1);
             if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
-            rewritten.push(`set ${parts[0]} to ${expression(tail.join(' '), known)}`);
+            rewritten.push(`set ${safeName(parts[0])} to ${expression(tail.join(' '), known, renames)}`);
             continue;
           }
           rewritten.push(stmt);
@@ -327,7 +341,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
         }
         case 'if':
           learn(headKey, 'if');
-          rewritten.push(`if ${condition(rest, known)}`);
+          rewritten.push(`if ${condition(rest, known, renames)}`);
           continue;
         case 'else':
           learn(headKey, 'else');
@@ -335,7 +349,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           continue;
         case 'while':
           learn(headKey, 'while');
-          rewritten.push(`while ${condition(rest, known)}`);
+          rewritten.push(`while ${condition(rest, known, renames)}`);
           continue;
         case 'for': {
           learn(headKey, 'for');
@@ -352,7 +366,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
         }
         case 'return':
           learn(headKey, 'return');
-          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ''), known)}` : 'return');
+          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ''), known, renames)}` : 'return');
           continue;
         case 'break':
         case 'continue':
@@ -361,16 +375,24 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           continue;
         case 'function': {
           learn(headKey, 'function');
-          const parts = wordsOf(rest.replace(/[:{]\s*$/, ''));
+          const cleanedDecl = rest.replace(/[:{]\s*$/, '').replace(DECL_NOISE, ' ').replace(/\s+/g, ' ').trim();
+          const parts = wordsOf(cleanedDecl);
           if (!parts.length) { rewritten.push(stmt); continue; }
-          const name = parts[0].replace(/\(.*$/, '');
+          const rawName = parts[0].replace(/\(.*$/, '');
+          const name = safeName(rawName);
+          if (name !== rawName) renames.set(rawName, name);
           const inParens = parts[0].includes('(') ? [parts[0].slice(parts[0].indexOf('('))] : [];
           const params = [...inParens, ...parts.slice(1)]
             .join(' ')
             .replace(/^\(|\)$/g, '')
             .replace(/,/g, ' ')
             .split(/\s+/)
-            .filter((p) => p && words.get(p.toLowerCase()) !== 'in' && p !== 'with');
+            .filter((p) => p && words.get(p.toLowerCase()) !== 'in' && p !== 'with')
+            .map((p) => {
+              const safe = safeName(p);
+              if (safe !== p) renames.set(p, safe);
+              return safe;
+            });
           known.add(name);
           params.forEach((p) => known.add(p));
           rewritten.push(params.length ? `to ${name} with ${params.join(' ')}` : `to ${name}`);
@@ -383,8 +405,21 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       // assignment without a leading verb: `name1 will be Twenty`
       const assign = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
       if (assign && !words.has(assign[1].toLowerCase())) {
-        known.add(assign[1]);
-        rewritten.push(`set ${assign[1]} to ${expression(assign[2], known)}`);
+        const name = safeName(assign[1]);
+        if (name !== assign[1]) renames.set(assign[1], name);
+        known.add(name);
+        rewritten.push(`set ${name} to ${expression(assign[2], known, renames)}`);
+        continue;
+      }
+
+      // "call 11 with 2", "run greet with \"sam\"", "do greet"
+      if (/^(?:call|run|do|invoke|execute|use)$/i.test(headKey) && toks.length >= 2) {
+        const target = safeName(toks[1]);
+        const args = wordsOf(rest)
+          .slice(1)
+          .filter((t) => !/^(?:with|and|using|,)$/i.test(t))
+          .map((t) => (renames.get(t) ?? t).replace(/,$/, ''));
+        rewritten.push(`${target}(${args.join(', ')})`);
         continue;
       }
 
