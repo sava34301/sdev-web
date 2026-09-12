@@ -163,6 +163,13 @@ CLOUD
   auth status | whoami | refresh | logout
   cloud list | cloud pull [name] | cloud push <file>
 
+AGENT (understands however you write)
+  agent status            What the agent has learned from your programs
+  agent explain <file>    Show what it understood, line by line
+  agent understand <file> Print the canonical sdev for a file [-o out]
+  agent promote <name>    Turn what it learned into a dialect [--rename]
+  agent forget            Clear the agent's memory
+
 SETTINGS
   runtime [v1|v2]         Show or set the default runtime
   languages               Natural languages the lexer understands
@@ -181,6 +188,62 @@ OPTIONS
   --explain               Show what the agent understood
   -o, --out <file>        Output path
 `);
+}
+
+/* ------------------------------------------------------------------ */
+/* the understanding agent                                             */
+/* ------------------------------------------------------------------ */
+
+async function cmdAgent(sub: string | undefined, rest: string[]): Promise<void> {
+  const memory = loadMemory();
+  switch (sub ?? 'status') {
+    case 'status': {
+      const words = Object.entries(memory.words);
+      console.log(`programs learned from : ${memory.programs}`);
+      console.log(`words learned         : ${words.length}`);
+      console.log(`line rewrites cached  : ${Object.keys(memory.lines).length}`);
+      if (words.length) {
+        console.log('\nyour words:');
+        for (const [word, e] of words.sort((a, b) => b[1].hits - a[1].hits).slice(0, 40)) {
+          console.log(`  ${word.padEnd(16)} -> ${e.intent}  (${e.hits})`);
+        }
+      }
+      return;
+    }
+    case 'explain': {
+      const file = rest[0] ?? die('sdev agent explain <file>');
+      const opts = runOptions();
+      const prepared = await prepareAsync(readSource(file), opts);
+      explainAgent(prepared.agent);
+      console.log('\n--- canonical sdev ---');
+      console.log(prepared.code);
+      return;
+    }
+    case 'understand': {
+      const file = rest[0] ?? die('sdev agent understand <file>');
+      const result = await understandAsync(readSource(file), { mode: 'on' });
+      const out = value('-o', '--out');
+      if (out) { writeFileSync(resolve(process.cwd(), out), result.source); console.log('written:', out); }
+      else console.log(result.source);
+      return;
+    }
+    case 'promote': {
+      const name = rest.join(' ') || 'My way of writing';
+      const spec = promoteToDialect({ name, memory, rename: flag('--rename') });
+      saveDialect(spec);
+      const learned = Object.keys(spec.synonyms).length;
+      console.log(`dialect "${spec.meta.name}" (${spec.meta.slug}) created from ${learned} learned word groups.`);
+      console.log(`activate it with: sdev dialect use ${spec.meta.slug}`);
+      return;
+    }
+    case 'forget': {
+      localStorage.removeItem('sdev_agent_memory');
+      console.log('the agent forgot everything it learned.');
+      return;
+    }
+    default:
+      die('sdev agent <status|explain|understand|promote|forget>');
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -888,6 +951,8 @@ async function main(): Promise<void> {
       return cmdInfo(pos[1] ?? die('sdev info <file>'));
     case 'sign':
       return cmdSign(pos[1] ?? 'show', pos[2] ?? die('sdev sign <show|stamp|verify|strip> <file>'));
+    case 'agent':
+      return cmdAgent(pos[1], pos.slice(2));
     case 'dialect':
       return cmdDialect(pos[1], pos.slice(2));
     case 'ext':
