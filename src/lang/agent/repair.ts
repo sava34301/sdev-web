@@ -232,7 +232,9 @@ function collectNames(lines: string[], words: Map<string, Intent>, seed?: Set<st
 
 export function repair(source: string, ctx: RepairContext = {}): RepairResult {
   const words = baseWordMap();
-  for (const [w, i] of ctx.extraWords ?? []) words.set(w.toLowerCase(), i);
+  /** Words the *user* taught the agent (dialect + memory) — as opposed to the built-in vocabulary. */
+  const ownWords = new Set<string>();
+  for (const [w, i] of ctx.extraWords ?? []) { words.set(w.toLowerCase(), i); ownWords.add(w.toLowerCase()); }
 
   const rawLines = source.split('\n');
   const known = collectNames(rawLines, words, ctx.knownNames);
@@ -263,7 +265,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
     // translator, not to the agent — unless the agent recognises their
     // leading word, guessing at them would only mangle them.
     const firstWord = line.trim().split(/[\s(]+/)[0]?.toLowerCase() ?? '';
-    if (/[^\x00-\x7F]/.test(line) && !words.has(firstWord.replace(/[(:]$/, ''))) {
+    if (/[^\x00-\x7F]/.test(line) && !ownWords.has(firstWord.replace(/[(:]$/, ''))) {
       unresolved.push(lineNo);
       return raw;
     }
