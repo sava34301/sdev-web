@@ -46,6 +46,15 @@ export interface Prepared {
   signature: FileSignature | null;
   dialect: DialectSpec | null;
   runtime: 'v1' | 'v2';
+  /** what the understanding agent made of the file */
+  agent: UnderstandResult | null;
+}
+
+/** Print, once, what the agent changed. */
+export function explainAgent(result: UnderstandResult | null): void {
+  if (!result || !result.notes.length) return;
+  process.stdout.write(`agent (${result.mode}${result.brainUsed !== 'none' ? `, ${result.brainUsed} AI` : ''}) understood:\n`);
+  for (const n of result.notes) process.stdout.write(`  ${n.line}: ${n.from}  ->  ${n.to}\n`);
 }
 
 function shebangRuntime(source: string): 'v1' | 'v2' | null {
@@ -78,10 +87,30 @@ export function prepare(rawSource: string, opts: PrepareOptions = {}): Prepared 
   const dialect = resolveDialect(signature, opts.dialect);
 
   let code = dialect ? canonicalize(body, dialect).source : body;
+
+  // The understanding agent runs before extensions and before any codegen.
+  const agent = understand(code, { mode: opts.agent, brain: opts.brain, dialect });
+  code = agent.source;
+
   if (!opts.noExt) code = applyExtensions(code);
 
   const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === 'v2' ? 'v2' : null) ?? runtimePreference();
-  return { code, signature, dialect, runtime };
+  return { code, signature, dialect, runtime, agent };
+}
+
+/** Same as `prepare`, but the agent may also consult its AI brain. */
+export async function prepareAsync(rawSource: string, opts: PrepareOptions = {}): Promise<Prepared> {
+  const signature = readSignature(rawSource);
+  const body = stripSignature(rawSource);
+  const dialect = resolveDialect(signature, opts.dialect);
+
+  let code = dialect ? canonicalize(body, dialect).source : body;
+  const agent = await understandAsync(code, { mode: opts.agent, brain: opts.brain, dialect });
+  code = agent.source;
+  if (!opts.noExt) code = applyExtensions(code);
+
+  const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === 'v2' ? 'v2' : null) ?? runtimePreference();
+  return { code, signature, dialect, runtime, agent };
 }
 
 /** Local `use "path"` modules, read relative to the file then the CWD. */
