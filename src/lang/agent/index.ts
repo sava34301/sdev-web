@@ -107,6 +107,11 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
   let source = result.source;
   const closed = closeBlocks(source);
   if (closed !== source && parses(closed)) source = closed;
+  // Never make a working program worse: if the file as written holds together
+  // and the agent's reading does not, the author's version wins.
+  if (source !== remembered && sense.parses && !parses(source)) {
+    return { done: true as const, source: remembered, sense, learned: {} as Record<string, Intent>, notes: [], unresolved: [] as number[] };
+  }
   return { done: false as const, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
 }
 
@@ -168,10 +173,15 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
     if (reply?.canonical && parses(reply.canonical)) {
       const before = current.split('\n');
       const after = reply.canonical.split('\n');
+      const original = prep.stripped.split('\n');
+      // A remembered line is only trustworthy when the author's file, the
+      // draft and the answer still line up one-to-one; the rule pass can
+      // split a line in two, and then line i is a different statement.
+      const aligned = original.length === before.length && before.length === after.length;
       after.forEach((line, i) => {
         if (before[i] !== undefined && before[i].trim() !== line.trim()) {
           notes.push({ line: i + 1, from: before[i].trim(), to: line.trim(), why: 'understood by the AI', source: 'brain' });
-          if (prep.learn) rememberLine(prep.memory, prep.stripped.split('\n')[i] ?? before[i], line.trim());
+          if (prep.learn && aligned) rememberLine(prep.memory, original[i], line.trim());
         }
       });
       current = reply.canonical;

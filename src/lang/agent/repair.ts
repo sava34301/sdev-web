@@ -181,6 +181,9 @@ function expression(rest: string, known: Set<string>, renames?: Map<string, stri
     return numberWord(words[0])!;
   }
   const allBare = tokens.every((t) => !isMaskedString(t));
+  // Operators the agent does not know about (pipes, bitwise, member access…)
+  // mean this is code, not prose — leave it exactly as the author wrote it.
+  if (/[|&^~@$\\.:]/.test(trimmed)) return trimmed;
   if (allBare) return '"' + tokens.join(' ').replace(/"/g, '\\"') + '"';
 
   // mixed: quote only the unknown runs
@@ -302,6 +305,15 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       const headKey = head.toLowerCase().replace(/[(:]$/, '');
       const intent = words.get(headKey);
       const rest = stmt.slice(stmt.indexOf(head) + head.length).trim().replace(/^\(|\)$/g, '').trim();
+
+      // A call written in code — `result(5)`, `input()` — where the name is
+      // something this file defines. That is already sdev: never reinterpret
+      // the author's own names as keywords.
+      const callBase = stmt.match(/^([\p{L}\p{N}_]+)\s*\(/u)?.[1];
+      if (callBase && (known.has(callBase) || ctx.knownNames?.has(callBase))) {
+        rewritten.push(stmt.replace(/[:{]\s*$/, '').trim());
+        continue;
+      }
 
       // closing brace / block end
       if (stmt === '}' || intent === 'end') { rewritten.push('end'); if (intent === 'end') learn(headKey, 'end'); continue; }
