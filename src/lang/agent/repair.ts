@@ -183,7 +183,11 @@ function expression(rest: string, known: Set<string>, renames?: Map<string, stri
   const allBare = tokens.every((t) => !isMaskedString(t));
   // Operators the agent does not know about (pipes, bitwise, member access…)
   // mean this is code, not prose — leave it exactly as the author wrote it.
-  if (/[|&^~@$\\.:]/.test(trimmed)) return trimmed;
+  // A `.` or `:` only counts as code when it joins two things with no spaces
+  // (`user.name`, `map:key`); a trailing full stop or "Result: ok" is prose.
+  const codeOperator = /[|&^~@$\\]/.test(trimmed);
+  const codePunctuation = /[\w\u0000)\]][.:][\w\u0000([]/.test(trimmed);
+  if (codeOperator || codePunctuation) return trimmed;
   if (allBare) return '"' + tokens.join(' ').replace(/"/g, '\\"') + '"';
 
   // mixed: quote only the unknown runs
