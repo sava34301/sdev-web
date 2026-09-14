@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
 import type { IdeFile, IdeFolder } from '@/components/ide/types';
 
@@ -31,6 +32,8 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
   const [hydrated, setHydrated] = useState<HydratedWorkspace | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const warnedRef = useRef(false);
   const [hydrationDone, setHydrationDone] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Maps local id → cloud uuid so updates target the same row
@@ -87,30 +90,51 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
   // ──────────────────── Debounced full snapshot upsert ────────────────────
   const flush = useCallback(async (snap: SnapshotInput) => {
     if (!user) return;
+    // A cached `user` object is not proof of a live session: if the token has
+    // expired (or a refresh was replayed), every write is rejected by the
+    // database. Confirm the session first and tell the user when it is gone.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setSyncError('Your session expired — sign in again to keep saving to the cloud.');
+      if (!warnedRef.current) {
+        warnedRef.current = true;
+        toast({
+          title: 'Not saved to the cloud',
+          description: 'Your sign-in expired. Sign in again to keep your files backed up.',
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
     setIsSyncing(true);
+    const failures: string[] = [];
+    const fail = (error: { message: string } | null) => { if (error) failures.push(error.message); };
     try {
       // 1) Upsert folders (new ones get cloud ids, existing get updated)
       for (const folder of snap.folders) {
         const cloudId = folder.cloudId ?? folderCloudMap.current.get(folder.id);
         const parentCloudId = folder.parentId ? (snap.folders.find(f => f.id === folder.parentId)?.cloudId ?? folderCloudMap.current.get(folder.parentId) ?? null) : null;
         if (cloudId) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('folders')
             .update({ name: folder.name, parent_id: parentCloudId })
             .eq('id', cloudId)
             .eq('user_id', user.id)
             .select('id')
             .maybeSingle();
-          if (!data) {
-            const { data: inserted } = await supabase
+          fail(error);
+          if (!data && !error) {
+            const { data: inserted, error: insErr } = await supabase
               .from('folders')
               .insert({ user_id: user.id, name: folder.name, parent_id: parentCloudId })
               .select('id')
               .single();
+            fail(insErr);
             if (inserted) folderCloudMap.current.set(folder.id, inserted.id);
           }
         } else {
-          const { data } = await supabase.from('folders').insert({ user_id: user.id, name: folder.name, parent_id: parentCloudId }).select('id').single();
+          const { data, error } = await supabase.from('folders').insert({ user_id: user.id, name: folder.name, parent_id: parentCloudId }).select('id').single();
+          fail(error);
           if (data) folderCloudMap.current.set(folder.id, data.id);
         }
       }
@@ -128,23 +152,26 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
           sort_order: i,
         };
         if (cloudId) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('code_files')
             .update(row)
             .eq('id', cloudId)
             .eq('user_id', user.id)
             .select('id')
             .maybeSingle();
-          if (!data) {
-            const { data: inserted } = await supabase
+          fail(error);
+          if (!data && !error) {
+            const { data: inserted, error: insErr } = await supabase
               .from('code_files')
               .insert({ ...row, user_id: user.id })
               .select('id')
               .single();
+            fail(insErr);
             if (inserted) fileCloudMap.current.set(file.id, inserted.id);
           }
         } else {
-          const { data } = await supabase.from('code_files').insert({ ...row, user_id: user.id }).select('id').single();
+          const { data, error } = await supabase.from('code_files').insert({ ...row, user_id: user.id }).select('id').single();
+          fail(error);
           if (data) fileCloudMap.current.set(file.id, data.id);
         }
       }
@@ -172,7 +199,21 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
           }
         }
       }
-      setLastSavedAt(Date.now());
+      if (failures.length) {
+        setSyncError('Some files could not be saved to the cloud.');
+        if (!warnedRef.current) {
+          warnedRef.current = true;
+          toast({
+            title: 'Some files were not saved',
+            description: 'The cloud rejected the save. Try signing out and back in; your work stays in this browser meanwhile.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        setSyncError(null);
+        warnedRef.current = false;
+        setLastSavedAt(Date.now());
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -185,5 +226,5 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [snapshot, enabled, user, flush, hydrationDone]);
 
-  return { hydrated, isSyncing, lastSavedAt };
+  return { hydrated, isSyncing, lastSavedAt, syncError };
 }
