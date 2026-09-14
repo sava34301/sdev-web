@@ -110,9 +110,19 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
   // Never make a working program worse: if the file as written holds together
   // and the agent's reading does not, the author's version wins.
   if (source !== remembered && sense.parses && !parses(source)) {
-    return { done: true as const, source: remembered, sense, learned: {} as Record<string, Intent>, notes: [], unresolved: [] as number[] };
+    // Keep the author's file, but say so and still let the brain have a go —
+    // a file that compiles can still mean the wrong thing.
+    return {
+      done: false as const,
+      forceBrain: true as const,
+      source: remembered,
+      sense,
+      learned: {} as Record<string, Intent>,
+      notes: [...result.notes, { line: 0, before: '', after: '', why: 'the rule rewrite did not compile — your file was kept as written' }],
+      unresolved: result.unresolved,
+    };
   }
-  return { done: false as const, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
+  return { done: false as const, forceBrain: false as const, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
 }
 
 function finish(prep: Prepared, source: string, learned: Record<string, Intent>): void {
