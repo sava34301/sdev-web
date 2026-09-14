@@ -118,7 +118,7 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
       source: remembered,
       sense,
       learned: {} as Record<string, Intent>,
-      notes: [...result.notes, { line: 0, before: '', after: '', why: 'the rule rewrite did not compile — your file was kept as written' }],
+      notes: [...result.notes, { line: 0, from: '', to: '', why: 'the rule rewrite did not compile — your file was kept as written', source: 'rules' as const }],
       unresolved: result.unresolved,
     };
   }
@@ -168,7 +168,7 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   const needsBrain =
     prep.brain !== 'none' &&
     !rules.done &&
-    (prep.mode === 'on' || rules.unresolved.length > 0 || !parses(current));
+    (prep.mode === 'on' || rules.forceBrain || rules.unresolved.length > 0 || !parses(current));
 
   if (needsBrain) {
     const vocabulary: Record<string, string> = {};
