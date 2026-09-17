@@ -165,7 +165,7 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
           </DialogTitle>
           <DialogDescription>
             Upload all open workspace files as a single commit. Needs a{' '}
-            <a href="https://github.com/settings/tokens/new?scopes=repo&description=sdev%20IDE" target="_blank" rel="noreferrer" className="underline text-primary inline-flex items-center gap-1">
+            <a href="https://github.com/settings/tokens/new?scopes=repo&description=sdev%20IDE" target="_blank" rel="noopener noreferrer" className="underline text-primary inline-flex items-center gap-1">
               personal access token <ExternalLink className="w-3 h-3" />
             </a>{' '}
             with <code className="font-mono">repo</code> scope. Token is stored only in your browser.
@@ -206,7 +206,7 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
             Will push <span className="font-mono text-foreground">{files.length}</span> file{files.length === 1 ? '' : 's'} from your current workspace.
           </p>
           {lastUrl && (
-            <a href={lastUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline inline-flex items-center gap-1">
+            <a href={lastUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline inline-flex items-center gap-1">
               View on GitHub <ExternalLink className="w-3 h-3" />
             </a>
           )}
