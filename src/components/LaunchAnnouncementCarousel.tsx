@@ -125,7 +125,9 @@ export function LaunchAnnouncementCarousel() {
     setOpen(false);
     try {
       window.localStorage.setItem(STORAGE_KEY, '1');
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to access localStorage', e);
+    }
   };
 
   const slide = SLIDES[i];
