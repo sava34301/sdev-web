@@ -139,41 +139,32 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
         }
       }
       // 2) Upsert files
+      const filesToUpsert = [];
       for (let i = 0; i < snap.files.length; i++) {
         const file = snap.files[i];
-        const cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
+        let cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
+        if (!cloudId) {
+          cloudId = crypto.randomUUID();
+          fileCloudMap.current.set(file.id, cloudId);
+        }
+
         const folderCloudId = file.folderId ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null) : null;
-        const row = {
+
+        filesToUpsert.push({
+          id: cloudId,
+          user_id: user.id,
           name: file.name,
           content: file.content,
           folder_id: folderCloudId,
           is_open: snap.openIds.includes(file.id),
           is_active: file.id === snap.activeId,
           sort_order: i,
-        };
-        if (cloudId) {
-          const { data, error } = await supabase
-            .from('code_files')
-            .update(row)
-            .eq('id', cloudId)
-            .eq('user_id', user.id)
-            .select('id')
-            .maybeSingle();
-          fail(error);
-          if (!data && !error) {
-            const { data: inserted, error: insErr } = await supabase
-              .from('code_files')
-              .insert({ ...row, user_id: user.id })
-              .select('id')
-              .single();
-            fail(insErr);
-            if (inserted) fileCloudMap.current.set(file.id, inserted.id);
-          }
-        } else {
-          const { data, error } = await supabase.from('code_files').insert({ ...row, user_id: user.id }).select('id').single();
-          fail(error);
-          if (data) fileCloudMap.current.set(file.id, data.id);
-        }
+        });
+      }
+
+      if (filesToUpsert.length > 0) {
+        const { error } = await supabase.from('code_files').upsert(filesToUpsert);
+        fail(error);
       }
       // 3) Delete only TRACKED cloud rows that no longer exist locally.
       //    Never touch rows we don't know about — those may be created by the
