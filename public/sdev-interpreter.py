@@ -824,8 +824,6 @@ def translate_source(source, source_language='auto'):
         for pat, repl in phrase_norms:
             t = pat.sub(lambda m, r=repl: m.group(1) + r, t)
         t = replace(t)
-        # Context fix: "forge name(" -> "conjure name(" (function decl).
-        t = re.sub(r'\bforge(\s+(?:[^\W\d]\w*\s*\.\s*)*[^\W\d]\w*\s*\()', r'conjure\1', t, flags=re.UNICODE)
         out_parts.append(t)
     return ''.join(out_parts), lang
 

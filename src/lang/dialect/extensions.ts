@@ -23,7 +23,8 @@ export interface ExtensionRecord {
 const CACHE_KEY = 'sdev_extensions_cache';
 const ENABLED_KEY = 'sdev_extensions_enabled';
 
-const db = supabase;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof localStorage === 'undefined') return fallback;

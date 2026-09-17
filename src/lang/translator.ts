@@ -820,10 +820,10 @@ export function translateSource(
         // Context fix: `forge name(` is really a method/function declaration in
         // most natural languages where "create" covers both vars and functions
         // (e.g. Bulgarian `създай`). Rewrite to `conjure name(`.
-        t = t.replace(/\bforge(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, 'conjure$1');
+        t = t.replace(/\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, 'conjure$1');
       } else {
         // v2: `set name(` / `set name with` is a function declaration -> `to name`.
-        t = t.replace(/\bset(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, 'to$1');
+        t = t.replace(/\bset(\s+[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, 'to$1');
         // Many languages use one word ("е", "es", "ist") for both binding and
         // comparison. Inside a condition it means `is`, not the `set … to` word.
         t = t

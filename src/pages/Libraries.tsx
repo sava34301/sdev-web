@@ -15,7 +15,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { cachedLibraries, exportOfflineBundle, fetchLibrary, forgetBundle, importOfflineBundle, type LibraryBundle } from '@/lang/dialect/registry';
 import { parseAddress } from '@/lang/dialect/address';
 
-const db = supabase;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
 
 interface PublicLibrary {
   id: string;

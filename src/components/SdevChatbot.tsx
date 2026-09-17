@@ -97,18 +97,14 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
 
   const testCodeBlocks = async (content: string): Promise<{ code: string; error: string }[]> => {
     const blocks = extractCodeBlocks(content);
-
-    const results = await Promise.all(
-      blocks.map(async (code) => {
-        const result = await executeAsync(code);
-        if (!result.success && result.error) {
-          return { code, error: result.error };
-        }
-        return null;
-      })
-    );
-
-    return results.filter((r): r is { code: string; error: string } => r !== null);
+    const errors: { code: string; error: string }[] = [];
+    for (const code of blocks) {
+      const result = await executeAsync(code);
+      if (!result.success && result.error) {
+        errors.push({ code, error: result.error });
+      }
+    }
+    return errors;
   };
 
   const streamChat = useCallback(async (userMessage: string) => {

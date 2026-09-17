@@ -384,8 +384,6 @@ export class VM {
         this.frames = savedFrames;
         return e.value;
       }
-      this.stack = savedStack;
-      this.frames = savedFrames;
       throw e;
     }
 

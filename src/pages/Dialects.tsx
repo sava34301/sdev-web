@@ -94,7 +94,8 @@ export default function Dialects() {
     if (!draft) return;
     // Cached per dialect version + core template version; a copy made from an
     // older core template is regenerated instead of served.
-    const db = supabase;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
     let dialectId: string | null = null;
     try {
       const { data: auth } = await supabase.auth.getUser();
