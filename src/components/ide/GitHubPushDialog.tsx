@@ -105,14 +105,15 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
       }
 
       // Create blobs
-      const tree: Array<{ path: string; mode: '100644'; type: 'blob'; sha: string }> = [];
-      for (const f of files) {
-        const blob = await gh(token, `/repos/${owner}/${name}/git/blobs`, {
-          method: 'POST',
-          body: JSON.stringify({ content: b64(f.content), encoding: 'base64' }),
-        }) as { sha: string };
-        tree.push({ path: f.name, mode: '100644', type: 'blob', sha: blob.sha });
-      }
+      const tree = await Promise.all(
+        files.map(async (f) => {
+          const blob = await gh(token, `/repos/${owner}/${name}/git/blobs`, {
+            method: 'POST',
+            body: JSON.stringify({ content: b64(f.content), encoding: 'base64' }),
+          }) as { sha: string };
+          return { path: f.name, mode: '100644' as const, type: 'blob' as const, sha: blob.sha };
+        })
+      );
 
       const treeRes = await gh(token, `/repos/${owner}/${name}/git/trees`, {
         method: 'POST',
