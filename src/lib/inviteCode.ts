@@ -29,8 +29,6 @@ export async function redeemInviteCode(code: string): Promise<{ ok: boolean; err
       localStorage.setItem(CODE_KEY, trimmed);
     } catch (error) {
       console.warn('Failed to access localStorage:', error);
-    } catch (err) {
-      console.error('Failed to save invite access to localStorage', err);
     }
     return { ok: true };
   }
