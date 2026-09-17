@@ -187,6 +187,11 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
       //    manual "Save to cloud" dialog or other tabs and must be preserved.
       const trackedFileIds = new Set(fileCloudMap.current.values());
       const localFileCloudIds = new Set(snap.files.map(f => f.cloudId ?? fileCloudMap.current.get(f.id)).filter(Boolean) as string[]);
+      const fileIdsToDelete: string[] = [];
+      for (const cid of trackedFileIds) {
+        if (!localFileCloudIds.has(cid)) {
+          fileIdsToDelete.push(cid);
+          // forget the mapping so we don't try again
       const filesToDelete = Array.from(trackedFileIds).filter(cid => !localFileCloudIds.has(cid));
       if (filesToDelete.length > 0) {
         await supabase.from('code_files').delete().in('id', filesToDelete);
@@ -196,6 +201,16 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
           }
         }
       }
+      if (fileIdsToDelete.length > 0) {
+        await supabase.from('code_files').delete().in('id', fileIdsToDelete);
+      }
+
+      const trackedFolderIds = new Set(folderCloudMap.current.values());
+      const localFolderCloudIds = new Set(snap.folders.map(f => f.cloudId ?? folderCloudMap.current.get(f.id)).filter(Boolean) as string[]);
+      const folderIdsToDelete: string[] = [];
+      for (const cid of trackedFolderIds) {
+        if (!localFolderCloudIds.has(cid)) {
+          folderIdsToDelete.push(cid);
 
       const trackedFolderIds = new Set(folderCloudMap.current.values());
       const localFolderCloudIds = new Set(snap.folders.map(f => f.cloudId ?? folderCloudMap.current.get(f.id)).filter(Boolean) as string[]);
@@ -207,6 +222,9 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
             if (cloud === cid) folderCloudMap.current.delete(local);
           }
         }
+      }
+      if (folderIdsToDelete.length > 0) {
+        await supabase.from('folders').delete().in('id', folderIdsToDelete);
       }
       if (failures.length) {
         setSyncError('Some files could not be saved to the cloud.');
