@@ -8,8 +8,7 @@ const LOCAL_KEY = 'sdev_dialects';
 const ACTIVE_KEY = 'sdev_active_dialect';
 
 /* The dialect tables ship with this draft; the generated types lag behind it. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 export function readLocalDialects(): DialectSpec[] {
   if (typeof localStorage === 'undefined') return [];
