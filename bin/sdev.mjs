@@ -517,9 +517,9 @@ function translateSource(source, sourceLanguage = "auto", options = {}) {
     t = replace(t, protect);
     t = fuzzy(t, protect);
     if (target === "v1") {
-      t = t.replace(/\bforge(\s+[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, "conjure$1");
+      t = t.replace(/\bforge(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, "conjure$1");
     } else {
-      t = t.replace(/\bset(\s+[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, "to$1");
+      t = t.replace(/\bset(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, "to$1");
       t = t.split("\n").map(
         (line) => /^\s*(if|while)\b/.test(line) ? line.replace(/(^\s*(?:if|while)\b[^\n]*?)\s+to\s+/, "$1 is ") : line
       ).join("\n");
@@ -4503,24 +4503,17 @@ var require_transformers = __commonJS({
           return (0, exports.toJson)(value2);
         case PostgresTypes.timestamp:
           return (0, exports.toTimestampString)(value2);
-        // Format to be consistent with PostgREST
         case PostgresTypes.abstime:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.date:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.daterange:
         case PostgresTypes.int4range:
         case PostgresTypes.int8range:
         case PostgresTypes.money:
         case PostgresTypes.reltime:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.text:
         case PostgresTypes.time:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.timestamptz:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.timetz:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.tsrange:
         case PostgresTypes.tstzrange:
           return noop(value2);
@@ -16507,7 +16500,6 @@ function typeOf(e, tys, fnTypes) {
       return "list";
     case "tome":
       return "tome";
-    // Milestone 6f: an object is a tome; a function value is an opaque word.
     case "new":
       return "tome";
     case "ref":
@@ -16823,12 +16815,6 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       if (e.args.length > 0) em.L(`    addq $${e.args.length * 8}, %rsp`);
       return;
     }
-    // ---- Milestone 6f: first-class functions, closures, objects ----
-    //
-    // A function value is a heap closure: [i64 code ptr][i64 ncaps][caps...].
-    // Calls through a value put the closure pointer in %r10; a lambda body
-    // copies its captures out of %r10 in its prologue, so the argument
-    // convention (args pushed right-to-left) is unchanged.
     case "ref": {
       const info = em.functions.get(e.name);
       if (!info) throw new Error(`native: unknown function ${e.name}`);
@@ -16962,7 +16948,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "str":
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       return true;
-    // ---- Milestone 6e: floats ----
     case "sqrt":
     case "floor":
     case "ceil":
@@ -16988,11 +16973,8 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "random":
       em.L("    call sdev_random");
       return true;
-    // ---- Milestone 6i: sequence + numeric library ----
     case "range":
-    // range(n) -> [0 .. n-1]
     case "sum":
-    // sum(list) -> int
     case "f2i":
       one();
       em.L("    movq %rax, %rdi");
@@ -17040,7 +17022,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    movq %rcx, (%rax)");
       return true;
     }
-    // ---- Milestone 6d: strings ----
     case "upper":
     case "lower":
     case "trim":
@@ -17092,7 +17073,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    call sdev_substr");
       return true;
     }
-    // ---- Milestone 6d: integer math ----
     case "min":
     case "max": {
       emitExpr(a[0], em, locals, tys, fnTypes);
@@ -17103,7 +17083,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L(`    ${n === "min" ? "cmovlq" : "cmovgq"} %rcx, %rax`);
       return true;
     }
-    // ---- Milestone 6d: tomes ----
     case "tome_new":
       em.L("    call sdev_tnew");
       return true;
@@ -17113,7 +17092,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    movq %rax, %rdi");
       em.L(`    call sdev_t${n === "keys" ? "keys" : "vals"}`);
       return true;
-    // ---- Milestone 6g: host file I/O ----
     case "read_file":
     case "file_exists":
       emitStrExpr(a[0], em, locals, tys, fnTypes);
@@ -17132,7 +17110,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "input":
       em.L("    call sdev_input");
       return true;
-    // ---- Milestone 6h: process / OS layer ----
     case "args":
       em.L("    call sdev_args");
       return true;
@@ -17313,7 +17290,6 @@ function emitStmt(s, em, locals, ctx) {
       em.L(`${end}:`);
       return;
     }
-    // ---- Milestone 6f ----
     case "break":
     case "continue": {
       const loop = (ctx.loops || [])[(ctx.loops || []).length - 1];
@@ -17333,9 +17309,6 @@ function emitStmt(s, em, locals, ctx) {
       em.L("    call sdev_tset");
       return;
     }
-    // `attempt … rescue err … end` — the handler stack lives in the runtime;
-    // a throw restores the saved %rsp/%rbp and jumps straight to the handler
-    // with the message in %rax.
     case "attempt": {
       const handler = em.gensym("rescue");
       const over = em.gensym("endtry");
@@ -23031,7 +23004,6 @@ function splitKwargs(args) {
   const last = args[args.length - 1];
   if (last && typeof last === "object" && last.__kwargs) {
     const { __kwargs, ...kw } = last;
-    void __kwargs;
     return { pos: args.slice(0, -1), kw };
   }
   return { pos: args, kw: {} };
@@ -24089,7 +24061,6 @@ var Interpreter = class {
         return yield* this.evDel(node, env);
       case "ScopeStatement":
         return null;
-      // scope hints; resolution is dynamic
       case "PassStatement":
         return null;
       case "ImportStatement":
@@ -24936,7 +24907,6 @@ var Interpreter = class {
     const last = args[args.length - 1];
     if (last && typeof last === "object" && last.__kwargs) {
       const { __kwargs, ...rest } = last;
-      void __kwargs;
       kwargs = rest;
       args.pop();
     }
@@ -24987,7 +24957,6 @@ var Interpreter = class {
     if (value2 && typeof value2 === "object" && "__await" in value2) {
       return value2.__await;
     }
-    void line;
     return value2;
   }
   // ----------------------------------------------------------
@@ -26816,7 +26785,7 @@ var BUILTINS = /* @__PURE__ */ new Set([
   "say_err"
 ]);
 var FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
-var DECL_NOISE = /\b(?:called|named|name|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|input|inputs|that|which|takes|taking|accepts|of|value)\b/gi;
+var DECL_NOISE = /\b(?:called|named|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
 var SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
 function safeName(raw) {
   const cleaned = raw.replace(/[^\p{L}\p{N}_]/gu, "_").replace(/^_+|_+$/g, "");
@@ -26882,6 +26851,9 @@ function expression(rest, known, renames) {
     return numberWord(words[0]);
   }
   const allBare = tokens.every((t) => !isMaskedString(t));
+  const codeOperator = /[|&^~@$\\]/.test(trimmed);
+  const codePunctuation = /[\w\u0000)\]][.:][\w\u0000([]/.test(trimmed);
+  if (codeOperator || codePunctuation) return trimmed;
   if (allBare) return '"' + tokens.join(" ").replace(/"/g, '\\"') + '"';
   return tokens.map((t) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || RESERVED.has(t) || BUILTINS.has(t) || /[(.[]/.test(t) ? t : '"' + t + '"').join(" + ");
 }
@@ -26891,7 +26863,6 @@ function condition(rest, known, renames) {
   for (const [re, to] of COMPARISONS) out = out.replace(re, to);
   out = out.replace(/\bthen\b/gi, " ").replace(/[:{]\s*$/, " ").replace(/\s*==\s*/g, " is ").replace(/\s*!=\s*/g, " is not ").replace(/\s*>=\s*/g, " is or more ").replace(/\s*<=\s*/g, " is or less ").replace(/\s+/g, " ").trim();
   out = out.split(" ").map((t) => !isMaskedString(t) && numberWord(t) !== null ? numberWord(t) : t).join(" ");
-  void known;
   return out;
 }
 var ASSIGN_RE = new RegExp(
@@ -26971,6 +26942,11 @@ function repair(source, ctx = {}) {
       const headKey = head2.toLowerCase().replace(/[(:]$/, "");
       const intent = words.get(headKey);
       const rest = stmt.slice(stmt.indexOf(head2) + head2.length).trim().replace(/^\(|\)$/g, "").trim();
+      const callBase = stmt.match(/^([\p{L}\p{N}_]+)\s*\(/u)?.[1];
+      if (callBase && (known.has(callBase) || ctx.knownNames?.has(callBase))) {
+        rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
+        continue;
+      }
       if (stmt === "}" || intent === "end") {
         rewritten.push("end");
         if (intent === "end") learn(headKey, "end");
@@ -27399,11 +27375,21 @@ function runRules(prep, opts) {
     knownNames: knownNames(prep.memory),
     strict: prep.mode === "strict"
   });
-  void opts;
   let source = result.source;
   const closed = closeBlocks(source);
   if (closed !== source && parses(closed)) source = closed;
-  return { done: false, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
+  if (source !== remembered && sense.parses && !parses(source)) {
+    return {
+      done: false,
+      forceBrain: true,
+      source: remembered,
+      sense,
+      learned: {},
+      notes: [...result.notes, { line: 0, from: "", to: "", why: "the rule rewrite did not compile \u2014 your file was kept as written", source: "rules" }],
+      unresolved: result.unresolved
+    };
+  }
+  return { done: false, forceBrain: false, source, sense, learned: result.learned, notes: result.notes, unresolved: result.unresolved };
 }
 function finish(prep, source, learned) {
   if (!prep.learn) return;
@@ -27433,7 +27419,7 @@ async function understandAsync(source, opts = {}) {
   let current = rules.source;
   let brainUsed = "none";
   const notes = [...rules.notes];
-  const needsBrain = prep.brain !== "none" && !rules.done && (prep.mode === "on" || rules.unresolved.length > 0 || !parses(current));
+  const needsBrain = prep.brain !== "none" && !rules.done && (prep.mode === "on" || rules.forceBrain || rules.unresolved.length > 0 || !parses(current));
   if (needsBrain) {
     const vocabulary = {};
     for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
@@ -27445,10 +27431,12 @@ async function understandAsync(source, opts = {}) {
     if (reply?.canonical && parses(reply.canonical)) {
       const before = current.split("\n");
       const after = reply.canonical.split("\n");
+      const original = prep.stripped.split("\n");
+      const aligned = original.length === before.length && before.length === after.length;
       after.forEach((line, i) => {
         if (before[i] !== void 0 && before[i].trim() !== line.trim()) {
           notes.push({ line: i + 1, from: before[i].trim(), to: line.trim(), why: "understood by the AI", source: "brain" });
-          if (prep.learn) rememberLine(prep.memory, prep.stripped.split("\n")[i] ?? before[i], line.trim());
+          if (prep.learn && aligned) rememberLine(prep.memory, original[i], line.trim());
         }
       });
       current = reply.canonical;
