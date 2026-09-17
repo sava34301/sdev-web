@@ -160,21 +160,21 @@ export type Database = {
           created_at: string
           dialect_id: string
           id: string
-          spec: Json
+          spec: any
           version: string
         }
         Insert: {
           created_at?: string
           dialect_id: string
           id?: string
-          spec: Json
+          spec: any
           version: string
         }
         Update: {
           created_at?: string
           dialect_id?: string
           id?: string
-          spec?: Json
+          spec?: any
           version?: string
         }
         Relationships: [
@@ -199,10 +199,10 @@ export type Database = {
           name: string
           share_code: string
           slug: string
-          spec: Json
+          spec: any
           updated_at: string
           user_id: string
-          visibility: string
+          visibility: "public" | "private" | "unlisted"
         }
         Insert: {
           created_at?: string
@@ -215,10 +215,10 @@ export type Database = {
           name: string
           share_code?: string
           slug: string
-          spec: Json
+          spec: any
           updated_at?: string
           user_id: string
-          visibility?: string
+          visibility?: "public" | "private" | "unlisted"
         }
         Update: {
           created_at?: string
@@ -231,10 +231,10 @@ export type Database = {
           name?: string
           share_code?: string
           slug?: string
-          spec?: Json
+          spec?: any
           updated_at?: string
           user_id?: string
-          visibility?: string
+          visibility?: "public" | "private" | "unlisted"
         }
         Relationships: []
       }
@@ -440,7 +440,7 @@ export type Database = {
           slug: string
           updated_at: string
           user_id: string
-          visibility: string
+          visibility: "public" | "private" | "unlisted"
         }
         Insert: {
           created_at?: string
@@ -452,7 +452,7 @@ export type Database = {
           slug: string
           updated_at?: string
           user_id: string
-          visibility?: string
+          visibility?: "public" | "private" | "unlisted"
         }
         Update: {
           created_at?: string
@@ -464,7 +464,7 @@ export type Database = {
           slug?: string
           updated_at?: string
           user_id?: string
-          visibility?: string
+          visibility?: "public" | "private" | "unlisted"
         }
         Relationships: []
       }
@@ -474,7 +474,7 @@ export type Database = {
           id: string
           library_id: string
           manifest: Json
-          modules: Json
+          modules: { [key: string]: string }
           version: string
         }
         Insert: {
@@ -482,7 +482,7 @@ export type Database = {
           id?: string
           library_id: string
           manifest?: Json
-          modules: Json
+          modules: { [key: string]: string }
           version: string
         }
         Update: {
@@ -490,7 +490,7 @@ export type Database = {
           id?: string
           library_id?: string
           manifest?: Json
-          modules?: Json
+          modules?: { [key: string]: string }
           version?: string
         }
         Relationships: [
@@ -574,40 +574,40 @@ export type Database = {
           about: string | null
           created_at: string
           id: string
-          kind: string
+          kind: "function" | "operator"
           name: string
           precedence: number | null
           source: string
           symbol: string | null
           updated_at: string
           user_id: string
-          visibility: string
+          visibility: "public" | "private" | "unlisted"
         }
         Insert: {
           about?: string | null
           created_at?: string
           id?: string
-          kind?: string
+          kind?: "function" | "operator"
           name: string
           precedence?: number | null
           source: string
           symbol?: string | null
           updated_at?: string
           user_id: string
-          visibility?: string
+          visibility?: "public" | "private" | "unlisted"
         }
         Update: {
           about?: string | null
           created_at?: string
           id?: string
-          kind?: string
+          kind?: "function" | "operator"
           name?: string
           precedence?: number | null
           source?: string
           symbol?: string | null
           updated_at?: string
           user_id?: string
-          visibility?: string
+          visibility?: "public" | "private" | "unlisted"
         }
         Relationships: []
       }

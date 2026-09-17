@@ -136,11 +136,32 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
 
       // 2) Upsert files
       for (const file of snap.files) {
+      const filesToUpsert = [];
+      for (let i = 0; i < snap.files.length; i++) {
+        const file = snap.files[i];
         let cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
         if (!cloudId) {
           cloudId = crypto.randomUUID();
           fileCloudMap.current.set(file.id, cloudId);
         }
+
+        const folderCloudId = file.folderId ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null) : null;
+
+        filesToUpsert.push({
+          id: cloudId,
+          user_id: user.id,
+          name: file.name,
+          content: file.content,
+          folder_id: folderCloudId,
+          is_open: snap.openIds.includes(file.id),
+          is_active: file.id === snap.activeId,
+          sort_order: i,
+        });
+      }
+
+      if (filesToUpsert.length > 0) {
+        const { error } = await supabase.from('code_files').upsert(filesToUpsert);
+        fail(error);
       }
 
       if (snap.files.length > 0) {
