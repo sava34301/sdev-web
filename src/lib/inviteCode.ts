@@ -13,6 +13,7 @@ export function clearInviteAccess() {
     localStorage.removeItem(KEY);
     localStorage.removeItem(CODE_KEY);
   } catch (error) {
+    console.warn('Failed to access localStorage:', error);
     console.error('Failed to clear invite access from localStorage', error);
   }
 }
@@ -26,6 +27,8 @@ export async function redeemInviteCode(code: string): Promise<{ ok: boolean; err
     try {
       localStorage.setItem(KEY, '1');
       localStorage.setItem(CODE_KEY, trimmed);
+    } catch (error) {
+      console.warn('Failed to access localStorage:', error);
     } catch (err) {
       console.error('Failed to save invite access to localStorage', err);
     }
