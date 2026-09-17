@@ -12,7 +12,9 @@ export function clearInviteAccess() {
   try {
     localStorage.removeItem(KEY);
     localStorage.removeItem(CODE_KEY);
-  } catch {}
+  } catch (error) {
+    console.warn('Failed to access localStorage:', error);
+  }
 }
 
 export async function redeemInviteCode(code: string): Promise<{ ok: boolean; error?: string }> {
@@ -24,7 +26,9 @@ export async function redeemInviteCode(code: string): Promise<{ ok: boolean; err
     try {
       localStorage.setItem(KEY, '1');
       localStorage.setItem(CODE_KEY, trimmed);
-    } catch {}
+    } catch (error) {
+      console.warn('Failed to access localStorage:', error);
+    }
     return { ok: true };
   }
   return { ok: false, error: 'invalid' };
