@@ -824,8 +824,6 @@ def translate_source(source, source_language='auto'):
         for pat, repl in phrase_norms:
             t = pat.sub(lambda m, r=repl: m.group(1) + r, t)
         t = replace(t)
-        # Context fix: "forge name(" -> "conjure name(" (function decl).
-        t = re.sub(r'\bforge(\s+[^\W\d]\w*\s*\()', r'conjure\1', t, flags=re.UNICODE)
         out_parts.append(t)
     return ''.join(out_parts), lang
 
@@ -1257,6 +1255,10 @@ class Parser:
     
     def parse_statement(self) -> Optional[ASTNode]:
         if self.check(TokenType.FORGE):
+            if self.pos + 2 < len(self.tokens) and \
+               self.tokens[self.pos + 1].type == TokenType.IDENTIFIER and \
+               self.tokens[self.pos + 2].type == TokenType.LPAREN:
+                return self.parse_conjure_declaration()
             return self.parse_forge_statement()
         if self.check(TokenType.CONJURE):
             return self.parse_conjure_declaration()
@@ -1290,7 +1292,10 @@ class Parser:
         return LetStatement(forge_token.line, name, value)
     
     def parse_conjure_declaration(self) -> FuncDeclaration:
-        conjure_token = self.consume(TokenType.CONJURE, "Expected 'conjure'")
+        if self.check(TokenType.FORGE):
+            conjure_token = self.consume(TokenType.FORGE, "Expected 'forge'")
+        else:
+            conjure_token = self.consume(TokenType.CONJURE, "Expected 'conjure'")
         name = self.consume(TokenType.IDENTIFIER, "Expected function name").value
         self.consume(TokenType.LPAREN, "Expected '('")
         
@@ -1661,7 +1666,7 @@ class Parser:
             is_static = self.match(TokenType.STATIC)
             is_private = self.match(TokenType.PRIVATE)
             
-            if self.check(TokenType.CONJURE):
+            if self.check(TokenType.CONJURE) or self.check(TokenType.FORGE):
                 self.advance()
                 method_name = self.consume(TokenType.IDENTIFIER, "Expected method name").value
                 self.consume(TokenType.LPAREN, "Expected '('")
@@ -1689,7 +1694,10 @@ class Parser:
     def parse_async_declaration(self) -> AsyncFuncDeclaration:
         """Parse: async conjure name(params) :: body ;;"""
         async_token = self.consume(TokenType.ASYNC, "Expected 'async'")
-        self.consume(TokenType.CONJURE, "Expected 'conjure' after 'async'")
+        if self.check(TokenType.FORGE):
+            self.consume(TokenType.FORGE, "Expected 'forge' or 'conjure' after 'async'")
+        else:
+            self.consume(TokenType.CONJURE, "Expected 'conjure' after 'async'")
         name = self.consume(TokenType.IDENTIFIER, "Expected function name").value
         self.consume(TokenType.LPAREN, "Expected '('")
         
