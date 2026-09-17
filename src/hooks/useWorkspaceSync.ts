@@ -180,24 +180,33 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
       //    manual "Save to cloud" dialog or other tabs and must be preserved.
       const trackedFileIds = new Set(fileCloudMap.current.values());
       const localFileCloudIds = new Set(snap.files.map(f => f.cloudId ?? fileCloudMap.current.get(f.id)).filter(Boolean) as string[]);
+      const fileIdsToDelete: string[] = [];
       for (const cid of trackedFileIds) {
         if (!localFileCloudIds.has(cid)) {
-          await supabase.from('code_files').delete().eq('id', cid);
+          fileIdsToDelete.push(cid);
           // forget the mapping so we don't try again
           for (const [local, cloud] of fileCloudMap.current.entries()) {
             if (cloud === cid) fileCloudMap.current.delete(local);
           }
         }
       }
+      if (fileIdsToDelete.length > 0) {
+        await supabase.from('code_files').delete().in('id', fileIdsToDelete);
+      }
+
       const trackedFolderIds = new Set(folderCloudMap.current.values());
       const localFolderCloudIds = new Set(snap.folders.map(f => f.cloudId ?? folderCloudMap.current.get(f.id)).filter(Boolean) as string[]);
+      const folderIdsToDelete: string[] = [];
       for (const cid of trackedFolderIds) {
         if (!localFolderCloudIds.has(cid)) {
-          await supabase.from('folders').delete().eq('id', cid);
+          folderIdsToDelete.push(cid);
           for (const [local, cloud] of folderCloudMap.current.entries()) {
             if (cloud === cid) folderCloudMap.current.delete(local);
           }
         }
+      }
+      if (folderIdsToDelete.length > 0) {
+        await supabase.from('folders').delete().in('id', folderIdsToDelete);
       }
       if (failures.length) {
         setSyncError('Some files could not be saved to the cloud.');
