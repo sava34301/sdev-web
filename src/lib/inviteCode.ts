@@ -12,7 +12,9 @@ export function clearInviteAccess() {
   try {
     localStorage.removeItem(KEY);
     localStorage.removeItem(CODE_KEY);
-  } catch {}
+  } catch (error) {
+    console.error('Failed to clear invite access from localStorage', error);
+  }
 }
 
 export async function redeemInviteCode(code: string): Promise<{ ok: boolean; error?: string }> {
@@ -24,7 +26,9 @@ export async function redeemInviteCode(code: string): Promise<{ ok: boolean; err
     try {
       localStorage.setItem(KEY, '1');
       localStorage.setItem(CODE_KEY, trimmed);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to save invite access to localStorage', err);
+    }
     return { ok: true };
   }
   return { ok: false, error: 'invalid' };
