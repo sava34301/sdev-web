@@ -112,68 +112,54 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
     try {
       // 1) Upsert folders (new ones get cloud ids, existing get updated)
       for (const folder of snap.folders) {
-        const cloudId = folder.cloudId ?? folderCloudMap.current.get(folder.id);
-        const parentCloudId = folder.parentId ? (snap.folders.find(f => f.id === folder.parentId)?.cloudId ?? folderCloudMap.current.get(folder.parentId) ?? null) : null;
-        if (cloudId) {
-          const { data, error } = await supabase
-            .from('folders')
-            .update({ name: folder.name, parent_id: parentCloudId })
-            .eq('id', cloudId)
-            .eq('user_id', user.id)
-            .select('id')
-            .maybeSingle();
-          fail(error);
-          if (!data && !error) {
-            const { data: inserted, error: insErr } = await supabase
-              .from('folders')
-              .insert({ user_id: user.id, name: folder.name, parent_id: parentCloudId })
-              .select('id')
-              .single();
-            fail(insErr);
-            if (inserted) folderCloudMap.current.set(folder.id, inserted.id);
-          }
-        } else {
-          const { data, error } = await supabase.from('folders').insert({ user_id: user.id, name: folder.name, parent_id: parentCloudId }).select('id').single();
-          fail(error);
-          if (data) folderCloudMap.current.set(folder.id, data.id);
+        let cloudId = folder.cloudId ?? folderCloudMap.current.get(folder.id);
+        if (!cloudId) {
+          cloudId = crypto.randomUUID();
+          folderCloudMap.current.set(folder.id, cloudId);
         }
       }
+
+      if (snap.folders.length > 0) {
+        const folderRows = snap.folders.map(folder => {
+          const cloudId = folder.cloudId ?? folderCloudMap.current.get(folder.id);
+          const parentCloudId = folder.parentId ? (snap.folders.find(f => f.id === folder.parentId)?.cloudId ?? folderCloudMap.current.get(folder.parentId) ?? null) : null;
+          return {
+            id: cloudId,
+            user_id: user.id,
+            name: folder.name,
+            parent_id: parentCloudId,
+          };
+        });
+        const { error } = await supabase.from('folders').upsert(folderRows);
+        fail(error);
+      }
+
       // 2) Upsert files
-      for (let i = 0; i < snap.files.length; i++) {
-        const file = snap.files[i];
-        const cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
-        const folderCloudId = file.folderId ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null) : null;
-        const row = {
-          name: file.name,
-          content: file.content,
-          folder_id: folderCloudId,
-          is_open: snap.openIds.includes(file.id),
-          is_active: file.id === snap.activeId,
-          sort_order: i,
-        };
-        if (cloudId) {
-          const { data, error } = await supabase
-            .from('code_files')
-            .update(row)
-            .eq('id', cloudId)
-            .eq('user_id', user.id)
-            .select('id')
-            .maybeSingle();
-          fail(error);
-          if (!data && !error) {
-            const { data: inserted, error: insErr } = await supabase
-              .from('code_files')
-              .insert({ ...row, user_id: user.id })
-              .select('id')
-              .single();
-            fail(insErr);
-            if (inserted) fileCloudMap.current.set(file.id, inserted.id);
-          }
-        } else {
-          const { data, error } = await supabase.from('code_files').insert({ ...row, user_id: user.id }).select('id').single();
-          fail(error);
-          if (data) fileCloudMap.current.set(file.id, data.id);
+      for (const file of snap.files) {
+        let cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
+        if (!cloudId) {
+          cloudId = crypto.randomUUID();
+          fileCloudMap.current.set(file.id, cloudId);
         }
+      }
+
+      if (snap.files.length > 0) {
+        const fileRows = snap.files.map((file, i) => {
+          const cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
+          const folderCloudId = file.folderId ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null) : null;
+          return {
+            id: cloudId,
+            user_id: user.id,
+            name: file.name,
+            content: file.content,
+            folder_id: folderCloudId,
+            is_open: snap.openIds.includes(file.id),
+            is_active: file.id === snap.activeId,
+            sort_order: i,
+          };
+        });
+        const { error } = await supabase.from('code_files').upsert(fileRows);
+        fail(error);
       }
       // 3) Delete only TRACKED cloud rows that no longer exist locally.
       //    Never touch rows we don't know about — those may be created by the
