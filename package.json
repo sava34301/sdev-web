@@ -20,6 +20,8 @@
     "probe:lexer": "node bin/sdevhost.mjs scripts/probe-self-lexer.sdev",
     "test:agent": "bun scripts/test-agent.ts",
     "test:ui": "bun scripts/test-ui.ts"
+    "test:transpile": "bun scripts/test-transpile.ts"
+    "test:matrix": "bun scripts/test-matrix.ts"
   },
   "main": "electron/main.cjs",
   "dependencies": {

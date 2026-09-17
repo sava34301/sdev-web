@@ -8,8 +8,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { parseAddress, formatAddress, type Address } from './address';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 const CACHE_KEY = 'sdev_library_cache';
 
