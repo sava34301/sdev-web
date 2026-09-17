@@ -105,14 +105,15 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
       }
 
       // Create blobs
-      const tree: Array<{ path: string; mode: '100644'; type: 'blob'; sha: string }> = [];
-      for (const f of files) {
-        const blob = await gh(token, `/repos/${owner}/${name}/git/blobs`, {
-          method: 'POST',
-          body: JSON.stringify({ content: b64(f.content), encoding: 'base64' }),
-        }) as { sha: string };
-        tree.push({ path: f.name, mode: '100644', type: 'blob', sha: blob.sha });
-      }
+      const tree = await Promise.all(
+        files.map(async (f) => {
+          const blob = await gh(token, `/repos/${owner}/${name}/git/blobs`, {
+            method: 'POST',
+            body: JSON.stringify({ content: b64(f.content), encoding: 'base64' }),
+          }) as { sha: string };
+          return { path: f.name, mode: '100644' as const, type: 'blob' as const, sha: blob.sha };
+        })
+      );
 
       const treeRes = await gh(token, `/repos/${owner}/${name}/git/trees`, {
         method: 'POST',
@@ -165,7 +166,7 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
           </DialogTitle>
           <DialogDescription>
             Upload all open workspace files as a single commit. Needs a{' '}
-            <a href="https://github.com/settings/tokens/new?scopes=repo&description=sdev%20IDE" target="_blank" rel="noreferrer" className="underline text-primary inline-flex items-center gap-1">
+            <a href="https://github.com/settings/tokens/new?scopes=repo&description=sdev%20IDE" target="_blank" rel="noopener noreferrer" className="underline text-primary inline-flex items-center gap-1">
               personal access token <ExternalLink className="w-3 h-3" />
             </a>{' '}
             with <code className="font-mono">repo</code> scope. Token is stored only in your browser.
@@ -206,7 +207,7 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
             Will push <span className="font-mono text-foreground">{files.length}</span> file{files.length === 1 ? '' : 's'} from your current workspace.
           </p>
           {lastUrl && (
-            <a href={lastUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline inline-flex items-center gap-1">
+            <a href={lastUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline inline-flex items-center gap-1">
               View on GitHub <ExternalLink className="w-3 h-3" />
             </a>
           )}

@@ -29,7 +29,9 @@ export function useAuth() {
     try {
       const { clearInviteAccess } = await import('@/lib/inviteCode');
       clearInviteAccess();
-    } catch {}
+    } catch (error) {
+      console.error('Failed to clear invite access during sign out:', error);
+    }
   };
 
   return { session, user, loading, signOut };
