@@ -19,6 +19,7 @@
     "test:driver": "node bin/sdevhost.mjs scripts/test-driver-artifact.sdev",
     "probe:lexer": "node bin/sdevhost.mjs scripts/probe-self-lexer.sdev",
     "test:agent": "bun scripts/test-agent.ts",
+    "test:strip": "bun scripts/test-strip.ts"
     "test:ui": "bun scripts/test-ui.ts"
     "test:transpile": "bun scripts/test-transpile.ts"
     "test:matrix": "bun scripts/test-matrix.ts"
