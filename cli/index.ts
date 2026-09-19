@@ -22,6 +22,7 @@ import {
 } from '@/lang/dialect/signature';
 import { validateDialect, isPublishable, inherit, preludeSource, type DialectSpec } from '@/lang/dialect/spec';
 import { canonicalize, dialectize, translateDialect } from '@/lang/dialect/canonicalize';
+import { presetList, findPreset } from '@/lang/dialect/presets';
 import { generateDialectDocs, docFreshness, TEMPLATE_VERSION } from '@/lang/dialect/docs';
 import { parseReference, parseAddress, formatAddress } from '@/lang/dialect/address';
 import { CATALOG, GROUP_LABELS } from '@/lang/dialect/catalog';
