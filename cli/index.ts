@@ -22,6 +22,7 @@ import {
 } from '@/lang/dialect/signature';
 import { validateDialect, isPublishable, inherit, preludeSource, type DialectSpec } from '@/lang/dialect/spec';
 import { canonicalize, dialectize, translateDialect } from '@/lang/dialect/canonicalize';
+import { presetList, findPreset } from '@/lang/dialect/presets';
 import { generateDialectDocs, docFreshness, TEMPLATE_VERSION } from '@/lang/dialect/docs';
 import { parseReference, parseAddress, formatAddress } from '@/lang/dialect/address';
 import { CATALOG, GROUP_LABELS } from '@/lang/dialect/catalog';
@@ -133,6 +134,7 @@ FILES
 
 DIALECTS
   dialect list                        Your dialects
+  dialect preset [slug] [-o file]     Install a ready-made dialect (+ its sample)
   dialect new <slug> --name "Name"    Create one
   dialect use <slug|none>             Choose the active dialect
   dialect show <slug>                 Inspect words and style
@@ -144,11 +146,14 @@ DIALECTS
   dialect words                       The catalog of changeable words
   dialect install <@user/slug|code>   Install someone else's dialect
   dialect publish <slug>              Publish yours
+  dialect pull | dialect sync         Fetch / two-way sync with your account
   dialect export|import <file>
   dialect remove <slug>
 
 EXTENSIONS
-  ext list | enable <id> | disable <id> | add <file> --name N [--about T] | sync | prelude
+  ext list | enable <id> | disable <id> | add <file> --name N [--about T]
+  ext publish <id|name> [--as public|unlisted|private] | ext pull | ext remove <id>
+  ext sync | ext prelude
 
 LIBRARIES
   lib list | add <@user/slug[@ver]> | remove <@user/slug> | pins <file>
@@ -161,7 +166,8 @@ CLOUD
   auth reset <email>      Send a password reset link
   auth token <a> <r>      Sign in with an access + refresh token pair
   auth status | whoami | refresh | logout
-  cloud list | cloud pull [name] | cloud push <file>
+  cloud list | cloud pull [name] | cloud push <file> | cloud rm <name>
+  cloud share <file> [--name T] [--about T] | cloud shared
 
 AGENT (understands however you write)
   agent status            What the agent has learned from your programs
@@ -637,6 +643,44 @@ async function cmdDialect(sub: string, rest: string[]): Promise<void> {
       console.log(`imported ${specs.length} dialect(s)`);
       return;
     }
+    case 'preset': {
+      const slug = rest[0];
+      if (!slug) {
+        for (const p of presetList()) console.log(`${p.spec.meta.slug.padEnd(14)} ${p.spec.meta.name}  ${p.spec.meta.description ?? ''}`);
+        return;
+      }
+      const preset = findPreset(slug) ?? die(`no ready-made dialect "${slug}"`);
+      saveDialect(structuredClone(preset.spec));
+      setActiveSlug(preset.spec.meta.slug);
+      const out = value('-o', '--out');
+      if (out) { writeFileSync(out, preset.sample + '\n'); console.log('wrote sample to', out); }
+      console.log(`installed and using ${preset.spec.meta.name}`);
+      return;
+    }
+    case 'pull': {
+      const user = await requireUser();
+      const { data } = await db.from('dialects').select('slug, spec').eq('user_id', user.id);
+      const rows = (data ?? []).filter((r: { spec: DialectSpec }) => r.spec?.meta?.slug);
+      for (const r of rows) saveDialect(r.spec);
+      console.log(`pulled ${rows.length} dialect(s) from your account`);
+      return;
+    }
+    case 'sync': {
+      const user = await requireUser();
+      const local = listDialects();
+      for (const spec of local) {
+        await db.from('dialects').upsert({
+          user_id: user.id, slug: spec.meta.slug, name: spec.meta.name,
+          description: spec.meta.description ?? '', languages: spec.meta.languages,
+          visibility: spec.meta.visibility, extends_slug: spec.meta.extends,
+          latest_version: spec.meta.version, spec, updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,slug' });
+      }
+      const { data } = await db.from('dialects').select('slug, spec').eq('user_id', user.id);
+      for (const r of data ?? []) if (r.spec?.meta?.slug) saveDialect(r.spec);
+      console.log(`synced ${local.length} up, ${(data ?? []).length} down`);
+      return;
+    }
     case 'remove': {
       const slug = rest[0] ?? die('sdev dialect remove <slug>');
       console.log(removeDialect(slug) ? 'removed ' + slug : 'no such dialect');
@@ -704,10 +748,39 @@ async function cmdExt(sub: string, rest: string[]): Promise<void> {
       console.log(`added and enabled ${record.name}`);
       return;
     }
+    case 'pull':
     case 'sync': {
       const user = await currentUser();
       const all = await syncExtensions(user?.id ?? null);
       console.log(`synced ${all.length} extension(s)`);
+      return;
+    }
+    case 'publish': {
+      const key = rest[0] ?? die('sdev ext publish <id|name> [--as public|unlisted|private]');
+      const match = cachedExtensions().find((e) => e.id === key || e.id.startsWith(key) || e.name === key);
+      if (!match) die('no such extension');
+      const user = await requireUser();
+      const asked = value('--as');
+      const visibility = asked === 'private' || asked === 'unlisted' || asked === 'public' ? asked : 'public';
+      const { error } = await db.from('sdev_extensions').upsert({
+        user_id: user.id, name: match.name, kind: match.kind, symbol: match.symbol,
+        about: match.about, source: match.source, visibility, updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,name' });
+      if (error) die(error.message);
+      await syncExtensions(user.id);
+      console.log(`published ${match.name} (${visibility})`);
+      return;
+    }
+    case 'rm':
+    case 'remove': {
+      const key = rest[0] ?? die('sdev ext remove <id|name>');
+      const match = cachedExtensions().find((e) => e.id === key || e.id.startsWith(key) || e.name === key);
+      if (!match) die('no such extension');
+      const user = await currentUser();
+      if (user && !match.id.startsWith('local-')) await db.from('sdev_extensions').delete().eq('user_id', user.id).eq('id', match.id);
+      setExtensionEnabled(match.id, false);
+      if (user) await syncExtensions(user.id);
+      console.log('removed', match.name);
       return;
     }
     case 'prelude':
@@ -881,7 +954,32 @@ async function cmdCloud(sub: string, rest: string[]): Promise<void> {
     console.log('pushed', name);
     return;
   }
-  die('cloud: use list | pull | push');
+  if (sub === 'rm') {
+    const name = rest[0] ?? die('sdev cloud rm <name>');
+    const { error } = await db.from('code_files').delete().eq('user_id', user.id).eq('name', name);
+    if (error) die(error.message);
+    console.log('removed', name);
+    return;
+  }
+  if (sub === 'share') {
+    const file = rest[0] ?? die('sdev cloud share <file>');
+    const body = stripSignature(readSource(file));
+    const title = value('--name') ?? basename(file);
+    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'program'}-${checksum(body).slice(0, 6)}`;
+    const { error } = await db.from('gists').insert({
+      user_id: user.id, slug, title, description: value('--about') ?? null, content: body, language: 'sdev',
+    });
+    if (error) die(error.message);
+    console.log(`shared — https://web.sdev.codes/g/${slug}`);
+    return;
+  }
+  if (sub === 'shared') {
+    const { data } = await db.from('gists').select('slug, title, view_count').eq('user_id', user.id).order('created_at', { ascending: false });
+    for (const g of data ?? []) console.log(`${String(g.title).padEnd(30)} /g/${g.slug}  ${g.view_count ?? 0} views`);
+    if (!data?.length) console.log('nothing shared yet');
+    return;
+  }
+  die('cloud: use list | pull | push | rm | share | shared');
 }
 
 /* ------------------------------------------------------------------ */

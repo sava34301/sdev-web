@@ -9,6 +9,8 @@ import IDEPage from "./pages/IDE";
 import Dialects from "./pages/Dialects";
 import Libraries from "./pages/Libraries";
 import Extensions from "./pages/Extensions";
+import Explore from "./pages/Explore";
+import MySdev from "./pages/MySdev";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Gist from "./pages/Gist";
@@ -44,6 +46,8 @@ const App = () => (
           <Route path="/dialects" element={<Dialects />} />
           <Route path="/libraries" element={<Libraries />} />
           <Route path="/extensions" element={<Extensions />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/my" element={<MySdev />} />
           <Route path="/account" element={<Account />} />
           <Route path="/g/:slug" element={<Gist />} />
           <Route path="/docs" element={<Docs />} />
