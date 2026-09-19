@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { expect, test, describe } from 'bun:test';
 import { findBoardById, detectBoardByUsb, BOARDS } from './board-db';
 

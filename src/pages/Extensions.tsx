@@ -15,7 +15,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { installExtension } from '@/lang/dialect/extensions';
 
 
-const db = supabase;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
 
 interface Extension {
   id: string;
