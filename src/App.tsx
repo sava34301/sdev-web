@@ -46,6 +46,8 @@ const App = () => (
           <Route path="/dialects" element={<Dialects />} />
           <Route path="/libraries" element={<Libraries />} />
           <Route path="/extensions" element={<Extensions />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/my" element={<MySdev />} />
           <Route path="/account" element={<Account />} />
           <Route path="/g/:slug" element={<Gist />} />
           <Route path="/docs" element={<Docs />} />
