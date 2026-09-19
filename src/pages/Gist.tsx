@@ -34,6 +34,7 @@ export default function Gist() {
   const { user } = useAuth();
   const [gist, setGist] = useState<GistView | null>(null);
   const [author, setAuthor] = useState<AuthorProfile | null>(null);
+  const [authorHandle, setAuthorHandle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [starred, setStarred] = useState(false);
 
@@ -48,6 +49,9 @@ export default function Gist() {
 
       const { data: prof } = await supabase.from('profiles').select('display_name, avatar_url, website, bio').eq('user_id', data.user_id).maybeSingle();
       if (prof) setAuthor(prof as AuthorProfile);
+
+      const { data: handleRow } = await supabase.from('usernames').select('username').eq('user_id', data.user_id).maybeSingle();
+      setAuthorHandle(handleRow?.username ?? null);
 
       if (user) {
         const { data: star } = await supabase.from('starred_snippets').select('id').eq('user_id', user.id).eq('gist_id', data.id).maybeSingle();
@@ -130,7 +134,12 @@ export default function Gist() {
             </div>
           )}
           <div className="text-sm">
-            <div className="font-medium">{author?.display_name || 'anon'}</div>
+            <div className="font-medium">
+              {author?.display_name || (authorHandle ? `@${authorHandle}` : 'anon')}
+              {authorHandle && author?.display_name && (
+                <span className="text-muted-foreground font-normal ml-2">@{authorHandle}</span>
+              )}
+            </div>
             <div className="text-xs text-muted-foreground flex items-center gap-2">
               <span>{gist.view_count} views</span>
               {author?.website && (
