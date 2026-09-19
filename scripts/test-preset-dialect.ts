@@ -20,7 +20,7 @@ function run(source: string): string[] {
   const out: string[] = [];
   const tokens = new Lexer(source, { sourceLanguage: 'English', translate: false }).tokenize();
   const ast = new Parser(tokens).parse();
-  const interp = new Interpreter({ output: (text: string) => out.push(text) });
+  const interp = new Interpreter((text: string) => out.push(text));
   interp.interpret(ast);
   return out;
 }
