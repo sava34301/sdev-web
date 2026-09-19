@@ -135,19 +135,16 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
       }
 
       // 2) Upsert files
-      for (const file of snap.files) {
-      const filesToUpsert = [];
-      for (let i = 0; i < snap.files.length; i++) {
-        const file = snap.files[i];
+      const filesToUpsert = snap.files.map((file, i) => {
         let cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
         if (!cloudId) {
           cloudId = crypto.randomUUID();
           fileCloudMap.current.set(file.id, cloudId);
         }
-
-        const folderCloudId = file.folderId ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null) : null;
-
-        filesToUpsert.push({
+        const folderCloudId = file.folderId
+          ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null)
+          : null;
+        return {
           id: cloudId,
           user_id: user.id,
           name: file.name,
@@ -156,75 +153,41 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
           is_open: snap.openIds.includes(file.id),
           is_active: file.id === snap.activeId,
           sort_order: i,
-        });
-      }
+        };
+      });
 
       if (filesToUpsert.length > 0) {
         const { error } = await supabase.from('code_files').upsert(filesToUpsert);
         fail(error);
       }
 
-      if (snap.files.length > 0) {
-        const fileRows = snap.files.map((file, i) => {
-          const cloudId = file.cloudId ?? fileCloudMap.current.get(file.id);
-          const folderCloudId = file.folderId ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null) : null;
-          return {
-            id: cloudId,
-            user_id: user.id,
-            name: file.name,
-            content: file.content,
-            folder_id: folderCloudId,
-            is_open: snap.openIds.includes(file.id),
-            is_active: file.id === snap.activeId,
-            sort_order: i,
-          };
-        });
-        const { error } = await supabase.from('code_files').upsert(fileRows);
-        fail(error);
-      }
       // 3) Delete only TRACKED cloud rows that no longer exist locally.
       //    Never touch rows we don't know about — those may be created by the
       //    manual "Save to cloud" dialog or other tabs and must be preserved.
       const trackedFileIds = new Set(fileCloudMap.current.values());
       const localFileCloudIds = new Set(snap.files.map(f => f.cloudId ?? fileCloudMap.current.get(f.id)).filter(Boolean) as string[]);
-      const fileIdsToDelete: string[] = [];
-      for (const cid of trackedFileIds) {
-        if (!localFileCloudIds.has(cid)) {
-          fileIdsToDelete.push(cid);
-          // forget the mapping so we don't try again
       const filesToDelete = Array.from(trackedFileIds).filter(cid => !localFileCloudIds.has(cid));
       if (filesToDelete.length > 0) {
-        await supabase.from('code_files').delete().in('id', filesToDelete);
+        const { error } = await supabase.from('code_files').delete().in('id', filesToDelete);
+        fail(error);
         for (const cid of filesToDelete) {
           for (const [local, cloud] of fileCloudMap.current.entries()) {
             if (cloud === cid) fileCloudMap.current.delete(local);
           }
         }
       }
-      if (fileIdsToDelete.length > 0) {
-        await supabase.from('code_files').delete().in('id', fileIdsToDelete);
-      }
-
-      const trackedFolderIds = new Set(folderCloudMap.current.values());
-      const localFolderCloudIds = new Set(snap.folders.map(f => f.cloudId ?? folderCloudMap.current.get(f.id)).filter(Boolean) as string[]);
-      const folderIdsToDelete: string[] = [];
-      for (const cid of trackedFolderIds) {
-        if (!localFolderCloudIds.has(cid)) {
-          folderIdsToDelete.push(cid);
 
       const trackedFolderIds = new Set(folderCloudMap.current.values());
       const localFolderCloudIds = new Set(snap.folders.map(f => f.cloudId ?? folderCloudMap.current.get(f.id)).filter(Boolean) as string[]);
       const foldersToDelete = Array.from(trackedFolderIds).filter(cid => !localFolderCloudIds.has(cid));
       if (foldersToDelete.length > 0) {
-        await supabase.from('folders').delete().in('id', foldersToDelete);
+        const { error } = await supabase.from('folders').delete().in('id', foldersToDelete);
+        fail(error);
         for (const cid of foldersToDelete) {
           for (const [local, cloud] of folderCloudMap.current.entries()) {
             if (cloud === cid) folderCloudMap.current.delete(local);
           }
         }
-      }
-      if (folderIdsToDelete.length > 0) {
-        await supabase.from('folders').delete().in('id', folderIdsToDelete);
       }
       if (failures.length) {
         setSyncError('Some files could not be saved to the cloud.');

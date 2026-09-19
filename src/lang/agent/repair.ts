@@ -187,7 +187,10 @@ function expression(rest: string, known: Set<string>, renames?: Map<string, stri
   // (`user.name`, `map:key`); a trailing full stop or "Result: ok" is prose.
   const codeOperator = /[|&^~@$\\]/.test(trimmed);
   const codePunctuation = /[\w\u0000)\]][.:][\w\u0000([]/.test(trimmed);
-  if (codeOperator || codePunctuation) return trimmed;
+  // A record/list literal written out in full (`{ theme: "dark" }`, `[1, 2]`)
+  // is code, whatever the spacing around its colons.
+  const codeLiteral = (/^\{[\s\S]*\}$/.test(trimmed) || /^\[[\s\S]*\]$/.test(trimmed));
+  if (codeOperator || codePunctuation || codeLiteral) return trimmed;
   if (allBare) return '"' + tokens.join(' ').replace(/"/g, '\\"') + '"';
 
   // mixed: quote only the unknown runs
