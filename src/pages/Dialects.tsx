@@ -93,16 +93,19 @@ export default function Dialects() {
     else toast.success('Dialect saved to your account.');
   };
 
-  const handlePublish = async () => {
-    if (!draft) return;
+  const publishSpec = async (spec: DialectSpec) => {
+    if (!user) { toast.error('Sign in first — publishing puts the dialect on your account.'); return; }
     try {
-      const published = await publish(draft);
-      setDraft(published);
+      const published = await publish(spec);
+      if (draft && draft.meta.slug === published.meta.slug) setDraft(published);
+      await refresh();
       toast.success('Published — share it with @you/' + published.meta.slug);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not publish');
     }
   };
+
+  const handlePublish = async () => { if (draft) await publishSpec(draft); };
 
   const handleInstall = async () => {
     try {
