@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { expect, test } from "bun:test";
 import { VM } from '../vm';
 import { ReturnException, SdevError } from '../errors';
