@@ -637,6 +637,44 @@ async function cmdDialect(sub: string, rest: string[]): Promise<void> {
       console.log(`imported ${specs.length} dialect(s)`);
       return;
     }
+    case 'preset': {
+      const slug = rest[0];
+      if (!slug) {
+        for (const p of presetList()) console.log(`${p.spec.meta.slug.padEnd(14)} ${p.spec.meta.name}  ${p.spec.meta.description ?? ''}`);
+        return;
+      }
+      const preset = findPreset(slug) ?? die(`no ready-made dialect "${slug}"`);
+      saveDialect(structuredClone(preset.spec));
+      setActiveSlug(preset.spec.meta.slug);
+      const out = value('-o', '--out');
+      if (out) { writeFileSync(out, preset.sample + '\n'); console.log('wrote sample to', out); }
+      console.log(`installed and using ${preset.spec.meta.name}`);
+      return;
+    }
+    case 'pull': {
+      const user = await requireUser();
+      const { data } = await db.from('dialects').select('slug, spec').eq('user_id', user.id);
+      const rows = (data ?? []).filter((r: { spec: DialectSpec }) => r.spec?.meta?.slug);
+      for (const r of rows) saveDialect(r.spec);
+      console.log(`pulled ${rows.length} dialect(s) from your account`);
+      return;
+    }
+    case 'sync': {
+      const user = await requireUser();
+      const local = listDialects();
+      for (const spec of local) {
+        await db.from('dialects').upsert({
+          user_id: user.id, slug: spec.meta.slug, name: spec.meta.name,
+          description: spec.meta.description ?? '', languages: spec.meta.languages,
+          visibility: spec.meta.visibility, extends_slug: spec.meta.extends,
+          latest_version: spec.meta.version, spec, updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,slug' });
+      }
+      const { data } = await db.from('dialects').select('slug, spec').eq('user_id', user.id);
+      for (const r of data ?? []) if (r.spec?.meta?.slug) saveDialect(r.spec);
+      console.log(`synced ${local.length} up, ${(data ?? []).length} down`);
+      return;
+    }
     case 'remove': {
       const slug = rest[0] ?? die('sdev dialect remove <slug>');
       console.log(removeDialect(slug) ? 'removed ' + slug : 'no such dialect');
