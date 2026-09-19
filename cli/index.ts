@@ -134,6 +134,7 @@ FILES
 
 DIALECTS
   dialect list                        Your dialects
+  dialect preset [slug] [-o file]     Install a ready-made dialect (+ its sample)
   dialect new <slug> --name "Name"    Create one
   dialect use <slug|none>             Choose the active dialect
   dialect show <slug>                 Inspect words and style
@@ -145,11 +146,14 @@ DIALECTS
   dialect words                       The catalog of changeable words
   dialect install <@user/slug|code>   Install someone else's dialect
   dialect publish <slug>              Publish yours
+  dialect pull | dialect sync         Fetch / two-way sync with your account
   dialect export|import <file>
   dialect remove <slug>
 
 EXTENSIONS
-  ext list | enable <id> | disable <id> | add <file> --name N [--about T] | sync | prelude
+  ext list | enable <id> | disable <id> | add <file> --name N [--about T]
+  ext publish <id|name> [--as public|unlisted|private] | ext pull | ext remove <id>
+  ext sync | ext prelude
 
 LIBRARIES
   lib list | add <@user/slug[@ver]> | remove <@user/slug> | pins <file>
@@ -162,7 +166,8 @@ CLOUD
   auth reset <email>      Send a password reset link
   auth token <a> <r>      Sign in with an access + refresh token pair
   auth status | whoami | refresh | logout
-  cloud list | cloud pull [name] | cloud push <file>
+  cloud list | cloud pull [name] | cloud push <file> | cloud rm <name>
+  cloud share <file> [--name T] [--about T] | cloud shared
 
 AGENT (understands however you write)
   agent status            What the agent has learned from your programs
