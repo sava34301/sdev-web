@@ -881,7 +881,32 @@ async function cmdCloud(sub: string, rest: string[]): Promise<void> {
     console.log('pushed', name);
     return;
   }
-  die('cloud: use list | pull | push');
+  if (sub === 'rm') {
+    const name = rest[0] ?? die('sdev cloud rm <name>');
+    const { error } = await db.from('code_files').delete().eq('user_id', user.id).eq('name', name);
+    if (error) die(error.message);
+    console.log('removed', name);
+    return;
+  }
+  if (sub === 'share') {
+    const file = rest[0] ?? die('sdev cloud share <file>');
+    const body = stripSignature(readSource(file));
+    const title = value('--name') ?? basename(file);
+    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'program'}-${checksum(body).slice(0, 6)}`;
+    const { error } = await db.from('gists').insert({
+      user_id: user.id, slug, title, description: value('--about') ?? null, content: body, language: 'sdev',
+    });
+    if (error) die(error.message);
+    console.log(`shared — https://web.sdev.codes/g/${slug}`);
+    return;
+  }
+  if (sub === 'shared') {
+    const { data } = await db.from('gists').select('slug, title, view_count').eq('user_id', user.id).order('created_at', { ascending: false });
+    for (const g of data ?? []) console.log(`${String(g.title).padEnd(30)} /g/${g.slug}  ${g.view_count ?? 0} views`);
+    if (!data?.length) console.log('nothing shared yet');
+    return;
+  }
+  die('cloud: use list | pull | push | rm | share | shared');
 }
 
 /* ------------------------------------------------------------------ */
