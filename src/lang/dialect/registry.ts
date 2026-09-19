@@ -72,7 +72,7 @@ export async function fetchLibrary(address: Address): Promise<LibraryBundle> {
     const version = address.version ?? lib.latest_version;
     const { data: ver } = await db.from('library_versions').select('version, modules').eq('library_id', lib.id).eq('version', version).maybeSingle();
     if (!ver) throw new Error(`${key} has no version ${version}.`);
-    const bundle: LibraryBundle = { address: key, version: ver.version, modules: ver.modules ?? {}, fetchedAt: Date.now() };
+    const bundle: LibraryBundle = { address: key, version: ver.version, modules: (ver.modules as Record<string, string> | null) ?? {}, fetchedAt: Date.now() };
     cacheBundle(bundle);
     return bundle;
   } catch (e) {
