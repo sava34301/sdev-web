@@ -708,6 +708,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_username: {
+        Args: { _seed: string; _user_id: string }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -717,6 +721,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      handle_base: { Args: { _seed: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
