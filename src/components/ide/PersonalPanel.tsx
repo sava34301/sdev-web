@@ -139,6 +139,11 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
             <BookOpen className="h-3.5 w-3.5 mr-1" />Docs
           </Button>
         </div>
+
+        <div className="flex gap-1.5">
+          <Button asChild size="sm" variant="outline" className="h-7 flex-1 text-xs"><Link to="/my">My sdev</Link></Button>
+          <Button asChild size="sm" variant="outline" className="h-7 flex-1 text-xs"><Link to="/explore">Explore</Link></Button>
+        </div>
       </section>
 
       {/* Libraries ------------------------------------------------------ */}
