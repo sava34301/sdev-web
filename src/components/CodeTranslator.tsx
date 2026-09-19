@@ -180,7 +180,7 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
           <div className="w-8 h-8 rounded-lg bg-secondary/20 flex items-center justify-center">
             <Wand2 className="w-4 h-4 text-secondary" />
           </div>
-          <span className="text-sm font-semibold text-foreground">AI Translator</span>
+          <span className="text-sm font-semibold text-foreground">Code Translator</span>
         </div>
         <Select value={sourceLanguage} onValueChange={setSourceLanguage}>
           <SelectTrigger className="w-[130px] h-8 text-xs border-border/50 bg-background/50">
