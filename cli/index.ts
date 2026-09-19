@@ -742,10 +742,39 @@ async function cmdExt(sub: string, rest: string[]): Promise<void> {
       console.log(`added and enabled ${record.name}`);
       return;
     }
+    case 'pull':
     case 'sync': {
       const user = await currentUser();
       const all = await syncExtensions(user?.id ?? null);
       console.log(`synced ${all.length} extension(s)`);
+      return;
+    }
+    case 'publish': {
+      const key = rest[0] ?? die('sdev ext publish <id|name> [--as public|unlisted|private]');
+      const match = cachedExtensions().find((e) => e.id === key || e.id.startsWith(key) || e.name === key);
+      if (!match) die('no such extension');
+      const user = await requireUser();
+      const asked = value('--as');
+      const visibility = asked === 'private' || asked === 'unlisted' || asked === 'public' ? asked : 'public';
+      const { error } = await db.from('sdev_extensions').upsert({
+        user_id: user.id, name: match.name, kind: match.kind, symbol: match.symbol,
+        about: match.about, source: match.source, visibility, updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,name' });
+      if (error) die(error.message);
+      await syncExtensions(user.id);
+      console.log(`published ${match.name} (${visibility})`);
+      return;
+    }
+    case 'rm':
+    case 'remove': {
+      const key = rest[0] ?? die('sdev ext remove <id|name>');
+      const match = cachedExtensions().find((e) => e.id === key || e.id.startsWith(key) || e.name === key);
+      if (!match) die('no such extension');
+      const user = await currentUser();
+      if (user && !match.id.startsWith('local-')) await db.from('sdev_extensions').delete().eq('user_id', user.id).eq('id', match.id);
+      setExtensionEnabled(match.id, false);
+      if (user) await syncExtensions(user.id);
+      console.log('removed', match.name);
       return;
     }
     case 'prelude':
