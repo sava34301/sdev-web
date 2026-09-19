@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, BookOpen, Check, Download, Loader2, Plus, Share2, Sparkles, Trash2, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDialects } from '@/hooks/useDialects';
+import { useAuth } from '@/hooks/useAuth';
+import { CreateDialectDialog, type CreateDialectValues } from '@/components/dialect/CreateDialectDialog';
 import { CATALOG, GROUP_LABELS, type CatalogGroup } from '@/lang/dialect/catalog';
 import { validateDialect, type DialectSpec } from '@/lang/dialect/spec';
 import { dialectize } from '@/lang/dialect/canonicalize';
