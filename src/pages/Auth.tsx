@@ -123,6 +123,17 @@ export default function Auth() {
             {signupAllowed && <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4 mt-4">
                 <div>
+                  <Label htmlFor="handle-up">Username</Label>
+                  <Input
+                    id="handle-up"
+                    required
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="yourname"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">People install your work as @{handle || 'yourname'}/thing.</p>
+                </div>
+                <div>
                   <Label htmlFor="name-up">Display name</Label>
                   <Input id="name-up" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
                 </div>
