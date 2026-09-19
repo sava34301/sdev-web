@@ -80,18 +80,17 @@ export function useDialects() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const create = useCallback((name: string, slug: string) => {
-    const spec = emptyDialect({ name, slug });
-    persist([...readLocalDialects().filter((d) => d.meta.slug !== slug), spec]);
-    return spec;
-  }, [persist]);
-
+  /**
+   * Keep the local copy authoritative, then mirror the dialect into the
+   * account. A cloud failure is reported back so the page can say so instead
+   * of pretending the dialect was stored.
+   */
   const save = useCallback(async (spec: DialectSpec) => {
     const next = readLocalDialects().filter((d) => d.meta.slug !== spec.meta.slug);
     persist([...next, spec]);
-    if (!user) return;
+    if (!user) return { saved: true, cloud: false as const, error: null as string | null };
     try {
-      await db.from('dialects').upsert({
+      const { error } = await db.from('dialects').upsert({
         user_id: user.id,
         slug: spec.meta.slug,
         name: spec.meta.name,
@@ -103,10 +102,22 @@ export function useDialects() {
         spec,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,slug' });
-    } catch {
-      /* offline / pre-migration: the local copy is authoritative */
+      if (error) return { saved: true, cloud: false as const, error: error.message as string };
+      return { saved: true, cloud: true as const, error: null };
+    } catch (e) {
+      return { saved: true, cloud: false as const, error: e instanceof Error ? e.message : 'offline' };
     }
   }, [user, persist]);
+
+  /** Start a new dialect, optionally from an existing one, and store it. */
+  const create = useCallback(async (meta: Partial<DialectSpec['meta']>, base?: DialectSpec) => {
+    const blank = emptyDialect(meta);
+    const spec: DialectSpec = base
+      ? { ...structuredClone(base), meta: { ...structuredClone(base).meta, ...blank.meta } }
+      : blank;
+    const result = await save(spec);
+    return { spec, ...result };
+  }, [save]);
 
   const publish = useCallback(async (spec: DialectSpec) => {
     if (!isPublishable(spec)) throw new Error('Fix the validation errors before publishing.');

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SEO } from '@/components/SEO';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, BookOpen, Check, Download, Loader2, Plus, Share2, Sparkles, Trash2, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDialects } from '@/hooks/useDialects';
+import { useAuth } from '@/hooks/useAuth';
+import { CreateDialectDialog, type CreateDialectValues } from '@/components/dialect/CreateDialectDialog';
 import { CATALOG, GROUP_LABELS, type CatalogGroup } from '@/lang/dialect/catalog';
 import { validateDialect, type DialectSpec } from '@/lang/dialect/spec';
 import { dialectize } from '@/lang/dialect/canonicalize';
@@ -21,8 +23,13 @@ import { getOrGenerateDocs } from '@/lang/dialect/docs';
 
 const GROUP_ORDER: CatalogGroup[] = ['core', 'control', 'functions', 'errors', 'objects', 'modules', 'literals', 'operators', 'builtins'];
 
+interface MyExtension { id: string; name: string; kind: string; about: string | null; visibility: string }
+interface MyProgram { id: string; name: string; updated_at: string }
+interface MyShared { id: string; slug: string; title: string; view_count: number }
+
 export default function Dialects() {
-  const { dialects, activeSlug, create, save, publish, remove, install, activate } = useDialects();
+  const { user } = useAuth();
+  const { dialects, activeSlug, create, save, publish, remove, install, activate, refresh } = useDialects();
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [draft, setDraft] = useState<DialectSpec | null>(null);
   const [query, setQuery] = useState('');
@@ -30,6 +37,10 @@ export default function Dialects() {
   const [aiRequest, setAiRequest] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [extensions, setExtensions] = useState<MyExtension[]>([]);
+  const [programs, setPrograms] = useState<MyProgram[]>([]);
+  const [shared, setShared] = useState<MyShared[]>([]);
 
   const issues = useMemo(() => (draft ? validateDialect(draft) : []), [draft]);
   const errors = issues.filter((i) => i.level === 'error');
@@ -40,33 +51,61 @@ export default function Dialects() {
     return CATALOG.filter((e) => !q || e.word.includes(q) || e.about.toLowerCase().includes(q) || (draft?.names[e.word] ?? '').toLowerCase().includes(q));
   }, [query, draft]);
 
+  /** Everything of yours that lives in your account. */
+  const loadMine = useCallback(async () => {
+    if (!user) { setExtensions([]); setPrograms([]); setShared([]); return; }
+    const db = supabase as unknown as { from: (t: string) => any };
+    try {
+      const [e, f, g] = await Promise.all([
+        db.from('sdev_extensions').select('id, name, kind, about, visibility').eq('user_id', user.id).order('created_at', { ascending: false }),
+        db.from('code_files').select('id, name, updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }),
+        db.from('gists').select('id, slug, title, view_count').eq('user_id', user.id).order('created_at', { ascending: false }),
+      ]);
+      setExtensions(Array.isArray(e.data) ? e.data : []);
+      setPrograms(Array.isArray(f.data) ? f.data : []);
+      setShared(Array.isArray(g.data) ? g.data : []);
+    } catch { /* offline */ }
+  }, [user]);
+
+  useEffect(() => { loadMine(); }, [loadMine]);
+
   const openEditor = (spec: DialectSpec) => { setEditingSlug(spec.meta.slug); setDraft(structuredClone(spec)); };
 
-  const handleCreate = () => {
-    const name = prompt('Name your version of sdev', 'My sdev');
-    if (!name) return;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'my-sdev';
-    openEditor(create(name, slug));
+  const handleCreate = async (values: CreateDialectValues) => {
+    const result = await create(
+      { name: values.name, slug: values.slug, description: values.description, languages: values.languages.length ? values.languages : ['en'], visibility: values.visibility },
+      values.base ?? undefined,
+    );
+    openEditor(result.spec);
+    await refresh();
+    if (result.error) toast.warning(`Saved here, but not to your account: ${result.error}`);
+    else if (!user) toast.success('Dialect created on this device. Sign in to keep it in your account.');
+    else toast.success('Dialect created and saved to your account.');
   };
 
   const handleSave = async () => {
     if (!draft) return;
     setSaving(true);
-    await save(draft);
+    const result = await save(draft);
     setSaving(false);
-    toast.success('Dialect saved');
+    if (result?.error) toast.error(`Saved here, but not to your account: ${result.error}`);
+    else if (!user) toast.success('Saved on this device. Sign in to keep it in your account.');
+    else toast.success('Dialect saved to your account.');
   };
 
-  const handlePublish = async () => {
-    if (!draft) return;
+  const publishSpec = async (spec: DialectSpec) => {
+    if (!user) { toast.error('Sign in first — publishing puts the dialect on your account.'); return; }
     try {
-      const published = await publish(draft);
-      setDraft(published);
+      const published = await publish(spec);
+      if (draft && draft.meta.slug === published.meta.slug) setDraft(published);
+      await refresh();
       toast.success('Published — share it with @you/' + published.meta.slug);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not publish');
     }
   };
+
+  const handlePublish = async () => { if (draft) await publishSpec(draft); };
 
   const handleInstall = async () => {
     try {
@@ -163,7 +202,7 @@ export default function Dialects() {
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold tracking-tight">Your dialects</h2>
-            <Button size="sm" onClick={handleCreate}><Plus className="h-4 w-4 mr-1.5" />New dialect</Button>
+            <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1.5" />Create dialect</Button>
           </div>
           {dialects.length === 0 && <p className="text-sm text-muted-foreground">No dialects yet. Create one, or install someone else's.</p>}
           <div className="grid gap-2 sm:grid-cols-2">
@@ -181,12 +220,66 @@ export default function Dialects() {
                     {activeSlug === d.meta.slug ? 'Deactivate' : 'Use'}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => openEditor(d)}>Edit</Button>
+                  <Button size="sm" variant="outline" onClick={() => publishSpec(d)} aria-label={`Publish ${d.meta.name}`}><Upload className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(d.meta.slug)} aria-label={`Delete ${d.meta.name}`}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </Card>
             ))}
           </div>
         </section>
+
+        <section className="mb-10 grid gap-4 lg:grid-cols-3">
+          <Card className="p-4">
+            <h2 className="text-sm font-semibold mb-2">Your extensions</h2>
+            {!user && <p className="text-xs text-muted-foreground">Sign in to see the extensions on your account.</p>}
+            {user && extensions.length === 0 && <p className="text-xs text-muted-foreground">Nothing yet.</p>}
+            <ul className="space-y-1.5">
+              {extensions.map((e) => (
+                <li key={e.id} className="text-xs flex items-center justify-between gap-2">
+                  <span className="truncate">{e.name} <span className="text-muted-foreground">· {e.kind}</span></span>
+                  <Badge variant="secondary" className="shrink-0">{e.visibility}</Badge>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="text-sm font-semibold mb-2">Your programs</h2>
+            {!user && <p className="text-xs text-muted-foreground">Sign in to see the files on your account.</p>}
+            {user && programs.length === 0 && <p className="text-xs text-muted-foreground">Nothing saved yet.</p>}
+            <ul className="space-y-1.5">
+              {programs.slice(0, 12).map((p) => (
+                <li key={p.id} className="text-xs flex items-center justify-between gap-2">
+                  <span className="font-mono truncate">{p.name}</span>
+                  <Link to="/ide" className="text-primary shrink-0">Open</Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="text-sm font-semibold mb-2">Shared by you</h2>
+            {!user && <p className="text-xs text-muted-foreground">Sign in to see what you have shared.</p>}
+            {user && shared.length === 0 && <p className="text-xs text-muted-foreground">Nothing shared yet.</p>}
+            <ul className="space-y-1.5">
+              {shared.map((g) => (
+                <li key={g.id} className="text-xs flex items-center justify-between gap-2">
+                  <Link to={`/g/${g.slug}`} className="truncate hover:underline">{g.title}</Link>
+                  <span className="text-muted-foreground shrink-0">{g.view_count} views</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+
+        <CreateDialectDialog
+          open={creating}
+          onOpenChange={setCreating}
+          existingSlugs={dialects.map((d) => d.meta.slug)}
+          installed={dialects}
+          onCreate={handleCreate}
+        />
+
 
         {draft && (
           <section>
