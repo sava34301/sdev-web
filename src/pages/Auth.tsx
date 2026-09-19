@@ -19,6 +19,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [handle, setHandle] = useState('');
   const [busy, setBusy] = useState(false);
   const signupAllowed = isLaunched() || hasInviteAccess();
 
@@ -39,13 +40,22 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wanted = handle.trim().toLowerCase();
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/.test(wanted)) {
+      return toast.error('Pick a username: 2–32 lowercase letters, numbers or dashes.');
+    }
     setBusy(true);
+    const { data: taken } = await supabase.from('usernames').select('user_id').eq('username', wanted).maybeSingle();
+    if (taken) {
+      setBusy(false);
+      return toast.error(`@${wanted} is taken.`);
+    }
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/ide`,
-        data: { display_name: displayName || email.split('@')[0] },
+        data: { username: wanted, display_name: displayName || wanted },
       },
     });
     setBusy(false);
@@ -112,6 +122,17 @@ export default function Auth() {
             </TabsContent>
             {signupAllowed && <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="handle-up">Username</Label>
+                  <Input
+                    id="handle-up"
+                    required
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="yourname"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">People install your work as @{handle || 'yourname'}/thing.</p>
+                </div>
                 <div>
                   <Label htmlFor="name-up">Display name</Label>
                   <Input id="name-up" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />

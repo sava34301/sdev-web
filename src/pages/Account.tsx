@@ -151,12 +151,12 @@ export default function Account() {
             <img src={profile.avatar_url} alt={profile.display_name || 'avatar'} className="h-16 w-16 rounded-full object-cover border border-border/50" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
           ) : (
             <div className="h-16 w-16 rounded-full bg-gradient-to-br from-neon-cyan to-neon-violet flex items-center justify-center text-lg font-bold text-background">
-              {(profile.display_name || user.email || 'U').slice(0, 2).toUpperCase()}
+              {(profile.display_name || username || 'U').slice(0, 2).toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-3xl font-bold tracking-tight">{profile.display_name || user.email}</h1>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{profile.display_name || (username ? `@${username}` : 'Your account')}</h1>
+            <p className="text-sm text-muted-foreground">{username ? `@${username}` : user.email}</p>
             {profile.website && (
               <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground underline">
                 {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
