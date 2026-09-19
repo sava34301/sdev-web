@@ -75,3 +75,9 @@ is out of scope until SDEV has a DOM binding.
 **J. Retire the bootstrap**
 Once B–D pass without the oracle, delete `lang/bootstrap/compile.mjs` and
 make the self-hosted compiler its own reference.
+
+## Sharing (done)
+- [x] Public /explore page: dialects, extensions, shared programs with search and install
+- [x] /my page: own dialects, extensions, files and shared programs
+- [x] Ready-made dialect "Сдев" (src/lang/dialect/presets.ts) — runs in the IDE and the CLI
+- [x] CLI cloud writes: dialect preset/pull/sync, ext publish/pull/remove, cloud rm/share/shared
