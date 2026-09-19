@@ -21,8 +21,13 @@ import { getOrGenerateDocs } from '@/lang/dialect/docs';
 
 const GROUP_ORDER: CatalogGroup[] = ['core', 'control', 'functions', 'errors', 'objects', 'modules', 'literals', 'operators', 'builtins'];
 
+interface MyExtension { id: string; name: string; kind: string; about: string | null; visibility: string }
+interface MyProgram { id: string; name: string; updated_at: string }
+interface MyShared { id: string; slug: string; title: string; view_count: number }
+
 export default function Dialects() {
-  const { dialects, activeSlug, create, save, publish, remove, install, activate } = useDialects();
+  const { user } = useAuth();
+  const { dialects, activeSlug, create, save, publish, remove, install, activate, refresh } = useDialects();
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [draft, setDraft] = useState<DialectSpec | null>(null);
   const [query, setQuery] = useState('');
@@ -30,6 +35,10 @@ export default function Dialects() {
   const [aiRequest, setAiRequest] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [extensions, setExtensions] = useState<MyExtension[]>([]);
+  const [programs, setPrograms] = useState<MyProgram[]>([]);
+  const [shared, setShared] = useState<MyShared[]>([]);
 
   const issues = useMemo(() => (draft ? validateDialect(draft) : []), [draft]);
   const errors = issues.filter((i) => i.level === 'error');
@@ -40,21 +49,46 @@ export default function Dialects() {
     return CATALOG.filter((e) => !q || e.word.includes(q) || e.about.toLowerCase().includes(q) || (draft?.names[e.word] ?? '').toLowerCase().includes(q));
   }, [query, draft]);
 
+  /** Everything of yours that lives in your account. */
+  const loadMine = useCallback(async () => {
+    if (!user) { setExtensions([]); setPrograms([]); setShared([]); return; }
+    const db = supabase as unknown as { from: (t: string) => any };
+    try {
+      const [e, f, g] = await Promise.all([
+        db.from('sdev_extensions').select('id, name, kind, about, visibility').eq('user_id', user.id).order('created_at', { ascending: false }),
+        db.from('code_files').select('id, name, updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }),
+        db.from('gists').select('id, slug, title, view_count').eq('user_id', user.id).order('created_at', { ascending: false }),
+      ]);
+      setExtensions(Array.isArray(e.data) ? e.data : []);
+      setPrograms(Array.isArray(f.data) ? f.data : []);
+      setShared(Array.isArray(g.data) ? g.data : []);
+    } catch { /* offline */ }
+  }, [user]);
+
+  useEffect(() => { loadMine(); }, [loadMine]);
+
   const openEditor = (spec: DialectSpec) => { setEditingSlug(spec.meta.slug); setDraft(structuredClone(spec)); };
 
-  const handleCreate = () => {
-    const name = prompt('Name your version of sdev', 'My sdev');
-    if (!name) return;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'my-sdev';
-    openEditor(create(name, slug));
+  const handleCreate = async (values: CreateDialectValues) => {
+    const result = await create(
+      { name: values.name, slug: values.slug, description: values.description, languages: values.languages.length ? values.languages : ['en'], visibility: values.visibility },
+      values.base ?? undefined,
+    );
+    openEditor(result.spec);
+    await refresh();
+    if (result.error) toast.warning(`Saved here, but not to your account: ${result.error}`);
+    else if (!user) toast.success('Dialect created on this device. Sign in to keep it in your account.');
+    else toast.success('Dialect created and saved to your account.');
   };
 
   const handleSave = async () => {
     if (!draft) return;
     setSaving(true);
-    await save(draft);
+    const result = await save(draft);
     setSaving(false);
-    toast.success('Dialect saved');
+    if (result?.error) toast.error(`Saved here, but not to your account: ${result.error}`);
+    else if (!user) toast.success('Saved on this device. Sign in to keep it in your account.');
+    else toast.success('Dialect saved to your account.');
   };
 
   const handlePublish = async () => {
