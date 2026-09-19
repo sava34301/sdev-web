@@ -199,7 +199,7 @@ export default function Dialects() {
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold tracking-tight">Your dialects</h2>
-            <Button size="sm" onClick={handleCreate}><Plus className="h-4 w-4 mr-1.5" />New dialect</Button>
+            <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1.5" />Create dialect</Button>
           </div>
           {dialects.length === 0 && <p className="text-sm text-muted-foreground">No dialects yet. Create one, or install someone else's.</p>}
           <div className="grid gap-2 sm:grid-cols-2">
@@ -217,12 +217,66 @@ export default function Dialects() {
                     {activeSlug === d.meta.slug ? 'Deactivate' : 'Use'}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => openEditor(d)}>Edit</Button>
+                  <Button size="sm" variant="outline" onClick={() => publishSpec(d)} aria-label={`Publish ${d.meta.name}`}><Upload className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(d.meta.slug)} aria-label={`Delete ${d.meta.name}`}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </Card>
             ))}
           </div>
         </section>
+
+        <section className="mb-10 grid gap-4 lg:grid-cols-3">
+          <Card className="p-4">
+            <h2 className="text-sm font-semibold mb-2">Your extensions</h2>
+            {!user && <p className="text-xs text-muted-foreground">Sign in to see the extensions on your account.</p>}
+            {user && extensions.length === 0 && <p className="text-xs text-muted-foreground">Nothing yet.</p>}
+            <ul className="space-y-1.5">
+              {extensions.map((e) => (
+                <li key={e.id} className="text-xs flex items-center justify-between gap-2">
+                  <span className="truncate">{e.name} <span className="text-muted-foreground">· {e.kind}</span></span>
+                  <Badge variant="secondary" className="shrink-0">{e.visibility}</Badge>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="text-sm font-semibold mb-2">Your programs</h2>
+            {!user && <p className="text-xs text-muted-foreground">Sign in to see the files on your account.</p>}
+            {user && programs.length === 0 && <p className="text-xs text-muted-foreground">Nothing saved yet.</p>}
+            <ul className="space-y-1.5">
+              {programs.slice(0, 12).map((p) => (
+                <li key={p.id} className="text-xs flex items-center justify-between gap-2">
+                  <span className="font-mono truncate">{p.name}</span>
+                  <Link to="/ide" className="text-primary shrink-0">Open</Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="text-sm font-semibold mb-2">Shared by you</h2>
+            {!user && <p className="text-xs text-muted-foreground">Sign in to see what you have shared.</p>}
+            {user && shared.length === 0 && <p className="text-xs text-muted-foreground">Nothing shared yet.</p>}
+            <ul className="space-y-1.5">
+              {shared.map((g) => (
+                <li key={g.id} className="text-xs flex items-center justify-between gap-2">
+                  <Link to={`/g/${g.slug}`} className="truncate hover:underline">{g.title}</Link>
+                  <span className="text-muted-foreground shrink-0">{g.view_count} views</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+
+        <CreateDialectDialog
+          open={creating}
+          onOpenChange={setCreating}
+          existingSlugs={dialects.map((d) => d.meta.slug)}
+          installed={dialects}
+          onCreate={handleCreate}
+        />
+
 
         {draft && (
           <section>
