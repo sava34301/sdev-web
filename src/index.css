@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hide all Lovable platform branding */
+/* Hide all core platform branding */
 #lovable-badge,
 [class*="lovable"],
 [id*="lovable"] {

@@ -322,7 +322,7 @@ const Index = () => {
               <button onClick={() => navigate('/ide')} className="bento p-6 text-left">
                 <MonitorDot className="w-5 h-5 text-primary mb-3" />
                 <h3 className="text-base mb-1">Browser IDE</h3>
-                <p className="text-sm text-muted-foreground">Files, terminal, debugger, AI assistant, live preview.</p>
+                <p className="text-sm text-muted-foreground">Files, terminal, debugger, smart assistant, live preview.</p>
               </button>
               <button onClick={() => navigate('/docs')} className="bento p-6 text-left">
                 <BookOpen className="w-5 h-5 text-brand-sky mb-3" />

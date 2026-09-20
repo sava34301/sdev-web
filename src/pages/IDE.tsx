@@ -644,7 +644,7 @@ export default function IDEPage() {
     // The understanding agent reads the whole file and turns however the user
     // writes into canonical sdev — before any runtime or codegen sees it.
     // `!#agent:off` in the file switches it off; `!#agent: local|online`
-    // chooses where its AI brain runs.
+    // chooses where its smart core runs.
     const { understandAsync } = await import('@/lang/agent');
     const understood = await understandAsync(dialectSrc, { dialect: activeDialect });
     const canonicalSrc = understood.source;
@@ -717,7 +717,7 @@ export default function IDEPage() {
     setStatusMsg('Running…');
 
     // ─── Hybrid translation pre-pass ───
-    // Stage 1: dictionary + fuzzy (sync, in Lexer). Stage 2: AI fallback
+    // Stage 1: dictionary + fuzzy (sync, in Lexer). Stage 2: smart fallback
     // only fires when foreign-script words remain after stage 1.
     try {
       const { translateSource } = await import('@/lang/translator');
@@ -726,14 +726,14 @@ export default function IDEPage() {
         .replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '')
         .replace(/(\/\/|#)[^\n]*/g, '');
       if (/[\u00A0-\uFFFF]{3,}/.test(stripped)) {
-        setStatusMsg('Translating with AI…');
+        setStatusMsg('Translating with Smart Translator…');
         try {
           const { data } = await supabase.functions.invoke('translate-fuzzy', {
             body: { code: stage1.translated, original: code, sourceLanguage: stage1.detectedLanguage ?? selectedLanguage },
           });
           if (data?.translated) {
             code = data.translated;
-            if (data.usedAI) toast.info('Translated with AI fallback');
+            if (data.usedAI) toast.info('Translated using fallback engine');
           } else {
             code = stage1.translated;
           }
@@ -1377,7 +1377,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                 <div className="text-xs">
                   <div className="font-semibold mb-1">Code Language</div>
                   <div>Write sdev in your language.</div>
-                  <div>AI translates to English on first run,</div>
+                  <div>The system translates to English on first run,</div>
                   <div>then caches for instant future runs.</div>
                   {lastResult && <div className="mt-1 text-primary">Last: {lastResult.detectedLanguage} {lastResult.fromCache ? '(cached ⚡)' : '(translated ✨)'}</div>}
                 </div>

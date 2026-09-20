@@ -50,7 +50,7 @@ export function IdeAssistantPanel({ code, fileName, error, problemSummary, onApp
   const apply = () => {
     if (!result) return;
     onApply(result.fixed_code);
-    toast.success('Applied AI fix to current file');
+    toast.success('Applied automatic fix to current file');
   };
 
   const confidenceColor = result?.confidence === 'high'
@@ -68,7 +68,7 @@ export function IdeAssistantPanel({ code, fileName, error, problemSummary, onApp
         <Textarea
           value={note}
           onChange={e => setNote(e.target.value)}
-          placeholder="Optional: tell the AI what you're trying to do or what's wrong…"
+          placeholder="Optional: describe what you're trying to do or what's wrong…"
           className="min-h-[60px] text-xs font-mono bg-muted/20 border-border/40"
         />
         <div className="flex gap-2">
