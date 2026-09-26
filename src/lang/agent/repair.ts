@@ -158,7 +158,8 @@ function expression(rest: string, known: Set<string>, renames?: Map<string, stri
   }
 
   const tokens = wordsOf(trimmed);
-  const numeric = numberWord(tokens.join(' '));
+  const ownName = tokens.length === 1 && known.has(tokens[0]);
+  const numeric = ownName ? null : numberWord(tokens.join(' '));
   if (numeric !== null) return numeric;
 
   const understood = tokens.every((t) => {
@@ -173,13 +174,8 @@ function expression(rest: string, known: Set<string>, renames?: Map<string, stri
     return false;
   });
 
-  if (understood) return tokens.join(' ');
+  if (understood) return joinOperands(tokens);
 
-  // Bare words the file never introduced: the user meant text.
-  const words = tokens.map((t) => (isMaskedString(t) ? t : t));
-  if (words.length === 1 && !isMaskedString(words[0]) && numberWord(words[0]) !== null) {
-    return numberWord(words[0])!;
-  }
   const allBare = tokens.every((t) => !isMaskedString(t));
   // Operators the agent does not know about (pipes, bitwise, member access…)
   // mean this is code, not prose — leave it exactly as the author wrote it.
@@ -191,17 +187,47 @@ function expression(rest: string, known: Set<string>, renames?: Map<string, stri
   // is code, whatever the spacing around its colons.
   const codeLiteral = (/^\{[\s\S]*\}$/.test(trimmed) || /^\[[\s\S]*\]$/.test(trimmed));
   if (codeOperator || codePunctuation || codeLiteral) return trimmed;
-  if (allBare) return '"' + tokens.join(' ').replace(/"/g, '\\"') + '"';
+  if (allBare && !tokens.some((t) => known.has(t))) return '"' + tokens.join(' ').replace(/"/g, '\\"') + '"';
 
-  // mixed: quote only the unknown runs
-  return tokens
-    .map((t) => (isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || RESERVED.has(t) || BUILTINS.has(t) || /[(.[]/.test(t)
-      ? t
-      : '"' + t + '"'))
-    .join(' + ');
+  // mixed: text runs become strings, the author's names stay values —
+  // `Hello, name` -> "Hello, " + name
+  const isValue = (t: string) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || BUILTINS.has(t) || /[(.[]/.test(t);
+  const pieces: { kind: 'text' | 'value' | 'op'; v: string }[] = [];
+  for (const t of tokens) {
+    if (/^[-+*/%]$/.test(t)) pieces.push({ kind: 'op', v: t });
+    else if (isValue(t)) pieces.push({ kind: 'value', v: t });
+    else if (pieces.length && pieces[pieces.length - 1].kind === 'text') pieces[pieces.length - 1].v += ' ' + t;
+    else pieces.push({ kind: 'text', v: t });
+  }
+  const parts = pieces.map((p, i) => {
+    if (p.kind !== 'text') return p.v;
+    const before = i > 0 && pieces[i - 1].kind === 'value' ? ' ' : '';
+    const after = i < pieces.length - 1 && pieces[i + 1].kind === 'value' ? ' ' : '';
+    return '"' + (before + p.v + after).replace(/"/g, '\\"') + '"';
+  });
+  return joinOperands(parts);
 }
 
-function condition(rest: string, known: Set<string>, renames?: Map<string, string>): string {
+/** `"Hello, " name` -> `"Hello, " + name`: two values side by side are joined. */
+function joinOperands(tokens: string[]): string {
+  const operand = (t: string) =>
+    !/^[-+*/%<>=!,]+$/.test(t) && !RESERVED.has(t) && !t.endsWith('(') && !t.endsWith(',') && !t.startsWith(')');
+  const out: string[] = [];
+  tokens.forEach((t, i) => {
+    if (i > 0 && operand(tokens[i - 1]) && operand(t) && !t.startsWith('(')) out.push('+');
+    out.push(t);
+  });
+  return out.join(' ');
+}
+
+interface ConditionInfo {
+  /** answers that are words: compared ignoring capitals and spaces */
+  textAsks?: Set<string>;
+  /** the line's string literals, so compared words can be lower-cased */
+  strings?: string[];
+}
+
+function condition(rest: string, known: Set<string>, renames?: Map<string, string>, info: ConditionInfo = {}): string {
   let out = ' ' + rest.trim() + ' ';
   if (renames?.size) out = out.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
   for (const [re, to] of COMPARISONS) out = out.replace(re, to);
@@ -214,13 +240,31 @@ function condition(rest: string, known: Set<string>, renames?: Map<string, strin
     .replace(/\s*<=\s*/g, ' is or less ')
     .replace(/\s+/g, ' ')
     .trim();
-  // stray number words inside the condition
-  out = out
-    .split(' ')
-    .map((t) => (!isMaskedString(t) && numberWord(t) !== null ? numberWord(t)! : t))
-    .join(' ');
-  void known;
-  return out;
+  const toks = out.split(' ');
+  // stray number words, and bare words the file never introduced (`answer is yes`)
+  const mapped = toks.map((t, i) => {
+    if (isMaskedString(t) || known.has(t)) return t;
+    if (numberWord(t) !== null) return numberWord(t)!;
+    if (/^[\p{L}_][\p{L}\p{N}_]*$/u.test(t) && !RESERVED.has(t.toLowerCase()) && !BUILTINS.has(t)) {
+      const prev = toks[i - 1]?.toLowerCase();
+      if (prev === 'is' || prev === 'not' || prev === 'equals') return '"' + t.toLowerCase() + '"';
+    }
+    return t;
+  });
+  // a typed word answer: "Yes", " yes " and "yes" are the same answer
+  for (let i = 0; i + 2 < mapped.length; i++) {
+    const name = mapped[i];
+    if (!info.textAsks?.has(name) || mapped[i + 1] !== 'is') continue;
+    const j = mapped[i + 2] === 'not' ? i + 3 : i + 2;
+    const lit = mapped[j];
+    if (!lit || !(isMaskedString(lit) || /^".*"$/.test(lit))) continue;
+    if (isMaskedString(lit) && info.strings) {
+      const k = Number(lit.slice(1, -1));
+      info.strings[k] = info.strings[k].toLowerCase().replace(/^"\s+|\s+"$/g, '"');
+    }
+    mapped[i] = `lower(trim(${name}))`;
+  }
+  return mapped.join(' ');
 }
 
 const ASSIGN_RE = new RegExp(
@@ -231,15 +275,140 @@ const ASSIGN_RE = new RegExp(
 );
 const ASSIGN_SYMBOL_RE = /^([\p{L}\p{N}_]+)\s*(?::=|<-|=(?!=))\s*(.+)$/u;
 
+/** Intents whose words people also pick as their own variable names. */
+const NAMEABLE_INTENTS = new Set<Intent>(['return', 'true', 'false', 'nothing', 'in', 'and', 'or', 'not', 'continue', 'break']);
+
+const NAME_PAT = '[\\p{L}_][\\p{L}\\p{N}_]*';
+const ASK_INTO = new RegExp(
+  `^(?:for\\s+)?(\\u0000\\d+\\u0000)?\\s*,?\\s*(?:(?:and\\s+)?(?:save|store|put|keep|remember|call|name)(?:\\s+it|\\s+the\\s+answer)?(?:\\s+(?:as|in|into|to))?|as|into|in|to|->|=>)\\s+(?:the\\s+|a\\s+)?(${NAME_PAT})\\s*[.:]?$`,
+  'iu',
+);
+const ASK_PROMPT_ONLY = /^(?:for\s+)?(\u0000\d+\u0000)\s*[.:]?$/u;
+const ASK_NAME_ONLY = new RegExp(`^(?:for\\s+)?(?:(?:the|a|an|their|your|his|her|my)\\s+)?(${NAME_PAT})\\s*[?.:]?$`, 'iu');
+
+interface AskForm { name: string; prompt: string | null }
+
+/** "ask "Name?" as name", "ask for age", "ask "Ready?"" — what is asked, and where it goes. */
+function parseAsk(rest: string): AskForm | null {
+  const r = rest.trim()
+    .replace(/^(?:the\s+)?(?:user|person|player|them)\s+(?:for\s+)?/i, '')
+    .replace(/^\(|\)$/g, '')
+    .trim();
+  let m = r.match(ASK_INTO);
+  if (m) return { name: m[2], prompt: m[1] ?? null };
+  m = r.match(ASK_PROMPT_ONLY);
+  if (m) return { name: 'answer', prompt: m[1] };
+  m = r.match(ASK_NAME_ONLY);
+  if (m) return { name: m[1], prompt: null };
+  return null;
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Every answer the program asks for, and which of them are numbers. A typed
+ * answer is text; it is a number when the question asks for one, or when the
+ * program does arithmetic with it or compares it to a number.
+ */
+function scanAsks(lines: string[], words: Map<string, Intent>) {
+  const asks = new Map<string, string>();
+  const masked: string[] = [];
+  for (const raw of lines) {
+    const { line, strings } = mask(raw);
+    masked.push(line);
+    const text = (t: string | null | undefined) => (t ? unmask(t, strings) : '');
+    for (const stmt0 of splitStatements(line)) {
+      const stmt = stmt0.replace(FILLER_HEAD, '').trim();
+      const toks = wordsOf(stmt);
+      if (!toks.length) continue;
+      if (words.get(toks[0].toLowerCase()) === 'ask') {
+        const f = parseAsk(stmt.slice(toks[0].length));
+        if (f) asks.set(f.name, text(f.prompt));
+        continue;
+      }
+      const m = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m) {
+        const rt = wordsOf(m[2]);
+        if (rt[0] && words.get(rt[0].toLowerCase().replace(/\($/, '')) === 'ask') asks.set(m[1], text(rt[1]));
+      }
+    }
+  }
+  const numeric = new Set<string>();
+  const body = masked.join('\n');
+  const edge = '(?<![\\p{L}\\p{N}_])';
+  const tail = '(?![\\p{L}\\p{N}_])';
+  const names = [...asks.keys()];
+  for (const [name, prompt] of asks) {
+    if (/\b(?:number|numbers|how\s+(?:many|much|old|far|long|tall)|age|amount|count|price|total)\b|\d/i.test(prompt)) {
+      numeric.add(name);
+      continue;
+    }
+    const n = escapeRe(name);
+    const arithmetic = new RegExp(`${edge}${n}${tail}\\s*[-*/%]|[-*/%]\\s*${edge}${n}${tail}`, 'u');
+    const againstNumber = new RegExp(
+      `${edge}${n}${tail}\\s*(?:is(?:\\s+not)?|equals|==|!=|>=|<=|>|<|is\\s+(?:greater|less|more|bigger|smaller)(?:\\s+than)?|(?:greater|less|more|bigger|smaller)\\s+than)\\s*-?\\d`,
+      'iu',
+    );
+    const plusNumber = new RegExp(`${edge}${n}${tail}\\s*\\+\\s*\\d|\\d\\s*\\+\\s*${edge}${n}${tail}`, 'u');
+    if (arithmetic.test(body) || againstNumber.test(body) || plusNumber.test(body)) numeric.add(name);
+  }
+  // `a + b` where both are answers: the author is adding numbers
+  for (const a of names) for (const b of names) {
+    if (new RegExp(`${edge}${escapeRe(a)}${tail}\\s*\\+\\s*${edge}${escapeRe(b)}${tail}`, 'u').test(body)) {
+      numeric.add(a);
+      numeric.add(b);
+    }
+  }
+  return { asks, numeric };
+}
+
+/** "Hello, [name]" -> ("Hello, " + str(name)) when `name` is the author's own. */
+function fillPlaceholders(literal: string, known: Set<string>): string {
+  const inner = literal.slice(1, -1);
+  const re = /\[([\p{L}_][\p{L}\p{N}_]*)\]|\{([\p{L}_][\p{L}\p{N}_]*)\}/gu;
+  if (![...inner.matchAll(re)].some((m) => known.has(m[1] ?? m[2]))) return literal;
+  const pieces: string[] = [];
+  let last = 0;
+  for (const m of inner.matchAll(re)) {
+    const name = m[1] ?? m[2];
+    if (!known.has(name)) continue;
+    if (m.index! > last) pieces.push('"' + inner.slice(last, m.index) + '"');
+    pieces.push(`str(${name})`);
+    last = m.index! + m[0].length;
+  }
+  if (last < inner.length) pieces.push('"' + inner.slice(last) + '"');
+  return '(' + pieces.join(' + ') + ')';
+}
+
+/** "add 1 to score", "increase score by 2", "take 3 from lives", "score++". */
+function counting(stmt: string): { name: string; op: '+' | '-'; by: string } | null {
+  const s = stmt.replace(/[.:]\s*$/, '').trim();
+  let m = s.match(new RegExp(`^(?:add|plus)\\s+(.+?)\\s+(?:to|onto)\\s+(?:the\\s+)?(${NAME_PAT})$`, 'iu'));
+  if (m) return { name: m[2], op: '+', by: m[1] };
+  m = s.match(new RegExp(`^(?:subtract|take|remove|minus)\\s+(.+?)\\s+(?:from|off)\\s+(?:the\\s+)?(${NAME_PAT})$`, 'iu'));
+  if (m) return { name: m[2], op: '-', by: m[1] };
+  m = s.match(new RegExp(`^(increase|raise|bump|increment|decrease|reduce|decrement)\\s+(?:the\\s+)?(${NAME_PAT})(?:\\s+by\\s+(.+))?$`, 'iu'));
+  if (m) return { name: m[2], op: /^(?:decrease|reduce|decrement)$/i.test(m[1]) ? '-' : '+', by: m[3] ?? '1' };
+  m = s.match(new RegExp(`^(${NAME_PAT})\\s*(\\+\\+|--)$`, 'u'));
+  if (m) return { name: m[1], op: m[2] === '++' ? '+' : '-', by: '1' };
+  m = s.match(new RegExp(`^(${NAME_PAT})\\s*([+-])=\\s*(.+)$`, 'u'));
+  if (m) return { name: m[1], op: m[2] as '+' | '-', by: m[3] };
+  return null;
+}
+
 /** Collect the names the file introduces, so bare words can be told apart. */
 function collectNames(lines: string[], words: Map<string, Intent>, seed?: Set<string>): Set<string> {
   const names = new Set<string>(seed ?? []);
+  const nameable = (w: string) => { const i = words.get(w.toLowerCase()); return !i || NAMEABLE_INTENTS.has(i); };
   for (const raw of lines) {
     const { line } = mask(raw);
     for (const stmt of splitStatements(line)) {
       const toks = wordsOf(stmt);
       if (!toks.length) continue;
       const head = words.get(toks[0].toLowerCase());
+      if (head === 'ask') { const f = parseAsk(stmt.slice(toks[0].length)); if (f) names.add(f.name); continue; }
       if (head === 'set' && toks[1]) { names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, '')); continue; }
       if (head === 'function' && toks[1]) {
         names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ''));
@@ -251,8 +420,8 @@ function collectNames(lines: string[], words: Map<string, Intent>, seed?: Set<st
         if (each > 1) names.add(toks[each - 1]);
         continue;
       }
-      const m = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
-      if (m && !words.has(m[1].toLowerCase())) names.add(m[1]);
+      const m = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m && nameable(m[1]) && (!head || NAMEABLE_INTENTS.has(head)) && !/^(?:if|when|while)$/i.test(toks[0])) names.add(m[1]);
     }
   }
   return names;
@@ -266,6 +435,37 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
 
   const rawLines = source.split('\n');
   const known = collectNames(rawLines, words, ctx.knownNames);
+  const { asks, numeric } = scanAsks(rawLines, words);
+  for (const name of asks.keys()) known.add(name);
+  /** answers that are words, compared without caring about capitals */
+  const textAsks = new Set([...asks.keys()].filter((n) => !numeric.has(n)));
+
+  /** `set name to input("…")`, as a number when the program treats it as one */
+  const askValue = (name: string, prompt: string | null) => {
+    const read = `input(${prompt ?? `"${name}? "`})`;
+    return `set ${name} to ${numeric.has(name) ? `num(${read})` : read}`;
+  };
+  /** the right-hand side `ask "…"` — returns the prompt token, or undefined */
+  const askRhs = (rhs: string): string | null | undefined => {
+    const t = wordsOf(rhs);
+    if (!t.length || words.get(t[0].toLowerCase().replace(/\($/, '')) !== 'ask') return undefined;
+    const tail = t.slice(1).join(' ').replace(/^\(|\)$/g, '').trim();
+    if (!tail) return null;
+    return isMaskedString(tail) ? tail : undefined;
+  };
+  /** can this word be the author's own variable name? */
+  const nameable = (w: string) => {
+    const intent = words.get(w.toLowerCase());
+    return !intent || NAMEABLE_INTENTS.has(intent);
+  };
+  const nextIndented = (index: number) => {
+    const here = rawLines[index].match(/^\s*/)?.[0].length ?? 0;
+    for (let j = index + 1; j < rawLines.length; j++) {
+      if (!rawLines[j].trim()) continue;
+      return (rawLines[j].match(/^\s*/)?.[0].length ?? 0) > here;
+    }
+    return false;
+  };
   /** names the user wrote that the compiler can't take, and what they became */
   const renames = new Map<string, string>();
   const notes: AgentNote[] = [];
@@ -290,6 +490,9 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
     const indent = raw.match(/^\s*/)?.[0] ?? '';
     const { line, strings, comment } = mask(raw);
     if (!line.trim()) return raw;
+    // "Hello, [name]" / "Hello, {name}" — the author's own names inside text.
+    for (let s = 0; s < strings.length; s++) strings[s] = fillPlaceholders(strings[s], known);
+    const cond = (r: string) => condition(r, known, renames, { textAsks, strings });
 
     // Lines written in another natural language belong to the built-in
     // translator, not to the agent — unless the agent recognises their
@@ -310,8 +513,28 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       if (!toks.length) continue;
       const head = toks[0];
       const headKey = head.toLowerCase().replace(/[(:]$/, '');
-      const intent = words.get(headKey);
+      let intent = words.get(headKey);
       const rest = stmt.slice(stmt.indexOf(head) + head.length).trim().replace(/^\(|\)$/g, '').trim();
+
+      // Counting: "add 1 to score", "increase score by 2", "score++".
+      const counted = counting(stmt);
+      if (counted) {
+        known.add(counted.name);
+        rewritten.push(`set ${counted.name} to ${counted.name} ${counted.op} ${expression(counted.by, known, renames)}`);
+        continue;
+      }
+
+      // "result is x + y" — a word the agent knows, used as the author's own name.
+      const selfAssign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (intent && selfAssign && selfAssign[1] === head && nameable(head)) intent = undefined;
+
+      // "hungry is yes:" followed by an indented block — a question with no `if`.
+      if (!intent && /[:{]\s*$/.test(stmt) && nextIndented(index) &&
+          /\s(?:is|equals|==|!=|>|<|>=|<=)\s/i.test(' ' + stmt + ' ')) {
+        rewritten.push(`if ${cond(stmt.replace(/[:{]\s*$/, ''))}`);
+        continue;
+      }
+
 
       // A call written in code — `result(5)`, `input()` — where the name is
       // something this file defines. That is already sdev: never reinterpret
@@ -333,10 +556,17 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           rewritten.push(`say ${expression(what, known, renames)}`);
           continue;
         }
-        case 'ask':
+        case 'ask': {
           learn(headKey, 'ask');
-          rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to ask` : 'ask');
+          const form = parseAsk(stmt.slice(head.length));
+          if (form) {
+            known.add(form.name);
+            rewritten.push(askValue(form.name, form.prompt));
+            continue;
+          }
+          rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to input()` : 'input()');
           continue;
+        }
         case 'set': {
           learn(headKey, 'set');
           const m = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
@@ -344,7 +574,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
             const name = safeName(m[1]);
             if (name !== m[1]) renames.set(m[1], name);
             known.add(name);
-            rewritten.push(`set ${name} to ${expression(m[2], known, renames)}`);
+            const asked = askRhs(m[2]);
+            rewritten.push(asked !== undefined ? askValue(name, asked) : `set ${name} to ${expression(m[2], known, renames)}`);
             continue;
           }
           const parts = wordsOf(rest);
@@ -360,15 +591,17 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
         }
         case 'if':
           learn(headKey, 'if');
-          rewritten.push(`if ${condition(rest, known, renames)}`);
+          rewritten.push(`if ${cond(rest)}`);
           continue;
-        case 'else':
+        case 'else': {
           learn(headKey, 'else');
-          rewritten.push(rest ? `else ${condition(rest, known)}`.replace(/^else if/, 'else if') : 'else');
+          const tail = rest.replace(/^[:{]\s*|[:{]\s*$/g, '').trim();
+          rewritten.push(tail ? `else ${cond(tail)}` : 'else');
           continue;
+        }
         case 'while':
           learn(headKey, 'while');
-          rewritten.push(`while ${condition(rest, known, renames)}`);
+          rewritten.push(`while ${cond(rest)}`);
           continue;
         case 'for': {
           learn(headKey, 'for');
@@ -422,12 +655,13 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       }
 
       // assignment without a leading verb: `name1 will be Twenty`
-      const assign = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
-      if (assign && !words.has(assign[1].toLowerCase())) {
+      const assign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (assign && nameable(assign[1])) {
         const name = safeName(assign[1]);
         if (name !== assign[1]) renames.set(assign[1], name);
         known.add(name);
-        rewritten.push(`set ${name} to ${expression(assign[2], known, renames)}`);
+        const asked = askRhs(assign[2]);
+        rewritten.push(asked !== undefined ? askValue(name, asked) : `set ${name} to ${expression(assign[2], known, renames)}`);
         continue;
       }
 
@@ -473,14 +707,17 @@ const OPENS = /^\s*(?:to\s+[\p{L}\p{N}_]|if\b|while\b|for\s+each\b|kind\b|attemp
 const CLOSES = /^\s*end\b/;
 
 /**
- * People often never write `end`. Close what they left open: a block is closed
- * at the first blank line that is followed by a line at the same or shallower
- * indentation, and anything still open is closed at the end of the file.
+ * People often never write `end`. Close what they left open: an indented
+ * block closes as soon as the code steps back out to its level (or at a blank
+ * line followed by a shallower line), and anything still open is closed at
+ * the end of the file. Flat files that write their own `end` are untouched.
  */
 export function closeBlocks(source: string): string {
   const lines = source.split('\n');
   const out: string[] = [];
-  const stack: string[] = [];
+  const stack: { indent: string; body: boolean }[] = [];
+  const width = (s: string) => s.match(/^\s*/)?.[0].length ?? 0;
+  const top = () => stack[stack.length - 1];
 
   const nextCode = (from: number) => {
     for (let j = from; j < lines.length; j++) if (lines[j].trim()) return lines[j];
@@ -495,17 +732,25 @@ export function closeBlocks(source: string): string {
         stack.length &&
         next !== null &&
         !/^\s*(?:else|end)\b/.test(next) &&
-        (next.match(/^\s*/)?.[0].length ?? 0) <= (stack[stack.length - 1].length)
+        width(next) <= top().indent.length
       ) {
-        out.push(stack.pop()! + 'end');
+        out.push(stack.pop()!.indent + 'end');
       }
       out.push(line);
       continue;
     }
+    const w = width(line);
+    const continues = /^\s*(?:else|end)\b/.test(line);
+    // stepping back out of an indented body closes it
+    while (stack.length && top().body && w <= top().indent.length && !(continues && w === top().indent.length)) {
+      out.push(stack.pop()!.indent + 'end');
+    }
+    if (stack.length && w > top().indent.length) top().body = true;
     if (CLOSES.test(line)) stack.pop();
-    else if (OPENS.test(line)) stack.push(line.match(/^\s*/)?.[0] ?? '');
+    else if (/^\s*else\b/.test(line) && stack.length) top().body = false;
+    else if (OPENS.test(line)) stack.push({ indent: line.match(/^\s*/)?.[0] ?? '', body: false });
     out.push(line);
   }
-  while (stack.length) out.push(stack.pop()! + 'end');
+  while (stack.length) out.push(stack.pop()!.indent + 'end');
   return out.join('\n');
 }

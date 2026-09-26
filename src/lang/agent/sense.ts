@@ -43,6 +43,11 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
       reasons.push(`line ${i + 1}: "${head}" is not canonical sdev`);
       continue;
     }
+    // `ask name` / `set x to ask` parse, but only input() actually reads a line.
+    if (head === 'ask' || /\bto\s+ask\b/i.test(line)) {
+      reasons.push(`line ${i + 1}: asks for input in words`);
+      continue;
+    }
     if (/^[\p{L}\p{N}_]+\s+(?:will be|becomes|gets|is now|should be|shall be|=|:=|<-)\s+/iu.test(line)) {
       reasons.push(`line ${i + 1}: looks like an assignment written another way`);
     }
