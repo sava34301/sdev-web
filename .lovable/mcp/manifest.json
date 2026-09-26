@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.4",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ygzqjekxzvsrkhuqhqbp.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "sdev-simple-developer-language",
+      "version": "0.1.0",
+      "title": "Sdev: Simple Developer Language"
+    },
+    "tools": [
+      {
+        "name": "list_files",
+        "title": "List my SDEV files",
+        "description": "List the signed-in user's saved SDEV files (name, id, runtime, last update).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "read_file",
+        "title": "Read an SDEV file",
+        "description": "Read the full source of one of the signed-in user's SDEV files by id.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "File id from list_files."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_file",
+        "title": "Save an SDEV file",
+        "description": "Create a new SDEV file, or overwrite an existing one when an id is given.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "File name, e.g. quiz.sdev."
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 500000,
+              "description": "SDEV source code."
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Existing file id to overwrite."
+            }
+          },
+          "required": [
+            "name",
+            "content"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_dialects",
+        "title": "List dialects",
+        "description": "List the signed-in user's own SDEV dialects plus publicly shared ones, optionally filtered by text.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Filter by name."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_shared_programs",
+        "title": "List shared programs",
+        "description": "List publicly shared SDEV programs, optionally filtered by title.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Filter by title."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "read_shared_program",
+        "title": "Read a shared program",
+        "description": "Read the source of a publicly shared SDEV program by its slug.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "Program slug."
+            }
+          },
+          "required": [
+            "slug"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
