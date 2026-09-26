@@ -22,11 +22,13 @@ export default function Auth() {
   const [handle, setHandle] = useState('');
   const [busy, setBusy] = useState(false);
   const signupAllowed = isLaunched() || hasInviteAccess();
+  const rawNext = new URLSearchParams(window.location.search).get('next') || '';
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/ide';
 
 
   useEffect(() => {
-    if (!authLoading && user) navigate('/ide');
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user) navigate(next);
+  }, [user, authLoading, navigate, next]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +37,7 @@ export default function Auth() {
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success('Welcome back!');
-    navigate('/ide');
+    navigate(next);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -54,7 +56,7 @@ export default function Auth() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/ide`,
+        emailRedirectTo: `${window.location.origin}${next}`,
         data: { username: wanted, display_name: displayName || wanted },
       },
     });
@@ -68,7 +70,7 @@ export default function Auth() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/ide',
+        redirectTo: window.location.origin + next,
       },
     });
     if (error) {

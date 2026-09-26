@@ -21,6 +21,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const PageFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/launch" element={<Launch />} />
 
             <Route path="/auth" element={<Auth />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
