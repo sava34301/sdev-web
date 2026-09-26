@@ -1,5 +1,6 @@
 import { execute } from '@/lang/index';
-import { repair, closeBlocks } from '@/lang/agent/index';
+import { repair } from '@/lang/agent/index';
+import { closeBlocks } from '@/lang/agent/repair';
 const answers = ['Sam','yes','3','4','4','Paris','no'];
 (globalThis as any).prompt = () => answers.shift() ?? '';
 const progs = {
