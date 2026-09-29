@@ -185,6 +185,9 @@ const Index = () => {
               <h1 className="font-display text-[2.75rem] leading-[0.95] sm:text-6xl lg:text-[5rem] tracking-[-0.04em]">
                 This is<br />
                 <span className="gradient-text">SDEV.</span>
+                <span className="block mt-5 font-sans text-xl md:text-2xl tracking-normal leading-snug text-muted-foreground">
+                  The self-hosting programming language for WebAssembly and native x86-64
+                </span>
               </h1>
               <p className="mt-7 text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed">
                 Lexer, parser and code generator are sdev source files. The toolchain rebuilds itself
