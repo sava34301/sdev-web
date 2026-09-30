@@ -492,10 +492,11 @@ export class Parser {
     const iterateToken = this.consume(TokenType.ITERATE, "Expected 'iterate'");
     // `for each n in xs` reads the same as `for n in xs` — the word "each" is
     // decoration, so skip it when a real variable name follows.
-    if (this.peek().value === 'each' && this.tokens[this.pos + 1]?.type !== TokenType.THROUGH) this.advance();
+    if (this.peek().value === 'each' && this.tokens[this.pos + 1]?.type !== TokenType.THROUGH && this.tokens[this.pos + 1]?.type !== TokenType.WITHIN) this.advance();
     const variables: string[] = [this.consumeName('Expected variable name')];
     while (this.match(TokenType.COMMA)) variables.push(this.consumeName('Expected variable name'));
-    this.consume(TokenType.THROUGH, "Expected 'through'");
+    // `in` can reach here lexed as `within` (e.g. `for i in range(…)`).
+    if (!this.match(TokenType.WITHIN)) this.consume(TokenType.THROUGH, "Expected 'through'");
     const iterable = this.parseExpressionOrTuple();
     const body = this.parseBlockStatement();
     let elseBlock: AST.BlockStatement | undefined;

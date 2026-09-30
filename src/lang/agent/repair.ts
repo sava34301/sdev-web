@@ -16,6 +16,7 @@ import {
 } from './vocabulary';
 import type { AgentNote } from './types';
 import { mathRequest } from './math';
+import { taskRequest } from './tasks';
 
 const PLACEHOLDER = '\u0000';
 
@@ -526,6 +527,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       }
 
       // "calculate 23-21", "what is 5 times 3", "add 2 and 3"
+      const task = taskRequest(stmt, known, isMaskedString);
+      if (task) { rewritten.push(...task); for (const t of task) { const v = t.match(/^\s*set (\w+) to/)?.[1]; if (v) known.add(v); } continue; }
       const math = mathRequest(stmt, known);
       if (math !== null) { rewritten.push(math.startsWith("(") ? `say (${math})` : `say ${math}`); continue; }
 
@@ -558,6 +561,10 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           learn(headKey, 'say');
           // "say to terminal x", "print out x", "show on screen x"
           const what = rest.replace(SAY_TARGET, '').trim() || rest;
+          // "print every even number between 1 and 10" is a request, not text:
+          // keep the literal reading as a fallback but let the AI look at it.
+          const bare = what.split(/\s+/).filter((w) => /^[A-Za-z]+$/.test(w) && !known.has(w));
+          if (bare.length >= 4 && !/\u0000/.test(what)) unresolved.push(lineNo);
           rewritten.push(`say ${expression(what, known, renames)}`);
           continue;
         }
@@ -700,6 +707,9 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
     }
 
     const joined = rewritten.join('\n' + indent);
+    // Text the rules made up out of a whole sentence is only a guess — the
+    // author probably asked for something. Let the AI have a look.
+    if ([...joined.matchAll(/"([^"\u0000]*)"/g)].some((m) => m[1].trim().split(/\s+/).length >= 4) && !unresolved.includes(lineNo)) unresolved.push(lineNo);
     const result = indent + unmask(joined, strings) + comment;
     note(lineNo, raw, result, 'understood as canonical sdev');
     return result;

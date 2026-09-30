@@ -3,7 +3,7 @@ import { Parser } from './parser';
 import { Interpreter } from './interpreter';
 import { SdevError } from './errors';
 import { stripBoardBlocks } from './hardware/strip';
-import { understand, understandAsync, stripAgentDirectives } from './agent';
+import { understand, understandAsync, stripAgentDirectives, reconsider } from './agent';
 import type { UnderstandOptions, UnderstandResult } from './agent';
 
 export interface ExecutionResult {
@@ -83,7 +83,14 @@ export let lastAgentRun: UnderstandResult | null = null;
 export async function executeAsync(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
   if (pickRuntime(source) === 'v2') return executeV2(source, options);
   const understood = await understandFor(source, options, true);
-  return execute(understood, { ...options, agent: false });
+  const first = execute(understood, { ...options, agent: false });
+  if (first.success || options.agent === false || !first.error) return first;
+  // It was understood but broke when it ran: let the AI see the error once.
+  const retry = await reconsider(source, first.error, { dialect: options.dialect ?? null, ...(options.agent || {}) }).catch(() => null);
+  if (!retry) return first;
+  const second = execute(retry.source, { ...options, agent: false });
+  if (second.success) { lastAgentRun = retry; return second; }
+  return first;
 }
 
 export function execute(source: string, options: ExecuteOptions = {}): ExecutionResult {
