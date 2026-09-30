@@ -527,7 +527,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
 
       // "calculate 23-21", "what is 5 times 3", "add 2 and 3"
       const math = mathRequest(stmt, known);
-      if (math !== null) { rewritten.push(`say ${math}`); continue; }
+      if (math !== null) { rewritten.push(math.startsWith("(") ? `say (${math})` : `say ${math}`); continue; }
 
       // "result is x + y" — a word the agent knows, used as the author's own name.
       const selfAssign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
