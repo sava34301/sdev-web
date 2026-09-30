@@ -21,6 +21,8 @@
     "test:agent": "bun scripts/test-agent.ts",
     "test:beginner": "bun scripts/test-beginner.ts",
     "test:math": "bun scripts/test-math.ts",
+    "test:tasks": "bun scripts/test-tasks.ts",
+    "test:brain": "bun scripts/test-brain.ts",
     "test:linker": "bun scripts/test-linker.ts",
     "test:strip": "bun scripts/test-strip.ts",
     "test:ui": "bun scripts/test-ui.ts",
