@@ -625,7 +625,8 @@ export default function IDEPage() {
     }
   }, [activeId, settings.autoSave]);
 
-  const runCode = useCallback(async () => {
+  const runCode = useCallback(async (override?: unknown, retried = false) => {
+    const overrideSrc = typeof override === 'string' ? override : undefined;
     if (!activeFile) return;
 
     // ─── v2 "Prism" runtime short-circuit ───
@@ -646,7 +647,9 @@ export default function IDEPage() {
     // `!#agent:off` in the file switches it off; `!#agent: local|online`
     // chooses where its smart core runs.
     const { understandAsync } = await import('@/lang/agent');
-    const understood = await understandAsync(dialectSrc, { dialect: activeDialect });
+    const understood = overrideSrc !== undefined
+      ? { source: overrideSrc, notes: [{ line: 0 }] }
+      : await understandAsync(dialectSrc, { dialect: activeDialect });
     const canonicalSrc = understood.source;
     if (understood.notes.length) {
       setStatusMsg(`Agent understood ${understood.notes.length} line${understood.notes.length === 1 ? '' : 's'}`);
@@ -903,8 +906,15 @@ export default function IDEPage() {
       setStatusMsg(`✓ Done in ${elapsed}ms`);
       recordRun(activeFile.name, activeFile.content, outputLines.join('\n'), 'success', elapsed);
     } catch (e) {
-      setOutput(outputLines);
       const msg = e instanceof SdevError ? e.message : String(e);
+      // Understood, but it broke when it ran: show the AI the error once.
+      if (!retried && !/!#agent\s*:\s*off/i.test(dialectSrc)) {
+        setStatusMsg('Agent is rethinking…');
+        const { reconsider } = await import('@/lang/agent');
+        const again = await reconsider(dialectSrc, msg, { dialect: activeDialect }).catch(() => null);
+        if (again?.source) { setIsRunning(false); return runCode(again.source, true); }
+      }
+      setOutput(outputLines);
       setError(msg);
       setExecTime(null);
       setStatusMsg('✗ Error');
