@@ -73,7 +73,7 @@ export function taskRequest(stmt: string, known: Set<string> = new Set(), quoted
     return [`say reverse(${subject(m[1])})`];
   }
   if ((m = s.replace(OUT, '').match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:uppercase|upper\s*case|capitals|caps)$/i))
-      || (m = s.replace(OUT, '').match(/^(?:uppercase|capitalize all|shout)\s+(.+)$/i))) {
+      || (m = s.replace(OUT, '').match(/^(?:uppercase|capitalize all)\s+(.+)$/i))) {
     return [`say upper(${/^make\s/i.test(s) ? text(m[1]) : subject(m[1])})`];
   }
   if ((m = s.replace(OUT, '').match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:lowercase|lower\s*case|small letters)$/i))

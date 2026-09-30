@@ -171,7 +171,7 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
     (prep.mode === 'on' || rules.forceBrain || rules.unresolved.length > 0 || !parses(current) || unknownNames(current).length > 0);
 
   if (needsBrain) {
-    const improved = await askBrain(prep, opts, current, rules.unresolved, [], notes);
+    const improved = await askBrain(prep, opts, current, rules.unresolved, [], notes, prep.mode === 'on' || rules.forceBrain || rules.unresolved.length > 0);
     if (improved) { current = improved.source; brainUsed = improved.used; }
   }
 
@@ -207,7 +207,7 @@ export function problemsOf(source: string): string[] {
  */
 async function askBrain(
   prep: Prepared, opts: UnderstandOptions, draft: string, unresolved: number[],
-  extraProblems: string[], notes: UnderstandResult['notes'],
+  extraProblems: string[], notes: UnderstandResult['notes'], preferReply = false,
 ): Promise<{ source: string; used: 'local' | 'online' } | null> {
   const vocabulary: Record<string, string> = {};
   for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
@@ -224,7 +224,7 @@ async function askBrain(
     );
     if (!reply?.canonical || used === 'none') break;
     const s = score(reply.canonical);
-    if (s < bestScore || (s === bestScore && extraProblems.length && attempt === 0)) {
+    if (s < bestScore || (s === bestScore && (preferReply || extraProblems.length > 0) && !best)) {
       best = { source: reply.canonical, used };
       bestScore = s;
       for (const [word, intent] of Object.entries(reply.words ?? {})) if (prep.learn) rememberWord(prep.memory, word, intent as Intent);
@@ -258,7 +258,7 @@ export async function reconsider(source: string, error: string, opts: Understand
   if (prep.mode === 'off' || prep.brain === 'none') return null;
   const draft = (lastUnderstood.get(source) ?? prep.stripped);
   const notes: UnderstandResult['notes'] = [];
-  const improved = await askBrain(prep, opts, draft, [], [`it failed when run: ${error}`], notes);
+  const improved = await askBrain(prep, opts, draft, [], [`it failed when run: ${error}`], notes, true);
   if (!improved || improved.source.trim() === draft.trim()) return null;
   finish(prep, improved.source, {});
   return { source: improved.source, changed: true, mode: prep.mode, notes, learned: {}, unresolved: [], brainUsed: improved.used };
