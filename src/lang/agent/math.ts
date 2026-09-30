@@ -47,7 +47,7 @@ function operators(s: string): string {
     .replace(/\b(?:the\s+)?cube\s+of\s+(\S+)/gi, '($1 ** 3)')
     .replace(/\babsolute\s+value\s+of\s+(\S+)/gi, 'abs($1)')
     .replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+of\s+(\S+)/gi, '($1 * $2 / 100)')
-    .replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)/gi, '($1 / 100)')
+    .replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)(?!\s*[\d(A-Za-z_])/gi, '($1 / 100)')
     .replace(/\b(?:plus|add|added\s+to|and)\b/gi, ' + ')
     .replace(/\b(?:minus|less|take\s+away)\b/gi, ' - ')
     .replace(/\b(?:times|multiply)\b/gi, ' * ')
@@ -72,6 +72,7 @@ function valid(expr: string, known: Set<string>): boolean {
   let depth = 0;
   for (const c of expr) { if (c === '(') depth++; if (c === ')') depth--; if (depth < 0) return false; }
   if (depth !== 0) return false;
+  if (/[\w.)]\s+[\w.(]/.test(expr)) return false;
   if (/[+\-*/%]\s*$/.test(expr) || /^\s*[*/%]/.test(expr) || /[+*/%]\s*[*/%]\s*[*/%]/.test(expr)) return false;
   return true;
 }
@@ -105,7 +106,7 @@ export function mathRequest(stmt: string, known: Set<string> = new Set()): strin
   else if ((m = s.match(/^(\S+)\s+divided\s+into\s+(\S+)$/i))) expr = `${m[2]} / ${m[1]}`;
   else if ((m = s.match(/^(?:square|squared)\s+(\S+)$/i))) expr = `${m[1]} ** 2`;
   else if ((m = s.match(/^round\s+(.+)$/i))) expr = `round(${operators(m[1])})`;
-  else expr = operators(s);
+  else expr = s;
 
   expr = expr ? operators(expr) : null;
   if (!expr || !valid(expr, known)) return null;

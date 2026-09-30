@@ -434,7 +434,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
   const ownWords = new Set<string>();
   for (const [w, i] of ctx.extraWords ?? []) { words.set(w.toLowerCase(), i); ownWords.add(w.toLowerCase()); }
 
-  const rawLines = source.split('\n');
+  const rawLines = source.split('\n').map((l) => l.replace(/^(\s*)(what|that|it|how|who|where)'s\b/i, '$1$2 is'));
   const known = collectNames(rawLines, words, ctx.knownNames);
   const { asks, numeric } = scanAsks(rawLines, words);
   for (const name of asks.keys()) known.add(name);
