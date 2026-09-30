@@ -12,7 +12,7 @@
  */
 import { scanDirectives, type AgentMode, type BrainMode } from './directives';
 import { repair, closeBlocks } from './repair';
-import { senseFile, parses } from './sense';
+import { senseFile, parses, unknownNames } from './sense';
 import { think, online } from './brain';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
@@ -25,7 +25,7 @@ export * from './types';
 export * from './directives';
 export * from './memory';
 export * from './promote';
-export { senseFile, parses } from './sense';
+export { senseFile, parses, unknownNames, definedNames, builtinNames } from './sense';
 export { repair } from './repair';
 export { VOCABULARY, CANONICAL } from './vocabulary';
 export type { Intent } from './vocabulary';
@@ -168,41 +168,16 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   const needsBrain =
     prep.brain !== 'none' &&
     !rules.done &&
-    (prep.mode === 'on' || rules.forceBrain || rules.unresolved.length > 0 || !parses(current));
+    (prep.mode === 'on' || rules.forceBrain || rules.unresolved.length > 0 || !parses(current) || unknownNames(current).length > 0);
 
   if (needsBrain) {
-    const vocabulary: Record<string, string> = {};
-    for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
-
-    const { reply, used } = await think(
-      { source: prep.stripped, draft: current, unresolved: rules.unresolved, vocabulary },
-      prep.brain === 'auto' && !online() ? 'local' : prep.brain,
-      opts.localUrl,
-    );
-
-    if (reply?.canonical && parses(reply.canonical)) {
-      const before = current.split('\n');
-      const after = reply.canonical.split('\n');
-      const original = prep.stripped.split('\n');
-      // A remembered line is only trustworthy when the author's file, the
-      // draft and the answer still line up one-to-one; the rule pass can
-      // split a line in two, and then line i is a different statement.
-      const aligned = original.length === before.length && before.length === after.length;
-      after.forEach((line, i) => {
-        if (before[i] !== undefined && before[i].trim() !== line.trim()) {
-          notes.push({ line: i + 1, from: before[i].trim(), to: line.trim(), why: 'understood by the AI', source: 'brain' });
-          if (prep.learn && aligned) rememberLine(prep.memory, original[i], line.trim());
-        }
-      });
-      current = reply.canonical;
-      brainUsed = used;
-      for (const [word, intent] of Object.entries(reply.words ?? {})) {
-        if (prep.learn) rememberWord(prep.memory, word, intent as Intent);
-      }
-    }
+    const improved = await askBrain(prep, opts, current, rules.unresolved, [], notes);
+    if (improved) { current = improved.source; brainUsed = improved.used; }
   }
 
   finish(prep, current, rules.learned);
+  lastUnderstood.set(source, current);
+  if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value as string);
 
   return {
     source: current,
@@ -214,6 +189,88 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
     brainUsed,
   };
 }
+
+/** problems a draft still has, in words the brain can act on */
+export function problemsOf(source: string): string[] {
+  const out: string[] = [];
+  if (!parses(source)) {
+    try { new (require_parser())(source); } catch (e) { out.push(`does not parse: ${e instanceof Error ? e.message : String(e)}`); }
+    if (!out.length) out.push('does not parse');
+  }
+  const unknown = unknownNames(source);
+  if (unknown.length) out.push(`uses names nothing defines: ${unknown.slice(0, 12).join(', ')}`);
+  return out;
+}
+
+function require_parser() {
+  return class { constructor(src: string) { if (!parses(src)) throw new Error('syntax error'); } };
+}
+
+/**
+ * Ask the brain, check its answer, and when the answer still has problems
+ * tell it what they are and ask once more. Returns null when nothing better
+ * than `draft` came back.
+ */
+export async function askBrain(
+  prep: Prepared, opts: UnderstandOptions, draft: string, unresolved: number[],
+  extraProblems: string[], notes: UnderstandResult['notes'],
+): Promise<{ source: string; used: 'local' | 'online' } | null> {
+  const vocabulary: Record<string, string> = {};
+  for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
+  const mode = prep.brain === 'auto' && !online() ? 'local' : prep.brain;
+  const score = (src: string) => (parses(src) ? 0 : 100) + unknownNames(src).length;
+  let best: { source: string; used: 'local' | 'online' } | null = null;
+  let bestScore = score(draft) + (extraProblems.length ? 50 : 0);
+  let problems = [...extraProblems, ...problemsOf(draft)];
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { reply, used } = await think(
+      { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems },
+      mode, opts.localUrl,
+    );
+    if (!reply?.canonical || used === 'none') break;
+    const s = score(reply.canonical);
+    if (s < bestScore || (s === bestScore && extraProblems.length && attempt === 0)) {
+      best = { source: reply.canonical, used };
+      bestScore = s;
+      for (const [word, intent] of Object.entries(reply.words ?? {})) if (prep.learn) rememberWord(prep.memory, word, intent as Intent);
+    }
+    if (s === 0) break;
+    problems = problemsOf(reply.canonical);
+  }
+  if (!best) return null;
+
+  const before = draft.split('\n');
+  const after = best.source.split('\n');
+  const original = prep.stripped.split('\n');
+  // A remembered line is only trustworthy when the author's file, the draft
+  // and the answer still line up one-to-one.
+  const aligned = original.length === before.length && before.length === after.length;
+  after.forEach((line, i) => {
+    if (before[i] === undefined || before[i].trim() !== line.trim()) {
+      notes.push({ line: i + 1, from: (before[i] ?? '').trim(), to: line.trim(), why: 'understood by the AI', source: 'brain' });
+      if (prep.learn && aligned && original[i] !== undefined) rememberLine(prep.memory, original[i], line.trim());
+    }
+  });
+  return best;
+}
+
+/**
+ * The program was understood but failed when it ran. Tell the brain what the
+ * runtime said and get a corrected program back (or null).
+ */
+export async function reconsider(source: string, error: string, opts: UnderstandOptions = {}): Promise<UnderstandResult | null> {
+  const prep = begin(source, opts);
+  if (prep.mode === 'off' || prep.brain === 'none') return null;
+  const draft = (lastUnderstood.get(source) ?? prep.stripped);
+  const notes: UnderstandResult['notes'] = [];
+  const improved = await askBrain(prep, opts, draft, [], [`it failed when run: ${error}`], notes);
+  if (!improved || improved.source.trim() === draft.trim()) return null;
+  finish(prep, improved.source, {});
+  return { source: improved.source, changed: true, mode: prep.mode, notes, learned: {}, unresolved: [], brainUsed: improved.used };
+}
+
+const lastUnderstood = new Map<string, string>();
 
 /** Just strip the directives — used by tooling that must not rewrite code. */
 export function stripAgentDirectives(source: string): string {

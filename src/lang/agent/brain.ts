@@ -20,6 +20,8 @@ export interface BrainRequest {
   unresolved: number[];
   /** words this user is known to use, canonical -> their spelling */
   vocabulary: Record<string, string>;
+  /** what went wrong with the previous attempt: unknown names, parse or runtime errors */
+  problems?: string[];
 }
 
 export interface BrainReply {
