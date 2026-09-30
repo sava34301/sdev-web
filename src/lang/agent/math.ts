@@ -50,7 +50,7 @@ function operators(s: string): string {
     .replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)/gi, '($1 / 100)')
     .replace(/\b(?:plus|add|added\s+to|and)\b/gi, ' + ')
     .replace(/\b(?:minus|less|take\s+away)\b/gi, ' - ')
-    .replace(/\b(?:times|x|multiply)\b/gi, ' * ')
+    .replace(/\b(?:times|multiply)\b/gi, ' * ')
     .replace(/(\d)\s*[x×]\s*(\d)/g, '$1 * $2')
     .replace(/[×]/g, ' * ')
     .replace(/[÷]/g, ' / ')

@@ -15,6 +15,7 @@ import {
   type Intent,
 } from './vocabulary';
 import type { AgentNote } from './types';
+import { mathRequest } from './math';
 
 const PLACEHOLDER = '\u0000';
 
@@ -523,6 +524,10 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
         rewritten.push(`set ${counted.name} to ${counted.name} ${counted.op} ${expression(counted.by, known, renames)}`);
         continue;
       }
+
+      // "calculate 23-21", "what is 5 times 3", "add 2 and 3"
+      const math = mathRequest(stmt, known);
+      if (math !== null) { rewritten.push(`say ${math}`); continue; }
 
       // "result is x + y" — a word the agent knows, used as the author's own name.
       const selfAssign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);

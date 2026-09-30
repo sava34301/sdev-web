@@ -7,6 +7,7 @@
  */
 import { Lexer } from '@/lang/lexer';
 import { Parser } from '@/lang/parser';
+import { mathRequest } from './math';
 import { baseWordMap, CANONICAL, type Intent } from './vocabulary';
 
 export interface Sense {
@@ -39,6 +40,10 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
     const line = lines[i].trim();
     if (!line || line.startsWith('#') || line.startsWith('//')) continue;
     const head = line.split(/[\s(]+/)[0].toLowerCase();
+    if (head !== 'say' && mathRequest(line) !== null) {
+      reasons.push(`line ${i + 1}: a calculation asked for in words`);
+      continue;
+    }
     if (NON_CANONICAL_HEAD.has(head) || extra?.has(head)) {
       reasons.push(`line ${i + 1}: "${head}" is not canonical sdev`);
       continue;
