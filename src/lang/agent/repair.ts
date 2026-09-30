@@ -707,6 +707,9 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
     }
 
     const joined = rewritten.join('\n' + indent);
+    // Text the rules made up out of a whole sentence is only a guess — the
+    // author probably asked for something. Let the AI have a look.
+    if ([...joined.matchAll(/"([^"\u0000]*)"/g)].some((m) => m[1].trim().split(/\s+/).length >= 4) && !unresolved.includes(lineNo)) unresolved.push(lineNo);
     const result = indent + unmask(joined, strings) + comment;
     note(lineNo, raw, result, 'understood as canonical sdev');
     return result;
