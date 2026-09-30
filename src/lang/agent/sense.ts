@@ -7,6 +7,8 @@
  */
 import { Lexer } from '@/lang/lexer';
 import { Parser } from '@/lang/parser';
+import { Interpreter } from '@/lang/interpreter';
+import { TokenType } from '@/lang/tokens';
 import { mathRequest } from './math';
 import { baseWordMap, CANONICAL, type Intent } from './vocabulary';
 
@@ -23,6 +25,69 @@ export function parses(source: string): boolean {
   } catch {
     return false;
   }
+}
+
+let builtinCache: Set<string> | null = null;
+/** every name the runtime provides before the first line runs */
+export function builtinNames(): Set<string> {
+  if (!builtinCache) {
+    try {
+      const env = (new Interpreter(() => {}) as unknown as { globalEnv: { values: Map<string, unknown> } }).globalEnv;
+      builtinCache = new Set(env.values.keys());
+    } catch { builtinCache = new Set(); }
+  }
+  return builtinCache;
+}
+
+const NAME = '[\\p{L}_][\\p{L}\\p{N}_]*';
+
+/** names the file itself introduces: variables, functions, parameters, loop variables, kinds */
+export function definedNames(source: string): Set<string> {
+  const out = new Set<string>();
+  const add = (re: RegExp, group = 1) => { for (const m of source.matchAll(re)) if (m[group]) out.add(m[group]); };
+  add(new RegExp(`\\b(?:set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\s+(${NAME})`, 'gu'));
+  add(new RegExp(`\\bfor\\s+(?:each\\s+)?(${NAME})`, 'gu'));
+  add(new RegExp(`\\bfor\\s+(?:each\\s+)?${NAME}\\s*,\\s*(${NAME})`, 'gu'));
+  add(new RegExp(`^\\s*(${NAME})\\s*(?:=|\\+=|-=|\\*=|/=)(?!=)`, 'gmu'));
+  // parameters: `with a b c`, `with a, b`, `(a, b)` after a declaration
+  for (const m of source.matchAll(new RegExp(`\\bwith\\s+([^\\n:{]+)`, 'gu'))) {
+    for (const w of m[1].split(/[\s,]+/)) if (new RegExp(`^${NAME}$`, 'u').test(w)) out.add(w);
+  }
+  for (const m of source.matchAll(new RegExp(`\\b(?:to|conjure|func|function|fn|def)\\s+${NAME}\\s*\\(([^)]*)\\)`, 'gu'))) {
+    for (const w of m[1].split(/[\s,=]+/)) if (new RegExp(`^${NAME}$`, 'u').test(w)) out.add(w);
+  }
+  // lambdas `(a, b) =>` / `x =>`
+  for (const m of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*=>|(${NAME})\\s*=>`, 'gu'))) {
+    for (const w of (m[1] ?? m[2] ?? '').split(/[\s,]+/)) if (w) out.add(w);
+  }
+  return out;
+}
+
+/**
+ * Bare words the file uses that nothing defines — the tell-tale of plain
+ * language written as code ("calculate", "reverse", "hello"). Properties
+ * (`a.b`) and record keys (`{ key: 1 }`) are not counted.
+ */
+export function unknownNames(source: string): string[] {
+  let tokens: { type: string; value: unknown }[];
+  try { tokens = new Lexer(source).tokenize() as unknown as { type: string; value: unknown }[]; } catch { return []; }
+  const defined = definedNames(source);
+  const builtins = builtinNames();
+  const out = new Set<string>();
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.type !== TokenType.IDENTIFIER) continue;
+    const name = String(t.value);
+    const prev = tokens[i - 1];
+    const next = tokens[i + 1];
+    if (prev && (String(prev.value) === '.' || prev.type === 'DOT')) continue;
+    if (next && (next.type === 'COLON' || String(next.value) === ':') ) continue;
+    if (/[^\x00-\x7F]/.test(name)) continue;
+    if (['end', 'else', 'self', 'this', 'me', 'super', 'it'].includes(name)) continue;
+    if (defined.has(name) || builtins.has(name)) continue;
+    out.add(name);
+  }
+  return [...out];
 }
 
 const NON_CANONICAL_HEAD = (() => {
@@ -72,6 +137,16 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
     if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line)) {
       reasons.push(`line ${i + 1}: a call written in words`);
     }
+  }
+
+  // A line that opens with a word nothing defines is a sentence, not code.
+  const unknown = new Set(unknownNames(source));
+  if (unknown.size) {
+    for (let i = 0; i < lines.length; i++) {
+      const head = lines[i].trim().match(/^[A-Za-z_]\w*/)?.[0];
+      if (head && unknown.has(head)) reasons.push(`line ${i + 1}: "${head}" is not defined anywhere`);
+    }
+    if (!reasons.length) reasons.push(`uses names nothing defines: ${[...unknown].slice(0, 5).join(', ')}`);
   }
 
   const ok = parses(source);
