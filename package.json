@@ -20,6 +20,7 @@
     "probe:lexer": "node bin/sdevhost.mjs scripts/probe-self-lexer.sdev",
     "test:agent": "bun scripts/test-agent.ts",
     "test:beginner": "bun scripts/test-beginner.ts",
+    "test:math": "bun scripts/test-math.ts",
     "test:linker": "bun scripts/test-linker.ts",
     "test:strip": "bun scripts/test-strip.ts",
     "test:ui": "bun scripts/test-ui.ts",
