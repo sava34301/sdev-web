@@ -12,7 +12,7 @@
  */
 import { scanDirectives, type AgentMode, type BrainMode } from './directives';
 import { repair, closeBlocks } from './repair';
-import { senseFile, parses, unknownNames } from './sense';
+import { senseFile, parses, unknownNames, parseError } from './sense';
 import { think, online } from './brain';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
@@ -193,17 +193,11 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
 /** problems a draft still has, in words the brain can act on */
 export function problemsOf(source: string): string[] {
   const out: string[] = [];
-  if (!parses(source)) {
-    try { new (require_parser())(source); } catch (e) { out.push(`does not parse: ${e instanceof Error ? e.message : String(e)}`); }
-    if (!out.length) out.push('does not parse');
-  }
+  const err = parseError(source);
+  if (err) out.push(`does not parse: ${err}`);
   const unknown = unknownNames(source);
   if (unknown.length) out.push(`uses names nothing defines: ${unknown.slice(0, 12).join(', ')}`);
   return out;
-}
-
-function require_parser() {
-  return class { constructor(src: string) { if (!parses(src)) throw new Error('syntax error'); } };
 }
 
 /**
@@ -211,7 +205,7 @@ function require_parser() {
  * tell it what they are and ask once more. Returns null when nothing better
  * than `draft` came back.
  */
-export async function askBrain(
+async function askBrain(
   prep: Prepared, opts: UnderstandOptions, draft: string, unresolved: number[],
   extraProblems: string[], notes: UnderstandResult['notes'],
 ): Promise<{ source: string; used: 'local' | 'online' } | null> {

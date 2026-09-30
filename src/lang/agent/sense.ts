@@ -18,6 +18,11 @@ export interface Sense {
   reasons: string[];
 }
 
+export function parseError(source: string): string | null {
+  try { new Parser(new Lexer(source).tokenize()).parse(); return null; }
+  catch (e) { return e instanceof Error ? e.message : String(e); }
+}
+
 export function parses(source: string): boolean {
   try {
     new Parser(new Lexer(source).tokenize()).parse();
