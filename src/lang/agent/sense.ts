@@ -83,7 +83,7 @@ export function unknownNames(source: string): string[] {
     if (prev && (String(prev.value) === '.' || prev.type === 'DOT')) continue;
     if (next && (next.type === 'COLON' || String(next.value) === ':') ) continue;
     if (/[^\x00-\x7F]/.test(name)) continue;
-    if (['end', 'else', 'self', 'this', 'me', 'super', 'it'].includes(name)) continue;
+    if (['end', 'else', 'self', 'this', 'me', 'super', 'to', 'with', 'each', 'of', 'from', 'by', 'step', 'more', 'less', 'essence', 'value'].includes(name)) continue;
     if (defined.has(name) || builtins.has(name)) continue;
     out.add(name);
   }
