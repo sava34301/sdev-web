@@ -16,6 +16,7 @@ import {
 } from './vocabulary';
 import type { AgentNote } from './types';
 import { mathRequest } from './math';
+import { taskRequest } from './tasks';
 
 const PLACEHOLDER = '\u0000';
 
@@ -526,6 +527,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       }
 
       // "calculate 23-21", "what is 5 times 3", "add 2 and 3"
+      const task = taskRequest(stmt, known, isMaskedString);
+      if (task) { rewritten.push(...task); for (const t of task) { const v = t.match(/^\s*set (\w+) to/)?.[1]; if (v) known.add(v); } continue; }
       const math = mathRequest(stmt, known);
       if (math !== null) { rewritten.push(math.startsWith("(") ? `say (${math})` : `say ${math}`); continue; }
 

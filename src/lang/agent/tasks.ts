@@ -20,6 +20,7 @@ function num(w: string): string | null {
 
 /** "hello" / 'hello' / hello -> a quoted sdev string */
 function text(w: string): string {
+  if (isQuoted(w.trim())) return w.trim();
   const t = w.trim().replace(/^(?:the\s+)?(?:word|text|string|name|sentence|phrase)\s+/i, '').trim();
   const q = t.match(/^["'“](.*)["'”]$/);
   return JSON.stringify(q ? q[1] : t);
@@ -31,7 +32,10 @@ function nums(list: string): string[] | null {
   return out.every((x) => x !== null) && out.length ? (out as string[]) : null;
 }
 
-export function taskRequest(stmt: string, known: Set<string> = new Set()): string[] | null {
+let isQuoted: (t: string) => boolean = () => false;
+
+export function taskRequest(stmt: string, known: Set<string> = new Set(), quoted?: (t: string) => boolean): string[] | null {
+  if (quoted) isQuoted = quoted;
   const s = stmt.trim().replace(PLEASE, '').replace(/[.!?]+\s*$/, '').trim();
   const head = s.split(/\s+/)[0]?.toLowerCase() ?? '';
   if (known.has(head)) return null;
