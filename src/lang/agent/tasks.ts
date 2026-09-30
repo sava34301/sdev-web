@@ -20,8 +20,8 @@ function num(w: string): string | null {
 
 /** "hello" / 'hello' / hello -> a quoted sdev string */
 function text(w: string): string {
-  if (isQuoted(w.trim())) return w.trim();
   const t = w.trim().replace(/^(?:the\s+)?(?:word|text|string|name|sentence|phrase)\s+/i, '').trim();
+  if (isQuoted(t)) return t;
   const q = t.match(/^["'“](.*)["'”]$/);
   return JSON.stringify(q ? q[1] : t);
 }
@@ -48,12 +48,12 @@ export function taskRequest(stmt: string, known: Set<string> = new Set(), quoted
     if (a !== null && b !== null && step !== null) {
       const down = Number(a) > Number(b);
       return down
-        ? [`set i to ${a}`, `while i is or more ${b}`, '  say i', `  set i to i - ${step}`, 'end']
-        : [`set i to ${a}`, `while i is or less ${b}`, '  say i', `  set i to i + ${step}`, 'end'];
+        ? [`set i to ${a}`, `while i >= ${b}`, '  say i', `  set i to i - ${step}`, 'end']
+        : [`set i to ${a}`, `while i <= ${b}`, '  say i', `  set i to i + ${step}`, 'end'];
     }
   }
   if ((m = s.match(/^count\s+(?:up\s+)?to\s+(\S+)$/i)) && num(m[1]) !== null) {
-    return ['set i to 1', `while i is or less ${num(m[1])}`, '  say i', '  set i to i + 1', 'end'];
+    return ['set i to 1', `while i <= ${num(m[1])}`, '  say i', '  set i to i + 1', 'end'];
   }
   if ((m = s.match(/^count\s+down\s+from\s+(\S+)$/i)) && num(m[1]) !== null) {
     return [`set i to ${num(m[1])}`, 'while i > 0', '  say i', '  set i to i - 1', 'end'];
@@ -65,18 +65,20 @@ export function taskRequest(stmt: string, known: Set<string> = new Set(), quoted
     return ['set i to 0', `while i < ${num(m[2])}`, `  say ${what}`, '  set i to i + 1', 'end'];
   }
 
+  if (/^(?:flip|toss)\s+(?:a\s+)?coin$/i.test(s)) return ['say pick(["heads", "tails"])'];
+
   // text operations
   const subject = (w: string) => (known.has(w.trim()) ? w.trim() : text(w));
-  if ((m = s.replace(OUT, '').match(/^(?:reverse|flip|backwards?)\s+(?:of\s+)?(.+)$/i)) || (m = s.replace(OUT, '').match(/^(.+?)\s+(?:reversed|backwards)$/i))) {
+  if ((m = s.replace(OUT, '').match(/^(?:reverse|backwards?)\s+(?:of\s+)?(.+)$/i)) || (m = s.replace(OUT, '').match(/^(.+?)\s+(?:reversed|backwards)$/i))) {
     return [`say reverse(${subject(m[1])})`];
   }
   if ((m = s.replace(OUT, '').match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:uppercase|upper\s*case|capitals|caps)$/i))
       || (m = s.replace(OUT, '').match(/^(?:uppercase|capitalize all|shout)\s+(.+)$/i))) {
-    return [`say upper(${subject(m[1])})`];
+    return [`say upper(${/^make\s/i.test(s) ? text(m[1]) : subject(m[1])})`];
   }
   if ((m = s.replace(OUT, '').match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:lowercase|lower\s*case|small letters)$/i))
       || (m = s.replace(OUT, '').match(/^lowercase\s+(.+)$/i))) {
-    return [`say lower(${subject(m[1])})`];
+    return [`say lower(${/^make\s/i.test(s) ? text(m[1]) : subject(m[1])})`];
   }
   if ((m = s.match(/^(?:what\s+is\s+|what's\s+|show\s+|tell\s+me\s+|give\s+me\s+)?(?:the\s+)?(?:length|size)\s+of\s+(.+)$/i))
       || (m = s.match(/^how\s+(?:many|much)\s+(?:letters|characters|chars)\s+(?:are\s+)?(?:in|does)\s+(.+?)(?:\s+have)?$/i))
@@ -97,7 +99,6 @@ export function taskRequest(stmt: string, known: Set<string> = new Set(), quoted
     if (a !== null && b !== null) return [`say randint(${a}, ${b})`];
   }
   if (/^(?:roll\s+(?:a\s+)?(?:die|dice)|throw\s+(?:a\s+)?dice?)$/i.test(s)) return ['say randint(1, 6)'];
-  if (/^(?:flip|toss)\s+(?:a\s+)?coin$/i.test(s)) return ['say pick(["heads", "tails"])'];
 
   // sorting / list stats
   if ((m = s.replace(OUT, '').match(/^sort\s+(?:the\s+)?(?:numbers\s+)?(.+?)(?:\s+(?:from\s+)?(?:biggest|largest|highest)\s+(?:to|first).*)?$/i))) {
@@ -110,7 +111,7 @@ export function taskRequest(stmt: string, known: Set<string> = new Set(), quoted
   if ((m = s.match(/^(?:print\s+|show\s+|make\s+|write\s+)?(?:the\s+)?(?:multiplication|times)\s+table\s+(?:of|for)\s+(\S+)$/i)) ||
       (m = s.match(/^(?:print\s+|show\s+)?(?:the\s+)?(\S+)\s+times\s+table$/i))) {
     const n = num(m[1]);
-    if (n !== null) return ['set i to 1', 'while i is or less 10', `  say str(${n}) + " x " + str(i) + " = " + str(${n} * i)`, '  set i to i + 1', 'end'];
+    if (n !== null) return ['set i to 1', 'while i <= 10', `  say str(${n}) + " x " + str(i) + " = " + str(${n} * i)`, '  set i to i + 1', 'end'];
   }
 
   // greetings
