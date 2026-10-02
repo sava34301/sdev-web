@@ -1,3 +1,4 @@
+// @ts-nocheck -- bun test file; not part of the app build
 import { describe, it, expect } from 'bun:test';
 import { isLaunched, LAUNCH_DATE } from '../launchGate';
 
