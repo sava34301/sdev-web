@@ -233,6 +233,98 @@ const Index = () => {
         </section>
 
 
+        {/* ===== PLAYGROUND ===== */}
+        <section ref={playgroundRef} className="border-t border-border bg-card/20">
+          <div className="max-w-[1400px] mx-auto px-6 py-16">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+              <div>
+                <div className="rule-label mb-2">Live</div>
+                <h2 className="text-3xl">Playground</h2>
+                <p className="text-sm text-muted-foreground mt-2">Runs entirely in your browser. Nothing to install.</p>
+              </div>
+              <div className="flex items-center gap-1 flex-wrap">
+                <Button variant="ghost" size="sm" onClick={handleCopyCode} className="gap-1.5 text-xs text-muted-foreground">
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleShare} className="gap-1.5 text-xs text-muted-foreground">
+                  <Share2 className="w-3.5 h-3.5" /> Share
+                </Button>
+                <Button variant={showTranslator ? 'secondary' : 'ghost'} size="sm" onClick={() => setShowTranslator(!showTranslator)} className="gap-1.5 text-xs">
+                  <Wand2 className="w-3.5 h-3.5" /> Translate
+                </Button>
+                <Button variant={showCompiler ? 'secondary' : 'ghost'} size="sm" onClick={() => setShowCompiler(!showCompiler)} className="gap-1.5 text-xs">
+                  <Cpu className="w-3.5 h-3.5" /> Compiler
+                </Button>
+                <Button onClick={runCode} size="sm" className="gap-1.5 font-medium ml-1">
+                  <Play className="w-3.5 h-3.5" /> Run
+                  <kbd className="hidden sm:inline ml-1 px-1.5 py-0.5 rounded bg-primary-foreground/20 text-[10px] font-mono">⌘↵</kbd>
+                </Button>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <ExampleCode onSelect={handleExampleSelect} />
+            </div>
+
+            <div className="grid lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-3">
+                <CodeEditor value={code} onChange={setCode} onRun={runCode} placeholder="// Write your sdev code here..." />
+              </div>
+
+              <div className="lg:col-span-2 space-y-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+                  <div className="flex items-center justify-between">
+                    <TabsList className="h-9 bg-muted/30">
+                      <TabsTrigger value="output" className="text-xs gap-1.5 data-[state=active]:bg-card">
+                        <Terminal className="w-3.5 h-3.5" /> Output
+                      </TabsTrigger>
+                      {showCanvas && (
+                        <TabsTrigger value="canvas" className="text-xs gap-1.5 data-[state=active]:bg-card">
+                          <Palette className="w-3.5 h-3.5" /> Canvas
+                        </TabsTrigger>
+                      )}
+                    </TabsList>
+                    <div className="flex items-center gap-2">
+                      {execTime !== undefined && (
+                        <span className="flex items-center gap-1 text-xs font-mono text-muted-foreground">
+                          <Timer className="w-3 h-3" /> {execTime}ms
+                        </span>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={handleClearOutput} aria-label="Clear output" title="Clear output" className="w-7 h-7 text-muted-foreground hover:text-foreground">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <TabsContent value="output" className="mt-2">
+                    <OutputPanel lines={output} error={error} />
+                  </TabsContent>
+                  <TabsContent value="canvas" className="mt-2">
+                    {showCanvas && <CanvasPanel ref={canvasRef} commands={graphicsCommands} onClose={() => setShowCanvas(false)} />}
+                  </TabsContent>
+                </Tabs>
+
+                {showCompiler && (
+                  <CompilerPanel code={code} onOutput={(lines, err) => { setOutput(lines); setError(err); }} />
+                )}
+                {showTranslator && <CodeTranslator onTranslated={handleTranslatedCode} />}
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <details className="group">
+                <summary className="flex items-center gap-3 cursor-pointer select-none py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                  <BookOpen className="w-4 h-4" />
+                  Language reference
+                  <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="pt-2">
+                  <LanguageReference />
+                </div>
+              </details>
+            </div>
+          </div>
+        </section>
         {/* ===== BENTO ===== */}
         <section className="max-w-[1400px] mx-auto px-6 pb-20">
           <div className="grid grid-cols-1 md:grid-cols-6 auto-rows-[minmax(0,auto)] gap-4">
@@ -367,98 +459,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ===== PLAYGROUND ===== */}
-        <section ref={playgroundRef} className="border-t border-border bg-card/20">
-          <div className="max-w-[1400px] mx-auto px-6 py-16">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-              <div>
-                <div className="rule-label mb-2">Live</div>
-                <h2 className="text-3xl">Playground</h2>
-                <p className="text-sm text-muted-foreground mt-2">Runs entirely in your browser. Nothing to install.</p>
-              </div>
-              <div className="flex items-center gap-1 flex-wrap">
-                <Button variant="ghost" size="sm" onClick={handleCopyCode} className="gap-1.5 text-xs text-muted-foreground">
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied' : 'Copy'}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleShare} className="gap-1.5 text-xs text-muted-foreground">
-                  <Share2 className="w-3.5 h-3.5" /> Share
-                </Button>
-                <Button variant={showTranslator ? 'secondary' : 'ghost'} size="sm" onClick={() => setShowTranslator(!showTranslator)} className="gap-1.5 text-xs">
-                  <Wand2 className="w-3.5 h-3.5" /> Translate
-                </Button>
-                <Button variant={showCompiler ? 'secondary' : 'ghost'} size="sm" onClick={() => setShowCompiler(!showCompiler)} className="gap-1.5 text-xs">
-                  <Cpu className="w-3.5 h-3.5" /> Compiler
-                </Button>
-                <Button onClick={runCode} size="sm" className="gap-1.5 font-medium ml-1">
-                  <Play className="w-3.5 h-3.5" /> Run
-                  <kbd className="hidden sm:inline ml-1 px-1.5 py-0.5 rounded bg-primary-foreground/20 text-[10px] font-mono">⌘↵</kbd>
-                </Button>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <ExampleCode onSelect={handleExampleSelect} />
-            </div>
-
-            <div className="grid lg:grid-cols-5 gap-4">
-              <div className="lg:col-span-3">
-                <CodeEditor value={code} onChange={setCode} onRun={runCode} placeholder="// Write your sdev code here..." />
-              </div>
-
-              <div className="lg:col-span-2 space-y-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-                  <div className="flex items-center justify-between">
-                    <TabsList className="h-9 bg-muted/30">
-                      <TabsTrigger value="output" className="text-xs gap-1.5 data-[state=active]:bg-card">
-                        <Terminal className="w-3.5 h-3.5" /> Output
-                      </TabsTrigger>
-                      {showCanvas && (
-                        <TabsTrigger value="canvas" className="text-xs gap-1.5 data-[state=active]:bg-card">
-                          <Palette className="w-3.5 h-3.5" /> Canvas
-                        </TabsTrigger>
-                      )}
-                    </TabsList>
-                    <div className="flex items-center gap-2">
-                      {execTime !== undefined && (
-                        <span className="flex items-center gap-1 text-xs font-mono text-muted-foreground">
-                          <Timer className="w-3 h-3" /> {execTime}ms
-                        </span>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={handleClearOutput} aria-label="Clear output" title="Clear output" className="w-7 h-7 text-muted-foreground hover:text-foreground">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                  <TabsContent value="output" className="mt-2">
-                    <OutputPanel lines={output} error={error} />
-                  </TabsContent>
-                  <TabsContent value="canvas" className="mt-2">
-                    {showCanvas && <CanvasPanel ref={canvasRef} commands={graphicsCommands} onClose={() => setShowCanvas(false)} />}
-                  </TabsContent>
-                </Tabs>
-
-                {showCompiler && (
-                  <CompilerPanel code={code} onOutput={(lines, err) => { setOutput(lines); setError(err); }} />
-                )}
-                {showTranslator && <CodeTranslator onTranslated={handleTranslatedCode} />}
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <details className="group">
-                <summary className="flex items-center gap-3 cursor-pointer select-none py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                  <BookOpen className="w-4 h-4" />
-                  Language reference
-                  <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                </summary>
-                <div className="pt-2">
-                  <LanguageReference />
-                </div>
-              </details>
-            </div>
-          </div>
-        </section>
 
         {/* ===== CTA ===== */}
         <section className="border-t border-border">
