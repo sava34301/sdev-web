@@ -4,6 +4,10 @@ Goal: every piece of the project that *can* be written in SDEV is written in
 SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
+## Current task
+- [ ] Homepage: move the bento feature/stat card section below the Playground
+      (hero → Playground → cards), keep everything else as-is.
+
 ## The host boundary (stays JavaScript, by necessity)
 
 - `bin/sdevhost.mjs` — the single SDEV kernel: compiles a `.sdev` program with
