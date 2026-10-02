@@ -325,6 +325,7 @@ const Index = () => {
             </div>
           </div>
         </section>
+
         {/* ===== BENTO ===== */}
         <section className="max-w-[1400px] mx-auto px-6 pb-20">
           <div className="grid grid-cols-1 md:grid-cols-6 auto-rows-[minmax(0,auto)] gap-4">
