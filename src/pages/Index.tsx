@@ -155,7 +155,6 @@ const Index = () => {
             <a href="/" className="flex items-center gap-2.5 group">
               <img src={sdevLogo} alt="sdev" className="w-7 h-7 object-contain" />
               <span className="text-lg font-display tracking-tight text-foreground">sdev</span>
-              <span className="rule-label border border-border rounded px-1.5 py-0.5 leading-none">v2</span>
             </a>
             <div className="hidden md:flex items-center gap-1">
               <button onClick={scrollToPlayground} className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors">Playground</button>
