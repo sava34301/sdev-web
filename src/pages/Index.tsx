@@ -255,7 +255,7 @@ const Index = () => {
 
       <main id="main">
         {/* ===== HERO ===== */}
-        <section className="home-hero relative min-h-[calc(100svh-4rem)] flex items-center border-b border-border/50">
+        <section className="home-hero relative flex items-center border-b border-border/50">
           <div className="home-grid-floor absolute inset-x-0 bottom-0 h-[52%] pointer-events-none" aria-hidden="true" />
           <div className="home-orbit home-orbit-a" aria-hidden="true" />
           <div className="home-orbit home-orbit-b" aria-hidden="true" />

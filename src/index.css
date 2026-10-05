@@ -364,7 +364,7 @@
       radial-gradient(55rem 38rem at 88% 8%, hsl(var(--brand-indigo) / 0.12), transparent 68%),
       radial-gradient(42rem 34rem at 5% 18%, hsl(var(--primary) / 0.12), transparent 70%);
   }
-  .home-hero { perspective: 1400px; }
+  .home-hero { min-height: calc(100svh - 9rem); perspective: 1400px; }
   .home-hero-copy {
     transform: translate3d(0, calc(var(--hero-scroll) * -28px), 0);
     opacity: calc(1 - var(--hero-scroll) * .32);
