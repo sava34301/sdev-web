@@ -280,7 +280,11 @@ export class JourneyScene {
     this.scene.add(this.core);
   }
 
-  setProgress(p: number) { this.target = Math.min(Math.max(p, 0), 1); }
+  private primed = false;
+  setProgress(p: number) {
+    this.target = Math.min(Math.max(p, 0), 1);
+    if (!this.primed) { this.primed = true; this.current = this.target; }
+  }
   setPointer(x: number, y: number) { this.pointer.set(x, y); }
 
   resize() {
