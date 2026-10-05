@@ -140,6 +140,8 @@ export class JourneyScene {
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   private curve: THREE.CatmullRomCurve3;
+  private keyAt: number[] = [];
+  private keyLook: THREE.Vector3[] = [];
   private panels: THREE.Group[] = [];
   private packets: { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; offset: number }[] = [];
   private core = new THREE.Group();
@@ -164,20 +166,21 @@ export class JourneyScene {
     this.camera = new THREE.PerspectiveCamera(52, 1, 0.1, 260);
     this.scene.fog = new THREE.FogExp2(token('--background', '220 23% 5%'), 0.028);
 
-    this.curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0.6, 15),
-      new THREE.Vector3(0, 0.4, 8.5),
-      new THREE.Vector3(2.6, 1.0, -9),
-      new THREE.Vector3(-1.2, 0.3, -11.5),
-      new THREE.Vector3(-3.2, -0.2, -28),
-      new THREE.Vector3(1.4, -0.2, -31.5),
-      new THREE.Vector3(3.4, 0.9, -48),
-      new THREE.Vector3(-1, 0.4, -51.5),
-      new THREE.Vector3(0, 1.6, -66),
-      new THREE.Vector3(0, 1.0, -70),
-      new THREE.Vector3(-2.5, 1.0, -94),
-      new THREE.Vector3(0, 0.8, -100),
-    ], false, 'catmullrom', 0.35);
+    // One camera keyframe per chapter; the camera dwells on each and flies between them.
+    const st = STAGES;
+    const keys: [number, THREE.Vector3, THREE.Vector3][] = [
+      [0.0, new THREE.Vector3(0, 0.6, 17), new THREE.Vector3(0, 0, 0)],
+      [0.12, new THREE.Vector3(0.6, 0.5, 8.6), st[0].pos.clone()],
+      [0.27, new THREE.Vector3(st[1].pos.x + 2, 0.8, st[1].pos.z + 9.2), st[1].pos.clone()],
+      [0.42, new THREE.Vector3(st[2].pos.x - 1.8, 0.4, st[2].pos.z + 9.2), st[2].pos.clone()],
+      [0.57, new THREE.Vector3(st[3].pos.x + 1.8, 1.0, st[3].pos.z + 9.2), st[3].pos.clone()],
+      [0.73, new THREE.Vector3(0, 1.6, -64.5), new THREE.Vector3(0, 0.6, -82)],
+      [0.93, new THREE.Vector3(CORE.x + 7.5, CORE.y + 2.2, CORE.z + 8.5), CORE.clone()],
+      [1.0, new THREE.Vector3(CORE.x + 10.5, CORE.y + 3, CORE.z + 2.5), CORE.clone()],
+    ];
+    this.keyAt = keys.map((k) => k[0]);
+    this.keyLook = keys.map((k) => k[2]);
+    this.curve = new THREE.CatmullRomCurve3(keys.map((k) => k[1]), false, 'centripetal');
 
     this.buildPanels();
     this.particles = this.buildParticles();
@@ -337,24 +340,26 @@ export class JourneyScene {
     this.pointerSmooth.lerp(this.pointer, 1 - Math.exp(-dt * 4));
     const p = this.current;
 
-    const travel = Math.min(p / 0.9, 1);
-    const camPos = this.curve.getPointAt(travel);
-    const ahead = this.curve.getPointAt(Math.min(travel + 0.035, 1));
-
-    // final chapter: orbit the fixed-point core
-    const orbit = Math.min(Math.max((p - 0.86) / 0.14, 0), 1);
-    if (orbit > 0) {
-      const ang = orbit * 1.4 - 0.7;
-      const orbitPos = this.tmp.set(CORE.x + Math.sin(ang) * 10, CORE.y + 1.2 + orbit * 0.8, CORE.z + Math.cos(ang) * 10);
-      camPos.lerp(orbitPos, orbit);
-      ahead.lerp(CORE, Math.min(orbit * 1.6, 1));
+    const n = this.keyAt.length;
+    let k = 0;
+    while (k < n - 2 && p >= this.keyAt[k + 1]) k++;
+    const u = Math.min(Math.max((p - this.keyAt[k]) / (this.keyAt[k + 1] - this.keyAt[k]), 0), 1);
+    // dwell near each keyframe, travel quickly between them
+    const w = Math.min(Math.max((u - 0.14) / 0.72, 0), 1);
+    const e = w * w * w * (w * (w * 6 - 15) + 10);
+    const camPos = this.curve.getPoint((k + e) / (n - 1));
+    const ahead = this.tmp.copy(this.keyLook[k]).lerp(this.keyLook[k + 1], e);
+    const orbit = Math.min(Math.max((p - 0.8) / 0.13, 0), 1);
+    if (k === n - 2) {
+      const ang = u * 0.9;
+      camPos.sub(CORE).applyAxisAngle(new THREE.Vector3(0, 1, 0), ang).add(CORE);
     }
 
     this.applyOffset(orbit);
     camPos.x += this.pointerSmooth.x * 0.45;
     camPos.y += this.pointerSmooth.y * 0.3;
     this.camera.position.copy(camPos);
-    this.look.lerp(ahead, this.look.lengthSq() === 0 ? 1 : 1 - Math.exp(-dt * 6));
+    this.look.lerp(ahead, this.look.lengthSq() === 0 ? 1 : 1 - Math.exp(-dt * 8));
     this.camera.lookAt(this.look);
 
     // panels breathe gently and turn slightly toward the camera as you pass
