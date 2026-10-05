@@ -154,6 +154,8 @@ export class JourneyScene {
   private disposables: { dispose: () => void }[] = [];
   private look = new THREE.Vector3();
   private tmp = new THREE.Vector3();
+  private size = new THREE.Vector2(1, 1);
+  private lastShift = NaN;
 
   constructor(private canvas: HTMLCanvasElement, private compact: boolean) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !compact, alpha: true, powerPreference: 'high-performance' });
@@ -288,7 +290,17 @@ export class JourneyScene {
     this.camera.aspect = w / h;
     // keep panels framed on tall phone screens
     this.camera.fov = w / h < 0.8 ? 72 : 52;
-    this.camera.updateProjectionMatrix();
+    this.size.set(w, h);
+    this.applyOffset(0);
+  }
+
+  /** On wide screens the 3D focus sits right of centre so the chapter copy has room on the left. */
+  private applyOffset(orbit: number) {
+    const { x: w, y: h } = this.size;
+    const shift = w / h > 1.1 ? -w * 0.17 * (1 - orbit) : 0;
+    if (Math.abs(shift - this.lastShift) < 0.5 && this.camera.view) return;
+    this.lastShift = shift;
+    this.camera.setViewOffset(w, h, shift, 0, w, h);
   }
 
   start() {
@@ -332,6 +344,7 @@ export class JourneyScene {
       ahead.lerp(CORE, Math.min(orbit * 1.6, 1));
     }
 
+    this.applyOffset(orbit);
     camPos.x += this.pointerSmooth.x * 0.45;
     camPos.y += this.pointerSmooth.y * 0.3;
     this.camera.position.copy(camPos);
