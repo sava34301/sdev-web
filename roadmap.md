@@ -81,7 +81,7 @@ Once B–D pass without the oracle, delete `lang/bootstrap/compile.mjs` and
 make the self-hosted compiler its own reference.
 
 ## Homepage
-- [ ] Real 3D scroll experience like modern award sites: pinned WebGL camera flight through the compiler, scroll-rotated 3D feature ring, IDE always one click away
+- [x] Real 3D scroll experience like modern award sites: pinned WebGL camera flight through the compiler, scroll-rotated 3D feature ring, IDE always one click away
 
 ## Sharing (done)
 - [x] Public /explore page: dialects, extensions, shared programs with search and install
