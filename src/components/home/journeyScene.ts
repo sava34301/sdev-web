@@ -174,9 +174,9 @@ export class JourneyScene {
       [0.27, new THREE.Vector3(st[1].pos.x + 2, 0.8, st[1].pos.z + 9.2), st[1].pos.clone()],
       [0.42, new THREE.Vector3(st[2].pos.x - 1.8, 0.4, st[2].pos.z + 9.2), st[2].pos.clone()],
       [0.57, new THREE.Vector3(st[3].pos.x + 1.8, 1.0, st[3].pos.z + 9.2), st[3].pos.clone()],
-      [0.73, new THREE.Vector3(0, 1.6, -64.5), new THREE.Vector3(0, 0.6, -82)],
-      [0.93, new THREE.Vector3(CORE.x + 7.5, CORE.y + 2.2, CORE.z + 8.5), CORE.clone()],
-      [1.0, new THREE.Vector3(CORE.x + 10.5, CORE.y + 3, CORE.z + 2.5), CORE.clone()],
+      [0.73, new THREE.Vector3(2.2, 1.6, -63), new THREE.Vector3(2.4, 0.6, -82)],
+      [0.93, new THREE.Vector3(CORE.x + 9.5, CORE.y + 1.2, CORE.z + 11), CORE.clone().add(new THREE.Vector3(0, -3.2, 0))],
+      [1.0, new THREE.Vector3(CORE.x + 13, CORE.y + 2, CORE.z + 4), CORE.clone().add(new THREE.Vector3(0, -3.2, 0))],
     ];
     this.keyAt = keys.map((k) => k[0]);
     this.keyLook = keys.map((k) => k[2]);
