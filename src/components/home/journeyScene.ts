@@ -168,12 +168,13 @@ export class JourneyScene {
 
     // One camera keyframe per chapter; the camera dwells on each and flies between them.
     const st = STAGES;
+    const side = this.compact ? 0 : 1;
     const keys: [number, THREE.Vector3, THREE.Vector3][] = [
       [0.0, new THREE.Vector3(0, 0.6, 17), new THREE.Vector3(0, 0, 0)],
-      [0.12, new THREE.Vector3(0.6, 0.5, 8.6), st[0].pos.clone()],
-      [0.27, new THREE.Vector3(st[1].pos.x + 2, 0.8, st[1].pos.z + 9.2), st[1].pos.clone()],
-      [0.42, new THREE.Vector3(st[2].pos.x - 1.8, 0.4, st[2].pos.z + 9.2), st[2].pos.clone()],
-      [0.57, new THREE.Vector3(st[3].pos.x + 1.8, 1.0, st[3].pos.z + 9.2), st[3].pos.clone()],
+      [0.12, new THREE.Vector3(0.6 * side, 0.5, 8.6), st[0].pos.clone()],
+      [0.27, new THREE.Vector3(st[1].pos.x + 2 * side, 0.8, st[1].pos.z + 9.2), st[1].pos.clone()],
+      [0.42, new THREE.Vector3(st[2].pos.x - 1.8 * side, 0.4, st[2].pos.z + 9.2), st[2].pos.clone()],
+      [0.57, new THREE.Vector3(st[3].pos.x + 1.8 * side, 1.0, st[3].pos.z + 9.2), st[3].pos.clone()],
       [0.73, new THREE.Vector3(2.2, 1.6, -63), new THREE.Vector3(2.4, 0.6, -82)],
       [0.93, new THREE.Vector3(CORE.x + 9.5, CORE.y + 1.2, CORE.z + 11), CORE.clone().add(new THREE.Vector3(0, -3.2, 0))],
       [1.0, new THREE.Vector3(CORE.x + 13, CORE.y + 2, CORE.z + 4), CORE.clone().add(new THREE.Vector3(0, -3.2, 0))],
