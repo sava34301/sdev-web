@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
@@ -180,7 +181,7 @@ const Index = () => {
     return () => io.disconnect();
   }, []);
 
-  const trackSpotlight = (e: React.PointerEvent) => {
+  const trackSpotlight = (e: ReactPointerEvent) => {
     const card = (e.target as HTMLElement).closest('.bento') as HTMLElement | null;
     if (!card) return;
     const r = card.getBoundingClientRect();
