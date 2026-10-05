@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +17,7 @@ import {
   Play, Terminal, Cpu, MonitorDot, Wand2,
   ArrowRight, Code2, Palette, Box, BookOpen,
   Timer, Trash2, Share2, Copy, Check, ChevronDown,
-  Recycle, Globe2, Layers, UserCircle, Binary,
+  Recycle, Globe2, Layers, UserCircle, Binary, History, ExternalLink,
 } from 'lucide-react';
 import { GraphicsCommand, TurtleState, createGraphicsBuiltins } from '@/lang/graphics';
 import { Lexer } from '@/lang/lexer';
@@ -79,6 +80,7 @@ const Index = () => {
       interpreter.interpret(ast);
       const t1 = performance.now();
 
+      setRunTick(n => n + 1);
       setExecTime(Math.round((t1 - t0) * 100) / 100);
       setOutput(outputLines);
       setError(undefined);
@@ -90,6 +92,7 @@ const Index = () => {
         setActiveTab('output');
       }
     } catch (e) {
+      setRunTick(n => n + 1);
       setOutput(outputLines);
       setError(e instanceof SdevError ? e.message : String(e));
     }
@@ -137,6 +140,55 @@ const Index = () => {
     } catch { /* ignore malformed share links */ }
   }, []);
 
+  const [runTick, setRunTick] = useState(0);
+  const [lastFile, setLastFile] = useState<string | null>(null);
+
+  const openInIde = useCallback((src: string, name = 'playground') => {
+    sessionStorage.setItem('sdev:imported_code', src);
+    sessionStorage.setItem('sdev:imported_name', name);
+    navigate('/ide');
+  }, [navigate]);
+
+  // Returning visitors: remember the file they last had open in the IDE
+  useEffect(() => {
+    try {
+      const files = JSON.parse(localStorage.getItem('sdev-ide-files') || '[]') as { id: string; name: string }[];
+      const active = JSON.parse(localStorage.getItem('sdev-ide-active') || 'null');
+      const f = files.find(x => x.id === active) || files[files.length - 1];
+      if (f?.name) setLastFile(f.name);
+    } catch { /* no saved workspace */ }
+  }, []);
+
+  // ⌘I / Ctrl+I (or plain "i" outside text fields) jumps straight to the IDE
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      const typing = t.closest('input, textarea, select, [contenteditable="true"], .cm-editor');
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); navigate('/ide'); }
+      else if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey && e.key === 'i') navigate('/ide');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navigate]);
+
+  // Reveal sections as they scroll in
+  useEffect(() => {
+    const els = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries) => entries.forEach(en => {
+      if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); }
+    }), { rootMargin: '0px 0px -8% 0px' });
+    els.forEach(el => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
+  const trackSpotlight = (e: ReactPointerEvent) => {
+    const card = (e.target as HTMLElement).closest('.bento') as HTMLElement | null;
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    card.style.setProperty('--my', `${e.clientY - r.top}px`);
+  };
+
   const scrollToPlayground = () => playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   return (
@@ -170,6 +222,7 @@ const Index = () => {
             <Button onClick={() => navigate('/ide')} size="sm" className="gap-2 font-medium">
               <MonitorDot className="w-3.5 h-3.5" />
               Open IDE
+              <kbd className="hidden md:inline ml-0.5 px-1.5 py-0.5 rounded bg-primary-foreground/20 text-[10px] font-mono">⌘I</kbd>
             </Button>
           </div>
         </nav>
@@ -180,8 +233,16 @@ const Index = () => {
         <section className="relative max-w-[1400px] mx-auto px-6 pt-16 pb-10 md:pt-24 md:pb-14">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
             <div className="max-w-2xl">
-              <div className="rule-label mb-5">A self-hosting language · released 2026</div>
-              <h1 className="font-display text-[2.75rem] leading-[0.95] sm:text-6xl lg:text-[5rem] tracking-[-0.04em]">
+              {lastFile ? (
+                <button onClick={() => navigate('/ide')} className="rise group mb-5 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-2 py-1 text-xs text-foreground hover:bg-primary/20 transition-colors">
+                  <History className="w-3.5 h-3.5 text-primary" />
+                  Continue <span className="font-mono">{lastFile}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-primary-foreground">Open IDE <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" /></span>
+                </button>
+              ) : (
+                <div className="rule-label mb-5 rise">A self-hosting language · released 2026</div>
+              )}
+              <h1 className="rise font-display text-[2.75rem] leading-[0.95] sm:text-6xl lg:text-[5rem] tracking-[-0.04em]">
                 This is<br />
                 <span className="gradient-text">SDEV.</span>
                 <span className="block mt-5 font-sans text-xl md:text-2xl tracking-normal leading-snug text-muted-foreground">
@@ -207,7 +268,7 @@ const Index = () => {
             </div>
 
             {/* Code specimen */}
-            <div className="bento p-0 overflow-hidden">
+            <div className="bento p-0 overflow-hidden rise" onPointerMove={trackSpotlight} style={{ animationDelay: '120ms' }}>
               <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/70 bg-background/40">
                 <div className="flex gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-brand-rose/60" />
@@ -215,6 +276,12 @@ const Index = () => {
                   <span className="w-2.5 h-2.5 rounded-full bg-brand-green/60" />
                 </div>
                 <span className="text-xs font-mono text-muted-foreground ml-2">example.sdev</span>
+                <button
+                  onClick={() => openInIde('// a taste of sdev\nconjure greet(name) ::\n  yield "Hello, " + name + "!"\n;;\n\nforge names be ["Ada", "Grace"]\n\niterate name through names ::\n  speak(greet(name))\n;;\n', 'example')}
+                  className="relative z-10 ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  Open in IDE <ExternalLink className="w-3 h-3" />
+                </button>
               </div>
               <pre className="p-5 text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
 <span className="text-muted-foreground">// a taste of sdev</span>
@@ -235,7 +302,7 @@ const Index = () => {
 
         {/* ===== PLAYGROUND ===== */}
         <section ref={playgroundRef} className="border-t border-border bg-card/20">
-          <div className="max-w-[1400px] mx-auto px-6 py-16">
+          <div className="max-w-[1400px] mx-auto px-6 py-16 reveal">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
               <div>
                 <div className="rule-label mb-2">Live</div>
@@ -249,6 +316,9 @@ const Index = () => {
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleShare} className="gap-1.5 text-xs text-muted-foreground">
                   <Share2 className="w-3.5 h-3.5" /> Share
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => openInIde(code)} className="gap-1.5 text-xs text-muted-foreground">
+                  <ExternalLink className="w-3.5 h-3.5" /> Open in IDE
                 </Button>
                 <Button variant={showTranslator ? 'secondary' : 'ghost'} size="sm" onClick={() => setShowTranslator(!showTranslator)} className="gap-1.5 text-xs">
                   <Wand2 className="w-3.5 h-3.5" /> Translate
@@ -296,7 +366,7 @@ const Index = () => {
                       </Button>
                     </div>
                   </div>
-                  <TabsContent value="output" className="mt-2">
+                  <TabsContent value="output" key={runTick} className={`mt-2 rounded-lg ${runTick ? 'run-pulse' : ''}`}>
                     <OutputPanel lines={output} error={error} />
                   </TabsContent>
                   <TabsContent value="canvas" className="mt-2">
@@ -327,8 +397,8 @@ const Index = () => {
         </section>
 
         {/* ===== BENTO ===== */}
-        <section className="max-w-[1400px] mx-auto px-6 pb-20">
-          <div className="grid grid-cols-1 md:grid-cols-6 auto-rows-[minmax(0,auto)] gap-4">
+        <section className="max-w-[1400px] mx-auto px-6 pb-20 pt-16 reveal">
+          <div onPointerMove={trackSpotlight} className="grid grid-cols-1 md:grid-cols-6 auto-rows-[minmax(0,auto)] gap-4">
 
             {/* Fixed point — wide feature tile with code */}
             <article className="bento md:col-span-4 p-7">

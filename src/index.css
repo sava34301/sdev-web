@@ -258,6 +258,36 @@
   }
   .bento:hover { border-color: hsl(var(--primary) / 0.45); transform: translateY(-2px); }
   .bento:hover::before { opacity: 1; }
+  /* Cursor-following spotlight (position set from JS via --mx/--my) */
+  .bento::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(22rem circle at var(--mx, 50%) var(--my, 50%), hsl(var(--primary) / 0.14), transparent 60%);
+    opacity: 0; transition: opacity .3s ease;
+    pointer-events: none;
+  }
+  .bento:hover::after { opacity: 1; }
+
+  /* Fast scroll reveal */
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .45s cubic-bezier(.2,.7,.2,1), transform .45s cubic-bezier(.2,.7,.2,1); }
+  .reveal.is-visible { opacity: 1; transform: none; }
+
+  /* Entrance for hero items */
+  .rise { animation: rise .5s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* Output pulse after a run */
+  .run-pulse { animation: run-pulse .7s ease-out; }
+  @keyframes run-pulse {
+    0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45); }
+    100% { box-shadow: 0 0 0 12px hsl(var(--primary) / 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .reveal.is-visible { opacity: 1; transform: none; transition: none; }
+    .rise, .run-pulse { animation: none; }
+    .bento, .bento:hover { transform: none; }
+  }
 
   .rule-label {
     font-family: 'JetBrains Mono', monospace;
