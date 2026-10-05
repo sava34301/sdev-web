@@ -80,6 +80,9 @@ is out of scope until SDEV has a DOM binding.
 Once B–D pass without the oracle, delete `lang/bootstrap/compile.mjs` and
 make the self-hosted compiler its own reference.
 
+## Homepage
+- [x] Real 3D scroll experience like modern award sites: pinned WebGL camera flight through the compiler, scroll-rotated 3D feature ring, IDE always one click away
+
 ## Sharing (done)
 - [x] Public /explore page: dialects, extensions, shared programs with search and install
 - [x] /my page: own dialects, extensions, files and shared programs

@@ -1,4 +1,3 @@
-import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
@@ -11,13 +10,15 @@ import { DownloadablesDropdown } from '@/components/DownloadablesDropdown';
 import { CodeTranslator } from '@/components/CodeTranslator';
 import { SdevChatbot } from '@/components/SdevChatbot';
 import { CompilerPanel } from '@/components/CompilerPanel';
+import { JourneyCanvas } from '@/components/home/JourneyCanvas';
+import type { JourneyScene } from '@/components/home/journeyScene';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Play, Terminal, Cpu, MonitorDot, Wand2,
   ArrowRight, Code2, Palette, Box, BookOpen,
   Timer, Trash2, Share2, Copy, Check, ChevronDown,
-  Recycle, Globe2, Layers, UserCircle, Binary, History, ExternalLink,
+  Recycle, Globe2, Layers, UserCircle, Binary, History, ExternalLink, ArrowDown,
 } from 'lucide-react';
 import { GraphicsCommand, TurtleState, createGraphicsBuiltins } from '@/lang/graphics';
 import { Lexer } from '@/lang/lexer';
@@ -34,6 +35,29 @@ forge message be "Hello, World!"
 speak(message)
 `;
 
+/** Chapters of the scroll-driven compiler flight; `at` is the scroll progress where each is centred. */
+const CHAPTERS = [
+  { at: 0.12, k: '01', label: 'Source', title: 'Written in words you already use.', body: 'forge, conjure, iterate — or their Bulgarian, Japanese or Spanish equivalents. Keywords in 26 human languages, normalised before a single token is read.' },
+  { at: 0.27, k: '02', label: 'Tokens', title: 'Every word becomes a token.', body: 'A lexer written in sdev itself walks your file byte by byte, UTF-8 included, and hands the parser a clean stream.' },
+  { at: 0.42, k: '03', label: 'Tree', title: 'Structure, not guesswork.', body: 'The parser builds a syntax tree you can print, inspect and transform. Plain-English intent is understood before it ever gets here.' },
+  { at: 0.57, k: '04', label: 'Bytecode', title: 'A tiny stack machine.', body: 'Compact opcodes in the .sdevc format — ENTER, LOAD_LOC, CALL, RET — that you can disassemble line by line.' },
+  { at: 0.73, k: '05', label: 'Two metals', title: 'WASM in your browser. x86-64 on your machine.', body: 'A hand-written WebAssembly seed VM, and real GAS assembly linked into a static binary with no libc.' },
+  { at: 0.93, k: '06', label: 'Fixed point', title: 'It rebuilds itself, byte for byte.', body: 'Compile the compiler with itself and the bytes don’t move. 87 of 87 cases identical — every change has to survive that check.' },
+];
+
+const RING = [
+  { icon: Recycle, tone: 'text-primary', title: 'Self-hosting fixed point', body: 'The lexer, parser and generator are sdev source and rebuild themselves identically.' },
+  { icon: Layers, tone: 'text-brand-sky', title: 'Two kinds of metal', body: 'WebAssembly seed VM in the browser, static x86-64 binaries on your machine.' },
+  { icon: Cpu, tone: 'text-brand-cyan', title: 'Machine learning, in sdev', body: 'Tensors, autograd, transformers and training loops — with CUDA and WebGPU fast paths.' },
+  { icon: Binary, tone: 'text-brand-amber', title: 'Programs that edit the language', body: 'Read, rewrite and recompile sdev’s own source tree — and prove it still hits the fixed point.' },
+  { icon: Globe2, tone: 'text-brand-green', title: '26 human languages', body: 'Write forge, or its Bulgarian, Japanese or Spanish equivalent. Dialects you can publish.' },
+  { icon: Palette, tone: 'text-brand-rose', title: 'Drawing, maps and boards', body: 'Turtle and canvas graphics, Leaflet maps, and firmware pushed straight to microcontrollers.' },
+  { icon: Code2, tone: 'text-brand-steel', title: 'Inspect the output', body: 'Native builds emit readable GAS assembly, linked with as and ld. Nothing hidden.' },
+  { icon: Wand2, tone: 'text-brand-violet', title: 'An agent that understands you', body: '“calculate 23-21” just runs. Intent is read and repaired before the code is generated.' },
+];
+
+const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
+
 const Index = () => {
   const navigate = useNavigate();
   const [code, setCode] = useState(DEFAULT_CODE);
@@ -48,7 +72,14 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<string>('output');
   const canvasRef = useRef<CanvasHandle>(null);
   const playgroundRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
+  const journeyRef = useRef<HTMLElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const chapterRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const railRef = useRef<HTMLOListElement>(null);
+  const ringSectionRef = useRef<HTMLElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<JourneyScene | null>(null);
+  const updateRef = useRef<() => void>(() => {});
 
   const runCode = useCallback(() => {
     const outputLines: string[] = [];
@@ -149,28 +180,76 @@ const Index = () => {
     sessionStorage.setItem('sdev:imported_name', name);
     navigate('/ide');
   }, [navigate]);
+  const onSceneReady = useCallback((scene: JourneyScene | null) => {
+    sceneRef.current = scene;
+    updateRef.current();
+  }, []);
 
-  // One passive scroll listener drives the dimensional scenes without blocking native scrolling.
+  // One passive scroll listener drives every scroll-linked scene: the WebGL flight,
+  // the chapter overlays and the 3D feature ring. Native scrolling stays untouched.
   useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let frame = 0;
-    const updateScene = () => {
-      const root = pageRef.current;
-      if (!root) return;
-      const viewport = Math.max(window.innerHeight, 1);
-      const heroProgress = Math.min(Math.max(window.scrollY / viewport, 0), 1.35);
-      const pageProgress = Math.min(window.scrollY / Math.max(document.documentElement.scrollHeight - viewport, 1), 1);
-      root.style.setProperty('--hero-scroll', heroProgress.toFixed(3));
-      root.style.setProperty('--page-scroll', pageProgress.toFixed(3));
+    const update = () => {
+      const vh = Math.max(window.innerHeight, 1);
+
+      const journey = journeyRef.current;
+      if (journey) {
+        const r = journey.getBoundingClientRect();
+        const p = clamp01(-r.top / Math.max(r.height - vh, 1));
+        sceneRef.current?.setProgress(p);
+        journey.style.setProperty('--jp', p.toFixed(4));
+        if (!reduce) {
+          const hero = heroRef.current;
+          if (hero) {
+            const o = clamp01(1 - p / 0.06);
+            hero.style.opacity = String(o);
+            hero.style.transform = `translate3d(0, ${(-p * 900).toFixed(1)}px, 0) scale(${(1 - p * 0.8).toFixed(4)})`;
+            hero.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+          }
+          let active = -1;
+          CHAPTERS.forEach((c, i) => {
+            const el = chapterRefs.current[i];
+            if (!el) return;
+            const d = p - c.at;
+            const hold = i === CHAPTERS.length - 1 ? 0.07 : 0.035;
+            const o = clamp01(1 - (Math.abs(d) - hold) / 0.045);
+            el.style.opacity = String(o);
+            el.style.transform = `translate3d(0, ${(-d * 520).toFixed(1)}px, 0) rotateX(${(d * 40).toFixed(2)}deg)`;
+            el.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+            if (o > 0.5) active = i;
+          });
+          railRef.current?.querySelectorAll('li').forEach((li, i) => li.toggleAttribute('data-active', i === active));
+        }
+      }
+
+      const ringSection = ringSectionRef.current;
+      const ring = ringRef.current;
+      if (ringSection && ring && !reduce) {
+        const r = ringSection.getBoundingClientRect();
+        const q = clamp01(-r.top / Math.max(r.height - vh, 1));
+        const step = 360 / RING.length;
+        const rot = -q * (360 - step);
+        ring.style.setProperty('--ring-rot', `${rot.toFixed(2)}deg`);
+        ring.style.setProperty('--ring-tilt', `${(10 - q * 16).toFixed(2)}deg`);
+        Array.from(ring.children).forEach((card, i) => {
+          const facing = Math.cos(((i * step + rot) * Math.PI) / 180);
+          (card as HTMLElement).style.opacity = (0.12 + 0.88 * clamp01(facing)).toFixed(3);
+        });
+      }
     };
+    updateRef.current = update;
     const onScroll = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(updateScene);
+      frame = requestAnimationFrame(update);
     };
-    updateScene();
+    update();
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
   }, []);
 
@@ -206,27 +285,18 @@ const Index = () => {
     return () => io.disconnect();
   }, []);
 
-  const trackSpotlight = (e: ReactPointerEvent) => {
-    const card = (e.target as HTMLElement).closest('.bento') as HTMLElement | null;
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    card.style.setProperty('--mx', `${e.clientX - r.left}px`);
-    card.style.setProperty('--my', `${e.clientY - r.top}px`);
-  };
-
   const scrollToPlayground = () => playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   return (
-    <div ref={pageRef} className="sdev-home min-h-screen bg-background relative overflow-clip">
+    <div className="sdev-home min-h-screen bg-background relative overflow-clip">
       <SEO
         title="sdev — Self-Hosted Language, WebAssembly + Native"
         description="sdev is a self-hosted programming language with a browser IDE, WebAssembly runtime, native x86-64 compiler, and built-in machine learning stack."
         path="/"
       />
-      <div className="home-atmosphere fixed inset-0 pointer-events-none" aria-hidden="true" />
 
       {/* ===== NAV ===== */}
-      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-2xl">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/40 bg-background/40 backdrop-blur-xl">
         <nav className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <a href="/" className="flex items-center gap-2.5 group">
@@ -254,100 +324,81 @@ const Index = () => {
       </header>
 
       <main id="main">
-        {/* ===== HERO ===== */}
-        <section className="home-hero relative flex items-center border-b border-border/50">
-          <div className="home-grid-floor absolute inset-x-0 bottom-0 h-[52%] pointer-events-none" aria-hidden="true" />
-          <div className="home-orbit home-orbit-a" aria-hidden="true" />
-          <div className="home-orbit home-orbit-b" aria-hidden="true" />
-          <div className="relative z-10 max-w-[1440px] w-full mx-auto px-6 py-16 md:py-24">
-           <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-14 lg:gap-8 items-center">
-            <div className="max-w-2xl home-hero-copy">
-              {lastFile ? (
-                <button onClick={() => navigate('/ide')} className="rise group mb-5 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-2 py-1 text-xs text-foreground hover:bg-primary/20 transition-colors">
-                  <History className="w-3.5 h-3.5 text-primary" />
-                  Continue <span className="font-mono">{lastFile}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-primary-foreground">Open IDE <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" /></span>
-                </button>
-              ) : (
-                <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-[0.18em] text-primary mb-6 rise">
-                  <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-primary" /></span>
-                  Self-hosting · released 2026
+        {/* ===== 3D COMPILER FLIGHT (pinned, scroll-scrubbed) ===== */}
+        <section ref={journeyRef} className="journey" aria-label="How sdev turns words into machine code">
+          <div className="journey-stage">
+            <div className="journey-backdrop" aria-hidden="true" />
+            <JourneyCanvas onReady={onSceneReady} />
+            <div className="journey-scrim" aria-hidden="true" />
+
+            <div className="journey-copy">
+              {/* Opening */}
+              <div ref={heroRef} className="journey-hero">
+                {lastFile ? (
+                  <button onClick={() => navigate('/ide')} className="rise group mb-6 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-2 py-1 text-xs text-foreground hover:bg-primary/20 transition-colors">
+                    <History className="w-3.5 h-3.5 text-primary" />
+                    Continue <span className="font-mono">{lastFile}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-primary-foreground">Open IDE <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" /></span>
+                  </button>
+                ) : (
+                  <div className="rise mb-6 inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-[0.18em] text-primary">
+                    <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-primary" /></span>
+                    Self-hosting · released 2026
+                  </div>
+                )}
+                <h1 className="rise font-display uppercase journey-title">
+                  This is<br />
+                  <span className="gradient-text">SDEV.</span>
+                  <span className="sr-only"> The self-hosting programming language for WebAssembly and native x86-64</span>
+                </h1>
+                <p className="rise mt-6 text-lg md:text-2xl text-foreground/80 max-w-xl leading-snug" style={{ animationDelay: '80ms' }}>
+                  The self-hosting programming language for WebAssembly and native x86-64.
+                </p>
+                <div className="rise mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: '140ms' }}>
+                  <Button onClick={() => navigate('/ide')} size="lg" className="gap-2 h-12 px-6 font-semibold">
+                    <MonitorDot className="w-4 h-4" /> Open the IDE
+                  </Button>
+                  <Button onClick={scrollToPlayground} variant="outline" size="lg" className="gap-2 h-12 px-6 bg-background/40 backdrop-blur">
+                    <Play className="w-4 h-4" /> Try it here
+                  </Button>
                 </div>
-              )}
-              <h1 className="rise font-display text-[3.5rem] leading-[0.86] sm:text-7xl lg:text-[6.4rem] uppercase">
-                This is<br />
-                <span className="gradient-text">SDEV.</span>
-              </h1>
-              <p className="mt-7 text-xl md:text-2xl text-foreground/80 max-w-xl leading-snug">
-                The self-hosting programming language for WebAssembly and native x86-64.
-              </p>
-              <p className="mt-4 text-base text-muted-foreground max-w-xl leading-relaxed">
-                Its lexer, parser and generator are sdev source. Rebuild it, inspect it, and verify every byte.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Button onClick={scrollToPlayground} size="lg" className="gap-2 h-12 px-6 font-semibold">
-                  <Play className="w-4 h-4" /> Run in browser
-                </Button>
-                <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6">
-                  Read the docs <ArrowRight className="w-4 h-4" />
-                </Button>
-                <code className="hidden lg:inline-flex items-center h-12 px-4 rounded-md border border-border bg-card/60 font-mono text-sm text-muted-foreground">
-                  <span className="text-primary mr-2">$</span> npm i -g sdev-lang
-                </code>
+                <div className="journey-hint rise" style={{ animationDelay: '400ms' }}>
+                  <ArrowDown className="w-3.5 h-3.5" /> Scroll to fly through the compiler
+                </div>
               </div>
+
+              {/* Chapters */}
+              {CHAPTERS.map((c, i) => (
+                <div
+                  key={c.k}
+                  ref={(el) => { chapterRefs.current[i] = el; }}
+                  className={`journey-chapter ${i === CHAPTERS.length - 1 ? 'journey-chapter-final' : ''}`}
+                >
+                  <div className="rule-label text-primary mb-4"><span className="text-foreground/60">{c.k}</span> &nbsp;/&nbsp; {c.label}</div>
+                  <h2 className="font-display uppercase text-4xl md:text-6xl leading-[0.92]">{c.title}</h2>
+                  <p className="mt-5 text-base md:text-lg text-muted-foreground leading-relaxed max-w-md">{c.body}</p>
+                  {i === CHAPTERS.length - 1 && (
+                    <div className="mt-7 flex flex-wrap gap-3 justify-center">
+                      <Button onClick={scrollToPlayground} size="lg" className="gap-2 h-12 px-6 font-semibold"><Play className="w-4 h-4" /> Run it yourself</Button>
+                      <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6 bg-background/40 backdrop-blur">Read the internals <ArrowRight className="w-4 h-4" /></Button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
-             {/* Scroll-linked compiler object */}
-             <div className="home-core-stage rise" style={{ animationDelay: '120ms' }}>
-              <div className="home-core-halo" aria-hidden="true" />
-              <div className="home-core-rail home-core-rail-a" aria-hidden="true" />
-              <div className="home-core-rail home-core-rail-b" aria-hidden="true" />
-              <div className="home-code-object" onPointerMove={trackSpotlight}>
-               <div className="flex items-center gap-2 px-4 py-3 border-b border-border/70 bg-background/55 backdrop-blur-xl">
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-rose/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-amber/60" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-green/60" />
-                </div>
-                <span className="text-xs font-mono text-muted-foreground ml-2">example.sdev</span>
-                 <Button
-                   variant="ghost"
-                   size="sm"
-                  onClick={() => openInIde('// a taste of sdev\nconjure greet(name) ::\n  yield "Hello, " + name + "!"\n;;\n\nforge names be ["Ada", "Grace"]\n\niterate name through names ::\n  speak(greet(name))\n;;\n', 'example')}
-                   className="relative z-10 ml-auto h-7 gap-1 px-2 text-xs text-muted-foreground"
-                >
-                  Open in IDE <ExternalLink className="w-3 h-3" />
-                 </Button>
-              </div>
-               <pre className="p-5 sm:p-7 text-xs sm:text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
-<span className="text-muted-foreground">// a taste of sdev</span>
-{'\n'}<span className="text-brand-sky">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
-{'\n'}  <span className="text-brand-sky">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
-{'\n'}<span className="text-muted-foreground">;;</span>
-{'\n'}
-{'\n'}<span className="text-brand-sky">forge</span> names <span className="text-primary">be</span> [<span className="text-brand-green">"Ada"</span>, <span className="text-brand-green">"Grace"</span>]
-{'\n'}
-{'\n'}<span className="text-brand-sky">iterate</span> name <span className="text-brand-sky">through</span> names <span className="text-muted-foreground">::</span>
-{'\n'}  <span className="text-brand-amber">speak</span>(<span className="text-brand-amber">greet</span>(name))
-{'\n'}<span className="text-muted-foreground">;;</span>
-              </pre>
-               <div className="flex items-center justify-between border-t border-border/60 bg-background/45 px-4 py-3">
-                 <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-brand-green" /> Ready to compile</span>
-                 <Button size="sm" onClick={() => openInIde(code)} className="h-8 gap-1.5 text-xs"><Play className="w-3 h-3" /> Run code</Button>
-               </div>
-              </div>
-              <div className="home-core-chip home-core-chip-wasm"><span>01</span> WASM</div>
-              <div className="home-core-chip home-core-chip-native"><span>02</span> x86-64</div>
-            </div>
-           </div>
+            {/* Progress rail */}
+            <ol ref={railRef} className="journey-rail" aria-hidden="true">
+              {CHAPTERS.map((c) => <li key={c.k}><span>{c.k}</span>{c.label}</li>)}
+            </ol>
+            <div className="journey-progress" aria-hidden="true"><span /></div>
+            <button onClick={scrollToPlayground} className="journey-skip">Skip to playground <ArrowDown className="w-3 h-3" /></button>
           </div>
         </section>
 
-
         {/* ===== PLAYGROUND ===== */}
         <section ref={playgroundRef} className="home-playground relative border-b border-border/60 bg-card/20">
-          <div className="home-section-index" aria-hidden="true">01</div>
-          <div className="max-w-[1440px] mx-auto px-6 py-20 md:py-28 reveal">
+                    <div className="max-w-[1440px] mx-auto px-6 py-20 md:py-28 reveal">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
               <div>
                 <div className="rule-label mb-2 text-primary">Live environment</div>
@@ -441,149 +492,75 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ===== BENTO ===== */}
-        <section className="home-capabilities relative max-w-[1440px] mx-auto px-6 pb-24 pt-24 md:pt-36 reveal">
-          <div className="home-section-index" aria-hidden="true">02</div>
-          <div className="mb-12 md:flex md:items-end md:justify-between gap-8">
-            <div><div className="rule-label mb-3 text-primary">Inside the machine</div><h2 className="text-4xl md:text-6xl uppercase max-w-3xl">A language you can inspect all the way down.</h2></div>
-            <p className="mt-5 md:mt-0 max-w-md text-muted-foreground leading-relaxed">From human-language keywords to native assembly, every layer stays visible and verifiable.</p>
-          </div>
-          <div onPointerMove={trackSpotlight} className="grid grid-cols-1 md:grid-cols-6 auto-rows-[minmax(0,auto)] gap-4">
-
-            {/* Fixed point — wide feature tile with code */}
-            <article className="bento md:col-span-4 p-7">
-              <div className="flex items-start justify-between gap-6">
-                <div className="max-w-md">
-                  <Recycle className="w-5 h-5 text-primary mb-4" />
-                  <h2 className="text-xl mb-2">It rebuilds itself, byte for byte</h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Compile the compiler with itself and the bytes don't move. Every change to the
-                    language has to survive that check before it lands.
-                  </p>
-                </div>
-                <pre className="hidden lg:block flex-1 rounded-lg border border-border/70 bg-background/60 p-4 font-mono text-[12px] leading-6 text-muted-foreground overflow-hidden">
-<span className="text-primary">$</span> sdev build compiler.sdev -o c1{'\n'}
-<span className="text-primary">$</span> ./c1 compiler.sdev -o c2{'\n'}
-<span className="text-primary">$</span> cmp c1 c2{'\n'}
-<span className="text-brand-green">  identical · 87/87 cases</span>
-                </pre>
-              </div>
-            </article>
-
-            {/* Two metals */}
-            <article className="bento md:col-span-2 p-7">
-              <Layers className="w-5 h-5 text-brand-sky mb-4" />
-              <h2 className="text-xl mb-2">Two kinds of metal</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                A hand-written WebAssembly seed VM in the browser, and real x86-64 assembly linked
-                to a static binary with no libc on your machine.
-              </p>
-            </article>
-
-            {/* ML */}
-            <article className="bento md:col-span-2 p-7">
-              <Cpu className="w-5 h-5 text-brand-cyan mb-4" />
-              <h2 className="text-xl mb-2">Machine learning, in sdev</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Tensors, autograd, transformers, training loops and checkpoints — the stack is sdev
-                source, with FFI, CUDA and WebGPU fast paths beneath it.
-              </p>
-            </article>
-
-            {/* Self-modification */}
-            <article className="bento md:col-span-2 p-7">
-              <Binary className="w-5 h-5 text-brand-amber mb-4" />
-              <h2 className="text-xl mb-2">Programs that edit the language</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                sdev can read, rewrite and recompile its own source tree. Models trained in sdev can
-                propose changes to sdev and prove they still hit the fixed point.
-              </p>
-            </article>
-
-            {/* 26 languages */}
-            <article className="bento md:col-span-2 p-7">
-              <Globe2 className="w-5 h-5 text-brand-green mb-4" />
-              <h2 className="text-xl mb-2">Keywords in 26 human languages</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Write <code className="font-mono text-xs text-foreground">forge</code>, or its
-                Bulgarian, Japanese or Spanish equivalent. Detected and normalised before a single
-                token is parsed.
-              </p>
-            </article>
-
-            {/* Numbers strip */}
-            <article className="bento md:col-span-6 p-0">
-              <dl className="grid grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 lg:divide-x divide-border/70">
-                {[
-                  { v: '2', l: 'runtimes — WASM and native x86-64' },
-                  { v: '0', l: 'libc dependencies in native builds' },
-                  { v: '87', l: 'byte-identical fixed-point cases' },
-                  { v: '26', l: 'human keyword languages' },
-                ].map((s) => (
-                  <div key={s.l} className="px-7 py-6">
-                    <dt className="sr-only">{s.l}</dt>
-                    <dd>
-                      <span className="block font-display text-4xl gradient-text">{s.v}</span>
-                      <span className="mt-1.5 block text-xs text-muted-foreground leading-snug">{s.l}</span>
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </article>
-
-            {/* Toolchain links */}
-            <div className="md:col-span-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-              <button onClick={() => navigate('/ide')} className="bento p-6 text-left">
-                <MonitorDot className="w-5 h-5 text-primary mb-3" />
-                <h3 className="text-base mb-1">Browser IDE</h3>
-                <p className="text-sm text-muted-foreground">Files, terminal, debugger, smart assistant, live preview.</p>
-              </button>
-              <button onClick={() => navigate('/docs')} className="bento p-6 text-left">
-                <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
-                <h3 className="text-base mb-1">Documentation</h3>
-                <p className="text-sm text-muted-foreground">The sdev Book, full reference and compiler internals.</p>
-              </button>
-              <div className="bento p-6">
-                <Terminal className="w-5 h-5 text-brand-amber mb-3" />
-                <h3 className="text-base mb-1">CLI, VS Code, desktop</h3>
-                <p className="text-sm text-muted-foreground">npm CLI, an editor extension, and a desktop app that builds native binaries.</p>
-              </div>
-              <div className="bento p-6">
-                <Box className="w-5 h-5 text-brand-green mb-3" />
-                <h3 className="text-base mb-1">Packages &amp; hardware</h3>
-                <p className="text-sm text-muted-foreground">Decentralised <code className="font-mono text-xs">summon</code> packages and firmware flashed to real boards.</p>
-              </div>
+        {/* ===== 3D FEATURE RING (pinned, scroll-rotated) ===== */}
+        <section ref={ringSectionRef} className="ring-section" aria-labelledby="ring-title">
+          <div className="ring-stage">
+            <div className="ring-heading">
+              <div className="rule-label text-primary mb-3">Inside the machine</div>
+              <h2 id="ring-title" className="font-display uppercase text-4xl md:text-6xl leading-[0.92] max-w-3xl">A language you can inspect all the way down.</h2>
             </div>
+            <div className="ring-viewport">
+              <div ref={ringRef} className="ring" style={{ ['--n' as string]: RING.length }}>
+                {RING.map((f, i) => (
+                  <article key={f.title} className="ring-card" style={{ ['--i' as string]: i }}>
+                    <f.icon className={`w-6 h-6 ${f.tone}`} />
+                    <h3 className="mt-6 text-xl font-display uppercase leading-tight">{f.title}</h3>
+                    <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{f.body}</p>
+                    <span className="ring-card-index">{String(i + 1).padStart(2, '0')}</span>
+                  </article>
+                ))}
+              </div>
+              <div className="ring-floor" aria-hidden="true" />
+            </div>
+          </div>
+        </section>
 
-            {/* Graphics / maps */}
-            <article className="bento md:col-span-3 p-7">
-              <Palette className="w-5 h-5 text-brand-rose mb-4" />
-              <h2 className="text-xl mb-2">Drawing, maps and boards</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Turtle and 2D canvas primitives, Leaflet mapping built into the language, and
-                firmware you can push straight onto microcontrollers from the IDE.
-              </p>
-            </article>
-
-            {/* Runtimes detail */}
-            <article className="bento md:col-span-3 p-7">
-              <Code2 className="w-5 h-5 text-brand-steel mb-4" />
-              <h2 className="text-xl mb-2">Inspect the output</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                Native builds emit GAS assembly you can read, then link with <code className="font-mono text-xs">as</code> and <code className="font-mono text-xs">ld</code>.
-              </p>
-              <code className="block text-xs font-mono text-muted-foreground bg-background/60 border border-border/70 rounded px-3 py-2 overflow-x-auto">
-                node scripts/sdev-native.mjs prog.sdev -o prog
-              </code>
-            </article>
+        {/* ===== NUMBERS + TOOLCHAIN ===== */}
+        <section className="relative max-w-[1440px] mx-auto px-6 pb-24 reveal">
+          <dl className="grid grid-cols-2 lg:grid-cols-4 border-y border-border/70 divide-x divide-border/70">
+            {[
+              { v: '2', l: 'runtimes — WASM and native x86-64' },
+              { v: '0', l: 'libc dependencies in native builds' },
+              { v: '87', l: 'byte-identical fixed-point cases' },
+              { v: '26', l: 'human keyword languages' },
+            ].map((s) => (
+              <div key={s.l} className="px-6 py-8">
+                <dt className="sr-only">{s.l}</dt>
+                <dd>
+                  <span className="block font-display text-5xl md:text-6xl gradient-text">{s.v}</span>
+                  <span className="mt-2 block text-xs text-muted-foreground leading-snug">{s.l}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button onClick={() => navigate('/ide')} className="bento p-6 text-left">
+              <MonitorDot className="w-5 h-5 text-primary mb-3" />
+              <h3 className="text-base mb-1">Browser IDE</h3>
+              <p className="text-sm text-muted-foreground">Files, terminal, debugger, smart assistant, live preview.</p>
+            </button>
+            <button onClick={() => navigate('/docs')} className="bento p-6 text-left">
+              <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
+              <h3 className="text-base mb-1">Documentation</h3>
+              <p className="text-sm text-muted-foreground">The sdev Book, full reference and compiler internals.</p>
+            </button>
+            <div className="bento p-6">
+              <Terminal className="w-5 h-5 text-brand-amber mb-3" />
+              <h3 className="text-base mb-1">CLI, VS Code, desktop</h3>
+              <p className="text-sm text-muted-foreground">npm CLI, an editor extension, and a desktop app that builds native binaries.</p>
+            </div>
+            <div className="bento p-6">
+              <Box className="w-5 h-5 text-brand-green mb-3" />
+              <h3 className="text-base mb-1">Packages &amp; hardware</h3>
+              <p className="text-sm text-muted-foreground">Decentralised <code className="font-mono text-xs">summon</code> packages and firmware flashed to real boards.</p>
+            </div>
           </div>
         </section>
 
 
         {/* ===== CTA ===== */}
         <section className="home-final relative border-t border-border overflow-hidden">
-          <div className="home-grid-floor absolute inset-x-0 bottom-0 h-full opacity-40 pointer-events-none" aria-hidden="true" />
+          <div className="final-tunnel" aria-hidden="true" />
           <div className="relative max-w-[1440px] mx-auto px-6 py-28 md:py-40 text-center">
             <div className="rule-label text-primary mb-4">Your workspace is ready</div>
             <h2 className="text-4xl md:text-7xl uppercase">Start where you are.</h2>
