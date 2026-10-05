@@ -5,8 +5,8 @@ SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
 ## Current task
-- [ ] Homepage: move the bento feature/stat card section below the Playground
-      (hero → Playground → cards), keep everything else as-is.
+- [x] Redesign the homepage as an immersive 3D scroll experience while keeping
+      the Playground functional and the IDE immediately accessible.
 
 ## The host boundary (stays JavaScript, by necessity)
 

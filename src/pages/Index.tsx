@@ -48,6 +48,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<string>('output');
   const canvasRef = useRef<CanvasHandle>(null);
   const playgroundRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   const runCode = useCallback(() => {
     const outputLines: string[] = [];
@@ -149,6 +150,30 @@ const Index = () => {
     navigate('/ide');
   }, [navigate]);
 
+  // One passive scroll listener drives the dimensional scenes without blocking native scrolling.
+  useEffect(() => {
+    let frame = 0;
+    const updateScene = () => {
+      const root = pageRef.current;
+      if (!root) return;
+      const viewport = Math.max(window.innerHeight, 1);
+      const heroProgress = Math.min(Math.max(window.scrollY / viewport, 0), 1.35);
+      const pageProgress = Math.min(window.scrollY / Math.max(document.documentElement.scrollHeight - viewport, 1), 1);
+      root.style.setProperty('--hero-scroll', heroProgress.toFixed(3));
+      root.style.setProperty('--page-scroll', pageProgress.toFixed(3));
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updateScene);
+    };
+    updateScene();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
   // Returning visitors: remember the file they last had open in the IDE
   useEffect(() => {
     try {
@@ -192,21 +217,21 @@ const Index = () => {
   const scrollToPlayground = () => playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div ref={pageRef} className="sdev-home min-h-screen bg-background relative overflow-clip">
       <SEO
         title="sdev — Self-Hosted Language, WebAssembly + Native"
         description="sdev is a self-hosted programming language with a browser IDE, WebAssembly runtime, native x86-64 compiler, and built-in machine learning stack."
         path="/"
       />
-      <div className="fixed inset-0 pointer-events-none aurora" />
+      <div className="home-atmosphere fixed inset-0 pointer-events-none" aria-hidden="true" />
 
       {/* ===== NAV ===== */}
-      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl">
-        <nav className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-2xl">
+        <nav className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <a href="/" className="flex items-center gap-2.5 group">
-              <img src={sdevLogo} alt="sdev" className="w-7 h-7 object-contain" />
-              <span className="text-lg font-display tracking-tight text-foreground">sdev</span>
+              <img src={sdevLogo} alt="sdev" className="w-7 h-7 object-contain transition-transform duration-300 group-hover:rotate-6" />
+              <span className="text-lg font-display text-foreground">sdev</span>
             </a>
             <div className="hidden md:flex items-center gap-1">
               <button onClick={scrollToPlayground} className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors">Playground</button>
@@ -219,7 +244,7 @@ const Index = () => {
               <UserCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Account</span>
             </Button>
-            <Button onClick={() => navigate('/ide')} size="sm" className="gap-2 font-medium">
+            <Button onClick={() => navigate('/ide')} size="sm" className="gap-2 font-semibold shadow-[0_0_28px_hsl(var(--primary)/0.22)]">
               <MonitorDot className="w-3.5 h-3.5" />
               Open IDE
               <kbd className="hidden md:inline ml-0.5 px-1.5 py-0.5 rounded bg-primary-foreground/20 text-[10px] font-mono">⌘I</kbd>
@@ -230,9 +255,13 @@ const Index = () => {
 
       <main id="main">
         {/* ===== HERO ===== */}
-        <section className="relative max-w-[1400px] mx-auto px-6 pt-16 pb-10 md:pt-24 md:pb-14">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
-            <div className="max-w-2xl">
+        <section className="home-hero relative flex items-center border-b border-border/50">
+          <div className="home-grid-floor absolute inset-x-0 bottom-0 h-[52%] pointer-events-none" aria-hidden="true" />
+          <div className="home-orbit home-orbit-a" aria-hidden="true" />
+          <div className="home-orbit home-orbit-b" aria-hidden="true" />
+          <div className="relative z-10 max-w-[1440px] w-full mx-auto px-6 py-16 md:py-24">
+           <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-14 lg:gap-8 items-center">
+            <div className="max-w-2xl home-hero-copy">
               {lastFile ? (
                 <button onClick={() => navigate('/ide')} className="rise group mb-5 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-2 py-1 text-xs text-foreground hover:bg-primary/20 transition-colors">
                   <History className="w-3.5 h-3.5 text-primary" />
@@ -240,23 +269,24 @@ const Index = () => {
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-primary-foreground">Open IDE <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" /></span>
                 </button>
               ) : (
-                <div className="rule-label mb-5 rise">A self-hosting language · released 2026</div>
+                <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-[0.18em] text-primary mb-6 rise">
+                  <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-primary" /></span>
+                  Self-hosting · released 2026
+                </div>
               )}
-              <h1 className="rise font-display text-[2.75rem] leading-[0.95] sm:text-6xl lg:text-[5rem] tracking-[-0.04em]">
+              <h1 className="rise font-display text-[3.5rem] leading-[0.86] sm:text-7xl lg:text-[6.4rem] uppercase">
                 This is<br />
                 <span className="gradient-text">SDEV.</span>
-                <span className="block mt-5 font-sans text-xl md:text-2xl tracking-normal leading-snug text-muted-foreground">
-                  The self-hosting programming language for WebAssembly and native x86-64
-                </span>
               </h1>
-              <p className="mt-7 text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed">
-                Lexer, parser and code generator are sdev source files. The toolchain rebuilds itself
-                and the output is byte-for-byte identical every time — a fixed point you can verify,
-                not a claim you have to trust.
+              <p className="mt-7 text-xl md:text-2xl text-foreground/80 max-w-xl leading-snug">
+                The self-hosting programming language for WebAssembly and native x86-64.
+              </p>
+              <p className="mt-4 text-base text-muted-foreground max-w-xl leading-relaxed">
+                Its lexer, parser and generator are sdev source. Rebuild it, inspect it, and verify every byte.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Button onClick={scrollToPlayground} size="lg" className="gap-2 h-12 px-6 font-semibold">
-                  <Play className="w-4 h-4" /> Run it in the browser
+                  <Play className="w-4 h-4" /> Run in browser
                 </Button>
                 <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6">
                   Read the docs <ArrowRight className="w-4 h-4" />
@@ -267,23 +297,29 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Code specimen */}
-            <div className="bento p-0 overflow-hidden rise" onPointerMove={trackSpotlight} style={{ animationDelay: '120ms' }}>
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/70 bg-background/40">
+             {/* Scroll-linked compiler object */}
+             <div className="home-core-stage rise" style={{ animationDelay: '120ms' }}>
+              <div className="home-core-halo" aria-hidden="true" />
+              <div className="home-core-rail home-core-rail-a" aria-hidden="true" />
+              <div className="home-core-rail home-core-rail-b" aria-hidden="true" />
+              <div className="home-code-object" onPointerMove={trackSpotlight}>
+               <div className="flex items-center gap-2 px-4 py-3 border-b border-border/70 bg-background/55 backdrop-blur-xl">
                 <div className="flex gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-brand-rose/60" />
                   <span className="w-2.5 h-2.5 rounded-full bg-brand-amber/60" />
                   <span className="w-2.5 h-2.5 rounded-full bg-brand-green/60" />
                 </div>
                 <span className="text-xs font-mono text-muted-foreground ml-2">example.sdev</span>
-                <button
+                 <Button
+                   variant="ghost"
+                   size="sm"
                   onClick={() => openInIde('// a taste of sdev\nconjure greet(name) ::\n  yield "Hello, " + name + "!"\n;;\n\nforge names be ["Ada", "Grace"]\n\niterate name through names ::\n  speak(greet(name))\n;;\n', 'example')}
-                  className="relative z-10 ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                   className="relative z-10 ml-auto h-7 gap-1 px-2 text-xs text-muted-foreground"
                 >
                   Open in IDE <ExternalLink className="w-3 h-3" />
-                </button>
+                 </Button>
               </div>
-              <pre className="p-5 text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
+               <pre className="p-5 sm:p-7 text-xs sm:text-sm font-mono leading-7 text-foreground/90 overflow-x-auto">
 <span className="text-muted-foreground">// a taste of sdev</span>
 {'\n'}<span className="text-brand-sky">conjure</span> <span className="text-brand-amber">greet</span>(name) <span className="text-muted-foreground">::</span>
 {'\n'}  <span className="text-brand-sky">yield</span> <span className="text-brand-green">"Hello, "</span> + name + <span className="text-brand-green">"!"</span>
@@ -295,18 +331,27 @@ const Index = () => {
 {'\n'}  <span className="text-brand-amber">speak</span>(<span className="text-brand-amber">greet</span>(name))
 {'\n'}<span className="text-muted-foreground">;;</span>
               </pre>
+               <div className="flex items-center justify-between border-t border-border/60 bg-background/45 px-4 py-3">
+                 <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-brand-green" /> Ready to compile</span>
+                 <Button size="sm" onClick={() => openInIde(code)} className="h-8 gap-1.5 text-xs"><Play className="w-3 h-3" /> Run code</Button>
+               </div>
+              </div>
+              <div className="home-core-chip home-core-chip-wasm"><span>01</span> WASM</div>
+              <div className="home-core-chip home-core-chip-native"><span>02</span> x86-64</div>
             </div>
+           </div>
           </div>
         </section>
 
 
         {/* ===== PLAYGROUND ===== */}
-        <section ref={playgroundRef} className="border-t border-border bg-card/20">
-          <div className="max-w-[1400px] mx-auto px-6 py-16 reveal">
+        <section ref={playgroundRef} className="home-playground relative border-b border-border/60 bg-card/20">
+          <div className="home-section-index" aria-hidden="true">01</div>
+          <div className="max-w-[1440px] mx-auto px-6 py-20 md:py-28 reveal">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
               <div>
-                <div className="rule-label mb-2">Live</div>
-                <h2 className="text-3xl">Playground</h2>
+                <div className="rule-label mb-2 text-primary">Live environment</div>
+                <h2 className="text-4xl md:text-6xl uppercase">Playground</h2>
                 <p className="text-sm text-muted-foreground mt-2">Runs entirely in your browser. Nothing to install.</p>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
@@ -337,12 +382,12 @@ const Index = () => {
               <ExampleCode onSelect={handleExampleSelect} />
             </div>
 
-            <div className="grid lg:grid-cols-5 gap-4">
+            <div className="home-playground-shell grid lg:grid-cols-5 gap-px overflow-hidden rounded-lg border border-border bg-border shadow-[0_32px_100px_hsl(var(--background)/0.7)]">
               <div className="lg:col-span-3">
                 <CodeEditor value={code} onChange={setCode} onRun={runCode} placeholder="// Write your sdev code here..." />
               </div>
 
-              <div className="lg:col-span-2 space-y-4">
+              <div className="lg:col-span-2 space-y-4 bg-background p-3">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
                   <div className="flex items-center justify-between">
                     <TabsList className="h-9 bg-muted/30">
@@ -397,7 +442,12 @@ const Index = () => {
         </section>
 
         {/* ===== BENTO ===== */}
-        <section className="max-w-[1400px] mx-auto px-6 pb-20 pt-16 reveal">
+        <section className="home-capabilities relative max-w-[1440px] mx-auto px-6 pb-24 pt-24 md:pt-36 reveal">
+          <div className="home-section-index" aria-hidden="true">02</div>
+          <div className="mb-12 md:flex md:items-end md:justify-between gap-8">
+            <div><div className="rule-label mb-3 text-primary">Inside the machine</div><h2 className="text-4xl md:text-6xl uppercase max-w-3xl">A language you can inspect all the way down.</h2></div>
+            <p className="mt-5 md:mt-0 max-w-md text-muted-foreground leading-relaxed">From human-language keywords to native assembly, every layer stays visible and verifiable.</p>
+          </div>
           <div onPointerMove={trackSpotlight} className="grid grid-cols-1 md:grid-cols-6 auto-rows-[minmax(0,auto)] gap-4">
 
             {/* Fixed point — wide feature tile with code */}
@@ -532,9 +582,11 @@ const Index = () => {
 
 
         {/* ===== CTA ===== */}
-        <section className="border-t border-border">
-          <div className="max-w-[1400px] mx-auto px-6 py-20 text-center">
-            <h2 className="text-3xl md:text-5xl tracking-tight">Start where you are.</h2>
+        <section className="home-final relative border-t border-border overflow-hidden">
+          <div className="home-grid-floor absolute inset-x-0 bottom-0 h-full opacity-40 pointer-events-none" aria-hidden="true" />
+          <div className="relative max-w-[1440px] mx-auto px-6 py-28 md:py-40 text-center">
+            <div className="rule-label text-primary mb-4">Your workspace is ready</div>
+            <h2 className="text-4xl md:text-7xl uppercase">Start where you are.</h2>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
               Open the IDE in this tab, or install the CLI and build a static binary in the next minute.
             </p>
