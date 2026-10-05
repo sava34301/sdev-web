@@ -1,3 +1,3 @@
 # Project Architecture Rules
 
-- Keep homepage dimensional motion CSS-driven from one passive scroll listener so native scrolling, accessibility, and load speed remain intact.
+- Drive all homepage scroll motion (lazy-loaded WebGL flight, pinned chapter overlays, CSS 3D ring) from one passive scroll listener with sticky stages, so native scrolling, accessibility and first paint stay intact; reduced motion gets a static stacked layout.
