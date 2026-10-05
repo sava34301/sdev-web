@@ -291,7 +291,9 @@ export class JourneyScene {
     // keep panels framed on tall phone screens
     this.camera.fov = w / h < 0.8 ? 72 : 52;
     this.size.set(w, h);
+    this.lastShift = NaN;
     this.applyOffset(0);
+    this.camera.updateProjectionMatrix();
   }
 
   /** On wide screens the 3D focus sits right of centre so the chapter copy has room on the left. */
