@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
@@ -328,6 +329,143 @@ const Index = () => {
     return () => io.disconnect();
   }, []);
 
+  // Pointer interactions: cursor glow, magnetic buttons and 3D tilt cards (fine pointers only).
+  useEffect(() => {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let frame = 0;
+    let last: PointerEvent | null = null;
+    let magnet: HTMLElement | null = null;
+    let tilt: HTMLElement | null = null;
+    const apply = () => {
+      const e = last;
+      if (!e) return;
+      if (glowRef.current) glowRef.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+      const t = e.target as HTMLElement;
+      const m = t.closest?.('.magnetic') as HTMLElement | null;
+      if (magnet && magnet !== m) magnet.style.transform = '';
+      magnet = m;
+      if (m) {
+        const r = m.getBoundingClientRect();
+        m.style.transform = `translate(${((e.clientX - r.left - r.width / 2) * 0.25).toFixed(1)}px, ${((e.clientY - r.top - r.height / 2) * 0.35).toFixed(1)}px)`;
+      }
+      const c = t.closest?.('.tilt') as HTMLElement | null;
+      if (tilt && tilt !== c) { tilt.style.setProperty('--rx', '0deg'); tilt.style.setProperty('--ry', '0deg'); }
+      tilt = c;
+      if (c) {
+        const r = c.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        c.style.setProperty('--rx', `${(-y * 12).toFixed(2)}deg`);
+        c.style.setProperty('--ry', `${(x * 14).toFixed(2)}deg`);
+        c.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        c.style.setProperty('--my', `${e.clientY - r.top}px`);
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      last = e;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(apply);
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('pointermove', onMove); };
+  }, []);
+
+  // Numbers count up the first time they scroll into view
+  useEffect(() => {
+    const dl = statsRef.current;
+    if (!dl) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      io.disconnect();
+      dl.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => {
+        const to = Number(el.dataset.count);
+        const t0 = performance.now();
+        const tick = (now: number) => {
+          const k = Math.min((now - t0) / 1400, 1);
+          el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 4))));
+          if (k < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    }, { threshold: 0.4 });
+    io.observe(dl);
+    return () => io.disconnect();
+  }, []);
+
+  // Drag (or flick) the feature ring; it keeps spinning briefly and settles on a card.
+  const step = 360 / RING.length;
+  const settleRing = useCallback(() => {
+    const d = ringDrag.current;
+    cancelAnimationFrame(d.raf);
+    const run = () => {
+      if (d.active) return;
+      if (Math.abs(d.velocity) > 0.05) {
+        d.offset += d.velocity;
+        d.velocity *= 0.92;
+      } else {
+        // ease toward the nearest card so one always faces you
+        const ring = ringRef.current;
+        const cur = parseFloat(ring?.style.getPropertyValue('--ring-rot') || '0');
+        const delta = Math.round(cur / step) * step - cur;
+        if (Math.abs(delta) < 0.05) { d.velocity = 0; return; }
+        d.offset += delta * 0.15;
+      }
+      updateRef.current();
+      d.raf = requestAnimationFrame(run);
+    };
+    d.raf = requestAnimationFrame(run);
+  }, [step]);
+  const onRingDown = (e: ReactPointerEvent) => {
+    const d = ringDrag.current;
+    d.active = true; d.lastX = e.clientX; d.velocity = 0; d.moved = 0;
+    cancelAnimationFrame(d.raf);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onRingMove = (e: ReactPointerEvent) => {
+    const d = ringDrag.current;
+    if (!d.active) return;
+    const dx = e.clientX - d.lastX;
+    d.lastX = e.clientX;
+    d.moved += Math.abs(dx);
+    d.velocity = dx * 0.25;
+    d.offset += dx * 0.25;
+    updateRef.current();
+  };
+  const onRingUp = () => {
+    const d = ringDrag.current;
+    if (!d.active) return;
+    d.active = false;
+    settleRing();
+  };
+  const focusRingCard = (i: number) => {
+    const d = ringDrag.current;
+    if (d.moved > 6) return; // it was a drag, not a click
+    const ring = ringRef.current;
+    const cur = parseFloat(ring?.style.getPropertyValue('--ring-rot') || '0');
+    let delta = (-i * step - cur) % 360;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    d.velocity = 0;
+    const startOffset = d.offset;
+    const t0 = performance.now();
+    cancelAnimationFrame(d.raf);
+    const run = (now: number) => {
+      const k = Math.min((now - t0) / 650, 1);
+      d.offset = startOffset + delta * (1 - Math.pow(1 - k, 3));
+      updateRef.current();
+      if (k < 1) d.raf = requestAnimationFrame(run);
+    };
+    d.raf = requestAnimationFrame(run);
+  };
+
+  const jumpToChapter = (at: number) => {
+    const j = journeyRef.current;
+    if (!j) return;
+    const top = j.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: top + at * (j.offsetHeight - window.innerHeight), behavior: 'smooth' });
+  };
+
   const scrollToPlayground = () => playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   return (
@@ -337,6 +475,8 @@ const Index = () => {
         description="sdev is a self-hosted programming language with a browser IDE, WebAssembly runtime, native x86-64 compiler, and built-in machine learning stack."
         path="/"
       />
+
+      <div ref={glowRef} className="cursor-glow" aria-hidden="true" />
 
       {/* ===== NAV ===== */}
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border/40 bg-background/40 backdrop-blur-xl">
@@ -391,19 +531,19 @@ const Index = () => {
                 )}
                 <h1 className="rise font-display uppercase journey-title">
                   This is<br />
-                  <span className="gradient-text">SDEV.</span>
+                  <span className="journey-letters" aria-label="SDEV.">{'SDEV.'.split('').map((ch, i) => <span key={i} aria-hidden="true" className="gradient-text" style={{ ['--d' as string]: `${i * 70}ms` }}>{ch}</span>)}</span>
                   <span className="sr-only"> The self-hosting programming language for WebAssembly and native x86-64</span>
                 </h1>
                 <p className="rise mt-6 text-lg md:text-2xl text-foreground/80 max-w-xl leading-snug" style={{ animationDelay: '80ms' }}>
                   The self-hosting programming language for WebAssembly and native x86-64.
                 </p>
                 <div className="rise mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: '140ms' }}>
-                  <Button onClick={() => navigate('/ide')} size="lg" className="gap-2 h-12 px-6 font-semibold">
+                  <span className="magnetic"><Button onClick={() => navigate('/ide')} size="lg" className="gap-2 h-12 px-6 font-semibold">
                     <MonitorDot className="w-4 h-4" /> Open the IDE
-                  </Button>
-                  <Button onClick={scrollToPlayground} variant="outline" size="lg" className="gap-2 h-12 px-6 bg-background/40 backdrop-blur">
+                  </Button></span>
+                  <span className="magnetic"><Button onClick={scrollToPlayground} variant="outline" size="lg" className="gap-2 h-12 px-6 bg-background/40 backdrop-blur">
                     <Play className="w-4 h-4" /> Try it here
-                  </Button>
+                  </Button></span>
                 </div>
                 <div className="journey-hint rise" style={{ animationDelay: '400ms' }}>
                   <ArrowDown className="w-3.5 h-3.5" /> Scroll to fly through the compiler
@@ -431,9 +571,13 @@ const Index = () => {
             </div>
 
             {/* Progress rail */}
-            <ol ref={railRef} className="journey-rail" aria-hidden="true">
-              {CHAPTERS.map((c) => <li key={c.k}><span>{c.k}</span>{c.label}</li>)}
-            </ol>
+            <nav aria-label="Compiler chapters">
+              <ol ref={railRef} className="journey-rail">
+                {CHAPTERS.map((c) => (
+                  <li key={c.k}><button onClick={() => jumpToChapter(c.at)}><span>{c.k}</span>{c.label}</button></li>
+                ))}
+              </ol>
+            </nav>
             <div className="journey-progress" aria-hidden="true"><span /></div>
             <button onClick={scrollToPlayground} className="journey-skip">Skip to playground <ArrowDown className="w-3 h-3" /></button>
           </div>
@@ -542,10 +686,11 @@ const Index = () => {
               <div className="rule-label text-primary mb-3">Inside the machine</div>
               <h2 id="ring-title" className="font-display uppercase text-4xl md:text-6xl leading-[0.92] max-w-3xl">A language you can inspect all the way down.</h2>
             </div>
-            <div className="ring-viewport">
+            <p className="ring-hint">Drag to spin · click a card to bring it forward</p>
+            <div className="ring-viewport" onPointerDown={onRingDown} onPointerMove={onRingMove} onPointerUp={onRingUp} onPointerCancel={onRingUp}>
               <div ref={ringRef} className="ring" style={{ ['--n' as string]: RING.length }}>
                 {RING.map((f, i) => (
-                  <article key={f.title} className="ring-card" style={{ ['--i' as string]: i }}>
+                  <article key={f.title} className="ring-card" style={{ ['--i' as string]: i }} onClick={() => focusRingCard(i)}>
                     <f.icon className={`w-6 h-6 ${f.tone}`} />
                     <h3 className="mt-6 text-xl font-display uppercase leading-tight">{f.title}</h3>
                     <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{f.body}</p>
@@ -560,7 +705,7 @@ const Index = () => {
 
         {/* ===== NUMBERS + TOOLCHAIN ===== */}
         <section className="relative max-w-[1440px] mx-auto px-6 pb-24 reveal">
-          <dl className="grid grid-cols-2 lg:grid-cols-4 border-y border-border/70 divide-x divide-border/70">
+          <dl ref={statsRef} className="stats-strip grid grid-cols-2 lg:grid-cols-4 border-y border-border/70 divide-x divide-border/70">
             {[
               { v: '2', l: 'runtimes — WASM and native x86-64' },
               { v: '0', l: 'libc dependencies in native builds' },
@@ -570,29 +715,29 @@ const Index = () => {
               <div key={s.l} className="px-6 py-8">
                 <dt className="sr-only">{s.l}</dt>
                 <dd>
-                  <span className="block font-display text-5xl md:text-6xl gradient-text">{s.v}</span>
+                  <span className="block font-display text-5xl md:text-6xl gradient-text" data-count={s.v}>{s.v}</span>
                   <span className="mt-2 block text-xs text-muted-foreground leading-snug">{s.l}</span>
                 </dd>
               </div>
             ))}
           </dl>
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button onClick={() => navigate('/ide')} className="bento p-6 text-left">
+            <button onClick={() => navigate('/ide')} className="bento tilt p-6 text-left">
               <MonitorDot className="w-5 h-5 text-primary mb-3" />
               <h3 className="text-base mb-1">Browser IDE</h3>
               <p className="text-sm text-muted-foreground">Files, terminal, debugger, smart assistant, live preview.</p>
             </button>
-            <button onClick={() => navigate('/docs')} className="bento p-6 text-left">
+            <button onClick={() => navigate('/docs')} className="bento tilt p-6 text-left">
               <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
               <h3 className="text-base mb-1">Documentation</h3>
               <p className="text-sm text-muted-foreground">The sdev Book, full reference and compiler internals.</p>
             </button>
-            <div className="bento p-6">
+            <div className="bento tilt p-6">
               <Terminal className="w-5 h-5 text-brand-amber mb-3" />
               <h3 className="text-base mb-1">CLI, VS Code, desktop</h3>
               <p className="text-sm text-muted-foreground">npm CLI, an editor extension, and a desktop app that builds native binaries.</p>
             </div>
-            <div className="bento p-6">
+            <div className="bento tilt p-6">
               <Box className="w-5 h-5 text-brand-green mb-3" />
               <h3 className="text-base mb-1">Packages &amp; hardware</h3>
               <p className="text-sm text-muted-foreground">Decentralised <code className="font-mono text-xs">summon</code> packages and firmware flashed to real boards.</p>
@@ -602,7 +747,7 @@ const Index = () => {
 
 
         {/* ===== CTA ===== */}
-        <section className="home-final relative border-t border-border overflow-hidden">
+        <section ref={finalRef} className="home-final relative border-t border-border overflow-hidden">
           <div className="final-tunnel" aria-hidden="true" />
           <div className="relative max-w-[1440px] mx-auto px-6 py-28 md:py-40 text-center">
             <div className="rule-label text-primary mb-4">Your workspace is ready</div>
@@ -611,12 +756,12 @@ const Index = () => {
               Open the IDE in this tab, or install the CLI and build a static binary in the next minute.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button onClick={() => navigate('/ide')} size="lg" className="gap-2 h-12 px-6 font-semibold">
+              <span className="magnetic"><Button onClick={() => navigate('/ide')} size="lg" className="gap-2 h-12 px-6 font-semibold">
                 <MonitorDot className="w-4 h-4" /> Open the IDE
-              </Button>
-              <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6">
+              </Button></span>
+              <span className="magnetic"><Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6">
                 Documentation <ArrowRight className="w-4 h-4" />
-              </Button>
+              </Button></span>
             </div>
           </div>
         </section>
