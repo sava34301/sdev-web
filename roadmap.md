@@ -83,6 +83,8 @@ make the self-hosted compiler its own reference.
 ## Homepage
 - [x] Real 3D scroll experience like modern award sites: pinned WebGL camera flight through the compiler, scroll-rotated 3D feature ring, IDE always one click away
 
+- [x] More interactive homepage: cursor glow, magnetic buttons, letter hover, clickable chapter rail, draggable ring, counting numbers, scroll-tilted Playground and zooming final tunnel
+
 ## Sharing (done)
 - [x] Public /explore page: dialects, extensions, shared programs with search and install
 - [x] /my page: own dialects, extensions, files and shared programs
