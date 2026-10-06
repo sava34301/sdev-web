@@ -80,6 +80,11 @@ const Index = () => {
   const ringRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<JourneyScene | null>(null);
   const updateRef = useRef<() => void>(() => {});
+  const finalRef = useRef<HTMLElement>(null);
+  const statsRef = useRef<HTMLDListElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  // ring drag state: extra rotation added on top of the scroll-driven spin
+  const ringDrag = useRef({ offset: 0, velocity: 0, active: false, lastX: 0, moved: 0, raf: 0 });
 
   const runCode = useCallback(() => {
     const outputLines: string[] = [];
@@ -232,10 +237,33 @@ const Index = () => {
         const rot = -q * (360 - step);
         ring.style.setProperty('--ring-rot', `${rot.toFixed(2)}deg`);
         ring.style.setProperty('--ring-tilt', `${(10 - q * 16).toFixed(2)}deg`);
+        const total = rot + ringDrag.current.offset;
+        ring.style.setProperty('--ring-rot', `${total.toFixed(2)}deg`);
         Array.from(ring.children).forEach((card, i) => {
-          const facing = Math.cos(((i * step + rot) * Math.PI) / 180);
+          const facing = Math.cos(((i * step + total) * Math.PI) / 180);
+          card.toggleAttribute('data-front', facing > 0.92);
           (card as HTMLElement).style.opacity = (0.12 + 0.88 * clamp01(facing)).toFixed(3);
         });
+      }
+
+      if (!reduce) {
+        // Playground tilts up out of the floor as it enters the viewport
+        const pg = playgroundRef.current;
+        if (pg) {
+          const r = pg.getBoundingClientRect();
+          pg.style.setProperty('--pg', clamp01((vh - r.top) / (vh * 0.85)).toFixed(3));
+        }
+        const stats = statsRef.current;
+        if (stats) {
+          const r = stats.getBoundingClientRect();
+          stats.style.setProperty('--sp', clamp01((vh - r.top) / (vh * 0.6)).toFixed(3));
+        }
+        // Final tunnel zooms toward you as you approach the end of the page
+        const fin = finalRef.current;
+        if (fin) {
+          const r = fin.getBoundingClientRect();
+          fin.style.setProperty('--fp', clamp01((vh - r.top) / (r.height + vh * 0.5)).toFixed(3));
+        }
       }
     };
     updateRef.current = update;
