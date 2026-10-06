@@ -85,6 +85,8 @@ make the self-hosted compiler its own reference.
 
 - [x] More interactive homepage: cursor glow, magnetic buttons, letter hover, clickable chapter rail, draggable ring, counting numbers, scroll-tilted Playground and zooming final tunnel
 
+- [x] Professional full redesign: Graphite & Blue, Space Grotesk + DM Sans, split hero with live typing demo, sticky how-it-works card stack, bento features, learn/ship rows, get-started paths
+
 ## Sharing (done)
 - [x] Public /explore page: dialects, extensions, shared programs with search and install
 - [x] /my page: own dialects, extensions, files and shared programs
