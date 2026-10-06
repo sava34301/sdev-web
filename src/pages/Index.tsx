@@ -263,17 +263,32 @@ const Index = () => {
     } catch { /* no saved workspace */ }
   }, []);
 
-  // ⌘I / Ctrl+I (or plain "i" outside text fields) jumps straight to the IDE
+  // ⌘I / Ctrl+I (or plain "i" outside text fields) jumps to the IDE. Edited playground
+  // code is carried along so a shortcut never throws away the visitor's work.
+  const codeRef = useRef(code);
+  codeRef.current = code;
   useEffect(() => {
+    const go = () => {
+      const current = codeRef.current;
+      if (current !== DEFAULT_CODE) openInIde(current, 'playground');
+      else navigate('/ide');
+    };
     const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.isComposing) return;
       const t = e.target as HTMLElement;
-      const typing = t.closest('input, textarea, select, [contenteditable="true"], .cm-editor');
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); navigate('/ide'); }
-      else if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey && e.key === 'i') navigate('/ide');
+      const typing = t.closest('input, textarea, select, [contenteditable="true"], .cm-editor, [role="dialog"]');
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'i') {
+        // Chat and other inputs keep ⌘I for themselves; the playground editor carries its code over.
+        if (typing && !t.closest('.home-playground')) return;
+        e.preventDefault();
+        go();
+      } else if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && e.key === 'i') {
+        go();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate]);
+  }, [navigate, openInIde]);
 
   // Reveal sections as they scroll in
   useEffect(() => {
