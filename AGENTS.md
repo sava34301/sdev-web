@@ -1,3 +1,3 @@
 # Project Architecture Rules
 
-- Drive homepage scroll motion (hero depth, sticky "How it works" card stack) from one passive scroll listener writing CSS variables/styles, with IntersectionObserver for reveals, so native scrolling, accessibility and first paint stay intact; reduced motion and small screens get a static stacked layout.
+- Drive all homepage scroll motion (lazy-loaded WebGL flight, pinned chapter overlays, CSS 3D ring) from one passive scroll listener with sticky stages, so native scrolling, accessibility and first paint stay intact; reduced motion gets a static stacked layout.
