@@ -1,5 +1,5 @@
-import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
 import { CodeEditor } from '@/components/CodeEditor';
@@ -11,15 +11,15 @@ import { DownloadablesDropdown } from '@/components/DownloadablesDropdown';
 import { CodeTranslator } from '@/components/CodeTranslator';
 import { SdevChatbot } from '@/components/SdevChatbot';
 import { CompilerPanel } from '@/components/CompilerPanel';
-import { JourneyCanvas } from '@/components/home/JourneyCanvas';
-import type { JourneyScene } from '@/components/home/journeyScene';
+import { HeroDemo } from '@/components/home/HeroDemo';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Play, Terminal, Cpu, MonitorDot, Wand2,
-  ArrowRight, Code2, Palette, Box, BookOpen,
+  ArrowRight, Palette, BookOpen,
   Timer, Trash2, Share2, Copy, Check, ChevronDown,
-  Recycle, Globe2, Layers, UserCircle, Binary, History, ExternalLink, ArrowDown,
+  Recycle, Globe2, Layers, UserCircle, History, ExternalLink,
+  GraduationCap, Rocket, Download,
 } from 'lucide-react';
 import { GraphicsCommand, TurtleState, createGraphicsBuiltins } from '@/lang/graphics';
 import { Lexer } from '@/lang/lexer';
@@ -36,25 +36,36 @@ forge message be "Hello, World!"
 speak(message)
 `;
 
-/** Chapters of the scroll-driven compiler flight; `at` is the scroll progress where each is centred. */
-const CHAPTERS = [
-  { at: 0.12, k: '01', label: 'Source', title: 'Written in words you already use.', body: 'forge, conjure, iterate — or their Bulgarian, Japanese or Spanish equivalents. Keywords in 26 human languages, normalised before a single token is read.' },
-  { at: 0.27, k: '02', label: 'Tokens', title: 'Every word becomes a token.', body: 'A lexer written in sdev itself walks your file byte by byte, UTF-8 included, and hands the parser a clean stream.' },
-  { at: 0.42, k: '03', label: 'Tree', title: 'Structure, not guesswork.', body: 'The parser builds a syntax tree you can print, inspect and transform. Plain-English intent is understood before it ever gets here.' },
-  { at: 0.57, k: '04', label: 'Bytecode', title: 'A tiny stack machine.', body: 'Compact opcodes in the .sdevc format — ENTER, LOAD_LOC, CALL, RET — that you can disassemble line by line.' },
-  { at: 0.73, k: '05', label: 'Two metals', title: 'WASM in your browser. x86-64 on your machine.', body: 'A hand-written WebAssembly seed VM, and real GAS assembly linked into a static binary with no libc.' },
-  { at: 0.93, k: '06', label: 'Fixed point', title: 'It rebuilds itself, byte for byte.', body: 'Compile the compiler with itself and the bytes don’t move. 87 of 87 cases identical — every change has to survive that check.' },
+/** The four stages shown in "How it works"; each maps to one panel in the 3D stack. */
+const STEPS = [
+  {
+    title: 'Write it your way',
+    body: 'Use sdev keywords, plain English sentences, or your own language. Beginners and experts write in the same file.',
+    panel: { label: 'greeting.sdev', lines: ['ask "What is your name?" as name', 'say Hello, name', '', 'forge total be 12 * 4', 'speak(total)'] },
+  },
+  {
+    title: 'It understands you',
+    body: 'Before anything runs, sdev reads your intent and turns everyday phrasing into precise code. Programs that already work are left exactly as written.',
+    panel: { label: 'understood as', lines: ['forge name be ask("What is your name?")', 'speak("Hello, " + name)', '', 'forge total be 12 * 4', 'speak(total)'] },
+  },
+  {
+    title: 'Compiled by itself',
+    body: 'The lexer, parser and code generator are written in sdev. Compiling the compiler with itself gives the same bytes every time.',
+    panel: { label: 'bytecode', lines: ['0000  PUSH_STR   "What is…"', '0002  CALL       ask', '0004  STORE_GLB  name', '0006  PUSH_INT   48', '0008  CALL       speak'] },
+  },
+  {
+    title: 'Runs everywhere',
+    body: 'Instantly in your browser through WebAssembly, or as a small native x86-64 program on your computer — no extra libraries needed.',
+    panel: { label: 'targets', lines: ['✓ seed.wasm        browser · 0.4 ms start', '✓ greeting         x86-64 · static · 14 KB', '', '$ ./greeting', 'What is your name? Ada'] },
+  },
 ];
 
-const RING = [
-  { icon: Recycle, tone: 'text-primary', title: 'Self-hosting fixed point', body: 'The lexer, parser and generator are sdev source and rebuild themselves identically.' },
-  { icon: Layers, tone: 'text-brand-sky', title: 'Two kinds of metal', body: 'WebAssembly seed VM in the browser, static x86-64 binaries on your machine.' },
-  { icon: Cpu, tone: 'text-brand-cyan', title: 'Machine learning, in sdev', body: 'Tensors, autograd, transformers and training loops — with CUDA and WebGPU fast paths.' },
-  { icon: Binary, tone: 'text-brand-amber', title: 'Programs that edit the language', body: 'Read, rewrite and recompile sdev’s own source tree — and prove it still hits the fixed point.' },
-  { icon: Globe2, tone: 'text-brand-green', title: '26 human languages', body: 'Write forge, or its Bulgarian, Japanese or Spanish equivalent. Dialects you can publish.' },
-  { icon: Palette, tone: 'text-brand-rose', title: 'Drawing, maps and boards', body: 'Turtle and canvas graphics, Leaflet maps, and firmware pushed straight to microcontrollers.' },
-  { icon: Code2, tone: 'text-brand-steel', title: 'Inspect the output', body: 'Native builds emit readable GAS assembly, linked with as and ld. Nothing hidden.' },
-  { icon: Wand2, tone: 'text-brand-violet', title: 'An agent that understands you', body: '“calculate 23-21” just runs. Intent is read and repaired before the code is generated.' },
+const KEYWORD_LANGS = [
+  { word: 'forge', lang: 'English' },
+  { word: 'създай', lang: 'Bulgarian' },
+  { word: 'forja', lang: 'Spanish' },
+  { word: '作る', lang: 'Japanese' },
+  { word: 'schmiede', lang: 'German' },
 ];
 
 const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
@@ -71,21 +82,15 @@ const Index = () => {
   const [execTime, setExecTime] = useState<number>();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('output');
+  const [step, setStep] = useState(0);
+  const [kw, setKw] = useState(0);
+  const [cliCopied, setCliCopied] = useState(false);
   const canvasRef = useRef<CanvasHandle>(null);
   const playgroundRef = useRef<HTMLDivElement>(null);
-  const journeyRef = useRef<HTMLElement>(null);
-  const heroRef = useRef<HTMLDivElement>(null);
-  const chapterRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const railRef = useRef<HTMLOListElement>(null);
-  const ringSectionRef = useRef<HTMLElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<JourneyScene | null>(null);
-  const updateRef = useRef<() => void>(() => {});
-  const finalRef = useRef<HTMLElement>(null);
+  const howRef = useRef<HTMLElement>(null);
+  const stackRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
   const statsRef = useRef<HTMLDListElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  // ring drag state: extra rotation added on top of the scroll-driven spin
-  const ringDrag = useRef({ offset: 0, velocity: 0, active: false, lastX: 0, moved: 0, raf: 0 });
 
   const runCode = useCallback(() => {
     const outputLines: string[] = [];
@@ -186,111 +191,6 @@ const Index = () => {
     sessionStorage.setItem('sdev:imported_name', name);
     navigate('/ide');
   }, [navigate]);
-  const onSceneReady = useCallback((scene: JourneyScene | null) => {
-    sceneRef.current = scene;
-    updateRef.current();
-  }, []);
-
-  // One passive scroll listener drives every scroll-linked scene: the WebGL flight,
-  // the chapter overlays and the 3D feature ring. Native scrolling stays untouched.
-  useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let frame = 0;
-    const update = () => {
-      const vh = Math.max(window.innerHeight, 1);
-
-      const journey = journeyRef.current;
-      if (journey) {
-        const r = journey.getBoundingClientRect();
-        const p = clamp01(-r.top / Math.max(r.height - vh, 1));
-        sceneRef.current?.setProgress(p);
-        journey.style.setProperty('--jp', p.toFixed(4));
-        if (!reduce) {
-          const hero = heroRef.current;
-          if (hero) {
-            const o = clamp01(1 - p / 0.06);
-            hero.style.opacity = String(o);
-            hero.style.transform = `translate3d(0, ${(-p * 900).toFixed(1)}px, 0) scale(${(1 - p * 0.8).toFixed(4)})`;
-            hero.style.visibility = o < 0.01 ? 'hidden' : 'visible';
-          }
-          let active = -1;
-          CHAPTERS.forEach((c, i) => {
-            const el = chapterRefs.current[i];
-            if (!el) return;
-            const d = p - c.at;
-            const hold = i === CHAPTERS.length - 1 ? 0.07 : 0.035;
-            const o = clamp01(1 - (Math.abs(d) - hold) / 0.045);
-            el.style.opacity = String(o);
-            el.style.transform = `translate3d(0, ${(-d * 520).toFixed(1)}px, 0) rotateX(${(d * 40).toFixed(2)}deg)`;
-            el.style.visibility = o < 0.01 ? 'hidden' : 'visible';
-            if (o > 0.5) active = i;
-          });
-          railRef.current?.querySelectorAll('li').forEach((li, i) => li.toggleAttribute('data-active', i === active));
-        }
-      }
-
-      const ringSection = ringSectionRef.current;
-      const ring = ringRef.current;
-      if (ringSection && ring && !reduce) {
-        const r = ringSection.getBoundingClientRect();
-        const q = clamp01(-r.top / Math.max(r.height - vh, 1));
-        const step = 360 / RING.length;
-        const rot = -q * (360 - step);
-        ring.style.setProperty('--ring-rot', `${rot.toFixed(2)}deg`);
-        ring.style.setProperty('--ring-tilt', `${(10 - q * 16).toFixed(2)}deg`);
-        const total = rot + ringDrag.current.offset;
-        ring.style.setProperty('--ring-rot', `${total.toFixed(2)}deg`);
-        Array.from(ring.children).forEach((card, i) => {
-          const facing = Math.cos(((i * step + total) * Math.PI) / 180);
-          card.toggleAttribute('data-front', facing > 0.92);
-          (card as HTMLElement).style.opacity = (0.12 + 0.88 * clamp01(facing)).toFixed(3);
-        });
-      }
-
-      if (!reduce) {
-        // Playground tilts up out of the floor as it enters the viewport
-        const pg = playgroundRef.current;
-        if (pg) {
-          const r = pg.getBoundingClientRect();
-          pg.style.setProperty('--pg', clamp01((vh - r.top) / (vh * 0.85)).toFixed(3));
-        }
-        const stats = statsRef.current;
-        if (stats) {
-          const r = stats.getBoundingClientRect();
-          stats.style.setProperty('--sp', clamp01((vh - r.top) / (vh * 0.6)).toFixed(3));
-        }
-        // Final tunnel zooms toward you as you approach the end of the page
-        const fin = finalRef.current;
-        if (fin) {
-          const r = fin.getBoundingClientRect();
-          fin.style.setProperty('--fp', clamp01((vh - r.top) / (r.height + vh * 0.5)).toFixed(3));
-        }
-      }
-    };
-    updateRef.current = update;
-    const onScroll = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-    };
-  }, []);
-
-  // Returning visitors: remember the file they last had open in the IDE
-  useEffect(() => {
-    try {
-      const files = JSON.parse(localStorage.getItem('sdev-ide-files') || '[]') as { id: string; name: string }[];
-      const active = JSON.parse(localStorage.getItem('sdev-ide-active') || 'null');
-      const f = files.find(x => x.id === active) || files[files.length - 1];
-      if (f?.name) setLastFile(f.name);
-    } catch { /* no saved workspace */ }
-  }, []);
 
   // ⌘I / Ctrl+I (or plain "i" outside text fields) jumps to the IDE. Edited playground
   // code is carried along so a shortcut never throws away the visitor's work.
@@ -319,62 +219,82 @@ const Index = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [navigate, openInIde]);
 
+  // One passive scroll listener: hero depth and the "How it works" card stack.
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let frame = 0;
+    let lastStep = -1;
+    const update = () => {
+      const vh = Math.max(window.innerHeight, 1);
+      const hero = heroRef.current;
+      if (hero && !reduce) {
+        const r = hero.getBoundingClientRect();
+        hero.style.setProperty('--hp', clamp01(-r.top / Math.max(r.height, 1)).toFixed(3));
+      }
+      const how = howRef.current;
+      const stack = stackRef.current;
+      if (how && stack) {
+        const r = how.getBoundingClientRect();
+        const p = clamp01(-r.top / Math.max(r.height - vh, 1));
+        const raw = p * (STEPS.length - 1);
+        // rest on each card, then move briskly to the next
+        const seg = Math.min(Math.floor(raw), STEPS.length - 2);
+        const f = clamp01((raw - seg - 0.3) / 0.4);
+        const pos = seg + f * f * (3 - 2 * f);
+        how.style.setProperty('--how', p.toFixed(4));
+        const s = Math.min(STEPS.length - 1, Math.round(pos));
+        if (s !== lastStep) { lastStep = s; setStep(s); }
+        if (!reduce) {
+          Array.from(stack.children).forEach((el, i) => {
+            const d = i - pos; // <0 already passed, 0 active, >0 waiting behind
+            const card = el as HTMLElement;
+            if (d < 0) {
+              const k = Math.min(-d, 1);
+              card.style.transform = `translate3d(0, ${(-k * 60).toFixed(1)}px, ${(k * 160).toFixed(1)}px) rotateX(${(k * 8).toFixed(2)}deg)`;
+              card.style.opacity = Math.max(0, 1 - k * 1.8).toFixed(3);
+            } else {
+              card.style.transform = `translate3d(0, ${(-d * 34).toFixed(1)}px, ${(-d * 90).toFixed(1)}px)`;
+              card.style.opacity = Math.max(0, 1 - d * 0.28).toFixed(3);
+            }
+            card.style.zIndex = String(d < 0 ? 200 + i : 100 - i);
+            card.toggleAttribute('data-active', Math.abs(d) < 0.5);
+          });
+        }
+      }
+    };
+    const onScroll = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
+  }, []);
+
+  // Returning visitors: remember the file they last had open in the IDE
+  useEffect(() => {
+    try {
+      const files = JSON.parse(localStorage.getItem('sdev-ide-files') || '[]') as { id: string; name: string }[];
+      const active = JSON.parse(localStorage.getItem('sdev-ide-active') || 'null');
+      const f = files.find(x => x.id === active) || files[files.length - 1];
+      if (f?.name) setLastFile(f.name);
+    } catch { /* no saved workspace */ }
+  }, []);
+
   // Reveal sections as they scroll in
   useEffect(() => {
     const els = document.querySelectorAll('.reveal');
     const io = new IntersectionObserver((entries) => entries.forEach(en => {
       if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); }
-    }), { rootMargin: '0px 0px -8% 0px' });
+    }), { rootMargin: '0px 0px -10% 0px' });
     els.forEach(el => io.observe(el));
     return () => io.disconnect();
   }, []);
 
-  // Pointer interactions: cursor glow, magnetic buttons and 3D tilt cards (fine pointers only).
-  useEffect(() => {
-    if (!window.matchMedia('(pointer: fine)').matches) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let frame = 0;
-    let last: PointerEvent | null = null;
-    let magnet: HTMLElement | null = null;
-    let tilt: HTMLElement | null = null;
-    const apply = () => {
-      const e = last;
-      if (!e) return;
-      if (glowRef.current) glowRef.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
-      const t = e.target as HTMLElement;
-      const m = t.closest?.('.magnetic') as HTMLElement | null;
-      if (magnet && magnet !== m) magnet.style.transform = '';
-      magnet = m;
-      if (m) {
-        const r = m.getBoundingClientRect();
-        m.style.transform = `translate(${((e.clientX - r.left - r.width / 2) * 0.25).toFixed(1)}px, ${((e.clientY - r.top - r.height / 2) * 0.35).toFixed(1)}px)`;
-      }
-      const c = t.closest?.('.tilt') as HTMLElement | null;
-      if (tilt && tilt !== c) { tilt.style.setProperty('--rx', '0deg'); tilt.style.setProperty('--ry', '0deg'); }
-      tilt = c;
-      if (c) {
-        const r = c.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width - 0.5;
-        const y = (e.clientY - r.top) / r.height - 0.5;
-        c.style.setProperty('--rx', `${(-y * 12).toFixed(2)}deg`);
-        c.style.setProperty('--ry', `${(x * 14).toFixed(2)}deg`);
-        c.style.setProperty('--mx', `${e.clientX - r.left}px`);
-        c.style.setProperty('--my', `${e.clientY - r.top}px`);
-      }
-    };
-    const onMove = (e: PointerEvent) => {
-      last = e;
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(apply);
-    };
-    window.addEventListener('pointermove', onMove, { passive: true });
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('pointermove', onMove); };
-  }, []);
-
-  // Numbers count up the first time they scroll into view
+  // Numbers count up once
   useEffect(() => {
     const dl = statsRef.current;
     if (!dl) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
     const io = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
       io.disconnect();
@@ -382,214 +302,196 @@ const Index = () => {
         const to = Number(el.dataset.count);
         const t0 = performance.now();
         const tick = (now: number) => {
-          const k = Math.min((now - t0) / 1400, 1);
-          el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 4))));
+          const k = Math.min((now - t0) / 1200, 1);
+          el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3))));
           if (k < 1) requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
       });
-    }, { threshold: 0.4 });
+    }, { threshold: 0.5 });
     io.observe(dl);
     return () => io.disconnect();
   }, []);
 
-  // Drag (or flick) the feature ring; it keeps spinning briefly and settles on a card.
-  const step = 360 / RING.length;
-  const settleRing = useCallback(() => {
-    const d = ringDrag.current;
-    cancelAnimationFrame(d.raf);
-    const run = () => {
-      if (d.active) return;
-      if (Math.abs(d.velocity) > 0.05) {
-        d.offset += d.velocity;
-        d.velocity *= 0.92;
-      } else {
-        // ease toward the nearest card so one always faces you
-        const ring = ringRef.current;
-        const cur = parseFloat(ring?.style.getPropertyValue('--ring-rot') || '0');
-        const delta = Math.round(cur / step) * step - cur;
-        if (Math.abs(delta) < 0.05) { d.velocity = 0; return; }
-        d.offset += delta * 0.15;
-      }
-      updateRef.current();
-      d.raf = requestAnimationFrame(run);
-    };
-    d.raf = requestAnimationFrame(run);
-  }, [step]);
-  const onRingDown = (e: ReactPointerEvent) => {
-    const d = ringDrag.current;
-    d.active = true; d.lastX = e.clientX; d.velocity = 0; d.moved = 0;
-    cancelAnimationFrame(d.raf);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onRingMove = (e: ReactPointerEvent) => {
-    const d = ringDrag.current;
-    if (!d.active) return;
-    const dx = e.clientX - d.lastX;
-    d.lastX = e.clientX;
-    d.moved += Math.abs(dx);
-    d.velocity = dx * 0.25;
-    d.offset += dx * 0.25;
-    updateRef.current();
-  };
-  const onRingUp = () => {
-    const d = ringDrag.current;
-    if (!d.active) return;
-    d.active = false;
-    settleRing();
-  };
-  const focusRingCard = (i: number) => {
-    const d = ringDrag.current;
-    if (d.moved > 6) return; // it was a drag, not a click
-    const ring = ringRef.current;
-    const cur = parseFloat(ring?.style.getPropertyValue('--ring-rot') || '0');
-    let delta = (-i * step - cur) % 360;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-    d.velocity = 0;
-    const startOffset = d.offset;
-    const t0 = performance.now();
-    cancelAnimationFrame(d.raf);
-    const run = (now: number) => {
-      const k = Math.min((now - t0) / 650, 1);
-      d.offset = startOffset + delta * (1 - Math.pow(1 - k, 3));
-      updateRef.current();
-      if (k < 1) d.raf = requestAnimationFrame(run);
-    };
-    d.raf = requestAnimationFrame(run);
-  };
+  // Keyword shown in many human languages
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const id = window.setInterval(() => setKw((k) => (k + 1) % KEYWORD_LANGS.length), 2200);
+    return () => window.clearInterval(id);
+  }, []);
 
-  const jumpToChapter = (at: number) => {
-    const j = journeyRef.current;
-    if (!j) return;
-    const top = j.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo({ top: top + at * (j.offsetHeight - window.innerHeight), behavior: 'smooth' });
+  // Soft light that follows the pointer inside feature cards
+  const trackSpotlight = (e: ReactPointerEvent) => {
+    const card = (e.target as HTMLElement).closest('.feature') as HTMLElement | null;
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    card.style.setProperty('--my', `${e.clientY - r.top}px`);
   };
 
   const scrollToPlayground = () => playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const jumpToStep = (i: number) => {
+    const how = howRef.current;
+    if (!how) return;
+    const top = how.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: top + (i / (STEPS.length - 1)) * (how.offsetHeight - window.innerHeight), behavior: 'smooth' });
+  };
+  const copyCli = () => {
+    navigator.clipboard.writeText('npm i -g sdev-lang');
+    setCliCopied(true);
+    setTimeout(() => setCliCopied(false), 1800);
+  };
 
   return (
-    <div className="sdev-home min-h-screen bg-background relative overflow-clip">
+    <div className="sdev-home min-h-screen bg-background relative">
       <SEO
         title="sdev — Self-Hosted Language, WebAssembly + Native"
         description="sdev is a self-hosted programming language with a browser IDE, WebAssembly runtime, native x86-64 compiler, and built-in machine learning stack."
         path="/"
       />
 
-      <div ref={glowRef} className="cursor-glow" aria-hidden="true" />
-
       {/* ===== NAV ===== */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/40 bg-background/40 backdrop-blur-xl">
-        <nav className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <a href="/" className="flex items-center gap-2.5 group">
-              <img src={sdevLogo} alt="sdev" className="w-7 h-7 object-contain transition-transform duration-300 group-hover:rotate-6" />
+      <header className="site-nav">
+        <nav className="max-w-[1240px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <a href="/" className="flex items-center gap-2.5">
+              <img src={sdevLogo} alt="sdev" className="w-7 h-7 object-contain" />
               <span className="text-lg font-display text-foreground">sdev</span>
             </a>
-            <div className="hidden md:flex items-center gap-1">
-              <button onClick={scrollToPlayground} className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors">Playground</button>
-              <button onClick={() => navigate('/docs')} className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors">Docs</button>
+            <div className="hidden md:flex items-center gap-1 text-sm">
+              <button onClick={() => jumpToStep(0)} className="nav-link">How it works</button>
+              <button onClick={scrollToPlayground} className="nav-link">Playground</button>
+              <button onClick={() => navigate('/docs')} className="nav-link">Docs</button>
+              <button onClick={() => navigate('/explore')} className="nav-link">Community</button>
               <DownloadablesDropdown code={code} />
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <Button onClick={() => navigate('/account')} variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <UserCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Account</span>
+              <span className="hidden sm:inline">Sign in</span>
             </Button>
-            <Button onClick={() => navigate('/ide')} size="sm" className="gap-2 font-semibold shadow-[0_0_28px_hsl(var(--primary)/0.22)]">
-              <MonitorDot className="w-3.5 h-3.5" />
+            <Button onClick={() => navigate('/ide')} size="sm" className="gap-2 font-medium">
               Open IDE
-              <kbd className="hidden md:inline ml-0.5 px-1.5 py-0.5 rounded bg-primary-foreground/20 text-[10px] font-mono">⌘I</kbd>
+              <kbd className="hidden md:inline px-1.5 py-0.5 rounded bg-primary-foreground/15 text-[10px] font-mono">⌘I</kbd>
             </Button>
           </div>
         </nav>
       </header>
 
       <main id="main">
-        {/* ===== 3D COMPILER FLIGHT (pinned, scroll-scrubbed) ===== */}
-        <section ref={journeyRef} className="journey" aria-label="How sdev turns words into machine code">
-          <div className="journey-stage">
-            <div className="journey-backdrop" aria-hidden="true" />
-            <JourneyCanvas onReady={onSceneReady} />
-            <div className="journey-scrim" aria-hidden="true" />
-
-            <div className="journey-copy">
-              {/* Opening */}
-              <div ref={heroRef} className="journey-hero">
-                {lastFile ? (
-                  <button onClick={() => navigate('/ide')} className="rise group mb-6 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 pl-3 pr-2 py-1 text-xs text-foreground hover:bg-primary/20 transition-colors">
-                    <History className="w-3.5 h-3.5 text-primary" />
-                    Continue <span className="font-mono">{lastFile}</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-primary-foreground">Open IDE <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" /></span>
-                  </button>
-                ) : (
-                  <div className="rise mb-6 inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-[0.18em] text-primary">
-                    <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-primary" /></span>
-                    Self-hosting · released 2026
-                  </div>
-                )}
-                <h1 className="rise font-display uppercase journey-title">
-                  This is<br />
-                  <span className="journey-letters" aria-label="SDEV.">{'SDEV.'.split('').map((ch, i) => <span key={i} aria-hidden="true" className="gradient-text" style={{ ['--d' as string]: `${i * 70}ms` }}>{ch}</span>)}</span>
-                  <span className="sr-only"> The self-hosting programming language for WebAssembly and native x86-64</span>
-                </h1>
-                <p className="rise mt-6 text-lg md:text-2xl text-foreground/80 max-w-xl leading-snug" style={{ animationDelay: '80ms' }}>
-                  The self-hosting programming language for WebAssembly and native x86-64.
-                </p>
-                <div className="rise mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: '140ms' }}>
-                  <span className="magnetic"><Button onClick={() => navigate('/ide')} size="lg" className="gap-2 h-12 px-6 font-semibold">
-                    <MonitorDot className="w-4 h-4" /> Open the IDE
-                  </Button></span>
-                  <span className="magnetic"><Button onClick={scrollToPlayground} variant="outline" size="lg" className="gap-2 h-12 px-6 bg-background/40 backdrop-blur">
-                    <Play className="w-4 h-4" /> Try it here
-                  </Button></span>
+        {/* ===== HERO (split) ===== */}
+        <section ref={heroRef} className="hero">
+          <div className="hero-grid" aria-hidden="true" />
+          <div className="hero-light" aria-hidden="true" />
+          <div className="relative max-w-[1240px] mx-auto px-6 pt-32 pb-20 md:pt-40 md:pb-28 grid lg:grid-cols-[1.05fr_1fr] gap-14 items-center">
+            <div className="hero-copy">
+              {lastFile ? (
+                <button onClick={() => navigate('/ide')} className="enter group mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 pl-3 pr-1.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors">
+                  <History className="w-3.5 h-3.5 text-primary" />
+                  Continue <span className="font-mono text-foreground">{lastFile}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-xs text-primary-foreground">Open <ArrowRight className="w-3 h-3" /></span>
+                </button>
+              ) : (
+                <div className="enter mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-sm text-muted-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  Open source · A compiler written in itself
                 </div>
-                <div className="journey-hint rise" style={{ animationDelay: '400ms' }}>
-                  <ArrowDown className="w-3.5 h-3.5" /> Scroll to fly through the compiler
-                </div>
+              )}
+              <h1 className="enter text-[2.75rem] leading-[1.02] sm:text-6xl lg:text-[4.4rem]" style={{ animationDelay: '60ms' }}>
+                Write in plain words.<br />
+                <span className="text-primary">Run it anywhere.</span>
+                <span className="sr-only"> — sdev, the self-hosting programming language for WebAssembly and native x86-64</span>
+              </h1>
+              <p className="enter mt-6 text-lg text-muted-foreground max-w-xl leading-relaxed" style={{ animationDelay: '120ms' }}>
+                sdev is a programming language that reads like everyday language, runs instantly in your browser,
+                and compiles to fast native programs. Even its own compiler is written in sdev.
+              </p>
+              <div className="enter mt-9 flex flex-wrap items-center gap-3" style={{ animationDelay: '180ms' }}>
+                <Button onClick={() => navigate('/ide')} size="lg" className="h-12 px-6 gap-2 font-medium">
+                  Open the IDE <ArrowRight className="w-4 h-4" />
+                </Button>
+                <Button onClick={scrollToPlayground} variant="outline" size="lg" className="h-12 px-6 gap-2 bg-card/50">
+                  <Play className="w-4 h-4" /> Try it here
+                </Button>
               </div>
+              <button onClick={copyCli} className="enter mt-6 inline-flex items-center gap-3 font-mono text-sm text-muted-foreground hover:text-foreground transition-colors" style={{ animationDelay: '240ms' }}>
+                <span className="text-primary">$</span> npm i -g sdev-lang
+                {cliCopied ? <Check className="w-3.5 h-3.5 text-brand-green" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <div className="hero-visual enter" style={{ animationDelay: '200ms' }}>
+              <HeroDemo onOpen={(src, name) => openInIde(src, name)} />
+            </div>
+          </div>
 
-              {/* Chapters */}
-              {CHAPTERS.map((c, i) => (
-                <div
-                  key={c.k}
-                  ref={(el) => { chapterRefs.current[i] = el; }}
-                  className={`journey-chapter ${i === CHAPTERS.length - 1 ? 'journey-chapter-final' : ''}`}
-                >
-                  <div className="rule-label text-primary mb-4"><span className="text-foreground/60">{c.k}</span> &nbsp;/&nbsp; {c.label}</div>
-                  <h2 className="font-display uppercase text-4xl md:text-6xl leading-[0.92]">{c.title}</h2>
-                  <p className="mt-5 text-base md:text-lg text-muted-foreground leading-relaxed max-w-md">{c.body}</p>
-                  {i === CHAPTERS.length - 1 && (
-                    <div className="mt-7 flex flex-wrap gap-3 justify-center">
-                      <Button onClick={scrollToPlayground} size="lg" className="gap-2 h-12 px-6 font-semibold"><Play className="w-4 h-4" /> Run it yourself</Button>
-                      <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6 bg-background/40 backdrop-blur">Read the internals <ArrowRight className="w-4 h-4" /></Button>
-                    </div>
-                  )}
+          {/* stats band */}
+          <div className="relative border-y border-border bg-card/30">
+            <dl ref={statsRef} className="max-w-[1240px] mx-auto grid grid-cols-2 lg:grid-cols-4">
+              {[
+                { v: '2', l: 'Runtimes', d: 'WebAssembly and native x86-64' },
+                { v: '26', l: 'Human languages', d: 'for keywords and dialects' },
+                { v: '87', l: 'Self-compile checks', d: 'byte-identical every time' },
+                { v: '0', l: 'Dependencies', d: 'in native builds — no libc' },
+              ].map((s) => (
+                <div key={s.l} className="stat">
+                  <dt className="text-sm text-foreground font-medium">{s.l}</dt>
+                  <dd className="order-first font-display text-4xl md:text-5xl text-foreground" data-count={s.v}>{s.v}</dd>
+                  <dd className="text-sm text-muted-foreground">{s.d}</dd>
                 </div>
               ))}
-            </div>
+            </dl>
+          </div>
+        </section>
 
-            {/* Progress rail */}
-            <nav aria-label="Compiler chapters">
-              <ol ref={railRef} className="journey-rail">
-                {CHAPTERS.map((c) => (
-                  <li key={c.k}><button onClick={() => jumpToChapter(c.at)}><span>{c.k}</span>{c.label}</button></li>
-                ))}
-              </ol>
-            </nav>
-            <div className="journey-progress" aria-hidden="true"><span /></div>
-            <button onClick={scrollToPlayground} className="journey-skip">Skip to playground <ArrowDown className="w-3 h-3" /></button>
+        {/* ===== HOW IT WORKS (sticky 3D stack) ===== */}
+        <section ref={howRef} className="how" aria-labelledby="how-title">
+          <div className="how-stage">
+            <div className="max-w-[1240px] w-full mx-auto px-6 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-20 items-center">
+              <div>
+                <div className="eyebrow">How it works</div>
+                <h2 id="how-title" className="mt-3 text-4xl md:text-5xl leading-[1.05]">From a sentence to a running program.</h2>
+                <ol className="mt-10 space-y-1">
+                  {STEPS.map((s, i) => (
+                    <li key={s.title}>
+                      <button onClick={() => jumpToStep(i)} className="how-step" data-active={i === step || undefined}>
+                        <span className="how-step-num">{String(i + 1).padStart(2, '0')}</span>
+                        <span>
+                          <span className="block text-lg font-display text-foreground">{s.title}</span>
+                          <span className="how-step-body">{s.body}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div className="how-scene" aria-hidden="true">
+                <div ref={stackRef} className="how-stack">
+                  {STEPS.map((s, i) => (
+                    <div key={s.title} className="how-card">
+                      <div className="flex items-center justify-between border-b border-border px-5 h-11">
+                        <span className="font-mono text-xs text-muted-foreground">{s.panel.label}</span>
+                        <span className="font-mono text-xs text-primary">{String(i + 1).padStart(2, '0')} / 04</span>
+                      </div>
+                      <pre className="px-5 py-5 font-mono text-[13px] leading-7 text-foreground/90">
+                        {s.panel.lines.map((l, j) => <div key={j}>{l || '\u00a0'}</div>)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+                <div className="how-progress"><span /></div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* ===== PLAYGROUND ===== */}
         <section ref={playgroundRef} className="home-playground relative border-b border-border/60 bg-card/20">
-                    <div className="max-w-[1440px] mx-auto px-6 py-20 md:py-28 reveal">
+                    <div className="max-w-[1240px] mx-auto px-6 py-20 md:py-28 reveal">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
               <div>
-                <div className="rule-label mb-2 text-primary">Live environment</div>
-                <h2 className="text-4xl md:text-6xl uppercase">Playground</h2>
+                <div className="eyebrow mb-3">Playground</div>
+                <h2 className="text-4xl md:text-5xl leading-[1.05]">Try it right here.</h2>
                 <p className="text-sm text-muted-foreground mt-2">Runs entirely in your browser. Nothing to install.</p>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
@@ -679,96 +581,144 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ===== 3D FEATURE RING (pinned, scroll-rotated) ===== */}
-        <section ref={ringSectionRef} className="ring-section" aria-labelledby="ring-title">
-          <div className="ring-stage">
-            <div className="ring-heading">
-              <div className="rule-label text-primary mb-3">Inside the machine</div>
-              <h2 id="ring-title" className="font-display uppercase text-4xl md:text-6xl leading-[0.92] max-w-3xl">A language you can inspect all the way down.</h2>
-            </div>
-            <p className="ring-hint">Drag to spin · click a card to bring it forward</p>
-            <div className="ring-viewport" onPointerDown={onRingDown} onPointerMove={onRingMove} onPointerUp={onRingUp} onPointerCancel={onRingUp}>
-              <div ref={ringRef} className="ring" style={{ ['--n' as string]: RING.length }}>
-                {RING.map((f, i) => (
-                  <article key={f.title} className="ring-card" style={{ ['--i' as string]: i }} onClick={() => focusRingCard(i)}>
-                    <f.icon className={`w-6 h-6 ${f.tone}`} />
-                    <h3 className="mt-6 text-xl font-display uppercase leading-tight">{f.title}</h3>
-                    <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{f.body}</p>
-                    <span className="ring-card-index">{String(i + 1).padStart(2, '0')}</span>
-                  </article>
+        {/* ===== FEATURES (bento) ===== */}
+        <section className="max-w-[1240px] mx-auto px-6 py-24 md:py-32" aria-labelledby="features-title">
+          <div className="reveal max-w-2xl">
+            <div className="eyebrow">Why sdev</div>
+            <h2 id="features-title" className="mt-3 text-4xl md:text-5xl leading-[1.05]">Simple on the surface. Serious underneath.</h2>
+            <p className="mt-4 text-lg text-muted-foreground">Everything you need to learn, build and ship — and every layer stays open for you to inspect.</p>
+          </div>
+          <div onPointerMove={trackSpotlight} className="mt-14 grid gap-4 md:grid-cols-6">
+            <article className="feature reveal md:col-span-4">
+              <Recycle className="w-5 h-5 text-primary" />
+              <h3 className="mt-5 text-xl">It builds itself, byte for byte</h3>
+              <p className="mt-2 text-muted-foreground max-w-md">The compiler is written in sdev. Compile it with itself and the output never changes — every update must pass that check.</p>
+              <pre className="mt-6 rounded-lg border border-border bg-background/70 p-4 font-mono text-[12.5px] leading-6 text-muted-foreground overflow-x-auto">
+<span className="text-primary">$</span> sdev build compiler.sdev -o stage1{'\n'}<span className="text-primary">$</span> ./stage1 compiler.sdev -o stage2{'\n'}<span className="text-primary">$</span> cmp stage1 stage2{'\n'}<span className="text-brand-green">identical · 87 of 87 checks passed</span>
+              </pre>
+            </article>
+            <article className="feature reveal md:col-span-2" style={{ transitionDelay: '80ms' }}>
+              <Globe2 className="w-5 h-5 text-primary" />
+              <h3 className="mt-5 text-xl">Code in your own language</h3>
+              <p className="mt-2 text-muted-foreground">Keywords work in 26 human languages, and you can publish your own dialect.</p>
+              <div className="mt-8 h-16 relative overflow-hidden" aria-live="off">
+                {KEYWORD_LANGS.map((k, i) => (
+                  <div key={k.word} className="kw" data-active={i === kw || undefined}>
+                    <span className="font-mono text-3xl text-foreground">{k.word}</span>
+                    <span className="ml-3 text-sm text-muted-foreground">{k.lang}</span>
+                  </div>
                 ))}
               </div>
-              <div className="ring-floor" aria-hidden="true" />
-            </div>
+            </article>
+            <article className="feature reveal md:col-span-2">
+              <Wand2 className="w-5 h-5 text-primary" />
+              <h3 className="mt-5 text-xl">Understands what you mean</h3>
+              <p className="mt-2 text-muted-foreground">Type “calculate 23 - 21” or “ask for their name” and it just runs.</p>
+            </article>
+            <article className="feature reveal md:col-span-2" style={{ transitionDelay: '80ms' }}>
+              <Layers className="w-5 h-5 text-primary" />
+              <h3 className="mt-5 text-xl">Browser and native</h3>
+              <p className="mt-2 text-muted-foreground">Instant WebAssembly in any browser, small static binaries on your machine.</p>
+            </article>
+            <article className="feature reveal md:col-span-2" style={{ transitionDelay: '160ms' }}>
+              <Cpu className="w-5 h-5 text-primary" />
+              <h3 className="mt-5 text-xl">Machine learning built in</h3>
+              <p className="mt-2 text-muted-foreground">Tensors, training loops and transformers, with GPU fast paths.</p>
+            </article>
           </div>
         </section>
 
-        {/* ===== NUMBERS + TOOLCHAIN ===== */}
-        <section className="relative max-w-[1440px] mx-auto px-6 pb-24 reveal">
-          <dl ref={statsRef} className="stats-strip grid grid-cols-2 lg:grid-cols-4 border-y border-border/70 divide-x divide-border/70">
-            {[
-              { v: '2', l: 'runtimes — WASM and native x86-64' },
-              { v: '0', l: 'libc dependencies in native builds' },
-              { v: '87', l: 'byte-identical fixed-point cases' },
-              { v: '26', l: 'human keyword languages' },
-            ].map((s) => (
-              <div key={s.l} className="px-6 py-8">
-                <dt className="sr-only">{s.l}</dt>
-                <dd>
-                  <span className="block font-display text-5xl md:text-6xl gradient-text" data-count={s.v}>{s.v}</span>
-                  <span className="mt-2 block text-xs text-muted-foreground leading-snug">{s.l}</span>
-                </dd>
+        {/* ===== ZIGZAG ===== */}
+        <section className="border-t border-border bg-card/20">
+          <div className="max-w-[1240px] mx-auto px-6 py-24 md:py-32 space-y-24 md:space-y-32">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <div className="reveal reveal-left">
+                <GraduationCap className="w-6 h-6 text-primary" />
+                <h2 className="mt-5 text-3xl md:text-4xl leading-tight">Friendly enough for a first program.</h2>
+                <p className="mt-4 text-lg text-muted-foreground leading-relaxed">New programmers write the way they think. A mini quiz with a score takes a few lines — no rules to memorise first.</p>
+                <ul className="mt-6 space-y-2.5 text-muted-foreground">
+                  {['Plain-language input and output', 'Clear error messages that suggest a fix', 'Runs in the browser — nothing to install'].map((t) => (
+                    <li key={t} className="flex gap-3"><Check className="w-5 h-5 text-primary shrink-0" />{t}</li>
+                  ))}
+                </ul>
               </div>
-            ))}
-          </dl>
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button onClick={() => navigate('/ide')} className="bento tilt p-6 text-left">
-              <MonitorDot className="w-5 h-5 text-primary mb-3" />
-              <h3 className="text-base mb-1">Browser IDE</h3>
-              <p className="text-sm text-muted-foreground">Files, terminal, debugger, smart assistant, live preview.</p>
-            </button>
-            <button onClick={() => navigate('/docs')} className="bento tilt p-6 text-left">
-              <BookOpen className="w-5 h-5 text-brand-sky mb-3" />
-              <h3 className="text-base mb-1">Documentation</h3>
-              <p className="text-sm text-muted-foreground">The sdev Book, full reference and compiler internals.</p>
-            </button>
-            <div className="bento tilt p-6">
-              <Terminal className="w-5 h-5 text-brand-amber mb-3" />
-              <h3 className="text-base mb-1">CLI, VS Code, desktop</h3>
-              <p className="text-sm text-muted-foreground">npm CLI, an editor extension, and a desktop app that builds native binaries.</p>
+              <div className="reveal reveal-right code-card">
+                <div className="code-card-head">quiz.sdev</div>
+                <pre>{`score is 0
+ask "What is 2 + 2?" as answer
+when answer is 4
+  add 1 to score
+say "You got [score] out of 1"`}</pre>
+              </div>
             </div>
-            <div className="bento tilt p-6">
-              <Box className="w-5 h-5 text-brand-green mb-3" />
-              <h3 className="text-base mb-1">Packages &amp; hardware</h3>
-              <p className="text-sm text-muted-foreground">Decentralised <code className="font-mono text-xs">summon</code> packages and firmware flashed to real boards.</p>
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <div className="reveal reveal-left lg:order-2">
+                <Rocket className="w-6 h-6 text-primary" />
+                <h2 className="mt-5 text-3xl md:text-4xl leading-tight">Powerful enough to ship.</h2>
+                <p className="mt-4 text-lg text-muted-foreground leading-relaxed">The same language compiles to native x86-64, flashes firmware to hardware, and drives a full machine-learning stack.</p>
+                <ul className="mt-6 space-y-2.5 text-muted-foreground">
+                  {['Command-line tool, VS Code extension and desktop app', 'Packages shared with one command', 'Readable assembly output you can inspect'].map((t) => (
+                    <li key={t} className="flex gap-3"><Check className="w-5 h-5 text-primary shrink-0" />{t}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="reveal reveal-right code-card lg:order-1">
+                <div className="code-card-head">terminal</div>
+                <pre>{`$ sdev native app.sdev -o app
+  compiled → app (x86-64, static, 18 KB)
+$ ./app
+  Server ready on :8080
+$ sdev ext publish my-dialect
+  published @you/my-dialect`}</pre>
+              </div>
             </div>
           </div>
         </section>
 
+        {/* ===== GET STARTED ===== */}
+        <section className="max-w-[1240px] mx-auto px-6 py-24 md:py-32" aria-labelledby="start-title">
+          <div className="reveal text-center max-w-2xl mx-auto">
+            <div className="eyebrow">Get started</div>
+            <h2 id="start-title" className="mt-3 text-4xl md:text-5xl leading-[1.05]">Pick how you want to work.</h2>
+          </div>
+          <div className="mt-14 grid gap-4 md:grid-cols-3">
+            <button onClick={() => navigate('/ide')} className="path reveal text-left">
+              <MonitorDot className="w-6 h-6 text-primary" />
+              <h3 className="mt-5 text-xl">Browser IDE</h3>
+              <p className="mt-2 text-muted-foreground">Files, terminal, debugger and an assistant. Nothing to install.</p>
+              <span className="path-cta">Open the IDE <ArrowRight className="w-4 h-4" /></span>
+            </button>
+            <button onClick={copyCli} className="path reveal text-left" style={{ transitionDelay: '80ms' }}>
+              <Terminal className="w-6 h-6 text-primary" />
+              <h3 className="mt-5 text-xl">Command line</h3>
+              <p className="mt-2 text-muted-foreground font-mono text-sm">npm i -g sdev-lang</p>
+              <span className="path-cta">{cliCopied ? 'Copied' : 'Copy command'} {cliCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</span>
+            </button>
+            <button onClick={() => navigate('/docs')} className="path reveal text-left" style={{ transitionDelay: '160ms' }}>
+              <BookOpen className="w-6 h-6 text-primary" />
+              <h3 className="mt-5 text-xl">Documentation</h3>
+              <p className="mt-2 text-muted-foreground">The sdev Book, the full reference and how the compiler works.</p>
+              <span className="path-cta">Read the docs <ArrowRight className="w-4 h-4" /></span>
+            </button>
+          </div>
+        </section>
 
-        {/* ===== CTA ===== */}
-        <section ref={finalRef} className="home-final relative border-t border-border overflow-hidden">
-          <div className="final-tunnel" aria-hidden="true" />
-          <div className="relative max-w-[1440px] mx-auto px-6 py-28 md:py-40 text-center">
-            <div className="rule-label text-primary mb-4">Your workspace is ready</div>
-            <h2 className="text-4xl md:text-7xl uppercase">Start where you are.</h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              Open the IDE in this tab, or install the CLI and build a static binary in the next minute.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <span className="magnetic"><Button onClick={() => navigate('/ide')} size="lg" className="gap-2 h-12 px-6 font-semibold">
-                <MonitorDot className="w-4 h-4" /> Open the IDE
-              </Button></span>
-              <span className="magnetic"><Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="gap-2 h-12 px-6">
-                Documentation <ArrowRight className="w-4 h-4" />
-              </Button></span>
+        {/* ===== FINAL CTA ===== */}
+        <section className="final">
+          <div className="hero-grid" aria-hidden="true" />
+          <div className="relative max-w-[1240px] mx-auto px-6 py-28 md:py-36 text-center reveal">
+            <h2 className="text-4xl md:text-6xl leading-[1.05]">Start building in your browser.</h2>
+            <p className="mt-5 text-lg text-muted-foreground max-w-xl mx-auto">Free and open source. Your first program is one click away.</p>
+            <div className="mt-9 flex flex-wrap justify-center gap-3">
+              <Button onClick={() => navigate('/ide')} size="lg" className="h-12 px-6 gap-2 font-medium">Open the IDE <ArrowRight className="w-4 h-4" /></Button>
+              <Button onClick={() => navigate('/docs')} variant="outline" size="lg" className="h-12 px-6 gap-2 bg-card/50"><Download className="w-4 h-4" /> Install & docs</Button>
             </div>
           </div>
         </section>
 
         {/* ===== FOOTER ===== */}
         <footer className="border-t border-border bg-card/40">
-          <div className="max-w-[1400px] mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="max-w-[1240px] mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <img src={sdevLogo} alt="" className="w-6 h-6 object-contain" />
               <span className="font-display text-foreground">sdev</span>
@@ -783,7 +733,7 @@ const Index = () => {
               <span className="font-mono text-xs">v2.0.0</span>
             </div>
           </div>
-          <div className="max-w-[1400px] mx-auto px-6 pb-8 text-center text-xs text-muted-foreground">
+          <div className="max-w-[1240px] mx-auto px-6 pb-8 text-center text-xs text-muted-foreground">
             <a href="https://sdev.codes" className="hover:text-foreground transition-colors">SDEV Programming Language</a> © 2026 by <a href="https://web.sdev.codes/" className="hover:text-foreground transition-colors">Sava Milanov</a> is licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" className="hover:text-foreground transition-colors">Creative Commons Attribution-ShareAlike 4.0 International</a>
             <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="" className="inline-block max-w-[1em] max-h-[1em] ml-[0.2em]" />
             <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="" className="inline-block max-w-[1em] max-h-[1em] ml-[0.2em]" />
