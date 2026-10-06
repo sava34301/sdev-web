@@ -236,7 +236,11 @@ const Index = () => {
       if (how && stack) {
         const r = how.getBoundingClientRect();
         const p = clamp01(-r.top / Math.max(r.height - vh, 1));
-        const pos = p * (STEPS.length - 1); // 0..3, continuous
+        const raw = p * (STEPS.length - 1);
+        // rest on each card, then move briskly to the next
+        const seg = Math.min(Math.floor(raw), STEPS.length - 2);
+        const f = clamp01((raw - seg - 0.3) / 0.4);
+        const pos = seg + f * f * (3 - 2 * f);
         how.style.setProperty('--how', p.toFixed(4));
         const s = Math.min(STEPS.length - 1, Math.round(pos));
         if (s !== lastStep) { lastStep = s; setStep(s); }
@@ -247,12 +251,12 @@ const Index = () => {
             if (d < 0) {
               const k = Math.min(-d, 1);
               card.style.transform = `translate3d(0, ${(-k * 60).toFixed(1)}px, ${(k * 160).toFixed(1)}px) rotateX(${(k * 8).toFixed(2)}deg)`;
-              card.style.opacity = (1 - k).toFixed(3);
+              card.style.opacity = Math.max(0, 1 - k * 1.8).toFixed(3);
             } else {
               card.style.transform = `translate3d(0, ${(-d * 34).toFixed(1)}px, ${(-d * 90).toFixed(1)}px)`;
               card.style.opacity = Math.max(0, 1 - d * 0.28).toFixed(3);
             }
-            card.style.zIndex = String(100 - i);
+            card.style.zIndex = String(d < 0 ? 200 + i : 100 - i);
             card.toggleAttribute('data-active', Math.abs(d) < 0.5);
           });
         }

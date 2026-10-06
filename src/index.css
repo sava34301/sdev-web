@@ -382,6 +382,7 @@
   }
   @keyframes light-drift { to { translate: -45% 3rem; } }
   .hero-copy { transform: translateY(calc(var(--hp) * -40px)); opacity: calc(1 - var(--hp) * .6); }
+  .hero-copy, .hero-visual { min-width: 0; }
   .hero-visual {
     perspective: 1400px;
   }
@@ -427,6 +428,8 @@
     box-shadow: 0 30px 70px -30px hsl(var(--background)), 0 1px 0 hsl(var(--foreground) / .05) inset;
     will-change: transform, opacity; transition: border-color .4s, box-shadow .4s;
   }
+  .how-card pre { transition: opacity .35s; }
+  .how-card:not([data-active]) pre { opacity: .15; }
   .how-card[data-active] { border-color: hsl(var(--primary) / .55); box-shadow: 0 40px 90px -30px hsl(var(--primary) / .35), 0 1px 0 hsl(var(--foreground) / .06) inset; }
   .how-progress { margin-top: 2.5rem; height: 2px; background: hsl(var(--border)); border-radius: 2px; overflow: hidden; }
   .how-progress span { display: block; height: 100%; background: hsl(var(--primary)); transform-origin: left; transform: scaleX(var(--how)); }
