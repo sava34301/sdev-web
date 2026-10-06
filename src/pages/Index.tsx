@@ -19,7 +19,7 @@ import {
   ArrowRight, Palette, BookOpen,
   Timer, Trash2, Share2, Copy, Check, ChevronDown,
   Recycle, Globe2, Layers, UserCircle, History, ExternalLink,
-  GraduationCap, Rocket, Code2, Download,
+  GraduationCap, Rocket, Download,
 } from 'lucide-react';
 import { GraphicsCommand, TurtleState, createGraphicsBuiltins } from '@/lang/graphics';
 import { Lexer } from '@/lang/lexer';
