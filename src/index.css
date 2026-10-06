@@ -539,7 +539,7 @@
   .journey-letters > span:hover { transform: translateY(-0.12em) rotate(-6deg) scale(1.06); filter: drop-shadow(0 0 24px hsl(var(--primary) / .6)); }
   @keyframes letter-in { from { opacity: 0; transform: translateY(.5em) rotateX(-80deg); } }
 
-  .journey-rail button { display: flex; gap: .6rem; color: inherit; transition: color .2s; }
+  .journey-rail button { display: flex; gap: .6rem; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; transition: color .2s; }
   .journey-rail button:hover { color: hsl(var(--foreground)); }
 
   .home-playground { --pg: 1; perspective: 1800px; }
