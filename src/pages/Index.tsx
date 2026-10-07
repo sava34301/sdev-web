@@ -91,6 +91,7 @@ const Index = () => {
   const stackRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const statsRef = useRef<HTMLDListElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   const runCode = useCallback(() => {
     const outputLines: string[] = [];
@@ -221,19 +222,31 @@ const Index = () => {
 
   // One passive scroll listener: hero depth and the "How it works" card stack.
   useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const panels = Array.from(pageRef.current?.querySelectorAll<HTMLElement>('[data-scroll-depth]') || []);
     let frame = 0;
     let lastStep = -1;
     const update = () => {
       const vh = Math.max(window.innerHeight, 1);
+      const reduce = motion.matches || !desktop.matches;
+      const page = pageRef.current;
+      const distance = document.documentElement.scrollHeight - vh;
+      page?.style.setProperty('--reading', String(clamp01(window.scrollY / Math.max(distance, 1))));
+      panels.forEach(panel => {
+        const r = panel.getBoundingClientRect();
+        if (r.bottom < -100 || r.top > vh + 100) return;
+        const p = reduce ? 0 : Math.max(-1, Math.min(1, (r.top + r.height / 2 - vh / 2) / vh));
+        panel.style.setProperty('--depth', p.toFixed(4));
+      });
       const hero = heroRef.current;
-      if (hero && !reduce) {
+      if (hero) {
         const r = hero.getBoundingClientRect();
-        hero.style.setProperty('--hp', clamp01(-r.top / Math.max(r.height, 1)).toFixed(3));
+        hero.style.setProperty('--hp', (reduce ? 0 : clamp01(-r.top / Math.max(r.height, 1))).toFixed(3));
       }
       const how = howRef.current;
       const stack = stackRef.current;
-      if (how && stack) {
+      if (how && stack && !reduce) {
         const r = how.getBoundingClientRect();
         const p = clamp01(-r.top / Math.max(r.height - vh, 1));
         const raw = p * (STEPS.length - 1);
@@ -266,7 +279,8 @@ const Index = () => {
     update();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
+    motion.addEventListener('change', onScroll);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); motion.removeEventListener('change', onScroll); };
   }, []);
 
   // Returning visitors: remember the file they last had open in the IDE
@@ -313,13 +327,6 @@ const Index = () => {
     return () => io.disconnect();
   }, []);
 
-  // Keyword shown in many human languages
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const id = window.setInterval(() => setKw((k) => (k + 1) % KEYWORD_LANGS.length), 2200);
-    return () => window.clearInterval(id);
-  }, []);
-
   // Soft light that follows the pointer inside feature cards
   const trackSpotlight = (e: ReactPointerEvent) => {
     const card = (e.target as HTMLElement).closest('.feature') as HTMLElement | null;
@@ -329,12 +336,18 @@ const Index = () => {
     card.style.setProperty('--my', `${e.clientY - r.top}px`);
   };
 
-  const scrollToPlayground = () => playgroundRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollBehavior = (): ScrollBehavior => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  const scrollToPlayground = () => playgroundRef.current?.scrollIntoView({ behavior: scrollBehavior() });
   const jumpToStep = (i: number) => {
     const how = howRef.current;
     if (!how) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth < 1024) {
+      setStep(i);
+      how.querySelectorAll<HTMLElement>('.how-step')[i]?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+      return;
+    }
     const top = how.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo({ top: top + (i / (STEPS.length - 1)) * (how.offsetHeight - window.innerHeight), behavior: 'smooth' });
+    window.scrollTo({ top: top + (i / (STEPS.length - 1)) * (how.offsetHeight - window.innerHeight), behavior: scrollBehavior() });
   };
   const copyCli = () => {
     navigator.clipboard.writeText('npm i -g sdev-lang');
@@ -343,7 +356,7 @@ const Index = () => {
   };
 
   return (
-    <div className="sdev-home min-h-screen bg-background relative">
+    <div ref={pageRef} className="sdev-home min-h-screen bg-background relative">
       <SEO
         title="sdev — Self-Hosted Language, WebAssembly + Native"
         description="sdev is a self-hosted programming language with a browser IDE, WebAssembly runtime, native x86-64 compiler, and built-in machine learning stack."
@@ -377,6 +390,7 @@ const Index = () => {
             </Button>
           </div>
         </nav>
+        <div className="reading-progress" aria-hidden="true" />
       </header>
 
       <main id="main">
@@ -454,13 +468,13 @@ const Index = () => {
                 <ol className="mt-10 space-y-1">
                   {STEPS.map((s, i) => (
                     <li key={s.title}>
-                      <button onClick={() => jumpToStep(i)} className="how-step" data-active={i === step || undefined}>
+                      <Button variant="ghost" onClick={() => jumpToStep(i)} className="how-step h-auto whitespace-normal justify-start" aria-current={i === step ? 'step' : undefined} data-active={i === step || undefined}>
                         <span className="how-step-num">{String(i + 1).padStart(2, '0')}</span>
                         <span>
                           <span className="block text-lg font-display text-foreground">{s.title}</span>
                           <span className="how-step-body">{s.body}</span>
                         </span>
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ol>
@@ -522,7 +536,7 @@ const Index = () => {
               <ExampleCode onSelect={handleExampleSelect} />
             </div>
 
-            <div className="home-playground-shell grid lg:grid-cols-5 gap-px overflow-hidden rounded-lg border border-border bg-border shadow-[0_32px_100px_hsl(var(--background)/0.7)]">
+            <div data-scroll-depth className="scroll-depth home-playground-shell grid lg:grid-cols-5 gap-px overflow-hidden rounded-lg border border-border bg-border shadow-[0_32px_100px_hsl(var(--background)/0.7)]">
               <div className="lg:col-span-3">
                 <CodeEditor value={code} onChange={setCode} onRun={runCode} placeholder="// Write your sdev code here..." />
               </div>
@@ -609,6 +623,11 @@ const Index = () => {
                   </div>
                 ))}
               </div>
+              <div className="mt-4 flex flex-wrap gap-1" role="group" aria-label="Example language">
+                {KEYWORD_LANGS.map((language, i) => (
+                  <Button key={language.lang} variant="ghost" size="sm" aria-pressed={kw === i} onClick={() => setKw(i)} className="language-choice h-7 px-2 text-xs text-muted-foreground">{language.lang}</Button>
+                ))}
+              </div>
             </article>
             <article className="feature reveal md:col-span-2">
               <Wand2 className="w-5 h-5 text-primary" />
@@ -642,14 +661,14 @@ const Index = () => {
                   ))}
                 </ul>
               </div>
-              <div className="reveal reveal-right code-card">
+              <div className="reveal reveal-right"><div data-scroll-depth className="scroll-depth code-card">
                 <div className="code-card-head">quiz.sdev</div>
                 <pre>{`score is 0
 ask "What is 2 + 2?" as answer
 when answer is 4
   add 1 to score
 say "You got [score] out of 1"`}</pre>
-              </div>
+              </div></div>
             </div>
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
               <div className="reveal reveal-left lg:order-2">
@@ -662,7 +681,7 @@ say "You got [score] out of 1"`}</pre>
                   ))}
                 </ul>
               </div>
-              <div className="reveal reveal-right code-card lg:order-1">
+              <div className="reveal reveal-right lg:order-1"><div data-scroll-depth className="scroll-depth code-card">
                 <div className="code-card-head">terminal</div>
                 <pre>{`$ sdev native app.sdev -o app
   compiled → app (x86-64, static, 18 KB)
@@ -670,7 +689,7 @@ $ ./app
   Server ready on :8080
 $ sdev ext publish my-dialect
   published @you/my-dialect`}</pre>
-              </div>
+              </div></div>
             </div>
           </div>
         </section>

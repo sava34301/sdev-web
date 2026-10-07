@@ -613,3 +613,29 @@
   }
   .ide-menu-btn:hover { color: hsl(var(--foreground)); background: hsl(var(--muted) / 0.4); }
 }
+
+/* Refined homepage motion: native scrolling, no scroll capture. */
+@layer components {
+  .reading-progress { height: 2px; background: hsl(var(--primary)); transform: scaleX(var(--reading, 0)); transform-origin: left; position: absolute; inset: auto 0 -1px; pointer-events: none; }
+  .scroll-depth { --depth: 0; transform: perspective(1400px) translateY(calc(var(--depth) * 32px)) rotateX(calc(var(--depth) * -7deg)); transform-origin: center; }
+  .home-playground { scroll-margin-top: 80px; }
+  .feature { border-radius: 8px; }
+  .feature.reveal.is-visible { transition: border-color .2s ease, opacity .6s ease, transform .6s ease; }
+  .feature:focus-within { border-color: hsl(var(--primary) / .6); }
+  .language-choice[aria-pressed="true"] { color: hsl(var(--primary)); background: hsl(var(--primary) / .1); }
+  .how-step { align-items: flex-start; }
+  .how-step:hover { border-color: hsl(var(--border)); }
+  .demo-tabs { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .demo-tab[aria-selected="true"] { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .demo-code { height: 13rem; overflow: auto; }
+  .demo-output { height: 6rem; overflow: auto; }
+  .hero-demo { border-radius: 8px; }
+  .hero-light { display: none; }
+  @media (max-width: 1023px), (prefers-reduced-motion: reduce) {
+    .scroll-depth { transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kw, .kw[data-active] { transition: none; }
+    .feature, .path, .hero-demo { transition: none; }
+  }
+}
