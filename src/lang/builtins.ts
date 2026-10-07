@@ -12,6 +12,7 @@ import { registerRegex } from './builtins/regex';
 import { registerFunctional } from './builtins/functional';
 import { registerBuffer } from './builtins/buffer';
 import { registerHost } from './builtins/host';
+import { registerText } from './builtins/text';
 
 export * from './builtins/utils';
 
@@ -30,5 +31,6 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
     registerFunctional(builtins, output);
     registerBuffer(builtins, output);
     registerHost(builtins, output);
+    registerText(builtins, output);
     return builtins;
 }
