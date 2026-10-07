@@ -649,9 +649,25 @@ export default function IDEPage() {
     const { understandAsync } = await import('@/lang/agent');
     const { definedNames } = await import('@/lang/agent');
     const projectNames = [...new Set(files.filter((f) => f.id !== activeFile.id).flatMap((f) => [...definedNames(f.content)]))];
+    // The file keeps a hidden copy of what the understander made of it; when
+    // the content hasn't changed, re-runs use that copy and skip the thinking.
+    const { understandKey } = await import('@/lang/agent');
+    const fileKey = understandKey(dialectSrc, JSON.stringify([activeDialect?.slug ?? null, projectNames]));
+    const saved = activeFile.understood?.key === fileKey ? activeFile.understood.source : null;
     const understood = overrideSrc !== undefined
       ? { source: overrideSrc, notes: [{ line: 0 }] }
-      : await understandAsync(dialectSrc, { dialect: activeDialect, projectNames });
+      : saved !== null
+        ? { source: saved, notes: [] as unknown[] }
+        : await understandAsync(dialectSrc, { dialect: activeDialect, projectNames });
+    if (overrideSrc === undefined && saved === null) {
+      const fileId = activeFile.id;
+      const stored = { key: fileKey, source: understood.source };
+      setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: stored } : f)));
+    } else if (overrideSrc !== undefined) {
+      const fileId = activeFile.id;
+      const stored = { key: fileKey, source: overrideSrc };
+      setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: stored } : f)));
+    }
     const canonicalSrc = understood.source;
     if (understood.notes.length) {
       setStatusMsg(`Agent understood ${understood.notes.length} line${understood.notes.length === 1 ? '' : 's'}`);

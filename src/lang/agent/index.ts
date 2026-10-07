@@ -17,7 +17,7 @@ import { think, online } from './brain';
 import { sdevUnderstand, isAiDialect, aiToSdev } from './sdev-engine';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
-  learnFromProgram, type AgentMemory,
+  learnFromProgram, type AgentMemory, understandKey, recallResult, rememberResult,
 } from './memory';
 import type { UnderstandOptions, UnderstandResult } from './types';
 import { CANONICAL as CANONICAL_WORDS, type Intent } from './vocabulary';
@@ -179,6 +179,13 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   const prep = begin(source, opts);
   if (prep.mode === 'off') return skip(prep.stripped, 'off');
 
+  // Already understood this exact file before? Reuse it — no thinking twice.
+  const key = understandKey(source, JSON.stringify([opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
+  const cached = recallResult(prep.memory, key);
+  if (cached !== null) {
+    return { source: cached, changed: cached !== prep.stripped, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
+  }
+
   const rules = runRules(prep, opts);
   let current = rules.source;
   let brainUsed: 'none' | 'local' | 'online' = 'none';
@@ -194,6 +201,8 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
     if (improved) { current = improved.source; brainUsed = improved.used; }
   }
 
+  // Only keep answers that hold together, so a bad reading is never frozen in.
+  if (parses(current) && (rules.done || brainUsed !== 'none' || unknownNames(current).length === 0)) rememberResult(prep.memory, key, current);
   finish(prep, current, rules.learned);
   lastUnderstood.set(source, current);
   if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value as string);

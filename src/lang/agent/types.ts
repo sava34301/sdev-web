@@ -48,4 +48,6 @@ export interface UnderstandResult {
   unresolved: number[];
   /** which brain answered, if any */
   brainUsed: 'none' | 'local' | 'online';
+  /** true when this came straight from an earlier run of the same file */
+  cached?: boolean;
 }
