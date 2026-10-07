@@ -105,7 +105,7 @@ export function useCloudFiles() {
       code_snippet: code.slice(0, 10000),
       output: output.slice(0, 10000),
       status,
-      duration_ms: durationMs,
+      duration_ms: Math.round(durationMs),
     });
   }, [user]);
 

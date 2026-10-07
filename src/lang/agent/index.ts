@@ -62,7 +62,15 @@ function begin(source: string, opts: UnderstandOptions): Prepared {
   const learn = directives.learn ?? opts.learn ?? true;
   // sdev:ai files are translated to canonical sdev before anything else reads them
   const stripped = isAiDialect(source) ? aiToSdev(source) : directives.source;
-  return { mode, brain, learn, stripped, memory: loadMemory() };
+  const memory = loadMemory();
+  // Saved readings from an older understander may be wrong — start them over.
+  if (memory.agent !== AGENT_VERSION) {
+    memory.lines = {};
+    memory.results = {};
+    memory.agent = AGENT_VERSION;
+    saveMemory(memory);
+  }
+  return { mode, brain, learn, stripped, memory };
 }
 
 function skip(source: string, mode: AgentMode): UnderstandResult {
@@ -91,7 +99,7 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 }
 
 /** Bumped whenever the understander changes how it reads files, so saved readings from older versions are never reused. */
-export const AGENT_VERSION = 'u3';
+export const AGENT_VERSION = 'u4';
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
@@ -113,8 +121,10 @@ export function isRequest(source: string): boolean {
 }
 
 function runRules(prep: Prepared, opts: UnderstandOptions) {
-  const { source: remembered } = applyMemoryLines(prep.stripped, prep.memory);
-  if (isRequest(remembered)) {
+  // A request is a program to write, never a line to look up in memory.
+  const request = isRequest(prep.stripped);
+  const { source: remembered } = request ? { source: prep.stripped } : applyMemoryLines(prep.stripped, prep.memory);
+  if (request) {
     const count = remembered.split('\n').length;
     return {
       done: false as const, forceBrain: true as const, source: remembered,
@@ -294,7 +304,7 @@ async function askBrain(
   const original = prep.stripped.split('\n');
   // A remembered line is only trustworthy when the author's file, the draft
   // and the answer still line up one-to-one.
-  const aligned = original.length === before.length && before.length === after.length;
+  const aligned = original.length === before.length && before.length === after.length && !isRequest(prep.stripped);
   after.forEach((line, i) => {
     if (before[i] === undefined || before[i].trim() !== line.trim()) {
       notes.push({ line: i + 1, from: (before[i] ?? '').trim(), to: line.trim(), why: 'understood by the AI', source: 'brain' });
