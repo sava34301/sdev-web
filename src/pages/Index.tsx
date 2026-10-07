@@ -12,6 +12,7 @@ import { CodeTranslator } from '@/components/CodeTranslator';
 import { SdevChatbot } from '@/components/SdevChatbot';
 import { CompilerPanel } from '@/components/CompilerPanel';
 import { HeroDemo } from '@/components/home/HeroDemo';
+import { CompilerScene } from '@/components/home/CompilerScene';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -59,6 +60,8 @@ const STEPS = [
     panel: { label: 'targets', lines: ['✓ seed.wasm        browser · 0.4 ms start', '✓ greeting         x86-64 · static · 14 KB', '', '$ ./greeting', 'What is your name? Ada'] },
   },
 ];
+
+const SCENE_PANELS = STEPS.map(s => s.panel);
 
 const KEYWORD_LANGS = [
   { word: 'forge', lang: 'English' },
@@ -223,7 +226,7 @@ const Index = () => {
   // One passive scroll listener: hero depth and the "How it works" card stack.
   useEffect(() => {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const desktop = window.matchMedia('(min-width: 1024px)');
+    const desktop = window.matchMedia('(min-width: 768px)');
     const panels = Array.from(pageRef.current?.querySelectorAll<HTMLElement>('[data-scroll-depth]') || []);
     let frame = 0;
     let lastStep = -1;
@@ -341,7 +344,7 @@ const Index = () => {
   const jumpToStep = (i: number) => {
     const how = howRef.current;
     if (!how) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth < 1024) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth < 768) {
       setStep(i);
       how.querySelectorAll<HTMLElement>('.how-step')[i]?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
       return;
@@ -461,7 +464,8 @@ const Index = () => {
         {/* ===== HOW IT WORKS (sticky 3D stack) ===== */}
         <section ref={howRef} className="how" aria-labelledby="how-title">
           <div className="how-stage">
-            <div className="max-w-[1240px] w-full mx-auto px-6 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-20 items-center">
+            <CompilerScene panels={SCENE_PANELS} />
+            <div className="compiler-copy max-w-[1240px] w-full mx-auto px-6 grid md:grid-cols-[0.85fr_1.15fr] gap-12 items-center">
               <div>
                 <div className="eyebrow">How it works</div>
                 <h2 id="how-title" className="mt-3 text-4xl md:text-5xl leading-[1.05]">From a sentence to a running program.</h2>
