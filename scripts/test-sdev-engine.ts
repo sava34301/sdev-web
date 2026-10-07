@@ -47,7 +47,7 @@ for (const [name, src, want] of cases) {
 // unsure lines fall back to the TypeScript engine
 const fb = sdevUnderstand('hungry is yes:\n  say "eat"', []);
 ok('unsure → fallback', fb !== null && !fb.sure);
-understand('say hi 3 times');
+understand('reverse hello');
 ok('fallback engine used', lastEngine === 'ts');
 // cross-file names: a name from another file is known
 const xf = sdevUnderstand('add 1 to total', ['total']);
