@@ -16,6 +16,8 @@ export interface AgentMemory {
   /** files the agent has learned from */
   programs: number;
   updated: number;
+  /** whole-file results: hash of the file -> canonical source */
+  results?: Record<string, { source: string; at: number }>;
 }
 
 export function emptyMemory(): AgentMemory {
@@ -39,6 +41,7 @@ function sane(value: unknown): AgentMemory {
     lines: m.lines ?? {},
     programs: m.programs ?? 0,
     updated: m.updated ?? 0,
+    results: m.results ?? {},
   };
 }
 
@@ -120,4 +123,31 @@ export function memoryWordMap(memory: AgentMemory): Map<string, Intent> {
     if (entry.hits > 0) map.set(word, entry.intent);
   }
   return map;
+}
+
+/** Stable short hash of a file plus everything that changes how it is read. */
+export function understandKey(source: string, extra = ''): string {
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  const s = source + '\u0000' + extra;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619);
+    h2 = Math.imul(h2 ^ c, 2246822507);
+  }
+  return (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36) + s.length.toString(36);
+}
+
+const MAX_RESULTS = 100;
+
+export function recallResult(memory: AgentMemory, key: string): string | null {
+  return memory.results?.[key]?.source ?? null;
+}
+
+export function rememberResult(memory: AgentMemory, key: string, source: string): void {
+  const results = (memory.results ??= {});
+  results[key] = { source, at: Date.now() };
+  const keys = Object.keys(results);
+  if (keys.length > MAX_RESULTS) {
+    keys.sort((a, b) => results[a].at - results[b].at).slice(0, keys.length - MAX_RESULTS).forEach((k) => delete results[k]);
+  }
 }
