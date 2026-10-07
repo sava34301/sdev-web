@@ -22,6 +22,7 @@
     "test:beginner": "bun scripts/test-beginner.ts",
     "test:math": "bun scripts/test-math.ts",
     "test:tasks": "bun scripts/test-tasks.ts",
+    "test:engine": "bun scripts/test-sdev-engine.ts",
     "test:brain": "bun scripts/test-brain.ts",
     "test:linker": "bun scripts/test-linker.ts",
     "test:strip": "bun scripts/test-strip.ts",

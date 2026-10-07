@@ -28,6 +28,10 @@ export interface UnderstandOptions {
   localUrl?: string;
   /** print what the agent changed */
   verbose?: boolean;
+  /** 'auto' (default): the sdev-written engine first, TypeScript fallback; 'ts': fallback only */
+  engine?: 'auto' | 'ts';
+  /** names defined in other project files, so cross-file references resolve */
+  projectNames?: string[];
 }
 
 export interface UnderstandResult {
