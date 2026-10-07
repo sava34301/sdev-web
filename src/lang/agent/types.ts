@@ -12,7 +12,7 @@ export interface AgentNote {
   from: string;
   to: string;
   why: string;
-  source: 'rules' | 'memory' | 'brain';
+  source: 'rules' | 'memory' | 'brain' | 'sdev';
 }
 
 export interface UnderstandOptions {
