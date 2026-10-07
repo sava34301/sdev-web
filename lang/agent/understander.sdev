@@ -12,7 +12,7 @@
 // memory), so cross-file references are never mistaken for typos.
 // =====================================================================
 
-forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#"]
+forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]
 
 // ---------- small helpers ----------
 
@@ -33,6 +33,9 @@ conjure starts_canonical(body) ::
 ;;
 
 conjure is_quoted(t) ::
+  ponder regex_test(t, "[\\[{][\\p{L}_][\\p{L}\\p{N}_]*[\\]}]") ::
+    yield nope
+  ;;
   yield regex_test(t, "^(\"[^\"]*\"|'[^']*')$")
 ;;
 
@@ -66,6 +69,13 @@ conjure safe_expr(e, names) ::
   ponder is_quoted(e) either is_math(e) ::
     yield yep
   ;;
+  ponder regex_test(e, "[\\-*/%^]") either (regex_test(e, "\\+") also isnt regex_test(e, "[\"']")) ::
+    iterate w through regex_find_all(e, "[\\p{L}_][\\p{L}\\p{N}_]*") ::
+      ponder has(names, w) also names[w] equals "typed" ::
+        yield nope
+      ;;
+    ;;
+  ;;
   forge rest be regex_replace(e, "\"[^\"]*\"|'[^']*'", " ")
   forge parts be regex_find_all(rest, "[\\p{L}_][\\p{L}\\p{N}_]*")
   iterate p through parts ::
@@ -84,8 +94,63 @@ conjure safe_expr(e, names) ::
 conjure understand_line(body, names) ::
   forge b be regex_replace(body, "^what's\\s", "what is ", "i")
 
+
+  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"
+  forge m be regex_capture(b, "^ask\\s+(\"[^\"]*\"|'[^']*')\\s+(as|into|for|and\\s+call\\s+it|and\\s+store\\s+in)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)$", "i")
+  ponder m differs void ::
+    yield ["set " + m[3] + " to input(" + m[1] + ")", yep]
+  ;;
+  m be regex_capture(b, "^ask\\s+(the\\s+user\\s+)?for\\s+(their\\s+|a\\s+|the\\s+)?([\\p{L}_][\\p{L}\\p{N}_]*)$", "i")
+  ponder m differs void ::
+    yield ["set " + m[3] + " to input(" + quote_text(m[3] + "? ") + ")", yep]
+  ;;
+  m be regex_capture(b, "^(set\\s+)?([\\p{L}_][\\p{L}\\p{N}_]*)\\s*(=|to|be)\\s*ask\\s+(\"[^\"]*\"|'[^']*')$", "i")
+  ponder m differs void ::
+    yield ["set " + m[2] + " to input(" + m[4] + ")", yep]
+  ;;
+
+  // conditions: when/if COND [then][:]  ->  if COND
+  m be regex_capture(b, "^(when|if)\\s+(.+?)\\s*(then)?\\s*:?$", "i")
+  ponder m differs void also isnt regex_test(b, "::") ::
+    forge cond be m[2]
+    ponder regex_test(cond, "\\b(yes|no)\\b", "i") ::
+      yield [body, nope]
+    ;;
+    forge plain be regex_replace(cond, "\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\b", " ", "i")
+    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::
+      yield ["if " + cond, yep]
+    ;;
+    yield [body, nope]
+  ;;
+  ponder regex_test(b, "^(otherwise|else)\\s*:?$", "i") ::
+    yield ["else", yep]
+  ;;
+
+  // say with pieces side by side: say "Hello, " name "!"
+  m be regex_capture(b, "^(say|print|show)\\s+(.+)$", "i")
+  ponder m differs void ::
+    forge pieces be regex_find_all(m[2], "\"[^\"]*\"|'[^']*'|[\\p{L}_][\\p{L}\\p{N}_]*|[0-9.]+|,")
+    forge glued be regex_replace(m[2], "\"[^\"]*\"|'[^']*'|[\\p{L}_][\\p{L}\\p{N}_]*|[0-9.]+|[,\\s]", "")
+    ponder glued equals "" also measure(pieces) > 1 ::
+      forge parts be []
+      forge fine be yep
+      iterate pc through pieces ::
+        ponder pc differs "," ::
+          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::
+            parts be parts + [pc]
+          ;; otherwise ::
+            fine be nope
+          ;;
+        ;;
+      ;;
+      ponder fine also measure(parts) > 1 ::
+        yield ["say " + weave(parts, " + "), yep]
+      ;;
+    ;;
+  ;;
+
   // output: print / show / display / output / write / say / tell
-  forge m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\s+(.+)$", "i")
+  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\s+(.+)$", "i")
   ponder m differs void ::
     forge arg be trim(m[2])
     ponder is_quoted(arg) either is_math(arg) ::
@@ -179,6 +244,10 @@ conjure understand_source(source, known) ::
   forge sure be yep
   forge n be 0
   forge rows be lines(source)
+  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,
+  // unless the author already writes "end" or "::" blocks themselves
+  forge auto_end be isnt regex_test(source, "(^|\n)\s*end\s*($|\n)|::")
+  forge opens be []
   iterate line through rows ::
     n be n + 1
     forge indent be leading_space(line)
@@ -194,9 +263,9 @@ conjure understand_source(source, known) ::
         notes be notes + [[n, body, r[0]]]
       ;;
       // learn declarations as we go: forge x be … / conjure f(a, b)
-      forge d be regex_capture(r[0], "^forge\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
+      forge d be regex_capture(r[0], "^(?:forge|set)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
       ponder d differs void ::
-        names[d[1]] be yep
+        names[d[1]] be regex_test(r[0], "input\\(") ~ "typed" : yep
       ;;
       d be regex_capture(r[0], "^conjure\\s+([\\p{L}_][\\p{L}\\p{N}_]*)\\s*\\(([^)]*)\\)")
       ponder d differs void ::
@@ -209,8 +278,25 @@ conjure understand_source(source, known) ::
       ponder d differs void ::
         names[d[1]] be yep
       ;;
+      ponder auto_end ::
+        forge isElse be regex_test(r[0], "^else\\b")
+        cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1]) either (measure(indent) equals measure(opens[-1]) also isnt isElse)) ::
+          out be out + [opens[-1] + "end"]
+          opens be portion(opens, 0, measure(opens) - 1)
+        ;;
+        ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1]) ::
+          opens be portion(opens, 0, measure(opens) - 1)
+        ;;
+        ponder regex_test(r[0], "^(if|else|while|for|repeat)\\b") ::
+          opens be opens + [indent]
+        ;;
+      ;;
       out be out + [indent + r[0]]
     ;;
+  ;;
+  cycle measure(opens) > 0 ::
+    out be out + [opens[-1] + "end"]
+    opens be portion(opens, 0, measure(opens) - 1)
   ;;
   yield [unlines(out), sure, notes]
 ;;

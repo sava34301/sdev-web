@@ -647,9 +647,11 @@ export default function IDEPage() {
     // `!#agent:off` in the file switches it off; `!#agent: local|online`
     // chooses where its smart core runs.
     const { understandAsync } = await import('@/lang/agent');
+    const { definedNames } = await import('@/lang/agent');
+    const projectNames = [...new Set(files.filter((f) => f.id !== activeFile.id).flatMap((f) => [...definedNames(f.content)]))];
     const understood = overrideSrc !== undefined
       ? { source: overrideSrc, notes: [{ line: 0 }] }
-      : await understandAsync(dialectSrc, { dialect: activeDialect });
+      : await understandAsync(dialectSrc, { dialect: activeDialect, projectNames });
     const canonicalSrc = understood.source;
     if (understood.notes.length) {
       setStatusMsg(`Agent understood ${understood.notes.length} line${understood.notes.length === 1 ? '' : 's'}`);

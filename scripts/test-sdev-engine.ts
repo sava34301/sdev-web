@@ -22,17 +22,24 @@ const cases: [string, string, string][] = [
   ['decrease', 'set n to 10\ndecrease n by 4\nshow n', '6'],
   ['becomes', 'set t to 1\nt becomes t * 9\nprint t', '9'],
   ['quoted say', 'say "Hi there"', 'Hi there'],
+  ['ask … as name', 'ask "Name?" as name\nsay "Hello, " name', 'Hello, Sam'],
+  ['ask for', 'ask for name\nsay "Hi " name "!"', 'Hi Sam!'],
+  ['= ask', 'name = ask "Who?"\nprint name', 'Sam'],
+  ['when / otherwise', 'set a to 2\nwhen a is 2\n  say "two"\notherwise\n  say "no"\nsay "done"', 'two|done'],
+  ['if with colon', 'set n to 5\nif n > 3:\n  print n\nsay "end"', '5|end'],
+  ['nested blocks', 'set n to 5\nif n > 3\n  if n < 9\n    say "mid"\nsay "x"', 'mid|x'],
   ['mixed canonical', 'forge a be 2\nprint a + 3', '5'],
 ];
 for (const [name, src, want] of cases) {
+  (globalThis as { prompt?: () => string }).prompt = () => 'Sam';
   const s = sdevUnderstand(src, []);
   const r = execute(src);
   ok(name, !!s?.sure && lastEngine === 'sdev' && r.success && r.output.join('|') === want, JSON.stringify({ s, r, engineError }));
 }
 // unsure lines fall back to the TypeScript engine
-const fb = sdevUnderstand('ask "name" as n', []);
+const fb = sdevUnderstand('hungry is yes:\n  say "eat"', []);
 ok('unsure → fallback', fb !== null && !fb.sure);
-understand('ask "What is your name?" as name\nsay "Hello, " name');
+understand('say hi 3 times');
 ok('fallback engine used', lastEngine === 'ts');
 // cross-file names: a name from another file is known
 const xf = sdevUnderstand('add 1 to total', ['total']);
