@@ -100,6 +100,7 @@ make the self-hosted compiler its own reference.
 - [x] Text-tooling primitives (lines, regex_capture/replace/find_all, char tests…) in JS + Python
 - [x] `lang/agent/understander.sdev` v1: output, calculations, set/add/increase/decrease/becomes; TS fallback when unsure
 - [x] Project names option for cross-file references; test:engine suite
-- [ ] Port remaining TS rules to sdev: ask/input, when/otherwise, loops & tasks, block closing, dialect words
-- [ ] Workspace symbol graph from all IDE files fed into projectNames
+- [x] Port ask/input, when/otherwise, side-by-side say, block closing by indentation to sdev
+- [ ] Port remaining TS rules: yes/no answers, number conversion of typed answers, loops & tasks, placeholders, dialect words
+- [x] Names from the other IDE files fed into the understander
 - [ ] AI-native dialect (`sdev:ai`) inside the sdev engine
