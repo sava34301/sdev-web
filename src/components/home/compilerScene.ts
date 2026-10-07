@@ -60,8 +60,9 @@ export function createCompilerScene(host: HTMLDivElement, section: HTMLElement, 
       block.rotation.y = d * -.08;
       block.visible = d > -.8;
     });
-    camera.position.set(-3.7 + Math.sin(p * Math.PI) * 1.3, 1.2 + p * .7, 14 - Math.sin(p * Math.PI) * 1.7);
-    camera.lookAt(-3.5, .5, 0);
+    const framingDistance = Math.max(17, 6.4 / (.43 * 2 * Math.tan(THREE.MathUtils.degToRad(18)) * camera.aspect));
+    camera.position.set(-3.1 + Math.sin(p * Math.PI) * 1.3, 1.2 + p * .7, framingDistance - Math.sin(p * Math.PI));
+    camera.lookAt(-3.1, .5, 0);
     renderer.render(scene, camera);
     host.dataset.progress = p.toFixed(3);
   }; render();

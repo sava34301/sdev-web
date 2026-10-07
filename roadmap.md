@@ -5,7 +5,7 @@ SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
 ## Current task
-- [ ] Research professional 3D scroll sites and replace the flat card stack with a real scroll-controlled 3D compiler scene.
+- [x] Research professional 3D scroll sites and replace the flat card stack with a real scroll-controlled 3D compiler scene; verify scene progress, framing, Playground and static mobile/reduced-motion fallbacks.
 - [x] Add refined scroll depth, reading progress, selectable code demos and language examples; verified Playground output, mobile overflow and reduced motion in the browser.
 - [x] Redesign the homepage as an immersive 3D scroll experience while keeping
       the Playground functional and the IDE immediately accessible.
