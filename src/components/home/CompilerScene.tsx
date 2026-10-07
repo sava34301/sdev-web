@@ -13,6 +13,7 @@ export function CompilerScene({ panels }: { panels: { label: string; lines: stri
     const start = () => {
       const current = ++generation;
       dispose?.(); dispose = undefined;
+      host.dataset.ready = 'false';
       if (motion.matches || !size.matches) return;
       import('./compilerScene').then(({ createCompilerScene }) => {
         if (generation !== current) return;

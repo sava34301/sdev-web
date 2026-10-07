@@ -42,6 +42,38 @@ export function createCompilerScene(host: HTMLDivElement, section: HTMLElement, 
     const edge = new THREE.LineSegments(new THREE.EdgesGeometry(slab.geometry), new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: .4 })); group.add(edge);
     rig.add(group); return group;
   });
+  // A deterministic exploded assembly, not an autoplaying decorative object.
+  const machine = new THREE.Group(); rig.add(machine);
+  const tileGeometry = new THREE.BoxGeometry(.62, .2, .62);
+  const tiles: THREE.Mesh[] = [];
+  for (let z = 0; z < 6; z++) {
+    for (let x = 0; x < 6; x++) {
+      const tile = new THREE.Mesh(tileGeometry, new THREE.MeshStandardMaterial({ color: (x + z) % 5 === 0 ? primary : surface, roughness: .28, metalness: .65 }));
+      tile.userData.x = x; tile.userData.z = z;
+      machine.add(tile); tiles.push(tile);
+    }
+  }
+  const processor = new THREE.Mesh(new THREE.BoxGeometry(4.9, .28, 4.9), new THREE.MeshStandardMaterial({ color: surface, metalness: .8, roughness: .35 }));
+  processor.position.y = -.4; machine.add(processor);
+  const outline = new THREE.LineSegments(new THREE.EdgesGeometry(processor.geometry), new THREE.LineBasicMaterial({ color: primary }));
+  outline.position.copy(processor.position); machine.add(outline);
+  const targets = new THREE.Group(); rig.add(targets);
+  const targetBlocks = ['WebAssembly', 'Native x86-64'].map((label, i) => {
+    const c = document.createElement('canvas'); c.width = 800; c.height = 400;
+    const ctx = c.getContext('2d');
+    if (!ctx) throw new Error('Canvas unavailable');
+    ctx.fillStyle = surface.getStyle(); ctx.fillRect(0, 0, 800, 400);
+    ctx.fillStyle = primary.getStyle(); ctx.fillRect(40, 45, 70, 8);
+    ctx.font = '500 28px monospace'; ctx.fillStyle = muted.getStyle(); ctx.fillText(i ? '02 / DESKTOP' : '01 / BROWSER', 40, 115);
+    ctx.font = '500 48px monospace'; ctx.fillStyle = foreground.getStyle(); ctx.fillText(label, 40, 225);
+    ctx.font = '28px monospace'; ctx.fillStyle = primary.getStyle(); ctx.fillText(i ? 'native machine code' : 'portable bytecode', 40, 315);
+    const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace; textures.push(texture);
+    const target = new THREE.Group();
+    target.add(new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.75, .4), new THREE.MeshStandardMaterial({ color: surface, metalness: .7, roughness: .3 })));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(3.48, 1.73), new THREE.MeshBasicMaterial({ map: texture })); face.position.z = .21;
+    target.add(face); targets.add(target); return target;
+  });
+  const smooth = (start: number, end: number, p: number) => THREE.MathUtils.smoothstep(p, start, end);
   const resize = () => { const { width, height } = host.getBoundingClientRect(); renderer.setSize(width, height); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); };
   const observer = new ResizeObserver(resize); observer.observe(host); resize();
   let frame = 0;
@@ -51,20 +83,39 @@ export function createCompilerScene(host: HTMLDivElement, section: HTMLElement, 
     frame = requestAnimationFrame(render);
     if (!visible) return;
     const p = Number(section.style.getPropertyValue('--how') || 0);
-    const stage = p * 3;
-    rig.rotation.y = -.48 + p * .68;
+    const stage = Math.min(p * 3, 1.4);
+    const assembly = smooth(.4, .7, p);
+    const split = smooth(.72, .96, p);
+    rig.rotation.y = -.55 + p * 1.05;
     rig.rotation.x = .12 - Math.sin(p * Math.PI) * .16;
     blocks.forEach((block, i) => {
       const d = i - stage;
-      block.position.set(d * .6, d * .65, -d * 3.1);
-      block.rotation.y = d * -.08;
-      block.visible = d > -.8;
+      const explode = smooth(.27, .48, p);
+      block.position.set(d * .6 + (i % 2 ? 1 : -1) * explode * 7, d * .65 + explode * (i - 1.5) * 3, -d * 3.1 - explode * 3);
+      block.rotation.y = d * -.08 + explode * (i % 2 ? .6 : -.6);
+      block.visible = d > -.8 && p < .56;
+    });
+    machine.visible = p > .35 && p < .96;
+    machine.rotation.set(.65 + assembly * .22, assembly * .6, 0);
+    machine.scale.setScalar(1 - split * .7);
+    tiles.forEach(tile => {
+      const x = Number(tile.userData.x); const z = Number(tile.userData.z);
+      const scatter = 1 - assembly;
+      tile.position.set((x - 2.5) * (.73 + scatter * 1.6), scatter * ((x + z) % 4) * 1.2, (z - 2.5) * (.73 + scatter * 1.6));
+      tile.rotation.set(scatter * .35, scatter * (x - 2.5) * .15, 0);
+    });
+    targets.visible = p > .74;
+    targetBlocks.forEach((target, i) => {
+      target.position.set(-.8 + (i ? 1 : -1) * (1 + split * .85), (i ? -.75 : .75) * split, split);
+      target.rotation.y = (i ? -.2 : .2) * split;
+      target.scale.setScalar(.05 + split * .95);
     });
     const framingDistance = Math.max(17, 6.4 / (.43 * 2 * Math.tan(THREE.MathUtils.degToRad(18)) * camera.aspect));
     camera.position.set(-3.1 + Math.sin(p * Math.PI) * 1.3, 1.2 + p * .7, framingDistance - Math.sin(p * Math.PI));
     camera.lookAt(-3.1, .5, 0);
     renderer.render(scene, camera);
     host.dataset.progress = p.toFixed(3);
+    host.dataset.chapter = p < .35 ? 'layers' : p < .74 ? 'assembly' : 'targets';
   }; render();
   return () => {
     cancelAnimationFrame(frame); observer.disconnect(); visibility.disconnect();
