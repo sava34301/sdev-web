@@ -88,6 +88,67 @@ conjure safe_expr(e, names) ::
   yield regex_test(rest, "^[\\p{L}\\p{N}_\\s+\\-*/().%^,\\[\\]]*$")
 ;;
 
+// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)
+// returns "" when a placeholder names something unknown
+conjure fill_placeholders(q, names) ::
+  forge inner be snatch(q, 1, measure(q) - 1)
+  forge parts be []
+  forge rest be inner
+  forge m be regex_capture(rest, "^([^\\[{]*)[\\[{]([\\p{L}_][\\p{L}\\p{N}_]*)[\\]}](.*)$", "s")
+  cycle m differs void ::
+    ponder isnt is_known(m[2], names) ::
+      yield ""
+    ;;
+    ponder m[1] differs "" ::
+      parts be parts + [quote_text(m[1])]
+    ;;
+    parts be parts + ["str(" + m[2] + ")"]
+    rest be m[3]
+    m be regex_capture(rest, "^([^\\[{]*)[\\[{]([\\p{L}_][\\p{L}\\p{N}_]*)[\\]}](.*)$", "s")
+  ;;
+  ponder rest differs "" ::
+    parts be parts + [quote_text(rest)]
+  ;;
+  yield weave(parts, " + ")
+;;
+
+conjure has_placeholder(t) ::
+  yield regex_test(t, "^[\"'].*[\\[{][\\p{L}_][\\p{L}\\p{N}_]*[\\]}].*[\"']$")
+;;
+
+// a free loop counter name
+conjure counter(names) ::
+  iterate c through ["i", "j", "k", "_n"] ::
+    ponder isnt has(names, c) ::
+      yield c
+    ;;
+  ;;
+  yield "_n"
+;;
+
+conjure asked(name, q, names) ::
+  ponder has(names, "#num:" + name) ::
+    yield "set " + name + " to num(input(" + q + "))"
+  ;;
+  yield "set " + name + " to input(" + q + ")"
+;;
+
+// something to say: a quoted text, a known name, or bare words
+conjure sayable(arg, names) ::
+  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::
+    yield arg
+  ;;
+  ponder regex_test(arg, "^[\\p{L}\\p{N} ,.!?'-]+$") ::
+    iterate w through regex_find_all(arg, "[\\p{L}_][\\p{L}\\p{N}_]*") ::
+      ponder is_known(w, names) ::
+        yield ""
+      ;;
+    ;;
+    yield quote_text(arg)
+  ;;
+  yield ""
+;;
+
 // ---------- one line ----------
 // returns [canonical, sure]
 
@@ -98,21 +159,58 @@ conjure understand_line(body, names) ::
   // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"
   forge m be regex_capture(b, "^ask\\s+(\"[^\"]*\"|'[^']*')\\s+(as|into|for|and\\s+call\\s+it|and\\s+store\\s+in)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)$", "i")
   ponder m differs void ::
-    yield ["set " + m[3] + " to input(" + m[1] + ")", yep]
+    yield [asked(m[3], m[1], names), yep]
   ;;
   m be regex_capture(b, "^ask\\s+(the\\s+user\\s+)?for\\s+(their\\s+|a\\s+|the\\s+)?([\\p{L}_][\\p{L}\\p{N}_]*)$", "i")
   ponder m differs void ::
-    yield ["set " + m[3] + " to input(" + quote_text(m[3] + "? ") + ")", yep]
+    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]
   ;;
   m be regex_capture(b, "^(set\\s+)?([\\p{L}_][\\p{L}\\p{N}_]*)\\s*(=|to|be)\\s*ask\\s+(\"[^\"]*\"|'[^']*')$", "i")
   ponder m differs void ::
-    yield ["set " + m[2] + " to input(" + m[4] + ")", yep]
+    yield [asked(m[2], m[4], names), yep]
+  ;;
+
+  // say X N times
+  m be regex_capture(b, "^(say|print|show|write)\\s+(.+?)\\s+(\\d+|[\\p{L}_][\\p{L}\\p{N}_]*)\\s+times$", "i")
+  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::
+    forge what be sayable(trim(m[2]), names)
+    ponder what differs "" ::
+      forge c be counter(names)
+      yield ["set " + c + " to 0\nwhile " + c + " < " + m[3] + "\n  say " + what + "\n  set " + c + " to " + c + " + 1\nend", yep]
+    ;;
+    yield [body, nope]
+  ;;
+  // count / print the numbers from A to B [by S]  ·  count to N
+  m be regex_capture(b, "^(count|print|show|say|list)\\s+(the\\s+)?(numbers\\s+)?from\\s+(-?[0-9]+)\\s+(to|until|through)\\s+(-?[0-9]+)(\\s+by\\s+([0-9]+))?$", "i")
+  ponder m equals void ::
+    forge m2 be regex_capture(b, "^(please\\s+)?count\\s+(up\\s+)?to\\s+([0-9]+)$", "i")
+    ponder m2 differs void ::
+      m be ["", "", "", "", "1", "", m2[3], "", ""]
+    ;;
+  ;;
+  ponder m differs void ::
+    forge c be counter(names)
+    forge step be m[8] equals "" ~ "1" : m[8]
+    forge down be num(m[4]) > num(m[6])
+    forge cmp be down ~ " >= " : " <= "
+    forge op be down ~ " - " : " + "
+    yield ["set " + c + " to " + m[4] + "\nwhile " + c + cmp + m[6] + "\n  say " + c + "\n  set " + c + " to " + c + op + step + "\nend", yep]
+  ;;
+  // repeat N times  (a block — its counter is bumped where the block ends)
+  m be regex_capture(b, "^(repeat|do\\s+this|do)\\s+(\\d+|[\\p{L}_][\\p{L}\\p{N}_]*)\\s+times\\s*:?$", "i")
+  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::
+    forge c be counter(names)
+    yield ["set " + c + " to 0\nwhile " + c + " < " + m[2] + "\n#bump " + c, yep]
   ;;
 
   // conditions: when/if COND [then][:]  ->  if COND
   m be regex_capture(b, "^(when|if)\\s+(.+?)\\s*(then)?\\s*:?$", "i")
   ponder m differs void also isnt regex_test(b, "::") ::
     forge cond be m[2]
+    forge yn be regex_capture(cond, "^([\\p{L}_][\\p{L}\\p{N}_]*)\\s+(is|equals|==?)\\s+[\"']?(yes|no|y|n)[\"']?$", "i")
+    ponder yn differs void also is_known(yn[1], names) ::
+      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]
+    ;;
     ponder regex_test(cond, "\\b(yes|no)\\b", "i") ::
       yield [body, nope]
     ;;
@@ -121,6 +219,10 @@ conjure understand_line(body, names) ::
       yield ["if " + cond, yep]
     ;;
     yield [body, nope]
+  ;;
+  m be regex_capture(b, "^([\\p{L}_][\\p{L}\\p{N}_]*)\\s+(is|equals)\\s+[\"']?(yes|no)[\"']?\\s*:$", "i")
+  ponder m differs void also is_known(m[1], names) ::
+    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]
   ;;
   ponder regex_test(b, "^(otherwise|else)\\s*:?$", "i") ::
     yield ["else", yep]
@@ -153,6 +255,13 @@ conjure understand_line(body, names) ::
   m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\s+(.+)$", "i")
   ponder m differs void ::
     forge arg be trim(m[2])
+    ponder has_placeholder(arg) ::
+      forge filled be fill_placeholders(arg, names)
+      ponder filled differs "" ::
+        yield ["speak(" + filled + ")", yep]
+      ;;
+      yield [body, nope]
+    ;;
     ponder is_quoted(arg) either is_math(arg) ::
       yield ["speak(" + arg + ")", yep]
     ;;
@@ -233,11 +342,38 @@ conjure understand_line(body, names) ::
 
 // ---------- the whole file ----------
 
-conjure understand_source(source, known) ::
+// an open block is [indent, counter]; a counted block bumps it before "end"
+conjure close_block(open) ::
+  ponder open[1] differs "" ::
+    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]
+  ;;
+  yield [open[0] + "end"]
+;;
+
+conjure understand_source(source, known, words) ::
   forge names be ::
   ;;
   iterate k through known ::
     names[k] be yep
+  ;;
+  // dialect / remembered words: [word, canonical]
+  forge wordmap be ::
+  ;;
+  ponder words differs void ::
+    iterate pair through words ::
+      wordmap[lower(pair[0])] be pair[1]
+    ;;
+  ;;
+  // names used in arithmetic or numeric comparisons: typed answers for
+  // them are converted to numbers when they are asked for
+  iterate row through lines(source) ::
+    forge bare be regex_replace(row, "\"[^\"]*\"|'[^']*'", "\"\"")
+    forge numeric be regex_test(bare, "[\\-*/%^<>]|\\b(more|less|greater|smaller)\\b") either (regex_test(bare, "\\+") also isnt regex_test(bare, "\"")) either regex_test(bare, "\\b(times|plus|minus|divided)\\b")
+    ponder numeric also isnt regex_test(trim(row), "^ask\\b", "i") ::
+      iterate w through regex_find_all(bare, "[\\p{L}_][\\p{L}\\p{N}_]*") ::
+        names["#num:" + w] be yep
+      ;;
+    ;;
   ;;
   forge out be []
   forge notes be []
@@ -252,6 +388,10 @@ conjure understand_source(source, known) ::
     n be n + 1
     forge indent be leading_space(line)
     forge body be trim(line)
+    forge head be lower(regex_replace(body, "^(\\S+).*$", "$1"))
+    ponder has(wordmap, head) also body differs "" ::
+      body be wordmap[head] + snatch(body, measure(head), measure(body))
+    ;;
     ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::
       out be out + [line]
     ;; otherwise ::
@@ -265,7 +405,7 @@ conjure understand_source(source, known) ::
       // learn declarations as we go: forge x be … / conjure f(a, b)
       forge d be regex_capture(r[0], "^(?:forge|set)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
       ponder d differs void ::
-        names[d[1]] be regex_test(r[0], "input\\(") ~ "typed" : yep
+        names[d[1]] be (regex_test(r[0], "input\\(") also isnt regex_test(r[0], "num\\(input")) ~ "typed" : yep
       ;;
       d be regex_capture(r[0], "^conjure\\s+([\\p{L}_][\\p{L}\\p{N}_]*)\\s*\\(([^)]*)\\)")
       ponder d differs void ::
@@ -280,22 +420,29 @@ conjure understand_source(source, known) ::
       ;;
       ponder auto_end ::
         forge isElse be regex_test(r[0], "^else\\b")
-        cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1]) either (measure(indent) equals measure(opens[-1]) also isnt isElse)) ::
-          out be out + [opens[-1] + "end"]
+        cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::
+          out be out + close_block(opens[-1])
           opens be portion(opens, 0, measure(opens) - 1)
         ;;
-        ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1]) ::
+        ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::
           opens be portion(opens, 0, measure(opens) - 1)
         ;;
-        ponder regex_test(r[0], "^(if|else|while|for|repeat)\\b") ::
-          opens be opens + [indent]
+        forge bump be regex_capture(r[0], "\n#bump (\\S+)$")
+        ponder bump differs void ::
+          opens be opens + [[indent, bump[1]]]
+          r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]
+        ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\b") also isnt contains(r[0], "\n") ::
+          opens be opens + [[indent, ""]]
         ;;
       ;;
-      out be out + [indent + r[0]]
+      ponder isnt auto_end also contains(r[0], "#bump") ::
+        sure be nope
+      ;;
+      out be out + [indent + replace(r[0], "\n", "\n" + indent)]
     ;;
   ;;
   cycle measure(opens) > 0 ::
-    out be out + [opens[-1] + "end"]
+    out be out + close_block(opens[-1])
     opens be portion(opens, 0, measure(opens) - 1)
   ;;
   yield [unlines(out), sure, notes]
