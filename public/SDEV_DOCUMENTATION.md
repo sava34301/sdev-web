@@ -3127,3 +3127,7 @@ v x = add(2, 3)
   p("not five")
 }
 ```
+
+### Requests in plain words
+
+A file that is a request — "make a window that is a calculator", "build a quiz game" — is not repaired line by line; the AI writes the whole working program (windows, buttons and inputs use the window toolkit). `evaluate("7 + 8 * 2")` safely computes arithmetic held in text, which is what calculators need. It works the same in the JavaScript and Python versions.

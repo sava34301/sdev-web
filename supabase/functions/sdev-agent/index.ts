@@ -42,6 +42,23 @@ Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, 
   fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.
   There is NO join, split, append, push, map, filter, printf — use weave, shatter, l + [x], each, sift.
 
+Window toolkit (the IDE shows a real window):
+  window("Title", width, height) … endwindow()   row() … endrow()   column() … endcolumn()
+  heading("text")  label("text")  label("@key") shows the live value of key
+  input("key", "placeholder")   the typed text is uiget("key")
+  button("Text", () -> handler())   handler is a function or lambda, run on click
+  uiget("key") reads a value, uiset("key", value) changes it and refreshes labels bound with "@key"
+  evaluate("2 + 3 * 4") safely computes an arithmetic expression held in text (use it for calculators)
+  Define functions BEFORE window(); put every widget between window() and endwindow().
+  Example calculator key:  to press with k / uiset("display", uiget("display") + k) / end
+                          button("7", () -> press("7"))
+                          button("=", () -> uiset("display", str(evaluate(uiget("display")))))
+
+Requests in plain words:
+- If the source is a request ("make a window that is a calculator", "build a quiz game"), write the WHOLE
+  working program that does it — complete, not a sketch. Anything with "window", "app", "buttons" or a
+  visual interface uses the window toolkit.
+
 Rules:
 - Compute with code; never hard-code an answer the program should work out.
 - Keep the author's own code and identifiers exactly as written (any language/script); only fix what is wrong.

@@ -94,8 +94,32 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 export let lastEngine: 'sdev' | 'ts' = 'ts';
 export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi } from './sdev-engine';
 
+/**
+ * A file that is a request in plain words ("make a window that is a
+ * calculator") is not code to repair — it is a program to write. Rules would
+ * only mangle it, so it goes straight to the brain.
+ */
+export function isRequest(source: string): boolean {
+  const rows = source.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#') && !l.startsWith('//'));
+  if (!rows.length || rows.length > 6) return false;
+  if (rows.some((l) => /[=(){}\[\]]|::|;;/.test(l) && !/^[\p{L}\s,.'"!?-]+$/u.test(l))) return false;
+  const text = rows.join(' ');
+  const verb = /^(please\s+)?(make|build|create|write|code|generate|design|program|draw|give\s+me|show\s+me|i\s+want|i\s+need|i'd\s+like|can\s+you|could\s+you|let's|lets)\b/i;
+  const thing = /\b(window|app|application|program|game|calculator|form|page|site|website|tool|todo|to-do|list|clock|timer|stopwatch|converter|quiz|interface|gui|ui|button|buttons|menu|counter|chat|editor|notes?|tracker|dashboard|generator|simulator|animation|drawing)\b/i;
+  return verb.test(text) && thing.test(text) && text.split(/\s+/).length >= 3;
+}
+
 function runRules(prep: Prepared, opts: UnderstandOptions) {
   const { source: remembered } = applyMemoryLines(prep.stripped, prep.memory);
+  if (isRequest(remembered)) {
+    const count = remembered.split('\n').length;
+    return {
+      done: false as const, forceBrain: true as const, source: remembered,
+      sense: senseFile(remembered, new Map()), learned: {} as Record<string, Intent>,
+      notes: [{ line: 0, from: '', to: '', why: 'this is a request for a program — the AI writes it', source: 'rules' as const }],
+      unresolved: Array.from({ length: count }, (_, i) => i + 1),
+    };
+  }
   const extraWords = new Map([...dialectWordMap(opts), ...memoryWordMap(prep.memory)]);
   const sense = senseFile(remembered, extraWords);
 
@@ -180,7 +204,7 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   if (prep.mode === 'off') return skip(prep.stripped, 'off');
 
   // Already understood this exact file before? Reuse it — no thinking twice.
-  const key = understandKey(source, JSON.stringify([opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
+  const key = understandKey(source, JSON.stringify(['v2', opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
   const cached = recallResult(prep.memory, key);
   if (cached !== null) {
     return { source: cached, changed: cached !== prep.stripped, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
