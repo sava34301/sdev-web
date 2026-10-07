@@ -20,7 +20,7 @@ const cache = new Map<string, RegExp>();
 function re(p: string, f: string): RegExp {
   const k = f + '/' + p;
   let r = cache.get(k);
-  if (!r) { r = re(p, f); if (cache.size > 500) cache.clear(); cache.set(k, r); }
+  if (!r) { r = new RegExp(p, f); if (cache.size > 500) cache.clear(); cache.set(k, r); }
   r.lastIndex = 0;
   return r;
 }
