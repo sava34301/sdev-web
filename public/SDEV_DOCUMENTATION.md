@@ -3069,3 +3069,27 @@ Shipped alongside the hardware layer:
 *This documentation covers sdev version 1.x. For the latest updates and additional examples, visit the sdev IDE.*
 
 
+
+---
+
+## Text-Tooling Functions
+
+Added so programs that read and rewrite code (like sdev's own understander, `lang/agent/understander.sdev`) can be written in sdev. Identical in the JavaScript and Python interpreters.
+
+| Function | Result |
+|---|---|
+| `lines(t)` / `unlines(list)` | split text into lines / join lines with newlines |
+| `words(t)` | split on whitespace, no empty items |
+| `char_at(t, i)` / `code_at(t, i)` | character / code point at `i` (`""` / `-1` when out of range) |
+| `find_from(t, sub, from)` / `find_last(t, sub)` | index search from a position / from the end |
+| `leading_space(t)` | the indentation at the start of `t` |
+| `is_letter(t)` `is_digit(t)` `is_space(t)` `is_name(t)` | character-class tests (Unicode letters) |
+| `regex_test(t, p, flags?)` | does the pattern match (flags: `i`, `m`, `s`) |
+| `regex_capture(t, p, flags?)` | `[whole, group1, …]` or `void` |
+| `regex_find_all(t, p, flags?)` | every match as a list |
+| `regex_replace(t, p, r, flags?)` | replace every match; `$1` refers to groups |
+| `quote_text(t)` | `t` as a quoted, escaped sdev text literal |
+
+## The Self-Hosted Understander
+
+The code understander now runs first as an sdev program (`lang/agent/understander.sdev`). It reads the file line by line and turns plain sentences (`print hello`, `calculate 23-21`, `set x to 5`, `add 2 to x`, `score becomes score * 2`) into canonical sdev. When it is not sure of every line, the original TypeScript understander handles the file instead, so nothing that worked before changes. Names defined in other project files can be passed in so cross-file references resolve.
