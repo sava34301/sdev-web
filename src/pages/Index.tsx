@@ -12,6 +12,7 @@ import { CodeTranslator } from '@/components/CodeTranslator';
 import { SdevChatbot } from '@/components/SdevChatbot';
 import { CompilerPanel } from '@/components/CompilerPanel';
 import { HeroDemo } from '@/components/home/HeroDemo';
+import { CompilerScrollScene } from '@/components/home/CompilerScrollScene';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -223,7 +224,7 @@ const Index = () => {
   // One passive scroll listener: hero depth and the "How it works" card stack.
   useEffect(() => {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const desktop = window.matchMedia('(min-width: 1024px)');
+    const desktop = window.matchMedia('(min-width: 768px)');
     const panels = Array.from(pageRef.current?.querySelectorAll<HTMLElement>('[data-scroll-depth]') || []);
     let frame = 0;
     let lastStep = -1;
@@ -246,7 +247,7 @@ const Index = () => {
       }
       const how = howRef.current;
       const stack = stackRef.current;
-      if (how && stack && !reduce) {
+      if (how && !reduce) {
         const r = how.getBoundingClientRect();
         const p = clamp01(-r.top / Math.max(r.height - vh, 1));
         const raw = p * (STEPS.length - 1);
@@ -257,7 +258,8 @@ const Index = () => {
         how.style.setProperty('--how', p.toFixed(4));
         const s = Math.min(STEPS.length - 1, Math.round(pos));
         if (s !== lastStep) { lastStep = s; setStep(s); }
-        if (!reduce) {
+        window.dispatchEvent(new Event('sdev:scroll-scene'));
+        if (stack) {
           Array.from(stack.children).forEach((el, i) => {
             const d = i - pos; // <0 already passed, 0 active, >0 waiting behind
             const card = el as HTMLElement;
@@ -341,7 +343,7 @@ const Index = () => {
   const jumpToStep = (i: number) => {
     const how = howRef.current;
     if (!how) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth < 1024) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.innerWidth < 768) {
       setStep(i);
       how.querySelectorAll<HTMLElement>('.how-step')[i]?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
       return;
@@ -461,8 +463,9 @@ const Index = () => {
         {/* ===== HOW IT WORKS (sticky 3D stack) ===== */}
         <section ref={howRef} className="how" aria-labelledby="how-title">
           <div className="how-stage">
-            <div className="max-w-[1240px] w-full mx-auto px-6 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-20 items-center">
-              <div>
+            <CompilerScrollScene />
+            <div className="max-w-[1240px] w-full mx-auto px-6 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-20 items-center how-layout">
+              <div className="how-copy">
                 <div className="eyebrow">How it works</div>
                 <h2 id="how-title" className="mt-3 text-4xl md:text-5xl leading-[1.05]">From a sentence to a running program.</h2>
                 <ol className="mt-10 space-y-1">
