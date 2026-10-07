@@ -33,6 +33,9 @@ conjure starts_canonical(body) ::
 ;;
 
 conjure is_quoted(t) ::
+  ponder regex_test(t, "[\\[{][\\p{L}_][\\p{L}\\p{N}_]*[\\]}]") ::
+    yield nope
+  ;;
   yield regex_test(t, "^(\"[^\"]*\"|'[^']*')$")
 ;;
 
@@ -65,6 +68,13 @@ conjure is_known(name, names) ::
 conjure safe_expr(e, names) ::
   ponder is_quoted(e) either is_math(e) ::
     yield yep
+  ;;
+  ponder regex_test(e, "[\\-*/%^]") either (regex_test(e, "\\+") also isnt regex_test(e, "[\"']")) ::
+    iterate w through regex_find_all(e, "[\\p{L}_][\\p{L}\\p{N}_]*") ::
+      ponder has(names, w) also names[w] equals "typed" ::
+        yield nope
+      ;;
+    ;;
   ;;
   forge rest be regex_replace(e, "\"[^\"]*\"|'[^']*'", " ")
   forge parts be regex_find_all(rest, "[\\p{L}_][\\p{L}\\p{N}_]*")
@@ -255,7 +265,7 @@ conjure understand_source(source, known) ::
       // learn declarations as we go: forge x be … / conjure f(a, b)
       forge d be regex_capture(r[0], "^(?:forge|set)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
       ponder d differs void ::
-        names[d[1]] be yep
+        names[d[1]] be regex_test(r[0], "input\\(") ~ "typed" : yep
       ;;
       d be regex_capture(r[0], "^conjure\\s+([\\p{L}_][\\p{L}\\p{N}_]*)\\s*\\(([^)]*)\\)")
       ponder d differs void ::
