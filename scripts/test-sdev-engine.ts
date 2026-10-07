@@ -2,7 +2,7 @@
  * The self-hosted understander (lang/agent/understander.sdev).
  * Run with: bun scripts/test-sdev-engine.ts
  */
-import { sdevUnderstand, engineError } from '../src/lang/agent/sdev-engine';
+import { sdevUnderstand, engineError, aiToSdev, sdevToAi } from '../src/lang/agent/sdev-engine';
 import { setMemoryStore, emptyMemory, type AgentMemory, lastEngine, understand } from '../src/lang/agent';
 import { execute } from '../src/lang';
 
@@ -28,10 +28,18 @@ const cases: [string, string, string][] = [
   ['when / otherwise', 'set a to 2\nwhen a is 2\n  say "two"\notherwise\n  say "no"\nsay "done"', 'two|done'],
   ['if with colon', 'set n to 5\nif n > 3:\n  print n\nsay "end"', '5|end'],
   ['nested blocks', 'set n to 5\nif n > 3\n  if n < 9\n    say "mid"\nsay "x"', 'mid|x'],
+  ['yes answer', 'ask "Hungry?" as h\nwhen h is yes\n  say "eat"\notherwise\n  say "no"', 'no'],
+  ['typed numbers', 'ask "a" as a\nask "b" as b\nsay a * b', '16'],
+  ['placeholder', 'ask "n" as name\nsay "Hello, [name]!"', 'Hello, Sam!'],
+  ['say N times', 'say hi 3 times', 'hi|hi|hi'],
+  ['repeat block', 'repeat 2 times\n  say "hi"\nsay "done"', 'hi|hi|done'],
+  ['count down', 'print numbers from 3 to 1', '3|2|1'],
+  ['count by', 'count from 0 to 10 by 5', '0|5|10'],
+  ['count to', 'please count to 2', '1|2'],
   ['mixed canonical', 'forge a be 2\nprint a + 3', '5'],
 ];
 for (const [name, src, want] of cases) {
-  (globalThis as { prompt?: () => string }).prompt = () => 'Sam';
+  (globalThis as { prompt?: () => string }).prompt = () => (name === 'typed numbers' ? '4' : name === 'yes answer' ? ' No ' : 'Sam');
   const s = sdevUnderstand(src, []);
   const r = execute(src);
   ok(name, !!s?.sure && lastEngine === 'sdev' && r.success && r.output.join('|') === want, JSON.stringify({ s, r, engineError }));
@@ -39,7 +47,7 @@ for (const [name, src, want] of cases) {
 // unsure lines fall back to the TypeScript engine
 const fb = sdevUnderstand('hungry is yes:\n  say "eat"', []);
 ok('unsure → fallback', fb !== null && !fb.sure);
-understand('say hi 3 times');
+understand('reverse hello');
 ok('fallback engine used', lastEngine === 'ts');
 // cross-file names: a name from another file is known
 const xf = sdevUnderstand('add 1 to total', ['total']);
@@ -53,5 +61,15 @@ ok('canonical left alone', execute(keep).output.join() === '1');
 const big = Array.from({ length: 2000 }, (_, i) => `set v${i} to ${i}\nadd 1 to v${i}`).join('\n');
 const t0 = performance.now(); const b = sdevUnderstand(big, []); const ms = performance.now() - t0;
 ok(`4000 lines in ${ms.toFixed(0)}ms`, !!b?.sure && ms < 5000);
+// dialect words reach the sdev engine
+const dw = sdevUnderstand('печатай "здравей"', [], [['печатай', 'say']]);
+ok('dialect words', !!dw?.sure && dw.source === 'speak("здравей")', JSON.stringify(dw));
+// sdev:ai — the AI dialect
+const ai = '!#ai\nf add(a, b) {\n  r a + b\n}\nv x = add(2, 3)\n? x == 5 && true {\n  p("five == " + "ok")\n} : {\n  p("no")\n}\nv i = 0\nw i < 2 {\n  p(i)\n  i = i + 1\n}\neach n in [7, 8] {\n  ? n != 7 {\n    p(n)\n  }\n}';
+const air = execute(ai);
+ok('sdev:ai runs', air.success && air.output.join('|') === 'five == ok|0|1|8', JSON.stringify(air));
+const canon = aiToSdev(ai);
+ok('sdev:ai round trip', aiToSdev(sdevToAi(canon)) === canon);
+ok('strings untouched', canon.includes('"five == "'));
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

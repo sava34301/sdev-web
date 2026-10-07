@@ -101,6 +101,7 @@ make the self-hosted compiler its own reference.
 - [x] `lang/agent/understander.sdev` v1: output, calculations, set/add/increase/decrease/becomes; TS fallback when unsure
 - [x] Project names option for cross-file references; test:engine suite
 - [x] Port ask/input, when/otherwise, side-by-side say, block closing by indentation to sdev
-- [ ] Port remaining TS rules: yes/no answers, number conversion of typed answers, loops & tasks, placeholders, dialect words
+- [x] Port yes/no answers, typed-number conversion, counted loops, placeholders, dialect words to sdev
 - [x] Names from the other IDE files fed into the understander
-- [ ] AI-native dialect (`sdev:ai`) inside the sdev engine
+- [x] AI-native dialect (`sdev:ai`, `!#ai`) written in sdev, both directions
+- [ ] Next: IDE button to view a file as sdev:ai; teach the online AI to answer in sdev:ai; port text tasks (reverse/upper/sort…)

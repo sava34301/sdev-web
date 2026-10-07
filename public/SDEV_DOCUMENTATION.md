@@ -3093,3 +3093,37 @@ Added so programs that read and rewrite code (like sdev's own understander, `lan
 ## The Self-Hosted Understander
 
 The code understander now runs first as an sdev program (`lang/agent/understander.sdev`). It reads the file line by line and turns plain sentences (`print hello`, `calculate 23-21`, `set x to 5`, `add 2 to x`, `score becomes score * 2`) into canonical sdev. When it is not sure of every line, the original TypeScript understander handles the file instead, so nothing that worked before changes. Names defined in other project files can be passed in so cross-file references resolve.
+
+### What the self-hosted understander handles
+
+Questions (`ask "Name?" as name`, `ask for name`, `name = ask "…"`), yes/no answers (`when hungry is yes`, `hungry is yes:`), typed numbers (answers used in maths become numbers), placeholders (`say "Hello, [name]!"`), counted loops (`say hi 3 times`, `repeat 3 times`, `count from 0 to 10 by 5`, `print numbers from 3 to 1`, `count to 5`), conditions with automatic block closing, side-by-side text (`say "Hi " name`), and dialect words.
+
+## sdev:ai — the dialect for AI models
+
+Start a file with `!#ai`. Every statement says what it is in its first token, blocks always use `{ }`, and the operators are the ones models already know — fewer tokens, no guessed indentation, no forgotten closings. It is translated to canonical sdev by `lang/agent/ai-dialect.sdev` (written in sdev) before it runs, and canonical sdev can be turned back into it.
+
+| sdev:ai | canonical sdev |
+|---|---|
+| `v x = 5` | `forge x be 5` |
+| `x = x + 1` | `x be x + 1` |
+| `p(x)` | `speak(x)` |
+| `f add(a, b) {` … `r a + b` … `}` | `conjure add(a, b) ::` … `yield a + b` … `;;` |
+| `? x > 3 {` / `} :? x > 1 {` / `} : {` | `ponder x > 3 ::` / `;; otherwise ponder x > 1 ::` / `;; otherwise ::` |
+| `w i < 3 {` | `cycle i < 3 ::` |
+| `each n in xs {` | `iterate n through xs ::` |
+| `try {` / `} catch e {` | `attempt ::` / `;; rescue e ::` |
+| `brk` / `next` | `yeet` / `skip` |
+| `==` `!=` `&&` `\|\|` `!` `true` `false` `null` | `equals` `differs` `also` `either` `isnt` `yep` `nope` `void` |
+
+```sdev
+!#ai
+f add(a, b) {
+  r a + b
+}
+v x = add(2, 3)
+? x == 5 {
+  p("five")
+} : {
+  p("not five")
+}
+```
