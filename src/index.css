@@ -639,3 +639,26 @@
     .feature, .path, .hero-demo { transition: none; }
   }
 }
+
+/* Full-bleed scroll-scrubbed 3D compiler world. */
+@layer components {
+  .compiler-world { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .compiler-world canvas { display: block; width: 100%; height: 100%; }
+  .compiler-copy { position: relative; z-index: 1; pointer-events: none; }
+  .compiler-copy > :first-child { pointer-events: auto; }
+  .how-stage { overflow: hidden; }
+  .how-stage:has(.compiler-world[data-ready="true"]) .how-scene { visibility: hidden; }
+  .how-stage:has(.compiler-world[data-ready="true"]) .compiler-copy > :first-child { background: hsl(var(--background) / .9); }
+  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+    .how { height: 360vh; }
+    .how-stage { position: sticky; top: 0; height: 100svh; padding-top: 4rem; }
+    .how-scene { display: block; }
+    .how-step-body { max-height: 0 !important; opacity: 0 !important; margin-top: 0; }
+    .how-step[data-active] .how-step-body { max-height: 10rem !important; opacity: 1 !important; margin-top: .4rem; }
+    .how-step:not([data-active]) .font-display { color: hsl(var(--muted-foreground)); }
+  }
+  @media (max-width: 767px), (prefers-reduced-motion: reduce) {
+    .compiler-world { display: none; }
+    .compiler-copy { pointer-events: auto; }
+  }
+}
