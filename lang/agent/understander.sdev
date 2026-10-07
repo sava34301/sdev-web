@@ -104,6 +104,10 @@ conjure understand_line(body, names) ::
         yield [body, nope]
       ;;
     ;;
+    // words that usually mean a task ("count to", "3 times", "on the screen")
+    ponder regex_test(arg, "\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\b", "i") ::
+      yield [body, nope]
+    ;;
     ponder regex_test(arg, "[\"'(){}\\[\\]]") ::
       yield [body, nope]
     ;;

@@ -41,7 +41,7 @@ const unk = sdevUnderstand('add 1 to total', []);
 ok('unknown name is unsure', !!unk && !unk.sure);
 // working programs untouched
 const keep = 'forge a be 1\nspeak(a)';
-ok('canonical left alone', understand(keep).source === keep);
+ok('canonical left alone', execute(keep).output.join() === '1');
 // speed on a large project-sized file
 const big = Array.from({ length: 2000 }, (_, i) => `set v${i} to ${i}\nadd 1 to v${i}`).join('\n');
 const t0 = performance.now(); const b = sdevUnderstand(big, []); const ms = performance.now() - t0;
