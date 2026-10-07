@@ -932,6 +932,8 @@ export default function IDEPage() {
         const again = await reconsider(dialectSrc, msg, { dialect: activeDialect }).catch(() => null);
         if (again?.source) { setIsRunning(false); return runCode(again.source, true); }
       }
+      // A reading that fails is never kept — the next run thinks again.
+      { const failedId = activeFile.id; setFiles((prev) => prev.map((f) => (f.id === failedId ? { ...f, understood: undefined } : f))); }
       setOutput(outputLines);
       setError(msg);
       setExecTime(null);
