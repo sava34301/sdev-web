@@ -651,8 +651,8 @@ export default function IDEPage() {
     const projectNames = [...new Set(files.filter((f) => f.id !== activeFile.id).flatMap((f) => [...definedNames(f.content)]))];
     // The file keeps a hidden copy of what the understander made of it; when
     // the content hasn't changed, re-runs use that copy and skip the thinking.
-    const { understandKey } = await import('@/lang/agent');
-    const fileKey = understandKey(dialectSrc, JSON.stringify([activeDialect ?? null, projectNames]));
+    const { understandKey, AGENT_VERSION } = await import('@/lang/agent');
+    const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, activeDialect ?? null, projectNames]));
     const saved = activeFile.understood?.key === fileKey ? activeFile.understood.source : null;
     const understood = overrideSrc !== undefined
       ? { source: overrideSrc, notes: [{ line: 0 }] }
