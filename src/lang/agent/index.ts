@@ -90,6 +90,9 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
   return map;
 }
 
+/** Bumped whenever the understander changes how it reads files, so saved readings from older versions are never reused. */
+export const AGENT_VERSION = 'u3';
+
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
 export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi } from './sdev-engine';
@@ -204,7 +207,7 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   if (prep.mode === 'off') return skip(prep.stripped, 'off');
 
   // Already understood this exact file before? Reuse it — no thinking twice.
-  const key = understandKey(source, JSON.stringify(['v2', opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
+  const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
   const cached = recallResult(prep.memory, key);
   if (cached !== null) {
     return { source: cached, changed: cached !== prep.stripped, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
