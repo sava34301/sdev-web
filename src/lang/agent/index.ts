@@ -14,6 +14,7 @@ import { scanDirectives, type AgentMode, type BrainMode } from './directives';
 import { repair, closeBlocks } from './repair';
 import { senseFile, parses, unknownNames, parseError } from './sense';
 import { think, online } from './brain';
+import { sdevUnderstand } from './sdev-engine';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
   learnFromProgram, type AgentMemory,
@@ -87,6 +88,10 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
   return map;
 }
 
+/** Which engine produced the last rule rewrite. */
+export let lastEngine: 'sdev' | 'ts' = 'ts';
+export { sdevUnderstand } from './sdev-engine';
+
 function runRules(prep: Prepared, opts: UnderstandOptions) {
   const { source: remembered } = applyMemoryLines(prep.stripped, prep.memory);
   const extraWords = new Map([...dialectWordMap(opts), ...memoryWordMap(prep.memory)]);
@@ -96,6 +101,17 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
     return { done: true as const, source: remembered, sense, learned: {} as Record<string, Intent>, notes: [], unresolved: [] as number[] };
   }
 
+  // The self-hosted engine (written in sdev) goes first; the TypeScript
+  // rules below are its fallback whenever it is not sure of every line.
+  if (opts.engine !== 'ts') {
+    const known = new Set([...knownNames(prep.memory), ...(opts.projectNames ?? [])]);
+    const s = sdevUnderstand(remembered, known);
+    if (s && s.sure && s.source !== remembered && parses(s.source) && unknownNames(s.source).length === 0) {
+      lastEngine = 'sdev';
+      return { done: true as const, source: s.source, sense, learned: {} as Record<string, Intent>, notes: s.notes, unresolved: [] as number[] };
+    }
+  }
+  lastEngine = 'ts';
   const result = repair(remembered, {
     extraWords,
     knownNames: knownNames(prep.memory),

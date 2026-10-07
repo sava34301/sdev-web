@@ -95,3 +95,11 @@ make the self-hosted compiler its own reference.
 - [x] /my page: own dialects, extensions, files and shared programs
 - [x] Ready-made dialect "Сдев" (src/lang/dialect/presets.ts) — runs in the IDE and the CLI
 - [x] CLI cloud writes: dialect preset/pull/sync, ext publish/pull/remove, cloud rm/share/shared
+
+## Self-hosted understander
+- [x] Text-tooling primitives (lines, regex_capture/replace/find_all, char tests…) in JS + Python
+- [x] `lang/agent/understander.sdev` v1: output, calculations, set/add/increase/decrease/becomes; TS fallback when unsure
+- [x] Project names option for cross-file references; test:engine suite
+- [ ] Port remaining TS rules to sdev: ask/input, when/otherwise, loops & tasks, block closing, dialect words
+- [ ] Workspace symbol graph from all IDE files fed into projectNames
+- [ ] AI-native dialect (`sdev:ai`) inside the sdev engine
