@@ -569,9 +569,18 @@ export default function IDEPage() {
       return;
     }
     setFolders(hydrated.folders);
-    setFiles(hydrated.files);
-    if (hydrated.activeId) setActiveId(hydrated.activeId);
-    setOpenIds(hydrated.openIds);
+    // Keep any local files that have no cloud counterpart (e.g. code just
+    // imported from the playground/gist) instead of dropping them.
+    setFiles(prev => {
+      const localOnly = prev.filter(f => !f.cloudId && !hydrated.files.some(h => h.id === f.id));
+      return [...hydrated.files, ...localOnly];
+    });
+    setActiveId(prev => prev ?? hydrated.activeId);
+    setOpenIds(prev => {
+      const merged = [...hydrated.openIds];
+      for (const id of prev) if (!merged.includes(id)) merged.push(id);
+      return merged;
+    });
     if (hydrated.files.length > 0) toast.success(`Restored ${hydrated.files.length} files from cloud`);
   }, [hydrated]);
   // Reset hydration flag when user changes (logout/login)
