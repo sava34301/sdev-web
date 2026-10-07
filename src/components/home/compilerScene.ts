@@ -106,7 +106,7 @@ export function createCompilerScene(host: HTMLDivElement, section: HTMLElement, 
     });
     targets.visible = p > .74;
     targetBlocks.forEach((target, i) => {
-      target.position.set((i ? 1 : -1) * (1 + split * 1.2), (i ? -.75 : .75) * split, 1 + split);
+      target.position.set(-.8 + (i ? 1 : -1) * (1 + split * .85), (i ? -.75 : .75) * split, split);
       target.rotation.y = (i ? -.2 : .2) * split;
       target.scale.setScalar(.05 + split * .95);
     });
