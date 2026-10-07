@@ -14,7 +14,7 @@ import { scanDirectives, type AgentMode, type BrainMode } from './directives';
 import { repair, closeBlocks } from './repair';
 import { senseFile, parses, unknownNames, parseError } from './sense';
 import { think, online } from './brain';
-import { sdevUnderstand } from './sdev-engine';
+import { sdevUnderstand, isAiDialect, aiToSdev } from './sdev-engine';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
   learnFromProgram, type AgentMemory,
@@ -60,7 +60,9 @@ function begin(source: string, opts: UnderstandOptions): Prepared {
   const mode: AgentMode = directives.mode ?? opts.mode ?? 'auto';
   const brain: BrainMode = directives.brain ?? opts.brain ?? 'auto';
   const learn = directives.learn ?? opts.learn ?? true;
-  return { mode, brain, learn, stripped: directives.source, memory: loadMemory() };
+  // sdev:ai files are translated to canonical sdev before anything else reads them
+  const stripped = isAiDialect(source) ? aiToSdev(source) : directives.source;
+  return { mode, brain, learn, stripped, memory: loadMemory() };
 }
 
 function skip(source: string, mode: AgentMode): UnderstandResult {
@@ -90,7 +92,7 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
-export { sdevUnderstand } from './sdev-engine';
+export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi } from './sdev-engine';
 
 function runRules(prep: Prepared, opts: UnderstandOptions) {
   const { source: remembered } = applyMemoryLines(prep.stripped, prep.memory);
@@ -105,7 +107,8 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
   // rules below are its fallback whenever it is not sure of every line.
   if (opts.engine !== 'ts') {
     const known = new Set([...knownNames(prep.memory), ...(opts.projectNames ?? [])]);
-    const s = sdevUnderstand(remembered, known);
+    const words: [string, string][] = [...extraWords].map(([w, intent]) => [w, CANONICAL_WORDS[intent] ?? w]);
+    const s = sdevUnderstand(remembered, known, words);
     if (s && s.sure && s.source !== remembered && parses(s.source) && unknownNames(s.source).length === 0) {
       lastEngine = 'sdev';
       return { done: true as const, source: s.source, sense, learned: {} as Record<string, Intent>, notes: s.notes, unresolved: [] as number[] };
