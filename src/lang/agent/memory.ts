@@ -18,6 +18,8 @@ export interface AgentMemory {
   updated: number;
   /** whole-file results: hash of the file -> canonical source */
   results?: Record<string, { source: string; at: number }>;
+  /** understander version that wrote the saved lines/results */
+  agent?: string;
 }
 
 export function emptyMemory(): AgentMemory {
@@ -42,6 +44,7 @@ function sane(value: unknown): AgentMemory {
     programs: m.programs ?? 0,
     updated: m.updated ?? 0,
     results: m.results ?? {},
+    agent: m.agent,
   };
 }
 
