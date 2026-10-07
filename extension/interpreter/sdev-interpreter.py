@@ -2688,7 +2688,7 @@ class Interpreter:
         # ---- text-tooling primitives (parity with src/lang/builtins/text.ts) ----
         import re as _re, json as _json
         def _pat(p):
-            return p.replace('\\p{L}', '[^\\W\\d_]').replace('\\p{N}', '\\d')
+            return p.replace('\\p{L}', '\\w').replace('\\p{N}', '\\d')
         def _fl(f):
             v = 0
             f = f if isinstance(f, str) else ''
