@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Play } from 'lucide-react';
+import { Play, Pause, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type Demo = { file: string; code: string; output: string[] };
 
@@ -45,10 +46,18 @@ export function HeroDemo({ onOpen }: { onOpen: (code: string, name: string) => v
   const [typed, setTyped] = useState(reduce ? DEMOS[0].code.length : 0);
   const [phase, setPhase] = useState<'typing' | 'running' | 'done'>(reduce ? 'done' : 'typing');
   const [shown, setShown] = useState(reduce ? DEMOS[0].output.length : 0);
+  const [paused, setPaused] = useState(false);
   const demo = DEMOS[index];
+  const selectDemo = (i: number) => {
+    setIndex(i);
+    setTyped(DEMOS[i].code.length);
+    setShown(DEMOS[i].output.length);
+    setPhase('done');
+    setPaused(true);
+  };
 
   useEffect(() => {
-    if (reduce) return;
+    if (reduce || paused) return;
     let timer: number;
     if (phase === 'typing') {
       if (typed < demo.code.length) {
@@ -68,31 +77,34 @@ export function HeroDemo({ onOpen }: { onOpen: (code: string, name: string) => v
       }, 3200);
     }
     return () => window.clearTimeout(timer);
-  }, [phase, typed, shown, demo, reduce]);
+  }, [phase, typed, shown, demo, reduce, paused]);
 
   const lines = demo.code.slice(0, typed).split('\n');
 
   return (
     <div className="hero-demo">
-      <div className="flex items-center gap-3 border-b border-border px-4 h-11">
-        <div className="flex gap-1.5" aria-hidden="true">
+      <div className="flex items-center gap-2 border-b border-border px-3 h-12">
+        <div className="hidden sm:flex gap-1.5" aria-hidden="true">
           <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
           <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
           <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
         </div>
-        <div className="flex gap-1 text-xs font-mono">
+        <div className="demo-tabs flex gap-1 text-xs font-mono" role="tablist" aria-label="Code examples">
           {DEMOS.map((d, i) => (
-            <span key={d.file} className={`px-2.5 py-1 rounded-md transition-colors ${i === index ? 'bg-muted text-foreground' : 'text-muted-foreground'}`}>{d.file}</span>
+            <Button key={d.file} variant="ghost" size="sm" role="tab" id={`demo-tab-${i}`} aria-selected={i === index} aria-controls="demo-panel" tabIndex={i === index ? 0 : -1} onClick={() => selectDemo(i)} onKeyDown={(e) => {
+              const next = e.key === 'ArrowRight' ? (i + 1) % DEMOS.length : e.key === 'ArrowLeft' ? (i + DEMOS.length - 1) % DEMOS.length : e.key === 'Home' ? 0 : e.key === 'End' ? DEMOS.length - 1 : undefined;
+              if (next === undefined) return;
+              e.preventDefault(); selectDemo(next); document.getElementById(`demo-tab-${next}`)?.focus();
+            }} className="demo-tab h-8 px-2 text-xs font-mono text-muted-foreground">{d.file}</Button>
           ))}
         </div>
-        <button
+        <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 shrink-0" aria-label="Open example in IDE" title="Open example in IDE"
           onClick={() => onOpen(demo.code + '\n', demo.file.replace('.sdev', ''))}
-          className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          Open in IDE
-        </button>
+          <ExternalLink />
+        </Button>
       </div>
-      <pre className="px-5 py-5 font-mono text-[13px] leading-7 min-h-[11rem] text-foreground/90" aria-label={`Example program ${demo.file}`}>
+      <pre id="demo-panel" role="tabpanel" aria-labelledby={`demo-tab-${index}`} className="demo-code px-5 py-5 font-mono text-[13px] leading-7 text-foreground/90" aria-label={`Example program ${demo.file}`}>
         {lines.map((l, i) => (
           <div key={i} className="flex">
             <span className="w-7 shrink-0 select-none text-muted-foreground/40">{i + 1}</span>
@@ -103,11 +115,12 @@ export function HeroDemo({ onOpen }: { onOpen: (code: string, name: string) => v
       <div className="border-t border-border bg-background/50 px-5 py-4">
         <div className="flex items-center justify-between mb-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Output</span>
-          <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${phase === 'running' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-            <Play className="w-3 h-3" /> {phase === 'running' ? 'Running…' : 'Run'}
-          </span>
+          <div className="flex items-center gap-1">
+            {!reduce && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPaused(p => !p)} aria-label={paused ? 'Resume examples' : 'Pause examples'} title={paused ? 'Resume examples' : 'Pause examples'}>{paused ? <Play /> : <Pause />}</Button>}
+            <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => { setPaused(true); setTyped(demo.code.length); setShown(demo.output.length); setPhase('done'); }}><Play /> Preview</Button>
+          </div>
         </div>
-        <div className="font-mono text-[13px] leading-6 min-h-[4.5rem]" aria-live="polite">
+        <div className="demo-output font-mono text-[13px] leading-6" aria-live={paused ? 'polite' : 'off'}>
           {demo.output.slice(0, shown).map((o, i) => (
             <div key={`${index}-${i}`} className="hero-out"><span className="text-muted-foreground/60 mr-2">›</span>{o}</div>
           ))}
