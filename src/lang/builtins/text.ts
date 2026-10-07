@@ -59,5 +59,45 @@ export function registerText(builtins: Map<string, SdevFunction>, _output: Outpu
     Array.from(text(a[0], 'regex_find_all', l).matchAll(re(text(a[1], 'regex_find_all', l), flagsOf(a[2], true))), (m) => m[0]));
   def('regex_replace', (a, l) =>
     text(a[0], 'regex_replace', l).replace(re(text(a[1], 'regex_replace', l), flagsOf(a[3], true)), text(a[2], 'regex_replace', l)));
+  // evaluate("2 + 3 * (4 - 1)") — safe arithmetic on text (calculators, forms)
+  def('evaluate', (a, l) => {
+    const src = text(a[0], 'evaluate', l).replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+    let i = 0;
+    const peek = () => { while (src[i] === ' ') i++; return src[i]; };
+    const fail = (): never => { throw new SdevError(`evaluate(): cannot read "${src}"`, l); };
+    const atom = (): number => {
+      const c = peek();
+      if (c === '(') { i++; const v = sum(); if (peek() !== ')') fail(); i++; return v; }
+      if (c === '-') { i++; return -atom(); }
+      if (c === '+') { i++; return atom(); }
+      const m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(src.slice(i));
+      if (!m) fail();
+      i += m![0].length;
+      let v = Number(m![0]);
+      if (peek() === '%') { i++; v /= 100; }
+      return v;
+    };
+    const power = (): number => { const b = atom(); if (peek() === '^' || src.startsWith('**', i)) { i += src[i] === '^' ? 1 : 2; return b ** power(); } return b; };
+    const product = (): number => {
+      let v = power();
+      for (;;) {
+        const c = peek();
+        if (c === '*' && src[i + 1] !== '*') { i++; v *= power(); }
+        else if (c === '/') { i++; v /= power(); }
+        else if (c === '%') { i++; v %= power(); }
+        else return v;
+      }
+    };
+    const sum = (): number => {
+      let v = product();
+      for (;;) {
+        const c = peek();
+        if (c === '+') { i++; v += product(); } else if (c === '-') { i++; v -= product(); } else return v;
+      }
+    };
+    const v = sum();
+    if (peek() !== undefined) fail();
+    return Math.round(v * 1e12) / 1e12;
+  });
   def('quote_text', (a, l) => JSON.stringify(text(a[0], 'quote_text', l)));
 }

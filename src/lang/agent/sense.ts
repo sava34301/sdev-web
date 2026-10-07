@@ -40,6 +40,8 @@ export function builtinNames(): Set<string> {
     try {
       const env = (new Interpreter(() => {}) as unknown as { globalEnv: { values: Map<string, unknown> } }).globalEnv;
       builtinCache = new Set(env.values.keys());
+      // the window toolkit (window, button, label, uiget, …) is there in the IDE too
+      for (const n of ['window','endwindow','row','endrow','column','endcolumn','group','endgroup','tabs','endtabs','tab','endtab','heading','label','paragraph','image','divider','spacer','progress','button','textarea','checkbox','slider','select','table','menu','endmenu','menuitem','uiget','uiset','show','alert']) builtinCache.add(n);
     } catch { builtinCache = new Set(); }
   }
   return builtinCache;

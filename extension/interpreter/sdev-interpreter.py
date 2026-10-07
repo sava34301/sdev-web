@@ -2719,6 +2719,27 @@ class Interpreter:
         }
         for _n, _f in _tb.items():
             builtins[_n] = SdevBuiltin(_n, _f, 1, 4)
+
+        def _evaluate(a, l):
+            import ast as _ast, operator as _op
+            src = str(a[0]).replace('×', '*').replace('÷', '/').replace('−', '-').replace('^', '**')
+            src = _re.sub(r'(\d+(?:\.\d+)?)%', r'(\1/100)', src)
+            ops = {_ast.Add: _op.add, _ast.Sub: _op.sub, _ast.Mult: _op.mul, _ast.Div: _op.truediv, _ast.Mod: _op.mod, _ast.Pow: _op.pow}
+            def ev(n):
+                if isinstance(n, _ast.Expression): return ev(n.body)
+                if isinstance(n, _ast.Constant) and isinstance(n.value, (int, float)): return n.value
+                if isinstance(n, _ast.BinOp) and type(n.op) in ops: return ops[type(n.op)](ev(n.left), ev(n.right))
+                if isinstance(n, _ast.UnaryOp) and isinstance(n.op, (_ast.USub, _ast.UAdd)): return -ev(n.operand) if isinstance(n.op, _ast.USub) else ev(n.operand)
+                raise SdevError('evaluate(): cannot read "%s"' % a[0], l)
+            try:
+                v = ev(_ast.parse(src, mode='eval'))
+            except SdevError:
+                raise
+            except Exception:
+                raise SdevError('evaluate(): cannot read "%s"' % a[0], l)
+            v = round(v, 12)
+            return int(v) if float(v).is_integer() else v
+        builtins['evaluate'] = SdevBuiltin('evaluate', _evaluate, 1, 1)
         
         def format_str(args, line):
             """Format a string with values"""
