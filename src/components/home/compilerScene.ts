@@ -70,7 +70,9 @@ export function createCompilerScene(canvas: HTMLCanvasElement) {
       group.position.y = (1.5 - i) * (.32 + explosion * 1.65);
       group.rotation.y = (i - 1.5) * Math.sin(p * Math.PI) * .13;
     });
-    assembly.position.set(3.1, -.5, 0);
+    const compact = camera.aspect < 1.25;
+    assembly.scale.setScalar(compact ? .75 : 1);
+    assembly.position.set(compact ? 2.4 : 3.1, -.5, 0);
     assembly.rotation.y = -.25 + p * 1.8;
     camera.position.set(Math.sin(p * Math.PI) * 2, 7.5 - p * 3.2, 17 - p * 2);
     camera.lookAt(0, -.3, 0);
