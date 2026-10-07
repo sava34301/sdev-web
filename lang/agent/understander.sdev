@@ -86,7 +86,7 @@ conjure understand_line(body, names) ::
 
 
   // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"
-  m be regex_capture(b, "^ask\\s+(\"[^\"]*\"|'[^']*')\\s+(as|into|for|and\\s+call\\s+it|and\\s+store\\s+in)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)$", "i")
+  forge m be regex_capture(b, "^ask\\s+(\"[^\"]*\"|'[^']*')\\s+(as|into|for|and\\s+call\\s+it|and\\s+store\\s+in)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)$", "i")
   ponder m differs void ::
     yield ["set " + m[3] + " to input(" + m[1] + ")", yep]
   ;;
@@ -140,7 +140,7 @@ conjure understand_line(body, names) ::
   ;;
 
   // output: print / show / display / output / write / say / tell
-  forge m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\s+(.+)$", "i")
+  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\s+(.+)$", "i")
   ponder m differs void ::
     forge arg be trim(m[2])
     ponder is_quoted(arg) either is_math(arg) ::
