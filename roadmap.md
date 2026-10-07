@@ -5,6 +5,7 @@ SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
 ## Current task
+- [x] Researched Codrops and exploded-view references; built and browser-verified a pinned Three.js compiler assembly with scroll-controlled rotation, separation and camera movement at desktop and 982px; phones and reduced motion stay static.
 - [x] Add refined scroll depth, reading progress, selectable code demos and language examples; verified Playground output, mobile overflow and reduced motion in the browser.
 - [x] Redesign the homepage as an immersive 3D scroll experience while keeping
       the Playground functional and the IDE immediately accessible.

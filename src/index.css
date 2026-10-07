@@ -639,3 +639,31 @@
     .feature, .path, .hero-demo { transition: none; }
   }
 }
+
+/* Pinned WebGL compiler teardown — scroll directly controls camera and layers. */
+@layer components {
+  .compiler-scroll-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .how-stage { overflow: hidden; }
+  .how-layout { position: relative; z-index: 1; pointer-events: none; }
+  .how-copy { max-width: 470px; pointer-events: auto; }
+  .how-copy h2 { font-size: 40px; }
+  .how-scene { visibility: hidden; }
+  .how { height: 380vh; }
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .how { height: 380vh; }
+    .how-stage { position: sticky; height: 100svh; padding: 4rem 0 0; }
+    .how-layout { grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .how-copy h2 { font-size: 30px; }
+    .how-step { padding: .75rem; gap: .75rem; }
+    .how-step-body { max-height: 0 !important; opacity: 0 !important; }
+    .how-step[data-active] .how-step-body { max-height: 10rem !important; opacity: 1 !important; }
+  }
+  @media (max-width: 767px), (prefers-reduced-motion: reduce) {
+    .compiler-scroll-canvas { display: none; }
+    .how { height: auto; }
+    .how-stage { position: relative; height: auto; padding: 6rem 0; }
+    .how-layout { grid-template-columns: 1fr; }
+    .how-copy { max-width: none; }
+    .how-step-body { max-height: none !important; opacity: 1 !important; }
+  }
+}
