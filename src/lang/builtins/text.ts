@@ -16,6 +16,15 @@ function flagsOf(v: unknown, global: boolean): string {
   return (global ? 'g' : '') + (f.includes('u') ? f : f + 'u');
 }
 
+const cache = new Map<string, RegExp>();
+function re(p: string, f: string): RegExp {
+  const k = f + '/' + p;
+  let r = cache.get(k);
+  if (!r) { r = re(p, f); if (cache.size > 500) cache.clear(); cache.set(k, r); }
+  r.lastIndex = 0;
+  return r;
+}
+
 export function registerText(builtins: Map<string, SdevFunction>, _output: OutputCallback): void {
   const def = (name: string, call: (args: unknown[], line: number) => unknown) =>
     builtins.set(name, { type: 'builtin', call });
@@ -41,14 +50,14 @@ export function registerText(builtins: Map<string, SdevFunction>, _output: Outpu
   def('is_name', (a, l) => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(text(a[0], 'is_name', l)));
 
   // Regular expressions with optional flags ("i", "m", "s").
-  def('regex_test', (a, l) => new RegExp(text(a[1], 'regex_test', l), flagsOf(a[2], false)).test(text(a[0], 'regex_test', l)));
+  def('regex_test', (a, l) => re(text(a[1], 'regex_test', l), flagsOf(a[2], false)).test(text(a[0], 'regex_test', l)));
   def('regex_capture', (a, l) => {
-    const m = text(a[0], 'regex_capture', l).match(new RegExp(text(a[1], 'regex_capture', l), flagsOf(a[2], false)));
+    const m = text(a[0], 'regex_capture', l).match(re(text(a[1], 'regex_capture', l), flagsOf(a[2], false)));
     return m ? Array.from(m, (x) => x ?? '') : null;
   });
   def('regex_find_all', (a, l) =>
-    Array.from(text(a[0], 'regex_find_all', l).matchAll(new RegExp(text(a[1], 'regex_find_all', l), flagsOf(a[2], true))), (m) => m[0]));
+    Array.from(text(a[0], 'regex_find_all', l).matchAll(re(text(a[1], 'regex_find_all', l), flagsOf(a[2], true))), (m) => m[0]));
   def('regex_replace', (a, l) =>
-    text(a[0], 'regex_replace', l).replace(new RegExp(text(a[1], 'regex_replace', l), flagsOf(a[3], true)), text(a[2], 'regex_replace', l)));
+    text(a[0], 'regex_replace', l).replace(re(text(a[1], 'regex_replace', l), flagsOf(a[3], true)), text(a[2], 'regex_replace', l)));
   def('quote_text', (a, l) => JSON.stringify(text(a[0], 'quote_text', l)));
 }
