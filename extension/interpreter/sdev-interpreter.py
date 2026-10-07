@@ -2684,6 +2684,41 @@ class Interpreter:
                 raise SdevError('Argument must be text', line)
             return list(args[0])
         builtins['chars'] = SdevBuiltin('chars', chars, 1, 1)
+
+        # ---- text-tooling primitives (parity with src/lang/builtins/text.ts) ----
+        import re as _re, json as _json
+        def _pat(p):
+            return p.replace('\\p{L}', '[^\\W\\d_]').replace('\\p{N}', '\\d')
+        def _fl(f):
+            v = 0
+            f = f if isinstance(f, str) else ''
+            if 'i' in f: v |= _re.I
+            if 'm' in f: v |= _re.M
+            if 's' in f: v |= _re.S
+            return v
+        def _jsrepl(r):
+            return _re.sub(r'\$(\d)', r'\\\1', r)
+        _tb = {
+            'lines': lambda a, l: _re.split(r'\r?\n', a[0]),
+            'unlines': lambda a, l: '\n'.join(str(x) for x in a[0]),
+            'words': lambda a, l: a[0].split(),
+            'char_at': lambda a, l: a[0][int(a[1])] if 0 <= int(a[1]) < len(a[0]) else '',
+            'code_at': lambda a, l: ord(a[0][int(a[1])]) if 0 <= int(a[1]) < len(a[0]) else -1,
+            'find_from': lambda a, l: a[0].find(a[1], int(a[2]) if len(a) > 2 else 0),
+            'find_last': lambda a, l: a[0].rfind(a[1]),
+            'leading_space': lambda a, l: a[0][:len(a[0]) - len(a[0].lstrip())],
+            'is_letter': lambda a, l: a[0] != '' and all(c.isalpha() for c in a[0]),
+            'is_digit': lambda a, l: _re.fullmatch(r'[0-9]+', a[0]) is not None,
+            'is_space': lambda a, l: a[0] != '' and a[0].isspace(),
+            'is_name': lambda a, l: _re.fullmatch(r'[^\W\d]\w*', a[0]) is not None,
+            'regex_test': lambda a, l: _re.search(_pat(a[1]), a[0], _fl(a[2] if len(a) > 2 else '')) is not None,
+            'regex_capture': lambda a, l: (lambda m: [m.group(0)] + [g or '' for g in m.groups()] if m else None)(_re.search(_pat(a[1]), a[0], _fl(a[2] if len(a) > 2 else ''))),
+            'regex_find_all': lambda a, l: [m.group(0) for m in _re.finditer(_pat(a[1]), a[0], _fl(a[2] if len(a) > 2 else ''))],
+            'regex_replace': lambda a, l: _re.sub(_pat(a[1]), _jsrepl(a[2]), a[0], flags=_fl(a[3] if len(a) > 3 else '')),
+            'quote_text': lambda a, l: _json.dumps(a[0], ensure_ascii=False),
+        }
+        for _n, _f in _tb.items():
+            builtins[_n] = SdevBuiltin(_n, _f, 1, 4)
         
         def format_str(args, line):
             """Format a string with values"""
