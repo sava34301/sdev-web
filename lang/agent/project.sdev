@@ -1,0 +1,87 @@
+// =====================================================================
+// project.sdev — the project index of the code understander, in sdev.
+//
+// Collects every name a file defines (variables, functions, kinds,
+// parameters, loop names, lambda parameters) so the understander can tell
+// a reference to another file apart from plain words.
+//
+//   defined_names(source)   -> list of names one file defines
+//   project_names(sources)  -> names defined across many files, no repeats
+// =====================================================================
+
+forge PNAME be "[\\p{L}_][\\p{L}\\p{N}_]*"
+
+conjure pn_add(seen, out, w) ::
+  ponder w differs "" also isnt has(seen, w) also regex_test(w, "^" + PNAME + "$") ::
+    seen[w] be yep
+    out be out + [w]
+  ;;
+  yield out
+;;
+
+// every match of `pattern`, keeping only what follows `prefix`
+conjure pn_tails(text, pattern, prefix) ::
+  forge got be []
+  iterate hit through regex_find_all(text, pattern) ::
+    got be got + [regex_replace(hit, prefix, "")]
+  ;;
+  yield got
+;;
+
+conjure pn_split(list_text) ::
+  yield regex_find_all(list_text, PNAME)
+;;
+
+conjure defined_names_into(source, seen, out) ::
+  forge kw be "\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\s+"
+  iterate w through pn_tails(source, kw + PNAME, kw) ::
+    out be pn_add(seen, out, w)
+  ;;
+  iterate w through pn_tails(source, "\\bfor\\s+(each\\s+)?" + PNAME, "^for\\s+(each\\s+)?") ::
+    out be pn_add(seen, out, w)
+  ;;
+  iterate w through pn_tails(source, "\\bfor\\s+(each\\s+)?" + PNAME + "\\s*,\\s*" + PNAME, "^.*,\\s*") ::
+    out be pn_add(seen, out, w)
+  ;;
+  iterate row through lines(source) ::
+    forge m be regex_capture(row, "^\\s*(" + PNAME + ")\\s*(=|\\+=|-=|\\*=|/=)(?!=)")
+    ponder m differs void ::
+      out be pn_add(seen, out, m[1])
+    ;;
+  ;;
+  // parameters: `with a b c`, `with a, b`
+  iterate part through pn_tails(source, "\\bwith\\s+[^\\n:{]+", "^with\\s+") ::
+    iterate w through regex_split(trim(part), "[\\s,]+") ::
+      out be pn_add(seen, out, w)
+    ;;
+  ;;
+  // `(a, b)` after a declaration
+  iterate part through pn_tails(source, "\\b(to|conjure|func|function|fn|def)\\s+" + PNAME + "\\s*\\([^)]*\\)", "^[^(]*\\(") ::
+    iterate w through regex_split(regex_replace(part, "\\)$", ""), "[\\s,=]+") ::
+      out be pn_add(seen, out, w)
+    ;;
+  ;;
+  // lambdas `(a, b) =>` / `x =>`
+  iterate part through regex_find_all(source, "\\([^()]*\\)\\s*=>|" + PNAME + "\\s*=>") ::
+    iterate w through pn_split(regex_replace(part, "=>$", "")) ::
+      out be pn_add(seen, out, w)
+    ;;
+  ;;
+  yield out
+;;
+
+conjure defined_names(source) ::
+  forge seen be ::
+  ;;
+  yield defined_names_into(source, seen, [])
+;;
+
+conjure project_names(sources) ::
+  forge seen be ::
+  ;;
+  forge out be []
+  iterate src through sources ::
+    out be defined_names_into(src, seen, out)
+  ;;
+  yield out
+;;
