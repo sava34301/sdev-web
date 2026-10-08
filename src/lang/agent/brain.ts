@@ -22,6 +22,8 @@ export interface BrainRequest {
   vocabulary: Record<string, string>;
   /** what went wrong with the previous attempt: unknown names, parse or runtime errors */
   problems?: string[];
+  /** 'ai': answer in sdev:ai (explicit { } blocks, fewer tokens) — used when writing whole programs */
+  format?: 'canonical' | 'ai';
 }
 
 export interface BrainReply {

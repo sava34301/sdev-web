@@ -66,6 +66,30 @@ Rules:
 - Bare words meant as text become quoted strings.
 - Never add prose, markdown fences or explanations inside the code.`;
 
+const AI_DIALECT = `
+
+sdev:ai — the dialect for AI models. When asked for sdev:ai, write ONLY this form:
+  !#ai                         first line
+  v x = 5                      declare            x = x + 1       change (also xs[0] = 1, r.k = 2)
+  p(x)                         print
+  f add(a, b) {                function            r a + b         return
+  ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else
+  w i < 3 {  }                 while               each n in xs {  }   for each
+  try {  } catch e {  }        brk / next          break / continue
+  == != && || ! true false null      every block closes with } on its own line
+  Calls to built-ins and the window toolkit stay as they are: window("Calc", 320, 400), button("7", () -> press("7")), uiset(...)
+  Lambdas: (x) -> x * 2.  One statement per line.
+Example:
+  !#ai
+  f press(k) {
+    uiset("display", uiget("display") + k)
+  }
+  window("Calculator", 320, 400)
+  input("display", "0")
+  button("7", () -> press("7"))
+  button("=", () -> uiset("display", str(evaluate(uiget("display")))))
+  endwindow()`;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -103,7 +127,9 @@ Deno.serve(async (req) => {
     '',
     body.problems?.length ? 'That draft still has these problems — fix them:\n- ' + body.problems.slice(0, 10).map((p) => String(p).slice(0, 300)).join('\n- ') : '',
     '',
-    'Return the whole program as canonical sdev.',
+    body.format === 'ai'
+      ? 'Return the whole program in sdev:ai (described below), starting with the line !#ai.'
+      : 'Return the whole program as canonical sdev.',
   ].join('\n');
 
   const res = await fetch('https://ai.gateway.lovable.dev/v1/responses', {
@@ -116,7 +142,7 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       model: 'openai/gpt-6-astra',
       stream: true,
-      instructions: SYSTEM,
+      instructions: body.format === 'ai' ? SYSTEM + AI_DIALECT : SYSTEM,
       input: user,
       reasoning: { effort: 'low' },
       text: {
