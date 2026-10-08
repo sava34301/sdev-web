@@ -106,4 +106,5 @@ make the self-hosted compiler its own reference.
 - [x] AI-native dialect (`sdev:ai`, `!#ai`) written in sdev, both directions
 - [x] IDE "Open as sdev:ai" (Edit menu, both ways); online AI writes whole programs in sdev:ai; everyday tasks (reverse/upper/sort/dice…) ported to sdev
 - [x] Project index (names defined across files) written in sdev: `lang/agent/project.sdev`, cached per file
+- [x] Large files read in remembered top-level parts: after a small edit only the changed parts are read again (~6x faster)
 - [x] Plain-words requests ("make a window that is a calculator") go straight to the AI, which writes the full program; added evaluate()

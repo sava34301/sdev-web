@@ -68,6 +68,16 @@ ok('canonical left alone', execute(keep).output.join() === '1');
 const big = Array.from({ length: 2000 }, (_, i) => `set v${i} to ${i}\nadd 1 to v${i}`).join('\n');
 const t0 = performance.now(); const b = sdevUnderstand(big, []); const ms = performance.now() - t0;
 ok(`4000 lines in ${ms.toFixed(0)}ms`, !!b?.sure && ms < 5000);
+// after a one-line edit only the changed part is read again
+{
+  const unit = (i: number) => `set n${i} to ${i}\nif n${i} is 5 or more\n  say "big"\nelse\n  say "small"\n`;
+  const src = Array.from({ length: 800 }, (_, i) => unit(i)).join('');
+  const first = sdevUnderstand(src, []);
+  const t = performance.now();
+  const again = sdevUnderstand(src.replace('set n400 to 400', 'set n400 to 401'), []);
+  const ms = performance.now() - t;
+  ok(`one edit in a 4000-line file: ${ms.toFixed(0)}ms`, !!again?.sure && ms < 600 && again.source === first!.source.replace('n400 be 400', 'n400 be 401'), again?.source.slice(0, 80));
+}
 // dialect words reach the sdev engine
 const dw = sdevUnderstand('печатай "здравей"', [], [['печатай', 'say']]);
 ok('dialect words', !!dw?.sure && dw.source === 'speak("здравей")', JSON.stringify(dw));

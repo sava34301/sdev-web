@@ -487,6 +487,9 @@ conjure close_block(open) ::
   yield [open[0] + "end"]
 ;;
 
+forge CHUNK_MEMO be ::
+;;
+
 conjure understand_source(source, known, words) ::
   forge names be ::
   ;;
@@ -521,66 +524,144 @@ conjure understand_source(source, known, words) ::
   // unless the author already writes "end" or "::" blocks themselves
   forge auto_end be isnt regex_test(source, "(^|\n)\s*end\s*($|\n)|::")
   forge opens be []
-  iterate line through rows ::
-    n be n + 1
-    forge indent be leading_space(line)
-    forge body be trim(line)
-    forge head be lower(regex_replace(body, "^(\\S+).*$", "$1"))
-    ponder has(wordmap, head) also body differs "" ::
-      body be wordmap[head] + snatch(body, measure(head), measure(body))
-    ;;
-    ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::
-      out be out + [line]
-    ;; otherwise ::
-      forge r be understand_line(body, names)
-      ponder isnt r[1] ::
-        sure be nope
-      ;;
-      ponder r[0] differs body ::
-        notes be notes + [[n, body, r[0]]]
-      ;;
-      // learn declarations as we go: forge x be … / conjure f(a, b)
-      forge d be regex_capture(r[0], "^(?:forge|set)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
-      ponder d differs void ::
-        names[d[1]] be (regex_test(r[0], "input\\(") also isnt regex_test(r[0], "num\\(input")) ~ "typed" : yep
-      ;;
-      d be regex_capture(r[0], "^conjure\\s+([\\p{L}_][\\p{L}\\p{N}_]*)\\s*\\(([^)]*)\\)")
-      ponder d differs void ::
-        names[d[1]] be yep
-        iterate p through regex_find_all(d[2], "[\\p{L}_][\\p{L}\\p{N}_]*") ::
-          names[p] be yep
-        ;;
-      ;;
-      d be regex_capture(r[0], "^iterate\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
-      ponder d differs void ::
-        names[d[1]] be yep
-      ;;
-      ponder auto_end ::
-        forge isElse be regex_test(r[0], "^else\\b")
-        cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::
-          out be out + close_block(opens[-1])
-          opens be portion(opens, 0, measure(opens) - 1)
-        ;;
-        ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::
-          opens be portion(opens, 0, measure(opens) - 1)
-        ;;
-        forge bump be regex_capture(r[0], "\n#bump (\\S+)$")
-        ponder bump differs void ::
-          opens be opens + [[indent, bump[1]]]
-          r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]
-        ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\b") also isnt contains(r[0], "\n") ::
-          opens be opens + [[indent, ""]]
-        ;;
-      ;;
-      ponder isnt auto_end also contains(r[0], "#bump") ::
-        sure be nope
-      ;;
-      out be out + [indent + replace(r[0], "\n", "\n" + indent)]
+  // Large files are read in top-level chunks. Each chunk's reading is
+  // remembered (keyed by its text and everything known before it), so after
+  // a small edit only the chunks that changed are read again.
+  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))
+  iterate k through keys(names) ::
+    ponder startswith(k, "#num:") ::
+      state be str(hash(state + k)) + str(hash(reverse(state + k)))
     ;;
   ;;
-  cycle measure(opens) > 0 ::
-    out be out + close_block(opens[-1])
-    opens be portion(opens, 0, measure(opens) - 1)
+  forge chunks be []
+  forge current be []
+  forge first_line be 1
+  forge idx be 0
+  iterate line through rows ::
+    idx be idx + 1
+    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\}|//|#)", "i")
+    ponder top also measure(current) > 0 ::
+      chunks be chunks + [[first_line, current]]
+      current be []
+      first_line be idx
+    ;;
+    current be current + [line]
+  ;;
+  ponder measure(current) > 0 ::
+    chunks be chunks + [[first_line, current]]
+  ;;
+  iterate chunk through chunks ::
+    forge key be state + "|#|" + unlines(chunk[1])
+    forge delta be []
+    ponder has(CHUNK_MEMO, key) ::
+      forge hit be CHUNK_MEMO[key]
+      out be out + hit[0]
+      ponder isnt hit[1] ::
+        sure be nope
+      ;;
+      iterate note through hit[2] ::
+        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]
+      ;;
+      delta be hit[3]
+      iterate pair through delta ::
+        names[pair[0]] be pair[1]
+      ;;
+    ;; otherwise ::
+      forge c_out be []
+      forge c_sure be yep
+      forge c_notes be []
+      forge saved_out be out
+      forge saved_notes be notes
+      forge saved_sure be sure
+      out be []
+      notes be []
+      sure be yep
+      n be chunk[0] - 1
+      iterate line through chunk[1] ::
+      n be n + 1
+      forge indent be leading_space(line)
+      forge body be trim(line)
+      forge head be lower(regex_replace(body, "^(\\S+).*$", "$1"))
+      ponder has(wordmap, head) also body differs "" ::
+        body be wordmap[head] + snatch(body, measure(head), measure(body))
+      ;;
+      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::
+        out be out + [line]
+      ;; otherwise ::
+        forge r be understand_line(body, names)
+        ponder isnt r[1] ::
+          sure be nope
+        ;;
+        ponder r[0] differs body ::
+          notes be notes + [[n, body, r[0]]]
+        ;;
+        // learn declarations as we go: forge x be … / conjure f(a, b)
+        forge d be regex_capture(r[0], "^(?:forge|set)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
+        ponder d differs void ::
+          names[d[1]] be (regex_test(r[0], "input\\(") also isnt regex_test(r[0], "num\\(input")) ~ "typed" : yep
+          delta be delta + [[d[1], names[d[1]]]]
+        ;;
+        d be regex_capture(r[0], "^conjure\\s+([\\p{L}_][\\p{L}\\p{N}_]*)\\s*\\(([^)]*)\\)")
+        ponder d differs void ::
+          names[d[1]] be yep
+          delta be delta + [[d[1], yep]]
+          iterate p through regex_find_all(d[2], "[\\p{L}_][\\p{L}\\p{N}_]*") ::
+            names[p] be yep
+            delta be delta + [[p, yep]]
+          ;;
+        ;;
+        d be regex_capture(r[0], "^iterate\\s+([\\p{L}_][\\p{L}\\p{N}_]*)")
+        ponder d differs void ::
+          names[d[1]] be yep
+          delta be delta + [[d[1], yep]]
+        ;;
+        ponder auto_end ::
+          forge isElse be regex_test(r[0], "^else\\b")
+          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::
+            out be out + close_block(opens[-1])
+            opens be portion(opens, 0, measure(opens) - 1)
+          ;;
+          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::
+            opens be portion(opens, 0, measure(opens) - 1)
+          ;;
+          forge bump be regex_capture(r[0], "\n#bump (\\S+)$")
+          ponder bump differs void ::
+            opens be opens + [[indent, bump[1]]]
+            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]
+          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\b") also isnt contains(r[0], "\n") ::
+            opens be opens + [[indent, ""]]
+          ;;
+        ;;
+        ponder isnt auto_end also contains(r[0], "#bump") ::
+          sure be nope
+        ;;
+        out be out + [indent + replace(r[0], "\n", "\n" + indent)]
+      ;;
+      ;;
+      // a top-level line follows: close what this chunk opened, here
+      cycle auto_end also measure(opens) > 0 ::
+        out be out + close_block(opens[-1])
+        opens be portion(opens, 0, measure(opens) - 1)
+      ;;
+      c_out be out
+      c_sure be sure
+      iterate note through notes ::
+        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]
+      ;;
+      ponder measure(CHUNK_MEMO) > 20000 ::
+        CHUNK_MEMO be ::
+        ;;
+      ;;
+      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]
+      out be saved_out + c_out
+      notes be saved_notes + notes
+      sure be saved_sure also c_sure
+    ;;
+    forge dsig be state
+    iterate pair through delta ::
+      dsig be dsig + "," + pair[0] + "=" + str(pair[1])
+    ;;
+    state be str(hash(dsig)) + str(hash(reverse(dsig)))
   ;;
   yield [unlines(out), sure, notes]
 ;;
