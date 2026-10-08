@@ -8,13 +8,14 @@
  */
 import UNDERSTANDER from '../../../lang/agent/understander.sdev?raw';
 import AI_DIALECT from '../../../lang/agent/ai-dialect.sdev?raw';
+import PROJECT from '../../../lang/agent/project.sdev?raw';
 import { Lexer } from '../lexer';
 import { Parser } from '../parser';
 import { Interpreter } from '../interpreter';
 import type { AgentNote } from './types';
 
 type Callable = { call: (args: unknown[], line: number) => unknown };
-type Engine = { understand: Callable; toSdev: Callable; toAi: Callable };
+type Engine = { understand: Callable; toSdev: Callable; toAi: Callable; names: Callable };
 
 let engine: Engine | null | false = null;
 export let engineError: string | null = null;
@@ -22,7 +23,7 @@ export let engineError: string | null = null;
 function load(): Engine | false {
   if (engine !== null) return engine;
   try {
-    const ast = new Parser(new Lexer(UNDERSTANDER + '\n' + AI_DIALECT).tokenize()).parse();
+    const ast = new Parser(new Lexer(UNDERSTANDER + '\n' + AI_DIALECT + '\n' + PROJECT).tokenize()).parse();
     const interp = new Interpreter(() => {});
     interp.interpret(ast);
     const env = interp.getGlobalEnv();
@@ -30,6 +31,7 @@ function load(): Engine | false {
       understand: env.get('understand_source', 0) as Callable,
       toSdev: env.get('ai_to_sdev', 0) as Callable,
       toAi: env.get('sdev_to_ai', 0) as Callable,
+      names: env.get('defined_names', 0) as Callable,
     };
   } catch (e) {
     engineError = e instanceof Error ? e.message : String(e);
@@ -87,4 +89,35 @@ export function sdevToAi(source: string): string {
   const e = load();
   if (!e) return source;
   return String(e.toAi.call([source], 0));
+}
+
+const namesCache = new Map<string, string[]>();
+/**
+ * Names one file defines, read by lang/agent/project.sdev. Cached per file
+ * content, so a large project only re-reads the files that changed.
+ * null = the sdev engine is unavailable (callers use the TypeScript index).
+ */
+export function sdevDefinedNames(source: string): string[] | null {
+  const hit = namesCache.get(source);
+  if (hit) return hit;
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.names.call([source], 0);
+    if (!Array.isArray(r)) return null;
+    const names = r.map(String);
+    if (namesCache.size > 500) namesCache.clear();
+    namesCache.set(source, names);
+    return names;
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+
+/** Every name defined across the given files, without repeats. */
+export function sdevProjectNames(sources: string[], fallback: (s: string) => Iterable<string>): string[] {
+  const out = new Set<string>();
+  for (const s of sources) for (const n of sdevDefinedNames(s) ?? fallback(s)) out.add(n);
+  return [...out];
 }

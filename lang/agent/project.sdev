@@ -51,13 +51,13 @@ conjure defined_names_into(source, seen, out) ::
   ;;
   // parameters: `with a b c`, `with a, b`
   iterate part through pn_tails(source, "\\bwith\\s+[^\\n:{]+", "^with\\s+") ::
-    iterate w through regex_split(trim(part), "[\\s,]+") ::
+    iterate w through pn_split(part) ::
       out be pn_add(seen, out, w)
     ;;
   ;;
   // `(a, b)` after a declaration
   iterate part through pn_tails(source, "\\b(to|conjure|func|function|fn|def)\\s+" + PNAME + "\\s*\\([^)]*\\)", "^[^(]*\\(") ::
-    iterate w through regex_split(regex_replace(part, "\\)$", ""), "[\\s,=]+") ::
+    iterate w through pn_split(part) ::
       out be pn_add(seen, out, w)
     ;;
   ;;

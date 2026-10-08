@@ -103,7 +103,7 @@ export const AGENT_VERSION = 'u5';
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
-export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi } from './sdev-engine';
+export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi, sdevDefinedNames, sdevProjectNames } from './sdev-engine';
 
 /**
  * A file that is a request in plain words ("make a window that is a
