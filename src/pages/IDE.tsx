@@ -647,8 +647,9 @@ export default function IDEPage() {
     // `!#agent:off` in the file switches it off; `!#agent: local|online`
     // chooses where its smart core runs.
     const { understandAsync } = await import('@/lang/agent');
-    const { definedNames } = await import('@/lang/agent');
-    const projectNames = [...new Set(files.filter((f) => f.id !== activeFile.id).flatMap((f) => [...definedNames(f.content)]))];
+    const { definedNames, sdevProjectNames } = await import('@/lang/agent');
+    // the project index is written in sdev (lang/agent/project.sdev); cached per file
+    const projectNames = sdevProjectNames(files.filter((f) => f.id !== activeFile.id).map((f) => f.content), definedNames);
     // The file keeps a hidden copy of what the understander made of it; when
     // the content hasn't changed, re-runs use that copy and skip the thinking.
     const { understandKey, AGENT_VERSION } = await import('@/lang/agent');
