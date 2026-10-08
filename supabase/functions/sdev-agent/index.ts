@@ -15,6 +15,7 @@ interface Body {
   unresolved?: number[];
   vocabulary?: Record<string, string>;
   problems?: string[];
+  format?: 'canonical' | 'ai';
 }
 
 const SYSTEM = `You are the understanding agent of the sdev programming language.
