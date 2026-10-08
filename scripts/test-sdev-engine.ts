@@ -47,6 +47,13 @@ for (const [name, src, want] of cases) {
 // unsure lines fall back to the TypeScript engine
 const fb = sdevUnderstand('hungry is yes:\n  say "eat"', []);
 ok('unsure → fallback', fb !== null && !fb.sure);
+{
+  const { sdevDefinedNames } = await import('../src/lang/agent/sdev-engine');
+  const { definedNames } = await import('../src/lang/agent/sense');
+  const src = 'set x to 1\nto add with a b\n  return a + b\nend\nfor each n, m in xs\ny = 2\nfn sq(p, q=1) {}\nv = map(xs, (u, w) => u + w)\ngreet with "world"\nforge имя be 1';
+  const a = [...(sdevDefinedNames(src) ?? [])].sort().join(','), b = [...definedNames(src)].sort().join(',');
+  ok('project index (sdev) matches TypeScript', a === b, a + ' vs ' + b);
+}
 understand('hungry is yes:\n  say "eat"');
 ok('fallback engine used', lastEngine === 'ts');
 // cross-file names: a name from another file is known
