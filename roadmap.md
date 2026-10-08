@@ -104,5 +104,5 @@ make the self-hosted compiler its own reference.
 - [x] Port yes/no answers, typed-number conversion, counted loops, placeholders, dialect words to sdev
 - [x] Names from the other IDE files fed into the understander
 - [x] AI-native dialect (`sdev:ai`, `!#ai`) written in sdev, both directions
-- [ ] Next: IDE button to view a file as sdev:ai; teach the online AI to answer in sdev:ai; port text tasks (reverse/upper/sort…)
+- [x] IDE "Open as sdev:ai" (Edit menu, both ways); online AI writes whole programs in sdev:ai; everyday tasks (reverse/upper/sort/dice…) ported to sdev
 - [x] Plain-words requests ("make a window that is a calculator") go straight to the AI, which writes the full program; added evaluate()

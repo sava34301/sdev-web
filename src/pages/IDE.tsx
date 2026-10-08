@@ -955,6 +955,27 @@ export default function IDEPage() {
     setActiveId(id);
   }, []);
 
+  // Open the active file in the other form: plain sdev -> sdev:ai (the
+  // dialect written for AI models), or an sdev:ai file -> plain sdev.
+  const convertAiView = useCallback(async () => {
+    if (!activeFile) return;
+    const { sdevToAi, aiToSdev, isAiDialect } = await import('@/lang/agent');
+    const body = stripSignature(activeFile.content);
+    const toAi = !isAiDialect(body);
+    const source = toAi ? (activeFile.understood?.source ?? body) : body;
+    const converted = toAi ? sdevToAi(source) : aiToSdev(source);
+    const base = activeFile.name.replace(/(\.ai)?\.sdev$/, '');
+    const id = nextFileId();
+    setFiles(prev => {
+      let name = `${base}${toAi ? '.ai' : ''}.sdev`;
+      for (let n = 2; prev.some(f => f.name === name); n++) name = `${base}${toAi ? '.ai' : ''}-${n}.sdev`;
+      return [...prev, { id, name, content: converted, folderId: activeFile.folderId ?? null } as IdeFile];
+    });
+    setOpenIds(prev => [...prev, id]);
+    setActiveId(id);
+    toast.success(toAi ? 'Opened as sdev:ai' : 'Opened as plain sdev');
+  }, [activeFile]);
+
   const newFolder = useCallback((parentId: string | null = null) => {
     const id = `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setFolders(prev => [...prev, { id, name: 'New Folder', parentId, expanded: true }]);
@@ -1270,6 +1291,9 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowGoToLine(true)} className="text-xs gap-2 cursor-pointer">
                     <ArrowRight className="w-3.5 h-3.5" /> Go to Line… <span className="ml-auto text-muted-foreground">⌃G</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={convertAiView} className="text-xs gap-2 cursor-pointer">
+                    <Wand2 className="w-3.5 h-3.5" /> {activeFile && /^\s*(\/\/[^\n]*\n\s*)*!#ai\b/.test(activeFile.content) ? 'Open as plain sdev' : 'Open as sdev:ai'}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-xs text-muted-foreground">Snippets</DropdownMenuLabel>

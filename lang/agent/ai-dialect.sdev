@@ -156,7 +156,86 @@ conjure ai_to_sdev(source) ::
 ;;
 
 // canonical sdev -> the AI form
-conjure sdev_line_to_ai(body) ::
+// the English canonical forms (say / set / if / while / for each / to … with / end)
+conjure english_line_to_ai(body, AI_DECLARED) ::
+  forge m be regex_capture(body, "^say\\s+(.+)$")
+  ponder m differs void ::
+    yield "p(" + ai_map_code(m[1], nope) + ")"
+  ;;
+  m be regex_capture(body, "^set\\s+(" + AI_NAME + "(?:\\[[^\\]]+\\]|\\." + AI_NAME + ")*)\\s+to\\s+(.+)$")
+  ponder m differs void ::
+    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::
+      yield m[1] + " = " + ai_map_code(m[2], nope)
+    ;;
+    AI_DECLARED[m[1]] be yep
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^if\\s+(.+)$")
+  ponder m differs void ::
+    yield "? " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^else\\s+if\\s+(.+)$")
+  ponder m differs void ::
+    yield "} :? " + ai_cond(m[1]) + " {"
+  ;;
+  ponder body equals "else" ::
+    yield "} : {"
+  ;;
+  ponder body equals "end" ::
+    yield "}"
+  ;;
+  m be regex_capture(body, "^while\\s+(.+)$")
+  ponder m differs void ::
+    yield "w " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^for\\s+(each\\s+)?(" + AI_NAME + ")\\s+in\\s+(.+)$")
+  ponder m differs void ::
+    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"
+  ;;
+  m be regex_capture(body, "^to\\s+(" + AI_NAME + ")(\\s+with\\s+(.+))?$")
+  ponder m differs void ::
+    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")
+    yield "f " + m[1] + "(" + params + ") {"
+  ;;
+  m be regex_capture(body, "^return(\\s+(.+))?$")
+  ponder m differs void ::
+    yield "r " + ai_map_code(m[2], nope)
+  ;;
+  ponder body equals "break" ::
+    yield "brk"
+  ;;
+  ponder body equals "continue" ::
+    yield "next"
+  ;;
+  yield ""
+;;
+
+// English comparisons -> symbols
+conjure ai_cond(c) ::
+  forge out be ""
+  iterate seg through ai_segments(c) ::
+    ponder startswith(seg, "\"") either startswith(seg, "'") ::
+      out be out + seg
+    ;; otherwise ::
+      forge x be seg
+      x be regex_replace(x, "\\s+is\\s+not\\s+", " != ")
+      x be regex_replace(x, "\\s+is\\s+(\\S+)\\s+or\\s+more\\b", " >= $1")
+      x be regex_replace(x, "\\s+is\\s+(\\S+)\\s+or\\s+less\\b", " <= $1")
+      x be regex_replace(x, "\\s+is\\s+", " == ")
+      x be regex_replace(x, "\\s+and\\s+", " && ")
+      x be regex_replace(x, "\\s+or\\s+", " || ")
+      x be regex_replace(x, "(^|\\s)not\\s+", "$1!")
+      out be out + ai_ops_to_ai(x)
+    ;;
+  ;;
+  yield out
+;;
+
+conjure sdev_line_to_ai(body, declared) ::
+  forge english be english_line_to_ai(body, declared)
+  ponder english differs "" ::
+    yield english
+  ;;
   forge m be regex_capture(body, "^;;\\s*otherwise\\s+ponder\\s+(.+?)\\s*::$")
   ponder m differs void ::
     yield "} :? " + ai_map_code(m[1], nope) + " {"
@@ -217,13 +296,15 @@ conjure sdev_line_to_ai(body) ::
 
 conjure sdev_to_ai(source) ::
   forge out be ["!#ai"]
+  forge declared be ::
+  ;;
   iterate line through lines(source) ::
     forge indent be leading_space(line)
     forge body be trim(line)
     ponder body equals "" either startswith(body, "//") ::
       out be out + [line]
     ;; otherwise ::
-      out be out + [indent + sdev_line_to_ai(body)]
+      out be out + [indent + sdev_line_to_ai(body, declared)]
     ;;
   ;;
   yield unlines(out)

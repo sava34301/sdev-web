@@ -99,7 +99,7 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 }
 
 /** Bumped whenever the understander changes how it reads files, so saved readings from older versions are never reused. */
-export const AGENT_VERSION = 'u4';
+export const AGENT_VERSION = 'u5';
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
@@ -281,13 +281,17 @@ async function askBrain(
   let best: { source: string; used: 'local' | 'online' } | null = null;
   let bestScore = score(draft) + (extraProblems.length ? 50 : 0);
   let problems = [...extraProblems, ...problemsOf(draft)];
+  // Writing a whole program from a request: let the model use sdev:ai.
+  const writing = isRequest(prep.stripped);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const { reply, used } = await think(
-      { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems },
+      { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems, format: writing ? 'ai' : 'canonical' },
       mode, opts.localUrl,
     );
     if (!reply?.canonical || used === 'none') break;
+    // Whole programs come back in sdev:ai; turn them into canonical sdev here.
+    if (isAiDialect(reply.canonical)) reply.canonical = aiToSdev(reply.canonical);
     const s = score(reply.canonical);
     if (s < bestScore || (s === bestScore && (preferReply || extraProblems.length > 0) && !best)) {
       best = { source: reply.canonical, used };
