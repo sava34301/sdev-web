@@ -156,11 +156,8 @@ conjure ai_to_sdev(source) ::
 ;;
 
 // canonical sdev -> the AI form
-forge AI_DECLARED be ::
-;;
-
 // the English canonical forms (say / set / if / while / for each / to … with / end)
-conjure english_line_to_ai(body) ::
+conjure english_line_to_ai(body, AI_DECLARED) ::
   forge m be regex_capture(body, "^say\\s+(.+)$")
   ponder m differs void ::
     yield "p(" + ai_map_code(m[1], nope) + ")"
@@ -234,8 +231,8 @@ conjure ai_cond(c) ::
   yield out
 ;;
 
-conjure sdev_line_to_ai(body) ::
-  forge english be english_line_to_ai(body)
+conjure sdev_line_to_ai(body, declared) ::
+  forge english be english_line_to_ai(body, declared)
   ponder english differs "" ::
     yield english
   ;;
@@ -299,13 +296,15 @@ conjure sdev_line_to_ai(body) ::
 
 conjure sdev_to_ai(source) ::
   forge out be ["!#ai"]
+  forge declared be ::
+  ;;
   iterate line through lines(source) ::
     forge indent be leading_space(line)
     forge body be trim(line)
     ponder body equals "" either startswith(body, "//") ::
       out be out + [line]
     ;; otherwise ::
-      out be out + [indent + sdev_line_to_ai(body)]
+      out be out + [indent + sdev_line_to_ai(body, declared)]
     ;;
   ;;
   yield unlines(out)
