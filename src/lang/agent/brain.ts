@@ -8,7 +8,11 @@
  *            custom endpoint that speaks BrainRequest/BrainReply directly.
  *            Free: it never touches the website's AI credits.
  *
- * `auto` only uses the computer's model. The website's AI is used only when
+ *   browser — a small coding model running inside the browser itself
+ *            (browser-brain.ts, WebGPU). Nothing to install; this is what
+ *            `auto` uses first on the website.
+ *
+ * `auto` only uses the computer's model (browser first, then a local app). The website's AI is used only when
  * the user turns it on (IDE setting, or `!#agent:online` in the file).
  *
  * The brain never runs the user's code and never sees anything but the source
@@ -164,10 +168,16 @@ export async function think(req: BrainRequest, mode: BrainMode, localUrl?: strin
   const cfg = brainSettings();
   const url = localUrl ?? cfg.localUrl;
 
-  // The computer's own model first — it is free.
+  // The computer's own model first — it is free. On the website that is the
+  // model running inside the browser; a local app (Ollama…) comes next.
   if (mode === 'local' || mode === 'auto') {
+    const inBrowser = typeof window !== 'undefined' && !localUrl ? await import('./browser-brain') : null;
+    if (inBrowser?.browserBrainSupported()) {
+      const reply = await inBrowser.callBrowser(req);
+      if (reply) return { reply, used: 'local' };
+    }
     const reply = await callLocal(req, url, cfg.localModel);
-    if (reply || mode === 'local') { lastBrainMissing = !reply; return { reply, used: reply ? 'local' : 'none' }; }
+    if (reply || (mode === 'local' && typeof window === 'undefined')) { lastBrainMissing = !reply; return { reply, used: reply ? 'local' : 'none' }; }
   }
   // The website's AI uses credits: only when the file asks for it
   // (`!#agent:online`) or the user switched it on.
