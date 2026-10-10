@@ -660,7 +660,12 @@ export default function IDEPage() {
       : saved !== null
         ? { source: saved, notes: [] as unknown[] }
         : await understandAsync(dialectSrc, { dialect: activeDialect, projectNames });
-    if (overrideSrc === undefined && saved === null) {
+    const { lastBrainMissing } = await import('@/lang/agent/brain');
+    const brainMissing = overrideSrc === undefined && saved === null && lastBrainMissing;
+    if (brainMissing) {
+      toast.info('This needs an AI, and none is running on your computer. Open Settings → Code understander AI to set one up (free), or switch on the website AI.');
+    }
+    if (overrideSrc === undefined && saved === null && !brainMissing) {
       const fileId = activeFile.id;
       const stored = { key: fileKey, source: understood.source };
       setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: stored } : f)));
