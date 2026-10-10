@@ -663,7 +663,7 @@ export default function IDEPage() {
     const { lastBrainMissing } = await import('@/lang/agent/brain');
     const brainMissing = overrideSrc === undefined && saved === null && lastBrainMissing;
     if (brainMissing) {
-      toast.info('This needs an AI, and none is running on your computer. Open Settings → Code understander AI to set one up (free), or switch on the website AI.');
+      toast.info('This needs the AI, which could not start in this browser. Open Settings → Code understander AI to see why, or switch on the website AI.');
     }
     if (overrideSrc === undefined && saved === null && !brainMissing) {
       const fileId = activeFile.id;
@@ -981,6 +981,19 @@ export default function IDEPage() {
     setActiveId(id);
     toast.success(toAi ? 'Opened as sdev:ai' : 'Opened as plain sdev');
   }, [activeFile]);
+
+  // Show the in-browser AI's first download, wherever it was started from.
+  useEffect(() => {
+    let off = () => {};
+    import('@/lang/agent/browser-brain').then(({ onBrowserBrain }) => {
+      off = onBrowserBrain((st) => {
+        if (st.status === 'loading') toast.loading(`Getting the code understander AI ready… ${Math.round(st.progress * 100)}% (one-time download)`, { id: 'browser-brain' });
+        else if (st.status === 'ready') toast.success('Code understander AI is ready on this computer', { id: 'browser-brain' });
+        else if (st.status === 'error') toast.error('The code understander AI could not start in this browser', { id: 'browser-brain' });
+      });
+    });
+    return () => off();
+  }, []);
 
   const newFolder = useCallback((parentId: string | null = null) => {
     const id = `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
