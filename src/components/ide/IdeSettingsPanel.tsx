@@ -1,5 +1,6 @@
 import { Settings } from 'lucide-react';
 import type { IdeSettings } from './types';
+import { AgentBrainSettings } from './AgentBrainSettings';
 
 interface Props {
   settings: IdeSettings;
@@ -107,6 +108,8 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
             </div>
           ))}
         </div>
+
+        <AgentBrainSettings />
 
         {/* Language runtime */}
         <div>
