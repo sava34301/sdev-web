@@ -3,8 +3,13 @@
  *
  * Two interchangeable implementations, both optional:
  *   online — the `sdev-agent` edge function on the website (Lovable AI).
- *   local  — an HTTP model endpoint on the user's own machine
- *            (SDEV_AGENT_LOCAL_URL, default http://localhost:11434/sdev-agent).
+ *   local  — a model running on the user's own computer (Ollama, LM Studio,
+ *            llama.cpp — anything with an OpenAI-style chat endpoint), or a
+ *            custom endpoint that speaks BrainRequest/BrainReply directly.
+ *            Free: it never touches the website's AI credits.
+ *
+ * `auto` only uses the computer's model. The website's AI is used only when
+ * the user turns it on (IDE setting, or `!#agent:online` in the file).
  *
  * The brain never runs the user's code and never sees anything but the source
  * it is asked to canonicalize. Rules + memory always work without it.
@@ -32,15 +37,37 @@ export interface BrainReply {
   notes?: string;
 }
 
-export const DEFAULT_LOCAL_URL = 'http://127.0.0.1:11434/sdev-agent';
+/** Ollama's OpenAI-compatible endpoint; LM Studio uses :1234, llama.cpp :8080 */
+export const DEFAULT_LOCAL_URL = 'http://127.0.0.1:11434/v1/chat/completions';
+export const DEFAULT_LOCAL_MODEL = 'qwen2.5-coder:7b';
 
-function localUrlFromEnv(): string | null {
+function env(name: string): string | null {
   try {
-    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
-    return env?.SDEV_AGENT_LOCAL_URL ?? null;
+    const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+    return e?.[name] ?? null;
   } catch {
     return null;
   }
+}
+function stored(key: string): string | null {
+  try { return typeof localStorage === 'undefined' ? null : localStorage.getItem(key); } catch { return null; }
+}
+
+/** Settings for the brain, from the IDE (localStorage) or the CLI (environment). */
+export interface BrainSettings {
+  localUrl: string;
+  localModel: string;
+  /** may the website's AI (which uses credits) be used? */
+  allowOnline: boolean;
+}
+export const BRAIN_KEYS = { url: 'sdev_agent_local_url', model: 'sdev_agent_local_model', online: 'sdev_agent_online' } as const;
+
+export function brainSettings(): BrainSettings {
+  return {
+    localUrl: stored(BRAIN_KEYS.url) || env('SDEV_AGENT_LOCAL_URL') || DEFAULT_LOCAL_URL,
+    localModel: stored(BRAIN_KEYS.model) || env('SDEV_AGENT_LOCAL_MODEL') || DEFAULT_LOCAL_MODEL,
+    allowOnline: (stored(BRAIN_KEYS.online) ?? env('SDEV_AGENT_ONLINE') ?? '') === '1',
+  };
 }
 
 export function online(): boolean {
@@ -48,16 +75,60 @@ export function online(): boolean {
   return nav?.onLine ?? true;
 }
 
-async function callLocal(req: BrainRequest, url: string): Promise<BrainReply | null> {
+function parseReply(text: string): BrainReply | null {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
   try {
+    const j = JSON.parse(cleaned) as BrainReply;
+    if (typeof j?.canonical === 'string') return j;
+  } catch { /* the model answered with bare code */ }
+  const code = cleaned.replace(/^```\w*\s*/, '').replace(/```\s*$/, '');
+  return code.trim() ? { canonical: code } : null;
+}
+
+async function callLocal(req: BrainRequest, url: string, model: string): Promise<BrainReply | null> {
+  try {
+    // A custom endpoint that speaks the brain protocol directly.
+    if (!/\/chat\/completions\/?$|\/api\/chat\/?$/.test(url)) {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req) });
+      if (!res.ok) return null;
+      const json = (await res.json()) as BrainReply;
+      return typeof json?.canonical === 'string' ? json : null;
+    }
+    const { brainInstructions, brainInput } = await import('./brain-prompt');
+    const messages = [
+      { role: 'system', content: brainInstructions(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
+      { role: 'user', content: brainInput(req) },
+    ];
+    const ollama = /\/api\/chat\/?$/.test(url);
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req),
+      body: JSON.stringify(ollama
+        ? { model, messages, stream: false, format: 'json' }
+        : { model, messages, stream: false, response_format: { type: 'json_object' } }),
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as BrainReply;
-    return typeof json?.canonical === 'string' ? json : null;
+    const json = await res.json() as { choices?: { message?: { content?: string } }[]; message?: { content?: string } };
+    const text = json.choices?.[0]?.message?.content ?? json.message?.content ?? '';
+    return parseReply(text);
+  } catch {
+    return null;
+  }
+}
+
+/** Is a model reachable on this computer? Returns its model names, or null. */
+export async function probeLocal(url = brainSettings().localUrl): Promise<string[] | null> {
+  try {
+    const base = url.replace(/\/v1\/chat\/completions\/?$|\/api\/chat\/?$/, '');
+    const res = await fetch(base + '/v1/models');
+    if (res.ok) {
+      const j = await res.json() as { data?: { id: string }[] };
+      return (j.data ?? []).map((m) => m.id);
+    }
+    const tags = await fetch(base + '/api/tags');
+    if (!tags.ok) return null;
+    const t = await tags.json() as { models?: { name: string }[] };
+    return (t.models ?? []).map((m) => m.name);
   } catch {
     return null;
   }
@@ -86,21 +157,19 @@ export interface BrainOutcome {
  */
 export async function think(req: BrainRequest, mode: BrainMode, localUrl?: string): Promise<BrainOutcome> {
   if (mode === 'none') return { reply: null, used: 'none' };
-  const url = localUrl ?? localUrlFromEnv() ?? DEFAULT_LOCAL_URL;
+  const cfg = brainSettings();
+  const url = localUrl ?? cfg.localUrl;
 
-  if (mode === 'local') {
-    const reply = await callLocal(req, url);
-    return { reply, used: reply ? 'local' : 'none' };
+  // The computer's own model first — it is free.
+  if (mode === 'local' || mode === 'auto') {
+    const reply = await callLocal(req, url, cfg.localModel);
+    if (reply || mode === 'local') return { reply, used: reply ? 'local' : 'none' };
   }
-  if (mode === 'online') {
-    const reply = await callOnline(req);
-    return { reply, used: reply ? 'online' : 'none' };
-  }
-
-  if (online()) {
+  // The website's AI uses credits: only when the file asks for it
+  // (`!#agent:online`) or the user switched it on.
+  if ((mode === 'online' || cfg.allowOnline) && online()) {
     const reply = await callOnline(req);
     if (reply) return { reply, used: 'online' };
   }
-  const reply = await callLocal(req, url);
-  return { reply, used: reply ? 'local' : 'none' };
+  return { reply: null, used: 'none' };
 }
