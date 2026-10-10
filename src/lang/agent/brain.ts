@@ -3,7 +3,9 @@
  *
  * Two interchangeable implementations, both optional:
  *   online — the `sdev-agent` edge function on the website (Lovable AI).
- *   local  — a model running on the user's own computer (Ollama, LM Studio,
+ *   browser — a small model running inside the user's browser (WebGPU).
+ *            Nothing to install; the default.
+ *   local  — a model server the user runs themselves (Ollama, LM Studio,
  *            llama.cpp — anything with an OpenAI-style chat endpoint), or a
  *            custom endpoint that speaks BrainRequest/BrainReply directly.
  *            Free: it never touches the website's AI credits.
@@ -57,15 +59,21 @@ function stored(key: string): string | null {
 export interface BrainSettings {
   localUrl: string;
   localModel: string;
+  /** run the built-in AI inside the browser (default on) */
+  browser: boolean;
+  /** did the user set their own model server? */
+  customLocal: boolean;
   /** may the website's AI (which uses credits) be used? */
   allowOnline: boolean;
 }
-export const BRAIN_KEYS = { url: 'sdev_agent_local_url', model: 'sdev_agent_local_model', online: 'sdev_agent_online' } as const;
+export const BRAIN_KEYS = { url: 'sdev_agent_local_url', model: 'sdev_agent_local_model', online: 'sdev_agent_online', browser: 'sdev_agent_browser' } as const;
 
 export function brainSettings(): BrainSettings {
   return {
     localUrl: stored(BRAIN_KEYS.url) || env('SDEV_AGENT_LOCAL_URL') || DEFAULT_LOCAL_URL,
     localModel: stored(BRAIN_KEYS.model) || env('SDEV_AGENT_LOCAL_MODEL') || DEFAULT_LOCAL_MODEL,
+    browser: (stored(BRAIN_KEYS.browser) ?? '1') !== '0',
+    customLocal: !!(stored(BRAIN_KEYS.url) || env('SDEV_AGENT_LOCAL_URL')),
     allowOnline: (stored(BRAIN_KEYS.online) ?? env('SDEV_AGENT_ONLINE') ?? '') === '1',
   };
 }
@@ -75,7 +83,7 @@ export function online(): boolean {
   return nav?.onLine ?? true;
 }
 
-function parseReply(text: string): BrainReply | null {
+export function parseReply(text: string): BrainReply | null {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
   try {
     const j = JSON.parse(cleaned) as BrainReply;
@@ -164,10 +172,20 @@ export async function think(req: BrainRequest, mode: BrainMode, localUrl?: strin
   const cfg = brainSettings();
   const url = localUrl ?? cfg.localUrl;
 
-  // The computer's own model first — it is free.
+  // Free, on the user's own computer: the built-in browser AI, then a model
+  // server the user set up themselves (or the CLI's local model).
   if (mode === 'local' || mode === 'auto') {
-    const reply = await callLocal(req, url, cfg.localModel);
-    if (reply || mode === 'local') { lastBrainMissing = !reply; return { reply, used: reply ? 'local' : 'none' }; }
+    const inBrowser = typeof window !== 'undefined';
+    if (inBrowser && cfg.browser) {
+      const { callBrowser } = await import('./browser-brain');
+      const reply = await callBrowser(req, parseReply);
+      if (reply) return { reply, used: 'local' };
+    }
+    if (!inBrowser || cfg.customLocal || localUrl) {
+      const reply = await callLocal(req, url, cfg.localModel);
+      if (reply) return { reply, used: 'local' };
+    }
+    if (mode === 'local') { lastBrainMissing = true; return { reply: null, used: 'none' }; }
   }
   // The website's AI uses credits: only when the file asks for it
   // (`!#agent:online`) or the user switched it on.
