@@ -155,7 +155,11 @@ export interface BrainOutcome {
  * Ask whichever brain is reachable. `auto` prefers the website when there is
  * internet and falls back to the user's own machine when there is not.
  */
+/** true when the last think() wanted an AI but none was reachable */
+export let lastBrainMissing = false;
+
 export async function think(req: BrainRequest, mode: BrainMode, localUrl?: string): Promise<BrainOutcome> {
+  lastBrainMissing = false;
   if (mode === 'none') return { reply: null, used: 'none' };
   const cfg = brainSettings();
   const url = localUrl ?? cfg.localUrl;
@@ -163,7 +167,7 @@ export async function think(req: BrainRequest, mode: BrainMode, localUrl?: strin
   // The computer's own model first — it is free.
   if (mode === 'local' || mode === 'auto') {
     const reply = await callLocal(req, url, cfg.localModel);
-    if (reply || mode === 'local') return { reply, used: reply ? 'local' : 'none' };
+    if (reply || mode === 'local') { lastBrainMissing = !reply; return { reply, used: reply ? 'local' : 'none' }; }
   }
   // The website's AI uses credits: only when the file asks for it
   // (`!#agent:online`) or the user switched it on.
@@ -171,5 +175,6 @@ export async function think(req: BrainRequest, mode: BrainMode, localUrl?: strin
     const reply = await callOnline(req);
     if (reply) return { reply, used: 'online' };
   }
+  lastBrainMissing = true;
   return { reply: null, used: 'none' };
 }

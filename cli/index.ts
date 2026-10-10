@@ -189,7 +189,8 @@ OPTIONS
   --no-ext                Ignore enabled extensions
   --lang <Language>       Source language for the lexer
   --agent <mode>          off | auto | on | strict (or local / online)
-  --brain <where>         auto | local | online | none
+  --brain <where>         auto (this computer's AI, free) | local | online (website AI, uses credits) | none
+                          SDEV_AGENT_LOCAL_URL / SDEV_AGENT_LOCAL_MODEL pick the local model (default Ollama, qwen2.5-coder:7b)
   --no-agent              Run the file exactly as written
   --explain               Show what the agent understood
   -o, --out <file>        Output path
