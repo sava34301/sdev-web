@@ -160,8 +160,8 @@ export interface BrainOutcome {
 }
 
 /**
- * Ask whichever brain is reachable. `auto` prefers the website when there is
- * internet and falls back to the user's own machine when there is not.
+ * Ask whichever brain is reachable. `auto` stays on the user's computer
+ * (browser AI, then their own model server); the website only when allowed.
  */
 /** true when the last think() wanted an AI but none was reachable */
 export let lastBrainMissing = false;

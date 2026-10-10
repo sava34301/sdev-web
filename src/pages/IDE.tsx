@@ -659,11 +659,22 @@ export default function IDEPage() {
       ? { source: overrideSrc, notes: [{ line: 0 }] }
       : saved !== null
         ? { source: saved, notes: [] as unknown[] }
-        : await understandAsync(dialectSrc, { dialect: activeDialect, projectNames });
+        : await (async () => {
+            // show the built-in AI's first-time preparation in the status bar
+            const { onBrowserBrain } = await import('@/lang/agent/browser-brain');
+            const off = onBrowserBrain((b) => {
+              if (b.state === 'loading') setStatusMsg(`Preparing the built-in AI (first time only) — ${Math.round(b.progress * 100)}%`);
+            });
+            try { return await understandAsync(dialectSrc, { dialect: activeDialect, projectNames }); } finally { off(); }
+          })();
     const { lastBrainMissing } = await import('@/lang/agent/brain');
     const brainMissing = overrideSrc === undefined && saved === null && lastBrainMissing;
     if (brainMissing) {
-      toast.info('This needs an AI, and none is running on your computer. Open Settings → Code understander AI to set one up (free), or switch on the website AI.');
+      const { browserBrainStatus } = await import('@/lang/agent/browser-brain');
+      const b = browserBrainStatus();
+      toast.info(b.state === 'unsupported' || b.state === 'failed'
+        ? b.text + ' Try Chrome or Edge, or switch on the website AI in Settings → Code understander AI.'
+        : 'The understander could not finish this file. Try again, or switch on the website AI in Settings → Code understander AI.');
     }
     if (overrideSrc === undefined && saved === null && !brainMissing) {
       const fileId = activeFile.id;
