@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import RELEASE from '../../release.json';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -510,8 +511,23 @@ exit /b 0
         <DropdownMenuItem onClick={downloadVsix} className="gap-3 cursor-pointer">
           <Puzzle className="w-4 h-4 text-neon-cyan" />
           <div>
-            <div className="font-medium">VS Code Extension (.vsix)</div>
-            <div className="text-xs text-muted-foreground">Syntax + snippets + Run command</div>
+            <div className="font-medium">VS Code Extension (.vsix) · v{RELEASE.version}</div>
+            <div className="text-xs text-muted-foreground">Runs files exactly like the website · updates itself</div>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            fetch('/downloads/sdev.mjs').then((r) => { if (!r.ok) throw new Error(`Download failed: ${r.status}`); return r.blob(); })
+              .then((b) => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'sdev.mjs'; a.click(); URL.revokeObjectURL(a.href);
+                toast.success('Downloaded the sdev command-line tool', { description: 'Run it with: node sdev.mjs run file.sdev — "sdev update" keeps it current.' }); })
+              .catch((e) => toast.error(e.message));
+          }}
+          className="gap-3 cursor-pointer"
+        >
+          <FileCode className="w-4 h-4 text-neon-cyan" />
+          <div>
+            <div className="font-medium">Command-line tool (sdev.mjs) · v{RELEASE.version}</div>
+            <div className="text-xs text-muted-foreground">Needs Node.js · updates itself</div>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={downloadVsixZip} className="gap-3 cursor-pointer">
