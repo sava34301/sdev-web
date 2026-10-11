@@ -1,11 +1,11 @@
 {
-  "name": "sdev-language",
-  "displayName": "sdev Language",
+  "name": "SDEV-language",
+  "displayName": "SDEV Programming Language",
   "description": "Official VS Code support for the sdev programming language — v1 + v2 syntax highlighting, snippets, hardware & ML support, and built-in run/build commands.",
   "version": "5.1.0",
-  "publisher": "sdev-lang",
+  "publisher": "CodeSM",
   "author": {
-    "name": "sdev"
+    "name": "SDEV, CodeSM"
   },
   "license": "MIT",
   "icon": "icon.png",
