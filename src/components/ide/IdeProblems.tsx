@@ -10,6 +10,12 @@ export interface Problem {
 
 /** Lint sdev source for common issues — runs in real-time, no execution. */
 export function lintSdev(code: string): Problem[] {
+  // sdev:ai (`!#ai`) uses `=` and `{ }` on purpose — keep only real errors.
+  if (/^\s*(\/\/[^\n]*\n\s*)*!#ai\b/.test(code)) return lintCanonical(code).filter((p) => p.severity === 'error');
+  return lintCanonical(code);
+}
+
+function lintCanonical(code: string): Problem[] {
   const problems: Problem[] = [];
   const lines = code.split('\n');
 
