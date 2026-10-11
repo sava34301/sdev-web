@@ -27,7 +27,19 @@ function envValue(name) {
   }
 }
 
+/** Vite's `?raw` imports (the sdev-written understander) as plain text. */
+const rawPlugin = {
+  name: 'raw',
+  setup(b) {
+    b.onResolve({ filter: /\?raw$/ }, (a) => ({ path: resolve(a.resolveDir, a.path.replace(/\?raw$/, '')), namespace: 'raw' }));
+    b.onLoad({ filter: /.*/, namespace: 'raw' }, (a) => ({ contents: readFileSync(a.path, 'utf8'), loader: 'text' }));
+  },
+};
+
 await build({
+  plugins: [rawPlugin],
+  // the in-browser AI only runs in the website
+  external: ['@mlc-ai/web-llm'],
   entryPoints: [resolve(root, 'cli/index.ts')],
   outfile: resolve(outDir, 'sdev.mjs'),
   bundle: true,

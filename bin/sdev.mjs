@@ -122,7 +122,7 @@ var init_env = __esm({
       Object.defineProperty(globalThis, "localStorage", { value: new FileStorage(), configurable: true });
     }
     nativeFetch = globalThis.fetch?.bind(globalThis);
-    globalThis.fetch = async (input, init2) => {
+    globalThis.fetch = (async (input, init2) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("sdev-seed.wasm")) {
         const bytes = readFileSync(seedWasmPath());
@@ -134,7 +134,7 @@ var init_env = __esm({
       }
       if (!nativeFetch) throw new Error("fetch is unavailable in this Node build");
       return nativeFetch(input, init2);
-    };
+    });
   }
 });
 
@@ -394,10 +394,10 @@ function compileReplacer(lang, target = "v1") {
   const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = entries.map(([k]) => escape(k)).join("|");
   if (!pattern) return COMPILED_REPLACERS[key] = (s) => s;
-  const re = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, "gu");
+  const re2 = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, "gu");
   const map = new Map(entries);
   const fn2 = (src, protect) => {
-    return src.replace(re, (_m, pre, word) => {
+    return src.replace(re2, (_m, pre, word) => {
       if (protect?.has(word)) return pre + word;
       const repl = map.get(word) ?? word;
       return pre + repl;
@@ -480,7 +480,7 @@ function dialectWords(spec) {
   const words = /* @__PURE__ */ new Set();
   if (!spec) return words;
   for (const w of Object.values(spec.names ?? {})) words.add(w);
-  for (const list of Object.values(spec.synonyms ?? {})) for (const w of list) words.add(w);
+  for (const list2 of Object.values(spec.synonyms ?? {})) for (const w of list2) words.add(w);
   for (const fn2 of spec.constructs?.functions ?? []) words.add(fn2.name);
   return words;
 }
@@ -511,8 +511,8 @@ function translateSource(source, sourceLanguage = "auto", options = {}) {
   const translated = segments.map((seg) => {
     if (!seg.code) return seg.text;
     let t = seg.text;
-    for (const [re, repl] of phraseNorms) {
-      t = t.replace(re, repl);
+    for (const [re2, repl] of phraseNorms) {
+      t = t.replace(re2, repl);
     }
     t = replace(t, protect);
     t = fuzzy(t, protect);
@@ -2445,7 +2445,7 @@ function __classPrivateFieldIn(state, receiver) {
   if (receiver === null || typeof receiver !== "object" && typeof receiver !== "function") throw new TypeError("Cannot use 'in' operator on non-object");
   return typeof state === "function" ? receiver === state : state.has(receiver);
 }
-function __addDisposableResource(env, value2, async) {
+function __addDisposableResource(env2, value2, async) {
   if (value2 !== null && value2 !== void 0) {
     if (typeof value2 !== "object" && typeof value2 !== "function") throw new TypeError("Object expected.");
     var dispose, inner;
@@ -2466,22 +2466,22 @@ function __addDisposableResource(env, value2, async) {
         return Promise.reject(e);
       }
     };
-    env.stack.push({ value: value2, dispose, async });
+    env2.stack.push({ value: value2, dispose, async });
   } else if (async) {
-    env.stack.push({ async: true });
+    env2.stack.push({ async: true });
   }
   return value2;
 }
-function __disposeResources(env) {
+function __disposeResources(env2) {
   function fail(e) {
-    env.error = env.hasError ? new _SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
-    env.hasError = true;
+    env2.error = env2.hasError ? new _SuppressedError(e, env2.error, "An error was suppressed during disposal.") : e;
+    env2.hasError = true;
   }
   var r, s = 0;
   function next() {
-    while (r = env.stack.pop()) {
+    while (r = env2.stack.pop()) {
       try {
-        if (!r.async && s === 1) return s = 0, env.stack.push(r), Promise.resolve().then(next);
+        if (!r.async && s === 1) return s = 0, env2.stack.push(r), Promise.resolve().then(next);
         if (r.dispose) {
           var result = r.dispose.call(r.value);
           if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) {
@@ -2493,8 +2493,8 @@ function __disposeResources(env) {
         fail(e);
       }
     }
-    if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
-    if (env.hasError) throw env.error;
+    if (s === 1) return env2.hasError ? Promise.reject(env2.error) : Promise.resolve();
+    if (env2.hasError) throw env2.error;
   }
   return next();
 }
@@ -2527,7 +2527,7 @@ var init_tslib_es6 = __esm({
       };
       return __assign.apply(this, arguments);
     };
-    __createBinding = Object.create ? function(o, m, k, k2) {
+    __createBinding = Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       var desc = Object.getOwnPropertyDescriptor(m, k);
       if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
@@ -2536,13 +2536,13 @@ var init_tslib_es6 = __esm({
         } };
       }
       Object.defineProperty(o, k2, desc);
-    } : function(o, m, k, k2) {
+    }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
-    };
-    __setModuleDefault = Object.create ? function(o, v) {
+    });
+    __setModuleDefault = Object.create ? (function(o, v) {
       Object.defineProperty(o, "default", { enumerable: true, value: v });
-    } : function(o, v) {
+    }) : function(o, v) {
       o["default"] = v;
     };
     ownKeys = function(o) {
@@ -2931,7 +2931,7 @@ var init_dist = __esm({
           let error = null;
           let data = null;
           let count = null;
-          let status = res$1.status;
+          let status2 = res$1.status;
           let statusText = res$1.statusText;
           if (res$1.ok) {
             var _this$headers$get2, _res$headers$get;
@@ -2955,7 +2955,7 @@ var init_dist = __esm({
               };
               data = null;
               count = null;
-              status = 406;
+              status2 = 406;
               statusText = "Not Acceptable";
             } else if (data.length === 1) data = data[0];
             else data = null;
@@ -2967,18 +2967,18 @@ var init_dist = __esm({
               if (Array.isArray(error) && res$1.status === 404) {
                 data = [];
                 error = null;
-                status = 200;
+                status2 = 200;
                 statusText = "OK";
               }
             } catch (_unused) {
               if (res$1.status === 404 && body === "") {
-                status = 204;
+                status2 = 204;
                 statusText = "No Content";
               } else error = { message: body };
             }
             if (error && _this.isMaybeSingle && (error === null || error === void 0 || (_error$details = error.details) === null || _error$details === void 0 ? void 0 : _error$details.includes("0 rows"))) {
               error = null;
-              status = 200;
+              status2 = 200;
               statusText = "OK";
             }
             if (error && _this.shouldThrowOnError) throw new PostgrestError(error);
@@ -2987,7 +2987,7 @@ var init_dist = __esm({
             error,
             data,
             count,
-            status,
+            status: status2,
             statusText
           };
         });
@@ -4137,15 +4137,15 @@ var require_websocket_factory = __commonJS({
        * ```
        */
       static getWebSocketConstructor() {
-        const env = this.detectEnvironment();
-        if (env.constructor) {
-          return env.constructor;
+        const env2 = this.detectEnvironment();
+        if (env2.constructor) {
+          return env2.constructor;
         }
-        let errorMessage = env.error || "WebSocket not supported in this environment.";
-        if (env.workaround) {
+        let errorMessage = env2.error || "WebSocket not supported in this environment.";
+        if (env2.workaround) {
           errorMessage += `
 
-Suggested solution: ${env.workaround}`;
+Suggested solution: ${env2.workaround}`;
         }
         throw new Error(errorMessage);
       }
@@ -4173,8 +4173,8 @@ Suggested solution: ${env.workaround}`;
        */
       static isWebSocketSupported() {
         try {
-          const env = this.detectEnvironment();
-          return env.type === "native" || env.type === "ws";
+          const env2 = this.detectEnvironment();
+          return env2.type === "native" || env2.type === "ws";
         } catch (_a) {
           return false;
         }
@@ -4503,17 +4503,24 @@ var require_transformers = __commonJS({
           return (0, exports.toJson)(value2);
         case PostgresTypes.timestamp:
           return (0, exports.toTimestampString)(value2);
+        // Format to be consistent with PostgREST
         case PostgresTypes.abstime:
+        // To allow users to cast it based on Timezone
         case PostgresTypes.date:
+        // To allow users to cast it based on Timezone
         case PostgresTypes.daterange:
         case PostgresTypes.int4range:
         case PostgresTypes.int8range:
         case PostgresTypes.money:
         case PostgresTypes.reltime:
+        // To allow users to cast it based on Timezone
         case PostgresTypes.text:
         case PostgresTypes.time:
+        // To allow users to cast it based on Timezone
         case PostgresTypes.timestamptz:
+        // To allow users to cast it based on Timezone
         case PostgresTypes.timetz:
+        // To allow users to cast it based on Timezone
         case PostgresTypes.tsrange:
         case PostgresTypes.tstzrange:
           return noop(value2);
@@ -4536,7 +4543,7 @@ var require_transformers = __commonJS({
       }
     };
     exports.toBoolean = toBoolean;
-    var toNumber2 = (value2) => {
+    var toNumber3 = (value2) => {
       if (typeof value2 === "string") {
         const parsedValue = parseFloat(value2);
         if (!Number.isNaN(parsedValue)) {
@@ -4545,7 +4552,7 @@ var require_transformers = __commonJS({
       }
       return value2;
     };
-    exports.toNumber = toNumber2;
+    exports.toNumber = toNumber3;
     var toJson = (value2) => {
       if (typeof value2 === "string") {
         try {
@@ -4652,12 +4659,12 @@ var require_push = __commonJS({
       updatePayload(payload) {
         this.payload = Object.assign(Object.assign({}, this.payload), payload);
       }
-      receive(status, callback) {
+      receive(status2, callback) {
         var _a;
-        if (this._hasReceived(status)) {
+        if (this._hasReceived(status2)) {
           callback((_a = this.receivedResp) === null || _a === void 0 ? void 0 : _a.response);
         }
-        this.recHooks.push({ status, callback });
+        this.recHooks.push({ status: status2, callback });
         return this;
       }
       startTimeout() {
@@ -4677,9 +4684,9 @@ var require_push = __commonJS({
           this.trigger("timeout", {});
         }, this.timeout);
       }
-      trigger(status, response) {
+      trigger(status2, response) {
         if (this.refEvent)
-          this.channel._trigger(this.refEvent, { status, response });
+          this.channel._trigger(this.refEvent, { status: status2, response });
       }
       destroy() {
         this._cancelRefEvent();
@@ -4695,11 +4702,11 @@ var require_push = __commonJS({
         clearTimeout(this.timeoutTimer);
         this.timeoutTimer = void 0;
       }
-      _matchReceive({ status, response }) {
-        this.recHooks.filter((h) => h.status === status).forEach((h) => h.callback(response));
+      _matchReceive({ status: status2, response }) {
+        this.recHooks.filter((h) => h.status === status2).forEach((h) => h.callback(response));
       }
-      _hasReceived(status) {
-        return this.receivedResp && this.receivedResp.status === status;
+      _hasReceived(status2) {
+        return this.receivedResp && this.receivedResp.status === status2;
       }
     };
     exports.default = Push;
@@ -5754,11 +5761,11 @@ Option 2: Install and provide the "ws" package:
        * @param channel A RealtimeChannel instance
        */
       async removeChannel(channel) {
-        const status = await channel.unsubscribe();
+        const status2 = await channel.unsubscribe();
         if (this.channels.length === 0) {
           this.disconnect();
         }
-        return status;
+        return status2;
       }
       /**
        * Unsubscribes and removes all channels
@@ -5998,8 +6005,8 @@ Option 2: Install and provide the "ws" package:
           }
           const { topic, event, payload, ref } = msg;
           const refString = ref ? `(${ref})` : "";
-          const status = payload.status || "";
-          this.log("receive", `${status} ${topic} ${event} ${refString}`.trim(), payload);
+          const status2 = payload.status || "";
+          this.log("receive", `${status2} ${topic} ${event} ${refString}`.trim(), payload);
           this.channels.filter((channel) => channel._isMember(topic)).forEach((channel) => channel._trigger(event, payload, ref));
           this._triggerStateCallbacks("message", msg);
         });
@@ -6299,17 +6306,17 @@ Option 2: Install and provide the "ws" package:
           this.logLevel = options.logLevel || options.log_level;
           this.params = Object.assign(Object.assign({}, this.params), { log_level: this.logLevel });
         }
-        this.reconnectAfterMs = (_h = options === null || options === void 0 ? void 0 : options.reconnectAfterMs) !== null && _h !== void 0 ? _h : (tries) => {
+        this.reconnectAfterMs = (_h = options === null || options === void 0 ? void 0 : options.reconnectAfterMs) !== null && _h !== void 0 ? _h : ((tries) => {
           return RECONNECT_INTERVALS[tries - 1] || DEFAULT_RECONNECT_FALLBACK;
-        };
+        });
         switch (this.vsn) {
           case constants_1.VSN_1_0_0:
-            this.encode = (_j = options === null || options === void 0 ? void 0 : options.encode) !== null && _j !== void 0 ? _j : (payload, callback) => {
+            this.encode = (_j = options === null || options === void 0 ? void 0 : options.encode) !== null && _j !== void 0 ? _j : ((payload, callback) => {
               return callback(JSON.stringify(payload));
-            };
-            this.decode = (_k = options === null || options === void 0 ? void 0 : options.decode) !== null && _k !== void 0 ? _k : (payload, callback) => {
+            });
+            this.decode = (_k = options === null || options === void 0 ? void 0 : options.decode) !== null && _k !== void 0 ? _k : ((payload, callback) => {
               return callback(JSON.parse(payload));
-            };
+            });
             break;
           case constants_1.VSN_2_0_0:
             this.encode = (_l = options === null || options === void 0 ? void 0 : options.encode) !== null && _l !== void 0 ? _l : this.serializer.encode.bind(this.serializer);
@@ -6411,9 +6418,9 @@ function createFetchClient(options) {
         },
         body: body ? JSON.stringify(body) : void 0
       });
-      const text = await res.text();
+      const text3 = await res.text();
       const isJson = (res.headers.get("content-type") || "").includes("application/json");
-      const data = isJson && text ? JSON.parse(text) : text;
+      const data = isJson && text3 ? JSON.parse(text3) : text3;
       if (!res.ok) {
         const errBody = isJson ? data : void 0;
         const errorDetail = errBody?.error;
@@ -6994,20 +7001,20 @@ var init_dist3 = __esm({
   "node_modules/@supabase/storage-js/dist/index.mjs"() {
     init_dist2();
     StorageError = class extends Error {
-      constructor(message, namespace = "storage", status, statusCode) {
+      constructor(message, namespace = "storage", status2, statusCode) {
         super(message);
         this.__isStorageError = true;
         this.namespace = namespace;
         this.name = namespace === "vectors" ? "StorageVectorsError" : "StorageError";
-        this.status = status;
+        this.status = status2;
         this.statusCode = statusCode;
       }
     };
     StorageApiError = class extends StorageError {
-      constructor(message, status, statusCode, namespace = "storage") {
-        super(message, namespace, status, statusCode);
+      constructor(message, status2, statusCode, namespace = "storage") {
+        super(message, namespace, status2, statusCode);
         this.name = namespace === "vectors" ? "StorageVectorsApiError" : "StorageApiError";
-        this.status = status;
+        this.status = status2;
         this.statusCode = statusCode;
       }
       toJSON() {
@@ -7059,22 +7066,22 @@ var init_dist3 = __esm({
     handleError = async (error, reject, options, namespace) => {
       if (error && typeof error === "object" && "status" in error && "ok" in error && typeof error.status === "number" && !(options === null || options === void 0 ? void 0 : options.noResolveJson)) {
         const responseError = error;
-        const status = responseError.status || 500;
+        const status2 = responseError.status || 500;
         if (typeof responseError.json === "function") responseError.json().then((err) => {
-          const statusCode = (err === null || err === void 0 ? void 0 : err.statusCode) || (err === null || err === void 0 ? void 0 : err.code) || status + "";
-          reject(new StorageApiError(_getErrorMessage(err), status, statusCode, namespace));
+          const statusCode = (err === null || err === void 0 ? void 0 : err.statusCode) || (err === null || err === void 0 ? void 0 : err.code) || status2 + "";
+          reject(new StorageApiError(_getErrorMessage(err), status2, statusCode, namespace));
         }).catch(() => {
           if (namespace === "vectors") {
-            const statusCode = status + "";
-            reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
+            const statusCode = status2 + "";
+            reject(new StorageApiError(responseError.statusText || `HTTP ${status2} error`, status2, statusCode, namespace));
           } else {
-            const statusCode = status + "";
-            reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
+            const statusCode = status2 + "";
+            reject(new StorageApiError(responseError.statusText || `HTTP ${status2} error`, status2, statusCode, namespace));
           }
         });
         else {
-          const statusCode = status + "";
-          reject(new StorageApiError(responseError.statusText || `HTTP ${status} error`, status, statusCode, namespace));
+          const statusCode = status2 + "";
+          reject(new StorageApiError(responseError.statusText || `HTTP ${status2} error`, status2, statusCode, namespace));
         }
       } else reject(new StorageUnknownError(_getErrorMessage(error), error, namespace));
     };
@@ -9282,11 +9289,11 @@ var require_errors = __commonJS({
     exports.isAuthRetryableFetchError = isAuthRetryableFetchError;
     exports.isAuthWeakPasswordError = isAuthWeakPasswordError;
     var AuthError = class extends Error {
-      constructor(message, status, code) {
+      constructor(message, status2, code) {
         super(message);
         this.__isAuthError = true;
         this.name = "AuthError";
-        this.status = status;
+        this.status = status2;
         this.code = code;
       }
     };
@@ -9295,10 +9302,10 @@ var require_errors = __commonJS({
       return typeof error === "object" && error !== null && "__isAuthError" in error;
     }
     var AuthApiError = class extends AuthError {
-      constructor(message, status, code) {
-        super(message, status, code);
+      constructor(message, status2, code) {
+        super(message, status2, code);
         this.name = "AuthApiError";
-        this.status = status;
+        this.status = status2;
         this.code = code;
       }
     };
@@ -9315,10 +9322,10 @@ var require_errors = __commonJS({
     };
     exports.AuthUnknownError = AuthUnknownError;
     var CustomAuthError = class extends AuthError {
-      constructor(message, name, status, code) {
-        super(message, status, code);
+      constructor(message, name, status2, code) {
+        super(message, status2, code);
         this.name = name;
-        this.status = status;
+        this.status = status2;
       }
     };
     exports.CustomAuthError = CustomAuthError;
@@ -9388,8 +9395,8 @@ var require_errors = __commonJS({
       return isAuthError(error) && error.name === "AuthPKCECodeVerifierMissingError";
     }
     var AuthRetryableFetchError = class extends CustomAuthError {
-      constructor(message, status) {
-        super(message, "AuthRetryableFetchError", status, void 0);
+      constructor(message, status2) {
+        super(message, "AuthRetryableFetchError", status2, void 0);
       }
     };
     exports.AuthRetryableFetchError = AuthRetryableFetchError;
@@ -9397,8 +9404,8 @@ var require_errors = __commonJS({
       return isAuthError(error) && error.name === "AuthRetryableFetchError";
     }
     var AuthWeakPasswordError = class extends CustomAuthError {
-      constructor(message, status, reasons) {
-        super(message, "AuthWeakPasswordError", status, "weak_password");
+      constructor(message, status2, reasons) {
+        super(message, "AuthWeakPasswordError", status2, "weak_password");
         this.reasons = reasons;
       }
     };
@@ -14546,7 +14553,12 @@ function brokeredPreviewStorage() {
     },
     setItem: (key, value2) => {
       localStorage.setItem(key, value2);
-      return request("lovable-preview-auth:set", key, value2).then(() => void 0);
+      return request("lovable-preview-auth:set", key, value2).then((res) => {
+        if (res && res.ok && typeof res.value === "string" && localStorage.getItem(key) === value2) {
+          if (res.value === "") localStorage.removeItem(key);
+          else localStorage.setItem(key, res.value);
+        }
+      });
     },
     removeItem: (key) => {
       localStorage.removeItem(key);
@@ -14578,6 +14590,198 @@ var init_client = __esm({
         autoRefreshToken: true
       }
     });
+  }
+});
+
+// src/lang/agent/brain-prompt.ts
+var brain_prompt_exports = {};
+__export(brain_prompt_exports, {
+  AI_DIALECT: () => AI_DIALECT,
+  SYSTEM: () => SYSTEM,
+  brainInput: () => brainInput,
+  brainInstructions: () => brainInstructions
+});
+function brainInstructions(format) {
+  return format === "ai" ? SYSTEM + AI_DIALECT : SYSTEM;
+}
+function brainInput(req) {
+  const body = { ...req, source: req.source.slice(0, 4e4) };
+  const source = body.source;
+  return [
+    "The author wrote this program:",
+    "```",
+    source,
+    "```",
+    "",
+    "A rule engine already produced this draft of canonical sdev:",
+    "```",
+    (body.draft ?? "").slice(0, 4e4),
+    "```",
+    "",
+    body.unresolved?.length ? `Lines it could not resolve: ${body.unresolved.join(", ")}` : "It resolved every line, but the result may still be wrong.",
+    "",
+    "Words this author is known to use (word -> meaning): " + JSON.stringify(body.vocabulary ?? {}),
+    "",
+    body.problems?.length ? "That draft still has these problems \u2014 fix them:\n- " + body.problems.slice(0, 10).map((p) => String(p).slice(0, 300)).join("\n- ") : "",
+    "",
+    body.format === "ai" ? "Return the whole program in sdev:ai (described below), starting with the line !#ai." : "Return the whole program as canonical sdev."
+  ].join("\n");
+}
+var SYSTEM, AI_DIALECT;
+var init_brain_prompt = __esm({
+  "src/lang/agent/brain-prompt.ts"() {
+    SYSTEM = `You are the understanding agent of the sdev programming language.
+A person wrote something \u2014 a program, a half-program, or a plain request in any human language
+("calculate 23-21", "count from 1 to 10", "ask my name and greet me", "make a shopping list and print it sorted").
+Turn it into a complete, WORKING sdev program that does what they meant. Output only code in the JSON field.
+
+Canonical sdev you must write (verified syntax):
+  say X                          print (say "a" + str(n) to join text and numbers)
+  set NAME to VALUE              create or change a variable
+  set name to input("Prompt? ")  read text; num(input("\u2026")) reads a number
+  if COND / else / end           blocks close with end (indent bodies 2 spaces)
+  while COND / end
+  for each x in LIST / end       for each i in sequence(1, 11) counts 1..10; sequence(n) is 0..n-1
+  to NAME with a b / return X / end   declare a function, call it as NAME(1, 2)
+  break, continue, true, false, nothing
+  comparisons: is, is not, ==, !=, >, <, >=, <=      logic: and, or, not
+  operators: + - * / % **         comments start with #
+  lists [1, 2, 3], l[0], l + [4] appends; records {name: "Sam", age: 3}, r.name, r["age"]
+  lambdas: (x) -> x * 2
+Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, sqrt, min, max, pow,
+  random, randint(a, b), pick(list), shuffle, sum, average, sort, sortDesc, reverse, unique, count(list, x),
+  first, last, upper, lower, trim, replace(s, a, b), contains(s_or_list, x), startswith, endswith,
+  chars(s), weave(list, sep) joins, shatter(s, sep) splits, sift(list, fn) filters, each(list, fn) maps,
+  fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.
+  There is NO join, split, append, push, map, filter, printf \u2014 use weave, shatter, l + [x], each, sift.
+
+Window toolkit (the IDE shows a real window):
+  window("Title", width, height) \u2026 endwindow()   row() \u2026 endrow()   column() \u2026 endcolumn()
+  heading("text")  label("text")  label("@key") shows the live value of key
+  input("key", "placeholder")   the typed text is uiget("key")
+  button("Text", () -> handler())   handler is a function or lambda, run on click
+  uiget("key") reads a value, uiset("key", value) changes it and refreshes labels bound with "@key"
+  evaluate("2 + 3 * 4") safely computes an arithmetic expression held in text (use it for calculators)
+  Define functions BEFORE window(); put every widget between window() and endwindow().
+  Example calculator key:  to press with k / uiset("display", uiget("display") + k) / end
+                          button("7", () -> press("7"))
+                          button("=", () -> uiset("display", str(evaluate(uiget("display")))))
+
+Requests in plain words:
+- If the source is a request ("make a window that is a calculator", "build a quiz game"), write the WHOLE
+  working program that does it \u2014 complete, not a sketch. Anything with "window", "app", "buttons" or a
+  visual interface uses the window toolkit.
+
+Rules:
+- Compute with code; never hard-code an answer the program should work out.
+- Keep the author's own code and identifiers exactly as written (any language/script); only fix what is wrong.
+- If the author's code already works, return it unchanged.
+- Bare words meant as text become quoted strings.
+- Never add prose, markdown fences or explanations inside the code.`;
+    AI_DIALECT = `
+
+sdev:ai \u2014 the dialect for AI models. When asked for sdev:ai, write ONLY this form:
+  !#ai                         first line
+  v x = 5                      declare            x = x + 1       change (also xs[0] = 1, r.k = 2)
+  p(x)                         print
+  f add(a, b) {                function            r a + b         return
+  ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else
+  w i < 3 {  }                 while               each n in xs {  }   for each
+  try {  } catch e {  }        brk / next          break / continue
+  == != && || ! true false null      every block closes with } on its own line
+  Calls to built-ins and the window toolkit stay as they are: window("Calc", 320, 400), button("7", () -> press("7")), uiset(...)
+  Lambdas: (x) -> x * 2.  One statement per line.
+Example:
+  !#ai
+  f press(k) {
+    uiset("display", uiget("display") + k)
+  }
+  window("Calculator", 320, 400)
+  input("display", "0")
+  button("7", () -> press("7"))
+  button("=", () -> uiset("display", str(evaluate(uiget("display")))))
+  endwindow()`;
+  }
+});
+
+// src/lang/agent/browser-brain.ts
+var browser_brain_exports = {};
+__export(browser_brain_exports, {
+  BROWSER_MODEL: () => BROWSER_MODEL,
+  browserBrainStatus: () => browserBrainStatus,
+  browserBrainSupported: () => browserBrainSupported,
+  callBrowser: () => callBrowser,
+  loadBrowserBrain: () => loadBrowserBrain,
+  onBrowserBrain: () => onBrowserBrain
+});
+function set(s) {
+  status = { ...status, ...s };
+  for (const l of listeners) l(status);
+}
+function browserBrainStatus() {
+  return status;
+}
+function onBrowserBrain(fn2) {
+  listeners.add(fn2);
+  return () => listeners.delete(fn2);
+}
+function browserBrainSupported() {
+  return typeof navigator !== "undefined" && "gpu" in navigator && typeof window !== "undefined";
+}
+function loadBrowserBrain() {
+  if (enginePromise) return enginePromise;
+  if (!browserBrainSupported()) {
+    set({ state: "unsupported", text: "This browser has no WebGPU, so the built-in AI cannot run here." });
+    return Promise.resolve(null);
+  }
+  set({ state: "loading", progress: 0, text: "Preparing the built-in AI\u2026" });
+  enginePromise = (async () => {
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) {
+        set({ state: "unsupported", text: "No graphics chip available to the browser, so the built-in AI cannot run here." });
+        return null;
+      }
+      const { CreateMLCEngine } = await import("@mlc-ai/web-llm");
+      const engine2 = await CreateMLCEngine(BROWSER_MODEL, {
+        initProgressCallback: (p) => set({ state: "loading", progress: p.progress, text: p.text })
+      });
+      set({ state: "ready", progress: 1, text: "The built-in AI is ready." });
+      return engine2;
+    } catch (e) {
+      enginePromise = null;
+      set({ state: "failed", text: "The built-in AI could not start: " + (e instanceof Error ? e.message : String(e)) });
+      return null;
+    }
+  })();
+  return enginePromise;
+}
+async function callBrowser(req, parse) {
+  const engine2 = await loadBrowserBrain();
+  if (!engine2) return null;
+  try {
+    const { brainInstructions: brainInstructions2, brainInput: brainInput2 } = await Promise.resolve().then(() => (init_brain_prompt(), brain_prompt_exports));
+    const r = await engine2.chat.completions.create({
+      messages: [
+        { role: "system", content: brainInstructions2(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
+        { role: "user", content: brainInput2(req) }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+      max_tokens: 2048
+    });
+    return parse(r.choices[0]?.message?.content ?? "");
+  } catch {
+    return null;
+  }
+}
+var BROWSER_MODEL, status, listeners, enginePromise;
+var init_browser_brain = __esm({
+  "src/lang/agent/browser-brain.ts"() {
+    BROWSER_MODEL = "Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC";
+    status = { state: "idle", progress: 0, text: "" };
+    listeners = /* @__PURE__ */ new Set();
+    enginePromise = null;
   }
 });
 
@@ -14666,15 +14870,15 @@ async function compile(userSrc, modules = null) {
         const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
         let bytes = srcBytes;
         if (path !== "<stdin>") {
-          let text = modules && Object.prototype.hasOwnProperty.call(modules, path) ? modules[path] : null;
-          if (text == null && typeof process !== "undefined" && process.versions?.node) {
+          let text3 = modules && Object.prototype.hasOwnProperty.call(modules, path) ? modules[path] : null;
+          if (text3 == null && typeof process !== "undefined" && process.versions?.node) {
             try {
-              text = nodeFs.readFileSync(path, "utf8");
+              text3 = nodeFs.readFileSync(path, "utf8");
             } catch {
-              text = "";
+              text3 = "";
             }
           }
-          bytes = encoder.encode(text ?? "");
+          bytes = encoder.encode(text3 ?? "");
         }
         const dst = allocStr(bytes.length);
         new Uint8Array(mem.buffer, dst + 4, bytes.length).set(bytes);
@@ -15281,8 +15485,8 @@ function disassemble(fn2, indent = "") {
   lines.push(`${indent}${label}:`);
   fn2.code.forEach((ins, i) => {
     const op = ins.op.padEnd(18);
-    const operand = ins.operand !== void 0 ? String(ins.operand) : "";
-    lines.push(`${indent}  ${String(i).padStart(4, "0")}  ${op} ${operand}`);
+    const operand2 = ins.operand !== void 0 ? String(ins.operand) : "";
+    lines.push(`${indent}  ${String(i).padStart(4, "0")}  ${op} ${operand2}`);
   });
   for (const nested of fn2.functions) {
     lines.push("");
@@ -15378,8 +15582,8 @@ var init_compiler = __esm({
         this.name = name;
         this.params = params;
       }
-      emit(op, operand, line) {
-        this.code.push({ op, operand, line });
+      emit(op, operand2, line) {
+        this.code.push({ op, operand: operand2, line });
         return this.code.length - 1;
       }
       emitJump(op, line) {
@@ -16500,6 +16704,7 @@ function typeOf(e, tys, fnTypes) {
       return "list";
     case "tome":
       return "tome";
+    // Milestone 6f: an object is a tome; a function value is an opaque word.
     case "new":
       return "tome";
     case "ref":
@@ -16815,6 +17020,12 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       if (e.args.length > 0) em.L(`    addq $${e.args.length * 8}, %rsp`);
       return;
     }
+    // ---- Milestone 6f: first-class functions, closures, objects ----
+    //
+    // A function value is a heap closure: [i64 code ptr][i64 ncaps][caps...].
+    // Calls through a value put the closure pointer in %r10; a lambda body
+    // copies its captures out of %r10 in its prologue, so the argument
+    // convention (args pushed right-to-left) is unchanged.
     case "ref": {
       const info = em.functions.get(e.name);
       if (!info) throw new Error(`native: unknown function ${e.name}`);
@@ -16948,6 +17159,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "str":
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       return true;
+    // ---- Milestone 6e: floats ----
     case "sqrt":
     case "floor":
     case "ceil":
@@ -16973,8 +17185,11 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "random":
       em.L("    call sdev_random");
       return true;
+    // ---- Milestone 6i: sequence + numeric library ----
     case "range":
+    // range(n) -> [0 .. n-1]
     case "sum":
+    // sum(list) -> int
     case "f2i":
       one();
       em.L("    movq %rax, %rdi");
@@ -17022,6 +17237,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    movq %rcx, (%rax)");
       return true;
     }
+    // ---- Milestone 6d: strings ----
     case "upper":
     case "lower":
     case "trim":
@@ -17073,6 +17289,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    call sdev_substr");
       return true;
     }
+    // ---- Milestone 6d: integer math ----
     case "min":
     case "max": {
       emitExpr(a[0], em, locals, tys, fnTypes);
@@ -17083,6 +17300,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L(`    ${n === "min" ? "cmovlq" : "cmovgq"} %rcx, %rax`);
       return true;
     }
+    // ---- Milestone 6d: tomes ----
     case "tome_new":
       em.L("    call sdev_tnew");
       return true;
@@ -17092,6 +17310,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    movq %rax, %rdi");
       em.L(`    call sdev_t${n === "keys" ? "keys" : "vals"}`);
       return true;
+    // ---- Milestone 6g: host file I/O ----
     case "read_file":
     case "file_exists":
       emitStrExpr(a[0], em, locals, tys, fnTypes);
@@ -17110,6 +17329,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "input":
       em.L("    call sdev_input");
       return true;
+    // ---- Milestone 6h: process / OS layer ----
     case "args":
       em.L("    call sdev_args");
       return true;
@@ -17290,6 +17510,7 @@ function emitStmt(s, em, locals, ctx) {
       em.L(`${end}:`);
       return;
     }
+    // ---- Milestone 6f ----
     case "break":
     case "continue": {
       const loop = (ctx.loops || [])[(ctx.loops || []).length - 1];
@@ -17309,6 +17530,9 @@ function emitStmt(s, em, locals, ctx) {
       em.L("    call sdev_tset");
       return;
     }
+    // `attempt … rescue err … end` — the handler stack lives in the runtime;
+    // a throw restores the saved %rsp/%rbp and jumps straight to the handler
+    // with the message in %rax.
     case "attempt": {
       const handler = em.gensym("rescue");
       const over = em.gensym("endtry");
@@ -18668,9 +18892,10 @@ var Parser = class _Parser {
   // iterate item[, item2] through list :: body ;; [otherwise :: ;;]
   parseIterateStatement() {
     const iterateToken = this.consume("ITERATE" /* ITERATE */, "Expected 'iterate'");
+    if (this.peek().value === "each" && this.tokens[this.pos + 1]?.type !== "THROUGH" /* THROUGH */ && this.tokens[this.pos + 1]?.type !== "WITHIN" /* WITHIN */) this.advance();
     const variables = [this.consumeName("Expected variable name")];
     while (this.match("COMMA" /* COMMA */)) variables.push(this.consumeName("Expected variable name"));
-    this.consume("THROUGH" /* THROUGH */, "Expected 'through'");
+    if (!this.match("WITHIN" /* WITHIN */)) this.consume("THROUGH" /* THROUGH */, "Expected 'through'");
     const iterable = this.parseExpressionOrTuple();
     const body = this.parseBlockStatement();
     let elseBlock;
@@ -19182,8 +19407,8 @@ var Parser = class _Parser {
   parseNot() {
     if (this.check("ISNT" /* ISNT */) && this.tokens[this.pos + 1]?.type !== "THROUGH" /* THROUGH */) {
       const t = this.advance();
-      const operand = this.parseNot();
-      return { type: "UnaryExpr", operator: "isnt", operand, line: t.line };
+      const operand2 = this.parseNot();
+      return { type: "UnaryExpr", operator: "isnt", operand: operand2, line: t.line };
     }
     return this.parseEquality();
   }
@@ -19308,16 +19533,16 @@ var Parser = class _Parser {
     if (this.match("MINUS" /* MINUS */, "ISNT" /* ISNT */)) {
       const operator = this.previous().value === "-" ? "-" : "isnt";
       const line = this.previous().line;
-      const operand = this.parseUnary();
-      return { type: "UnaryExpr", operator, operand, line };
+      const operand2 = this.parseUnary();
+      return { type: "UnaryExpr", operator, operand: operand2, line };
     }
     if (this.match("PLUS" /* PLUS */)) {
       return this.parseUnary();
     }
     if (this.match("AWAIT" /* AWAIT */)) {
       const awaitLine = this.previous().line;
-      const operand = this.parseUnary();
-      return { type: "AwaitExpr", operand, line: awaitLine };
+      const operand2 = this.parseUnary();
+      return { type: "AwaitExpr", operand: operand2, line: awaitLine };
     }
     if (this.check("EMIT" /* EMIT */) || this.check("DELEGATE" /* DELEGATE */)) {
       const t = this.advance();
@@ -19642,24 +19867,24 @@ var Parser = class _Parser {
    */
   buildFString(template, line) {
     const parts = [];
-    let text = "";
+    let text3 = "";
     let i = 0;
     while (i < template.length) {
       const ch = template[i];
       if (ch === "{" && template[i + 1] === "{") {
-        text += "{";
+        text3 += "{";
         i += 2;
         continue;
       }
       if (ch === "}" && template[i + 1] === "}") {
-        text += "}";
+        text3 += "}";
         i += 2;
         continue;
       }
       if (ch === "{") {
-        if (text) {
-          parts.push({ kind: "text", value: text });
-          text = "";
+        if (text3) {
+          parts.push({ kind: "text", value: text3 });
+          text3 = "";
         }
         let depth = 1;
         let body = "";
@@ -19706,10 +19931,10 @@ var Parser = class _Parser {
         parts.push({ kind: "expr", expr: sub.parseExpression(), spec, conv, debug });
         continue;
       }
-      text += ch;
+      text3 += ch;
       i++;
     }
-    if (text) parts.push({ kind: "text", value: text });
+    if (text3) parts.push({ kind: "text", value: text3 });
     return { type: "FStringExpr", parts, line };
   }
   lexTemplate(source, line) {
@@ -19843,10 +20068,84 @@ var Environment = class {
 // src/lang/interpreter.ts
 init_errors();
 
-// src/lang/builtins.ts
+// src/lang/builtins/utils.ts
 init_errors();
-function createBuiltins(output) {
-  const builtins = /* @__PURE__ */ new Map();
+function setObjectTextHook(hook) {
+  objectTextHook = hook;
+}
+function stringify(value2) {
+  if (value2 === null) return "void";
+  if (typeof value2 === "boolean") return value2 ? "yep" : "nope";
+  if (typeof value2 === "string") return value2;
+  if (value2 && typeof value2 === "object" && value2.__error__) {
+    return String(value2.message ?? "");
+  }
+  if (value2 && typeof value2 === "object" && objectTextHook) {
+    const custom = objectTextHook(value2);
+    if (custom !== void 0) return custom;
+  }
+  if (typeof value2 === "number") {
+    if (value2 === Infinity) return "inf";
+    if (value2 === -Infinity) return "-inf";
+    return String(value2);
+  }
+  if (Array.isArray(value2)) {
+    return "[" + value2.map(stringify).join(", ") + "]";
+  }
+  if (typeof value2 === "object") {
+    if (value2.type === "builtin" || value2.type === "user" || value2.type === "lambda" || value2.type === "class") {
+      return "<conjuration>";
+    }
+    const entries = Object.entries(value2).filter(([k]) => ![
+      "add",
+      "sub",
+      "mul",
+      "mag",
+      "normalize",
+      "dot",
+      "distance",
+      "enqueue",
+      "dequeue",
+      "push",
+      "pop",
+      "peek",
+      "size",
+      "isEmpty",
+      "clear",
+      "values",
+      "keys",
+      "entries",
+      "get",
+      "set",
+      "has",
+      "delete",
+      "remove",
+      "append",
+      "prepend",
+      "toList",
+      "_data"
+    ].includes(k)).map(([k, v]) => `${k}: ${stringify(v)}`).join(", ");
+    return ":: " + entries + " ;;";
+  }
+  return String(value2);
+}
+function isTruthy(value2) {
+  if (value2 === null) return false;
+  if (typeof value2 === "boolean") return value2;
+  if (typeof value2 === "number") return value2 !== 0;
+  if (typeof value2 === "string") return value2.length > 0;
+  if (Array.isArray(value2)) return value2.length > 0;
+  return true;
+}
+function toNumber(value2, line) {
+  if (typeof value2 === "number") return value2;
+  throw new SdevError(`Expected number, got ${typeof value2}`, line);
+}
+var objectTextHook = null;
+
+// src/lang/builtins/io.ts
+init_errors();
+function registerIo(builtins, output) {
   const speak = {
     type: "builtin",
     call: (args) => {
@@ -19897,9 +20196,9 @@ function createBuiltins(output) {
         case "number":
           if (typeof val === "number") return val;
           if (typeof val === "string") {
-            const num = parseFloat(val);
-            if (isNaN(num)) throw new SdevError(`Cannot morph '${val}' to number`, line);
-            return num;
+            const num2 = parseFloat(val);
+            if (isNaN(num2)) throw new SdevError(`Cannot morph '${val}' to number`, line);
+            return num2;
           }
           throw new SdevError("Cannot morph to number", line);
         case "text":
@@ -20068,6 +20367,11 @@ function createBuiltins(output) {
       return "mystery";
     }
   });
+}
+
+// src/lang/builtins/math.ts
+init_errors();
+function registerMath(builtins, output) {
   builtins.set("magnitude", {
     type: "builtin",
     call: (args, line) => {
@@ -20127,6 +20431,235 @@ function createBuiltins(output) {
     type: "builtin",
     call: () => Math.random()
   });
+  builtins.set("sin", { type: "builtin", call: (args) => Math.sin(args[0]) });
+  builtins.set("cos", { type: "builtin", call: (args) => Math.cos(args[0]) });
+  builtins.set("tan", { type: "builtin", call: (args) => Math.tan(args[0]) });
+  builtins.set("log", { type: "builtin", call: (args) => Math.log(args[0]) });
+  builtins.set("exp", { type: "builtin", call: (args) => Math.exp(args[0]) });
+  builtins.set("PI", { type: "builtin", call: () => Math.PI });
+  builtins.set("TAU", { type: "builtin", call: () => Math.PI * 2 });
+  builtins.set("random", {
+    type: "builtin",
+    call: () => Math.random()
+  });
+  builtins.set("randint", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("randint() takes 2 arguments", line);
+      const min = Math.ceil(args[0]);
+      const max = Math.floor(args[1]);
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+  });
+  builtins.set("pick", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("pick() takes 1 argument", line);
+      const arr = args[0];
+      if (!Array.isArray(arr)) throw new SdevError("Argument must be a list", line);
+      return arr[Math.floor(Math.random() * arr.length)] ?? null;
+    }
+  });
+  builtins.set("shuffle", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("shuffle() takes 1 argument", line);
+      const arr = args[0];
+      if (!Array.isArray(arr)) throw new SdevError("Argument must be a list", line);
+      const shuffled = [...arr];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+  });
+  builtins.set("clamp", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("clamp() takes 3 arguments (value, min, max)", line);
+      const [val, min, max] = args.map((a) => {
+        if (typeof a !== "number") throw new SdevError("All arguments must be numbers", line);
+        return a;
+      });
+      return Math.min(Math.max(val, min), max);
+    }
+  });
+  builtins.set("lerp", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("lerp() takes 3 arguments (start, end, t)", line);
+      const [start, end, t] = args.map((a) => {
+        if (typeof a !== "number") throw new SdevError("All arguments must be numbers", line);
+        return a;
+      });
+      return start + (end - start) * t;
+    }
+  });
+  builtins.set("mapRange", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 5) throw new SdevError("mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax)", line);
+      const [value2, inMin, inMax, outMin, outMax] = args.map((a) => {
+        if (typeof a !== "number") throw new SdevError("All arguments must be numbers", line);
+        return a;
+      });
+      return outMin + (value2 - inMin) * (outMax - outMin) / (inMax - inMin);
+    }
+  });
+  builtins.set("sign", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("sign() takes 1 argument", line);
+      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
+      return Math.sign(args[0]);
+    }
+  });
+  builtins.set("pow", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("pow() takes 2 arguments (base, exponent)", line);
+      if (typeof args[0] !== "number" || typeof args[1] !== "number") {
+        throw new SdevError("Arguments must be numbers", line);
+      }
+      return Math.pow(args[0], args[1]);
+    }
+  });
+  builtins.set("asin", { type: "builtin", call: (args) => Math.asin(args[0]) });
+  builtins.set("acos", { type: "builtin", call: (args) => Math.acos(args[0]) });
+  builtins.set("atan", { type: "builtin", call: (args) => Math.atan(args[0]) });
+  builtins.set("atan2", {
+    type: "builtin",
+    call: (args) => Math.atan2(args[0], args[1])
+  });
+  builtins.set("sinh", { type: "builtin", call: (args) => Math.sinh(args[0]) });
+  builtins.set("cosh", { type: "builtin", call: (args) => Math.cosh(args[0]) });
+  builtins.set("tanh", { type: "builtin", call: (args) => Math.tanh(args[0]) });
+  builtins.set("log10", { type: "builtin", call: (args) => Math.log10(args[0]) });
+  builtins.set("log2", { type: "builtin", call: (args) => Math.log2(args[0]) });
+  builtins.set("E", { type: "builtin", call: () => Math.E });
+  builtins.set("INFINITY", { type: "builtin", call: () => Infinity });
+  builtins.set("hex", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("hex() takes 1 argument", line);
+      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
+      return "0x" + Math.trunc(args[0]).toString(16).toUpperCase();
+    }
+  });
+  builtins.set("oct", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("oct() takes 1 argument", line);
+      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
+      return "0o" + Math.trunc(args[0]).toString(8);
+    }
+  });
+  builtins.set("bin", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("bin() takes 1 argument", line);
+      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
+      return "0b" + (Math.trunc(args[0]) >>> 0).toString(2);
+    }
+  });
+  builtins.set("parseNum", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1 || args.length > 2) throw new SdevError("parseNum() takes 1-2 arguments", line);
+      if (typeof args[0] !== "string") throw new SdevError("First argument must be text", line);
+      const base = args.length === 2 ? Number(args[1]) : void 0;
+      const n = base ? parseInt(args[0], base) : parseFloat(args[0]);
+      if (isNaN(n)) throw new SdevError(`Cannot parse '${args[0]}' as number`, line);
+      return n;
+    }
+  });
+  builtins.set("toFixed", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("toFixed() takes 2 arguments (number, digits)", line);
+      if (typeof args[0] !== "number") throw new SdevError("First argument must be a number", line);
+      if (typeof args[1] !== "number") throw new SdevError("Second argument must be a number", line);
+      return args[0].toFixed(args[1]);
+    }
+  });
+  builtins.set("toPrecision", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("toPrecision() takes 2 arguments", line);
+      if (typeof args[0] !== "number") throw new SdevError("First argument must be a number", line);
+      if (typeof args[1] !== "number") throw new SdevError("Second argument must be a number", line);
+      return args[0].toPrecision(args[1]);
+    }
+  });
+  builtins.set("isNaN", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isNaN() takes 1 argument", line);
+      return typeof args[0] === "number" && isNaN(args[0]);
+    }
+  });
+  builtins.set("isFinite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isFinite() takes 1 argument", line);
+      return typeof args[0] === "number" && isFinite(args[0]);
+    }
+  });
+  builtins.set("isInteger", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isInteger() takes 1 argument", line);
+      return typeof args[0] === "number" && Number.isInteger(args[0]);
+    }
+  });
+  builtins.set("bitAnd", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("bitAnd() takes 2 arguments", line);
+      return args[0] & args[1];
+    }
+  });
+  builtins.set("bitOr", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("bitOr() takes 2 arguments", line);
+      return args[0] | args[1];
+    }
+  });
+  builtins.set("bitXor", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("bitXor() takes 2 arguments", line);
+      return args[0] ^ args[1];
+    }
+  });
+  builtins.set("bitNot", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("bitNot() takes 1 argument", line);
+      return ~args[0];
+    }
+  });
+  builtins.set("bitShiftLeft", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("bitShiftLeft() takes 2 arguments", line);
+      return args[0] << args[1];
+    }
+  });
+  builtins.set("bitShiftRight", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("bitShiftRight() takes 2 arguments", line);
+      return args[0] >> args[1];
+    }
+  });
+}
+
+// src/lang/builtins/dict.ts
+init_errors();
+function registerDict(builtins, output) {
   builtins.set("inscriptions", {
     type: "builtin",
     call: (args, line) => {
@@ -20149,6 +20682,100 @@ function createBuiltins(output) {
       return Object.values(obj);
     }
   });
+  builtins.set("has", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("has() takes 2 arguments (tome, key)", line);
+      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
+        throw new SdevError("First argument must be a tome", line);
+      }
+      const key = String(args[1]);
+      return key in args[0];
+    }
+  });
+  builtins.set("get", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2 || args.length > 3) throw new SdevError("get() takes 2-3 arguments (tome, key, default?)", line);
+      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
+        throw new SdevError("First argument must be a tome", line);
+      }
+      const key = String(args[1]);
+      const obj = args[0];
+      if (key in obj) return obj[key];
+      return args.length === 3 ? args[2] : null;
+    }
+  });
+  builtins.set("set", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("set() takes 3 arguments (tome, key, value)", line);
+      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
+        throw new SdevError("First argument must be a tome", line);
+      }
+      const key = String(args[1]);
+      args[0][key] = args[2];
+      return args[0];
+    }
+  });
+  builtins.set("del", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("del() takes 2 arguments (tome, key)", line);
+      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
+        throw new SdevError("First argument must be a tome", line);
+      }
+      const key = String(args[1]);
+      const obj = args[0];
+      const existed = key in obj;
+      delete obj[key];
+      return existed;
+    }
+  });
+  builtins.set("merge", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("merge() takes at least 2 arguments", line);
+      const result = {};
+      for (const arg of args) {
+        if (!arg || typeof arg !== "object" || Array.isArray(arg)) {
+          throw new SdevError("All arguments must be tomes", line);
+        }
+        Object.assign(result, arg);
+      }
+      return result;
+    }
+  });
+  builtins.set("entries", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("entries() takes 1 argument", line);
+      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
+        throw new SdevError("Argument must be a tome", line);
+      }
+      return Object.entries(args[0]).map(([k, v]) => [k, v]);
+    }
+  });
+  builtins.set("fromEntries", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fromEntries() takes 1 argument", line);
+      if (!Array.isArray(args[0])) throw new SdevError("Argument must be a list", line);
+      const result = {};
+      for (const entry of args[0]) {
+        if (!Array.isArray(entry) || entry.length !== 2) {
+          throw new SdevError("Each entry must be a [key, value] pair", line);
+        }
+        result[String(entry[0])] = entry[1];
+      }
+      return result;
+    }
+  });
+}
+
+// src/lang/builtins/string.ts
+init_errors();
+function registerString(builtins, output) {
   builtins.set("upper", {
     type: "builtin",
     call: (args, line) => {
@@ -20240,60 +20867,6 @@ function createBuiltins(output) {
         return "tome";
       }
       return "mystery";
-    }
-  });
-  builtins.set("sin", { type: "builtin", call: (args) => Math.sin(args[0]) });
-  builtins.set("cos", { type: "builtin", call: (args) => Math.cos(args[0]) });
-  builtins.set("tan", { type: "builtin", call: (args) => Math.tan(args[0]) });
-  builtins.set("log", { type: "builtin", call: (args) => Math.log(args[0]) });
-  builtins.set("exp", { type: "builtin", call: (args) => Math.exp(args[0]) });
-  builtins.set("PI", { type: "builtin", call: () => Math.PI });
-  builtins.set("TAU", { type: "builtin", call: () => Math.PI * 2 });
-  builtins.set("random", {
-    type: "builtin",
-    call: () => Math.random()
-  });
-  builtins.set("randint", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("randint() takes 2 arguments", line);
-      const min = Math.ceil(args[0]);
-      const max = Math.floor(args[1]);
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-  });
-  builtins.set("pick", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("pick() takes 1 argument", line);
-      const arr = args[0];
-      if (!Array.isArray(arr)) throw new SdevError("Argument must be a list", line);
-      return arr[Math.floor(Math.random() * arr.length)] ?? null;
-    }
-  });
-  builtins.set("shuffle", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("shuffle() takes 1 argument", line);
-      const arr = args[0];
-      if (!Array.isArray(arr)) throw new SdevError("Argument must be a list", line);
-      const shuffled = [...arr];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    }
-  });
-  builtins.set("etch", { type: "builtin", call: (args) => JSON.stringify(args[0]) });
-  builtins.set("unetch", {
-    type: "builtin",
-    call: (args, line) => {
-      try {
-        return JSON.parse(args[0]);
-      } catch {
-        throw new SdevError("Invalid JSON", line);
-      }
     }
   });
   builtins.set("replace", {
@@ -20397,6 +20970,161 @@ function createBuiltins(output) {
       throw new SdevError("First argument must be text or list", line);
     }
   });
+  builtins.set("capitalize", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("capitalize() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].charAt(0).toUpperCase() + args[0].slice(1).toLowerCase();
+    }
+  });
+  builtins.set("title", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("title() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+  });
+  builtins.set("center", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2 || args.length > 3) throw new SdevError("center() takes 2-3 arguments", line);
+      if (typeof args[0] !== "string") throw new SdevError("First argument must be text", line);
+      if (typeof args[1] !== "number") throw new SdevError("Second argument must be a number", line);
+      const pad = args.length === 3 ? String(args[2]) : " ";
+      const s = args[0];
+      const width = args[1];
+      if (s.length >= width) return s;
+      const total = width - s.length;
+      const left = Math.floor(total / 2);
+      const right = total - left;
+      return pad.repeat(left) + s + pad.repeat(right);
+    }
+  });
+  builtins.set("trimLeft", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("trimLeft() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].trimStart();
+    }
+  });
+  builtins.set("trimRight", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("trimRight() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].trimEnd();
+    }
+  });
+  builtins.set("isUpper", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isUpper() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].length > 0 && args[0] === args[0].toUpperCase() && args[0] !== args[0].toLowerCase();
+    }
+  });
+  builtins.set("isLower", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isLower() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].length > 0 && args[0] === args[0].toLowerCase() && args[0] !== args[0].toUpperCase();
+    }
+  });
+  builtins.set("isDigit", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isDigit() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].length > 0 && /^\d+$/.test(args[0]);
+    }
+  });
+  builtins.set("isAlpha", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isAlpha() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].length > 0 && /^[a-zA-Z]+$/.test(args[0]);
+    }
+  });
+  builtins.set("isAlphaNum", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isAlphaNum() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].length > 0 && /^[a-zA-Z0-9]+$/.test(args[0]);
+    }
+  });
+  builtins.set("isSpace", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("isSpace() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return args[0].length > 0 && /^\s+$/.test(args[0]);
+    }
+  });
+  builtins.set("chr", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("chr() takes 1 argument", line);
+      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
+      return String.fromCharCode(args[0]);
+    }
+  });
+  builtins.set("ord", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1 || args.length > 2) throw new SdevError("ord() takes 1 or 2 arguments", line);
+      if (typeof args[0] !== "string" || args[0].length === 0) throw new SdevError("Argument must be a non-empty string", line);
+      const idx = args.length === 2 ? Number(args[1]) : 0;
+      if (idx < 0 || idx >= args[0].length) return 0;
+      return args[0].charCodeAt(idx);
+    }
+  });
+  builtins.set("base64encode", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("base64encode() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      return btoa(args[0]);
+    }
+  });
+  builtins.set("base64decode", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("base64decode() takes 1 argument", line);
+      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
+      try {
+        return atob(args[0]);
+      } catch {
+        throw new SdevError("Invalid base64 string", line);
+      }
+    }
+  });
+}
+
+// src/lang/builtins/json.ts
+init_errors();
+function registerJson(builtins, output) {
+  builtins.set("etch", { type: "builtin", call: (args) => JSON.stringify(args[0]) });
+  builtins.set("unetch", {
+    type: "builtin",
+    call: (args, line) => {
+      try {
+        return JSON.parse(args[0]);
+      } catch {
+        throw new SdevError("Invalid JSON", line);
+      }
+    }
+  });
+}
+
+// src/lang/builtins/list.ts
+init_errors();
+function registerList(builtins, output) {
   builtins.set("insert", {
     type: "builtin",
     call: (args, line) => {
@@ -20644,6 +21372,11 @@ function createBuiltins(output) {
       return null;
     }
   });
+}
+
+// src/lang/builtins/types.ts
+init_errors();
+function registerTypes(builtins, output) {
   builtins.set("isNum", {
     type: "builtin",
     call: (args, line) => {
@@ -20698,71 +21431,11 @@ function createBuiltins(output) {
       return false;
     }
   });
-  builtins.set("clamp", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("clamp() takes 3 arguments (value, min, max)", line);
-      const [val, min, max] = args.map((a) => {
-        if (typeof a !== "number") throw new SdevError("All arguments must be numbers", line);
-        return a;
-      });
-      return Math.min(Math.max(val, min), max);
-    }
-  });
-  builtins.set("lerp", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("lerp() takes 3 arguments (start, end, t)", line);
-      const [start, end, t] = args.map((a) => {
-        if (typeof a !== "number") throw new SdevError("All arguments must be numbers", line);
-        return a;
-      });
-      return start + (end - start) * t;
-    }
-  });
-  builtins.set("mapRange", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 5) throw new SdevError("mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax)", line);
-      const [value2, inMin, inMax, outMin, outMax] = args.map((a) => {
-        if (typeof a !== "number") throw new SdevError("All arguments must be numbers", line);
-        return a;
-      });
-      return outMin + (value2 - inMin) * (outMax - outMin) / (inMax - inMin);
-    }
-  });
-  builtins.set("sign", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("sign() takes 1 argument", line);
-      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
-      return Math.sign(args[0]);
-    }
-  });
-  builtins.set("pow", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("pow() takes 2 arguments (base, exponent)", line);
-      if (typeof args[0] !== "number" || typeof args[1] !== "number") {
-        throw new SdevError("Arguments must be numbers", line);
-      }
-      return Math.pow(args[0], args[1]);
-    }
-  });
-  builtins.set("asin", { type: "builtin", call: (args) => Math.asin(args[0]) });
-  builtins.set("acos", { type: "builtin", call: (args) => Math.acos(args[0]) });
-  builtins.set("atan", { type: "builtin", call: (args) => Math.atan(args[0]) });
-  builtins.set("atan2", {
-    type: "builtin",
-    call: (args) => Math.atan2(args[0], args[1])
-  });
-  builtins.set("sinh", { type: "builtin", call: (args) => Math.sinh(args[0]) });
-  builtins.set("cosh", { type: "builtin", call: (args) => Math.cosh(args[0]) });
-  builtins.set("tanh", { type: "builtin", call: (args) => Math.tanh(args[0]) });
-  builtins.set("log10", { type: "builtin", call: (args) => Math.log10(args[0]) });
-  builtins.set("log2", { type: "builtin", call: (args) => Math.log2(args[0]) });
-  builtins.set("E", { type: "builtin", call: () => Math.E });
-  builtins.set("INFINITY", { type: "builtin", call: () => Infinity });
+}
+
+// src/lang/builtins/time.ts
+init_errors();
+function registerTime(builtins, output) {
   builtins.set("now", {
     type: "builtin",
     call: () => Date.now()
@@ -20771,95 +21444,37 @@ function createBuiltins(output) {
     type: "builtin",
     call: () => (/* @__PURE__ */ new Date()).toISOString()
   });
-  builtins.set("has", {
+  builtins.set("time", {
     type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("has() takes 2 arguments (tome, key)", line);
-      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
-        throw new SdevError("First argument must be a tome", line);
-      }
-      const key = String(args[1]);
-      return key in args[0];
+    call: () => {
+      const d = /* @__PURE__ */ new Date();
+      return {
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        day: d.getDate(),
+        hour: d.getHours(),
+        minute: d.getMinutes(),
+        second: d.getSeconds(),
+        ms: d.getMilliseconds(),
+        timestamp: d.getTime(),
+        iso: d.toISOString()
+      };
     }
   });
-  builtins.set("get", {
+  builtins.set("formatTime", {
     type: "builtin",
     call: (args, line) => {
-      if (args.length < 2 || args.length > 3) throw new SdevError("get() takes 2-3 arguments (tome, key, default?)", line);
-      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
-        throw new SdevError("First argument must be a tome", line);
-      }
-      const key = String(args[1]);
-      const obj = args[0];
-      if (key in obj) return obj[key];
-      return args.length === 3 ? args[2] : null;
+      if (args.length < 1) throw new SdevError("formatTime() takes at least 1 argument", line);
+      if (typeof args[0] !== "number") throw new SdevError("First argument must be a number (ms)", line);
+      const d = new Date(args[0]);
+      return d.toISOString();
     }
   });
-  builtins.set("set", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("set() takes 3 arguments (tome, key, value)", line);
-      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
-        throw new SdevError("First argument must be a tome", line);
-      }
-      const key = String(args[1]);
-      args[0][key] = args[2];
-      return args[0];
-    }
-  });
-  builtins.set("del", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("del() takes 2 arguments (tome, key)", line);
-      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
-        throw new SdevError("First argument must be a tome", line);
-      }
-      const key = String(args[1]);
-      const obj = args[0];
-      const existed = key in obj;
-      delete obj[key];
-      return existed;
-    }
-  });
-  builtins.set("merge", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 2) throw new SdevError("merge() takes at least 2 arguments", line);
-      const result = {};
-      for (const arg of args) {
-        if (!arg || typeof arg !== "object" || Array.isArray(arg)) {
-          throw new SdevError("All arguments must be tomes", line);
-        }
-        Object.assign(result, arg);
-      }
-      return result;
-    }
-  });
-  builtins.set("entries", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("entries() takes 1 argument", line);
-      if (!args[0] || typeof args[0] !== "object" || Array.isArray(args[0])) {
-        throw new SdevError("Argument must be a tome", line);
-      }
-      return Object.entries(args[0]).map(([k, v]) => [k, v]);
-    }
-  });
-  builtins.set("fromEntries", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("fromEntries() takes 1 argument", line);
-      if (!Array.isArray(args[0])) throw new SdevError("Argument must be a list", line);
-      const result = {};
-      for (const entry of args[0]) {
-        if (!Array.isArray(entry) || entry.length !== 2) {
-          throw new SdevError("Each entry must be a [key, value] pair", line);
-        }
-        result[String(entry[0])] = entry[1];
-      }
-      return result;
-    }
-  });
+}
+
+// src/lang/builtins/misc.ts
+init_errors();
+function registerMisc(builtins, output) {
   builtins.set("starts", {
     type: "builtin",
     call: (args, line) => {
@@ -21181,489 +21796,6 @@ function createBuiltins(output) {
     call: (args, line) => {
       const msg = args.length > 0 ? stringify(args[0]) : "Error";
       throw new SdevError(msg, line);
-    }
-  });
-  builtins.set("chr", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("chr() takes 1 argument", line);
-      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
-      return String.fromCharCode(args[0]);
-    }
-  });
-  builtins.set("ord", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1 || args.length > 2) throw new SdevError("ord() takes 1 or 2 arguments", line);
-      if (typeof args[0] !== "string" || args[0].length === 0) throw new SdevError("Argument must be a non-empty string", line);
-      const idx = args.length === 2 ? Number(args[1]) : 0;
-      if (idx < 0 || idx >= args[0].length) return 0;
-      return args[0].charCodeAt(idx);
-    }
-  });
-  builtins.set("hex", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("hex() takes 1 argument", line);
-      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
-      return "0x" + Math.trunc(args[0]).toString(16).toUpperCase();
-    }
-  });
-  builtins.set("oct", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("oct() takes 1 argument", line);
-      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
-      return "0o" + Math.trunc(args[0]).toString(8);
-    }
-  });
-  builtins.set("bin", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("bin() takes 1 argument", line);
-      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
-      return "0b" + (Math.trunc(args[0]) >>> 0).toString(2);
-    }
-  });
-  builtins.set("parseNum", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1 || args.length > 2) throw new SdevError("parseNum() takes 1-2 arguments", line);
-      if (typeof args[0] !== "string") throw new SdevError("First argument must be text", line);
-      const base = args.length === 2 ? Number(args[1]) : void 0;
-      const n = base ? parseInt(args[0], base) : parseFloat(args[0]);
-      if (isNaN(n)) throw new SdevError(`Cannot parse '${args[0]}' as number`, line);
-      return n;
-    }
-  });
-  builtins.set("toFixed", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("toFixed() takes 2 arguments (number, digits)", line);
-      if (typeof args[0] !== "number") throw new SdevError("First argument must be a number", line);
-      if (typeof args[1] !== "number") throw new SdevError("Second argument must be a number", line);
-      return args[0].toFixed(args[1]);
-    }
-  });
-  builtins.set("toPrecision", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("toPrecision() takes 2 arguments", line);
-      if (typeof args[0] !== "number") throw new SdevError("First argument must be a number", line);
-      if (typeof args[1] !== "number") throw new SdevError("Second argument must be a number", line);
-      return args[0].toPrecision(args[1]);
-    }
-  });
-  builtins.set("isNaN", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isNaN() takes 1 argument", line);
-      return typeof args[0] === "number" && isNaN(args[0]);
-    }
-  });
-  builtins.set("isFinite", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isFinite() takes 1 argument", line);
-      return typeof args[0] === "number" && isFinite(args[0]);
-    }
-  });
-  builtins.set("isInteger", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isInteger() takes 1 argument", line);
-      return typeof args[0] === "number" && Number.isInteger(args[0]);
-    }
-  });
-  builtins.set("capitalize", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("capitalize() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].charAt(0).toUpperCase() + args[0].slice(1).toLowerCase();
-    }
-  });
-  builtins.set("title", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("title() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].replace(/\b\w/g, (c) => c.toUpperCase());
-    }
-  });
-  builtins.set("center", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 2 || args.length > 3) throw new SdevError("center() takes 2-3 arguments", line);
-      if (typeof args[0] !== "string") throw new SdevError("First argument must be text", line);
-      if (typeof args[1] !== "number") throw new SdevError("Second argument must be a number", line);
-      const pad = args.length === 3 ? String(args[2]) : " ";
-      const s = args[0];
-      const width = args[1];
-      if (s.length >= width) return s;
-      const total = width - s.length;
-      const left = Math.floor(total / 2);
-      const right = total - left;
-      return pad.repeat(left) + s + pad.repeat(right);
-    }
-  });
-  builtins.set("trimLeft", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("trimLeft() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].trimStart();
-    }
-  });
-  builtins.set("trimRight", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("trimRight() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].trimEnd();
-    }
-  });
-  builtins.set("isUpper", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isUpper() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].length > 0 && args[0] === args[0].toUpperCase() && args[0] !== args[0].toLowerCase();
-    }
-  });
-  builtins.set("isLower", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isLower() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].length > 0 && args[0] === args[0].toLowerCase() && args[0] !== args[0].toUpperCase();
-    }
-  });
-  builtins.set("isDigit", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isDigit() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].length > 0 && /^\d+$/.test(args[0]);
-    }
-  });
-  builtins.set("isAlpha", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isAlpha() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].length > 0 && /^[a-zA-Z]+$/.test(args[0]);
-    }
-  });
-  builtins.set("isAlphaNum", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isAlphaNum() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].length > 0 && /^[a-zA-Z0-9]+$/.test(args[0]);
-    }
-  });
-  builtins.set("isSpace", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("isSpace() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return args[0].length > 0 && /^\s+$/.test(args[0]);
-    }
-  });
-  builtins.set("match", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("match() takes 2 arguments (text, pattern)", line);
-      if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
-      const m = args[0].match(new RegExp(args[1]));
-      return m ? Array.from(m) : null;
-    }
-  });
-  builtins.set("matchAll", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("matchAll() takes 2 arguments (text, pattern)", line);
-      if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
-      const matches = Array.from(args[0].matchAll(new RegExp(args[1], "g")));
-      return matches.map((m) => Array.from(m));
-    }
-  });
-  builtins.set("replaceRegex", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("replaceRegex() takes 3 arguments", line);
-      if (typeof args[0] !== "string" || typeof args[1] !== "string" || typeof args[2] !== "string") {
-        throw new SdevError("Arguments must be text", line);
-      }
-      return args[0].replace(new RegExp(args[1], "g"), args[2]);
-    }
-  });
-  builtins.set("test", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("test() takes 2 arguments (text, pattern)", line);
-      if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
-      return new RegExp(args[1]).test(args[0]);
-    }
-  });
-  builtins.set("bitAnd", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("bitAnd() takes 2 arguments", line);
-      return args[0] & args[1];
-    }
-  });
-  builtins.set("bitOr", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("bitOr() takes 2 arguments", line);
-      return args[0] | args[1];
-    }
-  });
-  builtins.set("bitXor", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("bitXor() takes 2 arguments", line);
-      return args[0] ^ args[1];
-    }
-  });
-  builtins.set("bitNot", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("bitNot() takes 1 argument", line);
-      return ~args[0];
-    }
-  });
-  builtins.set("bitShiftLeft", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("bitShiftLeft() takes 2 arguments", line);
-      return args[0] << args[1];
-    }
-  });
-  builtins.set("bitShiftRight", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("bitShiftRight() takes 2 arguments", line);
-      return args[0] >> args[1];
-    }
-  });
-  builtins.set("base64encode", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("base64encode() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      return btoa(args[0]);
-    }
-  });
-  builtins.set("base64decode", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("base64decode() takes 1 argument", line);
-      if (typeof args[0] !== "string") throw new SdevError("Argument must be text", line);
-      try {
-        return atob(args[0]);
-      } catch {
-        throw new SdevError("Invalid base64 string", line);
-      }
-    }
-  });
-  builtins.set("hash", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("hash() takes 1 argument", line);
-      const str = stringify(args[0]);
-      let h = 0;
-      for (let i = 0; i < str.length; i++) {
-        const ch = str.charCodeAt(i);
-        h = (h << 5) - h + ch;
-        h |= 0;
-      }
-      return h;
-    }
-  });
-  builtins.set("time", {
-    type: "builtin",
-    call: () => {
-      const d = /* @__PURE__ */ new Date();
-      return {
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-        day: d.getDate(),
-        hour: d.getHours(),
-        minute: d.getMinutes(),
-        second: d.getSeconds(),
-        ms: d.getMilliseconds(),
-        timestamp: d.getTime(),
-        iso: d.toISOString()
-      };
-    }
-  });
-  builtins.set("formatTime", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1) throw new SdevError("formatTime() takes at least 1 argument", line);
-      if (typeof args[0] !== "number") throw new SdevError("First argument must be a number (ms)", line);
-      const d = new Date(args[0]);
-      return d.toISOString();
-    }
-  });
-  builtins.set("compose", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 2) throw new SdevError("compose() takes at least 2 arguments", line);
-      const fns = args.map((a) => {
-        if (!a || typeof a !== "object" || !("call" in a)) throw new SdevError("All arguments must be functions", line);
-        return a;
-      });
-      return {
-        type: "builtin",
-        call: (innerArgs, innerLine) => {
-          let result = fns[fns.length - 1].call(innerArgs, innerLine);
-          for (let i = fns.length - 2; i >= 0; i--) {
-            result = fns[i].call([result], innerLine);
-          }
-          return result;
-        }
-      };
-    }
-  });
-  builtins.set("pipe", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 2) throw new SdevError("pipe() takes at least 2 arguments (value, ...fns)", line);
-      let result = args[0];
-      for (let i = 1; i < args.length; i++) {
-        const fn2 = args[i];
-        if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Arguments after first must be functions", line);
-        result = fn2.call([result], line);
-      }
-      return result;
-    }
-  });
-  builtins.set("curry", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("curry() takes 2 arguments (fn, arity)", line);
-      const fn2 = args[0];
-      const arity = args[1];
-      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("First argument must be a function", line);
-      const curried = (collected) => ({
-        type: "builtin",
-        call: (innerArgs, innerLine) => {
-          const all = [...collected, ...innerArgs];
-          if (all.length >= arity) return fn2.call(all, innerLine);
-          return curried(all);
-        }
-      });
-      return curried([]);
-    }
-  });
-  builtins.set("memoize", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("memoize() takes 1 argument", line);
-      const fn2 = args[0];
-      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Argument must be a function", line);
-      const cache = /* @__PURE__ */ new Map();
-      return {
-        type: "builtin",
-        call: (innerArgs, innerLine) => {
-          const key = JSON.stringify(innerArgs);
-          if (cache.has(key)) return cache.get(key);
-          const result = fn2.call(innerArgs, innerLine);
-          cache.set(key, result);
-          return result;
-        }
-      };
-    }
-  });
-  builtins.set("buffer", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("buffer() takes 1 argument (size)", line);
-      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
-      const size = Math.trunc(args[0]);
-      const data = new Uint8Array(size);
-      const obj = {};
-      obj._type = "buffer";
-      obj._data = data;
-      obj.size = { type: "builtin", call: () => size };
-      obj.get = { type: "builtin", call: (a, l) => {
-        const i = a[0];
-        if (i < 0 || i >= size) throw new SdevError("Buffer index out of bounds", l);
-        return data[i];
-      } };
-      obj.set = { type: "builtin", call: (a, l) => {
-        const i = a[0];
-        const v = a[1];
-        if (i < 0 || i >= size) throw new SdevError("Buffer index out of bounds", l);
-        data[i] = v & 255;
-        return null;
-      } };
-      obj.fill = { type: "builtin", call: (a) => {
-        data.fill(a[0]);
-        return null;
-      } };
-      obj.slice = { type: "builtin", call: (a) => {
-        const start = a[0] || 0;
-        const end = a[1] || size;
-        return Array.from(data.slice(start, end));
-      } };
-      obj.toList = { type: "builtin", call: () => Array.from(data) };
-      obj.toText = { type: "builtin", call: () => new TextDecoder().decode(data) };
-      obj.fromString = { type: "builtin", call: (a) => {
-        const bytes = new TextEncoder().encode(a[0]);
-        data.set(bytes.slice(0, size));
-        return null;
-      } };
-      obj.copyTo = { type: "builtin", call: (a, l) => {
-        const target = a[0];
-        if (!target || target._type !== "buffer") throw new SdevError("Target must be a buffer", l);
-        target._data.set(data.slice(0, target._data.length));
-        return null;
-      } };
-      return obj;
-    }
-  });
-  builtins.set("pointer", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("pointer() takes 2 arguments (buffer, offset)", line);
-      const buf = args[0];
-      if (!buf || buf._type !== "buffer") throw new SdevError("First argument must be a buffer", line);
-      const offset = args[1];
-      const data = buf._data;
-      const obj = {};
-      obj._type = "pointer";
-      obj.offset = offset;
-      obj.read = { type: "builtin", call: () => data[offset] ?? 0 };
-      obj.write = { type: "builtin", call: (a) => {
-        data[offset] = a[0] & 255;
-        return null;
-      } };
-      obj.advance = { type: "builtin", call: (a) => {
-        const newOffset = offset + (a.length > 0 ? a[0] : 1);
-        return builtins.get("pointer").call([buf, newOffset], line);
-      } };
-      obj.readU16 = { type: "builtin", call: () => data[offset] | data[offset + 1] << 8 };
-      obj.readU32 = { type: "builtin", call: () => data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 | data[offset + 3] << 24 };
-      obj.writeU16 = { type: "builtin", call: (a) => {
-        const v = a[0];
-        data[offset] = v & 255;
-        data[offset + 1] = v >> 8 & 255;
-        return null;
-      } };
-      obj.writeU32 = { type: "builtin", call: (a) => {
-        const v = a[0];
-        data[offset] = v & 255;
-        data[offset + 1] = v >> 8 & 255;
-        data[offset + 2] = v >> 16 & 255;
-        data[offset + 3] = v >> 24 & 255;
-        return null;
-      } };
-      return obj;
     }
   });
   builtins.set("keys", {
@@ -22051,6 +22183,233 @@ function createBuiltins(output) {
       }
     }
   });
+  builtins.set("hash", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("hash() takes 1 argument", line);
+      const str = stringify(args[0]);
+      let h = 0;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h = (h << 5) - h + ch;
+        h |= 0;
+      }
+      return h;
+    }
+  });
+}
+
+// src/lang/builtins/regex.ts
+init_errors();
+function registerRegex(builtins, output) {
+  builtins.set("match", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("match() takes 2 arguments (text, pattern)", line);
+      if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
+      const m = args[0].match(new RegExp(args[1]));
+      return m ? Array.from(m) : null;
+    }
+  });
+  builtins.set("matchAll", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("matchAll() takes 2 arguments (text, pattern)", line);
+      if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
+      const matches = Array.from(args[0].matchAll(new RegExp(args[1], "g")));
+      return matches.map((m) => Array.from(m));
+    }
+  });
+  builtins.set("replaceRegex", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("replaceRegex() takes 3 arguments", line);
+      if (typeof args[0] !== "string" || typeof args[1] !== "string" || typeof args[2] !== "string") {
+        throw new SdevError("Arguments must be text", line);
+      }
+      return args[0].replace(new RegExp(args[1], "g"), args[2]);
+    }
+  });
+  builtins.set("test", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("test() takes 2 arguments (text, pattern)", line);
+      if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
+      return new RegExp(args[1]).test(args[0]);
+    }
+  });
+}
+
+// src/lang/builtins/functional.ts
+init_errors();
+function registerFunctional(builtins, output) {
+  builtins.set("compose", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("compose() takes at least 2 arguments", line);
+      const fns = args.map((a) => {
+        if (!a || typeof a !== "object" || !("call" in a)) throw new SdevError("All arguments must be functions", line);
+        return a;
+      });
+      return {
+        type: "builtin",
+        call: (innerArgs, innerLine) => {
+          let result = fns[fns.length - 1].call(innerArgs, innerLine);
+          for (let i = fns.length - 2; i >= 0; i--) {
+            result = fns[i].call([result], innerLine);
+          }
+          return result;
+        }
+      };
+    }
+  });
+  builtins.set("pipe", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("pipe() takes at least 2 arguments (value, ...fns)", line);
+      let result = args[0];
+      for (let i = 1; i < args.length; i++) {
+        const fn2 = args[i];
+        if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Arguments after first must be functions", line);
+        result = fn2.call([result], line);
+      }
+      return result;
+    }
+  });
+  builtins.set("curry", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("curry() takes 2 arguments (fn, arity)", line);
+      const fn2 = args[0];
+      const arity = args[1];
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("First argument must be a function", line);
+      const curried = (collected) => ({
+        type: "builtin",
+        call: (innerArgs, innerLine) => {
+          const all = [...collected, ...innerArgs];
+          if (all.length >= arity) return fn2.call(all, innerLine);
+          return curried(all);
+        }
+      });
+      return curried([]);
+    }
+  });
+  builtins.set("memoize", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("memoize() takes 1 argument", line);
+      const fn2 = args[0];
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Argument must be a function", line);
+      const cache2 = /* @__PURE__ */ new Map();
+      return {
+        type: "builtin",
+        call: (innerArgs, innerLine) => {
+          const key = JSON.stringify(innerArgs);
+          if (cache2.has(key)) return cache2.get(key);
+          const result = fn2.call(innerArgs, innerLine);
+          cache2.set(key, result);
+          return result;
+        }
+      };
+    }
+  });
+}
+
+// src/lang/builtins/buffer.ts
+init_errors();
+function registerBuffer(builtins, output) {
+  builtins.set("buffer", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("buffer() takes 1 argument (size)", line);
+      if (typeof args[0] !== "number") throw new SdevError("Argument must be a number", line);
+      const size = Math.trunc(args[0]);
+      const data = new Uint8Array(size);
+      const obj = {};
+      obj._type = "buffer";
+      obj._data = data;
+      obj.size = { type: "builtin", call: () => size };
+      obj.get = { type: "builtin", call: (a, l) => {
+        const i = a[0];
+        if (i < 0 || i >= size) throw new SdevError("Buffer index out of bounds", l);
+        return data[i];
+      } };
+      obj.set = { type: "builtin", call: (a, l) => {
+        const i = a[0];
+        const v = a[1];
+        if (i < 0 || i >= size) throw new SdevError("Buffer index out of bounds", l);
+        data[i] = v & 255;
+        return null;
+      } };
+      obj.fill = { type: "builtin", call: (a) => {
+        data.fill(a[0]);
+        return null;
+      } };
+      obj.slice = { type: "builtin", call: (a) => {
+        const start = a[0] || 0;
+        const end = a[1] || size;
+        return Array.from(data.slice(start, end));
+      } };
+      obj.toList = { type: "builtin", call: () => Array.from(data) };
+      obj.toText = { type: "builtin", call: () => new TextDecoder().decode(data) };
+      obj.fromString = { type: "builtin", call: (a) => {
+        const bytes = new TextEncoder().encode(a[0]);
+        data.set(bytes.slice(0, size));
+        return null;
+      } };
+      obj.copyTo = { type: "builtin", call: (a, l) => {
+        const target = a[0];
+        if (!target || target._type !== "buffer") throw new SdevError("Target must be a buffer", l);
+        target._data.set(data.slice(0, target._data.length));
+        return null;
+      } };
+      return obj;
+    }
+  });
+  builtins.set("pointer", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("pointer() takes 2 arguments (buffer, offset)", line);
+      const buf = args[0];
+      if (!buf || buf._type !== "buffer") throw new SdevError("First argument must be a buffer", line);
+      const offset = args[1];
+      const data = buf._data;
+      const obj = {};
+      obj._type = "pointer";
+      obj.offset = offset;
+      obj.read = { type: "builtin", call: () => data[offset] ?? 0 };
+      obj.write = { type: "builtin", call: (a) => {
+        data[offset] = a[0] & 255;
+        return null;
+      } };
+      obj.advance = { type: "builtin", call: (a) => {
+        const newOffset = offset + (a.length > 0 ? a[0] : 1);
+        return builtins.get("pointer").call([buf, newOffset], line);
+      } };
+      obj.readU16 = { type: "builtin", call: () => data[offset] | data[offset + 1] << 8 };
+      obj.readU32 = { type: "builtin", call: () => data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 | data[offset + 3] << 24 };
+      obj.writeU16 = { type: "builtin", call: (a) => {
+        const v = a[0];
+        data[offset] = v & 255;
+        data[offset + 1] = v >> 8 & 255;
+        return null;
+      } };
+      obj.writeU32 = { type: "builtin", call: (a) => {
+        const v = a[0];
+        data[offset] = v & 255;
+        data[offset + 1] = v >> 8 & 255;
+        data[offset + 2] = v >> 16 & 255;
+        data[offset + 3] = v >> 24 & 255;
+        return null;
+      } };
+      return obj;
+    }
+  });
+}
+
+// src/lang/builtins/host.ts
+init_errors();
+function registerHost(builtins, output) {
   const host = () => globalThis.__sdevHost ?? {};
   builtins.set("rand", { type: "builtin", call: () => Math.random() });
   builtins.set("ln", {
@@ -22174,79 +22533,157 @@ function createBuiltins(output) {
     type: "builtin",
     call: (args) => ffiHost().close?.(Number(args[0])) ?? false
   });
+}
+
+// src/lang/builtins/text.ts
+init_errors();
+function text(v, fn2, line) {
+  if (typeof v !== "string") throw new SdevError(`${fn2}() expects text`, line);
+  return v;
+}
+function flagsOf(v, global2) {
+  const f = typeof v === "string" ? v.replace(/[^imsu]/g, "") : "";
+  return (global2 ? "g" : "") + (f.includes("u") ? f : f + "u");
+}
+var cache = /* @__PURE__ */ new Map();
+function re(p, f) {
+  const k = f + "/" + p;
+  let r = cache.get(k);
+  if (!r) {
+    r = new RegExp(p, f);
+    if (cache.size > 500) cache.clear();
+    cache.set(k, r);
+  }
+  r.lastIndex = 0;
+  return r;
+}
+function registerText(builtins, _output) {
+  const def = (name, call) => builtins.set(name, { type: "builtin", call });
+  def("lines", (a, l) => text(a[0], "lines", l).split(/\r?\n/));
+  def("unlines", (a, l) => {
+    if (!Array.isArray(a[0])) throw new SdevError("unlines() expects a list", l);
+    return a[0].map((x) => typeof x === "string" ? x : String(x)).join("\n");
+  });
+  def("words", (a, l) => text(a[0], "words", l).split(/\s+/).filter(Boolean));
+  def("char_at", (a, l) => text(a[0], "char_at", l)[Number(a[1])] ?? "");
+  def("code_at", (a, l) => {
+    const s = text(a[0], "code_at", l);
+    const c = s.codePointAt(Number(a[1]));
+    return c === void 0 ? -1 : c;
+  });
+  def("find_from", (a, l) => text(a[0], "find_from", l).indexOf(text(a[1], "find_from", l), Number(a[2] ?? 0)));
+  def("find_last", (a, l) => text(a[0], "find_last", l).lastIndexOf(text(a[1], "find_last", l)));
+  def("leading_space", (a, l) => text(a[0], "leading_space", l).match(/^\s*/)[0]);
+  def("is_letter", (a, l) => new RegExp("^\\p{L}+$", "u").test(text(a[0], "is_letter", l)));
+  def("is_digit", (a, l) => /^[0-9]+$/.test(text(a[0], "is_digit", l)));
+  def("is_space", (a, l) => /^\s+$/.test(text(a[0], "is_space", l)));
+  def("is_name", (a, l) => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(text(a[0], "is_name", l)));
+  def("regex_test", (a, l) => re(text(a[1], "regex_test", l), flagsOf(a[2], false)).test(text(a[0], "regex_test", l)));
+  def("regex_capture", (a, l) => {
+    const m = text(a[0], "regex_capture", l).match(re(text(a[1], "regex_capture", l), flagsOf(a[2], false)));
+    return m ? Array.from(m, (x) => x ?? "") : null;
+  });
+  def("regex_find_all", (a, l) => Array.from(text(a[0], "regex_find_all", l).matchAll(re(text(a[1], "regex_find_all", l), flagsOf(a[2], true))), (m) => m[0]));
+  def("regex_replace", (a, l) => text(a[0], "regex_replace", l).replace(re(text(a[1], "regex_replace", l), flagsOf(a[3], true)), text(a[2], "regex_replace", l)));
+  def("evaluate", (a, l) => {
+    const src = text(a[0], "evaluate", l).replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
+    let i = 0;
+    const peek = () => {
+      while (src[i] === " ") i++;
+      return src[i];
+    };
+    const fail = () => {
+      throw new SdevError(`evaluate(): cannot read "${src}"`, l);
+    };
+    const atom = () => {
+      const c = peek();
+      if (c === "(") {
+        i++;
+        const v3 = sum();
+        if (peek() !== ")") fail();
+        i++;
+        return v3;
+      }
+      if (c === "-") {
+        i++;
+        return -atom();
+      }
+      if (c === "+") {
+        i++;
+        return atom();
+      }
+      const m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(src.slice(i));
+      if (!m) fail();
+      i += m[0].length;
+      let v2 = Number(m[0]);
+      if (peek() === "%") {
+        i++;
+        v2 /= 100;
+      }
+      return v2;
+    };
+    const power = () => {
+      const b = atom();
+      if (peek() === "^" || src.startsWith("**", i)) {
+        i += src[i] === "^" ? 1 : 2;
+        return b ** power();
+      }
+      return b;
+    };
+    const product = () => {
+      let v2 = power();
+      for (; ; ) {
+        const c = peek();
+        if (c === "*" && src[i + 1] !== "*") {
+          i++;
+          v2 *= power();
+        } else if (c === "/") {
+          i++;
+          v2 /= power();
+        } else if (c === "%") {
+          i++;
+          v2 %= power();
+        } else return v2;
+      }
+    };
+    const sum = () => {
+      let v2 = product();
+      for (; ; ) {
+        const c = peek();
+        if (c === "+") {
+          i++;
+          v2 += product();
+        } else if (c === "-") {
+          i++;
+          v2 -= product();
+        } else return v2;
+      }
+    };
+    const v = sum();
+    if (peek() !== void 0) fail();
+    return Math.round(v * 1e12) / 1e12;
+  });
+  def("quote_text", (a, l) => JSON.stringify(text(a[0], "quote_text", l)));
+}
+
+// src/lang/builtins.ts
+function createBuiltins(output) {
+  const builtins = /* @__PURE__ */ new Map();
+  registerIo(builtins, output);
+  registerMath(builtins, output);
+  registerDict(builtins, output);
+  registerString(builtins, output);
+  registerJson(builtins, output);
+  registerList(builtins, output);
+  registerTypes(builtins, output);
+  registerTime(builtins, output);
+  registerMisc(builtins, output);
+  registerRegex(builtins, output);
+  registerFunctional(builtins, output);
+  registerBuffer(builtins, output);
+  registerHost(builtins, output);
+  registerText(builtins, output);
   return builtins;
-}
-var objectTextHook = null;
-function setObjectTextHook(hook) {
-  objectTextHook = hook;
-}
-function stringify(value2) {
-  if (value2 === null) return "void";
-  if (typeof value2 === "boolean") return value2 ? "yep" : "nope";
-  if (typeof value2 === "string") return value2;
-  if (value2 && typeof value2 === "object" && value2.__error__) {
-    return String(value2.message ?? "");
-  }
-  if (value2 && typeof value2 === "object" && objectTextHook) {
-    const custom = objectTextHook(value2);
-    if (custom !== void 0) return custom;
-  }
-  if (typeof value2 === "number") {
-    if (value2 === Infinity) return "inf";
-    if (value2 === -Infinity) return "-inf";
-    return String(value2);
-  }
-  if (Array.isArray(value2)) {
-    return "[" + value2.map(stringify).join(", ") + "]";
-  }
-  if (typeof value2 === "object") {
-    if (value2.type === "builtin" || value2.type === "user" || value2.type === "lambda" || value2.type === "class") {
-      return "<conjuration>";
-    }
-    const entries = Object.entries(value2).filter(([k]) => ![
-      "add",
-      "sub",
-      "mul",
-      "mag",
-      "normalize",
-      "dot",
-      "distance",
-      "enqueue",
-      "dequeue",
-      "push",
-      "pop",
-      "peek",
-      "size",
-      "isEmpty",
-      "clear",
-      "values",
-      "keys",
-      "entries",
-      "get",
-      "set",
-      "has",
-      "delete",
-      "remove",
-      "append",
-      "prepend",
-      "toList",
-      "_data"
-    ].includes(k)).map(([k, v]) => `${k}: ${stringify(v)}`).join(", ");
-    return ":: " + entries + " ;;";
-  }
-  return String(value2);
-}
-function isTruthy(value2) {
-  if (value2 === null) return false;
-  if (typeof value2 === "boolean") return value2;
-  if (typeof value2 === "number") return value2 !== 0;
-  if (typeof value2 === "string") return value2.length > 0;
-  if (Array.isArray(value2)) return value2.length > 0;
-  return true;
-}
-function toNumber(value2, line) {
-  if (typeof value2 === "number") return value2;
-  throw new SdevError(`Expected number, got ${typeof value2}`, line);
 }
 
 // src/lang/advanced.ts
@@ -22337,11 +22774,11 @@ function createAdvancedBuiltins(output) {
               headers: options.headers,
               body: options.body ? JSON.stringify(options.body) : void 0
             });
-            const text = await response.text();
+            const text3 = await response.text();
             try {
-              return JSON.parse(text);
+              return JSON.parse(text3);
             } catch {
-              return text;
+              return text3;
             }
           } catch (e) {
             throw new SdevError(`Network error: ${e}`, line);
@@ -22509,8 +22946,8 @@ function createAdvancedBuiltins(output) {
       const a = args[0];
       const b = args[1];
       if (!Array.isArray(a) || !Array.isArray(b)) throw new SdevError("Arguments must be lists", line);
-      const set = /* @__PURE__ */ new Set([...a.map((x) => JSON.stringify(x)), ...b.map((x) => JSON.stringify(x))]);
-      return [...set].map((x) => JSON.parse(x));
+      const set2 = /* @__PURE__ */ new Set([...a.map((x) => JSON.stringify(x)), ...b.map((x) => JSON.stringify(x))]);
+      return [...set2].map((x) => JSON.parse(x));
     }
   });
   builtins.set("intersect", {
@@ -23004,6 +23441,7 @@ function splitKwargs(args) {
   const last = args[args.length - 1];
   if (last && typeof last === "object" && last.__kwargs) {
     const { __kwargs, ...kw } = last;
+    void __kwargs;
     return { pos: args.slice(0, -1), kw };
   }
   return { pos: args, kw: {} };
@@ -23039,88 +23477,88 @@ function repr(value2) {
   return String(value2);
 }
 function formatValue(value2, spec, conv) {
-  let text;
-  if (conv === "r") text = repr(value2);
-  else if (conv === "a") text = repr(value2);
-  else text = displayText(value2);
-  if (!spec) return text;
+  let text3;
+  if (conv === "r") text3 = repr(value2);
+  else if (conv === "a") text3 = repr(value2);
+  else text3 = displayText(value2);
+  if (!spec) return text3;
   const m = /^(?:(.)?([<>^]))?([+\- ])?(#)?(0)?(\d+)?(,)?(?:\.(\d+))?([bcdeEfFgGnosxX%])?$/.exec(spec);
-  if (!m) return text;
+  if (!m) return text3;
   const [, fillRaw, align, sign, alt, zero, widthRaw, comma, precRaw, kind] = m;
   const width = widthRaw ? parseInt(widthRaw, 10) : 0;
   const prec = precRaw ? parseInt(precRaw, 10) : void 0;
   if (kind && "bcdeEfFgGnosxX%".includes(kind) && kind !== "s") {
-    const num = Number(value2);
+    const num2 = Number(value2);
     switch (kind) {
       case "b":
-        text = (num >>> 0).toString(2);
+        text3 = (num2 >>> 0).toString(2);
         break;
       case "o":
-        text = (num >>> 0).toString(8);
+        text3 = (num2 >>> 0).toString(8);
         break;
       case "x":
-        text = (num >>> 0).toString(16);
+        text3 = (num2 >>> 0).toString(16);
         break;
       case "X":
-        text = (num >>> 0).toString(16).toUpperCase();
+        text3 = (num2 >>> 0).toString(16).toUpperCase();
         break;
       case "c":
-        text = String.fromCharCode(num);
+        text3 = String.fromCharCode(num2);
         break;
       case "d":
       case "n":
-        text = String(Math.trunc(num));
+        text3 = String(Math.trunc(num2));
         break;
       case "e":
-        text = num.toExponential(prec ?? 6);
+        text3 = num2.toExponential(prec ?? 6);
         break;
       case "E":
-        text = num.toExponential(prec ?? 6).toUpperCase();
+        text3 = num2.toExponential(prec ?? 6).toUpperCase();
         break;
       case "f":
       case "F":
-        text = num.toFixed(prec ?? 6);
+        text3 = num2.toFixed(prec ?? 6);
         break;
       case "g":
       case "G":
-        text = prec !== void 0 ? num.toPrecision(prec) : String(num);
+        text3 = prec !== void 0 ? num2.toPrecision(prec) : String(num2);
         break;
       case "%":
-        text = (num * 100).toFixed(prec ?? 6) + "%";
+        text3 = (num2 * 100).toFixed(prec ?? 6) + "%";
         break;
     }
-    if (alt && kind === "x") text = "0x" + text;
-    if (alt && kind === "b") text = "0b" + text;
-    if (alt && kind === "o") text = "0o" + text;
+    if (alt && kind === "x") text3 = "0x" + text3;
+    if (alt && kind === "b") text3 = "0b" + text3;
+    if (alt && kind === "o") text3 = "0o" + text3;
   } else if (prec !== void 0 && typeof value2 === "number") {
-    text = value2.toFixed(prec);
+    text3 = value2.toFixed(prec);
   } else if (prec !== void 0 && typeof value2 === "string") {
-    text = value2.slice(0, prec);
+    text3 = value2.slice(0, prec);
   }
   if (comma) {
-    const [ip, fp] = text.split(".");
-    text = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (fp ? "." + fp : "");
+    const [ip, fp] = text3.split(".");
+    text3 = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (fp ? "." + fp : "");
   }
-  if (sign === "+" && typeof value2 === "number" && Number(value2) >= 0) text = "+" + text;
-  if (sign === " " && typeof value2 === "number" && Number(value2) >= 0) text = " " + text;
-  if (width && text.length < width) {
+  if (sign === "+" && typeof value2 === "number" && Number(value2) >= 0) text3 = "+" + text3;
+  if (sign === " " && typeof value2 === "number" && Number(value2) >= 0) text3 = " " + text3;
+  if (width && text3.length < width) {
     const fill = fillRaw ?? (zero ? "0" : " ");
-    const pad = fill.repeat(width - text.length);
+    const pad = fill.repeat(width - text3.length);
     const defaultAlign = typeof value2 === "number" ? ">" : "<";
     switch (align ?? (zero ? ">" : defaultAlign)) {
       case ">":
-        text = pad + text;
+        text3 = pad + text3;
         break;
       case "^": {
         const left = Math.floor(pad.length / 2);
-        text = pad.slice(0, left) + text + pad.slice(left);
+        text3 = pad.slice(0, left) + text3 + pad.slice(left);
         break;
       }
       default:
-        text = text + pad;
+        text3 = text3 + pad;
     }
   }
-  return text;
+  return text3;
 }
 function displayText(value2) {
   if (value2 === null || value2 === void 0) return "void";
@@ -23139,8 +23577,8 @@ function displayText(value2) {
 function createParityBuiltins(output, host) {
   const b = /* @__PURE__ */ new Map();
   const add = (name, impl) => b.set(name, fn(name, impl));
-  const list = (v, line) => [...host.iterate(v, line)];
-  const num = (v) => typeof v === "number" ? v : Number(v);
+  const list2 = (v, line) => [...host.iterate(v, line)];
+  const num2 = (v) => typeof v === "number" ? v : Number(v);
   add("print", (args) => {
     const { pos, kw } = splitKwargs(args);
     const sep = kw.sep === void 0 ? " " : String(kw.sep);
@@ -23152,31 +23590,31 @@ function createParityBuiltins(output, host) {
   add("repr", (args) => repr(args[0]));
   add("int", (args) => {
     const [v, base] = args;
-    if (typeof v === "string") return parseInt(v.trim(), base ? num(base) : 10) || 0;
+    if (typeof v === "string") return parseInt(v.trim(), base ? num2(base) : 10) || 0;
     if (typeof v === "boolean") return v ? 1 : 0;
-    return Math.trunc(num(v));
+    return Math.trunc(num2(v));
   });
   add("float", (args) => args.length ? parseFloat(String(args[0])) : 0);
   add("bool", (args) => host.truthy(args[0]));
-  add("complexish", (args) => ({ real: num(args[0]), imag: num(args[1] ?? 0) }));
+  add("complexish", (args) => ({ real: num2(args[0]), imag: num2(args[1] ?? 0) }));
   add("bytes", (args, line) => {
     const v = args[0];
     if (typeof v === "string") return new Uint8Array([...v].map((c) => c.charCodeAt(0)));
     if (typeof v === "number") return new Uint8Array(v);
-    return new Uint8Array(list(v, line).map((x) => num(x) & 255));
+    return new Uint8Array(list2(v, line).map((x) => num2(x) & 255));
   });
-  add("list", (args, line) => args.length ? list(args[0], line) : []);
-  add("tuple", (args, line) => makeTuple(args.length ? list(args[0], line) : []));
-  add("set", (args, line) => new SdevSet(args.length ? list(args[0], line) : []));
-  add("frozenset", (args, line) => new SdevSet(args.length ? list(args[0], line) : [], true));
+  add("list", (args, line) => args.length ? list2(args[0], line) : []);
+  add("tuple", (args, line) => makeTuple(args.length ? list2(args[0], line) : []));
+  add("set", (args, line) => new SdevSet(args.length ? list2(args[0], line) : []));
+  add("frozenset", (args, line) => new SdevSet(args.length ? list2(args[0], line) : [], true));
   add("dict", (args, line) => {
     const { pos, kw } = splitKwargs(args);
     const out = {};
     if (pos.length && pos[0] && typeof pos[0] === "object" && !Array.isArray(pos[0])) {
       Object.assign(out, pos[0]);
     } else if (pos.length) {
-      for (const pair of list(pos[0], line)) {
-        const [k, v] = list(pair, line);
+      for (const pair of list2(pos[0], line)) {
+        const [k, v] = list2(pair, line);
         out[stringify(k)] = v;
       }
     }
@@ -23192,7 +23630,7 @@ function createParityBuiltins(output, host) {
     throw new SdevError("len() needs a sized value", line);
   });
   add("range", (args) => {
-    const [a, bb, c] = args.map((x) => x === void 0 ? void 0 : num(x));
+    const [a, bb, c] = args.map((x) => x === void 0 ? void 0 : num2(x));
     const start = bb === void 0 ? 0 : a;
     const stop = bb === void 0 ? a : bb;
     const step = c === void 0 ? 1 : c;
@@ -23203,12 +23641,12 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("enumerate", (args, line) => {
-    const items = list(args[0], line);
-    const start = args[1] === void 0 ? 0 : num(args[1]);
+    const items = list2(args[0], line);
+    const start = args[1] === void 0 ? 0 : num2(args[1]);
     return items.map((v, i) => makeTuple([i + start, v]));
   });
   add("zip", (args, line) => {
-    const cols = args.map((a) => list(a, line));
+    const cols = args.map((a) => list2(a, line));
     const n = cols.length ? Math.min(...cols.map((c) => c.length)) : 0;
     const out = [];
     for (let i = 0; i < n; i++) out.push(makeTuple(cols.map((c) => c[i])));
@@ -23217,7 +23655,7 @@ function createParityBuiltins(output, host) {
   add("zip_longest", (args, line) => {
     const { pos, kw } = splitKwargs(args);
     const filler = kw.fillvalue ?? null;
-    const cols = pos.map((a) => list(a, line));
+    const cols = pos.map((a) => list2(a, line));
     const n = cols.length ? Math.max(...cols.map((c) => c.length)) : 0;
     const out = [];
     for (let i = 0; i < n; i++) out.push(makeTuple(cols.map((c) => i < c.length ? c[i] : filler)));
@@ -23225,7 +23663,7 @@ function createParityBuiltins(output, host) {
   });
   add("map", (args, line) => {
     const f = args[0];
-    const cols = args.slice(1).map((a) => list(a, line));
+    const cols = args.slice(1).map((a) => list2(a, line));
     const n = cols.length ? Math.min(...cols.map((c) => c.length)) : 0;
     const out = [];
     for (let i = 0; i < n; i++) out.push(host.call(f, cols.map((c) => c[i]), line));
@@ -23233,13 +23671,13 @@ function createParityBuiltins(output, host) {
   });
   add("filter", (args, line) => {
     const [f, seq] = args;
-    return list(seq, line).filter((v) => f === null ? host.truthy(v) : host.truthy(host.call(f, [v], line)));
+    return list2(seq, line).filter((v) => f === null ? host.truthy(v) : host.truthy(host.call(f, [v], line)));
   });
-  add("any", (args, line) => list(args[0], line).some((v) => host.truthy(v)));
-  add("all", (args, line) => list(args[0], line).every((v) => host.truthy(v)));
+  add("any", (args, line) => list2(args[0], line).some((v) => host.truthy(v)));
+  add("all", (args, line) => list2(args[0], line).every((v) => host.truthy(v)));
   add("sorted", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const items = list(pos[0], line);
+    const items = list2(pos[0], line);
     const key = kw.key ?? pos[1];
     const reverse = host.truthy(kw.reverse);
     const scored = items.map((v) => ({ v, k: key ? host.call(key, [v], line) : v }));
@@ -23252,10 +23690,10 @@ function createParityBuiltins(output, host) {
     const out = scored.map((s) => s.v);
     return reverse ? out.reverse() : out;
   });
-  add("reversed", (args, line) => list(args[0], line).reverse());
+  add("reversed", (args, line) => list2(args[0], line).reverse());
   add("min", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const items = pos.length === 1 ? list(pos[0], line) : pos;
+    const items = pos.length === 1 ? list2(pos[0], line) : pos;
     if (!items.length) return kw.default ?? null;
     const key = kw.key;
     return items.reduce((best, v) => {
@@ -23266,7 +23704,7 @@ function createParityBuiltins(output, host) {
   });
   add("max", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const items = pos.length === 1 ? list(pos[0], line) : pos;
+    const items = pos.length === 1 ? list2(pos[0], line) : pos;
     if (!items.length) return kw.default ?? null;
     const key = kw.key;
     return items.reduce((best, v) => {
@@ -23276,20 +23714,20 @@ function createParityBuiltins(output, host) {
     });
   });
   add("sum", (args, line) => {
-    const items = list(args[0], line);
+    const items = list2(args[0], line);
     let acc = args[1] ?? 0;
     for (const v of items) acc = acc + v;
     return acc;
   });
-  add("abs", (args) => Math.abs(num(args[0])));
+  add("abs", (args) => Math.abs(num2(args[0])));
   add("round", (args) => {
-    const n = num(args[0]);
-    const d = args[1] === void 0 ? 0 : num(args[1]);
+    const n = num2(args[0]);
+    const d = args[1] === void 0 ? 0 : num2(args[1]);
     const f = Math.pow(10, d);
     return Math.round(n * f) / f;
   });
   add("pow", (args) => {
-    const [a, e, m] = args.map(num);
+    const [a, e, m] = args.map(num2);
     if (args[2] === void 0) return Math.pow(a, e);
     let result = 1;
     let base = a % m;
@@ -23302,12 +23740,12 @@ function createParityBuiltins(output, host) {
     return result;
   });
   add("divmod", (args) => {
-    const [a, bb] = args.map(num);
+    const [a, bb] = args.map(num2);
     return makeTuple([Math.floor(a / bb), (a % bb + bb) % bb]);
   });
-  add("bin", (args) => "0b" + (num(args[0]) >>> 0).toString(2));
-  add("oct", (args) => "0o" + (num(args[0]) >>> 0).toString(8));
-  add("hex", (args) => "0x" + (num(args[0]) >>> 0).toString(16));
+  add("bin", (args) => "0b" + (num2(args[0]) >>> 0).toString(2));
+  add("oct", (args) => "0o" + (num2(args[0]) >>> 0).toString(8));
+  add("hex", (args) => "0x" + (num2(args[0]) >>> 0).toString(16));
   add("type", (args) => {
     const v = args[0];
     if (v === null || v === void 0) return "void";
@@ -23410,7 +23848,7 @@ function createParityBuiltins(output, host) {
     if (isGenerator(g)) g.close();
     return null;
   });
-  add("collect", (args, line) => list(args[0], line));
+  add("collect", (args, line) => list2(args[0], line));
   add("property", (args) => args[0]);
   add("staticmethod", (args) => args[0]);
   add("classmethod", (args) => args[0]);
@@ -23434,7 +23872,7 @@ function createParityBuiltins(output, host) {
   });
   add("reduce", (args, line) => {
     const [f, seq, initial] = args;
-    const items = list(seq, line);
+    const items = list2(seq, line);
     let acc;
     let start = 0;
     if (args.length > 2) acc = initial;
@@ -23447,42 +23885,42 @@ function createParityBuiltins(output, host) {
   });
   add("dataclass", (args) => args[0]);
   add("count", (args) => {
-    let i = args[0] === void 0 ? 0 : num(args[0]);
-    const step = args[1] === void 0 ? 1 : num(args[1]);
-    const it = function* () {
+    let i = args[0] === void 0 ? 0 : num2(args[0]);
+    const step = args[1] === void 0 ? 1 : num2(args[1]);
+    const it = (function* () {
       for (; ; ) {
         yield i;
         i += step;
       }
-    }();
+    })();
     return makeGenerator(it);
   });
   add("cycle", (args, line) => {
-    const items = list(args[0], line);
-    const it = function* () {
+    const items = list2(args[0], line);
+    const it = (function* () {
       if (!items.length) return null;
       for (; ; ) for (const v of items) yield v;
-    }();
+    })();
     return makeGenerator(it);
   });
   add("repeat", (args) => {
     const [v, times] = args;
-    const it = function* () {
+    const it = (function* () {
       if (times === void 0) {
         for (; ; ) yield v;
       }
-      for (let i = 0; i < num(times); i++) yield v;
+      for (let i = 0; i < num2(times); i++) yield v;
       return null;
-    }();
+    })();
     return makeGenerator(it);
   });
-  add("chain", (args, line) => args.flatMap((a) => list(a, line)));
+  add("chain", (args, line) => args.flatMap((a) => list2(a, line)));
   add("islice", (args, line) => {
     const [seq, a, bb, c] = args;
     const items = [];
-    const start = bb === void 0 ? 0 : num(a);
-    const stop = bb === void 0 ? a === void 0 ? Infinity : num(a) : num(bb);
-    const step = c === void 0 ? 1 : num(c);
+    const start = bb === void 0 ? 0 : num2(a);
+    const stop = bb === void 0 ? a === void 0 ? Infinity : num2(a) : num2(bb);
+    const step = c === void 0 ? 1 : num2(c);
     let i = 0;
     for (const v of host.iterate(seq, line)) {
       if (i >= stop) break;
@@ -23493,8 +23931,8 @@ function createParityBuiltins(output, host) {
   });
   add("product", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const repeatN = kw.repeat === void 0 ? 1 : num(kw.repeat);
-    let pools = pos.map((a) => list(a, line));
+    const repeatN = kw.repeat === void 0 ? 1 : num2(kw.repeat);
+    let pools = pos.map((a) => list2(a, line));
     if (repeatN > 1) {
       const base = pools;
       pools = [];
@@ -23509,8 +23947,8 @@ function createParityBuiltins(output, host) {
     return result.map(makeTuple);
   });
   add("permutations", (args, line) => {
-    const items = list(args[0], line);
-    const r = args[1] === void 0 ? items.length : num(args[1]);
+    const items = list2(args[0], line);
+    const r = args[1] === void 0 ? items.length : num2(args[1]);
     const out = [];
     const walk = (current, remaining) => {
       if (current.length === r) {
@@ -23523,8 +23961,8 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("combinations", (args, line) => {
-    const items = list(args[0], line);
-    const r = num(args[1]);
+    const items = list2(args[0], line);
+    const r = num2(args[1]);
     const out = [];
     const walk = (start, current) => {
       if (current.length === r) {
@@ -23537,7 +23975,7 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("accumulate", (args, line) => {
-    const items = list(args[0], line);
+    const items = list2(args[0], line);
     const f = args[1];
     const out = [];
     let acc = null;
@@ -23548,7 +23986,7 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("groupby", (args, line) => {
-    const items = list(args[0], line);
+    const items = list2(args[0], line);
     const key = args[1];
     const out = [];
     let currentKey = Symbol("none");
@@ -23567,7 +24005,7 @@ function createParityBuiltins(output, host) {
   });
   add("Counter", (args, line) => {
     const counts = {};
-    for (const v of list(args[0] ?? [], line)) {
+    for (const v of list2(args[0] ?? [], line)) {
       const k = stringify(v);
       counts[k] = (counts[k] ?? 0) + 1;
     }
@@ -23586,7 +24024,7 @@ function createParityBuiltins(output, host) {
     });
   });
   add("namedtuple", (args, line) => {
-    const fields = typeof args[1] === "string" ? String(args[1]).split(/[\s,]+/) : list(args[1], line).map(String);
+    const fields = typeof args[1] === "string" ? String(args[1]).split(/[\s,]+/) : list2(args[1], line).map(String);
     return fn(String(args[0]), (values) => {
       const out = {};
       fields.forEach((f, i) => {
@@ -23595,23 +24033,23 @@ function createParityBuiltins(output, host) {
       return out;
     });
   });
-  add("deque", (args, line) => args.length ? list(args[0], line) : []);
+  add("deque", (args, line) => args.length ? list2(args[0], line) : []);
   add("OrderedDict", (args) => ({ ...args[0] ?? {} }));
-  add("union", (args, line) => new SdevSet(args.flatMap((a) => list(a, line))));
+  add("union", (args, line) => new SdevSet(args.flatMap((a) => list2(a, line))));
   add("intersection", (args, line) => {
-    const [first, ...rest] = args.map((a) => new SdevSet(list(a, line)));
+    const [first, ...rest] = args.map((a) => new SdevSet(list2(a, line)));
     return new SdevSet(first.values().filter((v) => rest.every((s) => s.has(v))));
   });
   add("difference", (args, line) => {
-    const [first, ...rest] = args.map((a) => new SdevSet(list(a, line)));
+    const [first, ...rest] = args.map((a) => new SdevSet(list2(a, line)));
     return new SdevSet(first.values().filter((v) => !rest.some((s) => s.has(v))));
   });
   add("symmetric_difference", (args, line) => {
-    const [a, bb] = args.map((x) => new SdevSet(list(x, line)));
+    const [a, bb] = args.map((x) => new SdevSet(list2(x, line)));
     return new SdevSet([...a.values().filter((v) => !bb.has(v)), ...bb.values().filter((v) => !a.has(v))]);
   });
   add("issubset", (args, line) => {
-    const [a, bb] = args.map((x) => new SdevSet(list(x, line)));
+    const [a, bb] = args.map((x) => new SdevSet(list2(x, line)));
     return a.values().every((v) => bb.has(v));
   });
   add("set_add", (args) => {
@@ -23643,7 +24081,7 @@ function createParityBuiltins(output, host) {
   });
   add("pop", (args) => {
     const [o, k, d] = args;
-    if (Array.isArray(o)) return o.length ? k === void 0 ? o.pop() : o.splice(num(k), 1)[0] : d ?? null;
+    if (Array.isArray(o)) return o.length ? k === void 0 ? o.pop() : o.splice(num2(k), 1)[0] : d ?? null;
     const obj = o;
     const key = stringify(k);
     if (!(key in obj)) return d ?? null;
@@ -23655,15 +24093,15 @@ function createParityBuiltins(output, host) {
     const [target, start, stop, step, value2] = args;
     if (!Array.isArray(target)) throw new SdevError("Only lists support slice assignment", line);
     const n = target.length;
-    const s = start === null || start === void 0 ? 0 : num(start) < 0 ? n + num(start) : num(start);
-    const e = stop === null || stop === void 0 ? n : num(stop) < 0 ? n + num(stop) : Math.min(num(stop), n);
-    const items = list(value2, line);
-    if (step === null || step === void 0 || num(step) === 1) {
+    const s = start === null || start === void 0 ? 0 : num2(start) < 0 ? n + num2(start) : num2(start);
+    const e = stop === null || stop === void 0 ? n : num2(stop) < 0 ? n + num2(stop) : Math.min(num2(stop), n);
+    const items = list2(value2, line);
+    if (step === null || step === void 0 || num2(step) === 1) {
       target.splice(s, Math.max(0, e - s), ...items);
       return target;
     }
     let idx = 0;
-    for (let i = s; i < e && idx < items.length; i += num(step)) target[i] = items[idx++];
+    for (let i = s; i < e && idx < items.length; i += num2(step)) target[i] = items[idx++];
     return target;
   });
   const EXCEPTIONS = [
@@ -23712,26 +24150,26 @@ function createParityBuiltins(output, host) {
     tau: Math.PI * 2,
     inf: Infinity,
     nan: NaN,
-    sqrt: fn("sqrt", (a) => Math.sqrt(num(a[0]))),
-    floor: fn("floor", (a) => Math.floor(num(a[0]))),
-    ceil: fn("ceil", (a) => Math.ceil(num(a[0]))),
-    trunc: fn("trunc", (a) => Math.trunc(num(a[0]))),
-    fabs: fn("fabs", (a) => Math.abs(num(a[0]))),
-    exp: fn("exp", (a) => Math.exp(num(a[0]))),
-    log: fn("log", (a) => a[1] === void 0 ? Math.log(num(a[0])) : Math.log(num(a[0])) / Math.log(num(a[1]))),
-    log2: fn("log2", (a) => Math.log2(num(a[0]))),
-    log10: fn("log10", (a) => Math.log10(num(a[0]))),
-    sin: fn("sin", (a) => Math.sin(num(a[0]))),
-    cos: fn("cos", (a) => Math.cos(num(a[0]))),
-    tan: fn("tan", (a) => Math.tan(num(a[0]))),
-    asin: fn("asin", (a) => Math.asin(num(a[0]))),
-    acos: fn("acos", (a) => Math.acos(num(a[0]))),
-    atan: fn("atan", (a) => Math.atan(num(a[0]))),
-    atan2: fn("atan2", (a) => Math.atan2(num(a[0]), num(a[1]))),
-    hypot: fn("hypot", (a) => Math.hypot(...a.map(num))),
+    sqrt: fn("sqrt", (a) => Math.sqrt(num2(a[0]))),
+    floor: fn("floor", (a) => Math.floor(num2(a[0]))),
+    ceil: fn("ceil", (a) => Math.ceil(num2(a[0]))),
+    trunc: fn("trunc", (a) => Math.trunc(num2(a[0]))),
+    fabs: fn("fabs", (a) => Math.abs(num2(a[0]))),
+    exp: fn("exp", (a) => Math.exp(num2(a[0]))),
+    log: fn("log", (a) => a[1] === void 0 ? Math.log(num2(a[0])) : Math.log(num2(a[0])) / Math.log(num2(a[1]))),
+    log2: fn("log2", (a) => Math.log2(num2(a[0]))),
+    log10: fn("log10", (a) => Math.log10(num2(a[0]))),
+    sin: fn("sin", (a) => Math.sin(num2(a[0]))),
+    cos: fn("cos", (a) => Math.cos(num2(a[0]))),
+    tan: fn("tan", (a) => Math.tan(num2(a[0]))),
+    asin: fn("asin", (a) => Math.asin(num2(a[0]))),
+    acos: fn("acos", (a) => Math.acos(num2(a[0]))),
+    atan: fn("atan", (a) => Math.atan(num2(a[0]))),
+    atan2: fn("atan2", (a) => Math.atan2(num2(a[0]), num2(a[1]))),
+    hypot: fn("hypot", (a) => Math.hypot(...a.map(num2))),
     gcd: fn("gcd", (a) => {
-      let x = Math.abs(num(a[0]));
-      let y = Math.abs(num(a[1]));
+      let x = Math.abs(num2(a[0]));
+      let y = Math.abs(num2(a[1]));
       while (y) {
         [x, y] = [y, x % y];
       }
@@ -23739,11 +24177,11 @@ function createParityBuiltins(output, host) {
     }),
     factorial: fn("factorial", (a) => {
       let acc = 1;
-      for (let i = 2; i <= num(a[0]); i++) acc *= i;
+      for (let i = 2; i <= num2(a[0]); i++) acc *= i;
       return acc;
     }),
-    isnan: fn("isnan", (a) => Number.isNaN(num(a[0]))),
-    isinf: fn("isinf", (a) => !Number.isFinite(num(a[0])) && !Number.isNaN(num(a[0])))
+    isnan: fn("isnan", (a) => Number.isNaN(num2(a[0]))),
+    isinf: fn("isinf", (a) => !Number.isFinite(num2(a[0])) && !Number.isNaN(num2(a[0])))
   });
   const jsonModule = moduleTome({
     dumps: fn("dumps", (a) => JSON.stringify(a[0])),
@@ -23751,10 +24189,10 @@ function createParityBuiltins(output, host) {
   });
   const randomModule = moduleTome({
     random: fn("random", () => Math.random()),
-    randint: fn("randint", (a) => Math.floor(Math.random() * (num(a[1]) - num(a[0]) + 1)) + num(a[0])),
-    uniform: fn("uniform", (a) => Math.random() * (num(a[1]) - num(a[0])) + num(a[0])),
+    randint: fn("randint", (a) => Math.floor(Math.random() * (num2(a[1]) - num2(a[0]) + 1)) + num2(a[0])),
+    uniform: fn("uniform", (a) => Math.random() * (num2(a[1]) - num2(a[0])) + num2(a[0])),
     choice: fn("choice", (a, line) => {
-      const items = list(a[0], line);
+      const items = list2(a[0], line);
       return items[Math.floor(Math.random() * items.length)];
     }),
     shuffle: fn("shuffle", (a) => {
@@ -23766,8 +24204,8 @@ function createParityBuiltins(output, host) {
       return xs;
     }),
     sample: fn("sample", (a, line) => {
-      const items = [...list(a[0], line)];
-      const k = num(a[1]);
+      const items = [...list2(a[0], line)];
+      const k = num2(a[1]);
       const out = [];
       for (let i = 0; i < k && items.length; i++) out.push(items.splice(Math.floor(Math.random() * items.length), 1)[0]);
       return out;
@@ -23846,7 +24284,7 @@ function createParityBuiltins(output, host) {
   }
   add("truthy", (args) => host.truthy(args[0]));
   add("is_generator", (args) => isGenerator(args[0]));
-  add("freeze", (args, line) => new SdevSet(list(args[0], line), true));
+  add("freeze", (args, line) => new SdevSet(list2(args[0], line), true));
   add("ascii", (args) => repr(args[0]));
   add("sdev_isTruthy", (args) => isTruthy(args[0]));
   return b;
@@ -23912,8 +24350,8 @@ var Interpreter = class {
   // Driver: runs the generator-based evaluator to completion.
   // A stray `emit` outside a generator body is a hard error.
   // ==========================================================
-  execute(node, env) {
-    const it = this.ev(node, env);
+  execute(node, env2) {
+    const it = this.ev(node, env2);
     let step = it.next();
     while (!step.done) {
       throw new SdevError("'emit' is only valid inside a generator function", node.line);
@@ -23923,11 +24361,11 @@ var Interpreter = class {
   // ==========================================================
   // Evaluator
   // ==========================================================
-  *ev(node, env) {
+  *ev(node, env2) {
     switch (node.type) {
       case "Program": {
         let result = null;
-        for (const stmt of node.statements) result = yield* this.ev(stmt, env);
+        for (const stmt of node.statements) result = yield* this.ev(stmt, env2);
         return result;
       }
       case "NumberLiteral":
@@ -23946,191 +24384,192 @@ var Interpreter = class {
         return bytes;
       }
       case "Identifier":
-        return this.executeIdentifier(node, env);
+        return this.executeIdentifier(node, env2);
       case "FStringExpr":
-        return yield* this.evFString(node, env);
+        return yield* this.evFString(node, env2);
       case "BinaryExpr":
-        return yield* this.evBinary(node, env);
+        return yield* this.evBinary(node, env2);
       case "UnaryExpr":
-        return yield* this.evUnary(node, env);
+        return yield* this.evUnary(node, env2);
       case "TernaryExpr":
-        return this.truthy(yield* this.ev(node.condition, env)) ? yield* this.ev(node.thenExpr, env) : yield* this.ev(node.elseExpr, env);
+        return this.truthy(yield* this.ev(node.condition, env2)) ? yield* this.ev(node.thenExpr, env2) : yield* this.ev(node.elseExpr, env2);
       case "WalrusExpr": {
-        const value2 = yield* this.ev(node.value, env);
-        env.define(node.name, value2);
+        const value2 = yield* this.ev(node.value, env2);
+        env2.define(node.name, value2);
         return value2;
       }
       case "AwaitExpr": {
-        const v = yield* this.ev(node.operand, env);
+        const v = yield* this.ev(node.operand, env2);
         return this.awaitValue(v, node.line);
       }
       case "EmitExpr": {
         if (node.delegate) {
-          const source = yield* this.ev(node.value, env);
+          const source = yield* this.ev(node.value, env2);
           let last = null;
           for (const item of this.iterableOf(source, node.line)) {
             last = yield { __emit: true, value: item };
           }
           return last;
         }
-        const value2 = node.value ? yield* this.ev(node.value, env) : null;
+        const value2 = node.value ? yield* this.ev(node.value, env2) : null;
         const sent = yield { __emit: true, value: value2 };
         return sent === void 0 ? null : sent;
       }
       case "CallExpr":
-        return yield* this.evCall(node, env);
+        return yield* this.evCall(node, env2);
       case "NewExpr":
-        return yield* this.evNew(node, env);
+        return yield* this.evNew(node, env2);
       case "IndexExpr":
-        return yield* this.evIndex(node, env);
+        return yield* this.evIndex(node, env2);
       case "SliceExpr":
-        return yield* this.evSlice(node, env);
+        return yield* this.evSlice(node, env2);
       case "MemberExpr":
-        return yield* this.evMember(node, env);
+        return yield* this.evMember(node, env2);
       case "ArrayLiteral":
-        return yield* this.evSequence(node.elements, env);
+        return yield* this.evSequence(node.elements, env2);
       case "TupleLiteral":
-        return makeTuple(yield* this.evSequence(node.elements, env));
+        return makeTuple(yield* this.evSequence(node.elements, env2));
       case "SetLiteral":
-        return new SdevSet(yield* this.evSequence(node.elements, env));
+        return new SdevSet(yield* this.evSequence(node.elements, env2));
       case "DictLiteral":
-        return yield* this.evDict(node, env);
+        return yield* this.evDict(node, env2);
       case "ComprehensionExpr":
-        return yield* this.evComprehension(node, env);
+        return yield* this.evComprehension(node, env2);
       case "StarExpr":
-        return yield* this.ev(node.operand, env);
+        return yield* this.ev(node.operand, env2);
       case "KeywordArg":
-        return yield* this.ev(node.value, env);
+        return yield* this.ev(node.value, env2);
       case "LambdaExpr":
-        return this.makeLambda(node, env);
+        return this.makeLambda(node, env2);
       case "LetStatement":
-        return yield* this.evLet(node, env);
+        return yield* this.evLet(node, env2);
       case "AssignStatement": {
-        const value2 = yield* this.ev(node.value, env);
-        if (node.declare && !env.has(node.name)) env.define(node.name, value2);
-        else env.set(node.name, value2, node.line);
+        const value2 = yield* this.ev(node.value, env2);
+        if (node.declare && !env2.has(node.name)) env2.define(node.name, value2);
+        else env2.set(node.name, value2, node.line);
         return value2;
       }
       case "AugAssignStatement":
-        return yield* this.evAugAssign(node, env);
+        return yield* this.evAugAssign(node, env2);
       case "IndexAssignStatement":
-        return yield* this.evIndexAssign(node, env);
+        return yield* this.evIndexAssign(node, env2);
       case "MemberAssignStatement":
-        return yield* this.evMemberAssign(node, env);
+        return yield* this.evMemberAssign(node, env2);
       case "IfStatement": {
-        if (this.truthy(yield* this.ev(node.condition, env))) return yield* this.ev(node.thenBranch, env);
-        if (node.elseBranch) return yield* this.ev(node.elseBranch, env);
+        if (this.truthy(yield* this.ev(node.condition, env2))) return yield* this.ev(node.thenBranch, env2);
+        if (node.elseBranch) return yield* this.ev(node.elseBranch, env2);
         return null;
       }
       case "WhileStatement":
-        return yield* this.evWhile(node, env);
+        return yield* this.evWhile(node, env2);
       case "ForEachStatement":
-        return yield* this.evForEach(node, env);
+        return yield* this.evForEach(node, env2);
       case "ForInStatement":
         return yield* this.evForEach(
           { type: "ForEachStatement", variable: node.variable, iterable: node.iterable, body: node.body, line: node.line },
-          env
+          env2
         );
       case "MatchStatement":
-        return yield* this.evMatch(node, env);
+        return yield* this.evMatch(node, env2);
       case "WithStatement":
-        return yield* this.evWith(node, env);
+        return yield* this.evWith(node, env2);
       case "FuncDeclaration":
-        return yield* this.evFuncDecl(node, env);
+        return yield* this.evFuncDecl(node, env2);
       case "ClassDeclaration":
-        return yield* this.evClassDecl(node, env);
+        return yield* this.evClassDecl(node, env2);
       case "ReturnStatement": {
-        const value2 = node.value ? yield* this.ev(node.value, env) : null;
+        const value2 = node.value ? yield* this.ev(node.value, env2) : null;
         throw new ReturnException(value2);
       }
       case "RaiseStatement": {
         if (!node.error) throw new SdevRaise("re-raise outside of a rescue block");
-        const err = yield* this.ev(node.error, env);
-        const cause = node.cause ? yield* this.ev(node.cause, env) : void 0;
+        const err = yield* this.ev(node.error, env2);
+        const cause = node.cause ? yield* this.ev(node.cause, env2) : void 0;
         throw new SdevRaise(err, cause);
       }
       case "AssertStatement": {
-        const ok = this.truthy(yield* this.ev(node.condition, env));
+        const ok = this.truthy(yield* this.ev(node.condition, env2));
         if (!ok) {
-          const msg = node.message ? stringify(yield* this.ev(node.message, env)) : "assertion failed";
+          const msg = node.message ? stringify(yield* this.ev(node.message, env2)) : "assertion failed";
           throw new SdevRaise(this.makeError("AssertionError", msg));
         }
         return null;
       }
       case "DelStatement":
-        return yield* this.evDel(node, env);
+        return yield* this.evDel(node, env2);
       case "ScopeStatement":
         return null;
+      // scope hints; resolution is dynamic
       case "PassStatement":
         return null;
       case "ImportStatement":
-        return this.evImport(node, env);
+        return this.evImport(node, env2);
       case "BreakStatement":
         throw new BreakSignal();
       case "ContinueStatement":
         throw new ContinueSignal();
       case "TryStatement":
-        return yield* this.evTry(node, env);
+        return yield* this.evTry(node, env2);
       case "BlockStatement": {
-        const blockEnv = new Environment(env);
+        const blockEnv = new Environment(env2);
         let result = null;
         for (const stmt of node.statements) result = yield* this.ev(stmt, blockEnv);
         return result;
       }
       case "ExpressionStatement":
-        return yield* this.ev(node.expression, env);
+        return yield* this.ev(node.expression, env2);
       default:
         throw new SdevError(`Unknown node type: ${node.type}`, 0);
     }
   }
-  *evSequence(nodes, env) {
+  *evSequence(nodes, env2) {
     const out = [];
     for (const n of nodes) {
       if (n.type === "StarExpr" && !n.double) {
-        const spread = yield* this.ev(n.operand, env);
+        const spread = yield* this.ev(n.operand, env2);
         for (const item of this.iterableOf(spread, n.line)) out.push(item);
         continue;
       }
-      out.push(yield* this.ev(n, env));
+      out.push(yield* this.ev(n, env2));
     }
     return out;
   }
-  executeIdentifier(node, env) {
+  executeIdentifier(node, env2) {
     if (node.name === "PI") return Math.PI;
     if (node.name === "TAU") return Math.PI * 2;
     if (node.name === "E") return Math.E;
     if (node.name === "INFINITY") return Infinity;
-    return env.get(node.name, node.line);
+    return env2.get(node.name, node.line);
   }
-  *evFString(node, env) {
+  *evFString(node, env2) {
     let out = "";
     for (const part of node.parts) {
       if (part.kind === "text") {
         out += part.value;
         continue;
       }
-      const value2 = yield* this.ev(part.expr, env);
-      const text = formatValue(value2, part.spec, part.conv);
-      out += part.debug ? `${part.debug}=${text}` : text;
+      const value2 = yield* this.ev(part.expr, env2);
+      const text3 = formatValue(value2, part.spec, part.conv);
+      out += part.debug ? `${part.debug}=${text3}` : text3;
     }
     return out;
   }
   // ----------------------------------------------------------
   // Operators
   // ----------------------------------------------------------
-  *evBinary(node, env) {
+  *evBinary(node, env2) {
     if (node.operator === "also") {
-      const left2 = yield* this.ev(node.left, env);
+      const left2 = yield* this.ev(node.left, env2);
       if (!this.truthy(left2)) return left2;
-      return yield* this.ev(node.right, env);
+      return yield* this.ev(node.right, env2);
     }
     if (node.operator === "either") {
-      const left2 = yield* this.ev(node.left, env);
+      const left2 = yield* this.ev(node.left, env2);
       if (this.truthy(left2)) return left2;
-      return yield* this.ev(node.right, env);
+      return yield* this.ev(node.right, env2);
     }
-    const left = yield* this.ev(node.left, env);
-    const right = yield* this.ev(node.right, env);
+    const left = yield* this.ev(node.left, env2);
+    const right = yield* this.ev(node.right, env2);
     return this.applyBinary(node.operator, left, right, node.line);
   }
   applyBinary(operator, left, right, line) {
@@ -24243,18 +24682,18 @@ var Interpreter = class {
       return stringify(v);
     });
   }
-  *evUnary(node, env) {
-    const operand = yield* this.ev(node.operand, env);
+  *evUnary(node, env2) {
+    const operand2 = yield* this.ev(node.operand, env2);
     switch (node.operator) {
       case "-": {
-        const m = this.protocolMethod(operand, "on_neg");
+        const m = this.protocolMethod(operand2, "on_neg");
         if (m) return m.call([], node.line);
-        if (typeof operand === "number") return -operand;
-        if (typeof operand === "string" && operand.trim() !== "" && !isNaN(Number(operand))) return -Number(operand);
+        if (typeof operand2 === "number") return -operand2;
+        if (typeof operand2 === "string" && operand2.trim() !== "" && !isNaN(Number(operand2))) return -Number(operand2);
         throw new SdevError("Cannot use '-' with non-number", node.line);
       }
       case "isnt":
-        return !this.truthy(operand);
+        return !this.truthy(operand2);
       default:
         throw new SdevError(`Unknown unary operator: ${node.operator}`, node.line);
     }
@@ -24262,12 +24701,12 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Calls
   // ----------------------------------------------------------
-  *evArgs(nodes, env) {
+  *evArgs(nodes, env2) {
     const args = [];
     const kwargs = {};
     for (const n of nodes) {
       if (n.type === "StarExpr") {
-        const v = yield* this.ev(n.operand, env);
+        const v = yield* this.ev(n.operand, env2);
         if (n.double) {
           if (v && typeof v === "object" && !Array.isArray(v)) Object.assign(kwargs, v);
         } else {
@@ -24276,16 +24715,16 @@ var Interpreter = class {
         continue;
       }
       if (n.type === "KeywordArg") {
-        kwargs[n.name] = yield* this.ev(n.value, env);
+        kwargs[n.name] = yield* this.ev(n.value, env2);
         continue;
       }
-      args.push(yield* this.ev(n, env));
+      args.push(yield* this.ev(n, env2));
     }
     return { args, kwargs };
   }
-  *evCall(node, env) {
-    const callee = yield* this.ev(node.callee, env);
-    const { args, kwargs } = yield* this.evArgs(node.args, env);
+  *evCall(node, env2) {
+    const callee = yield* this.ev(node.callee, env2);
+    const { args, kwargs } = yield* this.evArgs(node.args, env2);
     return this.callValue(callee, args, node.line, kwargs);
   }
   /** Calls any callable sdev value: function, class, or object with `on_call`. */
@@ -24307,9 +24746,9 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Indexing / members
   // ----------------------------------------------------------
-  *evIndex(node, env) {
-    const obj = yield* this.ev(node.object, env);
-    const index = yield* this.ev(node.index, env);
+  *evIndex(node, env2) {
+    const obj = yield* this.ev(node.object, env2);
+    const index = yield* this.ev(node.index, env2);
     return this.getIndex(obj, index, node.line);
   }
   getIndex(obj, index, line) {
@@ -24343,11 +24782,11 @@ var Interpreter = class {
     }
     throw new SdevError("Cannot index this type", line);
   }
-  *evSlice(node, env) {
-    const obj = yield* this.ev(node.object, env);
-    const start = node.start ? yield* this.ev(node.start, env) : null;
-    const stop = node.stop ? yield* this.ev(node.stop, env) : null;
-    const step = node.step ? yield* this.ev(node.step, env) : null;
+  *evSlice(node, env2) {
+    const obj = yield* this.ev(node.object, env2);
+    const start = node.start ? yield* this.ev(node.start, env2) : null;
+    const stop = node.stop ? yield* this.ev(node.stop, env2) : null;
+    const step = node.step ? yield* this.ev(node.step, env2) : null;
     return this.sliceValue(obj, start, stop, step, node.line);
   }
   sliceValue(obj, start, stop, step, line) {
@@ -24373,8 +24812,8 @@ var Interpreter = class {
     }
     return typeof obj === "string" ? out.join("") : out;
   }
-  *evMember(node, env) {
-    const obj = yield* this.ev(node.object, env);
+  *evMember(node, env2) {
+    const obj = yield* this.ev(node.object, env2);
     return this.getMember(obj, node.property, node.line);
   }
   getMember(obj, property, line) {
@@ -24429,31 +24868,31 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Literals
   // ----------------------------------------------------------
-  *evDict(node, env) {
+  *evDict(node, env2) {
     const result = {};
     for (const entry of node.entries) {
       if (entry.key.type === "StarExpr" && entry.key.double) {
-        const spread = yield* this.ev(entry.key.operand, env);
+        const spread = yield* this.ev(entry.key.operand, env2);
         if (spread && typeof spread === "object") Object.assign(result, spread);
         continue;
       }
-      const key = stringify(yield* this.ev(entry.key, env));
-      result[key] = yield* this.ev(entry.value, env);
+      const key = stringify(yield* this.ev(entry.key, env2));
+      result[key] = yield* this.ev(entry.value, env2);
     }
     return result;
   }
-  *evComprehension(node, env) {
+  *evComprehension(node, env2) {
     if (node.form === "gen") {
       const self2 = this;
-      const iter = function* () {
-        yield* self2.comprehensionWalk(node, env, 0, (value2) => value2);
+      const iter = (function* () {
+        yield* self2.comprehensionWalk(node, env2, 0, (value2) => value2);
         return null;
-      }();
+      })();
       return makeGenerator(iter);
     }
     const collected = [];
     const pairs = [];
-    for (const produced of this.comprehensionWalk(node, env, 0, (v) => v)) {
+    for (const produced of this.comprehensionWalk(node, env2, 0, (v) => v)) {
       if (node.form === "dict") {
         const p = produced;
         pairs.push(p);
@@ -24468,20 +24907,20 @@ var Interpreter = class {
     return dict;
   }
   /** Lazily walks comprehension clauses, producing one value per match. */
-  *comprehensionWalk(node, env, clauseIndex, emit2) {
+  *comprehensionWalk(node, env2, clauseIndex, emit2) {
     if (clauseIndex >= node.clauses.length) {
       if (node.form === "dict") {
-        const key = stringify(this.execute(node.element, env));
-        yield emit2({ key, value: this.execute(node.valueExpr, env) });
+        const key = stringify(this.execute(node.element, env2));
+        yield emit2({ key, value: this.execute(node.valueExpr, env2) });
       } else {
-        yield emit2(this.execute(node.element, env));
+        yield emit2(this.execute(node.element, env2));
       }
       return;
     }
     const clause = node.clauses[clauseIndex];
-    const source = this.execute(clause.iterable, env);
+    const source = this.execute(clause.iterable, env2);
     for (const item of this.iterableOf(source, node.line)) {
-      const scope = new Environment(env);
+      const scope = new Environment(env2);
       this.bindTarget(clause.variable, item, scope, node.line);
       let ok = true;
       for (const cond of clause.conditions) {
@@ -24494,59 +24933,59 @@ var Interpreter = class {
       yield* this.comprehensionWalk(node, scope, clauseIndex + 1, emit2);
     }
   }
-  bindTarget(target, value2, env, line) {
+  bindTarget(target, value2, env2, line) {
     if (typeof target === "string") {
-      env.define(target, value2);
+      env2.define(target, value2);
       return;
     }
     const items = [...this.iterableOf(value2, line)];
-    target.forEach((name, i) => env.define(name, items[i] === void 0 ? null : items[i]));
+    target.forEach((name, i) => env2.define(name, items[i] === void 0 ? null : items[i]));
   }
   // ----------------------------------------------------------
   // Assignment
   // ----------------------------------------------------------
-  *evLet(node, env) {
-    const value2 = yield* this.ev(node.value, env);
+  *evLet(node, env2) {
+    const value2 = yield* this.ev(node.value, env2);
     if (node.targets && node.targets.length > 1) {
       const items = [...this.iterableOf(value2, node.line)];
       const star = node.starIndex;
       if (star === void 0) {
-        node.targets.forEach((name, i) => env.define(name, items[i] === void 0 ? null : items[i]));
+        node.targets.forEach((name, i) => env2.define(name, items[i] === void 0 ? null : items[i]));
       } else {
         const after = node.targets.length - star - 1;
         node.targets.forEach((name, i) => {
-          if (i < star) env.define(name, items[i] === void 0 ? null : items[i]);
-          else if (i === star) env.define(name, items.slice(star, items.length - after));
-          else env.define(name, items[items.length - (node.targets.length - i)] ?? null);
+          if (i < star) env2.define(name, items[i] === void 0 ? null : items[i]);
+          else if (i === star) env2.define(name, items.slice(star, items.length - after));
+          else env2.define(name, items[items.length - (node.targets.length - i)] ?? null);
         });
       }
       return value2;
     }
-    env.define(node.name, value2);
+    env2.define(node.name, value2);
     return value2;
   }
-  *evAugAssign(node, env) {
-    const current = yield* this.ev(node.target, env);
-    const operand = yield* this.ev(node.value, env);
-    const updated = this.applyBinary(node.operator, current, operand, node.line);
+  *evAugAssign(node, env2) {
+    const current = yield* this.ev(node.target, env2);
+    const operand2 = yield* this.ev(node.value, env2);
+    const updated = this.applyBinary(node.operator, current, operand2, node.line);
     if (node.target.type === "Identifier") {
-      env.set(node.target.name, updated, node.line);
+      env2.set(node.target.name, updated, node.line);
     } else if (node.target.type === "IndexExpr") {
-      const obj = yield* this.ev(node.target.object, env);
-      const index = yield* this.ev(node.target.index, env);
+      const obj = yield* this.ev(node.target.object, env2);
+      const index = yield* this.ev(node.target.index, env2);
       this.setIndex(obj, index, updated, node.line);
     } else if (node.target.type === "MemberExpr") {
-      const obj = yield* this.ev(node.target.object, env);
+      const obj = yield* this.ev(node.target.object, env2);
       this.setMember(obj, node.target.property, updated, node.line);
     } else {
       throw new SdevError("Invalid augmented assignment target", node.line);
     }
     return updated;
   }
-  *evIndexAssign(node, env) {
-    const obj = yield* this.ev(node.object, env);
-    const index = yield* this.ev(node.index, env);
-    const value2 = yield* this.ev(node.value, env);
+  *evIndexAssign(node, env2) {
+    const obj = yield* this.ev(node.object, env2);
+    const index = yield* this.ev(node.index, env2);
+    const value2 = yield* this.ev(node.value, env2);
     return this.setIndex(obj, index, value2, node.line);
   }
   setIndex(obj, index, value2, line) {
@@ -24565,9 +25004,9 @@ var Interpreter = class {
     }
     throw new SdevError("Cannot assign to index of this type", line);
   }
-  *evMemberAssign(node, env) {
-    const obj = yield* this.ev(node.object, env);
-    const value2 = yield* this.ev(node.value, env);
+  *evMemberAssign(node, env2) {
+    const obj = yield* this.ev(node.object, env2);
+    const value2 = yield* this.ev(node.value, env2);
     return this.setMember(obj, node.property, value2, node.line);
   }
   setMember(obj, property, value2, line) {
@@ -24584,13 +25023,13 @@ var Interpreter = class {
     obj[property] = value2;
     return value2;
   }
-  *evDel(node, env) {
+  *evDel(node, env2) {
     for (const target of node.targets) {
       if (target.type === "Identifier") {
-        env.define(target.name, null);
+        env2.define(target.name, null);
       } else if (target.type === "IndexExpr") {
-        const obj = yield* this.ev(target.object, env);
-        const index = yield* this.ev(target.index, env);
+        const obj = yield* this.ev(target.object, env2);
+        const index = yield* this.ev(target.index, env2);
         if (Array.isArray(obj)) {
           const i = index;
           obj.splice(i < 0 ? obj.length + i : i, 1);
@@ -24600,7 +25039,7 @@ var Interpreter = class {
           delete obj[stringify(index)];
         }
       } else if (target.type === "MemberExpr") {
-        const obj = yield* this.ev(target.object, env);
+        const obj = yield* this.ev(target.object, env2);
         if (obj && typeof obj === "object") delete obj[target.property];
       }
     }
@@ -24609,13 +25048,13 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Loops
   // ----------------------------------------------------------
-  *evWhile(node, env) {
+  *evWhile(node, env2) {
     let result = null;
     let iterations = 0;
     let broke = false;
-    while (this.truthy(yield* this.ev(node.condition, env))) {
+    while (this.truthy(yield* this.ev(node.condition, env2))) {
       try {
-        result = yield* this.ev(node.body, env);
+        result = yield* this.ev(node.body, env2);
       } catch (e) {
         if (e instanceof BreakSignal) {
           broke = true;
@@ -24627,17 +25066,17 @@ var Interpreter = class {
         throw new SdevError("Maximum loop iterations exceeded (possible infinite loop)", node.line);
       }
     }
-    if (!broke && node.elseBlock) yield* this.ev(node.elseBlock, env);
+    if (!broke && node.elseBlock) yield* this.ev(node.elseBlock, env2);
     return result;
   }
-  *evForEach(node, env) {
-    const iterable = yield* this.ev(node.iterable, env);
+  *evForEach(node, env2) {
+    const iterable = yield* this.ev(node.iterable, env2);
     const targets = node.variables ?? node.variable;
     let result = null;
     let iterations = 0;
     let broke = false;
     for (const item of this.iterableOf(iterable, node.line)) {
-      const loopEnv = new Environment(env);
+      const loopEnv = new Environment(env2);
       this.bindTarget(targets, item, loopEnv, node.line);
       try {
         result = yield* this.ev(node.body, loopEnv);
@@ -24652,7 +25091,7 @@ var Interpreter = class {
         throw new SdevError("Maximum loop iterations exceeded", node.line);
       }
     }
-    if (!broke && node.elseBlock) yield* this.ev(node.elseBlock, env);
+    if (!broke && node.elseBlock) yield* this.ev(node.elseBlock, env2);
     return result;
   }
   /** Universal iteration protocol: lists, strings, sets, tomes, generators, `on_iter`. */
@@ -24706,31 +25145,31 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Pattern matching
   // ----------------------------------------------------------
-  *evMatch(node, env) {
-    const subject = yield* this.ev(node.subject, env);
+  *evMatch(node, env2) {
+    const subject = yield* this.ev(node.subject, env2);
     for (const kase of node.cases) {
-      const scope = new Environment(env);
+      const scope = new Environment(env2);
       if (!this.matchPattern(kase.pattern, subject, scope, node.line)) continue;
       if (kase.guard && !this.truthy(this.execute(kase.guard, scope))) continue;
       return yield* this.ev(kase.body, scope);
     }
     return null;
   }
-  matchPattern(pattern, value2, env, line) {
+  matchPattern(pattern, value2, env2, line) {
     switch (pattern.type) {
       case "PatWildcard":
         return true;
       case "PatCapture": {
-        if (pattern.pattern && !this.matchPattern(pattern.pattern, value2, env, line)) return false;
-        env.define(pattern.name, value2);
+        if (pattern.pattern && !this.matchPattern(pattern.pattern, value2, env2, line)) return false;
+        env2.define(pattern.name, value2);
         return true;
       }
       case "PatLiteral":
-        return this.isEqual(this.execute(pattern.value, env), value2);
+        return this.isEqual(this.execute(pattern.value, env2), value2);
       case "PatValue":
-        return this.isEqual(this.execute(pattern.expr, env), value2);
+        return this.isEqual(this.execute(pattern.expr, env2), value2);
       case "PatOr":
-        return pattern.options.some((p) => this.matchPattern(p, value2, env, line));
+        return pattern.options.some((p) => this.matchPattern(p, value2, env2, line));
       case "PatSequence": {
         if (!Array.isArray(value2)) return false;
         const fixed = pattern.elements.length;
@@ -24738,13 +25177,13 @@ var Interpreter = class {
         if (pattern.restName !== void 0 && value2.length < fixed) return false;
         const at = pattern.restIndex ?? fixed;
         for (let i = 0; i < at; i++) {
-          if (!this.matchPattern(pattern.elements[i], value2[i], env, line)) return false;
+          if (!this.matchPattern(pattern.elements[i], value2[i], env2, line)) return false;
         }
         const tailCount = fixed - at;
         for (let i = 0; i < tailCount; i++) {
-          if (!this.matchPattern(pattern.elements[at + i], value2[value2.length - tailCount + i], env, line)) return false;
+          if (!this.matchPattern(pattern.elements[at + i], value2[value2.length - tailCount + i], env2, line)) return false;
         }
-        if (pattern.restName) env.define(pattern.restName, value2.slice(at, value2.length - tailCount));
+        if (pattern.restName) env2.define(pattern.restName, value2.slice(at, value2.length - tailCount));
         return true;
       }
       case "PatMapping": {
@@ -24752,30 +25191,30 @@ var Interpreter = class {
         const obj = value2;
         const used = /* @__PURE__ */ new Set();
         for (const { key, pattern: sub } of pattern.entries) {
-          const k = stringify(this.execute(key, env));
+          const k = stringify(this.execute(key, env2));
           if (!(k in obj)) return false;
-          if (!this.matchPattern(sub, obj[k], env, line)) return false;
+          if (!this.matchPattern(sub, obj[k], env2, line)) return false;
           used.add(k);
         }
         if (pattern.restName) {
           const rest = {};
           for (const k of Object.keys(obj)) if (!used.has(k)) rest[k] = obj[k];
-          env.define(pattern.restName, rest);
+          env2.define(pattern.restName, rest);
         }
         return true;
       }
       case "PatClass": {
-        const klass = env.get(pattern.className, line);
+        const klass = env2.get(pattern.className, line);
         if (!klass || klass.type !== "class") return false;
         if (!this.isInstanceOf(value2, klass)) return false;
         const obj = value2;
         const order = klass.attrs["match_fields"] ?? Object.keys(obj);
         for (let i = 0; i < pattern.positional.length; i++) {
           const field = stringify(order[i]);
-          if (!this.matchPattern(pattern.positional[i], obj[field], env, line)) return false;
+          if (!this.matchPattern(pattern.positional[i], obj[field], env2, line)) return false;
         }
         for (const { name, pattern: sub } of pattern.keywords) {
-          if (!this.matchPattern(sub, obj[name], env, line)) return false;
+          if (!this.matchPattern(sub, obj[name], env2, line)) return false;
         }
         return true;
       }
@@ -24792,8 +25231,8 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Context managers
   // ----------------------------------------------------------
-  *evWith(node, env) {
-    const scope = new Environment(env);
+  *evWith(node, env2) {
+    const scope = new Environment(env2);
     const opened = [];
     try {
       for (const item of node.items) {
@@ -24824,24 +25263,24 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Functions
   // ----------------------------------------------------------
-  *evFuncDecl(node, env) {
-    let fn2 = this.makeFunction(node, env);
+  *evFuncDecl(node, env2) {
+    let fn2 = this.makeFunction(node, env2);
     if (node.decorators?.length) {
       for (const dec of [...node.decorators].reverse()) {
-        const decorator = yield* this.ev(dec, env);
+        const decorator = yield* this.ev(dec, env2);
         fn2 = this.callValue(decorator, [fn2], node.line);
       }
     }
-    env.define(node.name, fn2);
+    env2.define(node.name, fn2);
     return null;
   }
-  makeFunction(node, env, boundName) {
+  makeFunction(node, env2, boundName) {
     const self2 = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: "normal" }));
     const fn2 = {
       type: "user",
       call: (args, callLine) => {
-        const funcEnv = new Environment(env);
+        const funcEnv = new Environment(env2);
         self2.bindParams(specs, args, funcEnv, callLine, node.name);
         if (node.isGenerator) {
           const iter = self2.generatorBody(node.body, funcEnv);
@@ -24865,8 +25304,8 @@ var Interpreter = class {
     return fn2;
   }
   /** Drives a generator function body, surfacing `emit` values to the host. */
-  *generatorBody(body, env) {
-    const it = this.ev(body, env);
+  *generatorBody(body, env2) {
+    const it = this.ev(body, env2);
     let sent = void 0;
     try {
       for (; ; ) {
@@ -24879,13 +25318,13 @@ var Interpreter = class {
       throw e;
     }
   }
-  makeLambda(node, env) {
+  makeLambda(node, env2) {
     const self2 = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: "normal" }));
     return {
       type: "lambda",
       call: (args, callLine) => {
-        const lambdaEnv = new Environment(env);
+        const lambdaEnv = new Environment(env2);
         self2.bindParams(specs, args, lambdaEnv, callLine, "<lambda>");
         try {
           return self2.execute(node.body, lambdaEnv);
@@ -24901,47 +25340,48 @@ var Interpreter = class {
    * Binds positional args, keyword args, defaults, `*rest` and `**named`
    * following Python's rules.
    */
-  bindParams(specs, rawArgs, env, line, fnName) {
+  bindParams(specs, rawArgs, env2, line, fnName) {
     let kwargs = {};
     const args = [...rawArgs];
     const last = args[args.length - 1];
     if (last && typeof last === "object" && last.__kwargs) {
       const { __kwargs, ...rest } = last;
+      void __kwargs;
       kwargs = rest;
       args.pop();
     }
     let pos = 0;
     for (const spec of specs) {
       if (spec.kind === "rest") {
-        env.define(spec.name, makeTuple(args.slice(pos)));
+        env2.define(spec.name, makeTuple(args.slice(pos)));
         pos = args.length;
         continue;
       }
       if (spec.kind === "named") {
-        env.define(spec.name, { ...kwargs });
+        env2.define(spec.name, { ...kwargs });
         kwargs = {};
         continue;
       }
       if (spec.kind === "kwonly") {
         if (spec.name in kwargs) {
-          env.define(spec.name, kwargs[spec.name]);
+          env2.define(spec.name, kwargs[spec.name]);
           delete kwargs[spec.name];
         } else if (spec.default) {
-          env.define(spec.name, this.execute(spec.default, env));
+          env2.define(spec.name, this.execute(spec.default, env2));
         } else {
           throw new SdevError(`Function '${fnName}' is missing keyword argument '${spec.name}'`, line);
         }
         continue;
       }
       if (pos < args.length) {
-        env.define(spec.name, args[pos++]);
+        env2.define(spec.name, args[pos++]);
       } else if (spec.kind !== "posonly" && spec.name in kwargs) {
-        env.define(spec.name, kwargs[spec.name]);
+        env2.define(spec.name, kwargs[spec.name]);
         delete kwargs[spec.name];
       } else if (spec.default) {
-        env.define(spec.name, this.execute(spec.default, env));
+        env2.define(spec.name, this.execute(spec.default, env2));
       } else {
-        env.define(spec.name, null);
+        env2.define(spec.name, null);
       }
     }
   }
@@ -24957,16 +25397,17 @@ var Interpreter = class {
     if (value2 && typeof value2 === "object" && "__await" in value2) {
       return value2.__await;
     }
+    void line;
     return value2;
   }
   // ----------------------------------------------------------
   // Classes
   // ----------------------------------------------------------
-  *evClassDecl(node, env) {
+  *evClassDecl(node, env2) {
     const baseNames = node.superClasses?.length ? node.superClasses : node.superClass ? [node.superClass] : [];
     const bases = [];
     for (const name of baseNames) {
-      const base = env.get(name, node.line);
+      const base = env2.get(name, node.line);
       if (!base || base.type !== "class") {
         throw new SdevError(`'${name}' is not a class`, node.line);
       }
@@ -24985,9 +25426,9 @@ var Interpreter = class {
     };
     klass.mro = this.linearize(klass);
     for (const field of node.fields ?? []) {
-      klass.attrs[field.name] = this.execute(field.value, env);
+      klass.attrs[field.name] = this.execute(field.value, env2);
     }
-    const classEnv = new Environment(env);
+    const classEnv = new Environment(env2);
     classEnv.define(node.name, klass);
     for (const method of node.methods) {
       const raw = this.makeFunction(method, classEnv, `${node.name}.${method.name}`);
@@ -25023,10 +25464,10 @@ var Interpreter = class {
     }
     let value2 = klass;
     for (const dec of [...node.decorators ?? []].reverse()) {
-      const decorator = yield* this.ev(dec, env);
+      const decorator = yield* this.ev(dec, env2);
       value2 = this.callValue(decorator, [value2], node.line);
     }
-    env.define(node.name, value2);
+    env2.define(node.name, value2);
     return null;
   }
   /** Renders a decorator expression to a name for the built-in decorators. */
@@ -25045,8 +25486,8 @@ var Interpreter = class {
       const lists = seqs.map((s) => [...s]).filter((s) => s.length);
       while (lists.length) {
         let head2;
-        for (const list of lists) {
-          const candidate = list[0];
+        for (const list2 of lists) {
+          const candidate = list2[0];
           if (!lists.some((other) => other.slice(1).includes(candidate))) {
             head2 = candidate;
             break;
@@ -25056,7 +25497,7 @@ var Interpreter = class {
           return seqs.flat().filter((c, i, a) => a.indexOf(c) === i);
         }
         result.push(head2);
-        for (const list of lists) if (list[0] === head2) list.shift();
+        for (const list2 of lists) if (list2[0] === head2) list2.shift();
         for (let i = lists.length - 1; i >= 0; i--) if (!lists[i].length) lists.splice(i, 1);
       }
       return result;
@@ -25077,9 +25518,9 @@ var Interpreter = class {
     }
     return void 0;
   }
-  *evNew(node, env) {
-    const klassValue = yield* this.ev(node.className, env);
-    const { args, kwargs } = yield* this.evArgs(node.args, env);
+  *evNew(node, env2) {
+    const klassValue = yield* this.ev(node.className, env2);
+    const { args, kwargs } = yield* this.evArgs(node.args, env2);
     if (!klassValue || klassValue.type !== "class") {
       throw new SdevError('Expected a class after "new"', node.line);
     }
@@ -25187,19 +25628,19 @@ var Interpreter = class {
     }
     return stringify(value2);
   }
-  *evTry(node, env) {
+  *evTry(node, env2) {
     const handlers = node.handlers ?? [{ types: [], alias: node.errorVar, body: node.catchBlock }];
     let result = null;
     try {
       try {
-        result = yield* this.ev(node.tryBlock, env);
-        if (node.elseBlock) result = yield* this.ev(node.elseBlock, env);
+        result = yield* this.ev(node.tryBlock, env2);
+        if (node.elseBlock) result = yield* this.ev(node.elseBlock, env2);
       } catch (e) {
         if (e instanceof ReturnException || e instanceof BreakSignal || e instanceof ContinueSignal) throw e;
         const raised = e instanceof SdevRaise ? e.value : this.makeError(e instanceof SdevError ? "RuntimeError" : "Error", e instanceof Error ? e.message : String(e));
         for (const handler of handlers) {
-          if (!this.handlerMatches(handler, raised, env, node.line)) continue;
-          const catchEnv = new Environment(env);
+          if (!this.handlerMatches(handler, raised, env2, node.line)) continue;
+          const catchEnv = new Environment(env2);
           if (handler.alias) {
             catchEnv.define(handler.alias, node.handlers ? raised : this.errorMessage(raised));
           }
@@ -25209,11 +25650,11 @@ var Interpreter = class {
         throw e;
       }
     } finally {
-      if (node.finallyBlock) yield* this.ev(node.finallyBlock, env);
+      if (node.finallyBlock) yield* this.ev(node.finallyBlock, env2);
     }
     return result;
   }
-  handlerMatches(handler, raised, env, line) {
+  handlerMatches(handler, raised, env2, line) {
     if (!handler.types || handler.types.length === 0) return true;
     const name = this.errorName(raised);
     for (const typeNode of handler.types) {
@@ -25221,11 +25662,11 @@ var Interpreter = class {
         const wanted = typeNode.name;
         if (wanted === "Error" || wanted === "Exception" || wanted === "BaseException") return true;
         if (wanted === name) return true;
-        const klass = env.has?.(wanted) ? env.get(wanted, line) : void 0;
+        const klass = env2.has?.(wanted) ? env2.get(wanted, line) : void 0;
         if (klass && klass.type === "class" && this.isInstanceOf(raised, klass)) return true;
         continue;
       }
-      const value2 = this.execute(typeNode, env);
+      const value2 = this.execute(typeNode, env2);
       if (value2 && value2.type === "class" && this.isInstanceOf(raised, value2)) return true;
     }
     return false;
@@ -25233,17 +25674,17 @@ var Interpreter = class {
   // ----------------------------------------------------------
   // Modules
   // ----------------------------------------------------------
-  evImport(node, env) {
-    const existing = env.has?.(node.module) ? env.get(node.module, node.line) : void 0;
+  evImport(node, env2) {
+    const existing = env2.has?.(node.module) ? env2.get(node.module, node.line) : void 0;
     const moduleValue = existing ?? {};
     if (node.isFrom && node.names) {
       for (const { name, alias } of node.names) {
-        const value2 = env.has?.(name) ? env.get(name, node.line) : moduleValue[name] ?? null;
-        env.define(alias ?? name, value2);
+        const value2 = env2.has?.(name) ? env2.get(name, node.line) : moduleValue[name] ?? null;
+        env2.define(alias ?? name, value2);
       }
       return null;
     }
-    env.define(node.alias ?? node.module.split(".").pop(), moduleValue);
+    env2.define(node.alias ?? node.module.split(".").pop(), moduleValue);
     return null;
   }
   // ----------------------------------------------------------
@@ -25361,14 +25802,14 @@ function formatSdev(code, indentSize = 2) {
 // src/lang/dialect/signature.ts
 var SIGNATURE_PREFIX = "#\u27E8sdev\u27E9 ";
 var SIGNATURE_RE = /^#\u27E8sdev\u27E9\s+(\S+)\s*$/;
-function toBase64Url(text) {
-  const bytes = new TextEncoder().encode(text);
+function toBase64Url(text3) {
+  const bytes = new TextEncoder().encode(text3);
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-function fromBase64Url(text) {
-  const padded = text.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text.length + 3) % 4);
+function fromBase64Url(text3) {
+  const padded = text3.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text3.length + 3) % 4);
   const bin = atob(padded);
   const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
   return new TextDecoder().decode(bytes);
@@ -25728,9 +26169,9 @@ function desugarOperators(code, spec) {
   const ops = [...spec.constructs.operators].sort((a, b) => b.symbol.length - a.symbol.length);
   const atom = String.raw`(?:[\p{L}\p{N}_]+(?:\([^()]*\))?|"[^"]*")`;
   for (const op of ops) {
-    const re = new RegExp(`(${atom})\\s*${escapeRe(op.symbol)}\\s*(${atom})`, "gu");
+    const re2 = new RegExp(`(${atom})\\s*${escapeRe(op.symbol)}\\s*(${atom})`, "gu");
     for (let pass = 0; pass < 8; pass++) {
-      const next = out.replace(re, (_m, a, b) => `${op.fn}(${a}, ${b})`);
+      const next = out.replace(re2, (_m, a, b) => `${op.fn}(${a}, ${b})`);
       if (next === out) break;
       out = next;
     }
@@ -25819,6 +26260,100 @@ function dialectize(source, spec) {
 }
 function translateDialect(source, from, to) {
   return dialectize(canonicalize(source, from, { withPrelude: false }).source, to);
+}
+
+// src/lang/dialect/presets.ts
+function bulgarian() {
+  const spec = emptyDialect({
+    name: "\u0421\u0434\u0435\u0432",
+    slug: "sdev-bg",
+    languages: ["bg", "en"],
+    description: "sdev, \u0434\u0443\u043C\u0430 \u043F\u043E \u0434\u0443\u043C\u0430 \u043D\u0430 \u0431\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438.",
+    version: "1.0.0",
+    visibility: "public"
+  });
+  Object.assign(spec.names, {
+    say: "\u043A\u0430\u0436\u0438",
+    ask: "\u043F\u0438\u0442\u0430\u0439",
+    set: "\u043D\u0435\u043A\u0430",
+    to: "\u043D\u0430",
+    if: "\u0430\u043A\u043E",
+    else: "\u0438\u043D\u0430\u0447\u0435",
+    end: "\u043A\u0440\u0430\u0439",
+    for: "\u0437\u0430",
+    each: "\u0432\u0441\u044F\u043A\u043E",
+    in: "\u0432\u044A\u0432",
+    while: "\u0434\u043E\u043A\u0430\u0442\u043E",
+    break: "\u0441\u043F\u0440\u0438",
+    continue: "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438",
+    match: "\u0441\u0440\u0430\u0432\u043D\u0438",
+    with: "\u0441",
+    return: "\u0432\u044A\u0440\u043D\u0438",
+    make: "\u0441\u044A\u0437\u0434\u0430\u0439",
+    capture: "\u0443\u043B\u043E\u0432\u0438",
+    ref: "\u043F\u0440\u0435\u043F\u0440\u0430\u0442\u043A\u0430",
+    call: "\u0438\u0437\u0432\u0438\u043A\u0430\u0439",
+    attempt: "\u043E\u043F\u0438\u0442\u0430\u0439",
+    rescue: "\u0445\u0432\u0430\u043D\u0438",
+    throw: "\u0445\u0432\u044A\u0440\u043B\u0438",
+    kind: "\u0432\u0438\u0434",
+    has: "\u0438\u043C\u0430",
+    does: "\u043F\u0440\u0430\u0432\u0438",
+    new: "\u043D\u043E\u0432",
+    self: "\u0430\u0437",
+    extends: "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430",
+    super: "\u0440\u043E\u0434\u0438\u0442\u0435\u043B",
+    use: "\u043F\u043E\u043B\u0437\u0432\u0430\u0439",
+    true: "\u0432\u044F\u0440\u043D\u043E",
+    false: "\u043D\u0435\u0432\u044F\u0440\u043D\u043E",
+    nothing: "\u043D\u0438\u0449\u043E",
+    is: "\u0435",
+    not: "\u043D\u0435",
+    and: "\u0438",
+    or: "\u0438\u043B\u0438",
+    more: "\u043F\u043E\u0432\u0435\u0447\u0435",
+    less: "\u043F\u043E_\u043C\u0430\u043B\u043A\u043E"
+  });
+  spec.synonyms.say = ["\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439"];
+  spec.synonyms.return = ["\u0440\u0435\u0437\u0443\u043B\u0442\u0430\u0442"];
+  spec.style = { ...spec.style, commentMarker: "#", assignment: "set-to", stringQuote: '"', blockStyle: "word" };
+  spec.constructs.functions = [
+    {
+      name: "\u0441\u0431\u043E\u0440",
+      about: "\u0441\u0443\u043C\u0430\u0442\u0430 \u043D\u0430 \u0441\u043F\u0438\u0441\u044A\u043A \u043E\u0442 \u0447\u0438\u0441\u043B\u0430",
+      source: ["to \u0441\u0431\u043E\u0440 with numbers", "  set total to 0", "  for each n in numbers", "    set total to total + n", "  end", "  return total", "end"].join("\n")
+    }
+  ];
+  return spec;
+}
+var BULGARIAN_SAMPLE = [
+  "# \u043F\u044A\u0440\u0432\u0430\u0442\u0430 \u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430 \u043D\u0430 \u0421\u0434\u0435\u0432",
+  '\u043D\u0435\u043A\u0430 \u0438\u043C\u0435 \u043D\u0430 "\u0441\u0432\u044F\u0442"',
+  "",
+  "\u043D\u0430 \u043F\u043E\u0437\u0434\u0440\u0430\u0432 \u0441 \u043A\u043E\u0439",
+  '  \u043A\u0430\u0436\u0438 "\u0437\u0434\u0440\u0430\u0432\u0435\u0439, " + \u043A\u043E\u0439',
+  "\u043A\u0440\u0430\u0439",
+  "",
+  "\u043F\u043E\u0437\u0434\u0440\u0430\u0432(\u0438\u043C\u0435)",
+  "",
+  "\u0437\u0430 \u0432\u0441\u044F\u043A\u043E \u043D \u0432\u044A\u0432 range(3)",
+  "  \u0430\u043A\u043E \u043D \u0435 1",
+  '    \u043A\u0430\u0436\u0438 "\u0435\u0434\u043D\u043E"',
+  "  \u0438\u043D\u0430\u0447\u0435",
+  "    \u043A\u0430\u0436\u0438 \u043D",
+  "  \u043A\u0440\u0430\u0439",
+  "\u043A\u0440\u0430\u0439",
+  "",
+  "\u043A\u0430\u0436\u0438 \u0441\u0431\u043E\u0440([1, 2, 3, 4])"
+].join("\n");
+var DIALECT_PRESETS = {
+  "sdev-bg": { spec: bulgarian(), sample: BULGARIAN_SAMPLE }
+};
+function presetList() {
+  return Object.values(DIALECT_PRESETS);
+}
+function findPreset(slug) {
+  return DIALECT_PRESETS[slug] ?? null;
 }
 
 // src/lang/dialect/sample.ts
@@ -25955,28 +26490,28 @@ function readCache() {
     return {};
   }
 }
-function writeCache(cache) {
+function writeCache(cache2) {
   if (typeof localStorage === "undefined") return;
-  localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  localStorage.setItem(CACHE_KEY, JSON.stringify(cache2));
 }
 function cachedLibraries() {
   return Object.values(readCache());
 }
 function cacheBundle(bundle) {
-  const cache = readCache();
-  cache[bundle.address] = bundle;
-  writeCache(cache);
+  const cache2 = readCache();
+  cache2[bundle.address] = bundle;
+  writeCache(cache2);
 }
 function forgetBundle(address) {
-  const cache = readCache();
-  delete cache[address];
-  writeCache(cache);
+  const cache2 = readCache();
+  delete cache2[address];
+  writeCache(cache2);
 }
 function libraryReferences(source) {
   const refs = [];
-  const re = /\buse\s+"(@[^"]+)"/g;
+  const re2 = /\buse\s+"(@[^"]+)"/g;
   let m;
-  while (m = re.exec(source)) {
+  while (m = re2.exec(source)) {
     const address = parseAddress(m[1]);
     if (address) refs.push(address);
   }
@@ -25984,7 +26519,7 @@ function libraryReferences(source) {
 }
 async function fetchLibrary(address) {
   const key = formatAddress(address);
-  const cache = readCache();
+  const cache2 = readCache();
   try {
     const { data: owner } = await db.from("usernames").select("user_id").eq("username", address.username).maybeSingle();
     if (!owner) throw new Error(`No user named @${address.username}.`);
@@ -25997,7 +26532,7 @@ async function fetchLibrary(address) {
     cacheBundle(bundle);
     return bundle;
   } catch (e) {
-    const offline = cache[key] ?? cache[formatAddress({ ...address, version: null })];
+    const offline = cache2[key] ?? cache2[formatAddress({ ...address, version: null })];
     if (offline) return offline;
     throw e instanceof Error ? e : new Error(`Could not resolve ${key}.`);
   }
@@ -26104,9 +26639,9 @@ function desugarExtensionOperators(source) {
     if (/^\s*#/.test(line)) return line;
     let out = line;
     for (const op of ops) {
-      const re = new RegExp(`(${ATOM})\\s*${escapeRe2(op.symbol)}\\s*(${ATOM})`, "gu");
+      const re2 = new RegExp(`(${ATOM})\\s*${escapeRe2(op.symbol)}\\s*(${ATOM})`, "gu");
       for (let pass = 0; pass < 8; pass++) {
-        const next = out.replace(re, (_m, a, b) => `${op.name}(${a}, ${b})`);
+        const next = out.replace(re2, (_m, a, b) => `${op.name}(${a}, ${b})`);
         if (next === out) break;
         out = next;
       }
@@ -26216,14 +26751,14 @@ var restored = false;
 async function ensureSession() {
   if (!restored) {
     restored = true;
-    const stored = readStored();
+    const stored2 = readStored();
     const { data: data2 } = await supabase.auth.getSession();
-    if (!data2.session && stored) {
-      const { data: set } = await supabase.auth.setSession({
-        access_token: stored.access_token,
-        refresh_token: stored.refresh_token
+    if (!data2.session && stored2) {
+      const { data: set2 } = await supabase.auth.setSession({
+        access_token: stored2.access_token,
+        refresh_token: stored2.refresh_token
       });
-      if (set.session) saveSession(set.session);
+      if (set2.session) saveSession(set2.session);
     }
   }
   const { data } = await supabase.auth.getSession();
@@ -26662,6 +27197,169 @@ var COMPARISONS = [
   [/\bor\s+less\b/gi, " or less "]
 ];
 
+// src/lang/agent/math.ts
+var LEAD = /^(?:(?:please|can you|could you|would you|i want to|i need to|i want you to|let'?s|now)\s+)*(?:calculate|calc|compute|evaluate|eval|solve|work\s+out|figure\s+out|find(?:\s+out)?|tell\s+me|give\s+me|show\s+me|print|display|output|say|what\s+is|what'?s|whats|what\s+are|how\s+much\s+is|how\s+much\s+are|how\s+many\s+is|result\s+of|answer)\b\s*/i;
+var FUNCS = /* @__PURE__ */ new Set(["sqrt", "abs", "round", "floor", "ceil", "min", "max"]);
+function numberWords(s) {
+  return s.replace(/\b(?:(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million)(?:[\s-]+(?:and\s+)?(?=zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million))?)+\b/gi, (m) => {
+    let total = 0, cur = 0;
+    for (const w of m.toLowerCase().split(/[\s-]+/)) {
+      if (w === "and") continue;
+      const v = NUMBER_WORDS[w];
+      if (v === void 0) return m;
+      if (v === 100) cur = (cur || 1) * 100;
+      else if (v >= 1e3) {
+        total += (cur || 1) * v;
+        cur = 0;
+      } else cur += v;
+    }
+    return String(total + cur);
+  });
+}
+function list(s) {
+  return s.split(/\s*,\s*|\s+and\s+|\s+&\s+|\s+/).map((x) => x.trim()).filter(Boolean);
+}
+function operators(s) {
+  return s.replace(/\bmultiplied\s+by\b/gi, " * ").replace(/\bdivided\s+by\b/gi, " / ").replace(/\b(?:raised\s+)?to\s+the\s+power\s+of\b/gi, " ** ").replace(/\bto\s+the\s+(\d+)(?:st|nd|rd|th)\s+power\b/gi, " ** $1").replace(/\bpower\b/gi, " ** ").replace(/(\S+)\s+squared\b/gi, "($1 ** 2)").replace(/(\S+)\s+cubed\b/gi, "($1 ** 3)").replace(/\bsquare\s+root\s+of\s+(\S+)/gi, "sqrt($1)").replace(/\bsqrt\s+(?!\()(\S+)/gi, "sqrt($1)").replace(/\b(?:the\s+)?square\s+of\s+(\S+)/gi, "($1 ** 2)").replace(/\b(?:the\s+)?cube\s+of\s+(\S+)/gi, "($1 ** 3)").replace(/\babsolute\s+value\s+of\s+(\S+)/gi, "abs($1)").replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+of\s+(\S+)/gi, "($1 * $2 / 100)").replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)(?!\s*[\d(A-Za-z_])/gi, "($1 / 100)").replace(/\b(?:plus|add|added\s+to|and)\b/gi, " + ").replace(/\b(?:minus|less|take\s+away)\b/gi, " - ").replace(/\b(?:times|multiply)\b/gi, " * ").replace(/(\d)\s*[x×]\s*(\d)/g, "$1 * $2").replace(/[×]/g, " * ").replace(/[÷]/g, " / ").replace(/\^/g, " ** ").replace(/\b(?:over)\b/gi, " / ").replace(/\b(?:mod|modulo|remainder\s+of)\b/gi, " % ").replace(/\s+/g, " ").trim();
+}
+function valid(expr, known) {
+  if (!expr || !/\d/.test(expr) && ![...expr.matchAll(/[A-Za-z_]\w*/g)].some((m) => known.has(m[0]))) return false;
+  if (!/^[\w\s.+\-*/%(),]+$/.test(expr)) return false;
+  for (const m of expr.matchAll(/[A-Za-z_]\w*/g)) {
+    if (!FUNCS.has(m[0]) && !known.has(m[0])) return false;
+  }
+  let depth = 0;
+  for (const c of expr) {
+    if (c === "(") depth++;
+    if (c === ")") depth--;
+    if (depth < 0) return false;
+  }
+  if (depth !== 0) return false;
+  if (/[\w.)]\s+[\w.(]/.test(expr)) return false;
+  if (/[+\-*/%]\s*$/.test(expr) || /^\s*[*/%]/.test(expr) || /[+*/%]\s*[*/%]\s*[*/%]/.test(expr)) return false;
+  return true;
+}
+function operand(s) {
+  return s.replace(/^the\s+/i, "").trim();
+}
+function mathRequest(stmt, known = /* @__PURE__ */ new Set()) {
+  const raw = stmt.trim().replace(/[?.!=]+\s*$/, "").trim();
+  if (!raw) return null;
+  let s = numberWords(raw);
+  const hadLead = LEAD.test(s);
+  s = s.replace(LEAD, "").replace(/^(?:the\s+)?(?:value|result|answer)\s+of\s+/i, "").replace(/^the\s+/i, "").trim();
+  let m;
+  let expr = null;
+  if (m = s.match(/^sum\s+of\s+(.+)$/i)) expr = list(m[1]).map(operand).join(" + ");
+  else if (m = s.match(/^product\s+of\s+(.+)$/i)) expr = list(m[1]).map(operand).join(" * ");
+  else if (m = s.match(/^(?:average|mean)\s+of\s+(.+)$/i)) {
+    const l = list(m[1]).map(operand);
+    expr = `(${l.join(" + ")}) / ${l.length}`;
+  } else if (m = s.match(/^difference\s+(?:between|of)\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m[1]} - ${m[2]}`;
+  else if (m = s.match(/^quotient\s+of\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m[1]} / ${m[2]}`;
+  else if (m = s.match(/^(?:max(?:imum)?|largest|biggest)\s+of\s+(.+)$/i)) expr = `max(${list(m[1]).join(", ")})`;
+  else if (m = s.match(/^(?:min(?:imum)?|smallest)\s+of\s+(.+)$/i)) expr = `min(${list(m[1]).join(", ")})`;
+  else if (m = s.match(/^subtract\s+(\S+)\s+from\s+(\S+)$/i)) expr = `${m[2]} - ${m[1]}`;
+  else if (m = s.match(/^take\s+(\S+)\s+(?:away\s+)?from\s+(\S+)$/i)) expr = `${m[2]} - ${m[1]}`;
+  else if (m = s.match(/^add\s+(.+?)\s+to\s+(\S+)$/i)) expr = `${m[1]} + ${m[2]}`;
+  else if (m = s.match(/^add\s+(.+)$/i)) expr = list(m[1]).join(" + ");
+  else if (m = s.match(/^multiply\s+(\S+)\s+(?:by|and|with|times)\s+(\S+)$/i)) expr = `${m[1]} * ${m[2]}`;
+  else if (m = s.match(/^divide\s+(\S+)\s+(?:by|into)\s+(\S+)$/i)) expr = `${m[1]} / ${m[2]}`;
+  else if (m = s.match(/^(\S+)\s+divided\s+into\s+(\S+)$/i)) expr = `${m[2]} / ${m[1]}`;
+  else if (m = s.match(/^(?:square|squared)\s+(\S+)$/i)) expr = `${m[1]} ** 2`;
+  else if (m = s.match(/^round\s+(.+)$/i)) expr = `round(${operators(m[1])})`;
+  else expr = s;
+  expr = expr ? operators(expr) : null;
+  if (!expr || !valid(expr, known)) return null;
+  const computes = /[+\-*/%]|\b(?:sqrt|abs|round|min|max|floor|ceil)\(/.test(expr);
+  if (!computes && !hadLead) return null;
+  return expr;
+}
+
+// src/lang/agent/tasks.ts
+var PLEASE = /^(?:(?:please|can you|could you|would you|i want to|i want you to|i need to|i'd like to|let'?s|now|then|and)\s+)*/i;
+var OUT = /^(?:say|print|show|display|output|tell me|give me|show me|write|list)\s+/i;
+function num(w) {
+  const t = w.trim().toLowerCase();
+  if (/^-?\d+(?:\.\d+)?$/.test(t)) return t;
+  if (t in NUMBER_WORDS) return String(NUMBER_WORDS[t]);
+  return null;
+}
+function text2(w) {
+  const t = w.trim().replace(/^(?:the\s+)?(?:word|text|string|name|sentence|phrase)\s+/i, "").trim();
+  if (isQuoted(t)) return t;
+  const q = t.match(/^["'“](.*)["'”]$/);
+  return JSON.stringify(q ? q[1] : t);
+}
+function nums(list2) {
+  const parts = list2.split(/\s*,\s*|\s+and\s+|\s+/).filter(Boolean);
+  const out = parts.map(num);
+  return out.every((x) => x !== null) && out.length ? out : null;
+}
+var isQuoted = () => false;
+function taskRequest(stmt, known = /* @__PURE__ */ new Set(), quoted) {
+  if (quoted) isQuoted = quoted;
+  const s = stmt.trim().replace(PLEASE, "").replace(/[.!?]+\s*$/, "").trim();
+  const head2 = s.split(/\s+/)[0]?.toLowerCase() ?? "";
+  if (known.has(head2)) return null;
+  let m;
+  if ((m = s.match(/^(?:count|print|show|say|list|display|output|write)?\s*(?:all\s+)?(?:the\s+)?(?:numbers?\s+)?(?:from\s+)?(\S+)\s+(?:to|through|until|till|-)\s+(\S+)(?:\s+by\s+(\S+))?$/i)) && /^(?:count|print|show|say|list|display|output|write|numbers?|from)/i.test(s)) {
+    const a = num(m[1]), b = num(m[2]), step = m[3] ? num(m[3]) : "1";
+    if (a !== null && b !== null && step !== null) {
+      const down = Number(a) > Number(b);
+      return down ? [`set i to ${a}`, `while i >= ${b}`, "  say i", `  set i to i - ${step}`, "end"] : [`set i to ${a}`, `while i <= ${b}`, "  say i", `  set i to i + ${step}`, "end"];
+    }
+  }
+  if ((m = s.match(/^count\s+(?:up\s+)?to\s+(\S+)$/i)) && num(m[1]) !== null) {
+    return ["set i to 1", `while i <= ${num(m[1])}`, "  say i", "  set i to i + 1", "end"];
+  }
+  if ((m = s.match(/^count\s+down\s+from\s+(\S+)$/i)) && num(m[1]) !== null) {
+    return [`set i to ${num(m[1])}`, "while i > 0", "  say i", "  set i to i - 1", "end"];
+  }
+  if ((m = s.match(/^(?:say|print|show|write|display|output|repeat)\s+(.+?)\s+(\S+)\s+times$/i)) && num(m[2]) !== null) {
+    const what = known.has(m[1].trim()) ? m[1].trim() : text2(m[1]);
+    return ["set i to 0", `while i < ${num(m[2])}`, `  say ${what}`, "  set i to i + 1", "end"];
+  }
+  if (/^(?:flip|toss)\s+(?:a\s+)?coin$/i.test(s)) return ['say pick(["heads", "tails"])'];
+  const subject = (w) => known.has(w.trim()) ? w.trim() : text2(w);
+  if ((m = s.replace(OUT, "").match(/^(?:reverse|backwards?)\s+(?:of\s+)?(.+)$/i)) || (m = s.replace(OUT, "").match(/^(.+?)\s+(?:reversed|backwards)$/i))) {
+    return [`say reverse(${subject(m[1])})`];
+  }
+  if ((m = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:uppercase|upper\s*case|capitals|caps)$/i)) || (m = s.replace(OUT, "").match(/^(?:uppercase|capitalize all)\s+(.+)$/i))) {
+    return [`say upper(${/^make\s/i.test(s) ? text2(m[1]) : subject(m[1])})`];
+  }
+  if ((m = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:lowercase|lower\s*case|small letters)$/i)) || (m = s.replace(OUT, "").match(/^lowercase\s+(.+)$/i))) {
+    return [`say lower(${/^make\s/i.test(s) ? text2(m[1]) : subject(m[1])})`];
+  }
+  if ((m = s.match(/^(?:what\s+is\s+|what's\s+|show\s+|tell\s+me\s+|give\s+me\s+)?(?:the\s+)?(?:length|size)\s+of\s+(.+)$/i)) || (m = s.match(/^how\s+(?:many|much)\s+(?:letters|characters|chars)\s+(?:are\s+)?(?:in|does)\s+(.+?)(?:\s+have)?$/i)) || (m = s.match(/^how\s+long\s+is\s+(.+)$/i))) {
+    const n = nums(m[1]);
+    return [`say len(${n && n.length > 1 ? `[${n.join(", ")}]` : subject(m[1])})`];
+  }
+  if (m = s.match(/^(?:is|check if|check whether|tell me if)\s+(\S+)\s+(?:is\s+)?(?:an?\s+)?(even|odd)(?:\s+or\s+(?:even|odd))?$/i)) {
+    const n = num(m[1]) ?? (known.has(m[1]) ? m[1] : null);
+    if (n !== null) return [`if ${n} % 2 is 0`, '  say "even"', "else", '  say "odd"', "end"];
+  }
+  if (m = s.match(/^(?:(?:give|show|pick|generate|roll|make|get)\s+(?:me\s+)?)?(?:a\s+)?random\s+(?:whole\s+)?number\s+(?:between|from)\s+(\S+)\s+(?:and|to)\s+(\S+)$/i)) {
+    const a = num(m[1]), b = num(m[2]);
+    if (a !== null && b !== null) return [`say randint(${a}, ${b})`];
+  }
+  if (/^(?:roll\s+(?:a\s+)?(?:die|dice)|throw\s+(?:a\s+)?dice?)$/i.test(s)) return ["say randint(1, 6)"];
+  if (m = s.replace(OUT, "").match(/^sort\s+(?:the\s+)?(?:numbers\s+)?(.+?)(?:\s+(?:from\s+)?(?:biggest|largest|highest)\s+(?:to|first).*)?$/i)) {
+    const n = nums(m[1]);
+    const desc = /biggest|largest|highest|descending/i.test(s);
+    if (n) return [desc ? `say sortDesc([${n.join(", ")}])` : `say sort([${n.join(", ")}])`];
+  }
+  if ((m = s.match(/^(?:print\s+|show\s+|make\s+|write\s+)?(?:the\s+)?(?:multiplication|times)\s+table\s+(?:of|for)\s+(\S+)$/i)) || (m = s.match(/^(?:print\s+|show\s+)?(?:the\s+)?(\S+)\s+times\s+table$/i))) {
+    const n = num(m[1]);
+    if (n !== null) return ["set i to 1", "while i <= 10", `  say str(${n}) + " x " + str(i) + " = " + str(${n} * i)`, "  set i to i + 1", "end"];
+  }
+  if ((m = s.match(/^(?:say\s+)?(?:hello|hi|hey)\s+to\s+(.+)$/i)) || (m = s.match(/^greet\s+(.+)$/i))) {
+    const who = m[1].trim();
+    return [known.has(who) ? `say "Hello, " + ${who}` : `say ${JSON.stringify(`Hello, ${who}`)}`];
+  }
+  return null;
+}
+
 // src/lang/agent/repair.ts
 var PLACEHOLDER2 = "\0";
 function mask2(raw) {
@@ -26832,7 +27530,8 @@ function expression(rest, known, renames) {
     if (isMaskedString(trimmed) || /^[\d.]+$/.test(trimmed) || trimmed.startsWith("(")) return trimmed;
   }
   const tokens = wordsOf(trimmed);
-  const numeric = numberWord(tokens.join(" "));
+  const ownName = tokens.length === 1 && known.has(tokens[0]);
+  const numeric = ownName ? null : numberWord(tokens.join(" "));
   if (numeric !== null) return numeric;
   const understood = tokens.every((t) => {
     if (isMaskedString(t)) return true;
@@ -26845,39 +27544,190 @@ function expression(rest, known, renames) {
     if (/[(.[]/.test(t)) return true;
     return false;
   });
-  if (understood) return tokens.join(" ");
-  const words = tokens.map((t) => isMaskedString(t) ? t : t);
-  if (words.length === 1 && !isMaskedString(words[0]) && numberWord(words[0]) !== null) {
-    return numberWord(words[0]);
-  }
+  if (understood) return joinOperands(tokens);
   const allBare = tokens.every((t) => !isMaskedString(t));
   const codeOperator = /[|&^~@$\\]/.test(trimmed);
   const codePunctuation = /[\w\u0000)\]][.:][\w\u0000([]/.test(trimmed);
-  if (codeOperator || codePunctuation) return trimmed;
-  if (allBare) return '"' + tokens.join(" ").replace(/"/g, '\\"') + '"';
-  return tokens.map((t) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || RESERVED.has(t) || BUILTINS.has(t) || /[(.[]/.test(t) ? t : '"' + t + '"').join(" + ");
+  const codeLiteral = /^\{[\s\S]*\}$/.test(trimmed) || /^\[[\s\S]*\]$/.test(trimmed);
+  if (codeOperator || codePunctuation || codeLiteral) return trimmed;
+  if (allBare && !tokens.some((t) => known.has(t))) return '"' + tokens.join(" ").replace(/"/g, '\\"') + '"';
+  const isValue = (t) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || BUILTINS.has(t) || /[(.[]/.test(t);
+  const pieces = [];
+  for (const t of tokens) {
+    if (/^[-+*/%]$/.test(t)) pieces.push({ kind: "op", v: t });
+    else if (isValue(t)) pieces.push({ kind: "value", v: t });
+    else if (pieces.length && pieces[pieces.length - 1].kind === "text") pieces[pieces.length - 1].v += " " + t;
+    else pieces.push({ kind: "text", v: t });
+  }
+  const parts = pieces.map((p, i) => {
+    if (p.kind !== "text") return p.v;
+    const before = i > 0 && pieces[i - 1].kind === "value" ? " " : "";
+    const after = i < pieces.length - 1 && pieces[i + 1].kind === "value" ? " " : "";
+    return '"' + (before + p.v + after).replace(/"/g, '\\"') + '"';
+  });
+  return joinOperands(parts);
 }
-function condition(rest, known, renames) {
+function joinOperands(tokens) {
+  const operand2 = (t) => !/^[-+*/%<>=!,]+$/.test(t) && !RESERVED.has(t) && !t.endsWith("(") && !t.endsWith(",") && !t.startsWith(")");
+  const out = [];
+  tokens.forEach((t, i) => {
+    if (i > 0 && operand2(tokens[i - 1]) && operand2(t) && !t.startsWith("(")) out.push("+");
+    out.push(t);
+  });
+  return out.join(" ");
+}
+function condition(rest, known, renames, info = {}) {
   let out = " " + rest.trim() + " ";
   if (renames?.size) out = out.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
-  for (const [re, to] of COMPARISONS) out = out.replace(re, to);
+  for (const [re2, to] of COMPARISONS) out = out.replace(re2, to);
   out = out.replace(/\bthen\b/gi, " ").replace(/[:{]\s*$/, " ").replace(/\s*==\s*/g, " is ").replace(/\s*!=\s*/g, " is not ").replace(/\s*>=\s*/g, " is or more ").replace(/\s*<=\s*/g, " is or less ").replace(/\s+/g, " ").trim();
-  out = out.split(" ").map((t) => !isMaskedString(t) && numberWord(t) !== null ? numberWord(t) : t).join(" ");
-  return out;
+  const toks = out.split(" ");
+  const mapped = toks.map((t, i) => {
+    if (isMaskedString(t) || known.has(t)) return t;
+    if (numberWord(t) !== null) return numberWord(t);
+    if (/^[\p{L}_][\p{L}\p{N}_]*$/u.test(t) && !RESERVED.has(t.toLowerCase()) && !BUILTINS.has(t)) {
+      const prev = toks[i - 1]?.toLowerCase();
+      if (prev === "is" || prev === "not" || prev === "equals") return '"' + t.toLowerCase() + '"';
+    }
+    return t;
+  });
+  for (let i = 0; i + 2 < mapped.length; i++) {
+    const name = mapped[i];
+    if (!info.textAsks?.has(name) || mapped[i + 1] !== "is") continue;
+    const j = mapped[i + 2] === "not" ? i + 3 : i + 2;
+    const lit = mapped[j];
+    if (!lit || !(isMaskedString(lit) || /^".*"$/.test(lit))) continue;
+    if (isMaskedString(lit) && info.strings) {
+      const k = Number(lit.slice(1, -1));
+      info.strings[k] = info.strings[k].toLowerCase().replace(/^"\s+|\s+"$/g, '"');
+    }
+    mapped[i] = `lower(trim(${name}))`;
+  }
+  return mapped.join(" ");
 }
 var ASSIGN_RE = new RegExp(
   `^([\\p{L}\\p{N}_]+)\\s+(?:${ASSIGN_PHRASES.filter((p) => /^[a-zа-я ]+$/i.test(p)).sort((a, b) => b.length - a.length).join("|")})\\s+(.+)$`,
   "iu"
 );
 var ASSIGN_SYMBOL_RE = /^([\p{L}\p{N}_]+)\s*(?::=|<-|=(?!=))\s*(.+)$/u;
+var NAMEABLE_INTENTS = /* @__PURE__ */ new Set(["return", "true", "false", "nothing", "in", "and", "or", "not", "continue", "break"]);
+var NAME_PAT = "[\\p{L}_][\\p{L}\\p{N}_]*";
+var ASK_INTO = new RegExp(
+  `^(?:for\\s+)?(\\u0000\\d+\\u0000)?\\s*,?\\s*(?:(?:and\\s+)?(?:save|store|put|keep|remember|call|name)(?:\\s+it|\\s+the\\s+answer)?(?:\\s+(?:as|in|into|to))?|as|into|in|to|->|=>)\\s+(?:the\\s+|a\\s+)?(${NAME_PAT})\\s*[.:]?$`,
+  "iu"
+);
+var ASK_PROMPT_ONLY = /^(?:for\s+)?(\u0000\d+\u0000)\s*[.:]?$/u;
+var ASK_NAME_ONLY = new RegExp(`^(?:for\\s+)?(?:(?:the|a|an|their|your|his|her|my)\\s+)?(${NAME_PAT})\\s*[?.:]?$`, "iu");
+function parseAsk(rest) {
+  const r = rest.trim().replace(/^(?:the\s+)?(?:user|person|player|them)\s+(?:for\s+)?/i, "").replace(/^\(|\)$/g, "").trim();
+  let m = r.match(ASK_INTO);
+  if (m) return { name: m[2], prompt: m[1] ?? null };
+  m = r.match(ASK_PROMPT_ONLY);
+  if (m) return { name: "answer", prompt: m[1] };
+  m = r.match(ASK_NAME_ONLY);
+  if (m) return { name: m[1], prompt: null };
+  return null;
+}
+function escapeRe3(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function scanAsks(lines, words) {
+  const asks = /* @__PURE__ */ new Map();
+  const masked = [];
+  for (const raw of lines) {
+    const { line, strings } = mask2(raw);
+    masked.push(line);
+    const text3 = (t) => t ? unmask2(t, strings) : "";
+    for (const stmt0 of splitStatements(line)) {
+      const stmt = stmt0.replace(FILLER_HEAD, "").trim();
+      const toks = wordsOf(stmt);
+      if (!toks.length) continue;
+      if (words.get(toks[0].toLowerCase()) === "ask") {
+        const f = parseAsk(stmt.slice(toks[0].length));
+        if (f) asks.set(f.name, text3(f.prompt));
+        continue;
+      }
+      const m = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m) {
+        const rt = wordsOf(m[2]);
+        if (rt[0] && words.get(rt[0].toLowerCase().replace(/\($/, "")) === "ask") asks.set(m[1], text3(rt[1]));
+      }
+    }
+  }
+  const numeric = /* @__PURE__ */ new Set();
+  const body = masked.join("\n");
+  const edge = "(?<![\\p{L}\\p{N}_])";
+  const tail = "(?![\\p{L}\\p{N}_])";
+  const names = [...asks.keys()];
+  for (const [name, prompt] of asks) {
+    if (/\b(?:number|numbers|how\s+(?:many|much|old|far|long|tall)|age|amount|count|price|total)\b|\d/i.test(prompt)) {
+      numeric.add(name);
+      continue;
+    }
+    const n = escapeRe3(name);
+    const arithmetic = new RegExp(`${edge}${n}${tail}\\s*[-*/%]|[-*/%]\\s*${edge}${n}${tail}`, "u");
+    const againstNumber = new RegExp(
+      `${edge}${n}${tail}\\s*(?:is(?:\\s+not)?|equals|==|!=|>=|<=|>|<|is\\s+(?:greater|less|more|bigger|smaller)(?:\\s+than)?|(?:greater|less|more|bigger|smaller)\\s+than)\\s*-?\\d`,
+      "iu"
+    );
+    const plusNumber = new RegExp(`${edge}${n}${tail}\\s*\\+\\s*\\d|\\d\\s*\\+\\s*${edge}${n}${tail}`, "u");
+    if (arithmetic.test(body) || againstNumber.test(body) || plusNumber.test(body)) numeric.add(name);
+  }
+  for (const a of names) for (const b of names) {
+    if (new RegExp(`${edge}${escapeRe3(a)}${tail}\\s*\\+\\s*${edge}${escapeRe3(b)}${tail}`, "u").test(body)) {
+      numeric.add(a);
+      numeric.add(b);
+    }
+  }
+  return { asks, numeric };
+}
+function fillPlaceholders(literal, known) {
+  const inner = literal.slice(1, -1);
+  const re2 = /\[([\p{L}_][\p{L}\p{N}_]*)\]|\{([\p{L}_][\p{L}\p{N}_]*)\}/gu;
+  if (![...inner.matchAll(re2)].some((m) => known.has(m[1] ?? m[2]))) return literal;
+  const pieces = [];
+  let last = 0;
+  for (const m of inner.matchAll(re2)) {
+    const name = m[1] ?? m[2];
+    if (!known.has(name)) continue;
+    if (m.index > last) pieces.push('"' + inner.slice(last, m.index) + '"');
+    pieces.push(`str(${name})`);
+    last = m.index + m[0].length;
+  }
+  if (last < inner.length) pieces.push('"' + inner.slice(last) + '"');
+  return "(" + pieces.join(" + ") + ")";
+}
+function counting(stmt) {
+  const s = stmt.replace(/[.:]\s*$/, "").trim();
+  let m = s.match(new RegExp(`^(?:add|plus)\\s+(.+?)\\s+(?:to|onto)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
+  if (m) return { name: m[2], op: "+", by: m[1] };
+  m = s.match(new RegExp(`^(?:subtract|take|remove|minus)\\s+(.+?)\\s+(?:from|off)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
+  if (m) return { name: m[2], op: "-", by: m[1] };
+  m = s.match(new RegExp(`^(increase|raise|bump|increment|decrease|reduce|decrement)\\s+(?:the\\s+)?(${NAME_PAT})(?:\\s+by\\s+(.+))?$`, "iu"));
+  if (m) return { name: m[2], op: /^(?:decrease|reduce|decrement)$/i.test(m[1]) ? "-" : "+", by: m[3] ?? "1" };
+  m = s.match(new RegExp(`^(${NAME_PAT})\\s*(\\+\\+|--)$`, "u"));
+  if (m) return { name: m[1], op: m[2] === "++" ? "+" : "-", by: "1" };
+  m = s.match(new RegExp(`^(${NAME_PAT})\\s*([+-])=\\s*(.+)$`, "u"));
+  if (m) return { name: m[1], op: m[2], by: m[3] };
+  return null;
+}
 function collectNames(lines, words, seed) {
   const names = new Set(seed ?? []);
+  const nameable = (w) => {
+    const i = words.get(w.toLowerCase());
+    return !i || NAMEABLE_INTENTS.has(i);
+  };
   for (const raw of lines) {
     const { line } = mask2(raw);
     for (const stmt of splitStatements(line)) {
       const toks = wordsOf(stmt);
       if (!toks.length) continue;
       const head2 = words.get(toks[0].toLowerCase());
+      if (head2 === "ask") {
+        const f = parseAsk(stmt.slice(toks[0].length));
+        if (f) names.add(f.name);
+        continue;
+      }
       if (head2 === "set" && toks[1]) {
         names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
         continue;
@@ -26892,8 +27742,8 @@ function collectNames(lines, words, seed) {
         if (each > 1) names.add(toks[each - 1]);
         continue;
       }
-      const m = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
-      if (m && !words.has(m[1].toLowerCase())) names.add(m[1]);
+      const m = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m && nameable(m[1]) && (!head2 || NAMEABLE_INTENTS.has(head2)) && !/^(?:if|when|while)$/i.test(toks[0])) names.add(m[1]);
     }
   }
   return names;
@@ -26905,8 +27755,34 @@ function repair(source, ctx = {}) {
     words.set(w.toLowerCase(), i);
     ownWords.add(w.toLowerCase());
   }
-  const rawLines = source.split("\n");
+  const rawLines = source.split("\n").map((l) => l.replace(/^(\s*)(what|that|it|how|who|where)'s\b/i, "$1$2 is"));
   const known = collectNames(rawLines, words, ctx.knownNames);
+  const { asks, numeric } = scanAsks(rawLines, words);
+  for (const name of asks.keys()) known.add(name);
+  const textAsks = new Set([...asks.keys()].filter((n) => !numeric.has(n)));
+  const askValue = (name, prompt) => {
+    const read = `input(${prompt ?? `"${name}? "`})`;
+    return `set ${name} to ${numeric.has(name) ? `num(${read})` : read}`;
+  };
+  const askRhs = (rhs) => {
+    const t = wordsOf(rhs);
+    if (!t.length || words.get(t[0].toLowerCase().replace(/\($/, "")) !== "ask") return void 0;
+    const tail = t.slice(1).join(" ").replace(/^\(|\)$/g, "").trim();
+    if (!tail) return null;
+    return isMaskedString(tail) ? tail : void 0;
+  };
+  const nameable = (w) => {
+    const intent = words.get(w.toLowerCase());
+    return !intent || NAMEABLE_INTENTS.has(intent);
+  };
+  const nextIndented = (index) => {
+    const here = rawLines[index].match(/^\s*/)?.[0].length ?? 0;
+    for (let j = index + 1; j < rawLines.length; j++) {
+      if (!rawLines[j].trim()) continue;
+      return (rawLines[j].match(/^\s*/)?.[0].length ?? 0) > here;
+    }
+    return false;
+  };
   const renames = /* @__PURE__ */ new Map();
   const notes = [];
   const learned = {};
@@ -26927,6 +27803,8 @@ function repair(source, ctx = {}) {
     const indent = raw.match(/^\s*/)?.[0] ?? "";
     const { line, strings, comment } = mask2(raw);
     if (!line.trim()) return raw;
+    for (let s = 0; s < strings.length; s++) strings[s] = fillPlaceholders(strings[s], known);
+    const cond = (r) => condition(r, known, renames, { textAsks, strings });
     const firstWord = line.trim().split(/[\s(]+/)[0]?.toLowerCase() ?? "";
     if (/[^\x00-\x7F]/.test(line) && !ownWords.has(firstWord.replace(/[(:]$/, ""))) {
       unresolved.push(lineNo);
@@ -26940,8 +27818,34 @@ function repair(source, ctx = {}) {
       if (!toks.length) continue;
       const head2 = toks[0];
       const headKey = head2.toLowerCase().replace(/[(:]$/, "");
-      const intent = words.get(headKey);
+      let intent = words.get(headKey);
       const rest = stmt.slice(stmt.indexOf(head2) + head2.length).trim().replace(/^\(|\)$/g, "").trim();
+      const counted = counting(stmt);
+      if (counted) {
+        known.add(counted.name);
+        rewritten.push(`set ${counted.name} to ${counted.name} ${counted.op} ${expression(counted.by, known, renames)}`);
+        continue;
+      }
+      const task = taskRequest(stmt, known, isMaskedString);
+      if (task) {
+        rewritten.push(...task);
+        for (const t of task) {
+          const v = t.match(/^\s*set (\w+) to/)?.[1];
+          if (v) known.add(v);
+        }
+        continue;
+      }
+      const math = mathRequest(stmt, known);
+      if (math !== null) {
+        rewritten.push(math.startsWith("(") ? `say (${math})` : `say ${math}`);
+        continue;
+      }
+      const selfAssign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (intent && selfAssign && selfAssign[1] === head2 && nameable(head2)) intent = void 0;
+      if (!intent && /[:{]\s*$/.test(stmt) && nextIndented(index) && /\s(?:is|equals|==|!=|>|<|>=|<=)\s/i.test(" " + stmt + " ")) {
+        rewritten.push(`if ${cond(stmt.replace(/[:{]\s*$/, ""))}`);
+        continue;
+      }
       const callBase = stmt.match(/^([\p{L}\p{N}_]+)\s*\(/u)?.[1];
       if (callBase && (known.has(callBase) || ctx.knownNames?.has(callBase))) {
         rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
@@ -26956,13 +27860,22 @@ function repair(source, ctx = {}) {
         case "say": {
           learn(headKey, "say");
           const what = rest.replace(SAY_TARGET, "").trim() || rest;
+          const bare = what.split(/\s+/).filter((w) => /^[A-Za-z]+$/.test(w) && !known.has(w));
+          if (bare.length >= 4 && !/\u0000/.test(what)) unresolved.push(lineNo);
           rewritten.push(`say ${expression(what, known, renames)}`);
           continue;
         }
-        case "ask":
+        case "ask": {
           learn(headKey, "ask");
-          rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to ask` : "ask");
+          const form = parseAsk(stmt.slice(head2.length));
+          if (form) {
+            known.add(form.name);
+            rewritten.push(askValue(form.name, form.prompt));
+            continue;
+          }
+          rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to input()` : "input()");
           continue;
+        }
         case "set": {
           learn(headKey, "set");
           const m = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
@@ -26970,7 +27883,8 @@ function repair(source, ctx = {}) {
             const name = safeName(m[1]);
             if (name !== m[1]) renames.set(m[1], name);
             known.add(name);
-            rewritten.push(`set ${name} to ${expression(m[2], known, renames)}`);
+            const asked = askRhs(m[2]);
+            rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(m[2], known, renames)}`);
             continue;
           }
           const parts = wordsOf(rest);
@@ -26986,15 +27900,17 @@ function repair(source, ctx = {}) {
         }
         case "if":
           learn(headKey, "if");
-          rewritten.push(`if ${condition(rest, known, renames)}`);
+          rewritten.push(`if ${cond(rest)}`);
           continue;
-        case "else":
+        case "else": {
           learn(headKey, "else");
-          rewritten.push(rest ? `else ${condition(rest, known)}`.replace(/^else if/, "else if") : "else");
+          const tail = rest.replace(/^[:{]\s*|[:{]\s*$/g, "").trim();
+          rewritten.push(tail ? `else ${cond(tail)}` : "else");
           continue;
+        }
         case "while":
           learn(headKey, "while");
-          rewritten.push(`while ${condition(rest, known, renames)}`);
+          rewritten.push(`while ${cond(rest)}`);
           continue;
         case "for": {
           learn(headKey, "for");
@@ -27043,12 +27959,13 @@ function repair(source, ctx = {}) {
         default:
           break;
       }
-      const assign = stmt.match(ASSIGN_RE) ?? stmt.match(ASSIGN_SYMBOL_RE);
-      if (assign && !words.has(assign[1].toLowerCase())) {
+      const assign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (assign && nameable(assign[1])) {
         const name = safeName(assign[1]);
         if (name !== assign[1]) renames.set(assign[1], name);
         known.add(name);
-        rewritten.push(`set ${name} to ${expression(assign[2], known, renames)}`);
+        const asked = askRhs(assign[2]);
+        rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(assign[2], known, renames)}`);
         continue;
       }
       if (/^(?:call|run|do|invoke|execute|use)$/i.test(headKey) && toks.length >= 2) {
@@ -27074,6 +27991,7 @@ function repair(source, ctx = {}) {
       unresolved.push(lineNo);
     }
     const joined = rewritten.join("\n" + indent);
+    if ([...joined.matchAll(/"([^"\u0000]*)"/g)].some((m) => m[1].trim().split(/\s+/).length >= 4) && !unresolved.includes(lineNo)) unresolved.push(lineNo);
     const result = indent + unmask2(joined, strings) + comment;
     note(lineNo, raw, result, "understood as canonical sdev");
     return result;
@@ -27086,6 +28004,8 @@ function closeBlocks(source) {
   const lines = source.split("\n");
   const out = [];
   const stack = [];
+  const width = (s) => s.match(/^\s*/)?.[0].length ?? 0;
+  const top = () => stack[stack.length - 1];
   const nextCode = (from) => {
     for (let j = from; j < lines.length; j++) if (lines[j].trim()) return lines[j];
     return null;
@@ -27094,21 +28014,36 @@ function closeBlocks(source) {
     const line = lines[i];
     if (!line.trim()) {
       const next = nextCode(i + 1);
-      while (stack.length && next !== null && !/^\s*(?:else|end)\b/.test(next) && (next.match(/^\s*/)?.[0].length ?? 0) <= stack[stack.length - 1].length) {
-        out.push(stack.pop() + "end");
+      while (stack.length && next !== null && !/^\s*(?:else|end)\b/.test(next) && width(next) <= top().indent.length) {
+        out.push(stack.pop().indent + "end");
       }
       out.push(line);
       continue;
     }
+    const w = width(line);
+    const continues = /^\s*(?:else|end)\b/.test(line);
+    while (stack.length && top().body && w <= top().indent.length && !(continues && w === top().indent.length)) {
+      out.push(stack.pop().indent + "end");
+    }
+    if (stack.length && w > top().indent.length) top().body = true;
     if (CLOSES.test(line)) stack.pop();
-    else if (OPENS.test(line)) stack.push(line.match(/^\s*/)?.[0] ?? "");
+    else if (/^\s*else\b/.test(line) && stack.length) top().body = false;
+    else if (OPENS.test(line)) stack.push({ indent: line.match(/^\s*/)?.[0] ?? "", body: false });
     out.push(line);
   }
-  while (stack.length) out.push(stack.pop() + "end");
+  while (stack.length) out.push(stack.pop().indent + "end");
   return out.join("\n");
 }
 
 // src/lang/agent/sense.ts
+function parseError(source) {
+  try {
+    new Parser(new Lexer(source).tokenize()).parse();
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
 function parses(source) {
   try {
     new Parser(new Lexer(source).tokenize()).parse();
@@ -27116,6 +28051,66 @@ function parses(source) {
   } catch {
     return false;
   }
+}
+var builtinCache = null;
+function builtinNames() {
+  if (!builtinCache) {
+    try {
+      const env2 = new Interpreter(() => {
+      }).globalEnv;
+      builtinCache = new Set(env2.values.keys());
+      for (const n of ["window", "endwindow", "row", "endrow", "column", "endcolumn", "group", "endgroup", "tabs", "endtabs", "tab", "endtab", "heading", "label", "paragraph", "image", "divider", "spacer", "progress", "button", "textarea", "checkbox", "slider", "select", "table", "menu", "endmenu", "menuitem", "uiget", "uiset", "show", "alert"]) builtinCache.add(n);
+    } catch {
+      builtinCache = /* @__PURE__ */ new Set();
+    }
+  }
+  return builtinCache;
+}
+var NAME = "[\\p{L}_][\\p{L}\\p{N}_]*";
+function definedNames(source) {
+  const out = /* @__PURE__ */ new Set();
+  const add = (re2, group = 1) => {
+    for (const m of source.matchAll(re2)) if (m[group]) out.add(m[group]);
+  };
+  add(new RegExp(`\\b(?:set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\s+(${NAME})`, "gu"));
+  add(new RegExp(`\\bfor\\s+(?:each\\s+)?(${NAME})`, "gu"));
+  add(new RegExp(`\\bfor\\s+(?:each\\s+)?${NAME}\\s*,\\s*(${NAME})`, "gu"));
+  add(new RegExp(`^\\s*(${NAME})\\s*(?:=|\\+=|-=|\\*=|/=)(?!=)`, "gmu"));
+  for (const m of source.matchAll(new RegExp(`\\bwith\\s+([^\\n:{]+)`, "gu"))) {
+    for (const w of m[1].split(/[\s,]+/)) if (new RegExp(`^${NAME}$`, "u").test(w)) out.add(w);
+  }
+  for (const m of source.matchAll(new RegExp(`\\b(?:to|conjure|func|function|fn|def)\\s+${NAME}\\s*\\(([^)]*)\\)`, "gu"))) {
+    for (const w of m[1].split(/[\s,=]+/)) if (new RegExp(`^${NAME}$`, "u").test(w)) out.add(w);
+  }
+  for (const m of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*=>|(${NAME})\\s*=>`, "gu"))) {
+    for (const w of (m[1] ?? m[2] ?? "").split(/[\s,]+/)) if (w) out.add(w);
+  }
+  return out;
+}
+function unknownNames(source) {
+  let tokens;
+  try {
+    tokens = new Lexer(source).tokenize();
+  } catch {
+    return [];
+  }
+  const defined = definedNames(source);
+  const builtins = builtinNames();
+  const out = /* @__PURE__ */ new Set();
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.type !== "IDENTIFIER" /* IDENTIFIER */) continue;
+    const name = String(t.value);
+    const prev = tokens[i - 1];
+    const next = tokens[i + 1];
+    if (prev && (String(prev.value) === "." || prev.type === "DOT")) continue;
+    if (next && (next.type === "COLON" || String(next.value) === ":")) continue;
+    if (/[^\x00-\x7F]/.test(name)) continue;
+    if (["end", "else", "self", "this", "me", "super", "to", "with", "each", "of", "from", "by", "step", "more", "less", "essence", "value"].includes(name)) continue;
+    if (defined.has(name) || builtins.has(name)) continue;
+    out.add(name);
+  }
+  return [...out];
 }
 var NON_CANONICAL_HEAD = (() => {
   const map = baseWordMap();
@@ -27130,8 +28125,16 @@ function senseFile(source, extra) {
     const line = lines[i].trim();
     if (!line || line.startsWith("#") || line.startsWith("//")) continue;
     const head2 = line.split(/[\s(]+/)[0].toLowerCase();
+    if (head2 !== "say" && mathRequest(line) !== null || taskRequest(line) !== null) {
+      reasons.push(`line ${i + 1}: a calculation asked for in words`);
+      continue;
+    }
     if (NON_CANONICAL_HEAD.has(head2) || extra?.has(head2)) {
       reasons.push(`line ${i + 1}: "${head2}" is not canonical sdev`);
+      continue;
+    }
+    if (head2 === "ask" || /\bto\s+ask\b/i.test(line)) {
+      reasons.push(`line ${i + 1}: asks for input in words`);
       continue;
     }
     if (/^[\p{L}\p{N}_]+\s+(?:will be|becomes|gets|is now|should be|shall be|=|:=|<-)\s+/iu.test(line)) {
@@ -27149,34 +28152,83 @@ function senseFile(source, extra) {
       reasons.push(`line ${i + 1}: a call written in words`);
     }
   }
+  const unknown = new Set(unknownNames(source));
+  if (unknown.size) {
+    for (let i = 0; i < lines.length; i++) {
+      const head2 = lines[i].trim().match(/^[A-Za-z_]\w*/)?.[0];
+      if (head2 && unknown.has(head2)) reasons.push(`line ${i + 1}: "${head2}" is not defined anywhere`);
+    }
+    if (!reasons.length) reasons.push(`uses names nothing defines: ${[...unknown].slice(0, 5).join(", ")}`);
+  }
   const ok = parses(source);
   return { parses: ok, suspicious: !ok || reasons.length > 0, reasons };
 }
 
 // src/lang/agent/brain.ts
-var DEFAULT_LOCAL_URL = "http://127.0.0.1:11434/sdev-agent";
-function localUrlFromEnv() {
+var DEFAULT_LOCAL_URL = "http://127.0.0.1:11434/v1/chat/completions";
+var DEFAULT_LOCAL_MODEL = "qwen2.5-coder:7b";
+function env(name) {
   try {
-    const env = globalThis.process?.env;
-    return env?.SDEV_AGENT_LOCAL_URL ?? null;
+    const e = globalThis.process?.env;
+    return e?.[name] ?? null;
   } catch {
     return null;
   }
+}
+function stored(key) {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+var BRAIN_KEYS = { url: "sdev_agent_local_url", model: "sdev_agent_local_model", online: "sdev_agent_online", browser: "sdev_agent_browser" };
+function brainSettings() {
+  return {
+    localUrl: stored(BRAIN_KEYS.url) || env("SDEV_AGENT_LOCAL_URL") || DEFAULT_LOCAL_URL,
+    localModel: stored(BRAIN_KEYS.model) || env("SDEV_AGENT_LOCAL_MODEL") || DEFAULT_LOCAL_MODEL,
+    browser: (stored(BRAIN_KEYS.browser) ?? "1") !== "0",
+    customLocal: !!(stored(BRAIN_KEYS.url) || env("SDEV_AGENT_LOCAL_URL")),
+    allowOnline: (stored(BRAIN_KEYS.online) ?? env("SDEV_AGENT_ONLINE") ?? "") === "1"
+  };
 }
 function online() {
   const nav = globalThis.navigator;
   return nav?.onLine ?? true;
 }
-async function callLocal(req, url) {
+function parseReply(text3) {
+  const cleaned = text3.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
   try {
+    const j = JSON.parse(cleaned);
+    if (typeof j?.canonical === "string") return j;
+  } catch {
+  }
+  const code = cleaned.replace(/^```\w*\s*/, "").replace(/```\s*$/, "");
+  return code.trim() ? { canonical: code } : null;
+}
+async function callLocal(req, url, model) {
+  try {
+    if (!/\/chat\/completions\/?$|\/api\/chat\/?$/.test(url)) {
+      const res2 = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
+      if (!res2.ok) return null;
+      const json2 = await res2.json();
+      return typeof json2?.canonical === "string" ? json2 : null;
+    }
+    const { brainInstructions: brainInstructions2, brainInput: brainInput2 } = await Promise.resolve().then(() => (init_brain_prompt(), brain_prompt_exports));
+    const messages = [
+      { role: "system", content: brainInstructions2(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
+      { role: "user", content: brainInput2(req) }
+    ];
+    const ollama = /\/api\/chat\/?$/.test(url);
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req)
+      body: JSON.stringify(ollama ? { model, messages, stream: false, format: "json" } : { model, messages, stream: false, response_format: { type: "json_object" } })
     });
     if (!res.ok) return null;
     const json = await res.json();
-    return typeof json?.canonical === "string" ? json : null;
+    const text3 = json.choices?.[0]?.message?.content ?? json.message?.content ?? "";
+    return parseReply(text3);
   } catch {
     return null;
   }
@@ -27192,23 +28244,1074 @@ async function callOnline(req) {
     return null;
   }
 }
+var lastBrainMissing = false;
 async function think(req, mode, localUrl) {
+  lastBrainMissing = false;
   if (mode === "none") return { reply: null, used: "none" };
-  const url = localUrl ?? localUrlFromEnv() ?? DEFAULT_LOCAL_URL;
-  if (mode === "local") {
-    const reply2 = await callLocal(req, url);
-    return { reply: reply2, used: reply2 ? "local" : "none" };
+  const cfg = brainSettings();
+  const url = localUrl ?? cfg.localUrl;
+  if (mode === "local" || mode === "auto") {
+    const inBrowser = typeof window !== "undefined";
+    if (inBrowser && cfg.browser) {
+      const { callBrowser: callBrowser2 } = await Promise.resolve().then(() => (init_browser_brain(), browser_brain_exports));
+      const reply = await callBrowser2(req, parseReply);
+      if (reply) return { reply, used: "local" };
+    }
+    if (!inBrowser || cfg.customLocal || localUrl) {
+      const reply = await callLocal(req, url, cfg.localModel);
+      if (reply) return { reply, used: "local" };
+    }
+    if (mode === "local") {
+      lastBrainMissing = true;
+      return { reply: null, used: "none" };
+    }
   }
-  if (mode === "online") {
-    const reply2 = await callOnline(req);
-    return { reply: reply2, used: reply2 ? "online" : "none" };
+  if ((mode === "online" || cfg.allowOnline) && online()) {
+    const reply = await callOnline(req);
+    if (reply) return { reply, used: "online" };
   }
-  if (online()) {
-    const reply2 = await callOnline(req);
-    if (reply2) return { reply: reply2, used: "online" };
+  lastBrainMissing = true;
+  return { reply: null, used: "none" };
+}
+
+// raw:/dev-server/lang/agent/understander.sdev
+var understander_default = `// =====================================================================
+// understander.sdev \u2014 the code understander, written in sdev.
+//
+// Reads a whole file line by line, works out what the author meant and
+// returns canonical sdev. The TypeScript understander (src/lang/agent)
+// stays behind it as the fallback: any line this engine is not sure
+// about makes the whole answer "unsure" and the fallback takes over.
+//
+//   understand_source(source, known_names) -> [source, sure, notes]
+//
+// known_names: names defined elsewhere in the project (other files,
+// memory), so cross-file references are never mistaken for typos.
+// =====================================================================
+
+forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]
+
+// ---------- small helpers ----------
+
+conjure starts_canonical(body) ::
+  forge first be lower(regex_replace(body, "^([^\\\\s(:]+).*$", "$1"))
+  iterate word through CANON ::
+    ponder first equals word ::
+      yield yep
+    ;;
+  ;;
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.\\\\[\\\\]\\"]*\\\\s+be\\\\s") ::
+    yield yep
+  ;;
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.]*\\\\s*\\\\(.*\\\\)$") ::
+    yield yep
+  ;;
+  yield nope
+;;
+
+conjure is_quoted(t) ::
+  ponder regex_test(t, "[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}]") ::
+    yield nope
+  ;;
+  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")
+;;
+
+// plus / minus / times / divided by -> symbols
+conjure math_words(t) ::
+  forge s be " " + lower(t) + " "
+  s be regex_replace(s, "\\\\s+divided\\\\s+by\\\\s+", " / ")
+  s be regex_replace(s, "\\\\s+multiplied\\\\s+by\\\\s+", " * ")
+  s be regex_replace(s, "\\\\s+to\\\\s+the\\\\s+power\\\\s+of\\\\s+", " ^ ")
+  s be regex_replace(s, "\\\\s+plus\\\\s+", " + ")
+  s be regex_replace(s, "\\\\s+minus\\\\s+", " - ")
+  s be regex_replace(s, "\\\\s+times\\\\s+", " * ")
+  s be regex_replace(s, "\\\\s+mod(ulo)?\\\\s+", " % ")
+  s be regex_replace(s, "\\\\s*\\\\?\\\\s*$", "")
+  yield trim(s)
+;;
+
+conjure is_math(t) ::
+  ponder isnt regex_test(t, "[0-9]") ::
+    yield nope
+  ;;
+  yield regex_test(t, "^[0-9\\\\s+\\\\-*/().%^]+$")
+;;
+
+conjure is_known(name, names) ::
+  yield has(names, name)
+;;
+
+// an expression made only of numbers, operators, quotes and known names
+conjure safe_expr(e, names) ::
+  ponder is_quoted(e) either is_math(e) ::
+    yield yep
+  ;;
+  ponder regex_test(e, "[\\\\-*/%^]") either (regex_test(e, "\\\\+") also isnt regex_test(e, "[\\"']")) ::
+    iterate w through regex_find_all(e, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+      ponder has(names, w) also names[w] equals "typed" ::
+        yield nope
+      ;;
+    ;;
+  ;;
+  forge rest be regex_replace(e, "\\"[^\\"]*\\"|'[^']*'", " ")
+  forge parts be regex_find_all(rest, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")
+  iterate p through parts ::
+    ponder isnt is_known(p, names) ::
+      ponder isnt (p equals "yep" either p equals "nope" either p equals "void") ::
+        yield nope
+      ;;
+    ;;
+  ;;
+  yield regex_test(rest, "^[\\\\p{L}\\\\p{N}_\\\\s+\\\\-*/().%^,\\\\[\\\\]]*$")
+;;
+
+// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)
+// returns "" when a placeholder names something unknown
+conjure fill_placeholders(q, names) ::
+  forge inner be snatch(q, 1, measure(q) - 1)
+  forge parts be []
+  forge rest be inner
+  forge m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")
+  cycle m differs void ::
+    ponder isnt is_known(m[2], names) ::
+      yield ""
+    ;;
+    ponder m[1] differs "" ::
+      parts be parts + [quote_text(m[1])]
+    ;;
+    parts be parts + ["str(" + m[2] + ")"]
+    rest be m[3]
+    m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")
+  ;;
+  ponder rest differs "" ::
+    parts be parts + [quote_text(rest)]
+  ;;
+  yield weave(parts, " + ")
+;;
+
+conjure has_placeholder(t) ::
+  yield regex_test(t, "^[\\"'].*[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}].*[\\"']$")
+;;
+
+// a free loop counter name
+conjure counter(names) ::
+  iterate c through ["i", "j", "k", "_n"] ::
+    ponder isnt has(names, c) ::
+      yield c
+    ;;
+  ;;
+  yield "_n"
+;;
+
+conjure asked(name, q, names) ::
+  ponder has(names, "#num:" + name) ::
+    yield "set " + name + " to num(input(" + q + "))"
+  ;;
+  yield "set " + name + " to input(" + q + ")"
+;;
+
+// something to say: a quoted text, a known name, or bare words
+conjure sayable(arg, names) ::
+  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::
+    yield arg
+  ;;
+  ponder regex_test(arg, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::
+    iterate w through regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+      ponder is_known(w, names) ::
+        yield ""
+      ;;
+    ;;
+    yield quote_text(arg)
+  ;;
+  yield ""
+;;
+
+
+// ---------- everyday tasks (reverse, upper/lower, length, dice, sort \u2026) ----------
+
+forge NUMBER_WORDS be :: "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "twenty": "20", "hundred": "100" ;;
+
+conjure as_number(t) ::
+  forge w be lower(trim(t))
+  ponder regex_test(w, "^-?[0-9]+(\\\\.[0-9]+)?$") ::
+    yield w
+  ;;
+  ponder has(NUMBER_WORDS, w) ::
+    yield NUMBER_WORDS[w]
+  ;;
+  yield ""
+;;
+
+// "hello" / hello / a known name -> an expression
+conjure subject_of(t, names) ::
+  forge w be regex_replace(trim(t), "^(the\\\\s+)?(word|text|name|string)\\\\s+", "", "i")
+  ponder is_quoted(w) ::
+    yield w
+  ;;
+  ponder is_known(w, names) ::
+    yield w
+  ;;
+  ponder regex_test(w, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::
+    yield quote_text(w)
+  ;;
+  yield ""
+;;
+
+conjure number_list(t) ::
+  forge found be regex_find_all(t, "-?[0-9]+(\\\\.[0-9]+)?")
+  ponder measure(found) < 2 ::
+    yield ""
+  ;;
+  ponder isnt regex_test(t, "^[0-9\\\\s,.\\\\-and]+$", "i") ::
+    yield ""
+  ;;
+  yield "[" + weave(found, ", ") + "]"
+;;
+
+// returns the canonical text, or "" when this is not an everyday task
+conjure task_line(b, names) ::
+  forge s be regex_replace(regex_replace(b, "^(please|can you|could you)\\\\s+", "", "i"), "[.!?]+\\\\s*$", "")
+  forge out be regex_replace(s, "^(print|say|show|display|output|tell me|give me)\\\\s+(the\\\\s+)?", "", "i")
+  forge m be void
+
+  ponder regex_test(s, "^(flip|toss)\\\\s+(a\\\\s+)?coin$", "i") ::
+    yield "say pick([\\"heads\\", \\"tails\\"])"
+  ;;
+  ponder regex_test(s, "^(roll|throw)\\\\s+(a\\\\s+)?(die|dice)$", "i") ::
+    yield "say randint(1, 6)"
+  ;;
+  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also as_number(m[1]) differs "" ::
+    yield "set i to " + as_number(m[1]) + "\\nwhile i > 0\\n  say i\\n  set i to i - 1\\nend"
+  ;;
+  m be regex_capture(out, "^(reverse|backwards)\\\\s+(of\\\\s+)?(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(out, "^()()(.+?)\\\\s+(reversed|backwards)$", "i")
+  ;;
+  ponder m differs void also subject_of(m[3], names) differs "" ::
+    yield "say reverse(" + subject_of(m[3], names) + ")"
+  ;;
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(uppercase|upper\\\\s*case|capitals|caps)$", "i")
+  ponder m differs void also subject_of(m[2], names) differs "" ::
+    yield "say upper(" + subject_of(m[2], names) + ")"
+  ;;
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(lowercase|lower\\\\s*case|small\\\\s+letters)$", "i")
+  ponder m differs void also subject_of(m[2], names) differs "" ::
+    yield "say lower(" + subject_of(m[2], names) + ")"
+  ;;
+  m be regex_capture(s, "^(what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(the\\\\s+)?(length|size)\\\\s+of\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^()()()how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge lst be number_list(m[4])
+    ponder lst differs "" ::
+      yield "say len(" + lst + ")"
+    ;;
+    ponder subject_of(m[4], names) differs "" ::
+      yield "say len(" + subject_of(m[4], names) + ")"
+    ;;
+  ;;
+  m be regex_capture(s, "^(is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(is\\\\s+)?(an?\\\\s+)?(even|odd)(\\\\s+or\\\\s+(even|odd))?$", "i")
+  ponder m differs void ::
+    forge n be as_number(m[2])
+    ponder n equals "" also is_known(m[2], names) ::
+      n be m[2]
+    ;;
+    ponder n differs "" ::
+      yield "if " + n + " % 2 is 0\\n  say \\"even\\"\\nelse\\n  say \\"odd\\"\\nend"
+    ;;
+  ;;
+  m be regex_capture(s, "^((give|show|pick|generate|roll|make|get)\\\\s+(me\\\\s+)?)?(a\\\\s+)?random\\\\s+(whole\\\\s+)?number\\\\s+(between|from)\\\\s+(\\\\S+)\\\\s+(and|to)\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also as_number(m[7]) differs "" also as_number(m[9]) differs "" ::
+    yield "say randint(" + as_number(m[7]) + ", " + as_number(m[9]) + ")"
+  ;;
+  m be regex_capture(out, "^sort\\\\s+(the\\\\s+)?(numbers\\\\s+)?(.+?)(\\\\s+(from\\\\s+)?(biggest|largest|highest)\\\\s+(to|first).*)?$", "i")
+  ponder m differs void also number_list(m[3]) differs "" ::
+    ponder regex_test(s, "biggest|largest|highest|descending", "i") ::
+      yield "say sortDesc(" + number_list(m[3]) + ")"
+    ;;
+    yield "say sort(" + number_list(m[3]) + ")"
+  ;;
+  m be regex_capture(s, "^(print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(the\\\\s+)?(multiplication|times)\\\\s+table\\\\s+(of|for)\\\\s+(\\\\S+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^(print\\\\s+|show\\\\s+)?(the\\\\s+)?()()(\\\\S+)\\\\s+times\\\\s+table$", "i")
+  ;;
+  ponder m differs void also as_number(m[5]) differs "" ::
+    forge n be as_number(m[5])
+    yield "set i to 1\\nwhile i <= 10\\n  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)\\n  set i to i + 1\\nend"
+  ;;
+  m be regex_capture(s, "^(say\\\\s+)?(hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^()()greet\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge who be trim(m[3])
+    ponder is_known(who, names) ::
+      yield "say \\"Hello, \\" + " + who
+    ;;
+    ponder regex_test(who, "^[\\\\p{L} '-]+$") ::
+      yield "say " + quote_text("Hello, " + who)
+    ;;
+  ;;
+  yield ""
+;;
+
+// ---------- one line ----------
+// returns [canonical, sure]
+
+conjure understand_line(body, names) ::
+  forge b be regex_replace(body, "^what's\\\\s", "what is ", "i")
+
+
+  // everyday tasks first: "reverse hello", "roll a dice", "say hello to Sam"
+  forge task be task_line(b, names)
+  ponder task differs "" ::
+    yield [task, yep]
+  ;;
+
+  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"
+  forge m be regex_capture(b, "^ask\\\\s+(\\"[^\\"]*\\"|'[^']*')\\\\s+(as|into|for|and\\\\s+call\\\\s+it|and\\\\s+store\\\\s+in)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
+  ponder m differs void ::
+    yield [asked(m[3], m[1], names), yep]
+  ;;
+  m be regex_capture(b, "^ask\\\\s+(the\\\\s+user\\\\s+)?for\\\\s+(their\\\\s+|a\\\\s+|the\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
+  ponder m differs void ::
+    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]
+  ;;
+  m be regex_capture(b, "^(set\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=|to|be)\\\\s*ask\\\\s+(\\"[^\\"]*\\"|'[^']*')$", "i")
+  ponder m differs void ::
+    yield [asked(m[2], m[4], names), yep]
+  ;;
+
+  // say X N times
+  m be regex_capture(b, "^(say|print|show|write)\\\\s+(.+?)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times$", "i")
+  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::
+    forge what be sayable(trim(m[2]), names)
+    ponder what differs "" ::
+      forge c be counter(names)
+      yield ["set " + c + " to 0\\nwhile " + c + " < " + m[3] + "\\n  say " + what + "\\n  set " + c + " to " + c + " + 1\\nend", yep]
+    ;;
+    yield [body, nope]
+  ;;
+  // count / print the numbers from A to B [by S]  \xB7  count to N
+  m be regex_capture(b, "^(count|print|show|say|list)\\\\s+(the\\\\s+)?(numbers\\\\s+)?from\\\\s+(-?[0-9]+)\\\\s+(to|until|through)\\\\s+(-?[0-9]+)(\\\\s+by\\\\s+([0-9]+))?$", "i")
+  ponder m equals void ::
+    forge m2 be regex_capture(b, "^(please\\\\s+)?count\\\\s+(up\\\\s+)?to\\\\s+([0-9]+)$", "i")
+    ponder m2 differs void ::
+      m be ["", "", "", "", "1", "", m2[3], "", ""]
+    ;;
+  ;;
+  ponder m differs void ::
+    forge c be counter(names)
+    forge step be m[8] equals "" ~ "1" : m[8]
+    forge down be num(m[4]) > num(m[6])
+    forge cmp be down ~ " >= " : " <= "
+    forge op be down ~ " - " : " + "
+    yield ["set " + c + " to " + m[4] + "\\nwhile " + c + cmp + m[6] + "\\n  say " + c + "\\n  set " + c + " to " + c + op + step + "\\nend", yep]
+  ;;
+  // repeat N times  (a block \u2014 its counter is bumped where the block ends)
+  m be regex_capture(b, "^(repeat|do\\\\s+this|do)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times\\\\s*:?$", "i")
+  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::
+    forge c be counter(names)
+    yield ["set " + c + " to 0\\nwhile " + c + " < " + m[2] + "\\n#bump " + c, yep]
+  ;;
+
+  // conditions: when/if COND [then][:]  ->  if COND
+  m be regex_capture(b, "^(when|if)\\\\s+(.+?)\\\\s*(then)?\\\\s*:?$", "i")
+  ponder m differs void also isnt regex_test(b, "::") ::
+    forge cond be m[2]
+    forge yn be regex_capture(cond, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals|==?)\\\\s+[\\"']?(yes|no|y|n)[\\"']?$", "i")
+    ponder yn differs void also is_known(yn[1], names) ::
+      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]
+    ;;
+    ponder regex_test(cond, "\\\\b(yes|no)\\\\b", "i") ::
+      yield [body, nope]
+    ;;
+    forge plain be regex_replace(cond, "\\\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\\\b", " ", "i")
+    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::
+      yield ["if " + cond, yep]
+    ;;
+    yield [body, nope]
+  ;;
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals)\\\\s+[\\"']?(yes|no)[\\"']?\\\\s*:$", "i")
+  ponder m differs void also is_known(m[1], names) ::
+    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]
+  ;;
+  ponder regex_test(b, "^(otherwise|else)\\\\s*:?$", "i") ::
+    yield ["else", yep]
+  ;;
+
+  // say with pieces side by side: say "Hello, " name "!"
+  m be regex_capture(b, "^(say|print|show)\\\\s+(.+)$", "i")
+  ponder m differs void ::
+    forge pieces be regex_find_all(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|,")
+    forge glued be regex_replace(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|[,\\\\s]", "")
+    ponder glued equals "" also measure(pieces) > 1 ::
+      forge parts be []
+      forge fine be yep
+      iterate pc through pieces ::
+        ponder pc differs "," ::
+          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::
+            parts be parts + [pc]
+          ;; otherwise ::
+            fine be nope
+          ;;
+        ;;
+      ;;
+      ponder fine also measure(parts) > 1 ::
+        yield ["say " + weave(parts, " + "), yep]
+      ;;
+    ;;
+  ;;
+
+  // output: print / show / display / output / write / say / tell
+  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\\\s+(.+)$", "i")
+  ponder m differs void ::
+    forge arg be trim(m[2])
+    ponder has_placeholder(arg) ::
+      forge filled be fill_placeholders(arg, names)
+      ponder filled differs "" ::
+        yield ["speak(" + filled + ")", yep]
+      ;;
+      yield [body, nope]
+    ;;
+    ponder is_quoted(arg) either is_math(arg) ::
+      yield ["speak(" + arg + ")", yep]
+    ;;
+    ponder is_name(arg) also is_known(arg, names) ::
+      yield ["speak(" + arg + ")", yep]
+    ;;
+    ponder safe_expr(arg, names) also regex_test(arg, "[+\\\\-*/]") ::
+      yield ["speak(" + arg + ")", yep]
+    ;;
+    // bare words with no known names in them: say them as written
+    forge used be regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")
+    iterate w through used ::
+      ponder is_known(w, names) ::
+        yield [body, nope]
+      ;;
+    ;;
+    // words that usually mean a task ("count to", "3 times", "on the screen")
+    ponder regex_test(arg, "\\\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\\\b", "i") ::
+      yield [body, nope]
+    ;;
+    ponder regex_test(arg, "[\\"'(){}\\\\[\\\\]]") ::
+      yield [body, nope]
+    ;;
+    yield ["speak(" + quote_text(arg) + ")", yep]
+  ;;
+
+  // plain calculations: calculate / compute / what is / how much is
+  m be regex_capture(b, "^(calculate|compute|evaluate|solve|what\\\\s+is|how\\\\s+much\\\\s+is)\\\\s+(.+?)\\\\??$", "i")
+  ponder m differs void ::
+    forge expr be math_words(m[2])
+    ponder is_math(expr) ::
+      yield ["speak(" + expr + ")", yep]
+    ;;
+    yield [body, nope]
+  ;;
+
+  // add N to x / increase x by N / decrease x by N
+  m be regex_capture(b, "^add\\\\s+(\\\\S+)\\\\s+to\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[1], names) ::
+    yield [m[2] + " be " + m[2] + " + " + m[1], yep]
+  ;;
+  m be regex_capture(b, "^(increase|raise)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::
+    yield [m[2] + " be " + m[2] + " + " + m[3], yep]
+  ;;
+  m be regex_capture(b, "^(decrease|lower|reduce)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::
+    yield [m[2] + " be " + m[2] + " - " + m[3], yep]
+  ;;
+
+  // x becomes E
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+becomes\\\\s+(.+)$", "i")
+  ponder m differs void also is_known(m[1], names) also safe_expr(trim(m[2]), names) ::
+    yield [m[1] + " be " + trim(m[2]), yep]
+  ;;
+
+  // set x to E / let x be E / make x E / x = E
+  m be regex_capture(b, "^(set|let|make)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(to|be|equal\\\\s+to|=)\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(b, "^()([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=)\\\\s*([^=].*)$")
+  ;;
+  ponder m differs void ::
+    forge value be trim(m[4])
+    ponder safe_expr(value, names) ::
+      ponder is_known(m[2], names) ::
+        yield [m[2] + " be " + value, yep]
+      ;;
+      yield ["forge " + m[2] + " be " + value, yep]
+    ;;
+    yield [body, nope]
+  ;;
+
+  ponder starts_canonical(b) ::
+    yield [body, yep]
+  ;;
+  yield [body, nope]
+;;
+
+// ---------- the whole file ----------
+
+// an open block is [indent, counter]; a counted block bumps it before "end"
+conjure close_block(open) ::
+  ponder open[1] differs "" ::
+    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]
+  ;;
+  yield [open[0] + "end"]
+;;
+
+forge CHUNK_MEMO be ::
+;;
+
+conjure understand_source(source, known, words) ::
+  forge names be ::
+  ;;
+  iterate k through known ::
+    names[k] be yep
+  ;;
+  // dialect / remembered words: [word, canonical]
+  forge wordmap be ::
+  ;;
+  ponder words differs void ::
+    iterate pair through words ::
+      wordmap[lower(pair[0])] be pair[1]
+    ;;
+  ;;
+  // names used in arithmetic or numeric comparisons: typed answers for
+  // them are converted to numbers when they are asked for
+  iterate row through lines(source) ::
+    forge bare be regex_replace(row, "\\"[^\\"]*\\"|'[^']*'", "\\"\\"")
+    forge numeric be regex_test(bare, "[\\\\-*/%^<>]|\\\\b(more|less|greater|smaller)\\\\b") either (regex_test(bare, "\\\\+") also isnt regex_test(bare, "\\"")) either regex_test(bare, "\\\\b(times|plus|minus|divided)\\\\b")
+    ponder numeric also isnt regex_test(trim(row), "^ask\\\\b", "i") ::
+      iterate w through regex_find_all(bare, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+        names["#num:" + w] be yep
+      ;;
+    ;;
+  ;;
+  forge out be []
+  forge notes be []
+  forge sure be yep
+  forge n be 0
+  forge rows be lines(source)
+  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,
+  // unless the author already writes "end" or "::" blocks themselves
+  forge auto_end be isnt regex_test(source, "(^|\\n)\\s*end\\s*($|\\n)|::")
+  forge opens be []
+  // Large files are read in top-level chunks. Each chunk's reading is
+  // remembered (keyed by its text and everything known before it), so after
+  // a small edit only the chunks that changed are read again.
+  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))
+  iterate k through keys(names) ::
+    ponder startswith(k, "#num:") ::
+      state be str(hash(state + k)) + str(hash(reverse(state + k)))
+    ;;
+  ;;
+  forge chunks be []
+  forge current be []
+  forge first_line be 1
+  forge idx be 0
+  iterate line through rows ::
+    idx be idx + 1
+    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\\\}|//|#)", "i")
+    ponder top also measure(current) > 0 ::
+      chunks be chunks + [[first_line, current]]
+      current be []
+      first_line be idx
+    ;;
+    current be current + [line]
+  ;;
+  ponder measure(current) > 0 ::
+    chunks be chunks + [[first_line, current]]
+  ;;
+  iterate chunk through chunks ::
+    forge key be state + "|#|" + unlines(chunk[1])
+    forge delta be []
+    ponder has(CHUNK_MEMO, key) ::
+      forge hit be CHUNK_MEMO[key]
+      out be out + hit[0]
+      ponder isnt hit[1] ::
+        sure be nope
+      ;;
+      iterate note through hit[2] ::
+        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]
+      ;;
+      delta be hit[3]
+      iterate pair through delta ::
+        names[pair[0]] be pair[1]
+      ;;
+    ;; otherwise ::
+      forge c_out be []
+      forge c_sure be yep
+      forge c_notes be []
+      forge saved_out be out
+      forge saved_notes be notes
+      forge saved_sure be sure
+      out be []
+      notes be []
+      sure be yep
+      n be chunk[0] - 1
+      iterate line through chunk[1] ::
+      n be n + 1
+      forge indent be leading_space(line)
+      forge body be trim(line)
+      forge head be lower(regex_replace(body, "^(\\\\S+).*$", "$1"))
+      ponder has(wordmap, head) also body differs "" ::
+        body be wordmap[head] + snatch(body, measure(head), measure(body))
+      ;;
+      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::
+        out be out + [line]
+      ;; otherwise ::
+        forge r be understand_line(body, names)
+        ponder isnt r[1] ::
+          sure be nope
+        ;;
+        ponder r[0] differs body ::
+          notes be notes + [[n, body, r[0]]]
+        ;;
+        // learn declarations as we go: forge x be \u2026 / conjure f(a, b)
+        forge d be regex_capture(r[0], "^(?:forge|set)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")
+        ponder d differs void ::
+          names[d[1]] be (regex_test(r[0], "input\\\\(") also isnt regex_test(r[0], "num\\\\(input")) ~ "typed" : yep
+          delta be delta + [[d[1], names[d[1]]]]
+        ;;
+        d be regex_capture(r[0], "^conjure\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*\\\\(([^)]*)\\\\)")
+        ponder d differs void ::
+          names[d[1]] be yep
+          delta be delta + [[d[1], yep]]
+          iterate p through regex_find_all(d[2], "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+            names[p] be yep
+            delta be delta + [[p, yep]]
+          ;;
+        ;;
+        d be regex_capture(r[0], "^iterate\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")
+        ponder d differs void ::
+          names[d[1]] be yep
+          delta be delta + [[d[1], yep]]
+        ;;
+        ponder auto_end ::
+          forge isElse be regex_test(r[0], "^else\\\\b")
+          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::
+            out be out + close_block(opens[-1])
+            opens be portion(opens, 0, measure(opens) - 1)
+          ;;
+          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::
+            opens be portion(opens, 0, measure(opens) - 1)
+          ;;
+          forge bump be regex_capture(r[0], "\\n#bump (\\\\S+)$")
+          ponder bump differs void ::
+            opens be opens + [[indent, bump[1]]]
+            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]
+          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\\\b") also isnt contains(r[0], "\\n") ::
+            opens be opens + [[indent, ""]]
+          ;;
+        ;;
+        ponder isnt auto_end also contains(r[0], "#bump") ::
+          sure be nope
+        ;;
+        out be out + [indent + replace(r[0], "\\n", "\\n" + indent)]
+      ;;
+      ;;
+      // a top-level line follows: close what this chunk opened, here
+      cycle auto_end also measure(opens) > 0 ::
+        out be out + close_block(opens[-1])
+        opens be portion(opens, 0, measure(opens) - 1)
+      ;;
+      c_out be out
+      c_sure be sure
+      iterate note through notes ::
+        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]
+      ;;
+      ponder measure(CHUNK_MEMO) > 20000 ::
+        CHUNK_MEMO be ::
+        ;;
+      ;;
+      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]
+      out be saved_out + c_out
+      notes be saved_notes + notes
+      sure be saved_sure also c_sure
+    ;;
+    forge dsig be state
+    iterate pair through delta ::
+      dsig be dsig + "," + pair[0] + "=" + str(pair[1])
+    ;;
+    state be str(hash(dsig)) + str(hash(reverse(dsig)))
+  ;;
+  yield [unlines(out), sure, notes]
+;;
+`;
+
+// raw:/dev-server/lang/agent/ai-dialect.sdev
+var ai_dialect_default = `// =====================================================================
+// ai-dialect.sdev \u2014 "sdev:ai", the dialect written for AI models.
+//
+// Designed for how language models generate code:
+//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)
+//   * blocks are always { \u2026 } \u2014 no indentation rules, no guessed closings
+//   * short, common tokens: fewer tokens -> faster, cheaper generation
+//   * the familiar operators models already know: == != && || !
+//
+// A file starts with  !#ai  and is translated to canonical sdev before it
+// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model
+// can be given any program to read in the dense form.
+//
+//   v x = 5               forge x be 5
+//   x = x + 1             x be x + 1
+//   p(x)                  speak(x)
+//   f add(a, b) {         conjure add(a, b) ::
+//   r a + b               yield a + b
+//   ? x > 3 {             ponder x > 3 ::
+//   } :? x > 1 {          ;; otherwise ponder x > 1 ::
+//   } : {                 ;; otherwise ::
+//   w i < 3 {             cycle i < 3 ::
+//   each n in xs {        iterate n through xs ::
+//   try { \u2026 } catch e {   attempt :: \u2026 ;; rescue e ::
+//   brk / next            yeet / skip
+//   }                     ;;
+//   == != && || !         equals differs also either isnt
+// =====================================================================
+
+// split a line into [code, text, code, text, \u2026] so strings are never touched
+conjure ai_segments(line) ::
+  yield regex_find_all(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|'[^']*'|[^\\"']+|[\\"']")
+;;
+
+conjure ai_ops_to_sdev(code) ::
+  forge c be code
+  c be regex_replace(c, "\\\\s*==\\\\s*", " equals ")
+  c be regex_replace(c, "\\\\s*!=\\\\s*", " differs ")
+  c be regex_replace(c, "\\\\s*&&\\\\s*", " also ")
+  c be regex_replace(c, "\\\\s*\\\\|\\\\|\\\\s*", " either ")
+  c be regex_replace(c, "(^|[^\\\\p{L}\\\\p{N}_])!\\\\s*(?!=)", "$1isnt ")
+  c be regex_replace(c, "\\\\btrue\\\\b", "yep")
+  c be regex_replace(c, "\\\\bfalse\\\\b", "nope")
+  c be regex_replace(c, "\\\\bnull\\\\b", "void")
+  yield c
+;;
+
+conjure ai_ops_to_ai(code) ::
+  forge c be code
+  c be regex_replace(c, "\\\\s+equals\\\\s+", " == ")
+  c be regex_replace(c, "\\\\s+differs\\\\s+", " != ")
+  c be regex_replace(c, "\\\\s+also\\\\s+", " && ")
+  c be regex_replace(c, "\\\\s+either\\\\s+", " || ")
+  c be regex_replace(c, "\\\\bisnt\\\\s+", "!")
+  c be regex_replace(c, "\\\\byep\\\\b", "true")
+  c be regex_replace(c, "\\\\bnope\\\\b", "false")
+  c be regex_replace(c, "\\\\bvoid\\\\b", "null")
+  yield c
+;;
+
+conjure ai_map_code(line, to_sdev) ::
+  forge out be ""
+  iterate seg through ai_segments(line) ::
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::
+      out be out + seg
+    ;; otherwise ponder to_sdev ::
+      out be out + ai_ops_to_sdev(seg)
+    ;; otherwise ::
+      out be out + ai_ops_to_ai(seg)
+    ;;
+  ;;
+  yield out
+;;
+
+forge AI_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"
+
+// one AI line -> one canonical line (or void when it is not AI syntax)
+conjure ai_line_to_sdev(body) ::
+  forge m be regex_capture(body, "^\\\\}\\\\s*:\\\\?\\\\s*(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  ponder regex_test(body, "^\\\\}\\\\s*:\\\\s*\\\\{$") ::
+    yield ";; otherwise ::"
+  ;;
+  m be regex_capture(body, "^\\\\}\\\\s*catch\\\\s+(" + AI_NAME + ")\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield ";; rescue " + m[1] + " ::"
+  ;;
+  ponder body equals "}" ::
+    yield ";;"
+  ;;
+  ponder regex_test(body, "^try\\\\s*\\\\{$") ::
+    yield "attempt ::"
+  ;;
+  m be regex_capture(body, "^v\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")
+  ponder m differs void ::
+    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^f\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "conjure " + m[1] + "(" + m[2] + ") ::"
+  ;;
+  m be regex_capture(body, "^r(\\\\s+(.+))?$")
+  ponder m differs void ::
+    ponder m[2] equals "" ::
+      yield "yield void"
+    ;;
+    yield "yield " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^p\\\\((.*)\\\\)$")
+  ponder m differs void ::
+    yield "speak(" + ai_map_code(m[1], yep) + ")"
+  ;;
+  m be regex_capture(body, "^\\\\?\\\\s*(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "ponder " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  m be regex_capture(body, "^w\\\\s+(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "cycle " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  m be regex_capture(body, "^each\\\\s+(" + AI_NAME + ")\\\\s+in\\\\s+(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"
+  ;;
+  ponder body equals "brk" ::
+    yield "yeet"
+  ;;
+  ponder body equals "next" ::
+    yield "skip"
+  ;;
+  // index or name assignment: x = e / xs[0] = e / o.k = e
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*=\\\\s*([^=].*)$")
+  ponder m differs void ::
+    yield m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  // a bare call or expression
+  yield ai_map_code(body, yep)
+;;
+
+conjure ai_to_sdev(source) ::
+  forge out be []
+  iterate line through lines(source) ::
+    forge indent be leading_space(line)
+    forge body be trim(line)
+    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::
+      ponder isnt startswith(body, "!#ai") ::
+        out be out + [line]
+      ;;
+    ;; otherwise ::
+      out be out + [indent + ai_line_to_sdev(body)]
+    ;;
+  ;;
+  yield unlines(out)
+;;
+
+// canonical sdev -> the AI form
+// the English canonical forms (say / set / if / while / for each / to \u2026 with / end)
+conjure english_line_to_ai(body, AI_DECLARED) ::
+  forge m be regex_capture(body, "^say\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "p(" + ai_map_code(m[1], nope) + ")"
+  ;;
+  m be regex_capture(body, "^set\\\\s+(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+to\\\\s+(.+)$")
+  ponder m differs void ::
+    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::
+      yield m[1] + " = " + ai_map_code(m[2], nope)
+    ;;
+    AI_DECLARED[m[1]] be yep
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^if\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "? " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^else\\\\s+if\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "} :? " + ai_cond(m[1]) + " {"
+  ;;
+  ponder body equals "else" ::
+    yield "} : {"
+  ;;
+  ponder body equals "end" ::
+    yield "}"
+  ;;
+  m be regex_capture(body, "^while\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "w " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^for\\\\s+(each\\\\s+)?(" + AI_NAME + ")\\\\s+in\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"
+  ;;
+  m be regex_capture(body, "^to\\\\s+(" + AI_NAME + ")(\\\\s+with\\\\s+(.+))?$")
+  ponder m differs void ::
+    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")
+    yield "f " + m[1] + "(" + params + ") {"
+  ;;
+  m be regex_capture(body, "^return(\\\\s+(.+))?$")
+  ponder m differs void ::
+    yield "r " + ai_map_code(m[2], nope)
+  ;;
+  ponder body equals "break" ::
+    yield "brk"
+  ;;
+  ponder body equals "continue" ::
+    yield "next"
+  ;;
+  yield ""
+;;
+
+// English comparisons -> symbols
+conjure ai_cond(c) ::
+  forge out be ""
+  iterate seg through ai_segments(c) ::
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::
+      out be out + seg
+    ;; otherwise ::
+      forge x be seg
+      x be regex_replace(x, "\\\\s+is\\\\s+not\\\\s+", " != ")
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+more\\\\b", " >= $1")
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+less\\\\b", " <= $1")
+      x be regex_replace(x, "\\\\s+is\\\\s+", " == ")
+      x be regex_replace(x, "\\\\s+and\\\\s+", " && ")
+      x be regex_replace(x, "\\\\s+or\\\\s+", " || ")
+      x be regex_replace(x, "(^|\\\\s)not\\\\s+", "$1!")
+      out be out + ai_ops_to_ai(x)
+    ;;
+  ;;
+  yield out
+;;
+
+conjure sdev_line_to_ai(body, declared) ::
+  forge english be english_line_to_ai(body, declared)
+  ponder english differs "" ::
+    yield english
+  ;;
+  forge m be regex_capture(body, "^;;\\\\s*otherwise\\\\s+ponder\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "} :? " + ai_map_code(m[1], nope) + " {"
+  ;;
+  ponder regex_test(body, "^;;\\\\s*otherwise\\\\s*::$") ::
+    yield "} : {"
+  ;;
+  m be regex_capture(body, "^;;\\\\s*rescue\\\\s+(" + AI_NAME + ")\\\\s*::$")
+  ponder m differs void ::
+    yield "} catch " + m[1] + " {"
+  ;;
+  ponder body equals ";;" ::
+    yield "}"
+  ;;
+  ponder regex_test(body, "^attempt\\\\s*::$") ::
+    yield "try {"
+  ;;
+  m be regex_capture(body, "^forge\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^conjure\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*::$")
+  ponder m differs void ::
+    yield "f " + m[1] + "(" + m[2] + ") {"
+  ;;
+  m be regex_capture(body, "^yield\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "r " + ai_map_code(m[1], nope)
+  ;;
+  m be regex_capture(body, "^speak\\\\((.*)\\\\)$")
+  ponder m differs void ::
+    yield "p(" + ai_map_code(m[1], nope) + ")"
+  ;;
+  m be regex_capture(body, "^ponder\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "? " + ai_map_code(m[1], nope) + " {"
+  ;;
+  m be regex_capture(body, "^cycle\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "w " + ai_map_code(m[1], nope) + " {"
+  ;;
+  m be regex_capture(body, "^iterate\\\\s+(" + AI_NAME + ")\\\\s+through\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"
+  ;;
+  ponder body equals "yeet" ::
+    yield "brk"
+  ;;
+  ponder body equals "skip" ::
+    yield "next"
+  ;;
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+be\\\\s+(.+)$")
+  ponder m differs void ::
+    yield m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  yield ai_map_code(body, nope)
+;;
+
+conjure sdev_to_ai(source) ::
+  forge out be ["!#ai"]
+  forge declared be ::
+  ;;
+  iterate line through lines(source) ::
+    forge indent be leading_space(line)
+    forge body be trim(line)
+    ponder body equals "" either startswith(body, "//") ::
+      out be out + [line]
+    ;; otherwise ::
+      out be out + [indent + sdev_line_to_ai(body, declared)]
+    ;;
+  ;;
+  yield unlines(out)
+;;
+`;
+
+// raw:/dev-server/lang/agent/project.sdev
+var project_default = '// =====================================================================\n// project.sdev \u2014 the project index of the code understander, in sdev.\n//\n// Collects every name a file defines (variables, functions, kinds,\n// parameters, loop names, lambda parameters) so the understander can tell\n// a reference to another file apart from plain words.\n//\n//   defined_names(source)   -> list of names one file defines\n//   project_names(sources)  -> names defined across many files, no repeats\n// =====================================================================\n\nforge PNAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\n\nconjure pn_add(seen, out, w) ::\n  ponder w differs "" also isnt has(seen, w) also regex_test(w, "^" + PNAME + "$") ::\n    seen[w] be yep\n    out be out + [w]\n  ;;\n  yield out\n;;\n\n// every match of `pattern`, keeping only what follows `prefix`\nconjure pn_tails(text, pattern, prefix) ::\n  forge got be []\n  iterate hit through regex_find_all(text, pattern) ::\n    got be got + [regex_replace(hit, prefix, "")]\n  ;;\n  yield got\n;;\n\nconjure pn_split(list_text) ::\n  yield regex_find_all(list_text, PNAME)\n;;\n\nconjure defined_names_into(source, seen, out) ::\n  forge kw be "\\\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\\\s+"\n  iterate w through pn_tails(source, kw + PNAME, kw) ::\n    out be pn_add(seen, out, w)\n  ;;\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME, "^for\\\\s+(each\\\\s+)?") ::\n    out be pn_add(seen, out, w)\n  ;;\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME + "\\\\s*,\\\\s*" + PNAME, "^.*,\\\\s*") ::\n    out be pn_add(seen, out, w)\n  ;;\n  iterate row through lines(source) ::\n    forge m be regex_capture(row, "^\\\\s*(" + PNAME + ")\\\\s*(=|\\\\+=|-=|\\\\*=|/=)(?!=)")\n    ponder m differs void ::\n      out be pn_add(seen, out, m[1])\n    ;;\n  ;;\n  // parameters: `with a b c`, `with a, b`\n  iterate part through pn_tails(source, "\\\\bwith\\\\s+[^\\\\n:{]+", "^with\\\\s+") ::\n    iterate w through regex_find_all(part, "[^\\\\s,]+") ::\n      out be pn_add(seen, out, w)\n    ;;\n  ;;\n  // `(a, b)` after a declaration\n  iterate part through pn_tails(source, "\\\\b(to|conjure|func|function|fn|def)\\\\s+" + PNAME + "\\\\s*\\\\([^)]*\\\\)", "^[^(]*\\\\(") ::\n    iterate w through regex_find_all(regex_replace(part, "\\\\)$", ""), "[^\\\\s,=]+") ::\n      out be pn_add(seen, out, w)\n    ;;\n  ;;\n  // lambdas `(a, b) =>` / `x =>`\n  iterate part through regex_find_all(source, "\\\\([^()]*\\\\)\\\\s*=>|" + PNAME + "\\\\s*=>") ::\n    iterate w through pn_split(regex_replace(part, "=>$", "")) ::\n      out be pn_add(seen, out, w)\n    ;;\n  ;;\n  yield out\n;;\n\nconjure defined_names(source) ::\n  forge seen be ::\n  ;;\n  yield defined_names_into(source, seen, [])\n;;\n\nconjure project_names(sources) ::\n  forge seen be ::\n  ;;\n  forge out be []\n  iterate src through sources ::\n    out be defined_names_into(src, seen, out)\n  ;;\n  yield out\n;;\n';
+
+// src/lang/agent/sdev-engine.ts
+var engine = null;
+var engineError = null;
+function load() {
+  if (engine !== null) return engine;
+  try {
+    const ast = new Parser(new Lexer(understander_default + "\n" + ai_dialect_default + "\n" + project_default).tokenize()).parse();
+    const interp = new Interpreter(() => {
+    });
+    interp.interpret(ast);
+    const env2 = interp.getGlobalEnv();
+    engine = {
+      understand: env2.get("understand_source", 0),
+      toSdev: env2.get("ai_to_sdev", 0),
+      toAi: env2.get("sdev_to_ai", 0),
+      names: env2.get("defined_names", 0)
+    };
+  } catch (e) {
+    engineError = e instanceof Error ? e.message : String(e);
+    engine = false;
   }
-  const reply = await callLocal(req, url);
-  return { reply, used: reply ? "local" : "none" };
+  return engine;
+}
+function sdevUnderstand(source, known, words = []) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.understand.call([source, [...known], words], 0);
+    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
+    return {
+      source: r[0],
+      sure: r[1] === true,
+      notes: (r[2] ?? []).map(([line, from, to]) => ({ line, from, to, why: "understood by the sdev engine", source: "sdev" }))
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function isAiDialect(source) {
+  for (const line of source.split("\n", 20)) {
+    const t = line.trim();
+    if (!t || t.startsWith("//")) continue;
+    return /^!#ai\b/.test(t);
+  }
+  return false;
+}
+function aiToSdev(source) {
+  const e = load();
+  if (!e) return source;
+  return String(e.toSdev.call([source], 0));
 }
 
 // src/lang/agent/memory.ts
@@ -27225,7 +29328,9 @@ function sane(value2) {
     names: m.names ?? {},
     lines: m.lines ?? {},
     programs: m.programs ?? 0,
-    updated: m.updated ?? 0
+    updated: m.updated ?? 0,
+    results: m.results ?? {},
+    agent: m.agent
   };
 }
 var browserStore = {
@@ -27275,9 +29380,9 @@ function rememberLine(memory, original, canonical) {
 }
 function learnFromProgram(memory, canonical) {
   memory.programs += 1;
-  const re = /^\s*set\s+([\p{L}\p{N}_]+)\s+to\b/gmu;
+  const re2 = /^\s*set\s+([\p{L}\p{N}_]+)\s+to\b/gmu;
   let m;
-  while (m = re.exec(canonical)) rememberName(memory, m[1]);
+  while (m = re2.exec(canonical)) rememberName(memory, m[1]);
   const fn2 = /^\s*to\s+([\p{L}\p{N}_]+)\b/gmu;
   while (m = fn2.exec(canonical)) rememberName(memory, m[1]);
 }
@@ -27287,6 +29392,28 @@ function memoryWordMap(memory) {
     if (entry.hits > 0) map.set(word, entry.intent);
   }
   return map;
+}
+function understandKey(source, extra = "") {
+  let h1 = 2166136261, h2 = 16777619;
+  const s = source + "\0" + extra;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619);
+    h2 = Math.imul(h2 ^ c, 2246822507);
+  }
+  return (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36) + s.length.toString(36);
+}
+var MAX_RESULTS = 100;
+function recallResult(memory, key) {
+  return memory.results?.[key]?.source ?? null;
+}
+function rememberResult(memory, key, source) {
+  const results = memory.results ??= {};
+  results[key] = { source, at: Date.now() };
+  const keys = Object.keys(results);
+  if (keys.length > MAX_RESULTS) {
+    keys.sort((a, b) => results[a].at - results[b].at).slice(0, keys.length - MAX_RESULTS).forEach((k) => delete results[k]);
+  }
 }
 
 // src/lang/agent/promote.ts
@@ -27310,11 +29437,11 @@ function promoteToDialect(opts = {}) {
   }
   const taken = /* @__PURE__ */ new Set();
   for (const [canonical, words] of byCanonical) {
-    const list = [...words].filter((w) => !taken.has(w));
-    if (!list.length) continue;
-    list.forEach((w) => taken.add(w));
-    spec.synonyms[canonical] = list;
-    if (opts.rename) spec.names[canonical] = list[0];
+    const list2 = [...words].filter((w) => !taken.has(w));
+    if (!list2.length) continue;
+    list2.forEach((w) => taken.add(w));
+    spec.synonyms[canonical] = list2;
+    if (opts.rename) spec.names[canonical] = list2[0];
   }
   return spec;
 }
@@ -27339,7 +29466,15 @@ function begin(source, opts) {
   const mode = directives.mode ?? opts.mode ?? "auto";
   const brain = directives.brain ?? opts.brain ?? "auto";
   const learn = directives.learn ?? opts.learn ?? true;
-  return { mode, brain, learn, stripped: directives.source, memory: loadMemory() };
+  const stripped = isAiDialect(source) ? aiToSdev(source) : directives.source;
+  const memory = loadMemory();
+  if (memory.agent !== AGENT_VERSION) {
+    memory.lines = {};
+    memory.results = {};
+    memory.agent = AGENT_VERSION;
+    saveMemory(memory);
+  }
+  return { mode, brain, learn, stripped, memory };
 }
 function skip(source, mode) {
   return { source, changed: false, mode, notes: [], learned: {}, unresolved: [], brainUsed: "none" };
@@ -27356,25 +29491,60 @@ function dialectWordMap(opts) {
     const intent = canonicalToIntent.get(canonical);
     if (intent && word) map.set(word.toLowerCase(), intent);
   }
-  for (const [canonical, list] of Object.entries(synonyms)) {
+  for (const [canonical, list2] of Object.entries(synonyms)) {
     const intent = canonicalToIntent.get(canonical);
     if (!intent) continue;
-    for (const word of list ?? []) map.set(word.toLowerCase(), intent);
+    for (const word of list2 ?? []) map.set(word.toLowerCase(), intent);
   }
   return map;
 }
+var AGENT_VERSION = "u5";
+var lastEngine = "ts";
+function isRequest(source) {
+  const rows = source.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && !l.startsWith("//"));
+  if (!rows.length || rows.length > 6) return false;
+  if (rows.some((l) => /[=(){}\[\]]|::|;;/.test(l) && !/^[\p{L}\s,.'"!?-]+$/u.test(l))) return false;
+  const text3 = rows.join(" ");
+  const verb = /^(please\s+)?(make|build|create|write|code|generate|design|program|draw|give\s+me|show\s+me|i\s+want|i\s+need|i'd\s+like|can\s+you|could\s+you|let's|lets)\b/i;
+  const thing = /\b(window|app|application|program|game|calculator|form|page|site|website|tool|todo|to-do|list|clock|timer|stopwatch|converter|quiz|interface|gui|ui|button|buttons|menu|counter|chat|editor|notes?|tracker|dashboard|generator|simulator|animation|drawing)\b/i;
+  return verb.test(text3) && thing.test(text3) && text3.split(/\s+/).length >= 3;
+}
 function runRules(prep, opts) {
-  const { source: remembered } = applyMemoryLines(prep.stripped, prep.memory);
+  const request = isRequest(prep.stripped);
+  const { source: remembered } = request ? { source: prep.stripped } : applyMemoryLines(prep.stripped, prep.memory);
+  if (request) {
+    const count = remembered.split("\n").length;
+    return {
+      done: false,
+      forceBrain: true,
+      source: remembered,
+      sense: senseFile(remembered, /* @__PURE__ */ new Map()),
+      learned: {},
+      notes: [{ line: 0, from: "", to: "", why: "this is a request for a program \u2014 the AI writes it", source: "rules" }],
+      unresolved: Array.from({ length: count }, (_, i) => i + 1)
+    };
+  }
   const extraWords = new Map([...dialectWordMap(opts), ...memoryWordMap(prep.memory)]);
   const sense = senseFile(remembered, extraWords);
   if (!sense.suspicious && sense.parses) {
     return { done: true, source: remembered, sense, learned: {}, notes: [], unresolved: [] };
   }
+  if (opts.engine !== "ts") {
+    const known = /* @__PURE__ */ new Set([...knownNames(prep.memory), ...opts.projectNames ?? []]);
+    const words = [...extraWords].map(([w, intent]) => [w, CANONICAL[intent] ?? w]);
+    const s = sdevUnderstand(remembered, known, words);
+    if (s && s.sure && s.source !== remembered && parses(s.source) && unknownNames(s.source).length === 0) {
+      lastEngine = "sdev";
+      return { done: true, source: s.source, sense, learned: {}, notes: s.notes, unresolved: [] };
+    }
+  }
+  lastEngine = "ts";
   const result = repair(remembered, {
     extraWords,
     knownNames: knownNames(prep.memory),
     strict: prep.mode === "strict"
   });
+  void opts;
   let source = result.source;
   const closed = closeBlocks(source);
   if (closed !== source && parses(closed)) source = closed;
@@ -27415,38 +29585,27 @@ function understand(source, opts = {}) {
 async function understandAsync(source, opts = {}) {
   const prep = begin(source, opts);
   if (prep.mode === "off") return skip(prep.stripped, "off");
+  const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
+  const cached3 = recallResult(prep.memory, key);
+  if (cached3 !== null) {
+    return { source: cached3, changed: cached3 !== prep.stripped, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: "none", cached: true };
+  }
   const rules = runRules(prep, opts);
   let current = rules.source;
   let brainUsed = "none";
   const notes = [...rules.notes];
-  const needsBrain = prep.brain !== "none" && !rules.done && (prep.mode === "on" || rules.forceBrain || rules.unresolved.length > 0 || !parses(current));
+  const needsBrain = prep.brain !== "none" && !rules.done && (prep.mode === "on" || rules.forceBrain || rules.unresolved.length > 0 || !parses(current) || unknownNames(current).length > 0);
   if (needsBrain) {
-    const vocabulary = {};
-    for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
-    const { reply, used } = await think(
-      { source: prep.stripped, draft: current, unresolved: rules.unresolved, vocabulary },
-      prep.brain === "auto" && !online() ? "local" : prep.brain,
-      opts.localUrl
-    );
-    if (reply?.canonical && parses(reply.canonical)) {
-      const before = current.split("\n");
-      const after = reply.canonical.split("\n");
-      const original = prep.stripped.split("\n");
-      const aligned = original.length === before.length && before.length === after.length;
-      after.forEach((line, i) => {
-        if (before[i] !== void 0 && before[i].trim() !== line.trim()) {
-          notes.push({ line: i + 1, from: before[i].trim(), to: line.trim(), why: "understood by the AI", source: "brain" });
-          if (prep.learn && aligned) rememberLine(prep.memory, original[i], line.trim());
-        }
-      });
-      current = reply.canonical;
-      brainUsed = used;
-      for (const [word, intent] of Object.entries(reply.words ?? {})) {
-        if (prep.learn) rememberWord(prep.memory, word, intent);
-      }
+    const improved = await askBrain(prep, opts, current, rules.unresolved, [], notes, prep.mode === "on" || rules.forceBrain || rules.unresolved.length > 0);
+    if (improved) {
+      current = improved.source;
+      brainUsed = improved.used;
     }
   }
+  if (parses(current) && (rules.done || brainUsed !== "none" || unknownNames(current).length === 0)) rememberResult(prep.memory, key, current);
   finish(prep, current, rules.learned);
+  lastUnderstood.set(source, current);
+  if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value);
   return {
     source: current,
     changed: current !== prep.stripped,
@@ -27457,6 +29616,54 @@ async function understandAsync(source, opts = {}) {
     brainUsed
   };
 }
+function problemsOf(source) {
+  const out = [];
+  const err = parseError(source);
+  if (err) out.push(`does not parse: ${err}`);
+  const unknown = unknownNames(source);
+  if (unknown.length) out.push(`uses names nothing defines: ${unknown.slice(0, 12).join(", ")}`);
+  return out;
+}
+async function askBrain(prep, opts, draft, unresolved, extraProblems, notes, preferReply = false) {
+  const vocabulary = {};
+  for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
+  const mode = prep.brain === "auto" && !online() ? "local" : prep.brain;
+  const score = (src) => (parses(src) ? 0 : 100) + unknownNames(src).length;
+  let best = null;
+  let bestScore = score(draft) + (extraProblems.length ? 50 : 0);
+  let problems = [...extraProblems, ...problemsOf(draft)];
+  const writing = isRequest(prep.stripped);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { reply, used } = await think(
+      { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems, format: writing ? "ai" : "canonical" },
+      mode,
+      opts.localUrl
+    );
+    if (!reply?.canonical || used === "none") break;
+    if (isAiDialect(reply.canonical)) reply.canonical = aiToSdev(reply.canonical);
+    const s = score(reply.canonical);
+    if (s < bestScore || s === bestScore && (preferReply || extraProblems.length > 0) && !best) {
+      best = { source: reply.canonical, used };
+      bestScore = s;
+      for (const [word, intent] of Object.entries(reply.words ?? {})) if (prep.learn) rememberWord(prep.memory, word, intent);
+    }
+    if (s === 0) break;
+    problems = problemsOf(reply.canonical);
+  }
+  if (!best) return null;
+  const before = draft.split("\n");
+  const after = best.source.split("\n");
+  const original = prep.stripped.split("\n");
+  const aligned = original.length === before.length && before.length === after.length && !isRequest(prep.stripped);
+  after.forEach((line, i) => {
+    if (before[i] === void 0 || before[i].trim() !== line.trim()) {
+      notes.push({ line: i + 1, from: (before[i] ?? "").trim(), to: line.trim(), why: "understood by the AI", source: "brain" });
+      if (prep.learn && aligned && original[i] !== void 0) rememberLine(prep.memory, original[i], line.trim());
+    }
+  });
+  return best;
+}
+var lastUnderstood = /* @__PURE__ */ new Map();
 
 // cli/pipeline.ts
 function explainAgent(result) {
@@ -27515,18 +29722,18 @@ function localModules(entryPath, source) {
   const dir = dirname2(resolve2(entryPath));
   const seen = /* @__PURE__ */ new Set();
   const walk = (src) => {
-    const re = /\buse\s+"([^"@][^"]*)"/g;
+    const re2 = /\buse\s+"([^"@][^"]*)"/g;
     let m;
-    while (m = re.exec(src)) {
+    while (m = re2.exec(src)) {
       const spec = m[1];
       if (seen.has(spec)) continue;
       seen.add(spec);
       const candidates = isAbsolute2(spec) ? [spec] : [resolve2(dir, spec), resolve2(process.cwd(), spec)];
       const hit = candidates.find((c) => existsSync3(c));
       if (!hit) continue;
-      const text = stripSignature(readFileSync3(hit, "utf8"));
-      modules[spec] = text;
-      walk(text);
+      const text3 = stripSignature(readFileSync3(hit, "utf8"));
+      modules[spec] = text3;
+      walk(text3);
     }
   };
   walk(source);
@@ -27661,9 +29868,9 @@ async function runEditor(opts) {
       const idx = top + r;
       parts.push("\x1B[K");
       if (idx < lines.length) {
-        const num = String(idx + 1).padStart(gw - 1, " ");
+        const num2 = String(idx + 1).padStart(gw - 1, " ");
         const slice = lines[idx].slice(left, left + textCols());
-        parts.push(C.gutter + num + " " + C.reset + highlight(slice));
+        parts.push(C.gutter + num2 + " " + C.reset + highlight(slice));
       } else {
         parts.push(C.gutter + "~" + C.reset);
       }
@@ -27671,8 +29878,8 @@ async function runEditor(opts) {
     }
     const rt = opts.runtime ?? runtimePreference();
     const dia = activeDialect();
-    const status = ` ${dirty ? "\u25CF" : " "} ${basename(path)}  ${lines.length} lines  ln ${cy + 1}, col ${cx + 1}  runtime ${rt}  dialect ${dia ? dia.meta.slug : "canonical"} `;
-    parts.push("\x1B[K" + C.status + status.padEnd(w).slice(0, w) + C.reset + "\r\n");
+    const status2 = ` ${dirty ? "\u25CF" : " "} ${basename(path)}  ${lines.length} lines  ln ${cy + 1}, col ${cx + 1}  runtime ${rt}  dialect ${dia ? dia.meta.slug : "canonical"} `;
+    parts.push("\x1B[K" + C.status + status2.padEnd(w).slice(0, w) + C.reset + "\r\n");
     const help2 = message ? C.accent + " " + message : C.dim + " ^S save  ^R run  ^F find  ^G line  ^K cut  ^L format  ^Q quit";
     parts.push("\x1B[K" + help2.slice(0, w + 20) + C.reset);
     parts.push(`\x1B[${cy - top + 1};${cx - left + gw + 1}H\x1B[?25h`);
@@ -27994,6 +30201,7 @@ FILES
 
 DIALECTS
   dialect list                        Your dialects
+  dialect preset [slug] [-o file]     Install a ready-made dialect (+ its sample)
   dialect new <slug> --name "Name"    Create one
   dialect use <slug|none>             Choose the active dialect
   dialect show <slug>                 Inspect words and style
@@ -28005,11 +30213,14 @@ DIALECTS
   dialect words                       The catalog of changeable words
   dialect install <@user/slug|code>   Install someone else's dialect
   dialect publish <slug>              Publish yours
+  dialect pull | dialect sync         Fetch / two-way sync with your account
   dialect export|import <file>
   dialect remove <slug>
 
 EXTENSIONS
-  ext list | enable <id> | disable <id> | add <file> --name N [--about T] | sync | prelude
+  ext list | enable <id> | disable <id> | add <file> --name N [--about T]
+  ext publish <id|name> [--as public|unlisted|private] | ext pull | ext remove <id>
+  ext sync | ext prelude
 
 LIBRARIES
   lib list | add <@user/slug[@ver]> | remove <@user/slug> | pins <file>
@@ -28022,7 +30233,8 @@ CLOUD
   auth reset <email>      Send a password reset link
   auth token <a> <r>      Sign in with an access + refresh token pair
   auth status | whoami | refresh | logout
-  cloud list | cloud pull [name] | cloud push <file>
+  cloud list | cloud pull [name] | cloud push <file> | cloud rm <name>
+  cloud share <file> [--name T] [--about T] | cloud shared
 
 AGENT (understands however you write)
   agent status            What the agent has learned from your programs
@@ -28044,7 +30256,8 @@ OPTIONS
   --no-ext                Ignore enabled extensions
   --lang <Language>       Source language for the lexer
   --agent <mode>          off | auto | on | strict (or local / online)
-  --brain <where>         auto | local | online | none
+  --brain <where>         auto (this computer's AI, free) | local | online (website AI, uses credits) | none
+                          SDEV_AGENT_LOCAL_URL / SDEV_AGENT_LOCAL_MODEL pick the local model (default Ollama, qwen2.5-coder:7b)
   --no-agent              Run the file exactly as written
   --explain               Show what the agent understood
   -o, --out <file>        Output path
@@ -28237,24 +30450,24 @@ async function cmdRunBc(file) {
 async function cmdDisasm(file) {
   const source = extname(file) === ".sdevc" ? loadContainer(file).source : stripSignature(readSource(file));
   const prepared = prepare(source, { ...runOptions(), dialect: extname(file) === ".sdevc" ? "none" : void 0 });
-  let text;
+  let text3;
   if (prepared.runtime === "v2") {
     const { compile: compile2, setSeedLoader: setSeedLoader2 } = await Promise.resolve().then(() => (init_compile_self(), compile_self_exports));
     const { seedWasmPath: seedWasmPath2 } = await Promise.resolve().then(() => (init_env(), env_exports));
     setSeedLoader2(async () => readFileSync5(seedWasmPath2()));
     const program = await compile2(prepared.code, localModules(file, prepared.code));
-    text = hexdump(program.bytecode);
+    text3 = hexdump(program.bytecode);
   } else {
     const { Compiler: Compiler2 } = await Promise.resolve().then(() => (init_compiler(), compiler_exports));
     const { disassemble: disassemble2 } = await Promise.resolve().then(() => (init_bytecode(), bytecode_exports));
     const ast = new Parser(new Lexer(prepared.code).tokenize()).parse();
-    text = disassemble2(new Compiler2().compile(ast).entry);
+    text3 = disassemble2(new Compiler2().compile(ast).entry);
   }
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync5(out, text);
+    writeFileSync5(out, text3);
     console.log("wrote", out);
-  } else console.log(text);
+  } else console.log(text3);
 }
 function hexdump(bytes) {
   const lines = [];
@@ -28412,12 +30625,12 @@ async function cmdDialect(sub, rest) {
     }
     case "docs": {
       const spec = requireLocalDialect(rest[0] ?? die("sdev dialect docs <slug>"));
-      const text = generateDialectDocs(spec);
+      const text3 = generateDialectDocs(spec);
       const out = value("-o", "--out");
       if (out) {
-        writeFileSync5(out, text);
+        writeFileSync5(out, text3);
         console.log("wrote", out, `(template v${TEMPLATE_VERSION})`);
-      } else console.log(text);
+      } else console.log(text3);
       return;
     }
     case "words": {
@@ -28510,6 +30723,53 @@ ${GROUP_LABELS[entry.group]}`);
       console.log(`imported ${specs.length} dialect(s)`);
       return;
     }
+    case "preset": {
+      const slug = rest[0];
+      if (!slug) {
+        for (const p of presetList()) console.log(`${p.spec.meta.slug.padEnd(14)} ${p.spec.meta.name}  ${p.spec.meta.description ?? ""}`);
+        return;
+      }
+      const preset = findPreset(slug) ?? die(`no ready-made dialect "${slug}"`);
+      saveDialect(structuredClone(preset.spec));
+      setActiveSlug(preset.spec.meta.slug);
+      const out = value("-o", "--out");
+      if (out) {
+        writeFileSync5(out, preset.sample + "\n");
+        console.log("wrote sample to", out);
+      }
+      console.log(`installed and using ${preset.spec.meta.name}`);
+      return;
+    }
+    case "pull": {
+      const user = await requireUser();
+      const { data } = await db3.from("dialects").select("slug, spec").eq("user_id", user.id);
+      const rows = (data ?? []).filter((r) => r.spec?.meta?.slug);
+      for (const r of rows) saveDialect(r.spec);
+      console.log(`pulled ${rows.length} dialect(s) from your account`);
+      return;
+    }
+    case "sync": {
+      const user = await requireUser();
+      const local = listDialects();
+      for (const spec of local) {
+        await db3.from("dialects").upsert({
+          user_id: user.id,
+          slug: spec.meta.slug,
+          name: spec.meta.name,
+          description: spec.meta.description ?? "",
+          languages: spec.meta.languages,
+          visibility: spec.meta.visibility,
+          extends_slug: spec.meta.extends,
+          latest_version: spec.meta.version,
+          spec,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        }, { onConflict: "user_id,slug" });
+      }
+      const { data } = await db3.from("dialects").select("slug, spec").eq("user_id", user.id);
+      for (const r of data ?? []) if (r.spec?.meta?.slug) saveDialect(r.spec);
+      console.log(`synced ${local.length} up, ${(data ?? []).length} down`);
+      return;
+    }
     case "remove": {
       const slug = rest[0] ?? die("sdev dialect remove <slug>");
       console.log(removeDialect(slug) ? "removed " + slug : "no such dialect");
@@ -28571,10 +30831,45 @@ async function cmdExt(sub, rest) {
       console.log(`added and enabled ${record.name}`);
       return;
     }
+    case "pull":
     case "sync": {
       const user = await currentUser();
       const all = await syncExtensions(user?.id ?? null);
       console.log(`synced ${all.length} extension(s)`);
+      return;
+    }
+    case "publish": {
+      const key = rest[0] ?? die("sdev ext publish <id|name> [--as public|unlisted|private]");
+      const match = cachedExtensions().find((e) => e.id === key || e.id.startsWith(key) || e.name === key);
+      if (!match) die("no such extension");
+      const user = await requireUser();
+      const asked = value("--as");
+      const visibility = asked === "private" || asked === "unlisted" || asked === "public" ? asked : "public";
+      const { error } = await db3.from("sdev_extensions").upsert({
+        user_id: user.id,
+        name: match.name,
+        kind: match.kind,
+        symbol: match.symbol,
+        about: match.about,
+        source: match.source,
+        visibility,
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      }, { onConflict: "user_id,name" });
+      if (error) die(error.message);
+      await syncExtensions(user.id);
+      console.log(`published ${match.name} (${visibility})`);
+      return;
+    }
+    case "rm":
+    case "remove": {
+      const key = rest[0] ?? die("sdev ext remove <id|name>");
+      const match = cachedExtensions().find((e) => e.id === key || e.id.startsWith(key) || e.name === key);
+      if (!match) die("no such extension");
+      const user = await currentUser();
+      if (user && !match.id.startsWith("local-")) await db3.from("sdev_extensions").delete().eq("user_id", user.id).eq("id", match.id);
+      setExtensionEnabled(match.id, false);
+      if (user) await syncExtensions(user.id);
+      console.log("removed", match.name);
       return;
     }
     case "prelude":
@@ -28682,9 +30977,9 @@ async function cmdAuth(sub, rest) {
     case "whoami": {
       const user = await currentUser();
       if (!user) {
-        const stored = storedSummary();
-        console.log(stored ? `signed out \u2014 the saved session for ${stored.email ?? "your account"} expired.
-sign in again: sdev auth login ${stored.email ?? "<email>"}` : "not signed in \u2014 sdev auth login <email>  or  sdev auth code <email>");
+        const stored2 = storedSummary();
+        console.log(stored2 ? `signed out \u2014 the saved session for ${stored2.email ?? "your account"} expired.
+sign in again: sdev auth login ${stored2.email ?? "<email>"}` : "not signed in \u2014 sdev auth login <email>  or  sdev auth code <email>");
         return;
       }
       const handle = await myUsername(user.id);
@@ -28738,14 +31033,44 @@ async function cmdCloud(sub, rest) {
     console.log("pushed", name);
     return;
   }
-  die("cloud: use list | pull | push");
+  if (sub === "rm") {
+    const name = rest[0] ?? die("sdev cloud rm <name>");
+    const { error } = await db3.from("code_files").delete().eq("user_id", user.id).eq("name", name);
+    if (error) die(error.message);
+    console.log("removed", name);
+    return;
+  }
+  if (sub === "share") {
+    const file = rest[0] ?? die("sdev cloud share <file>");
+    const body = stripSignature(readSource(file));
+    const title = value("--name") ?? basename2(file);
+    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32) || "program"}-${checksum(body).slice(0, 6)}`;
+    const { error } = await db3.from("gists").insert({
+      user_id: user.id,
+      slug,
+      title,
+      description: value("--about") ?? null,
+      content: body,
+      language: "sdev"
+    });
+    if (error) die(error.message);
+    console.log(`shared \u2014 https://web.sdev.codes/g/${slug}`);
+    return;
+  }
+  if (sub === "shared") {
+    const { data } = await db3.from("gists").select("slug, title, view_count").eq("user_id", user.id).order("created_at", { ascending: false });
+    for (const g of data ?? []) console.log(`${String(g.title).padEnd(30)} /g/${g.slug}  ${g.view_count ?? 0} views`);
+    if (!data?.length) console.log("nothing shared yet");
+    return;
+  }
+  die("cloud: use list | pull | push | rm | share | shared");
 }
-function emit(text) {
+function emit(text3) {
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync5(out, text);
+    writeFileSync5(out, text3);
     console.log("wrote", out);
-  } else process.stdout.write(text.endsWith("\n") ? text : text + "\n");
+  } else process.stdout.write(text3.endsWith("\n") ? text3 : text3 + "\n");
 }
 async function cmdEdit(file) {
   if (!file) die("sdev edit <file.sdev>");
