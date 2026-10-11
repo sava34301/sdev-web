@@ -1,6 +1,6 @@
 {
   "version": "5.1.0",
-  "released": "2026-10-11T15:28:45.264Z",
+  "released": "2026-10-11T15:42:24.073Z",
   "notes": "One version for the IDE, CLI, VS Code extension and desktop app. Everything now runs the same language code, including the code understander and sdev:ai.",
   "cli": {
     "url": "https://web.sdev.codes/downloads/sdev.mjs",
