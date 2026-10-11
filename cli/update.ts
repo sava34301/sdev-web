@@ -11,7 +11,7 @@ import { existsSync, readFileSync, writeFileSync, renameSync, chmodSync, mkdirSy
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { VERSION, SITE } from './version';
-import { SDEV_HOME } from './store';
+import { SDEV_HOME } from './env';
 
 interface Releases { version: string; notes?: string; cli: { url: string; wasm?: string; runtime?: string } }
 
