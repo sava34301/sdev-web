@@ -1329,7 +1329,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   </DropdownMenuItem>
                   {([['quiz.ai.sdev', 'sdev:ai example: quiz game'], ['todo.ai.sdev', 'sdev:ai example: to-do list']] as const).map(([file, label]) => (
                     <DropdownMenuItem key={file} onClick={() => openSample(file)} className="text-xs gap-2 cursor-pointer">
-                      <FileCode className="w-3.5 h-3.5" /> {label}
+                      <Wand2 className="w-3.5 h-3.5" /> {label}
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
