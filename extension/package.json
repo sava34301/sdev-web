@@ -1,8 +1,8 @@
 {
   "name": "sdev-language",
   "displayName": "sdev Language",
-  "description": "Official VS Code support for the sdev programming language \u2014 v1 + v2 syntax highlighting, snippets, hardware & ML support, and built-in run/build commands.",
-  "version": "1.2.0",
+  "description": "Official VS Code support for the sdev programming language — v1 + v2 syntax highlighting, snippets, hardware & ML support, and built-in run/build commands.",
+  "version": "5.1.0",
   "publisher": "sdev-lang",
   "author": {
     "name": "sdev"
@@ -178,8 +178,8 @@
           ],
           "default": "v1",
           "enumDescriptions": [
-            "v1 \u2014 the tree-walking interpreter (forge / conjure / ponder, graphics, web, Leaflet).",
-            "v2 \u2014 the self-hosted compiler (say / set / to \u2026 end) executed on the seed VM."
+            "v1 — the tree-walking interpreter (forge / conjure / ponder, graphics, web, Leaflet).",
+            "v2 — the self-hosted compiler (say / set / to … end) executed on the seed VM."
           ],
           "description": "Which sdev track the Run command targets."
         },
@@ -191,7 +191,7 @@
             "python"
           ],
           "default": "bundled",
-          "description": "Which runtime to use. 'bundled' runs the sdev CLI shipped with this extension \u2014 the same language code as the website (dialects, code understander, sdev:ai, v1 and v2)."
+          "description": "Which runtime to use. 'bundled' runs the sdev CLI shipped with this extension — the same language code as the website (dialects, code understander, sdev:ai, v1 and v2)."
         },
         "sdev.nodePath": {
           "type": "string",

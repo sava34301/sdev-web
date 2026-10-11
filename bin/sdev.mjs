@@ -2188,11 +2188,11 @@ function __metadata(metadataKey, metadataValue) {
 }
 function __awaiter(thisArg, _arguments, P, generator) {
   function adopt(value2) {
-    return value2 instanceof P ? value2 : new P(function(resolve6) {
-      resolve6(value2);
+    return value2 instanceof P ? value2 : new P(function(resolve7) {
+      resolve7(value2);
     });
   }
-  return new (P || (P = Promise))(function(resolve6, reject) {
+  return new (P || (P = Promise))(function(resolve7, reject) {
     function fulfilled(value2) {
       try {
         step(generator.next(value2));
@@ -2208,7 +2208,7 @@ function __awaiter(thisArg, _arguments, P, generator) {
       }
     }
     function step(result) {
-      result.done ? resolve6(result.value) : adopt(result.value).then(fulfilled, rejected);
+      result.done ? resolve7(result.value) : adopt(result.value).then(fulfilled, rejected);
     }
     step((generator = generator.apply(thisArg, _arguments || [])).next());
   });
@@ -2399,14 +2399,14 @@ function __asyncValues(o) {
   }, i);
   function verb(n) {
     i[n] = o[n] && function(v) {
-      return new Promise(function(resolve6, reject) {
-        v = o[n](v), settle(resolve6, reject, v.done, v.value);
+      return new Promise(function(resolve7, reject) {
+        v = o[n](v), settle(resolve7, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve6, reject, d, v) {
+  function settle(resolve7, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve6({ value: v2, done: d });
+      resolve7({ value: v2, done: d });
     }, reject);
   }
 }
@@ -5266,15 +5266,15 @@ var require_RealtimeChannel = __commonJS({
             }
           }
         } else {
-          return new Promise((resolve6) => {
+          return new Promise((resolve7) => {
             var _a2, _b2, _c;
             const push = this._push(args.type, args, opts.timeout || this.timeout);
             if (args.type === "broadcast" && !((_c = (_b2 = (_a2 = this.params) === null || _a2 === void 0 ? void 0 : _a2.config) === null || _b2 === void 0 ? void 0 : _b2.broadcast) === null || _c === void 0 ? void 0 : _c.ack)) {
-              resolve6("ok");
+              resolve7("ok");
             }
-            push.receive("ok", () => resolve6("ok"));
-            push.receive("error", () => resolve6("error"));
-            push.receive("timeout", () => resolve6("timed out"));
+            push.receive("ok", () => resolve7("ok"));
+            push.receive("error", () => resolve7("error"));
+            push.receive("timeout", () => resolve7("timed out"));
           });
         }
       }
@@ -5302,16 +5302,16 @@ var require_RealtimeChannel = __commonJS({
         };
         this.joinPush.destroy();
         let leavePush = null;
-        return new Promise((resolve6) => {
+        return new Promise((resolve7) => {
           leavePush = new push_1.default(this, constants_1.CHANNEL_EVENTS.leave, {}, timeout);
           leavePush.receive("ok", () => {
             onClose();
-            resolve6("ok");
+            resolve7("ok");
           }).receive("timeout", () => {
             onClose();
-            resolve6("timed out");
+            resolve7("timed out");
           }).receive("error", () => {
-            resolve6("error");
+            resolve7("error");
           });
           leavePush.send();
           if (!this._canPush()) {
@@ -5390,8 +5390,8 @@ var require_RealtimeChannel = __commonJS({
       _trigger(type, payload, ref) {
         var _a, _b;
         const typeLower = type.toLocaleLowerCase();
-        const { close, error, leave, join: join3 } = constants_1.CHANNEL_EVENTS;
-        const events = [close, error, leave, join3];
+        const { close, error, leave, join: join4 } = constants_1.CHANNEL_EVENTS;
+        const events = [close, error, leave, join4];
         if (ref && events.indexOf(typeLower) >= 0 && ref !== this._joinRef()) {
           return;
         }
@@ -6964,7 +6964,7 @@ function _objectSpread2(e) {
   return e;
 }
 async function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
-  return new Promise((resolve6, reject) => {
+  return new Promise((resolve7, reject) => {
     fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
       if (!result.ok) throw result;
       if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
@@ -6974,7 +6974,7 @@ async function _handleRequest(fetcher, method, url, options, parameters, body, n
         if (!contentType || !contentType.includes("application/json")) return {};
       }
       return result.json();
-    }).then((data) => resolve6(data)).catch((error) => handleError(error, reject, options, namespace));
+    }).then((data) => resolve7(data)).catch((error) => handleError(error, reject, options, namespace));
   });
 }
 function createFetchApi(namespace = "storage") {
@@ -14510,7 +14510,7 @@ function brokeredPreviewStorage() {
   const RESULT = "lovable-preview-auth:result";
   const TIMEOUT = 2e3;
   const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const request = (type, key, value2) => new Promise((resolve6) => {
+  const request = (type, key, value2) => new Promise((resolve7) => {
     const requestId = newId();
     let done = false;
     let timer;
@@ -14519,7 +14519,7 @@ function brokeredPreviewStorage() {
       done = true;
       clearTimeout(timer);
       window.removeEventListener("message", onMessage);
-      resolve6(r);
+      resolve7(r);
     };
     const onMessage = (e) => {
       if (editorOrigins.indexOf(e.origin) < 0) return;
@@ -17790,8 +17790,8 @@ __export(link_exports, {
   link: () => link
 });
 import { spawnSync } from "node:child_process";
-import { writeFileSync as writeFileSync4, mkdirSync as mkdirSync3 } from "node:fs";
-import { dirname as dirname4, resolve as resolve4 } from "node:path";
+import { writeFileSync as writeFileSync5, mkdirSync as mkdirSync4 } from "node:fs";
+import { dirname as dirname5, resolve as resolve5 } from "node:path";
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { encoding: "utf8", ...opts });
   if (r.status !== 0) {
@@ -17804,12 +17804,12 @@ ${r.stderr || r.stdout}`;
 function link(asmText, outPath, opts = {}) {
   const as = opts.as || "as";
   const ld = opts.ld || "ld";
-  const tmp = opts.tmpDir || dirname4(outPath);
-  mkdirSync3(tmp, { recursive: true });
-  const progS = resolve4(tmp, "_sdev_prog.s");
-  const progO = resolve4(tmp, "_sdev_prog.o");
-  const rtO = resolve4(tmp, "_sdev_runtime.o");
-  writeFileSync4(progS, asmText);
+  const tmp = opts.tmpDir || dirname5(outPath);
+  mkdirSync4(tmp, { recursive: true });
+  const progS = resolve5(tmp, "_sdev_prog.s");
+  const progO = resolve5(tmp, "_sdev_prog.o");
+  const rtO = resolve5(tmp, "_sdev_runtime.o");
+  writeFileSync5(progS, asmText);
   run(as, ["--64", "-o", progO, progS]);
   run(as, ["--64", "-o", rtO, RUNTIME_S]);
   run(ld, ["-o", outPath, rtO, progO]);
@@ -17819,13 +17819,13 @@ var RUNTIME_S;
 var init_link = __esm({
   "lang/native/link.mjs"() {
     RUNTIME_S = (() => {
-      if (process.env.SDEV_RUNTIME_S) return resolve4(process.env.SDEV_RUNTIME_S);
+      if (process.env.SDEV_RUNTIME_S) return resolve5(process.env.SDEV_RUNTIME_S);
       try {
         const u = import.meta.url;
-        if (u) return resolve4(new URL("./runtime.s", u).pathname);
+        if (u) return resolve5(new URL("./runtime.s", u).pathname);
       } catch {
       }
-      return resolve4(typeof __dirname !== "undefined" ? __dirname : ".", "runtime.s");
+      return resolve5(typeof __dirname !== "undefined" ? __dirname : ".", "runtime.s");
     })();
   }
 });
@@ -17833,8 +17833,8 @@ var init_link = __esm({
 // cli/index.ts
 init_env();
 init_env();
-import { writeFileSync as writeFileSync5, readFileSync as readFileSync5, mkdirSync as mkdirSync4, existsSync as existsSync5 } from "node:fs";
-import { resolve as resolve5, basename as basename2, dirname as dirname5, extname } from "node:path";
+import { writeFileSync as writeFileSync6, readFileSync as readFileSync6, mkdirSync as mkdirSync5, existsSync as existsSync6 } from "node:fs";
+import { resolve as resolve6, basename as basename2, dirname as dirname6, extname } from "node:path";
 import { createInterface as createInterface2 } from "node:readline";
 
 // src/lang/keywords.ts
@@ -30129,8 +30129,94 @@ async function runEditor(opts) {
   if (dirty) console.log(`discarded unsaved changes to ${basename(path)}`);
 }
 
+// cli/version.ts
+var VERSION = "5.1.0";
+var SITE = "https://web.sdev.codes";
+
+// cli/update.ts
+import { existsSync as existsSync5, readFileSync as readFileSync5, writeFileSync as writeFileSync4, renameSync, chmodSync as chmodSync2, mkdirSync as mkdirSync3 } from "node:fs";
+import { dirname as dirname4, join as join3, resolve as resolve4 } from "node:path";
+import { fileURLToPath } from "node:url";
+init_env();
+function newer(a, b) {
+  const pa = a.split(".").map(Number), pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) > (pb[i] ?? 0);
+  return false;
+}
+async function fetchReleases() {
+  try {
+    const res = await fetch(`${process.env.SDEV_RELEASES_URL ?? SITE + "/releases.json"}`, { headers: { "cache-control": "no-cache" } });
+    if (!res.ok) return null;
+    const j = await res.json();
+    return typeof j?.version === "string" ? j : null;
+  } catch {
+    return null;
+  }
+}
+var stampFile = () => join3(SDEV_HOME, "update-check.json");
+async function maybeNotifyUpdate() {
+  if (process.env.SDEV_NO_UPDATE_CHECK === "1" || !process.stdout.isTTY) return;
+  try {
+    const f = stampFile();
+    const last = existsSync5(f) ? JSON.parse(readFileSync5(f, "utf8")) : null;
+    if (last?.latest && newer(last.latest, VERSION)) {
+      process.stderr.write(`
+sdev ${last.latest} is available (you have ${VERSION}). Run: sdev update
+`);
+    }
+    if (last && Date.now() - last.at < 24 * 3600 * 1e3) return;
+    const r = await fetchReleases();
+    mkdirSync3(SDEV_HOME, { recursive: true });
+    writeFileSync4(f, JSON.stringify({ at: Date.now(), latest: r?.version ?? last?.latest }));
+  } catch {
+  }
+}
+function selfPath() {
+  try {
+    return fileURLToPath(import.meta.url);
+  } catch {
+    return resolve4(process.argv[1]);
+  }
+}
+async function runUpdate(force = false) {
+  const r = await fetchReleases();
+  if (!r) {
+    console.error("Could not reach the sdev website to check for updates.");
+    process.exitCode = 1;
+    return;
+  }
+  if (!force && !newer(r.version, VERSION)) {
+    console.log(`sdev ${VERSION} is the newest version.`);
+    return;
+  }
+  const self2 = selfPath();
+  const dir = dirname4(self2);
+  console.log(`Updating sdev ${VERSION} -> ${r.version}\u2026`);
+  const get2 = async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`download failed (${res.status}): ${url}`);
+    return new Uint8Array(await res.arrayBuffer());
+  };
+  try {
+    const cli = await get2(r.cli.url);
+    const extras = [];
+    if (r.cli.wasm) extras.push(["sdev-seed.wasm", await get2(r.cli.wasm)]);
+    if (r.cli.runtime) extras.push(["runtime.s", await get2(r.cli.runtime)]);
+    const tmp = self2 + ".new";
+    writeFileSync4(tmp, cli);
+    chmodSync2(tmp, 493);
+    for (const [name, bytes] of extras) writeFileSync4(join3(dir, name), bytes);
+    renameSync(tmp, self2);
+    writeFileSync4(stampFile(), JSON.stringify({ at: Date.now(), latest: r.version }));
+    console.log(`sdev is now ${r.version}.${r.notes ? "\n" + r.notes : ""}`);
+  } catch (e) {
+    console.error(`Update failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.error("If sdev was installed with npm, run: npm install -g sdev-lang@latest");
+    process.exitCode = 1;
+  }
+}
+
 // cli/index.ts
-var VERSION = "5.0.0";
 var SDEVC_MAGIC = "SDEVC4";
 var argv = process.argv.slice(2);
 function flag(name, short) {
@@ -30249,6 +30335,7 @@ SETTINGS
   translate <file> --to <Language> [-o out]
   home                    Where the CLI keeps local state
   version
+  update [--force]        Update sdev to the newest version (checked daily)
 
 OPTIONS
   --dialect <slug|none>   Override the dialect for this run
@@ -30293,7 +30380,7 @@ async function cmdAgent(sub, rest) {
       const result = await understandAsync(readSource(file), { mode: "on" });
       const out = value("-o", "--out");
       if (out) {
-        writeFileSync5(resolve5(process.cwd(), out), result.source);
+        writeFileSync6(resolve6(process.cwd(), out), result.source);
         console.log("written:", out);
       } else console.log(result.source);
       return;
@@ -30392,7 +30479,7 @@ async function cmdRepl() {
 }
 async function cmdWatch(file) {
   const { watch } = await import("node:fs");
-  const path = resolve5(process.cwd(), file);
+  const path = resolve6(process.cwd(), file);
   const once = async () => {
     console.log(`
 --- ${(/* @__PURE__ */ new Date()).toLocaleTimeString()} ---`);
@@ -30427,7 +30514,7 @@ function cmdCompile(file) {
   };
   const out = value("-o", "--out") ?? file.replace(/\.sdev$/, "") + ".sdevc";
   const json = JSON.stringify(container);
-  writeFileSync5(out, json);
+  writeFileSync6(out, json);
   console.log(`compiled -> ${out} (${(json.length / 1024).toFixed(2)} KB, ${detected}, runtime ${prepared.runtime})`);
 }
 function loadContainer(file) {
@@ -30454,7 +30541,7 @@ async function cmdDisasm(file) {
   if (prepared.runtime === "v2") {
     const { compile: compile2, setSeedLoader: setSeedLoader2 } = await Promise.resolve().then(() => (init_compile_self(), compile_self_exports));
     const { seedWasmPath: seedWasmPath2 } = await Promise.resolve().then(() => (init_env(), env_exports));
-    setSeedLoader2(async () => readFileSync5(seedWasmPath2()));
+    setSeedLoader2(async () => readFileSync6(seedWasmPath2()));
     const program = await compile2(prepared.code, localModules(file, prepared.code));
     text3 = hexdump(program.bytecode);
   } else {
@@ -30465,7 +30552,7 @@ async function cmdDisasm(file) {
   }
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync5(out, text3);
+    writeFileSync6(out, text3);
     console.log("wrote", out);
   } else console.log(text3);
 }
@@ -30489,14 +30576,14 @@ async function cmdNative(file) {
       throw new Error(`cannot resolve module "${p}"`);
     }
   });
-  const outBin = value("-o", "--out") ?? resolve5(dirname5(resolve5(file)), basename2(file).replace(/\.sdev$/, ""));
+  const outBin = value("-o", "--out") ?? resolve6(dirname6(resolve6(file)), basename2(file).replace(/\.sdev$/, ""));
   const asmPath = outBin + ".s";
-  writeFileSync5(asmPath, asm);
+  writeFileSync6(asmPath, asm);
   if (flag("--emit-asm")) {
     console.log("wrote", asmPath);
     return;
   }
-  link2(asm, outBin, { as: value("--as"), ld: value("--ld"), tmpDir: dirname5(outBin) });
+  link2(asm, outBin, { as: value("--as"), ld: value("--ld"), tmpDir: dirname6(outBin) });
   console.log("wrote", outBin);
 }
 function cmdInfo(file) {
@@ -30505,7 +30592,7 @@ function cmdInfo(file) {
   const body = stripSignature(raw);
   const dialect = sig?.dialect ? findDialect(sig.dialect.replace(/^@[^/]+\//, "")) : null;
   const rows = [
-    ["file", resolve5(process.cwd(), file)],
+    ["file", resolve6(process.cwd(), file)],
     ["size", `${Buffer.byteLength(body)} bytes \xB7 ${body.split("\n").length} lines`],
     ["signed", hasSignature(raw) ? "yes" : "no"],
     ["runtime", sig?.rt ?? `${runtimePreference()} (default)`],
@@ -30520,7 +30607,7 @@ function cmdInfo(file) {
   for (const [k, v] of rows) console.log(k.padEnd(width) + "  " + v);
 }
 function cmdSign(sub, file) {
-  const path = resolve5(process.cwd(), file);
+  const path = resolve6(process.cwd(), file);
   const raw = readSource(file);
   if (sub === "show") {
     const sig = readSignature(raw);
@@ -30528,7 +30615,7 @@ function cmdSign(sub, file) {
     return;
   }
   if (sub === "strip") {
-    writeFileSync5(path, stripSignature(raw));
+    writeFileSync6(path, stripSignature(raw));
     console.log("signature removed");
     return;
   }
@@ -30548,7 +30635,7 @@ function cmdSign(sub, file) {
       libs: libraryReferences(body).map(formatAddress),
       origin: previous?.origin ?? null
     });
-    writeFileSync5(path, signed);
+    writeFileSync6(path, signed);
     console.log("stamped", basename2(path));
     return;
   }
@@ -30628,7 +30715,7 @@ async function cmdDialect(sub, rest) {
       const text3 = generateDialectDocs(spec);
       const out = value("-o", "--out");
       if (out) {
-        writeFileSync5(out, text3);
+        writeFileSync6(out, text3);
         console.log("wrote", out, `(template v${TEMPLATE_VERSION})`);
       } else console.log(text3);
       return;
@@ -30711,7 +30798,7 @@ ${GROUP_LABELS[entry.group]}`);
     }
     case "export": {
       const out = value("-o", "--out") ?? rest[0] ?? "sdev-dialects.json";
-      writeFileSync5(out, JSON.stringify({ format: "sdev-dialects", version: 1, dialects: listDialects() }, null, 2));
+      writeFileSync6(out, JSON.stringify({ format: "sdev-dialects", version: 1, dialects: listDialects() }, null, 2));
       console.log("wrote", out);
       return;
     }
@@ -30734,7 +30821,7 @@ ${GROUP_LABELS[entry.group]}`);
       setActiveSlug(preset.spec.meta.slug);
       const out = value("-o", "--out");
       if (out) {
-        writeFileSync5(out, preset.sample + "\n");
+        writeFileSync6(out, preset.sample + "\n");
         console.log("wrote sample to", out);
       }
       console.log(`installed and using ${preset.spec.meta.name}`);
@@ -30908,7 +30995,7 @@ async function cmdLib(sub, rest) {
     }
     case "export": {
       const out = value("-o", "--out") ?? rest[0] ?? "sdev-libraries.json";
-      writeFileSync5(out, exportOfflineBundle());
+      writeFileSync6(out, exportOfflineBundle());
       console.log("wrote", out);
       return;
     }
@@ -31005,9 +31092,9 @@ async function cmdCloud(sub, rest) {
     const rows = (data ?? []).filter((f) => !wanted || f.name === wanted);
     if (!rows.length) die("nothing to pull");
     const dir = value("-o", "--out") ?? ".";
-    mkdirSync4(dir, { recursive: true });
+    mkdirSync5(dir, { recursive: true });
     for (const f of rows) {
-      writeFileSync5(resolve5(dir, f.name), stripSignature(f.content ?? ""));
+      writeFileSync6(resolve6(dir, f.name), stripSignature(f.content ?? ""));
       console.log("pulled", f.name);
     }
     return;
@@ -31068,7 +31155,7 @@ async function cmdCloud(sub, rest) {
 function emit(text3) {
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync5(out, text3);
+    writeFileSync6(out, text3);
     console.log("wrote", out);
   } else process.stdout.write(text3.endsWith("\n") ? text3 : text3 + "\n");
 }
@@ -31081,7 +31168,10 @@ async function main() {
   const cmd = pos[0];
   if (!cmd || flag("--help", "-h")) return help();
   if (flag("--version", "-v")) return console.log("sdev v" + VERSION);
+  if (cmd !== "update") void maybeNotifyUpdate();
   switch (cmd) {
+    case "update":
+      return runUpdate(flag("--force"));
     case "run":
     case "exec":
       return cmdRun(pos[1] ?? die("sdev run <file>"));
@@ -31105,7 +31195,7 @@ async function main() {
       const formatted = formatSdev(stripSignature(raw));
       if (flag("-w", "--write")) {
         const sig = readSignature(raw);
-        writeFileSync5(resolve5(process.cwd(), file), sig ? repairSignature(raw.split("\n")[0] + "\n" + formatted) : formatted);
+        writeFileSync6(resolve6(process.cwd(), file), sig ? repairSignature(raw.split("\n")[0] + "\n" + formatted) : formatted);
         console.log("formatted", basename2(file));
       } else process.stdout.write(formatted.endsWith("\n") ? formatted : formatted + "\n");
       return;
@@ -31170,7 +31260,7 @@ async function main() {
     case "help":
       return help();
     default: {
-      if (existsSync5(resolve5(process.cwd(), cmd))) return cmdRun(cmd);
+      if (existsSync6(resolve6(process.cwd(), cmd))) return cmdRun(cmd);
       console.error(`unknown command "${cmd}"`);
       help();
       process.exit(1);

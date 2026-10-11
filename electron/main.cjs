@@ -75,6 +75,20 @@ function createWindow() {
   });
 }
 
+// Only the sdev IDE itself (the website or the bundled copy) may use the
+// desktop bridge — never a page it navigates to.
+function trusted(e) {
+  try {
+    const u = new URL(e.senderFrame ? e.senderFrame.url : e.sender.getURL());
+    return u.protocol === 'file:' || u.origin === new URL(SITE).origin || (isDev && u.hostname === 'localhost');
+  } catch { return false; }
+}
+const _handle = ipcMain.handle.bind(ipcMain);
+ipcMain.handle = (ch, fn) => _handle(ch, (e, ...a) => {
+  if (!trusted(e)) throw new Error('sdev desktop bridge: untrusted page');
+  return fn(e, ...a);
+});
+
 // ---- IPC: filesystem ------------------------------------------------------
 ipcMain.handle('sdev:openFile', async () => {
   const r = await dialog.showOpenDialog({
