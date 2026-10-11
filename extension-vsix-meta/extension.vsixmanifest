@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Language="en-US" Id="sdev-language" Version="5.1.0" Publisher="sdev-lang"/>
+    <Identity Language="en-US" Id="sdev-language" Version="5.1.0" Publisher="CodeSM"/>
     <DisplayName>sdev Language</DisplayName>
     <Description xml:space="preserve">Official VS Code support for the sdev programming language — v1 + v2 syntax highlighting, snippets, hardware &amp; ML support, and built-in run/build commands.</Description>
     <Tags>sdev,language,interpreter,compiler,wasm,syntax,snippets</Tags>
@@ -9,13 +9,13 @@
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
       <Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.75.0"/>
-      <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="https://s-dev.lovable.app"/>
+      <Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="https://sdev.codes"/>
       <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value=""/>
       <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value=""/>
       <Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value=""/>
     </Properties>
-    <Icon>extension/icon.png</Icon>
-    <License>extension/LICENSE</License>
+    <Icon>files/extension/icon.png</Icon>
+    <License>files/extension/LICENSE</License>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
