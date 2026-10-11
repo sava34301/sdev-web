@@ -1,0 +1,23 @@
+!#ai
+// A to-do list, written in sdev:ai.
+v todos = []
+f add(task) {
+  todos = todos + [task]
+  p("Added: " + task)
+}
+f show() {
+  ? len(todos) == 0 {
+    p("Nothing to do!")
+    r null
+  }
+  v n = 0
+  each t in todos {
+    n = n + 1
+    p(str(n) + ". " + t)
+  }
+}
+add("Buy milk")
+add("Write an sdev program")
+add("Share it with a friend")
+show()
+p("You have " + str(len(todos)) + " things to do.")
