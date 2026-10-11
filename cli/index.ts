@@ -48,7 +48,7 @@ import { runEditor } from './editor';
 import { prepare, prepareAsync, explainAgent, runPrepared, readSource, localModules, type PrepareOptions } from './pipeline';
 import { understandAsync, promoteToDialect, loadMemory } from '@/lang/agent';
 
-const VERSION = '5.0.0';
+import { VERSION, SITE } from './version';
 const SDEVC_MAGIC = 'SDEVC4';
 
 const argv = process.argv.slice(2);
