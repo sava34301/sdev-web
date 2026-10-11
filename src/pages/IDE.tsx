@@ -993,6 +993,21 @@ export default function IDEPage() {
     toast.success(toAi ? 'Opened as sdev:ai' : 'Opened as plain sdev');
   }, [activeFile]);
 
+  // Open one of the bundled example programs as a new file (runs as-is, sdev:ai included).
+  const openSample = useCallback(async (file: string) => {
+    const res = await fetch(`/samples/${file}`);
+    if (!res.ok) { toast.error(`Could not open ${file}`); return; }
+    const content = await res.text();
+    const id = nextFileId();
+    setFiles(prev => {
+      let name = file;
+      for (let n = 2; prev.some(f => f.name === name); n++) name = file.replace(/\.sdev$/, `-${n}.sdev`);
+      return [...prev, { id, name, content, folderId: null } as IdeFile];
+    });
+    setOpenIds(prev => [...prev, id]);
+    setActiveId(id);
+  }, []);
+
   const newFolder = useCallback((parentId: string | null = null) => {
     const id = `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setFolders(prev => [...prev, { id, name: 'New Folder', parentId, expanded: true }]);
@@ -1312,6 +1327,11 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   <DropdownMenuItem onClick={convertAiView} className="text-xs gap-2 cursor-pointer">
                     <Wand2 className="w-3.5 h-3.5" /> {activeFile && /^\s*(\/\/[^\n]*\n\s*)*!#ai\b/.test(activeFile.content) ? 'Open as plain sdev' : 'Open as sdev:ai'}
                   </DropdownMenuItem>
+                  {([['quiz.ai.sdev', 'sdev:ai example: quiz game'], ['todo.ai.sdev', 'sdev:ai example: to-do list']] as const).map(([file, label]) => (
+                    <DropdownMenuItem key={file} onClick={() => openSample(file)} className="text-xs gap-2 cursor-pointer">
+                      <FileCode className="w-3.5 h-3.5" /> {label}
+                    </DropdownMenuItem>
+                  ))}
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-xs text-muted-foreground">Snippets</DropdownMenuLabel>
                   {Object.entries(SNIPPETS).map(([name, snippet]) => (
