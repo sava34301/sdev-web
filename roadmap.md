@@ -5,6 +5,11 @@ SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
 ## Current task
+- [x] One version for every tool (`release.json`, `npm run release`); CLI, VS Code extension and desktop app update themselves from `releases.json`
+- [x] VS Code extension runs the same CLI as the website (dialects, understander, sdev:ai, v1/v2, native)
+- [x] Desktop app opens the live editor (offline: bundled copy) and announces desktop updates
+- [x] sdev:ai examples (quiz game, to-do list) open and run in the editor; no false warnings on sdev:ai files
+- [ ] Code understander's own parser, interpreter and block-closing rules written in SDEV (not started this turn)
 - [x] Build the next 3D sequence: exploded code layers, processor assembly and paired runtime targets; verified forward/reverse scroll, tablet framing and reduced motion.
 - [x] Research professional 3D scroll sites and replace the flat card stack with a real scroll-controlled 3D compiler scene; verify scene progress, framing, Playground and static mobile/reduced-motion fallbacks.
 - [x] Add refined scroll depth, reading progress, selectable code demos and language examples; verified Playground output, mobile overflow and reduced motion in the browser.

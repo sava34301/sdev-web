@@ -81,3 +81,7 @@ Syntax colouring, line numbers, and the status bar shows the runtime and the
 active dialect. `Ctrl+S` save, `Ctrl+R` save and run through the full
 pipeline, `Ctrl+F` find, `Ctrl+G` go to line, `Ctrl+K` cut line, `Ctrl+L`
 format, `Ctrl+Q` quit (asks once when there are unsaved changes).
+
+## Updating
+
+`sdev update` installs the newest version in place. The CLI checks once a day and tells you when one is out (`SDEV_NO_UPDATE_CHECK=1` turns the check off).
