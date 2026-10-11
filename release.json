@@ -1,0 +1,5 @@
+{
+  "version": "5.1.0",
+  "site": "https://web.sdev.codes",
+  "notes": "One version for the IDE, CLI, VS Code extension and desktop app. Everything now runs the same language code, including the code understander and sdev:ai."
+}

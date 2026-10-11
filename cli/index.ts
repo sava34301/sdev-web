@@ -48,7 +48,8 @@ import { runEditor } from './editor';
 import { prepare, prepareAsync, explainAgent, runPrepared, readSource, localModules, type PrepareOptions } from './pipeline';
 import { understandAsync, promoteToDialect, loadMemory } from '@/lang/agent';
 
-const VERSION = '5.0.0';
+import { VERSION } from './version';
+import { maybeNotifyUpdate, runUpdate } from './update';
 const SDEVC_MAGIC = 'SDEVC4';
 
 const argv = process.argv.slice(2);
@@ -182,6 +183,7 @@ SETTINGS
   translate <file> --to <Language> [-o out]
   home                    Where the CLI keeps local state
   version
+  update [--force]        Update sdev to the newest version (checked daily)
 
 OPTIONS
   --dialect <slug|none>   Override the dialect for this run
@@ -1009,7 +1011,11 @@ async function main(): Promise<void> {
   if (!cmd || flag('--help', '-h')) return help();
   if (flag('--version', '-v')) return console.log('sdev v' + VERSION);
 
+  if (cmd !== 'update') void maybeNotifyUpdate();
+
   switch (cmd) {
+    case 'update':
+      return runUpdate(flag('--force'));
     case 'run':
     case 'exec':
       return cmdRun(pos[1] ?? die('sdev run <file>'));

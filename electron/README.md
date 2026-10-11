@@ -60,3 +60,7 @@ Inside the app, `window.sdevDesktop` exposes:
 
 The web build does not define `window.sdevDesktop`, so any UI that gates
 on it stays hidden in the browser.
+
+## Updates
+
+The desktop app opens the live editor from the website, so it is always the newest version; without internet it uses the bundled copy. When the desktop shell itself changes, it offers the new download.

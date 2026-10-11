@@ -16,6 +16,33 @@ const { pathToFileURL } = require('node:url');
 
 const isDev = !!process.env.SDEV_DESKTOP_DEV;
 const DIST_INDEX = path.join(__dirname, '..', 'dist', 'index.html');
+// The IDE itself always comes from the website when online, so the desktop
+// app is always the newest version; the bundled copy is the offline fallback.
+const SITE = process.env.SDEV_SITE || 'https://web.sdev.codes';
+const SHELL_VERSION = (() => { try { return require('../release.json').version; } catch { return app.getVersion(); } })();
+
+function newer(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  return false;
+}
+
+/** The native shell (file dialogs, assembler bridge) changes rarely — tell the user when it does. */
+async function checkShellUpdate(win) {
+  try {
+    const res = await fetch(SITE + '/releases.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const rel = await res.json();
+    if (!newer(rel.version, SHELL_VERSION)) return;
+    const r = await dialog.showMessageBox(win, {
+      type: 'info',
+      message: `SDEV Desktop ${rel.version} is available`,
+      detail: `You have ${SHELL_VERSION}. The editor itself is already up to date; this update refreshes the desktop features.${rel.notes ? '\n\n' + rel.notes : ''}`,
+      buttons: ['Download', 'Later'],
+    });
+    if (r.response === 0) shell.openExternal(rel.desktop && rel.desktop.page ? rel.desktop.page : SITE);
+  } catch { /* offline */ }
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -33,11 +60,13 @@ function createWindow() {
     },
   });
 
+  const offline = () => win.loadFile(DIST_INDEX, { hash: '/ide' }).catch(() => win.loadFile(DIST_INDEX));
   if (isDev) {
     win.loadURL('http://localhost:8080/ide');
   } else {
-    // Load index.html and route the SPA to /ide via hash-less URL fragment.
-    win.loadFile(DIST_INDEX, { hash: '/ide' }).catch(() => win.loadFile(DIST_INDEX));
+    win.loadURL(SITE + '/ide').catch(offline);
+    win.webContents.once('did-fail-load', (_e, code) => { if (code !== -3) offline(); });
+    setTimeout(() => checkShellUpdate(win), 4000);
   }
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -45,6 +74,20 @@ function createWindow() {
     return { action: 'deny' };
   });
 }
+
+// Only the sdev IDE itself (the website or the bundled copy) may use the
+// desktop bridge — never a page it navigates to.
+function trusted(e) {
+  try {
+    const u = new URL(e.senderFrame ? e.senderFrame.url : e.sender.getURL());
+    return u.protocol === 'file:' || u.origin === new URL(SITE).origin || (isDev && u.hostname === 'localhost');
+  } catch { return false; }
+}
+const _handle = ipcMain.handle.bind(ipcMain);
+ipcMain.handle = (ch, fn) => _handle(ch, (e, ...a) => {
+  if (!trusted(e)) throw new Error('sdev desktop bridge: untrusted page');
+  return fn(e, ...a);
+});
 
 // ---- IPC: filesystem ------------------------------------------------------
 ipcMain.handle('sdev:openFile', async () => {

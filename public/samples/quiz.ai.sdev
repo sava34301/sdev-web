@@ -1,0 +1,24 @@
+!#ai
+// Capital-cities quiz, written in sdev:ai (the dialect made for AI models).
+v questions = [["Capital of France?", "paris"], ["Capital of Japan?", "tokyo"], ["Capital of Bulgaria?", "sofia"]]
+v score = 0
+v i = 0
+p("Welcome to the capitals quiz!")
+each q in questions {
+  i = i + 1
+  v answer = lower(trim(input(str(i) + ". " + q[0] + " ")))
+  ? answer == q[1] {
+    p("Correct!")
+    score = score + 1
+  } : {
+    p("Not quite - it is " + upper(q[1]))
+  }
+}
+p("You scored " + str(score) + " out of " + str(len(questions)))
+? score == len(questions) {
+  p("Perfect - share this with a friend!")
+} :? score > 0 {
+  p("Nice try - play again to beat your score.")
+} : {
+  p("Keep practising!")
+}

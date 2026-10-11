@@ -28,7 +28,8 @@
     "test:strip": "bun scripts/test-strip.ts",
     "test:ui": "bun scripts/test-ui.ts",
     "test:transpile": "bun scripts/test-transpile.ts",
-    "test:matrix": "bun scripts/test-matrix.ts"
+    "test:matrix": "bun scripts/test-matrix.ts",
+    "release": "node scripts/release.mjs"
   },
   "main": "electron/main.cjs",
   "dependencies": {

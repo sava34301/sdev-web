@@ -2,16 +2,35 @@
   "name": "sdev-language",
   "displayName": "sdev Language",
   "description": "Official VS Code support for the sdev programming language — v1 + v2 syntax highlighting, snippets, hardware & ML support, and built-in run/build commands.",
-  "version": "1.2.0",
+  "version": "5.1.0",
   "publisher": "sdev-lang",
-  "author": { "name": "sdev" },
+  "author": {
+    "name": "sdev"
+  },
   "license": "MIT",
   "icon": "icon.png",
-  "homepage": "https://s-dev.lovable.app",
-  "repository": { "type": "git", "url": "https://s-dev.lovable.app" },
-  "engines": { "vscode": "^1.75.0" },
-  "categories": ["Programming Languages", "Snippets", "Formatters"],
-  "keywords": ["sdev", "interpreter", "language", "compiler", "wasm", "arduino", "machine learning"],
+  "homepage": "https://web.sdev.codes",
+  "repository": {
+    "type": "git",
+    "url": "https://web.sdev.codes"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Formatters"
+  ],
+  "keywords": [
+    "sdev",
+    "interpreter",
+    "language",
+    "compiler",
+    "wasm",
+    "arduino",
+    "machine learning"
+  ],
   "main": "./extension.js",
   "activationEvents": [
     "onLanguage:sdev",
@@ -20,16 +39,26 @@
     "onCommand:sdev.runV2",
     "onCommand:sdev.buildNative",
     "onCommand:sdev.openPlayground",
-    "onCommand:sdev.openDocs"
+    "onCommand:sdev.openDocs",
+    "onCommand:sdev.checkForUpdates"
   ],
   "contributes": {
     "languages": [
       {
         "id": "sdev",
-        "aliases": ["sdev", "Sdev"],
-        "extensions": [".sdev", ".sdv"],
+        "aliases": [
+          "sdev",
+          "Sdev"
+        ],
+        "extensions": [
+          ".sdev",
+          ".sdv"
+        ],
         "configuration": "./language-configuration.json",
-        "icon": { "light": "./icon.png", "dark": "./icon.png" }
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
       }
     ],
     "grammars": [
@@ -37,46 +66,116 @@
         "language": "sdev",
         "scopeName": "source.sdev",
         "path": "./syntaxes/sdev.tmLanguage.json",
-        "embeddedLanguages": { "meta.embedded.block.javascript": "javascript" }
+        "embeddedLanguages": {
+          "meta.embedded.block.javascript": "javascript"
+        }
       }
     ],
     "snippets": [
-      { "language": "sdev", "path": "./snippets/sdev.json" }
+      {
+        "language": "sdev",
+        "path": "./snippets/sdev.json"
+      }
     ],
     "commands": [
-      { "command": "sdev.run", "title": "sdev: Run File", "icon": "$(play)" },
-      { "command": "sdev.runSelection", "title": "sdev: Run Selection" },
-      { "command": "sdev.runV2", "title": "sdev: Run File with v2 (self-hosted compiler + seed VM)" },
-      { "command": "sdev.buildNative", "title": "sdev: Build Native Executable (x86-64)" },
-      { "command": "sdev.openPlayground", "title": "sdev: Open Online Playground" },
-      { "command": "sdev.openDocs", "title": "sdev: Open Documentation" }
+      {
+        "command": "sdev.run",
+        "title": "sdev: Run File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "sdev.runSelection",
+        "title": "sdev: Run Selection"
+      },
+      {
+        "command": "sdev.runV2",
+        "title": "sdev: Run File with v2 (self-hosted compiler + seed VM)"
+      },
+      {
+        "command": "sdev.buildNative",
+        "title": "sdev: Build Native Executable (x86-64)"
+      },
+      {
+        "command": "sdev.openPlayground",
+        "title": "sdev: Open Online Playground"
+      },
+      {
+        "command": "sdev.openDocs",
+        "title": "sdev: Open Documentation"
+      },
+      {
+        "command": "sdev.checkForUpdates",
+        "title": "sdev: Check for Updates"
+      }
     ],
     "menus": {
       "editor/title/run": [
-        { "command": "sdev.run", "when": "resourceLangId == sdev", "group": "navigation" },
-        { "command": "sdev.runV2", "when": "resourceLangId == sdev", "group": "navigation" }
+        {
+          "command": "sdev.run",
+          "when": "resourceLangId == sdev",
+          "group": "navigation"
+        },
+        {
+          "command": "sdev.runV2",
+          "when": "resourceLangId == sdev",
+          "group": "navigation"
+        }
       ],
       "editor/context": [
-        { "command": "sdev.runSelection", "when": "resourceLangId == sdev && editorHasSelection", "group": "z_sdev" }
+        {
+          "command": "sdev.runSelection",
+          "when": "resourceLangId == sdev && editorHasSelection",
+          "group": "z_sdev"
+        }
       ],
       "commandPalette": [
-        { "command": "sdev.run", "when": "resourceLangId == sdev" },
-        { "command": "sdev.runV2", "when": "resourceLangId == sdev" },
-        { "command": "sdev.buildNative", "when": "resourceLangId == sdev" },
-        { "command": "sdev.runSelection", "when": "resourceLangId == sdev && editorHasSelection" }
+        {
+          "command": "sdev.run",
+          "when": "resourceLangId == sdev"
+        },
+        {
+          "command": "sdev.runV2",
+          "when": "resourceLangId == sdev"
+        },
+        {
+          "command": "sdev.buildNative",
+          "when": "resourceLangId == sdev"
+        },
+        {
+          "command": "sdev.runSelection",
+          "when": "resourceLangId == sdev && editorHasSelection"
+        }
       ]
     },
     "keybindings": [
-      { "command": "sdev.run", "key": "ctrl+enter", "mac": "cmd+enter", "when": "resourceLangId == sdev && editorTextFocus" },
-      { "command": "sdev.runSelection", "key": "ctrl+shift+enter", "mac": "cmd+shift+enter", "when": "resourceLangId == sdev && editorHasSelection" },
-      { "command": "sdev.runV2", "key": "ctrl+alt+enter", "mac": "cmd+alt+enter", "when": "resourceLangId == sdev && editorTextFocus" }
+      {
+        "command": "sdev.run",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "resourceLangId == sdev && editorTextFocus"
+      },
+      {
+        "command": "sdev.runSelection",
+        "key": "ctrl+shift+enter",
+        "mac": "cmd+shift+enter",
+        "when": "resourceLangId == sdev && editorHasSelection"
+      },
+      {
+        "command": "sdev.runV2",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "resourceLangId == sdev && editorTextFocus"
+      }
     ],
     "configuration": {
       "title": "sdev",
       "properties": {
         "sdev.dialect": {
           "type": "string",
-          "enum": ["v1", "v2"],
+          "enum": [
+            "v1",
+            "v2"
+          ],
           "default": "v1",
           "enumDescriptions": [
             "v1 — the tree-walking interpreter (forge / conjure / ponder, graphics, web, Leaflet).",
@@ -86,9 +185,13 @@
         },
         "sdev.runner": {
           "type": "string",
-          "enum": ["bundled", "node", "python"],
+          "enum": [
+            "bundled",
+            "node",
+            "python"
+          ],
           "default": "bundled",
-          "description": "Which runtime to use for v1 files. 'bundled' uses the interpreter shipped with this extension (no install required)."
+          "description": "Which runtime to use. 'bundled' runs the sdev CLI shipped with this extension — the same language code as the website (dialects, code understander, sdev:ai, v1 and v2)."
         },
         "sdev.nodePath": {
           "type": "string",
@@ -114,6 +217,11 @@
           "type": "string",
           "default": "",
           "description": "Where native executables are written. Empty = next to the source file."
+        },
+        "sdev.autoUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Install new sdev versions automatically (checked once a day)."
         }
       }
     }
