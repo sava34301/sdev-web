@@ -1,0 +1,146 @@
+// =====================================================================
+// blocks.sdev — the code understander's block-closing rules, in sdev.
+//
+// People rarely write `end`, and AI models sometimes forget a `}`.
+// These rules close what was left open, using indentation as the guide:
+//   * an indented body closes as soon as the code steps back out of it
+//   * a blank line followed by a shallower line closes it too
+//   * anything still open is closed at the end of the file
+// Flat files that write their own `end` / `}` are left untouched.
+// =====================================================================
+
+forge BLOCK_OPENS be "^\\s*(?:to\\s+[\\p{L}\\p{N}_]|if\\b|while\\b|for\\s+each\\b|kind\\b|attempt\\b|match\\b)"
+forge BLOCK_CLOSES be "^\\s*end\\b"
+forge BLOCK_CONTINUES be "^\\s*(?:else|end)\\b"
+
+conjure next_code_line(ls, from) ::
+  forge j be from
+  cycle j < measure(ls) ::
+    ponder trim(ls[j]) differs "" ::
+      yield ls[j]
+    ;;
+    j be j + 1
+  ;;
+  yield void
+;;
+
+// English canonical form: if / while / for each / to … closed by `end`
+conjure close_blocks(source) ::
+  forge ls be lines(source)
+  forge out be []
+  // each open block is [indent, has_body]
+  forge stack be []
+  forge i be 0
+  cycle i < measure(ls) ::
+    forge line be ls[i]
+    ponder trim(line) equals "" ::
+      forge nxt be next_code_line(ls, i + 1)
+      ponder nxt differs void also isnt regex_test(nxt, BLOCK_CONTINUES) ::
+        cycle measure(stack) > 0 also measure(leading_space(nxt)) <= measure(stack[-1][0]) ::
+          out be out + [stack[-1][0] + "end"]
+          stack be portion(stack, 0, measure(stack) - 1)
+        ;;
+      ;;
+      out be out + [line]
+    ;; otherwise ::
+      forge w be measure(leading_space(line))
+      forge cont be regex_test(line, BLOCK_CONTINUES)
+      cycle measure(stack) > 0 also stack[-1][1] also w <= measure(stack[-1][0]) also isnt (cont also w equals measure(stack[-1][0])) ::
+        out be out + [stack[-1][0] + "end"]
+        stack be portion(stack, 0, measure(stack) - 1)
+      ;;
+      ponder measure(stack) > 0 also w > measure(stack[-1][0]) ::
+        stack[-1] be [stack[-1][0], yep]
+      ;;
+      ponder regex_test(line, BLOCK_CLOSES) ::
+        ponder measure(stack) > 0 ::
+          stack be portion(stack, 0, measure(stack) - 1)
+        ;;
+      ;; otherwise ponder regex_test(line, "^\\s*else\\b") also measure(stack) > 0 ::
+        stack[-1] be [stack[-1][0], nope]
+      ;; otherwise ponder regex_test(line, BLOCK_OPENS) ::
+        stack be stack + [[leading_space(line), nope]]
+      ;;
+      out be out + [line]
+    ;;
+    i be i + 1
+  ;;
+  cycle measure(stack) > 0 ::
+    out be out + [stack[-1][0] + "end"]
+    stack be portion(stack, 0, measure(stack) - 1)
+  ;;
+  yield unlines(out)
+;;
+
+// code of a line with strings and // comments removed, for brace counting
+conjure brace_code(line) ::
+  forge c be regex_replace(line, "\"(?:\\\\.|[^\"\\\\])*\"|'[^']*'", "\"\"")
+  forge k be find_from(c, "//", 0)
+  ponder k >= 0 ::
+    c be snatch(c, 0, k)
+  ;;
+  yield trim(c)
+;;
+
+// sdev:ai form: blocks are { … }; add any `}` a model forgot
+conjure close_ai_braces(source) ::
+  forge ls be lines(source)
+  forge out be []
+  forge stack be []
+  iterate line through ls ::
+    forge code be brace_code(line)
+    ponder code equals "" ::
+      out be out + [line]
+    ;; otherwise ::
+      forge w be measure(leading_space(line))
+      forge closing be startswith(code, "}")
+      // stepping back to (or out of) an opener's level without `}` closes it
+      cycle measure(stack) > 0 also (w < measure(stack[-1]) either (w equals measure(stack[-1]) also isnt closing)) ::
+        out be out + [stack[-1] + "}"]
+        stack be portion(stack, 0, measure(stack) - 1)
+      ;;
+      ponder closing also measure(stack) > 0 ::
+        stack be portion(stack, 0, measure(stack) - 1)
+      ;;
+      ponder endswith(code, "{") ::
+        stack be stack + [leading_space(line)]
+      ;;
+      out be out + [line]
+    ;;
+  ;;
+  cycle measure(stack) > 0 ::
+    out be out + [stack[-1] + "}"]
+    stack be portion(stack, 0, measure(stack) - 1)
+  ;;
+  yield unlines(out)
+;;
+
+// structure report: [[line, message], …] for blocks that never close or close twice
+conjure check_blocks(source) ::
+  forge problems be []
+  forge stack be []
+  forge n be 0
+  iterate line through lines(source) ::
+    n be n + 1
+    forge code be brace_code(line)
+    ponder endswith(code, "::") either endswith(code, "{") ::
+      ponder startswith(code, ";;") either startswith(code, "}") ::
+        ponder measure(stack) equals 0 ::
+          problems be problems + [[n, "nothing is open here to continue"]]
+        ;;
+      ;; otherwise ::
+        stack be stack + [n]
+      ;;
+    ;; otherwise ponder code equals ";;" either code equals "}" ::
+      ponder measure(stack) equals 0 ::
+        problems be problems + [[n, "this closes a block that was never opened"]]
+      ;; otherwise ::
+        stack be portion(stack, 0, measure(stack) - 1)
+      ;;
+    ;;
+  ;;
+  iterate s through stack ::
+    problems be problems + [[s, "this block is never closed"]]
+  ;;
+  yield problems
+;;
