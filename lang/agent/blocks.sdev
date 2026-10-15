@@ -50,14 +50,14 @@ conjure close_blocks(source) ::
         stack be portion(stack, 0, measure(stack) - 1)
       ;;
       ponder measure(stack) > 0 also w > measure(stack[-1][0]) ::
-        stack[-1] be [stack[-1][0], yep]
+        stack[measure(stack) - 1] be [stack[-1][0], yep]
       ;;
       ponder regex_test(line, BLOCK_CLOSES) ::
         ponder measure(stack) > 0 ::
           stack be portion(stack, 0, measure(stack) - 1)
         ;;
       ;; otherwise ponder regex_test(line, "^\\s*else\\b") also measure(stack) > 0 ::
-        stack[-1] be [stack[-1][0], nope]
+        stack[measure(stack) - 1] be [stack[-1][0], nope]
       ;; otherwise ponder regex_test(line, BLOCK_OPENS) ::
         stack be stack + [[leading_space(line), nope]]
       ;;
