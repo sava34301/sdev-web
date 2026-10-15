@@ -13,8 +13,8 @@ forge BLOCK_OPENS be "^\\s*(?:to\\s+[\\p{L}\\p{N}_]|if\\b|while\\b|for\\s+each\\
 forge BLOCK_CLOSES be "^\\s*end\\b"
 forge BLOCK_CONTINUES be "^\\s*(?:else|end)\\b"
 
-conjure next_code_line(ls, from) ::
-  forge j be from
+conjure next_code_line(ls, start) ::
+  forge j be start
   cycle j < measure(ls) ::
     ponder trim(ls[j]) differs "" ::
       yield ls[j]
