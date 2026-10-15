@@ -90,3 +90,23 @@ ok('sdev:ai round trip', aiToSdev(sdevToAi(canon)) === canon);
 ok('strings untouched', canon.includes('"five == "'));
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
+
+// ---- block-closing rules written in sdev (lang/agent/blocks.sdev) ----
+{
+  const { sdevCloseBlocks, sdevCloseAiBraces, sdevCheckBlocks } = await import('../src/lang/agent/sdev-engine');
+  const { closeBlocks } = await import('../src/lang/agent/repair');
+  const samples = [
+    'set n to 5\nif n > 3\n  say "big"\nsay "done"',
+    'set n to 2\nif n is 2\n  say "two"\nelse\n  say "no"\nsay "x"',
+    'to add with a b\n  return a + b\n\nsay add(1, 2)',
+    'set i to 0\nwhile i < 3\n  if i is 1\n    say "one"\n  set i to i + 1',
+    'if 1 < 2\n  say "a"\nend\nsay "b"',
+  ];
+  for (const s of samples) ok('sdev block closer matches: ' + s.split('\n')[1], sdevCloseBlocks(s) === closeBlocks(s));
+  const ai = '!#ai\nv s = 0\neach n in [1, 2, 3] {\n  s += n\n  ? n == 2 {\n    p("two")\np("total " + str(s))';
+  ok('sdev:ai forgotten braces are closed', (sdevCloseAiBraces(ai).match(/}/g) ?? []).length === 2);
+  const r = execute(aiToSdev(ai), { agent: false });
+  ok('sdev:ai with += and missing braces runs', r.output.join('|') === 'two|total 6', r.output.join('|'));
+  ok('block check reports stray and unclosed', sdevCheckBlocks('ponder yep ::\n;;\n;;\nponder yep ::').length === 2);
+}
+console.log(`\n${passed} passed, ${failed} failed`);

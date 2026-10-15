@@ -14,7 +14,7 @@ import { scanDirectives, type AgentMode, type BrainMode } from './directives';
 import { repair, closeBlocks } from './repair';
 import { senseFile, parses, unknownNames, parseError } from './sense';
 import { think, online } from './brain';
-import { sdevUnderstand, isAiDialect, aiToSdev } from './sdev-engine';
+import { sdevUnderstand, isAiDialect, aiToSdev, sdevCloseBlocks } from './sdev-engine';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
   learnFromProgram, type AgentMemory, understandKey, recallResult, rememberResult,
@@ -99,11 +99,11 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 }
 
 /** Bumped whenever the understander changes how it reads files, so saved readings from older versions are never reused. */
-export const AGENT_VERSION = 'u5';
+export const AGENT_VERSION = 'u6';
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
-export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi, sdevDefinedNames, sdevProjectNames } from './sdev-engine';
+export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi, sdevDefinedNames, sdevProjectNames, sdevCloseBlocks, sdevCloseAiBraces, sdevCheckBlocks } from './sdev-engine';
 
 /**
  * A file that is a request in plain words ("make a window that is a
@@ -161,7 +161,7 @@ function runRules(prep: Prepared, opts: UnderstandOptions) {
   // People rarely write `end`. If their file doesn't hang together without it,
   // close what they left open — but only when that actually helps.
   let source = result.source;
-  const closed = closeBlocks(source);
+  const closed = sdevCloseBlocks(source) ?? closeBlocks(source);
   if (closed !== source && parses(closed)) source = closed;
   // Never make a working program worse: if the file as written holds together
   // and the agent's reading does not, the author's version wins.

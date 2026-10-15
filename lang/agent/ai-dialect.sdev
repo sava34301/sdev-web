@@ -13,6 +13,7 @@
 //
 //   v x = 5               forge x be 5
 //   x = x + 1             x be x + 1
+//   x += 2                x be x + (2)
 //   p(x)                  speak(x)
 //   f add(a, b) {         conjure add(a, b) ::
 //   r a + b               yield a + b
@@ -130,6 +131,11 @@ conjure ai_line_to_sdev(body) ::
   ponder body equals "next" ::
     yield "skip"
   ;;
+  // compound assignment: x += e / x -= e / x *= e / x /= e
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\[[^\\]]+\\]|\\." + AI_NAME + ")*)\\s*([-+*/])=\\s*(.+)$")
+  ponder m differs void ::
+    yield m[1] + " be " + m[1] + " " + m[2] + " (" + ai_map_code(m[3], yep) + ")"
+  ;;
   // index or name assignment: x = e / xs[0] = e / o.k = e
   m be regex_capture(body, "^(" + AI_NAME + "(?:\\[[^\\]]+\\]|\\." + AI_NAME + ")*)\\s*=\\s*([^=].*)$")
   ponder m differs void ::
@@ -141,7 +147,7 @@ conjure ai_line_to_sdev(body) ::
 
 conjure ai_to_sdev(source) ::
   forge out be []
-  iterate line through lines(source) ::
+  iterate line through lines(close_ai_braces(source)) ::
     forge indent be leading_space(line)
     forge body be trim(line)
     ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::
