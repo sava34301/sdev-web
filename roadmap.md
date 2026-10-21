@@ -4,7 +4,18 @@ Goal: every piece of the project that *can* be written in SDEV is written in
 SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
-## Current task
+## Current task — Arduino remake
+- [ ] Every Arduino board in the catalogue (Uno R3/R4 Minima/R4 WiFi/Q, Nano family, Mega, Leonardo, Micro, MKR, Zero, Due, Giga, Portenta, ESP32/ESP8266, Pico)
+- [ ] Every Arduino core command available in the `board` block (SDEV words + raw C++), `::`/`;;` and `{}` blocks
+- [ ] Every Library Manager library usable with `use "Name"` (compact index of all libraries)
+- [ ] Compile on the website with no install (hosted builder for supported boards, own build server for the rest)
+- [ ] Upload from the browser: STK500v1, STK500v2, AVR109, SAM-BA, DFU (WebUSB), esptool, UF2
+- [ ] Full hardware documentation generated from the command catalogue
+- [ ] Tests: translator, protocol simulators, real compiles of every example
+- [ ] (Earlier request, not started) canonical API registry + Runtime Explorer platform upgrade
+
+## Previous task
+
 - [x] One version for every tool (`release.json`, `npm run release`); CLI, VS Code extension and desktop app update themselves from `releases.json`
 - [x] VS Code extension runs the same CLI as the website (dialects, understander, sdev:ai, v1/v2, native)
 - [x] Desktop app opens the live editor (offline: bundled copy) and announces desktop updates
