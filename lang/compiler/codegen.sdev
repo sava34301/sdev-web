@@ -1687,6 +1687,21 @@ to parse_cmp with pos
       set expr_type[0] to 0
       return pos
     end
+    set str_cmp to 0
+    if lk is 1
+      set str_cmp to 1
+    end
+    if rk is 1
+      set str_cmp to 1
+    end
+    if str_cmp is 1
+      emit_byte(144)
+      if neg
+        emit_byte(48)
+      end
+      set expr_type[0] to 0
+      return pos
+    end
     if neg
       emit_byte(33)
     else

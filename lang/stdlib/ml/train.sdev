@@ -1,10 +1,11 @@
 // ============================================================
-// sdev ML Stdlib — Language-Model Training (Milestone 14)
+// sdev ML Stdlib — Language-Model Training (Milestone 14 + M15)
 // ============================================================
 // End-to-end training for the decoder-only model in transformer.sdev:
 // batching, next-token cross-entropy, Adam + gradient clipping,
-// temperature / top-k sampling, checkpoint save + load, and an
-// evaluation loop. Written entirely in sdev.
+// temperature / top-k sampling, text/JSON & binary ("SDEVML01")
+// checkpoint save + load, and an evaluation loop. Written entirely
+// in sdev.
 
 link "transformer.sdev"
 link "data.sdev"
@@ -150,7 +151,7 @@ conjure lm_complete(model, vocab, prompt, max_new, temperature, k) ::
     yield decode(vocab, lm_generate(model, ids, max_new, temperature, k))
 ;;
 
-// ---------- checkpoints ----------
+// ---------- checkpoints (text) ----------
 // Flat text format: one parameter tensor per line, "shape|values".
 conjure checkpoint_text(model) ::
     forge s be ""
@@ -205,6 +206,156 @@ conjure load_checkpoint(path, model) ::
         be i be i + 1
     ;;
     yield measure(model.params)
+;;
+
+// ---------- binary checkpoints (M15: "SDEVML01") ----------
+// Compact IEEE-754 binary64 hex-framed checkpoint format with magic
+// header "SDEVML01", version, step, loss, and flat parameter tensors.
+
+forge CKPT_MAGIC be "SDEVML01"
+forge CKPT_VERSION be 1
+forge CKPT_HEX_DIGITS be "0123456789abcdef"
+forge CKPT_SCRATCH_BUF be void
+
+conjure ckpt_buf() ::
+    either CKPT_SCRATCH_BUF equals void ::
+        be CKPT_SCRATCH_BUF be ffi_buf(8)
+    ;;
+    yield CKPT_SCRATCH_BUF
+;;
+
+conjure u32_to_hex8(n) ::
+    forge out be ""
+    forge i be 0
+    cycle i < 8 ::
+        forge nib be bitAnd(bitShiftRight(n, i * 4), 15)
+        be out be out + chr(ord(CKPT_HEX_DIGITS, nib))
+        be i be i + 1
+    ;;
+    yield out
+;;
+
+conjure hex_nibble(code) ::
+    either code >= 48 ::
+        either code <= 57 :: yield code - 48 ;;
+    ;;
+    either code >= 97 ::
+        either code <= 102 :: yield code - 87 ;;
+    ;;
+    either code >= 65 ::
+        either code <= 70 :: yield code - 55 ;;
+    ;;
+    yield 0
+;;
+
+conjure hex8_to_u32(s, offset) ::
+    forge acc be 0
+    forge i be 0
+    cycle i < 8 ::
+        forge nib be hex_nibble(ord(s, offset + i))
+        be acc be bitOr(acc, bitShiftLeft(nib, i * 4))
+        be i be i + 1
+    ;;
+    yield acc
+;;
+
+conjure f64_to_hex(x) ::
+    forge b be ckpt_buf()
+    ffi_write_f64(b, 0, 1.0 * x)
+    forge lo be ffi_read_i32(b, 0)
+    forge hi be ffi_read_i32(b, 1)
+    yield u32_to_hex8(lo) + u32_to_hex8(hi)
+;;
+
+conjure hex_to_f64(s, offset) ::
+    forge b be ckpt_buf()
+    forge lo be hex8_to_u32(s, offset)
+    forge hi be hex8_to_u32(s, offset + 8)
+    ffi_write_i32(b, 0, lo)
+    ffi_write_i32(b, 1, hi)
+    yield ffi_read_f64(b, 0)
+;;
+
+conjure checkpoint_bin_encode(model, step be 0, loss be 0.0) ::
+    forge s be CKPT_MAGIC + "\n"
+    be s be s + str(CKPT_VERSION) + "|" + str(step) + "|" + f64_to_hex(loss) + "|" + str(measure(model.params)) + "\n"
+    forge i be 0
+    cycle i < measure(model.params) ::
+        forge p be model.params[i]
+        forge line be ""
+        forge j be 0
+        cycle j < measure(p.shape) ::
+            either j > 0 :: be line be line + "," ;;
+            be line be line + str(p.shape[j])
+            be j be j + 1
+        ;;
+        be line be line + "|"
+        be j be 0
+        cycle j < measure(p.data) ::
+            be line be line + f64_to_hex(p.data[j])
+            be j be j + 1
+        ;;
+        be s be s + line + "\n"
+        be i be i + 1
+    ;;
+    yield s
+;;
+
+conjure save_checkpoint_bin(path, model, step be 0, loss be 0.0) ::
+    forge payload be checkpoint_bin_encode(model, step, loss)
+    write_file(path, payload)
+    yield {
+        ok: yep,
+        magic: CKPT_MAGIC,
+        version: CKPT_VERSION,
+        step: step,
+        loss: loss,
+        params: measure(model.params),
+        bytes: measure(payload)
+    }
+;;
+
+conjure load_checkpoint_bin(path, model) ::
+    forge raw be read_file(path)
+    forge rows be split_text(raw, "\n")
+    either measure(rows) < 2 ::
+        yield { ok: nope, err: "truncated binary checkpoint", magic: "", version: 0, step: 0, loss: 0.0, params: 0 }
+    ;;
+    either rows[0] differs CKPT_MAGIC ::
+        yield { ok: nope, err: "invalid checkpoint magic", magic: rows[0], version: 0, step: 0, loss: 0.0, params: 0 }
+    ;;
+    forge meta be split_text(rows[1], "|")
+    forge ver be morph(meta[0], "number")
+    forge step be morph(meta[1], "number")
+    forge loss be hex_to_f64(meta[2], 0)
+    forge i be 0
+    cycle i < measure(model.params) ::
+        forge row_idx be 2 + i
+        either row_idx < measure(rows) ::
+            forge parts be split_text(rows[row_idx], "|")
+            either measure(parts) equals 2 ::
+                forge hex_blob be parts[1]
+                forge p be model.params[i]
+                forge j be 0
+                cycle j < measure(p.data) ::
+                    forge off be j * 16
+                    either off + 16 <= measure(hex_blob) ::
+                        set p.data[j] to hex_to_f64(hex_blob, off)
+                    ;;
+                    be j be j + 1
+                ;;
+            ;;
+        ;;
+        be i be i + 1
+    ;;
+    yield {
+        ok: yep,
+        magic: CKPT_MAGIC,
+        version: ver,
+        step: step,
+        loss: loss,
+        params: measure(model.params)
+    }
 ;;
 
 // Small split helper so checkpoints need no host support beyond file I/O.

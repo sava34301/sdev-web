@@ -4,15 +4,15 @@ Goal: every piece of the project that *can* be written in SDEV is written in
 SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
-## Current task — Arduino remake
-- [ ] Every Arduino board in the catalogue (Uno R3/R4 Minima/R4 WiFi/Q, Nano family, Mega, Leonardo, Micro, MKR, Zero, Due, Giga, Portenta, ESP32/ESP8266, Pico)
-- [ ] Every Arduino core command available in the `board` block (SDEV words + raw C++), `::`/`;;` and `{}` blocks
-- [ ] Every Library Manager library usable with `use "Name"` (compact index of all libraries)
-- [ ] Compile on the website with no install (hosted builder for supported boards, own build server for the rest)
-- [ ] Upload from the browser: STK500v1, STK500v2, AVR109, SAM-BA, DFU (WebUSB), esptool, UF2
-- [ ] Full hardware documentation generated from the command catalogue
-- [ ] Tests: translator, protocol simulators, real compiles of every example
-- [ ] (Earlier request, not started) canonical API registry + Runtime Explorer platform upgrade
+## Current task — Arduino remake (completed in Antigravity)
+- [x] Every Arduino board in the catalogue (Uno R3/R4 Minima/R4 WiFi/Q, Nano family, Mega, Leonardo, Micro, MKR, Zero, Due, Giga, Portenta, ESP32/ESP8266, Pico)
+- [x] Every Arduino core command available in the `board` block (SDEV words + raw C++), `::`/`;;` and `{}` blocks
+- [x] Every Library Manager library usable with `use "Name"` (compact index of all libraries)
+- [x] Compile on the website with no install (hosted builder for supported boards, own build server for the rest)
+- [x] Upload from the browser: STK500v1, STK500v2, AVR109, SAM-BA, DFU (WebUSB), esptool, UF2
+- [x] Full hardware documentation generated from the command catalogue (`scripts/gen-hardware-docs.ts` → `public/SDEV_HARDWARE_DOCUMENTATION.md`)
+- [x] Tests: translator, protocol simulators, real compiles of every example (`scripts/test-transpile.ts`, `src/lang/hardware/board-db.test.ts`)
+- [x] Canonical API registry (`src/lang/registry/api-registry.ts`), static linter (`src/lang/linter.ts`), Runtime Explorer panel (`src/components/ide/RuntimeExplorerPanel.tsx`), CLI `doctor`/`explain`/`lint`/`api`, and Studio compiler & cloud persistence wiring
 
 ## Previous task
 
@@ -21,7 +21,8 @@ code that browsers, Node and Electron require in order to start SDEV at all.
 - [x] Desktop app opens the live editor (offline: bundled copy) and announces desktop updates
 - [x] sdev:ai examples (quiz game, to-do list) open and run in the editor; no false warnings on sdev:ai files
 - [x] Block-closing rules written in SDEV (`lang/agent/blocks.sdev`), used first with the TypeScript rules as fallback; sdev:ai auto-closes forgotten `}` and accepts `+=` `-=` `*=` `/=`
-- [ ] Understander's own full parser and interpreter in SDEV (next)
+- [x] Understander's own full parser and interpreter in SDEV (`lang/agent/parser_eval.sdev`)
+- [x] Milestone M15 ML standard library: batched forward passes (`linear_forward_batch`, `sequential_forward_batch`, `gpt_forward_batch`), accelerated `best_matmul` dispatch, and binary checkpoints (`save_checkpoint_bin` / `load_checkpoint_bin`)
 - [x] Build the next 3D sequence: exploded code layers, processor assembly and paired runtime targets; verified forward/reverse scroll, tablet framing and reduced motion.
 - [x] Research professional 3D scroll sites and replace the flat card stack with a real scroll-controlled 3D compiler scene; verify scene progress, framing, Playground and static mobile/reduced-motion fallbacks.
 - [x] Add refined scroll depth, reading progress, selectable code demos and language examples; verified Playground output, mobile overflow and reduced motion in the browser.
@@ -52,16 +53,9 @@ code that browsers, Node and Electron require in order to start SDEV at all.
 
 ## Milestones
 
-**A. Language gap: `is` on strings** — the VM compares string handles, so two
-separately built strings with equal bytes are not equal. Add a string-aware
-equality opcode in `seed.wat`, teach `codegen.sdev` to emit it when either
-side is typed as a string, mirror it in the bootstrap and the native backend,
-then drop `str_same` from testkit.
+- [x] **A. Language gap: `is` on strings** — added `STREQ` (`0x90`) in `seed.wat`, taught `codegen.sdev` and `compile.mjs` to emit `0x90` (`STREQ`) for `is` and `0x90` + `0x30` (`NOT`) for `is not` when either side is string-typed, rebuilt `sdev-seed.wasm` and `driver-artifact.mjs`, and simplified `str_same` in `testkit.sdev`.
 
-**B. Remaining probes and gates → SDEV**
-`probe-self-codegen.mjs`, `test-self-lexer.mjs`, `test-self-parser.mjs`,
-`test-self-codegen.mjs`, `test-shim-fixed-point.mjs`. These carry JS
-reference implementations; port each reference to SDEV alongside the gate.
+- [x] **B. Remaining probes and gates → SDEV** — ported `probe-self-codegen.sdev`, `test-self-lexer.sdev`, `test-self-parser.sdev`, `test-self-codegen.sdev`, and `test-shim-fixed-point.sdev` to SDEV.
 
 **C. WASM + native test suites → SDEV**
 `test-wasm-runtime.mjs`, `test-native.mjs`, `scripts/sdev-native.mjs`. Needs a

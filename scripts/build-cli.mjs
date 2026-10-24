@@ -49,9 +49,9 @@ await build({
   banner: { js: '#!/usr/bin/env node\nimport { createRequire as __cr } from "node:module";\nconst require = __cr(import.meta.url);' },
   alias: { '@': resolve(root, 'src') },
   define: {
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(envValue('VITE_SUPABASE_URL')),
-    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(envValue('VITE_SUPABASE_PUBLISHABLE_KEY')),
-    'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(envValue('VITE_SUPABASE_PROJECT_ID')),
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(envValue('VITE_SUPABASE_URL') || 'https://ygzqjekxzvsrkhuqhqbp.supabase.co'),
+    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(envValue('VITE_SUPABASE_PUBLISHABLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnenFqZWt4enZzcmtodXFocWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NzU1NDEsImV4cCI6MjA4NTQ1MTU0MX0.--CgBH0g9CJsHC_pRoaNp1nDDQ8cQ5m-gQ0w7zlnjiY'),
+    'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(envValue('VITE_SUPABASE_PROJECT_ID') || 'ygzqjekxzvsrkhuqhqbp'),
     'import.meta.env.MODE': '"production"',
     'import.meta.env.DEV': 'false',
     'import.meta.env.PROD': 'true',

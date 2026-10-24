@@ -44,6 +44,7 @@ import {
   AlertCircle, Hash, Wand2, ListTree, ArrowRight, Sparkles, Github, Globe, Usb,
 } from 'lucide-react';
 import { HardwarePanel } from '@/components/ide/HardwarePanel';
+import { RuntimeExplorerPanel } from '@/components/ide/RuntimeExplorerPanel';
 import { GitHubPushDialog } from '@/components/ide/GitHubPushDialog';
 import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
 import { toast } from 'sonner';
@@ -1248,6 +1249,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
     { id: 'problems' as SidePanel, icon: AlertCircle, label: `Problems (${problems.length})` },
     { id: 'assistant' as SidePanel, icon: Sparkles,  label: 'AI Doctor — fix & explain' },
     { id: 'hardware' as SidePanel, icon: Usb,       label: 'Hardware — boards & uploader' },
+    { id: 'runtime'  as SidePanel, icon: BookOpen,  label: 'Runtime & API Explorer' },
     { id: 'personal' as SidePanel, icon: Languages, label: 'Personal sdev — dialects, libraries, extensions' },
     { id: 'settings' as SidePanel, icon: Settings,  label: 'Settings' },
   ];
@@ -1721,6 +1723,18 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     <HardwarePanel
                       source={activeFile?.content ?? ''}
                       onAppendLog={(line) => setOutput(prev => [...prev, line])}
+                      onInsertCode={(snippet) => {
+                        if (!activeFile) return;
+                        updateActiveContent(activeFile.content + (activeFile.content.endsWith('\n') ? '' : '\n') + snippet);
+                      }}
+                    />
+                  )}
+                  {sidePanel === 'runtime' && (
+                    <RuntimeExplorerPanel
+                      onInsertCode={(snippet) => {
+                        if (!activeFile) return;
+                        updateActiveContent(activeFile.content + (activeFile.content.endsWith('\n') ? '' : '\n') + snippet);
+                      }}
                     />
                   )}
                   {sidePanel === 'personal' && (

@@ -1,0 +1,291 @@
+# Self-hosted expression parser test — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-self-parser.sdev
+#
+# Runs the expression parser rules from lang/compiler/parser.sdev on sample
+# arithmetic sources and diffs the streamed RPN against an SDEV reference
+# parser, plus verifies byte-identity of lang/compiler/parser.sdev.
+#
+# host-prefetch: sdev:compile:self:lang/compiler/parser.sdev
+# host-prefetch: sdev:compile:boot:lang/compiler/parser.sdev
+
+use "lang/stdlib/testkit.sdev"
+use "lang/compiler/parser.sdev"
+
+set tk_kind to mklist(1000)
+set tk_num  to mklist(1000)
+set tk_count to 0
+set rpn_buf to {v: ""}
+
+to emit_rpn with s
+  set rpn_buf["v"] to concat(rpn_buf["v"], concat(s, "\n"))
+  return 0
+end
+
+to self_parse_atom with pos
+  if tk_kind[pos] is 1
+    set _ to emit_rpn(concat("N=", str(tk_num[pos])))
+    return pos + 1
+  end
+  if is_op_c(pos, 40)
+    set pos to self_parse_add(pos + 1)
+    if is_op_c(pos, 41)
+      return pos + 1
+    end
+    return pos
+  end
+  return pos
+end
+
+to self_parse_mul with pos
+  set pos to self_parse_atom(pos)
+  set going to 1
+  while going
+    if is_op_c(pos, 42)
+      set pos to self_parse_atom(pos + 1)
+      set _ to emit_rpn("OP=*")
+    else
+      if is_op_c(pos, 47)
+        set pos to self_parse_atom(pos + 1)
+        set _ to emit_rpn("OP=/")
+      else
+        set going to 0
+      end
+    end
+  end
+  return pos
+end
+
+to self_parse_add with pos
+  set pos to self_parse_mul(pos)
+  set going to 1
+  while going
+    if is_op_c(pos, 43)
+      set pos to self_parse_mul(pos + 1)
+      set _ to emit_rpn("OP=+")
+    else
+      if is_op_c(pos, 45)
+        set pos to self_parse_mul(pos + 1)
+        set _ to emit_rpn("OP=-")
+      else
+        set going to 0
+      end
+    end
+  end
+  return pos
+end
+
+# Reference parser ported from refParse in scripts/test-self-parser.mjs.
+set rtk_k to mklist(1000)
+set rtk_v to mklist(1000)
+set rtk_n to mklist(2)
+set rtk_p to mklist(2)
+set ref_out to {v: ""}
+
+to ref_is_op with p c
+  if p >= rtk_n[0]
+    return 0
+  end
+  if rtk_k[p] is 4
+    if rtk_v[p] is c
+      return 1
+    end
+  end
+  return 0
+end
+
+to ref_parse_atom
+  set p to rtk_p[0]
+  if p < rtk_n[0]
+    if rtk_k[p] is 1
+      set ref_out["v"] to concat(ref_out["v"], concat("N=", concat(str(rtk_v[p]), "\n")))
+      set rtk_p[0] to p + 1
+      return 0
+    end
+  end
+  if ref_is_op(p, 40)
+    set rtk_p[0] to p + 1
+    set _ to ref_parse_add()
+    if ref_is_op(rtk_p[0], 41)
+      set rtk_p[0] to rtk_p[0] + 1
+    end
+    return 0
+  end
+  return 0
+end
+
+to ref_parse_mul
+  set _ to ref_parse_atom()
+  set going to 1
+  while going
+    if ref_is_op(rtk_p[0], 42)
+      set rtk_p[0] to rtk_p[0] + 1
+      set _ to ref_parse_atom()
+      set ref_out["v"] to concat(ref_out["v"], "OP=*\n")
+    else if ref_is_op(rtk_p[0], 47)
+      set rtk_p[0] to rtk_p[0] + 1
+      set _ to ref_parse_atom()
+      set ref_out["v"] to concat(ref_out["v"], "OP=/\n")
+    else
+      set going to 0
+    end
+  end
+  return 0
+end
+
+to ref_parse_add
+  set _ to ref_parse_mul()
+  set going to 1
+  while going
+    if ref_is_op(rtk_p[0], 43)
+      set rtk_p[0] to rtk_p[0] + 1
+      set _ to ref_parse_mul()
+      set ref_out["v"] to concat(ref_out["v"], "OP=+\n")
+    else if ref_is_op(rtk_p[0], 45)
+      set rtk_p[0] to rtk_p[0] + 1
+      set _ to ref_parse_mul()
+      set ref_out["v"] to concat(ref_out["v"], "OP=-\n")
+    else
+      set going to 0
+    end
+  end
+  return 0
+end
+
+to ref_parse with src
+  set rtk_n[0] to 0
+  set i to 0
+  set n to length(src)
+  while i < n
+    set c to ord(src, i)
+    if c is 32
+      set i to i + 1
+    else if c is 9
+      set i to i + 1
+    else if c is 10
+      set i to i + 1
+    else if c >= 48
+      if c <= 57
+        set j to i
+        set scanning to 1
+        while scanning
+          if j >= n
+            set scanning to 0
+          else
+            set d to ord(src, j)
+            if d >= 48
+              if d <= 57
+                set j to j + 1
+              else
+                set scanning to 0
+              end
+            else
+              set scanning to 0
+            end
+          end
+        end
+        set idx to rtk_n[0]
+        set rtk_k[idx] to 1
+        set rtk_v[idx] to int(substr(src, i, j - i))
+        set rtk_n[0] to idx + 1
+        set i to j
+      else
+        set idx to rtk_n[0]
+        set rtk_k[idx] to 4
+        set rtk_v[idx] to c
+        set rtk_n[0] to idx + 1
+        set i to i + 1
+      end
+    else
+      set idx to rtk_n[0]
+      set rtk_k[idx] to 4
+      set rtk_v[idx] to c
+      set rtk_n[0] to idx + 1
+      set i to i + 1
+    end
+  end
+  set rtk_p[0] to 0
+  set ref_out["v"] to ""
+  set _ to ref_parse_add()
+  return ref_out["v"]
+end
+
+set case_names to split("single number|add|precedence|parens override|chained associativity|nested|mixed", "|")
+set case_srcs  to split("42|1 + 2|1 + 2 * 3|(1 + 2) * 3|1 - 2 - 3|((1 + 2) * (3 - 4)) / 5|10 + 20 * 30 - 40 / 5 + (6 * 7)", "|")
+
+set ci to 0
+while ci < length(case_names)
+  set src to case_srcs[ci]
+  set tk_count to 0
+  set n to length(src)
+  set i to 0
+  while i < n
+    set c to ord(src, i)
+    if c is 32
+      set i to i + 1
+    else
+      if c is 9
+        set i to i + 1
+      else
+        if c is 10
+          set i to i + 1
+        else
+          if c >= 48
+            if c <= 57
+              set j to i
+              set going to 1
+              while going
+                if j >= n
+                  set going to 0
+                else
+                  set d to ord(src, j)
+                  if d >= 48
+                    if d <= 57
+                      set j to j + 1
+                    else
+                      set going to 0
+                    end
+                  else
+                    set going to 0
+                  end
+                end
+              end
+              set v to 0
+              set k to i
+              while k < j
+                set v to v * 10 + ord(src, k) - 48
+                set k to k + 1
+              end
+              set tk_kind[tk_count] to 1
+              set tk_num[tk_count] to v
+              set tk_count to tk_count + 1
+              set i to j
+            else
+              set tk_kind[tk_count] to 4
+              set tk_num[tk_count] to c
+              set tk_count to tk_count + 1
+              set i to i + 1
+            end
+          else
+            set tk_kind[tk_count] to 4
+            set tk_num[tk_count] to c
+            set tk_count to tk_count + 1
+            set i to i + 1
+          end
+        end
+      end
+    end
+  end
+  set rpn_buf["v"] to ""
+  set _ to self_parse_add(0)
+  set got to rpn_buf["v"]
+  set expected to ref_parse(src)
+  set _ to check(case_names[ci], got is expected)
+  set ci to ci + 1
+end
+
+set self_out to read_file("sdev:compile:self:lang/compiler/parser.sdev")
+set boot_out to read_file("sdev:compile:boot:lang/compiler/parser.sdev")
+set _ to check("parser.sdev compiles byte-identically", self_out is boot_out)
+
+set _ to tk_report("self-parser")

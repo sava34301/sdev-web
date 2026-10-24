@@ -1,9 +1,9 @@
 // ============================================================
-// sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d)
+// sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d + M15)
 // ============================================================
-// Minimal decoder-only transformer written in sdev. Enough to
-// build small language models; scales up with CUDA/WebGPU
-// backends in later milestones.
+// Minimal decoder-only transformer written in sdev. Uses
+// accelerated matmul dispatch (accel_matmul) and supports
+// single-sequence and batched GPT forward passes.
 
 link "nn.sdev"
 
@@ -100,14 +100,12 @@ conjure attn_forward(x, wq, wk, wv, wo, dim) ::
     forge q be wq.forward(x)
     forge k be wk.forward(x)
     forge v be wv.forward(x)
-    // scaled dot-product with causal mask (simplified fwd; grads
-    // flow through matmul chain via autograd).
+    // scaled dot-product with accelerated matmul dispatch (M15)
     forge scale be 1.0 / root(1.0 * dim)
     forge kt be transpose(k)
-    forge scores be t_scale(matmul(q, kt), scale)
-    // NOTE: greedy softmax + matmul(v) — see docs for full masking.
+    forge scores be t_scale(accel_matmul(q, kt), scale)
     forge attn be softmax(scores)
-    forge ctx be matmul(attn, v)
+    forge ctx be accel_matmul(attn, v)
     yield wo.forward(tensor_grad(ctx.data, ctx.shape))
 ;;
 
@@ -179,19 +177,88 @@ conjure gpt(vocab, dim, hidden, layers) ::
         be i be i + 1
     ;;
     yield {
+        vocab: vocab,
+        dim: dim,
+        hidden: hidden,
+        layers: layers,
         params: params,
         forward: (ids) -> gpt_forward(ids, emb, blocks, head, layers)
     }
 ;;
 
 conjure gpt_forward(ids, emb, blocks, head, layers) ::
-    forge x be emb.forward(ids)
+    forge tok_tensor be isTome(ids) ~ ids : tensor(ids, [measure(ids)])
+    forge x be emb.forward(tok_tensor)
     forge i be 0
     cycle i < layers ::
         be x be blocks[i].forward(x)
         be i be i + 1
     ;;
     yield head.forward(x)
+;;
+
+// Batched GPT forward pass (M15):
+// Accepts a list of token sequences (each a list of token ids or a 1D tensor)
+// or a 2D tensor [batch_size, seq_len], and returns a [batch_size, seq_len, vocab]
+// batch tensor with per-sequence logit tensors in `.outputs` and indexed `[b]`.
+conjure gpt_forward_batch(model, batch_token_seqs) ::
+    forge seqs be gather()
+    either isTome(batch_token_seqs) ::
+        forge bsz be batch_token_seqs.shape[0]
+        forge slen be batch_token_seqs.shape[1]
+        forge b be 0
+        cycle b < bsz ::
+            forge row be gather()
+            forge t be 0
+            cycle t < slen ::
+                pluck(row, batch_token_seqs.data[b * slen + t])
+                be t be t + 1
+            ;;
+            pluck(seqs, tensor(row, [slen]))
+            be b be b + 1
+        ;;
+    ;; otherwise ::
+        forge b be 0
+        cycle b < measure(batch_token_seqs) ::
+            forge item be batch_token_seqs[b]
+            either isTome(item) ::
+                pluck(seqs, item)
+            ;; otherwise ::
+                pluck(seqs, tensor(item, [measure(item)]))
+            ;;
+            be b be b + 1
+        ;;
+    ;;
+    forge bcount be measure(seqs)
+    either bcount equals 0 ::
+        yield tensor_grad([], [0, 0, 0])
+    ;;
+    forge outputs be gather()
+    forge flat be gather()
+    forge seq_len be 0
+    forge vocab_sz be 0
+    forge i be 0
+    cycle i < bcount ::
+        forge lg be model.forward(seqs[i])
+        be seq_len be lg.shape[0]
+        be vocab_sz be lg.shape[1]
+        pluck(outputs, lg)
+        forge k be 0
+        cycle k < measure(lg.data) ::
+            pluck(flat, lg.data[k])
+            be k be k + 1
+        ;;
+        be i be i + 1
+    ;;
+    forge batch_out be tensor_grad(flat, [bcount, seq_len, vocab_sz])
+    set batch_out.outputs to outputs
+    set batch_out.batch_size to bcount
+    be i be 0
+    cycle i < bcount ::
+        set batch_out[str(i)] to outputs[i]
+        be i be i + 1
+    ;;
+    yield batch_out
 ;;
 
 // ---------- sampling ----------

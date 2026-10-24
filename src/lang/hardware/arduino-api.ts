@@ -177,7 +177,7 @@ export const STRING_METHODS: ArduinoMethod[] = [
   'getBytes(buf, len)', 'indexOf(text[, from])', 'lastIndexOf(text[, from])', 'length()', 'remove(index[, count])',
   'replace(find, with)', 'reserve(size)', 'setCharAt(index, c)', 'startsWith(text)', 'substring(from[, to])',
   'toCharArray(buf, len)', 'toDouble()', 'toFloat()', 'toInt()', 'toLowerCase()', 'toUpperCase()', 'trim()',
-].map(signature => ({ signature, summary: STRING_SUMMARY[signature.split('(')[0]] ?? '' }));
+].map(signature => ({ signature, summary: STRING_SUMMARY?.[signature.split('(')[0]] ?? '' }));
 
 // eslint-disable-next-line no-var
 var STRING_SUMMARY: Record<string, string>;

@@ -59,6 +59,7 @@
 ;;   0x8D THAS                      pop key, pop tome, push 1/0
 ;;   0x8E TKEYS                     pop tome, push list of key handles
 ;;   0x8F TVALS                     pop tome, push list of values
+;;   0x90 STREQ                     pop b, pop a, push 1 if string bytes match else 0
 ;;   0x91 STRCAT                    pop b, pop a, allocate new pool-shaped blob, push handle
 
 ;;   ; --- Milestone 6: floats (boxed f64 on the heap; stack cell holds addr) ---
@@ -984,6 +985,17 @@
               (select (i32.load offset=4 (local.get $a))
                       (i32.load (local.get $a))
                       (call $is_tome (local.get $a))))
+            (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
+            (br $dispatch)))
+
+        ;; --- STREQ (0x90) --- pop b, pop a, push 1 if string bytes match else 0
+        (if (i32.eq (local.get $op) (i32.const 0x90))
+          (then
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $b (i32.load (local.get $sp)))
+            (local.set $sp (i32.sub (local.get $sp) (i32.const 4)))
+            (local.set $a (i32.load (local.get $sp)))
+            (i32.store (local.get $sp) (call $streq (local.get $a) (local.get $b)))
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))
 

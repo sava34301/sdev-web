@@ -88,9 +88,7 @@ class FileStorage implements Storage {
   }
 }
 
-if (typeof (globalThis as { localStorage?: Storage }).localStorage === 'undefined') {
-  Object.defineProperty(globalThis, 'localStorage', { value: new FileStorage(), configurable: true });
-}
+Object.defineProperty(globalThis, 'localStorage', { value: new FileStorage(), configurable: true });
 
 /** Where the seed VM lives: env override, next to the bundle, or in public/. */
 export function seedWasmPath(): string {
