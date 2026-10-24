@@ -1,0 +1,241 @@
+# SDEV WebAssembly Seed VM Specification & Binary Emitter — authored in SDEV.
+#
+# Defines the canonical binary layout and opcode tables of the SDEV Seed VM,
+# and provides binary WebAssembly (.wasm) emission helpers (LEB128, section
+# builders) written in 100% pure SDEV.
+
+# ---- Memory Layout Constants ----------------------------------------------
+# 0x00000..0x0FFFF: String pool (64 KiB, length-prefixed UTF-8 blobs)
+# 0x10000..0x13FFF: Global variable slots (256 slots * 4 bytes)
+# 0x14000..0x17FFF: Operand stack (u32 cells)
+# 0x18000..0x1BFFF: Call stack (frames of ret_ip, saved_fp, locals)
+# 0x1C000..0x2FFFF: Bytecode program (up to 80 KiB)
+# 0x30000..0x1FFFFFF: Bump-pointer heap (~31.8 MiB)
+
+to seed_mem_string_pool_base
+  return 0
+end
+
+to seed_mem_code_base
+  return 114688
+end
+
+# ---- Opcode Constants -----------------------------------------------------
+
+to op_push_i32
+  return 1
+end
+
+to op_push_str
+  return 2
+end
+
+to op_load
+  return 3
+end
+
+to op_store
+  return 4
+end
+
+to op_pop
+  return 5
+end
+
+to op_add
+  return 16
+end
+
+to op_sub
+  return 17
+end
+
+to op_mul
+  return 18
+end
+
+to op_div
+  return 19
+end
+
+to op_mod
+  return 20
+end
+
+to op_eq
+  return 32
+end
+
+to op_ne
+  return 33
+end
+
+to op_lt
+  return 34
+end
+
+to op_gt
+  return 35
+end
+
+to op_le
+  return 36
+end
+
+to op_ge
+  return 37
+end
+
+to op_not
+  return 48
+end
+
+to op_jmp
+  return 64
+end
+
+to op_jz
+  return 65
+end
+
+to op_say_i32
+  return 80
+end
+
+to op_say_str
+  return 81
+end
+
+to op_call
+  return 96
+end
+
+to op_ret
+  return 97
+end
+
+to op_enter
+  return 98
+end
+
+to op_load_loc
+  return 99
+end
+
+to op_store_loc
+  return 100
+end
+
+to op_alloc
+  return 112
+end
+
+to op_newlist
+  return 128
+end
+
+to op_lget
+  return 129
+end
+
+to op_lset
+  return 130
+end
+
+to op_len
+  return 131
+end
+
+to op_sget
+  return 132
+end
+
+to op_i2s
+  return 135
+end
+
+to op_chr
+  return 136
+end
+
+to op_lnew
+  return 137
+end
+
+to op_tnew
+  return 138
+end
+
+to op_tset
+  return 139
+end
+
+to op_tget
+  return 140
+end
+
+to op_thas
+  return 141
+end
+
+to op_tkeys
+  return 142
+end
+
+to op_tvals
+  return 143
+end
+
+to op_streq
+  return 144
+end
+
+to op_strcat
+  return 145
+end
+
+to op_halt
+  return 255
+end
+
+# ---- WebAssembly Binary Header & LEB128 Encoding -------------------------
+
+to wasm_magic_bytes
+  set out to mklist(8)
+  set out[0] to 0
+  set out[1] to 97
+  set out[2] to 115
+  set out[3] to 109
+  set out[4] to 1
+  set out[5] to 0
+  set out[6] to 0
+  set out[7] to 0
+  return out
+end
+
+# Encodes an unsigned integer into unsigned LEB128 byte sequence
+to leb128_encode_u32 with val
+  set bytes to mklist(5)
+  set count to 0
+  set v to val
+  set going to 1
+  while going
+    set b to v % 128
+    set v to v / 128
+    if v is 0
+      set bytes[count] to b
+      set count to count + 1
+      set going to 0
+    else
+      set bytes[count] to b + 128
+      set count to count + 1
+    end
+  end
+  set res to mklist(count)
+  set i to 0
+  while i < count
+    set res[i] to bytes[i]
+    set i to i + 1
+  end
+  return res
+end

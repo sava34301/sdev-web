@@ -1,0 +1,101 @@
+# SDEV v1-to-v2 Frontend Transpiler — authored in SDEV.
+#
+# Translates legacy SDEV v1 mystical syntax into canonical SDEV v2 syntax.
+
+use "lang/stdlib/v2/text.sdev"
+
+to v1_transpile_line with line
+  set t to trim(line)
+  if length(t) is 0
+    return line
+  end
+
+  # Blocks: ;; -> end
+  if t is ";;"
+    return "end"
+  end
+
+  # Statements
+  # speak(x) -> say x
+  if text_starts_with(t, "speak(") and text_ends_with(t, ")")
+    set inner to substr(t, 6, length(t) - 7)
+    return "say " + inner
+  end
+
+  # yield -> return
+  if text_starts_with(t, "yield ")
+    return "return " + substr(t, 6, length(t) - 6)
+  end
+  if t is "yield"
+    return "return"
+  end
+
+  # yeet -> break, skip -> continue
+  if t is "yeet"
+    return "break"
+  end
+  if t is "skip"
+    return "continue"
+  end
+
+  # otherwise :: -> else
+  if t is "otherwise ::"
+    return "else"
+  end
+
+  # otherwise ponder cond :: -> else if cond
+  if text_starts_with(t, "otherwise ponder ") and text_ends_with(t, " ::")
+    set cond to substr(t, 17, length(t) - 19)
+    return "else if " + cond
+  end
+
+  # ponder cond :: -> if cond
+  if text_starts_with(t, "ponder ") and text_ends_with(t, " ::")
+    set cond to substr(t, 7, length(t) - 9)
+    return "if " + cond
+  end
+
+  # either cond :: -> if cond
+  if text_starts_with(t, "either ") and text_ends_with(t, " ::")
+    set cond to substr(t, 7, length(t) - 9)
+    return "if " + cond
+  end
+
+  # cycle cond :: -> while cond
+  if text_starts_with(t, "cycle ") and text_ends_with(t, " ::")
+    set cond to substr(t, 6, length(t) - 8)
+    return "while " + cond
+  end
+
+  # forge x be v -> set x to v
+  if text_starts_with(t, "forge ")
+    set rest to substr(t, 6, length(t) - 6)
+    set parts to split(rest, " be ")
+    if length(parts) is 2
+      return "set " + trim(parts[0]) + " to " + trim(parts[1])
+    end
+  end
+
+  # be x be v -> set x to v
+  if text_starts_with(t, "be ")
+    set rest to substr(t, 3, length(t) - 3)
+    set parts to split(rest, " be ")
+    if length(parts) is 2
+      return "set " + trim(parts[0]) + " to " + trim(parts[1])
+    end
+  end
+
+  return line
+end
+
+to v1_to_v2_source with src
+  set lines to split(src, "\n")
+  set n to length(lines)
+  set out to ""
+  set i to 0
+  while i < n
+    set out to out + v1_transpile_line(lines[i]) + "\n"
+    set i to i + 1
+  end
+  return out
+end

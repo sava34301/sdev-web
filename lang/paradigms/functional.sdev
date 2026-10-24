@@ -1,0 +1,60 @@
+# SDEV Paradigms: Functional Programming & Algebraic Types — authored in SDEV.
+
+# ---- Option Type ----------------------------------------------------------
+
+to Some with val
+  return { tag: "Some", val: val }
+end
+
+to None
+  return { tag: "None", val: 0 }
+end
+
+to is_some with opt
+  return opt["tag"] is "Some"
+end
+
+to is_none with opt
+  return opt["tag"] is "None"
+end
+
+to unwrap_or with opt fallback
+  if is_some(opt)
+    return opt["val"]
+  end
+  return fallback
+end
+
+# ---- Result Type ----------------------------------------------------------
+
+to Ok with val
+  return { tag: "Ok", val: val }
+end
+
+to Err with err
+  return { tag: "Err", err: err }
+end
+
+to is_ok with res
+  return res["tag"] is "Ok"
+end
+
+to is_err with res
+  return res["tag"] is "Err"
+end
+
+to result_unwrap_or with res fallback
+  if is_ok(res)
+    return res["val"]
+  end
+  return fallback
+end
+
+# ---- Pattern Matching Helper ----------------------------------------------
+
+to match_adt with adt on_some on_none
+  if is_some(adt)
+    return on_some
+  end
+  return on_none
+end

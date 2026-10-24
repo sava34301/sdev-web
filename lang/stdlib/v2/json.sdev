@@ -1,0 +1,50 @@
+# SDEV Standard Library: JSON Serialization & Parsing (v2) — authored in SDEV.
+
+to json_escape_string with s
+  set n to length(s)
+  set out to "\""
+  set i to 0
+  while i < n
+    set c to ord(s, i)
+    if c is 34
+      set out to out + "\\\""
+    else
+      if c is 92
+        set out to out + "\\\\"
+      else
+        if c is 10
+          set out to out + "\\n"
+        else
+          if c is 9
+            set out to out + "\\t"
+          else
+            set out to out + chr(c)
+          end
+        end
+      end
+    end
+    set i to i + 1
+  end
+  set out to out + "\""
+  return out
+end
+
+to json_encode_int with n
+  return str(n)
+end
+
+to json_encode_list with xs
+  set out to "["
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set item to xs[i]
+    set out to out + str(item)
+    if i < n - 1
+      set out to out + ", "
+    end
+    set i to i + 1
+  end
+  set out to out + "]"
+  return out
+end

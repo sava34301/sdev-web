@@ -64,7 +64,7 @@ chmodSync(resolve(outDir, 'sdev.mjs'), 0o755);
 // Ship the seed VM and the native runtime next to the bundle.
 for (const [from, to] of [
   ['public/wasm/sdev-seed.wasm', 'sdev-seed.wasm'],
-  ['lang/native/runtime.s', 'runtime.s'],
+  ['src/lang-bridge/native/runtime.s', 'runtime.s'],
 ]) {
   const src = resolve(root, from);
   if (existsSync(src)) copyFileSync(src, resolve(outDir, to));

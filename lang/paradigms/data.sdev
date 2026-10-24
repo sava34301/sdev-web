@@ -1,0 +1,97 @@
+# SDEV Paradigms: Relational Tables & DataFrames — authored in SDEV.
+
+to table_create with name cols
+  return {
+    name: name,
+    columns: cols,
+    rows: mklist(256),
+    count: 0
+  }
+end
+
+to table_insert with tbl row
+  set cnt to tbl["count"]
+  set rows to tbl["rows"]
+  set rows[cnt] to row
+  set tbl["count"] to cnt + 1
+  return tbl["count"]
+end
+
+to table_count with tbl
+  return tbl["count"]
+end
+
+to table_to_csv with tbl
+  set out to ""
+  set cols to tbl["columns"]
+  set nc to length(cols)
+  set i to 0
+  while i < nc
+    set out to out + cols[i]
+    if i < nc - 1
+      set out to out + ","
+    end
+    set i to i + 1
+  end
+  set out to out + "\n"
+
+  set nr to tbl["count"]
+  set rows to tbl["rows"]
+  set r to 0
+  while r < nr
+    set row to rows[r]
+    set c to 0
+    while c < nc
+      set col_name to cols[c]
+      if has(row, col_name)
+        set out to out + row[col_name]
+      end
+      if c < nc - 1
+        set out to out + ","
+      end
+      set c to c + 1
+    end
+    set out to out + "\n"
+    set r to r + 1
+  end
+  return out
+end
+
+to table_to_markdown with tbl
+  set out to "| "
+  set cols to tbl["columns"]
+  set nc to length(cols)
+  set i to 0
+  while i < nc
+    set out to out + cols[i] + " | "
+    set i to i + 1
+  end
+  set out to out + "\n| "
+  set j to 0
+  while j < nc
+    set out to out + "--- | "
+    set j to j + 1
+  end
+  set out to out + "\n"
+
+  set nr to tbl["count"]
+  set rows to tbl["rows"]
+  set r to 0
+  while r < nr
+    set row to rows[r]
+    set out to out + "| "
+    set c to 0
+    while c < nc
+      set col_name to cols[c]
+      if has(row, col_name)
+        set out to out + row[col_name] + " | "
+      else
+        set out to out + " | "
+      end
+      set c to c + 1
+    end
+    set out to out + "\n"
+    set r to r + 1
+  end
+  return out
+end

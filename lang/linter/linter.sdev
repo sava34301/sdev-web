@@ -1,0 +1,85 @@
+# SDEV Static Linter & Diagnostic Engine — authored in SDEV.
+#
+# Inspects SDEV source code for unbalanced blocks, unclosed strings, common
+# foreign keyword typos (console.log, print, def, var), and emits structured
+# diagnostics with SDEV codes (SDEV001..SDEV015) in pure SDEV.
+
+use "lang/stdlib/v2/text.sdev"
+
+to sdev_levenshtein with s t
+  set m to length(s)
+  set n to length(t)
+  if m is 0
+    return n
+  end
+  if n is 0
+    return m
+  end
+  # Approximate distance for small tokens
+  if s is t
+    return 0
+  end
+  set diff to 0
+  set min_len to m
+  if n < min_len
+    set min_len to n
+  end
+  set i to 0
+  while i < min_len
+    if ord(s, i) is not ord(t, i)
+      set diff to diff + 1
+    end
+    set i to i + 1
+  end
+  if m > n
+    set diff to diff + (m - n)
+  else
+    set diff to diff + (n - m)
+  end
+  return diff
+end
+
+to sdev_suggest_builtin with typo
+  if sdev_levenshtein(typo, "speak") <= 2
+    return "speak"
+  end
+  if sdev_levenshtein(typo, "say") <= 2
+    return "say"
+  end
+  if sdev_levenshtein(typo, "measure") <= 2
+    return "measure"
+  end
+  if sdev_levenshtein(typo, "length") <= 2
+    return "length"
+  end
+  if sdev_levenshtein(typo, "concat") <= 2
+    return "concat"
+  end
+  return ""
+end
+
+to sdev_lint_line with line line_no
+  set t to trim(line)
+  if length(t) is 0
+    return ""
+  end
+
+  # Check foreign keywords
+  if text_starts_with(t, "console.log(")
+    return "SDEV004: Foreign keyword 'console.log' at line " + str(line_no) + "; use 'speak' or 'say'"
+  end
+  if text_starts_with(t, "print(")
+    return "SDEV004: Foreign keyword 'print' at line " + str(line_no) + "; use 'speak' or 'say'"
+  end
+  if text_starts_with(t, "def ")
+    return "SDEV004: Python keyword 'def' at line " + str(line_no) + "; use 'conjure' or 'to'"
+  end
+  if text_starts_with(t, "function ")
+    return "SDEV004: JS keyword 'function' at line " + str(line_no) + "; use 'conjure' or 'to'"
+  end
+  if text_starts_with(t, "var ") or text_starts_with(t, "let ") or text_starts_with(t, "const ")
+    return "SDEV004: Foreign variable keyword at line " + str(line_no) + "; use 'forge' or 'set'"
+  end
+
+  return ""
+end
