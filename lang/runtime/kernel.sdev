@@ -1,0 +1,199 @@
+# SDEV Virtual OS Kernel — authored in SDEV.
+#
+# Provides an in-memory Virtual Filesystem (VFS), process table and scheduler,
+# inter-process pipes, environment store, and unified system call dispatcher
+# in 100% pure SDEV.
+
+# ---- Kernel Initialization ------------------------------------------------
+
+to kernel_boot
+  set k to {
+    vfs: {},
+    procs: mklist(64),
+    proc_names: mklist(64),
+    proc_status: mklist(64),
+    proc_count: 0,
+    current_pid: 0,
+    pipes: {},
+    next_pipe_id: 1,
+    env: {
+      "OS": "sdev-kernel",
+      "VERSION": "2.0-selfhosted",
+      "USER": "sdev"
+    }
+  }
+
+  # Pre-populate canonical virtual files
+  set vfs to k["vfs"]
+  set vfs["/etc/hostname"] to "sdev-vm"
+  set vfs["/etc/version"] to "2.0.0"
+  set vfs["/home/user/readme.txt"] to "Welcome to the SDEV Self-Hosted Environment."
+
+  # Initialize init process (PID 0)
+  set procs to k["procs"]
+  set procs[0] to 0
+  set pnames to k["proc_names"]
+  set pnames[0] to "kernel_init"
+  set pstat to k["proc_status"]
+  set pstat[0] to "running"
+  set k["proc_count"] to 1
+
+  return k
+end
+
+# ---- Virtual Filesystem (VFS) ---------------------------------------------
+
+to vfs_write with k path content
+  set vfs to k["vfs"]
+  set vfs[path] to content
+  return 1
+end
+
+to vfs_read with k path
+  set vfs to k["vfs"]
+  if has(vfs, path)
+    return vfs[path]
+  end
+  return ""
+end
+
+to vfs_exists with k path
+  set vfs to k["vfs"]
+  if has(vfs, path)
+    return 1
+  end
+  return 0
+end
+
+to vfs_delete with k path
+  set vfs to k["vfs"]
+  if has(vfs, path)
+    set vfs[path] to ""
+    return 1
+  end
+  return 0
+end
+
+# ---- Process Management & Scheduling --------------------------------------
+
+to kernel_spawn with k name
+  set pid to k["proc_count"]
+  set procs to k["procs"]
+  set procs[pid] to pid
+  set pnames to k["proc_names"]
+  set pnames[pid] to name
+  set pstat to k["proc_status"]
+  set pstat[pid] to "ready"
+  set k["proc_count"] to pid + 1
+  return pid
+end
+
+to kernel_kill with k pid
+  if pid < k["proc_count"]
+    set pstat to k["proc_status"]
+    set pstat[pid] to "terminated"
+    return 1
+  end
+  return 0
+end
+
+to kernel_schedule_next with k
+  set i to 0
+  set pstat to k["proc_status"]
+  while i < k["proc_count"]
+    if pstat[i] is "ready"
+      set pstat[i] to "running"
+      set k["current_pid"] to i
+      return i
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+# ---- IPC Pipe System ------------------------------------------------------
+
+to kernel_pipe_open with k
+  set id to k["next_pipe_id"]
+  set k["next_pipe_id"] to id + 1
+  set pipes to k["pipes"]
+  set pipes[str(id)] to ""
+  return id
+end
+
+to kernel_pipe_write with k id data
+  set key to str(id)
+  set pipes to k["pipes"]
+  if has(pipes, key)
+    set cur to pipes[key]
+    set pipes[key] to cur + data
+    return length(data)
+  end
+  return 0 - 1
+end
+
+to kernel_pipe_read with k id
+  set key to str(id)
+  set pipes to k["pipes"]
+  if has(pipes, key)
+    set data to pipes[key]
+    set pipes[key] to ""
+    return data
+  end
+  return ""
+end
+
+# ---- Environment Variables ------------------------------------------------
+
+to kernel_setenv with k key val
+  set env to k["env"]
+  set env[key] to val
+  return 1
+end
+
+to kernel_getenv with k key
+  set env to k["env"]
+  if has(env, key)
+    return env[key]
+  end
+  return ""
+end
+
+# ---- Unified System Call Dispatcher ---------------------------------------
+# Syscall numbers:
+# 1 = SYS_READ (arg1: path)
+# 2 = SYS_WRITE (arg1: path, arg2: content)
+# 3 = SYS_EXISTS (arg1: path)
+# 4 = SYS_SPAWN (arg1: proc_name)
+# 5 = SYS_KILL (arg1: pid)
+# 6 = SYS_GETENV (arg1: env_key)
+# 7 = SYS_SETENV (arg1: env_key, arg2: env_val)
+# 8 = SYS_UNAME ()
+
+to kernel_syscall with k sysno arg1 arg2
+  if sysno is 1
+    return vfs_read(k, arg1)
+  end
+  if sysno is 2
+    return vfs_write(k, arg1, arg2)
+  end
+  if sysno is 3
+    return vfs_exists(k, arg1)
+  end
+  if sysno is 4
+    return kernel_spawn(k, arg1)
+  end
+  if sysno is 5
+    return kernel_kill(k, arg1)
+  end
+  if sysno is 6
+    return kernel_getenv(k, arg1)
+  end
+  if sysno is 7
+    return kernel_setenv(k, arg1, arg2)
+  end
+  if sysno is 8
+    return "SDEV OS 2.0-selfhosted"
+  end
+  return "ENOSYS"
+end

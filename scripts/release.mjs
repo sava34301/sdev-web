@@ -13,6 +13,7 @@
  *   -> public/releases.json what every installed tool checks to update itself
  */
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -73,8 +74,14 @@ const py = `import zipfile,json,sys
 e=json.load(open(sys.argv[1]))
 with zipfile.ZipFile(sys.argv[2],'w',zipfile.ZIP_DEFLATED) as z:
   for name,path in e: z.write(path,name)`;
-writeFileSync('/tmp/_sdev_vsix.json', JSON.stringify(entries));
-execFileSync('python3', ['-c', py, '/tmp/_sdev_vsix.json', vsix], { stdio: 'inherit' });
+const tmpJson = join(tmpdir(), '_sdev_vsix.json');
+writeFileSync(tmpJson, JSON.stringify(entries));
+const pyBin = process.platform === 'win32' ? 'python' : 'python3';
+try {
+  execFileSync(pyBin, ['-c', py, tmpJson, vsix], { stdio: 'inherit' });
+} catch {
+  execFileSync('python', ['-c', py, tmpJson, vsix], { stdio: 'inherit' });
+}
 copyFileSync(vsix, at(`public/sdev-language-${v}.vsix`));
 
 // 6. the update manifest

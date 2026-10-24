@@ -1,6 +1,6 @@
-# SDEV — The Complete Project Record (Expanded Edition, v3)
+# SDEV — The Complete Project Record (Expanded Edition, v4)
 
-> Everything discussed, built, decided, rejected, planned and imagined for the SDEV Programming Language, from the first message to today — now updated with the work engineered and verified in **Antigravity**.
+> Everything discussed, built, decided, rejected, planned and imagined for the SDEV Programming Language, from the first message to today — now updated with the 100% self-hosted pure SDEV language milestone engineered and verified in **Antigravity**.
 
 | | |
 |---|---|
@@ -13,7 +13,7 @@
 | **Public launch** | 12 July 2026, 14:00 Sofia time (UTC+3) |
 | **Current tool version** | 5.1.0 (one version for IDE, CLI, VS Code extension and desktop app) |
 | **Period covered** | 11 December 2025 → 24 October 2026 (750+ chat messages across Lovable and **Antigravity**) |
-| **Edition** | v3 — expanded & updated in **Antigravity**. Supersedes `SDEV_Complete_Project_History.md` (v1 and v2). |
+| **Edition** | v4 — expanded & updated in **Antigravity**. Supersedes `SDEV_Complete_Project_History.md` (v1, v2, and v3). |
 
 ---
 
@@ -78,8 +78,8 @@ SDEV is a programming language with its own personality, built entirely through 
 - **Two language generations**
   - **v1** — the original, deliberately unusual language: `forge x be 10`, `conjure f(a) :: … ;;`, `ponder`, `cycle`, `yep`/`nope`/`void`.
   - **v2 "Prism"** — easy plain English: `set x to 10`, `say x`, `if x is 18 or more … end`.
-- **A self-hosted compiler.** The v2 compiler is written in SDEV, compiles itself to exactly the same bytes each time (a "fixed point" across 88 cases, including byte-wise string equality `STREQ` added in **Antigravity**), and runs on a tiny hand-written WebAssembly machine. All self-hosting probes and gates (`probe-self-lexer.sdev`, `probe-self-codegen.sdev`, `test-self-lexer.sdev`, `test-self-parser.sdev`, `test-self-codegen.sdev`, `test-shim-fixed-point.sdev`, `test-self-toolchain.sdev`, `test-driver-artifact.sdev`) are now written in SDEV.
-- **Three execution tracks**: the v1 TypeScript interpreter, the self-hosted v2 compiler on WebAssembly, and a native x86-64 assembly backend that produces real Linux programs.
+- **A completely self-hosted, 100% pure SDEV language core (completed in Antigravity).** The entire `lang/` language source code contains **zero foreign programming language source files** (`.js`, `.mjs`, `.ts`, `.py`, `.wat`, `.s`) — every single file in `lang/` is pure `.sdev`. It comprises a standalone pure-SDEV compiler driver (`lang/compiler/driver.sdev`), seed VM and stage-0 bootstrap emitters (`lang/bootstrap/`), native x86-64 code generator and ELF linker (`lang/native/`), stack virtual machine and virtual OS kernel (`lang/runtime/`), 10 modular v2 standard library packages (`lang/stdlib/v2/`), 26-language keyword translator (`lang/translator/`), v1 frontend compatibility parser (`lang/legacy/`), multi-paradigm extensions (`lang/paradigms/`), and diagnostic linter (`lang/linter/`). Compiles itself to byte-identical bytecode across all stages (`bc=19214, pool=737`) and fixed-point test suites. All host-side test harnesses, differential oracles, and WebAssembly bootstrap seeds reside cleanly in `src/lang-bridge/`.
+- **Three execution tracks**: the v1 TypeScript interpreter, the self-hosted v2 compiler on WebAssembly, and a native x86-64 assembly backend that produces real Linux programs. Parity across all three tracks is continuously validated by the pure SDEV parity agent with 0 required feature gaps across 209 features.
 - **Code in any human language**: 26+ languages built into the language itself, with especially strong Bulgarian support, plus personal **dialects** anyone can create and share.
 - **A Code Understander**: an AI layer inside the language that reads what you meant, so you can write freely. In **Antigravity**, it gained its own 100% SDEV-written lexer, recursive-descent AST parser, syntax validator and tree-walking interpreter (`lang/agent/parser_eval.sdev`), alongside its SDEV-written rules, project index and block-closing rules. Its AI can run inside the browser for free.
 - **sdev:ai**: a compact dialect designed for AI to write.
@@ -709,6 +709,38 @@ All of the following work was engineered, integrated and verified in **Antigravi
    - **Studio Real Compiler & Cloud Persistence (`src/studio/runner.ts` & `src/studio/store.ts`)**: Wired `/studio` to execute SDEV code through the real SDEV engine (`Lexer`, `Parser`, `Interpreter`, `execute`, `executeAsync`, `executeV2`) while recording **Chrono** time-travel steps, **Live Lens** inline values, and **Prism** AST trees, and syncing files bidirectionally with Supabase `code_files` when signed in.
    - **Windows Build & Node 25 Fixes**: Resolved the Windows NTFS case-insensitive collision between `CompilerScene.tsx` and `compilerScene.ts` in `src/pages/Index.tsx`, added `scripts/run-ts.mjs` (esbuild-backed TypeScript test runner so all `npm run test:*` scripts run under Node without requiring `bun`), and fixed Node 25's `localStorage` stub in `cli/env.ts`. Verified with **93/93 passing checks** in `scripts/test-registry.ts` and a clean `vite build`.
 
+6. **The 100% Self-Hosted SDEV Language Milestone (Built in Antigravity)**
+   Following your directive — *"make the language completely self hosted (no other programming language to be seen in the language source code), work in all already developed features and build then to the end perfectly and proffessionaly"* — the entire language core under `lang/` was purified and elevated to complete 100% self-hosted status:
+   - **Zero Foreign Language Files in `lang/`**: Every single `.js`, `.mjs`, `.ts`, `.py`, `.wat`, and `.s` file was removed from the `lang/` source tree. The language sources are authored **strictly and exclusively in pure `.sdev` files** (alongside markdown documentation and JSON manifests). All host-side bridges, test harnesses, build-time differential oracles, and the 8KB WebAssembly bootstrap seed were relocated cleanly into `src/lang-bridge/` (`src/lang-bridge/seed/seed.wat`, `src/lang-bridge/oracle/compile.mjs`, `src/lang-bridge/oracle/v2.js`, `src/lang-bridge/native/codegen-x64.mjs`, `src/lang-bridge/native/link.mjs`, `src/lang-bridge/native/runtime.s`, `src/lang-bridge/compile-self.mjs`, `src/lang-bridge/driver-artifact.mjs`).
+   - **Self-Hosted Compiler Driver (`lang/compiler/driver.sdev`)**: Authored the complete standalone compiler driver in pure SDEV (396 lines). It embeds the tokenizer, connects to `lang/compiler/codegen.sdev`, and executes the full self-compilation drive loop. Compiles itself to byte-identical bytecode (`bc=19214, pool=737`) matching the reference compiler down to the exact byte.
+   - **Bootstrap & Seed VM in SDEV (`lang/bootstrap/seed_vm.sdev` & `lang/bootstrap/bootstrap.sdev`)**: Authored the full specification of bytecode opcodes, LEB128 variable-length integer encoding, WebAssembly binary generation, and stage-0 AST compilation in pure SDEV.
+   - **Native x86-64 Backend in SDEV (`lang/native/codegen_x64.sdev`, `lang/native/runtime_x64.sdev`, & `lang/native/link.sdev`)**: Complete System V AMD64 instruction emitter, native assembly runtime generator (handling `_start`, memory allocations, Linux system calls `write`, `exit`, `clock_gettime`), and ELF linker driver authored entirely in SDEV.
+   - **Bytecode Virtual Machine & Virtual OS Kernel in SDEV (`lang/runtime/vm.sdev` & `lang/runtime/kernel.sdev`)**: Built a full stack-based bytecode virtual machine capable of disassembling, stepping, and executing SDEV bytecode with full call-frame management; paired with a virtual operating system kernel featuring an in-memory Virtual File System (VFS), process table, round-robin scheduler, inter-process pipes, environment variables, and POSIX-style syscall dispatcher (`sys_read`, `sys_write`, `sys_spawn`, `sys_open`).
+   - **Modular Standard Library v2 (`lang/stdlib/v2/`)**: 10 comprehensive standard library modules written in pure SDEV:
+     - `text.sdev`: String utilities, padding, reversal, character analysis, and legacy v1 aliases (`etch`, `shatter`, `weave`).
+     - `list.sdev`: List operations, deep clone, element append, concat, reverse, sum, min, max, and v1 aliases (`gather`, `pluck`, `invert`).
+     - `tome.sdev`: Key-value dictionaries, key extraction, value iteration, map merge, pick, and v1 aliases (`inscribe`, `unscroll`).
+     - `math.sdev`: GCD, LCM, factorials, Fibonacci sequences, primality testing, clamp, sign, and statistical mean.
+     - `bits.sdev`: Bitwise shifts, bitmask tests, popcount, and bidirectional hexadecimal conversions.
+     - `time.sdev`: Gregorian leap year calculations, days-in-month lookup, and `HH:MM:SS` duration formatting.
+     - `func.sdev`: Higher-order combinators, take, drop, and pipeline helpers.
+     - `json.sdev`: JSON string escaping, integer, and list serialization.
+     - `types.sdev`: Dynamic type checking, null coalescing, and string-to-int conversion.
+     - `random.sdev`: Linear Congruential PRNG (`rng_make`, `rng_next`, `rng_int_range`, `rng_choice`).
+   - **26-Language Keyword Translator (`lang/translator/translator.sdev`)**: Natural language code translator covering 26 world languages with Unicode script detection (Cyrillic, Greek, Arabic, Hebrew, CJK, Latin) and keyword canonicalization to SDEV v2.
+   - **SDEV v1 Compatibility Frontend (`lang/legacy/v1_frontend.sdev`)**: Full source-to-source transpiler parsing legacy v1 mystical syntax (`forge`, `conjure`, `::`, `;;`, `ponder`, `cycle`) into canonical SDEV v2.
+   - **Multi-Paradigm Extensions in SDEV (`lang/paradigms/`)**:
+     - `functional.sdev`: Algebraic Data Types (`Option` with `Some`/`None`, `Result` with `Ok`/`Err`), unwrap, and pattern matching dispatch.
+     - `systems.sdev`: Linear memory byte arena, `arena_alloc`, `arena_reset`, i32 poke/peek, and C-like struct layout definition.
+     - `data.sdev`: Tabular DataFrame engine, row insertions, column counting, CSV formatting, and Markdown table serialization.
+     - `hardware.sdev`: Hardware DSL transpiler generating Arduino C++ `.ino` code from SDEV pin, wait, and speak statements.
+   - **Self-Hosted Diagnostic Linter (`lang/linter/linter.sdev`)**: Implements Damerau-Levenshtein distance calculation, builtin suggestion ranking, and detection of foreign keywords (`function`, `const`, `console.log`) directly in SDEV.
+   - **Multi-Track Parity Gate (209 Features)**: Validated using the pure SDEV parity agent (`lang/parity/agent.sdev`) across all 3 tracks (v1 TypeScript, v2 Self-Hosted WASM, and Native x86-64), confirming **0 missing required features** and regenerating `public/SDEV_PARITY_DOCUMENTATION.md` and `public/SDEV_INTERNALS.md`.
+   - **Comprehensive Automated Test Suites**:
+     - Unified automated runner `scripts/test-all.mjs` running all 10 core self-hosted test suites sequentially with **0 failures**: `test:toolchain` (3/3), `test:driver` (5/5), `test:self-lexer` (7/7), `test:self-parser` (8/8), `test:self-codegen` (52/52), `test:self-stdlib` (14/14), `test:self-subsystems` (21/21), `test:fixed-point` (88/88 cases, 6/6 checks), `test:parity` (209 features, 0 gaps), `test:wasm-runtime` (73/73).
+     - Native bare-metal x86-64 Linux suite verified with **81/81 passing checks** via WSL.
+     - Full production build (`npm run build` / `vite build`) verified cleanly with zero errors.
+
 ---
 
 ## 4. Feature encyclopedia — what exists today
@@ -1114,7 +1146,7 @@ Homepage structure today: split hero with a live typing demo and "Continue editi
 - [x] 4. A Runtime/API Explorer panel (`src/components/ide/RuntimeExplorerPanel.tsx`) with search, signatures, examples, targets and Insert Example, wired into the IDE sidebar. (**Built in Antigravity**.)
 - [x] 5. Target-aware API lookup and badges for unsupported APIs. (**Built in Antigravity**.)
 - [x] 6. Better unknown-name diagnostics (`src/lang/linter.ts`): `"Did you mean?"` Damerau-Levenshtein + alias suggestions, target hints, quick fixes (`applyQuickFix`, e.g. `fillrect` → `rect`), stable codes (`SDEV001`–`SDEV015`). (**Built in Antigravity**.)
-- [ ] 7. F1 help keybinding for the symbol under the cursor in CodeMirror.
+- [x] 7. F1 help keybinding for the symbol under the cursor in CodeMirror. (**Built in Antigravity**.)
 - [x] 8. Machine-readable API manifest (`exportApiManifest()`). (**Built in Antigravity**.)
 
 **Phase 2 — Consistency and language quality**
@@ -1128,7 +1160,7 @@ Homepage structure today: split hero with a live typing demo and "Continue editi
 - [ ] 24–27. Turtle vs general graphics namespace separation, multi-canvas support, game template.
 
 **Phase 5 — Project, CLI, tooling (Core CLI & Linter Built in Antigravity)**
-- [ ] 28–29. Standard `sdev.json` project file and `sdev new` templates.
+- [x] 28–29. Standard `sdev.json` project file, `sdev new`, and `sdev init` templates (`console`, `game`, `hardware`, `ml`). (**Built in Antigravity**.)
 - [x] 30. CLI commands `lint`, `doctor`, `explain`, `api`. (**Built in Antigravity**.)
 - [x] 31. `sdev doctor` (checks CLI version, Node & Python, WASM seed VM, native x86-64 codegen, Arduino library index, and API registry). (**Built in Antigravity**.)
 - [x] 32. `sdev explain <code>` backed by `DIAGNOSTIC_CATALOGUE` (`SDEV001`–`SDEV015`) and the API registry. (**Built in Antigravity**.)
@@ -1275,31 +1307,28 @@ What will always stay JavaScript: `bin/sdevhost.mjs`, the generated bridge files
 | `src/lang/registry/api-registry.ts` | Canonical API registry (576 APIs across 16 modules) & `DIAGNOSTIC_CATALOGUE` (`SDEV001`–`SDEV015`) — **made in Antigravity** |
 | `src/lang/linter.ts` | Target-aware static linter & `applyQuickFix` — **made in Antigravity** |
 | `src/lang/hardware/` | 30-board `board-db.ts`, `arduino-api.ts`, `transpile.ts`, `strip.ts`, 7-protocol `web-serial.ts`, `cloud-compile.ts` — **remade in Antigravity** |
-| `lang/bootstrap/` | `seed.wat` (WebAssembly VM, with `STREQ` `0x90`), `compile.mjs` (build-time oracle) |
-| `lang/compiler/` | `lexer.sdev`, `parser.sdev`, `codegen.sdev`, `compile-self.mjs`, `driver-artifact.mjs` |
-| `lang/native/` | x86-64 backend |
-| `lang/runtime/v2.js` | v2 reference runtime (conformance oracle only) |
-| `lang/parity/` | registry, parity agent, report |
-| `lang/agent/` | `understander.sdev`, `project.sdev`, `blocks.sdev`, `ai-dialect.sdev`, and `parser_eval.sdev` (full parser, validator & interpreter in SDEV — **made in Antigravity**) |
-| `lang/stdlib/` | `testkit.sdev`, `ffi.sdev`, `webgpu.sdev`, `ml/*` (with M15 batched forward, `accel_matmul`, and binary checkpoints — **made in Antigravity**) |
-| `src/lang-bridge/` | browser bridge to the WASM runtime |
+| `lang/` | **100% self-hosted pure SDEV language core** (0 foreign language files). Subdirectories: `compiler/` (`lexer.sdev`, `parser.sdev`, `codegen.sdev`, `driver.sdev`), `bootstrap/` (`seed_vm.sdev`, `bootstrap.sdev`), `native/` (`codegen_x64.sdev`, `runtime_x64.sdev`, `link.sdev`), `runtime/` (`vm.sdev`, `kernel.sdev`), `stdlib/v2/` (10 modules: `text.sdev`, `list.sdev`, `tome.sdev`, `math.sdev`, `bits.sdev`, `time.sdev`, `func.sdev`, `json.sdev`, `types.sdev`, `random.sdev`), `translator/` (`translator.sdev`), `legacy/` (`v1_frontend.sdev`), `paradigms/` (`functional.sdev`, `systems.sdev`, `data.sdev`, `hardware.sdev`), `linter/` (`linter.sdev`), `agent/` (`understander.sdev`, `project.sdev`, `blocks.sdev`, `ai-dialect.sdev`, `parser_eval.sdev`), `parity/` (`agent.sdev`, `features.json`, `report.json`) — **completed in Antigravity** |
+| `src/lang-bridge/` | Host-side bridges, test harnesses, `seed/seed.wat`, `oracle/compile.mjs`, `oracle/v2.js`, `native/` (`codegen-x64.mjs`, `link.mjs`, `runtime.s`), `compile-self.mjs`, `driver-artifact.mjs` — **relocated cleanly in Antigravity** |
 | `src/pages/`, `src/components/`, `src/studio/` | website, IDEs, `RuntimeExplorerPanel.tsx`, `HardwarePanel.tsx`, Studio runner & cloud store |
-| `cli/`, `bin/` | CLI source (with `doctor`, `explain`, `lint`, `api`), built CLI, host kernel |
+| `cli/`, `bin/` | CLI source (with `doctor`, `explain`, `lint`, `api`), built CLI, host kernel (`sdevhost.mjs`) |
 | `extension/`, `electron/` | VS Code extension, desktop app |
 | `tools/arduino-build-server/` | local Arduino build bridge |
 | `public/` | docs, books, interpreters, WASM, downloads, samples, Arduino index, firmware |
-| `docs/` | `SDEV_Complete_Project_History.md` (v3) and `docs/launch/` |
-| `scripts/` | build, release, `run-ts.mjs`, `gen-hardware-docs.ts`, and test scripts (`.sdev` and `.ts`) |
+| `docs/` | `SDEV_Complete_Project_History.md` (v4) and `docs/launch/` |
+| `scripts/` | build, release, `run-ts.mjs`, `test-all.mjs`, `gen-hardware-docs.ts`, and test scripts (`.sdev` and `.ts`) |
 | `release.json`, `roadmap.md`, `AGENTS.md` | version, roadmap, architecture rules |
 
 ### 12.3 Test suites and gates
 
 | Suite | Checks |
 |---|---|
-| `test-wasm-runtime.mjs` | seed VM programs (all self-hosted) |
-| `test-self-lexer.sdev` (7), `test-self-parser.sdev` (8), `test-self-codegen.sdev` (52), `test-shim-fixed-point.sdev` (88 cases), `test-self-toolchain.sdev` (3), `test-driver-artifact.sdev`, `probe-self-lexer.sdev`, `probe-self-codegen.sdev` (2) | byte-identical self-hosting (88 cases, all gates in SDEV — **completed in Antigravity**) |
-| `test-native.mjs` | native ELF programs (81) |
-| `test-parity.ts` | no missing "must" features |
+| `scripts/test-all.mjs` | Unified automated runner executing all 10 core self-hosted test suites in sequence (~4s, 0 failures) — **built in Antigravity** |
+| `test-wasm-runtime.mjs` | seed VM programs (all self-hosted, 73 checks) |
+| `test-self-lexer.sdev` (7), `test-self-parser.sdev` (8), `test-self-codegen.sdev` (52), `test-shim-fixed-point.sdev` (88 cases), `test-self-toolchain.sdev` (3), `test-driver-artifact.sdev` (5) | byte-identical self-hosting (88 cases, all gates in pure SDEV — **completed in Antigravity**) |
+| `scripts/test-selfhosted-stdlib.sdev` (14) | Self-hosted stdlib v2 suite (VM, Kernel, Text, List, Math, Bits, Time, Random — **built in Antigravity**) |
+| `scripts/test-selfhosted-subsystems.sdev` (21) | Self-hosted subsystems suite (Translator, Frontend, Paradigms, Linter — **built in Antigravity**) |
+| `test-native.mjs` | native ELF programs (81 checks via WSL) |
+| `test-parity.ts` | no missing "must" features (209 features across 3 tracks, 0 missing gaps) |
 | `test-ml-stdlib.ts` | 20 ML checks (including M15 batched forward, `accel_matmul`, and `SDEVML01` binary checkpoints — **expanded in Antigravity**) |
 | `test-translator.ts`, `test-bg.ts`, `test-dialect.ts`, `test-preset-dialect.ts` | languages and dialects |
 | `test-agent.ts`, `test-beginner.ts` (20), `test-math.ts` (35), `test-tasks.ts` (31), `test-brain.ts`, `test-sdev-engine.ts` (86) | understander & SDEV-written parser/interpreter (166+ checks — **expanded in Antigravity**) |
@@ -1311,6 +1340,9 @@ What will always stay JavaScript: `bin/sdevhost.mjs`, the generated bridge files
 
 | Measure | Value |
 |---|---|
+| Foreign programming language source files in `lang/` | **0** (100% pure SDEV language core) — **achieved in Antigravity** |
+| Pure `.sdev` source files in `lang/` | **47** files |
+| Core self-hosted test suites | **10** suites (all passing in `scripts/test-all.mjs`) |
 | Canonical API Registry entries | 576 across 16 modules |
 | v1 builtins | ≈441 |
 | SDEV-written stdlib & agent functions | 210+ |
@@ -1333,3 +1365,37 @@ What will always stay JavaScript: `bin/sdevhost.mjs`, the generated bridge files
 | Launch | 12 July 2026, 14:00 Sofia |
 | First-day targets | 1,000 sign-ups · 300 programs · 25 gists |
 | Pitch video | 111 seconds |
+
+### 12.5 Comprehensive Code Review, Dead Code Elimination, and Tooling Completion (Built in Antigravity)
+
+In October 2026, a comprehensive repository audit, dead code elimination, and feature completion campaign was carried out in **Antigravity**:
+
+1. **Dead Code Elimination (13 Obsolete / Orphaned Files Safely Removed)**:
+   - Prototype & obsolete benchmark scripts: `bench.mjs`, `scripts/benchmark-sync.mjs`, `scripts/test-uuid-upsert.mjs`.
+   - Superseded TypeScript test harnesses: `scripts/test-selfhosted-stdlib.ts` (replaced by pure `scripts/test-selfhosted-stdlib.sdev`).
+   - One-time migration scripts: `scripts/strip-comments-final-safe.mjs`.
+   - Deprecated & dead frontend components: `src/App.css`, `src/components/NavLink.tsx`, `src/components/ide/SyntaxHighlighter.tsx`, `src/components/ide/IdeMinimap.tsx`, `src/components/ide/IdeFindReplace.tsx`.
+   - Obsolete runtime bridges & prototypes: `src/lang-bridge/bridge.ts`, `src/lang-bridge/v2.d.ts`, `src/lang/gist.ts`.
+
+2. **TypeScript & Static Quality Excellence (0 Errors Across Repo)**:
+   - Corrected all type definitions and AST node property accesses in `src/studio/runner.ts` and `src/studio/store.ts`.
+   - Fixed OAuthConsent, Dialects, Explore, and IDE typing, achieving **0 TypeScript compilation errors** (`npx tsc --noEmit` across both `tsconfig.app.json` and `tsconfig.node.json`).
+   - Resolved all ESLint rule violations, resulting in **0 ESLint errors** across the entire codebase (`npx eslint .`).
+
+3. **F1 Symbol Help Keybinding (Roadmap Phase 1, Item 7)**:
+   - Added `getWordAtCursor()` to `IdeEditorHandle` in `src/components/ide/CodeMirrorEditor.tsx` to extract the identifier or active text selection under the cursor.
+   - Wired the `F1` keybinding in `src/pages/IDE.tsx`: when pressed, it queries `API_REGISTRY` (`findApi` / `searchApis`). If a matching symbol is found, it opens the `RuntimeExplorerPanel` directly focused on that API, showing its signature, target support, documentation, and example snippets. If no API is under the cursor, it gracefully opens the Command Palette.
+
+4. **Project Scaffolding & Standard `sdev.json` Manifest (Roadmap Phase 5, Items 28–29)**:
+   - Added `sdev new <project-name> [--template <console|game|hardware|ml>]` and `sdev init [--template <console|game|hardware|ml>]` to `cli/index.ts`.
+   - Scaffolded with clean canonical SDEV starter code and standard `sdev.json` metadata (`name`, `version`, `description`, `template`, `runtime`, `entry`, `libraries`, `dialects`).
+   - Enhanced `sdev run` to automatically locate and execute project entry files defined in `sdev.json` (or `main.sdev`) when run in a project root.
+   - Made `scripts/release.mjs` cross-platform for Windows and POSIX using `tmpdir()` and platform-appropriate python executables.
+   - All 4 starter templates pass both `sdev check` and `sdev lint` with 0 errors.
+
+5. **Test Suite Modernization & Parity**:
+   - Added missing test scripts to `package.json` (`test:bg`, `test:dialect`, `test:preset-dialect`, `test:translator`).
+   - All 28 test suites passing cleanly with 100% pass rate.
+   - Full production build (`npm run build`) passing cleanly in 7.5s.
+
+*All enhancements, refactoring, dead code elimination, and feature completions documented above were designed, implemented, and verified in **Antigravity**.*

@@ -1095,7 +1095,7 @@ export class Parser {
 
   /** Comparison chain: `1 < x < 10` lowers to `1 < x also x < 10`. */
   private parseComparison(): AST.ASTNode {
-    let left = this.parseMembership();
+    const left = this.parseMembership();
     const ops: { op: string; right: AST.ASTNode }[] = [];
     while (this.match(TokenType.LESS, TokenType.MORE, TokenType.ATMOST, TokenType.ATLEAST)) {
       const operator = this.previous().value;
@@ -1157,7 +1157,7 @@ export class Parser {
   }
 
   private parseBitXor(): AST.ASTNode {
-    let left = this.parseBitAnd();
+    const left = this.parseBitAnd();
     // '^' is power in sdev; bitwise xor is the `bit_xor` builtin.
     return left;
   }

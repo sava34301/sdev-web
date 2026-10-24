@@ -1,0 +1,132 @@
+# SDEV Standard Library: Lists & Sequences (v2) — authored in SDEV.
+
+to list_clone with xs
+  set n to length(xs)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  return out
+end
+
+to list_append with xs item
+  set n to length(xs)
+  set out to mklist(n + 1)
+  set i to 0
+  while i < n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  set out[n] to item
+  return out
+end
+
+to list_contains_val with xs val
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if xs[i] is val
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to list_index_of_val with xs val
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if xs[i] is val
+      return i
+    end
+    set i to i + 1
+  end
+  return 0 - 1
+end
+
+to list_concat_two with a b
+  set na to length(a)
+  set nb to length(b)
+  set out to mklist(na + nb)
+  set i to 0
+  while i < na
+    set out[i] to a[i]
+    set i to i + 1
+  end
+  set j to 0
+  while j < nb
+    set out[na + j] to b[j]
+    set j to j + 1
+  end
+  return out
+end
+
+to list_reverse_new with xs
+  set n to length(xs)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to xs[n - 1 - i]
+    set i to i + 1
+  end
+  return out
+end
+
+to list_sum_all with xs
+  set total to 0
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set total to total + xs[i]
+    set i to i + 1
+  end
+  return total
+end
+
+to list_min_val with xs
+  set n to length(xs)
+  if n is 0
+    return 0
+  end
+  set m to xs[0]
+  set i to 1
+  while i < n
+    if xs[i] < m
+      set m to xs[i]
+    end
+    set i to i + 1
+  end
+  return m
+end
+
+to list_max_val with xs
+  set n to length(xs)
+  if n is 0
+    return 0
+  end
+  set m to xs[0]
+  set i to 1
+  while i < n
+    if xs[i] > m
+      set m to xs[i]
+    end
+    set i to i + 1
+  end
+  return m
+end
+
+# SDEV v1 Compatibility Aliases
+to gather
+  return mklist(0)
+end
+
+to pluck with xs item
+  return list_append(xs, item)
+end
+
+to invert with xs
+  return list_reverse_new(xs)
+end

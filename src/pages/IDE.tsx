@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { HardwarePanel } from '@/components/ide/HardwarePanel';
 import { RuntimeExplorerPanel } from '@/components/ide/RuntimeExplorerPanel';
+import { findApi, searchApis } from '@/lang/registry/api-registry';
 import { GitHubPushDialog } from '@/components/ide/GitHubPushDialog';
 import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
 import { toast } from 'sonner';
@@ -501,6 +502,7 @@ export default function IDEPage() {
   const [showGoToLine, setShowGoToLine] = useState(false);
   const [showGitHubPush, setShowGitHubPush] = useState(false);
   const [zenMode, setZenMode] = useState(false);
+  const [runtimeQuery, setRuntimeQuery] = useState('');
 
   // Auth + cloud sync
   const { user } = useAuth();
@@ -520,7 +522,7 @@ export default function IDEPage() {
       sessionStorage.removeItem('sdev:imported_code');
       sessionStorage.removeItem('sdev:imported_name');
       const id = nextFileId();
-      const name = (importedName || 'imported').replace(/[^\w.\-]/g, '_') + (importedName?.endsWith('.sdev') ? '' : '.sdev');
+      const name = (importedName || 'imported').replace(/[^\w.-]/g, '_') + (importedName?.endsWith('.sdev') ? '' : '.sdev');
       const file: IdeFile = { id, name, content: imported };
       setFiles(prev => [...prev, file]);
       setOpenIds(prev => [...prev, id]);
@@ -591,7 +593,16 @@ export default function IDEPage() {
       if (ctrl && e.shiftKey && (e.key === 'M' || e.key === 'm')) { e.preventDefault(); setBottomPanel('problems'); }
       if (ctrl && e.shiftKey && (e.key === 'P' || e.key === 'p')) { e.preventDefault(); setShowCommandPalette(true); }
       if (ctrl && e.key === 'g') { e.preventDefault(); setShowGoToLine(true); }
-      if (e.key === 'F1') { e.preventDefault(); setShowCommandPalette(true); }
+      if (e.key === 'F1') {
+        e.preventDefault();
+        const word = editorRef.current?.getWordAtCursor?.();
+        if (word && (findApi(word) || searchApis(word).length > 0)) {
+          setSidePanel('runtime');
+          setRuntimeQuery(word);
+          return;
+        }
+        setShowCommandPalette(true);
+      }
       if (e.key === 'F11') { e.preventDefault(); setIsFullscreen(f => !f); }
       if (ctrl && e.key === '`') { e.preventDefault(); setBottomPanel('terminal'); }
       if (ctrl && e.altKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); setZenMode(z => !z); }
@@ -599,12 +610,13 @@ export default function IDEPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFile]);
 
   // Live linting (problems)
   const problems: Problem[] = useMemo(
     () => activeFile ? lintSdev(activeFile.content) : [],
-    [activeFile?.content]
+    [activeFile]
   );
 
   const formatCurrent = useCallback(() => {
@@ -1731,6 +1743,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   )}
                   {sidePanel === 'runtime' && (
                     <RuntimeExplorerPanel
+                      initialQuery={runtimeQuery}
                       onInsertCode={(snippet) => {
                         if (!activeFile) return;
                         updateActiveContent(activeFile.content + (activeFile.content.endsWith('\n') ? '' : '\n') + snippet);

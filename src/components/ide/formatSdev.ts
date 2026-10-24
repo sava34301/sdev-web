@@ -8,7 +8,7 @@ export function formatSdev(code: string, indentSize = 2): string {
   const out: string[] = [];
 
   for (const raw of lines) {
-    let line = raw.replace(/\s+$/, ''); // rtrim
+    const line = raw.replace(/\s+$/, ''); // rtrim
     const trimmed = line.trim();
 
     // Count balance of this line (ignoring contents of strings/comments)

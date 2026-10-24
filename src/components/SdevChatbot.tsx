@@ -95,7 +95,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     return assistantContent;
   }, []);
 
-  const testCodeBlocks = async (content: string): Promise<{ code: string; error: string }[]> => {
+  const testCodeBlocks = useCallback(async (content: string): Promise<{ code: string; error: string }[]> => {
     const blocks = extractCodeBlocks(content);
 
     const results = await Promise.all(
@@ -109,7 +109,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     );
 
     return results.filter((r): r is { code: string; error: string } => r !== null);
-  };
+  }, []);
 
   const streamChat = useCallback(async (userMessage: string) => {
     const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
@@ -182,7 +182,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast, fetchStream]);
+  }, [messages, toast, fetchStream, testCodeBlocks]);
 
   const handleSend = useCallback(() => {
     if (!input.trim() || isLoading) return;

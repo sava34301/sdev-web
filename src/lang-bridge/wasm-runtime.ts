@@ -12,7 +12,7 @@
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain JS module
-import { compile as selfCompile, setSeedLoader } from '../../lang/compiler/compile-self.mjs';
+import { compile as selfCompile, setSeedLoader } from './compile-self.mjs';
 import { translateSource, type TranslatorDialect } from '@/lang/translator';
 
 export class WasmSubsetError extends Error {}
@@ -90,8 +90,10 @@ export async function runWasm(
   }
 
   const module = await loadSeed();
+  /* eslint-disable prefer-const */
   let mem!: WebAssembly.Memory;
   let allocStr!: (n: number) => number;
+  /* eslint-enable prefer-const */
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 

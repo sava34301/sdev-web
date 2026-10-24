@@ -2,11 +2,11 @@
 import { readFile, writeFile, readFile as fsReadFile } from 'node:fs/promises';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { compile as selfCompile } from '../lang/compiler/compile-self.mjs';
+import { compile as selfCompile } from '../src/lang-bridge/compile-self.mjs';
 // The JS bootstrap survives ONLY as a build/test tool: the self-hosted
 // codegen does not speak floats or host I/O yet (Milestone 5q). Cases
 // tagged `compiler: 'bootstrap'` still exercise those seed VM opcodes.
-import { compile as bootstrapCompile } from '../lang/bootstrap/compile.mjs';
+import { compile as bootstrapCompile } from '../src/lang-bridge/oracle/compile.mjs';
 
 const wasmBytes = await readFile('./public/wasm/sdev-seed.wasm');
 const module = await WebAssembly.compile(wasmBytes);

@@ -92,12 +92,15 @@ export default function Explore() {
   useEffect(() => { load(); }, [load]);
 
   const q = query.trim().toLowerCase();
-  const match = (...fields: (string | null | undefined)[]) =>
-    !q || fields.some((f) => (f ?? '').toLowerCase().includes(q));
+  const match = useCallback(
+    (...fields: (string | null | undefined)[]) =>
+      !q || fields.some((f) => (f ?? '').toLowerCase().includes(q)),
+    [q]
+  );
 
-  const shownDialects = useMemo(() => dialects.filter((d) => match(d.name, d.slug, d.description, (d.languages ?? []).join(' '))), [dialects, q]);
-  const shownExtensions = useMemo(() => extensions.filter((e) => match(e.name, e.about, e.symbol)), [extensions, q]);
-  const shownPrograms = useMemo(() => programs.filter((p) => match(p.title, p.description, p.slug)), [programs, q]);
+  const shownDialects = useMemo(() => dialects.filter((d) => match(d.name, d.slug, d.description, (d.languages ?? []).join(' '))), [dialects, match]);
+  const shownExtensions = useMemo(() => extensions.filter((e) => match(e.name, e.about, e.symbol)), [extensions, match]);
+  const shownPrograms = useMemo(() => programs.filter((p) => match(p.title, p.description, p.slug)), [programs, match]);
 
   const installDialect = (row: PublicDialect) => {
     if (!row.spec?.meta?.slug) { toast.error('That dialect has nothing to install yet.'); return; }

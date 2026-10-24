@@ -83,7 +83,7 @@ export function resolveDialect(sig: FileSignature | null, opt?: string): Dialect
 
 export function prepare(rawSource: string, opts: PrepareOptions = {}): Prepared {
   const signature = readSignature(rawSource);
-  const body = stripSignature(rawSource);
+  const body = stripBoardBlocks(stripSignature(rawSource));
   const dialect = resolveDialect(signature, opts.dialect);
 
   let code = dialect ? canonicalize(body, dialect).source : body;
@@ -101,7 +101,7 @@ export function prepare(rawSource: string, opts: PrepareOptions = {}): Prepared 
 /** Same as `prepare`, but the agent may also consult its AI brain. */
 export async function prepareAsync(rawSource: string, opts: PrepareOptions = {}): Promise<Prepared> {
   const signature = readSignature(rawSource);
-  const body = stripSignature(rawSource);
+  const body = stripBoardBlocks(stripSignature(rawSource));
   const dialect = resolveDialect(signature, opts.dialect);
 
   let code = dialect ? canonicalize(body, dialect).source : body;

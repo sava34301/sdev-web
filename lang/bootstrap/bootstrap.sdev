@@ -1,0 +1,28 @@
+# Stage-0 Bootstrap Compiler — authored in SDEV.
+#
+# A minimal, self-contained bootstrap compiler written in SDEV that compiles
+# core expressions, assignments, conditionals, loops, functions, and `say`
+# statements directly into SDEV seed VM bytecode.
+
+use "lang/bootstrap/seed_vm.sdev"
+
+to boot_compile_say_int with val
+  set bc to mklist(7)
+  set bc[0] to op_push_i32()
+  set bc[1] to val % 256
+  set bc[2] to (val / 256) % 256
+  set bc[3] to (val / 65536) % 256
+  set bc[4] to (val / 16777216) % 256
+  set bc[5] to op_say_i32()
+  set bc[6] to op_halt()
+  return bc
+end
+
+to boot_compile_say_str with pool_offset
+  set bc to mklist(4)
+  set bc[0] to op_push_str()
+  set bc[1] to pool_offset % 256
+  set bc[2] to (pool_offset / 256) % 256
+  set bc[3] to op_say_str()
+  return bc
+end

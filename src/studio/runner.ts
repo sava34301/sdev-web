@@ -23,8 +23,8 @@ import {
   detectLanguage,
   translateSource,
   type Token,
-  type AST,
 } from '@/lang';
+import * as AST from '@/lang/ast';
 import { stringify } from '@/lang/builtins';
 import {
   createGraphicsBuiltins,
@@ -269,7 +269,7 @@ function buildStepSummary(node: AST.ASTNode, result: unknown, sourceLine: string
     case 'AssignStatement':
       return `${node.name} ← ${formatShortValue(result)}`;
     case 'AugAssignStatement':
-      return `${node.op}= assignment → ${formatShortValue(result)}`;
+      return `${node.operator}= assignment → ${formatShortValue(result)}`;
     case 'FuncDeclaration':
       return `conjure ${node.name}(${node.params.join(', ')})`;
     case 'ClassDeclaration':
@@ -280,12 +280,10 @@ function buildStepSummary(node: AST.ASTNode, result: unknown, sourceLine: string
       return `ponder condition`;
     case 'WhileStatement':
       return `cycle loop`;
-    case 'RepeatStatement':
-      return `repeat loop`;
     case 'ForEachStatement':
       return `for ${node.variable} through collection`;
     case 'ForInStatement':
-      return `for ${node.variables.join(', ')} in iterable`;
+      return `for ${node.variable} in iterable`;
     case 'ExpressionStatement':
       return sourceLine.trim() || 'expression';
     default:
@@ -375,7 +373,7 @@ function executeWithTracing(
   const detectedLanguage = options.sourceLanguage ?? detectLanguage(stripped);
   let executableSource = stripped;
   if (detectedLanguage && detectedLanguage !== 'English') {
-    executableSource = translateSource(stripped, detectedLanguage, 'English').translated;
+    executableSource = translateSource(stripped, detectedLanguage, { target: runtime }).translated;
   }
 
   const sourceLines = stripped.split(/\r?\n/);
@@ -546,7 +544,6 @@ function executeWithTracing(
       } else if (
         node.type === 'IfStatement' ||
         node.type === 'WhileStatement' ||
-        node.type === 'RepeatStatement' ||
         node.type === 'ForEachStatement' ||
         node.type === 'ForInStatement'
       ) {

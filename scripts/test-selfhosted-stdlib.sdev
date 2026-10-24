@@ -1,0 +1,65 @@
+# SDEV Self-Hosted Stdlib Test Suite — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev
+
+use "lang/stdlib/testkit.sdev"
+use "lang/bootstrap/seed_vm.sdev"
+use "lang/runtime/vm.sdev"
+use "lang/runtime/kernel.sdev"
+use "lang/stdlib/v2/text.sdev"
+use "lang/stdlib/v2/list.sdev"
+use "lang/stdlib/v2/tome.sdev"
+use "lang/stdlib/v2/math.sdev"
+use "lang/stdlib/v2/bits.sdev"
+use "lang/stdlib/v2/time.sdev"
+use "lang/stdlib/v2/func.sdev"
+use "lang/stdlib/v2/json.sdev"
+use "lang/stdlib/v2/types.sdev"
+use "lang/stdlib/v2/random.sdev"
+
+# 1. Test Seed VM & VM step/run
+set bc to mklist(7)
+set bc[0] to 1
+set bc[1] to 42
+set bc[2] to 0
+set bc[3] to 0
+set bc[4] to 0
+set bc[5] to 80
+set bc[6] to 255
+set vm to vm_create(bc, mklist(0))
+set out to vm_run(vm, 10)
+set _ to check("VM executed bytecode output 42", out[0] is "42")
+
+# 2. Test Kernel & VFS & Syscalls
+set k to kernel_boot()
+set _ to check("Kernel VFS hostname read", kernel_syscall(k, 1, "/etc/hostname", "") is "sdev-vm")
+set _ to kernel_syscall(k, 2, "/tmp/hello.txt", "sdev-kernel-lives")
+set _ to check("Kernel VFS write and read syscall", kernel_syscall(k, 1, "/tmp/hello.txt", "") is "sdev-kernel-lives")
+set _ to check("Kernel uname syscall", kernel_syscall(k, 8, "", "") is "SDEV OS 2.0-selfhosted")
+
+# 3. Test Text stdlib
+set _ to check("Text pad left", text_pad_left("42", 5, "0") is "00042")
+set _ to check("Text reverse", text_reverse("stressed") is "desserts")
+
+# 4. Test List stdlib
+set xs to [1, 2, 3, 4]
+set _ to check("List sum all", list_sum_all(xs) is 10)
+
+# 5. Test Math stdlib
+set _ to check("Math GCD(48, 18)", math_gcd(48, 18) is 6)
+set _ to check("Math Fib(8)", math_fib(8) is 21)
+
+# 6. Test Bits stdlib
+set _ to check("Bits to hex", bits_to_hex(255) is "ff")
+set _ to check("Bits from hex", bits_from_hex("ff") is 255)
+
+# 7. Test Time stdlib
+set _ to check("Time leap year 2024", time_is_leap_year(2024) is 1)
+set _ to check("Time format duration", time_format_duration_ms(3661000) is "01:01:01")
+
+# 8. Test Random stdlib
+set rng to rng_make(42)
+set r to rng_int_range(rng, 10, 20)
+set _ to check("Random in range 10..20", r >= 10 and r <= 20)
+
+set _ to tk_report("self-hosted stdlib")

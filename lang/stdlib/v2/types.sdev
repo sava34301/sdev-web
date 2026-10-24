@@ -1,0 +1,60 @@
+# SDEV Standard Library: Types & Coercions (v2) — authored in SDEV.
+
+to types_is_empty with v
+  if length(v) is 0
+    return 1
+  end
+  return 0
+end
+
+to types_coalesce with a b
+  if types_is_empty(a)
+    return b
+  end
+  return a
+end
+
+to types_to_int_or with s fallback
+  set n to length(s)
+  if n is 0
+    return fallback
+  end
+  set v to 0
+  set i to 0
+  set neg to 0
+  if ord(s, 0) is 45
+    set neg to 1
+    set i to 1
+  end
+  while i < n
+    set c to ord(s, i)
+    if c < 48
+      return fallback
+    end
+    if c > 57
+      return fallback
+    end
+    set v to v * 10 + (c - 48)
+    set i to i + 1
+  end
+  if neg is 1
+    return 0 - v
+  end
+  return v
+end
+
+to types_to_bool with v
+  if v is 0
+    return 0
+  end
+  if v is "false"
+    return 0
+  end
+  if v is "0"
+    return 0
+  end
+  if v is ""
+    return 0
+  end
+  return 1
+end

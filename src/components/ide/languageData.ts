@@ -1,5 +1,5 @@
 // Shared sdev language data: keywords, builtins, snippets, docs.
-// Used by SyntaxHighlighter, autocomplete, hover, and outline.
+// Used by autocomplete, hover, and outline.
 
 export const SDEV_KEYWORDS = [
   'forge', 'be', 'conjure', 'yield', 'yeet', 'skip',

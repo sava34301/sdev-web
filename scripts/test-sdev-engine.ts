@@ -18,7 +18,7 @@ import { execute } from '../src/lang';
 let memory: AgentMemory = emptyMemory();
 setMemoryStore({ load: () => memory, save: (m) => { memory = m; } });
 let passed = 0, failed = 0;
-const ok = (name: string, cond: boolean, info = '') => { cond ? passed++ : failed++; console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${cond ? '' : '  ' + info}`); };
+const ok = (name: string, cond: boolean, info = '') => { if (cond) passed++; else failed++; console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${cond ? '' : '  ' + info}`); };
 
 const cases: [string, string, string][] = [
   ['bare print', 'print hello world', 'hello world'],

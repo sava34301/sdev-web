@@ -1,0 +1,96 @@
+# SDEV Standard Library: Text & Strings (v2) — authored in SDEV.
+
+to text_upper with s
+  return upper(s)
+end
+
+to text_lower with s
+  return lower(s)
+end
+
+to text_trim with s
+  return trim(s)
+end
+
+to text_contains with s sub
+  return contains(s, sub)
+end
+
+to text_replace with s target rep
+  return replace(s, target, rep)
+end
+
+to text_split with s delim
+  return split(s, delim)
+end
+
+to text_join with items delim
+  return join(items, delim)
+end
+
+to text_starts_with with s prefix
+  set lp to length(prefix)
+  if length(s) < lp
+    return 0
+  end
+  return substr(s, 0, lp) is prefix
+end
+
+to text_ends_with with s suffix
+  set ls to length(s)
+  set lsf to length(suffix)
+  if ls < lsf
+    return 0
+  end
+  return substr(s, ls - lsf, lsf) is suffix
+end
+
+to text_repeat with s count
+  set out to ""
+  set i to 0
+  while i < count
+    set out to out + s
+    set i to i + 1
+  end
+  return out
+end
+
+to text_pad_left with s target_len pad_char
+  set cur to length(s)
+  if cur >= target_len
+    return s
+  end
+  return text_repeat(pad_char, target_len - cur) + s
+end
+
+to text_pad_right with s target_len pad_char
+  set cur to length(s)
+  if cur >= target_len
+    return s
+  end
+  return s + text_repeat(pad_char, target_len - cur)
+end
+
+to text_reverse with s
+  set n to length(s)
+  set out to ""
+  set i to n - 1
+  while i >= 0
+    set out to out + chr(ord(s, i))
+    set i to i - 1
+  end
+  return out
+end
+
+# SDEV v1 Compatibility Aliases
+to etch with a b
+  return a + b
+end
+
+to shatter with s delim
+  return text_split(s, delim)
+end
+
+to weave with list delim
+  return text_join(list, delim)
+end

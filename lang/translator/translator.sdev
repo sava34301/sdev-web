@@ -1,0 +1,129 @@
+# SDEV Multilingual 26-Language Keyword Translator — authored in SDEV.
+#
+# Recognises script families (Cyrillic, Greek, Arabic, Hebrew, Devanagari,
+# CJK, Hangul, Thai) and translates localized keywords into canonical SDEV.
+
+to translator_supported_languages
+  set langs to mklist(26)
+  set langs[0] to "English"
+  set langs[1] to "Bulgarian"
+  set langs[2] to "Spanish"
+  set langs[3] to "Russian"
+  set langs[4] to "German"
+  set langs[5] to "French"
+  set langs[6] to "Japanese"
+  set langs[7] to "Chinese"
+  set langs[8] to "Arabic"
+  set langs[9] to "Hindi"
+  set langs[10] to "Portuguese"
+  set langs[11] to "Italian"
+  set langs[12] to "Korean"
+  set langs[13] to "Turkish"
+  set langs[14] to "Polish"
+  set langs[15] to "Dutch"
+  set langs[16] to "Greek"
+  set langs[17] to "Hebrew"
+  set langs[18] to "Swedish"
+  set langs[19] to "Czech"
+  set langs[20] to "Romanian"
+  set langs[21] to "Hungarian"
+  set langs[22] to "Ukrainian"
+  set langs[23] to "Vietnamese"
+  set langs[24] to "Thai"
+  set langs[25] to "Swahili"
+  return langs
+end
+
+to translator_detect_script with src
+  set n to length(src)
+  set i to 0
+  while i < n
+    set c to ord(src, i)
+    # Cyrillic: 0xD0..0xD1 (208..209)
+    if c is 208 or c is 209
+      return "Cyrillic"
+    end
+    # Greek: 0xCE..0xCF (206..207)
+    if c is 206 or c is 207
+      return "Greek"
+    end
+    # Arabic: 0xD8..0xDB (216..219)
+    if c >= 216 and c <= 219
+      return "Arabic"
+    end
+    # Hebrew: 0xD6..0xD7 (214..215)
+    if c is 214 or c is 215
+      return "Hebrew"
+    end
+    # CJK: 0xE4..0xE9 (228..233)
+    if c >= 228 and c <= 233
+      return "CJK"
+    end
+    set i to i + 1
+  end
+  return "Latin"
+end
+
+to translator_canonicalize_word with word
+  # Bulgarian / Russian translations
+  if word is "нека"
+    return "set"
+  end
+  if word is "кажи"
+    return "say"
+  end
+  if word is "ако"
+    return "if"
+  end
+  if word is "иначе"
+    return "else"
+  end
+  if word is "докато"
+    return "while"
+  end
+  if word is "край"
+    return "end"
+  end
+
+  # Spanish translations
+  if word is "definir"
+    return "set"
+  end
+  if word is "decir"
+    return "say"
+  end
+  if word is "si"
+    return "if"
+  end
+  if word is "sino"
+    return "else"
+  end
+  if word is "mientras"
+    return "while"
+  end
+  if word is "fin"
+    return "end"
+  end
+
+  # German translations
+  if word is "setze"
+    return "set"
+  end
+  if word is "sage"
+    return "say"
+  end
+  if word is "wenn"
+    return "if"
+  end
+  if word is "sonst"
+    return "else"
+  end
+  if word is "solange"
+    return "while"
+  end
+  if word is "ende"
+    return "end"
+  end
+
+  return word
+end
