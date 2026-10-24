@@ -125,6 +125,9 @@ export default function Docs() {
           </Link>
           <h1 className="text-xl font-bold tracking-tight">sdev <span className="text-muted-foreground font-normal">/ Documentation</span></h1>
           <div className="ml-auto flex items-center gap-2">
+            <Link to="/docs/self-hosting-design-guide" className="hidden lg:inline-flex">
+              <Button size="sm" variant="ghost" className="gap-2"><Code2 className="w-4 h-4" />Language design guide</Button>
+            </Link>
             <a href="/sdev-book-en.pdf" download>
               <Button size="sm" variant="outline" className="gap-2"><Download className="w-4 h-4" />Book PDF (EN)</Button>
             </a>

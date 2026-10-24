@@ -17,6 +17,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Account = lazy(() => import("./pages/Account"));
 const Gist = lazy(() => import("./pages/Gist"));
 const Docs = lazy(() => import("./pages/Docs"));
+const SelfHostingGuide = lazy(() => import("./pages/SelfHostingGuide"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/account" element={<Account />} />
             <Route path="/g/:slug" element={<Gist />} />
             <Route path="/docs" element={<Docs />} />
+            <Route path="/docs/self-hosting-design-guide" element={<SelfHostingGuide />} />
             <Route path="/docs/:section" element={<Docs />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
