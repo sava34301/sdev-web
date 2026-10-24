@@ -9,6 +9,7 @@ sdev features a radically unique syntax (keywords like `forge`, `be`, `conjure`)
 - [Home](/): Try sdev in your browser — language overview, live playground, examples, and downloads.
 - [IDE](/ide): Full-featured web IDE with file tree, terminal, debugger, and live canvas preview.
 - [Documentation](/docs): Complete language reference, the sdev Book (EN/BG), and Leaflet/GIS guide.
+- [Programming language design guide](/docs/self-hosting-design-guide): How the sdev compiler is written in sdev, runs on a hand-written WebAssembly stack VM, and compiles itself to byte-identical bytecode.
 - [Sign in](/auth): Create an account to save files to the cloud and share gists.
 - [Account](/account): Manage profile, cloud files, public gists, and run history.
 
