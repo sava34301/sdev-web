@@ -1,0 +1,1698 @@
+// =====================================================================
+// parser_eval.sdev — self-hosted canonical SDEV tokenizer, recursive-
+// descent parser, syntax validator, and tree-walking interpreter.
+//
+// Written 100% in SDEV. Supports both v2 canonical forms (`say`,
+// `set ... to`, `if ... else ... end`, `while ... end`,
+// `for each ... in ... end`, `to name with params ... end`, `return`)
+// and v1 forms (`speak`, `forge ... be`, `ponder ... otherwise`,
+// `cycle`, `iterate ... through`, `conjure`, `yield`), plus expressions,
+// lists, tomes, indexing, member access, calls, and built-ins.
+//
+// Entry points:
+//   sdev_parse_program(source)        -> [ok_bool, ast_nodes, errors]
+//   sdev_validate_syntax(source)      -> [valid_bool, diagnostics_list]
+//   sdev_eval_program(source, inputs) -> [ok_bool, output_lines, error_msg]
+// =====================================================================
+
+// ---------- Tokenizer ----------
+
+conjure pe_tokenize(source) ::
+  forge tokens be []
+  forge errors be []
+  forge ls be lines(source)
+  forge line_idx be 0
+  cycle line_idx < measure(ls) ::
+    forge line_num be line_idx + 1
+    forge line be ls[line_idx]
+    forge n be measure(line)
+    forge i be 0
+    cycle i < n ::
+      forge ch be char_at(line, i)
+      ponder ch equals " " either ch equals "\t" either ch equals "\r" ::
+        i be i + 1
+      ;; otherwise ponder ch equals "#" either (ch equals "/" also char_at(line, i + 1) equals "/") ::
+        i be n
+      ;; otherwise ponder ch equals "\"" either ch equals "'" ::
+        forge quote be ch
+        i be i + 1
+        forge s be ""
+        forge closed be nope
+        cycle i < n also isnt closed ::
+          forge c be char_at(line, i)
+          ponder c equals "\\" ::
+            i be i + 1
+            ponder i < n ::
+              forge esc be char_at(line, i)
+              ponder esc equals "n" ::
+                s be s + "\n"
+              ;; otherwise ponder esc equals "t" ::
+                s be s + "\t"
+              ;; otherwise ponder esc equals "r" ::
+                s be s + "\r"
+              ;; otherwise ::
+                s be s + esc
+              ;;
+              i be i + 1
+            ;;
+          ;; otherwise ponder c equals quote ::
+            closed be yep
+            i be i + 1
+          ;; otherwise ::
+            s be s + c
+            i be i + 1
+          ;;
+        ;;
+        ponder isnt closed ::
+          errors be errors + [[line_num, "Unterminated string literal"]]
+        ;;
+        tokens be tokens + [{ type: "STRING", value: s, line: line_num }]
+      ;; otherwise ponder is_digit(ch) ::
+        forge num_s be ""
+        cycle i < n also is_digit(char_at(line, i)) ::
+          num_s be num_s + char_at(line, i)
+          i be i + 1
+        ;;
+        ponder i < n also char_at(line, i) equals "." also i + 1 < n also is_digit(char_at(line, i + 1)) ::
+          num_s be num_s + "."
+          i be i + 1
+          cycle i < n also is_digit(char_at(line, i)) ::
+            num_s be num_s + char_at(line, i)
+            i be i + 1
+          ;;
+        ;;
+        tokens be tokens + [{ type: "NUMBER", value: num(num_s), line: line_num }]
+      ;; otherwise ponder is_letter(ch) either ch equals "_" ::
+        forge id_s be ""
+        cycle i < n ::
+          forge c2 be char_at(line, i)
+          ponder is_letter(c2) either is_digit(c2) either c2 equals "_" ::
+            id_s be id_s + c2
+            i be i + 1
+          ;; otherwise ::
+            yeet
+          ;;
+        ;;
+        tokens be tokens + [{ type: "IDENT", value: id_s, line: line_num }]
+      ;; otherwise ::
+        forge two be snatch(line, i, i + 2)
+        ponder two equals "::" ::
+          tokens be tokens + [{ type: "DOUBLE_COLON", value: "::", line: line_num }]
+          i be i + 2
+        ;; otherwise ponder two equals ";;" ::
+          tokens be tokens + [{ type: "DOUBLE_SEMI", value: ";;", line: line_num }]
+          i be i + 2
+        ;; otherwise ponder two equals "==" either two equals "!=" either two equals "<=" either two equals ">=" either two equals "&&" either two equals "||" either two equals "**" either two equals "->" either two equals "+=" either two equals "-=" either two equals "*=" either two equals "/=" ::
+          tokens be tokens + [{ type: "OP", value: two, line: line_num }]
+          i be i + 2
+        ;; otherwise ponder ch equals "(" ::
+          tokens be tokens + [{ type: "LPAREN", value: "(", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals ")" ::
+          tokens be tokens + [{ type: "RPAREN", value: ")", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "[" ::
+          tokens be tokens + [{ type: "LBRACKET", value: "[", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "]" ::
+          tokens be tokens + [{ type: "RBRACKET", value: "]", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "{" ::
+          tokens be tokens + [{ type: "LBRACE", value: "{", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "}" ::
+          tokens be tokens + [{ type: "RBRACE", value: "}", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "," ::
+          tokens be tokens + [{ type: "COMMA", value: ",", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals ":" ::
+          tokens be tokens + [{ type: "COLON", value: ":", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "." ::
+          tokens be tokens + [{ type: "DOT", value: ".", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "~" ::
+          tokens be tokens + [{ type: "TILDE", value: "~", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "+" either ch equals "-" either ch equals "*" either ch equals "/" either ch equals "%" either ch equals "^" either ch equals "<" either ch equals ">" either ch equals "=" either ch equals "!" ::
+          tokens be tokens + [{ type: "OP", value: ch, line: line_num }]
+          i be i + 1
+        ;; otherwise ::
+          errors be errors + [[line_num, "Unexpected character '" + ch + "'"]]
+          i be i + 1
+        ;;
+      ;;
+    ;;
+    line_idx be line_idx + 1
+  ;;
+  forge last_line be measure(ls) > 0 ~ measure(ls) : 1
+  tokens be tokens + [{ type: "EOF", value: "", line: last_line }]
+  yield [tokens, errors]
+;;
+
+// ---------- Parser helpers ----------
+
+conjure pe_peek(p) ::
+  yield p.tokens[p.pos]
+;;
+
+conjure pe_next_tok(p, offset) ::
+  forge idx be p.pos + offset
+  ponder idx < measure(p.tokens) ::
+    yield p.tokens[idx]
+  ;;
+  yield p.tokens[measure(p.tokens) - 1]
+;;
+
+conjure pe_at_end(p) ::
+  yield p.tokens[p.pos].type equals "EOF"
+;;
+
+conjure pe_advance(p) ::
+  forge tok be p.tokens[p.pos]
+  ponder isnt pe_at_end(p) ::
+    p.pos be p.pos + 1
+  ;;
+  yield tok
+;;
+
+conjure pe_check(p, t) ::
+  yield p.tokens[p.pos].type equals t
+;;
+
+conjure pe_check_word(p, w) ::
+  forge tok be p.tokens[p.pos]
+  yield tok.type equals "IDENT" also lower(tok.value) equals w
+;;
+
+conjure pe_check_op(p, op) ::
+  forge tok be p.tokens[p.pos]
+  yield tok.type equals "OP" also tok.value equals op
+;;
+
+conjure pe_error(p, line, msg) ::
+  p.errors be p.errors + [[line, msg]]
+;;
+
+conjure pe_is_block_closer(p) ::
+  ponder pe_check(p, "DOUBLE_SEMI") ::
+    yield yep
+  ;;
+  ponder pe_check_word(p, "end") either pe_check_word(p, "else") either pe_check_word(p, "elif") either pe_check_word(p, "otherwise") either pe_check_word(p, "rescue") ::
+    yield yep
+  ;;
+  yield nope
+;;
+
+conjure pe_is_stmt_keyword(w) ::
+  forge lw be lower(w)
+  iterate kw through ["forge", "conjure", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "if", "else", "elif", "end", "while", "for", "return", "break", "continue"] ::
+    ponder lw equals kw ::
+      yield yep
+    ;;
+  ;;
+  yield nope
+;;
+
+// ---------- Expression parser ----------
+
+conjure pe_parse_primary(p) ::
+  forge tok be pe_peek(p)
+  ponder tok.type equals "NUMBER" ::
+    pe_advance(p)
+    yield { type: "Literal", value: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "STRING" ::
+    pe_advance(p)
+    yield { type: "Literal", value: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "IDENT" ::
+    forge lw be lower(tok.value)
+    ponder lw equals "yep" either lw equals "true" ::
+      pe_advance(p)
+      yield { type: "Literal", value: yep, line: tok.line }
+    ;;
+    ponder lw equals "nope" either lw equals "false" ::
+      pe_advance(p)
+      yield { type: "Literal", value: nope, line: tok.line }
+    ;;
+    ponder lw equals "void" either lw equals "null" ::
+      pe_advance(p)
+      yield { type: "Literal", value: void, line: tok.line }
+    ;;
+    ponder (lw equals "ask" either lw equals "input") also pe_next_tok(p, 1).type differs "LPAREN" also pe_next_tok(p, 1).line equals tok.line ::
+      pe_advance(p)
+      forge prompt_e be pe_parse_expr(p)
+      yield { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }
+    ;;
+    ponder pe_is_stmt_keyword(lw) ::
+      pe_error(p, tok.line, "Unexpected keyword '" + tok.value + "' in expression")
+      yield { type: "Literal", value: void, line: tok.line }
+    ;;
+    pe_advance(p)
+    yield { type: "Ident", name: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "LPAREN" ::
+    pe_advance(p)
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+      yield { type: "List", elements: [], line: tok.line }
+    ;;
+    forge inner be pe_parse_expr(p)
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '('")
+    ;;
+    yield inner
+  ;;
+  ponder tok.type equals "LBRACKET" ::
+    pe_advance(p)
+    forge items be []
+    ponder isnt pe_check(p, "RBRACKET") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACKET") ::
+        items be items + [pe_parse_expr(p)]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "RBRACKET") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '['")
+    ;;
+    yield { type: "List", elements: items, line: tok.line }
+  ;;
+  ponder tok.type equals "LBRACE" ::
+    pe_advance(p)
+    forge entries be []
+    ponder isnt pe_check(p, "RBRACE") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACE") ::
+        forge k_e be void
+        ponder pe_check(p, "IDENT") also pe_next_tok(p, 1).type equals "COLON" ::
+          forge kt be pe_advance(p)
+          k_e be { type: "Literal", value: kt.value, line: kt.line }
+        ;; otherwise ::
+          k_e be pe_parse_expr(p)
+        ;;
+        ponder pe_check(p, "COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ':' in tome literal")
+          yeet
+        ;;
+        forge v_e be pe_parse_expr(p)
+        entries be entries + [[k_e, v_e]]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "RBRACE") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '{'")
+    ;;
+    yield { type: "Dict", entries: entries, line: tok.line }
+  ;;
+  ponder tok.type equals "DOUBLE_COLON" ::
+    pe_advance(p)
+    forge entries be []
+    ponder isnt pe_check(p, "DOUBLE_SEMI") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+        forge k_e be pe_parse_expr(p)
+        ponder pe_check(p, "COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ':' in tome literal")
+          yeet
+        ;;
+        forge v_e be pe_parse_expr(p)
+        entries be entries + [[k_e, v_e]]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '::' tome literal")
+    ;;
+    yield { type: "Dict", entries: entries, line: tok.line }
+  ;;
+  pe_error(p, tok.line, "Expected expression near '" + str(tok.value) + "'")
+  ponder isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
+    pe_advance(p)
+  ;;
+  yield { type: "Literal", value: void, line: tok.line }
+;;
+
+conjure pe_parse_postfix(p) ::
+  forge expr be pe_parse_primary(p)
+  cycle isnt pe_at_end(p) ::
+    ponder pe_check(p, "LPAREN") also pe_peek(p).line equals expr.line ::
+      pe_advance(p)
+      forge args be []
+      ponder isnt pe_check(p, "RPAREN") ::
+        cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+          args be args + [pe_parse_expr(p)]
+          ponder pe_check(p, "COMMA") ::
+            pe_advance(p)
+          ;; otherwise ::
+            yeet
+          ;;
+        ;;
+      ;;
+      ponder pe_check(p, "RPAREN") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected ')' after arguments")
+      ;;
+      expr be { type: "Call", callee: expr, args: args, line: expr.line }
+    ;; otherwise ponder pe_check(p, "LBRACKET") also pe_peek(p).line equals expr.line ::
+      pe_advance(p)
+      forge idx_e be pe_parse_expr(p)
+      ponder pe_check(p, "RBRACKET") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected ']' after index")
+      ;;
+      expr be { type: "Index", object: expr, index: idx_e, line: expr.line }
+    ;; otherwise ponder pe_check(p, "DOT") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge prop be pe_advance(p).value
+        expr be { type: "Member", object: expr, property: prop, line: expr.line }
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected property name after '.'")
+        yeet
+      ;;
+    ;; otherwise ::
+      yeet
+    ;;
+  ;;
+  yield expr
+;;
+
+conjure pe_parse_unary(p) ::
+  ponder pe_check_op(p, "-") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "-", operand: pe_parse_unary(p), line: t.line }
+  ;;
+  ponder pe_check_op(p, "+") ::
+    pe_advance(p)
+    yield pe_parse_unary(p)
+  ;;
+  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "not", operand: pe_parse_unary(p), line: t.line }
+  ;;
+  yield pe_parse_postfix(p)
+;;
+
+conjure pe_parse_pow(p) ::
+  forge left be pe_parse_unary(p)
+  ponder pe_check_op(p, "^") either pe_check_op(p, "**") ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '^'")
+      yield left
+    ;;
+    forge right be pe_parse_pow(p)
+    yield { type: "Binary", op: "^", left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_mul(p) ::
+  forge left be pe_parse_pow(p)
+  cycle pe_check_op(p, "*") either pe_check_op(p, "/") either pe_check_op(p, "%") ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
+      yield left
+    ;;
+    forge right be pe_parse_pow(p)
+    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_add(p) ::
+  forge left be pe_parse_mul(p)
+  cycle (pe_check_op(p, "+") either pe_check_op(p, "-")) also pe_peek(p).line equals left.line ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
+      yield left
+    ;;
+    forge right be pe_parse_mul(p)
+    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_cmp(p) ::
+  forge left be pe_parse_add(p)
+  cycle isnt pe_at_end(p) ::
+    ponder pe_check_word(p, "equals") either pe_check_op(p, "==") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: "==", left: left, right: right, line: op_t.line }
+    ;; otherwise ponder pe_check_word(p, "differs") either pe_check_op(p, "!=") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: "!=", left: left, right: right, line: op_t.line }
+    ;; otherwise ponder pe_check_word(p, "is") ::
+      forge is_t be pe_advance(p)
+      ponder pe_check_word(p, "not") either pe_check_word(p, "isnt") ::
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: "!=", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder (pe_check_word(p, "more") either pe_check_word(p, "greater")) also lower(pe_next_tok(p, 1).value) equals "than" ::
+        pe_advance(p)
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: ">", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder (pe_check_word(p, "less") either pe_check_word(p, "smaller")) also lower(pe_next_tok(p, 1).value) equals "than" ::
+        pe_advance(p)
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: "<", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder pe_check_word(p, "at") also (lower(pe_next_tok(p, 1).value) equals "least" either lower(pe_next_tok(p, 1).value) equals "most") ::
+        pe_advance(p)
+        forge lm be pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: lower(lm.value) equals "least" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
+      ;; otherwise ::
+        forge right be pe_parse_add(p)
+        ponder pe_check_word(p, "or") also (lower(pe_next_tok(p, 1).value) equals "more" either lower(pe_next_tok(p, 1).value) equals "less") ::
+          pe_advance(p)
+          forge ml be pe_advance(p)
+          left be { type: "Binary", op: lower(ml.value) equals "more" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
+        ;; otherwise ::
+          left be { type: "Binary", op: "==", left: left, right: right, line: is_t.line }
+        ;;
+      ;;
+    ;; otherwise ponder pe_check_op(p, "<") either pe_check_op(p, ">") either pe_check_op(p, "<=") either pe_check_op(p, ">=") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: op_t.value, left: left, right: right, line: op_t.line }
+    ;; otherwise ::
+      yeet
+    ;;
+  ;;
+  yield left
+;;
+
+conjure pe_parse_not(p) ::
+  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "not", operand: pe_parse_not(p), line: t.line }
+  ;;
+  yield pe_parse_cmp(p)
+;;
+
+conjure pe_parse_and(p) ::
+  forge left be pe_parse_not(p)
+  cycle pe_check_word(p, "also") either pe_check_word(p, "and") either pe_check_op(p, "&&") ::
+    forge t be pe_advance(p)
+    forge right be pe_parse_not(p)
+    left be { type: "Binary", op: "and", left: left, right: right, line: t.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_or(p) ::
+  forge left be pe_parse_and(p)
+  cycle (pe_check_word(p, "either") also pe_peek(p).line equals left.line) either pe_check_word(p, "or") either pe_check_op(p, "||") ::
+    forge t be pe_advance(p)
+    forge right be pe_parse_and(p)
+    left be { type: "Binary", op: "or", left: left, right: right, line: t.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_ternary(p) ::
+  forge left be pe_parse_or(p)
+  ponder pe_check(p, "TILDE") ::
+    pe_advance(p)
+    forge then_e be pe_parse_or(p)
+    ponder pe_check(p, "COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, left.line, "Expected ':' in ternary expression")
+    ;;
+    forge else_e be pe_parse_ternary(p)
+    yield { type: "Ternary", cond: left, then_expr: then_e, else_expr: else_e, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_expr(p) ::
+  yield pe_parse_ternary(p)
+;;
+
+// ---------- Statement parser ----------
+
+conjure pe_parse_if(p) ::
+  forge kw be pe_advance(p)
+  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge cond be pe_parse_expr(p)
+  ponder pe_check_word(p, "then") ::
+    pe_advance(p)
+  ;;
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  forge lw be lower(kw.value)
+  ponder lw equals "ponder" either lw equals "either" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after '" + kw.value + "' condition")
+    ;;
+    forge then_body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      then_body be then_body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed '" + kw.value + "' block (missing ';;')")
+    ;;
+    forge else_body be []
+    ponder pe_check_word(p, "otherwise") ::
+      pe_advance(p)
+      ponder pe_check_word(p, "ponder") either pe_check_word(p, "either") either pe_check_word(p, "if") ::
+        else_body be [pe_parse_if(p)]
+      ;; otherwise ::
+        ponder pe_check(p, "DOUBLE_COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, pe_peek(p).line, "Expected '::' after 'otherwise'")
+        ;;
+        cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+          else_body be else_body + [pe_parse_stmt(p)]
+        ;;
+        ponder pe_check(p, "DOUBLE_SEMI") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, kw.line, "Unclosed 'otherwise' block (missing ';;')")
+        ;;
+      ;;
+    ;;
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  // Natural v2 block: if ... [else if ...] [else ...] end
+  forge then_body be []
+  cycle isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
+    then_body be then_body + [pe_parse_stmt(p)]
+  ;;
+  forge else_body be []
+  ponder pe_check_word(p, "elif") ::
+    else_body be [pe_parse_if(p)]
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  ponder pe_check_word(p, "else") either pe_check_word(p, "otherwise") ::
+    pe_advance(p)
+    ponder pe_check_word(p, "if") ::
+      else_body be [pe_parse_if(p)]
+      yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+    ;;
+    ponder pe_check(p, "COLON") ::
+      pe_advance(p)
+    ;;
+    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+      else_body be else_body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
+    ;;
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
+  ;;
+  yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+;;
+
+conjure pe_parse_while(p) ::
+  forge kw be pe_advance(p)
+  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge cond be pe_parse_expr(p)
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  forge lw be lower(kw.value)
+  ponder lw equals "cycle" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after 'cycle' condition")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'cycle' block (missing ';;')")
+    ;;
+    yield { type: "While", cond: cond, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'while' block (missing 'end')")
+  ;;
+  yield { type: "While", cond: cond, body: body, line: kw.line }
+;;
+
+conjure pe_parse_for(p) ::
+  forge kw be pe_advance(p)
+  ponder lower(kw.value) equals "for" also pe_check_word(p, "each") ::
+    pe_advance(p)
+  ;;
+  ponder isnt pe_check(p, "IDENT") ::
+    pe_error(p, kw.line, "Expected loop variable name after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge var_name be pe_advance(p).value
+  ponder pe_check_word(p, "in") either pe_check_word(p, "through") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Expected 'in' or 'through' in loop")
+  ;;
+  ponder pe_at_end(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected iterable expression in loop")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge iter_e be pe_parse_expr(p)
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  ponder lower(kw.value) equals "iterate" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after 'iterate' header")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'iterate' block (missing ';;')")
+    ;;
+    yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'for' block (missing 'end')")
+  ;;
+  yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
+;;
+
+conjure pe_parse_func(p) ::
+  forge kw be pe_advance(p)
+  ponder isnt pe_check(p, "IDENT") ::
+    pe_error(p, kw.line, "Expected function name after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge fn_name be pe_advance(p).value
+  forge params be []
+  forge lw be lower(kw.value)
+  ponder lw equals "conjure" ::
+    ponder pe_check(p, "LPAREN") ::
+      pe_advance(p)
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+        ponder pe_check(p, "IDENT") ::
+          params be params + [pe_advance(p).value]
+        ;; otherwise ::
+          pe_error(p, kw.line, "Expected parameter name")
+          yeet
+        ;;
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+      ponder pe_check(p, "RPAREN") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, kw.line, "Expected ')' after parameters")
+      ;;
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '(' after function name in 'conjure'")
+    ;;
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' to open function body")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'conjure' block (missing ';;')")
+    ;;
+    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+  ;;
+  // `to name [with a b | (a, b)] ... end`
+  ponder pe_check_word(p, "with") also pe_peek(p).line equals kw.line ::
+    pe_advance(p)
+    cycle pe_check(p, "IDENT") also pe_peek(p).line equals kw.line ::
+      params be params + [pe_advance(p).value]
+      ponder pe_check(p, "COMMA") ::
+        pe_advance(p)
+      ;;
+    ;;
+  ;; otherwise ponder pe_check(p, "LPAREN") also pe_peek(p).line equals kw.line ::
+    pe_advance(p)
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+      ponder pe_check(p, "IDENT") ::
+        params be params + [pe_advance(p).value]
+      ;; otherwise ::
+        pe_error(p, kw.line, "Expected parameter name")
+        yeet
+      ;;
+      ponder pe_check(p, "COMMA") ::
+        pe_advance(p)
+      ;; otherwise ::
+        yeet
+      ;;
+    ;;
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected ')' after parameters")
+    ;;
+  ;;
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  ponder pe_check(p, "DOUBLE_COLON") ::
+    pe_advance(p)
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed function block (missing ';;')")
+    ;;
+    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'to' function block (missing 'end')")
+  ;;
+  yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+;;
+
+conjure pe_parse_stmt(p) ::
+  forge tok be pe_peek(p)
+  ponder pe_is_block_closer(p) ::
+    pe_error(p, tok.line, "Unexpected '" + tok.value + "' without matching open block")
+    pe_advance(p)
+    yield { type: "Noop", line: tok.line }
+  ;;
+  // forge x be expr
+  ponder pe_check_word(p, "forge") ::
+    pe_advance(p)
+    ponder isnt pe_check(p, "IDENT") ::
+      pe_error(p, tok.line, "Expected variable name after 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge name be pe_advance(p).value
+    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'be' after variable name in 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected expression after 'be' in 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Let", name: name, value: val, line: tok.line }
+  ;;
+  // set target to expr
+  ponder pe_check_word(p, "set") also pe_next_tok(p, 1).type differs "LPAREN" ::
+    pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected variable name after 'set'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge target be pe_parse_postfix(p)
+    ponder target.type differs "Ident" also target.type differs "Index" also target.type differs "Member" ::
+      pe_error(p, tok.line, "Invalid assignment target in 'set'")
+    ;;
+    ponder pe_check_word(p, "to") either pe_check_word(p, "be") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'to' in 'set' statement")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected expression after 'to' in 'set' statement")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: target, value: val, declare: yep, line: tok.line }
+  ;;
+  // leading `be target be expr`
+  ponder pe_check_word(p, "be") ::
+    pe_advance(p)
+    forge target be pe_parse_postfix(p)
+    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'be' after target")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: target, value: val, declare: nope, line: tok.line }
+  ;;
+  // ask "Prompt" as name / ask for name
+  ponder pe_check_word(p, "ask") also pe_next_tok(p, 1).type differs "LPAREN" ::
+    pe_advance(p)
+    ponder pe_check_word(p, "for") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge vname be pe_advance(p).value
+        yield { type: "Ask", prompt: { type: "Literal", value: vname + "? ", line: tok.line }, name: vname, line: tok.line }
+      ;;
+      pe_error(p, tok.line, "Expected variable name after 'ask for'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge prompt_e be pe_parse_expr(p)
+    ponder pe_check_word(p, "as") either pe_check_word(p, "into") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge vname be pe_advance(p).value
+        yield { type: "Ask", prompt: prompt_e, name: vname, line: tok.line }
+      ;;
+      pe_error(p, tok.line, "Expected variable name after 'as'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    yield { type: "ExprStmt", expr: { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }, line: tok.line }
+  ;;
+  // say / speak / print command or call
+  ponder pe_check_word(p, "say") either pe_check_word(p, "speak") either pe_check_word(p, "print") either pe_check_word(p, "whisper") either pe_check_word(p, "shout") ::
+    forge cmd be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > cmd.line either pe_is_block_closer(p) ::
+      pe_error(p, cmd.line, "Expected expression after '" + cmd.value + "'")
+      yield { type: "Noop", line: cmd.line }
+    ;;
+    forge args be []
+    args be args + [pe_parse_expr(p)]
+    cycle pe_check(p, "COMMA") also pe_peek(p).line equals cmd.line ::
+      pe_advance(p)
+      args be args + [pe_parse_expr(p)]
+    ;;
+    yield { type: "Print", mode: lower(cmd.value), args: args, line: cmd.line }
+  ;;
+  // Conditionals: if / ponder / either
+  ponder pe_check_word(p, "if") either pe_check_word(p, "ponder") either pe_check_word(p, "either") ::
+    yield pe_parse_if(p)
+  ;;
+  // Loops: while / cycle
+  ponder pe_check_word(p, "while") either pe_check_word(p, "cycle") ::
+    yield pe_parse_while(p)
+  ;;
+  // Loops: for / iterate
+  ponder pe_check_word(p, "for") either pe_check_word(p, "iterate") ::
+    yield pe_parse_for(p)
+  ;;
+  // Functions: conjure / to
+  ponder pe_check_word(p, "conjure") either pe_check_word(p, "to") ::
+    yield pe_parse_func(p)
+  ;;
+  // Return / yield
+  ponder pe_check_word(p, "yield") either pe_check_word(p, "return") ::
+    forge kw be pe_advance(p)
+    forge val be void
+    ponder isnt pe_at_end(p) also pe_peek(p).line equals kw.line also isnt pe_is_block_closer(p) ::
+      val be pe_parse_expr(p)
+    ;;
+    yield { type: "Return", value: val, line: kw.line }
+  ;;
+  // Break / yeet
+  ponder pe_check_word(p, "yeet") either pe_check_word(p, "break") ::
+    forge kw be pe_advance(p)
+    yield { type: "Break", line: kw.line }
+  ;;
+  // Continue / skip
+  ponder pe_check_word(p, "skip") either pe_check_word(p, "continue") ::
+    forge kw be pe_advance(p)
+    yield { type: "Continue", line: kw.line }
+  ;;
+  // Expression or Assignment
+  forge expr be pe_parse_expr(p)
+  ponder pe_check_word(p, "be") either pe_check_op(p, "=") ::
+    forge op_t be pe_advance(p)
+    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
+      pe_error(p, expr.line, "Invalid assignment target")
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected expression in assignment")
+      yield { type: "Noop", line: expr.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: expr, value: val, declare: nope, line: expr.line }
+  ;;
+  ponder pe_check(p, "OP") also (pe_peek(p).value equals "+=" either pe_peek(p).value equals "-=" either pe_peek(p).value equals "*=" either pe_peek(p).value equals "/=") ::
+    forge op_t be pe_advance(p)
+    forge base_op be snatch(op_t.value, 0, 1)
+    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
+      pe_error(p, expr.line, "Invalid augmented assignment target")
+    ;;
+    forge rhs be pe_parse_expr(p)
+    yield { type: "Assign", target: expr, value: { type: "Binary", op: base_op, left: expr, right: rhs, line: expr.line }, declare: nope, line: expr.line }
+  ;;
+  yield { type: "ExprStmt", expr: expr, line: expr.line }
+;;
+
+// ---------- Public Parser & Validator Entry Points ----------
+
+conjure sdev_parse_program(source) ::
+  forge tok_res be pe_tokenize(source)
+  forge p be {
+    tokens: tok_res[0],
+    pos: 0,
+    errors: tok_res[1]
+  }
+  forge ast be []
+  cycle isnt pe_at_end(p) ::
+    forge before be p.pos
+    forge stmt be pe_parse_stmt(p)
+    ponder stmt.type differs "Noop" ::
+      ast be ast + [stmt]
+    ;;
+    ponder p.pos equals before also isnt pe_at_end(p) ::
+      pe_advance(p)
+    ;;
+  ;;
+  yield [measure(p.errors) equals 0, ast, p.errors]
+;;
+
+conjure sdev_validate_syntax(source) ::
+  forge parsed be sdev_parse_program(source)
+  yield [parsed[0], parsed[2]]
+;;
+
+// ---------- Tree-Walking Interpreter ----------
+
+conjure pe_truthy(v) ::
+  ponder v equals void ::
+    yield nope
+  ;;
+  ponder isTruth(v) ::
+    yield v
+  ;;
+  ponder isNum(v) ::
+    yield v differs 0
+  ;;
+  ponder isText(v) ::
+    yield measure(v) > 0
+  ;;
+  ponder isList(v) ::
+    yield measure(v) > 0
+  ;;
+  yield yep
+;;
+
+conjure pe_stringify(v) ::
+  ponder v equals void ::
+    yield "void"
+  ;;
+  ponder isTruth(v) ::
+    yield v ~ "yep" : "nope"
+  ;;
+  ponder isText(v) ::
+    yield v
+  ;;
+  ponder isList(v) ::
+    forge parts be []
+    iterate item through v ::
+      parts be parts + [pe_stringify(item)]
+    ;;
+    yield "[" + weave(parts, ", ") + "]"
+  ;;
+  yield str(v)
+;;
+
+conjure pe_get_var(st, name, line) ::
+  forge top_idx be measure(st.scopes) - 1
+  forge local_s be st.scopes[top_idx]
+  ponder has(local_s, name) ::
+    yield local_s[name]
+  ;;
+  forge global_s be st.scopes[0]
+  ponder has(global_s, name) ::
+    yield global_s[name]
+  ;;
+  ponder name equals "PI" ::
+    yield PI()
+  ;;
+  ponder name equals "TAU" ::
+    yield TAU()
+  ;;
+  ponder name equals "E" ::
+    yield E()
+  ;;
+  st.error be "Line " + str(line) + ": Undefined variable '" + name + "'"
+  yield void
+;;
+
+conjure pe_set_var(st, name, val, declare) ::
+  forge top_idx be measure(st.scopes) - 1
+  forge local_s be st.scopes[top_idx]
+  ponder declare either has(local_s, name) either top_idx equals 0 ::
+    local_s[name] be val
+    yield val
+  ;;
+  forge global_s be st.scopes[0]
+  ponder has(global_s, name) ::
+    global_s[name] be val
+    yield val
+  ;;
+  local_s[name] be val
+  yield val
+;;
+
+conjure pe_read_input(st) ::
+  ponder st.input_idx < measure(st.inputs) ::
+    forge ans be str(st.inputs[st.input_idx])
+    st.input_idx be st.input_idx + 1
+    yield ans
+  ;;
+  yield ""
+;;
+
+conjure pe_call_builtin(st, name, args, line) ::
+  ponder name equals "str" ::
+    yield pe_stringify(measure(args) > 0 ~ args[0] : "")
+  ;;
+  ponder name equals "num" ::
+    forge v be args[0]
+    ponder isNum(v) ::
+      yield v
+    ;;
+    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\.[0-9]+)?$") ::
+      yield num(trim(v))
+    ;;
+    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to number"
+    yield 0
+  ;;
+  ponder name equals "int" ::
+    forge v be args[0]
+    ponder isNum(v) ::
+      yield int(v)
+    ;;
+    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\.[0-9]+)?$") ::
+      yield int(num(trim(v)))
+    ;;
+    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to int"
+    yield 0
+  ;;
+  ponder name equals "length" either name equals "len" either name equals "measure" ::
+    yield measure(args[0])
+  ;;
+  ponder name equals "upper" ::
+    yield upper(pe_stringify(args[0]))
+  ;;
+  ponder name equals "lower" ::
+    yield lower(pe_stringify(args[0]))
+  ;;
+  ponder name equals "trim" ::
+    yield trim(pe_stringify(args[0]))
+  ;;
+  ponder name equals "reverse" ::
+    yield reverse(args[0])
+  ;;
+  ponder name equals "abs" either name equals "magnitude" ::
+    yield abs(args[0])
+  ;;
+  ponder name equals "min" either name equals "least" ::
+    ponder measure(args) equals 1 also isList(args[0]) ::
+      yield min(args[0])
+    ;;
+    yield min(args)
+  ;;
+  ponder name equals "max" either name equals "greatest" ::
+    ponder measure(args) equals 1 also isList(args[0]) ::
+      yield max(args[0])
+    ;;
+    yield max(args)
+  ;;
+  ponder name equals "range" either name equals "sequence" ::
+    ponder measure(args) equals 1 ::
+      yield range(args[0])
+    ;;
+    ponder measure(args) equals 2 ::
+      yield range(args[0], args[1])
+    ;;
+    yield range(args[0], args[1], args[2])
+  ;;
+  ponder name equals "sum" ::
+    yield sum(args[0])
+  ;;
+  ponder name equals "sort" ::
+    yield sort(args[0])
+  ;;
+  ponder name equals "sortDesc" ::
+    yield sortDesc(args[0])
+  ;;
+  ponder name equals "sqrt" either name equals "root" ::
+    yield root(args[0])
+  ;;
+  ponder name equals "floor" either name equals "ground" ::
+    yield ground(args[0])
+  ;;
+  ponder name equals "ceil" either name equals "elevate" ::
+    yield elevate(args[0])
+  ;;
+  ponder name equals "round" either name equals "nearby" ::
+    yield nearby(args[0])
+  ;;
+  ponder name equals "pow" ::
+    yield pow(args[0], args[1])
+  ;;
+  ponder name equals "contains" ::
+    yield contains(args[0], args[1])
+  ;;
+  ponder name equals "startswith" either name equals "starts" ::
+    yield startswith(args[0], args[1])
+  ;;
+  ponder name equals "endswith" either name equals "ends" ::
+    yield endswith(args[0], args[1])
+  ;;
+  ponder name equals "replace" ::
+    yield replace(args[0], args[1], args[2])
+  ;;
+  ponder name equals "shatter" either name equals "split" ::
+    yield shatter(args[0], args[1])
+  ;;
+  ponder name equals "weave" either name equals "join" ::
+    yield weave(args[0], args[1])
+  ;;
+  ponder name equals "portion" either name equals "slice" ::
+    ponder measure(args) equals 2 ::
+      yield portion(args[0], args[1])
+    ;;
+    yield portion(args[0], args[1], args[2])
+  ;;
+  ponder name equals "snatch" ::
+    ponder measure(args) equals 2 ::
+      yield snatch(args[0], args[1])
+    ;;
+    yield snatch(args[0], args[1], args[2])
+  ;;
+  ponder name equals "gather" ::
+    ponder measure(args) equals 0 ::
+      yield []
+    ;;
+    yield gather(args[0], args[1])
+  ;;
+  ponder name equals "pluck" ::
+    ponder measure(args) equals 1 ::
+      yield pluck(args[0])
+    ;;
+    yield pluck(args[0], args[1])
+  ;;
+  ponder name equals "chr" ::
+    yield chr(args[0])
+  ;;
+  ponder name equals "ord" ::
+    ponder measure(args) equals 1 ::
+      yield ord(args[0])
+    ;;
+    yield ord(args[0], args[1])
+  ;;
+  ponder name equals "keys" either name equals "inscriptions" ::
+    yield keys(args[0])
+  ;;
+  ponder name equals "values" either name equals "contents" ::
+    yield values(args[0])
+  ;;
+  ponder name equals "has" ::
+    yield has(args[0], args[1])
+  ;;
+  ponder name equals "pick" ::
+    yield pick(args[0])
+  ;;
+  ponder name equals "randint" ::
+    yield randint(args[0], args[1])
+  ;;
+  ponder name equals "input" either name equals "ask" ::
+    yield pe_read_input(st)
+  ;;
+  ponder name equals "say" either name equals "speak" either name equals "print" ::
+    forge parts be []
+    iterate a through args ::
+      parts be parts + [pe_stringify(a)]
+    ;;
+    st.outputs be st.outputs + [weave(parts, " ")]
+    yield void
+  ;;
+  st.error be "Line " + str(line) + ": Unknown function '" + name + "'"
+  yield void
+;;
+
+conjure pe_eval_expr(st, node) ::
+  ponder st.error differs void ::
+    yield void
+  ;;
+  ponder node.type equals "Literal" ::
+    yield node.value
+  ;;
+  ponder node.type equals "Ident" ::
+    yield pe_get_var(st, node.name, node.line)
+  ;;
+  ponder node.type equals "List" ::
+    forge out be []
+    iterate el through node.elements ::
+      out be out + [pe_eval_expr(st, el)]
+    ;;
+    yield out
+  ;;
+  ponder node.type equals "Dict" ::
+    forge d be ::
+    ;;
+    iterate pair through node.entries ::
+      forge k be pe_stringify(pe_eval_expr(st, pair[0]))
+      d[k] be pe_eval_expr(st, pair[1])
+    ;;
+    yield d
+  ;;
+  ponder node.type equals "Unary" ::
+    forge v be pe_eval_expr(st, node.operand)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder node.op equals "-" ::
+      yield 0 - v
+    ;;
+    ponder node.op equals "not" ::
+      yield isnt pe_truthy(v)
+    ;;
+    yield v
+  ;;
+  ponder node.type equals "Ternary" ::
+    forge c be pe_eval_expr(st, node.cond)
+    ponder pe_truthy(c) ::
+      yield pe_eval_expr(st, node.then_expr)
+    ;;
+    yield pe_eval_expr(st, node.else_expr)
+  ;;
+  ponder node.type equals "Binary" ::
+    forge op be node.op
+    ponder op equals "and" ::
+      forge lv be pe_eval_expr(st, node.left)
+      ponder isnt pe_truthy(lv) ::
+        yield nope
+      ;;
+      yield pe_truthy(pe_eval_expr(st, node.right))
+    ;;
+    ponder op equals "or" ::
+      forge lv be pe_eval_expr(st, node.left)
+      ponder pe_truthy(lv) ::
+        yield yep
+      ;;
+      yield pe_truthy(pe_eval_expr(st, node.right))
+    ;;
+    forge left be pe_eval_expr(st, node.left)
+    forge right be pe_eval_expr(st, node.right)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder op equals "+" ::
+      ponder isList(left) also isList(right) ::
+        yield left + right
+      ;;
+      ponder isText(left) either isText(right) ::
+        yield pe_stringify(left) + pe_stringify(right)
+      ;;
+      yield left + right
+    ;;
+    ponder op equals "-" ::
+      yield left - right
+    ;;
+    ponder op equals "*" ::
+      ponder isText(left) also isNum(right) ::
+        yield repeat(left, right)
+      ;;
+      ponder isNum(left) also isText(right) ::
+        yield repeat(right, left)
+      ;;
+      yield left * right
+    ;;
+    ponder op equals "/" ::
+      ponder right equals 0 ::
+        st.error be "Line " + str(node.line) + ": Division by zero"
+        yield void
+      ;;
+      yield left / right
+    ;;
+    ponder op equals "%" ::
+      ponder right equals 0 ::
+        st.error be "Line " + str(node.line) + ": Modulo by zero"
+        yield void
+      ;;
+      yield ((left % right) + right) % right
+    ;;
+    ponder op equals "^" ::
+      yield pow(left, right)
+    ;;
+    ponder op equals "==" ::
+      yield left equals right
+    ;;
+    ponder op equals "!=" ::
+      yield left differs right
+    ;;
+    ponder op equals "<" ::
+      yield left < right
+    ;;
+    ponder op equals ">" ::
+      yield left > right
+    ;;
+    ponder op equals "<=" ::
+      yield left <= right
+    ;;
+    ponder op equals ">=" ::
+      yield left >= right
+    ;;
+    yield void
+  ;;
+  ponder node.type equals "Index" ::
+    forge obj be pe_eval_expr(st, node.object)
+    forge idx be pe_eval_expr(st, node.index)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder isList(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      ponder i < 0 either i >= measure(obj) ::
+        st.error be "Line " + str(node.line) + ": List index out of range"
+        yield void
+      ;;
+      yield obj[i]
+    ;;
+    ponder isText(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      ponder i < 0 either i >= measure(obj) ::
+        st.error be "Line " + str(node.line) + ": String index out of range"
+        yield void
+      ;;
+      yield char_at(obj, i)
+    ;;
+    ponder isTome(obj) ::
+      forge k be pe_stringify(idx)
+      yield has(obj, k) ~ obj[k] : void
+    ;;
+    st.error be "Line " + str(node.line) + ": Cannot index value"
+    yield void
+  ;;
+  ponder node.type equals "Member" ::
+    forge obj be pe_eval_expr(st, node.object)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder (isList(obj) either isText(obj)) also node.property equals "length" ::
+      yield measure(obj)
+    ;;
+    ponder isTome(obj) ::
+      yield has(obj, node.property) ~ obj[node.property] : void
+    ;;
+    st.error be "Line " + str(node.line) + ": Cannot access property '" + node.property + "'"
+    yield void
+  ;;
+  ponder node.type equals "Call" ::
+    forge arg_vals be []
+    iterate a through node.args ::
+      arg_vals be arg_vals + [pe_eval_expr(st, a)]
+    ;;
+    ponder st.error differs void ::
+      yield void
+    ;;
+    forge fname be node.callee.type equals "Ident" ~ node.callee.name : ""
+    ponder fname differs "" also has(st.funcs, fname) ::
+      forge fn be st.funcs[fname]
+      forge frame be ::
+      ;;
+      forge pi be 0
+      cycle pi < measure(fn.params) ::
+        forge pname be fn.params[pi]
+        frame[pname] be pi < measure(arg_vals) ~ arg_vals[pi] : void
+        pi be pi + 1
+      ;;
+      st.scopes be st.scopes + [frame]
+      pe_exec_block(st, fn.body)
+      forge ret be st.return_val
+      st.returning be nope
+      st.return_val be void
+      st.scopes be portion(st.scopes, 0, measure(st.scopes) - 1)
+      yield ret
+    ;;
+    yield pe_call_builtin(st, fname, arg_vals, node.line)
+  ;;
+  yield void
+;;
+
+conjure pe_exec_assign(st, target, val, declare, line) ::
+  ponder target.type equals "Ident" ::
+    pe_set_var(st, target.name, val, declare)
+    yield void
+  ;;
+  ponder target.type equals "Index" ::
+    forge obj be pe_eval_expr(st, target.object)
+    forge idx be pe_eval_expr(st, target.index)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder isList(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      obj[i] be val
+      yield void
+    ;;
+    ponder isTome(obj) ::
+      obj[pe_stringify(idx)] be val
+      yield void
+    ;;
+    st.error be "Line " + str(line) + ": Cannot index-assign on this value"
+    yield void
+  ;;
+  ponder target.type equals "Member" ::
+    forge obj be pe_eval_expr(st, target.object)
+    ponder isTome(obj) ::
+      obj[target.property] be val
+      yield void
+    ;;
+    st.error be "Line " + str(line) + ": Cannot set property on non-tome"
+    yield void
+  ;;
+;;
+
+conjure pe_exec_block(st, stmts) ::
+  iterate s through stmts ::
+    ponder st.error differs void either st.returning either st.breaking either st.continuing ::
+      yield void
+    ;;
+    pe_exec_stmt(st, s)
+  ;;
+;;
+
+conjure pe_exec_stmt(st, stmt) ::
+  ponder st.error differs void either st.returning either st.breaking either st.continuing ::
+    yield void
+  ;;
+  st.steps be st.steps + 1
+  ponder st.steps > st.max_steps ::
+    st.error be "Execution step limit exceeded (infinite loop?)"
+    yield void
+  ;;
+  ponder stmt.type equals "Let" ::
+    forge val be pe_eval_expr(st, stmt.value)
+    ponder st.error equals void ::
+      pe_set_var(st, stmt.name, val, yep)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Assign" ::
+    forge val be pe_eval_expr(st, stmt.value)
+    ponder st.error equals void ::
+      pe_exec_assign(st, stmt.target, val, stmt.declare, stmt.line)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Ask" ::
+    pe_eval_expr(st, stmt.prompt)
+    forge ans be pe_read_input(st)
+    pe_set_var(st, stmt.name, ans, yep)
+    yield void
+  ;;
+  ponder stmt.type equals "Print" ::
+    forge parts be []
+    iterate a through stmt.args ::
+      forge v be pe_eval_expr(st, a)
+      parts be parts + [pe_stringify(v)]
+    ;;
+    ponder st.error equals void ::
+      forge sep be stmt.mode equals "whisper" ~ "" : " "
+      forge line_out be weave(parts, sep)
+      ponder stmt.mode equals "shout" ::
+        line_out be upper(line_out)
+      ;;
+      st.outputs be st.outputs + [line_out]
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "If" ::
+    forge c be pe_eval_expr(st, stmt.cond)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder pe_truthy(c) ::
+      pe_exec_block(st, stmt.then_body)
+    ;; otherwise ::
+      pe_exec_block(st, stmt.else_body)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "While" ::
+    cycle st.error equals void also isnt st.returning ::
+      forge c be pe_eval_expr(st, stmt.cond)
+      ponder st.error differs void either isnt pe_truthy(c) ::
+        yeet
+      ;;
+      pe_exec_block(st, stmt.body)
+      ponder st.breaking ::
+        st.breaking be nope
+        yeet
+      ;;
+      ponder st.continuing ::
+        st.continuing be nope
+      ;;
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "For" ::
+    forge iter_val be pe_eval_expr(st, stmt.iter)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    forge items be isList(iter_val) ~ iter_val : (isText(iter_val) ~ chars(iter_val) : [])
+    iterate item through items ::
+      ponder st.error differs void either st.returning ::
+        yeet
+      ;;
+      pe_set_var(st, stmt.vname, item, nope)
+      pe_exec_block(st, stmt.body)
+      ponder st.breaking ::
+        st.breaking be nope
+        yeet
+      ;;
+      ponder st.continuing ::
+        st.continuing be nope
+      ;;
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Func" ::
+    st.funcs[stmt.name] be stmt
+    yield void
+  ;;
+  ponder stmt.type equals "Return" ::
+    forge val be stmt.value equals void ~ void : pe_eval_expr(st, stmt.value)
+    st.return_val be val
+    st.returning be yep
+    yield void
+  ;;
+  ponder stmt.type equals "Break" ::
+    st.breaking be yep
+    yield void
+  ;;
+  ponder stmt.type equals "Continue" ::
+    st.continuing be yep
+    yield void
+  ;;
+  ponder stmt.type equals "ExprStmt" ::
+    pe_eval_expr(st, stmt.expr)
+    yield void
+  ;;
+;;
+
+conjure sdev_eval_program(source, inputs) ::
+  forge parsed be sdev_parse_program(source)
+  ponder isnt parsed[0] ::
+    forge first_err be parsed[2][0]
+    yield [nope, [], "Line " + str(first_err[0]) + ": " + first_err[1]]
+  ;;
+  forge global_scope be ::
+  ;;
+  forge st be {
+    scopes: [global_scope],
+    funcs: ::
+    ;;,
+    outputs: [],
+    inputs: inputs equals void ~ [] : inputs,
+    input_idx: 0,
+    error: void,
+    returning: nope,
+    return_val: void,
+    breaking: nope,
+    continuing: nope,
+    steps: 0,
+    max_steps: 50000
+  }
+  pe_exec_block(st, parsed[1])
+  ponder st.error differs void ::
+    yield [nope, st.outputs, st.error]
+  ;;
+  yield [yep, st.outputs, void]
+;;

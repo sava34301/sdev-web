@@ -6,7 +6,7 @@
  * files, and work with personal dialects, extensions and libraries.
  */
 import './env';
-import { SDEV_HOME } from './env';
+import { SDEV_HOME, seedWasmPath } from './env';
 import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, basename, dirname, extname } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -14,6 +14,18 @@ import { Lexer } from '@/lang/lexer';
 import { Parser } from '@/lang/parser';
 import { Interpreter } from '@/lang/interpreter';
 import { SdevError } from '@/lang/errors';
+import { spawnSync } from 'node:child_process';
+import {
+  API_REGISTRY,
+  findApi,
+  searchApis,
+  suggestNearestApis,
+  findDiagnostic,
+  DIAGNOSTIC_LIST,
+  type ApiTarget,
+  type ApiModule,
+} from '@/lang/registry/api-registry';
+import { lintSdevSource } from '@/lang/linter';
 import { translateSource, detectLanguage, SUPPORTED_LANGUAGES } from '@/lang/translator';
 import { formatSdev } from '@/components/ide/formatSdev';
 import {
@@ -61,7 +73,7 @@ function value(name: string, short?: string): string | undefined {
   const i = argv.findIndex((a) => a === name || (short && a === short));
   return i >= 0 && i + 1 < argv.length ? argv[i + 1] : undefined;
 }
-const FLAGS_WITH_VALUES = new Set(['--dialect', '--lang', '--to', '--from', '-o', '--out', '--as', '--ld', '--runtime', '--name', '--about', '--agent', '--brain']);
+const FLAGS_WITH_VALUES = new Set(['--dialect', '--lang', '--to', '--from', '-o', '--out', '--as', '--ld', '--runtime', '--name', '--about', '--agent', '--brain', '--target', '--module']);
 /** Positional arguments, in order, skipping flags and their values. */
 function positionals(): string[] {
   const out: string[] = [];
@@ -119,6 +131,10 @@ RUNNING
   edit <file>             Full-screen editor: ^S save, ^R run, ^F find, ^Q quit
   repl                    Interactive session
   check <file>            Parse only, report syntax errors
+  lint <file>             Lint source (--target v1|v2-wasm|native-x64|arduino-cpp|web)
+  api [query]             Search canonical API registry (--module <m>, --target <t>)
+  explain <CODE|name>     Explain a diagnostic code (SDEV001..SDEV015) or API
+  doctor                  Check SDEV toolchain, runtimes, and API registry health
   ast <file>              Print the syntax tree as JSON
   fmt <file> [-w]         Format source (-w writes in place)
   watch <file>            Re-run on every save
@@ -1001,6 +1017,169 @@ async function cmdEdit(file: string | undefined): Promise<void> {
 }
 
 /* ------------------------------------------------------------------ */
+/* diagnostics, linter, api explorer, doctor                           */
+/* ------------------------------------------------------------------ */
+
+function cmdDoctor(): void {
+  console.log(`sdev doctor — toolchain & environment check (v${VERSION})\n`);
+
+  const repoRoot = resolve(process.cwd());
+  let wasmPath = '';
+  try {
+    wasmPath = seedWasmPath();
+  } catch {
+    wasmPath = resolve(repoRoot, 'public/wasm/sdev-seed.wasm');
+  }
+  const hasWasm = Boolean(wasmPath && existsSync(wasmPath));
+
+  const codegenPath = resolve(repoRoot, 'lang/native/codegen-x64.mjs');
+  const runtimeAsmPath = resolve(repoRoot, 'lang/native/runtime.s');
+  const hasNative = existsSync(codegenPath) && existsSync(runtimeAsmPath);
+
+  const arduinoIndexPath = resolve(repoRoot, 'public/arduino/library-index.json');
+  const hasArduinoIndex = existsSync(arduinoIndexPath);
+
+  let pythonVersion = 'not found';
+  for (const bin of ['python3', 'python']) {
+    try {
+      const res = spawnSync(bin, ['--version'], { encoding: 'utf8', timeout: 2500 });
+      const out = ((res.stdout || '') + (res.stderr || '')).trim();
+      if (res.status === 0 && out) {
+        pythonVersion = out.split(/\r?\n/)[0];
+        break;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const checks: { label: string; ok: boolean; detail: string }[] = [
+    { label: 'CLI Version', ok: true, detail: `sdev v${VERSION}` },
+    { label: 'Node.js Runtime', ok: true, detail: `${process.version} (${process.platform}/${process.arch})` },
+    { label: 'Python Runtime', ok: pythonVersion !== 'not found', detail: pythonVersion },
+    { label: 'Self-Hosted WASM VM', ok: hasWasm, detail: hasWasm ? wasmPath : 'missing (public/wasm/sdev-seed.wasm)' },
+    { label: 'Native x86-64 Codegen', ok: hasNative, detail: hasNative ? 'lang/native/codegen-x64.mjs + runtime.s' : 'missing' },
+    { label: 'Arduino Library Index', ok: hasArduinoIndex, detail: hasArduinoIndex ? arduinoIndexPath : 'missing (public/arduino/library-index.json)' },
+    { label: 'Canonical API Registry', ok: API_REGISTRY.length > 0, detail: `${API_REGISTRY.length} canonical APIs · ${DIAGNOSTIC_LIST.length} diagnostic codes` },
+    { label: 'Local SDEV Home', ok: existsSync(SDEV_HOME), detail: SDEV_HOME },
+  ];
+
+  const width = Math.max(...checks.map((c) => c.label.length));
+  for (const c of checks) {
+    const badge = c.ok ? '[OK]  ' : '[WARN]';
+    console.log(`  ${badge} ${c.label.padEnd(width)}  ${c.detail}`);
+  }
+
+  const failed = checks.filter((c) => !c.ok);
+  console.log('');
+  if (failed.length === 0) {
+    console.log('All SDEV toolchain checks passed.');
+  } else {
+    console.log(`${checks.length - failed.length}/${checks.length} checks passed (${failed.length} warning${failed.length === 1 ? '' : 's'}).`);
+  }
+}
+
+function cmdExplain(codeOrName: string): void {
+  const diag = findDiagnostic(codeOrName);
+  if (diag) {
+    console.log(`${diag.code} — ${diag.title} [${diag.severity.toUpperCase()} · ${diag.category}]`);
+    console.log(`\nEXPLANATION\n  ${diag.explanation}`);
+    console.log(`\nFIX HINT\n  ${diag.fixHint}`);
+    console.log(`\nEXAMPLE FIX\n  ${diag.goodExample.split('\n').join('\n  ')}`);
+    return;
+  }
+
+  const api = findApi(codeOrName);
+  if (api) {
+    console.log(`${api.name} (${api.module}) — [${api.status.toUpperCase()}]`);
+    console.log(`\nSIGNATURE\n  ${api.signature}`);
+    console.log(`\nDESCRIPTION\n  ${api.description}`);
+    console.log(`\nTARGETS\n  ${api.targets.join(', ')}`);
+    if (api.params.length > 0) {
+      console.log('\nPARAMETERS');
+      for (const p of api.params) {
+        console.log(`  ${p.name}${p.optional ? '?' : ''}: ${p.type}${p.description ? ' — ' + p.description : ''}`);
+      }
+    }
+    console.log(`\nRETURNS\n  ${api.returns}`);
+    if (api.deprecated) {
+      console.log(`\nDEPRECATED (since ${api.deprecated.since})\n  Replace with '${api.deprecated.replacement}': ${api.deprecated.reason}`);
+    }
+    console.log(`\nEXAMPLE\n  ${api.example.split('\n').join('\n  ')}`);
+    return;
+  }
+
+  const suggestions = suggestNearestApis(codeOrName, 3);
+  console.error(`No diagnostic code or API named '${codeOrName}' found.`);
+  if (suggestions.length > 0) {
+    console.error(`Did you mean: ${suggestions.map((s) => s.entry.name).join(', ')}?`);
+  }
+  console.error(`Try 'sdev api ${codeOrName}' or 'sdev explain SDEV001'.`);
+  process.exit(1);
+}
+
+function cmdLint(file: string): void {
+  const raw = readSource(file);
+  const body = stripSignature(raw);
+  const targetFlag = value('--target') as ApiTarget | undefined;
+  const diags = lintSdevSource(body, {
+    target: targetFlag,
+  });
+
+  if (diags.length === 0) {
+    console.log(`✓ ${basename(file)} — no lint issues found${targetFlag ? ` (target: ${targetFlag})` : ''}`);
+    return;
+  }
+
+  for (const d of diags) {
+    const loc = `${basename(file)}:${d.line}${d.column ? ':' + d.column : ''}`;
+    const sev = d.severity.toUpperCase().padEnd(7);
+    console.log(`${loc}  ${sev} [${d.code}] ${d.message}`);
+    if (d.suggestion) {
+      console.log(`          hint: ${d.suggestion}`);
+    }
+  }
+
+  const errors = diags.filter((d) => d.severity === 'error').length;
+  const warnings = diags.filter((d) => d.severity === 'warning').length;
+  const infos = diags.filter((d) => d.severity === 'info').length;
+  console.log(`\n${diags.length} issue${diags.length === 1 ? '' : 's'} (${errors} error${errors === 1 ? '' : 's'}, ${warnings} warning${warnings === 1 ? '' : 's'}, ${infos} info)`);
+  if (errors > 0) process.exit(1);
+}
+
+function cmdApi(query?: string): void {
+  const mod = value('--module') as ApiModule | undefined;
+  const target = value('--target') as ApiTarget | undefined;
+  const results = searchApis(query ?? '', {
+    module: mod ?? 'all',
+    target: target ?? 'all',
+  });
+
+  if (results.length === 0) {
+    console.log(`No APIs matched '${query ?? ''}'${mod ? ` in module ${mod}` : ''}${target ? ` for target ${target}` : ''}.`);
+    if (query) {
+      const near = suggestNearestApis(query, 3);
+      if (near.length > 0) {
+        console.log(`Did you mean: ${near.map((n) => n.entry.name).join(', ')}?`);
+      }
+    }
+    return;
+  }
+
+  console.log(`Canonical SDEV API Registry — ${results.length} matching API${results.length === 1 ? '' : 's'}\n`);
+  for (const entry of results.slice(0, 60)) {
+    const statusBadge = entry.status === 'implemented' ? '' : ` [${entry.status.toUpperCase()}]`;
+    console.log(`  ${entry.signature.padEnd(36)} (${entry.module})${statusBadge}`);
+    console.log(`    ${entry.description}`);
+    console.log(`    targets: ${entry.targets.join(', ')}`);
+  }
+  if (results.length > 60) {
+    console.log(`\n  ... and ${results.length - 60} more. Filter with --module <m> or --target <t>, or inspect with 'sdev explain <name>'.`);
+  }
+
+}
+
+/* ------------------------------------------------------------------ */
 /* dispatch                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -1096,6 +1275,14 @@ async function main(): Promise<void> {
     case 'home':
       console.log(SDEV_HOME);
       return;
+    case 'doctor':
+      return cmdDoctor();
+    case 'explain':
+      return cmdExplain(pos[1] ?? die('sdev explain <CODE|name>'));
+    case 'lint':
+      return cmdLint(pos[1] ?? die('sdev lint <file.sdev>'));
+    case 'api':
+      return cmdApi(pos[1]);
     case 'version':
       console.log('sdev v' + VERSION);
       return;

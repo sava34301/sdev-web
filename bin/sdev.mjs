@@ -118,11 +118,9 @@ var init_env = __esm({
         this.flush();
       }
     };
-    if (typeof globalThis.localStorage === "undefined") {
-      Object.defineProperty(globalThis, "localStorage", { value: new FileStorage(), configurable: true });
-    }
+    Object.defineProperty(globalThis, "localStorage", { value: new FileStorage(), configurable: true });
     nativeFetch = globalThis.fetch?.bind(globalThis);
-    globalThis.fetch = (async (input, init2) => {
+    globalThis.fetch = async (input, init2) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.includes("sdev-seed.wasm")) {
         const bytes = readFileSync(seedWasmPath());
@@ -134,7 +132,7 @@ var init_env = __esm({
       }
       if (!nativeFetch) throw new Error("fetch is unavailable in this Node build");
       return nativeFetch(input, init2);
-    });
+    };
   }
 });
 
@@ -2138,9 +2136,9 @@ function __param(paramIndex, decorator) {
   };
 }
 function __esDecorate(ctor, descriptorIn, decorators, contextIn, initializers, extraInitializers) {
-  function accept(f) {
-    if (f !== void 0 && typeof f !== "function") throw new TypeError("Function expected");
-    return f;
+  function accept(f2) {
+    if (f2 !== void 0 && typeof f2 !== "function") throw new TypeError("Function expected");
+    return f2;
   }
   var kind = contextIn.kind, key = kind === "getter" ? "get" : kind === "setter" ? "set" : "value";
   var target = !descriptorIn && ctor ? contextIn["static"] ? ctor : ctor.prototype : null;
@@ -2150,9 +2148,9 @@ function __esDecorate(ctor, descriptorIn, decorators, contextIn, initializers, e
     var context = {};
     for (var p in contextIn) context[p] = p === "access" ? {} : contextIn[p];
     for (var p in contextIn.access) context.access[p] = contextIn.access[p];
-    context.addInitializer = function(f) {
+    context.addInitializer = function(f2) {
       if (done) throw new TypeError("Cannot add initializers after decoration has completed");
-      extraInitializers.push(accept(f || null));
+      extraInitializers.push(accept(f2 || null));
     };
     var result = (0, decorators[i])(kind === "accessor" ? { get: descriptor.get, set: descriptor.set } : descriptor[key], context);
     if (kind === "accessor") {
@@ -2179,9 +2177,9 @@ function __runInitializers(thisArg, initializers, value2) {
 function __propKey(x) {
   return typeof x === "symbol" ? x : "".concat(x);
 }
-function __setFunctionName(f, name, prefix) {
+function __setFunctionName(f2, name, prefix) {
   if (typeof name === "symbol") name = name.description ? "[".concat(name.description, "]") : "";
-  return Object.defineProperty(f, "name", { configurable: true, value: prefix ? "".concat(prefix, " ", name) : name });
+  return Object.defineProperty(f2, "name", { configurable: true, value: prefix ? "".concat(prefix, " ", name) : name });
 }
 function __metadata(metadataKey, metadataValue) {
   if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(metadataKey, metadataValue);
@@ -2217,7 +2215,7 @@ function __generator(thisArg, body) {
   var _ = { label: 0, sent: function() {
     if (t[0] & 1) throw t[1];
     return t[1];
-  }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+  }, trys: [], ops: [] }, f2, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
   return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() {
     return this;
   }), g;
@@ -2227,9 +2225,9 @@ function __generator(thisArg, body) {
     };
   }
   function step(op) {
-    if (f) throw new TypeError("Generator is already executing.");
+    if (f2) throw new TypeError("Generator is already executing.");
     while (g && (g = 0, op[0] && (_ = 0)), _) try {
-      if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+      if (f2 = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
       if (y = 0, t) op = [op[0] & 2, t.value];
       switch (op[0]) {
         case 0:
@@ -2276,18 +2274,18 @@ function __generator(thisArg, body) {
       op = [6, e];
       y = 0;
     } finally {
-      f = t = 0;
+      f2 = t = 0;
     }
     if (op[0] & 5) throw op[1];
     return { value: op[0] ? op[1] : void 0, done: true };
   }
 }
-function __exportStar(m, o) {
-  for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(o, p)) __createBinding(o, m, p);
+function __exportStar(m2, o) {
+  for (var p in m2) if (p !== "default" && !Object.prototype.hasOwnProperty.call(o, p)) __createBinding(o, m2, p);
 }
 function __values(o) {
-  var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-  if (m) return m.call(o);
+  var s = typeof Symbol === "function" && Symbol.iterator, m2 = s && o[s], i = 0;
+  if (m2) return m2.call(o);
   if (o && typeof o.length === "number") return {
     next: function() {
       if (o && i >= o.length) o = void 0;
@@ -2297,16 +2295,16 @@ function __values(o) {
   throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 }
 function __read(o, n) {
-  var m = typeof Symbol === "function" && o[Symbol.iterator];
-  if (!m) return o;
-  var i = m.call(o), r, ar = [], e;
+  var m2 = typeof Symbol === "function" && o[Symbol.iterator];
+  if (!m2) return o;
+  var i = m2.call(o), r, ar = [], e;
   try {
     while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
   } catch (error) {
     e = { error };
   } finally {
     try {
-      if (r && !r.done && (m = i["return"])) m.call(i);
+      if (r && !r.done && (m2 = i["return"])) m2.call(i);
     } finally {
       if (e) throw e.error;
     }
@@ -2343,19 +2341,19 @@ function __asyncGenerator(thisArg, _arguments, generator) {
   return i = Object.create((typeof AsyncIterator === "function" ? AsyncIterator : Object).prototype), verb("next"), verb("throw"), verb("return", awaitReturn), i[Symbol.asyncIterator] = function() {
     return this;
   }, i;
-  function awaitReturn(f) {
+  function awaitReturn(f2) {
     return function(v) {
-      return Promise.resolve(v).then(f, reject);
+      return Promise.resolve(v).then(f2, reject);
     };
   }
-  function verb(n, f) {
+  function verb(n, f2) {
     if (g[n]) {
       i[n] = function(v) {
         return new Promise(function(a, b) {
           q.push([n, v, a, b]) > 1 || resume(n, v);
         });
       };
-      if (f) i[n] = f(i[n]);
+      if (f2) i[n] = f2(i[n]);
     }
   }
   function resume(n, v) {
@@ -2374,8 +2372,8 @@ function __asyncGenerator(thisArg, _arguments, generator) {
   function reject(value2) {
     resume("throw", value2);
   }
-  function settle(f, v) {
-    if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]);
+  function settle(f2, v) {
+    if (f2(v), q.shift(), q.length) resume(q[0][0], q[0][1]);
   }
 }
 function __asyncDelegator(o) {
@@ -2385,16 +2383,16 @@ function __asyncDelegator(o) {
   }), verb("return"), i[Symbol.iterator] = function() {
     return this;
   }, i;
-  function verb(n, f) {
+  function verb(n, f2) {
     i[n] = o[n] ? function(v) {
-      return (p = !p) ? { value: __await(o[n](v)), done: false } : f ? f(v) : v;
-    } : f;
+      return (p = !p) ? { value: __await(o[n](v)), done: false } : f2 ? f2(v) : v;
+    } : f2;
   }
 }
 function __asyncValues(o) {
   if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-  var m = o[Symbol.asyncIterator], i;
-  return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function() {
+  var m2 = o[Symbol.asyncIterator], i;
+  return m2 ? m2.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function() {
     return this;
   }, i);
   function verb(n) {
@@ -2430,16 +2428,16 @@ function __importStar(mod) {
 function __importDefault(mod) {
   return mod && mod.__esModule ? mod : { default: mod };
 }
-function __classPrivateFieldGet(receiver, state, kind, f) {
-  if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-  return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+function __classPrivateFieldGet(receiver, state, kind, f2) {
+  if (kind === "a" && !f2) throw new TypeError("Private accessor was defined without a getter");
+  if (typeof state === "function" ? receiver !== state || !f2 : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+  return kind === "m" ? f2 : kind === "a" ? f2.call(receiver) : f2 ? f2.value : state.get(receiver);
 }
-function __classPrivateFieldSet(receiver, state, value2, kind, f) {
+function __classPrivateFieldSet(receiver, state, value2, kind, f2) {
   if (kind === "m") throw new TypeError("Private method is not writable");
-  if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-  return kind === "a" ? f.call(receiver, value2) : f ? f.value = value2 : state.set(receiver, value2), value2;
+  if (kind === "a" && !f2) throw new TypeError("Private accessor was defined without a setter");
+  if (typeof state === "function" ? receiver !== state || !f2 : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+  return kind === "a" ? f2.call(receiver, value2) : f2 ? f2.value = value2 : state.set(receiver, value2), value2;
 }
 function __classPrivateFieldIn(state, receiver) {
   if (receiver === null || typeof receiver !== "object" && typeof receiver !== "function") throw new TypeError("Cannot use 'in' operator on non-object");
@@ -2500,8 +2498,8 @@ function __disposeResources(env2) {
 }
 function __rewriteRelativeImportExtension(path, preserveJsx) {
   if (typeof path === "string" && /^\.\.?\//.test(path)) {
-    return path.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function(m, tsx, d, ext, cm) {
-      return tsx ? preserveJsx ? ".jsx" : ".js" : d && (!ext || !cm) ? m : d + ext + "." + cm.toLowerCase() + "js";
+    return path.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function(m2, tsx, d, ext2, cm) {
+      return tsx ? preserveJsx ? ".jsx" : ".js" : d && (!ext2 || !cm) ? m2 : d + ext2 + "." + cm.toLowerCase() + "js";
     });
   }
   return path;
@@ -2527,22 +2525,22 @@ var init_tslib_es6 = __esm({
       };
       return __assign.apply(this, arguments);
     };
-    __createBinding = Object.create ? (function(o, m, k, k2) {
+    __createBinding = Object.create ? function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      var desc = Object.getOwnPropertyDescriptor(m2, k);
+      if (!desc || ("get" in desc ? !m2.__esModule : desc.writable || desc.configurable)) {
         desc = { enumerable: true, get: function() {
-          return m[k];
+          return m2[k];
         } };
       }
       Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
+    } : function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    });
-    __setModuleDefault = Object.create ? (function(o, v) {
+      o[k2] = m2[k];
+    };
+    __setModuleDefault = Object.create ? function(o, v) {
       Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
+    } : function(o, v) {
       o["default"] = v;
     };
     ownKeys = function(o) {
@@ -4503,24 +4501,17 @@ var require_transformers = __commonJS({
           return (0, exports.toJson)(value2);
         case PostgresTypes.timestamp:
           return (0, exports.toTimestampString)(value2);
-        // Format to be consistent with PostgREST
         case PostgresTypes.abstime:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.date:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.daterange:
         case PostgresTypes.int4range:
         case PostgresTypes.int8range:
         case PostgresTypes.money:
         case PostgresTypes.reltime:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.text:
         case PostgresTypes.time:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.timestamptz:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.timetz:
-        // To allow users to cast it based on Timezone
         case PostgresTypes.tsrange:
         case PostgresTypes.tstzrange:
           return noop(value2);
@@ -4821,10 +4812,10 @@ var require_RealtimePresence = __commonJS({
         this.map(transformedState, (key, newPresences) => {
           const currentPresences = state[key];
           if (currentPresences) {
-            const newPresenceRefs = newPresences.map((m) => m.presence_ref);
-            const curPresenceRefs = currentPresences.map((m) => m.presence_ref);
-            const joinedPresences = newPresences.filter((m) => curPresenceRefs.indexOf(m.presence_ref) < 0);
-            const leftPresences = currentPresences.filter((m) => newPresenceRefs.indexOf(m.presence_ref) < 0);
+            const newPresenceRefs = newPresences.map((m2) => m2.presence_ref);
+            const curPresenceRefs = currentPresences.map((m2) => m2.presence_ref);
+            const joinedPresences = newPresences.filter((m2) => curPresenceRefs.indexOf(m2.presence_ref) < 0);
+            const leftPresences = currentPresences.filter((m2) => newPresenceRefs.indexOf(m2.presence_ref) < 0);
             if (joinedPresences.length > 0) {
               joins[key] = joinedPresences;
             }
@@ -4865,8 +4856,8 @@ var require_RealtimePresence = __commonJS({
           const currentPresences = (_a = state[key]) !== null && _a !== void 0 ? _a : [];
           state[key] = this.cloneDeep(newPresences);
           if (currentPresences.length > 0) {
-            const joinedPresenceRefs = state[key].map((m) => m.presence_ref);
-            const curPresences = currentPresences.filter((m) => joinedPresenceRefs.indexOf(m.presence_ref) < 0);
+            const joinedPresenceRefs = state[key].map((m2) => m2.presence_ref);
+            const curPresences = currentPresences.filter((m2) => joinedPresenceRefs.indexOf(m2.presence_ref) < 0);
             state[key].unshift(...curPresences);
           }
           onJoin(key, currentPresences, newPresences);
@@ -4875,8 +4866,8 @@ var require_RealtimePresence = __commonJS({
           let currentPresences = state[key];
           if (!currentPresences)
             return;
-          const presenceRefsToRemove = leftPresences.map((m) => m.presence_ref);
-          currentPresences = currentPresences.filter((m) => presenceRefsToRemove.indexOf(m.presence_ref) < 0);
+          const presenceRefsToRemove = leftPresences.map((m2) => m2.presence_ref);
+          currentPresences = currentPresences.filter((m2) => presenceRefsToRemove.indexOf(m2.presence_ref) < 0);
           state[key] = currentPresences;
           onLeave(key, currentPresences, leftPresences);
           if (currentPresences.length === 0)
@@ -6306,17 +6297,17 @@ Option 2: Install and provide the "ws" package:
           this.logLevel = options.logLevel || options.log_level;
           this.params = Object.assign(Object.assign({}, this.params), { log_level: this.logLevel });
         }
-        this.reconnectAfterMs = (_h = options === null || options === void 0 ? void 0 : options.reconnectAfterMs) !== null && _h !== void 0 ? _h : ((tries) => {
+        this.reconnectAfterMs = (_h = options === null || options === void 0 ? void 0 : options.reconnectAfterMs) !== null && _h !== void 0 ? _h : (tries) => {
           return RECONNECT_INTERVALS[tries - 1] || DEFAULT_RECONNECT_FALLBACK;
-        });
+        };
         switch (this.vsn) {
           case constants_1.VSN_1_0_0:
-            this.encode = (_j = options === null || options === void 0 ? void 0 : options.encode) !== null && _j !== void 0 ? _j : ((payload, callback) => {
+            this.encode = (_j = options === null || options === void 0 ? void 0 : options.encode) !== null && _j !== void 0 ? _j : (payload, callback) => {
               return callback(JSON.stringify(payload));
-            });
-            this.decode = (_k = options === null || options === void 0 ? void 0 : options.decode) !== null && _k !== void 0 ? _k : ((payload, callback) => {
+            };
+            this.decode = (_k = options === null || options === void 0 ? void 0 : options.decode) !== null && _k !== void 0 ? _k : (payload, callback) => {
               return callback(JSON.parse(payload));
-            });
+            };
             break;
           case constants_1.VSN_2_0_0:
             this.encode = (_l = options === null || options === void 0 ? void 0 : options.encode) !== null && _l !== void 0 ? _l : this.serializer.encode.bind(this.serializer);
@@ -6996,7 +6987,7 @@ function createFetchApi(namespace = "storage") {
     }
   };
 }
-var StorageError, StorageApiError, StorageUnknownError, resolveFetch, isPlainObject, recursiveToCamel, isValidBucketName, _getErrorMessage, handleError, _getRequestParams, defaultApi, get, post, put, head, remove, vectorsApi, BaseApiClient, StreamDownloadBuilder, _Symbol$toStringTag, BlobDownloadBuilder, DEFAULT_SEARCH_OPTIONS, DEFAULT_FILE_OPTIONS, StorageFileApi, version, DEFAULT_HEADERS, StorageBucketApi, StorageAnalyticsClient, VectorIndexApi, VectorDataApi, VectorBucketApi, StorageVectorsClient, VectorBucketScope, VectorIndexScope, StorageClient;
+var StorageError, StorageApiError, StorageUnknownError, resolveFetch, isPlainObject2, recursiveToCamel, isValidBucketName, _getErrorMessage, handleError, _getRequestParams, defaultApi, get, post, put, head, remove, vectorsApi, BaseApiClient, StreamDownloadBuilder, _Symbol$toStringTag, BlobDownloadBuilder, DEFAULT_SEARCH_OPTIONS, DEFAULT_FILE_OPTIONS, StorageFileApi, version, DEFAULT_HEADERS, StorageBucketApi, StorageAnalyticsClient, VectorIndexApi, VectorDataApi, VectorBucketApi, StorageVectorsClient, VectorBucketScope, VectorIndexScope, StorageClient;
 var init_dist3 = __esm({
   "node_modules/@supabase/storage-js/dist/index.mjs"() {
     init_dist2();
@@ -7037,7 +7028,7 @@ var init_dist3 = __esm({
       if (customFetch) return (...args) => customFetch(...args);
       return (...args) => fetch(...args);
     };
-    isPlainObject = (value2) => {
+    isPlainObject2 = (value2) => {
       if (typeof value2 !== "object" || value2 === null) return false;
       const prototype = Object.getPrototypeOf(value2);
       return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(Symbol.toStringTag in value2) && !(Symbol.iterator in value2);
@@ -7091,7 +7082,7 @@ var init_dist3 = __esm({
         headers: (options === null || options === void 0 ? void 0 : options.headers) || {}
       };
       if (method === "GET" || method === "HEAD" || !body) return _objectSpread2(_objectSpread2({}, params), parameters);
-      if (isPlainObject(body)) {
+      if (isPlainObject2(body)) {
         params.headers = _objectSpread2({ "Content-Type": "application/json" }, options === null || options === void 0 ? void 0 : options.headers);
         params.body = JSON.stringify(body);
       } else params.body = body;
@@ -9472,15 +9463,15 @@ var require_base64url = __commonJS({
       }
     }
     function byteFromBase64URL(charCode, state, emit2) {
-      const bits = FROM_BASE64URL[charCode];
-      if (bits > -1) {
-        state.queue = state.queue << 6 | bits;
+      const bits2 = FROM_BASE64URL[charCode];
+      if (bits2 > -1) {
+        state.queue = state.queue << 6 | bits2;
         state.queuedBits += 6;
         while (state.queuedBits >= 8) {
           emit2(state.queue >> state.queuedBits - 8 & 255);
           state.queuedBits -= 8;
         }
-      } else if (bits === -2) {
+      } else if (bits2 === -2) {
         return;
       } else {
         throw new Error(`Invalid Base64-URL character "${String.fromCharCode(charCode)}"`);
@@ -9759,9 +9750,9 @@ var require_helpers = __commonJS({
       };
       return data;
     }
-    async function sleep(time) {
+    async function sleep(time2) {
       return await new Promise((accept) => {
-        setTimeout(() => accept(null), time);
+        setTimeout(() => accept(null), time2);
       });
     }
     function retryable(fn2, isRetryable) {
@@ -14494,58 +14485,83 @@ var init_dist4 = __esm({
 });
 
 // src/integrations/supabase/previewAuthStorage.ts
+function readBrokerReply(data, requestId) {
+  if (typeof data !== "object" || data === null) return null;
+  if (!("type" in data) || data.type !== RESULT) return null;
+  if (!("requestId" in data) || data.requestId !== requestId) return null;
+  return {
+    ok: "ok" in data && Boolean(data.ok),
+    value: "value" in data && typeof data.value === "string" ? data.value : null
+  };
+}
 function brokeredPreviewStorage() {
   if (typeof window === "undefined") return void 0;
   const host = location.hostname;
   const PREVIEW_ZONES = ["lovableproject.com", "lovableproject-dev.com", "lovable.app", "gpt-eng.com", "gptengineer.run"];
   const onPreviewZone = PREVIEW_ZONES.some((z) => host === z || host.endsWith("." + z));
   const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-  const projectId = onPreviewZone ? host.match(new RegExp("^(?:id-preview(?:-[a-z0-9]+)?|project)--(" + UUID + ")(?:-dev)?(?=\\.|$)", "i"))?.[1] ?? host.match(new RegExp("^(" + UUID + ")(?=[.-])", "i"))?.[1] : void 0;
-  const framed = window.parent && window.parent !== window;
+  const projectId = onPreviewZone ? new RegExp("^(?:id-preview(?:-[a-z0-9]+)?|project)--(" + UUID + ")(?:-dev)?(?=\\.|$)", "i").exec(host)?.[1] ?? new RegExp("^(" + UUID + ")(?=[.-])", "i").exec(host)?.[1] : void 0;
+  const parentWindow = window.parent;
+  const framed = parentWindow !== null && parentWindow !== window;
   if (!projectId || !framed) return localStorage;
   const dev = host.endsWith(".lovableproject-dev.com") || host.endsWith(".gpt-eng.com");
   const EDITOR = dev ? /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$|^http:\/\/localhost:3000$/ : /^https:\/\/([a-z0-9-]+\.)*(lovable\.dev|gptengineer\.app)$/;
-  const ancestor = location.ancestorOrigins && location.ancestorOrigins[0] || (document.referrer ? new URL(document.referrer).origin : "");
+  const ancestorOrigins = location.ancestorOrigins;
+  const ancestor = ancestorOrigins?.[0] ?? (document.referrer ? new URL(document.referrer).origin : "");
   const editorOrigins = ancestor && EDITOR.test(ancestor) ? [ancestor] : dev ? ["https://lovable.dev", "http://localhost:3000"] : ["https://lovable.dev"];
-  const RESULT = "lovable-preview-auth:result";
   const TIMEOUT = 2e3;
   const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
   const request = (type, key, value2) => new Promise((resolve7) => {
     const requestId = newId();
     let done = false;
-    let timer;
-    const finish2 = (r) => {
+    const finish2 = (reply) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
       window.removeEventListener("message", onMessage);
-      resolve7(r);
+      resolve7(reply);
     };
     const onMessage = (e) => {
-      if (editorOrigins.indexOf(e.origin) < 0) return;
-      const d = e.data;
-      if (d && d.type === RESULT && d.requestId === requestId) finish2(d);
+      if (!editorOrigins.includes(e.origin)) return;
+      const reply = readBrokerReply(e.data, requestId);
+      if (reply) finish2(reply);
     };
     window.addEventListener("message", onMessage);
+    const timer = setTimeout(() => {
+      finish2(null);
+    }, TIMEOUT);
     const msg = { type, requestId, projectId, key };
-    if (value2 !== void 0) msg["value"] = value2;
+    if (value2 !== void 0) msg.value = value2;
     for (const origin of editorOrigins) window.parent.postMessage(msg, origin);
-    timer = setTimeout(() => finish2(null), TIMEOUT);
   });
   let firstGet = true;
   const RETRY_DELAY = 250;
+  const readLocal = (key) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return void 0;
+    }
+  };
   return {
     getItem: async (key) => {
-      let res = await request("lovable-preview-auth:get", key);
+      const local = readLocal(key);
+      let res = await request("lovable-preview-auth:get", key, local ?? void 0);
       if (!res && firstGet) {
-        await new Promise((r) => setTimeout(r, RETRY_DELAY));
-        res = await request("lovable-preview-auth:get", key);
+        await new Promise((resolve7) => setTimeout(resolve7, RETRY_DELAY));
+        res = await request("lovable-preview-auth:get", key, local ?? void 0);
       }
       firstGet = false;
-      if (res && res.ok && typeof res.value === "string") {
+      if (res?.ok && res.value !== null) {
         if (res.value === "") {
-          localStorage.removeItem(key);
+          if (local !== void 0 && readLocal(key) === local) localStorage.removeItem(key);
           return null;
+        }
+        if (local === null && readLocal(key) === null) {
+          try {
+            localStorage.setItem(key, res.value);
+          } catch {
+          }
         }
         return res.value;
       }
@@ -14554,20 +14570,24 @@ function brokeredPreviewStorage() {
     setItem: (key, value2) => {
       localStorage.setItem(key, value2);
       return request("lovable-preview-auth:set", key, value2).then((res) => {
-        if (res && res.ok && typeof res.value === "string" && localStorage.getItem(key) === value2) {
+        if (res?.ok && res.value !== null && localStorage.getItem(key) === value2) {
           if (res.value === "") localStorage.removeItem(key);
           else localStorage.setItem(key, res.value);
         }
       });
     },
     removeItem: (key) => {
+      const local = readLocal(key);
       localStorage.removeItem(key);
-      return request("lovable-preview-auth:remove", key).then(() => void 0);
+      return request("lovable-preview-auth:remove", key, local ?? void 0).then(() => {
+      });
     }
   };
 }
+var RESULT;
 var init_previewAuthStorage = __esm({
   "src/integrations/supabase/previewAuthStorage.ts"() {
+    RESULT = "lovable-preview-auth:result";
   }
 });
 
@@ -14789,7 +14809,7 @@ var init_browser_brain = __esm({
 var DRIVER_BYTECODE_B64, DRIVER_POOL_B64;
 var init_driver_artifact = __esm({
   "lang/compiler/driver-artifact.mjs"() {
-    DRIVER_BYTECODE_B64 = "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";
+    DRIVER_BYTECODE_B64 = "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";
     DRIVER_POOL_B64 = "AAAAAAMAAAB1c2UBAAAAfAEAAAAKBAAAAGtleXMGAAAAdmFsdWVzAwAAAGhhcwYAAABsZW5ndGgGAAAAY29uY2F0AwAAAG9yZAMAAABjaHIDAAAAc3RyBgAAAG1rbGlzdAMAAABpMmYDAAAAZjJpBAAAAGZuZWcEAAAAZmFicwUAAABmc3FydAQAAABmc2luBAAAAGZjb3MEAAAAZnRhbgQAAABmZXhwBAAAAGZsb2cEAAAAZnBvdwUAAABmYnl0ZQMAAABudW0JAAAAcmVhZF9maWxlCgAAAHdyaXRlX2ZpbGUIAAAAaHR0cF9nZXQFAAAAdXBwZXIFAAAAbG93ZXIEAAAAdHJpbQYAAABzdWJzdHIEAAAAZmluZAgAAABjb250YWlucwUAAABzcGxpdAQAAABqb2luBwAAAHJlcGxhY2UDAAAAaW50AwAAAGFicwMAAABtaW4DAAAAbWF4BQAAAHJhbmdlAwAAAHN1bQYAAAByYW5kb20FAAAAZmNlaWwGAAAAZmZsb29yBgAAAGZyb3VuZAIAAAB0bwUAAAB3aGlsZQMAAABmb3IHAAAAYXR0ZW1wdAQAAABtYWtlBAAAAGtpbmQCAAAAaWYEAAAAZWxzZQcAAABleHRlbmRzBQAAAHN1cGVyBAAAAHNlbGYGAAAAc3VwZXJfAQAAAF8DAAAAZW5kBAAAAHRydWUFAAAAZmFsc2UHAAAAbm90aGluZwQAAAB3aXRoBwAAAGNhcHR1cmUDAAAAbmV3AwAAAHJlZgQAAABjYWxsAgAAAGlzAwAAAG5vdAIAAABvcgQAAABtb3JlBAAAAGxlc3MDAAAAYW5kBgAAAHJlc2N1ZQMAAABzYXkDAAAAc2V0BgAAAHJldHVybgUAAABicmVhawgAAABjb250aW51ZQUAAAB0aHJvdwQAAABlYWNoAgAAAGluBQAAAF9mZV9sBQAAAF9mZV9pBwAAADxzdGRpbj4=";
   }
 });
@@ -15926,8 +15946,8 @@ var init_compiler = __esm({
       }
       compileClass(node, fn2) {
         const ctorFn = new FunctionCompiler(node.name, []);
-        const initMethod = node.methods.find((m) => m.name === "init");
-        const otherMethods = node.methods.filter((m) => m.name !== "init");
+        const initMethod = node.methods.find((m2) => m2.name === "init");
+        const otherMethods = node.methods.filter((m2) => m2.name !== "init");
         if (initMethod) {
           ctorFn.params = initMethod.params.filter((p) => p !== "self");
         }
@@ -16207,10 +16227,10 @@ function desugarKinds(tokens) {
         }
         if (opener(j)) {
           if (depth === 0 && tokens[j].type === "KW" && tokens[j].value === "to" && tokens[j + 1] && tokens[j + 1].type === "IDENT") {
-            const m = tokens[j + 1].value;
-            const fn2 = cname + "_" + m;
+            const m2 = tokens[j + 1].value;
+            const fn2 = cname + "_" + m2;
             tokens[j + 1] = { ...tokens[j + 1], value: fn2 };
-            methods.push({ key: m, fn: fn2 });
+            methods.push({ key: m2, fn: fn2 });
           }
           depth++;
           j++;
@@ -16704,7 +16724,6 @@ function typeOf(e, tys, fnTypes) {
       return "list";
     case "tome":
       return "tome";
-    // Milestone 6f: an object is a tome; a function value is an opaque word.
     case "new":
       return "tome";
     case "ref":
@@ -16770,12 +16789,12 @@ function tomeValKey(e) {
 function inferFnTypes(funcs, mainBody = [], classes = null) {
   const fnTypes = /* @__PURE__ */ new Map();
   fnTypes._classes = classes;
-  const byName = new Map(funcs.map((f) => [f.name, f]));
+  const byName = new Map(funcs.map((f2) => [f2.name, f2]));
   const noteCalls = (e, tys) => {
     if (!e || typeof e !== "object") return;
     if (e.k === "call") {
-      const f = byName.get(e.name);
-      if (f) {
+      const f2 = byName.get(e.name);
+      if (f2) {
         e.args.forEach((arg, i) => {
           const t = typeOf(arg, tys, fnTypes);
           const key = `@param:${e.name}:${i}`;
@@ -16791,10 +16810,10 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
     }
   };
   for (let pass = 0; pass < 3; pass++) {
-    for (const f of [...funcs, { name: null, params: [], body: mainBody }]) {
+    for (const f2 of [...funcs, { name: null, params: [], body: mainBody }]) {
       const tys = /* @__PURE__ */ new Map();
-      for (const [i, p] of (f.params || []).entries()) {
-        const t2 = f.name && fnTypes.get(`@param:${f.name}:${i}`);
+      for (const [i, p] of (f2.params || []).entries()) {
+        const t2 = f2.name && fnTypes.get(`@param:${f2.name}:${i}`);
         if (t2) tys.set(p, t2);
       }
       let t = "int";
@@ -16823,8 +16842,8 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
           }
         }
       };
-      walk(f.body);
-      if (f.name) fnTypes.set(f.name, t);
+      walk(f2.body);
+      if (f2.name) fnTypes.set(f2.name, t);
     }
   }
   return fnTypes;
@@ -17020,12 +17039,6 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       if (e.args.length > 0) em.L(`    addq $${e.args.length * 8}, %rsp`);
       return;
     }
-    // ---- Milestone 6f: first-class functions, closures, objects ----
-    //
-    // A function value is a heap closure: [i64 code ptr][i64 ncaps][caps...].
-    // Calls through a value put the closure pointer in %r10; a lambda body
-    // copies its captures out of %r10 in its prologue, so the argument
-    // convention (args pushed right-to-left) is unchanged.
     case "ref": {
       const info = em.functions.get(e.name);
       if (!info) throw new Error(`native: unknown function ${e.name}`);
@@ -17159,7 +17172,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "str":
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       return true;
-    // ---- Milestone 6e: floats ----
     case "sqrt":
     case "floor":
     case "ceil":
@@ -17185,11 +17197,8 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "random":
       em.L("    call sdev_random");
       return true;
-    // ---- Milestone 6i: sequence + numeric library ----
     case "range":
-    // range(n) -> [0 .. n-1]
     case "sum":
-    // sum(list) -> int
     case "f2i":
       one();
       em.L("    movq %rax, %rdi");
@@ -17237,7 +17246,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    movq %rcx, (%rax)");
       return true;
     }
-    // ---- Milestone 6d: strings ----
     case "upper":
     case "lower":
     case "trim":
@@ -17289,7 +17297,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    call sdev_substr");
       return true;
     }
-    // ---- Milestone 6d: integer math ----
     case "min":
     case "max": {
       emitExpr(a[0], em, locals, tys, fnTypes);
@@ -17300,7 +17307,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L(`    ${n === "min" ? "cmovlq" : "cmovgq"} %rcx, %rax`);
       return true;
     }
-    // ---- Milestone 6d: tomes ----
     case "tome_new":
       em.L("    call sdev_tnew");
       return true;
@@ -17310,7 +17316,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    movq %rax, %rdi");
       em.L(`    call sdev_t${n === "keys" ? "keys" : "vals"}`);
       return true;
-    // ---- Milestone 6g: host file I/O ----
     case "read_file":
     case "file_exists":
       emitStrExpr(a[0], em, locals, tys, fnTypes);
@@ -17329,7 +17334,6 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "input":
       em.L("    call sdev_input");
       return true;
-    // ---- Milestone 6h: process / OS layer ----
     case "args":
       em.L("    call sdev_args");
       return true;
@@ -17510,7 +17514,6 @@ function emitStmt(s, em, locals, ctx) {
       em.L(`${end}:`);
       return;
     }
-    // ---- Milestone 6f ----
     case "break":
     case "continue": {
       const loop = (ctx.loops || [])[(ctx.loops || []).length - 1];
@@ -17530,9 +17533,6 @@ function emitStmt(s, em, locals, ctx) {
       em.L("    call sdev_tset");
       return;
     }
-    // `attempt … rescue err … end` — the handler stack lives in the runtime;
-    // a throw restores the saved %rsp/%rbp and jumps straight to the handler
-    // with the message in %rax.
     case "attempt": {
       const handler = em.gensym("rescue");
       const over = em.gensym("endtry");
@@ -17601,34 +17601,34 @@ function generateAsm(source, opts = {}) {
   em.classes = classes;
   const funcs = ast.filter((s) => s.k === "func");
   const main2 = ast.filter((s) => s.k !== "func");
-  for (const f of funcs) {
-    em.functions.set(f.name, { arity: f.params.length, label: `sdev_fn_${f.name}` });
+  for (const f2 of funcs) {
+    em.functions.set(f2.name, { arity: f2.params.length, label: `sdev_fn_${f2.name}` });
   }
   em.fnTypes = inferFnTypes(funcs, main2, classes);
   em.L("# Generated by lang/native/codegen-x64.mjs \u2014 do not edit by hand.");
   em.L("    .text");
   em.L("    .globl sdev_main");
-  for (const f of funcs) {
-    const info = em.functions.get(f.name);
+  for (const f2 of funcs) {
+    const info = em.functions.get(f2.name);
     em.L(`${info.label}:`);
     em.L("    pushq %rbp");
     em.L("    movq %rsp, %rbp");
     em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
     const locals = /* @__PURE__ */ new Map();
-    f.params.forEach((p, i) => locals.set(p, i));
-    collectSets(f.body, locals);
-    f.params.forEach((_p, i) => {
+    f2.params.forEach((p, i) => locals.set(p, i));
+    collectSets(f2.body, locals);
+    f2.params.forEach((_p, i) => {
       em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
     });
     const epilogue = em.gensym("ret");
     const ptys = /* @__PURE__ */ new Map();
-    f.params.forEach((p, i) => {
-      const t = em.fnTypes.get(`@param:${f.name}:${i}`);
+    f2.params.forEach((p, i) => {
+      const t = em.fnTypes.get(`@param:${f2.name}:${i}`);
       if (t) ptys.set(p, t);
     });
     const ctx = { epilogue, tys: ptys, fnTypes: em.fnTypes };
-    f.body.forEach((s) => emitStmt(s, em, locals, ctx));
+    f2.body.forEach((s) => emitStmt(s, em, locals, ctx));
     em.L("    xorq %rax, %rax");
     em.L(`${epilogue}:`);
     em.L("    movq %rbp, %rsp");
@@ -21906,8 +21906,8 @@ function registerMisc(builtins, output) {
       vec.mul = makeVecMethod((self2, scalar) => buildVec(self2.x * scalar, self2.y * scalar));
       vec.mag = makeVecMethod((self2) => Math.sqrt(self2.x ** 2 + self2.y ** 2));
       vec.normalize = makeVecMethod((self2) => {
-        const m = Math.sqrt(self2.x ** 2 + self2.y ** 2);
-        return m === 0 ? buildVec(0, 0) : buildVec(self2.x / m, self2.y / m);
+        const m2 = Math.sqrt(self2.x ** 2 + self2.y ** 2);
+        return m2 === 0 ? buildVec(0, 0) : buildVec(self2.x / m2, self2.y / m2);
       });
       vec.dot = makeVecMethod((self2, other) => {
         const o = other;
@@ -21931,8 +21931,8 @@ function registerMisc(builtins, output) {
     vec.mul = makeMethod((s, sc) => buildVec(s.x * sc, s.y * sc));
     vec.mag = makeMethod((s) => Math.sqrt(s.x ** 2 + s.y ** 2));
     vec.normalize = makeMethod((s) => {
-      const m = Math.sqrt(s.x ** 2 + s.y ** 2);
-      return m === 0 ? buildVec(0, 0) : buildVec(s.x / m, s.y / m);
+      const m2 = Math.sqrt(s.x ** 2 + s.y ** 2);
+      return m2 === 0 ? buildVec(0, 0) : buildVec(s.x / m2, s.y / m2);
     });
     vec.dot = makeMethod((s, o) => s.x * o.x + s.y * o.y);
     vec.distance = makeMethod((s, o) => Math.sqrt((s.x - o.x) ** 2 + (s.y - o.y) ** 2));
@@ -22207,8 +22207,8 @@ function registerRegex(builtins, output) {
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("match() takes 2 arguments (text, pattern)", line);
       if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
-      const m = args[0].match(new RegExp(args[1]));
-      return m ? Array.from(m) : null;
+      const m2 = args[0].match(new RegExp(args[1]));
+      return m2 ? Array.from(m2) : null;
     }
   });
   builtins.set("matchAll", {
@@ -22217,7 +22217,7 @@ function registerRegex(builtins, output) {
       if (args.length !== 2) throw new SdevError("matchAll() takes 2 arguments (text, pattern)", line);
       if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
       const matches = Array.from(args[0].matchAll(new RegExp(args[1], "g")));
-      return matches.map((m) => Array.from(m));
+      return matches.map((m2) => Array.from(m2));
     }
   });
   builtins.set("replaceRegex", {
@@ -22542,15 +22542,15 @@ function text(v, fn2, line) {
   return v;
 }
 function flagsOf(v, global2) {
-  const f = typeof v === "string" ? v.replace(/[^imsu]/g, "") : "";
-  return (global2 ? "g" : "") + (f.includes("u") ? f : f + "u");
+  const f2 = typeof v === "string" ? v.replace(/[^imsu]/g, "") : "";
+  return (global2 ? "g" : "") + (f2.includes("u") ? f2 : f2 + "u");
 }
 var cache = /* @__PURE__ */ new Map();
-function re(p, f) {
-  const k = f + "/" + p;
+function re(p, f2) {
+  const k = f2 + "/" + p;
   let r = cache.get(k);
   if (!r) {
-    r = new RegExp(p, f);
+    r = new RegExp(p, f2);
     if (cache.size > 500) cache.clear();
     cache.set(k, r);
   }
@@ -22580,10 +22580,10 @@ function registerText(builtins, _output) {
   def("is_name", (a, l) => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(text(a[0], "is_name", l)));
   def("regex_test", (a, l) => re(text(a[1], "regex_test", l), flagsOf(a[2], false)).test(text(a[0], "regex_test", l)));
   def("regex_capture", (a, l) => {
-    const m = text(a[0], "regex_capture", l).match(re(text(a[1], "regex_capture", l), flagsOf(a[2], false)));
-    return m ? Array.from(m, (x) => x ?? "") : null;
+    const m2 = text(a[0], "regex_capture", l).match(re(text(a[1], "regex_capture", l), flagsOf(a[2], false)));
+    return m2 ? Array.from(m2, (x) => x ?? "") : null;
   });
-  def("regex_find_all", (a, l) => Array.from(text(a[0], "regex_find_all", l).matchAll(re(text(a[1], "regex_find_all", l), flagsOf(a[2], true))), (m) => m[0]));
+  def("regex_find_all", (a, l) => Array.from(text(a[0], "regex_find_all", l).matchAll(re(text(a[1], "regex_find_all", l), flagsOf(a[2], true))), (m2) => m2[0]));
   def("regex_replace", (a, l) => text(a[0], "regex_replace", l).replace(re(text(a[1], "regex_replace", l), flagsOf(a[3], true)), text(a[2], "regex_replace", l)));
   def("evaluate", (a, l) => {
     const src = text(a[0], "evaluate", l).replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
@@ -22612,10 +22612,10 @@ function registerText(builtins, _output) {
         i++;
         return atom();
       }
-      const m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(src.slice(i));
-      if (!m) fail();
-      i += m[0].length;
-      let v2 = Number(m[0]);
+      const m2 = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(src.slice(i));
+      if (!m2) fail();
+      i += m2[0].length;
+      let v2 = Number(m2[0]);
       if (peek() === "%") {
         i++;
         v2 /= 100;
@@ -23057,16 +23057,16 @@ function createMatrixBuiltins() {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("transpose() takes 1 argument", line);
-      const m = args[0];
-      if (!Array.isArray(m)) throw new SdevError("Argument must be a 2D list", line);
-      if (m.length === 0) return [];
-      const rows = m.length;
-      const cols = m[0].length;
+      const m2 = args[0];
+      if (!Array.isArray(m2)) throw new SdevError("Argument must be a 2D list", line);
+      if (m2.length === 0) return [];
+      const rows = m2.length;
+      const cols = m2[0].length;
       const result = [];
       for (let j = 0; j < cols; j++) {
         const row = [];
         for (let i = 0; i < rows; i++) {
-          row.push(m[i][j]);
+          row.push(m2[i][j]);
         }
         result.push(row);
       }
@@ -23137,28 +23137,28 @@ function createMatrixBuiltins() {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("matscale() takes 2 arguments (matrix, scalar)", line);
-      const m = args[0];
+      const m2 = args[0];
       const s = args[1];
-      return m.map((row) => row.map((v) => v * s));
+      return m2.map((row) => row.map((v) => v * s));
     }
   });
   builtins.set("shape", {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("shape() takes 1 argument", line);
-      const m = args[0];
-      if (!Array.isArray(m)) return [0];
-      if (m.length === 0) return [0];
-      if (!Array.isArray(m[0])) return [m.length];
-      return [m.length, m[0].length];
+      const m2 = args[0];
+      if (!Array.isArray(m2)) return [0];
+      if (m2.length === 0) return [0];
+      if (!Array.isArray(m2[0])) return [m2.length];
+      return [m2.length, m2[0].length];
     }
   });
   builtins.set("flatten", {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("flatten() takes 1 argument", line);
-      const m = args[0];
-      if (!Array.isArray(m)) return [m];
+      const m2 = args[0];
+      if (!Array.isArray(m2)) return [m2];
       const flat = (arr) => {
         const result = [];
         for (const item of arr) {
@@ -23170,7 +23170,7 @@ function createMatrixBuiltins() {
         }
         return result;
       };
-      return flat(m);
+      return flat(m2);
     }
   });
   builtins.set("reshape", {
@@ -23196,9 +23196,9 @@ function createMatrixBuiltins() {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("matsum() takes 1 argument", line);
-      const m = args[0];
-      if (!Array.isArray(m)) return m;
-      const flat = m.flat(Infinity);
+      const m2 = args[0];
+      if (!Array.isArray(m2)) return m2;
+      const flat = m2.flat(Infinity);
       return flat.reduce((a, b) => a + b, 0);
     }
   });
@@ -23206,9 +23206,9 @@ function createMatrixBuiltins() {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("matmean() takes 1 argument", line);
-      const m = args[0];
-      if (!Array.isArray(m)) return m;
-      const flat = m.flat(Infinity);
+      const m2 = args[0];
+      if (!Array.isArray(m2)) return m2;
+      const flat = m2.flat(Infinity);
       if (flat.length === 0) return 0;
       return flat.reduce((a, b) => a + b, 0) / flat.length;
     }
@@ -23441,7 +23441,6 @@ function splitKwargs(args) {
   const last = args[args.length - 1];
   if (last && typeof last === "object" && last.__kwargs) {
     const { __kwargs, ...kw } = last;
-    void __kwargs;
     return { pos: args.slice(0, -1), kw };
   }
   return { pos: args, kw: {} };
@@ -23482,9 +23481,9 @@ function formatValue(value2, spec, conv) {
   else if (conv === "a") text3 = repr(value2);
   else text3 = displayText(value2);
   if (!spec) return text3;
-  const m = /^(?:(.)?([<>^]))?([+\- ])?(#)?(0)?(\d+)?(,)?(?:\.(\d+))?([bcdeEfFgGnosxX%])?$/.exec(spec);
-  if (!m) return text3;
-  const [, fillRaw, align, sign, alt, zero, widthRaw, comma, precRaw, kind] = m;
+  const m2 = /^(?:(.)?([<>^]))?([+\- ])?(#)?(0)?(\d+)?(,)?(?:\.(\d+))?([bcdeEfFgGnosxX%])?$/.exec(spec);
+  if (!m2) return text3;
+  const [, fillRaw, align, sign, alt, zero, widthRaw, comma, precRaw, kind] = m2;
   const width = widthRaw ? parseInt(widthRaw, 10) : 0;
   const prec = precRaw ? parseInt(precRaw, 10) : void 0;
   if (kind && "bcdeEfFgGnosxX%".includes(kind) && kind !== "s") {
@@ -23662,16 +23661,16 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("map", (args, line) => {
-    const f = args[0];
+    const f2 = args[0];
     const cols = args.slice(1).map((a) => list2(a, line));
     const n = cols.length ? Math.min(...cols.map((c) => c.length)) : 0;
     const out = [];
-    for (let i = 0; i < n; i++) out.push(host.call(f, cols.map((c) => c[i]), line));
+    for (let i = 0; i < n; i++) out.push(host.call(f2, cols.map((c) => c[i]), line));
     return out;
   });
   add("filter", (args, line) => {
-    const [f, seq] = args;
-    return list2(seq, line).filter((v) => f === null ? host.truthy(v) : host.truthy(host.call(f, [v], line)));
+    const [f2, seq] = args;
+    return list2(seq, line).filter((v) => f2 === null ? host.truthy(v) : host.truthy(host.call(f2, [v], line)));
   });
   add("any", (args, line) => list2(args[0], line).some((v) => host.truthy(v)));
   add("all", (args, line) => list2(args[0], line).every((v) => host.truthy(v)));
@@ -23723,18 +23722,18 @@ function createParityBuiltins(output, host) {
   add("round", (args) => {
     const n = num2(args[0]);
     const d = args[1] === void 0 ? 0 : num2(args[1]);
-    const f = Math.pow(10, d);
-    return Math.round(n * f) / f;
+    const f2 = Math.pow(10, d);
+    return Math.round(n * f2) / f2;
   });
   add("pow", (args) => {
-    const [a, e, m] = args.map(num2);
+    const [a, e, m2] = args.map(num2);
     if (args[2] === void 0) return Math.pow(a, e);
     let result = 1;
-    let base = a % m;
+    let base = a % m2;
     let exp = e;
     while (exp > 0) {
-      if (exp % 2 === 1) result = result * base % m;
-      base = base * base % m;
+      if (exp % 2 === 1) result = result * base % m2;
+      base = base * base % m2;
       exp = Math.floor(exp / 2);
     }
     return result;
@@ -23871,7 +23870,7 @@ function createParityBuiltins(output, host) {
     return fn("partial", (callArgs, l) => host.call(target, [...bound, ...callArgs], l ?? line));
   });
   add("reduce", (args, line) => {
-    const [f, seq, initial] = args;
+    const [f2, seq, initial] = args;
     const items = list2(seq, line);
     let acc;
     let start = 0;
@@ -23880,38 +23879,38 @@ function createParityBuiltins(output, host) {
       acc = items[0];
       start = 1;
     }
-    for (let i = start; i < items.length; i++) acc = host.call(f, [acc, items[i]], line);
+    for (let i = start; i < items.length; i++) acc = host.call(f2, [acc, items[i]], line);
     return acc;
   });
   add("dataclass", (args) => args[0]);
   add("count", (args) => {
     let i = args[0] === void 0 ? 0 : num2(args[0]);
     const step = args[1] === void 0 ? 1 : num2(args[1]);
-    const it = (function* () {
+    const it = function* () {
       for (; ; ) {
         yield i;
         i += step;
       }
-    })();
+    }();
     return makeGenerator(it);
   });
   add("cycle", (args, line) => {
     const items = list2(args[0], line);
-    const it = (function* () {
+    const it = function* () {
       if (!items.length) return null;
       for (; ; ) for (const v of items) yield v;
-    })();
+    }();
     return makeGenerator(it);
   });
   add("repeat", (args) => {
     const [v, times] = args;
-    const it = (function* () {
+    const it = function* () {
       if (times === void 0) {
         for (; ; ) yield v;
       }
       for (let i = 0; i < num2(times); i++) yield v;
       return null;
-    })();
+    }();
     return makeGenerator(it);
   });
   add("chain", (args, line) => args.flatMap((a) => list2(a, line)));
@@ -23976,11 +23975,11 @@ function createParityBuiltins(output, host) {
   });
   add("accumulate", (args, line) => {
     const items = list2(args[0], line);
-    const f = args[1];
+    const f2 = args[1];
     const out = [];
     let acc = null;
     items.forEach((v, i) => {
-      acc = i === 0 ? v : f ? host.call(f, [acc, v], line) : acc + v;
+      acc = i === 0 ? v : f2 ? host.call(f2, [acc, v], line) : acc + v;
       out.push(acc);
     });
     return out;
@@ -24027,8 +24026,8 @@ function createParityBuiltins(output, host) {
     const fields = typeof args[1] === "string" ? String(args[1]).split(/[\s,]+/) : list2(args[1], line).map(String);
     return fn(String(args[0]), (values) => {
       const out = {};
-      fields.forEach((f, i) => {
-        out[f] = values[i] ?? null;
+      fields.forEach((f2, i) => {
+        out[f2] = values[i] ?? null;
       });
       return out;
     });
@@ -24218,12 +24217,12 @@ function createParityBuiltins(output, host) {
   });
   const reModule = moduleTome({
     match: fn("match", (a) => {
-      const m = new RegExp("^" + String(a[0])).exec(String(a[1]));
-      return m ? { group: m[0], groups: m.slice(1), index: m.index } : null;
+      const m2 = new RegExp("^" + String(a[0])).exec(String(a[1]));
+      return m2 ? { group: m2[0], groups: m2.slice(1), index: m2.index } : null;
     }),
     search: fn("search", (a) => {
-      const m = new RegExp(String(a[0])).exec(String(a[1]));
-      return m ? { group: m[0], groups: m.slice(1), index: m.index } : null;
+      const m2 = new RegExp(String(a[0])).exec(String(a[1]));
+      return m2 ? { group: m2[0], groups: m2.slice(1), index: m2.index } : null;
     }),
     findall: fn("findall", (a) => String(a[1]).match(new RegExp(String(a[0]), "g")) ?? []),
     sub: fn("sub", (a) => String(a[2]).replace(new RegExp(String(a[0]), "g"), String(a[1]))),
@@ -24275,9 +24274,9 @@ function createParityBuiltins(output, host) {
   };
   add("module", (args, line) => {
     const name = String(args[0]);
-    const m = modules[name];
-    if (!m) throw new SdevError(`Unknown module '${name}'`, line);
-    return m;
+    const m2 = modules[name];
+    if (!m2) throw new SdevError(`Unknown module '${name}'`, line);
+    return m2;
   });
   for (const [name, value2] of Object.entries(modules)) {
     b.set(name, value2);
@@ -24328,12 +24327,12 @@ var Interpreter = class {
     this.globalEnv.define("NAN", NaN);
     this.globalEnv.define("Ellipsis", "...");
     setObjectTextHook((value2) => {
-      const m = this.protocolMethod(value2, "on_text");
-      return m ? stringify(m.call([], 0)) : void 0;
+      const m2 = this.protocolMethod(value2, "on_text");
+      return m2 ? stringify(m2.call([], 0)) : void 0;
     });
     setObjectReprHook((value2) => {
-      const m = this.protocolMethod(value2, "on_repr") ?? this.protocolMethod(value2, "on_text");
-      return m ? stringify(m.call([], 0)) : void 0;
+      const m2 = this.protocolMethod(value2, "on_repr") ?? this.protocolMethod(value2, "on_text");
+      return m2 ? stringify(m2.call([], 0)) : void 0;
     });
   }
   getGlobalEnv() {
@@ -24499,7 +24498,6 @@ var Interpreter = class {
         return yield* this.evDel(node, env2);
       case "ScopeStatement":
         return null;
-      // scope hints; resolution is dynamic
       case "PassStatement":
         return null;
       case "ImportStatement":
@@ -24673,12 +24671,12 @@ var Interpreter = class {
   percentFormat(template, value2) {
     const args = Array.isArray(value2) ? [...value2] : [value2];
     let i = 0;
-    return template.replace(/%(\.\d+)?[sdifr%]/g, (m) => {
-      if (m === "%%") return "%";
+    return template.replace(/%(\.\d+)?[sdifr%]/g, (m2) => {
+      if (m2 === "%%") return "%";
       const v = args[i++];
-      const prec = /\.(\d+)/.exec(m);
-      if (m.endsWith("d") || m.endsWith("i")) return String(Math.trunc(Number(v)));
-      if (m.endsWith("f")) return Number(v).toFixed(prec ? Number(prec[1]) : 6);
+      const prec = /\.(\d+)/.exec(m2);
+      if (m2.endsWith("d") || m2.endsWith("i")) return String(Math.trunc(Number(v)));
+      if (m2.endsWith("f")) return Number(v).toFixed(prec ? Number(prec[1]) : 6);
       return stringify(v);
     });
   }
@@ -24686,8 +24684,8 @@ var Interpreter = class {
     const operand2 = yield* this.ev(node.operand, env2);
     switch (node.operator) {
       case "-": {
-        const m = this.protocolMethod(operand2, "on_neg");
-        if (m) return m.call([], node.line);
+        const m2 = this.protocolMethod(operand2, "on_neg");
+        if (m2) return m2.call([], node.line);
         if (typeof operand2 === "number") return -operand2;
         if (typeof operand2 === "string" && operand2.trim() !== "" && !isNaN(Number(operand2))) return -Number(operand2);
         throw new SdevError("Cannot use '-' with non-number", node.line);
@@ -24739,8 +24737,8 @@ var Interpreter = class {
       }
       return rich.call(args, line);
     }
-    const m = this.protocolMethod(callee, "on_call");
-    if (m) return m.call(args, line);
+    const m2 = this.protocolMethod(callee, "on_call");
+    if (m2) return m2.call(args, line);
     throw new SdevError(`Cannot call non-function: ${stringify(callee)}`, line);
   }
   // ----------------------------------------------------------
@@ -24752,8 +24750,8 @@ var Interpreter = class {
     return this.getIndex(obj, index, node.line);
   }
   getIndex(obj, index, line) {
-    const m = this.protocolMethod(obj, "on_get");
-    if (m) return m.call([index], line);
+    const m2 = this.protocolMethod(obj, "on_get");
+    if (m2) return m2.call([index], line);
     if (Array.isArray(obj)) {
       if (typeof index !== "number") throw new SdevError("List index must be a number", line);
       const idx = index < 0 ? obj.length + index : index;
@@ -24884,10 +24882,10 @@ var Interpreter = class {
   *evComprehension(node, env2) {
     if (node.form === "gen") {
       const self2 = this;
-      const iter = (function* () {
+      const iter = function* () {
         yield* self2.comprehensionWalk(node, env2, 0, (value2) => value2);
         return null;
-      })();
+      }();
       return makeGenerator(iter);
     }
     const collected = [];
@@ -24989,8 +24987,8 @@ var Interpreter = class {
     return this.setIndex(obj, index, value2, node.line);
   }
   setIndex(obj, index, value2, line) {
-    const m = this.protocolMethod(obj, "on_set");
-    if (m) return m.call([index, value2], line);
+    const m2 = this.protocolMethod(obj, "on_set");
+    if (m2) return m2.call([index, value2], line);
     if (Array.isArray(obj)) {
       if (typeof index !== "number") throw new SdevError("List index must be a number", line);
       const idx = index < 0 ? obj.length + index : index;
@@ -25346,7 +25344,6 @@ var Interpreter = class {
     const last = args[args.length - 1];
     if (last && typeof last === "object" && last.__kwargs) {
       const { __kwargs, ...rest } = last;
-      void __kwargs;
       kwargs = rest;
       args.pop();
     }
@@ -25397,7 +25394,6 @@ var Interpreter = class {
     if (value2 && typeof value2 === "object" && "__await" in value2) {
       return value2.__await;
     }
-    void line;
     return value2;
   }
   // ----------------------------------------------------------
@@ -25506,8 +25502,8 @@ var Interpreter = class {
   }
   findMethod(klass, name) {
     for (const c of klass.mro) {
-      const m = c.methods.get(name);
-      if (m) return m;
+      const m2 = c.methods.get(name);
+      if (m2) return m2;
     }
     return void 0;
   }
@@ -25691,8 +25687,8 @@ var Interpreter = class {
   // Helpers
   // ----------------------------------------------------------
   truthy(value2) {
-    const m = this.protocolMethod(value2, "on_truth");
-    if (m) return isTruthy(m.call([], 0));
+    const m2 = this.protocolMethod(value2, "on_truth");
+    if (m2) return isTruthy(m2.call([], 0));
     if (value2 instanceof SdevSet) return value2.size > 0;
     const len = this.protocolMethod(value2, "on_len");
     if (len) return Number(len.call([], 0)) !== 0;
@@ -25727,8 +25723,8 @@ var Interpreter = class {
   isEqual(a, b) {
     if (a === null && b === null) return true;
     if (a === null || b === null) return false;
-    const m = this.protocolMethod(a, "on_eq");
-    if (m) return isTruthy(m.call([b], 0));
+    const m2 = this.protocolMethod(a, "on_eq");
+    if (m2) return isTruthy(m2.call([b], 0));
     if (a instanceof SdevSet && b instanceof SdevSet) {
       return a.size === b.size && a.values().every((v) => b.has(v));
     }
@@ -25751,6 +25747,8157 @@ var Interpreter = class {
 
 // cli/index.ts
 init_errors();
+import { spawnSync as spawnSync2 } from "node:child_process";
+
+// src/lang/graphics.ts
+init_errors();
+function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
+  const builtins = /* @__PURE__ */ new Map();
+  let spriteIdCounter = 0;
+  const sprites = /* @__PURE__ */ new Map();
+  builtins.set("canvas", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("canvas() takes 2 arguments (width, height)", line);
+      const w = args[0];
+      const h = args[1];
+      emit2({ type: "canvas", width: w, height: h });
+      return null;
+    }
+  });
+  builtins.set("clear", {
+    type: "builtin",
+    call: (args) => {
+      const color = args[0] ?? "#1a1a2e";
+      emit2({ type: "clear", color });
+      return null;
+    }
+  });
+  builtins.set("background", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("background() takes at least 1 argument", line);
+      emit2({ type: "background", color: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("fill", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fill() takes 1 argument (color)", line);
+      emit2({ type: "fill", color: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("noFill", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "noFill" });
+      return null;
+    }
+  });
+  builtins.set("stroke", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1 || args.length > 2) throw new SdevError("stroke() takes 1-2 arguments (color, width?)", line);
+      emit2({ type: "stroke", color: stringify(args[0]), width: args[1] ?? 1 });
+      return null;
+    }
+  });
+  builtins.set("noStroke", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "noStroke" });
+      return null;
+    }
+  });
+  builtins.set("lineWidth", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("lineWidth() takes 1 argument", line);
+      emit2({ type: "lineWidth", width: args[0] });
+      return null;
+    }
+  });
+  builtins.set("lineCap", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("lineCap() takes 1 argument (round, square, butt)", line);
+      emit2({ type: "lineCap", cap: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("lineJoin", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("lineJoin() takes 1 argument (round, bevel, miter)", line);
+      emit2({ type: "lineJoin", join: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("alpha", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("alpha() takes 1 argument (0-1)", line);
+      emit2({ type: "alpha", value: args[0] });
+      return null;
+    }
+  });
+  builtins.set("shadow", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 3) throw new SdevError("shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?)", line);
+      emit2({
+        type: "shadow",
+        color: stringify(args[0]),
+        blur: args[1],
+        offsetX: args[2],
+        offsetY: args[3] ?? args[2]
+      });
+      return null;
+    }
+  });
+  builtins.set("noShadow", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "noShadow" });
+      return null;
+    }
+  });
+  builtins.set("rect", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("rect() takes 4-5 arguments (x, y, w, h, radius?)", line);
+      emit2({ type: "rect", x: args[0], y: args[1], w: args[2], h: args[3], radius: args[4] ?? 0 });
+      return null;
+    }
+  });
+  builtins.set("circle", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("circle() takes 3 arguments (x, y, radius)", line);
+      emit2({ type: "circle", x: args[0], y: args[1], r: args[2] });
+      return null;
+    }
+  });
+  builtins.set("ellipse", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?)", line);
+      emit2({ type: "ellipse", x: args[0], y: args[1], rx: args[2], ry: args[3], rotation: args[4] ?? 0 });
+      return null;
+    }
+  });
+  builtins.set("arc", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 5) throw new SdevError("arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?)", line);
+      emit2({
+        type: "arc",
+        x: args[0],
+        y: args[1],
+        r: args[2],
+        start: args[3],
+        end: args[4],
+        ccw: args[5] ?? false
+      });
+      return null;
+    }
+  });
+  builtins.set("line", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("line() takes 4 arguments (x1, y1, x2, y2)", line);
+      emit2({ type: "line", x1: args[0], y1: args[1], x2: args[2], y2: args[3] });
+      return null;
+    }
+  });
+  builtins.set("point", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("point() takes 2-3 arguments (x, y, size?)", line);
+      emit2({ type: "point", x: args[0], y: args[1], size: args[2] ?? 1 });
+      return null;
+    }
+  });
+  builtins.set("triangle", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 6) throw new SdevError("triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3)", line);
+      emit2({ type: "triangle", x1: args[0], y1: args[1], x2: args[2], y2: args[3], x3: args[4], y3: args[5] });
+      return null;
+    }
+  });
+  builtins.set("polygon", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("polygon() takes points [[x,y], ...]", line);
+      const points = args[0];
+      if (!Array.isArray(points)) throw new SdevError("polygon() argument must be a list of points", line);
+      emit2({ type: "polygon", points });
+      return null;
+    }
+  });
+  builtins.set("star", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?)", line);
+      emit2({
+        type: "star",
+        x: args[0],
+        y: args[1],
+        outer: args[2],
+        inner: args[3],
+        points: args[4] ?? 5
+      });
+      return null;
+    }
+  });
+  builtins.set("heart", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("heart() takes 3 arguments (x, y, size)", line);
+      emit2({ type: "heart", x: args[0], y: args[1], size: args[2] });
+      return null;
+    }
+  });
+  builtins.set("text", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 3) throw new SdevError("text() takes 3-4 arguments (str, x, y, size?)", line);
+      emit2({ type: "text", text: stringify(args[0]), x: args[1], y: args[2], size: args[3] ?? 16 });
+      return null;
+    }
+  });
+  builtins.set("textAlign", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("textAlign() takes 1-2 arguments (horizontal, vertical?)", line);
+      emit2({ type: "textAlign", horizontal: stringify(args[0]), vertical: args[1] ? stringify(args[1]) : "alphabetic" });
+      return null;
+    }
+  });
+  builtins.set("font", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("font() takes 1-2 arguments (fontFamily, style?)", line);
+      emit2({ type: "font", family: stringify(args[0]), style: args[1] ? stringify(args[1]) : "normal" });
+      return null;
+    }
+  });
+  builtins.set("linearGradient", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 5) throw new SdevError("linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops)", line);
+      const stops = args.slice(4);
+      emit2({ type: "linearGradient", x1: args[0], y1: args[1], x2: args[2], y2: args[3], stops });
+      return null;
+    }
+  });
+  builtins.set("radialGradient", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 7) throw new SdevError("radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops)", line);
+      const stops = args.slice(6);
+      emit2({ type: "radialGradient", x1: args[0], y1: args[1], r1: args[2], x2: args[3], y2: args[4], r2: args[5], stops });
+      return null;
+    }
+  });
+  builtins.set("translate", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("translate() takes 2 arguments (x, y)", line);
+      emit2({ type: "translate", x: args[0], y: args[1] });
+      return null;
+    }
+  });
+  builtins.set("rotate", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("rotate() takes 1 argument (angle in radians)", line);
+      emit2({ type: "rotate", angle: args[0] });
+      return null;
+    }
+  });
+  builtins.set("scale", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("scale() takes 1-2 arguments (x, y?)", line);
+      emit2({ type: "scale", x: args[0], y: args[1] ?? args[0] });
+      return null;
+    }
+  });
+  builtins.set("save", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "save" });
+      return null;
+    }
+  });
+  builtins.set("restore", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "restore" });
+      return null;
+    }
+  });
+  builtins.set("resetTransform", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "resetTransform" });
+      return null;
+    }
+  });
+  builtins.set("beginPath", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "beginPath" });
+      return null;
+    }
+  });
+  builtins.set("closePath", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "closePath" });
+      return null;
+    }
+  });
+  builtins.set("moveTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("moveTo() takes 2 arguments (x, y)", line);
+      emit2({ type: "moveTo", x: args[0], y: args[1] });
+      return null;
+    }
+  });
+  builtins.set("lineTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("lineTo() takes 2 arguments (x, y)", line);
+      emit2({ type: "lineTo", x: args[0], y: args[1] });
+      return null;
+    }
+  });
+  builtins.set("bezierTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 6) throw new SdevError("bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y)", line);
+      emit2({ type: "bezierTo", cp1x: args[0], cp1y: args[1], cp2x: args[2], cp2y: args[3], x: args[4], y: args[5] });
+      return null;
+    }
+  });
+  builtins.set("quadraticTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("quadraticTo() takes 4 arguments (cpx, cpy, x, y)", line);
+      emit2({ type: "quadraticTo", cpx: args[0], cpy: args[1], x: args[2], y: args[3] });
+      return null;
+    }
+  });
+  builtins.set("fillPath", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "fillPath" });
+      return null;
+    }
+  });
+  builtins.set("strokePath", {
+    type: "builtin",
+    call: () => {
+      emit2({ type: "strokePath" });
+      return null;
+    }
+  });
+  builtins.set("createSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("createSprite() takes 4-5 arguments (x, y, width, height, color?)", line);
+      const id = spriteIdCounter++;
+      const sprite = {
+        id,
+        x: args[0],
+        y: args[1],
+        width: args[2],
+        height: args[3],
+        color: args[4] ? stringify(args[4]) : "#ffffff",
+        rotation: 0,
+        scale: 1,
+        visible: true,
+        velocityX: 0,
+        velocityY: 0
+      };
+      sprites.set(id, sprite);
+      emit2({ type: "createSprite", sprite });
+      return sprite;
+    }
+  });
+  builtins.set("drawSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("drawSprite() takes 1 argument (sprite)", line);
+      const sprite = args[0];
+      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
+      emit2({ type: "drawSprite", sprite });
+      return null;
+    }
+  });
+  builtins.set("moveSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("moveSprite() takes 3 arguments (sprite, dx, dy)", line);
+      const sprite = args[0];
+      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
+      sprite.x += args[1];
+      sprite.y += args[2];
+      return sprite;
+    }
+  });
+  builtins.set("updateSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("updateSprite() takes 1 argument (sprite)", line);
+      const sprite = args[0];
+      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
+      sprite.x += sprite.velocityX;
+      sprite.y += sprite.velocityY;
+      return sprite;
+    }
+  });
+  builtins.set("spriteCollides", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("spriteCollides() takes 2 arguments (sprite1, sprite2)", line);
+      const a = args[0];
+      const b = args[1];
+      if (!a || !b) throw new SdevError("Invalid sprites", line);
+      return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+    }
+  });
+  builtins.set("turtle", {
+    type: "builtin",
+    call: () => {
+      setTurtle({ x: 200, y: 200, angle: -90, penDown: true, color: "#00ff88", width: 2 });
+      emit2({ type: "turtle_reset" });
+      return null;
+    }
+  });
+  builtins.set("forward", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("forward() takes 1 argument (distance)", line);
+      const t = getTurtle();
+      const dist = args[0];
+      const rad = t.angle * Math.PI / 180;
+      const newX = t.x + Math.cos(rad) * dist;
+      const newY = t.y + Math.sin(rad) * dist;
+      if (t.penDown) {
+        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+      }
+      setTurtle({ x: newX, y: newY });
+      emit2({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      return null;
+    }
+  });
+  builtins.set("backward", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("backward() takes 1 argument (distance)", line);
+      const dist = -args[0];
+      const t = getTurtle();
+      const rad = t.angle * Math.PI / 180;
+      const newX = t.x + Math.cos(rad) * dist;
+      const newY = t.y + Math.sin(rad) * dist;
+      if (t.penDown) {
+        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+      }
+      setTurtle({ x: newX, y: newY });
+      emit2({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      return null;
+    }
+  });
+  builtins.set("left", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("left() takes 1 argument (degrees)", line);
+      const t = getTurtle();
+      const newAngle = t.angle - args[0];
+      setTurtle({ angle: newAngle });
+      emit2({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
+      return null;
+    }
+  });
+  builtins.set("right", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("right() takes 1 argument (degrees)", line);
+      const t = getTurtle();
+      const newAngle = t.angle + args[0];
+      setTurtle({ angle: newAngle });
+      emit2({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
+      return null;
+    }
+  });
+  builtins.set("penup", {
+    type: "builtin",
+    call: () => {
+      setTurtle({ penDown: false });
+      return null;
+    }
+  });
+  builtins.set("pendown", {
+    type: "builtin",
+    call: () => {
+      setTurtle({ penDown: true });
+      return null;
+    }
+  });
+  builtins.set("pencolor", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("pencolor() takes 1 argument (color)", line);
+      setTurtle({ color: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("penwidth", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("penwidth() takes 1 argument (width)", line);
+      setTurtle({ width: args[0] });
+      return null;
+    }
+  });
+  builtins.set("goto", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("goto() takes 2 arguments (x, y)", line);
+      const t = getTurtle();
+      const newX = args[0];
+      const newY = args[1];
+      if (t.penDown) {
+        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+      }
+      setTurtle({ x: newX, y: newY });
+      emit2({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      return null;
+    }
+  });
+  builtins.set("home", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      if (t.penDown) {
+        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: 200, y2: 200, color: t.color, width: t.width });
+      }
+      setTurtle({ x: 200, y: 200, angle: -90 });
+      emit2({ type: "turtle_move", x: 200, y: 200, angle: -90 });
+      return null;
+    }
+  });
+  builtins.set("setheading", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("setheading() takes 1 argument (angle)", line);
+      const t = getTurtle();
+      const angle = args[0] - 90;
+      setTurtle({ angle });
+      emit2({ type: "turtle_move", x: t.x, y: t.y, angle });
+      return null;
+    }
+  });
+  builtins.set("heading", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      return (t.angle + 90) % 360;
+    }
+  });
+  builtins.set("pos", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      return [t.x, t.y];
+    }
+  });
+  builtins.set("turtleCircle", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("turtleCircle() takes 1-2 arguments (radius, steps?)", line);
+      const radius = args[0];
+      const steps = args[1] ?? 36;
+      const t = getTurtle();
+      const angleStep = 360 / steps;
+      const dist = 2 * Math.PI * radius / steps;
+      for (let i = 0; i < steps; i++) {
+        const rad = t.angle * Math.PI / 180;
+        const newX = t.x + Math.cos(rad) * dist;
+        const newY = t.y + Math.sin(rad) * dist;
+        if (t.penDown) {
+          emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+        }
+        t.x = newX;
+        t.y = newY;
+        t.angle += angleStep;
+      }
+      setTurtle({ x: t.x, y: t.y, angle: t.angle });
+      emit2({ type: "turtle_move", x: t.x, y: t.y, angle: t.angle });
+      return null;
+    }
+  });
+  builtins.set("dot", {
+    type: "builtin",
+    call: (args, line) => {
+      const size = args[0] ?? 5;
+      const color = args[1] ? stringify(args[1]) : getTurtle().color;
+      const t = getTurtle();
+      emit2({ type: "turtle_dot", x: t.x, y: t.y, size, color });
+      return null;
+    }
+  });
+  builtins.set("stamp", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      emit2({ type: "turtle_stamp", x: t.x, y: t.y, angle: t.angle, color: t.color });
+      return null;
+    }
+  });
+  builtins.set("hue", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1 || args.length > 3) throw new SdevError("hue() takes 1-3 arguments (h, s?, l?)", line);
+      const h = args[0];
+      const s = args[1] ?? 100;
+      const l = args[2] ?? 50;
+      return `hsl(${h}, ${s}%, ${l}%)`;
+    }
+  });
+  builtins.set("rgb", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("rgb() takes 3 arguments (r, g, b)", line);
+      return `rgb(${args[0]}, ${args[1]}, ${args[2]})`;
+    }
+  });
+  builtins.set("rgba", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("rgba() takes 4 arguments (r, g, b, a)", line);
+      return `rgba(${args[0]}, ${args[1]}, ${args[2]}, ${args[3]})`;
+    }
+  });
+  builtins.set("hsla", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("hsla() takes 4 arguments (h, s, l, a)", line);
+      return `hsla(${args[0]}, ${args[1]}%, ${args[2]}%, ${args[3]})`;
+    }
+  });
+  builtins.set("randomColor", {
+    type: "builtin",
+    call: () => {
+      const h = Math.floor(Math.random() * 360);
+      return `hsl(${h}, 70%, 60%)`;
+    }
+  });
+  builtins.set("radians", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("radians() takes 1 argument (degrees)", line);
+      return args[0] * Math.PI / 180;
+    }
+  });
+  builtins.set("degrees", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("degrees() takes 1 argument (radians)", line);
+      return args[0] * 180 / Math.PI;
+    }
+  });
+  builtins.set("lerp", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("lerp() takes 3 arguments (a, b, t)", line);
+      const a = args[0];
+      const b = args[1];
+      const t = args[2];
+      return a + (b - a) * t;
+    }
+  });
+  builtins.set("mapRange", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 5) throw new SdevError("mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax)", line);
+      const value2 = args[0];
+      const inMin = args[1];
+      const inMax = args[2];
+      const outMin = args[3];
+      const outMax = args[4];
+      return outMin + (outMax - outMin) * ((value2 - inMin) / (inMax - inMin));
+    }
+  });
+  builtins.set("constrain", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("constrain() takes 3 arguments (value, min, max)", line);
+      const value2 = args[0];
+      const min = args[1];
+      const max = args[2];
+      return Math.max(min, Math.min(max, value2));
+    }
+  });
+  builtins.set("dist", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("dist() takes 4 arguments (x1, y1, x2, y2)", line);
+      const dx = args[2] - args[0];
+      const dy = args[3] - args[1];
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+  });
+  return builtins;
+}
+
+// src/lang/ui.ts
+function createUiBuiltins(emit2, registerHandler) {
+  const builtins = /* @__PURE__ */ new Map();
+  const state = { nodes: /* @__PURE__ */ new Map(), rootId: null, values: /* @__PURE__ */ new Map() };
+  let nextId = 1;
+  const containerStack = [];
+  const currentParent = () => containerStack.length > 0 ? containerStack[containerStack.length - 1] : state.rootId;
+  function pushNode(type, props, opts = {}) {
+    const id = nextId++;
+    const parent = opts.isRoot ? null : currentParent();
+    const node = { id, type, props, children: [], parent, handlers: {} };
+    state.nodes.set(id, node);
+    if (parent !== null) {
+      const p = state.nodes.get(parent);
+      if (p) p.children.push(id);
+    }
+    if (opts.isRoot) state.rootId = id;
+    if (opts.container) containerStack.push(id);
+    emit2(state);
+    return node;
+  }
+  function pop() {
+    if (containerStack.length > 0) containerStack.pop();
+    emit2(state);
+  }
+  function asString(v, fallback = "") {
+    if (v === null || v === void 0) return fallback;
+    return typeof v === "string" ? v : stringify(v);
+  }
+  function asNumber(v, fallback = 0) {
+    if (typeof v === "number") return v;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  function asBool(v) {
+    return !!v;
+  }
+  function asHandler(v) {
+    if (!v || typeof v !== "object") return null;
+    const fn2 = v;
+    if (fn2.type !== "builtin" && fn2.type !== "user" && fn2.type !== "lambda") return null;
+    if (typeof fn2.call !== "function") return null;
+    return registerHandler({ fn: (args) => fn2.call(args) });
+  }
+  builtins.set("window", { type: "builtin", call: (args, line) => {
+    const title = asString(args[0], "sdev App");
+    const width = asNumber(args[1], 480);
+    const height = asNumber(args[2], 600);
+    state.nodes.clear();
+    state.rootId = null;
+    state.values.clear();
+    containerStack.length = 0;
+    nextId = 1;
+    pushNode("window", { title, width, height }, { container: true, isRoot: true });
+    return null;
+  } });
+  builtins.set("endwindow", { type: "builtin", call: () => {
+    pop();
+    return null;
+  } });
+  builtins.set("row", { type: "builtin", call: () => {
+    pushNode("row", { gap: 8 }, { container: true });
+    return null;
+  } });
+  builtins.set("endrow", { type: "builtin", call: () => {
+    pop();
+    return null;
+  } });
+  builtins.set("column", { type: "builtin", call: () => {
+    pushNode("column", { gap: 8 }, { container: true });
+    return null;
+  } });
+  builtins.set("endcolumn", { type: "builtin", call: () => {
+    pop();
+    return null;
+  } });
+  builtins.set("group", { type: "builtin", call: (args) => {
+    pushNode("group", { title: asString(args[0], "") }, { container: true });
+    return null;
+  } });
+  builtins.set("endgroup", { type: "builtin", call: () => {
+    pop();
+    return null;
+  } });
+  builtins.set("tabs", { type: "builtin", call: () => {
+    pushNode("tabs", {}, { container: true });
+    return null;
+  } });
+  builtins.set("endtabs", { type: "builtin", call: () => {
+    pop();
+    return null;
+  } });
+  builtins.set("tab", { type: "builtin", call: (args) => {
+    pushNode("tab", { title: asString(args[0], "Tab") }, { container: true });
+    return null;
+  } });
+  builtins.set("endtab", { type: "builtin", call: () => {
+    pop();
+    return null;
+  } });
+  function resolveTextArg(raw) {
+    const s = asString(raw, "");
+    if (s.startsWith("@") && s.length > 1) {
+      const key = s.slice(1);
+      return { text: asString(state.values.get(key), ""), bind: key };
+    }
+    if (state.values.has(s)) {
+      return { text: asString(state.values.get(s), ""), bind: s };
+    }
+    return { text: s };
+  }
+  builtins.set("heading", { type: "builtin", call: (args) => {
+    const { text: text3, bind } = resolveTextArg(args[0]);
+    pushNode("heading", { text: text3, bind, level: asNumber(args[1], 1) });
+    return null;
+  } });
+  builtins.set("label", { type: "builtin", call: (args) => {
+    const { text: text3, bind } = resolveTextArg(args[0]);
+    pushNode("label", { text: text3, bind });
+    return null;
+  } });
+  builtins.set("paragraph", { type: "builtin", call: (args) => {
+    const { text: text3, bind } = resolveTextArg(args[0]);
+    pushNode("paragraph", { text: text3, bind });
+    return null;
+  } });
+  builtins.set("image", { type: "builtin", call: (args) => {
+    pushNode("image", { src: asString(args[0]), width: asNumber(args[1], 0), height: asNumber(args[2], 0), alt: asString(args[3], "") });
+    return null;
+  } });
+  builtins.set("divider", { type: "builtin", call: () => {
+    pushNode("divider", {});
+    return null;
+  } });
+  builtins.set("spacer", { type: "builtin", call: (args) => {
+    pushNode("spacer", { size: asNumber(args[0], 8) });
+    return null;
+  } });
+  builtins.set("progress", { type: "builtin", call: (args) => {
+    const raw = args[0];
+    let bind;
+    let value2 = 0;
+    if (typeof raw === "string") {
+      const k = raw.startsWith("@") ? raw.slice(1) : raw;
+      if (state.values.has(k)) {
+        bind = k;
+        value2 = asNumber(state.values.get(k), 0);
+      } else value2 = asNumber(raw, 0);
+    } else value2 = asNumber(raw, 0);
+    pushNode("progress", { value: value2, bind, max: asNumber(args[1], 100) });
+    return null;
+  } });
+  builtins.set("button", { type: "builtin", call: (args, line) => {
+    const label = asString(args[0], "Button");
+    const handler = asHandler(args[1]);
+    const node = pushNode("button", { label, variant: asString(args[2], "default") });
+    if (handler !== null) node.handlers.click = handler;
+    emit2(state);
+    return null;
+  } });
+  builtins.set("input", { type: "builtin", call: (args) => {
+    const bind = asString(args[0], "");
+    const placeholder = asString(args[1], "");
+    if (bind && !state.values.has(bind)) state.values.set(bind, "");
+    pushNode("input", { bind, placeholder });
+    return null;
+  } });
+  builtins.set("textarea", { type: "builtin", call: (args) => {
+    const bind = asString(args[0], "");
+    const placeholder = asString(args[1], "");
+    const rows = asNumber(args[2], 4);
+    if (bind && !state.values.has(bind)) state.values.set(bind, "");
+    pushNode("textarea", { bind, placeholder, rows });
+    return null;
+  } });
+  builtins.set("checkbox", { type: "builtin", call: (args) => {
+    const bind = asString(args[0], "");
+    const label = asString(args[1], "");
+    if (bind && !state.values.has(bind)) state.values.set(bind, false);
+    pushNode("checkbox", { bind, label });
+    return null;
+  } });
+  builtins.set("slider", { type: "builtin", call: (args) => {
+    const bind = asString(args[0], "");
+    const min = asNumber(args[1], 0);
+    const max = asNumber(args[2], 100);
+    const step = asNumber(args[3], 1);
+    if (bind && !state.values.has(bind)) state.values.set(bind, min);
+    pushNode("slider", { bind, min, max, step });
+    return null;
+  } });
+  builtins.set("select", { type: "builtin", call: (args) => {
+    const bind = asString(args[0], "");
+    const opts = Array.isArray(args[1]) ? args[1].map((o) => asString(o)) : [];
+    if (bind && !state.values.has(bind)) state.values.set(bind, opts[0] ?? "");
+    pushNode("select", { bind, options: opts });
+    return null;
+  } });
+  builtins.set("table", { type: "builtin", call: (args) => {
+    const headers = Array.isArray(args[0]) ? args[0].map((h) => asString(h)) : [];
+    const rowsArg = Array.isArray(args[1]) ? args[1] : [];
+    const rows = rowsArg.map((r) => Array.isArray(r) ? r.map((c) => asString(c)) : []);
+    pushNode("table", { headers, rows });
+    return null;
+  } });
+  builtins.set("menu", { type: "builtin", call: (args) => {
+    pushNode("menu", { label: asString(args[0], "Menu") }, { container: true });
+    return null;
+  } });
+  builtins.set("endmenu", { type: "builtin", call: () => {
+    pop();
+    return null;
+  } });
+  builtins.set("menuitem", { type: "builtin", call: (args) => {
+    const label = asString(args[0], "Item");
+    const handler = asHandler(args[1]);
+    const node = pushNode("menuitem", { label });
+    if (handler !== null) node.handlers.click = handler;
+    emit2(state);
+    return null;
+  } });
+  builtins.set("uiget", { type: "builtin", call: (args) => {
+    const k = asString(args[0]);
+    return state.values.has(k) ? state.values.get(k) : null;
+  } });
+  builtins.set("uiset", { type: "builtin", call: (args) => {
+    const k = asString(args[0]);
+    state.values.set(k, args[1]);
+    for (const node of state.nodes.values()) {
+      const b = node.props.bind;
+      if (typeof b === "string" && b === k) {
+        if (node.type === "progress") node.props.value = asNumber(args[1], 0);
+        else node.props.text = asString(args[1], "");
+      }
+    }
+    emit2(state);
+    return null;
+  } });
+  builtins.set("show", { type: "builtin", call: () => {
+    emit2(state);
+    return null;
+  } });
+  builtins.set("alert", { type: "builtin", call: (args) => {
+    const msg = asString(args[0], "");
+    if (typeof window !== "undefined") {
+      window.alert(msg);
+    }
+    return null;
+  } });
+  return builtins;
+}
+
+// src/lang/web.ts
+function asStr(v, fb = "") {
+  if (v === null || v === void 0) return fb;
+  return typeof v === "string" ? v : stringify(v);
+}
+function isPlainObject(v) {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function escapeAttr(s) {
+  return s.replace(/[&"]/g, (c) => ({ "&": "&amp;", '"': "&quot;" })[c]);
+}
+function renderAttrs(attrs) {
+  if (!attrs) return "";
+  const parts = [];
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === false || v === null || v === void 0) continue;
+    if (v === true) {
+      parts.push(k);
+      continue;
+    }
+    parts.push(`${k}="${escapeAttr(asStr(v))}"`);
+  }
+  return parts.length ? " " + parts.join(" ") : "";
+}
+function cssRuleFromDict(selector, dict) {
+  const decls = Object.entries(dict).map(([k, v]) => `  ${k.replace(/_/g, "-")}: ${asStr(v)};`).join("\n");
+  return `${selector} {
+${decls}
+}`;
+}
+var VOID_TAGS = /* @__PURE__ */ new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr"
+]);
+var ELEMENT_TAGS = [
+  // structure
+  "div",
+  "span",
+  "section",
+  "article",
+  "aside",
+  "header",
+  "footer",
+  "main",
+  "nav",
+  "figure",
+  "figcaption",
+  "address",
+  "hgroup",
+  // headings & text
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "blockquote",
+  "pre",
+  "code",
+  "em",
+  "strong",
+  "small",
+  "mark",
+  "cite",
+  "q",
+  "abbr",
+  "sub",
+  "sup",
+  "b",
+  "i",
+  "u",
+  "s",
+  "del",
+  "ins",
+  "kbd",
+  "samp",
+  "var",
+  "time",
+  // links & media
+  "a",
+  "img",
+  "picture",
+  "source",
+  "video",
+  "audio",
+  "iframe",
+  "embed",
+  "object",
+  "canvas",
+  "svg",
+  "map",
+  "area",
+  // lists
+  "ul",
+  "ol",
+  "li",
+  "dl",
+  "dt",
+  "dd",
+  // tables
+  "table",
+  "thead",
+  "tbody",
+  "tfoot",
+  "tr",
+  "th",
+  "td",
+  "caption",
+  "colgroup",
+  "col",
+  // forms
+  "form",
+  "input",
+  "textarea",
+  "button",
+  "select",
+  "option",
+  "optgroup",
+  "label",
+  "fieldset",
+  "legend",
+  "datalist",
+  "output",
+  "progress",
+  "meter",
+  // interactive
+  "details",
+  "summary",
+  "dialog",
+  "menu",
+  // misc
+  "hr",
+  "br"
+];
+function createWebBuiltins(emit2) {
+  const builtins = /* @__PURE__ */ new Map();
+  const state = {
+    title: "sdev Web App",
+    head: [],
+    stack: [[]],
+    // root buffer
+    css: [],
+    js: [],
+    produced: false
+  };
+  const top = () => state.stack[state.stack.length - 1];
+  const push = (html) => {
+    top().push(html);
+  };
+  const mark = () => {
+    state.produced = true;
+    emit2(state);
+  };
+  function parseElArgs(args) {
+    let text3 = "";
+    let attrs = {};
+    if (args.length === 1) {
+      if (isPlainObject(args[0])) attrs = args[0];
+      else text3 = asStr(args[0]);
+    } else if (args.length >= 2) {
+      if (isPlainObject(args[0])) {
+        attrs = args[0];
+        if (isPlainObject(args[1])) Object.assign(attrs, args[1]);
+        else text3 = asStr(args[1]);
+      } else {
+        text3 = asStr(args[0]);
+        if (isPlainObject(args[1])) attrs = args[1];
+      }
+    }
+    return { text: text3, attrs };
+  }
+  function emitElement(tag, args) {
+    const { text: text3, attrs } = parseElArgs(args);
+    if (VOID_TAGS.has(tag)) {
+      push(`<${tag}${renderAttrs(attrs)}>`);
+    } else {
+      push(`<${tag}${renderAttrs(attrs)}>${escapeHtml(text3)}</${tag}>`);
+    }
+    mark();
+  }
+  function openElement(tag, args) {
+    const { attrs } = parseElArgs(args);
+    push(`<${tag}${renderAttrs(attrs)}>`);
+    state.stack.push([]);
+    mark();
+  }
+  function closeElementGeneric() {
+    if (state.stack.length <= 1) return;
+    const inner = state.stack.pop().join("");
+    const parent = top();
+    parent.push(inner);
+  }
+  const nameStack = [];
+  function openEl(tag, args) {
+    const { attrs } = parseElArgs(args);
+    push(`<${tag}${renderAttrs(attrs)}>`);
+    state.stack.push([]);
+    nameStack.push(tag);
+    mark();
+  }
+  function closeEl() {
+    if (state.stack.length <= 1 || nameStack.length === 0) return;
+    const tag = nameStack.pop();
+    const inner = state.stack.pop().join("");
+    top().push(inner + `</${tag}>`);
+    mark();
+  }
+  builtins.set("page", { type: "builtin", call: (args) => {
+    state.title = asStr(args[0], "sdev Web App");
+    state.head.length = 0;
+    state.stack.length = 0;
+    state.stack.push([]);
+    state.css.length = 0;
+    state.js.length = 0;
+    nameStack.length = 0;
+    mark();
+    return null;
+  } });
+  builtins.set("endpage", { type: "builtin", call: () => {
+    while (nameStack.length) closeEl();
+    mark();
+    return null;
+  } });
+  builtins.set("title", { type: "builtin", call: (args) => {
+    state.title = asStr(args[0], state.title);
+    mark();
+    return null;
+  } });
+  builtins.set("meta", { type: "builtin", call: (args) => {
+    const attrs = isPlainObject(args[0]) ? args[0] : {};
+    state.head.push(`<meta${renderAttrs(attrs)}>`);
+    mark();
+    return null;
+  } });
+  builtins.set("link", { type: "builtin", call: (args) => {
+    const attrs = isPlainObject(args[0]) ? args[0] : { rel: asStr(args[0]), href: asStr(args[1]) };
+    state.head.push(`<link${renderAttrs(attrs)}>`);
+    mark();
+    return null;
+  } });
+  builtins.set("tag", { type: "builtin", call: (args) => {
+    const name = asStr(args[0], "div");
+    emitElement(name, args.slice(1));
+    return null;
+  } });
+  builtins.set("open", { type: "builtin", call: (args) => {
+    const name = asStr(args[0], "div");
+    openEl(name, args.slice(1));
+    return null;
+  } });
+  builtins.set("close", { type: "builtin", call: () => {
+    closeEl();
+    return null;
+  } });
+  builtins.set("style", { type: "builtin", call: (args) => {
+    if (args.length === 1 && typeof args[0] === "string") {
+      state.css.push(args[0]);
+    } else {
+      const selector = asStr(args[0], "*");
+      const dict = isPlainObject(args[1]) ? args[1] : {};
+      state.css.push(cssRuleFromDict(selector, dict));
+    }
+    mark();
+    return null;
+  } });
+  builtins.set("keyframes", { type: "builtin", call: (args) => {
+    const name = asStr(args[0], "kf");
+    const steps = isPlainObject(args[1]) ? args[1] : {};
+    const body = Object.entries(steps).map(([k, v]) => isPlainObject(v) ? `  ${k} { ${Object.entries(v).map(([p, pv]) => `${p.replace(/_/g, "-")}: ${asStr(pv)}`).join("; ")} }` : "").join("\n");
+    state.css.push(`@keyframes ${name} {
+${body}
+}`);
+    mark();
+    return null;
+  } });
+  builtins.set("script", { type: "builtin", call: (args) => {
+    state.js.push(asStr(args[0]));
+    mark();
+    return null;
+  } });
+  builtins.set("onclick", { type: "builtin", call: (args) => {
+    const sel = asStr(args[0]);
+    const code = asStr(args[1]);
+    state.js.push(`document.querySelectorAll(${JSON.stringify(sel)}).forEach(el => el.addEventListener('click', () => { ${code} }));`);
+    mark();
+    return null;
+  } });
+  builtins.set("on", { type: "builtin", call: (args) => {
+    const evt = asStr(args[0]);
+    const sel = asStr(args[1]);
+    const code = asStr(args[2]);
+    state.js.push(`document.querySelectorAll(${JSON.stringify(sel)}).forEach(el => el.addEventListener(${JSON.stringify(evt)}, (event) => { ${code} }));`);
+    mark();
+    return null;
+  } });
+  builtins.set("raw_html", { type: "builtin", call: (args) => {
+    push(asStr(args[0]));
+    mark();
+    return null;
+  } });
+  builtins.set("raw_css", { type: "builtin", call: (args) => {
+    state.css.push(asStr(args[0]));
+    mark();
+    return null;
+  } });
+  builtins.set("raw_js", { type: "builtin", call: (args) => {
+    state.js.push(asStr(args[0]));
+    mark();
+    return null;
+  } });
+  for (const tagName of ELEMENT_TAGS) {
+    const collides = [
+      "input",
+      "select",
+      "button",
+      "textarea",
+      "label",
+      "progress",
+      "table",
+      "menu",
+      "option",
+      "image",
+      "title",
+      "meta",
+      "link",
+      "script",
+      "style",
+      "on",
+      "open",
+      "close",
+      "tag",
+      "page",
+      "header",
+      "footer",
+      "form",
+      "video",
+      "audio"
+    ].includes(tagName);
+    if (!collides) {
+      builtins.set(tagName, {
+        type: "builtin",
+        call: (args) => {
+          emitElement(tagName, args);
+          return null;
+        }
+      });
+    }
+    builtins.set(`html_${tagName}`, {
+      type: "builtin",
+      call: (args) => {
+        emitElement(tagName, args);
+        return null;
+      }
+    });
+    if (!VOID_TAGS.has(tagName)) {
+      builtins.set(`open_${tagName}`, {
+        type: "builtin",
+        call: (args) => {
+          openEl(tagName, args);
+          return null;
+        }
+      });
+      builtins.set(`end_${tagName}`, {
+        type: "builtin",
+        call: () => {
+          closeEl();
+          return null;
+        }
+      });
+    }
+  }
+  return builtins;
+}
+
+// src/lang/kernel.ts
+init_errors();
+var VirtualFileSystem = class {
+  root;
+  constructor() {
+    this.root = this.makeDir("kernel");
+    this.mkdir("/home");
+    this.mkdir("/tmp");
+    this.mkdir("/bin");
+    this.mkdir("/etc");
+    this.mkdir("/dev");
+    this.mkdir("/var");
+    this.mkdir("/var/log");
+  }
+  makeDir(owner) {
+    return {
+      type: "directory",
+      children: /* @__PURE__ */ new Map(),
+      permissions: 493,
+      owner,
+      created: Date.now(),
+      modified: Date.now()
+    };
+  }
+  makeFile(content, owner) {
+    return {
+      type: "file",
+      content,
+      permissions: 420,
+      owner,
+      created: Date.now(),
+      modified: Date.now()
+    };
+  }
+  resolve(path) {
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length === 0) return { parent: this.root, name: "", node: this.root };
+    let current = this.root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const child = current.children?.get(parts[i]);
+      if (!child || child.type !== "directory") {
+        throw new SdevError(`VFS: directory not found: ${parts.slice(0, i + 1).join("/")}`, 0);
+      }
+      current = child;
+    }
+    const name = parts[parts.length - 1];
+    return { parent: current, name, node: current.children?.get(name) };
+  }
+  read(path) {
+    const { node } = this.resolve(path);
+    if (!node) throw new SdevError(`VFS: file not found: ${path}`, 0);
+    if (node.type !== "file") throw new SdevError(`VFS: not a file: ${path}`, 0);
+    return typeof node.content === "string" ? node.content : new TextDecoder().decode(node.content);
+  }
+  readBytes(path) {
+    const { node } = this.resolve(path);
+    if (!node) throw new SdevError(`VFS: file not found: ${path}`, 0);
+    if (node.type !== "file") throw new SdevError(`VFS: not a file: ${path}`, 0);
+    if (node.content instanceof Uint8Array) return node.content;
+    return new TextEncoder().encode(node.content);
+  }
+  write(path, content, owner = "user") {
+    const { parent, name } = this.resolve(path);
+    const existing = parent.children?.get(name);
+    if (existing && existing.type === "directory") {
+      throw new SdevError(`VFS: cannot write to directory: ${path}`, 0);
+    }
+    const file = this.makeFile(typeof content === "string" ? content : "", owner);
+    if (content instanceof Uint8Array) file.content = content;
+    else file.content = content;
+    parent.children.set(name, file);
+  }
+  append(path, content) {
+    const { parent, name, node } = this.resolve(path);
+    if (node && node.type === "file") {
+      const existing = typeof node.content === "string" ? node.content : "";
+      node.content = existing + content;
+      node.modified = Date.now();
+    } else {
+      parent.children.set(name, this.makeFile(content, "user"));
+    }
+  }
+  mkdir(path, owner = "kernel") {
+    const parts = path.split("/").filter(Boolean);
+    let current = this.root;
+    for (const part of parts) {
+      if (!current.children.has(part)) {
+        current.children.set(part, this.makeDir(owner));
+      }
+      current = current.children.get(part);
+    }
+  }
+  list(path) {
+    const { node } = this.resolve(path || "/");
+    if (!node) throw new SdevError(`VFS: path not found: ${path}`, 0);
+    if (node.type !== "directory") throw new SdevError(`VFS: not a directory: ${path}`, 0);
+    return Array.from(node.children.keys());
+  }
+  exists(path) {
+    try {
+      const { node } = this.resolve(path);
+      return !!node;
+    } catch {
+      return false;
+    }
+  }
+  delete(path) {
+    const { parent, name, node } = this.resolve(path);
+    if (!node) return false;
+    parent.children.delete(name);
+    return true;
+  }
+  stat(path) {
+    const { node } = this.resolve(path);
+    if (!node) throw new SdevError(`VFS: not found: ${path}`, 0);
+    return {
+      type: node.type,
+      permissions: node.permissions,
+      owner: node.owner,
+      created: node.created,
+      modified: node.modified,
+      size: node.type === "file" ? typeof node.content === "string" ? node.content.length : node.content.length : node.children.size
+    };
+  }
+  // Export entire VFS as a tome for sdev code
+  toTome() {
+    const convert = (node) => {
+      if (node.type === "file") return typeof node.content === "string" ? node.content : "<binary>";
+      const obj = {};
+      node.children.forEach((child, name) => {
+        obj[name] = convert(child);
+      });
+      return obj;
+    };
+    return convert(this.root);
+  }
+};
+var TaskScheduler = class {
+  tasks = /* @__PURE__ */ new Map();
+  nextId = 1;
+  currentTask = null;
+  tickCount = 0;
+  output;
+  quantum = 100;
+  // instructions per time slice
+  constructor(output) {
+    this.output = output;
+  }
+  createTask(fn2, name = "", priority = 0, privilege = "user") {
+    const id = this.nextId++;
+    this.tasks.set(id, {
+      id,
+      name: name || `task_${id}`,
+      state: "ready",
+      priority,
+      privilegeLevel: privilege,
+      fn: fn2,
+      created: Date.now(),
+      cpuTime: 0
+    });
+    return id;
+  }
+  killTask(id) {
+    const task = this.tasks.get(id);
+    if (!task) return false;
+    task.state = "terminated";
+    return true;
+  }
+  getTask(id) {
+    return this.tasks.get(id);
+  }
+  listTasks() {
+    return Array.from(this.tasks.values());
+  }
+  yieldCurrent() {
+    if (this.currentTask !== null) {
+      const task = this.tasks.get(this.currentTask);
+      if (task && task.state === "running") task.state = "ready";
+    }
+  }
+  // Round-robin scheduler with priority
+  schedule() {
+    const ready = Array.from(this.tasks.values()).filter((t) => t.state === "ready").sort((a, b) => b.priority - a.priority);
+    if (ready.length === 0) return null;
+    const task = ready[0];
+    task.state = "running";
+    this.currentTask = task.id;
+    return task;
+  }
+  // Run one scheduling cycle (cooperative)
+  tick(line) {
+    this.tickCount++;
+    const task = this.schedule();
+    if (!task) return;
+    try {
+      const t0 = performance.now();
+      task.result = task.fn.call([], line);
+      task.cpuTime += performance.now() - t0;
+      task.state = "terminated";
+    } catch (e) {
+      task.state = "terminated";
+      this.output(`[KERNEL] Task ${task.name} crashed: ${e instanceof SdevError ? e.message : String(e)}`);
+    }
+  }
+  runAll(line) {
+    let safety = 0;
+    while (this.tasks.size > 0 && safety < 1e4) {
+      const alive = Array.from(this.tasks.values()).filter((t) => t.state !== "terminated");
+      if (alive.length === 0) break;
+      this.tick(line);
+      safety++;
+    }
+  }
+  getCurrentPrivilege() {
+    if (this.currentTask === null) return "kernel";
+    return this.tasks.get(this.currentTask)?.privilegeLevel ?? "user";
+  }
+};
+var SyscallInterface = class {
+  handlers = /* @__PURE__ */ new Map();
+  privilegeRequired = /* @__PURE__ */ new Map();
+  register(name, handler, privilege = "user") {
+    this.handlers.set(name, handler);
+    this.privilegeRequired.set(name, privilege);
+  }
+  call(name, args, line, currentPrivilege) {
+    const handler = this.handlers.get(name);
+    if (!handler) throw new SdevError(`Syscall not found: ${name}`, line);
+    const required = this.privilegeRequired.get(name) ?? "user";
+    if (required === "kernel" && currentPrivilege !== "kernel") {
+      throw new SdevError(`Permission denied: syscall '${name}' requires kernel privilege`, line);
+    }
+    return handler(args, line);
+  }
+  list() {
+    return Array.from(this.handlers.keys());
+  }
+};
+var HeapManager = class {
+  blocks = [];
+  nextAddress = 0;
+  totalAllocated = 0;
+  totalFreed = 0;
+  maxHeapSize;
+  constructor(maxSize = 1048576) {
+    this.maxHeapSize = maxSize;
+  }
+  alloc(size, line) {
+    if (size <= 0) throw new SdevError("Heap: allocation size must be positive", line);
+    if (this.totalAllocated - this.totalFreed + size > this.maxHeapSize) {
+      throw new SdevError("Heap: out of memory", line);
+    }
+    for (const block of this.blocks) {
+      if (block.free && block.size >= size) {
+        block.free = false;
+        block.data = new Array(size).fill(null);
+        return block.address;
+      }
+    }
+    const address = this.nextAddress;
+    this.blocks.push({ address, size, free: false, data: new Array(size).fill(null) });
+    this.nextAddress += size;
+    this.totalAllocated += size;
+    return address;
+  }
+  free(address, line) {
+    const block = this.blocks.find((b) => b.address === address);
+    if (!block) throw new SdevError(`Heap: invalid address ${address}`, line);
+    if (block.free) throw new SdevError(`Heap: double free at address ${address}`, line);
+    block.free = true;
+    this.totalFreed += block.size;
+  }
+  load(address, line) {
+    for (const block of this.blocks) {
+      if (!block.free && address >= block.address && address < block.address + block.size) {
+        return block.data[address - block.address];
+      }
+    }
+    throw new SdevError(`Heap: access violation at address ${address}`, line);
+  }
+  store(address, value2, line) {
+    for (const block of this.blocks) {
+      if (!block.free && address >= block.address && address < block.address + block.size) {
+        block.data[address - block.address] = value2;
+        return;
+      }
+    }
+    throw new SdevError(`Heap: access violation at address ${address}`, line);
+  }
+  // Mark-and-sweep GC
+  gc(roots) {
+    const marked = /* @__PURE__ */ new Set();
+    for (const addr of roots) {
+      for (const block of this.blocks) {
+        if (!block.free && addr >= block.address && addr < block.address + block.size) {
+          marked.add(block.address);
+        }
+      }
+    }
+    let freed = 0;
+    for (const block of this.blocks) {
+      if (!block.free && !marked.has(block.address)) {
+        block.free = true;
+        this.totalFreed += block.size;
+        freed++;
+      }
+    }
+    return freed;
+  }
+  stats() {
+    const usedBlocks = this.blocks.filter((b) => !b.free);
+    const freeBlocks = this.blocks.filter((b) => b.free);
+    return {
+      totalAllocated: this.totalAllocated,
+      totalFreed: this.totalFreed,
+      inUse: this.totalAllocated - this.totalFreed,
+      usedBlocks: usedBlocks.length,
+      freeBlocks: freeBlocks.length,
+      maxHeapSize: this.maxHeapSize
+    };
+  }
+};
+var HAL = class {
+  devices = /* @__PURE__ */ new Map();
+  interruptHandlers = /* @__PURE__ */ new Map();
+  pendingInterrupts = [];
+  eventQueue = [];
+  registerDevice(device) {
+    this.devices.set(device.name, device);
+  }
+  getDevice(name) {
+    return this.devices.get(name);
+  }
+  listDevices() {
+    return Array.from(this.devices.keys());
+  }
+  registerInterrupt(num2, handler) {
+    this.interruptHandlers.set(num2, handler);
+  }
+  triggerInterrupt(num2) {
+    this.pendingInterrupts.push(num2);
+  }
+  processPendingInterrupts(line) {
+    while (this.pendingInterrupts.length > 0) {
+      const num2 = this.pendingInterrupts.shift();
+      const handler = this.interruptHandlers.get(num2);
+      if (handler) {
+        handler.call([num2], line);
+      }
+    }
+  }
+  pushEvent(type, data) {
+    this.eventQueue.push({ type, data });
+  }
+  pollEvent() {
+    return this.eventQueue.shift() ?? null;
+  }
+};
+var WindowManager = class {
+  windows = /* @__PURE__ */ new Map();
+  nextId = 1;
+  focusedId = null;
+  createWindow(title, x, y, w, h) {
+    const id = this.nextId++;
+    this.windows.set(id, {
+      id,
+      title,
+      x,
+      y,
+      width: w,
+      height: h,
+      visible: true,
+      focused: false,
+      content: [],
+      zIndex: id
+    });
+    this.focusWindow(id);
+    return id;
+  }
+  closeWindow(id) {
+    const existed = this.windows.delete(id);
+    if (this.focusedId === id) this.focusedId = null;
+    return existed;
+  }
+  moveWindow(id, x, y) {
+    const w = this.windows.get(id);
+    if (w) {
+      w.x = x;
+      w.y = y;
+    }
+  }
+  resizeWindow(id, width, height) {
+    const w = this.windows.get(id);
+    if (w) {
+      w.width = width;
+      w.height = height;
+    }
+  }
+  focusWindow(id) {
+    this.windows.forEach((w2) => {
+      w2.focused = false;
+    });
+    const w = this.windows.get(id);
+    if (w) {
+      w.focused = true;
+      this.focusedId = id;
+    }
+  }
+  setContent(id, content) {
+    const w = this.windows.get(id);
+    if (w) w.content = content;
+  }
+  getWindow(id) {
+    return this.windows.get(id);
+  }
+  listWindows() {
+    return Array.from(this.windows.values()).sort((a, b) => a.zIndex - b.zIndex);
+  }
+};
+var Kernel = class {
+  vfs;
+  scheduler;
+  syscalls;
+  heap;
+  hal;
+  windowManager;
+  privilegeLevel = "kernel";
+  output;
+  booted = false;
+  constructor(output) {
+    this.output = output;
+    this.vfs = new VirtualFileSystem();
+    this.scheduler = new TaskScheduler(output);
+    this.syscalls = new SyscallInterface();
+    this.heap = new HeapManager();
+    this.hal = new HAL();
+    this.windowManager = new WindowManager();
+    this.registerDefaultSyscalls();
+    this.registerDefaultDevices();
+  }
+  registerDefaultSyscalls() {
+    const { vfs, heap, scheduler, hal, windowManager } = this;
+    this.syscalls.register("fs_read", (args) => vfs.read(String(args[0])));
+    this.syscalls.register("fs_read_bytes", (args) => {
+      const bytes = vfs.readBytes(String(args[0]));
+      return Array.from(bytes);
+    });
+    this.syscalls.register("fs_write", (args) => {
+      vfs.write(String(args[0]), String(args[1]));
+      return true;
+    });
+    this.syscalls.register("fs_append", (args) => {
+      vfs.append(String(args[0]), String(args[1]));
+      return true;
+    });
+    this.syscalls.register("fs_mkdir", (args) => {
+      vfs.mkdir(String(args[0]));
+      return true;
+    });
+    this.syscalls.register("fs_list", (args) => vfs.list(String(args[0])));
+    this.syscalls.register("fs_exists", (args) => vfs.exists(String(args[0])));
+    this.syscalls.register("fs_delete", (args) => vfs.delete(String(args[0])));
+    this.syscalls.register("fs_stat", (args) => vfs.stat(String(args[0])));
+    this.syscalls.register("mem_alloc", (args, line) => heap.alloc(Number(args[0]), line), "kernel");
+    this.syscalls.register("mem_free", (args, line) => {
+      heap.free(Number(args[0]), line);
+      return null;
+    }, "kernel");
+    this.syscalls.register("mem_load", (args, line) => heap.load(Number(args[0]), line), "kernel");
+    this.syscalls.register("mem_store", (args, line) => {
+      heap.store(Number(args[0]), args[1], line);
+      return null;
+    }, "kernel");
+    this.syscalls.register("mem_stats", () => heap.stats());
+    this.syscalls.register("gc", () => heap.gc(/* @__PURE__ */ new Set()));
+    this.syscalls.register("write", (args) => {
+      this.output(stringify(args[0]));
+      return null;
+    });
+    this.syscalls.register("read", () => {
+      if (typeof globalThis !== "undefined" && typeof globalThis.prompt === "function") {
+        return globalThis.prompt("") ?? "";
+      }
+      return "";
+    });
+    this.syscalls.register("task_create", (args, line) => {
+      const fn2 = args[0];
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("task_create: argument must be a function", line);
+      return scheduler.createTask(fn2, String(args[1] ?? ""), Number(args[2] ?? 0));
+    });
+    this.syscalls.register("task_kill", (args) => scheduler.killTask(Number(args[0])));
+    this.syscalls.register("task_yield", () => {
+      scheduler.yieldCurrent();
+      return null;
+    });
+    this.syscalls.register("task_list", () => scheduler.listTasks().map((t) => ({
+      id: t.id,
+      name: t.name,
+      state: t.state,
+      priority: t.priority,
+      privilege: t.privilegeLevel
+    })));
+    this.syscalls.register("dev_list", () => hal.listDevices());
+    this.syscalls.register("dev_read", (args, line) => {
+      const dev = hal.getDevice(String(args[0]));
+      if (!dev) throw new SdevError(`Device not found: ${args[0]}`, line);
+      return dev.read();
+    });
+    this.syscalls.register("dev_write", (args, line) => {
+      const dev = hal.getDevice(String(args[0]));
+      if (!dev) throw new SdevError(`Device not found: ${args[0]}`, line);
+      dev.write(args[1]);
+      return null;
+    });
+    this.syscalls.register("win_create", (args) => windowManager.createWindow(String(args[0]), Number(args[1] ?? 0), Number(args[2] ?? 0), Number(args[3] ?? 400), Number(args[4] ?? 300)));
+    this.syscalls.register("win_close", (args) => windowManager.closeWindow(Number(args[0])));
+    this.syscalls.register("win_move", (args) => {
+      windowManager.moveWindow(Number(args[0]), Number(args[1]), Number(args[2]));
+      return null;
+    });
+    this.syscalls.register("win_resize", (args) => {
+      windowManager.resizeWindow(Number(args[0]), Number(args[1]), Number(args[2]));
+      return null;
+    });
+    this.syscalls.register("win_focus", (args) => {
+      windowManager.focusWindow(Number(args[0]));
+      return null;
+    });
+    this.syscalls.register("win_list", () => windowManager.listWindows().map((w) => ({
+      id: w.id,
+      title: w.title,
+      x: w.x,
+      y: w.y,
+      width: w.width,
+      height: w.height,
+      focused: w.focused
+    })));
+    this.syscalls.register("time", () => Date.now());
+    this.syscalls.register("uptime", () => this.booted ? Date.now() : 0);
+    this.syscalls.register("interrupt", (args, line) => {
+      const num2 = Number(args[0]);
+      const handler = args[1];
+      if (!handler || typeof handler !== "object" || !("call" in handler)) throw new SdevError("interrupt handler must be a function", line);
+      hal.registerInterrupt(num2, handler);
+      return null;
+    }, "kernel");
+    this.syscalls.register("get_privilege", () => this.privilegeLevel);
+    this.syscalls.register("set_privilege", (args, line) => {
+      const level = String(args[0]);
+      if (level !== "kernel" && level !== "user") throw new SdevError("Invalid privilege level", line);
+      if (this.privilegeLevel !== "kernel") throw new SdevError("Permission denied: only kernel can change privilege", line);
+      this.privilegeLevel = level;
+      return null;
+    }, "kernel");
+    this.syscalls.register("panic", (args, line) => {
+      const msg = args.length > 0 ? stringify(args[0]) : "kernel panic";
+      this.output(`
+========================================`);
+      this.output(`  KERNEL PANIC: ${msg}`);
+      this.output(`========================================`);
+      this.output(`  System halted.`);
+      throw new SdevError(`KERNEL PANIC: ${msg}`, line);
+    }, "kernel");
+  }
+  registerDefaultDevices() {
+    const keyBuffer = [];
+    this.hal.registerDevice({
+      name: "keyboard",
+      type: "keyboard",
+      read: () => keyBuffer.shift() ?? null,
+      write: (data) => {
+        keyBuffer.push(String(data));
+      },
+      status: () => ({ buffered: keyBuffer.length })
+    });
+    const displayBuffer = [];
+    this.hal.registerDevice({
+      name: "display",
+      type: "display",
+      read: () => [...displayBuffer],
+      write: (data) => {
+        displayBuffer.push(String(data));
+      },
+      status: () => ({ lines: displayBuffer.length })
+    });
+    let timerTicks = 0;
+    this.hal.registerDevice({
+      name: "timer",
+      type: "timer",
+      read: () => timerTicks,
+      write: () => {
+        timerTicks++;
+      },
+      status: () => ({ ticks: timerTicks, time: Date.now() })
+    });
+    this.hal.registerDevice({
+      name: "disk0",
+      type: "disk",
+      read: () => this.vfs.toTome(),
+      write: () => {
+      },
+      status: () => ({ type: "virtual", mounted: true })
+    });
+  }
+  boot() {
+    this.booted = true;
+    this.output("[KERNEL] sdev OS booting...");
+    this.output("[KERNEL] VFS initialized");
+    this.output("[KERNEL] Task scheduler ready");
+    this.output("[KERNEL] Syscall interface registered");
+    this.output("[KERNEL] HAL: " + this.hal.listDevices().join(", "));
+    this.output("[KERNEL] Window manager ready");
+    this.output("[KERNEL] Boot complete.");
+    this.vfs.write("/var/log/boot.log", [
+      `sdev OS boot at ${(/* @__PURE__ */ new Date()).toISOString()}`,
+      `Devices: ${this.hal.listDevices().join(", ")}`,
+      `Syscalls: ${this.syscalls.list().join(", ")}`
+    ].join("\n"));
+  }
+  getPrivilege() {
+    return this.privilegeLevel;
+  }
+  setPrivilege(level) {
+    this.privilegeLevel = level;
+  }
+};
+function createKernelBuiltins(output) {
+  const kernel = new Kernel(output);
+  const builtins = /* @__PURE__ */ new Map();
+  builtins.set("syscall", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("syscall() requires at least 1 argument (name)", line);
+      const name = String(args[0]);
+      return kernel.syscalls.call(name, args.slice(1), line, kernel.getPrivilege());
+    }
+  });
+  builtins.set("kernelBoot", {
+    type: "builtin",
+    call: () => {
+      kernel.boot();
+      return true;
+    }
+  });
+  builtins.set("fsRead", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fsRead() takes 1 argument", line);
+      return kernel.vfs.read(String(args[0]));
+    }
+  });
+  builtins.set("fsWrite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("fsWrite() takes 2 arguments (path, content)", line);
+      kernel.vfs.write(String(args[0]), String(args[1]));
+      return true;
+    }
+  });
+  builtins.set("fsList", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fsList() takes 1 argument", line);
+      return kernel.vfs.list(String(args[0]));
+    }
+  });
+  builtins.set("fsMkdir", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fsMkdir() takes 1 argument", line);
+      kernel.vfs.mkdir(String(args[0]));
+      return true;
+    }
+  });
+  builtins.set("fsDelete", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fsDelete() takes 1 argument", line);
+      return kernel.vfs.delete(String(args[0]));
+    }
+  });
+  builtins.set("fsExists", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fsExists() takes 1 argument", line);
+      return kernel.vfs.exists(String(args[0]));
+    }
+  });
+  builtins.set("fsStat", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fsStat() takes 1 argument", line);
+      return kernel.vfs.stat(String(args[0]));
+    }
+  });
+  builtins.set("fsAppend", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("fsAppend() takes 2 arguments", line);
+      kernel.vfs.append(String(args[0]), String(args[1]));
+      return true;
+    }
+  });
+  builtins.set("createTask", {
+    type: "builtin",
+    call: (args, line) => {
+      const fn2 = args[0];
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("createTask() requires a function", line);
+      return kernel.scheduler.createTask(fn2, String(args[1] ?? ""), Number(args[2] ?? 0));
+    }
+  });
+  builtins.set("killTask", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("killTask() takes 1 argument", line);
+      return kernel.scheduler.killTask(Number(args[0]));
+    }
+  });
+  builtins.set("yieldTask", {
+    type: "builtin",
+    call: () => {
+      kernel.scheduler.yieldCurrent();
+      return null;
+    }
+  });
+  builtins.set("taskList", {
+    type: "builtin",
+    call: () => kernel.scheduler.listTasks().map((t) => ({
+      id: t.id,
+      name: t.name,
+      state: t.state,
+      priority: t.priority
+    }))
+  });
+  builtins.set("runTasks", {
+    type: "builtin",
+    call: (_args, line) => {
+      kernel.scheduler.runAll(line);
+      return null;
+    }
+  });
+  builtins.set("heapAlloc", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("heapAlloc() takes 1 argument (size)", line);
+      return kernel.heap.alloc(Number(args[0]), line);
+    }
+  });
+  builtins.set("heapFree", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("heapFree() takes 1 argument (address)", line);
+      kernel.heap.free(Number(args[0]), line);
+      return null;
+    }
+  });
+  builtins.set("heapLoad", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("heapLoad() takes 1 argument (address)", line);
+      return kernel.heap.load(Number(args[0]), line);
+    }
+  });
+  builtins.set("heapStore", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("heapStore() takes 2 arguments (address, value)", line);
+      kernel.heap.store(Number(args[0]), args[1], line);
+      return null;
+    }
+  });
+  builtins.set("heapStats", {
+    type: "builtin",
+    call: () => kernel.heap.stats()
+  });
+  builtins.set("gc", {
+    type: "builtin",
+    call: () => kernel.heap.gc(/* @__PURE__ */ new Set())
+  });
+  builtins.set("createWindow", {
+    type: "builtin",
+    call: (args) => {
+      return kernel.windowManager.createWindow(
+        String(args[0] ?? "Window"),
+        Number(args[1] ?? 0),
+        Number(args[2] ?? 0),
+        Number(args[3] ?? 400),
+        Number(args[4] ?? 300)
+      );
+    }
+  });
+  builtins.set("closeWindow", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("closeWindow() takes 1 argument", line);
+      return kernel.windowManager.closeWindow(Number(args[0]));
+    }
+  });
+  builtins.set("moveWindow", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("moveWindow() takes 3 arguments (id, x, y)", line);
+      kernel.windowManager.moveWindow(Number(args[0]), Number(args[1]), Number(args[2]));
+      return null;
+    }
+  });
+  builtins.set("resizeWindow", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("resizeWindow() takes 3 arguments (id, w, h)", line);
+      kernel.windowManager.resizeWindow(Number(args[0]), Number(args[1]), Number(args[2]));
+      return null;
+    }
+  });
+  builtins.set("windowList", {
+    type: "builtin",
+    call: () => kernel.windowManager.listWindows().map((w) => ({
+      id: w.id,
+      title: w.title,
+      x: w.x,
+      y: w.y,
+      width: w.width,
+      height: w.height,
+      focused: w.focused
+    }))
+  });
+  builtins.set("deviceList", {
+    type: "builtin",
+    call: () => kernel.hal.listDevices()
+  });
+  builtins.set("deviceRead", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("deviceRead() takes 1 argument", line);
+      const dev = kernel.hal.getDevice(String(args[0]));
+      if (!dev) throw new SdevError(`Device not found: ${args[0]}`, line);
+      return dev.read();
+    }
+  });
+  builtins.set("deviceWrite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("deviceWrite() takes 2 arguments", line);
+      const dev = kernel.hal.getDevice(String(args[0]));
+      if (!dev) throw new SdevError(`Device not found: ${args[0]}`, line);
+      dev.write(args[1]);
+      return null;
+    }
+  });
+  builtins.set("deviceStatus", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("deviceStatus() takes 1 argument", line);
+      const dev = kernel.hal.getDevice(String(args[0]));
+      if (!dev) throw new SdevError(`Device not found: ${args[0]}`, line);
+      return dev.status();
+    }
+  });
+  builtins.set("onInterrupt", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("onInterrupt() takes 2 arguments (num, handler)", line);
+      const handler = args[1];
+      if (!handler || typeof handler !== "object" || !("call" in handler)) throw new SdevError("Second argument must be a function", line);
+      kernel.hal.registerInterrupt(Number(args[0]), handler);
+      return null;
+    }
+  });
+  builtins.set("triggerInterrupt", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("triggerInterrupt() takes 1 argument", line);
+      kernel.hal.triggerInterrupt(Number(args[0]));
+      kernel.hal.processPendingInterrupts(line);
+      return null;
+    }
+  });
+  builtins.set("getPrivilege", {
+    type: "builtin",
+    call: () => kernel.getPrivilege()
+  });
+  builtins.set("setPrivilege", {
+    type: "builtin",
+    call: (args, line) => {
+      const level = String(args[0]);
+      if (level !== "kernel" && level !== "user") throw new SdevError("Invalid privilege level", line);
+      if (kernel.getPrivilege() !== "kernel") throw new SdevError("Permission denied", line);
+      kernel.setPrivilege(level);
+      return null;
+    }
+  });
+  const typedArrayFactory = (TypedArrayCtor, typeName) => ({
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError(`${typeName}() takes 1 argument (size)`, line);
+      const size = Math.trunc(Number(args[0]));
+      const data = new TypedArrayCtor(size);
+      const obj = { _type: typeName, length: size };
+      obj.get = { type: "builtin", call: (a) => data[a[0]] };
+      obj.set = { type: "builtin", call: (a) => {
+        data[a[0]] = a[1];
+        return null;
+      } };
+      obj.fill = { type: "builtin", call: (a) => {
+        data.fill(a[0]);
+        return null;
+      } };
+      obj.toList = { type: "builtin", call: () => Array.from(data) };
+      obj.slice = { type: "builtin", call: (a) => Array.from(data.slice(a[0], a[1])) };
+      obj.size = { type: "builtin", call: () => size };
+      obj.copyTo = { type: "builtin", call: (a, l) => {
+        const target = a[0];
+        if (!target || !target._type) throw new SdevError("Target must be a typed array", l);
+        return null;
+      } };
+      return obj;
+    }
+  });
+  builtins.set("u8", typedArrayFactory(Uint8Array, "u8"));
+  builtins.set("u16", typedArrayFactory(Uint16Array, "u16"));
+  builtins.set("u32", typedArrayFactory(Uint32Array, "u32"));
+  builtins.set("i8", typedArrayFactory(Int8Array, "i8"));
+  builtins.set("i16", typedArrayFactory(Int16Array, "i16"));
+  builtins.set("i32", typedArrayFactory(Int32Array, "i32"));
+  builtins.set("f32", typedArrayFactory(Float32Array, "f32"));
+  builtins.set("f64", typedArrayFactory(Float64Array, "f64"));
+  const eventHandlers = /* @__PURE__ */ new Map();
+  builtins.set("onEvent", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("onEvent() takes 2 arguments (event, handler)", line);
+      const event = String(args[0]);
+      const handler = args[1];
+      if (!handler || typeof handler !== "object" || !("call" in handler)) throw new SdevError("Second argument must be a function", line);
+      if (!eventHandlers.has(event)) eventHandlers.set(event, []);
+      eventHandlers.get(event).push(handler);
+      return null;
+    }
+  });
+  builtins.set("emitEvent", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("emitEvent() takes at least 1 argument", line);
+      const event = String(args[0]);
+      const data = args.slice(1);
+      const handlers = eventHandlers.get(event);
+      if (handlers) {
+        for (const h of handlers) h.call(data, line);
+      }
+      return null;
+    }
+  });
+  builtins.set("loadModule", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("loadModule() takes 1 argument (path)", line);
+      const path = String(args[0]);
+      if (kernel.vfs.exists(path)) {
+        return kernel.vfs.read(path);
+      }
+      throw new SdevError(`Module not found: ${path}`, line);
+    }
+  });
+  builtins.set("getTime", { type: "builtin", call: () => Date.now() });
+  return { builtins, kernel };
+}
+
+// src/lang/hardware/arduino-api.ts
+var f = (category) => (name, signature, returns, summary, sdev, boards) => ({ name, signature, returns, summary, category, ...sdev ? { sdev } : {}, ...boards ? { boards } : {} });
+var dio = f("Digital I/O");
+var aio = f("Analog I/O");
+var adv = f("Advanced I/O");
+var time = f("Time");
+var math = f("Math");
+var trig = f("Trigonometry");
+var chr = f("Characters");
+var rnd = f("Random numbers");
+var bits = f("Bits and bytes");
+var ext = f("External interrupts");
+var irq = f("Interrupts");
+var util = f("Utilities");
+var ARDUINO_FUNCTIONS = [
+  dio("pinMode", "pinMode(pin, mode)", "void", "Configure a pin as INPUT, OUTPUT, INPUT_PULLUP (or INPUT_PULLDOWN on boards that have it).", "pin 13 be output"),
+  dio("digitalWrite", "digitalWrite(pin, value)", "void", "Set a digital pin HIGH or LOW.", "pin 13 write high \xB7 pin 13 on \xB7 pin 13 off \xB7 pin 13 toggle"),
+  dio("digitalRead", "digitalRead(pin)", "int", "Read a digital pin: HIGH or LOW.", "pin 2 read \xB7 read pin 2"),
+  aio("analogRead", "analogRead(pin)", "int", "Read an analog pin (0\u20131023 at the default 10-bit resolution).", "analog 0 read \xB7 read analog A0"),
+  aio("analogWrite", "analogWrite(pin, value)", "void", "Write a PWM value (0\u2013255) to a PWM pin, or a voltage to a DAC pin.", "pin 9 analog 128 \xB7 pin 9 pwm 128"),
+  aio("analogReference", "analogReference(type)", "void", "Choose the reference voltage for analogRead (DEFAULT, INTERNAL, EXTERNAL, \u2026).", "analog reference internal"),
+  aio("analogReadResolution", "analogReadResolution(bits)", "void", "Set the number of bits analogRead returns.", void 0, "Zero, Due, MKR, Nano 33, Uno R4, Giga, Portenta, ESP32, RP2040"),
+  aio("analogWriteResolution", "analogWriteResolution(bits)", "void", "Set the number of bits analogWrite accepts.", void 0, "Zero, Due, MKR, Nano 33, Uno R4, Giga, Portenta, RP2040"),
+  adv("tone", "tone(pin, frequency[, duration])", "void", "Play a square wave of the given frequency (Hz) on a pin.", "tone 8 440 200"),
+  adv("noTone", "noTone(pin)", "void", "Stop a tone started with tone().", "notone 8"),
+  adv("pulseIn", "pulseIn(pin, value[, timeout])", "unsigned long", "Measure how long (\xB5s) a pin stays HIGH or LOW.", "pulsein 7 high"),
+  adv("pulseInLong", "pulseInLong(pin, value[, timeout])", "unsigned long", "Like pulseIn, but works with interrupts and long pulses."),
+  adv("shiftOut", "shiftOut(dataPin, clockPin, bitOrder, value)", "void", "Send a byte one bit at a time (for shift registers).", "shiftout 11 12 msbfirst 0xAA"),
+  adv("shiftIn", "shiftIn(dataPin, clockPin, bitOrder)", "byte", "Read a byte one bit at a time."),
+  time("delay", "delay(ms)", "void", "Pause the program for a number of milliseconds.", "wait 500 \xB7 wait 2 seconds"),
+  time("delayMicroseconds", "delayMicroseconds(us)", "void", "Pause for a number of microseconds.", "wait 50 us \xB7 wait_us 50"),
+  time("millis", "millis()", "unsigned long", "Milliseconds since the board started.", "now()"),
+  time("micros", "micros()", "unsigned long", "Microseconds since the board started.", "nowus()"),
+  math("abs", "abs(x)", "number", "Absolute value."),
+  math("constrain", "constrain(x, low, high)", "number", "Limit a number to a range."),
+  math("map", "map(value, fromLow, fromHigh, toLow, toHigh)", "long", "Re-map a number from one range to another."),
+  math("max", "max(a, b)", "number", "Larger of two numbers."),
+  math("min", "min(a, b)", "number", "Smaller of two numbers."),
+  math("pow", "pow(base, exponent)", "double", "Raise a number to a power."),
+  math("sq", "sq(x)", "number", "Square of a number."),
+  math("sqrt", "sqrt(x)", "double", "Square root."),
+  math("floor", "floor(x)", "double", "Round down."),
+  math("ceil", "ceil(x)", "double", "Round up."),
+  math("round", "round(x)", "long", "Round to the nearest whole number."),
+  math("fabs", "fabs(x)", "double", "Absolute value of a decimal number."),
+  math("fmod", "fmod(x, y)", "double", "Remainder of a decimal division."),
+  math("log", "log(x)", "double", "Natural logarithm."),
+  math("log10", "log10(x)", "double", "Base-10 logarithm."),
+  math("exp", "exp(x)", "double", "e raised to x."),
+  trig("sin", "sin(rad)", "double", "Sine of an angle in radians."),
+  trig("cos", "cos(rad)", "double", "Cosine of an angle in radians."),
+  trig("tan", "tan(rad)", "double", "Tangent of an angle in radians."),
+  trig("asin", "asin(x)", "double", "Arc sine."),
+  trig("acos", "acos(x)", "double", "Arc cosine."),
+  trig("atan", "atan(x)", "double", "Arc tangent."),
+  trig("atan2", "atan2(y, x)", "double", "Angle of the point (x, y)."),
+  trig("radians", "radians(deg)", "double", "Degrees to radians."),
+  trig("degrees", "degrees(rad)", "double", "Radians to degrees."),
+  chr("isAlpha", "isAlpha(c)", "bool", "Is the character a letter?"),
+  chr("isAlphaNumeric", "isAlphaNumeric(c)", "bool", "Is the character a letter or digit?"),
+  chr("isAscii", "isAscii(c)", "bool", "Is the character ASCII?"),
+  chr("isControl", "isControl(c)", "bool", "Is the character a control character?"),
+  chr("isDigit", "isDigit(c)", "bool", "Is the character a digit?"),
+  chr("isGraph", "isGraph(c)", "bool", "Is the character printable and not a space?"),
+  chr("isHexadecimalDigit", "isHexadecimalDigit(c)", "bool", "Is the character 0-9, a-f or A-F?"),
+  chr("isLowerCase", "isLowerCase(c)", "bool", "Is the character lower case?"),
+  chr("isPrintable", "isPrintable(c)", "bool", "Is the character printable?"),
+  chr("isPunct", "isPunct(c)", "bool", "Is the character punctuation?"),
+  chr("isSpace", "isSpace(c)", "bool", "Is the character white space (space, tab, newline\u2026)?"),
+  chr("isUpperCase", "isUpperCase(c)", "bool", "Is the character upper case?"),
+  chr("isWhitespace", "isWhitespace(c)", "bool", "Is the character a space or tab?"),
+  rnd("random", "random([min,] max)", "long", "Random number from min up to (not including) max.", "randint(1, 6)  (inclusive)"),
+  rnd("randomSeed", "randomSeed(seed)", "void", "Start the random generator from a seed, e.g. analogRead of a floating pin."),
+  bits("bit", "bit(n)", "number", "The value of bit n (1, 2, 4, 8, \u2026)."),
+  bits("bitClear", "bitClear(x, n)", "void", "Set bit n of x to 0."),
+  bits("bitRead", "bitRead(x, n)", "int", "Read bit n of x."),
+  bits("bitSet", "bitSet(x, n)", "void", "Set bit n of x to 1."),
+  bits("bitWrite", "bitWrite(x, n, b)", "void", "Write 0 or 1 to bit n of x."),
+  bits("highByte", "highByte(x)", "byte", "The high (left) byte of a word."),
+  bits("lowByte", "lowByte(x)", "byte", "The low (right) byte of a word."),
+  bits("word", "word(high, low)", "word", "Combine two bytes into a word."),
+  ext("attachInterrupt", "attachInterrupt(digitalPinToInterrupt(pin), handler, mode)", "void", "Run a function when a pin changes (RISING, FALLING, CHANGE, LOW, HIGH).", "attach 2 rising onPress"),
+  ext("detachInterrupt", "detachInterrupt(digitalPinToInterrupt(pin))", "void", "Stop running the interrupt handler.", "detach 2"),
+  ext("digitalPinToInterrupt", "digitalPinToInterrupt(pin)", "int", "The interrupt number for a pin."),
+  irq("interrupts", "interrupts()", "void", "Re-enable interrupts."),
+  irq("noInterrupts", "noInterrupts()", "void", "Disable interrupts (for timing-critical code)."),
+  util("sizeof", "sizeof(x)", "size_t", "Size of a variable or array in bytes."),
+  util("F", 'F("text")', "text", "Keep a string in flash memory instead of RAM."),
+  util("PROGMEM", "const int table[] PROGMEM = {\u2026}", "modifier", "Store data in flash memory."),
+  util("yield", "yield()", "void", "Let background tasks run (ESP32/ESP8266/RP2040). In sdev, `yield x` inside a function means return.")
+];
+var STRING_METHODS = [
+  "charAt(n)",
+  "compareTo(other)",
+  "concat(value)",
+  "c_str()",
+  "endsWith(text)",
+  "equals(other)",
+  "equalsIgnoreCase(other)",
+  "getBytes(buf, len)",
+  "indexOf(text[, from])",
+  "lastIndexOf(text[, from])",
+  "length()",
+  "remove(index[, count])",
+  "replace(find, with)",
+  "reserve(size)",
+  "setCharAt(index, c)",
+  "startsWith(text)",
+  "substring(from[, to])",
+  "toCharArray(buf, len)",
+  "toDouble()",
+  "toFloat()",
+  "toInt()",
+  "toLowerCase()",
+  "toUpperCase()",
+  "trim()"
+].map((signature) => ({ signature, summary: STRING_SUMMARY?.[signature.split("(")[0]] ?? "" }));
+var STRING_SUMMARY;
+STRING_SUMMARY = {
+  charAt: "Character at a position.",
+  compareTo: "Compare alphabetically.",
+  concat: "Append a value.",
+  c_str: "C string pointer.",
+  endsWith: "Ends with the text?",
+  equals: "Same text?",
+  equalsIgnoreCase: "Same text ignoring case?",
+  getBytes: "Copy bytes into a buffer.",
+  indexOf: "Position of text (-1 if missing).",
+  lastIndexOf: "Last position of text.",
+  length: "Number of characters.",
+  remove: "Remove characters.",
+  replace: "Replace text.",
+  reserve: "Reserve memory.",
+  setCharAt: "Change one character.",
+  startsWith: "Starts with the text?",
+  substring: "Part of the text.",
+  toCharArray: "Copy into a char array.",
+  toDouble: "Convert to a decimal number.",
+  toFloat: "Convert to a decimal number.",
+  toInt: "Convert to a whole number.",
+  toLowerCase: "Make lower case.",
+  toUpperCase: "Make upper case.",
+  trim: "Remove spaces at both ends."
+};
+for (const m2 of STRING_METHODS) m2.summary = STRING_SUMMARY[m2.signature.split("(")[0]] ?? m2.summary;
+var lib = (l) => l;
+var m = (signature, summary) => ({ signature, summary });
+var ARDUINO_LIBRARIES = [
+  lib({
+    name: "Wire",
+    headers: ["Wire.h"],
+    bundled: true,
+    category: "Communication",
+    summary: "I\xB2C / TWI bus \u2014 talk to sensors, displays and other boards.",
+    classes: [{ name: "Wire", methods: [
+      m("begin([address])", "Join the bus (as controller, or as peripheral with an address)."),
+      m("end()", "Leave the bus."),
+      m("setClock(hz)", "Bus speed (100000 or 400000)."),
+      m("beginTransmission(address)", "Start writing to a device."),
+      m("write(value)", "Queue bytes."),
+      m("endTransmission([stop])", "Send the queued bytes (0 = success)."),
+      m("requestFrom(address, count)", "Ask a device for bytes."),
+      m("available()", "Bytes waiting."),
+      m("read()", "Read a byte."),
+      m("onReceive(handler)", "Peripheral: run when data arrives."),
+      m("onRequest(handler)", "Peripheral: run when data is requested."),
+      m("setWireTimeout(us, reset)", "Avoid hanging on a stuck bus."),
+      m("getWireTimeoutFlag()", "Did a timeout happen?"),
+      m("clearWireTimeoutFlag()", "Clear the timeout flag.")
+    ] }],
+    example: `use "Wire"
+conjure setup() ::
+  Wire.begin()
+  speak("I2C scan")
+  within a be sequence(1, 127) ::
+    Wire.beginTransmission(a)
+    ponder Wire.endTransmission() equals 0 ::
+      speak("found device at", a)
+    ;;
+  ;;
+;;
+conjure loop() ::
+;;`
+  }),
+  lib({
+    name: "SPI",
+    headers: ["SPI.h"],
+    bundled: true,
+    category: "Communication",
+    summary: "Serial Peripheral Interface bus.",
+    classes: [{ name: "SPI", methods: [
+      m("begin()", "Start the bus."),
+      m("end()", "Stop the bus."),
+      m("beginTransaction(SPISettings(speed, MSBFIRST, SPI_MODE0))", "Claim the bus with settings."),
+      m("endTransaction()", "Release the bus."),
+      m("transfer(value)", "Send and receive one byte."),
+      m("transfer16(value)", "Send and receive 16 bits."),
+      m("transfer(buffer, size)", "Send and receive a buffer."),
+      m("usingInterrupt(n)", "Make SPI interrupt-safe."),
+      m("setBitOrder(order)", "Deprecated: use SPISettings."),
+      m("setClockDivider(div)", "Deprecated: use SPISettings."),
+      m("setDataMode(mode)", "Deprecated: use SPISettings.")
+    ] }]
+  }),
+  lib({
+    name: "EEPROM",
+    headers: ["EEPROM.h"],
+    bundled: true,
+    category: "Data storage",
+    summary: "Memory that keeps its value when the power is off.",
+    boards: "AVR, Uno R4, ESP32/ESP8266 (emulated), RP2040 (emulated)",
+    classes: [{ name: "EEPROM", methods: [
+      m("read(address)", "Read a byte."),
+      m("write(address, value)", "Write a byte."),
+      m("update(address, value)", "Write only if different (saves wear)."),
+      m("get(address, variable)", "Read any type."),
+      m("put(address, variable)", "Write any type."),
+      m("length()", "Size in bytes."),
+      m("EEPROM[address]", "Read/write like an array."),
+      m("begin(size) / commit()", "ESP32/ESP8266/RP2040 only: open and save the emulated EEPROM.")
+    ] }],
+    example: `use "EEPROM"
+conjure setup() ::
+  forge boots be EEPROM.read(0) + 1
+  EEPROM.update(0, boots)
+  speak("This board has started", boots, "times")
+;;
+conjure loop() ::
+;;`
+  }),
+  lib({
+    name: "SoftwareSerial",
+    headers: ["SoftwareSerial.h"],
+    bundled: true,
+    category: "Communication",
+    summary: "Extra serial ports on any digital pins.",
+    boards: "AVR, Uno R4, ESP8266",
+    classes: [{ name: "SoftwareSerial", create: "device bt be SoftwareSerial(10, 11)", methods: [
+      ...["begin(speed)", "available()", "read()", "peek()", "write(value)", "print(value)", "println(value)", "end()"].map((s) => m(s, "Same as Serial.")),
+      m("listen()", "Make this port the one that receives."),
+      m("isListening()", "Is this port receiving?"),
+      m("overflow()", "Did the buffer overflow?")
+    ] }]
+  }),
+  lib({
+    name: "HID",
+    headers: ["HID.h"],
+    bundled: true,
+    category: "Device control",
+    summary: "Low-level USB HID (used by Keyboard and Mouse).",
+    boards: "Leonardo, Micro, Zero, MKR, Due, Uno R4",
+    classes: []
+  }),
+  lib({
+    name: "Servo",
+    headers: ["Servo.h"],
+    bundled: false,
+    category: "Device control",
+    summary: "Control hobby servo motors.",
+    classes: [{ name: "Servo", create: "device arm be Servo", methods: [
+      m("attach(pin[, min, max])", "Connect the servo to a pin."),
+      m("write(angle)", "Move to an angle (0\u2013180)."),
+      m("writeMicroseconds(us)", "Set the pulse width directly."),
+      m("read()", "Last angle written."),
+      m("attached()", "Is it attached?"),
+      m("detach()", "Release the pin.")
+    ] }],
+    example: `use "Servo"
+device arm be Servo
+conjure setup() ::
+  arm.attach(9)
+;;
+conjure loop() ::
+  within angle be sequence(0, 181, 5) ::
+    arm.write(angle)
+    wait 15
+  ;;
+  within angle be sequence(180, -1, -5) ::
+    arm.write(angle)
+    wait 15
+  ;;
+;;`
+  }),
+  lib({
+    name: "Stepper",
+    headers: ["Stepper.h"],
+    bundled: false,
+    category: "Device control",
+    summary: "Unipolar and bipolar stepper motors.",
+    classes: [{ name: "Stepper", create: "device motor be Stepper(200, 8, 9, 10, 11)", methods: [m("setSpeed(rpm)", "Speed in turns per minute."), m("step(steps)", "Turn a number of steps (negative = backwards).")] }]
+  }),
+  lib({
+    name: "LiquidCrystal",
+    headers: ["LiquidCrystal.h"],
+    bundled: false,
+    category: "Display",
+    summary: "Character LCDs (HD44780) wired directly to pins.",
+    classes: [{ name: "LiquidCrystal", create: "device lcd be LiquidCrystal(12, 11, 5, 4, 3, 2)", methods: [
+      m("begin(cols, rows)", "Start the display."),
+      m("clear()", "Clear the screen."),
+      m("home()", "Cursor to top-left."),
+      m("setCursor(col, row)", "Move the cursor."),
+      m("print(value)", "Show text."),
+      m("write(char)", "Show one character."),
+      m("cursor() / noCursor()", "Show or hide the cursor."),
+      m("blink() / noBlink()", "Blinking cursor."),
+      m("display() / noDisplay()", "Turn text on/off."),
+      m("scrollDisplayLeft() / scrollDisplayRight()", "Scroll."),
+      m("autoscroll() / noAutoscroll()", "Automatic scrolling."),
+      m("leftToRight() / rightToLeft()", "Text direction."),
+      m("createChar(n, bytes)", "Define a custom character.")
+    ] }]
+  }),
+  lib({
+    name: "LiquidCrystal I2C",
+    headers: ["LiquidCrystal_I2C.h"],
+    bundled: false,
+    category: "Display",
+    summary: "Character LCDs with an I\xB2C backpack (2 wires).",
+    classes: [{ name: "LiquidCrystal_I2C", create: "device lcd be LiquidCrystal_I2C(0x27, 16, 2)", methods: [
+      m("init()", "Start the display."),
+      m("backlight() / noBacklight()", "Backlight on/off."),
+      m("clear()", "Clear."),
+      m("setCursor(col, row)", "Move the cursor."),
+      m("print(value)", "Show text.")
+    ] }],
+    example: `use "LiquidCrystal I2C"
+device lcd be LiquidCrystal_I2C(0x27, 16, 2)
+conjure setup() ::
+  lcd.init()
+  lcd.backlight()
+  lcd.print("Hello from sdev")
+;;
+conjure loop() ::
+  lcd.setCursor(0, 1)
+  lcd.print(now() / 1000)
+  wait 500
+;;`
+  }),
+  lib({
+    name: "SD",
+    headers: ["SD.h"],
+    bundled: false,
+    category: "Data storage",
+    summary: "Read and write files on SD cards.",
+    classes: [
+      { name: "SD", methods: [m("begin(csPin)", "Start the card."), m("exists(path)", "Does a file exist?"), m("mkdir(path)", "Make a folder."), m("open(path, FILE_READ | FILE_WRITE)", "Open a file."), m("remove(path)", "Delete a file."), m("rmdir(path)", "Delete a folder.")] },
+      { name: "File", methods: ["available()", "close()", "flush()", "peek()", "position()", "print(v)", "println(v)", "seek(pos)", "size()", "read()", "write(v)", "isDirectory()", "openNextFile()", "rewindDirectory()", "name()"].map((s) => m(s, "File operation.")) }
+    ]
+  }),
+  lib({
+    name: "Keyboard",
+    headers: ["Keyboard.h"],
+    bundled: false,
+    category: "Device control",
+    summary: "Act as a USB keyboard.",
+    boards: "Leonardo, Micro, Zero, MKR, Due, Uno R4, Nano 33 IoT, Giga",
+    classes: [{ name: "Keyboard", methods: [m("begin()", "Start."), m("end()", "Stop."), m("press(key)", "Hold a key."), m("release(key)", "Let go of a key."), m("releaseAll()", "Let go of all keys."), m("write(key)", "Press and release."), m("print(text)", "Type text."), m("println(text)", "Type text + Enter.")] }]
+  }),
+  lib({
+    name: "Mouse",
+    headers: ["Mouse.h"],
+    bundled: false,
+    category: "Device control",
+    summary: "Act as a USB mouse.",
+    boards: "Leonardo, Micro, Zero, MKR, Due, Uno R4, Nano 33 IoT, Giga",
+    classes: [{ name: "Mouse", methods: [m("begin()", "Start."), m("end()", "Stop."), m("click([button])", "Click."), m("move(x, y[, wheel])", "Move the pointer."), m("press([button])", "Hold a button."), m("release([button])", "Release a button."), m("isPressed([button])", "Is a button held?")] }]
+  }),
+  lib({
+    name: "Ethernet",
+    headers: ["SPI.h", "Ethernet.h"],
+    bundled: false,
+    category: "Communication",
+    summary: "Wired networking with the Ethernet shield (W5100/W5500).",
+    classes: [
+      { name: "Ethernet", methods: [m("begin(mac[, ip])", "Connect (DHCP if no ip)."), m("localIP()", "Our address."), m("maintain()", "Renew DHCP."), m("hardwareStatus()", "Which chip."), m("linkStatus()", "Cable connected?")] },
+      { name: "EthernetClient", methods: [m("connect(host, port)", "Open a connection."), m("print/println/write", "Send."), m("available() / read()", "Receive."), m("stop()", "Close."), m("connected()", "Still connected?")] },
+      { name: "EthernetServer", methods: [m("begin()", "Listen."), m("available()", "Next client.")] }
+    ]
+  }),
+  lib({
+    name: "WiFiS3",
+    headers: ["WiFiS3.h"],
+    bundled: true,
+    category: "Communication",
+    summary: "Wi-Fi on the Uno R4 WiFi.",
+    boards: "Uno R4 WiFi",
+    classes: [
+      { name: "WiFi", methods: [m("begin(ssid, pass)", "Connect."), m("status()", "WL_CONNECTED when connected."), m("localIP()", "Our address."), m("RSSI()", "Signal strength."), m("disconnect()", "Disconnect."), m("scanNetworks()", "List networks."), m("beginAP(ssid, pass)", "Make a hotspot.")] },
+      { name: "WiFiClient / WiFiServer / WiFiUDP / WiFiSSLClient", methods: [m("connect(host, port)", "Open a connection."), m("available() / read()", "Receive."), m("print/write", "Send."), m("stop()", "Close.")] }
+    ]
+  }),
+  lib({
+    name: "WiFiNINA",
+    headers: ["WiFiNINA.h"],
+    bundled: false,
+    category: "Communication",
+    summary: "Wi-Fi on Nano 33 IoT, MKR WiFi 1010, Uno WiFi Rev2, Nano RP2040 Connect.",
+    boards: "Nano 33 IoT, MKR WiFi 1010, Uno WiFi Rev2, Nano RP2040 Connect",
+    classes: [{ name: "WiFi", methods: [m("begin(ssid, pass)", "Connect."), m("status()", "Connection state."), m("localIP()", "Our address."), m("RSSI()", "Signal.")] }]
+  }),
+  lib({
+    name: "WiFi",
+    headers: ["WiFi.h"],
+    bundled: true,
+    category: "Communication",
+    summary: "Wi-Fi on ESP32, Nano ESP32, Pico W, Giga and Portenta.",
+    boards: "ESP32, Nano ESP32, Giga, Portenta, Pico W",
+    classes: [{ name: "WiFi", methods: [m("begin(ssid, pass)", "Connect."), m("status()", "WL_CONNECTED when connected."), m("localIP()", "Our address."), m("softAP(ssid, pass)", "Make a hotspot."), m("scanNetworks()", "List networks."), m("disconnect()", "Disconnect.")] }]
+  }),
+  lib({
+    name: "ESP8266WiFi",
+    headers: ["ESP8266WiFi.h"],
+    bundled: true,
+    category: "Communication",
+    summary: "Wi-Fi on ESP8266 boards.",
+    boards: "ESP8266",
+    classes: [{ name: "WiFi", methods: [m("begin(ssid, pass)", "Connect."), m("status()", "Connection state."), m("localIP()", "Our address.")] }]
+  }),
+  lib({
+    name: "ArduinoBLE",
+    headers: ["ArduinoBLE.h"],
+    bundled: false,
+    category: "Communication",
+    summary: "Bluetooth Low Energy.",
+    boards: "Uno R4 WiFi, Nano 33 BLE, Nano 33 IoT, Nano RP2040 Connect, Nano ESP32, MKR WiFi 1010, Giga, Portenta",
+    classes: [
+      { name: "BLE", methods: [m("begin()", "Start BLE."), m("setLocalName(name)", "Advertised name."), m("advertise()", "Start advertising."), m("scan()", "Look for devices."), m("available()", "Next found device."), m("central()", "Connected central device."), m("poll()", "Process BLE events.")] },
+      { name: "BLEService / BLECharacteristic", methods: [m("BLEService(uuid)", "A service."), m("BLEIntCharacteristic(uuid, BLERead | BLENotify)", "A value."), m("writeValue(v)", "Update the value."), m("value()", "Read the value."), m("written()", "Was it written?")] }
+    ]
+  }),
+  lib({
+    name: "Arduino_LED_Matrix",
+    headers: ["Arduino_LED_Matrix.h"],
+    bundled: true,
+    category: "Display",
+    summary: "The 12\xD78 LED matrix on the Uno R4 WiFi.",
+    boards: "Uno R4 WiFi",
+    classes: [{ name: "ArduinoLEDMatrix", create: "device matrix be ArduinoLEDMatrix", methods: [
+      m("begin()", "Start the matrix."),
+      m("loadFrame(frame)", "Show a frame (3 \xD7 uint32_t)."),
+      m("renderBitmap(bitmap, 8, 12)", "Show a byte[8][12] bitmap."),
+      m("loadSequence(frames)", "Load an animation."),
+      m("play([loop])", "Play the animation."),
+      m("autoscroll(ms)", "Scroll text drawn with ArduinoGraphics."),
+      m("beginDraw() / endDraw()", "Draw with ArduinoGraphics."),
+      m("textScrollSpeed(ms)", "Scroll speed.")
+    ] }],
+    example: `use "Arduino_LED_Matrix"
+device matrix be ArduinoLEDMatrix
+conjure setup() ::
+  matrix.begin()
+;;
+conjure loop() ::
+  matrix.loadFrame(LEDMATRIX_HEART_BIG)
+  wait 500
+  matrix.loadFrame(LEDMATRIX_HEART_SMALL)
+  wait 500
+;;`
+  }),
+  lib({
+    name: "ArduinoGraphics",
+    headers: ["ArduinoGraphics.h"],
+    bundled: false,
+    category: "Display",
+    summary: "Draw text and shapes (used with the R4 LED matrix and displays).",
+    classes: [{ name: "ArduinoGraphics", methods: [m("beginDraw() / endDraw()", "Start/finish drawing."), m("stroke(r, g, b)", "Line color."), m("textFont(Font_5x7)", "Choose a font."), m("text(str, x, y)", "Draw text."), m("beginText(x, y, color) / endText(SCROLL_LEFT)", "Scrolling text."), m("point / line / rect / circle", "Shapes.")] }]
+  }),
+  lib({
+    name: "RTC",
+    headers: ["RTC.h"],
+    bundled: true,
+    category: "Timing",
+    summary: "Real-time clock of the Uno R4.",
+    boards: "Uno R4 Minima, Uno R4 WiFi",
+    classes: [{ name: "RTC", methods: [m("begin()", "Start the clock."), m("setTime(RTCTime)", "Set the date and time."), m("getTime(RTCTime&)", "Read the date and time."), m("setPeriodicCallback(fn, Period::ONCE_EVERY_1_SEC)", "Run a function periodically."), m("setAlarmCallback(fn, time, match)", "Alarm.")] }]
+  }),
+  lib({
+    name: "Firmata",
+    headers: ["Firmata.h"],
+    bundled: false,
+    category: "Communication",
+    summary: "Control the board from a computer with the Firmata protocol.",
+    classes: [{ name: "Firmata", methods: [m("begin(speed)", "Start."), m("processInput()", "Handle incoming messages."), m("sendAnalog(pin, value)", "Report a value."), m("attach(command, handler)", "Handle a command.")] }]
+  }),
+  lib({
+    name: "Adafruit NeoPixel",
+    headers: ["Adafruit_NeoPixel.h"],
+    bundled: false,
+    category: "Display",
+    summary: "WS2812 / NeoPixel RGB LED strips and rings.",
+    classes: [{ name: "Adafruit_NeoPixel", create: "device strip be Adafruit_NeoPixel(8, 6, NEO_GRB + NEO_KHZ800)", methods: [
+      m("begin()", "Start."),
+      m("show()", "Send colors to the LEDs."),
+      m("clear()", "All off."),
+      m("setPixelColor(i, r, g, b)", "Color one LED."),
+      m("Color(r, g, b)", "Pack a color."),
+      m("ColorHSV(hue)", "Color from a hue."),
+      m("setBrightness(0-255)", "Overall brightness."),
+      m("numPixels()", "How many LEDs."),
+      m("fill(color, first, count)", "Fill a range.")
+    ] }],
+    example: `use "Adafruit NeoPixel"
+device strip be Adafruit_NeoPixel(8, 6, NEO_GRB + NEO_KHZ800)
+conjure setup() ::
+  strip.begin()
+  strip.setBrightness(40)
+;;
+conjure loop() ::
+  within i be sequence(8) ::
+    strip.clear()
+    strip.setPixelColor(i, strip.Color(0, 80, 255))
+    strip.show()
+    wait 80
+  ;;
+;;`
+  }),
+  lib({
+    name: "FastLED",
+    headers: ["FastLED.h"],
+    bundled: false,
+    category: "Display",
+    summary: "Fast control of many kinds of LED strips.",
+    classes: [{ name: "FastLED", methods: [m("addLeds<WS2812B, PIN, GRB>(leds, count)", "Register a strip."), m("show()", "Send colors."), m("clear()", "All off."), m("setBrightness(v)", "Brightness."), m("CRGB(r, g, b) / CHSV(h, s, v)", "Colors.")] }]
+  }),
+  lib({
+    name: "DHT sensor library",
+    headers: ["DHT.h"],
+    bundled: false,
+    category: "Sensors",
+    summary: 'DHT11 / DHT22 temperature and humidity sensors (also install "Adafruit Unified Sensor").',
+    classes: [{ name: "DHT", create: "device dht be DHT(2, DHT22)", methods: [m("begin()", "Start."), m("readTemperature([fahrenheit])", "Temperature."), m("readHumidity()", "Humidity %."), m("computeHeatIndex(t, h)", "Feels-like temperature.")] }],
+    example: `use "DHT sensor library"
+use "Adafruit Unified Sensor"
+device dht be DHT(2, DHT22)
+conjure setup() ::
+  dht.begin()
+;;
+conjure loop() ::
+  forge t: float be dht.readTemperature()
+  forge h: float be dht.readHumidity()
+  speak("Temperature:", t, "C  Humidity:", h, "%")
+  wait 2 seconds
+;;`
+  }),
+  lib({ name: "Adafruit Unified Sensor", headers: ["Adafruit_Sensor.h"], bundled: false, category: "Sensors", summary: "Common base used by Adafruit sensor libraries.", classes: [] }),
+  lib({
+    name: "Adafruit GFX Library",
+    headers: ["Adafruit_GFX.h"],
+    bundled: false,
+    category: "Display",
+    summary: "Shapes, text and bitmaps for displays.",
+    classes: [{ name: "Adafruit_GFX", methods: ["drawPixel(x, y, c)", "drawLine(x0, y0, x1, y1, c)", "drawRect(x, y, w, h, c)", "fillRect(x, y, w, h, c)", "drawCircle(x, y, r, c)", "fillCircle(x, y, r, c)", "setCursor(x, y)", "setTextSize(n)", "setTextColor(c)", "print(v)", "drawBitmap(x, y, bmp, w, h, c)"].map((s) => m(s, "Drawing.")) }]
+  }),
+  lib({
+    name: "Adafruit SSD1306",
+    headers: ["Adafruit_GFX.h", "Adafruit_SSD1306.h"],
+    bundled: false,
+    category: "Display",
+    summary: "128\xD764 / 128\xD732 OLED displays.",
+    classes: [{ name: "Adafruit_SSD1306", create: "device oled be Adafruit_SSD1306(128, 64, &Wire, -1)", methods: [m("begin(SSD1306_SWITCHCAPVCC, 0x3C)", "Start."), m("clearDisplay()", "Clear."), m("display()", "Show what was drawn."), m("\u2026all Adafruit GFX methods", "Drawing.")] }]
+  }),
+  lib({ name: "U8g2", headers: ["U8g2lib.h"], bundled: false, category: "Display", summary: "Monochrome displays of almost every kind.", classes: [{ name: "U8G2_*", methods: [m("begin()", "Start."), m("clearBuffer() / sendBuffer()", "Frame."), m("setFont(font)", "Font."), m("drawStr(x, y, text)", "Text.")] }] }),
+  lib({ name: "TM1637", headers: ["TM1637Display.h"], bundled: false, category: "Display", summary: "4-digit 7-segment displays.", classes: [{ name: "TM1637Display", create: "device digits be TM1637Display(2, 3)", methods: [m("setBrightness(0-7)", "Brightness."), m("showNumberDec(n)", "Show a number."), m("clear()", "Clear.")] }] }),
+  lib({ name: "LedControl", headers: ["LedControl.h"], bundled: false, category: "Display", summary: "MAX7219 LED matrices and 7-segment displays.", classes: [{ name: "LedControl", create: "device leds be LedControl(12, 11, 10, 1)", methods: [m("shutdown(dev, false)", "Wake up."), m("setIntensity(dev, 0-15)", "Brightness."), m("setLed(dev, row, col, on)", "One LED."), m("clearDisplay(dev)", "Clear.")] }] }),
+  lib({ name: "NewPing", headers: ["NewPing.h"], bundled: false, category: "Sensors", summary: "HC-SR04 ultrasonic distance sensors.", classes: [{ name: "NewPing", create: "device sonar be NewPing(9, 10, 200)", methods: [m("ping_cm()", "Distance in cm."), m("ping_in()", "Distance in inches."), m("ping_median(n)", "Median of n pings (\xB5s).")] }] }),
+  lib({ name: "AccelStepper", headers: ["AccelStepper.h"], bundled: false, category: "Device control", summary: "Steppers with acceleration.", classes: [{ name: "AccelStepper", create: "device motor be AccelStepper(AccelStepper::DRIVER, 2, 3)", methods: [m("setMaxSpeed(s)", "Top speed."), m("setAcceleration(a)", "Acceleration."), m("moveTo(pos)", "Target position."), m("run()", "Call often to move."), m("distanceToGo()", "Steps left.")] }] }),
+  lib({ name: "IRremote", headers: ["IRremote.hpp"], bundled: false, category: "Communication", summary: "Send and receive infrared remote codes.", classes: [{ name: "IrReceiver / IrSender", methods: [m("IrReceiver.begin(pin)", "Start receiving."), m("IrReceiver.decode()", "Got a code?"), m("IrReceiver.decodedIRData.command", "The code."), m("IrReceiver.resume()", "Ready for the next one."), m("IrSender.sendNEC(addr, cmd, repeats)", "Send.")] }] }),
+  lib({ name: "PubSubClient", headers: ["PubSubClient.h"], bundled: false, category: "Communication", summary: "MQTT messaging.", classes: [{ name: "PubSubClient", methods: [m("setServer(host, port)", "Broker."), m("connect(id)", "Connect."), m("publish(topic, msg)", "Send."), m("subscribe(topic)", "Listen."), m("setCallback(fn)", "Handle messages."), m("loop()", "Call often.")] }] }),
+  lib({ name: "ArduinoJson", headers: ["ArduinoJson.h"], bundled: false, category: "Data processing", summary: "Read and write JSON.", classes: [{ name: "JsonDocument", methods: [m("deserializeJson(doc, input)", "Parse."), m("serializeJson(doc, output)", "Write."), m('doc["key"]', "Get/set values.")] }] }),
+  lib({ name: "OneWire", headers: ["OneWire.h"], bundled: false, category: "Communication", summary: "1-Wire bus (DS18B20 and more).", classes: [{ name: "OneWire", create: "device bus be OneWire(4)", methods: [m("reset()", "Reset."), m("search(addr)", "Find devices."), m("write(b)", "Send."), m("read()", "Receive.")] }] }),
+  lib({ name: "DallasTemperature", headers: ["OneWire.h", "DallasTemperature.h"], bundled: false, category: "Sensors", summary: 'DS18B20 temperature sensors (also install "OneWire").', classes: [{ name: "DallasTemperature", create: "device temps be DallasTemperature(&bus)", methods: [m("begin()", "Start."), m("requestTemperatures()", "Measure."), m("getTempCByIndex(0)", "Temperature in \xB0C.")] }] }),
+  lib({ name: "MFRC522", headers: ["SPI.h", "MFRC522.h"], bundled: false, category: "Sensors", summary: "RFID card readers.", classes: [{ name: "MFRC522", create: "device rfid be MFRC522(10, 9)", methods: [m("PCD_Init()", "Start."), m("PICC_IsNewCardPresent()", "Card near?"), m("PICC_ReadCardSerial()", "Read its id."), m("uid.uidByte[i]", "Id bytes.")] }] }),
+  lib({ name: "TinyGPSPlus", headers: ["TinyGPSPlus.h"], bundled: false, category: "Sensors", summary: "Read GPS modules.", classes: [{ name: "TinyGPSPlus", methods: [m("encode(c)", "Feed a character."), m("location.lat() / lng()", "Position."), m("location.isValid()", "Have a fix?")] }] }),
+  lib({ name: "RTClib", headers: ["RTClib.h"], bundled: false, category: "Timing", summary: "DS1307 / DS3231 / PCF8523 clock modules.", classes: [{ name: "RTC_DS3231", create: "device clock be RTC_DS3231", methods: [m("begin()", "Start."), m("now()", "Current DateTime."), m("adjust(DateTime(F(__DATE__), F(__TIME__)))", "Set the time.")] }] }),
+  lib({ name: "Bounce2", headers: ["Bounce2.h"], bundled: false, category: "Signal input/output", summary: "Clean button presses.", classes: [{ name: "Bounce", create: "device button be Bounce", methods: [m("attach(pin, INPUT_PULLUP)", "Connect."), m("interval(ms)", "Debounce time."), m("update()", "Call each loop."), m("fell() / rose()", "Pressed / released.")] }] }),
+  lib({ name: "Keypad", headers: ["Keypad.h"], bundled: false, category: "Signal input/output", summary: "Matrix keypads.", classes: [{ name: "Keypad", methods: [m("getKey()", "Pressed key or 0."), m("waitForKey()", "Wait for a key.")] }] }),
+  lib({ name: "HX711", headers: ["HX711.h"], bundled: false, category: "Sensors", summary: "Load-cell (scale) amplifiers.", classes: [{ name: "HX711", create: "device scale be HX711", methods: [m("begin(dout, sck)", "Start."), m("read()", "Raw value."), m("get_units(n)", "Weight."), m("tare()", "Zero."), m("set_scale(f)", "Calibrate.")] }] }),
+  lib({ name: "Adafruit BME280 Library", headers: ["Adafruit_BME280.h"], bundled: false, category: "Sensors", summary: "BME280 temperature, pressure and humidity.", classes: [{ name: "Adafruit_BME280", create: "device bme be Adafruit_BME280", methods: [m("begin(0x76)", "Start."), m("readTemperature()", "\xB0C."), m("readPressure()", "Pa."), m("readHumidity()", "%.")] }] }),
+  lib({ name: "Adafruit MPU6050", headers: ["Adafruit_MPU6050.h"], bundled: false, category: "Sensors", summary: "MPU-6050 accelerometer and gyroscope.", classes: [{ name: "Adafruit_MPU6050", create: "device imu be Adafruit_MPU6050", methods: [m("begin()", "Start."), m("getEvent(&a, &g, &temp)", "Read all values.")] }] }),
+  lib({ name: "Encoder", headers: ["Encoder.h"], bundled: false, category: "Signal input/output", summary: "Rotary encoders.", classes: [{ name: "Encoder", create: "device knob be Encoder(2, 3)", methods: [m("read()", "Position."), m("write(n)", "Set position.")] }] }),
+  lib({ name: "CapacitiveSensor", headers: ["CapacitiveSensor.h"], bundled: false, category: "Sensors", summary: "Touch sensing with a resistor and foil.", classes: [{ name: "CapacitiveSensor", create: "device touch be CapacitiveSensor(4, 2)", methods: [m("capacitiveSensor(samples)", "Touch value.")] }] }),
+  lib({ name: "ArduinoHttpClient", headers: ["ArduinoHttpClient.h"], bundled: false, category: "Communication", summary: "HTTP and WebSocket client.", classes: [{ name: "HttpClient", methods: [m("get(path)", "GET request."), m("post(path, type, body)", "POST request."), m("responseStatusCode()", "Status."), m("responseBody()", "Body.")] }] }),
+  lib({ name: "ArduinoMqttClient", headers: ["ArduinoMqttClient.h"], bundled: false, category: "Communication", summary: "MQTT client from Arduino.", classes: [{ name: "MqttClient", methods: [m("connect(broker, port)", "Connect."), m("beginMessage(topic) / print / endMessage()", "Publish."), m("subscribe(topic)", "Listen."), m("poll()", "Call often.")] }] }),
+  lib({ name: "Arduino_JSON", headers: ["Arduino_JSON.h"], bundled: false, category: "Data processing", summary: "Simple JSON from Arduino.", classes: [{ name: "JSON", methods: [m("JSON.parse(text)", "Parse."), m("JSON.stringify(value)", "Write.")] }] }),
+  lib({ name: "ArduinoModbus", headers: ["ArduinoRS485.h", "ArduinoModbus.h"], bundled: false, category: "Communication", summary: 'Modbus RTU/TCP (also install "ArduinoRS485").', classes: [] }),
+  lib({ name: "ArduinoRS485", headers: ["ArduinoRS485.h"], bundled: false, category: "Communication", summary: "RS-485 serial.", classes: [] }),
+  lib({ name: "Arduino_LSM9DS1", headers: ["Arduino_LSM9DS1.h"], bundled: false, category: "Sensors", summary: "IMU of the Nano 33 BLE.", boards: "Nano 33 BLE", classes: [{ name: "IMU", methods: [m("begin()", "Start."), m("readAcceleration(x, y, z)", "Acceleration."), m("readGyroscope(x, y, z)", "Rotation."), m("readMagneticField(x, y, z)", "Compass.")] }] }),
+  lib({ name: "Arduino_LSM6DS3", headers: ["Arduino_LSM6DS3.h"], bundled: false, category: "Sensors", summary: "IMU of the Nano 33 IoT and Uno WiFi Rev2.", boards: "Nano 33 IoT, Uno WiFi Rev2", classes: [{ name: "IMU", methods: [m("begin()", "Start."), m("readAcceleration(x, y, z)", "Acceleration."), m("readGyroscope(x, y, z)", "Rotation.")] }] }),
+  lib({ name: "Arduino_APDS9960", headers: ["Arduino_APDS9960.h"], bundled: false, category: "Sensors", summary: "Gesture, color and proximity (Nano 33 BLE Sense).", classes: [] }),
+  lib({ name: "Arduino_HTS221", headers: ["Arduino_HTS221.h"], bundled: false, category: "Sensors", summary: "Temperature and humidity (Nano 33 BLE Sense).", classes: [] }),
+  lib({ name: "Arduino_LPS22HB", headers: ["Arduino_LPS22HB.h"], bundled: false, category: "Sensors", summary: "Barometric pressure (Nano 33 BLE Sense).", classes: [] }),
+  lib({ name: "ArduinoIoTCloud", headers: ["ArduinoIoTCloud.h", "Arduino_ConnectionHandler.h"], bundled: false, category: "Communication", summary: "Connect to Arduino Cloud.", classes: [] }),
+  lib({ name: "Scheduler", headers: ["Scheduler.h"], bundled: false, category: "Timing", summary: "Run several loops at once.", boards: "Due, Zero, MKR", classes: [{ name: "Scheduler", methods: [m("startLoop(fn)", "Run another loop.")] }] }),
+  lib({ name: "Arduino_FreeRTOS", headers: ["Arduino_FreeRTOS.h"], bundled: false, category: "Timing", summary: "FreeRTOS tasks on AVR boards.", boards: "AVR", classes: [] })
+];
+var LIB_BY_NAME = new Map(ARDUINO_LIBRARIES.map((l) => [l.name.toLowerCase(), l]));
+var LIB_BY_HEADER = /* @__PURE__ */ new Map();
+for (const l of ARDUINO_LIBRARIES) for (const h of l.headers) if (!LIB_BY_HEADER.has(h.toLowerCase())) LIB_BY_HEADER.set(h.toLowerCase(), l);
+
+// src/components/ide/languageData.ts
+var SDEV_BUILTINS = [
+  // I/O
+  { name: "speak", signature: "speak(...args)", doc: "Print values to the output, separated by spaces.", category: "io" },
+  { name: "print", signature: "print(value)", doc: "Alias for speak().", category: "io" },
+  { name: "input", signature: "input(prompt)", doc: "Read a line of text from the user.", category: "io" },
+  { name: "wait", signature: "wait(ms)", doc: "Pause execution for the given milliseconds.", category: "io" },
+  // Math
+  { name: "random", signature: "random()", doc: "Random float between 0 and 1.", category: "math" },
+  { name: "floor", signature: "floor(n)", doc: "Round down to nearest integer.", category: "math" },
+  { name: "ground", signature: "ground(n)", doc: "Floor \u2014 round towards negative infinity.", category: "math" },
+  { name: "ceil", signature: "ceil(n)", doc: "Round up to nearest integer.", category: "math" },
+  { name: "round", signature: "round(n)", doc: "Round to nearest integer.", category: "math" },
+  { name: "abs", signature: "abs(n)", doc: "Absolute value.", category: "math" },
+  { name: "root", signature: "root(n)", doc: "Square root.", category: "math" },
+  { name: "pow", signature: "pow(base, exp)", doc: "Raise base to exponent.", category: "math" },
+  { name: "min", signature: "min(...values)", doc: "Smallest value.", category: "math" },
+  { name: "max", signature: "max(...values)", doc: "Largest value.", category: "math" },
+  { name: "sin", signature: "sin(rad)", doc: "Sine.", category: "math" },
+  { name: "cos", signature: "cos(rad)", doc: "Cosine.", category: "math" },
+  { name: "tan", signature: "tan(rad)", doc: "Tangent.", category: "math" },
+  { name: "log", signature: "log(n)", doc: "Natural logarithm.", category: "math" },
+  // Type
+  { name: "morph", signature: "morph(value, type)", doc: 'Convert value to "text", "number", or "bool".', category: "type" },
+  { name: "type", signature: "type(value)", doc: "Get the type name of a value.", category: "type" },
+  // String
+  { name: "measure", signature: "measure(s)", doc: "Length of string or list.", category: "string" },
+  { name: "upper", signature: "upper(s)", doc: "Uppercase a string.", category: "string" },
+  { name: "lower", signature: "lower(s)", doc: "Lowercase a string.", category: "string" },
+  { name: "trim", signature: "trim(s)", doc: "Remove leading/trailing whitespace.", category: "string" },
+  { name: "split", signature: "split(s, sep)", doc: "Split string into list.", category: "string" },
+  { name: "join", signature: "join(list, sep)", doc: "Join list into string.", category: "string" },
+  { name: "replace", signature: "replace(s, find, rep)", doc: "Replace first occurrence.", category: "string" },
+  { name: "includes", signature: "includes(s, sub)", doc: "True if substring/element present.", category: "string" },
+  { name: "startsWith", signature: "startsWith(s, sub)", doc: "True if string starts with sub.", category: "string" },
+  { name: "endsWith", signature: "endsWith(s, sub)", doc: "True if string ends with sub.", category: "string" },
+  // Lists
+  { name: "gather", signature: "gather(list, fn)", doc: "Reduce a list with a function.", category: "list" },
+  { name: "pluck", signature: "pluck(list, idx)", doc: "Get element at index.", category: "list" },
+  { name: "weave", signature: "weave(...lists)", doc: "Concatenate lists.", category: "list" },
+  { name: "each", signature: "each(list, fn)", doc: "Map over list.", category: "list" },
+  { name: "sift", signature: "sift(list, fn)", doc: "Filter list by predicate.", category: "list" },
+  { name: "clone", signature: "clone(value)", doc: "Deep copy a value.", category: "list" },
+  { name: "range", signature: "range(start, end, step?)", doc: "Generate a range list.", category: "list" },
+  { name: "sort", signature: "sort(list)", doc: "Sort a list.", category: "list" },
+  { name: "reverse", signature: "reverse(list)", doc: "Reverse a list.", category: "list" },
+  { name: "push", signature: "push(list, item)", doc: "Append to list.", category: "list" },
+  { name: "pop", signature: "pop(list)", doc: "Remove and return last item.", category: "list" },
+  { name: "keys", signature: "keys(map)", doc: "Keys of a map.", category: "list" },
+  { name: "values", signature: "values(map)", doc: "Values of a map.", category: "list" },
+  // Graphics
+  { name: "canvas", signature: "canvas(w, h)", doc: "Open a drawing canvas.", category: "graphics" },
+  { name: "clear", signature: "clear(color)", doc: "Clear canvas to color.", category: "graphics" },
+  { name: "rect", signature: "rect(x, y, w, h)", doc: "Draw a rectangle.", category: "graphics" },
+  { name: "circle", signature: "circle(x, y, r)", doc: "Draw a circle.", category: "graphics" },
+  { name: "ellipse", signature: "ellipse(x, y, rx, ry)", doc: "Draw an ellipse.", category: "graphics" },
+  { name: "triangle", signature: "triangle(x1,y1,x2,y2,x3,y3)", doc: "Draw a triangle.", category: "graphics" },
+  { name: "line", signature: "line(x1,y1,x2,y2)", doc: "Draw a line.", category: "graphics" },
+  { name: "point", signature: "point(x, y)", doc: "Draw a point.", category: "graphics" },
+  { name: "text", signature: "text(s, x, y)", doc: "Draw text.", category: "graphics" },
+  { name: "fill", signature: "fill(color)", doc: "Set fill color.", category: "graphics" },
+  { name: "stroke", signature: "stroke(color)", doc: "Set stroke color.", category: "graphics" },
+  { name: "noStroke", signature: "noStroke()", doc: "Disable stroke.", category: "graphics" },
+  { name: "hue", signature: "hue(deg)", doc: "HSL hue color string.", category: "graphics" },
+  { name: "star", signature: "star(x,y,r,points)", doc: "Draw a star.", category: "graphics" },
+  { name: "heart", signature: "heart(x, y, size)", doc: "Draw a heart.", category: "graphics" },
+  // Turtle
+  { name: "turtle", signature: "turtle()", doc: "Initialize turtle graphics.", category: "turtle" },
+  { name: "forward", signature: "forward(d)", doc: "Move turtle forward.", category: "turtle" },
+  { name: "backward", signature: "backward(d)", doc: "Move turtle backward.", category: "turtle" },
+  { name: "left", signature: "left(deg)", doc: "Turn left.", category: "turtle" },
+  { name: "right", signature: "right(deg)", doc: "Turn right.", category: "turtle" },
+  { name: "goto", signature: "goto(x, y)", doc: "Move turtle to position.", category: "turtle" },
+  { name: "home", signature: "home()", doc: "Return turtle to origin.", category: "turtle" },
+  { name: "pendown", signature: "pendown()", doc: "Pen down (draws while moving).", category: "turtle" },
+  { name: "penup", signature: "penup()", doc: "Pen up (no drawing).", category: "turtle" },
+  { name: "pencolor", signature: "pencolor(color)", doc: "Set pen color.", category: "turtle" },
+  { name: "penwidth", signature: "penwidth(w)", doc: "Set pen width.", category: "turtle" },
+  // OOP / data
+  { name: "Stack", signature: "Stack()", doc: "Stack data structure.", category: "oop" },
+  { name: "Queue", signature: "Queue()", doc: "Queue data structure.", category: "oop" },
+  { name: "Set", signature: "Set()", doc: "Set data structure.", category: "oop" },
+  { name: "Map", signature: "Map()", doc: "Map (dictionary) data structure.", category: "oop" },
+  // UI
+  { name: "window", signature: "window(title)", doc: "Create a UI window.", category: "ui" },
+  { name: "button", signature: "button(label, fn)", doc: "Create a button.", category: "ui" },
+  { name: "label", signature: "label(text)", doc: "Create a text label.", category: "ui" },
+  { name: "textbox", signature: "textbox(key)", doc: "Create a text input.", category: "ui" },
+  // Web (browser DSL — renders in the IDE's WEB preview panel)
+  { name: "page", signature: "page(title)", doc: "Start a new HTML page. Switches the IDE to the WEB preview panel.", category: "web" },
+  { name: "endpage", signature: "endpage()", doc: "Finalize the page and auto-close any open containers.", category: "web" },
+  { name: "tag", signature: "tag(name, text?, attrs?)", doc: 'Emit any HTML tag (e.g. tag("div","hi",{class:"x"})).', category: "web" },
+  { name: "open", signature: "open(name, attrs?)", doc: "Open a container element; pair with close().", category: "web" },
+  { name: "close", signature: "close()", doc: "Close the most recently opened container.", category: "web" },
+  { name: "style", signature: "style(selector, dict) | style(raw_css)", doc: "Add CSS \u2014 either a selector + dict of declarations, or a raw CSS string.", category: "web" },
+  { name: "keyframes", signature: "keyframes(name, steps)", doc: "Define a @keyframes animation from a step dict.", category: "web" },
+  { name: "script", signature: "script(code)", doc: "Append JavaScript to the page <script>.", category: "web" },
+  { name: "onclick", signature: "onclick(selector, code)", doc: "Bind a click handler to all elements matching a CSS selector.", category: "web" },
+  { name: "on", signature: "on(event, selector, code)", doc: "Bind any DOM event to elements matching a CSS selector.", category: "web" },
+  { name: "raw_html", signature: "raw_html(html)", doc: "Insert raw HTML at the current position.", category: "web" },
+  { name: "raw_css", signature: "raw_css(css)", doc: "Append raw CSS to the document <style>.", category: "web" },
+  { name: "raw_js", signature: "raw_js(js)", doc: "Append raw JavaScript to the document <script>.", category: "web" },
+  { name: "html_div", signature: "html_div(text?, attrs?)", doc: "Emit a <div>. Every HTML5 tag has an html_<tag> form (html_h1, html_button, html_input, \u2026) and a paired open_<tag> / end_<tag> for nesting.", category: "web" },
+  { name: "h1", signature: "h1(text?, attrs?)", doc: "Emit an <h1> heading. Same shape for h2\u2026h6, p, span, a, img, ul/li, table, form, etc.", category: "web" },
+  { name: "meta", signature: "meta(attrs)", doc: "Add a <meta> tag to <head>.", category: "web" },
+  { name: "link", signature: "link(rel, href) | link(attrs)", doc: "Add a <link> tag to <head> (stylesheets, icons, \u2026).", category: "web" }
+];
+
+// src/lang/registry/api-registry.ts
+var UNIVERSAL_TARGETS = ["v1", "v2-wasm", "native-x64", "browser", "cli"];
+var V1_V2_TARGETS = ["v1", "v2-wasm", "browser", "cli"];
+var V1_CORE_TARGETS = ["v1", "browser", "cli"];
+var BROWSER_ONLY_TARGETS = ["v1", "browser"];
+var CLI_NATIVE_TARGETS = ["v1", "cli", "native-x64"];
+var HARDWARE_TARGETS = ["hardware"];
+var HARDWARE_AND_V1_TARGETS = ["hardware", "v1", "browser", "cli"];
+var NATIVE_X64_BUILTINS = /* @__PURE__ */ new Set([
+  "speak",
+  "say",
+  "print",
+  "println",
+  "whisper",
+  "shout",
+  "measure",
+  "len",
+  "length",
+  "ord",
+  "chr",
+  "str",
+  "int",
+  "num",
+  "morph",
+  "upper",
+  "lower",
+  "trim",
+  "replace",
+  "portion",
+  "shatter",
+  "split",
+  "weave",
+  "join",
+  "contains",
+  "indexOf",
+  "has",
+  "keys",
+  "inscriptions",
+  "values",
+  "contents",
+  "gather",
+  "push",
+  "pluck",
+  "pop",
+  "sequence",
+  "range",
+  "sum",
+  "abs",
+  "magnitude",
+  "min",
+  "least",
+  "max",
+  "greatest",
+  "sqrt",
+  "root",
+  "floor",
+  "ground",
+  "ceil",
+  "elevate",
+  "round",
+  "nearby",
+  "sin",
+  "cos",
+  "tan",
+  "exp",
+  "log",
+  "ln",
+  "pow",
+  "random",
+  "chaos",
+  "rand",
+  "read_file",
+  "write_file",
+  "fileExists",
+  "appendFile",
+  "input",
+  "now"
+]);
+var V2_WASM_BUILTINS = /* @__PURE__ */ new Set([
+  ...NATIVE_X64_BUILTINS,
+  "each",
+  "sift",
+  "fold",
+  "reverse",
+  "sort",
+  "clone",
+  "etch",
+  "unetch",
+  "essence",
+  "gettype",
+  "typeof",
+  "lines",
+  "unlines",
+  "words",
+  "char_at",
+  "code_at",
+  "find_from",
+  "find_last",
+  "leading_space",
+  "is_letter",
+  "is_digit",
+  "is_space",
+  "is_name",
+  "regex_test",
+  "regex_capture",
+  "regex_find_all",
+  "regex_replace",
+  "evaluate",
+  "quote_text"
+]);
+var CURATED_SEEDS = [
+  // ── Core I/O & Type Conversions ──────────────────────────────────────────
+  {
+    name: "speak",
+    aliases: ["say", "print", "println"],
+    module: "core",
+    signature: "speak(...values: any) -> void",
+    params: [{ name: "...values", type: "any", description: "Values to format and print separated by spaces" }],
+    returns: "void",
+    description: "Print one or more values to standard output, separated by spaces.",
+    example: 'forge greeting be "Hello, sdev!"\nspeak(greeting, 42)',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "say",
+    aliases: ["speak"],
+    module: "core",
+    signature: "say(...values: any) -> void",
+    params: [{ name: "...values", type: "any", description: "Values to print to output" }],
+    returns: "void",
+    description: "v2 plain-English alias for speak(). Outputs values separated by spaces.",
+    example: 'say("Result:", 10 + 20)',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "whisper",
+    aliases: [],
+    module: "core",
+    signature: "whisper(...values: any) -> void",
+    params: [{ name: "...values", type: "any", description: "Values concatenated without spaces" }],
+    returns: "void",
+    description: "Output values concatenated directly with no separator.",
+    example: 'whisper("a", "b", "c") // outputs "abc"',
+    targets: V1_CORE_TARGETS
+  },
+  {
+    name: "shout",
+    aliases: [],
+    module: "core",
+    signature: "shout(...values: any) -> void",
+    params: [{ name: "...values", type: "any", description: "Values printed in UPPERCASE" }],
+    returns: "void",
+    description: "Print values to standard output converted to uppercase.",
+    example: 'shout("warning: system hot")',
+    targets: V1_CORE_TARGETS
+  },
+  {
+    name: "input",
+    aliases: [],
+    module: "core",
+    signature: "input(prompt?: text) -> text",
+    params: [{ name: "prompt", type: "text", optional: true, defaultValue: '""', description: "Prompt shown to the user" }],
+    returns: "text",
+    description: "Prompt the user and read a line of text input.",
+    example: 'forge name be input("What is your name? ")\nspeak("Welcome,", name)',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "measure",
+    aliases: ["len"],
+    module: "core",
+    signature: "measure(collection: text | list | tome) -> number",
+    params: [{ name: "collection", type: "text | list | tome", description: "String, list, or tome to measure" }],
+    returns: "number",
+    description: "Return the character count of a string, item count of a list, or key count of a tome.",
+    example: "speak(measure([10, 20, 30])) // 3",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "morph",
+    aliases: ["str", "int", "num"],
+    module: "core",
+    signature: 'morph(value: any, targetType: "number" | "text" | "truth") -> any',
+    params: [
+      { name: "value", type: "any", description: "Value to convert" },
+      { name: "targetType", type: '"number" | "text" | "truth"', description: "Target type name" }
+    ],
+    returns: "number | text | truth",
+    description: "Explicitly convert a value between number, text, and truth (boolean).",
+    example: 'forge n be morph("42", "number")\nspeak(n + 8) // 50',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "essence",
+    aliases: ["gettype", "typeof", "type"],
+    module: "core",
+    signature: "essence(value: any) -> text",
+    params: [{ name: "value", type: "any", description: "Value to inspect" }],
+    returns: "text",
+    description: 'Return the canonical SDEV type name of a value ("number", "text", "truth", "list", "tome", "conjuration", "void").',
+    example: 'speak(essence([1, 2, 3])) // "list"',
+    targets: V1_V2_TARGETS
+  },
+  {
+    name: "sequence",
+    aliases: ["range"],
+    module: "list",
+    signature: "sequence(startOrEnd: number, end?: number, step?: number) -> list<number>",
+    params: [
+      { name: "startOrEnd", type: "number", description: "Stop value (if 1 arg) or start value (if 2-3 args)" },
+      { name: "end", type: "number", optional: true, description: "Exclusive stop value" },
+      { name: "step", type: "number", optional: true, defaultValue: "1", description: "Increment step (non-zero)" }
+    ],
+    returns: "list<number>",
+    description: "Generate a list of numbers in an arithmetic progression.",
+    example: "iterate i through sequence(1, 5) ::\n  speak(i)\n;;",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "each",
+    aliases: [],
+    module: "list",
+    signature: "each(items: list, transform: (item, index?) -> any) -> list",
+    params: [
+      { name: "items", type: "list", description: "Input list" },
+      { name: "transform", type: "conjuration", description: "Mapping function applied to each element" }
+    ],
+    returns: "list",
+    description: "Transform every element of a list with a function and return the new list.",
+    example: "forge doubled be each([1, 2, 3], x -> x * 2)\nspeak(doubled)",
+    targets: V1_V2_TARGETS
+  },
+  {
+    name: "sift",
+    aliases: [],
+    module: "list",
+    signature: "sift(items: list, predicate: (item) -> truth) -> list",
+    params: [
+      { name: "items", type: "list", description: "Input list" },
+      { name: "predicate", type: "conjuration", description: "Filter predicate returning yep/nope" }
+    ],
+    returns: "list",
+    description: "Keep only the elements of a list for which predicate(item) returns truthy.",
+    example: "forge evens be sift([1, 2, 3, 4], x -> x % 2 equals 0)\nspeak(evens)",
+    targets: V1_V2_TARGETS
+  },
+  {
+    name: "fold",
+    aliases: [],
+    module: "list",
+    signature: "fold(items: list, initial: any, reducer: (acc, item) -> any) -> any",
+    params: [
+      { name: "items", type: "list", description: "Input list" },
+      { name: "initial", type: "any", description: "Initial accumulator value" },
+      { name: "reducer", type: "conjuration", description: "Accumulator function (acc, item) -> nextAcc" }
+    ],
+    returns: "any",
+    description: "Reduce a list to a single value by successively applying reducer(acc, item).",
+    example: "forge total be fold([1, 2, 3, 4], 0, (acc, x) -> acc + x)\nspeak(total) // 10",
+    targets: V1_V2_TARGETS
+  },
+  {
+    name: "gather",
+    aliases: ["push"],
+    module: "list",
+    signature: "gather(items?: list, value?: any) -> list",
+    params: [
+      { name: "items", type: "list", optional: true, description: "Target list to append to (omit to create empty list)" },
+      { name: "value", type: "any", optional: true, description: "Element to append" }
+    ],
+    returns: "list",
+    description: "Append an item to a list (or return a new empty list when called with 0 arguments).",
+    example: "forge xs be [1, 2]\ngather(xs, 3)\nspeak(xs) // [1, 2, 3]",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "pluck",
+    aliases: ["pop"],
+    module: "list",
+    signature: "pluck(items: list, valueToAppend?: any) -> any",
+    params: [
+      { name: "items", type: "list", description: "Target list" },
+      { name: "valueToAppend", type: "any", optional: true, description: "Optional value to push in ML dialect mode" }
+    ],
+    returns: "any",
+    description: "Remove and return the last element of a list (or append when given 2 arguments in stdlib mode).",
+    example: "forge xs be [10, 20, 30]\nforge lastItem be pluck(xs)\nspeak(lastItem, xs)",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "portion",
+    aliases: ["snatch"],
+    module: "list",
+    signature: "portion(seq: list | text, start: number, end?: number) -> list | text",
+    params: [
+      { name: "seq", type: "list | text", description: "List or string to slice" },
+      { name: "start", type: "number", description: "Start index (0-based)" },
+      { name: "end", type: "number", optional: true, description: "Optional exclusive end index" }
+    ],
+    returns: "list | text",
+    description: "Extract a slice of a list or substring of text from start to end.",
+    example: 'speak(portion("sdev-lang", 0, 4)) // "sdev"',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "weave",
+    aliases: ["join"],
+    module: "text",
+    signature: "weave(items: list, separator: text) -> text",
+    params: [
+      { name: "items", type: "list", description: "List of values to join" },
+      { name: "separator", type: "text", description: "Delimiter inserted between elements" }
+    ],
+    returns: "text",
+    description: "Join all elements of a list into a single string separated by separator.",
+    example: 'speak(weave(["a", "b", "c"], "-")) // "a-b-c"',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "shatter",
+    aliases: ["split"],
+    module: "text",
+    signature: "shatter(str: text, separator: text) -> list<text>",
+    params: [
+      { name: "str", type: "text", description: "Input string" },
+      { name: "separator", type: "text", description: "Delimiter to split on" }
+    ],
+    returns: "list<text>",
+    description: "Split a string by separator into a list of substrings.",
+    example: 'speak(shatter("one,two,three", ","))',
+    targets: UNIVERSAL_TARGETS
+  },
+  // ── Math ──────────────────────────────────────────────────────────────────
+  {
+    name: "magnitude",
+    aliases: ["abs"],
+    module: "math",
+    signature: "magnitude(n: number) -> number",
+    params: [{ name: "n", type: "number", description: "Numeric value" }],
+    returns: "number",
+    description: "Return the absolute value |n| of a number.",
+    example: "speak(magnitude(-42)) // 42",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "least",
+    aliases: ["min"],
+    module: "math",
+    signature: "least(...values: number[]) -> number",
+    params: [{ name: "...values", type: "number | list<number>", description: "Numbers or a single list of numbers" }],
+    returns: "number",
+    description: "Return the smallest number among the arguments or list.",
+    example: "speak(least(4, 1, 9, -2)) // -2",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "greatest",
+    aliases: ["max"],
+    module: "math",
+    signature: "greatest(...values: number[]) -> number",
+    params: [{ name: "...values", type: "number | list<number>", description: "Numbers or a single list of numbers" }],
+    returns: "number",
+    description: "Return the largest number among the arguments or list.",
+    example: "speak(greatest(4, 1, 9, -2)) // 9",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "root",
+    aliases: ["sqrt"],
+    module: "math",
+    signature: "root(n: number) -> number",
+    params: [{ name: "n", type: "number", description: "Non-negative number" }],
+    returns: "number",
+    description: "Compute the principal square root of n.",
+    example: "speak(root(81)) // 9",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "ground",
+    aliases: ["floor"],
+    module: "math",
+    signature: "ground(n: number) -> number",
+    params: [{ name: "n", type: "number", description: "Number to floor" }],
+    returns: "number",
+    description: "Round a number down toward negative infinity.",
+    example: "speak(ground(3.9)) // 3",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "elevate",
+    aliases: ["ceil"],
+    module: "math",
+    signature: "elevate(n: number) -> number",
+    params: [{ name: "n", type: "number", description: "Number to ceiling" }],
+    returns: "number",
+    description: "Round a number up toward positive infinity.",
+    example: "speak(elevate(3.1)) // 4",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "nearby",
+    aliases: ["round"],
+    module: "math",
+    signature: "nearby(n: number) -> number",
+    params: [{ name: "n", type: "number", description: "Number to round" }],
+    returns: "number",
+    description: "Round a number to the nearest integer.",
+    example: "speak(nearby(3.6)) // 4",
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "chaos",
+    aliases: ["random", "rand"],
+    module: "math",
+    signature: "chaos() -> number",
+    params: [],
+    returns: "number",
+    description: "Generate a pseudo-random floating-point number in [0, 1).",
+    example: "speak(chaos())",
+    targets: UNIVERSAL_TARGETS
+  },
+  // ── Tome (Dict) & JSON ───────────────────────────────────────────────────
+  {
+    name: "inscriptions",
+    aliases: ["keys", "tome_keys"],
+    module: "tome",
+    signature: "inscriptions(t: tome) -> list<text>",
+    params: [{ name: "t", type: "tome", description: "Dictionary/tome to inspect" }],
+    returns: "list<text>",
+    description: "Return a list of all keys in a tome.",
+    example: 'forge user be { name: "Ada", role: "admin" }\nspeak(inscriptions(user))',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "contents",
+    aliases: ["values"],
+    module: "tome",
+    signature: "contents(t: tome) -> list<any>",
+    params: [{ name: "t", type: "tome", description: "Dictionary/tome to inspect" }],
+    returns: "list<any>",
+    description: "Return a list of all values stored in a tome.",
+    example: 'forge user be { name: "Ada", role: "admin" }\nspeak(contents(user))',
+    targets: UNIVERSAL_TARGETS
+  },
+  {
+    name: "etch",
+    aliases: [],
+    module: "tome",
+    signature: "etch(value: any) -> text",
+    params: [{ name: "value", type: "any", description: "Value to serialize" }],
+    returns: "text",
+    description: "Serialize an SDEV value into a JSON string.",
+    example: "speak(etch({ score: 100, active: yep }))",
+    targets: V1_V2_TARGETS
+  },
+  {
+    name: "unetch",
+    aliases: [],
+    module: "tome",
+    signature: "unetch(json: text) -> any",
+    params: [{ name: "json", type: "text", description: "Valid JSON string" }],
+    returns: "any",
+    description: "Parse a JSON string into an SDEV value (tome, list, number, text, truth, void).",
+    example: 'forge data be unetch("{\\"x\\": 10}")\nspeak(data["x"])',
+    targets: V1_V2_TARGETS
+  },
+  // ── Deprecated Legacy Aliases (for linter SDEV008 checks) ────────────────
+  {
+    name: "print",
+    aliases: [],
+    module: "core",
+    signature: "print(...values: any) -> void",
+    params: [{ name: "...values", type: "any", description: "Values to print" }],
+    returns: "void",
+    description: "Legacy alias for speak(). Prefer canonical speak() or v2 say().",
+    example: 'speak("Prefer speak() over print()")',
+    targets: UNIVERSAL_TARGETS,
+    deprecated: {
+      since: "1.2.0",
+      replacement: "speak",
+      reason: "Use canonical `speak(...)` or `say(...)` for cross-dialect consistency."
+    }
+  },
+  {
+    name: "println",
+    aliases: [],
+    module: "core",
+    signature: "println(...values: any) -> void",
+    params: [{ name: "...values", type: "any", description: "Values to print" }],
+    returns: "void",
+    description: "Legacy alias for speak(). Prefer canonical speak() or v2 say().",
+    example: 'speak("Hello, world!")',
+    targets: UNIVERSAL_TARGETS,
+    deprecated: {
+      since: "1.2.0",
+      replacement: "speak",
+      reason: "speak() already appends a newline; use `speak(...)` instead of `println(...)`."
+    }
+  },
+  {
+    name: "typeof",
+    aliases: [],
+    module: "core",
+    signature: "typeof(value: any) -> text",
+    params: [{ name: "value", type: "any", description: "Value to inspect" }],
+    returns: "text",
+    description: "JavaScript-style alias for essence() / gettype().",
+    example: "speak(essence(42))",
+    targets: V1_V2_TARGETS,
+    deprecated: {
+      since: "1.2.0",
+      replacement: "essence",
+      reason: "Use `essence(val)` or `gettype(val)` in canonical SDEV."
+    }
+  },
+  // ── Graphics & Canvas ────────────────────────────────────────────────────
+  {
+    name: "canvas",
+    aliases: [],
+    module: "graphics",
+    signature: "canvas(width: number, height: number) -> void",
+    params: [
+      { name: "width", type: "number", description: "Canvas width in pixels" },
+      { name: "height", type: "number", description: "Canvas height in pixels" }
+    ],
+    returns: "void",
+    description: "Initialize the 2D drawing canvas with the specified pixel dimensions.",
+    example: 'canvas(400, 400)\nclear("#0d0d15")',
+    targets: BROWSER_ONLY_TARGETS
+  },
+  {
+    name: "rect",
+    aliases: [],
+    module: "graphics",
+    signature: "rect(x: number, y: number, width: number, height: number, radius?: number) -> void",
+    params: [
+      { name: "x", type: "number", description: "Top-left X coordinate" },
+      { name: "y", type: "number", description: "Top-left Y coordinate" },
+      { name: "width", type: "number", description: "Rectangle width" },
+      { name: "height", type: "number", description: "Rectangle height" },
+      { name: "radius", type: "number", optional: true, defaultValue: "0", description: "Optional corner radius" }
+    ],
+    returns: "void",
+    description: "Draw a filled and/or stroked rectangle on the canvas.",
+    example: 'canvas(400, 400)\nfill("#00ff88")\nrect(50, 50, 120, 80, 8)',
+    targets: BROWSER_ONLY_TARGETS
+  },
+  {
+    name: "circle",
+    aliases: [],
+    module: "graphics",
+    signature: "circle(x: number, y: number, radius: number) -> void",
+    params: [
+      { name: "x", type: "number", description: "Center X coordinate" },
+      { name: "y", type: "number", description: "Center Y coordinate" },
+      { name: "radius", type: "number", description: "Circle radius in pixels" }
+    ],
+    returns: "void",
+    description: "Draw a circle centered at (x, y) with the given radius.",
+    example: 'canvas(400, 400)\nfill("#38bdf8")\ncircle(200, 200, 60)',
+    targets: BROWSER_ONLY_TARGETS
+  },
+  // ── UI Toolkit ───────────────────────────────────────────────────────────
+  {
+    name: "window",
+    aliases: [],
+    module: "ui",
+    signature: "window(title?: text, width?: number, height?: number) -> void",
+    params: [
+      { name: "title", type: "text", optional: true, defaultValue: '"sdev App"', description: "Window title" },
+      { name: "width", type: "number", optional: true, defaultValue: "480", description: "Window width" },
+      { name: "height", type: "number", optional: true, defaultValue: "600", description: "Window height" }
+    ],
+    returns: "void",
+    description: "Create a declarative UI window rendered in the App Preview panel.",
+    example: 'window("Counter App")\nheading("Hello UI")\nbutton("Click me", () -> speak("Clicked!"))\nendwindow()',
+    targets: BROWSER_ONLY_TARGETS
+  },
+  // ── ML Stdlib (lang/stdlib/ml/*.sdev) ────────────────────────────────────
+  {
+    name: "tensor",
+    aliases: [],
+    module: "ml",
+    signature: "tensor(data: list<number>, shape: list<number>) -> tome",
+    params: [
+      { name: "data", type: "list<number>", description: "Flat f64 element list" },
+      { name: "shape", type: "list<number>", description: "Dimension sizes, e.g. [rows, cols]" }
+    ],
+    returns: "tome",
+    description: "Construct an N-dimensional tensor tome for the SDEV ML stdlib.",
+    example: "forge w be tensor([1.0, 2.0, 3.0, 4.0], [2, 2])\nspeak(w.shape)",
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "tensor_grad",
+    aliases: [],
+    module: "ml",
+    signature: "tensor_grad(data: list<number>, shape: list<number>) -> tome",
+    params: [
+      { name: "data", type: "list<number>", description: "Flat f64 element list" },
+      { name: "shape", type: "list<number>", description: "Dimension sizes" }
+    ],
+    returns: "tome",
+    description: "Construct a differentiable tensor with zero-initialized gradient buffer (`requires_grad: yep`).",
+    example: "forge x be tensor_grad([0.5, -1.2], [2, 1])",
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "zeros",
+    aliases: [],
+    module: "ml",
+    signature: "zeros(shape: list<number>) -> tome",
+    params: [{ name: "shape", type: "list<number>", description: "Tensor shape dimensions" }],
+    returns: "tome",
+    description: "Create a tensor filled with 0.0 of the specified shape.",
+    example: "forge z be zeros([3, 3])",
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "ones",
+    aliases: [],
+    module: "ml",
+    signature: "ones(shape: list<number>) -> tome",
+    params: [{ name: "shape", type: "list<number>", description: "Tensor shape dimensions" }],
+    returns: "tome",
+    description: "Create a tensor filled with 1.0 of the specified shape.",
+    example: "forge o be ones([2, 4])",
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "randn",
+    aliases: [],
+    module: "ml",
+    signature: "randn(shape: list<number>) -> tome",
+    params: [{ name: "shape", type: "list<number>", description: "Tensor shape dimensions" }],
+    returns: "tome",
+    description: "Create a tensor sampled from a standard normal distribution N(0, 1) via Box-Muller transform.",
+    example: "forge weights be randn([4, 4])",
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "determinant",
+    aliases: ["det"],
+    module: "matrix",
+    signature: "determinant(m: list<list<number>>) -> number",
+    params: [{ name: "m", type: "list<list<number>>", description: "Square 2D matrix" }],
+    returns: "number",
+    description: "Compute the determinant of a square matrix.",
+    example: "forge d be determinant([[1, 2], [3, 4]])",
+    targets: ["v1", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "nn_dense",
+    aliases: ["linear_layer"],
+    module: "ml",
+    signature: "nn_dense(in_features: number, out_features: number) -> tome",
+    params: [
+      { name: "in_features", type: "number", description: "Input feature dimension" },
+      { name: "out_features", type: "number", description: "Output feature dimension" }
+    ],
+    returns: "tome",
+    description: "Create a trainable dense (fully-connected) neural network layer with weights and bias tensors.",
+    example: "forge layer be nn_dense(4, 8)",
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  // ── WebGPU Stdlib (lang/stdlib/webgpu.sdev) ──────────────────────────────
+  {
+    name: "wgpu_init",
+    aliases: ["gpu_init", "__wgpu_request_device"],
+    module: "webgpu",
+    signature: "wgpu_init() -> number",
+    params: [],
+    returns: "number",
+    description: "Request a WebGPU adapter/device handle in the browser (returns 0 when falling back to CPU).",
+    example: "forge dev be wgpu_init()",
+    targets: ["v1", "v2-wasm", "browser"],
+    status: "partial"
+  },
+  {
+    name: "wgpu_matmul",
+    aliases: ["gpu_matmul"],
+    module: "webgpu",
+    signature: "wgpu_matmul(a: tome, b: tome) -> tome",
+    params: [
+      { name: "a", type: "tome", description: "Left 2D tensor" },
+      { name: "b", type: "tome", description: "Right 2D tensor" }
+    ],
+    returns: "tome",
+    description: "Execute WGSL compute-shader matrix multiplication on WebGPU, with automatic CPU fallback.",
+    example: "forge c be wgpu_matmul(a, b)",
+    targets: ["v1", "v2-wasm", "browser"],
+    status: "partial"
+  },
+  // ── Leaflet / Geo Visualization (Planned / Partial Roadmap) ──────────────
+  {
+    name: "leaflet_map",
+    aliases: ["map_view", "geoMap"],
+    module: "leaflet",
+    signature: "leaflet_map(lat: number, lng: number, zoom?: number) -> tome",
+    params: [
+      { name: "lat", type: "number", description: "Initial latitude" },
+      { name: "lng", type: "number", description: "Initial longitude" },
+      { name: "zoom", type: "number", optional: true, defaultValue: "12", description: "Initial zoom level" }
+    ],
+    returns: "tome",
+    description: "Create an interactive Leaflet map widget inside the Web/App preview panel.",
+    example: "forge m be leaflet_map(42.6977, 23.3219, 13)",
+    targets: ["browser"],
+    status: "planned"
+  },
+  {
+    name: "leaflet_marker",
+    aliases: ["geoMarker"],
+    module: "leaflet",
+    signature: "leaflet_marker(map: tome, lat: number, lng: number, label?: text) -> void",
+    params: [
+      { name: "map", type: "tome", description: "Map handle from leaflet_map()" },
+      { name: "lat", type: "number", description: "Marker latitude" },
+      { name: "lng", type: "number", description: "Marker longitude" },
+      { name: "label", type: "text", optional: true, description: "Popup label text" }
+    ],
+    returns: "void",
+    description: "Place a geographic pin marker on a Leaflet map instance.",
+    example: 'leaflet_marker(m, 42.6977, 23.3219, "Sofia")',
+    targets: ["browser"],
+    status: "planned"
+  }
+];
+var COMMON_API_ALIASES = {
+  // Graphics aliases
+  fillrect: "rect",
+  fill_rect: "rect",
+  drawrect: "rect",
+  draw_rect: "rect",
+  strokerect: "rect",
+  rectangle: "rect",
+  box: "rect",
+  fillcircle: "circle",
+  drawcircle: "circle",
+  drawline: "line",
+  drawtext: "text",
+  filltext: "text",
+  clearrect: "clear",
+  cls: "clear",
+  bgcolor: "background",
+  strokeweight: "lineWidth",
+  strokewidth: "lineWidth",
+  // Output / Console aliases
+  println: "speak",
+  printf: "speak",
+  puts: "speak",
+  echo: "speak",
+  "console.log": "speak",
+  console_log: "speak",
+  writeline: "speak",
+  log_line: "speak",
+  // Collection / String aliases
+  len: "measure",
+  length: "measure",
+  size: "measure",
+  count_items: "measure",
+  push: "gather",
+  append: "gather",
+  add: "gather",
+  pop: "pluck",
+  shift: "pluck",
+  filter: "sift",
+  where: "sift",
+  select_if: "sift",
+  reduce: "fold",
+  inject: "fold",
+  accumulate: "fold",
+  map: "each",
+  foreach: "each",
+  slice: "portion",
+  substr: "portion",
+  substring: "portion",
+  split: "shatter",
+  explode: "shatter",
+  join: "weave",
+  implode: "weave",
+  // Math aliases
+  sqrt: "root",
+  abs: "magnitude",
+  floor: "ground",
+  ceil: "elevate",
+  round: "nearby",
+  rand: "chaos",
+  min: "least",
+  max: "greatest",
+  // Type & Dict aliases
+  typeof: "essence",
+  type_of: "essence",
+  type: "essence",
+  cast: "morph",
+  convert: "morph",
+  stringify: "etch",
+  to_json: "etch",
+  json_stringify: "etch",
+  parse_json: "unetch",
+  from_json: "unetch",
+  json_parse: "unetch",
+  dict_keys: "inscriptions",
+  dict_values: "contents",
+  // Host / Network
+  fetch: "invoke",
+  http_request: "invoke",
+  readfile: "read_file",
+  readfilesync: "read_file",
+  writefile: "write_file",
+  writefilesync: "write_file"
+};
+function parseSignatureParams(signature) {
+  const open = signature.indexOf("(");
+  const close = signature.lastIndexOf(")");
+  if (open < 0 || close <= open) return [];
+  const rawInside = signature.slice(open + 1, close).trim();
+  if (!rawInside) return [];
+  return rawInside.split(",").map((part) => {
+    const clean = part.trim().replace(/^\[|\]$/g, "");
+    const optional = clean.includes("?") || part.includes("[");
+    const [namePart, typePart] = clean.split(":").map((s) => s.trim());
+    const name = namePart.replace(/\?$/, "");
+    return {
+      name: name || "arg",
+      type: typePart || (name.startsWith("...") ? "any[]" : "any"),
+      optional
+    };
+  });
+}
+function classifyCoreBuiltinModule(name) {
+  if (name.startsWith("ffi_")) return "ffi";
+  if ([
+    "upper",
+    "lower",
+    "trim",
+    "trimLeft",
+    "trimRight",
+    "replace",
+    "startswith",
+    "endswith",
+    "starts",
+    "ends",
+    "repeat",
+    "padleft",
+    "padright",
+    "padLeft",
+    "padRight",
+    "charAt",
+    "indexOf",
+    "lastIndexOf",
+    "capitalize",
+    "title",
+    "center",
+    "isUpper",
+    "isLower",
+    "isDigit",
+    "isAlpha",
+    "isAlphaNum",
+    "isSpace",
+    "chr",
+    "ord",
+    "base64encode",
+    "base64decode",
+    "locate",
+    "chars",
+    "format",
+    "shatter",
+    "weave",
+    "lines",
+    "unlines",
+    "words",
+    "char_at",
+    "code_at",
+    "find_from",
+    "find_last",
+    "leading_space",
+    "is_letter",
+    "is_digit",
+    "is_space",
+    "is_name",
+    "regex_test",
+    "regex_capture",
+    "regex_find_all",
+    "regex_replace",
+    "quote_text",
+    "match",
+    "matchAll",
+    "replaceRegex",
+    "test",
+    "len"
+  ].includes(name)) {
+    return "text";
+  }
+  if ([
+    "sequence",
+    "range",
+    "each",
+    "sift",
+    "fold",
+    "gather",
+    "pluck",
+    "portion",
+    "snatch",
+    "insert",
+    "remove",
+    "concat",
+    "flatten",
+    "zip",
+    "unzip",
+    "first",
+    "last",
+    "rest",
+    "take",
+    "drop",
+    "sum",
+    "product",
+    "average",
+    "mean",
+    "sort",
+    "sortDesc",
+    "unique",
+    "count",
+    "all",
+    "any",
+    "find",
+    "seek",
+    "every",
+    "some",
+    "enumerate",
+    "difference",
+    "union",
+    "intersect",
+    "position",
+    "chunk",
+    "groupBy",
+    "clone",
+    "reverse",
+    "push",
+    "pop"
+  ].includes(name)) {
+    return "list";
+  }
+  if ([
+    "inscriptions",
+    "contents",
+    "has",
+    "get",
+    "set",
+    "del",
+    "merge",
+    "entries",
+    "fromEntries",
+    "keys",
+    "values",
+    "tome_keys",
+    "etch",
+    "unetch",
+    "erase",
+    "freeze",
+    "isFrozen",
+    "Map",
+    "Set",
+    "Queue",
+    "Stack",
+    "LinkedList"
+  ].includes(name)) {
+    return "tome";
+  }
+  if ([
+    "magnitude",
+    "least",
+    "greatest",
+    "root",
+    "ground",
+    "elevate",
+    "nearby",
+    "chaos",
+    "random",
+    "rand",
+    "randint",
+    "pick",
+    "shuffle",
+    "clamp",
+    "constrain",
+    "lerp",
+    "mapRange",
+    "sign",
+    "pow",
+    "sin",
+    "cos",
+    "tan",
+    "asin",
+    "acos",
+    "atan",
+    "atan2",
+    "sinh",
+    "cosh",
+    "tanh",
+    "log",
+    "ln",
+    "log10",
+    "log2",
+    "exp",
+    "PI",
+    "TAU",
+    "E",
+    "INFINITY",
+    "hex",
+    "oct",
+    "bin",
+    "parseNum",
+    "toFixed",
+    "toPrecision",
+    "isNaN",
+    "isFinite",
+    "isInteger",
+    "bitAnd",
+    "bitOr",
+    "bitXor",
+    "bitNot",
+    "bitShiftLeft",
+    "bitShiftRight",
+    "dist",
+    "radians",
+    "degrees",
+    "abs",
+    "min",
+    "max",
+    "floor",
+    "ceil",
+    "round",
+    "sqrt",
+    "Vec2",
+    "evaluate"
+  ].includes(name)) {
+    return "math";
+  }
+  return "core";
+}
+function classifyGraphicsModule(name) {
+  if ([
+    "turtle",
+    "forward",
+    "backward",
+    "left",
+    "right",
+    "penup",
+    "pendown",
+    "pencolor",
+    "penwidth",
+    "goto",
+    "home",
+    "setheading",
+    "heading",
+    "pos",
+    "turtleCircle",
+    "dot",
+    "stamp"
+  ].includes(name)) {
+    return "turtle";
+  }
+  return "graphics";
+}
+function computeTargetsFor(name, module) {
+  if (module === "graphics" || module === "turtle" || module === "ui" || module === "web") {
+    return BROWSER_ONLY_TARGETS;
+  }
+  if (module === "leaflet") {
+    return ["browser"];
+  }
+  if (module === "hardware") {
+    return HARDWARE_TARGETS;
+  }
+  if (module === "ffi") {
+    return CLI_NATIVE_TARGETS;
+  }
+  if (module === "webgpu") {
+    return ["v1", "v2-wasm", "browser"];
+  }
+  const targets = /* @__PURE__ */ new Set(["v1", "browser", "cli"]);
+  if (V2_WASM_BUILTINS.has(name)) targets.add("v2-wasm");
+  if (NATIVE_X64_BUILTINS.has(name)) targets.add("native-x64");
+  return Array.from(targets);
+}
+function buildRegistry() {
+  const byName = /* @__PURE__ */ new Map();
+  const langDocMap = /* @__PURE__ */ new Map();
+  for (const b of SDEV_BUILTINS) {
+    langDocMap.set(b.name, b);
+  }
+  const curatedMap = /* @__PURE__ */ new Map();
+  for (const seed of CURATED_SEEDS) {
+    curatedMap.set(seed.name, seed);
+  }
+  const upsert = (name, module, defaults = {}) => {
+    const curated = curatedMap.get(name);
+    const langDoc = langDocMap.get(name);
+    const existing = byName.get(name);
+    const finalModule = curated?.module ?? existing?.module ?? module;
+    const signature = curated?.signature ?? defaults.signature ?? existing?.signature ?? langDoc?.signature ?? `${name}(...args)`;
+    const description = curated?.description ?? defaults.description ?? existing?.description ?? langDoc?.doc ?? `Built-in ${finalModule} function \`${name}()\`.`;
+    const params = curated?.params ?? defaults.params ?? existing?.params ?? parseSignatureParams(signature);
+    const returns = curated?.returns ?? defaults.returns ?? existing?.returns ?? (signature.includes("->") ? signature.split("->").pop().trim() : "any");
+    const targets = curated?.targets ?? defaults.targets ?? existing?.targets ?? computeTargetsFor(name, finalModule);
+    const status2 = curated?.status ?? defaults.status ?? existing?.status ?? "implemented";
+    const aliases = Array.from(
+      /* @__PURE__ */ new Set([...existing?.aliases ?? [], ...defaults.aliases ?? [], ...curated?.aliases ?? []])
+    );
+    const example = curated?.example ?? defaults.example ?? existing?.example ?? `${name}()`;
+    byName.set(name, {
+      name,
+      aliases,
+      module: finalModule,
+      signature,
+      params,
+      returns,
+      description,
+      example,
+      sinceVersion: curated?.sinceVersion ?? defaults.sinceVersion ?? existing?.sinceVersion ?? "1.0.0",
+      ...curated?.deprecated || defaults.deprecated || existing?.deprecated ? { deprecated: curated?.deprecated ?? defaults.deprecated ?? existing?.deprecated } : {},
+      targets,
+      status: status2
+    });
+  };
+  const coreBuiltins = createBuiltins(() => {
+  });
+  for (const name of coreBuiltins.keys()) {
+    upsert(name, classifyCoreBuiltinModule(name));
+  }
+  const advBuiltins = createAdvancedBuiltins(() => {
+  });
+  for (const name of advBuiltins.keys()) {
+    upsert(name, classifyCoreBuiltinModule(name));
+  }
+  const matrixBuiltins = createMatrixBuiltins();
+  for (const name of matrixBuiltins.keys()) {
+    upsert(name, "matrix", {
+      targets: V1_CORE_TARGETS,
+      description: `Matrix linear algebra operation \`${name}()\`.`
+    });
+  }
+  const nopTurtle = { x: 0, y: 0, angle: 0, penDown: true, color: "#fff", width: 1 };
+  const gfxBuiltins = createGraphicsBuiltins(
+    () => {
+    },
+    () => nopTurtle,
+    () => {
+    }
+  );
+  for (const name of gfxBuiltins.keys()) {
+    if (byName.has(name) && ["math", "core"].includes(byName.get(name).module)) {
+      continue;
+    }
+    const mod = classifyGraphicsModule(name);
+    upsert(name, mod, {
+      targets: BROWSER_ONLY_TARGETS,
+      returns: "void"
+    });
+  }
+  const uiBuiltins = createUiBuiltins(
+    () => {
+    },
+    () => 0
+  );
+  for (const name of uiBuiltins.keys()) {
+    if (name === "input") {
+      const existing = byName.get("input");
+      if (existing && !existing.targets.includes("browser")) {
+        existing.targets.push("browser");
+      }
+      continue;
+    }
+    upsert(name, "ui", {
+      targets: BROWSER_ONLY_TARGETS,
+      returns: name === "uiget" ? "any" : "void"
+    });
+  }
+  const webBuiltins = createWebBuiltins(() => {
+  });
+  for (const name of webBuiltins.keys()) {
+    if ((name.startsWith("open_") || name.startsWith("end_") || name.startsWith("html_")) && !["html_div", "html_input", "html_button", "open_div", "end_div", "open_form", "end_form"].includes(name)) {
+      continue;
+    }
+    if (byName.has(name)) continue;
+    upsert(name, "web", {
+      targets: BROWSER_ONLY_TARGETS,
+      signature: `${name}(textOrAttrs?, attrs?) -> void`,
+      returns: "void",
+      description: `Emit or manage HTML/CSS/JS in the SDEV Web Preview panel via \`${name}()\`.`
+    });
+  }
+  const { builtins: kernelBuiltins } = createKernelBuiltins(() => {
+  });
+  for (const name of kernelBuiltins.keys()) {
+    if (byName.has(name)) continue;
+    upsert(name, "kernel", {
+      targets: V1_CORE_TARGETS,
+      description: `SDEV OS virtual kernel primitive \`${name}()\`.`
+    });
+  }
+  for (const b of SDEV_BUILTINS) {
+    const modMap = {
+      io: "core",
+      math: "math",
+      string: "text",
+      list: "list",
+      graphics: "graphics",
+      turtle: "turtle",
+      ui: "ui",
+      oop: "tome",
+      sys: "core",
+      type: "core",
+      web: "web"
+    };
+    upsert(b.name, modMap[b.category] ?? "core", {
+      signature: b.signature,
+      description: b.doc
+    });
+  }
+  for (const fn2 of ARDUINO_FUNCTIONS) {
+    if (byName.has(fn2.name)) {
+      const existing = byName.get(fn2.name);
+      if (!existing.targets.includes("hardware")) {
+        existing.targets = [...existing.targets, "hardware"];
+      }
+      continue;
+    }
+    upsert(fn2.name, "hardware", {
+      signature: `${fn2.signature} -> ${fn2.returns}`,
+      returns: fn2.returns,
+      description: fn2.summary,
+      example: fn2.sdev ?? fn2.signature,
+      targets: HARDWARE_AND_V1_TARGETS.filter((t) => t === "hardware"),
+      status: "implemented"
+    });
+  }
+  for (const seed of CURATED_SEEDS) {
+    upsert(seed.name, seed.module ?? "core", seed);
+  }
+  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+var API_REGISTRY = buildRegistry();
+var EXACT_INDEX = /* @__PURE__ */ new Map();
+var LOWER_INDEX = /* @__PURE__ */ new Map();
+for (const entry of API_REGISTRY) {
+  EXACT_INDEX.set(entry.name, entry);
+  LOWER_INDEX.set(entry.name.toLowerCase(), entry);
+  for (const alias of entry.aliases) {
+    if (!EXACT_INDEX.has(alias)) EXACT_INDEX.set(alias, entry);
+    if (!LOWER_INDEX.has(alias.toLowerCase())) LOWER_INDEX.set(alias.toLowerCase(), entry);
+  }
+}
+function findApi(name) {
+  if (!name) return void 0;
+  return EXACT_INDEX.get(name) ?? LOWER_INDEX.get(name.toLowerCase());
+}
+function searchApis(query = "", filters = {}) {
+  const q = query.trim().toLowerCase();
+  const { module = "all", target = "all", status: status2 = "all", includeDeprecated = true } = filters;
+  return API_REGISTRY.filter((entry) => {
+    if (!includeDeprecated && entry.deprecated) return false;
+    if (module !== "all" && entry.module !== module) return false;
+    if (target !== "all" && !entry.targets.includes(target)) return false;
+    if (status2 !== "all" && entry.status !== status2) return false;
+    if (!q) return true;
+    const haystacks = [
+      entry.name.toLowerCase(),
+      ...entry.aliases.map((a) => a.toLowerCase()),
+      entry.module.toLowerCase(),
+      entry.signature.toLowerCase(),
+      entry.description.toLowerCase()
+    ];
+    return haystacks.some((h) => h.includes(q));
+  }).sort((a, b) => {
+    if (!q) return a.name.localeCompare(b.name);
+    const aExact = a.name.toLowerCase() === q ? 0 : a.name.toLowerCase().startsWith(q) ? 1 : 2;
+    const bExact = b.name.toLowerCase() === q ? 0 : b.name.toLowerCase().startsWith(q) ? 1 : 2;
+    if (aExact !== bExact) return aExact - bExact;
+    return a.name.localeCompare(b.name);
+  });
+}
+function levenshteinDistance(a, b) {
+  const s = a.toLowerCase();
+  const t = b.toLowerCase();
+  if (s === t) return 0;
+  if (s.length === 0) return t.length;
+  if (t.length === 0) return s.length;
+  const dp = Array.from(
+    { length: s.length + 1 },
+    () => new Array(t.length + 1).fill(0)
+  );
+  for (let i = 0; i <= s.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= t.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= s.length; i++) {
+    for (let j = 1; j <= t.length; j++) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        // deletion
+        dp[i][j - 1] + 1,
+        // insertion
+        dp[i - 1][j - 1] + cost
+        // substitution
+      );
+      if (i > 1 && j > 1 && s[i - 1] === t[j - 2] && s[i - 2] === t[j - 1]) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1);
+      }
+    }
+  }
+  return dp[s.length][t.length];
+}
+function suggestNearestApis(unknownName, maxDistance = 3) {
+  const raw = unknownName.trim();
+  if (!raw) return [];
+  const lower = raw.toLowerCase();
+  const suggestions = [];
+  const seenEntries = /* @__PURE__ */ new Set();
+  const mappedTarget = COMMON_API_ALIASES[raw] ?? COMMON_API_ALIASES[lower];
+  if (mappedTarget) {
+    const targetEntry = findApi(mappedTarget);
+    if (targetEntry) {
+      suggestions.push({
+        entry: targetEntry,
+        matchedName: targetEntry.name,
+        distance: 0,
+        reason: "alias"
+      });
+      seenEntries.add(targetEntry.name);
+    }
+  }
+  for (const [aliasKey, canonicalTarget] of Object.entries(COMMON_API_ALIASES)) {
+    const d = levenshteinDistance(lower, aliasKey);
+    if (d <= Math.min(2, maxDistance)) {
+      const directEntry = findApi(aliasKey);
+      if (directEntry && !seenEntries.has(directEntry.name)) {
+        suggestions.push({
+          entry: directEntry,
+          matchedName: directEntry.name,
+          distance: d,
+          reason: d === 0 ? "alias" : "typo"
+        });
+        seenEntries.add(directEntry.name);
+      }
+      const canonicalEntry = findApi(canonicalTarget);
+      if (canonicalEntry && !seenEntries.has(canonicalEntry.name)) {
+        suggestions.push({
+          entry: canonicalEntry,
+          matchedName: canonicalEntry.name,
+          distance: d,
+          reason: "alias"
+        });
+        seenEntries.add(canonicalEntry.name);
+      }
+    }
+  }
+  for (const entry of API_REGISTRY) {
+    if (seenEntries.has(entry.name)) continue;
+    const candidates = [entry.name, ...entry.aliases];
+    let bestDist = Infinity;
+    let bestMatch = entry.name;
+    for (const c of candidates) {
+      const d = levenshteinDistance(lower, c.toLowerCase());
+      if (d < bestDist) {
+        bestDist = d;
+        bestMatch = c;
+      }
+    }
+    if (bestDist <= maxDistance) {
+      suggestions.push({
+        entry,
+        matchedName: entry.name,
+        distance: bestDist,
+        reason: bestDist === 0 ? "alias" : "typo"
+      });
+      seenEntries.add(entry.name);
+    } else if (lower.length >= 3 && (entry.name.toLowerCase().startsWith(lower) || lower.startsWith(entry.name.toLowerCase()))) {
+      suggestions.push({
+        entry,
+        matchedName: entry.name,
+        distance: Math.abs(entry.name.length - lower.length),
+        reason: "prefix"
+      });
+      seenEntries.add(entry.name);
+    }
+  }
+  return suggestions.sort((a, b) => {
+    if (a.distance !== b.distance) return a.distance - b.distance;
+    if (a.reason !== b.reason) {
+      const order = { alias: 0, typo: 1, prefix: 2 };
+      return order[a.reason] - order[b.reason];
+    }
+    return a.entry.name.localeCompare(b.entry.name);
+  }).slice(0, 5);
+}
+var DIAGNOSTIC_CATALOGUE = {
+  SDEV001: {
+    code: "SDEV001",
+    title: "Unbalanced or unclosed block delimiter",
+    severity: "error",
+    category: "syntax",
+    explanation: "Every block opened with `::` (or `{` in sdev:ai / board blocks) must be closed with a matching `;;` (or `}`). Check indentation or missing `;;` at the end of a function, loop, or conditional.",
+    badExample: 'ponder score > 10 ::\n  speak("High score!")\n// missing ;;',
+    goodExample: 'ponder score > 10 ::\n  speak("High score!")\n;;',
+    fixHint: "Add the matching `;;` block closer or remove the extra `;;`."
+  },
+  SDEV002: {
+    code: "SDEV002",
+    title: "Syntax or parser error",
+    severity: "error",
+    category: "syntax",
+    explanation: "The SDEV lexer or parser encountered an unexpected token, malformed expression, or unterminated string literal.",
+    badExample: 'forge msg be "unterminated string\nspeak(msg)',
+    goodExample: 'forge msg be "terminated string"\nspeak(msg)',
+    fixHint: "Check matching quotes, parentheses `()`, brackets `[]`, and statement keywords on the reported line."
+  },
+  SDEV003: {
+    code: "SDEV003",
+    title: "Division or modulo by zero",
+    severity: "error",
+    category: "semantic",
+    explanation: "Dividing or taking the remainder by literal `0` (`/ 0` or `% 0`) causes a runtime arithmetic error or undefined result.",
+    badExample: "forge ratio be total / 0",
+    goodExample: "ponder divisor differs 0 ::\n  forge ratio be total / divisor\n;;",
+    fixHint: "Guard the denominator with `ponder divisor differs 0` before dividing."
+  },
+  SDEV004: {
+    code: "SDEV004",
+    title: "Unreachable code after control-flow terminator",
+    severity: "warning",
+    category: "semantic",
+    explanation: "Statements placed immediately after `yield` (`return`), `yeet` (`break`), `skip` (`continue`), or `hurl` (`raise`) inside the same block will never execute.",
+    badExample: 'conjure calc(x) ::\n  yield x * 2\n  speak("never reached")\n;;',
+    goodExample: 'conjure calc(x) ::\n  speak("computing...")\n  yield x * 2\n;;',
+    fixHint: "Move the unreachable statements before `yield`/`yeet`/`skip` or remove them."
+  },
+  SDEV005: {
+    code: "SDEV005",
+    title: "Unused variable declaration",
+    severity: "warning",
+    category: "semantic",
+    explanation: "A variable was declared with `forge` / `let` / `set` but its value is never read anywhere in the program. Prefix intentional throwaway variables with `_`.",
+    badExample: 'forge unusedTemp be 99\nspeak("hello")',
+    goodExample: 'forge _unusedTemp be 99\nspeak("hello")',
+    fixHint: "Remove the unused variable, reference it, or prefix its name with `_`."
+  },
+  SDEV006: {
+    code: "SDEV006",
+    title: "Unknown function or builtin call",
+    severity: "error",
+    category: "semantic",
+    explanation: "The called function is not defined in the current file or in the canonical SDEV API registry. It may be a typo or a foreign-language function name (e.g. `fillrect` instead of `rect`, `println` instead of `speak`).",
+    badExample: 'fillrect(10, 10, 100, 50)\nprintln("done")',
+    goodExample: 'rect(10, 10, 100, 50)\nspeak("done")',
+    fixHint: "Replace the unknown call with the suggested SDEV builtin or declare it with `conjure`."
+  },
+  SDEV007: {
+    code: "SDEV007",
+    title: "Target capability mismatch",
+    severity: "error",
+    category: "target",
+    explanation: "The called builtin belongs to a module not supported on the selected compilation/execution target (for example, calling browser-only `canvas()` or `window()` when targeting `native-x64` or `cli`).",
+    badExample: "// Target: native-x64\ncanvas(400, 400)\nrect(0, 0, 100, 100)",
+    goodExample: "// Target: browser\ncanvas(400, 400)\nrect(0, 0, 100, 100)",
+    fixHint: "Switch the target runtime to `browser` / `v1`, or guard target-specific calls."
+  },
+  SDEV008: {
+    code: "SDEV008",
+    title: "Deprecated builtin or legacy keyword alias",
+    severity: "warning",
+    category: "deprecation",
+    explanation: "This function or keyword spelling is deprecated or a legacy compatibility alias. Prefer the canonical SDEV builtin for forward compatibility across v1, v2-wasm, and native-x64.",
+    badExample: 'println("hello")\nforge t be typeof(42)',
+    goodExample: 'speak("hello")\nforge t be essence(42)',
+    fixHint: "Replace the deprecated call with its canonical replacement shown in the diagnostic."
+  },
+  SDEV009: {
+    code: "SDEV009",
+    title: "Assignment syntax mismatch (`=` instead of `be`)",
+    severity: "warning",
+    category: "style",
+    explanation: "In canonical SDEV, variable declarations and assignments use `be` (`forge x be 10`, `x be 20`) rather than `=`. (`=` is only standard inside `!#ai` dialect files).",
+    badExample: "forge x = 10\nx = 20",
+    goodExample: "forge x be 10\nx be 20",
+    fixHint: "Replace `=` with `be` (or add `!#ai` at the top of the file to use the AI dialect)."
+  },
+  SDEV010: {
+    code: "SDEV010",
+    title: "Foreign declaration keyword (`function` / `const` / `var`)",
+    severity: "warning",
+    category: "style",
+    explanation: "JavaScript/Python declaration keywords like `function`, `const`, or `var` are not canonical SDEV. Use `conjure` (or `to`) for functions and `forge` (or `let`) for variables.",
+    badExample: "function add(a, b) ::\n  yield a + b\n;;",
+    goodExample: "conjure add(a, b) ::\n  yield a + b\n;;",
+    fixHint: "Use `conjure name(params) :: ... ;;` for functions and `forge name be value` for variables."
+  },
+  SDEV011: {
+    code: "SDEV011",
+    title: "Builtin argument count (arity) mismatch",
+    severity: "error",
+    category: "semantic",
+    explanation: "A canonical SDEV builtin was called with fewer or more arguments than its signature allows.",
+    badExample: "forge n be measure()\ncircle(100, 100)",
+    goodExample: "forge n be measure([1, 2, 3])\ncircle(100, 100, 50)",
+    fixHint: "Check the function signature in `sdev explain <name>` or the Runtime Explorer panel."
+  },
+  SDEV012: {
+    code: "SDEV012",
+    title: "Declaration shadows a core SDEV builtin",
+    severity: "warning",
+    category: "semantic",
+    explanation: "Declaring a variable or function with the same name as a core SDEV builtin (such as `speak`, `measure`, `gather`, `sift`) shadows the builtin in that scope and can break subsequent calls.",
+    badExample: "forge measure be 10\nspeak(measure([1, 2])) // fails!",
+    goodExample: "forge totalMeasure be 10\nspeak(measure([1, 2]))",
+    fixHint: "Rename the variable so it does not shadow a built-in function."
+  },
+  SDEV013: {
+    code: "SDEV013",
+    title: "Constant condition in conditional or loop",
+    severity: "warning",
+    category: "semantic",
+    explanation: "A `ponder` (`if`) or `cycle` (`while`) condition is a constant literal (`yep`, `nope`, `true`, `false`), making a branch either unconditionally taken, dead, or an infinite loop.",
+    badExample: 'ponder nope ::\n  speak("never runs")\n;;',
+    goodExample: 'ponder isReady ::\n  speak("ready!")\n;;',
+    fixHint: "Replace the constant literal with a dynamic condition or remove the dead branch."
+  },
+  SDEV014: {
+    code: "SDEV014",
+    title: "Self-assignment or tautological comparison",
+    severity: "warning",
+    category: "semantic",
+    explanation: "Assigning a variable to itself (`x be x`) has no effect, and comparing a variable to itself (`x equals x` or `x differs x`) always evaluates to a constant boolean.",
+    badExample: 'x be x\nponder x equals x ::\n  speak("always true")\n;;',
+    goodExample: 'x be x + 1\nponder x equals target ::\n  speak("matched")\n;;',
+    fixHint: "Intended another variable or expression on the right-hand side?"
+  },
+  SDEV015: {
+    code: "SDEV015",
+    title: "Planned or experimental API call",
+    severity: "info",
+    category: "target",
+    explanation: "The called function is registered in the SDEV roadmap with status `planned` and is not yet fully implemented in the runtime.",
+    badExample: "forge m be leaflet_map(42.69, 23.32)",
+    goodExample: "// Check status in Runtime Explorer or `sdev api leaflet`",
+    fixHint: "Use an `implemented` API from `sdev api` for production programs."
+  }
+};
+var DIAGNOSTIC_LIST = Object.values(DIAGNOSTIC_CATALOGUE);
+function findDiagnostic(code) {
+  if (!code) return void 0;
+  return DIAGNOSTIC_CATALOGUE[code.trim().toUpperCase()];
+}
+
+// src/lang/linter.ts
+init_errors();
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\understander.sdev
+var understander_default = `// =====================================================================\r
+// understander.sdev \u2014 the code understander, written in sdev.\r
+//\r
+// Reads a whole file line by line, works out what the author meant and\r
+// returns canonical sdev. The TypeScript understander (src/lang/agent)\r
+// stays behind it as the fallback: any line this engine is not sure\r
+// about makes the whole answer "unsure" and the fallback takes over.\r
+//\r
+//   understand_source(source, known_names) -> [source, sure, notes]\r
+//\r
+// known_names: names defined elsewhere in the project (other files,\r
+// memory), so cross-file references are never mistaken for typos.\r
+// =====================================================================\r
+\r
+forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]\r
+\r
+// ---------- small helpers ----------\r
+\r
+conjure starts_canonical(body) ::\r
+  forge first be lower(regex_replace(body, "^([^\\\\s(:]+).*$", "$1"))\r
+  iterate word through CANON ::\r
+    ponder first equals word ::\r
+      yield yep\r
+    ;;\r
+  ;;\r
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.\\\\[\\\\]\\"]*\\\\s+be\\\\s") ::\r
+    yield yep\r
+  ;;\r
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.]*\\\\s*\\\\(.*\\\\)$") ::\r
+    yield yep\r
+  ;;\r
+  yield nope\r
+;;\r
+\r
+conjure is_quoted(t) ::\r
+  ponder regex_test(t, "[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}]") ::\r
+    yield nope\r
+  ;;\r
+  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")\r
+;;\r
+\r
+// plus / minus / times / divided by -> symbols\r
+conjure math_words(t) ::\r
+  forge s be " " + lower(t) + " "\r
+  s be regex_replace(s, "\\\\s+divided\\\\s+by\\\\s+", " / ")\r
+  s be regex_replace(s, "\\\\s+multiplied\\\\s+by\\\\s+", " * ")\r
+  s be regex_replace(s, "\\\\s+to\\\\s+the\\\\s+power\\\\s+of\\\\s+", " ^ ")\r
+  s be regex_replace(s, "\\\\s+plus\\\\s+", " + ")\r
+  s be regex_replace(s, "\\\\s+minus\\\\s+", " - ")\r
+  s be regex_replace(s, "\\\\s+times\\\\s+", " * ")\r
+  s be regex_replace(s, "\\\\s+mod(ulo)?\\\\s+", " % ")\r
+  s be regex_replace(s, "\\\\s*\\\\?\\\\s*$", "")\r
+  yield trim(s)\r
+;;\r
+\r
+conjure is_math(t) ::\r
+  ponder isnt regex_test(t, "[0-9]") ::\r
+    yield nope\r
+  ;;\r
+  yield regex_test(t, "^[0-9\\\\s+\\\\-*/().%^]+$")\r
+;;\r
+\r
+conjure is_known(name, names) ::\r
+  yield has(names, name)\r
+;;\r
+\r
+// an expression made only of numbers, operators, quotes and known names\r
+conjure safe_expr(e, names) ::\r
+  ponder is_quoted(e) either is_math(e) ::\r
+    yield yep\r
+  ;;\r
+  ponder regex_test(e, "[\\\\-*/%^]") either (regex_test(e, "\\\\+") also isnt regex_test(e, "[\\"']")) ::\r
+    iterate w through regex_find_all(e, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+      ponder has(names, w) also names[w] equals "typed" ::\r
+        yield nope\r
+      ;;\r
+    ;;\r
+  ;;\r
+  forge rest be regex_replace(e, "\\"[^\\"]*\\"|'[^']*'", " ")\r
+  forge parts be regex_find_all(rest, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
+  iterate p through parts ::\r
+    ponder isnt is_known(p, names) ::\r
+      ponder isnt (p equals "yep" either p equals "nope" either p equals "void") ::\r
+        yield nope\r
+      ;;\r
+    ;;\r
+  ;;\r
+  yield regex_test(rest, "^[\\\\p{L}\\\\p{N}_\\\\s+\\\\-*/().%^,\\\\[\\\\]]*$")\r
+;;\r
+\r
+// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)\r
+// returns "" when a placeholder names something unknown\r
+conjure fill_placeholders(q, names) ::\r
+  forge inner be snatch(q, 1, measure(q) - 1)\r
+  forge parts be []\r
+  forge rest be inner\r
+  forge m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
+  cycle m differs void ::\r
+    ponder isnt is_known(m[2], names) ::\r
+      yield ""\r
+    ;;\r
+    ponder m[1] differs "" ::\r
+      parts be parts + [quote_text(m[1])]\r
+    ;;\r
+    parts be parts + ["str(" + m[2] + ")"]\r
+    rest be m[3]\r
+    m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
+  ;;\r
+  ponder rest differs "" ::\r
+    parts be parts + [quote_text(rest)]\r
+  ;;\r
+  yield weave(parts, " + ")\r
+;;\r
+\r
+conjure has_placeholder(t) ::\r
+  yield regex_test(t, "^[\\"'].*[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}].*[\\"']$")\r
+;;\r
+\r
+// a free loop counter name\r
+conjure counter(names) ::\r
+  iterate c through ["i", "j", "k", "_n"] ::\r
+    ponder isnt has(names, c) ::\r
+      yield c\r
+    ;;\r
+  ;;\r
+  yield "_n"\r
+;;\r
+\r
+conjure asked(name, q, names) ::\r
+  ponder has(names, "#num:" + name) ::\r
+    yield "set " + name + " to num(input(" + q + "))"\r
+  ;;\r
+  yield "set " + name + " to input(" + q + ")"\r
+;;\r
+\r
+// something to say: a quoted text, a known name, or bare words\r
+conjure sayable(arg, names) ::\r
+  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::\r
+    yield arg\r
+  ;;\r
+  ponder regex_test(arg, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
+    iterate w through regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+      ponder is_known(w, names) ::\r
+        yield ""\r
+      ;;\r
+    ;;\r
+    yield quote_text(arg)\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+\r
+// ---------- everyday tasks (reverse, upper/lower, length, dice, sort \u2026) ----------\r
+\r
+forge NUMBER_WORDS be :: "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "twenty": "20", "hundred": "100" ;;\r
+\r
+conjure as_number(t) ::\r
+  forge w be lower(trim(t))\r
+  ponder regex_test(w, "^-?[0-9]+(\\\\.[0-9]+)?$") ::\r
+    yield w\r
+  ;;\r
+  ponder has(NUMBER_WORDS, w) ::\r
+    yield NUMBER_WORDS[w]\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+// "hello" / hello / a known name -> an expression\r
+conjure subject_of(t, names) ::\r
+  forge w be regex_replace(trim(t), "^(the\\\\s+)?(word|text|name|string)\\\\s+", "", "i")\r
+  ponder is_quoted(w) ::\r
+    yield w\r
+  ;;\r
+  ponder is_known(w, names) ::\r
+    yield w\r
+  ;;\r
+  ponder regex_test(w, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
+    yield quote_text(w)\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+conjure number_list(t) ::\r
+  forge found be regex_find_all(t, "-?[0-9]+(\\\\.[0-9]+)?")\r
+  ponder measure(found) < 2 ::\r
+    yield ""\r
+  ;;\r
+  ponder isnt regex_test(t, "^[0-9\\\\s,.\\\\-and]+$", "i") ::\r
+    yield ""\r
+  ;;\r
+  yield "[" + weave(found, ", ") + "]"\r
+;;\r
+\r
+// returns the canonical text, or "" when this is not an everyday task\r
+conjure task_line(b, names) ::\r
+  forge s be regex_replace(regex_replace(b, "^(please|can you|could you)\\\\s+", "", "i"), "[.!?]+\\\\s*$", "")\r
+  forge out be regex_replace(s, "^(print|say|show|display|output|tell me|give me)\\\\s+(the\\\\s+)?", "", "i")\r
+  forge m be void\r
+\r
+  ponder regex_test(s, "^(flip|toss)\\\\s+(a\\\\s+)?coin$", "i") ::\r
+    yield "say pick([\\"heads\\", \\"tails\\"])"\r
+  ;;\r
+  ponder regex_test(s, "^(roll|throw)\\\\s+(a\\\\s+)?(die|dice)$", "i") ::\r
+    yield "say randint(1, 6)"\r
+  ;;\r
+  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also as_number(m[1]) differs "" ::\r
+    yield "set i to " + as_number(m[1]) + "\\nwhile i > 0\\n  say i\\n  set i to i - 1\\nend"\r
+  ;;\r
+  m be regex_capture(out, "^(reverse|backwards)\\\\s+(of\\\\s+)?(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(out, "^()()(.+?)\\\\s+(reversed|backwards)$", "i")\r
+  ;;\r
+  ponder m differs void also subject_of(m[3], names) differs "" ::\r
+    yield "say reverse(" + subject_of(m[3], names) + ")"\r
+  ;;\r
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(uppercase|upper\\\\s*case|capitals|caps)$", "i")\r
+  ponder m differs void also subject_of(m[2], names) differs "" ::\r
+    yield "say upper(" + subject_of(m[2], names) + ")"\r
+  ;;\r
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(lowercase|lower\\\\s*case|small\\\\s+letters)$", "i")\r
+  ponder m differs void also subject_of(m[2], names) differs "" ::\r
+    yield "say lower(" + subject_of(m[2], names) + ")"\r
+  ;;\r
+  m be regex_capture(s, "^(what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(the\\\\s+)?(length|size)\\\\s+of\\\\s+(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(s, "^()()()how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")\r
+  ;;\r
+  ponder m differs void ::\r
+    forge lst be number_list(m[4])\r
+    ponder lst differs "" ::\r
+      yield "say len(" + lst + ")"\r
+    ;;\r
+    ponder subject_of(m[4], names) differs "" ::\r
+      yield "say len(" + subject_of(m[4], names) + ")"\r
+    ;;\r
+  ;;\r
+  m be regex_capture(s, "^(is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(is\\\\s+)?(an?\\\\s+)?(even|odd)(\\\\s+or\\\\s+(even|odd))?$", "i")\r
+  ponder m differs void ::\r
+    forge n be as_number(m[2])\r
+    ponder n equals "" also is_known(m[2], names) ::\r
+      n be m[2]\r
+    ;;\r
+    ponder n differs "" ::\r
+      yield "if " + n + " % 2 is 0\\n  say \\"even\\"\\nelse\\n  say \\"odd\\"\\nend"\r
+    ;;\r
+  ;;\r
+  m be regex_capture(s, "^((give|show|pick|generate|roll|make|get)\\\\s+(me\\\\s+)?)?(a\\\\s+)?random\\\\s+(whole\\\\s+)?number\\\\s+(between|from)\\\\s+(\\\\S+)\\\\s+(and|to)\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also as_number(m[7]) differs "" also as_number(m[9]) differs "" ::\r
+    yield "say randint(" + as_number(m[7]) + ", " + as_number(m[9]) + ")"\r
+  ;;\r
+  m be regex_capture(out, "^sort\\\\s+(the\\\\s+)?(numbers\\\\s+)?(.+?)(\\\\s+(from\\\\s+)?(biggest|largest|highest)\\\\s+(to|first).*)?$", "i")\r
+  ponder m differs void also number_list(m[3]) differs "" ::\r
+    ponder regex_test(s, "biggest|largest|highest|descending", "i") ::\r
+      yield "say sortDesc(" + number_list(m[3]) + ")"\r
+    ;;\r
+    yield "say sort(" + number_list(m[3]) + ")"\r
+  ;;\r
+  m be regex_capture(s, "^(print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(the\\\\s+)?(multiplication|times)\\\\s+table\\\\s+(of|for)\\\\s+(\\\\S+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(s, "^(print\\\\s+|show\\\\s+)?(the\\\\s+)?()()(\\\\S+)\\\\s+times\\\\s+table$", "i")\r
+  ;;\r
+  ponder m differs void also as_number(m[5]) differs "" ::\r
+    forge n be as_number(m[5])\r
+    yield "set i to 1\\nwhile i <= 10\\n  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)\\n  set i to i + 1\\nend"\r
+  ;;\r
+  m be regex_capture(s, "^(say\\\\s+)?(hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(s, "^()()greet\\\\s+(.+)$", "i")\r
+  ;;\r
+  ponder m differs void ::\r
+    forge who be trim(m[3])\r
+    ponder is_known(who, names) ::\r
+      yield "say \\"Hello, \\" + " + who\r
+    ;;\r
+    ponder regex_test(who, "^[\\\\p{L} '-]+$") ::\r
+      yield "say " + quote_text("Hello, " + who)\r
+    ;;\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+// ---------- one line ----------\r
+// returns [canonical, sure]\r
+\r
+conjure understand_line(body, names) ::\r
+  forge b be regex_replace(body, "^what's\\\\s", "what is ", "i")\r
+\r
+\r
+  // everyday tasks first: "reverse hello", "roll a dice", "say hello to Sam"\r
+  forge task be task_line(b, names)\r
+  ponder task differs "" ::\r
+    yield [task, yep]\r
+  ;;\r
+\r
+  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"\r
+  forge m be regex_capture(b, "^ask\\\\s+(\\"[^\\"]*\\"|'[^']*')\\\\s+(as|into|for|and\\\\s+call\\\\s+it|and\\\\s+store\\\\s+in)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
+  ponder m differs void ::\r
+    yield [asked(m[3], m[1], names), yep]\r
+  ;;\r
+  m be regex_capture(b, "^ask\\\\s+(the\\\\s+user\\\\s+)?for\\\\s+(their\\\\s+|a\\\\s+|the\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
+  ponder m differs void ::\r
+    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]\r
+  ;;\r
+  m be regex_capture(b, "^(set\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=|to|be)\\\\s*ask\\\\s+(\\"[^\\"]*\\"|'[^']*')$", "i")\r
+  ponder m differs void ::\r
+    yield [asked(m[2], m[4], names), yep]\r
+  ;;\r
+\r
+  // say X N times\r
+  m be regex_capture(b, "^(say|print|show|write)\\\\s+(.+?)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times$", "i")\r
+  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::\r
+    forge what be sayable(trim(m[2]), names)\r
+    ponder what differs "" ::\r
+      forge c be counter(names)\r
+      yield ["set " + c + " to 0\\nwhile " + c + " < " + m[3] + "\\n  say " + what + "\\n  set " + c + " to " + c + " + 1\\nend", yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+  // count / print the numbers from A to B [by S]  \xB7  count to N\r
+  m be regex_capture(b, "^(count|print|show|say|list)\\\\s+(the\\\\s+)?(numbers\\\\s+)?from\\\\s+(-?[0-9]+)\\\\s+(to|until|through)\\\\s+(-?[0-9]+)(\\\\s+by\\\\s+([0-9]+))?$", "i")\r
+  ponder m equals void ::\r
+    forge m2 be regex_capture(b, "^(please\\\\s+)?count\\\\s+(up\\\\s+)?to\\\\s+([0-9]+)$", "i")\r
+    ponder m2 differs void ::\r
+      m be ["", "", "", "", "1", "", m2[3], "", ""]\r
+    ;;\r
+  ;;\r
+  ponder m differs void ::\r
+    forge c be counter(names)\r
+    forge step be m[8] equals "" ~ "1" : m[8]\r
+    forge down be num(m[4]) > num(m[6])\r
+    forge cmp be down ~ " >= " : " <= "\r
+    forge op be down ~ " - " : " + "\r
+    yield ["set " + c + " to " + m[4] + "\\nwhile " + c + cmp + m[6] + "\\n  say " + c + "\\n  set " + c + " to " + c + op + step + "\\nend", yep]\r
+  ;;\r
+  // repeat N times  (a block \u2014 its counter is bumped where the block ends)\r
+  m be regex_capture(b, "^(repeat|do\\\\s+this|do)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times\\\\s*:?$", "i")\r
+  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::\r
+    forge c be counter(names)\r
+    yield ["set " + c + " to 0\\nwhile " + c + " < " + m[2] + "\\n#bump " + c, yep]\r
+  ;;\r
+\r
+  // conditions: when/if COND [then][:]  ->  if COND\r
+  m be regex_capture(b, "^(when|if)\\\\s+(.+?)\\\\s*(then)?\\\\s*:?$", "i")\r
+  ponder m differs void also isnt regex_test(b, "::") ::\r
+    forge cond be m[2]\r
+    forge yn be regex_capture(cond, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals|==?)\\\\s+[\\"']?(yes|no|y|n)[\\"']?$", "i")\r
+    ponder yn differs void also is_known(yn[1], names) ::\r
+      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]\r
+    ;;\r
+    ponder regex_test(cond, "\\\\b(yes|no)\\\\b", "i") ::\r
+      yield [body, nope]\r
+    ;;\r
+    forge plain be regex_replace(cond, "\\\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\\\b", " ", "i")\r
+    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::\r
+      yield ["if " + cond, yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals)\\\\s+[\\"']?(yes|no)[\\"']?\\\\s*:$", "i")\r
+  ponder m differs void also is_known(m[1], names) ::\r
+    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]\r
+  ;;\r
+  ponder regex_test(b, "^(otherwise|else)\\\\s*:?$", "i") ::\r
+    yield ["else", yep]\r
+  ;;\r
+\r
+  // say with pieces side by side: say "Hello, " name "!"\r
+  m be regex_capture(b, "^(say|print|show)\\\\s+(.+)$", "i")\r
+  ponder m differs void ::\r
+    forge pieces be regex_find_all(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|,")\r
+    forge glued be regex_replace(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|[,\\\\s]", "")\r
+    ponder glued equals "" also measure(pieces) > 1 ::\r
+      forge parts be []\r
+      forge fine be yep\r
+      iterate pc through pieces ::\r
+        ponder pc differs "," ::\r
+          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::\r
+            parts be parts + [pc]\r
+          ;; otherwise ::\r
+            fine be nope\r
+          ;;\r
+        ;;\r
+      ;;\r
+      ponder fine also measure(parts) > 1 ::\r
+        yield ["say " + weave(parts, " + "), yep]\r
+      ;;\r
+    ;;\r
+  ;;\r
+\r
+  // output: print / show / display / output / write / say / tell\r
+  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\\\s+(.+)$", "i")\r
+  ponder m differs void ::\r
+    forge arg be trim(m[2])\r
+    ponder has_placeholder(arg) ::\r
+      forge filled be fill_placeholders(arg, names)\r
+      ponder filled differs "" ::\r
+        yield ["speak(" + filled + ")", yep]\r
+      ;;\r
+      yield [body, nope]\r
+    ;;\r
+    ponder is_quoted(arg) either is_math(arg) ::\r
+      yield ["speak(" + arg + ")", yep]\r
+    ;;\r
+    ponder is_name(arg) also is_known(arg, names) ::\r
+      yield ["speak(" + arg + ")", yep]\r
+    ;;\r
+    ponder safe_expr(arg, names) also regex_test(arg, "[+\\\\-*/]") ::\r
+      yield ["speak(" + arg + ")", yep]\r
+    ;;\r
+    // bare words with no known names in them: say them as written\r
+    forge used be regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
+    iterate w through used ::\r
+      ponder is_known(w, names) ::\r
+        yield [body, nope]\r
+      ;;\r
+    ;;\r
+    // words that usually mean a task ("count to", "3 times", "on the screen")\r
+    ponder regex_test(arg, "\\\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\\\b", "i") ::\r
+      yield [body, nope]\r
+    ;;\r
+    ponder regex_test(arg, "[\\"'(){}\\\\[\\\\]]") ::\r
+      yield [body, nope]\r
+    ;;\r
+    yield ["speak(" + quote_text(arg) + ")", yep]\r
+  ;;\r
+\r
+  // plain calculations: calculate / compute / what is / how much is\r
+  m be regex_capture(b, "^(calculate|compute|evaluate|solve|what\\\\s+is|how\\\\s+much\\\\s+is)\\\\s+(.+?)\\\\??$", "i")\r
+  ponder m differs void ::\r
+    forge expr be math_words(m[2])\r
+    ponder is_math(expr) ::\r
+      yield ["speak(" + expr + ")", yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+\r
+  // add N to x / increase x by N / decrease x by N\r
+  m be regex_capture(b, "^add\\\\s+(\\\\S+)\\\\s+to\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[1], names) ::\r
+    yield [m[2] + " be " + m[2] + " + " + m[1], yep]\r
+  ;;\r
+  m be regex_capture(b, "^(increase|raise)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
+    yield [m[2] + " be " + m[2] + " + " + m[3], yep]\r
+  ;;\r
+  m be regex_capture(b, "^(decrease|lower|reduce)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
+    yield [m[2] + " be " + m[2] + " - " + m[3], yep]\r
+  ;;\r
+\r
+  // x becomes E\r
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+becomes\\\\s+(.+)$", "i")\r
+  ponder m differs void also is_known(m[1], names) also safe_expr(trim(m[2]), names) ::\r
+    yield [m[1] + " be " + trim(m[2]), yep]\r
+  ;;\r
+\r
+  // set x to E / let x be E / make x E / x = E\r
+  m be regex_capture(b, "^(set|let|make)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(to|be|equal\\\\s+to|=)\\\\s+(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(b, "^()([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=)\\\\s*([^=].*)$")\r
+  ;;\r
+  ponder m differs void ::\r
+    forge value be trim(m[4])\r
+    ponder safe_expr(value, names) ::\r
+      ponder is_known(m[2], names) ::\r
+        yield [m[2] + " be " + value, yep]\r
+      ;;\r
+      yield ["forge " + m[2] + " be " + value, yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+\r
+  ponder starts_canonical(b) ::\r
+    yield [body, yep]\r
+  ;;\r
+  yield [body, nope]\r
+;;\r
+\r
+// ---------- the whole file ----------\r
+\r
+// an open block is [indent, counter]; a counted block bumps it before "end"\r
+conjure close_block(open) ::\r
+  ponder open[1] differs "" ::\r
+    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]\r
+  ;;\r
+  yield [open[0] + "end"]\r
+;;\r
+\r
+forge CHUNK_MEMO be ::\r
+;;\r
+\r
+conjure understand_source(source, known, words) ::\r
+  forge names be ::\r
+  ;;\r
+  iterate k through known ::\r
+    names[k] be yep\r
+  ;;\r
+  // dialect / remembered words: [word, canonical]\r
+  forge wordmap be ::\r
+  ;;\r
+  ponder words differs void ::\r
+    iterate pair through words ::\r
+      wordmap[lower(pair[0])] be pair[1]\r
+    ;;\r
+  ;;\r
+  // names used in arithmetic or numeric comparisons: typed answers for\r
+  // them are converted to numbers when they are asked for\r
+  iterate row through lines(source) ::\r
+    forge bare be regex_replace(row, "\\"[^\\"]*\\"|'[^']*'", "\\"\\"")\r
+    forge numeric be regex_test(bare, "[\\\\-*/%^<>]|\\\\b(more|less|greater|smaller)\\\\b") either (regex_test(bare, "\\\\+") also isnt regex_test(bare, "\\"")) either regex_test(bare, "\\\\b(times|plus|minus|divided)\\\\b")\r
+    ponder numeric also isnt regex_test(trim(row), "^ask\\\\b", "i") ::\r
+      iterate w through regex_find_all(bare, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+        names["#num:" + w] be yep\r
+      ;;\r
+    ;;\r
+  ;;\r
+  forge out be []\r
+  forge notes be []\r
+  forge sure be yep\r
+  forge n be 0\r
+  forge rows be lines(source)\r
+  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,\r
+  // unless the author already writes "end" or "::" blocks themselves\r
+  forge auto_end be isnt regex_test(source, "(^|\\n)\\s*end\\s*($|\\n)|::")\r
+  forge opens be []\r
+  // Large files are read in top-level chunks. Each chunk's reading is\r
+  // remembered (keyed by its text and everything known before it), so after\r
+  // a small edit only the chunks that changed are read again.\r
+  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))\r
+  iterate k through keys(names) ::\r
+    ponder startswith(k, "#num:") ::\r
+      state be str(hash(state + k)) + str(hash(reverse(state + k)))\r
+    ;;\r
+  ;;\r
+  forge chunks be []\r
+  forge current be []\r
+  forge first_line be 1\r
+  forge idx be 0\r
+  iterate line through rows ::\r
+    idx be idx + 1\r
+    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\\\}|//|#)", "i")\r
+    ponder top also measure(current) > 0 ::\r
+      chunks be chunks + [[first_line, current]]\r
+      current be []\r
+      first_line be idx\r
+    ;;\r
+    current be current + [line]\r
+  ;;\r
+  ponder measure(current) > 0 ::\r
+    chunks be chunks + [[first_line, current]]\r
+  ;;\r
+  iterate chunk through chunks ::\r
+    forge key be state + "|#|" + unlines(chunk[1])\r
+    forge delta be []\r
+    ponder has(CHUNK_MEMO, key) ::\r
+      forge hit be CHUNK_MEMO[key]\r
+      out be out + hit[0]\r
+      ponder isnt hit[1] ::\r
+        sure be nope\r
+      ;;\r
+      iterate note through hit[2] ::\r
+        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]\r
+      ;;\r
+      delta be hit[3]\r
+      iterate pair through delta ::\r
+        names[pair[0]] be pair[1]\r
+      ;;\r
+    ;; otherwise ::\r
+      forge c_out be []\r
+      forge c_sure be yep\r
+      forge c_notes be []\r
+      forge saved_out be out\r
+      forge saved_notes be notes\r
+      forge saved_sure be sure\r
+      out be []\r
+      notes be []\r
+      sure be yep\r
+      n be chunk[0] - 1\r
+      iterate line through chunk[1] ::\r
+      n be n + 1\r
+      forge indent be leading_space(line)\r
+      forge body be trim(line)\r
+      forge head be lower(regex_replace(body, "^(\\\\S+).*$", "$1"))\r
+      ponder has(wordmap, head) also body differs "" ::\r
+        body be wordmap[head] + snatch(body, measure(head), measure(body))\r
+      ;;\r
+      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::\r
+        out be out + [line]\r
+      ;; otherwise ::\r
+        forge r be understand_line(body, names)\r
+        ponder isnt r[1] ::\r
+          sure be nope\r
+        ;;\r
+        ponder r[0] differs body ::\r
+          notes be notes + [[n, body, r[0]]]\r
+        ;;\r
+        // learn declarations as we go: forge x be \u2026 / conjure f(a, b)\r
+        forge d be regex_capture(r[0], "^(?:forge|set)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
+        ponder d differs void ::\r
+          names[d[1]] be (regex_test(r[0], "input\\\\(") also isnt regex_test(r[0], "num\\\\(input")) ~ "typed" : yep\r
+          delta be delta + [[d[1], names[d[1]]]]\r
+        ;;\r
+        d be regex_capture(r[0], "^conjure\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*\\\\(([^)]*)\\\\)")\r
+        ponder d differs void ::\r
+          names[d[1]] be yep\r
+          delta be delta + [[d[1], yep]]\r
+          iterate p through regex_find_all(d[2], "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+            names[p] be yep\r
+            delta be delta + [[p, yep]]\r
+          ;;\r
+        ;;\r
+        d be regex_capture(r[0], "^iterate\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
+        ponder d differs void ::\r
+          names[d[1]] be yep\r
+          delta be delta + [[d[1], yep]]\r
+        ;;\r
+        ponder auto_end ::\r
+          forge isElse be regex_test(r[0], "^else\\\\b")\r
+          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::\r
+            out be out + close_block(opens[-1])\r
+            opens be portion(opens, 0, measure(opens) - 1)\r
+          ;;\r
+          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::\r
+            opens be portion(opens, 0, measure(opens) - 1)\r
+          ;;\r
+          forge bump be regex_capture(r[0], "\\n#bump (\\\\S+)$")\r
+          ponder bump differs void ::\r
+            opens be opens + [[indent, bump[1]]]\r
+            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]\r
+          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\\\b") also isnt contains(r[0], "\\n") ::\r
+            opens be opens + [[indent, ""]]\r
+          ;;\r
+        ;;\r
+        ponder isnt auto_end also contains(r[0], "#bump") ::\r
+          sure be nope\r
+        ;;\r
+        out be out + [indent + replace(r[0], "\\n", "\\n" + indent)]\r
+      ;;\r
+      ;;\r
+      // a top-level line follows: close what this chunk opened, here\r
+      cycle auto_end also measure(opens) > 0 ::\r
+        out be out + close_block(opens[-1])\r
+        opens be portion(opens, 0, measure(opens) - 1)\r
+      ;;\r
+      c_out be out\r
+      c_sure be sure\r
+      iterate note through notes ::\r
+        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]\r
+      ;;\r
+      ponder measure(CHUNK_MEMO) > 20000 ::\r
+        CHUNK_MEMO be ::\r
+        ;;\r
+      ;;\r
+      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]\r
+      out be saved_out + c_out\r
+      notes be saved_notes + notes\r
+      sure be saved_sure also c_sure\r
+    ;;\r
+    forge dsig be state\r
+    iterate pair through delta ::\r
+      dsig be dsig + "," + pair[0] + "=" + str(pair[1])\r
+    ;;\r
+    state be str(hash(dsig)) + str(hash(reverse(dsig)))\r
+  ;;\r
+  yield [unlines(out), sure, notes]\r
+;;\r
+`;
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\ai-dialect.sdev
+var ai_dialect_default = `// =====================================================================\r
+// ai-dialect.sdev \u2014 "sdev:ai", the dialect written for AI models.\r
+//\r
+// Designed for how language models generate code:\r
+//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)\r
+//   * blocks are always { \u2026 } \u2014 no indentation rules, no guessed closings\r
+//   * short, common tokens: fewer tokens -> faster, cheaper generation\r
+//   * the familiar operators models already know: == != && || !\r
+//\r
+// A file starts with  !#ai  and is translated to canonical sdev before it\r
+// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model\r
+// can be given any program to read in the dense form.\r
+//\r
+//   v x = 5               forge x be 5\r
+//   x = x + 1             x be x + 1\r
+//   x += 2                x be x + (2)\r
+//   p(x)                  speak(x)\r
+//   f add(a, b) {         conjure add(a, b) ::\r
+//   r a + b               yield a + b\r
+//   ? x > 3 {             ponder x > 3 ::\r
+//   } :? x > 1 {          ;; otherwise ponder x > 1 ::\r
+//   } : {                 ;; otherwise ::\r
+//   w i < 3 {             cycle i < 3 ::\r
+//   each n in xs {        iterate n through xs ::\r
+//   try { \u2026 } catch e {   attempt :: \u2026 ;; rescue e ::\r
+//   brk / next            yeet / skip\r
+//   }                     ;;\r
+//   == != && || !         equals differs also either isnt\r
+// =====================================================================\r
+\r
+// split a line into [code, text, code, text, \u2026] so strings are never touched\r
+conjure ai_segments(line) ::\r
+  yield regex_find_all(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|'[^']*'|[^\\"']+|[\\"']")\r
+;;\r
+\r
+conjure ai_ops_to_sdev(code) ::\r
+  forge c be code\r
+  c be regex_replace(c, "\\\\s*==\\\\s*", " equals ")\r
+  c be regex_replace(c, "\\\\s*!=\\\\s*", " differs ")\r
+  c be regex_replace(c, "\\\\s*&&\\\\s*", " also ")\r
+  c be regex_replace(c, "\\\\s*\\\\|\\\\|\\\\s*", " either ")\r
+  c be regex_replace(c, "(^|[^\\\\p{L}\\\\p{N}_])!\\\\s*(?!=)", "$1isnt ")\r
+  c be regex_replace(c, "\\\\btrue\\\\b", "yep")\r
+  c be regex_replace(c, "\\\\bfalse\\\\b", "nope")\r
+  c be regex_replace(c, "\\\\bnull\\\\b", "void")\r
+  yield c\r
+;;\r
+\r
+conjure ai_ops_to_ai(code) ::\r
+  forge c be code\r
+  c be regex_replace(c, "\\\\s+equals\\\\s+", " == ")\r
+  c be regex_replace(c, "\\\\s+differs\\\\s+", " != ")\r
+  c be regex_replace(c, "\\\\s+also\\\\s+", " && ")\r
+  c be regex_replace(c, "\\\\s+either\\\\s+", " || ")\r
+  c be regex_replace(c, "\\\\bisnt\\\\s+", "!")\r
+  c be regex_replace(c, "\\\\byep\\\\b", "true")\r
+  c be regex_replace(c, "\\\\bnope\\\\b", "false")\r
+  c be regex_replace(c, "\\\\bvoid\\\\b", "null")\r
+  yield c\r
+;;\r
+\r
+conjure ai_map_code(line, to_sdev) ::\r
+  forge out be ""\r
+  iterate seg through ai_segments(line) ::\r
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
+      out be out + seg\r
+    ;; otherwise ponder to_sdev ::\r
+      out be out + ai_ops_to_sdev(seg)\r
+    ;; otherwise ::\r
+      out be out + ai_ops_to_ai(seg)\r
+    ;;\r
+  ;;\r
+  yield out\r
+;;\r
+\r
+forge AI_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\r
+\r
+// one AI line -> one canonical line (or void when it is not AI syntax)\r
+conjure ai_line_to_sdev(body) ::\r
+  forge m be regex_capture(body, "^\\\\}\\\\s*:\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"\r
+  ;;\r
+  ponder regex_test(body, "^\\\\}\\\\s*:\\\\s*\\\\{$") ::\r
+    yield ";; otherwise ::"\r
+  ;;\r
+  m be regex_capture(body, "^\\\\}\\\\s*catch\\\\s+(" + AI_NAME + ")\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield ";; rescue " + m[1] + " ::"\r
+  ;;\r
+  ponder body equals "}" ::\r
+    yield ";;"\r
+  ;;\r
+  ponder regex_test(body, "^try\\\\s*\\\\{$") ::\r
+    yield "attempt ::"\r
+  ;;\r
+  m be regex_capture(body, "^v\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")\r
+  ponder m differs void ::\r
+    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)\r
+  ;;\r
+  m be regex_capture(body, "^f\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "conjure " + m[1] + "(" + m[2] + ") ::"\r
+  ;;\r
+  m be regex_capture(body, "^r(\\\\s+(.+))?$")\r
+  ponder m differs void ::\r
+    ponder m[2] equals "" ::\r
+      yield "yield void"\r
+    ;;\r
+    yield "yield " + ai_map_code(m[2], yep)\r
+  ;;\r
+  m be regex_capture(body, "^p\\\\((.*)\\\\)$")\r
+  ponder m differs void ::\r
+    yield "speak(" + ai_map_code(m[1], yep) + ")"\r
+  ;;\r
+  m be regex_capture(body, "^\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "ponder " + ai_map_code(m[1], yep) + " ::"\r
+  ;;\r
+  m be regex_capture(body, "^w\\\\s+(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "cycle " + ai_map_code(m[1], yep) + " ::"\r
+  ;;\r
+  m be regex_capture(body, "^each\\\\s+(" + AI_NAME + ")\\\\s+in\\\\s+(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"\r
+  ;;\r
+  ponder body equals "brk" ::\r
+    yield "yeet"\r
+  ;;\r
+  ponder body equals "next" ::\r
+    yield "skip"\r
+  ;;\r
+  // compound assignment: x += e / x -= e / x *= e / x /= e\r
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*([-+*/])=\\\\s*(.+)$")\r
+  ponder m differs void ::\r
+    yield m[1] + " be " + m[1] + " " + m[2] + " (" + ai_map_code(m[3], yep) + ")"\r
+  ;;\r
+  // index or name assignment: x = e / xs[0] = e / o.k = e\r
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*=\\\\s*([^=].*)$")\r
+  ponder m differs void ::\r
+    yield m[1] + " be " + ai_map_code(m[2], yep)\r
+  ;;\r
+  // a bare call or expression\r
+  yield ai_map_code(body, yep)\r
+;;\r
+\r
+conjure ai_to_sdev(source) ::\r
+  forge out be []\r
+  iterate line through lines(close_ai_braces(source)) ::\r
+    forge indent be leading_space(line)\r
+    forge body be trim(line)\r
+    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::\r
+      ponder isnt startswith(body, "!#ai") ::\r
+        out be out + [line]\r
+      ;;\r
+    ;; otherwise ::\r
+      out be out + [indent + ai_line_to_sdev(body)]\r
+    ;;\r
+  ;;\r
+  yield unlines(out)\r
+;;\r
+\r
+// canonical sdev -> the AI form\r
+// the English canonical forms (say / set / if / while / for each / to \u2026 with / end)\r
+conjure english_line_to_ai(body, AI_DECLARED) ::\r
+  forge m be regex_capture(body, "^say\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "p(" + ai_map_code(m[1], nope) + ")"\r
+  ;;\r
+  m be regex_capture(body, "^set\\\\s+(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+to\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::\r
+      yield m[1] + " = " + ai_map_code(m[2], nope)\r
+    ;;\r
+    AI_DECLARED[m[1]] be yep\r
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
+  ;;\r
+  m be regex_capture(body, "^if\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "? " + ai_cond(m[1]) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^else\\\\s+if\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "} :? " + ai_cond(m[1]) + " {"\r
+  ;;\r
+  ponder body equals "else" ::\r
+    yield "} : {"\r
+  ;;\r
+  ponder body equals "end" ::\r
+    yield "}"\r
+  ;;\r
+  m be regex_capture(body, "^while\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "w " + ai_cond(m[1]) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^for\\\\s+(each\\\\s+)?(" + AI_NAME + ")\\\\s+in\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^to\\\\s+(" + AI_NAME + ")(\\\\s+with\\\\s+(.+))?$")\r
+  ponder m differs void ::\r
+    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")\r
+    yield "f " + m[1] + "(" + params + ") {"\r
+  ;;\r
+  m be regex_capture(body, "^return(\\\\s+(.+))?$")\r
+  ponder m differs void ::\r
+    yield "r " + ai_map_code(m[2], nope)\r
+  ;;\r
+  ponder body equals "break" ::\r
+    yield "brk"\r
+  ;;\r
+  ponder body equals "continue" ::\r
+    yield "next"\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+// English comparisons -> symbols\r
+conjure ai_cond(c) ::\r
+  forge out be ""\r
+  iterate seg through ai_segments(c) ::\r
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
+      out be out + seg\r
+    ;; otherwise ::\r
+      forge x be seg\r
+      x be regex_replace(x, "\\\\s+is\\\\s+not\\\\s+", " != ")\r
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+more\\\\b", " >= $1")\r
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+less\\\\b", " <= $1")\r
+      x be regex_replace(x, "\\\\s+is\\\\s+", " == ")\r
+      x be regex_replace(x, "\\\\s+and\\\\s+", " && ")\r
+      x be regex_replace(x, "\\\\s+or\\\\s+", " || ")\r
+      x be regex_replace(x, "(^|\\\\s)not\\\\s+", "$1!")\r
+      out be out + ai_ops_to_ai(x)\r
+    ;;\r
+  ;;\r
+  yield out\r
+;;\r
+\r
+conjure sdev_line_to_ai(body, declared) ::\r
+  forge english be english_line_to_ai(body, declared)\r
+  ponder english differs "" ::\r
+    yield english\r
+  ;;\r
+  forge m be regex_capture(body, "^;;\\\\s*otherwise\\\\s+ponder\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "} :? " + ai_map_code(m[1], nope) + " {"\r
+  ;;\r
+  ponder regex_test(body, "^;;\\\\s*otherwise\\\\s*::$") ::\r
+    yield "} : {"\r
+  ;;\r
+  m be regex_capture(body, "^;;\\\\s*rescue\\\\s+(" + AI_NAME + ")\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "} catch " + m[1] + " {"\r
+  ;;\r
+  ponder body equals ";;" ::\r
+    yield "}"\r
+  ;;\r
+  ponder regex_test(body, "^attempt\\\\s*::$") ::\r
+    yield "try {"\r
+  ;;\r
+  m be regex_capture(body, "^forge\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
+  ;;\r
+  m be regex_capture(body, "^conjure\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "f " + m[1] + "(" + m[2] + ") {"\r
+  ;;\r
+  m be regex_capture(body, "^yield\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "r " + ai_map_code(m[1], nope)\r
+  ;;\r
+  m be regex_capture(body, "^speak\\\\((.*)\\\\)$")\r
+  ponder m differs void ::\r
+    yield "p(" + ai_map_code(m[1], nope) + ")"\r
+  ;;\r
+  m be regex_capture(body, "^ponder\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "? " + ai_map_code(m[1], nope) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^cycle\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "w " + ai_map_code(m[1], nope) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^iterate\\\\s+(" + AI_NAME + ")\\\\s+through\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"\r
+  ;;\r
+  ponder body equals "yeet" ::\r
+    yield "brk"\r
+  ;;\r
+  ponder body equals "skip" ::\r
+    yield "next"\r
+  ;;\r
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+be\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield m[1] + " = " + ai_map_code(m[2], nope)\r
+  ;;\r
+  yield ai_map_code(body, nope)\r
+;;\r
+\r
+conjure sdev_to_ai(source) ::\r
+  forge out be ["!#ai"]\r
+  forge declared be ::\r
+  ;;\r
+  iterate line through lines(source) ::\r
+    forge indent be leading_space(line)\r
+    forge body be trim(line)\r
+    ponder body equals "" either startswith(body, "//") ::\r
+      out be out + [line]\r
+    ;; otherwise ::\r
+      out be out + [indent + sdev_line_to_ai(body, declared)]\r
+    ;;\r
+  ;;\r
+  yield unlines(out)\r
+;;\r
+`;
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\project.sdev
+var project_default = '// =====================================================================\r\n// project.sdev \u2014 the project index of the code understander, in sdev.\r\n//\r\n// Collects every name a file defines (variables, functions, kinds,\r\n// parameters, loop names, lambda parameters) so the understander can tell\r\n// a reference to another file apart from plain words.\r\n//\r\n//   defined_names(source)   -> list of names one file defines\r\n//   project_names(sources)  -> names defined across many files, no repeats\r\n// =====================================================================\r\n\r\nforge PNAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\r\n\r\nconjure pn_add(seen, out, w) ::\r\n  ponder w differs "" also isnt has(seen, w) also regex_test(w, "^" + PNAME + "$") ::\r\n    seen[w] be yep\r\n    out be out + [w]\r\n  ;;\r\n  yield out\r\n;;\r\n\r\n// every match of `pattern`, keeping only what follows `prefix`\r\nconjure pn_tails(text, pattern, prefix) ::\r\n  forge got be []\r\n  iterate hit through regex_find_all(text, pattern) ::\r\n    got be got + [regex_replace(hit, prefix, "")]\r\n  ;;\r\n  yield got\r\n;;\r\n\r\nconjure pn_split(list_text) ::\r\n  yield regex_find_all(list_text, PNAME)\r\n;;\r\n\r\nconjure defined_names_into(source, seen, out) ::\r\n  forge kw be "\\\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\\\s+"\r\n  iterate w through pn_tails(source, kw + PNAME, kw) ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME, "^for\\\\s+(each\\\\s+)?") ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME + "\\\\s*,\\\\s*" + PNAME, "^.*,\\\\s*") ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate row through lines(source) ::\r\n    forge m be regex_capture(row, "^\\\\s*(" + PNAME + ")\\\\s*(=|\\\\+=|-=|\\\\*=|/=)(?!=)")\r\n    ponder m differs void ::\r\n      out be pn_add(seen, out, m[1])\r\n    ;;\r\n  ;;\r\n  // parameters: `with a b c`, `with a, b`\r\n  iterate part through pn_tails(source, "\\\\bwith\\\\s+[^\\\\n:{]+", "^with\\\\s+") ::\r\n    iterate w through regex_find_all(part, "[^\\\\s,]+") ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  // `(a, b)` after a declaration\r\n  iterate part through pn_tails(source, "\\\\b(to|conjure|func|function|fn|def)\\\\s+" + PNAME + "\\\\s*\\\\([^)]*\\\\)", "^[^(]*\\\\(") ::\r\n    iterate w through regex_find_all(regex_replace(part, "\\\\)$", ""), "[^\\\\s,=]+") ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  // lambdas `(a, b) =>` / `x =>`\r\n  iterate part through regex_find_all(source, "\\\\([^()]*\\\\)\\\\s*=>|" + PNAME + "\\\\s*=>") ::\r\n    iterate w through pn_split(regex_replace(part, "=>$", "")) ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  yield out\r\n;;\r\n\r\nconjure defined_names(source) ::\r\n  forge seen be ::\r\n  ;;\r\n  yield defined_names_into(source, seen, [])\r\n;;\r\n\r\nconjure project_names(sources) ::\r\n  forge seen be ::\r\n  ;;\r\n  forge out be []\r\n  iterate src through sources ::\r\n    out be defined_names_into(src, seen, out)\r\n  ;;\r\n  yield out\r\n;;\r\n';
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\blocks.sdev
+var blocks_default = '// =====================================================================\r\n// blocks.sdev \u2014 the code understander\'s block-closing rules, in sdev.\r\n//\r\n// People rarely write `end`, and AI models sometimes forget a `}`.\r\n// These rules close what was left open, using indentation as the guide:\r\n//   * an indented body closes as soon as the code steps back out of it\r\n//   * a blank line followed by a shallower line closes it too\r\n//   * anything still open is closed at the end of the file\r\n// Flat files that write their own `end` / `}` are left untouched.\r\n// =====================================================================\r\n\r\nforge BLOCK_OPENS be "^\\\\s*(?:to\\\\s+[\\\\p{L}\\\\p{N}_]|if\\\\b|while\\\\b|for\\\\s+each\\\\b|kind\\\\b|attempt\\\\b|match\\\\b)"\r\nforge BLOCK_CLOSES be "^\\\\s*end\\\\b"\r\nforge BLOCK_CONTINUES be "^\\\\s*(?:else|end)\\\\b"\r\n\r\nconjure next_code_line(ls, start) ::\r\n  forge j be start\r\n  cycle j < measure(ls) ::\r\n    ponder trim(ls[j]) differs "" ::\r\n      yield ls[j]\r\n    ;;\r\n    j be j + 1\r\n  ;;\r\n  yield void\r\n;;\r\n\r\n// English canonical form: if / while / for each / to \u2026 closed by `end`\r\nconjure close_blocks(source) ::\r\n  forge ls be lines(source)\r\n  forge out be []\r\n  // each open block is [indent, has_body]\r\n  forge stack be []\r\n  forge i be 0\r\n  cycle i < measure(ls) ::\r\n    forge line be ls[i]\r\n    ponder trim(line) equals "" ::\r\n      forge nxt be next_code_line(ls, i + 1)\r\n      ponder nxt differs void also isnt regex_test(nxt, BLOCK_CONTINUES) ::\r\n        cycle measure(stack) > 0 also measure(leading_space(nxt)) <= measure(stack[-1][0]) ::\r\n          out be out + [stack[-1][0] + "end"]\r\n          stack be portion(stack, 0, measure(stack) - 1)\r\n        ;;\r\n      ;;\r\n      out be out + [line]\r\n    ;; otherwise ::\r\n      forge w be measure(leading_space(line))\r\n      forge cont be regex_test(line, BLOCK_CONTINUES)\r\n      cycle measure(stack) > 0 also stack[-1][1] also w <= measure(stack[-1][0]) also isnt (cont also w equals measure(stack[-1][0])) ::\r\n        out be out + [stack[-1][0] + "end"]\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder measure(stack) > 0 also w > measure(stack[-1][0]) ::\r\n        stack[measure(stack) - 1] be [stack[-1][0], yep]\r\n      ;;\r\n      ponder regex_test(line, BLOCK_CLOSES) ::\r\n        ponder measure(stack) > 0 ::\r\n          stack be portion(stack, 0, measure(stack) - 1)\r\n        ;;\r\n      ;; otherwise ponder regex_test(line, "^\\\\s*else\\\\b") also measure(stack) > 0 ::\r\n        stack[measure(stack) - 1] be [stack[-1][0], nope]\r\n      ;; otherwise ponder regex_test(line, BLOCK_OPENS) ::\r\n        stack be stack + [[leading_space(line), nope]]\r\n      ;;\r\n      out be out + [line]\r\n    ;;\r\n    i be i + 1\r\n  ;;\r\n  cycle measure(stack) > 0 ::\r\n    out be out + [stack[-1][0] + "end"]\r\n    stack be portion(stack, 0, measure(stack) - 1)\r\n  ;;\r\n  yield unlines(out)\r\n;;\r\n\r\n// code of a line with strings and // comments removed, for brace counting\r\nconjure brace_code(line) ::\r\n  forge c be regex_replace(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|\'[^\']*\'", "\\"\\"")\r\n  forge k be find_from(c, "//", 0)\r\n  ponder k >= 0 ::\r\n    c be snatch(c, 0, k)\r\n  ;;\r\n  yield trim(c)\r\n;;\r\n\r\n// sdev:ai form: blocks are { \u2026 }; add any `}` a model forgot\r\nconjure close_ai_braces(source) ::\r\n  forge ls be lines(source)\r\n  forge out be []\r\n  forge stack be []\r\n  iterate line through ls ::\r\n    forge code be brace_code(line)\r\n    ponder code equals "" ::\r\n      out be out + [line]\r\n    ;; otherwise ::\r\n      forge w be measure(leading_space(line))\r\n      forge closing be startswith(code, "}")\r\n      // stepping back to (or out of) an opener\'s level without `}` closes it\r\n      cycle measure(stack) > 0 also (w < measure(stack[-1]) either (w equals measure(stack[-1]) also isnt closing)) ::\r\n        out be out + [stack[-1] + "}"]\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder closing also measure(stack) > 0 ::\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder endswith(code, "{") ::\r\n        stack be stack + [leading_space(line)]\r\n      ;;\r\n      out be out + [line]\r\n    ;;\r\n  ;;\r\n  cycle measure(stack) > 0 ::\r\n    out be out + [stack[-1] + "}"]\r\n    stack be portion(stack, 0, measure(stack) - 1)\r\n  ;;\r\n  yield unlines(out)\r\n;;\r\n\r\n// structure report: [[line, message], \u2026] for blocks that never close or close twice\r\nconjure check_blocks(source) ::\r\n  forge problems be []\r\n  forge stack be []\r\n  forge n be 0\r\n  iterate line through lines(source) ::\r\n    n be n + 1\r\n    forge code be brace_code(line)\r\n    ponder endswith(code, "::") either endswith(code, "{") ::\r\n      ponder startswith(code, ";;") either startswith(code, "}") ::\r\n        ponder measure(stack) equals 0 ::\r\n          problems be problems + [[n, "nothing is open here to continue"]]\r\n        ;;\r\n      ;; otherwise ::\r\n        stack be stack + [n]\r\n      ;;\r\n    ;; otherwise ponder code equals ";;" either code equals "}" ::\r\n      ponder measure(stack) equals 0 ::\r\n        problems be problems + [[n, "this closes a block that was never opened"]]\r\n      ;; otherwise ::\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n    ;;\r\n  ;;\r\n  iterate s through stack ::\r\n    problems be problems + [[s, "this block is never closed"]]\r\n  ;;\r\n  yield problems\r\n;;\r\n';
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\parser_eval.sdev
+var parser_eval_default = `// =====================================================================
+// parser_eval.sdev \u2014 self-hosted canonical SDEV tokenizer, recursive-
+// descent parser, syntax validator, and tree-walking interpreter.
+//
+// Written 100% in SDEV. Supports both v2 canonical forms (\`say\`,
+// \`set ... to\`, \`if ... else ... end\`, \`while ... end\`,
+// \`for each ... in ... end\`, \`to name with params ... end\`, \`return\`)
+// and v1 forms (\`speak\`, \`forge ... be\`, \`ponder ... otherwise\`,
+// \`cycle\`, \`iterate ... through\`, \`conjure\`, \`yield\`), plus expressions,
+// lists, tomes, indexing, member access, calls, and built-ins.
+//
+// Entry points:
+//   sdev_parse_program(source)        -> [ok_bool, ast_nodes, errors]
+//   sdev_validate_syntax(source)      -> [valid_bool, diagnostics_list]
+//   sdev_eval_program(source, inputs) -> [ok_bool, output_lines, error_msg]
+// =====================================================================
+
+// ---------- Tokenizer ----------
+
+conjure pe_tokenize(source) ::
+  forge tokens be []
+  forge errors be []
+  forge ls be lines(source)
+  forge line_idx be 0
+  cycle line_idx < measure(ls) ::
+    forge line_num be line_idx + 1
+    forge line be ls[line_idx]
+    forge n be measure(line)
+    forge i be 0
+    cycle i < n ::
+      forge ch be char_at(line, i)
+      ponder ch equals " " either ch equals "\\t" either ch equals "\\r" ::
+        i be i + 1
+      ;; otherwise ponder ch equals "#" either (ch equals "/" also char_at(line, i + 1) equals "/") ::
+        i be n
+      ;; otherwise ponder ch equals "\\"" either ch equals "'" ::
+        forge quote be ch
+        i be i + 1
+        forge s be ""
+        forge closed be nope
+        cycle i < n also isnt closed ::
+          forge c be char_at(line, i)
+          ponder c equals "\\\\" ::
+            i be i + 1
+            ponder i < n ::
+              forge esc be char_at(line, i)
+              ponder esc equals "n" ::
+                s be s + "\\n"
+              ;; otherwise ponder esc equals "t" ::
+                s be s + "\\t"
+              ;; otherwise ponder esc equals "r" ::
+                s be s + "\\r"
+              ;; otherwise ::
+                s be s + esc
+              ;;
+              i be i + 1
+            ;;
+          ;; otherwise ponder c equals quote ::
+            closed be yep
+            i be i + 1
+          ;; otherwise ::
+            s be s + c
+            i be i + 1
+          ;;
+        ;;
+        ponder isnt closed ::
+          errors be errors + [[line_num, "Unterminated string literal"]]
+        ;;
+        tokens be tokens + [{ type: "STRING", value: s, line: line_num }]
+      ;; otherwise ponder is_digit(ch) ::
+        forge num_s be ""
+        cycle i < n also is_digit(char_at(line, i)) ::
+          num_s be num_s + char_at(line, i)
+          i be i + 1
+        ;;
+        ponder i < n also char_at(line, i) equals "." also i + 1 < n also is_digit(char_at(line, i + 1)) ::
+          num_s be num_s + "."
+          i be i + 1
+          cycle i < n also is_digit(char_at(line, i)) ::
+            num_s be num_s + char_at(line, i)
+            i be i + 1
+          ;;
+        ;;
+        tokens be tokens + [{ type: "NUMBER", value: num(num_s), line: line_num }]
+      ;; otherwise ponder is_letter(ch) either ch equals "_" ::
+        forge id_s be ""
+        cycle i < n ::
+          forge c2 be char_at(line, i)
+          ponder is_letter(c2) either is_digit(c2) either c2 equals "_" ::
+            id_s be id_s + c2
+            i be i + 1
+          ;; otherwise ::
+            yeet
+          ;;
+        ;;
+        tokens be tokens + [{ type: "IDENT", value: id_s, line: line_num }]
+      ;; otherwise ::
+        forge two be snatch(line, i, i + 2)
+        ponder two equals "::" ::
+          tokens be tokens + [{ type: "DOUBLE_COLON", value: "::", line: line_num }]
+          i be i + 2
+        ;; otherwise ponder two equals ";;" ::
+          tokens be tokens + [{ type: "DOUBLE_SEMI", value: ";;", line: line_num }]
+          i be i + 2
+        ;; otherwise ponder two equals "==" either two equals "!=" either two equals "<=" either two equals ">=" either two equals "&&" either two equals "||" either two equals "**" either two equals "->" either two equals "+=" either two equals "-=" either two equals "*=" either two equals "/=" ::
+          tokens be tokens + [{ type: "OP", value: two, line: line_num }]
+          i be i + 2
+        ;; otherwise ponder ch equals "(" ::
+          tokens be tokens + [{ type: "LPAREN", value: "(", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals ")" ::
+          tokens be tokens + [{ type: "RPAREN", value: ")", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "[" ::
+          tokens be tokens + [{ type: "LBRACKET", value: "[", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "]" ::
+          tokens be tokens + [{ type: "RBRACKET", value: "]", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "{" ::
+          tokens be tokens + [{ type: "LBRACE", value: "{", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "}" ::
+          tokens be tokens + [{ type: "RBRACE", value: "}", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "," ::
+          tokens be tokens + [{ type: "COMMA", value: ",", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals ":" ::
+          tokens be tokens + [{ type: "COLON", value: ":", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "." ::
+          tokens be tokens + [{ type: "DOT", value: ".", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "~" ::
+          tokens be tokens + [{ type: "TILDE", value: "~", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "+" either ch equals "-" either ch equals "*" either ch equals "/" either ch equals "%" either ch equals "^" either ch equals "<" either ch equals ">" either ch equals "=" either ch equals "!" ::
+          tokens be tokens + [{ type: "OP", value: ch, line: line_num }]
+          i be i + 1
+        ;; otherwise ::
+          errors be errors + [[line_num, "Unexpected character '" + ch + "'"]]
+          i be i + 1
+        ;;
+      ;;
+    ;;
+    line_idx be line_idx + 1
+  ;;
+  forge last_line be measure(ls) > 0 ~ measure(ls) : 1
+  tokens be tokens + [{ type: "EOF", value: "", line: last_line }]
+  yield [tokens, errors]
+;;
+
+// ---------- Parser helpers ----------
+
+conjure pe_peek(p) ::
+  yield p.tokens[p.pos]
+;;
+
+conjure pe_next_tok(p, offset) ::
+  forge idx be p.pos + offset
+  ponder idx < measure(p.tokens) ::
+    yield p.tokens[idx]
+  ;;
+  yield p.tokens[measure(p.tokens) - 1]
+;;
+
+conjure pe_at_end(p) ::
+  yield p.tokens[p.pos].type equals "EOF"
+;;
+
+conjure pe_advance(p) ::
+  forge tok be p.tokens[p.pos]
+  ponder isnt pe_at_end(p) ::
+    p.pos be p.pos + 1
+  ;;
+  yield tok
+;;
+
+conjure pe_check(p, t) ::
+  yield p.tokens[p.pos].type equals t
+;;
+
+conjure pe_check_word(p, w) ::
+  forge tok be p.tokens[p.pos]
+  yield tok.type equals "IDENT" also lower(tok.value) equals w
+;;
+
+conjure pe_check_op(p, op) ::
+  forge tok be p.tokens[p.pos]
+  yield tok.type equals "OP" also tok.value equals op
+;;
+
+conjure pe_error(p, line, msg) ::
+  p.errors be p.errors + [[line, msg]]
+;;
+
+conjure pe_is_block_closer(p) ::
+  ponder pe_check(p, "DOUBLE_SEMI") ::
+    yield yep
+  ;;
+  ponder pe_check_word(p, "end") either pe_check_word(p, "else") either pe_check_word(p, "elif") either pe_check_word(p, "otherwise") either pe_check_word(p, "rescue") ::
+    yield yep
+  ;;
+  yield nope
+;;
+
+conjure pe_is_stmt_keyword(w) ::
+  forge lw be lower(w)
+  iterate kw through ["forge", "conjure", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "if", "else", "elif", "end", "while", "for", "return", "break", "continue"] ::
+    ponder lw equals kw ::
+      yield yep
+    ;;
+  ;;
+  yield nope
+;;
+
+// ---------- Expression parser ----------
+
+conjure pe_parse_primary(p) ::
+  forge tok be pe_peek(p)
+  ponder tok.type equals "NUMBER" ::
+    pe_advance(p)
+    yield { type: "Literal", value: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "STRING" ::
+    pe_advance(p)
+    yield { type: "Literal", value: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "IDENT" ::
+    forge lw be lower(tok.value)
+    ponder lw equals "yep" either lw equals "true" ::
+      pe_advance(p)
+      yield { type: "Literal", value: yep, line: tok.line }
+    ;;
+    ponder lw equals "nope" either lw equals "false" ::
+      pe_advance(p)
+      yield { type: "Literal", value: nope, line: tok.line }
+    ;;
+    ponder lw equals "void" either lw equals "null" ::
+      pe_advance(p)
+      yield { type: "Literal", value: void, line: tok.line }
+    ;;
+    ponder (lw equals "ask" either lw equals "input") also pe_next_tok(p, 1).type differs "LPAREN" also pe_next_tok(p, 1).line equals tok.line ::
+      pe_advance(p)
+      forge prompt_e be pe_parse_expr(p)
+      yield { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }
+    ;;
+    ponder pe_is_stmt_keyword(lw) ::
+      pe_error(p, tok.line, "Unexpected keyword '" + tok.value + "' in expression")
+      yield { type: "Literal", value: void, line: tok.line }
+    ;;
+    pe_advance(p)
+    yield { type: "Ident", name: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "LPAREN" ::
+    pe_advance(p)
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+      yield { type: "List", elements: [], line: tok.line }
+    ;;
+    forge inner be pe_parse_expr(p)
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '('")
+    ;;
+    yield inner
+  ;;
+  ponder tok.type equals "LBRACKET" ::
+    pe_advance(p)
+    forge items be []
+    ponder isnt pe_check(p, "RBRACKET") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACKET") ::
+        items be items + [pe_parse_expr(p)]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "RBRACKET") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '['")
+    ;;
+    yield { type: "List", elements: items, line: tok.line }
+  ;;
+  ponder tok.type equals "LBRACE" ::
+    pe_advance(p)
+    forge entries be []
+    ponder isnt pe_check(p, "RBRACE") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACE") ::
+        forge k_e be void
+        ponder pe_check(p, "IDENT") also pe_next_tok(p, 1).type equals "COLON" ::
+          forge kt be pe_advance(p)
+          k_e be { type: "Literal", value: kt.value, line: kt.line }
+        ;; otherwise ::
+          k_e be pe_parse_expr(p)
+        ;;
+        ponder pe_check(p, "COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ':' in tome literal")
+          yeet
+        ;;
+        forge v_e be pe_parse_expr(p)
+        entries be entries + [[k_e, v_e]]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "RBRACE") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '{'")
+    ;;
+    yield { type: "Dict", entries: entries, line: tok.line }
+  ;;
+  ponder tok.type equals "DOUBLE_COLON" ::
+    pe_advance(p)
+    forge entries be []
+    ponder isnt pe_check(p, "DOUBLE_SEMI") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+        forge k_e be pe_parse_expr(p)
+        ponder pe_check(p, "COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ':' in tome literal")
+          yeet
+        ;;
+        forge v_e be pe_parse_expr(p)
+        entries be entries + [[k_e, v_e]]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '::' tome literal")
+    ;;
+    yield { type: "Dict", entries: entries, line: tok.line }
+  ;;
+  pe_error(p, tok.line, "Expected expression near '" + str(tok.value) + "'")
+  ponder isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
+    pe_advance(p)
+  ;;
+  yield { type: "Literal", value: void, line: tok.line }
+;;
+
+conjure pe_parse_postfix(p) ::
+  forge expr be pe_parse_primary(p)
+  cycle isnt pe_at_end(p) ::
+    ponder pe_check(p, "LPAREN") also pe_peek(p).line equals expr.line ::
+      pe_advance(p)
+      forge args be []
+      ponder isnt pe_check(p, "RPAREN") ::
+        cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+          args be args + [pe_parse_expr(p)]
+          ponder pe_check(p, "COMMA") ::
+            pe_advance(p)
+          ;; otherwise ::
+            yeet
+          ;;
+        ;;
+      ;;
+      ponder pe_check(p, "RPAREN") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected ')' after arguments")
+      ;;
+      expr be { type: "Call", callee: expr, args: args, line: expr.line }
+    ;; otherwise ponder pe_check(p, "LBRACKET") also pe_peek(p).line equals expr.line ::
+      pe_advance(p)
+      forge idx_e be pe_parse_expr(p)
+      ponder pe_check(p, "RBRACKET") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected ']' after index")
+      ;;
+      expr be { type: "Index", object: expr, index: idx_e, line: expr.line }
+    ;; otherwise ponder pe_check(p, "DOT") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge prop be pe_advance(p).value
+        expr be { type: "Member", object: expr, property: prop, line: expr.line }
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected property name after '.'")
+        yeet
+      ;;
+    ;; otherwise ::
+      yeet
+    ;;
+  ;;
+  yield expr
+;;
+
+conjure pe_parse_unary(p) ::
+  ponder pe_check_op(p, "-") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "-", operand: pe_parse_unary(p), line: t.line }
+  ;;
+  ponder pe_check_op(p, "+") ::
+    pe_advance(p)
+    yield pe_parse_unary(p)
+  ;;
+  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "not", operand: pe_parse_unary(p), line: t.line }
+  ;;
+  yield pe_parse_postfix(p)
+;;
+
+conjure pe_parse_pow(p) ::
+  forge left be pe_parse_unary(p)
+  ponder pe_check_op(p, "^") either pe_check_op(p, "**") ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '^'")
+      yield left
+    ;;
+    forge right be pe_parse_pow(p)
+    yield { type: "Binary", op: "^", left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_mul(p) ::
+  forge left be pe_parse_pow(p)
+  cycle pe_check_op(p, "*") either pe_check_op(p, "/") either pe_check_op(p, "%") ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
+      yield left
+    ;;
+    forge right be pe_parse_pow(p)
+    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_add(p) ::
+  forge left be pe_parse_mul(p)
+  cycle (pe_check_op(p, "+") either pe_check_op(p, "-")) also pe_peek(p).line equals left.line ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
+      yield left
+    ;;
+    forge right be pe_parse_mul(p)
+    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_cmp(p) ::
+  forge left be pe_parse_add(p)
+  cycle isnt pe_at_end(p) ::
+    ponder pe_check_word(p, "equals") either pe_check_op(p, "==") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: "==", left: left, right: right, line: op_t.line }
+    ;; otherwise ponder pe_check_word(p, "differs") either pe_check_op(p, "!=") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: "!=", left: left, right: right, line: op_t.line }
+    ;; otherwise ponder pe_check_word(p, "is") ::
+      forge is_t be pe_advance(p)
+      ponder pe_check_word(p, "not") either pe_check_word(p, "isnt") ::
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: "!=", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder (pe_check_word(p, "more") either pe_check_word(p, "greater")) also lower(pe_next_tok(p, 1).value) equals "than" ::
+        pe_advance(p)
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: ">", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder (pe_check_word(p, "less") either pe_check_word(p, "smaller")) also lower(pe_next_tok(p, 1).value) equals "than" ::
+        pe_advance(p)
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: "<", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder pe_check_word(p, "at") also (lower(pe_next_tok(p, 1).value) equals "least" either lower(pe_next_tok(p, 1).value) equals "most") ::
+        pe_advance(p)
+        forge lm be pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: lower(lm.value) equals "least" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
+      ;; otherwise ::
+        forge right be pe_parse_add(p)
+        ponder pe_check_word(p, "or") also (lower(pe_next_tok(p, 1).value) equals "more" either lower(pe_next_tok(p, 1).value) equals "less") ::
+          pe_advance(p)
+          forge ml be pe_advance(p)
+          left be { type: "Binary", op: lower(ml.value) equals "more" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
+        ;; otherwise ::
+          left be { type: "Binary", op: "==", left: left, right: right, line: is_t.line }
+        ;;
+      ;;
+    ;; otherwise ponder pe_check_op(p, "<") either pe_check_op(p, ">") either pe_check_op(p, "<=") either pe_check_op(p, ">=") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: op_t.value, left: left, right: right, line: op_t.line }
+    ;; otherwise ::
+      yeet
+    ;;
+  ;;
+  yield left
+;;
+
+conjure pe_parse_not(p) ::
+  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "not", operand: pe_parse_not(p), line: t.line }
+  ;;
+  yield pe_parse_cmp(p)
+;;
+
+conjure pe_parse_and(p) ::
+  forge left be pe_parse_not(p)
+  cycle pe_check_word(p, "also") either pe_check_word(p, "and") either pe_check_op(p, "&&") ::
+    forge t be pe_advance(p)
+    forge right be pe_parse_not(p)
+    left be { type: "Binary", op: "and", left: left, right: right, line: t.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_or(p) ::
+  forge left be pe_parse_and(p)
+  cycle (pe_check_word(p, "either") also pe_peek(p).line equals left.line) either pe_check_word(p, "or") either pe_check_op(p, "||") ::
+    forge t be pe_advance(p)
+    forge right be pe_parse_and(p)
+    left be { type: "Binary", op: "or", left: left, right: right, line: t.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_ternary(p) ::
+  forge left be pe_parse_or(p)
+  ponder pe_check(p, "TILDE") ::
+    pe_advance(p)
+    forge then_e be pe_parse_or(p)
+    ponder pe_check(p, "COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, left.line, "Expected ':' in ternary expression")
+    ;;
+    forge else_e be pe_parse_ternary(p)
+    yield { type: "Ternary", cond: left, then_expr: then_e, else_expr: else_e, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_expr(p) ::
+  yield pe_parse_ternary(p)
+;;
+
+// ---------- Statement parser ----------
+
+conjure pe_parse_if(p) ::
+  forge kw be pe_advance(p)
+  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge cond be pe_parse_expr(p)
+  ponder pe_check_word(p, "then") ::
+    pe_advance(p)
+  ;;
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  forge lw be lower(kw.value)
+  ponder lw equals "ponder" either lw equals "either" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after '" + kw.value + "' condition")
+    ;;
+    forge then_body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      then_body be then_body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed '" + kw.value + "' block (missing ';;')")
+    ;;
+    forge else_body be []
+    ponder pe_check_word(p, "otherwise") ::
+      pe_advance(p)
+      ponder pe_check_word(p, "ponder") either pe_check_word(p, "either") either pe_check_word(p, "if") ::
+        else_body be [pe_parse_if(p)]
+      ;; otherwise ::
+        ponder pe_check(p, "DOUBLE_COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, pe_peek(p).line, "Expected '::' after 'otherwise'")
+        ;;
+        cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+          else_body be else_body + [pe_parse_stmt(p)]
+        ;;
+        ponder pe_check(p, "DOUBLE_SEMI") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, kw.line, "Unclosed 'otherwise' block (missing ';;')")
+        ;;
+      ;;
+    ;;
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  // Natural v2 block: if ... [else if ...] [else ...] end
+  forge then_body be []
+  cycle isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
+    then_body be then_body + [pe_parse_stmt(p)]
+  ;;
+  forge else_body be []
+  ponder pe_check_word(p, "elif") ::
+    else_body be [pe_parse_if(p)]
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  ponder pe_check_word(p, "else") either pe_check_word(p, "otherwise") ::
+    pe_advance(p)
+    ponder pe_check_word(p, "if") ::
+      else_body be [pe_parse_if(p)]
+      yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+    ;;
+    ponder pe_check(p, "COLON") ::
+      pe_advance(p)
+    ;;
+    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+      else_body be else_body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
+    ;;
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
+  ;;
+  yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+;;
+
+conjure pe_parse_while(p) ::
+  forge kw be pe_advance(p)
+  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge cond be pe_parse_expr(p)
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  forge lw be lower(kw.value)
+  ponder lw equals "cycle" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after 'cycle' condition")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'cycle' block (missing ';;')")
+    ;;
+    yield { type: "While", cond: cond, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'while' block (missing 'end')")
+  ;;
+  yield { type: "While", cond: cond, body: body, line: kw.line }
+;;
+
+conjure pe_parse_for(p) ::
+  forge kw be pe_advance(p)
+  ponder lower(kw.value) equals "for" also pe_check_word(p, "each") ::
+    pe_advance(p)
+  ;;
+  ponder isnt pe_check(p, "IDENT") ::
+    pe_error(p, kw.line, "Expected loop variable name after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge var_name be pe_advance(p).value
+  ponder pe_check_word(p, "in") either pe_check_word(p, "through") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Expected 'in' or 'through' in loop")
+  ;;
+  ponder pe_at_end(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected iterable expression in loop")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge iter_e be pe_parse_expr(p)
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  ponder lower(kw.value) equals "iterate" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after 'iterate' header")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'iterate' block (missing ';;')")
+    ;;
+    yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'for' block (missing 'end')")
+  ;;
+  yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
+;;
+
+conjure pe_parse_func(p) ::
+  forge kw be pe_advance(p)
+  ponder isnt pe_check(p, "IDENT") ::
+    pe_error(p, kw.line, "Expected function name after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge fn_name be pe_advance(p).value
+  forge params be []
+  forge lw be lower(kw.value)
+  ponder lw equals "conjure" ::
+    ponder pe_check(p, "LPAREN") ::
+      pe_advance(p)
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+        ponder pe_check(p, "IDENT") ::
+          params be params + [pe_advance(p).value]
+        ;; otherwise ::
+          pe_error(p, kw.line, "Expected parameter name")
+          yeet
+        ;;
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+      ponder pe_check(p, "RPAREN") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, kw.line, "Expected ')' after parameters")
+      ;;
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '(' after function name in 'conjure'")
+    ;;
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' to open function body")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'conjure' block (missing ';;')")
+    ;;
+    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+  ;;
+  // \`to name [with a b | (a, b)] ... end\`
+  ponder pe_check_word(p, "with") also pe_peek(p).line equals kw.line ::
+    pe_advance(p)
+    cycle pe_check(p, "IDENT") also pe_peek(p).line equals kw.line ::
+      params be params + [pe_advance(p).value]
+      ponder pe_check(p, "COMMA") ::
+        pe_advance(p)
+      ;;
+    ;;
+  ;; otherwise ponder pe_check(p, "LPAREN") also pe_peek(p).line equals kw.line ::
+    pe_advance(p)
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+      ponder pe_check(p, "IDENT") ::
+        params be params + [pe_advance(p).value]
+      ;; otherwise ::
+        pe_error(p, kw.line, "Expected parameter name")
+        yeet
+      ;;
+      ponder pe_check(p, "COMMA") ::
+        pe_advance(p)
+      ;; otherwise ::
+        yeet
+      ;;
+    ;;
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected ')' after parameters")
+    ;;
+  ;;
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  ponder pe_check(p, "DOUBLE_COLON") ::
+    pe_advance(p)
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed function block (missing ';;')")
+    ;;
+    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'to' function block (missing 'end')")
+  ;;
+  yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+;;
+
+conjure pe_parse_stmt(p) ::
+  forge tok be pe_peek(p)
+  ponder pe_is_block_closer(p) ::
+    pe_error(p, tok.line, "Unexpected '" + tok.value + "' without matching open block")
+    pe_advance(p)
+    yield { type: "Noop", line: tok.line }
+  ;;
+  // forge x be expr
+  ponder pe_check_word(p, "forge") ::
+    pe_advance(p)
+    ponder isnt pe_check(p, "IDENT") ::
+      pe_error(p, tok.line, "Expected variable name after 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge name be pe_advance(p).value
+    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'be' after variable name in 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected expression after 'be' in 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Let", name: name, value: val, line: tok.line }
+  ;;
+  // set target to expr
+  ponder pe_check_word(p, "set") also pe_next_tok(p, 1).type differs "LPAREN" ::
+    pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected variable name after 'set'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge target be pe_parse_postfix(p)
+    ponder target.type differs "Ident" also target.type differs "Index" also target.type differs "Member" ::
+      pe_error(p, tok.line, "Invalid assignment target in 'set'")
+    ;;
+    ponder pe_check_word(p, "to") either pe_check_word(p, "be") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'to' in 'set' statement")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected expression after 'to' in 'set' statement")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: target, value: val, declare: yep, line: tok.line }
+  ;;
+  // leading \`be target be expr\`
+  ponder pe_check_word(p, "be") ::
+    pe_advance(p)
+    forge target be pe_parse_postfix(p)
+    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'be' after target")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: target, value: val, declare: nope, line: tok.line }
+  ;;
+  // ask "Prompt" as name / ask for name
+  ponder pe_check_word(p, "ask") also pe_next_tok(p, 1).type differs "LPAREN" ::
+    pe_advance(p)
+    ponder pe_check_word(p, "for") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge vname be pe_advance(p).value
+        yield { type: "Ask", prompt: { type: "Literal", value: vname + "? ", line: tok.line }, name: vname, line: tok.line }
+      ;;
+      pe_error(p, tok.line, "Expected variable name after 'ask for'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge prompt_e be pe_parse_expr(p)
+    ponder pe_check_word(p, "as") either pe_check_word(p, "into") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge vname be pe_advance(p).value
+        yield { type: "Ask", prompt: prompt_e, name: vname, line: tok.line }
+      ;;
+      pe_error(p, tok.line, "Expected variable name after 'as'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    yield { type: "ExprStmt", expr: { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }, line: tok.line }
+  ;;
+  // say / speak / print command or call
+  ponder pe_check_word(p, "say") either pe_check_word(p, "speak") either pe_check_word(p, "print") either pe_check_word(p, "whisper") either pe_check_word(p, "shout") ::
+    forge cmd be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > cmd.line either pe_is_block_closer(p) ::
+      pe_error(p, cmd.line, "Expected expression after '" + cmd.value + "'")
+      yield { type: "Noop", line: cmd.line }
+    ;;
+    forge args be []
+    args be args + [pe_parse_expr(p)]
+    cycle pe_check(p, "COMMA") also pe_peek(p).line equals cmd.line ::
+      pe_advance(p)
+      args be args + [pe_parse_expr(p)]
+    ;;
+    yield { type: "Print", mode: lower(cmd.value), args: args, line: cmd.line }
+  ;;
+  // Conditionals: if / ponder / either
+  ponder pe_check_word(p, "if") either pe_check_word(p, "ponder") either pe_check_word(p, "either") ::
+    yield pe_parse_if(p)
+  ;;
+  // Loops: while / cycle
+  ponder pe_check_word(p, "while") either pe_check_word(p, "cycle") ::
+    yield pe_parse_while(p)
+  ;;
+  // Loops: for / iterate
+  ponder pe_check_word(p, "for") either pe_check_word(p, "iterate") ::
+    yield pe_parse_for(p)
+  ;;
+  // Functions: conjure / to
+  ponder pe_check_word(p, "conjure") either pe_check_word(p, "to") ::
+    yield pe_parse_func(p)
+  ;;
+  // Return / yield
+  ponder pe_check_word(p, "yield") either pe_check_word(p, "return") ::
+    forge kw be pe_advance(p)
+    forge val be void
+    ponder isnt pe_at_end(p) also pe_peek(p).line equals kw.line also isnt pe_is_block_closer(p) ::
+      val be pe_parse_expr(p)
+    ;;
+    yield { type: "Return", value: val, line: kw.line }
+  ;;
+  // Break / yeet
+  ponder pe_check_word(p, "yeet") either pe_check_word(p, "break") ::
+    forge kw be pe_advance(p)
+    yield { type: "Break", line: kw.line }
+  ;;
+  // Continue / skip
+  ponder pe_check_word(p, "skip") either pe_check_word(p, "continue") ::
+    forge kw be pe_advance(p)
+    yield { type: "Continue", line: kw.line }
+  ;;
+  // Expression or Assignment
+  forge expr be pe_parse_expr(p)
+  ponder pe_check_word(p, "be") either pe_check_op(p, "=") ::
+    forge op_t be pe_advance(p)
+    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
+      pe_error(p, expr.line, "Invalid assignment target")
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected expression in assignment")
+      yield { type: "Noop", line: expr.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: expr, value: val, declare: nope, line: expr.line }
+  ;;
+  ponder pe_check(p, "OP") also (pe_peek(p).value equals "+=" either pe_peek(p).value equals "-=" either pe_peek(p).value equals "*=" either pe_peek(p).value equals "/=") ::
+    forge op_t be pe_advance(p)
+    forge base_op be snatch(op_t.value, 0, 1)
+    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
+      pe_error(p, expr.line, "Invalid augmented assignment target")
+    ;;
+    forge rhs be pe_parse_expr(p)
+    yield { type: "Assign", target: expr, value: { type: "Binary", op: base_op, left: expr, right: rhs, line: expr.line }, declare: nope, line: expr.line }
+  ;;
+  yield { type: "ExprStmt", expr: expr, line: expr.line }
+;;
+
+// ---------- Public Parser & Validator Entry Points ----------
+
+conjure sdev_parse_program(source) ::
+  forge tok_res be pe_tokenize(source)
+  forge p be {
+    tokens: tok_res[0],
+    pos: 0,
+    errors: tok_res[1]
+  }
+  forge ast be []
+  cycle isnt pe_at_end(p) ::
+    forge before be p.pos
+    forge stmt be pe_parse_stmt(p)
+    ponder stmt.type differs "Noop" ::
+      ast be ast + [stmt]
+    ;;
+    ponder p.pos equals before also isnt pe_at_end(p) ::
+      pe_advance(p)
+    ;;
+  ;;
+  yield [measure(p.errors) equals 0, ast, p.errors]
+;;
+
+conjure sdev_validate_syntax(source) ::
+  forge parsed be sdev_parse_program(source)
+  yield [parsed[0], parsed[2]]
+;;
+
+// ---------- Tree-Walking Interpreter ----------
+
+conjure pe_truthy(v) ::
+  ponder v equals void ::
+    yield nope
+  ;;
+  ponder isTruth(v) ::
+    yield v
+  ;;
+  ponder isNum(v) ::
+    yield v differs 0
+  ;;
+  ponder isText(v) ::
+    yield measure(v) > 0
+  ;;
+  ponder isList(v) ::
+    yield measure(v) > 0
+  ;;
+  yield yep
+;;
+
+conjure pe_stringify(v) ::
+  ponder v equals void ::
+    yield "void"
+  ;;
+  ponder isTruth(v) ::
+    yield v ~ "yep" : "nope"
+  ;;
+  ponder isText(v) ::
+    yield v
+  ;;
+  ponder isList(v) ::
+    forge parts be []
+    iterate item through v ::
+      parts be parts + [pe_stringify(item)]
+    ;;
+    yield "[" + weave(parts, ", ") + "]"
+  ;;
+  yield str(v)
+;;
+
+conjure pe_get_var(st, name, line) ::
+  forge top_idx be measure(st.scopes) - 1
+  forge local_s be st.scopes[top_idx]
+  ponder has(local_s, name) ::
+    yield local_s[name]
+  ;;
+  forge global_s be st.scopes[0]
+  ponder has(global_s, name) ::
+    yield global_s[name]
+  ;;
+  ponder name equals "PI" ::
+    yield PI()
+  ;;
+  ponder name equals "TAU" ::
+    yield TAU()
+  ;;
+  ponder name equals "E" ::
+    yield E()
+  ;;
+  st.error be "Line " + str(line) + ": Undefined variable '" + name + "'"
+  yield void
+;;
+
+conjure pe_set_var(st, name, val, declare) ::
+  forge top_idx be measure(st.scopes) - 1
+  forge local_s be st.scopes[top_idx]
+  ponder declare either has(local_s, name) either top_idx equals 0 ::
+    local_s[name] be val
+    yield val
+  ;;
+  forge global_s be st.scopes[0]
+  ponder has(global_s, name) ::
+    global_s[name] be val
+    yield val
+  ;;
+  local_s[name] be val
+  yield val
+;;
+
+conjure pe_read_input(st) ::
+  ponder st.input_idx < measure(st.inputs) ::
+    forge ans be str(st.inputs[st.input_idx])
+    st.input_idx be st.input_idx + 1
+    yield ans
+  ;;
+  yield ""
+;;
+
+conjure pe_call_builtin(st, name, args, line) ::
+  ponder name equals "str" ::
+    yield pe_stringify(measure(args) > 0 ~ args[0] : "")
+  ;;
+  ponder name equals "num" ::
+    forge v be args[0]
+    ponder isNum(v) ::
+      yield v
+    ;;
+    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\\\.[0-9]+)?$") ::
+      yield num(trim(v))
+    ;;
+    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to number"
+    yield 0
+  ;;
+  ponder name equals "int" ::
+    forge v be args[0]
+    ponder isNum(v) ::
+      yield int(v)
+    ;;
+    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\\\.[0-9]+)?$") ::
+      yield int(num(trim(v)))
+    ;;
+    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to int"
+    yield 0
+  ;;
+  ponder name equals "length" either name equals "len" either name equals "measure" ::
+    yield measure(args[0])
+  ;;
+  ponder name equals "upper" ::
+    yield upper(pe_stringify(args[0]))
+  ;;
+  ponder name equals "lower" ::
+    yield lower(pe_stringify(args[0]))
+  ;;
+  ponder name equals "trim" ::
+    yield trim(pe_stringify(args[0]))
+  ;;
+  ponder name equals "reverse" ::
+    yield reverse(args[0])
+  ;;
+  ponder name equals "abs" either name equals "magnitude" ::
+    yield abs(args[0])
+  ;;
+  ponder name equals "min" either name equals "least" ::
+    ponder measure(args) equals 1 also isList(args[0]) ::
+      yield min(args[0])
+    ;;
+    yield min(args)
+  ;;
+  ponder name equals "max" either name equals "greatest" ::
+    ponder measure(args) equals 1 also isList(args[0]) ::
+      yield max(args[0])
+    ;;
+    yield max(args)
+  ;;
+  ponder name equals "range" either name equals "sequence" ::
+    ponder measure(args) equals 1 ::
+      yield range(args[0])
+    ;;
+    ponder measure(args) equals 2 ::
+      yield range(args[0], args[1])
+    ;;
+    yield range(args[0], args[1], args[2])
+  ;;
+  ponder name equals "sum" ::
+    yield sum(args[0])
+  ;;
+  ponder name equals "sort" ::
+    yield sort(args[0])
+  ;;
+  ponder name equals "sortDesc" ::
+    yield sortDesc(args[0])
+  ;;
+  ponder name equals "sqrt" either name equals "root" ::
+    yield root(args[0])
+  ;;
+  ponder name equals "floor" either name equals "ground" ::
+    yield ground(args[0])
+  ;;
+  ponder name equals "ceil" either name equals "elevate" ::
+    yield elevate(args[0])
+  ;;
+  ponder name equals "round" either name equals "nearby" ::
+    yield nearby(args[0])
+  ;;
+  ponder name equals "pow" ::
+    yield pow(args[0], args[1])
+  ;;
+  ponder name equals "contains" ::
+    yield contains(args[0], args[1])
+  ;;
+  ponder name equals "startswith" either name equals "starts" ::
+    yield startswith(args[0], args[1])
+  ;;
+  ponder name equals "endswith" either name equals "ends" ::
+    yield endswith(args[0], args[1])
+  ;;
+  ponder name equals "replace" ::
+    yield replace(args[0], args[1], args[2])
+  ;;
+  ponder name equals "shatter" either name equals "split" ::
+    yield shatter(args[0], args[1])
+  ;;
+  ponder name equals "weave" either name equals "join" ::
+    yield weave(args[0], args[1])
+  ;;
+  ponder name equals "portion" either name equals "slice" ::
+    ponder measure(args) equals 2 ::
+      yield portion(args[0], args[1])
+    ;;
+    yield portion(args[0], args[1], args[2])
+  ;;
+  ponder name equals "snatch" ::
+    ponder measure(args) equals 2 ::
+      yield snatch(args[0], args[1])
+    ;;
+    yield snatch(args[0], args[1], args[2])
+  ;;
+  ponder name equals "gather" ::
+    ponder measure(args) equals 0 ::
+      yield []
+    ;;
+    yield gather(args[0], args[1])
+  ;;
+  ponder name equals "pluck" ::
+    ponder measure(args) equals 1 ::
+      yield pluck(args[0])
+    ;;
+    yield pluck(args[0], args[1])
+  ;;
+  ponder name equals "chr" ::
+    yield chr(args[0])
+  ;;
+  ponder name equals "ord" ::
+    ponder measure(args) equals 1 ::
+      yield ord(args[0])
+    ;;
+    yield ord(args[0], args[1])
+  ;;
+  ponder name equals "keys" either name equals "inscriptions" ::
+    yield keys(args[0])
+  ;;
+  ponder name equals "values" either name equals "contents" ::
+    yield values(args[0])
+  ;;
+  ponder name equals "has" ::
+    yield has(args[0], args[1])
+  ;;
+  ponder name equals "pick" ::
+    yield pick(args[0])
+  ;;
+  ponder name equals "randint" ::
+    yield randint(args[0], args[1])
+  ;;
+  ponder name equals "input" either name equals "ask" ::
+    yield pe_read_input(st)
+  ;;
+  ponder name equals "say" either name equals "speak" either name equals "print" ::
+    forge parts be []
+    iterate a through args ::
+      parts be parts + [pe_stringify(a)]
+    ;;
+    st.outputs be st.outputs + [weave(parts, " ")]
+    yield void
+  ;;
+  st.error be "Line " + str(line) + ": Unknown function '" + name + "'"
+  yield void
+;;
+
+conjure pe_eval_expr(st, node) ::
+  ponder st.error differs void ::
+    yield void
+  ;;
+  ponder node.type equals "Literal" ::
+    yield node.value
+  ;;
+  ponder node.type equals "Ident" ::
+    yield pe_get_var(st, node.name, node.line)
+  ;;
+  ponder node.type equals "List" ::
+    forge out be []
+    iterate el through node.elements ::
+      out be out + [pe_eval_expr(st, el)]
+    ;;
+    yield out
+  ;;
+  ponder node.type equals "Dict" ::
+    forge d be ::
+    ;;
+    iterate pair through node.entries ::
+      forge k be pe_stringify(pe_eval_expr(st, pair[0]))
+      d[k] be pe_eval_expr(st, pair[1])
+    ;;
+    yield d
+  ;;
+  ponder node.type equals "Unary" ::
+    forge v be pe_eval_expr(st, node.operand)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder node.op equals "-" ::
+      yield 0 - v
+    ;;
+    ponder node.op equals "not" ::
+      yield isnt pe_truthy(v)
+    ;;
+    yield v
+  ;;
+  ponder node.type equals "Ternary" ::
+    forge c be pe_eval_expr(st, node.cond)
+    ponder pe_truthy(c) ::
+      yield pe_eval_expr(st, node.then_expr)
+    ;;
+    yield pe_eval_expr(st, node.else_expr)
+  ;;
+  ponder node.type equals "Binary" ::
+    forge op be node.op
+    ponder op equals "and" ::
+      forge lv be pe_eval_expr(st, node.left)
+      ponder isnt pe_truthy(lv) ::
+        yield nope
+      ;;
+      yield pe_truthy(pe_eval_expr(st, node.right))
+    ;;
+    ponder op equals "or" ::
+      forge lv be pe_eval_expr(st, node.left)
+      ponder pe_truthy(lv) ::
+        yield yep
+      ;;
+      yield pe_truthy(pe_eval_expr(st, node.right))
+    ;;
+    forge left be pe_eval_expr(st, node.left)
+    forge right be pe_eval_expr(st, node.right)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder op equals "+" ::
+      ponder isList(left) also isList(right) ::
+        yield left + right
+      ;;
+      ponder isText(left) either isText(right) ::
+        yield pe_stringify(left) + pe_stringify(right)
+      ;;
+      yield left + right
+    ;;
+    ponder op equals "-" ::
+      yield left - right
+    ;;
+    ponder op equals "*" ::
+      ponder isText(left) also isNum(right) ::
+        yield repeat(left, right)
+      ;;
+      ponder isNum(left) also isText(right) ::
+        yield repeat(right, left)
+      ;;
+      yield left * right
+    ;;
+    ponder op equals "/" ::
+      ponder right equals 0 ::
+        st.error be "Line " + str(node.line) + ": Division by zero"
+        yield void
+      ;;
+      yield left / right
+    ;;
+    ponder op equals "%" ::
+      ponder right equals 0 ::
+        st.error be "Line " + str(node.line) + ": Modulo by zero"
+        yield void
+      ;;
+      yield ((left % right) + right) % right
+    ;;
+    ponder op equals "^" ::
+      yield pow(left, right)
+    ;;
+    ponder op equals "==" ::
+      yield left equals right
+    ;;
+    ponder op equals "!=" ::
+      yield left differs right
+    ;;
+    ponder op equals "<" ::
+      yield left < right
+    ;;
+    ponder op equals ">" ::
+      yield left > right
+    ;;
+    ponder op equals "<=" ::
+      yield left <= right
+    ;;
+    ponder op equals ">=" ::
+      yield left >= right
+    ;;
+    yield void
+  ;;
+  ponder node.type equals "Index" ::
+    forge obj be pe_eval_expr(st, node.object)
+    forge idx be pe_eval_expr(st, node.index)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder isList(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      ponder i < 0 either i >= measure(obj) ::
+        st.error be "Line " + str(node.line) + ": List index out of range"
+        yield void
+      ;;
+      yield obj[i]
+    ;;
+    ponder isText(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      ponder i < 0 either i >= measure(obj) ::
+        st.error be "Line " + str(node.line) + ": String index out of range"
+        yield void
+      ;;
+      yield char_at(obj, i)
+    ;;
+    ponder isTome(obj) ::
+      forge k be pe_stringify(idx)
+      yield has(obj, k) ~ obj[k] : void
+    ;;
+    st.error be "Line " + str(node.line) + ": Cannot index value"
+    yield void
+  ;;
+  ponder node.type equals "Member" ::
+    forge obj be pe_eval_expr(st, node.object)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder (isList(obj) either isText(obj)) also node.property equals "length" ::
+      yield measure(obj)
+    ;;
+    ponder isTome(obj) ::
+      yield has(obj, node.property) ~ obj[node.property] : void
+    ;;
+    st.error be "Line " + str(node.line) + ": Cannot access property '" + node.property + "'"
+    yield void
+  ;;
+  ponder node.type equals "Call" ::
+    forge arg_vals be []
+    iterate a through node.args ::
+      arg_vals be arg_vals + [pe_eval_expr(st, a)]
+    ;;
+    ponder st.error differs void ::
+      yield void
+    ;;
+    forge fname be node.callee.type equals "Ident" ~ node.callee.name : ""
+    ponder fname differs "" also has(st.funcs, fname) ::
+      forge fn be st.funcs[fname]
+      forge frame be ::
+      ;;
+      forge pi be 0
+      cycle pi < measure(fn.params) ::
+        forge pname be fn.params[pi]
+        frame[pname] be pi < measure(arg_vals) ~ arg_vals[pi] : void
+        pi be pi + 1
+      ;;
+      st.scopes be st.scopes + [frame]
+      pe_exec_block(st, fn.body)
+      forge ret be st.return_val
+      st.returning be nope
+      st.return_val be void
+      st.scopes be portion(st.scopes, 0, measure(st.scopes) - 1)
+      yield ret
+    ;;
+    yield pe_call_builtin(st, fname, arg_vals, node.line)
+  ;;
+  yield void
+;;
+
+conjure pe_exec_assign(st, target, val, declare, line) ::
+  ponder target.type equals "Ident" ::
+    pe_set_var(st, target.name, val, declare)
+    yield void
+  ;;
+  ponder target.type equals "Index" ::
+    forge obj be pe_eval_expr(st, target.object)
+    forge idx be pe_eval_expr(st, target.index)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder isList(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      obj[i] be val
+      yield void
+    ;;
+    ponder isTome(obj) ::
+      obj[pe_stringify(idx)] be val
+      yield void
+    ;;
+    st.error be "Line " + str(line) + ": Cannot index-assign on this value"
+    yield void
+  ;;
+  ponder target.type equals "Member" ::
+    forge obj be pe_eval_expr(st, target.object)
+    ponder isTome(obj) ::
+      obj[target.property] be val
+      yield void
+    ;;
+    st.error be "Line " + str(line) + ": Cannot set property on non-tome"
+    yield void
+  ;;
+;;
+
+conjure pe_exec_block(st, stmts) ::
+  iterate s through stmts ::
+    ponder st.error differs void either st.returning either st.breaking either st.continuing ::
+      yield void
+    ;;
+    pe_exec_stmt(st, s)
+  ;;
+;;
+
+conjure pe_exec_stmt(st, stmt) ::
+  ponder st.error differs void either st.returning either st.breaking either st.continuing ::
+    yield void
+  ;;
+  st.steps be st.steps + 1
+  ponder st.steps > st.max_steps ::
+    st.error be "Execution step limit exceeded (infinite loop?)"
+    yield void
+  ;;
+  ponder stmt.type equals "Let" ::
+    forge val be pe_eval_expr(st, stmt.value)
+    ponder st.error equals void ::
+      pe_set_var(st, stmt.name, val, yep)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Assign" ::
+    forge val be pe_eval_expr(st, stmt.value)
+    ponder st.error equals void ::
+      pe_exec_assign(st, stmt.target, val, stmt.declare, stmt.line)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Ask" ::
+    pe_eval_expr(st, stmt.prompt)
+    forge ans be pe_read_input(st)
+    pe_set_var(st, stmt.name, ans, yep)
+    yield void
+  ;;
+  ponder stmt.type equals "Print" ::
+    forge parts be []
+    iterate a through stmt.args ::
+      forge v be pe_eval_expr(st, a)
+      parts be parts + [pe_stringify(v)]
+    ;;
+    ponder st.error equals void ::
+      forge sep be stmt.mode equals "whisper" ~ "" : " "
+      forge line_out be weave(parts, sep)
+      ponder stmt.mode equals "shout" ::
+        line_out be upper(line_out)
+      ;;
+      st.outputs be st.outputs + [line_out]
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "If" ::
+    forge c be pe_eval_expr(st, stmt.cond)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder pe_truthy(c) ::
+      pe_exec_block(st, stmt.then_body)
+    ;; otherwise ::
+      pe_exec_block(st, stmt.else_body)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "While" ::
+    cycle st.error equals void also isnt st.returning ::
+      forge c be pe_eval_expr(st, stmt.cond)
+      ponder st.error differs void either isnt pe_truthy(c) ::
+        yeet
+      ;;
+      pe_exec_block(st, stmt.body)
+      ponder st.breaking ::
+        st.breaking be nope
+        yeet
+      ;;
+      ponder st.continuing ::
+        st.continuing be nope
+      ;;
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "For" ::
+    forge iter_val be pe_eval_expr(st, stmt.iter)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    forge items be isList(iter_val) ~ iter_val : (isText(iter_val) ~ chars(iter_val) : [])
+    iterate item through items ::
+      ponder st.error differs void either st.returning ::
+        yeet
+      ;;
+      pe_set_var(st, stmt.vname, item, nope)
+      pe_exec_block(st, stmt.body)
+      ponder st.breaking ::
+        st.breaking be nope
+        yeet
+      ;;
+      ponder st.continuing ::
+        st.continuing be nope
+      ;;
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Func" ::
+    st.funcs[stmt.name] be stmt
+    yield void
+  ;;
+  ponder stmt.type equals "Return" ::
+    forge val be stmt.value equals void ~ void : pe_eval_expr(st, stmt.value)
+    st.return_val be val
+    st.returning be yep
+    yield void
+  ;;
+  ponder stmt.type equals "Break" ::
+    st.breaking be yep
+    yield void
+  ;;
+  ponder stmt.type equals "Continue" ::
+    st.continuing be yep
+    yield void
+  ;;
+  ponder stmt.type equals "ExprStmt" ::
+    pe_eval_expr(st, stmt.expr)
+    yield void
+  ;;
+;;
+
+conjure sdev_eval_program(source, inputs) ::
+  forge parsed be sdev_parse_program(source)
+  ponder isnt parsed[0] ::
+    forge first_err be parsed[2][0]
+    yield [nope, [], "Line " + str(first_err[0]) + ": " + first_err[1]]
+  ;;
+  forge global_scope be ::
+  ;;
+  forge st be {
+    scopes: [global_scope],
+    funcs: ::
+    ;;,
+    outputs: [],
+    inputs: inputs equals void ~ [] : inputs,
+    input_idx: 0,
+    error: void,
+    returning: nope,
+    return_val: void,
+    breaking: nope,
+    continuing: nope,
+    steps: 0,
+    max_steps: 50000
+  }
+  pe_exec_block(st, parsed[1])
+  ponder st.error differs void ::
+    yield [nope, st.outputs, st.error]
+  ;;
+  yield [yep, st.outputs, void]
+;;
+`;
+
+// src/lang/agent/sdev-engine.ts
+var engine = null;
+var engineError = null;
+function load() {
+  if (engine !== null) return engine;
+  try {
+    const ast = new Parser(new Lexer(blocks_default + "\n" + understander_default + "\n" + ai_dialect_default + "\n" + project_default + "\n" + parser_eval_default).tokenize()).parse();
+    const interp = new Interpreter(() => {
+    });
+    interp.interpret(ast);
+    const env2 = interp.getGlobalEnv();
+    engine = {
+      understand: env2.get("understand_source", 0),
+      toSdev: env2.get("ai_to_sdev", 0),
+      toAi: env2.get("sdev_to_ai", 0),
+      names: env2.get("defined_names", 0),
+      close: env2.get("close_blocks", 0),
+      closeAi: env2.get("close_ai_braces", 0),
+      check: env2.get("check_blocks", 0),
+      parse: env2.get("sdev_parse_program", 0),
+      validate: env2.get("sdev_validate_syntax", 0),
+      eval: env2.get("sdev_eval_program", 0)
+    };
+  } catch (e) {
+    engineError = e instanceof Error ? e.message : String(e);
+    engine = false;
+  }
+  return engine;
+}
+function sdevUnderstand(source, known, words = []) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.understand.call([source, [...known], words], 0);
+    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
+    return {
+      source: r[0],
+      sure: r[1] === true,
+      notes: (r[2] ?? []).map(([line, from, to]) => ({ line, from, to, why: "understood by the sdev engine", source: "sdev" }))
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function isAiDialect(source) {
+  for (const line of source.split("\n", 20)) {
+    const t = line.trim();
+    if (!t || t.startsWith("//")) continue;
+    return /^!#ai\b/.test(t);
+  }
+  return false;
+}
+function aiToSdev(source) {
+  const e = load();
+  if (!e) return source;
+  return String(e.toSdev.call([source], 0));
+}
+function sdevCloseBlocks(source) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.close.call([source], 0));
+  } catch (err) {
+    engineError = String(err);
+    return null;
+  }
+}
+function sdevCheckBlocks(source) {
+  const e = load();
+  if (!e) return [];
+  try {
+    const r = e.check.call([source], 0);
+    return Array.isArray(r) ? r.map(([l, m2]) => [Number(l), String(m2)]) : [];
+  } catch {
+    return [];
+  }
+}
+
+// src/lang/hardware/transpile.ts
+function extractBoardBlock(source) {
+  const braceMatch = /\bboard\s+"([^"]+)"\s*\{/.exec(source);
+  const colonMatch = /\bboard\s+"([^"]+)"\s*::/.exec(source);
+  if (!braceMatch && !colonMatch) return null;
+  const useBrace = braceMatch && (!colonMatch || braceMatch.index <= colonMatch.index);
+  if (useBrace && braceMatch) {
+    const open = braceMatch.index + braceMatch[0].length - 1;
+    let depth2 = 1;
+    let i2 = open + 1;
+    while (i2 < source.length && depth2 > 0) {
+      const ch = source[i2];
+      if (ch === "{") depth2++;
+      else if (ch === "}") depth2--;
+      else if (ch === "/" && source[i2 + 1] === "/") {
+        const nl = source.indexOf("\n", i2);
+        i2 = nl === -1 ? source.length : nl;
+        continue;
+      } else if (ch === "/" && source[i2 + 1] === "*") {
+        const end = source.indexOf("*/", i2 + 2);
+        i2 = end === -1 ? source.length : end + 2;
+        continue;
+      } else if (ch === '"') {
+        i2++;
+        while (i2 < source.length && source[i2] !== '"') {
+          if (source[i2] === "\\") i2++;
+          i2++;
+        }
+      }
+      i2++;
+    }
+    if (depth2 !== 0) return null;
+    return {
+      boardId: braceMatch[1],
+      body: source.slice(open + 1, i2 - 1),
+      startIndex: braceMatch.index,
+      endIndex: i2
+    };
+  }
+  const m2 = colonMatch;
+  const bodyStart = m2.index + m2[0].length;
+  let depth = 1;
+  let i = bodyStart;
+  let lastBlockToken = "::";
+  let lineStart = bodyStart;
+  while (i < source.length && depth > 0) {
+    const ch = source[i];
+    if (ch === "\n") {
+      lineStart = i + 1;
+      i++;
+      continue;
+    }
+    if (ch === "/" && source[i + 1] === "/") {
+      const nl = source.indexOf("\n", i);
+      i = nl === -1 ? source.length : nl;
+      continue;
+    }
+    if (ch === "/" && source[i + 1] === "*") {
+      const end = source.indexOf("*/", i + 2);
+      i = end === -1 ? source.length : end + 2;
+      continue;
+    }
+    if (ch === '"') {
+      i++;
+      while (i < source.length && source[i] !== '"') {
+        if (source[i] === "\\") i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+    if (ch === ";" && source[i + 1] === ";") {
+      depth--;
+      lastBlockToken = ";;";
+      if (depth === 0) {
+        return {
+          boardId: m2[1],
+          body: source.slice(bodyStart, i),
+          startIndex: m2.index,
+          endIndex: i + 2
+        };
+      }
+      i += 2;
+      continue;
+    }
+    if (ch === ":" && source[i + 1] === ":") {
+      const prevChar = i > 0 ? source[i - 1] : " ";
+      const nextChar = i + 2 < source.length ? source[i + 2] : " ";
+      const isCppScope = /\w/.test(prevChar) && /\w/.test(nextChar);
+      if (!isCppScope) {
+        const linePrefix = source.slice(lineStart, i).trim();
+        const isContinuation = /^(?:otherwise|elif|else)\b/.test(linePrefix);
+        if (!isContinuation || lastBlockToken === ";;") {
+          depth++;
+        }
+        lastBlockToken = "::";
+      }
+      i += 2;
+      continue;
+    }
+    if (!/\s/.test(ch)) {
+      const linePrefix = source.slice(lineStart, i + 1).trim();
+      if (!/^(?:otherwise|elif|else)\b/.test(linePrefix)) {
+        lastBlockToken = "stmt";
+      }
+    }
+    i++;
+  }
+  return null;
+}
+
+// src/lang/hardware/strip.ts
+function stripBoardBlocks(source) {
+  let out = source;
+  for (let i = 0; i < 32; i++) {
+    const block = extractBoardBlock(out);
+    if (!block) break;
+    const removed = out.slice(block.startIndex, block.endIndex);
+    const newlines = removed.split("\n").length - 1;
+    out = out.slice(0, block.startIndex) + "\n".repeat(newlines) + out.slice(block.endIndex);
+  }
+  return out;
+}
+
+// src/lang/linter.ts
+var CORE_SHADOW_PROTECTED = /* @__PURE__ */ new Set([
+  "speak",
+  "say",
+  "measure",
+  "morph",
+  "gather",
+  "pluck",
+  "sift",
+  "each",
+  "fold",
+  "sequence"
+]);
+var STRICT_ARITY_RULES = {
+  measure: { min: 1, max: 1 },
+  morph: { min: 2, max: 2 },
+  canvas: { min: 2, max: 2 },
+  circle: { min: 3, max: 3 },
+  line: { min: 4, max: 4 },
+  triangle: { min: 6, max: 6 },
+  rect: { min: 4, max: 5 },
+  each: { min: 2, max: 2 },
+  sift: { min: 2, max: 2 },
+  fold: { min: 3, max: 3 },
+  root: { min: 1, max: 1 },
+  sqrt: { min: 1, max: 1 },
+  sin: { min: 1, max: 1 },
+  cos: { min: 1, max: 1 },
+  tan: { min: 1, max: 1 },
+  abs: { min: 1, max: 1 },
+  floor: { min: 1, max: 1 },
+  ceil: { min: 1, max: 1 },
+  round: { min: 1, max: 2 },
+  magnitude: { min: 1, max: 1 },
+  ground: { min: 1, max: 1 },
+  elevate: { min: 1, max: 1 },
+  nearby: { min: 1, max: 1 }
+};
+function stripLineComment(line) {
+  let inQuote = null;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuote) {
+      if (ch === "\\") {
+        i++;
+        continue;
+      }
+      if (ch === inQuote) inQuote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      inQuote = ch;
+      continue;
+    }
+    if (ch === "/" && line[i + 1] === "/") {
+      return line.slice(0, i);
+    }
+    if (ch === "#") {
+      return line.slice(0, i);
+    }
+  }
+  return line;
+}
+function isZeroNode(node) {
+  if (node.type === "NumberLiteral" && node.value === 0) return true;
+  if (node.type === "UnaryExpr" && (node.operator === "-" || node.operator === "+") && node.operand.type === "NumberLiteral" && node.operand.value === 0) {
+    return true;
+  }
+  return false;
+}
+function isTerminatorStatement(stmt) {
+  switch (stmt.type) {
+    case "ReturnStatement":
+      return "yield / return";
+    case "BreakStatement":
+      return "yeet / break";
+    case "ContinueStatement":
+      return "skip / continue";
+    case "RaiseStatement":
+      return "hurl / raise";
+    default:
+      return null;
+  }
+}
+function lintSdevSource(source, options = {}) {
+  const diagnostics = [];
+  const seenKeys = /* @__PURE__ */ new Set();
+  const pushDiag = (diag) => {
+    if (options.includeInfo === false && diag.severity === "info") return;
+    const key = `${diag.code}:${diag.line}:${diag.message}`;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+    diagnostics.push(diag);
+  };
+  const aiMode = options.dialect === "ai" || isAiDialect(source);
+  const rawLines = source.split("\n");
+  try {
+    const engineBlockIssues = sdevCheckBlocks(source);
+    for (const [line, msg] of engineBlockIssues) {
+      pushDiag({
+        code: "SDEV001",
+        title: DIAGNOSTIC_CATALOGUE.SDEV001.title,
+        severity: "error",
+        message: `Unbalanced block: ${msg}.`,
+        line,
+        quickFix: {
+          title: "Append closing `;;` delimiter",
+          line: rawLines.length,
+          replacement: `${rawLines[rawLines.length - 1] ?? ""}
+;;`
+        }
+      });
+    }
+  } catch {
+  }
+  let openBlocks = 0;
+  let lastOpenBlockLine = 1;
+  let openParens = 0;
+  let openBrackets = 0;
+  rawLines.forEach((rawLine, idx) => {
+    const lineNo = idx + 1;
+    const code = stripLineComment(rawLine);
+    const trimmed = code.trim();
+    if (!trimmed || trimmed.startsWith("!#") || trimmed.startsWith("#!")) return;
+    let openQuote = null;
+    for (let i = 0; i < code.length; i++) {
+      const ch = code[i];
+      if (openQuote) {
+        if (ch === "\\") {
+          i++;
+          continue;
+        }
+        if (ch === openQuote) openQuote = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") {
+        openQuote = ch;
+        continue;
+      }
+      if (ch === "(") openParens++;
+      else if (ch === ")") openParens--;
+      else if (ch === "[") openBrackets++;
+      else if (ch === "]") openBrackets--;
+    }
+    if (openQuote) {
+      pushDiag({
+        code: "SDEV002",
+        title: DIAGNOSTIC_CATALOGUE.SDEV002.title,
+        severity: "error",
+        message: `Unterminated string literal (${openQuote}) on line ${lineNo}.`,
+        line: lineNo
+      });
+    }
+    const codeWithoutStrings = code.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""');
+    const opens = (codeWithoutStrings.match(/::/g) || []).length;
+    const closes = (codeWithoutStrings.match(/;;/g) || []).length;
+    if (opens > 0) lastOpenBlockLine = lineNo;
+    openBlocks += opens - closes;
+    if (openBlocks < 0) {
+      pushDiag({
+        code: "SDEV001",
+        title: DIAGNOSTIC_CATALOGUE.SDEV001.title,
+        severity: "error",
+        message: "Extra `;;` closes a block that was never opened.",
+        line: lineNo
+      });
+      openBlocks = 0;
+    }
+    if (!aiMode) {
+      if (/^\s*(?:forge\s+)?[A-Za-z_]\w*\s*=\s*[^=>]/.test(codeWithoutStrings) && !/==|!=|<=|>=/.test(codeWithoutStrings)) {
+        const fixed = rawLine.replace(/(\b[A-Za-z_]\w*\s*)=(\s*[^=>])/, "$1be$2");
+        pushDiag({
+          code: "SDEV009",
+          title: DIAGNOSTIC_CATALOGUE.SDEV009.title,
+          severity: "warning",
+          message: "Use `be` for assignment in canonical SDEV (e.g. `forge x be 5`), not `=`.",
+          line: lineNo,
+          suggestion: "be",
+          quickFix: {
+            title: "Replace `=` with `be`",
+            line: lineNo,
+            replacement: fixed
+          }
+        });
+      }
+      const foreignKw = /^\s*(function|const)\s+([A-Za-z_]\w*)/.exec(codeWithoutStrings);
+      if (foreignKw) {
+        const kw = foreignKw[1];
+        const rep = kw === "function" ? "conjure" : "forge";
+        pushDiag({
+          code: "SDEV010",
+          title: DIAGNOSTIC_CATALOGUE.SDEV010.title,
+          severity: "warning",
+          message: `Foreign keyword '${kw}' in canonical SDEV. Did you mean '${rep}'?`,
+          line: lineNo,
+          suggestion: rep,
+          quickFix: {
+            title: `Replace '${kw}' with '${rep}'`,
+            line: lineNo,
+            targetText: kw,
+            replacement: rep
+          }
+        });
+      }
+      if (/^\s*within\s+[A-Za-z_]\w*\s+be\b/.test(codeWithoutStrings)) {
+        pushDiag({
+          code: "SDEV008",
+          title: DIAGNOSTIC_CATALOGUE.SDEV008.title,
+          severity: "warning",
+          message: "`within ... be ...` is the legacy loop dialect; prefer `iterate <item> through <list> ::`.",
+          line: lineNo,
+          suggestion: "iterate"
+        });
+      }
+    }
+    if (/(?:\/|%)\s*0(?![.\d])/.test(codeWithoutStrings)) {
+      pushDiag({
+        code: "SDEV003",
+        title: DIAGNOSTIC_CATALOGUE.SDEV003.title,
+        severity: "error",
+        message: "Division or modulo by literal zero (`/ 0` or `% 0`).",
+        line: lineNo
+      });
+    }
+  });
+  if (openBlocks > 0) {
+    pushDiag({
+      code: "SDEV001",
+      title: DIAGNOSTIC_CATALOGUE.SDEV001.title,
+      severity: "error",
+      message: `${openBlocks} unclosed block${openBlocks > 1 ? "s" : ""} \u2014 missing \`;;\` (opened on line ${lastOpenBlockLine}).`,
+      line: lastOpenBlockLine,
+      quickFix: {
+        title: "Add closing `;;`",
+        line: rawLines.length,
+        replacement: `${rawLines[rawLines.length - 1] ?? ""}
+;;`
+      }
+    });
+  }
+  if (openParens !== 0) {
+    pushDiag({
+      code: "SDEV002",
+      title: DIAGNOSTIC_CATALOGUE.SDEV002.title,
+      severity: "error",
+      message: openParens > 0 ? `${openParens} unclosed parenthesis \`(\`.` : `${-openParens} extra closing parenthesis \`)\`.`,
+      line: rawLines.length
+    });
+  }
+  if (openBrackets !== 0) {
+    pushDiag({
+      code: "SDEV002",
+      title: DIAGNOSTIC_CATALOGUE.SDEV002.title,
+      severity: "error",
+      message: openBrackets > 0 ? `${openBrackets} unclosed bracket \`[\`.` : `${-openBrackets} extra closing bracket \`]\`.`,
+      line: rawLines.length
+    });
+  }
+  const preparedSource = stripBoardBlocks(aiMode ? aiToSdev(source) : source);
+  let ast = null;
+  try {
+    const tokens = new Lexer(preparedSource).tokenize();
+    ast = new Parser(tokens).parse();
+  } catch (err) {
+    if (err instanceof SdevError) {
+      pushDiag({
+        code: "SDEV002",
+        title: DIAGNOSTIC_CATALOGUE.SDEV002.title,
+        severity: "error",
+        message: err.message.replace(/^\[line \d+(?:, col \d+)?\]\s*/, ""),
+        line: err.line || 1,
+        column: err.column
+      });
+    }
+  }
+  if (!ast) {
+    return diagnostics.sort((a, b) => a.line - b.line);
+  }
+  const definedCallables = /* @__PURE__ */ new Set();
+  const declaredVars = /* @__PURE__ */ new Map();
+  const localScopes = /* @__PURE__ */ new Set();
+  const noteVarDecl = (name, line, isParamOrLoop = false) => {
+    if (!name || name === "self" || name === "super") return;
+    localScopes.add(name);
+    if (CORE_SHADOW_PROTECTED.has(name)) {
+      pushDiag({
+        code: "SDEV012",
+        title: DIAGNOSTIC_CATALOGUE.SDEV012.title,
+        severity: "warning",
+        message: `Declaration '${name}' shadows the core SDEV builtin '${name}()'.`,
+        line
+      });
+    }
+    if (!isParamOrLoop && !declaredVars.has(name)) {
+      declaredVars.set(name, { line, used: false });
+    }
+  };
+  const markVarUsed = (name) => {
+    const entry = declaredVars.get(name);
+    if (entry) entry.used = true;
+  };
+  const collectDecls = (node) => {
+    if (!node || typeof node !== "object") return;
+    switch (node.type) {
+      case "Program":
+      case "BlockStatement":
+        for (const s of node.statements) collectDecls(s);
+        return;
+      case "FuncDeclaration":
+        definedCallables.add(node.name);
+        localScopes.add(node.name);
+        for (const p of node.params) noteVarDecl(p, node.line, true);
+        collectDecls(node.body);
+        return;
+      case "ClassDeclaration":
+        definedCallables.add(node.name);
+        localScopes.add(node.name);
+        for (const f2 of node.fields ?? []) collectDecls(f2);
+        for (const m2 of node.methods) {
+          definedCallables.add(m2.name);
+          for (const p of m2.params) noteVarDecl(p, m2.line, true);
+          collectDecls(m2.body);
+        }
+        return;
+      case "LetStatement": {
+        const names = node.targets && node.targets.length > 0 ? node.targets : [node.name];
+        for (const n of names) {
+          noteVarDecl(n, node.line, false);
+          if (node.value.type === "LambdaExpr" || node.value.type === "CallExpr" || node.value.type === "Identifier") {
+            definedCallables.add(n);
+          }
+        }
+        collectDecls(node.value);
+        return;
+      }
+      case "AssignStatement":
+        if (node.declare || !localScopes.has(node.name)) {
+          noteVarDecl(node.name, node.line, false);
+        }
+        if (node.value.type === "LambdaExpr" || node.value.type === "CallExpr") {
+          definedCallables.add(node.name);
+        }
+        collectDecls(node.value);
+        return;
+      case "ForEachStatement":
+        for (const v of node.variables ?? [node.variable]) {
+          noteVarDecl(v, node.line, true);
+        }
+        collectDecls(node.iterable);
+        collectDecls(node.body);
+        if (node.elseBlock) collectDecls(node.elseBlock);
+        return;
+      case "ForInStatement":
+        noteVarDecl(node.variable, node.line, true);
+        collectDecls(node.iterable);
+        collectDecls(node.body);
+        return;
+      case "ImportStatement":
+        if (node.alias) {
+          definedCallables.add(node.alias);
+          noteVarDecl(node.alias, node.line, true);
+        }
+        if (node.names) {
+          for (const item of node.names) {
+            const bound = item.alias ?? item.name;
+            definedCallables.add(bound);
+            noteVarDecl(bound, node.line, true);
+          }
+        }
+        return;
+      case "TryStatement":
+        collectDecls(node.tryBlock);
+        if (node.errorVar) noteVarDecl(node.errorVar, node.line, true);
+        collectDecls(node.catchBlock);
+        for (const h of node.handlers ?? []) {
+          if (h.alias) noteVarDecl(h.alias, node.line, true);
+          collectDecls(h.body);
+        }
+        if (node.elseBlock) collectDecls(node.elseBlock);
+        if (node.finallyBlock) collectDecls(node.finallyBlock);
+        return;
+      case "IfStatement":
+        collectDecls(node.condition);
+        collectDecls(node.thenBranch);
+        if (node.elseBranch) collectDecls(node.elseBranch);
+        return;
+      case "WhileStatement":
+        collectDecls(node.condition);
+        collectDecls(node.body);
+        if (node.elseBlock) collectDecls(node.elseBlock);
+        return;
+      case "LambdaExpr":
+        for (const p of node.params) noteVarDecl(p, node.line, true);
+        collectDecls(node.body);
+        return;
+      default: {
+        const rec = node;
+        for (const key of Object.keys(rec)) {
+          const val = rec[key];
+          if (Array.isArray(val)) {
+            for (const item of val) {
+              if (item && typeof item === "object" && "type" in item) {
+                collectDecls(item);
+              }
+            }
+          } else if (val && typeof val === "object" && "type" in val) {
+            collectDecls(val);
+          }
+        }
+      }
+    }
+  };
+  collectDecls(ast);
+  const checkStatementSequence = (stmts) => {
+    let terminatedBy = null;
+    for (const stmt of stmts) {
+      if (terminatedBy) {
+        pushDiag({
+          code: "SDEV004",
+          title: DIAGNOSTIC_CATALOGUE.SDEV004.title,
+          severity: "warning",
+          message: `Unreachable code after \`${terminatedBy.kind}\` on line ${terminatedBy.line}.`,
+          line: stmt.line
+        });
+        terminatedBy = null;
+      }
+      walkNode(stmt);
+      const term = isTerminatorStatement(stmt);
+      if (term) {
+        terminatedBy = { kind: term, line: stmt.line };
+      }
+    }
+  };
+  const inspectCall = (callNode) => {
+    let calleeName = null;
+    if (callNode.callee.type === "Identifier") {
+      calleeName = callNode.callee.name;
+      markVarUsed(calleeName);
+    } else if (callNode.callee.type === "MemberExpr" && callNode.callee.object.type === "Identifier") {
+      markVarUsed(callNode.callee.object.name);
+      const dotted = `${callNode.callee.object.name}.${callNode.callee.property}`;
+      if (COMMON_API_ALIASES[dotted]) {
+        calleeName = dotted;
+      }
+    }
+    if (!calleeName) return;
+    if (definedCallables.has(calleeName) || localScopes.has(calleeName)) {
+      return;
+    }
+    const api = findApi(calleeName);
+    if (!api) {
+      if (calleeName.startsWith("__")) return;
+      const suggestions = suggestNearestApis(calleeName, 3);
+      const top = suggestions[0];
+      const hintText = top ? ` Did you mean '${top.matchedName}'?` : "";
+      const rawLine = rawLines[callNode.line - 1] ?? "";
+      pushDiag({
+        code: "SDEV006",
+        title: DIAGNOSTIC_CATALOGUE.SDEV006.title,
+        severity: "error",
+        message: `Unknown function '${calleeName}()'.${hintText}`,
+        line: callNode.line,
+        suggestion: top?.matchedName,
+        ...top ? {
+          quickFix: {
+            title: `Replace '${calleeName}' with '${top.matchedName}'`,
+            line: callNode.line,
+            targetText: calleeName,
+            replacement: top.matchedName
+          }
+        } : {}
+      });
+      return;
+    }
+    if (api.deprecated) {
+      pushDiag({
+        code: "SDEV008",
+        title: DIAGNOSTIC_CATALOGUE.SDEV008.title,
+        severity: "warning",
+        message: `'${api.name}()' is deprecated since v${api.deprecated.since}: ${api.deprecated.reason} Did you mean '${api.deprecated.replacement}()'?`,
+        line: callNode.line,
+        suggestion: api.deprecated.replacement,
+        quickFix: {
+          title: `Replace '${api.name}' with '${api.deprecated.replacement}'`,
+          line: callNode.line,
+          targetText: api.name,
+          replacement: api.deprecated.replacement
+        }
+      });
+    }
+    if (api.status === "planned") {
+      pushDiag({
+        code: "SDEV015",
+        title: DIAGNOSTIC_CATALOGUE.SDEV015.title,
+        severity: "info",
+        message: `'${api.name}()' (module '${api.module}') is currently marked as 'planned' on the SDEV roadmap.`,
+        line: callNode.line
+      });
+    }
+    if (options.target && !api.targets.includes(options.target)) {
+      pushDiag({
+        code: "SDEV007",
+        title: DIAGNOSTIC_CATALOGUE.SDEV007.title,
+        severity: "error",
+        message: `Target capability mismatch: '${api.name}()' (module '${api.module}') is not supported on target '${options.target}'. Supported targets: ${api.targets.join(", ")}.`,
+        line: callNode.line
+      });
+    }
+    const arity = STRICT_ARITY_RULES[api.name];
+    if (arity) {
+      const argc = callNode.args.length;
+      if (argc < arity.min || argc > arity.max) {
+        const expected = arity.min === arity.max ? `${arity.min}` : `${arity.min}\u2013${arity.max}`;
+        pushDiag({
+          code: "SDEV011",
+          title: DIAGNOSTIC_CATALOGUE.SDEV011.title,
+          severity: "error",
+          message: `'${api.name}()' expects ${expected} argument${arity.max === 1 ? "" : "s"}, but got ${argc}. Signature: ${api.signature}`,
+          line: callNode.line
+        });
+      }
+    }
+  };
+  const walkNode = (node) => {
+    if (!node || typeof node !== "object") return;
+    switch (node.type) {
+      case "Program":
+      case "BlockStatement":
+        checkStatementSequence(node.statements);
+        return;
+      case "Identifier":
+        markVarUsed(node.name);
+        return;
+      case "LetStatement":
+        walkNode(node.value);
+        return;
+      case "AssignStatement":
+        if (node.value.type === "Identifier" && node.value.name === node.name && !node.declare) {
+          pushDiag({
+            code: "SDEV014",
+            title: DIAGNOSTIC_CATALOGUE.SDEV014.title,
+            severity: "warning",
+            message: `Self-assignment: '${node.name} be ${node.name}' has no effect.`,
+            line: node.line
+          });
+        }
+        walkNode(node.value);
+        return;
+      case "BinaryExpr":
+        if ((node.operator === "/" || node.operator === "%") && isZeroNode(node.right)) {
+          pushDiag({
+            code: "SDEV003",
+            title: DIAGNOSTIC_CATALOGUE.SDEV003.title,
+            severity: "error",
+            message: `Division or modulo by zero (\`${node.operator} 0\`).`,
+            line: node.line
+          });
+        }
+        if ((node.operator === "equals" || node.operator === "==" || node.operator === "differs" || node.operator === "!=") && node.left.type === "Identifier" && node.right.type === "Identifier" && node.left.name === node.right.name) {
+          pushDiag({
+            code: "SDEV014",
+            title: DIAGNOSTIC_CATALOGUE.SDEV014.title,
+            severity: "warning",
+            message: `Comparing '${node.left.name}' to itself with '${node.operator}' is always constant.`,
+            line: node.line
+          });
+        }
+        walkNode(node.left);
+        walkNode(node.right);
+        return;
+      case "IfStatement":
+        if (node.condition.type === "BooleanLiteral") {
+          pushDiag({
+            code: "SDEV013",
+            title: DIAGNOSTIC_CATALOGUE.SDEV013.title,
+            severity: "warning",
+            message: `Constant condition \`${node.condition.value ? "yep" : "nope"}\` in \`ponder\` statement.`,
+            line: node.line
+          });
+        }
+        walkNode(node.condition);
+        walkNode(node.thenBranch);
+        if (node.elseBranch) walkNode(node.elseBranch);
+        return;
+      case "WhileStatement":
+        if (node.condition.type === "BooleanLiteral" && !node.condition.value) {
+          pushDiag({
+            code: "SDEV013",
+            title: DIAGNOSTIC_CATALOGUE.SDEV013.title,
+            severity: "warning",
+            message: "Constant `nope` condition in `cycle` loop \u2014 loop body will never execute.",
+            line: node.line
+          });
+        }
+        walkNode(node.condition);
+        walkNode(node.body);
+        if (node.elseBlock) walkNode(node.elseBlock);
+        return;
+      case "CallExpr":
+        inspectCall(node);
+        if (node.callee.type !== "Identifier") walkNode(node.callee);
+        for (const arg of node.args) walkNode(arg);
+        return;
+      case "FuncDeclaration":
+        walkNode(node.body);
+        return;
+      case "ClassDeclaration":
+        for (const f2 of node.fields ?? []) walkNode(f2);
+        for (const m2 of node.methods) walkNode(m2.body);
+        return;
+      default: {
+        const rec = node;
+        for (const key of Object.keys(rec)) {
+          const val = rec[key];
+          if (Array.isArray(val)) {
+            for (const item of val) {
+              if (item && typeof item === "object") {
+                if ("type" in item) walkNode(item);
+                else {
+                  for (const sub of Object.values(item)) {
+                    if (sub && typeof sub === "object" && "type" in sub) {
+                      walkNode(sub);
+                    }
+                  }
+                }
+              }
+            }
+          } else if (val && typeof val === "object" && "type" in val) {
+            walkNode(val);
+          }
+        }
+      }
+    }
+  };
+  walkNode(ast);
+  for (const [name, info] of declaredVars.entries()) {
+    if (name.startsWith("_")) continue;
+    if (KEYWORD_TOKEN_BY_WORD[name]) continue;
+    if (!info.used) {
+      const rawLine = rawLines[info.line - 1] ?? "";
+      pushDiag({
+        code: "SDEV005",
+        title: DIAGNOSTIC_CATALOGUE.SDEV005.title,
+        severity: "warning",
+        message: `Variable '${name}' is declared but never used. Prefix with '_${name}' if intentional.`,
+        line: info.line,
+        suggestion: `_${name}`,
+        quickFix: {
+          title: `Rename '${name}' to '_${name}'`,
+          line: info.line,
+          targetText: name,
+          replacement: `_${name}`
+        }
+      });
+    }
+  }
+  return diagnostics.sort((a, b) => a.line - b.line);
+}
+
+// cli/index.ts
 init_translator();
 
 // src/components/ide/formatSdev.ts
@@ -25827,10 +33974,10 @@ function hasSignature(source) {
 }
 function readSignature(source) {
   const first = source.split("\n", 1)[0] ?? "";
-  const m = first.match(SIGNATURE_RE);
-  if (!m) return null;
+  const m2 = first.match(SIGNATURE_RE);
+  if (!m2) return null;
   try {
-    const parsed = JSON.parse(fromBase64Url(m[1]));
+    const parsed = JSON.parse(fromBase64Url(m2[1]));
     return parsed && parsed.v === 1 ? parsed : null;
   } catch {
     return null;
@@ -26092,7 +34239,7 @@ function isPublishable(spec) {
 }
 function preludeSource(spec) {
   if (spec.constructs.functions.length === 0) return "";
-  return spec.constructs.functions.map((f) => f.source.trim()).join("\n\n") + "\n";
+  return spec.constructs.functions.map((f2) => f2.source.trim()).join("\n\n") + "\n";
 }
 
 // src/lang/dialect/canonicalize.ts
@@ -26196,9 +34343,9 @@ function rewriteAssignmentForward(code, spec) {
 }
 function rewriteAssignmentReverse(code, spec) {
   const form = spec.style.assignment;
-  const m = code.match(/^(\s*)set\s+([\p{L}\p{N}_]+)\s+to\s+(.+)$/u);
-  if (!m) return code;
-  const [, ws, name, rhs] = m;
+  const m2 = code.match(/^(\s*)set\s+([\p{L}\p{N}_]+)\s+to\s+(.+)$/u);
+  if (!m2) return code;
+  const [, ws, name, rhs] = m2;
   if (form === "equals") return `${ws}${name} = ${rhs}`;
   if (form === "arrow") return `${ws}${rhs} -> ${name}`;
   return code;
@@ -26460,9 +34607,9 @@ function generateDialectDocs(spec) {
 var ADDRESS_RE = /^@([a-z0-9][a-z0-9-]{0,30})\/([a-z0-9][a-z0-9-]{0,38})(?:@(\d+\.\d+\.\d+))?$/;
 var SHARE_CODE_RE = /^[0-9a-f]{8}$/;
 function parseAddress(input) {
-  const m = input.trim().match(ADDRESS_RE);
-  if (!m) return null;
-  return { username: m[1], slug: m[2], version: m[3] ?? null };
+  const m2 = input.trim().match(ADDRESS_RE);
+  if (!m2) return null;
+  return { username: m2[1], slug: m2[2], version: m2[3] ?? null };
 }
 function formatAddress(a) {
   return `@${a.username}/${a.slug}${a.version ? `@${a.version}` : ""}`;
@@ -26510,9 +34657,9 @@ function forgetBundle(address) {
 function libraryReferences(source) {
   const refs = [];
   const re2 = /\buse\s+"(@[^"]+)"/g;
-  let m;
-  while (m = re2.exec(source)) {
-    const address = parseAddress(m[1]);
+  let m2;
+  while (m2 = re2.exec(source)) {
+    const address = parseAddress(m2[1]);
     if (address) refs.push(address);
   }
   return refs;
@@ -26523,10 +34670,10 @@ async function fetchLibrary(address) {
   try {
     const { data: owner } = await db.from("usernames").select("user_id").eq("username", address.username).maybeSingle();
     if (!owner) throw new Error(`No user named @${address.username}.`);
-    const { data: lib } = await db.from("libraries").select("id, latest_version").eq("user_id", owner.user_id).eq("slug", address.slug).maybeSingle();
-    if (!lib) throw new Error(`No library ${key}.`);
-    const version3 = address.version ?? lib.latest_version;
-    const { data: ver } = await db.from("library_versions").select("version, modules").eq("library_id", lib.id).eq("version", version3).maybeSingle();
+    const { data: lib2 } = await db.from("libraries").select("id, latest_version").eq("user_id", owner.user_id).eq("slug", address.slug).maybeSingle();
+    if (!lib2) throw new Error(`No library ${key}.`);
+    const version3 = address.version ?? lib2.latest_version;
+    const { data: ver } = await db.from("library_versions").select("version, modules").eq("library_id", lib2.id).eq("version", version3).maybeSingle();
     if (!ver) throw new Error(`${key} has no version ${version3}.`);
     const bundle = { address: key, version: ver.version, modules: ver.modules ?? {}, fetchedAt: Date.now() };
     cacheBundle(bundle);
@@ -26615,10 +34762,10 @@ async function syncExtensions(userId) {
   }
   return cachedExtensions();
 }
-function installExtension(ext) {
-  const next = cachedExtensions().filter((e) => e.id !== ext.id);
-  writeJson(CACHE_KEY2, [...next, ext]);
-  setExtensionEnabled(ext.id, true);
+function installExtension(ext2) {
+  const next = cachedExtensions().filter((e) => e.id !== ext2.id);
+  writeJson(CACHE_KEY2, [...next, ext2]);
+  setExtensionEnabled(ext2.id, true);
 }
 function activeExtensions() {
   const on = new Set(enabledIds());
@@ -26796,20 +34943,20 @@ async function requireUser() {
   return user;
 }
 function explain(message) {
-  const m = message.toLowerCase();
-  if (m.includes("invalid login credentials")) {
+  const m2 = message.toLowerCase();
+  if (m2.includes("invalid login credentials")) {
     return "That email and password combination was not accepted.\nIf you signed up with Google, set a password on the website first, or use: sdev auth code <email>";
   }
-  if (m.includes("email not confirmed")) {
+  if (m2.includes("email not confirmed")) {
     return "This account still needs email confirmation. Open the link we emailed you, then try again.";
   }
-  if (m.includes("email logins are disabled") || m.includes("signups not allowed") || m.includes("email provider")) {
+  if (m2.includes("email logins are disabled") || m2.includes("signups not allowed") || m2.includes("email provider")) {
     return "Password sign-in is not enabled for this account type. Try: sdev auth code <email>";
   }
-  if (m.includes("token has expired") || m.includes("invalid token")) {
+  if (m2.includes("token has expired") || m2.includes("invalid token")) {
     return "That code is no longer valid. Request a fresh one with: sdev auth code <email>";
   }
-  if (m.includes("fetch failed") || m.includes("network") || m.includes("enotfound")) {
+  if (m2.includes("fetch failed") || m2.includes("network") || m2.includes("enotfound")) {
     return "Could not reach the sdev backend. Check your internet connection or proxy settings.";
   }
   return message;
@@ -26948,47 +35095,6 @@ init_env();
 import { readFileSync as readFileSync3, existsSync as existsSync3 } from "node:fs";
 import { resolve as resolve2, dirname as dirname2, isAbsolute as isAbsolute2 } from "node:path";
 
-// src/lang/hardware/transpile.ts
-function extractBoardBlock(source) {
-  const m = /\bboard\s+"([^"]+)"\s*\{/.exec(source);
-  if (!m) return null;
-  const open = m.index + m[0].length - 1;
-  let depth = 1;
-  let i = open + 1;
-  while (i < source.length && depth > 0) {
-    const ch = source[i];
-    if (ch === "{") depth++;
-    else if (ch === "}") depth--;
-    else if (ch === "/" && source[i + 1] === "/") {
-      const nl = source.indexOf("\n", i);
-      i = nl === -1 ? source.length : nl;
-      continue;
-    } else if (ch === '"') {
-      i++;
-      while (i < source.length && source[i] !== '"') {
-        if (source[i] === "\\") i++;
-        i++;
-      }
-    }
-    i++;
-  }
-  if (depth !== 0) return null;
-  return { boardId: m[1], body: source.slice(open + 1, i - 1), startIndex: m.index, endIndex: i };
-}
-
-// src/lang/hardware/strip.ts
-function stripBoardBlocks(source) {
-  let out = source;
-  for (let i = 0; i < 32; i++) {
-    const block = extractBoardBlock(out);
-    if (!block) break;
-    const removed = out.slice(block.startIndex, block.endIndex);
-    const newlines = removed.split("\n").length - 1;
-    out = out.slice(0, block.startIndex) + "\n".repeat(newlines) + out.slice(block.endIndex);
-  }
-  return out;
-}
-
 // src/lang/agent/directives.ts
 var DIRECTIVE_RE = /^\s*!#\s*agent\s*:\s*([a-z]+)(?:\s*:\s*([a-z]+))?\s*$/i;
 function scanDirectives(source) {
@@ -26997,11 +35103,11 @@ function scanDirectives(source) {
   let learn = null;
   let found = false;
   const lines = source.split("\n").map((line) => {
-    const m = line.match(DIRECTIVE_RE);
-    if (!m) return line;
+    const m2 = line.match(DIRECTIVE_RE);
+    if (!m2) return line;
     found = true;
-    const head2 = m[1].toLowerCase();
-    const tail = (m[2] ?? "").toLowerCase();
+    const head2 = m2[1].toLowerCase();
+    const tail = (m2[2] ?? "").toLowerCase();
     switch (head2) {
       case "off":
         mode = "off";
@@ -27201,12 +35307,12 @@ var COMPARISONS = [
 var LEAD = /^(?:(?:please|can you|could you|would you|i want to|i need to|i want you to|let'?s|now)\s+)*(?:calculate|calc|compute|evaluate|eval|solve|work\s+out|figure\s+out|find(?:\s+out)?|tell\s+me|give\s+me|show\s+me|print|display|output|say|what\s+is|what'?s|whats|what\s+are|how\s+much\s+is|how\s+much\s+are|how\s+many\s+is|result\s+of|answer)\b\s*/i;
 var FUNCS = /* @__PURE__ */ new Set(["sqrt", "abs", "round", "floor", "ceil", "min", "max"]);
 function numberWords(s) {
-  return s.replace(/\b(?:(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million)(?:[\s-]+(?:and\s+)?(?=zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million))?)+\b/gi, (m) => {
+  return s.replace(/\b(?:(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million)(?:[\s-]+(?:and\s+)?(?=zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million))?)+\b/gi, (m2) => {
     let total = 0, cur = 0;
-    for (const w of m.toLowerCase().split(/[\s-]+/)) {
+    for (const w of m2.toLowerCase().split(/[\s-]+/)) {
       if (w === "and") continue;
       const v = NUMBER_WORDS[w];
-      if (v === void 0) return m;
+      if (v === void 0) return m2;
       if (v === 100) cur = (cur || 1) * 100;
       else if (v >= 1e3) {
         total += (cur || 1) * v;
@@ -27223,10 +35329,10 @@ function operators(s) {
   return s.replace(/\bmultiplied\s+by\b/gi, " * ").replace(/\bdivided\s+by\b/gi, " / ").replace(/\b(?:raised\s+)?to\s+the\s+power\s+of\b/gi, " ** ").replace(/\bto\s+the\s+(\d+)(?:st|nd|rd|th)\s+power\b/gi, " ** $1").replace(/\bpower\b/gi, " ** ").replace(/(\S+)\s+squared\b/gi, "($1 ** 2)").replace(/(\S+)\s+cubed\b/gi, "($1 ** 3)").replace(/\bsquare\s+root\s+of\s+(\S+)/gi, "sqrt($1)").replace(/\bsqrt\s+(?!\()(\S+)/gi, "sqrt($1)").replace(/\b(?:the\s+)?square\s+of\s+(\S+)/gi, "($1 ** 2)").replace(/\b(?:the\s+)?cube\s+of\s+(\S+)/gi, "($1 ** 3)").replace(/\babsolute\s+value\s+of\s+(\S+)/gi, "abs($1)").replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+of\s+(\S+)/gi, "($1 * $2 / 100)").replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)(?!\s*[\d(A-Za-z_])/gi, "($1 / 100)").replace(/\b(?:plus|add|added\s+to|and)\b/gi, " + ").replace(/\b(?:minus|less|take\s+away)\b/gi, " - ").replace(/\b(?:times|multiply)\b/gi, " * ").replace(/(\d)\s*[x×]\s*(\d)/g, "$1 * $2").replace(/[×]/g, " * ").replace(/[÷]/g, " / ").replace(/\^/g, " ** ").replace(/\b(?:over)\b/gi, " / ").replace(/\b(?:mod|modulo|remainder\s+of)\b/gi, " % ").replace(/\s+/g, " ").trim();
 }
 function valid(expr, known) {
-  if (!expr || !/\d/.test(expr) && ![...expr.matchAll(/[A-Za-z_]\w*/g)].some((m) => known.has(m[0]))) return false;
+  if (!expr || !/\d/.test(expr) && ![...expr.matchAll(/[A-Za-z_]\w*/g)].some((m2) => known.has(m2[0]))) return false;
   if (!/^[\w\s.+\-*/%(),]+$/.test(expr)) return false;
-  for (const m of expr.matchAll(/[A-Za-z_]\w*/g)) {
-    if (!FUNCS.has(m[0]) && !known.has(m[0])) return false;
+  for (const m2 of expr.matchAll(/[A-Za-z_]\w*/g)) {
+    if (!FUNCS.has(m2[0]) && !known.has(m2[0])) return false;
   }
   let depth = 0;
   for (const c of expr) {
@@ -27248,26 +35354,26 @@ function mathRequest(stmt, known = /* @__PURE__ */ new Set()) {
   let s = numberWords(raw);
   const hadLead = LEAD.test(s);
   s = s.replace(LEAD, "").replace(/^(?:the\s+)?(?:value|result|answer)\s+of\s+/i, "").replace(/^the\s+/i, "").trim();
-  let m;
+  let m2;
   let expr = null;
-  if (m = s.match(/^sum\s+of\s+(.+)$/i)) expr = list(m[1]).map(operand).join(" + ");
-  else if (m = s.match(/^product\s+of\s+(.+)$/i)) expr = list(m[1]).map(operand).join(" * ");
-  else if (m = s.match(/^(?:average|mean)\s+of\s+(.+)$/i)) {
-    const l = list(m[1]).map(operand);
+  if (m2 = s.match(/^sum\s+of\s+(.+)$/i)) expr = list(m2[1]).map(operand).join(" + ");
+  else if (m2 = s.match(/^product\s+of\s+(.+)$/i)) expr = list(m2[1]).map(operand).join(" * ");
+  else if (m2 = s.match(/^(?:average|mean)\s+of\s+(.+)$/i)) {
+    const l = list(m2[1]).map(operand);
     expr = `(${l.join(" + ")}) / ${l.length}`;
-  } else if (m = s.match(/^difference\s+(?:between|of)\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m[1]} - ${m[2]}`;
-  else if (m = s.match(/^quotient\s+of\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m[1]} / ${m[2]}`;
-  else if (m = s.match(/^(?:max(?:imum)?|largest|biggest)\s+of\s+(.+)$/i)) expr = `max(${list(m[1]).join(", ")})`;
-  else if (m = s.match(/^(?:min(?:imum)?|smallest)\s+of\s+(.+)$/i)) expr = `min(${list(m[1]).join(", ")})`;
-  else if (m = s.match(/^subtract\s+(\S+)\s+from\s+(\S+)$/i)) expr = `${m[2]} - ${m[1]}`;
-  else if (m = s.match(/^take\s+(\S+)\s+(?:away\s+)?from\s+(\S+)$/i)) expr = `${m[2]} - ${m[1]}`;
-  else if (m = s.match(/^add\s+(.+?)\s+to\s+(\S+)$/i)) expr = `${m[1]} + ${m[2]}`;
-  else if (m = s.match(/^add\s+(.+)$/i)) expr = list(m[1]).join(" + ");
-  else if (m = s.match(/^multiply\s+(\S+)\s+(?:by|and|with|times)\s+(\S+)$/i)) expr = `${m[1]} * ${m[2]}`;
-  else if (m = s.match(/^divide\s+(\S+)\s+(?:by|into)\s+(\S+)$/i)) expr = `${m[1]} / ${m[2]}`;
-  else if (m = s.match(/^(\S+)\s+divided\s+into\s+(\S+)$/i)) expr = `${m[2]} / ${m[1]}`;
-  else if (m = s.match(/^(?:square|squared)\s+(\S+)$/i)) expr = `${m[1]} ** 2`;
-  else if (m = s.match(/^round\s+(.+)$/i)) expr = `round(${operators(m[1])})`;
+  } else if (m2 = s.match(/^difference\s+(?:between|of)\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m2[1]} - ${m2[2]}`;
+  else if (m2 = s.match(/^quotient\s+of\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m2[1]} / ${m2[2]}`;
+  else if (m2 = s.match(/^(?:max(?:imum)?|largest|biggest)\s+of\s+(.+)$/i)) expr = `max(${list(m2[1]).join(", ")})`;
+  else if (m2 = s.match(/^(?:min(?:imum)?|smallest)\s+of\s+(.+)$/i)) expr = `min(${list(m2[1]).join(", ")})`;
+  else if (m2 = s.match(/^subtract\s+(\S+)\s+from\s+(\S+)$/i)) expr = `${m2[2]} - ${m2[1]}`;
+  else if (m2 = s.match(/^take\s+(\S+)\s+(?:away\s+)?from\s+(\S+)$/i)) expr = `${m2[2]} - ${m2[1]}`;
+  else if (m2 = s.match(/^add\s+(.+?)\s+to\s+(\S+)$/i)) expr = `${m2[1]} + ${m2[2]}`;
+  else if (m2 = s.match(/^add\s+(.+)$/i)) expr = list(m2[1]).join(" + ");
+  else if (m2 = s.match(/^multiply\s+(\S+)\s+(?:by|and|with|times)\s+(\S+)$/i)) expr = `${m2[1]} * ${m2[2]}`;
+  else if (m2 = s.match(/^divide\s+(\S+)\s+(?:by|into)\s+(\S+)$/i)) expr = `${m2[1]} / ${m2[2]}`;
+  else if (m2 = s.match(/^(\S+)\s+divided\s+into\s+(\S+)$/i)) expr = `${m2[2]} / ${m2[1]}`;
+  else if (m2 = s.match(/^(?:square|squared)\s+(\S+)$/i)) expr = `${m2[1]} ** 2`;
+  else if (m2 = s.match(/^round\s+(.+)$/i)) expr = `round(${operators(m2[1])})`;
   else expr = s;
   expr = expr ? operators(expr) : null;
   if (!expr || !valid(expr, known)) return null;
@@ -27302,59 +35408,59 @@ function taskRequest(stmt, known = /* @__PURE__ */ new Set(), quoted) {
   const s = stmt.trim().replace(PLEASE, "").replace(/[.!?]+\s*$/, "").trim();
   const head2 = s.split(/\s+/)[0]?.toLowerCase() ?? "";
   if (known.has(head2)) return null;
-  let m;
-  if ((m = s.match(/^(?:count|print|show|say|list|display|output|write)?\s*(?:all\s+)?(?:the\s+)?(?:numbers?\s+)?(?:from\s+)?(\S+)\s+(?:to|through|until|till|-)\s+(\S+)(?:\s+by\s+(\S+))?$/i)) && /^(?:count|print|show|say|list|display|output|write|numbers?|from)/i.test(s)) {
-    const a = num(m[1]), b = num(m[2]), step = m[3] ? num(m[3]) : "1";
+  let m2;
+  if ((m2 = s.match(/^(?:count|print|show|say|list|display|output|write)?\s*(?:all\s+)?(?:the\s+)?(?:numbers?\s+)?(?:from\s+)?(\S+)\s+(?:to|through|until|till|-)\s+(\S+)(?:\s+by\s+(\S+))?$/i)) && /^(?:count|print|show|say|list|display|output|write|numbers?|from)/i.test(s)) {
+    const a = num(m2[1]), b = num(m2[2]), step = m2[3] ? num(m2[3]) : "1";
     if (a !== null && b !== null && step !== null) {
       const down = Number(a) > Number(b);
       return down ? [`set i to ${a}`, `while i >= ${b}`, "  say i", `  set i to i - ${step}`, "end"] : [`set i to ${a}`, `while i <= ${b}`, "  say i", `  set i to i + ${step}`, "end"];
     }
   }
-  if ((m = s.match(/^count\s+(?:up\s+)?to\s+(\S+)$/i)) && num(m[1]) !== null) {
-    return ["set i to 1", `while i <= ${num(m[1])}`, "  say i", "  set i to i + 1", "end"];
+  if ((m2 = s.match(/^count\s+(?:up\s+)?to\s+(\S+)$/i)) && num(m2[1]) !== null) {
+    return ["set i to 1", `while i <= ${num(m2[1])}`, "  say i", "  set i to i + 1", "end"];
   }
-  if ((m = s.match(/^count\s+down\s+from\s+(\S+)$/i)) && num(m[1]) !== null) {
-    return [`set i to ${num(m[1])}`, "while i > 0", "  say i", "  set i to i - 1", "end"];
+  if ((m2 = s.match(/^count\s+down\s+from\s+(\S+)$/i)) && num(m2[1]) !== null) {
+    return [`set i to ${num(m2[1])}`, "while i > 0", "  say i", "  set i to i - 1", "end"];
   }
-  if ((m = s.match(/^(?:say|print|show|write|display|output|repeat)\s+(.+?)\s+(\S+)\s+times$/i)) && num(m[2]) !== null) {
-    const what = known.has(m[1].trim()) ? m[1].trim() : text2(m[1]);
-    return ["set i to 0", `while i < ${num(m[2])}`, `  say ${what}`, "  set i to i + 1", "end"];
+  if ((m2 = s.match(/^(?:say|print|show|write|display|output|repeat)\s+(.+?)\s+(\S+)\s+times$/i)) && num(m2[2]) !== null) {
+    const what = known.has(m2[1].trim()) ? m2[1].trim() : text2(m2[1]);
+    return ["set i to 0", `while i < ${num(m2[2])}`, `  say ${what}`, "  set i to i + 1", "end"];
   }
   if (/^(?:flip|toss)\s+(?:a\s+)?coin$/i.test(s)) return ['say pick(["heads", "tails"])'];
   const subject = (w) => known.has(w.trim()) ? w.trim() : text2(w);
-  if ((m = s.replace(OUT, "").match(/^(?:reverse|backwards?)\s+(?:of\s+)?(.+)$/i)) || (m = s.replace(OUT, "").match(/^(.+?)\s+(?:reversed|backwards)$/i))) {
-    return [`say reverse(${subject(m[1])})`];
+  if ((m2 = s.replace(OUT, "").match(/^(?:reverse|backwards?)\s+(?:of\s+)?(.+)$/i)) || (m2 = s.replace(OUT, "").match(/^(.+?)\s+(?:reversed|backwards)$/i))) {
+    return [`say reverse(${subject(m2[1])})`];
   }
-  if ((m = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:uppercase|upper\s*case|capitals|caps)$/i)) || (m = s.replace(OUT, "").match(/^(?:uppercase|capitalize all)\s+(.+)$/i))) {
-    return [`say upper(${/^make\s/i.test(s) ? text2(m[1]) : subject(m[1])})`];
+  if ((m2 = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:uppercase|upper\s*case|capitals|caps)$/i)) || (m2 = s.replace(OUT, "").match(/^(?:uppercase|capitalize all)\s+(.+)$/i))) {
+    return [`say upper(${/^make\s/i.test(s) ? text2(m2[1]) : subject(m2[1])})`];
   }
-  if ((m = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:lowercase|lower\s*case|small letters)$/i)) || (m = s.replace(OUT, "").match(/^lowercase\s+(.+)$/i))) {
-    return [`say lower(${/^make\s/i.test(s) ? text2(m[1]) : subject(m[1])})`];
+  if ((m2 = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:lowercase|lower\s*case|small letters)$/i)) || (m2 = s.replace(OUT, "").match(/^lowercase\s+(.+)$/i))) {
+    return [`say lower(${/^make\s/i.test(s) ? text2(m2[1]) : subject(m2[1])})`];
   }
-  if ((m = s.match(/^(?:what\s+is\s+|what's\s+|show\s+|tell\s+me\s+|give\s+me\s+)?(?:the\s+)?(?:length|size)\s+of\s+(.+)$/i)) || (m = s.match(/^how\s+(?:many|much)\s+(?:letters|characters|chars)\s+(?:are\s+)?(?:in|does)\s+(.+?)(?:\s+have)?$/i)) || (m = s.match(/^how\s+long\s+is\s+(.+)$/i))) {
-    const n = nums(m[1]);
-    return [`say len(${n && n.length > 1 ? `[${n.join(", ")}]` : subject(m[1])})`];
+  if ((m2 = s.match(/^(?:what\s+is\s+|what's\s+|show\s+|tell\s+me\s+|give\s+me\s+)?(?:the\s+)?(?:length|size)\s+of\s+(.+)$/i)) || (m2 = s.match(/^how\s+(?:many|much)\s+(?:letters|characters|chars)\s+(?:are\s+)?(?:in|does)\s+(.+?)(?:\s+have)?$/i)) || (m2 = s.match(/^how\s+long\s+is\s+(.+)$/i))) {
+    const n = nums(m2[1]);
+    return [`say len(${n && n.length > 1 ? `[${n.join(", ")}]` : subject(m2[1])})`];
   }
-  if (m = s.match(/^(?:is|check if|check whether|tell me if)\s+(\S+)\s+(?:is\s+)?(?:an?\s+)?(even|odd)(?:\s+or\s+(?:even|odd))?$/i)) {
-    const n = num(m[1]) ?? (known.has(m[1]) ? m[1] : null);
+  if (m2 = s.match(/^(?:is|check if|check whether|tell me if)\s+(\S+)\s+(?:is\s+)?(?:an?\s+)?(even|odd)(?:\s+or\s+(?:even|odd))?$/i)) {
+    const n = num(m2[1]) ?? (known.has(m2[1]) ? m2[1] : null);
     if (n !== null) return [`if ${n} % 2 is 0`, '  say "even"', "else", '  say "odd"', "end"];
   }
-  if (m = s.match(/^(?:(?:give|show|pick|generate|roll|make|get)\s+(?:me\s+)?)?(?:a\s+)?random\s+(?:whole\s+)?number\s+(?:between|from)\s+(\S+)\s+(?:and|to)\s+(\S+)$/i)) {
-    const a = num(m[1]), b = num(m[2]);
+  if (m2 = s.match(/^(?:(?:give|show|pick|generate|roll|make|get)\s+(?:me\s+)?)?(?:a\s+)?random\s+(?:whole\s+)?number\s+(?:between|from)\s+(\S+)\s+(?:and|to)\s+(\S+)$/i)) {
+    const a = num(m2[1]), b = num(m2[2]);
     if (a !== null && b !== null) return [`say randint(${a}, ${b})`];
   }
   if (/^(?:roll\s+(?:a\s+)?(?:die|dice)|throw\s+(?:a\s+)?dice?)$/i.test(s)) return ["say randint(1, 6)"];
-  if (m = s.replace(OUT, "").match(/^sort\s+(?:the\s+)?(?:numbers\s+)?(.+?)(?:\s+(?:from\s+)?(?:biggest|largest|highest)\s+(?:to|first).*)?$/i)) {
-    const n = nums(m[1]);
+  if (m2 = s.replace(OUT, "").match(/^sort\s+(?:the\s+)?(?:numbers\s+)?(.+?)(?:\s+(?:from\s+)?(?:biggest|largest|highest)\s+(?:to|first).*)?$/i)) {
+    const n = nums(m2[1]);
     const desc = /biggest|largest|highest|descending/i.test(s);
     if (n) return [desc ? `say sortDesc([${n.join(", ")}])` : `say sort([${n.join(", ")}])`];
   }
-  if ((m = s.match(/^(?:print\s+|show\s+|make\s+|write\s+)?(?:the\s+)?(?:multiplication|times)\s+table\s+(?:of|for)\s+(\S+)$/i)) || (m = s.match(/^(?:print\s+|show\s+)?(?:the\s+)?(\S+)\s+times\s+table$/i))) {
-    const n = num(m[1]);
+  if ((m2 = s.match(/^(?:print\s+|show\s+|make\s+|write\s+)?(?:the\s+)?(?:multiplication|times)\s+table\s+(?:of|for)\s+(\S+)$/i)) || (m2 = s.match(/^(?:print\s+|show\s+)?(?:the\s+)?(\S+)\s+times\s+table$/i))) {
+    const n = num(m2[1]);
     if (n !== null) return ["set i to 1", "while i <= 10", `  say str(${n}) + " x " + str(i) + " = " + str(${n} * i)`, "  set i to i + 1", "end"];
   }
-  if ((m = s.match(/^(?:say\s+)?(?:hello|hi|hey)\s+to\s+(.+)$/i)) || (m = s.match(/^greet\s+(.+)$/i))) {
-    const who = m[1].trim();
+  if ((m2 = s.match(/^(?:say\s+)?(?:hello|hi|hey)\s+to\s+(.+)$/i)) || (m2 = s.match(/^greet\s+(.+)$/i))) {
+    const who = m2[1].trim();
     return [known.has(who) ? `say "Hello, " + ${who}` : `say ${JSON.stringify(`Hello, ${who}`)}`];
   }
   return null;
@@ -27620,12 +35726,12 @@ var ASK_PROMPT_ONLY = /^(?:for\s+)?(\u0000\d+\u0000)\s*[.:]?$/u;
 var ASK_NAME_ONLY = new RegExp(`^(?:for\\s+)?(?:(?:the|a|an|their|your|his|her|my)\\s+)?(${NAME_PAT})\\s*[?.:]?$`, "iu");
 function parseAsk(rest) {
   const r = rest.trim().replace(/^(?:the\s+)?(?:user|person|player|them)\s+(?:for\s+)?/i, "").replace(/^\(|\)$/g, "").trim();
-  let m = r.match(ASK_INTO);
-  if (m) return { name: m[2], prompt: m[1] ?? null };
-  m = r.match(ASK_PROMPT_ONLY);
-  if (m) return { name: "answer", prompt: m[1] };
-  m = r.match(ASK_NAME_ONLY);
-  if (m) return { name: m[1], prompt: null };
+  let m2 = r.match(ASK_INTO);
+  if (m2) return { name: m2[2], prompt: m2[1] ?? null };
+  m2 = r.match(ASK_PROMPT_ONLY);
+  if (m2) return { name: "answer", prompt: m2[1] };
+  m2 = r.match(ASK_NAME_ONLY);
+  if (m2) return { name: m2[1], prompt: null };
   return null;
 }
 function escapeRe3(s) {
@@ -27643,14 +35749,14 @@ function scanAsks(lines, words) {
       const toks = wordsOf(stmt);
       if (!toks.length) continue;
       if (words.get(toks[0].toLowerCase()) === "ask") {
-        const f = parseAsk(stmt.slice(toks[0].length));
-        if (f) asks.set(f.name, text3(f.prompt));
+        const f2 = parseAsk(stmt.slice(toks[0].length));
+        if (f2) asks.set(f2.name, text3(f2.prompt));
         continue;
       }
-      const m = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
-      if (m) {
-        const rt = wordsOf(m[2]);
-        if (rt[0] && words.get(rt[0].toLowerCase().replace(/\($/, "")) === "ask") asks.set(m[1], text3(rt[1]));
+      const m2 = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m2) {
+        const rt = wordsOf(m2[2]);
+        if (rt[0] && words.get(rt[0].toLowerCase().replace(/\($/, "")) === "ask") asks.set(m2[1], text3(rt[1]));
       }
     }
   }
@@ -27684,31 +35790,31 @@ function scanAsks(lines, words) {
 function fillPlaceholders(literal, known) {
   const inner = literal.slice(1, -1);
   const re2 = /\[([\p{L}_][\p{L}\p{N}_]*)\]|\{([\p{L}_][\p{L}\p{N}_]*)\}/gu;
-  if (![...inner.matchAll(re2)].some((m) => known.has(m[1] ?? m[2]))) return literal;
+  if (![...inner.matchAll(re2)].some((m2) => known.has(m2[1] ?? m2[2]))) return literal;
   const pieces = [];
   let last = 0;
-  for (const m of inner.matchAll(re2)) {
-    const name = m[1] ?? m[2];
+  for (const m2 of inner.matchAll(re2)) {
+    const name = m2[1] ?? m2[2];
     if (!known.has(name)) continue;
-    if (m.index > last) pieces.push('"' + inner.slice(last, m.index) + '"');
+    if (m2.index > last) pieces.push('"' + inner.slice(last, m2.index) + '"');
     pieces.push(`str(${name})`);
-    last = m.index + m[0].length;
+    last = m2.index + m2[0].length;
   }
   if (last < inner.length) pieces.push('"' + inner.slice(last) + '"');
   return "(" + pieces.join(" + ") + ")";
 }
 function counting(stmt) {
   const s = stmt.replace(/[.:]\s*$/, "").trim();
-  let m = s.match(new RegExp(`^(?:add|plus)\\s+(.+?)\\s+(?:to|onto)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
-  if (m) return { name: m[2], op: "+", by: m[1] };
-  m = s.match(new RegExp(`^(?:subtract|take|remove|minus)\\s+(.+?)\\s+(?:from|off)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
-  if (m) return { name: m[2], op: "-", by: m[1] };
-  m = s.match(new RegExp(`^(increase|raise|bump|increment|decrease|reduce|decrement)\\s+(?:the\\s+)?(${NAME_PAT})(?:\\s+by\\s+(.+))?$`, "iu"));
-  if (m) return { name: m[2], op: /^(?:decrease|reduce|decrement)$/i.test(m[1]) ? "-" : "+", by: m[3] ?? "1" };
-  m = s.match(new RegExp(`^(${NAME_PAT})\\s*(\\+\\+|--)$`, "u"));
-  if (m) return { name: m[1], op: m[2] === "++" ? "+" : "-", by: "1" };
-  m = s.match(new RegExp(`^(${NAME_PAT})\\s*([+-])=\\s*(.+)$`, "u"));
-  if (m) return { name: m[1], op: m[2], by: m[3] };
+  let m2 = s.match(new RegExp(`^(?:add|plus)\\s+(.+?)\\s+(?:to|onto)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
+  if (m2) return { name: m2[2], op: "+", by: m2[1] };
+  m2 = s.match(new RegExp(`^(?:subtract|take|remove|minus)\\s+(.+?)\\s+(?:from|off)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
+  if (m2) return { name: m2[2], op: "-", by: m2[1] };
+  m2 = s.match(new RegExp(`^(increase|raise|bump|increment|decrease|reduce|decrement)\\s+(?:the\\s+)?(${NAME_PAT})(?:\\s+by\\s+(.+))?$`, "iu"));
+  if (m2) return { name: m2[2], op: /^(?:decrease|reduce|decrement)$/i.test(m2[1]) ? "-" : "+", by: m2[3] ?? "1" };
+  m2 = s.match(new RegExp(`^(${NAME_PAT})\\s*(\\+\\+|--)$`, "u"));
+  if (m2) return { name: m2[1], op: m2[2] === "++" ? "+" : "-", by: "1" };
+  m2 = s.match(new RegExp(`^(${NAME_PAT})\\s*([+-])=\\s*(.+)$`, "u"));
+  if (m2) return { name: m2[1], op: m2[2], by: m2[3] };
   return null;
 }
 function collectNames(lines, words, seed) {
@@ -27724,8 +35830,8 @@ function collectNames(lines, words, seed) {
       if (!toks.length) continue;
       const head2 = words.get(toks[0].toLowerCase());
       if (head2 === "ask") {
-        const f = parseAsk(stmt.slice(toks[0].length));
-        if (f) names.add(f.name);
+        const f2 = parseAsk(stmt.slice(toks[0].length));
+        if (f2) names.add(f2.name);
         continue;
       }
       if (head2 === "set" && toks[1]) {
@@ -27742,8 +35848,8 @@ function collectNames(lines, words, seed) {
         if (each > 1) names.add(toks[each - 1]);
         continue;
       }
-      const m = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
-      if (m && nameable(m[1]) && (!head2 || NAMEABLE_INTENTS.has(head2)) && !/^(?:if|when|while)$/i.test(toks[0])) names.add(m[1]);
+      const m2 = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m2 && nameable(m2[1]) && (!head2 || NAMEABLE_INTENTS.has(head2)) && !/^(?:if|when|while)$/i.test(toks[0])) names.add(m2[1]);
     }
   }
   return names;
@@ -27835,9 +35941,9 @@ function repair(source, ctx = {}) {
         }
         continue;
       }
-      const math = mathRequest(stmt, known);
-      if (math !== null) {
-        rewritten.push(math.startsWith("(") ? `say (${math})` : `say ${math}`);
+      const math2 = mathRequest(stmt, known);
+      if (math2 !== null) {
+        rewritten.push(math2.startsWith("(") ? `say (${math2})` : `say ${math2}`);
         continue;
       }
       const selfAssign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
@@ -27878,13 +35984,13 @@ function repair(source, ctx = {}) {
         }
         case "set": {
           learn(headKey, "set");
-          const m = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
-          if (m) {
-            const name = safeName(m[1]);
-            if (name !== m[1]) renames.set(m[1], name);
+          const m2 = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
+          if (m2) {
+            const name = safeName(m2[1]);
+            if (name !== m2[1]) renames.set(m2[1], name);
             known.add(name);
-            const asked = askRhs(m[2]);
-            rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(m[2], known, renames)}`);
+            const asked = askRhs(m2[2]);
+            rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(m2[2], known, renames)}`);
             continue;
           }
           const parts = wordsOf(rest);
@@ -27991,7 +36097,7 @@ function repair(source, ctx = {}) {
       unresolved.push(lineNo);
     }
     const joined = rewritten.join("\n" + indent);
-    if ([...joined.matchAll(/"([^"\u0000]*)"/g)].some((m) => m[1].trim().split(/\s+/).length >= 4) && !unresolved.includes(lineNo)) unresolved.push(lineNo);
+    if ([...joined.matchAll(/"([^"\u0000]*)"/g)].some((m2) => m2[1].trim().split(/\s+/).length >= 4) && !unresolved.includes(lineNo)) unresolved.push(lineNo);
     const result = indent + unmask2(joined, strings) + comment;
     note(lineNo, raw, result, "understood as canonical sdev");
     return result;
@@ -28070,20 +36176,20 @@ var NAME = "[\\p{L}_][\\p{L}\\p{N}_]*";
 function definedNames(source) {
   const out = /* @__PURE__ */ new Set();
   const add = (re2, group = 1) => {
-    for (const m of source.matchAll(re2)) if (m[group]) out.add(m[group]);
+    for (const m2 of source.matchAll(re2)) if (m2[group]) out.add(m2[group]);
   };
   add(new RegExp(`\\b(?:set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\s+(${NAME})`, "gu"));
   add(new RegExp(`\\bfor\\s+(?:each\\s+)?(${NAME})`, "gu"));
   add(new RegExp(`\\bfor\\s+(?:each\\s+)?${NAME}\\s*,\\s*(${NAME})`, "gu"));
   add(new RegExp(`^\\s*(${NAME})\\s*(?:=|\\+=|-=|\\*=|/=)(?!=)`, "gmu"));
-  for (const m of source.matchAll(new RegExp(`\\bwith\\s+([^\\n:{]+)`, "gu"))) {
-    for (const w of m[1].split(/[\s,]+/)) if (new RegExp(`^${NAME}$`, "u").test(w)) out.add(w);
+  for (const m2 of source.matchAll(new RegExp(`\\bwith\\s+([^\\n:{]+)`, "gu"))) {
+    for (const w of m2[1].split(/[\s,]+/)) if (new RegExp(`^${NAME}$`, "u").test(w)) out.add(w);
   }
-  for (const m of source.matchAll(new RegExp(`\\b(?:to|conjure|func|function|fn|def)\\s+${NAME}\\s*\\(([^)]*)\\)`, "gu"))) {
-    for (const w of m[1].split(/[\s,=]+/)) if (new RegExp(`^${NAME}$`, "u").test(w)) out.add(w);
+  for (const m2 of source.matchAll(new RegExp(`\\b(?:to|conjure|func|function|fn|def)\\s+${NAME}\\s*\\(([^)]*)\\)`, "gu"))) {
+    for (const w of m2[1].split(/[\s,=]+/)) if (new RegExp(`^${NAME}$`, "u").test(w)) out.add(w);
   }
-  for (const m of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*=>|(${NAME})\\s*=>`, "gu"))) {
-    for (const w of (m[1] ?? m[2] ?? "").split(/[\s,]+/)) if (w) out.add(w);
+  for (const m2 of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*=>|(${NAME})\\s*=>`, "gu"))) {
+    for (const w of (m2[1] ?? m2[2] ?? "").split(/[\s,]+/)) if (w) out.add(w);
   }
   return out;
 }
@@ -28274,1063 +36380,23 @@ async function think(req, mode, localUrl) {
   return { reply: null, used: "none" };
 }
 
-// raw:/dev-server/lang/agent/understander.sdev
-var understander_default = `// =====================================================================
-// understander.sdev \u2014 the code understander, written in sdev.
-//
-// Reads a whole file line by line, works out what the author meant and
-// returns canonical sdev. The TypeScript understander (src/lang/agent)
-// stays behind it as the fallback: any line this engine is not sure
-// about makes the whole answer "unsure" and the fallback takes over.
-//
-//   understand_source(source, known_names) -> [source, sure, notes]
-//
-// known_names: names defined elsewhere in the project (other files,
-// memory), so cross-file references are never mistaken for typos.
-// =====================================================================
-
-forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]
-
-// ---------- small helpers ----------
-
-conjure starts_canonical(body) ::
-  forge first be lower(regex_replace(body, "^([^\\\\s(:]+).*$", "$1"))
-  iterate word through CANON ::
-    ponder first equals word ::
-      yield yep
-    ;;
-  ;;
-  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.\\\\[\\\\]\\"]*\\\\s+be\\\\s") ::
-    yield yep
-  ;;
-  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.]*\\\\s*\\\\(.*\\\\)$") ::
-    yield yep
-  ;;
-  yield nope
-;;
-
-conjure is_quoted(t) ::
-  ponder regex_test(t, "[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}]") ::
-    yield nope
-  ;;
-  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")
-;;
-
-// plus / minus / times / divided by -> symbols
-conjure math_words(t) ::
-  forge s be " " + lower(t) + " "
-  s be regex_replace(s, "\\\\s+divided\\\\s+by\\\\s+", " / ")
-  s be regex_replace(s, "\\\\s+multiplied\\\\s+by\\\\s+", " * ")
-  s be regex_replace(s, "\\\\s+to\\\\s+the\\\\s+power\\\\s+of\\\\s+", " ^ ")
-  s be regex_replace(s, "\\\\s+plus\\\\s+", " + ")
-  s be regex_replace(s, "\\\\s+minus\\\\s+", " - ")
-  s be regex_replace(s, "\\\\s+times\\\\s+", " * ")
-  s be regex_replace(s, "\\\\s+mod(ulo)?\\\\s+", " % ")
-  s be regex_replace(s, "\\\\s*\\\\?\\\\s*$", "")
-  yield trim(s)
-;;
-
-conjure is_math(t) ::
-  ponder isnt regex_test(t, "[0-9]") ::
-    yield nope
-  ;;
-  yield regex_test(t, "^[0-9\\\\s+\\\\-*/().%^]+$")
-;;
-
-conjure is_known(name, names) ::
-  yield has(names, name)
-;;
-
-// an expression made only of numbers, operators, quotes and known names
-conjure safe_expr(e, names) ::
-  ponder is_quoted(e) either is_math(e) ::
-    yield yep
-  ;;
-  ponder regex_test(e, "[\\\\-*/%^]") either (regex_test(e, "\\\\+") also isnt regex_test(e, "[\\"']")) ::
-    iterate w through regex_find_all(e, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
-      ponder has(names, w) also names[w] equals "typed" ::
-        yield nope
-      ;;
-    ;;
-  ;;
-  forge rest be regex_replace(e, "\\"[^\\"]*\\"|'[^']*'", " ")
-  forge parts be regex_find_all(rest, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")
-  iterate p through parts ::
-    ponder isnt is_known(p, names) ::
-      ponder isnt (p equals "yep" either p equals "nope" either p equals "void") ::
-        yield nope
-      ;;
-    ;;
-  ;;
-  yield regex_test(rest, "^[\\\\p{L}\\\\p{N}_\\\\s+\\\\-*/().%^,\\\\[\\\\]]*$")
-;;
-
-// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)
-// returns "" when a placeholder names something unknown
-conjure fill_placeholders(q, names) ::
-  forge inner be snatch(q, 1, measure(q) - 1)
-  forge parts be []
-  forge rest be inner
-  forge m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")
-  cycle m differs void ::
-    ponder isnt is_known(m[2], names) ::
-      yield ""
-    ;;
-    ponder m[1] differs "" ::
-      parts be parts + [quote_text(m[1])]
-    ;;
-    parts be parts + ["str(" + m[2] + ")"]
-    rest be m[3]
-    m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")
-  ;;
-  ponder rest differs "" ::
-    parts be parts + [quote_text(rest)]
-  ;;
-  yield weave(parts, " + ")
-;;
-
-conjure has_placeholder(t) ::
-  yield regex_test(t, "^[\\"'].*[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}].*[\\"']$")
-;;
-
-// a free loop counter name
-conjure counter(names) ::
-  iterate c through ["i", "j", "k", "_n"] ::
-    ponder isnt has(names, c) ::
-      yield c
-    ;;
-  ;;
-  yield "_n"
-;;
-
-conjure asked(name, q, names) ::
-  ponder has(names, "#num:" + name) ::
-    yield "set " + name + " to num(input(" + q + "))"
-  ;;
-  yield "set " + name + " to input(" + q + ")"
-;;
-
-// something to say: a quoted text, a known name, or bare words
-conjure sayable(arg, names) ::
-  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::
-    yield arg
-  ;;
-  ponder regex_test(arg, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::
-    iterate w through regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
-      ponder is_known(w, names) ::
-        yield ""
-      ;;
-    ;;
-    yield quote_text(arg)
-  ;;
-  yield ""
-;;
-
-
-// ---------- everyday tasks (reverse, upper/lower, length, dice, sort \u2026) ----------
-
-forge NUMBER_WORDS be :: "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "twenty": "20", "hundred": "100" ;;
-
-conjure as_number(t) ::
-  forge w be lower(trim(t))
-  ponder regex_test(w, "^-?[0-9]+(\\\\.[0-9]+)?$") ::
-    yield w
-  ;;
-  ponder has(NUMBER_WORDS, w) ::
-    yield NUMBER_WORDS[w]
-  ;;
-  yield ""
-;;
-
-// "hello" / hello / a known name -> an expression
-conjure subject_of(t, names) ::
-  forge w be regex_replace(trim(t), "^(the\\\\s+)?(word|text|name|string)\\\\s+", "", "i")
-  ponder is_quoted(w) ::
-    yield w
-  ;;
-  ponder is_known(w, names) ::
-    yield w
-  ;;
-  ponder regex_test(w, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::
-    yield quote_text(w)
-  ;;
-  yield ""
-;;
-
-conjure number_list(t) ::
-  forge found be regex_find_all(t, "-?[0-9]+(\\\\.[0-9]+)?")
-  ponder measure(found) < 2 ::
-    yield ""
-  ;;
-  ponder isnt regex_test(t, "^[0-9\\\\s,.\\\\-and]+$", "i") ::
-    yield ""
-  ;;
-  yield "[" + weave(found, ", ") + "]"
-;;
-
-// returns the canonical text, or "" when this is not an everyday task
-conjure task_line(b, names) ::
-  forge s be regex_replace(regex_replace(b, "^(please|can you|could you)\\\\s+", "", "i"), "[.!?]+\\\\s*$", "")
-  forge out be regex_replace(s, "^(print|say|show|display|output|tell me|give me)\\\\s+(the\\\\s+)?", "", "i")
-  forge m be void
-
-  ponder regex_test(s, "^(flip|toss)\\\\s+(a\\\\s+)?coin$", "i") ::
-    yield "say pick([\\"heads\\", \\"tails\\"])"
-  ;;
-  ponder regex_test(s, "^(roll|throw)\\\\s+(a\\\\s+)?(die|dice)$", "i") ::
-    yield "say randint(1, 6)"
-  ;;
-  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")
-  ponder m differs void also as_number(m[1]) differs "" ::
-    yield "set i to " + as_number(m[1]) + "\\nwhile i > 0\\n  say i\\n  set i to i - 1\\nend"
-  ;;
-  m be regex_capture(out, "^(reverse|backwards)\\\\s+(of\\\\s+)?(.+)$", "i")
-  ponder m equals void ::
-    m be regex_capture(out, "^()()(.+?)\\\\s+(reversed|backwards)$", "i")
-  ;;
-  ponder m differs void also subject_of(m[3], names) differs "" ::
-    yield "say reverse(" + subject_of(m[3], names) + ")"
-  ;;
-  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(uppercase|upper\\\\s*case|capitals|caps)$", "i")
-  ponder m differs void also subject_of(m[2], names) differs "" ::
-    yield "say upper(" + subject_of(m[2], names) + ")"
-  ;;
-  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(lowercase|lower\\\\s*case|small\\\\s+letters)$", "i")
-  ponder m differs void also subject_of(m[2], names) differs "" ::
-    yield "say lower(" + subject_of(m[2], names) + ")"
-  ;;
-  m be regex_capture(s, "^(what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(the\\\\s+)?(length|size)\\\\s+of\\\\s+(.+)$", "i")
-  ponder m equals void ::
-    m be regex_capture(s, "^()()()how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")
-  ;;
-  ponder m differs void ::
-    forge lst be number_list(m[4])
-    ponder lst differs "" ::
-      yield "say len(" + lst + ")"
-    ;;
-    ponder subject_of(m[4], names) differs "" ::
-      yield "say len(" + subject_of(m[4], names) + ")"
-    ;;
-  ;;
-  m be regex_capture(s, "^(is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(is\\\\s+)?(an?\\\\s+)?(even|odd)(\\\\s+or\\\\s+(even|odd))?$", "i")
-  ponder m differs void ::
-    forge n be as_number(m[2])
-    ponder n equals "" also is_known(m[2], names) ::
-      n be m[2]
-    ;;
-    ponder n differs "" ::
-      yield "if " + n + " % 2 is 0\\n  say \\"even\\"\\nelse\\n  say \\"odd\\"\\nend"
-    ;;
-  ;;
-  m be regex_capture(s, "^((give|show|pick|generate|roll|make|get)\\\\s+(me\\\\s+)?)?(a\\\\s+)?random\\\\s+(whole\\\\s+)?number\\\\s+(between|from)\\\\s+(\\\\S+)\\\\s+(and|to)\\\\s+(\\\\S+)$", "i")
-  ponder m differs void also as_number(m[7]) differs "" also as_number(m[9]) differs "" ::
-    yield "say randint(" + as_number(m[7]) + ", " + as_number(m[9]) + ")"
-  ;;
-  m be regex_capture(out, "^sort\\\\s+(the\\\\s+)?(numbers\\\\s+)?(.+?)(\\\\s+(from\\\\s+)?(biggest|largest|highest)\\\\s+(to|first).*)?$", "i")
-  ponder m differs void also number_list(m[3]) differs "" ::
-    ponder regex_test(s, "biggest|largest|highest|descending", "i") ::
-      yield "say sortDesc(" + number_list(m[3]) + ")"
-    ;;
-    yield "say sort(" + number_list(m[3]) + ")"
-  ;;
-  m be regex_capture(s, "^(print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(the\\\\s+)?(multiplication|times)\\\\s+table\\\\s+(of|for)\\\\s+(\\\\S+)$", "i")
-  ponder m equals void ::
-    m be regex_capture(s, "^(print\\\\s+|show\\\\s+)?(the\\\\s+)?()()(\\\\S+)\\\\s+times\\\\s+table$", "i")
-  ;;
-  ponder m differs void also as_number(m[5]) differs "" ::
-    forge n be as_number(m[5])
-    yield "set i to 1\\nwhile i <= 10\\n  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)\\n  set i to i + 1\\nend"
-  ;;
-  m be regex_capture(s, "^(say\\\\s+)?(hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")
-  ponder m equals void ::
-    m be regex_capture(s, "^()()greet\\\\s+(.+)$", "i")
-  ;;
-  ponder m differs void ::
-    forge who be trim(m[3])
-    ponder is_known(who, names) ::
-      yield "say \\"Hello, \\" + " + who
-    ;;
-    ponder regex_test(who, "^[\\\\p{L} '-]+$") ::
-      yield "say " + quote_text("Hello, " + who)
-    ;;
-  ;;
-  yield ""
-;;
-
-// ---------- one line ----------
-// returns [canonical, sure]
-
-conjure understand_line(body, names) ::
-  forge b be regex_replace(body, "^what's\\\\s", "what is ", "i")
-
-
-  // everyday tasks first: "reverse hello", "roll a dice", "say hello to Sam"
-  forge task be task_line(b, names)
-  ponder task differs "" ::
-    yield [task, yep]
-  ;;
-
-  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"
-  forge m be regex_capture(b, "^ask\\\\s+(\\"[^\\"]*\\"|'[^']*')\\\\s+(as|into|for|and\\\\s+call\\\\s+it|and\\\\s+store\\\\s+in)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
-  ponder m differs void ::
-    yield [asked(m[3], m[1], names), yep]
-  ;;
-  m be regex_capture(b, "^ask\\\\s+(the\\\\s+user\\\\s+)?for\\\\s+(their\\\\s+|a\\\\s+|the\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
-  ponder m differs void ::
-    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]
-  ;;
-  m be regex_capture(b, "^(set\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=|to|be)\\\\s*ask\\\\s+(\\"[^\\"]*\\"|'[^']*')$", "i")
-  ponder m differs void ::
-    yield [asked(m[2], m[4], names), yep]
-  ;;
-
-  // say X N times
-  m be regex_capture(b, "^(say|print|show|write)\\\\s+(.+?)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times$", "i")
-  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::
-    forge what be sayable(trim(m[2]), names)
-    ponder what differs "" ::
-      forge c be counter(names)
-      yield ["set " + c + " to 0\\nwhile " + c + " < " + m[3] + "\\n  say " + what + "\\n  set " + c + " to " + c + " + 1\\nend", yep]
-    ;;
-    yield [body, nope]
-  ;;
-  // count / print the numbers from A to B [by S]  \xB7  count to N
-  m be regex_capture(b, "^(count|print|show|say|list)\\\\s+(the\\\\s+)?(numbers\\\\s+)?from\\\\s+(-?[0-9]+)\\\\s+(to|until|through)\\\\s+(-?[0-9]+)(\\\\s+by\\\\s+([0-9]+))?$", "i")
-  ponder m equals void ::
-    forge m2 be regex_capture(b, "^(please\\\\s+)?count\\\\s+(up\\\\s+)?to\\\\s+([0-9]+)$", "i")
-    ponder m2 differs void ::
-      m be ["", "", "", "", "1", "", m2[3], "", ""]
-    ;;
-  ;;
-  ponder m differs void ::
-    forge c be counter(names)
-    forge step be m[8] equals "" ~ "1" : m[8]
-    forge down be num(m[4]) > num(m[6])
-    forge cmp be down ~ " >= " : " <= "
-    forge op be down ~ " - " : " + "
-    yield ["set " + c + " to " + m[4] + "\\nwhile " + c + cmp + m[6] + "\\n  say " + c + "\\n  set " + c + " to " + c + op + step + "\\nend", yep]
-  ;;
-  // repeat N times  (a block \u2014 its counter is bumped where the block ends)
-  m be regex_capture(b, "^(repeat|do\\\\s+this|do)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times\\\\s*:?$", "i")
-  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::
-    forge c be counter(names)
-    yield ["set " + c + " to 0\\nwhile " + c + " < " + m[2] + "\\n#bump " + c, yep]
-  ;;
-
-  // conditions: when/if COND [then][:]  ->  if COND
-  m be regex_capture(b, "^(when|if)\\\\s+(.+?)\\\\s*(then)?\\\\s*:?$", "i")
-  ponder m differs void also isnt regex_test(b, "::") ::
-    forge cond be m[2]
-    forge yn be regex_capture(cond, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals|==?)\\\\s+[\\"']?(yes|no|y|n)[\\"']?$", "i")
-    ponder yn differs void also is_known(yn[1], names) ::
-      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]
-    ;;
-    ponder regex_test(cond, "\\\\b(yes|no)\\\\b", "i") ::
-      yield [body, nope]
-    ;;
-    forge plain be regex_replace(cond, "\\\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\\\b", " ", "i")
-    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::
-      yield ["if " + cond, yep]
-    ;;
-    yield [body, nope]
-  ;;
-  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals)\\\\s+[\\"']?(yes|no)[\\"']?\\\\s*:$", "i")
-  ponder m differs void also is_known(m[1], names) ::
-    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]
-  ;;
-  ponder regex_test(b, "^(otherwise|else)\\\\s*:?$", "i") ::
-    yield ["else", yep]
-  ;;
-
-  // say with pieces side by side: say "Hello, " name "!"
-  m be regex_capture(b, "^(say|print|show)\\\\s+(.+)$", "i")
-  ponder m differs void ::
-    forge pieces be regex_find_all(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|,")
-    forge glued be regex_replace(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|[,\\\\s]", "")
-    ponder glued equals "" also measure(pieces) > 1 ::
-      forge parts be []
-      forge fine be yep
-      iterate pc through pieces ::
-        ponder pc differs "," ::
-          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::
-            parts be parts + [pc]
-          ;; otherwise ::
-            fine be nope
-          ;;
-        ;;
-      ;;
-      ponder fine also measure(parts) > 1 ::
-        yield ["say " + weave(parts, " + "), yep]
-      ;;
-    ;;
-  ;;
-
-  // output: print / show / display / output / write / say / tell
-  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\\\s+(.+)$", "i")
-  ponder m differs void ::
-    forge arg be trim(m[2])
-    ponder has_placeholder(arg) ::
-      forge filled be fill_placeholders(arg, names)
-      ponder filled differs "" ::
-        yield ["speak(" + filled + ")", yep]
-      ;;
-      yield [body, nope]
-    ;;
-    ponder is_quoted(arg) either is_math(arg) ::
-      yield ["speak(" + arg + ")", yep]
-    ;;
-    ponder is_name(arg) also is_known(arg, names) ::
-      yield ["speak(" + arg + ")", yep]
-    ;;
-    ponder safe_expr(arg, names) also regex_test(arg, "[+\\\\-*/]") ::
-      yield ["speak(" + arg + ")", yep]
-    ;;
-    // bare words with no known names in them: say them as written
-    forge used be regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")
-    iterate w through used ::
-      ponder is_known(w, names) ::
-        yield [body, nope]
-      ;;
-    ;;
-    // words that usually mean a task ("count to", "3 times", "on the screen")
-    ponder regex_test(arg, "\\\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\\\b", "i") ::
-      yield [body, nope]
-    ;;
-    ponder regex_test(arg, "[\\"'(){}\\\\[\\\\]]") ::
-      yield [body, nope]
-    ;;
-    yield ["speak(" + quote_text(arg) + ")", yep]
-  ;;
-
-  // plain calculations: calculate / compute / what is / how much is
-  m be regex_capture(b, "^(calculate|compute|evaluate|solve|what\\\\s+is|how\\\\s+much\\\\s+is)\\\\s+(.+?)\\\\??$", "i")
-  ponder m differs void ::
-    forge expr be math_words(m[2])
-    ponder is_math(expr) ::
-      yield ["speak(" + expr + ")", yep]
-    ;;
-    yield [body, nope]
-  ;;
-
-  // add N to x / increase x by N / decrease x by N
-  m be regex_capture(b, "^add\\\\s+(\\\\S+)\\\\s+to\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[1], names) ::
-    yield [m[2] + " be " + m[2] + " + " + m[1], yep]
-  ;;
-  m be regex_capture(b, "^(increase|raise)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::
-    yield [m[2] + " be " + m[2] + " + " + m[3], yep]
-  ;;
-  m be regex_capture(b, "^(decrease|lower|reduce)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::
-    yield [m[2] + " be " + m[2] + " - " + m[3], yep]
-  ;;
-
-  // x becomes E
-  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+becomes\\\\s+(.+)$", "i")
-  ponder m differs void also is_known(m[1], names) also safe_expr(trim(m[2]), names) ::
-    yield [m[1] + " be " + trim(m[2]), yep]
-  ;;
-
-  // set x to E / let x be E / make x E / x = E
-  m be regex_capture(b, "^(set|let|make)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(to|be|equal\\\\s+to|=)\\\\s+(.+)$", "i")
-  ponder m equals void ::
-    m be regex_capture(b, "^()([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=)\\\\s*([^=].*)$")
-  ;;
-  ponder m differs void ::
-    forge value be trim(m[4])
-    ponder safe_expr(value, names) ::
-      ponder is_known(m[2], names) ::
-        yield [m[2] + " be " + value, yep]
-      ;;
-      yield ["forge " + m[2] + " be " + value, yep]
-    ;;
-    yield [body, nope]
-  ;;
-
-  ponder starts_canonical(b) ::
-    yield [body, yep]
-  ;;
-  yield [body, nope]
-;;
-
-// ---------- the whole file ----------
-
-// an open block is [indent, counter]; a counted block bumps it before "end"
-conjure close_block(open) ::
-  ponder open[1] differs "" ::
-    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]
-  ;;
-  yield [open[0] + "end"]
-;;
-
-forge CHUNK_MEMO be ::
-;;
-
-conjure understand_source(source, known, words) ::
-  forge names be ::
-  ;;
-  iterate k through known ::
-    names[k] be yep
-  ;;
-  // dialect / remembered words: [word, canonical]
-  forge wordmap be ::
-  ;;
-  ponder words differs void ::
-    iterate pair through words ::
-      wordmap[lower(pair[0])] be pair[1]
-    ;;
-  ;;
-  // names used in arithmetic or numeric comparisons: typed answers for
-  // them are converted to numbers when they are asked for
-  iterate row through lines(source) ::
-    forge bare be regex_replace(row, "\\"[^\\"]*\\"|'[^']*'", "\\"\\"")
-    forge numeric be regex_test(bare, "[\\\\-*/%^<>]|\\\\b(more|less|greater|smaller)\\\\b") either (regex_test(bare, "\\\\+") also isnt regex_test(bare, "\\"")) either regex_test(bare, "\\\\b(times|plus|minus|divided)\\\\b")
-    ponder numeric also isnt regex_test(trim(row), "^ask\\\\b", "i") ::
-      iterate w through regex_find_all(bare, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
-        names["#num:" + w] be yep
-      ;;
-    ;;
-  ;;
-  forge out be []
-  forge notes be []
-  forge sure be yep
-  forge n be 0
-  forge rows be lines(source)
-  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,
-  // unless the author already writes "end" or "::" blocks themselves
-  forge auto_end be isnt regex_test(source, "(^|\\n)\\s*end\\s*($|\\n)|::")
-  forge opens be []
-  // Large files are read in top-level chunks. Each chunk's reading is
-  // remembered (keyed by its text and everything known before it), so after
-  // a small edit only the chunks that changed are read again.
-  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))
-  iterate k through keys(names) ::
-    ponder startswith(k, "#num:") ::
-      state be str(hash(state + k)) + str(hash(reverse(state + k)))
-    ;;
-  ;;
-  forge chunks be []
-  forge current be []
-  forge first_line be 1
-  forge idx be 0
-  iterate line through rows ::
-    idx be idx + 1
-    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\\\}|//|#)", "i")
-    ponder top also measure(current) > 0 ::
-      chunks be chunks + [[first_line, current]]
-      current be []
-      first_line be idx
-    ;;
-    current be current + [line]
-  ;;
-  ponder measure(current) > 0 ::
-    chunks be chunks + [[first_line, current]]
-  ;;
-  iterate chunk through chunks ::
-    forge key be state + "|#|" + unlines(chunk[1])
-    forge delta be []
-    ponder has(CHUNK_MEMO, key) ::
-      forge hit be CHUNK_MEMO[key]
-      out be out + hit[0]
-      ponder isnt hit[1] ::
-        sure be nope
-      ;;
-      iterate note through hit[2] ::
-        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]
-      ;;
-      delta be hit[3]
-      iterate pair through delta ::
-        names[pair[0]] be pair[1]
-      ;;
-    ;; otherwise ::
-      forge c_out be []
-      forge c_sure be yep
-      forge c_notes be []
-      forge saved_out be out
-      forge saved_notes be notes
-      forge saved_sure be sure
-      out be []
-      notes be []
-      sure be yep
-      n be chunk[0] - 1
-      iterate line through chunk[1] ::
-      n be n + 1
-      forge indent be leading_space(line)
-      forge body be trim(line)
-      forge head be lower(regex_replace(body, "^(\\\\S+).*$", "$1"))
-      ponder has(wordmap, head) also body differs "" ::
-        body be wordmap[head] + snatch(body, measure(head), measure(body))
-      ;;
-      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::
-        out be out + [line]
-      ;; otherwise ::
-        forge r be understand_line(body, names)
-        ponder isnt r[1] ::
-          sure be nope
-        ;;
-        ponder r[0] differs body ::
-          notes be notes + [[n, body, r[0]]]
-        ;;
-        // learn declarations as we go: forge x be \u2026 / conjure f(a, b)
-        forge d be regex_capture(r[0], "^(?:forge|set)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")
-        ponder d differs void ::
-          names[d[1]] be (regex_test(r[0], "input\\\\(") also isnt regex_test(r[0], "num\\\\(input")) ~ "typed" : yep
-          delta be delta + [[d[1], names[d[1]]]]
-        ;;
-        d be regex_capture(r[0], "^conjure\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*\\\\(([^)]*)\\\\)")
-        ponder d differs void ::
-          names[d[1]] be yep
-          delta be delta + [[d[1], yep]]
-          iterate p through regex_find_all(d[2], "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
-            names[p] be yep
-            delta be delta + [[p, yep]]
-          ;;
-        ;;
-        d be regex_capture(r[0], "^iterate\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")
-        ponder d differs void ::
-          names[d[1]] be yep
-          delta be delta + [[d[1], yep]]
-        ;;
-        ponder auto_end ::
-          forge isElse be regex_test(r[0], "^else\\\\b")
-          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::
-            out be out + close_block(opens[-1])
-            opens be portion(opens, 0, measure(opens) - 1)
-          ;;
-          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::
-            opens be portion(opens, 0, measure(opens) - 1)
-          ;;
-          forge bump be regex_capture(r[0], "\\n#bump (\\\\S+)$")
-          ponder bump differs void ::
-            opens be opens + [[indent, bump[1]]]
-            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]
-          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\\\b") also isnt contains(r[0], "\\n") ::
-            opens be opens + [[indent, ""]]
-          ;;
-        ;;
-        ponder isnt auto_end also contains(r[0], "#bump") ::
-          sure be nope
-        ;;
-        out be out + [indent + replace(r[0], "\\n", "\\n" + indent)]
-      ;;
-      ;;
-      // a top-level line follows: close what this chunk opened, here
-      cycle auto_end also measure(opens) > 0 ::
-        out be out + close_block(opens[-1])
-        opens be portion(opens, 0, measure(opens) - 1)
-      ;;
-      c_out be out
-      c_sure be sure
-      iterate note through notes ::
-        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]
-      ;;
-      ponder measure(CHUNK_MEMO) > 20000 ::
-        CHUNK_MEMO be ::
-        ;;
-      ;;
-      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]
-      out be saved_out + c_out
-      notes be saved_notes + notes
-      sure be saved_sure also c_sure
-    ;;
-    forge dsig be state
-    iterate pair through delta ::
-      dsig be dsig + "," + pair[0] + "=" + str(pair[1])
-    ;;
-    state be str(hash(dsig)) + str(hash(reverse(dsig)))
-  ;;
-  yield [unlines(out), sure, notes]
-;;
-`;
-
-// raw:/dev-server/lang/agent/ai-dialect.sdev
-var ai_dialect_default = `// =====================================================================
-// ai-dialect.sdev \u2014 "sdev:ai", the dialect written for AI models.
-//
-// Designed for how language models generate code:
-//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)
-//   * blocks are always { \u2026 } \u2014 no indentation rules, no guessed closings
-//   * short, common tokens: fewer tokens -> faster, cheaper generation
-//   * the familiar operators models already know: == != && || !
-//
-// A file starts with  !#ai  and is translated to canonical sdev before it
-// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model
-// can be given any program to read in the dense form.
-//
-//   v x = 5               forge x be 5
-//   x = x + 1             x be x + 1
-//   p(x)                  speak(x)
-//   f add(a, b) {         conjure add(a, b) ::
-//   r a + b               yield a + b
-//   ? x > 3 {             ponder x > 3 ::
-//   } :? x > 1 {          ;; otherwise ponder x > 1 ::
-//   } : {                 ;; otherwise ::
-//   w i < 3 {             cycle i < 3 ::
-//   each n in xs {        iterate n through xs ::
-//   try { \u2026 } catch e {   attempt :: \u2026 ;; rescue e ::
-//   brk / next            yeet / skip
-//   }                     ;;
-//   == != && || !         equals differs also either isnt
-// =====================================================================
-
-// split a line into [code, text, code, text, \u2026] so strings are never touched
-conjure ai_segments(line) ::
-  yield regex_find_all(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|'[^']*'|[^\\"']+|[\\"']")
-;;
-
-conjure ai_ops_to_sdev(code) ::
-  forge c be code
-  c be regex_replace(c, "\\\\s*==\\\\s*", " equals ")
-  c be regex_replace(c, "\\\\s*!=\\\\s*", " differs ")
-  c be regex_replace(c, "\\\\s*&&\\\\s*", " also ")
-  c be regex_replace(c, "\\\\s*\\\\|\\\\|\\\\s*", " either ")
-  c be regex_replace(c, "(^|[^\\\\p{L}\\\\p{N}_])!\\\\s*(?!=)", "$1isnt ")
-  c be regex_replace(c, "\\\\btrue\\\\b", "yep")
-  c be regex_replace(c, "\\\\bfalse\\\\b", "nope")
-  c be regex_replace(c, "\\\\bnull\\\\b", "void")
-  yield c
-;;
-
-conjure ai_ops_to_ai(code) ::
-  forge c be code
-  c be regex_replace(c, "\\\\s+equals\\\\s+", " == ")
-  c be regex_replace(c, "\\\\s+differs\\\\s+", " != ")
-  c be regex_replace(c, "\\\\s+also\\\\s+", " && ")
-  c be regex_replace(c, "\\\\s+either\\\\s+", " || ")
-  c be regex_replace(c, "\\\\bisnt\\\\s+", "!")
-  c be regex_replace(c, "\\\\byep\\\\b", "true")
-  c be regex_replace(c, "\\\\bnope\\\\b", "false")
-  c be regex_replace(c, "\\\\bvoid\\\\b", "null")
-  yield c
-;;
-
-conjure ai_map_code(line, to_sdev) ::
-  forge out be ""
-  iterate seg through ai_segments(line) ::
-    ponder startswith(seg, "\\"") either startswith(seg, "'") ::
-      out be out + seg
-    ;; otherwise ponder to_sdev ::
-      out be out + ai_ops_to_sdev(seg)
-    ;; otherwise ::
-      out be out + ai_ops_to_ai(seg)
-    ;;
-  ;;
-  yield out
-;;
-
-forge AI_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"
-
-// one AI line -> one canonical line (or void when it is not AI syntax)
-conjure ai_line_to_sdev(body) ::
-  forge m be regex_capture(body, "^\\\\}\\\\s*:\\\\?\\\\s*(.+?)\\\\s*\\\\{$")
-  ponder m differs void ::
-    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"
-  ;;
-  ponder regex_test(body, "^\\\\}\\\\s*:\\\\s*\\\\{$") ::
-    yield ";; otherwise ::"
-  ;;
-  m be regex_capture(body, "^\\\\}\\\\s*catch\\\\s+(" + AI_NAME + ")\\\\s*\\\\{$")
-  ponder m differs void ::
-    yield ";; rescue " + m[1] + " ::"
-  ;;
-  ponder body equals "}" ::
-    yield ";;"
-  ;;
-  ponder regex_test(body, "^try\\\\s*\\\\{$") ::
-    yield "attempt ::"
-  ;;
-  m be regex_capture(body, "^v\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")
-  ponder m differs void ::
-    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)
-  ;;
-  m be regex_capture(body, "^f\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{$")
-  ponder m differs void ::
-    yield "conjure " + m[1] + "(" + m[2] + ") ::"
-  ;;
-  m be regex_capture(body, "^r(\\\\s+(.+))?$")
-  ponder m differs void ::
-    ponder m[2] equals "" ::
-      yield "yield void"
-    ;;
-    yield "yield " + ai_map_code(m[2], yep)
-  ;;
-  m be regex_capture(body, "^p\\\\((.*)\\\\)$")
-  ponder m differs void ::
-    yield "speak(" + ai_map_code(m[1], yep) + ")"
-  ;;
-  m be regex_capture(body, "^\\\\?\\\\s*(.+?)\\\\s*\\\\{$")
-  ponder m differs void ::
-    yield "ponder " + ai_map_code(m[1], yep) + " ::"
-  ;;
-  m be regex_capture(body, "^w\\\\s+(.+?)\\\\s*\\\\{$")
-  ponder m differs void ::
-    yield "cycle " + ai_map_code(m[1], yep) + " ::"
-  ;;
-  m be regex_capture(body, "^each\\\\s+(" + AI_NAME + ")\\\\s+in\\\\s+(.+?)\\\\s*\\\\{$")
-  ponder m differs void ::
-    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"
-  ;;
-  ponder body equals "brk" ::
-    yield "yeet"
-  ;;
-  ponder body equals "next" ::
-    yield "skip"
-  ;;
-  // index or name assignment: x = e / xs[0] = e / o.k = e
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*=\\\\s*([^=].*)$")
-  ponder m differs void ::
-    yield m[1] + " be " + ai_map_code(m[2], yep)
-  ;;
-  // a bare call or expression
-  yield ai_map_code(body, yep)
-;;
-
-conjure ai_to_sdev(source) ::
-  forge out be []
-  iterate line through lines(source) ::
-    forge indent be leading_space(line)
-    forge body be trim(line)
-    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::
-      ponder isnt startswith(body, "!#ai") ::
-        out be out + [line]
-      ;;
-    ;; otherwise ::
-      out be out + [indent + ai_line_to_sdev(body)]
-    ;;
-  ;;
-  yield unlines(out)
-;;
-
-// canonical sdev -> the AI form
-// the English canonical forms (say / set / if / while / for each / to \u2026 with / end)
-conjure english_line_to_ai(body, AI_DECLARED) ::
-  forge m be regex_capture(body, "^say\\\\s+(.+)$")
-  ponder m differs void ::
-    yield "p(" + ai_map_code(m[1], nope) + ")"
-  ;;
-  m be regex_capture(body, "^set\\\\s+(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+to\\\\s+(.+)$")
-  ponder m differs void ::
-    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::
-      yield m[1] + " = " + ai_map_code(m[2], nope)
-    ;;
-    AI_DECLARED[m[1]] be yep
-    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
-  ;;
-  m be regex_capture(body, "^if\\\\s+(.+)$")
-  ponder m differs void ::
-    yield "? " + ai_cond(m[1]) + " {"
-  ;;
-  m be regex_capture(body, "^else\\\\s+if\\\\s+(.+)$")
-  ponder m differs void ::
-    yield "} :? " + ai_cond(m[1]) + " {"
-  ;;
-  ponder body equals "else" ::
-    yield "} : {"
-  ;;
-  ponder body equals "end" ::
-    yield "}"
-  ;;
-  m be regex_capture(body, "^while\\\\s+(.+)$")
-  ponder m differs void ::
-    yield "w " + ai_cond(m[1]) + " {"
-  ;;
-  m be regex_capture(body, "^for\\\\s+(each\\\\s+)?(" + AI_NAME + ")\\\\s+in\\\\s+(.+)$")
-  ponder m differs void ::
-    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"
-  ;;
-  m be regex_capture(body, "^to\\\\s+(" + AI_NAME + ")(\\\\s+with\\\\s+(.+))?$")
-  ponder m differs void ::
-    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")
-    yield "f " + m[1] + "(" + params + ") {"
-  ;;
-  m be regex_capture(body, "^return(\\\\s+(.+))?$")
-  ponder m differs void ::
-    yield "r " + ai_map_code(m[2], nope)
-  ;;
-  ponder body equals "break" ::
-    yield "brk"
-  ;;
-  ponder body equals "continue" ::
-    yield "next"
-  ;;
-  yield ""
-;;
-
-// English comparisons -> symbols
-conjure ai_cond(c) ::
-  forge out be ""
-  iterate seg through ai_segments(c) ::
-    ponder startswith(seg, "\\"") either startswith(seg, "'") ::
-      out be out + seg
-    ;; otherwise ::
-      forge x be seg
-      x be regex_replace(x, "\\\\s+is\\\\s+not\\\\s+", " != ")
-      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+more\\\\b", " >= $1")
-      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+less\\\\b", " <= $1")
-      x be regex_replace(x, "\\\\s+is\\\\s+", " == ")
-      x be regex_replace(x, "\\\\s+and\\\\s+", " && ")
-      x be regex_replace(x, "\\\\s+or\\\\s+", " || ")
-      x be regex_replace(x, "(^|\\\\s)not\\\\s+", "$1!")
-      out be out + ai_ops_to_ai(x)
-    ;;
-  ;;
-  yield out
-;;
-
-conjure sdev_line_to_ai(body, declared) ::
-  forge english be english_line_to_ai(body, declared)
-  ponder english differs "" ::
-    yield english
-  ;;
-  forge m be regex_capture(body, "^;;\\\\s*otherwise\\\\s+ponder\\\\s+(.+?)\\\\s*::$")
-  ponder m differs void ::
-    yield "} :? " + ai_map_code(m[1], nope) + " {"
-  ;;
-  ponder regex_test(body, "^;;\\\\s*otherwise\\\\s*::$") ::
-    yield "} : {"
-  ;;
-  m be regex_capture(body, "^;;\\\\s*rescue\\\\s+(" + AI_NAME + ")\\\\s*::$")
-  ponder m differs void ::
-    yield "} catch " + m[1] + " {"
-  ;;
-  ponder body equals ";;" ::
-    yield "}"
-  ;;
-  ponder regex_test(body, "^attempt\\\\s*::$") ::
-    yield "try {"
-  ;;
-  m be regex_capture(body, "^forge\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")
-  ponder m differs void ::
-    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
-  ;;
-  m be regex_capture(body, "^conjure\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*::$")
-  ponder m differs void ::
-    yield "f " + m[1] + "(" + m[2] + ") {"
-  ;;
-  m be regex_capture(body, "^yield\\\\s+(.+)$")
-  ponder m differs void ::
-    yield "r " + ai_map_code(m[1], nope)
-  ;;
-  m be regex_capture(body, "^speak\\\\((.*)\\\\)$")
-  ponder m differs void ::
-    yield "p(" + ai_map_code(m[1], nope) + ")"
-  ;;
-  m be regex_capture(body, "^ponder\\\\s+(.+?)\\\\s*::$")
-  ponder m differs void ::
-    yield "? " + ai_map_code(m[1], nope) + " {"
-  ;;
-  m be regex_capture(body, "^cycle\\\\s+(.+?)\\\\s*::$")
-  ponder m differs void ::
-    yield "w " + ai_map_code(m[1], nope) + " {"
-  ;;
-  m be regex_capture(body, "^iterate\\\\s+(" + AI_NAME + ")\\\\s+through\\\\s+(.+?)\\\\s*::$")
-  ponder m differs void ::
-    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"
-  ;;
-  ponder body equals "yeet" ::
-    yield "brk"
-  ;;
-  ponder body equals "skip" ::
-    yield "next"
-  ;;
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+be\\\\s+(.+)$")
-  ponder m differs void ::
-    yield m[1] + " = " + ai_map_code(m[2], nope)
-  ;;
-  yield ai_map_code(body, nope)
-;;
-
-conjure sdev_to_ai(source) ::
-  forge out be ["!#ai"]
-  forge declared be ::
-  ;;
-  iterate line through lines(source) ::
-    forge indent be leading_space(line)
-    forge body be trim(line)
-    ponder body equals "" either startswith(body, "//") ::
-      out be out + [line]
-    ;; otherwise ::
-      out be out + [indent + sdev_line_to_ai(body, declared)]
-    ;;
-  ;;
-  yield unlines(out)
-;;
-`;
-
-// raw:/dev-server/lang/agent/project.sdev
-var project_default = '// =====================================================================\n// project.sdev \u2014 the project index of the code understander, in sdev.\n//\n// Collects every name a file defines (variables, functions, kinds,\n// parameters, loop names, lambda parameters) so the understander can tell\n// a reference to another file apart from plain words.\n//\n//   defined_names(source)   -> list of names one file defines\n//   project_names(sources)  -> names defined across many files, no repeats\n// =====================================================================\n\nforge PNAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\n\nconjure pn_add(seen, out, w) ::\n  ponder w differs "" also isnt has(seen, w) also regex_test(w, "^" + PNAME + "$") ::\n    seen[w] be yep\n    out be out + [w]\n  ;;\n  yield out\n;;\n\n// every match of `pattern`, keeping only what follows `prefix`\nconjure pn_tails(text, pattern, prefix) ::\n  forge got be []\n  iterate hit through regex_find_all(text, pattern) ::\n    got be got + [regex_replace(hit, prefix, "")]\n  ;;\n  yield got\n;;\n\nconjure pn_split(list_text) ::\n  yield regex_find_all(list_text, PNAME)\n;;\n\nconjure defined_names_into(source, seen, out) ::\n  forge kw be "\\\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\\\s+"\n  iterate w through pn_tails(source, kw + PNAME, kw) ::\n    out be pn_add(seen, out, w)\n  ;;\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME, "^for\\\\s+(each\\\\s+)?") ::\n    out be pn_add(seen, out, w)\n  ;;\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME + "\\\\s*,\\\\s*" + PNAME, "^.*,\\\\s*") ::\n    out be pn_add(seen, out, w)\n  ;;\n  iterate row through lines(source) ::\n    forge m be regex_capture(row, "^\\\\s*(" + PNAME + ")\\\\s*(=|\\\\+=|-=|\\\\*=|/=)(?!=)")\n    ponder m differs void ::\n      out be pn_add(seen, out, m[1])\n    ;;\n  ;;\n  // parameters: `with a b c`, `with a, b`\n  iterate part through pn_tails(source, "\\\\bwith\\\\s+[^\\\\n:{]+", "^with\\\\s+") ::\n    iterate w through regex_find_all(part, "[^\\\\s,]+") ::\n      out be pn_add(seen, out, w)\n    ;;\n  ;;\n  // `(a, b)` after a declaration\n  iterate part through pn_tails(source, "\\\\b(to|conjure|func|function|fn|def)\\\\s+" + PNAME + "\\\\s*\\\\([^)]*\\\\)", "^[^(]*\\\\(") ::\n    iterate w through regex_find_all(regex_replace(part, "\\\\)$", ""), "[^\\\\s,=]+") ::\n      out be pn_add(seen, out, w)\n    ;;\n  ;;\n  // lambdas `(a, b) =>` / `x =>`\n  iterate part through regex_find_all(source, "\\\\([^()]*\\\\)\\\\s*=>|" + PNAME + "\\\\s*=>") ::\n    iterate w through pn_split(regex_replace(part, "=>$", "")) ::\n      out be pn_add(seen, out, w)\n    ;;\n  ;;\n  yield out\n;;\n\nconjure defined_names(source) ::\n  forge seen be ::\n  ;;\n  yield defined_names_into(source, seen, [])\n;;\n\nconjure project_names(sources) ::\n  forge seen be ::\n  ;;\n  forge out be []\n  iterate src through sources ::\n    out be defined_names_into(src, seen, out)\n  ;;\n  yield out\n;;\n';
-
-// src/lang/agent/sdev-engine.ts
-var engine = null;
-var engineError = null;
-function load() {
-  if (engine !== null) return engine;
-  try {
-    const ast = new Parser(new Lexer(understander_default + "\n" + ai_dialect_default + "\n" + project_default).tokenize()).parse();
-    const interp = new Interpreter(() => {
-    });
-    interp.interpret(ast);
-    const env2 = interp.getGlobalEnv();
-    engine = {
-      understand: env2.get("understand_source", 0),
-      toSdev: env2.get("ai_to_sdev", 0),
-      toAi: env2.get("sdev_to_ai", 0),
-      names: env2.get("defined_names", 0)
-    };
-  } catch (e) {
-    engineError = e instanceof Error ? e.message : String(e);
-    engine = false;
-  }
-  return engine;
-}
-function sdevUnderstand(source, known, words = []) {
-  const e = load();
-  if (!e) return null;
-  try {
-    const r = e.understand.call([source, [...known], words], 0);
-    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
-    return {
-      source: r[0],
-      sure: r[1] === true,
-      notes: (r[2] ?? []).map(([line, from, to]) => ({ line, from, to, why: "understood by the sdev engine", source: "sdev" }))
-    };
-  } catch (err) {
-    engineError = err instanceof Error ? err.message : String(err);
-    return null;
-  }
-}
-function isAiDialect(source) {
-  for (const line of source.split("\n", 20)) {
-    const t = line.trim();
-    if (!t || t.startsWith("//")) continue;
-    return /^!#ai\b/.test(t);
-  }
-  return false;
-}
-function aiToSdev(source) {
-  const e = load();
-  if (!e) return source;
-  return String(e.toSdev.call([source], 0));
-}
-
 // src/lang/agent/memory.ts
 function emptyMemory() {
   return { version: 1, words: {}, names: {}, lines: {}, programs: 0, updated: 0 };
 }
 var KEY = "sdev_agent_memory";
 function sane(value2) {
-  const m = value2;
-  if (!m || typeof m !== "object") return emptyMemory();
+  const m2 = value2;
+  if (!m2 || typeof m2 !== "object") return emptyMemory();
   return {
     version: 1,
-    words: m.words ?? {},
-    names: m.names ?? {},
-    lines: m.lines ?? {},
-    programs: m.programs ?? 0,
-    updated: m.updated ?? 0,
-    results: m.results ?? {},
-    agent: m.agent
+    words: m2.words ?? {},
+    names: m2.names ?? {},
+    lines: m2.lines ?? {},
+    programs: m2.programs ?? 0,
+    updated: m2.updated ?? 0,
+    results: m2.results ?? {},
+    agent: m2.agent
   };
 }
 var browserStore = {
@@ -29381,10 +36447,10 @@ function rememberLine(memory, original, canonical) {
 function learnFromProgram(memory, canonical) {
   memory.programs += 1;
   const re2 = /^\s*set\s+([\p{L}\p{N}_]+)\s+to\b/gmu;
-  let m;
-  while (m = re2.exec(canonical)) rememberName(memory, m[1]);
+  let m2;
+  while (m2 = re2.exec(canonical)) rememberName(memory, m2[1]);
   const fn2 = /^\s*to\s+([\p{L}\p{N}_]+)\b/gmu;
-  while (m = fn2.exec(canonical)) rememberName(memory, m[1]);
+  while (m2 = fn2.exec(canonical)) rememberName(memory, m2[1]);
 }
 function memoryWordMap(memory) {
   const map = /* @__PURE__ */ new Map();
@@ -29498,7 +36564,7 @@ function dialectWordMap(opts) {
   }
   return map;
 }
-var AGENT_VERSION = "u5";
+var AGENT_VERSION = "u6";
 var lastEngine = "ts";
 function isRequest(source) {
   const rows = source.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && !l.startsWith("//"));
@@ -29544,9 +36610,8 @@ function runRules(prep, opts) {
     knownNames: knownNames(prep.memory),
     strict: prep.mode === "strict"
   });
-  void opts;
   let source = result.source;
-  const closed = closeBlocks(source);
+  const closed = sdevCloseBlocks(source) ?? closeBlocks(source);
   if (closed !== source && parses(closed)) source = closed;
   if (source !== remembered && sense.parses && !parses(source)) {
     return {
@@ -29723,9 +36788,9 @@ function localModules(entryPath, source) {
   const seen = /* @__PURE__ */ new Set();
   const walk = (src) => {
     const re2 = /\buse\s+"([^"@][^"]*)"/g;
-    let m;
-    while (m = re2.exec(src)) {
-      const spec = m[1];
+    let m2;
+    while (m2 = re2.exec(src)) {
+      const spec = m2[1];
       if (seen.has(spec)) continue;
       seen.add(spec);
       const candidates = isAbsolute2(spec) ? [spec] : [resolve2(dir, spec), resolve2(process.cwd(), spec)];
@@ -30157,8 +37222,8 @@ var stampFile = () => join3(SDEV_HOME, "update-check.json");
 async function maybeNotifyUpdate() {
   if (process.env.SDEV_NO_UPDATE_CHECK === "1" || !process.stdout.isTTY) return;
   try {
-    const f = stampFile();
-    const last = existsSync5(f) ? JSON.parse(readFileSync5(f, "utf8")) : null;
+    const f2 = stampFile();
+    const last = existsSync5(f2) ? JSON.parse(readFileSync5(f2, "utf8")) : null;
     if (last?.latest && newer(last.latest, VERSION)) {
       process.stderr.write(`
 sdev ${last.latest} is available (you have ${VERSION}). Run: sdev update
@@ -30167,7 +37232,7 @@ sdev ${last.latest} is available (you have ${VERSION}). Run: sdev update
     if (last && Date.now() - last.at < 24 * 3600 * 1e3) return;
     const r = await fetchReleases();
     mkdirSync3(SDEV_HOME, { recursive: true });
-    writeFileSync4(f, JSON.stringify({ at: Date.now(), latest: r?.version ?? last?.latest }));
+    writeFileSync4(f2, JSON.stringify({ at: Date.now(), latest: r?.version ?? last?.latest }));
   } catch {
   }
 }
@@ -30226,7 +37291,7 @@ function value(name, short) {
   const i = argv.findIndex((a) => a === name || short && a === short);
   return i >= 0 && i + 1 < argv.length ? argv[i + 1] : void 0;
 }
-var FLAGS_WITH_VALUES = /* @__PURE__ */ new Set(["--dialect", "--lang", "--to", "--from", "-o", "--out", "--as", "--ld", "--runtime", "--name", "--about", "--agent", "--brain"]);
+var FLAGS_WITH_VALUES = /* @__PURE__ */ new Set(["--dialect", "--lang", "--to", "--from", "-o", "--out", "--as", "--ld", "--runtime", "--name", "--about", "--agent", "--brain", "--target", "--module"]);
 function positionals() {
   const out = [];
   for (let i = 0; i < argv.length; i++) {
@@ -30271,6 +37336,10 @@ RUNNING
   edit <file>             Full-screen editor: ^S save, ^R run, ^F find, ^Q quit
   repl                    Interactive session
   check <file>            Parse only, report syntax errors
+  lint <file>             Lint source (--target v1|v2-wasm|native-x64|arduino-cpp|web)
+  api [query]             Search canonical API registry (--module <m>, --target <t>)
+  explain <CODE|name>     Explain a diagnostic code (SDEV001..SDEV015) or API
+  doctor                  Check SDEV toolchain, runtimes, and API registry health
   ast <file>              Print the syntax tree as JSON
   fmt <file> [-w]         Format source (-w writes in place)
   watch <file>            Re-run on every save
@@ -30421,7 +37490,7 @@ async function cmdRepl() {
   console.log(`sdev ${VERSION} \xB7 runtime ${runtimePreference()} \xB7 dialect ${dialect ? dialect.meta.name : "canonical"}`);
   console.log(":q quit  :rt v1|v2  :dialect <slug|none>  :clear  :load <file>");
   const rl = createInterface2({ input: process.stdin, output: process.stdout, prompt: "sdev> " });
-  const interpreter = new Interpreter((m) => console.log(m));
+  const interpreter = new Interpreter((m2) => console.log(m2));
   let buffer = "";
   rl.prompt();
   rl.on("line", async (line) => {
@@ -30694,7 +37763,7 @@ async function cmdDialect(sub, rest) {
       for (const [k, v] of words) console.log(`  ${k.padEnd(16)} ${v}`);
       if (spec.constructs.functions.length) {
         console.log("\nadded functions:");
-        for (const f of spec.constructs.functions) console.log(`  ${f.name}`);
+        for (const f2 of spec.constructs.functions) console.log(`  ${f2.name}`);
       }
       if (spec.constructs.operators.length) {
         console.log("\noperators:");
@@ -31082,20 +38151,20 @@ async function cmdCloud(sub, rest) {
   const user = await requireUser();
   if (sub === "list" || sub === void 0) {
     const { data } = await db3.from("code_files").select("name, updated_at, dialect_slug, runtime").eq("user_id", user.id).order("updated_at", { ascending: false });
-    for (const f of data ?? []) console.log(`${String(f.name).padEnd(28)} ${new Date(f.updated_at).toLocaleString()}  ${f.runtime ?? "v1"}  ${f.dialect_slug ?? "canonical"}`);
+    for (const f2 of data ?? []) console.log(`${String(f2.name).padEnd(28)} ${new Date(f2.updated_at).toLocaleString()}  ${f2.runtime ?? "v1"}  ${f2.dialect_slug ?? "canonical"}`);
     if (!data?.length) console.log("no files in the cloud yet");
     return;
   }
   if (sub === "pull") {
     const { data } = await db3.from("code_files").select("name, content").eq("user_id", user.id);
     const wanted = rest[0];
-    const rows = (data ?? []).filter((f) => !wanted || f.name === wanted);
+    const rows = (data ?? []).filter((f2) => !wanted || f2.name === wanted);
     if (!rows.length) die("nothing to pull");
     const dir = value("-o", "--out") ?? ".";
     mkdirSync5(dir, { recursive: true });
-    for (const f of rows) {
-      writeFileSync6(resolve6(dir, f.name), stripSignature(f.content ?? ""));
-      console.log("pulled", f.name);
+    for (const f2 of rows) {
+      writeFileSync6(resolve6(dir, f2.name), stripSignature(f2.content ?? ""));
+      console.log("pulled", f2.name);
     }
     return;
   }
@@ -31162,6 +38231,167 @@ function emit(text3) {
 async function cmdEdit(file) {
   if (!file) die("sdev edit <file.sdev>");
   await runEditor({ ...runOptions(), path: file });
+}
+function cmdDoctor() {
+  console.log(`sdev doctor \u2014 toolchain & environment check (v${VERSION})
+`);
+  const repoRoot = resolve6(process.cwd());
+  let wasmPath = "";
+  try {
+    wasmPath = seedWasmPath();
+  } catch {
+    wasmPath = resolve6(repoRoot, "public/wasm/sdev-seed.wasm");
+  }
+  const hasWasm = Boolean(wasmPath && existsSync6(wasmPath));
+  const codegenPath = resolve6(repoRoot, "lang/native/codegen-x64.mjs");
+  const runtimeAsmPath = resolve6(repoRoot, "lang/native/runtime.s");
+  const hasNative = existsSync6(codegenPath) && existsSync6(runtimeAsmPath);
+  const arduinoIndexPath = resolve6(repoRoot, "public/arduino/library-index.json");
+  const hasArduinoIndex = existsSync6(arduinoIndexPath);
+  let pythonVersion = "not found";
+  for (const bin of ["python3", "python"]) {
+    try {
+      const res = spawnSync2(bin, ["--version"], { encoding: "utf8", timeout: 2500 });
+      const out = ((res.stdout || "") + (res.stderr || "")).trim();
+      if (res.status === 0 && out) {
+        pythonVersion = out.split(/\r?\n/)[0];
+        break;
+      }
+    } catch {
+    }
+  }
+  const checks = [
+    { label: "CLI Version", ok: true, detail: `sdev v${VERSION}` },
+    { label: "Node.js Runtime", ok: true, detail: `${process.version} (${process.platform}/${process.arch})` },
+    { label: "Python Runtime", ok: pythonVersion !== "not found", detail: pythonVersion },
+    { label: "Self-Hosted WASM VM", ok: hasWasm, detail: hasWasm ? wasmPath : "missing (public/wasm/sdev-seed.wasm)" },
+    { label: "Native x86-64 Codegen", ok: hasNative, detail: hasNative ? "lang/native/codegen-x64.mjs + runtime.s" : "missing" },
+    { label: "Arduino Library Index", ok: hasArduinoIndex, detail: hasArduinoIndex ? arduinoIndexPath : "missing (public/arduino/library-index.json)" },
+    { label: "Canonical API Registry", ok: API_REGISTRY.length > 0, detail: `${API_REGISTRY.length} canonical APIs \xB7 ${DIAGNOSTIC_LIST.length} diagnostic codes` },
+    { label: "Local SDEV Home", ok: existsSync6(SDEV_HOME), detail: SDEV_HOME }
+  ];
+  const width = Math.max(...checks.map((c) => c.label.length));
+  for (const c of checks) {
+    const badge = c.ok ? "[OK]  " : "[WARN]";
+    console.log(`  ${badge} ${c.label.padEnd(width)}  ${c.detail}`);
+  }
+  const failed = checks.filter((c) => !c.ok);
+  console.log("");
+  if (failed.length === 0) {
+    console.log("All SDEV toolchain checks passed.");
+  } else {
+    console.log(`${checks.length - failed.length}/${checks.length} checks passed (${failed.length} warning${failed.length === 1 ? "" : "s"}).`);
+  }
+}
+function cmdExplain(codeOrName) {
+  const diag = findDiagnostic(codeOrName);
+  if (diag) {
+    console.log(`${diag.code} \u2014 ${diag.title} [${diag.severity.toUpperCase()} \xB7 ${diag.category}]`);
+    console.log(`
+EXPLANATION
+  ${diag.explanation}`);
+    console.log(`
+FIX HINT
+  ${diag.fixHint}`);
+    console.log(`
+EXAMPLE FIX
+  ${diag.goodExample.split("\n").join("\n  ")}`);
+    return;
+  }
+  const api = findApi(codeOrName);
+  if (api) {
+    console.log(`${api.name} (${api.module}) \u2014 [${api.status.toUpperCase()}]`);
+    console.log(`
+SIGNATURE
+  ${api.signature}`);
+    console.log(`
+DESCRIPTION
+  ${api.description}`);
+    console.log(`
+TARGETS
+  ${api.targets.join(", ")}`);
+    if (api.params.length > 0) {
+      console.log("\nPARAMETERS");
+      for (const p of api.params) {
+        console.log(`  ${p.name}${p.optional ? "?" : ""}: ${p.type}${p.description ? " \u2014 " + p.description : ""}`);
+      }
+    }
+    console.log(`
+RETURNS
+  ${api.returns}`);
+    if (api.deprecated) {
+      console.log(`
+DEPRECATED (since ${api.deprecated.since})
+  Replace with '${api.deprecated.replacement}': ${api.deprecated.reason}`);
+    }
+    console.log(`
+EXAMPLE
+  ${api.example.split("\n").join("\n  ")}`);
+    return;
+  }
+  const suggestions = suggestNearestApis(codeOrName, 3);
+  console.error(`No diagnostic code or API named '${codeOrName}' found.`);
+  if (suggestions.length > 0) {
+    console.error(`Did you mean: ${suggestions.map((s) => s.entry.name).join(", ")}?`);
+  }
+  console.error(`Try 'sdev api ${codeOrName}' or 'sdev explain SDEV001'.`);
+  process.exit(1);
+}
+function cmdLint(file) {
+  const raw = readSource(file);
+  const body = stripSignature(raw);
+  const targetFlag = value("--target");
+  const diags = lintSdevSource(body, {
+    target: targetFlag
+  });
+  if (diags.length === 0) {
+    console.log(`\u2713 ${basename2(file)} \u2014 no lint issues found${targetFlag ? ` (target: ${targetFlag})` : ""}`);
+    return;
+  }
+  for (const d of diags) {
+    const loc = `${basename2(file)}:${d.line}${d.column ? ":" + d.column : ""}`;
+    const sev = d.severity.toUpperCase().padEnd(7);
+    console.log(`${loc}  ${sev} [${d.code}] ${d.message}`);
+    if (d.suggestion) {
+      console.log(`          hint: ${d.suggestion}`);
+    }
+  }
+  const errors = diags.filter((d) => d.severity === "error").length;
+  const warnings = diags.filter((d) => d.severity === "warning").length;
+  const infos = diags.filter((d) => d.severity === "info").length;
+  console.log(`
+${diags.length} issue${diags.length === 1 ? "" : "s"} (${errors} error${errors === 1 ? "" : "s"}, ${warnings} warning${warnings === 1 ? "" : "s"}, ${infos} info)`);
+  if (errors > 0) process.exit(1);
+}
+function cmdApi(query) {
+  const mod = value("--module");
+  const target = value("--target");
+  const results = searchApis(query ?? "", {
+    module: mod ?? "all",
+    target: target ?? "all"
+  });
+  if (results.length === 0) {
+    console.log(`No APIs matched '${query ?? ""}'${mod ? ` in module ${mod}` : ""}${target ? ` for target ${target}` : ""}.`);
+    if (query) {
+      const near = suggestNearestApis(query, 3);
+      if (near.length > 0) {
+        console.log(`Did you mean: ${near.map((n) => n.entry.name).join(", ")}?`);
+      }
+    }
+    return;
+  }
+  console.log(`Canonical SDEV API Registry \u2014 ${results.length} matching API${results.length === 1 ? "" : "s"}
+`);
+  for (const entry of results.slice(0, 60)) {
+    const statusBadge = entry.status === "implemented" ? "" : ` [${entry.status.toUpperCase()}]`;
+    console.log(`  ${entry.signature.padEnd(36)} (${entry.module})${statusBadge}`);
+    console.log(`    ${entry.description}`);
+    console.log(`    targets: ${entry.targets.join(", ")}`);
+  }
+  if (results.length > 60) {
+    console.log(`
+  ... and ${results.length - 60} more. Filter with --module <m> or --target <t>, or inspect with 'sdev explain <name>'.`);
+  }
 }
 async function main() {
   const pos = positionals();
@@ -31254,6 +38484,14 @@ async function main() {
     case "home":
       console.log(SDEV_HOME);
       return;
+    case "doctor":
+      return cmdDoctor();
+    case "explain":
+      return cmdExplain(pos[1] ?? die("sdev explain <CODE|name>"));
+    case "lint":
+      return cmdLint(pos[1] ?? die("sdev lint <file.sdev>"));
+    case "api":
+      return cmdApi(pos[1]);
     case "version":
       console.log("sdev v" + VERSION);
       return;

@@ -15,7 +15,7 @@ export function CompilerScene({ panels }: { panels: { label: string; lines: stri
       dispose?.(); dispose = undefined;
       host.dataset.ready = 'false';
       if (motion.matches || !size.matches) return;
-      import('./compilerScene').then(({ createCompilerScene }) => {
+      import('./compilerScene.ts').then(({ createCompilerScene }) => {
         if (generation !== current) return;
         try { dispose = createCompilerScene(host, section, panels); host.dataset.ready = 'true'; }
         catch { host.dataset.ready = 'false'; }

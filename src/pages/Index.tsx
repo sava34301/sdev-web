@@ -12,7 +12,7 @@ import { CodeTranslator } from '@/components/CodeTranslator';
 import { SdevChatbot } from '@/components/SdevChatbot';
 import { CompilerPanel } from '@/components/CompilerPanel';
 import { HeroDemo } from '@/components/home/HeroDemo';
-import { CompilerScene } from '@/components/home/CompilerScene';
+import { CompilerScene } from '@/components/home/CompilerScene.tsx';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {

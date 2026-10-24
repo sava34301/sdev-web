@@ -1,0 +1,698 @@
+# Self-hosted codegen end-to-end test — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-self-codegen.sdev
+#
+# Compiles every case in the self-codegen suite (+ Milestone A string equality
+# cases) in-process using lang/compiler/codegen.sdev, executes the resulting
+# seed bytecode in an SDEV-authored VM interpreter, and verifies both runtime
+# output and exact bytecode + string-pool digests against the bootstrap oracle.
+#
+# host-prefetch: sdev:compile:self:scripts/test-self-codegen.sdev
+# host-prefetch: sdev:compile:boot:scripts/test-self-codegen.sdev
+
+use "lang/stdlib/testkit.sdev"
+use "lang/compiler/codegen.sdev"
+
+set tk_kind to mklist(4000)
+set tk_num  to mklist(4000)
+set tk_num2 to mklist(4000)
+set tk_txt  to mklist(4000)
+set tk_count to 0
+
+set bc to mklist(16384)
+set bc[0] to 0
+set sym_names to mklist(256)
+set sym_names[0] to 0
+set sym_types to mklist(256)
+set sym_types[0] to 0
+set loc_names to mklist(256)
+set loc_names[0] to 0
+set loc_types to mklist(256)
+set loc_types[0] to 0
+set fn_names to mklist(256)
+set fn_names[0] to 0
+set fn_offsets to mklist(256)
+set fn_offsets[0] to 0
+set fn_arities to mklist(256)
+set fn_arities[0] to 0
+set fn_ret_types to mklist(256)
+set fn_ret_types[0] to 0
+set fn_extras to mklist(256)
+set fn_extras[0] to 0
+set fn_body_start to mklist(256)
+set fn_body_start[0] to 0
+set lam_names to mklist(64)
+set lam_names[0] to 0
+set lam_caps to mklist(64)
+set lam_caps[0] to 0
+set lsav_names to mklist(256)
+set lsav_names[0] to 0
+set lsav_types to mklist(256)
+set lsav_types[0] to 0
+set cur_fn to mklist(2)
+set cur_fn[0] to 0
+set pend_names to mklist(512)
+set pend_names[0] to 0
+set pend_pos to mklist(512)
+set pend_pos[0] to 0
+set in_func to mklist(2)
+set in_func[0] to 0
+set expr_type to mklist(2)
+set expr_type[0] to 0
+set scratch to mklist(4)
+set scratch[0] to 0
+set emit_enabled to mklist(2)
+set emit_enabled[0] to 0
+set skip_fn_defs to mklist(2)
+set skip_fn_defs[0] to 0
+set pool_bytes to mklist(8192)
+set pool_bytes[0] to 0
+set pool_keys to mklist(256)
+set pool_keys[0] to 0
+set pool_offs to mklist(256)
+set pool_offs[0] to 0
+set brk_pos to mklist(256)
+set brk_pos[0] to 0
+set brk_dep to mklist(256)
+set brk_dep[0] to 0
+set cnt_pos to mklist(256)
+set cnt_pos[0] to 0
+set cnt_dep to mklist(256)
+set cnt_dep[0] to 0
+set loop_depth to mklist(2)
+set loop_depth[0] to 0
+set fe_depth to mklist(2)
+set fe_depth[0] to 0
+set cls_names to mklist(64)
+set cls_names[0] to 0
+set mth_cls to mklist(256)
+set mth_cls[0] to 0
+set mth_key to mklist(256)
+set mth_key[0] to 0
+set mth_fn to mklist(256)
+set mth_fn[0] to 0
+set mth_sup to mklist(256)
+set mth_sup[0] to 0
+set last_id to mklist(2)
+set last_id[0] to ""
+
+# ---- SDEV-authored seed bytecode VM for executing compiled test cases ------
+
+set vm_stk  to mklist(1024)
+set vm_vars to mklist(256)
+set vm_call to mklist(2048)
+set vm_heap to mklist(4096)
+set vm_strs to {init: ""}
+set vm_out  to {v: ""}
+set vm_state to mklist(8)
+
+to vm_read_u16 with ip
+  return bc[ip + 1] + bc[ip + 2] * 256
+end
+
+to vm_read_i16 with ip
+  set v to bc[ip + 1] + bc[ip + 2] * 256
+  if v >= 32768
+    set v to v - 65536
+  end
+  return v
+end
+
+to vm_read_i32 with ip
+  return bc[ip + 1] + bc[ip + 2] * 256 + bc[ip + 3] * 65536 + bc[ip + 4] * 16777216
+end
+
+to vm_pool_str with off
+  set slen to pool_bytes[off + 1] + pool_bytes[off + 2] * 256
+  set s to ""
+  set si to 0
+  while si < slen
+    set s to concat(s, chr(pool_bytes[off + 5 + si]))
+    set si to si + 1
+  end
+  set vm_strs[str(off)] to s
+  return off
+end
+
+to vm_new_str with s
+  set h to vm_state[4]
+  set vm_state[4] to h + 1
+  set vm_strs[str(h)] to s
+  return h
+end
+
+to vm_is_arith with op
+  if op >= 16
+    if op <= 20
+      return 1
+    end
+  end
+  return 0
+end
+
+to vm_is_cmp with op
+  if op >= 32
+    if op <= 37
+      return 1
+    end
+  end
+  return 0
+end
+
+to exec_bc
+  set ip to 0
+  set sp to 0
+  set fp to 0
+  set csp to 0
+  set hp to 0
+  set vm_state[4] to 50000
+  set vm_out["v"] to ""
+  set gi to 0
+  while gi < 64
+    set vm_vars[gi] to 0
+    set gi to gi + 1
+  end
+  set prog_len to bc[0]
+  set running to 1
+  while running
+    if ip >= prog_len
+      set running to 0
+    else
+      set op to bc[ip + 1]
+      set ip to ip + 1
+      if op is 255
+        set running to 0
+      else if op is 1
+        set vm_stk[sp] to vm_read_i32(ip)
+        set sp to sp + 1
+        set ip to ip + 4
+      else if op is 2
+        set off to vm_read_u16(ip)
+        set vm_stk[sp] to vm_pool_str(off)
+        set sp to sp + 1
+        set ip to ip + 2
+      else if op is 3
+        set slot to bc[ip + 1]
+        set vm_stk[sp] to vm_vars[slot]
+        set sp to sp + 1
+        set ip to ip + 1
+      else if op is 4
+        set slot to bc[ip + 1]
+        set sp to sp - 1
+        set vm_vars[slot] to vm_stk[sp]
+        set ip to ip + 1
+      else if op is 5
+        set sp to sp - 1
+      else if vm_is_arith(op)
+        set sp to sp - 1
+        set b to vm_stk[sp]
+        set sp to sp - 1
+        set a to vm_stk[sp]
+        if op is 16
+          set vm_stk[sp] to a + b
+        else if op is 17
+          set vm_stk[sp] to a - b
+        else if op is 18
+          set vm_stk[sp] to a * b
+        else if op is 19
+          set vm_stk[sp] to a / b
+        else
+          set vm_stk[sp] to a % b
+        end
+        set sp to sp + 1
+      else if vm_is_cmp(op)
+        set sp to sp - 1
+        set b to vm_stk[sp]
+        set sp to sp - 1
+        set a to vm_stk[sp]
+        if op is 32
+          set vm_stk[sp] to a is b
+        else if op is 33
+          set vm_stk[sp] to a is not b
+        else if op is 34
+          set vm_stk[sp] to a < b
+        else if op is 35
+          set vm_stk[sp] to a > b
+        else if op is 36
+          set vm_stk[sp] to a <= b
+        else
+          set vm_stk[sp] to a >= b
+        end
+        set sp to sp + 1
+      else if op is 48
+        set sp to sp - 1
+        if vm_stk[sp] is 0
+          set vm_stk[sp] to 1
+        else
+          set vm_stk[sp] to 0
+        end
+        set sp to sp + 1
+      else if op is 64
+        set rel to vm_read_i16(ip)
+        set ip to ip + 2 + rel
+      else if op is 65
+        set sp to sp - 1
+        set cond to vm_stk[sp]
+        set rel to vm_read_i16(ip)
+        set ip to ip + 2
+        if cond is 0
+          set ip to ip + rel
+        end
+      else if op is 80
+        set sp to sp - 1
+        set vm_out["v"] to concat(vm_out["v"], concat(str(vm_stk[sp]), "
+"))
+      else if op is 81
+        set sp to sp - 1
+        set h to vm_stk[sp]
+        set vm_out["v"] to concat(vm_out["v"], concat(vm_strs[str(h)], "
+"))
+      else if op is 96
+        set target to vm_read_u16(ip)
+        set nargs to bc[ip + 3]
+        set ip to ip + 3
+        set vm_call[csp] to ip
+        set vm_call[csp + 1] to fp
+        set fp to csp
+        set csp to csp + 2
+        set base to sp - nargs
+        set ai to 0
+        while ai < nargs
+          set vm_call[csp] to vm_stk[base + ai]
+          set csp to csp + 1
+          set ai to ai + 1
+        end
+        set sp to sp - nargs
+        set ip to target
+      else if op is 97
+        set sp to sp - 1
+        set retv to vm_stk[sp]
+        set ip to vm_call[fp]
+        set saved_fp to vm_call[fp + 1]
+        set csp to fp
+        set fp to saved_fp
+        set vm_stk[sp] to retv
+        set sp to sp + 1
+      else if op is 98
+        set nloc to bc[ip + 1]
+        set ip to ip + 1
+        set li to 0
+        while li < nloc
+          set vm_call[csp] to 0
+          set csp to csp + 1
+          set li to li + 1
+        end
+      else if op is 99
+        set slot to bc[ip + 1]
+        set ip to ip + 1
+        set vm_stk[sp] to vm_call[fp + 2 + slot]
+        set sp to sp + 1
+      else if op is 100
+        set slot to bc[ip + 1]
+        set ip to ip + 1
+        set sp to sp - 1
+        set vm_call[fp + 2 + slot] to vm_stk[sp]
+      else if op is 128
+        set n to vm_read_u16(ip)
+        set ip to ip + 2
+        set addr to hp
+        set vm_heap[hp] to n
+        set hp to hp + 1
+        set base to sp - n
+        set li to 0
+        while li < n
+          set vm_heap[hp] to vm_stk[base + li]
+          set hp to hp + 1
+          set li to li + 1
+        end
+        set sp to sp - n
+        set vm_stk[sp] to 100000 + addr
+        set sp to sp + 1
+      else if op is 129
+        set sp to sp - 1
+        set idx to vm_stk[sp]
+        set sp to sp - 1
+        set arr to vm_stk[sp] - 100000
+        set vm_stk[sp] to vm_heap[arr + 1 + idx]
+        set sp to sp + 1
+      else if op is 130
+        set sp to sp - 1
+        set val to vm_stk[sp]
+        set sp to sp - 1
+        set idx to vm_stk[sp]
+        set sp to sp - 1
+        set arr to vm_stk[sp] - 100000
+        set vm_heap[arr + 1 + idx] to val
+      else if op is 131
+        set sp to sp - 1
+        set a to vm_stk[sp]
+        if a >= 100000
+          set vm_stk[sp] to vm_heap[a - 100000]
+        else
+          set vm_stk[sp] to length(vm_strs[str(a)])
+        end
+        set sp to sp + 1
+      else if op is 132
+        set sp to sp - 1
+        set idx to vm_stk[sp]
+        set sp to sp - 1
+        set h to vm_stk[sp]
+        set vm_stk[sp] to ord(vm_strs[str(h)], idx)
+        set sp to sp + 1
+      else if op is 135
+        set sp to sp - 1
+        set vm_stk[sp] to vm_new_str(str(vm_stk[sp]))
+        set sp to sp + 1
+      else if op is 136
+        set sp to sp - 1
+        set vm_stk[sp] to vm_new_str(chr(vm_stk[sp]))
+        set sp to sp + 1
+      else if op is 137
+        set sp to sp - 1
+        set n to vm_stk[sp]
+        set addr to hp
+        set vm_heap[hp] to n
+        set hp to hp + 1
+        set li to 0
+        while li < n
+          set vm_heap[hp] to 0
+          set hp to hp + 1
+          set li to li + 1
+        end
+        set vm_stk[sp] to 100000 + addr
+        set sp to sp + 1
+      else if op is 144
+        set sp to sp - 1
+        set b to vm_stk[sp]
+        set sp to sp - 1
+        set a to vm_stk[sp]
+        set vm_stk[sp] to concat(vm_strs[str(a)], "") is vm_strs[str(b)]
+        set sp to sp + 1
+      else if op is 145
+        set sp to sp - 1
+        set b to vm_stk[sp]
+        set sp to sp - 1
+        set a to vm_stk[sp]
+        set vm_stk[sp] to vm_new_str(concat(vm_strs[str(a)], vm_strs[str(b)]))
+        set sp to sp + 1
+      else
+        set running to 0
+      end
+    end
+  end
+  return vm_out["v"]
+end
+
+set case_names to split("single say|arithmetic|parens override|multiple says|nested + mixed|left associativity|set + read|set expr + reuse|accumulator|read in expr|comparison is|comparison is not|comparison lt/gt|comparison le/ge|if then|if else true|if else false|while count up|while sum|nested if in while|fizzbuzz-lite|zero-arg fn|one-arg fn|two-arg fn|fn using locals|fn calls fn|recursive factorial|recursive fib|fn with while|global + fn together|builtin mklist + len|string literal|string concat|string var + concat|str builtin|chr / ord|list literal + index|list literal length|index in expr|set xs[i] to v|index in while|empty string|string in loop|forward call|forward mutual recursion|forward call in expr|string-returning fn|string fn concat|string fn with param|fn returns int by str path|string is / is not (Milestone A)", "|")
+set case_srcs  to split("say 42\n~\nsay 1 + 2 * 3\n~\nsay (1 + 2) * 3\n~\nsay 1\nsay 2\nsay 3\n~\nsay ((10 + 20) * (30 - 4)) / 5\n~\nsay 100 - 1 - 2 - 3\n~\nset x to 7\nsay x\n~\nset a to 3 + 4\nset b to a * 2\nsay a\nsay b\n~\nset s to 0\nset s to s + 10\nset s to s + 20\nset s to s + 30\nsay s\n~\nset x to 5\nset y to 6\nsay x * y + x\n~\nsay 5 is 5\nsay 5 is 4\n~\nsay 5 is not 5\nsay 5 is not 4\n~\nsay 3 < 5\nsay 3 > 5\n~\nsay 3 <= 3\nsay 3 >= 4\n~\nset x to 10\nif x is 10\nsay 111\nend\nsay 999\n~\nset x to 1\nif x is 1\nsay 100\nelse\nsay 200\nend\n~\nset x to 2\nif x is 1\nsay 100\nelse\nsay 200\nend\n~\nset i to 0\nwhile i < 5\nsay i\nset i to i + 1\nend\nsay 999\n~\nset i to 1\nset s to 0\nwhile i <= 10\nset s to s + i\nset i to i + 1\nend\nsay s\n~\nset i to 0\nwhile i < 6\nif i is 3\nsay 300\nelse\nsay i\nend\nset i to i + 1\nend\n~\nset i to 1\nwhile i <= 5\nif i is 3\nsay 30\nelse\nsay i\nend\nset i to i + 1\nend\n~\nto answer\nreturn 42\nend\nsay answer()\n~\nto sq with x\nreturn x * x\nend\nsay sq(5)\nsay sq(9)\n~\nto add with a b\nreturn a + b\nend\nsay add(3, 4)\nsay add(10, 20)\n~\nto hyp with a b\nset s to a * a + b * b\nreturn s\nend\nsay hyp(3, 4)\n~\nto sq with x\nreturn x * x\nend\nto sum_sq with a b\nreturn sq(a) + sq(b)\nend\nsay sum_sq(3, 4)\n~\nto fact with n\nif n < 2\nreturn 1\nend\nreturn n * fact(n - 1)\nend\nsay fact(6)\n~\nto fib with n\nif n < 2\nreturn n\nend\nreturn fib(n - 1) + fib(n - 2)\nend\nsay fib(10)\n~\nto sum_to with n\nset i to 1\nset s to 0\nwhile i <= n\nset s to s + i\nset i to i + 1\nend\nreturn s\nend\nsay sum_to(10)\nsay sum_to(100)\n~\nset base to 100\nto shift with x\nreturn x + base\nend\nsay shift(5)\nsay shift(7)\n~\nset xs to mklist(5)\nsay length(xs)\n~\nsay \"hello\"\n~\nsay \"foo\" + \"bar\"\n~\nset a to \"hi\"\nset b to \" there\"\nsay a + b\n~\nsay str(42) + str(58)\n~\nsay chr(65) + chr(90)\nsay ord(\"Z\", 0)\n~\nset xs to [10, 20, 30, 40]\nsay xs[0]\nsay xs[1]\nsay xs[3]\n~\nset xs to [7, 7, 7, 7, 7]\nsay length(xs)\n~\nset xs to [1, 2, 3, 4, 5]\nsay xs[2] * xs[4] + xs[0]\n~\nset xs to mklist(4)\nset xs[0] to 100\nset xs[1] to 200\nset xs[2] to xs[0] + xs[1]\nsay xs[2]\n~\nset xs to [3, 1, 4, 1, 5, 9]\nset i to 0\nset s to 0\nwhile i < length(xs)\nset s to s + xs[i]\nset i to i + 1\nend\nsay s\n~\nset s to \"\"\nsay length(s)\n~\nset i to 0\nwhile i < 3\nsay \"tick\"\nset i to i + 1\nend\n~\nsay greet()\nto greet\nreturn 7\nend\n~\nto is_even with n\nif n is 0\nreturn 1\nend\nreturn is_odd(n - 1)\nend\nto is_odd with n\nif n is 0\nreturn 0\nend\nreturn is_even(n - 1)\nend\nsay is_even(10)\nsay is_odd(10)\nsay is_even(7)\n~\nsay double(3) + double(4)\nto double with x\nreturn x * 2\nend\n~\nto hi\nreturn \"hello\"\nend\nsay hi()\n~\nto hi\nreturn \"hi \"\nend\nto you\nreturn \"you\"\nend\nsay hi() + you()\n~\nto greet with n\nreturn \"hello \" + n\nend\nsay greet(\"world\")\nsay greet(\"sdev\")\n~\nto pick with n\nif n is 1\nreturn \"one\"\nend\nreturn \"many\"\nend\nsay pick(1)\nsay pick(9)\n~\nset a to \"ab\" + \"c\"\nset b to \"a\" + \"bc\"\nsay a is b\nsay a is not b\nsay a is \"xyz\"\nsay a is not \"xyz\"", "
+~
+")
+set case_exps  to split("42\n\n~\n7\n\n~\n9\n\n~\n1\n2\n3\n\n~\n156\n\n~\n94\n\n~\n7\n\n~\n7\n14\n\n~\n60\n\n~\n35\n\n~\n1\n0\n\n~\n0\n1\n\n~\n1\n0\n\n~\n1\n0\n\n~\n111\n999\n\n~\n100\n\n~\n200\n\n~\n0\n1\n2\n3\n4\n999\n\n~\n55\n\n~\n0\n1\n2\n300\n4\n5\n\n~\n1\n2\n30\n4\n5\n\n~\n42\n\n~\n25\n81\n\n~\n7\n30\n\n~\n25\n\n~\n25\n\n~\n720\n\n~\n55\n\n~\n55\n5050\n\n~\n105\n107\n\n~\n5\n\n~\nhello\n\n~\nfoobar\n\n~\nhi there\n\n~\n4258\n\n~\nAZ\n90\n\n~\n10\n20\n40\n\n~\n5\n\n~\n16\n\n~\n300\n\n~\n23\n\n~\n0\n\n~\ntick\ntick\ntick\n\n~\n7\n\n~\n1\n0\n0\n\n~\n14\n\n~\nhello\n\n~\nhi you\n\n~\nhello world\nhello sdev\n\n~\none\nmany\n\n~\n1\n0\n0\n1\n", "
+~
+")
+set case_sigs  to split("10:263985:0:0,22:818617:0:0,22:543427:0:0,22:723254:0:0,34:662544:0:0,28:231572:0:0,14:833787:0:0,33:511701:0:0,44:474778:0:0,27:678215:0:0,28:124569:0:0,28:428094:0:0,28:501857:0:0,28:375364:0:0,34:26598:0:0,37:198998:0:0,37:258421:0:0,44:710921:0:0,52:895917:0:0,58:94440:0:0,58:754392:0:0,21:155982:0:0,36:936693:0:0,46:608579:0:0,43:701291:0:0,51:198425:0:0,53:622966:0:0,60:77290:0:0,77:780652:0:0,43:609007:0:0,16:977375:0:0,8:430016:9:685763,12:156265:14:315859,20:922441:16:549987,18:741580:0:0,28:34516:5:368693,56:548126:0:0,38:92309:0:0,61:66338:0:0,72:535763:0:0,88:101094:0:0,13:906090:4:996153,39:251529:8:879595,21:430842:0:0,106:298278:0:0,39:521529:0:0,19:918300:9:685763,34:733384:14:78282,33:882659:27:49474,49:106027:15:805177,50:708349:29:276505", ",")
+
+set ci to 0
+while ci < length(case_names)
+  set src to case_srcs[ci]
+  set exp to case_exps[ci]
+  set exp_sig to case_sigs[ci]
+
+  # Reset lexer + codegen state for this case
+  set tk_count to 0
+  set _srclen to length(src)
+  set _i to 0
+  while _i < _srclen
+    set _c to ord(src, _i)
+    if _c is 32
+      set _i to _i + 1
+    else
+      if _c is 9
+        set _i to _i + 1
+      else
+        if _c is 13
+          set _i to _i + 1
+        else
+          if _c is 10
+            set tk_kind[tk_count] to 5
+            set tk_count to tk_count + 1
+            set _i to _i + 1
+          else
+            if is_digit(_c)
+              set _j to _i
+              set _going to 1
+              while _going
+                if _j >= _srclen
+                  set _going to 0
+                else
+                  if is_digit(ord(src, _j))
+                    set _j to _j + 1
+                  else
+                    set _going to 0
+                  end
+                end
+              end
+              set _v to 0
+              set _k to _i
+              while _k < _j
+                set _v to _v * 10 + ord(src, _k) - 48
+                set _k to _k + 1
+              end
+              set tk_kind[tk_count] to 1
+              set tk_num[tk_count] to _v
+              set tk_num2[tk_count] to 0
+              set tk_count to tk_count + 1
+              set _i to _j
+            else
+              if _c is 34
+                set _j to _i + 1
+                set _collecting to 1
+                while _collecting
+                  if _j >= _srclen
+                    set _collecting to 0
+                  else
+                    if ord(src, _j) is 34
+                      set _collecting to 0
+                    else
+                      set _j to _j + 1
+                    end
+                  end
+                end
+                set tk_kind[tk_count] to 3
+                set tk_txt[tk_count] to slice(src, _i + 1, _j)
+                set tk_count to tk_count + 1
+                set _i to _j + 1
+              else
+                if is_alpha(_c)
+                  set _j to _i
+                  set _going to 1
+                  while _going
+                    if _j >= _srclen
+                      set _going to 0
+                    else
+                      if is_alnum(ord(src, _j))
+                        set _j to _j + 1
+                      else
+                        set _going to 0
+                      end
+                    end
+                  end
+                  set tk_kind[tk_count] to 2
+                  set tk_txt[tk_count] to slice(src, _i, _j)
+                  set tk_count to tk_count + 1
+                  set _i to _j
+                else
+                  set _tok to _c
+                  if _c is 60
+                    if _i + 1 < _srclen
+                      if ord(src, _i + 1) is 61
+                        set _tok to 300
+                        set _i to _i + 1
+                      end
+                    end
+                  end
+                  if _c is 62
+                    if _i + 1 < _srclen
+                      if ord(src, _i + 1) is 61
+                        set _tok to 301
+                        set _i to _i + 1
+                      end
+                    end
+                  end
+                  set tk_kind[tk_count] to 4
+                  set tk_num[tk_count] to _tok
+                  set tk_count to tk_count + 1
+                  set _i to _i + 1
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  set bc[0] to 0
+  set sym_names[0] to 0
+  set sym_types[0] to 0
+  set loc_names[0] to 0
+  set loc_types[0] to 0
+  set fn_names[0] to 0
+  set fn_offsets[0] to 0
+  set fn_arities[0] to 0
+  set fn_ret_types[0] to 0
+  set fn_extras[0] to 0
+  set fn_body_start[0] to 0
+  set lam_names[0] to 0
+  set lam_caps[0] to 0
+  set lsav_names[0] to 0
+  set lsav_types[0] to 0
+  set cur_fn[0] to 0
+  set pend_names[0] to 0
+  set pend_pos[0] to 0
+  set in_func[0] to 0
+  set expr_type[0] to 0
+  set scratch[0] to 0
+  set emit_enabled[0] to 0
+  set skip_fn_defs[0] to 0
+  set pool_bytes[0] to 0
+  set pool_keys[0] to 0
+  set pool_offs[0] to 0
+  set brk_pos[0] to 0
+  set brk_dep[0] to 0
+  set cnt_pos[0] to 0
+  set cnt_dep[0] to 0
+  set loop_depth[0] to 0
+  set fe_depth[0] to 0
+  set cls_names[0] to 0
+  set mth_cls[0] to 0
+  set mth_key[0] to 0
+  set mth_fn[0] to 0
+  set mth_sup[0] to 0
+  set last_id[0] to ""
+
+  desugar_kinds()
+
+  set emit_enabled[0] to 0
+  set skip_fn_defs[0] to 0
+  set _iter to 0
+  while _iter < 2
+    set pos to 0
+    set sym_names[0] to 0
+    set sym_types[0] to 0
+    set going to 1
+    while going
+      set new_pos to parse_stmt(pos)
+      if new_pos is pos
+        set going to 0
+      else
+        set pos to new_pos
+      end
+      if pos >= tk_count
+        set going to 0
+      end
+    end
+    set _iter to _iter + 1
+  end
+
+  set sym_names[0] to 0
+  set sym_types[0] to 0
+  set pend_names[0] to 0
+  set pend_pos[0] to 0
+  set bc[0] to 0
+  set emit_enabled[0] to 1
+
+  emit_byte(64)
+  set _jmp_main to placeholder16()
+
+  set _i to 1
+  set _fstop to fn_names[0] + 1
+  while _i < _fstop
+    set fn_offsets[_i] to bc[0]
+    set loc_names[0] to 0
+    set loc_types[0] to 0
+    set pos to fn_body_start[_i]
+    set pos to parse_params(pos)
+    set _extras to fn_extras[_i]
+    if _extras > 0
+      emit_byte(98)
+      emit_byte(_extras)
+    end
+    set cur_fn[0] to _i
+    set _ppos to pos
+    set _psyms to sym_names[0]
+    set emit_enabled[0] to 0
+    set in_func[0] to 1
+    set _pend to parse_block(pos)
+    set emit_enabled[0] to 1
+    set sym_names[0] to _psyms
+    set sym_types[0] to _psyms
+    set pos to _ppos
+    set in_func[0] to 1
+    set pos to parse_block(pos)
+    emit_byte(1)
+    emit_i32(0)
+    emit_byte(97)
+    set in_func[0] to 0
+    set cur_fn[0] to 0
+    set _i to _i + 1
+  end
+
+  patch_i16(_jmp_main, bc[0])
+
+  set skip_fn_defs[0] to 1
+  set pos to 0
+  set going to 1
+  while going
+    set new_pos to parse_stmt(pos)
+    if new_pos is pos
+      set going to 0
+    else
+      set pos to new_pos
+    end
+    if pos >= tk_count
+      set going to 0
+    end
+  end
+  emit_byte(255)
+  resolve_pending_calls()
+
+  set bch to bc[0]
+  set k to 1
+  while k <= bc[0]
+    set bch to (bch * 131 + bc[k]) % 1000003
+    set k to k + 1
+  end
+  set plh to pool_bytes[0]
+  set k to 1
+  while k <= pool_bytes[0]
+    set plh to (plh * 131 + pool_bytes[k]) % 1000003
+    set k to k + 1
+  end
+  set got_sig to concat(str(bc[0]), concat(":", concat(str(bch), concat(":", concat(str(pool_bytes[0]), concat(":", str(plh)))))))
+
+  set got to exec_bc()
+  set ok to 0
+  if got is exp
+    if got_sig is exp_sig
+      set ok to 1
+    end
+  end
+  set _ to check(case_names[ci], ok)
+  if ok is 0
+    say concat("   expected out: ", replace(exp, "
+", "|"))
+    say concat("   got out     : ", replace(got, "
+", "|"))
+    say concat("   expected sig: ", exp_sig)
+    say concat("   got sig     : ", got_sig)
+  end
+
+  set ci to ci + 1
+end
+
+set self_out to read_file("sdev:compile:self:scripts/test-self-codegen.sdev")
+set boot_out to read_file("sdev:compile:boot:scripts/test-self-codegen.sdev")
+set _ to check("test-self-codegen.sdev byte-identical through shim and bootstrap", self_out is boot_out)
+
+set _ to tk_report("self-codegen")

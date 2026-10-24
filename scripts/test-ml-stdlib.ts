@@ -1,24 +1,29 @@
 /**
- * Milestone 13 — ML stdlib execution harness.
+ * Milestone 13 & 15 — ML stdlib execution harness.
  *
  * The ML stack (lang/stdlib/ml/*.sdev) is written entirely in sdev. This
  * harness links those modules, installs the Node host bindings the stdlib
  * expects (read_file / write_file / http_get), and runs real programs on the
- * v1 interpreter so tensor math, autograd and training are actually verified
+ * v1 interpreter so tensor math, autograd, batched forward passes,
+ * accelerated matmul dispatch, and binary checkpoints are actually verified
  * instead of only type-checked by eye.
  *
- *   bun run scripts/test-ml-stdlib.ts
+ *   node scripts/run-ts.mjs scripts/test-ml-stdlib.ts
  */
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { execute } from '../src/lang';
 import { resolveLinks, type LinkableFile } from '../src/lang/linker';
 
+const resolveHostPath = (p: string) =>
+  p.startsWith('/tmp/') ? join(tmpdir(), p.slice(5)) : p;
+
 // ---- Node host bindings consumed by src/lang/builtins.ts ----
 (globalThis as unknown as { __sdevHost: unknown }).__sdevHost = {
-  readFile: (p: string) => readFileSync(p, 'utf8'),
-  writeFile: (p: string, c: string) => writeFileSync(p, c),
+  readFile: (p: string) => readFileSync(resolveHostPath(p), 'utf8'),
+  writeFile: (p: string, c: string) => writeFileSync(resolveHostPath(p), c),
   httpGet: (url: string) =>
     execFileSync('curl', ['-sL', '--max-time', '20', url], { encoding: 'utf8' }),
 };
@@ -259,6 +264,135 @@ speak(str(original) + "|" + str(m.params[0].data[0]))`,
   (out) => {
     const [a, b] = String(out[0] ?? '').split('|').map(Number);
     return near(a, b, 1e-9) ? null : `checkpoint mismatch: ${a} vs ${b}`;
+  }
+);
+
+// 16. M15: Batched linear forward pass matches single-sample forward & supports autograd
+run(
+  'M15 nn: linear_forward_batch shape, equivalence & autograd',
+  `link "nn.sdev"
+tape_reset()
+forge l be linear(3, 2)
+forge x0 be tensor_grad([1.0, 2.0, 3.0], [1, 3])
+forge x1 be tensor_grad([4.0, 5.0, 6.0], [1, 3])
+forge bx be tensor_grad([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3])
+forge y0 be l.forward(x0)
+forge y1 be l.forward(x1)
+tape_reset()
+forge by be linear_forward_batch(l, bx)
+forge loss be d_mse(by, zeros([2, 2]))
+backward(loss)
+forge grad_norm be abs(l.w.grad[0]) + abs(l.w.grad[1])
+speak(str(by.shape[0]) + "x" + str(by.shape[1]) + "|" + str(by.data[0] - y0.data[0]) + "|" + str(by.data[2] - y1.data[0]) + "|" + str(grad_norm > 0.0))`,
+  (out) => {
+    const [shape, d0, d1, hasGrad] = String(out[0] ?? '').split('|');
+    if (shape !== '2x2') return `expected 2x2 shape, got ${shape}`;
+    if (!near(Number(d0), 0, 1e-9) || !near(Number(d1), 0, 1e-9)) {
+      return `batch vs single mismatch: ${d0}, ${d1}`;
+    }
+    if (hasGrad !== 'yep' && hasGrad !== 'true') return `expected non-zero weight gradient, got ${hasGrad}`;
+    return null;
+  }
+);
+
+// 17. M15: Batched sequential forward pass through multi-layer MLP
+run(
+  'M15 nn: sequential_forward_batch multi-layer MLP',
+  `link "nn.sdev"
+forge l1 be linear(3, 4)
+forge a1 be relu_layer()
+forge l2 be linear(4, 2)
+forge net be sequential([l1, a1, l2])
+forge x0 be tensor([0.5, -1.0, 2.0], [1, 3])
+forge x1 be tensor([-0.5, 1.5, 0.25], [1, 3])
+forge bx be tensor([0.5, -1.0, 2.0, -0.5, 1.5, 0.25], [2, 3])
+forge y0 be net.forward(x0)
+forge y1 be net.forward(x1)
+forge by be sequential_forward_batch(net, bx)
+speak(str(by.shape[0]) + "x" + str(by.shape[1]) + "|" + str(by.data[0] - y0.data[0]) + "|" + str(by.data[3] - y1.data[1]))`,
+  (out) => {
+    const [shape, d0, d1] = String(out[0] ?? '').split('|');
+    if (shape !== '2x2') return `expected 2x2 shape, got ${shape}`;
+    if (!near(Number(d0), 0, 1e-9) || !near(Number(d1), 0, 1e-9)) {
+      return `sequential batch mismatch: ${d0}, ${d1}`;
+    }
+    return null;
+  }
+);
+
+// 18. M15: Batched GPT forward pass produces [B, T, vocab] logits matching single sequence
+run(
+  'M15 transformer: gpt_forward_batch [B, T, vocab] matches per-sequence forward',
+  `link "transformer.sdev"
+forge m be gpt(6, 4, 8, 1)
+forge seq0 be [1.0, 2.0, 3.0]
+forge seq1 be [0.0, 4.0, 2.0]
+forge single0 be m.forward(tensor(seq0, [3]))
+forge single1 be m.forward(tensor(seq1, [3]))
+forge batch_out be gpt_forward_batch(m, [seq0, seq1])
+forge shape_str be str(batch_out.shape[0]) + "x" + str(batch_out.shape[1]) + "x" + str(batch_out.shape[2])
+forge diff0 be batch_out.data[0] - single0.data[0]
+forge diff1 be batch_out.data[18] - single1.data[0]
+forge diff_last be batch_out.data[35] - single1.data[17]
+speak(shape_str + "|" + str(diff0) + "|" + str(diff1) + "|" + str(diff_last))`,
+  (out) => {
+    const [shape, d0, d1, dLast] = String(out[0] ?? '').split('|');
+    if (shape !== '2x3x6') return `expected 2x3x6 shape, got ${shape}`;
+    if (!near(Number(d0), 0, 1e-9) || !near(Number(d1), 0, 1e-9) || !near(Number(dLast), 0, 1e-9)) {
+      return `gpt_forward_batch mismatch: ${d0}, ${d1}, ${dLast}`;
+    }
+    return null;
+  }
+);
+
+// 19. M15: Accelerated matmul dispatch (best_matmul + pure SDEV fallback)
+run(
+  'M15 accelerators: accel_matmul fallback and custom accelerator dispatch',
+  `link "nn.sdev"
+forge a be tensor([1.0, 2.0, 3.0, 4.0], [2, 2])
+forge b be tensor([2.0, 0.0, 1.0, 2.0], [2, 2])
+forge c_fallback be accel_matmul(a, b)
+forge calls be [0]
+conjure mock_wg_matmul(ta, tb) ::
+    set calls[0] to calls[0] + 1
+    yield t_matmul(ta, tb)
+;;
+set_accel({ ok: nope }, void, { ok: yep, matmul: mock_wg_matmul })
+forge c_accel be accel_matmul(a, b)
+set_accel(void, void, void)
+speak(str(c_fallback.data[0]) + "," + str(c_fallback.data[3]) + "|" + str(c_accel.data[0]) + "," + str(c_accel.data[3]) + "|" + str(calls[0]))`,
+  (out) => {
+    const [fb, ac, calls] = String(out[0] ?? '').split('|');
+    if (fb !== '4,8') return `fallback matmul wrong: ${fb}`;
+    if (ac !== '4,8') return `accelerated matmul wrong: ${ac}`;
+    if (Number(calls) !== 1) return `expected 1 accelerator dispatch call, got ${calls}`;
+    return null;
+  }
+);
+
+// 20. M15: Binary checkpoint save_checkpoint_bin + load_checkpoint_bin round-trip
+run(
+  'M15 train: binary checkpoint SDEVML01 header, metadata & exact f64 round-trip',
+  `link "train.sdev"
+forge m be gpt(5, 4, 8, 1)
+forge orig0 be m.params[0].data[0]
+forge orig1 be m.params[1].data[2]
+save_checkpoint_bin("/tmp/sdev-ckpt.bin", m, 42, 0.125)
+forge raw be read_file("/tmp/sdev-ckpt.bin")
+forge magic be split_text(raw, "\\n")[0]
+set m.params[0].data[0] to -999.0
+set m.params[1].data[2] to 777.0
+forge meta be load_checkpoint_bin("/tmp/sdev-ckpt.bin", m)
+speak(magic + "|" + str(meta.ok) + "|" + str(meta.version) + "|" + str(meta.step) + "|" + str(meta.loss) + "|" + str(orig0 - m.params[0].data[0]) + "|" + str(orig1 - m.params[1].data[2]))`,
+  (out) => {
+    const [magic, ok, ver, step, loss, d0, d1] = String(out[0] ?? '').split('|');
+    if (magic !== 'SDEVML01') return `expected magic SDEVML01, got ${magic}`;
+    if (ok !== 'yep' && ok !== 'true') return `expected ok=true, got ${ok}`;
+    if (Number(ver) !== 1) return `expected version 1, got ${ver}`;
+    if (Number(step) !== 42) return `expected step 42, got ${step}`;
+    if (!near(Number(loss), 0.125, 1e-12)) return `expected loss 0.125, got ${loss}`;
+    if (Number(d0) !== 0 || Number(d1) !== 0) return `expected bit-exact f64 restore, got diffs ${d0}, ${d1}`;
+    return null;
   }
 );
 

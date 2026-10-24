@@ -1,8 +1,17 @@
 /**
- * The self-hosted understander (lang/agent/understander.sdev).
- * Run with: bun scripts/test-sdev-engine.ts
+ * The self-hosted understander (lang/agent/understander.sdev) and
+ * self-hosted parser, syntax validator & interpreter (lang/agent/parser_eval.sdev).
+ * Run with: node scripts/run-ts.mjs scripts/test-sdev-engine.ts
  */
-import { sdevUnderstand, engineError, aiToSdev, sdevToAi } from '../src/lang/agent/sdev-engine';
+import {
+  sdevUnderstand,
+  engineError,
+  aiToSdev,
+  sdevToAi,
+  sdevParseProgram,
+  sdevValidateSyntax,
+  sdevEvalProgram,
+} from '../src/lang/agent/sdev-engine';
 import { setMemoryStore, emptyMemory, type AgentMemory, lastEngine, understand } from '../src/lang/agent';
 import { execute } from '../src/lang';
 
@@ -88,8 +97,6 @@ ok('sdev:ai runs', air.success && air.output.join('|') === 'five == ok|0|1|8', J
 const canon = aiToSdev(ai);
 ok('sdev:ai round trip', aiToSdev(sdevToAi(canon)) === canon);
 ok('strings untouched', canon.includes('"five == "'));
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed) process.exit(1);
 
 // ---- block-closing rules written in sdev (lang/agent/blocks.sdev) ----
 {
@@ -109,4 +116,100 @@ if (failed) process.exit(1);
   ok('sdev:ai with += and missing braces runs', r.output.join('|') === 'two|total 6', r.output.join('|'));
   ok('block check reports stray and unclosed', sdevCheckBlocks('ponder yep ::\n;;\n;;\nponder yep ::').length === 2);
 }
+
+// ---- self-hosted parser, syntax validator & interpreter (lang/agent/parser_eval.sdev) ----
+{
+  // 1. Parsing canonical v2 & v1 programs
+  const pV2 = sdevParseProgram('set x to 10\nif x > 5\n  say "high"\nelse\n  say "low"\nend');
+  ok('sdevParseProgram: parses v2 canonical AST', !!pV2?.ok && pV2.ast.length === 2 && pV2.errors.length === 0, JSON.stringify(pV2));
+
+  const pV1 = sdevParseProgram('forge x be 10\nponder x > 5 ::\n  speak("high")\n;; otherwise ::\n  speak("low")\n;;');
+  ok('sdevParseProgram: parses v1 canonical AST', !!pV1?.ok && pV1.ast.length === 2 && pV1.errors.length === 0, JSON.stringify(pV1));
+
+  // 2. Syntax validation (valid and invalid programs)
+  const vOk = sdevValidateSyntax('to square with n\n  return n * n\nend\nsay square(6)');
+  ok('sdevValidateSyntax: valid program passes', !!vOk?.valid && vOk.errors.length === 0, JSON.stringify(vOk));
+
+  const badCases: [string, string][] = [
+    ['unclosed if', 'set x to 1\nif x > 0\n  say x'],
+    ['unclosed ponder', 'ponder 1 < 2 ::\n  speak("hi")'],
+    ['stray end', 'say "hello"\nend'],
+    ['stray else', 'else\n  say "nope"\nend'],
+    ['incomplete set', 'set x to'],
+    ['incomplete forge', 'forge x'],
+    ['unterminated string', 'say "unterminated'],
+    ['unclosed paren', 'say (1 + 2'],
+  ];
+  for (const [label, badSrc] of badCases) {
+    const vBad = sdevValidateSyntax(badSrc);
+    ok(`sdevValidateSyntax detects ${label}`, vBad !== null && !vBad.valid && vBad.errors.length > 0, JSON.stringify(vBad));
+  }
+
+  // 3. Tree-walking interpreter on understood programs
+  for (const [name, src, want] of cases) {
+    const u = sdevUnderstand(src, []);
+    const inputs = name === 'typed numbers' ? ['4', '4'] : name === 'yes answer' ? [' No '] : ['Sam'];
+    const ev = sdevEvalProgram(u!.source, inputs);
+    ok(`sdevEvalProgram (understood: ${name})`, !!ev?.ok && ev.output.join('|') === want, JSON.stringify({ canonical: u?.source, ev, want }));
+  }
+
+  // 4. Functions & recursion (both `to ... with ... end` and `conjure ... :: ... ;;`)
+  const recV2 = [
+    'to fact with n',
+    '  if n <= 1',
+    '    return 1',
+    '  end',
+    '  return n * fact(n - 1)',
+    'end',
+    'say fact(5)',
+  ].join('\n');
+  const evRecV2 = sdevEvalProgram(recV2);
+  ok('sdevEvalProgram: recursive function (v2 to/with/end)', !!evRecV2?.ok && evRecV2.output.join('|') === '120', JSON.stringify(evRecV2));
+
+  const recV1 = [
+    'conjure fib(n) ::',
+    '  ponder n <= 1 ::',
+    '    yield n',
+    '  ;;',
+    '  yield fib(n - 1) + fib(n - 2)',
+    ';;',
+    'speak(fib(7))',
+  ].join('\n');
+  const evRecV1 = sdevEvalProgram(recV1);
+  ok('sdevEvalProgram: recursive function (v1 conjure/yield)', !!evRecV1?.ok && evRecV1.output.join('|') === '13', JSON.stringify(evRecV1));
+
+  // 5. Loops (while, for each, cycle, iterate, break/yeet, continue/skip)
+  const loopSrc = [
+    'set acc to 0',
+    'for each x in range(1, 7)',
+    '  if x is 3',
+    '    continue',
+    '  end',
+    '  if x is 6',
+    '    break',
+    '  end',
+    '  set acc to acc + x',
+    'end',
+    'say acc',
+  ].join('\n');
+  const evLoop = sdevEvalProgram(loopSrc);
+  ok('sdevEvalProgram: for each + continue + break', !!evLoop?.ok && evLoop.output.join('|') === '12', JSON.stringify(evLoop));
+
+  // 6. Inputs, lists, indexing & built-ins
+  const builtinsSrc = [
+    'set name to trim(upper(input("Name?")))',
+    'set k to int(input("Factor?"))',
+    'set nums to [3, 1, 4, 1, 5]',
+    'set nums[1] to 9',
+    'say name + ":" + str(length(nums)) + ":" + str(sum(nums)) + ":" + str(min(nums)) + ":" + str(max(nums)) + ":" + str(abs(-k))',
+  ].join('\n');
+  const evBuiltins = sdevEvalProgram(builtinsSrc, ['  ada ', '7']);
+  ok('sdevEvalProgram: inputs, lists & builtins', !!evBuiltins?.ok && evBuiltins.output[0] === 'ADA:5:22:1:9:7', JSON.stringify(evBuiltins));
+
+  // 7. Runtime errors reported cleanly
+  const evDivZero = sdevEvalProgram('say 10 / 0');
+  ok('sdevEvalProgram: division by zero error', evDivZero !== null && !evDivZero.ok && !!evDivZero.error, JSON.stringify(evDivZero));
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
+if (failed) process.exit(1);

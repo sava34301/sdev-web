@@ -1,6 +1,7 @@
 /**
- * Bridge to the self-hosted understander (lang/agent/understander.sdev) and
- * the AI dialect (lang/agent/ai-dialect.sdev).
+ * Bridge to the self-hosted understander (lang/agent/understander.sdev),
+ * the AI dialect (lang/agent/ai-dialect.sdev), and the self-hosted SDEV
+ * parser, syntax validator & tree-walking interpreter (lang/agent/parser_eval.sdev).
  *
  * The sdev engine runs first. It answers only when it is sure of every line;
  * otherwise (or when it fails to load or throws) it returns null and the
@@ -10,13 +11,25 @@ import UNDERSTANDER from '../../../lang/agent/understander.sdev?raw';
 import AI_DIALECT from '../../../lang/agent/ai-dialect.sdev?raw';
 import PROJECT from '../../../lang/agent/project.sdev?raw';
 import BLOCKS from '../../../lang/agent/blocks.sdev?raw';
+import PARSER_EVAL from '../../../lang/agent/parser_eval.sdev?raw';
 import { Lexer } from '../lexer';
 import { Parser } from '../parser';
 import { Interpreter } from '../interpreter';
 import type { AgentNote } from './types';
 
 type Callable = { call: (args: unknown[], line: number) => unknown };
-type Engine = { understand: Callable; toSdev: Callable; toAi: Callable; names: Callable; close: Callable; closeAi: Callable; check: Callable };
+type Engine = {
+  understand: Callable;
+  toSdev: Callable;
+  toAi: Callable;
+  names: Callable;
+  close: Callable;
+  closeAi: Callable;
+  check: Callable;
+  parse: Callable;
+  validate: Callable;
+  eval: Callable;
+};
 
 let engine: Engine | null | false = null;
 export let engineError: string | null = null;
@@ -24,7 +37,7 @@ export let engineError: string | null = null;
 function load(): Engine | false {
   if (engine !== null) return engine;
   try {
-    const ast = new Parser(new Lexer(BLOCKS + '\n' + UNDERSTANDER + '\n' + AI_DIALECT + '\n' + PROJECT).tokenize()).parse();
+    const ast = new Parser(new Lexer(BLOCKS + '\n' + UNDERSTANDER + '\n' + AI_DIALECT + '\n' + PROJECT + '\n' + PARSER_EVAL).tokenize()).parse();
     const interp = new Interpreter(() => {});
     interp.interpret(ast);
     const env = interp.getGlobalEnv();
@@ -36,6 +49,9 @@ function load(): Engine | false {
       close: env.get('close_blocks', 0) as Callable,
       closeAi: env.get('close_ai_braces', 0) as Callable,
       check: env.get('check_blocks', 0) as Callable,
+      parse: env.get('sdev_parse_program', 0) as Callable,
+      validate: env.get('sdev_validate_syntax', 0) as Callable,
+      eval: env.get('sdev_eval_program', 0) as Callable,
     };
   } catch (e) {
     engineError = e instanceof Error ? e.message : String(e);
@@ -48,6 +64,12 @@ export interface SdevEngineResult {
   source: string;
   sure: boolean;
   notes: AgentNote[];
+}
+
+export interface SdevParseResult {
+  ok: boolean;
+  ast: unknown[];
+  errors: [number, string][];
 }
 
 /**
@@ -148,4 +170,66 @@ export function sdevCheckBlocks(source: string): [number, string][] {
     const r = e.check.call([source], 0);
     return Array.isArray(r) ? (r as [number, string][]).map(([l, m]) => [Number(l), String(m)]) : [];
   } catch { return []; }
+}
+
+/**
+ * Self-hosted canonical SDEV parser (lang/agent/parser_eval.sdev).
+ * Returns { ok, ast, errors } where each error is [line, message].
+ */
+export function sdevParseProgram(source: string): SdevParseResult | null {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.parse.call([source], 0) as [boolean, unknown[], [number, string][]];
+    if (!Array.isArray(r)) return null;
+    return {
+      ok: r[0] === true,
+      ast: Array.isArray(r[1]) ? r[1] : [],
+      errors: Array.isArray(r[2]) ? r[2].map(([l, m]) => [Number(l), String(m)]) : [],
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+
+/**
+ * Self-hosted SDEV syntax validator (lang/agent/parser_eval.sdev).
+ * Returns { valid, errors } where each diagnostic is [line, message].
+ */
+export function sdevValidateSyntax(source: string): { valid: boolean; errors: [number, string][] } | null {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.validate.call([source], 0) as [boolean, [number, string][]];
+    if (!Array.isArray(r)) return null;
+    return {
+      valid: r[0] === true,
+      errors: Array.isArray(r[1]) ? r[1].map(([l, m]) => [Number(l), String(m)]) : [],
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+
+/**
+ * Self-hosted SDEV tree-walking interpreter (lang/agent/parser_eval.sdev).
+ * Executes canonical SDEV programs and returns { ok, output, error }.
+ */
+export function sdevEvalProgram(source: string, inputs: string[] = []): { ok: boolean; output: string[]; error: string | null } | null {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.eval.call([source, inputs], 0) as [boolean, unknown[], unknown];
+    if (!Array.isArray(r)) return null;
+    return {
+      ok: r[0] === true,
+      output: Array.isArray(r[1]) ? r[1].map(String) : [],
+      error: r[2] != null && r[2] !== '' ? String(r[2]) : null,
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
 }

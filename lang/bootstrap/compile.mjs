@@ -29,7 +29,7 @@ const OP = {
   CALLV: 0xC4,
   CALL: 0x60, RET: 0x61, ENTER: 0x62, LOAD_LOC: 0x63, STORE_LOC: 0x64,
   ALLOC: 0x70, NEWLIST: 0x80, LGET: 0x81, LSET: 0x82, LEN: 0x83,
-  SGET: 0x84, I2S: 0x87, CHR: 0x88, LNEW: 0x89, STRCAT: 0x91,
+  SGET: 0x84, I2S: 0x87, CHR: 0x88, LNEW: 0x89, STREQ: 0x90, STRCAT: 0x91,
   // Milestone 5t — tomes (string-keyed dictionaries)
   TNEW: 0x8A, TSET: 0x8B, TGET: 0x8C, THAS: 0x8D, TKEYS: 0x8E, TVALS: 0x8F,
   // Milestone 6 — boxed f64 floats
@@ -791,6 +791,11 @@ function emitExpr(e, em, locals) {
       const rk = emitExpr(e.r, em, locals);
       // Promote `+` to STRCAT when either operand is a string literal.
       if (e.op === '+' && (lk === 'str' || rk === 'str')) { em.emit(OP.STRCAT); return 'str'; }
+      if ((e.op === 'is' || e.op === 'isnot') && (lk === 'str' || rk === 'str')) {
+        em.emit(OP.STREQ);
+        if (e.op === 'isnot') em.emit(OP.NOT);
+        return 'int';
+      }
       // Float arithmetic when BOTH sides are floats. Mixed int/float requires
       // an explicit i2f() — keeps codegen deterministic given emission order.
       if (lk === 'float' && rk === 'float') {
