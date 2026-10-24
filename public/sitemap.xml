@@ -16,6 +16,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://web.sdev.codes/docs/self-hosting-design-guide</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://web.sdev.codes/docs/book-en</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

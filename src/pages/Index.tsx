@@ -749,6 +749,7 @@ $ sdev ext publish my-dialect
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
               <button onClick={() => navigate('/docs')} className="hover:text-foreground transition-colors">Docs</button>
+              <a href="/docs/self-hosting-design-guide" className="hover:text-foreground transition-colors">Language design guide</a>
               <button onClick={() => navigate('/ide')} className="hover:text-foreground transition-colors">IDE</button>
               <button onClick={() => navigate('/account')} className="hover:text-foreground transition-colors">Account</button>
               <button onClick={() => navigate('/privacy')} className="hover:text-foreground transition-colors">Privacy</button>
