@@ -107,8 +107,8 @@ serve(async (req: Request) => {
       );
     }
 
-    const LOVABLE_API_KEY = aiKey();
-    if (!LOVABLE_API_KEY) {
+    const AI_KEY = aiKey();
+    if (!AI_KEY) {
       return new Response(
         JSON.stringify({ translated: partial, usedAI: false, error: AI_NOT_CONFIGURED }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -125,7 +125,7 @@ serve(async (req: Request) => {
     const aiResp = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

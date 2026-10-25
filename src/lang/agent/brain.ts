@@ -2,7 +2,7 @@
  * The AI brain.
  *
  * Two interchangeable implementations, both optional:
- *   online — the `sdev-agent` edge function on the website (Lovable AI).
+ *   online — the `sdev-agent` edge function on the website (your configured AI provider).
  *   browser — a small model running inside the user's browser (WebGPU).
  *            Nothing to install; the default.
  *   local  — a model server the user runs themselves (Ollama, LM Studio,

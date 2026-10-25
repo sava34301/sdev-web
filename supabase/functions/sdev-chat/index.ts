@@ -291,15 +291,15 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = aiKey();
-    if (!LOVABLE_API_KEY) {
+    const AI_KEY = aiKey();
+    if (!AI_KEY) {
       throw new Error(AI_NOT_CONFIGURED);
     }
 
     const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -325,8 +325,8 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = aiKey();
-    if (!LOVABLE_API_KEY) {
+    const AI_KEY = aiKey();
+    if (!AI_KEY) {
       throw new Error(AI_NOT_CONFIGURED);
     }
 
@@ -408,11 +408,11 @@ ${code}
     const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: aiModel("google/gemini-2.5-pro", 'strong'),
+        model: aiModel("google/gemini-3.8-flash", 'strong'),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

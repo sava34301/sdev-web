@@ -587,8 +587,8 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = aiKey();
-    if (!LOVABLE_API_KEY) {
+    const AI_KEY = aiKey();
+    if (!AI_KEY) {
       return new Response(JSON.stringify({ error: "AI service not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -650,7 +650,7 @@ ${code}`;
     const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -697,11 +697,11 @@ ${code}`;
       const detectResponse = await fetch(aiUrl('/chat/completions'), {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${AI_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: aiModel("google/gemini-2.5-flash-lite", 'fast'),
+          model: aiModel("google/gemini-3.1-flash-lite", 'fast'),
           messages: [
             {
               role: "system",
