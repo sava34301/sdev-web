@@ -24,7 +24,7 @@ import {
   translateSource,
   type Token,
 } from '@/lang';
-import * as AST from '@/lang/ast';
+import type * as AST from '@/lang/ast';
 import { stringify } from '@/lang/builtins';
 import {
   createGraphicsBuiltins,
@@ -373,7 +373,7 @@ function executeWithTracing(
   const detectedLanguage = options.sourceLanguage ?? detectLanguage(stripped);
   let executableSource = stripped;
   if (detectedLanguage && detectedLanguage !== 'English') {
-    executableSource = translateSource(stripped, detectedLanguage, { target: runtime }).translated;
+    executableSource = translateSource(stripped, detectedLanguage).translated;
   }
 
   const sourceLines = stripped.split(/\r?\n/);
