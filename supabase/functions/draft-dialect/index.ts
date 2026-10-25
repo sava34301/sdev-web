@@ -1,3 +1,4 @@
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 /**
@@ -17,7 +18,7 @@ interface Body {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const key = Deno.env.get('LOVABLE_API_KEY');
+  const key = aiKey();
   if (!key) {
     return new Response(JSON.stringify({ error: 'AI is not configured for this project.' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -62,15 +63,11 @@ Deno.serve(async (req) => {
     'Reply as JSON: { "names": { canonical: word, ... }, "style": {...}, "notes": "..." }',
   ].join('\n');
 
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const res = await fetch(aiUrl('/chat/completions'), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Lovable-API-Key': key,
-      'X-Lovable-AIG-SDK': 'fetch',
-    },
+    headers: aiHeaders(),
     body: JSON.stringify({
-      model: 'google/gemini-3.7-flash',
+      model: aiModel('google/gemini-3.7-flash'),
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: system },

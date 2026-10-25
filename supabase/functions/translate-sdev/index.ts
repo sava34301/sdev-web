@@ -1,3 +1,4 @@
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -586,7 +587,7 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = aiKey();
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI service not configured" }), {
         status: 500,
@@ -646,14 +647,14 @@ TRANSLATION RULES — follow them strictly:
 
 ${code}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: aiModel("google/gemini-2.5-flash"),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -693,14 +694,14 @@ ${code}`;
     let detectedLanguage = sourceLanguage && sourceLanguage !== "auto" ? sourceLanguage : "Unknown";
     
     if (detectedLanguage === "Unknown") {
-      const detectResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const detectResponse = await fetch(aiUrl('/chat/completions'), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
+          model: aiModel("google/gemini-2.5-flash-lite", 'fast'),
           messages: [
             {
               role: "system",
