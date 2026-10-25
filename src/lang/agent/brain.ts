@@ -1,7 +1,10 @@
 /**
  * The AI brain.
  *
- * Three interchangeable implementations, all optional:
+ * Two interchangeable implementations, both optional:
+ *   online — the `sdev-agent` edge function on the website (your configured AI provider).
+ *   browser — a small model running inside the user's browser (WebGPU).
+ *            Nothing to install; the default.
  *   local  — a model server the user runs themselves (Ollama, LM Studio,
  *            llama.cpp — anything with an OpenAI-style chat endpoint), or a
  *            custom endpoint that speaks BrainRequest/BrainReply directly.
@@ -345,10 +348,10 @@ export async function probeLocalServer(url = brainSettings().localUrl): Promise<
         result.serverType = endpoints.baseUrl.includes('1234')
           ? 'LM Studio'
           : endpoints.baseUrl.includes('11434')
-          ? 'Ollama'
-          : endpoints.baseUrl.includes('8080')
-          ? 'llama.cpp'
-          : 'OpenAI-Compatible';
+            ? 'Ollama'
+            : endpoints.baseUrl.includes('8080')
+              ? 'llama.cpp'
+              : 'OpenAI-Compatible';
         return result;
       }
     }

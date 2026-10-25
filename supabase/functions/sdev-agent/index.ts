@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       stream: true,
       instructions: body.format === 'ai' ? SYSTEM + AI_DIALECT : SYSTEM,
       input: user,
-      reasoning: { effort: 'low' },
+      ...(usingOwnProvider() && !Deno.env.get('SDEV_AI_REASONING') ? {} : { reasoning: { effort: Deno.env.get('SDEV_AI_REASONING') || 'low' } }),
       text: {
         format: {
           type: 'json_schema',

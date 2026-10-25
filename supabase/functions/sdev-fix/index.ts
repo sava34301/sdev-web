@@ -66,8 +66,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = aiKey();
-    if (!LOVABLE_API_KEY) throw new Error(AI_NOT_CONFIGURED);
+    const AI_KEY = aiKey();
+    if (!AI_KEY) throw new Error(AI_NOT_CONFIGURED);
 
     const userMsg = [
       note ? `User note:\n${note}` : null,
@@ -77,7 +77,7 @@ serve(async (req) => {
 
     const resp = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${AI_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: aiModel("google/gemini-3-flash-preview"),
         messages: [
