@@ -1,3 +1,4 @@
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 /**
@@ -94,7 +95,7 @@ Example:
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const key = Deno.env.get('LOVABLE_API_KEY');
+  const key = aiKey();
   if (!key) {
     return new Response(JSON.stringify({ error: 'The understanding agent is not configured for this project.' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -133,15 +134,11 @@ Deno.serve(async (req) => {
       : 'Return the whole program as canonical sdev.',
   ].join('\n');
 
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/responses', {
+  const res = await fetch(aiUrl('/responses'), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Lovable-API-Key': key,
-      'X-Lovable-AIG-SDK': 'fetch',
-    },
+    headers: aiHeaders(),
     body: JSON.stringify({
-      model: 'openai/gpt-6-astra',
+      model: aiModel('openai/gpt-6-astra'),
       stream: true,
       instructions: body.format === 'ai' ? SYSTEM + AI_DIALECT : SYSTEM,
       input: user,

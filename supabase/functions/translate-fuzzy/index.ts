@@ -1,3 +1,4 @@
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 // supabase/functions/translate-fuzzy/index.ts
 // ────────────────────────────────────────────────────────────────────
 // AI fallback for the sdev built-in translator.
@@ -106,10 +107,10 @@ serve(async (req: Request) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = aiKey();
     if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ translated: partial, usedAI: false, error: "LOVABLE_API_KEY not configured" }),
+        JSON.stringify({ translated: partial, usedAI: false, error: AI_NOT_CONFIGURED }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -121,14 +122,14 @@ serve(async (req: Request) => {
       `\nReturn ONLY the fully-translated sdev source code.`,
     ].join("\n");
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: aiModel("google/gemini-3-flash-preview"),
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage },
