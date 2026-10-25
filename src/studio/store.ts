@@ -474,7 +474,7 @@ function hydrateFileFromCloud(row: {
     name: row.name,
     content: stripSignature(row.content),
     language: row.language || 'sdev',
-    runtime: sig?.rt ?? 'v1',
+    runtime: sig?.rt === 'v2' ? 'v2' : 'v1',
     dialect: sig?.dialect ?? null,
     updatedAt: row.updated_at,
     dirty: false,
