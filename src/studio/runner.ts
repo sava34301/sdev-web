@@ -24,7 +24,15 @@ import {
   translateSource,
   type Token,
 } from '@/lang';
-import type * as AST from '@/lang/ast';
+// The studio inspects nodes from several parser generations, so it reads them loosely.
+type LooseNode = { type: string; [key: string]: any };
+// eslint-disable-next-line @typescript-eslint/no-namespace
+declare namespace AST {
+  type ASTNode = LooseNode;
+  type Program = LooseNode & { body: LooseNode[] };
+  type AssignStatement = LooseNode;
+  type LetStatement = LooseNode;
+}
 import { stringify } from '@/lang/builtins';
 import {
   createGraphicsBuiltins,
