@@ -4,7 +4,7 @@ import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED }
 // AI fallback for the sdev built-in translator.
 // The synchronous dictionary + fuzzy translator handles 95%+ of cases.
 // When user code STILL contains foreign-script words after that pass,
-// we ask Lovable AI to rewrite the snippet as canonical English sdev.
+// we ask the configured AI provider to rewrite the snippet as canonical English sdev.
 // ────────────────────────────────────────────────────────────────────
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
