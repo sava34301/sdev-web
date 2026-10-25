@@ -146,4 +146,5 @@ describe('board-db', () => {
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0 && typeof process !== 'undefined') process.exit(1);
+const nodeProcess = (globalThis as { process?: { exit(code: number): void } }).process;
+if (failed > 0 && nodeProcess) nodeProcess.exit(1);

@@ -330,7 +330,7 @@ speak(decode(vocab, out))
 `crawl(url)` / `crawl_many(urls)`, `teacher_query(endpoint, key, prompt)`,
 `distill_batch(endpoint, key, prompts)`, `save_model(path, model)`.
 
-`teacher_query` lets a stronger model (for example through the Lovable AI
+`teacher_query` lets a stronger model (for example through an OpenAI-compatible
 gateway) generate the supervision signal for a local sdev model.
 
 ---
@@ -415,7 +415,7 @@ Routing: `parse*` → `parser.sdev`, `lex*` → `lexer.sdev`, `doc*` →
 ```sdev
 link "stdlib/ml/auto_evolve.sdev"
 set_review_hook(conjure(path, body) :: yield confirm("Apply " + path + "?") ;;)
-evolve_forever(model, sources, "https://ai.gateway.lovable.dev/v1/chat", "$KEY", 24)
+evolve_forever(model, sources, "https://api.openai.com/v1/chat", "$KEY", 24)
 ```
 
 Two independent barriers: the path whitelist runs *before* the hook, and

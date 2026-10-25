@@ -1126,7 +1126,7 @@ function createWindow() {
     titleBarStyle: 'hiddenInset', backgroundColor: '#0d0e1a',
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
-  win.loadURL('https://s-dev.lovable.app/ide');
+  win.loadURL('https://web.sdev.codes/ide');
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
 }
 app.whenReady().then(() => {
