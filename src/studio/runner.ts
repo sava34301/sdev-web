@@ -29,7 +29,7 @@ type LooseNode = { type: string; [key: string]: any };
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace AST {
   type ASTNode = LooseNode;
-  type Program = LooseNode & { body: LooseNode[] };
+  type Program = import("@/lang/ast").Program;
   type AssignStatement = LooseNode;
   type LetStatement = LooseNode;
 }
