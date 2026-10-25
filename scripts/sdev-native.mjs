@@ -9,8 +9,8 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, basename, dirname, isAbsolute } from 'node:path';
-import { generateAsm } from '../lang/native/codegen-x64.mjs';
-import { link } from '../lang/native/link.mjs';
+import { generateAsm } from '../src/lang-bridge/native/codegen-x64.mjs';
+import { link } from '../src/lang-bridge/native/link.mjs';
 
 function usage() {
   console.error('usage: sdev-native <file.sdev> [-o out] [--emit-asm] [--as PATH] [--ld PATH]');

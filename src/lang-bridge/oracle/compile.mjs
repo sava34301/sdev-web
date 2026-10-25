@@ -19,7 +19,7 @@
 //   fn(args) call form, `name with a b` form
 //   + - * / %,  is / is not / < > <= >=,  and / or / not
 
-import { tokenize, SdevError } from '../runtime/v2.js';
+import { tokenize, SdevError } from './v2.js';
 
 const OP = {
   PUSH_I32: 0x01, PUSH_STR: 0x02, LOAD: 0x03, STORE: 0x04, POP: 0x05,

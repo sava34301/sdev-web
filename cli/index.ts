@@ -396,7 +396,7 @@ async function cmdDisasm(file: string): Promise<void> {
   if (prepared.runtime === 'v2') {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore — plain JS module
-    const { compile, setSeedLoader } = await import('../lang/compiler/compile-self.mjs');
+    const { compile, setSeedLoader } = await import('../src/lang-bridge/compile-self.mjs');
     const { seedWasmPath } = await import('./env');
     setSeedLoader(async () => readFileSync(seedWasmPath()));
     const program = await compile(prepared.code, localModules(file, prepared.code));
@@ -424,10 +424,10 @@ function hexdump(bytes: Uint8Array): string {
 async function cmdNative(file: string): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore — plain JS modules
-  const { generateAsm } = await import('../lang/native/codegen-x64.mjs');
+  const { generateAsm } = await import('../src/lang-bridge/native/codegen-x64.mjs');
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
-  const { link } = await import('../lang/native/link.mjs');
+  const { link } = await import('../src/lang-bridge/native/link.mjs');
   const prepared = prepare(readSource(file), runOptions());
   const modules = localModules(file, prepared.code);
   const asm = generateAsm(prepared.code, {
@@ -1032,8 +1032,8 @@ function cmdDoctor(): void {
   }
   const hasWasm = Boolean(wasmPath && existsSync(wasmPath));
 
-  const codegenPath = resolve(repoRoot, 'lang/native/codegen-x64.mjs');
-  const runtimeAsmPath = resolve(repoRoot, 'lang/native/runtime.s');
+  const codegenPath = resolve(repoRoot, 'src/lang-bridge/native/codegen-x64.mjs');
+  const runtimeAsmPath = resolve(repoRoot, 'src/lang-bridge/native/runtime.s');
   const hasNative = existsSync(codegenPath) && existsSync(runtimeAsmPath);
 
   const arduinoIndexPath = resolve(repoRoot, 'public/arduino/library-index.json');
@@ -1058,7 +1058,7 @@ function cmdDoctor(): void {
     { label: 'Node.js Runtime', ok: true, detail: `${process.version} (${process.platform}/${process.arch})` },
     { label: 'Python Runtime', ok: pythonVersion !== 'not found', detail: pythonVersion },
     { label: 'Self-Hosted WASM VM', ok: hasWasm, detail: hasWasm ? wasmPath : 'missing (public/wasm/sdev-seed.wasm)' },
-    { label: 'Native x86-64 Codegen', ok: hasNative, detail: hasNative ? 'lang/native/codegen-x64.mjs + runtime.s' : 'missing' },
+    { label: 'Native x86-64 Codegen', ok: hasNative, detail: hasNative ? 'src/lang-bridge/native/codegen-x64.mjs + runtime.s' : 'missing' },
     { label: 'Arduino Library Index', ok: hasArduinoIndex, detail: hasArduinoIndex ? arduinoIndexPath : 'missing (public/arduino/library-index.json)' },
     { label: 'Canonical API Registry', ok: API_REGISTRY.length > 0, detail: `${API_REGISTRY.length} canonical APIs · ${DIAGNOSTIC_LIST.length} diagnostic codes` },
     { label: 'Local SDEV Home', ok: existsSync(SDEV_HOME), detail: SDEV_HOME },

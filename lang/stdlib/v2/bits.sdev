@@ -1,0 +1,79 @@
+# SDEV Standard Library: Bits & Binary Operations (v2) — authored in SDEV.
+
+to bits_shl with val shift
+  set v to val
+  set s to shift
+  while s > 0
+    set v to v * 2
+    set s to s - 1
+  end
+  return v
+end
+
+to bits_shr with val shift
+  set v to val
+  set s to shift
+  while s > 0
+    set v to v / 2
+    set s to s - 1
+  end
+  return v
+end
+
+to bits_test with val bit_pos
+  set mask to bits_shl(1, bit_pos)
+  return (val / mask) % 2
+end
+
+to bits_popcount with val
+  set v to val
+  set count to 0
+  while v > 0
+    set count to count + (v % 2)
+    set v to v / 2
+  end
+  return count
+end
+
+to bits_to_hex with val
+  if val is 0
+    return "0"
+  end
+  set hex_chars to "0123456789abcdef"
+  set out to ""
+  set v to val
+  while v > 0
+    set rem to v % 16
+    set out to chr(ord(hex_chars, rem)) + out
+    set v to v / 16
+  end
+  return out
+end
+
+to bits_from_hex with hex_str
+  set n to length(hex_str)
+  set v to 0
+  set i to 0
+  while i < n
+    set c to ord(hex_str, i)
+    set digit to 0
+    if c >= 48
+      if c <= 57
+        set digit to c - 48
+      end
+    end
+    if c >= 97
+      if c <= 102
+        set digit to c - 87
+      end
+    end
+    if c >= 65
+      if c <= 70
+        set digit to c - 55
+      end
+    end
+    set v to v * 16 + digit
+    set i to i + 1
+  end
+  return v
+end

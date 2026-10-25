@@ -1,0 +1,15 @@
+# SDEV Native ELF Linker Driver — authored in SDEV.
+#
+# Automates invoking the GNU Assembler (`as`) and Linker (`ld`) via host
+# execution to assemble `.s` files and link them into static Linux ELF binaries.
+
+to link_build_command with asm_path obj_path out_bin
+  set cmd to "as " + asm_path + " -o " + obj_path + " && ld -static " + obj_path + " -o " + out_bin
+  return cmd
+end
+
+to link_assemble_and_link with asm_path obj_path out_bin
+  set cmd to link_build_command(asm_path, obj_path, out_bin)
+  set res to read_file("sdev:exec:" + cmd)
+  return res
+end

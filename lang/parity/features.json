@@ -4,17 +4,17 @@
     {
       "id": "v1",
       "label": "sdev v1 (TypeScript interpreter)",
-      "sources": "src/lang/keywords.ts,src/lang/tokens.ts,src/lang/builtins.ts,src/lang/pyparity.ts"
+      "sources": "src/lang/keywords.ts,src/lang/tokens.ts,src/lang/builtins.ts,src/lang/builtins/io.ts,src/lang/builtins/list.ts,src/lang/builtins/string.ts,src/lang/builtins/math.ts,src/lang/builtins/dict.ts,src/lang/builtins/host.ts,src/lang/builtins/types.ts,src/lang/builtins/misc.ts,src/lang/builtins/functional.ts,src/lang/builtins/text.ts,src/lang/builtins/time.ts,src/lang/builtins/json.ts,src/lang/builtins/regex.ts,src/lang/builtins/buffer.ts,src/lang/builtins/utils.ts,src/lang/pyparity.ts,src/lang/lexer.ts,src/lang/parser.ts,src/lang/interpreter.ts"
     },
     {
       "id": "v2",
       "label": "sdev v2 (self-hosted compiler on the seed VM)",
-      "sources": "lang/compiler/lexer.sdev,lang/compiler/parser.sdev,lang/compiler/codegen.sdev"
+      "sources": "lang/compiler/lexer.sdev,lang/compiler/parser.sdev,lang/compiler/codegen.sdev,lang/compiler/driver.sdev"
     },
     {
       "id": "native",
       "label": "native x86-64 backend",
-      "sources": "lang/native/codegen-x64.mjs,lang/bootstrap/compile.mjs"
+      "sources": "lang/native/codegen_x64.sdev,lang/native/runtime_x64.sdev,lang/native/link.sdev,src/lang-bridge/native/codegen-x64.mjs,src/lang-bridge/oracle/compile.mjs"
     }
   ],
   "features": [

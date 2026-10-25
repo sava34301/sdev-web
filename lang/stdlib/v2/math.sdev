@@ -1,0 +1,132 @@
+# SDEV Standard Library: Mathematics & Numerics (v2) — authored in SDEV.
+
+to math_PI
+  return 3.141592653589793
+end
+
+to math_E
+  return 2.718281828459045
+end
+
+to math_TAU
+  return 6.283185307179586
+end
+
+to math_abs with x
+  return abs(x)
+end
+
+to math_min with a b
+  return min(a, b)
+end
+
+to math_max with a b
+  return max(a, b)
+end
+
+to math_clamp with x lo hi
+  if x < lo
+    return lo
+  end
+  if x > hi
+    return hi
+  end
+  return x
+end
+
+to math_sign with x
+  if x < 0
+    return 0 - 1
+  end
+  if x > 0
+    return 1
+  end
+  return 0
+end
+
+to math_gcd with a b
+  set x to abs(a)
+  set y to abs(b)
+  while y > 0
+    set t to y
+    set y to x % y
+    set x to t
+  end
+  return x
+end
+
+to math_lcm with a b
+  if a is 0
+    return 0
+  end
+  if b is 0
+    return 0
+  end
+  return abs(a * b) / math_gcd(a, b)
+end
+
+to math_factorial with n
+  if n <= 1
+    return 1
+  end
+  set res to 1
+  set i to 2
+  while i <= n
+    set res to res * i
+    set i to i + 1
+  end
+  return res
+end
+
+to math_fib with n
+  if n <= 0
+    return 0
+  end
+  if n is 1
+    return 1
+  end
+  set a to 0
+  set b to 1
+  set i to 2
+  while i <= n
+    set c to a + b
+    set a to b
+    set b to c
+    set i to i + 1
+  end
+  return b
+end
+
+to math_is_prime with n
+  if n <= 1
+    return 0
+  end
+  if n <= 3
+    return 1
+  end
+  if n % 2 is 0
+    return 0
+  end
+  set d to 3
+  while d * d <= n
+    if n % d is 0
+      return 0
+    end
+    set d to d + 2
+  end
+  return 1
+end
+
+to math_mean with xs
+  set n to length(xs)
+  if n is 0
+    return 0.0
+  end
+  set total to 0
+  set i to 0
+  while i < n
+    set total to total + xs[i]
+    set i to i + 1
+  end
+  return total / n
+end

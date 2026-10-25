@@ -1,0 +1,52 @@
+# SDEV Paradigms: Systems Programming & Memory Arenas — authored in SDEV.
+
+to arena_create with capacity_bytes
+  set mem to mklist(capacity_bytes)
+  set a to {
+    bytes: mem,
+    cap: capacity_bytes,
+    offset: 0
+  }
+  return a
+end
+
+to arena_alloc with a n_bytes
+  set cur to a["offset"]
+  set next_off to cur + n_bytes
+  if next_off > a["cap"]
+    return 0 - 1
+  end
+  set a["offset"] to next_off
+  return cur
+end
+
+to arena_reset with a
+  set a["offset"] to 0
+  return 0
+end
+
+to mem_poke_i32 with a ptr val
+  set mem to a["bytes"]
+  set mem[ptr] to val % 256
+  set mem[ptr + 1] to (val / 256) % 256
+  set mem[ptr + 2] to (val / 65536) % 256
+  set mem[ptr + 3] to (val / 16777216) % 256
+  return 4
+end
+
+to mem_peek_i32 with a ptr
+  set mem to a["bytes"]
+  set b0 to mem[ptr]
+  set b1 to mem[ptr + 1]
+  set b2 to mem[ptr + 2]
+  set b3 to mem[ptr + 3]
+  return b0 + b1 * 256 + b2 * 65536 + b3 * 16777216
+end
+
+to struct_define with name size_bytes
+  return { name: name, size: size_bytes }
+end
+
+to struct_sizeof with s
+  return s["size"]
+end
