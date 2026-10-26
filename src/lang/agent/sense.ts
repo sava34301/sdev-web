@@ -170,7 +170,7 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
       reasons.push(`line ${i + 1}: reads like a sentence, not a statement`);
     }
     // "say to terminal x" — the destination is spelled out in words.
-    if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(line)) {
+    if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(codeOnly(line))) {
       reasons.push(`line ${i + 1}: names the output destination in words`);
     }
     // "call greet with 2"
