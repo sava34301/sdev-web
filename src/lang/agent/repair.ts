@@ -103,6 +103,8 @@ export interface RepairResult {
 const FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
 /** Words that carry no meaning inside a declaration. */
 const DECL_NOISE = /\b(?:called|named|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
+/** Noise inside a parameter list — articles are left to the caller, since `a` and `b` are common names. */
+const PARAM_NOISE = /\b(?:called|named|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
 /** Where output goes: the terminal, the screen, the console — always the same place. */
 const SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
 
@@ -668,7 +670,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           const declParams = split < 0 ? '' : declBody.slice(split);
           // `with a name` reads as English; `with a b` and `(a, b)` are parameter lists
           const keepAll = /[(,]/.test(declParams);
-          const cleanedParams = keepAll ? declParams : declParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, ' ');
+          const wordyParams = declParams.replace(PARAM_NOISE, ' ');
+          const cleanedParams = keepAll ? wordyParams : wordyParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, ' ');
           const cleanedDecl = (declHead.replace(DECL_NOISE, ' ') + ' ' + cleanedParams).replace(/\s+/g, ' ').trim();
           const parts = wordsOf(cleanedDecl);
           if (!parts.length) { rewritten.push(stmt); continue; }
