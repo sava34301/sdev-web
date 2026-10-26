@@ -666,8 +666,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           const split = declBody.search(/\swith\s|\(/);
           const declHead = split < 0 ? declBody : declBody.slice(0, split);
           const declParams = split < 0 ? '' : declBody.slice(split);
-          const paramWords = declParams.trim().split(/\s+/);
-          const keepAll = /[(,]/.test(declParams) || paramWords.slice(1).every((w) => w.length <= 2 || !/^(?:a|an|the)$/i.test(w));
+          // `with a name` reads as English; `with a b` and `(a, b)` are parameter lists
+          const keepAll = /[(,]/.test(declParams);
           const cleanedParams = keepAll ? declParams : declParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, ' ');
           const cleanedDecl = (declHead.replace(DECL_NOISE, ' ') + ' ' + cleanedParams).replace(/\s+/g, ' ').trim();
           const parts = wordsOf(cleanedDecl);
