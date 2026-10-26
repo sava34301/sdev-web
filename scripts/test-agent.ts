@@ -87,5 +87,19 @@ check('sentence closes block', String(sentences.includes('end')), 'true');
 check('sentence call', String(sentences.includes('n11(2)')), 'true');
 check('sentence runs', execute(sentences).output.join('|'), '3');
 
+// ---- working sdev is never rewritten -------------------------------------
+memory = emptyMemory();
+for (const src of [
+  'forge double be x -> x * 2\nspeak(double(5))',
+  'forge data be :: "score": 100, "name": "Alice" ;;\nspeak(data["score"])',
+  'conjure total(nums) ::\n  yield fold(nums, 0, (acc, x) -> acc + x)\n;;\nspeak(total([1, 2, 3]))',
+  'forge n be 3\nponder n > 2 ::\n  speak("big")\n;;',
+]) check(`working file untouched: ${src.split('\n')[0]}`, understand(src).source, src);
+
+// ---- rules keep code that is already code ---------------------------------
+check('call keeps its bracket', repair('set p to int(s)\nsay p').source, 'set p to int(s)\nsay p');
+check('parameter named a', repair('to add with a b\n  return a + b\nend').source, 'to add with a b\n  return a + b\nend');
+check('method call kept', repair('set c to new Counter()\nc.start(5)').source, 'set c to new Counter()\nc.start(5)');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
