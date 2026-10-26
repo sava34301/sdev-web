@@ -125,8 +125,10 @@ const NON_CANONICAL_HEAD = (() => {
  * every keyword the lexer accepts (forge, conjure, ponder, yield, let, fn, …)
  * and every function the runtime defines (speak, print, …) is real sdev.
  */
-export function isSdevWord(word: string): boolean {
-  return Object.prototype.hasOwnProperty.call(KEYWORD_TOKEN_BY_WORD, word) || runtimeNames().has(word);
+export function isSdevWord(word: string, line = ''): boolean {
+  if (Object.prototype.hasOwnProperty.call(KEYWORD_TOKEN_BY_WORD, word)) return true;
+  // a runtime function only counts when the line really calls it: `speak(x)`, not `shout "hi"`
+  return runtimeNames().has(word) && new RegExp(`^${word}\\s*\\(`, 'i').test(line);
 }
 
 /** a line with its strings and sdev's `::` / `;;` block marks taken out */
@@ -135,7 +137,7 @@ function codeOnly(line: string): string {
 }
 
 /** reasons that only say the file is written in another style — not that it means something else */
-const STYLE_ONLY = /is not canonical sdev|several statements on one line|looks like an assignment written another way/;
+const STYLE_ONLY = /several statements on one line|looks like an assignment written another way/;
 
 export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
   const reasons: string[] = [];
@@ -149,7 +151,7 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
       reasons.push(`line ${i + 1}: a calculation asked for in words`);
       continue;
     }
-    if ((NON_CANONICAL_HEAD.has(head) && !isSdevWord(head)) || extra?.has(head)) {
+    if ((NON_CANONICAL_HEAD.has(head) && !isSdevWord(head, line)) || extra?.has(head)) {
       reasons.push(`line ${i + 1}: "${head}" is not canonical sdev`);
       continue;
     }
