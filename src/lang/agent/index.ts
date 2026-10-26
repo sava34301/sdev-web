@@ -340,6 +340,15 @@ export function stripAgentDirectives(source: string): string {
   return scanDirectives(source).source;
 }
 
+/**
+ * The file exactly as its author wrote it — directives removed, and an
+ * sdev:ai file turned into canonical sdev — with no rules or AI applied.
+ * Runners try this first: working code always reaches the compiler untouched.
+ */
+export function asWritten(source: string): string {
+  return isAiDialect(source) ? aiToSdev(source) : scanDirectives(source).source;
+}
+
 /** Is the agent switched off for this file? */
 export function agentDisabled(source: string): boolean {
   return scanDirectives(source).mode === 'off';
