@@ -26,7 +26,7 @@ export * from './types';
 export * from './directives';
 export * from './memory';
 export * from './promote';
-export { senseFile, parses, unknownNames, definedNames, builtinNames } from './sense';
+export { senseFile, parses, unknownNames, definedNames, builtinNames, wordsNeedReading } from './sense';
 export { repair } from './repair';
 export { VOCABULARY, CANONICAL } from './vocabulary';
 export type { Intent } from './vocabulary';
@@ -338,6 +338,15 @@ const lastUnderstood = new Map<string, string>();
 /** Just strip the directives — used by tooling that must not rewrite code. */
 export function stripAgentDirectives(source: string): string {
   return scanDirectives(source).source;
+}
+
+/**
+ * The file exactly as its author wrote it — directives removed, and an
+ * sdev:ai file turned into canonical sdev — with no rules or AI applied.
+ * Runners try this first: working code always reaches the compiler untouched.
+ */
+export function asWritten(source: string): string {
+  return isAiDialect(source) ? aiToSdev(source) : scanDirectives(source).source;
 }
 
 /** Is the agent switched off for this file? */

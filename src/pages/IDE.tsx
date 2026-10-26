@@ -643,6 +643,64 @@ export default function IDEPage() {
     const activeDialect = getActiveDialect();
     const strippedSrc = stripSignature(activeFile.content);
     const dialectSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
+    const { asWritten, wordsNeedReading } = await import('@/lang/agent');
+    // the file as its author wrote it: directives out, sdev:ai made canonical, nothing else
+    const writtenSrc = asWritten(dialectSrc);
+    const runtimePref = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || null;
+    // Runtime is chosen from the user's own file, before the prelude is added.
+    const wantsV2 = (src: string) => {
+      const head10 = src.split('\n', 10).map(l => l.trim());
+      const shebangV2 = head10.some(l => l.startsWith('#!sdev v2'));
+      const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
+      return shebangV2 || (!shebangV1 && (runtimePref === 'v2' || runtimePref === 'v2-wasm'));
+    };
+    // Compile + run with the self-hosted v2 toolchain. Returns null when the
+    // compiler cannot compile the source (so the caller can decide what next).
+    const tryV2 = async (src: string): Promise<{ success: boolean; output: string[]; error: string | null } | { notCompiled: string }> => {
+      const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
+      const body = applyExtensions(src);
+      // Milestone 5z: `use "path"` resolves against the workspace files.
+      // Personal SDEV: `use "@user/lib@1.2.0"` resolves through the
+      // library registry (cached locally, so it also works offline).
+      const moduleMap: Record<string, string> = await resolveLibraries(body);
+      for (const f of files) {
+        const source = activeDialect ? canonicalize(stripSignature(f.content), activeDialect).source : stripSignature(f.content);
+        moduleMap[f.name] = source;
+        moduleMap['./' + f.name] = source;
+      }
+      try {
+        return await runWasm(body, moduleMap, { sourceLanguage: selectedLanguage, dialect: activeDialect });
+      } catch (e) {
+        if (e instanceof WasmSubsetError) return { notCompiled: e.message };
+        throw e;
+      }
+    };
+    const showV2 = (r: { success: boolean; output: string[]; error: string | null }) => {
+      setOutput(r.output);
+      setError(r.success ? undefined : r.error ?? 'error');
+      setStatusMsg(r.success ? 'Done (v2 · self-hosted)' : `✗ ${r.error ?? 'error'}`);
+      if (!r.success) setBottomPanel('terminal');
+    };
+
+    // ─── v2: working code is compiled exactly as written ───
+    // The understander only reads a v2 file when the self-hosted compiler
+    // cannot compile it as written, so it can never break a working program.
+    let v2AsWrittenError: string | null = null;
+    if (overrideSrc === undefined && wantsV2(writtenSrc) && !wordsNeedReading(writtenSrc)) {
+      setIsRunning(true);
+      setStatusMsg('Running (v2 · self-hosted)…');
+      setUiState(null); setWebState(null);
+      try {
+        const r = await tryV2(writtenSrc);
+        if (!('notCompiled' in r)) { showV2(r); setIsRunning(false); return; }
+        v2AsWrittenError = r.notCompiled;
+      } catch (e) {
+        setStatusMsg(`✗ v2: ${e instanceof Error ? e.message : String(e)}`);
+        setIsRunning(false);
+        return;
+      }
+    }
+
     // The understanding agent reads the whole file and turns however the user
     // writes into canonical sdev — before any runtime or codegen sees it.
     // `!#agent:off` in the file switches it off; `!#agent: local|online`
@@ -694,46 +752,36 @@ export default function IDEPage() {
     // desugared to calls and their function bodies run ahead of the program.
     const rawSrc = applyExtensions(canonicalSrc);
 
-    // Runtime is chosen from the user's own file, before the prelude is added.
-    const head10 = canonicalSrc.split('\n', 10).map(l => l.trim());
-    const shebangV2Wasm = head10.some(l => l.startsWith('#!sdev v2-wasm'));
-    const shebangV2 = head10.some(l => l.startsWith('#!sdev v2') && !l.startsWith('#!sdev v2-wasm'));
-    const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
-    const runtimePref = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || null;
-    const useV2 = shebangV2Wasm || shebangV2
-      || (!shebangV1 && (runtimePref === 'v2' || runtimePref === 'v2-wasm'));
-
-    if (useV2) {
+    if (wantsV2(canonicalSrc)) {
       setIsRunning(true);
       setStatusMsg('Running (v2 · self-hosted)…');
       setUiState(null); setWebState(null);
       try {
-        const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
-        try {
-          // Milestone 5z: `use "path"` resolves against the workspace files.
-          // Personal SDEV: `use "@user/lib@1.2.0"` resolves through the
-          // library registry (cached locally, so it also works offline).
-          const moduleMap: Record<string, string> = await resolveLibraries(rawSrc);
-          for (const f of files) {
-            const source = activeDialect ? canonicalize(stripSignature(f.content), activeDialect).source : stripSignature(f.content);
-            moduleMap[f.name] = source;
-            moduleMap['./' + f.name] = source;
-          }
-          const r = await runWasm(rawSrc, moduleMap, {
-            sourceLanguage: selectedLanguage,
-            dialect: activeDialect,
-          });
-          setOutput(r.output);
-          setStatusMsg(r.success ? 'Done (v2 · self-hosted)' : `✗ ${r.error ?? 'error'}`);
-        } catch (e) {
-          if (e instanceof WasmSubsetError) {
-            setOutput([
-              `✗ the self-hosted sdev compiler cannot compile this yet: ${e.message}`,
-              '  v2 runs only on the self-hosted toolchain — no JavaScript fallback.',
-              '  Run it with #!sdev v1 while this feature is being self-hosted.',
-            ]);
-            setStatusMsg('✗ not yet self-hosted');
-          } else throw e;
+        // Already tried the file as written and the understander changed nothing: same answer.
+        let r = v2AsWrittenError !== null && canonicalSrc.trim() === writtenSrc.trim()
+          ? { notCompiled: v2AsWrittenError }
+          : await tryV2(canonicalSrc);
+        // The agent's reading does not compile but the file as written does: the author's file wins.
+        if ('notCompiled' in r && v2AsWrittenError === null && overrideSrc === undefined && canonicalSrc.trim() !== writtenSrc.trim()) {
+          const asIs = await tryV2(writtenSrc);
+          if (!('notCompiled' in asIs)) r = asIs;
+        }
+        if ('notCompiled' in r) {
+          // Report what the compiler said about the author's own file — not about a guess.
+          const reason = v2AsWrittenError ?? r.notCompiled;
+          setOutput([
+            `✗ the self-hosted sdev compiler cannot compile this yet: ${reason}`,
+            '  v2 runs only on the self-hosted toolchain — no JavaScript fallback.',
+            '  Run it with #!sdev v1 while this feature is being self-hosted.',
+          ]);
+          setError(reason);
+          setStatusMsg('✗ not yet self-hosted');
+          setBottomPanel('terminal');
+          // a reading that does not compile is never kept
+          const failedId = activeFile.id;
+          setFiles((prev) => prev.map((f) => (f.id === failedId ? { ...f, understood: undefined } : f)));
+        } else {
+          showV2(r);
         }
       } catch (e) {
         setStatusMsg(`✗ v2: ${e instanceof Error ? e.message : String(e)}`);
@@ -942,13 +990,21 @@ export default function IDEPage() {
       setStatusMsg(`✓ Done in ${elapsed}ms`);
       recordRun(activeFile.name, activeFile.content, outputLines.join('\n'), 'success', elapsed);
     } catch (e) {
-      const msg = e instanceof SdevError ? e.message : String(e);
-      // Understood, but it broke when it ran: show the AI the error once.
-      if (!retried && !/!#agent\s*:\s*off/i.test(dialectSrc)) {
-        setStatusMsg('Agent is rethinking…');
-        const { reconsider } = await import('@/lang/agent');
-        const again = await reconsider(dialectSrc, msg, { dialect: activeDialect }).catch(() => null);
-        if (again?.source) { setIsRunning(false); return runCode(again.source, true); }
+      const msg = e instanceof SdevError || e instanceof Error
+        ? e.message
+        : typeof e === 'object' && e !== null ? (() => { try { return JSON.stringify(e); } catch { return String(e); } })() : String(e);
+      const rewritten = canonicalSrc.trim() !== writtenSrc.trim();
+      if (!retried && rewritten) {
+        const { parses } = await import('@/lang/agent');
+        // The agent's reading broke, but the author's file holds together: the file as written wins.
+        if (parses(writtenSrc)) { setIsRunning(false); return runCode(writtenSrc, true); }
+        // Neither works: the file needed the agent, so let the AI see the error once.
+        if (!/!#agent\s*:\s*off/i.test(dialectSrc)) {
+          setStatusMsg('Agent is rethinking…');
+          const { reconsider } = await import('@/lang/agent');
+          const again = await reconsider(dialectSrc, msg, { dialect: activeDialect }).catch(() => null);
+          if (again?.source) { setIsRunning(false); return runCode(again.source, true); }
+        }
       }
       // A reading that fails is never kept — the next run thinks again.
       { const failedId = activeFile.id; setFiles((prev) => prev.map((f) => (f.id === failedId ? { ...f, understood: undefined } : f))); }

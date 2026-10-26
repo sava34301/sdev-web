@@ -30,6 +30,7 @@
     "test:self-codegen": "node bin/sdevhost.mjs scripts/test-self-codegen.sdev",
     "test:fixed-point": "node bin/sdevhost.mjs scripts/test-shim-fixed-point.sdev",
     "test:agent": "node scripts/run-ts.mjs scripts/test-agent.ts",
+    "test:understander-docs": "node scripts/run-ts.mjs scripts/test-understander-docs.ts",
     "test:beginner": "node scripts/run-ts.mjs scripts/test-beginner.ts",
     "test:math": "node scripts/run-ts.mjs scripts/test-math.ts",
     "test:tasks": "node scripts/run-ts.mjs scripts/test-tasks.ts",
