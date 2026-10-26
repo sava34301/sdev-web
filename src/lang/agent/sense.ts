@@ -12,11 +12,14 @@ import { TokenType } from '@/lang/tokens';
 import { mathRequest } from './math';
 import { taskRequest } from './tasks';
 import { baseWordMap, CANONICAL, type Intent } from './vocabulary';
+import { KEYWORD_TOKEN_BY_WORD } from '@/lang/keywords';
 
 export interface Sense {
   parses: boolean;
   suspicious: boolean;
   reasons: string[];
+  /** parses, defines every name it uses, and only differs in style */
+  working?: boolean;
 }
 
 export function parseError(source: string): string | null {
@@ -34,12 +37,22 @@ export function parses(source: string): boolean {
 }
 
 let builtinCache: Set<string> | null = null;
+let runtimeCache: Set<string> | null = null;
+/** names the interpreter itself defines (speak, print, len, …) — without the window toolkit */
+function runtimeNames(): Set<string> {
+  if (!runtimeCache) {
+    try {
+      const env = (new Interpreter(() => {}) as unknown as { globalEnv: { values: Map<string, unknown> } }).globalEnv;
+      runtimeCache = new Set(env.values.keys());
+    } catch { runtimeCache = new Set(); }
+  }
+  return runtimeCache;
+}
 /** every name the runtime provides before the first line runs */
 export function builtinNames(): Set<string> {
   if (!builtinCache) {
     try {
-      const env = (new Interpreter(() => {}) as unknown as { globalEnv: { values: Map<string, unknown> } }).globalEnv;
-      builtinCache = new Set(env.values.keys());
+      builtinCache = new Set(runtimeNames());
       // the window toolkit (window, button, label, uiget, …) is there in the IDE too
       for (const n of ['window','endwindow','row','endrow','column','endcolumn','group','endgroup','tabs','endtabs','tab','endtab','heading','label','paragraph','image','divider','spacer','progress','button','textarea','checkbox','slider','select','table','menu','endmenu','menuitem','uiget','uiset','show','alert']) builtinCache.add(n);
     } catch { builtinCache = new Set(); }
@@ -64,8 +77,10 @@ export function definedNames(source: string): Set<string> {
   for (const m of source.matchAll(new RegExp(`\\b(?:to|conjure|func|function|fn|def)\\s+${NAME}\\s*\\(([^)]*)\\)`, 'gu'))) {
     for (const w of m[1].split(/[\s,=]+/)) if (new RegExp(`^${NAME}$`, 'u').test(w)) out.add(w);
   }
-  // lambdas `(a, b) =>` / `x =>`
-  for (const m of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*=>|(${NAME})\\s*=>`, 'gu'))) {
+  add(new RegExp(`\\b(?:iterate|within|spell|lambda|essence|rescue|except|alias)\\s+(${NAME})`, 'gu'));
+  add(new RegExp(`\\b(?:iterate|for)\\s+${NAME}\\s*,\\s*(${NAME})`, 'gu'));
+  // lambdas `(a, b) =>` / `x =>` / sdev's own `(a, b) ->` / `x ->`
+  for (const m of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*(?:=>|->)|(${NAME})\\s*(?:=>|->)`, 'gu'))) {
     for (const w of (m[1] ?? m[2] ?? '').split(/[\s,]+/)) if (w) out.add(w);
   }
   return out;
@@ -105,6 +120,23 @@ const NON_CANONICAL_HEAD = (() => {
   return out;
 })();
 
+/**
+ * sdev's own spellings are never "another way of writing" something:
+ * every keyword the lexer accepts (forge, conjure, ponder, yield, let, fn, …)
+ * and every function the runtime defines (speak, print, …) is real sdev.
+ */
+export function isSdevWord(word: string): boolean {
+  return Object.prototype.hasOwnProperty.call(KEYWORD_TOKEN_BY_WORD, word) || runtimeNames().has(word);
+}
+
+/** a line with its strings and sdev's `::` / `;;` block marks taken out */
+function codeOnly(line: string): string {
+  return line.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '""').replace(/::|;;/g, ' ');
+}
+
+/** reasons that only say the file is written in another style — not that it means something else */
+const STYLE_ONLY = /is not canonical sdev|several statements on one line|looks like an assignment written another way/;
+
 export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
   const reasons: string[] = [];
   const lines = source.split('\n');
@@ -117,7 +149,7 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
       reasons.push(`line ${i + 1}: a calculation asked for in words`);
       continue;
     }
-    if (NON_CANONICAL_HEAD.has(head) || extra?.has(head)) {
+    if ((NON_CANONICAL_HEAD.has(head) && !isSdevWord(head)) || extra?.has(head)) {
       reasons.push(`line ${i + 1}: "${head}" is not canonical sdev`);
       continue;
     }
@@ -129,7 +161,7 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
     if (/^[\p{L}\p{N}_]+\s+(?:will be|becomes|gets|is now|should be|shall be|=|:=|<-)\s+/iu.test(line)) {
       reasons.push(`line ${i + 1}: looks like an assignment written another way`);
     }
-    if (/;\s*\S/.test(line)) reasons.push(`line ${i + 1}: several statements on one line`);
+    if (/;\s*\S/.test(codeOnly(line))) reasons.push(`line ${i + 1}: several statements on one line`);
 
     // Plain English written as code: three or more bare words with no call,
     // no quotes and no operators. It may parse, but it means nothing.
@@ -158,5 +190,8 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
   }
 
   const ok = parses(source);
-  return { parses: ok, suspicious: !ok || reasons.length > 0, reasons };
+  // A file that parses, uses only names it defines, and is merely written in
+  // another style is working code — it must reach the compiler as written.
+  const working = ok && unknown.size === 0 && reasons.every((r) => STYLE_ONLY.test(r));
+  return { parses: ok, suspicious: !ok || (reasons.length > 0 && !working), reasons, working };
 }
