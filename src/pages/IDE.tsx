@@ -643,7 +643,7 @@ export default function IDEPage() {
     const activeDialect = getActiveDialect();
     const strippedSrc = stripSignature(activeFile.content);
     const dialectSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
-    const { asWritten } = await import('@/lang/agent');
+    const { asWritten, wordsNeedReading } = await import('@/lang/agent');
     // the file as its author wrote it: directives out, sdev:ai made canonical, nothing else
     const writtenSrc = asWritten(dialectSrc);
     const runtimePref = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || null;
@@ -686,7 +686,7 @@ export default function IDEPage() {
     // The understander only reads a v2 file when the self-hosted compiler
     // cannot compile it as written, so it can never break a working program.
     let v2AsWrittenError: string | null = null;
-    if (overrideSrc === undefined && wantsV2(writtenSrc)) {
+    if (overrideSrc === undefined && wantsV2(writtenSrc) && !wordsNeedReading(writtenSrc)) {
       setIsRunning(true);
       setStatusMsg('Running (v2 · self-hosted)…');
       setUiState(null); setWebState(null);
@@ -758,9 +758,14 @@ export default function IDEPage() {
       setUiState(null); setWebState(null);
       try {
         // Already tried the file as written and the understander changed nothing: same answer.
-        const r = v2AsWrittenError !== null && canonicalSrc.trim() === writtenSrc.trim()
+        let r = v2AsWrittenError !== null && canonicalSrc.trim() === writtenSrc.trim()
           ? { notCompiled: v2AsWrittenError }
           : await tryV2(canonicalSrc);
+        // The agent's reading does not compile but the file as written does: the author's file wins.
+        if ('notCompiled' in r && v2AsWrittenError === null && overrideSrc === undefined && canonicalSrc.trim() !== writtenSrc.trim()) {
+          const asIs = await tryV2(writtenSrc);
+          if (!('notCompiled' in asIs)) r = asIs;
+        }
         if ('notCompiled' in r) {
           // Report what the compiler said about the author's own file — not about a guess.
           const reason = v2AsWrittenError ?? r.notCompiled;

@@ -26,7 +26,7 @@ export * from './types';
 export * from './directives';
 export * from './memory';
 export * from './promote';
-export { senseFile, parses, unknownNames, definedNames, builtinNames } from './sense';
+export { senseFile, parses, unknownNames, definedNames, builtinNames, wordsNeedReading } from './sense';
 export { repair } from './repair';
 export { VOCABULARY, CANONICAL } from './vocabulary';
 export type { Intent } from './vocabulary';

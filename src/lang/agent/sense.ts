@@ -197,3 +197,14 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
   const working = ok && unknown.size === 0 && reasons.every((r) => STYLE_ONLY.test(r));
   return { parses: ok, suspicious: !ok || (reasons.length > 0 && !working), reasons, working };
 }
+
+/**
+ * For files the v1 parser cannot judge (sdev v2): does a line open with a
+ * word that is plainly not sdev — `terminal x`, `output Hello`, `ask name`?
+ * Those still compile as a bare expression, so compiling is not proof the
+ * author got what they meant; such a file is read by the agent first.
+ */
+export function wordsNeedReading(source: string): boolean {
+  return senseFile(source).reasons.some((r) =>
+    /is not canonical sdev|asks for input in words|names the output destination/.test(r) && !/"[^"]*[^\x00-\x7F][^"]*"/.test(r));
+}

@@ -3,7 +3,7 @@ import { Parser } from './parser';
 import { Interpreter } from './interpreter';
 import { SdevError } from './errors';
 import { stripBoardBlocks } from './hardware/strip';
-import { understand, understandAsync, stripAgentDirectives, reconsider, asWritten, parses } from './agent';
+import { understand, understandAsync, stripAgentDirectives, reconsider, asWritten, parses, wordsNeedReading } from './agent';
 import type { UnderstandOptions, UnderstandResult } from './agent';
 
 export interface ExecutionResult {
@@ -52,6 +52,12 @@ export async function executeV2(source: string, options: ExecuteOptions = {}): P
     // reads the file when the self-hosted compiler cannot compile it.
     const written = asWritten(source);
     let r: Awaited<ReturnType<typeof runWasm>>;
+    // A line opening with a plainly-not-sdev word (`terminal x`) still compiles, so read those first.
+    if (options.agent !== false && wordsNeedReading(written)) {
+      const understood = await understandFor(source, options, true);
+      try { r = await runWasm(understood); return { success: r.success, output: r.output, error: r.error ?? undefined, detectedLanguage: null }; }
+      catch { /* the reading does not compile — try the file as written */ }
+    }
     try {
       r = await runWasm(written);
     } catch (first) {
