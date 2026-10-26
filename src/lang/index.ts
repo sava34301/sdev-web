@@ -97,13 +97,10 @@ export async function executeAsync(source: string, options: ExecuteOptions = {})
   if (first.success || options.agent === false || !first.error) return first;
   // The agent's reading broke but the author's file holds together: the file as written wins.
   const written = asWritten(source);
-  if (understood.trim() !== written.trim() && parses(written)) {
-    const asIs = execute(written, { ...options, agent: false });
-    if (asIs.success) return asIs;
-    return asIs;
-  }
-  // The author's file did not run as written and needs reading: let the AI see the error once.
+  if (understood.trim() !== written.trim() && parses(written)) return execute(written, { ...options, agent: false });
+  // The author's own file ran and failed: that is a real error to show, not something to rewrite.
   if (understood.trim() === written.trim() && parses(written)) return first;
+  // The file needed the agent and its reading still broke: let the AI see the error once.
   const retry = await reconsider(source, first.error, { dialect: options.dialect ?? null, ...(options.agent || {}) }).catch(() => null);
   if (!retry) return first;
   const second = execute(retry.source, { ...options, agent: false });
