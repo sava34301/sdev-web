@@ -113,6 +113,24 @@ function safeName(raw: string): string {
   return /^[\p{N}]/u.test(cleaned) ? 'n' + cleaned : cleaned;
 }
 
+/** `(x + 1)` -> `x + 1`, but only when the brackets wrap the whole thing: `int(s)` keeps its `)` */
+function unwrap(raw: string): string {
+  const s = raw.trim();
+  if (!s.startsWith('(') || !s.endsWith(')')) return s;
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth++;
+    else if (s[i] === ')') { depth--; if (depth === 0 && i < s.length - 1) return s; }
+  }
+  return depth === 0 ? s.slice(1, -1).trim() : s;
+}
+
+/** an assignment target the compiler already accepts as written: `self.n`, `box.size`, `items[0]` */
+function targetName(raw: string): string {
+  if (/^[\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*|\[[^\]]+\])+$/u.test(raw)) return raw;
+  return safeName(raw);
+}
+
 function wordsOf(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
@@ -410,6 +428,8 @@ function collectNames(lines: string[], words: Map<string, Intent>, seed?: Set<st
       const toks = wordsOf(stmt);
       if (!toks.length) continue;
       const head = words.get(toks[0].toLowerCase());
+      // `rescue e` / `catch err` / `iterate x through …` bind a name too
+      if (/^(?:rescue|catch|except|iterate)$/i.test(toks[0]) && toks[1]) { names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, '')); continue; }
       if (head === 'ask') { const f = parseAsk(stmt.slice(toks[0].length)); if (f) names.add(f.name); continue; }
       if (head === 'set' && toks[1]) { names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, '')); continue; }
       if (head === 'function' && toks[1]) {
@@ -451,7 +471,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
   const askRhs = (rhs: string): string | null | undefined => {
     const t = wordsOf(rhs);
     if (!t.length || words.get(t[0].toLowerCase().replace(/\($/, '')) !== 'ask') return undefined;
-    const tail = t.slice(1).join(' ').replace(/^\(|\)$/g, '').trim();
+    const tail = unwrap(t.slice(1).join(' '));
     if (!tail) return null;
     return isMaskedString(tail) ? tail : undefined;
   };
@@ -516,7 +536,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       const head = toks[0];
       const headKey = head.toLowerCase().replace(/[(:]$/, '');
       let intent = words.get(headKey);
-      const rest = stmt.slice(stmt.indexOf(head) + head.length).trim().replace(/^\(|\)$/g, '').trim();
+      const rest = unwrap(stmt.slice(stmt.indexOf(head) + head.length));
 
       // Counting: "add 1 to score", "increase score by 2", "score++".
       const counted = counting(stmt);
@@ -595,7 +615,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
             known.add(parts[0]);
             const tail = parts.slice(1);
             if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
-            rewritten.push(`set ${safeName(parts[0])} to ${expression(tail.join(' '), known, renames)}`);
+            rewritten.push(`set ${targetName(parts[0])} to ${expression(tail.join(' '), known, renames)}`);
             continue;
           }
           rewritten.push(stmt);
@@ -630,7 +650,8 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
         }
         case 'return':
           learn(headKey, 'return');
-          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ''), known, renames)}` : 'return');
+          // "give back the total" -> total; but `return a + b` keeps its `a`
+          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|value|of)\s+|^an?\s+(?=[\p{L}_][\p{L}\p{N}_]*\s*$)/iu, ''), known, renames)}` : 'return');
           continue;
         case 'break':
         case 'continue':
@@ -639,7 +660,16 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           continue;
         case 'function': {
           learn(headKey, 'function');
-          const cleanedDecl = rest.replace(/[:{]\s*$/, '').replace(DECL_NOISE, ' ').replace(/\s+/g, ' ').trim();
+          // Noise words are only dropped from the wording around the name —
+          // inside a real parameter list (`with a b`, `(a, b)`) every word is a name.
+          const declBody = rest.replace(/[:{]\s*$/, '');
+          const split = declBody.search(/\swith\s|\(/);
+          const declHead = split < 0 ? declBody : declBody.slice(0, split);
+          const declParams = split < 0 ? '' : declBody.slice(split);
+          const paramWords = declParams.trim().split(/\s+/);
+          const keepAll = /[(,]/.test(declParams) || paramWords.slice(1).every((w) => w.length <= 2 || !/^(?:a|an|the)$/i.test(w));
+          const cleanedParams = keepAll ? declParams : declParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, ' ');
+          const cleanedDecl = (declHead.replace(DECL_NOISE, ' ') + ' ' + cleanedParams).replace(/\s+/g, ' ').trim();
           const parts = wordsOf(cleanedDecl);
           if (!parts.length) { rewritten.push(stmt); continue; }
           const rawName = parts[0].replace(/\(.*$/, '');
@@ -648,7 +678,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
           const inParens = parts[0].includes('(') ? [parts[0].slice(parts[0].indexOf('('))] : [];
           const params = [...inParens, ...parts.slice(1)]
             .join(' ')
-            .replace(/^\(|\)$/g, '')
+            .replace(/^\(([^()]*)\)$/, '$1')
             .replace(/,/g, ' ')
             .split(/\s+/)
             .filter((p) => p && words.get(p.toLowerCase()) !== 'in' && p !== 'with')
@@ -689,7 +719,7 @@ export function repair(source: string, ctx: RepairContext = {}): RepairResult {
       }
 
       // a bare call or an already-canonical line
-      if (/^[\p{L}\p{N}_]+\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head) || BUILTINS.has(headKey)) {
+      if (/^[\p{L}\p{N}_]+(?:\.[\p{L}\p{N}_]+)*\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head) || BUILTINS.has(headKey)) {
         rewritten.push(stmt.replace(/[:{]\s*$/, '').trim());
         continue;
       }
