@@ -1,6 +1,2 @@
 import { repair } from '../src/lang/agent/repair';
-import { sdevUnderstand } from '../src/lang/agent/sdev-engine';
-for (const s of ['set p to int(s)\nsay p', 'to add with a b\n  return a + b\nend\nsay add(1, 2', 'set c to new Counter()\nc.start(5)']) {
-  console.log('REPAIR', JSON.stringify(repair(s).source));
-  console.log('SDEV  ', JSON.stringify(sdevUnderstand(s, new Set(), [])));
-}
+for (const s of ['to greet with a name\n  say name\nend', 'def greet(name):', 'function add(a, b) {', 'make a function called greet that takes name', 'give back the total', 'return a + b', 'print("hi")', 'say(x + 1) * 2']) console.log(JSON.stringify(s), '->', JSON.stringify(repair(s).source));
