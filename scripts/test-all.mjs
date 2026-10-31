@@ -17,6 +17,8 @@ const suites = [
   { name: 'Self-Hosted Subsystems', cmd: 'node', args: ['bin/sdevhost.mjs', 'scripts/test-selfhosted-subsystems.sdev'] },
   { name: 'Shim Fixed-Point (88 cases)', cmd: 'node', args: ['bin/sdevhost.mjs', 'scripts/test-shim-fixed-point.sdev'] },
   { name: 'Parity Gate (209 features)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-parity.ts'] },
+  { name: 'Formal Formatter Suite (8 cases)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-formatter.ts'] },
+  { name: 'Multi-Language Parity Suite (16 cases)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-multi-language-features.ts'] },
   { name: 'WASM Runtime Suite (73 cases)', cmd: 'node', args: ['scripts/test-wasm-runtime.mjs'] },
 ];
 

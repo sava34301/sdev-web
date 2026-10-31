@@ -960,6 +960,7 @@ iterate n through nums ::
 const GUIDES = [
   ['Part II — The language', [
     ['public/SDEV_V2_DOCUMENTATION.md', 'sdev v2 "Prism" — language guide'],
+    ['public/SDEV_MULTI_PARADIGM_DOCUMENTATION.md', 'Multi-Language Parity & Modern Paradigms (SQL, Kotlin, Rust, C++)'],
     ['public/SDEV_DOCUMENTATION.md', 'Full v1 language reference'],
   ]],
   ['Part III — The complete narrative guide', [

@@ -79,4 +79,139 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
       return obj;
     },
   });
+
+  // ============= Systems Programming Arena Memory =============
+  builtins.set('arena_create', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const cap = toNumber(args[0], line);
+      return {
+        bytes: new Array(cap).fill(0),
+        cap,
+        offset: 0,
+      };
+    },
+  });
+
+  builtins.set('arena_alloc', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const n = toNumber(args[1], line);
+      if (!a || typeof a !== 'object') throw new SdevError('First argument must be an arena', line);
+      const cur = (a.offset as number) || 0;
+      const next = cur + n;
+      if (next > (a.cap as number)) return -1;
+      a.offset = next;
+      return cur;
+    },
+  });
+
+  builtins.set('arena_reset', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      if (!a || typeof a !== 'object') throw new SdevError('First argument must be an arena', line);
+      a.offset = 0;
+      return 0;
+    },
+  });
+
+  builtins.set('mem_poke_u8', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const ptr = toNumber(args[1], line);
+      const val = toNumber(args[2], line);
+      a.bytes[ptr] = val & 0xff;
+      return 0;
+    },
+  });
+
+  builtins.set('mem_peek_u8', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const ptr = toNumber(args[1], line);
+      return a.bytes[ptr] & 0xff;
+    },
+  });
+
+  builtins.set('mem_poke_i16', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const ptr = toNumber(args[1], line);
+      const val = toNumber(args[2], line);
+      a.bytes[ptr] = val & 0xff;
+      a.bytes[ptr + 1] = (val >> 8) & 0xff;
+      return 0;
+    },
+  });
+
+  builtins.set('mem_peek_i16', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const ptr = toNumber(args[1], line);
+      const b0 = a.bytes[ptr] & 0xff;
+      const b1 = a.bytes[ptr + 1] & 0xff;
+      let val = b0 | (b1 << 8);
+      if (val >= 0x8000) val -= 0x10000;
+      return val;
+    },
+  });
+
+  builtins.set('mem_poke_i32', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const ptr = toNumber(args[1], line);
+      const val = toNumber(args[2], line);
+      a.bytes[ptr] = val & 0xff;
+      a.bytes[ptr + 1] = (val >> 8) & 0xff;
+      a.bytes[ptr + 2] = (val >> 16) & 0xff;
+      a.bytes[ptr + 3] = (val >> 24) & 0xff;
+      return 0;
+    },
+  });
+
+  builtins.set('mem_peek_i32', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const ptr = toNumber(args[1], line);
+      const b0 = a.bytes[ptr] & 0xff;
+      const b1 = a.bytes[ptr + 1] & 0xff;
+      const b2 = a.bytes[ptr + 2] & 0xff;
+      const b3 = a.bytes[ptr + 3] & 0xff;
+      return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) | 0;
+    },
+  });
+
+  builtins.set('mem_fill', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const ptr = toNumber(args[1], line);
+      const len = toNumber(args[2], line);
+      const val = toNumber(args[3], line) & 0xff;
+      for (let i = 0; i < len; i++) a.bytes[ptr + i] = val;
+      return 0;
+    },
+  });
+
+  builtins.set('mem_copy', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as Record<string, unknown>;
+      const dst = toNumber(args[1], line);
+      const src = toNumber(args[2], line);
+      const len = toNumber(args[3], line);
+      const slice = a.bytes.slice(src, src + len);
+      for (let i = 0; i < len; i++) a.bytes[dst + i] = slice[i];
+      return 0;
+    },
+  });
+
 }

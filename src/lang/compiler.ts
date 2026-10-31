@@ -46,11 +46,13 @@ class FunctionCompiler {
 
 export class Compiler {
   private constants: ConstantPool = { numbers: [], strings: [] };
+  private fixedVariables: Set<string> = new Set();
   private debugInfo: DebugInfo = { sourceMap: [], localNames: [] };
 
   compile(program: AST.Program): Chunk {
     this.constants = { numbers: [], strings: [] };
     this.debugInfo = { sourceMap: [], localNames: [] };
+    this.fixedVariables = new Set();
     const fn = new FunctionCompiler('', []);
     this.compileStatements(program.statements, fn);
     fn.emit(OpCode.HALT, undefined, 0);
@@ -97,10 +99,14 @@ export class Compiler {
 
       case 'LetStatement':
         this.compileNode(node.value, fn);
+        if (node.isFixed) this.fixedVariables.add(node.name);
         fn.emit(OpCode.DEFINE, node.name, node.line);
         break;
 
       case 'AssignStatement':
+        if (this.fixedVariables.has(node.name)) {
+          throw new SdevError(`Cannot reassign fixed variable '${node.name}'`, node.line);
+        }
         this.compileNode(node.value, fn);
         fn.emit(OpCode.STORE, node.name, node.line);
         break;
@@ -267,6 +273,31 @@ export class Compiler {
         this.compileNode(node.operand, fn);
         break;
 
+      case 'FStringExpr': {
+        if (node.parts.length === 0) {
+          fn.emit(OpCode.PUSH_STR, '', node.line);
+          break;
+        }
+        for (let i = 0; i < node.parts.length; i++) {
+          const part = node.parts[i];
+          if (part.kind === 'text') {
+            fn.emit(OpCode.PUSH_STR, part.value, node.line);
+          } else {
+            fn.emit(OpCode.LOAD, 'str', node.line);
+            this.compileNode(part.expr, fn);
+            fn.emit(OpCode.CALL, 1, node.line);
+          }
+          if (i > 0) {
+            fn.emit(OpCode.ADD, undefined, node.line);
+          }
+        }
+        break;
+      }
+
+      case 'MatchStatement':
+        this.compileMatch(node, fn);
+        break;
+
       default:
         throw new SdevError(`Compiler: unknown node type ${(node as { type: string }).type}`, 0);
     }
@@ -407,7 +438,71 @@ export class Compiler {
     fn.loopStack.pop();
   }
 
-  private compileTryCatch(node: AST.TryStatement, fn: FunctionCompiler): void {
+
+  private compileMatch(node: AST.MatchStatement, fn: FunctionCompiler): void {
+    this.compileNode(node.subject, fn);
+    const tempVar = `__match_${fn.code.length}_${node.line}`;
+    fn.emit(OpCode.DEFINE, tempVar, node.line);
+
+    const endJumps: number[] = [];
+
+    for (const c of node.cases) {
+      this.compileMatchPattern(c.pattern, tempVar, fn, node.line);
+
+      if (c.guard) {
+        this.compileNode(c.guard, fn);
+        fn.emit(OpCode.AND, undefined, node.line);
+      }
+
+      const skipCaseJump = fn.emitJump(OpCode.JUMP_IF_FALSE, node.line);
+      this.compileStatements(c.body.statements, fn);
+      endJumps.push(fn.emitJump(OpCode.JUMP, node.line));
+      fn.patchJump(skipCaseJump);
+    }
+
+    for (const jump of endJumps) {
+      fn.patchJump(jump);
+    }
+  }
+
+  private compileMatchPattern(pat: AST.PatternNode, tempVar: string, fn: FunctionCompiler, line: number): void {
+    switch (pat.type) {
+      case 'PatWildcard':
+        fn.emit(OpCode.PUSH_BOOL, true, line);
+        break;
+      case 'PatLiteral':
+        fn.emit(OpCode.LOAD, tempVar, line);
+        this.compileNode(pat.value, fn);
+        fn.emit(OpCode.EQ, undefined, line);
+        break;
+      case 'PatValue':
+        fn.emit(OpCode.LOAD, tempVar, line);
+        this.compileNode(pat.expr, fn);
+        fn.emit(OpCode.EQ, undefined, line);
+        break;
+      case 'PatCapture':
+        if (pat.pattern) {
+          this.compileMatchPattern(pat.pattern, tempVar, fn, line);
+        } else {
+          fn.emit(OpCode.PUSH_BOOL, true, line);
+        }
+        fn.emit(OpCode.LOAD, tempVar, line);
+        fn.emit(OpCode.DEFINE, pat.name, line);
+        break;
+      case 'PatOr': {
+        for (let i = 0; i < pat.options.length; i++) {
+          this.compileMatchPattern(pat.options[i], tempVar, fn, line);
+          if (i > 0) fn.emit(OpCode.OR, undefined, line);
+        }
+        break;
+      }
+      default:
+        fn.emit(OpCode.PUSH_BOOL, true, line);
+        break;
+    }
+  }
+
+    private compileTryCatch(node: AST.TryStatement, fn: FunctionCompiler): void {
     // Compile try block as a function, call it, catch errors
     const tryFn = new FunctionCompiler('<try>', []);
     this.compileStatements(node.tryBlock.statements, tryFn);

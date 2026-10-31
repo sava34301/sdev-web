@@ -754,7 +754,152 @@ const CURATED_SEEDS: CuratedSeed[] = [
     status: 'partial',
   },
 
-  // ── Leaflet / Geo Visualization (Planned / Partial Roadmap) ──────────────
+
+  // ── Relational SQL / LINQ Query Primitives (Kotlin, SQL, C# parity) ────────
+  {
+    name: 'sql_select',
+    aliases: ['select'],
+    module: 'tome',
+    signature: 'sql_select(records: list<tome>, columns: list<string> | string) -> list<tome>',
+    params: [
+      { name: 'records', type: 'list<tome>', description: 'List of record tomes to query' },
+      { name: 'columns', type: 'list<string> | string', description: 'Column names to project (or comma-separated string)' },
+    ],
+    returns: 'list<tome>',
+    description: 'Relational projection: extracts specified fields from each record (SQL SELECT).',
+    example: 'sql_select(users, ["id", "name"])',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'sql_where',
+    aliases: ['where'],
+    module: 'tome',
+    signature: 'sql_where(records: list<tome>, predicate: func) -> list<tome>',
+    params: [
+      { name: 'records', type: 'list<tome>', description: 'List of record tomes to filter' },
+      { name: 'predicate', type: 'func', description: 'Filter predicate function returning truthy/falsy' },
+    ],
+    returns: 'list<tome>',
+    description: 'Relational filtering: returns records that satisfy the predicate condition (SQL WHERE).',
+    example: 'sql_where(users, func(u) :: yield u["age"] >= 18 ;;)',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'sql_order_by',
+    aliases: ['order_by', 'sort_by'],
+    module: 'tome',
+    signature: 'sql_order_by(records: list<tome>, key: string, ascending?: bool) -> list<tome>',
+    params: [
+      { name: 'records', type: 'list<tome>', description: 'List of record tomes to sort' },
+      { name: 'key', type: 'string', description: 'Property key name to sort by' },
+      { name: 'ascending', type: 'bool', optional: true, description: 'True for ascending, false for descending (default true)' },
+    ],
+    returns: 'list<tome>',
+    description: 'Relational sorting: sorts records by property key in ascending or descending order (SQL ORDER BY).',
+    example: 'sql_order_by(users, "name", true)',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'sql_limit',
+    aliases: ['limit'],
+    module: 'tome',
+    signature: 'sql_limit(records: list<tome>, count: number, offset?: number) -> list<tome>',
+    params: [
+      { name: 'records', type: 'list<tome>', description: 'List of record tomes to paginate' },
+      { name: 'count', type: 'number', description: 'Maximum number of records to return' },
+      { name: 'offset', type: 'number', optional: true, description: 'Number of initial records to skip (default 0)' },
+    ],
+    returns: 'list<tome>',
+    description: 'Relational pagination: slices records with limit and offset (SQL LIMIT / OFFSET).',
+    example: 'sql_limit(users, 10, 20)',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'sql_join',
+    aliases: ['join'],
+    module: 'tome',
+    signature: 'sql_join(left: list<tome>, right: list<tome>, onKey: string | list<string>, type?: string) -> list<tome>',
+    params: [
+      { name: 'left', type: 'list<tome>', description: 'Left list of record tomes' },
+      { name: 'right', type: 'list<tome>', description: 'Right list of record tomes' },
+      { name: 'onKey', type: 'string | list<string>', description: 'Join key name or [left_key, right_key]' },
+      { name: 'type', type: 'string', optional: true, description: "'inner' (default) or 'left' join type" },
+    ],
+    returns: 'list<tome>',
+    description: 'Relational join: combines records from two tables matching on foreign/primary keys (SQL JOIN).',
+    example: 'sql_join(users, orders, "user_id", "inner")',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'sql_group_by',
+    aliases: ['group_by'],
+    module: 'tome',
+    signature: 'sql_group_by(records: list<tome>, groupKey: string, aggCol: string, aggType: string) -> list<tome>',
+    params: [
+      { name: 'records', type: 'list<tome>', description: 'List of record tomes to aggregate' },
+      { name: 'groupKey', type: 'string', description: 'Grouping column name' },
+      { name: 'aggCol', type: 'string', description: 'Column to aggregate over' },
+      { name: 'aggType', type: 'string', description: "'sum', 'avg', 'min', 'max', or 'count'" },
+    ],
+    returns: 'list<tome>',
+    description: 'Relational grouping: groups records by key and computes aggregation over specified column (SQL GROUP BY).',
+    example: 'sql_group_by(sales, "region", "amount", "sum")',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'coalesce',
+    aliases: ['elvis', 'null_coalesce'],
+    module: 'core',
+    signature: 'coalesce(val: any, fallback: any) -> any',
+    params: [
+      { name: 'val', type: 'any', description: 'Value to evaluate' },
+      { name: 'fallback', type: 'any', description: 'Fallback value if val is null, undefined or void' },
+    ],
+    returns: 'any',
+    description: 'Null-coalescing / Elvis operator: returns val if defined and non-null, else fallback.',
+    example: 'coalesce(username, "Guest")',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'safe_get',
+    aliases: ['safe_nav'],
+    module: 'core',
+    signature: 'safe_get(obj: any, key: string, fallback?: any) -> any',
+    params: [
+      { name: 'obj', type: 'any', description: 'Object or tome to traverse' },
+      { name: 'key', type: 'string', description: 'Property key or index' },
+      { name: 'fallback', type: 'any', optional: true, description: 'Fallback if obj is null or property missing (default null)' },
+    ],
+    returns: 'any',
+    description: 'Safe navigation helper: safely reads a property without throwing if the target object is null/void.',
+    example: 'safe_get(user, "profile", {})',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+  {
+    name: 'copy_record',
+    aliases: ['record_copy', 'copy'],
+    module: 'tome',
+    signature: 'copy_record(record: tome, updates: tome) -> tome',
+    params: [
+      { name: 'record', type: 'tome', description: 'Base record tome' },
+      { name: 'updates', type: 'tome', description: 'Fields to update or override' },
+    ],
+    returns: 'tome',
+    description: 'Data class record copy: returns a shallow clone of the record with fields updated (Kotlin .copy()).',
+    example: 'copy_record(user, { "age": 26 })',
+    targets: ['v1', 'v2-wasm', 'native-x64', 'browser', 'cli'],
+    status: 'implemented',
+  },
+
+    // ── Leaflet / Geo Visualization (Planned / Partial Roadmap) ──────────────
   {
     name: 'leaflet_map',
     aliases: ['map_view', 'geoMap'],
@@ -909,6 +1054,7 @@ function parseSignatureParams(signature: string): ApiParam[] {
 
 function classifyCoreBuiltinModule(name: string): ApiModule {
   if (name.startsWith('ffi_')) return 'ffi';
+  if (name.startsWith('sql_') || ['copy_record'].includes(name)) return 'tome';
   if (
     [
       'upper', 'lower', 'trim', 'trimLeft', 'trimRight', 'replace',
