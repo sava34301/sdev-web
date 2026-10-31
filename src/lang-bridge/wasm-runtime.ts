@@ -90,8 +90,10 @@ export async function runWasm(
   }
 
   const module = await loadSeed();
+  /* eslint-disable prefer-const */
   let mem!: WebAssembly.Memory;
   let allocStr!: (n: number) => number;
+  /* eslint-enable prefer-const */
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 

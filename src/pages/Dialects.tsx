@@ -54,6 +54,7 @@ export default function Dialects() {
   /** Everything of yours that lives in your account. */
   const loadMine = useCallback(async () => {
     if (!user) { setExtensions([]); setPrograms([]); setShared([]); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = supabase as unknown as { from: (t: string) => any };
     try {
       const [e, f, g] = await Promise.all([

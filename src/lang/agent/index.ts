@@ -113,7 +113,7 @@ export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi, sdevDefinedNames, sdev
 export function isRequest(source: string): boolean {
   const rows = source.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#') && !l.startsWith('//'));
   if (!rows.length || rows.length > 6) return false;
-  if (rows.some((l) => /[=(){}\[\]]|::|;;/.test(l) && !/^[\p{L}\s,.'"!?-]+$/u.test(l))) return false;
+  if (rows.some((l) => /[=(){}[\]]|::|;;/.test(l) && !/^[\p{L}\s,.'"!?-]+$/u.test(l))) return false;
   const text = rows.join(' ');
   const verb = /^(please\s+)?(make|build|create|write|code|generate|design|program|draw|give\s+me|show\s+me|i\s+want|i\s+need|i'd\s+like|can\s+you|could\s+you|let's|lets)\b/i;
   const thing = /\b(window|app|application|program|game|calculator|form|page|site|website|tool|todo|to-do|list|clock|timer|stopwatch|converter|quiz|interface|gui|ui|button|buttons|menu|counter|chat|editor|notes?|tracker|dashboard|generator|simulator|animation|drawing)\b/i;

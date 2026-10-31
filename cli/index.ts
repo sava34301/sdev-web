@@ -73,7 +73,7 @@ function value(name: string, short?: string): string | undefined {
   const i = argv.findIndex((a) => a === name || (short && a === short));
   return i >= 0 && i + 1 < argv.length ? argv[i + 1] : undefined;
 }
-const FLAGS_WITH_VALUES = new Set(['--dialect', '--lang', '--to', '--from', '-o', '--out', '--as', '--ld', '--runtime', '--name', '--about', '--agent', '--brain', '--target', '--module']);
+const FLAGS_WITH_VALUES = new Set(['--dialect', '--lang', '--to', '--from', '-o', '--out', '--as', '--ld', '--runtime', '--name', '--about', '--agent', '--brain', '--target', '--module', '--template', '-t']);
 /** Positional arguments, in order, skipping flags and their values. */
 function positionals(): string[] {
   const out: string[] = [];
@@ -126,8 +126,12 @@ function help(): void {
 USAGE
   sdev <command> [options]
 
+PROJECT
+  new <name> [-t <tmpl>]  Create an SDEV project (templates: console, game, hardware, ml)
+  init [-t <tmpl>]        Initialize sdev.json in the current directory
+
 RUNNING
-  run <file>              Run a program (dialect + extensions + libraries applied)
+  run [file]              Run a program (or project entry from sdev.json)
   edit <file>             Full-screen editor: ^S save, ^R run, ^F find, ^Q quit
   repl                    Interactive session
   check <file>            Parse only, report syntax errors
@@ -275,11 +279,30 @@ async function cmdAgent(sub: string | undefined, rest: string[]): Promise<void> 
 /* running                                                             */
 /* ------------------------------------------------------------------ */
 
-async function cmdRun(file: string): Promise<void> {
+async function cmdRun(file?: string): Promise<void> {
+  let targetFile = file;
+  if (!targetFile) {
+    const manifestPath = resolve(process.cwd(), 'sdev.json');
+    if (existsSync(manifestPath)) {
+      try {
+        const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+        if (manifest.entry && existsSync(resolve(process.cwd(), manifest.entry))) {
+          targetFile = manifest.entry;
+        }
+      } catch {
+        // ignore manifest parse error
+      }
+    }
+  }
+  if (!targetFile && existsSync(resolve(process.cwd(), 'main.sdev'))) {
+    targetFile = 'main.sdev';
+  }
+  if (!targetFile) die('sdev run <file> (or run inside an sdev project directory)');
+
   const opts = runOptions();
-  const prepared = await prepareAsync(readSource(file), opts);
+  const prepared = await prepareAsync(readSource(targetFile), opts);
   if (opts.explain) explainAgent(prepared.agent);
-  const outcome = await runPrepared(prepared, file, opts);
+  const outcome = await runPrepared(prepared, targetFile, opts);
   if (!outcome.success) die(outcome.error ?? 'program failed');
 }
 
@@ -1180,6 +1203,172 @@ function cmdApi(query?: string): void {
 }
 
 /* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* project templates and scaffolding                                  */
+/* ------------------------------------------------------------------ */
+
+interface ProjectTemplate {
+  runtime: 'v1' | 'v2';
+  description: string;
+  code: string;
+}
+
+const PROJECT_TEMPLATES: Record<string, ProjectTemplate> = {
+  console: {
+    runtime: 'v2',
+    description: 'Standard SDEV console application',
+    code: `# Standard SDEV console application
+speak "Welcome to {name}!"
+
+conjure greet(user) ::
+  yield "Hello, " + user + "!"
+;;
+
+speak greet("developer")
+`,
+  },
+  game: {
+    runtime: 'v1',
+    description: 'SDEV 2D canvas and game starter',
+    code: `# SDEV 2D Canvas & Game starter
+canvas(400, 300)
+fill("darkblue")
+rect(0, 0, 400, 300)
+
+fill("gold")
+circle(200, 150, 40)
+
+fill("white")
+text("SDEV Game Starter", 130, 155)
+speak "Canvas initialized."
+`,
+  },
+  hardware: {
+    runtime: 'v1',
+    description: 'SDEV Microcontroller and hardware starter',
+    code: `# SDEV Hardware / Microcontroller starter
+board "uno" {
+  conjure setup() {
+    pin 13 be output
+    serial begin 9600
+  }
+
+  conjure loop() {
+    pin 13 write high
+    wait 500
+    pin 13 write low
+    wait 500
+  }
+}
+`,
+  },
+  ml: {
+    runtime: 'v2',
+    description: 'SDEV Machine Learning and tensor starter',
+    code: `# SDEV Machine Learning & Tensor starter
+speak "Initializing SDEV ML model..."
+forge x be randn([4, 8])
+forge w be randn([8, 2])
+forge y be matmul(x, w)
+
+speak "Shape of output tensor:"
+speak shape(y)
+speak "ML pipeline ready."
+`,
+  },
+};
+
+function createProjectFiles(targetDir: string, name: string, templateKey: string, isInit = false): void {
+  const tmpl = PROJECT_TEMPLATES[templateKey] ?? PROJECT_TEMPLATES.console;
+  if (!PROJECT_TEMPLATES[templateKey]) {
+    console.warn(`Template "${templateKey}" not found. Falling back to "console" (options: console, game, hardware, ml).`);
+  }
+
+  mkdirSync(targetDir, { recursive: true });
+
+  const manifestPath = resolve(targetDir, 'sdev.json');
+  if (existsSync(manifestPath)) {
+    die(`sdev.json already exists in ${targetDir}`);
+  }
+
+  const manifest = {
+    name,
+    version: '0.1.0',
+    description: tmpl.description,
+    template: templateKey in PROJECT_TEMPLATES ? templateKey : 'console',
+    runtime: tmpl.runtime,
+    entry: 'main.sdev',
+    libraries: [],
+    dialects: [],
+  };
+
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+
+  const mainPath = resolve(targetDir, 'main.sdev');
+  if (!existsSync(mainPath)) {
+    writeFileSync(mainPath, tmpl.code.replace(/\{name\}/g, name));
+  }
+
+  const readmePath = resolve(targetDir, 'README.md');
+  if (!existsSync(readmePath)) {
+    const readme = `# ${name}
+
+${tmpl.description}
+
+## Getting Started
+
+Run the program:
+\`\`\`bash
+sdev run
+\`\`\`
+
+Or run the entry file directly:
+\`\`\`bash
+sdev run main.sdev
+\`\`\`
+
+Check syntax:
+\`\`\`bash
+sdev check main.sdev
+\`\`\`
+
+Static analysis and lint:
+\`\`\`bash
+sdev lint main.sdev
+\`\`\`
+`;
+    writeFileSync(readmePath, readme);
+  }
+
+  console.log(`✓ Initialized SDEV project "${name}" [template: ${templateKey in PROJECT_TEMPLATES ? templateKey : 'console'}, runtime: ${tmpl.runtime}]`);
+  console.log(`  - sdev.json`);
+  console.log(`  - main.sdev`);
+  console.log(`  - README.md`);
+  console.log('\nTo get started:');
+  if (!isInit) {
+    console.log(`  cd ${name}`);
+  }
+  console.log('  sdev run');
+}
+
+function cmdNew(name?: string): void {
+  if (!name) die('sdev new <project-name> [--template console|game|hardware|ml]');
+  const targetDir = resolve(process.cwd(), name);
+  if (existsSync(targetDir)) {
+    die(`directory "${name}" already exists`);
+  }
+  const tmpl = value('--template', '-t') ?? 'console';
+  createProjectFiles(targetDir, name, tmpl, false);
+}
+
+function cmdInit(): void {
+  const targetDir = process.cwd();
+  const name = basename(targetDir);
+  const tmpl = value('--template', '-t') ?? 'console';
+  createProjectFiles(targetDir, name, tmpl, true);
+}
+
 /* dispatch                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -1195,9 +1384,13 @@ async function main(): Promise<void> {
   switch (cmd) {
     case 'update':
       return runUpdate(flag('--force'));
+    case 'new':
+      return cmdNew(pos[1]);
+    case 'init':
+      return cmdInit();
     case 'run':
     case 'exec':
-      return cmdRun(pos[1] ?? die('sdev run <file>'));
+      return cmdRun(pos[1]);
     case 'repl':
       return cmdRepl();
     case 'watch':

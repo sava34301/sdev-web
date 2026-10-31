@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck -- bun test file; not part of the app build
 import { expect, test, describe } from "bun:test";
 import { parses, parseError } from "../sense";

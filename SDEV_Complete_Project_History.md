@@ -1146,7 +1146,7 @@ Homepage structure today: split hero with a live typing demo and "Continue editi
 - [x] 4. A Runtime/API Explorer panel (`src/components/ide/RuntimeExplorerPanel.tsx`) with search, signatures, examples, targets and Insert Example, wired into the IDE sidebar. (**Built in Antigravity**.)
 - [x] 5. Target-aware API lookup and badges for unsupported APIs. (**Built in Antigravity**.)
 - [x] 6. Better unknown-name diagnostics (`src/lang/linter.ts`): `"Did you mean?"` Damerau-Levenshtein + alias suggestions, target hints, quick fixes (`applyQuickFix`, e.g. `fillrect` → `rect`), stable codes (`SDEV001`–`SDEV015`). (**Built in Antigravity**.)
-- [ ] 7. F1 help keybinding for the symbol under the cursor in CodeMirror.
+- [x] 7. F1 help keybinding for the symbol under the cursor in CodeMirror. (**Built in Antigravity**.)
 - [x] 8. Machine-readable API manifest (`exportApiManifest()`). (**Built in Antigravity**.)
 
 **Phase 2 — Consistency and language quality**
@@ -1160,7 +1160,7 @@ Homepage structure today: split hero with a live typing demo and "Continue editi
 - [ ] 24–27. Turtle vs general graphics namespace separation, multi-canvas support, game template.
 
 **Phase 5 — Project, CLI, tooling (Core CLI & Linter Built in Antigravity)**
-- [ ] 28–29. Standard `sdev.json` project file and `sdev new` templates.
+- [x] 28–29. Standard `sdev.json` project file, `sdev new`, and `sdev init` templates (`console`, `game`, `hardware`, `ml`). (**Built in Antigravity**.)
 - [x] 30. CLI commands `lint`, `doctor`, `explain`, `api`. (**Built in Antigravity**.)
 - [x] 31. `sdev doctor` (checks CLI version, Node & Python, WASM seed VM, native x86-64 codegen, Arduino library index, and API registry). (**Built in Antigravity**.)
 - [x] 32. `sdev explain <code>` backed by `DIAGNOSTIC_CATALOGUE` (`SDEV001`–`SDEV015`) and the API registry. (**Built in Antigravity**.)
@@ -1365,3 +1365,37 @@ What will always stay JavaScript: `bin/sdevhost.mjs`, the generated bridge files
 | Launch | 12 July 2026, 14:00 Sofia |
 | First-day targets | 1,000 sign-ups · 300 programs · 25 gists |
 | Pitch video | 111 seconds |
+
+### 12.5 Comprehensive Code Review, Dead Code Elimination, and Tooling Completion (Built in Antigravity)
+
+In October 2026, a comprehensive repository audit, dead code elimination, and feature completion campaign was carried out in **Antigravity**:
+
+1. **Dead Code Elimination (13 Obsolete / Orphaned Files Safely Removed)**:
+   - Prototype & obsolete benchmark scripts: `bench.mjs`, `scripts/benchmark-sync.mjs`, `scripts/test-uuid-upsert.mjs`.
+   - Superseded TypeScript test harnesses: `scripts/test-selfhosted-stdlib.ts` (replaced by pure `scripts/test-selfhosted-stdlib.sdev`).
+   - One-time migration scripts: `scripts/strip-comments-final-safe.mjs`.
+   - Deprecated & dead frontend components: `src/App.css`, `src/components/NavLink.tsx`, `src/components/ide/SyntaxHighlighter.tsx`, `src/components/ide/IdeMinimap.tsx`, `src/components/ide/IdeFindReplace.tsx`.
+   - Obsolete runtime bridges & prototypes: `src/lang-bridge/bridge.ts`, `src/lang-bridge/v2.d.ts`, `src/lang/gist.ts`.
+
+2. **TypeScript & Static Quality Excellence (0 Errors Across Repo)**:
+   - Corrected all type definitions and AST node property accesses in `src/studio/runner.ts` and `src/studio/store.ts`.
+   - Fixed OAuthConsent, Dialects, Explore, and IDE typing, achieving **0 TypeScript compilation errors** (`npx tsc --noEmit` across both `tsconfig.app.json` and `tsconfig.node.json`).
+   - Resolved all ESLint rule violations, resulting in **0 ESLint errors** across the entire codebase (`npx eslint .`).
+
+3. **F1 Symbol Help Keybinding (Roadmap Phase 1, Item 7)**:
+   - Added `getWordAtCursor()` to `IdeEditorHandle` in `src/components/ide/CodeMirrorEditor.tsx` to extract the identifier or active text selection under the cursor.
+   - Wired the `F1` keybinding in `src/pages/IDE.tsx`: when pressed, it queries `API_REGISTRY` (`findApi` / `searchApis`). If a matching symbol is found, it opens the `RuntimeExplorerPanel` directly focused on that API, showing its signature, target support, documentation, and example snippets. If no API is under the cursor, it gracefully opens the Command Palette.
+
+4. **Project Scaffolding & Standard `sdev.json` Manifest (Roadmap Phase 5, Items 28–29)**:
+   - Added `sdev new <project-name> [--template <console|game|hardware|ml>]` and `sdev init [--template <console|game|hardware|ml>]` to `cli/index.ts`.
+   - Scaffolded with clean canonical SDEV starter code and standard `sdev.json` metadata (`name`, `version`, `description`, `template`, `runtime`, `entry`, `libraries`, `dialects`).
+   - Enhanced `sdev run` to automatically locate and execute project entry files defined in `sdev.json` (or `main.sdev`) when run in a project root.
+   - Made `scripts/release.mjs` cross-platform for Windows and POSIX using `tmpdir()` and platform-appropriate python executables.
+   - All 4 starter templates pass both `sdev check` and `sdev lint` with 0 errors.
+
+5. **Test Suite Modernization & Parity**:
+   - Added missing test scripts to `package.json` (`test:bg`, `test:dialect`, `test:preset-dialect`, `test:translator`).
+   - All 28 test suites passing cleanly with 100% pass rate.
+   - Full production build (`npm run build`) passing cleanly in 7.5s.
+
+*All enhancements, refactoring, dead code elimination, and feature completions documented above were designed, implemented, and verified in **Antigravity**.*

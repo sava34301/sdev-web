@@ -29,7 +29,7 @@ export function AgentBrainSettings() {
   const [serverStatus, setServerStatus] = useState('');
 
   useEffect(() => onBrowserBrain(setB), []);
-  const save = (k: string, v: string) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch { /* private mode */ } };
+  const save = (k: string, v: string) => { try { if (v) { localStorage.setItem(k, v); } else { localStorage.removeItem(k); } } catch { /* private mode */ } };
 
   const supported = browserBrainSupported();
   const stateText =

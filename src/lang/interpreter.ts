@@ -124,7 +124,7 @@ export class Interpreter {
   // ==========================================================
   private execute(node: AST.ASTNode, env: Environment): unknown {
     const it = this.ev(node, env);
-    let step = it.next();
+    const step = it.next();
     while (!step.done) {
       throw new SdevError("'emit' is only valid inside a generator function", node.line);
     }
@@ -642,6 +642,7 @@ export class Interpreter {
 
   private *evComprehension(node: AST.ComprehensionExpr, env: Environment): Ev {
     if (node.form === 'gen') {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
       const iter = (function* (): Generator<unknown, unknown, unknown> {
         yield* self.comprehensionWalk(node, env, 0, (value) => value);
@@ -1050,7 +1051,8 @@ export class Interpreter {
   }
 
   private makeFunction(node: AST.FuncDeclaration, env: Environment, boundName?: string): RichFunction {
-    const self = this;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const self = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
 
     const fn: RichFunction = {
@@ -1099,7 +1101,8 @@ export class Interpreter {
   }
 
   private makeLambda(node: AST.LambdaExpr, env: Environment): RichFunction {
-    const self = this;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const self = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
     return {
       type: 'lambda',

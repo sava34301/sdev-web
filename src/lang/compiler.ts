@@ -134,7 +134,7 @@ export class Compiler {
         else throw new SdevError(`Unknown unary op: ${node.operator}`, node.line);
         break;
 
-      case 'TernaryExpr':
+      case 'TernaryExpr': {
         this.compileNode(node.condition, fn);
         const jumpFalseT = fn.emitJump(OpCode.JUMP_IF_FALSE, node.line);
         this.compileNode(node.thenExpr, fn);
@@ -143,6 +143,7 @@ export class Compiler {
         this.compileNode(node.elseExpr, fn);
         fn.patchJump(jumpEndT);
         break;
+      }
 
       case 'CallExpr':
         this.compileNode(node.callee, fn);
