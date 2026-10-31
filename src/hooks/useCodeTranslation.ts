@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
  * 1. Synchronous dictionary + fuzzy match (instant, offline, free)
  * 2. If foreign-script characters STILL remain in code (not in
  *    strings/comments), call the `translate-fuzzy` edge function
- *    which uses Lovable AI to rewrite the snippet.
+ *    which uses the configured AI provider to rewrite the snippet.
  *
  * Stage 1 covers ~95% of cases. Stage 2 only fires for genuinely
  * novel phrasings the dictionary can't handle.

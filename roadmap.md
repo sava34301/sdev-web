@@ -119,3 +119,13 @@ make the self-hosted compiler its own reference.
 - [x] Project index (names defined across files) written in sdev: `lang/agent/project.sdev`, cached per file
 - [x] Large files read in remembered top-level parts: after a small edit only the changed parts are read again (~6x faster)
 - [x] Plain-words requests ("make a window that is a calculator") go straight to the AI, which writes the full program; added evaluate()
+
+## Detach from Lovable (started 2026-10-25)
+- [x] AI helpers use our own provider via SDEV_AI_* secrets (legacy gateway only as fallback)
+- [x] Removed unused Lovable sign-in helper, dev tagger, old s-dev.lovable.app links
+- [ ] AI provider key — waiting on user (SDEV_AI_API_KEY / BASE_URL / MODEL)
+- [ ] Email (sign-up / reset / app emails) — needs an email service + sending domain from user
+- [ ] Backend (database, accounts, storage, functions) — needs user's own backend project
+- [ ] Website hosting for web.sdev.codes — needs user's hosting choice
+- [ ] Assistant integration (MCP) — needs decision: rebuild on open MCP SDK or drop
+- [ ] Final move-out cleanup: preview sign-in bridge, launch-gate preview hosts, badge CSS, sandbox dev plugins

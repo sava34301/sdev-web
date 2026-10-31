@@ -64,8 +64,8 @@ link "stdlib/ml/data.sdev"
 
 forge prompts be ["explain gravity", "what is a compiler?"]
 forge pairs be distill_batch(
-    "https://ai.gateway.lovable.dev/v1/chat",
-    "$LOVABLE_API_KEY",
+    "https://api.openai.com/v1/chat",
+    "$SDEV_AI_API_KEY",
     prompts
 )
 // pairs now holds { prompt, target } — train your local model to imitate.
