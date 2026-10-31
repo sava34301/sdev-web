@@ -82,4 +82,124 @@ export function registerFunctional(builtins: Map<string, SdevFunction>, output: 
       };
     },
   });
+
+  // ============= Monadic Option & Result (Rust/Functional Parity) =============
+  builtins.set('Some', {
+    type: 'builtin',
+    call: (args: unknown[]) => ({ is_some: true, is_none: false, val: args[0] }),
+  });
+
+  builtins.set('None', {
+    type: 'builtin',
+    call: () => ({ is_some: false, is_none: true, val: null }),
+  });
+
+  builtins.set('is_some', {
+    type: 'builtin',
+    call: (args: unknown[]) => {
+      const o = args[0] as Record<string, unknown>;
+      return Boolean(o && typeof o === 'object' && o.is_some);
+    },
+  });
+
+  builtins.set('is_none', {
+    type: 'builtin',
+    call: (args: unknown[]) => {
+      const o = args[0] as Record<string, unknown>;
+      return Boolean(o && typeof o === 'object' && o.is_none);
+    },
+  });
+
+  builtins.set('unwrap_or', {
+    type: 'builtin',
+    call: (args: unknown[]) => {
+      const o = args[0] as Record<string, unknown>;
+      const fallback = args[1];
+      if (o && typeof o === 'object') {
+        if (o.is_some || o.is_ok) return o.val;
+      }
+      return fallback;
+    },
+  });
+
+  builtins.set('map_some', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const opt = args[0] as Record<string, unknown>;
+      const fn = args[1] as SdevFunction;
+      if (!opt || typeof opt !== 'object' || !opt.is_some) return opt;
+      if (!fn || typeof fn !== 'object' || !('call' in fn)) throw new SdevError('Second argument must be a function', line);
+      return { is_some: true, is_none: false, val: fn.call([opt.val], line) };
+    },
+  });
+
+  builtins.set('flat_map_some', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const opt = args[0] as Record<string, unknown>;
+      const fn = args[1] as SdevFunction;
+      if (!opt || typeof opt !== 'object' || !opt.is_some) return opt;
+      if (!fn || typeof fn !== 'object' || !('call' in fn)) throw new SdevError('Second argument must be a function', line);
+      return fn.call([opt.val], line);
+    },
+  });
+
+  builtins.set('Ok', {
+    type: 'builtin',
+    call: (args: unknown[]) => ({ is_ok: true, is_err: false, val: args[0], err: null }),
+  });
+
+  builtins.set('Err', {
+    type: 'builtin',
+    call: (args: unknown[]) => ({ is_ok: false, is_err: true, val: null, err: args[0] }),
+  });
+
+  builtins.set('is_ok', {
+    type: 'builtin',
+    call: (args: unknown[]) => {
+      const o = args[0] as Record<string, unknown>;
+      return Boolean(o && typeof o === 'object' && o.is_ok);
+    },
+  });
+
+  builtins.set('is_err', {
+    type: 'builtin',
+    call: (args: unknown[]) => {
+      const o = args[0] as Record<string, unknown>;
+      return Boolean(o && typeof o === 'object' && o.is_err);
+    },
+  });
+
+  builtins.set('result_unwrap_or', {
+    type: 'builtin',
+    call: (args: unknown[]) => {
+      const r = args[0] as Record<string, unknown>;
+      const fallback = args[1];
+      if (r && typeof r === 'object' && r.is_ok) return r.val;
+      return fallback;
+    },
+  });
+
+  builtins.set('map_ok', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const r = args[0] as Record<string, unknown>;
+      const fn = args[1] as SdevFunction;
+      if (!r || typeof r !== 'object' || !r.is_ok) return r;
+      if (!fn || typeof fn !== 'object' || !('call' in fn)) throw new SdevError('Second argument must be a function', line);
+      return { is_ok: true, is_err: false, val: fn.call([r.val], line), err: null };
+    },
+  });
+
+  builtins.set('flat_map_ok', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const r = args[0] as Record<string, unknown>;
+      const fn = args[1] as SdevFunction;
+      if (!r || typeof r !== 'object' || !r.is_ok) return r;
+      if (!fn || typeof fn !== 'object' || !('call' in fn)) throw new SdevError('Second argument must be a function', line);
+      return fn.call([r.val], line);
+    },
+  });
+
 }

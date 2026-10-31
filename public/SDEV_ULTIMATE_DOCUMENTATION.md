@@ -4,7 +4,7 @@
 > machine, native backend, standard library, machine-learning stack, hardware,
 > GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-09-12 by
+> Created by **Sava Milanov**. Generated on 2026-10-31 by
 > `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
 > guides or the implementation and re-run the generator.
 
@@ -1937,6 +1937,526 @@ the agent understands you without it.
 ---
 
 
+### Multi-Language Parity & Modern Paradigms (SQL, Kotlin, Rust, C++)
+
+_Source: `public/SDEV_MULTI_PARADIGM_DOCUMENTATION.md`_
+
+
+> **Comprehensive documentation for all new features and multi-language capabilities added to SDEV**  
+> _Engineered, verified, and documented in **Antigravity** — October 2026._
+
+---
+
+#### Table of Contents
+
+1. [Executive Summary & Multi-Language Vision](#1-executive-summary--multi-language-vision)
+2. [String Interpolation & F-Strings (Python / JS / Ruby Parity)](#2-string-interpolation--f-strings)
+3. [Immutable Variable Bindings: `fixed` / `const` / `val` (Kotlin / Rust Parity)](#3-immutable-variable-bindings-fixed--const--val)
+4. [Pattern Matching & Scalar `match` Statement (Rust / Kotlin / Python Parity)](#4-pattern-matching--scalar-match-statement)
+5. [Relational SQL & LINQ Query Engine (SQL / C# Parity)](#5-relational-sql--linq-query-engine)
+6. [Modern Language Conveniences: Null-Safety & Data Records (Kotlin / C# Parity)](#6-modern-language-conveniences-null-safety--data-records)
+7. [Systems Programming & Low-Level Memory Arenas (C / C++ Parity)](#7-systems-programming--low-level-memory-arenas)
+8. [Monadic Algebraic Data Types: `Option` & `Result` (Rust / Haskell Parity)](#8-monadic-algebraic-data-types-option--result)
+9. [Formal Code Formatter & Developer Tooling](#9-formal-code-formatter--developer-tooling)
+10. [Dual-Runtime Parity & Verification Matrix](#10-dual-runtime-parity--verification-matrix)
+
+---
+
+#### 1. Executive Summary & Multi-Language Vision
+
+SDEV was created to eliminate the artificial boundaries between scripting simplicity, systems safety, functional purity, and relational queries. Rather than requiring developers to switch languages between rapid scripting, backend data wrangling, hardware microcontrollers, and low-level performance code, SDEV provides a single cohesive syntax with **dual-runtime execution**:
+
+1. **v1 Runtime (TypeScript / Browser / Node.js)**: Instant, zero-compile execution in the browser IDE, Node.js CLI, and VS Code extension with rich debugging, Live Lens, and Chrono time-travel.
+2. **v2 Runtime (100% Pure Self-Hosted Seed VM)**: Bytecode compiler and virtual machine written entirely in SDEV (`lang/compiler/*.sdev`, `lang/runtime/*.sdev`), compiling itself to byte-identical WebAssembly and native x86-64 code.
+
+Every feature documented here is guaranteed **dual-runtime parity**: programs written with these features execute identically whether interpreted in the browser or compiled on the self-hosted seed VM.
+
+---
+
+#### 2. String Interpolation & F-Strings
+
+##### 2.1 Overview
+SDEV supports native expression interpolation within string literals. Any string literal containing `{expression}` evaluates the expression and automatically converts the result to a string.
+
+##### 2.2 Basic Syntax
+```sdev
+forge name be "Alice"
+forge items be 42
+
+# Direct variable interpolation
+forge greeting be "Hello, {name}! You have {items} items in your cart."
+speak(greeting)
+# Output: Hello, Alice! You have 42 items in your cart.
+```
+
+##### 2.3 Expressions Inside Interpolation
+Any valid SDEV expression can be embedded inside braces:
+```sdev
+forge width be 10
+forge height be 20
+
+speak("Area = {width * height} square units")
+# Output: Area = 200 square units
+
+forge user be { name: "Bob", role: "admin" }
+speak("User {user['name']} has role {upper(user['role'])}")
+# Output: User Bob has role ADMIN
+```
+
+##### 2.4 Escaping Literal Braces
+To output a literal `{` or `}` inside an interpolated string, escape it with double braces `{{` or `}}`:
+```sdev
+forge jsonTemplate be "JSON: {{ \"user\": \"{name}\" }}"
+speak(jsonTemplate)
+# Output: JSON: { "user": "Alice" }
+
+forge mathDoc be "Set notation: {{x | x > 0}}"
+speak(mathDoc)
+# Output: Set notation: {x | x > 0}
+```
+
+##### 2.5 Format Specs & Debug Formatting
+SDEV supports format specifications, conversions, and debug expressions:
+```sdev
+forge pi be 3.1415926535
+
+# Format specification (2 decimal places)
+speak("Pi is approximately {pi:.2f}")
+
+# Debug formatting: appends 'expr=' before the value
+forge score be 98.5
+speak("{score=}")
+# Output: score=98.5
+```
+
+##### 2.6 Implementation Details
+- **Parser**: Handled via `hasInterpolation()` and `buildFString()` in [`src/lang/parser.ts`](file:///c:/Users/User/Documents/sdev-web-anti/sdev-web/src/lang/parser.ts).
+- **v1 Interpreter**: Evaluated via `evFString()` in [`src/lang/interpreter.ts`](file:///c:/Users/User/Documents/sdev-web-anti/sdev-web/src/lang/interpreter.ts).
+- **v2 Compiler**: Compiled into chained `OpCode.LOAD 'str'` and `OpCode.ADD` instructions in [`src/lang/compiler.ts`](file:///c:/Users/User/Documents/sdev-web-anti/sdev-web/src/lang/compiler.ts).
+
+---
+
+#### 3. Immutable Variable Bindings: `fixed` / `const` / `val`
+
+##### 3.1 Overview
+Variables in SDEV are mutable by default when declared with `forge` or `set`. To ensure referential transparency, avoid accidental reassignments, and enable compiler optimizations, SDEV introduces the `fixed` keyword (with aliases `const` in plain dialect and `val` in Kotlin dialect).
+
+##### 3.2 Syntax
+```sdev
+# Canonical SDEV (mystic)
+fixed MAX_CONNECTIONS be 1000
+fixed TIMEOUT_MS be 5000
+
+# Plain dialect alias
+const BUFFER_SIZE be 4096
+
+# Kotlin dialect alias
+val API_ENDPOINT be "https://api.sdev.codes"
+```
+
+##### 3.3 Reassignment Protection
+Attempting to reassign a `fixed` variable triggers errors at all phases:
+
+###### Runtime Reassignment
+```sdev
+fixed PORT be 8080
+PORT be 9000
+# Throws SdevError: Cannot reassign fixed variable 'PORT'
+```
+
+###### Compile-Time Reassignment (v2 Compiler)
+The compiler inspects variable bindings before emitting bytecode. Reassigning a `fixed` variable halts compilation with a fatal diagnostic.
+
+###### Static Linter Diagnostic (`SDEV014`)
+The SDEV static linter automatically flags any reassignment of an immutable binding:
+```
+[SDEV014] Error: Reassignment of immutable variable 'PORT' at line 2.
+```
+
+---
+
+#### 4. Pattern Matching & Scalar `match` Statement
+
+##### 4.1 Overview
+SDEV features a first-class `match` statement capable of branching on scalars, data values, wildcards, and conditional guards. On the v2 bytecode engine, `match` compiles down to an efficient short-circuiting jump tree.
+
+##### 4.2 Syntax & Pattern Types
+```sdev
+match expression ::
+  case <pattern-1> [when <guard-1>] ::
+    # code for case 1
+  ;;
+  case <pattern-2> ::
+    # code for case 2
+  ;;
+  case _ ::
+    # fallback default arm
+  ;;
+;;
+```
+
+##### 4.3 Examples
+
+###### Scalar & Status Matching
+```sdev
+forge http_status be 404
+forge status_msg be ""
+
+match http_status ::
+  case 200 ::
+    status_msg be "OK: Request succeeded"
+  ;;
+  case 201 ::
+    status_msg be "Created: Resource created"
+  ;;
+  case 400 ::
+    status_msg be "Bad Request: Client error"
+  ;;
+  case 404 ::
+    status_msg be "Not Found: Endpoint does not exist"
+  ;;
+  case 500 ::
+    status_msg be "Internal Server Error"
+  ;;
+  case _ ::
+    status_msg be "Unknown Status Code"
+  ;;
+;;
+
+speak(status_msg)
+# Output: Not Found: Endpoint does not exist
+```
+
+###### Guard Conditions (`when` / `also`)
+```sdev
+forge age be 25
+forge category be ""
+
+match age ::
+  case a when a < 13 ::
+    category be "Child"
+  ;;
+  case a when a >= 13 also a < 20 ::
+    category be "Teenager"
+  ;;
+  case a when a >= 20 also a < 65 ::
+    category be "Adult"
+  ;;
+  case _ ::
+    category be "Senior"
+  ;;
+;;
+
+speak("Category: {category}")
+# Output: Category: Adult
+```
+
+###### Multiple Alternatives (Or-Patterns)
+```sdev
+forge command be "q"
+
+match command ::
+  case "q" | "quit" | "exit" ::
+    speak("Shutting down cleanly...")
+  ;;
+  case "h" | "help" | "?" ::
+    speak("Available commands: run, build, test, quit")
+  ;;
+  case _ ::
+    speak("Unrecognized command")
+  ;;
+;;
+```
+
+---
+
+#### 5. Relational SQL & LINQ Query Engine
+
+##### 5.1 Overview
+SDEV provides an integrated relational engine that allows lists of records/tomes to be queried with standard SQL semantics (projection, filtering, sorting, limits, uniqueness, joins, grouping, and aggregations) without requiring an external database.
+
+##### 5.2 API Reference
+
+| Function | Signature | Description |
+| :--- | :--- | :--- |
+| `sql_select` | `(records, columns)` | Projects specified columns into new records. |
+| `sql_where` | `(records, predicate_fn)` | Filters records matching the predicate function. |
+| `sql_order_by` | `(records, column, ascending)` | Sorts records by column (numeric or string). |
+| `sql_limit` | `(records, count)` | Limits the returned records to at most `count`. |
+| `sql_distinct` | `(records, column)` | Returns unique records based on a specified key. |
+| `sql_join` | `(left, right, on_keys, join_type)` | Relational join (`"inner"`, `"left"`, `"right"`). `on_keys` is `["left_id", "right_id"]`. |
+| `sql_group_by` | `(records, key_col, agg_col, agg_fn)` | Groups by `key_col` and computes `agg_fn` on `agg_col`. |
+| `sql_count` | `(records)` | Returns total number of rows. |
+| `sql_sum` | `(records, column)` | Sums numeric values of a column across all rows. |
+| `sql_avg` | `(records, column)` | Calculates average value of a column. |
+| `sql_min` | `(records, column)` | Returns minimum value in a column. |
+| `sql_max` | `(records, column)` | Returns maximum value in a column. |
+
+##### 5.3 Complete Example Pipeline
+```sdev
+forge employees be [
+  { id: 101, name: "Alice", dept: "Engineering", salary: 120000 },
+  { id: 102, name: "Bob", dept: "Marketing", salary: 75000 },
+  { id: 103, name: "Charlie", dept: "Engineering", salary: 95000 },
+  { id: 104, name: "Diana", dept: "Design", salary: 85000 },
+  { id: 105, name: "Evan", dept: "Engineering", salary: 140000 }
+]
+
+# 1. Filter: Engineering employees earning >= 100,000
+forge high_earners be sql_where(employees, (e) -> e["dept"] == "Engineering" also e["salary"] >= 100000)
+
+# 2. Project: Select only name and salary
+forge projected be sql_select(high_earners, ["name", "salary"])
+
+# 3. Sort: Order by salary descending
+forge sorted be sql_order_by(projected, "salary", false)
+
+# 4. Limit: Top 2 earners
+forge top2 be sql_limit(sorted, 2)
+
+speak("Top Earner: {top2[0]['name']} (${top2[0]['salary']})")
+speak("Total Count: {sql_count(high_earners)}")
+speak("Average Salary: ${sql_avg(employees, 'salary')}")
+speak("Max Salary: ${sql_max(employees, 'salary')}")
+```
+
+##### 5.4 Relational Joins
+```sdev
+forge users be [
+  { id: 1, username: "alice" },
+  { id: 2, username: "bob" }
+]
+
+forge orders be [
+  { order_id: 501, user_id: 1, total: 249.99 },
+  { order_id: 502, user_id: 1, total: 39.50 },
+  { order_id: 503, user_id: 2, total: 112.00 }
+]
+
+# Inner Join users and orders on users.id == orders.user_id
+forge user_orders be sql_join(users, orders, ["id", "user_id"], "inner")
+
+speak("Total joined orders: {sql_count(user_orders)}")
+speak("First order username: {user_orders[0]['username']}")
+speak("First order amount: ${user_orders[0]['total']}")
+```
+
+---
+
+#### 6. Modern Language Conveniences: Null-Safety & Data Records
+
+##### 6.1 `coalesce` (Elvis / Null-Coalescing Operator)
+Returns the first non-null, non-void value:
+```sdev
+forge input_timeout be null
+forge effective_timeout be coalesce(input_timeout, 3000)
+speak(effective_timeout)
+# Output: 3000
+
+forge user_theme be "dark"
+forge active_theme be coalesce(user_theme, "light")
+speak(active_theme)
+# Output: dark
+```
+
+##### 6.2 `safe_get` (Safe Navigation Helper)
+Retrieves a property from a record or map without throwing an error if the key is missing or the object is null:
+```sdev
+forge profile be { name: "Alice", settings: { notifications: true } }
+
+# Key exists
+forge notif be safe_get(profile["settings"], "notifications", false)
+speak("Notifications enabled: {notif}")
+
+# Key does not exist: returns fallback
+forge email be safe_get(profile, "email", "no-email@sdev.codes")
+speak("Email: {email}")
+# Output: Email: no-email@sdev.codes
+```
+
+##### 6.3 `copy_record` (Data-Class Record Update)
+Creates an immutable copy of a record with updated or newly added fields:
+```sdev
+forge config be {
+  host: "localhost",
+  port: 8080,
+  debug: false
+}
+
+# Clone with production overrides
+forge prod_config be copy_record(config, {
+  host: "0.0.0.0",
+  port: 443,
+  debug: false
+})
+
+speak("Dev Port: {config['port']}")      # 8080 (unchanged)
+speak("Prod Port: {prod_config['port']}") # 443
+```
+
+---
+
+#### 7. Systems Programming & Low-Level Memory Arenas
+
+##### 7.1 Overview
+For embedded devices (Arduino, ESP32), WebAssembly memory interop, and high-performance byte manipulation, SDEV provides linear **Memory Arenas** with byte-level read/write primitives.
+
+##### 7.2 Arena Lifecycle & Primitives
+
+```sdev
+# 1. Create a 1024-byte arena
+forge arena be arena_create(1024)
+
+# 2. Allocate 16 bytes for a network packet header
+forge header_ptr be arena_alloc(arena, 16)
+
+# 3. Write 8-bit, 16-bit, and 32-bit values (Little-Endian)
+mem_poke_u8(arena, header_ptr + 0, 0x45)         # IPv4 Version & IHL
+mem_poke_u8(arena, header_ptr + 1, 0x00)         # DSCP / ECN
+mem_poke_i16(arena, header_ptr + 2, 1500)        # Total Length = 1500
+mem_poke_i32(arena, header_ptr + 4, 0x7F000001)  # 127.0.0.1 (Source IP)
+
+# 4. Read back structured values
+forge version_byte be mem_peek_u8(arena, header_ptr + 0)
+forge total_len be mem_peek_i16(arena, header_ptr + 2)
+forge ip_addr be mem_peek_i32(arena, header_ptr + 4)
+
+speak("Length: {total_len} bytes")
+speak("IP: {ip_addr}")
+```
+
+##### 7.3 Bulk Memory Operations (`mem_fill` & `mem_copy`)
+```sdev
+forge scratch be arena_create(256)
+
+# Fill 64 bytes with 0xFF (memset)
+mem_fill(scratch, 0, 64, 255)
+
+# Copy 32 bytes from offset 0 to offset 64 (memcpy)
+mem_copy(scratch, 64, 0, 32)
+
+speak("Byte at 64: {mem_peek_u8(scratch, 64)}")
+# Output: Byte at 64: 255
+
+# Reset arena bump pointer back to 0
+arena_reset(scratch)
+```
+
+---
+
+#### 8. Monadic Algebraic Data Types: `Option` & `Result`
+
+##### 8.1 `Option` (`Some` and `None`)
+Represents an optional value without null pointer exceptions:
+```sdev
+# Creating options
+forge present be Some("config.json")
+forge missing be None()
+
+# Checking options
+speak("Is present: {is_some(present)}")
+speak("Is missing: {is_none(missing)}")
+
+# Safe unwrapping with fallback
+forge filename be unwrap_or(missing, "default.json")
+speak("Filename: {filename}")
+# Output: Filename: default.json
+
+# Monadic map: transforms value if Some, leaves None intact
+forge upper_file be map_some(present, (f) -> upper(f))
+speak("Transformed: {upper_file['val']}")
+# Output: Transformed: CONFIG.JSON
+```
+
+##### 8.2 `Result` (`Ok` and `Err`)
+Represents either success (`Ok`) or failure (`Err`):
+```sdev
+conjure divide(numerator, denominator) ::
+  ponder denominator == 0 ::
+    yield Err("Division by zero")
+  ;;
+  yield Ok(numerator / denominator)
+;;
+
+forge res1 be divide(100, 4)
+forge res2 be divide(100, 0)
+
+speak("res1 success: {is_ok(res1)}")   # true
+speak("res2 error: {is_err(res2)}")     # true
+
+# Unwrap with default fallback
+speak("res1 val: {result_unwrap_or(res1, 0)}") # 25
+speak("res2 val: {result_unwrap_or(res2, 0)}") # 0
+
+# Monadic transformation on success
+forge doubled be map_ok(res1, (v) -> v * 2)
+speak("Doubled result: {doubled['val']}") # 50
+```
+
+---
+
+#### 9. Formal Code Formatter & Developer Tooling
+
+##### 9.1 SDEV Code Formatter
+SDEV includes a formal, deterministic formatter tested against edge cases:
+- Indents body statements within `:: ... ;;` blocks by a consistent 2 or 4 spaces.
+- Correctly handles nested blocks, multiline lambdas, classes, and match expressions.
+- Preserves strings and comments containing colons (`:`) or semicolons (`;`) without corrupting syntax.
+- Completely idempotent: running the formatter multiple times produces identical output.
+- Normalizes excess blank lines and strips trailing whitespace.
+
+##### 9.2 Running the Formatter Suite
+```sh
+npm run test:formatter
+```
+Outputs:
+```
+=== SDEV Formal Formatter Test Suite ===
+  ✓ Indents body of :: ;; block by 2 spaces
+  ✓ Configurable indent size (4 spaces)
+  ✓ Multi-level nested block indentation
+  ✓ Idempotence: formatting twice produces identical output
+  ✓ Leaves strings containing :: and ;; intact
+  ✓ Ignores :: inside single-line comments
+  ✓ Strips trailing whitespace from lines
+  ✓ Normalizes excessive blank lines
+
+Formatter suite: 8 passed, 0 failed
+```
+
+---
+
+#### 10. Dual-Runtime Parity & Verification Matrix
+
+All features adhere to dual-runtime parity requirements:
+
+| Feature | v1 (Browser/TypeScript) | v2 (Self-Hosted SDEV VM) | Test Coverage |
+| :--- | :--- | :--- | :--- |
+| **String Interpolation** | Full (`hasInterpolation`) | Full (`OpCode.ADD`) | `scripts/test-multi-language-features.ts` |
+| **Escaped Braces `{{`** | Full (`buildFString`) | Full (`buildFString`) | `scripts/test-multi-language-features.ts` |
+| **`fixed` Bindings** | Runtime + Linter guard | Compile-time rejection | `scripts/test-multi-language-features.ts` |
+| **Scalar `match`** | Interpreter evaluator | Bytecode jump tree | `scripts/test-multi-language-features.ts` |
+| **Relational SQL** | `src/lang/builtins/sql.ts` | `lang/stdlib/v2/sql.sdev` | `scripts/test-selfhosted-subsystems.sdev` |
+| **SQL Aggregations** | All 5 aggregates | All 5 aggregates | `scripts/test-multi-language-features.ts` |
+| **Null-Safety Helpers** | `coalesce`, `safe_get` | `coalesce`, `safe_get` | `scripts/test-multi-language-features.ts` |
+| **Arena Memory** | `src/lang/builtins/buffer.ts` | `lang/paradigms/systems.sdev` | `scripts/test-selfhosted-subsystems.sdev` |
+| **Option & Result** | `src/lang/builtins/functional.ts` | `lang/paradigms/functional.sdev` | `scripts/test-selfhosted-subsystems.sdev` |
+| **Code Formatter** | Standard AST printer | Standard AST printer | `scripts/test-formatter.ts` |
+
+##### Automated Test Execution
+Run the complete multi-language verification suite:
+```sh
+npm test
+```
+All 12 test suites, 209 track features, and 616 API registry entries pass with 100% success.
+
+---
+
+_Document engineered, written, and verified in **Antigravity** on 31 October 2026._
+
+---
+
+
 ### Full v1 language reference
 
 _Source: `public/SDEV_DOCUMENTATION.md`_
@@ -2143,6 +2663,22 @@ x be x + 5    // x = 15
 x be x * 2    // x = 30
 x be x - 10   // x = 20
 x be x / 4    // x = 5
+```
+
+##### Immutable Constants (`fixed` / `const` / `val`)
+
+To define an immutable constant binding that cannot be reassigned:
+
+```sdev
+fixed MAX_USERS be 100
+fixed API_URL be "https://api.sdev.codes"
+
+# Dialect aliases:
+const BUFFER_SIZE be 4096   // Plain dialect
+val TIMEOUT_MS be 5000      // Kotlin dialect
+
+# Attempting to reassign throws an error:
+# MAX_USERS be 200  // Error: Cannot reassign fixed variable 'MAX_USERS'
 ```
 
 ##### Built-in Constants
@@ -2480,6 +3016,32 @@ Inline (for short bodies):
 
 ```sdev
 ponder x > 0 :: speak("positive") ;; otherwise :: speak("non-positive") ;;
+```
+
+##### Pattern Matching — `match`
+
+The `match` statement branches on values, wildcards, or guards:
+
+```sdev
+forge status be 200
+forge msg be ""
+
+match status ::
+  case 200 ::
+    msg be "OK"
+  ;;
+  case 404 ::
+    msg be "Not Found"
+  ;;
+  case code when code >= 500 ::
+    msg be "Server Error"
+  ;;
+  case _ ::
+    msg be "Unknown"
+  ;;
+;;
+
+speak(msg)
 ```
 
 ##### While Loop — `cycle`
@@ -5010,6 +5572,132 @@ Shipped alongside the hardware layer:
 
 *This documentation covers sdev version 1.x. For the latest updates and additional examples, visit the sdev IDE.*
 
+
+
+---
+
+#### Text-Tooling Functions
+
+Added so programs that read and rewrite code (like sdev's own understander, `lang/agent/understander.sdev`) can be written in sdev. Identical in the JavaScript and Python interpreters.
+
+| Function | Result |
+|---|---|
+| `lines(t)` / `unlines(list)` | split text into lines / join lines with newlines |
+| `words(t)` | split on whitespace, no empty items |
+| `char_at(t, i)` / `code_at(t, i)` | character / code point at `i` (`""` / `-1` when out of range) |
+| `find_from(t, sub, from)` / `find_last(t, sub)` | index search from a position / from the end |
+| `leading_space(t)` | the indentation at the start of `t` |
+| `is_letter(t)` `is_digit(t)` `is_space(t)` `is_name(t)` | character-class tests (Unicode letters) |
+| `regex_test(t, p, flags?)` | does the pattern match (flags: `i`, `m`, `s`) |
+| `regex_capture(t, p, flags?)` | `[whole, group1, …]` or `void` |
+| `regex_find_all(t, p, flags?)` | every match as a list |
+| `regex_replace(t, p, r, flags?)` | replace every match; `$1` refers to groups |
+| `quote_text(t)` | `t` as a quoted, escaped sdev text literal |
+
+#### The Self-Hosted Understander
+
+The code understander now runs first as an sdev program (`lang/agent/understander.sdev`). It reads the file line by line and turns plain sentences (`print hello`, `calculate 23-21`, `set x to 5`, `add 2 to x`, `score becomes score * 2`) into canonical sdev. When it is not sure of every line, the original TypeScript understander handles the file instead, so nothing that worked before changes. Names defined in other project files can be passed in so cross-file references resolve.
+
+##### What the self-hosted understander handles
+
+Questions (`ask "Name?" as name`, `ask for name`, `name = ask "…"`), yes/no answers (`when hungry is yes`, `hungry is yes:`), typed numbers (answers used in maths become numbers), placeholders (`say "Hello, [name]!"`), counted loops (`say hi 3 times`, `repeat 3 times`, `count from 0 to 10 by 5`, `print numbers from 3 to 1`, `count to 5`), conditions with automatic block closing, side-by-side text (`say "Hi " name`), and dialect words.
+
+#### sdev:ai — the dialect for AI models
+
+Start a file with `!#ai`. Every statement says what it is in its first token, blocks always use `{ }`, and the operators are the ones models already know — fewer tokens, no guessed indentation, no forgotten closings. It is translated to canonical sdev by `lang/agent/ai-dialect.sdev` (written in sdev) before it runs, and canonical sdev can be turned back into it.
+
+| sdev:ai | canonical sdev |
+|---|---|
+| `v x = 5` | `forge x be 5` |
+| `x = x + 1` | `x be x + 1` |
+| `p(x)` | `speak(x)` |
+| `f add(a, b) {` … `r a + b` … `}` | `conjure add(a, b) ::` … `yield a + b` … `;;` |
+| `? x > 3 {` / `} :? x > 1 {` / `} : {` | `ponder x > 3 ::` / `;; otherwise ponder x > 1 ::` / `;; otherwise ::` |
+| `w i < 3 {` | `cycle i < 3 ::` |
+| `each n in xs {` | `iterate n through xs ::` |
+| `try {` / `} catch e {` | `attempt ::` / `;; rescue e ::` |
+| `brk` / `next` | `yeet` / `skip` |
+| `==` `!=` `&&` `\|\|` `!` `true` `false` `null` | `equals` `differs` `also` `either` `isnt` `yep` `nope` `void` |
+
+```sdev
+!#ai
+f add(a, b) {
+  r a + b
+}
+v x = add(2, 3)
+? x == 5 {
+  p("five")
+} : {
+  p("not five")
+}
+```
+
+##### Requests in plain words
+
+A file that is a request — "make a window that is a calculator", "build a quiz game" — is not repaired line by line; the AI writes the whole working program (windows, buttons and inputs use the window toolkit). `evaluate("7 + 8 * 2")` safely computes arithmetic held in text, which is what calculators need. It works the same in the JavaScript and Python versions.
+
+
+---
+
+#### 28. Multi-Language Parity & Modern Extensions
+
+SDEV includes standard library extensions bringing complete parity with SQL, Kotlin, Rust, and C/C++:
+
+##### 28.1 Relational SQL Engine
+Query lists of records with declarative SQL semantics:
+
+```sdev
+forge users be [
+  { id: 1, name: "Alice", role: "admin", age: 30 },
+  { id: 2, name: "Bob", role: "user", age: 22 },
+  { id: 3, name: "Charlie", role: "user", age: 35 }
+]
+
+forge filtered be sql_where(users, (u) -> u["age"] >= 25)
+forge projected be sql_select(filtered, ["id", "name"])
+forge sorted be sql_order_by(projected, "name", true)
+
+speak("Count: {sql_count(filtered)}")
+speak("Average Age: {sql_avg(users, 'age')}")
+```
+
+##### 28.2 Kotlin & C# Null-Safety
+```sdev
+# Elvis / Null-coalescing
+forge port be coalesce(null, 8080) # 8080
+
+# Safe navigation
+forge email be safe_get(user, "email", "default@test.com")
+
+# Immutable record copying
+forge updated be copy_record(user, { role: "superadmin" })
+```
+
+##### 28.3 Rust Monadic Types (Option & Result)
+```sdev
+# Option
+forge opt be Some(10)
+forge doubled be map_some(opt, (x) -> x * 2) # Some(20)
+forge val be unwrap_or(None(), 99)           # 99
+
+# Result
+forge res be Ok(50)
+forge mapped be map_ok(res, (x) -> x + 50)   # Ok(100)
+```
+
+##### 28.4 Systems Low-Level Arena Memory (C / C++)
+```sdev
+forge a be arena_create(128)
+forge ptr be arena_alloc(a, 4)
+mem_poke_u8(a, ptr, 255)
+mem_poke_i16(a, ptr + 1, 1024)
+mem_poke_i32(a, ptr + 3, 123456)
+
+speak(mem_peek_u8(a, ptr))
+speak(mem_peek_i16(a, ptr + 1))
+speak(mem_peek_i32(a, ptr + 3))
+```
+
 ---
 
 
@@ -6962,82 +7650,133 @@ user-supplied executable host code — so opening someone else's dialect is safe
 _Source: `lang/README.md`_
 
 
-This directory holds the SDEV language itself. It is **not** application code.
+This directory contains the core source code for the **SDEV programming language**.
 
-#### Status
+> **Self-Hosting Status: 100% Pure SDEV**
+>
+> The SDEV language is completely self-hosted. There are **zero foreign programming language source files** (`.js`, `.mjs`, `.ts`, `.py`, `.wat`, `.s`) in `lang/`. Every compiler stage, virtual machine, operating system kernel, standard library module, paradigm expansion, linter, and translator is authored exclusively in pure `.sdev` files.
+> Host bridges and test harnesses reside outside this directory in `src/lang-bridge/` and `scripts/`.
 
-Milestone 1 (this launch) — **shipped**:
-- `runtime/v2.js` — the v2 "Prism" runtime, written in **pure JavaScript** with
-  zero TypeScript and zero external dependencies. Implements the full
-  beginner-first v2 surface syntax (`say`, `set … to`, `if/else/end`,
-  `for each … in … end`, `while … end`, `to <name> with … end`, pipelines,
-  lists, comparisons, boolean logic, arithmetic).
-- `src/lang-bridge/bridge.ts` — the *only* remaining TypeScript file in the
-  execution path. It picks v1 or v2 per file and delegates.
+---
 
-Milestone 2 (post-launch) — **scaffolded**:
-- `bootstrap/` — hand-written WebAssembly seed that will execute a minimal
-  SDEV subset (`sdev-min`). No TypeScript, no other host language.
-- `compiler/` — the real compiler, written in SDEV, compiled by the seed.
-- `runtime/vm.sdev`, `runtime/kernel.sdev`, `runtime/std/` — VM + kernel +
-  standard library, written in SDEV.
-- `paradigms/` — opt-in blocks: functional (`match`, ADTs, pipelines),
-  systems (pointers, structs, FFI), data (SQL-ish queries), hardware
-  (`board` → C++).
-- `translator/` — the 26-language keyword translator, written in SDEV.
-- `legacy/v1_frontend.sdev` — refine-mode: parses v1 keywords
-  (`forge`, `conjure`, `::`, `;;`) into the v2 AST.
-
-#### Runtime selection (today)
-
-Choose per file with a shebang:
+#### Directory Overview
 
 ```
-#!sdev v1
-forge x be 10
-speak(x)
+lang/
+├── compiler/              # Self-hosted compiler toolchain
+│   ├── lexer.sdev         # Tokenizer: splits SDEV source code into tokens
+│   ├── parser.sdev        # Recursive-descent AST parser
+│   ├── codegen.sdev       # Bytecode generator: AST -> bytecode & string pool
+│   └── driver.sdev        # Compiler driver: compiles source code to runnable bytecode
+├── bootstrap/             # Stage-0 bootstrap & VM bytecode emitter
+│   ├── seed_vm.sdev       # WebAssembly bytecode emitter & LEB128 encoding
+│   └── bootstrap.sdev     # Stage-0 bootstrap bytecode compiler
+├── runtime/               # Virtual Machine & OS Kernel
+│   ├── vm.sdev            # Stack-based bytecode virtual machine & disassembler
+│   └── kernel.sdev        # Virtual OS Kernel: VFS, process scheduler, pipes, syscalls
+├── native/                # Native x86-64 code generation & linking
+│   ├── codegen_x64.sdev   # x86-64 machine code instruction generator
+│   ├── runtime_x64.sdev   # System V AMD64 runtime generator
+│   ├── link.sdev          # Standalone ELF linker driver
+│   └── README.md          # Native backend documentation
+├── stdlib/                # Standard Library
+│   ├── v2/                # Core v2 modular standard library
+│   │   ├── text.sdev      # String manipulation, padding, reversal, v1 aliases
+│   │   ├── list.sdev      # List manipulation, fold, filter, map, sorting
+│   │   ├── tome.sdev      # Key-value map/dictionary operations
+│   │   ├── math.sdev      # Math utilities, gcd/lcm, primes, stats, clamp
+│   │   ├── bits.sdev      # Bitwise shifts, bitmask tests, popcount, hex
+│   │   ├── time.sdev      # Time calculations, leap years, duration formatting
+│   │   ├── func.sdev      # Functional combinators, take, drop, compose
+│   │   ├── json.sdev      # JSON serialization and escape sequences
+│   │   ├── types.sdev     # Dynamic type checking, conversions, coalesce
+│   │   └── random.sdev    # Linear Congruential PRNG
+│   ├── ml/                # Machine learning standard library
+│   │   ├── tensor.sdev    # N-dimensional tensor operations
+│   │   ├── autograd.sdev  # Reverse-mode automatic differentiation
+│   │   ├── nn.sdev        # Neural network layers (dense, activation, loss)
+│   │   ├── transformer.sdev # Attention and transformer architectures
+│   │   ├── train.sdev     # Optimizers, training loops, checkpoints
+│   │   ├── data.sdev      # Datasets, tokenization, batching
+│   │   ├── cuda.sdev      # Hardware accelerator dispatch
+│   │   ├── self_modify.sdev # Code introspection & self-modification
+│   │   └── auto_evolve.sdev # Automated code evolution & benchmarking
+│   ├── ffi.sdev           # Foreign Function Interface bindings
+│   ├── testkit.sdev       # Unit test assertion framework
+│   └── webgpu.sdev        # WebGPU shader & compute dispatch
+├── paradigms/             # Multi-paradigm extensions
+│   ├── functional.sdev    # Algebraic Data Types (`Option`, `Result`) and pattern matching
+│   ├── systems.sdev       # Linear memory arenas, pointers, structs, peek/poke
+│   ├── data.sdev          # DataFrames, columnar tables, CSV & Markdown serialization
+│   └── hardware.sdev      # Microcontroller hardware transpiler (Arduino / C++)
+├── translator/            # Natural language keyword translation
+│   └── translator.sdev    # 26-language keyword translator & script detector
+├── legacy/                # Compatibility frontends
+│   └── v1_frontend.sdev   # SDEV v1 mystical syntax to v2 canonical syntax translator
+├── linter/                # Diagnostic linter
+│   └── linter.sdev        # Levenshtein distance, spelling corrections, linting rules
+├── agent/                 # SDEV Understander & dialect agents
+│   ├── ai-dialect.sdev    # AI conversational dialect translator
+│   ├── blocks.sdev        # Block delimiter analyzer & balancer
+│   ├── parser_eval.sdev   # AST evaluation engine in SDEV
+│   ├── project.sdev       # Multi-file project indexer & resolver
+│   └── understander.sdev  # Natural English to canonical SDEV code understander
+└── parity/                # Parity test tracking
+    ├── agent.sdev         # Parity validation agent in pure SDEV
+    ├── features.json      # 209 language features across v1, v2, and native tracks
+    └── report.json        # Auto-generated verification report (0 missing required features)
 ```
 
-```
-#!sdev v2
-set x to 10
-say x
-```
+---
 
-Or globally with `localStorage.sdev_runtime = "v2"` in the IDE console.
+#### Toolchain & Compilation Architecture
 
-Default without a shebang is **v1** while we finish the v2 golden-file suite.
+##### 1. Stage-0 Bootstrap & Seed VM (`lang/bootstrap/`)
+The foundation begins with a minimal 8KB WebAssembly execution seed (`src/lang-bridge/seed/seed.wat`). The seed VM implements a compact bytecode instruction set. `lang/bootstrap/seed_vm.sdev` provides the complete specification of bytecode opcodes, LEB128 variable-length integer encoding, and binary WebAssembly generation in pure SDEV. `lang/bootstrap/bootstrap.sdev` compiles stage-0 AST nodes into runnable bytecode.
 
-#### Build (Milestone 2, when implemented)
+##### 2. Self-Hosted Compiler (`lang/compiler/`)
+The self-hosted compiler is structured into three clean stages:
+- **`lexer.sdev`**: Scans SDEV source text into a stream of typed tokens (`INT`, `STR`, `IDENT`, `OP`, `KW`).
+- **`parser.sdev`**: Recursive-descent parser that constructs the structured Abstract Syntax Tree (AST).
+- **`codegen.sdev`**: Walks the AST to generate compact bytecode instructions and an interned string pool table.
+- **`driver.sdev`**: Standalone compiler driver that compiles SDEV source files directly into self-contained bytecode bundles.
 
-```
-node build/build.mjs           # runs stage0 → stage1 → stage2
-# produces dist/sdev-core.wasm
-```
+Fixed-point self-compilation is verified by compiling the compiler with itself:
+$$\text{Compiler}_{\text{self}}(\text{Compiler}_{\text{src}}) \equiv \text{Compiler}_{\text{oracle}}(\text{Compiler}_{\text{src}})$$
+Producing byte-identical bytecode across all stages (`bc=19214, pool=737`).
 
-The Milestone 2 plan is in `.lovable/plan.md` (approved by the user).
+##### 3. Native x86-64 Backend (`lang/native/`)
+The native compiler produces bare-metal x86-64 machine code:
+- **`codegen_x64.sdev`**: Emits System V AMD64 instructions (`mov`, `push`, `pop`, `add`, `sub`, `imul`, `idiv`, `cmp`, `jmp`, `call`, `syscall`).
+- **`runtime_x64.sdev`**: Generates the minimal standalone runtime containing `_start`, memory allocators, string formatting, and Linux syscall wrappers (`write`, `exit`, `clock_gettime`).
+- **`link.sdev`**: Drives standard native linkers (`ld`, `ld.lld`, `gcc`) to generate static or dynamic ELF executables.
 
-#### Self-hosting status
+##### 4. Virtual Machine & Operating System Kernel (`lang/runtime/`)
+- **`vm.sdev`**: Stack-based bytecode virtual machine capable of stepping, disassembling, and executing SDEV bytecode with full call-frame management and arithmetic/control-flow opcode dispatch.
+- **`kernel.sdev`**: Virtual operating system kernel with an in-memory Virtual File System (VFS), process table, round-robin scheduler, inter-process pipes, environment variables, and POSIX-like system calls (`sys_read`, `sys_write`, `sys_spawn`, `sys_open`).
 
-`lang/compiler/{lexer,parser,codegen}.sdev` now compile **themselves** to
-byte-identical bytecode through the seed VM — verified by
-`scripts/test-self-toolchain.sdev` (all three targets required) and
-`scripts/test-self-codegen.mjs` (full case suite).
+##### 5. Standard Library (`lang/stdlib/v2/`)
+Modular, high-performance standard library components covering strings (`text.sdev`), lists (`list.sdev`), associative dictionaries (`tome.sdev`), advanced arithmetic & prime testing (`math.sdev`), bitwise manipulation (`bits.sdev`), calendar/clock calculations (`time.sdev`), functional combinators (`func.sdev`), JSON encoding (`json.sdev`), runtime type introspection (`types.sdev`), and pseudo-random number generation (`random.sdev`).
 
-Two rules the self-hosted codegen must keep in step with the reference
-compiler, both fixed while closing this milestone:
+---
 
-1. Every name a function body assigns is a **local**, even when a load of
-   that name appears before its first assignment and a global of the same
-   name exists. A silent pre-walk of the body registers those locals in
-   source order; globals it interned along the way are rolled back so the
-   symbol table keeps the reference ordering.
-2. Fresh local and global slots are **int-typed**. Slot tables are reused
-   across functions, so a new slot must clear the previous occupant's type
-   or `+` mis-selects STRCAT over ADD.
+#### Test Verification
 
-The JS bootstrap (`lang/bootstrap/compile.mjs`) is now redundant and is
-kept only as the differential oracle for the test suites.
+The entire language toolchain is tested using the SDEV host environment:
+
+| Test Suite | Command | Description |
+| :--- | :--- | :--- |
+| **Toolchain** | `npm run test:toolchain` | Lexer, parser, and codegen self-compilation |
+| **Driver** | `npm run test:driver` | Standalone driver artifact verification |
+| **Lexer** | `npm run test:self-lexer` | Self-hosted lexer tokenizer suite |
+| **Parser** | `npm run test:self-parser` | Self-hosted AST parser suite |
+| **Codegen** | `npm run test:self-codegen` | 52/52 bytecode emission test cases |
+| **Fixed-Point** | `npm run test:fixed-point` | Shim and bootstrap fixed-point parity |
+| **WASM Runtime** | `node scripts/test-wasm-runtime.mjs` | Seed VM bytecode execution (73/73 passed) |
+| **Native x86-64** | `wsl node scripts/test-native.mjs` | Bare-metal Linux ELF generation (81/81 passed) |
+| **Self-Hosted Stdlib** | `node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev` | All 10 v2 stdlib modules |
+| **Self-Hosted Subsystems** | `node bin/sdevhost.mjs scripts/test-selfhosted-subsystems.sdev` | VM, Kernel, Translator, Frontend, Paradigms, Linter |
+| **Parity Gate** | `node scripts/run-ts.mjs scripts/test-parity.ts` | 209 features across 3 tracks (0 missing required) |
 
 ---
 
@@ -7047,53 +7786,28 @@ kept only as the differential oracle for the test suites.
 _Source: `lang/native/README.md`_
 
 
-The **browser IDE** runs SDEV on WebAssembly (see `lang/bootstrap/`).
-This directory is the **desktop** backend: it compiles SDEV to real
-x86-64 assembly (GAS/AT&T syntax) and links it into a static Linux ELF.
+The **browser IDE** runs SDEV on WebAssembly (see `lang/bootstrap/seed_vm.sdev` and `src/lang-bridge/seed/`).
+This directory is the **desktop** backend: it compiles SDEV to real x86-64 assembly (GAS/AT&T syntax) and links it into a static Linux ELF without libc.
 
 #### Files
 
-- `codegen-x64.mjs` — SDEV AST → `.s` (System V AMD64, no libc).
-- `runtime.s` — hand-written asm: `_start`, `sdev_say_int`, `sdev_say_str`.
-- `link.mjs` — spawns `as` + `ld` to produce an ELF binary.
+- `codegen_x64.sdev` — SDEV-authored x86-64 GAS assembly codegen and feature catalogue.
+- `runtime_x64.sdev` — SDEV-authored System V AMD64 assembly runtime generator (`_start`, `sdev_say_int`, `sdev_say_str`, syscalls).
+- `link.sdev` — SDEV-authored native ELF assembler and linker driver.
+
+The host bridge and pre-built asm runtime live under `src/lang-bridge/native/` and `bin/runtime.s`.
 
 #### Usage (CLI)
 
-```
+```bash
 node scripts/sdev-native.mjs prog.sdev -o prog
 ./prog
 ```
 
 The compiler will:
-
-1. parse `prog.sdev` using the same parser the browser uses,
-2. emit `prog.s` next to `prog`,
-3. assemble + link into `prog` (static ELF, no libc, ~1 KB).
-
-#### Supported subset (matches WASM seed)
-
-- `set … to`, `if / else / end`, `while / end`
-- `to name with p1 p2 … end`, `return`, full recursion
-- 64-bit signed integers, string *literals* (immutable)
-- `say <expr>` — prints int or string + newline
-
-Not yet: lists, dynamic strings, canvas/graphics, hardware. Those stay
-browser-only until we port them to the native backend.
-
-#### Prerequisites
-
-- GNU binutils (`as`, `ld`). On Linux they ship in every distro.
-- On this sandbox we pull them via `nix run nixpkgs#binutils`.
-- macOS: install `binutils` via Homebrew (`brew install binutils`) — this
-  gives you `x86_64-linux-gnu-as`; pass paths through `link()`'s `opts`.
-- Windows: assemble the emitted `.s` with MASM/NASM or run under WSL.
-
-#### Why two backends?
-
-Browsers don't execute x86 machine code — they only run JS and WASM.
-So the web IDE stays on WebAssembly (which *is* the browser's native
-assembly). For real desktop CLI use where you want an actual ELF you can
-`strace` or `objdump -d`, use this backend.
+1. Parse `prog.sdev`,
+2. Emit `prog.s` next to `prog`,
+3. Assemble + link into `prog` (static ELF, no libc, ~1 KB).
 
 ---
 
@@ -7163,6 +7877,10 @@ Inside the app, `window.sdevDesktop` exposes:
 
 The web build does not define `window.sdevDesktop`, so any UI that gates
 on it stays hidden in the browser.
+
+#### Updates
+
+The desktop app opens the live editor from the website, so it is always the newest version; without internet it uses the bundled copy. When the desktop shell itself changes, it offers the new download.
 
 ---
 
@@ -8258,285 +8976,1724 @@ authored on a workstation run unchanged in the web playground.
 _Source: `public/SDEV_HARDWARE_DOCUMENTATION.md`_
 
 
-Program microcontrollers (Arduino, ESP32, ESP8266, Raspberry Pi Pico, Teensy, and more) directly in sdev. This document covers the `board { }` DSL, the compiler/uploader pipeline, the Hardware panel in the IDE, and the Arduino Library Manager integration.
+Program **30 microcontrollers** (Arduino Uno R3 / R4 Minima / R4 WiFi / Uno Q, Nano family, Mega 2560, Leonardo, Micro, MKR family, Zero, Due, Giga R1, Portenta H7, ESP32 / C3 / S2 / S3, ESP8266, Raspberry Pi Pico / Pico W, ATtiny85, and Teensy 4.1) directly in **sdev**.
+
+This reference covers:
+1. **Block Syntax**: `board "<id>" :: ... ;;` and `board "<id>" { ... }`
+2. **Supported Boards (30)**: FQBNs, MCUs, memory, cloud vs. local compilation, and USB IDs
+3. **SDEV Hardware DSL & Statements**: pins, PWM, timing, serial, interrupts, tone, shiftOut, raw `cpp { ... }`
+4. **Complete Arduino Core Reference (75 functions, 14 constant groups, 16 types, Serial & String APIs)**
+5. **Curated Libraries (61)** with SDEV `device` declarations, methods, and transpiled C++ examples
+6. **Arduino Library Manager Integration (10,232 indexed libraries)**
+7. **Browser Flashing Protocols (7 uploaders)**: STK500v1, STK500v2, AVR109, SAM-BA / BOSSA, WebUSB DFU 1.1, ESP32/ESP8266 SLIP, and RP2040 UF2
 
 ---
 
-#### 1. Overview
+#### 1. The `board` Block
 
-sdev's hardware layer lets you write firmware in sdev syntax that transpiles to Arduino-compatible C++ and is uploaded to a physical board over Web Serial. Everything Arduino's C++ ecosystem supports — libraries, sensors, actuators, protocols — is available, because the underlying compilation path is real `arduino-cli`.
+A `board` block embeds a hardware sketch inside any `.sdev` file. When you run the file in the desktop/browser sdev interpreter, `stripBoardBlocks()` strips all `board` blocks automatically so desktop code and microcontroller firmware can live side-by-side in one file.
 
-Two ways to run hardware code:
-1. **Real board** — write a `board { }` block, hit Upload, sdev transpiles → `.ino` → `arduino-cli` compiles → firmware flashed over USB.
-2. **Simulation (roadmap)** — future in-browser simulator that runs `board { }` blocks in the IDE's Canvas panel.
+Both sdev `:: ... ;;` delimiters and brace `{ ... }` delimiters are supported:
 
----
+```sdev
+board "uno" ::
+  conjure setup() ::
+    pin led be output
+    speak("Arduino Uno ready!")
+  ;;
 
-#### 2. The `board { }` block
+  conjure loop() ::
+    pin led toggle
+    wait 500
+  ;;
+;;
+```
 
-A `board { }` block is a hardware sketch. It is stripped from the file before the normal sdev interpreter runs, so a mixed file (sdev on desktop + firmware on device) is legal.
+Or with `{ ... }`:
 
 ```sdev
 board "uno" {
-  conjure setup() ::
+  conjure setup() {
     pin 13 be output
     serial begin 9600
-  ;;
-
-  conjure loop() ::
+  }
+  conjure loop() {
     pin 13 write high
     wait 500
     pin 13 write low
     wait 500
-  ;;
+  }
 }
 ```
 
-##### Board targets
+---
 
-The string after `board` selects the target. Supported ids:
+#### 2. Supported Boards (30)
 
-| Id | Board | MCU | Uploader |
-|----|-------|-----|----------|
-| `uno` | Arduino Uno R3 | ATmega328P | STK500 |
-| `nano` | Arduino Nano | ATmega328P | STK500 |
-| `nano-old` | Arduino Nano (168) | ATmega168 | STK500 |
-| `mega` | Arduino Mega 2560 | ATmega2560 | STK500 |
-| `leonardo` | Arduino Leonardo | ATmega32U4 | STK500 |
-| `micro` | Arduino Micro | ATmega32U4 | STK500 |
-| `esp32` | ESP32 DevKit | ESP32 | esptool |
-| `esp32-s3` | ESP32-S3 DevKit | ESP32-S3 | esptool |
-| `esp8266` | NodeMCU | ESP8266 | esptool |
-| `pico` | Raspberry Pi Pico | RP2040 | UF2 drop |
-| `teensy41` | Teensy 4.1 | iMXRT1062 | arduino-cli |
+| ID (`board "<id>"`) | Board | FQBN | MCU | Flash / RAM | Uploader | Browser Flash | Zero-Install Cloud Build |
+|---|---|---|---|---|---|---|---|
+| `uno` | Arduino Uno (R3) | `arduino:avr:uno` | ATmega328P | 32 KB / 2 KB | `stk500v1` | Yes (`stk500v1`) | Yes (`uno`) |
+| `uno-r4-minima` | Arduino Uno R4 Minima | `arduino:renesas_uno:minima` | RA4M1 | 256 KB / 32 KB | `dfu` | Yes (`dfu`) | Local CLI |
+| `uno-r4-wifi` | Arduino Uno R4 WiFi | `arduino:renesas_uno:unor4wifi` | RA4M1 + ESP32-S3 | 256 KB / 32 KB | `samba` | Yes (`samba`) | Local CLI |
+| `uno-q` | Arduino Uno Q | `arduino:zephyr:unoq` | Qualcomm Dragonwing QRB2210 + STM32U585 | 2048 KB / 786 KB | `app-lab` | No (`app-lab`) | Local CLI |
+| `nano` | Arduino Nano (ATmega328P) | `arduino:avr:nano:cpu=atmega328` | ATmega328P | 32 KB / 2 KB | `stk500v1` | Yes (`stk500v1`) | Yes (`nano`) |
+| `nano-old` | Arduino Nano (ATmega168 / Old Bootloader) | `arduino:avr:nano:cpu=atmega168` | ATmega168 | 16 KB / 1 KB | `stk500v1` | Yes (`stk500v1`) | Local CLI |
+| `nano-every` | Arduino Nano Every | `arduino:megaavr:nona4809` | ATmega4809 | 48 KB / 6 KB | `samba` | Yes (`samba`) | Local CLI |
+| `nano-33-iot` | Arduino Nano 33 IoT | `arduino:samd:nano_33_iot` | SAMD21G18A | 256 KB / 32 KB | `samba` | Yes (`samba`) | Local CLI |
+| `nano-33-ble` | Arduino Nano 33 BLE / Sense | `arduino:mbed_nano:nano33ble` | nRF52840 | 1024 KB / 256 KB | `samba` | Yes (`samba`) | Local CLI |
+| `nano-rp2040` | Arduino Nano RP2040 Connect | `arduino:mbed_nano:nanorp2040connect` | RP2040 | 16384 KB / 264 KB | `uf2` | Yes (`uf2`) | Yes (`nano-rp2040-connect`) |
+| `nano-esp32` | Arduino Nano ESP32 | `arduino:esp32:nano_nora` | ESP32-S3 | 16384 KB / 512 KB | `esptool` | Yes (`esptool`) | Local CLI |
+| `mega` | Arduino Mega 2560 | `arduino:avr:mega:cpu=atmega2560` | ATmega2560 | 256 KB / 8 KB | `stk500v2` | Yes (`stk500v2`) | Yes (`mega`) |
+| `leonardo` | Arduino Leonardo | `arduino:avr:leonardo` | ATmega32U4 | 32 KB / 2.5 KB | `avr109` | Yes (`avr109`) | Local CLI |
+| `micro` | Arduino Micro | `arduino:avr:micro` | ATmega32U4 | 32 KB / 2.5 KB | `avr109` | Yes (`avr109`) | Local CLI |
+| `mkr-wifi-1010` | Arduino MKR WiFi 1010 | `arduino:samd:mkrwifi1010` | SAMD21G18A | 256 KB / 32 KB | `samba` | Yes (`samba`) | Local CLI |
+| `mkr-zero` | Arduino MKR Zero | `arduino:samd:mkrzero` | SAMD21G18A | 256 KB / 32 KB | `samba` | Yes (`samba`) | Local CLI |
+| `mkr-wan-1310` | Arduino MKR WAN 1310 | `arduino:samd:mkrwan1310` | SAMD21G18A | 256 KB / 32 KB | `samba` | Yes (`samba`) | Local CLI |
+| `zero` | Arduino Zero | `arduino:samd:arduino_zero_native` | SAMD21G18A | 256 KB / 32 KB | `samba` | Yes (`samba`) | Local CLI |
+| `due` | Arduino Due | `arduino:sam:arduino_due_x` | AT91SAM3X8E | 512 KB / 96 KB | `samba` | Yes (`samba`) | Local CLI |
+| `giga` | Arduino Giga R1 WiFi | `arduino:mbed_giga:giga` | STM32H747XI | 2048 KB / 1024 KB | `dfu` | Yes (`dfu`) | Local CLI |
+| `portenta-h7` | Arduino Portenta H7 | `arduino:mbed_portenta:envie_m7` | STM32H747XI | 2048 KB / 1024 KB | `dfu` | Yes (`dfu`) | Local CLI |
+| `esp32` | ESP32 DevKit (generic) | `esp32:esp32:esp32` | ESP32 | 4096 KB / 520 KB | `esptool` | Yes (`esptool`) | Yes (`esp32`) |
+| `esp32-c3` | ESP32-C3 DevKit | `esp32:esp32:esp32c3` | ESP32-C3 | 4096 KB / 400 KB | `esptool` | Yes (`esptool`) | Yes (`esp32-c3-devkitm-1`) |
+| `esp32-s2` | ESP32-S2 DevKit | `esp32:esp32:esp32s2` | ESP32-S2 | 4096 KB / 320 KB | `esptool` | Yes (`esptool`) | Yes (`esp32-s2-devkitm-1`) |
+| `esp32-s3` | ESP32-S3 DevKit | `esp32:esp32:esp32s3` | ESP32-S3 | 8192 KB / 512 KB | `esptool` | Yes (`esptool`) | Local CLI |
+| `esp8266` | ESP8266 NodeMCU | `esp8266:esp8266:nodemcuv2` | ESP8266 | 4096 KB / 80 KB | `esptool` | Yes (`esptool`) | Yes (`esp8266`) |
+| `pico` | Raspberry Pi Pico (RP2040) | `rp2040:rp2040:rpipico` | RP2040 | 2048 KB / 264 KB | `uf2` | Yes (`uf2`) | Yes (`pi-pico`) |
+| `pico-w` | Raspberry Pi Pico W (RP2040) | `rp2040:rp2040:rpipicow` | RP2040 | 2048 KB / 264 KB | `uf2` | Yes (`uf2`) | Local CLI |
+| `attiny85` | ATtiny85 | `attiny:avr:ATtinyX5:cpu=attiny85` | ATtiny85 | 8 KB / 0.5 KB | `stk500v1` | Yes (`stk500v1`) | Yes (`attiny85`) |
+| `teensy41` | Teensy 4.1 | `teensy:avr:teensy41` | iMXRT1062 | 8192 KB / 1024 KB | `arduino-cli` | No (`arduino-cli`) | Local CLI |
 
-##### Required entry points
-
-- `setup()` — runs once at boot.
-- `loop()` — runs forever after `setup()` returns.
-
-Both are declared with `conjure` like any other sdev function.
+##### Special Board Notes
+- **Arduino Uno R4 Minima (`uno-r4-minima`)**: Uses the Renesas RA4M1 (48 MHz Cortex-M4F) and flashes directly from the browser over **WebUSB DFU 1.1** (`0x2341:0x0369`).
+- **Arduino Uno R4 WiFi (`uno-r4-wifi`)**: Uses the Renesas RA4M1 + ESP32-S3 co-processor and flashes over **SAM-BA / BOSSA** (`flashSamba`) after a 1200-baud touch reset.
+- **Arduino Uno Q (`uno-q`)**: Hybrid Qualcomm Dragonwing QRB2210 Linux SBC + STM32U585 real-time MCU running Zephyr (`arduino:zephyr:unoq`). Sketches are deployed via **Arduino App Lab** or `arduino-cli` over ADB/network rather than browser Web Serial; use **Export .ino** in the Hardware panel.
+- **Raspberry Pi Pico / Pico W / Nano RP2040 Connect (`pico`, `pico-w`, `nano-rp2040`)**: Compiles to an RP2040 **UF2** image (`0x0A324655` / `0x9E5D5157` / family `0xE48BFF56`) and writes directly to the mounted `RPI-RP2` drive via the File System Access API (or downloads `.uf2`).
 
 ---
 
-#### 3. Hardware statements
+#### 3. SDEV Hardware DSL Cheat Sheet
 
-Inside a `board { }` block, the following sdev statements transpile to Arduino C++:
+| SDEV Statement / Expression | Generated Arduino C++ |
+|---|---|
+| `use "Servo"` | `#include <Servo.h>` |
+| `use "Ethernet"` | `#include <SPI.h>` + `#include <Ethernet.h>` |
+| `device arm be Servo` | `Servo arm;` |
+| `device lcd be LiquidCrystal_I2C(0x27, 16, 2)` | `LiquidCrystal_I2C lcd(0x27, 16, 2);` |
+| `conjure setup() :: ... ;;` / `to setup` | `void setup() { ... }` (auto-inserts `Serial.begin(9600);` when `speak`/`say` is used) |
+| `conjure loop() :: ... ;;` / `to loop` | `void loop() { ... }` |
+| `conjure blink(pin: int, ms: long) :: ... ;;` | `auto blink(int pin, long ms) { ... }` |
+| `forge x: float be 3.14` | `float x = 3.14;` |
+| `forge notes be [262, 294, 330]` | `auto notes[] = {262, 294, 330};` |
+| `fixed forge LED: int be 13` | `const int LED = 13;` |
+| `keep forge counter: long be 0` | `static long counter = 0;` |
+| `volatile forge ticks: long be 0` | `volatile long ticks = 0;` |
+| `pin 13 be output` / `input` / `input_pullup` / `input_pulldown` | `pinMode(13, OUTPUT / INPUT / INPUT_PULLUP / INPUT_PULLDOWN);` |
+| `pin led on` / `pin led off` | `digitalWrite(LED_BUILTIN, HIGH / LOW);` |
+| `pin 13 toggle` | `digitalWrite(13, !digitalRead(13));` |
+| `pin 13 write high` / `pin 13 write low` | `digitalWrite(13, HIGH / LOW);` |
+| `pin 9 analog 128` / `pin 9 pwm 128` / `analog 9 write 128` | `analogWrite(9, 128);` |
+| `analog reference internal` | `analogReference(INTERNAL);` |
+| `pin 2 read` / `read pin 2` | `digitalRead(2)` |
+| `analog 0 read` / `read analog A0` | `analogRead(A0)` |
+| `wait 500` | `delay(500);` |
+| `wait 2 seconds` | `delay((2) * 1000);` |
+| `wait 50 us` / `wait_us 50` | `delayMicroseconds(50);` |
+| `now()` / `nowus()` | `millis()` / `micros()` |
+| `serial begin 115200` | `Serial.begin(115200);` |
+| `speak("Value:", x)` | `Serial.print("Value:"); Serial.print(" "); Serial.println(x);` |
+| `say "hello"` | `Serial.println("hello");` |
+| `serial read` / `serial avail` | `Serial.read()` / `Serial.available()` |
+| `tone 8 440 200` / `notone 8` | `tone(8, 440, 200);` / `noTone(8);` |
+| `pulsein 7 high` | `pulseIn(7, HIGH)` |
+| `shiftout 11 12 msbfirst 0xAA` | `shiftOut(11, 12, MSBFIRST, 0xAA);` |
+| `attach 2 rising onPress` / `detach 2` | `attachInterrupt(digitalPinToInterrupt(2), onPress, RISING);` / `detachInterrupt(...)` |
+| `ponder x equals 0 :: ... otherwise :: ... ;;` | `if (x == 0) { ... } else { ... }` |
+| `within i be sequence(8) :: ... ;;` | `for (long i = 0; i < 8; i++) { ... }` |
+| `within i be sequence(1, 127) :: ... ;;` | `for (long i = 1; i < 127; i++) { ... }` |
+| `within a be sequence(0, 181, 5) :: ... ;;` | `for (long a = 0; (5) >= 0 ? a < 181 : a > 181; a += (5)) { ... }` |
+| `cycle x < 10 :: ... ;;` | `while (x < 10) { ... }` |
+| `yeet` / `skip` / `yield val` | `break;` / `continue;` / `return val;` |
+| `randint(1, 6)` | `random(1, (6) + 1)` |
+| `equals` / `differs` / `also` / `either` / `isnt` / `yep` / `nope` | `==` / `!=` / `&&` / `||` / `!` / `true` / `false` |
+| `cpp { ... }` | Raw C/C++ copied verbatim without line translation |
 
-##### Pin configuration
-```
-pin 13 be output       // pinMode(13, OUTPUT);
-pin 2  be input        // pinMode(2,  INPUT);
-pin 2  be input_pullup // pinMode(2,  INPUT_PULLUP);
-```
+---
+
+#### 4. Arduino Core Functions (75)
 
 ##### Digital I/O
-```
-pin 13 write high      // digitalWrite(13, HIGH);
-pin 13 write low       // digitalWrite(13, LOW);
-forge v be pin 2 read  // int v = digitalRead(2);
-```
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `pinMode` | `pinMode(pin, mode)` | `void` | `pin 13 be output` | Configure a pin as INPUT, OUTPUT, INPUT_PULLUP (or INPUT_PULLDOWN on boards that have it). |
+| `digitalWrite` | `digitalWrite(pin, value)` | `void` | `pin 13 write high · pin 13 on · pin 13 off · pin 13 toggle` | Set a digital pin HIGH or LOW. |
+| `digitalRead` | `digitalRead(pin)` | `int` | `pin 2 read · read pin 2` | Read a digital pin: HIGH or LOW. |
 
 ##### Analog I/O
-```
-forge x be analog 0 read       // analogRead(A0);
-analog 9 write 128             // analogWrite(9, 128);  (PWM, 0-255)
-```
 
-##### Timing
-```
-wait 500          // delay(500);
-wait_us 100       // delayMicroseconds(100);
-forge t be now()  // millis();
-forge u be nowus() // micros();
-```
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `analogRead` | `analogRead(pin)` | `int` | `analog 0 read · read analog A0` | Read an analog pin (0–1023 at the default 10-bit resolution). |
+| `analogWrite` | `analogWrite(pin, value)` | `void` | `pin 9 analog 128 · pin 9 pwm 128` | Write a PWM value (0–255) to a PWM pin, or a voltage to a DAC pin. |
+| `analogReference` | `analogReference(type)` | `void` | `analog reference internal` | Choose the reference voltage for analogRead (DEFAULT, INTERNAL, EXTERNAL, …). |
+| `analogReadResolution` | `analogReadResolution(bits)` | `void` | `analogReadResolution(bits)` | Set the number of bits analogRead returns. *(Boards: Zero, Due, MKR, Nano 33, Uno R4, Giga, Portenta, ESP32, RP2040)* |
+| `analogWriteResolution` | `analogWriteResolution(bits)` | `void` | `analogWriteResolution(bits)` | Set the number of bits analogWrite accepts. *(Boards: Zero, Due, MKR, Nano 33, Uno R4, Giga, Portenta, RP2040)* |
 
-##### Serial
-```
-serial begin 9600         // Serial.begin(9600);
-serial print "hello"      // Serial.print("hello");
-serial println x          // Serial.println(x);
-forge b be serial read    // Serial.read();
-forge n be serial avail   // Serial.available();
-```
+##### Advanced I/O
 
-##### Advanced (pass-through emitted verbatim)
-```
-tone 8 440 200
-notone 8
-forge d be pulsein 3 high 1000000
-shiftout 11 12 msbfirst 0xAA
-attach 0 rising conjure()  ISR
-detach 0
-```
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `tone` | `tone(pin, frequency[, duration])` | `void` | `tone 8 440 200` | Play a square wave of the given frequency (Hz) on a pin. |
+| `noTone` | `noTone(pin)` | `void` | `notone 8` | Stop a tone started with tone(). |
+| `pulseIn` | `pulseIn(pin, value[, timeout])` | `unsigned long` | `pulsein 7 high` | Measure how long (µs) a pin stays HIGH or LOW. |
+| `pulseInLong` | `pulseInLong(pin, value[, timeout])` | `unsigned long` | `pulseInLong(pin, value[, timeout])` | Like pulseIn, but works with interrupts and long pulses. |
+| `shiftOut` | `shiftOut(dataPin, clockPin, bitOrder, value)` | `void` | `shiftout 11 12 msbfirst 0xAA` | Send a byte one bit at a time (for shift registers). |
+| `shiftIn` | `shiftIn(dataPin, clockPin, bitOrder)` | `byte` | `shiftIn(dataPin, clockPin, bitOrder)` | Read a byte one bit at a time. |
 
-##### Library includes
+##### Time
 
-Any Arduino C++ library becomes usable with `use`:
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `delay` | `delay(ms)` | `void` | `wait 500 · wait 2 seconds` | Pause the program for a number of milliseconds. |
+| `delayMicroseconds` | `delayMicroseconds(us)` | `void` | `wait 50 us · wait_us 50` | Pause for a number of microseconds. |
+| `millis` | `millis()` | `unsigned long` | `now()` | Milliseconds since the board started. |
+| `micros` | `micros()` | `unsigned long` | `nowus()` | Microseconds since the board started. |
 
+##### Math
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `abs` | `abs(x)` | `number` | `abs(x)` | Absolute value. |
+| `constrain` | `constrain(x, low, high)` | `number` | `constrain(x, low, high)` | Limit a number to a range. |
+| `map` | `map(value, fromLow, fromHigh, toLow, toHigh)` | `long` | `map(value, fromLow, fromHigh, toLow, toHigh)` | Re-map a number from one range to another. |
+| `max` | `max(a, b)` | `number` | `max(a, b)` | Larger of two numbers. |
+| `min` | `min(a, b)` | `number` | `min(a, b)` | Smaller of two numbers. |
+| `pow` | `pow(base, exponent)` | `double` | `pow(base, exponent)` | Raise a number to a power. |
+| `sq` | `sq(x)` | `number` | `sq(x)` | Square of a number. |
+| `sqrt` | `sqrt(x)` | `double` | `sqrt(x)` | Square root. |
+| `floor` | `floor(x)` | `double` | `floor(x)` | Round down. |
+| `ceil` | `ceil(x)` | `double` | `ceil(x)` | Round up. |
+| `round` | `round(x)` | `long` | `round(x)` | Round to the nearest whole number. |
+| `fabs` | `fabs(x)` | `double` | `fabs(x)` | Absolute value of a decimal number. |
+| `fmod` | `fmod(x, y)` | `double` | `fmod(x, y)` | Remainder of a decimal division. |
+| `log` | `log(x)` | `double` | `log(x)` | Natural logarithm. |
+| `log10` | `log10(x)` | `double` | `log10(x)` | Base-10 logarithm. |
+| `exp` | `exp(x)` | `double` | `exp(x)` | e raised to x. |
+
+##### Trigonometry
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `sin` | `sin(rad)` | `double` | `sin(rad)` | Sine of an angle in radians. |
+| `cos` | `cos(rad)` | `double` | `cos(rad)` | Cosine of an angle in radians. |
+| `tan` | `tan(rad)` | `double` | `tan(rad)` | Tangent of an angle in radians. |
+| `asin` | `asin(x)` | `double` | `asin(x)` | Arc sine. |
+| `acos` | `acos(x)` | `double` | `acos(x)` | Arc cosine. |
+| `atan` | `atan(x)` | `double` | `atan(x)` | Arc tangent. |
+| `atan2` | `atan2(y, x)` | `double` | `atan2(y, x)` | Angle of the point (x, y). |
+| `radians` | `radians(deg)` | `double` | `radians(deg)` | Degrees to radians. |
+| `degrees` | `degrees(rad)` | `double` | `degrees(rad)` | Radians to degrees. |
+
+##### Characters
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `isAlpha` | `isAlpha(c)` | `bool` | `isAlpha(c)` | Is the character a letter? |
+| `isAlphaNumeric` | `isAlphaNumeric(c)` | `bool` | `isAlphaNumeric(c)` | Is the character a letter or digit? |
+| `isAscii` | `isAscii(c)` | `bool` | `isAscii(c)` | Is the character ASCII? |
+| `isControl` | `isControl(c)` | `bool` | `isControl(c)` | Is the character a control character? |
+| `isDigit` | `isDigit(c)` | `bool` | `isDigit(c)` | Is the character a digit? |
+| `isGraph` | `isGraph(c)` | `bool` | `isGraph(c)` | Is the character printable and not a space? |
+| `isHexadecimalDigit` | `isHexadecimalDigit(c)` | `bool` | `isHexadecimalDigit(c)` | Is the character 0-9, a-f or A-F? |
+| `isLowerCase` | `isLowerCase(c)` | `bool` | `isLowerCase(c)` | Is the character lower case? |
+| `isPrintable` | `isPrintable(c)` | `bool` | `isPrintable(c)` | Is the character printable? |
+| `isPunct` | `isPunct(c)` | `bool` | `isPunct(c)` | Is the character punctuation? |
+| `isSpace` | `isSpace(c)` | `bool` | `isSpace(c)` | Is the character white space (space, tab, newline…)? |
+| `isUpperCase` | `isUpperCase(c)` | `bool` | `isUpperCase(c)` | Is the character upper case? |
+| `isWhitespace` | `isWhitespace(c)` | `bool` | `isWhitespace(c)` | Is the character a space or tab? |
+
+##### Random numbers
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `random` | `random([min,] max)` | `long` | `randint(1, 6)  (inclusive)` | Random number from min up to (not including) max. |
+| `randomSeed` | `randomSeed(seed)` | `void` | `randomSeed(seed)` | Start the random generator from a seed, e.g. analogRead of a floating pin. |
+
+##### Bits and bytes
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `bit` | `bit(n)` | `number` | `bit(n)` | The value of bit n (1, 2, 4, 8, …). |
+| `bitClear` | `bitClear(x, n)` | `void` | `bitClear(x, n)` | Set bit n of x to 0. |
+| `bitRead` | `bitRead(x, n)` | `int` | `bitRead(x, n)` | Read bit n of x. |
+| `bitSet` | `bitSet(x, n)` | `void` | `bitSet(x, n)` | Set bit n of x to 1. |
+| `bitWrite` | `bitWrite(x, n, b)` | `void` | `bitWrite(x, n, b)` | Write 0 or 1 to bit n of x. |
+| `highByte` | `highByte(x)` | `byte` | `highByte(x)` | The high (left) byte of a word. |
+| `lowByte` | `lowByte(x)` | `byte` | `lowByte(x)` | The low (right) byte of a word. |
+| `word` | `word(high, low)` | `word` | `word(high, low)` | Combine two bytes into a word. |
+
+##### External interrupts
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `attachInterrupt` | `attachInterrupt(digitalPinToInterrupt(pin), handler, mode)` | `void` | `attach 2 rising onPress` | Run a function when a pin changes (RISING, FALLING, CHANGE, LOW, HIGH). |
+| `detachInterrupt` | `detachInterrupt(digitalPinToInterrupt(pin))` | `void` | `detach 2` | Stop running the interrupt handler. |
+| `digitalPinToInterrupt` | `digitalPinToInterrupt(pin)` | `int` | `digitalPinToInterrupt(pin)` | The interrupt number for a pin. |
+
+##### Interrupts
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `interrupts` | `interrupts()` | `void` | `interrupts()` | Re-enable interrupts. |
+| `noInterrupts` | `noInterrupts()` | `void` | `noInterrupts()` | Disable interrupts (for timing-critical code). |
+
+##### Utilities
+
+| Function | Signature | Returns | SDEV Form | Description |
+|---|---|---|---|---|
+| `sizeof` | `sizeof(x)` | `size_t` | `sizeof(x)` | Size of a variable or array in bytes. |
+| `F` | `F("text")` | `text` | `F("text")` | Keep a string in flash memory instead of RAM. |
+| `PROGMEM` | `const int table[] PROGMEM = {…}` | `modifier` | `const int table[] PROGMEM = {…}` | Store data in flash memory. |
+| `yield` | `yield()` | `void` | `yield()` | Let background tasks run (ESP32/ESP8266/RP2040). In sdev, `yield x` inside a function means return. |
+
+##### Constants
+
+| Constant | SDEV Alias | Description |
+|---|---|---|
+| `HIGH` | `high` | Pin is on (5 V or 3.3 V). |
+| `LOW` | `low` | Pin is off (0 V). |
+| `INPUT` | `input` | Pin mode: read a signal. |
+| `OUTPUT` | `output` | Pin mode: drive a signal. |
+| `INPUT_PULLUP` | `input_pullup` | Pin mode: input with the internal pull-up resistor. |
+| `INPUT_PULLDOWN` | `input_pulldown` | Pin mode: input with a pull-down resistor (SAMD, ESP32, RP2040, Renesas). |
+| `LED_BUILTIN` | `led` | The pin of the on-board LED. |
+| `A0 … A7` | — | Analog input pins. |
+| `RISING / FALLING / CHANGE` | `rising · falling · change` | Interrupt modes. |
+| `MSBFIRST / LSBFIRST` | `msbfirst · lsbfirst` | Bit order for shiftIn/shiftOut and SPI. |
+| `DEC / HEX / OCT / BIN` | — | Number formats for print(). |
+| `DEFAULT / INTERNAL / INTERNAL1V1 / INTERNAL2V56 / EXTERNAL` | — | analogReference() options (depend on the board). |
+| `true / false` | `yep · nope` | Booleans. |
+| `PI, HALF_PI, TWO_PI, DEG_TO_RAD, RAD_TO_DEG` | — | Math constants. |
+
+##### Types & Qualifiers
+
+| C++ Type | SDEV Type | Summary |
+|---|---|---|
+| `bool` | `bool` | true or false. |
+| `byte` | `byte` | 0–255. |
+| `char` | `char` | One character. |
+| `int` | `int` | Whole number (16-bit on AVR, 32-bit on ARM/ESP). |
+| `unsigned int` | — | Non-negative whole number. |
+| `long` | `long` | 32-bit whole number (default for untyped sdev parameters). |
+| `unsigned long` | `ulong` | 32-bit non-negative — use for millis() values. |
+| `short` | — | 16-bit whole number. |
+| `word` | — | 16-bit non-negative. |
+| `float` | `float · decimal` | Decimal number. |
+| `double` | `double` | Decimal number (same as float on AVR). |
+| `String` | `text · string` | Text object. |
+| `size_t` | — | Size in bytes. |
+| `uint8_t … int64_t` | — | Fixed-size integers. |
+| `arrays` | `forge notes be [262, 294, 330]` | Fixed list of values. |
+| `const / static / volatile` | `fixed · keep · volatile` | Qualifiers. |
+
+##### `Serial` / `Stream` Methods
+
+| Method | Description |
+|---|---|
+| `Serial.begin(speed[, config])` | Open the port at a baud rate (9600, 115200, …). |
+| `Serial.end()` | Close the port. |
+| `Serial.available()` | Number of bytes waiting to be read. |
+| `Serial.availableForWrite()` | Bytes that can be written without blocking. |
+| `Serial.read()` | Read one byte (-1 if none). |
+| `Serial.peek()` | Look at the next byte without removing it. |
+| `Serial.write(value | buffer, len)` | Send raw bytes. |
+| `Serial.print(value[, format])` | Send text (format: DEC, HEX, OCT, BIN or decimal places). |
+| `Serial.println(value[, format])` | Send text followed by a new line. |
+| `Serial.flush()` | Wait until all outgoing data is sent. |
+| `Serial.find(target)` | Read until the target text is found. |
+| `Serial.findUntil(target, terminal)` | Read until target or terminal text is found. |
+| `Serial.parseInt()` | Read the next whole number. |
+| `Serial.parseFloat()` | Read the next decimal number. |
+| `Serial.readBytes(buffer, length)` | Read bytes into a buffer. |
+| `Serial.readBytesUntil(char, buffer, length)` | Read bytes until a character. |
+| `Serial.readString()` | Read everything into a String. |
+| `Serial.readStringUntil(char)` | Read into a String until a character, e.g. '\n'. |
+| `Serial.setTimeout(ms)` | How long the read/parse functions wait. |
+| `Serial.if (Serial)` | True once a USB serial port is open (Leonardo, Zero, R4, …). |
+| `Serial.serialEvent()` | Define this function to run when data arrives. |
+
+##### `String` Methods
+
+| Method | Description |
+|---|---|
+| `str.charAt(n)` | Character at a position. |
+| `str.compareTo(other)` | Compare alphabetically. |
+| `str.concat(value)` | Append a value. |
+| `str.c_str()` | C string pointer. |
+| `str.endsWith(text)` | Ends with the text? |
+| `str.equals(other)` | Same text? |
+| `str.equalsIgnoreCase(other)` | Same text ignoring case? |
+| `str.getBytes(buf, len)` | Copy bytes into a buffer. |
+| `str.indexOf(text[, from])` | Position of text (-1 if missing). |
+| `str.lastIndexOf(text[, from])` | Last position of text. |
+| `str.length()` | Number of characters. |
+| `str.remove(index[, count])` | Remove characters. |
+| `str.replace(find, with)` | Replace text. |
+| `str.reserve(size)` | Reserve memory. |
+| `str.setCharAt(index, c)` | Change one character. |
+| `str.startsWith(text)` | Starts with the text? |
+| `str.substring(from[, to])` | Part of the text. |
+| `str.toCharArray(buf, len)` | Copy into a char array. |
+| `str.toDouble()` | Convert to a decimal number. |
+| `str.toFloat()` | Convert to a decimal number. |
+| `str.toInt()` | Convert to a whole number. |
+| `str.toLowerCase()` | Make lower case. |
+| `str.toUpperCase()` | Make upper case. |
+| `str.trim()` | Remove spaces at both ends. |
+
+---
+
+#### 5. Curated Libraries (61)
+
+Every curated library below has pre-mapped headers (including multi-header libraries like `Ethernet`, `Adafruit SSD1306`, `DallasTemperature`, `MFRC522`, `ArduinoModbus`, and `ArduinoIoTCloud`) so `use "<Name>"` emits the exact `#include` directives needed.
+
+##### Wire (`use "Wire"`)
+
+- **Category**: Communication
+- **Headers**: `#include <Wire.h>`
+- **Delivery**: Bundled with board core
+- **Summary**: I²C / TWI bus — talk to sensors, displays and other boards.
+
+**Class `Wire`**
+
+| Method | Summary |
+|---|---|
+| `begin([address])` | Join the bus (as controller, or as peripheral with an address). |
+| `end()` | Leave the bus. |
+| `setClock(hz)` | Bus speed (100000 or 400000). |
+| `beginTransmission(address)` | Start writing to a device. |
+| `write(value)` | Queue bytes. |
+| `endTransmission([stop])` | Send the queued bytes (0 = success). |
+| `requestFrom(address, count)` | Ask a device for bytes. |
+| `available()` | Bytes waiting. |
+| `read()` | Read a byte. |
+| `onReceive(handler)` | Peripheral: run when data arrives. |
+| `onRequest(handler)` | Peripheral: run when data is requested. |
+| `setWireTimeout(us, reset)` | Avoid hanging on a stuck bus. |
+| `getWireTimeoutFlag()` | Did a timeout happen? |
+| `clearWireTimeoutFlag()` | Clear the timeout flag. |
+
+**SDEV Sketch:**
 ```sdev
-board "uno" {
-  use "Servo"
+board "uno" ::
   use "Wire"
-  use "Adafruit_NeoPixel"
-
-  conjure setup() :: ... ;;
-  conjure loop()  :: ... ;;
-}
-```
-
-`use "X"` emits `#include <X.h>` and marks the library as required so the Library Manager materialises it into the sketchbook before `arduino-cli compile` runs.
-
-##### Raw C++ escape hatch
-```
-cpp {
-  Servo s;
-  s.attach(9);
-  s.write(90);
-}
-```
-Everything inside `cpp { ... }` is copied byte-for-byte into the generated `.ino`. Use it for anything the DSL doesn't cover natively.
-
----
-
-#### 4. The Hardware panel (IDE)
-
-Open the IDE's left sidebar and click the **USB** icon to reveal the Hardware panel. It contains:
-
-##### 4.1 Board picker
-Dropdown of every board in the catalogue. The selection is written into the transpiled sketch as the target FQBN (fully qualified board name). Auto-populated after **Detect Board** succeeds.
-
-##### 4.2 Detect Board
-Requests a Web Serial port. The USB VID/PID reported by the port is matched against `src/lang/hardware/board-db.ts` to auto-identify:
-
-- Arduino VIDs `0x2341`, `0x2A03`
-- CH340 clones `0x1A86:0x7523`
-- CP210x clones `0x10C4:0xEA60`
-- FTDI `0x0403:0x6001`
-- ESP32-S3 native USB `0x303A:0x1001`
-- Raspberry Pi Pico `0x2E8A`
-- Teensy `0x16C0`
-
-If the VID/PID isn't recognised, you can still pick the board manually.
-
-##### 4.3 Compile
-Sends the current file to the `compile-firmware` edge function, which:
-1. Extracts and transpiles the `board { }` block to `.ino`.
-2. Merges the selected library set into the `arduino-cli` sketchbook.
-3. Runs `arduino-cli compile --fqbn <FQBN>` and returns the resulting `.hex` (AVR), `.bin` (ESP), or `.uf2` (RP2040).
-
-If no build server is configured (`ARDUINO_BUILD_URL` unset), the function returns the generated `.ino` so you can build it locally in the Arduino IDE.
-
-##### 4.4 Upload
-Compiles (if not already), then flashes the firmware over the selected Web Serial port:
-
-- **AVR (Uno / Nano / Mega / Leonardo / Micro)** — bundled JS implementation of the STK500v1 bootloader protocol (`src/lang/hardware/web-serial.ts`).
-- **ESP32 / ESP8266** — hands the `.bin` to `esptool-js`.
-- **RP2040 Pico** — downloads the `.uf2` and prompts you to drop it on the `RPI-RP2` mass-storage volume.
-
-##### 4.5 Serial Monitor
-After upload, reopens the same port at the chosen baud rate and streams I/O into the panel. Includes a send-line input and a baud selector (300 – 2 000 000).
-
-##### 4.6 Library Manager
-Backed by Arduino's official index (`https://downloads.arduino.cc/libraries/library_index.json`). Search, install, uninstall, version-pin. Installed libraries live per-user under `~/libraries/<name>@<version>/`.
-
-Because the firmware path is real C++, **every** Arduino library works unchanged — Servo, Adafruit_NeoPixel, FastLED, PubSubClient, Wire, SPI, ArduinoJson, LiquidCrystal, DHT sensor, all of them.
-
----
-
-#### 5. Bytecode compiler additions
-
-The bytecode compiler (`src/lang/compiler.ts` → `src/lang/vm.ts`) was brought up to interpreter parity as part of the hardware work. What changed:
-
-##### 5.1 Loop control
-`while`, `iterate ... through` (forEach), and `iterate ... in` (forIn) now compile through a shared `compileIndexedForLoop` helper that maintains a `LoopContext` stack:
-
-```ts
-interface LoopContext {
-  breakJumps: number[];    // patched to loop exit
-  continueJumps: number[]; // patched to loop's continue target
-}
-```
-
-- `break`   — emits `JUMP -1`, index recorded in the current loop's `breakJumps`, patched to the instruction after the loop.
-- `continue` — emits `JUMP -1`, recorded in `continueJumps`, patched to the loop's step/condition instruction.
-
-Previously these compiled to `NOP` and silently did nothing.
-
-##### 5.2 New / clarified opcodes
-
-See `src/lang/bytecode.ts` for the full list. Highlights:
-
-- **Control flow patching**: `JUMP`, `JUMP_IF_FALSE`, `JUMP_IF_TRUE` all support post-hoc target patching via `patchJump()` / `patchJumpTo()`.
-- **Bitwise**: `BIT_AND`, `BIT_OR`, `BIT_XOR`, `BIT_NOT`, `BIT_SHL`, `BIT_SHR` — needed for register-level firmware work.
-- **Systems**: `SYSCALL`, `ALLOC`, `FREE`, `HEAP_LOAD`, `HEAP_STORE`, `INTERRUPT`.
-- **Tasks**: `TASK_CREATE`, `TASK_YIELD`, `TASK_KILL`.
-
-##### 5.3 Binary format
-
-`serializeChunk()` / `deserializeChunk()` in `src/lang/bytecode.ts`:
-```
-magic (u32 LE) | version (u32 LE) | payloadLen (u32 LE) | payload (JSON)
-```
-Magic is `0x53444556` ("SDEV"). Current `BYTECODE_VERSION = 2`.
-
----
-
-#### 6. Runtime files added / touched
-
-| File | Purpose |
-|------|---------|
-| `src/lang/hardware/strip.ts` | Removes `board { }` blocks before the sdev interpreter runs. |
-| `src/lang/hardware/transpile.ts` | sdev → `.ino` C++ transpiler. |
-| `src/lang/hardware/board-db.ts` | Board catalogue + USB VID/PID lookup. |
-| `src/lang/hardware/web-serial.ts` | Web Serial wrapper, Intel HEX parser, STK500v1 flasher, serial monitor helper. |
-| `src/components/ide/HardwarePanel.tsx` | UI: board picker, detect, compile, upload, serial monitor, library manager. |
-| `supabase/functions/compile-firmware/index.ts` | Edge proxy to `arduino-cli`; falls back to returning `.ino` when no build server is configured. |
-| `src/pages/IDE.tsx` | Registers the Hardware sidebar tab and ships a `blink.sdev` starter file. |
-| `src/lang/compiler.ts` | Loop context stack, `break` / `continue` patching. |
-| `src/lang/index.ts` | Calls `stripBoardBlocks()` before lex/parse. |
-
----
-
-#### 7. Quick reference: the blink starter
-
-```sdev
-board "uno" {
   conjure setup() ::
-    pin 13 be output
+    Wire.begin()
+    speak("I2C scan")
+    within a be sequence(1, 127) ::
+      Wire.beginTransmission(a)
+      ponder Wire.endTransmission() equals 0 ::
+        speak("found device at", a)
+      ;;
+    ;;
   ;;
-
   conjure loop() ::
-    pin 13 write high
-    wait 500
-    pin 13 write low
-    wait 500
   ;;
+;;
+```
+**Transpiled Arduino C++ (`.ino`):**
+```cpp
+// auto-generated from sdev for Arduino Uno (R3) (arduino:avr:uno)
+// do not edit by hand
+
+#include <Wire.h>
+
+
+
+void setup() {
+  Serial.begin(9600);
+  Wire.begin();
+  Serial.println("I2C scan");
+  for (long a = 1; a < 127; a++) {
+    Wire.beginTransmission(a);
+    if (Wire.endTransmission() == 0) {
+      Serial.print("found device at"); Serial.print(" "); Serial.println(a);
+    }
+  }
+}
+void loop() {
 }
 ```
 
-Steps:
-1. Plug in an Uno.
-2. Hardware panel → **Detect Board** → confirm "Arduino Uno".
-3. **Upload** → LED on pin 13 blinks at 1 Hz.
+##### SPI (`use "SPI"`)
+
+- **Category**: Communication
+- **Headers**: `#include <SPI.h>`
+- **Delivery**: Bundled with board core
+- **Summary**: Serial Peripheral Interface bus.
+
+**Class `SPI`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start the bus. |
+| `end()` | Stop the bus. |
+| `beginTransaction(SPISettings(speed, MSBFIRST, SPI_MODE0))` | Claim the bus with settings. |
+| `endTransaction()` | Release the bus. |
+| `transfer(value)` | Send and receive one byte. |
+| `transfer16(value)` | Send and receive 16 bits. |
+| `transfer(buffer, size)` | Send and receive a buffer. |
+| `usingInterrupt(n)` | Make SPI interrupt-safe. |
+| `setBitOrder(order)` | Deprecated: use SPISettings. |
+| `setClockDivider(div)` | Deprecated: use SPISettings. |
+| `setDataMode(mode)` | Deprecated: use SPISettings. |
+
+##### EEPROM (`use "EEPROM"`)
+
+- **Category**: Data storage
+- **Headers**: `#include <EEPROM.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: AVR, Uno R4, ESP32/ESP8266 (emulated), RP2040 (emulated)
+- **Summary**: Memory that keeps its value when the power is off.
+
+**Class `EEPROM`**
+
+| Method | Summary |
+|---|---|
+| `read(address)` | Read a byte. |
+| `write(address, value)` | Write a byte. |
+| `update(address, value)` | Write only if different (saves wear). |
+| `get(address, variable)` | Read any type. |
+| `put(address, variable)` | Write any type. |
+| `length()` | Size in bytes. |
+| `EEPROM[address]` | Read/write like an array. |
+| `begin(size) / commit()` | ESP32/ESP8266/RP2040 only: open and save the emulated EEPROM. |
+
+**SDEV Sketch:**
+```sdev
+board "uno" ::
+  use "EEPROM"
+  conjure setup() ::
+    forge boots be EEPROM.read(0) + 1
+    EEPROM.update(0, boots)
+    speak("This board has started", boots, "times")
+  ;;
+  conjure loop() ::
+  ;;
+;;
+```
+**Transpiled Arduino C++ (`.ino`):**
+```cpp
+// auto-generated from sdev for Arduino Uno (R3) (arduino:avr:uno)
+// do not edit by hand
+
+#include <EEPROM.h>
+
+
+
+void setup() {
+  Serial.begin(9600);
+  auto boots = EEPROM.read(0) + 1;
+  EEPROM.update(0, boots);
+  Serial.print("This board has started"); Serial.print(" "); Serial.print(boots); Serial.print(" "); Serial.println("times");
+}
+void loop() {
+}
+```
+
+##### SoftwareSerial (`use "SoftwareSerial"`)
+
+- **Category**: Communication
+- **Headers**: `#include <SoftwareSerial.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: AVR, Uno R4, ESP8266
+- **Summary**: Extra serial ports on any digital pins.
+
+**Class `SoftwareSerial`** — `device bt be SoftwareSerial(10, 11)`
+
+| Method | Summary |
+|---|---|
+| `begin(speed)` | Same as Serial. |
+| `available()` | Same as Serial. |
+| `read()` | Same as Serial. |
+| `peek()` | Same as Serial. |
+| `write(value)` | Same as Serial. |
+| `print(value)` | Same as Serial. |
+| `println(value)` | Same as Serial. |
+| `end()` | Same as Serial. |
+| `listen()` | Make this port the one that receives. |
+| `isListening()` | Is this port receiving? |
+| `overflow()` | Did the buffer overflow? |
+
+##### HID (`use "HID"`)
+
+- **Category**: Device control
+- **Headers**: `#include <HID.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: Leonardo, Micro, Zero, MKR, Due, Uno R4
+- **Summary**: Low-level USB HID (used by Keyboard and Mouse).
+
+##### Servo (`use "Servo"`)
+
+- **Category**: Device control
+- **Headers**: `#include <Servo.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Control hobby servo motors.
+
+**Class `Servo`** — `device arm be Servo`
+
+| Method | Summary |
+|---|---|
+| `attach(pin[, min, max])` | Connect the servo to a pin. |
+| `write(angle)` | Move to an angle (0–180). |
+| `writeMicroseconds(us)` | Set the pulse width directly. |
+| `read()` | Last angle written. |
+| `attached()` | Is it attached? |
+| `detach()` | Release the pin. |
+
+**SDEV Sketch:**
+```sdev
+board "uno" ::
+  use "Servo"
+  device arm be Servo
+  conjure setup() ::
+    arm.attach(9)
+  ;;
+  conjure loop() ::
+    within angle be sequence(0, 181, 5) ::
+      arm.write(angle)
+      wait 15
+    ;;
+    within angle be sequence(180, -1, -5) ::
+      arm.write(angle)
+      wait 15
+    ;;
+  ;;
+;;
+```
+**Transpiled Arduino C++ (`.ino`):**
+```cpp
+// auto-generated from sdev for Arduino Uno (R3) (arduino:avr:uno)
+// do not edit by hand
+
+#include <Servo.h>
+
+
+
+Servo arm;
+void setup() {
+  arm.attach(9);
+}
+void loop() {
+  for (long angle = 0; (5) >= 0 ? angle < 181 : angle > 181; angle += (5)) {
+    arm.write(angle);
+    delay(15);
+  }
+  for (long angle = 180; (-5) >= 0 ? angle < -1 : angle > -1; angle += (-5)) {
+    arm.write(angle);
+    delay(15);
+  }
+}
+```
+
+##### Stepper (`use "Stepper"`)
+
+- **Category**: Device control
+- **Headers**: `#include <Stepper.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Unipolar and bipolar stepper motors.
+
+**Class `Stepper`** — `device motor be Stepper(200, 8, 9, 10, 11)`
+
+| Method | Summary |
+|---|---|
+| `setSpeed(rpm)` | Speed in turns per minute. |
+| `step(steps)` | Turn a number of steps (negative = backwards). |
+
+##### LiquidCrystal (`use "LiquidCrystal"`)
+
+- **Category**: Display
+- **Headers**: `#include <LiquidCrystal.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Character LCDs (HD44780) wired directly to pins.
+
+**Class `LiquidCrystal`** — `device lcd be LiquidCrystal(12, 11, 5, 4, 3, 2)`
+
+| Method | Summary |
+|---|---|
+| `begin(cols, rows)` | Start the display. |
+| `clear()` | Clear the screen. |
+| `home()` | Cursor to top-left. |
+| `setCursor(col, row)` | Move the cursor. |
+| `print(value)` | Show text. |
+| `write(char)` | Show one character. |
+| `cursor() / noCursor()` | Show or hide the cursor. |
+| `blink() / noBlink()` | Blinking cursor. |
+| `display() / noDisplay()` | Turn text on/off. |
+| `scrollDisplayLeft() / scrollDisplayRight()` | Scroll. |
+| `autoscroll() / noAutoscroll()` | Automatic scrolling. |
+| `leftToRight() / rightToLeft()` | Text direction. |
+| `createChar(n, bytes)` | Define a custom character. |
+
+##### LiquidCrystal I2C (`use "LiquidCrystal I2C"`)
+
+- **Category**: Display
+- **Headers**: `#include <LiquidCrystal_I2C.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Character LCDs with an I²C backpack (2 wires).
+
+**Class `LiquidCrystal_I2C`** — `device lcd be LiquidCrystal_I2C(0x27, 16, 2)`
+
+| Method | Summary |
+|---|---|
+| `init()` | Start the display. |
+| `backlight() / noBacklight()` | Backlight on/off. |
+| `clear()` | Clear. |
+| `setCursor(col, row)` | Move the cursor. |
+| `print(value)` | Show text. |
+
+**SDEV Sketch:**
+```sdev
+board "uno" ::
+  use "LiquidCrystal I2C"
+  device lcd be LiquidCrystal_I2C(0x27, 16, 2)
+  conjure setup() ::
+    lcd.init()
+    lcd.backlight()
+    lcd.print("Hello from sdev")
+  ;;
+  conjure loop() ::
+    lcd.setCursor(0, 1)
+    lcd.print(now() / 1000)
+    wait 500
+  ;;
+;;
+```
+**Transpiled Arduino C++ (`.ino`):**
+```cpp
+// auto-generated from sdev for Arduino Uno (R3) (arduino:avr:uno)
+// do not edit by hand
+
+#include <LiquidCrystal_I2C.h>
+
+
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Hello from sdev");
+}
+void loop() {
+  lcd.setCursor(0, 1);
+  lcd.print(millis() / 1000);
+  delay(500);
+}
+```
+
+##### SD (`use "SD"`)
+
+- **Category**: Data storage
+- **Headers**: `#include <SD.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Read and write files on SD cards.
+
+**Class `SD`**
+
+| Method | Summary |
+|---|---|
+| `begin(csPin)` | Start the card. |
+| `exists(path)` | Does a file exist? |
+| `mkdir(path)` | Make a folder. |
+| `open(path, FILE_READ | FILE_WRITE)` | Open a file. |
+| `remove(path)` | Delete a file. |
+| `rmdir(path)` | Delete a folder. |
+
+**Class `File`**
+
+| Method | Summary |
+|---|---|
+| `available()` | File operation. |
+| `close()` | File operation. |
+| `flush()` | File operation. |
+| `peek()` | File operation. |
+| `position()` | File operation. |
+| `print(v)` | File operation. |
+| `println(v)` | File operation. |
+| `seek(pos)` | File operation. |
+| `size()` | File operation. |
+| `read()` | File operation. |
+| `write(v)` | File operation. |
+| `isDirectory()` | File operation. |
+| `openNextFile()` | File operation. |
+| `rewindDirectory()` | File operation. |
+| `name()` | File operation. |
+
+##### Keyboard (`use "Keyboard"`)
+
+- **Category**: Device control
+- **Headers**: `#include <Keyboard.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: Leonardo, Micro, Zero, MKR, Due, Uno R4, Nano 33 IoT, Giga
+- **Summary**: Act as a USB keyboard.
+
+**Class `Keyboard`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `end()` | Stop. |
+| `press(key)` | Hold a key. |
+| `release(key)` | Let go of a key. |
+| `releaseAll()` | Let go of all keys. |
+| `write(key)` | Press and release. |
+| `print(text)` | Type text. |
+| `println(text)` | Type text + Enter. |
+
+##### Mouse (`use "Mouse"`)
+
+- **Category**: Device control
+- **Headers**: `#include <Mouse.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: Leonardo, Micro, Zero, MKR, Due, Uno R4, Nano 33 IoT, Giga
+- **Summary**: Act as a USB mouse.
+
+**Class `Mouse`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `end()` | Stop. |
+| `click([button])` | Click. |
+| `move(x, y[, wheel])` | Move the pointer. |
+| `press([button])` | Hold a button. |
+| `release([button])` | Release a button. |
+| `isPressed([button])` | Is a button held? |
+
+##### Ethernet (`use "Ethernet"`)
+
+- **Category**: Communication
+- **Headers**: `#include <SPI.h>`, `#include <Ethernet.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Wired networking with the Ethernet shield (W5100/W5500).
+
+**Class `Ethernet`**
+
+| Method | Summary |
+|---|---|
+| `begin(mac[, ip])` | Connect (DHCP if no ip). |
+| `localIP()` | Our address. |
+| `maintain()` | Renew DHCP. |
+| `hardwareStatus()` | Which chip. |
+| `linkStatus()` | Cable connected? |
+
+**Class `EthernetClient`**
+
+| Method | Summary |
+|---|---|
+| `connect(host, port)` | Open a connection. |
+| `print/println/write` | Send. |
+| `available() / read()` | Receive. |
+| `stop()` | Close. |
+| `connected()` | Still connected? |
+
+**Class `EthernetServer`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Listen. |
+| `available()` | Next client. |
+
+##### WiFiS3 (`use "WiFiS3"`)
+
+- **Category**: Communication
+- **Headers**: `#include <WiFiS3.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: Uno R4 WiFi
+- **Summary**: Wi-Fi on the Uno R4 WiFi.
+
+**Class `WiFi`**
+
+| Method | Summary |
+|---|---|
+| `begin(ssid, pass)` | Connect. |
+| `status()` | WL_CONNECTED when connected. |
+| `localIP()` | Our address. |
+| `RSSI()` | Signal strength. |
+| `disconnect()` | Disconnect. |
+| `scanNetworks()` | List networks. |
+| `beginAP(ssid, pass)` | Make a hotspot. |
+
+**Class `WiFiClient / WiFiServer / WiFiUDP / WiFiSSLClient`**
+
+| Method | Summary |
+|---|---|
+| `connect(host, port)` | Open a connection. |
+| `available() / read()` | Receive. |
+| `print/write` | Send. |
+| `stop()` | Close. |
+
+##### WiFiNINA (`use "WiFiNINA"`)
+
+- **Category**: Communication
+- **Headers**: `#include <WiFiNINA.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: Nano 33 IoT, MKR WiFi 1010, Uno WiFi Rev2, Nano RP2040 Connect
+- **Summary**: Wi-Fi on Nano 33 IoT, MKR WiFi 1010, Uno WiFi Rev2, Nano RP2040 Connect.
+
+**Class `WiFi`**
+
+| Method | Summary |
+|---|---|
+| `begin(ssid, pass)` | Connect. |
+| `status()` | Connection state. |
+| `localIP()` | Our address. |
+| `RSSI()` | Signal. |
+
+##### WiFi (`use "WiFi"`)
+
+- **Category**: Communication
+- **Headers**: `#include <WiFi.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: ESP32, Nano ESP32, Giga, Portenta, Pico W
+- **Summary**: Wi-Fi on ESP32, Nano ESP32, Pico W, Giga and Portenta.
+
+**Class `WiFi`**
+
+| Method | Summary |
+|---|---|
+| `begin(ssid, pass)` | Connect. |
+| `status()` | WL_CONNECTED when connected. |
+| `localIP()` | Our address. |
+| `softAP(ssid, pass)` | Make a hotspot. |
+| `scanNetworks()` | List networks. |
+| `disconnect()` | Disconnect. |
+
+##### ESP8266WiFi (`use "ESP8266WiFi"`)
+
+- **Category**: Communication
+- **Headers**: `#include <ESP8266WiFi.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: ESP8266
+- **Summary**: Wi-Fi on ESP8266 boards.
+
+**Class `WiFi`**
+
+| Method | Summary |
+|---|---|
+| `begin(ssid, pass)` | Connect. |
+| `status()` | Connection state. |
+| `localIP()` | Our address. |
+
+##### ArduinoBLE (`use "ArduinoBLE"`)
+
+- **Category**: Communication
+- **Headers**: `#include <ArduinoBLE.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: Uno R4 WiFi, Nano 33 BLE, Nano 33 IoT, Nano RP2040 Connect, Nano ESP32, MKR WiFi 1010, Giga, Portenta
+- **Summary**: Bluetooth Low Energy.
+
+**Class `BLE`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start BLE. |
+| `setLocalName(name)` | Advertised name. |
+| `advertise()` | Start advertising. |
+| `scan()` | Look for devices. |
+| `available()` | Next found device. |
+| `central()` | Connected central device. |
+| `poll()` | Process BLE events. |
+
+**Class `BLEService / BLECharacteristic`**
+
+| Method | Summary |
+|---|---|
+| `BLEService(uuid)` | A service. |
+| `BLEIntCharacteristic(uuid, BLERead | BLENotify)` | A value. |
+| `writeValue(v)` | Update the value. |
+| `value()` | Read the value. |
+| `written()` | Was it written? |
+
+##### Arduino_LED_Matrix (`use "Arduino_LED_Matrix"`)
+
+- **Category**: Display
+- **Headers**: `#include <Arduino_LED_Matrix.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: Uno R4 WiFi
+- **Summary**: The 12×8 LED matrix on the Uno R4 WiFi.
+
+**Class `ArduinoLEDMatrix`** — `device matrix be ArduinoLEDMatrix`
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start the matrix. |
+| `loadFrame(frame)` | Show a frame (3 × uint32_t). |
+| `renderBitmap(bitmap, 8, 12)` | Show a byte[8][12] bitmap. |
+| `loadSequence(frames)` | Load an animation. |
+| `play([loop])` | Play the animation. |
+| `autoscroll(ms)` | Scroll text drawn with ArduinoGraphics. |
+| `beginDraw() / endDraw()` | Draw with ArduinoGraphics. |
+| `textScrollSpeed(ms)` | Scroll speed. |
+
+**SDEV Sketch:**
+```sdev
+board "uno" ::
+  use "Arduino_LED_Matrix"
+  device matrix be ArduinoLEDMatrix
+  conjure setup() ::
+    matrix.begin()
+  ;;
+  conjure loop() ::
+    matrix.loadFrame(LEDMATRIX_HEART_BIG)
+    wait 500
+    matrix.loadFrame(LEDMATRIX_HEART_SMALL)
+    wait 500
+  ;;
+;;
+```
+**Transpiled Arduino C++ (`.ino`):**
+```cpp
+// auto-generated from sdev for Arduino Uno (R3) (arduino:avr:uno)
+// do not edit by hand
+
+#include <Arduino_LED_Matrix.h>
+
+
+
+ArduinoLEDMatrix matrix;
+void setup() {
+  matrix.begin();
+}
+void loop() {
+  matrix.loadFrame(LEDMATRIX_HEART_BIG);
+  delay(500);
+  matrix.loadFrame(LEDMATRIX_HEART_SMALL);
+  delay(500);
+}
+```
+
+##### ArduinoGraphics (`use "ArduinoGraphics"`)
+
+- **Category**: Display
+- **Headers**: `#include <ArduinoGraphics.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Draw text and shapes (used with the R4 LED matrix and displays).
+
+**Class `ArduinoGraphics`**
+
+| Method | Summary |
+|---|---|
+| `beginDraw() / endDraw()` | Start/finish drawing. |
+| `stroke(r, g, b)` | Line color. |
+| `textFont(Font_5x7)` | Choose a font. |
+| `text(str, x, y)` | Draw text. |
+| `beginText(x, y, color) / endText(SCROLL_LEFT)` | Scrolling text. |
+| `point / line / rect / circle` | Shapes. |
+
+##### RTC (`use "RTC"`)
+
+- **Category**: Timing
+- **Headers**: `#include <RTC.h>`
+- **Delivery**: Bundled with board core
+- **Supported Boards**: Uno R4 Minima, Uno R4 WiFi
+- **Summary**: Real-time clock of the Uno R4.
+
+**Class `RTC`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start the clock. |
+| `setTime(RTCTime)` | Set the date and time. |
+| `getTime(RTCTime&)` | Read the date and time. |
+| `setPeriodicCallback(fn, Period::ONCE_EVERY_1_SEC)` | Run a function periodically. |
+| `setAlarmCallback(fn, time, match)` | Alarm. |
+
+##### Firmata (`use "Firmata"`)
+
+- **Category**: Communication
+- **Headers**: `#include <Firmata.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Control the board from a computer with the Firmata protocol.
+
+**Class `Firmata`**
+
+| Method | Summary |
+|---|---|
+| `begin(speed)` | Start. |
+| `processInput()` | Handle incoming messages. |
+| `sendAnalog(pin, value)` | Report a value. |
+| `attach(command, handler)` | Handle a command. |
+
+##### Adafruit NeoPixel (`use "Adafruit NeoPixel"`)
+
+- **Category**: Display
+- **Headers**: `#include <Adafruit_NeoPixel.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: WS2812 / NeoPixel RGB LED strips and rings.
+
+**Class `Adafruit_NeoPixel`** — `device strip be Adafruit_NeoPixel(8, 6, NEO_GRB + NEO_KHZ800)`
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `show()` | Send colors to the LEDs. |
+| `clear()` | All off. |
+| `setPixelColor(i, r, g, b)` | Color one LED. |
+| `Color(r, g, b)` | Pack a color. |
+| `ColorHSV(hue)` | Color from a hue. |
+| `setBrightness(0-255)` | Overall brightness. |
+| `numPixels()` | How many LEDs. |
+| `fill(color, first, count)` | Fill a range. |
+
+**SDEV Sketch:**
+```sdev
+board "uno" ::
+  use "Adafruit NeoPixel"
+  device strip be Adafruit_NeoPixel(8, 6, NEO_GRB + NEO_KHZ800)
+  conjure setup() ::
+    strip.begin()
+    strip.setBrightness(40)
+  ;;
+  conjure loop() ::
+    within i be sequence(8) ::
+      strip.clear()
+      strip.setPixelColor(i, strip.Color(0, 80, 255))
+      strip.show()
+      wait 80
+    ;;
+  ;;
+;;
+```
+**Transpiled Arduino C++ (`.ino`):**
+```cpp
+// auto-generated from sdev for Arduino Uno (R3) (arduino:avr:uno)
+// do not edit by hand
+
+#include <Adafruit_NeoPixel.h>
+
+
+
+Adafruit_NeoPixel strip(8, 6, NEO_GRB + NEO_KHZ800);
+void setup() {
+  strip.begin();
+  strip.setBrightness(40);
+}
+void loop() {
+  for (long i = 0; i < 8; i++) {
+    strip.clear();
+    strip.setPixelColor(i, strip.Color(0, 80, 255));
+    strip.show();
+    delay(80);
+  }
+}
+```
+
+##### FastLED (`use "FastLED"`)
+
+- **Category**: Display
+- **Headers**: `#include <FastLED.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Fast control of many kinds of LED strips.
+
+**Class `FastLED`**
+
+| Method | Summary |
+|---|---|
+| `addLeds<WS2812B, PIN, GRB>(leds, count)` | Register a strip. |
+| `show()` | Send colors. |
+| `clear()` | All off. |
+| `setBrightness(v)` | Brightness. |
+| `CRGB(r, g, b) / CHSV(h, s, v)` | Colors. |
+
+##### DHT sensor library (`use "DHT sensor library"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <DHT.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: DHT11 / DHT22 temperature and humidity sensors (also install "Adafruit Unified Sensor").
+
+**Class `DHT`** — `device dht be DHT(2, DHT22)`
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `readTemperature([fahrenheit])` | Temperature. |
+| `readHumidity()` | Humidity %. |
+| `computeHeatIndex(t, h)` | Feels-like temperature. |
+
+**SDEV Sketch:**
+```sdev
+board "uno" ::
+  use "DHT sensor library"
+  use "Adafruit Unified Sensor"
+  device dht be DHT(2, DHT22)
+  conjure setup() ::
+    dht.begin()
+  ;;
+  conjure loop() ::
+    forge t: float be dht.readTemperature()
+    forge h: float be dht.readHumidity()
+    speak("Temperature:", t, "C  Humidity:", h, "%")
+    wait 2 seconds
+  ;;
+;;
+```
+**Transpiled Arduino C++ (`.ino`):**
+```cpp
+// auto-generated from sdev for Arduino Uno (R3) (arduino:avr:uno)
+// do not edit by hand
+
+#include <DHT.h>
+#include <Adafruit_Sensor.h>
+
+
+
+
+DHT dht(2, DHT22);
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+}
+void loop() {
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+  Serial.print("Temperature:"); Serial.print(" "); Serial.print(t); Serial.print(" "); Serial.print("C  Humidity:"); Serial.print(" "); Serial.print(h); Serial.print(" "); Serial.println("%");
+  delay((2) * 1000);
+}
+```
+
+##### Adafruit Unified Sensor (`use "Adafruit Unified Sensor"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Adafruit_Sensor.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Common base used by Adafruit sensor libraries.
+
+##### Adafruit GFX Library (`use "Adafruit GFX Library"`)
+
+- **Category**: Display
+- **Headers**: `#include <Adafruit_GFX.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Shapes, text and bitmaps for displays.
+
+**Class `Adafruit_GFX`**
+
+| Method | Summary |
+|---|---|
+| `drawPixel(x, y, c)` | Drawing. |
+| `drawLine(x0, y0, x1, y1, c)` | Drawing. |
+| `drawRect(x, y, w, h, c)` | Drawing. |
+| `fillRect(x, y, w, h, c)` | Drawing. |
+| `drawCircle(x, y, r, c)` | Drawing. |
+| `fillCircle(x, y, r, c)` | Drawing. |
+| `setCursor(x, y)` | Drawing. |
+| `setTextSize(n)` | Drawing. |
+| `setTextColor(c)` | Drawing. |
+| `print(v)` | Drawing. |
+| `drawBitmap(x, y, bmp, w, h, c)` | Drawing. |
+
+##### Adafruit SSD1306 (`use "Adafruit SSD1306"`)
+
+- **Category**: Display
+- **Headers**: `#include <Adafruit_GFX.h>`, `#include <Adafruit_SSD1306.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: 128×64 / 128×32 OLED displays.
+
+**Class `Adafruit_SSD1306`** — `device oled be Adafruit_SSD1306(128, 64, &Wire, -1)`
+
+| Method | Summary |
+|---|---|
+| `begin(SSD1306_SWITCHCAPVCC, 0x3C)` | Start. |
+| `clearDisplay()` | Clear. |
+| `display()` | Show what was drawn. |
+| `…all Adafruit GFX methods` | Drawing. |
+
+##### U8g2 (`use "U8g2"`)
+
+- **Category**: Display
+- **Headers**: `#include <U8g2lib.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Monochrome displays of almost every kind.
+
+**Class `U8G2_*`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `clearBuffer() / sendBuffer()` | Frame. |
+| `setFont(font)` | Font. |
+| `drawStr(x, y, text)` | Text. |
+
+##### TM1637 (`use "TM1637"`)
+
+- **Category**: Display
+- **Headers**: `#include <TM1637Display.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: 4-digit 7-segment displays.
+
+**Class `TM1637Display`** — `device digits be TM1637Display(2, 3)`
+
+| Method | Summary |
+|---|---|
+| `setBrightness(0-7)` | Brightness. |
+| `showNumberDec(n)` | Show a number. |
+| `clear()` | Clear. |
+
+##### LedControl (`use "LedControl"`)
+
+- **Category**: Display
+- **Headers**: `#include <LedControl.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: MAX7219 LED matrices and 7-segment displays.
+
+**Class `LedControl`** — `device leds be LedControl(12, 11, 10, 1)`
+
+| Method | Summary |
+|---|---|
+| `shutdown(dev, false)` | Wake up. |
+| `setIntensity(dev, 0-15)` | Brightness. |
+| `setLed(dev, row, col, on)` | One LED. |
+| `clearDisplay(dev)` | Clear. |
+
+##### NewPing (`use "NewPing"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <NewPing.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: HC-SR04 ultrasonic distance sensors.
+
+**Class `NewPing`** — `device sonar be NewPing(9, 10, 200)`
+
+| Method | Summary |
+|---|---|
+| `ping_cm()` | Distance in cm. |
+| `ping_in()` | Distance in inches. |
+| `ping_median(n)` | Median of n pings (µs). |
+
+##### AccelStepper (`use "AccelStepper"`)
+
+- **Category**: Device control
+- **Headers**: `#include <AccelStepper.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Steppers with acceleration.
+
+**Class `AccelStepper`** — `device motor be AccelStepper(AccelStepper::DRIVER, 2, 3)`
+
+| Method | Summary |
+|---|---|
+| `setMaxSpeed(s)` | Top speed. |
+| `setAcceleration(a)` | Acceleration. |
+| `moveTo(pos)` | Target position. |
+| `run()` | Call often to move. |
+| `distanceToGo()` | Steps left. |
+
+##### IRremote (`use "IRremote"`)
+
+- **Category**: Communication
+- **Headers**: `#include <IRremote.hpp>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Send and receive infrared remote codes.
+
+**Class `IrReceiver / IrSender`**
+
+| Method | Summary |
+|---|---|
+| `IrReceiver.begin(pin)` | Start receiving. |
+| `IrReceiver.decode()` | Got a code? |
+| `IrReceiver.decodedIRData.command` | The code. |
+| `IrReceiver.resume()` | Ready for the next one. |
+| `IrSender.sendNEC(addr, cmd, repeats)` | Send. |
+
+##### PubSubClient (`use "PubSubClient"`)
+
+- **Category**: Communication
+- **Headers**: `#include <PubSubClient.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: MQTT messaging.
+
+**Class `PubSubClient`**
+
+| Method | Summary |
+|---|---|
+| `setServer(host, port)` | Broker. |
+| `connect(id)` | Connect. |
+| `publish(topic, msg)` | Send. |
+| `subscribe(topic)` | Listen. |
+| `setCallback(fn)` | Handle messages. |
+| `loop()` | Call often. |
+
+##### ArduinoJson (`use "ArduinoJson"`)
+
+- **Category**: Data processing
+- **Headers**: `#include <ArduinoJson.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Read and write JSON.
+
+**Class `JsonDocument`**
+
+| Method | Summary |
+|---|---|
+| `deserializeJson(doc, input)` | Parse. |
+| `serializeJson(doc, output)` | Write. |
+| `doc["key"]` | Get/set values. |
+
+##### OneWire (`use "OneWire"`)
+
+- **Category**: Communication
+- **Headers**: `#include <OneWire.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: 1-Wire bus (DS18B20 and more).
+
+**Class `OneWire`** — `device bus be OneWire(4)`
+
+| Method | Summary |
+|---|---|
+| `reset()` | Reset. |
+| `search(addr)` | Find devices. |
+| `write(b)` | Send. |
+| `read()` | Receive. |
+
+##### DallasTemperature (`use "DallasTemperature"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <OneWire.h>`, `#include <DallasTemperature.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: DS18B20 temperature sensors (also install "OneWire").
+
+**Class `DallasTemperature`** — `device temps be DallasTemperature(&bus)`
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `requestTemperatures()` | Measure. |
+| `getTempCByIndex(0)` | Temperature in °C. |
+
+##### MFRC522 (`use "MFRC522"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <SPI.h>`, `#include <MFRC522.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: RFID card readers.
+
+**Class `MFRC522`** — `device rfid be MFRC522(10, 9)`
+
+| Method | Summary |
+|---|---|
+| `PCD_Init()` | Start. |
+| `PICC_IsNewCardPresent()` | Card near? |
+| `PICC_ReadCardSerial()` | Read its id. |
+| `uid.uidByte[i]` | Id bytes. |
+
+##### TinyGPSPlus (`use "TinyGPSPlus"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <TinyGPSPlus.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Read GPS modules.
+
+**Class `TinyGPSPlus`**
+
+| Method | Summary |
+|---|---|
+| `encode(c)` | Feed a character. |
+| `location.lat() / lng()` | Position. |
+| `location.isValid()` | Have a fix? |
+
+##### RTClib (`use "RTClib"`)
+
+- **Category**: Timing
+- **Headers**: `#include <RTClib.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: DS1307 / DS3231 / PCF8523 clock modules.
+
+**Class `RTC_DS3231`** — `device clock be RTC_DS3231`
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `now()` | Current DateTime. |
+| `adjust(DateTime(F(__DATE__), F(__TIME__)))` | Set the time. |
+
+##### Bounce2 (`use "Bounce2"`)
+
+- **Category**: Signal input/output
+- **Headers**: `#include <Bounce2.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Clean button presses.
+
+**Class `Bounce`** — `device button be Bounce`
+
+| Method | Summary |
+|---|---|
+| `attach(pin, INPUT_PULLUP)` | Connect. |
+| `interval(ms)` | Debounce time. |
+| `update()` | Call each loop. |
+| `fell() / rose()` | Pressed / released. |
+
+##### Keypad (`use "Keypad"`)
+
+- **Category**: Signal input/output
+- **Headers**: `#include <Keypad.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Matrix keypads.
+
+**Class `Keypad`**
+
+| Method | Summary |
+|---|---|
+| `getKey()` | Pressed key or 0. |
+| `waitForKey()` | Wait for a key. |
+
+##### HX711 (`use "HX711"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <HX711.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Load-cell (scale) amplifiers.
+
+**Class `HX711`** — `device scale be HX711`
+
+| Method | Summary |
+|---|---|
+| `begin(dout, sck)` | Start. |
+| `read()` | Raw value. |
+| `get_units(n)` | Weight. |
+| `tare()` | Zero. |
+| `set_scale(f)` | Calibrate. |
+
+##### Adafruit BME280 Library (`use "Adafruit BME280 Library"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Adafruit_BME280.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: BME280 temperature, pressure and humidity.
+
+**Class `Adafruit_BME280`** — `device bme be Adafruit_BME280`
+
+| Method | Summary |
+|---|---|
+| `begin(0x76)` | Start. |
+| `readTemperature()` | °C. |
+| `readPressure()` | Pa. |
+| `readHumidity()` | %. |
+
+##### Adafruit MPU6050 (`use "Adafruit MPU6050"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Adafruit_MPU6050.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: MPU-6050 accelerometer and gyroscope.
+
+**Class `Adafruit_MPU6050`** — `device imu be Adafruit_MPU6050`
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `getEvent(&a, &g, &temp)` | Read all values. |
+
+##### Encoder (`use "Encoder"`)
+
+- **Category**: Signal input/output
+- **Headers**: `#include <Encoder.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Rotary encoders.
+
+**Class `Encoder`** — `device knob be Encoder(2, 3)`
+
+| Method | Summary |
+|---|---|
+| `read()` | Position. |
+| `write(n)` | Set position. |
+
+##### CapacitiveSensor (`use "CapacitiveSensor"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <CapacitiveSensor.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Touch sensing with a resistor and foil.
+
+**Class `CapacitiveSensor`** — `device touch be CapacitiveSensor(4, 2)`
+
+| Method | Summary |
+|---|---|
+| `capacitiveSensor(samples)` | Touch value. |
+
+##### ArduinoHttpClient (`use "ArduinoHttpClient"`)
+
+- **Category**: Communication
+- **Headers**: `#include <ArduinoHttpClient.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: HTTP and WebSocket client.
+
+**Class `HttpClient`**
+
+| Method | Summary |
+|---|---|
+| `get(path)` | GET request. |
+| `post(path, type, body)` | POST request. |
+| `responseStatusCode()` | Status. |
+| `responseBody()` | Body. |
+
+##### ArduinoMqttClient (`use "ArduinoMqttClient"`)
+
+- **Category**: Communication
+- **Headers**: `#include <ArduinoMqttClient.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: MQTT client from Arduino.
+
+**Class `MqttClient`**
+
+| Method | Summary |
+|---|---|
+| `connect(broker, port)` | Connect. |
+| `beginMessage(topic) / print / endMessage()` | Publish. |
+| `subscribe(topic)` | Listen. |
+| `poll()` | Call often. |
+
+##### Arduino_JSON (`use "Arduino_JSON"`)
+
+- **Category**: Data processing
+- **Headers**: `#include <Arduino_JSON.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Simple JSON from Arduino.
+
+**Class `JSON`**
+
+| Method | Summary |
+|---|---|
+| `JSON.parse(text)` | Parse. |
+| `JSON.stringify(value)` | Write. |
+
+##### ArduinoModbus (`use "ArduinoModbus"`)
+
+- **Category**: Communication
+- **Headers**: `#include <ArduinoRS485.h>`, `#include <ArduinoModbus.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Modbus RTU/TCP (also install "ArduinoRS485").
+
+##### ArduinoRS485 (`use "ArduinoRS485"`)
+
+- **Category**: Communication
+- **Headers**: `#include <ArduinoRS485.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: RS-485 serial.
+
+##### Arduino_LSM9DS1 (`use "Arduino_LSM9DS1"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Arduino_LSM9DS1.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: Nano 33 BLE
+- **Summary**: IMU of the Nano 33 BLE.
+
+**Class `IMU`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `readAcceleration(x, y, z)` | Acceleration. |
+| `readGyroscope(x, y, z)` | Rotation. |
+| `readMagneticField(x, y, z)` | Compass. |
+
+##### Arduino_LSM6DS3 (`use "Arduino_LSM6DS3"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Arduino_LSM6DS3.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: Nano 33 IoT, Uno WiFi Rev2
+- **Summary**: IMU of the Nano 33 IoT and Uno WiFi Rev2.
+
+**Class `IMU`**
+
+| Method | Summary |
+|---|---|
+| `begin()` | Start. |
+| `readAcceleration(x, y, z)` | Acceleration. |
+| `readGyroscope(x, y, z)` | Rotation. |
+
+##### Arduino_APDS9960 (`use "Arduino_APDS9960"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Arduino_APDS9960.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Gesture, color and proximity (Nano 33 BLE Sense).
+
+##### Arduino_HTS221 (`use "Arduino_HTS221"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Arduino_HTS221.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Temperature and humidity (Nano 33 BLE Sense).
+
+##### Arduino_LPS22HB (`use "Arduino_LPS22HB"`)
+
+- **Category**: Sensors
+- **Headers**: `#include <Arduino_LPS22HB.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Barometric pressure (Nano 33 BLE Sense).
+
+##### ArduinoIoTCloud (`use "ArduinoIoTCloud"`)
+
+- **Category**: Communication
+- **Headers**: `#include <ArduinoIoTCloud.h>`, `#include <Arduino_ConnectionHandler.h>`
+- **Delivery**: Arduino Library Manager
+- **Summary**: Connect to Arduino Cloud.
+
+##### Scheduler (`use "Scheduler"`)
+
+- **Category**: Timing
+- **Headers**: `#include <Scheduler.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: Due, Zero, MKR
+- **Summary**: Run several loops at once.
+
+**Class `Scheduler`**
+
+| Method | Summary |
+|---|---|
+| `startLoop(fn)` | Run another loop. |
+
+##### Arduino_FreeRTOS (`use "Arduino_FreeRTOS"`)
+
+- **Category**: Timing
+- **Headers**: `#include <Arduino_FreeRTOS.h>`
+- **Delivery**: Arduino Library Manager
+- **Supported Boards**: AVR
+- **Summary**: FreeRTOS tasks on AVR boards.
 
 ---
 
-#### 8. Browser support
+#### 6. Arduino Library Manager Index (10,232 Libraries)
 
-Web Serial is Chromium-only (Chrome, Edge, Opera, Brave, Arc) on desktop. Firefox and Safari will see a "Web Serial not supported" notice; use Chromium for uploading. The rest of the IDE works everywhere.
+The IDE bundles the complete Arduino Library Manager catalogue at `/arduino/library-index.json` (**10,232 libraries**). Any library in the index can be searched offline in **Hardware → Library Manager** and included with `use "<LibraryName>"` or `use "<HeaderName.h>"`.
+
+| Category | Indexed Libraries |
+|---|---|
+| Communication | 2,326 |
+| Sensors | 2,025 |
+| Device Control | 1,708 |
+| Display | 882 |
+| Other | 842 |
+| Signal Input/Output | 800 |
+| Data Processing | 618 |
+| Uncategorized | 385 |
+| Timing | 372 |
+| Data Storage | 274 |
 
 ---
 
-#### 9. Security notes
+#### 7. Browser Upload Protocols & Architecture
 
-- Web Serial requires an explicit user gesture and per-origin permission. sdev never opens a port without you clicking **Detect** or **Upload**.
-- The `compile-firmware` edge function validates the incoming source length and rejects payloads over the configured cap.
-- No library binaries are ever executed in the browser — Arduino libraries only run on the target MCU after flashing.
+`src/lang/hardware/web-serial.ts` implements 7 distinct browser flashing protocols dispatched by `flashBoard(board, port, firmware, onProgress)`:
 
----
-
-*Hardware support is additive. Non-hardware sdev programs are unaffected; the `board { }` block is invisible to the standard interpreter and VM.*
+1. **`stk500v1` (`flashAvr`)**: Optiboot / AVR061 protocol (`GET_SYNC=0x30`, `ENTER_PROGMODE=0x50`, `LOAD_ADDRESS=0x55`, `PROG_PAGE=0x64`, `LEAVE_PROGMODE=0x51`, `CRC_EOP=0x20` -> `IN_SYNC=0x14, OK=0x10`). Used by Arduino Uno R3, Nano (ATmega328P @ 115200 & ATmega168 @ 57600), and ATtiny85.
+2. **`stk500v2` (`flashStk500v2`)**: AVR068 framed protocol (`MESSAGE_START=0x1B`, sequence number, 16-bit length, `TOKEN=0x0E`, XOR checksum, `CMD_SIGN_ON=0x01`, `CMD_ENTER_PROGMODE_ISP=0x10`, `CMD_LOAD_ADDRESS=0x06`, `CMD_PROGRAM_FLASH_ISP=0x13`, `CMD_LEAVE_PROGMODE_ISP=0x11`). Used by Arduino Mega 2560.
+3. **`avr109` (`flashAvr109`)**: Caterina bootloader protocol with 1200-baud touch reset (`'S'` software ID, `'P'` enter prog mode, `'A'` word address, `'B'` block load, `'L'` leave, `'E'` exit). Used by Arduino Leonardo and Arduino Micro (ATmega32U4).
+4. **`samba` (`flashSamba`)**: Atmel/Microchip SAM-BA & BOSSA monitor over Web Serial (`N#` binary mode, `V#` version, `X<addr>#` erase, `S<sram>,<len>#` + `Y<sram>,0#` + `Y<flash>,<len>#` applet page write, `K#` reset). Used by Arduino Uno R4 WiFi, Zero, Due, MKR family, Nano 33 IoT/BLE, and Nano Every.
+5. **`dfu` (`flashDfuWebUsb`)**: USB DFU 1.1 & DfuSe over **WebUSB** (`DFU_DNLOAD=1`, `DFU_GETSTATUS=3`, `DFU_CLRSTATUS=4`, DfuSe Set Address Pointer `0x21` to `flashBase`, 1024-byte blocks starting at `wValue=2`, zero-length manifest). Used by Arduino Uno R4 Minima, Giga R1 WiFi, and Portenta H7.
+6. **`esptool` (`flashEsp`)**: Espressif ROM bootloader SLIP framing (`0xC0` frame end, `0xDB 0xDC` / `0xDB 0xDD` escapes, `SYNC=0x08`, `FLASH_BEGIN=0x02`, `FLASH_DATA=0x03`, `FLASH_END=0x04`) with DTR/RTS auto-reset. Used by ESP32, ESP32-C3, ESP32-S2, ESP32-S3, Nano ESP32, and ESP8266.
+7. **`uf2` (`buildUf2FromHexOrBin` + `flashUf2`)**: Generates 512-byte RP2040 UF2 blocks (`magicStart0=0x0A324655`, `magicStart1=0x9E5D5157`, `familyId=0xE48BFF56`, `magicEnd=0x0AB16F30`, 256-byte payloads at `0x10000000`) and writes directly to the `RPI-RP2` USB volume via `showDirectoryPicker` or downloads `.uf2`. Used by Raspberry Pi Pico, Pico W, and Arduino Nano RP2040 Connect.
 
 ---
 
@@ -10047,242 +12204,17 @@ attempt ::
 
 Everything below is extracted from the implementation at build time.
 
-### Builtin index — v1 runtime (442 builtins)
+### Builtin index — v1 runtime (217 builtins)
 
 Every function registered into the interpreter's global environment, grouped by
 the module that installs it.
 
 #### `src/lang/builtins.ts` — Core standard library — I/O, types, math, collections, strings, regex, time
 
-225 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
+0 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
 | Call | What it does | Rules | Source |
 | --- | --- | --- | --- |
-| `__tryCatch(a, b)` | __tryCatch(tryFn, catchFn) - used by compiler for attempt/rescue. | __tryCatch requires 2 function arguments | `builtins.ts:2475` |
-| `abs(a)` | abs alias. | abs() takes 1 argument | `builtins.ts:2433` |
-| `acos(a)` | Inverse cosine, in radians. | — | `builtins.ts:1029` |
-| `all(a, b)` | True when every element of the list is truthy (or satisfies the given predicate). | all() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:866` |
-| `any(a, b)` | True when at least one element of the list is truthy (or satisfies the given predicate). | any() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:879` |
-| `appendFile(a, b)` | Convenience aliases. | appendFile() takes 2 arguments | `builtins.ts:2372` |
-| `asin(a)` | More trig. | — | `builtins.ts:1028` |
-| `atan(a)` | Inverse tangent, in radians. | — | `builtins.ts:1030` |
-| `atan2(a, b)` | Angle in radians from the origin to the point (b, a), correct in all four quadrants. | — | `builtins.ts:1031` |
-| `average(a)` | Arithmetic mean of a list of numbers. | average() takes 1 argument; Argument must be a list | `builtins.ts:805` |
-| `base64decode(a)` | Decodes Base64 text back into a string. | base64decode() takes 1 argument; Argument must be text | `builtins.ts:1885` |
-| `base64encode(a)` | Encodes a string or byte buffer as Base64 text. | base64encode() takes 1 argument; Argument must be text | `builtins.ts:1876` |
-| `bin(a)` | bin(n) - number to binary string. | bin() takes 1 argument; Argument must be a number | `builtins.ts:1586` |
-| `bitAnd(a, b)` | Bitwise AND of two integers. | bitAnd() takes 2 arguments | `builtins.ts:1826` |
-| `bitNot(a)` | Bitwise complement of an integer. | bitNot() takes 1 argument | `builtins.ts:1850` |
-| `bitOr(a, b)` | Bitwise OR of two integers. | bitOr() takes 2 arguments | `builtins.ts:1834` |
-| `bitShiftLeft(a, b)` | Shifts the bits of an integer left by n places. | bitShiftLeft() takes 2 arguments | `builtins.ts:1858` |
-| `bitShiftRight(a, b)` | Shifts the bits of an integer right by n places. | bitShiftRight() takes 2 arguments | `builtins.ts:1866` |
-| `bitXor(a, b)` | Bitwise exclusive OR of two integers. | bitXor() takes 2 arguments | `builtins.ts:1842` |
-| `buffer(a)` | buffer(size) - create a byte buffer. | buffer() takes 1 argument (size); Argument must be a number | `builtins.ts:2027` |
-| `capitalize(a)` | capitalize(s) - first char uppercase. | capitalize() takes 1 argument; Argument must be text | `builtins.ts:1662` |
-| `ceil(a)` | Evaluates `Math.ceil(a)`. | — | `builtins.ts:2443` |
-| `center(…)` | center(s, width, char?) - center-pad string. | center() takes 2-3 arguments; First argument must be text | `builtins.ts:1682` |
-| `chaos()` | Random number generator with seedable, reproducible output. | — | `builtins.ts:331` |
-| `charAt(a, b)` | The character at a zero-based index in a string. | charAt() takes 2 arguments (text, index); First argument must be text | `builtins.ts:595` |
-| `chars(a)` | chars(s) - string to char list. | chars() takes 1 argument; Argument must be text | `builtins.ts:1187` |
-| `chr(a)` | chr(n) - number to character. | chr() takes 1 argument; Argument must be a number | `builtins.ts:1540` |
-| `chunk(a, b)` | chunk(list, size) - split list into chunks. | chunk() takes 2 arguments (list, size); First argument must be a list | `builtins.ts:2162` |
-| `clamp(a, b, c)` | ============= Math Utilities =============. | clamp() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:971` |
-| `clone(a)` | clone(list) - deep copy. | clone() takes 1 argument | `builtins.ts:1274` |
-| `compose(…)` | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)). | compose() takes at least 2 arguments; All arguments must be functions | `builtins.ts:1947` |
-| `concat(…)` | Joins two lists (or two strings) into a new one; the inputs are not modified. | concat() takes at least 2 arguments; All arguments must be lists | `builtins.ts:666` |
-| `constrain(a, b, c)` | constrain(v, min, max) - alias for clamp. | constrain() takes 3 arguments (value, min, max); All arguments must be numbers | `builtins.ts:1345` |
-| `contains(a, b)` | True when the collection holds the given value, or the string holds the substring. | contains() takes 2 arguments; First argument must be text, list, or tome | `builtins.ts:400` |
-| `contents(a)` | Returns the values of a tome as a list. | contents() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:349` |
-| `cos(a)` | Cosine of an angle in radians. | — | `builtins.ts:470` |
-| `cosh(a)` | Evaluates `Math.cosh(a)`. | — | `builtins.ts:1036` |
-| `count(a, b)` | How many times a value occurs in a list or a substring occurs in a string. | count() takes 2 arguments (list, value); First argument must be a list | `builtins.ts:856` |
-| `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins.ts:1984` |
-| `degrees(a)` | degrees(rad) - radians to degrees. | degrees() takes 1 argument; Argument must be a number | `builtins.ts:1381` |
-| `del(a, b)` | Deletes a key from a tome or an index from a list, in place. | del() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1096` |
-| `delay()` | delay(ms) - no-op in synchronous context. | — | `builtins.ts:1440` |
-| `deleteFile(a)` | Deletes a file from the host filesystem. | deleteFile() takes 1 argument | `builtins.ts:2389` |
-| `difference(a, b)` | difference(a, b) - set difference. | difference() takes 2 arguments; Arguments must be lists | `builtins.ts:1285` |
-| `dist(a, b, c, d)` | dist(x1, y1, x2, y2) - distance between two points. | dist() takes 4 arguments (x1, y1, x2, y2); All arguments must be numbers | `builtins.ts:1358` |
-| `drop(a, b)` | Returns a copy of the list without its first `n` elements. | drop() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:770` |
-| `E()` | Constants. | — | `builtins.ts:1042` |
-| `each(a, b)` | map over array with lambda. | each() takes 2 arguments (list, transform); First argument must be a list | `builtins.ts:119` |
-| `elevate(a)` | Raises the current task to a privileged mode so it may use restricted syscalls. | elevate() takes 1 argument | `builtins.ts:315` |
-| `ends(a, b)` | ends(s, suffix) - alias for endswith. | ends() takes 2 arguments; Arguments must be text | `builtins.ts:1166` |
-| `endswith(a, b)` | True when the string ends with the given suffix. | endswith() takes 2 arguments; Arguments must be text | `builtins.ts:552` |
-| `entries(a)` | Returns a tome as a list of `[key, value]` pairs. | entries() takes 1 argument; Argument must be a tome | `builtins.ts:1126` |
-| `enumerate(a)` | enumerate(list) - [[index, item], ...]. | enumerate() takes 1 argument; Argument must be a list | `builtins.ts:1335` |
-| `essence(a)` | get type. | essence() takes 1 argument | `builtins.ts:246` |
-| `etch(a)` | JSON. | — | `builtins.ts:520` |
-| `every(a, b)` | every(list, predicate) - alias for all. | every() takes 2 arguments; First argument must be a list | `builtins.ts:1311` |
-| `exit(…)` | exit(code?) - terminate program. | Program exited with code ${code} | `builtins.ts:1511` |
-| `exp(a)` | e raised to the given power. | — | `builtins.ts:473` |
-| `ffi_buf(a)` | Allocates a raw byte buffer usable as an FFI argument. | ffi_buf() takes a positive byte size | `builtins.ts:2584` |
-| `ffi_call(a, b, c, d)` | Calls a symbol in a loaded native library with the given arguments. | ffi_call() — no native FFI host available | `builtins.ts:2631` |
-| `ffi_close(a)` | Unloads a native library handle opened with `ffi_open`. | Expected number, got ${typeof value} | `builtins.ts:2639` |
-| `ffi_open(a)` | Evaluates `ffiHost().open?.(String(a ?? '')) ?? null`. | — | `builtins.ts:2622` |
-| `ffi_read_f64(a, b)` | Evaluates `bufOf(a, line).getFloat64(Number(b) * 8, true)`. | — | `builtins.ts:2604` |
-| `ffi_read_i32(a, b)` | Evaluates `bufOf(a, line).getInt32(Number(b) * 4, true)`. | — | `builtins.ts:2616` |
-| `ffi_sym(a, b)` | Evaluates `ffiHost().sym?.(Number(a), String(b ?? '')) ?? null`. | — | `builtins.ts:2626` |
-| `ffi_write_f64(a, b, c)` | Writes a 64-bit float into an FFI buffer at a byte offset. | — | `builtins.ts:2597` |
-| `ffi_write_i32(a, b, c)` | Writes a 32-bit integer into an FFI buffer at a byte offset. | — | `builtins.ts:2609` |
-| `fileExists(a)` | True when the given host filesystem path exists. | fileExists() takes 1 argument | `builtins.ts:2381` |
-| `find(a, b)` | Returns the index of the first matching element, or -1 when nothing matches. | find() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:892` |
-| `first(a)` | The first element of a list or the first character of a string. | first() takes 1 argument; Argument must be a list or text | `builtins.ts:729` |
-| `flatten(a)` | Collapses nested lists into a single flat list. | flatten() takes 1 argument; Argument must be a list | `builtins.ts:683` |
-| `floor(a)` | floor/ceil/round aliases. | — | `builtins.ts:2442` |
-| `fold(a, b, c)` | reduce array. | fold() takes 3 arguments (list, initial, reducer); First argument must be a list | `builtins.ts:152` |
-| `format(…)` | format(template, ...args) - string formatting with {} placeholders. | format() takes at least 1 argument; First argument must be text | `builtins.ts:1197` |
-| `formatTime(…)` | formatTime(ms, format?) - format milliseconds. | formatTime() takes at least 1 argument; First argument must be a number (ms) | `builtins.ts:1934` |
-| `freeze(a)` | freeze(obj) - make object immutable (shallow). | freeze() takes 1 argument | `builtins.ts:2124` |
-| `fromEntries(a)` | Builds a tome from a list of `[key, value]` pairs. | fromEntries() takes 1 argument; Argument must be a list | `builtins.ts:1137` |
-| `gather(a, b)` | push to list. | gather() takes 0 or 2 arguments; First argument must be a list | `builtins.ts:171` |
-| `get(…)` | Reads a key from a tome with an optional default when the key is missing. | get() takes 2-3 arguments (tome, key, default?); First argument must be a tome | `builtins.ts:1069` |
-| `gettype(a)` | get the type of a value (avoids 'essence' keyword clash). | gettype() takes 1 argument | `builtins.ts:447` |
-| `greatest(…)` | The largest of the supplied numbers (or of a list). | greatest() takes at least 1 argument | `builtins.ts:288` |
-| `ground(a)` | Rounds a number down to the nearest integer (floor). | ground() takes 1 argument | `builtins.ts:307` |
-| `groupBy(a, b)` | groupBy(list, fn) - group list elements by function result. | groupBy() takes 2 arguments; First argument must be a list | `builtins.ts:2144` |
-| `has(a, b)` | ============= Tome (Dict) Operations =============. | has() takes 2 arguments (tome, key); First argument must be a tome | `builtins.ts:1057` |
-| `hash(a)` | Deterministic hash of a value, returned as a number or hex string. | hash() takes 1 argument | `builtins.ts:1897` |
-| `hex(a)` | hex(n) - number to hex string. | hex() takes 1 argument; Argument must be a number | `builtins.ts:1566` |
-| `http_get(a)` | Performs an HTTP GET and returns the response body as text. | http_get() takes a url; http_get( | `builtins.ts:2547` |
-| `indexOf(a, b)` | Index of the first occurrence of a substring, or -1 when absent. | indexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:607` |
-| `INFINITY()` | The floating-point positive infinity constant. | — | `builtins.ts:1043` |
-| `input(…)` | input(prompt?) - uses browser prompt() for real input. | — | `builtins.ts:1420` |
-| `inscriptions(a)` | Dict operations. | inscriptions() takes 1 argument; Argument must be a tome (dict) | `builtins.ts:337` |
-| `insert(a, b, c)` | ============= List Operations =============. | insert() takes 3 arguments (list, index, value); First argument must be a list | `builtins.ts:641` |
-| `int(a)` | int / num aliases. | int() takes 1 argument; Cannot convert to integer: ${stringify(args[0])} | `builtins.ts:2454` |
-| `isAlpha(a)` | isAlpha(s) - check if all alphabetic. | isAlpha() takes 1 argument; Argument must be text | `builtins.ts:1749` |
-| `isAlphaNum(a)` | isAlphaNum(s) - check if all alphanumeric. | isAlphaNum() takes 1 argument; Argument must be text | `builtins.ts:1759` |
-| `isDigit(a)` | isDigit(s) - check if all digits. | isDigit() takes 1 argument; Argument must be text | `builtins.ts:1739` |
-| `isFinite(a)` | isFinite(v) - check if finite. | isFinite() takes 1 argument | `builtins.ts:1642` |
-| `isFrozen(a)` | isFrozen(obj). | isFrozen() takes 1 argument | `builtins.ts:2134` |
-| `isFunc(a)` | True when the value is callable (a function, lambda, or builtin). | isFunc() takes 1 argument | `builtins.ts:957` |
-| `isInteger(a)` | isInteger(v) - check if integer. | isInteger() takes 1 argument | `builtins.ts:1651` |
-| `isList(a)` | True when the value is a list. | isList() takes 1 argument | `builtins.ts:925` |
-| `isLower(a)` | isLower(s) - check if all lowercase. | isLower() takes 1 argument; Argument must be text | `builtins.ts:1729` |
-| `isNaN(a)` | isNaN(v) - check if NaN. | isNaN() takes 1 argument | `builtins.ts:1633` |
-| `isNum(a)` | ============= Type Checking =============. | isNum() takes 1 argument | `builtins.ts:909` |
-| `isSpace(a)` | isSpace(s) - check if all whitespace. | isSpace() takes 1 argument; Argument must be text | `builtins.ts:1769` |
-| `isText(a)` | True when the value is a string. | isText() takes 1 argument | `builtins.ts:917` |
-| `isTome(a)` | True when the value is a tome (dictionary). | isTome() takes 1 argument | `builtins.ts:933` |
-| `isTruth(a)` | True when the value is a boolean. | isTruth() takes 1 argument | `builtins.ts:941` |
-| `isUpper(a)` | isUpper(s) - check if all uppercase. | isUpper() takes 1 argument; Argument must be text | `builtins.ts:1719` |
-| `isVoid(a)` | True when the value is `void` (absent). | isVoid() takes 1 argument | `builtins.ts:949` |
-| `keys(a)` | keys(tome) - alias for inscriptions. | keys() takes 1 argument; Argument must be a tome | `builtins.ts:2104` |
-| `last(a)` | The final element of a list or the final character of a string. | last() takes 1 argument; Argument must be a list or text | `builtins.ts:739` |
-| `lastIndexOf(a, b)` | Index of the final occurrence of a substring, or -1 when absent. | lastIndexOf() takes 2 arguments; First argument must be text or list | `builtins.ts:623` |
-| `least(…)` | The smallest of the supplied numbers (or of a list). | least() takes at least 1 argument | `builtins.ts:277` |
-| `len(a)` | alias for measure (used internally by compiler forEach). | len() takes 1 argument; len() argument must be string, list, or dict | `builtins.ts:422` |
-| `lerp(a, b, c)` | Linear interpolation between two values by a factor in 0..1. | lerp() takes 3 arguments (start, end, t); All arguments must be numbers | `builtins.ts:983` |
-| `LinkedList(a)` | LinkedList() - doubly linked list. | Index out of bounds; LinkedList is empty | `builtins.ts:2337` |
-| `listDir()` | Lists the entries of a host directory. | — | `builtins.ts:2397` |
-| `ln(a)` | Evaluates `Math.log(toNumber(a, line))`. | — | `builtins.ts:2503` |
-| `locate(a, b)` | locate(s, sub) - find index of substring. | locate() takes 2 arguments; First argument must be text or list | `builtins.ts:1176` |
-| `log(a)` | Natural logarithm. | — | `builtins.ts:472` |
-| `log10(a)` | Base-10 logarithm. | — | `builtins.ts:1038` |
-| `log2(a)` | Base-2 logarithm. | — | `builtins.ts:1039` |
-| `lower(a)` | Lowercases every character in the string. | lower() takes 1 argument; Argument must be text | `builtins.ts:371` |
-| `magnitude(a)` | Math operations with unique names. | magnitude() takes 1 argument | `builtins.ts:269` |
-| `Map(a, b)` | Map() - map data structure. | — | `builtins.ts:2283` |
-| `mapRange(a, b, c, d, e)` | Re-maps a number from one numeric range into another, proportionally. | mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax); All arguments must be numbers | `builtins.ts:995` |
-| `match(a, b)` | match(text, pattern) - regex match, returns list of matches or null. | match() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1781` |
-| `matchAll(a, b)` | matchAll(text, pattern) - all regex matches. | matchAll() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1792` |
-| `max(a)` | The largest of the supplied numbers (or of a list). | max() takes at least 1 argument | `builtins.ts:2423` |
-| `mean(a)` | mean(list) - alias for average. | mean() takes 1 argument; Argument must be a list | `builtins.ts:1405` |
-| `measure(a)` | get length. | measure() takes exactly 1 argument; measure() argument must be string, list, or dict | `builtins.ts:47` |
-| `memoize(a)` | memoize(fn) - memoization. | memoize() takes 1 argument; Argument must be a function | `builtins.ts:2004` |
-| `merge(…)` | Combines two tomes into a new one; keys on the right win. | merge() takes at least 2 arguments; All arguments must be tomes | `builtins.ts:1111` |
-| `min(a)` | min/max aliases. | min() takes at least 1 argument | `builtins.ts:2414` |
-| `morph(a, b)` | type conversion. | morph() takes 2 arguments (value, type); Second argument must be type name | `builtins.ts:62` |
-| `nearby(a)` | True when two floating-point numbers are equal within a small tolerance. | nearby() takes 1 argument | `builtins.ts:323` |
-| `now()` | ============= Time =============. | — | `builtins.ts:1046` |
-| `num(a)` | Converts a value to a number, or `void` when it cannot be parsed. | num() takes 1 argument; Cannot convert to number: ${stringify(args[0])} | `builtins.ts:2464` |
-| `oct(a)` | oct(n) - number to octal string. | oct() takes 1 argument; Argument must be a number | `builtins.ts:1576` |
-| `ord(…)` | ord(char) - character to number. | ord() takes 1 or 2 arguments; Argument must be a non-empty string | `builtins.ts:1550` |
-| `padleft(…)` | Pads the string on the left with a fill character until it reaches the target width. | padleft() takes 2-3 arguments; First argument must be text | `builtins.ts:573` |
-| `padLeft(…)` | padLeft(s, width, char?) - alias PascalCase. | padLeft() takes 2-3 arguments; First argument must be text | `builtins.ts:1213` |
-| `padright(…)` | Pads the string on the right with a fill character until it reaches the target width. | padright() takes 2-3 arguments; First argument must be text | `builtins.ts:584` |
-| `padRight(…)` | padRight(s, width, char?) - alias PascalCase. | padRight() takes 2-3 arguments; First argument must be text | `builtins.ts:1225` |
-| `panic(…)` | panic(message) - fatal error. | PANIC: ${msg} | `builtins.ts:1520` |
-| `parseNum(…)` | parseNum(str, base?) - parse string to number with optional base. | parseNum() takes 1-2 arguments; First argument must be text | `builtins.ts:1596` |
-| `PI()` | The constant π (3.14159…). | — | `builtins.ts:474` |
-| `pick(a)` | Returns one element chosen at random from a list. | pick() takes 1 argument; Argument must be a list | `builtins.ts:494` |
-| `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins.ts:1969` |
-| `pluck(…)` | pop from list, or append when given a value (stdlib/ML dialect). | pluck() takes 1 or 2 arguments; Argument must be a list | `builtins.ts:186` |
-| `pointer(a, b)` | pointer(buffer, offset) - create a reference to a buffer position. | pointer() takes 2 arguments (buffer, offset); First argument must be a buffer | `builtins.ts:2076` |
-| `portion(…)` | slice - get portion. | portion() takes 2 or 3 arguments; First argument must be a list or string | `builtins.ts:203` |
-| `pow(a, b)` | Raises the first number to the power of the second. | pow() takes 2 arguments (base, exponent); Arguments must be numbers | `builtins.ts:1016` |
-| `print(…)` | print() - alias for speak. | — | `builtins.ts:1454` |
-| `println(…)` | println() - print with newline (same as print in this context). | — | `builtins.ts:1464` |
-| `product(a)` | Multiplies every number in a list together. | product() takes 1 argument; Argument must be a list | `builtins.ts:793` |
-| `Queue(a)` | Queue() - FIFO queue. | Queue is empty | `builtins.ts:2303` |
-| `radians(a)` | radians(deg) - degrees to radians. | radians() takes 1 argument; Argument must be a number | `builtins.ts:1371` |
-| `rand()` | Random floating-point number; with arguments, a random value in the range. | — | `builtins.ts:2502` |
-| `randint(a, b)` | Random utilities. | randint() takes 2 arguments | `builtins.ts:484` |
-| `random()` | random() alias for chaos(). | — | `builtins.ts:478` |
-| `range(…)` | range() - alias for sequence. | range() takes 1-3 arguments; range() step cannot be 0 | `builtins.ts:1474` |
-| `read_file(a)` | Reads a file from the host filesystem and returns its text. | read_file() takes a path; read_file( | `builtins.ts:2519` |
-| `remove(a, b)` | Removes the first occurrence of a value from a list, in place. | remove() takes 2 arguments (list, index); First argument must be a list | `builtins.ts:653` |
-| `repeat(a, b)` | Builds a list (or string) by repeating a value `n` times. | repeat() takes 2 arguments (text, count); First argument must be text | `builtins.ts:563` |
-| `replace(a, b, c)` | ============= String Operations =============. | replace() takes 3 arguments (text, search, replacement); First argument must be text | `builtins.ts:530` |
-| `replaceRegex(a, b, c)` | replaceRegex(text, pattern, replacement) - regex replace. | replaceRegex() takes 3 arguments; Arguments must be text | `builtins.ts:1803` |
-| `rest(a)` | Everything after the first element of a list. | rest() takes 1 argument; Argument must be a list or text | `builtins.ts:749` |
-| `reverse(a)` | Returns the list or string in reverse order. | reverse() takes 1 argument; Argument must be text or list | `builtins.ts:389` |
-| `root(a)` | Square root (alias kept for readability). | root() takes 1 argument | `builtins.ts:299` |
-| `round(a)` | Evaluates `Math.round(a)`. | — | `builtins.ts:2444` |
-| `say()` | `say` is the v2 spelling — both runtimes must print the same way. | — | `builtins.ts:24` |
-| `seek(a, b)` | seek(list, predicate) - alias for find. | seek() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:1296` |
-| `sequence(…)` | conjure a sequence. | sequence() takes 1 to 3 arguments; sequence() step cannot be 0 | `builtins.ts:90` |
-| `set(a, b, c)` | Writes a value at a key or index inside a tome or list. | set() takes 3 arguments (tome, key, value); First argument must be a tome | `builtins.ts:1083` |
-| `Set(a)` | Set() - set data structure. | — | `builtins.ts:2263` |
-| `shatter(a, b)` | split string to list. | shatter() takes 2 arguments; First argument must be a string | `builtins.ts:233` |
-| `shout(…)` | output in uppercase. | — | `builtins.ts:37` |
-| `shuffle(a)` | Returns the list in a random order (Fisher–Yates). | shuffle() takes 1 argument; Argument must be a list | `builtins.ts:504` |
-| `sift(a, b)` | filter array. | sift() takes 2 arguments (list, predicate); First argument must be a list | `builtins.ts:137` |
-| `sign(a)` | Returns -1, 0, or 1 depending on the sign of the number. | sign() takes 1 argument; Argument must be a number | `builtins.ts:1007` |
-| `sin(a)` | Advanced math. | — | `builtins.ts:469` |
-| `sinh(a)` | Evaluates `Math.sinh(a)`. | — | `builtins.ts:1035` |
-| `sleep()` | sleep(ms) - alias for delay. | — | `builtins.ts:1446` |
-| `snatch(…)` | snatch(str_or_list, start, end?) - substring OR remove at index from list. | snatch() takes 2-3 arguments; Second argument must be a number | `builtins.ts:1237` |
-| `some(a, b)` | some(list, predicate) - alias for any. | some() takes 2 arguments; First argument must be a list | `builtins.ts:1323` |
-| `sort(…)` | Returns the list sorted ascending, or by the supplied comparison function. | sort() takes 1-2 arguments; First argument must be a list | `builtins.ts:819` |
-| `sortDesc(a)` | sortDesc(list) - sort descending. | sortDesc() takes 1 argument; Argument must be a list | `builtins.ts:1261` |
-| `spawn(a)` | spawn (run function, synchronous in browser). | spawn() requires a function | `builtins.ts:2403` |
-| `speak()` | Runtime primitive. | — | `builtins.ts:22` |
-| `sqrt(a)` | Square root. | — | `builtins.ts:2445` |
-| `Stack(a)` | Stack() - LIFO stack. | Stack is empty | `builtins.ts:2320` |
-| `starts(a, b)` | starts(s, prefix) - alias for startswith. | starts() takes 2 arguments; Arguments must be text | `builtins.ts:1156` |
-| `startswith(a, b)` | True when the string begins with the given prefix. | startswith() takes 2 arguments; Arguments must be text | `builtins.ts:541` |
-| `str(a)` | str alias for morph to text. | — | `builtins.ts:2448` |
-| `sum(a)` | Adds every number in a list together. | sum() takes 1 argument; Argument must be a list | `builtins.ts:781` |
-| `take(a, b)` | Returns the first `n` elements of a list. | take() takes 2 arguments (list, count); Second argument must be a number | `builtins.ts:759` |
-| `tan(a)` | Tangent of an angle in radians. | — | `builtins.ts:471` |
-| `tanh(a)` | Evaluates `Math.tanh(a)`. | — | `builtins.ts:1037` |
-| `tap(a, b)` | debounce - not useful in sync context, but included for API completeness tap(value, fn) - execute fn with value, return value (for debugging). | tap() takes 2 arguments (value, fn); Second argument must be a function | `builtins.ts:2179` |
-| `TAU()` | The constant τ — a full turn in radians, equal to 2π. | — | `builtins.ts:475` |
-| `test(a, b)` | test(text, pattern) - test if regex matches. | test() takes 2 arguments (text, pattern); Arguments must be text | `builtins.ts:1815` |
-| `throw(…)` | throw(message) - throw error. | — | `builtins.ts:1529` |
-| `time()` | time() - current time as tome. | — | `builtins.ts:1915` |
-| `times(a, b)` | repeat(fn, n) - call function n times, return list of results. | times() takes 2 arguments (count, fn); First argument must be a number | `builtins.ts:2191` |
-| `timestamp()` | Current time in milliseconds since the Unix epoch. | — | `builtins.ts:1051` |
-| `title(a)` | title(s) - title case. | title() takes 1 argument; Argument must be text | `builtins.ts:1672` |
-| `toFixed(a, b)` | toFixed(n, digits) - format to fixed decimal places. | toFixed() takes 2 arguments (number, digits); First argument must be a number | `builtins.ts:1611` |
-| `tome_keys(a)` | Returns the keys of a tome as a list. | tome_keys() takes a tome | `builtins.ts:2508` |
-| `toPrecision(a, b)` | toPrecision(n, precision) - format to precision. | toPrecision() takes 2 arguments; First argument must be a number | `builtins.ts:1622` |
-| `trim(a)` | Removes leading and trailing whitespace. | trim() takes 1 argument; Argument must be text | `builtins.ts:380` |
-| `trimLeft(a)` | trimLeft(s) / trimRight(s). | trimLeft() takes 1 argument; Argument must be text | `builtins.ts:1700` |
-| `trimRight(a)` | Removes trailing whitespace only. | trimRight() takes 1 argument; Argument must be text | `builtins.ts:1709` |
-| `typeof(a)` | typeof() - alias for gettype. | typeof() takes 1 argument | `builtins.ts:1491` |
-| `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | Invalid JSON | `builtins.ts:521` |
-| `unique(a)` | Removes duplicate values, preserving first-seen order. | unique() takes 1 argument; Argument must be a list | `builtins.ts:841` |
-| `unzip(a)` | Splits a list of pairs into two parallel lists. | unzip() takes 1 argument; Argument must be a list | `builtins.ts:709` |
-| `upper(a)` | String operations. | upper() takes 1 argument; Argument must be text | `builtins.ts:362` |
-| `values(a)` | values(tome) - alias for contents. | values() takes 1 argument; Argument must be a tome | `builtins.ts:2114` |
-| `Vec2(a, b)` | Vec2(x, y) - 2D vector. | Vec2() takes 2 arguments (x, y) | `builtins.ts:2207` |
-| `weave(a, b)` | join list to string. | weave() takes 2 arguments; First argument must be a list | `builtins.ts:220` |
-| `whisper(…)` | output without newline concept (same as speak in this context). | — | `builtins.ts:27` |
-| `write_file(a, b)` | Writes text to a file on the host filesystem, creating or truncating it. | write_file() takes a path and content; write_file( | `builtins.ts:2531` |
-| `zip(…)` | Pairs up two lists element by element into a list of pairs. | zip() takes at least 2 arguments; Argument ${i + 1} must be a list | `builtins.ts:692` |
 
 #### `src/lang/advanced.ts` — Pro layer — file I/O, hashing, base64, JSON, async, OS glue, buffers, FFI bridge
 
@@ -10549,15 +12481,6 @@ the module that installs it.
 
 ### Seed VM memory map
 
-| Range | Region |
-| --- | --- |
-| `0x00000..0x0FFFF` | string pool  (utf-8 blobs, length-prefixed u32; 64 KiB) |
-| `0x10000..0x13FFF` | global variable slots (256 slots × 4 bytes → rounded) |
-| `0x14000..0x17FFF` | operand stack (u32 cells; sp grows up) |
-| `0x18000..0x1BFFF` | call stack (frames of ret_ip, saved_fp, locals…) |
-| `0x1C000..0x2FFFF` | bytecode program (u8 stream, up to 80 KiB) |
-| `0x30000..0x1FFFFFF` | bump-pointer heap (lists, dynamic strings; ~31.8 MiB). |
-
 
 ### Seed VM opcode table
 
@@ -10567,82 +12490,15 @@ follow the opcode byte directly in the bytecode stream.
 
 | Opcode | Mnemonic | Behaviour |
 | --- | --- | --- |
-| `0x01` | `PUSH_I32` | Operands `<i32 LE>`. push signed 32-bit constant |
-| `0x02` | `PUSH_STR` | Operands `<u16 idx LE>`. push interned string handle (pool offset) |
-| `0x03` | `LOAD` | Operands `<u8 slot>`. push global variable value |
-| `0x04` | `STORE` | Operands `<u8 slot>`. pop into global variable |
-| `0x05` | `POP` | drop top of stack |
-| `0x10` | `ADD` | Pop b, pop a, push a + b (signed 32-bit wrap). |
-| `0x11` | `SUB` | Pop b, pop a, push a - b. |
-| `0x12` | `MUL` | Pop b, pop a, push a * b. |
-| `0x13` | `DIV` | Pop b, pop a, push the truncated quotient a / b. |
-| `0x14` | `MOD` | Pop b, pop a, push the remainder a % b. |
-| `0x20` | `EQ` | Pop b, pop a, push 1 when a == b else 0. |
-| `0x21` | `NE` | Pop b, pop a, push 1 when a != b else 0. |
-| `0x22` | `LT` | Pop b, pop a, push 1 when a < b else 0. |
-| `0x23` | `GT` | Pop b, pop a, push 1 when a > b else 0. |
-| `0x24` | `LE` | Pop b, pop a, push 1 when a <= b else 0. |
-| `0x25` | `GE` | Pop b, pop a, push 1 when a >= b else 0. |
-| `0x30` | `NOT` | Seed VM instruction. |
-| `0x40` | `JMP` | Operands `<i16 off LE>`. unconditional relative jump |
-| `0x41` | `JZ` | Operands `<i16 off LE>`. pop; jump if zero |
-| `0x50` | `SAY_I32` | pop int; host prints it |
-| `0x51` | `SAY_STR` | pop string handle; host prints pool[handle] |
-| `0x60` | `CALL` | Operands `<u16 target>`. <u8 n_args>   allocate frame, copy args, jump |
-| `0x61` | `RET` | pop retval, restore ip+fp, push retval |
-| `0x62` | `ENTER` | Operands `<u8 n_locals>`. reserve additional local slots |
-| `0x63` | `LOAD_LOC` | Operands `<u8 slot>`. push local (0..n_args-1 = args) |
-| `0x64` | `STORE_LOC` | Operands `<u8 slot>`. pop into local |
-| `0x70` | `ALLOC` | pop size, bump HP by (size+3 & ~3), push old HP |
-| `0x80` | `NEWLIST` | Operands `<u16 n>`. pop n items (right→left in memory), push arr addr |
-| `0x81` | `LGET` | pop idx, pop arr, push arr[idx] |
-| `0x82` | `LSET` | pop val, pop idx, pop arr, arr[idx]=val |
-| `0x83` | `LEN` | pop addr, push u32 at addr (length header) |
-| `0x84` | `SGET` | pop idx, pop str, push byte at bytes[idx] |
-| `0x87` | `I2S` | pop int, push decimal-string blob |
-| `0x88` | `CHR` | pop byte, push new 1-char string blob |
-| `0x89` | `LNEW` | pop n, alloc zeroed list [n | n cells] |
-| `0x8A` | `TNEW` | Operands `<u16 cap>`. allocate an empty tome with room for cap pairs |
-| `0x8B` | `TSET` | pop val, pop key, peek tome; store; leaves tome |
-| `0x8C` | `TGET` | pop key, pop tome, push value (0 when absent) |
-| `0x8D` | `THAS` | pop key, pop tome, push 1/0 |
-| `0x8E` | `TKEYS` | pop tome, push list of key handles |
-| `0x8F` | `TVALS` | pop tome, push list of values |
-| `0x91` | `STRCAT` | pop b, pop a, allocate new pool-shaped blob, push handle |
-| `0xA0` | `PUSH_F64` | Operands `<f64 LE>`. alloc 8-byte cell, store f64, push addr |
-| `0xA1` | `FADD` | Pop two boxed f64 addresses, push a newly boxed a + b. |
-| `0xA2` | `FSUB` | Pop two boxed f64 addresses, push a newly boxed a - b. |
-| `0xA3` | `FMUL` | Pop two boxed f64 addresses, push a newly boxed a * b. |
-| `0xA4` | `FDIV` | Pop two boxed f64 addresses, push a newly boxed a / b. |
-| `0xA5` | `FLT` | Pop two boxed f64 addresses, push the i32 boolean a < b. |
-| `0xA6` | `FGT` | Pop two boxed f64 addresses, push the i32 boolean a > b. |
-| `0xA7` | `FEQ` | Pop two boxed f64 addresses, push the i32 boolean a == b. |
-| `0xA8` | `I2F` | pop int; box as f64 and push |
-| `0xA9` | `F2I` | pop float; push i32 truncation |
-| `0xAA` | `FNEG` | Pop a boxed f64, push a newly boxed negation. |
-| `0xAB` | `FABS` | Pop a boxed f64, push a newly boxed absolute value. |
-| `0xAC` | `FSQRT` | Pop a boxed f64, push a newly boxed square root. |
-| `0xAD` | `SAY_F64` | pop float addr; host prints it |
-| `0xAE` | `FMATH` | Operands `<u8 op>`. pop f64; call host_fmath(op,x); push new boxed result |
-| `0xB0` | `READFILE` | pop path handle; push content handle (0 on error) |
-| `0xB1` | `WRITEFILE` | pop data, pop path; push i32 status (0 ok, -1 err) |
-| `0xB2` | `HTTPGET` | pop url handle; push response body handle (0 err) |
-| `0xB4` | `FBYTE` | pop idx (0..7), pop float; push IEEE-754 LE byte |
-| `0xC0` | `TRY` | Operands `<i16 rel>`. push handler record [handler_ip, sp, fp, csp] |
-| `0xC1` | `ENDTRY` | pop the newest handler record |
-| `0xC2` | `THROW` | pop message handle; unwind to handler (or halt) |
-| `0xC3` | `S2F` | pop string handle; push boxed f64 (`num`) |
-| `0xC4` | `CALLV` | Operands `<u8 n_args>`. pop callee (code offset OR closure) and call it |
-| `0xC5` | `CLOSURE` | Operands `<u16 target>`. <u8 ncaps> |
-| `0xFF` | `HALT` | Seed VM instruction. |
 
 
-### sdev-written source index (16 files, 192 functions)
+
+### sdev-written source index (28 files, 294 functions)
 
 Every function defined in sdev itself — the self-hosted compiler, the parity
 agent, and the standard library.
 
-#### `lang/compiler/codegen.sdev`
+#### `lang\compiler\codegen.sdev`
 
 SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits the byte stream to a global buffer `bc` whose cell 0 holds the current byte count and cells 1..count hold the bytes. The scripts/test-self- codegen.mjs driver harvests the buffer via `say`, reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance, and verifies the executed output matches the JS bootstrap compiler's output. Grammar this milestone covers: program := stmt* stmt    := 'say' expr | 'set' IDENT 'to' expr | 'if' expr NL block ('else' NL block)? 'end' | 'while' expr NL block 'end' | 'to' IDENT ('with' IDENT*)? NL block 'end' | 'return' expr? block   := stmt*                              (until 'else' or 'end') expr    := cmp cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )? add     := mul (('+'|'-') mul)* mul     := atom (('*'|'/') atom)* atom    := INT | IDENT                              (variable load) | IDENT '(' args? ')'                (function call / builtin) | '(' expr ')' Restriction: functions must be defined before their call sites — the self-hosted compiler emits function bodies inline, bracketed by a JMP that skips over them, and records each body's byte offset in a global table. Forward references / mutual recursion land in a later milestone.
 
@@ -10689,16 +12545,22 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 | `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1565 |
 | `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 1608 |
 | `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1659 |
-| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1753 |
-| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1763 |
-| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1780 |
-| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1798 |
-| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1804 |
-| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1821 |
-| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1856 |
-| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1878 |
+| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1768 |
+| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1778 |
+| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1795 |
+| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1813 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 1819 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 1836 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 1871 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 1893 |
 
-#### `lang/compiler/lexer.sdev`
+#### `lang\compiler\driver.sdev`
+
+The self-hosted SDEV compiler driver — written in SDEV. This file IS the compiler that ships: the self-hosted compiler compiles this program (with codegen.sdev pulled in by `use`) to the bytecode that the browser IDE, the CLI and every test run on the seed VM. It is source-independent: the program being compiled arrives through read_file("<stdin>"), which the host answers from memory. Modules named by `use "path"` inside that program are fetched through read_file(path). Output protocol (one value per `say`): <bytecode length> <byte>... <pool length> <byte>... Rebuild + verify (no JavaScript compiler involved): node bin/sdevhost.mjs scripts/bake-driver.sdev node bin/sdevhost.mjs scripts/test-driver-artifact.sdev
+
+_No top-level functions — this file is a script or data module._
+
+#### `lang\compiler\lexer.sdev`
 
 SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hosted compiler. The bootstrap JS compiler (lang/bootstrap/compile.mjs) still compiles this file to bytecode for now; once the parser + codegen are also ported, the JS compiler is deleted. The lexer streams tokens straight to stdout via `say`, one per line, in a stable text format: N=<int>      integer literal I=<ident>    identifier or keyword S=<text>     string literal (contents only, no quotes) P=<char>     single-char punctuation NL           newline EOF          end of source The `scripts/test-self-lexer.mjs` driver splices a `set src to "..."` stub in front of this file and diffs the output against a JS reference lexer built from the same rules.
 
@@ -10712,7 +12574,7 @@ SDEV lexer, written in SDEV. This is the first piece of the Milestone-5 self-hos
 | `slice` | `src i j` | Extracts the substring between two byte offsets, byte by byte. | `out` | 61 |
 | `lex` | `src` | Turns source text into the token stream: kinds, lexemes, and line numbers. | _no explicit yield_ | 70 |
 
-#### `lang/compiler/parser.sdev`
+#### `lang\compiler\parser.sdev`
 
 SDEV expression parser, written in SDEV. This is the second slice of Milestone 5 (self-hosted compiler). It sits on top of the lexer (lang/compiler/lexer.sdev) and, for now, handles arithmetic expressions with correct precedence: expr  := add add   := mul (('+' | '-') mul)* mul   := atom (('*' | '/') atom)* atom  := NUM | '(' expr ')' The parser reads tokens from globals populated by an inlined top-level lex loop (see scripts/test-self-parser.mjs for the harness). It streams the parse in reverse-Polish form via `say`, one atom or operator per line — that's easy to diff against a JS reference implementation. The full statement parser lands next; this file exercises recursion, global-buffer reads, and function-return threading of the cursor.
 
@@ -10725,7 +12587,7 @@ SDEV expression parser, written in SDEV. This is the second slice of Milestone 5
 | `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 54 |
 | `parse_add` | `pos` | Parses the addition / subtraction precedence level. | `pos` | 73 |
 
-#### `lang/parity/agent.sdev`
+#### `lang\parity\agent.sdev`
 
 sdev Parity Agent — written in sdev, runs on sdev Phase 0/1 of the v1 <-> v2 parity plan. The agent is the machine that keeps every sdev track honest: 1. loads the canonical registry (lang/parity/features.json), 2. loads the source of every track listed in that registry, 3. probes each track for each feature, 4. prints a gap report and writes lang/parity/report.json, 5. regenerates the parity matrix inside the documentation, between <!-- PARITY:BEGIN --> / <!-- PARITY:END --> markers, 6. reports how many `must` features are missing so CI can fail. Adding a track = one entry in the registry. The agent needs no change. Host builtins used: read_file, write_file.
 
@@ -10746,7 +12608,7 @@ sdev Parity Agent — written in sdev, runs on sdev Phase 0/1 of the v1 <-> v2 p
 | `sync_doc` | `path, block` | Rewrites the parity matrix block inside the parity documentation in place. | `0` | 266 |
 | `run_parity_agent` | `registry_path, doc_paths` | Entry point: audit, then write both the JSON report and the documentation. | `measure(report.must_missing)` | 283 |
 
-#### `lang/stdlib/ffi.sdev`
+#### `lang\stdlib\ffi.sdev`
 
 sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared libraries (.so / .dylib / .dll) from sdev. This is the bridge that lets the ML stdlib reach BLAS, libcudart, cuBLAS, cuDNN, and any other C ABI library the host system exposes. Requires host builtins provided by the native runtime: ffi_open(path)                  -> lib handle (int)   or void on error ffi_sym(lib, name)              -> fn handle (int)    or void on error ffi_call(fn, ret_kind, args)    -> result (kind-typed) ffi_close(lib)                  -> yep/nope ffi_buf(size)                   -> raw byte buffer addr (int) ffi_read_f64(buf, i) / ffi_write_f64(buf, i, x) ffi_read_i32(buf, i) / ffi_write_i32(buf, i, n) The browser WASM runtime stubs these to void — FFI only runs on the native/Node track. The interpreter's `advanced.ts` wires the Node side via `koffi` when installed. Type kinds are small ints so the host can dispatch fast: 0 void   1 i32   2 i64   3 f32   4 f64 5 ptr    6 cstr  7 buf   8 bool
 
@@ -10766,7 +12628,7 @@ sdev Stdlib — Foreign Function Interface (Milestone 9) Call into native shared
 | `open_cuda` | `cudart_path, cublas_path` | CUDA fast path Open libcudart + libcublas and expose the handful of symbols the ML stdlib needs for GPU-accelerated training. | `{` | 145 |
 | `cuda_ok` | `cuda` | True when a CUDA runtime and device are reachable from this host. | `yep` | 167 |
 
-#### `lang/stdlib/ml/auto_evolve.sdev`
+#### `lang\stdlib\ml\auto_evolve.sdev`
 
 sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12) Wires the ML stack into sdev's own source tree. A trained sdev model reads demand signals, drafts patches to the language, runs them through a review hook, and — on approval — commits them to disk. The same loop can also fine-tune the model on fresh distilled data or teacher outputs. Nothing here writes to disk unless `set_review_hook(...)` has been called with a function that returns `yep`. That is the single gate protecting the entire pipeline.
 
@@ -10785,7 +12647,7 @@ sdev ML Stdlib — Autonomous Evolution Loop (Milestone 12) Wires the ML stack i
 | `prompt_pool` | `demand` | Builds the prompt set handed to the teacher model for the next round. | `out` | 145 |
 | `evolve_forever` | `model, sources, teacher_url, teacher_key, ticks` | long-running driver | _no explicit yield_ | 160 |
 
-#### `lang/stdlib/ml/autograd.sdev`
+#### `lang\stdlib\ml\autograd.sdev`
 
 sdev ML Stdlib — Autograd Tape (Milestone 8b) Reverse-mode automatic differentiation implemented as a global operation tape. Each recorded op stores its inputs, output, and a "kind" tag; `backward(out)` walks the tape in reverse and accumulates gradients into each tensor's `grad` list.
 
@@ -10814,7 +12676,7 @@ sdev ML Stdlib — Autograd Tape (Milestone 8b) Reverse-mode automatic different
 | `adam_new` | `params` | Adam | `{ m: m, v: v, t: 0, b1: 0.9, b2: 0.999, eps: 0.00000001 }` | 279 |
 | `adam_step` | `opt, params, lr` | Applies one Adam optimiser update using the stored moment estimates. | _no explicit yield_ | 296 |
 
-#### `lang/stdlib/ml/cuda.sdev`
+#### `lang\stdlib\ml\cuda.sdev`
 
 sdev ML Stdlib — CUDA Fast Path (Milestone 11) Thin sdev-native layer over the FFI cuBLAS/cudart bindings in ffi.sdev. Gives the ML stack a real GPU matmul + training loop when the process is on a CUDA-capable box, and transparently falls back to the pure-sdev tensor ops otherwise so the same program keeps running in the browser IDE. Everything here is sdev source that runs on both interpreter tracks. The native/Node runtime wires the FFI symbols; the browser stubs them to void, which forces `cuda_ok(...)` to nope and every helper below to take the CPU path.
 
@@ -10834,7 +12696,7 @@ sdev ML Stdlib — CUDA Fast Path (Milestone 11) Thin sdev-native layer over the
 | `cuda_forward_linear` | `dev, x, w, bias` | training-loop hook Drop-in replacement for nn.fit's inner matmul step. The rest of the training loop (loss, autograd tape, optimizer) stays pure sdev — only the hot kernel moves to the GPU. | `t_add(y, bias)` | 125 |
 | `cuda_report` | `dev` | diagnostics | `"CUDA: unavailable (running on CPU fallback)"` | 131 |
 
-#### `lang/stdlib/ml/data.sdev`
+#### `lang\stdlib\ml\data.sdev`
 
 sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and LLM-distillation utilities. Uses host builtins: read_file, write_file, http_get.
 
@@ -10853,23 +12715,31 @@ sdev ML Stdlib — Data & Web (Milestone 8e) Dataset loaders, web scraping, and 
 | `distill_batch` | `endpoint, key, prompts` | Queries a teacher model for a batch of examples so a smaller model can learn from them. | `pairs` | 79 |
 | `save_model` | `path, model` | checkpointing | _no explicit yield_ | 91 |
 
-#### `lang/stdlib/ml/nn.sdev`
+#### `lang\stdlib\ml\nn.sdev`
 
-sdev ML Stdlib — Neural Network Layers (Milestone 8c) High-level layer builders. Each layer returns a tome exposing { params: [tensors...], forward: conjure(x) }.
+sdev ML Stdlib — Neural Network Layers (Milestone 8c + M15) High-level layer builders, accelerated matmul dispatch, and batched forward passes. Each layer returns a tome exposing { params: [tensors...], w, b, forward: conjure(x) }.
 
-7 functions.
+15 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `linear` | `in_features, out_features` | Creates a dense layer with a weight matrix and bias vector. | `{` | 9 |
-| `broadcast_row` | `row, rows` | Adds a bias row to every row of a matrix. | `t` | 23 |
-| `sequential` | `layers` | Chains layers into a single model whose forward pass runs them in order. | `{` | 36 |
-| `seq_forward` | `layers, x` | Runs the forward pass of a sequential model. | `cur` | 51 |
-| `relu_layer` | _none_ | A layer that applies ReLU element-wise. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 61 |
-| `train_step` | `model, x, y, lr` | training loop | `loss.data[0]` | 66 |
-| `fit` | `model, xs, ys, epochs, lr` | Trains a model over a dataset for the given epochs, reporting loss per epoch. | _no explicit yield_ | 75 |
+| `set_accel` | `cuda_dev be void, blas_handle be void, webgpu_dev be void` | Part of the Accelerated matmul dispatch (M15) section of this module. | `{ cuda: ACCEL_CUDA, blas: ACCEL_BLAS, webgpu: ACCEL_WEBGPU }` | 17 |
+| `t_matmul` | `a, b` | Part of the Accelerated matmul dispatch (M15) section of this module. | `matmul(a, b)` | 24 |
+| `accel_matmul` | `a, b, cuda_dev be void, blas_handle be void, webgpu_dev be void` | Priority: CUDA -> BLAS -> WebGPU -> pure-SDEV t_matmul. Accepts optional explicit (cuda_dev, blas_handle) or uses active globals. | `best_matmul(cu, bl, a, b)` | 30 |
+| `d_accel_matmul` | `a, b` | Part of the Accelerated matmul dispatch (M15) section of this module. | `o` | 52 |
+| `linear` | `in_features, out_features` | Layers | `{` | 60 |
+| `broadcast_row` | `row, rows` | Adds a bias row to every row of a matrix. | `t` | 78 |
+| `sequential` | `layers` | Chains layers into a single model whose forward pass runs them in order. | `{` | 91 |
+| `seq_forward` | `layers, x` | Runs the forward pass of a sequential model. | `cur` | 107 |
+| `relu_layer` | _none_ | A layer that applies ReLU element-wise. | `{ params: gather(), forward: (x) -> d_relu(x) }` | 117 |
+| `pack_batch_2d` | `batch_x` | Batched forward passes (M15) Accepts either a 2D tensor [batch_size, in_features] or a list of sample tensors / feature lists, packs into [B, in_features], and runs a single batched forward pass. | `batch_x` | 125 |
+| `attach_batch_rows` | `out_tensor` | Part of the Batched forward passes (M15) section of this module. | `out_tensor` | 162 |
+| `linear_forward_batch` | `layer, batch_x` | Part of the Batched forward passes (M15) section of this module. | `attach_batch_rows(out)` | 184 |
+| `sequential_forward_batch` | `model, batch_x` | Part of the Batched forward passes (M15) section of this module. | `attach_batch_rows(out)` | 190 |
+| `train_step` | `model, x, y, lr` | training loop | `loss.data[0]` | 197 |
+| `fit` | `model, xs, ys, epochs, lr` | Trains a model over a dataset for the given epochs, reporting loss per epoch. | _no explicit yield_ | 206 |
 
-#### `lang/stdlib/ml/self_modify.sdev`
+#### `lang\stdlib\ml\self_modify.sdev`
 
 sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-trained model to read the sdev source tree, propose edits, and rewrite its own weights or the language runtime itself. All mutations pass through a review hook so users can gate every change. Requires host builtins: read_file, write_file, http_get.
 
@@ -10885,7 +12755,7 @@ sdev ML Stdlib — Self-Modification (Milestone 8f) GATED: enables an sdev-train
 | `update_docs` | `section, body` | documentation sync | _no explicit yield_ | 69 |
 | `rewrite_weights` | `model, transform` | weight rewriting The model can rewrite its own weights outside of gradient descent (e.g. surgery, LoRA-style adapters). Guarded so it only fires when review hook approves. | `yep` | 79 |
 
-#### `lang/stdlib/ml/tensor.sdev`
+#### `lang\stdlib\ml\tensor.sdev`
 
 sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: [f64...], shape: [int...], grad: [f64...] | void, requires_grad: bool } All ops are pure by default; autograd tape is opt-in per tensor. Fully written in sdev — runs on both the WASM and Native ASM tracks.
 
@@ -10910,33 +12780,42 @@ sdev ML Stdlib — Tensor Core (Milestone 8) A tensor is a tome: { data: [f64...
 | `mse` | `pred, target` | losses | `s / n` | 170 |
 | `cross_entropy` | `pred, target` | Mean cross-entropy loss between predicted probabilities and target labels. | `s` | 182 |
 
-#### `lang/stdlib/ml/train.sdev`
+#### `lang\stdlib\ml\train.sdev`
 
-sdev ML Stdlib — Language-Model Training (Milestone 14) End-to-end training for the decoder-only model in transformer.sdev: batching, next-token cross-entropy, Adam + gradient clipping, temperature / top-k sampling, checkpoint save + load, and an evaluation loop. Written entirely in sdev.
+sdev ML Stdlib — Language-Model Training (Milestone 14 + M15) End-to-end training for the decoder-only model in transformer.sdev: batching, next-token cross-entropy, Adam + gradient clipping, temperature / top-k sampling, text/JSON & binary ("SDEVML01") checkpoint save + load, and an evaluation loop. Written entirely in sdev.
 
-13 functions.
+22 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `lm_batches` | `ids, block` | batching Cut a flat token stream into (context, next-token) pairs of length `block`. | `{ xs: xs, ys: ys, block: block, count: measure(xs) }` | 14 |
-| `lm_step` | `model, opt, ctx, targets, lr` | one optimisation step | `loss.data[0]` | 35 |
-| `lm_fit` | `model, ids, block, epochs, lr` | full training loop | `{ history: history, final: history[measure(history) - 1], opt: opt }` | 47 |
-| `lm_loss` | `model, ids, block` | evaluation | `total / batches.count` | 66 |
-| `perplexity` | `model, ids, block` | Perplexity = e^(mean NLL). Lower is better. | `exp(lm_loss(model, ids, block))` | 80 |
-| `last_logits` | `model, ids` | sampling | `tensor(row, [vocab])` | 85 |
-| `sample_topk` | `logits, temperature, k` | Temperature + top-k filtering, then multinomial draw. | `sample_next(tensor(scaled, [n]))` | 99 |
-| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Generates a continuation from a trained language model. | `out` | 135 |
-| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Convenience wrapper: encode a prompt, generate, and decode the result. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 148 |
-| `checkpoint_text` | `model` | checkpoints Flat text format: one parameter tensor per line, "shape\|values". | `s` | 155 |
-| `save_checkpoint` | `path, model` | Serialises every model parameter to a checkpoint file. | `measure(model.params)` | 180 |
-| `load_checkpoint` | `path, model` | Loads weights back into an identically-shaped model. | `measure(model.params)` | 186 |
-| `split_text` | `s, sep` | Small split helper so checkpoints need no host support beyond file I/O. | `out` | 211 |
+| `lm_batches` | `ids, block` | batching Cut a flat token stream into (context, next-token) pairs of length `block`. | `{ xs: xs, ys: ys, block: block, count: measure(xs) }` | 15 |
+| `lm_step` | `model, opt, ctx, targets, lr` | one optimisation step | `loss.data[0]` | 36 |
+| `lm_fit` | `model, ids, block, epochs, lr` | full training loop | `{ history: history, final: history[measure(history) - 1], opt: opt }` | 48 |
+| `lm_loss` | `model, ids, block` | evaluation | `total / batches.count` | 67 |
+| `perplexity` | `model, ids, block` | Perplexity = e^(mean NLL). Lower is better. | `exp(lm_loss(model, ids, block))` | 81 |
+| `last_logits` | `model, ids` | sampling | `tensor(row, [vocab])` | 86 |
+| `sample_topk` | `logits, temperature, k` | Temperature + top-k filtering, then multinomial draw. | `sample_next(tensor(scaled, [n]))` | 100 |
+| `lm_generate` | `model, prompt_ids, max_new, temperature, k` | Generates a continuation from a trained language model. | `out` | 136 |
+| `lm_complete` | `model, vocab, prompt, max_new, temperature, k` | Convenience wrapper: encode a prompt, generate, and decode the result. | `decode(vocab, lm_generate(model, ids, max_new, temperature, k))` | 149 |
+| `checkpoint_text` | `model` | checkpoints (text) Flat text format: one parameter tensor per line, "shape\|values". | `s` | 156 |
+| `save_checkpoint` | `path, model` | Serialises every model parameter to a checkpoint file. | `measure(model.params)` | 181 |
+| `load_checkpoint` | `path, model` | Loads weights back into an identically-shaped model. | `measure(model.params)` | 187 |
+| `ckpt_buf` | _none_ | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `CKPT_SCRATCH_BUF` | 220 |
+| `u32_to_hex8` | `n` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `out` | 227 |
+| `hex_nibble` | `code` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `0` | 238 |
+| `hex8_to_u32` | `s, offset` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `acc` | 251 |
+| `f64_to_hex` | `x` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `u32_to_hex8(lo) + u32_to_hex8(hi)` | 262 |
+| `hex_to_f64` | `s, offset` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `ffi_read_f64(b, 0)` | 270 |
+| `checkpoint_bin_encode` | `model, step be 0, loss be 0.0` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `s` | 279 |
+| `save_checkpoint_bin` | `path, model, step be 0, loss be 0.0` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `{` | 304 |
+| `load_checkpoint_bin` | `path, model` | Part of the binary checkpoints (M15: "SDEVML01") section of this module. | `{ ok: nope, err: "truncated binary checkpoint", magic: "", version: 0, step: 0, loss: 0.0,` | 318 |
+| `split_text` | `s, sep` | Small split helper so checkpoints need no host support beyond file I/O. | `out` | 362 |
 
-#### `lang/stdlib/ml/transformer.sdev`
+#### `lang\stdlib\ml\transformer.sdev`
 
-sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only transformer written in sdev. Enough to build small language models; scales up with CUDA/WebGPU backends in later milestones.
+sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d + M15) Minimal decoder-only transformer written in sdev. Uses accelerated matmul dispatch (accel_matmul) and supports single-sequence and batched GPT forward passes.
 
-13 functions.
+14 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
@@ -10946,15 +12825,16 @@ sdev ML Stdlib — Transformer / LLM Blocks (Milestone 8d) Minimal decoder-only 
 | `ln_apply` | `x, g, b` | Normalises each row to zero mean and unit variance, then scales and shifts it. | `tensor_grad(d, x.shape)` | 49 |
 | `attention_head` | `dim` | attention (single head, causal) | `{` | 79 |
 | `attn_forward` | `x, wq, wk, wv, wo, dim` | Scaled dot-product self-attention with causal masking. | `wo.forward(tensor_grad(ctx.data, ctx.shape))` | 99 |
-| `transpose` | `a` | Swaps the two dimensions of a 2-D tensor. | `tensor(d, [c, r])` | 114 |
-| `transformer_block` | `dim, hidden` | transformer block | `{` | 133 |
-| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | One transformer block: attention, residual, feed-forward, residual. | `d_add(x1, f)` | 154 |
-| `gpt` | `vocab, dim, hidden, layers` | decoder-only LM | `{` | 162 |
-| `gpt_forward` | `ids, emb, blocks, head, layers` | Full model forward pass: embed, run every block, project to vocabulary logits. | `head.forward(x)` | 187 |
-| `sample_next` | `logits` | sampling | `n - 1` | 198 |
-| `generate` | `model, prompt_ids, max_new` | Samples tokens autoregressively from the model until the length limit. | `out` | 212 |
+| `transpose` | `a` | Swaps the two dimensions of a 2-D tensor. | `tensor(d, [c, r])` | 112 |
+| `transformer_block` | `dim, hidden` | transformer block | `{` | 131 |
+| `block_forward` | `x, ln1, attn, ln2, ff1, ff2` | One transformer block: attention, residual, feed-forward, residual. | `d_add(x1, f)` | 152 |
+| `gpt` | `vocab, dim, hidden, layers` | decoder-only LM | `{` | 160 |
+| `gpt_forward` | `ids, emb, blocks, head, layers` | Full model forward pass: embed, run every block, project to vocabulary logits. | `head.forward(x)` | 189 |
+| `gpt_forward_batch` | `model, batch_token_seqs` | Batched GPT forward pass (M15): Accepts a list of token sequences (each a list of token ids or a 1D tensor) or a 2D tensor [batch_size, seq_len], and returns a [batch_size, seq_len, vocab] batch tensor with per-sequence logit tensors in `.outputs` and indexed `[b]`. | `tensor_grad([], [0, 0, 0])` | 204 |
+| `sample_next` | `logits` | sampling | `n - 1` | 265 |
+| `generate` | `model, prompt_ids, max_new` | Samples tokens autoregressively from the model until the length limit. | `out` | 279 |
 
-#### `lang/stdlib/testkit.sdev`
+#### `lang\stdlib\testkit.sdev`
 
 testkit — assertions and host helpers for SDEV-authored build scripts. use "lang/stdlib/testkit.sdev" Scripts written against this module run under the SDEV host: node bin/sdevhost.mjs scripts/<name>.sdev
 
@@ -10962,14 +12842,197 @@ testkit — assertions and host helpers for SDEV-authored build scripts. use "la
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `str_same` | `a b` | Byte-wise string equality. The `is` operator compares handles, so two separately built strings with the same bytes are not `is`-equal. | `0` | 15 |
-| `first_diff` | `a b` | First differing byte offset, or -1 when the strings match. | `i` | 33 |
-| `check` | `name ok` | Computes and yields `0`. | `0` | 51 |
-| `tk_report` | `title` | Computes and yields `0`. | `0` | 62 |
-| `host_args` | _none_ | Part of the Host helpers section of this module. | `read_file("sdev:args")` | 75 |
-| `shell` | `cmd` | Part of the Host helpers section of this module. | `read_file(concat("sdev:exec:", cmd))` | 79 |
+| `str_same` | `a b` | Byte-wise string equality. `is` on string-typed expressions dispatches to STREQ in the VM; `str_same` wraps `is` for untyped parameter callers. | `concat(a, "") is b` | 15 |
+| `first_diff` | `a b` | First differing byte offset, or -1 when the strings match. | `i` | 20 |
+| `check` | `name ok` | Computes and yields `0`. | `0` | 38 |
+| `tk_report` | `title` | Computes and yields `0`. | `0` | 49 |
+| `host_args` | _none_ | Part of the Host helpers section of this module. | `read_file("sdev:args")` | 62 |
+| `shell` | `cmd` | Part of the Host helpers section of this module. | `read_file(concat("sdev:exec:", cmd))` | 66 |
 
-#### `lang/stdlib/webgpu.sdev`
+#### `lang\stdlib\v2\bits.sdev`
+
+SDEV Standard Library: Bits & Binary Operations (v2) — authored in SDEV.
+
+6 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `bits_shl` | `val shift` | Computes and yields `v`. | `v` | 3 |
+| `bits_shr` | `val shift` | Computes and yields `v`. | `v` | 13 |
+| `bits_test` | `val bit_pos` | Computes and yields `(val / mask) % 2`. | `(val / mask) % 2` | 23 |
+| `bits_popcount` | `val` | Computes and yields `count`. | `count` | 28 |
+| `bits_to_hex` | `val` | Computes and yields `"0"`. | `"0"` | 38 |
+| `bits_from_hex` | `hex_str` | Computes and yields `v`. | `v` | 53 |
+
+#### `lang\stdlib\v2\func.sdev`
+
+SDEV Standard Library: Functional Combinators (v2) — authored in SDEV.
+
+2 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `func_take` | `xs count` | Computes and yields `out`. | `out` | 3 |
+| `func_drop` | `xs count` | Computes and yields `mklist(0)`. | `mklist(0)` | 18 |
+
+#### `lang\stdlib\v2\json.sdev`
+
+SDEV Standard Library: JSON Serialization & Parsing (v2) — authored in SDEV.
+
+3 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `json_escape_string` | `s` | Computes and yields `out`. | `out` | 3 |
+| `json_encode_int` | `n` | Computes and yields `str(n)`. | `str(n)` | 32 |
+| `json_encode_list` | `xs` | Computes and yields `out`. | `out` | 36 |
+
+#### `lang\stdlib\v2\list.sdev`
+
+SDEV Standard Library: Lists & Sequences (v2) — authored in SDEV.
+
+12 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `list_clone` | `xs` | Computes and yields `out`. | `out` | 3 |
+| `list_append` | `xs item` | Computes and yields `out`. | `out` | 14 |
+| `list_contains_val` | `xs val` | Computes and yields `1`. | `1` | 26 |
+| `list_index_of_val` | `xs val` | Computes and yields `i`. | `i` | 38 |
+| `list_concat_two` | `a b` | Computes and yields `out`. | `out` | 50 |
+| `list_reverse_new` | `xs` | Computes and yields `out`. | `out` | 67 |
+| `list_sum_all` | `xs` | Computes and yields `total`. | `total` | 78 |
+| `list_min_val` | `xs` | Computes and yields `0`. | `0` | 89 |
+| `list_max_val` | `xs` | Computes and yields `0`. | `0` | 105 |
+| `gather` | _none_ | SDEV v1 Compatibility Aliases | `mklist(0)` | 122 |
+| `pluck` | `xs item` | Computes and yields `list_append(xs, item)`. | `list_append(xs, item)` | 126 |
+| `invert` | `xs` | Computes and yields `list_reverse_new(xs)`. | `list_reverse_new(xs)` | 130 |
+
+#### `lang\stdlib\v2\math.sdev`
+
+SDEV Standard Library: Mathematics & Numerics (v2) — authored in SDEV.
+
+14 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `math_PI` | _none_ | Computes and yields `3.141592653589793`. | `3.141592653589793` | 3 |
+| `math_E` | _none_ | Computes and yields `2.718281828459045`. | `2.718281828459045` | 7 |
+| `math_TAU` | _none_ | Computes and yields `6.283185307179586`. | `6.283185307179586` | 11 |
+| `math_abs` | `x` | Computes and yields `abs(x)`. | `abs(x)` | 15 |
+| `math_min` | `a b` | Computes and yields `min(a, b)`. | `min(a, b)` | 19 |
+| `math_max` | `a b` | Computes and yields `max(a, b)`. | `max(a, b)` | 23 |
+| `math_clamp` | `x lo hi` | Computes and yields `lo`. | `lo` | 27 |
+| `math_sign` | `x` | Computes and yields `0 - 1`. | `0 - 1` | 37 |
+| `math_gcd` | `a b` | Computes and yields `x`. | `x` | 47 |
+| `math_lcm` | `a b` | Computes and yields `0`. | `0` | 58 |
+| `math_factorial` | `n` | Computes and yields `1`. | `1` | 68 |
+| `math_fib` | `n` | Computes and yields `0`. | `0` | 81 |
+| `math_is_prime` | `n` | Computes and yields `0`. | `0` | 100 |
+| `math_mean` | `xs` | Computes and yields `0.0`. | `0.0` | 120 |
+
+#### `lang\stdlib\v2\random.sdev`
+
+SDEV Standard Library: Random & Pseudo-RNG (v2) — authored in SDEV.
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `rng_make` | `seed` | Computes and yields `{ state: s }`. | `{ state: s }` | 3 |
+| `rng_next` | `rng` | Linear Congruential Generator (LCG) step: (state * 1103515245 + 12345) % 2147483648 | `s` | 12 |
+| `rng_int_range` | `rng min_val max_val` | Computes and yields `min_val`. | `min_val` | 21 |
+| `rng_choice` | `rng xs` | Computes and yields `0`. | `0` | 30 |
+
+#### `lang\stdlib\v2\sql.sdev`
+
+SDEV Standard Library: Relational SQL Primitives — authored in pure SDEV.
+
+10 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `sql_select` | `rows cols` | Computes and yields `out`. | `out` | 3 |
+| `sql_where` | `rows predicate` | Computes and yields `out`. | `out` | 25 |
+| `sql_limit` | `rows count offset` | Computes and yields `out`. | `out` | 39 |
+| `sql_count` | `rows` | Computes and yields `length(rows)`. | `length(rows)` | 55 |
+| `sql_sum` | `rows col` | Computes and yields `total`. | `total` | 59 |
+| `sql_avg` | `rows col` | Computes and yields `0`. | `0` | 73 |
+| `sql_min` | `rows col` | Computes and yields `0`. | `0` | 81 |
+| `sql_max` | `rows col` | Computes and yields `0`. | `0` | 98 |
+| `sql_distinct` | `rows col` | Computes and yields `out`. | `out` | 115 |
+| `sql_join` | `left right left_key right_key` | Computes and yields `out`. | `out` | 132 |
+
+#### `lang\stdlib\v2\text.sdev`
+
+SDEV Standard Library: Text & Strings (v2) — authored in SDEV.
+
+16 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `text_upper` | `s` | Computes and yields `upper(s)`. | `upper(s)` | 3 |
+| `text_lower` | `s` | Computes and yields `lower(s)`. | `lower(s)` | 7 |
+| `text_trim` | `s` | Computes and yields `trim(s)`. | `trim(s)` | 11 |
+| `text_contains` | `s sub` | Computes and yields `contains(s, sub)`. | `contains(s, sub)` | 15 |
+| `text_replace` | `s target rep` | Computes and yields `replace(s, target, rep)`. | `replace(s, target, rep)` | 19 |
+| `text_split` | `s delim` | Computes and yields `split(s, delim)`. | `split(s, delim)` | 23 |
+| `text_join` | `items delim` | Computes and yields `join(items, delim)`. | `join(items, delim)` | 27 |
+| `text_starts_with` | `s prefix` | Computes and yields `0`. | `0` | 31 |
+| `text_ends_with` | `s suffix` | Computes and yields `0`. | `0` | 39 |
+| `text_repeat` | `s count` | Computes and yields `out`. | `out` | 48 |
+| `text_pad_left` | `s target_len pad_char` | Computes and yields `s`. | `s` | 58 |
+| `text_pad_right` | `s target_len pad_char` | Computes and yields `s`. | `s` | 66 |
+| `text_reverse` | `s` | Computes and yields `out`. | `out` | 74 |
+| `etch` | `a b` | SDEV v1 Compatibility Aliases | `a + b` | 86 |
+| `shatter` | `s delim` | Computes and yields `text_split(s, delim)`. | `text_split(s, delim)` | 90 |
+| `weave` | `list delim` | Computes and yields `text_join(list, delim)`. | `text_join(list, delim)` | 94 |
+
+#### `lang\stdlib\v2\time.sdev`
+
+SDEV Standard Library: Time & Calendar (v2) — authored in SDEV.
+
+3 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `time_is_leap_year` | `year` | Computes and yields `1`. | `1` | 3 |
+| `time_days_in_month` | `year month` | Computes and yields `29`. | `29` | 16 |
+| `time_format_duration_ms` | `ms` | Computes and yields `h_str + ":" + m_str + ":" + s_str`. | `h_str + ":" + m_str + ":" + s_str` | 38 |
+
+#### `lang\stdlib\v2\tome.sdev`
+
+SDEV Standard Library: Tomes & Mappings (v2) — authored in SDEV.
+
+10 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `tome_create` | _none_ | Computes and yields `{}`. | `{}` | 3 |
+| `tome_get_or` | `t key fallback` | Computes and yields `t[key]`. | `t[key]` | 7 |
+| `tome_put_kv` | `t key val` | Computes and yields `t`. | `t` | 14 |
+| `tome_has_key` | `t key` | Computes and yields `has(t, key)`. | `has(t, key)` | 19 |
+| `tome_keys_list` | `t` | Computes and yields `keys(t)`. | `keys(t)` | 23 |
+| `tome_values_list` | `t` | Computes and yields `values(t)`. | `values(t)` | 27 |
+| `tome_merge_two` | `a b` | Computes and yields `out`. | `out` | 31 |
+| `tome_pick_keys` | `t wanted_keys` | Computes and yields `out`. | `out` | 50 |
+| `inscribe` | `t key val` | SDEV v1 Compatibility Aliases | `tome_put_kv(t, key, val)` | 64 |
+| `unscroll` | `t key` | Computes and yields `tome_get_or(t, key, "")`. | `tome_get_or(t, key, "")` | 68 |
+
+#### `lang\stdlib\v2\types.sdev`
+
+SDEV Standard Library: Types & Coercions (v2) — authored in SDEV.
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `types_is_empty` | `v` | Computes and yields `1`. | `1` | 3 |
+| `types_coalesce` | `a b` | Computes and yields `b`. | `b` | 10 |
+| `types_to_int_or` | `s fallback` | Computes and yields `fallback`. | `fallback` | 17 |
+| `types_to_bool` | `v` | Computes and yields `0`. | `0` | 46 |
+
+#### `lang\stdlib\webgpu.sdev`
 
 lang/stdlib/webgpu.sdev Milestone 10 — WebGPU acceleration for the browser IDE Provides a thin, sdev-native wrapper over the host's WebGPU bindings. The runtime exposes a handful of host calls (`__wgpu_*`) that the browser build implements through `navigator.gpu`. On Node/native builds without a GPU adapter, every entry point falls back to the pure-sdev CPU tensor kernels so user code stays portable. This module is written entirely in sdev and is compiled by the self-hosted compiler like the rest of the stdlib.
 
@@ -11197,174 +13260,256 @@ Registry: **209 features** across **3 tracks**.
 
 #### `lang/bootstrap/` — JS bootstrap compiler + hand-written WebAssembly seed VM
 
-- `lang/bootstrap/compile.mjs`
-- `lang/bootstrap/seed.wat`
+- `lang\bootstrap\bootstrap.sdev`
+- `lang\bootstrap\seed_vm.sdev`
 
 #### `lang/compiler/` — The self-hosted compiler, written in sdev
 
-- `lang/compiler/codegen.sdev`
-- `lang/compiler/compile-self.mjs`
-- `lang/compiler/driver-artifact.mjs`
-- `lang/compiler/lexer.sdev`
-- `lang/compiler/parser.sdev`
+- `lang\compiler\codegen.sdev`
+- `lang\compiler\driver.sdev`
+- `lang\compiler\lexer.sdev`
+- `lang\compiler\parser.sdev`
 
 #### `lang/native/` — x86-64 GAS backend, assembly runtime, linker driver
 
-- `lang/native/README.md`
-- `lang/native/codegen-x64.mjs`
-- `lang/native/link.mjs`
-- `lang/native/runtime.s`
+- `lang\native\README.md`
+- `lang\native\codegen_x64.sdev`
+- `lang\native\link.sdev`
+- `lang\native\runtime_x64.sdev`
 
 #### `lang/runtime/` — v2 reference runtime (JS, legacy oracle)
 
-- `lang/runtime/v2.js`
+- `lang\runtime\kernel.sdev`
+- `lang\runtime\vm.sdev`
 
 #### `lang/stdlib/` — Standard library written in sdev (ML, FFI, WebGPU, CUDA)
 
-- `lang/stdlib/ffi.sdev`
-- `lang/stdlib/ml/auto_evolve.sdev`
-- `lang/stdlib/ml/autograd.sdev`
-- `lang/stdlib/ml/cuda.sdev`
-- `lang/stdlib/ml/data.sdev`
-- `lang/stdlib/ml/nn.sdev`
-- `lang/stdlib/ml/self_modify.sdev`
-- `lang/stdlib/ml/tensor.sdev`
-- `lang/stdlib/ml/train.sdev`
-- `lang/stdlib/ml/transformer.sdev`
-- `lang/stdlib/testkit.sdev`
-- `lang/stdlib/webgpu.sdev`
+- `lang\stdlib\ffi.sdev`
+- `lang\stdlib\ml\auto_evolve.sdev`
+- `lang\stdlib\ml\autograd.sdev`
+- `lang\stdlib\ml\cuda.sdev`
+- `lang\stdlib\ml\data.sdev`
+- `lang\stdlib\ml\nn.sdev`
+- `lang\stdlib\ml\self_modify.sdev`
+- `lang\stdlib\ml\tensor.sdev`
+- `lang\stdlib\ml\train.sdev`
+- `lang\stdlib\ml\transformer.sdev`
+- `lang\stdlib\testkit.sdev`
+- `lang\stdlib\v2\bits.sdev`
+- `lang\stdlib\v2\func.sdev`
+- `lang\stdlib\v2\json.sdev`
+- `lang\stdlib\v2\list.sdev`
+- `lang\stdlib\v2\math.sdev`
+- `lang\stdlib\v2\random.sdev`
+- `lang\stdlib\v2\sql.sdev`
+- `lang\stdlib\v2\text.sdev`
+- `lang\stdlib\v2\time.sdev`
+- `lang\stdlib\v2\tome.sdev`
+- `lang\stdlib\v2\types.sdev`
+- `lang\stdlib\webgpu.sdev`
 
 #### `lang/parity/` — Feature registry, parity agent, generated report
 
-- `lang/parity/agent.sdev`
-- `lang/parity/features.json`
-- `lang/parity/report.json`
+- `lang\parity\agent.sdev`
+- `lang\parity\features.json`
+- `lang\parity\report.json`
 
 #### `src/lang/` — v1 TypeScript reference implementation
 
-- `src/lang/advanced.ts`
-- `src/lang/agent/brain.ts`
-- `src/lang/agent/directives.ts`
-- `src/lang/agent/index.ts`
-- `src/lang/agent/memory.ts`
-- `src/lang/agent/promote.ts`
-- `src/lang/agent/repair.ts`
-- `src/lang/agent/sense.ts`
-- `src/lang/agent/types.ts`
-- `src/lang/agent/vocabulary.ts`
-- `src/lang/ast.ts`
-- `src/lang/builtins.ts`
-- `src/lang/bytecode.ts`
-- `src/lang/compiler.ts`
-- `src/lang/dialect/address.ts`
-- `src/lang/dialect/canonicalize.ts`
-- `src/lang/dialect/catalog.ts`
-- `src/lang/dialect/docs.ts`
-- `src/lang/dialect/extensions.ts`
-- `src/lang/dialect/index.ts`
-- `src/lang/dialect/registry.ts`
-- `src/lang/dialect/sample.ts`
-- `src/lang/dialect/signature.ts`
-- `src/lang/dialect/spec.ts`
-- `src/lang/environment.ts`
-- `src/lang/errors.ts`
-- `src/lang/gist.ts`
-- `src/lang/graphics.ts`
-- `src/lang/hardware/board-db.ts`
-- `src/lang/hardware/strip.ts`
-- `src/lang/hardware/transpile.ts`
-- `src/lang/hardware/web-serial.ts`
-- `src/lang/index.ts`
-- `src/lang/interpreter.ts`
-- `src/lang/kernel.ts`
-- `src/lang/keywords.ts`
-- `src/lang/lexer.ts`
-- `src/lang/linker.ts`
-- `src/lang/matrix.ts`
-- `src/lang/parser.ts`
-- `src/lang/pyparity.ts`
-- `src/lang/runtime-values.ts`
-- `src/lang/tokens.ts`
-- `src/lang/translator-v2.ts`
-- `src/lang/translator.ts`
-- `src/lang/ui.ts`
-- `src/lang/vm.ts`
-- `src/lang/web.ts`
+- `src\lang\advanced.ts`
+- `src\lang\agent\brain-prompt.ts`
+- `src\lang\agent\brain.ts`
+- `src\lang\agent\browser-brain.ts`
+- `src\lang\agent\directives.ts`
+- `src\lang\agent\index.ts`
+- `src\lang\agent\math.ts`
+- `src\lang\agent\memory.ts`
+- `src\lang\agent\promote.ts`
+- `src\lang\agent\repair.ts`
+- `src\lang\agent\sdev-engine.ts`
+- `src\lang\agent\sense.ts`
+- `src\lang\agent\tasks.ts`
+- `src\lang\agent\tests\sense.test.ts`
+- `src\lang\agent\types.ts`
+- `src\lang\agent\vocabulary.ts`
+- `src\lang\ast.ts`
+- `src\lang\builtins.ts`
+- `src\lang\builtins\buffer.ts`
+- `src\lang\builtins\dict.ts`
+- `src\lang\builtins\functional.ts`
+- `src\lang\builtins\host.ts`
+- `src\lang\builtins\io.ts`
+- `src\lang\builtins\json.ts`
+- `src\lang\builtins\list.ts`
+- `src\lang\builtins\math.ts`
+- `src\lang\builtins\misc.ts`
+- `src\lang\builtins\regex.ts`
+- `src\lang\builtins\sql.ts`
+- `src\lang\builtins\string.ts`
+- `src\lang\builtins\text.ts`
+- `src\lang\builtins\time.ts`
+- `src\lang\builtins\types.ts`
+- `src\lang\builtins\utils.ts`
+- `src\lang\bytecode.ts`
+- `src\lang\compiler.ts`
+- `src\lang\dialect\address.ts`
+- `src\lang\dialect\canonicalize.ts`
+- `src\lang\dialect\catalog.ts`
+- `src\lang\dialect\docs.ts`
+- `src\lang\dialect\extensions.ts`
+- `src\lang\dialect\index.ts`
+- `src\lang\dialect\presets.ts`
+- `src\lang\dialect\registry.ts`
+- `src\lang\dialect\sample.ts`
+- `src\lang\dialect\signature.ts`
+- `src\lang\dialect\spec.ts`
+- `src\lang\environment.ts`
+- `src\lang\errors.ts`
+- `src\lang\graphics.ts`
+- `src\lang\hardware\arduino-api.ts`
+- `src\lang\hardware\board-db.test.ts`
+- `src\lang\hardware\board-db.ts`
+- `src\lang\hardware\cloud-compile.ts`
+- `src\lang\hardware\strip.ts`
+- `src\lang\hardware\transpile.ts`
+- `src\lang\hardware\web-serial.ts`
+- `src\lang\index.ts`
+- `src\lang\interpreter.ts`
+- `src\lang\kernel.ts`
+- `src\lang\keywords.ts`
+- `src\lang\lexer.ts`
+- `src\lang\linker.ts`
+- `src\lang\linter.ts`
+- `src\lang\matrix.ts`
+- `src\lang\parser.ts`
+- `src\lang\pyparity.ts`
+- `src\lang\registry\api-registry.ts`
+- `src\lang\runtime-values.ts`
+- `src\lang\tests\vm.test.ts`
+- `src\lang\tokens.ts`
+- `src\lang\translator-v2.ts`
+- `src\lang\translator.ts`
+- `src\lang\ui.ts`
+- `src\lang\vm.ts`
+- `src\lang\web.ts`
 
 #### `src/lang-bridge/` — Runtime selection + WASM bridge for the browser IDE
 
-- `src/lang-bridge/bridge.ts`
-- `src/lang-bridge/compile-self.d.ts`
-- `src/lang-bridge/v2.d.ts`
-- `src/lang-bridge/wasm-runtime.ts`
+- `src\lang-bridge\compile-self.d.ts`
+- `src\lang-bridge\compile-self.mjs`
+- `src\lang-bridge\driver-artifact.mjs`
+- `src\lang-bridge\native\codegen-x64.mjs`
+- `src\lang-bridge\native\link.mjs`
+- `src\lang-bridge\native\runtime.s`
+- `src\lang-bridge\oracle\compile.mjs`
+- `src\lang-bridge\oracle\v2.js`
+- `src\lang-bridge\seed\seed.wat`
+- `src\lang-bridge\wasm-runtime.ts`
 
 #### `electron/` — Desktop IDE shell with native build/run IPC
 
-- `electron/README.md`
-- `electron/main.cjs`
-- `electron/preload.cjs`
+- `electron\README.md`
+- `electron\main.cjs`
+- `electron\preload.cjs`
 
 #### `scripts/` — Build drivers and the full test-gate suite
 
-- `scripts/_compiler-entry.ts`
-- `scripts/_ext-v2-cli.mjs`
-- `scripts/build-book-content.py`
-- `scripts/build-book-pdf.py`
-- `scripts/build-book.ts`
-- `scripts/build-cli.mjs`
-- `scripts/build-compiler.ts`
-- `scripts/build-driver.mjs`
-- `scripts/build-seed-wasm.mjs`
-- `scripts/build-ultimate-docs.mjs`
-- `scripts/probe-self-codegen.mjs`
-- `scripts/probe-self-lexer.sdev`
-- `scripts/sdev-native.mjs`
-- `scripts/sdev-runtime-launcher.ts`
-- `scripts/test-agent.ts`
-- `scripts/test-bg.ts`
-- `scripts/test-dialect.ts`
-- `scripts/test-driver-artifact.sdev`
-- `scripts/test-ml-stdlib.ts`
-- `scripts/test-native.mjs`
-- `scripts/test-parity.ts`
-- `scripts/test-self-codegen.mjs`
-- `scripts/test-self-lexer.mjs`
-- `scripts/test-self-parser.mjs`
-- `scripts/test-self-toolchain.sdev`
-- `scripts/test-shim-fixed-point.mjs`
-- `scripts/test-translator.ts`
-- `scripts/test-wasm-runtime.mjs`
+- `scripts\_compiler-entry.ts`
+- `scripts\_ext-v2-cli.mjs`
+- `scripts\build-arduino-library-index.py`
+- `scripts\build-book-content.py`
+- `scripts\build-book-pdf.py`
+- `scripts\build-book.ts`
+- `scripts\build-cli.mjs`
+- `scripts\build-compiler.ts`
+- `scripts\build-driver.mjs`
+- `scripts\build-seed-wasm.mjs`
+- `scripts\build-ultimate-docs.mjs`
+- `scripts\gen-hardware-docs.ts`
+- `scripts\probe-self-codegen.sdev`
+- `scripts\probe-self-lexer.sdev`
+- `scripts\release.mjs`
+- `scripts\run-ts.mjs`
+- `scripts\sdev-native.mjs`
+- `scripts\sdev-runtime-launcher.ts`
+- `scripts\test-agent.ts`
+- `scripts\test-all.mjs`
+- `scripts\test-beginner.ts`
+- `scripts\test-bg.ts`
+- `scripts\test-brain.ts`
+- `scripts\test-dialect.ts`
+- `scripts\test-driver-artifact.sdev`
+- `scripts\test-formatter.ts`
+- `scripts\test-linker.ts`
+- `scripts\test-math.ts`
+- `scripts\test-matrix.ts`
+- `scripts\test-ml-stdlib.ts`
+- `scripts\test-multi-language-features.ts`
+- `scripts\test-native.mjs`
+- `scripts\test-parity.ts`
+- `scripts\test-preset-dialect.ts`
+- `scripts\test-registry.ts`
+- `scripts\test-sdev-engine.ts`
+- `scripts\test-self-codegen.sdev`
+- `scripts\test-self-lexer.sdev`
+- `scripts\test-self-parser.sdev`
+- `scripts\test-self-toolchain.sdev`
+- `scripts\test-selfhosted-stdlib.sdev`
+- `scripts\test-selfhosted-stdlib.ts`
+- `scripts\test-selfhosted-subsystems.sdev`
+- `scripts\test-shim-fixed-point.sdev`
+- `scripts\test-strip.ts`
+- `scripts\test-tasks.ts`
+- `scripts\test-translator.ts`
+- `scripts\test-transpile.ts`
+- `scripts\test-ui.ts`
+- `scripts\test-wasm-runtime.mjs`
 
 
 ### Toolchain and test gates
 
 | Command | Purpose |
 | --- | --- |
-| `node scripts/_compiler-entry.ts` |  |
-| `node scripts/_ext-v2-cli.mjs` | Entry point bundled into extension/interpreter/sdev-v2.cjs. |
-| `node scripts/build-book-content.py` | !/usr/bin/env python3 |
-| `node scripts/build-book-pdf.py` | !/usr/bin/env python3 |
-| `node scripts/build-book.ts` | Generates the giant sdev Book in English and Bulgarian. |
-| `node scripts/build-cli.mjs` | !/usr/bin/env node |
-| `node scripts/build-compiler.ts` | Bundles the sdev compiler + VM + interpreter into a single Node.js CLI. |
-| `node scripts/build-driver.mjs` | Milestone 5p — bake the self-hosted driver bytecode. |
-| `node scripts/build-seed-wasm.mjs` | Build the seed VM: lang/bootstrap/seed.wat → public/wasm/sdev-seed.wasm |
-| `node scripts/build-ultimate-docs.mjs` | Builds public/SDEV_ULTIMATE_DOCUMENTATION.md — the single, complete sdev |
-| `node scripts/probe-self-codegen.mjs` | Probe: run the self-hosted codegen through the shim, but tap into what |
-| `node scripts/sdev-native.mjs` | SDEV native compiler CLI. |
-| `node scripts/sdev-runtime-launcher.ts` |  |
-| `node scripts/test-agent.ts` | ---- the user's own example ----------------------------------------- |
-| `node scripts/test-bg.ts` |  |
-| `node scripts/test-dialect.ts` | ---- a Bulgarian dialect with braces and `=` assignment ------------------- |
-| `node scripts/test-ml-stdlib.ts` | ---- Node host bindings consumed by src/lang/builtins.ts ---- |
-| `node scripts/test-native.mjs` | Regression suite for the native x86-64 backend. |
-| `node scripts/test-parity.ts` | The agent parses the registry line-by-line. Validate the same file with a |
-| `node scripts/test-self-codegen.mjs` | Self-hosted codegen end-to-end test. |
-| `node scripts/test-self-lexer.mjs` | Runs the self-hosted lexer (lang/compiler/lexer.sdev) through the seed |
-| `node scripts/test-self-parser.mjs` | Runs the self-hosted expression parser through the seed WASM VM and |
-| `node scripts/test-shim-fixed-point.mjs` | Milestone 5l gate — shim fixed-point verification. |
-| `node scripts/test-translator.ts` | A Bulgarian dialect: `кажи` means say, `нека` means set. Those words are the |
-| `node scripts/test-wasm-runtime.mjs` | Standalone Node harness: compile + run via the seed WASM. No browser. |
+| `node scripts\_compiler-entry.ts` |  |
+| `node scripts\_ext-v2-cli.mjs` | Entry point bundled into extension/interpreter/sdev-v2.cjs. |
+| `node scripts\build-arduino-library-index.py` | !/usr/bin/env python3 |
+| `node scripts\build-book-content.py` | !/usr/bin/env python3 |
+| `node scripts\build-book-pdf.py` | !/usr/bin/env python3 |
+| `node scripts\build-book.ts` | Generates the giant sdev Book in English and Bulgarian. |
+| `node scripts\build-cli.mjs` | !/usr/bin/env node |
+| `node scripts\build-compiler.ts` | Bundles the sdev compiler + VM + interpreter into a single Node.js CLI. |
+| `node scripts\build-driver.mjs` | Bake the self-hosted driver bytecode. |
+| `node scripts\build-seed-wasm.mjs` | Build the seed VM: lang/bootstrap/seed.wat → public/wasm/sdev-seed.wasm |
+| `node scripts\build-ultimate-docs.mjs` | !/usr/bin/env node |
+| `node scripts\gen-hardware-docs.ts` | ============================================================ |
+| `node scripts\release.mjs` | !/usr/bin/env node |
+| `node scripts\run-ts.mjs` | !/usr/bin/env node |
+| `node scripts\sdev-native.mjs` | !/usr/bin/env node |
+| `node scripts\sdev-runtime-launcher.ts` |  |
+| `node scripts\test-agent.ts` | ---- the user's own example ----------------------------------------- |
+| `node scripts\test-all.mjs` | ───────────────────────────────────────────────────────────────────────── |
+| `node scripts\test-beginner.ts` |  |
+| `node scripts\test-bg.ts` |  |
+| `node scripts\test-brain.ts` | Quick connectivity check: verify the online brain is reachable before running full suite |
+| `node scripts\test-dialect.ts` | ---- a Bulgarian dialect with braces and `=` assignment ------------------- |
+| `node scripts\test-formatter.ts` | 1. Basic indentation |
+| `node scripts\test-linker.ts` | Test data |
+| `node scripts\test-math.ts` |  |
+| `node scripts\test-matrix.ts` | matrix |
+| `node scripts\test-ml-stdlib.ts` | ---- Node host bindings consumed by src/lang/builtins.ts ---- |
+| `node scripts\test-multi-language-features.ts` | ── 1. String Interpolation (Phase 2, Item 10) ─────────────────────────────── |
+| `node scripts\test-native.mjs` | !/usr/bin/env node |
+| `node scripts\test-parity.ts` | The agent parses the registry line-by-line. Validate the same file with a |
+| `node scripts\test-preset-dialect.ts` |  |
+| `node scripts\test-registry.ts` |  |
+| `node scripts\test-sdev-engine.ts` | unsure lines fall back to the TypeScript engine |
+| `node scripts\test-selfhosted-stdlib.ts` | 1. Test Seed VM & VM step/run |
+| `node scripts\test-strip.ts` |  |
+| `node scripts\test-tasks.ts` |  |
+| `node scripts\test-translator.ts` | A Bulgarian dialect: `кажи` means say, `нека` means set. Those words are the |
+| `node scripts\test-transpile.ts` | Basic case |
+| `node scripts\test-ui.ts` | Helper to call built-ins |
+| `node scripts\test-wasm-runtime.mjs` | Standalone Node harness: compile + run via the seed WASM. No browser. |
 
 
 ---

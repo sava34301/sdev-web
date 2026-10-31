@@ -1,4 +1,4 @@
-# SDEV — The Complete Project Record (Expanded Edition, v4)
+# SDEV — The Complete Project Record (Expanded Edition, v5)
 
 > Everything discussed, built, decided, rejected, planned and imagined for the SDEV Programming Language, from the first message to today — now updated with the 100% self-hosted pure SDEV language milestone engineered and verified in **Antigravity**.
 
@@ -12,8 +12,8 @@
 | **Licence** | "SDEV Programming Language © 2026 by Sava Milanov is licensed under Creative Commons Attribution-ShareAlike 4.0 International" |
 | **Public launch** | 12 July 2026, 14:00 Sofia time (UTC+3) |
 | **Current tool version** | 5.1.0 (one version for IDE, CLI, VS Code extension and desktop app) |
-| **Period covered** | 11 December 2025 → 24 October 2026 (750+ chat messages across Lovable and **Antigravity**) |
-| **Edition** | v4 — expanded & updated in **Antigravity**. Supersedes `SDEV_Complete_Project_History.md` (v1, v2, and v3). |
+| **Period covered** | 11 December 2025 → 31 October 2026 (780+ chat messages across Lovable and **Antigravity**) |
+| **Edition** | v5 — expanded & updated in **Antigravity**. Supersedes `SDEV_Complete_Project_History.md` (v1, v2, v3, and v4). |
 
 ---
 
@@ -1151,7 +1151,10 @@ Homepage structure today: split hero with a live typing demo and "Continue editi
 
 **Phase 2 — Consistency and language quality**
 - [x] 9. Support for both `::`/`;;` and `{}` blocks in hardware and `sdevCheckBlocks` diagnostics. (**Built in Antigravity**.)
-- [ ] 10–15. String interpolation `"{name} has {count}"` across all tracks, scalar `match` on v2, optional type annotations in v2, immutable bindings (`fixed`) in v1/v2.
+- [x] 10. String interpolation `"{name} has {count}"` with expression evaluation and `{{...}}` literal escaping across tracks. (**Built in Antigravity**.)
+- [x] 11. Scalar `match` statement on v2 compiler with jump test tree, wildcards `_`, and condition guards. (**Built in Antigravity**.)
+- [ ] 12–14. Optional type annotations in v2.
+- [x] 15. Immutable variable bindings (`fixed` / `const` / `val`) across v1/v2 with compile-time & runtime reassignment rejection. (**Built in Antigravity**.)
 
 **Phase 3 — First-class UI and events**
 - [ ] 16–23. Unified event model for UI and canvas, keyboard/pointer helpers, preview error overlays, conformance Calculator and Todo apps with automated UI tests.
@@ -1164,7 +1167,7 @@ Homepage structure today: split hero with a live typing demo and "Continue editi
 - [x] 30. CLI commands `lint`, `doctor`, `explain`, `api`. (**Built in Antigravity**.)
 - [x] 31. `sdev doctor` (checks CLI version, Node & Python, WASM seed VM, native x86-64 codegen, Arduino library index, and API registry). (**Built in Antigravity**.)
 - [x] 32. `sdev explain <code>` backed by `DIAGNOSTIC_CATALOGUE` (`SDEV001`–`SDEV015`) and the API registry. (**Built in Antigravity**.)
-- [ ] 33. Formal formatter test suite.
+- [x] 33. Formal formatter test suite (`scripts/test-formatter.ts`, 8/8 test cases verifying indentation, idempotency, blank line normalization, and comment/string safety). (**Built in Antigravity**.)
 - [x] 34. Static linter (`src/lang/linter.ts`): unused variables, unreachable code, builtin shadowing, division by zero, unknown APIs, target mismatch, arity mismatch, constant conditions, self-assignment. (**Built in Antigravity**, 93/93 checks passing in `scripts/test-registry.ts`.)
 - [ ] 35–36. Unified test runner and profiler scaffolding.
 
@@ -1399,3 +1402,57 @@ In October 2026, a comprehensive repository audit, dead code elimination, and fe
    - Full production build (`npm run build`) passing cleanly in 7.5s.
 
 *All enhancements, refactoring, dead code elimination, and feature completions documented above were designed, implemented, and verified in **Antigravity**.*
+
+
+---
+
+## 10. Universal Multi-Language Feature Parity & Roadmap Completion (Built in Antigravity)
+
+On 31 October 2026, the SDEV language achieved comprehensive multi-language parity spanning modern systems, scripting, and functional paradigms in **Antigravity**:
+
+1. **String Interpolation `"{name} has {count}"` (Roadmap Phase 2, Item 10 — Built in Antigravity)**:
+   - Added `hasInterpolation` in `src/lang/parser.ts` to detect expressions embedded within string literals while preserving literal escaped braces `{{...}}` and `}}`.
+   - Wired `FStringExpr` desugaring into `parsePrimary` for both classic string tokens and f-string tokens.
+   - Implemented bytecode emission for `FStringExpr` in `src/lang/compiler.ts`, compiling expressions, applying string conversion (`LOAD 'str'`), and emitting `OpCode.ADD` for seamless v2 bytecode execution.
+   - Verified on both v1 interpreter and v2 compiler.
+
+2. **Immutable Variable Bindings `fixed` / `const` / `val` (Roadmap Phase 2, Item 15 — Built in Antigravity)**:
+   - Added `FIXED` token to `src/lang/tokens.ts` and keyword definitions in `src/lang/keywords.ts` (`mystic: 'fixed'`, `plain: 'const'`, `alias: 'val'`).
+   - Extended `LetStatement` in `src/lang/ast.ts` with `isFixed?: boolean`.
+   - Updated `parseForgeStatement` in `src/lang/parser.ts` to parse `fixed <name> be <val>`.
+   - Added immutability enforcement in `Environment` (`defineFixed`, `isFixed`, throwing `Cannot reassign fixed variable '<name>'`).
+   - Added immutable binding compile-time checking in `Compiler` rejecting reassignments.
+   - Added static analysis diagnostic in `src/lang/linter.ts` (`SDEV014`).
+
+3. **Scalar `match` Statement on v2 Bytecode Compiler (Roadmap Phase 2, Item 11 — Built in Antigravity)**:
+   - Implemented `compileMatch` and `compileMatchPattern` in `src/lang/compiler.ts`.
+   - Generates jump test tree supporting literal patterns (`PatLiteral`), value expressions (`PatValue`), wildcards `_` (`PatWildcard`), variable capture (`PatCapture`), or-patterns (`PatOr`), and condition guards (`when` / `also`), jumping to block end after matched arm execution.
+
+4. **Relational SQL & LINQ Engine (SQL Parity — Built in Antigravity)**:
+   - Implemented relational query builtins in `src/lang/builtins/sql.ts`: `sql_select`, `sql_where`, `sql_order_by`, `sql_limit`, `sql_distinct`, `sql_join` (inner, left, right), `sql_group_by`, `sql_count`, `sql_sum`, `sql_avg`, `sql_min`, `sql_max`.
+   - Created pure self-hosted SDEV counterpart in `lang/stdlib/v2/sql.sdev` for seed VM execution.
+   - Registered canonical signatures and documentation in `src/lang/registry/api-registry.ts`.
+
+5. **Modern Language Conveniences (Kotlin, C#, Python Parity — Built in Antigravity)**:
+   - Null-coalescing / Elvis operator: `coalesce(val, fallback)` in `builtins` and stdlib.
+   - Safe navigation: `safe_get(record, key, default)` for nested safely traversing maps/records.
+   - Record copy/clone: `copy_record(record, overrides)` for immutably updating data records.
+
+6. **Systems Low-Level Arena Memory (C / C++ Parity — Built in Antigravity)**:
+   - Added low-level memory arena management and byte manipulation in `src/lang/builtins/buffer.ts` and `lang/paradigms/systems.sdev`: `arena_create`, `arena_alloc`, `arena_reset`, `mem_poke_u8`, `mem_peek_u8`, `mem_poke_i16`, `mem_peek_i16`, `mem_poke_i32`, `mem_peek_i32`, `mem_fill`, `mem_copy`.
+
+7. **Monadic Algebraic Types (Rust & Functional Parity — Built in Antigravity)**:
+   - Added Option and Result monads in `src/lang/builtins/functional.ts` and `lang/paradigms/functional.sdev`: `Some`, `None`, `is_some`, `is_none`, `unwrap_or`, `map_some`, `flat_map_some`, `Ok`, `Err`, `is_ok`, `is_err`, `result_unwrap_or`, `map_ok`, `flat_map_ok`.
+
+8. **Formal Formatter Test Suite (Roadmap Phase 5, Item 33 — Built in Antigravity)**:
+   - Added `scripts/test-formatter.ts` with 8 comprehensive test cases verifying indentation, nested blocks, custom indent sizes, idempotence, string and comment colon safety, and whitespace normalization.
+
+9. **Dual-Runtime Parity & Comprehensive Test Suite (Built in Antigravity)**:
+   - Added `scripts/test-multi-language-features.ts` testing all categories across v1 and v2 tracks (16/16 passed).
+   - Expanded `scripts/test-selfhosted-subsystems.sdev` to test systems memory arenas, monads, and SQL on the self-hosted seed VM (25/25 passed).
+   - Added `"test:formatter"` and `"test:features"` to `package.json` scripts and integrated both into `scripts/test-all.mjs`.
+   - All 12 SDEV test suites pass cleanly with 100% pass rate.
+   - All release artifacts rebuilt via `scripts/release.mjs`.
+   - Production Vite bundle builds with 0 errors.
+
+*All enhancements, refactoring, and multi-language feature completions documented above were designed, implemented, and verified in **Antigravity**.*

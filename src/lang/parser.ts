@@ -34,7 +34,8 @@ export class Parser {
 
   private parseStatement(): AST.ASTNode {
     if (this.check(TokenType.AT) && this.isDecoratorPosition()) return this.parseDecorated();
-    if (this.check(TokenType.FORGE)) return this.parseForgeStatement();
+    if (this.check(TokenType.FORGE)) return this.parseForgeStatement(false);
+    if (this.check(TokenType.FIXED)) return this.parseForgeStatement(true);
     if (this.check(TokenType.CONJURE)) return this.parseConjureDeclaration();
     if (this.check(TokenType.ASYNC)) return this.parseAsyncStatement();
     if (this.check(TokenType.PONDER)) return this.parsePonderStatement();
@@ -257,8 +258,11 @@ export class Parser {
   }
 
   // forge name[: Type] be value    |    forge a, b be pair
-  private parseForgeStatement(): AST.LetStatement {
-    const forgeToken = this.consume(TokenType.FORGE, "Expected 'forge'");
+  // fixed name[: Type] be value
+  private parseForgeStatement(isFixed = false): AST.LetStatement {
+    const token = isFixed
+      ? this.consume(TokenType.FIXED, "Expected 'fixed'")
+      : this.consume(TokenType.FORGE, "Expected 'forge'");
     // A target list may contain one starred name: `forge a, *rest be xs`.
     let starIndex: number | undefined;
     const readTarget = (): string => {
@@ -277,7 +281,7 @@ export class Parser {
 
     // Declaration without initialiser: `forge x: Int`
     if (!this.check(TokenType.BE)) {
-      return { type: 'LetStatement', name: names[0], targets: names.length > 1 ? names : undefined, starIndex, annotation, value: { type: 'NullLiteral', line: forgeToken.line }, line: forgeToken.line };
+      return { type: 'LetStatement', name: names[0], targets: names.length > 1 ? names : undefined, starIndex, annotation, value: { type: 'NullLiteral', line: token.line }, line: token.line, isFixed };
     }
     this.consume(TokenType.BE, "Expected 'be'");
     const value = this.parseExpressionOrTuple();
@@ -288,7 +292,8 @@ export class Parser {
       starIndex,
       annotation,
       value,
-      line: forgeToken.line,
+      line: token.line,
+      isFixed,
     };
   }
 
@@ -1363,6 +1368,9 @@ export class Parser {
       // Implicit adjacent string concatenation
       let value = token.value;
       while (this.check(TokenType.STRING)) value += this.advance().value;
+      if (this.hasInterpolation(value)) {
+        return this.buildFString(value, token.line);
+      }
       return { type: 'StringLiteral', value, line: token.line };
     }
 
@@ -1659,6 +1667,24 @@ export class Parser {
     }
     if (text) parts.push({ kind: 'text', value: text });
     return { type: 'FStringExpr', parts, line };
+  }
+
+
+  private hasInterpolation(str: string): boolean {
+    if (str.includes('{{') || str.includes('}}')) return true;
+    let i = 0;
+    while (i < str.length) {
+      if (str[i] === '{') {
+        if (str[i + 1] === '{') {
+          i += 2;
+          continue;
+        }
+        const close = str.indexOf('}', i + 1);
+        if (close > i + 1) return true;
+      }
+      i++;
+    }
+    return false;
   }
 
   private lexTemplate(source: string, line: number): Token[] {

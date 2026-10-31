@@ -10,6 +10,7 @@ use "lang/paradigms/systems.sdev"
 use "lang/paradigms/data.sdev"
 use "lang/paradigms/hardware.sdev"
 use "lang/linter/linter.sdev"
+use "lang/stdlib/v2/sql.sdev"
 
 # 1. Test Multilingual Translator
 set langs to translator_supported_languages()
@@ -26,7 +27,7 @@ set _ to check("v1 transpile contains set", contains(v2_code, "set x to 10"))
 set _ to check("v1 transpile contains say", contains(v2_code, "say x"))
 set _ to check("v1 transpile contains end", contains(v2_code, "end"))
 
-# 3. Test Functional Paradigm (ADTs)
+# 3. Test Functional Paradigm (ADTs & Monads)
 set opt to Some(42)
 set _ to check("Option is_some", is_some(opt) is 1)
 set _ to check("Option unwrap", unwrap_or(opt, 0) is 42)
@@ -38,19 +39,28 @@ set res_ok to Ok("success")
 set _ to check("Result is_ok", is_ok(res_ok) is 1)
 set _ to check("Result unwrap", result_unwrap_or(res_ok, "fallback") is "success")
 
-# 4. Test Systems Paradigm (Memory Arena)
+# 4. Test Systems Paradigm (Memory Arena: u8, i16, i32)
 set a to arena_create(128)
-set ptr to arena_alloc(a, 4)
-set _ to mem_poke_i32(a, ptr, 123456)
-set _ to check("Arena poke/peek i32", mem_peek_i32(a, ptr) is 123456)
+set ptr to arena_alloc(a, 8)
+set _ to mem_poke_u8(a, ptr, 250)
+set _ to check("Arena poke/peek u8", mem_peek_u8(a, ptr) is 250)
+set _ to mem_poke_i16(a, ptr + 1, 1024)
+set _ to check("Arena poke/peek i16", mem_peek_i16(a, ptr + 1) is 1024)
+set _ to mem_poke_i32(a, ptr + 3, 123456)
+set _ to check("Arena poke/peek i32", mem_peek_i32(a, ptr + 3) is 123456)
 
-# 5. Test Data Paradigm (Relational Tables)
+# 5. Test Data Paradigm & Relational SQL
 set tbl to table_create("users", ["id", "name", "role"])
 set u1 to { id: 1, name: "Alice", role: "admin" }
 set _ to table_insert(tbl, u1)
 set _ to check("Table row count", table_count(tbl) is 1)
 set csv to table_to_csv(tbl)
 set _ to check("Table to CSV", contains(csv, "Alice") and contains(csv, "admin"))
+
+# Test pure-SDEV SQL module
+set recs to [{ id: 1, val: 10 }, { id: 2, val: 25 }]
+set _ to check("SQL count", sql_count(recs) is 2)
+set _ to check("SQL sum", sql_sum(recs, "val") is 35)
 
 # 6. Test Hardware Paradigm (Embedded Transpiler)
 set sdev_hw to "pin 13 be output\npin 13 be high\nwait 500 ms"

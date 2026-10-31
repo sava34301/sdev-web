@@ -37,6 +37,8 @@
     "test:engine": "node scripts/run-ts.mjs scripts/test-sdev-engine.ts",
     "test:brain": "node scripts/run-ts.mjs scripts/test-brain.ts",
     "test:linker": "node scripts/run-ts.mjs scripts/test-linker.ts",
+    "test:formatter": "node scripts/run-ts.mjs scripts/test-formatter.ts",
+    "test:features": "node scripts/run-ts.mjs scripts/test-multi-language-features.ts",
     "test:strip": "node scripts/run-ts.mjs scripts/test-strip.ts",
     "test:ui": "node scripts/run-ts.mjs scripts/test-ui.ts",
     "test:transpile": "node scripts/run-ts.mjs scripts/test-transpile.ts",

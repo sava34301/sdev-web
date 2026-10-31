@@ -1,0 +1,158 @@
+# SDEV Standard Library: Relational SQL Primitives — authored in pure SDEV.
+
+to sql_select with rows cols
+  set out to []
+  set nr to length(rows)
+  set nc to length(cols)
+  set r to 0
+  while r < nr
+    set row to rows[r]
+    set item to {}
+    set c to 0
+    while c < nc
+      set col to cols[c]
+      if has(row, col)
+        set item[col] to row[col]
+      end
+      set c to c + 1
+    end
+    set out to out + [item]
+    set r to r + 1
+  end
+  return out
+end
+
+to sql_where with rows predicate
+  set out to []
+  set nr to length(rows)
+  set r to 0
+  while r < nr
+    set row to rows[r]
+    if predicate(row)
+      set out to out + [row]
+    end
+    set r to r + 1
+  end
+  return out
+end
+
+to sql_limit with rows count offset
+  set out to []
+  set nr to length(rows)
+  set start to offset
+  set end_idx to start + count
+  if end_idx > nr
+    set end_idx to nr
+  end
+  set i to start
+  while i < end_idx
+    set out to out + [rows[i]]
+    set i to i + 1
+  end
+  return out
+end
+
+to sql_count with rows
+  return length(rows)
+end
+
+to sql_sum with rows col
+  set total to 0
+  set nr to length(rows)
+  set r to 0
+  while r < nr
+    set row to rows[r]
+    if has(row, col)
+      set total to total + row[col]
+    end
+    set r to r + 1
+  end
+  return total
+end
+
+to sql_avg with rows col
+  set nr to length(rows)
+  if nr is 0
+    return 0
+  end
+  return sql_sum(rows, col) / nr
+end
+
+to sql_min with rows col
+  set nr to length(rows)
+  if nr is 0
+    return 0
+  end
+  set m to rows[0][col]
+  set r to 1
+  while r < nr
+    set v to rows[r][col]
+    if v < m
+      set m to v
+    end
+    set r to r + 1
+  end
+  return m
+end
+
+to sql_max with rows col
+  set nr to length(rows)
+  if nr is 0
+    return 0
+  end
+  set m to rows[0][col]
+  set r to 1
+  while r < nr
+    set v to rows[r][col]
+    if v > m
+      set m to v
+    end
+    set r to r + 1
+  end
+  return m
+end
+
+to sql_distinct with rows col
+  set out to []
+  set seen to {}
+  set nr to length(rows)
+  set r to 0
+  while r < nr
+    set row to rows[r]
+    set k to str(row[col])
+    if not has(seen, k)
+      set seen[k] to 1
+      set out to out + [row]
+    end
+    set r to r + 1
+  end
+  return out
+end
+
+to sql_join with left right left_key right_key
+  set out to []
+  set nl to length(left)
+  set nr to length(right)
+  set l to 0
+  while l < nl
+    set lrow to left[l]
+    set lval to lrow[left_key]
+    set r to 0
+    while r < nr
+      set rrow to right[r]
+      if rrow[right_key] is lval
+        set merged to {}
+        for each k in keys(lrow)
+          set merged[k] to lrow[k]
+        end
+        for each k in keys(rrow)
+          set merged[k] to rrow[k]
+        end
+        set out to out + [merged]
+      end
+      set r to r + 1
+    end
+    set l to l + 1
+  end
+  return out
+end

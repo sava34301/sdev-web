@@ -165,6 +165,7 @@ export function execute(source: string, options: ExecuteOptions = {}): Execution
 export { Lexer } from './lexer';
 export { Parser } from './parser';
 export { Interpreter } from './interpreter';
+export { Compiler } from './compiler';
 export { SdevError } from './errors';
 export {
   translateSource,

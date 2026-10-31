@@ -175,6 +175,7 @@ export interface LetStatement {
   annotation?: ASTNode;
   value: ASTNode;
   line: number;
+  isFixed?: boolean;
 }
 
 export interface AssignStatement {

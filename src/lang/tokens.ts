@@ -10,6 +10,7 @@ export enum TokenType {
 
   // Unique sdev Keywords
   FORGE = 'FORGE',         // variable declaration
+  FIXED = 'FIXED',         // immutable variable declaration
   CONJURE = 'CONJURE',     // function
   PONDER = 'PONDER',       // if
   OTHERWISE = 'OTHERWISE', // else
