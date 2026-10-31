@@ -64,7 +64,7 @@
     "@codemirror/view": "^6.43.9",
     "@hookform/resolvers": "^3.10.0",
     "@lezer/highlight": "^1.2.3",
-    "@lovable.dev/mcp-js": "^3.0.4",
+    "@lovable.dev/mcp-js": "^3.4.0",
     "@mlc-ai/web-llm": "^0.2.85",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
