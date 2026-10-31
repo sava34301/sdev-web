@@ -25,6 +25,20 @@ to unwrap_or with opt fallback
   return fallback
 end
 
+to map_some with opt fn
+  if is_some(opt)
+    return Some(fn(opt["val"]))
+  end
+  return None()
+end
+
+to flat_map_some with opt fn
+  if is_some(opt)
+    return fn(opt["val"])
+  end
+  return None()
+end
+
 # ---- Result Type ----------------------------------------------------------
 
 to Ok with val
@@ -48,6 +62,20 @@ to result_unwrap_or with res fallback
     return res["val"]
   end
   return fallback
+end
+
+to map_ok with res fn
+  if is_ok(res)
+    return Ok(fn(res["val"]))
+  end
+  return res
+end
+
+to flat_map_ok with res fn
+  if is_ok(res)
+    return fn(res["val"])
+  end
+  return res
 end
 
 # ---- Pattern Matching Helper ----------------------------------------------

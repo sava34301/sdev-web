@@ -22,6 +22,7 @@ const SOURCES: DocSource[] = [
   { id: 'reference',   title: 'Full Language Reference',     url: '/SDEV_DOCUMENTATION.md',      icon: Library },
 
   { id: 'v2',          title: 'sdev v2 "Prism" Guide',       url: '/SDEV_V2_DOCUMENTATION.md',   icon: ScrollText },
+  { id: 'multi-paradigm', title: 'Multi-Language Parity (SQL, Kotlin, Rust, C++)', url: '/SDEV_MULTI_PARADIGM_DOCUMENTATION.md', icon: ScrollText },
   { id: 'leaflet',     title: 'Leaflet & GIS Reference',     url: '/SDEV_LEAFLET_DOCUMENTATION.md', icon: ScrollText },
   { id: 'hardware',    title: 'Hardware & Boards',           url: '/SDEV_HARDWARE_DOCUMENTATION.md', icon: ScrollText },
   { id: 'internals',   title: 'Compiler & VM Internals',     url: '/SDEV_INTERNALS.md',          icon: Library },

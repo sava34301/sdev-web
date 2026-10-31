@@ -203,6 +203,22 @@ x be x - 10   // x = 20
 x be x / 4    // x = 5
 ```
 
+### Immutable Constants (`fixed` / `const` / `val`)
+
+To define an immutable constant binding that cannot be reassigned:
+
+```sdev
+fixed MAX_USERS be 100
+fixed API_URL be "https://api.sdev.codes"
+
+# Dialect aliases:
+const BUFFER_SIZE be 4096   // Plain dialect
+val TIMEOUT_MS be 5000      // Kotlin dialect
+
+# Attempting to reassign throws an error:
+# MAX_USERS be 200  // Error: Cannot reassign fixed variable 'MAX_USERS'
+```
+
 ### Built-in Constants
 
 sdev provides these constants directly:
@@ -538,6 +554,32 @@ Inline (for short bodies):
 
 ```sdev
 ponder x > 0 :: speak("positive") ;; otherwise :: speak("non-positive") ;;
+```
+
+### Pattern Matching — `match`
+
+The `match` statement branches on values, wildcards, or guards:
+
+```sdev
+forge status be 200
+forge msg be ""
+
+match status ::
+  case 200 ::
+    msg be "OK"
+  ;;
+  case 404 ::
+    msg be "Not Found"
+  ;;
+  case code when code >= 500 ::
+    msg be "Server Error"
+  ;;
+  case _ ::
+    msg be "Unknown"
+  ;;
+;;
+
+speak(msg)
 ```
 
 ### While Loop — `cycle`
@@ -3131,3 +3173,65 @@ v x = add(2, 3)
 ### Requests in plain words
 
 A file that is a request — "make a window that is a calculator", "build a quiz game" — is not repaired line by line; the AI writes the whole working program (windows, buttons and inputs use the window toolkit). `evaluate("7 + 8 * 2")` safely computes arithmetic held in text, which is what calculators need. It works the same in the JavaScript and Python versions.
+
+
+---
+
+## 28. Multi-Language Parity & Modern Extensions
+
+SDEV includes standard library extensions bringing complete parity with SQL, Kotlin, Rust, and C/C++:
+
+### 28.1 Relational SQL Engine
+Query lists of records with declarative SQL semantics:
+
+```sdev
+forge users be [
+  { id: 1, name: "Alice", role: "admin", age: 30 },
+  { id: 2, name: "Bob", role: "user", age: 22 },
+  { id: 3, name: "Charlie", role: "user", age: 35 }
+]
+
+forge filtered be sql_where(users, (u) -> u["age"] >= 25)
+forge projected be sql_select(filtered, ["id", "name"])
+forge sorted be sql_order_by(projected, "name", true)
+
+speak("Count: {sql_count(filtered)}")
+speak("Average Age: {sql_avg(users, 'age')}")
+```
+
+### 28.2 Kotlin & C# Null-Safety
+```sdev
+# Elvis / Null-coalescing
+forge port be coalesce(null, 8080) # 8080
+
+# Safe navigation
+forge email be safe_get(user, "email", "default@test.com")
+
+# Immutable record copying
+forge updated be copy_record(user, { role: "superadmin" })
+```
+
+### 28.3 Rust Monadic Types (Option & Result)
+```sdev
+# Option
+forge opt be Some(10)
+forge doubled be map_some(opt, (x) -> x * 2) # Some(20)
+forge val be unwrap_or(None(), 99)           # 99
+
+# Result
+forge res be Ok(50)
+forge mapped be map_ok(res, (x) -> x + 50)   # Ok(100)
+```
+
+### 28.4 Systems Low-Level Arena Memory (C / C++)
+```sdev
+forge a be arena_create(128)
+forge ptr be arena_alloc(a, 4)
+mem_poke_u8(a, ptr, 255)
+mem_poke_i16(a, ptr + 1, 1024)
+mem_poke_i32(a, ptr + 3, 123456)
+
+speak(mem_peek_u8(a, ptr))
+speak(mem_peek_i16(a, ptr + 1))
+speak(mem_peek_i32(a, ptr + 3))
+```

@@ -15248,10 +15248,12 @@ var init_compiler = __esm({
     };
     Compiler = class {
       constants = { numbers: [], strings: [] };
+      fixedVariables = /* @__PURE__ */ new Set();
       debugInfo = { sourceMap: [], localNames: [] };
       compile(program) {
         this.constants = { numbers: [], strings: [] };
         this.debugInfo = { sourceMap: [], localNames: [] };
+        this.fixedVariables = /* @__PURE__ */ new Set();
         const fn2 = new FunctionCompiler("", []);
         this.compileStatements(program.statements, fn2);
         fn2.emit("HALT" /* HALT */, void 0, 0);
@@ -15290,9 +15292,13 @@ var init_compiler = __esm({
             break;
           case "LetStatement":
             this.compileNode(node.value, fn2);
+            if (node.isFixed) this.fixedVariables.add(node.name);
             fn2.emit("DEFINE" /* DEFINE */, node.name, node.line);
             break;
           case "AssignStatement":
+            if (this.fixedVariables.has(node.name)) {
+              throw new SdevError(`Cannot reassign fixed variable '${node.name}'`, node.line);
+            }
             this.compileNode(node.value, fn2);
             fn2.emit("STORE" /* STORE */, node.name, node.line);
             break;
@@ -15429,6 +15435,29 @@ var init_compiler = __esm({
           case "AwaitExpr":
             this.compileNode(node.operand, fn2);
             break;
+          case "FStringExpr": {
+            if (node.parts.length === 0) {
+              fn2.emit("PUSH_STR" /* PUSH_STR */, "", node.line);
+              break;
+            }
+            for (let i = 0; i < node.parts.length; i++) {
+              const part = node.parts[i];
+              if (part.kind === "text") {
+                fn2.emit("PUSH_STR" /* PUSH_STR */, part.value, node.line);
+              } else {
+                fn2.emit("LOAD" /* LOAD */, "str", node.line);
+                this.compileNode(part.expr, fn2);
+                fn2.emit("CALL" /* CALL */, 1, node.line);
+              }
+              if (i > 0) {
+                fn2.emit("ADD" /* ADD */, void 0, node.line);
+              }
+            }
+            break;
+          }
+          case "MatchStatement":
+            this.compileMatch(node, fn2);
+            break;
           default:
             throw new SdevError(`Compiler: unknown node type ${node.type}`, 0);
         }
@@ -15550,6 +15579,62 @@ var init_compiler = __esm({
         fn2.patchJump(exitJump);
         for (const j of ctx.breakJumps) fn2.patchJump(j);
         fn2.loopStack.pop();
+      }
+      compileMatch(node, fn2) {
+        this.compileNode(node.subject, fn2);
+        const tempVar = `__match_${fn2.code.length}_${node.line}`;
+        fn2.emit("DEFINE" /* DEFINE */, tempVar, node.line);
+        const endJumps = [];
+        for (const c of node.cases) {
+          this.compileMatchPattern(c.pattern, tempVar, fn2, node.line);
+          if (c.guard) {
+            this.compileNode(c.guard, fn2);
+            fn2.emit("AND" /* AND */, void 0, node.line);
+          }
+          const skipCaseJump = fn2.emitJump("JUMP_IF_FALSE" /* JUMP_IF_FALSE */, node.line);
+          this.compileStatements(c.body.statements, fn2);
+          endJumps.push(fn2.emitJump("JUMP" /* JUMP */, node.line));
+          fn2.patchJump(skipCaseJump);
+        }
+        for (const jump of endJumps) {
+          fn2.patchJump(jump);
+        }
+      }
+      compileMatchPattern(pat, tempVar, fn2, line) {
+        switch (pat.type) {
+          case "PatWildcard":
+            fn2.emit("PUSH_BOOL" /* PUSH_BOOL */, true, line);
+            break;
+          case "PatLiteral":
+            fn2.emit("LOAD" /* LOAD */, tempVar, line);
+            this.compileNode(pat.value, fn2);
+            fn2.emit("EQ" /* EQ */, void 0, line);
+            break;
+          case "PatValue":
+            fn2.emit("LOAD" /* LOAD */, tempVar, line);
+            this.compileNode(pat.expr, fn2);
+            fn2.emit("EQ" /* EQ */, void 0, line);
+            break;
+          case "PatCapture":
+            if (pat.pattern) {
+              this.compileMatchPattern(pat.pattern, tempVar, fn2, line);
+            } else {
+              fn2.emit("PUSH_BOOL" /* PUSH_BOOL */, true, line);
+            }
+            fn2.emit("LOAD" /* LOAD */, tempVar, line);
+            fn2.emit("DEFINE" /* DEFINE */, pat.name, line);
+            break;
+          case "PatOr": {
+            for (let i = 0; i < pat.options.length; i++) {
+              this.compileMatchPattern(pat.options[i], tempVar, fn2, line);
+              if (i > 0) fn2.emit("OR" /* OR */, void 0, line);
+            }
+            break;
+          }
+          default:
+            fn2.emit("PUSH_BOOL" /* PUSH_BOOL */, true, line);
+            break;
+        }
       }
       compileTryCatch(node, fn2) {
         const tryFn = new FunctionCompiler("<try>", []);
@@ -17469,6 +17554,7 @@ import { createInterface as createInterface2 } from "node:readline";
 var KEYWORD_SPECS = [
   // ---- declarations -------------------------------------------------
   { token: "FORGE", mystic: "forge", plain: "let", aliases: ["var"], about: "variable declaration" },
+  { token: "FIXED", mystic: "fixed", plain: "const", aliases: ["val"], about: "immutable variable declaration" },
   { token: "CONJURE", mystic: "conjure", plain: "func", aliases: ["def"], about: "function declaration" },
   { token: "ESSENCE_KW", mystic: "essence", plain: "kind", aliases: ["class"], about: "class declaration" },
   { token: "EXTEND", mystic: "extend", plain: "extends", about: "inheritance" },
@@ -17551,6 +17637,7 @@ var TokenType = /* @__PURE__ */ ((TokenType2) => {
   TokenType2["BYTES"] = "BYTES";
   TokenType2["IDENTIFIER"] = "IDENTIFIER";
   TokenType2["FORGE"] = "FORGE";
+  TokenType2["FIXED"] = "FIXED";
   TokenType2["CONJURE"] = "CONJURE";
   TokenType2["PONDER"] = "PONDER";
   TokenType2["OTHERWISE"] = "OTHERWISE";
@@ -18102,7 +18189,8 @@ var Parser = class _Parser {
   // ==========================================================
   parseStatement() {
     if (this.check("AT" /* AT */) && this.isDecoratorPosition()) return this.parseDecorated();
-    if (this.check("FORGE" /* FORGE */)) return this.parseForgeStatement();
+    if (this.check("FORGE" /* FORGE */)) return this.parseForgeStatement(false);
+    if (this.check("FIXED" /* FIXED */)) return this.parseForgeStatement(true);
     if (this.check("CONJURE" /* CONJURE */)) return this.parseConjureDeclaration();
     if (this.check("ASYNC" /* ASYNC */)) return this.parseAsyncStatement();
     if (this.check("PONDER" /* PONDER */)) return this.parsePonderStatement();
@@ -18302,8 +18390,9 @@ var Parser = class _Parser {
     throw new SdevError("Invalid assignment target", line);
   }
   // forge name[: Type] be value    |    forge a, b be pair
-  parseForgeStatement() {
-    const forgeToken = this.consume("FORGE" /* FORGE */, "Expected 'forge'");
+  // fixed name[: Type] be value
+  parseForgeStatement(isFixed = false) {
+    const token = isFixed ? this.consume("FIXED" /* FIXED */, "Expected 'fixed'") : this.consume("FORGE" /* FORGE */, "Expected 'forge'");
     let starIndex;
     const readTarget = () => {
       if (this.check("STAR" /* STAR */)) {
@@ -18318,7 +18407,7 @@ var Parser = class _Parser {
     let annotation;
     if (this.match("COLON" /* COLON */)) annotation = this.parseTypeExpr();
     if (!this.check("BE" /* BE */)) {
-      return { type: "LetStatement", name: names[0], targets: names.length > 1 ? names : void 0, starIndex, annotation, value: { type: "NullLiteral", line: forgeToken.line }, line: forgeToken.line };
+      return { type: "LetStatement", name: names[0], targets: names.length > 1 ? names : void 0, starIndex, annotation, value: { type: "NullLiteral", line: token.line }, line: token.line, isFixed };
     }
     this.consume("BE" /* BE */, "Expected 'be'");
     const value2 = this.parseExpressionOrTuple();
@@ -18329,7 +18418,8 @@ var Parser = class _Parser {
       starIndex,
       annotation,
       value: value2,
-      line: forgeToken.line
+      line: token.line,
+      isFixed
     };
   }
   /** Type annotations are ordinary expressions (`Int`, `List[Str]`, `Int | Void`). */
@@ -19286,6 +19376,9 @@ var Parser = class _Parser {
     if (this.match("STRING" /* STRING */)) {
       let value2 = token.value;
       while (this.check("STRING" /* STRING */)) value2 += this.advance().value;
+      if (this.hasInterpolation(value2)) {
+        return this.buildFString(value2, token.line);
+      }
       return { type: "StringLiteral", value: value2, line: token.line };
     }
     if (this.match("FSTRING" /* FSTRING */)) {
@@ -19565,6 +19658,22 @@ var Parser = class _Parser {
     if (text3) parts.push({ kind: "text", value: text3 });
     return { type: "FStringExpr", parts, line };
   }
+  hasInterpolation(str) {
+    if (str.includes("{{") || str.includes("}}")) return true;
+    let i = 0;
+    while (i < str.length) {
+      if (str[i] === "{") {
+        if (str[i + 1] === "{") {
+          i += 2;
+          continue;
+        }
+        const close = str.indexOf("}", i + 1);
+        if (close > i + 1) return true;
+      }
+      i++;
+    }
+    return false;
+  }
   lexTemplate(source, line) {
     const tokens = new Lexer(source, { sourceLanguage: null }).tokenize();
     return tokens.map((t) => ({ ...t, line }));
@@ -19656,12 +19765,22 @@ var Parser = class _Parser {
 init_errors();
 var Environment = class {
   values = /* @__PURE__ */ new Map();
+  fixed = /* @__PURE__ */ new Set();
   parent;
   constructor(parent) {
     this.parent = parent;
   }
   define(name, value2) {
     this.values.set(name, value2);
+  }
+  defineFixed(name, value2) {
+    this.values.set(name, value2);
+    this.fixed.add(name);
+  }
+  isFixed(name) {
+    if (this.fixed.has(name)) return true;
+    if (this.parent) return this.parent.isFixed(name);
+    return false;
   }
   hasOwn(name) {
     return this.values.has(name);
@@ -19677,10 +19796,16 @@ var Environment = class {
   }
   set(name, value2, line) {
     if (this.values.has(name)) {
+      if (this.fixed.has(name)) {
+        throw new SdevError(`Cannot reassign fixed variable '${name}'`, line);
+      }
       this.values.set(name, value2);
       return;
     }
     if (this.parent) {
+      if (this.parent.isFixed(name)) {
+        throw new SdevError(`Cannot reassign fixed variable '${name}'`, line);
+      }
       this.parent.set(name, value2, line);
       return;
     }
@@ -21941,6 +22066,110 @@ function registerFunctional(builtins, output) {
       };
     }
   });
+  builtins.set("Some", {
+    type: "builtin",
+    call: (args) => ({ is_some: true, is_none: false, val: args[0] })
+  });
+  builtins.set("None", {
+    type: "builtin",
+    call: () => ({ is_some: false, is_none: true, val: null })
+  });
+  builtins.set("is_some", {
+    type: "builtin",
+    call: (args) => {
+      const o = args[0];
+      return Boolean(o && typeof o === "object" && o.is_some);
+    }
+  });
+  builtins.set("is_none", {
+    type: "builtin",
+    call: (args) => {
+      const o = args[0];
+      return Boolean(o && typeof o === "object" && o.is_none);
+    }
+  });
+  builtins.set("unwrap_or", {
+    type: "builtin",
+    call: (args) => {
+      const o = args[0];
+      const fallback = args[1];
+      if (o && typeof o === "object") {
+        if (o.is_some || o.is_ok) return o.val;
+      }
+      return fallback;
+    }
+  });
+  builtins.set("map_some", {
+    type: "builtin",
+    call: (args, line) => {
+      const opt = args[0];
+      const fn2 = args[1];
+      if (!opt || typeof opt !== "object" || !opt.is_some) return opt;
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Second argument must be a function", line);
+      return { is_some: true, is_none: false, val: fn2.call([opt.val], line) };
+    }
+  });
+  builtins.set("flat_map_some", {
+    type: "builtin",
+    call: (args, line) => {
+      const opt = args[0];
+      const fn2 = args[1];
+      if (!opt || typeof opt !== "object" || !opt.is_some) return opt;
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Second argument must be a function", line);
+      return fn2.call([opt.val], line);
+    }
+  });
+  builtins.set("Ok", {
+    type: "builtin",
+    call: (args) => ({ is_ok: true, is_err: false, val: args[0], err: null })
+  });
+  builtins.set("Err", {
+    type: "builtin",
+    call: (args) => ({ is_ok: false, is_err: true, val: null, err: args[0] })
+  });
+  builtins.set("is_ok", {
+    type: "builtin",
+    call: (args) => {
+      const o = args[0];
+      return Boolean(o && typeof o === "object" && o.is_ok);
+    }
+  });
+  builtins.set("is_err", {
+    type: "builtin",
+    call: (args) => {
+      const o = args[0];
+      return Boolean(o && typeof o === "object" && o.is_err);
+    }
+  });
+  builtins.set("result_unwrap_or", {
+    type: "builtin",
+    call: (args) => {
+      const r = args[0];
+      const fallback = args[1];
+      if (r && typeof r === "object" && r.is_ok) return r.val;
+      return fallback;
+    }
+  });
+  builtins.set("map_ok", {
+    type: "builtin",
+    call: (args, line) => {
+      const r = args[0];
+      const fn2 = args[1];
+      if (!r || typeof r !== "object" || !r.is_ok) return r;
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Second argument must be a function", line);
+      return { is_ok: true, is_err: false, val: fn2.call([r.val], line), err: null };
+    }
+  });
+  builtins.set("flat_map_ok", {
+    type: "builtin",
+    call: (args, line) => {
+      const r = args[0];
+      const fn2 = args[1];
+      if (!r || typeof r !== "object" || !r.is_ok) return r;
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) throw new SdevError("Second argument must be a function", line);
+      return fn2.call([r.val], line);
+    }
+  });
 }
 
 // src/lang/builtins/buffer.ts
@@ -22031,6 +22260,128 @@ function registerBuffer(builtins, output) {
         return null;
       } };
       return obj;
+    }
+  });
+  builtins.set("arena_create", {
+    type: "builtin",
+    call: (args, line) => {
+      const cap = toNumber(args[0], line);
+      return {
+        bytes: new Array(cap).fill(0),
+        cap,
+        offset: 0
+      };
+    }
+  });
+  builtins.set("arena_alloc", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const n = toNumber(args[1], line);
+      if (!a || typeof a !== "object") throw new SdevError("First argument must be an arena", line);
+      const cur = a.offset || 0;
+      const next = cur + n;
+      if (next > a.cap) return -1;
+      a.offset = next;
+      return cur;
+    }
+  });
+  builtins.set("arena_reset", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      if (!a || typeof a !== "object") throw new SdevError("First argument must be an arena", line);
+      a.offset = 0;
+      return 0;
+    }
+  });
+  builtins.set("mem_poke_u8", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const ptr = toNumber(args[1], line);
+      const val = toNumber(args[2], line);
+      a.bytes[ptr] = val & 255;
+      return 0;
+    }
+  });
+  builtins.set("mem_peek_u8", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const ptr = toNumber(args[1], line);
+      return a.bytes[ptr] & 255;
+    }
+  });
+  builtins.set("mem_poke_i16", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const ptr = toNumber(args[1], line);
+      const val = toNumber(args[2], line);
+      a.bytes[ptr] = val & 255;
+      a.bytes[ptr + 1] = val >> 8 & 255;
+      return 0;
+    }
+  });
+  builtins.set("mem_peek_i16", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const ptr = toNumber(args[1], line);
+      const b0 = a.bytes[ptr] & 255;
+      const b1 = a.bytes[ptr + 1] & 255;
+      let val = b0 | b1 << 8;
+      if (val >= 32768) val -= 65536;
+      return val;
+    }
+  });
+  builtins.set("mem_poke_i32", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const ptr = toNumber(args[1], line);
+      const val = toNumber(args[2], line);
+      a.bytes[ptr] = val & 255;
+      a.bytes[ptr + 1] = val >> 8 & 255;
+      a.bytes[ptr + 2] = val >> 16 & 255;
+      a.bytes[ptr + 3] = val >> 24 & 255;
+      return 0;
+    }
+  });
+  builtins.set("mem_peek_i32", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const ptr = toNumber(args[1], line);
+      const b0 = a.bytes[ptr] & 255;
+      const b1 = a.bytes[ptr + 1] & 255;
+      const b2 = a.bytes[ptr + 2] & 255;
+      const b3 = a.bytes[ptr + 3] & 255;
+      return b0 | b1 << 8 | b2 << 16 | b3 << 24 | 0;
+    }
+  });
+  builtins.set("mem_fill", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const ptr = toNumber(args[1], line);
+      const len = toNumber(args[2], line);
+      const val = toNumber(args[3], line) & 255;
+      for (let i = 0; i < len; i++) a.bytes[ptr + i] = val;
+      return 0;
+    }
+  });
+  builtins.set("mem_copy", {
+    type: "builtin",
+    call: (args, line) => {
+      const a = args[0];
+      const dst = toNumber(args[1], line);
+      const src = toNumber(args[2], line);
+      const len = toNumber(args[3], line);
+      const slice = a.bytes.slice(src, src + len);
+      for (let i = 0; i < len; i++) a.bytes[dst + i] = slice[i];
+      return 0;
     }
   });
 }
@@ -22294,6 +22645,304 @@ function registerText(builtins, _output) {
   def("quote_text", (a, l) => JSON.stringify(text(a[0], "quote_text", l)));
 }
 
+// src/lang/builtins/sql.ts
+init_errors();
+function registerSql(builtins, _output) {
+  builtins.set("sql_select", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_select() takes 2 arguments: (records, columns)", line);
+      const records = args[0];
+      if (!Array.isArray(records)) throw new SdevError("First argument must be a list of records", line);
+      let colList = [];
+      if (typeof args[1] === "string") {
+        colList = args[1].split(",").map((s) => s.trim()).filter(Boolean);
+      } else if (Array.isArray(args[1])) {
+        colList = args[1].map((s) => stringify(s));
+      } else {
+        throw new SdevError("Columns must be a list of column names or comma-separated string", line);
+      }
+      if (colList.includes("*")) {
+        return records.map((r) => r && typeof r === "object" ? { ...r } : r);
+      }
+      return records.map((row) => {
+        if (!row || typeof row !== "object") return {};
+        const obj = {};
+        for (const col of colList) {
+          if (col in row) {
+            obj[col] = row[col];
+          }
+        }
+        return obj;
+      });
+    }
+  });
+  builtins.set("sql_where", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_where() takes 2 arguments: (records, predicate_fn)", line);
+      const records = args[0];
+      if (!Array.isArray(records)) throw new SdevError("First argument must be a list of records", line);
+      const fn2 = args[1];
+      if (!fn2 || typeof fn2 !== "object" || !("call" in fn2)) {
+        throw new SdevError("Second argument must be a predicate function", line);
+      }
+      return records.filter((row) => {
+        const res = fn2.call([row], line);
+        return isTruthy(res);
+      });
+    }
+  });
+  builtins.set("sql_order_by", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_order_by() takes at least 2 arguments: (records, key, [ascending])", line);
+      const records = args[0];
+      if (!Array.isArray(records)) throw new SdevError("First argument must be a list of records", line);
+      const key = stringify(args[1]);
+      const asc = args[2] === void 0 ? true : isTruthy(args[2]);
+      const copy = [...records];
+      copy.sort((a, b) => {
+        const va = a && typeof a === "object" ? a[key] : void 0;
+        const vb = b && typeof b === "object" ? b[key] : void 0;
+        if (va === vb) return 0;
+        if (va === void 0 || va === null) return asc ? -1 : 1;
+        if (vb === void 0 || vb === null) return asc ? 1 : -1;
+        if (typeof va === "number" && typeof vb === "number") {
+          return asc ? va - vb : vb - va;
+        }
+        const sa = stringify(va);
+        const sb = stringify(vb);
+        return asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
+      });
+      return copy;
+    }
+  });
+  builtins.set("sql_limit", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_limit() takes at least 2 arguments: (records, count, [offset])", line);
+      const records = args[0];
+      if (!Array.isArray(records)) throw new SdevError("First argument must be a list of records", line);
+      const count = Math.max(0, Math.floor(Number(args[1]) || 0));
+      const offset = Math.max(0, Math.floor(Number(args[2]) || 0));
+      return records.slice(offset, offset + count);
+    }
+  });
+  builtins.set("sql_distinct", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("sql_distinct() takes at least 1 argument: (records, [key])", line);
+      const records = args[0];
+      if (!Array.isArray(records)) throw new SdevError("First argument must be a list of records", line);
+      const key = args[1] !== void 0 ? stringify(args[1]) : null;
+      const seen = /* @__PURE__ */ new Set();
+      const out = [];
+      for (const row of records) {
+        const repr2 = key ? stringify(row && typeof row === "object" ? row[key] : row) : JSON.stringify(row);
+        if (!seen.has(repr2)) {
+          seen.add(repr2);
+          out.push(row);
+        }
+      }
+      return out;
+    }
+  });
+  builtins.set("sql_join", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 3) throw new SdevError("sql_join() takes at least 3 arguments: (left, right, on_key, [join_type])", line);
+      const left = args[0];
+      const right = args[1];
+      if (!Array.isArray(left) || !Array.isArray(right)) throw new SdevError("Left and right must be lists of records", line);
+      let leftKey = "";
+      let rightKey = "";
+      if (Array.isArray(args[2])) {
+        leftKey = stringify(args[2][0]);
+        rightKey = stringify(args[2][1] ?? args[2][0]);
+      } else {
+        leftKey = stringify(args[2]);
+        rightKey = leftKey;
+      }
+      const joinType = args[3] ? stringify(args[3]).toLowerCase() : "inner";
+      const rightMap = /* @__PURE__ */ new Map();
+      for (const r of right) {
+        if (!r || typeof r !== "object") continue;
+        const k = stringify(r[rightKey]);
+        const list2 = rightMap.get(k) ?? [];
+        list2.push(r);
+        rightMap.set(k, list2);
+      }
+      const out = [];
+      for (const l of left) {
+        if (!l || typeof l !== "object") continue;
+        const k = stringify(l[leftKey]);
+        const matches = rightMap.get(k);
+        if (matches && matches.length > 0) {
+          for (const m2 of matches) {
+            out.push({ ...m2, ...l });
+          }
+        } else if (joinType === "left") {
+          out.push({ ...l });
+        }
+      }
+      return out;
+    }
+  });
+  builtins.set("sql_group_by", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("sql_group_by() takes 4 arguments: (records, key, agg_col, agg_type)", line);
+      const records = args[0];
+      if (!Array.isArray(records)) throw new SdevError("First argument must be a list of records", line);
+      const groupKey = stringify(args[1]);
+      const aggCol = stringify(args[2]);
+      const aggType = stringify(args[3]).toLowerCase();
+      const groups = /* @__PURE__ */ new Map();
+      for (const row of records) {
+        if (!row || typeof row !== "object") continue;
+        const gVal = row[groupKey];
+        const gKey = stringify(gVal);
+        const entry = groups.get(gKey) ?? { group: gVal, values: [] };
+        const numVal = Number(row[aggCol]);
+        if (!isNaN(numVal)) entry.values.push(numVal);
+        groups.set(gKey, entry);
+      }
+      const out = [];
+      for (const [_, entry] of groups) {
+        let aggVal = 0;
+        if (aggType === "sum") {
+          aggVal = entry.values.reduce((a, b) => a + b, 0);
+        } else if (aggType === "avg") {
+          aggVal = entry.values.length ? entry.values.reduce((a, b) => a + b, 0) / entry.values.length : 0;
+        } else if (aggType === "min") {
+          aggVal = entry.values.length ? Math.min(...entry.values) : 0;
+        } else if (aggType === "max") {
+          aggVal = entry.values.length ? Math.max(...entry.values) : 0;
+        } else if (aggType === "count") {
+          aggVal = entry.values.length;
+        }
+        out.push({
+          [groupKey]: entry.group,
+          [aggType]: aggVal,
+          count: entry.values.length
+        });
+      }
+      return out;
+    }
+  });
+  builtins.set("sql_count", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("sql_count() takes 1 argument: (records)", line);
+      return Array.isArray(args[0]) ? args[0].length : 0;
+    }
+  });
+  builtins.set("sql_sum", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_sum() takes 2 arguments: (records, col)", line);
+      const records = args[0];
+      if (!Array.isArray(records)) return 0;
+      const col = stringify(args[1]);
+      let total = 0;
+      for (const r of records) {
+        if (r && typeof r === "object") {
+          const val = Number(r[col]);
+          if (!isNaN(val)) total += val;
+        }
+      }
+      return total;
+    }
+  });
+  builtins.set("sql_avg", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_avg() takes 2 arguments: (records, col)", line);
+      const records = args[0];
+      if (!Array.isArray(records) || records.length === 0) return 0;
+      const col = stringify(args[1]);
+      let total = 0;
+      let count = 0;
+      for (const r of records) {
+        if (r && typeof r === "object") {
+          const val = Number(r[col]);
+          if (!isNaN(val)) {
+            total += val;
+            count++;
+          }
+        }
+      }
+      return count ? total / count : 0;
+    }
+  });
+  builtins.set("sql_min", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_min() takes 2 arguments: (records, col)", line);
+      const records = args[0];
+      if (!Array.isArray(records) || records.length === 0) return 0;
+      const col = stringify(args[1]);
+      let minVal = Infinity;
+      for (const r of records) {
+        if (r && typeof r === "object") {
+          const val = Number(r[col]);
+          if (!isNaN(val) && val < minVal) minVal = val;
+        }
+      }
+      return minVal === Infinity ? 0 : minVal;
+    }
+  });
+  builtins.set("sql_max", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("sql_max() takes 2 arguments: (records, col)", line);
+      const records = args[0];
+      if (!Array.isArray(records) || records.length === 0) return 0;
+      const col = stringify(args[1]);
+      let maxVal = -Infinity;
+      for (const r of records) {
+        if (r && typeof r === "object") {
+          const val = Number(r[col]);
+          if (!isNaN(val) && val > maxVal) maxVal = val;
+        }
+      }
+      return maxVal === -Infinity ? 0 : maxVal;
+    }
+  });
+  builtins.set("coalesce", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("coalesce() takes 2 arguments: (val, fallback)", line);
+      const val = args[0];
+      return val !== null && val !== void 0 && val !== "void" ? val : args[1];
+    }
+  });
+  builtins.set("safe_get", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("safe_get() takes at least 2 arguments: (obj, key, [fallback])", line);
+      const obj = args[0];
+      const fallback = args[2] !== void 0 ? args[2] : null;
+      if (!obj || typeof obj !== "object") return fallback;
+      const key = stringify(args[1]);
+      const val = obj[key];
+      return val !== void 0 ? val : fallback;
+    }
+  });
+  builtins.set("copy_record", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("copy_record() takes 2 arguments: (record, updates)", line);
+      const rec = args[0];
+      const upd = args[1];
+      if (!rec || typeof rec !== "object") throw new SdevError("First argument must be a record / tome", line);
+      if (!upd || typeof upd !== "object") throw new SdevError("Second argument must be a record of updates", line);
+      return { ...rec, ...upd };
+    }
+  });
+}
+
 // src/lang/builtins.ts
 function createBuiltins(output) {
   const builtins = /* @__PURE__ */ new Map();
@@ -22311,6 +22960,7 @@ function createBuiltins(output) {
   registerBuffer(builtins, output);
   registerHost(builtins, output);
   registerText(builtins, output);
+  registerSql(builtins, output);
   return builtins;
 }
 
@@ -24507,6 +25157,7 @@ var Interpreter = class {
     }
     return result;
   }
+  // eslint-disable-next-line require-yield
   *evComprehension(node, env2) {
     if (node.form === "gen") {
       const self2 = this;
@@ -24576,18 +25227,29 @@ var Interpreter = class {
       const items = [...this.iterableOf(value2, node.line)];
       const star = node.starIndex;
       if (star === void 0) {
-        node.targets.forEach((name, i) => env2.define(name, items[i] === void 0 ? null : items[i]));
+        node.targets.forEach((name, i) => {
+          const v = items[i] === void 0 ? null : items[i];
+          if (node.isFixed) env2.defineFixed(name, v);
+          else env2.define(name, v);
+        });
       } else {
         const after = node.targets.length - star - 1;
         node.targets.forEach((name, i) => {
-          if (i < star) env2.define(name, items[i] === void 0 ? null : items[i]);
-          else if (i === star) env2.define(name, items.slice(star, items.length - after));
-          else env2.define(name, items[items.length - (node.targets.length - i)] ?? null);
+          let v;
+          if (i < star) v = items[i] === void 0 ? null : items[i];
+          else if (i === star) v = items.slice(star, items.length - after);
+          else v = items[items.length - (node.targets.length - i)] ?? null;
+          if (node.isFixed) env2.defineFixed(name, v);
+          else env2.define(name, v);
         });
       }
       return value2;
     }
-    env2.define(node.name, value2);
+    if (node.isFixed) {
+      env2.defineFixed(node.name, value2);
+    } else {
+      env2.define(node.name, value2);
+    }
     return value2;
   }
   *evAugAssign(node, env2) {
@@ -29103,6 +29765,149 @@ var CURATED_SEEDS = [
     targets: ["v1", "v2-wasm", "browser"],
     status: "partial"
   },
+  // ── Relational SQL / LINQ Query Primitives (Kotlin, SQL, C# parity) ────────
+  {
+    name: "sql_select",
+    aliases: ["select"],
+    module: "tome",
+    signature: "sql_select(records: list<tome>, columns: list<string> | string) -> list<tome>",
+    params: [
+      { name: "records", type: "list<tome>", description: "List of record tomes to query" },
+      { name: "columns", type: "list<string> | string", description: "Column names to project (or comma-separated string)" }
+    ],
+    returns: "list<tome>",
+    description: "Relational projection: extracts specified fields from each record (SQL SELECT).",
+    example: 'sql_select(users, ["id", "name"])',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "sql_where",
+    aliases: ["where"],
+    module: "tome",
+    signature: "sql_where(records: list<tome>, predicate: func) -> list<tome>",
+    params: [
+      { name: "records", type: "list<tome>", description: "List of record tomes to filter" },
+      { name: "predicate", type: "func", description: "Filter predicate function returning truthy/falsy" }
+    ],
+    returns: "list<tome>",
+    description: "Relational filtering: returns records that satisfy the predicate condition (SQL WHERE).",
+    example: 'sql_where(users, func(u) :: yield u["age"] >= 18 ;;)',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "sql_order_by",
+    aliases: ["order_by", "sort_by"],
+    module: "tome",
+    signature: "sql_order_by(records: list<tome>, key: string, ascending?: bool) -> list<tome>",
+    params: [
+      { name: "records", type: "list<tome>", description: "List of record tomes to sort" },
+      { name: "key", type: "string", description: "Property key name to sort by" },
+      { name: "ascending", type: "bool", optional: true, description: "True for ascending, false for descending (default true)" }
+    ],
+    returns: "list<tome>",
+    description: "Relational sorting: sorts records by property key in ascending or descending order (SQL ORDER BY).",
+    example: 'sql_order_by(users, "name", true)',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "sql_limit",
+    aliases: ["limit"],
+    module: "tome",
+    signature: "sql_limit(records: list<tome>, count: number, offset?: number) -> list<tome>",
+    params: [
+      { name: "records", type: "list<tome>", description: "List of record tomes to paginate" },
+      { name: "count", type: "number", description: "Maximum number of records to return" },
+      { name: "offset", type: "number", optional: true, description: "Number of initial records to skip (default 0)" }
+    ],
+    returns: "list<tome>",
+    description: "Relational pagination: slices records with limit and offset (SQL LIMIT / OFFSET).",
+    example: "sql_limit(users, 10, 20)",
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "sql_join",
+    aliases: ["join"],
+    module: "tome",
+    signature: "sql_join(left: list<tome>, right: list<tome>, onKey: string | list<string>, type?: string) -> list<tome>",
+    params: [
+      { name: "left", type: "list<tome>", description: "Left list of record tomes" },
+      { name: "right", type: "list<tome>", description: "Right list of record tomes" },
+      { name: "onKey", type: "string | list<string>", description: "Join key name or [left_key, right_key]" },
+      { name: "type", type: "string", optional: true, description: "'inner' (default) or 'left' join type" }
+    ],
+    returns: "list<tome>",
+    description: "Relational join: combines records from two tables matching on foreign/primary keys (SQL JOIN).",
+    example: 'sql_join(users, orders, "user_id", "inner")',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "sql_group_by",
+    aliases: ["group_by"],
+    module: "tome",
+    signature: "sql_group_by(records: list<tome>, groupKey: string, aggCol: string, aggType: string) -> list<tome>",
+    params: [
+      { name: "records", type: "list<tome>", description: "List of record tomes to aggregate" },
+      { name: "groupKey", type: "string", description: "Grouping column name" },
+      { name: "aggCol", type: "string", description: "Column to aggregate over" },
+      { name: "aggType", type: "string", description: "'sum', 'avg', 'min', 'max', or 'count'" }
+    ],
+    returns: "list<tome>",
+    description: "Relational grouping: groups records by key and computes aggregation over specified column (SQL GROUP BY).",
+    example: 'sql_group_by(sales, "region", "amount", "sum")',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "coalesce",
+    aliases: ["elvis", "null_coalesce"],
+    module: "core",
+    signature: "coalesce(val: any, fallback: any) -> any",
+    params: [
+      { name: "val", type: "any", description: "Value to evaluate" },
+      { name: "fallback", type: "any", description: "Fallback value if val is null, undefined or void" }
+    ],
+    returns: "any",
+    description: "Null-coalescing / Elvis operator: returns val if defined and non-null, else fallback.",
+    example: 'coalesce(username, "Guest")',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "safe_get",
+    aliases: ["safe_nav"],
+    module: "core",
+    signature: "safe_get(obj: any, key: string, fallback?: any) -> any",
+    params: [
+      { name: "obj", type: "any", description: "Object or tome to traverse" },
+      { name: "key", type: "string", description: "Property key or index" },
+      { name: "fallback", type: "any", optional: true, description: "Fallback if obj is null or property missing (default null)" }
+    ],
+    returns: "any",
+    description: "Safe navigation helper: safely reads a property without throwing if the target object is null/void.",
+    example: 'safe_get(user, "profile", {})',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
+  {
+    name: "copy_record",
+    aliases: ["record_copy", "copy"],
+    module: "tome",
+    signature: "copy_record(record: tome, updates: tome) -> tome",
+    params: [
+      { name: "record", type: "tome", description: "Base record tome" },
+      { name: "updates", type: "tome", description: "Fields to update or override" }
+    ],
+    returns: "tome",
+    description: "Data class record copy: returns a shallow clone of the record with fields updated (Kotlin .copy()).",
+    example: 'copy_record(user, { "age": 26 })',
+    targets: ["v1", "v2-wasm", "native-x64", "browser", "cli"],
+    status: "implemented"
+  },
   // ── Leaflet / Geo Visualization (Planned / Partial Roadmap) ──────────────
   {
     name: "leaflet_map",
@@ -29242,6 +30047,7 @@ function parseSignatureParams(signature) {
 }
 function classifyCoreBuiltinModule(name) {
   if (name.startsWith("ffi_")) return "ffi";
+  if (name.startsWith("sql_") || ["copy_record"].includes(name)) return "tome";
   if ([
     "upper",
     "lower",
@@ -33147,6 +33953,7 @@ function lintSdevSource(source, options = {}) {
   const definedCallables = /* @__PURE__ */ new Set();
   const declaredVars = /* @__PURE__ */ new Map();
   const localScopes = /* @__PURE__ */ new Set();
+  const fixedDecls = /* @__PURE__ */ new Set();
   const noteVarDecl = (name, line, isParamOrLoop = false) => {
     if (!name || name === "self" || name === "super") return;
     localScopes.add(name);
@@ -33194,6 +34001,7 @@ function lintSdevSource(source, options = {}) {
         const names = node.targets && node.targets.length > 0 ? node.targets : [node.name];
         for (const n of names) {
           noteVarDecl(n, node.line, false);
+          if (node.isFixed) fixedDecls.add(n);
           if (node.value.type === "LambdaExpr" || node.value.type === "CallExpr" || node.value.type === "Identifier") {
             definedCallables.add(n);
           }
@@ -33403,6 +34211,15 @@ function lintSdevSource(source, options = {}) {
         walkNode(node.value);
         return;
       case "AssignStatement":
+        if (fixedDecls.has(node.name)) {
+          pushDiag({
+            code: "SDEV014",
+            title: "Reassignment of immutable variable",
+            severity: "error",
+            message: `Cannot reassign fixed variable '${node.name}'`,
+            line: node.line
+          });
+        }
         if (node.value.type === "Identifier" && node.value.name === node.name && !node.declare) {
           pushDiag({
             code: "SDEV014",
