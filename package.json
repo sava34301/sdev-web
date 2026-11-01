@@ -33,6 +33,7 @@
     "test:understander-docs": "node scripts/run-ts.mjs scripts/test-understander-docs.ts",
     "test:beginner": "node scripts/run-ts.mjs scripts/test-beginner.ts",
     "test:math": "node scripts/run-ts.mjs scripts/test-math.ts",
+    "test:parser-literals": "node scripts/run-ts.mjs scripts/test-parser-literals.ts",
     "test:tasks": "node scripts/run-ts.mjs scripts/test-tasks.ts",
     "test:engine": "node scripts/run-ts.mjs scripts/test-sdev-engine.ts",
     "test:brain": "node scripts/run-ts.mjs scripts/test-brain.ts",
