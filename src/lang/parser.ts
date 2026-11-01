@@ -1669,21 +1669,18 @@ export class Parser {
   }
 
 
-  private hasInterpolation(str: string): boolean {
-    if (str.includes('{{') || str.includes('}}')) return true;
-    let i = 0;
-    while (i < str.length) {
-      if (str[i] === '{') {
-        if (str[i + 1] === '{') {
-          i += 2;
-          continue;
-        }
-        const close = str.indexOf('}', i + 1);
-        if (close > i + 1) return true;
-      }
-      i++;
-    }
-    return false;
+  /**
+   * `fixed` / `const` / `val` start a constant declaration only in the shape
+   * `fixed name be ...` (or `fixed a, b be ...`, `fixed name: Type`). Anywhere
+   * else they are ordinary names, so `forge val be 3` and `val + 1` still work.
+   */
+  private isContextualFixedStart(): boolean {
+    const t = this.peek();
+    if (t.type !== TokenType.IDENTIFIER || !FIXED_WORDS.has(t.value)) return false;
+    const name = this.tokens[this.pos + 1];
+    const after = this.tokens[this.pos + 2];
+    if (!name || name.type !== TokenType.IDENTIFIER || !after) return false;
+    return after.type === TokenType.BE || after.type === TokenType.COMMA || after.type === TokenType.COLON;
   }
 
   private lexTemplate(source: string, line: number): Token[] {
