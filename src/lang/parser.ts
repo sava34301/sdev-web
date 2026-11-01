@@ -1608,6 +1608,47 @@ export class Parser {
     return { type: 'DictLiteral', entries, line };
   }
 
+  private isEscapedOrRegexBrace(template: string, i: number): boolean {
+    // Odd number of backslashes directly before '{' => escaped '\{'
+    let bs = 0;
+    for (let k = i - 1; k >= 0 && template[k] === '\\'; k--) bs++;
+    if (bs % 2 === 1) return true;
+
+    // Check if preceded by \p or \P (Unicode property escape e.g. \p{L})
+    if (i >= 1 && (template[i - 1] === 'p' || template[i - 1] === 'P')) {
+      let bsP = 0;
+      for (let k = i - 2; k >= 0 && template[k] === '\\'; k--) bsP++;
+      if (bsP % 2 === 1) return true;
+    }
+
+    // Check if preceded by \u or \x (e.g. \u{...})
+    if (i >= 1 && (template[i - 1] === 'u' || template[i - 1] === 'x')) {
+      let bsU = 0;
+      for (let k = i - 2; k >= 0 && template[k] === '\\'; k--) bsU++;
+      if (bsU % 2 === 1) return true;
+    }
+
+    // Check if inside regex character class bracket `[...]` without closing `]`
+    let inCharClass = false;
+    for (let k = i - 1; k >= 0; k--) {
+      if (template[k] === ']' && (k === 0 || template[k - 1] !== '\\')) break;
+      if (template[k] === '[' && (k === 0 || template[k - 1] !== '\\')) {
+        inCharClass = true;
+        break;
+      }
+    }
+    if (inCharClass) return true;
+
+    // Look ahead to check if content is a regex quantifier like {1,2} or {3}
+    const close = template.indexOf('}', i + 1);
+    if (close > i + 1) {
+      const inner = template.slice(i + 1, close).trim();
+      if (/^\d+(?:\s*,\s*\d*)?$/.test(inner)) return true;
+    }
+
+    return false;
+  }
+
   /**
    * Compiles an f-string template into an FStringExpr. Supports `{expr}`,
    * `{expr!r}` conversions, `{expr:spec}` format specs, `{expr=}` debug
@@ -1622,6 +1663,11 @@ export class Parser {
       if (ch === '{' && template[i + 1] === '{') { text += '{'; i += 2; continue; }
       if (ch === '}' && template[i + 1] === '}') { text += '}'; i += 2; continue; }
       if (ch === '{') {
+        if (this.isEscapedOrRegexBrace(template, i)) {
+          text += ch;
+          i++;
+          continue;
+        }
         if (text) { parts.push({ kind: 'text', value: text }); text = ''; }
         let depth = 1;
         let body = '';
@@ -1661,8 +1707,12 @@ export class Parser {
           body = debug;
         }
 
-        const sub = new Parser(this.lexTemplate(body, line));
-        parts.push({ kind: 'expr', expr: sub.parseExpression(), spec, conv, debug });
+        try {
+          const sub = new Parser(this.lexTemplate(body, line));
+          parts.push({ kind: 'expr', expr: sub.parseExpression(), spec, conv, debug });
+        } catch {
+          text += '{' + body + (spec ? ':' + spec : '') + '}';
+        }
         continue;
       }
       text += ch;
@@ -1672,6 +1722,30 @@ export class Parser {
     return { type: 'FStringExpr', parts, line };
   }
 
+  private hasInterpolation(str: string): boolean {
+    if (str.includes('{{') || str.includes('}}')) return true;
+    let i = 0;
+    while (i < str.length) {
+      if (str[i] === '{') {
+        if (str[i + 1] === '{') {
+          i += 2;
+          continue;
+        }
+        if (this.isEscapedOrRegexBrace(str, i)) {
+          i++;
+          continue;
+        }
+        const close = str.indexOf('}', i + 1);
+        if (close > i + 1) {
+          const body = str.slice(i + 1, close);
+          if (!/^[\]\\[]/.test(body) && /^[\p{L}\p{N}_\s+\-*/%()[\]."'!:=]+$/u.test(body)) {
+            return true;
+          }
+        }
+      }
+      i++;
+    }
+    return false;
 
   /**
    * `fixed` / `const` / `val` start a constant declaration only in the shape

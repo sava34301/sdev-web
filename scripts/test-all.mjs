@@ -21,6 +21,9 @@ const suites = [
   { name: 'Parser Literals (names & strings)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-parser-literals.ts'] },
   { name: 'SDEV Engine', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-sdev-engine.ts'] },
   { name: 'Multi-Language Parity Suite (16 cases)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-multi-language-features.ts'] },
+  { name: 'Local Model Server Suite (12 cases)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-local-brain.ts'] },
+  { name: 'Understander SDEV Engine Suite (86 cases)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-sdev-engine.ts'] },
+  { name: 'Understander Agent Suite (29 cases)', cmd: 'node', args: ['scripts/run-ts.mjs', 'scripts/test-agent.ts'] },
   { name: 'WASM Runtime Suite (73 cases)', cmd: 'node', args: ['scripts/test-wasm-runtime.mjs'] },
 ];
 

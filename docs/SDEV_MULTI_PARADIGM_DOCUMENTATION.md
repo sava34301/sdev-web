@@ -506,8 +506,51 @@ Run the complete multi-language verification suite:
 ```sh
 npm test
 ```
-All 12 test suites, 209 track features, and 616 API registry entries pass with 100% success.
+All 15 test suites, 209 track features, and 616 API registry entries pass with 100% success.
 
 ---
 
-_Document engineered, written, and verified in **Antigravity** on 31 October 2026._
+## 11. Code Understander & Local Model Server Integration
+
+The SDEV Code Understander combines deterministic self-hosted rules written in pure SDEV with local large language models (LM Studio, Ollama, llama.cpp, LocalAI) and in-browser WebGPU models, providing seamless offline code understanding and repair with zero AI cloud credits.
+
+### 11.1 Understander Architecture
+1. **Self-Hosted Engine (`lang/agent/*.sdev`)**:
+   - `lang/agent/understander.sdev`: Canonicalizes natural sentences, loose syntax, and regional dialect vocabulary into verified SDEV AST.
+   - `lang/agent/blocks.sdev`: Indentation-based block and brace balancer.
+   - `lang/agent/ai-dialect.sdev`: Transparent bidirectional translation between `sdev:ai` (`!#ai`) and canonical SDEV.
+   - `lang/agent/parser_eval.sdev`: Pure SDEV-hosted parser, syntax validator, and AST evaluator.
+   - `lang/agent/project.sdev`: Project-wide symbol indexing and cross-file resolution.
+2. **Three-Tier Multi-Brain Pipeline**:
+   - **Tier 1 (Local Model Server)**: If configured by the user (LM Studio on port 1234, Ollama on port 11434, llama.cpp on port 8080), queries run locally on the user's GPU/CPU.
+   - **Tier 2 (Browser WebGPU Brain)**: In-browser WebLLM model running private offline inference with zero installations.
+   - **Tier 3 (Website Edge Function)**: Invoked only when `!#agent:online` is explicitly specified in the source file or enabled in IDE Settings.
+
+### 11.2 Universal Local Model URL Normalization
+The engine automatically normalizes all common local server address variants:
+
+| User Input | Resolved Chat Endpoint | Resolved Models Endpoint | Server Type |
+| :--- | :--- | :--- | :--- |
+| `http://localhost:1234` | `http://localhost:1234/v1/chat/completions` | `http://localhost:1234/v1/models` | LM Studio |
+| `http://localhost:1234/v1` | `http://localhost:1234/v1/chat/completions` | `http://localhost:1234/v1/models` | LM Studio |
+| `http://127.0.0.1:11434` | `http://127.0.0.1:11434/v1/chat/completions` | `http://127.0.0.1:11434/v1/models` & `/api/tags` | Ollama |
+| `http://localhost:8080` | `http://localhost:8080/v1/chat/completions` | `http://localhost:8080/v1/models` | llama.cpp / LocalAI |
+
+### 11.3 CORS Detection & Actionable Guidance
+Because web browsers enforce Cross-Origin Resource Sharing (CORS) when client-side applications connect to `localhost`:
+- **LM Studio**: Open the **Local Server** (or Developer) tab and toggle ON **"Enable CORS"**.
+- **Ollama**: Set the environment variable `OLLAMA_ORIGINS="*"` and restart Ollama:
+  ```powershell
+  $env:OLLAMA_ORIGINS = "*"
+  ollama serve
+  ```
+
+### 11.4 SDev Doctor IDE Assistant
+The IDE Assistant Panel (**SDev Doctor**) directly leverages local models:
+- When "Fix & Explain" is clicked, SDev Doctor uses `callLocalFix` to query the local model with the active source code, compiler error, and user notes.
+- The model returns a structured diagnosis: `fixed_code`, `explanation`, `changes`, `how_it_works`, and `confidence`.
+- If no local model is running, it automatically falls back to the self-hosted structural repair engine (`sdevCloseBlocks`, `sdevUnderstand`), guaranteeing that users are never blocked.
+
+---
+
+_Document engineered, written, and verified in **Antigravity** on 1 November 2026._
