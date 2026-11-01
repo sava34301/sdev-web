@@ -204,7 +204,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_copy', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as { bytes: number[] };
       const dst = toNumber(args[1], line);
       const src = toNumber(args[2], line);
       const len = toNumber(args[3], line);

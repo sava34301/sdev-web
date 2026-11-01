@@ -2,6 +2,10 @@ import { Token, TokenType } from './tokens';
 import { Lexer } from './lexer';
 import * as AST from './ast';
 import { SdevError } from './errors';
+import { WORDS_BY_TOKEN } from './keywords';
+
+/** Every spelling of the contextual constant-declaration keyword (`fixed`, `const`, `val`). */
+const FIXED_WORDS = new Set<string>(WORDS_BY_TOKEN.FIXED ?? ['fixed', 'const', 'val']);
 
 /**
  * sdev recursive-descent parser.
@@ -35,7 +39,7 @@ export class Parser {
   private parseStatement(): AST.ASTNode {
     if (this.check(TokenType.AT) && this.isDecoratorPosition()) return this.parseDecorated();
     if (this.check(TokenType.FORGE)) return this.parseForgeStatement(false);
-    if (this.check(TokenType.FIXED)) return this.parseForgeStatement(true);
+    if (this.isContextualFixedStart()) return this.parseForgeStatement(true);
     if (this.check(TokenType.CONJURE)) return this.parseConjureDeclaration();
     if (this.check(TokenType.ASYNC)) return this.parseAsyncStatement();
     if (this.check(TokenType.PONDER)) return this.parsePonderStatement();
@@ -261,7 +265,7 @@ export class Parser {
   // fixed name[: Type] be value
   private parseForgeStatement(isFixed = false): AST.LetStatement {
     const token = isFixed
-      ? this.consume(TokenType.FIXED, "Expected 'fixed'")
+      ? this.advance()
       : this.consume(TokenType.FORGE, "Expected 'forge'");
     // A target list may contain one starred name: `forge a, *rest be xs`.
     let starIndex: number | undefined;
@@ -1365,12 +1369,11 @@ export class Parser {
     }
 
     if (this.match(TokenType.STRING)) {
-      // Implicit adjacent string concatenation
+      // Implicit adjacent string concatenation. Plain strings are always
+      // literal text — `{...}` is only a template inside f"..." strings, so
+      // JSON, regex quantifiers (`\d{3}`) and `\p{L}` stay exactly as written.
       let value = token.value;
       while (this.check(TokenType.STRING)) value += this.advance().value;
-      if (this.hasInterpolation(value)) {
-        return this.buildFString(value, token.line);
-      }
       return { type: 'StringLiteral', value, line: token.line };
     }
 
@@ -1670,21 +1673,18 @@ export class Parser {
   }
 
 
-  private hasInterpolation(str: string): boolean {
-    if (str.includes('{{') || str.includes('}}')) return true;
-    let i = 0;
-    while (i < str.length) {
-      if (str[i] === '{') {
-        if (str[i + 1] === '{') {
-          i += 2;
-          continue;
-        }
-        const close = str.indexOf('}', i + 1);
-        if (close > i + 1) return true;
-      }
-      i++;
-    }
-    return false;
+  /**
+   * `fixed` / `const` / `val` start a constant declaration only in the shape
+   * `fixed name be ...` (or `fixed a, b be ...`, `fixed name: Type`). Anywhere
+   * else they are ordinary names, so `forge val be 3` and `val + 1` still work.
+   */
+  private isContextualFixedStart(): boolean {
+    const t = this.peek();
+    if (t.type !== TokenType.IDENTIFIER || !FIXED_WORDS.has(t.value)) return false;
+    const name = this.tokens[this.pos + 1];
+    const after = this.tokens[this.pos + 2];
+    if (!name || name.type !== TokenType.IDENTIFIER || !after) return false;
+    return after.type === TokenType.BE || after.type === TokenType.COMMA || after.type === TokenType.COLON;
   }
 
   private lexTemplate(source: string, line: number): Token[] {
