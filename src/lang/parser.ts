@@ -35,7 +35,7 @@ export class Parser {
   private parseStatement(): AST.ASTNode {
     if (this.check(TokenType.AT) && this.isDecoratorPosition()) return this.parseDecorated();
     if (this.check(TokenType.FORGE)) return this.parseForgeStatement(false);
-    if (this.check(TokenType.FIXED)) return this.parseForgeStatement(true);
+    if (this.isContextualFixedStart()) return this.parseForgeStatement(true);
     if (this.check(TokenType.CONJURE)) return this.parseConjureDeclaration();
     if (this.check(TokenType.ASYNC)) return this.parseAsyncStatement();
     if (this.check(TokenType.PONDER)) return this.parsePonderStatement();
@@ -261,7 +261,7 @@ export class Parser {
   // fixed name[: Type] be value
   private parseForgeStatement(isFixed = false): AST.LetStatement {
     const token = isFixed
-      ? this.consume(TokenType.FIXED, "Expected 'fixed'")
+      ? this.advance()
       : this.consume(TokenType.FORGE, "Expected 'forge'");
     // A target list may contain one starred name: `forge a, *rest be xs`.
     let starIndex: number | undefined;
@@ -1365,12 +1365,11 @@ export class Parser {
     }
 
     if (this.match(TokenType.STRING)) {
-      // Implicit adjacent string concatenation
+      // Implicit adjacent string concatenation. Plain strings are always
+      // literal text — `{...}` is only a template inside f"..." strings, so
+      // JSON, regex quantifiers (`\d{3}`) and `\p{L}` stay exactly as written.
       let value = token.value;
       while (this.check(TokenType.STRING)) value += this.advance().value;
-      if (this.hasInterpolation(value)) {
-        return this.buildFString(value, token.line);
-      }
       return { type: 'StringLiteral', value, line: token.line };
     }
 
