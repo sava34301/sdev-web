@@ -1,6 +1,8 @@
 // Standalone Node harness: compile + run via the seed WASM. No browser.
 import { readFile, writeFile, readFile as fsReadFile } from 'node:fs/promises';
 import { readFileSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { compile as selfCompile } from '../src/lang-bridge/compile-self.mjs';
 // The JS bootstrap survives ONLY as a build/test tool: the self-hosted
@@ -75,8 +77,10 @@ async function runProgram(src, which = 'self') {
 }
 
 // Module fixtures for the Milestone 5z `use` tests.
-const MOD_A = '/tmp/sdev-mod-a.sdev';
-const MOD_B = '/tmp/sdev-mod-b.sdev';
+const tmpDir = os.tmpdir();
+const MOD_A = path.join(tmpDir, 'sdev-mod-a.sdev').replace(/\\/g, '/');
+const MOD_B = path.join(tmpDir, 'sdev-mod-b.sdev').replace(/\\/g, '/');
+const TMP_M7 = path.join(tmpDir, 'sdev-m7.txt').replace(/\\/g, '/');
 writeFileSync(MOD_A, 'to triple with n\n  return n * 3\nend\n');
 writeFileSync(MOD_B, `use "${MOD_A}"\nto bump with n\n  return triple(n) - 1\nend\n`);
 
@@ -183,7 +187,7 @@ const cases = [
   // ---- Milestone 7: file I/O ----
   {
     name: 'write_file + read_file round-trip',
-    src: `set path to "/tmp/sdev-m7.txt"\nset status to write_file(path, "hello sdev")\nsay status\nsay read_file(path)`,
+    src: `set path to \"${TMP_M7}\"\nset status to write_file(path, "hello sdev")\nsay status\nsay read_file(path)`,
     expect: ['0', 'hello sdev'],
   },
   {
