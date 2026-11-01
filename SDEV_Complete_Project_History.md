@@ -1,6 +1,6 @@
-# SDEV — The Complete Project Record (Expanded Edition, v5)
+# SDEV — The Complete Project Record (Expanded Edition, v6)
 
-> Everything discussed, built, decided, rejected, planned and imagined for the SDEV Programming Language, from the first message to today — now updated with the 100% self-hosted pure SDEV language milestone engineered and verified in **Antigravity**.
+> Everything discussed, built, decided, rejected, planned and imagined for the SDEV Programming Language, from the first message to today — now updated with the Code Understander hardening, Universal Local Model Server integration (LM Studio, Ollama, llama.cpp), and IDE SDev Doctor integration engineered and verified in **Antigravity**.
 
 | | |
 |---|---|
@@ -12,8 +12,8 @@
 | **Licence** | "SDEV Programming Language © 2026 by Sava Milanov is licensed under Creative Commons Attribution-ShareAlike 4.0 International" |
 | **Public launch** | 12 July 2026, 14:00 Sofia time (UTC+3) |
 | **Current tool version** | 5.1.0 (one version for IDE, CLI, VS Code extension and desktop app) |
-| **Period covered** | 11 December 2025 → 31 October 2026 (780+ chat messages across Lovable and **Antigravity**) |
-| **Edition** | v5 — expanded & updated in **Antigravity**. Supersedes `SDEV_Complete_Project_History.md` (v1, v2, v3, and v4). |
+| **Period covered** | 11 December 2025 → 1 November 2026 (790+ chat messages across Lovable and **Antigravity**) |
+| **Edition** | v6 — expanded & updated in **Antigravity**. Supersedes `SDEV_Complete_Project_History.md` (v1 through v5). |
 
 ---
 

@@ -117,10 +117,16 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     },
   });
 
+  interface ArenaRecord {
+    bytes: number[];
+    offset: number;
+    size: number;
+  }
+
   builtins.set('mem_poke_u8', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const ptr = toNumber(args[1], line);
       const val = toNumber(args[2], line);
       a.bytes[ptr] = val & 0xff;
@@ -131,7 +137,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_peek_u8', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const ptr = toNumber(args[1], line);
       return a.bytes[ptr] & 0xff;
     },
@@ -140,7 +146,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_poke_i16', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const ptr = toNumber(args[1], line);
       const val = toNumber(args[2], line);
       a.bytes[ptr] = val & 0xff;
@@ -152,7 +158,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_peek_i16', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const ptr = toNumber(args[1], line);
       const b0 = a.bytes[ptr] & 0xff;
       const b1 = a.bytes[ptr + 1] & 0xff;
@@ -165,7 +171,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_poke_i32', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const ptr = toNumber(args[1], line);
       const val = toNumber(args[2], line);
       a.bytes[ptr] = val & 0xff;
@@ -179,7 +185,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_peek_i32', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const ptr = toNumber(args[1], line);
       const b0 = a.bytes[ptr] & 0xff;
       const b1 = a.bytes[ptr + 1] & 0xff;
@@ -192,7 +198,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_fill', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const ptr = toNumber(args[1], line);
       const len = toNumber(args[2], line);
       const val = toNumber(args[3], line) & 0xff;
@@ -204,7 +210,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
   builtins.set('mem_copy', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
+      const a = args[0] as ArenaRecord;
       const dst = toNumber(args[1], line);
       const src = toNumber(args[2], line);
       const len = toNumber(args[3], line);
