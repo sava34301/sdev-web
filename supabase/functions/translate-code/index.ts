@@ -1,3 +1,4 @@
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -324,9 +325,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const AI_KEY = aiKey();
+    if (!AI_KEY) {
+      throw new Error(AI_NOT_CONFIGURED);
     }
 
     const isWebCode = sourceLanguage === 'html' || sourceLanguage === 'html-css-js';
@@ -404,14 +405,14 @@ ${code}
 ${code}
 \`\`\``;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: aiModel("google/gemini-3.8-flash", 'strong'),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

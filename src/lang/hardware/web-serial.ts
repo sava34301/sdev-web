@@ -130,7 +130,9 @@ export function decodeBase64Bytes(b64: string): Uint8Array {
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
-  return new Uint8Array(Buffer.from(clean, 'base64'));
+  const NodeBuffer = (globalThis as { Buffer?: { from(s: string, enc: string): Uint8Array } }).Buffer;
+  if (!NodeBuffer) throw new Error('No base64 decoder available');
+  return new Uint8Array(NodeBuffer.from(clean, 'base64'));
 }
 
 export function firmwareToBytes(firmware: string | Uint8Array): { data: Uint8Array; startAddress: number } {
@@ -258,7 +260,7 @@ async function stk500v1Command(
   if (insync !== STK500V1.IN_SYNC) {
     throw new Error(`STK500: expected IN_SYNC, got 0x${insync.toString(16)}`);
   }
-  let extra = new Uint8Array(0);
+  let extra: Uint8Array = new Uint8Array(0);
   if (expectExtra > 0) extra = await bufReader.readN(expectExtra, 2000);
   const [ok] = await bufReader.readN(1, 2000);
   if (ok !== STK500V1.OK) {
