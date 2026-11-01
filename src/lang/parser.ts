@@ -2,6 +2,10 @@ import { Token, TokenType } from './tokens';
 import { Lexer } from './lexer';
 import * as AST from './ast';
 import { SdevError } from './errors';
+import { WORDS_BY_TOKEN } from './keywords';
+
+/** Every spelling of the contextual constant-declaration keyword (`fixed`, `const`, `val`). */
+const FIXED_WORDS = new Set<string>(WORDS_BY_TOKEN.FIXED ?? ['fixed', 'const', 'val']);
 
 /**
  * sdev recursive-descent parser.
