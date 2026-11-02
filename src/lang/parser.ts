@@ -1722,31 +1722,6 @@ export class Parser {
     return { type: 'FStringExpr', parts, line };
   }
 
-  private hasInterpolation(str: string): boolean {
-    if (str.includes('{{') || str.includes('}}')) return true;
-    let i = 0;
-    while (i < str.length) {
-      if (str[i] === '{') {
-        if (str[i + 1] === '{') {
-          i += 2;
-          continue;
-        }
-        if (this.isEscapedOrRegexBrace(str, i)) {
-          i++;
-          continue;
-        }
-        const close = str.indexOf('}', i + 1);
-        if (close > i + 1) {
-          const body = str.slice(i + 1, close);
-          if (!/^[\]\\[]/.test(body) && /^[\p{L}\p{N}_\s+\-*/%()[\]."'!:=]+$/u.test(body)) {
-            return true;
-          }
-        }
-      }
-      i++;
-    }
-    return false;
-
   /**
    * `fixed` / `const` / `val` start a constant declaration only in the shape
    * `fixed name be ...` (or `fixed a, b be ...`, `fixed name: Type`). Anywhere
