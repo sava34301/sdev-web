@@ -3,19 +3,23 @@
 // interpreter / compiler) never has to know about the hardware DSL. The blocks
 // are extracted separately for transpilation to Arduino .ino by
 // `src/lang/hardware/transpile.ts`.
+//
+// Blocks the author has not closed yet (`board "uno"` / `loop:` written
+// Python-style) are found too, so the editor and runtimes never read
+// half-written firmware as sdev.
 
-import { extractBoardBlock } from './transpile';
+import { findBoardSpans } from './understand';
 
 export function stripBoardBlocks(source: string): string {
-  let out = source;
-  // Loop in case multiple blocks are present.
-  for (let i = 0; i < 32; i++) {
-    const block = extractBoardBlock(out);
-    if (!block) break;
-    // Replace with blank lines preserving line numbers as best we can.
-    const removed = out.slice(block.startIndex, block.endIndex);
-    const newlines = removed.split('\n').length - 1;
-    out = out.slice(0, block.startIndex) + '\n'.repeat(newlines) + out.slice(block.endIndex);
+  const spans = findBoardSpans(source);
+  if (spans.length === 0) return source;
+  let out = '';
+  let last = 0;
+  for (const s of spans) {
+    const removed = source.slice(s.start, s.end);
+    // Replace with blank lines, preserving line numbers.
+    out += source.slice(last, s.start) + '\n'.repeat(removed.split('\n').length - 1);
+    last = s.end;
   }
-  return out;
+  return out + source.slice(last);
 }
