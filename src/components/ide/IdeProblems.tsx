@@ -1,4 +1,5 @@
 import { AlertTriangle, Info, AlertCircle, FileX2 } from 'lucide-react';
+import { stripBoardBlocks } from '@/lang/hardware/strip';
 
 export interface Problem {
   severity: 'error' | 'warning' | 'info';
@@ -10,6 +11,8 @@ export interface Problem {
 
 /** Lint sdev source for common issues — runs in real-time, no execution. */
 export function lintSdev(code: string): Problem[] {
+  // Board blocks are firmware, read by the hardware reader — not sdev to lint.
+  code = stripBoardBlocks(code);
   // sdev:ai (`!#ai`) uses `=` and `{ }` on purpose — keep only real errors.
   if (/^\s*(\/\/[^\n]*\n\s*)*!#ai\b/.test(code)) return lintCanonical(code).filter((p) => p.severity === 'error');
   return lintCanonical(code);
