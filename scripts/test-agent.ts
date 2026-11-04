@@ -111,5 +111,20 @@ check('board { } block kept byte for byte', understand(boardBrace).source, board
   const r = understand('output Hello\n' + boardBrace);
   check('sdev around a board block is still understood', r.source, 'speak("Hello")\n' + boardBrace);
 }
+// ---- hardware: loose board code is read into the hardware language ---------
+memory = emptyMemory();
+check('hardware: plain words become pin and wait statements',
+  understand('board "uno" ::\n  conjure setup() ::\n    set pin 13 as output\n  ;;\n  conjure loop() ::\n    turn on the led\n    wait one second\n    turn off pin 13\n    wait half a second\n  ;;\n;;\n').source,
+  'board "uno" ::\n  conjure setup() ::\n    pin 13 be output\n  ;;\n  conjure loop() ::\n    pin led on\n    wait 1 second\n    pin 13 off\n    wait 500\n  ;;\n;;\n');
+check('hardware: Python-style blocks get setup(), loop() and their ;;',
+  understand('board uno:\n  setup:\n    make the led an output\n  loop:\n    blink the led every 200 ms\n    if pin 2 is high:\n      beep on pin 8 at 440 for 200 ms\n    else:\n      toggle pin 12\n').source,
+  'board "uno" ::\n  conjure setup() ::\n    pin led be output\n  ;;\n  conjure loop() ::\n    pin led on\n    wait 200\n    pin led off\n    wait 200\n    ponder read pin 2 equals HIGH ::\n      tone 8 440 200\n    otherwise ::\n      pin 12 toggle\n    ;;\n  ;;\n;;\n');
+check('hardware: the documented script-style example gets setup() and loop()',
+  understand('board "uno"\n  pin 13 is output\n  forever\n    turn 13 on ; wait 500ms\n    turn 13 off; wait 500ms\n  end\nend\n').source,
+  'board "uno" ::\n  conjure setup() ::\n    pin 13 be output\n  ;;\n  conjure loop() ::\n    pin 13 on\n    wait 500\n    pin 13 off\n    wait 500\n  ;;\n;;\n');
+{
+  const r = understand('board "uno" ::\n  conjure setup() ::\n  ;;\n  conjure loop() ::\n    do the macarena with the servo\n  ;;\n;;\n');
+  check('hardware: a line no rule can read is reported, not guessed', JSON.stringify(r.unresolved), '[5]');
+}
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
