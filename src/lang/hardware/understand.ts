@@ -461,6 +461,23 @@ function isComment(t: string): boolean {
   return t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || (t.startsWith('#') && !/^#\s*(include|define|if|ifdef|ifndef|endif|pragma|undef|else|elif)\b/.test(t));
 }
 
+const C_TYPES = /^(?:unsigned|signed|const|static|volatile|extern|int|long|short|char|float|double|bool|boolean|byte|word|void|auto|String|uint\d+_t|int\d+_t|size_t|struct|class|enum|typedef|return|case|default|goto|delete|new)\b/;
+
+/**
+ * The transpiler is generous: anything with an operator, or starting with
+ * `if`/`do`/`for`, is passed to C++ silently. Those still count as unknown
+ * when they are clearly words, not code ("do the dance", "spin at 50%").
+ */
+export function reallyRecognised(line: string): boolean {
+  if (!boardLineRecognised(line)) return false;
+  const body = splitComment(line.trim()).code.trim();
+  if (/(?:::|\{|;)$/.test(body) || body === 'otherwise' || body === 'else') return true;
+  if (/^(?:if|while|for|switch|do)\b/.test(body) && !/^(?:(?:if|while|for|switch)\s*\(.*\)\s*\{?|do)$/.test(body)) return false;
+  const code = body.replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  if (/^[A-Za-z_][\w.:<>]*\s*\(/.test(code) || C_TYPES.test(code)) return true;
+  return !/\b[A-Za-z_]\w*\s+[A-Za-z_]\w*\s+[A-Za-z_]\w*\b/.test(code);
+}
+
 const FINE_AS_IS = /^(?:use\s+"|device\s+\w+\s+be\s+|cpp\s*\{|[{}]$|;;$|::$)/;
 
 /** One line → its reading. `resolved` is false when no rule could place an unknown line. */
@@ -471,7 +488,7 @@ function readLine(line: string, ctx: Ctx): { lines: string[]; rule: string | nul
   if (!t || isComment(t) || FINE_AS_IS.test(t)) return { lines: [line], rule: null, resolved: true };
   const { code, comment } = splitComment(rest);
   const body = strip(code.replace(/;\s*$/, (s) => (/^\w+\s*\(.*\)\s*;$/.test(code) ? s : '')));
-  const recognised = boardLineRecognised(line);
+  const recognised = reallyRecognised(line);
   // `turn 13 on ; wait 500ms` — several plain-word statements on one line
   if (!recognised && /;\s*\S/.test(body) && !/^for\s*\(/.test(body)) {
     const parts = splitStatements(body);
@@ -687,11 +704,9 @@ export function readBoardBlock(text: string, firstLine = 1, strict = true): { te
     }
   }
   // `end` (v2 style) closes blocks too, but only `;;` / `}` delimit the board block itself
-  fixedBody = fixedBody.map((l, idx) => {
+  fixedBody = fixedBody.map((l) => {
     if (l.trim() !== 'end') return l;
-    const to = /^[ \t]*/.exec(l)![0] + (useBrace ? '}' : ';;');
-    notes.push({ line: firstLine + 1 + idx, from: 'end', to: to.trim(), why: 'block end' });
-    return to;
+    return /^[ \t]*/.exec(l)![0] + (useBrace ? '}' : ';;');
   });
   const wrapped = ensureSetupLoop(fixedBody, useBrace);
   if (wrapped.changed) {
@@ -738,7 +753,7 @@ export function unknownBoardLines(blockText: string): number[] {
     if (i === 0) return;
     const t = l.trim();
     if (!t || isComment(t) || FINE_AS_IS.test(t)) return;
-    if (!boardLineRecognised(l)) out.push(i + 1);
+    if (!reallyRecognised(l)) out.push(i + 1);
   });
   return out;
 }
