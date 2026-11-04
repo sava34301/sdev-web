@@ -20,7 +20,8 @@ import {
   learnFromProgram, type AgentMemory, understandKey, recallResult, rememberResult,
 } from './memory';
 import type { UnderstandOptions, UnderstandResult } from './types';
-import { maskBoardBlocks, unmaskBoardBlocks, withoutBoardBlocks } from './boards';
+import { maskBoardBlocks, unmaskBoardBlocks, withoutBoardBlocks, readBoardPieces, type BoardPiece } from './boards';
+import { BOARD_GUIDE, findBoardSpans, unknownBoardLines, readBoardBlock } from '../hardware/understand';
 import { CANONICAL as CANONICAL_WORDS, type Intent } from './vocabulary';
 
 export * from './types';
@@ -55,7 +56,7 @@ interface Prepared {
   stripped: string;
   memory: AgentMemory;
   /** hardware board blocks set aside while reading (see ./boards.ts) */
-  boards: string[];
+  boards: BoardPiece[];
   /** the file as written, board blocks included */
   original: string;
 }
@@ -106,7 +107,7 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 }
 
 /** Bumped whenever the understander changes how it reads files, so saved readings from older versions are never reused. */
-export const AGENT_VERSION = 'u7';
+export const AGENT_VERSION = 'u8';
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
@@ -203,14 +204,15 @@ export function understand(source: string, opts: UnderstandOptions = {}): Unders
   const rules = runRules(prep, opts);
   finish(prep, rules.source, rules.learned);
 
-  const out = unmaskBoardBlocks(rules.source, prep.boards);
+  const hw = readBoardPieces(prep.boards);
+  const out = unmaskBoardBlocks(rules.source, prep.boards, hw.texts);
   return {
     source: out,
     changed: out !== prep.original,
     mode: prep.mode,
-    notes: rules.notes,
+    notes: [...rules.notes, ...boardNotes(hw.notes)],
     learned: rules.learned,
-    unresolved: rules.unresolved,
+    unresolved: [...rules.unresolved, ...hw.unresolved],
     brainUsed: 'none',
   };
 }
@@ -228,8 +230,7 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
   const cached = recallResult(prep.memory, key);
   if (cached !== null) {
-    const out = unmaskBoardBlocks(cached, prep.boards);
-    return { source: out, changed: out !== prep.original, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
+    return { source: cached, changed: cached !== prep.original, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
   }
 
   const rules = runRules(prep, opts);
@@ -247,22 +248,80 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
     if (improved) { current = improved.source; brainUsed = improved.used; }
   }
 
+  // Board blocks: the hardware reader first, the brain only for lines it could not place.
+  const hw = readBoardPieces(prep.boards);
+  notes.push(...boardNotes(hw.notes));
+  let boardUnresolved = hw.unresolved;
+  if (hw.unresolved.length && prep.brain !== 'none') {
+    const asked = await askBrainAboutBoards(prep, opts, hw.texts, notes);
+    hw.texts = asked.texts;
+    boardUnresolved = asked.unresolved;
+    if (asked.used !== 'none') brainUsed = asked.used;
+  }
+  const out = unmaskBoardBlocks(current, prep.boards, hw.texts);
+
   // Only keep answers that hold together, so a bad reading is never frozen in.
-  if (parses(current) && (rules.done || brainUsed !== 'none' || unknownNames(current).length === 0)) rememberResult(prep.memory, key, current);
+  if (parses(current) && boardUnresolved.length === 0 && (rules.done || brainUsed !== 'none' || unknownNames(current).length === 0)) rememberResult(prep.memory, key, out);
   finish(prep, current, rules.learned);
   lastUnderstood.set(source, current);
   if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value as string);
 
-  const out = unmaskBoardBlocks(current, prep.boards);
   return {
     source: out,
     changed: out !== prep.original,
     mode: prep.mode,
     notes,
     learned: rules.learned,
-    unresolved: brainUsed === 'none' ? rules.unresolved : [],
+    unresolved: [...(brainUsed === 'none' ? rules.unresolved : []), ...boardUnresolved],
     brainUsed,
   };
+}
+
+function boardNotes(notes: { line: number; from: string; to: string; why: string }[]): UnderstandResult['notes'] {
+  return notes.map((n) => ({ line: n.line, from: n.from, to: n.to, why: `hardware: ${n.why}`, source: 'rules' as const }));
+}
+
+/**
+ * Ask the brain about board-block lines the hardware reader could not place.
+ * It is shown the hardware language, and its answer is only kept when it
+ * leaves fewer lines the transpiler does not understand.
+ */
+async function askBrainAboutBoards(
+  prep: Prepared, opts: UnderstandOptions, texts: string[], notes: UnderstandResult['notes'],
+): Promise<{ texts: string[]; unresolved: number[]; used: 'none' | 'local' | 'online' }> {
+  const out = [...texts];
+  const unresolved: number[] = [];
+  let used: 'none' | 'local' | 'online' = 'none';
+  const mode = prep.brain === 'auto' && !online() ? 'local' : prep.brain;
+  for (let i = 0; i < out.length; i++) {
+    const bad = unknownBoardLines(out[i]);
+    if (bad.length === 0) continue;
+    const lines = out[i].split('\n');
+    const { reply, used: by } = await think({
+      source: prep.boards[i].text,
+      draft: out[i],
+      unresolved: bad,
+      vocabulary: {},
+      problems: [...BOARD_GUIDE, 'Rewrite these lines into the hardware language: ' + bad.map((n) => lines[n - 1].trim()).join(' | ').slice(0, 240)],
+      format: 'canonical',
+    }, mode, opts.localUrl);
+    const answer = reply?.canonical ?? '';
+    const span = by !== 'none' ? findBoardSpans(answer)[0] : undefined;
+    if (span) {
+      // the brain's block goes through the reader too, so its loose bits are tidied the same way
+      const candidate = readBoardBlock(answer.slice(span.start, span.end), 1, span.strict).text;
+      const left = unknownBoardLines(candidate);
+      if (left.length < bad.length) {
+        out[i] = candidate;
+        used = by;
+        notes.push({ line: prep.boards[i].line, from: '', to: '', why: `hardware: the AI read ${bad.length - left.length} line${bad.length - left.length === 1 ? '' : 's'} the rules could not`, source: 'brain' });
+        unresolved.push(...left.map((n) => prep.boards[i].line + n - 1));
+        continue;
+      }
+    }
+    unresolved.push(...bad.map((n) => prep.boards[i].line + n - 1));
+  }
+  return { texts: out, unresolved, used };
 }
 
 /** problems a draft still has, in words the brain can act on */
@@ -341,7 +400,7 @@ export async function reconsider(source: string, error: string, opts: Understand
   const improved = await askBrain(prep, opts, draft, [], [`it failed when run: ${error}`], notes, true);
   if (!improved || improved.source.trim() === draft.trim()) return null;
   finish(prep, improved.source, {});
-  return { source: unmaskBoardBlocks(improved.source, prep.boards), changed: true, mode: prep.mode, notes, learned: {}, unresolved: [], brainUsed: improved.used };
+  return { source: unmaskBoardBlocks(improved.source, prep.boards, readBoardPieces(prep.boards).texts), changed: true, mode: prep.mode, notes, learned: {}, unresolved: [], brainUsed: improved.used };
 }
 
 const lastUnderstood = new Map<string, string>();
