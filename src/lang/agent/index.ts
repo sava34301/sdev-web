@@ -20,6 +20,7 @@ import {
   learnFromProgram, type AgentMemory, understandKey, recallResult, rememberResult,
 } from './memory';
 import type { UnderstandOptions, UnderstandResult } from './types';
+import { maskBoardBlocks, unmaskBoardBlocks, withoutBoardBlocks } from './boards';
 import { CANONICAL as CANONICAL_WORDS, type Intent } from './vocabulary';
 
 export * from './types';
@@ -53,6 +54,10 @@ interface Prepared {
   learn: boolean;
   stripped: string;
   memory: AgentMemory;
+  /** hardware board blocks set aside while reading (see ./boards.ts) */
+  boards: string[];
+  /** the file as written, board blocks included */
+  original: string;
 }
 
 function begin(source: string, opts: UnderstandOptions): Prepared {
@@ -61,7 +66,9 @@ function begin(source: string, opts: UnderstandOptions): Prepared {
   const brain: BrainMode = directives.brain ?? opts.brain ?? 'auto';
   const learn = directives.learn ?? opts.learn ?? true;
   // sdev:ai files are translated to canonical sdev before anything else reads them
-  const stripped = isAiDialect(source) ? aiToSdev(source) : directives.source;
+  const original = isAiDialect(source) ? aiToSdev(source) : directives.source;
+  // Board blocks are firmware for the hardware transpiler, not sdev to read.
+  const { source: stripped, blocks: boards } = maskBoardBlocks(original);
   const memory = loadMemory();
   // Saved readings from an older understander may be wrong — start them over.
   if (memory.agent !== AGENT_VERSION) {
@@ -70,7 +77,7 @@ function begin(source: string, opts: UnderstandOptions): Prepared {
     memory.agent = AGENT_VERSION;
     saveMemory(memory);
   }
-  return { mode, brain, learn, stripped, memory };
+  return { mode, brain, learn, stripped, memory, boards, original };
 }
 
 function skip(source: string, mode: AgentMode): UnderstandResult {
@@ -99,7 +106,7 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 }
 
 /** Bumped whenever the understander changes how it reads files, so saved readings from older versions are never reused. */
-export const AGENT_VERSION = 'u6';
+export const AGENT_VERSION = 'u7';
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
@@ -191,14 +198,15 @@ function finish(prep: Prepared, source: string, learned: Record<string, Intent>)
 /** Synchronous understanding: directives + rules + memory. No network. */
 export function understand(source: string, opts: UnderstandOptions = {}): UnderstandResult {
   const prep = begin(source, opts);
-  if (prep.mode === 'off') return skip(prep.stripped, 'off');
+  if (prep.mode === 'off') return skip(prep.original, 'off');
 
   const rules = runRules(prep, opts);
   finish(prep, rules.source, rules.learned);
 
+  const out = unmaskBoardBlocks(rules.source, prep.boards);
   return {
-    source: rules.source,
-    changed: rules.source !== prep.stripped,
+    source: out,
+    changed: out !== prep.original,
     mode: prep.mode,
     notes: rules.notes,
     learned: rules.learned,
@@ -214,13 +222,14 @@ export function understand(source: string, opts: UnderstandOptions = {}): Unders
  */
 export async function understandAsync(source: string, opts: UnderstandOptions = {}): Promise<UnderstandResult> {
   const prep = begin(source, opts);
-  if (prep.mode === 'off') return skip(prep.stripped, 'off');
+  if (prep.mode === 'off') return skip(prep.original, 'off');
 
   // Already understood this exact file before? Reuse it — no thinking twice.
   const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
   const cached = recallResult(prep.memory, key);
   if (cached !== null) {
-    return { source: cached, changed: cached !== prep.stripped, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
+    const out = unmaskBoardBlocks(cached, prep.boards);
+    return { source: out, changed: out !== prep.original, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
   }
 
   const rules = runRules(prep, opts);
@@ -244,9 +253,10 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   lastUnderstood.set(source, current);
   if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value as string);
 
+  const out = unmaskBoardBlocks(current, prep.boards);
   return {
-    source: current,
-    changed: current !== prep.stripped,
+    source: out,
+    changed: out !== prep.original,
     mode: prep.mode,
     notes,
     learned: rules.learned,
@@ -256,7 +266,8 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
 }
 
 /** problems a draft still has, in words the brain can act on */
-export function problemsOf(source: string): string[] {
+export function problemsOf(input: string): string[] {
+  const source = withoutBoardBlocks(input);
   const out: string[] = [];
   const err = parseError(source);
   if (err) out.push(`does not parse: ${err}`);
@@ -330,7 +341,7 @@ export async function reconsider(source: string, error: string, opts: Understand
   const improved = await askBrain(prep, opts, draft, [], [`it failed when run: ${error}`], notes, true);
   if (!improved || improved.source.trim() === draft.trim()) return null;
   finish(prep, improved.source, {});
-  return { source: improved.source, changed: true, mode: prep.mode, notes, learned: {}, unresolved: [], brainUsed: improved.used };
+  return { source: unmaskBoardBlocks(improved.source, prep.boards), changed: true, mode: prep.mode, notes, learned: {}, unresolved: [], brainUsed: improved.used };
 }
 
 const lastUnderstood = new Map<string, string>();

@@ -10,7 +10,7 @@ let memory: AgentMemory = emptyMemory();
 setMemoryStore({ load: () => memory, save: (m) => { memory = m; } });
 const verbose = process.env.V === '1';
 let total = 0, okRun = 0, changed = 0, broke = 0, diff = 0, v2changed = 0, v2total = 0;
-const docs = process.argv.length > 2 ? process.argv.slice(2) : ['public/SDEV_DOCUMENTATION.md', 'public/sdev-book-en.md', 'public/SDEV_FULL_DOCUMENTATION.md', 'public/SDEV_V2_DOCUMENTATION.md'];
+const docs = process.argv.length > 2 ? process.argv.slice(2) : ['public/SDEV_DOCUMENTATION.md', 'public/sdev-book-en.md', 'public/SDEV_FULL_DOCUMENTATION.md', 'public/SDEV_V2_DOCUMENTATION.md', 'public/SDEV_HARDWARE_DOCUMENTATION.md'];
 for (const d of docs) {
   const text = readFileSync(d, 'utf8');
   const blocks = d.endsWith('.sdev') ? [text] : [...text.matchAll(/```sdev[^\n]*\n([\s\S]*?)```/g)].map(m => m[1]);

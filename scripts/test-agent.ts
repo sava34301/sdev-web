@@ -101,5 +101,15 @@ check('call keeps its bracket', repair('set p to int(s)\nsay p').source, 'set p 
 check('parameter named a', repair('to add with a b\n  return a + b\nend').source, 'to add with a b\n  return a + b\nend');
 check('method call kept', repair('set c to new Counter()\nc.start(5)').source, 'set c to new Counter()\nc.start(5)');
 
+// ---- hardware board blocks are firmware, never rewritten -------------------
+memory = emptyMemory();
+const boardColon = 'board "uno" ::\n  conjure setup() ::\n    pin led be output\n    speak("ready")\n  ;;\n  conjure loop() ::\n    pin led toggle\n    wait 500\n  ;;\n;;\n';
+const boardBrace = 'board "uno" {\n  conjure setup() {\n    pin 13 be output\n    serial begin 9600\n  }\n  conjure loop() {\n    pin 13 write high\n    wait 500\n  }\n}\n';
+check('board :: block kept byte for byte', understand(boardColon).source, boardColon);
+check('board { } block kept byte for byte', understand(boardBrace).source, boardBrace);
+{
+  const r = understand('output Hello\n' + boardBrace);
+  check('sdev around a board block is still understood', r.source, 'speak("Hello")\n' + boardBrace);
+}
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
