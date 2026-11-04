@@ -533,6 +533,16 @@ function stripOuterParens(cond: string): string {
   return c.slice(1, -1).trim();
 }
 
+/**
+ * Does the transpiler know this one board-block line? `false` means it would
+ * be passed through to C++ unchanged (and almost certainly not compile).
+ */
+export function boardLineRecognised(line: string): boolean {
+  const warnings: string[] = [];
+  translateLine(line, 0, warnings);
+  return warnings.length === 0;
+}
+
 function translateLine(
   line: string,
   _depth: number,
