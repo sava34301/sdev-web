@@ -160,6 +160,8 @@ export function lintSdevSource(
   source: string,
   options: LintOptions = {}
 ): LintDiagnostic[] {
+  // Board blocks are firmware, read by the hardware reader — not sdev to lint.
+  source = stripBoardBlocks(source);
   const diagnostics: LintDiagnostic[] = [];
   const seenKeys = new Set<string>();
 
