@@ -481,11 +481,15 @@ function closes(t: string): boolean {
 
 function balanced(lines: string[]): boolean {
   let depth = 0;
+  let prevClosed = false;
   for (const l of lines) {
     const t = l.trim();
     if (!t || isComment(t)) continue;
+    // `otherwise ::` right after its `ponder` body (no `;;`) closes and reopens in one go
+    const cont = /^(?:otherwise|else|elif)\b/.test(t);
     if (closes(t)) depth--;
-    else if (opens(t)) depth++;
+    else if (opens(t) && (!cont || prevClosed)) depth++;
+    prevClosed = closes(t);
     if (depth < 0) return false;
   }
   return depth === 0;
@@ -601,7 +605,9 @@ export function readBoardBlock(text: string, firstLine = 1, strict = true): { te
   }
   if (!strict) {
     const pad = header ? header[1] : '';
-    tail = [pad + (useBrace ? '}' : ';;')];
+    let trailing = 0;
+    while (fixedBody.length && fixedBody[fixedBody.length - 1].trim() === '') { fixedBody = fixedBody.slice(0, -1); trailing++; }
+    tail = [pad + (useBrace ? '}' : ';;'), ...Array(trailing).fill('')];
   }
   return { text: [headerOut, ...fixedBody, ...tail].join('\n'), notes, unresolved };
 }
