@@ -15,7 +15,7 @@
 // are rewritten. Lines the rules cannot place are reported as `unresolved`
 // so the AI brain can be asked about just those.
 
-import { extractBoardBlock, boardLineRecognised, boardLineKind } from './transpile';
+import { extractBoardBlock, boardLineKind } from './transpile';
 import { BOARDS, findBoardById } from './board-db';
 
 export interface BoardNote {
