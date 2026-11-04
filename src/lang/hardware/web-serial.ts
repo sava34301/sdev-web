@@ -175,7 +175,11 @@ class SerialBufferReader {
   /** Wait up to `ms` for one chunk; returns false on timeout. */
   private async pull(ms: number): Promise<boolean> {
     if (this.closed) throw new Error('serial closed during read');
-    if (!this.pending) this.pending = this.reader.read();
+    if (!this.pending) {
+      this.pending = this.reader.read();
+      // Releasing the lock later rejects a still-waiting read; that is expected.
+      this.pending.catch(() => {});
+    }
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<'timeout'>((res) => {
       timer = setTimeout(() => res('timeout'), Math.max(0, ms));
