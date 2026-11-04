@@ -59,7 +59,7 @@ export function readBoardPieces(blocks: BoardPiece[]): { texts: string[]; notes:
 }
 
 /** Put the board blocks back (`texts[i]` replaces marker i). A marker the AI dropped is restored at the end of the file. */
-export function unmaskBoardBlocks(source: string, texts: string[]): string {
+export function unmaskBoardBlocks(source: string, blocks: BoardPiece[], texts: string[] = blocks.map((b) => b.text)): string {
   if (texts.length === 0) return source;
   const used = new Set<number>();
   const lines = source.split('\n');
@@ -74,26 +74,12 @@ export function unmaskBoardBlocks(source: string, texts: string[]): string {
     let blanks = 0;
     let k = i + 1;
     while (k < lines.length && lines[k].trim() === '') { blanks++; k++; }
-    const need = Math.min(blanks, MARKER_BLANKS.get(source)?.[n] ?? blanks);
-    i += need;
+    i += Math.min(blanks, blocks[n].text.split('\n').length - 1);
   }
   let result = out.join('\n');
   const missing = texts.filter((_, n) => !used.has(n));
   if (missing.length) result = result.replace(/\s*$/, '') + '\n\n' + missing.join('\n\n') + '\n';
   return result;
-}
-
-// how many blank lines each marker stood for, per masked source
-const MARKER_BLANKS = new Map<string, number[]>();
-
-/** Mask, remembering marker sizes so unmasking removes exactly the stand-in blank lines. */
-export function maskForReading(source: string): MaskedBoards {
-  const masked = maskBoardBlocks(source);
-  if (masked.blocks.length) {
-    MARKER_BLANKS.set(masked.source, masked.blocks.map((b) => b.text.split('\n').length - 1));
-    if (MARKER_BLANKS.size > 50) MARKER_BLANKS.delete(MARKER_BLANKS.keys().next().value as string);
-  }
-  return masked;
 }
 
 /** The file without its board blocks — what the sdev side of the file looks like. */
