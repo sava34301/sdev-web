@@ -82,6 +82,10 @@ export function findBoardSpans(source: string): BoardSpan[] {
     } else {
       while (j < lines.length && (lines[j].trim() === '' || indentOf(lines[j]) > headerIndent)) j++;
       while (j > i + 1 && lines[j - 1].trim() === '') j--;
+      // an `end` / `;;` / `}` at the header's indent closes the block
+      let k = j;
+      while (k < lines.length && lines[k].trim() === '') k++;
+      if (k < lines.length && indentOf(lines[k]) === headerIndent && /^(?:end|;;|\})$/.test(lines[k].trim())) j = k + 1;
     }
     const endLine = j - 1;
     const end = starts[endLine] + lines[endLine].length;
@@ -439,6 +443,20 @@ function splitComment(body: string): { code: string; comment: string } {
   return { code: body, comment: '' };
 }
 
+function splitStatements(code: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inStr = false;
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i];
+    if (ch === '"' && code[i - 1] !== '\\') inStr = !inStr;
+    if (!inStr && ch === ';' && code[i + 1] !== ';') { if (cur.trim()) out.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+
 function isComment(t: string): boolean {
   return t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || (t.startsWith('#') && !/^#\s*(include|define|if|ifdef|ifndef|endif|pragma|undef|else|elif)\b/.test(t));
 }
@@ -454,6 +472,14 @@ function readLine(line: string, ctx: Ctx): { lines: string[]; rule: string | nul
   const { code, comment } = splitComment(rest);
   const body = strip(code.replace(/;\s*$/, (s) => (/^\w+\s*\(.*\)\s*;$/.test(code) ? s : '')));
   const recognised = boardLineRecognised(line);
+  // `turn 13 on ; wait 500ms` — several plain-word statements on one line
+  if (!recognised && /;\s*\S/.test(body) && !/^for\s*\(/.test(body)) {
+    const parts = splitStatements(body);
+    if (parts.length > 1) {
+      const read = parts.map((p) => readLine(indent + p, ctx));
+      return { lines: read.flatMap((r) => r.lines), rule: 'several statements on a line', resolved: read.every((r) => r.resolved) };
+    }
+  }
   for (const rule of recognised ? RECOGNISED_ONLY : RULES) {
     const r = rule.run(body, ctx);
     if (r === null) continue;
@@ -606,6 +632,12 @@ export function readBoardBlock(text: string, firstLine = 1, strict = true): { te
   if (!strict) {
     const pad = header ? header[1] : '';
     let trailing = 0;
+    // the author's own closing `end` for the board block becomes its `;;`
+    let k = fixedBody.length - 1;
+    while (k >= 0 && fixedBody[k].trim() === '') k--;
+    if (k >= 0 && /^(?:end|;;|\})$/.test(fixedBody[k].trim()) && indentOf(fixedBody[k]) <= (header ? indentOf(header[1]) : 0)) {
+      fixedBody = [...fixedBody.slice(0, k), ...fixedBody.slice(k + 1)];
+    }
     while (fixedBody.length && fixedBody[fixedBody.length - 1].trim() === '') { fixedBody = fixedBody.slice(0, -1); trailing++; }
     tail = [pad + (useBrace ? '}' : ';;'), ...Array(trailing).fill('')];
   }
