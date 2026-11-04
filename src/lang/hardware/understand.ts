@@ -553,6 +553,55 @@ function closeByIndent(lines: string[]): string[] {
 }
 
 // ---------------------------------------------------------------
+// Every Arduino sketch needs setup() and loop(). Statements written straight
+// inside the board block (script style) are what should happen at start-up.
+// ---------------------------------------------------------------
+const GLOBAL_LINE = /^(?:use\s+"|device\s|(?:fixed\s+|keep\s+|volatile\s+)*forge\s|define\s|cpp\s*\{|#)/;
+const FUNCTION_LINE = /^(?:conjure\s+\w+\s*\(|to\s+\w+|(?:void|int|long|float|bool|byte|auto|String)\s+\w+\s*\([^)]*\)\s*\{)/;
+
+function ensureSetupLoop(lines: string[], useBrace: boolean): { lines: string[]; changed: boolean } {
+  const code = lines.map((l) => l.trim());
+  const hasSetup = code.some((t) => /^(?:conjure\s+setup\s*\(|to\s+setup\b|void\s+setup\s*\()/.test(t));
+  const hasLoop = code.some((t) => /^(?:conjure\s+loop\s*\(|to\s+loop\b|void\s+loop\s*\()/.test(t));
+  if (hasSetup && hasLoop) return { lines, changed: false };
+  // split into top-level pieces
+  const loose: string[] = [];
+  const kept: string[] = [];
+  let firstLoose = -1;
+  let depth = 0;
+  let inFunction = false;
+  let prevClosed = false;
+  let pieceIsLoose = false;
+  for (const l of lines) {
+    const t = l.trim();
+    if (!t || isComment(t)) { (depth > 0 && pieceIsLoose ? loose : kept).push(l); continue; }
+    if (depth === 0) {
+      inFunction = FUNCTION_LINE.test(t);
+      pieceIsLoose = !inFunction && !GLOBAL_LINE.test(t);
+      if (pieceIsLoose && firstLoose < 0) firstLoose = kept.length;
+    }
+    (pieceIsLoose ? loose : kept).push(l);
+    const cont = /^(?:otherwise|else|elif)\b/.test(t);
+    if (closes(t)) depth = Math.max(0, depth - 1);
+    else if (opens(t) && (!cont || prevClosed)) depth++;
+    prevClosed = closes(t);
+  }
+  if (loose.length === 0 && hasSetup === hasLoop && hasSetup) return { lines, changed: false };
+  if (hasSetup && loose.length) return { lines, changed: false }; // can't tell where they belong — leave them
+  const pad = /^[ \t]*/.exec(lines.find((l) => l.trim()) ?? '')![0];
+  const open = useBrace ? '{' : '::';
+  const close = useBrace ? '}' : ';;';
+  const out = [...kept];
+  if (!hasSetup) {
+    while (loose.length && loose[loose.length - 1].trim() === '') loose.pop();
+    const setup = [`${pad}conjure setup() ${open}`, ...loose.map((l) => (l.trim() ? '  ' + l : l)), `${pad}${close}`];
+    out.splice(firstLoose < 0 ? 0 : firstLoose, 0, ...setup);
+  }
+  if (!hasLoop) out.push(`${pad}conjure loop() ${open}`, `${pad}${close}`);
+  return { lines: out, changed: true };
+}
+
+// ---------------------------------------------------------------
 // Board ids people actually type
 // ---------------------------------------------------------------
 function boardIdFor(raw: string): string {
@@ -628,6 +677,18 @@ export function readBoardBlock(text: string, firstLine = 1, strict = true): { te
       }
       fixedBody = closed;
     }
+  }
+  // `end` (v2 style) closes blocks too, but only `;;` / `}` delimit the board block itself
+  fixedBody = fixedBody.map((l, idx) => {
+    if (l.trim() !== 'end') return l;
+    const to = /^[ \t]*/.exec(l)![0] + (useBrace ? '}' : ';;');
+    notes.push({ line: firstLine + 1 + idx, from: 'end', to: to.trim(), why: 'block end' });
+    return to;
+  });
+  const wrapped = ensureSetupLoop(fixedBody, useBrace);
+  if (wrapped.changed) {
+    notes.push({ line: firstLine, from: '', to: '', why: 'put the start-up lines in setup() — every Arduino program needs setup() and loop()' });
+    fixedBody = wrapped.lines;
   }
   if (!strict) {
     const pad = header ? header[1] : '';
