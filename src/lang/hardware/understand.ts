@@ -678,6 +678,14 @@ export function readBoardBlock(text: string, firstLine = 1, strict = true): { te
       fixedBody = closed;
     }
   }
+  if (!strict) {
+    // the author's own closing `end` for the board block becomes its `;;`
+    let k = fixedBody.length - 1;
+    while (k >= 0 && fixedBody[k].trim() === '') k--;
+    if (k >= 0 && /^(?:end|;;|\})$/.test(fixedBody[k].trim()) && indentOf(fixedBody[k]) <= (header ? indentOf(header[1]) : 0)) {
+      fixedBody = [...fixedBody.slice(0, k), ...fixedBody.slice(k + 1)];
+    }
+  }
   // `end` (v2 style) closes blocks too, but only `;;` / `}` delimit the board block itself
   fixedBody = fixedBody.map((l, idx) => {
     if (l.trim() !== 'end') return l;
@@ -693,12 +701,6 @@ export function readBoardBlock(text: string, firstLine = 1, strict = true): { te
   if (!strict) {
     const pad = header ? header[1] : '';
     let trailing = 0;
-    // the author's own closing `end` for the board block becomes its `;;`
-    let k = fixedBody.length - 1;
-    while (k >= 0 && fixedBody[k].trim() === '') k--;
-    if (k >= 0 && /^(?:end|;;|\})$/.test(fixedBody[k].trim()) && indentOf(fixedBody[k]) <= (header ? indentOf(header[1]) : 0)) {
-      fixedBody = [...fixedBody.slice(0, k), ...fixedBody.slice(k + 1)];
-    }
     while (fixedBody.length && fixedBody[fixedBody.length - 1].trim() === '') { fixedBody = fixedBody.slice(0, -1); trailing++; }
     tail = [pad + (useBrace ? '}' : ';;'), ...Array(trailing).fill('')];
   }
