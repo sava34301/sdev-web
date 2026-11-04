@@ -162,33 +162,71 @@ async function withReader<T>(
 
 class SerialBufferReader {
   private queue: number[] = [];
+  /**
+   * The read that is still waiting for bytes. When a timeout fires we must NOT
+   * start a second `reader.read()` — the first one is still queued inside the
+   * stream and would swallow the next chunk, so every later reply would be lost.
+   * Instead the same pending read is reused until it resolves.
+   */
+  private pending: Promise<ReadableStreamReadResult<Uint8Array>> | null = null;
+  private closed = false;
   constructor(private reader: ReadableStreamDefaultReader<Uint8Array>) {}
+
+  /** Wait up to `ms` for one chunk; returns false on timeout. */
+  private async pull(ms: number): Promise<boolean> {
+    if (this.closed) throw new Error('serial closed during read');
+    if (!this.pending) {
+      this.pending = this.reader.read();
+      // Releasing the lock later rejects a still-waiting read; that is expected.
+      this.pending.catch(() => {});
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<'timeout'>((res) => {
+      timer = setTimeout(() => res('timeout'), Math.max(0, ms));
+    });
+    try {
+      const result = await Promise.race([this.pending, timeout]);
+      if (result === 'timeout') return false;
+      this.pending = null;
+      if (result.done) {
+        this.closed = true;
+        throw new Error('serial closed during read');
+      }
+      if (result.value) {
+        for (let i = 0; i < result.value.length; i++) this.queue.push(result.value[i]);
+      }
+      return true;
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
 
   async readN(n: number, timeoutMs = 1500): Promise<Uint8Array> {
     const deadline = Date.now() + timeoutMs;
     while (this.queue.length < n) {
       const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new Error('serial read timeout');
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      try {
-        const result = await Promise.race([
-          this.reader.read(),
-          new Promise<{ done: true; value?: Uint8Array }>((_, rej) => {
-            timer = setTimeout(() => rej(new Error('serial read timeout')), remaining);
-          }),
-        ]);
-        if (result.done) throw new Error('serial closed during read');
-        if (result.value) {
-          for (let i = 0; i < result.value.length; i++) {
-            this.queue.push(result.value[i]);
-          }
-        }
-      } finally {
-        if (timer !== undefined) clearTimeout(timer);
+      if (remaining <= 0 || !(await this.pull(remaining))) {
+        if (this.queue.length >= n) break;
+        throw new Error('serial read timeout');
       }
     }
-    const out = new Uint8Array(this.queue.splice(0, n));
-    return out;
+    return new Uint8Array(this.queue.splice(0, n));
+  }
+
+  /** Read one byte, or null when nothing arrives in time. */
+  async readByte(timeoutMs: number): Promise<number | null> {
+    try {
+      return (await this.readN(1, timeoutMs))[0];
+    } catch (e) {
+      if (e instanceof Error && e.message === 'serial read timeout') return null;
+      throw e;
+    }
+  }
+
+  /** Throw away everything already received plus anything arriving within `quietMs`. */
+  async drain(quietMs = 30): Promise<void> {
+    this.queue.length = 0;
+    while (await this.pull(quietMs)) this.queue.length = 0;
   }
 
   async readUntilByte(delimiter: number, timeoutMs = 1500): Promise<Uint8Array> {
@@ -202,14 +240,17 @@ class SerialBufferReader {
   }
 }
 
-/** Reset an AVR by toggling DTR/RTS — the standard Arduino auto-reset. */
-async function resetAvr(port: WebSerialPort, waitMs = 50): Promise<void> {
+/**
+ * Reset an AVR the way avrdude's `arduino` programmer does: drop DTR/RTS,
+ * wait, then assert them. The falling edge on the board's RESET line (through
+ * its 100 nF capacitor) restarts the chip into the bootloader, which then
+ * listens for roughly one second.
+ */
+async function resetAvr(port: WebSerialPort, waitMs = 250): Promise<void> {
   await port.setSignals({ dataTerminalReady: false, requestToSend: false });
   await new Promise((r) => setTimeout(r, waitMs));
   await port.setSignals({ dataTerminalReady: true, requestToSend: true });
-  await new Promise((r) => setTimeout(r, waitMs));
-  await port.setSignals({ dataTerminalReady: false, requestToSend: false });
-  await new Promise((r) => setTimeout(r, waitMs));
+  await new Promise((r) => setTimeout(r, Math.min(50, waitMs)));
 }
 
 /** 1200-baud touch reset used by Caterina (AVR109), SAM-BA (BOSSA), and RP2040. */
@@ -280,30 +321,41 @@ export async function flashAvr(
   const pageSize = opts?.pageSize ?? 128;
   await port.open({ baudRate, dataBits: 8, stopBits: 1, parity: 'none' });
   try {
-    onProgress?.({ phase: 'reset' });
-    await resetAvr(port, opts?.resetWaitMs ?? 50);
-
     await withReader(port, async (reader, writer) => {
       const bufReader = new SerialBufferReader(reader);
-      onProgress?.({ phase: 'sync' });
+      const resetWait = opts?.resetWaitMs ?? 250;
+      const attemptMs = Math.max(20, Math.min(200, resetWait));
       let synced = false;
-      for (let i = 0; i < 10; i++) {
-        try {
+      // The bootloader only listens for ~1 s after reset, so if the first window
+      // is missed (slow USB adapter, board still running the old sketch) reset
+      // again instead of giving up.
+      for (let round = 0; round < 3 && !synced; round++) {
+        onProgress?.({ phase: 'reset' });
+        await resetAvr(port, resetWait);
+        await bufReader.drain(Math.min(30, attemptMs));
+        onProgress?.({ phase: 'sync' });
+        for (let i = 0; i < 8 && !synced; i++) {
           await writer.write(toBuf([STK500V1.GET_SYNC, STK500V1.CRC_EOP]));
-          const [a, b] = await bufReader.readN(2, 250);
-          if (a === STK500V1.IN_SYNC && b === STK500V1.OK) {
-            synced = true;
-            break;
+          // Scan for IN_SYNC so stray bytes from the old sketch can't misalign us.
+          const until = Date.now() + attemptMs;
+          while (Date.now() < until) {
+            const b = await bufReader.readByte(until - Date.now());
+            if (b === null) break;
+            if (b !== STK500V1.IN_SYNC) continue;
+            const ok = await bufReader.readByte(Math.max(20, until - Date.now()));
+            if (ok === STK500V1.OK) { synced = true; break; }
           }
-        } catch {
-          /* retry */
         }
       }
       if (!synced) {
         throw new Error(
-          'STK500: could not synchronise with bootloader (is the board in bootloader mode? wrong board?)'
+          'STK500: could not synchronise with bootloader. Check that the right board and port are selected, ' +
+          'close any other app using the port (Arduino IDE serial monitor), or press the board\'s RESET button ' +
+          'just as the upload starts.'
         );
       }
+      // Earlier GET_SYNC attempts may still be answered — discard those replies.
+      await bufReader.drain(Math.min(50, attemptMs));
 
       await stk500v1Command(writer, bufReader, [STK500V1.ENTER_PROGMODE]);
 
