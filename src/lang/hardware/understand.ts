@@ -15,7 +15,7 @@
 // are rewritten. Lines the rules cannot place are reported as `unresolved`
 // so the AI brain can be asked about just those.
 
-import { extractBoardBlock, boardLineRecognised } from './transpile';
+import { extractBoardBlock, boardLineRecognised, boardLineKind } from './transpile';
 import { BOARDS, findBoardById } from './board-db';
 
 export interface BoardNote {
@@ -469,7 +469,8 @@ const C_TYPES = /^(?:unsigned|signed|const|static|volatile|extern|int|long|short
  * when they are clearly words, not code ("do the dance", "spin at 50%").
  */
 export function reallyRecognised(line: string): boolean {
-  if (!boardLineRecognised(line)) return false;
+  const kind = boardLineKind(line);
+  if (kind !== 'passthrough') return kind === 'known';
   const body = splitComment(line.trim()).code.trim();
   if (/(?:::|\{|;)$/.test(body) || body === 'otherwise' || body === 'else') return true;
   if (/^(?:if|while|for|switch|do)\b/.test(body) && !/^(?:(?:if|while|for|switch)\s*\(.*\)\s*\{?|do)$/.test(body)) return false;
