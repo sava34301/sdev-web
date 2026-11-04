@@ -252,7 +252,7 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   const hw = readBoardPieces(prep.boards);
   notes.push(...boardNotes(hw.notes));
   let boardUnresolved = hw.unresolved;
-  if (hw.unresolved.length && prep.brain !== 'none' && prep.mode !== 'off') {
+  if (hw.unresolved.length && prep.brain !== 'none') {
     const asked = await askBrainAboutBoards(prep, opts, hw.texts, notes);
     hw.texts = asked.texts;
     boardUnresolved = asked.unresolved;
