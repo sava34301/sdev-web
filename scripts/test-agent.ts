@@ -109,7 +109,7 @@ check('board :: block kept byte for byte', understand(boardColon).source, boardC
 check('board { } block kept byte for byte', understand(boardBrace).source, boardBrace);
 {
   const r = understand('output Hello\n' + boardBrace);
-  check('sdev around a board block is still understood', r.source, 'say "Hello"\n' + boardBrace);
+  check('sdev around a board block is still understood', r.source, 'speak("Hello")\n' + boardBrace);
 }
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
