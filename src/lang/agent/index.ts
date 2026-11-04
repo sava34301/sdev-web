@@ -106,7 +106,7 @@ function dialectWordMap(opts: UnderstandOptions): Map<string, Intent> {
 }
 
 /** Bumped whenever the understander changes how it reads files, so saved readings from older versions are never reused. */
-export const AGENT_VERSION = 'u6';
+export const AGENT_VERSION = 'u7';
 
 /** Which engine produced the last rule rewrite. */
 export let lastEngine: 'sdev' | 'ts' = 'ts';
