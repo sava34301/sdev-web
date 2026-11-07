@@ -406,6 +406,28 @@ async function runProtocolSimulations() {
   await flashAvr(stk1Port, sampleHex, undefined, { resetWaitMs: 1 });
   check('STK500v1 flashed 16 bytes accurately', stk1Flashed, Array.from(parsed.data));
 
+  // 1b. STK500v1 with a slow bootloader: the first sync attempts go unanswered,
+  // then the old sketch's stray bytes arrive before the real reply. Replies after
+  // a read timeout must not be lost (regression: Uno R3 "could not synchronise").
+  const slowFlashed: number[] = [];
+  let ignoredSyncs = 0;
+  const slowPort = createSimulatedSerialPort((bytes, reply) => {
+    const cmd = bytes[0];
+    if (cmd === STK500V1.GET_SYNC && ignoredSyncs < 3) { ignoredSyncs++; return; }
+    if (cmd === STK500V1.GET_SYNC && ignoredSyncs === 3) {
+      ignoredSyncs++;
+      setTimeout(() => reply([0x00, 0x48, 0x69, STK500V1.IN_SYNC, STK500V1.OK]), 5);
+      return;
+    }
+    if (cmd === STK500V1.PROG_PAGE) {
+      const len = (bytes[1] << 8) | bytes[2];
+      slowFlashed.push(...bytes.subarray(4, 4 + len));
+    }
+    reply([STK500V1.IN_SYNC, STK500V1.OK]);
+  });
+  await flashAvr(slowPort, sampleHex, undefined, { resetWaitMs: 40 });
+  check('STK500v1 syncs with a slow bootloader and stray bytes', slowFlashed, Array.from(parsed.data));
+
   // 2. STK500v2 simulator
   const stk2Flashed: number[] = [];
   const stk2Port = createSimulatedSerialPort((bytes, reply) => {

@@ -533,11 +533,32 @@ function stripOuterParens(cond: string): string {
   return c.slice(1, -1).trim();
 }
 
+/**
+ * Does the transpiler know this one board-block line? `false` means it would
+ * be passed through to C++ unchanged (and almost certainly not compile).
+ */
+export function boardLineRecognised(line: string): boolean {
+  return boardLineKind(line) !== 'unknown';
+}
+
+/**
+ * `known`: a hardware-language statement; `passthrough`: handed to C++ as is
+ * because it looks like C++ (a call, an operator, `if (...) {`); `unknown`:
+ * passed through with a warning.
+ */
+export function boardLineKind(line: string): 'known' | 'passthrough' | 'unknown' {
+  const warnings: string[] = [];
+  const info = { passthrough: false };
+  translateLine(line, 0, warnings, false, info);
+  return warnings.length ? 'unknown' : info.passthrough ? 'passthrough' : 'known';
+}
+
 function translateLine(
   line: string,
   _depth: number,
   warnings: string[],
-  autoSerialBegin = false
+  autoSerialBegin = false,
+  info?: { passthrough: boolean }
 ): string {
   const indentMatch = /^[ \t]*/.exec(line);
   const indent = indentMatch ? indentMatch[0] : '';
@@ -830,16 +851,19 @@ function translateLine(
 
   // C++ style control headers (`if (...) {`, `while (...) {`, `for (...) {`, `switch (...) {`, `do {`)
   if (/^(if|else|while|for|switch|do)\b/.test(body)) {
+    if (info) info.passthrough = true;
     return `${indent}${transpileExpr(body)}${comment}`;
   }
 
   // Already ends with `;`, `{`, or `}`
   if (/[;{}]$/.test(body)) {
+    if (info) info.passthrough = true;
     return `${indent}${transpileExpr(body)}${comment}`;
   }
 
   // Function/method call or C++ expression statement (e.g. `Wire.begin()`, `x++`, `a = 1`)
   if (/^[A-Za-z_][\w.:<>]*\s*\(/.test(body) || /[=+\-*/&|^%<>]/.test(body)) {
+    if (info) info.passthrough = true;
     return `${indent}${transpileExpr(body)};${comment}`;
   }
 

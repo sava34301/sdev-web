@@ -1,3 +1,4 @@
+import { withoutBoardBlocks } from './boards';
 /**
  * Does this file need the agent at all?
  *
@@ -205,6 +206,6 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
  * author got what they meant; such a file is read by the agent first.
  */
 export function wordsNeedReading(source: string): boolean {
-  return senseFile(source).reasons.some((r) =>
+  return senseFile(withoutBoardBlocks(source)).reasons.some((r) =>
     /is not canonical sdev|asks for input in words|names the output destination/.test(r) && !/"[^"]*[^\x00-\x7F][^"]*"/.test(r));
 }
