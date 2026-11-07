@@ -43,7 +43,7 @@ console.log('--- 1. String Interpolation ---');
 const interpV1 = execute(`
 forge user be "Alice"
 forge items be 42
-forge msg be "Hello, {user}! You have {items} items."
+forge msg be f"Hello, {user}! You have {items} items."
 speak(msg)
 `);
 check('v1 interpreter string interpolation with variables', interpV1.success && interpV1.output[0] === 'Hello, Alice! You have 42 items.', String(interpV1.error));
@@ -51,20 +51,20 @@ check('v1 interpreter string interpolation with variables', interpV1.success && 
 const interpExpr = execute(`
 forge a be 10
 forge b be 25
-forge res be "{a} + {b} = {a + b}"
+forge res be f"{a} + {b} = {a + b}"
 speak(res)
 `);
 check('v1 interpreter string interpolation with arithmetic expression', interpExpr.success && interpExpr.output[0] === '10 + 25 = 35', String(interpExpr.error));
 
 const interpEscaped = execute(`
-forge escaped be "Braces: {{literal}}"
+forge escaped be f"Braces: {{literal}}"
 speak(escaped)
 `);
 check('String escaped double-braces {{...}} preserved literally', interpEscaped.success && interpEscaped.output[0] === 'Braces: {literal}', String(interpEscaped.error));
 
 const interpV2Compiled = compileToBytecode(`
 forge name be "Bob"
-forge text be "Welcome, {name}!"
+forge text be f"Welcome, {name}!"
 `);
 check('v2 compiler compiles string interpolation without error', interpV2Compiled !== null && interpV2Compiled.entry.code.length > 0);
 

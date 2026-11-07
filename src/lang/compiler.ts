@@ -298,6 +298,95 @@ export class Compiler {
         this.compileMatch(node, fn);
         break;
 
+      case 'PassStatement':
+        // No-op statement
+        break;
+
+      case 'AugAssignStatement':
+        this.compileAugAssign(node, fn);
+        break;
+
+      case 'AssertStatement': {
+        this.compileNode(node.condition, fn);
+        const passJump = fn.emitJump(OpCode.JUMP_IF_TRUE, node.line);
+        if (node.message) {
+          this.compileNode(node.message, fn);
+        } else {
+          fn.emit(OpCode.PUSH_STR, 'AssertionError: condition failed', node.line);
+        }
+        fn.emit(OpCode.LOAD, 'panic', node.line);
+        fn.emit(OpCode.SWAP, undefined, node.line);
+        fn.emit(OpCode.CALL, 1, node.line);
+        fn.emit(OpCode.POP, undefined, node.line);
+        fn.patchJump(passJump);
+        break;
+      }
+
+      case 'TupleLiteral':
+      case 'SetLiteral':
+        for (const el of node.elements) {
+          this.compileNode(el, fn);
+        }
+        fn.emit(OpCode.MAKE_LIST, node.elements.length, node.line);
+        break;
+
+      case 'BytesLiteral':
+        fn.emit(OpCode.PUSH_STR, node.value, node.line);
+        break;
+
+      case 'WalrusExpr':
+        this.compileNode(node.value, fn);
+        fn.emit(OpCode.DUP, undefined, node.line);
+        fn.emit(OpCode.DEFINE, node.name, node.line);
+        break;
+
+      case 'SliceExpr': {
+        fn.emit(OpCode.LOAD, 'portion', node.line);
+        this.compileNode(node.object, fn);
+        if (node.start) {
+          this.compileNode(node.start, fn);
+        } else {
+          fn.emit(OpCode.PUSH_NUM, 0, node.line);
+        }
+        if (node.stop) {
+          this.compileNode(node.stop, fn);
+        } else {
+          fn.emit(OpCode.LOAD, 'len', node.line);
+          this.compileNode(node.object, fn);
+          fn.emit(OpCode.CALL, 1, node.line);
+        }
+        fn.emit(OpCode.CALL, 3, node.line);
+        break;
+      }
+
+      case 'ComprehensionExpr':
+        this.compileComprehension(node, fn);
+        break;
+
+      case 'WithStatement':
+        this.compileWith(node, fn);
+        break;
+
+      case 'EmitExpr':
+        this.compileNode(node.value, fn);
+        break;
+
+      case 'DelStatement': {
+        for (const target of node.targets) {
+          if (target.type === 'IndexExpr') {
+            fn.emit(OpCode.LOAD, 'pluck', target.line);
+            this.compileNode(target.object, fn);
+            this.compileNode(target.index, fn);
+            fn.emit(OpCode.CALL, 2, target.line);
+            fn.emit(OpCode.POP, undefined, target.line);
+          } else if (target.type === 'Identifier') {
+            fn.emit(OpCode.PUSH_NULL, undefined, target.line);
+            fn.emit(OpCode.STORE, target.name, target.line);
+          }
+        }
+        break;
+      }
+
       default:
         throw new SdevError(`Compiler: unknown node type ${(node as { type: string }).type}`, 0);
     }
@@ -502,7 +591,139 @@ export class Compiler {
     }
   }
 
-    private compileTryCatch(node: AST.TryStatement, fn: FunctionCompiler): void {
+  private compileAugAssign(node: AST.AugAssignStatement, fn: FunctionCompiler): void {
+    const op = node.operator;
+    const opMap: Record<string, OpCode> = {
+      '+': OpCode.ADD, '-': OpCode.SUB, '*': OpCode.MUL, '/': OpCode.DIV,
+      '%': OpCode.MOD, '**': OpCode.POW,
+      '&': OpCode.BIT_AND, '|': OpCode.BIT_OR, '^': OpCode.BIT_XOR,
+      '<<': OpCode.BIT_SHL, '>>': OpCode.BIT_SHR,
+    };
+    const binOp = opMap[op] ?? OpCode.ADD;
+    if (node.target.type === 'Identifier') {
+      const varName = node.target.name;
+      if (this.fixedVariables.has(varName)) {
+        throw new SdevError(`Cannot reassign fixed variable '${varName}'`, node.line);
+      }
+      fn.emit(OpCode.LOAD, varName, node.line);
+      this.compileNode(node.value, fn);
+      fn.emit(binOp, undefined, node.line);
+      fn.emit(OpCode.STORE, varName, node.line);
+    } else if (node.target.type === 'IndexExpr') {
+      const targetTemp = `__aug_obj_${fn.code.length}_${node.line}`;
+      const indexTemp = `__aug_idx_${fn.code.length}_${node.line}`;
+      const valTemp = `__aug_val_${fn.code.length}_${node.line}`;
+      this.compileNode(node.target.object, fn);
+      fn.emit(OpCode.STORE, targetTemp, node.line);
+      this.compileNode(node.target.index, fn);
+      fn.emit(OpCode.STORE, indexTemp, node.line);
+
+      fn.emit(OpCode.LOAD, targetTemp, node.line);
+      fn.emit(OpCode.LOAD, indexTemp, node.line);
+      fn.emit(OpCode.INDEX_GET, undefined, node.line);
+
+      this.compileNode(node.value, fn);
+      fn.emit(binOp, undefined, node.line);
+      fn.emit(OpCode.STORE, valTemp, node.line);
+
+      fn.emit(OpCode.LOAD, targetTemp, node.line);
+      fn.emit(OpCode.LOAD, indexTemp, node.line);
+      fn.emit(OpCode.LOAD, valTemp, node.line);
+      fn.emit(OpCode.INDEX_SET, undefined, node.line);
+    }
+  }
+
+  private compileComprehension(node: AST.ComprehensionExpr, fn: FunctionCompiler): void {
+    const accVar = `__comp_acc_${fn.code.length}_${node.line}`;
+    if (node.form === 'dict') {
+      fn.emit(OpCode.MAKE_DICT, 0, node.line);
+    } else {
+      fn.emit(OpCode.MAKE_LIST, 0, node.line);
+    }
+    fn.emit(OpCode.DEFINE, accVar, node.line);
+
+    const loopExits: number[] = [];
+    for (let cIdx = 0; cIdx < node.clauses.length; cIdx++) {
+      const clause = node.clauses[cIdx];
+      const iterVar = `__comp_iter_${fn.code.length}_${node.line}`;
+      const idxVar = `__comp_i_${fn.code.length}_${node.line}`;
+      const lenVar = `__comp_len_${fn.code.length}_${node.line}`;
+
+      this.compileNode(clause.iterable, fn);
+      fn.emit(OpCode.DEFINE, iterVar, node.line);
+      fn.emit(OpCode.PUSH_NUM, 0, node.line);
+      fn.emit(OpCode.DEFINE, idxVar, node.line);
+
+      fn.emit(OpCode.LOAD, 'len', node.line);
+      fn.emit(OpCode.LOAD, iterVar, node.line);
+      fn.emit(OpCode.CALL, 1, node.line);
+      fn.emit(OpCode.DEFINE, lenVar, node.line);
+
+      const loopStart = fn.currentPos();
+      fn.emit(OpCode.LOAD, idxVar, node.line);
+      fn.emit(OpCode.LOAD, lenVar, node.line);
+      fn.emit(OpCode.LT, undefined, node.line);
+      const exitJump = fn.emitJump(OpCode.JUMP_IF_FALSE, node.line);
+      loopExits.push(exitJump);
+
+      fn.emit(OpCode.LOAD, iterVar, node.line);
+      fn.emit(OpCode.LOAD, idxVar, node.line);
+      fn.emit(OpCode.INDEX_GET, undefined, node.line);
+      const targetVar = Array.isArray(clause.variable) ? clause.variable[0] : clause.variable;
+      fn.emit(OpCode.DEFINE, targetVar, node.line);
+
+      const skipJumps: number[] = [];
+      for (const cond of clause.conditions) {
+        this.compileNode(cond, fn);
+        skipJumps.push(fn.emitJump(OpCode.JUMP_IF_FALSE, node.line));
+      }
+
+      if (cIdx === node.clauses.length - 1) {
+        if (node.form === 'dict' && node.valueExpr) {
+          fn.emit(OpCode.LOAD, accVar, node.line);
+          this.compileNode(node.element, fn);
+          this.compileNode(node.valueExpr, fn);
+          fn.emit(OpCode.INDEX_SET, undefined, node.line);
+        } else {
+          fn.emit(OpCode.LOAD, 'gather', node.line);
+          fn.emit(OpCode.LOAD, accVar, node.line);
+          this.compileNode(node.element, fn);
+          fn.emit(OpCode.CALL, 2, node.line);
+          fn.emit(OpCode.STORE, accVar, node.line);
+        }
+      }
+
+      for (const sj of skipJumps) fn.patchJump(sj);
+
+      fn.emit(OpCode.LOAD, idxVar, node.line);
+      fn.emit(OpCode.PUSH_NUM, 1, node.line);
+      fn.emit(OpCode.ADD, undefined, node.line);
+      fn.emit(OpCode.STORE, idxVar, node.line);
+      fn.emit(OpCode.JUMP, loopStart, node.line);
+    }
+
+    for (const ej of loopExits.reverse()) fn.patchJump(ej);
+
+    fn.emit(OpCode.LOAD, accVar, node.line);
+  }
+
+  private compileWith(node: AST.WithStatement, fn: FunctionCompiler): void {
+    for (let i = 0; i < node.items.length; i++) {
+      const item = node.items[i];
+      const ctxVar = `__with_ctx_${i}_${fn.code.length}_${node.line}`;
+      this.compileNode(item.expr, fn);
+      fn.emit(OpCode.DEFINE, ctxVar, node.line);
+      if (item.alias) {
+        fn.emit(OpCode.LOAD, ctxVar, node.line);
+        fn.emit(OpCode.DEFINE, item.alias, node.line);
+      }
+    }
+    for (const stmt of node.body.statements) {
+      this.compileNode(stmt, fn);
+    }
+  }
+
+  private compileTryCatch(node: AST.TryStatement, fn: FunctionCompiler): void {
     // Compile try block as a function, call it, catch errors
     const tryFn = new FunctionCompiler('<try>', []);
     this.compileStatements(node.tryBlock.statements, tryFn);

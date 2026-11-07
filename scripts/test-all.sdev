@@ -1,0 +1,190 @@
+# ================================================================
+# SDEV Self-Hosted Language Core Test Runner — authored in SDEV
+#
+# Runs all self-hosted compiler, VM, runtime, stdlib, subsystems,
+# native PE generator, and parity test suites sequentially.
+#
+#   node bin/sdevhost.mjs scripts/test-all.sdev
+# ================================================================
+
+use "lang/stdlib/testkit.sdev"
+
+to run_suite with name cmd
+  say concat("\n▶ [Running] ", concat(name, "..."))
+  set res to shell(cmd)
+  set nl to find(res, "\n")
+  set status_code to substr(res, 0, nl)
+  set output to substr(res, nl + 1, length(res) - (nl + 1))
+  if length(output) > 0
+    say output
+  end
+  if status_code is "0"
+    say concat("✓ [PASSED] ", name)
+    return 1
+  else
+    say concat("✗ [FAILED] ", concat(name, concat(" (exit code ", concat(status_code, ")"))))
+    return 0
+  end
+end
+
+say "================================================================"
+say "  Running SDEV Self-Hosted Language Core Test Suites"
+say "================================================================"
+
+set total_passed to 0
+set total_failed to 0
+
+# 1. Toolchain
+set ok to run_suite("Toolchain (Lexer/Parser/Codegen)", "node bin/sdevhost.mjs scripts/test-self-toolchain.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 2. Driver Artifact
+set ok to run_suite("Driver Artifact", "node bin/sdevhost.mjs scripts/test-driver-artifact.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 3. Self-Hosted Lexer
+set ok to run_suite("Self-Hosted Lexer", "node bin/sdevhost.mjs scripts/test-self-lexer.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 4. Self-Hosted Parser
+set ok to run_suite("Self-Hosted Parser", "node bin/sdevhost.mjs scripts/test-self-parser.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 5. Self-Hosted Codegen
+set ok to run_suite("Self-Hosted Codegen", "node bin/sdevhost.mjs scripts/test-self-codegen.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 6. Self-Hosted Stdlib v2
+set ok to run_suite("Self-Hosted Stdlib v2", "node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 7. Self-Hosted Subsystems
+set ok to run_suite("Self-Hosted Subsystems", "node bin/sdevhost.mjs scripts/test-selfhosted-subsystems.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 8. Shim Fixed-Point
+set ok to run_suite("Shim Fixed-Point (88 cases)", "node bin/sdevhost.mjs scripts/test-shim-fixed-point.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 9. Parity Gate (pure SDEV)
+set ok to run_suite("Parity Gate (209 features)", "node bin/sdevhost.mjs scripts/test-parity.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 10. Formal Formatter Suite (pure SDEV)
+set ok to run_suite("Formal Formatter Suite (8 cases)", "node bin/sdevhost.mjs scripts/test-formatter.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 11. Parser Literals (pure SDEV)
+set ok to run_suite("Parser Literals (names & strings)", "node bin/sdevhost.mjs scripts/test-parser-literals.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 12. Multi-Language Parity Suite (pure SDEV)
+set ok to run_suite("Multi-Language Parity Suite (15 cases)", "node bin/sdevhost.mjs scripts/test-multi-language-features.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 13. Local Model Server Suite
+set ok to run_suite("Local Model Server Suite (12 cases)", "node scripts/run-ts.mjs scripts/test-local-brain.ts")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 14. Understander SDEV Engine Suite
+set ok to run_suite("Understander SDEV Engine Suite (86 cases)", "node scripts/run-ts.mjs scripts/test-sdev-engine.ts")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 15. Understander Agent Suite
+set ok to run_suite("Understander Agent Suite (29 cases)", "node scripts/run-ts.mjs scripts/test-agent.ts")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 16. WASM Runtime Suite
+set ok to run_suite("WASM Runtime Suite (73 cases)", "node scripts/test-wasm-runtime.mjs")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 17. Compiler Internals Suite
+set ok to run_suite("Compiler Internals Suite (9 cases)", "node scripts/run-ts.mjs scripts/test-compiler-features.ts")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 18. Native Windows PE/COFF (.exe) Suite
+set ok to run_suite("Native Windows PE Suite (10 cases)", "node scripts/run-ts.mjs scripts/test-native-pe.ts")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+say "\n================================================================"
+if total_failed is 0
+  say concat("  All ", concat(str(total_passed), " SDEV Self-Hosted Test Suites Passed Successfully!"))
+  say "================================================================\n"
+  set _ to write_file("sdev:exit:0", "")
+else
+  say concat("  Test Run FAILED: ", concat(str(total_failed), " suite(s) failed."))
+  say "================================================================\n"
+  set _ to write_file("sdev:exit:1", "")
+end
