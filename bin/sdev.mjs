@@ -15458,6 +15458,83 @@ var init_compiler = __esm({
           case "MatchStatement":
             this.compileMatch(node, fn2);
             break;
+          case "PassStatement":
+            break;
+          case "AugAssignStatement":
+            this.compileAugAssign(node, fn2);
+            break;
+          case "AssertStatement": {
+            this.compileNode(node.condition, fn2);
+            const passJump = fn2.emitJump("JUMP_IF_TRUE" /* JUMP_IF_TRUE */, node.line);
+            if (node.message) {
+              this.compileNode(node.message, fn2);
+            } else {
+              fn2.emit("PUSH_STR" /* PUSH_STR */, "AssertionError: condition failed", node.line);
+            }
+            fn2.emit("LOAD" /* LOAD */, "panic", node.line);
+            fn2.emit("SWAP" /* SWAP */, void 0, node.line);
+            fn2.emit("CALL" /* CALL */, 1, node.line);
+            fn2.emit("POP" /* POP */, void 0, node.line);
+            fn2.patchJump(passJump);
+            break;
+          }
+          case "TupleLiteral":
+          case "SetLiteral":
+            for (const el of node.elements) {
+              this.compileNode(el, fn2);
+            }
+            fn2.emit("MAKE_LIST" /* MAKE_LIST */, node.elements.length, node.line);
+            break;
+          case "BytesLiteral":
+            fn2.emit("PUSH_STR" /* PUSH_STR */, node.value, node.line);
+            break;
+          case "WalrusExpr":
+            this.compileNode(node.value, fn2);
+            fn2.emit("DUP" /* DUP */, void 0, node.line);
+            fn2.emit("DEFINE" /* DEFINE */, node.name, node.line);
+            break;
+          case "SliceExpr": {
+            fn2.emit("LOAD" /* LOAD */, "portion", node.line);
+            this.compileNode(node.object, fn2);
+            if (node.start) {
+              this.compileNode(node.start, fn2);
+            } else {
+              fn2.emit("PUSH_NUM" /* PUSH_NUM */, 0, node.line);
+            }
+            if (node.stop) {
+              this.compileNode(node.stop, fn2);
+            } else {
+              fn2.emit("LOAD" /* LOAD */, "len", node.line);
+              this.compileNode(node.object, fn2);
+              fn2.emit("CALL" /* CALL */, 1, node.line);
+            }
+            fn2.emit("CALL" /* CALL */, 3, node.line);
+            break;
+          }
+          case "ComprehensionExpr":
+            this.compileComprehension(node, fn2);
+            break;
+          case "WithStatement":
+            this.compileWith(node, fn2);
+            break;
+          case "EmitExpr":
+            this.compileNode(node.value, fn2);
+            break;
+          case "DelStatement": {
+            for (const target of node.targets) {
+              if (target.type === "IndexExpr") {
+                fn2.emit("LOAD" /* LOAD */, "pluck", target.line);
+                this.compileNode(target.object, fn2);
+                this.compileNode(target.index, fn2);
+                fn2.emit("CALL" /* CALL */, 2, target.line);
+                fn2.emit("POP" /* POP */, void 0, target.line);
+              } else if (target.type === "Identifier") {
+                fn2.emit("PUSH_NULL" /* PUSH_NULL */, void 0, target.line);
+                fn2.emit("STORE" /* STORE */, target.name, target.line);
+              }
+            }
+            break;
+          }
           default:
             throw new SdevError(`Compiler: unknown node type ${node.type}`, 0);
         }
@@ -15634,6 +15711,128 @@ var init_compiler = __esm({
           default:
             fn2.emit("PUSH_BOOL" /* PUSH_BOOL */, true, line);
             break;
+        }
+      }
+      compileAugAssign(node, fn2) {
+        const op = node.operator;
+        const opMap = {
+          "+": "ADD" /* ADD */,
+          "-": "SUB" /* SUB */,
+          "*": "MUL" /* MUL */,
+          "/": "DIV" /* DIV */,
+          "%": "MOD" /* MOD */,
+          "**": "POW" /* POW */,
+          "&": "BIT_AND" /* BIT_AND */,
+          "|": "BIT_OR" /* BIT_OR */,
+          "^": "BIT_XOR" /* BIT_XOR */,
+          "<<": "BIT_SHL" /* BIT_SHL */,
+          ">>": "BIT_SHR" /* BIT_SHR */
+        };
+        const binOp = opMap[op] ?? "ADD" /* ADD */;
+        if (node.target.type === "Identifier") {
+          const varName = node.target.name;
+          if (this.fixedVariables.has(varName)) {
+            throw new SdevError(`Cannot reassign fixed variable '${varName}'`, node.line);
+          }
+          fn2.emit("LOAD" /* LOAD */, varName, node.line);
+          this.compileNode(node.value, fn2);
+          fn2.emit(binOp, void 0, node.line);
+          fn2.emit("STORE" /* STORE */, varName, node.line);
+        } else if (node.target.type === "IndexExpr") {
+          const targetTemp = `__aug_obj_${fn2.code.length}_${node.line}`;
+          const indexTemp = `__aug_idx_${fn2.code.length}_${node.line}`;
+          const valTemp = `__aug_val_${fn2.code.length}_${node.line}`;
+          this.compileNode(node.target.object, fn2);
+          fn2.emit("STORE" /* STORE */, targetTemp, node.line);
+          this.compileNode(node.target.index, fn2);
+          fn2.emit("STORE" /* STORE */, indexTemp, node.line);
+          fn2.emit("LOAD" /* LOAD */, targetTemp, node.line);
+          fn2.emit("LOAD" /* LOAD */, indexTemp, node.line);
+          fn2.emit("INDEX_GET" /* INDEX_GET */, void 0, node.line);
+          this.compileNode(node.value, fn2);
+          fn2.emit(binOp, void 0, node.line);
+          fn2.emit("STORE" /* STORE */, valTemp, node.line);
+          fn2.emit("LOAD" /* LOAD */, targetTemp, node.line);
+          fn2.emit("LOAD" /* LOAD */, indexTemp, node.line);
+          fn2.emit("LOAD" /* LOAD */, valTemp, node.line);
+          fn2.emit("INDEX_SET" /* INDEX_SET */, void 0, node.line);
+        }
+      }
+      compileComprehension(node, fn2) {
+        const accVar = `__comp_acc_${fn2.code.length}_${node.line}`;
+        if (node.form === "dict") {
+          fn2.emit("MAKE_DICT" /* MAKE_DICT */, 0, node.line);
+        } else {
+          fn2.emit("MAKE_LIST" /* MAKE_LIST */, 0, node.line);
+        }
+        fn2.emit("DEFINE" /* DEFINE */, accVar, node.line);
+        const loopExits = [];
+        for (let cIdx = 0; cIdx < node.clauses.length; cIdx++) {
+          const clause = node.clauses[cIdx];
+          const iterVar = `__comp_iter_${fn2.code.length}_${node.line}`;
+          const idxVar = `__comp_i_${fn2.code.length}_${node.line}`;
+          const lenVar = `__comp_len_${fn2.code.length}_${node.line}`;
+          this.compileNode(clause.iterable, fn2);
+          fn2.emit("DEFINE" /* DEFINE */, iterVar, node.line);
+          fn2.emit("PUSH_NUM" /* PUSH_NUM */, 0, node.line);
+          fn2.emit("DEFINE" /* DEFINE */, idxVar, node.line);
+          fn2.emit("LOAD" /* LOAD */, "len", node.line);
+          fn2.emit("LOAD" /* LOAD */, iterVar, node.line);
+          fn2.emit("CALL" /* CALL */, 1, node.line);
+          fn2.emit("DEFINE" /* DEFINE */, lenVar, node.line);
+          const loopStart = fn2.currentPos();
+          fn2.emit("LOAD" /* LOAD */, idxVar, node.line);
+          fn2.emit("LOAD" /* LOAD */, lenVar, node.line);
+          fn2.emit("LT" /* LT */, void 0, node.line);
+          const exitJump = fn2.emitJump("JUMP_IF_FALSE" /* JUMP_IF_FALSE */, node.line);
+          loopExits.push(exitJump);
+          fn2.emit("LOAD" /* LOAD */, iterVar, node.line);
+          fn2.emit("LOAD" /* LOAD */, idxVar, node.line);
+          fn2.emit("INDEX_GET" /* INDEX_GET */, void 0, node.line);
+          const targetVar = Array.isArray(clause.variable) ? clause.variable[0] : clause.variable;
+          fn2.emit("DEFINE" /* DEFINE */, targetVar, node.line);
+          const skipJumps = [];
+          for (const cond of clause.conditions) {
+            this.compileNode(cond, fn2);
+            skipJumps.push(fn2.emitJump("JUMP_IF_FALSE" /* JUMP_IF_FALSE */, node.line));
+          }
+          if (cIdx === node.clauses.length - 1) {
+            if (node.form === "dict" && node.valueExpr) {
+              fn2.emit("LOAD" /* LOAD */, accVar, node.line);
+              this.compileNode(node.element, fn2);
+              this.compileNode(node.valueExpr, fn2);
+              fn2.emit("INDEX_SET" /* INDEX_SET */, void 0, node.line);
+            } else {
+              fn2.emit("LOAD" /* LOAD */, "gather", node.line);
+              fn2.emit("LOAD" /* LOAD */, accVar, node.line);
+              this.compileNode(node.element, fn2);
+              fn2.emit("CALL" /* CALL */, 2, node.line);
+              fn2.emit("STORE" /* STORE */, accVar, node.line);
+            }
+          }
+          for (const sj of skipJumps) fn2.patchJump(sj);
+          fn2.emit("LOAD" /* LOAD */, idxVar, node.line);
+          fn2.emit("PUSH_NUM" /* PUSH_NUM */, 1, node.line);
+          fn2.emit("ADD" /* ADD */, void 0, node.line);
+          fn2.emit("STORE" /* STORE */, idxVar, node.line);
+          fn2.emit("JUMP" /* JUMP */, loopStart, node.line);
+        }
+        for (const ej of loopExits.reverse()) fn2.patchJump(ej);
+        fn2.emit("LOAD" /* LOAD */, accVar, node.line);
+      }
+      compileWith(node, fn2) {
+        for (let i = 0; i < node.items.length; i++) {
+          const item = node.items[i];
+          const ctxVar = `__with_ctx_${i}_${fn2.code.length}_${node.line}`;
+          this.compileNode(item.expr, fn2);
+          fn2.emit("DEFINE" /* DEFINE */, ctxVar, node.line);
+          if (item.alias) {
+            fn2.emit("LOAD" /* LOAD */, ctxVar, node.line);
+            fn2.emit("DEFINE" /* DEFINE */, item.alias, node.line);
+          }
+        }
+        for (const stmt of node.body.statements) {
+          this.compileNode(stmt, fn2);
         }
       }
       compileTryCatch(node, fn2) {
@@ -17554,7 +17753,7 @@ import { createInterface as createInterface2 } from "node:readline";
 var KEYWORD_SPECS = [
   // ---- declarations -------------------------------------------------
   { token: "FORGE", mystic: "forge", plain: "let", aliases: ["var"], about: "variable declaration" },
-  { token: "FIXED", mystic: "fixed", plain: "const", aliases: ["val"], about: "immutable variable declaration" },
+  { token: "FIXED", mystic: "fixed", plain: "const", about: "immutable variable declaration" },
   { token: "CONJURE", mystic: "conjure", plain: "func", aliases: ["def"], about: "function declaration" },
   { token: "ESSENCE_KW", mystic: "essence", plain: "kind", aliases: ["class"], about: "class declaration" },
   { token: "EXTEND", mystic: "extend", plain: "extends", about: "inheritance" },
@@ -17730,6 +17929,7 @@ var KEYWORDS = (() => {
   const map = {};
   for (const [word, token] of Object.entries(KEYWORD_TOKEN_BY_WORD)) {
     if (word === "essence" || word === "kind") continue;
+    if (token === "FIXED") continue;
     const tt = TokenType[token];
     if (tt) map[word] = tt;
   }
@@ -18171,6 +18371,7 @@ var Lexer = class {
 
 // src/lang/parser.ts
 init_errors();
+var FIXED_WORDS = new Set(WORDS_BY_TOKEN.FIXED ?? ["fixed", "const", "val"]);
 var Parser = class _Parser {
   tokens;
   pos = 0;
@@ -18190,7 +18391,7 @@ var Parser = class _Parser {
   parseStatement() {
     if (this.check("AT" /* AT */) && this.isDecoratorPosition()) return this.parseDecorated();
     if (this.check("FORGE" /* FORGE */)) return this.parseForgeStatement(false);
-    if (this.check("FIXED" /* FIXED */)) return this.parseForgeStatement(true);
+    if (this.isContextualFixedStart()) return this.parseForgeStatement(true);
     if (this.check("CONJURE" /* CONJURE */)) return this.parseConjureDeclaration();
     if (this.check("ASYNC" /* ASYNC */)) return this.parseAsyncStatement();
     if (this.check("PONDER" /* PONDER */)) return this.parsePonderStatement();
@@ -18392,7 +18593,7 @@ var Parser = class _Parser {
   // forge name[: Type] be value    |    forge a, b be pair
   // fixed name[: Type] be value
   parseForgeStatement(isFixed = false) {
-    const token = isFixed ? this.consume("FIXED" /* FIXED */, "Expected 'fixed'") : this.consume("FORGE" /* FORGE */, "Expected 'forge'");
+    const token = isFixed ? this.advance() : this.consume("FORGE" /* FORGE */, "Expected 'forge'");
     let starIndex;
     const readTarget = () => {
       if (this.check("STAR" /* STAR */)) {
@@ -19376,9 +19577,6 @@ var Parser = class _Parser {
     if (this.match("STRING" /* STRING */)) {
       let value2 = token.value;
       while (this.check("STRING" /* STRING */)) value2 += this.advance().value;
-      if (this.hasInterpolation(value2)) {
-        return this.buildFString(value2, token.line);
-      }
       return { type: "StringLiteral", value: value2, line: token.line };
     }
     if (this.match("FSTRING" /* FSTRING */)) {
@@ -19581,6 +19779,36 @@ var Parser = class _Parser {
     this.consume("RBRACE" /* RBRACE */, "Expected '}'");
     return { type: "DictLiteral", entries, line };
   }
+  isEscapedOrRegexBrace(template, i) {
+    let bs = 0;
+    for (let k = i - 1; k >= 0 && template[k] === "\\"; k--) bs++;
+    if (bs % 2 === 1) return true;
+    if (i >= 1 && (template[i - 1] === "p" || template[i - 1] === "P")) {
+      let bsP = 0;
+      for (let k = i - 2; k >= 0 && template[k] === "\\"; k--) bsP++;
+      if (bsP % 2 === 1) return true;
+    }
+    if (i >= 1 && (template[i - 1] === "u" || template[i - 1] === "x")) {
+      let bsU = 0;
+      for (let k = i - 2; k >= 0 && template[k] === "\\"; k--) bsU++;
+      if (bsU % 2 === 1) return true;
+    }
+    let inCharClass = false;
+    for (let k = i - 1; k >= 0; k--) {
+      if (template[k] === "]" && (k === 0 || template[k - 1] !== "\\")) break;
+      if (template[k] === "[" && (k === 0 || template[k - 1] !== "\\")) {
+        inCharClass = true;
+        break;
+      }
+    }
+    if (inCharClass) return true;
+    const close = template.indexOf("}", i + 1);
+    if (close > i + 1) {
+      const inner = template.slice(i + 1, close).trim();
+      if (/^\d+(?:\s*,\s*\d*)?$/.test(inner)) return true;
+    }
+    return false;
+  }
   /**
    * Compiles an f-string template into an FStringExpr. Supports `{expr}`,
    * `{expr!r}` conversions, `{expr:spec}` format specs, `{expr=}` debug
@@ -19603,6 +19831,11 @@ var Parser = class _Parser {
         continue;
       }
       if (ch === "{") {
+        if (this.isEscapedOrRegexBrace(template, i)) {
+          text3 += ch;
+          i++;
+          continue;
+        }
         if (text3) {
           parts.push({ kind: "text", value: text3 });
           text3 = "";
@@ -19648,8 +19881,12 @@ var Parser = class _Parser {
           debug = body.slice(0, body.lastIndexOf("=")).trim();
           body = debug;
         }
-        const sub = new _Parser(this.lexTemplate(body, line));
-        parts.push({ kind: "expr", expr: sub.parseExpression(), spec, conv, debug });
+        try {
+          const sub = new _Parser(this.lexTemplate(body, line));
+          parts.push({ kind: "expr", expr: sub.parseExpression(), spec, conv, debug });
+        } catch {
+          text3 += "{" + body + (spec ? ":" + spec : "") + "}";
+        }
         continue;
       }
       text3 += ch;
@@ -19667,12 +19904,34 @@ var Parser = class _Parser {
           i += 2;
           continue;
         }
+        if (this.isEscapedOrRegexBrace(str, i)) {
+          i++;
+          continue;
+        }
         const close = str.indexOf("}", i + 1);
-        if (close > i + 1) return true;
+        if (close > i + 1) {
+          const body = str.slice(i + 1, close);
+          if (!/^[\]\\[]/.test(body) && /^[\p{L}\p{N}_\s+\-*/%()[\]."'!:=]+$/u.test(body)) {
+            return true;
+          }
+        }
       }
       i++;
     }
     return false;
+  }
+  /**
+   * `fixed` / `const` / `val` start a constant declaration only in the shape
+   * `fixed name be ...` (or `fixed a, b be ...`, `fixed name: Type`). Anywhere
+   * else they are ordinary names, so `forge val be 3` and `val + 1` still work.
+   */
+  isContextualFixedStart() {
+    const t = this.peek();
+    if (t.type !== "IDENTIFIER" /* IDENTIFIER */ || !FIXED_WORDS.has(t.value)) return false;
+    const name = this.tokens[this.pos + 1];
+    const after = this.tokens[this.pos + 2];
+    if (!name || name.type !== "IDENTIFIER" /* IDENTIFIER */ || !after) return false;
+    return after.type === "BE" /* BE */ || after.type === "COMMA" /* COMMA */ || after.type === "COLON" /* COLON */;
   }
   lexTemplate(source, line) {
     const tokens = new Lexer(source, { sourceLanguage: null }).tokenize();
@@ -36035,11 +36294,29 @@ var BUILTINS = /* @__PURE__ */ new Set([
 ]);
 var FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
 var DECL_NOISE = /\b(?:called|named|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
+var PARAM_NOISE = /\b(?:called|named|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
 var SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
 function safeName(raw) {
   const cleaned = raw.replace(/[^\p{L}\p{N}_]/gu, "_").replace(/^_+|_+$/g, "");
   if (!cleaned) return "value";
   return /^[\p{N}]/u.test(cleaned) ? "n" + cleaned : cleaned;
+}
+function unwrap(raw) {
+  const s = raw.trim();
+  if (!s.startsWith("(") || !s.endsWith(")")) return s;
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "(") depth++;
+    else if (s[i] === ")") {
+      depth--;
+      if (depth === 0 && i < s.length - 1) return s;
+    }
+  }
+  return depth === 0 ? s.slice(1, -1).trim() : s;
+}
+function targetName(raw) {
+  if (/^[\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*|\[[^\]]+\])+$/u.test(raw)) return raw;
+  return safeName(raw);
 }
 function wordsOf(line) {
   return line.trim().split(/\s+/).filter(Boolean);
@@ -36274,6 +36551,10 @@ function collectNames(lines, words, seed) {
       const toks = wordsOf(stmt);
       if (!toks.length) continue;
       const head2 = words.get(toks[0].toLowerCase());
+      if (/^(?:rescue|catch|except|iterate)$/i.test(toks[0]) && toks[1]) {
+        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
+        continue;
+      }
       if (head2 === "ask") {
         const f2 = parseAsk(stmt.slice(toks[0].length));
         if (f2) names.add(f2.name);
@@ -36318,7 +36599,7 @@ function repair(source, ctx = {}) {
   const askRhs = (rhs) => {
     const t = wordsOf(rhs);
     if (!t.length || words.get(t[0].toLowerCase().replace(/\($/, "")) !== "ask") return void 0;
-    const tail = t.slice(1).join(" ").replace(/^\(|\)$/g, "").trim();
+    const tail = unwrap(t.slice(1).join(" "));
     if (!tail) return null;
     return isMaskedString(tail) ? tail : void 0;
   };
@@ -36370,7 +36651,7 @@ function repair(source, ctx = {}) {
       const head2 = toks[0];
       const headKey = head2.toLowerCase().replace(/[(:]$/, "");
       let intent = words.get(headKey);
-      const rest = stmt.slice(stmt.indexOf(head2) + head2.length).trim().replace(/^\(|\)$/g, "").trim();
+      const rest = unwrap(stmt.slice(stmt.indexOf(head2) + head2.length));
       const counted = counting(stmt);
       if (counted) {
         known.add(counted.name);
@@ -36443,7 +36724,7 @@ function repair(source, ctx = {}) {
             known.add(parts[0]);
             const tail = parts.slice(1);
             if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
-            rewritten.push(`set ${safeName(parts[0])} to ${expression(tail.join(" "), known, renames)}`);
+            rewritten.push(`set ${targetName(parts[0])} to ${expression(tail.join(" "), known, renames)}`);
             continue;
           }
           rewritten.push(stmt);
@@ -36478,7 +36759,7 @@ function repair(source, ctx = {}) {
         }
         case "return":
           learn(headKey, "return");
-          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|a|value|of)\s+/i, ""), known, renames)}` : "return");
+          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|value|of)\s+|^an?\s+(?=[\p{L}_][\p{L}\p{N}_]*\s*$)/iu, ""), known, renames)}` : "return");
           continue;
         case "break":
         case "continue":
@@ -36487,7 +36768,14 @@ function repair(source, ctx = {}) {
           continue;
         case "function": {
           learn(headKey, "function");
-          const cleanedDecl = rest.replace(/[:{]\s*$/, "").replace(DECL_NOISE, " ").replace(/\s+/g, " ").trim();
+          const declBody = rest.replace(/[:{]\s*$/, "");
+          const split = declBody.search(/\swith\s|\(/);
+          const declHead = split < 0 ? declBody : declBody.slice(0, split);
+          const declParams = split < 0 ? "" : declBody.slice(split);
+          const keepAll = /[(,]/.test(declParams);
+          const wordyParams = declParams.replace(PARAM_NOISE, " ");
+          const cleanedParams = keepAll ? wordyParams : wordyParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, " ");
+          const cleanedDecl = (declHead.replace(DECL_NOISE, " ") + " " + cleanedParams).replace(/\s+/g, " ").trim();
           const parts = wordsOf(cleanedDecl);
           if (!parts.length) {
             rewritten.push(stmt);
@@ -36497,7 +36785,7 @@ function repair(source, ctx = {}) {
           const name = safeName(rawName);
           if (name !== rawName) renames.set(rawName, name);
           const inParens = parts[0].includes("(") ? [parts[0].slice(parts[0].indexOf("("))] : [];
-          const params = [...inParens, ...parts.slice(1)].join(" ").replace(/^\(|\)$/g, "").replace(/,/g, " ").split(/\s+/).filter((p) => p && words.get(p.toLowerCase()) !== "in" && p !== "with").map((p) => {
+          const params = [...inParens, ...parts.slice(1)].join(" ").replace(/^\(([^()]*)\)$/, "$1").replace(/,/g, " ").split(/\s+/).filter((p) => p && words.get(p.toLowerCase()) !== "in" && p !== "with").map((p) => {
             const safe = safeName(p);
             if (safe !== p) renames.set(p, safe);
             return safe;
@@ -36525,7 +36813,7 @@ function repair(source, ctx = {}) {
         rewritten.push(`${target}(${args.join(", ")})`);
         continue;
       }
-      if (/^[\p{L}\p{N}_]+\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head2) || BUILTINS.has(headKey)) {
+      if (/^[\p{L}\p{N}_]+(?:\.[\p{L}\p{N}_]+)*\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head2) || BUILTINS.has(headKey)) {
         rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
         continue;
       }
@@ -36604,12 +36892,23 @@ function parses(source) {
   }
 }
 var builtinCache = null;
-function builtinNames() {
-  if (!builtinCache) {
+var runtimeCache = null;
+function runtimeNames() {
+  if (!runtimeCache) {
     try {
       const env2 = new Interpreter(() => {
       }).globalEnv;
-      builtinCache = new Set(env2.values.keys());
+      runtimeCache = new Set(env2.values.keys());
+    } catch {
+      runtimeCache = /* @__PURE__ */ new Set();
+    }
+  }
+  return runtimeCache;
+}
+function builtinNames() {
+  if (!builtinCache) {
+    try {
+      builtinCache = new Set(runtimeNames());
       for (const n of ["window", "endwindow", "row", "endrow", "column", "endcolumn", "group", "endgroup", "tabs", "endtabs", "tab", "endtab", "heading", "label", "paragraph", "image", "divider", "spacer", "progress", "button", "textarea", "checkbox", "slider", "select", "table", "menu", "endmenu", "menuitem", "uiget", "uiset", "show", "alert"]) builtinCache.add(n);
     } catch {
       builtinCache = /* @__PURE__ */ new Set();
@@ -36633,7 +36932,9 @@ function definedNames(source) {
   for (const m2 of source.matchAll(new RegExp(`\\b(?:to|conjure|func|function|fn|def)\\s+${NAME}\\s*\\(([^)]*)\\)`, "gu"))) {
     for (const w of m2[1].split(/[\s,=]+/)) if (new RegExp(`^${NAME}$`, "u").test(w)) out.add(w);
   }
-  for (const m2 of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*=>|(${NAME})\\s*=>`, "gu"))) {
+  add(new RegExp(`\\b(?:iterate|within|spell|lambda|essence|rescue|except|alias)\\s+(${NAME})`, "gu"));
+  add(new RegExp(`\\b(?:iterate|for)\\s+${NAME}\\s*,\\s*(${NAME})`, "gu"));
+  for (const m2 of source.matchAll(new RegExp(`\\(([^()]*)\\)\\s*(?:=>|->)|(${NAME})\\s*(?:=>|->)`, "gu"))) {
     for (const w of (m2[1] ?? m2[2] ?? "").split(/[\s,]+/)) if (w) out.add(w);
   }
   return out;
@@ -36669,6 +36970,14 @@ var NON_CANONICAL_HEAD = (() => {
   for (const [word, intent] of map) if (word !== CANONICAL[intent]) out.set(word, intent);
   return out;
 })();
+function isSdevWord(word, line = "") {
+  if (Object.prototype.hasOwnProperty.call(KEYWORD_TOKEN_BY_WORD, word)) return true;
+  return runtimeNames().has(word) && new RegExp(`^${word}\\s*\\(`, "i").test(line);
+}
+function codeOnly(line) {
+  return line.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '""').replace(/::|;;/g, " ");
+}
+var STYLE_ONLY = /several statements on one line|looks like an assignment written another way/;
 function senseFile(source, extra) {
   const reasons = [];
   const lines = source.split("\n");
@@ -36680,7 +36989,7 @@ function senseFile(source, extra) {
       reasons.push(`line ${i + 1}: a calculation asked for in words`);
       continue;
     }
-    if (NON_CANONICAL_HEAD.has(head2) || extra?.has(head2)) {
+    if (NON_CANONICAL_HEAD.has(head2) && !isSdevWord(head2, line) || extra?.has(head2)) {
       reasons.push(`line ${i + 1}: "${head2}" is not canonical sdev`);
       continue;
     }
@@ -36691,12 +37000,12 @@ function senseFile(source, extra) {
     if (/^[\p{L}\p{N}_]+\s+(?:will be|becomes|gets|is now|should be|shall be|=|:=|<-)\s+/iu.test(line)) {
       reasons.push(`line ${i + 1}: looks like an assignment written another way`);
     }
-    if (/;\s*\S/.test(line)) reasons.push(`line ${i + 1}: several statements on one line`);
+    if (/;\s*\S/.test(codeOnly(line))) reasons.push(`line ${i + 1}: several statements on one line`);
     const known = baseWordMap().has(head2) || extra?.has(head2);
     if (!known && /^[\p{L}_][\p{L}\p{N}_]*(?:\s+[\p{L}\p{N}_]+){2,}$/u.test(line)) {
       reasons.push(`line ${i + 1}: reads like a sentence, not a statement`);
     }
-    if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(line)) {
+    if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(codeOnly(line))) {
       reasons.push(`line ${i + 1}: names the output destination in words`);
     }
     if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line)) {
@@ -36712,12 +37021,59 @@ function senseFile(source, extra) {
     if (!reasons.length) reasons.push(`uses names nothing defines: ${[...unknown].slice(0, 5).join(", ")}`);
   }
   const ok = parses(source);
-  return { parses: ok, suspicious: !ok || reasons.length > 0, reasons };
+  const working = ok && unknown.size === 0 && reasons.every((r) => STYLE_ONLY.test(r));
+  return { parses: ok, suspicious: !ok || reasons.length > 0 && !working, reasons, working };
 }
 
 // src/lang/agent/brain.ts
 var DEFAULT_LOCAL_URL = "http://127.0.0.1:11434/v1/chat/completions";
 var DEFAULT_LOCAL_MODEL = "qwen2.5-coder:7b";
+function normalizeLocalEndpoints(rawInput) {
+  let u = (rawInput ?? "").trim();
+  if (!u) u = "http://127.0.0.1:11434";
+  if (!/^https?:\/\//i.test(u)) u = "http://" + u;
+  u = u.replace(/\/+$/, "");
+  if (/\/api\/chat$/i.test(u)) {
+    const base2 = u.replace(/\/api\/chat$/i, "");
+    return {
+      baseUrl: base2,
+      chatUrl: u,
+      modelsUrl: base2 + "/v1/models",
+      tagsUrl: base2 + "/api/tags",
+      isOllamaNative: true
+    };
+  }
+  if (/\/v1\/chat\/completions$/i.test(u)) {
+    const base2 = u.replace(/\/v1\/chat\/completions$/i, "");
+    return {
+      baseUrl: base2,
+      chatUrl: u,
+      modelsUrl: base2 + "/v1/models",
+      tagsUrl: base2 + "/api/tags",
+      isOllamaNative: false
+    };
+  }
+  let base = u;
+  if (/\/v1$/i.test(base)) {
+    base = base.replace(/\/v1$/i, "");
+  }
+  return {
+    baseUrl: base,
+    chatUrl: base + "/v1/chat/completions",
+    modelsUrl: base + "/v1/models",
+    tagsUrl: base + "/api/tags",
+    isOllamaNative: false
+  };
+}
+async function fetchWithTimeout(url, init = {}, timeoutMs = 15e3) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
 function env(name) {
   try {
     const e = globalThis.process?.env;
@@ -36733,7 +37089,12 @@ function stored(key) {
     return null;
   }
 }
-var BRAIN_KEYS = { url: "sdev_agent_local_url", model: "sdev_agent_local_model", online: "sdev_agent_online", browser: "sdev_agent_browser" };
+var BRAIN_KEYS = {
+  url: "sdev_agent_local_url",
+  model: "sdev_agent_local_model",
+  online: "sdev_agent_online",
+  browser: "sdev_agent_browser"
+};
 function brainSettings() {
   return {
     localUrl: stored(BRAIN_KEYS.url) || env("SDEV_AGENT_LOCAL_URL") || DEFAULT_LOCAL_URL,
@@ -36748,35 +37109,93 @@ function online() {
   return nav?.onLine ?? true;
 }
 function parseReply(text3) {
-  const cleaned = text3.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  const trimmed = text3.trim();
+  const fenceMatch = /^```(?:[a-zA-Z0-9_-]+)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
+  const unwrapped = fenceMatch ? fenceMatch[1].trim() : trimmed;
   try {
-    const j = JSON.parse(cleaned);
+    const j = JSON.parse(unwrapped);
     if (typeof j?.canonical === "string") return j;
   } catch {
   }
-  const code = cleaned.replace(/^```\w*\s*/, "").replace(/```\s*$/, "");
-  return code.trim() ? { canonical: code } : null;
+  return unwrapped ? { canonical: unwrapped } : null;
 }
 async function callLocal(req, url, model) {
   try {
-    if (!/\/chat\/completions\/?$|\/api\/chat\/?$/.test(url)) {
-      const res2 = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
-      if (!res2.ok) return null;
-      const json2 = await res2.json();
-      return typeof json2?.canonical === "string" ? json2 : null;
+    const endpoints = normalizeLocalEndpoints(url);
+    if (!/\/chat\/completions\/?$|\/api\/chat\/?$/.test(endpoints.chatUrl) && !/\/chat\/completions\/?$|\/api\/chat\/?$/.test(url)) {
+      try {
+        const res2 = await fetchWithTimeout(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(req)
+        }, 3e4);
+        if (res2.ok) {
+          const json2 = await res2.json();
+          return typeof json2?.canonical === "string" ? json2 : null;
+        }
+      } catch {
+      }
     }
     const { brainInstructions: brainInstructions2, brainInput: brainInput2 } = await Promise.resolve().then(() => (init_brain_prompt(), brain_prompt_exports));
     const messages = [
-      { role: "system", content: brainInstructions2(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
+      {
+        role: "system",
+        content: brainInstructions2(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}'
+      },
       { role: "user", content: brainInput2(req) }
     ];
-    const ollama = /\/api\/chat\/?$/.test(url);
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ollama ? { model, messages, stream: false, format: "json" } : { model, messages, stream: false, response_format: { type: "json_object" } })
-    });
-    if (!res.ok) return null;
+    let res = null;
+    try {
+      res = await fetchWithTimeout(endpoints.chatUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer not-needed"
+        },
+        body: JSON.stringify({
+          model: model || "default",
+          messages,
+          temperature: 0.1,
+          stream: false,
+          response_format: { type: "json_object" }
+        })
+      }, 45e3);
+    } catch {
+    }
+    if (res && res.status === 400) {
+      try {
+        res = await fetchWithTimeout(endpoints.chatUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer not-needed"
+          },
+          body: JSON.stringify({
+            model: model || "default",
+            messages,
+            temperature: 0.1,
+            stream: false
+          })
+        }, 45e3);
+      } catch {
+      }
+    }
+    if ((!res || res.status === 404 || res.status === 405) && endpoints.baseUrl) {
+      try {
+        res = await fetchWithTimeout(endpoints.baseUrl + "/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: model || "default",
+            messages,
+            stream: false,
+            format: "json"
+          })
+        }, 45e3);
+      } catch {
+      }
+    }
+    if (!res || !res.ok) return null;
     const json = await res.json();
     const text3 = json.choices?.[0]?.message?.content ?? json.message?.content ?? "";
     return parseReply(text3);
@@ -36802,13 +37221,17 @@ async function think(req, mode, localUrl) {
   const cfg = brainSettings();
   const url = localUrl ?? cfg.localUrl;
   if (mode === "local" || mode === "auto") {
+    if (cfg.customLocal || localUrl) {
+      const reply = await callLocal(req, url, cfg.localModel);
+      if (reply) return { reply, used: "local" };
+    }
     const inBrowser = typeof window !== "undefined";
     if (inBrowser && cfg.browser) {
       const { callBrowser: callBrowser2 } = await Promise.resolve().then(() => (init_browser_brain(), browser_brain_exports));
       const reply = await callBrowser2(req, parseReply);
       if (reply) return { reply, used: "local" };
     }
-    if (!inBrowser || cfg.customLocal || localUrl) {
+    if (!cfg.customLocal && !localUrl) {
       const reply = await callLocal(req, url, cfg.localModel);
       if (reply) return { reply, used: "local" };
     }

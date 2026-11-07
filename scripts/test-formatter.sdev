@@ -1,0 +1,54 @@
+# SDEV Formal Formatter Test Suite — authored in SDEV.
+#
+# Verifies indentation, idempotency, comment/string safety, and whitespace
+# normalization in the self-hosted formatter.
+#
+#   node bin/sdevhost.mjs scripts/test-formatter.sdev
+
+use "lang/stdlib/testkit.sdev"
+use "lang/formatter/formatter.sdev"
+
+# 1. Basic indentation
+set unindented to "conjure main() ::\nspeak(\"hello\")\n;;"
+set expected2 to "conjure main() ::\n  speak(\"hello\")\n;;"
+set res1 to sdev_format(unindented, 2)
+set _ to check("Indents body of :: ;; block by 2 spaces", str_same(res1, expected2))
+
+# 2. Configurable indent size
+set expected4 to "conjure main() ::\n    speak(\"hello\")\n;;"
+set res2 to sdev_format(unindented, 4)
+set _ to check("Configurable indent size (4 spaces)", str_same(res2, expected4))
+
+# 3. Multi-level nesting
+set nestedCode to "conjure outer() ::\ncycle count < 10 ::\nponder count is 5 ::\nspeak(\"five\")\n;;\n;;\n;;"
+set expectedNested to "conjure outer() ::\n  cycle count < 10 ::\n    ponder count is 5 ::\n      speak(\"five\")\n    ;;\n  ;;\n;;"
+set res3 to sdev_format(nestedCode, 2)
+set _ to check("Multi-level nested block indentation", str_same(res3, expectedNested))
+
+# 4. Idempotence: format(format(code)) === format(code)
+set res4 to sdev_format(res3, 2)
+set _ to check("Idempotence: formatting twice produces identical output", str_same(res3, res4))
+
+# 5. String safety: :: inside strings are not counted as block openers
+set stringCode to "speak(\"here is a colon :: in text\")\nspeak(\"here is double semi ;; in text\")"
+set res5 to sdev_format(stringCode, 2)
+set _ to check("Leaves strings containing :: and ;; intact", str_same(res5, stringCode))
+
+# 6. Comment safety: :: inside comments are not counted
+set commentCode to "// comment with :: opener\nspeak(\"test\")"
+set res6 to sdev_format(commentCode, 2)
+set _ to check("Ignores :: inside single-line comments", find(res6, "  speak") is 0 - 1)
+
+# 7. Trailing whitespace stripping
+set trailingWs to "speak(\"hello\")     \nspeak(\"world\")  "
+set expectedNoWs to "speak(\"hello\")\nspeak(\"world\")"
+set res7 to sdev_format(trailingWs, 2)
+set _ to check("Strips trailing whitespace from lines", str_same(res7, expectedNoWs))
+
+# 8. Blank line normalization: collapses 3+ blank lines into 2
+set excessiveBlanks to "speak(\"a\")\n\n\n\n\nspeak(\"b\")"
+set expectedBlanks to "speak(\"a\")\n\nspeak(\"b\")"
+set res8 to sdev_format(excessiveBlanks, 2)
+set _ to check("Normalizes excessive blank lines", str_same(res8, expectedBlanks))
+
+set _ to tk_report("formal formatter suite")

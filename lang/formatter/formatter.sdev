@@ -1,0 +1,153 @@
+# SDEV Self-Hosted Code Formatter — authored in SDEV.
+#
+# Formats SDEV source code:
+# - Reindents based on `::` opens and `;;` closes
+# - Configurable indentation size
+# - Trims trailing whitespace
+# - Normalizes excessive blank lines
+# - String and comment safe
+
+to rtrim with s
+  set n to length(s)
+  set i to n - 1
+  while i >= 0
+    set c to ord(s, i)
+    if c is not 32 and c is not 9 and c is not 13
+      return substr(s, 0, i + 1)
+    end
+    set i to i - 1
+  end
+  return ""
+end
+
+to make_spaces with count
+  set out to ""
+  set i to 0
+  while i < count
+    set out to concat(out, " ")
+    set i to i + 1
+  end
+  return out
+end
+
+to count_blocks with line
+  set opens to 0
+  set closes to 0
+  set in_str to 0
+  set n to length(line)
+  set i to 0
+  while i < n
+    set c to ord(line, i)
+    if in_str is not 0
+      if c is 92
+        set i to i + 2
+      else
+        if c is in_str
+          set in_str to 0
+        end
+        set i to i + 1
+      end
+    else
+      if c is 34
+        set in_str to 34
+        set i to i + 1
+      else
+        if c is 39
+          set in_str to 39
+          set i to i + 1
+        else
+          if c is 47 and i + 1 < n and ord(line, i + 1) is 47
+            set i to n
+          else
+            if c is 58 and i + 1 < n and ord(line, i + 1) is 58
+              set opens to opens + 1
+              set i to i + 2
+            else
+              if c is 59 and i + 1 < n and ord(line, i + 1) is 59
+                set closes to closes + 1
+                set i to i + 2
+              else
+                set i to i + 1
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  set res to mklist(2)
+  set res[0] to opens
+  set res[1] to closes
+  return res
+end
+
+to starts_with_closer with s
+  set t to trim(s)
+  if length(t) >= 2
+    if substr(t, 0, 2) is ";;"
+      return 1
+    end
+  end
+  return 0
+end
+
+to slice_list with xs count
+  set out to mklist(count)
+  set i to 0
+  while i < count
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  return out
+end
+
+to sdev_format with code indent_size
+  set lines to split(code, "\n")
+  set total_lines to length(lines)
+  set out_lines to mklist(total_lines)
+  set out_count to 0
+  set depth to 0
+  set consecutive_blank to 0
+  set idx to 0
+
+  while idx < total_lines
+    set raw_line to lines[idx]
+    set line to rtrim(raw_line)
+    set trimmed to trim(line)
+
+    if trimmed is ""
+      if consecutive_blank < 1
+        set out_lines[out_count] to ""
+        set out_count to out_count + 1
+        set consecutive_blank to consecutive_blank + 1
+      end
+    else
+      set consecutive_blank to 0
+      set counts to count_blocks(trimmed)
+      set opens to counts[0]
+      set closes to counts[1]
+
+      set local_depth to depth
+      if starts_with_closer(trimmed) is 1
+        if local_depth > 0
+          set local_depth to local_depth - 1
+        end
+      end
+
+      set indent to make_spaces(local_depth * indent_size)
+      set formatted_line to concat(indent, trimmed)
+      set out_lines[out_count] to formatted_line
+      set out_count to out_count + 1
+
+      set depth to depth + opens - closes
+      if depth < 0
+        set depth to 0
+      end
+    end
+
+    set idx to idx + 1
+  end
+
+  set final_list to slice_list(out_lines, out_count)
+  return join(final_list, "\n")
+end

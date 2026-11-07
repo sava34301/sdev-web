@@ -1419,3 +1419,35 @@ local render.
 All tables are owner-scoped with public read where visibility allows, and every
 table carries explicit grants. Published specs are **data only** — no
 user-supplied executable host code — so opening someone else's dialect is safe.
+
+
+---
+
+## 8. Self-Hosting & Zero-Cost Native Windows PE Backend
+
+### 8.1 Pure SDEV Self-Hosted Toolchain & Test Infrastructure
+In alignment with the self-hosting propositions:
+- **Pure SDEV Formatter (`lang/formatter/formatter.sdev`)**:
+  Formally formats SDEV code with configurable indentation (2 or 4 spaces), handling block openers (`::`, `to`, `if`, `while`, `for each`) and closers (`;;`, `end`) with full idempotency and string preservation.
+- **Pure SDEV Master Test Runner (`scripts/test-all.sdev`)**:
+  Replaces third-party test runners by driving all 18 language core test suites sequentially via host shell dispatch. Executes under `bin/sdevhost.mjs scripts/test-all.sdev` (`npm test`) with 100% pass rate in ~12 seconds.
+- **Parity & Multi-Language Parity Suites (`scripts/test-parity.sdev`, `scripts/test-multi-language-features.sdev`)**:
+  Enforces 209 language features across JS builtins, seed VM, and Python interpreter with zero gaps.
+
+### 8.2 Compiler Internals (Bytecode & AST)
+`src/lang/compiler.ts` implements bytecode emission for high-level language constructs:
+- `AugAssignStatement`: In-place operations (`+=`, `-=`, `*=`, `/=`, `%=`, `**=`, `&=`, `|=`, `^=`, `<<=`, `>>=`) for local/global identifiers and indexed collection items.
+- `AssertStatement`: Emits conditional jump to panic instructions on condition failure.
+- `PassStatement`: Emits clean NOP.
+- `WalrusExpr` (`:=`): Binds target variable in current scope via `OpCode.DEFINE` and leaves evaluated value on operand stack.
+- `SliceExpr`: Compiles call to `portion(obj, start, stop)`.
+- `TupleLiteral` & `SetLiteral`: Sequence bytecode emission for immutable tuples and distinct sets.
+- `ComprehensionExpr`: List, set, and dict comprehensions compiled directly into loops with filtering conditions and accumulator initialization.
+- `WithStatement`: Context manager entry/exit protocol binding aliases and executing body blocks.
+
+### 8.3 Zero-Cost Native Windows PE/COFF (.exe) Generator (`src/lang-bridge/native/pe.mjs`)
+Produces native 64-bit Windows console executables (PE32+) directly from raw machine code without requiring external C toolchains (MSVC, GCC, Clang) or paid annual EV/OV code-signing certificates:
+- **Binary Layout**: DOS stub, PE header, COFF header (Machine AMD64 `0x8664`), Optional Header (PE32+ `0x020B`, Subsystem Windows CUI `3`).
+- **Imports**: Direct construction of `.rdata` section with Import Directory Table, Import Lookup Table (ILT), and Import Address Table (IAT) resolving `KERNEL32.dll` (`GetStdHandle`, `WriteFile`, `ExitProcess`).
+- **Machine Code (.text)**: Emits Win64 ABI-compliant x86-64 instructions with 16-byte stack alignment, shadow space reservation (32 bytes), and console I/O handle management.
+- **CLI Integration**: `scripts/sdev-native.mjs` targets Windows PE by default on Windows (`node scripts/sdev-native.mjs <file.sdev> -o <file.exe>`) and static ELF on Linux.

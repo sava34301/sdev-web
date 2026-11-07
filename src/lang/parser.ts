@@ -1746,6 +1746,7 @@ export class Parser {
       i++;
     }
     return false;
+  }
 
   /**
    * `fixed` / `const` / `val` start a constant declaration only in the shape
