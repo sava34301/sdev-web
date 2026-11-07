@@ -50,7 +50,8 @@
     "test:bg": "node scripts/run-ts.mjs scripts/test-bg.ts",
     "test:dialect": "node scripts/run-ts.mjs scripts/test-dialect.ts",
     "test:preset-dialect": "node scripts/run-ts.mjs scripts/test-preset-dialect.ts",
-    "test:translator": "node scripts/run-ts.mjs scripts/test-translator.ts"
+    "test:translator": "node scripts/run-ts.mjs scripts/test-translator.ts",
+    "security:scan": "npx ecc-agentshield scan --path remotion-pitch --format terminal"
   },
   "main": "electron/main.cjs",
   "dependencies": {
