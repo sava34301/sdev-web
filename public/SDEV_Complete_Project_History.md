@@ -1456,3 +1456,39 @@ On 31 October 2026, the SDEV language achieved comprehensive multi-language pari
    - Production Vite bundle builds with 0 errors.
 
 *All enhancements, refactoring, and multi-language feature completions documented above were designed, implemented, and verified in **Antigravity**.*
+
+
+---
+
+## 11. Self-Hosting Propositions & Zero-Cost Native Windows PE Backend (Built in Antigravity)
+
+In November 2026, following architectural deliberation, SDEV executed Proposition 1 of the self-hosting milestones, compiler internals expansion, and native executable generation in **Antigravity**:
+
+1. **Pure Self-Hosted SDEV Master Test Runner (`scripts/test-all.sdev`)**:
+   - Replaced Node.js-based test runners with a 100% pure SDEV master test runner authored in `scripts/test-all.sdev`.
+   - Wired `npm test` directly to `node bin/sdevhost.mjs scripts/test-all.sdev`.
+   - Drives 18 core test suites sequentially through host shell dispatch, testing the self-toolchain, driver artifact, self-lexer, self-parser, self-codegen, self-stdlib v2, self-subsystems, shim fixed-point, parity gate, formatter, parser literals, multi-language parity, local model server, understander SDEV engine, understander agent, WASM runtime, compiler internals, and native Windows PE suite.
+   - All 18 suites execute with 100% pass rate in ~12 seconds.
+
+2. **Self-Hosted Code Formatter (`lang/formatter/formatter.sdev`)**:
+   - Authored the formal code formatter entirely in pure SDEV.
+   - Supports 2- and 4-space indentation, block opening (`::`, `to`, `if`, `while`, `for each`) and closing (`;;`, `end`), string literal and comment colon safety, and full idempotence.
+   - Verified via pure SDEV test suite `scripts/test-formatter.sdev` (8/8 cases pass).
+
+3. **Compiler Internals (Bytecode & AST Parity)**:
+   - Added bytecode compilation in `src/lang/compiler.ts` for Python, Kotlin, and Rust parity constructs:
+     - `AugAssignStatement`: In-place operators (`+=`, `-=`, `*=`, `/=`, etc.) for variables and indexed collections.
+     - `AssertStatement`: Assertions with custom error panic jump instructions.
+     - `PassStatement`: Bytecode NOP statement.
+     - `WalrusExpr` (`:=`): Inline assignment leaving value on operand stack.
+     - `SliceExpr`: Bytecode list and string slicing via `portion`.
+     - `TupleLiteral` & `SetLiteral`: Immutable sequence and set bytecode generation.
+     - `ComprehensionExpr`: List, set, and dict comprehensions compiled directly to bytecode loops with filtering.
+     - `WithStatement`: Resource management context manager lifecycle execution.
+   - Verified via `scripts/test-compiler-features.ts` (9/9 cases pass).
+
+4. **Zero-Cost Standalone Windows PE/COFF (.exe) Generator (`src/lang-bridge/native/pe.mjs`)**:
+   - Built a native Windows binary emitter that compiles directly to 64-bit Windows console executables (PE32+) without GCC, Clang, MSVC, external linkers, or annual code-signing certificate fees ($200–$400/yr).
+   - Generates compliant PE headers, COFF AMD64 headers, Section Table (`.text`, `.rdata`), and Win64 API Import Address Table for `KERNEL32.dll` (`GetStdHandle`, `WriteFile`, `ExitProcess`).
+   - Integrated into `scripts/sdev-native.mjs` (`--target windows`, `--format pe`) producing ready-to-run `.exe` binaries on Windows console.
+   - Verified via `scripts/test-native-pe.ts` with real process spawning on Windows (10/10 cases pass).

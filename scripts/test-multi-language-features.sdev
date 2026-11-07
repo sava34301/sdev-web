@@ -1,0 +1,90 @@
+# Multi-Language Parity Suite — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-multi-language-features.sdev
+
+use "lang/stdlib/testkit.sdev"
+use "lang/stdlib/v2/sql.sdev"
+use "lang/paradigms/functional.sdev"
+use "lang/paradigms/systems.sdev"
+
+to run_snippet with code
+  set p to ".tmp_snippet_mlf.sdev"
+  set _ to write_file(p, code)
+  set res to shell(concat("node bin/sdev.mjs run --no-agent ", p))
+  set nl to find(res, "\n")
+  set code_str to substr(res, 0, nl)
+  set out to substr(res, nl + 1, length(res) - (nl + 1))
+  set r to mklist(2)
+  set r[0] to code_str
+  set r[1] to trim(out)
+  return r
+end
+
+# 1. String Interpolation
+set q to chr(34)
+set s1 to concat("forge user be ", concat(q, concat("Alice", concat(q, concat("\nforge items be 42\nforge msg be f", concat(q, concat("Hello, {user}! You have {items} items.", concat(q, "\nspeak(msg)"))))))))
+set r1 to run_snippet(s1)
+set ok1 to 0
+if r1[0] is "0"
+  if r1[1] is "Hello, Alice! You have 42 items."
+    set ok1 to 1
+  end
+end
+set _ to check("v1 interpreter string interpolation with variables", ok1)
+
+# 2. Immutable `fixed` bindings
+set r2 to run_snippet("fixed MAX_USERS be 100\nspeak(MAX_USERS)")
+set ok2 to 0
+if r2[0] is "0"
+  if r2[1] is "100"
+    set ok2 to 1
+  end
+end
+set _ to check("fixed constant declaration and reading", ok2)
+
+set r3 to run_snippet("fixed PI be 3.14\nPI be 3.14159")
+set ok3 to 0
+if r3[0] is not "0"
+  set ok3 to 1
+end
+set _ to check("Reassignment of fixed binding throws error", ok3)
+
+# 3. Scalar `match` statement on v2
+set r4 to run_snippet("forge status be 200\nmatch status ::\n  case 200 ::\n    speak(\"OK\")\n  ;;\n  case 404 ::\n    speak(\"Not Found\")\n  ;;\n  case _ ::\n    speak(\"Other\")\n  ;;\n;;")
+set ok4 to 0
+if r4[0] is "0"
+  if r4[1] is "OK"
+    set ok4 to 1
+  end
+end
+set _ to check("match statement branches correctly", ok4)
+
+# 4. SQL Relational Engine
+set rows to [{ id: 1, name: "Alice", val: 50 }, { id: 2, name: "Bob", val: 30 }]
+set _ to check("SQL count", sql_count(rows) is 2)
+set _ to check("SQL sum", sql_sum(rows, "val") is 80)
+set _ to check("SQL max", sql_max(rows, "val") is 50)
+set _ to check("SQL min", sql_min(rows, "val") is 30)
+
+# 5. Systems Arena Memory
+set a to arena_create(256)
+set p to arena_alloc(a, 16)
+set _ to mem_poke_u8(a, p, 200)
+set _ to check("Arena poke/peek u8", mem_peek_u8(a, p) is 200)
+set _ to mem_poke_i16(a, p + 2, 32000)
+set _ to check("Arena poke/peek i16", mem_peek_i16(a, p + 2) is 32000)
+set _ to mem_poke_i32(a, p + 4, 1000000)
+set _ to check("Arena poke/peek i32", mem_peek_i32(a, p + 4) is 1000000)
+
+# 6. Functional ADTs (Option & Result)
+set opt to Some(42)
+set _ to check("Option is_some", is_some(opt) is 1)
+set _ to check("Option unwrap", unwrap_or(opt, 0) is 42)
+set res_ok to Ok("success")
+set _ to check("Result is_ok", is_ok(res_ok) is 1)
+set _ to check("Result unwrap", result_unwrap_or(res_ok, "err") is "success")
+
+# Cleanup scratch
+set _ to write_file(".tmp_snippet_mlf.sdev", "")
+
+set _ to tk_report("multi-language features suite")

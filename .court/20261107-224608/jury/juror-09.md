@@ -1,0 +1,4 @@
+VOTE: GUILTY
+REASON: As someone looking out for a young person's well-being, expecting a self-funded student to spend hundreds of dollars of his own money and risk severe burnout on an unprioritized five-front workload with zero users is completely irresponsible.
+DECIDING FACT: The developer is a "Single solo creator / student developer (Sava Milanov)" who is "Self-funded, zero venture funding, zero enterprise sponsors" taking on five concurrent domains and an admitted "$200–$400/year" certificate cost before launch.
+WOULD FLIP IF: The plan eliminated the out-of-pocket code signing expense and sequenced the work into one sustainable milestone at a time to protect the student's time and financial well-being.
