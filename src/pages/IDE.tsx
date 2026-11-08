@@ -41,10 +41,13 @@ import {
   ChevronDown, Search, Terminal, Code, BookOpen, RotateCcw,
   Maximize2, Minimize2, SplitSquareHorizontal, FolderOpen, Command,
   Bug, Palette, X, Languages, RefreshCw, CheckCircle2, Eye, EyeOff,
-  AlertCircle, Hash, Wand2, ListTree, ArrowRight, Sparkles, Github, Globe, Usb,
+  AlertCircle, Hash, Wand2, ListTree, ArrowRight, Sparkles, Github, Globe, Usb, Users, History, Boxes,
 } from 'lucide-react';
 import { HardwarePanel } from '@/components/ide/HardwarePanel';
 import { RuntimeExplorerPanel } from '@/components/ide/RuntimeExplorerPanel';
+import { TimeTravelDebugger } from '@/components/ide/TimeTravelDebugger';
+import { LiveClassroomPanel } from '@/components/ide/LiveClassroomPanel';
+import { WasiComponentDialog } from '@/components/ide/WasiComponentDialog';
 import { findApi, searchApis } from '@/lang/registry/api-registry';
 import { GitHubPushDialog } from '@/components/ide/GitHubPushDialog';
 import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
@@ -330,7 +333,7 @@ function uniqueUntitled(existing: { name: string }[]): string {
   while (taken.has(`untitled${n}.sdev`)) n++;
   return `untitled${n}.sdev`;
 }
-type BottomPanel = 'terminal' | 'canvas' | 'app' | 'web' | 'problems';
+type BottomPanel = 'terminal' | 'debugger' | 'canvas' | 'app' | 'web' | 'problems';
 
 const DEFAULT_SETTINGS: IdeSettings = {
   fontSize: 14,
@@ -501,6 +504,7 @@ export default function IDEPage() {
   // Pro IDE state
   const [showGoToLine, setShowGoToLine] = useState(false);
   const [showGitHubPush, setShowGitHubPush] = useState(false);
+  const [showWasiDialog, setShowWasiDialog] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const [runtimeQuery, setRuntimeQuery] = useState('');
 
@@ -1318,6 +1322,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
     { id: 'assistant' as SidePanel, icon: Sparkles,  label: 'AI Doctor — fix & explain' },
     { id: 'hardware' as SidePanel, icon: Usb,       label: 'Hardware — boards & uploader' },
     { id: 'runtime'  as SidePanel, icon: BookOpen,  label: 'Runtime & API Explorer' },
+    { id: 'classroom' as SidePanel, icon: Users,    label: 'Live Classroom & Pair Rooms' },
     { id: 'personal' as SidePanel, icon: Languages, label: 'Personal sdev — dialects, libraries, extensions' },
     { id: 'settings' as SidePanel, icon: Settings,  label: 'Settings' },
   ];
@@ -1621,6 +1626,13 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   <Download className="w-3.5 h-3.5 text-neon-green" /> All files
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setShowWasiDialog(true)} className="gap-2 text-xs cursor-pointer">
+                  <Boxes className="w-3.5 h-3.5 text-emerald-400" />
+                  <div>
+                    <div className="font-medium">WASI 0.2 Component (.wasm)</div>
+                    <div className="text-muted-foreground text-[10px]">Polyglot .wit + Rust/Python/Node/Go</div>
+                  </div>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={packageAsExe} className="gap-2 text-xs cursor-pointer">
                   <Cpu className="w-3.5 h-3.5 text-neon-cyan" />
                   <div>
@@ -1806,6 +1818,17 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                       }}
                     />
                   )}
+                  {sidePanel === 'classroom' && (
+                    <LiveClassroomPanel
+                      fileName={activeFile?.name ?? 'main.sdev'}
+                      content={activeFile?.content ?? ''}
+                      cursor={cursor}
+                      lastOutput={output}
+                      lastError={error}
+                      onApplyRemoteCode={(newCode) => updateActiveContent(newCode)}
+                      onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
+                    />
+                  )}
                   {sidePanel === 'personal' && (
                     <PersonalPanel
                       content={activeFile?.content}
@@ -1906,6 +1929,12 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                       <Terminal className="w-3 h-3" /> OUTPUT
                       {error && <span className="w-1.5 h-1.5 rounded-full bg-destructive ml-1" />}
                     </button>
+                    <button
+                      onClick={() => setBottomPanel('debugger')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono border-b-2 transition-all ${bottomPanel === 'debugger' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <History className="w-3 h-3" /> TIME-TRAVEL
+                    </button>
                     {showCanvas && (
                       <button
                         onClick={() => setBottomPanel('canvas')}
@@ -1955,6 +1984,17 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                       onClear={() => { setOutput([]); setError(undefined); setExecTime(null); }}
                     />
                     </>
+                  )}
+                  {bottomPanel === 'debugger' && (
+                    <TimeTravelDebugger
+                      source={activeFile?.content ?? ''}
+                      runtime={runMode === 'vm' ? 'v2' : 'v1'}
+                      onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
+                      onSyncCanvas={(cmds) => {
+                        setGraphicsCommands(cmds);
+                        setShowCanvas(true);
+                      }}
+                    />
                   )}
                   {bottomPanel === 'canvas' && showCanvas && (
                     <div className="h-full overflow-auto p-2 bg-background/30">
@@ -2048,6 +2088,13 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           open={showGitHubPush}
           onOpenChange={setShowGitHubPush}
           files={files}
+        />
+
+        <WasiComponentDialog
+          open={showWasiDialog}
+          onOpenChange={setShowWasiDialog}
+          source={activeFile?.content ?? ''}
+          fileName={activeFile?.name ?? 'module.sdev'}
         />
 
         <DesktopNativeButton getSource={() => activeFile?.content ?? ''} />

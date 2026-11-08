@@ -1,0 +1,4 @@
+VOTE: GUILTY
+REASON: The proposal demands five simultaneous, resource-heavy expansions without providing a single line-item budget, cost projection, or proof of capital beyond the personal pockets of a self-funded student.
+DECIDING FACT: The project is driven by a single solo creator and student developer (Sava Milanov) who is self-funded and pre-launch with zero documented financial reserves or budget.
+WOULD FLIP IF: The proposal included a verified, fully funded budget specifying who pays for development and compute expenses, how much they cost, and when funds are released across a sequenced timeline.

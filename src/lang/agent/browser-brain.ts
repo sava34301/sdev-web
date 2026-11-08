@@ -68,6 +68,19 @@ export function loadBrowserBrain(): Promise<Engine | null> {
 }
 
 export async function callBrowser(req: BrainRequest, parse: (text: string) => BrainReply | null): Promise<BrainReply | null> {
+  const useMicro = typeof localStorage === 'undefined' || localStorage.getItem('sdev_agent_micro_brain') !== '0';
+  if (useMicro) {
+    try {
+      const { callMicroBrain } = await import('./micro-brain');
+      const microReply = await callMicroBrain(req);
+      if (microReply) {
+        set({ state: 'ready', progress: 1, text: 'Micro-Brain (<50MB pre-baked WebGPU) active.' });
+        return microReply;
+      }
+    } catch {
+      // Fall through to full WebLLM engine
+    }
+  }
   const engine = await loadBrowserBrain();
   if (!engine) return null;
   try {

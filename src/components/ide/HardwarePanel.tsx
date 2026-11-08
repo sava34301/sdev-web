@@ -18,6 +18,7 @@ import {
   type WebSerialPort, type FlashProgress,
 } from '@/lang/hardware/web-serial';
 import { compileSketch } from '@/lang/hardware/cloud-compile';
+import { HardwareSimulatorCanvas } from '@/components/ide/HardwareSimulatorCanvas';
 import { toast } from 'sonner';
 
 interface Props {
@@ -43,6 +44,7 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
   const [serialInput, setSerialInput] = useState('');
   const [librariesOpen, setLibrariesOpen] = useState(false);
   const [cppPreviewOpen, setCppPreviewOpen] = useState(false);
+  const [simulatorOpen, setSimulatorOpen] = useState(true);
   const [buildUrl, setBuildUrl] = useState<string>(() => localStorage.getItem('sdev.hw.buildUrl') ?? DEFAULT_BUILD_URL);
   const [buildOk, setBuildOk] = useState<boolean | null>(null);
 
@@ -562,6 +564,30 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
                 {transpiled.ino}
               </pre>
             </div>
+          )}
+        </section>
+
+        {/* In-Browser Virtual Breadboard Simulator */}
+        <section className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Virtual Breadboard &amp; Pinout Simulator
+            </label>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-5 px-1.5 text-[10px]"
+              onClick={() => setSimulatorOpen((o) => !o)}
+            >
+              {simulatorOpen ? 'Hide' : 'Show'}
+            </Button>
+          </div>
+          {simulatorOpen && (
+            <HardwareSimulatorCanvas
+              source={understoodSource}
+              boardId={board.id}
+              onSerialLine={onAppendLog}
+            />
           )}
         </section>
 
