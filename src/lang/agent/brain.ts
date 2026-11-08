@@ -20,6 +20,7 @@
  * it is asked to canonicalize. Rules + memory always work without it.
  */
 import type { BrainMode } from './directives';
+import { closeBlocks } from './repair';
 
 export interface BrainRequest {
   /** the user's original source */
@@ -169,20 +170,170 @@ export function online(): boolean {
   return nav?.onLine ?? true;
 }
 
-export function parseReply(text: string): BrainReply | null {
-  const trimmed = text.trim();
-  // Strip outer markdown code fences (e.g. ```json ... ``` or ```sdev ... ``` or ``` ... ```)
-  const fenceMatch = /^```(?:[a-zA-Z0-9_-]+)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
-  const unwrapped = fenceMatch ? fenceMatch[1].trim() : trimmed;
+/**
+ * Post-processes and normalizes code output by small in-browser SLMs (WebGPU Qwen/Llama)
+ * or local model servers:
+ * 1. Restores missing `!#ai` header if AI dialect constructs are used.
+ * 2. Normalizes Python/JS syntax hallucinations into canonical sdev (`print` -> `say`, `def` -> `to`, `range` -> `sequence`, `elif` -> `else if`, etc.).
+ * 3. Strips markdown fences and conversational artifacts.
+ * 4. Ensures unclosed blocks receive their matching `end`.
+ */
+export function sanitizeBrainOutput(code: string, format?: 'canonical' | 'ai'): string {
+  if (!code) return '';
+  let text = code.trim();
 
-  try {
-    const j = JSON.parse(unwrapped) as BrainReply;
-    if (typeof j?.canonical === 'string') return j;
-  } catch {
-    /* the model answered with bare code */
+  // Strip enclosing code fences if present inside the canonical string
+  text = text.replace(/^```(?:[a-zA-Z0-9_:-]+)?\n([\s\S]*?)\n```$/g, '$1').trim();
+
+  // 1. Check for AI dialect constructs
+  const hasAiDialectMarkers =
+    /^\s*!#ai\b/m.test(text) ||
+    /^\s*(?:v\s+[a-zA-Z_]|f\s+[a-zA-Z_]\w*\s*\(|p\s*\(|\?\s+.+?\{|each\s+[a-zA-Z_]\w*\s+in\b)/m.test(text);
+
+  if (hasAiDialectMarkers || format === 'ai') {
+    if (!/^\s*!#ai\b/m.test(text)) {
+      text = `!#ai\n${text}`;
+    }
+    // Auto-balance curly braces for AI dialect
+    const openBraces = (text.match(/\{/g) || []).length;
+    const closeBraces = (text.match(/\}/g) || []).length;
+    if (openBraces > closeBraces) {
+      text = text + '\n' + '}'.repeat(openBraces - closeBraces);
+    }
+    return text;
   }
 
-  return unwrapped ? { canonical: unwrapped } : null;
+  // 2. Canonical SDEV sanitization
+  const lines = text.split('\n');
+  const out: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    const trimmed = line.trim();
+
+    // Skip conversational chat preamble / postamble
+    if (
+      i === 0 &&
+      /^(?:here\s+is|sure|certainly|this\s+program|below\s+is|the\s+following|here's)\b/i.test(trimmed)
+    ) {
+      continue;
+    }
+    if (
+      i === lines.length - 1 &&
+      /^(?:hope\s+this|let\s+me\s+know|feel\s+free|enjoy|cheers)\b/i.test(trimmed)
+    ) {
+      continue;
+    }
+
+    // print(...) -> say ...
+    line = line.replace(/^(\s*)print\s*\((.*)\)\s*;?$/, '$1say $2');
+    // console.log(...) -> say ...
+    line = line.replace(/^(\s*)console\.log\s*\((.*)\)\s*;?$/, '$1say $2');
+    // echo ... -> say ...
+    line = line.replace(/^(\s*)echo\s+(.*)$/, '$1say $2');
+
+    // let/var/const x = expr -> set x to expr
+    line = line.replace(/^(\s*)(?:let|var|const)\s+([a-zA-Z_]\w*)\s*=\s*(.+?);?$/, '$1set $2 to $3');
+
+    // def foo(a, b): -> to foo with a b
+    line = line.replace(/^(\s*)def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*:?\s*$/, (_m, pad, fn, args) => {
+      const argList = args.trim() ? args.split(',').map((a: string) => a.trim()).filter(Boolean).join(' ') : '';
+      return `${pad}to ${fn}${argList ? ' with ' + argList : ''}`;
+    });
+
+    // function foo(a, b) { -> to foo with a b
+    line = line.replace(/^(\s*)function\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*\{?\s*$/, (_m, pad, fn, args) => {
+      const argList = args.trim() ? args.split(',').map((a: string) => a.trim()).filter(Boolean).join(' ') : '';
+      return `${pad}to ${fn}${argList ? ' with ' + argList : ''}`;
+    });
+
+    // elif cond: -> else if cond
+    line = line.replace(/^(\s*)elif\s+(.*?)\s*:?\s*$/, '$1else if $2');
+
+    // for i in range(a, b): -> for each i in sequence(a, b)
+    line = line.replace(/^(\s*)for\s+(?:each\s+)?([a-zA-Z_]\w*)\s+in\s+range\s*\(([^)]+)\)\s*:?\s*$/, '$1for each $2 in sequence($3)');
+
+    // for x in xs: -> for each x in xs
+    line = line.replace(/^(\s*)for\s+([a-zA-Z_]\w*)\s+in\s+([a-zA-Z_][\w.[\]]*)\s*:?\s*$/, '$1for each $2 in $3');
+
+    // Strip trailing colons on if/else/while/for
+    line = line.replace(/^(\s*(?:if\b|else\b|while\b|for\s+each\b|to\b).*?)\s*:\s*$/, '$1');
+
+    out.push(line);
+  }
+
+  const cleaned = out.join('\n');
+  return closeBlocks(cleaned);
+}
+
+export function parseReply(text: string, format?: 'canonical' | 'ai'): BrainReply | null {
+  if (!text || !text.trim()) return null;
+  const trimmed = text.trim();
+
+  // 1. Direct JSON parse
+  try {
+    const j = JSON.parse(trimmed) as BrainReply;
+    if (typeof j?.canonical === 'string') {
+      return {
+        canonical: sanitizeBrainOutput(j.canonical, format),
+        notes: j.notes ?? undefined,
+        words: j.words ?? undefined,
+      };
+    }
+  } catch {
+    /* not raw JSON */
+  }
+
+  // 2. Scan for markdown code fences (```json ... ``` or ```sdev ... ``` or ``` ... ```)
+  const codeBlockRegex = /```(?:json|sdev|sdev:ai)?\s*([\s\S]*?)\s*```/gi;
+  let match: RegExpExecArray | null;
+  while ((match = codeBlockRegex.exec(trimmed)) !== null) {
+    const block = match[1].trim();
+    try {
+      const j = JSON.parse(block) as BrainReply;
+      if (typeof j?.canonical === 'string') {
+        return {
+          canonical: sanitizeBrainOutput(j.canonical, format),
+          notes: j.notes ?? undefined,
+          words: j.words ?? undefined,
+        };
+      }
+    } catch {
+      /* not JSON block */
+    }
+    if (block.length > 0 && !block.startsWith('{')) {
+      return { canonical: sanitizeBrainOutput(block, format) };
+    }
+  }
+
+  // 3. Scan for embedded JSON object with "canonical" key
+  const jsonObjectMatch = /\{[\s\S]*?"canonical"\s*:\s*[\s\S]*?\}/.exec(trimmed);
+  if (jsonObjectMatch) {
+    try {
+      const j = JSON.parse(jsonObjectMatch[0]) as BrainReply;
+      if (typeof j?.canonical === 'string') {
+        return {
+          canonical: sanitizeBrainOutput(j.canonical, format),
+          notes: j.notes ?? undefined,
+          words: j.words ?? undefined,
+        };
+      }
+    } catch {
+      // If parsing failed due to literal raw newlines inside "canonical": "..."
+      const canonMatch = /"canonical"\s*:\s*"([\s\S]*?)"\s*(?:,\s*"notes"|\})/.exec(jsonObjectMatch[0]);
+      if (canonMatch) {
+        return { canonical: sanitizeBrainOutput(canonMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'), format) };
+      }
+    }
+  }
+
+  // 4. Fallback: bare code returned
+  const cleanedPreamble = trimmed
+    .replace(/^```[a-zA-Z0-9_-]*\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim();
+
+  return cleanedPreamble ? { canonical: sanitizeBrainOutput(cleanedPreamble, format) } : null;
 }
 
 async function callLocal(req: BrainRequest, url: string, model: string): Promise<BrainReply | null> {
