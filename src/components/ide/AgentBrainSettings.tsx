@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BRAIN_KEYS, brainSettings, probeLocalServer, type LocalProbeResult } from '@/lang/agent/brain';
 import { browserBrainStatus, browserBrainSupported, loadBrowserBrain, onBrowserBrain, type BrowserBrainStatus } from '@/lang/agent/browser-brain';
-import { CheckCircle2, AlertCircle, Loader2, Server, HelpCircle } from 'lucide-react';
+import { initMicroBrainCache, getMicroBrainStats, type MicroBrainStats } from '@/lang/agent/micro-brain';
+import { CheckCircle2, AlertCircle, Loader2, Server, HelpCircle, Zap } from 'lucide-react';
 
 function Toggle({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
   return (
@@ -36,6 +37,18 @@ export function AgentBrainSettings() {
   const [model, setModel] = useState(initial.localModel);
   const [probing, setProbing] = useState(false);
   const [probeResult, setProbeResult] = useState<LocalProbeResult | null>(null);
+  const [microBrain, setMicroBrain] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sdev_agent_micro_brain') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const [microStats, setMicroStats] = useState<MicroBrainStats>(() => getMicroBrainStats());
+
+  useEffect(() => {
+    void initMicroBrainCache().then(setMicroStats);
+  }, []);
 
   useEffect(() => onBrowserBrain(setB), []);
   const save = (k: string, v: string) => {
@@ -89,6 +102,24 @@ export function AgentBrainSettings() {
       <p className="text-[11px] text-muted-foreground mb-2">
         Simple code is understood instantly with no AI. For harder files a small AI runs right inside this browser, on your computer — nothing to install, no account, private.
       </p>
+      <Toggle
+        on={microBrain}
+        label="Pre-baked Micro-Brain (<50MB, instant)"
+        onClick={() => {
+          const v = !microBrain;
+          setMicroBrain(v);
+          save('sdev_agent_micro_brain', v ? '1' : '0');
+        }}
+      />
+      {microBrain && (
+        <div className="mb-2 px-2 py-1.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] font-mono text-emerald-300 flex items-center justify-between">
+          <span className="flex items-center gap-1">
+            <Zap className="w-3 h-3 text-emerald-400" />
+            Cached ({(microStats.weightBytes / 1024).toFixed(1)} KB • 0 MB download)
+          </span>
+          <span>{microStats.webgpuAccelerated ? 'WebGPU' : 'SIMD'} ready</span>
+        </div>
+      )}
       <Toggle
         on={browser}
         label="Built-in AI in this browser"
