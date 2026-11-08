@@ -67,7 +67,7 @@ export function loadBrowserBrain(): Promise<Engine | null> {
   return enginePromise;
 }
 
-export async function callBrowser(req: BrainRequest, parse: (text: string) => BrainReply | null): Promise<BrainReply | null> {
+export async function callBrowser(req: BrainRequest, parse: (text: string, format?: 'canonical' | 'ai') => BrainReply | null): Promise<BrainReply | null> {
   const useMicro = typeof localStorage === 'undefined' || localStorage.getItem('sdev_agent_micro_brain') !== '0';
   if (useMicro) {
     try {
@@ -85,16 +85,24 @@ export async function callBrowser(req: BrainRequest, parse: (text: string) => Br
   if (!engine) return null;
   try {
     const { brainInstructions, brainInput } = await import('./brain-prompt');
+    const { sanitizeBrainOutput } = await import('./brain');
     const r = await engine.chat.completions.create({
       messages: [
         { role: 'system', content: brainInstructions(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
         { role: 'user', content: brainInput(req) },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.2,
+      temperature: 0.05,
+      top_p: 0.95,
       max_tokens: 2048,
     });
-    return parse(r.choices[0]?.message?.content ?? '');
+    const rawContent = r.choices[0]?.message?.content ?? '';
+    const reply = parse(rawContent, req.format);
+    if (reply?.canonical) {
+      reply.canonical = sanitizeBrainOutput(reply.canonical, req.format);
+      return reply;
+    }
+    return null;
   } catch {
     return null;
   }

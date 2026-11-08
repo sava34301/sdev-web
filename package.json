@@ -57,6 +57,7 @@
     "test:preset-dialect": "node scripts/run-ts.mjs scripts/test-preset-dialect.ts",
     "test:translator": "node scripts/run-ts.mjs scripts/test-translator.ts",
     "test:expansion": "node scripts/run-ts.mjs scripts/test-expansion-features.ts",
+    "test:brain-benchmarks": "node scripts/run-ts.mjs scripts/test-micro-brain-benchmarks.ts && node scripts/run-ts.mjs scripts/test-brain-sanitizer.ts",
     "security:scan": "npx ecc-agentshield scan --path remotion-pitch --format terminal"
   },
   "main": "electron/main.cjs",
