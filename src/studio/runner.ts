@@ -35,6 +35,7 @@ import { createUiBuiltins, type UiState } from '@/lang/ui';
 import { createWebBuiltins, type WebState } from '@/lang/web';
 import { stripSignature } from '@/lang/dialect/signature';
 import { lintSdevSource, type LintDiagnostic } from '@/lang/linter';
+import { understand } from '@/lang/agent';
 import type { ApiTarget } from '@/lang/registry/api-registry';
 
 // ============================================================
@@ -68,6 +69,8 @@ export interface ChronoStep {
   callStack: string[];
   /** Console outputs accumulated up to and including this step */
   outputSnapshot: string[];
+  /** Canvas commands accumulated up to and including this step */
+  canvasSnapshot?: GraphicsCommand[];
   /** Formatted result of this step, if any */
   resultValue?: string;
   /** Elapsed time in ms since execution start */
@@ -401,7 +404,9 @@ function executeWithTracing(
   let ast: AST.Program | null = null;
 
   try {
-    const lexer = new Lexer(executableSource);
+    const understood = understand(executableSource);
+    const traceTarget = understood.changed ? understood.source : executableSource;
+    const lexer = new Lexer(traceTarget);
     tokens = lexer.tokenize();
     const parser = new Parser(tokens);
     ast = parser.parse();
@@ -569,6 +574,7 @@ function executeWithTracing(
           variableList: varsList,
           callStack: [...callStack],
           outputSnapshot: [...outputs],
+          canvasSnapshot: [...canvasCommands],
           resultValue:
             result !== null && result !== undefined ? formatShortValue(result) : undefined,
           elapsedMs: Number((performance.now() - startTime).toFixed(2)),
