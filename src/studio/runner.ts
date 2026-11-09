@@ -706,7 +706,3 @@ export async function runStudioCodeAsync(
 
   return traced;
 }
-
-// Convenience aliases for Studio components
-export const runSdevStudio = runStudioCode;
-export const runSdevStudioAsync = runStudioCodeAsync;

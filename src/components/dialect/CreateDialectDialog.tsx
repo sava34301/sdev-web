@@ -23,7 +23,7 @@ export interface CreateDialectValues {
   base: DialectSpec | null;
 }
 
-export function slugify(value: string): string {
+function slugify(value: string): string {
   return value
     .toLowerCase()
     .normalize('NFKD')

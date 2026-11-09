@@ -7,7 +7,7 @@ export interface Symbol {
   detail?: string;
 }
 
-export function extractSymbols(code: string): Symbol[] {
+function extractSymbols(code: string): Symbol[] {
   const out: Symbol[] = [];
   const lines = code.split('\n');
   let inClass: string | null = null;

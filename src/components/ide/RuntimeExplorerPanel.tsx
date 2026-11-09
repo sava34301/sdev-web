@@ -528,4 +528,3 @@ export function RuntimeExplorerPanel({
     </div>
   );
 }
-export default RuntimeExplorerPanel;
