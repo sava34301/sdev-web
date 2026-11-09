@@ -23,5 +23,3 @@ export const SEO = ({ title, description, path = "/" }: SEOProps) => {
     </Helmet>
   );
 };
-
-export default SEO;

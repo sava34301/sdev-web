@@ -184,3 +184,6 @@ export { resolveLinks } from './linker';
 export type { LinkableFile } from './linker';
 export * from './tokens';
 export * from './ast';
+export { evaluateLiveScratchpad, type LiveLineResult, type LiveScratchpadResult, type LiveScratchpadOptions } from './eval-live';
+export { runBenchmark, formatBenchmarkReport, type BenchmarkResult, type BenchmarkOptions } from './benchmark';
+export { parseNotebook, executeNotebook, type Notebook, type NotebookCell, type NotebookExecutionResult, type CellExecutionResult } from './notebook';

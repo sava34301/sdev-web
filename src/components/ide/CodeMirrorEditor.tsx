@@ -462,5 +462,3 @@ export const CodeMirrorEditor = forwardRef<IdeEditorHandle, Props>(function Code
 
   return <div ref={hostRef} className="h-full w-full overflow-hidden bg-background/40" />;
 });
-
-export default CodeMirrorEditor;

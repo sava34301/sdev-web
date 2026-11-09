@@ -122,16 +122,3 @@ export function getHoverDoc(word: string): { title: string; doc: string } | null
   if (SDEV_CONSTANTS.includes(word)) return { title: word, doc: 'sdev constant' };
   return null;
 }
-
-export function extractIdentifiers(code: string): string[] {
-  const set = new Set<string>();
-  const re = /\b[a-zA-Z_][a-zA-Z0-9_]*\b/g;
-  let m;
-  while ((m = re.exec(code))) {
-    const w = m[0];
-    if (!SDEV_KEYWORDS.includes(w) && !SDEV_CONSTANTS.includes(w) && !SDEV_BUILTINS.find(b => b.name === w)) {
-      set.add(w);
-    }
-  }
-  return [...set].sort();
-}

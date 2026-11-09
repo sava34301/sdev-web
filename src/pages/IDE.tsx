@@ -47,6 +47,7 @@ import { HardwarePanel } from '@/components/ide/HardwarePanel';
 import { RuntimeExplorerPanel } from '@/components/ide/RuntimeExplorerPanel';
 import { TimeTravelDebugger } from '@/components/ide/TimeTravelDebugger';
 import { LiveClassroomPanel } from '@/components/ide/LiveClassroomPanel';
+import { LiveScratchpadPanel } from '@/components/ide/LiveScratchpadPanel';
 import { WasiComponentDialog } from '@/components/ide/WasiComponentDialog';
 import { findApi, searchApis } from '@/lang/registry/api-registry';
 import { GitHubPushDialog } from '@/components/ide/GitHubPushDialog';
@@ -333,7 +334,7 @@ function uniqueUntitled(existing: { name: string }[]): string {
   while (taken.has(`untitled${n}.sdev`)) n++;
   return `untitled${n}.sdev`;
 }
-type BottomPanel = 'terminal' | 'debugger' | 'canvas' | 'app' | 'web' | 'problems';
+type BottomPanel = 'terminal' | 'debugger' | 'scratchpad' | 'canvas' | 'app' | 'web' | 'problems';
 
 const DEFAULT_SETTINGS: IdeSettings = {
   fontSize: 14,
@@ -1935,6 +1936,12 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     >
                       <History className="w-3 h-3" /> TIME-TRAVEL
                     </button>
+                    <button
+                      onClick={() => setBottomPanel('scratchpad')}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono border-b-2 transition-all ${bottomPanel === 'scratchpad' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Sparkles className="w-3 h-3" /> LIVE SCRATCHPAD
+                    </button>
                     {showCanvas && (
                       <button
                         onClick={() => setBottomPanel('canvas')}
@@ -1994,6 +2001,12 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                         setGraphicsCommands(cmds);
                         setShowCanvas(true);
                       }}
+                    />
+                  )}
+                  {bottomPanel === 'scratchpad' && (
+                    <LiveScratchpadPanel
+                      source={activeFile?.content ?? ''}
+                      onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
                     />
                   )}
                   {bottomPanel === 'canvas' && showCanvas && (
