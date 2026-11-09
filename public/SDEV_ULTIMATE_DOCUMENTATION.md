@@ -4,7 +4,7 @@
 > machine, native backend, standard library, machine-learning stack, hardware,
 > GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-11-01 by
+> Created by **Sava Milanov**. Generated on 2026-11-09 by
 > `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
 > guides or the implementation and re-run the generator.
 
@@ -7685,6 +7685,38 @@ All tables are owner-scoped with public read where visibility allows, and every
 table carries explicit grants. Published specs are **data only** — no
 user-supplied executable host code — so opening someone else's dialect is safe.
 
+
+---
+
+#### 8. Self-Hosting & Zero-Cost Native Windows PE Backend
+
+##### 8.1 Pure SDEV Self-Hosted Toolchain & Test Infrastructure
+In alignment with the self-hosting propositions:
+- **Pure SDEV Formatter (`lang/formatter/formatter.sdev`)**:
+  Formally formats SDEV code with configurable indentation (2 or 4 spaces), handling block openers (`::`, `to`, `if`, `while`, `for each`) and closers (`;;`, `end`) with full idempotency and string preservation.
+- **Pure SDEV Master Test Runner (`scripts/test-all.sdev`)**:
+  Replaces third-party test runners by driving all 18 language core test suites sequentially via host shell dispatch. Executes under `bin/sdevhost.mjs scripts/test-all.sdev` (`npm test`) with 100% pass rate in ~12 seconds.
+- **Parity & Multi-Language Parity Suites (`scripts/test-parity.sdev`, `scripts/test-multi-language-features.sdev`)**:
+  Enforces 209 language features across JS builtins, seed VM, and Python interpreter with zero gaps.
+
+##### 8.2 Compiler Internals (Bytecode & AST)
+`src/lang/compiler.ts` implements bytecode emission for high-level language constructs:
+- `AugAssignStatement`: In-place operations (`+=`, `-=`, `*=`, `/=`, `%=`, `**=`, `&=`, `|=`, `^=`, `<<=`, `>>=`) for local/global identifiers and indexed collection items.
+- `AssertStatement`: Emits conditional jump to panic instructions on condition failure.
+- `PassStatement`: Emits clean NOP.
+- `WalrusExpr` (`:=`): Binds target variable in current scope via `OpCode.DEFINE` and leaves evaluated value on operand stack.
+- `SliceExpr`: Compiles call to `portion(obj, start, stop)`.
+- `TupleLiteral` & `SetLiteral`: Sequence bytecode emission for immutable tuples and distinct sets.
+- `ComprehensionExpr`: List, set, and dict comprehensions compiled directly into loops with filtering conditions and accumulator initialization.
+- `WithStatement`: Context manager entry/exit protocol binding aliases and executing body blocks.
+
+##### 8.3 Zero-Cost Native Windows PE/COFF (.exe) Generator (`src/lang-bridge/native/pe.mjs`)
+Produces native 64-bit Windows console executables (PE32+) directly from raw machine code without requiring external C toolchains (MSVC, GCC, Clang) or paid annual EV/OV code-signing certificates:
+- **Binary Layout**: DOS stub, PE header, COFF header (Machine AMD64 `0x8664`), Optional Header (PE32+ `0x020B`, Subsystem Windows CUI `3`).
+- **Imports**: Direct construction of `.rdata` section with Import Directory Table, Import Lookup Table (ILT), and Import Address Table (IAT) resolving `KERNEL32.dll` (`GetStdHandle`, `WriteFile`, `ExitProcess`).
+- **Machine Code (.text)**: Emits Win64 ABI-compliant x86-64 instructions with 16-byte stack alignment, shadow space reservation (32 bytes), and console I/O handle management.
+- **CLI Integration**: `scripts/sdev-native.mjs` targets Windows PE by default on Windows (`node scripts/sdev-native.mjs <file.sdev> -o <file.exe>`) and static ELF on Linux.
+
 ---
 
 
@@ -8698,8 +8730,8 @@ set_review_hook(conjure(path, body) :: yield yep ;;)
 
 evolve_forever(
     model, sources,
-    "https://api.openai.com/v1/chat",
-    "$SDEV_AI_API_KEY",
+    "https://ai.gateway.lovable.dev/v1/chat",
+    "$LOVABLE_API_KEY",
     24
 )
 ```
@@ -13360,6 +13392,7 @@ Registry: **209 features** across **3 tracks**.
 #### `src/lang/` — v1 TypeScript reference implementation
 
 - `src\lang\advanced.ts`
+- `src\lang\agent\boards.ts`
 - `src\lang\agent\brain-prompt.ts`
 - `src\lang\agent\brain.ts`
 - `src\lang\agent\browser-brain.ts`
@@ -13367,6 +13400,7 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\agent\index.ts`
 - `src\lang\agent\math.ts`
 - `src\lang\agent\memory.ts`
+- `src\lang\agent\micro-brain.ts`
 - `src\lang\agent\promote.ts`
 - `src\lang\agent\repair.ts`
 - `src\lang\agent\sdev-engine.ts`
@@ -13376,6 +13410,7 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\agent\types.ts`
 - `src\lang\agent\vocabulary.ts`
 - `src\lang\ast.ts`
+- `src\lang\benchmark.ts`
 - `src\lang\builtins.ts`
 - `src\lang\builtins\buffer.ts`
 - `src\lang\builtins\dict.ts`
@@ -13394,6 +13429,7 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\builtins\types.ts`
 - `src\lang\builtins\utils.ts`
 - `src\lang\bytecode.ts`
+- `src\lang\collab\live-room.ts`
 - `src\lang\compiler.ts`
 - `src\lang\dialect\address.ts`
 - `src\lang\dialect\canonicalize.ts`
@@ -13408,13 +13444,16 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\dialect\spec.ts`
 - `src\lang\environment.ts`
 - `src\lang\errors.ts`
+- `src\lang\eval-live.ts`
 - `src\lang\graphics.ts`
 - `src\lang\hardware\arduino-api.ts`
 - `src\lang\hardware\board-db.test.ts`
 - `src\lang\hardware\board-db.ts`
 - `src\lang\hardware\cloud-compile.ts`
+- `src\lang\hardware\simulator.ts`
 - `src\lang\hardware\strip.ts`
 - `src\lang\hardware\transpile.ts`
+- `src\lang\hardware\understand.ts`
 - `src\lang\hardware\web-serial.ts`
 - `src\lang\index.ts`
 - `src\lang\interpreter.ts`
@@ -13424,6 +13463,7 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\linker.ts`
 - `src\lang\linter.ts`
 - `src\lang\matrix.ts`
+- `src\lang\notebook.ts`
 - `src\lang\parser.ts`
 - `src\lang\pyparity.ts`
 - `src\lang\registry\api-registry.ts`
@@ -13434,6 +13474,7 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\translator.ts`
 - `src\lang\ui.ts`
 - `src\lang\vm.ts`
+- `src\lang\wasi-component.ts`
 - `src\lang\web.ts`
 
 #### `src/lang-bridge/` — Runtime selection + WASM bridge for the browser IDE
@@ -13443,6 +13484,7 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang-bridge\driver-artifact.mjs`
 - `src\lang-bridge\native\codegen-x64.mjs`
 - `src\lang-bridge\native\link.mjs`
+- `src\lang-bridge\native\pe.mjs`
 - `src\lang-bridge\native\runtime.s`
 - `src\lang-bridge\oracle\compile.mjs`
 - `src\lang-bridge\oracle\v2.js`
@@ -13477,20 +13519,32 @@ Registry: **209 features** across **3 tracks**.
 - `scripts\sdev-runtime-launcher.ts`
 - `scripts\test-agent.ts`
 - `scripts\test-all.mjs`
+- `scripts\test-all.sdev`
 - `scripts\test-beginner.ts`
 - `scripts\test-bg.ts`
+- `scripts\test-brain-sanitizer.ts`
 - `scripts\test-brain.ts`
+- `scripts\test-compiler-features.ts`
 - `scripts\test-dialect.ts`
 - `scripts\test-driver-artifact.sdev`
+- `scripts\test-expansion-features.ts`
+- `scripts\test-formatter.sdev`
 - `scripts\test-formatter.ts`
 - `scripts\test-linker.ts`
 - `scripts\test-local-brain.ts`
 - `scripts\test-math.ts`
 - `scripts\test-matrix.ts`
+- `scripts\test-micro-brain-benchmarks.ts`
 - `scripts\test-ml-stdlib.ts`
+- `scripts\test-multi-language-features.sdev`
 - `scripts\test-multi-language-features.ts`
+- `scripts\test-native-pe.ts`
 - `scripts\test-native.mjs`
+- `scripts\test-new-features-tdd.ts`
+- `scripts\test-parity.sdev`
 - `scripts\test-parity.ts`
+- `scripts\test-parser-literals.sdev`
+- `scripts\test-parser-literals.ts`
 - `scripts\test-preset-dialect.ts`
 - `scripts\test-registry.ts`
 - `scripts\test-sdev-engine.ts`
@@ -13507,6 +13561,7 @@ Registry: **209 features** across **3 tracks**.
 - `scripts\test-translator.ts`
 - `scripts\test-transpile.ts`
 - `scripts\test-ui.ts`
+- `scripts\test-understander-docs.ts`
 - `scripts\test-wasm-runtime.mjs`
 
 
@@ -13528,23 +13583,30 @@ Registry: **209 features** across **3 tracks**.
 | `node scripts\gen-hardware-docs.ts` | ============================================================ |
 | `node scripts\release.mjs` | !/usr/bin/env node |
 | `node scripts\run-ts.mjs` | !/usr/bin/env node |
-| `node scripts\sdev-native.mjs` | !/usr/bin/env node |
+| `node scripts\sdev-native.mjs` | SDEV native compiler CLI. |
 | `node scripts\sdev-runtime-launcher.ts` |  |
 | `node scripts\test-agent.ts` | ---- the user's own example ----------------------------------------- |
 | `node scripts\test-all.mjs` | ───────────────────────────────────────────────────────────────────────── |
 | `node scripts\test-beginner.ts` |  |
 | `node scripts\test-bg.ts` |  |
+| `node scripts\test-brain-sanitizer.ts` | 1. Missing !#ai header restoration |
 | `node scripts\test-brain.ts` | Quick connectivity check: verify the online brain is reachable before running full suite |
+| `node scripts\test-compiler-features.ts` | 1. AugAssignStatement |
 | `node scripts\test-dialect.ts` | ---- a Bulgarian dialect with braces and `=` assignment ------------------- |
+| `node scripts\test-expansion-features.ts` | Calculate factorial and print |
 | `node scripts\test-formatter.ts` | 1. Basic indentation |
 | `node scripts\test-linker.ts` | Test data |
 | `node scripts\test-local-brain.ts` | 1. LM Studio endpoint normalization |
 | `node scripts\test-math.ts` |  |
 | `node scripts\test-matrix.ts` | matrix |
+| `node scripts\test-micro-brain-benchmarks.ts` |  |
 | `node scripts\test-ml-stdlib.ts` | ---- Node host bindings consumed by src/lang/builtins.ts ---- |
 | `node scripts\test-multi-language-features.ts` | ── 1. String Interpolation (Phase 2, Item 10) ─────────────────────────────── |
+| `node scripts\test-native-pe.ts` | 1. Binary structure verification |
 | `node scripts\test-native.mjs` | !/usr/bin/env node |
+| `node scripts\test-new-features-tdd.ts` | Interactive Notebook |
 | `node scripts\test-parity.ts` | The agent parses the registry line-by-line. Validate the same file with a |
+| `node scripts\test-parser-literals.ts` | `val` and `const` stay usable as ordinary names. |
 | `node scripts\test-preset-dialect.ts` |  |
 | `node scripts\test-registry.ts` |  |
 | `node scripts\test-sdev-engine.ts` | unsure lines fall back to the TypeScript engine |
@@ -13554,6 +13616,7 @@ Registry: **209 features** across **3 tracks**.
 | `node scripts\test-translator.ts` | A Bulgarian dialect: `кажи` means say, `нека` means set. Those words are the |
 | `node scripts\test-transpile.ts` | Basic case |
 | `node scripts\test-ui.ts` | Helper to call built-ins |
+| `node scripts\test-understander-docs.ts` |  |
 | `node scripts\test-wasm-runtime.mjs` | Standalone Node harness: compile + run via the seed WASM. No browser. |
 
 
