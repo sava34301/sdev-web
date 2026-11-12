@@ -1725,6 +1725,7 @@ export class Parser {
   }
 
 
+
   /**
    * `fixed` / `const` / `val` start a constant declaration only in the shape
    * `fixed name be ...` (or `fixed a, b be ...`, `fixed name: Type`). Anywhere

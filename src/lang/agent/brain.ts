@@ -1,6 +1,7 @@
 /**
  * The AI brain.
  *
+ * Three interchangeable implementations, all optional:
  * Two interchangeable implementations, both optional:
  *   online — the `sdev-agent` edge function on the website (your configured AI provider).
  *   browser — a small model running inside the user's browser (WebGPU).
