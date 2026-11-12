@@ -3155,6 +3155,10 @@ Start a file with `!#ai`. Every statement says what it is in its first token, bl
 | `each n in xs {` | `iterate n through xs ::` |
 | `try {` / `} catch e {` | `attempt ::` / `;; rescue e ::` |
 | `brk` / `next` | `yeet` / `skip` |
+| `k MAX = 3` | `fixed MAX be 3` |
+| `c Dog : Animal {` | `essence Dog extend Animal ::` |
+| `throw e` | `hurl e` |
+| `} finally {` | `;; ensure ::` |
 | `==` `!=` `&&` `\|\|` `!` `true` `false` `null` | `equals` `differs` `also` `either` `isnt` `yep` `nope` `void` |
 
 ```sdev
