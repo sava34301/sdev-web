@@ -137,8 +137,8 @@ export async function evaluateLiveScratchpad(
       const lineSteps = traced.chrono.filter((s) => s.line === lineNum);
       const outs: string[] = [];
       for (const st of lineSteps) {
-        if (st.consoleOutputs && st.consoleOutputs.length > 0) {
-          outs.push(st.consoleOutputs[st.consoleOutputs.length - 1]);
+        if (st.outputSnapshot && st.outputSnapshot.length > 0) {
+          outs.push(st.outputSnapshot[st.outputSnapshot.length - 1]);
         }
       }
       if (outs.length === 0 && allOutputs.length > 0) {
