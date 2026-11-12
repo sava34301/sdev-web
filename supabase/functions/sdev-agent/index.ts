@@ -115,6 +115,8 @@ sdev:ai — the dialect for AI models. When asked for sdev:ai, write ONLY this f
   ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else
   w i < 3 {  }                 while               each n in xs {  }   for each
   try {  } catch e {  }        brk / next          break / continue
+  } finally {  }   throw e      k MAX = 3           constant
+  c Dog : Animal {  f init(self, n) { self.n = n }  }    class (": Animal" optional); make one with new Dog(1)
   == != && || ! true false null      every block closes with } on its own line
   Calls to built-ins and the window toolkit stay as they are: window("Calc", 320, 400), button("7", () -> press("7")), uiset(...)
   Lambdas: (x) -> x * 2.  One statement per line.
