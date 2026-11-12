@@ -17,7 +17,9 @@ function flagsOf(v: unknown, global: boolean): string {
 }
 
 const cache = new Map<string, RegExp>();
-function re(p: string, f: string): RegExp {
+function re(p: string, f: string, t?: string, line = 0): RegExp {
+  const bad = regexProblem(p, t ?? '');
+  if (bad) throw new SdevError(bad, line);
   const k = f + '/' + p;
   let r = cache.get(k);
   if (!r) { r = new RegExp(p, f); if (cache.size > 500) cache.clear(); cache.set(k, r); }
