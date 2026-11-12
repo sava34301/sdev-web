@@ -1,6 +1,6 @@
 // Requires a signed-in user for paid AI helpers. Returns a 401 Response when the
 // caller has no valid session, or null when the request may continue.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 export async function requireUser(req: Request, cors: Record<string, string>): Promise<Response | null> {
   const header = req.headers.get("Authorization") ?? "";
