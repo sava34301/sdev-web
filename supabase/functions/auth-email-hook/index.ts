@@ -234,7 +234,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     recipient: payload.data.email,
     confirmationUrl: payload.data.url,
     token: payload.data.token,
-    email: maskEmail(payload.data.email),
+    email: payload.data.email,
     oldEmail: payload.data.old_email,
     newEmail: payload.data.new_email,
   }
@@ -257,7 +257,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
-    recipient_email: maskEmail(payload.data.email),
+    recipient_email: payload.data.email,
     status: 'pending',
   })
 
@@ -283,7 +283,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     await supabase.from('email_send_log').insert({
       message_id: messageId,
       template_name: emailType,
-      recipient_email: maskEmail(payload.data.email),
+      recipient_email: payload.data.email,
       status: 'failed',
       error_message: 'Failed to enqueue email',
     })

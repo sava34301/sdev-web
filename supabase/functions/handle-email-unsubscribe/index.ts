@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
   const { error: suppressError } = await supabase
     .from('suppressed_emails')
     .upsert(
-      { email: maskEmail(tokenRecord.email).toLowerCase(), reason: 'unsubscribe' },
+      { email: tokenRecord.email.toLowerCase(), reason: 'unsubscribe' },
       { onConflict: 'email' },
     )
 
