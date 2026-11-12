@@ -10,6 +10,15 @@ import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
 
+// Never write full email addresses to logs.
+function maskEmail(e: unknown): string {
+  const s = String(e ?? '')
+  const at = s.indexOf('@')
+  if (at < 1) return '***'
+  return s[0] + '***' + s.slice(at)
+}
+
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -207,7 +216,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
   // payload.type is the hook event type ("auth")
   const emailType = payload.data.action_type
-  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+  console.log('Received auth event', { emailType, email: maskEmail(payload.data.email), run_id })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
@@ -225,7 +234,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     recipient: payload.data.email,
     confirmationUrl: payload.data.url,
     token: payload.data.token,
-    email: payload.data.email,
+    email: maskEmail(payload.data.email),
     oldEmail: payload.data.old_email,
     newEmail: payload.data.new_email,
   }
@@ -248,7 +257,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
-    recipient_email: payload.data.email,
+    recipient_email: maskEmail(payload.data.email),
     status: 'pending',
   })
 
@@ -274,7 +283,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     await supabase.from('email_send_log').insert({
       message_id: messageId,
       template_name: emailType,
-      recipient_email: payload.data.email,
+      recipient_email: maskEmail(payload.data.email),
       status: 'failed',
       error_message: 'Failed to enqueue email',
     })
@@ -284,7 +293,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
   }
 
-  console.log('Auth email enqueued', { emailType, email: payload.data.email, run_id })
+  console.log('Auth email enqueued', { emailType, email: maskEmail(payload.data.email), run_id })
 
   return new Response(
     JSON.stringify({ success: true, queued: true }),
