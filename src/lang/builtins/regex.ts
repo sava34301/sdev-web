@@ -1,5 +1,11 @@
 import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
 import { SdevError } from '../errors';
+import { regexProblem } from './regex-guard';
+
+function guard(text: string, pattern: string, line: number) {
+  const p = regexProblem(pattern, text);
+  if (p) throw new SdevError(p, line);
+}
 
 export function registerRegex(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
 
@@ -11,6 +17,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, output: Outpu
     call: (args: unknown[], line: number) => {
       if (args.length !== 2) throw new SdevError('match() takes 2 arguments (text, pattern)', line);
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string') throw new SdevError('Arguments must be text', line);
+      guard(args[0], args[1], line);
       const m = args[0].match(new RegExp(args[1]));
       return m ? Array.from(m) : null;
     },
@@ -22,6 +29,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, output: Outpu
     call: (args: unknown[], line: number) => {
       if (args.length !== 2) throw new SdevError('matchAll() takes 2 arguments (text, pattern)', line);
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string') throw new SdevError('Arguments must be text', line);
+      guard(args[0], args[1], line);
       const matches = Array.from(args[0].matchAll(new RegExp(args[1], 'g')));
       return matches.map(m => Array.from(m));
     },
@@ -34,6 +42,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, output: Outpu
       if (args.length !== 3) throw new SdevError('replaceRegex() takes 3 arguments', line);
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string' || typeof args[2] !== 'string') {
         throw new SdevError('Arguments must be text', line);
+      guard(args[0], args[1], line);
       }
       return args[0].replace(new RegExp(args[1], 'g'), args[2]);
     },
@@ -45,6 +54,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, output: Outpu
     call: (args: unknown[], line: number) => {
       if (args.length !== 2) throw new SdevError('test() takes 2 arguments (text, pattern)', line);
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string') throw new SdevError('Arguments must be text', line);
+      guard(args[0], args[1], line);
       return new RegExp(args[1]).test(args[0]);
     },
   });

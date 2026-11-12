@@ -1,3 +1,4 @@
+import { requireUser } from '../_shared/auth.ts';
 import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -20,7 +21,7 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
     "saltar": "skip", "hablar": "speak", "mostrar": "speak", "decir": "speak",
     "esencia": "essence", "extender": "extend", "propio": "self", "padre": "super",
     "nuevo": "new", "intento": "attempt", "intentar": "attempt", "rescatar": "rescue",
-    "también": "also", "también": "also", "cualquiera": "either", "o": "either",
+     "también": "also", "cualquiera": "either", "o": "either",
     "no_es": "isnt", "igual": "equals", "difiere": "differs", "sí": "yep",
     "no": "nope", "vacío": "void", "invocar": "summon", "asíncrono": "async",
     "esperar": "await", "generar": "spawn", "verdadero": "yep", "falso": "nope",
@@ -223,7 +224,7 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
     "विस्तार": "extend", "स्वयं": "self", "अभिभावक": "super",
     "नया": "new", "प्रयास": "attempt", "कोशिश": "attempt",
     "बचाना": "rescue", "पकड़ना": "rescue", "भी": "also",
-    "और": "also", "या": "either", "नहीं": "isnt",
+    "और": "also", "या": "either", 
     "बराबर": "equals", "भिन्न": "differs", "हां": "yep",
     "सत्य": "yep", "नहीं": "nope", "असत्य": "nope",
     "रिक्त": "void", "शून्य": "void", "आयात": "summon",
@@ -248,7 +249,7 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
   },
   Polish: {
     "kuć": "forge", "utwórz": "forge", "być": "be", "jest": "be",
-    "przywołaj": "conjure", "funkcja": "conjure", "zwróć": "yield",
+     "funkcja": "conjure", "zwróć": "yield",
     "oddaj": "yield", "rozważ": "ponder", "jeśli": "ponder",
     "jeżeli": "ponder", "inaczej": "otherwise", "pętla": "cycle",
     "dopóki": "cycle", "iteruj": "iterate", "dla": "iterate",
@@ -259,7 +260,7 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
     "sam": "self", "rodzic": "super", "nowy": "new", "nowe": "new",
     "próbuj": "attempt", "spróbuj": "attempt", "ratuj": "rescue",
     "złap": "rescue", "też": "also", "i": "also", "lub": "either",
-    "albo": "either", "nie": "isnt", "równe": "equals",
+    "albo": "either",  "równe": "equals",
     "różni": "differs", "tak": "yep", "prawda": "yep",
     "nie": "nope", "fałsz": "nope", "pusty": "void",
     "przywołaj": "summon", "importuj": "summon",
@@ -331,7 +332,7 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
     "laajentaa": "extend", "itse": "self", "ylempi": "super",
     "uusi": "new", "yritä": "attempt", "pelasta": "rescue",
     "kiinni": "rescue", "myös": "also", "ja": "also",
-    "tai": "either", "ei": "isnt", "yhtäsuuri": "equals",
+    "tai": "either",  "yhtäsuuri": "equals",
     "eroaa": "differs", "kyllä": "yep", "tosi": "yep",
     "ei": "nope", "epätosi": "nope", "tyhjä": "void",
     "kutsu": "summon", "tuo": "summon", "asynkroninen": "async",
@@ -365,7 +366,7 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
     "מחלקה": "essence", "להרחיב": "extend", "עצמי": "self",
     "הורה": "super", "חדש": "new", "לנסות": "attempt",
     "להציל": "rescue", "לתפוס": "rescue", "גם": "also",
-    "ו": "also", "או": "either", "לא": "isnt",
+    "ו": "also", "או": "either", 
     "שווה": "equals", "שונה": "differs", "כן": "yep",
     "אמת": "yep", "לא": "nope", "שקר": "nope",
     "ריק": "void", "לייבא": "summon", "אסינכרוני": "async",
@@ -436,7 +437,7 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
     "maga": "self", "szülő": "super", "új": "new",
     "próba": "attempt", "megpróbál": "attempt", "ment": "rescue",
     "elkap": "rescue", "is": "also", "és": "also",
-    "vagy": "either", "nem": "isnt", "egyenlő": "equals",
+    "vagy": "either",  "egyenlő": "equals",
     "különbözik": "differs", "igen": "yep", "igaz": "yep",
     "nem": "nope", "hamis": "nope", "üres": "void",
     "behív": "summon", "importál": "summon", "aszinkron": "async",
@@ -444,8 +445,8 @@ const KEYWORD_TABLES: Record<string, Record<string, string>> = {
   },
   Bulgarian: {
     "изкова": "forge", "създай": "forge", "направи": "forge",
-    "нека": "forge", "бъде": "be", "да_бъде": "be", "е": "be",
-    "да_е": "be", "да_бъде": "be",
+    "нека": "forge", "бъде": "be",  "е": "be",
+     
     "извикай": "conjure", "функция": "conjure",
     "върни": "yield", "обмисли": "ponder", "ако": "ponder",
     "иначе": "otherwise", "в_противен_случай": "otherwise",
@@ -563,8 +564,13 @@ function buildKeywordTablePrompt(lang: string): string {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const denied = await requireUser(req, corsHeaders);
+  if (denied) return denied;
+
   try {
-    const { code, sourceLanguage } = await req.json();
+    const { code, sourceLanguage: rawLang } = await req.json();
+    // Language names only: letters, digits, spaces, + # . - (keeps instructions out of the system prompt)
+    const sourceLanguage = typeof rawLang === "string" ? (/^[A-Za-z0-9+#. -]{1,40}$/.test(rawLang.trim()) ? rawLang.trim() : "auto") : rawLang;
 
     if (!code || typeof code !== "string") {
       return new Response(JSON.stringify({ error: "No code provided" }), {
