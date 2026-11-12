@@ -43,7 +43,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, output: Outpu
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string' || typeof args[2] !== 'string') {
         throw new SdevError('Arguments must be text', line);
       }
-      guard(args[1], args[0], line);
+      guard(args[0], args[1], line);
       return args[0].replace(new RegExp(args[1], 'g'), args[2]);
     },
   });
