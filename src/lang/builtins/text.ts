@@ -5,6 +5,7 @@
  */
 import { SdevFunction, OutputCallback } from './utils';
 import { SdevError } from '../errors';
+import { regexProblem } from './regex-guard';
 
 function text(v: unknown, fn: string, line: number): string {
   if (typeof v !== 'string') throw new SdevError(`${fn}() expects text`, line);
@@ -52,15 +53,21 @@ export function registerText(builtins: Map<string, SdevFunction>, _output: Outpu
   def('is_name', (a, l) => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(text(a[0], 'is_name', l)));
 
   // Regular expressions with optional flags ("i", "m", "s").
-  def('regex_test', (a, l) => re(text(a[1], 'regex_test', l), flagsOf(a[2], false)).test(text(a[0], 'regex_test', l)));
+  const rx = (a: unknown[], fn: string, flagIdx: number, global: boolean, l: number) => {
+    const t = text(a[0], fn, l);
+    return { t, r: re(text(a[1], fn, l), flagsOf(a[flagIdx], global), t, l) };
+  };
+  def('regex_test', (a, l) => { const { t, r } = rx(a, 'regex_test', 2, false, l); return r.test(t); });
   def('regex_capture', (a, l) => {
-    const m = text(a[0], 'regex_capture', l).match(re(text(a[1], 'regex_capture', l), flagsOf(a[2], false)));
+    const { t, r } = rx(a, 'regex_capture', 2, false, l);
+    const m = t.match(r);
     return m ? Array.from(m, (x) => x ?? '') : null;
   });
-  def('regex_find_all', (a, l) =>
-    Array.from(text(a[0], 'regex_find_all', l).matchAll(re(text(a[1], 'regex_find_all', l), flagsOf(a[2], true))), (m) => m[0]));
-  def('regex_replace', (a, l) =>
-    text(a[0], 'regex_replace', l).replace(re(text(a[1], 'regex_replace', l), flagsOf(a[3], true)), text(a[2], 'regex_replace', l)));
+  def('regex_find_all', (a, l) => { const { t, r } = rx(a, 'regex_find_all', 2, true, l); return Array.from(t.matchAll(r), (m) => m[0]); });
+  def('regex_replace', (a, l) => {
+    const { t, r } = rx(a, 'regex_replace', 3, true, l);
+    return t.replace(r, text(a[2], 'regex_replace', l));
+  });
   // evaluate("2 + 3 * (4 - 1)") — safe arithmetic on text (calculators, forms)
   def('evaluate', (a, l) => {
     const src = text(a[0], 'evaluate', l).replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
