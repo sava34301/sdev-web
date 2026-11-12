@@ -1,3 +1,4 @@
+import { requireUser } from '../_shared/auth.ts';
 import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SDEV_INTERNALS } from "../_shared/sdev-internals.ts";
@@ -42,6 +43,9 @@ builtin lives in graphics/web/ui, or if a link cycle is at fault.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const denied = await requireUser(req, corsHeaders);
+  if (denied) return denied;
 
   try {
     const { code, error, note } = await req.json();

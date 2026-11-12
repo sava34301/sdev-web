@@ -1,3 +1,4 @@
+import { requireUser } from '../_shared/auth.ts';
 import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 // supabase/functions/translate-fuzzy/index.ts
 // ────────────────────────────────────────────────────────────────────
@@ -74,6 +75,9 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const denied = await requireUser(req, corsHeaders);
+  if (denied) return denied;
 
   try {
     const body = await req.json().catch(() => ({}));

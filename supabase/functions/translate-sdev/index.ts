@@ -1,3 +1,4 @@
+import { requireUser } from '../_shared/auth.ts';
 import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -563,8 +564,13 @@ function buildKeywordTablePrompt(lang: string): string {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const denied = await requireUser(req, corsHeaders);
+  if (denied) return denied;
+
   try {
-    const { code, sourceLanguage } = await req.json();
+    const { code, sourceLanguage: rawLang } = await req.json();
+    // Language names only: letters, digits, spaces, + # . - (keeps instructions out of the system prompt)
+    const sourceLanguage = typeof rawLang === "string" ? (/^[A-Za-z0-9+#. -]{1,40}$/.test(rawLang.trim()) ? rawLang.trim() : "auto") : rawLang;
 
     if (!code || typeof code !== "string") {
       return new Response(JSON.stringify({ error: "No code provided" }), {
