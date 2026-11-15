@@ -53,11 +53,11 @@ Self-hosted (v2) libraries for systems and causal-AI work — load with use "lan
   bits: bits_and/or/xor(a, b), bits_shl/shr(v, n), bits_not_n(v, width), floor_div, floor_mod, wrap_u8/u16/i16
   mem: mem_arena(size), mem_put/get_u8/u16/i16(m, addr[, v]) little-endian, mem_copy, mem_fill, mem_hex,
        ring_create(cap), ring_push, ring_get(r, i), ring_len
-  oce (needs list, bits, mem): Ontological Causal Engine in one 64 KB arena — oce_create(), oce_entity(m),
+  oce (v2: use "lang/stdlib/v2/oce.sdev", it loads list, bits, mem itself; classic and !#ai files: built in, no import): Ontological Causal Engine in one 64 KB arena — oce_create(), oce_entity(m),
        oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),
        oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),
        oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).
-  In v2 files "kind" is a reserved word — never use it as a name.
+  In v2 files, xs + [a] joins lists only when the file uses "lang/stdlib/v2/list.sdev"; prefer list_append(xs, a).
 
 Canonical SDEV Patterns & Examples:
   # 1. Math and output:
