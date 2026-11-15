@@ -1,6 +1,6 @@
-~ The OCE discovers gravity from nothing — classic sdev (forge / be).
-~ Same engine, same answers as examples/oce/gravity.sdev; the functions are
-~ built into the classic runtimes (browser and Python), so no import is needed.
+// The OCE discovers gravity from nothing — classic sdev (forge / be).
+// Same engine and same answers as examples/oce/gravity.sdev: the OCE functions
+// are built into the classic runtimes (browser and Python), so no import.
 
 forge m be oce_create()
 forge names be ["supported", "pos_z", "vel_z", "density", "pos_x", "vel_x", "mass", "near"]
@@ -9,31 +9,31 @@ forge table be oce_entity(m)
 forge stone be oce_entity(m)
 forge w be [[0, 0, 0, 12, 0, 0, 0, 0], [1, 0, 0, 50, 0, 0, 10, 0], [1, 100, 0, 50, 0, 0, 10, 0]]
 
-conjure tick(w)
+conjure tick(w) ::
   forge i be 1
-  cycle i < measure(w)
+  cycle i < measure(w) ::
     forge o be w[i]
     forge v be o[2]
-    ponder o[0] == 0
-      o[2] = v - 10
+    ponder o[0] == 0 ::
+      o[2] be v - 10
     ;;
-    o[1] = o[1] + v
-    i = i + 1
+    o[1] be o[1] + v
+    i be i + 1
   ;;
 ;;
 
 oce_observe(m, w)
-w[2][0] = 0
+w[2][0] be 0
 oce_intervene(m, stone, 0, 0)
 forge surprises be 0
 forge t be 0
-cycle t < 12
+cycle t < 12 ::
   tick(w)
-  surprises = surprises + oce_observe(m, w)
-  t = t + 1
+  surprises be surprises + oce_observe(m, w)
+  t be t + 1
 ;;
 speak("surprises while learning: " + str(surprises))
 speak(oce_describe(m, names))
 oce_imagine(m, table, 0, 0, 3)
 speak("if the table lost support, after 3 ticks vel_z = " + str(oce_imagined(m, table, 2)))
-speak("model size: " + str(oce_mdl_bits(m) // 8) + " bytes")
+speak("model size: " + str(floor_div(oce_mdl_bits(m), 8)) + " bytes")
