@@ -500,14 +500,14 @@ function parseProgram(tokens) {
         while (peek().type === 'OP' && peek().value === ',') { p++; args.push(expr()); }
       }
       eat('OP', ')');
-      a = { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args, line: a.line };
     }
     // `fn with a b` call form (space-separated single atoms)
     else if (a.k === 'ident' && peek().type === 'KW' && peek().value === 'with') {
       p++;
       const args = [];
       while (canStartAtom(peek())) args.push(atom());
-      a = { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args, line: a.line };
     }
     // postfix indexing: x[i][j]...  and Milestone 5y member access x.f / x.m()
     while (true) {
@@ -944,7 +944,7 @@ function emitExpr(e, em, locals) {
     case 'call': {
       const bi = BUILTINS[e.name];
       if (bi) {
-        if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, 0);
+        if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, e.line ?? 0);
         let argKind = 'int';
         for (const a of e.args) argKind = emitExpr(a, em, locals);
         bi.emit(em);
@@ -953,8 +953,8 @@ function emitExpr(e, em, locals) {
         return bi.ret;
       }
       const info = em.functions.get(e.name);
-      if (!info) throw new SdevError(`unknown function ${e.name}`, 0);
-      if (e.args.length !== info.arity) throw new SdevError(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, 0);
+      if (!info) throw new SdevError(`unknown function ${e.name}`, e.line ?? 0);
+      if (e.args.length !== info.arity) throw new SdevError(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, e.line ?? 0);
       for (const a of e.args) emitExpr(a, em, locals);
       em.emit(OP.CALL);
       const site = em.here();
