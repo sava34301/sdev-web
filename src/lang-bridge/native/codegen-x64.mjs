@@ -331,10 +331,15 @@ function emitExpr(e, em, locals, tys = new Map(), fnTypes = new Map()) {
       }
       if ((e.op === 'is' || e.op === 'isnot') &&
           (typeOf(e.l, tys, fnTypes) === 'str' || typeOf(e.r, tys, fnTypes) === 'str')) {
-        // Milestone 6d: text compares by value, not by pointer.
-        emitStrExpr(e.l, em, locals, tys, fnTypes);
+        // Milestone 6d: text compares by value, not by pointer. An untyped
+        // side (a list item, a parameter) already holds a text pointer, as in
+        // the VM's STREQ — it must not be converted with str().
+        const asText = (x) => (typeOf(x, tys, fnTypes) === 'int'
+          ? emitExpr(x, em, locals, tys, fnTypes)
+          : emitStrExpr(x, em, locals, tys, fnTypes));
+        asText(e.l);
         em.L('    pushq %rax');
-        emitStrExpr(e.r, em, locals, tys, fnTypes);
+        asText(e.r);
         em.L('    movq %rax, %rsi');
         em.L('    popq %rdi');
         em.L('    call sdev_str_eq');
