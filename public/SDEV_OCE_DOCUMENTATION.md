@@ -17,10 +17,7 @@ The whole engine is **one 64 KB block of bytes**, laid out like the OCE paper:
 ## Quick start
 
 ```sdev
-use "lang/stdlib/v2/list.sdev"
-use "lang/stdlib/v2/bits.sdev"
-use "lang/stdlib/v2/mem.sdev"
-use "lang/stdlib/v2/oce.sdev"
+use "lang/stdlib/v2/oce.sdev"          # brings list, bits and mem with it
 
 set m to oce_create()
 set _ to oce_medium(m, 3, 12)          # air density = 12
@@ -40,6 +37,22 @@ law 2 [confidence 20]: if supported == 0 then vel_z += -10
 law 4 [confidence 30]: if always then pos_z += vel_z
 model size: 60 bytes
 ```
+
+### Classic sdev and the AI syntax
+
+In classic files (`forge … be …`) and `!#ai` files every function on this page is built in —
+no import, on the website and in the Python version alike:
+
+```sdev
+forge m be oce_create()
+oce_medium(m, 3, 12)
+forge stone be oce_entity(m)
+oce_observe(m, rows)
+speak(oce_describe(m, names))
+```
+
+`examples/oce/gravity-classic.sdev` and `examples/oce/gravity-ai.sdev` are the same demo in those
+two styles and print exactly the same lines as the v2 version.
 
 ## How it learns
 
@@ -94,7 +107,10 @@ extension: `MUTATE_ADD` may add a second property (`source_b`), so one node can 
 - Integer world only (int16 properties); up to 32 entities and 8 invented hidden properties.
 - One condition per law and one level of exceptions.
 - It is a working learner for small rule-based worlds, not the paper's claimed nanosecond speeds; those were not measured.
-- These libraries are for SDEV v2 files (`to … with …`, `set … to …`). The v1 / `sdev:ai` runtimes cannot load them yet.
+- Numbers follow SDEV v2 in every runtime: division of whole numbers drops the remainder toward zero.
+- The Python version does not read `!#ai` files yet; use classic syntax there.
 
 Tests: `node bin/sdevhost.mjs scripts/test-oce.sdev` (35 checks: memory layout, learning gravity,
 buoyancy, a hidden magnetic property, counterfactuals, motifs, sequences, Rule 110).
+`bun scripts/test-oce-parity.ts` runs the same checks on the SDEV virtual machine, a native Linux
+build, the website's classic runtime and the Python version, and requires identical output.
