@@ -47,17 +47,17 @@ forge m be oce_create()
 forge names be ["supported", "pos_z", "vel_z", "density", "pos_x", "vel_x", "mass", "near_magnet"]
 oce_medium(m, 3, 12)
 forge box be [[[0, 0, 0, 12, 0, 0, 0, 0]], [0], m]
-conjure spawn(sup, pz, dens, fe) ::
+conjure add_body(sup, pz, dens, fe) ::
   forge id be oce_entity(box[2])
   box[0] be box[0] + [[sup, pz, 0, dens, 0, 0, 10, 0]]
   box[1] be box[1] + [fe]
   yield id
 ;;
-forge table be spawn(1, 0, 50, 0)
-forge stone be spawn(1, 100, 50, 0)
-forge balloon be spawn(1, 100, 2, 0)
-forge cube_a be spawn(1, 0, 70, 1)
-forge cube_b be spawn(1, 0, 70, 0)
+forge table be add_body(1, 0, 50, 0)
+forge stone be add_body(1, 100, 50, 0)
+forge balloon be add_body(1, 100, 2, 0)
+forge cube_a be add_body(1, 0, 70, 1)
+forge cube_b be add_body(1, 0, 70, 0)
 
 conjure physics() ::
   forge world be box[0]
