@@ -1,4 +1,5 @@
 # SDEV Standard Library: Relational SQL Primitives — authored in pure SDEV.
+use "lang/stdlib/v2/list.sdev"
 
 to sql_select with rows cols
   set out to []

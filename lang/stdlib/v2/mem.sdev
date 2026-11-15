@@ -1,4 +1,5 @@
 # SDEV Standard Library: Byte Memory, Packed Fields & Ring Buffers (v2)
+use "lang/stdlib/v2/bits.sdev"
 # — authored in SDEV.
 #
 #   use "lang/stdlib/v2/bits.sdev"
