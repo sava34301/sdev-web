@@ -256,13 +256,16 @@ export function desugarKinds(tokens) {
       while (k >= 0 && tokens[k].type === 'NL') k--;
       return !(k >= 0 && tokens[k].type === 'KW' && tokens[k].value === 'else');
     }
-    if (t.type === 'IDENT' && (t.value === 'attempt' || t.value === 'make' || t.value === 'kind')) return true;
+    if (t.type === 'IDENT' && (t.value === 'attempt' || t.value === 'make')) return true;
+    // `kind Name` opens a class block only when it starts a statement, so
+    // `kind` stays usable as an ordinary variable or parameter name.
+    if (t.type === 'IDENT' && t.value === 'kind') return (i === 0 || tokens[i - 1].type === 'NL') && !!tokens[i + 1] && tokens[i + 1].type === 'IDENT';
     return false;
   };
   let i = 0;
   while (i < tokens.length) {
     const t = tokens[i];
-    if (t.type === 'IDENT' && t.value === 'kind' && tokens[i + 1] && tokens[i + 1].type === 'IDENT') {
+    if (t.type === 'IDENT' && t.value === 'kind' && (i === 0 || tokens[i - 1].type === 'NL') && tokens[i + 1] && tokens[i + 1].type === 'IDENT') {
       const cname = tokens[i + 1].value;
       const methods = [];
       classes.set(cname, methods);

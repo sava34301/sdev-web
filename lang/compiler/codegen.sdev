@@ -833,7 +833,19 @@ to is_kind_opener with j
     return 1
   end
   if str_eq(w, "kind")
-    return 1
+    # `kind Name` opens a class only at the start of a statement, so `kind`
+    # stays usable as an ordinary variable or parameter name.
+    if j > 0
+      if tk_kind[j - 1] is not 5
+        return 0
+      end
+    end
+    if j + 1 < tk_count
+      if tk_kind[j + 1] is 2
+        return 1
+      end
+    end
+    return 0
   end
   if str_eq(w, "if")
     # `else if` chains share the outer `end`.
@@ -853,6 +865,11 @@ to desugar_kinds
       if i + 1 < tk_count
         if tk_kind[i + 1] is 2
           set matched to 1
+        end
+      end
+      if i > 0
+        if tk_kind[i - 1] is not 5
+          set matched to 0
         end
       end
     end
