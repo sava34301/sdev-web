@@ -785,8 +785,9 @@ function emitExpr(e, em, locals) {
       if (e.op === 'not') { emitExpr(e.x, em, locals); em.emit(OP.NOT); return 'int'; }
       break;
     case 'bin': {
-      if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
-      if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
+      // Short-circuit and/or: both paths leave exactly one 0/1 value (mirrors lang/compiler/codegen.sdev).
+      if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const b1 = em.here(); emitExpr(e.r, em, locals); em.emit(OP.NOT); em.emit(OP.NOT); em.emit(OP.JMP); const fe = em.placeholder16(); const b2 = em.here(); em.patchI16(fx, em.here() - b1); em.emit(OP.PUSH_I32); em.emitI32(0); em.patchI16(fe, em.here() - b2); return 'int'; }
+      if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const b1 = em.here(); em.emit(OP.PUSH_I32); em.emitI32(1); em.emit(OP.JMP); const fe = em.placeholder16(); const b2 = em.here(); em.patchI16(fx, em.here() - b1); emitExpr(e.r, em, locals); em.emit(OP.NOT); em.emit(OP.NOT); em.patchI16(fe, em.here() - b2); return 'int'; }
       const lk = emitExpr(e.l, em, locals);
       const rk = emitExpr(e.r, em, locals);
       // Promote `+` to STRCAT when either operand is a string literal.
