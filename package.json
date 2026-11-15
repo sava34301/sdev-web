@@ -16,6 +16,7 @@
     "test": "node bin/sdevhost.mjs scripts/test-all.sdev",
     "test:self-stdlib": "node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev",
     "test:self-subsystems": "node bin/sdevhost.mjs scripts/test-selfhosted-subsystems.sdev",
+    "test:oce": "node bin/sdevhost.mjs scripts/test-oce.sdev",
     "test:parity": "node bin/sdevhost.mjs scripts/test-parity.sdev",
     "test:formatter": "node bin/sdevhost.mjs scripts/test-formatter.sdev",
     "test:parser-literals": "node bin/sdevhost.mjs scripts/test-parser-literals.sdev",

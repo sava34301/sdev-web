@@ -1,6 +1,7 @@
 # OCE regression suite — authored in SDEV.
 #   node bin/sdevhost.mjs scripts/test-oce.sdev
 use "lang/stdlib/testkit.sdev"
+use "lang/stdlib/v2/list.sdev"
 use "lang/stdlib/v2/bits.sdev"
 use "lang/stdlib/v2/mem.sdev"
 use "lang/stdlib/v2/oce.sdev"
@@ -43,8 +44,8 @@ set world_box to [[[0, 0, 0, 12, 0, 0, 0, 0]]]
 set ferro_box to [[0]]
 to spawn with sup pz dens fe
   set id to oce_entity(m)
-  set world_box[0] to world_box[0] + [[sup, pz, 0, dens, 0, 0, 10, 0]]
-  set ferro_box[0] to ferro_box[0] + [fe]
+  set world_box[0] to list_append(world_box[0], [sup, pz, 0, dens, 0, 0, 10, 0])
+  set ferro_box[0] to list_append(ferro_box[0], fe)
   return id
 end
 set table to spawn(1, 0, 50, 0)
@@ -73,7 +74,7 @@ to physics
     if ferro[i] is 1 and o[7] is 1
       set x[5] to o[5] + 6
     end
-    set nw to nw + [x]
+    set nw to list_append(nw, x)
     set i to i + 1
   end
   set world_box[0] to nw
@@ -146,7 +147,7 @@ set _ to check("fibonacci rule", oce_sequence_rule([1, 1, 2, 3, 5, 8])[0] is "fi
 set rows to [[0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0]]
 set k to 0
 while k < 6
-  set rows to rows + [oce_ca_step(rows[length(rows) - 1], 110)]
+  set rows to list_append(rows, oce_ca_step(rows[length(rows) - 1], 110))
   set k to k + 1
 end
 set _ to check("Rule 110 rediscovered from cells", oce_ca_rule(rows) is 110)
