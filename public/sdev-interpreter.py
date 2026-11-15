@@ -926,6 +926,17 @@ class Lexer:
                 self.advance()
             return
         
+        # `==` / `!=` — symbolic forms of `equals` / `differs`, as in the
+        # browser runtime.
+        if char == '=' and self.peek() == '=':
+            self.advance()
+            self.add_token(TokenType.EQUALS, '==', start_column)
+            return
+        if char == '!' and self.peek() == '=':
+            self.advance()
+            self.add_token(TokenType.DIFFERS, '!=', start_column)
+            return
+
         if char == '<':
             if self.peek() == '>':
                 self.advance()
