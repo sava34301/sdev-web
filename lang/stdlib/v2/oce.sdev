@@ -855,7 +855,7 @@ to oce_motifs with text threshold
           set i to i + 1
         end
       end
-      set rules to list_append(rules, next, ba, bb)
+      set rules to list_append(list_append(list_append(rules, next), ba), bb)
       set seq to out
       set next to next + 1
     end
