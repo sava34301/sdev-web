@@ -89,6 +89,19 @@ export async function runWasm(
     throw new WasmSubsetError(msg);
   }
 
+  // The self-hosted compiler has no error channel, so an unknown function,
+  // a wrong argument count or a list joined without the list library would
+  // run silently with wrong results. The reference compiler names them.
+  try {
+    const { compile: checkCompile } = await import('./oracle/compile.mjs');
+    checkCompile(source, modules ? { readModule: (path: string) => modules?.[path] ?? '' } : {});
+  } catch (e) {
+    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line 0: /, '');
+    if (/unknown function|expected \d+ args|joining lists with \+/.test(msg)) {
+      return { success: false, output: [], error: msg };
+    }
+  }
+
   const module = await loadSeed();
   /* eslint-disable prefer-const */
   let mem!: WebAssembly.Memory;
