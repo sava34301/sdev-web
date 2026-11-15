@@ -7,7 +7,7 @@ v stone = oce_entity(m)
 v w = [[0, 0, 0, 12, 0, 0, 0, 0], [1, 0, 0, 50, 0, 0, 10, 0], [1, 100, 0, 50, 0, 0, 10, 0]]
 f tick(w) {
   v i = 1
-  while i < measure(w) {
+  w i < measure(w) {
     v o = w[i]
     v vz = o[2]
     ? o[0] == 0 {
@@ -22,7 +22,7 @@ w[2][0] = 0
 oce_intervene(m, stone, 0, 0)
 v surprises = 0
 v t = 0
-while t < 12 {
+w t < 12 {
   tick(w)
   surprises = surprises + oce_observe(m, w)
   t = t + 1
