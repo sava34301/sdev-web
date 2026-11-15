@@ -2170,6 +2170,576 @@ class SdevColor:
 
 # ============= Interpreter =============
 
+
+# ============================================================
+# Bit logic, byte memory, ring buffers and the Ontological Causal Engine.
+# Line-for-line port of lang/stdlib/v2/{bits,mem,oce}.sdev, identical to
+# src/lang/builtins/oce.ts — keep the three in step (dual-runtime parity).
+# Integer semantics follow SDEV v2: `/` truncates toward zero and `%` keeps
+# the sign of the dividend. An arena is a plain list of 0..255 numbers.
+# ============================================================
+_OCE_NONE = 65535
+_OCE_OSG = 49152
+_OCE_FIRED = 4096
+_OCE_LOG = 63488
+_OCE_SANDBOX = 57344
+
+def _o_tdiv(a, b):
+    if b == 0:
+        raise ZeroDivisionError('division by zero')
+    q = abs(a) // abs(b)
+    return q if (a < 0) == (b < 0) else -q
+
+def _o_tmod(a, b):
+    return a - _o_tdiv(a, b) * b
+
+def _o_int(v):
+    if isinstance(v, bool):
+        return 1 if v else 0
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return 0
+
+def bits_shl(val, shift):
+    v = val
+    for _ in range(max(0, shift)):
+        v *= 2
+    return v
+
+def bits_shr(val, shift):
+    v = val
+    for _ in range(max(0, shift)):
+        v = _o_tdiv(v, 2)
+    return v
+
+def bits_test(val, pos):
+    return _o_tmod(_o_tdiv(val, bits_shl(1, pos)), 2)
+
+def bits_popcount(val):
+    v, c = val, 0
+    while v > 0:
+        c += _o_tmod(v, 2)
+        v = _o_tdiv(v, 2)
+    return c
+
+def bits_to_hex(val):
+    if val == 0:
+        return '0'
+    hx, out, v = '0123456789abcdef', '', val
+    while v > 0:
+        out = hx[_o_tmod(v, 16)] + out
+        v = _o_tdiv(v, 16)
+    return out
+
+def bits_from_hex(s):
+    v = 0
+    for ch in s:
+        c, d = ord(ch), 0
+        if 48 <= c <= 57: d = c - 48
+        if 97 <= c <= 102: d = c - 87
+        if 65 <= c <= 70: d = c - 55
+        v = v * 16 + d
+    return v
+
+def _o_bitloop(a, b, mode):
+    x, y, out, place = a, b, 0, 1
+    while (x > 0 and y > 0) if mode == 'and' else (x > 0 or y > 0):
+        bx, by = _o_tmod(x, 2), _o_tmod(y, 2)
+        if mode == 'and': hit = bx == 1 and by == 1
+        elif mode == 'or': hit = bx == 1 or by == 1
+        else: hit = bx != by
+        if hit:
+            out += place
+        x, y, place = _o_tdiv(x, 2), _o_tdiv(y, 2), place * 2
+    return out
+
+def bits_and(a, b): return _o_bitloop(a, b, 'and')
+def bits_or(a, b): return _o_bitloop(a, b, 'or')
+def bits_xor(a, b): return _o_bitloop(a, b, 'xor')
+
+def bits_not_n(val, width):
+    full = bits_shl(1, width) - 1
+    return full - bits_and(val, full)
+
+def floor_div(a, b):
+    q = _o_tdiv(a, b)
+    if q * b != a and (a < 0) != (b < 0):
+        q -= 1
+    return q
+
+def floor_mod(a, b): return a - floor_div(a, b) * b
+def wrap_u8(v): return floor_mod(v, 256)
+def wrap_u16(v): return floor_mod(v, 65536)
+def wrap_i16(v):
+    u = floor_mod(v, 65536)
+    return u - 65536 if u >= 32768 else u
+
+def mem_arena(size): return [0] * size
+def mem_put_u8(m, a, v):
+    m[a] = wrap_u8(v); return 0
+def mem_get_u8(m, a): return m[a]
+def mem_put_u16(m, a, v):
+    u = wrap_u16(v); m[a] = u % 256; m[a + 1] = u // 256; return 0
+def mem_get_u16(m, a): return m[a] + m[a + 1] * 256
+def mem_put_i16(m, a, v): return mem_put_u16(m, a, wrap_i16(v))
+def mem_get_i16(m, a):
+    u = m[a] + m[a + 1] * 256
+    return u - 65536 if u >= 32768 else u
+def mem_fill_list(m, a, count, v):
+    for i in range(count):
+        m[a + i] = wrap_u8(v)
+    return 0
+def mem_copy_list(dst, da, src, sa, count):
+    if da > sa:
+        for i in range(count - 1, -1, -1):
+            dst[da + i] = src[sa + i]
+    else:
+        for i in range(count):
+            dst[da + i] = src[sa + i]
+    return 0
+def mem_equal(a, aa, b, ba, count):
+    for i in range(count):
+        if a[aa + i] != b[ba + i]:
+            return 0
+    return 1
+def mem_clone(m): return list(m)
+def mem_hex(m, a, count):
+    hx = '0123456789abcdef'
+    return ' '.join(hx[m[a + i] // 16] + hx[m[a + i] % 16] for i in range(count))
+
+def ring_create(cap):
+    r = [0] * (cap + 3); r[0] = cap; return r
+def ring_push(r, v):
+    cap = r[0]; slot = _o_tmod(r[1] + r[2], cap)
+    if r[2] < cap: r[2] += 1
+    else: r[1] = _o_tmod(r[1] + 1, cap)
+    r[slot + 3] = v
+    return 0
+def ring_len(r): return r[2]
+def ring_get(r, i): return r[_o_tmod(r[1] + i, r[0]) + 3]
+def ring_pop_oldest(r):
+    v = r[r[1] + 3]; r[1] = _o_tmod(r[1] + 1, r[0]); r[2] -= 1; return v
+
+_OCE_OP_NAMES = ['NOP_FREE', 'PROP_EQ', 'PROP_GT', 'PROP_LT', 'BIT_AND', 'LOGIC_XOR', 'TEMPORAL_SEQ', 'MUTATE_ADD', 'MUTATE_SET', 'MUTATE_MUL_SHIFT', 'CAUSAL_IMPLIES', 'EXCEPTION_UNLESS', 'SANDBOX_FORK', 'DIFF_INTERRUPT', 'SPAWN_LATENT', 'EXT_QUERY_PTR']
+def oce_op_name(op): return '?' if op < 0 or op > 15 else _OCE_OP_NAMES[op]
+def oce_create():
+    m = mem_arena(65536)
+    mem_put_u16(m, 0, 3297); mem_put_u16(m, 2, 0); mem_put_u16(m, 4, 1); mem_put_u16(m, 10, 0)
+    mem_put_u8(m, 12, 8); mem_put_u8(m, 14, 8)
+    return m
+def oce_node_count(m): return mem_get_u16(m, 2)
+def oce_entity_count(m): return mem_get_u16(m, 4)
+def oce_tick(m): return mem_get_u16(m, 10)
+def oce_contradictions(m): return mem_get_u16(m, 18)
+def oce_repairs(m): return mem_get_u16(m, 20)
+def oce_osg_base(): return _OCE_OSG
+def oce_slot_base(slot): return _OCE_SANDBOX + slot * 1024
+def oce_prop_addr(base, e, p): return base + e * 32 + p * 2
+def oce_get(m, e, p): return mem_get_i16(m, oce_prop_addr(_OCE_OSG, e, p))
+def oce_set(m, e, p, v): return mem_put_i16(m, oce_prop_addr(_OCE_OSG, e, p), v)
+def oce_entity(m):
+    n = mem_get_u16(m, 4)
+    if n >= 32: return -1
+    mem_put_u16(m, 4, n + 1); return n
+def oce_medium(m, p, v): return oce_set(m, 0, p, v)
+def oce_node_addr(i): return 16384 + i * 12
+def oce_n_op(m, i): return m[16384 + i * 12 + 2]
+def oce_n_conf(m, i): return m[16384 + i * 12 + 3]
+def oce_n_a(m, i): return mem_get_u16(m, 16384 + i * 12 + 4)
+def oce_n_b(m, i): return mem_get_u16(m, 16384 + i * 12 + 6)
+def oce_n_out(m, i): return mem_get_u16(m, 16384 + i * 12 + 8)
+def oce_n_delta(m, i): return mem_get_i16(m, 16384 + i * 12 + 10)
+def oce_set_conf(m, i, c):
+    v = max(0, min(255, c)); m[16384 + i * 12 + 3] = v; return v
+def oce_alloc(m, op, conf, a, b, out, delta):
+    n = mem_get_u16(m, 2); found = -1
+    for i in range(n):
+        if m[16384 + i * 12 + 2] == 0:
+            found = i; break
+    if found < 0:
+        if n >= 2730: return -1
+        found = n; mem_put_u16(m, 2, n + 1)
+    at = 16384 + found * 12
+    mem_put_u16(m, at, at); m[at + 2] = op; m[at + 3] = conf
+    mem_put_u16(m, at + 4, a); mem_put_u16(m, at + 6, b); mem_put_u16(m, at + 8, out); mem_put_i16(m, at + 10, delta)
+    return found
+def oce_free(m, i):
+    mem_fill_list(m, 16384 + i * 12, 12, 0); return 0
+def oce_live_nodes(m):
+    return sum(1 for i in range(mem_get_u16(m, 2)) if m[16384 + i * 12 + 2] != 0)
+def oce_mdl_bits(m): return oce_live_nodes(m) * 96
+def oce_add_axiom(m, guard, target, a, b, delta, specialized, conf):
+    g = _OCE_NONE
+    if len(guard) > 0:
+        g = oce_alloc(m, guard[0], 255, guard[1], guard[2], _OCE_NONE, guard[3])
+    mu = oce_alloc(m, 7, 255, a, b, target, delta)
+    return oce_alloc(m, 10, conf, g, specialized, mu, target)
+def oce_add_exception(m, parent, guard, special):
+    g = oce_alloc(m, guard[0], 255, guard[1], guard[2], _OCE_NONE, guard[3])
+    return oce_alloc(m, 11, 255, parent, g, special, 0)
+def _o_rhs(m, base, b): return 0 if b == _OCE_NONE else mem_get_i16(m, base + b * 2)
+def oce_guard_holds(m, base, e, g):
+    cur = g
+    while cur != _OCE_NONE:
+        op = oce_n_op(m, cur)
+        lhs = mem_get_i16(m, base + e * 32 + oce_n_a(m, cur) * 2)
+        rhs = _o_rhs(m, base, oce_n_b(m, cur)) + oce_n_delta(m, cur)
+        if op == 1 and lhs != rhs: return 0
+        if op == 2 and not (lhs > rhs): return 0
+        if op == 3 and not (lhs < rhs): return 0
+        if op == 4 and bits_and(wrap_u16(lhs), wrap_u16(rhs)) == 0: return 0
+        if op == 5 and lhs == rhs: return 0
+        cur = oce_n_out(m, cur)
+    return 1
+def _o_contribution(m, base, e, h):
+    mu = oce_n_out(m, h); row = base + e * 32; tgt = oce_n_out(m, mu)
+    v = mem_get_i16(m, row + oce_n_a(m, mu) * 2) + oce_n_delta(m, mu)
+    if oce_n_b(m, mu) != _OCE_NONE:
+        v += mem_get_i16(m, row + oce_n_b(m, mu) * 2)
+    return v - mem_get_i16(m, row + tgt * 2)
+def _o_resolve(m, base, e, h):
+    for i in range(mem_get_u16(m, 2)):
+        if oce_n_op(m, i) == 11 and oce_n_a(m, i) == h and oce_guard_holds(m, base, e, oce_n_b(m, i)):
+            return oce_n_out(m, i)
+    return h
+def oce_step(m, src, dst, record):
+    ents = mem_get_u16(m, 4)
+    mem_copy_list(m, dst, m, src, ents * 32)
+    if record:
+        mem_fill_list(m, _OCE_FIRED, 1024, 0)
+    n = mem_get_u16(m, 2)
+    for e in range(1, ents):
+        for h in range(n):
+            if oce_n_op(m, h) == 10 and oce_n_b(m, h) == 0 and oce_guard_holds(m, src, e, oce_n_a(m, h)):
+                use = _o_resolve(m, src, e, h)
+                tgt = oce_n_delta(m, use)
+                at = dst + e * 32 + tgt * 2
+                mem_put_i16(m, at, mem_get_i16(m, at) + _o_contribution(m, src, e, use))
+                if record:
+                    mem_put_u16(m, _OCE_FIRED + e * 32 + tgt * 2, use + 1)
+    return dst
+def oce_predict(m): return oce_step(m, _OCE_OSG, _OCE_SANDBOX, 1)
+def oce_predicted(m, e, p): return mem_get_i16(m, oce_prop_addr(_OCE_SANDBOX, e, p))
+def _o_log(m, kind, p, h, e, residual, src):
+    head = mem_get_u16(m, 6); at = _OCE_LOG + head * 64
+    m[at] = kind; m[at + 1] = p
+    mem_put_u16(m, at + 2, h); mem_put_u16(m, at + 4, e); mem_put_i16(m, at + 6, residual)
+    mem_copy_list(m, at + 8, m, src + e * 32, 32)
+    mem_put_u16(m, 6, (head + 1) % 32)
+    if mem_get_u16(m, 8) < 32:
+        mem_put_u16(m, 8, mem_get_u16(m, 8) + 1)
+    return at
+def oce_log_count(m): return mem_get_u16(m, 8)
+def _o_find_guard(m, pos, neg, medium):
+    for s in range(16):
+        mv = mem_get_i16(m, medium + s * 2)
+        for op in (3, 2):
+            ok = True
+            for a in pos:
+                v = mem_get_i16(m, a + s * 2)
+                if (op == 3 and not (v < mv)) or (op == 2 and not (v > mv)):
+                    ok = False; break
+            if ok:
+                for a in neg:
+                    v = mem_get_i16(m, a + s * 2)
+                    if (op == 3 and v < mv) or (op == 2 and v > mv):
+                        ok = False; break
+            if ok and mv != 0:
+                return [op, s, s, 0]
+    for s in range(16):
+        want = mem_get_i16(m, pos[0] + s * 2)
+        ok = all(mem_get_i16(m, a + s * 2) == want for a in pos) and all(mem_get_i16(m, a + s * 2) != want for a in neg)
+        if ok:
+            return [1, s, _OCE_NONE, want]
+    return []
+def _o_spawn_latent(m, pos_e):
+    slot = m[12]
+    if slot > 15: return []
+    m[12] = slot + 1
+    oce_alloc(m, 14, 255, slot, _OCE_NONE, _OCE_NONE, 0)
+    for e in pos_e:
+        oce_set(m, e, slot, 1)
+    return [1, slot, _OCE_NONE, 1]
+def _o_candidates(m, row, p, d):
+    out = [[p, q, 0] for q in range(16) if q != p and d != 0 and mem_get_i16(m, row + q * 2) == d]
+    out.append([p, _OCE_NONE, d])
+    return out
+def _o_cand_value(m, row, c):
+    v = mem_get_i16(m, row + c[0] * 2) + c[2]
+    if c[1] != _OCE_NONE:
+        v += mem_get_i16(m, row + c[1] * 2)
+    return v - mem_get_i16(m, row + c[0] * 2)
+def _o_log_successes(m, h, neg):
+    out = list(neg)
+    for k in range(mem_get_u16(m, 8)):
+        at = _OCE_LOG + k * 64
+        if m[at] == 1 and mem_get_u16(m, at + 2) == h:
+            out.append(at + 8)
+    return out
+def _o_repair_fired(m, obs, e, p, h, residual):
+    src = _OCE_OSG; ents = mem_get_u16(m, 4)
+    change = obs[e][p] - oce_get(m, e, p)
+    _o_log(m, 2, p, h, e, residual, src)
+    if oce_n_b(m, h) == 1:
+        oce_set_conf(m, h, oce_n_conf(m, h) - 4); return 0
+    pos = [src + e * 32]; pos_e = [e]; neg = []
+    for f in range(1, ents):
+        if f != e and mem_get_u16(m, _OCE_FIRED + f * 32 + p * 2) == h + 1:
+            right = obs[f][p] == oce_predicted(m, f, p)
+            if right:
+                neg.append(src + f * 32)
+            if not right and obs[f][p] - oce_get(m, f, p) == change:
+                pos.append(src + f * 32); pos_e.append(f)
+    neg = _o_log_successes(m, h, neg)
+    guard = _o_find_guard(m, pos, neg, src)
+    if len(guard) == 0:
+        guard = _o_spawn_latent(m, pos_e)
+    if len(guard) == 0:
+        oce_set_conf(m, h, oce_n_conf(m, h) - 4); return 0
+    c = _o_candidates(m, src + e * 32, p, change)[0]
+    sp = oce_add_axiom(m, [], p, c[0], c[1], c[2], 1, 8)
+    oce_add_exception(m, h, guard, sp)
+    mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
+    return 1
+def _o_split(m, obs, p, c, want_pos):
+    out = []
+    for f in range(1, mem_get_u16(m, 4)):
+        need = obs[f][p] - oce_predicted(m, f, p)
+        if (_o_cand_value(m, _OCE_OSG + f * 32, c) == need) == want_pos:
+            out.append(_OCE_OSG + f * 32)
+    return out
+def _o_repair_new(m, obs, e, p, residual):
+    src = _OCE_OSG; ents = mem_get_u16(m, 4)
+    _o_log(m, 2, p, _OCE_NONE, e, residual, src)
+    cands = _o_candidates(m, src + e * 32, p, residual)
+    found = False; best_guard = []; best = cands[-1]
+    for c in cands:
+        pos = _o_split(m, obs, p, c, True); neg = _o_split(m, obs, p, c, False)
+        if len(neg) == 0:
+            found, best_guard, best = True, [], c; break
+        g = _o_find_guard(m, pos, neg, src)
+        if len(g) > 0:
+            found, best_guard, best = True, g, c; break
+    if not found:
+        pos_e = [e]
+        for f in range(1, ents):
+            need = obs[f][p] - oce_predicted(m, f, p)
+            if f != e and need != 0 and _o_cand_value(m, src + f * 32, best) == need:
+                pos_e.append(f)
+        best_guard = _o_spawn_latent(m, pos_e)
+        found = len(best_guard) > 0
+    if not found:
+        return 0
+    oce_add_axiom(m, best_guard, p, best[0], best[1], best[2], 0, 8)
+    mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
+    return 1
+def oce_repair(m, obs, e, p):
+    residual = obs[e][p] - oce_predicted(m, e, p)
+    fired = mem_get_u16(m, _OCE_FIRED + e * 32 + p * 2)
+    mem_put_u16(m, 18, mem_get_u16(m, 18) + 1)
+    if fired == 0:
+        return _o_repair_new(m, obs, e, p, residual)
+    return _o_repair_fired(m, obs, e, p, fired - 1, residual)
+def oce_prune(m):
+    n = mem_get_u16(m, 2); freed = 0
+    for h in range(n):
+        if oce_n_op(m, h) == 10 and oce_n_conf(m, h) == 0:
+            g = oce_n_a(m, h)
+            while g != _OCE_NONE:
+                nxt = oce_n_out(m, g); oce_free(m, g); freed += 1; g = nxt
+            oce_free(m, oce_n_out(m, h)); oce_free(m, h); freed += 2
+            for i in range(n):
+                if oce_n_op(m, i) == 11 and (oce_n_a(m, i) == h or oce_n_out(m, i) == h):
+                    oce_free(m, oce_n_b(m, i)); oce_free(m, i); freed += 2
+    return freed
+def oce_observe(m, obs):
+    obs = [[_o_int(v) for v in row] for row in obs]
+    ents = mem_get_u16(m, 4); vis = m[14]; errors = 0
+    if mem_get_u16(m, 10) > 0:
+        rounds = 0; again = True
+        while again and rounds < 12:
+            again = False; oce_predict(m)
+            for e in range(1, ents):
+                for p in range(vis):
+                    if obs[e][p] != oce_predicted(m, e, p):
+                        errors += 1; oce_repair(m, obs, e, p); again = True; break
+                if again:
+                    break
+            rounds += 1
+        for e in range(1, ents):
+            for p in range(vis):
+                fired = mem_get_u16(m, _OCE_FIRED + e * 32 + p * 2)
+                if fired != 0 and obs[e][p] == oce_predicted(m, e, p):
+                    oce_set_conf(m, fired - 1, oce_n_conf(m, fired - 1) + 1)
+                    if mem_get_u16(m, 10) % 4 == 0:
+                        _o_log(m, 1, p, fired - 1, e, 0, _OCE_OSG)
+        oce_prune(m)
+    for e in range(1, ents):
+        for p in range(vis):
+            oce_set(m, e, p, obs[e][p])
+    mem_put_u16(m, 10, mem_get_u16(m, 10) + 1)
+    mem_put_u16(m, 16, errors)
+    oce_predict(m)
+    return errors
+def oce_intervene(m, e, p, v):
+    oce_set(m, e, p, v); oce_predict(m); return v
+def oce_imagine(m, e, p, v, ticks):
+    ents = mem_get_u16(m, 4); a = oce_slot_base(1); b = oce_slot_base(2)
+    mem_copy_list(m, a, m, _OCE_OSG, ents * 32)
+    mem_put_i16(m, oce_prop_addr(a, e, p), v)
+    for _ in range(ticks):
+        oce_step(m, a, b, 0); mem_copy_list(m, a, m, b, ents * 32)
+    return a
+def oce_imagined(m, e, p): return mem_get_i16(m, oce_prop_addr(_OCE_SANDBOX + 1024, e, p))
+def oce_ext_create(): return {}
+def oce_ext_store(ext, sector, offset, v):
+    ext[f'{sector}:{offset}'] = v; return v
+def oce_ext_query(ext, sector, offset, fallback):
+    return ext.get(f'{sector}:{offset}', fallback)
+def oce_ext_load(m, ext, sector, offset, e, p):
+    v = _o_int(oce_ext_query(ext, sector, offset, 0))
+    oce_alloc(m, 15, 1, sector, offset, e * 16 + p, 0)
+    oce_set(m, e, p, v)
+    return v
+def _o_pname(names, p):
+    if p == _OCE_NONE: return '0'
+    if p < len(names): return str(names[p])
+    return f'latent_{p - 7}'
+def _o_guard_text(m, names, g):
+    if g == _OCE_NONE: return 'always'
+    parts = []; cur = g
+    while cur != _OCE_NONE:
+        op = oce_n_op(m, cur)
+        sym = ' > ' if op == 2 else ' < ' if op == 3 else ' == '
+        rhs = str(oce_n_delta(m, cur))
+        if oce_n_b(m, cur) != _OCE_NONE:
+            rhs = 'medium.' + _o_pname(names, oce_n_b(m, cur))
+        parts.append(_o_pname(names, oce_n_a(m, cur)) + sym + rhs)
+        cur = oce_n_out(m, cur)
+    return ' and '.join(parts)
+def _o_mut_text(m, names, h):
+    mu = oce_n_out(m, h); t = _o_pname(names, oce_n_out(m, mu))
+    if oce_n_b(m, mu) != _OCE_NONE:
+        return t + ' += ' + _o_pname(names, oce_n_b(m, mu))
+    return t + ' += ' + str(oce_n_delta(m, mu))
+def oce_describe(m, names):
+    out = ''; n = mem_get_u16(m, 2)
+    for h in range(n):
+        if oce_n_op(m, h) == 10 and oce_n_b(m, h) == 0:
+            out += f'law {h} [confidence {oce_n_conf(m, h)}]: if {_o_guard_text(m, names, oce_n_a(m, h))} then {_o_mut_text(m, names, h)}\n'
+            for i in range(n):
+                if oce_n_op(m, i) == 11 and oce_n_a(m, i) == h:
+                    out += f'  unless {_o_guard_text(m, names, oce_n_b(m, i))} then {_o_mut_text(m, names, oce_n_out(m, i))}\n'
+    return out
+def oce_motifs(text, threshold):
+    seq = list(str(text).encode('utf-8')); rules = []; nxt = 256
+    while True:
+        counts = {}; best_n = 0; ba = bb = 0
+        for i in range(len(seq) - 1):
+            k = (seq[i], seq[i + 1]); c = counts.get(k, 0) + 1; counts[k] = c
+            if c > best_n:
+                best_n, ba, bb = c, seq[i], seq[i + 1]
+        if best_n < threshold:
+            break
+        out = []; i = 0
+        while i < len(seq):
+            if i < len(seq) - 1 and seq[i] == ba and seq[i + 1] == bb:
+                out.append(nxt); i += 2
+            else:
+                out.append(seq[i]); i += 1
+        rules += [nxt, ba, bb]; seq = out; nxt += 1
+    return [seq, rules]
+def oce_motif_expand(rules, sym):
+    if sym < 256: return chr(sym)
+    for i in range(0, len(rules), 3):
+        if rules[i] == sym:
+            return oce_motif_expand(rules, rules[i + 1]) + oce_motif_expand(rules, rules[i + 2])
+    return ''
+def oce_sequence_rule(xs):
+    n = len(xs)
+    if n < 2: return ['none']
+    if all(x == xs[0] for x in xs): return ['const', xs[0]]
+    d = xs[1] - xs[0]
+    if all(xs[i] - xs[i - 1] == d for i in range(2, n)): return ['add', d]
+    if xs[0] != 0:
+        r = _o_tdiv(xs[1], xs[0])
+        if all(xs[i] == xs[i - 1] * r for i in range(1, n)): return ['mul', r]
+    if n >= 3 and all(xs[i] == xs[i - 1] + xs[i - 2] for i in range(2, n)): return ['fib']
+    return ['none']
+def oce_sequence_next(xs, rule):
+    n = len(xs); tag = rule[0] if rule else None
+    if tag == 'const': return _o_int(rule[1])
+    if tag == 'add': return xs[n - 1] + _o_int(rule[1])
+    if tag == 'mul': return xs[n - 1] * _o_int(rule[1])
+    if tag == 'fib': return xs[n - 1] + xs[n - 2]
+    return 0
+def oce_ca_rule(rows):
+    table = [-1] * 8
+    for r in range(len(rows) - 1):
+        a, b = rows[r], rows[r + 1]; w = len(a)
+        for i in range(w):
+            k = a[(i + w - 1) % w] * 4 + a[i] * 2 + a[(i + 1) % w]
+            if table[k] >= 0 and table[k] != b[i]: return -1
+            table[k] = b[i]
+    rule = 0
+    for k in range(7, -1, -1):
+        rule = rule * 2 + max(0, table[k])
+    return rule
+def oce_ca_step(row, rule):
+    w = len(row)
+    return [bits_test(rule, row[(i + w - 1) % w] * 4 + row[i] * 2 + row[(i + 1) % w]) for i in range(w)]
+
+_OCE_TABLE = [
+    ('bits_shl', bits_shl, 2), ('bits_shr', bits_shr, 2), ('bits_test', bits_test, 2), ('bits_popcount', bits_popcount, 1),
+    ('bits_to_hex', bits_to_hex, 1), ('bits_from_hex', bits_from_hex, 1), ('bits_and', bits_and, 2), ('bits_or', bits_or, 2),
+    ('bits_xor', bits_xor, 2), ('bits_not_n', bits_not_n, 2), ('floor_div', floor_div, 2), ('floor_mod', floor_mod, 2),
+    ('wrap_u8', wrap_u8, 1), ('wrap_u16', wrap_u16, 1), ('wrap_i16', wrap_i16, 1),
+    ('mem_arena', mem_arena, 1), ('mem_put_u8', mem_put_u8, 3), ('mem_get_u8', mem_get_u8, 2), ('mem_put_u16', mem_put_u16, 3),
+    ('mem_get_u16', mem_get_u16, 2), ('mem_put_i16', mem_put_i16, 3), ('mem_get_i16', mem_get_i16, 2), ('mem_equal', mem_equal, 5),
+    ('mem_clone', mem_clone, 1), ('mem_hex', mem_hex, 3),
+    ('ring_create', ring_create, 1), ('ring_push', ring_push, 2), ('ring_len', ring_len, 1), ('ring_get', ring_get, 2), ('ring_pop_oldest', ring_pop_oldest, 1),
+    ('oce_op_name', oce_op_name, 1), ('oce_create', oce_create, 0), ('oce_node_count', oce_node_count, 1), ('oce_entity_count', oce_entity_count, 1),
+    ('oce_tick', oce_tick, 1), ('oce_contradictions', oce_contradictions, 1), ('oce_repairs', oce_repairs, 1), ('oce_osg_base', oce_osg_base, 0),
+    ('oce_slot_base', oce_slot_base, 1), ('oce_prop_addr', oce_prop_addr, 3), ('oce_get', oce_get, 3), ('oce_set', oce_set, 4),
+    ('oce_entity', oce_entity, 1), ('oce_medium', oce_medium, 3), ('oce_node_addr', oce_node_addr, 1),
+    ('oce_n_op', oce_n_op, 2), ('oce_n_conf', oce_n_conf, 2), ('oce_n_a', oce_n_a, 2), ('oce_n_b', oce_n_b, 2), ('oce_n_out', oce_n_out, 2), ('oce_n_delta', oce_n_delta, 2),
+    ('oce_set_conf', oce_set_conf, 3), ('oce_alloc', oce_alloc, 7), ('oce_free', oce_free, 2), ('oce_live_nodes', oce_live_nodes, 1),
+    ('oce_mdl_bits', oce_mdl_bits, 1), ('oce_add_axiom', oce_add_axiom, 8), ('oce_add_exception', oce_add_exception, 4),
+    ('oce_guard_holds', oce_guard_holds, 4), ('oce_step', oce_step, 4), ('oce_predict', oce_predict, 1), ('oce_predicted', oce_predicted, 3),
+    ('oce_log_count', oce_log_count, 1), ('oce_repair', oce_repair, 4), ('oce_prune', oce_prune, 1), ('oce_observe', oce_observe, 2),
+    ('oce_intervene', oce_intervene, 4), ('oce_imagine', oce_imagine, 5), ('oce_imagined', oce_imagined, 3),
+    ('oce_ext_create', oce_ext_create, 0), ('oce_ext_store', oce_ext_store, 4), ('oce_ext_query', oce_ext_query, 4), ('oce_ext_load', oce_ext_load, 6),
+    ('oce_describe', oce_describe, 2), ('oce_motifs', oce_motifs, 2), ('oce_motif_expand', oce_motif_expand, 2),
+    ('oce_sequence_rule', oce_sequence_rule, 1), ('oce_sequence_next', oce_sequence_next, 2), ('oce_ca_rule', oce_ca_rule, 1), ('oce_ca_step', oce_ca_step, 2),
+]
+OCE_BUILTIN_NAMES = [n for n, _, _ in _OCE_TABLE] + ['mem_fill', 'mem_copy']
+
+def _o_norm(v):
+    if isinstance(v, bool):
+        return 1 if v else 0
+    if isinstance(v, float) and v.is_integer():
+        return int(v)
+    if isinstance(v, float):
+        return int(v)
+    return v
+
+def _register_oce(builtins):
+    def wrap(name, impl):
+        def call(args, line):
+            try:
+                return impl(*[_o_norm(a) for a in args])
+            except SdevError:
+                raise
+            except Exception as e:
+                raise SdevError(f'{name}(): {e}', line)
+        return call
+    for name, impl, arity in _OCE_TABLE:
+        builtins[name] = SdevBuiltin(name, wrap(name, impl), arity, arity)
+    builtins['mem_fill'] = SdevBuiltin('mem_fill', wrap('mem_fill', mem_fill_list), 4, 4)
+    builtins['mem_copy'] = SdevBuiltin('mem_copy', wrap('mem_copy', mem_copy_list), 5, 5)
+
+
 class Interpreter:
     def __init__(self, output_callback: Callable[[str], None] = print):
         self.output = output_callback
@@ -4042,6 +4612,7 @@ class Interpreter:
             self.output('[alert] ' + _s(args[0] if args else ''))
             return None
         builtins['alert'] = SdevBuiltin('alert', _alert, 1, 1)
+        _register_oce(builtins)
 
         return builtins
     
