@@ -23,6 +23,7 @@ const SOURCES: DocSource[] = [
 
   { id: 'ai-syntax',   title: 'sdev:ai — AI Syntax Reference', url: '/SDEV_AI_SYNTAX_DOCUMENTATION.md', icon: ScrollText },
   { id: 'oce',         title: 'OCE — Causal Engine Library', url: '/SDEV_OCE_DOCUMENTATION.md', icon: ScrollText },
+  { id: 'new-features', title: 'New Features — November 2026', url: '/SDEV_NEW_FEATURES.md', icon: ScrollText },
   { id: 'v2',          title: 'sdev v2 "Prism" Guide',       url: '/SDEV_V2_DOCUMENTATION.md',   icon: ScrollText },
   { id: 'multi-paradigm', title: 'Multi-Language Parity (SQL, Kotlin, Rust, C++)', url: '/SDEV_MULTI_PARADIGM_DOCUMENTATION.md', icon: ScrollText },
   { id: 'leaflet',     title: 'Leaflet & GIS Reference',     url: '/SDEV_LEAFLET_DOCUMENTATION.md', icon: ScrollText },
