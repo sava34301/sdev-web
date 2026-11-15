@@ -4,6 +4,13 @@ Goal: every piece of the project that *can* be written in SDEV is written in
 SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
+## Current task — OCE causal engine in SDEV
+- [x] bits / mem / oce v2 libraries, 35-check test, gravity example (VM + native identical)
+- [x] Compiler fix: `and` / `or` left the stack unbalanced (self-compiles byte-identical)
+- [ ] v2 compiler: list `+`, arity errors, clear message for reserved names (silent today)
+- [ ] Native backend: `concat` builtin (blocks the testkit-based test natively)
+- [ ] Make the libraries loadable from v1 / sdev:ai files
+
 ## Current task — Arduino remake (completed in Antigravity)
 - [x] Every Arduino board in the catalogue (Uno R3/R4 Minima/R4 WiFi/Q, Nano family, Mega, Leonardo, Micro, MKR, Zero, Due, Giga, Portenta, ESP32/ESP8266, Pico)
 - [x] Every Arduino core command available in the `board` block (SDEV words + raw C++), `::`/`;;` and `{}` blocks
