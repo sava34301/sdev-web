@@ -993,7 +993,9 @@ function emitStmt(s, em, locals, ctx) {
 
 function collectSets(body, locals) {
   for (const s of body) {
-    if ((s.k === 'set' || s.k === 'setIndex') && !locals.has(s.name)) locals.set(s.name, locals.size);
+    // Only `set name to` makes a local; `set g[i] to` writes into an existing
+    // (possibly global) list, as in the VM.
+    if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
     if (s.k === 'while') collectSets(s.body, locals);
     if (s.k === 'attempt') {
