@@ -148,4 +148,4 @@ while k < 6
 end
 set _ to check("Rule 110 rediscovered from cells", oce_ca_rule(rows) is 110)
 
-set _ to finish()
+set _ to tk_report("oce")
