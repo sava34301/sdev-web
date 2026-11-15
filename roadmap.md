@@ -7,9 +7,11 @@ code that browsers, Node and Electron require in order to start SDEV at all.
 ## Current task — OCE causal engine in SDEV
 - [x] bits / mem / oce v2 libraries, 35-check test, gravity example (VM + native identical)
 - [x] Compiler fix: `and` / `or` left the stack unbalanced (self-compiles byte-identical)
-- [ ] v2 compiler: list `+`, arity errors, clear message for reserved names (silent today)
-- [ ] Native backend: `concat` builtin (blocks the testkit-based test natively)
-- [ ] Make the libraries loadable from v1 / sdev:ai files
+- [x] v2 compiler: `xs + [a]` joins lists; unknown function / wrong argument count reported (CLI + website); `kind` usable as a name
+- [x] Native backend: `concat`, normalised and/or, text compare of list items, global list writes from functions
+- [x] Classic + `!#ai` files: bits/mem/oce built into the browser and Python runtimes (parity gate `scripts/test-oce-parity.ts`)
+- [x] Website loads `use "lang/stdlib/..."` files
+- [ ] Python version reading `!#ai` files (not started)
 
 ## Current task — Arduino remake (completed in Antigravity)
 - [x] Every Arduino board in the catalogue (Uno R3/R4 Minima/R4 WiFi/Q, Nano family, Mega, Leonardo, Micro, MKR, Zero, Due, Giga, Portenta, ESP32/ESP8266, Pico)

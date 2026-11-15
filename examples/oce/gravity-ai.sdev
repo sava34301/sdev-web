@@ -1,0 +1,34 @@
+!#ai
+v m = oce_create()
+v names = ["supported", "pos_z", "vel_z", "density", "pos_x", "vel_x", "mass", "near"]
+oce_medium(m, 3, 12)
+v table = oce_entity(m)
+v stone = oce_entity(m)
+v w = [[0, 0, 0, 12, 0, 0, 0, 0], [1, 0, 0, 50, 0, 0, 10, 0], [1, 100, 0, 50, 0, 0, 10, 0]]
+f tick(w) {
+  v i = 1
+  w i < measure(w) {
+    v o = w[i]
+    v vz = o[2]
+    ? o[0] == 0 {
+      o[2] = vz - 10
+    }
+    o[1] = o[1] + vz
+    i = i + 1
+  }
+}
+oce_observe(m, w)
+w[2][0] = 0
+oce_intervene(m, stone, 0, 0)
+v surprises = 0
+v t = 0
+w t < 12 {
+  tick(w)
+  surprises = surprises + oce_observe(m, w)
+  t = t + 1
+}
+p("surprises while learning: " + str(surprises))
+p(oce_describe(m, names))
+oce_imagine(m, table, 0, 0, 3)
+p("if the table lost support, after 3 ticks vel_z = " + str(oce_imagined(m, table, 2)))
+p("model size: " + str(floor_div(oce_mdl_bits(m), 8)) + " bytes")

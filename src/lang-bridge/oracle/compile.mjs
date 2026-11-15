@@ -256,13 +256,16 @@ export function desugarKinds(tokens) {
       while (k >= 0 && tokens[k].type === 'NL') k--;
       return !(k >= 0 && tokens[k].type === 'KW' && tokens[k].value === 'else');
     }
-    if (t.type === 'IDENT' && (t.value === 'attempt' || t.value === 'make' || t.value === 'kind')) return true;
+    if (t.type === 'IDENT' && (t.value === 'attempt' || t.value === 'make')) return true;
+    // `kind Name` opens a class block only when it starts a statement, so
+    // `kind` stays usable as an ordinary variable or parameter name.
+    if (t.type === 'IDENT' && t.value === 'kind') return (i === 0 || tokens[i - 1].type === 'NL') && !!tokens[i + 1] && tokens[i + 1].type === 'IDENT';
     return false;
   };
   let i = 0;
   while (i < tokens.length) {
     const t = tokens[i];
-    if (t.type === 'IDENT' && t.value === 'kind' && tokens[i + 1] && tokens[i + 1].type === 'IDENT') {
+    if (t.type === 'IDENT' && t.value === 'kind' && (i === 0 || tokens[i - 1].type === 'NL') && tokens[i + 1] && tokens[i + 1].type === 'IDENT') {
       const cname = tokens[i + 1].value;
       const methods = [];
       classes.set(cname, methods);
@@ -497,14 +500,14 @@ function parseProgram(tokens) {
         while (peek().type === 'OP' && peek().value === ',') { p++; args.push(expr()); }
       }
       eat('OP', ')');
-      a = { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args, line: a.line };
     }
     // `fn with a b` call form (space-separated single atoms)
     else if (a.k === 'ident' && peek().type === 'KW' && peek().value === 'with') {
       p++;
       const args = [];
       while (canStartAtom(peek())) args.push(atom());
-      a = { k: 'call', name: a.name, args };
+      a = { k: 'call', name: a.name, args, line: a.line };
     }
     // postfix indexing: x[i][j]...  and Milestone 5y member access x.f / x.m()
     while (true) {
@@ -788,6 +791,13 @@ function emitExpr(e, em, locals) {
       // Short-circuit and/or: both paths leave exactly one 0/1 value (mirrors lang/compiler/codegen.sdev).
       if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const b1 = em.here(); emitExpr(e.r, em, locals); em.emit(OP.NOT); em.emit(OP.NOT); em.emit(OP.JMP); const fe = em.placeholder16(); const b2 = em.here(); em.patchI16(fx, em.here() - b1); em.emit(OP.PUSH_I32); em.emitI32(0); em.patchI16(fe, em.here() - b2); return 'int'; }
       if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const b1 = em.here(); em.emit(OP.PUSH_I32); em.emitI32(1); em.emit(OP.JMP); const fe = em.placeholder16(); const b2 = em.here(); em.patchI16(fx, em.here() - b1); emitExpr(e.r, em, locals); em.emit(OP.NOT); em.emit(OP.NOT); em.patchI16(fe, em.here() - b2); return 'int'; }
+      // `xs + [a, b]` / `[a] + xs` joins lists via list_concat_two
+      // (lang/stdlib/v2/list.sdev); mirrors lang/compiler/codegen.sdev.
+      if (e.op === '+' && (e.l.k === 'list' || e.r.k === 'list')) {
+        if (!em.functions.has('list_concat_two')) throw new SdevError('joining lists with + needs use "lang/stdlib/v2/list.sdev"', e.line ?? 0);
+        emitExpr({ k: 'call', name: 'list_concat_two', args: [e.l, e.r] }, em, locals);
+        return 'int';
+      }
       const lk = emitExpr(e.l, em, locals);
       const rk = emitExpr(e.r, em, locals);
       // Promote `+` to STRCAT when either operand is a string literal.
@@ -934,7 +944,7 @@ function emitExpr(e, em, locals) {
     case 'call': {
       const bi = BUILTINS[e.name];
       if (bi) {
-        if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, 0);
+        if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, e.line ?? 0);
         let argKind = 'int';
         for (const a of e.args) argKind = emitExpr(a, em, locals);
         bi.emit(em);
@@ -943,8 +953,8 @@ function emitExpr(e, em, locals) {
         return bi.ret;
       }
       const info = em.functions.get(e.name);
-      if (!info) throw new SdevError(`unknown function ${e.name}`, 0);
-      if (e.args.length !== info.arity) throw new SdevError(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, 0);
+      if (!info) throw new SdevError(`unknown function ${e.name}`, e.line ?? 0);
+      if (e.args.length !== info.arity) throw new SdevError(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, e.line ?? 0);
       for (const a of e.args) emitExpr(a, em, locals);
       em.emit(OP.CALL);
       const site = em.here();

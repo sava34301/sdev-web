@@ -833,7 +833,19 @@ to is_kind_opener with j
     return 1
   end
   if str_eq(w, "kind")
-    return 1
+    # `kind Name` opens a class only at the start of a statement, so `kind`
+    # stays usable as an ordinary variable or parameter name.
+    if j > 0
+      if tk_kind[j - 1] is not 5
+        return 0
+      end
+    end
+    if j + 1 < tk_count
+      if tk_kind[j + 1] is 2
+        return 1
+      end
+    end
+    return 0
   end
   if str_eq(w, "if")
     # `else if` chains share the outer `end`.
@@ -853,6 +865,11 @@ to desugar_kinds
       if i + 1 < tk_count
         if tk_kind[i + 1] is 2
           set matched to 1
+        end
+      end
+      if i > 0
+        if tk_kind[i - 1] is not 5
+          set matched to 0
         end
       end
     end
@@ -1605,14 +1622,57 @@ end
 
 
 
+# 1 when tokens s .. e-1 are exactly one list literal `[ ... ]`.
+to is_list_lit_span with s e
+  if is_op_c(s, 91) is 0
+    return 0
+  end
+  set depth to 0
+  set k to s
+  while k < e
+    if is_op_c(k, 91)
+      set depth to depth + 1
+    end
+    if is_op_c(k, 93)
+      set depth to depth - 1
+      if depth is 0
+        if k is e - 1
+          return 1
+        end
+        return 0
+      end
+    end
+    set k to k + 1
+  end
+  return 0
+end
+
 to parse_add with pos
+  set lstart to pos
   set pos to parse_mul(pos)
+  set lend to pos
+  set first to 1
   set going to 1
   while going
     if is_op_c(pos, 43)
       set lk to expr_type[0]
+      set rstart to pos + 1
       set pos to parse_mul(pos + 1)
       set rk to expr_type[0]
+      # `xs + [a, b]` / `[a] + xs` joins lists via list_concat_two
+      # (lang/stdlib/v2/list.sdev), since the VM's ADD is integer-only.
+      set lit to is_list_lit_span(rstart, pos)
+      if first is 1
+        if is_list_lit_span(lstart, lend)
+          set lit to 1
+        end
+      end
+      set first to 0
+      if lit is 1
+        emit_call("list_concat_two", 2)
+        set lk to 7
+        set rk to 7
+      end
       set promote to 0
       if lk is 1
         set promote to 1
@@ -1620,19 +1680,24 @@ to parse_add with pos
       if rk is 1
         set promote to 1
       end
-      if promote is 1
-        emit_byte(145)
-        set expr_type[0] to 1
+      if lit is 1
+        set expr_type[0] to 0
       else
-        if both_float(lk, rk)
-          emit_byte(161)
-          set expr_type[0] to 2
+        if promote is 1
+          emit_byte(145)
+          set expr_type[0] to 1
         else
-          emit_byte(16)
-          set expr_type[0] to 0
+          if both_float(lk, rk)
+            emit_byte(161)
+            set expr_type[0] to 2
+          else
+            emit_byte(16)
+            set expr_type[0] to 0
+          end
         end
       end
     else
+      set first to 0
       if is_op_c(pos, 45)
         set lk to expr_type[0]
         set pos to parse_mul(pos + 1)
