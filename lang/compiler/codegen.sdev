@@ -1780,10 +1780,19 @@ to parse_and with pos
   set going to 1
   while going
     if is_ident_word(pos, "and")
+      # a and b  ->  a JZ L1 ; b NOT NOT ; JMP L2 ; L1: PUSH 0 ; L2:
+      # Both paths leave exactly one 0/1 value on the stack.
       emit_byte(65)
       set fx to placeholder16()
       set pos to parse_not(pos + 1)
+      emit_byte(48)
+      emit_byte(48)
+      emit_byte(64)
+      set fe to placeholder16()
       patch_i16(fx, bc[0])
+      emit_byte(1)
+      emit_i32(0)
+      patch_i16(fe, bc[0])
       set expr_type[0] to 0
     else
       set going to 0
@@ -1797,11 +1806,18 @@ to parse_or with pos
   set going to 1
   while going
     if is_ident_word(pos, "or")
-      emit_byte(48)
+      # a or b  ->  a JZ L1 ; PUSH 1 ; JMP L2 ; L1: b NOT NOT ; L2:
       emit_byte(65)
       set fx to placeholder16()
-      set pos to parse_and(pos + 1)
+      emit_byte(1)
+      emit_i32(1)
+      emit_byte(64)
+      set fe to placeholder16()
       patch_i16(fx, bc[0])
+      set pos to parse_and(pos + 1)
+      emit_byte(48)
+      emit_byte(48)
+      patch_i16(fe, bc[0])
       set expr_type[0] to 0
     else
       set going to 0
