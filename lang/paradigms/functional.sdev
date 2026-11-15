@@ -27,14 +27,14 @@ end
 
 to map_some with opt fn
   if is_some(opt)
-    return Some(fn(opt["val"]))
+    return Some(call fn(opt["val"]))
   end
   return None()
 end
 
 to flat_map_some with opt fn
   if is_some(opt)
-    return fn(opt["val"])
+    return call fn(opt["val"])
   end
   return None()
 end
@@ -66,14 +66,14 @@ end
 
 to map_ok with res fn
   if is_ok(res)
-    return Ok(fn(res["val"]))
+    return Ok(call fn(res["val"]))
   end
   return res
 end
 
 to flat_map_ok with res fn
   if is_ok(res)
-    return fn(res["val"])
+    return call fn(res["val"])
   end
   return res
 end

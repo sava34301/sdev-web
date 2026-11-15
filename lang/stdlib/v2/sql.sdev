@@ -28,7 +28,7 @@ to sql_where with rows predicate
   set r to 0
   while r < nr
     set row to rows[r]
-    if predicate(row)
+    if call predicate(row)
       set out to out + [row]
     end
     set r to r + 1
