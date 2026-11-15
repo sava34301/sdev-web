@@ -447,17 +447,6 @@ end
 # ---- Repair (Abductive Hypothesis Synthesizer) ----------------------------
 # obs: list of observed rows (visible values per entity). Returns 1 if a rule
 # was added.
-to oce_repair with m obs e p
-  set actual to obs[e][p]
-  set residual to actual - oce_predicted(m, e, p)
-  set fired to mem_get_u16(m, 4096 + e * 32 + p * 2)
-  set _ to mem_put_u16(m, 18, mem_get_u16(m, 18) + 1)
-  if fired is 0
-    return oce_repair_new(m, obs, e, p, residual)
-  end
-  return oce_repair_fired(m, obs, e, p, fired - 1, residual)
-end
-
 # Operator 1 (guard specialisation) and Operator 2 (latent) for a law that
 # fired and was wrong.
 to oce_repair_fired with m obs e p h residual
@@ -586,6 +575,17 @@ to oce_repair_new with m obs e p residual
   set _ to oce_add_axiom(m, best_guard, p, best[0], best[1], best[2], 0, 8)
   set _ to mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
   return 1
+end
+
+to oce_repair with m obs e p
+  set actual to obs[e][p]
+  set residual to actual - oce_predicted(m, e, p)
+  set fired to mem_get_u16(m, 4096 + e * 32 + p * 2)
+  set _ to mem_put_u16(m, 18, mem_get_u16(m, 18) + 1)
+  if fired is 0
+    return oce_repair_new(m, obs, e, p, residual)
+  end
+  return oce_repair_fired(m, obs, e, p, fired - 1, residual)
 end
 
 # ---- Garbage collection (synaptic pruning) ---------------------------------
