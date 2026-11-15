@@ -1,4 +1,7 @@
 # SDEV Standard Library: Ontological Causal Engine (OCE) — authored in SDEV.
+use "lang/stdlib/v2/list.sdev"
+use "lang/stdlib/v2/bits.sdev"
+use "lang/stdlib/v2/mem.sdev"
 #
 #   use "lang/stdlib/v2/list.sdev"
 #   use "lang/stdlib/v2/bits.sdev"
