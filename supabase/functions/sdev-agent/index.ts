@@ -57,7 +57,7 @@ Self-hosted (v2) libraries for systems and causal-AI work — load with use "lan
        oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),
        oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),
        oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).
-  In v2 files `kind` is a reserved word — never use it as a name.
+  In v2 files "kind" is a reserved word — never use it as a name.
 
 Canonical SDEV Patterns & Examples:
   # 1. Math and output:
