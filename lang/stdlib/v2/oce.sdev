@@ -428,11 +428,11 @@ to oce_candidates with m row p d
   set q to 0
   while q < 16
     if q is not p and d is not 0 and mem_get_i16(m, row + q * 2) is d
-      set out to out + [[p, q, 0]]
+      set out to list_append(out, [p, q, 0])
     end
     set q to q + 1
   end
-  set out to out + [[p, 65535, d]]
+  set out to list_append(out, [p, 65535, d])
   return out
 end
 
@@ -467,11 +467,11 @@ to oce_repair_fired with m obs e p h residual
       if f is not e and fired_f is h + 1
         set right to obs[f][p] is oce_predicted(m, f, p)
         if right
-          set neg to neg + [src + f * 32]
+          set neg to list_append(neg, src + f * 32)
         end
         if not right and obs[f][p] - oce_get(m, f, p) is change
-          set pos to pos + [src + f * 32]
-          set pos_e to pos_e + [f]
+          set pos to list_append(pos, src + f * 32)
+          set pos_e to list_append(pos_e, f)
         end
       end
       set f to f + 1
@@ -502,7 +502,7 @@ to oce_log_successes with m h neg
   while k < mem_get_u16(m, 8)
     set at to 63488 + k * 64
     if m[at] is 1 and mem_get_u16(m, at + 2) is h
-      set out to out + [at + 8]
+      set out to list_append(out, at + 8)
     end
     set k to k + 1
   end
@@ -519,7 +519,7 @@ to oce_split with m obs p c want_pos
     set need to obs[f][p] - oce_predicted(m, f, p)
     set hit to oce_cand_value(m, src + f * 32, c) is need
     if hit is want_pos
-      set out to out + [src + f * 32]
+      set out to list_append(out, src + f * 32)
     end
     set f to f + 1
   end
@@ -560,7 +560,7 @@ to oce_repair_new with m obs e p residual
     while f < ents
       set need to obs[f][p] - oce_predicted(m, f, p)
       if f is not e and need is not 0 and oce_cand_value(m, src + f * 32, best) is need
-        set pos_e to pos_e + [f]
+        set pos_e to list_append(pos_e, f)
       end
       set f to f + 1
     end
@@ -814,7 +814,7 @@ to oce_motifs with text threshold
   set seq to []
   set i to 0
   while i < length(text)
-    set seq to seq + [ord(text, i)]
+    set seq to list_append(seq, ord(text, i))
     set i to i + 1
   end
   set rules to []
@@ -847,14 +847,14 @@ to oce_motifs with text threshold
       set i to 0
       while i < length(seq)
         if i < length(seq) - 1 and seq[i] is ba and seq[i + 1] is bb
-          set out to out + [next]
+          set out to list_append(out, next)
           set i to i + 2
         else
-          set out to out + [seq[i]]
+          set out to list_append(out, seq[i])
           set i to i + 1
         end
       end
-      set rules to rules + [next, ba, bb]
+      set rules to list_append(rules, next, ba, bb)
       set seq to out
       set next to next + 1
     end
