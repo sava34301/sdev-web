@@ -38,12 +38,13 @@ set _ to check("freed slot is reused", oce_alloc(m, 1, 1, 0, 0, 0, 0) is 0)
 set m to oce_create()
 set names to ["supported", "pos_z", "vel_z", "density", "pos_x", "vel_x", "mass", "near_magnet"]
 set _ to oce_medium(m, 3, 12)
-set world to [[0, 0, 0, 12, 0, 0, 0, 0]]
-set ferro to [0]
+# Functions assign locals, so the simulated world lives in holder cells.
+set world_box to [[[0, 0, 0, 12, 0, 0, 0, 0]]]
+set ferro_box to [[0]]
 to spawn with sup pz dens fe
   set id to oce_entity(m)
-  set world to world + [[sup, pz, 0, dens, 0, 0, 10, 0]]
-  set ferro to ferro + [fe]
+  set world_box[0] to world_box[0] + [[sup, pz, 0, dens, 0, 0, 10, 0]]
+  set ferro_box[0] to ferro_box[0] + [fe]
   return id
 end
 set table to spawn(1, 0, 50, 0)
@@ -53,6 +54,8 @@ set cube_a to spawn(1, 0, 70, 1)
 set cube_b to spawn(1, 0, 70, 0)
 
 to physics
+  set world to world_box[0]
+  set ferro to ferro_box[0]
   set nw to [world[0]]
   set i to 1
   while i < length(world)
@@ -73,11 +76,11 @@ to physics
     set nw to nw + [x]
     set i to i + 1
   end
-  set world to nw
+  set world_box[0] to nw
   return 0
 end
 to act with e p v
-  set row to world[e]
+  set row to world_box[0][e]
   set row[p] to v
   set _ to oce_intervene(m, e, p, v)
   return v
@@ -87,13 +90,13 @@ to run_ticks with k
   set t to 0
   while t < k
     set _ to physics()
-    set errs to errs + oce_observe(m, world)
+    set errs to errs + oce_observe(m, world_box[0])
     set t to t + 1
   end
   return errs
 end
 
-set _ to oce_observe(m, world)
+set _ to oce_observe(m, world_box[0])
 set _ to check("quiet world: no surprises", run_ticks(5) is 0)
 set _ to act(stone, 0, 0)
 set early to run_ticks(3)
