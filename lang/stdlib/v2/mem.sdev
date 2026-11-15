@@ -1,0 +1,159 @@
+# SDEV Standard Library: Byte Memory, Packed Fields & Ring Buffers (v2)
+# — authored in SDEV.
+#
+#   use "lang/stdlib/v2/bits.sdev"
+#   use "lang/stdlib/v2/mem.sdev"
+#
+# A memory arena is a plain list of bytes (0..255). Multi-byte fields are
+# little-endian, like x86-64 and ARM. This is what lets SDEV programs lay out
+# C-style packed structs (for example the OCE's 12-byte node) byte for byte.
+
+to mem_arena with size
+  set m to mklist(size)
+  set i to 0
+  while i < size
+    set m[i] to 0
+    set i to i + 1
+  end
+  return m
+end
+
+to mem_put_u8 with m addr v
+  set m[addr] to wrap_u8(v)
+  return 0
+end
+
+to mem_get_u8 with m addr
+  return m[addr]
+end
+
+to mem_put_u16 with m addr v
+  set u to wrap_u16(v)
+  set m[addr] to u % 256
+  set m[addr + 1] to u / 256
+  return 0
+end
+
+to mem_get_u16 with m addr
+  return m[addr] + m[addr + 1] * 256
+end
+
+to mem_put_i16 with m addr v
+  return mem_put_u16(m, addr, wrap_i16(v))
+end
+
+to mem_get_i16 with m addr
+  set u to m[addr] + m[addr + 1] * 256
+  if u >= 32768
+    return u - 65536
+  end
+  return u
+end
+
+to mem_fill with m addr count v
+  set i to 0
+  while i < count
+    set m[addr + i] to wrap_u8(v)
+    set i to i + 1
+  end
+  return 0
+end
+
+# Copy `count` bytes inside one arena or between two (memmove-safe).
+to mem_copy with dst dst_addr src src_addr count
+  if dst_addr > src_addr
+    set i to count - 1
+    while i >= 0
+      set dst[dst_addr + i] to src[src_addr + i]
+      set i to i - 1
+    end
+  else
+    set i to 0
+    while i < count
+      set dst[dst_addr + i] to src[src_addr + i]
+      set i to i + 1
+    end
+  end
+  return 0
+end
+
+to mem_equal with a a_addr b b_addr count
+  set i to 0
+  while i < count
+    if a[a_addr + i] is not b[b_addr + i]
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+to mem_clone with m
+  set n to length(m)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to m[i]
+    set i to i + 1
+  end
+  return out
+end
+
+to mem_hex with m addr count
+  set out to ""
+  set hex to "0123456789abcdef"
+  set i to 0
+  while i < count
+    set b to m[addr + i]
+    set out to out + chr(ord(hex, b / 16)) + chr(ord(hex, b % 16))
+    if i < count - 1
+      set out to out + " "
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+# ---- Ring buffer of integers -----------------------------------------------
+# Layout: [capacity, head, count, item0, item1, ...]
+
+to ring_create with capacity
+  set r to mklist(capacity + 3)
+  set r[0] to capacity
+  set r[1] to 0
+  set r[2] to 0
+  set i to 0
+  while i < capacity
+    set r[i + 3] to 0
+    set i to i + 1
+  end
+  return r
+end
+
+to ring_push with r v
+  set cap to r[0]
+  set slot to (r[1] + r[2]) % cap
+  if r[2] < cap
+    set r[2] to r[2] + 1
+  else
+    set r[1] to (r[1] + 1) % cap
+  end
+  set r[slot + 3] to v
+  return 0
+end
+
+to ring_len with r
+  return r[2]
+end
+
+# 0 is the oldest item still held.
+to ring_get with r i
+  return r[((r[1] + i) % r[0]) + 3]
+end
+
+to ring_pop_oldest with r
+  set v to r[r[1] + 3]
+  set r[1] to (r[1] + 1) % r[0]
+  set r[2] to r[2] - 1
+  return v
+end
