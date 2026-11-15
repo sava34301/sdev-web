@@ -2381,12 +2381,14 @@ def oce_live_nodes(m):
     return sum(1 for i in range(mem_get_u16(m, 2)) if m[16384 + i * 12 + 2] != 0)
 def oce_mdl_bits(m): return oce_live_nodes(m) * 96
 def oce_add_axiom(m, guard, target, a, b, delta, specialized, conf):
+    guard = [_o_int(g) for g in guard]
     g = _OCE_NONE
     if len(guard) > 0:
         g = oce_alloc(m, guard[0], 255, guard[1], guard[2], _OCE_NONE, guard[3])
     mu = oce_alloc(m, 7, 255, a, b, target, delta)
     return oce_alloc(m, 10, conf, g, specialized, mu, target)
 def oce_add_exception(m, parent, guard, special):
+    guard = [_o_int(g) for g in guard]
     g = oce_alloc(m, guard[0], 255, guard[1], guard[2], _OCE_NONE, guard[3])
     return oce_alloc(m, 11, 255, parent, g, special, 0)
 def _o_rhs(m, base, b): return 0 if b == _OCE_NONE else mem_get_i16(m, base + b * 2)
@@ -2635,6 +2637,7 @@ def _o_mut_text(m, names, h):
         return t + ' += ' + _o_pname(names, oce_n_b(m, mu))
     return t + ' += ' + str(oce_n_delta(m, mu))
 def oce_describe(m, names):
+    names = list(names)
     out = ''; n = mem_get_u16(m, 2)
     for h in range(n):
         if oce_n_op(m, h) == 10 and oce_n_b(m, h) == 0:
@@ -2662,12 +2665,14 @@ def oce_motifs(text, threshold):
         rules += [nxt, ba, bb]; seq = out; nxt += 1
     return [seq, rules]
 def oce_motif_expand(rules, sym):
+    rules = [_o_int(r) for r in rules]; sym = _o_int(sym)
     if sym < 256: return chr(sym)
     for i in range(0, len(rules), 3):
         if rules[i] == sym:
             return oce_motif_expand(rules, rules[i + 1]) + oce_motif_expand(rules, rules[i + 2])
     return ''
 def oce_sequence_rule(xs):
+    xs = [_o_int(x) for x in xs]
     n = len(xs)
     if n < 2: return ['none']
     if all(x == xs[0] for x in xs): return ['const', xs[0]]
@@ -2679,6 +2684,7 @@ def oce_sequence_rule(xs):
     if n >= 3 and all(xs[i] == xs[i - 1] + xs[i - 2] for i in range(2, n)): return ['fib']
     return ['none']
 def oce_sequence_next(xs, rule):
+    xs = [_o_int(x) for x in xs]
     n = len(xs); tag = rule[0] if rule else None
     if tag == 'const': return _o_int(rule[1])
     if tag == 'add': return xs[n - 1] + _o_int(rule[1])
@@ -2686,6 +2692,7 @@ def oce_sequence_next(xs, rule):
     if tag == 'fib': return xs[n - 1] + xs[n - 2]
     return 0
 def oce_ca_rule(rows):
+    rows = [[_o_int(c) for c in row] for row in rows]
     table = [-1] * 8
     for r in range(len(rows) - 1):
         a, b = rows[r], rows[r + 1]; w = len(a)
@@ -2698,6 +2705,7 @@ def oce_ca_rule(rows):
         rule = rule * 2 + max(0, table[k])
     return rule
 def oce_ca_step(row, rule):
+    row = [_o_int(c) for c in row]
     w = len(row)
     return [bits_test(rule, row[(i + w - 1) % w] * 4 + row[i] * 2 + row[(i + 1) % w]) for i in range(w)]
 
