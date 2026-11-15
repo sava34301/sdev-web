@@ -1,6 +1,7 @@
 # OCE regression suite — authored in SDEV.
 #   node bin/sdevhost.mjs scripts/test-oce.sdev
 use "lang/stdlib/testkit.sdev"
+use "lang/stdlib/v2/list.sdev"
 use "lang/stdlib/v2/bits.sdev"
 use "lang/stdlib/v2/mem.sdev"
 use "lang/stdlib/v2/oce.sdev"
