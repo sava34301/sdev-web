@@ -448,112 +448,140 @@ end
 # obs: list of observed rows (visible values per entity). Returns 1 if a rule
 # was added.
 to oce_repair with m obs e p
-  set src to 49152
-  set ents to mem_get_u16(m, 4)
   set actual to obs[e][p]
-  set old to oce_get(m, e, p)
-  set predicted to oce_predicted(m, e, p)
-  set residual to actual - predicted
+  set residual to actual - oce_predicted(m, e, p)
   set fired to mem_get_u16(m, 4096 + e * 32 + p * 2)
   set _ to mem_put_u16(m, 18, mem_get_u16(m, 18) + 1)
-  if fired is not 0
-    set h to fired - 1
-    set _ to oce_log(m, 2, p, h, e, residual, src)
-    set parent to h
-    if oce_n_b(m, h) is 1
-      set _ to oce_set_conf(m, h, oce_n_conf(m, h) - 4)
-      return 0
-    end
-    # Operator 1: who obeyed this law? (log successes + correct peers now)
+  if fired is 0
+    return oce_repair_new(m, obs, e, p, residual)
+  end
+  return oce_repair_fired(m, obs, e, p, fired - 1, residual)
+end
+
+# Operator 1 (guard specialisation) and Operator 2 (latent) for a law that
+# fired and was wrong.
+to oce_repair_fired with m obs e p h residual
+  set src to 49152
+  set ents to mem_get_u16(m, 4)
+  set change to obs[e][p] - oce_get(m, e, p)
+  set _ to oce_log(m, 2, p, h, e, residual, src)
+  set result to 0
+  if oce_n_b(m, h) is 1
+    set _ to oce_set_conf(m, h, oce_n_conf(m, h) - 4)
+  else
     set pos to [src + e * 32]
     set pos_e to [e]
     set neg to []
     set f to 1
     while f < ents
-      if f is not e and mem_get_u16(m, 4096 + f * 32 + p * 2) is fired
-        if obs[f][p] is oce_predicted(m, f, p)
+      set fired_f to mem_get_u16(m, 4096 + f * 32 + p * 2)
+      if f is not e and fired_f is h + 1
+        set right to obs[f][p] is oce_predicted(m, f, p)
+        if right
           set neg to neg + [src + f * 32]
-        else
-          if obs[f][p] - oce_get(m, f, p) is actual - old
-            set pos to pos + [src + f * 32]
-            set pos_e to pos_e + [f]
-          end
+        end
+        if not right and obs[f][p] - oce_get(m, f, p) is change
+          set pos to pos + [src + f * 32]
+          set pos_e to pos_e + [f]
         end
       end
       set f to f + 1
     end
-    set k to 0
-    while k < mem_get_u16(m, 8)
-      set at to 63488 + k * 64
-      if m[at] is 1 and mem_get_u16(m, at + 2) is h
-        set neg to neg + [at + 8]
-      end
-      set k to k + 1
-    end
+    set neg to oce_log_successes(m, h, neg)
     set guard to oce_find_guard(m, pos, neg, src)
     if length(guard) is 0
       set guard to oce_spawn_latent(m, pos_e)
     end
     if length(guard) is 0
       set _ to oce_set_conf(m, h, oce_n_conf(m, h) - 4)
-      return 0
+    else
+      set cands to oce_candidates(m, src + e * 32, p, change)
+      set c to cands[0]
+      set sp to oce_add_axiom(m, [], p, c[0], c[1], c[2], 1, 8)
+      set _ to oce_add_exception(m, h, guard, sp)
+      set _ to mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
+      set result to 1
     end
-    set cands to oce_candidates(m, src + e * 32, p, actual - old)
-    set c to cands[0]
-    set sp to oce_add_axiom(m, [], p, c[0], c[1], c[2], 1, 8)
-    set _ to oce_add_exception(m, parent, guard, sp)
-    set _ to mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
-    return 1
   end
-  # Operator 3: nothing explained this change — fit a new law to the residual.
+  return result
+end
+
+# Snapshots of entities this law explained correctly, from the episodic log.
+to oce_log_successes with m h neg
+  set out to neg
+  set k to 0
+  while k < mem_get_u16(m, 8)
+    set at to 63488 + k * 64
+    if m[at] is 1 and mem_get_u16(m, at + 2) is h
+      set out to out + [at + 8]
+    end
+    set k to k + 1
+  end
+  return out
+end
+
+# Entities (row addresses) split by whether candidate c explains them.
+to oce_split with m obs p c want_pos
+  set src to 49152
+  set ents to mem_get_u16(m, 4)
+  set out to []
+  set f to 1
+  while f < ents
+    set need to obs[f][p] - oce_predicted(m, f, p)
+    set hit to oce_cand_value(m, src + f * 32, c) is need
+    if hit is want_pos
+      set out to out + [src + f * 32]
+    end
+    set f to f + 1
+  end
+  return out
+end
+
+# Operator 3 (algebraic delta fitting), falling back to Operator 2.
+to oce_repair_new with m obs e p residual
+  set src to 49152
+  set ents to mem_get_u16(m, 4)
   set _ to oce_log(m, 2, p, 65535, e, residual, src)
   set cands to oce_candidates(m, src + e * 32, p, residual)
-  set best_guard to [0]
-  set best to 0
+  set found to 0
+  set best_guard to []
+  set best to cands[length(cands) - 1]
   set ci to 0
-  while ci < length(cands) and length(best_guard) is 1
+  while ci < length(cands) and found is 0
     set c to cands[ci]
-    set pos to []
-    set pos_e to []
-    set neg to []
-    set f to 1
-    while f < ents
-      set need to obs[f][p] - oce_predicted(m, f, p)
-      if oce_cand_value(m, src + f * 32, c) is need
-        set pos to pos + [src + f * 32]
-        set pos_e to pos_e + [f]
-      else
-        set neg to neg + [src + f * 32]
-      end
-      set f to f + 1
-    end
+    set pos to oce_split(m, obs, p, c, 1)
+    set neg to oce_split(m, obs, p, c, 0)
     if length(neg) is 0
+      set found to 1
       set best_guard to []
       set best to c
     else
       set g to oce_find_guard(m, pos, neg, src)
       if length(g) > 0
+        set found to 1
         set best_guard to g
         set best to c
       end
     end
     set ci to ci + 1
   end
-  if length(best_guard) is 1
-    # Operator 2: visible properties cannot tell them apart -> hidden cause.
-    set best to cands[length(cands) - 1]
+  if found is 0
     set pos_e to [e]
     set f to 1
     while f < ents
-      if f is not e and obs[f][p] - oce_predicted(m, f, p) is oce_cand_value(m, src + f * 32, best) and obs[f][p] is not oce_predicted(m, f, p)
+      set need to obs[f][p] - oce_predicted(m, f, p)
+      if f is not e and need is not 0 and oce_cand_value(m, src + f * 32, best) is need
         set pos_e to pos_e + [f]
       end
       set f to f + 1
     end
     set best_guard to oce_spawn_latent(m, pos_e)
-    if length(best_guard) is 0
-      return 0
+    if length(best_guard) > 0
+      set found to 1
     end
+  end
+  if found is 0
+    return 0
   end
   set _ to oce_add_axiom(m, best_guard, p, best[0], best[1], best[2], 0, 8)
   set _ to mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
