@@ -4624,6 +4624,9 @@ class Interpreter:
             return None
         builtins['alert'] = SdevBuiltin('alert', _alert, 1, 1)
         _register_oce(builtins)
+        if 'str' not in builtins:
+            # `str(x)` — text form of any value, as in the browser runtime.
+            builtins['str'] = SdevBuiltin('str', lambda a, l: self._stringify(a[0]), 1, 1)
 
         return builtins
     
