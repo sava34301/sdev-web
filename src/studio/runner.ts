@@ -24,7 +24,15 @@ import {
   translateSource,
   type Token,
 } from '@/lang';
-import * as AST from '@/lang/ast';
+// The studio inspects nodes from several parser generations, so it reads them loosely.
+type LooseNode = { type: string; [key: string]: any };
+// eslint-disable-next-line @typescript-eslint/no-namespace
+declare namespace AST {
+  type ASTNode = LooseNode;
+  type Program = import("@/lang/ast").Program;
+  type AssignStatement = LooseNode;
+  type LetStatement = LooseNode;
+}
 import { stringify } from '@/lang/builtins';
 import {
   createGraphicsBuiltins,
@@ -376,7 +384,7 @@ function executeWithTracing(
   const detectedLanguage = options.sourceLanguage ?? detectLanguage(stripped);
   let executableSource = stripped;
   if (detectedLanguage && detectedLanguage !== 'English') {
-    executableSource = translateSource(stripped, detectedLanguage, { target: runtime }).translated;
+    executableSource = translateSource(stripped, detectedLanguage).translated;
   }
 
   const sourceLines = stripped.split(/\r?\n/);

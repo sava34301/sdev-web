@@ -332,7 +332,7 @@ export class Parser {
     let found = false;
     const walk = (n: unknown): void => {
       if (found || !n || typeof n !== 'object') return;
-      const node = n as { type?: string; [k: string]: unknown };
+      const node = n as { type?: string;[k: string]: unknown };
       if (node.type === 'EmitExpr') { found = true; return; }
       // Do not descend into nested function bodies.
       if (node.type === 'FuncDeclaration' || node.type === 'LambdaExpr') return;
@@ -638,7 +638,7 @@ export class Parser {
 
     // Literals
     if (this.check(TokenType.NUMBER) || this.check(TokenType.STRING) ||
-        this.check(TokenType.YEP) || this.check(TokenType.NOPE) || this.check(TokenType.VOID)) {
+      this.check(TokenType.YEP) || this.check(TokenType.NOPE) || this.check(TokenType.VOID)) {
       const value = this.parseUnary();
       return { type: 'PatLiteral', value, line: t.line };
     }
@@ -956,12 +956,14 @@ export class Parser {
       this.advance();
       const value = this.parseExpressionOrTuple();
       if (expr.type === 'SliceExpr') {
-        return { type: 'ExpressionStatement', expression: {
-          type: 'CallExpr',
-          callee: { type: 'Identifier', name: 'slice_assign', line: expr.line },
-          args: [expr.object, expr.start ?? { type: 'NullLiteral', line: expr.line }, expr.stop ?? { type: 'NullLiteral', line: expr.line }, expr.step ?? { type: 'NullLiteral', line: expr.line }, value],
-          line: expr.line,
-        }, line: expr.line };
+        return {
+          type: 'ExpressionStatement', expression: {
+            type: 'CallExpr',
+            callee: { type: 'Identifier', name: 'slice_assign', line: expr.line },
+            args: [expr.object, expr.start ?? { type: 'NullLiteral', line: expr.line }, expr.stop ?? { type: 'NullLiteral', line: expr.line }, expr.step ?? { type: 'NullLiteral', line: expr.line }, value],
+            line: expr.line,
+          }, line: expr.line
+        };
       }
       return this.makeAssignment(expr, value, expr.line);
     }
@@ -1129,7 +1131,7 @@ export class Parser {
   /** `x through xs`, `x isnt through xs`, `a same b`, `a isnt same b`. */
   private parseMembership(): AST.ASTNode {
     let left = this.parseBitOr();
-    for (;;) {
+    for (; ;) {
       if (this.check(TokenType.THROUGH)) {
         this.advance();
         const right = this.parseBitOr();
@@ -1253,7 +1255,7 @@ export class Parser {
   private parseCall(): AST.ASTNode {
     let expr = this.parsePrimary();
 
-    for (;;) {
+    for (; ;) {
       if (this.match(TokenType.LPAREN)) {
         expr = this.finishCall(expr);
       } else if (this.match(TokenType.LBRACKET)) {
@@ -1315,7 +1317,7 @@ export class Parser {
         }
         // keyword argument:  name be value  |  name: value
         if (this.check(TokenType.IDENTIFIER) &&
-            (this.tokens[this.pos + 1]?.type === TokenType.BE || this.tokens[this.pos + 1]?.type === TokenType.COLON)) {
+          (this.tokens[this.pos + 1]?.type === TokenType.BE || this.tokens[this.pos + 1]?.type === TokenType.COLON)) {
           const name = this.advance().value;
           this.advance();
           args.push({ type: 'KeywordArg', name, value: this.parseExpression(), line: callee.line });
@@ -1722,31 +1724,7 @@ export class Parser {
     return { type: 'FStringExpr', parts, line };
   }
 
-  private hasInterpolation(str: string): boolean {
-    if (str.includes('{{') || str.includes('}}')) return true;
-    let i = 0;
-    while (i < str.length) {
-      if (str[i] === '{') {
-        if (str[i + 1] === '{') {
-          i += 2;
-          continue;
-        }
-        if (this.isEscapedOrRegexBrace(str, i)) {
-          i++;
-          continue;
-        }
-        const close = str.indexOf('}', i + 1);
-        if (close > i + 1) {
-          const body = str.slice(i + 1, close);
-          if (!/^[\]\\[]/.test(body) && /^[\p{L}\p{N}_\s+\-*/%()[\]."'!:=]+$/u.test(body)) {
-            return true;
-          }
-        }
-      }
-      i++;
-    }
-    return false;
-  }
+
 
   /**
    * `fixed` / `const` / `val` start a constant declaration only in the shape

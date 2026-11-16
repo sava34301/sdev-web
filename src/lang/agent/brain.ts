@@ -500,10 +500,10 @@ export async function probeLocalServer(url = brainSettings().localUrl): Promise<
         result.serverType = endpoints.baseUrl.includes('1234')
           ? 'LM Studio'
           : endpoints.baseUrl.includes('11434')
-          ? 'Ollama'
-          : endpoints.baseUrl.includes('8080')
-          ? 'llama.cpp'
-          : 'OpenAI-Compatible';
+            ? 'Ollama'
+            : endpoints.baseUrl.includes('8080')
+              ? 'llama.cpp'
+              : 'OpenAI-Compatible';
         return result;
       }
     }
