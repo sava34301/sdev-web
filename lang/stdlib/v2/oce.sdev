@@ -1,0 +1,1005 @@
+# SDEV Standard Library: Ontological Causal Engine (OCE) — authored in SDEV.
+use "lang/stdlib/v2/list.sdev"
+use "lang/stdlib/v2/bits.sdev"
+use "lang/stdlib/v2/mem.sdev"
+#
+#   use "lang/stdlib/v2/list.sdev"
+#   use "lang/stdlib/v2/bits.sdev"
+#   use "lang/stdlib/v2/mem.sdev"
+#   use "lang/stdlib/v2/oce.sdev"
+#
+# A weightless, token-free causal learner after "Ontological Causal Engine
+# (OCE)" (Nov 2026). No weights, no gradients, no tokens: the whole engine is
+# ONE 64 KB byte arena (a list of 65,536 bytes) laid out exactly like the paper:
+#
+#   0x0000-0x3FFF  core: header, fired-axiom table, I/O ring buffer
+#   0x4000-0xBFFF  Causal Transition Axiom table: 2,730 packed 12-byte nodes
+#   0xC000-0xDFFF  Ontological State Graph: entities x 16 int16 properties
+#   0xE000-0xF7FF  Mental Sandbox: six 1 KB counterfactual slots
+#   0xF800-0xFFFF  Episodic Contradiction Log: 32 x 64-byte snapshots
+#
+# Node (12 bytes, little-endian):
+#   0-1 node_id  2 opcode  3 confidence  4-5 source_a  6-7 source_b
+#   8-9 target_out  10-11 delta_immediate (int16)
+#
+# How axioms are stored (documented choice, the paper leaves it open):
+#   CAUSAL_IMPLIES head: a = first guard (65535 none), b = 1 if specialized,
+#                        out = mutation node, delta = target property
+#   guard (PROP_EQ/GT/LT): a = property, b = medium property (65535 = 0),
+#                          delta = constant, out = next guard
+#   MUTATE_ADD: target = a + b + delta, with a/b property slots
+#               (b = 65535 means nothing) — b is the SDEV extension that lets
+#               one node express kinematics (pos += vel)
+#   EXCEPTION_UNLESS: a = parent head, b = guard node, out = specialized head
+#
+# Entities: up to 32 (each sandbox slot is 1 KB = 32 x 32 bytes). Entity 0 is
+# the medium (air, world constants). Properties 0..7 are observed, 8..15 are
+# latent registers the engine invents itself (SPAWN_LATENT).
+
+# ---- Opcodes ---------------------------------------------------------------
+to oce_op_name with op
+  set names to ["NOP_FREE", "PROP_EQ", "PROP_GT", "PROP_LT", "BIT_AND", "LOGIC_XOR", "TEMPORAL_SEQ", "MUTATE_ADD", "MUTATE_SET", "MUTATE_MUL_SHIFT", "CAUSAL_IMPLIES", "EXCEPTION_UNLESS", "SANDBOX_FORK", "DIFF_INTERRUPT", "SPAWN_LATENT", "EXT_QUERY_PTR"]
+  if op < 0 or op > 15
+    return "?"
+  end
+  return names[op]
+end
+
+# ---- Arena & header --------------------------------------------------------
+to oce_create
+  set m to mem_arena(65536)
+  set _ to mem_put_u16(m, 0, 3297)
+  set _ to mem_put_u16(m, 2, 0)
+  set _ to mem_put_u16(m, 4, 1)
+  set _ to mem_put_u16(m, 10, 0)
+  set _ to mem_put_u8(m, 12, 8)
+  set _ to mem_put_u8(m, 14, 8)
+  return m
+end
+
+to oce_node_count with m
+  return mem_get_u16(m, 2)
+end
+
+to oce_entity_count with m
+  return mem_get_u16(m, 4)
+end
+
+to oce_tick with m
+  return mem_get_u16(m, 10)
+end
+
+to oce_contradictions with m
+  return mem_get_u16(m, 18)
+end
+
+to oce_repairs with m
+  return mem_get_u16(m, 20)
+end
+
+to oce_osg_base
+  return 49152
+end
+
+to oce_slot_base with slot
+  return 57344 + slot * 1024
+end
+
+to oce_prop_addr with base e p
+  return base + e * 32 + p * 2
+end
+
+to oce_get with m e p
+  return mem_get_i16(m, oce_prop_addr(49152, e, p))
+end
+
+to oce_set with m e p v
+  return mem_put_i16(m, oce_prop_addr(49152, e, p), v)
+end
+
+to oce_entity with m
+  set n to mem_get_u16(m, 4)
+  if n >= 32
+    return 0 - 1
+  end
+  set _ to mem_put_u16(m, 4, n + 1)
+  return n
+end
+
+to oce_medium with m p v
+  return oce_set(m, 0, p, v)
+end
+
+# ---- Nodes -----------------------------------------------------------------
+to oce_node_addr with i
+  return 16384 + i * 12
+end
+
+to oce_n_op with m i
+  return m[16384 + i * 12 + 2]
+end
+
+to oce_n_conf with m i
+  return m[16384 + i * 12 + 3]
+end
+
+to oce_n_a with m i
+  return mem_get_u16(m, 16384 + i * 12 + 4)
+end
+
+to oce_n_b with m i
+  return mem_get_u16(m, 16384 + i * 12 + 6)
+end
+
+to oce_n_out with m i
+  return mem_get_u16(m, 16384 + i * 12 + 8)
+end
+
+to oce_n_delta with m i
+  return mem_get_i16(m, 16384 + i * 12 + 10)
+end
+
+to oce_set_conf with m i c
+  set v to c
+  if v < 0
+    set v to 0
+  end
+  if v > 255
+    set v to 255
+  end
+  set m[16384 + i * 12 + 3] to v
+  return v
+end
+
+# Allocate a node: reuse the first NOP_FREE slot, else grow (max 2,730).
+to oce_alloc with m op conf a b out delta
+  set n to mem_get_u16(m, 2)
+  set i to 0
+  set found to 0 - 1
+  while i < n and found < 0
+    if m[16384 + i * 12 + 2] is 0
+      set found to i
+    end
+    set i to i + 1
+  end
+  if found < 0
+    if n >= 2730
+      return 0 - 1
+    end
+    set found to n
+    set _ to mem_put_u16(m, 2, n + 1)
+  end
+  set at to 16384 + found * 12
+  set _ to mem_put_u16(m, at, at)
+  set m[at + 2] to op
+  set m[at + 3] to conf
+  set _ to mem_put_u16(m, at + 4, a)
+  set _ to mem_put_u16(m, at + 6, b)
+  set _ to mem_put_u16(m, at + 8, out)
+  set _ to mem_put_i16(m, at + 10, delta)
+  return found
+end
+
+to oce_free with m i
+  set _ to mem_fill(m, 16384 + i * 12, 12, 0)
+  return 0
+end
+
+to oce_live_nodes with m
+  set n to mem_get_u16(m, 2)
+  set c to 0
+  set i to 0
+  while i < n
+    if m[16384 + i * 12 + 2] is not 0
+      set c to c + 1
+    end
+    set i to i + 1
+  end
+  return c
+end
+
+# Minimum Description Length of the learned model, in bits.
+to oce_mdl_bits with m
+  return oce_live_nodes(m) * 96
+end
+
+# ---- Axioms ----------------------------------------------------------------
+# guard = [op, prop, medium_prop or 65535, const] or [] for "always".
+to oce_add_axiom with m guard target a b delta specialized conf
+  set g to 65535
+  if length(guard) > 0
+    set g to oce_alloc(m, guard[0], 255, guard[1], guard[2], 65535, guard[3])
+  end
+  set mu to oce_alloc(m, 7, 255, a, b, target, delta)
+  return oce_alloc(m, 10, conf, g, specialized, mu, target)
+end
+
+to oce_add_exception with m parent guard special
+  set g to oce_alloc(m, guard[0], 255, guard[1], guard[2], 65535, guard[3])
+  return oce_alloc(m, 11, 255, parent, g, special, 0)
+end
+
+to oce_rhs with m base b
+  if b is 65535
+    return 0
+  end
+  return mem_get_i16(m, base + b * 2)
+end
+
+# Does guard chain starting at node g hold for entity e in state `base`?
+to oce_guard_holds with m base e g
+  set cur to g
+  while cur is not 65535
+    set op to oce_n_op(m, cur)
+    set lhs to mem_get_i16(m, base + e * 32 + oce_n_a(m, cur) * 2)
+    set rhs to oce_rhs(m, base, oce_n_b(m, cur)) + oce_n_delta(m, cur)
+    if op is 1 and lhs is not rhs
+      return 0
+    end
+    if op is 2 and not (lhs > rhs)
+      return 0
+    end
+    if op is 3 and not (lhs < rhs)
+      return 0
+    end
+    if op is 4 and bits_and(wrap_u16(lhs), wrap_u16(rhs)) is 0
+      return 0
+    end
+    if op is 5 and lhs is rhs
+      return 0
+    end
+    set cur to oce_n_out(m, cur)
+  end
+  return 1
+end
+
+# Contribution of head h's mutation to entity e: (a + b + delta) - target.
+to oce_contribution with m base e h
+  set mu to oce_n_out(m, h)
+  set row to base + e * 32
+  set tgt to oce_n_out(m, mu)
+  set v to mem_get_i16(m, row + oce_n_a(m, mu) * 2) + oce_n_delta(m, mu)
+  if oce_n_b(m, mu) is not 65535
+    set v to v + mem_get_i16(m, row + oce_n_b(m, mu) * 2)
+  end
+  return v - mem_get_i16(m, row + tgt * 2)
+end
+
+# Which head actually governs e: h itself or a specialized exception override.
+to oce_resolve with m base e h
+  set n to mem_get_u16(m, 2)
+  set i to 0
+  while i < n
+    if oce_n_op(m, i) is 11 and oce_n_a(m, i) is h
+      if oce_guard_holds(m, base, e, oce_n_b(m, i))
+        return oce_n_out(m, i)
+      end
+    end
+    set i to i + 1
+  end
+  return h
+end
+
+# ---- Prediction (Mental Sandbox) -------------------------------------------
+# Copies state src -> dst and applies every matching axiom once (one tick).
+# record = 1 writes the fired-axiom table used for learning.
+to oce_step with m src dst record
+  set ents to mem_get_u16(m, 4)
+  set _ to mem_copy(m, dst, m, src, ents * 32)
+  if record
+    set _ to mem_fill(m, 4096, 1024, 0)
+  end
+  set n to mem_get_u16(m, 2)
+  set e to 1
+  while e < ents
+    set h to 0
+    while h < n
+      if oce_n_op(m, h) is 10 and oce_n_b(m, h) is 0
+        if oce_guard_holds(m, src, e, oce_n_a(m, h))
+          set use to oce_resolve(m, src, e, h)
+          set tgt to oce_n_delta(m, use)
+          set at to dst + e * 32 + tgt * 2
+          set _ to mem_put_i16(m, at, mem_get_i16(m, at) + oce_contribution(m, src, e, use))
+          if record
+            set _ to mem_put_u16(m, 4096 + e * 32 + tgt * 2, use + 1)
+          end
+        end
+      end
+      set h to h + 1
+    end
+    set e to e + 1
+  end
+  return dst
+end
+
+to oce_predict with m
+  return oce_step(m, 49152, 57344, 1)
+end
+
+to oce_predicted with m e p
+  return mem_get_i16(m, oce_prop_addr(57344, e, p))
+end
+
+# ---- Episodic Contradiction Log -------------------------------------------
+# entry: 0 kind (1 success, 2 contradiction), 1 prop, 2-3 head, 4-5 entity,
+#        6-7 residual, 8-39 entity snapshot (16 x int16)
+to oce_log with m entry_kind p h e residual src
+  set head to mem_get_u16(m, 6)
+  set at to 63488 + head * 64
+  set m[at] to entry_kind
+  set m[at + 1] to p
+  set _ to mem_put_u16(m, at + 2, h)
+  set _ to mem_put_u16(m, at + 4, e)
+  set _ to mem_put_i16(m, at + 6, residual)
+  set _ to mem_copy(m, at + 8, m, src + e * 32, 32)
+  set _ to mem_put_u16(m, 6, (head + 1) % 32)
+  if mem_get_u16(m, 8) < 32
+    set _ to mem_put_u16(m, 8, mem_get_u16(m, 8) + 1)
+  end
+  return at
+end
+
+to oce_log_count with m
+  return mem_get_u16(m, 8)
+end
+
+# ---- Guard synthesis (Operator 1 core) -------------------------------------
+# pos / neg: lists of row addresses (32-byte property rows). medium: row of
+# entity 0. Tries medium-relative comparisons first (they generalise), then an
+# exact value. Returns [] when nothing separates.
+to oce_find_guard with m pos neg medium
+  set s to 0
+  while s < 16
+    set mv to mem_get_i16(m, medium + s * 2)
+    set op to 3
+    while op >= 2
+      set ok to 1
+      set i to 0
+      while i < length(pos) and ok
+        set v to mem_get_i16(m, pos[i] + s * 2)
+        if op is 3 and not (v < mv)
+          set ok to 0
+        end
+        if op is 2 and not (v > mv)
+          set ok to 0
+        end
+        set i to i + 1
+      end
+      set i to 0
+      while i < length(neg) and ok
+        set v to mem_get_i16(m, neg[i] + s * 2)
+        if op is 3 and v < mv
+          set ok to 0
+        end
+        if op is 2 and v > mv
+          set ok to 0
+        end
+        set i to i + 1
+      end
+      if ok and mv is not 0
+        return [op, s, s, 0]
+      end
+      set op to op - 1
+    end
+    set s to s + 1
+  end
+  set s to 0
+  while s < 16
+    set want to mem_get_i16(m, pos[0] + s * 2)
+    set ok to 1
+    set i to 0
+    while i < length(pos) and ok
+      if mem_get_i16(m, pos[i] + s * 2) is not want
+        set ok to 0
+      end
+      set i to i + 1
+    end
+    set i to 0
+    while i < length(neg) and ok
+      if mem_get_i16(m, neg[i] + s * 2) is want
+        set ok to 0
+      end
+      set i to i + 1
+    end
+    if ok
+      return [1, s, 65535, want]
+    end
+    set s to s + 1
+  end
+  return []
+end
+
+# Operator 2: invent a hidden register and mark the positives.
+to oce_spawn_latent with m pos_entities
+  set slot to m[12]
+  if slot > 15
+    return []
+  end
+  set m[12] to slot + 1
+  set _ to oce_alloc(m, 14, 255, slot, 65535, 65535, 0)
+  set i to 0
+  while i < length(pos_entities)
+    set _ to oce_set(m, pos_entities[i], slot, 1)
+    set i to i + 1
+  end
+  return [1, slot, 65535, 1]
+end
+
+# Candidate mutations for "property p changes by d" in row: [a, b, delta].
+# A link to an existing property (pos += vel) is preferred over a constant.
+to oce_candidates with m row p d
+  set out to []
+  set q to 0
+  while q < 16
+    if q is not p and d is not 0 and mem_get_i16(m, row + q * 2) is d
+      set out to list_append(out, [p, q, 0])
+    end
+    set q to q + 1
+  end
+  set out to list_append(out, [p, 65535, d])
+  return out
+end
+
+to oce_cand_value with m row cand
+  set v to mem_get_i16(m, row + cand[0] * 2) + cand[2]
+  if cand[1] is not 65535
+    set v to v + mem_get_i16(m, row + cand[1] * 2)
+  end
+  return v - mem_get_i16(m, row + cand[0] * 2)
+end
+
+# ---- Repair (Abductive Hypothesis Synthesizer) ----------------------------
+# obs: list of observed rows (visible values per entity). Returns 1 if a rule
+# was added.
+# Operator 1 (guard specialisation) and Operator 2 (latent) for a law that
+# fired and was wrong.
+to oce_repair_fired with m obs e p h residual
+  set src to 49152
+  set ents to mem_get_u16(m, 4)
+  set change to obs[e][p] - oce_get(m, e, p)
+  set _ to oce_log(m, 2, p, h, e, residual, src)
+  set result to 0
+  if oce_n_b(m, h) is 1
+    set _ to oce_set_conf(m, h, oce_n_conf(m, h) - 4)
+  else
+    set pos to [src + e * 32]
+    set pos_e to [e]
+    set neg to []
+    set f to 1
+    while f < ents
+      set fired_f to mem_get_u16(m, 4096 + f * 32 + p * 2)
+      if f is not e and fired_f is h + 1
+        set right to obs[f][p] is oce_predicted(m, f, p)
+        if right
+          set neg to list_append(neg, src + f * 32)
+        end
+        if not right and obs[f][p] - oce_get(m, f, p) is change
+          set pos to list_append(pos, src + f * 32)
+          set pos_e to list_append(pos_e, f)
+        end
+      end
+      set f to f + 1
+    end
+    set neg to oce_log_successes(m, h, neg)
+    set guard to oce_find_guard(m, pos, neg, src)
+    if length(guard) is 0
+      set guard to oce_spawn_latent(m, pos_e)
+    end
+    if length(guard) is 0
+      set _ to oce_set_conf(m, h, oce_n_conf(m, h) - 4)
+    else
+      set cands to oce_candidates(m, src + e * 32, p, change)
+      set c to cands[0]
+      set sp to oce_add_axiom(m, [], p, c[0], c[1], c[2], 1, 8)
+      set _ to oce_add_exception(m, h, guard, sp)
+      set _ to mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
+      set result to 1
+    end
+  end
+  return result
+end
+
+# Snapshots of entities this law explained correctly, from the episodic log.
+to oce_log_successes with m h neg
+  set out to neg
+  set k to 0
+  while k < mem_get_u16(m, 8)
+    set at to 63488 + k * 64
+    if m[at] is 1 and mem_get_u16(m, at + 2) is h
+      set out to list_append(out, at + 8)
+    end
+    set k to k + 1
+  end
+  return out
+end
+
+# Entities (row addresses) split by whether candidate c explains them.
+to oce_split with m obs p c want_pos
+  set src to 49152
+  set ents to mem_get_u16(m, 4)
+  set out to []
+  set f to 1
+  while f < ents
+    set need to obs[f][p] - oce_predicted(m, f, p)
+    set hit to oce_cand_value(m, src + f * 32, c) is need
+    if hit is want_pos
+      set out to list_append(out, src + f * 32)
+    end
+    set f to f + 1
+  end
+  return out
+end
+
+# Operator 3 (algebraic delta fitting), falling back to Operator 2.
+to oce_repair_new with m obs e p residual
+  set src to 49152
+  set ents to mem_get_u16(m, 4)
+  set _ to oce_log(m, 2, p, 65535, e, residual, src)
+  set cands to oce_candidates(m, src + e * 32, p, residual)
+  set found to 0
+  set best_guard to []
+  set best to cands[length(cands) - 1]
+  set ci to 0
+  while ci < length(cands) and found is 0
+    set c to cands[ci]
+    set pos to oce_split(m, obs, p, c, 1)
+    set neg to oce_split(m, obs, p, c, 0)
+    if length(neg) is 0
+      set found to 1
+      set best_guard to []
+      set best to c
+    else
+      set g to oce_find_guard(m, pos, neg, src)
+      if length(g) > 0
+        set found to 1
+        set best_guard to g
+        set best to c
+      end
+    end
+    set ci to ci + 1
+  end
+  if found is 0
+    set pos_e to [e]
+    set f to 1
+    while f < ents
+      set need to obs[f][p] - oce_predicted(m, f, p)
+      if f is not e and need is not 0 and oce_cand_value(m, src + f * 32, best) is need
+        set pos_e to list_append(pos_e, f)
+      end
+      set f to f + 1
+    end
+    set best_guard to oce_spawn_latent(m, pos_e)
+    if length(best_guard) > 0
+      set found to 1
+    end
+  end
+  if found is 0
+    return 0
+  end
+  set _ to oce_add_axiom(m, best_guard, p, best[0], best[1], best[2], 0, 8)
+  set _ to mem_put_u16(m, 20, mem_get_u16(m, 20) + 1)
+  return 1
+end
+
+to oce_repair with m obs e p
+  set actual to obs[e][p]
+  set residual to actual - oce_predicted(m, e, p)
+  set fired to mem_get_u16(m, 4096 + e * 32 + p * 2)
+  set _ to mem_put_u16(m, 18, mem_get_u16(m, 18) + 1)
+  if fired is 0
+    return oce_repair_new(m, obs, e, p, residual)
+  end
+  return oce_repair_fired(m, obs, e, p, fired - 1, residual)
+end
+
+# ---- Garbage collection (synaptic pruning) ---------------------------------
+to oce_prune with m
+  set n to mem_get_u16(m, 2)
+  set freed to 0
+  set h to 0
+  while h < n
+    if oce_n_op(m, h) is 10 and oce_n_conf(m, h) is 0
+      set g to oce_n_a(m, h)
+      while g is not 65535
+        set nxt to oce_n_out(m, g)
+        set _ to oce_free(m, g)
+        set freed to freed + 1
+        set g to nxt
+      end
+      set _ to oce_free(m, oce_n_out(m, h))
+      set _ to oce_free(m, h)
+      set freed to freed + 2
+      set i to 0
+      while i < n
+        if oce_n_op(m, i) is 11 and (oce_n_a(m, i) is h or oce_n_out(m, i) is h)
+          set _ to oce_free(m, oce_n_b(m, i))
+          set _ to oce_free(m, i)
+          set freed to freed + 2
+        end
+        set i to i + 1
+      end
+    end
+    set h to h + 1
+  end
+  return freed
+end
+
+# ---- The cognitive cycle ---------------------------------------------------
+# obs: one list per entity (entity 0 included, it is ignored) holding the
+# visible properties 0..7. Returns the number of contradictions this tick.
+to oce_observe with m obs
+  set ents to mem_get_u16(m, 4)
+  set vis to m[14]
+  set errors to 0
+  if mem_get_u16(m, 10) > 0
+    set rounds to 0
+    set again to 1
+    while again and rounds < 12
+      set again to 0
+      set _ to oce_predict(m)
+      set e to 1
+      while e < ents and again is 0
+        set p to 0
+        while p < vis and again is 0
+          if obs[e][p] is not oce_predicted(m, e, p)
+            set errors to errors + 1
+            set _ to oce_repair(m, obs, e, p)
+            set again to 1
+          end
+          set p to p + 1
+        end
+        set e to e + 1
+      end
+      set rounds to rounds + 1
+    end
+    # Case A: consolidate every law that predicted correctly.
+    set e to 1
+    while e < ents
+      set p to 0
+      while p < vis
+        set fired to mem_get_u16(m, 4096 + e * 32 + p * 2)
+        if fired is not 0 and obs[e][p] is oce_predicted(m, e, p)
+          set _ to oce_set_conf(m, fired - 1, oce_n_conf(m, fired - 1) + 1)
+          if mem_get_u16(m, 10) % 4 is 0
+            set _ to oce_log(m, 1, p, fired - 1, e, 0, 49152)
+          end
+        end
+        set p to p + 1
+      end
+      set e to e + 1
+    end
+    set _ to oce_prune(m)
+  end
+  set e to 1
+  while e < ents
+    set p to 0
+    while p < vis
+      set _ to oce_set(m, e, p, obs[e][p])
+      set p to p + 1
+    end
+    set e to e + 1
+  end
+  set _ to mem_put_u16(m, 10, mem_get_u16(m, 10) + 1)
+  set _ to mem_put_u16(m, 16, errors)
+  set _ to oce_predict(m)
+  return errors
+end
+
+# do(X = x): an intervention from outside. It is applied, never learned.
+to oce_intervene with m e p v
+  set _ to oce_set(m, e, p, v)
+  set _ to oce_predict(m)
+  return v
+end
+
+# ---- Counterfactual imagination (SANDBOX_FORK) -----------------------------
+# Fork the world into sandbox slot 1, apply do(e.p = v), run `ticks` steps.
+# Read results with oce_imagined. Nothing is learned and the OSG is untouched.
+to oce_imagine with m e p v ticks
+  set ents to mem_get_u16(m, 4)
+  set a to oce_slot_base(1)
+  set b to oce_slot_base(2)
+  set _ to mem_copy(m, a, m, 49152, ents * 32)
+  set _ to mem_put_i16(m, oce_prop_addr(a, e, p), v)
+  set t to 0
+  while t < ticks
+    set _ to oce_step(m, a, b, 0)
+    set _ to mem_copy(m, a, m, b, ents * 32)
+    set t to t + 1
+  end
+  return a
+end
+
+to oce_imagined with m e p
+  return mem_get_i16(m, oce_prop_addr(57344 + 1024, e, p))
+end
+
+# ---- External knowledge (EXT_QUERY_PTR) ------------------------------------
+# Facts live outside the 64 KB arena, in a tome keyed "sector:offset".
+to oce_ext_create
+  return {}
+end
+
+to oce_ext_store with ext sector offset v
+  set ext[str(sector) + ":" + str(offset)] to v
+  return v
+end
+
+to oce_ext_query with ext sector offset fallback
+  set k to str(sector) + ":" + str(offset)
+  if has(ext, k)
+    return ext[k]
+  end
+  return fallback
+end
+
+# Load an external fact into a property register for the current tick.
+to oce_ext_load with m ext sector offset e p
+  set v to oce_ext_query(ext, sector, offset, 0)
+  set _ to oce_alloc(m, 15, 1, sector, offset, e * 16 + p, 0)
+  set _ to oce_set(m, e, p, v)
+  return v
+end
+
+# ---- Readable model --------------------------------------------------------
+to oce_pname with names p
+  if p is 65535
+    return "0"
+  end
+  if p < length(names)
+    return names[p]
+  end
+  return "latent_" + str(p - 7)
+end
+
+to oce_guard_text with m names g
+  if g is 65535
+    return "always"
+  end
+  set out to ""
+  set cur to g
+  while cur is not 65535
+    set op to oce_n_op(m, cur)
+    set sym to " == "
+    if op is 2
+      set sym to " > "
+    end
+    if op is 3
+      set sym to " < "
+    end
+    set rhs to str(oce_n_delta(m, cur))
+    if oce_n_b(m, cur) is not 65535
+      set rhs to "medium." + oce_pname(names, oce_n_b(m, cur))
+    end
+    if length(out) > 0
+      set out to out + " and "
+    end
+    set out to out + oce_pname(names, oce_n_a(m, cur)) + sym + rhs
+    set cur to oce_n_out(m, cur)
+  end
+  return out
+end
+
+to oce_mut_text with m names h
+  set mu to oce_n_out(m, h)
+  set t to oce_pname(names, oce_n_out(m, mu))
+  if oce_n_b(m, mu) is not 65535
+    return t + " += " + oce_pname(names, oce_n_b(m, mu))
+  end
+  return t + " += " + str(oce_n_delta(m, mu))
+end
+
+to oce_describe with m names
+  set out to ""
+  set n to mem_get_u16(m, 2)
+  set h to 0
+  while h < n
+    if oce_n_op(m, h) is 10 and oce_n_b(m, h) is 0
+      set out to out + "law " + str(h) + " [confidence " + str(oce_n_conf(m, h)) + "]: if " + oce_guard_text(m, names, oce_n_a(m, h)) + " then " + oce_mut_text(m, names, h) + "\n"
+      set i to 0
+      while i < n
+        if oce_n_op(m, i) is 11 and oce_n_a(m, i) is h
+          set sp to oce_n_out(m, i)
+          set out to out + "  unless " + oce_guard_text(m, names, oce_n_b(m, i)) + " then " + oce_mut_text(m, names, sp) + "\n"
+        end
+        set i to i + 1
+      end
+    end
+    set h to h + 1
+  end
+  return out
+end
+
+# ---- Zero-token ingestion: online motif folding ----------------------------
+# Repeatedly replaces the most frequent adjacent pair (count >= threshold)
+# with a new symbol 256, 257, ... Returns [sequence, rules] where rules is a
+# flat list [sym, left, right, ...]. Works on raw bytes, no vocabulary.
+to oce_motifs with text threshold
+  set seq to []
+  set i to 0
+  while i < length(text)
+    set seq to list_append(seq, ord(text, i))
+    set i to i + 1
+  end
+  set rules to []
+  set next to 256
+  set going to 1
+  while going
+    set counts to {}
+    set best_k to ""
+    set best_n to 0
+    set i to 0
+    while i < length(seq) - 1
+      set k to str(seq[i]) + "," + str(seq[i + 1])
+      set c to 1
+      if has(counts, k)
+        set c to counts[k] + 1
+      end
+      set counts[k] to c
+      if c > best_n
+        set best_n to c
+        set best_k to k
+        set ba to seq[i]
+        set bb to seq[i + 1]
+      end
+      set i to i + 1
+    end
+    if best_n < threshold
+      set going to 0
+    else
+      set out to []
+      set i to 0
+      while i < length(seq)
+        if i < length(seq) - 1 and seq[i] is ba and seq[i + 1] is bb
+          set out to list_append(out, next)
+          set i to i + 2
+        else
+          set out to list_append(out, seq[i])
+          set i to i + 1
+        end
+      end
+      set rules to list_append(list_append(list_append(rules, next), ba), bb)
+      set seq to out
+      set next to next + 1
+    end
+  end
+  return [seq, rules]
+end
+
+# Expand a motif symbol back to bytes.
+to oce_motif_expand with rules sym
+  if sym < 256
+    return chr(sym)
+  end
+  set i to 0
+  while i < length(rules)
+    if rules[i] is sym
+      return oce_motif_expand(rules, rules[i + 1]) + oce_motif_expand(rules, rules[i + 2])
+    end
+    set i to i + 3
+  end
+  return ""
+end
+
+# ---- Generator discovery (Phase II) ----------------------------------------
+# Finds the shortest rule that produces xs: ["const", c], ["add", d],
+# ["mul", r], ["fib"], or ["none"]. Predicts beyond the data, never memorises.
+to oce_sequence_rule with xs
+  set n to length(xs)
+  if n < 2
+    return ["none"]
+  end
+  set ok to 1
+  set i to 1
+  while i < n
+    if xs[i] is not xs[0]
+      set ok to 0
+    end
+    set i to i + 1
+  end
+  if ok
+    return ["const", xs[0]]
+  end
+  set d to xs[1] - xs[0]
+  set ok to 1
+  set i to 2
+  while i < n
+    if xs[i] - xs[i - 1] is not d
+      set ok to 0
+    end
+    set i to i + 1
+  end
+  if ok
+    return ["add", d]
+  end
+  if xs[0] is not 0
+    set r to xs[1] / xs[0]
+    set ok to 1
+    set i to 1
+    while i < n
+      if xs[i] is not xs[i - 1] * r
+        set ok to 0
+      end
+      set i to i + 1
+    end
+    if ok
+      return ["mul", r]
+    end
+  end
+  if n >= 3
+    set ok to 1
+    set i to 2
+    while i < n
+      if xs[i] is not xs[i - 1] + xs[i - 2]
+        set ok to 0
+      end
+      set i to i + 1
+    end
+    if ok
+      return ["fib"]
+    end
+  end
+  return ["none"]
+end
+
+to oce_sequence_next with xs rule
+  set n to length(xs)
+  if rule[0] is "const"
+    return rule[1]
+  end
+  if rule[0] is "add"
+    return xs[n - 1] + rule[1]
+  end
+  if rule[0] is "mul"
+    return xs[n - 1] * rule[1]
+  end
+  if rule[0] is "fib"
+    return xs[n - 1] + xs[n - 2]
+  end
+  return 0
+end
+
+# Elementary cellular automaton: infer the Wolfram rule number from rows of
+# 0/1 cells (wrap-around). Returns -1 if the rows contradict each other.
+to oce_ca_rule with rows
+  set table to [0 - 1, 0 - 1, 0 - 1, 0 - 1, 0 - 1, 0 - 1, 0 - 1, 0 - 1]
+  set r to 0
+  while r < length(rows) - 1
+    set a to rows[r]
+    set b to rows[r + 1]
+    set w to length(a)
+    set i to 0
+    while i < w
+      set k to a[(i + w - 1) % w] * 4 + a[i] * 2 + a[(i + 1) % w]
+      if table[k] >= 0 and table[k] is not b[i]
+        return 0 - 1
+      end
+      set table[k] to b[i]
+      set i to i + 1
+    end
+    set r to r + 1
+  end
+  set rule to 0
+  set k to 7
+  while k >= 0
+    set bit to table[k]
+    if bit < 0
+      set bit to 0
+    end
+    set rule to rule * 2 + bit
+    set k to k - 1
+  end
+  return rule
+end
+
+to oce_ca_step with row rule
+  set w to length(row)
+  set out to mklist(w)
+  set i to 0
+  while i < w
+    set k to row[(i + w - 1) % w] * 4 + row[i] * 2 + row[(i + 1) % w]
+    set out[i] to bits_test(rule, k)
+    set i to i + 1
+  end
+  return out
+end

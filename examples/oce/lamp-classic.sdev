@@ -1,0 +1,28 @@
+// Learn a lamp: brightness grows only while the switch is on (classic sdev).
+forge m be oce_create()
+forge names be ["switch", "brightness", "p2", "p3", "p4", "p5", "p6", "p7"]
+forge lamp be oce_entity(m)
+forge w be [[0, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]]
+
+oce_observe(m, w)
+forge t be 0
+cycle t < 8 ::
+  forge row be w[1]
+  ponder row[0] == 1 ::
+    row[1] be row[1] + 5
+  ;;
+  ponder t == 4 ::
+    row[0] be 0
+    oce_intervene(m, lamp, 0, 0)
+  ;;
+  forge surprises be oce_observe(m, w)
+  speak("tick " + str(t) + ": surprises " + str(surprises))
+  t be t + 1
+;;
+speak(oce_describe(m, names))
+speak("predicted brightness next tick: " + str(oce_predicted(m, lamp, 1)))
+oce_imagine(m, lamp, 0, 1, 3)
+speak("if switched on for 3 ticks: " + str(oce_imagined(m, lamp, 1)))
+speak("real brightness unchanged: " + str(oce_get(m, lamp, 1)))
+forge rule be oce_sequence_rule([3, 7, 11, 15])
+speak(rule[0] + " -> next " + str(oce_sequence_next([3, 7, 11, 15], rule)))

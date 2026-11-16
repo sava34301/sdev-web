@@ -1,0 +1,30 @@
+# Learn a lamp: brightness grows only while the switch is on. Guide: SDEV_OCE_DEVELOPER_GUIDE.md
+use "lang/stdlib/v2/oce.sdev"
+
+set m to oce_create()
+set names to ["switch", "brightness", "p2", "p3", "p4", "p5", "p6", "p7"]
+set lamp to oce_entity(m)
+set w to [[0, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]]
+
+set _ to oce_observe(m, w)
+set t to 0
+while t < 8
+  set row to w[1]
+  if row[0] is 1
+    set row[1] to row[1] + 5
+  end
+  if t is 4
+    set row[0] to 0
+    set _ to oce_intervene(m, lamp, 0, 0)
+  end
+  set surprises to oce_observe(m, w)
+  say "tick " + str(t) + ": surprises " + str(surprises)
+  set t to t + 1
+end
+say oce_describe(m, names)
+say "predicted brightness next tick: " + str(oce_predicted(m, lamp, 1))
+set _ to oce_imagine(m, lamp, 0, 1, 3)
+say "if switched on for 3 ticks: " + str(oce_imagined(m, lamp, 1))
+say "real brightness unchanged: " + str(oce_get(m, lamp, 1))
+set rule to oce_sequence_rule([3, 7, 11, 15])
+say rule[0] + " -> next " + str(oce_sequence_next([3, 7, 11, 15], rule))

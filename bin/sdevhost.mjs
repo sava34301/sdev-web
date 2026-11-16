@@ -105,6 +105,16 @@ async function main() {
   const scriptSrc = readFileSync(scriptPath, 'utf8');
   const table = await prefetch(scriptSrc, args);
 
+  // The self-hosted compiler has no error channel, so a broken program
+  // (unknown function, wrong argument count, unbalanced block) would run
+  // silently. Check it with the reference compiler first and report.
+  try {
+    (await oracle())(scriptSrc);
+  } catch (e) {
+    const msg = String(e?.message ?? e).replace(/^\[sdev v2\] line 0: /, '');
+    process.stderr.write(`sdev: ${scriptPath}: ${msg}\n`);
+    process.exit(1);
+  }
   const program = await selfCompile(scriptSrc);
   // The seed VM is a static asset under public/wasm — read by path at
   // runtime, never imported, so no bundler ever pulls the binary into a chunk.
