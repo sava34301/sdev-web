@@ -5,7 +5,7 @@
  * and type inference with instruction-budget infinite loop protection.
  */
 
-import { execute, executeAsync } from './index';
+import { execute, executeAsync } from './executor';
 import { runStudioCode } from '../studio/runner';
 
 export interface LiveLineResult {

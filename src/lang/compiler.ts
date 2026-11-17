@@ -788,7 +788,6 @@ export class Compiler {
       ctorFn.emit(OpCode.MEMBER_SET, method.name, node.line);
     }
 
-    // Return self
     ctorFn.emit(OpCode.LOAD, 'self', node.line);
     ctorFn.emit(OpCode.RETURN, undefined, node.line);
 

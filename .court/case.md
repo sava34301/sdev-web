@@ -1,24 +1,21 @@
-# Case: Adopt all five proposed expansion features for the SDEV language and web platform simultaneously.
+Участие на ученик от V–VII клас в Националната олимпиада по информационни технологии (НОИТ) 2026–2027 в категория XI–XII клас („Разпределени приложения“) с проекта sdev при поети ангажименти за теста, Приложение 5 и защитата.
 
-## Background and Current State
-- SDEV is an independent, self-hosted multi-paradigm programming language created by Sava Milanov.
-- Current status: The toolchain features dual dialects (v1 expressive and v2 Prism beginner-friendly), three execution tracks (v1 TypeScript interpreter, v2 self-hosted compiler on a WebAssembly seed VM, and a native x86-64 backend producing static Linux ELFs), plus hardware `board "<id>"` blocks and a local WebGPU browser AI engine.
-- Developer: Single solo creator / student developer (Sava Milanov), self-funded, pre-launch.
+## Участник и избор на категория
+- Участникът е в V–VII клас и по регламент има право да участва във всяка възрастова група (V–VII, VIII–X или XI–XII клас).
+- Въпросът е дали да участва в XI–XII клас (направление „Разпределени приложения“), вместо в VIII–X клас („Софтуерни приложения“) или V–VII клас („Интерактивни проекти“ / „Мултимедийни проекти“).
 
-## The Proposal on Trial: Five-Feature Expansion
-The proposal asks to simultaneously adopt and build all five new expansion features:
+## Нови условия и ангажименти на участника (преразглеждане)
+- Тест за XI–XII клас: Участникът заявява, че разбира материала за XI–XII клас и ще успее да го премине (тестът е 50% от крайната оценка на националния кръг).
+- Приложение 5 (ИИ): Участникът се ангажира да опише правилно и подробно цялото Приложение 5 (Раздели А, Б и В с пълни записи и ясно разграничаване на собствения принос от този на ИИ).
+- Защита на проекта: Участникът ще работи целенасочено по 20-минутната защита, за да може да разкаже и защити всеки детайл от кода, архитектурата и проекта пред журито.
 
-1. **In-Browser Hardware Simulator (Virtual Breadboard & Pinout Canvas)**:
-   Embed an interactive circuit/MCU simulator (RP2040, ESP32, micro:bit) into the web IDE so users writing `board "<id>"` can simulate virtual GPIO pins, buttons, sensors, and LEDs directly in the browser tab with zero physical hardware.
+## Факти за проекта (sdev / sdev-web)
+- Проектът е собствен език за програмиране (`sdev`) с два диалекта (v1 и v2 „Prism“), TS интерпретатор, байткод VM, самохостващ се WASM компилатор и native x86-64 бекенд.
+- Средата включва уеб IDE (React/Vite), Electron десктоп приложение, CLI, VS Code разширение, хардуерна транспилация (`board` блокове и `compile-firmware`), локален WebGPU модел (`@mlc-ai/web-llm`) и облачен бекенд в Supabase с 15+ Edge Functions (`sdev-agent`, `sdev-chat`, `sdev-fix`, `translate-code`, `compile-firmware`, `mcp` сървър и др.), OAuth/автентикация, споделяне на Gist/библиотеки/разширения и автоматизирани тестове (`package.json`).
+- Доста голяма част от кода е написана с помощта на ИИ.
 
-2. **Time-Travel Visual Debugger (Omniscient Scrubber)**:
-   Build a unified execution timeline slider in the IDE. Beginners can scrub backwards and forwards through variable states, call frames, and canvas draws line-by-line across both v1 and v2 Prism dialects.
-
-3. **Sub-50MB Pre-Baked WebGPU Model for `sdev:ai`**:
-   Train, distill, or quantize a custom sub-50MB local model specifically for sdev dialect translation and code understanding, cached in IndexedDB/CacheStorage, replacing multi-gigabyte WebLLM generic SLM downloads.
-
-4. **WASI 0.2 Component Model Export**:
-   Expand the self-hosted WASM compiler backend to emit official WASI 0.2 / Component Model binaries and `wit` interfaces so sdev modules can be imported as native libraries in Rust, Python, Go, and Node.
-
-5. **Multiplayer Classroom & Pair-Programming Live Rooms**:
-   Integrate real-time P2P WebRTC / CRDT multi-cursor rooms into the IDE for simultaneous editing, shared execution, and classroom teacher broadcast.
+## Правила от регламента на НОИТ 2026–2027 и данни от 2026 г.
+- По-малък ученик може да се състезава в по-горна група, но на националния кръг полага теста по ИТ за XI–XII клас (50% от крайната оценка; защитата е другите 50%).
+- Направление „Разпределени приложения“ (XI–XII клас) акцентира върху клиент-сървърни приложения по HTTP, RESTful уеб услуги (APIs), JSON/XML, многослойни архитектури, Serverless functions, автоматични тестове, контрол на версиите, онлайн достъпност и тестови акаунти за всички роли.
+- Непълнота или неверни сведения в Приложение 5 водят до декласиране. При защитата (20 т.) журито оценява отговаряне на въпроси и представяне на аргументи.
+- Протокол на лауреатите от НОИТ 2026 (8–10 май 2026 г.): в списъка на лауреатите с Отличен 6.00 има и 10-класник (89 проект / 74 тест = 82). В „Разпределени приложения“ има 9 лауреати с финални резултати от 82 до 88 (проект 71–91, тест 79–96). Минималният финален резултат за Отличен 6.00 в протокола е 82.

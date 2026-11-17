@@ -1,0 +1,4 @@
+Извадка от резултатите в Google Antigravity (обобщен запис Б02):
+- Пачове в src/lang/agent/sdev-engine.ts и src/lang/agent/browser-brain.ts за изолиране на неразпознати редове и работа с локален WebGPU/LLM сървър.
+- Добавени тестови проверки в scripts/test-micro-brain-benchmarks.ts и scripts/test-brain-sanitizer.ts.
+- Всички промени са прегледани, редактирани при нужда и валидирани от автора чрез npm test, npm run test:understander-docs и npm run test:brain-benchmarks.

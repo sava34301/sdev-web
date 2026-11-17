@@ -1,0 +1,442 @@
+# =============================================================================
+# SDEV Self-Hosted Dialect Engine: Canonicalizer, Address Codec & Presets
+# (lang/dialect/dialect.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/stdlib/v2/buffer.sdev"
+
+# A dialect spec is stored as a list:
+# 0: name (str)
+# 1: slug (str)
+# 2: lang_tag (str)
+# 3: count of mappings (int)
+# 4: dialect_words list (str)
+# 5: canonical_words list (str)
+
+to dialect_create with name slug lang_tag
+  set d to mklist(6)
+  set d[0] to concat(name, "")
+  set d[1] to concat(slug, "")
+  set d[2] to concat(lang_tag, "")
+  set d[3] to 0
+  set d[4] to mklist(64)
+  set d[5] to mklist(64)
+  return d
+end
+
+to dialect_add_word with d custom_word canonical_word
+  set n to d[3]
+  set dw to d[4]
+  set cw to d[5]
+  set dw[n] to concat(custom_word, "")
+  set cw[n] to concat(canonical_word, "")
+  set d[3] to n + 1
+  return d
+end
+
+to dialect_canonicalize with src d
+  set out to concat(src, "")
+  set n to d[3]
+  set dw to d[4]
+  set cw to d[5]
+  set i to 0
+  while i < n
+    set from_w to concat(dw[i], "")
+    set to_w to concat(cw[i], "")
+    set out to replace(out, from_w + " ", to_w + " ")
+    set out to replace(out, from_w + "(", to_w + "(")
+    set out to replace(out, " " + from_w + "\n", " " + to_w + "\n")
+    if str_eq(out, from_w)
+      set out to to_w
+    end
+    set i to i + 1
+  end
+  return concat(out, "")
+end
+
+to dialect_signature with d
+  set payload to concat(d[0], "") + "|" + concat(d[1], "") + "|" + concat(d[2], "")
+  set n to d[3]
+  set dw to d[4]
+  set cw to d[5]
+  set i to 0
+  while i < n
+    set payload to payload + "|" + concat(dw[i], "") + "=" + concat(cw[i], "")
+    set i to i + 1
+  end
+  return "sdev-sig-" + hash_fnv1a_hex(payload)
+end
+
+to dialect_encode_address with d
+  set slug to concat(d[1], "")
+  set sig to dialect_signature(d)
+  return "sdev://dialect/" + slug + "?" + base64_encode(sig)
+end
+
+to dialect_decode_slug with addr
+  if text_starts_with(addr, "sdev://dialect/") is 0
+    return ""
+  end
+  set rest to substr(addr, 15, length(addr) - 15)
+  set q to find(rest, "?")
+  if q >= 0
+    return substr(rest, 0, q)
+  end
+  return concat(rest, "")
+end
+
+to dialect_preset with slug
+  set k to lower(trim(slug))
+  if str_eq(k, "bg") or str_eq(k, "bulgarian")
+    set d to dialect_create("Български", "bg", "bg")
+    set _ to dialect_add_word(d, "нека", "set")
+    set _ to dialect_add_word(d, "бъде", "to")
+    set _ to dialect_add_word(d, "кажи", "say")
+    set _ to dialect_add_word(d, "ако", "if")
+    set _ to dialect_add_word(d, "иначе", "else")
+    set _ to dialect_add_word(d, "докато", "while")
+    set _ to dialect_add_word(d, "край", "end")
+    return d
+  end
+  if str_eq(k, "es") or str_eq(k, "spanish")
+    set d to dialect_create("Español", "es", "es")
+    set _ to dialect_add_word(d, "forjar", "set")
+    set _ to dialect_add_word(d, "ser", "to")
+    set _ to dialect_add_word(d, "hablar", "say")
+    set _ to dialect_add_word(d, "si", "if")
+    set _ to dialect_add_word(d, "sino", "else")
+    set _ to dialect_add_word(d, "mientras", "while")
+    set _ to dialect_add_word(d, "fin", "end")
+    return d
+  end
+  if str_eq(k, "pirate")
+    set d to dialect_create("Pirate Speak", "pirate", "en")
+    set _ to dialect_add_word(d, "plunder", "set")
+    set _ to dialect_add_word(d, "be_yar", "to")
+    set _ to dialect_add_word(d, "bellow", "say")
+    set _ to dialect_add_word(d, "parley", "if")
+    set _ to dialect_add_word(d, "mutiny", "else")
+    set _ to dialect_add_word(d, "anchor", "end")
+    return d
+  end
+  set d_def to dialect_create("Standard English", "en", "en")
+  return d_def
+end
+
+
+to dialect_is_word_char with ch
+  set c to ord(ch, 0)
+  if c >= 65 and c <= 90
+    return 1
+  end
+  if c >= 97 and c <= 122
+    return 1
+  end
+  if c >= 48 and c <= 57
+    return 1
+  end
+  if c is 95 or c >= 128
+    return 1
+  end
+  return 0
+end
+
+to dialect_push_list with xs val
+  set n to length(xs)
+  set out to mklist(n + 1)
+  set i to 0
+  while i < n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  set out[n] to val
+  return out
+end
+
+to dialect_split_line with line comment_marker
+  set segs to []
+  set buf to ""
+  set n to length(line)
+  set mlen to length(comment_marker)
+  set i to 0
+  while i < n
+    if mlen > 0 and (i + mlen) <= n
+      if str_eq(substr(line, i, mlen), comment_marker)
+        if length(buf) > 0
+          set segs to dialect_push_list(segs, ["code", buf])
+          set buf to ""
+        end
+        set segs to dialect_push_list(segs, ["comment", substr(line, i, n - i)])
+        return segs
+      end
+    end
+    set ch to substr(line, i, 1)
+    if ch is "\"" or ch is "'"
+      if length(buf) > 0
+        set segs to dialect_push_list(segs, ["code", buf])
+        set buf to ""
+      end
+      set quote to ch
+      set s to ch
+      set i to i + 1
+      set closed to 0
+      while i < n and closed is 0
+        set cur to substr(line, i, 1)
+        if cur is "\\" and (i + 1) < n
+          set s to s + cur + substr(line, i + 1, 1)
+          set i to i + 2
+        else
+          set s to s + cur
+          if cur is quote
+            set closed to 1
+          end
+          set i to i + 1
+        end
+      end
+      set segs to dialect_push_list(segs, ["string", s])
+    else
+      set buf to buf + ch
+      set i to i + 1
+    end
+  end
+  if length(buf) > 0
+    set segs to dialect_push_list(segs, ["code", buf])
+  end
+  return segs
+end
+
+to dialect_map_words with code_str dict
+  set n to length(code_str)
+  set out to ""
+  set i to 0
+  while i < n
+    set ch to substr(code_str, i, 1)
+    if dialect_is_word_char(ch) is 1
+      set j to i + 1
+      while j < n and dialect_is_word_char(substr(code_str, j, 1)) is 1
+        set j to j + 1
+      end
+      set w to substr(code_str, i, j - i)
+      if has(dict, w)
+        set out to out + dict[w]
+      else
+        set out to out + w
+      end
+      set i to j
+    else
+      set out to out + ch
+      set i to i + 1
+    end
+  end
+  return out
+end
+
+to dialect_xor8 with a b
+  set x to a % 256
+  set y to b % 256
+  set res to 0
+  set p to 1
+  set bit to 0
+  while bit < 8
+    set bx to x % 2
+    set by to y % 2
+    if bx is not by
+      set res to res + p
+    end
+    set x to (x - bx) / 2
+    set y to (y - by) / 2
+    set p to p * 2
+    set bit to bit + 1
+  end
+  return res
+end
+
+to dialect_hex4 with val
+  set hex_chars to "0123456789abcdef"
+  set v to val
+  set out to ""
+  set k to 0
+  while k < 4
+    set digit to v % 16
+    set out to substr(hex_chars, digit, 1) + out
+    set v to (v - digit) / 16
+    set k to k + 1
+  end
+  return out
+end
+
+to dialect_fnv1a_hex with body_str
+  set hi to 33052
+  set lo to 40389
+  set n to length(body_str)
+  set i to 0
+  while i < n
+    set c to ord(body_str, i)
+    set b0 to lo % 256
+    set lo to (lo - b0) + dialect_xor8(b0, c % 256)
+    set p0 to lo * 403
+    set lo_next to p0 % 65536
+    set carry to (p0 - lo_next) / 65536
+    set hi_next to ((hi * 403) + (lo * 256) + carry) % 65536
+    set lo to lo_next
+    set hi to hi_next
+    set i to i + 1
+  end
+  return dialect_hex4(hi) + dialect_hex4(lo)
+end
+
+to dialect_has_signature with src prefix_str
+  set nl to find(src, "\n")
+  set first to src
+  if nl >= 0
+    set first to substr(src, 0, nl)
+  end
+  if text_starts_with(first, prefix_str) is 0
+    return 0
+  end
+  set rest to text_trim(substr(first, length(prefix_str), length(first) - length(prefix_str)))
+  if length(rest) is 0 or find(rest, " ") >= 0
+    return 0
+  end
+  return 1
+end
+
+to dialect_strip_signature with src prefix_str
+  if dialect_has_signature(src, prefix_str) is 0
+    return src
+  end
+  set nl to find(src, "\n")
+  if nl < 0
+    return ""
+  end
+  return substr(src, nl + 1, length(src) - nl - 1)
+end
+
+to dialect_is_slug_char with ch
+  set c to ord(ch, 0)
+  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c is 45
+    return 1
+  end
+  return 0
+end
+
+to dialect_is_lower_alnum with ch
+  set c to ord(ch, 0)
+  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57)
+    return 1
+  end
+  return 0
+end
+
+to dialect_is_digits with s
+  set n to length(s)
+  if n is 0
+    return 0
+  end
+  set i to 0
+  while i < n
+    set c to ord(s, i)
+    if c < 48 or c > 57
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+to dialect_is_semver with s
+  set parts to split(s, ".")
+  if length(parts) is not 3
+    return 0
+  end
+  if dialect_is_digits(parts[0]) is 0 or dialect_is_digits(parts[1]) is 0 or dialect_is_digits(parts[2]) is 0
+    return 0
+  end
+  return 1
+end
+
+to dialect_valid_ident_part with s max_len
+  set n to length(s)
+  if n < 1 or n > max_len
+    return 0
+  end
+  if dialect_is_lower_alnum(substr(s, 0, 1)) is 0
+    return 0
+  end
+  set i to 1
+  while i < n
+    if dialect_is_slug_char(substr(s, i, 1)) is 0
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+to dialect_parse_address with raw_input
+  set s to text_trim(raw_input)
+  if length(s) < 4 or substr(s, 0, 1) is not "@"
+    return []
+  end
+  set body to substr(s, 1, length(s) - 1)
+  set slash to find(body, "/")
+  if slash <= 0
+    return []
+  end
+  set user to substr(body, 0, slash)
+  if dialect_valid_ident_part(user, 31) is 0
+    return []
+  end
+  set tail to substr(body, slash + 1, length(body) - slash - 1)
+  set at_idx to find(tail, "@")
+  set slug to tail
+  set ver to ""
+  if at_idx >= 0
+    set slug to substr(tail, 0, at_idx)
+    set vpart to substr(tail, at_idx + 1, length(tail) - at_idx - 1)
+    if dialect_is_semver(vpart) is 0
+      return []
+    end
+    set ver to vpart
+  end
+  if dialect_valid_ident_part(slug, 39) is 0
+    return []
+  end
+  return [user, slug, ver]
+end
+
+to dialect_format_address with username slug version
+  if length(str(version)) > 0
+    return "@" + username + "/" + slug + "@" + str(version)
+  end
+  return "@" + username + "/" + slug
+end
+
+to dialect_is_share_code with raw_input
+  set s to text_lower(text_trim(raw_input))
+  if length(s) is not 8
+    return 0
+  end
+  set i to 0
+  while i < 8
+    set c to ord(s, i)
+    set ok to 0
+    if (c >= 48 and c <= 57) or (c >= 97 and c <= 102)
+      set ok to 1
+    end
+    if ok is 0
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+to dialect_preset_bg_data
+  set names to [["say", "кажи"], ["ask", "питай"], ["set", "нека"], ["to", "на"], ["if", "ако"], ["else", "иначе"], ["end", "край"], ["for", "за"], ["each", "всяко"], ["in", "във"], ["while", "докато"], ["break", "спри"], ["continue", "продължи"], ["match", "сравни"], ["with", "с"], ["return", "върни"], ["make", "създай"], ["capture", "улови"], ["ref", "препратка"], ["call", "извикай"], ["attempt", "опитай"], ["rescue", "хвани"], ["throw", "хвърли"], ["kind", "вид"], ["has", "има"], ["does", "прави"], ["new", "нов"], ["self", "аз"], ["extends", "наследява"], ["super", "родител"], ["use", "ползвай"], ["true", "вярно"], ["false", "невярно"], ["nothing", "нищо"], ["is", "е"], ["not", "не"], ["and", "и"], ["or", "или"], ["more", "повече"], ["less", "по_малко"]]
+  set syns to [["say", ["принтирай"]], ["return", ["резултат"]]]
+  set sample to "# първата ми програма на Сдев\nнека име на \"свят\"\n\nна поздрав с кой\n  кажи \"здравей, \" + кой\nкрай\n\nпоздрав(име)\n\nза всяко н във range(3)\n  ако н е 1\n    кажи \"едно\"\n  иначе\n    кажи н\n  край\nкрай\n\nкажи сбор([1, 2, 3, 4])"
+  return [names, syns, sample]
+end

@@ -532,12 +532,6 @@ export async function probeLocalServer(url = brainSettings().localUrl): Promise<
   }
 }
 
-/** Is a model reachable on this computer? Returns its model names, or null. */
-export async function probeLocal(url = brainSettings().localUrl): Promise<string[] | null> {
-  const res = await probeLocalServer(url);
-  return res.ok && res.models.length > 0 ? res.models : null;
-}
-
 /**
  * Directly ask a local model server to diagnose, repair, and explain code for SDev Doctor.
  */

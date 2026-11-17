@@ -11,6 +11,16 @@ import {
   SdevSet, SdevRaise, keyOf, makeTuple, isTuple, makeGenerator, isGenerator,
   isFunction, SdevGenerator,
 } from './runtime-values';
+import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
+import SDEV_TEXT_SRC from '../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_LIST_SRC from '../../lang/stdlib/v2/list.sdev?raw';
+import SDEV_PYPARITY_SRC from '../../lang/stdlib/v2/pyparity.sdev?raw';
+
+let pyRunner: SdevModuleRunner | null = null;
+function getPyRunner(): SdevModuleRunner {
+  if (!pyRunner) pyRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_LIST_SRC, SDEV_PYPARITY_SRC);
+  return pyRunner;
+}
 
 export interface ParityHost {
   call: (fn: unknown, args: unknown[], line: number) => unknown;
@@ -221,21 +231,22 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
     const start = bb === undefined ? 0 : a!;
     const stop = bb === undefined ? a! : bb;
     const step = c === undefined ? 1 : c;
-    const out: number[] = [];
-    if (step === 0) return out;
-    if (step > 0) for (let i = start; i < stop; i += step) out.push(i);
-    else for (let i = start; i > stop; i += step) out.push(i);
-    return out;
+    return getPyRunner().call('py_range', start, stop, step) as number[];
   });
 
   add('enumerate', (args, line) => {
     const items = list(args[0], line);
     const start = args[1] === undefined ? 0 : num(args[1]);
-    return items.map((v, i) => makeTuple([i + start, v]));
+    const pairs = getPyRunner().call('py_enumerate', items, start) as unknown[][];
+    return pairs.map((p) => makeTuple(p));
   });
 
   add('zip', (args, line) => {
     const cols = args.map((a) => list(a, line));
+    if (cols.length === 2) {
+      const pairs = getPyRunner().call('py_zip', cols[0], cols[1]) as unknown[][];
+      return pairs.map((p) => makeTuple(p));
+    }
     const n = cols.length ? Math.min(...cols.map((c) => c.length)) : 0;
     const out: unknown[] = [];
     for (let i = 0; i < n; i++) out.push(makeTuple(cols.map((c) => c[i])));
@@ -266,14 +277,24 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
     return list(seq, line).filter((v) => (f === null ? host.truthy(v) : host.truthy(host.call(f, [v], line))));
   });
 
-  add('any', (args, line) => list(args[0], line).some((v) => host.truthy(v)));
-  add('all', (args, line) => list(args[0], line).every((v) => host.truthy(v)));
+  add('any', (args, line) => {
+    const flags = list(args[0], line).map((v) => (host.truthy(v) ? 1 : 0));
+    return Boolean(getPyRunner().call('py_any', flags));
+  });
+  add('all', (args, line) => {
+    const flags = list(args[0], line).map((v) => (host.truthy(v) ? 1 : 0));
+    return Boolean(getPyRunner().call('py_all', flags));
+  });
 
   add('sorted', (args, line) => {
     const { pos, kw } = splitKwargs(args);
     const items = list(pos[0], line);
     const key = kw.key ?? pos[1];
     const reverse = host.truthy(kw.reverse);
+    if (!key && items.every((v) => typeof v === 'number' || typeof v === 'string')) {
+      const sorted = getPyRunner().call('py_sorted', items) as unknown[];
+      return reverse ? (getPyRunner().call('py_reversed', sorted) as unknown[]) : sorted;
+    }
     const scored = items.map((v) => ({ v, k: key ? host.call(key, [v], line) : v }));
     scored.sort((x, y) => {
       const a = x.k as number | string;
@@ -285,7 +306,7 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
     return reverse ? out.reverse() : out;
   });
 
-  add('reversed', (args, line) => list(args[0], line).reverse());
+  add('reversed', (args, line) => getPyRunner().call('py_reversed', list(args[0], line)) as unknown[]);
 
   add('min', (args, line) => {
     const { pos, kw } = splitKwargs(args);
@@ -313,7 +334,11 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
 
   add('sum', (args, line) => {
     const items = list(args[0], line);
-    let acc: unknown = args[1] ?? 0;
+    const init = args[1] ?? 0;
+    if (items.every((v) => typeof v === 'number') && typeof init === 'number') {
+      return getPyRunner().call('py_sum', items, init);
+    }
+    let acc: unknown = init;
     for (const v of items) acc = (acc as number) + (v as number);
     return acc;
   });
@@ -341,11 +366,24 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
   });
   add('divmod', (args) => {
     const [a, bb] = args.map(num);
+    if (Number.isInteger(a) && Number.isInteger(bb) && a >= 0 && bb > 0) {
+      const res = getPyRunner().call('py_divmod', a, bb) as [number, number];
+      return makeTuple(res);
+    }
     return makeTuple([Math.floor(a / bb), ((a % bb) + bb) % bb]);
   });
-  add('bin', (args) => '0b' + (num(args[0]) >>> 0).toString(2));
-  add('oct', (args) => '0o' + (num(args[0]) >>> 0).toString(8));
-  add('hex', (args) => '0x' + (num(args[0]) >>> 0).toString(16));
+  add('bin', (args) => {
+    const n = Math.trunc(num(args[0])) >>> 0;
+    return getPyRunner().callStr('py_bin', n);
+  });
+  add('oct', (args) => {
+    const n = Math.trunc(num(args[0])) >>> 0;
+    return getPyRunner().callStr('py_oct', n);
+  });
+  add('hex', (args) => {
+    const n = Math.trunc(num(args[0])) >>> 0;
+    return getPyRunner().callStr('py_hex', n);
+  });
 
   // ---------- reflection ----------
   add('type', (args) => {
@@ -418,12 +456,7 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
   add('dir', (args) => (args[0] && typeof args[0] === 'object' ? Object.keys(args[0] as object).sort() : []));
   add('callable', (args) => isFunction(args[0]) || (!!args[0] && (args[0] as { type?: string }).type === 'class'));
   add('id', (args) => keyOf(args[0]).length * 2654435761 % 2147483647);
-  add('hash', (args) => {
-    const s = keyOf(args[0]);
-    let h = 0;
-    for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-    return h;
-  });
+  add('hash', (args) => getPyRunner().call('py_str_hash', keyOf(args[0])) as number);
   add('format', (args) => formatValue(args[0], args[1] === undefined ? undefined : String(args[1])));
 
   // ---------- iteration protocol ----------
@@ -529,7 +562,10 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
     return makeGenerator(it);
   });
 
-  add('chain', (args, line) => args.flatMap((a) => list(a, line)));
+  add('chain', (args, line) => {
+    if (args.length === 2) return getPyRunner().call('py_chain', list(args[0], line), list(args[1], line)) as unknown[];
+    return args.flatMap((a) => list(a, line));
+  });
 
   add('islice', (args, line) => {
     const [seq, a, bb, c] = args;
@@ -591,6 +627,9 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
   add('accumulate', (args, line) => {
     const items = list(args[0], line);
     const f = args[1];
+    if (!f && items.every((v) => typeof v === 'number')) {
+      return getPyRunner().call('py_accumulate', items) as number[];
+    }
     const out: unknown[] = [];
     let acc: unknown = null;
     items.forEach((v, i) => {
@@ -764,17 +803,8 @@ export function createParityBuiltins(output: OutputCallback, host: ParityHost): 
     atan: fn('atan', (a) => Math.atan(num(a[0]))),
     atan2: fn('atan2', (a) => Math.atan2(num(a[0]), num(a[1]))),
     hypot: fn('hypot', (a) => Math.hypot(...a.map(num))),
-    gcd: fn('gcd', (a) => {
-      let x = Math.abs(num(a[0]));
-      let y = Math.abs(num(a[1]));
-      while (y) { [x, y] = [y, x % y]; }
-      return x;
-    }),
-    factorial: fn('factorial', (a) => {
-      let acc = 1;
-      for (let i = 2; i <= num(a[0]); i++) acc *= i;
-      return acc;
-    }),
+    gcd: fn('gcd', (a) => getPyRunner().call('py_gcd', Math.trunc(num(a[0])), Math.trunc(num(a[1]))) as number),
+    factorial: fn('factorial', (a) => getPyRunner().call('py_factorial', Math.trunc(num(a[0]))) as number),
     isnan: fn('isnan', (a) => Number.isNaN(num(a[0]))),
     isinf: fn('isinf', (a) => !Number.isFinite(num(a[0])) && !Number.isNaN(num(a[0]))),
   });

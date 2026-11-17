@@ -1,0 +1,4 @@
+Извадка от резултатите в Lovable (обобщен запис Б01):
+- Генерирани начални React/TSX компоненти за уеб IDE в src/pages/IDE.tsx, Explore.tsx, Gist.tsx, Libraries.tsx, Extensions.tsx.
+- Създадени Edge Functions в supabase/functions/ (sdev-agent, sdev-chat, sdev-fix, compile-firmware, mcp).
+- След генерирането кодът е преглеждан, тестван в браузър и доработван/коригиран директно от автора в хранилището.

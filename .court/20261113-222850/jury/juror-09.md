@@ -1,0 +1,4 @@
+VOTE: GUILTY
+REASON: Putting a V–VII grade student into the XI–XII grade category on unverified promises—with no mock test scores, no existing AI logs under a disqualification rule, and no proof they can defend a massive compiler and cloud codebase—is an unacceptable risk to the child's time, effort, and well-being.
+DECIDING FACT: The record contains no XI–XII mock test results, no existing Annex 5 AI-contribution records (where incompleteness leads to disqualification), and no verification that the student can defend the AI-written codebase, leaving the entire plan resting on promises alone.
+WOULD FLIP IF: The record included passing XI–XII mock test results, completed Annex 5 records clearly separating the student's own work from AI-generated code, and a verified practice defense showing the student can explain the project's modules.

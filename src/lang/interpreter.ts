@@ -5,6 +5,7 @@ import { createBuiltins, SdevFunction, isTruthy, stringify, OutputCallback, setO
 import { createAdvancedBuiltins } from './advanced';
 import { createMatrixBuiltins } from './matrix';
 import { createParityBuiltins, formatValue, setObjectReprHook } from './pyparity';
+import { createWebBuiltins, bindWebBuiltinsToEnv, renderWebDocument, type WebState } from './web';
 import {
   SdevRaise, SdevSet, keyOf, makeTuple, isTuple, makeGenerator, isGenerator,
   isFunction, SdevGenerator, PROTOCOL_SLOTS, REFLECTED_SLOTS, dunderAlias,
@@ -48,6 +49,7 @@ interface CallableMeta {
   isGenerator?: boolean;
   isAsync?: boolean;
   name?: string;
+  ast?: AST.FuncDeclaration | AST.LambdaExpr;
 }
 
 type RichFunction = SdevFunction & { meta?: CallableMeta };
@@ -57,8 +59,9 @@ const MAX_ITERATIONS = 1_000_000;
 export class Interpreter {
   private globalEnv: Environment;
   private output: OutputCallback;
+  private webState: WebState | null = null;
 
-  constructor(output: OutputCallback) {
+  constructor(output: OutputCallback, options?: { bindWeb?: boolean }) {
     this.output = output;
     this.globalEnv = new Environment();
 
@@ -87,6 +90,14 @@ export class Interpreter {
       }
     });
 
+    // Default Web Toolkit builtins so `execute()` and CLI can run web programs directly.
+    if (options?.bindWeb !== false) {
+      const web = createWebBuiltins((s) => {
+        this.webState = s;
+      });
+      bindWebBuiltinsToEnv(this.globalEnv, web);
+    }
+
     this.globalEnv.define('PI', Math.PI);
     this.globalEnv.define('TAU', Math.PI * 2);
     this.globalEnv.define('E', Math.E);
@@ -108,6 +119,14 @@ export class Interpreter {
 
   getGlobalEnv(): Environment {
     return this.globalEnv;
+  }
+
+  getWebState(): WebState | null {
+    return this.webState && this.webState.produced ? this.webState : null;
+  }
+
+  getWebHtml(): string | null {
+    return this.webState && this.webState.produced ? renderWebDocument(this.webState) : null;
   }
 
   interpret(program: AST.Program): unknown {
@@ -1091,6 +1110,7 @@ export class Interpreter {
         isGenerator: node.isGenerator,
         isAsync: node.isAsync,
         name: boundName ?? node.name,
+        ast: node,
       },
     };
     return fn;
@@ -1128,7 +1148,7 @@ export class Interpreter {
           throw e;
         }
       },
-      meta: { paramSpecs: specs, name: '<lambda>' },
+      meta: { paramSpecs: specs, name: '<lambda>', isAsync: node.isAsync, isGenerator: node.isGenerator, ast: node },
     };
   }
 

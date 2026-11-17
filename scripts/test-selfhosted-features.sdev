@@ -1,0 +1,152 @@
+# =============================================================================
+# SDEV Self-Hosted Complete Feature Suite — authored in SDEV
+#
+#   node bin/sdevhost.mjs scripts/test-selfhosted-features.sdev
+#
+# Compiles and executes Graphics, Turtle, UI Toolkit, Matrix, Regex, Buffer,
+# Python-Parity, Dialect Engine, API Registry, Native PE/COFF, WASI Component,
+# Notebook, Benchmark, and Live Collab directly on the self-hosted compiler.
+# =============================================================================
+
+use "lang/stdlib/testkit.sdev"
+use "lang/stdlib/v2/graphics.sdev"
+use "lang/stdlib/v2/turtle.sdev"
+use "lang/stdlib/v2/ui.sdev"
+use "lang/stdlib/v2/matrix.sdev"
+use "lang/stdlib/v2/regex.sdev"
+use "lang/stdlib/v2/buffer.sdev"
+use "lang/stdlib/v2/pyparity.sdev"
+use "lang/dialect/dialect.sdev"
+use "lang/registry/registry.sdev"
+use "lang/native/pe_x64.sdev"
+use "lang/runtime/wasi.sdev"
+use "lang/runtime/notebook.sdev"
+use "lang/linter/linter.sdev"
+use "lang/translator/translator.sdev"
+use "lang/paradigms/hardware.sdev"
+
+# 1. 2D Canvas Graphics & Turtle Vector Graphics (in SDEV)
+set _ to canvas_create(400, 300)
+set _ to gfx_background("#090d16")
+set _ to gfx_fill("#38bdf8")
+set _ to gfx_stroke("#818cf8")
+set _ to gfx_rect(10, 20, 120, 80, 8)
+set _ to gfx_circle(200, 150, 45)
+set _ to gfx_line(0, 0, 400, 300)
+set _ to gfx_text("SDEV Canvas", 40, 50)
+set svg_out to gfx_to_svg()
+set _ to check("Graphics: recorded 5 scene commands", gfx_cmd_count() is 5)
+set _ to check("Graphics: renders valid <svg> with rect, circle, line, text", contains(svg_out, "<svg") and contains(svg_out, "<circle cx=\"200\" cy=\"150\" r=\"45\"") and contains(svg_out, "SDEV Canvas"))
+
+set _ to turtle_create()
+set _ to turtle_forward(100)
+set _ to turtle_right(90)
+set _ to turtle_forward(50)
+set t_svg to turtle_to_svg()
+set _ to check("Turtle: computed position (300, 250) using trig", turtle_x() is 300 and turtle_y() is 250)
+set _ to check("Turtle: emitted 2 SVG line segments", turtle_segment_count() is 2 and contains(t_svg, "x2=\"300\" y2=\"200\""))
+
+# 2. Declarative UI & Window Toolkit (in SDEV)
+set _ to ui_window("Calculator", 360, 480)
+set _ to ui_column(12)
+set _ to ui_card("Inputs")
+set _ to ui_input("username", "Enter name", "Ada")
+set _ to ui_slider("volume", 0, 100, 75)
+set _ to ui_checkbox("notifications", "Enable alerts", 1)
+set _ to ui_button("Save", "primary")
+set _ to ui_end()
+set _ to ui_end()
+set ui_html to ui_to_html()
+set _ to check("UI: reactive state get/set works", str_same(ui_get("username"), "Ada") and str_same(ui_get("volume"), "75"))
+set _ to ui_set("volume", "90")
+set _ to check("UI: updated state persists", str_same(ui_get("volume"), "90"))
+set _ to check("UI: renders window HTML tree", contains(ui_html, "data-title=\"Calculator\"") and contains(ui_html, "data-ui-key=\"username\""))
+
+# 3. Matrix & Linear Algebra (in SDEV)
+set m1 to mat_from_flat(2, 2, [4, 7, 2, 6])
+set m2 to mat_eye(2)
+set prod to mat_mul(m1, m2)
+set tr to mat_transpose(m1)
+set _ to check("Matrix: det([4,7;2,6]) is 10", mat_det(m1) is 10)
+set _ to check("Matrix: trace([4,7;2,6]) is 10", mat_trace(m1) is 10)
+set _ to check("Matrix: mul with identity preserves matrix", mat_get(prod, 0, 1) is 7 and mat_get(prod, 1, 0) is 2)
+set _ to check("Matrix: transpose swaps off-diagonal", mat_get(tr, 0, 1) is 2 and mat_get(tr, 1, 0) is 7)
+set _ to check("Matrix: dot product [1,2,3].[4,5,6] is 32", mat_dot([1, 2, 3], [4, 5, 6]) is 32)
+
+# 4. Regular Expressions & Glob Matching (in SDEV)
+set _ to check("Regex: ^hello\\s+\\w+$ matches", re_test("^hello\\s+\\w+$", "hello sdev_2") is 1)
+set _ to check("Regex: \\d+ finds digits in text", str_same(re_search("\\d+", "version 2026 release"), "2026"))
+set _ to check("Regex: non-matching pattern returns 0", re_test("^\\d+$", "abc") is 0)
+set _ to check("Glob: *.sdev matches sdev-website.sdev", glob_match("*.sdev", "sdev-website.sdev") is 1)
+set _ to check("Glob: test-?.sdev matches test-1.sdev", glob_match("test-?.sdev", "test-1.sdev") is 1)
+
+# 5. Binary Byte Buffers, Hex, Base64 & Hashing (in SDEV)
+set b to buf_from_str("sdev")
+set hx to buf_to_hex(b)
+set b2 to buf_from_hex(hx)
+set _ to check("Buffer: hex round-trip for 'sdev'", str_same(hx, "73646576") and str_same(buf_to_str(b2), "sdev"))
+set b64 to base64_encode("Hello SDEV!")
+set dec to base64_decode(b64)
+set _ to check("Buffer: Base64 encode/decode round-trip", str_same(b64, "SGVsbG8gU0RFViE=") and str_same(dec, "Hello SDEV!"))
+set _ to check("Buffer: FNV/DJB2 hash is deterministic", str_same(hash_fnv1a_hex("sdev"), hash_fnv1a_hex("sdev")))
+
+# 6. Python-Parity Stdlib & Set Algebra (in SDEV)
+set sorted_xs to py_sorted([9, 2, 7, 1, 5])
+set _ to check("PyParity: py_sorted sorts ascending", sorted_xs[0] is 1 and sorted_xs[4] is 9)
+set _ to check("PyParity: py_bin / py_oct / py_hex", str_same(py_bin(10), "0b1010") and str_same(py_oct(8), "0o10") and str_same(py_hex(255), "0xff"))
+set s_union to py_set_union([1, 2, 3], [3, 4, 5])
+set s_inter to py_set_intersection([1, 2, 3], [2, 3, 4])
+set _ to check("PyParity: set union & intersection", length(s_union) is 5 and length(s_inter) is 2 and py_set_issubset(s_inter, s_union) is 1)
+
+# 7. Custom Dialect Engine (in SDEV)
+set bg_d to dialect_preset("bg")
+set bg_canon to dialect_canonicalize("нека x бъде 42\nкажи(x)", bg_d)
+set bg_addr to dialect_encode_address(bg_d)
+set _ to check("Dialect: Bulgarian preset canonicalizes to set/to/say", contains(bg_canon, "set x to 42") and contains(bg_canon, "say(x)"))
+set _ to check("Dialect: sdev:// address round-trips slug", str_same(dialect_decode_slug(bg_addr), "bg"))
+
+# 8. Canonical API Registry & Diagnostic Catalogue (in SDEV)
+set _ to check("Registry: 15 canonical modules registered", length(registry_modules()) is 15)
+set _ to check("Registry: resolves page() to web and mat_mul() to matrix", str_same(registry_find_module("page"), "web") and str_same(registry_find_module("mat_mul"), "matrix"))
+set _ to check("Registry: explains SDEV001..SDEV015", contains(registry_explain_diagnostic("SDEV001"), "Unbalanced") and contains(registry_explain_diagnostic("SDEV015"), "Planned"))
+
+# 9. Native PE/COFF (.exe), WASI Component, Notebook & Collab (in SDEV)
+set exe_buf to pe_build_minimal_exe(0)
+set _ to check("Native PE: valid MZ + PE\\0\\0 x86-64 header", pe_verify_header(exe_buf) is 1)
+set wasm_hdr to wasi_emit_component_header()
+set _ to check("WASI Component: valid \\0asm header", wasm_hdr[0] is 0 and wasm_hdr[1] is 97 and wasm_hdr[4] is 13)
+set nb to nb_create()
+set _ to nb_add_cell(nb, "markdown", "# SDEV Notebook")
+set _ to nb_add_cell(nb, "code", "say 42")
+set _ to check("Notebook: exports markdown & sdev code fence", nb_cell_count(nb) is 2 and contains(nb_to_markdown(nb), "```sdev"))
+set cdoc to collab_doc_create("Hello World")
+set _ to collab_apply_insert(cdoc, 5, " SDEV")
+set _ to check("Collab: OT insert produces 'Hello SDEV World'", str_same(cdoc[0], "Hello SDEV World"))
+
+# 10. Newly Ported Self-Hosted Engine Checks (SDEV Parity Verification)
+set _ to check("Graphics: color CSS & sprite collision", str_same(gfx_rgb_css(10, 20, 30), "rgb(10, 20, 30)") and gfx_sprite_collides(0, 0, 10, 10, 5, 5, 10, 10) is 1)
+set _ to check("UI: resolve @username binding", ui_resolve_bind("@username")[0] is 1 and str_same(ui_resolve_bind("@username")[2], "Ada"))
+set m2d to [[4, 7], [2, 6]]
+set _ to check("Matrix 2D: sum & mul with identity", mat2d_sum(m2d) is 19 and mat2d_mul(m2d, mat2d_identity(2))[0][1] is 7)
+set _ to check("Regex: find_all & replace_all", length(re_find_all("\\d+", "a1 b22 c333")) is 3 and str_same(re_replace_all("x1 y2", "\\d+", "#"), "x# y#"))
+set ar to mem_arena_new(64)
+set off0 to mem_arena_alloc(ar, 8)
+set _ to mem_arena_poke_u8(ar[0], 0, 255)
+set _ to mem_arena_poke_i16(ar[0], 1, 1024)
+set _ to mem_arena_poke_i32(ar[0], 4, 123456)
+set _ to check("Arena: u8/i16/i32 poke/peek parity", mem_arena_peek_u8(ar[0], 0) is 255 and mem_arena_peek_i16(ar[0], 1) is 1024 and mem_arena_peek_i32(ar[0], 4) is 123456)
+set _ to check("PyParity: range, sum, gcd, factorial", length(py_range(0, 5, 1)) is 5 and py_sum([1, 2, 3, 4], 0) is 10 and py_gcd(48, 18) is 6 and py_factorial(5) is 120)
+set paddr to dialect_parse_address("@sava/sdev-bg@1.0.0")
+set _ to check("Dialect: parse address & FNV-1a hex", str_same(paddr[0], "sava") and str_same(paddr[1], "sdev-bg") and length(dialect_fnv1a_hex("say \"hi\"\n")) is 8 and dialect_is_share_code("deadbeef") is 1)
+set _ to check("Registry: Damerau-Levenshtein transposition", registry_damerau_levenshtein("ab", "ba") is 1)
+set _ to check("Linter: stripLineComment preserves strings", str_same(sdev_strip_line_comment("say \"#keep\" # drop"), "say \"#keep\" "))
+set _ to check("Translator: script detection, segmentation & levenshtein", translator_has_non_ascii("кажи") is 1 and length(translator_segment_source("say \"#s\"")) is 2 and translator_levenshtein("kitten", "sitting") is 3)
+set wit_s to wasi_generate_wit("mathOps", [["hipotSq", [["a", "f64"], ["b", "f64"]], "f64"]])
+set _ to check("WASI: kebab-case, ULEB128 & WIT", str_same(wasi_to_kebab("hipotSq"), "hipot-sq") and length(wasi_encode_uleb128(300)) is 2 and contains(wit_s, "hipot-sq: func(a: f64, b: f64) -> f64;"))
+set nb_parsed to nb_parse_cells("# Demo\n\n```sdev\nsay 1\n```")
+set bstats to bench_compute([2.0, 4.0, 6.0])
+set crdt_res to crdt_should_accept(1, "peer-a", "a", 2, "peer-b", "b", 0)
+set _ to check("Notebook/Bench/CRDT: parse, stats & merge", str_same(nb_parsed[0], "Demo") and length(nb_parsed[1]) is 2 and bstats[1] <= bstats[3] and crdt_res[0] is 1)
+set _ to check("Hardware: strip spans preserves newlines", str_same(hw_strip_spans("a\nb\nc\nd", [[2, 5]]), "a\n\n\nd"))
+
+set _ to tk_report("self-hosted all features")

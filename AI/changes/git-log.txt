@@ -1,0 +1,60 @@
+﻿ed076c6 2026-11-12 Sava Milanov — Merge branch 'antigrab' of https://github.com/sava34301/sdev-web into antigrab
+4ba80a9 2026-11-09 Sava Milanov — feat(engine, ide, docs): add live scratchpad, micro-benchmarking, literate notebooks, and operational documentation
+9818ec9 2026-11-08 Sava Milanov — fix(agent): improve WebGPU model grounding, output parsing, and natural language solving
+c364fb9 2026-11-08 Sava Milanov — feat(ide,lang): add hardware simulator, time-travel debugger, micro-brain, WASI 0.2 export, and multiplayer rooms
+9c18b34 2026-11-04 gpt-engineer-app[bot] — Changes
+9334a9b 2026-11-04 gpt-engineer-app[bot] — Changes
+1631ef6 2026-11-04 gpt-engineer-app[bot] — Changes
+74f9a79 2026-11-04 gpt-engineer-app[bot] — Changes
+fa29209 2026-11-04 gpt-engineer-app[bot] — Changes
+5cb9ddf 2026-11-04 gpt-engineer-app[bot] — Changes
+ecb145d 2026-11-04 gpt-engineer-app[bot] — Changes
+94b42c7 2026-11-04 gpt-engineer-app[bot] — Changes
+55404f0 2026-11-04 gpt-engineer-app[bot] — Changes
+3955eb3 2026-11-04 gpt-engineer-app[bot] — Changes
+b4c50e8 2026-11-04 gpt-engineer-app[bot] — Changes
+dcc71e5 2026-11-04 gpt-engineer-app[bot] — Changes
+2554201 2026-11-04 gpt-engineer-app[bot] — Changes
+953271a 2026-11-04 gpt-engineer-app[bot] — Changes
+9ee9d4d 2026-11-04 gpt-engineer-app[bot] — Changes
+c1af9c0 2026-11-04 gpt-engineer-app[bot] — Changes
+13da956 2026-11-04 gpt-engineer-app[bot] — Changes
+0d81f39 2026-11-04 gpt-engineer-app[bot] — Changes
+d64070b 2026-11-04 gpt-engineer-app[bot] — Changes
+390dcac 2026-11-04 gpt-engineer-app[bot] — Changes
+64728a2 2026-11-04 gpt-engineer-app[bot] — Changes
+f5b273d 2026-11-04 gpt-engineer-app[bot] — Changes
+390b72c 2026-11-04 gpt-engineer-app[bot] — Changes
+d828953 2026-11-04 gpt-engineer-app[bot] — Changes
+f23f677 2026-11-04 gpt-engineer-app[bot] — Changes
+b930e9e 2026-11-04 gpt-engineer-app[bot] — Changes
+3aa5288 2026-11-03 gpt-engineer-app[bot] — Changes
+aacb4f9 2026-11-08 Sava Milanov — feat(core): implement self-hosted test runner, zero-cost native PE generator, and compiler internals
+ccb2870 2026-11-01 gpt-engineer-app[bot] — Changes
+cfb9f5e 2026-11-01 gpt-engineer-app[bot] — Changes
+419b86b 2026-11-01 gpt-engineer-app[bot] — Changes
+c9d80c5 2026-11-01 gpt-engineer-app[bot] — Changes
+c3f1f7b 2026-11-01 gpt-engineer-app[bot] — Changes
+fb13322 2026-11-01 gpt-engineer-app[bot] — Changes
+e2136a9 2026-10-26 gpt-engineer-app[bot] — Changes
+b3086c1 2026-10-26 gpt-engineer-app[bot] — Changes
+1e6c41d 2026-10-26 gpt-engineer-app[bot] — Changes
+7596baf 2026-10-26 gpt-engineer-app[bot] — Changes
+3cc34e6 2026-10-26 gpt-engineer-app[bot] — Changes
+cf89548 2026-10-26 gpt-engineer-app[bot] — Changes
+a82a6e6 2026-10-26 gpt-engineer-app[bot] — Changes
+4450e25 2026-10-26 gpt-engineer-app[bot] — Changes
+eef330f 2026-10-26 gpt-engineer-app[bot] — Changes
+e395f65 2026-10-26 gpt-engineer-app[bot] — Changes
+1e6beef 2026-10-26 gpt-engineer-app[bot] — Changes
+b2699c3 2026-10-26 gpt-engineer-app[bot] — Changes
+ac1a562 2026-10-26 gpt-engineer-app[bot] — Changes
+02f9c9b 2026-10-26 gpt-engineer-app[bot] — Changes
+ae69c0e 2026-10-26 gpt-engineer-app[bot] — Changes
+3c941ce 2026-10-26 gpt-engineer-app[bot] — Changes
+4de4d0c 2026-10-26 gpt-engineer-app[bot] — Changes
+b9006c6 2026-10-26 gpt-engineer-app[bot] — Changes
+ebe20ef 2026-10-26 gpt-engineer-app[bot] — Changes
+7c34938 2026-10-26 gpt-engineer-app[bot] — Changes
+4fea9f8 2026-10-25 gpt-engineer-app[bot] — Changes
+7301952 2026-10-25 gpt-engineer-app[bot] — Changes

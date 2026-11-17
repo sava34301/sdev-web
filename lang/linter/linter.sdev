@@ -83,3 +83,39 @@ to sdev_lint_line with line line_no
 
   return ""
 end
+
+
+to sdev_strip_line_comment with line
+  set n to length(line)
+  set in_q to ""
+  set i to 0
+  while i < n
+    set ch to substr(line, i, 1)
+    if length(in_q) > 0
+      if ch is "\\"
+        set i to i + 2
+      else
+        if ch is in_q
+          set in_q to ""
+        end
+        set i to i + 1
+      end
+    else
+      if ch is "\"" or ch is "'" or ch is "`"
+        set in_q to ch
+        set i to i + 1
+      else
+        if ch is "/" and (i + 1) < n
+          if substr(line, i + 1, 1) is "/"
+            return substr(line, 0, i)
+          end
+        end
+        if ch is "#"
+          return substr(line, 0, i)
+        end
+        set i to i + 1
+      end
+    end
+  end
+  return line
+end

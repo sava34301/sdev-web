@@ -84,9 +84,3 @@ export function scanDirectives(source: string): DirectiveScan {
   return { mode, brain, learn, found, source: lines.join('\n') };
 }
 
-/** The directive line the agent writes when it promotes settings into a file. */
-export function directiveLine(mode: AgentMode, brain?: BrainMode): string {
-  if (mode === 'off') return '!#agent:off';
-  if (brain && brain !== 'auto' && brain !== 'none') return `!#agent:${brain}`;
-  return `!#agent:${mode}`;
-}

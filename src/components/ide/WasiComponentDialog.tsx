@@ -20,6 +20,7 @@ import {
   buildWasiComponentBundle,
 } from '@/lang/wasi-component';
 import { toast } from 'sonner';
+import { useClipboard } from '@/hooks/useClipboard';
 
 interface WasiComponentDialogProps {
   open: boolean;
@@ -40,7 +41,7 @@ export function WasiComponentDialog({
   );
 
   const [activeTab, setActiveTab] = useState<'wit' | 'typescript' | 'python' | 'rust' | 'go'>('wit');
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard({ timeoutMs: 1500 });
   const [testResult, setTestResult] = useState<string | null>(null);
 
   const activeCode = useMemo(() => {
@@ -49,10 +50,8 @@ export function WasiComponentDialog({
   }, [activeTab, bundle]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(activeCode).catch(() => {});
-    setCopied(true);
+    copy(activeCode);
     toast.success('Copied to clipboard');
-    setTimeout(() => setCopied(false), 1500);
   };
 
   const downloadWasm = () => {

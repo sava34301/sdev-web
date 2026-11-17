@@ -1850,6 +1850,14 @@ to parse_and with pos
       emit_byte(65)
       set fx to placeholder16()
       set pos to parse_not(pos + 1)
+<<<<<<< HEAD
+      emit_byte(64)
+      set done_and to placeholder16()
+      patch_i16(fx, bc[0])
+      emit_byte(1)
+      emit_i32(0)
+      patch_i16(done_and, bc[0])
+=======
       emit_byte(48)
       emit_byte(48)
       emit_byte(64)
@@ -1858,6 +1866,7 @@ to parse_and with pos
       emit_byte(1)
       emit_i32(0)
       patch_i16(fe, bc[0])
+>>>>>>> 2773d440193e4daf61f43a17bae84d5906aa9bba
       set expr_type[0] to 0
     else
       set going to 0
@@ -1874,6 +1883,15 @@ to parse_or with pos
       # a or b  ->  a JZ L1 ; PUSH 1 ; JMP L2 ; L1: b NOT NOT ; L2:
       emit_byte(65)
       set fx to placeholder16()
+<<<<<<< HEAD
+      set pos to parse_and(pos + 1)
+      emit_byte(64)
+      set done_or to placeholder16()
+      patch_i16(fx, bc[0])
+      emit_byte(1)
+      emit_i32(1)
+      patch_i16(done_or, bc[0])
+=======
       emit_byte(1)
       emit_i32(1)
       emit_byte(64)
@@ -1883,6 +1901,7 @@ to parse_or with pos
       emit_byte(48)
       emit_byte(48)
       patch_i16(fe, bc[0])
+>>>>>>> 2773d440193e4daf61f43a17bae84d5906aa9bba
       set expr_type[0] to 0
     else
       set going to 0

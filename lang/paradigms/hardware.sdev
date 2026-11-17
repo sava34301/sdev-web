@@ -20,7 +20,7 @@ to hw_transpile_board with board_id sdev_code
 
   set i to 0
   while i < n
-    set line to trim(lines[i])
+    set line to text_trim(lines[i])
 
     # pin <n> be output -> pinMode(n, OUTPUT);
     if text_starts_with(line, "pin ") and text_ends_with(line, " be output")
@@ -41,7 +41,7 @@ to hw_transpile_board with board_id sdev_code
 
   set j to 0
   while j < n
-    set line to trim(lines[j])
+    set line to text_trim(lines[j])
 
     # pin <n> be high -> digitalWrite(n, HIGH);
     if text_starts_with(line, "pin ") and text_ends_with(line, " be high")
@@ -72,4 +72,32 @@ to hw_transpile_board with board_id sdev_code
 
   set out to out + "}\n"
   return out
+end
+
+
+to hw_strip_spans with source spans_list
+  set ns to length(spans_list)
+  if ns is 0
+    return source
+  end
+  set out to ""
+  set last to 0
+  set slen to length(source)
+  set i to 0
+  while i < ns
+    set sp to spans_list[i]
+    set s_idx to sp[0]
+    set e_idx to sp[1]
+    set out to out + substr(source, last, s_idx - last)
+    set k to s_idx
+    while k < e_idx and k < slen
+      if substr(source, k, 1) is "\n"
+        set out to out + "\n"
+      end
+      set k to k + 1
+    end
+    set last to e_idx
+    set i to i + 1
+  end
+  return out + substr(source, last, slen - last)
 end

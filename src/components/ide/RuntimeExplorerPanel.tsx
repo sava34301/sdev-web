@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useClipboard } from '@/hooks/useClipboard';
 import {
   Search,
   Cpu,
@@ -114,7 +115,7 @@ export function RuntimeExplorerPanel({
       }
     }
   }, [initialQuery]);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const { copiedId: copiedKey, copy } = useClipboard({ timeoutMs: 1500 });
 
   const filteredApis = useMemo(
     () =>
@@ -143,11 +144,7 @@ export function RuntimeExplorerPanel({
   }, [query]);
 
   const handleCopy = (text: string, key: string) => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => {});
-    }
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 1500);
+    copy(text, key);
   };
 
   return (

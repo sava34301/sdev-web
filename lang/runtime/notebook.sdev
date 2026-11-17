@@ -1,0 +1,312 @@
+# =============================================================================
+# SDEV Runtime: Interactive Notebook, Benchmark & Live Collab Engine
+# (lang/runtime/notebook.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+# Notebook cell list:
+# 0: cell_count (int)
+# 1: kinds list ("code" or "markdown")
+# 2: sources list (str)
+to nb_create
+  set nb to mklist(3)
+  set nb[0] to 0
+  set nb[1] to mklist(64)
+  set nb[2] to mklist(64)
+  return nb
+end
+
+to nb_add_cell with nb kind_str src_str
+  set idx to nb[0]
+  set kinds to nb[1]
+  set srcs to nb[2]
+  set kinds[idx] to concat(kind_str, "")
+  set srcs[idx] to concat(src_str, "")
+  set nb[0] to idx + 1
+  return idx
+end
+
+to nb_cell_count with nb
+  return nb[0]
+end
+
+to nb_to_markdown with nb
+  set n to nb[0]
+  set kinds to nb[1]
+  set srcs to nb[2]
+  set out to ""
+  set i to 0
+  while i < n
+    set k to concat(kinds[i], "")
+    set s to concat(srcs[i], "")
+    if i > 0
+      set out to out + "\n\n"
+    end
+    if str_eq(k, "code")
+      set out to out + "```sdev\n" + s + "\n```"
+    else
+      set out to out + s
+    end
+    set i to i + 1
+  end
+  return concat(out, "")
+end
+
+# Benchmark statistical analyzer
+to bench_stats with samples_ms
+  set n to length(samples_ms)
+  if n is 0
+    return { count: 0, min: 0, max: 0, mean: 0 }
+  end
+  set mn to samples_ms[0]
+  set mx to samples_ms[0]
+  set total to 0
+  set i to 0
+  while i < n
+    set v to samples_ms[i]
+    if v < mn
+      set mn to v
+    end
+    if v > mx
+      set mx to v
+    end
+    set total to total + v
+    set i to i + 1
+  end
+  return { count: n, min: mn, max: mx, mean: total / n }
+end
+
+# Collaborative OT/CRDT document state
+to collab_doc_create with initial_text
+  set doc to mklist(3)
+  set doc[0] to concat(initial_text, "")
+  set doc[1] to 1
+  set doc[2] to 0
+  return doc
+end
+
+to collab_apply_insert with doc pos text_ins
+  set cur to concat(doc[0], "")
+  set n to length(cur)
+  set p to pos
+  if p < 0
+    set p to 0
+  end
+  if p > n
+    set p to n
+  end
+  set pre to substr(cur, 0, p)
+  set post to substr(cur, p, n - p)
+  set doc[0] to pre + concat(text_ins, "") + post
+  set doc[1] to doc[1] + 1
+  return concat(doc[0], "")
+end
+
+to collab_apply_delete with doc pos del_len
+  set cur to concat(doc[0], "")
+  set n to length(cur)
+  set p to pos
+  if p < 0
+    set p to 0
+  end
+  if p >= n
+    return cur
+  end
+  set end_p to p + del_len
+  if end_p > n
+    set end_p to n
+  end
+  set pre to substr(cur, 0, p)
+  set post to substr(cur, end_p, n - end_p)
+  set doc[0] to pre + post
+  set doc[1] to doc[1] + 1
+  return concat(doc[0], "")
+end
+
+
+to nb_push_list with xs val
+  set n to length(xs)
+  set out to mklist(n + 1)
+  set i to 0
+  while i < n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  set out[n] to val
+  return out
+end
+
+to nb_parse_cells with md_src
+  set clean to text_replace(md_src, "\r\n", "\n")
+  set lines to split(clean, "\n")
+  set n to length(lines)
+  set cells to []
+  set in_code to 0
+  set code_lang to ""
+  set buf to []
+  set cell_start to 1
+  set title to "Untitled Notebook"
+  set title_found to 0
+  set i to 0
+  while i < n
+    set line to lines[i]
+    set trimmed to text_trim(line)
+    if title_found is 0
+      if text_starts_with(trimmed, "# ") is 1
+        set title to text_trim(substr(trimmed, 2, length(trimmed) - 2))
+        set title_found to 1
+      end
+    end
+    if in_code is 0
+      if text_starts_with(trimmed, "```") is 1
+        set joined to text_trim(join(buf, "\n"))
+        if length(joined) > 0
+          set idx to length(cells)
+          set cells to nb_push_list(cells, [idx, "markdown", "", joined, cell_start, i])
+        end
+        set in_code to 1
+        set code_lang to text_trim(substr(trimmed, 3, length(trimmed) - 3))
+        if length(code_lang) is 0
+          set code_lang to "sdev"
+        end
+        set buf to []
+        set cell_start to i + 2
+      else
+        set buf to nb_push_list(buf, line)
+      end
+    else
+      if text_starts_with(trimmed, "```") is 1
+        set idx to length(cells)
+        set cells to nb_push_list(cells, [idx, "code", code_lang, text_trim(join(buf, "\n")), cell_start, i + 1])
+        set in_code to 0
+        set code_lang to ""
+        set buf to []
+        set cell_start to i + 2
+      else
+        set buf to nb_push_list(buf, line)
+      end
+    end
+    set i to i + 1
+  end
+  set rem_joined to text_trim(join(buf, "\n"))
+  if length(rem_joined) > 0
+    set cell_kind to "markdown"
+    if in_code is 1
+      set cell_kind to "code"
+    end
+    set idx to length(cells)
+    set cells to nb_push_list(cells, [idx, cell_kind, code_lang, rem_joined, cell_start, n])
+  end
+  return [title, cells]
+end
+
+to bench_compute with samples_ms
+  set n to length(samples_ms)
+  if n is 0
+    return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 1]
+  end
+  set sorted to mklist(n)
+  set i to 0
+  set total to 0.0
+  while i < n
+    set v to i2f(samples_ms[i])
+    set sorted[i] to v
+    set total to total + v
+    set i to i + 1
+  end
+  set i to 1
+  while i < n
+    set key to sorted[i]
+    set ins to i
+    set j to i - 1
+    while j >= 0
+      if sorted[j] > key
+        set sorted[j + 1] to sorted[j]
+        set ins to j
+        set j to j - 1
+      else
+        set j to 0 - 1
+      end
+    end
+    set sorted[ins] to key
+    set i to i + 1
+  end
+  set mean to total / i2f(n)
+  set min_v to sorted[0]
+  set max_v to sorted[n - 1]
+  set i50 to f2i(ffloor(i2f(n - 1) * 0.5))
+  set i95 to f2i(ffloor(i2f(n - 1) * 0.95))
+  set i99 to f2i(ffloor(i2f(n - 1) * 0.99))
+  set p50 to sorted[i50]
+  set p95 to sorted[i95]
+  set p99 to sorted[i99]
+  set ops to 0
+  if mean > 0.0
+    set ops to f2i(fround(1000.0 / mean))
+  end
+  set denom to max_v
+  if denom <= 0.0
+    set denom to 1.0
+  end
+  set filled to f2i(fround((p50 / denom) * 24.0))
+  if filled < 1
+    set filled to 1
+  end
+  if filled > 24
+    set filled to 24
+  end
+  return [mean, min_v, max_v, p50, p95, p99, ops, filled]
+end
+
+to crdt_str_gt with a b
+  set na to length(a)
+  set nb to length(b)
+  set lim to na
+  if nb < lim
+    set lim to nb
+  end
+  set i to 0
+  while i < lim
+    set ca to ord(a, i)
+    set cb to ord(b, i)
+    if ca > cb
+      return 1
+    end
+    if ca < cb
+      return 0
+    end
+    set i to i + 1
+  end
+  if na > nb
+    return 1
+  end
+  return 0
+end
+
+to crdt_should_accept with local_clock local_peer local_content rem_clock rem_peer rem_content force_accept
+  set next_clock to local_clock
+  if rem_clock > next_clock
+    set next_clock to rem_clock
+  end
+  if force_accept is 1
+    return [1, next_clock + 1]
+  end
+  set wins to 0
+  if rem_clock > local_clock
+    set wins to 1
+  else
+    if rem_clock is local_clock
+      if crdt_str_gt(rem_peer, local_peer) is 1
+        set wins to 1
+      end
+    end
+  end
+  if wins is 1
+    if str_eq(rem_content, local_content) is 0
+      return [1, next_clock]
+    end
+  end
+  return [0, next_clock]
+end

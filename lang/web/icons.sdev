@@ -1,0 +1,120 @@
+# =============================================================================
+# SDEV Self-Hosted Web Toolkit: Vector SVG Icon Library (lang/web/icons.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to web_icon_inner with name
+  set k to lower(trim(name))
+  if str_eq(k, "arrow-right") or str_eq(k, "arrow_right")
+    return "<path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/>"
+  end
+  if str_eq(k, "arrow-left") or str_eq(k, "arrow_left")
+    return "<path d=\"m12 19-7-7 7-7\"/><path d=\"M19 12H5\"/>"
+  end
+  if str_eq(k, "arrow-up-right") or str_eq(k, "external")
+    return "<path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/>"
+  end
+  if str_eq(k, "chevron-right")
+    return "<path d=\"m9 18 6-6-6-6\"/>"
+  end
+  if str_eq(k, "chevron-down")
+    return "<path d=\"m6 9 6 6 6-6\"/>"
+  end
+  if str_eq(k, "check")
+    return "<path d=\"M20 6 9 17l-5-5\"/>"
+  end
+  if str_eq(k, "check-circle") or str_eq(k, "check-circle-2")
+    return "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/>"
+  end
+  if str_eq(k, "copy")
+    return "<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/>"
+  end
+  if str_eq(k, "play")
+    return "<polygon points=\"6 3 20 12 6 21 6 3\"/>"
+  end
+  if str_eq(k, "terminal")
+    return "<polyline points=\"4 17 10 11 4 5\"/><line x1=\"12\" x2=\"20\" y1=\"19\" y2=\"19\"/>"
+  end
+  if str_eq(k, "code") or str_eq(k, "code-2")
+    return "<polyline points=\"16 18 22 12 16 6\"/><polyline points=\"8 6 2 12 8 18\"/>"
+  end
+  if str_eq(k, "sparkles")
+    return "<path d=\"m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z\"/><path d=\"M5 3v4\"/><path d=\"M3 5h4\"/>"
+  end
+  if str_eq(k, "wand") or str_eq(k, "wand-2")
+    return "<path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z\"/><path d=\"m14 7 3 3\"/>"
+  end
+  if str_eq(k, "cpu")
+    return "<rect width=\"16\" height=\"16\" x=\"4\" y=\"4\" rx=\"2\"/><rect width=\"6\" height=\"6\" x=\"9\" y=\"9\" rx=\"1\"/><path d=\"M15 2v2\"/><path d=\"M15 20v2\"/><path d=\"M2 15h2\"/><path d=\"M2 9h2\"/><path d=\"M20 15h2\"/><path d=\"M20 9h2\"/><path d=\"M9 2v2\"/><path d=\"M9 20v2\"/>"
+  end
+  if str_eq(k, "globe") or str_eq(k, "globe-2")
+    return "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\"/><path d=\"M2 12h20\"/>"
+  end
+  if str_eq(k, "layers")
+    return "<path d=\"m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z\"/><path d=\"m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65\"/><path d=\"m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65\"/>"
+  end
+  if str_eq(k, "recycle")
+    return "<path d=\"M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5\"/><path d=\"M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12\"/><path d=\"m14 16-3 3 3 3\"/><path d=\"M8.293 13.596 7.196 9.5 3.1 10.598\"/><path d=\"m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843\"/><path d=\"m13.378 9.633 4.096 1.098 1.097-4.096\"/>"
+  end
+  if str_eq(k, "book-open") or str_eq(k, "book")
+    return "<path d=\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\"/><path d=\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\"/>"
+  end
+  if str_eq(k, "graduation-cap")
+    return "<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/><path d=\"M22 10v6\"/><path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>"
+  end
+  if str_eq(k, "rocket")
+    return "<path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\"/><path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\"/>"
+  end
+  if str_eq(k, "download")
+    return "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"7 10 12 15 17 10\"/><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\"/>"
+  end
+  if str_eq(k, "monitor-dot") or str_eq(k, "monitor")
+    return "<rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\"/><line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\"/><line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\"/>"
+  end
+  if str_eq(k, "zap")
+    return "<polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"/>"
+  end
+  if str_eq(k, "shield")
+    return "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/>"
+  end
+  if str_eq(k, "search")
+    return "<circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>"
+  end
+  if str_eq(k, "menu")
+    return "<line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\"/><line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\"/><line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\"/>"
+  end
+  if str_eq(k, "x") or str_eq(k, "close")
+    return "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>"
+  end
+  if str_eq(k, "star")
+    return "<polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"/>"
+  end
+  if str_eq(k, "heart")
+    return "<path d=\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\"/>"
+  end
+  if str_eq(k, "sun")
+    return "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2\"/><path d=\"M12 20v2\"/><path d=\"M2 12h2\"/><path d=\"M20 12h2\"/>"
+  end
+  if str_eq(k, "moon")
+    return "<path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\"/>"
+  end
+  if str_eq(k, "github") or str_eq(k, "git-branch")
+    return "<line x1=\"6\" x2=\"6\" y1=\"3\" y2=\"15\"/><circle cx=\"18\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M18 9a9 9 0 0 1-9 9\"/>"
+  end
+  if str_eq(k, "sdev") or str_eq(k, "sdev-logo")
+    return "<defs><linearGradient id=\"sdev-g\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#38bdf8\"/><stop offset=\"55%\" stop-color=\"#818cf8\"/><stop offset=\"100%\" stop-color=\"#34d399\"/></linearGradient></defs><rect x=\"2\" y=\"2\" width=\"20\" height=\"20\" rx=\"5\" fill=\"url(#sdev-g)\" fill-opacity=\"0.16\" stroke=\"url(#sdev-g)\" stroke-width=\"1.75\"/><path d=\"M8 9.5 5.5 12 8 14.5\" stroke=\"#38bdf8\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M16 9.5 18.5 12 16 14.5\" stroke=\"#34d399\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M13.2 8.2 10.8 15.8\" stroke=\"#818cf8\" stroke-width=\"1.9\" stroke-linecap=\"round\"/>"
+  end
+  return "<circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>"
+end
+
+to web_icon_svg with name cls
+  set c to cls
+  if length(c) is 0
+    set c to "sdev-icon"
+  end
+  set inner to web_icon_inner(name)
+  set out to "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"" + c + "\" aria-hidden=\"true\">" + inner + "</svg>"
+  return concat(out, "")
+end

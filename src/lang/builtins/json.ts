@@ -3,7 +3,6 @@ import { SdevError } from '../errors';
 
 export function registerJson(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
 
-  // JSON
   builtins.set('etch', { type: 'builtin', call: (args: unknown[]) => JSON.stringify(args[0]) });
   builtins.set('unetch', {
     type: 'builtin',

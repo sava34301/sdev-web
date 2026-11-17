@@ -13,49 +13,19 @@
 import type { DialectSpec } from './spec';
 import { DEFAULT_STYLE, preludeSource } from './spec';
 import { CATALOG_WORDS } from './catalog';
+import { getDialectRunner } from './dialect-runner';
 
 type Seg = { kind: 'code' | 'string' | 'comment'; text: string };
 
 function splitLine(line: string, commentMarker: string): Seg[] {
-  const segs: Seg[] = [];
-  let buf = '';
-  let i = 0;
-  const flush = () => { if (buf) { segs.push({ kind: 'code', text: buf }); buf = ''; } };
-  while (i < line.length) {
-    const c = line[i];
-    if (commentMarker && line.startsWith(commentMarker, i)) {
-      flush();
-      segs.push({ kind: 'comment', text: line.slice(i) });
-      return segs;
-    }
-    if (c === '"' || c === "'") {
-      flush();
-      const quote = c;
-      let s = c;
-      i++;
-      while (i < line.length) {
-        if (line[i] === '\\' && i + 1 < line.length) { s += line[i] + line[i + 1]; i += 2; continue; }
-        s += line[i];
-        if (line[i] === quote) { i++; break; }
-        i++;
-      }
-      segs.push({ kind: 'string', text: s });
-      continue;
-    }
-    buf += c;
-    i++;
-  }
-  flush();
-  return segs;
+  const raw = getDialectRunner().call('dialect_split_line', line, commentMarker) as Array<['code' | 'string' | 'comment', string]>;
+  return raw.map(([kind, text]) => ({ kind, text }));
 }
 
-const WORD_SPLIT = /([\p{L}\p{N}_]+)/u;
-
 function mapWords(code: string, dict: Map<string, string>): string {
-  return code
-    .split(WORD_SPLIT)
-    .map((part, idx) => (idx % 2 === 1 ? dict.get(part) ?? part : part))
-    .join('');
+  const dictObj: Record<string, string> = {};
+  for (const [k, v] of dict) dictObj[k] = v;
+  return getDialectRunner().callStr('dialect_map_words', code, dictObj);
 }
 
 function forwardDict(spec: DialectSpec): Map<string, string> {
@@ -77,7 +47,7 @@ function reverseDict(spec: DialectSpec): Map<string, string> {
   return dict;
 }
 
-function escapeRe(s: string): string {
+export function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

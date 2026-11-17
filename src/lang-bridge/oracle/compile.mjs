@@ -788,6 +788,10 @@ function emitExpr(e, em, locals) {
       if (e.op === 'not') { emitExpr(e.x, em, locals); em.emit(OP.NOT); return 'int'; }
       break;
     case 'bin': {
+<<<<<<< HEAD
+      if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.emit(OP.JMP); const done = em.placeholder16(); const afterDone = em.here(); em.patchI16(fx, em.here() - before); em.emit(OP.PUSH_I32); em.emitI32(0); em.patchI16(done, em.here() - afterDone); return 'int'; }
+      if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.emit(OP.JMP); const done = em.placeholder16(); const afterDone = em.here(); em.patchI16(fx, em.here() - before); em.emit(OP.PUSH_I32); em.emitI32(1); em.patchI16(done, em.here() - afterDone); return 'int'; }
+=======
       // Short-circuit and/or: both paths leave exactly one 0/1 value (mirrors lang/compiler/codegen.sdev).
       if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const b1 = em.here(); emitExpr(e.r, em, locals); em.emit(OP.NOT); em.emit(OP.NOT); em.emit(OP.JMP); const fe = em.placeholder16(); const b2 = em.here(); em.patchI16(fx, em.here() - b1); em.emit(OP.PUSH_I32); em.emitI32(0); em.patchI16(fe, em.here() - b2); return 'int'; }
       if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const b1 = em.here(); em.emit(OP.PUSH_I32); em.emitI32(1); em.emit(OP.JMP); const fe = em.placeholder16(); const b2 = em.here(); em.patchI16(fx, em.here() - b1); emitExpr(e.r, em, locals); em.emit(OP.NOT); em.emit(OP.NOT); em.patchI16(fe, em.here() - b2); return 'int'; }
@@ -798,6 +802,7 @@ function emitExpr(e, em, locals) {
         emitExpr({ k: 'call', name: 'list_concat_two', args: [e.l, e.r] }, em, locals);
         return 'int';
       }
+>>>>>>> 2773d440193e4daf61f43a17bae84d5906aa9bba
       const lk = emitExpr(e.l, em, locals);
       const rk = emitExpr(e.r, em, locals);
       // Promote `+` to STRCAT when either operand is a string literal.

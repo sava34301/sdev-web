@@ -1,0 +1,5 @@
+Представителни заявки към Lovable (обобщен запис Б01; пълната история от 700+ итерации е описана в SDEV_Complete_Project_History.md):
+
+1. Проектиране на двата диалекта на езика sdev (v1 с уникални ключови думи и v2 "Prism" за начинаещи) и уеб IDE с редактор и конзола.
+2. Изграждане на споделяне на проекти (Gist, Explore, Libraries, Extensions), автентикация и OAuth, както и облачни Supabase Edge Functions (sdev-agent, sdev-chat, compile-firmware, mcp).
+3. Поддръжка на хардуерни board блокове, WebAssembly виртуална машина и десктоп/CLI разпространение чрез единна версия в release.json.

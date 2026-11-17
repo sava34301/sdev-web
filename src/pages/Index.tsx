@@ -23,11 +23,11 @@ import {
   GraduationCap, Rocket, Download,
 } from 'lucide-react';
 import { GraphicsCommand, TurtleState, createGraphicsBuiltins } from '@/lang/graphics';
+import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/web';
+import { WebPreviewPanel } from '@/components/ide/WebPreviewPanel';
 import { Lexer } from '@/lang/lexer';
 import { Parser } from '@/lang/parser';
 import { Interpreter } from '@/lang/interpreter';
-import { Environment } from '@/lang/environment';
-import { createBuiltins } from '@/lang/builtins';
 import { SdevError } from '@/lang/errors';
 import sdevLogo from '@/assets/sdev-logo.png';
 
@@ -79,6 +79,7 @@ const Index = () => {
   const [output, setOutput] = useState<string[]>([]);
   const [error, setError] = useState<string>();
   const [graphicsCommands, setGraphicsCommands] = useState<GraphicsCommand[]>([]);
+  const [webState, setWebState] = useState<WebState | null>(null);
   const [showCanvas, setShowCanvas] = useState(false);
   const [showTranslator, setShowTranslator] = useState(false);
   const [showCompiler, setShowCompiler] = useState(false);
@@ -108,12 +109,8 @@ const Index = () => {
       const parser = new Parser(tokens);
       const ast = parser.parse();
 
-      const env = new Environment();
-      const builtins = createBuiltins((msg) => outputLines.push(msg));
-      builtins.forEach((fn, name) => env.define(name, fn));
-      env.define('PI', Math.PI);
-      env.define('TAU', Math.PI * 2);
-      env.define('E', Math.E);
+      const interpreter = new Interpreter((msg) => outputLines.push(msg));
+      const env = interpreter.getGlobalEnv();
 
       const gfxBuiltins = createGraphicsBuiltins(
         (cmd) => commands.push(cmd),
@@ -122,8 +119,20 @@ const Index = () => {
       );
       gfxBuiltins.forEach((fn, name) => env.define(name, fn));
 
-      const interpreter = new Interpreter((msg) => outputLines.push(msg));
-      (interpreter as unknown as { globalEnv: Environment }).globalEnv = env;
+      let producedWeb = false;
+      const webBuiltins = createWebBuiltins((s) => {
+        producedWeb = true;
+        setWebState({
+          ...s,
+          head: [...s.head],
+          stack: s.stack.map((b) => [...b]),
+          css: [...s.css],
+          js: [...s.js],
+          moduleJs: [...(s.moduleJs ?? [])],
+        });
+      });
+      bindWebBuiltinsToEnv(env, webBuiltins);
+
       interpreter.interpret(ast);
       const t1 = performance.now();
 
@@ -132,7 +141,9 @@ const Index = () => {
       setOutput(outputLines);
       setError(undefined);
       setGraphicsCommands(commands);
-      if (commands.length > 0) {
+      if (producedWeb) {
+        setActiveTab('web');
+      } else if (commands.length > 0) {
         setShowCanvas(true);
         setActiveTab('canvas');
       } else {
@@ -557,6 +568,11 @@ const Index = () => {
                           <Palette className="w-3.5 h-3.5" /> Canvas
                         </TabsTrigger>
                       )}
+                      {webState?.produced && (
+                        <TabsTrigger value="web" className="text-xs gap-1.5 data-[state=active]:bg-card">
+                          <Globe2 className="w-3.5 h-3.5" /> Web
+                        </TabsTrigger>
+                      )}
                     </TabsList>
                     <div className="flex items-center gap-2">
                       {execTime !== undefined && (
@@ -574,6 +590,9 @@ const Index = () => {
                   </TabsContent>
                   <TabsContent value="canvas" className="mt-2">
                     {showCanvas && <CanvasPanel ref={canvasRef} commands={graphicsCommands} onClose={() => setShowCanvas(false)} />}
+                  </TabsContent>
+                  <TabsContent value="web" className="mt-2 h-[380px] rounded-lg overflow-hidden border border-border">
+                    {webState?.produced && <WebPreviewPanel state={webState} />}
                   </TabsContent>
                 </Tabs>
 

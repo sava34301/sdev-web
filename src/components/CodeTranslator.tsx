@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Upload, Wand2, Copy, Check, Zap, FlaskConical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useClipboard } from '@/hooks/useClipboard';
 import { execute, executeAsync } from '@/lang';
 
 const LANGUAGES = [
@@ -36,7 +37,7 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
   const [inputCode, setInputCode] = useState('');
   const [outputCode, setOutputCode] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard({ timeoutMs: 2000 });
   const [inputMethod, setInputMethod] = useState<'paste' | 'upload'>('paste');
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'passed' | 'failed'>('idle');
   const { toast } = useToast();
@@ -156,11 +157,9 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
 
   const handleCopy = useCallback(() => {
     if (outputCode) {
-      navigator.clipboard.writeText(outputCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      copy(outputCode);
     }
-  }, [outputCode]);
+  }, [outputCode, copy]);
 
   const handleUseInEditor = useCallback(() => {
     if (outputCode && onTranslated) {

@@ -35,6 +35,19 @@ export type ApiModule =
   | 'ffi'
   | 'webgpu';
 
+import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_LINTER_SRC from '../../../lang/linter/linter.sdev?raw';
+import SDEV_REGISTRY_SRC from '../../../lang/registry/registry.sdev?raw';
+
+let registryRunner: SdevModuleRunner | null = null;
+function getRegistryRunner(): SdevModuleRunner {
+  if (!registryRunner) {
+    registryRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_LINTER_SRC, SDEV_REGISTRY_SRC);
+  }
+  return registryRunner;
+}
+
 export type ApiTarget =
   | 'v1'
   | 'v2-wasm'
@@ -1291,21 +1304,29 @@ function buildRegistry(): ApiEntry[] {
 
   // 6. Harvest Web DSL builtins (createWebBuiltins)
   const webBuiltins = createWebBuiltins(() => {});
+  const primaryOpenClose = new Set([
+    'html_div', 'html_input', 'html_button', 'html_select', 'html_textarea', 'html_label', 'html_table', 'html_canvas',
+    'open_div', 'end_div', 'open_main', 'end_main', 'open_header', 'end_header', 'open_footer', 'end_footer',
+    'open_nav', 'end_nav', 'open_section', 'end_section', 'open_article', 'end_article', 'open_aside', 'end_aside',
+    'open_form', 'end_form', 'open_ul', 'end_ul', 'open_ol', 'end_ol', 'open_table', 'end_table',
+    'open_grid', 'end_grid', 'open_card', 'end_card', 'open_route', 'end_route', 'open_modal', 'close_modal',
+  ]);
   for (const name of webBuiltins.keys()) {
-    // Skip every generated open_<tag> / end_<tag> / html_<tag> except representative ones
-    // so the registry stays clean while still registering all primary web tags and html_div/html_input/html_button.
-    if (
-      (name.startsWith('open_') || name.startsWith('end_') || name.startsWith('html_')) &&
-      !['html_div', 'html_input', 'html_button', 'open_div', 'end_div', 'open_form', 'end_form'].includes(name)
-    ) {
+    const isGeneratedOpenClose =
+      name.startsWith('open_') ||
+      name.startsWith('end_') ||
+      name.startsWith('html_') ||
+      (name.startsWith('open') && name.length > 4 && name !== 'open_modal') ||
+      (name.startsWith('end') && name.length > 3 && name !== 'endpage' && name !== 'endswith' && name !== 'ends');
+    if (isGeneratedOpenClose && !primaryOpenClose.has(name)) {
       continue;
     }
     if (byName.has(name)) continue;
     upsert(name, 'web', {
-      targets: BROWSER_ONLY_TARGETS,
+      targets: ['v1', 'browser', 'cli'],
       signature: `${name}(textOrAttrs?, attrs?) -> void`,
       returns: 'void',
-      description: `Emit or manage HTML/CSS/JS in the SDEV Web Preview panel via \`${name}()\`.`,
+      description: `Emit or manage HTML/CSS/JS in the SDEV Web Toolkit via \`${name}()\`.`,
     });
   }
 
@@ -1386,13 +1407,17 @@ for (const entry of API_REGISTRY) {
 // Lookup, Search & "Did you mean?" Helpers
 // ----------------------------------------------------------------------------
 
-export function getApiRegistry(): ApiEntry[] {
-  return API_REGISTRY;
-}
+const ALL_WEB_BUILTIN_NAMES = new Set(createWebBuiltins(() => {}).keys());
 
 export function findApi(name: string): ApiEntry | undefined {
   if (!name) return undefined;
-  return EXACT_INDEX.get(name) ?? LOWER_INDEX.get(name.toLowerCase());
+  const hit = EXACT_INDEX.get(name) ?? LOWER_INDEX.get(name.toLowerCase());
+  if (hit) return hit;
+  const lower = name.toLowerCase();
+  if (ALL_WEB_BUILTIN_NAMES.has(name) || ALL_WEB_BUILTIN_NAMES.has(lower)) {
+    return EXACT_INDEX.get('open_div') ?? EXACT_INDEX.get('div');
+  }
+  return undefined;
 }
 
 export interface SearchApiFilters {
@@ -1431,38 +1456,7 @@ export function searchApis(query: string = '', filters: SearchApiFilters = {}): 
 }
 
 export function levenshteinDistance(a: string, b: string): number {
-  const s = a.toLowerCase();
-  const t = b.toLowerCase();
-  if (s === t) return 0;
-  if (s.length === 0) return t.length;
-  if (t.length === 0) return s.length;
-
-  const dp: number[][] = Array.from({ length: s.length + 1 }, () =>
-    new Array<number>(t.length + 1).fill(0)
-  );
-  for (let i = 0; i <= s.length; i++) dp[i][0] = i;
-  for (let j = 0; j <= t.length; j++) dp[0][j] = j;
-
-  for (let i = 1; i <= s.length; i++) {
-    for (let j = 1; j <= t.length; j++) {
-      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,      // deletion
-        dp[i][j - 1] + 1,      // insertion
-        dp[i - 1][j - 1] + cost // substitution
-      );
-      // Damerau transposition
-      if (
-        i > 1 &&
-        j > 1 &&
-        s[i - 1] === t[j - 2] &&
-        s[i - 2] === t[j - 1]
-      ) {
-        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1);
-      }
-    }
-  }
-  return dp[s.length][t.length];
+  return Number(getRegistryRunner().call('registry_damerau_levenshtein', a, b));
 }
 
 export interface ApiSuggestion {

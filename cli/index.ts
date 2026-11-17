@@ -127,7 +127,7 @@ USAGE
   sdev <command> [options]
 
 PROJECT
-  new <name> [-t <tmpl>]  Create an SDEV project (templates: console, game, hardware, ml)
+  new <name> [-t <tmpl>]  Create an SDEV project (templates: console, web, game, hardware, ml)
   init [-t <tmpl>]        Initialize sdev.json in the current directory
 
 RUNNING
@@ -304,6 +304,26 @@ async function cmdRun(file?: string): Promise<void> {
   if (opts.explain) explainAgent(prepared.agent);
   const outcome = await runPrepared(prepared, targetFile, opts);
   if (!outcome.success) die(outcome.error ?? 'program failed');
+  const outPath = value('-o', '--out');
+  if (outPath && outcome.webHtml) {
+    writeFileSync(resolve(process.cwd(), outPath), outcome.webHtml);
+    console.log(`wrote web document -> ${outPath} (${(outcome.webHtml.length / 1024).toFixed(2)} KB)`);
+  }
+}
+
+async function cmdBuildWeb(file: string): Promise<void> {
+  const opts = { ...runOptions(), runtime: 'v1' as const };
+  const prepared = await prepareAsync(readSource(file), opts);
+  const outcome = await runPrepared(prepared, file, opts);
+  if (!outcome.success) die(outcome.error ?? 'web build failed');
+  if (!outcome.webHtml || !outcome.webState) {
+    die('file did not produce a web page — call page("Title") in your sdev program');
+  }
+  const out = value('-o', '--out') ?? basename(file).replace(/\.sdev$/, '') + '.html';
+  const resolvedOut = resolve(process.cwd(), out);
+  mkdirSync(dirname(resolvedOut), { recursive: true });
+  writeFileSync(resolvedOut, outcome.webHtml);
+  console.log(`✓ built web document -> ${out} (${(outcome.webHtml.length / 1024).toFixed(2)} KB)`);
 }
 
 function parseFile(file: string, opts: PrepareOptions) {
@@ -1277,6 +1297,43 @@ speak shape(y)
 speak "ML pipeline ready."
 `,
   },
+  web: {
+    runtime: 'v1',
+    description: 'SDEV Full-Stack Website Builder (HTML5, CSS3, JavaScript)',
+    code: `// SDEV Website Starter
+page("{name}", { theme: "sdev-dark" })
+  web_state({ count: 0 })
+
+  navbar("{name}", ["Features", "Interactive"], [
+    { label: "Get Started", href: "#interactive", variant: "primary" }
+  ])
+
+  hero_section({
+    badge: "Built in sdev",
+    title: "Welcome to {name}.",
+    highlight: "HTML + CSS + JS in one language.",
+    subtitle: "Write structure, styles, and reactive client-side logic directly in sdev.",
+    primaryCta: { label: "Try Counter", href: "#interactive" }
+  })
+
+  section({ id: "interactive", class: "max-w-xl mx-auto px-6 py-20" }, () -> ::
+    div({ class: "card text-center" }, () -> ::
+      h2("Reactive Counter", { class: "text-2xl mb-4" })
+      div("0", { bind: "count", class: "text-5xl font-display text-primary mb-6" })
+      div({ class: "flex justify-center gap-3" }, () -> ::
+        button("-1", () -> :: state_set("count", state_get("count") - 1) ;;, { class: "btn btn-outline" })
+        button("+1", () -> :: state_set("count", state_get("count") + 1) ;;, { class: "btn btn-primary" })
+      ;;)
+    ;;)
+  ;;)
+
+  footer_section("{name}", ["Home", "Docs"])
+  scroll_driver()
+  scroll_reveal()
+endpage()
+speak("Website rendered.")
+`,
+  },
 };
 
 function createProjectFiles(targetDir: string, name: string, templateKey: string, isInit = false): void {
@@ -1418,6 +1475,9 @@ async function main(): Promise<void> {
     }
     case 'compile':
       return cmdCompile(pos[1] ?? die('sdev compile <file>'));
+    case 'build-web':
+    case 'web':
+      return cmdBuildWeb(pos[1] ?? die('sdev build-web <file.sdev> [-o index.html]'));
     case 'run-bc':
       return cmdRunBc(pos[1] ?? die('sdev run-bc <file.sdevc>'));
     case 'disasm':

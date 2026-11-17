@@ -1,0 +1,323 @@
+# =============================================================================
+# SDEV Self-Hosted Web Toolkit: CSS3 Engine (lang/web/css.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to web_kebab_case with prop
+  if text_starts_with(prop, "--")
+    return concat(prop, "")
+  end
+  set n to length(prop)
+  set out to ""
+  set i to 0
+  while i < n
+    set c to ord(prop, i)
+    if c >= 65 and c <= 90
+      set out to out + "-" + chr(c + 32)
+    else
+      if c is 95
+        set out to out + "-"
+      else
+        set out to out + chr(c)
+      end
+    end
+    set i to i + 1
+  end
+  return concat(out, "")
+end
+
+to web_is_unitless_css with kebab_prop
+  if text_starts_with(kebab_prop, "--")
+    return 1
+  end
+  if str_eq(kebab_prop, "opacity") or str_eq(kebab_prop, "z-index") or str_eq(kebab_prop, "font-weight")
+    return 1
+  end
+  if str_eq(kebab_prop, "line-height") or str_eq(kebab_prop, "flex") or str_eq(kebab_prop, "flex-grow")
+    return 1
+  end
+  if str_eq(kebab_prop, "flex-shrink") or str_eq(kebab_prop, "order") or str_eq(kebab_prop, "scale")
+    return 1
+  end
+  if str_eq(kebab_prop, "zoom") or str_eq(kebab_prop, "aspect-ratio") or str_eq(kebab_prop, "columns")
+    return 1
+  end
+  if str_eq(kebab_prop, "grid-column") or str_eq(kebab_prop, "grid-row") or str_eq(kebab_prop, "orphans") or str_eq(kebab_prop, "widows") or str_eq(kebab_prop, "tab-size") or str_eq(kebab_prop, "animation-iteration-count")
+    return 1
+  end
+  if str_eq(kebab_prop, "fill-opacity") or str_eq(kebab_prop, "stroke-opacity") or str_eq(kebab_prop, "stroke-width") or str_eq(kebab_prop, "stroke-miterlimit")
+    return 1
+  end
+  return 0
+end
+
+to web_is_numeric_str with s
+  set n to length(s)
+  if n is 0
+    return 0
+  end
+  set i to 0
+  if ord(s, 0) is 45
+    if n is 1
+      return 0
+    end
+    set i to 1
+  end
+  set saw_digit to 0
+  while i < n
+    set c to ord(s, i)
+    if c >= 48 and c <= 57
+      set saw_digit to 1
+    else
+      if c is not 46
+        return 0
+      end
+    end
+    set i to i + 1
+  end
+  return saw_digit
+end
+
+to web_format_css_val with kebab_prop val_str
+  set v to concat(val_str, "")
+  if str_eq(v, "0")
+    return "0"
+  end
+  if web_is_numeric_str(v) is 1
+    if web_is_unitless_css(kebab_prop) is 0
+      return v + "px"
+    end
+  end
+  return concat(v, "")
+end
+
+to web_css_decl with prop val_str
+  set k to web_kebab_case(prop)
+  set v to web_format_css_val(k, val_str)
+  return k + ": " + v + ";"
+end
+
+to web_tome_to_decls with style_tome
+  set ks to keys(style_tome)
+  set vs to values(style_tome)
+  set n to length(ks)
+  set out to ""
+  set i to 0
+  while i < n
+    set k to concat(ks[i], "")
+    set v to concat(vs[i], "")
+    if i > 0
+      set out to out + " "
+    end
+    set out to out + web_css_decl(k, v)
+    set i to i + 1
+  end
+  return concat(out, "")
+end
+
+to web_style_rule with selector style_tome
+  set decls to web_tome_to_decls(style_tome)
+  return selector + " { " + decls + " }"
+end
+
+to web_nested_rule with parent_sel child_sel style_tome
+  set resolved to ""
+  if find(child_sel, "&") >= 0
+    set resolved to replace(child_sel, "&", parent_sel)
+  else
+    set resolved to parent_sel + " " + child_sel
+  end
+  return web_style_rule(resolved, style_tome)
+end
+
+to web_media_query with bp
+  set k to lower(trim(bp))
+  if str_eq(k, "sm")
+    return "(max-width: 640px)"
+  end
+  if str_eq(k, "mobile")
+    return "(max-width: 767px)"
+  end
+  if str_eq(k, "md")
+    return "(min-width: 768px)"
+  end
+  if str_eq(k, "tablet")
+    return "(max-width: 1023px)"
+  end
+  if str_eq(k, "lg") or str_eq(k, "desktop")
+    return "(min-width: 1024px)"
+  end
+  if str_eq(k, "xl")
+    return "(min-width: 1280px)"
+  end
+  if str_eq(k, "dark")
+    return "(prefers-color-scheme: dark)"
+  end
+  if str_eq(k, "light")
+    return "(prefers-color-scheme: light)"
+  end
+  if str_eq(k, "reduced-motion")
+    return "(prefers-reduced-motion: reduce)"
+  end
+  if str_eq(k, "motion")
+    return "(prefers-reduced-motion: no-preference)"
+  end
+  if text_starts_with(bp, "@media")
+    return trim(substr(bp, 6, length(bp) - 6))
+  end
+  if text_starts_with(bp, "(")
+    return concat(bp, "")
+  end
+  return "(" + bp + ")"
+end
+
+to web_media_rule with bp inner_css
+  set mq to web_media_query(bp)
+  return "@media " + mq + " {\n" + inner_css + "\n}"
+end
+
+to web_keyframes_rule with name from_tome to_tome
+  set from_d to web_tome_to_decls(from_tome)
+  set to_d to web_tome_to_decls(to_tome)
+  return "@keyframes " + name + " {\n  from { " + from_d + " }\n  to { " + to_d + " }\n}"
+end
+
+to web_keyframes_steps with name step_names step_tomes
+  set n to length(step_names)
+  set body to ""
+  set i to 0
+  while i < n
+    set st_name to concat(step_names[i], "")
+    set st_tome to step_tomes[i]
+    set ks to keys(st_tome)
+    set vs to values(st_tome)
+    set m to length(ks)
+    set decls to ""
+    set j to 0
+    while j < m
+      set k to web_kebab_case(concat(ks[j], ""))
+      set v to web_format_css_val(k, concat(vs[j], ""))
+      if j > 0
+        set decls to decls + "; "
+      end
+      set decls to decls + k + ": " + v
+      set j to j + 1
+    end
+    if i > 0
+      set body to body + "\n"
+    end
+    set body to body + "  " + st_name + " { " + decls + " }"
+    set i to i + 1
+  end
+  return "@keyframes " + name + " {\n" + body + "\n}"
+end
+
+to web_font_face_rule with family src extra_tome
+  set src_decl to "url(\"" + src + "\")"
+  if text_starts_with(src, "url(")
+    set src_decl to concat(src, "")
+  end
+  set ks to keys(extra_tome)
+  set vs to values(extra_tome)
+  set n to length(ks)
+  set extra_str to ""
+  set i to 0
+  while i < n
+    set k to web_kebab_case(concat(ks[i], ""))
+    set v to concat(vs[i], "")
+    set extra_str to extra_str + "\n  " + k + ": " + v + ";"
+    set i to i + 1
+  end
+  return "@font-face {\n  font-family: \"" + family + "\";\n  src: " + src_decl + ";" + extra_str + "\n}"
+end
+
+to web_tome_to_inline_style with style_tome
+  set ks to keys(style_tome)
+  set vs to values(style_tome)
+  set n to length(ks)
+  set out to ""
+  set i to 0
+  while i < n
+    set k to web_kebab_case(concat(ks[i], ""))
+    set v to web_format_css_val(k, concat(vs[i], ""))
+    if i > 0
+      set out to out + "; "
+    end
+    set out to out + k + ": " + v
+    set i to i + 1
+  end
+  return concat(out, "")
+end
+
+to web_style_block with selector style_tome
+  set ks to keys(style_tome)
+  set vs to values(style_tome)
+  set n to length(ks)
+  set decls to ""
+  set i to 0
+  while i < n
+    set k to web_kebab_case(concat(ks[i], ""))
+    set v to web_format_css_val(k, concat(vs[i], ""))
+    if i > 0
+      set decls to decls + "\n"
+    end
+    set decls to decls + "  " + k + ": " + v + ";"
+    set i to i + 1
+  end
+  return selector + " {\n" + decls + "\n}"
+end
+
+to web_css_vars_rule with vars_tome
+  set ks to keys(vars_tome)
+  set vs to values(vars_tome)
+  set n to length(ks)
+  set out to ":root {"
+  set i to 0
+  while i < n
+    set k to concat(ks[i], "")
+    set v to concat(vs[i], "")
+    set var_name to web_kebab_case(k)
+    if text_starts_with(var_name, "--") is 0
+      set var_name to "--" + var_name
+    end
+    set out to out + " " + var_name + ": " + v + ";"
+    set i to i + 1
+  end
+  set out to out + " }"
+  return concat(out, "")
+end
+
+to web_css_vars_for with vars_tome selector_str
+  set ks to keys(vars_tome)
+  set vs to values(vars_tome)
+  set n to length(ks)
+  set decls to ""
+  set i to 0
+  while i < n
+    set k to concat(ks[i], "")
+    set v to concat(vs[i], "")
+    set var_name to web_kebab_case(k)
+    if text_starts_with(var_name, "--") is 0
+      set var_name to "--" + var_name
+    end
+    if i > 0
+      set decls to decls + "\n"
+    end
+    set decls to decls + "  " + var_name + ": " + v + ";"
+    set i to i + 1
+  end
+  return selector_str + " {\n" + decls + "\n}"
+end
+
+to web_css_var with name fallback
+  set vname to web_kebab_case(name)
+  if text_starts_with(vname, "--") is 0
+    set vname to "--" + vname
+  end
+  if length(fallback) > 0
+    return "var(" + vname + ", " + fallback + ")"
+  end
+  return "var(" + vname + ")"
+end

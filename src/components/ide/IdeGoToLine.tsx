@@ -12,7 +12,12 @@ export function IdeGoToLine({ open, totalLines, onClose, onGo }: Props) {
   const [val, setVal] = useState('');
   const ref = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (open) { setVal(''); setTimeout(() => ref.current?.focus(), 30); } }, [open]);
+  useEffect(() => {
+    if (open) {
+      setVal('');
+      requestAnimationFrame(() => ref.current?.focus());
+    }
+  }, [open]);
 
   if (!open) return null;
 
@@ -35,6 +40,7 @@ export function IdeGoToLine({ open, totalLines, onClose, onGo }: Props) {
         </div>
         <input
           ref={ref}
+          autoFocus
           type="number"
           min={1}
           max={totalLines}

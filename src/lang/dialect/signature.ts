@@ -29,6 +29,8 @@ export interface FileSignature {
   ts?: number;
 }
 
+import { getDialectRunner } from './dialect-runner';
+
 export const SIGNATURE_PREFIX = '#\u27E8sdev\u27E9 ';
 const SIGNATURE_RE = /^#\u27E8sdev\u27E9\s+(\S+)\s*$/;
 
@@ -47,17 +49,12 @@ function fromBase64Url(text: string): string {
 }
 
 export function checksum(body: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < body.length; i++) {
-    h ^= body.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h.toString(16).padStart(8, '0');
+  return getDialectRunner().callStr('dialect_fnv1a_hex', body);
 }
 
 /** Does this text start with a signature line? */
 export function hasSignature(source: string): boolean {
-  return SIGNATURE_RE.test(source.split('\n', 1)[0] ?? '');
+  return Number(getDialectRunner().call('dialect_has_signature', source, SIGNATURE_PREFIX)) === 1;
 }
 
 /** Read the signature, or null for a plain canonical file. */
@@ -75,9 +72,7 @@ export function readSignature(source: string): FileSignature | null {
 
 /** The file without its signature line — what the editor shows and the compiler runs. */
 export function stripSignature(source: string): string {
-  if (!hasSignature(source)) return source;
-  const idx = source.indexOf('\n');
-  return idx === -1 ? '' : source.slice(idx + 1);
+  return getDialectRunner().callStr('dialect_strip_signature', source, SIGNATURE_PREFIX);
 }
 
 /** Write (or repair) the signature on a file. */

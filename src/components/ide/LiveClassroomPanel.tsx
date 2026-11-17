@@ -12,6 +12,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useClipboard } from '@/hooks/useClipboard';
 import {
   LiveRoomSession,
   generateRoomCode,
@@ -51,7 +52,7 @@ export function LiveClassroomPanel({
     snapshot: CrdtSnapshot;
     isTeacher: boolean;
   } | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard({ timeoutMs: 1500 });
 
   const sessionRef = useRef<LiveRoomSession | null>(null);
   const suppressOutgoingRef = useRef(false);
@@ -151,10 +152,8 @@ export function LiveClassroomPanel({
       typeof window !== 'undefined'
         ? `${window.location.origin}/ide?room=${session.roomCode}`
         : session.roomCode;
-    navigator.clipboard.writeText(url).catch(() => {});
-    setCopied(true);
+    copy(url);
     toast.success(`Copied invite link for room #${session.roomCode}`);
-    setTimeout(() => setCopied(false), 1500);
   };
 
   return (

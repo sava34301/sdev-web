@@ -1,5 +1,14 @@
 import { SdevError } from './errors';
 import { SdevFunction, stringify } from './builtins';
+import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
+import SDEV_GRAPHICS_SRC from '../../lang/stdlib/v2/graphics.sdev?raw';
+import SDEV_TURTLE_SRC from '../../lang/stdlib/v2/turtle.sdev?raw';
+
+let gfxRunner: SdevModuleRunner | null = null;
+function getGfxRunner(): SdevModuleRunner {
+  if (!gfxRunner) gfxRunner = createSdevModuleRunner(SDEV_GRAPHICS_SRC, SDEV_TURTLE_SRC);
+  return gfxRunner;
+}
 
 export interface GraphicsCommand {
   type: string;
@@ -269,7 +278,6 @@ export function createGraphicsBuiltins(
     },
   });
 
-  // ========== Text ==========
   builtins.set('text', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
@@ -506,12 +514,7 @@ export function createGraphicsBuiltins(
       const a = args[0] as SpriteData;
       const b = args[1] as SpriteData;
       if (!a || !b) throw new SdevError('Invalid sprites', line);
-      return (
-        a.x < b.x + b.width &&
-        a.x + a.width > b.x &&
-        a.y < b.y + b.height &&
-        a.y + a.height > b.y
-      );
+      return Boolean(getGfxRunner().call('gfx_sprite_collides', a.x, a.y, a.width, a.height, b.x, b.y, b.width, b.height));
     },
   });
 
@@ -530,10 +533,7 @@ export function createGraphicsBuiltins(
     call: (args: unknown[], line: number) => {
       if (args.length !== 1) throw new SdevError('forward() takes 1 argument (distance)', line);
       const t = getTurtle();
-      const dist = args[0] as number;
-      const rad = (t.angle * Math.PI) / 180;
-      const newX = t.x + Math.cos(rad) * dist;
-      const newY = t.y + Math.sin(rad) * dist;
+      const [newX, newY] = getGfxRunner().call('turtle_step_pos', t.x, t.y, t.angle, args[0] as number) as [number, number];
       if (t.penDown) {
         emit({ type: 'turtle_line', x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
@@ -549,9 +549,7 @@ export function createGraphicsBuiltins(
       if (args.length !== 1) throw new SdevError('backward() takes 1 argument (distance)', line);
       const dist = -(args[0] as number);
       const t = getTurtle();
-      const rad = (t.angle * Math.PI) / 180;
-      const newX = t.x + Math.cos(rad) * dist;
-      const newY = t.y + Math.sin(rad) * dist;
+      const [newX, newY] = getGfxRunner().call('turtle_step_pos', t.x, t.y, t.angle, dist) as [number, number];
       if (t.penDown) {
         emit({ type: 'turtle_line', x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
@@ -683,22 +681,16 @@ export function createGraphicsBuiltins(
       const radius = args[0] as number;
       const steps = (args[1] as number) ?? 36;
       const t = getTurtle();
-      const angleStep = 360 / steps;
-      const dist = (2 * Math.PI * radius) / steps;
-      
-      for (let i = 0; i < steps; i++) {
-        const rad = (t.angle * Math.PI) / 180;
-        const newX = t.x + Math.cos(rad) * dist;
-        const newY = t.y + Math.sin(rad) * dist;
-        if (t.penDown) {
-          emit({ type: 'turtle_line', x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+      const [endX, endY, endAngle, segs] = getGfxRunner().call(
+        'turtle_circle_steps', t.x, t.y, t.angle, radius, steps
+      ) as [number, number, number, Array<[number, number, number, number]>];
+      if (t.penDown) {
+        for (const [x1, y1, x2, y2] of segs) {
+          emit({ type: 'turtle_line', x1, y1, x2, y2, color: t.color, width: t.width });
         }
-        t.x = newX;
-        t.y = newY;
-        t.angle += angleStep;
       }
-      setTurtle({ x: t.x, y: t.y, angle: t.angle });
-      emit({ type: 'turtle_move', x: t.x, y: t.y, angle: t.angle });
+      setTurtle({ x: endX, y: endY, angle: endAngle });
+      emit({ type: 'turtle_move', x: endX, y: endY, angle: endAngle });
       return null;
     },
   });
@@ -728,10 +720,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length < 1 || args.length > 3) throw new SdevError('hue() takes 1-3 arguments (h, s?, l?)', line);
-      const h = args[0] as number;
-      const s = (args[1] as number) ?? 100;
-      const l = (args[2] as number) ?? 50;
-      return `hsl(${h}, ${s}%, ${l}%)`;
+      return getGfxRunner().callStr('gfx_hue_css', args[0] as number, (args[1] as number) ?? 100, (args[2] as number) ?? 50);
     },
   });
 
@@ -739,7 +728,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 3) throw new SdevError('rgb() takes 3 arguments (r, g, b)', line);
-      return `rgb(${args[0]}, ${args[1]}, ${args[2]})`;
+      return getGfxRunner().callStr('gfx_rgb_css', args[0], args[1], args[2]);
     },
   });
 
@@ -747,7 +736,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 4) throw new SdevError('rgba() takes 4 arguments (r, g, b, a)', line);
-      return `rgba(${args[0]}, ${args[1]}, ${args[2]}, ${args[3]})`;
+      return getGfxRunner().callStr('gfx_rgba_css', args[0], args[1], args[2], args[3]);
     },
   });
 
@@ -755,7 +744,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 4) throw new SdevError('hsla() takes 4 arguments (h, s, l, a)', line);
-      return `hsla(${args[0]}, ${args[1]}%, ${args[2]}%, ${args[3]})`;
+      return getGfxRunner().callStr('gfx_hsla_css', args[0], args[1], args[2], args[3]);
     },
   });
 
@@ -763,7 +752,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: () => {
       const h = Math.floor(Math.random() * 360);
-      return `hsl(${h}, 70%, 60%)`;
+      return getGfxRunner().callStr('gfx_hue_css', h, 70, 60);
     },
   });
 
@@ -772,7 +761,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 1) throw new SdevError('radians() takes 1 argument (degrees)', line);
-      return (args[0] as number) * Math.PI / 180;
+      return getGfxRunner().call('gfx_radians', args[0] as number);
     },
   });
 
@@ -780,7 +769,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 1) throw new SdevError('degrees() takes 1 argument (radians)', line);
-      return (args[0] as number) * 180 / Math.PI;
+      return getGfxRunner().call('gfx_degrees', args[0] as number);
     },
   });
 
@@ -788,10 +777,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 3) throw new SdevError('lerp() takes 3 arguments (a, b, t)', line);
-      const a = args[0] as number;
-      const b = args[1] as number;
-      const t = args[2] as number;
-      return a + (b - a) * t;
+      return getGfxRunner().call('gfx_lerp', args[0], args[1], args[2]);
     },
   });
 
@@ -799,12 +785,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 5) throw new SdevError('mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax)', line);
-      const value = args[0] as number;
-      const inMin = args[1] as number;
-      const inMax = args[2] as number;
-      const outMin = args[3] as number;
-      const outMax = args[4] as number;
-      return outMin + (outMax - outMin) * ((value - inMin) / (inMax - inMin));
+      return getGfxRunner().call('gfx_map_range', args[0], args[1], args[2], args[3], args[4]);
     },
   });
 
@@ -812,10 +793,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 3) throw new SdevError('constrain() takes 3 arguments (value, min, max)', line);
-      const value = args[0] as number;
-      const min = args[1] as number;
-      const max = args[2] as number;
-      return Math.max(min, Math.min(max, value));
+      return getGfxRunner().call('gfx_constrain', args[0], args[1], args[2]);
     },
   });
 
@@ -823,9 +801,7 @@ export function createGraphicsBuiltins(
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       if (args.length !== 4) throw new SdevError('dist() takes 4 arguments (x1, y1, x2, y2)', line);
-      const dx = (args[2] as number) - (args[0] as number);
-      const dy = (args[3] as number) - (args[1] as number);
-      return Math.sqrt(dx * dx + dy * dy);
+      return getGfxRunner().call('gfx_dist', args[0], args[1], args[2], args[3]);
     },
   });
 

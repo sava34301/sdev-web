@@ -12,6 +12,16 @@
  *    explicit user invocation).
  */
 
+import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_NOTEBOOK_SRC from '../../../lang/runtime/notebook.sdev?raw';
+
+let collabRunner: SdevModuleRunner | null = null;
+function getCollabRunner(): SdevModuleRunner {
+  if (!collabRunner) collabRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_NOTEBOOK_SRC);
+  return collabRunner;
+}
+
 export type RoomRole = 'peer' | 'teacher' | 'student';
 
 export interface PeerPresence {
@@ -137,20 +147,18 @@ export class CrdtDocument {
    * Returns `true` if the incoming snapshot won and updated local state.
    */
   public mergeRemoteSnapshot(remote: CrdtSnapshot, forceAccept = false): boolean {
-    if (forceAccept) {
-      this.clock = Math.max(this.clock, remote.clock) + 1;
-      this.content = remote.content;
-      this.fileName = remote.fileName;
-      return true;
-    }
-
-    const remoteWins =
-      remote.clock > this.clock ||
-      (remote.clock === this.clock && remote.authorPeerId > this.authorPeerId);
-
-    this.clock = Math.max(this.clock, remote.clock);
-
-    if (remoteWins && remote.content !== this.content) {
+    const [won, nextClock] = getCollabRunner().call(
+      'crdt_should_accept',
+      this.clock,
+      this.authorPeerId,
+      this.content,
+      remote.clock,
+      remote.authorPeerId,
+      remote.content,
+      forceAccept ? 1 : 0
+    ) as [number, number];
+    this.clock = Number(nextClock);
+    if (won === 1) {
       this.content = remote.content;
       this.fileName = remote.fileName;
       return true;

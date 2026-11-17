@@ -179,6 +179,38 @@ else
   set total_failed to total_failed + 1
 end
 
+# 19. Self-Hosted Web Toolkit Suite (pure SDEV on Seed VM)
+set ok to run_suite("Self-Hosted Web Toolkit Suite (11 cases)", "node bin/sdevhost.mjs scripts/test-selfhosted-web.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 20. Self-Hosted All Features Suite (pure SDEV on Seed VM)
+set ok to run_suite("Self-Hosted All Features Suite (32 cases)", "node bin/sdevhost.mjs scripts/test-selfhosted-features.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 21. SDEV Website Built in SDEV (pure SDEV on Seed VM)
+set ok to run_suite("SDEV Website Built in SDEV", "node bin/sdevhost.mjs lang/web/sdev-website.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 22. Web Toolkit TS & Python Parity Suite (51 cases)
+set ok to run_suite("Web Toolkit TS & Python Parity Suite (51 cases)", "node scripts/run-ts.mjs scripts/test-web.ts")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
 say "\n================================================================"
 if total_failed is 0
   say concat("  All ", concat(str(total_passed), " SDEV Self-Hosted Test Suites Passed Successfully!"))

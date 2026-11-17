@@ -537,9 +537,6 @@ function stripOuterParens(cond: string): string {
  * Does the transpiler know this one board-block line? `false` means it would
  * be passed through to C++ unchanged (and almost certainly not compile).
  */
-export function boardLineRecognised(line: string): boolean {
-  return boardLineKind(line) !== 'unknown';
-}
 
 /**
  * `known`: a hardware-language statement; `passthrough`: handed to C++ as is
