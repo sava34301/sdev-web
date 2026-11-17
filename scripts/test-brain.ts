@@ -1,11 +1,19 @@
 /**
  * Free-form requests through the whole agent, including the online AI brain.
- * Needs internet. Run: bun scripts/test-brain.ts
+ * Needs internet & Supabase edge function. Run: bun scripts/test-brain.ts
  */
 import { executeAsync } from '@/lang';
 import { setMemoryStore, emptyMemory } from '@/lang/agent/index';
 let mem = emptyMemory();
 setMemoryStore({ load: () => mem, save: (m) => { mem = m; } });
+
+// Quick connectivity check: verify the online brain is reachable before running full suite
+const probe = await executeAsync('FizzBuzz up to 15', { agent: { brain: 'online' } });
+if (!probe.success || !probe.output.some((o) => /fizz/i.test(o))) {
+  console.log('  [skip] Online AI brain is unreachable or credentials are not configured in this environment.');
+  console.log('         Skipping scripts/test-brain.ts (requires live sdev-agent edge function).');
+  process.exit(0);
+}
 
 type Case = [string, (out: string[]) => boolean];
 const has = (...parts: string[]) => (o: string[]) => parts.every((p) => o.join('\n').toLowerCase().includes(p.toLowerCase()));

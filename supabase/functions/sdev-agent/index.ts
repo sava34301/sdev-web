@@ -1,4 +1,8 @@
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
 
 /**
  * The online brain of the sdev understanding agent.
@@ -36,12 +40,57 @@ Canonical sdev you must write (verified syntax):
   operators: + - * / % **         comments start with #
   lists [1, 2, 3], l[0], l + [4] appends; records {name: "Sam", age: 3}, r.name, r["age"]
   lambdas: (x) -> x * 2
+
 Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, sqrt, min, max, pow,
   random, randint(a, b), pick(list), shuffle, sum, average, sort, sortDesc, reverse, unique, count(list, x),
   first, last, upper, lower, trim, replace(s, a, b), contains(s_or_list, x), startswith, endswith,
   chars(s), weave(list, sep) joins, shatter(s, sep) splits, sift(list, fn) filters, each(list, fn) maps,
   fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.
   There is NO join, split, append, push, map, filter, printf — use weave, shatter, l + [x], each, sift.
+
+Self-hosted (v2) libraries for systems and causal-AI work — load with use "lang/stdlib/v2/<name>.sdev":
+  list: list_append(xs, x), list_concat_two(a, b) (in v2 files lists never grow with +)
+  bits: bits_and/or/xor(a, b), bits_shl/shr(v, n), bits_not_n(v, width), floor_div, floor_mod, wrap_u8/u16/i16
+  mem: mem_arena(size), mem_put/get_u8/u16/i16(m, addr[, v]) little-endian, mem_copy, mem_fill, mem_hex,
+       ring_create(cap), ring_push, ring_get(r, i), ring_len
+  oce (v2: use "lang/stdlib/v2/oce.sdev", it loads list, bits, mem itself; classic and !#ai files: built in, no import): Ontological Causal Engine in one 64 KB arena — oce_create(), oce_entity(m),
+       oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),
+       oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),
+       oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).
+  In v2 files, xs + [a] joins lists only when the file uses "lang/stdlib/v2/list.sdev"; prefer list_append(xs, a).
+
+Canonical SDEV Patterns & Examples:
+  # 1. Math and output:
+  say "hello world"
+  say 23 - 21
+
+  # 2. Functions and calls:
+  to double with n
+    return n * 2
+  end
+  say double(21)
+
+  # 3. Loops (counting from 1 to 10):
+  for each i in sequence(1, 11)
+    say i
+  end
+
+  # 4. Sorting lists:
+  set items to ["milk", "eggs", "bread"]
+  say sort(items)
+
+  # 5. Records / Objects:
+  set person to {name: "Ana", age: 30}
+  say person.name
+  say person.age
+
+  # 6. Palindrome check:
+  set w to "racecar"
+  if w is weave(reverse(chars(w)), "")
+    say "palindrome"
+  else
+    say "not palindrome"
+  end
 
 Window toolkit (the IDE shows a real window):
   window("Title", width, height) … endwindow()   row() … endrow()   column() … endcolumn()
@@ -51,9 +100,6 @@ Window toolkit (the IDE shows a real window):
   uiget("key") reads a value, uiset("key", value) changes it and refreshes labels bound with "@key"
   evaluate("2 + 3 * 4") safely computes an arithmetic expression held in text (use it for calculators)
   Define functions BEFORE window(); put every widget between window() and endwindow().
-  Example calculator key:  to press with k / uiset("display", uiget("display") + k) / end
-                          button("7", () -> press("7"))
-                          button("=", () -> uiset("display", str(evaluate(uiget("display")))))
 
 Requests in plain words:
 - If the source is a request ("make a window that is a calculator", "build a quiz game"), write the WHOLE
@@ -61,25 +107,31 @@ Requests in plain words:
   visual interface uses the window toolkit.
 
 Rules:
+- CRITICAL: NEVER output Python syntax (NO "def", NO "print", NO "range()", NO "elif", NO trailing colons :).
+- CRITICAL: NEVER output JavaScript syntax (NO "console.log", NO "function", NO "let", NO "var", NO "const", NO "===").
+- Every function, if, while, and for each block MUST be closed with "end" on its own line.
 - Compute with code; never hard-code an answer the program should work out.
 - Keep the author's own code and identifiers exactly as written (any language/script); only fix what is wrong.
 - If the author's code already works, return it unchanged.
 - Bare words meant as text become quoted strings.
-- Never add prose, markdown fences or explanations inside the code.`;
+- Never add prose, markdown fences or explanations outside the JSON. Return ONLY JSON: {"canonical": "<program>", "notes": "<short note>"}`;
 
 const AI_DIALECT = `
 
 sdev:ai — the dialect for AI models. When asked for sdev:ai, write ONLY this form:
-  !#ai                         first line
+  !#ai                         MUST be the very first line
   v x = 5                      declare            x = x + 1       change (also xs[0] = 1, r.k = 2)
   p(x)                         print
   f add(a, b) {                function            r a + b         return
   ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else
   w i < 3 {  }                 while               each n in xs {  }   for each
   try {  } catch e {  }        brk / next          break / continue
+  } finally {  }   throw e      k MAX = 3           constant
+  c Dog : Animal {  f init(self, n) { self.n = n }  }    class (": Animal" optional); make one with new Dog(1)
   == != && || ! true false null      every block closes with } on its own line
   Calls to built-ins and the window toolkit stay as they are: window("Calc", 320, 400), button("7", () -> press("7")), uiset(...)
   Lambdas: (x) -> x * 2.  One statement per line.
+
 Example:
   !#ai
   f press(k) {
@@ -94,7 +146,7 @@ Example:
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const key = Deno.env.get('LOVABLE_API_KEY');
+  const key = aiKey();
   if (!key) {
     return new Response(JSON.stringify({ error: 'The understanding agent is not configured for this project.' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -133,19 +185,15 @@ Deno.serve(async (req) => {
       : 'Return the whole program as canonical sdev.',
   ].join('\n');
 
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/responses', {
+  const res = await fetch(aiUrl('/responses'), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Lovable-API-Key': key,
-      'X-Lovable-AIG-SDK': 'fetch',
-    },
+    headers: aiHeaders(),
     body: JSON.stringify({
-      model: 'openai/gpt-6-astra',
+      model: aiModel('openai/gpt-6-astra'),
       stream: true,
       instructions: body.format === 'ai' ? SYSTEM + AI_DIALECT : SYSTEM,
       input: user,
-      reasoning: { effort: 'low' },
+      ...(usingOwnProvider() && !Deno.env.get('SDEV_AI_REASONING') ? {} : { reasoning: { effort: Deno.env.get('SDEV_AI_REASONING') || 'low' } }),
       text: {
         format: {
           type: 'json_schema',

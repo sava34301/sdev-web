@@ -5,7 +5,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import wabtInit from 'wabt';
 
 const wabt = await wabtInit();
-const wat = await readFile('./lang/bootstrap/seed.wat', 'utf8');
+const wat = await readFile('./src/lang-bridge/seed/seed.wat', 'utf8');
 const mod = wabt.parseWat('seed.wat', wat, { mutable_globals: true });
 mod.validate();
 const { buffer } = mod.toBinary({ log: false, write_debug_names: false });

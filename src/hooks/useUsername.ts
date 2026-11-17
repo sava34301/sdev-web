@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 
 const db = supabase;
 
-export const USERNAME_RE = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/;
+const USERNAME_RE = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/;
 
 /**
  * The handle that makes `@you/thing` addresses work. One per account, claimed

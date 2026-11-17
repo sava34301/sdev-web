@@ -87,5 +87,44 @@ check('sentence closes block', String(sentences.includes('end')), 'true');
 check('sentence call', String(sentences.includes('n11(2)')), 'true');
 check('sentence runs', execute(sentences).output.join('|'), '3');
 
+// ---- working sdev is never rewritten -------------------------------------
+memory = emptyMemory();
+for (const src of [
+  'forge double be x -> x * 2\nspeak(double(5))',
+  'forge data be :: "score": 100, "name": "Alice" ;;\nspeak(data["score"])',
+  'conjure total(nums) ::\n  yield fold(nums, 0, (acc, x) -> acc + x)\n;;\nspeak(total([1, 2, 3]))',
+  'forge n be 3\nponder n > 2 ::\n  speak("big")\n;;',
+]) check(`working file untouched: ${src.split('\n')[0]}`, understand(src).source, src);
+
+// ---- rules keep code that is already code ---------------------------------
+check('call keeps its bracket', repair('set p to int(s)\nsay p').source, 'set p to int(s)\nsay p');
+check('parameter named a', repair('to add with a b\n  return a + b\nend').source, 'to add with a b\n  return a + b\nend');
+check('method call kept', repair('set c to new Counter()\nc.start(5)').source, 'set c to new Counter()\nc.start(5)');
+
+// ---- hardware board blocks are firmware, never rewritten -------------------
+memory = emptyMemory();
+const boardColon = 'board "uno" ::\n  conjure setup() ::\n    pin led be output\n    speak("ready")\n  ;;\n  conjure loop() ::\n    pin led toggle\n    wait 500\n  ;;\n;;\n';
+const boardBrace = 'board "uno" {\n  conjure setup() {\n    pin 13 be output\n    serial begin 9600\n  }\n  conjure loop() {\n    pin 13 write high\n    wait 500\n  }\n}\n';
+check('board :: block kept byte for byte', understand(boardColon).source, boardColon);
+check('board { } block kept byte for byte', understand(boardBrace).source, boardBrace);
+{
+  const r = understand('output Hello\n' + boardBrace);
+  check('sdev around a board block is still understood', r.source, 'speak("Hello")\n' + boardBrace);
+}
+// ---- hardware: loose board code is read into the hardware language ---------
+memory = emptyMemory();
+check('hardware: plain words become pin and wait statements',
+  understand('board "uno" ::\n  conjure setup() ::\n    set pin 13 as output\n  ;;\n  conjure loop() ::\n    turn on the led\n    wait one second\n    turn off pin 13\n    wait half a second\n  ;;\n;;\n').source,
+  'board "uno" ::\n  conjure setup() ::\n    pin 13 be output\n  ;;\n  conjure loop() ::\n    pin led on\n    wait 1 second\n    pin 13 off\n    wait 500\n  ;;\n;;\n');
+check('hardware: Python-style blocks get setup(), loop() and their ;;',
+  understand('board uno:\n  setup:\n    make the led an output\n  loop:\n    blink the led every 200 ms\n    if pin 2 is high:\n      beep on pin 8 at 440 for 200 ms\n    else:\n      toggle pin 12\n').source,
+  'board "uno" ::\n  conjure setup() ::\n    pin led be output\n  ;;\n  conjure loop() ::\n    pin led on\n    wait 200\n    pin led off\n    wait 200\n    ponder read pin 2 equals HIGH ::\n      tone 8 440 200\n    otherwise ::\n      pin 12 toggle\n    ;;\n  ;;\n;;\n');
+check('hardware: the documented script-style example gets setup() and loop()',
+  understand('board "uno"\n  pin 13 is output\n  forever\n    turn 13 on ; wait 500ms\n    turn 13 off; wait 500ms\n  end\nend\n').source,
+  'board "uno" ::\n  conjure setup() ::\n    pin 13 be output\n  ;;\n  conjure loop() ::\n    pin 13 on\n    wait 500\n    pin 13 off\n    wait 500\n  ;;\n;;\n');
+{
+  const r = understand('board "uno" ::\n  conjure setup() ::\n  ;;\n  conjure loop() ::\n    do the macarena with the servo\n  ;;\n;;\n');
+  check('hardware: a line no rule can read is reported, not guessed', JSON.stringify(r.unresolved), '[5]');
+}
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -93,7 +93,7 @@ export function IdeFileTree({
                 <button onClick={e => { e.stopPropagation(); onNewFolder(id); }} className="p-0.5 rounded hover:bg-muted hover:text-primary" title="New folder"><FolderPlus className="w-3 h-3" /></button>
               )}
               <button onClick={e => { e.stopPropagation(); startRename(id, name); }} className="p-0.5 rounded hover:bg-muted hover:text-primary" title="Rename"><Edit3 className="w-3 h-3" /></button>
-              <button onClick={e => { e.stopPropagation(); isFolder ? onDeleteFolder(id) : onDelete(id); }} className="p-0.5 rounded hover:bg-muted hover:text-destructive" title="Delete"><Trash2 className="w-3 h-3" /></button>
+              <button onClick={e => { e.stopPropagation(); if (isFolder) onDeleteFolder(id); else onDelete(id); }} className="p-0.5 rounded hover:bg-muted hover:text-destructive" title="Delete"><Trash2 className="w-3 h-3" /></button>
             </div>
           </>
         )}

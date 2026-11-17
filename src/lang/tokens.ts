@@ -10,6 +10,7 @@ export enum TokenType {
 
   // Unique sdev Keywords
   FORGE = 'FORGE',         // variable declaration
+  FIXED = 'FIXED',         // immutable variable declaration
   CONJURE = 'CONJURE',     // function
   PONDER = 'PONDER',       // if
   OTHERWISE = 'OTHERWISE', // else
@@ -130,7 +131,11 @@ export const KEYWORDS: Record<string, TokenType> = (() => {
     // Contextual for backwards compatibility: `essence(x)` is a builtin and
     // `kind` is a common variable name in existing sdev sources. Both are
     // recognised as class declarations by the parser when followed by a name.
+    // `fixed` / `const` / `val` are contextual too: `val` and `const` are
+    // common variable names, so they declare a constant only when a name
+    // follows (`fixed x be 1`) and stay identifiers everywhere else.
     if (word === 'essence' || word === 'kind') continue;
+    if (token === 'FIXED') continue;
     const tt = (TokenType as unknown as Record<string, TokenType>)[token];
     if (tt) map[word] = tt;
   }

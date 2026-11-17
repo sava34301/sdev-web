@@ -4,6 +4,15 @@ Goal: every piece of the project that *can* be written in SDEV is written in
 SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
+## Current task — OCE causal engine in SDEV
+- [x] bits / mem / oce v2 libraries, 35-check test, gravity example (VM + native identical)
+- [x] Compiler fix: `and` / `or` left the stack unbalanced (self-compiles byte-identical)
+- [x] v2 compiler: `xs + [a]` joins lists; unknown function / wrong argument count reported (CLI + website); `kind` usable as a name
+- [x] Native backend: `concat`, normalised and/or, text compare of list items, global list writes from functions
+- [x] Classic + `!#ai` files: bits/mem/oce built into the browser and Python runtimes (parity gate `scripts/test-oce-parity.ts`)
+- [x] Website loads `use "lang/stdlib/..."` files
+- [ ] Python version reading `!#ai` files (not started)
+
 ## Current task — Arduino remake (completed in Antigravity)
 - [x] Every Arduino board in the catalogue (Uno R3/R4 Minima/R4 WiFi/Q, Nano family, Mega, Leonardo, Micro, MKR, Zero, Due, Giga, Portenta, ESP32/ESP8266, Pico)
 - [x] Every Arduino core command available in the `board` block (SDEV words + raw C++), `::`/`;;` and `{}` blocks
@@ -115,7 +124,18 @@ make the self-hosted compiler its own reference.
 - [x] Port yes/no answers, typed-number conversion, counted loops, placeholders, dialect words to sdev
 - [x] Names from the other IDE files fed into the understander
 - [x] AI-native dialect (`sdev:ai`, `!#ai`) written in sdev, both directions
+- [x] sdev:ai constants (`k`), classes (`c Name : Base {`), `throw`, `finally`; AI prompts updated
 - [x] IDE "Open as sdev:ai" (Edit menu, both ways); online AI writes whole programs in sdev:ai; everyday tasks (reverse/upper/sort/dice…) ported to sdev
 - [x] Project index (names defined across files) written in sdev: `lang/agent/project.sdev`, cached per file
 - [x] Large files read in remembered top-level parts: after a small edit only the changed parts are read again (~6x faster)
 - [x] Plain-words requests ("make a window that is a calculator") go straight to the AI, which writes the full program; added evaluate()
+
+## Detach from Lovable (started 2026-10-25)
+- [x] AI helpers use our own provider via SDEV_AI_* secrets (legacy gateway only as fallback)
+- [x] Removed unused Lovable sign-in helper, dev tagger, old s-dev.lovable.app links
+- [ ] AI provider key — waiting on user (SDEV_AI_API_KEY / BASE_URL / MODEL)
+- [ ] Email (sign-up / reset / app emails) — needs an email service + sending domain from user
+- [ ] Backend (database, accounts, storage, functions) — needs user's own backend project
+- [ ] Website hosting for web.sdev.codes — needs user's hosting choice
+- [ ] Assistant integration (MCP) — needs decision: rebuild on open MCP SDK or drop
+- [ ] Final move-out cleanup: preview sign-in bridge, launch-gate preview hosts, badge CSS, sandbox dev plugins

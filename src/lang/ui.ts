@@ -283,7 +283,6 @@ export function createUiBuiltins(
   builtins.set('alert', { type: 'builtin', call: (args: unknown[]) => {
     const msg = asString(args[0], '');
     if (typeof window !== 'undefined') {
-      // eslint-disable-next-line no-alert
       window.alert(msg);
     }
     return null;

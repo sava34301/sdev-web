@@ -3,7 +3,7 @@ import { Parser } from './parser';
 import { Interpreter } from './interpreter';
 import { SdevError } from './errors';
 import { stripBoardBlocks } from './hardware/strip';
-import { understand, understandAsync, stripAgentDirectives, reconsider } from './agent';
+import { understand, understandAsync, stripAgentDirectives, reconsider, asWritten, parses, wordsNeedReading } from './agent';
 import type { UnderstandOptions, UnderstandResult } from './agent';
 
 export interface ExecutionResult {
@@ -48,8 +48,24 @@ function pickRuntime(source: string): 'v1' | 'v2' {
 export async function executeV2(source: string, options: ExecuteOptions = {}): Promise<ExecutionResult> {
   const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
   try {
-    const understood = await understandFor(source, options, true);
-    const r = await runWasm(understood);
+    // Working code is compiled exactly as written; the understander only
+    // reads the file when the self-hosted compiler cannot compile it.
+    const written = asWritten(source);
+    let r: Awaited<ReturnType<typeof runWasm>>;
+    // A line opening with a plainly-not-sdev word (`terminal x`) still compiles, so read those first.
+    if (options.agent !== false && wordsNeedReading(written)) {
+      const understood = await understandFor(source, options, true);
+      try { r = await runWasm(understood); return { success: r.success, output: r.output, error: r.error ?? undefined, detectedLanguage: null }; }
+      catch { /* the reading does not compile — try the file as written */ }
+    }
+    try {
+      r = await runWasm(written);
+    } catch (first) {
+      if (!(first instanceof WasmSubsetError) || options.agent === false) throw first;
+      const understood = await understandFor(source, options, true);
+      if (understood.trim() === written.trim()) throw first;
+      try { r = await runWasm(understood); } catch { throw first; }
+    }
     return { success: r.success, output: r.output, error: r.error ?? undefined, detectedLanguage: null };
   } catch (e) {
     const notYet = e instanceof WasmSubsetError;
@@ -85,7 +101,12 @@ export async function executeAsync(source: string, options: ExecuteOptions = {})
   const understood = await understandFor(source, options, true);
   const first = execute(understood, { ...options, agent: false });
   if (first.success || options.agent === false || !first.error) return first;
-  // It was understood but broke when it ran: let the AI see the error once.
+  // The agent's reading broke but the author's file holds together: the file as written wins.
+  const written = asWritten(source);
+  if (understood.trim() !== written.trim() && parses(written)) return execute(written, { ...options, agent: false });
+  // The author's own file ran and failed: that is a real error to show, not something to rewrite.
+  if (understood.trim() === written.trim() && parses(written)) return first;
+  // The file needed the agent and its reading still broke: let the AI see the error once.
   const retry = await reconsider(source, first.error, { dialect: options.dialect ?? null, ...(options.agent || {}) }).catch(() => null);
   if (!retry) return first;
   const second = execute(retry.source, { ...options, agent: false });
@@ -144,6 +165,7 @@ export function execute(source: string, options: ExecuteOptions = {}): Execution
 export { Lexer } from './lexer';
 export { Parser } from './parser';
 export { Interpreter } from './interpreter';
+export { Compiler } from './compiler';
 export { SdevError } from './errors';
 export {
   translateSource,
@@ -162,3 +184,6 @@ export { resolveLinks } from './linker';
 export type { LinkableFile } from './linker';
 export * from './tokens';
 export * from './ast';
+export { evaluateLiveScratchpad, type LiveLineResult, type LiveScratchpadResult, type LiveScratchpadOptions } from './eval-live';
+export { runBenchmark, formatBenchmarkReport, type BenchmarkResult, type BenchmarkOptions } from './benchmark';
+export { parseNotebook, executeNotebook, type Notebook, type NotebookCell, type NotebookExecutionResult, type CellExecutionResult } from './notebook';

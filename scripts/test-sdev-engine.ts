@@ -18,7 +18,7 @@ import { execute } from '../src/lang';
 let memory: AgentMemory = emptyMemory();
 setMemoryStore({ load: () => memory, save: (m) => { memory = m; } });
 let passed = 0, failed = 0;
-const ok = (name: string, cond: boolean, info = '') => { cond ? passed++ : failed++; console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${cond ? '' : '  ' + info}`); };
+const ok = (name: string, cond: boolean, info = '') => { if (cond) passed++; else failed++; console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${name}${cond ? '' : '  ' + info}`); };
 
 const cases: [string, string, string][] = [
   ['bare print', 'print hello world', 'hello world'],
@@ -97,6 +97,12 @@ ok('sdev:ai runs', air.success && air.output.join('|') === 'five == ok|0|1|8', J
 const canon = aiToSdev(ai);
 ok('sdev:ai round trip', aiToSdev(sdevToAi(canon)) === canon);
 ok('strings untouched', canon.includes('"five == "'));
+{
+  const ai2 = '!#ai\nk K = 3\nc A {\n  f init(self, n) {\n    self.n = n\n  }\n}\nc B : A {\n  f show(self) {\n    p(self.n)\n  }\n}\ntry {\n  throw "bad"\n} catch e {\n  p("caught")\n} finally {\n  p("fin")\n}\nv b = new B(K)\nb.show()';
+  const c2 = aiToSdev(ai2);
+  ok('sdev:ai constants, classes, throw, finally run', execute(c2, { agent: false }).output.join('|') === 'caught|fin|3', c2);
+  ok('sdev:ai classes round trip', aiToSdev(sdevToAi(c2)) === c2);
+}
 
 // ---- block-closing rules written in sdev (lang/agent/blocks.sdev) ----
 {

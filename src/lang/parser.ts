@@ -2,6 +2,10 @@ import { Token, TokenType } from './tokens';
 import { Lexer } from './lexer';
 import * as AST from './ast';
 import { SdevError } from './errors';
+import { WORDS_BY_TOKEN } from './keywords';
+
+/** Every spelling of the contextual constant-declaration keyword (`fixed`, `const`, `val`). */
+const FIXED_WORDS = new Set<string>(WORDS_BY_TOKEN.FIXED ?? ['fixed', 'const', 'val']);
 
 /**
  * sdev recursive-descent parser.
@@ -34,7 +38,8 @@ export class Parser {
 
   private parseStatement(): AST.ASTNode {
     if (this.check(TokenType.AT) && this.isDecoratorPosition()) return this.parseDecorated();
-    if (this.check(TokenType.FORGE)) return this.parseForgeStatement();
+    if (this.check(TokenType.FORGE)) return this.parseForgeStatement(false);
+    if (this.isContextualFixedStart()) return this.parseForgeStatement(true);
     if (this.check(TokenType.CONJURE)) return this.parseConjureDeclaration();
     if (this.check(TokenType.ASYNC)) return this.parseAsyncStatement();
     if (this.check(TokenType.PONDER)) return this.parsePonderStatement();
@@ -257,8 +262,11 @@ export class Parser {
   }
 
   // forge name[: Type] be value    |    forge a, b be pair
-  private parseForgeStatement(): AST.LetStatement {
-    const forgeToken = this.consume(TokenType.FORGE, "Expected 'forge'");
+  // fixed name[: Type] be value
+  private parseForgeStatement(isFixed = false): AST.LetStatement {
+    const token = isFixed
+      ? this.advance()
+      : this.consume(TokenType.FORGE, "Expected 'forge'");
     // A target list may contain one starred name: `forge a, *rest be xs`.
     let starIndex: number | undefined;
     const readTarget = (): string => {
@@ -277,7 +285,7 @@ export class Parser {
 
     // Declaration without initialiser: `forge x: Int`
     if (!this.check(TokenType.BE)) {
-      return { type: 'LetStatement', name: names[0], targets: names.length > 1 ? names : undefined, starIndex, annotation, value: { type: 'NullLiteral', line: forgeToken.line }, line: forgeToken.line };
+      return { type: 'LetStatement', name: names[0], targets: names.length > 1 ? names : undefined, starIndex, annotation, value: { type: 'NullLiteral', line: token.line }, line: token.line, isFixed };
     }
     this.consume(TokenType.BE, "Expected 'be'");
     const value = this.parseExpressionOrTuple();
@@ -288,7 +296,8 @@ export class Parser {
       starIndex,
       annotation,
       value,
-      line: forgeToken.line,
+      line: token.line,
+      isFixed,
     };
   }
 
@@ -323,7 +332,7 @@ export class Parser {
     let found = false;
     const walk = (n: unknown): void => {
       if (found || !n || typeof n !== 'object') return;
-      const node = n as { type?: string; [k: string]: unknown };
+      const node = n as { type?: string;[k: string]: unknown };
       if (node.type === 'EmitExpr') { found = true; return; }
       // Do not descend into nested function bodies.
       if (node.type === 'FuncDeclaration' || node.type === 'LambdaExpr') return;
@@ -629,7 +638,7 @@ export class Parser {
 
     // Literals
     if (this.check(TokenType.NUMBER) || this.check(TokenType.STRING) ||
-        this.check(TokenType.YEP) || this.check(TokenType.NOPE) || this.check(TokenType.VOID)) {
+      this.check(TokenType.YEP) || this.check(TokenType.NOPE) || this.check(TokenType.VOID)) {
       const value = this.parseUnary();
       return { type: 'PatLiteral', value, line: t.line };
     }
@@ -947,12 +956,14 @@ export class Parser {
       this.advance();
       const value = this.parseExpressionOrTuple();
       if (expr.type === 'SliceExpr') {
-        return { type: 'ExpressionStatement', expression: {
-          type: 'CallExpr',
-          callee: { type: 'Identifier', name: 'slice_assign', line: expr.line },
-          args: [expr.object, expr.start ?? { type: 'NullLiteral', line: expr.line }, expr.stop ?? { type: 'NullLiteral', line: expr.line }, expr.step ?? { type: 'NullLiteral', line: expr.line }, value],
-          line: expr.line,
-        }, line: expr.line };
+        return {
+          type: 'ExpressionStatement', expression: {
+            type: 'CallExpr',
+            callee: { type: 'Identifier', name: 'slice_assign', line: expr.line },
+            args: [expr.object, expr.start ?? { type: 'NullLiteral', line: expr.line }, expr.stop ?? { type: 'NullLiteral', line: expr.line }, expr.step ?? { type: 'NullLiteral', line: expr.line }, value],
+            line: expr.line,
+          }, line: expr.line
+        };
       }
       return this.makeAssignment(expr, value, expr.line);
     }
@@ -1095,7 +1106,7 @@ export class Parser {
 
   /** Comparison chain: `1 < x < 10` lowers to `1 < x also x < 10`. */
   private parseComparison(): AST.ASTNode {
-    let left = this.parseMembership();
+    const left = this.parseMembership();
     const ops: { op: string; right: AST.ASTNode }[] = [];
     while (this.match(TokenType.LESS, TokenType.MORE, TokenType.ATMOST, TokenType.ATLEAST)) {
       const operator = this.previous().value;
@@ -1120,7 +1131,7 @@ export class Parser {
   /** `x through xs`, `x isnt through xs`, `a same b`, `a isnt same b`. */
   private parseMembership(): AST.ASTNode {
     let left = this.parseBitOr();
-    for (;;) {
+    for (; ;) {
       if (this.check(TokenType.THROUGH)) {
         this.advance();
         const right = this.parseBitOr();
@@ -1157,7 +1168,7 @@ export class Parser {
   }
 
   private parseBitXor(): AST.ASTNode {
-    let left = this.parseBitAnd();
+    const left = this.parseBitAnd();
     // '^' is power in sdev; bitwise xor is the `bit_xor` builtin.
     return left;
   }
@@ -1244,7 +1255,7 @@ export class Parser {
   private parseCall(): AST.ASTNode {
     let expr = this.parsePrimary();
 
-    for (;;) {
+    for (; ;) {
       if (this.match(TokenType.LPAREN)) {
         expr = this.finishCall(expr);
       } else if (this.match(TokenType.LBRACKET)) {
@@ -1306,7 +1317,7 @@ export class Parser {
         }
         // keyword argument:  name be value  |  name: value
         if (this.check(TokenType.IDENTIFIER) &&
-            (this.tokens[this.pos + 1]?.type === TokenType.BE || this.tokens[this.pos + 1]?.type === TokenType.COLON)) {
+          (this.tokens[this.pos + 1]?.type === TokenType.BE || this.tokens[this.pos + 1]?.type === TokenType.COLON)) {
           const name = this.advance().value;
           this.advance();
           args.push({ type: 'KeywordArg', name, value: this.parseExpression(), line: callee.line });
@@ -1360,7 +1371,9 @@ export class Parser {
     }
 
     if (this.match(TokenType.STRING)) {
-      // Implicit adjacent string concatenation
+      // Implicit adjacent string concatenation. Plain strings are always
+      // literal text — `{...}` is only a template inside f"..." strings, so
+      // JSON, regex quantifiers (`\d{3}`) and `\p{L}` stay exactly as written.
       let value = token.value;
       while (this.check(TokenType.STRING)) value += this.advance().value;
       return { type: 'StringLiteral', value, line: token.line };
@@ -1597,6 +1610,47 @@ export class Parser {
     return { type: 'DictLiteral', entries, line };
   }
 
+  private isEscapedOrRegexBrace(template: string, i: number): boolean {
+    // Odd number of backslashes directly before '{' => escaped '\{'
+    let bs = 0;
+    for (let k = i - 1; k >= 0 && template[k] === '\\'; k--) bs++;
+    if (bs % 2 === 1) return true;
+
+    // Check if preceded by \p or \P (Unicode property escape e.g. \p{L})
+    if (i >= 1 && (template[i - 1] === 'p' || template[i - 1] === 'P')) {
+      let bsP = 0;
+      for (let k = i - 2; k >= 0 && template[k] === '\\'; k--) bsP++;
+      if (bsP % 2 === 1) return true;
+    }
+
+    // Check if preceded by \u or \x (e.g. \u{...})
+    if (i >= 1 && (template[i - 1] === 'u' || template[i - 1] === 'x')) {
+      let bsU = 0;
+      for (let k = i - 2; k >= 0 && template[k] === '\\'; k--) bsU++;
+      if (bsU % 2 === 1) return true;
+    }
+
+    // Check if inside regex character class bracket `[...]` without closing `]`
+    let inCharClass = false;
+    for (let k = i - 1; k >= 0; k--) {
+      if (template[k] === ']' && (k === 0 || template[k - 1] !== '\\')) break;
+      if (template[k] === '[' && (k === 0 || template[k - 1] !== '\\')) {
+        inCharClass = true;
+        break;
+      }
+    }
+    if (inCharClass) return true;
+
+    // Look ahead to check if content is a regex quantifier like {1,2} or {3}
+    const close = template.indexOf('}', i + 1);
+    if (close > i + 1) {
+      const inner = template.slice(i + 1, close).trim();
+      if (/^\d+(?:\s*,\s*\d*)?$/.test(inner)) return true;
+    }
+
+    return false;
+  }
+
   /**
    * Compiles an f-string template into an FStringExpr. Supports `{expr}`,
    * `{expr!r}` conversions, `{expr:spec}` format specs, `{expr=}` debug
@@ -1611,6 +1665,11 @@ export class Parser {
       if (ch === '{' && template[i + 1] === '{') { text += '{'; i += 2; continue; }
       if (ch === '}' && template[i + 1] === '}') { text += '}'; i += 2; continue; }
       if (ch === '{') {
+        if (this.isEscapedOrRegexBrace(template, i)) {
+          text += ch;
+          i++;
+          continue;
+        }
         if (text) { parts.push({ kind: 'text', value: text }); text = ''; }
         let depth = 1;
         let body = '';
@@ -1650,8 +1709,12 @@ export class Parser {
           body = debug;
         }
 
-        const sub = new Parser(this.lexTemplate(body, line));
-        parts.push({ kind: 'expr', expr: sub.parseExpression(), spec, conv, debug });
+        try {
+          const sub = new Parser(this.lexTemplate(body, line));
+          parts.push({ kind: 'expr', expr: sub.parseExpression(), spec, conv, debug });
+        } catch {
+          text += '{' + body + (spec ? ':' + spec : '') + '}';
+        }
         continue;
       }
       text += ch;
@@ -1659,6 +1722,22 @@ export class Parser {
     }
     if (text) parts.push({ kind: 'text', value: text });
     return { type: 'FStringExpr', parts, line };
+  }
+
+
+
+  /**
+   * `fixed` / `const` / `val` start a constant declaration only in the shape
+   * `fixed name be ...` (or `fixed a, b be ...`, `fixed name: Type`). Anywhere
+   * else they are ordinary names, so `forge val be 3` and `val + 1` still work.
+   */
+  private isContextualFixedStart(): boolean {
+    const t = this.peek();
+    if (t.type !== TokenType.IDENTIFIER || !FIXED_WORDS.has(t.value)) return false;
+    const name = this.tokens[this.pos + 1];
+    const after = this.tokens[this.pos + 2];
+    if (!name || name.type !== TokenType.IDENTIFIER || !after) return false;
+    return after.type === TokenType.BE || after.type === TokenType.COMMA || after.type === TokenType.COLON;
   }
 
   private lexTemplate(source: string, line: number): Token[] {

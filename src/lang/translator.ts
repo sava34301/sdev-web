@@ -689,7 +689,10 @@ function segmentSource(source: string): Segment[] {
 
 /** Returns true if `code` contains non-ASCII chars (likely foreign script). */
 export function hasNonAscii(code: string): boolean {
-  return /[^\x00-\x7F]/.test(code);
+  for (let i = 0; i < code.length; i++) {
+    if (code.charCodeAt(i) > 127) return true;
+  }
+  return false;
 }
 
 /**

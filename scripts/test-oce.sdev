@@ -1,0 +1,155 @@
+# OCE regression suite — authored in SDEV.
+#   node bin/sdevhost.mjs scripts/test-oce.sdev
+use "lang/stdlib/testkit.sdev"
+use "lang/stdlib/v2/list.sdev"
+use "lang/stdlib/v2/bits.sdev"
+use "lang/stdlib/v2/mem.sdev"
+use "lang/stdlib/v2/oce.sdev"
+
+# -- bits & memory ----------------------------------------------------------
+set _ to check("bits_and", bits_and(12, 10) is 8)
+set _ to check("bits_or", bits_or(12, 10) is 14)
+set _ to check("bits_xor", bits_xor(12, 10) is 6)
+set _ to check("bits_not_n", bits_not_n(5, 4) is 10)
+set _ to check("floor_div negative", floor_div(0 - 7, 2) is 0 - 4)
+set _ to check("floor_mod negative", floor_mod(0 - 7, 2) is 1)
+set _ to check("wrap_i16", wrap_i16(40000) is 0 - 25536)
+set mm to mem_arena(16)
+set _ to mem_put_i16(mm, 2, 0 - 2)
+set _ to check("i16 round trip", mem_get_i16(mm, 2) is 0 - 2)
+set _ to check("i16 bytes little-endian", mem_hex(mm, 2, 2) is "fe ff")
+set _ to mem_put_u16(mm, 0, 513)
+set _ to check("u16 round trip", mem_get_u16(mm, 0) is 513)
+set r to ring_create(3)
+set _ to ring_push(r, 1)
+set _ to ring_push(r, 2)
+set _ to ring_push(r, 3)
+set _ to ring_push(r, 4)
+set _ to check("ring keeps newest", ring_get(r, 0) is 2 and ring_len(r) is 3)
+
+# -- the 12-byte node -------------------------------------------------------
+set m to oce_create()
+set _ to check("arena is 64 KB", length(m) is 65536)
+set n0 to oce_alloc(m, 7, 200, 1, 2, 3, 0 - 10)
+set _ to check("node packs to 12 bytes", mem_hex(m, 16384, 12) is "00 40 07 c8 01 00 02 00 03 00 f6 ff")
+set _ to oce_free(m, n0)
+set _ to check("freed slot is reused", oce_alloc(m, 1, 1, 0, 0, 0, 0) is 0)
+
+# -- learning physics from zero bytes ---------------------------------------
+set m to oce_create()
+set names to ["supported", "pos_z", "vel_z", "density", "pos_x", "vel_x", "mass", "near_magnet"]
+set _ to oce_medium(m, 3, 12)
+# Functions assign locals, so the simulated world lives in holder cells.
+set world_box to [[[0, 0, 0, 12, 0, 0, 0, 0]]]
+set ferro_box to [[0]]
+to spawn with sup pz dens fe
+  set id to oce_entity(m)
+  set world_box[0] to list_append(world_box[0], [sup, pz, 0, dens, 0, 0, 10, 0])
+  set ferro_box[0] to list_append(ferro_box[0], fe)
+  return id
+end
+set table to spawn(1, 0, 50, 0)
+set stone to spawn(1, 100, 50, 0)
+set balloon to spawn(1, 100, 2, 0)
+set cube_a to spawn(1, 0, 70, 1)
+set cube_b to spawn(1, 0, 70, 0)
+
+to physics
+  set world to world_box[0]
+  set ferro to ferro_box[0]
+  set nw to [world[0]]
+  set i to 1
+  while i < length(world)
+    set o to world[i]
+    set x to [o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7]]
+    if o[0] is 0
+      if o[3] > 12
+        set x[2] to o[2] - 10
+      else
+        set x[2] to o[2] + 4
+      end
+    end
+    set x[1] to o[1] + o[2]
+    set x[4] to o[4] + o[5]
+    if ferro[i] is 1 and o[7] is 1
+      set x[5] to o[5] + 6
+    end
+    set nw to list_append(nw, x)
+    set i to i + 1
+  end
+  set world_box[0] to nw
+  return 0
+end
+to act with e p v
+  set row to world_box[0][e]
+  set row[p] to v
+  set _ to oce_intervene(m, e, p, v)
+  return v
+end
+to run_ticks with k
+  set errs to 0
+  set t to 0
+  while t < k
+    set _ to physics()
+    set errs to errs + oce_observe(m, world_box[0])
+    set t to t + 1
+  end
+  return errs
+end
+
+set _ to oce_observe(m, world_box[0])
+set _ to check("quiet world: no surprises", run_ticks(5) is 0)
+set _ to act(stone, 0, 0)
+set early to run_ticks(3)
+set _ to check("stone release is surprising", early > 0)
+set _ to check("then gravity is predicted exactly", run_ticks(20) is 0)
+set _ to act(stone, 0, 1)
+set _ to act(stone, 2, 0)
+set _ to act(stone, 1, 100)
+set _ to run_ticks(2)
+set _ to act(stone, 0, 0)
+set _ to check("gravity holds on a second drop", run_ticks(10) is 0)
+set _ to act(balloon, 0, 0)
+set _ to run_ticks(2)
+set _ to check("balloon learned via exception (buoyancy)", run_ticks(8) is 0)
+set _ to act(cube_a, 7, 1)
+set _ to act(cube_b, 7, 1)
+set _ to run_ticks(3)
+set _ to check("identical cubes split by latent property", run_ticks(8) is 0)
+set _ to check("latent register was invented", oce_get(m, cube_a, 8) is 1 and oce_get(m, cube_b, 8) is 0)
+set model to oce_describe(m, names)
+say model
+set _ to check("model says gravity", contains(model, "if supported == 0 then vel_z += -10"))
+set _ to check("model says kinematics", contains(model, "pos_z += vel_z"))
+set _ to check("model says buoyancy exception", contains(model, "unless density < medium.density then vel_z += 4"))
+set _ to check("model uses a latent cause", contains(model, "latent_1 == 1"))
+set _ to check("model stays tiny (< 2 KB)", oce_mdl_bits(m) < 16384)
+
+# -- counterfactual: what if the table lost support? ------------------------
+set _ to oce_imagine(m, table, 0, 0, 3)
+set _ to check("imagined table falls", oce_imagined(m, table, 2) is 0 - 30)
+set _ to check("imagination leaves reality alone", oce_get(m, table, 2) is 0)
+
+# -- external knowledge -----------------------------------------------------
+set ext to oce_ext_create()
+set _ to oce_ext_store(ext, 3, 74, 5555)
+set _ to check("external fact query", oce_ext_query(ext, 3, 74, 0) is 5555)
+
+# -- zero-token motif folding & generator discovery -------------------------
+set fold to oce_motifs("abcabcabcabc", 2)
+set _ to check("motifs compress repeats", length(fold[0]) < 12)
+set _ to check("motifs expand back", oce_motif_expand(fold[1], fold[0][0]) is "abcabc" or oce_motif_expand(fold[1], fold[0][0]) is "abc")
+set seq to [3, 7, 11, 15]
+set rule to oce_sequence_rule(seq)
+set _ to check("arithmetic rule", rule[0] is "add" and oce_sequence_next(seq, rule) is 19)
+set _ to check("geometric rule", oce_sequence_next([2, 6, 18], oce_sequence_rule([2, 6, 18])) is 54)
+set _ to check("fibonacci rule", oce_sequence_rule([1, 1, 2, 3, 5, 8])[0] is "fib")
+set rows to [[0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0]]
+set k to 0
+while k < 6
+  set rows to list_append(rows, oce_ca_step(rows[length(rows) - 1], 110))
+  set k to k + 1
+end
+set _ to check("Rule 110 rediscovered from cells", oce_ca_rule(rows) is 110)
+
+set _ to tk_report("oce")

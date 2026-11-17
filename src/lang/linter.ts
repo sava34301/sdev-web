@@ -160,6 +160,8 @@ export function lintSdevSource(
   source: string,
   options: LintOptions = {}
 ): LintDiagnostic[] {
+  // Board blocks are firmware, read by the hardware reader — not sdev to lint.
+  source = stripBoardBlocks(source);
   const diagnostics: LintDiagnostic[] = [];
   const seenKeys = new Set<string>();
 
@@ -392,6 +394,7 @@ export function lintSdevSource(
   const definedCallables = new Set<string>();
   const declaredVars = new Map<string, { line: number; used: boolean }>();
   const localScopes = new Set<string>();
+  const fixedDecls = new Set<string>();
 
   const noteVarDecl = (name: string, line: number, isParamOrLoop = false) => {
     if (!name || name === 'self' || name === 'super') return;
@@ -442,6 +445,7 @@ export function lintSdevSource(
         const names = node.targets && node.targets.length > 0 ? node.targets : [node.name];
         for (const n of names) {
           noteVarDecl(n, node.line, false);
+          if (node.isFixed) fixedDecls.add(n);
           if (
             node.value.type === 'LambdaExpr' ||
             node.value.type === 'CallExpr' ||
@@ -687,6 +691,15 @@ export function lintSdevSource(
         return;
 
       case 'AssignStatement':
+        if (fixedDecls.has(node.name)) {
+          pushDiag({
+            code: 'SDEV014',
+            title: 'Reassignment of immutable variable',
+            severity: 'error',
+            message: `Cannot reassign fixed variable '${node.name}'`,
+            line: node.line,
+          });
+        }
         if (
           node.value.type === 'Identifier' &&
           node.value.name === node.name &&

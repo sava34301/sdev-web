@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "court": {
+      "source": "alexyc9381/court-skill",
+      "sourceType": "github",
+      "skillPath": "skills/court/SKILL.md",
+      "computedHash": "5a5f391fe89829319e5198867096957975f489355901a098640fce17751493ea"
+    },
+    "riff": {
+      "source": "develop212/riff",
+      "sourceType": "github",
+      "skillPath": "skills/riff/SKILL.md",
+      "computedHash": "dcf4fa83eac5e619c937aaf9bcac8e0fa61ce75b6b8fbcdd8789180dfa72cdc0"
+    }
+  }
+}

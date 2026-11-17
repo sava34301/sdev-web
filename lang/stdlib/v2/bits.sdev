@@ -1,0 +1,167 @@
+# SDEV Standard Library: Bits & Binary Operations (v2) — authored in SDEV.
+
+to bits_shl with val shift
+  set v to val
+  set s to shift
+  while s > 0
+    set v to v * 2
+    set s to s - 1
+  end
+  return v
+end
+
+to bits_shr with val shift
+  set v to val
+  set s to shift
+  while s > 0
+    set v to v / 2
+    set s to s - 1
+  end
+  return v
+end
+
+to bits_test with val bit_pos
+  set mask to bits_shl(1, bit_pos)
+  return (val / mask) % 2
+end
+
+to bits_popcount with val
+  set v to val
+  set count to 0
+  while v > 0
+    set count to count + (v % 2)
+    set v to v / 2
+  end
+  return count
+end
+
+to bits_to_hex with val
+  if val is 0
+    return "0"
+  end
+  set hex_chars to "0123456789abcdef"
+  set out to ""
+  set v to val
+  while v > 0
+    set rem to v % 16
+    set out to chr(ord(hex_chars, rem)) + out
+    set v to v / 16
+  end
+  return out
+end
+
+to bits_from_hex with hex_str
+  set n to length(hex_str)
+  set v to 0
+  set i to 0
+  while i < n
+    set c to ord(hex_str, i)
+    set digit to 0
+    if c >= 48
+      if c <= 57
+        set digit to c - 48
+      end
+    end
+    if c >= 97
+      if c <= 102
+        set digit to c - 87
+      end
+    end
+    if c >= 65
+      if c <= 70
+        set digit to c - 55
+      end
+    end
+    set v to v * 16 + digit
+    set i to i + 1
+  end
+  return v
+end
+
+# ---- Bitwise logic on non-negative integers (added for OCE / systems code) --
+# Written with plain arithmetic so every backend (seed VM, v1, native) agrees.
+
+to bits_and with a b
+  set x to a
+  set y to b
+  set out to 0
+  set place to 1
+  while x > 0 and y > 0
+    if x % 2 is 1 and y % 2 is 1
+      set out to out + place
+    end
+    set x to x / 2
+    set y to y / 2
+    set place to place * 2
+  end
+  return out
+end
+
+to bits_or with a b
+  set x to a
+  set y to b
+  set out to 0
+  set place to 1
+  while x > 0 or y > 0
+    if x % 2 is 1 or y % 2 is 1
+      set out to out + place
+    end
+    set x to x / 2
+    set y to y / 2
+    set place to place * 2
+  end
+  return out
+end
+
+to bits_xor with a b
+  set x to a
+  set y to b
+  set out to 0
+  set place to 1
+  while x > 0 or y > 0
+    if x % 2 is not y % 2
+      set out to out + place
+    end
+    set x to x / 2
+    set y to y / 2
+    set place to place * 2
+  end
+  return out
+end
+
+# Flip the low `width` bits.
+to bits_not_n with a width
+  return bits_shl(1, width) - 1 - bits_and(a, bits_shl(1, width) - 1)
+end
+
+# Floor division / modulo (division in SDEV truncates toward zero).
+to floor_div with a b
+  set q to a / b
+  if q * b is not a
+    if (a < 0) is not (b < 0)
+      set q to q - 1
+    end
+  end
+  return q
+end
+
+to floor_mod with a b
+  return a - floor_div(a, b) * b
+end
+
+# Wrap any integer into a fixed-width register.
+to wrap_u8 with v
+  return floor_mod(v, 256)
+end
+
+to wrap_u16 with v
+  return floor_mod(v, 65536)
+end
+
+to wrap_i16 with v
+  set u to floor_mod(v, 65536)
+  if u >= 32768
+    return u - 65536
+  end
+  return u
+end

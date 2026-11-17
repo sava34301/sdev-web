@@ -1,0 +1,92 @@
+{
+  "verdict": "GUILTY",
+  "guilty": 12,
+  "not_guilty": 0,
+  "no_vote": 0,
+  "jurors": [
+    {
+      "juror": "The Accountant",
+      "vote": "GUILTY",
+      "reason": "Committing a self-funded student developer with zero revenue and no user base to an ongoing out-of-pocket overhead of $200\u0432\u0402\u201c$400 per year for code signing certificates is an indefensible cash burn with zero return.",
+      "fact": "The proposal requires purchasing an OV/EV code signing certificate (~$200\u0432\u0402\u201c$400/year) despite the developer being self-funded with zero venture funding, zero enterprise sponsors, and no established user base.",
+      "flip": "The plan stripped out the premature certificate purchase and relied strictly on zero-cost distribution until user demand or outside funding covers operating costs."
+    },
+    {
+      "juror": "The First-Time Customer",
+      "vote": "GUILTY",
+      "reason": "As a first-time user, I would never switch from my current tools to an unreleased language that prioritizes rewriting its own working build scripts and test runners into pure SDEV over delivering a stable, finished tool I can actually run on my system this week.",
+      "fact": "The project is in \"Pre-launch stage; no established user base or external contributor community yet\" while the native backend \"currently produces Linux x86-64 ELF executables only\", yet the roadmap prioritizes rewriting working Node.js/TypeScript test runners and build scripts into pure SDEV.",
+      "flip": "The roadmap shelved internal bootstrapping rewrites (Milestones C\u0432\u0402\u201cJ) to focus entirely on delivering a stable, zero-cost VS Code extension and a working compiler distribution that a new developer can install and use immediately."
+    },
+    {
+      "juror": "The Competitor",
+      "vote": "GUILTY",
+      "reason": "I would ignore this entirely because a rival with zero users that burns its sole developer's bandwidth rewriting functional test runners and building OS linkers from scratch is defeating itself instead of competing for users.",
+      "fact": "The project remains in a \"Pre-launch stage; no established user base or external contributor community yet\" while proposing to port working Node.js test runners and build scripts to pure SDEV.",
+      "flip": "The roadmap shelved the internal harness rewrites and native linker development to focus strictly on public distribution and user acquisition with the currently passing toolchain."
+    },
+    {
+      "juror": "The Retired Judge",
+      "vote": "GUILTY",
+      "reason": "The proponent has failed to carry the burden of proof, substituting unevidenced faith in AI velocity for an actionable schedule and conceding on the record that proposed capital expenditures cannot be defended under the project's budget.",
+      "fact": "The case mandates concurrent execution across five distinct systems domains by a solo student developer with zero funding and no user base, without a single line of documentary evidence establishing phase sequencing or resource allocation.",
+      "flip": "The case were narrowed to a strictly sequenced, single-domain milestone that eliminated premature capital outlays and proved feasibility before expanding scope."
+    },
+    {
+      "juror": "The Teenager",
+      "vote": "GUILTY",
+      "reason": "This sounds like a massive snoozefest of invisible busywork that nobody is using, nobody is talking about, and nobody will ever care about next week.",
+      "fact": "\"Pre-launch stage; no established user base or external contributor community yet.\"",
+      "flip": "The roadmap ditched the boring internal rewrites to ship something people can actually try and talk about online."
+    },
+    {
+      "juror": "The Engineer",
+      "vote": "GUILTY",
+      "reason": "In the real world, rebuilding your build and test harness in an unstable language while concurrently writing raw PE and Mach-O binary linkers and a new static type checker creates an un-debuggable circular failure loop where everything breaks at once.",
+      "fact": "The case bundles retiring the working JavaScript bootstrap compiler and porting test runners to pure SDEV with constructing Windows PE and macOS Mach-O linkers and implementing compile-time static type checking.",
+      "flip": "The case was restructured into a phased engineering pipeline that keeps the working test harness intact and freezes v2 language semantics before touching new binary linkers or self-hosting build scripts."
+    },
+    {
+      "juror": "The Small-Business Owner",
+      "vote": "GUILTY",
+      "reason": "You cannot keep the doors open when a solo operator tries to remodel five different aisles at once, throws out working equipment to rebuild it by hand, and burns cash on annual certificates before having a single customer.",
+      "fact": "The developer is a \"Single solo creator / student developer\" with \"zero venture funding, zero enterprise sponsors\" and \"no established user base or external contributor community yet.\"",
+      "flip": "The scope was narrowed to delivering the current working compiler to real users first, shelving the paid certificates and internal rewrites until foot traffic actually arrives."
+    },
+    {
+      "juror": "The Statistician",
+      "vote": "GUILTY",
+      "reason": "Extrapolating from a tiny sample of 17 passing bootstrap tests to assume a solo student can conquer five complex systems domains simultaneously suffers from extreme survivorship bias and ignores the near-zero historical base rate of unprioritized solo compiler expansions succeeding.",
+      "fact": "The roadmap commits a \"Single solo creator / student developer\" with \"zero venture funding\" and \"no established user base\" to execute five distinct systems domains concurrently without prioritization or sequencing.",
+      "flip": "The scope were narrowed from five concurrent initiatives to a single, sequentially gated milestone that measures external adoption before committing resources to native linkers or self-hosting build rewrites."
+    },
+    {
+      "juror": "The Parent",
+      "vote": "GUILTY",
+      "reason": "As someone looking out for a young person's well-being, expecting a self-funded student to spend hundreds of dollars of his own money and risk severe burnout on an unprioritized five-front workload with zero users is completely irresponsible.",
+      "fact": "The developer is a \"Single solo creator / student developer (Sava Milanov)\" who is \"Self-funded, zero venture funding, zero enterprise sponsors\" taking on five concurrent domains and an admitted \"$200\u0432\u0402\u201c$400/year\" certificate cost before launch.",
+      "flip": "The plan eliminated the out-of-pocket code signing expense and sequenced the work into one sustainable milestone at a time to protect the student's time and financial well-being."
+    },
+    {
+      "juror": "The Investor",
+      "vote": "GUILTY",
+      "reason": "I will not invest in an unsequenced, five-front technical expansion that burns scarce capital on certificates and tooling rewrites before the project has secured a single user or demonstrated market demand.",
+      "fact": "The project is in a pre-launch stage with no established user base or external contributor community yet.",
+      "flip": "The roadmap were phased sequentially to prove user adoption and developer traction before investing in native platform backends, harness rewrites, and paid certificates."
+    },
+    {
+      "juror": "The Designer",
+      "vote": "GUILTY",
+      "reason": "A stranger cannot understand what SDEV is or why it matters in five seconds when the roadmap splinters its identity across five conflicting technical domains instead of presenting one coherent, legible product.",
+      "fact": "The proposed scope simultaneously demands internal harness rewrites, Windows and macOS native backends, v2 bytecode features, IDE and Studio consolidation, and packaging while the project is in \"Pre-launch stage; no established user base or external contributor community yet.\"",
+      "flip": "The roadmap focused exclusively on delivering one clear, immediate user experience that a newcomer can understand in five seconds before expanding into low-level compiler plumbing."
+    },
+    {
+      "juror": "The Lawyer",
+      "vote": "GUILTY",
+      "reason": "The plan exposes an unincorporated student developer to fatal regulatory vetting hurdles and personal civil liability by mandating OV/EV code signing and multi-platform binary distribution without establishing a legal entity, Apple notarization compliance, or liability disclaimers.",
+      "fact": "The plan tasks a \"Single solo creator / student developer (Sava Milanov)\" with purchasing an \"OV/EV code signing certificate (~$200\u0432\u0402\u201c$400/year)\" and distributing desktop installers across Windows and macOS.",
+      "flip": "The case eliminated commercial binary distribution and code-signing certificate acquisition from the scope until a formal legal entity and liability protection structure are established."
+    }
+  ]
+}

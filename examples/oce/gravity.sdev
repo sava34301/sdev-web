@@ -1,0 +1,46 @@
+# The OCE discovers gravity from nothing — written in SDEV.
+#   node bin/sdevhost.mjs examples/oce/gravity.sdev
+#   node scripts/sdev-native.mjs examples/oce/gravity.sdev -o gravity && ./gravity
+use "lang/stdlib/v2/list.sdev"
+use "lang/stdlib/v2/bits.sdev"
+use "lang/stdlib/v2/mem.sdev"
+use "lang/stdlib/v2/oce.sdev"
+
+set m to oce_create()
+set names to ["supported", "pos_z", "vel_z", "density", "pos_x", "vel_x", "mass", "near"]
+set _ to oce_medium(m, 3, 12)
+set table to oce_entity(m)
+set stone to oce_entity(m)
+# Observed world: one row per entity (row 0 is the medium).
+set w to [[0, 0, 0, 12, 0, 0, 0, 0], [1, 0, 0, 50, 0, 0, 10, 0], [1, 100, 0, 50, 0, 0, 10, 0]]
+
+to tick with w
+  set i to 1
+  while i < length(w)
+    set o to w[i]
+    set v to o[2]
+    if o[0] is 0
+      set o[2] to v - 10
+    end
+    set o[1] to o[1] + v
+    set i to i + 1
+  end
+  return 0
+end
+
+set _ to oce_observe(m, w)
+set stone_row to w[2]
+set stone_row[0] to 0
+set _ to oce_intervene(m, stone, 0, 0)
+set t to 0
+set surprises to 0
+while t < 12
+  set _ to tick(w)
+  set surprises to surprises + oce_observe(m, w)
+  set t to t + 1
+end
+say "surprises while learning: " + str(surprises)
+say oce_describe(m, names)
+set _ to oce_imagine(m, table, 0, 0, 3)
+say "if the table lost support, after 3 ticks vel_z = " + str(oce_imagined(m, table, 2))
+say "model size: " + str(oce_mdl_bits(m) / 8) + " bytes"

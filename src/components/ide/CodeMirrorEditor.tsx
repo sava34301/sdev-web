@@ -32,6 +32,7 @@ export interface IdeEditorHandle {
   openFind: () => void;
   format: () => void;
   insertAtCursor: (text: string) => void;
+  getWordAtCursor?: () => string | null;
 }
 
 interface Props {
@@ -443,9 +444,21 @@ export const CodeMirrorEditor = forwardRef<IdeEditorHandle, Props>(function Code
       });
       view.focus();
     },
+    getWordAtCursor() {
+      const view = viewRef.current;
+      if (!view) return null;
+      const sel = view.state.selection.main;
+      if (!sel.empty) {
+        const text = view.state.sliceDoc(sel.from, sel.to).trim();
+        if (text) return text;
+      }
+      const word = view.state.wordAt(sel.head);
+      if (word) {
+        return view.state.sliceDoc(word.from, word.to);
+      }
+      return null;
+    },
   }), []);
 
   return <div ref={hostRef} className="h-full w-full overflow-hidden bg-background/40" />;
 });
-
-export default CodeMirrorEditor;

@@ -12,10 +12,42 @@
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain JS module
-import { compile as selfCompile, setSeedLoader } from '../../lang/compiler/compile-self.mjs';
+import { compile as selfCompile, setSeedLoader } from './compile-self.mjs';
 import { translateSource, type TranslatorDialect } from '@/lang/translator';
 
 export class WasmSubsetError extends Error {}
+
+// The SDEV standard library ships with the website, so `use
+// "lang/stdlib/v2/oce.sdev"` works in the browser exactly as on the CLI.
+// Files load lazily, only when a program names them.
+type Loader = () => Promise<string>;
+let STDLIB: Record<string, Loader> = {};
+try {
+  STDLIB = import.meta.glob('/lang/stdlib/**/*.sdev', { query: '?raw', import: 'default' }) as Record<string, Loader>;
+} catch { /* not running under Vite (Node / Bun) — files come from disk */ }
+
+const USE_RE = /^[ \t]*use "([^"]+)"[ \t]*$/gm;
+
+/** Add every shipped stdlib file the program (transitively) uses. */
+export async function withStdlib(source: string, modules?: Record<string, string> | null): Promise<Record<string, string> | null> {
+  if (Object.keys(STDLIB).length === 0) return modules ?? null;
+  const out: Record<string, string> = { ...(modules ?? {}) };
+  const queue = [source, ...Object.values(out)];
+  let added = false;
+  while (queue.length) {
+    const text = queue.pop()!;
+    for (const m of text.matchAll(USE_RE)) {
+      const path = m[1];
+      if (path in out) continue;
+      const load = STDLIB['/' + path.replace(/^\.?\//, '')];
+      if (!load) continue;
+      out[path] = await load();
+      queue.push(out[path]);
+      added = true;
+    }
+  }
+  return added || modules ? out : null;
+}
 
 interface SeedExports {
   memory: WebAssembly.Memory;
@@ -78,6 +110,7 @@ export async function runWasm(
   // Milestone 5q: floats and host I/O are compiled by the self-hosted
   // codegen itself, so there is no bootstrap-only carve-out left here.
   // Compile source to bytecode via the self-hosted compiler shim.
+  modules = (await withStdlib(source, modules)) ?? undefined;
   setSeedLoader(loadSeedBytes);
   let program: { bytecode: Uint8Array; stringPool: Uint8Array };
   try {
@@ -89,9 +122,24 @@ export async function runWasm(
     throw new WasmSubsetError(msg);
   }
 
+  // The self-hosted compiler has no error channel, so an unknown function,
+  // a wrong argument count or a list joined without the list library would
+  // run silently with wrong results. The reference compiler names them.
+  try {
+    const { compile: checkCompile } = await import('./oracle/compile.mjs');
+    checkCompile(source, modules ? { readModule: (path: string) => modules?.[path] ?? '' } : {});
+  } catch (e) {
+    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line 0: /, '');
+    if (/unknown function|expected \d+ args|joining lists with \+/.test(msg)) {
+      return { success: false, output: [], error: msg };
+    }
+  }
+
   const module = await loadSeed();
+  /* eslint-disable prefer-const */
   let mem!: WebAssembly.Memory;
   let allocStr!: (n: number) => number;
+  /* eslint-enable prefer-const */
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 

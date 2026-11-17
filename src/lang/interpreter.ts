@@ -124,7 +124,7 @@ export class Interpreter {
   // ==========================================================
   private execute(node: AST.ASTNode, env: Environment): unknown {
     const it = this.ev(node, env);
-    let step = it.next();
+    const step = it.next();
     while (!step.done) {
       throw new SdevError("'emit' is only valid inside a generator function", node.line);
     }
@@ -640,8 +640,10 @@ export class Interpreter {
     return result;
   }
 
+  // eslint-disable-next-line require-yield
   private *evComprehension(node: AST.ComprehensionExpr, env: Environment): Ev {
     if (node.form === 'gen') {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
       const iter = (function* (): Generator<unknown, unknown, unknown> {
         yield* self.comprehensionWalk(node, env, 0, (value) => value);
@@ -714,18 +716,29 @@ export class Interpreter {
       const items = [...this.iterableOf(value, node.line)];
       const star = node.starIndex;
       if (star === undefined) {
-        node.targets.forEach((name, i) => env.define(name, items[i] === undefined ? null : items[i]));
+        node.targets.forEach((name, i) => {
+          const v = items[i] === undefined ? null : items[i];
+          if (node.isFixed) env.defineFixed(name, v);
+          else env.define(name, v);
+        });
       } else {
         const after = node.targets.length - star - 1;
         node.targets.forEach((name, i) => {
-          if (i < star) env.define(name, items[i] === undefined ? null : items[i]);
-          else if (i === star) env.define(name, items.slice(star, items.length - after));
-          else env.define(name, items[items.length - (node.targets!.length - i)] ?? null);
+          let v: unknown;
+          if (i < star) v = items[i] === undefined ? null : items[i];
+          else if (i === star) v = items.slice(star, items.length - after);
+          else v = items[items.length - (node.targets!.length - i)] ?? null;
+          if (node.isFixed) env.defineFixed(name, v);
+          else env.define(name, v);
         });
       }
       return value;
     }
-    env.define(node.name, value);
+    if (node.isFixed) {
+      env.defineFixed(node.name, value);
+    } else {
+      env.define(node.name, value);
+    }
     return value;
   }
 
@@ -1050,7 +1063,8 @@ export class Interpreter {
   }
 
   private makeFunction(node: AST.FuncDeclaration, env: Environment, boundName?: string): RichFunction {
-    const self = this;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const self = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
 
     const fn: RichFunction = {
@@ -1099,7 +1113,8 @@ export class Interpreter {
   }
 
   private makeLambda(node: AST.LambdaExpr, env: Environment): RichFunction {
-    const self = this;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const self = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
     return {
       type: 'lambda',

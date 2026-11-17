@@ -20,8 +20,13 @@ interface InviteCode {
 
 function randomCode() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  // Cryptographically secure, unbiased: 16 chars from 31 symbols ≈ 79 bits.
   let out = '';
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  const limit = 256 - (256 % chars.length);
+  while (out.length < 16) {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    for (const b of bytes) if (b < limit && out.length < 16) out += chars[b % chars.length];
+  }
   return out;
 }
 

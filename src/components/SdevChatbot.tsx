@@ -1,3 +1,4 @@
+import { supabase } from '@/integrations/supabase/client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -41,11 +42,14 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
   const MAX_FIX_ATTEMPTS = 3;
 
   const fetchStream = useCallback(async (messagesToSend: Message[]): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Please sign in to use the SDEV assistant.');
     const resp = await fetch(CHAT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ messages: messagesToSend }),
     });
@@ -95,7 +99,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     return assistantContent;
   }, []);
 
-  const testCodeBlocks = async (content: string): Promise<{ code: string; error: string }[]> => {
+  const testCodeBlocks = useCallback(async (content: string): Promise<{ code: string; error: string }[]> => {
     const blocks = extractCodeBlocks(content);
 
     const results = await Promise.all(
@@ -109,7 +113,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     );
 
     return results.filter((r): r is { code: string; error: string } => r !== null);
-  };
+  }, []);
 
   const streamChat = useCallback(async (userMessage: string) => {
     const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
@@ -182,7 +186,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast, fetchStream]);
+  }, [messages, toast, fetchStream, testCodeBlocks]);
 
   const handleSend = useCallback(() => {
     if (!input.trim() || isLoading) return;

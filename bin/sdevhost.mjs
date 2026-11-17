@@ -1,52 +1,58 @@
 // ─────────────────────────────────────────────────────────────────────────
 // SDEV host — the irreducible JavaScript kernel.
 //
-// This is the ONLY JavaScript allowed in the SDEV toolchain. Everything a
-// build script, probe or test used to do in JS is now written in SDEV and
-// executed here: this file compiles a `.sdev` program with the self-hosted
-// compiler, loads it into the hand-written seed VM, and answers the VM's
-// host calls (files, process, shell, compiler oracle).
+// This is the host that runs SDEV programs from the command line. Everything
+// a build script, probe or test does is written in SDEV and executed here:
+// this file compiles a `.sdev` program with the self-hosted compiler, loads
+// it into the seed VM, and answers the VM's host calls (files, process,
+// shell, compiler access). It contains no language logic.
 //
 //   node bin/sdevhost.mjs scripts/test-self-toolchain.sdev [args...]
 //
 // Host protocol — everything rides on `read_file` / `write_file`, because
 // the seed VM's import table is fixed:
 //
-//   read_file("sdev:args")            → CLI args, one per line
-//   read_file("sdev:ls:<dir>")        → directory entries, one per line
-//   read_file("sdev:exec:<cmd>")      → "<exit>\n<combined output>"
-//   read_file("sdev:compile:self:<p>")→ "<bytecode hex> <pool hex>"
-//   read_file("sdev:compile:boot:<p>")→ same, via the bootstrap oracle
-//   read_file("sdev:driver:baked")    → checked-in driver artifact hex
-//   read_file("sdev:driver:fresh")    → driver rebuilt from the oracle
-//   write_file("sdev:exit:<code>", "")→ set the process exit code
-//   write_file("sdev:err", text)      → write to stderr
-//   any other path                    → the real filesystem
+//   read_file("sdev:args")                → CLI args, one per line
+//   read_file("sdev:ls:<dir>")            → directory entries, one per line
+//   read_file("sdev:exec:<cmd>")          → "<exit>\n<combined output>"
+//   read_file("sdev:compile:self:<p>")    → "<bytecode hex> <pool hex>" (shipped compiler)
+//   read_file("sdev:compile:stage2:<p>")  → same, compiled by the compiler that
+//                                           lang/compiler/driver.sdev builds today
+//   read_file("sdev:compile:boot:<p>")    → same, via the JavaScript reference
+//                                           oracle (differential testing only)
+//   read_file("sdev:driver:baked")        → checked-in compiler build, hex
+//   write_file("sdev:append:<path>", t)   → append t to a real file
+//   write_file("sdev:exit:<code>", "")    → set the process exit code
+//   write_file("sdev:err", text)          → write to stderr
+//   any other path                        → the real filesystem
 // ─────────────────────────────────────────────────────────────────────────
 
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { compile as selfCompile } from '../lang/compiler/compile-self.mjs';
+import { compile as selfCompile, compileWith, bakedDriver } from '../src/lang-bridge/compile-self.mjs';
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
-const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
+const hex = (u8) => Buffer.from(u8).toString('hex');
 
-let bootstrapCompile = null;
-async function boot() {
-  if (!bootstrapCompile) {
-    bootstrapCompile = (await import('../lang/bootstrap/compile.mjs')).compile;
+let oracleCompile = null;
+async function oracle() {
+  if (!oracleCompile) {
+    oracleCompile = (await import('../src/lang-bridge/oracle/compile.mjs')).compile;
   }
-  return bootstrapCompile;
+  return oracleCompile;
 }
 
-let buildDriver = null;
-async function driverBuilder() {
-  if (!buildDriver) {
-    buildDriver = (await import('../scripts/build-driver.mjs')).buildDriver;
+// The compiler that the current lang/compiler/driver.sdev produces, built by
+// the shipped compiler. Used for stage-2 / stage-3 fixed-point checks.
+let stage2 = null;
+async function stage2Driver() {
+  if (!stage2) {
+    const src = readFileSync('lang/compiler/driver.sdev', 'utf8');
+    stage2 = await selfCompile(src);
   }
-  return buildDriver;
+  return stage2;
 }
 
 // Anything the SDEV program may ask for that needs async work is resolved
@@ -63,23 +69,24 @@ async function prefetch(scriptSrc, args) {
 
   for (const key of wanted) {
     if (key === 'sdev:driver:baked') {
-      const a = await import('../lang/compiler/driver-artifact.mjs');
-      const b64 = (s) => new Uint8Array(Buffer.from(s, 'base64'));
-      put(key, `${hex(b64(a.DRIVER_BYTECODE_B64))} ${hex(b64(a.DRIVER_POOL_B64))}`);
+      const d = bakedDriver();
+      put(key, `${hex(d.bytecode)} ${hex(d.stringPool)}`);
       continue;
     }
     if (key === 'sdev:driver:fresh') {
-      const build = await driverBuilder();
-      const { bytecode, stringPool } = await build();
-      put(key, `${hex(bytecode)} ${hex(stringPool)}`);
+      const src = readFileSync('lang/compiler/driver.sdev', 'utf8');
+      const r = (await oracle())(src);
+      put(key, `${hex(r.bytecode)} ${hex(r.stringPool)}`);
       continue;
     }
-    const m = /^sdev:compile:(self|boot):(.+)$/.exec(key);
+    const m = /^sdev:compile:(self|stage2|boot):(.+)$/.exec(key);
     if (!m) continue;
     const [, mode, path] = m;
     try {
       const src = readFileSync(path, 'utf8');
-      const r = mode === 'self' ? await selfCompile(src) : (await boot())(src);
+      const r = mode === 'self' ? await selfCompile(src)
+        : mode === 'stage2' ? await compileWith(await stage2Driver(), src)
+        : (await oracle())(src);
       put(key, `${hex(r.bytecode)} ${hex(r.stringPool)}`);
     } catch (e) {
       put(key, `error ${e?.message ?? e}`);
@@ -98,6 +105,16 @@ async function main() {
   const scriptSrc = readFileSync(scriptPath, 'utf8');
   const table = await prefetch(scriptSrc, args);
 
+  // The self-hosted compiler has no error channel, so a broken program
+  // (unknown function, wrong argument count, unbalanced block) would run
+  // silently. Check it with the reference compiler first and report.
+  try {
+    (await oracle())(scriptSrc);
+  } catch (e) {
+    const msg = String(e?.message ?? e).replace(/^\[sdev v2\] line 0: /, '');
+    process.stderr.write(`sdev: ${scriptPath}: ${msg}\n`);
+    process.exit(1);
+  }
   const program = await selfCompile(scriptSrc);
   // The seed VM is a static asset under public/wasm — read by path at
   // runtime, never imported, so no bundler ever pulls the binary into a chunk.
@@ -154,6 +171,9 @@ async function main() {
         const data = decoder.decode(new Uint8Array(mem.buffer, dPtr, dLen));
         if (path.startsWith('sdev:exit:')) { exitCode = Number(path.slice(10)) | 0; return 0; }
         if (path === 'sdev:err') { process.stderr.write(data); return 0; }
+        if (path.startsWith('sdev:append:')) {
+          try { appendFileSync(path.slice(12), data); return 0; } catch { return -1; }
+        }
         try { writeFileSync(path, data); return 0; } catch { return -1; }
       },
       host_http_get: () => 0,

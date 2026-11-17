@@ -1,0 +1,31 @@
+# SDEV Standard Library: Functional Combinators (v2) — authored in SDEV.
+
+to func_take with xs count
+  set n to length(xs)
+  set take_n to count
+  if take_n > n
+    set take_n to n
+  end
+  set out to mklist(take_n)
+  set i to 0
+  while i < take_n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  return out
+end
+
+to func_drop with xs count
+  set n to length(xs)
+  if count >= n
+    return mklist(0)
+  end
+  set rem to n - count
+  set out to mklist(rem)
+  set i to 0
+  while i < rem
+    set out[i] to xs[count + i]
+    set i to i + 1
+  end
+  return out
+end

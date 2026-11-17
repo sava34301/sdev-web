@@ -11,8 +11,10 @@ import { registerMisc } from './builtins/misc';
 import { registerRegex } from './builtins/regex';
 import { registerFunctional } from './builtins/functional';
 import { registerBuffer } from './builtins/buffer';
+import { registerOce } from './builtins/oce';
 import { registerHost } from './builtins/host';
 import { registerText } from './builtins/text';
+import { registerSql } from './builtins/sql';
 
 export * from './builtins/utils';
 
@@ -32,5 +34,7 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
     registerBuffer(builtins, output);
     registerHost(builtins, output);
     registerText(builtins, output);
+    registerSql(builtins, output);
+    registerOce(builtins);
     return builtins;
 }

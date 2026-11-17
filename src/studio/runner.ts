@@ -23,8 +23,16 @@ import {
   detectLanguage,
   translateSource,
   type Token,
-  type AST,
 } from '@/lang';
+// The studio inspects nodes from several parser generations, so it reads them loosely.
+type LooseNode = { type: string; [key: string]: any };
+// eslint-disable-next-line @typescript-eslint/no-namespace
+declare namespace AST {
+  type ASTNode = LooseNode;
+  type Program = import("@/lang/ast").Program;
+  type AssignStatement = LooseNode;
+  type LetStatement = LooseNode;
+}
 import { stringify } from '@/lang/builtins';
 import {
   createGraphicsBuiltins,
@@ -35,6 +43,7 @@ import { createUiBuiltins, type UiState } from '@/lang/ui';
 import { createWebBuiltins, type WebState } from '@/lang/web';
 import { stripSignature } from '@/lang/dialect/signature';
 import { lintSdevSource, type LintDiagnostic } from '@/lang/linter';
+import { understand } from '@/lang/agent';
 import type { ApiTarget } from '@/lang/registry/api-registry';
 
 // ============================================================
@@ -68,6 +77,8 @@ export interface ChronoStep {
   callStack: string[];
   /** Console outputs accumulated up to and including this step */
   outputSnapshot: string[];
+  /** Canvas commands accumulated up to and including this step */
+  canvasSnapshot?: GraphicsCommand[];
   /** Formatted result of this step, if any */
   resultValue?: string;
   /** Elapsed time in ms since execution start */
@@ -269,7 +280,7 @@ function buildStepSummary(node: AST.ASTNode, result: unknown, sourceLine: string
     case 'AssignStatement':
       return `${node.name} ← ${formatShortValue(result)}`;
     case 'AugAssignStatement':
-      return `${node.op}= assignment → ${formatShortValue(result)}`;
+      return `${node.operator}= assignment → ${formatShortValue(result)}`;
     case 'FuncDeclaration':
       return `conjure ${node.name}(${node.params.join(', ')})`;
     case 'ClassDeclaration':
@@ -280,12 +291,10 @@ function buildStepSummary(node: AST.ASTNode, result: unknown, sourceLine: string
       return `ponder condition`;
     case 'WhileStatement':
       return `cycle loop`;
-    case 'RepeatStatement':
-      return `repeat loop`;
     case 'ForEachStatement':
       return `for ${node.variable} through collection`;
     case 'ForInStatement':
-      return `for ${node.variables.join(', ')} in iterable`;
+      return `for ${node.variable} in iterable`;
     case 'ExpressionStatement':
       return sourceLine.trim() || 'expression';
     default:
@@ -375,7 +384,7 @@ function executeWithTracing(
   const detectedLanguage = options.sourceLanguage ?? detectLanguage(stripped);
   let executableSource = stripped;
   if (detectedLanguage && detectedLanguage !== 'English') {
-    executableSource = translateSource(stripped, detectedLanguage, 'English').translated;
+    executableSource = translateSource(stripped, detectedLanguage).translated;
   }
 
   const sourceLines = stripped.split(/\r?\n/);
@@ -403,7 +412,9 @@ function executeWithTracing(
   let ast: AST.Program | null = null;
 
   try {
-    const lexer = new Lexer(executableSource);
+    const understood = understand(executableSource);
+    const traceTarget = understood.changed ? understood.source : executableSource;
+    const lexer = new Lexer(traceTarget);
     tokens = lexer.tokenize();
     const parser = new Parser(tokens);
     ast = parser.parse();
@@ -546,7 +557,6 @@ function executeWithTracing(
       } else if (
         node.type === 'IfStatement' ||
         node.type === 'WhileStatement' ||
-        node.type === 'RepeatStatement' ||
         node.type === 'ForEachStatement' ||
         node.type === 'ForInStatement'
       ) {
@@ -572,6 +582,7 @@ function executeWithTracing(
           variableList: varsList,
           callStack: [...callStack],
           outputSnapshot: [...outputs],
+          canvasSnapshot: [...canvasCommands],
           resultValue:
             result !== null && result !== undefined ? formatShortValue(result) : undefined,
           elapsedMs: Number((performance.now() - startTime).toFixed(2)),
@@ -695,7 +706,3 @@ export async function runStudioCodeAsync(
 
   return traced;
 }
-
-// Convenience aliases for Studio components
-export const runSdevStudio = runStudioCode;
-export const runSdevStudioAsync = runStudioCodeAsync;

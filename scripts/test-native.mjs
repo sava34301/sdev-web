@@ -6,8 +6,8 @@ import { writeFileSync, mkdtempSync, chmodSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { generateAsm } from '../lang/native/codegen-x64.mjs';
-import { link } from '../lang/native/link.mjs';
+import { generateAsm } from '../src/lang-bridge/native/codegen-x64.mjs';
+import { link } from '../src/lang-bridge/native/link.mjs';
 
 const CASES = [
   { name: 'say-int',   src: `say 42`, out: '42\n' },

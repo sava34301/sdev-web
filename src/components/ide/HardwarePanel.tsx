@@ -10,6 +10,7 @@ import {
   type BoardDescriptor,
 } from '@/lang/hardware/board-db';
 import { extractBoardBlock, transpileBoard } from '@/lang/hardware/transpile';
+import { readBoards } from '@/lang/hardware/understand';
 import { ARDUINO_LIBRARIES, type ArduinoLibrary } from '@/lang/hardware/arduino-api';
 import {
   isWebSerialSupported, isWebUsbSupported, requestSerialPort, getGrantedPorts,
@@ -17,6 +18,7 @@ import {
   type WebSerialPort, type FlashProgress,
 } from '@/lang/hardware/web-serial';
 import { compileSketch } from '@/lang/hardware/cloud-compile';
+import { HardwareSimulatorCanvas } from '@/components/ide/HardwareSimulatorCanvas';
 import { toast } from 'sonner';
 
 interface Props {
@@ -42,10 +44,19 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
   const [serialInput, setSerialInput] = useState('');
   const [librariesOpen, setLibrariesOpen] = useState(false);
   const [cppPreviewOpen, setCppPreviewOpen] = useState(false);
+  const [simulatorOpen, setSimulatorOpen] = useState(true);
   const [buildUrl, setBuildUrl] = useState<string>(() => localStorage.getItem('sdev.hw.buildUrl') ?? DEFAULT_BUILD_URL);
   const [buildOk, setBuildOk] = useState<boolean | null>(null);
 
-  const block = useMemo(() => extractBoardBlock(source), [source]);
+  // The code understander reads the board block first: loose lines ("turn on
+  // the led", "wait one second", `loop:` with no `;;`) become the hardware
+  // language; lines it already knows stay exactly as written.
+  const agentOff = useMemo(() => /^\s*!#agent:\s*off\b/im.test(source), [source]);
+  const reading = useMemo(() => (agentOff ? null : readBoards(source)), [source, agentOff]);
+  const [aiReading, setAiReading] = useState<{ for: string; text: string; read: number } | null>(null);
+  const understoodSource = aiReading?.for === source ? aiReading.text : reading?.source ?? source;
+  const unresolvedLines = aiReading?.for === source ? [] : reading?.unresolved ?? [];
+  const block = useMemo(() => extractBoardBlock(understoodSource), [understoodSource]);
 
   // Automatically select the board declared in `board "<id>"` when valid
   useEffect(() => {
@@ -118,17 +129,41 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
   };
 
   const compile = useCallback(async (): Promise<string | null> => {
-    if (!transpiled) {
+    let sketch = transpiled;
+    if (reading?.notes.length) {
+      for (const n of reading.notes) {
+        onAppendLog(n.from ? `[hw] understood line ${n.line}: ${n.from}  →  ${n.to}` : `[hw] understood: ${n.why}`);
+      }
+    }
+    if (unresolvedLines.length && !agentOff) {
+      onAppendLog(`[hw] asking the code understander's AI about line${unresolvedLines.length === 1 ? '' : 's'} ${unresolvedLines.join(', ')}…`);
+      setStatus('busy');
+      try {
+        const { understandAsync } = await import('@/lang/agent');
+        const r = await understandAsync(source);
+        const aiBlock = extractBoardBlock(r.source);
+        const left = r.unresolved.filter((n) => unresolvedLines.includes(n));
+        if (aiBlock && left.length < unresolvedLines.length) {
+          setAiReading({ for: source, text: r.source, read: unresolvedLines.length - left.length });
+          sketch = transpileBoard(aiBlock, board);
+          onAppendLog(`[hw] the AI understood ${unresolvedLines.length - left.length} more line${unresolvedLines.length - left.length === 1 ? '' : 's'}`);
+        }
+        if (left.length) onAppendLog(`[hw] still not understood: line${left.length === 1 ? '' : 's'} ${left.join(', ')} — passed to the compiler as written`);
+      } catch (e) {
+        onAppendLog(`[hw] the AI could not help: ${(e as Error).message}`);
+      }
+    }
+    if (!sketch) {
       toast.error('No `board "<id>" { ... }` or `board "<id>" :: ... ;;` block found in this file.');
       return null;
     }
     setStatus('busy');
-    const allLibs = [...new Set([...transpiled.libraries, ...getInstalledLibs()])];
+    const allLibs = [...new Set([...sketch.libraries, ...getInstalledLibs()])];
     onAppendLog(`[hw] compiling for ${board.label} (${board.fqbn})…`);
 
     const r = await compileSketch({
       board,
-      ino: transpiled.ino,
+      ino: sketch.ino,
       libraries: allLibs,
       buildUrl: buildUrl.trim() || undefined,
       onLog: onAppendLog,
@@ -160,7 +195,7 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
         onAppendLog('[hw] The generated .ino has been downloaded meanwhile.');
       }
       toast.error(r.message ?? 'Local arduino-cli build server required for this board — .ino exported.');
-      downloadText(`${board.id}.ino`, r.ino ?? transpiled.ino);
+      downloadText(`${board.id}.ino`, r.ino ?? sketch.ino);
       return null;
     }
 
@@ -169,7 +204,7 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
     if (r.log) onAppendLog(r.log);
     toast.error(msg);
     return null;
-  }, [transpiled, board, onAppendLog, buildUrl]);
+  }, [transpiled, board, onAppendLog, buildUrl, reading, unresolvedLines, agentOff, source]);
 
   const testBuildServer = useCallback(async () => {
     if (!buildUrl.trim()) {
@@ -421,9 +456,30 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
                 <code>board "{block.boardId}"</code> block active ({transpiled?.libraries.length ?? 0} libs)
               </span>
             </p>
+          ) : reading?.hasBoard ? (
+            <p className="text-[11px] text-amber-400 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              <span>The board block could not be read — check its <code>;;</code> / <code>{'}'}</code> closers.</span>
+            </p>
           ) : (
             <p className="text-[11px] text-muted-foreground">
               No <code>board "&lt;id&gt;" :: ... ;;</code> or <code>{'{ ... }'}</code> block in current file
+            </p>
+          )}
+
+          {block && (reading?.notes.length || aiReading?.for === source) ? (
+            <p className="text-[11px] text-primary flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              <span>
+                Code understander read {reading?.notes.filter((n) => n.from).length ?? 0} line{(reading?.notes.filter((n) => n.from).length ?? 0) === 1 ? '' : 's'}
+                {aiReading?.for === source ? `, the AI ${aiReading.read} more` : ''} — see the C++ preview
+              </span>
+            </p>
+          ) : null}
+          {block && unresolvedLines.length > 0 && (
+            <p className="text-[11px] text-amber-400 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              <span>Line{unresolvedLines.length === 1 ? '' : 's'} {unresolvedLines.join(', ')} not understood yet — the AI is asked when you compile</span>
             </p>
           )}
 
@@ -508,6 +564,30 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
                 {transpiled.ino}
               </pre>
             </div>
+          )}
+        </section>
+
+        {/* In-Browser Virtual Breadboard Simulator */}
+        <section className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Virtual Breadboard &amp; Pinout Simulator
+            </label>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-5 px-1.5 text-[10px]"
+              onClick={() => setSimulatorOpen((o) => !o)}
+            >
+              {simulatorOpen ? 'Hide' : 'Show'}
+            </Button>
+          </div>
+          {simulatorOpen && (
+            <HardwareSimulatorCanvas
+              source={understoodSource}
+              boardId={board.id}
+              onSerialLine={onAppendLog}
+            />
           )}
         </section>
 

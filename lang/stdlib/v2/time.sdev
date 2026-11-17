@@ -1,0 +1,58 @@
+# SDEV Standard Library: Time & Calendar (v2) — authored in SDEV.
+
+to time_is_leap_year with year
+  if year % 400 is 0
+    return 1
+  end
+  if year % 100 is 0
+    return 0
+  end
+  if year % 4 is 0
+    return 1
+  end
+  return 0
+end
+
+to time_days_in_month with year month
+  if month is 2
+    if time_is_leap_year(year)
+      return 29
+    end
+    return 28
+  end
+  if month is 4
+    return 30
+  end
+  if month is 6
+    return 30
+  end
+  if month is 9
+    return 30
+  end
+  if month is 11
+    return 30
+  end
+  return 31
+end
+
+to time_format_duration_ms with ms
+  set total_sec to ms / 1000
+  set s to total_sec % 60
+  set total_min to total_sec / 60
+  set m to total_min % 60
+  set h to total_min / 60
+
+  set s_str to str(s)
+  if s < 10
+    set s_str to "0" + s_str
+  end
+  set m_str to str(m)
+  if m < 10
+    set m_str to "0" + m_str
+  end
+  set h_str to str(h)
+  if h < 10
+    set h_str to "0" + h_str
+  end
+  return h_str + ":" + m_str + ":" + s_str
+end

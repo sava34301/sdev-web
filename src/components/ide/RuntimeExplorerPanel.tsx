@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   Cpu,
@@ -30,6 +30,7 @@ import {
 export interface RuntimeExplorerPanelProps {
   onInsertCode?: (code: string) => void;
   defaultTarget?: ApiTarget | 'all';
+  initialQuery?: string;
 }
 
 const MODULES: { value: ApiModule | 'all'; label: string }[] = [
@@ -95,13 +96,24 @@ const TARGET_BADGE_STYLE: Record<ApiTarget, string> = {
 export function RuntimeExplorerPanel({
   onInsertCode,
   defaultTarget = 'all',
+  initialQuery,
 }: RuntimeExplorerPanelProps) {
   const [activeTab, setActiveTab] = useState<'apis' | 'diagnostics'>('apis');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [selectedModule, setSelectedModule] = useState<ApiModule | 'all'>('all');
   const [selectedTarget, setSelectedTarget] = useState<ApiTarget | 'all'>(defaultTarget);
   const [selectedStatus, setSelectedStatus] = useState<ApiStatus | 'all'>('all');
-  const [expandedName, setExpandedName] = useState<string | null>('speak');
+  const [expandedName, setExpandedName] = useState<string | null>(initialQuery ?? 'speak');
+
+  useEffect(() => {
+    if (initialQuery !== undefined) {
+      setQuery(initialQuery);
+      if (initialQuery) {
+        setExpandedName(initialQuery);
+        setActiveTab('apis');
+      }
+    }
+  }, [initialQuery]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const filteredApis = useMemo(
@@ -516,4 +528,3 @@ export function RuntimeExplorerPanel({
     </div>
   );
 }
-export default RuntimeExplorerPanel;

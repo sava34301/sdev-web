@@ -1,3 +1,5 @@
+import { requireUser } from '../_shared/auth.ts';
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SDEV_INTERNALS } from "../_shared/sdev-internals.ts";
 
@@ -42,6 +44,9 @@ builtin lives in graphics/web/ui, or if a link cycle is at fault.`;
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const denied = await requireUser(req, corsHeaders);
+  if (denied) return denied;
+
   try {
     const { code, error, note } = await req.json();
     if (typeof code !== "string") {
@@ -65,8 +70,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const AI_KEY = aiKey();
+    if (!AI_KEY) throw new Error(AI_NOT_CONFIGURED);
 
     const userMsg = [
       note ? `User note:\n${note}` : null,
@@ -74,11 +79,11 @@ serve(async (req) => {
       `Source code:\n\`\`\`sdev\n${code}\n\`\`\``,
     ].filter(Boolean).join("\n\n");
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${AI_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: aiModel("google/gemini-3-flash-preview"),
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userMsg },

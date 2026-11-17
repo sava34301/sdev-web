@@ -28,6 +28,7 @@ export interface KeywordSpec {
 export const KEYWORD_SPECS: KeywordSpec[] = [
   // ---- declarations -------------------------------------------------
   { token: 'FORGE', mystic: 'forge', plain: 'let', aliases: ['var'], about: 'variable declaration' },
+  { token: 'FIXED', mystic: 'fixed', plain: 'const', about: 'immutable variable declaration' },
   { token: 'CONJURE', mystic: 'conjure', plain: 'func', aliases: ['def'], about: 'function declaration' },
   { token: 'ESSENCE_KW', mystic: 'essence', plain: 'kind', aliases: ['class'], about: 'class declaration' },
   { token: 'EXTEND', mystic: 'extend', plain: 'extends', about: 'inheritance' },

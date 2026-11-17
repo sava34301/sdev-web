@@ -1,3 +1,5 @@
+import { requireUser } from '../_shared/auth.ts';
+import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SDEV_INTERNALS } from "../_shared/sdev-internals.ts";
 
@@ -265,6 +267,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const denied = await requireUser(req, corsHeaders);
+  if (denied) return denied;
+
   try {
     const { messages } = await req.json();
 
@@ -278,31 +283,31 @@ serve(async (req) => {
     for (const m of messages) {
       if (
         !m || typeof m !== "object" ||
-        !["user", "assistant", "system"].includes(m.role) ||
+        !["user", "assistant"].includes(m.role) ||
         typeof m.content !== "string" ||
         m.content.length === 0 ||
         m.content.length > 8000
       ) {
         return new Response(
-          JSON.stringify({ error: "Invalid message: each must have role user/assistant/system and content string ≤ 8000 chars" }),
+          JSON.stringify({ error: "Invalid message: each must have role user/assistant and content string ≤ 8000 chars" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const AI_KEY = aiKey();
+    if (!AI_KEY) {
+      throw new Error(AI_NOT_CONFIGURED);
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: aiModel("google/gemini-3-flash-preview"),
         messages: [
           { role: "system", content: SDEV_SYSTEM_PROMPT },
           ...messages,
