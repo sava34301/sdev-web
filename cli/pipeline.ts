@@ -14,6 +14,7 @@ import { resolve, dirname, isAbsolute } from 'node:path';
 import { Lexer } from '@/lang/lexer';
 import { Parser } from '@/lang/parser';
 import { Interpreter } from '@/lang/interpreter';
+import type { WebState } from '@/lang/web';
 import { stripBoardBlocks } from '@/lang/hardware/strip';
 import { canonicalize } from '@/lang/dialect/canonicalize';
 import { applyExtensions } from '@/lang/dialect/extensions';
@@ -141,6 +142,8 @@ export function localModules(entryPath: string, source: string): Record<string, 
 export interface RunOutcome {
   success: boolean;
   error?: string;
+  webState?: WebState | null;
+  webHtml?: string | null;
 }
 
 /** Run prepared code, streaming output to stdout as it is produced. */
@@ -179,8 +182,13 @@ export async function runPrepared(
       dialect: prepared.dialect,
     });
     const ast = new Parser(lexer.tokenize()).parse();
-    new Interpreter(say).interpret(ast);
-    return { success: true };
+    const interpreter = new Interpreter(say);
+    interpreter.interpret(ast);
+    return {
+      success: true,
+      webState: interpreter.getWebState(),
+      webHtml: interpreter.getWebHtml(),
+    };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : String(e) };
   }

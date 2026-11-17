@@ -95,6 +95,8 @@ class TokenType(Enum):
     RPAREN = auto()
     LBRACKET = auto()
     RBRACKET = auto()
+    LBRACE = auto()
+    RBRACE = auto()
     COMMA = auto()
     ARROW = auto()
     PIPE = auto()
@@ -776,18 +778,25 @@ def _segment_source(source):
 def has_non_ascii(code):
     return any(ord(ch) > 127 for ch in code)
 
-_ENGLISH_RE = re.compile(r'\b(forge|be|conjure|ponder|cycle|speak|yield)\b')
+_ENGLISH_RE = re.compile(r'\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind|page|endpage|style|styles|theme|window|canvas|board)\b')
 
 def detect_language(source):
-    english_hits = len(_ENGLISH_RE.findall(source))
+    code_only = ' '.join(text for is_code, text in _segment_source(source) if is_code)
+    english_hits = len(_ENGLISH_RE.findall(code_only))
     best_lang = None
     best_score = 0
     for lang in SUPPORTED_LANGUAGES:
         table = KEYWORD_TABLES[lang]
         score = 0
         for word in table.keys():
-            if word in source:
-                score += 1
+            if len(word) == 1 and word.isascii():
+                continue
+            head = word.split('_')[0]
+            if head not in code_only:
+                continue
+            pat = re.escape(word).replace(r'\_', r'[\s_]+')
+            if re.search(r'(?<!\w)' + pat + r'(?!\w)', code_only):
+                score += 2 if not word.isascii() else 1
         if score > best_score:
             best_score = score
             best_lang = lang
@@ -866,6 +875,8 @@ class Lexer:
             ')': TokenType.RPAREN,
             '[': TokenType.LBRACKET,
             ']': TokenType.RBRACKET,
+            '{': TokenType.LBRACE,
+            '}': TokenType.RBRACE,
             ',': TokenType.COMMA,
             '.': TokenType.DOT,
             '+': TokenType.PLUS,
@@ -1284,6 +1295,45 @@ class Parser:
             return self.parse_attempt_statement()
         if self.check(TokenType.DOUBLE_COLON):
             return self.parse_block_statement()
+        if self.check(TokenType.SUMMON):
+            tok = self.advance()
+            if self.check(TokenType.STRING):
+                self.advance()
+            return ExpressionStatement(tok.line, NullLiteral(tok.line))
+        tok = self.peek()
+        if tok.type == TokenType.IDENTIFIER and tok.value == 'use':
+            self.advance()
+            if self.check(TokenType.STRING):
+                self.advance()
+            return ExpressionStatement(tok.line, NullLiteral(tok.line))
+        if tok.type == TokenType.IDENTIFIER and tok.value == 'set':
+            depth = 0
+            has_to = False
+            for idx in range(self.pos + 1, len(self.tokens)):
+                t = self.tokens[idx]
+                if t.type in (TokenType.LPAREN, TokenType.LBRACKET, TokenType.LBRACE):
+                    depth += 1
+                elif t.type in (TokenType.RPAREN, TokenType.RBRACKET, TokenType.RBRACE):
+                    depth -= 1
+                elif depth == 0 and t.type == TokenType.IDENTIFIER and t.value == 'to':
+                    has_to = True
+                    break
+                elif depth == 0 and (t.type in (TokenType.DOUBLE_COLON, TokenType.DOUBLE_SEMI, TokenType.EOF) or t.line != tok.line):
+                    break
+            if has_to:
+                set_tok = self.advance()
+                target = self.parse_expression()
+                if not (self.check(TokenType.IDENTIFIER) and self.peek().value == 'to'):
+                    raise SdevError("Expected 'to' in set statement", set_tok.line)
+                self.advance()
+                val = self.parse_expression()
+                if isinstance(target, Identifier):
+                    return LetStatement(set_tok.line, target.name, val)
+                if isinstance(target, IndexExpr):
+                    return IndexAssignStatement(set_tok.line, target.obj, target.index, val)
+                if isinstance(target, MemberExpr):
+                    return MemberAssignStatement(set_tok.line, target.obj, target.property, val)
+                raise SdevError('Invalid assignment target', set_tok.line)
         return self.parse_expression_statement()
     
     def parse_forge_statement(self) -> LetStatement:
@@ -1380,6 +1430,14 @@ class Parser:
         return BlockStatement(colon_token.line, statements)
     
     def parse_expression_statement(self) -> Optional[ASTNode]:
+        head = self.peek()
+        if head.type == TokenType.IDENTIFIER and head.value in ('say', 'speak', 'print'):
+            nxt = self.tokens[self.pos + 1] if self.pos + 1 < len(self.tokens) else None
+            if nxt and nxt.line == head.line and nxt.type in (TokenType.STRING, TokenType.NUMBER, TokenType.IDENTIFIER, TokenType.LBRACKET, TokenType.MINUS, TokenType.YEP, TokenType.NOPE, TokenType.VOID, TokenType.SELF, TokenType.ISNT):
+                if not (nxt.type == TokenType.IDENTIFIER and nxt.value in ('to', 'be')):
+                    self.advance()
+                    arg = self.parse_expression()
+                    return ExpressionStatement(head.line, CallExpr(head.line, Identifier(head.line, head.value), [arg]))
         expr = self.parse_expression()
         
         if self.match(TokenType.BE):
@@ -1498,7 +1556,7 @@ class Parser:
                 expr = MemberExpr(expr.line, expr, prop)
             elif self.match(TokenType.ARROW):
                 if isinstance(expr, Identifier):
-                    body = self.parse_expression()
+                    body = self.parse_block_statement() if self.check(TokenType.DOUBLE_COLON) else self.parse_expression()
                     expr = LambdaExpr(expr.line, [expr.name], body)
                 else:
                     raise SdevError('Invalid lambda syntax', expr.line)
@@ -1631,19 +1689,22 @@ class Parser:
             if self.match(TokenType.ARROW):
                 if not is_lambda_params:
                     raise SdevError('Invalid lambda parameters', token.line)
-                body = self.parse_expression()
+                body = self.parse_block_statement() if self.check(TokenType.DOUBLE_COLON) else self.parse_expression()
                 return LambdaExpr(token.line, names, body)
-            
+
             if len(exprs) == 1:
                 return exprs[0]
             if len(exprs) == 0:
                 # Empty parens for unit/void
                 return NullLiteral(token.line)
             raise SdevError('Unexpected multiple expressions', token.line)
-        
+
         if self.match(TokenType.LBRACKET):
             return self.parse_array_literal(token.line)
-        
+
+        if self.match(TokenType.LBRACE):
+            return self.parse_brace_dict_literal(token.line)
+
         if self.match(TokenType.DOUBLE_COLON):
             return self.parse_dict_literal(token.line)
         
@@ -1724,6 +1785,26 @@ class Parser:
         self.consume(TokenType.RBRACKET, "Expected ']'")
         return ArrayLiteral(line, elements)
     
+    def parse_brace_dict_literal(self, line: int) -> DictLiteral:
+        entries = []
+        if not self.check(TokenType.RBRACE):
+            while True:
+                if self.check(TokenType.RBRACE):
+                    break
+                tok = self.peek()
+                if tok.type == TokenType.IDENTIFIER or tok.value in KEYWORDS:
+                    self.advance()
+                    key = StringLiteral(tok.line, tok.value)
+                else:
+                    key = self.parse_expression()
+                self.consume(TokenType.COLON, "Expected ':' in object literal")
+                value = self.parse_expression()
+                entries.append((key, value))
+                if not self.match(TokenType.COMMA):
+                    break
+        self.consume(TokenType.RBRACE, "Expected '}'")
+        return DictLiteral(line, entries)
+
     def parse_dict_literal(self, line: int) -> DictLiteral:
         entries = []
         if not self.check(TokenType.DOUBLE_SEMI):
@@ -2207,6 +2288,9 @@ class Interpreter:
             self.output(msg)
             return None
         builtins['speak'] = SdevBuiltin('speak', speak)
+        builtins['say'] = builtins['speak']
+        builtins['print'] = builtins['speak']
+        builtins['str'] = SdevBuiltin('str', lambda a, l=0: self._stringify(a[0]) if a else '', 1, 1)
         
         def whisper(args, line):
             msg = ''.join(self._stringify(a) for a in args)
@@ -2231,6 +2315,7 @@ class Interpreter:
                 return len(arg)
             raise SdevError('measure() argument must be text, list, or tome', line)
         builtins['measure'] = SdevBuiltin('measure', measure, 1, 1)
+        builtins['length'] = builtins['measure']
         
         def sequence(args, line):
             if len(args) < 1 or len(args) > 3:
@@ -3953,61 +4038,66 @@ class Interpreter:
 
         # ───────── UI Toolkit (CLI: logs declarative commands) ─────────
         ui_values: Dict[str, Any] = {}
+        ui_active = {'root': False}
         def _s(v, fb=''):
             if v is None: return fb
-            return v if isinstance(v, str) else str(v)
+            return v if isinstance(v, str) else self._stringify(v)
         def _log(msg): self.output('[ui] ' + msg)
-        def _simple(fmt):
-            return lambda args: (_log(fmt(args)) or None)
+        def _simple(fmt, sets_root=None):
+            def _fn(args, line=0):
+                if sets_root is not None:
+                    ui_active['root'] = sets_root
+                _log(fmt(args))
+                return None
+            return _fn
         ui_defs = {
-            'window':    (lambda a: f'window("{_s(a[0] if a else "sdev App")}", {a[1] if len(a)>1 else 480}, {a[2] if len(a)>2 else 600})', 0, 3),
-            'endwindow': (lambda a: 'endwindow', 0, 0),
-            'row':       (lambda a: 'row', 0, 0), 'endrow': (lambda a: 'endrow', 0, 0),
-            'column':    (lambda a: 'column', 0, 0), 'endcolumn': (lambda a: 'endcolumn', 0, 0),
-            'group':     (lambda a: f'group("{_s(a[0] if a else "")}")', 0, 1), 'endgroup': (lambda a: 'endgroup', 0, 0),
-            'tabs':      (lambda a: 'tabs', 0, 0), 'endtabs': (lambda a: 'endtabs', 0, 0),
-            'tab':       (lambda a: f'tab("{_s(a[0] if a else "Tab")}")', 0, 1), 'endtab': (lambda a: 'endtab', 0, 0),
-            'heading':   (lambda a: f'heading("{_s(a[0] if a else "")}", {a[1] if len(a)>1 else 1})', 1, 2),
-            'label':     (lambda a: f'label("{_s(a[0] if a else "")}")', 1, 1),
-            'paragraph': (lambda a: f'paragraph("{_s(a[0] if a else "")}")', 1, 1),
-            'image':     (lambda a: f'image("{_s(a[0] if a else "")}")', 1, 4),
-            'divider':   (lambda a: 'divider', 0, 0),
-            'spacer':    (lambda a: f'spacer({a[0] if a else 8})', 0, 1),
-            'progress':  (lambda a: f'progress({a[0] if a else 0}/{a[1] if len(a)>1 else 100})', 1, 2),
-            'menu':      (lambda a: f'menu("{_s(a[0] if a else "Menu")}")', 0, 1), 'endmenu': (lambda a: 'endmenu', 0, 0),
-            'show':      (lambda a: 'show()', 0, 0),
+            'window':    (lambda a: f'window("{_s(a[0] if a else "sdev App")}", {a[1] if len(a)>1 else 480}, {a[2] if len(a)>2 else 600})', 0, 3, True),
+            'endwindow': (lambda a: 'endwindow', 0, 0, False),
+            'row':       (lambda a: 'row', 0, 0, None), 'endrow': (lambda a: 'endrow', 0, 0, None),
+            'column':    (lambda a: 'column', 0, 0, None), 'endcolumn': (lambda a: 'endcolumn', 0, 0, None),
+            'group':     (lambda a: f'group("{_s(a[0] if a else "")}")', 0, 1, None), 'endgroup': (lambda a: 'endgroup', 0, 0, None),
+            'tabs':      (lambda a: 'tabs', 0, 0, None), 'endtabs': (lambda a: 'endtabs', 0, 0, None),
+            'tab':       (lambda a: f'tab("{_s(a[0] if a else "Tab")}")', 0, 1, None), 'endtab': (lambda a: 'endtab', 0, 0, None),
+            'heading':   (lambda a: f'heading("{_s(a[0] if a else "")}", {a[1] if len(a)>1 else 1})', 1, 2, None),
+            'label':     (lambda a: f'label("{_s(a[0] if a else "")}")', 1, 1, None),
+            'paragraph': (lambda a: f'paragraph("{_s(a[0] if a else "")}")', 1, 1, None),
+            'image':     (lambda a: f'image("{_s(a[0] if a else "")}")', 1, 4, None),
+            'divider':   (lambda a: 'divider', 0, 0, None),
+            'spacer':    (lambda a: f'spacer({a[0] if a else 8})', 0, 1, None),
+            'progress':  (lambda a: f'progress({a[0] if a else 0}/{a[1] if len(a)>1 else 100})', 1, 2, None),
+            'menu':      (lambda a: f'menu("{_s(a[0] if a else "Menu")}")', 0, 1, None), 'endmenu': (lambda a: 'endmenu', 0, 0, None),
+            'show':      (lambda a: 'show()', 0, 0, None),
         }
-        for nm, (fmt, mn, mx) in ui_defs.items():
-            builtins[nm] = SdevBuiltin(nm, _simple(fmt), mn, mx)
-        def _btn(args):
+        for nm, (fmt, mn, mx, sr) in ui_defs.items():
+            builtins[nm] = SdevBuiltin(nm, _simple(fmt, sr), mn, mx)
+        def _btn(args, line=0):
             label = _s(args[0] if args else 'Button')
             variant = _s(args[2] if len(args) > 2 else 'default')
             _log(f'button("{label}", variant="{variant}")')
             return None
         builtins['button'] = SdevBuiltin('button', _btn, 1, 3)
-        def _menuitem(args):
+        def _menuitem(args, line=0):
             _log(f'menuitem("{_s(args[0] if args else "")}")')
             return None
         builtins['menuitem'] = SdevBuiltin('menuitem', _menuitem, 1, 2)
-        def _input(args):
+        def _input_ui(args, line=0):
             k = _s(args[0] if args else '')
             if k and k not in ui_values: ui_values[k] = ''
             _log(f'input(bind="{k}", placeholder="{_s(args[1] if len(args)>1 else "")}")')
             return None
-        builtins['input'] = SdevBuiltin('input', _input, 1, 2)
-        def _textarea(args):
+        def _textarea(args, line=0):
             k = _s(args[0] if args else '')
             if k and k not in ui_values: ui_values[k] = ''
             _log(f'textarea(bind="{k}", rows={args[2] if len(args)>2 else 4})')
             return None
         builtins['textarea'] = SdevBuiltin('textarea', _textarea, 1, 3)
-        def _checkbox(args):
+        def _checkbox(args, line=0):
             k = _s(args[0] if args else '')
             if k and k not in ui_values: ui_values[k] = False
             _log(f'checkbox(bind="{k}", label="{_s(args[1] if len(args)>1 else "")}")')
             return None
         builtins['checkbox'] = SdevBuiltin('checkbox', _checkbox, 1, 2)
-        def _slider(args):
+        def _slider(args, line=0):
             k = _s(args[0] if args else '')
             mn_ = args[1] if len(args) > 1 else 0
             mx_ = args[2] if len(args) > 2 else 100
@@ -4016,7 +4106,7 @@ class Interpreter:
             _log(f'slider(bind="{k}", {mn_}..{mx_} step {st_})')
             return None
         builtins['slider'] = SdevBuiltin('slider', _slider, 1, 4)
-        def _select(args):
+        def _select(args, line=0):
             k = _s(args[0] if args else '')
             opts = args[1] if (len(args) > 1 and isinstance(args[1], list)) else []
             opts = [str(o) for o in opts]
@@ -4024,24 +4114,693 @@ class Interpreter:
             _log(f'select(bind="{k}", options={opts})')
             return None
         builtins['select'] = SdevBuiltin('select', _select, 1, 2)
-        def _table(args):
+        def _table(args, line=0):
             headers = args[0] if (args and isinstance(args[0], list)) else []
             rows = args[1] if (len(args) > 1 and isinstance(args[1], list)) else []
             _log(f'table({headers}, rows={len(rows)})')
             return None
         builtins['table'] = SdevBuiltin('table', _table, 1, 2)
-        def _uiget(args):
+        def _uiget(args, line=0):
             k = _s(args[0] if args else '')
             return ui_values.get(k)
         builtins['uiget'] = SdevBuiltin('uiget', _uiget, 1, 1)
-        def _uiset(args):
+        def _uiset(args, line=0):
             ui_values[_s(args[0])] = args[1] if len(args) > 1 else None
             return None
         builtins['uiset'] = SdevBuiltin('uiset', _uiset, 2, 2)
-        def _alert(args):
+        def _alert(args, line=0):
             self.output('[alert] ' + _s(args[0] if args else ''))
             return None
         builtins['alert'] = SdevBuiltin('alert', _alert, 1, 1)
+
+        # ───────── Web Toolkit (HTML5 + CSS3 + JS + Components) ─────────
+        SAFE_START = '\uE000'
+        SAFE_END = '\uE001'
+        web_state: Dict[str, Any] = {
+            'title': 'sdev Web App',
+            'lang': 'en',
+            'dir': 'ltr',
+            'body_attrs': {},
+            'head': [],
+            'stack': [[]],
+            'name_stack': [],
+            'css': [],
+            'js': [],
+            'module_js': [],
+            'theme': 'plain',
+            'utilities': False,
+            'produced': False,
+            'seq': 0,
+        }
+        self._web_state = web_state
+
+        VOID_TAGS = {
+            'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+            'link', 'meta', 'param', 'source', 'track', 'wbr',
+        }
+        ELEMENT_TAGS = [
+            'div', 'span', 'section', 'article', 'aside', 'header', 'footer', 'main', 'nav',
+            'figure', 'figcaption', 'address', 'hgroup', 'search', 'template', 'slot', 'noscript',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'blockquote', 'pre', 'code',
+            'em', 'strong', 'small', 'mark', 'cite', 'q', 'abbr', 'dfn', 'sub', 'sup',
+            'b', 'i', 'u', 's', 'del', 'ins', 'kbd', 'samp', 'var', 'time',
+            'ruby', 'rt', 'rp', 'bdi', 'bdo', 'wbr', 'data',
+            'a', 'img', 'picture', 'source', 'video', 'audio', 'track', 'iframe', 'embed', 'object', 'param',
+            'canvas', 'svg', 'map', 'area', 'math',
+            'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+            'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
+            'form', 'input', 'textarea', 'button', 'select', 'option', 'optgroup',
+            'label', 'fieldset', 'legend', 'datalist', 'output', 'progress', 'meter',
+            'details', 'summary', 'dialog', 'menu',
+            'hr', 'br',
+        ]
+        UNITLESS_CSS = {
+            'opacity', 'z-index', 'line-height', 'font-weight', 'flex', 'flex-grow',
+            'flex-shrink', 'order', 'scale', 'zoom', 'aspect-ratio', 'grid-column', 'grid-row',
+        }
+
+        def _mark_safe(h: str) -> str:
+            clean = h.replace(SAFE_START, '').replace(SAFE_END, '')
+            return f"{SAFE_START}{clean}{SAFE_END}"
+
+        def _strip_safe(h: str) -> str:
+            return h.replace(SAFE_START, '').replace(SAFE_END, '')
+
+        def _esc_html(s: str) -> str:
+            return (s.replace('&', '&amp;').replace('<', '&lt;')
+                     .replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;'))
+
+        def _render_safe_text(s: str) -> str:
+            if not s: return ''
+            if SAFE_START not in s: return _esc_html(s)
+            out = []
+            i = 0
+            while i < len(s):
+                st = s.find(SAFE_START, i)
+                if st == -1:
+                    out.append(_esc_html(s[i:]))
+                    break
+                if st > i:
+                    out.append(_esc_html(s[i:st]))
+                en = s.find(SAFE_END, st + 1)
+                if en == -1:
+                    out.append(s[st + 1:])
+                    break
+                out.append(s[st + 1:en])
+                i = en + 1
+            return ''.join(out)
+
+        def _esc_attr(s: str) -> str:
+            return _strip_safe(s).replace('&', '&amp;').replace('"', '&quot;')
+
+        def _css_prop(k: str) -> str:
+            if k.startswith('--'): return k
+            s1 = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', str(k))
+            return s1.replace('_', '-').lower()
+
+        def _css_val(prop: str, v: Any) -> str:
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                num_s = str(int(v)) if v == int(v) else str(v)
+                if v == 0 or prop in UNITLESS_CSS or prop.startswith('--'):
+                    return num_s
+                return f"{num_s}px"
+            return _strip_safe(_s(v))
+
+        def _css_rule(selector: str, d: dict) -> str:
+            decls = []
+            nested = []
+            for k, v in d.items():
+                if v is None or v is False: continue
+                if isinstance(v, dict):
+                    ks = str(k)
+                    if ks.startswith('@media') or ks.startswith('@supports'):
+                        nested.append(f"{ks} {{\n{_css_rule(selector, v)}\n}}")
+                    elif '&' in ks:
+                        nested.append(_css_rule(ks.replace('&', selector), v))
+                    else:
+                        nested.append(_css_rule(f"{selector} {ks}", v))
+                else:
+                    p = _css_prop(str(k))
+                    decls.append(f"  {p}: {_css_val(p, v)};")
+            parts = []
+            if decls:
+                parts.append(f"{selector} {{\n" + "\n".join(decls) + "\n}")
+            parts.extend(nested)
+            return "\n\n".join(parts)
+
+        def _is_callable(v: Any) -> bool:
+            return isinstance(v, (SdevBuiltin, SdevUserFunc, SdevLambda, SdevBoundMethod, SdevAsyncFunc))
+
+        def _ast_to_js(node: Any) -> str:
+            if node is None: return 'null'
+            if isinstance(node, NumberLiteral):
+                return str(int(node.value)) if node.value == int(node.value) else str(node.value)
+            if isinstance(node, StringLiteral):
+                return json.dumps(node.value)
+            if isinstance(node, BooleanLiteral):
+                return 'true' if node.value else 'false'
+            if isinstance(node, NullLiteral):
+                return 'null'
+            if isinstance(node, Identifier):
+                return node.name
+            if isinstance(node, BinaryExpr):
+                op_map = {'equals': '===', 'differs': '!==', 'also': '&&', 'either': '||'}
+                op = op_map.get(node.operator, node.operator)
+                return f"({_ast_to_js(node.left)} {op} {_ast_to_js(node.right)})"
+            if isinstance(node, UnaryExpr):
+                op = '!' if node.operator == 'isnt' else node.operator
+                return f"{op}({_ast_to_js(node.operand)})"
+            if isinstance(node, CallExpr):
+                args_js = [_ast_to_js(a) for a in node.args]
+                if isinstance(node.callee, Identifier):
+                    nm = node.callee.name
+                    if nm in ('speak', 'say', 'print'): return f"console.log({', '.join(args_js)})"
+                    if nm in ('str',):
+                        empty_q = '""'
+                        return f"String({args_js[0] if args_js else empty_q})"
+                    if nm in ('num',): return f"Number({args_js[0] if args_js else '0'})"
+                    if nm in ('dom_text', 'dom_set_text'): return f"$sdev.text({', '.join(args_js)})"
+                    if nm in ('dom_html', 'dom_set_html'): return f"$sdev.html({', '.join(args_js)})"
+                    if nm in ('dom_attr', 'dom_set_attr'): return f"$sdev.attr({', '.join(args_js)})"
+                    if nm in ('dom_toggle_class',): return f"$sdev.toggleClass({', '.join(args_js)})"
+                    if nm in ('state_get', 'uiget'): return f"$sdev.stateGet({', '.join(args_js)})"
+                    if nm in ('state_set', 'uiset'): return f"$sdev.stateSet({', '.join(args_js)})"
+                    if nm in ('clipboard_copy',): return f"$sdev.copy({', '.join(args_js)})"
+                    if nm in ('toast', 'toast_notify'): return f"$sdev.toast({', '.join(args_js)})"
+                return f"{_ast_to_js(node.callee)}({', '.join(args_js)})"
+            if isinstance(node, LetStatement):
+                return f"let {node.name} = {_ast_to_js(node.value)};"
+            if isinstance(node, AssignStatement):
+                return f"{node.name} = {_ast_to_js(node.value)};"
+            if isinstance(node, IfStatement):
+                s = f"if ({_ast_to_js(node.condition)}) {{\n{_ast_to_js(node.then_branch)}\n}}"
+                if node.else_branch:
+                    s += f" else {{\n{_ast_to_js(node.else_branch)}\n}}"
+                return s
+            if isinstance(node, WhileStatement):
+                return f"while ({_ast_to_js(node.condition)}) {{\n{_ast_to_js(node.body)}\n}}"
+            if isinstance(node, BlockStatement):
+                return "\n".join(_ast_to_js(st) for st in node.statements)
+            if isinstance(node, ExpressionStatement):
+                return f"{_ast_to_js(node.expression)};"
+            if isinstance(node, ReturnStatement):
+                return f"return {_ast_to_js(node.value)};" if node.value else "return;"
+            return ''
+
+        def _compile_handler(h: Any) -> str:
+            if isinstance(h, str): return h
+            if isinstance(h, (SdevUserFunc, SdevLambda)):
+                return _ast_to_js(h.body)
+            return _s(h)
+
+        def _render_attrs(attrs: Optional[dict], spec_id=None, spec_classes=None) -> str:
+            merged = dict(attrs or {})
+            if spec_id and 'id' not in merged:
+                merged['id'] = spec_id
+            cls_list = list(spec_classes or [])
+            if 'class' in merged:
+                c = merged.pop('class')
+                if isinstance(c, list): cls_list.extend(str(x) for x in c if x)
+                elif isinstance(c, dict): cls_list.extend(str(k) for k, v in c.items() if v)
+                elif c: cls_list.append(str(c))
+            if 'className' in merged:
+                c = merged.pop('className')
+                if c: cls_list.append(str(c))
+            parts = []
+            if merged.get('id') not in (None, False):
+                parts.append(f'id="{_esc_attr(_s(merged.pop("id")))}"')
+            final_cls = ' '.join(c.strip() for c in cls_list if c and c.strip())
+            if final_cls:
+                parts.append(f'class="{_esc_attr(final_cls)}"')
+            for k, v in merged.items():
+                if v is None or v is False or k in ('html', 'innerHTML', 'children', 'text'):
+                    continue
+                if k == 'style' and isinstance(v, dict):
+                    st = '; '.join(f"{_css_prop(sk)}: {_css_val(_css_prop(sk), sv)}" for sk, sv in v.items() if sv not in (None, False))
+                    if st: parts.append(f'style="{_esc_attr(st)}"')
+                    continue
+                if k in ('bind', 'bindText'):
+                    parts.append(f'data-bind-text="{_esc_attr(_s(v))}"')
+                    continue
+                if k == 'bindValue':
+                    parts.append(f'data-bind-value="{_esc_attr(_s(v))}"')
+                    continue
+                if str(k).startswith('on') and _is_callable(v):
+                    web_state['seq'] += 1
+                    fn_name = f"__sdev_h{web_state['seq']}"
+                    body = _compile_handler(v)
+                    web_state['js'].append(f"window.{fn_name} = function(event, el) {{ {body} }};")
+                    parts.append(f'{k}="{fn_name}(event, this)"')
+                    continue
+                if v is True:
+                    parts.append(str(k))
+                else:
+                    parts.append(f'{k}="{_esc_attr(_s(v))}"')
+            return (' ' + ' '.join(parts)) if parts else ''
+
+        def _parse_tag_spec(raw_spec: str):
+            clean = raw_spec.strip()
+            if '.' not in clean and '#' not in clean:
+                return (clean or 'div', None, [])
+            tokens = re.findall(r'[.#]?[^.#]+', clean)
+            tag = 'div'
+            tid = None
+            classes = []
+            for idx, tok in enumerate(tokens):
+                if tok.startswith('#'): tid = tok[1:]
+                elif tok.startswith('.'): classes.append(tok[1:])
+                elif idx == 0: tag = tok
+            return (tag, tid, classes)
+
+        def _render_el_str(raw_spec: str, args: List[Any], line: int = 0) -> str:
+            tag, tid, classes = _parse_tag_spec(raw_spec)
+            text = ''
+            raw_html_inner = None
+            attrs: Dict[str, Any] = {}
+            children_fn = None
+            children_list = None
+
+            if tag == 'a' and len(args) >= 2 and isinstance(args[0], str) and isinstance(args[1], str):
+                text = args[0]
+                attrs['href'] = args[1]
+                if len(args) > 2 and isinstance(args[2], dict): attrs.update(args[2])
+                if len(args) > 3 and _is_callable(args[3]): children_fn = args[3]
+            elif tag == 'img' and len(args) >= 1 and isinstance(args[0], str):
+                attrs['src'] = args[0]
+                if len(args) > 1 and isinstance(args[1], str): attrs['alt'] = args[1]
+                elif len(args) > 1 and isinstance(args[1], dict): attrs.update(args[1])
+                if len(args) > 2 and isinstance(args[2], dict): attrs.update(args[2])
+            elif tag == 'button' and len(args) >= 2 and isinstance(args[0], str) and _is_callable(args[1]):
+                text = args[0]
+                attrs['onclick'] = args[1]
+                if len(args) > 2 and isinstance(args[2], dict): attrs.update(args[2])
+            else:
+                for a in args:
+                    if a is None: continue
+                    if _is_callable(a): children_fn = a
+                    elif isinstance(a, list): children_list = a
+                    elif isinstance(a, dict): attrs.update(a)
+                    else: text += (' ' if text else '') + _s(a)
+
+            if isinstance(attrs.get('html'), str): raw_html_inner = attrs['html']
+            elif isinstance(attrs.get('innerHTML'), str): raw_html_inner = attrs['innerHTML']
+            if isinstance(attrs.get('text'), str) and not text: text = attrs['text']
+
+            attr_str = _render_attrs(attrs, tid, classes)
+            if tag in VOID_TAGS:
+                return f"<{tag}{attr_str}>"
+
+            inner = ''
+            if raw_html_inner is not None:
+                inner += _strip_safe(raw_html_inner)
+            elif text:
+                inner += _render_safe_text(text)
+
+            if children_list is not None:
+                for item in children_list:
+                    if item is None or item is False: continue
+                    s = _s(item)
+                    if tag in ('ul', 'ol') and SAFE_START not in s and not s.strip().startswith('<li'):
+                        inner += f"<li>{_render_safe_text(s)}</li>"
+                    elif tag == 'tr' and SAFE_START not in s and not s.strip().startswith('<t'):
+                        inner += f"<td>{_render_safe_text(s)}</td>"
+                    elif tag == 'select' and SAFE_START not in s and not s.strip().startswith('<option'):
+                        inner += f'<option value="{_esc_attr(s)}">{_esc_html(s)}</option>'
+                    else:
+                        inner += _render_safe_text(s)
+
+            if children_fn is not None:
+                web_state['stack'].append([])
+                ret = self._call_function(children_fn, [], line)
+                emitted = ''.join(web_state['stack'].pop())
+                if emitted: inner += emitted
+                elif isinstance(ret, str): inner += _render_safe_text(ret)
+
+            return f"<{tag}{attr_str}>{inner}</{tag}>"
+
+        def _emit_el(raw_spec: str, args: List[Any], line: int = 0) -> str:
+            h = _render_el_str(raw_spec, args, line)
+            web_state['stack'][-1].append(_strip_safe(h))
+            web_state['produced'] = True
+            return _mark_safe(h)
+
+        def _open_el(raw_spec: str, args: List[Any], line: int = 0):
+            tag, tid, classes = _parse_tag_spec(raw_spec)
+            attrs = {}
+            for a in args:
+                if isinstance(a, dict): attrs.update(a)
+                elif _is_callable(a):
+                    _emit_el(raw_spec, args, line)
+                    return None
+            web_state['stack'][-1].append(f"<{tag}{_render_attrs(attrs, tid, classes)}>")
+            web_state['stack'].append([])
+            web_state['name_stack'].append(tag)
+            web_state['produced'] = True
+            return None
+
+        def _close_el():
+            if len(web_state['stack']) <= 1 or not web_state['name_stack']:
+                return None
+            tag = web_state['name_stack'].pop()
+            inner = ''.join(web_state['stack'].pop())
+            web_state['stack'][-1].append(inner + f"</{tag}>")
+            web_state['produced'] = True
+            return None
+
+        def _render_web_doc() -> str:
+            body = _strip_safe(''.join(web_state['stack'][0]) if web_state['stack'] else '')
+            css = '\n\n'.join(web_state['css'])
+            js = '\n\n'.join(web_state['js'])
+            head = '\n'.join(web_state['head'])
+            lang = _esc_attr(web_state.get('lang') or 'en')
+            return (
+                f"<!DOCTYPE html>\n<html lang=\"{lang}\">\n<head>\n"
+                f"<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+                f"<title>{_esc_html(web_state['title'])}</title>\n{head}\n"
+                f"<style>\n*, *::before, *::after {{ box-sizing: border-box; }}\n{css}\n</style>\n</head>\n"
+                f"<body>\n{body}\n<script>\n{js}\n</script>\n</body>\n</html>"
+            )
+
+        def _web_page(args, line=0):
+            opts = args[1] if (len(args) > 1 and isinstance(args[1], dict)) else (args[0] if (args and isinstance(args[0], dict)) else {})
+            web_state['title'] = args[0] if (args and isinstance(args[0], str)) else _s(opts.get('title'), 'sdev Web App')
+            web_state['lang'] = _s(opts.get('lang'), 'en')
+            web_state['head'] = []
+            web_state['stack'] = [[]]
+            web_state['name_stack'] = []
+            web_state['css'] = []
+            web_state['js'] = []
+            web_state['module_js'] = []
+            web_state['theme'] = _s(opts.get('theme'), 'plain')
+            web_state['produced'] = True
+            return None
+        builtins['page'] = SdevBuiltin('page', _web_page, 0, 2)
+
+        def _web_endpage(args, line=0):
+            while web_state['name_stack']:
+                _close_el()
+            web_state['produced'] = True
+            return _render_web_doc()
+        builtins['endpage'] = SdevBuiltin('endpage', _web_endpage, 0, 0)
+
+        orig_title = builtins.get('title')
+        def _web_title(args, line=0):
+            raw_t = _s(args[0] if args else web_state['title'])
+            if web_state['produced']:
+                web_state['title'] = raw_t
+            if orig_title:
+                return orig_title.func(args, line)
+            return raw_t.title()
+        builtins['title'] = SdevBuiltin('title', _web_title, 1, 1)
+        builtins['page_title'] = SdevBuiltin('page_title', lambda a, l=0: (web_state.__setitem__('title', _s(a[0] if a else '')), web_state.__setitem__('produced', True), web_state['title'])[2], 1, 1)
+        builtins['html_lang'] = SdevBuiltin('html_lang', lambda a, l=0: (web_state.__setitem__('lang', _s(a[0] if a else 'en')), None)[1], 1, 2)
+        builtins['body_class'] = SdevBuiltin('body_class', lambda a, l=0: None, 1, 1)
+        builtins['body_attr'] = SdevBuiltin('body_attr', lambda a, l=0: None, 1, 2)
+
+        def _web_meta(args, line=0):
+            attrs = args[0] if (args and isinstance(args[0], dict)) else ({'name': _s(args[0]), 'content': _s(args[1])} if len(args) >= 2 else {})
+            web_state['head'].append(f"<meta{_render_attrs(attrs)}>")
+            web_state['produced'] = True
+            return None
+        builtins['meta'] = SdevBuiltin('meta', _web_meta, 1, 2)
+
+        def _web_link(args, line=0):
+            attrs = args[0] if (args and isinstance(args[0], dict)) else {'rel': _s(args[0] if args else ''), 'href': _s(args[1] if len(args) > 1 else '')}
+            web_state['head'].append(f"<link{_render_attrs(attrs)}>")
+            web_state['produced'] = True
+            return None
+        builtins['link'] = SdevBuiltin('link', _web_link, 1, 2)
+        builtins['stylesheet'] = SdevBuiltin('stylesheet', lambda a, l=0: (web_state['head'].append(f'<link rel="stylesheet" href="{_esc_attr(_s(a[0] if a else ""))}">'), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['favicon'] = SdevBuiltin('favicon', lambda a, l=0: (web_state['head'].append(f'<link rel="icon" href="{_esc_attr(_s(a[0] if a else ""))}">'), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['google_font'] = SdevBuiltin('google_font', lambda a, l=0: (web_state['head'].append(f'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={_esc_attr(_s(a[0] if a else "Inter"))}&display=swap">'), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['seo'] = SdevBuiltin('seo', lambda a, l=0: (web_state['head'].append(f'<meta property="og:title" content="{_esc_attr(_s((a[0] if isinstance(a[0], dict) else {}).get("title", web_state["title"])))}">'), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['external_script'] = SdevBuiltin('external_script', lambda a, l=0: (web_state['head'].append(f'<script src="{_esc_attr(_s(a[0] if a else ""))}"></script>'), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['import_map'] = SdevBuiltin('import_map', lambda a, l=0: (web_state['head'].append(f'<script type="importmap">{json.dumps({"imports": a[0] if (a and isinstance(a[0], dict)) else {}})}</script>'), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['head_raw'] = SdevBuiltin('head_raw', lambda a, l=0: (web_state['head'].append(_strip_safe(_s(a[0] if a else ''))), web_state.__setitem__('produced', True), None)[2], 1, 1)
+
+        builtins['tag'] = SdevBuiltin('tag', lambda a, l=0: _emit_el(_s(a[0] if a else 'div'), a[1:], l), 1, 5)
+        builtins['el'] = SdevBuiltin('el', lambda a, l=0: _mark_safe(_render_el_str(_s(a[0] if a else 'span'), a[1:], l)), 1, 5)
+        builtins['raw'] = SdevBuiltin('raw', lambda a, l=0: _mark_safe(_s(a[0] if a else '')), 1, 1)
+        builtins['text_node'] = SdevBuiltin('text_node', lambda a, l=0: (web_state['stack'][-1].append(_render_safe_text(_s(a[0] if a else ''))), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['comment_html'] = SdevBuiltin('comment_html', lambda a, l=0: (web_state['stack'][-1].append(f"<!-- {_s(a[0] if a else '')} -->"), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['markdown'] = SdevBuiltin('markdown', lambda a, l=0: _emit_el('div', [{'class': 'prose'}, _s(a[0] if a else '')], l), 1, 2)
+        builtins['md_html'] = SdevBuiltin('md_html', lambda a, l=0: _mark_safe(f"<p>{_esc_html(_s(a[0] if a else ''))}</p>"), 1, 1)
+        builtins['open'] = SdevBuiltin('open', lambda a, l=0: _open_el(_s(a[0] if a else 'div'), a[1:], l), 1, 4)
+        builtins['close'] = SdevBuiltin('close', lambda a, l=0: _close_el(), 0, 1)
+
+        def _web_icon(args, line=0):
+            nm = _s(args[0] if args else 'sparkles')
+            svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" data-icon="{_esc_attr(nm)}"></svg>'
+            web_state['stack'][-1].append(svg)
+            web_state['produced'] = True
+            return _mark_safe(svg)
+        builtins['icon'] = SdevBuiltin('icon', _web_icon, 1, 2)
+        builtins['inline_icon'] = SdevBuiltin('inline_icon', lambda a, l=0: _mark_safe(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" data-icon="{_esc_attr(_s(a[0] if a else "sparkles"))}"></svg>'), 1, 2)
+        builtins['svg_path'] = SdevBuiltin('svg_path', lambda a, l=0: _emit_el('path', [{'d': _s(a[0] if a else ''), **(a[1] if len(a) > 1 and isinstance(a[1], dict) else {})}], l), 1, 2)
+        builtins['svg_circle'] = SdevBuiltin('svg_circle', lambda a, l=0: _emit_el('circle', [{'cx': a[0] if a else 12, 'cy': a[1] if len(a)>1 else 12, 'r': a[2] if len(a)>2 else 10}], l), 0, 4)
+        builtins['svg_rect'] = SdevBuiltin('svg_rect', lambda a, l=0: _emit_el('rect', [{'x': a[0] if a else 0, 'y': a[1] if len(a)>1 else 0, 'width': a[2] if len(a)>2 else 24, 'height': a[3] if len(a)>3 else 24}], l), 0, 5)
+        builtins['svg_line'] = SdevBuiltin('svg_line', lambda a, l=0: _emit_el('line', [{'x1': a[0] if a else 0, 'y1': a[1] if len(a)>1 else 0, 'x2': a[2] if len(a)>2 else 24, 'y2': a[3] if len(a)>3 else 24}], l), 0, 5)
+        builtins['svg_polygon'] = SdevBuiltin('svg_polygon', lambda a, l=0: _emit_el('polygon', [{'points': _s(a[0] if a else '')}], l), 1, 2)
+        builtins['svg_text'] = SdevBuiltin('svg_text', lambda a, l=0: _emit_el('text', [_s(a[0] if a else '')], l), 1, 4)
+        builtins['svg_g'] = SdevBuiltin('svg_g', lambda a, l=0: _emit_el('g', a, l), 0, 3)
+
+        def _web_style(args, line=0):
+            if len(args) == 1 and isinstance(args[0], str):
+                web_state['css'].append(args[0])
+            elif len(args) == 1 and isinstance(args[0], dict):
+                for sel, rules in args[0].items():
+                    if isinstance(rules, dict): web_state['css'].append(_css_rule(str(sel), rules))
+            else:
+                sel = _s(args[0] if args else '*')
+                d = args[1] if (len(args) > 1 and isinstance(args[1], dict)) else {}
+                web_state['css'].append(_css_rule(sel, d))
+            web_state['produced'] = True
+            return None
+        builtins['style'] = SdevBuiltin('style', _web_style, 1, 2)
+        builtins['styles'] = SdevBuiltin('styles', lambda a, l=0: _web_style(a, l), 1, 1)
+
+        def _web_css_vars(args, line=0):
+            vs = args[0] if (args and isinstance(args[0], dict)) else {}
+            sel = _s(args[1] if len(args) > 1 else ':root')
+            decls = '\n'.join(f"  {k if str(k).startswith('--') else '--' + _css_prop(str(k))}: {_s(v)};" for k, v in vs.items())
+            web_state['css'].append(f"{sel} {{\n{decls}\n}}")
+            web_state['produced'] = True
+            return None
+        builtins['css_vars'] = SdevBuiltin('css_vars', _web_css_vars, 1, 2)
+        builtins['css_var'] = SdevBuiltin('css_var', lambda a, l=0: f"var({a[0] if str(a[0]).startswith('--') else '--' + _css_prop(str(a[0]))}{', ' + _s(a[1]) if len(a) > 1 else ''})", 1, 2)
+
+        def _web_media(args, line=0):
+            q = _s(args[0] if args else 'md')
+            aliases = {'mobile': '(max-width: 767px)', 'tablet': '(max-width: 1023px)', 'desktop': '(min-width: 1024px)', 'reduced-motion': '(prefers-reduced-motion: reduce)'}
+            rq = aliases.get(q, q if q.startswith('(') else f"({q})")
+            body_arg = args[1] if len(args) > 1 else {}
+            if isinstance(body_arg, dict):
+                inner = '\n'.join(_css_rule(str(k), v) for k, v in body_arg.items() if isinstance(v, dict))
+                web_state['css'].append(f"@media {rq} {{\n{inner}\n}}")
+            elif _is_callable(body_arg):
+                prev = len(web_state['css'])
+                self._call_function(body_arg, [], line)
+                cap = '\n'.join(web_state['css'][prev:])
+                del web_state['css'][prev:]
+                web_state['css'].append(f"@media {rq} {{\n{cap}\n}}")
+            web_state['produced'] = True
+            return None
+        builtins['media'] = SdevBuiltin('media', _web_media, 2, 2)
+
+        def _web_keyframes(args, line=0):
+            nm = _s(args[0] if args else 'kf')
+            steps = args[1] if (len(args) > 1 and isinstance(args[1], dict)) else {}
+            lines_kf = []
+            for st_k, st_v in steps.items():
+                if isinstance(st_v, dict):
+                    decls = '; '.join(f"{_css_prop(p)}: {_css_val(_css_prop(p), pv)}" for p, pv in st_v.items())
+                    lines_kf.append(f"  {st_k} {{ {decls} }}")
+            web_state['css'].append(f"@keyframes {nm} {{\n" + "\n".join(lines_kf) + "\n}")
+            web_state['produced'] = True
+            return None
+        builtins['keyframes'] = SdevBuiltin('keyframes', _web_keyframes, 2, 2)
+        builtins['font_face'] = SdevBuiltin('font_face', lambda a, l=0: (web_state['css'].append(f'@font-face {{ font-family: "{_esc_attr(_s(a[0]))}"; src: url("{_esc_attr(_s(a[1]))}"); }}'), web_state.__setitem__('produced', True), None)[2], 2, 3)
+        builtins['theme'] = SdevBuiltin('theme', lambda a, l=0: (web_state.__setitem__('theme', _s(a[0] if a else 'sdev-dark')), web_state.__setitem__('utilities', True), web_state.__setitem__('produced', True), None)[3], 1, 2)
+        builtins['use_utilities'] = SdevBuiltin('use_utilities', lambda a, l=0: (web_state.__setitem__('utilities', True), web_state.__setitem__('produced', True), None)[2], 0, 0)
+
+        builtins['sdev_to_js'] = SdevBuiltin('sdev_to_js', lambda a, l=0: _compile_handler(a[0] if a else ''), 1, 1)
+        builtins['script'] = SdevBuiltin('script', lambda a, l=0: (web_state['js'].append(_compile_handler(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['script_module'] = SdevBuiltin('script_module', lambda a, l=0: (web_state['module_js'].append(_compile_handler(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 1)
+
+        def _web_client_fn(args, line=0):
+            nm = _s(args[0] if args else 'fn')
+            if len(args) >= 3 and isinstance(args[1], str) and isinstance(args[2], str):
+                params = args[1]
+                body = _compile_handler(args[2])
+            else:
+                fn_obj = args[1] if len(args) > 1 else args[0]
+                params = ', '.join(fn_obj.params) if isinstance(fn_obj, (SdevUserFunc, SdevLambda)) else ''
+                body = _compile_handler(fn_obj)
+            web_state['js'].append(f"function {nm}({params}) {{\n{body}\n}}\nwindow.{nm} = {nm};")
+            web_state['produced'] = True
+            return None
+        builtins['client_fn'] = SdevBuiltin('client_fn', _web_client_fn, 1, 3)
+
+        builtins['onclick'] = SdevBuiltin('onclick', lambda a, l=0: (web_state['js'].append(f"document.querySelectorAll({json.dumps(_s(a[0]))}).forEach(el => el.addEventListener('click', (event) => {{ {_compile_handler(a[1])} }}));"), web_state.__setitem__('produced', True), None)[2], 2, 2)
+        builtins['on'] = SdevBuiltin('on', lambda a, l=0: (web_state['js'].append(f"document.querySelectorAll({json.dumps(_s(a[1]))}).forEach(el => el.addEventListener({json.dumps(_s(a[0]))}, (event) => {{ {_compile_handler(a[2])} }}));"), web_state.__setitem__('produced', True), None)[2], 3, 4)
+        builtins['on_ready'] = SdevBuiltin('on_ready', lambda a, l=0: (web_state['js'].append(_compile_handler(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['on_scroll'] = SdevBuiltin('on_scroll', lambda a, l=0: (web_state['js'].append(f"window.addEventListener('scroll', () => {{ {_compile_handler(a[0] if a else '')} }}, {{ passive: true }});"), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['on_intersect'] = SdevBuiltin('on_intersect', lambda a, l=0: (web_state['js'].append(f"/* on_intersect({_s(a[0] if a else '.reveal')}) */"), web_state.__setitem__('produced', True), None)[2], 1, 3)
+        builtins['on_keydown'] = SdevBuiltin('on_keydown', lambda a, l=0: (web_state['js'].append(f"window.addEventListener('keydown', (event) => {{ {_compile_handler(a[-1] if a else '')} }});"), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['set_interval'] = SdevBuiltin('set_interval', lambda a, l=0: (web_state['js'].append(f"setInterval(() => {{ {_compile_handler(a[0])} }}, {a[1] if len(a)>1 else 1000});"), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['set_timeout'] = SdevBuiltin('set_timeout', lambda a, l=0: (web_state['js'].append(f"setTimeout(() => {{ {_compile_handler(a[0])} }}, {a[1] if len(a)>1 else 500});"), web_state.__setitem__('produced', True), None)[2], 1, 2)
+
+        builtins['web_state'] = SdevBuiltin('web_state', lambda a, l=0: (web_state['js'].insert(0, f"window.$sdev && window.$sdev.initState({json.dumps(a[0] if (a and isinstance(a[0], dict)) else {})});"), web_state.__setitem__('produced', True), a[0] if a else {})[2], 1, 1)
+        builtins['state_set'] = SdevBuiltin('state_set', lambda a, l=0: (web_state['js'].append(f"window.$sdev && window.$sdev.stateSet({json.dumps(_s(a[0]))}, {json.dumps(a[1] if len(a)>1 else None)});"), None)[1], 2, 2)
+        builtins['state_get'] = SdevBuiltin('state_get', lambda a, l=0: a[1] if len(a) > 1 else None, 1, 2)
+
+        for dom_nm in ('dom_get', 'dom_query', 'dom_get_all', 'dom_query_all', 'dom_text', 'dom_set_text', 'dom_html', 'dom_set_html', 'dom_val', 'dom_value', 'dom_set_val', 'dom_attr', 'dom_set_attr', 'dom_style', 'dom_css_var', 'dom_add_class', 'dom_remove_class', 'dom_toggle_class', 'dom_has_class', 'dom_show', 'dom_hide', 'dom_toggle', 'dom_append', 'dom_remove', 'dom_scroll_to', 'clipboard_copy', 'storage_get', 'storage_set', 'storage_remove', 'fetch_json', 'navigate_route', 'toast', 'toast_notify', 'open_modal', 'close_modal'):
+            builtins[dom_nm] = SdevBuiltin(dom_nm, lambda a, l=0, _n=dom_nm: (web_state['js'].append(f"/* {_n}({', '.join(json.dumps(x) for x in a)}) */"), None)[1], 0, 5)
+
+        builtins['scroll_driver'] = SdevBuiltin('scroll_driver', lambda a, l=0: (web_state['js'].append("/* scroll_driver */"), web_state.__setitem__('produced', True), None)[2], 0, 1)
+        builtins['scroll_reveal'] = SdevBuiltin('scroll_reveal', lambda a, l=0: (web_state['js'].append("/* scroll_reveal */"), web_state.__setitem__('produced', True), None)[2], 0, 3)
+        builtins['count_up'] = SdevBuiltin('count_up', lambda a, l=0: (web_state['js'].append("/* count_up */"), web_state.__setitem__('produced', True), None)[2], 0, 2)
+        builtins['pointer_spotlight'] = SdevBuiltin('pointer_spotlight', lambda a, l=0: (web_state['js'].append("/* pointer_spotlight */"), web_state.__setitem__('produced', True), None)[2], 0, 1)
+        builtins['hero_demo_widget'] = SdevBuiltin('hero_demo_widget', lambda a, l=0: _emit_el('div', [{'class': 'hero-demo', 'id': 'sdev-hero-demo'}], l), 0, 2)
+        builtins['compiler_scene_3d'] = SdevBuiltin('compiler_scene_3d', lambda a, l=0: _emit_el('section', [{'id': 'how', 'class': 'how'}], l), 0, 3)
+        builtins['three_scene'] = builtins['compiler_scene_3d']
+        builtins['sdev_playground'] = SdevBuiltin('sdev_playground', lambda a, l=0: _emit_el('section', [{'id': 'playground', 'class': 'home-playground'}], l), 0, 1)
+        builtins['canvas_2d'] = SdevBuiltin('canvas_2d', lambda a, l=0: _emit_el('canvas', [{'id': _s(a[0] if a else 'canvas'), 'width': a[1] if len(a)>1 else 400, 'height': a[2] if len(a)>2 else 300}], l), 1, 4)
+
+        builtins['route'] = SdevBuiltin('route', lambda a, l=0: _emit_el('div', [{'data-route-view': _s(a[0] if a else '/')}, *(a[1:])], l), 1, 3)
+        builtins['open_route'] = SdevBuiltin('open_route', lambda a, l=0: _open_el('div', [{'data-route-view': _s(a[0] if a else '/')}], l), 1, 2)
+        builtins['end_route'] = SdevBuiltin('end_route', lambda a, l=0: _close_el(), 0, 0)
+        builtins['router_link'] = SdevBuiltin('router_link', lambda a, l=0: _emit_el('a', [_s(a[1] if len(a)>1 else ''), {'href': _s(a[0] if a else '/'), 'data-route': _s(a[0] if a else '/')}], l), 1, 3)
+
+        def _web_navbar(args, line=0):
+            brand = args[0] if args else 'sdev'
+            brand_name = _s(brand.get('name', 'sdev')) if isinstance(brand, dict) else _s(brand, 'sdev')
+            extra_fn = args[2] if (len(args) > 2 and _is_callable(args[2])) else None
+            return _emit_el('header', [{'class': 'site-nav'}, brand_name, extra_fn], line)
+        builtins['navbar'] = SdevBuiltin('navbar', _web_navbar, 1, 4)
+
+        def _web_hero(args, line=0):
+            if args and isinstance(args[0], str) and len(args) >= 4:
+                return _emit_el('section', [{'class': 'hero'}, _s(args[0]), _s(args[1]), _s(args[2]), _s(args[3]), _s(args[4] if len(args)>4 else '')], line)
+            opts = args[0] if (args and isinstance(args[0], dict)) else {}
+            t = _s(opts.get('title', 'Write in plain words.'))
+            hl = _s(opts.get('highlight', ''))
+            sub = _s(opts.get('subtitle', ''))
+            return _emit_el('section', [{'class': 'hero'}, f"{t} {hl} {sub}".strip()], line)
+        builtins['hero_section'] = SdevBuiltin('hero_section', _web_hero, 1, 5)
+
+        builtins['stat_band'] = SdevBuiltin('stat_band', lambda a, l=0: _emit_el('div', [{'class': 'stats-band'}], l), 1, 2)
+        builtins['bento_grid'] = SdevBuiltin('bento_grid', lambda a, l=0: _emit_el('div', [{'class': 'bento-grid'}, *a], l), 0, 2)
+        builtins['feature_card'] = SdevBuiltin('feature_card', lambda a, l=0: _emit_el('article', [{'class': 'feature reveal'}, *a], l), 1, 5)
+        builtins['code_card'] = SdevBuiltin('code_card', lambda a, l=0: _emit_el('div', [{'class': 'code-card'}, _s(a[0] if a else ''), _s(a[1] if len(a)>1 else '')], l), 1, 3)
+        builtins['tabs_component'] = SdevBuiltin('tabs_component', lambda a, l=0: _emit_el('div', [{'data-tabs': True}], l), 1, 2)
+        builtins['accordion'] = SdevBuiltin('accordion', lambda a, l=0: _emit_el('div', [{'data-accordion': True}], l), 1, 2)
+        builtins['modal_dialog'] = SdevBuiltin('modal_dialog', lambda a, l=0: _emit_el('div', [{'class': 'modal-backdrop', 'id': _s(a[0] if a else 'modal')}], l), 1, 3)
+        builtins['data_table'] = SdevBuiltin('data_table', lambda a, l=0: _emit_el('table', [{'class': 'data-table'}], l), 1, 3)
+        builtins['form_field'] = SdevBuiltin('form_field', lambda a, l=0: _emit_el('div', [{'class': 'form-field'}, _s(a[0] if a else '')], l), 1, 4)
+        builtins['footer_section'] = SdevBuiltin('footer_section', lambda a, l=0: _emit_el('footer', [{'class': 'site-footer'}, _s(a[-1] if a else '')], l), 1, 4)
+
+        builtins['web_meta'] = SdevBuiltin('web_meta', lambda a, l=0: (web_state['head'].append(f'<meta name="description" content="{_esc_attr(_s(a[0] if a else ""))}">'), web_state.__setitem__('produced', True), None)[2], 1, 2)
+        builtins['web_icon_svg'] = SdevBuiltin('web_icon_svg', lambda a, l=0: _mark_safe(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="{_esc_attr(_s(a[1] if len(a)>1 else "sdev-icon"))}" data-icon="{_esc_attr(_s(a[0] if a else "sparkles"))}"></svg>'), 1, 2)
+        builtins['hero_demo_html'] = SdevBuiltin('hero_demo_html', lambda a, l=0: _mark_safe('<div id="sdev-hero-demo"></div>'), 0, 1)
+        builtins['feature_card_html'] = SdevBuiltin('feature_card_html', lambda a, l=0: _mark_safe(f'<div class="bento reveal"><h3>{_esc_html(_s(a[0] if a else ""))}</h3></div>'), 1, 5)
+        builtins['stat_card_html'] = SdevBuiltin('stat_card_html', lambda a, l=0: _mark_safe(f'<div data-count="{_esc_attr(_s(a[0] if a else ""))}">{_esc_html(_s(a[1] if len(a)>1 else ""))}</div>'), 1, 3)
+        builtins['code_card_html'] = SdevBuiltin('code_card_html', lambda a, l=0: _mark_safe(f'<div class="code-card"><pre><code>{_esc_html(_s(a[1] if len(a)>1 else ""))}</code></pre></div>'), 1, 2)
+        builtins['route_view'] = SdevBuiltin('route_view', lambda a, l=0: _emit_el('div', [{'data-route-view': _s(a[0] if a else '/')}, _mark_safe(_s(a[2] if len(a)>2 else ''))], l), 1, 3)
+        builtins['a_html'] = SdevBuiltin('a_html', lambda a, l=0: _mark_safe(_render_el_str('a', [a[0] if a else '', _s(a[1] if len(a)>1 else '#'), a[2] if len(a)>2 else {}], l)), 1, 3)
+        builtins['a_link'] = SdevBuiltin('a_link', lambda a, l=0: _emit_el('a', [a[0] if a else '', _s(a[1] if len(a)>1 else '#'), a[2] if len(a)>2 else {}], l), 1, 3)
+        builtins['btn_html'] = SdevBuiltin('btn_html', lambda a, l=0: _mark_safe(_render_el_str('button', [a[0] if a else '', a[1] if len(a)>1 else {}], l)), 1, 2)
+        builtins['btn'] = SdevBuiltin('btn', lambda a, l=0: _emit_el('button', [a[0] if a else '', a[1] if len(a)>1 else {}], l), 1, 2)
+        builtins['li_html'] = SdevBuiltin('li_html', lambda a, l=0: _mark_safe(_render_el_str('li', a, l)), 1, 2)
+        builtins['li_el'] = SdevBuiltin('li_el', lambda a, l=0: _emit_el('li', a, l), 1, 2)
+        builtins['ul_list'] = SdevBuiltin('ul_list', lambda a, l=0: _emit_el('ul', [a[1] if len(a)>1 else {}, a[0] if a else []], l), 1, 2)
+        builtins['ol_list'] = SdevBuiltin('ol_list', lambda a, l=0: _emit_el('ol', [a[1] if len(a)>1 else {}, a[0] if a else []], l), 1, 2)
+        builtins['hr_el'] = SdevBuiltin('hr_el', lambda a, l=0: _emit_el('hr', [], l), 0, 1)
+        builtins['br_el'] = SdevBuiltin('br_el', lambda a, l=0: _mark_safe('<br>'), 0, 1)
+        builtins['img_el'] = SdevBuiltin('img_el', lambda a, l=0: _emit_el('img', a, l), 1, 3)
+        builtins['input_el'] = SdevBuiltin('input_el', lambda a, l=0: _emit_el('input', [{'type': _s(a[0] if a else 'text')}], l), 0, 3)
+        builtins['textarea_el'] = SdevBuiltin('textarea_el', lambda a, l=0: _emit_el('textarea', [a[1] if len(a)>1 else {}], l), 0, 2)
+        builtins['label_el'] = SdevBuiltin('label_el', lambda a, l=0: _emit_el('label', [a[0] if a else '', a[2] if len(a)>2 else {}], l), 1, 3)
+        builtins['option_el'] = SdevBuiltin('option_el', lambda a, l=0: _emit_el('option', [a[0] if a else '', {'value': _s(a[1] if len(a)>1 else '')}], l), 1, 3)
+        builtins['header_el'] = SdevBuiltin('header_el', lambda a, l=0: _emit_el('header', a, l), 1, 2)
+        builtins['footer_el'] = SdevBuiltin('footer_el', lambda a, l=0: _emit_el('footer', a, l), 1, 2)
+        builtins['nav_el'] = SdevBuiltin('nav_el', lambda a, l=0: _emit_el('nav', a, l), 1, 2)
+        builtins['code_el'] = SdevBuiltin('code_el', lambda a, l=0: _emit_el('code', a, l), 1, 2)
+        builtins['pre_el'] = SdevBuiltin('pre_el', lambda a, l=0: _emit_el('pre', a, l), 1, 2)
+        builtins['style_nested'] = SdevBuiltin('style_nested', lambda a, l=0: (web_state['css'].append(_css_rule(f"{_s(a[0])} {_s(a[1])}", a[2] if len(a)>2 and isinstance(a[2], dict) else {})), web_state.__setitem__('produced', True), None)[2], 3, 3)
+        builtins['media_style'] = SdevBuiltin('media_style', lambda a, l=0: (web_state['css'].append(f"@media {_s(a[0])} {{ {_css_rule(_s(a[1]), a[2] if len(a)>2 and isinstance(a[2], dict) else {})} }}"), web_state.__setitem__('produced', True), None)[2], 3, 3)
+        builtins['script_raw'] = SdevBuiltin('script_raw', lambda a, l=0: (web_state['js'].append(_s(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['script_sdev'] = SdevBuiltin('script_sdev', lambda a, l=0: (web_state['js'].append(_compile_handler(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['web_state_init'] = SdevBuiltin('web_state_init', lambda a, l=0: None, 2, 2)
+        builtins['web_emit'] = SdevBuiltin('web_emit', lambda a, l=0: (web_state['stack'][-1].append(_strip_safe(_s(a[0] if a else ''))), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['web_el'] = SdevBuiltin('web_el', lambda a, l=0: _mark_safe(_render_el_str(_s(a[0] if a else 'div'), [a[1] if len(a)>1 else '', a[2] if len(a)>2 else {}], l)), 1, 3)
+        builtins['web_el_raw'] = SdevBuiltin('web_el_raw', lambda a, l=0: _mark_safe(_render_el_str(_s(a[0] if a else 'div'), [{**(a[2] if len(a)>2 and isinstance(a[2], dict) else {}), 'html': _s(a[1] if len(a)>1 else '')}], l)), 1, 3)
+        builtins['web_void_el'] = SdevBuiltin('web_void_el', lambda a, l=0: _mark_safe(_render_el_str(_s(a[0] if a else 'br'), [a[1] if len(a)>1 else {}], l)), 1, 2)
+        builtins['web_tag_emmet'] = SdevBuiltin('web_tag_emmet', lambda a, l=0: _mark_safe(_render_el_str(_s(a[0] if a else 'div'), [a[1] if len(a)>1 else '', a[2] if len(a)>2 else {}], l)), 1, 3)
+
+        builtins['raw_html'] = SdevBuiltin('raw_html', lambda a, l=0: (web_state['stack'][-1].append(_s(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['raw_css'] = SdevBuiltin('raw_css', lambda a, l=0: (web_state['css'].append(_s(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 1)
+        builtins['raw_js'] = SdevBuiltin('raw_js', lambda a, l=0: (web_state['js'].append(_s(a[0] if a else '')), web_state.__setitem__('produced', True), None)[2], 1, 1)
+
+        builtins['render_html'] = SdevBuiltin('render_html', lambda a, l=0: _render_web_doc(), 0, 0)
+        builtins['get_html'] = SdevBuiltin('get_html', lambda a, l=0: _render_web_doc(), 0, 0)
+        builtins['get_body_html'] = SdevBuiltin('get_body_html', lambda a, l=0: _strip_safe(''.join(web_state['stack'][0])), 0, 0)
+        builtins['get_css'] = SdevBuiltin('get_css', lambda a, l=0: '\n\n'.join(web_state['css']), 0, 0)
+        builtins['get_js'] = SdevBuiltin('get_js', lambda a, l=0: '\n\n'.join(web_state['js']), 0, 0)
+
+        def _web_save_html(args, line=0):
+            path = _s(args[0] if args else 'index.html')
+            doc = _render_web_doc()
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(doc)
+            except Exception:
+                pass
+            return doc
+        builtins['save_html'] = SdevBuiltin('save_html', _web_save_html, 0, 1)
+
+        DIRECT_SKIP = {
+            'input', 'select', 'button', 'textarea', 'label', 'progress',
+            'table', 'menu', 'image', 'title', 'meta', 'link', 'script',
+            'style', 'on', 'open', 'close', 'tag', 'page', 'canvas',
+            'del', 'time', 'map',
+        }
+        for _t in ELEMENT_TAGS:
+            if _t not in DIRECT_SKIP:
+                builtins[_t] = SdevBuiltin(_t, lambda a, l=0, _tg=_t: _emit_el(_tg, a, l), 0, 5)
+            builtins[f"html_{_t}"] = SdevBuiltin(f"html_{_t}", lambda a, l=0, _tg=_t: _emit_el(_tg, a, l), 0, 5)
+            if _t not in VOID_TAGS:
+                _ofn = SdevBuiltin(f"open_{_t}", lambda a, l=0, _tg=_t: _open_el(_tg, a, l), 0, 4)
+                _cfn = SdevBuiltin(f"end_{_t}", lambda a, l=0: _close_el(), 0, 0)
+                builtins[f"open_{_t}"] = _ofn
+                builtins[f"end_{_t}"] = _cfn
+                builtins[f"open{_t}"] = _ofn
+                builtins[f"end{_t}"] = _cfn
+
+        # Smart-dispatch shared UI/HTML names when web_state['produced'] is active
+        for _sh in ('button', 'select', 'textarea', 'label', 'progress', 'table', 'menu', 'image', 'dialog'):
+            _prev_ui = builtins.get(_sh)
+            _web_fn = builtins.get('html_img' if _sh == 'image' else f"html_{_sh}")
+            def _make_shared(p_ui, w_fn):
+                def _disp(args, line=0):
+                    if web_state['produced'] and not ui_active['root']:
+                        return w_fn.func(args, line)
+                    if p_ui:
+                        return p_ui.func(args, line)
+                    return w_fn.func(args, line)
+                return _disp
+            builtins[_sh] = SdevBuiltin(_sh, _make_shared(_prev_ui, _web_fn), 0, 5)
+
+        orig_core_input = builtins.get('input')
+        def _smart_input(args, line=0):
+            if web_state['produced'] and not ui_active['root'] and (len(args) == 0 or isinstance(args[0], dict) or (len(args) > 1 and isinstance(args[1], dict))):
+                return builtins['html_input'].func(args, line)
+            if ui_active['root']:
+                return _input_ui(args, line)
+            if orig_core_input:
+                return orig_core_input.func(args, line)
+            return ''
+        builtins['input'] = SdevBuiltin('input', _smart_input, 0, 3)
 
         return builtins
     
@@ -4157,7 +4916,10 @@ class Interpreter:
                 lambda_env.define(param, args[i])
             else:
                 lambda_env.define(param, None)
-        return self._execute(func.body, lambda_env)
+        try:
+            return self._execute(func.body, lambda_env)
+        except ReturnException as e:
+            return e.value
     
     def interpret(self, program: Program) -> Any:
         result = None

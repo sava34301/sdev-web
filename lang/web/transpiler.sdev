@@ -1,0 +1,245 @@
+# =============================================================================
+# SDEV Self-Hosted Web Toolkit: SDEV-to-JavaScript Client Transpiler
+# (lang/web/transpiler.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to sdev_expr_to_js with expr
+  set s to trim(expr)
+  if length(s) is 0
+    return ""
+  end
+  # Boolean & null literals
+  set s to replace(s, " yep", " true")
+  set s to replace(s, "(yep", "(true")
+  set s to replace(s, ",yep", ",true")
+  set s to replace(s, " nope", " false")
+  set s to replace(s, "(nope", "(false")
+  set s to replace(s, ",nope", ",false")
+  if str_eq(s, "yep")
+    set s to "true"
+  end
+  if str_eq(s, "nope")
+    set s to "false"
+  end
+  if str_eq(s, "void") or str_eq(s, "nothing")
+    set s to "null"
+  end
+
+  # Operators
+  set s to replace(s, " is not ", " !== ")
+  set s to replace(s, " equals ", " === ")
+  set s to replace(s, " differs ", " !== ")
+  set s to replace(s, " is ", " === ")
+  set s to replace(s, " also ", " && ")
+  set s to replace(s, " and ", " && ")
+  set s to replace(s, " either ", " || ")
+  set s to replace(s, " or ", " || ")
+  set s to replace(s, "isnt ", "!")
+
+  # DOM & Reactive State Builtins -> window.$sdev.*
+  set s to replace(s, "state_get(", "window.$sdev.get(")
+  set s to replace(s, "state_set(", "window.$sdev.set(")
+  set s to replace(s, "dom_text(", "window.$sdev.setText(")
+  set s to replace(s, "dom_get_text(", "window.$sdev.getText(")
+  set s to replace(s, "dom_html(", "window.$sdev.setHtml(")
+  set s to replace(s, "dom_value(", "window.$sdev.setVal(")
+  set s to replace(s, "dom_get_value(", "window.$sdev.getVal(")
+  set s to replace(s, "dom_style(", "window.$sdev.setStyle(")
+  set s to replace(s, "dom_attr(", "window.$sdev.setAttr(")
+  set s to replace(s, "dom_add_class(", "window.$sdev.addClass(")
+  set s to replace(s, "dom_remove_class(", "window.$sdev.removeClass(")
+  set s to replace(s, "dom_toggle_class(", "window.$sdev.toggleClass(")
+  set s to replace(s, "open_modal(", "window.$sdev.openModal(")
+  set s to replace(s, "close_modal(", "window.$sdev.closeModal(")
+  set s to replace(s, "toast(", "window.$sdev.toast(")
+  set s to replace(s, "clipboard_copy(", "window.$sdev.copy(")
+  set s to replace(s, "navigate_to(", "window.$sdev.navigate(")
+  set s to replace(s, "str(", "String(")
+  return concat(s, "")
+end
+
+to sdev_line_to_js with raw_line
+  set t to trim(raw_line)
+  if length(t) is 0
+    return ""
+  end
+  if text_starts_with(t, "#") or text_starts_with(t, "//")
+    return ""
+  end
+
+  # Block closers
+  if str_eq(t, ";;") or str_eq(t, "end")
+    return "}"
+  end
+
+  # Else-if / otherwise ponder
+  if text_starts_with(t, ";; otherwise ponder ") and text_ends_with(t, " ::")
+    set cond to substr(t, 20, length(t) - 23)
+    return "} else if (" + sdev_expr_to_js(cond) + ") {"
+  end
+  if text_starts_with(t, "otherwise ponder ") and text_ends_with(t, " ::")
+    set cond to substr(t, 17, length(t) - 20)
+    return "} else if (" + sdev_expr_to_js(cond) + ") {"
+  end
+  if text_starts_with(t, "else if ")
+    set cond to substr(t, 8, length(t) - 8)
+    return "} else if (" + sdev_expr_to_js(cond) + ") {"
+  end
+
+  # Else / otherwise
+  if str_eq(t, ";; otherwise ::") or str_eq(t, "otherwise ::") or str_eq(t, "else")
+    return "} else {"
+  end
+
+  # If / ponder
+  if text_starts_with(t, "ponder ") and text_ends_with(t, " ::")
+    set cond to substr(t, 7, length(t) - 10)
+    return "if (" + sdev_expr_to_js(cond) + ") {"
+  end
+  if text_starts_with(t, "if ")
+    set cond to substr(t, 3, length(t) - 3)
+    if text_ends_with(cond, " ::")
+      set cond to substr(cond, 0, length(cond) - 3)
+    end
+    return "if (" + sdev_expr_to_js(cond) + ") {"
+  end
+
+  # While / cycle
+  if text_starts_with(t, "cycle ") and text_ends_with(t, " ::")
+    set cond to substr(t, 6, length(t) - 9)
+    return "while (" + sdev_expr_to_js(cond) + ") {"
+  end
+  if text_starts_with(t, "while ")
+    set cond to substr(t, 6, length(t) - 6)
+    if text_ends_with(cond, " ::")
+      set cond to substr(cond, 0, length(cond) - 3)
+    end
+    return "while (" + sdev_expr_to_js(cond) + ") {"
+  end
+
+  # For each / iterate
+  if text_starts_with(t, "iterate ") and text_ends_with(t, " ::")
+    set body_part to substr(t, 8, length(t) - 11)
+    set th_idx to find(body_part, " through ")
+    if th_idx >= 0
+      set vname to trim(substr(body_part, 0, th_idx))
+      set iter_ex to substr(body_part, th_idx + 9, length(body_part) - (th_idx + 9))
+      return "for (const " + vname + " of " + sdev_expr_to_js(iter_ex) + ") {"
+    end
+  end
+  if text_starts_with(t, "for each ")
+    set body_part to substr(t, 9, length(t) - 9)
+    set in_idx to find(body_part, " in ")
+    if in_idx >= 0
+      set vname to trim(substr(body_part, 0, in_idx))
+      set iter_ex to substr(body_part, in_idx + 4, length(body_part) - (in_idx + 4))
+      return "for (const " + vname + " of " + sdev_expr_to_js(iter_ex) + ") {"
+    end
+  end
+
+  # Function declarations: conjure name(params) ::  OR  to name with a b
+  if text_starts_with(t, "conjure ") and text_ends_with(t, " ::")
+    set sig to trim(substr(t, 8, length(t) - 11))
+    return "function " + sig + " {"
+  end
+  if text_starts_with(t, "to ")
+    set rest to trim(substr(t, 3, length(t) - 3))
+    set w_idx to find(rest, " with ")
+    if w_idx >= 0
+      set fname to trim(substr(rest, 0, w_idx))
+      set pstr to trim(substr(rest, w_idx + 6, length(rest) - (w_idx + 6)))
+      set plist to split(pstr, " ")
+      return "function " + fname + "(" + join(plist, ", ") + ") {"
+    end
+    return "function " + rest + "() {"
+  end
+
+  # Variable declaration: forge x be val  OR  set x to val
+  if text_starts_with(t, "forge ")
+    set rest to substr(t, 6, length(t) - 6)
+    set b_idx to find(rest, " be ")
+    if b_idx >= 0
+      set vname to trim(substr(rest, 0, b_idx))
+      set vex to substr(rest, b_idx + 4, length(rest) - (b_idx + 4))
+      return "let " + vname + " = " + sdev_expr_to_js(vex) + ";"
+    end
+  end
+  if text_starts_with(t, "set ")
+    set rest to substr(t, 4, length(t) - 4)
+    set to_idx to find(rest, " to ")
+    if to_idx >= 0
+      set vname to trim(substr(rest, 0, to_idx))
+      set vex to substr(rest, to_idx + 4, length(rest) - (to_idx + 4))
+      return "let " + vname + " = " + sdev_expr_to_js(vex) + ";"
+    end
+  end
+
+  # Return / yield / break / continue
+  if text_starts_with(t, "yield ")
+    return "return " + sdev_expr_to_js(substr(t, 6, length(t) - 6)) + ";"
+  end
+  if text_starts_with(t, "return ")
+    return "return " + sdev_expr_to_js(substr(t, 7, length(t) - 7)) + ";"
+  end
+  if str_eq(t, "yield") or str_eq(t, "return")
+    return "return;"
+  end
+  if str_eq(t, "yeet") or str_eq(t, "break")
+    return "break;"
+  end
+  if str_eq(t, "skip") or str_eq(t, "continue")
+    return "continue;"
+  end
+
+  # Output: speak(...) / say ...
+  if text_starts_with(t, "speak(") and text_ends_with(t, ")")
+    set inner to substr(t, 6, length(t) - 7)
+    return "console.log(" + sdev_expr_to_js(inner) + ");"
+  end
+  if text_starts_with(t, "say ")
+    set inner to substr(t, 4, length(t) - 4)
+    return "console.log(" + sdev_expr_to_js(inner) + ");"
+  end
+
+  # Reassignment: x be val
+  set b_pos to find(t, " be ")
+  if b_pos > 0
+    set lhs to trim(substr(t, 0, b_pos))
+    set rhs to substr(t, b_pos + 4, length(t) - (b_pos + 4))
+    return lhs + " = " + sdev_expr_to_js(rhs) + ";"
+  end
+
+  return sdev_expr_to_js(t) + ";"
+end
+
+to sdev_to_js with sdev_code
+  set ls to split(sdev_code, "\n")
+  set n to length(ls)
+  set out to ""
+  set i to 0
+  while i < n
+    set js_line to sdev_line_to_js(ls[i])
+    if length(js_line) > 0
+      if length(out) > 0
+        set out to out + "\n"
+      end
+      set out to out + js_line
+    end
+    set i to i + 1
+  end
+  return concat(out, "")
+end
+
+to web_client_fn_js with name params sdev_body
+  set body_js to sdev_to_js(sdev_body)
+  set out to "function " + name + "(" + params + ") {\n" + body_js + "\n}\nwindow." + name + " = " + name + ";"
+  return concat(out, "")
+end
+
+to web_on_ready_js with sdev_body
+  set body_js to sdev_to_js(sdev_body)
+  return "(function(){ const fn = function(){ " + body_js + " }; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); })();"
+end

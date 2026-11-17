@@ -40,7 +40,7 @@ import {
   type TurtleState,
 } from '@/lang/graphics';
 import { createUiBuiltins, type UiState } from '@/lang/ui';
-import { createWebBuiltins, type WebState } from '@/lang/web';
+import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/web';
 import { stripSignature } from '@/lang/dialect/signature';
 import { lintSdevSource, type LintDiagnostic } from '@/lang/linter';
 import { understand } from '@/lang/agent';
@@ -483,7 +483,9 @@ function executeWithTracing(
   uiBuiltins.forEach((fn, name) => globalEnv.define(name, fn));
 
   const webBuiltins = createWebBuiltins((st: WebState) => webStates.push(st));
-  webBuiltins.forEach((fn, name) => globalEnv.define(name, fn));
+  bindWebBuiltinsToEnv(globalEnv, webBuiltins, {
+    hasUiRoot: () => uiStates.length > 0 && uiStates[uiStates.length - 1].rootId != null,
+  });
 
   // Snapshot initial globals so Chrono only displays user-created/modified bindings
   const initialGlobals = new Map<string, unknown>();

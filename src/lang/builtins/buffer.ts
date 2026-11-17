@@ -1,11 +1,17 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
+import { SdevFunction, OutputCallback, toNumber } from './utils';
 import { SdevError } from '../errors';
+import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_BITS_SRC from '../../../lang/stdlib/v2/bits.sdev?raw';
+import SDEV_BUFFER_SRC from '../../../lang/stdlib/v2/buffer.sdev?raw';
 
-export function registerBuffer(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+let bufRunner: SdevModuleRunner | null = null;
+function getBufRunner(): SdevModuleRunner {
+  if (!bufRunner) bufRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_BITS_SRC, SDEV_BUFFER_SRC);
+  return bufRunner;
+}
 
-  // ============= Buffer / Byte Array =============
-
-  // buffer(size) - create a byte buffer
+export function registerBuffer(builtins: Map<string, SdevFunction>, _output: OutputCallback): void {
   builtins.set('buffer', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
@@ -13,33 +19,46 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
       if (typeof args[0] !== 'number') throw new SdevError('Argument must be a number', line);
       const size = Math.trunc(args[0]);
       const data = new Uint8Array(size);
+      const sdevList = new Array<number>(size).fill(0);
+      const syncFromList = () => { for (let i = 0; i < size; i++) data[i] = sdevList[i] & 0xff; };
+      const syncToList = () => { for (let i = 0; i < size; i++) sdevList[i] = data[i]; };
       const obj: Record<string, unknown> = {};
       obj._type = 'buffer';
       obj._data = data;
-      obj.size = { type: 'builtin', call: () => size } as SdevFunction;
+      obj.size = { type: 'builtin', call: () => getBufRunner().call('buf_len', sdevList) } as SdevFunction;
       obj.get = { type: 'builtin', call: (a: unknown[], l: number) => {
         const i = a[0] as number;
         if (i < 0 || i >= size) throw new SdevError('Buffer index out of bounds', l);
-        return data[i];
+        syncToList();
+        return getBufRunner().call('buf_get', sdevList, i);
       } } as SdevFunction;
       obj.set = { type: 'builtin', call: (a: unknown[], l: number) => {
         const i = a[0] as number;
         const v = a[1] as number;
         if (i < 0 || i >= size) throw new SdevError('Buffer index out of bounds', l);
-        data[i] = v & 0xFF;
+        getBufRunner().call('buf_set', sdevList, i, v);
+        syncFromList();
         return null;
       } } as SdevFunction;
-      obj.fill = { type: 'builtin', call: (a: unknown[]) => { data.fill(a[0] as number & 0xFF); return null; } } as SdevFunction;
+      obj.fill = { type: 'builtin', call: (a: unknown[]) => {
+        getBufRunner().call('mem_arena_fill', sdevList, 0, size, a[0] as number);
+        syncFromList();
+        return null;
+      } } as SdevFunction;
       obj.slice = { type: 'builtin', call: (a: unknown[]) => {
-        const start = (a[0] as number) || 0;
-        const end = (a[1] as number) || size;
-        return Array.from(data.slice(start, end));
+        syncToList();
+        return getBufRunner().call('buf_slice', sdevList, (a[0] as number) || 0, (a[1] as number) || size);
       } } as SdevFunction;
       obj.toList = { type: 'builtin', call: () => Array.from(data) } as SdevFunction;
-      obj.toText = { type: 'builtin', call: () => new TextDecoder().decode(data) } as SdevFunction;
+      obj.toText = { type: 'builtin', call: () => {
+        syncToList();
+        return getBufRunner().callStr('buf_to_str', sdevList);
+      } } as SdevFunction;
       obj.fromString = { type: 'builtin', call: (a: unknown[]) => {
-        const bytes = new TextEncoder().encode(a[0] as string);
-        data.set(bytes.slice(0, size));
+        const list = getBufRunner().call('buf_from_str', String(a[0] ?? '')) as number[];
+        data.fill(0);
+        for (let i = 0; i < Math.min(size, list.length); i++) data[i] = list[i] & 0xff;
+        syncToList();
         return null;
       } } as SdevFunction;
       obj.copyTo = { type: 'builtin', call: (a: unknown[], l: number) => {
@@ -52,9 +71,6 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     },
   });
 
-  // ============= Pointer-like References =============
-
-  // pointer(buffer, offset) - create a reference to a buffer position
   builtins.set('pointer', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
@@ -63,74 +79,87 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
       if (!buf || buf._type !== 'buffer') throw new SdevError('First argument must be a buffer', line);
       const offset = args[1] as number;
       const data = buf._data as Uint8Array;
+      const bytesView = () => Array.from(data);
       const obj: Record<string, unknown> = {};
       obj._type = 'pointer';
       obj.offset = offset;
-      obj.read = { type: 'builtin', call: () => data[offset] ?? 0 } as SdevFunction;
-      obj.write = { type: 'builtin', call: (a: unknown[]) => { data[offset] = (a[0] as number) & 0xFF; return null; } } as SdevFunction;
+      obj.read = { type: 'builtin', call: () => getBufRunner().call('mem_arena_peek_u8', bytesView(), offset) } as SdevFunction;
+      obj.write = { type: 'builtin', call: (a: unknown[]) => {
+        const b = bytesView();
+        getBufRunner().call('mem_arena_poke_u8', b, offset, a[0] as number);
+        data[offset] = b[offset];
+        return null;
+      } } as SdevFunction;
       obj.advance = { type: 'builtin', call: (a: unknown[]) => {
         const newOffset = offset + (a.length > 0 ? (a[0] as number) : 1);
         return (builtins.get('pointer') as SdevFunction).call([buf, newOffset], line);
       } } as SdevFunction;
       obj.readU16 = { type: 'builtin', call: () => data[offset] | (data[offset + 1] << 8) } as SdevFunction;
-      obj.readU32 = { type: 'builtin', call: () => data[offset] | (data[offset+1]<<8) | (data[offset+2]<<16) | (data[offset+3]<<24) } as SdevFunction;
-      obj.writeU16 = { type: 'builtin', call: (a: unknown[]) => { const v = a[0] as number; data[offset]=v&0xFF; data[offset+1]=(v>>8)&0xFF; return null; } } as SdevFunction;
-      obj.writeU32 = { type: 'builtin', call: (a: unknown[]) => { const v = a[0] as number; data[offset]=v&0xFF; data[offset+1]=(v>>8)&0xFF; data[offset+2]=(v>>16)&0xFF; data[offset+3]=(v>>24)&0xFF; return null; } } as SdevFunction;
+      obj.readU32 = { type: 'builtin', call: () => data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24) } as SdevFunction;
+      obj.writeU16 = { type: 'builtin', call: (a: unknown[]) => {
+        const b = bytesView();
+        getBufRunner().call('mem_arena_poke_i16', b, offset, a[0] as number);
+        data[offset] = b[offset]; data[offset + 1] = b[offset + 1];
+        return null;
+      } } as SdevFunction;
+      obj.writeU32 = { type: 'builtin', call: (a: unknown[]) => {
+        const b = bytesView();
+        getBufRunner().call('mem_arena_poke_i32', b, offset, a[0] as number);
+        data[offset] = b[offset]; data[offset + 1] = b[offset + 1]; data[offset + 2] = b[offset + 2]; data[offset + 3] = b[offset + 3];
+        return null;
+      } } as SdevFunction;
       return obj;
-    },
-  });
-
-  // ============= Systems Programming Arena Memory =============
-  builtins.set('arena_create', {
-    type: 'builtin',
-    call: (args: unknown[], line: number) => {
-      const cap = toNumber(args[0], line);
-      return {
-        bytes: new Array(cap).fill(0),
-        cap,
-        offset: 0,
-      };
-    },
-  });
-
-  builtins.set('arena_alloc', {
-    type: 'builtin',
-    call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
-      const n = toNumber(args[1], line);
-      if (!a || typeof a !== 'object') throw new SdevError('First argument must be an arena', line);
-      const cur = (a.offset as number) || 0;
-      const next = cur + n;
-      if (next > (a.cap as number)) return -1;
-      a.offset = next;
-      return cur;
-    },
-  });
-
-  builtins.set('arena_reset', {
-    type: 'builtin',
-    call: (args: unknown[], line: number) => {
-      const a = args[0] as Record<string, unknown>;
-      if (!a || typeof a !== 'object') throw new SdevError('First argument must be an arena', line);
-      a.offset = 0;
-      return 0;
     },
   });
 
   interface ArenaRecord {
     bytes: number[];
     offset: number;
-    size: number;
+    cap: number;
+    _sdevArena: unknown[];
   }
+
+  const syncArenaToState = (a: ArenaRecord) => {
+    a.offset = Number(a._sdevArena[2]);
+  };
+
+  builtins.set('arena_create', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const cap = toNumber(args[0], line);
+      const raw = getBufRunner().call('mem_arena_new', cap) as [number[], number, number];
+      return { bytes: raw[0], cap: raw[1], offset: raw[2], _sdevArena: raw };
+    },
+  });
+
+  builtins.set('arena_alloc', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as ArenaRecord;
+      const n = toNumber(args[1], line);
+      if (!a || typeof a !== 'object') throw new SdevError('First argument must be an arena', line);
+      const ptr = getBufRunner().call('mem_arena_alloc', a._sdevArena, n);
+      syncArenaToState(a);
+      return ptr;
+    },
+  });
+
+  builtins.set('arena_reset', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      const a = args[0] as ArenaRecord;
+      if (!a || typeof a !== 'object') throw new SdevError('First argument must be an arena', line);
+      getBufRunner().call('mem_arena_reset', a._sdevArena);
+      syncArenaToState(a);
+      return 0;
+    },
+  });
 
   builtins.set('mem_poke_u8', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const ptr = toNumber(args[1], line);
-      const val = toNumber(args[2], line);
-      a.bytes[ptr] = val & 0xff;
-      return 0;
+      return getBufRunner().call('mem_arena_poke_u8', a.bytes, toNumber(args[1], line), toNumber(args[2], line));
     },
   });
 
@@ -138,8 +167,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const ptr = toNumber(args[1], line);
-      return a.bytes[ptr] & 0xff;
+      return getBufRunner().call('mem_arena_peek_u8', a.bytes, toNumber(args[1], line));
     },
   });
 
@@ -147,11 +175,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const ptr = toNumber(args[1], line);
-      const val = toNumber(args[2], line);
-      a.bytes[ptr] = val & 0xff;
-      a.bytes[ptr + 1] = (val >> 8) & 0xff;
-      return 0;
+      return getBufRunner().call('mem_arena_poke_i16', a.bytes, toNumber(args[1], line), toNumber(args[2], line));
     },
   });
 
@@ -159,12 +183,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const ptr = toNumber(args[1], line);
-      const b0 = a.bytes[ptr] & 0xff;
-      const b1 = a.bytes[ptr + 1] & 0xff;
-      let val = b0 | (b1 << 8);
-      if (val >= 0x8000) val -= 0x10000;
-      return val;
+      return getBufRunner().call('mem_arena_peek_i16', a.bytes, toNumber(args[1], line));
     },
   });
 
@@ -172,13 +191,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const ptr = toNumber(args[1], line);
-      const val = toNumber(args[2], line);
-      a.bytes[ptr] = val & 0xff;
-      a.bytes[ptr + 1] = (val >> 8) & 0xff;
-      a.bytes[ptr + 2] = (val >> 16) & 0xff;
-      a.bytes[ptr + 3] = (val >> 24) & 0xff;
-      return 0;
+      return getBufRunner().call('mem_arena_poke_i32', a.bytes, toNumber(args[1], line), toNumber(args[2], line));
     },
   });
 
@@ -186,12 +199,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const ptr = toNumber(args[1], line);
-      const b0 = a.bytes[ptr] & 0xff;
-      const b1 = a.bytes[ptr + 1] & 0xff;
-      const b2 = a.bytes[ptr + 2] & 0xff;
-      const b3 = a.bytes[ptr + 3] & 0xff;
-      return (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)) | 0;
+      return getBufRunner().call('mem_arena_peek_i32', a.bytes, toNumber(args[1], line));
     },
   });
 
@@ -199,11 +207,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const ptr = toNumber(args[1], line);
-      const len = toNumber(args[2], line);
-      const val = toNumber(args[3], line) & 0xff;
-      for (let i = 0; i < len; i++) a.bytes[ptr + i] = val;
-      return 0;
+      return getBufRunner().call('mem_arena_fill', a.bytes, toNumber(args[1], line), toNumber(args[2], line), toNumber(args[3], line));
     },
   });
 
@@ -211,13 +215,7 @@ export function registerBuffer(builtins: Map<string, SdevFunction>, output: Outp
     type: 'builtin',
     call: (args: unknown[], line: number) => {
       const a = args[0] as ArenaRecord;
-      const dst = toNumber(args[1], line);
-      const src = toNumber(args[2], line);
-      const len = toNumber(args[3], line);
-      const slice = a.bytes.slice(src, src + len);
-      for (let i = 0; i < len; i++) a.bytes[dst + i] = slice[i];
-      return 0;
+      return getBufRunner().call('mem_arena_copy', a.bytes, toNumber(args[1], line), toNumber(args[2], line), toNumber(args[3], line));
     },
   });
-
 }

@@ -7,6 +7,7 @@
  * is desugared to a call before the untouched toolchain sees the source.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { escapeRe } from './canonicalize';
 
 export interface ExtensionRecord {
   id: string;
@@ -55,10 +56,6 @@ export function setExtensionEnabled(id: string, on: boolean): void {
   writeJson(ENABLED_KEY, [...next]);
 }
 
-export function isExtensionEnabled(id: string): boolean {
-  return enabledIds().includes(id);
-}
-
 /** Pull the signed-in user's extensions into the cache, keeping installed
  *  public ones and local (`sdev ext add`) ones — those live only in the cache. */
 export async function syncExtensions(userId: string | null): Promise<ExtensionRecord[]> {
@@ -104,9 +101,6 @@ export function extensionPrelude(): string {
   return bodies.length ? bodies.join('\n\n') + '\n' : '';
 }
 
-function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 const ATOM = String.raw`(?:[\p{L}\p{N}_]+(?:\([^()]*\))?|"[^"]*")`;
 

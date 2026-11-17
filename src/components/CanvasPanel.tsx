@@ -316,7 +316,6 @@ export const CanvasPanel = forwardRef<CanvasHandle, CanvasPanelProps>(({ command
           break;
         }
 
-        // ========== Text ==========
         case 'text':
           currentFont = `${cmd.size}px ${currentFontFamily}`;
           ctx.font = currentFont;

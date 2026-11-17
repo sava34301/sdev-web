@@ -1,0 +1,11 @@
+# =============================================================================
+# SDEV Standard Library: Website Building Toolkit (lang/stdlib/v2/web.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/web/icons.sdev"
+use "lang/web/themes.sdev"
+use "lang/web/transpiler.sdev"
+use "lang/web/css.sdev"
+use "lang/web/html.sdev"
+use "lang/web/components.sdev"

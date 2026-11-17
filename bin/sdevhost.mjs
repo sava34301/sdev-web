@@ -136,7 +136,7 @@ async function main() {
     if (path.startsWith('sdev:exec:')) {
       const cmd = path.slice(10);
       try {
-        const out = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+        const out = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 20 * 1024 * 1024, windowsHide: true });
         return `0\n${out}`;
       } catch (e) {
         return `${e.status ?? 1}\n${(e.stdout ?? '') + (e.stderr ?? '')}`;

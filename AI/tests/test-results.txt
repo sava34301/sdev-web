@@ -1,0 +1,31 @@
+=== NOIT Appendix 5 — Automated Verification Log (no personal API keys) ===
+Date: 2026-11-14
+
+1) npm run test:understander-docs
+blocks=480 runnable(v1)=179 rewritten=8 broken=0 threw=0 | v2 blocks=74 v2 rewritten=34
+
+2) npm run test:brain-benchmarks
+=== WebGPU Micro-Brain Natural Language Benchmark Suite ===
+  ok   calculate the area of a circle with radius 2
+  ok   make a shopping list with milk, eggs and bread and print it sorted
+  ok   print every even number between 1 and 10
+  ok   convert 100 celsius to fahrenheit
+  ok   find the biggest number in 4, 17, 9 and 12
+  ok   write a function that doubles a number and use it on 21
+  ok   check if racecar is a palindrome
+  ok   count how many vowels are in the word programming
+  ok   print the first 10 fibonacci numbers
+  ok   sum all numbers from 1 to 100
+  ok   make a record for a person named Ana who is 30 and print her name and age
+  ok   FizzBuzz up to 15
+Results: 12 passed, 0 failed out of 12 benchmarks
+
+=== Brain Sanitizer & Parser Robustness Tests ===
+aiToSdev output: "forge x be 10\nspeak(x)"
+  ok   Restores missing !#ai header for AI dialect tokens
+  ok   Converts print(...) to say ...
+  ok   Converts def foo(a, b): and auto-closes with end
+  ok   Converts for i in range(...) loop to for each i in sequence(...)
+  ok   Extracts JSON and cleans prose preambles/postambles
+  ok   Extracts bare JSON object embedded in text
+All Brain Sanitizer tests passed!

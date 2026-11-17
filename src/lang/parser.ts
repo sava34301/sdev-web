@@ -55,7 +55,7 @@ export class Parser {
     if (this.check(TokenType.MATCH) && this.isMatchStatement()) return this.parseMatchStatement();
     if (this.check(TokenType.RAISE)) return this.parseRaiseStatement();
     if (this.check(TokenType.ASSERT)) return this.parseAssertStatement();
-    if (this.check(TokenType.DEL)) return this.parseDelStatement();
+    if (this.check(TokenType.DEL) && this.tokens[this.pos + 1]?.type !== TokenType.LPAREN) return this.parseDelStatement();
     if (this.check(TokenType.GLOBAL) || this.check(TokenType.NONLOCAL)) return this.parseScopeStatement();
     if (this.check(TokenType.SUMMON)) return this.parseImportStatement();
     if (this.check(TokenType.FROM)) return this.parseFromImportStatement();
@@ -453,17 +453,21 @@ export class Parser {
     };
   }
 
+  private lastBlockConsumedEnd = false;
+
   // ponder condition :: body ;; [elsewise cond :: ;;] [otherwise :: body ;;]
   private parsePonderStatement(): AST.IfStatement {
     const ponderToken = this.consume(TokenType.PONDER, "Expected 'ponder'");
     const condition = this.parseExpression();
     const thenBranch = this.parseBlockStatement();
+    const closedByEnd = this.lastBlockConsumedEnd;
 
     let elseBranch: AST.BlockStatement | AST.IfStatement | undefined;
-    if (this.check(TokenType.ELIF)) {
+    if (!closedByEnd && this.check(TokenType.ELIF)) {
       elseBranch = this.parseElifChain();
-    } else if (this.match(TokenType.OTHERWISE)) {
-      if (this.check(TokenType.PONDER)) {
+    } else if (!closedByEnd && this.match(TokenType.OTHERWISE)) {
+      const otherwiseToken = this.previous();
+      if (this.check(TokenType.PONDER) && this.peek().line === otherwiseToken.line) {
         elseBranch = this.parsePonderStatement();
       } else {
         elseBranch = this.parseBlockStatement();
@@ -477,9 +481,10 @@ export class Parser {
     const t = this.consume(TokenType.ELIF, "Expected 'elif'");
     const condition = this.parseExpression();
     const thenBranch = this.parseBlockStatement();
+    const closedByEnd = this.lastBlockConsumedEnd;
     let elseBranch: AST.BlockStatement | AST.IfStatement | undefined;
-    if (this.check(TokenType.ELIF)) elseBranch = this.parseElifChain();
-    else if (this.match(TokenType.OTHERWISE)) elseBranch = this.parseBlockStatement();
+    if (!closedByEnd && this.check(TokenType.ELIF)) elseBranch = this.parseElifChain();
+    else if (!closedByEnd && this.match(TokenType.OTHERWISE)) elseBranch = this.parseBlockStatement();
     return { type: 'IfStatement', condition, thenBranch, elseBranch, line: t.line };
   }
 
@@ -866,7 +871,9 @@ export class Parser {
       while (!this.isAtEnd() && !this.checkEndWord() && !this.check(TokenType.DOUBLE_SEMI) && !this.check(TokenType.OTHERWISE) && !this.checkIdentifierValue('else')) {
         statements.push(this.parseStatement());
       }
-      if (this.checkEndWord()) this.advance();
+      const consumedEnd = this.checkEndWord();
+      if (consumedEnd) this.advance();
+      this.lastBlockConsumedEnd = consumedEnd;
       return { type: 'BlockStatement', statements, line: start.line };
     }
     const colonToken = this.consume(TokenType.DOUBLE_COLON, "Expected '::'");
@@ -875,6 +882,7 @@ export class Parser {
       statements.push(this.parseStatement());
     }
     this.consume(TokenType.DOUBLE_SEMI, "Expected ';;'");
+    this.lastBlockConsumedEnd = false;
     return { type: 'BlockStatement', statements, line: colonToken.line };
   }
 
@@ -1316,7 +1324,7 @@ export class Parser {
           continue;
         }
         // keyword argument:  name be value  |  name: value
-        if (this.check(TokenType.IDENTIFIER) &&
+        if ((this.check(TokenType.IDENTIFIER) || /^[A-Za-z_$][\w$]*$/.test(this.peek().value)) &&
           (this.tokens[this.pos + 1]?.type === TokenType.BE || this.tokens[this.pos + 1]?.type === TokenType.COLON)) {
           const name = this.advance().value;
           this.advance();
@@ -1402,8 +1410,8 @@ export class Parser {
       return { type: 'Identifier', name: token.value, line: token.line };
     }
 
-    // Contextual keywords usable as plain values (`match`, `case`, `when`, ...)
-    if (this.check(TokenType.MATCH) || this.check(TokenType.WHEN) || this.check(TokenType.CASE)) {
+    // Contextual keywords usable as plain values (`match`, `case`, `when`, `del`, ...)
+    if (this.check(TokenType.MATCH) || this.check(TokenType.WHEN) || this.check(TokenType.CASE) || this.check(TokenType.DEL)) {
       const t = this.advance();
       return { type: 'Identifier', name: t.value, line: t.line };
     }
@@ -1579,13 +1587,13 @@ export class Parser {
           first = false;
           continue;
         }
-        // Allow bare identifier keys (treated as string)
+        // Allow bare identifier or keyword keys (treated as string, e.g. { class: "card", for: "id" })
         let key: AST.ASTNode;
-        let bareKeyToken: { value: string; line: number } | undefined;
+        let bareKeyToken: { value: string; line: number; isIdent: boolean } | undefined;
         const t = this.peek();
-        if (t.type === TokenType.IDENTIFIER && this.tokens[this.pos + 1]?.type === TokenType.COLON) {
+        if (/^[A-Za-z_$][\w$]*$/.test(t.value) && this.tokens[this.pos + 1]?.type === TokenType.COLON) {
           this.advance();
-          bareKeyToken = { value: t.value, line: t.line };
+          bareKeyToken = { value: t.value, line: t.line, isIdent: t.type === TokenType.IDENTIFIER };
           key = { type: 'StringLiteral', value: t.value, line: t.line };
         } else {
           key = this.parseExpression();
@@ -1595,7 +1603,7 @@ export class Parser {
         if (first && this.check(TokenType.ITERATE)) {
           // In a comprehension a bare identifier key is an expression,
           // not the shorthand string key used by dict literals.
-          const compKey: AST.ASTNode = bareKeyToken
+          const compKey: AST.ASTNode = bareKeyToken && bareKeyToken.isIdent
             ? { type: 'Identifier', name: bareKeyToken.value, line: bareKeyToken.line }
             : key;
           const comp = this.finishComprehension(compKey, 'dict', value, line);

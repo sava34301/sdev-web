@@ -5,7 +5,7 @@
 use "lang/stdlib/testkit.sdev"
 
 to run_snippet with code
-  set p to ".tmp_snippet.sdev"
+  set p to ".tmp_snippet_literals.sdev"
   set _ to write_file(p, code)
   set res to shell(concat("node bin/sdev.mjs run --no-agent ", p))
   set nl to find(res, "\n")
@@ -110,6 +110,6 @@ end
 set _ to check("f-strings still interpolate", ok11)
 
 # Cleanup scratch
-set _ to write_file(".tmp_snippet.sdev", "")
+set _ to write_file(".tmp_snippet_literals.sdev", "")
 
 set _ to tk_report("parser literals suite")

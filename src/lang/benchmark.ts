@@ -5,7 +5,16 @@
  * (min, p50, p95, p99, max), and produces formatted distribution bar reports.
  */
 
-import { execute } from './index';
+import { execute } from './executor';
+import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
+import SDEV_TEXT_SRC from '../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_NOTEBOOK_SRC from '../../lang/runtime/notebook.sdev?raw';
+
+let benchRunner: SdevModuleRunner | null = null;
+function getBenchRunner(): SdevModuleRunner {
+  if (!benchRunner) benchRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_NOTEBOOK_SRC);
+  return benchRunner;
+}
 
 export interface BenchmarkOptions {
   warmup?: number;
@@ -69,15 +78,13 @@ export async function runBenchmark(
   }
 
   const totalDurationMs = performance.now() - tTotalStart;
-  samples.sort((a, b) => a - b);
-
-  const sumMs = samples.reduce((acc, s) => acc + s, 0);
-  const meanMs = Number((sumMs / iterations).toFixed(4));
-  const minMs = Number(samples[0].toFixed(4));
-  const maxMs = Number(samples[samples.length - 1].toFixed(4));
-  const p50Ms = percentile(samples, 50);
-  const p95Ms = percentile(samples, 95);
-  const p99Ms = percentile(samples, 99);
+  const [rawMean, rawMin, rawMax, rawP50, rawP95, rawP99] = getBenchRunner().call('bench_compute', samples) as number[];
+  const meanMs = Number(rawMean.toFixed(4));
+  const minMs = Number(rawMin.toFixed(4));
+  const maxMs = Number(rawMax.toFixed(4));
+  const p50Ms = Number(rawP50.toFixed(4));
+  const p95Ms = Number(rawP95.toFixed(4));
+  const p99Ms = Number(rawP99.toFixed(4));
 
   // Operations per second: iterations / total time in seconds
   const totalSec = totalDurationMs / 1000;
@@ -104,7 +111,8 @@ export async function runBenchmark(
  */
 export function formatBenchmarkReport(res: BenchmarkResult): string {
   const barWidth = 24;
-  const filled = Math.min(barWidth, Math.max(1, Math.round((res.p50Ms / (res.maxMs || 1)) * barWidth)));
+  const [, , , , , , , rawFilled] = getBenchRunner().call('bench_compute', [res.minMs, res.p50Ms, res.maxMs]) as number[];
+  const filled = Math.min(barWidth, Math.max(1, Number(rawFilled || 1)));
   const bar = '█'.repeat(filled) + '░'.repeat(barWidth - filled);
 
   return [

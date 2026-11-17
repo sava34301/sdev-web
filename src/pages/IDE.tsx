@@ -56,7 +56,7 @@ import { toast } from 'sonner';
 import { stripBoardBlocks } from '@/lang/hardware/strip';
 import type { IdeFile, IdeFolder, SidePanel, IdeSettings } from '@/components/ide/types';
 import { createUiBuiltins, type UiState, type UiCallback } from '@/lang/ui';
-import { createWebBuiltins, type WebState } from '@/lang/web';
+import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/web';
 import { AppPreviewPanel } from '@/components/ide/AppPreviewPanel';
 import { WebPreviewPanel } from '@/components/ide/WebPreviewPanel';
 import { useWorkspaceSync } from '@/hooks/useWorkspaceSync';
@@ -73,6 +73,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import sdevLogo from '@/assets/sdev-logo.png';
 import sdevStubAsset from '@/runtime/sdev-stub-win-x64.exe.asset.json';
+import sdevWebsiteSource from '../../lang/web/sdev-website.sdev?raw';
 
 const patchLegacyRuntimeStub = (stub: Uint8Array): boolean => {
   // Existing uploaded Windows runtimes contain the web DSL helper named
@@ -286,6 +287,11 @@ speak("Get name:", m.get("name"))
 speak("Keys:", m.keys())
 speak("Has age:", m.has("age"))
 `,
+  },
+  {
+    id: '6',
+    name: 'sdev-website.sdev',
+    content: sdevWebsiteSource,
   },
   {
     id: '99',
@@ -912,11 +918,16 @@ export default function IDEPage() {
         let producedWeb = false;
         const web = createWebBuiltins((s) => {
           producedWeb = true;
-          setWebState({ ...s, head: [...s.head], stack: s.stack.map(b => [...b]), css: [...s.css], js: [...s.js] });
+          setWebState({
+            ...s,
+            head: [...s.head],
+            stack: s.stack.map(b => [...b]),
+            css: [...s.css],
+            js: [...s.js],
+            moduleJs: [...(s.moduleJs ?? [])],
+          });
         });
-        web.forEach((fn, name) => {
-          if (name !== 'canvas') env.define(name, fn);
-        });
+        bindWebBuiltinsToEnv(env, web, { hasUiRoot: () => uiStateRef.current?.rootId != null });
         interpreter.interpret(ast);
         if (producedWeb) setBottomPanel('web');
         else if (producedUi) { setBottomPanel('app'); }
@@ -974,11 +985,16 @@ export default function IDEPage() {
         let producedWeb = false;
         const web = createWebBuiltins((s) => {
           producedWeb = true;
-          setWebState({ ...s, head: [...s.head], stack: s.stack.map(b => [...b]), css: [...s.css], js: [...s.js] });
+          setWebState({
+            ...s,
+            head: [...s.head],
+            stack: s.stack.map(b => [...b]),
+            css: [...s.css],
+            js: [...s.js],
+            moduleJs: [...(s.moduleJs ?? [])],
+          });
         });
-        web.forEach((fn, name) => {
-          if (name !== 'canvas') env.define(name, fn);
-        });
+        bindWebBuiltinsToEnv(env, web, { hasUiRoot: () => uiStateRef.current?.rootId != null });
         interpreter.interpret(ast);
         if (producedWeb) setBottomPanel('web');
         else if (producedUi) { setBottomPanel('app'); }

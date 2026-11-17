@@ -1,0 +1,187 @@
+# =============================================================================
+# SDEV Standard Library: Turtle Vector Graphics Engine (lang/stdlib/v2/turtle.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+# _turtle state list:
+# 0: x (int)
+# 1: y (int)
+# 2: angle_deg (int)
+# 3: pen_down (int 1/0)
+# 4: color (str)
+# 5: width (int)
+# 6: seg_count (int)
+# 7: svg_body (str)
+set _turtle to mklist(10)
+set _turtle[0] to 200
+set _turtle[1] to 200
+set _turtle[2] to 0
+set _turtle[3] to 1
+set _turtle[4] to "#38bdf8"
+set _turtle[5] to 2
+set _turtle[6] to 0
+set _turtle[7] to ""
+
+to turtle_create
+  set _turtle[0] to 200
+  set _turtle[1] to 200
+  set _turtle[2] to 0
+  set _turtle[3] to 1
+  set _turtle[4] to "#38bdf8"
+  set _turtle[5] to 2
+  set _turtle[6] to 0
+  set _turtle[7] to ""
+  return _turtle
+end
+
+to turtle_emit with frag
+  set cur to concat(_turtle[7], "")
+  set _turtle[7] to cur + frag + "\n"
+  set _turtle[6] to _turtle[6] + 1
+  return 0
+end
+
+to turtle_forward with dist
+  set x1 to _turtle[0]
+  set y1 to _turtle[1]
+  set deg to _turtle[2]
+  set rad to i2f(deg) * 3.14159265 / 180.0
+  set dx to f2i(fround(fcos(rad) * i2f(dist)))
+  set dy to f2i(fround(fsin(rad) * i2f(dist)))
+  set x2 to x1 + dx
+  set y2 to y1 + dy
+  set _turtle[0] to x2
+  set _turtle[1] to y2
+  if _turtle[3] is 1
+    set col to concat(_turtle[4], "")
+    set w to str(_turtle[5])
+    set _ to turtle_emit("<line x1=\"" + str(x1) + "\" y1=\"" + str(y1) + "\" x2=\"" + str(x2) + "\" y2=\"" + str(y2) + "\" stroke=\"" + col + "\" stroke-width=\"" + w + "\" stroke-linecap=\"round\"/>")
+  end
+  return 0
+end
+
+to turtle_backward with dist
+  return turtle_forward(0 - dist)
+end
+
+to turtle_right with deg
+  set _turtle[2] to (_turtle[2] + deg) % 360
+  return 0
+end
+
+to turtle_left with deg
+  set a to (_turtle[2] - deg) % 360
+  if a < 0
+    set a to a + 360
+  end
+  set _turtle[2] to a
+  return 0
+end
+
+to turtle_goto with x y
+  set x1 to _turtle[0]
+  set y1 to _turtle[1]
+  set _turtle[0] to x
+  set _turtle[1] to y
+  if _turtle[3] is 1
+    set col to concat(_turtle[4], "")
+    set w to str(_turtle[5])
+    set _ to turtle_emit("<line x1=\"" + str(x1) + "\" y1=\"" + str(y1) + "\" x2=\"" + str(x) + "\" y2=\"" + str(y) + "\" stroke=\"" + col + "\" stroke-width=\"" + w + "\" stroke-linecap=\"round\"/>")
+  end
+  return 0
+end
+
+to turtle_pen_up
+  set _turtle[3] to 0
+  return 0
+end
+
+to turtle_pen_down
+  set _turtle[3] to 1
+  return 0
+end
+
+to turtle_pen_color with col_str
+  set _turtle[4] to concat(col_str, "")
+  return 0
+end
+
+to turtle_pen_width with w
+  set _turtle[5] to w
+  return 0
+end
+
+to turtle_heading with deg
+  set _turtle[2] to deg % 360
+  return 0
+end
+
+to turtle_home
+  set _turtle[0] to 200
+  set _turtle[1] to 200
+  set _turtle[2] to 0
+  return 0
+end
+
+to turtle_dot with r
+  set col to concat(_turtle[4], "")
+  return turtle_emit("<circle cx=\"" + str(_turtle[0]) + "\" cy=\"" + str(_turtle[1]) + "\" r=\"" + str(r) + "\" fill=\"" + col + "\"/>")
+end
+
+to turtle_circle with r
+  set col to concat(_turtle[4], "")
+  set w to str(_turtle[5])
+  return turtle_emit("<circle cx=\"" + str(_turtle[0]) + "\" cy=\"" + str(_turtle[1]) + "\" r=\"" + str(r) + "\" fill=\"none\" stroke=\"" + col + "\" stroke-width=\"" + w + "\"/>")
+end
+
+to turtle_x
+  return _turtle[0]
+end
+
+to turtle_y
+  return _turtle[1]
+end
+
+to turtle_angle
+  return _turtle[2]
+end
+
+to turtle_segment_count
+  return _turtle[6]
+end
+
+to turtle_to_svg
+  set svg to "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"400\" viewBox=\"0 0 400 400\">\n" + concat(_turtle[7], "") + "</svg>"
+  return concat(svg, "")
+end
+
+
+to turtle_step_pos with x y angle_deg dist
+  set rad to (angle_deg * 3.141592653589793) / 180.0
+  set nx to x + (fcos(rad) * dist)
+  set ny to y + (fsin(rad) * dist)
+  return [nx, ny]
+end
+
+to turtle_circle_steps with x y angle_deg radius steps
+  set angle_step to 360.0 / steps
+  set dist to ((2.0 * 3.141592653589793) * radius) / steps
+  set cx to x
+  set cy to y
+  set ca to angle_deg
+  set segs to mklist(steps)
+  set i to 0
+  while i < steps
+    set rad to (ca * 3.141592653589793) / 180.0
+    set nx to cx + (fcos(rad) * dist)
+    set ny to cy + (fsin(rad) * dist)
+    set segs[i] to [cx, cy, nx, ny]
+    set cx to nx
+    set cy to ny
+    set ca to ca + angle_step
+    set i to i + 1
+  end
+  return [cx, cy, ca, segs]
+end

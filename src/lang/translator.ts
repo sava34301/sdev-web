@@ -15,6 +15,14 @@
  * supported via underscore-joined keys in the keyword tables.
  */
 import { V1_TO_V2, V2_EXTRA, TAG_TO_LANGUAGE } from './translator-v2';
+import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
+import SDEV_TRANSLATOR_SRC from '../../lang/translator/translator.sdev?raw';
+
+let translatorRunner: SdevModuleRunner | null = null;
+function getTranslatorRunner(): SdevModuleRunner {
+  if (!translatorRunner) translatorRunner = createSdevModuleRunner(SDEV_TRANSLATOR_SRC);
+  return translatorRunner;
+}
 
 // ============================================================
 // Keyword tables — foreign word → canonical English sdev keyword
@@ -535,15 +543,6 @@ export const KEYWORD_TABLES: Record<string, Record<string, string>> = {
   },
 };
 
-// Canonical English sdev keywords — never translated, never replaced.
-export const ENGLISH_KEYWORDS = new Set([
-  'forge', 'be', 'conjure', 'yield', 'ponder', 'otherwise', 'cycle',
-  'iterate', 'through', 'within', 'yeet', 'skip', 'speak', 'essence',
-  'extend', 'self', 'super', 'new', 'attempt', 'rescue', 'also',
-  'either', 'isnt', 'equals', 'differs', 'yep', 'nope', 'void',
-  'summon', 'async', 'await', 'spawn',
-]);
-
 export const SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
 
 // ============================================================
@@ -646,41 +645,8 @@ function compileReplacer(lang: string, target: TranslationTarget = 'v1'): (s: st
 interface Segment { code: boolean; text: string; }
 
 function segmentSource(source: string): Segment[] {
-  const segs: Segment[] = [];
-  let i = 0;
-  let buf = '';
-  const flush = (code: boolean) => { if (buf) { segs.push({ code, text: buf }); buf = ''; } };
-
-  while (i < source.length) {
-    const c = source[i];
-    // Line comments  // ...   or  # ...
-    if ((c === '/' && source[i + 1] === '/') || c === '#') {
-      flush(true);
-      const end = source.indexOf('\n', i);
-      const stop = end === -1 ? source.length : end;
-      segs.push({ code: false, text: source.slice(i, stop) });
-      i = stop;
-      continue;
-    }
-    // Strings: " ' `
-    if (c === '"' || c === "'" || c === '`') {
-      flush(true);
-      const quote = c;
-      let j = i + 1;
-      while (j < source.length) {
-        if (source[j] === '\\') { j += 2; continue; }
-        if (source[j] === quote) { j++; break; }
-        j++;
-      }
-      segs.push({ code: false, text: source.slice(i, j) });
-      i = j;
-      continue;
-    }
-    buf += c;
-    i++;
-  }
-  flush(true);
-  return segs;
+  const raw = getTranslatorRunner().call('translator_segment_source', source) as Array<[number, string]>;
+  return raw.map(([codeFlag, text]) => ({ code: codeFlag === 1, text }));
 }
 
 // ============================================================
@@ -689,10 +655,7 @@ function segmentSource(source: string): Segment[] {
 
 /** Returns true if `code` contains non-ASCII chars (likely foreign script). */
 export function hasNonAscii(code: string): boolean {
-  for (let i = 0; i < code.length; i++) {
-    if (code.charCodeAt(i) > 127) return true;
-  }
-  return false;
+  return Number(getTranslatorRunner().call('translator_has_non_ascii', code)) === 1;
 }
 
 /**
@@ -701,25 +664,41 @@ export function hasNonAscii(code: string): boolean {
  * code is already English sdev.
  */
 export function detectLanguage(source: string, protect?: ReadonlySet<string>): string | null {
-  // Quick English check — hits on either surface mean the code is already sdev.
-  const englishHits = (source.match(
-    /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind)\b/g,
+  const codeOnly = segmentSource(source)
+    .filter((s) => s.code)
+    .map((s) => s.text)
+    .join('\n');
+
+  // Quick English check — hits on either surface or declarative builtins mean the code is already sdev.
+  const englishHits = (codeOnly.match(
+    /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind|page|endpage|style|styles|theme|window|canvas|board)\b/g,
   ) || []).length;
 
   let bestLang: string | null = null;
   let bestScore = 0;
+
+  const hasWholeWord = (text: string, word: string): boolean => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[\\s_]+');
+    const re = new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, 'u');
+    return re.test(text);
+  };
 
   for (const lang of SUPPORTED_LANGUAGES) {
     const table = KEYWORD_TABLES[lang];
     let score = 0;
     for (const word of Object.keys(table)) {
       if (protect?.has(word)) continue;
-      // Cheap substring count — good enough for heuristic detection.
-      if (source.includes(word)) score++;
+      if (word.length === 1 && word.charCodeAt(0) < 128) continue;
+      if (codeOnly.includes(word.split('_')[0]) && hasWholeWord(codeOnly, word)) {
+        score += hasNonAscii(word) ? 2 : 1;
+      }
     }
     for (const word of Object.keys(V2_EXTRA[lang] ?? {})) {
       if (protect?.has(word)) continue;
-      if (source.includes(word)) score++;
+      if (word.length === 1 && word.charCodeAt(0) < 128) continue;
+      if (codeOnly.includes(word.split('_')[0]) && hasWholeWord(codeOnly, word)) {
+        score += hasNonAscii(word) ? 2 : 1;
+      }
     }
     if (score > bestScore) {
       bestScore = score;
@@ -864,23 +843,7 @@ export function translateForDialect(
 // ============================================================
 
 function levenshtein(a: string, b: string): number {
-  if (a === b) return 0;
-  const al = a.length, bl = b.length;
-  if (al === 0) return bl;
-  if (bl === 0) return al;
-  // Single-row DP for memory efficiency.
-  let prev = new Array(bl + 1);
-  let curr = new Array(bl + 1);
-  for (let j = 0; j <= bl; j++) prev[j] = j;
-  for (let i = 1; i <= al; i++) {
-    curr[0] = i;
-    for (let j = 1; j <= bl; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
-    }
-    [prev, curr] = [curr, prev];
-  }
-  return prev[bl];
+  return Number(getTranslatorRunner().call('translator_levenshtein', a, b));
 }
 
 const FUZZY_REPLACERS: Record<string, (s: string, protect?: ReadonlySet<string>) => string> = {};

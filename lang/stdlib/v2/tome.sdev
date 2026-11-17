@@ -5,8 +5,15 @@ to tome_create
 end
 
 to tome_get_or with t key fallback
-  if has(t, key)
-    return t[key]
+  set ks to keys(t)
+  set vs to values(t)
+  set n to length(ks)
+  set i to 0
+  while i < n
+    if concat(ks[i], "") is key
+      return vs[i]
+    end
+    set i to i + 1
   end
   return fallback
 end

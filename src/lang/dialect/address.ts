@@ -5,27 +5,26 @@
  *   8-character share code  — paste-friendly
  */
 
+import { getDialectRunner } from './dialect-runner';
+
 export interface Address {
   username: string;
   slug: string;
   version: string | null;
 }
 
-const ADDRESS_RE = /^@([a-z0-9][a-z0-9-]{0,30})\/([a-z0-9][a-z0-9-]{0,38})(?:@(\d+\.\d+\.\d+))?$/;
-const SHARE_CODE_RE = /^[0-9a-f]{8}$/;
-
 export function parseAddress(input: string): Address | null {
-  const m = input.trim().match(ADDRESS_RE);
-  if (!m) return null;
-  return { username: m[1], slug: m[2], version: m[3] ?? null };
+  const res = getDialectRunner().call('dialect_parse_address', input) as string[];
+  if (!res || res.length === 0) return null;
+  return { username: res[0], slug: res[1], version: res[2] ? res[2] : null };
 }
 
 export function formatAddress(a: Address): string {
-  return `@${a.username}/${a.slug}${a.version ? `@${a.version}` : ''}`;
+  return getDialectRunner().callStr('dialect_format_address', a.username, a.slug, a.version ?? '');
 }
 
 export function isShareCode(input: string): boolean {
-  return SHARE_CODE_RE.test(input.trim().toLowerCase());
+  return Number(getDialectRunner().call('dialect_is_share_code', input)) === 1;
 }
 
 /** Accepts either form and reports what it is. */

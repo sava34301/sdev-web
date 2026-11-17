@@ -5,7 +5,16 @@
  * cells sequentially, maintaining variable and function state across cells.
  */
 
-import { execute } from './index';
+import { execute } from './executor';
+import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
+import SDEV_TEXT_SRC from '../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_NOTEBOOK_SRC from '../../lang/runtime/notebook.sdev?raw';
+
+let nbRunner: SdevModuleRunner | null = null;
+function getNbRunner(): SdevModuleRunner {
+  if (!nbRunner) nbRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_NOTEBOOK_SRC);
+  return nbRunner;
+}
 
 export interface NotebookCell {
   id: string;
@@ -42,72 +51,19 @@ export interface NotebookExecutionResult {
  * Parses markdown into sequential markdown and code cells.
  */
 export function parseNotebook(markdown: string): Notebook {
-  const lines = markdown.split(/\r?\n/);
-  const cells: NotebookCell[] = [];
-  let inCode = false;
-  let codeLang = '';
-  let currentBuffer: string[] = [];
-  let cellStartLine = 1;
-  let title = 'Untitled Notebook';
-
-  const firstHeading = lines.find((l) => /^#\s+(.+)$/.test(l));
-  if (firstHeading) {
-    const m = firstHeading.match(/^#\s+(.+)$/);
-    if (m) title = m[1].trim();
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const fenceMatch = line.match(/^```([a-zA-Z0-9_:-]*)/);
-
-    if (fenceMatch && !inCode) {
-      // Flush preceding markdown cell if not empty
-      if (currentBuffer.join('').trim()) {
-        cells.push({
-          id: `cell-${cells.length}`,
-          index: cells.length,
-          kind: 'markdown',
-          content: currentBuffer.join('\n').trim(),
-          startLine: cellStartLine,
-          endLine: i,
-        });
-      }
-      inCode = true;
-      codeLang = fenceMatch[1].toLowerCase() || 'sdev';
-      currentBuffer = [];
-      cellStartLine = i + 1;
-    } else if (line.startsWith('```') && inCode) {
-      cells.push({
-        id: `cell-${cells.length}`,
-        index: cells.length,
-        kind: 'code',
-        language: codeLang,
-        content: currentBuffer.join('\n'),
-        startLine: cellStartLine,
-        endLine: i + 1,
-      });
-      inCode = false;
-      codeLang = '';
-      currentBuffer = [];
-      cellStartLine = i + 2;
-    } else {
-      currentBuffer.push(line);
-    }
-  }
-
-  // Flush remaining markdown if any
-  if (currentBuffer.join('').trim()) {
-    cells.push({
-      id: `cell-${cells.length}`,
-      index: cells.length,
-      kind: inCode ? 'code' : 'markdown',
-      language: inCode ? codeLang : undefined,
-      content: currentBuffer.join('\n').trim(),
-      startLine: cellStartLine,
-      endLine: lines.length,
-    });
-  }
-
+  const [title, rawCells] = getNbRunner().call('nb_parse_cells', markdown) as [
+    string,
+    Array<[number, 'markdown' | 'code', string, string, number, number]>
+  ];
+  const cells: NotebookCell[] = rawCells.map(([index, kind, lang, content, startLine, endLine]) => ({
+    id: `cell-${index}`,
+    index,
+    kind,
+    language: kind === 'code' ? (lang || 'sdev') : undefined,
+    content,
+    startLine,
+    endLine,
+  }));
   return { cells, title };
 }
 

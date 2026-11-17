@@ -9,17 +9,22 @@
 // half-written firmware as sdev.
 
 import { findBoardSpans } from './understand';
+import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_HARDWARE_SRC from '../../../lang/paradigms/hardware.sdev?raw';
+
+let hwStripRunner: SdevModuleRunner | null = null;
+function getHwStripRunner(): SdevModuleRunner {
+  if (!hwStripRunner) hwStripRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_HARDWARE_SRC);
+  return hwStripRunner;
+}
 
 export function stripBoardBlocks(source: string): string {
   const spans = findBoardSpans(source);
   if (spans.length === 0) return source;
-  let out = '';
-  let last = 0;
-  for (const s of spans) {
-    const removed = source.slice(s.start, s.end);
-    // Replace with blank lines, preserving line numbers.
-    out += source.slice(last, s.start) + '\n'.repeat(removed.split('\n').length - 1);
-    last = s.end;
-  }
-  return out + source.slice(last);
+  return getHwStripRunner().callStr(
+    'hw_strip_spans',
+    source,
+    spans.map((s) => [s.start, s.end])
+  );
 }

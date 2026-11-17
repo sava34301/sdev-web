@@ -10,6 +10,7 @@ import { Search, BookOpen, Download, FileCode, Code2, Terminal, ArrowLeft, Libra
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { slugify } from '@/lib/utils';
 
 interface Heading { id: string; text: string; level: number }
 interface DocSource { id: string; title: string; url: string; icon: React.ComponentType<{ className?: string }> }
@@ -36,9 +37,6 @@ const SOURCES: DocSource[] = [
   { id: 'autoevolve',  title: 'Autonomous Evolution',        url: '/SDEV_AUTOEVOLVE_DOCUMENTATION.md', icon: Library },
 ];
 
-function slugify(s: string) {
-  return s.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
-}
 
 function extractHeadings(md: string): Heading[] {
   const out: Heading[] = [];

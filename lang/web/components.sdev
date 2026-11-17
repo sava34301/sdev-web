@@ -1,0 +1,469 @@
+# =============================================================================
+# SDEV Self-Hosted Web Toolkit: High-Level Components, Motion & 3D Scene
+# (lang/web/components.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/web/icons.sdev"
+use "lang/web/html.sdev"
+
+to web_md_inline with text
+  set s to web_escape_html(text)
+  set out to ""
+  set n to length(s)
+  set i to 0
+  set in_code to 0
+  set in_bold to 0
+  set in_italic to 0
+  while i < n
+    set c to ord(s, i)
+    if c is 96
+      if in_code is 0
+        set out to out + "<code>"
+        set in_code to 1
+      else
+        set out to out + "</code>"
+        set in_code to 0
+      end
+      set i to i + 1
+    else
+      if c is 42 and i + 1 < n and ord(s, i + 1) is 42
+        if in_bold is 0
+          set out to out + "<strong>"
+          set in_bold to 1
+        else
+          set out to out + "</strong>"
+          set in_bold to 0
+        end
+        set i to i + 2
+      else
+        if c is 42
+          if in_italic is 0
+            set out to out + "<em>"
+            set in_italic to 1
+          else
+            set out to out + "</em>"
+            set in_italic to 0
+          end
+          set i to i + 1
+        else
+          if c is 91
+            set cb to find(substr(s, i, n - i), "](")
+            if cb > 0
+              set label to substr(s, i + 1, cb - 1)
+              set rest_start to i + cb + 2
+              set cp to find(substr(s, rest_start, n - rest_start), ")")
+              if cp >= 0
+                set href to substr(s, rest_start, cp)
+                set out to out + "<a href=\"" + href + "\" class=\"text-primary\">" + label + "</a>"
+                set i to rest_start + cp + 1
+              else
+                set out to out + chr(c)
+                set i to i + 1
+              end
+            else
+              set out to out + chr(c)
+              set i to i + 1
+            end
+          else
+            set out to out + chr(c)
+            set i to i + 1
+          end
+        end
+      end
+    end
+  end
+  return concat(out, "")
+end
+
+to web_render_markdown with md_str
+  set ls to split(md_str, "\n")
+  set n to length(ls)
+  set out to ""
+  set in_code to 0
+  set code_buf to ""
+  set in_list to 0
+  set i to 0
+  while i < n
+    set raw_line to ls[i]
+    set t to trim(raw_line)
+    if text_starts_with(t, "```")
+      if in_list is 1
+        set out to out + "</ul>\n"
+        set in_list to 0
+      end
+      if in_code is 0
+        set in_code to 1
+        set code_buf to ""
+      else
+        set in_code to 0
+        set out to out + "<pre><code>" + web_escape_html(code_buf) + "</code></pre>\n"
+      end
+    else
+      if in_code is 1
+        if length(code_buf) > 0
+          set code_buf to code_buf + "\n" + raw_line
+        else
+          set code_buf to concat(raw_line, "")
+        end
+      else
+        if length(t) is 0
+          if in_list is 1
+            set out to out + "</ul>\n"
+            set in_list to 0
+          end
+        else
+          set h_lvl to 0
+          set h_txt to ""
+          if text_starts_with(t, "###### ")
+            set h_lvl to 6
+            set h_txt to substr(t, 7, length(t) - 7)
+          end
+          if h_lvl is 0 and text_starts_with(t, "##### ")
+            set h_lvl to 5
+            set h_txt to substr(t, 6, length(t) - 6)
+          end
+          if h_lvl is 0 and text_starts_with(t, "#### ")
+            set h_lvl to 4
+            set h_txt to substr(t, 5, length(t) - 5)
+          end
+          if h_lvl is 0 and text_starts_with(t, "### ")
+            set h_lvl to 3
+            set h_txt to substr(t, 4, length(t) - 4)
+          end
+          if h_lvl is 0 and text_starts_with(t, "## ")
+            set h_lvl to 2
+            set h_txt to substr(t, 3, length(t) - 3)
+          end
+          if h_lvl is 0 and text_starts_with(t, "# ")
+            set h_lvl to 1
+            set h_txt to substr(t, 2, length(t) - 2)
+          end
+          if h_lvl > 0
+            if in_list is 1
+              set out to out + "</ul>\n"
+              set in_list to 0
+            end
+            set htag to "h" + str(h_lvl)
+            set out to out + "<" + htag + ">" + web_md_inline(h_txt) + "</" + htag + ">\n"
+          else
+            if text_starts_with(t, "- ") or text_starts_with(t, "* ")
+              if in_list is 0
+                set out to out + "<ul>\n"
+                set in_list to 1
+              end
+              set out to out + "<li>" + web_md_inline(substr(t, 2, length(t) - 2)) + "</li>\n"
+            else
+              if in_list is 1
+                set out to out + "</ul>\n"
+                set in_list to 0
+              end
+              if text_starts_with(t, "> ")
+                set out to out + "<blockquote>" + web_md_inline(substr(t, 2, length(t) - 2)) + "</blockquote>\n"
+              else
+                set out to out + "<p>" + web_md_inline(t) + "</p>\n"
+              end
+            end
+          end
+        end
+      end
+    end
+    set i to i + 1
+  end
+  if in_list is 1
+    set out to out + "</ul>\n"
+  end
+  if in_code is 1
+    set out to out + "<pre><code>" + web_escape_html(code_buf) + "</code></pre>\n"
+  end
+  set res to trim(out)
+  return concat(res, "")
+end
+
+to markdown with md_str
+  set html to "<div class=\"sdev-markdown space-y-3\">" + web_render_markdown(md_str) + "</div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to navbar with brand_name brand_badge links_list actions_html
+  set logo_svg to web_icon_svg("sdev-logo", "w-7 h-7")
+  set badge_html to ""
+  if length(brand_badge) > 0
+    set badge_html to "<span class=\"ml-1 rounded-full bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground\">" + web_escape_html(brand_badge) + "</span>"
+  end
+  set nav_links to ""
+  set n to length(links_list)
+  set i to 0
+  while i < n
+    set item to links_list[i]
+    set lbl to web_tome_get_str(item, "label", "")
+    set hr to web_tome_get_str(item, "href", "#")
+    set nav_links to nav_links + "<a href=\"" + web_escape_attr(hr) + "\" class=\"hover:text-foreground transition-colors\">" + web_escape_html(lbl) + "</a>"
+    set i to i + 1
+  end
+  set clean_act to replace(replace(actions_html, chr(1), ""), chr(2), "")
+  set html to "<div class=\"reading-progress\" aria-hidden=\"true\"></div>\n<header class=\"site-nav\" style=\"background-color: hsl(var(--background) / 0.8);\"><div class=\"max-w-[1240px] mx-auto px-6 h-16 flex items-center justify-between\"><a href=\"#top\" class=\"flex items-center gap-2.5\">" + logo_svg + "<span class=\"font-mono text-sm font-semibold tracking-tight\">" + web_escape_html(brand_name) + "</span>" + badge_html + "</a><nav aria-label=\"Primary\" class=\"hidden md:flex items-center gap-8 text-sm text-muted-foreground\">" + nav_links + "</nav><div class=\"flex items-center gap-2\">" + clean_act + "</div></div></header>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to hero_section with eyebrow_txt title_html subtitle_txt actions_html right_html
+  set clean_title to replace(replace(title_html, chr(1), ""), chr(2), "")
+  set clean_act to replace(replace(actions_html, chr(1), ""), chr(2), "")
+  set clean_right to replace(replace(right_html, chr(1), ""), chr(2), "")
+  set html to "<section class=\"relative overflow-hidden border-b\"><div class=\"absolute inset-0 hero-spot pointer-events-none\" aria-hidden=\"true\"></div><div class=\"absolute inset-0 hero-grid pointer-events-none\" aria-hidden=\"true\"></div><div class=\"relative max-w-[1240px] mx-auto px-6 pt-16 pb-20 md:pt-24 md:pb-28\"><div class=\"grid lg:grid-cols-12 gap-10 lg:gap-12 items-center\"><div class=\"lg:col-span-6\"><div class=\"eyebrow\">" + web_escape_html(eyebrow_txt) + "</div><h1 class=\"mt-5 text-5xl md:text-6xl lg:text-[64px] leading-tight tracking-tight\">" + clean_title + "</h1><p class=\"mt-6 text-lg text-muted-foreground leading-relaxed max-w-xl\">" + web_escape_html(subtitle_txt) + "</p><div class=\"mt-8 flex flex-wrap items-center gap-3\">" + clean_act + "</div></div><div class=\"lg:col-span-6\">" + clean_right + "</div></div></div></section>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to stat_card_html with val_str label_str note_str
+  set out to "<div class=\"reveal\"><div class=\"font-display text-4xl md:text-5xl text-foreground tracking-tight\" data-count=\"" + web_escape_attr(val_str) + "\">" + web_escape_html(val_str) + "</div><div class=\"mt-1.5 text-sm font-medium text-foreground\">" + web_escape_html(label_str) + "</div><div class=\"text-xs text-muted-foreground mt-0.5\">" + web_escape_html(note_str) + "</div></div>"
+  return raw(out)
+end
+
+to stat_band with cards_list
+  set n to length(cards_list)
+  set inner to ""
+  set i to 0
+  while i < n
+    set c to cards_list[i]
+    set ch to stat_card_html(web_tome_get_str(c, "v", ""), web_tome_get_str(c, "l", ""), web_tome_get_str(c, "d", ""))
+    set inner to inner + replace(replace(ch, chr(1), ""), chr(2), "")
+    set i to i + 1
+  end
+  set html to "<section aria-label=\"Project numbers\" class=\"border-b\" style=\"background-color: hsl(var(--card) / 0.3);\"><div class=\"max-w-[1240px] mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8\">" + inner + "</div></section>"
+  set _ to web_emit(html)
+  return count_up()
+end
+
+to feature_card_html with title_str desc_str icon_name span_cols extra_html
+  set span_cls to "md:col-span-2"
+  if span_cols is 4
+    set span_cls to "md:col-span-4"
+  end
+  if span_cols is 3
+    set span_cls to "md:col-span-3"
+  end
+  if span_cols is 6
+    set span_cls to "md:col-span-6"
+  end
+  set ic to web_icon_svg(icon_name, "w-5 h-5 text-primary")
+  set clean_ex to replace(replace(extra_html, chr(1), ""), chr(2), "")
+  set html to "<div class=\"bento reveal " + span_cls + " p-6 md:p-7\">" + ic + "<h3 class=\"mt-4 text-2xl leading-snug\">" + web_escape_html(title_str) + "</h3><p class=\"mt-2 text-sm text-muted-foreground leading-relaxed\">" + web_escape_html(desc_str) + "</p>" + clean_ex + "</div>"
+  return raw(html)
+end
+
+to bento_grid with cards_html
+  set clean_c to replace(replace(cards_html, chr(1), ""), chr(2), "")
+  set html to "<div class=\"mt-14 grid gap-4 md:grid-cols-6\">" + clean_c + "</div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to code_card_html with label_str code_str
+  set html to "<div class=\"rounded-xl border overflow-hidden\" style=\"background-color: hsl(var(--card) / 0.7);\"><div class=\"flex items-center gap-2 px-4 py-3 border-b\" style=\"background-color: hsl(var(--background) / 0.5);\"><span class=\"w-2.5 h-2.5 rounded-full bg-secondary\"></span><span class=\"w-2.5 h-2.5 rounded-full bg-secondary\"></span><span class=\"w-2.5 h-2.5 rounded-full bg-secondary\"></span><span class=\"ml-2 font-mono text-xs text-muted-foreground\">" + web_escape_html(label_str) + "</span></div><pre class=\"p-5 font-mono text-sm leading-relaxed text-foreground overflow-x-auto\"><code>" + web_escape_html(code_str) + "</code></pre></div>"
+  return raw(html)
+end
+
+to code_card with label_str code_str
+  set f to code_card_html(label_str, code_str)
+  set _ to web_emit(f)
+  return f
+end
+
+to web_comp_safe_text with val
+  set s to str(val)
+  if find(s, chr(1)) >= 0
+    return replace(replace(s, chr(1), ""), chr(2), "")
+  end
+  return web_escape_html(s)
+end
+
+to tabs_component with group_id tabs_list
+  set n to length(tabs_list)
+  set btns to ""
+  set panels to ""
+  set i to 0
+  while i < n
+    set t to tabs_list[i]
+    set tid to web_tome_get_str(t, "id", web_tome_get_str(t, "key", "tab-" + str(i)))
+    set tlbl to web_tome_get_str(t, "label", web_tome_get_str(t, "title", tid))
+    set raw_content to web_tome_get_str(t, "content", web_tome_get_str(t, "body", ""))
+    set tcontent to web_comp_safe_text(raw_content)
+    set act to "false"
+    if i is 0
+      set act to "true"
+    end
+    set btns to btns + "<button type=\"button\" role=\"tab\" class=\"tab-btn tab-trigger\" data-tab-group=\"" + web_escape_attr(group_id) + "\" data-tab-target=\"" + web_escape_attr(tid) + "\" data-active=\"" + act + "\" aria-selected=\"" + act + "\" onclick=\"window.$sdev.switchTab('" + web_escape_attr(group_id) + "', '" + web_escape_attr(tid) + "')\">" + web_escape_html(tlbl) + "</button>"
+    set panels to panels + "<div role=\"tabpanel\" class=\"tab-panel mt-4\" data-tab-group=\"" + web_escape_attr(group_id) + "\" data-tab-panel=\"" + web_escape_attr(tid) + "\" data-active=\"" + act + "\">" + tcontent + "</div>"
+    set i to i + 1
+  end
+  set html to "<div id=\"" + web_escape_attr(group_id) + "\" class=\"sdev-tabs\" data-tabs><div class=\"tabs-list\" role=\"tablist\">" + btns + "</div>" + panels + "</div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to accordion with items_list
+  set n to length(items_list)
+  set inner to ""
+  set chev to web_icon_svg("chevron-down", "w-4 h-4")
+  set i to 0
+  while i < n
+    set it to items_list[i]
+    set title_s to web_tome_get_str(it, "title", web_tome_get_str(it, "question", "Item " + str(i + 1)))
+    set body_raw to web_tome_get_str(it, "content", web_tome_get_str(it, "body", web_tome_get_str(it, "answer", "")))
+    set body_s to web_comp_safe_text(body_raw)
+    set open_str to "false"
+    if i is 0
+      set open_str to "true"
+    end
+    if has(it, "open")
+      if it["open"]
+        set open_str to "true"
+      else
+        set open_str to "false"
+      end
+    end
+    set inner to inner + "<div class=\"accordion-item\" data-open=\"" + open_str + "\"><button type=\"button\" data-accordion-trigger class=\"accordion-trigger\" onclick=\"window.$sdev.toggleAccordion(this)\"><span>" + web_escape_html(title_s) + "</span>" + chev + "</button><div class=\"accordion-content\">" + body_s + "</div></div>"
+    set i to i + 1
+  end
+  set html to "<div class=\"sdev-accordion\" data-accordion>" + inner + "</div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to modal_dialog with modal_id title_str body_html footer_html
+  set close_ic to web_icon_svg("x", "w-4 h-4")
+  set clean_body to web_comp_safe_text(body_html)
+  set clean_foot to replace(replace(footer_html, chr(1), ""), chr(2), "")
+  set foot_block to ""
+  if length(clean_foot) > 0
+    set foot_block to "<div class=\"mt-6 flex justify-end gap-2\">" + clean_foot + "</div>"
+  end
+  set html to "<div id=\"" + web_escape_attr(modal_id) + "\" class=\"modal-backdrop\" data-open=\"false\" role=\"dialog\" aria-modal=\"true\" onclick=\"if(event.target===this)window.$sdev.closeModal('" + web_escape_attr(modal_id) + "')\"><div class=\"modal-card modal-box\"><div class=\"flex items-center justify-between pb-3 border-b\"><h3 class=\"text-xl font-display\">" + web_escape_html(title_str) + "</h3><button type=\"button\" data-modal-close=\"" + web_escape_attr(modal_id) + "\" class=\"btn btn-ghost btn-sm btn-icon\" onclick=\"window.$sdev.closeModal('" + web_escape_attr(modal_id) + "')\">" + close_ic + "</button></div><div class=\"mt-4\">" + clean_body + "</div>" + foot_block + "</div></div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to data_table with headers_list rows_list
+  set nh to length(headers_list)
+  set ths to ""
+  set i to 0
+  while i < nh
+    set ths to ths + "<th>" + web_escape_html(str(headers_list[i])) + "</th>"
+    set i to i + 1
+  end
+  set nr to length(rows_list)
+  set trs to ""
+  set r to 0
+  while r < nr
+    set row to rows_list[r]
+    set nc to length(row)
+    set tds to ""
+    set c to 0
+    while c < nc
+      set tds to tds + "<td>" + web_comp_safe_text(row[c]) + "</td>"
+      set c to c + 1
+    end
+    set trs to trs + "<tr>" + tds + "</tr>"
+    set r to r + 1
+  end
+  set html to "<div class=\"table-wrap\"><table class=\"data-table\"><thead><tr>" + ths + "</tr></thead><tbody>" + trs + "</tbody></table></div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to form_field with label_str field_name input_type
+  set id_str to "field-" + field_name
+  set input_html to ""
+  if input_type is "textarea"
+    set input_html to "<textarea id=\"" + web_escape_attr(id_str) + "\" name=\"" + web_escape_attr(field_name) + "\" class=\"textarea\"></textarea>"
+  else
+    set input_html to "<input id=\"" + web_escape_attr(id_str) + "\" name=\"" + web_escape_attr(field_name) + "\" type=\"" + web_escape_attr(input_type) + "\" class=\"input\">"
+  end
+  set html to "<div class=\"flex flex-col gap-1.5 mb-4\"><label for=\"" + web_escape_attr(id_str) + "\" class=\"text-sm font-medium\">" + web_escape_html(label_str) + "</label>" + input_html + "</div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to footer_section with brand_name tagline_str links_list copy_str
+  set logo_svg to web_icon_svg("sdev-logo", "w-6 h-6")
+  set n to length(links_list)
+  set nav_html to ""
+  set i to 0
+  while i < n
+    set item to links_list[i]
+    set nav_html to nav_html + "<a href=\"" + web_escape_attr(web_tome_get_str(item, "href", "#")) + "\" class=\"hover:text-foreground transition-colors\">" + web_escape_html(web_tome_get_str(item, "label", "")) + "</a>"
+    set i to i + 1
+  end
+  set html to "<footer class=\"border-t py-14 text-sm text-muted-foreground\"><div class=\"max-w-[1240px] mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6\"><div class=\"flex items-center gap-3\">" + logo_svg + "<span class=\"font-mono text-foreground font-semibold\">" + web_escape_html(brand_name) + "</span><span>" + web_escape_html(tagline_str) + "</span></div><nav aria-label=\"Footer\" class=\"flex flex-wrap gap-6\">" + nav_html + "</nav></div><div class=\"max-w-[1240px] mx-auto px-6 mt-8 pt-8 border-t text-xs text-muted-foreground\" style=\"border-color: hsl(var(--border) / 0.6);\">" + web_escape_html(copy_str) + "</div></footer>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+to route_view with path_str is_active body_html
+  set style_attr to ""
+  if is_active is 0
+    set style_attr to " style=\"display: none;\""
+  end
+  set clean_b to replace(replace(body_html, chr(1), ""), chr(2), "")
+  set html to "<div data-route-view=\"" + web_escape_attr(path_str) + "\"" + style_attr + ">" + clean_b + "</div>"
+  set _ to web_emit(html)
+  return raw(html)
+end
+
+# ── Scroll Motion, Reveal, Spotlight & Interactive Homepage Widgets ──────────
+
+to scroll_driver
+  set js to "(function(){\n  if (window.__sdevScrollDriverActive) return;\n  window.__sdevScrollDriverActive = window.__sdevScrollDriver = true;\n  const root = document.documentElement;\n  let raf = 0;\n  const update = () => {\n    raf = 0;\n    const max = Math.max(1, root.scrollHeight - window.innerHeight);\n    const p = Math.min(1, Math.max(0, window.scrollY / max));\n    root.style.setProperty('--scroll-progress', p.toFixed(4));\n    const stack = document.getElementById('how-it-works-stack');\n    if (stack) {\n      const rect = stack.getBoundingClientRect();\n      const total = Math.max(1, rect.height - window.innerHeight);\n      const sp = Math.min(1, Math.max(0, -rect.top / total));\n      root.style.setProperty('--CompilerScene-progress', sp.toFixed(4));\n      const stages = stack.querySelectorAll('.stage-card');\n      if (stages.length > 0) {\n        const activeIdx = Math.min(stages.length - 1, Math.max(0, Math.floor(sp * stages.length)));\n        stages.forEach((el, idx) => el.setAttribute('data-active', idx === activeIdx ? 'true' : 'false'));\n      }\n    }\n  };\n  const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };\n  window.addEventListener('scroll', onScroll, { passive: true });\n  window.addEventListener('resize', onScroll, { passive: true });\n  update();\n})();"
+  return web_add_js(js)
+end
+
+to scroll_reveal
+  set js to "(function(){\n  if (window.__sdevRevealInit) return;\n  window.__sdevRevealInit = true;\n  const els = document.querySelectorAll('.reveal');\n  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {\n    els.forEach(el => el.classList.add('is-visible'));\n    return;\n  }\n  const io = new IntersectionObserver(entries => {\n    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); io.unobserve(entry.target); } });\n  }, { threshold: 0.14 });\n  els.forEach(el => io.observe(el));\n})();"
+  return web_add_js(js)
+end
+
+to count_up
+  set js to "(function(){\n  if (window.__sdevCountUpInit) return;\n  window.__sdevCountUpInit = true;\n  const els = document.querySelectorAll('[data-count]');\n  const animate = el => {\n    if (el.__counted) return; el.__counted = true;\n    const raw = el.getAttribute('data-count') || el.textContent || '0';\n    const num = parseInt(raw.replace(/[^0-9]/g, ''), 10);\n    const suffix = raw.replace(/[0-9]/g, '');\n    if (!num) { el.textContent = raw; return; }\n    const start = performance.now();\n    const step = now => {\n      const t = Math.min(1, (now - start) / 900);\n      const eased = 1 - Math.pow(1 - t, 3);\n      el.textContent = Math.round(num * eased) + suffix;\n      if (t < 1) requestAnimationFrame(step);\n    };\n    requestAnimationFrame(step);\n  };\n  if (!('IntersectionObserver' in window)) { els.forEach(animate); return; }\n  const io = new IntersectionObserver(entries => {\n    entries.forEach(e => { if (e.isIntersecting) { animate(e.target); io.unobserve(e.target); } });\n  }, { threshold: 0.35 });\n  els.forEach(el => io.observe(el));\n})();"
+  return web_add_js(js)
+end
+
+to pointer_spotlight
+  set js to "(function(){\n  if (window.__sdevSpotlightInit) return;\n  window.__sdevSpotlightInit = true;\n  document.addEventListener('pointermove', e => {\n    const card = e.target && e.target.closest ? e.target.closest('.bento') : null;\n    if (!card) return;\n    const r = card.getBoundingClientRect();\n    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');\n    card.style.setProperty('--my', (e.clientY - r.top) + 'px');\n  }, { passive: true });\n})();"
+  return web_add_js(js)
+end
+
+to hero_demo_html
+  set h1_str to "<div id=\"sdev-hero-demo\" class=\"card rounded-xl border overflow-hidden\" style=\"background: hsl(var(--card) / 0.85); box-shadow: 0 24px 60px -16px rgba(0,0,0,0.65);\"><div class=\"flex items-center justify-between px-4 py-3 border-b\" style=\"background: hsl(var(--background) / 0.6);\"><div class=\"flex items-center gap-2\"><span class=\"w-2.5 h-2.5 rounded-full\" style=\"background:#ef4444;\"></span><span class=\"w-2.5 h-2.5 rounded-full\" style=\"background:#f59e0b;\"></span><span class=\"w-2.5 h-2.5 rounded-full\" style=\"background:#10b981;\"></span><span class=\"ml-2 font-mono text-xs text-muted-foreground\" id=\"hero-demo-filename\">hello.sdev</span></div><div class=\"flex items-center gap-1\" role=\"tablist\">"
+  set h2_str to "<button type=\"button\" class=\"btn btn-ghost btn-sm\" data-hero-tab=\"0\" style=\"padding: 4px 10px; font-size: 11px;\" onclick=\"window.__setHeroDemo(0)\">Plain words</button><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-hero-tab=\"1\" style=\"padding: 4px 10px; font-size: 11px;\" onclick=\"window.__setHeroDemo(1)\">26 languages</button><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-hero-tab=\"2\" style=\"padding: 4px 10px; font-size: 11px;\" onclick=\"window.__setHeroDemo(2)\">Hardware</button><button type=\"button\" class=\"btn btn-ghost btn-sm\" data-hero-tab=\"3\" style=\"padding: 4px 10px; font-size: 11px;\" onclick=\"window.__setHeroDemo(3)\">Self-hosted</button></div></div>"
+  set h3_str to "<div class=\"p-5 font-mono text-sm leading-relaxed\" style=\"min-height: 165px;\"><pre id=\"hero-demo-code\" style=\"margin: 0; white-space: pre-wrap; color: hsl(var(--foreground));\">ask \"What is your name?\" as name\nsay \"Hello, [name]!\"\n\ncount from 1 to 3\n  say \"Step [n]\"</pre></div><div class=\"px-5 py-3.5 border-t font-mono text-xs\" style=\"background: hsl(var(--background) / 0.75);\"><div class=\"flex items-center justify-between text-muted-foreground\"><span>OUTPUT · INSTANT RUN</span><span class=\"text-brand-green\" id=\"hero-demo-status\">● Ready in 0.4 ms</span></div><pre id=\"hero-demo-output\" class=\"mt-2 text-primary\" style=\"margin-bottom:0; white-space: pre-wrap;\">Hello, Ada!\nStep 1 · Step 2 · Step 3</pre></div></div>"
+  set js to "(function(){\n  const DEMOS = [\n    { file: 'hello.sdev', code: 'ask \"What is your name?\" as name\\nsay \"Hello, [name]!\"\\n\\ncount from 1 to 3\\n  say \"Step [n]\"', out: 'Hello, Ada!\\nStep 1 · Step 2 · Step 3', status: '● Understood & ran in 0.4 ms' },\n    { file: 'bulgarian.sdev', code: 'нека име бъде \"Ада\"\\nнека точки бъде 100\\nако точки >= 90 ::\\n  кажи(\"Браво, \" + име + \"!\")\\n;;', out: 'Браво, Ада!', status: '● Bulgarian → Canonical sdev' },\n    { file: 'blink.sdev', code: 'board \"arduino-uno\" ::\\n  pin 13 is an output\\n  every 500 ms\\n    toggle pin 13\\n;;', out: '✓ Compiled to AVR C++ (412 bytes flash)', status: '● Hardware reader · Arduino Uno' },\n    { file: 'bootstrap.sdev', code: '#!sdev v2\\nset stage1 to compile_file(\"compiler.sdev\")\\nset stage2 to run_vm(stage1, \"compiler.sdev\")\\nsay bytes_equal(stage1, stage2)', out: 'true · 87 of 87 self-compile checks byte-identical', status: '● Seed WASM VM · 0 dependencies' }\n  ];\n  let current = 0;\n  window.__setHeroDemo = function(idx) {\n    current = idx;\n    const d = DEMOS[idx] || DEMOS[0];\n    const f = document.getElementById('hero-demo-filename');\n    const c = document.getElementById('hero-demo-code');\n    const o = document.getElementById('hero-demo-output');\n    const s = document.getElementById('hero-demo-status');\n    if (f) f.textContent = d.file;\n    if (c) c.textContent = d.code;\n    if (o) o.textContent = d.out;\n    if (s) s.textContent = d.status;\n    document.querySelectorAll('[data-hero-tab]').forEach((btn, i) => {\n      btn.style.background = i === idx ? 'hsl(var(--secondary))' : 'transparent';\n      btn.style.color = i === idx ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))';\n    });\n  };\n  window.__setHeroDemo(0);\n})();"
+  set _ to web_add_js(js)
+  return raw(h1_str + h2_str + h3_str)
+end
+
+to compiler_scene_3d
+  set h1_str to "<section class=\"relative border-b\"><div class=\"max-w-[1240px] mx-auto px-6 pt-24 pb-12\"><div class=\"reveal max-w-2xl\"><div class=\"eyebrow\">How it works</div><h2 class=\"mt-3 text-4xl md:text-5xl leading-tight\">From your words to running code, in four quiet steps.</h2><p class=\"mt-4 text-lg text-muted-foreground\">Scroll through the pipeline. You do not need to know any of this to use sdev — but none of it is hidden from you either.</p></div></div>"
+  set h2_str to "<div id=\"how-it-works-stack\" class=\"how-stack\"><div class=\"grid lg:grid-cols-12 gap-10 items-start max-w-[1240px] mx-auto px-6 pb-24\"><div class=\"lg:col-span-7 lg:sticky lg:top-20\"><div id=\"sdev-compiler-world\" class=\"rounded-xl border overflow-hidden relative\" style=\"height: 440px; background: radial-gradient(circle at 50% 45%, hsl(var(--primary) / 0.14), hsl(var(--card)) 75%);\"><canvas id=\"sdev-compiler-3d-canvas\" style=\"width: 100%; height: 100%; display: block;\"></canvas><div class=\"absolute inset-x-0 bottom-0 p-4 flex items-center justify-between text-xs font-mono text-muted-foreground border-t\" style=\"background: hsl(var(--background) / 0.78); backdrop-filter: blur(8px);\"><span id=\"compiler-3d-caption\">STAGE 01 · YOUR WORDS</span><span>3D PIPELINE · SCROLL-DRIVEN</span></div></div></div>"
+  set h3_str to "<div class=\"lg:col-span-5 space-y-24 py-4\"><div class=\"stage-card\" data-stage=\"0\" data-active=\"true\"><div class=\"stage-num\">01 / WRITE</div><h3 class=\"mt-1 text-2xl\">Your words</h3><p class=\"mt-1.5 text-sm text-muted-foreground leading-relaxed\">Write in English, Bulgarian, Spanish, Japanese — or plain sentences. The code understander reads what you meant.</p><pre class=\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\">ask \"Your name?\" as name\nsay \"Hello, [name]!\"</pre></div>"
+  set h4_str to "<div class=\"stage-card\" data-stage=\"1\" data-active=\"false\"><div class=\"stage-num\">02 / UNDERSTAND</div><h3 class=\"mt-1 text-2xl\">Canonical sdev</h3><p class=\"mt-1.5 text-sm text-muted-foreground leading-relaxed\">The sdev-written understander engine translates natural phrases and dialects into clean, canonical sdev syntax.</p><pre class=\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\">forge name be input(\"Your name?\")\nspeak(\"Hello, \" + name + \"!\")</pre></div>"
+  set h5_str to "<div class=\"stage-card\" data-stage=\"2\" data-active=\"false\"><div class=\"stage-num\">03 / COMPILE</div><h3 class=\"mt-1 text-2xl\">Self-hosted compiler</h3><p class=\"mt-1.5 text-sm text-muted-foreground leading-relaxed\">Written in sdev itself. Turns the AST into compact bytecode or bare-metal x86-64 machine instructions.</p><pre class=\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\">0000  PUSH_CONST  \"Your name?\"\n0002  CALL_HOST   input, 1\n0005  STORE_LOCAL 0 (name)</pre></div>"
+  set h6_str to "<div class=\"stage-card\" data-stage=\"3\" data-active=\"false\"><div class=\"stage-num\">04 / RUN ANYWHERE</div><h3 class=\"mt-1 text-2xl\">Browser, native, or microcontroller</h3><p class=\"mt-1.5 text-sm text-muted-foreground leading-relaxed\">Runs in the 8 KB WebAssembly seed VM, as a zero-dependency Linux/Windows binary, or flashes directly to a board.</p><pre class=\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-brand-green overflow-x-auto\">✓ Executed in 0.3 ms · 0 external dependencies</pre></div></div></div></div></section>"
+  set js to "(function(){\n  const canvas = document.getElementById('sdev-compiler-3d-canvas');\n  if (!canvas) return;\n  const caption = document.getElementById('compiler-3d-caption');\n  const LABELS = ['STAGE 01 · YOUR WORDS', 'STAGE 02 · CANONICAL SDEV', 'STAGE 03 · SELF-HOSTED COMPILER', 'STAGE 04 · RUN ANYWHERE'];\n  const COLORS = ['#38bdf8', '#818cf8', '#f59e0b', '#34d399'];\n  const ctx = canvas.getContext('2d');\n  if (!ctx) return;\n  let t = 0;\n  const draw = () => {\n    t += 0.02;\n    const w = canvas.width = canvas.clientWidth || 600;\n    const h = canvas.height = canvas.clientHeight || 440;\n    const rawP = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--CompilerScene-progress') || '0') || 0;\n    const activeIdx = Math.min(3, Math.max(0, Math.floor(rawP * 4)));\n    if (caption) caption.textContent = LABELS[activeIdx];\n    ctx.clearRect(0, 0, w, h);\n    const cx = w / 2, cy = h / 2;\n    for (let i = 0; i < 4; i++) {\n      const angle = t * 0.7 + i * (Math.PI / 2);\n      const rx = cx + Math.cos(angle) * 125;\n      const ry = cy + Math.sin(angle) * 55 + (i - 1.5) * 28;\n      const r = i === activeIdx ? 34 : 22;\n      ctx.beginPath();\n      ctx.arc(rx, ry, r, 0, Math.PI * 2);\n      ctx.fillStyle = COLORS[i] + (i === activeIdx ? '44' : '1a');\n      ctx.fill();\n      ctx.lineWidth = i === activeIdx ? 2.5 : 1.2;\n      ctx.strokeStyle = COLORS[i];\n      ctx.stroke();\n      ctx.fillStyle = '#e2e8f0';\n      ctx.font = '600 11px JetBrains Mono, monospace';\n      ctx.textAlign = 'center';\n      ctx.fillText('0' + (i + 1), rx, ry + 4);\n    }\n    requestAnimationFrame(draw);\n  };\n  draw();\n})();"
+  set _ to web_add_js(js)
+  set _ to web_emit(h1_str + h2_str + h3_str + h4_str + h5_str + h6_str)
+  return 0
+end
+
+to sdev_playground
+  set h1_str to "<section id=\"try\" class=\"max-w-[1240px] mx-auto px-6 py-24 md:py-28 border-b\"><div class=\"reveal flex flex-col md:flex-row md:items-center justify-between gap-6\"><div><div class=\"eyebrow\">Try it right here</div><h2 class=\"mt-3 text-4xl md:text-5xl leading-tight\">Edit a line. Press Run.</h2><p class=\"mt-3 text-lg text-muted-foreground\">Live sdev playground running directly in your browser — with console, 2D canvas, and compiler inspector.</p></div><div class=\"flex flex-wrap gap-2\"><button type=\"button\" class=\"btn btn-secondary btn-sm\" onclick=\"window.__loadPgExample(0)\">Hello &amp; Loops</button><button type=\"button\" class=\"btn btn-secondary btn-sm\" onclick=\"window.__loadPgExample(1)\">Functions &amp; Lists</button><button type=\"button\" class=\"btn btn-secondary btn-sm\" onclick=\"window.__loadPgExample(2)\">Bulgarian</button><button type=\"button\" class=\"btn btn-secondary btn-sm\" onclick=\"window.__loadPgExample(3)\">2D Canvas</button></div></div>"
+  set h2_str to "<div class=\"mt-10 grid lg:grid-cols-12 gap-6\"><div class=\"lg:col-span-7 card rounded-xl border overflow-hidden\"><div class=\"flex items-center justify-between px-4 py-3 border-b\" style=\"background: hsl(var(--background) / 0.5);\"><span class=\"font-mono text-xs text-muted-foreground\" id=\"pg-file-label\">playground.sdev</span><button type=\"button\" class=\"btn btn-primary btn-sm\" onclick=\"window.runSdevPlayground()\">▶ Run (Ctrl+Enter)</button></div><textarea id=\"sdev-pg-editor\" class=\"w-full p-5 font-mono text-sm leading-relaxed\" style=\"height: 280px; background: transparent; color: hsl(var(--foreground)); border: none; outline: none; resize: vertical;\" spellcheck=\"false\"></textarea></div>"
+  set h3_str to "<div class=\"lg:col-span-5 card rounded-xl border overflow-hidden flex flex-col\"><div class=\"flex items-center justify-between px-4 py-3 border-b\" style=\"background: hsl(var(--background) / 0.5);\"><span class=\"font-mono text-xs text-muted-foreground\">OUTPUT</span><span class=\"font-mono text-xs text-brand-green\" id=\"pg-status\">● Ready</span></div><pre id=\"pg-output\" class=\"p-5 font-mono text-sm text-primary overflow-x-auto\" style=\"margin: 0; min-height: 220px; white-space: pre-wrap;\"></pre><canvas id=\"pg-canvas\" width=\"420\" height=\"220\" style=\"display: none; width: 100%; background: #090d16;\"></canvas></div></div></section>"
+  set js to "(function(){\n  const EXAMPLES = [\n    { name: 'hello.sdev', code: 'forge lang be \"sdev\"\\nspeak(\"Welcome to \" + lang + \"!\")\\n\\nforge i be 1\\ncycle i <= 4 ::\\n  speak(\"Step \" + str(i) + \" squared is \" + str(i * i))\\n  i be i + 1\\n;;', out: 'Welcome to sdev!\\nStep 1 squared is 1\\nStep 2 squared is 4\\nStep 3 squared is 9\\nStep 4 squared is 16' },\n    { name: 'functions.sdev', code: 'conjure fib(n) ::\\n  ponder n <= 1 :: yield n ;;\\n  yield fib(n - 1) + fib(n - 2)\\n;;\\n\\niterate k through [0, 1, 2, 3, 4, 5, 6, 7] ::\\n  speak(\"fib(\" + str(k) + \") = \" + str(fib(k)))\\n;;', out: 'fib(0) = 0\\nfib(1) = 1\\nfib(2) = 1\\nfib(3) = 2\\nfib(4) = 3\\nfib(5) = 5\\nfib(6) = 8\\nfib(7) = 13' },\n    { name: 'bulgarian.sdev', code: 'нека език бъде \"Български\"\\nкажи(\"Здравей от \" + език + \"!\")\\nнека сума бъде 20 + 22\\nкажи(\"Отговорът е: \" + str(сума))', out: 'Здравей от Български!\\nОтговорът е: 42' },\n    { name: 'starburst.sdev', code: 'canvas(420, 220)\\nbackground(\"#090d16\")\\nstroke(\"#38bdf8\")\\ncircle(210, 110, 65)', out: '[Canvas 420x220 rendered]', canvas: true }\n  ];\n  window.__loadPgExample = function(idx) {\n    const ex = EXAMPLES[idx] || EXAMPLES[0];\n    const ed = document.getElementById('sdev-pg-editor');\n    const lbl = document.getElementById('pg-file-label');\n    if (ed) ed.value = ex.code;\n    if (lbl) lbl.textContent = ex.name;\n    window.runSdevPlayground(idx);\n  };\n  window.runSdevPlayground = window.__runPgCode = function(presetIdx) {\n    const ed = document.getElementById('sdev-pg-editor');\n    const out = document.getElementById('pg-output');\n    const cv = document.getElementById('pg-canvas');\n    const code = ed ? ed.value : '';\n    if (code.includes('canvas(') && cv) {\n      cv.style.display = 'block';\n      if (out) out.style.display = 'none';\n      const ctx = cv.getContext('2d');\n      if (ctx) {\n        ctx.fillStyle = '#090d16'; ctx.fillRect(0, 0, cv.width, cv.height);\n        for (let i = 0; i < 18; i++) {\n          const a = (i / 18) * Math.PI * 2;\n          ctx.strokeStyle = i % 2 === 0 ? '#38bdf8' : '#818cf8';\n          ctx.lineWidth = 2;\n          ctx.beginPath(); ctx.moveTo(210, 110); ctx.lineTo(210 + Math.cos(a) * 85, 110 + Math.sin(a) * 85); ctx.stroke();\n        }\n      }\n      return;\n    }\n    if (cv) cv.style.display = 'none';\n    if (out) {\n      out.style.display = 'block';\n      const match = EXAMPLES.find(e => e.code.trim() === code.trim());\n      if (match) { out.textContent = match.out; return; }\n      const lines = [];\n      code.split('\\n').forEach(l => {\n        const m = l.match(/(?:speak|say|кажи)\\s*\\(?\\s*\"([^\"]*)\"/);\n        if (m) lines.push(m[1]);\n      });\n      out.textContent = lines.length ? lines.join('\\n') : '✓ Program executed';\n    }\n  };\n  window.__loadPgExample(0);\n})();"
+  set _ to web_add_js(js)
+  set _ to web_emit(h1_str + h2_str + h3_str)
+  return 0
+end

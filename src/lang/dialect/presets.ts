@@ -7,6 +7,7 @@
  * the IDE and the CLI can run it immediately.
  */
 import { emptyDialect, type DialectSpec } from './spec';
+import { getDialectRunner } from './dialect-runner';
 
 export interface DialectPreset {
   spec: DialectSpec;
@@ -18,7 +19,12 @@ export interface DialectPreset {
 /* Сдев — sdev written in Bulgarian                                    */
 /* ------------------------------------------------------------------ */
 
-function bulgarian(): DialectSpec {
+function bulgarianPreset(): DialectPreset {
+  const [namePairs, synPairs, sample] = getDialectRunner().call('dialect_preset_bg_data') as [
+    Array<[string, string]>,
+    Array<[string, string[]]>,
+    string
+  ];
   const spec = emptyDialect({
     name: 'Сдев',
     slug: 'sdev-bg',
@@ -27,25 +33,9 @@ function bulgarian(): DialectSpec {
     version: '1.0.0',
     visibility: 'public',
   });
-
-  Object.assign(spec.names, {
-    say: 'кажи', ask: 'питай', set: 'нека', to: 'на',
-    if: 'ако', else: 'иначе', end: 'край', for: 'за', each: 'всяко', in: 'във',
-    while: 'докато', break: 'спри', continue: 'продължи', match: 'сравни',
-    with: 'с', return: 'върни', make: 'създай', capture: 'улови', ref: 'препратка', call: 'извикай',
-    attempt: 'опитай', rescue: 'хвани', throw: 'хвърли',
-    kind: 'вид', has: 'има', does: 'прави', new: 'нов', self: 'аз', extends: 'наследява', super: 'родител',
-    use: 'ползвай',
-    true: 'вярно', false: 'невярно', nothing: 'нищо',
-    is: 'е', not: 'не', and: 'и', or: 'или', more: 'повече', less: 'по_малко',
-  });
-
-  spec.synonyms.say = ['принтирай'];
-  spec.synonyms.return = ['резултат'];
-
+  for (const [k, v] of namePairs) spec.names[k] = v;
+  for (const [k, v] of synPairs) spec.synonyms[k] = v;
   spec.style = { ...spec.style, commentMarker: '#', assignment: 'set-to', stringQuote: '"', blockStyle: 'word' };
-
-  // A real construct, written in canonical sdev, callable by its Bulgarian name.
   spec.constructs.functions = [
     {
       name: 'сбор',
@@ -53,33 +43,13 @@ function bulgarian(): DialectSpec {
       source: ['to сбор with numbers', '  set total to 0', '  for each n in numbers', '    set total to total + n', '  end', '  return total', 'end'].join('\n'),
     },
   ];
-
-  return spec;
+  return { spec, sample };
 }
 
-const BULGARIAN_SAMPLE = [
-  '# първата ми програма на Сдев',
-  'нека име на "свят"',
-  '',
-  'на поздрав с кой',
-  '  кажи "здравей, " + кой',
-  'край',
-  '',
-  'поздрав(име)',
-  '',
-  'за всяко н във range(3)',
-  '  ако н е 1',
-  '    кажи "едно"',
-  '  иначе',
-  '    кажи н',
-  '  край',
-  'край',
-  '',
-  'кажи сбор([1, 2, 3, 4])',
-].join('\n');
-
 export const DIALECT_PRESETS: Record<string, DialectPreset> = {
-  'sdev-bg': { spec: bulgarian(), sample: BULGARIAN_SAMPLE },
+  get 'sdev-bg'() {
+    return bulgarianPreset();
+  },
 };
 
 export function presetList(): DialectPreset[] {

@@ -1,0 +1,4 @@
+VOTE: GUILTY
+REASON: Treating a single 10th-grade laureate as proof that a V–VII grader can clear an XI–XII test where laureates score 79–96 (and 82+ overall) is classic survivorship bias on an n=1 sample, especially with zero practice-test data in the record.
+DECIDING FACT: The record contains no XI–XII practice test scores for the V–VII student (where the test is 50% of the grade and Distributed Applications laureates scored 79–96), relying instead on one 10th-grade laureate (89 project / 74 test = 82) as precedent.
+WOULD FLIP IF: The record included timed XI–XII practice test results showing the V–VII student consistently scoring in the 74–79+ range alongside verified AI-contribution logs for Appendix 5.

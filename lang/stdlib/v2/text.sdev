@@ -1,5 +1,12 @@
 # SDEV Standard Library: Text & Strings (v2) — authored in SDEV.
 
+to str_eq with a b
+  if concat(a, "") is b
+    return 1
+  end
+  return 0
+end
+
 to text_upper with s
   return upper(s)
 end
@@ -33,7 +40,10 @@ to text_starts_with with s prefix
   if length(s) < lp
     return 0
   end
-  return substr(s, 0, lp) is prefix
+  if substr(s, 0, lp) is prefix
+    return 1
+  end
+  return 0
 end
 
 to text_ends_with with s suffix
@@ -42,7 +52,10 @@ to text_ends_with with s suffix
   if ls < lsf
     return 0
   end
-  return substr(s, ls - lsf, lsf) is suffix
+  if substr(s, ls - lsf, lsf) is suffix
+    return 1
+  end
+  return 0
 end
 
 to text_repeat with s count

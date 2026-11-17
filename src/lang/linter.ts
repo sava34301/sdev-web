@@ -20,6 +20,15 @@ import { SdevError } from './errors';
 import { sdevCheckBlocks, isAiDialect, aiToSdev } from './agent/sdev-engine';
 import { stripBoardBlocks } from './hardware/strip';
 import { KEYWORD_TOKEN_BY_WORD } from './keywords';
+import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
+import SDEV_TEXT_SRC from '../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_LINTER_SRC from '../../lang/linter/linter.sdev?raw';
+
+let linterRunner: SdevModuleRunner | null = null;
+function getLinterRunner(): SdevModuleRunner {
+  if (!linterRunner) linterRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_LINTER_SRC);
+  return linterRunner;
+}
 import {
   findApi,
   suggestNearestApis,
@@ -85,29 +94,7 @@ const STRICT_ARITY_RULES: Record<string, { min: number; max: number }> = {
 };
 
 function stripLineComment(line: string): string {
-  let inQuote: string | null = null;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuote) {
-      if (ch === '\\') {
-        i++;
-        continue;
-      }
-      if (ch === inQuote) inQuote = null;
-      continue;
-    }
-    if (ch === '"' || ch === "'" || ch === '`') {
-      inQuote = ch;
-      continue;
-    }
-    if (ch === '/' && line[i + 1] === '/') {
-      return line.slice(0, i);
-    }
-    if (ch === '#') {
-      return line.slice(0, i);
-    }
-  }
-  return line;
+  return getLinterRunner().callStr('sdev_strip_line_comment', line);
 }
 
 function isZeroNode(node: AST.ASTNode): boolean {

@@ -1,0 +1,336 @@
+# =============================================================================
+# SDEV Standard Library: Regular Expression & Glob Engine (lang/stdlib/v2/regex.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to re_is_digit_char with c
+  if c >= 48 and c <= 57
+    return 1
+  end
+  return 0
+end
+
+to re_is_word_char with c
+  if c >= 48 and c <= 57
+    return 1
+  end
+  if c >= 65 and c <= 90
+    return 1
+  end
+  if c >= 97 and c <= 122
+    return 1
+  end
+  if c is 95
+    return 1
+  end
+  return 0
+end
+
+to re_is_space_char with c
+  if c is 32 or c is 9 or c is 10 or c is 13
+    return 1
+  end
+  return 0
+end
+
+to re_char_matches with pat pi c
+  set pc to ord(pat, pi)
+  if pc is 46
+    if c is not 10
+      return 1
+    end
+    return 0
+  end
+  if pc is 91
+    set end_b to find(substr(pat, pi + 1, length(pat) - (pi + 1)), "]")
+    if end_b > 0
+      set neg to 0
+      set j to pi + 1
+      if ord(pat, j) is 94
+        set neg to 1
+        set j to j + 1
+      end
+      set matched to 0
+      set stop_j to pi + 1 + end_b
+      while j < stop_j
+        set ch_j to ord(pat, j)
+        if j + 2 < stop_j and ord(pat, j + 1) is 45
+          set hi to ord(pat, j + 2)
+          if c >= ch_j and c <= hi
+            set matched to 1
+          end
+          set j to j + 3
+        else
+          if c is ch_j
+            set matched to 1
+          end
+          set j to j + 1
+        end
+      end
+      if neg is 1
+        if matched is 0
+          return 1
+        end
+        return 0
+      end
+      return matched
+    end
+  end
+  if pc is 92 and pi + 1 < length(pat)
+    set esc to ord(pat, pi + 1)
+    if esc is 100
+      return re_is_digit_char(c)
+    end
+    if esc is 119
+      return re_is_word_char(c)
+    end
+    if esc is 115
+      return re_is_space_char(c)
+    end
+    if c is esc
+      return 1
+    end
+    return 0
+  end
+  if c is pc
+    return 1
+  end
+  return 0
+end
+
+to re_atom_len with pat pi
+  set pc to ord(pat, pi)
+  if pc is 92 and pi + 1 < length(pat)
+    return 2
+  end
+  if pc is 91
+    set end_b to find(substr(pat, pi + 1, length(pat) - (pi + 1)), "]")
+    if end_b > 0
+      return end_b + 2
+    end
+  end
+  return 1
+end
+
+to re_match_here with pat pi text ti
+  set plen to length(pat)
+  set tlen to length(text)
+  if pi >= plen
+    return ti
+  end
+  if ord(pat, pi) is 36 and pi + 1 is plen
+    if ti is tlen
+      return ti
+    end
+    return 0 - 1
+  end
+  set alen to re_atom_len(pat, pi)
+  set next_pi to pi + alen
+  set quant to 0
+  if next_pi < plen
+    set qc to ord(pat, next_pi)
+    if qc is 42 or qc is 43 or qc is 63
+      set quant to qc
+      set next_pi to next_pi + 1
+    end
+  end
+
+  if quant is 42
+    # Greedy *
+    set cur_ti to ti
+    while cur_ti < tlen and re_char_matches(pat, pi, ord(text, cur_ti)) is 1
+      set cur_ti to cur_ti + 1
+    end
+    while cur_ti >= ti
+      set r to re_match_here(pat, next_pi, text, cur_ti)
+      if r >= 0
+        return r
+      end
+      set cur_ti to cur_ti - 1
+    end
+    return 0 - 1
+  end
+
+  if quant is 43
+    # Greedy +
+    if ti >= tlen or re_char_matches(pat, pi, ord(text, ti)) is 0
+      return 0 - 1
+    end
+    set cur_ti to ti + 1
+    while cur_ti < tlen and re_char_matches(pat, pi, ord(text, cur_ti)) is 1
+      set cur_ti to cur_ti + 1
+    end
+    while cur_ti > ti
+      set r to re_match_here(pat, next_pi, text, cur_ti)
+      if r >= 0
+        return r
+      end
+      set cur_ti to cur_ti - 1
+    end
+    return 0 - 1
+  end
+
+  if quant is 63
+    # Optional ?
+    if ti < tlen and re_char_matches(pat, pi, ord(text, ti)) is 1
+      set r1 to re_match_here(pat, next_pi, text, ti + 1)
+      if r1 >= 0
+        return r1
+      end
+    end
+    return re_match_here(pat, next_pi, text, ti)
+  end
+
+  if ti < tlen and re_char_matches(pat, pi, ord(text, ti)) is 1
+    return re_match_here(pat, next_pi, text, ti + 1)
+  end
+  return 0 - 1
+end
+
+to re_search_index with pat text
+  set plen to length(pat)
+  set tlen to length(text)
+  if plen > 0 and ord(pat, 0) is 94
+    set end_pos to re_match_here(pat, 1, text, 0)
+    if end_pos >= 0
+      return 0
+    end
+    return 0 - 1
+  end
+  set ti to 0
+  while ti <= tlen
+    set end_pos to re_match_here(pat, 0, text, ti)
+    if end_pos >= 0
+      return ti
+    end
+    set ti to ti + 1
+  end
+  return 0 - 1
+end
+
+to re_test with pat text
+  if re_search_index(pat, text) >= 0
+    return 1
+  end
+  return 0
+end
+
+to re_match with pat text
+  set plen to length(pat)
+  set start_pi to 0
+  if plen > 0 and ord(pat, 0) is 94
+    set start_pi to 1
+  end
+  set end_pos to re_match_here(pat, start_pi, text, 0)
+  if end_pos < 0
+    return ""
+  end
+  return substr(text, 0, end_pos)
+end
+
+to re_search with pat text
+  set plen to length(pat)
+  set tlen to length(text)
+  if plen > 0 and ord(pat, 0) is 94
+    set end_pos to re_match_here(pat, 1, text, 0)
+    if end_pos >= 0
+      return substr(text, 0, end_pos)
+    end
+    return ""
+  end
+  set ti to 0
+  while ti <= tlen
+    set end_pos to re_match_here(pat, 0, text, ti)
+    if end_pos >= 0
+      return substr(text, ti, end_pos - ti)
+    end
+    set ti to ti + 1
+  end
+  return ""
+end
+
+to glob_match_at with pat pi text ti
+  set plen to length(pat)
+  set tlen to length(text)
+  if pi >= plen
+    if ti >= tlen
+      return 1
+    end
+    return 0
+  end
+  set pc to ord(pat, pi)
+  if pc is 42
+    set k to ti
+    while k <= tlen
+      if glob_match_at(pat, pi + 1, text, k) is 1
+        return 1
+      end
+      set k to k + 1
+    end
+    return 0
+  end
+  if ti < tlen
+    if pc is 63 or pc is ord(text, ti)
+      return glob_match_at(pat, pi + 1, text, ti + 1)
+    end
+  end
+  return 0
+end
+
+to glob_match with pat text
+  return glob_match_at(pat, 0, text, 0)
+end
+
+to re_find_all with pat text
+  set out to mklist(0)
+  set plen to length(pat)
+  set tlen to length(text)
+  if plen > 0 and ord(pat, 0) is 94
+    set end_pos to re_match_here(pat, 1, text, 0)
+    if end_pos >= 0
+      set tmp to mklist(1)
+      set tmp[0] to substr(text, 0, end_pos)
+      return tmp
+    end
+    return out
+  end
+  set ti to 0
+  set count to 0
+  set buf to mklist(128)
+  while ti <= tlen
+    set end_pos to re_match_here(pat, 0, text, ti)
+    if end_pos > ti
+      set buf[count] to substr(text, ti, end_pos - ti)
+      set count to count + 1
+      set ti to end_pos
+    else
+      set ti to ti + 1
+    end
+  end
+  set res to mklist(count)
+  set i to 0
+  while i < count
+    set res[i] to buf[i]
+    set i to i + 1
+  end
+  return res
+end
+
+to re_replace_all with text pat repl
+  set tlen to length(text)
+  set out to ""
+  set ti to 0
+  while ti < tlen
+    set end_pos to re_match_here(pat, 0, text, ti)
+    if end_pos > ti
+      set out to out + concat(repl, "")
+      set ti to end_pos
+    else
+      set out to out + substr(text, ti, 1)
+      set ti to ti + 1
+    end
+  end
+  return concat(out, "")
+end

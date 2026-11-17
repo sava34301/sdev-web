@@ -127,11 +127,13 @@ conjure check_blocks(source) ::
       ponder startswith(code, ";;") either startswith(code, "}") ::
         ponder measure(stack) equals 0 ::
           problems be problems + [[n, "nothing is open here to continue"]]
+        ;; otherwise ::
+          stack[measure(stack) - 1] be n
         ;;
       ;; otherwise ::
         stack be stack + [n]
       ;;
-    ;; otherwise ponder code equals ";;" either code equals "}" ::
+    ;; otherwise ponder startswith(code, ";;") either startswith(code, "}") ::
       ponder measure(stack) equals 0 ::
         problems be problems + [[n, "this closes a block that was never opened"]]
       ;; otherwise ::

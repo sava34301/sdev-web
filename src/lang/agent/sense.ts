@@ -39,12 +39,16 @@ export function parses(source: string): boolean {
 
 let builtinCache: Set<string> | null = null;
 let runtimeCache: Set<string> | null = null;
+const WEB_CONTEXT_ONLY_NAMES = new Set([
+  'a', 'b', 'i', 'p', 'q', 's', 'u', 'g',
+  'output', 'var', 'sub', 'show',
+]);
 /** names the interpreter itself defines (speak, print, len, …) — without the window toolkit */
 function runtimeNames(): Set<string> {
   if (!runtimeCache) {
     try {
       const env = (new Interpreter(() => {}) as unknown as { globalEnv: { values: Map<string, unknown> } }).globalEnv;
-      runtimeCache = new Set(env.values.keys());
+      runtimeCache = new Set([...env.values.keys()].filter((k) => !WEB_CONTEXT_ONLY_NAMES.has(k)));
     } catch { runtimeCache = new Set(); }
   }
   return runtimeCache;
@@ -97,6 +101,7 @@ export function unknownNames(source: string): string[] {
   try { tokens = new Lexer(source).tokenize() as unknown as { type: string; value: unknown }[]; } catch { return []; }
   const defined = definedNames(source);
   const builtins = builtinNames();
+  const isWebProgram = /\b(?:page|endpage|html_\w+|open_\w+)\s*\(/.test(source);
   const out = new Set<string>();
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
@@ -109,6 +114,7 @@ export function unknownNames(source: string): string[] {
     if (/[^\x00-\x7F]/.test(name)) continue;
     if (['end', 'else', 'self', 'this', 'me', 'super', 'to', 'with', 'each', 'of', 'from', 'by', 'step', 'more', 'less', 'essence', 'value'].includes(name)) continue;
     if (defined.has(name) || builtins.has(name)) continue;
+    if (isWebProgram && WEB_CONTEXT_ONLY_NAMES.has(name)) continue;
     out.add(name);
   }
   return [...out];

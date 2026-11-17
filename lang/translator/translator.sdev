@@ -127,3 +127,144 @@ to translator_canonicalize_word with word
 
   return word
 end
+
+
+to translator_has_non_ascii with code
+  set n to length(code)
+  set i to 0
+  while i < n
+    if ord(code, i) > 127
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to tr_push_list with xs val
+  set n to length(xs)
+  set out to mklist(n + 1)
+  set i to 0
+  while i < n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  set out[n] to val
+  return out
+end
+
+to translator_segment_source with source
+  set segs to []
+  set n to length(source)
+  set i to 0
+  set buf to ""
+  while i < n
+    set c to substr(source, i, 1)
+    set is_comment to 0
+    if c is "#"
+      set is_comment to 1
+    else
+      if c is "/" and (i + 1) < n
+        if substr(source, i + 1, 1) is "/"
+          set is_comment to 1
+        end
+      end
+    end
+    if is_comment is 1
+      if length(buf) > 0
+        set segs to tr_push_list(segs, [1, buf])
+        set buf to ""
+      end
+      set stop to i
+      while stop < n and substr(source, stop, 1) is not "\n"
+        set stop to stop + 1
+      end
+      set segs to tr_push_list(segs, [0, substr(source, i, stop - i)])
+      set i to stop
+    else
+      if c is "\"" or c is "'" or c is "`"
+        if length(buf) > 0
+          set segs to tr_push_list(segs, [1, buf])
+          set buf to ""
+        end
+        set quote to c
+        set j to i + 1
+        set closed to 0
+        while j < n and closed is 0
+          set cur to substr(source, j, 1)
+          if cur is "\\"
+            set j to j + 2
+          else
+            if cur is quote
+              set closed to 1
+            end
+            set j to j + 1
+          end
+        end
+        if j > n
+          set j to n
+        end
+        set segs to tr_push_list(segs, [0, substr(source, i, j - i)])
+        set i to j
+      else
+        set buf to buf + c
+        set i to i + 1
+      end
+    end
+  end
+  if length(buf) > 0
+    set segs to tr_push_list(segs, [1, buf])
+  end
+  return segs
+end
+
+to translator_levenshtein with a b
+  if a is b
+    return 0
+  end
+  set al to length(a)
+  set bl to length(b)
+  if al is 0
+    return bl
+  end
+  if bl is 0
+    return al
+  end
+  set prev to mklist(bl + 1)
+  set curr to mklist(bl + 1)
+  set j to 0
+  while j <= bl
+    set prev[j] to j
+    set j to j + 1
+  end
+  set i to 1
+  while i <= al
+    set curr[0] to i
+    set ai to substr(a, i - 1, 1)
+    set j to 1
+    while j <= bl
+      set cost to 1
+      if ai is substr(b, j - 1, 1)
+        set cost to 0
+      end
+      set best to curr[j - 1] + 1
+      set del_c to prev[j] + 1
+      if del_c < best
+        set best to del_c
+      end
+      set sub_c to prev[j - 1] + cost
+      if sub_c < best
+        set best to sub_c
+      end
+      set curr[j] to best
+      set j to j + 1
+    end
+    set k to 0
+    while k <= bl
+      set prev[k] to curr[k]
+      set k to k + 1
+    end
+    set i to i + 1
+  end
+  return prev[bl]
+end

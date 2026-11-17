@@ -418,8 +418,3 @@ export function stripAgentDirectives(source: string): string {
 export function asWritten(source: string): string {
   return isAiDialect(source) ? aiToSdev(source) : scanDirectives(source).source;
 }
-
-/** Is the agent switched off for this file? */
-export function agentDisabled(source: string): boolean {
-  return scanDirectives(source).mode === 'off';
-}

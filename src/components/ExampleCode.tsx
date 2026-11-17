@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Code2, Palette, Cpu, Box, Layers, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, Code2, Palette, Cpu, Box, Layers, Globe, ChevronDown } from 'lucide-react';
 
 interface ExampleCodeProps {
   onSelect: (code: string) => void;
@@ -8,7 +8,7 @@ interface ExampleCodeProps {
 interface Example {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
-  category: 'basics' | 'algorithms' | 'graphics' | '3d';
+  category: 'basics' | 'algorithms' | 'graphics' | '3d' | 'web';
   code: string;
 }
 
@@ -30,6 +30,8 @@ const EXAMPLES: Example[] = [
   { name: '3D Cube', icon: Box, category: '3d', code: `canvas(400, 400)\nclear("#0d0d15")\n\nforge vertices be [\n  [-50, -50, -50], [50, -50, -50], [50, 50, -50], [-50, 50, -50],\n  [-50, -50, 50], [50, -50, 50], [50, 50, 50], [-50, 50, 50]\n]\n\nforge edges be [\n  [0, 1], [1, 2], [2, 3], [3, 0],\n  [4, 5], [5, 6], [6, 7], [7, 4],\n  [0, 4], [1, 5], [2, 6], [3, 7]\n]\n\nforge angleX be 0.5\nforge angleY be 0.7\n\nconjure project(v) ::\n  forge x be v[0]\n  forge y be v[1]\n  forge z be v[2]\n  forge x2 be x * cos(angleY) - z * sin(angleY)\n  forge z2 be x * sin(angleY) + z * cos(angleY)\n  forge y2 be y * cos(angleX) - z2 * sin(angleX)\n  forge z3 be y * sin(angleX) + z2 * cos(angleX)\n  forge scale be 200 / (z3 + 300)\n  yield [200 + x2 * scale, 200 + y2 * scale]\n;;\n\nstroke(hue(180, 100, 60), 2)\nforge i be 0\ncycle i < measure(edges) ::\n  forge edge be edges[i]\n  forge p1 be project(vertices[edge[0]])\n  forge p2 be project(vertices[edge[1]])\n  line(p1[0], p1[1], p2[0], p2[1])\n  i be i + 1\n;;\n\nfill(hue(300, 100, 70))\nforge j be 0\ncycle j < measure(vertices) ::\n  forge p be project(vertices[j])\n  circle(p[0], p[1], 4)\n  j be j + 1\n;;\n\nfill("#ffffff")\ntext("3D Wireframe Cube", 110, 380, 18)` },
   { name: '3D Pyramid', icon: Layers, category: '3d', code: `canvas(400, 400)\nclear("#0d0d15")\n\nforge apex be [0, -60, 0]\nforge base be [\n  [-50, 40, -50], [50, 40, -50],\n  [50, 40, 50], [-50, 40, 50]\n]\n\nforge angleY be 0.8\n\nconjure rotateProject(v) ::\n  forge x be v[0] * cos(angleY) - v[2] * sin(angleY)\n  forge z be v[0] * sin(angleY) + v[2] * cos(angleY)\n  forge scale be 200 / (z + 300)\n  yield [200 + x * scale, 200 + v[1] * scale]\n;;\n\nstroke(hue(50, 100, 60), 2)\nforge i be 0\ncycle i < 4 ::\n  forge p1 be rotateProject(base[i])\n  forge p2 be rotateProject(base[(i + 1) % 4])\n  line(p1[0], p1[1], p2[0], p2[1])\n  i be i + 1\n;;\n\nstroke(hue(200, 100, 70), 2)\nforge apexProj be rotateProject(apex)\nforge j be 0\ncycle j < 4 ::\n  forge bp be rotateProject(base[j])\n  line(apexProj[0], apexProj[1], bp[0], bp[1])\n  j be j + 1\n;;\n\nfill(hue(0, 100, 70))\ncircle(apexProj[0], apexProj[1], 6)\n\nfill(hue(120, 100, 60))\nforge k be 0\ncycle k < 4 ::\n  forge bp be rotateProject(base[k])\n  circle(bp[0], bp[1], 4)\n  k be k + 1\n;;\n\nfill("#ffffff")\ntext("3D Pyramid", 150, 380, 18)` },
   { name: '3D Sphere', icon: Box, category: '3d', code: `canvas(400, 400)\nclear("#0d0d15")\n\nforge radius be 80\nforge rotY be 0.5\nforge points be 200\nforge phi be (1 + root(5)) / 2\n\nforge i be 0\ncycle i < points ::\n  forge y be 1 - (i / (points - 1)) * 2\n  forge radiusAtY be root(1 - y * y)\n  forge theta be 2 * PI * i / phi\n  forge x be cos(theta) * radiusAtY * radius\n  forge z be sin(theta) * radiusAtY * radius\n  forge yPos be y * radius\n  forge xRot be x * cos(rotY) - z * sin(rotY)\n  forge zRot be x * sin(rotY) + z * cos(rotY)\n  forge depth be (zRot + radius) / (radius * 2)\n  forge brightness be 30 + depth * 70\n  fill(hue(200 + depth * 60, 80, brightness))\n  forge size be 2 + depth * 3\n  circle(200 + xRot, 200 + yPos, size)\n  i be i + 1\n;;\n\nfill("#ffffff")\ntext("3D Sphere (Fibonacci)", 100, 380, 16)` },
+  { name: 'Website Builder', icon: Globe, category: 'web', code: `// Build a full HTML/CSS/JS app in sdev!\npage("sdev Web Studio", { theme: "sdev-dark" })\n  web_state({ count: 0 })\n\n  div({ class: "max-w-xl mx-auto p-6" }, () -> ::\n    div({ class: "card text-center" }, () -> ::\n      span("HTML + CSS + JS in sdev", { class: "pill mb-4" })\n      h1("Reactive Web Counter", { class: "text-3xl mb-2" })\n      p("Client handlers compile directly from sdev to JavaScript.", { class: "text-muted-foreground text-sm mb-6" })\n      div("0", { id: "counter", bind: "count", class: "text-5xl font-display text-primary mb-6" })\n      div({ class: "flex justify-center gap-3" }, () -> ::\n        button("-1", () -> :: state_set("count", state_get("count") - 1) ;;, { class: "btn btn-outline" })\n        button("Reset", () -> :: state_set("count", 0) ;;, { class: "btn btn-secondary" })\n        button("+1", () -> :: state_set("count", state_get("count") + 1) ;;, { class: "btn btn-primary" })\n      ;;)\n    ;;)\n  ;;)\nendpage()` },
+  { name: 'sdev Website', icon: Globe, category: 'web', code: `// The sdev homepage built in sdev!\npage("sdev — Self-Hosted Language", { theme: "sdev-dark" })\n  navbar("sdev", ["How it works", "Playground", "Features"], [\n    { label: "Open IDE", href: "#playground", variant: "primary" }\n  ])\n  hero_section({\n    badge: "Open source · A compiler written in itself",\n    title: "Write in plain words.",\n    highlight: "Run it anywhere.",\n    subtitle: "sdev is a programming language that reads like everyday language, runs in your browser, and compiles to native x86-64.",\n    primaryCta: { label: "Try Playground", href: "#playground" },\n    cli: "npm i -g sdev-lang"\n  })\n  stat_band([\n    { v: "2", l: "Runtimes", d: "WebAssembly and native x86-64" },\n    { v: "26", l: "Human languages", d: "for keywords and dialects" },\n    { v: "87", l: "Self-compile checks", d: "byte-identical every time" },\n    { v: "0", l: "Dependencies", d: "in native builds — no libc" }\n  ])\n  compiler_scene_3d()\n  sdev_playground()\n  footer_section("sdev", ["Docs", "IDE", "Privacy", "Terms"])\n  scroll_driver()\n  scroll_reveal()\nendpage()` },
 ];
 
 const CATEGORIES = [
@@ -37,6 +39,7 @@ const CATEGORIES = [
   { key: 'algorithms', label: 'Algorithms', icon: Cpu, count: 3 },
   { key: 'graphics', label: 'Graphics', icon: Palette, count: 6 },
   { key: '3d', label: '3D', icon: Box, count: 3 },
+  { key: 'web', label: 'Web', icon: Globe, count: 2 },
 ] as const;
 
 export function ExampleCode({ onSelect }: ExampleCodeProps) {

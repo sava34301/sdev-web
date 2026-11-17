@@ -1,0 +1,4 @@
+VOTE: GUILTY
+REASON: Although `sdev` has real distributed components on paper, shipping this into XI–XII as stated breaks at the first production gates: an unbenchmarked 50% XI–XII exam dependency, missing Appendix 5 AI-contribution logs that cause disqualification, and unverified online/test-account readiness.
+DECIDING FACT: Half of the national round score depends on the XI–XII IT test (where 2026 laureates scored 79–96 and the minimum for Excellent 6.00 was 82), yet the record has no evidence of the V–VII student's test readiness or of the mandatory Appendix 5 records separating human and AI contributions despite much of the code being written with AI.
+WOULD FLIP IF: The record included practice-test results proving the V–VII student can handle the XI–XII exam, complete Appendix 5 logs separating human from AI work for the 20-minute defense, and verified online accessibility, version control, and test accounts for all roles.

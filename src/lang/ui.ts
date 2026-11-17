@@ -1,6 +1,15 @@
 // SDev UI Toolkit — produces declarative UI commands consumed by AppPreviewPanel.tsx
 import { SdevError } from './errors';
 import { SdevFunction, stringify } from './builtins';
+import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
+import SDEV_TEXT_SRC from '../../lang/stdlib/v2/text.sdev?raw';
+import SDEV_UI_SRC from '../../lang/stdlib/v2/ui.sdev?raw';
+
+let uiRunner: SdevModuleRunner | null = null;
+function getUiRunner(): SdevModuleRunner {
+  if (!uiRunner) uiRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_UI_SRC);
+  return uiRunner;
+}
 
 export type UiNodeType =
   | 'window' | 'row' | 'column' | 'group' | 'tabs' | 'tab'
@@ -97,22 +106,25 @@ export function createUiBuiltins(
     state.values.clear();
     containerStack.length = 0;
     nextId = 1;
+    getUiRunner().call('ui_window', title, width, height);
     pushNode('window', { title, width, height }, { container: true, isRoot: true });
     return null;
   }});
 
   builtins.set('endwindow', { type: 'builtin', call: () => { pop(); return null; }});
 
-  builtins.set('row', { type: 'builtin', call: () => { pushNode('row', { gap: 8 }, { container: true }); return null; }});
-  builtins.set('endrow', { type: 'builtin', call: () => { pop(); return null; }});
-  builtins.set('column', { type: 'builtin', call: () => { pushNode('column', { gap: 8 }, { container: true }); return null; }});
-  builtins.set('endcolumn', { type: 'builtin', call: () => { pop(); return null; }});
+  builtins.set('row', { type: 'builtin', call: () => { getUiRunner().call('ui_row', 8); pushNode('row', { gap: 8 }, { container: true }); return null; }});
+  builtins.set('endrow', { type: 'builtin', call: () => { getUiRunner().call('ui_end'); pop(); return null; }});
+  builtins.set('column', { type: 'builtin', call: () => { getUiRunner().call('ui_column', 8); pushNode('column', { gap: 8 }, { container: true }); return null; }});
+  builtins.set('endcolumn', { type: 'builtin', call: () => { getUiRunner().call('ui_end'); pop(); return null; }});
 
   builtins.set('group', { type: 'builtin', call: (args: unknown[]) => {
-    pushNode('group', { title: asString(args[0], '') }, { container: true });
+    const title = asString(args[0], '');
+    getUiRunner().call('ui_card', title);
+    pushNode('group', { title }, { container: true });
     return null;
   }});
-  builtins.set('endgroup', { type: 'builtin', call: () => { pop(); return null; }});
+  builtins.set('endgroup', { type: 'builtin', call: () => { getUiRunner().call('ui_end'); pop(); return null; }});
 
   builtins.set('tabs', { type: 'builtin', call: () => { pushNode('tabs', {}, { container: true }); return null; }});
   builtins.set('endtabs', { type: 'builtin', call: () => { pop(); return null; }});
@@ -123,15 +135,11 @@ export function createUiBuiltins(
   builtins.set('endtab', { type: 'builtin', call: () => { pop(); return null; }});
 
   // ───────────────────────── Display widgets ─────────────────────────
-  // Text widgets accept either a literal string OR a bind key. If the first
-  // argument matches an existing reactive key (registered via `uiset` or an
-  // input's bind), the widget reactively reads from `state.values[key]`.
-  // You can also force a binding by prefixing the string with "@" (e.g. "@count").
   function resolveTextArg(raw: unknown): { text: string; bind?: string } {
     const s = asString(raw, '');
-    if (s.startsWith('@') && s.length > 1) {
-      const key = s.slice(1);
-      return { text: asString(state.values.get(key), ''), bind: key };
+    const [bound, key, val] = getUiRunner().call('ui_resolve_bind', s) as [number, string, string];
+    if (bound === 1) {
+      return { text: state.values.has(key) ? asString(state.values.get(key), '') : String(val ?? ''), bind: key };
     }
     if (state.values.has(s)) {
       return { text: asString(state.values.get(s), ''), bind: s };
@@ -141,18 +149,22 @@ export function createUiBuiltins(
 
   builtins.set('heading', { type: 'builtin', call: (args: unknown[]) => {
     const { text, bind } = resolveTextArg(args[0]);
-    pushNode('heading', { text, bind, level: asNumber(args[1], 1) });
+    const level = asNumber(args[1], 1);
+    getUiRunner().call('ui_heading', text, level);
+    pushNode('heading', { text, bind, level });
     return null;
   }});
 
   builtins.set('label', { type: 'builtin', call: (args: unknown[]) => {
     const { text, bind } = resolveTextArg(args[0]);
+    getUiRunner().call('ui_label', text);
     pushNode('label', { text, bind });
     return null;
   }});
 
   builtins.set('paragraph', { type: 'builtin', call: (args: unknown[]) => {
     const { text, bind } = resolveTextArg(args[0]);
+    getUiRunner().call('ui_text', text);
     pushNode('paragraph', { text, bind });
     return null;
   }});
@@ -162,11 +174,10 @@ export function createUiBuiltins(
     return null;
   }});
 
-  builtins.set('divider', { type: 'builtin', call: () => { pushNode('divider', {}); return null; }});
-  builtins.set('spacer', { type: 'builtin', call: (args: unknown[]) => { pushNode('spacer', { size: asNumber(args[0], 8) }); return null; }});
+  builtins.set('divider', { type: 'builtin', call: () => { getUiRunner().call('ui_divider'); pushNode('divider', {}); return null; }});
+  builtins.set('spacer', { type: 'builtin', call: (args: unknown[]) => { const size = asNumber(args[0], 8); getUiRunner().call('ui_spacer', size); pushNode('spacer', { size }); return null; }});
 
   builtins.set('progress', { type: 'builtin', call: (args: unknown[]) => {
-    // value can be a number OR a bind key (string of an existing reactive value)
     const raw = args[0];
     let bind: string | undefined;
     let value = 0;
@@ -175,7 +186,9 @@ export function createUiBuiltins(
       if (state.values.has(k)) { bind = k; value = asNumber(state.values.get(k), 0); }
       else value = asNumber(raw, 0);
     } else value = asNumber(raw, 0);
-    pushNode('progress', { value, bind, max: asNumber(args[1], 100) });
+    const max = asNumber(args[1], 100);
+    getUiRunner().call('ui_progress', bind ?? 'progress', value, max);
+    pushNode('progress', { value, bind, max });
     return null;
   }});
 
@@ -183,7 +196,9 @@ export function createUiBuiltins(
   builtins.set('button', { type: 'builtin', call: (args: unknown[], line: number) => {
     const label = asString(args[0], 'Button');
     const handler = asHandler(args[1]);
-    const node = pushNode('button', { label, variant: asString(args[2], 'default') });
+    const variant = asString(args[2], 'default');
+    getUiRunner().call('ui_button', label, variant);
+    const node = pushNode('button', { label, variant });
     if (handler !== null) node.handlers.click = handler;
     emit(state);
     return null;
@@ -192,7 +207,11 @@ export function createUiBuiltins(
   builtins.set('input', { type: 'builtin', call: (args: unknown[]) => {
     const bind = asString(args[0], '');
     const placeholder = asString(args[1], '');
-    if (bind && !state.values.has(bind)) state.values.set(bind, '');
+    if (bind && !state.values.has(bind)) {
+      state.values.set(bind, '');
+      getUiRunner().call('ui_set', bind, '');
+    }
+    getUiRunner().call('ui_input', bind, placeholder, asString(state.values.get(bind), ''));
     pushNode('input', { bind, placeholder });
     return null;
   }});
@@ -201,7 +220,10 @@ export function createUiBuiltins(
     const bind = asString(args[0], '');
     const placeholder = asString(args[1], '');
     const rows = asNumber(args[2], 4);
-    if (bind && !state.values.has(bind)) state.values.set(bind, '');
+    if (bind && !state.values.has(bind)) {
+      state.values.set(bind, '');
+      getUiRunner().call('ui_set', bind, '');
+    }
     pushNode('textarea', { bind, placeholder, rows });
     return null;
   }});
@@ -209,7 +231,11 @@ export function createUiBuiltins(
   builtins.set('checkbox', { type: 'builtin', call: (args: unknown[]) => {
     const bind = asString(args[0], '');
     const label = asString(args[1], '');
-    if (bind && !state.values.has(bind)) state.values.set(bind, false);
+    if (bind && !state.values.has(bind)) {
+      state.values.set(bind, false);
+      getUiRunner().call('ui_set', bind, 'false');
+    }
+    getUiRunner().call('ui_checkbox', bind, label, state.values.get(bind) ? 1 : 0);
     pushNode('checkbox', { bind, label });
     return null;
   }});
@@ -219,7 +245,11 @@ export function createUiBuiltins(
     const min = asNumber(args[1], 0);
     const max = asNumber(args[2], 100);
     const step = asNumber(args[3], 1);
-    if (bind && !state.values.has(bind)) state.values.set(bind, min);
+    if (bind && !state.values.has(bind)) {
+      state.values.set(bind, min);
+      getUiRunner().call('ui_set', bind, String(min));
+    }
+    getUiRunner().call('ui_slider', bind, min, max, asNumber(state.values.get(bind), min));
     pushNode('slider', { bind, min, max, step });
     return null;
   }});
@@ -227,7 +257,11 @@ export function createUiBuiltins(
   builtins.set('select', { type: 'builtin', call: (args: unknown[]) => {
     const bind = asString(args[0], '');
     const opts = Array.isArray(args[1]) ? (args[1] as unknown[]).map(o => asString(o)) : [];
-    if (bind && !state.values.has(bind)) state.values.set(bind, opts[0] ?? '');
+    if (bind && !state.values.has(bind)) {
+      const def = opts[0] ?? '';
+      state.values.set(bind, def);
+      getUiRunner().call('ui_set', bind, def);
+    }
     pushNode('select', { bind, options: opts });
     return null;
   }});
@@ -259,11 +293,16 @@ export function createUiBuiltins(
   // ───────────────────────── Reactive value helpers ─────────────────────────
   builtins.set('uiget', { type: 'builtin', call: (args: unknown[]) => {
     const k = asString(args[0]);
-    return state.values.has(k) ? state.values.get(k) : null;
+    if (state.values.has(k)) return state.values.get(k);
+    if (Number(getUiRunner().call('ui_has_key', k)) === 1) {
+      return getUiRunner().callStr('ui_get', k);
+    }
+    return null;
   }});
   builtins.set('uiset', { type: 'builtin', call: (args: unknown[]) => {
     const k = asString(args[0]);
     state.values.set(k, args[1]);
+    getUiRunner().call('ui_set', k, asString(args[1], ''));
     // Reactively refresh any text/progress nodes bound to this key
     for (const node of state.nodes.values()) {
       const b = (node.props as Record<string, unknown>).bind;
@@ -294,6 +333,7 @@ export function createUiBuiltins(
 // External setter so the React panel can update reactive values when an input changes.
 export function setUiValue(state: UiState, key: string, value: unknown): UiState {
   state.values.set(key, value);
+  getUiRunner().call('ui_set', key, value == null ? '' : String(value));
   // Mirror the new value into any text/progress widgets bound to this key,
   // so labels/headings/paragraphs stay in sync with input/slider/checkbox edits.
   for (const node of state.nodes.values()) {

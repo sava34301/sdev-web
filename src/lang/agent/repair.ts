@@ -17,6 +17,7 @@ import {
 import type { AgentNote } from './types';
 import { mathRequest } from './math';
 import { taskRequest } from './tasks';
+import { escapeRe } from '../dialect/canonicalize';
 
 const PLACEHOLDER = '\u0000';
 
@@ -325,9 +326,6 @@ function parseAsk(rest: string): AskForm | null {
   return null;
 }
 
-function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 /**
  * Every answer the program asks for, and which of them are numbers. A typed

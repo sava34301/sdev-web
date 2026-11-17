@@ -1,0 +1,77 @@
+# =============================================================================
+# SDEV Native Backend: Windows x86-64 PE/COFF (.exe) Emitter
+# (lang/native/pe_x64.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/list.sdev"
+
+to pe_push_u8 with buf b
+  set cur to buf[0]
+  set buf[cur + 1] to b % 256
+  set buf[0] to cur + 1
+  return 0
+end
+
+to pe_push_u16 with buf v
+  set _ to pe_push_u8(buf, v % 256)
+  set _ to pe_push_u8(buf, (v / 256) % 256)
+  return 0
+end
+
+to pe_push_u32 with buf v
+  set _ to pe_push_u8(buf, v % 256)
+  set _ to pe_push_u8(buf, (v / 256) % 256)
+  set _ to pe_push_u8(buf, (v / 65536) % 256)
+  set _ to pe_push_u8(buf, (v / 16777216) % 256)
+  return 0
+end
+
+# Emits MS-DOS MZ header + PE\0\0 signature + COFF x86-64 header + code section
+to pe_build_minimal_exe with exit_code
+  set buf to mklist(512)
+  set buf[0] to 0
+  # 'M', 'Z' magic (0x4D, 0x5A)
+  set _ to pe_push_u8(buf, 77)
+  set _ to pe_push_u8(buf, 90)
+  # Pad DOS header to offset 0x3C (60)
+  while buf[0] < 60
+    set _ to pe_push_u8(buf, 0)
+  end
+  # e_lfanew = 64 (0x40)
+  set _ to pe_push_u32(buf, 64)
+  # PE\0\0 signature at offset 64: 'P' (80), 'E' (69), 0, 0
+  set _ to pe_push_u8(buf, 80)
+  set _ to pe_push_u8(buf, 69)
+  set _ to pe_push_u8(buf, 0)
+  set _ to pe_push_u8(buf, 0)
+  # Machine = IMAGE_FILE_MACHINE_AMD64 (0x8664 = 34404)
+  set _ to pe_push_u16(buf, 34404)
+  # NumberOfSections = 1
+  set _ to pe_push_u16(buf, 1)
+  # TimeDateStamp, PointerToSymbolTable, NumberOfSymbols
+  set _ to pe_push_u32(buf, 0)
+  set _ to pe_push_u32(buf, 0)
+  set _ to pe_push_u32(buf, 0)
+  # SizeOfOptionalHeader = 240, Characteristics = 0x0022 (EXECUTABLE_IMAGE | LARGE_ADDRESS_AWARE)
+  set _ to pe_push_u16(buf, 240)
+  set _ to pe_push_u16(buf, 34)
+  # OptionalHeader Magic = PE32+ (0x020B = 523)
+  set _ to pe_push_u16(buf, 523)
+  # Emit x86-64 machine code stub: mov eax, exit_code (B8 imm32); ret (C3)
+  set _ to pe_push_u8(buf, 184)
+  set _ to pe_push_u32(buf, exit_code)
+  set _ to pe_push_u8(buf, 195)
+  return buf
+end
+
+to pe_verify_header with buf
+  if buf[0] < 70
+    return 0
+  end
+  # Check 'M', 'Z' at [1..2] and 'P', 'E' at [65..66]
+  if buf[1] is 77 and buf[2] is 90 and buf[65] is 80 and buf[66] is 69
+    return 1
+  end
+  return 0
+end

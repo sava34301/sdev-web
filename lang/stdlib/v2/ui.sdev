@@ -1,0 +1,201 @@
+# =============================================================================
+# SDEV Standard Library: Declarative UI & Window Toolkit (lang/stdlib/v2/ui.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+# _ui state list:
+# 0: title (str)
+# 1: width (int)
+# 2: height (int)
+# 3: node_count (int)
+# 4: html_body (str)
+# 5: state_count (int)
+set _ui to mklist(8)
+set _ui[0] to "SDEV App"
+set _ui[1] to 480
+set _ui[2] to 360
+set _ui[3] to 0
+set _ui[4] to ""
+set _ui[5] to 0
+
+set _ui_keys to mklist(128)
+set _ui_vals to mklist(128)
+
+to ui_window with title_str w h
+  set _ui[0] to concat(title_str, "")
+  set _ui[1] to w
+  set _ui[2] to h
+  set _ui[3] to 1
+  set _ui[4] to ""
+  set _ui[5] to 0
+  return _ui
+end
+
+to ui_emit with frag
+  set cur to concat(_ui[4], "")
+  set _ui[4] to cur + frag + "\n"
+  set _ui[3] to _ui[3] + 1
+  return _ui[3]
+end
+
+to ui_set with key_str val_str
+  set k to concat(key_str, "")
+  set v to concat(val_str, "")
+  set n to _ui[5]
+  set i to 0
+  while i < n
+    if str_eq(_ui_keys[i], k)
+      set _ui_vals[i] to v
+      return 0
+    end
+    set i to i + 1
+  end
+  set _ui_keys[n] to k
+  set _ui_vals[n] to v
+  set _ui[5] to n + 1
+  return 0
+end
+
+to ui_get with key_str
+  set k to concat(key_str, "")
+  set n to _ui[5]
+  set i to 0
+  while i < n
+    if str_eq(_ui_keys[i], k)
+      return concat(_ui_vals[i], "")
+    end
+    set i to i + 1
+  end
+  return ""
+end
+
+to ui_row with gap
+  return ui_emit("<div class=\"ui-row\" style=\"display:flex;flex-direction:row;align-items:center;gap:" + str(gap) + "px;\">")
+end
+
+to ui_column with gap
+  return ui_emit("<div class=\"ui-col\" style=\"display:flex;flex-direction:column;gap:" + str(gap) + "px;\">")
+end
+
+to ui_grid with cols gap
+  return ui_emit("<div class=\"ui-grid\" style=\"display:grid;grid-template-columns:repeat(" + str(cols) + ",minmax(0,1fr));gap:" + str(gap) + "px;\">")
+end
+
+to ui_card with title_str
+  set hdr to ""
+  if length(title_str) > 0
+    set hdr to "<div class=\"ui-card-title\" style=\"font-weight:600;margin-bottom:8px;\">" + concat(title_str, "") + "</div>"
+  end
+  return ui_emit("<div class=\"ui-card\" style=\"border:1px solid #1e293b;border-radius:10px;padding:14px;background:#0f172a;\">" + hdr)
+end
+
+to ui_end
+  set cur to concat(_ui[4], "")
+  set _ui[4] to cur + "</div>\n"
+  return 0
+end
+
+to ui_heading with text_str level
+  set tag to "h" + str(level)
+  return ui_emit("<" + tag + " class=\"ui-heading\">" + concat(text_str, "") + "</" + tag + ">")
+end
+
+to ui_text with text_str
+  return ui_emit("<p class=\"ui-text\">" + concat(text_str, "") + "</p>")
+end
+
+to ui_label with text_str
+  return ui_emit("<label class=\"ui-label\">" + concat(text_str, "") + "</label>")
+end
+
+to ui_button with label_str variant_str
+  return ui_emit("<button type=\"button\" class=\"ui-btn ui-btn-" + concat(variant_str, "") + "\">" + concat(label_str, "") + "</button>")
+end
+
+to ui_input with key_str placeholder_str default_val
+  set _ to ui_set(key_str, default_val)
+  return ui_emit("<input type=\"text\" data-ui-key=\"" + concat(key_str, "") + "\" placeholder=\"" + concat(placeholder_str, "") + "\" value=\"" + concat(default_val, "") + "\"/>")
+end
+
+to ui_checkbox with key_str label_str checked_int
+  set v to "false"
+  set chk to ""
+  if checked_int is 1
+    set v to "true"
+    set chk to " checked"
+  end
+  set _ to ui_set(key_str, v)
+  return ui_emit("<label class=\"ui-checkbox\"><input type=\"checkbox\" data-ui-key=\"" + concat(key_str, "") + "\"" + chk + "/><span>" + concat(label_str, "") + "</span></label>")
+end
+
+to ui_slider with key_str min_v max_v cur_v
+  set _ to ui_set(key_str, str(cur_v))
+  return ui_emit("<input type=\"range\" data-ui-key=\"" + concat(key_str, "") + "\" min=\"" + str(min_v) + "\" max=\"" + str(max_v) + "\" value=\"" + str(cur_v) + "\"/>")
+end
+
+to ui_progress with key_str val_int max_int
+  set _ to ui_set(key_str, str(val_int))
+  return ui_emit("<progress data-ui-key=\"" + concat(key_str, "") + "\" value=\"" + str(val_int) + "\" max=\"" + str(max_int) + "\"></progress>")
+end
+
+to ui_badge with text_str variant_str
+  return ui_emit("<span class=\"ui-badge ui-badge-" + concat(variant_str, "") + "\">" + concat(text_str, "") + "</span>")
+end
+
+to ui_alert with title_str msg_str variant_str
+  return ui_emit("<div class=\"ui-alert ui-alert-" + concat(variant_str, "") + "\"><strong>" + concat(title_str, "") + "</strong><p>" + concat(msg_str, "") + "</p></div>")
+end
+
+to ui_stat with label_str val_str delta_str
+  return ui_emit("<div class=\"ui-stat\"><span class=\"ui-stat-label\">" + concat(label_str, "") + "</span><strong class=\"ui-stat-value\">" + concat(val_str, "") + "</strong><small class=\"ui-stat-delta\">" + concat(delta_str, "") + "</small></div>")
+end
+
+to ui_divider
+  return ui_emit("<hr class=\"ui-divider\"/>")
+end
+
+to ui_spacer with px
+  return ui_emit("<div class=\"ui-spacer\" style=\"height:" + str(px) + "px;\"></div>")
+end
+
+to ui_node_count
+  return _ui[3]
+end
+
+to ui_to_html
+  set t to concat(_ui[0], "")
+  set w to str(_ui[1])
+  set h to str(_ui[2])
+  set out to "<div class=\"sdev-ui-window\" data-title=\"" + t + "\" style=\"width:" + w + "px;min-height:" + h + "px;\">\n<div class=\"sdev-ui-titlebar\">" + t + "</div>\n<div class=\"sdev-ui-content\">\n" + concat(_ui[4], "") + "</div>\n</div>"
+  return concat(out, "")
+end
+
+
+to ui_has_key with key_str
+  set k to concat(key_str, "")
+  set n to _ui[5]
+  set i to 0
+  while i < n
+    if str_eq(_ui_keys[i], k)
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to ui_resolve_bind with raw_str
+  set s to concat(raw_str, "")
+  if length(s) > 1
+    if substr(s, 0, 1) is "@"
+      set k to substr(s, 1, length(s) - 1)
+      return [1, k, ui_get(k)]
+    end
+  end
+  if ui_has_key(s) is 1
+    return [1, s, ui_get(s)]
+  end
+  return [0, "", s]
+end

@@ -6,6 +6,7 @@
  * through the ordinary canonicalizer with no AI involved at all.
  */
 import { emptyDialect, type DialectSpec } from '@/lang/dialect/spec';
+import { slugify } from '@/lib/utils';
 import { CANONICAL, type Intent } from './vocabulary';
 import type { AgentMemory } from './memory';
 import type { UnderstandResult } from './types';
@@ -20,15 +21,6 @@ export interface PromoteOptions {
   rename?: boolean;
 }
 
-function slugify(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 40) || 'my-sdev'
-  );
-}
 
 export function promoteToDialect(opts: PromoteOptions = {}): DialectSpec {
   const name = opts.name ?? 'My way of writing';

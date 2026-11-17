@@ -785,8 +785,8 @@ function emitExpr(e, em, locals) {
       if (e.op === 'not') { emitExpr(e.x, em, locals); em.emit(OP.NOT); return 'int'; }
       break;
     case 'bin': {
-      if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
-      if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.patchI16(fx, em.here() - before); return 'int'; }
+      if (e.op === 'and') { emitExpr(e.l, em, locals); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.emit(OP.JMP); const done = em.placeholder16(); const afterDone = em.here(); em.patchI16(fx, em.here() - before); em.emit(OP.PUSH_I32); em.emitI32(0); em.patchI16(done, em.here() - afterDone); return 'int'; }
+      if (e.op === 'or')  { emitExpr(e.l, em, locals); em.emit(OP.NOT); em.emit(OP.JZ); const fx = em.placeholder16(); const before = em.here(); emitExpr(e.r, em, locals); em.emit(OP.JMP); const done = em.placeholder16(); const afterDone = em.here(); em.patchI16(fx, em.here() - before); em.emit(OP.PUSH_I32); em.emitI32(1); em.patchI16(done, em.here() - afterDone); return 'int'; }
       const lk = emitExpr(e.l, em, locals);
       const rk = emitExpr(e.r, em, locals);
       // Promote `+` to STRCAT when either operand is a string literal.
