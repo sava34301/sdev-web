@@ -1,6 +1,15 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
+// Never write full email addresses to logs.
+function maskEmail(e: unknown): string {
+  const s = String(e ?? '')
+  const at = s.indexOf('@')
+  if (at < 1) return '***'
+  return s[0] + '***' + s.slice(at)
+}
+
+
 function jsonResponse(data: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -114,12 +123,12 @@ Deno.serve(async (req) => {
   if (suppressError) {
     console.error('Failed to suppress email', {
       error: suppressError,
-      email: tokenRecord.email,
+      email: maskEmail(tokenRecord.email),
     })
     return jsonResponse({ error: 'Failed to process unsubscribe' }, 500)
   }
 
-  console.log('Email unsubscribed', { email: tokenRecord.email })
+  console.log('Email unsubscribed', { email: maskEmail(tokenRecord.email) })
 
   return jsonResponse({ success: true })
 })

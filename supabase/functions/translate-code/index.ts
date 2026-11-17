@@ -1,3 +1,4 @@
+import { requireUser } from '../_shared/auth.ts';
 import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -301,6 +302,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const denied = await requireUser(req, corsHeaders);
+  if (denied) return denied;
 
   try {
     const { code, sourceLanguage } = await req.json();

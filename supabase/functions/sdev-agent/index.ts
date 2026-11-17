@@ -1,5 +1,8 @@
 import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
 
 /**
  * The online brain of the sdev understanding agent.
@@ -44,6 +47,17 @@ Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, 
   chars(s), weave(list, sep) joins, shatter(s, sep) splits, sift(list, fn) filters, each(list, fn) maps,
   fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.
   There is NO join, split, append, push, map, filter, printf — use weave, shatter, l + [x], each, sift.
+
+Self-hosted (v2) libraries for systems and causal-AI work — load with use "lang/stdlib/v2/<name>.sdev":
+  list: list_append(xs, x), list_concat_two(a, b) (in v2 files lists never grow with +)
+  bits: bits_and/or/xor(a, b), bits_shl/shr(v, n), bits_not_n(v, width), floor_div, floor_mod, wrap_u8/u16/i16
+  mem: mem_arena(size), mem_put/get_u8/u16/i16(m, addr[, v]) little-endian, mem_copy, mem_fill, mem_hex,
+       ring_create(cap), ring_push, ring_get(r, i), ring_len
+  oce (v2: use "lang/stdlib/v2/oce.sdev", it loads list, bits, mem itself; classic and !#ai files: built in, no import): Ontological Causal Engine in one 64 KB arena — oce_create(), oce_entity(m),
+       oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),
+       oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),
+       oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).
+  In v2 files, xs + [a] joins lists only when the file uses "lang/stdlib/v2/list.sdev"; prefer list_append(xs, a).
 
 Canonical SDEV Patterns & Examples:
   # 1. Math and output:
@@ -112,6 +126,8 @@ sdev:ai — the dialect for AI models. When asked for sdev:ai, write ONLY this f
   ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else
   w i < 3 {  }                 while               each n in xs {  }   for each
   try {  } catch e {  }        brk / next          break / continue
+  } finally {  }   throw e      k MAX = 3           constant
+  c Dog : Animal {  f init(self, n) { self.n = n }  }    class (": Animal" optional); make one with new Dog(1)
   == != && || ! true false null      every block closes with } on its own line
   Calls to built-ins and the window toolkit stay as they are: window("Calc", 320, 400), button("7", () -> press("7")), uiset(...)
   Lambdas: (x) -> x * 2.  One statement per line.

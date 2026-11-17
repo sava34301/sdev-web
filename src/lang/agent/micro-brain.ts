@@ -174,7 +174,7 @@ export async function initMicroBrainCache(): Promise<MicroBrainStats> {
       const cache = await window.caches.open(MICRO_BRAIN_CACHE_KEY);
       const existing = await cache.match('/__sdev_micro_brain_weights.bin');
       if (!existing) {
-        const blob = new Blob([PREBAKED_WEIGHTS.buffer], { type: 'application/octet-stream' });
+        const blob = new Blob([PREBAKED_WEIGHTS.buffer as ArrayBuffer], { type: 'application/octet-stream' });
         await cache.put(
           '/__sdev_micro_brain_weights.bin',
           new Response(blob, {

@@ -76,6 +76,7 @@ end
 
 # 6. Self-Hosted Stdlib v2
 set ok to run_suite("Self-Hosted Stdlib v2", "node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev")
+set ok to run_suite("OCE causal engine", "node bin/sdevhost.mjs scripts/test-oce.sdev")
 if ok is 1
   set total_passed to total_passed + 1
 else

@@ -3,6 +3,12 @@ import { SdevError } from '../errors';
 import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
 import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
 import SDEV_REGEX_SRC from '../../../lang/stdlib/v2/regex.sdev?raw';
+import { regexProblem } from './regex-guard';
+
+function guard(text: string, pattern: string, line: number) {
+  const p = regexProblem(pattern, text);
+  if (p) throw new SdevError(p, line);
+}
 
 let regexRunner: SdevModuleRunner | null = null;
 function getRegexRunner(): SdevModuleRunner {
@@ -21,6 +27,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, _output: Outp
     call: (args: unknown[], line: number) => {
       if (args.length !== 2) throw new SdevError('match() takes 2 arguments (text, pattern)', line);
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string') throw new SdevError('Arguments must be text', line);
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         const hit = getRegexRunner().callStr('re_search', args[1], args[0]);
         if (hit) return [hit];
@@ -37,6 +44,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, _output: Outp
     call: (args: unknown[], line: number) => {
       if (args.length !== 2) throw new SdevError('matchAll() takes 2 arguments (text, pattern)', line);
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string') throw new SdevError('Arguments must be text', line);
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         const hits = getRegexRunner().call('re_find_all', args[1], args[0]) as string[];
         return hits.map((h) => [h]);
@@ -54,6 +62,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, _output: Outp
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string' || typeof args[2] !== 'string') {
         throw new SdevError('Arguments must be text', line);
       }
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         return getRegexRunner().callStr('re_replace_all', args[0], args[1], args[2]);
       }
@@ -67,6 +76,7 @@ export function registerRegex(builtins: Map<string, SdevFunction>, _output: Outp
     call: (args: unknown[], line: number) => {
       if (args.length !== 2) throw new SdevError('test() takes 2 arguments (text, pattern)', line);
       if (typeof args[0] !== 'string' || typeof args[1] !== 'string') throw new SdevError('Arguments must be text', line);
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         return getRegexRunner().call('re_test', args[1], args[0]) === 1;
       }

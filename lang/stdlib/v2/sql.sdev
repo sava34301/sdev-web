@@ -1,4 +1,5 @@
 # SDEV Standard Library: Relational SQL Primitives — authored in pure SDEV.
+use "lang/stdlib/v2/list.sdev"
 
 to sql_select with rows cols
   set out to []
@@ -28,7 +29,7 @@ to sql_where with rows predicate
   set r to 0
   while r < nr
     set row to rows[r]
-    if predicate(row)
+    if call predicate(row)
       set out to out + [row]
     end
     set r to r + 1
