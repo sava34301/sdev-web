@@ -10,6 +10,7 @@
 import { SdevFunction, stringify } from './builtins';
 import { isFunction, isGenerator } from './runtime-values';
 import type * as AST from './ast';
+import type { Environment } from './environment';
 import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
 
 import SDEV_TEXT_SRC from '../../lang/stdlib/v2/text.sdev?raw';

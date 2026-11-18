@@ -52,9 +52,9 @@ const SEED_ASSET_PATH = '/wasm/sdev-seed' + '.wasm';
 
 async function defaultSeedBytes() {
   if (typeof process !== 'undefined' && process.versions?.node) {
-    const { readFile } = await import('node:fs/promises');
-    const base = new URL('../../public', import.meta.url).href.replace(/\/$/, '');
-    return readFile(new URL(base + SEED_ASSET_PATH));
+    const fs = await ensureNodeFs();
+    const seedPath = '../../public' + SEED_ASSET_PATH;
+    return fs.promises.readFile(new URL(seedPath, import.meta.url));
   }
   const res = await fetch(SEED_ASSET_PATH);
   if (!res.ok) throw new Error(`fetch seed VM: ${res.status}`);
