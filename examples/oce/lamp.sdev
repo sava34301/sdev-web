@@ -1,3 +1,4 @@
+#!sdev v2
 # Learn a lamp: brightness grows only while the switch is on. Guide: SDEV_OCE_DEVELOPER_GUIDE.md
 use "lang/stdlib/v2/oce.sdev"
 

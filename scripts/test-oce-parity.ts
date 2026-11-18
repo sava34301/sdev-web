@@ -10,6 +10,7 @@ import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execute, executeAsync } from '../src/lang/index';
+import { pickRuntime } from '../src/lang/executor';
 
 let pass = 0, fail = 0;
 const check = (name: string, ok: boolean, detail = '') => {
@@ -30,6 +31,10 @@ check('classic (browser runtime) = v2', lines(classic('scripts/test-oce-classic.
 check('classic (Python runtime) = v2', lines(run('python3', ['public/sdev-interpreter.py', 'scripts/test-oce-classic.sdev'])) === v2);
 
 const g = lines(run('node', ['bin/sdevhost.mjs', 'examples/oce/gravity.sdev']));
+for (const name of ['lamp', 'gravity']) {
+  const source = readFileSync(`examples/oce/${name}.sdev`, 'utf8');
+  check(`${name} selects SDEV v2 without a runtime setting`, pickRuntime(source) === 'v2');
+}
 check('gravity demo learns gravity', g.includes('if supported == 0 then vel_z += -10'), g);
 check('gravity classic (browser) = v2', lines(classic('examples/oce/gravity-classic.sdev')) === g);
 check('gravity classic (Python) = v2', lines(run('python3', ['public/sdev-interpreter.py', 'examples/oce/gravity-classic.sdev'])) === g);

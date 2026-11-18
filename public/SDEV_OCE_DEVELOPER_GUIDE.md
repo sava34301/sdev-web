@@ -24,14 +24,14 @@ There are no weights, no training data files and no AI model. Everything lives i
 
 | You write | Setup line | Runs on |
 |---|---|---|
-| SDEV v2 (`set … to`, `to f with …`) | `use "lang/stdlib/v2/oce.sdev"` | website, `sdevhost` command-line tool, native Linux |
+| SDEV v2 (`set … to`, `to f with …`) | `#!sdev v2`, then `use "lang/stdlib/v2/oce.sdev"` on its own line | website, `sdevhost` command-line tool, native Linux |
 | Classic SDEV (`forge … be`) | none, it's built in | website, Python version |
 | `!#ai` files | none, it's built in | website |
 
 All three give exactly the same answers.
 
 **Running a file:**
-- **Website:** paste it into the IDE and press Run.
+- **Website:** paste the full example into the IDE and press Run. Keep `#!sdev v2` as the first line of v2 examples so the IDE selects the right runtime.
 - **Command line (v2):** `node bin/sdevhost.mjs my-world.sdev`
 - **Python (classic):** `python3 public/sdev-interpreter.py my-world.sdev`
 - **Native Linux program (v2):** `node scripts/sdev-native.mjs my-world.sdev -o my-world`, then `./my-world`
@@ -45,6 +45,7 @@ The lamp gets 5 brighter each tick, but only while its switch is on. The engine 
 The file is `examples/oce/lamp.sdev` (classic version: `examples/oce/lamp-classic.sdev`).
 
 ```sdev
+#!sdev v2
 use "lang/stdlib/v2/oce.sdev"
 
 set m to oce_create()
@@ -149,6 +150,8 @@ Each law has one condition, and exceptions go one level deep. If your rule needs
 ## 5. Recipes
 
 ### Learn number patterns
+Run this recipe and the ones below inside a v2 file with the two setup lines above.
+
 ```sdev
 set rule to oce_sequence_rule([3, 7, 11, 15])
 say rule[0]                                      # add

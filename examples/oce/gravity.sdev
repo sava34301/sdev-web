@@ -1,3 +1,4 @@
+#!sdev v2
 # The OCE discovers gravity from nothing — written in SDEV.
 #   node bin/sdevhost.mjs examples/oce/gravity.sdev
 #   node scripts/sdev-native.mjs examples/oce/gravity.sdev -o gravity && ./gravity

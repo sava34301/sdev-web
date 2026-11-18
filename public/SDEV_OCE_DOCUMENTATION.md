@@ -17,7 +17,9 @@ The whole engine is **one 64 KB block of bytes**, laid out like the OCE paper:
 ## Quick start
 
 ```sdev
-use "lang/stdlib/v2/oce.sdev"          # brings list, bits and mem with it
+#!sdev v2
+# The OCE library brings list, bits, and mem with it.
+use "lang/stdlib/v2/oce.sdev"
 
 set m to oce_create()
 set _ to oce_medium(m, 3, 12)          # air density = 12
@@ -40,8 +42,8 @@ model size: 60 bytes
 
 ### Classic sdev and the AI syntax
 
-In classic files (`forge … be …`) and `!#ai` files every function on this page is built in —
-no import, on the website and in the Python version alike:
+In classic files (`forge … be …`), these functions are built in on the website and in the Python version.
+On the website, `!#ai` files also have these functions built in. The standalone Python interpreter requires classic syntax:
 
 ```sdev
 forge m be oce_create()
