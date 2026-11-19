@@ -610,7 +610,8 @@ export default function IDEPage() {
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && e.key === 'p') { e.preventDefault(); setShowCommandPalette(true); }
-      if (ctrl && e.key === 'Enter') { e.preventDefault(); runCode(); }
+      if (ctrl && e.shiftKey && e.key === 'Enter') { e.preventDefault(); void runCode({ noUnderstand: true }); }
+      else if (ctrl && e.key === 'Enter') { e.preventDefault(); runCode(); }
       if (ctrl && e.key === 's') { e.preventDefault(); void downloadCurrentFile('written'); }
       if (ctrl && e.key === 'b') { e.preventDefault(); setSidePanel(p => p === 'explorer' ? null : 'explorer'); }
       if (ctrl && e.shiftKey && (e.key === 'F' || e.key === 'f')) { e.preventDefault(); setSidePanel(p => p === 'search' ? null : 'search'); }
@@ -678,6 +679,7 @@ export default function IDEPage() {
   const runCode = useCallback(async (override?: unknown, retried = false) => {
     const overrideSrc = typeof override === 'string' ? override : undefined;
     const reunderstand = typeof override === 'object' && override !== null && 'reunderstand' in override && Boolean((override as { reunderstand?: boolean }).reunderstand);
+    const noUnderstand = typeof override === 'object' && override !== null && 'noUnderstand' in override && Boolean((override as { noUnderstand?: boolean }).noUnderstand);
     if (!activeFile) return;
 
     // ─── v2 "Prism" runtime short-circuit ───
@@ -728,7 +730,7 @@ export default function IDEPage() {
     const showV2 = (r: { success: boolean; output: string[]; error: string | null }) => {
       setOutput(r.output);
       setError(r.success ? undefined : r.error ?? 'error');
-      setStatusMsg(r.success ? 'Done (v2 · self-hosted)' : `✗ ${r.error ?? 'error'}`);
+      setStatusMsg(r.success ? (noUnderstand ? 'Done (v2 · without understanding)' : 'Done (v2 · self-hosted)') : `✗ ${r.error ?? 'error'}`);
       if (!r.success) setBottomPanel('terminal');
     };
 
@@ -736,13 +738,25 @@ export default function IDEPage() {
     // The understander only reads a v2 file when the self-hosted compiler
     // cannot compile it as written, so it can never break a working program.
     let v2AsWrittenError: string | null = null;
-    if (overrideSrc === undefined && wantsV2(writtenSrc) && !wordsNeedReading(writtenSrc)) {
+    if (overrideSrc === undefined && wantsV2(writtenSrc) && (noUnderstand || !wordsNeedReading(writtenSrc))) {
       setIsRunning(true);
-      setStatusMsg('Running (v2 · self-hosted)…');
+      setStatusMsg(noUnderstand ? 'Running (v2 · without understanding)…' : 'Running (v2 · self-hosted)…');
       setUiState(null); setWebState(null);
       try {
         const r = await tryV2(writtenSrc);
         if (!('notCompiled' in r)) { showV2(r); setIsRunning(false); return; }
+        if (noUnderstand) {
+          setOutput([
+            `✗ the self-hosted sdev compiler cannot compile this yet: ${r.notCompiled}`,
+            '  v2 runs only on the self-hosted toolchain — no JavaScript fallback.',
+            '  Run it with #!sdev v1 while this feature is being self-hosted.',
+          ]);
+          setError(r.notCompiled);
+          setStatusMsg('✗ not yet self-hosted');
+          setBottomPanel('terminal');
+          setIsRunning(false);
+          return;
+        }
         v2AsWrittenError = r.notCompiled;
       } catch (e) {
         setStatusMsg(`✗ v2: ${e instanceof Error ? e.message : String(e)}`);
@@ -763,21 +777,23 @@ export default function IDEPage() {
     // the content hasn't changed, re-runs use that copy and skip the thinking.
     const { understandKey, AGENT_VERSION } = await import('@/lang/agent');
     const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, activeDialect ?? null, projectNames]));
-    const saved = !reunderstand && activeFile.understood?.key === fileKey ? activeFile.understood.source : null;
+    const saved = !reunderstand && !noUnderstand && activeFile.understood?.key === fileKey ? activeFile.understood.source : null;
     const understood = overrideSrc !== undefined
       ? { source: overrideSrc, notes: [{ line: 0 }], brainUsed: 'none' as const, cached: false }
-      : saved !== null
-        ? { source: saved, notes: [] as unknown[], brainUsed: activeFile.understood?.brainUsed ?? ('none' as const), cached: true }
-        : await (async () => {
-            // show the built-in AI's first-time preparation in the status bar
-            const { onBrowserBrain } = await import('@/lang/agent/browser-brain');
-            const off = onBrowserBrain((b) => {
-              if (b.state === 'loading') setStatusMsg(`Preparing the built-in AI (first time only) — ${Math.round(b.progress * 100)}%`);
-            });
-            try { return await understandAsync(dialectSrc, { dialect: activeDialect, projectNames, fresh: reunderstand }); } finally { off(); }
-          })();
+      : noUnderstand
+        ? { source: writtenSrc, notes: [] as unknown[], brainUsed: 'none' as const, cached: false }
+        : saved !== null
+          ? { source: saved, notes: [] as unknown[], brainUsed: activeFile.understood?.brainUsed ?? ('none' as const), cached: true }
+          : await (async () => {
+              // show the built-in AI's first-time preparation in the status bar
+              const { onBrowserBrain } = await import('@/lang/agent/browser-brain');
+              const off = onBrowserBrain((b) => {
+                if (b.state === 'loading') setStatusMsg(`Preparing the built-in AI (first time only) — ${Math.round(b.progress * 100)}%`);
+              });
+              try { return await understandAsync(dialectSrc, { dialect: activeDialect, projectNames, fresh: reunderstand }); } finally { off(); }
+            })();
     const { lastBrainMissing } = await import('@/lang/agent/brain');
-    const brainMissing = overrideSrc === undefined && saved === null && lastBrainMissing;
+    const brainMissing = overrideSrc === undefined && !noUnderstand && saved === null && lastBrainMissing;
     if (brainMissing) {
       const { browserBrainStatus } = await import('@/lang/agent/browser-brain');
       const b = browserBrainStatus();
@@ -793,7 +809,7 @@ export default function IDEPage() {
       fromCache: saved !== null || Boolean('cached' in understood && understood.cached),
       detectedLanguage: activeFile.understood?.detectedLanguage ?? null,
     };
-    if (overrideSrc === undefined && saved === null && !brainMissing) {
+    if (overrideSrc === undefined && !noUnderstand && saved === null && !brainMissing) {
       const fileId = activeFile.id;
       setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: baseUnderstoodMeta } : f)));
     } else if (overrideSrc !== undefined) {
@@ -857,7 +873,7 @@ export default function IDEPage() {
     setUiState(null);
     setWebState(null);
     setIsRunning(true);
-    setStatusMsg('Running…');
+    setStatusMsg(noUnderstand ? 'Running (without understanding)…' : 'Running…');
 
     // ─── Hybrid translation pre-pass ───
     // Stage 1: dictionary + fuzzy (sync, in Lexer). Stage 2: smart fallback
@@ -1057,14 +1073,14 @@ export default function IDEPage() {
         setShowCanvas(true);
         setBottomPanel('canvas');
       }
-      setStatusMsg(`✓ Done in ${elapsed}ms`);
+      setStatusMsg(noUnderstand ? `✓ Done in ${elapsed}ms (without understanding)` : `✓ Done in ${elapsed}ms`);
       recordRun(activeFile.name, activeFile.content, outputLines.join('\n'), 'success', elapsed);
     } catch (e) {
       const msg = e instanceof SdevError || e instanceof Error
         ? e.message
         : typeof e === 'object' && e !== null ? (() => { try { return JSON.stringify(e); } catch { return String(e); } })() : String(e);
       const rewritten = canonicalSrc.trim() !== writtenSrc.trim();
-      if (!retried) {
+      if (!retried && !noUnderstand) {
         const { parses, unknownNames, reconsider } = await import('@/lang/agent');
         if (rewritten) {
           // The agent's reading broke, but the author's file holds together: the file as written wins.
@@ -1079,7 +1095,7 @@ export default function IDEPage() {
         }
       }
       // A reading that fails is never kept — the next run thinks again.
-      { const failedId = activeFile.id; setFiles((prev) => prev.map((f) => (f.id === failedId ? { ...f, understood: undefined } : f))); }
+      if (!noUnderstand) { const failedId = activeFile.id; setFiles((prev) => prev.map((f) => (f.id === failedId ? { ...f, understood: undefined } : f))); }
       setOutput(outputLines);
       setError(msg);
       setExecTime(null);
@@ -1587,9 +1603,12 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                 <DropdownMenuTrigger asChild>
                   <button className="ide-menu-btn font-mono">Run</button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-52 bg-card border-border/50">
+                <DropdownMenuContent className="w-56 bg-card border-border/50">
                   <DropdownMenuItem onClick={runCode} className="text-xs gap-2 cursor-pointer">
                     <Play className="w-3.5 h-3.5 text-neon-green" /> Run Program <span className="ml-auto text-muted-foreground">⌃↵</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void runCode({ noUnderstand: true })} className="text-xs gap-2 cursor-pointer">
+                    <Zap className="w-3.5 h-3.5 text-neon-cyan" /> Run without Understanding <span className="ml-auto text-muted-foreground">⇧⌃↵</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => void reunderstandCurrentFile()} className="text-xs gap-2 cursor-pointer">
                     <RefreshCw className="w-3.5 h-3.5 text-primary" /> Re-understand & Run
@@ -1842,20 +1861,45 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button
-              size="sm"
-              onClick={runCode}
-              disabled={isRunning || isTranslating}
-              className="ide-run-btn gap-1.5 font-semibold h-7 text-xs min-w-[72px] rounded-md border-0"
-            >
-              {isTranslating ? (
-                <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Translating</span>
-              ) : isRunning ? (
-                <span className="flex items-center gap-1"><span className="animate-spin">⟳</span> Running</span>
-              ) : (
-                <><Play className="w-3 h-3 fill-current" /> Run</>
-              )}
-            </Button>
+            <div className="flex items-center">
+              <Button
+                size="sm"
+                onClick={runCode}
+                disabled={isRunning || isTranslating}
+                className="ide-run-btn gap-1.5 font-semibold h-7 text-xs min-w-[68px] rounded-l-md rounded-r-none border-0"
+              >
+                {isTranslating ? (
+                  <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Translating</span>
+                ) : isRunning ? (
+                  <span className="flex items-center gap-1"><span className="animate-spin">⟳</span> Running</span>
+                ) : (
+                  <><Play className="w-3 h-3 fill-current" /> Run</>
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={isRunning || isTranslating}
+                    aria-label="Run options"
+                    className="ide-run-btn h-7 px-1.5 rounded-r-md rounded-l-none border-0 border-l border-background/20"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-card border-border/50">
+                  <DropdownMenuItem onClick={runCode} className="text-xs gap-2 cursor-pointer">
+                    <Play className="w-3.5 h-3.5 text-neon-green" /> Run Program <span className="ml-auto text-muted-foreground">⌃↵</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void runCode({ noUnderstand: true })} className="text-xs gap-2 cursor-pointer">
+                    <Zap className="w-3.5 h-3.5 text-neon-cyan" /> Run without Understanding <span className="ml-auto text-muted-foreground">⇧⌃↵</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void reunderstandCurrentFile()} className="text-xs gap-2 cursor-pointer">
+                    <RefreshCw className="w-3.5 h-3.5 text-primary" /> Re-understand & Run
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {activeFile && (
               <UserMenu
@@ -2325,6 +2369,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
             onSelectFile={(id) => { selectFile(id); setShowCommandPalette(false); }}
             onNewFile={() => { newFile(); setShowCommandPalette(false); }}
             onRun={() => { runCode(); setShowCommandPalette(false); }}
+            onRunWithoutUnderstanding={() => { void runCode({ noUnderstand: true }); setShowCommandPalette(false); }}
             onTogglePanel={(panel) => { setSidePanel(p => p === panel ? null : panel); setShowCommandPalette(false); }}
           />
         )}

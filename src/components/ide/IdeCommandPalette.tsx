@@ -8,6 +8,7 @@ interface Props {
   onSelectFile: (id: string) => void;
   onNewFile: () => void;
   onRun: () => void;
+  onRunWithoutUnderstanding?: () => void;
   onTogglePanel: (panel: SidePanel) => void;
 }
 
@@ -21,7 +22,7 @@ interface PaletteItem {
   category: string;
 }
 
-export function IdeCommandPalette({ files, onClose, onSelectFile, onNewFile, onRun, onTogglePanel }: Props) {
+export function IdeCommandPalette({ files, onClose, onSelectFile, onNewFile, onRun, onRunWithoutUnderstanding, onTogglePanel }: Props) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +30,7 @@ export function IdeCommandPalette({ files, onClose, onSelectFile, onNewFile, onR
 
   const commands: PaletteItem[] = [
     { id: 'run', label: 'Run Program', description: 'Execute current file', icon: Play, action: onRun, shortcut: '⌃↵', category: 'Run' },
+    ...(onRunWithoutUnderstanding ? [{ id: 'run-raw', label: 'Run without Understanding', description: 'Run current file directly without the understander', icon: Zap, action: onRunWithoutUnderstanding, shortcut: '⇧⌃↵', category: 'Run' }] : []),
     { id: 'new', label: 'New File', description: 'Create a new sdev file', icon: Plus, action: onNewFile, shortcut: '⌃N', category: 'File' },
     { id: 'explorer', label: 'Toggle Explorer', description: 'Show/hide file explorer', icon: FolderOpen, action: () => onTogglePanel('explorer'), shortcut: '⌃B', category: 'View' },
     { id: 'search', label: 'Toggle Search', description: 'Search across files', icon: Search, action: () => onTogglePanel('search'), shortcut: '⌃F', category: 'View' },
