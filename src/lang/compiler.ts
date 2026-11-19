@@ -48,11 +48,13 @@ export class Compiler {
   private constants: ConstantPool = { numbers: [], strings: [] };
   private fixedVariables: Set<string> = new Set();
   private debugInfo: DebugInfo = { sourceMap: [], localNames: [] };
+  private classNodes = new Map<string, AST.ClassDeclaration>();
 
   compile(program: AST.Program): Chunk {
     this.constants = { numbers: [], strings: [] };
     this.debugInfo = { sourceMap: [], localNames: [] };
     this.fixedVariables = new Set();
+    this.classNodes.clear();
     const fn = new FunctionCompiler('', []);
     this.compileStatements(program.statements, fn);
     fn.emit(OpCode.HALT, undefined, 0);
@@ -749,12 +751,38 @@ export class Compiler {
     fn.emit(OpCode.POP, undefined, node.line);
   }
 
+  private collectSuperMethods(node: AST.ClassDeclaration, seen = new Set<string>()): AST.FuncDeclaration[] {
+    const bases = node.superClasses?.length ? node.superClasses : (node.superClass ? [node.superClass] : []);
+    const out: AST.FuncDeclaration[] = [];
+    for (const baseName of bases) {
+      if (seen.has(baseName)) continue;
+      seen.add(baseName);
+      const baseNode = this.classNodes.get(baseName);
+      if (!baseNode) continue;
+      out.push(...baseNode.methods, ...this.collectSuperMethods(baseNode, seen));
+    }
+    return out;
+  }
+
+  private compileMethodClosure(method: AST.FuncDeclaration, ctorFn: FunctionCompiler, line: number): number {
+    const params = method.params.filter(p => p !== 'self');
+    const methodFn = new FunctionCompiler(method.name, params);
+    this.compileStatements(method.body.statements, methodFn);
+    methodFn.emit(OpCode.PUSH_NULL, undefined, line);
+    methodFn.emit(OpCode.RETURN, undefined, line);
+    const methodDef: FunctionDef = { name: method.name, params, code: methodFn.code, functions: methodFn.functions };
+    const methodIdx = ctorFn.functions.length;
+    ctorFn.functions.push(methodDef);
+    return methodIdx;
+  }
+
   private compileClass(node: AST.ClassDeclaration, fn: FunctionCompiler): void {
+    this.classNodes.set(node.name, node);
     // Compile class as a constructor function that returns an object with methods
     const ctorFn = new FunctionCompiler(node.name, []);
 
-    // Find init method
-    const initMethod = node.methods.find(m => m.name === 'init');
+    const superMethods = this.collectSuperMethods(node);
+    const initMethod = node.methods.find(m => m.name === 'init') ?? superMethods.find(m => m.name === 'init');
     const otherMethods = node.methods.filter(m => m.name !== 'init');
 
     // If there's an init, use its params for the constructor
@@ -766,26 +794,39 @@ export class Compiler {
     ctorFn.emit(OpCode.MAKE_DICT, 0, node.line);
     ctorFn.emit(OpCode.DEFINE, 'self', node.line);
 
+    // Bind inherited methods to `super` and (for non-init) to `self`
+    if (superMethods.length > 0) {
+      ctorFn.emit(OpCode.MAKE_DICT, 0, node.line);
+      ctorFn.emit(OpCode.DEFINE, 'super', node.line);
+      const boundSuper = new Set<string>();
+      for (const sm of superMethods) {
+        if (boundSuper.has(sm.name)) continue;
+        boundSuper.add(sm.name);
+        const methodIdx = this.compileMethodClosure(sm, ctorFn, node.line);
+        ctorFn.emit(OpCode.LOAD, 'super', node.line);
+        ctorFn.emit(OpCode.MAKE_FUNC, methodIdx, node.line);
+        ctorFn.emit(OpCode.MEMBER_SET, sm.name, node.line);
+        if (sm.name !== 'init') {
+          ctorFn.emit(OpCode.LOAD, 'self', node.line);
+          ctorFn.emit(OpCode.MAKE_FUNC, methodIdx, node.line);
+          ctorFn.emit(OpCode.MEMBER_SET, sm.name, node.line);
+        }
+      }
+    }
+
+    // Add own methods to self before init runs so init can call self methods
+    for (const method of otherMethods) {
+      const methodIdx = this.compileMethodClosure(method, ctorFn, node.line);
+      ctorFn.emit(OpCode.LOAD, 'self', node.line);
+      ctorFn.emit(OpCode.MAKE_FUNC, methodIdx, node.line);
+      ctorFn.emit(OpCode.MEMBER_SET, method.name, node.line);
+    }
+
     // Compile init body if present
     if (initMethod) {
       for (const stmt of initMethod.body.statements) {
         this.compileNode(stmt, ctorFn);
       }
-    }
-
-    // Add other methods to self
-    for (const method of otherMethods) {
-      const methodFn = new FunctionCompiler(method.name, method.params);
-      this.compileStatements(method.body.statements, methodFn);
-      methodFn.emit(OpCode.PUSH_NULL, undefined, node.line);
-      methodFn.emit(OpCode.RETURN, undefined, node.line);
-      const methodDef: FunctionDef = { name: method.name, params: method.params, code: methodFn.code, functions: methodFn.functions };
-      const methodIdx = ctorFn.functions.length;
-      ctorFn.functions.push(methodDef);
-
-      ctorFn.emit(OpCode.LOAD, 'self', node.line);
-      ctorFn.emit(OpCode.MAKE_FUNC, methodIdx, node.line);
-      ctorFn.emit(OpCode.MEMBER_SET, method.name, node.line);
     }
 
     ctorFn.emit(OpCode.LOAD, 'self', node.line);

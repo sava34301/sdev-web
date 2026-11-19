@@ -1081,7 +1081,7 @@ export class Interpreter {
     return null;
   }
 
-  private makeFunction(node: AST.FuncDeclaration, env: Environment, boundName?: string): RichFunction {
+  private makeFunction(node: AST.FuncDeclaration, env: Environment, boundName?: string, ownerClass?: SdevClass): RichFunction {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
@@ -1091,6 +1091,26 @@ export class Interpreter {
       call: (args: unknown[], callLine: number) => {
         const funcEnv = new Environment(env);
         self.bindParams(specs, args, funcEnv, callLine, node.name);
+
+        const receiver = args[0];
+        if (ownerClass && receiver && typeof receiver === 'object') {
+          const instClass = (receiver as { __class__?: SdevClass }).__class__ ?? ownerClass;
+          const idx = instClass.mro.indexOf(ownerClass);
+          const rest = idx >= 0 ? instClass.mro.slice(idx + 1) : ownerClass.mro.slice(1);
+          if (rest.length > 0) {
+            const superProxy: Record<string, unknown> = {};
+            for (const base of rest) {
+              base.methods.forEach((method, name) => {
+                if (name in superProxy) return;
+                superProxy[name] = {
+                  type: 'user',
+                  call: (callArgs: unknown[], line: number) => method.call([receiver, ...callArgs], line),
+                } as SdevFunction;
+              });
+            }
+            funcEnv.define('super', superProxy);
+          }
+        }
 
         if (node.isGenerator) {
           const iter = self.generatorBody(node.body, funcEnv);
@@ -1260,7 +1280,7 @@ export class Interpreter {
     classEnv.define(node.name, klass);
 
     for (const method of node.methods) {
-      const raw = this.makeFunction(method, classEnv, `${node.name}.${method.name}`);
+      const raw = this.makeFunction(method, classEnv, `${node.name}.${method.name}`, klass);
       const decorators = (method.decorators ?? []).map((d) => this.describeDecorator(d));
 
       if (decorators.includes('property')) {
