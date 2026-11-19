@@ -524,6 +524,15 @@ export default function IDEPage() {
 
   const activeFile = files.find(f => f.id === activeId);
   const openFiles = openIds.map(id => files.find(f => f.id === id)).filter(Boolean) as IdeFile[];
+  const translatedSourceForActive = activeFile
+    ? (activeFile.understood?.source ?? translatedContent.get(activeFile.id) ?? readSignature(activeFile.content)?.translated ?? null)
+    : null;
+  const activePlainBody = activeFile ? stripSignature(activeFile.content) : '';
+  const hasTranslation = Boolean(
+    activeFile &&
+    translatedSourceForActive &&
+    translatedSourceForActive.trim() !== activePlainBody.trim()
+  );
 
   // Import code from a Gist (sessionStorage) on mount
   useEffect(() => {
@@ -597,7 +606,7 @@ export default function IDEPage() {
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && e.key === 'p') { e.preventDefault(); setShowCommandPalette(true); }
       if (ctrl && e.key === 'Enter') { e.preventDefault(); runCode(); }
-      if (ctrl && e.key === 's') { e.preventDefault(); downloadCurrentFile(); toast.success('File saved!'); }
+      if (ctrl && e.key === 's') { e.preventDefault(); void downloadCurrentFile('written'); }
       if (ctrl && e.key === 'b') { e.preventDefault(); setSidePanel(p => p === 'explorer' ? null : 'explorer'); }
       if (ctrl && e.shiftKey && (e.key === 'F' || e.key === 'f')) { e.preventDefault(); setSidePanel(p => p === 'search' ? null : 'search'); }
       if (ctrl && e.shiftKey && (e.key === 'O' || e.key === 'o')) { e.preventDefault(); setSidePanel(p => p === 'outline' ? null : 'outline'); }
@@ -633,12 +642,24 @@ export default function IDEPage() {
   const formatCurrent = useCallback(() => {
     if (!activeFile) return;
     const formatted = formatSdev(activeFile.content, settings.tabSize);
-    setFiles(prev => prev.map(f => f.id === activeId ? { ...f, content: formatted, modified: true } : f));
+    setFiles(prev => prev.map(f => f.id === activeId
+      ? { ...f, content: formatted, modified: true, understood: formatted === f.content ? f.understood : undefined }
+      : f));
     toast.success('Formatted');
   }, [activeFile, activeId, settings.tabSize]);
 
   const updateActiveContent = useCallback((content: string) => {
-    setFiles(prev => prev.map(f => f.id === activeId ? { ...f, content, modified: true } : f));
+    setFiles(prev => prev.map(f => {
+      if (f.id !== activeId) return f;
+      if (f.content === content) return f;
+      return { ...f, content, modified: true, understood: undefined };
+    }));
+    setTranslatedContent(prev => {
+      if (!prev.has(activeId)) return prev;
+      const next = new Map(prev);
+      next.delete(activeId);
+      return next;
+    });
     if (settings.autoSave) {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       autoSaveTimer.current = setTimeout(() => {
@@ -651,6 +672,7 @@ export default function IDEPage() {
 
   const runCode = useCallback(async (override?: unknown, retried = false) => {
     const overrideSrc = typeof override === 'string' ? override : undefined;
+    const reunderstand = typeof override === 'object' && override !== null && 'reunderstand' in override && Boolean((override as { reunderstand?: boolean }).reunderstand);
     if (!activeFile) return;
 
     // ─── v2 "Prism" runtime short-circuit ───
@@ -736,18 +758,18 @@ export default function IDEPage() {
     // the content hasn't changed, re-runs use that copy and skip the thinking.
     const { understandKey, AGENT_VERSION } = await import('@/lang/agent');
     const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, activeDialect ?? null, projectNames]));
-    const saved = activeFile.understood?.key === fileKey ? activeFile.understood.source : null;
+    const saved = !reunderstand && activeFile.understood?.key === fileKey ? activeFile.understood.source : null;
     const understood = overrideSrc !== undefined
-      ? { source: overrideSrc, notes: [{ line: 0 }] }
+      ? { source: overrideSrc, notes: [{ line: 0 }], brainUsed: 'none' as const, cached: false }
       : saved !== null
-        ? { source: saved, notes: [] as unknown[] }
+        ? { source: saved, notes: [] as unknown[], brainUsed: activeFile.understood?.brainUsed ?? ('none' as const), cached: true }
         : await (async () => {
             // show the built-in AI's first-time preparation in the status bar
             const { onBrowserBrain } = await import('@/lang/agent/browser-brain');
             const off = onBrowserBrain((b) => {
               if (b.state === 'loading') setStatusMsg(`Preparing the built-in AI (first time only) — ${Math.round(b.progress * 100)}%`);
             });
-            try { return await understandAsync(dialectSrc, { dialect: activeDialect, projectNames }); } finally { off(); }
+            try { return await understandAsync(dialectSrc, { dialect: activeDialect, projectNames, fresh: reunderstand }); } finally { off(); }
           })();
     const { lastBrainMissing } = await import('@/lang/agent/brain');
     const brainMissing = overrideSrc === undefined && saved === null && lastBrainMissing;
@@ -758,14 +780,20 @@ export default function IDEPage() {
         ? b.text + ' Try Chrome or Edge, or switch on the website AI in Settings → Code understander AI.'
         : 'The understander could not finish this file. Try again, or switch on the website AI in Settings → Code understander AI.');
     }
+    const baseUnderstoodMeta = {
+      key: fileKey,
+      source: understood.source,
+      notesCount: understood.notes.length,
+      brainUsed: understood.brainUsed,
+      fromCache: saved !== null || Boolean('cached' in understood && understood.cached),
+      detectedLanguage: activeFile.understood?.detectedLanguage ?? null,
+    };
     if (overrideSrc === undefined && saved === null && !brainMissing) {
       const fileId = activeFile.id;
-      const stored = { key: fileKey, source: understood.source };
-      setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: stored } : f)));
+      setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: baseUnderstoodMeta } : f)));
     } else if (overrideSrc !== undefined) {
       const fileId = activeFile.id;
-      const stored = { key: fileKey, source: overrideSrc };
-      setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: stored } : f)));
+      setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: { ...baseUnderstoodMeta, source: overrideSrc, fromCache: false } } : f)));
     }
     const canonicalSrc = understood.source;
     if (understood.notes.length) {
@@ -832,6 +860,7 @@ export default function IDEPage() {
     try {
       const { translateSource } = await import('@/lang/translator');
       const stage1 = translateSource(code, selectedLanguage, { target: 'v1', dialect: activeDialect });
+      const humanLangDetected = stage1.detectedLanguage && stage1.detectedLanguage !== 'English' ? stage1.detectedLanguage : null;
       const stripped = stage1.translated
         .replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '')
         .replace(/(\/\/|#)[^\n]*/g, '');
@@ -853,6 +882,23 @@ export default function IDEPage() {
       } else {
         code = stage1.translated;
       }
+      if (humanLangDetected || code.trim() !== stripBoardBlocks(rawSrc).trim()) {
+        const translatedCode = code;
+        const fileId = activeFile.id;
+        setTranslatedContent(prev => {
+          const next = new Map(prev);
+          next.set(fileId, translatedCode);
+          return next;
+        });
+        setFiles((prev) => prev.map((f) => (f.id === fileId ? {
+          ...f,
+          understood: {
+            ...baseUnderstoodMeta,
+            source: translatedCode,
+            detectedLanguage: humanLangDetected,
+          },
+        } : f)));
+      }
     } catch {/* fallback to raw lexer */}
 
     // ─── Module linking ───
@@ -872,11 +918,9 @@ export default function IDEPage() {
     const t0 = performance.now();
 
     try {
-      let detectedLanguage: string | null = null;
       if (runMode === 'interpreter') {
         const lexer = new Lexer(code, lexerOpts);
         const tokens = lexer.tokenize();
-        detectedLanguage = lexer.detectedLanguage;
         const parser = new Parser(tokens);
         const ast = parser.parse();
         const interpreter = new Interpreter((msg) => outputLines.push(msg));
@@ -940,7 +984,6 @@ export default function IDEPage() {
         // disassembly/export in the Compiler panel.
         const lexer = new Lexer(code, lexerOpts);
         const tokens = lexer.tokenize();
-        detectedLanguage = lexer.detectedLanguage;
         const parser = new Parser(tokens);
         const ast = parser.parse();
         // Best-effort compile to bytecode (for IR/export). Unsupported features
@@ -1000,17 +1043,6 @@ export default function IDEPage() {
         else if (producedUi) { setBottomPanel('app'); }
       }
 
-      // Stash the translated source so the "view translated" toggle works.
-      if (detectedLanguage && detectedLanguage !== 'English') {
-        const { translateSource } = await import('@/lang/translator');
-        const result = translateSource(code, selectedLanguage);
-        setTranslatedContent(prev => {
-          const next = new Map(prev);
-          next.set(activeFile.id, result.translated);
-          return next;
-        });
-      }
-
       const elapsed = Math.round((performance.now() - t0) * 10) / 10;
       setOutput(outputLines);
       setError(undefined);
@@ -1027,14 +1059,16 @@ export default function IDEPage() {
         ? e.message
         : typeof e === 'object' && e !== null ? (() => { try { return JSON.stringify(e); } catch { return String(e); } })() : String(e);
       const rewritten = canonicalSrc.trim() !== writtenSrc.trim();
-      if (!retried && rewritten) {
-        const { parses } = await import('@/lang/agent');
-        // The agent's reading broke, but the author's file holds together: the file as written wins.
-        if (parses(writtenSrc)) { setIsRunning(false); return runCode(writtenSrc, true); }
-        // Neither works: the file needed the agent, so let the AI see the error once.
-        if (!/!#agent\s*:\s*off/i.test(dialectSrc)) {
+      if (!retried) {
+        const { parses, unknownNames, reconsider } = await import('@/lang/agent');
+        if (rewritten) {
+          // The agent's reading broke, but the author's file holds together: the file as written wins.
+          if (parses(writtenSrc)) { setIsRunning(false); return runCode(writtenSrc, true); }
+        }
+        // Let the AI rethink once when the file needed reading (even if local rules/WebLLM failed to rewrite it).
+        const neededReading = rewritten || !parses(writtenSrc) || unknownNames(writtenSrc).length > 0;
+        if (neededReading && !/!#agent\s*:\s*off/i.test(dialectSrc)) {
           setStatusMsg('Agent is rethinking…');
-          const { reconsider } = await import('@/lang/agent');
           const again = await reconsider(dialectSrc, msg, { dialect: activeDialect }).catch(() => null);
           if (again?.source) { setIsRunning(false); return runCode(again.source, true); }
         }
@@ -1051,6 +1085,19 @@ export default function IDEPage() {
       setIsRunning(false);
     }
   }, [activeFile, runMode, selectedLanguage, recordRun, files]);
+
+  const reunderstandCurrentFile = useCallback(async () => {
+    if (!activeFile) return;
+    const fileId = activeFile.id;
+    setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: undefined } : f)));
+    setTranslatedContent((prev) => {
+      if (!prev.has(fileId)) return prev;
+      const next = new Map(prev);
+      next.delete(fileId);
+      return next;
+    });
+    await runCode({ reunderstand: true });
+  }, [activeFile, runCode]);
 
   const newFile = useCallback((folderId: string | null = null) => {
     const id = nextFileId();
@@ -1153,47 +1200,91 @@ export default function IDEPage() {
     if (activeId === id && next.length > 0) setActiveId(next[next.length - 1]);
   }, [openIds, activeId]);
 
-  const downloadCurrentFile = () => {
+  const downloadCurrentFile = async (variant: 'written' | 'translated' = 'written') => {
     if (!activeFile) return;
     // Exported files carry (or keep) their hidden signature so any IDE can
-    // tell which runtime, dialect and libraries they were written against.
+    // tell which runtime, dialect, libraries and translated version they have.
     const dialect = getActiveDialect();
     const existing = readSignature(activeFile.content);
-    const signed = writeSignature(activeFile.content, {
-      rt: (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1',
-      dialect: dialect ? dialect.meta.slug : existing?.dialect ?? null,
-      dialectVersion: dialect ? dialect.meta.version : existing?.dialectVersion ?? null,
+    const runtime = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1';
+
+    let bodyToDownload = activeFile.content;
+    let fileNameToDownload = activeFile.name;
+    let embeddedTranslated: string | null =
+      activeFile.understood?.source ?? translatedContent.get(activeFile.id) ?? existing?.translated ?? null;
+
+    if (variant === 'translated') {
+      if (!embeddedTranslated) {
+        const stripped = stripSignature(activeFile.content);
+        const dialectSrc = dialect ? canonicalize(stripped, dialect).source : stripped;
+        const { understandAsync, definedNames, sdevProjectNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
+        const projectNames = sdevProjectNames(files.filter((f) => f.id !== activeFile.id).map((f) => f.content), definedNames);
+        const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, dialect ?? null, projectNames]));
+        const res = await understandAsync(dialectSrc, { dialect, projectNames });
+        embeddedTranslated = res.source;
+        const fileId = activeFile.id;
+        setFiles((prev) => prev.map((f) => (f.id === fileId ? {
+          ...f,
+          understood: {
+            key: fileKey,
+            source: res.source,
+            notesCount: res.notes.length,
+            brainUsed: res.brainUsed,
+            fromCache: !!res.cached,
+          },
+        } : f)));
+      }
+      bodyToDownload = embeddedTranslated;
+      fileNameToDownload = activeFile.name.endsWith('.sdev')
+        ? activeFile.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev')
+        : `${activeFile.name}.translated.sdev`;
+    }
+
+    const hasDiff = Boolean(embeddedTranslated && embeddedTranslated.trim() !== stripSignature(activeFile.content).trim());
+    const signed = writeSignature(bodyToDownload, {
+      rt: runtime,
+      dialect: variant === 'translated' ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
+      dialectVersion: variant === 'translated' ? null : (dialect ? dialect.meta.version : existing?.dialectVersion ?? null),
       libs: existing?.libs ?? [],
-      origin: existing?.origin ?? null,
+      origin: variant === 'translated' ? (dialect ? dialect.meta.slug : existing?.origin ?? null) : (existing?.origin ?? null),
+      translated: variant === 'written' && hasDiff ? embeddedTranslated : undefined,
     });
     const blob = new Blob([signed], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = activeFile.name; a.click();
+    a.href = url; a.download = fileNameToDownload; a.click();
     URL.revokeObjectURL(url);
+    toast.success(variant === 'translated' ? `Downloaded ${fileNameToDownload}` : `Saved ${fileNameToDownload}`);
   };
 
-  const downloadAllFiles = () => {
+  const downloadAllFiles = (variant: 'written' | 'translated' = 'written') => {
     const dialect = getActiveDialect();
     const runtime = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1';
     files.forEach(file => {
       // Same signature the single-file export writes, so a whole workspace
-      // round-trips with its runtime, dialect and library pins intact.
+      // round-trips with its runtime, dialect, library pins and translation intact.
       const existing = readSignature(file.content);
-      const signed = writeSignature(file.content, {
+      const cachedTranslated = file.understood?.source ?? translatedContent.get(file.id) ?? existing?.translated ?? null;
+      const hasDiff = Boolean(cachedTranslated && cachedTranslated.trim() !== stripSignature(file.content).trim());
+      const body = variant === 'translated' && hasDiff && cachedTranslated ? cachedTranslated : file.content;
+      const outName = variant === 'translated' && hasDiff
+        ? (file.name.endsWith('.sdev') ? file.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev') : `${file.name}.translated.sdev`)
+        : file.name;
+      const signed = writeSignature(body, {
         rt: runtime,
-        dialect: dialect ? dialect.meta.slug : existing?.dialect ?? null,
-        dialectVersion: dialect ? dialect.meta.version : existing?.dialectVersion ?? null,
+        dialect: variant === 'translated' && hasDiff ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
+        dialectVersion: variant === 'translated' && hasDiff ? null : (dialect ? dialect.meta.version : existing?.dialectVersion ?? null),
         libs: existing?.libs ?? [],
-        origin: existing?.origin ?? null,
+        origin: variant === 'translated' && hasDiff ? (dialect ? dialect.meta.slug : existing?.origin ?? null) : (existing?.origin ?? null),
+        translated: variant === 'written' && hasDiff ? cachedTranslated : undefined,
       });
       const blob = new Blob([signed], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = file.name; a.click();
+      a.href = url; a.download = outName; a.click();
       URL.revokeObjectURL(url);
     });
-    toast.success(`Downloaded ${files.length} files`);
+    toast.success(`Downloaded ${files.length} files (${variant === 'translated' ? 'translated' : 'user-written'})`);
   };
 
 
@@ -1306,7 +1397,14 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
             }
           }
           const id = nextFileId();
-          const newFile: IdeFile = { id, name: file.name, content };
+          const newFile: IdeFile = {
+            id,
+            name: file.name,
+            content,
+            understood: sig?.translated
+              ? { key: '', source: sig.translated, fromCache: true }
+              : undefined,
+          };
           setFiles(prev => [...prev, newFile]);
           setOpenIds(prev => [...prev, id]);
           setActiveId(id);
@@ -1380,10 +1478,13 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     <FolderOpen className="w-3.5 h-3.5" /> Open File…
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={downloadCurrentFile} className="text-xs gap-2 cursor-pointer">
-                    <Save className="w-3.5 h-3.5" /> Save <span className="ml-auto text-muted-foreground">⌃S</span>
+                  <DropdownMenuItem onClick={() => void downloadCurrentFile('written')} className="text-xs gap-2 cursor-pointer">
+                    <Save className="w-3.5 h-3.5" /> Save (user-written) <span className="ml-auto text-muted-foreground">⌃S</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={downloadAllFiles} className="text-xs gap-2 cursor-pointer">
+                  <DropdownMenuItem onClick={() => void downloadCurrentFile('translated')} className="text-xs gap-2 cursor-pointer">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" /> Download translated (.sdev)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => downloadAllFiles('written')} className="text-xs gap-2 cursor-pointer">
                     <Download className="w-3.5 h-3.5" /> Save All Files
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -1415,6 +1516,9 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowGoToLine(true)} className="text-xs gap-2 cursor-pointer">
                     <ArrowRight className="w-3.5 h-3.5" /> Go to Line… <span className="ml-auto text-muted-foreground">⌃G</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void reunderstandCurrentFile()} className="text-xs gap-2 cursor-pointer">
+                    <RefreshCw className="w-3.5 h-3.5" /> Re-understand File
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={convertAiView} className="text-xs gap-2 cursor-pointer">
                     <Wand2 className="w-3.5 h-3.5" /> {activeFile && /^\s*(\/\/[^\n]*\n\s*)*!#ai\b/.test(activeFile.content) ? 'Open as plain sdev' : 'Open as sdev:ai'}
@@ -1473,6 +1577,9 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                 <DropdownMenuContent className="w-52 bg-card border-border/50">
                   <DropdownMenuItem onClick={runCode} className="text-xs gap-2 cursor-pointer">
                     <Play className="w-3.5 h-3.5 text-neon-green" /> Run Program <span className="ml-auto text-muted-foreground">⌃↵</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void reunderstandCurrentFile()} className="text-xs gap-2 cursor-pointer">
+                    <RefreshCw className="w-3.5 h-3.5 text-primary" /> Re-understand & Run
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setRunMode('interpreter')} className="text-xs gap-2 cursor-pointer">
@@ -1562,26 +1669,50 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   <div>Write sdev in your language.</div>
                   <div>The system translates to English on first run,</div>
                   <div>then caches for instant future runs.</div>
-                  {lastResult && <div className="mt-1 text-primary">Last: {lastResult.detectedLanguage} {lastResult.fromCache ? '(cached ⚡)' : '(translated ✨)'}</div>}
+                  {(lastResult?.detectedLanguage || activeFile?.understood?.detectedLanguage) && (
+                    <div className="mt-1 text-primary">
+                      Last: {lastResult?.detectedLanguage ?? activeFile?.understood?.detectedLanguage}{' '}
+                      {(lastResult?.fromCache ?? activeFile?.understood?.fromCache) ? '(cached ⚡)' : '(translated ✨)'}
+                    </div>
+                  )}
                 </div>
               </TooltipContent>
             </Tooltip>
 
             {/* Show translated source toggle */}
-            {lastResult && lastResult.detectedLanguage !== 'English' && (
+            {hasTranslation && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showTranslated ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                    onClick={() => setShowTranslated(v => !v)}
+                    aria-label={showTranslated ? 'Show original code' : 'Preview translated sdev'}
+                  >
+                    {showTranslated ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{showTranslated ? 'Show original code' : 'Preview translated sdev'}</TooltipContent>
+              </Tooltip>
+            )}
+
+            {activeFile && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
-                    onClick={() => setShowTranslated(v => !v)}
-                    aria-label={showTranslated ? 'Show original code' : 'Show English translation'}
+                    className="h-7 gap-1 px-2 text-xs font-mono text-muted-foreground hover:text-primary"
+                    onClick={() => void reunderstandCurrentFile()}
+                    disabled={isRunning || isTranslating}
+                    aria-label="Re-understand code"
                   >
-                    {showTranslated ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : ''}`} />
+                    <span className="hidden lg:inline">Re-understand</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{showTranslated ? 'Show original code' : 'Show English translation'}</TooltipContent>
+                <TooltipContent>Clear cached reading and re-understand this file</TooltipContent>
               </Tooltip>
             )}
 
@@ -1611,15 +1742,40 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
               </Tooltip>
             </div>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={downloadCurrentFile} className="gap-1.5 text-xs border-border/50 h-7">
-                  <Save className="w-3 h-3" />
-                  <span className="hidden sm:inline">Save</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Save file (Ctrl+S)</TooltipContent>
-            </Tooltip>
+            {hasTranslation ? (
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs border-border/50 h-7">
+                        <Save className="w-3 h-3" />
+                        <span className="hidden sm:inline">Save</span>
+                        <ChevronDown className="w-2.5 h-2.5 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Download user-written or translated version</TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end" className="w-56 bg-card border-border/50">
+                  <DropdownMenuItem onClick={() => void downloadCurrentFile('written')} className="gap-2 text-xs cursor-pointer">
+                    <Save className="w-3.5 h-3.5 text-neon-cyan" /> User-written version (.sdev)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void downloadCurrentFile('translated')} className="gap-2 text-xs cursor-pointer">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" /> Translated version (.sdev)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => void downloadCurrentFile('written')} className="gap-1.5 text-xs border-border/50 h-7">
+                    <Save className="w-3 h-3" />
+                    <span className="hidden sm:inline">Save</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Save file (Ctrl+S)</TooltipContent>
+              </Tooltip>
+            )}
 
             <DropdownMenu>
               <Tooltip>
@@ -1633,14 +1789,20 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                 </TooltipTrigger>
                 <TooltipContent>Downloads</TooltipContent>
               </Tooltip>
-              <DropdownMenuContent align="end" className="w-52 bg-card border-border/50">
+              <DropdownMenuContent align="end" className="w-60 bg-card border-border/50">
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Downloads</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={downloadCurrentFile} className="gap-2 text-xs cursor-pointer">
-                  <Save className="w-3.5 h-3.5 text-neon-cyan" /> Current file (.sdev)
+                <DropdownMenuItem onClick={() => void downloadCurrentFile('written')} className="gap-2 text-xs cursor-pointer">
+                  <Save className="w-3.5 h-3.5 text-neon-cyan" /> Current file — user-written (.sdev)
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={downloadAllFiles} className="gap-2 text-xs cursor-pointer">
-                  <Download className="w-3.5 h-3.5 text-neon-green" /> All files
+                <DropdownMenuItem onClick={() => void downloadCurrentFile('translated')} className="gap-2 text-xs cursor-pointer">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Current file — translated (.sdev)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadAllFiles('written')} className="gap-2 text-xs cursor-pointer">
+                  <Download className="w-3.5 h-3.5 text-neon-green" /> All files (user-written)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => downloadAllFiles('translated')} className="gap-2 text-xs cursor-pointer">
+                  <Download className="w-3.5 h-3.5 text-primary" /> All files (translated)
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setShowWasiDialog(true)} className="gap-2 text-xs cursor-pointer">
@@ -1867,32 +2029,71 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                 <ResizablePanel defaultSize={65} minSize={25} className="min-h-0">
                   <div className="flex h-full min-h-0 flex-col">
                     <IdeTabs files={openFiles} activeId={activeId} onSelect={selectFile} onClose={closeTab} />
-                    {/* Translation banner */}
-                    {lastResult && lastResult.detectedLanguage !== 'English' && (
+                    {/* Translation / Understander banner */}
+                    {hasTranslation && (
                       <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border-b border-primary/20 text-xs font-mono">
                         <CheckCircle2 className="w-3 h-3 text-primary flex-shrink-0" />
-                        <span className="text-primary">
-                          {lastResult.fromCache ? '⚡ Cached translation' : '✨ Translated'} from <strong>{lastResult.detectedLanguage}</strong> → English
+                        <span className="text-primary truncate">
+                          {activeFile?.understood?.fromCache ? '⚡ Cached translation' : '✨ Translated'}
+                          {activeFile?.understood?.detectedLanguage && activeFile.understood.detectedLanguage !== 'English'
+                            ? <> from <strong>{activeFile.understood.detectedLanguage}</strong> → canonical sdev</>
+                            : activeFile?.understood?.brainUsed === 'online'
+                              ? ' via Website AI → canonical sdev'
+                              : activeFile?.understood?.brainUsed === 'local'
+                                ? ' via Built-in AI → canonical sdev'
+                                : ' by understander → canonical sdev'}
                         </span>
-                        <button
-                          onClick={() => setShowTranslated(v => !v)}
-                          className="ml-auto flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {showTranslated ? <><EyeOff className="w-3 h-3" /> Show original</> : <><Eye className="w-3 h-3" /> View English</>}
-                        </button>
+                        <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+                          <button
+                            onClick={() => void reunderstandCurrentFile()}
+                            disabled={isRunning || isTranslating}
+                            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Re-understand
+                          </button>
+                          <button
+                            onClick={() => void downloadCurrentFile('translated')}
+                            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Download className="w-3 h-3" /> Download translated
+                          </button>
+                          <button
+                            onClick={() => setShowTranslated(v => !v)}
+                            className="flex items-center gap-1 text-primary hover:text-foreground transition-colors font-semibold"
+                          >
+                            {showTranslated ? <><EyeOff className="w-3 h-3" /> Show original</> : <><Eye className="w-3 h-3" /> Preview</>}
+                          </button>
+                        </div>
                       </div>
                     )}
                     <div className="flex-1 min-h-0 overflow-hidden">
                       {activeFile ? (
-                        showTranslated && lastResult ? (
+                        showTranslated && hasTranslation && translatedSourceForActive ? (
                           <div className="flex flex-col h-full">
-                            <div className="px-3 py-1 text-[10px] font-mono text-muted-foreground bg-muted/10 border-b border-border/30 flex items-center gap-2">
-                              <Eye className="w-3 h-3" />
-                              English translation (read-only) — edit your original to make changes
+                            <div className="px-3 py-1 text-[10px] font-mono text-muted-foreground bg-muted/10 border-b border-border/30 flex items-center justify-between gap-2">
+                              <span className="flex items-center gap-2">
+                                <Eye className="w-3 h-3" />
+                                Translated canonical sdev (read-only) — edit your original to make changes
+                              </span>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => void reunderstandCurrentFile()}
+                                  disabled={isRunning || isTranslating}
+                                  className="hover:text-foreground transition-colors flex items-center gap-1 disabled:opacity-50"
+                                >
+                                  <RefreshCw className="w-3 h-3" /> Re-understand
+                                </button>
+                                <button
+                                  onClick={() => void downloadCurrentFile('translated')}
+                                  className="hover:text-foreground transition-colors flex items-center gap-1"
+                                >
+                                  <Download className="w-3 h-3" /> Download translated
+                                </button>
+                              </div>
                             </div>
                             <IdeEditor
                               key={activeFile.id + '-translated'}
-                              value={lastResult.translated}
+                              value={translatedSourceForActive}
                               onChange={() => {}}
                               readOnly
                               fileName={activeFile.name}
@@ -2087,6 +2288,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   content={activeFile.content}
                   cloudId={cloudIds[activeFile.id] ?? activeFile.cloudId ?? null}
                   runtime={runMode === 'vm' ? 'v2' : (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1'}
+                  translatedSource={hasTranslation ? translatedSourceForActive : null}
                 />
               )}
               <DialectSwitcher />

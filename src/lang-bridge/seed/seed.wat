@@ -1650,6 +1650,7 @@
             (i32.store (i32.add (local.get $tmp) (i32.const 4)) (local.get $a))
             (i32.store (i32.add (local.get $tmp) (i32.const 8)) (local.get $n))
             (local.set $addr (i32.sub (local.get $sp) (i32.mul (local.get $n) (i32.const 4))))
+            (local.set $sp (local.get $addr))
             (local.set $b (i32.add (local.get $tmp) (i32.const 12)))
             (block $kdone
               (loop $kcopy
@@ -1661,7 +1662,6 @@
                 (br $kcopy)
               )
             )
-            (local.set $sp (local.get $addr))
             (i32.store (local.get $sp) (local.get $tmp))
             (local.set $sp (i32.add (local.get $sp) (i32.const 4)))
             (br $dispatch)))

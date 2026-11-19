@@ -169,6 +169,9 @@ to emit_byte with b
   if emit_enabled[0] is 0
     return 0
   end
+  if bc[0] + 1 >= length(bc)
+    throw "bytecode buffer overflow"
+  end
   set bc[bc[0] + 1] to b
   set bc[0] to bc[0] + 1
   return 0
@@ -196,6 +199,9 @@ to intern_str with s
   end
   set off to pool_bytes[0]
   set slen to length(s)
+  if off + 4 + slen >= length(pool_bytes)
+    throw "string pool overflow"
+  end
   set pool_bytes[off + 1] to slen % 256
   set pool_bytes[off + 2] to (slen / 256) % 256
   set pool_bytes[off + 3] to (slen / 65536) % 256
@@ -238,6 +244,9 @@ end
 # offset `target`. Offsets are relative to the end of the instruction
 # (pos + 2). Negative offsets get two's-complement 16-bit encoding.
 to patch_i16 with pos target
+  if emit_enabled[0] is 0
+    return 0
+  end
   set off to target - (pos + 2)
   if off < 0
     set off to off + 65536
@@ -269,6 +278,11 @@ to intern_name with name
     end
     set k to k + 1
   end
+  if emit_enabled[0] is 1
+    if sym_names[0] >= 256
+      throw "too many globals (256 max)"
+    end
+  end
   set sym_names[sym_names[0] + 1] to name
   set sym_names[0] to sym_names[0] + 1
   set sym_types[sym_names[0]] to 0
@@ -289,6 +303,11 @@ to find_local with name
 end
 
 to add_local with name
+  if emit_enabled[0] is 1
+    if loc_names[0] >= 256
+      throw "too many locals (256 max)"
+    end
+  end
   set loc_names[loc_names[0] + 1] to name
   set loc_names[0] to loc_names[0] + 1
   # Fresh slots start int-typed; without this reset a slot reused by a
@@ -377,17 +396,28 @@ end
 # and back-patches each u16 target. This unblocks mutual recursion and any
 # forward reference — a call site may appear before its callee's `to …`.
 
+to check_arity with name got want
+  if emit_enabled[0] is 1
+    if got is not want
+      throw name + ": expected " + str(want) + " args, got " + str(got)
+    end
+  end
+  return 0
+end
+
 to emit_call with name nargs
   # The kind of the last argument pushed — `values(t)` needs it to decide
   # whether the produced list holds strings.
   set argk to expr_type[0]
   # --- Milestone 5t: tome builtins ---
   if str_eq(name, "keys")
+    check_arity(name, nargs, 1)
     emit_byte(142)
     set expr_type[0] to 5
     return 0
   end
   if str_eq(name, "values")
+    check_arity(name, nargs, 1)
     emit_byte(143)
     if argk is 4
       set expr_type[0] to 5
@@ -397,125 +427,148 @@ to emit_call with name nargs
     return 0
   end
   if str_eq(name, "has")
+    check_arity(name, nargs, 2)
     emit_byte(141)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "length")
+    check_arity(name, nargs, 1)
     emit_byte(131)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "concat")
+    check_arity(name, nargs, 2)
     emit_byte(145)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "ord")
+    check_arity(name, nargs, 2)
     emit_byte(132)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "chr")
+    check_arity(name, nargs, 1)
     emit_byte(136)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "str")
+    check_arity(name, nargs, 1)
     emit_byte(135)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "mklist")
+    check_arity(name, nargs, 1)
     emit_byte(137)
     set expr_type[0] to 0
     return 0
   end
   # --- Milestone 5q: floats + host I/O builtins -----------------------------
   if str_eq(name, "i2f")
+    check_arity(name, nargs, 1)
     emit_byte(168)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "f2i")
+    check_arity(name, nargs, 1)
     emit_byte(169)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "fneg")
+    check_arity(name, nargs, 1)
     emit_byte(170)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fabs")
+    check_arity(name, nargs, 1)
     emit_byte(171)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fsqrt")
+    check_arity(name, nargs, 1)
     emit_byte(172)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fsin")
+    check_arity(name, nargs, 1)
     emit_byte(174)
     emit_byte(0)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fcos")
+    check_arity(name, nargs, 1)
     emit_byte(174)
     emit_byte(1)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "ftan")
+    check_arity(name, nargs, 1)
     emit_byte(174)
     emit_byte(2)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fexp")
+    check_arity(name, nargs, 1)
     emit_byte(174)
     emit_byte(3)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "flog")
+    check_arity(name, nargs, 1)
     emit_byte(174)
     emit_byte(4)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fpow")
+    check_arity(name, nargs, 2)
     emit_byte(174)
     emit_byte(5)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fbyte")
+    check_arity(name, nargs, 2)
     emit_byte(180)
     set expr_type[0] to 0
     return 0
   end
   # Milestone 5v: num(s) parses a string into a float.
   if str_eq(name, "num")
+    check_arity(name, nargs, 1)
     emit_byte(195)
     set expr_type[0] to 2
     return 0
   end
 
   if str_eq(name, "read_file")
+    check_arity(name, nargs, 1)
     emit_byte(176)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "write_file")
+    check_arity(name, nargs, 2)
     emit_byte(177)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "http_get")
+    check_arity(name, nargs, 1)
     emit_byte(178)
     set expr_type[0] to 1
     return 0
@@ -523,31 +576,37 @@ to emit_call with name nargs
 
   # --- Milestone 5u: string + numeric standard library ----------------------
   if str_eq(name, "upper")
+    check_arity(name, nargs, 1)
     emit_byte(146)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "lower")
+    check_arity(name, nargs, 1)
     emit_byte(147)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "trim")
+    check_arity(name, nargs, 1)
     emit_byte(148)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "substr")
+    check_arity(name, nargs, 3)
     emit_byte(149)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "find")
+    check_arity(name, nargs, 2)
     emit_byte(150)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "contains")
+    check_arity(name, nargs, 2)
     emit_byte(150)
     emit_byte(1)
     emit_i32(0)
@@ -556,66 +615,79 @@ to emit_call with name nargs
     return 0
   end
   if str_eq(name, "split")
+    check_arity(name, nargs, 2)
     emit_byte(151)
     set expr_type[0] to 5
     return 0
   end
   if str_eq(name, "join")
+    check_arity(name, nargs, 2)
     emit_byte(152)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "replace")
+    check_arity(name, nargs, 3)
     emit_byte(153)
     set expr_type[0] to 1
     return 0
   end
   if str_eq(name, "int")
+    check_arity(name, nargs, 1)
     emit_byte(154)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "abs")
+    check_arity(name, nargs, 1)
     emit_byte(155)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "min")
+    check_arity(name, nargs, 2)
     emit_byte(156)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "max")
+    check_arity(name, nargs, 2)
     emit_byte(157)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "range")
+    check_arity(name, nargs, 1)
     emit_byte(158)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "sum")
+    check_arity(name, nargs, 1)
     emit_byte(159)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "random")
+    check_arity(name, nargs, 1)
     emit_byte(184)
     set expr_type[0] to 0
     return 0
   end
   if str_eq(name, "fceil")
+    check_arity(name, nargs, 1)
     emit_byte(181)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "ffloor")
+    check_arity(name, nargs, 1)
     emit_byte(182)
     set expr_type[0] to 2
     return 0
   end
   if str_eq(name, "fround")
+    check_arity(name, nargs, 1)
     emit_byte(183)
     set expr_type[0] to 2
     return 0
@@ -628,6 +700,14 @@ to emit_call with name nargs
   # `is_even ↔ is_odd`). We always record a patch site in that case and
   # let `resolve_pending_calls` write the final u16 target.
   set idx to find_fn(name)
+  if emit_enabled[0] is 1
+    if idx < 0
+      throw "unknown function " + name
+    end
+    if fn_arities[idx + 1] is not nargs
+      throw name + ": expected " + str(fn_arities[idx + 1]) + " args, got " + str(nargs)
+    end
+  end
   emit_byte(96)
   set patch_pos to bc[0]
   set target to 0
@@ -667,6 +747,11 @@ to emit_ref with name
   emit_byte(1)
   set patch_pos to bc[0]
   set idx to find_fn(name)
+  if emit_enabled[0] is 1
+    if idx < 0
+      throw "unknown function " + name
+    end
+  end
   set target to 0
   if idx >= 0
     set target to fn_offsets[idx + 1]
@@ -1036,6 +1121,11 @@ to emit_new with cname
     end
     set k to k + 1
   end
+  if emit_enabled[0] is 1
+    if ci is 0
+      throw "unknown kind " + cname
+    end
+  end
   set n to 0
   set m to 1
   set mstop to mth_cls[0] + 1
@@ -1246,14 +1336,16 @@ to parse_atom with pos
       emit_byte(64)
       set lover to placeholder16()
       set lbody_off to bc[0]
-      set lsav_names[0] to loc_names[0]
-      set lsav_types[0] to loc_names[0]
+      set lbase to lsav_names[0]
+      set lsn to loc_names[0]
       set lsi to 1
-      while lsi <= lsav_names[0]
-        set lsav_names[lsi] to loc_names[lsi]
-        set lsav_types[lsi] to loc_types[lsi]
+      while lsi <= lsn
+        set lsav_names[lbase + lsi] to loc_names[lsi]
+        set lsav_types[lbase + lsi] to loc_types[lsi]
         set lsi to lsi + 1
       end
+      set lsav_names[0] to lbase + lsn
+      set lsav_types[0] to lbase + lsn
       set lsave_in to in_func[0]
       set loc_names[0] to 0
       set loc_types[0] to 0
@@ -1270,11 +1362,14 @@ to parse_atom with pos
       set lfixed to loc_names[0]
       set lbody_start to lpos
       set lsave_emit to emit_enabled[0]
+      set lsave_syms to sym_names[0]
       set emit_enabled[0] to 0
       set in_func[0] to 1
       set ltmp to parse_block(lbody_start)
       set lextras to loc_names[0] - lfixed
       set emit_enabled[0] to lsave_emit
+      set sym_names[0] to lsave_syms
+      set sym_types[0] to lsave_syms
       set loc_names[0] to lfixed
       if lextras > 0
         emit_byte(98)
@@ -1289,14 +1384,16 @@ to parse_atom with pos
       emit_byte(lbody_off % 256)
       emit_byte((lbody_off / 256) % 256)
       emit_byte(lncaps)
-      set loc_names[0] to lsav_names[0]
-      set loc_types[0] to lsav_types[0]
+      set loc_names[0] to lsn
+      set loc_types[0] to lsn
       set lsi to 1
-      while lsi <= lsav_names[0]
-        set loc_names[lsi] to lsav_names[lsi]
-        set loc_types[lsi] to lsav_types[lsi]
+      while lsi <= lsn
+        set loc_names[lsi] to lsav_names[lbase + lsi]
+        set loc_types[lsi] to lsav_types[lbase + lsi]
         set lsi to lsi + 1
       end
+      set lsav_names[0] to lbase
+      set lsav_types[0] to lbase
       set in_func[0] to lsave_in
       if is_ident_word(pos, "end")
         set pos to pos + 1
@@ -1669,6 +1766,11 @@ to parse_add with pos
       end
       set first to 0
       if lit is 1
+        if emit_enabled[0] is 1
+          if find_fn("list_concat_two") < 0
+            throw "joining lists with + needs use \"lang/stdlib/v2/list.sdev\""
+          end
+        end
         emit_call("list_concat_two", 2)
         set lk to 7
         set rk to 7
@@ -2085,6 +2187,11 @@ to parse_stmt with pos
   # Milestone 5s: `break` / `continue` are ordinary identifiers in the
   # lexer, so they are matched before the expression-statement fallback.
   if is_ident_word(pos, "break")
+    if emit_enabled[0] is 1
+      if loop_depth[0] is 0
+        throw "break outside of a loop"
+      end
+    end
     emit_byte(64)
     set bp to placeholder16()
     set brk_pos[brk_pos[0] + 1] to bp
@@ -2094,6 +2201,11 @@ to parse_stmt with pos
     return pos + 1
   end
   if is_ident_word(pos, "continue")
+    if emit_enabled[0] is 1
+      if loop_depth[0] is 0
+        throw "continue outside of a loop"
+      end
+    end
     emit_byte(64)
     set cp to placeholder16()
     set cnt_pos[cnt_pos[0] + 1] to cp

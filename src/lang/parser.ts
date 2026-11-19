@@ -811,18 +811,19 @@ export class Parser {
 
     const handlers: AST.ExceptHandler[] = [];
     while (this.check(TokenType.RESCUE)) {
-      this.advance();
+      const rescueTok = this.advance();
       const star = this.match(TokenType.STAR);
       const types: AST.ASTNode[] = [];
       let alias: string | undefined;
 
-      if (!this.check(TokenType.DOUBLE_COLON)) {
-        // Legacy form: `rescue err ::` binds a lowercase name.
+      if (!this.check(TokenType.DOUBLE_COLON) && !this.isAtEnd() && this.peek().line === rescueTok.line) {
+        // Legacy / v2 form: `rescue err ::` or `rescue err\n` binds a lowercase name.
         const first = this.peek();
+        const nextTok = this.tokens[this.pos + 1];
         const legacyBind =
           first.type === TokenType.IDENTIFIER &&
           /^[a-z_]/.test(first.value) &&
-          (this.tokens[this.pos + 1]?.type === TokenType.DOUBLE_COLON);
+          (nextTok?.type === TokenType.DOUBLE_COLON || !nextTok || nextTok.line > rescueTok.line);
         if (legacyBind) {
           alias = this.advance().value;
         } else {
@@ -868,7 +869,15 @@ export class Parser {
     if (!this.check(TokenType.DOUBLE_COLON)) {
       const start = this.peek();
       const statements: AST.ASTNode[] = [];
-      while (!this.isAtEnd() && !this.checkEndWord() && !this.check(TokenType.DOUBLE_SEMI) && !this.check(TokenType.OTHERWISE) && !this.checkIdentifierValue('else')) {
+      while (
+        !this.isAtEnd() &&
+        !this.checkEndWord() &&
+        !this.check(TokenType.DOUBLE_SEMI) &&
+        !this.check(TokenType.OTHERWISE) &&
+        !this.checkIdentifierValue('else') &&
+        !this.check(TokenType.RESCUE) &&
+        !this.check(TokenType.FINALLY)
+      ) {
         statements.push(this.parseStatement());
       }
       const consumedEnd = this.checkEndWord();
@@ -1405,6 +1414,62 @@ export class Parser {
 
     if (this.match(TokenType.SELF)) return { type: 'Identifier', name: 'self', line: token.line };
     if (this.match(TokenType.SUPER)) return { type: 'Identifier', name: 'super', line: token.line };
+
+    if (this.checkIdentifierValue('nothing')) {
+      this.advance();
+      return { type: 'NullLiteral', line: token.line };
+    }
+
+    // v2 `ref NAME` — first-class function value
+    if (
+      this.checkIdentifierValue('ref') &&
+      this.tokens[this.pos + 1]?.type === TokenType.IDENTIFIER &&
+      this.tokens[this.pos + 1]?.line === token.line
+    ) {
+      this.advance();
+      const target = this.advance();
+      return { type: 'Identifier', name: target.value, line: target.line };
+    }
+
+    // v2 `call TARGET(args)` — indirect call through a function/closure value
+    if (
+      this.checkIdentifierValue('call') &&
+      this.tokens[this.pos + 1]?.type === TokenType.IDENTIFIER &&
+      this.tokens[this.pos + 2]?.type === TokenType.LPAREN
+    ) {
+      this.advance();
+      return this.parseCall();
+    }
+
+    // v2 `make [with p...] [capture c...] ... end` — closure expression
+    if (this.checkIdentifierValue('make')) {
+      const next = this.tokens[this.pos + 1];
+      const isMakeClosure =
+        !next ||
+        next.line > token.line ||
+        next.type === TokenType.WITH ||
+        (next.type === TokenType.IDENTIFIER && (next.value === 'with' || next.value === 'capture'));
+      if (isMakeClosure) {
+        this.advance();
+        const params: string[] = [];
+        if ((this.check(TokenType.WITH) || this.checkIdentifierValue('with')) && this.peek().line === token.line) {
+          this.advance();
+          while (this.check(TokenType.IDENTIFIER) && this.peek().line === token.line && !this.checkIdentifierValue('capture')) {
+            params.push(this.advance().value);
+            this.match(TokenType.COMMA);
+          }
+        }
+        if (this.checkIdentifierValue('capture') && this.peek().line === token.line) {
+          this.advance();
+          while (this.check(TokenType.IDENTIFIER) && this.peek().line === token.line) {
+            this.advance();
+            this.match(TokenType.COMMA);
+          }
+        }
+        const body = this.parseBlockStatement();
+        return { type: 'LambdaExpr', params, body, line: token.line };
+      }
+    }
 
     if (this.match(TokenType.IDENTIFIER)) {
       return { type: 'Identifier', name: token.value, line: token.line };

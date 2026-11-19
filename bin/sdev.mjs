@@ -53,13 +53,13 @@ function loadStore() {
   }
 }
 function seedWasmPath() {
-  const candidates = [
+  const candidates2 = [
     process.env.SDEV_SEED_WASM,
     join(dirname(process.argv[1] ?? "."), "sdev-seed.wasm"),
     resolve(process.cwd(), "public/wasm/sdev-seed.wasm"),
     resolve(SDEV_HOME, "sdev-seed.wasm")
   ].filter(Boolean);
-  for (const c of candidates) if (existsSync(c)) return c;
+  for (const c of candidates2) if (existsSync(c)) return c;
   throw new Error("sdev-seed.wasm not found. Set SDEV_SEED_WASM to its path.");
 }
 var SDEV_HOME, STORE_PATH, FILE_NS, FileStorage, nativeFetch;
@@ -1058,10 +1058,10 @@ var init_parser = __esm({
         while (!this.check("DOUBLE_SEMI" /* DOUBLE_SEMI */) && !this.isAtEnd()) {
           this.consume("CASE" /* CASE */, "Expected 'case' inside a match block");
           const pattern = this.parsePattern();
-          let guard;
-          if (this.match("WHEN" /* WHEN */)) guard = this.parseExpression();
+          let guard2;
+          if (this.match("WHEN" /* WHEN */)) guard2 = this.parseExpression();
           const body = this.parseBlockStatement();
-          cases.push({ pattern, guard, body });
+          cases.push({ pattern, guard: guard2, body });
         }
         this.consume("DOUBLE_SEMI" /* DOUBLE_SEMI */, "Expected ';;' to close the match block");
         return { type: "MatchStatement", subject, cases, line: t.line };
@@ -1275,13 +1275,14 @@ var init_parser = __esm({
         const tryBlock = this.parseBlockStatement();
         const handlers = [];
         while (this.check("RESCUE" /* RESCUE */)) {
-          this.advance();
+          const rescueTok = this.advance();
           const star = this.match("STAR" /* STAR */);
           const types = [];
           let alias;
-          if (!this.check("DOUBLE_COLON" /* DOUBLE_COLON */)) {
+          if (!this.check("DOUBLE_COLON" /* DOUBLE_COLON */) && !this.isAtEnd() && this.peek().line === rescueTok.line) {
             const first = this.peek();
-            const legacyBind = first.type === "IDENTIFIER" /* IDENTIFIER */ && /^[a-z_]/.test(first.value) && this.tokens[this.pos + 1]?.type === "DOUBLE_COLON" /* DOUBLE_COLON */;
+            const nextTok = this.tokens[this.pos + 1];
+            const legacyBind = first.type === "IDENTIFIER" /* IDENTIFIER */ && /^[a-z_]/.test(first.value) && (nextTok?.type === "DOUBLE_COLON" /* DOUBLE_COLON */ || !nextTok || nextTok.line > rescueTok.line);
             if (legacyBind) {
               alias = this.advance().value;
             } else {
@@ -1321,7 +1322,7 @@ var init_parser = __esm({
         if (!this.check("DOUBLE_COLON" /* DOUBLE_COLON */)) {
           const start = this.peek();
           const statements2 = [];
-          while (!this.isAtEnd() && !this.checkEndWord() && !this.check("DOUBLE_SEMI" /* DOUBLE_SEMI */) && !this.check("OTHERWISE" /* OTHERWISE */) && !this.checkIdentifierValue("else")) {
+          while (!this.isAtEnd() && !this.checkEndWord() && !this.check("DOUBLE_SEMI" /* DOUBLE_SEMI */) && !this.check("OTHERWISE" /* OTHERWISE */) && !this.checkIdentifierValue("else") && !this.check("RESCUE" /* RESCUE */) && !this.check("FINALLY" /* FINALLY */)) {
             statements2.push(this.parseStatement());
           }
           const consumedEnd = this.checkEndWord();
@@ -1795,6 +1796,43 @@ var init_parser = __esm({
         if (this.match("VOID" /* VOID */)) return { type: "NullLiteral", line: token.line };
         if (this.match("SELF" /* SELF */)) return { type: "Identifier", name: "self", line: token.line };
         if (this.match("SUPER" /* SUPER */)) return { type: "Identifier", name: "super", line: token.line };
+        if (this.checkIdentifierValue("nothing")) {
+          this.advance();
+          return { type: "NullLiteral", line: token.line };
+        }
+        if (this.checkIdentifierValue("ref") && this.tokens[this.pos + 1]?.type === "IDENTIFIER" /* IDENTIFIER */ && this.tokens[this.pos + 1]?.line === token.line) {
+          this.advance();
+          const target = this.advance();
+          return { type: "Identifier", name: target.value, line: target.line };
+        }
+        if (this.checkIdentifierValue("call") && this.tokens[this.pos + 1]?.type === "IDENTIFIER" /* IDENTIFIER */ && this.tokens[this.pos + 2]?.type === "LPAREN" /* LPAREN */) {
+          this.advance();
+          return this.parseCall();
+        }
+        if (this.checkIdentifierValue("make")) {
+          const next = this.tokens[this.pos + 1];
+          const isMakeClosure = !next || next.line > token.line || next.type === "WITH" /* WITH */ || next.type === "IDENTIFIER" /* IDENTIFIER */ && (next.value === "with" || next.value === "capture");
+          if (isMakeClosure) {
+            this.advance();
+            const params = [];
+            if ((this.check("WITH" /* WITH */) || this.checkIdentifierValue("with")) && this.peek().line === token.line) {
+              this.advance();
+              while (this.check("IDENTIFIER" /* IDENTIFIER */) && this.peek().line === token.line && !this.checkIdentifierValue("capture")) {
+                params.push(this.advance().value);
+                this.match("COMMA" /* COMMA */);
+              }
+            }
+            if (this.checkIdentifierValue("capture") && this.peek().line === token.line) {
+              this.advance();
+              while (this.check("IDENTIFIER" /* IDENTIFIER */) && this.peek().line === token.line) {
+                this.advance();
+                this.match("COMMA" /* COMMA */);
+              }
+            }
+            const body = this.parseBlockStatement();
+            return { type: "LambdaExpr", params, body, line: token.line };
+          }
+        }
         if (this.match("IDENTIFIER" /* IDENTIFIER */)) {
           return { type: "Identifier", name: token.value, line: token.line };
         }
@@ -4441,7 +4479,7 @@ var init_misc = __esm({
 var text_default;
 var init_text = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\text.sdev"() {
-    text_default = '# SDEV Standard Library: Text & Strings (v2) \u2014 authored in SDEV.\n\nto str_eq with a b\n  if concat(a, "") is b\n    return 1\n  end\n  return 0\nend\n\nto text_upper with s\n  return upper(s)\nend\n\nto text_lower with s\n  return lower(s)\nend\n\nto text_trim with s\n  return trim(s)\nend\n\nto text_contains with s sub\n  return contains(s, sub)\nend\n\nto text_replace with s target rep\n  return replace(s, target, rep)\nend\n\nto text_split with s delim\n  return split(s, delim)\nend\n\nto text_join with items delim\n  return join(items, delim)\nend\n\nto text_starts_with with s prefix\n  set lp to length(prefix)\n  if length(s) < lp\n    return 0\n  end\n  if substr(s, 0, lp) is prefix\n    return 1\n  end\n  return 0\nend\n\nto text_ends_with with s suffix\n  set ls to length(s)\n  set lsf to length(suffix)\n  if ls < lsf\n    return 0\n  end\n  if substr(s, ls - lsf, lsf) is suffix\n    return 1\n  end\n  return 0\nend\n\nto text_repeat with s count\n  set out to ""\n  set i to 0\n  while i < count\n    set out to out + s\n    set i to i + 1\n  end\n  return out\nend\n\nto text_pad_left with s target_len pad_char\n  set cur to length(s)\n  if cur >= target_len\n    return s\n  end\n  return text_repeat(pad_char, target_len - cur) + s\nend\n\nto text_pad_right with s target_len pad_char\n  set cur to length(s)\n  if cur >= target_len\n    return s\n  end\n  return s + text_repeat(pad_char, target_len - cur)\nend\n\nto text_reverse with s\n  set n to length(s)\n  set out to ""\n  set i to n - 1\n  while i >= 0\n    set out to out + chr(ord(s, i))\n    set i to i - 1\n  end\n  return out\nend\n\n# SDEV v1 Compatibility Aliases\nto etch with a b\n  return a + b\nend\n\nto shatter with s delim\n  return text_split(s, delim)\nend\n\nto weave with list delim\n  return text_join(list, delim)\nend\n';
+    text_default = '# SDEV Standard Library: Text & Strings (v2) \u2014 authored in SDEV.\r\n\r\nto str_eq with a b\r\n  if concat(a, "") is b\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_upper with s\r\n  return upper(s)\r\nend\r\n\r\nto text_lower with s\r\n  return lower(s)\r\nend\r\n\r\nto text_trim with s\r\n  return trim(s)\r\nend\r\n\r\nto text_contains with s sub\r\n  return contains(s, sub)\r\nend\r\n\r\nto text_replace with s target rep\r\n  return replace(s, target, rep)\r\nend\r\n\r\nto text_split with s delim\r\n  return split(s, delim)\r\nend\r\n\r\nto text_join with items delim\r\n  return join(items, delim)\r\nend\r\n\r\nto text_starts_with with s prefix\r\n  set lp to length(prefix)\r\n  if length(s) < lp\r\n    return 0\r\n  end\r\n  if substr(s, 0, lp) is prefix\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_ends_with with s suffix\r\n  set ls to length(s)\r\n  set lsf to length(suffix)\r\n  if ls < lsf\r\n    return 0\r\n  end\r\n  if substr(s, ls - lsf, lsf) is suffix\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_repeat with s count\r\n  set out to ""\r\n  set i to 0\r\n  while i < count\r\n    set out to out + s\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto text_pad_left with s target_len pad_char\r\n  set cur to length(s)\r\n  if cur >= target_len\r\n    return s\r\n  end\r\n  return text_repeat(pad_char, target_len - cur) + s\r\nend\r\n\r\nto text_pad_right with s target_len pad_char\r\n  set cur to length(s)\r\n  if cur >= target_len\r\n    return s\r\n  end\r\n  return s + text_repeat(pad_char, target_len - cur)\r\nend\r\n\r\nto text_reverse with s\r\n  set n to length(s)\r\n  set out to ""\r\n  set i to n - 1\r\n  while i >= 0\r\n    set out to out + chr(ord(s, i))\r\n    set i to i - 1\r\n  end\r\n  return out\r\nend\r\n\r\n# SDEV v1 Compatibility Aliases\r\nto etch with a b\r\n  return a + b\r\nend\r\n\r\nto shatter with s delim\r\n  return text_split(s, delim)\r\nend\r\n\r\nto weave with list delim\r\n  return text_join(list, delim)\r\nend\r\n';
   }
 });
 
@@ -4449,11 +4487,33 @@ var init_text = __esm({
 var regex_default;
 var init_regex = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\regex.sdev"() {
-    regex_default = '# =============================================================================\n# SDEV Standard Library: Regular Expression & Glob Engine (lang/stdlib/v2/regex.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\n\nto re_is_digit_char with c\n  if c >= 48 and c <= 57\n    return 1\n  end\n  return 0\nend\n\nto re_is_word_char with c\n  if c >= 48 and c <= 57\n    return 1\n  end\n  if c >= 65 and c <= 90\n    return 1\n  end\n  if c >= 97 and c <= 122\n    return 1\n  end\n  if c is 95\n    return 1\n  end\n  return 0\nend\n\nto re_is_space_char with c\n  if c is 32 or c is 9 or c is 10 or c is 13\n    return 1\n  end\n  return 0\nend\n\nto re_char_matches with pat pi c\n  set pc to ord(pat, pi)\n  if pc is 46\n    if c is not 10\n      return 1\n    end\n    return 0\n  end\n  if pc is 91\n    set end_b to find(substr(pat, pi + 1, length(pat) - (pi + 1)), "]")\n    if end_b > 0\n      set neg to 0\n      set j to pi + 1\n      if ord(pat, j) is 94\n        set neg to 1\n        set j to j + 1\n      end\n      set matched to 0\n      set stop_j to pi + 1 + end_b\n      while j < stop_j\n        set ch_j to ord(pat, j)\n        if j + 2 < stop_j and ord(pat, j + 1) is 45\n          set hi to ord(pat, j + 2)\n          if c >= ch_j and c <= hi\n            set matched to 1\n          end\n          set j to j + 3\n        else\n          if c is ch_j\n            set matched to 1\n          end\n          set j to j + 1\n        end\n      end\n      if neg is 1\n        if matched is 0\n          return 1\n        end\n        return 0\n      end\n      return matched\n    end\n  end\n  if pc is 92 and pi + 1 < length(pat)\n    set esc to ord(pat, pi + 1)\n    if esc is 100\n      return re_is_digit_char(c)\n    end\n    if esc is 119\n      return re_is_word_char(c)\n    end\n    if esc is 115\n      return re_is_space_char(c)\n    end\n    if c is esc\n      return 1\n    end\n    return 0\n  end\n  if c is pc\n    return 1\n  end\n  return 0\nend\n\nto re_atom_len with pat pi\n  set pc to ord(pat, pi)\n  if pc is 92 and pi + 1 < length(pat)\n    return 2\n  end\n  if pc is 91\n    set end_b to find(substr(pat, pi + 1, length(pat) - (pi + 1)), "]")\n    if end_b > 0\n      return end_b + 2\n    end\n  end\n  return 1\nend\n\nto re_match_here with pat pi text ti\n  set plen to length(pat)\n  set tlen to length(text)\n  if pi >= plen\n    return ti\n  end\n  if ord(pat, pi) is 36 and pi + 1 is plen\n    if ti is tlen\n      return ti\n    end\n    return 0 - 1\n  end\n  set alen to re_atom_len(pat, pi)\n  set next_pi to pi + alen\n  set quant to 0\n  if next_pi < plen\n    set qc to ord(pat, next_pi)\n    if qc is 42 or qc is 43 or qc is 63\n      set quant to qc\n      set next_pi to next_pi + 1\n    end\n  end\n\n  if quant is 42\n    # Greedy *\n    set cur_ti to ti\n    while cur_ti < tlen and re_char_matches(pat, pi, ord(text, cur_ti)) is 1\n      set cur_ti to cur_ti + 1\n    end\n    while cur_ti >= ti\n      set r to re_match_here(pat, next_pi, text, cur_ti)\n      if r >= 0\n        return r\n      end\n      set cur_ti to cur_ti - 1\n    end\n    return 0 - 1\n  end\n\n  if quant is 43\n    # Greedy +\n    if ti >= tlen or re_char_matches(pat, pi, ord(text, ti)) is 0\n      return 0 - 1\n    end\n    set cur_ti to ti + 1\n    while cur_ti < tlen and re_char_matches(pat, pi, ord(text, cur_ti)) is 1\n      set cur_ti to cur_ti + 1\n    end\n    while cur_ti > ti\n      set r to re_match_here(pat, next_pi, text, cur_ti)\n      if r >= 0\n        return r\n      end\n      set cur_ti to cur_ti - 1\n    end\n    return 0 - 1\n  end\n\n  if quant is 63\n    # Optional ?\n    if ti < tlen and re_char_matches(pat, pi, ord(text, ti)) is 1\n      set r1 to re_match_here(pat, next_pi, text, ti + 1)\n      if r1 >= 0\n        return r1\n      end\n    end\n    return re_match_here(pat, next_pi, text, ti)\n  end\n\n  if ti < tlen and re_char_matches(pat, pi, ord(text, ti)) is 1\n    return re_match_here(pat, next_pi, text, ti + 1)\n  end\n  return 0 - 1\nend\n\nto re_search_index with pat text\n  set plen to length(pat)\n  set tlen to length(text)\n  if plen > 0 and ord(pat, 0) is 94\n    set end_pos to re_match_here(pat, 1, text, 0)\n    if end_pos >= 0\n      return 0\n    end\n    return 0 - 1\n  end\n  set ti to 0\n  while ti <= tlen\n    set end_pos to re_match_here(pat, 0, text, ti)\n    if end_pos >= 0\n      return ti\n    end\n    set ti to ti + 1\n  end\n  return 0 - 1\nend\n\nto re_test with pat text\n  if re_search_index(pat, text) >= 0\n    return 1\n  end\n  return 0\nend\n\nto re_match with pat text\n  set plen to length(pat)\n  set start_pi to 0\n  if plen > 0 and ord(pat, 0) is 94\n    set start_pi to 1\n  end\n  set end_pos to re_match_here(pat, start_pi, text, 0)\n  if end_pos < 0\n    return ""\n  end\n  return substr(text, 0, end_pos)\nend\n\nto re_search with pat text\n  set plen to length(pat)\n  set tlen to length(text)\n  if plen > 0 and ord(pat, 0) is 94\n    set end_pos to re_match_here(pat, 1, text, 0)\n    if end_pos >= 0\n      return substr(text, 0, end_pos)\n    end\n    return ""\n  end\n  set ti to 0\n  while ti <= tlen\n    set end_pos to re_match_here(pat, 0, text, ti)\n    if end_pos >= 0\n      return substr(text, ti, end_pos - ti)\n    end\n    set ti to ti + 1\n  end\n  return ""\nend\n\nto glob_match_at with pat pi text ti\n  set plen to length(pat)\n  set tlen to length(text)\n  if pi >= plen\n    if ti >= tlen\n      return 1\n    end\n    return 0\n  end\n  set pc to ord(pat, pi)\n  if pc is 42\n    set k to ti\n    while k <= tlen\n      if glob_match_at(pat, pi + 1, text, k) is 1\n        return 1\n      end\n      set k to k + 1\n    end\n    return 0\n  end\n  if ti < tlen\n    if pc is 63 or pc is ord(text, ti)\n      return glob_match_at(pat, pi + 1, text, ti + 1)\n    end\n  end\n  return 0\nend\n\nto glob_match with pat text\n  return glob_match_at(pat, 0, text, 0)\nend\n\nto re_find_all with pat text\n  set out to mklist(0)\n  set plen to length(pat)\n  set tlen to length(text)\n  if plen > 0 and ord(pat, 0) is 94\n    set end_pos to re_match_here(pat, 1, text, 0)\n    if end_pos >= 0\n      set tmp to mklist(1)\n      set tmp[0] to substr(text, 0, end_pos)\n      return tmp\n    end\n    return out\n  end\n  set ti to 0\n  set count to 0\n  set buf to mklist(128)\n  while ti <= tlen\n    set end_pos to re_match_here(pat, 0, text, ti)\n    if end_pos > ti\n      set buf[count] to substr(text, ti, end_pos - ti)\n      set count to count + 1\n      set ti to end_pos\n    else\n      set ti to ti + 1\n    end\n  end\n  set res to mklist(count)\n  set i to 0\n  while i < count\n    set res[i] to buf[i]\n    set i to i + 1\n  end\n  return res\nend\n\nto re_replace_all with text pat repl\n  set tlen to length(text)\n  set out to ""\n  set ti to 0\n  while ti < tlen\n    set end_pos to re_match_here(pat, 0, text, ti)\n    if end_pos > ti\n      set out to out + concat(repl, "")\n      set ti to end_pos\n    else\n      set out to out + substr(text, ti, 1)\n      set ti to ti + 1\n    end\n  end\n  return concat(out, "")\nend\n';
+    regex_default = '# =============================================================================\r\n# SDEV Standard Library: Regular Expression & Glob Engine (lang/stdlib/v2/regex.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\nto re_is_digit_char with c\r\n  if c >= 48 and c <= 57\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto re_is_word_char with c\r\n  if c >= 48 and c <= 57\r\n    return 1\r\n  end\r\n  if c >= 65 and c <= 90\r\n    return 1\r\n  end\r\n  if c >= 97 and c <= 122\r\n    return 1\r\n  end\r\n  if c is 95\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto re_is_space_char with c\r\n  if c is 32 or c is 9 or c is 10 or c is 13\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto re_char_matches with pat pi c\r\n  set pc to ord(pat, pi)\r\n  if pc is 46\r\n    if c is not 10\r\n      return 1\r\n    end\r\n    return 0\r\n  end\r\n  if pc is 91\r\n    set end_b to find(substr(pat, pi + 1, length(pat) - (pi + 1)), "]")\r\n    if end_b > 0\r\n      set neg to 0\r\n      set j to pi + 1\r\n      if ord(pat, j) is 94\r\n        set neg to 1\r\n        set j to j + 1\r\n      end\r\n      set matched to 0\r\n      set stop_j to pi + 1 + end_b\r\n      while j < stop_j\r\n        set ch_j to ord(pat, j)\r\n        if j + 2 < stop_j and ord(pat, j + 1) is 45\r\n          set hi to ord(pat, j + 2)\r\n          if c >= ch_j and c <= hi\r\n            set matched to 1\r\n          end\r\n          set j to j + 3\r\n        else\r\n          if c is ch_j\r\n            set matched to 1\r\n          end\r\n          set j to j + 1\r\n        end\r\n      end\r\n      if neg is 1\r\n        if matched is 0\r\n          return 1\r\n        end\r\n        return 0\r\n      end\r\n      return matched\r\n    end\r\n  end\r\n  if pc is 92 and pi + 1 < length(pat)\r\n    set esc to ord(pat, pi + 1)\r\n    if esc is 100\r\n      return re_is_digit_char(c)\r\n    end\r\n    if esc is 119\r\n      return re_is_word_char(c)\r\n    end\r\n    if esc is 115\r\n      return re_is_space_char(c)\r\n    end\r\n    if c is esc\r\n      return 1\r\n    end\r\n    return 0\r\n  end\r\n  if c is pc\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto re_atom_len with pat pi\r\n  set pc to ord(pat, pi)\r\n  if pc is 92 and pi + 1 < length(pat)\r\n    return 2\r\n  end\r\n  if pc is 91\r\n    set end_b to find(substr(pat, pi + 1, length(pat) - (pi + 1)), "]")\r\n    if end_b > 0\r\n      return end_b + 2\r\n    end\r\n  end\r\n  return 1\r\nend\r\n\r\nto re_match_here with pat pi text ti\r\n  set plen to length(pat)\r\n  set tlen to length(text)\r\n  if pi >= plen\r\n    return ti\r\n  end\r\n  if ord(pat, pi) is 36 and pi + 1 is plen\r\n    if ti is tlen\r\n      return ti\r\n    end\r\n    return 0 - 1\r\n  end\r\n  set alen to re_atom_len(pat, pi)\r\n  set next_pi to pi + alen\r\n  set quant to 0\r\n  if next_pi < plen\r\n    set qc to ord(pat, next_pi)\r\n    if qc is 42 or qc is 43 or qc is 63\r\n      set quant to qc\r\n      set next_pi to next_pi + 1\r\n    end\r\n  end\r\n\r\n  if quant is 42\r\n    # Greedy *\r\n    set cur_ti to ti\r\n    while cur_ti < tlen and re_char_matches(pat, pi, ord(text, cur_ti)) is 1\r\n      set cur_ti to cur_ti + 1\r\n    end\r\n    while cur_ti >= ti\r\n      set r to re_match_here(pat, next_pi, text, cur_ti)\r\n      if r >= 0\r\n        return r\r\n      end\r\n      set cur_ti to cur_ti - 1\r\n    end\r\n    return 0 - 1\r\n  end\r\n\r\n  if quant is 43\r\n    # Greedy +\r\n    if ti >= tlen or re_char_matches(pat, pi, ord(text, ti)) is 0\r\n      return 0 - 1\r\n    end\r\n    set cur_ti to ti + 1\r\n    while cur_ti < tlen and re_char_matches(pat, pi, ord(text, cur_ti)) is 1\r\n      set cur_ti to cur_ti + 1\r\n    end\r\n    while cur_ti > ti\r\n      set r to re_match_here(pat, next_pi, text, cur_ti)\r\n      if r >= 0\r\n        return r\r\n      end\r\n      set cur_ti to cur_ti - 1\r\n    end\r\n    return 0 - 1\r\n  end\r\n\r\n  if quant is 63\r\n    # Optional ?\r\n    if ti < tlen and re_char_matches(pat, pi, ord(text, ti)) is 1\r\n      set r1 to re_match_here(pat, next_pi, text, ti + 1)\r\n      if r1 >= 0\r\n        return r1\r\n      end\r\n    end\r\n    return re_match_here(pat, next_pi, text, ti)\r\n  end\r\n\r\n  if ti < tlen and re_char_matches(pat, pi, ord(text, ti)) is 1\r\n    return re_match_here(pat, next_pi, text, ti + 1)\r\n  end\r\n  return 0 - 1\r\nend\r\n\r\nto re_search_index with pat text\r\n  set plen to length(pat)\r\n  set tlen to length(text)\r\n  if plen > 0 and ord(pat, 0) is 94\r\n    set end_pos to re_match_here(pat, 1, text, 0)\r\n    if end_pos >= 0\r\n      return 0\r\n    end\r\n    return 0 - 1\r\n  end\r\n  set ti to 0\r\n  while ti <= tlen\r\n    set end_pos to re_match_here(pat, 0, text, ti)\r\n    if end_pos >= 0\r\n      return ti\r\n    end\r\n    set ti to ti + 1\r\n  end\r\n  return 0 - 1\r\nend\r\n\r\nto re_test with pat text\r\n  if re_search_index(pat, text) >= 0\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto re_match with pat text\r\n  set plen to length(pat)\r\n  set start_pi to 0\r\n  if plen > 0 and ord(pat, 0) is 94\r\n    set start_pi to 1\r\n  end\r\n  set end_pos to re_match_here(pat, start_pi, text, 0)\r\n  if end_pos < 0\r\n    return ""\r\n  end\r\n  return substr(text, 0, end_pos)\r\nend\r\n\r\nto re_search with pat text\r\n  set plen to length(pat)\r\n  set tlen to length(text)\r\n  if plen > 0 and ord(pat, 0) is 94\r\n    set end_pos to re_match_here(pat, 1, text, 0)\r\n    if end_pos >= 0\r\n      return substr(text, 0, end_pos)\r\n    end\r\n    return ""\r\n  end\r\n  set ti to 0\r\n  while ti <= tlen\r\n    set end_pos to re_match_here(pat, 0, text, ti)\r\n    if end_pos >= 0\r\n      return substr(text, ti, end_pos - ti)\r\n    end\r\n    set ti to ti + 1\r\n  end\r\n  return ""\r\nend\r\n\r\nto glob_match_at with pat pi text ti\r\n  set plen to length(pat)\r\n  set tlen to length(text)\r\n  if pi >= plen\r\n    if ti >= tlen\r\n      return 1\r\n    end\r\n    return 0\r\n  end\r\n  set pc to ord(pat, pi)\r\n  if pc is 42\r\n    set k to ti\r\n    while k <= tlen\r\n      if glob_match_at(pat, pi + 1, text, k) is 1\r\n        return 1\r\n      end\r\n      set k to k + 1\r\n    end\r\n    return 0\r\n  end\r\n  if ti < tlen\r\n    if pc is 63 or pc is ord(text, ti)\r\n      return glob_match_at(pat, pi + 1, text, ti + 1)\r\n    end\r\n  end\r\n  return 0\r\nend\r\n\r\nto glob_match with pat text\r\n  return glob_match_at(pat, 0, text, 0)\r\nend\r\n\r\nto re_find_all with pat text\r\n  set out to mklist(0)\r\n  set plen to length(pat)\r\n  set tlen to length(text)\r\n  if plen > 0 and ord(pat, 0) is 94\r\n    set end_pos to re_match_here(pat, 1, text, 0)\r\n    if end_pos >= 0\r\n      set tmp to mklist(1)\r\n      set tmp[0] to substr(text, 0, end_pos)\r\n      return tmp\r\n    end\r\n    return out\r\n  end\r\n  set ti to 0\r\n  set count to 0\r\n  set buf to mklist(128)\r\n  while ti <= tlen\r\n    set end_pos to re_match_here(pat, 0, text, ti)\r\n    if end_pos > ti\r\n      set buf[count] to substr(text, ti, end_pos - ti)\r\n      set count to count + 1\r\n      set ti to end_pos\r\n    else\r\n      set ti to ti + 1\r\n    end\r\n  end\r\n  set res to mklist(count)\r\n  set i to 0\r\n  while i < count\r\n    set res[i] to buf[i]\r\n    set i to i + 1\r\n  end\r\n  return res\r\nend\r\n\r\nto re_replace_all with text pat repl\r\n  set tlen to length(text)\r\n  set out to ""\r\n  set ti to 0\r\n  while ti < tlen\r\n    set end_pos to re_match_here(pat, 0, text, ti)\r\n    if end_pos > ti\r\n      set out to out + concat(repl, "")\r\n      set ti to end_pos\r\n    else\r\n      set out to out + substr(text, ti, 1)\r\n      set ti to ti + 1\r\n    end\r\n  end\r\n  return concat(out, "")\r\nend\r\n';
+  }
+});
+
+// src/lang/builtins/regex-guard.ts
+function regexProblem(pattern, text3) {
+  if (pattern.length > MAX_REGEX_PATTERN) return `Pattern is too long (max ${MAX_REGEX_PATTERN} characters)`;
+  if (text3.length > MAX_REGEX_TEXT) return `Text is too long for a pattern search (max ${MAX_REGEX_TEXT} characters)`;
+  if (NESTED_QUANTIFIER.test(pattern)) {
+    return "Pattern repeats a group that itself repeats, which can freeze the page \u2014 simplify it";
+  }
+  return null;
+}
+var MAX_REGEX_PATTERN, MAX_REGEX_TEXT, NESTED_QUANTIFIER;
+var init_regex_guard = __esm({
+  "src/lang/builtins/regex-guard.ts"() {
+    MAX_REGEX_PATTERN = 1e3;
+    MAX_REGEX_TEXT = 2e5;
+    NESTED_QUANTIFIER = /\((?:\?:)?(?:\\.|\[[^\]]*\]|[^()\\])[+*]\)(?:[+*]|\{\d+,\d*\})/;
   }
 });
 
 // src/lang/builtins/regex.ts
+function guard(text3, pattern, line) {
+  const p = regexProblem(pattern, text3);
+  if (p) throw new SdevError(p, line);
+}
 function getRegexRunner() {
   if (!regexRunner) regexRunner = createSdevModuleRunner(text_default, regex_default);
   return regexRunner;
@@ -4467,6 +4527,7 @@ function registerRegex(builtins, _output) {
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("match() takes 2 arguments (text, pattern)", line);
       if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         const hit = getRegexRunner().callStr("re_search", args[1], args[0]);
         if (hit) return [hit];
@@ -4481,6 +4542,7 @@ function registerRegex(builtins, _output) {
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("matchAll() takes 2 arguments (text, pattern)", line);
       if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         const hits = getRegexRunner().call("re_find_all", args[1], args[0]);
         return hits.map((h) => [h]);
@@ -4496,6 +4558,7 @@ function registerRegex(builtins, _output) {
       if (typeof args[0] !== "string" || typeof args[1] !== "string" || typeof args[2] !== "string") {
         throw new SdevError("Arguments must be text", line);
       }
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         return getRegexRunner().callStr("re_replace_all", args[0], args[1], args[2]);
       }
@@ -4507,6 +4570,7 @@ function registerRegex(builtins, _output) {
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("test() takes 2 arguments (text, pattern)", line);
       if (typeof args[0] !== "string" || typeof args[1] !== "string") throw new SdevError("Arguments must be text", line);
+      guard(args[0], args[1], line);
       if (!usesHostOnlyRegex(args[1])) {
         return getRegexRunner().call("re_test", args[1], args[0]) === 1;
       }
@@ -4521,6 +4585,7 @@ var init_regex2 = __esm({
     init_sdev_module();
     init_text();
     init_regex();
+    init_regex_guard();
     regexRunner = null;
   }
 });
@@ -4712,7 +4777,7 @@ var init_functional = __esm({
 var bits_default;
 var init_bits = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\bits.sdev"() {
-    bits_default = '# SDEV Standard Library: Bits & Binary Operations (v2) \u2014 authored in SDEV.\n\nto bits_shl with val shift\n  set v to val\n  set s to shift\n  while s > 0\n    set v to v * 2\n    set s to s - 1\n  end\n  return v\nend\n\nto bits_shr with val shift\n  set v to val\n  set s to shift\n  while s > 0\n    if v >= 0\n      set v to (v - (v % 2)) / 2\n    else\n      set v to 0 - (((0 - v) + 1) - (((0 - v) + 1) % 2)) / 2\n    end\n    set s to s - 1\n  end\n  return v\nend\n\nto bits_test with val bit_pos\n  set mask to bits_shl(1, bit_pos)\n  set q to (val - (val % mask)) / mask\n  return q % 2\nend\n\nto bits_popcount with val\n  set v to val\n  set count to 0\n  while v > 0\n    set bit to v % 2\n    set count to count + bit\n    set v to (v - bit) / 2\n  end\n  return count\nend\n\nto bits_to_hex with val\n  if val is 0\n    return "0"\n  end\n  set hex_chars to "0123456789abcdef"\n  set out to ""\n  set v to val\n  while v > 0\n    set rem to v % 16\n    set out to chr(ord(hex_chars, rem)) + out\n    set v to (v - rem) / 16\n  end\n  return out\nend\n\nto bits_from_hex with hex_str\n  set n to length(hex_str)\n  set v to 0\n  set i to 0\n  while i < n\n    set c to ord(hex_str, i)\n    set digit to 0\n    if c >= 48\n      if c <= 57\n        set digit to c - 48\n      end\n    end\n    if c >= 97\n      if c <= 102\n        set digit to c - 87\n      end\n    end\n    if c >= 65\n      if c <= 70\n        set digit to c - 55\n      end\n    end\n    set v to v * 16 + digit\n    set i to i + 1\n  end\n  return v\nend\n';
+    bits_default = '# SDEV Standard Library: Bits & Binary Operations (v2) \u2014 authored in SDEV.\r\n\r\nto bits_shl with val shift\r\n  set v to val\r\n  set s to shift\r\n  while s > 0\r\n    set v to v * 2\r\n    set s to s - 1\r\n  end\r\n  return v\r\nend\r\n\r\nto bits_shr with val shift\r\n  set v to val\r\n  set s to shift\r\n  while s > 0\r\n    if v >= 0\r\n      set v to (v - (v % 2)) / 2\r\n    else\r\n      set v to 0 - (((0 - v) + 1) - (((0 - v) + 1) % 2)) / 2\r\n    end\r\n    set s to s - 1\r\n  end\r\n  return v\r\nend\r\n\r\nto bits_test with val bit_pos\r\n  set mask to bits_shl(1, bit_pos)\r\n  set q to (val - (val % mask)) / mask\r\n  return q % 2\r\nend\r\n\r\nto bits_popcount with val\r\n  set v to val\r\n  set count to 0\r\n  while v > 0\r\n    set bit to v % 2\r\n    set count to count + bit\r\n    set v to (v - bit) / 2\r\n  end\r\n  return count\r\nend\r\n\r\nto bits_to_hex with val\r\n  if val is 0\r\n    return "0"\r\n  end\r\n  set hex_chars to "0123456789abcdef"\r\n  set out to ""\r\n  set v to val\r\n  while v > 0\r\n    set rem to v % 16\r\n    set out to chr(ord(hex_chars, rem)) + out\r\n    set v to (v - rem) / 16\r\n  end\r\n  return out\r\nend\r\n\r\nto bits_from_hex with hex_str\r\n  set n to length(hex_str)\r\n  set v to 0\r\n  set i to 0\r\n  while i < n\r\n    set c to ord(hex_str, i)\r\n    set digit to 0\r\n    if c >= 48\r\n      if c <= 57\r\n        set digit to c - 48\r\n      end\r\n    end\r\n    if c >= 97\r\n      if c <= 102\r\n        set digit to c - 87\r\n      end\r\n    end\r\n    if c >= 65\r\n      if c <= 70\r\n        set digit to c - 55\r\n      end\r\n    end\r\n    set v to v * 16 + digit\r\n    set i to i + 1\r\n  end\r\n  return v\r\nend\r\n\r\n# ---- Bitwise logic on non-negative integers (added for OCE / systems code) --\r\n# Written with plain arithmetic so every backend (seed VM, v1, native) agrees.\r\n\r\nto bits_and with a b\r\n  set x to a\r\n  set y to b\r\n  set out to 0\r\n  set place to 1\r\n  while x > 0 and y > 0\r\n    if x % 2 is 1 and y % 2 is 1\r\n      set out to out + place\r\n    end\r\n    set x to x / 2\r\n    set y to y / 2\r\n    set place to place * 2\r\n  end\r\n  return out\r\nend\r\n\r\nto bits_or with a b\r\n  set x to a\r\n  set y to b\r\n  set out to 0\r\n  set place to 1\r\n  while x > 0 or y > 0\r\n    if x % 2 is 1 or y % 2 is 1\r\n      set out to out + place\r\n    end\r\n    set x to x / 2\r\n    set y to y / 2\r\n    set place to place * 2\r\n  end\r\n  return out\r\nend\r\n\r\nto bits_xor with a b\r\n  set x to a\r\n  set y to b\r\n  set out to 0\r\n  set place to 1\r\n  while x > 0 or y > 0\r\n    if x % 2 is not y % 2\r\n      set out to out + place\r\n    end\r\n    set x to x / 2\r\n    set y to y / 2\r\n    set place to place * 2\r\n  end\r\n  return out\r\nend\r\n\r\n# Flip the low `width` bits.\r\nto bits_not_n with a width\r\n  return bits_shl(1, width) - 1 - bits_and(a, bits_shl(1, width) - 1)\r\nend\r\n\r\n# Floor division / modulo (division in SDEV truncates toward zero).\r\nto floor_div with a b\r\n  set q to a / b\r\n  if q * b is not a\r\n    if (a < 0) is not (b < 0)\r\n      set q to q - 1\r\n    end\r\n  end\r\n  return q\r\nend\r\n\r\nto floor_mod with a b\r\n  return a - floor_div(a, b) * b\r\nend\r\n\r\n# Wrap any integer into a fixed-width register.\r\nto wrap_u8 with v\r\n  return floor_mod(v, 256)\r\nend\r\n\r\nto wrap_u16 with v\r\n  return floor_mod(v, 65536)\r\nend\r\n\r\nto wrap_i16 with v\r\n  set u to floor_mod(v, 65536)\r\n  if u >= 32768\r\n    return u - 65536\r\n  end\r\n  return u\r\nend\r\n';
   }
 });
 
@@ -4720,7 +4785,7 @@ var init_bits = __esm({
 var buffer_default;
 var init_buffer = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\buffer.sdev"() {
-    buffer_default = '# =============================================================================\n# SDEV Standard Library: Byte Buffers, Hex, Base64 & Hashing\n# (lang/stdlib/v2/buffer.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\nuse "lang/stdlib/v2/bits.sdev"\n\nto buf_from_str with s\n  set n to length(s)\n  set b to mklist(n)\n  set i to 0\n  while i < n\n    set b[i] to ord(s, i)\n    set i to i + 1\n  end\n  return b\nend\n\nto buf_to_str with b\n  set n to length(b)\n  set out to ""\n  set i to 0\n  while i < n\n    set out to out + chr(b[i])\n    set i to i + 1\n  end\n  return concat(out, "")\nend\n\nto buf_len with b\n  return length(b)\nend\n\nto buf_get with b idx\n  return b[idx]\nend\n\nto buf_set with b idx val\n  set b[idx] to val % 256\n  return b\nend\n\nto buf_slice with b start_idx end_idx\n  set count to end_idx - start_idx\n  if count < 0\n    set count to 0\n  end\n  set out to mklist(count)\n  set i to 0\n  while i < count\n    set out[i] to b[start_idx + i]\n    set i to i + 1\n  end\n  return out\nend\n\nto buf_concat with a b\n  set na to length(a)\n  set nb to length(b)\n  set out to mklist(na + nb)\n  set i to 0\n  while i < na\n    set out[i] to a[i]\n    set i to i + 1\n  end\n  set j to 0\n  while j < nb\n    set out[na + j] to b[j]\n    set j to j + 1\n  end\n  return out\nend\n\nto buf_equals with a b\n  set na to length(a)\n  if na is not length(b)\n    return 0\n  end\n  set i to 0\n  while i < na\n    if a[i] is not b[i]\n      return 0\n    end\n    set i to i + 1\n  end\n  return 1\nend\n\nto buf_to_hex with b\n  set n to length(b)\n  set out to ""\n  set i to 0\n  while i < n\n    set hx to bits_to_hex(b[i])\n    if length(hx) is 1\n      set hx to "0" + hx\n    end\n    set out to out + hx\n    set i to i + 1\n  end\n  return concat(out, "")\nend\n\nto buf_from_hex with hex_str\n  set clean to trim(hex_str)\n  set n to length(clean) / 2\n  set out to mklist(n)\n  set i to 0\n  while i < n\n    set pair to substr(clean, i * 2, 2)\n    set out[i] to bits_from_hex(pair)\n    set i to i + 1\n  end\n  return out\nend\n\nto base64_encode with s\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\n  set n to length(s)\n  set out to ""\n  set i to 0\n  while i < n\n    set b0 to ord(s, i)\n    set rem to n - i\n    set b1 to 0\n    set b2 to 0\n    if rem > 1\n      set b1 to ord(s, i + 1)\n    end\n    if rem > 2\n      set b2 to ord(s, i + 2)\n    end\n    set triplet to b0 * 65536 + b1 * 256 + b2\n    set c0 to (triplet / 262144) % 64\n    set c1 to (triplet / 4096) % 64\n    set c2 to (triplet / 64) % 64\n    set c3 to triplet % 64\n    set out to out + substr(alpha, c0, 1) + substr(alpha, c1, 1)\n    if rem > 1\n      set out to out + substr(alpha, c2, 1)\n    else\n      set out to out + "="\n    end\n    if rem > 2\n      set out to out + substr(alpha, c3, 1)\n    else\n      set out to out + "="\n    end\n    set i to i + 3\n  end\n  return concat(out, "")\nend\n\nto base64_decode with b64_str\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\n  set n to length(b64_str)\n  set out to ""\n  set i to 0\n  while i + 3 < n\n    set ch0 to substr(b64_str, i, 1)\n    set ch1 to substr(b64_str, i + 1, 1)\n    set ch2 to substr(b64_str, i + 2, 1)\n    set ch3 to substr(b64_str, i + 3, 1)\n    set v0 to find(alpha, ch0)\n    set v1 to find(alpha, ch1)\n    set v2 to 0\n    if str_eq(ch2, "=") is 0\n      set v2 to find(alpha, ch2)\n    end\n    set v3 to 0\n    if str_eq(ch3, "=") is 0\n      set v3 to find(alpha, ch3)\n    end\n    set triplet to v0 * 262144 + v1 * 4096 + v2 * 64 + v3\n    set b0 to (triplet / 65536) % 256\n    set b1 to (triplet / 256) % 256\n    set b2 to triplet % 256\n    set out to out + chr(b0)\n    if str_eq(ch2, "=") is 0\n      set out to out + chr(b1)\n    end\n    if str_eq(ch3, "=") is 0\n      set out to out + chr(b2)\n    end\n    set i to i + 4\n  end\n  return concat(out, "")\nend\n\nto hash_djb2 with s\n  set h to 5381\n  set n to length(s)\n  set i to 0\n  while i < n\n    set h to ((h * 33) + ord(s, i)) % 2147483647\n    set i to i + 1\n  end\n  return h\nend\n\nto hash_fnv1a_hex with s\n  set h to hash_djb2(s)\n  return bits_to_hex(h)\nend\n\n# \u2500\u2500 Arena Memory Operations (Pure SDEV) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nto buf_byte with val\n  set b to val % 256\n  if b < 0\n    set b to b + 256\n  end\n  return b\nend\n\nto mem_arena_new with cap\n  set a to mklist(3)\n  set bytes to mklist(cap)\n  set i to 0\n  while i < cap\n    set bytes[i] to 0\n    set i to i + 1\n  end\n  set a[0] to bytes\n  set a[1] to cap\n  set a[2] to 0\n  return a\nend\n\nto mem_arena_alloc with a n\n  set cur to a[2]\n  set next_off to cur + n\n  if next_off > a[1]\n    return 0 - 1\n  end\n  set a[2] to next_off\n  return cur\nend\n\nto mem_arena_reset with a\n  set a[2] to 0\n  return 0\nend\n\nto mem_arena_poke_u8 with bytes ptr val\n  set bytes[ptr] to buf_byte(val)\n  return 0\nend\n\nto mem_arena_peek_u8 with bytes ptr\n  return buf_byte(bytes[ptr])\nend\n\nto mem_arena_poke_i16 with bytes ptr val\n  set u to val\n  if u < 0\n    set u to u + 65536\n  end\n  set b0 to u % 256\n  set b1 to ((u - b0) / 256) % 256\n  set bytes[ptr] to b0\n  set bytes[ptr + 1] to b1\n  return 0\nend\n\nto mem_arena_peek_i16 with bytes ptr\n  set b0 to buf_byte(bytes[ptr])\n  set b1 to buf_byte(bytes[ptr + 1])\n  set v to b0 + b1 * 256\n  if v >= 32768\n    set v to v - 65536\n  end\n  return v\nend\n\nto mem_arena_poke_i32 with bytes ptr val\n  set u to val\n  if u < 0\n    set u to u + 4294967296\n  end\n  set b0 to u % 256\n  set r1 to (u - b0) / 256\n  set b1 to r1 % 256\n  set r2 to (r1 - b1) / 256\n  set b2 to r2 % 256\n  set r3 to (r2 - b2) / 256\n  set b3 to r3 % 256\n  set bytes[ptr] to b0\n  set bytes[ptr + 1] to b1\n  set bytes[ptr + 2] to b2\n  set bytes[ptr + 3] to b3\n  return 0\nend\n\nto mem_arena_peek_i32 with bytes ptr\n  set b0 to buf_byte(bytes[ptr])\n  set b1 to buf_byte(bytes[ptr + 1])\n  set b2 to buf_byte(bytes[ptr + 2])\n  set b3 to buf_byte(bytes[ptr + 3])\n  set v to b0 + b1 * 256 + b2 * 65536 + b3 * 16777216\n  if b3 >= 128\n    set v to v - 4294967296\n  end\n  return v\nend\n\nto mem_arena_fill with bytes ptr n val\n  set b to buf_byte(val)\n  set i to 0\n  while i < n\n    set bytes[ptr + i] to b\n    set i to i + 1\n  end\n  return 0\nend\n\nto mem_arena_copy with bytes dst src n\n  set tmp to mklist(n)\n  set i to 0\n  while i < n\n    set tmp[i] to bytes[src + i]\n    set i to i + 1\n  end\n  set j to 0\n  while j < n\n    set bytes[dst + j] to tmp[j]\n    set j to j + 1\n  end\n  return 0\nend\n';
+    buffer_default = '# =============================================================================\r\n# SDEV Standard Library: Byte Buffers, Hex, Base64 & Hashing\r\n# (lang/stdlib/v2/buffer.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\nuse "lang/stdlib/v2/bits.sdev"\r\n\r\nto buf_from_str with s\r\n  set n to length(s)\r\n  set b to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set b[i] to ord(s, i)\r\n    set i to i + 1\r\n  end\r\n  return b\r\nend\r\n\r\nto buf_to_str with b\r\n  set n to length(b)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set out to out + chr(b[i])\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto buf_len with b\r\n  return length(b)\r\nend\r\n\r\nto buf_get with b idx\r\n  return b[idx]\r\nend\r\n\r\nto buf_set with b idx val\r\n  set b[idx] to val % 256\r\n  return b\r\nend\r\n\r\nto buf_slice with b start_idx end_idx\r\n  set count to end_idx - start_idx\r\n  if count < 0\r\n    set count to 0\r\n  end\r\n  set out to mklist(count)\r\n  set i to 0\r\n  while i < count\r\n    set out[i] to b[start_idx + i]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto buf_concat with a b\r\n  set na to length(a)\r\n  set nb to length(b)\r\n  set out to mklist(na + nb)\r\n  set i to 0\r\n  while i < na\r\n    set out[i] to a[i]\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j < nb\r\n    set out[na + j] to b[j]\r\n    set j to j + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto buf_equals with a b\r\n  set na to length(a)\r\n  if na is not length(b)\r\n    return 0\r\n  end\r\n  set i to 0\r\n  while i < na\r\n    if a[i] is not b[i]\r\n      return 0\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 1\r\nend\r\n\r\nto buf_to_hex with b\r\n  set n to length(b)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set hx to bits_to_hex(b[i])\r\n    if length(hx) is 1\r\n      set hx to "0" + hx\r\n    end\r\n    set out to out + hx\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto buf_from_hex with hex_str\r\n  set clean to trim(hex_str)\r\n  set n to length(clean) / 2\r\n  set out to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set pair to substr(clean, i * 2, 2)\r\n    set out[i] to bits_from_hex(pair)\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto base64_encode with s\r\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\r\n  set n to length(s)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set b0 to ord(s, i)\r\n    set rem to n - i\r\n    set b1 to 0\r\n    set b2 to 0\r\n    if rem > 1\r\n      set b1 to ord(s, i + 1)\r\n    end\r\n    if rem > 2\r\n      set b2 to ord(s, i + 2)\r\n    end\r\n    set triplet to b0 * 65536 + b1 * 256 + b2\r\n    set c0 to (triplet / 262144) % 64\r\n    set c1 to (triplet / 4096) % 64\r\n    set c2 to (triplet / 64) % 64\r\n    set c3 to triplet % 64\r\n    set out to out + substr(alpha, c0, 1) + substr(alpha, c1, 1)\r\n    if rem > 1\r\n      set out to out + substr(alpha, c2, 1)\r\n    else\r\n      set out to out + "="\r\n    end\r\n    if rem > 2\r\n      set out to out + substr(alpha, c3, 1)\r\n    else\r\n      set out to out + "="\r\n    end\r\n    set i to i + 3\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto base64_decode with b64_str\r\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\r\n  set n to length(b64_str)\r\n  set out to ""\r\n  set i to 0\r\n  while i + 3 < n\r\n    set ch0 to substr(b64_str, i, 1)\r\n    set ch1 to substr(b64_str, i + 1, 1)\r\n    set ch2 to substr(b64_str, i + 2, 1)\r\n    set ch3 to substr(b64_str, i + 3, 1)\r\n    set v0 to find(alpha, ch0)\r\n    set v1 to find(alpha, ch1)\r\n    set v2 to 0\r\n    if str_eq(ch2, "=") is 0\r\n      set v2 to find(alpha, ch2)\r\n    end\r\n    set v3 to 0\r\n    if str_eq(ch3, "=") is 0\r\n      set v3 to find(alpha, ch3)\r\n    end\r\n    set triplet to v0 * 262144 + v1 * 4096 + v2 * 64 + v3\r\n    set b0 to (triplet / 65536) % 256\r\n    set b1 to (triplet / 256) % 256\r\n    set b2 to triplet % 256\r\n    set out to out + chr(b0)\r\n    if str_eq(ch2, "=") is 0\r\n      set out to out + chr(b1)\r\n    end\r\n    if str_eq(ch3, "=") is 0\r\n      set out to out + chr(b2)\r\n    end\r\n    set i to i + 4\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto hash_djb2 with s\r\n  set h to 5381\r\n  set n to length(s)\r\n  set i to 0\r\n  while i < n\r\n    set h to ((h * 33) + ord(s, i)) % 2147483647\r\n    set i to i + 1\r\n  end\r\n  return h\r\nend\r\n\r\nto hash_fnv1a_hex with s\r\n  set h to hash_djb2(s)\r\n  return bits_to_hex(h)\r\nend\r\n\r\n# \u2500\u2500 Arena Memory Operations (Pure SDEV) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\n\r\nto buf_byte with val\r\n  set b to val % 256\r\n  if b < 0\r\n    set b to b + 256\r\n  end\r\n  return b\r\nend\r\n\r\nto mem_arena_new with cap\r\n  set a to mklist(3)\r\n  set bytes to mklist(cap)\r\n  set i to 0\r\n  while i < cap\r\n    set bytes[i] to 0\r\n    set i to i + 1\r\n  end\r\n  set a[0] to bytes\r\n  set a[1] to cap\r\n  set a[2] to 0\r\n  return a\r\nend\r\n\r\nto mem_arena_alloc with a n\r\n  set cur to a[2]\r\n  set next_off to cur + n\r\n  if next_off > a[1]\r\n    return 0 - 1\r\n  end\r\n  set a[2] to next_off\r\n  return cur\r\nend\r\n\r\nto mem_arena_reset with a\r\n  set a[2] to 0\r\n  return 0\r\nend\r\n\r\nto mem_arena_poke_u8 with bytes ptr val\r\n  set bytes[ptr] to buf_byte(val)\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_u8 with bytes ptr\r\n  return buf_byte(bytes[ptr])\r\nend\r\n\r\nto mem_arena_poke_i16 with bytes ptr val\r\n  set u to val\r\n  if u < 0\r\n    set u to u + 65536\r\n  end\r\n  set b0 to u % 256\r\n  set b1 to ((u - b0) / 256) % 256\r\n  set bytes[ptr] to b0\r\n  set bytes[ptr + 1] to b1\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_i16 with bytes ptr\r\n  set b0 to buf_byte(bytes[ptr])\r\n  set b1 to buf_byte(bytes[ptr + 1])\r\n  set v to b0 + b1 * 256\r\n  if v >= 32768\r\n    set v to v - 65536\r\n  end\r\n  return v\r\nend\r\n\r\nto mem_arena_poke_i32 with bytes ptr val\r\n  set u to val\r\n  if u < 0\r\n    set u to u + 4294967296\r\n  end\r\n  set b0 to u % 256\r\n  set r1 to (u - b0) / 256\r\n  set b1 to r1 % 256\r\n  set r2 to (r1 - b1) / 256\r\n  set b2 to r2 % 256\r\n  set r3 to (r2 - b2) / 256\r\n  set b3 to r3 % 256\r\n  set bytes[ptr] to b0\r\n  set bytes[ptr + 1] to b1\r\n  set bytes[ptr + 2] to b2\r\n  set bytes[ptr + 3] to b3\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_i32 with bytes ptr\r\n  set b0 to buf_byte(bytes[ptr])\r\n  set b1 to buf_byte(bytes[ptr + 1])\r\n  set b2 to buf_byte(bytes[ptr + 2])\r\n  set b3 to buf_byte(bytes[ptr + 3])\r\n  set v to b0 + b1 * 256 + b2 * 65536 + b3 * 16777216\r\n  if b3 >= 128\r\n    set v to v - 4294967296\r\n  end\r\n  return v\r\nend\r\n\r\nto mem_arena_fill with bytes ptr n val\r\n  set b to buf_byte(val)\r\n  set i to 0\r\n  while i < n\r\n    set bytes[ptr + i] to b\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto mem_arena_copy with bytes dst src n\r\n  set tmp to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set tmp[i] to bytes[src + i]\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j < n\r\n    set bytes[dst + j] to tmp[j]\r\n    set j to j + 1\r\n  end\r\n  return 0\r\nend\r\n';
   }
 });
 
@@ -4938,6 +5003,802 @@ var init_buffer2 = __esm({
   }
 });
 
+// src/lang/builtins/oce.ts
+function bits_shl(val, shift) {
+  let v = val;
+  for (let s = shift; s > 0; s--) v *= 2;
+  return v;
+}
+function bits_shr(val, shift) {
+  let v = val;
+  for (let s = shift; s > 0; s--) v = tdiv(v, 2);
+  return v;
+}
+function bits_test(val, pos) {
+  return tmod(tdiv(val, bits_shl(1, pos)), 2);
+}
+function bits_popcount(val) {
+  let v = val, c = 0;
+  while (v > 0) {
+    c += tmod(v, 2);
+    v = tdiv(v, 2);
+  }
+  return c;
+}
+function bits_to_hex(val) {
+  if (val === 0) return "0";
+  const hx = "0123456789abcdef";
+  let out = "";
+  let v = val;
+  while (v > 0) {
+    out = hx[tmod(v, 16)] + out;
+    v = tdiv(v, 16);
+  }
+  return out;
+}
+function bits_from_hex(s) {
+  let v = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    let d = 0;
+    if (c >= 48 && c <= 57) d = c - 48;
+    if (c >= 97 && c <= 102) d = c - 87;
+    if (c >= 65 && c <= 70) d = c - 55;
+    v = v * 16 + d;
+  }
+  return v;
+}
+function bitLoop(a, b, mode) {
+  let x = a, y = b, out = 0, place = 1;
+  const go = () => mode === "and" ? x > 0 && y > 0 : x > 0 || y > 0;
+  while (go()) {
+    const bx = tmod(x, 2), by = tmod(y, 2);
+    const hit = mode === "and" ? bx === 1 && by === 1 : mode === "or" ? bx === 1 || by === 1 : bx !== by;
+    if (hit) out += place;
+    x = tdiv(x, 2);
+    y = tdiv(y, 2);
+    place *= 2;
+  }
+  return out;
+}
+function bits_not_n(val, width) {
+  const full = bits_shl(1, width) - 1;
+  return full - bits_and(val, full);
+}
+function floor_div(a, b) {
+  let q = tdiv(a, b);
+  if (q * b !== a && a < 0 !== b < 0) q -= 1;
+  return q;
+}
+function wrap_i16(v) {
+  const u = floor_mod(v, 65536);
+  return u >= 32768 ? u - 65536 : u;
+}
+function mem_put_u8(m2, a, v) {
+  m2[a] = wrap_u8(v);
+  return 0;
+}
+function mem_put_u16(m2, a, v) {
+  const u = wrap_u16(v);
+  m2[a] = u % 256;
+  m2[a + 1] = tdiv(u, 256);
+  return 0;
+}
+function mem_get_i16(m2, a) {
+  const u = m2[a] + m2[a + 1] * 256;
+  return u >= 32768 ? u - 65536 : u;
+}
+function mem_fill_list(m2, a, count, v) {
+  for (let i = 0; i < count; i++) m2[a + i] = wrap_u8(v);
+  return 0;
+}
+function mem_copy_list(dst, da, src, sa, count) {
+  if (da > sa) for (let i = count - 1; i >= 0; i--) dst[da + i] = src[sa + i];
+  else for (let i = 0; i < count; i++) dst[da + i] = src[sa + i];
+  return 0;
+}
+function mem_equal(a, aa, b, ba, count) {
+  for (let i = 0; i < count; i++) if (a[aa + i] !== b[ba + i]) return 0;
+  return 1;
+}
+function mem_hex(m2, a, count) {
+  const hx = "0123456789abcdef";
+  let out = "";
+  for (let i = 0; i < count; i++) {
+    const b = m2[a + i];
+    out += hx[tdiv(b, 16)] + hx[b % 16];
+    if (i < count - 1) out += " ";
+  }
+  return out;
+}
+function ring_create(cap) {
+  const r = new Array(cap + 3).fill(0);
+  r[0] = cap;
+  return r;
+}
+function ring_push(r, v) {
+  const cap = r[0];
+  const slot = tmod(r[1] + r[2], cap);
+  if (r[2] < cap) r[2] += 1;
+  else r[1] = tmod(r[1] + 1, cap);
+  r[slot + 3] = v;
+  return 0;
+}
+function ring_pop_oldest(r) {
+  const v = r[r[1] + 3];
+  r[1] = tmod(r[1] + 1, r[0]);
+  r[2] -= 1;
+  return v;
+}
+function oce_create() {
+  const m2 = mem_arena(65536);
+  mem_put_u16(m2, 0, 3297);
+  mem_put_u16(m2, 2, 0);
+  mem_put_u16(m2, 4, 1);
+  mem_put_u16(m2, 10, 0);
+  mem_put_u8(m2, 12, 8);
+  mem_put_u8(m2, 14, 8);
+  return m2;
+}
+function oce_entity(m2) {
+  const n = mem_get_u16(m2, 4);
+  if (n >= 32) return -1;
+  mem_put_u16(m2, 4, n + 1);
+  return n;
+}
+function oce_set_conf(m2, i, c) {
+  const v = Math.max(0, Math.min(255, c));
+  m2[16384 + i * 12 + 3] = v;
+  return v;
+}
+function oce_alloc(m2, op, conf, a, b, out, delta) {
+  const n = mem_get_u16(m2, 2);
+  let found = -1;
+  for (let i = 0; i < n && found < 0; i++) if (m2[16384 + i * 12 + 2] === 0) found = i;
+  if (found < 0) {
+    if (n >= 2730) return -1;
+    found = n;
+    mem_put_u16(m2, 2, n + 1);
+  }
+  const at = 16384 + found * 12;
+  mem_put_u16(m2, at, at);
+  m2[at + 2] = op;
+  m2[at + 3] = conf;
+  mem_put_u16(m2, at + 4, a);
+  mem_put_u16(m2, at + 6, b);
+  mem_put_u16(m2, at + 8, out);
+  mem_put_i16(m2, at + 10, delta);
+  return found;
+}
+function oce_free(m2, i) {
+  mem_fill_list(m2, 16384 + i * 12, 12, 0);
+  return 0;
+}
+function oce_live_nodes(m2) {
+  const n = mem_get_u16(m2, 2);
+  let c = 0;
+  for (let i = 0; i < n; i++) if (m2[16384 + i * 12 + 2] !== 0) c++;
+  return c;
+}
+function oce_add_axiom(m2, guard2, target, a, b, delta, specialized, conf) {
+  let g = NONE;
+  if (guard2.length > 0) g = oce_alloc(m2, guard2[0], 255, guard2[1], guard2[2], NONE, guard2[3]);
+  const mu = oce_alloc(m2, 7, 255, a, b, target, delta);
+  return oce_alloc(m2, 10, conf, g, specialized, mu, target);
+}
+function oce_add_exception(m2, parent, guard2, special) {
+  const g = oce_alloc(m2, guard2[0], 255, guard2[1], guard2[2], NONE, guard2[3]);
+  return oce_alloc(m2, 11, 255, parent, g, special, 0);
+}
+function oce_guard_holds(m2, base, e, g) {
+  let cur = g;
+  while (cur !== NONE) {
+    const op = nOp(m2, cur);
+    const lhs = mem_get_i16(m2, base + e * 32 + nA(m2, cur) * 2);
+    const rhs = rhsOf(m2, base, nB(m2, cur)) + nDelta(m2, cur);
+    if (op === 1 && lhs !== rhs) return 0;
+    if (op === 2 && !(lhs > rhs)) return 0;
+    if (op === 3 && !(lhs < rhs)) return 0;
+    if (op === 4 && bits_and(wrap_u16(lhs), wrap_u16(rhs)) === 0) return 0;
+    if (op === 5 && lhs === rhs) return 0;
+    cur = nOut(m2, cur);
+  }
+  return 1;
+}
+function contribution(m2, base, e, h) {
+  const mu = nOut(m2, h);
+  const row = base + e * 32;
+  const tgt = nOut(m2, mu);
+  let v = mem_get_i16(m2, row + nA(m2, mu) * 2) + nDelta(m2, mu);
+  if (nB(m2, mu) !== NONE) v += mem_get_i16(m2, row + nB(m2, mu) * 2);
+  return v - mem_get_i16(m2, row + tgt * 2);
+}
+function resolve2(m2, base, e, h) {
+  const n = mem_get_u16(m2, 2);
+  for (let i = 0; i < n; i++) if (nOp(m2, i) === 11 && nA(m2, i) === h && oce_guard_holds(m2, base, e, nB(m2, i))) return nOut(m2, i);
+  return h;
+}
+function oce_step(m2, src, dst, record) {
+  const ents = mem_get_u16(m2, 4);
+  mem_copy_list(m2, dst, m2, src, ents * 32);
+  if (record) mem_fill_list(m2, FIRED, 1024, 0);
+  const n = mem_get_u16(m2, 2);
+  for (let e = 1; e < ents; e++) {
+    for (let h = 0; h < n; h++) {
+      if (nOp(m2, h) === 10 && nB(m2, h) === 0 && oce_guard_holds(m2, src, e, nA(m2, h))) {
+        const use = resolve2(m2, src, e, h);
+        const tgt = nDelta(m2, use);
+        const at = dst + e * 32 + tgt * 2;
+        mem_put_i16(m2, at, mem_get_i16(m2, at) + contribution(m2, src, e, use));
+        if (record) mem_put_u16(m2, FIRED + e * 32 + tgt * 2, use + 1);
+      }
+    }
+  }
+  return dst;
+}
+function log(m2, kind, p, h, e, residual, src) {
+  const head2 = mem_get_u16(m2, 6);
+  const at = LOG + head2 * 64;
+  m2[at] = kind;
+  m2[at + 1] = p;
+  mem_put_u16(m2, at + 2, h);
+  mem_put_u16(m2, at + 4, e);
+  mem_put_i16(m2, at + 6, residual);
+  mem_copy_list(m2, at + 8, m2, src + e * 32, 32);
+  mem_put_u16(m2, 6, (head2 + 1) % 32);
+  if (mem_get_u16(m2, 8) < 32) mem_put_u16(m2, 8, mem_get_u16(m2, 8) + 1);
+  return at;
+}
+function findGuard(m2, pos, neg, medium) {
+  for (let s = 0; s < 16; s++) {
+    const mv = mem_get_i16(m2, medium + s * 2);
+    for (let op = 3; op >= 2; op--) {
+      let ok = true;
+      for (let i = 0; i < pos.length && ok; i++) {
+        const v = mem_get_i16(m2, pos[i] + s * 2);
+        if (op === 3 && !(v < mv)) ok = false;
+        if (op === 2 && !(v > mv)) ok = false;
+      }
+      for (let i = 0; i < neg.length && ok; i++) {
+        const v = mem_get_i16(m2, neg[i] + s * 2);
+        if (op === 3 && v < mv) ok = false;
+        if (op === 2 && v > mv) ok = false;
+      }
+      if (ok && mv !== 0) return [op, s, s, 0];
+    }
+  }
+  for (let s = 0; s < 16; s++) {
+    const want = mem_get_i16(m2, pos[0] + s * 2);
+    let ok = true;
+    for (let i = 0; i < pos.length && ok; i++) if (mem_get_i16(m2, pos[i] + s * 2) !== want) ok = false;
+    for (let i = 0; i < neg.length && ok; i++) if (mem_get_i16(m2, neg[i] + s * 2) === want) ok = false;
+    if (ok) return [1, s, NONE, want];
+  }
+  return [];
+}
+function spawnLatent(m2, posE) {
+  const slot = m2[12];
+  if (slot > 15) return [];
+  m2[12] = slot + 1;
+  oce_alloc(m2, 14, 255, slot, NONE, NONE, 0);
+  for (const e of posE) oce_set(m2, e, slot, 1);
+  return [1, slot, NONE, 1];
+}
+function candidates(m2, row, p, d) {
+  const out = [];
+  for (let q = 0; q < 16; q++) if (q !== p && d !== 0 && mem_get_i16(m2, row + q * 2) === d) out.push([p, q, 0]);
+  out.push([p, NONE, d]);
+  return out;
+}
+function candValue(m2, row, c) {
+  let v = mem_get_i16(m2, row + c[0] * 2) + c[2];
+  if (c[1] !== NONE) v += mem_get_i16(m2, row + c[1] * 2);
+  return v - mem_get_i16(m2, row + c[0] * 2);
+}
+function logSuccesses(m2, h, neg) {
+  const out = neg.slice();
+  for (let k = 0; k < mem_get_u16(m2, 8); k++) {
+    const at = LOG + k * 64;
+    if (m2[at] === 1 && mem_get_u16(m2, at + 2) === h) out.push(at + 8);
+  }
+  return out;
+}
+function repairFired(m2, obs, e, p, h, residual) {
+  const src = OSG;
+  const ents = mem_get_u16(m2, 4);
+  const change = obs[e][p] - oce_get(m2, e, p);
+  log(m2, 2, p, h, e, residual, src);
+  if (nB(m2, h) === 1) {
+    oce_set_conf(m2, h, nConf(m2, h) - 4);
+    return 0;
+  }
+  const pos = [src + e * 32];
+  const posE = [e];
+  let neg = [];
+  for (let f2 = 1; f2 < ents; f2++) {
+    if (f2 !== e && mem_get_u16(m2, FIRED + f2 * 32 + p * 2) === h + 1) {
+      const right = obs[f2][p] === oce_predicted(m2, f2, p);
+      if (right) neg.push(src + f2 * 32);
+      if (!right && obs[f2][p] - oce_get(m2, f2, p) === change) {
+        pos.push(src + f2 * 32);
+        posE.push(f2);
+      }
+    }
+  }
+  neg = logSuccesses(m2, h, neg);
+  let guard2 = findGuard(m2, pos, neg, src);
+  if (guard2.length === 0) guard2 = spawnLatent(m2, posE);
+  if (guard2.length === 0) {
+    oce_set_conf(m2, h, nConf(m2, h) - 4);
+    return 0;
+  }
+  const c = candidates(m2, src + e * 32, p, change)[0];
+  const sp = oce_add_axiom(m2, [], p, c[0], c[1], c[2], 1, 8);
+  oce_add_exception(m2, h, guard2, sp);
+  mem_put_u16(m2, 20, mem_get_u16(m2, 20) + 1);
+  return 1;
+}
+function split(m2, obs, p, c, wantPos) {
+  const ents = mem_get_u16(m2, 4);
+  const out = [];
+  for (let f2 = 1; f2 < ents; f2++) {
+    const need = obs[f2][p] - oce_predicted(m2, f2, p);
+    if (candValue(m2, OSG + f2 * 32, c) === need === wantPos) out.push(OSG + f2 * 32);
+  }
+  return out;
+}
+function repairNew(m2, obs, e, p, residual) {
+  const src = OSG;
+  const ents = mem_get_u16(m2, 4);
+  log(m2, 2, p, NONE, e, residual, src);
+  const cands = candidates(m2, src + e * 32, p, residual);
+  let found = false;
+  let bestGuard = [];
+  let best = cands[cands.length - 1];
+  for (let ci = 0; ci < cands.length && !found; ci++) {
+    const c = cands[ci];
+    const pos = split(m2, obs, p, c, true);
+    const neg = split(m2, obs, p, c, false);
+    if (neg.length === 0) {
+      found = true;
+      bestGuard = [];
+      best = c;
+    } else {
+      const g = findGuard(m2, pos, neg, src);
+      if (g.length > 0) {
+        found = true;
+        bestGuard = g;
+        best = c;
+      }
+    }
+  }
+  if (!found) {
+    const posE = [e];
+    for (let f2 = 1; f2 < ents; f2++) {
+      const need = obs[f2][p] - oce_predicted(m2, f2, p);
+      if (f2 !== e && need !== 0 && candValue(m2, src + f2 * 32, best) === need) posE.push(f2);
+    }
+    bestGuard = spawnLatent(m2, posE);
+    if (bestGuard.length > 0) found = true;
+  }
+  if (!found) return 0;
+  oce_add_axiom(m2, bestGuard, p, best[0], best[1], best[2], 0, 8);
+  mem_put_u16(m2, 20, mem_get_u16(m2, 20) + 1);
+  return 1;
+}
+function oce_repair(m2, obs, e, p) {
+  const residual = obs[e][p] - oce_predicted(m2, e, p);
+  const fired = mem_get_u16(m2, FIRED + e * 32 + p * 2);
+  mem_put_u16(m2, 18, mem_get_u16(m2, 18) + 1);
+  if (fired === 0) return repairNew(m2, obs, e, p, residual);
+  return repairFired(m2, obs, e, p, fired - 1, residual);
+}
+function oce_prune(m2) {
+  const n = mem_get_u16(m2, 2);
+  let freed = 0;
+  for (let h = 0; h < n; h++) {
+    if (nOp(m2, h) === 10 && nConf(m2, h) === 0) {
+      let g = nA(m2, h);
+      while (g !== NONE) {
+        const nxt = nOut(m2, g);
+        oce_free(m2, g);
+        freed++;
+        g = nxt;
+      }
+      oce_free(m2, nOut(m2, h));
+      oce_free(m2, h);
+      freed += 2;
+      for (let i = 0; i < n; i++) if (nOp(m2, i) === 11 && (nA(m2, i) === h || nOut(m2, i) === h)) {
+        oce_free(m2, nB(m2, i));
+        oce_free(m2, i);
+        freed += 2;
+      }
+    }
+  }
+  return freed;
+}
+function oce_observe(m2, obs) {
+  const ents = mem_get_u16(m2, 4);
+  const vis = m2[14];
+  let errors = 0;
+  if (mem_get_u16(m2, 10) > 0) {
+    let rounds = 0;
+    let again = true;
+    while (again && rounds < 12) {
+      again = false;
+      oce_predict(m2);
+      for (let e = 1; e < ents && !again; e++) {
+        for (let p = 0; p < vis && !again; p++) {
+          if (obs[e][p] !== oce_predicted(m2, e, p)) {
+            errors++;
+            oce_repair(m2, obs, e, p);
+            again = true;
+          }
+        }
+      }
+      rounds++;
+    }
+    for (let e = 1; e < ents; e++) {
+      for (let p = 0; p < vis; p++) {
+        const fired = mem_get_u16(m2, FIRED + e * 32 + p * 2);
+        if (fired !== 0 && obs[e][p] === oce_predicted(m2, e, p)) {
+          oce_set_conf(m2, fired - 1, nConf(m2, fired - 1) + 1);
+          if (mem_get_u16(m2, 10) % 4 === 0) log(m2, 1, p, fired - 1, e, 0, OSG);
+        }
+      }
+    }
+    oce_prune(m2);
+  }
+  for (let e = 1; e < ents; e++) for (let p = 0; p < vis; p++) oce_set(m2, e, p, obs[e][p]);
+  mem_put_u16(m2, 10, mem_get_u16(m2, 10) + 1);
+  mem_put_u16(m2, 16, errors);
+  oce_predict(m2);
+  return errors;
+}
+function oce_intervene(m2, e, p, v) {
+  oce_set(m2, e, p, v);
+  oce_predict(m2);
+  return v;
+}
+function oce_imagine(m2, e, p, v, ticks) {
+  const ents = mem_get_u16(m2, 4);
+  const a = oce_slot_base(1);
+  const b = oce_slot_base(2);
+  mem_copy_list(m2, a, m2, OSG, ents * 32);
+  mem_put_i16(m2, oce_prop_addr(a, e, p), v);
+  for (let t = 0; t < ticks; t++) {
+    oce_step(m2, a, b, 0);
+    mem_copy_list(m2, a, m2, b, ents * 32);
+  }
+  return a;
+}
+function oce_ext_store(ext2, sector, offset, v) {
+  ext2[`${sector}:${offset}`] = v;
+  return v;
+}
+function oce_ext_query(ext2, sector, offset, fallback) {
+  const k = `${sector}:${offset}`;
+  return Object.prototype.hasOwnProperty.call(ext2, k) ? ext2[k] : fallback;
+}
+function oce_ext_load(m2, ext2, sector, offset, e, p) {
+  const v = int(oce_ext_query(ext2, sector, offset, 0));
+  oce_alloc(m2, 15, 1, sector, offset, e * 16 + p, 0);
+  oce_set(m2, e, p, v);
+  return v;
+}
+function guardText(m2, names, g) {
+  if (g === NONE) return "always";
+  let out = "";
+  let cur = g;
+  while (cur !== NONE) {
+    const op = nOp(m2, cur);
+    const sym = op === 2 ? " > " : op === 3 ? " < " : " == ";
+    let rhs = String(nDelta(m2, cur));
+    if (nB(m2, cur) !== NONE) rhs = "medium." + pname(names, nB(m2, cur));
+    if (out.length > 0) out += " and ";
+    out += pname(names, nA(m2, cur)) + sym + rhs;
+    cur = nOut(m2, cur);
+  }
+  return out;
+}
+function mutText(m2, names, h) {
+  const mu = nOut(m2, h);
+  const t = pname(names, nOut(m2, mu));
+  if (nB(m2, mu) !== NONE) return t + " += " + pname(names, nB(m2, mu));
+  return t + " += " + String(nDelta(m2, mu));
+}
+function oce_describe(m2, names) {
+  let out = "";
+  const n = mem_get_u16(m2, 2);
+  for (let h = 0; h < n; h++) {
+    if (nOp(m2, h) === 10 && nB(m2, h) === 0) {
+      out += `law ${h} [confidence ${nConf(m2, h)}]: if ${guardText(m2, names, nA(m2, h))} then ${mutText(m2, names, h)}
+`;
+      for (let i = 0; i < n; i++) if (nOp(m2, i) === 11 && nA(m2, i) === h) out += `  unless ${guardText(m2, names, nB(m2, i))} then ${mutText(m2, names, nOut(m2, i))}
+`;
+    }
+  }
+  return out;
+}
+function oce_motifs(text3, threshold) {
+  const bytes = new TextEncoder().encode(text3);
+  let seq = Array.from(bytes);
+  const rules = [];
+  let next = 256;
+  for (; ; ) {
+    const counts = /* @__PURE__ */ new Map();
+    let bestN = 0;
+    let ba = 0;
+    let bb = 0;
+    for (let i = 0; i < seq.length - 1; i++) {
+      const k = `${seq[i]},${seq[i + 1]}`;
+      const c = (counts.get(k) ?? 0) + 1;
+      counts.set(k, c);
+      if (c > bestN) {
+        bestN = c;
+        ba = seq[i];
+        bb = seq[i + 1];
+      }
+    }
+    if (bestN < threshold) break;
+    const out = [];
+    for (let i = 0; i < seq.length; ) {
+      if (i < seq.length - 1 && seq[i] === ba && seq[i + 1] === bb) {
+        out.push(next);
+        i += 2;
+      } else {
+        out.push(seq[i]);
+        i += 1;
+      }
+    }
+    rules.push(next, ba, bb);
+    seq = out;
+    next++;
+  }
+  return [seq, rules];
+}
+function oce_motif_expand(rules, sym) {
+  if (sym < 256) return String.fromCharCode(sym);
+  for (let i = 0; i < rules.length; i += 3) if (rules[i] === sym) return oce_motif_expand(rules, rules[i + 1]) + oce_motif_expand(rules, rules[i + 2]);
+  return "";
+}
+function oce_sequence_rule(xs) {
+  const n = xs.length;
+  if (n < 2) return ["none"];
+  if (xs.every((x) => x === xs[0])) return ["const", xs[0]];
+  const d = xs[1] - xs[0];
+  let ok = true;
+  for (let i = 2; i < n; i++) if (xs[i] - xs[i - 1] !== d) ok = false;
+  if (ok) return ["add", d];
+  if (xs[0] !== 0) {
+    const r = tdiv(xs[1], xs[0]);
+    ok = true;
+    for (let i = 1; i < n; i++) if (xs[i] !== xs[i - 1] * r) ok = false;
+    if (ok) return ["mul", r];
+  }
+  if (n >= 3) {
+    ok = true;
+    for (let i = 2; i < n; i++) if (xs[i] !== xs[i - 1] + xs[i - 2]) ok = false;
+    if (ok) return ["fib"];
+  }
+  return ["none"];
+}
+function oce_sequence_next(xs, rule) {
+  const n = xs.length;
+  if (rule[0] === "const") return int(rule[1]);
+  if (rule[0] === "add") return xs[n - 1] + int(rule[1]);
+  if (rule[0] === "mul") return xs[n - 1] * int(rule[1]);
+  if (rule[0] === "fib") return xs[n - 1] + xs[n - 2];
+  return 0;
+}
+function oce_ca_rule(rows) {
+  const table = [-1, -1, -1, -1, -1, -1, -1, -1];
+  for (let r = 0; r < rows.length - 1; r++) {
+    const a = rows[r];
+    const b = rows[r + 1];
+    const w = a.length;
+    for (let i = 0; i < w; i++) {
+      const k = a[(i + w - 1) % w] * 4 + a[i] * 2 + a[(i + 1) % w];
+      if (table[k] >= 0 && table[k] !== b[i]) return -1;
+      table[k] = b[i];
+    }
+  }
+  let rule = 0;
+  for (let k = 7; k >= 0; k--) rule = rule * 2 + Math.max(0, table[k]);
+  return rule;
+}
+function oce_ca_step(row, rule) {
+  const w = row.length;
+  const out = new Array(w).fill(0);
+  for (let i = 0; i < w; i++) out[i] = bits_test(rule, row[(i + w - 1) % w] * 4 + row[i] * 2 + row[(i + 1) % w]);
+  return out;
+}
+function registerOce(builtins) {
+  for (const [name, impl, arity] of TABLE) {
+    builtins.set(name, {
+      type: "builtin",
+      call: (args, line) => {
+        if (args.length !== arity) throw new SdevError(`${name}() takes ${arity} argument${arity === 1 ? "" : "s"}, got ${args.length}`, line);
+        try {
+          return impl(...args.map(norm));
+        } catch (e) {
+          if (e instanceof SdevError) throw e;
+          throw new SdevError(`${name}(): ${e.message}`, line);
+        }
+      }
+    });
+  }
+  const oldFill = builtins.get("mem_fill");
+  const oldCopy = builtins.get("mem_copy");
+  builtins.set("mem_fill", {
+    type: "builtin",
+    call: (args, line) => {
+      if (Array.isArray(args[0])) return mem_fill_list(args[0], int(args[1]), int(args[2]), int(args[3]));
+      if (oldFill) return oldFill.call(args, line);
+      throw new SdevError("mem_fill() needs a byte list", line);
+    }
+  });
+  builtins.set("mem_copy", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length === 5 && Array.isArray(args[0]) && Array.isArray(args[2])) {
+        return mem_copy_list(args[0], int(args[1]), args[2], int(args[3]), int(args[4]));
+      }
+      if (oldCopy) return oldCopy.call(args, line);
+      throw new SdevError("mem_copy() takes (dst, dst_addr, src, src_addr, count)", line);
+    }
+  });
+}
+var NONE, OSG, FIRED, LOG, SANDBOX, tdiv, tmod, int, bits_and, bits_or, bits_xor, floor_mod, wrap_u8, wrap_u16, mem_arena, mem_get_u8, mem_get_u16, mem_put_i16, mem_clone, ring_len, ring_get, OP_NAMES, oce_op_name, oce_node_count, oce_entity_count, oce_tick, oce_contradictions, oce_repairs, oce_osg_base, oce_slot_base, oce_prop_addr, oce_get, oce_set, oce_medium, oce_node_addr, nOp, nConf, nA, nB, nOut, nDelta, oce_mdl_bits, rhsOf, oce_predict, oce_predicted, oce_log_count, oce_imagined, oce_ext_create, pname, TABLE, OCE_BUILTIN_NAMES, norm;
+var init_oce = __esm({
+  "src/lang/builtins/oce.ts"() {
+    init_errors();
+    NONE = 65535;
+    OSG = 49152;
+    FIRED = 4096;
+    LOG = 63488;
+    SANDBOX = 57344;
+    tdiv = (a, b) => {
+      if (b === 0) throw new Error("division by zero");
+      return Math.trunc(a / b);
+    };
+    tmod = (a, b) => {
+      if (b === 0) throw new Error("modulo by zero");
+      return a % b;
+    };
+    int = (v) => {
+      if (typeof v === "boolean") return v ? 1 : 0;
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.trunc(n) : 0;
+    };
+    bits_and = (a, b) => bitLoop(a, b, "and");
+    bits_or = (a, b) => bitLoop(a, b, "or");
+    bits_xor = (a, b) => bitLoop(a, b, "xor");
+    floor_mod = (a, b) => a - floor_div(a, b) * b;
+    wrap_u8 = (v) => floor_mod(v, 256);
+    wrap_u16 = (v) => floor_mod(v, 65536);
+    mem_arena = (size) => new Array(size).fill(0);
+    mem_get_u8 = (m2, a) => m2[a];
+    mem_get_u16 = (m2, a) => m2[a] + m2[a + 1] * 256;
+    mem_put_i16 = (m2, a, v) => mem_put_u16(m2, a, wrap_i16(v));
+    mem_clone = (m2) => m2.slice();
+    ring_len = (r) => r[2];
+    ring_get = (r, i) => r[tmod(r[1] + i, r[0]) + 3];
+    OP_NAMES = ["NOP_FREE", "PROP_EQ", "PROP_GT", "PROP_LT", "BIT_AND", "LOGIC_XOR", "TEMPORAL_SEQ", "MUTATE_ADD", "MUTATE_SET", "MUTATE_MUL_SHIFT", "CAUSAL_IMPLIES", "EXCEPTION_UNLESS", "SANDBOX_FORK", "DIFF_INTERRUPT", "SPAWN_LATENT", "EXT_QUERY_PTR"];
+    oce_op_name = (op) => op < 0 || op > 15 ? "?" : OP_NAMES[op];
+    oce_node_count = (m2) => mem_get_u16(m2, 2);
+    oce_entity_count = (m2) => mem_get_u16(m2, 4);
+    oce_tick = (m2) => mem_get_u16(m2, 10);
+    oce_contradictions = (m2) => mem_get_u16(m2, 18);
+    oce_repairs = (m2) => mem_get_u16(m2, 20);
+    oce_osg_base = () => OSG;
+    oce_slot_base = (slot) => SANDBOX + slot * 1024;
+    oce_prop_addr = (base, e, p) => base + e * 32 + p * 2;
+    oce_get = (m2, e, p) => mem_get_i16(m2, oce_prop_addr(OSG, e, p));
+    oce_set = (m2, e, p, v) => mem_put_i16(m2, oce_prop_addr(OSG, e, p), v);
+    oce_medium = (m2, p, v) => oce_set(m2, 0, p, v);
+    oce_node_addr = (i) => 16384 + i * 12;
+    nOp = (m2, i) => m2[16384 + i * 12 + 2];
+    nConf = (m2, i) => m2[16384 + i * 12 + 3];
+    nA = (m2, i) => mem_get_u16(m2, 16384 + i * 12 + 4);
+    nB = (m2, i) => mem_get_u16(m2, 16384 + i * 12 + 6);
+    nOut = (m2, i) => mem_get_u16(m2, 16384 + i * 12 + 8);
+    nDelta = (m2, i) => mem_get_i16(m2, 16384 + i * 12 + 10);
+    oce_mdl_bits = (m2) => oce_live_nodes(m2) * 96;
+    rhsOf = (m2, base, b) => b === NONE ? 0 : mem_get_i16(m2, base + b * 2);
+    oce_predict = (m2) => oce_step(m2, OSG, SANDBOX, 1);
+    oce_predicted = (m2, e, p) => mem_get_i16(m2, oce_prop_addr(SANDBOX, e, p));
+    oce_log_count = (m2) => mem_get_u16(m2, 8);
+    oce_imagined = (m2, e, p) => mem_get_i16(m2, oce_prop_addr(SANDBOX + 1024, e, p));
+    oce_ext_create = () => ({});
+    pname = (names, p) => p === NONE ? "0" : p < names.length ? String(names[p]) : `latent_${p - 7}`;
+    TABLE = [
+      ["bits_shl", bits_shl, 2],
+      ["bits_shr", bits_shr, 2],
+      ["bits_test", bits_test, 2],
+      ["bits_popcount", bits_popcount, 1],
+      ["bits_to_hex", bits_to_hex, 1],
+      ["bits_from_hex", bits_from_hex, 1],
+      ["bits_and", bits_and, 2],
+      ["bits_or", bits_or, 2],
+      ["bits_xor", bits_xor, 2],
+      ["bits_not_n", bits_not_n, 2],
+      ["floor_div", floor_div, 2],
+      ["floor_mod", floor_mod, 2],
+      ["wrap_u8", wrap_u8, 1],
+      ["wrap_u16", wrap_u16, 1],
+      ["wrap_i16", wrap_i16, 1],
+      ["mem_arena", mem_arena, 1],
+      ["mem_put_u8", mem_put_u8, 3],
+      ["mem_get_u8", mem_get_u8, 2],
+      ["mem_put_u16", mem_put_u16, 3],
+      ["mem_get_u16", mem_get_u16, 2],
+      ["mem_put_i16", mem_put_i16, 3],
+      ["mem_get_i16", mem_get_i16, 2],
+      ["mem_equal", mem_equal, 5],
+      ["mem_clone", mem_clone, 1],
+      ["mem_hex", mem_hex, 3],
+      ["ring_create", ring_create, 1],
+      ["ring_push", ring_push, 2],
+      ["ring_len", ring_len, 1],
+      ["ring_get", ring_get, 2],
+      ["ring_pop_oldest", ring_pop_oldest, 1],
+      ["oce_op_name", oce_op_name, 1],
+      ["oce_create", oce_create, 0],
+      ["oce_node_count", oce_node_count, 1],
+      ["oce_entity_count", oce_entity_count, 1],
+      ["oce_tick", oce_tick, 1],
+      ["oce_contradictions", oce_contradictions, 1],
+      ["oce_repairs", oce_repairs, 1],
+      ["oce_osg_base", oce_osg_base, 0],
+      ["oce_slot_base", oce_slot_base, 1],
+      ["oce_prop_addr", oce_prop_addr, 3],
+      ["oce_get", oce_get, 3],
+      ["oce_set", oce_set, 4],
+      ["oce_entity", oce_entity, 1],
+      ["oce_medium", oce_medium, 3],
+      ["oce_node_addr", oce_node_addr, 1],
+      ["oce_n_op", nOp, 2],
+      ["oce_n_conf", nConf, 2],
+      ["oce_n_a", nA, 2],
+      ["oce_n_b", nB, 2],
+      ["oce_n_out", nOut, 2],
+      ["oce_n_delta", nDelta, 2],
+      ["oce_set_conf", oce_set_conf, 3],
+      ["oce_alloc", oce_alloc, 7],
+      ["oce_free", oce_free, 2],
+      ["oce_live_nodes", oce_live_nodes, 1],
+      ["oce_mdl_bits", oce_mdl_bits, 1],
+      ["oce_add_axiom", oce_add_axiom, 8],
+      ["oce_add_exception", oce_add_exception, 4],
+      ["oce_guard_holds", oce_guard_holds, 4],
+      ["oce_step", oce_step, 4],
+      ["oce_predict", oce_predict, 1],
+      ["oce_predicted", oce_predicted, 3],
+      ["oce_log_count", oce_log_count, 1],
+      ["oce_repair", oce_repair, 4],
+      ["oce_prune", oce_prune, 1],
+      ["oce_observe", oce_observe, 2],
+      ["oce_intervene", oce_intervene, 4],
+      ["oce_imagine", oce_imagine, 5],
+      ["oce_imagined", oce_imagined, 3],
+      ["oce_ext_create", oce_ext_create, 0],
+      ["oce_ext_store", oce_ext_store, 4],
+      ["oce_ext_query", oce_ext_query, 4],
+      ["oce_ext_load", oce_ext_load, 6],
+      ["oce_describe", oce_describe, 2],
+      ["oce_motifs", oce_motifs, 2],
+      ["oce_motif_expand", oce_motif_expand, 2],
+      ["oce_sequence_rule", oce_sequence_rule, 1],
+      ["oce_sequence_next", oce_sequence_next, 2],
+      ["oce_ca_rule", oce_ca_rule, 1],
+      ["oce_ca_step", oce_ca_step, 2]
+    ];
+    OCE_BUILTIN_NAMES = [...TABLE.map(([n]) => n), "mem_fill", "mem_copy"];
+    norm = (v) => typeof v === "number" || typeof v === "boolean" ? int(v) : v;
+  }
+});
+
 // src/lang/builtins/host.ts
 function registerHost(builtins, output) {
   const host = () => globalThis.__sdevHost ?? {};
@@ -5080,7 +5941,9 @@ function flagsOf(v, global2) {
   const f2 = typeof v === "string" ? v.replace(/[^imsu]/g, "") : "";
   return (global2 ? "g" : "") + (f2.includes("u") ? f2 : f2 + "u");
 }
-function re(p, f2) {
+function re(p, f2, t, line = 0) {
+  const bad = regexProblem(p, t ?? "");
+  if (bad) throw new SdevError(bad, line);
   const k = f2 + "/" + p;
   let r = cache.get(k);
   if (!r) {
@@ -5112,13 +5975,27 @@ function registerText(builtins, _output) {
   def("is_digit", (a, l) => /^[0-9]+$/.test(text(a[0], "is_digit", l)));
   def("is_space", (a, l) => /^\s+$/.test(text(a[0], "is_space", l)));
   def("is_name", (a, l) => /^[\p{L}_][\p{L}\p{N}_]*$/u.test(text(a[0], "is_name", l)));
-  def("regex_test", (a, l) => re(text(a[1], "regex_test", l), flagsOf(a[2], false)).test(text(a[0], "regex_test", l)));
+  const rx = (a, fn2, flagIdx, global2, l) => {
+    const t = text(a[0], fn2, l);
+    return { t, r: re(text(a[1], fn2, l), flagsOf(a[flagIdx], global2), t, l) };
+  };
+  def("regex_test", (a, l) => {
+    const { t, r } = rx(a, "regex_test", 2, false, l);
+    return r.test(t);
+  });
   def("regex_capture", (a, l) => {
-    const m2 = text(a[0], "regex_capture", l).match(re(text(a[1], "regex_capture", l), flagsOf(a[2], false)));
+    const { t, r } = rx(a, "regex_capture", 2, false, l);
+    const m2 = t.match(r);
     return m2 ? Array.from(m2, (x) => x ?? "") : null;
   });
-  def("regex_find_all", (a, l) => Array.from(text(a[0], "regex_find_all", l).matchAll(re(text(a[1], "regex_find_all", l), flagsOf(a[2], true))), (m2) => m2[0]));
-  def("regex_replace", (a, l) => text(a[0], "regex_replace", l).replace(re(text(a[1], "regex_replace", l), flagsOf(a[3], true)), text(a[2], "regex_replace", l)));
+  def("regex_find_all", (a, l) => {
+    const { t, r } = rx(a, "regex_find_all", 2, true, l);
+    return Array.from(t.matchAll(r), (m2) => m2[0]);
+  });
+  def("regex_replace", (a, l) => {
+    const { t, r } = rx(a, "regex_replace", 3, true, l);
+    return t.replace(r, text(a[2], "regex_replace", l));
+  });
   def("evaluate", (a, l) => {
     const src = text(a[0], "evaluate", l).replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
     let i = 0;
@@ -5203,6 +6080,7 @@ var cache;
 var init_text2 = __esm({
   "src/lang/builtins/text.ts"() {
     init_errors();
+    init_regex_guard();
     cache = /* @__PURE__ */ new Map();
   }
 });
@@ -5528,6 +6406,7 @@ function createBuiltins(output) {
   registerHost(builtins, output);
   registerText(builtins, output);
   registerSql(builtins, output);
+  registerOce(builtins);
   return builtins;
 }
 var init_builtins = __esm({
@@ -5544,6 +6423,7 @@ var init_builtins = __esm({
     init_regex2();
     init_functional();
     init_buffer2();
+    init_oce();
     init_host();
     init_text2();
     init_sql();
@@ -5895,7 +6775,7 @@ var init_advanced = __esm({
 var matrix_default;
 var init_matrix = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\matrix.sdev"() {
-    matrix_default = '# =============================================================================\n# SDEV Standard Library: Matrix & Linear Algebra (lang/stdlib/v2/matrix.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n# A Matrix is represented as a flat list:\n#   cell 0 = rows\n#   cell 1 = cols\n#   cells 2..(2 + rows*cols - 1) = row-major elements\n\nto mat_zeros with rows cols\n  set total to rows * cols\n  set m to mklist(total + 2)\n  set m[0] to rows\n  set m[1] to cols\n  set i to 0\n  while i < total\n    set m[i + 2] to 0\n    set i to i + 1\n  end\n  return m\nend\n\nto mat_ones with rows cols\n  set total to rows * cols\n  set m to mklist(total + 2)\n  set m[0] to rows\n  set m[1] to cols\n  set i to 0\n  while i < total\n    set m[i + 2] to 1\n    set i to i + 1\n  end\n  return m\nend\n\nto mat_eye with n\n  set m to mat_zeros(n, n)\n  set i to 0\n  while i < n\n    set m[2 + i * n + i] to 1\n    set i to i + 1\n  end\n  return m\nend\n\nto mat_from_flat with rows cols flat_list\n  set total to rows * cols\n  set m to mklist(total + 2)\n  set m[0] to rows\n  set m[1] to cols\n  set i to 0\n  while i < total\n    set m[i + 2] to flat_list[i]\n    set i to i + 1\n  end\n  return m\nend\n\nto mat_rows with m\n  return m[0]\nend\n\nto mat_cols with m\n  return m[1]\nend\n\nto mat_get with m r c\n  set cols to m[1]\n  return m[2 + r * cols + c]\nend\n\nto mat_set with m r c val\n  set cols to m[1]\n  set m[2 + r * cols + c] to val\n  return m\nend\n\nto mat_add with a b\n  set r to a[0]\n  set c to a[1]\n  set total to r * c\n  set out to mat_zeros(r, c)\n  set i to 0\n  while i < total\n    set out[i + 2] to a[i + 2] + b[i + 2]\n    set i to i + 1\n  end\n  return out\nend\n\nto mat_sub with a b\n  set r to a[0]\n  set c to a[1]\n  set total to r * c\n  set out to mat_zeros(r, c)\n  set i to 0\n  while i < total\n    set out[i + 2] to a[i + 2] - b[i + 2]\n    set i to i + 1\n  end\n  return out\nend\n\nto mat_scale with m scalar\n  set r to m[0]\n  set c to m[1]\n  set total to r * c\n  set out to mat_zeros(r, c)\n  set i to 0\n  while i < total\n    set out[i + 2] to m[i + 2] * scalar\n    set i to i + 1\n  end\n  return out\nend\n\nto mat_mul with a b\n  set r to a[0]\n  set k_dim to a[1]\n  set c to b[1]\n  set out to mat_zeros(r, c)\n  set i to 0\n  while i < r\n    set j to 0\n    while j < c\n      set acc to 0\n      set k to 0\n      while k < k_dim\n        set acc to acc + a[2 + i * k_dim + k] * b[2 + k * c + j]\n        set k to k + 1\n      end\n      set out[2 + i * c + j] to acc\n      set j to j + 1\n    end\n    set i to i + 1\n  end\n  return out\nend\n\nto mat_transpose with m\n  set r to m[0]\n  set c to m[1]\n  set out to mat_zeros(c, r)\n  set i to 0\n  while i < r\n    set j to 0\n    while j < c\n      set out[2 + j * r + i] to m[2 + i * c + j]\n      set j to j + 1\n    end\n    set i to i + 1\n  end\n  return out\nend\n\nto mat_trace with m\n  set n to m[0]\n  set cols to m[1]\n  set tr to 0\n  set i to 0\n  while i < n\n    set tr to tr + m[2 + i * cols + i]\n    set i to i + 1\n  end\n  return tr\nend\n\nto mat_det with m\n  set n to m[0]\n  if n is 1\n    return m[2]\n  end\n  if n is 2\n    return m[2] * m[5] - m[3] * m[4]\n  end\n  if n is 3\n    set a to m[2]\n    set b to m[3]\n    set c to m[4]\n    set d to m[5]\n    set e to m[6]\n    set f to m[7]\n    set g to m[8]\n    set h to m[9]\n    set ii to m[10]\n    return a * (e * ii - f * h) - b * (d * ii - f * g) + c * (d * h - e * g)\n  end\n  return 0\nend\n\nto mat_dot with v1 v2\n  set n to length(v1)\n  set s to 0\n  set i to 0\n  while i < n\n    set s to s + v1[i] * v2[i]\n    set i to i + 1\n  end\n  return s\nend\n\nto mat_norm_sq with m\n  set total to m[0] * m[1]\n  set s to 0\n  set i to 0\n  while i < total\n    set v to m[i + 2]\n    set s to s + v * v\n    set i to i + 1\n  end\n  return s\nend\n\nto mat_to_str with m\n  set r to m[0]\n  set c to m[1]\n  set out to "["\n  set i to 0\n  while i < r\n    if i > 0\n      set out to out + ", "\n    end\n    set out to out + "["\n    set j to 0\n    while j < c\n      if j > 0\n        set out to out + ", "\n      end\n      set out to out + str(m[2 + i * c + j])\n      set j to j + 1\n    end\n    set out to out + "]"\n    set i to i + 1\n  end\n  set out to out + "]"\n  return concat(out, "")\nend\n\n# \u2500\u2500 2D List-of-Lists Matrix Operations (dual-runtime API parity) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nto mat2d_create with rows cols fill\n  set out to mklist(rows)\n  set i to 0\n  while i < rows\n    set row to mklist(cols)\n    set j to 0\n    while j < cols\n      set row[j] to fill\n      set j to j + 1\n    end\n    set out[i] to row\n    set i to i + 1\n  end\n  return out\nend\n\nto mat2d_identity with n\n  set out to mat2d_create(n, n, 0)\n  set i to 0\n  while i < n\n    set row to out[i]\n    set row[i] to 1\n    set i to i + 1\n  end\n  return out\nend\n\nto mat2d_transpose with m\n  set rows to length(m)\n  if rows is 0\n    return mklist(0)\n  end\n  set r0 to m[0]\n  set cols to length(r0)\n  set out to mklist(cols)\n  set j to 0\n  while j < cols\n    set row to mklist(rows)\n    set i to 0\n    while i < rows\n      set mr to m[i]\n      set row[i] to mr[j]\n      set i to i + 1\n    end\n    set out[j] to row\n    set j to j + 1\n  end\n  return out\nend\n\nto mat2d_dot with a b\n  set n to length(a)\n  set s to 0\n  set i to 0\n  while i < n\n    set s to s + a[i] * b[i]\n    set i to i + 1\n  end\n  return s\nend\n\nto mat2d_mul with a b\n  set rows_a to length(a)\n  set a0 to a[0]\n  set cols_a to length(a0)\n  set b0 to b[0]\n  set cols_b to length(b0)\n  set out to mklist(rows_a)\n  set i to 0\n  while i < rows_a\n    set row to mklist(cols_b)\n    set ai to a[i]\n    set j to 0\n    while j < cols_b\n      set s to 0\n      set k to 0\n      while k < cols_a\n        set bk to b[k]\n        set s to s + ai[k] * bk[j]\n        set k to k + 1\n      end\n      set row[j] to s\n      set j to j + 1\n    end\n    set out[i] to row\n    set i to i + 1\n  end\n  return out\nend\n\nto mat2d_add with a b\n  set rows to length(a)\n  if rows is 0\n    return mklist(0)\n  end\n  set a0 to a[0]\n  set cols to length(a0)\n  set out to mklist(rows)\n  set i to 0\n  while i < rows\n    set ai to a[i]\n    set bi to b[i]\n    set row to mklist(cols)\n    set j to 0\n    while j < cols\n      set row[j] to ai[j] + bi[j]\n      set j to j + 1\n    end\n    set out[i] to row\n    set i to i + 1\n  end\n  return out\nend\n\nto mat2d_sub with a b\n  set rows to length(a)\n  if rows is 0\n    return mklist(0)\n  end\n  set a0 to a[0]\n  set cols to length(a0)\n  set out to mklist(rows)\n  set i to 0\n  while i < rows\n    set ai to a[i]\n    set bi to b[i]\n    set row to mklist(cols)\n    set j to 0\n    while j < cols\n      set row[j] to ai[j] - bi[j]\n      set j to j + 1\n    end\n    set out[i] to row\n    set i to i + 1\n  end\n  return out\nend\n\nto mat2d_scale with m scalar\n  set rows to length(m)\n  if rows is 0\n    return mklist(0)\n  end\n  set out to mklist(rows)\n  set i to 0\n  while i < rows\n    set mi to m[i]\n    set cols to length(mi)\n    set row to mklist(cols)\n    set j to 0\n    while j < cols\n      set row[j] to mi[j] * scalar\n      set j to j + 1\n    end\n    set out[i] to row\n    set i to i + 1\n  end\n  return out\nend\n\nto mat2d_sum with m\n  set rows to length(m)\n  set s to 0\n  set i to 0\n  while i < rows\n    set mi to m[i]\n    set cols to length(mi)\n    set j to 0\n    while j < cols\n      set s to s + mi[j]\n      set j to j + 1\n    end\n    set i to i + 1\n  end\n  return s\nend\n\nto mat2d_reshape with flat rows cols\n  set out to mklist(rows)\n  set i to 0\n  while i < rows\n    set row to mklist(cols)\n    set j to 0\n    while j < cols\n      set row[j] to flat[i * cols + j]\n      set j to j + 1\n    end\n    set out[i] to row\n    set i to i + 1\n  end\n  return out\nend\n';
+    matrix_default = '# =============================================================================\r\n# SDEV Standard Library: Matrix & Linear Algebra (lang/stdlib/v2/matrix.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n# A Matrix is represented as a flat list:\r\n#   cell 0 = rows\r\n#   cell 1 = cols\r\n#   cells 2..(2 + rows*cols - 1) = row-major elements\r\n\r\nto mat_zeros with rows cols\r\n  set total to rows * cols\r\n  set m to mklist(total + 2)\r\n  set m[0] to rows\r\n  set m[1] to cols\r\n  set i to 0\r\n  while i < total\r\n    set m[i + 2] to 0\r\n    set i to i + 1\r\n  end\r\n  return m\r\nend\r\n\r\nto mat_ones with rows cols\r\n  set total to rows * cols\r\n  set m to mklist(total + 2)\r\n  set m[0] to rows\r\n  set m[1] to cols\r\n  set i to 0\r\n  while i < total\r\n    set m[i + 2] to 1\r\n    set i to i + 1\r\n  end\r\n  return m\r\nend\r\n\r\nto mat_eye with n\r\n  set m to mat_zeros(n, n)\r\n  set i to 0\r\n  while i < n\r\n    set m[2 + i * n + i] to 1\r\n    set i to i + 1\r\n  end\r\n  return m\r\nend\r\n\r\nto mat_from_flat with rows cols flat_list\r\n  set total to rows * cols\r\n  set m to mklist(total + 2)\r\n  set m[0] to rows\r\n  set m[1] to cols\r\n  set i to 0\r\n  while i < total\r\n    set m[i + 2] to flat_list[i]\r\n    set i to i + 1\r\n  end\r\n  return m\r\nend\r\n\r\nto mat_rows with m\r\n  return m[0]\r\nend\r\n\r\nto mat_cols with m\r\n  return m[1]\r\nend\r\n\r\nto mat_get with m r c\r\n  set cols to m[1]\r\n  return m[2 + r * cols + c]\r\nend\r\n\r\nto mat_set with m r c val\r\n  set cols to m[1]\r\n  set m[2 + r * cols + c] to val\r\n  return m\r\nend\r\n\r\nto mat_add with a b\r\n  set r to a[0]\r\n  set c to a[1]\r\n  set total to r * c\r\n  set out to mat_zeros(r, c)\r\n  set i to 0\r\n  while i < total\r\n    set out[i + 2] to a[i + 2] + b[i + 2]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat_sub with a b\r\n  set r to a[0]\r\n  set c to a[1]\r\n  set total to r * c\r\n  set out to mat_zeros(r, c)\r\n  set i to 0\r\n  while i < total\r\n    set out[i + 2] to a[i + 2] - b[i + 2]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat_scale with m scalar\r\n  set r to m[0]\r\n  set c to m[1]\r\n  set total to r * c\r\n  set out to mat_zeros(r, c)\r\n  set i to 0\r\n  while i < total\r\n    set out[i + 2] to m[i + 2] * scalar\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat_mul with a b\r\n  set r to a[0]\r\n  set k_dim to a[1]\r\n  set c to b[1]\r\n  set out to mat_zeros(r, c)\r\n  set i to 0\r\n  while i < r\r\n    set j to 0\r\n    while j < c\r\n      set acc to 0\r\n      set k to 0\r\n      while k < k_dim\r\n        set acc to acc + a[2 + i * k_dim + k] * b[2 + k * c + j]\r\n        set k to k + 1\r\n      end\r\n      set out[2 + i * c + j] to acc\r\n      set j to j + 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat_transpose with m\r\n  set r to m[0]\r\n  set c to m[1]\r\n  set out to mat_zeros(c, r)\r\n  set i to 0\r\n  while i < r\r\n    set j to 0\r\n    while j < c\r\n      set out[2 + j * r + i] to m[2 + i * c + j]\r\n      set j to j + 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat_trace with m\r\n  set n to m[0]\r\n  set cols to m[1]\r\n  set tr to 0\r\n  set i to 0\r\n  while i < n\r\n    set tr to tr + m[2 + i * cols + i]\r\n    set i to i + 1\r\n  end\r\n  return tr\r\nend\r\n\r\nto mat_det with m\r\n  set n to m[0]\r\n  if n is 1\r\n    return m[2]\r\n  end\r\n  if n is 2\r\n    return m[2] * m[5] - m[3] * m[4]\r\n  end\r\n  if n is 3\r\n    set a to m[2]\r\n    set b to m[3]\r\n    set c to m[4]\r\n    set d to m[5]\r\n    set e to m[6]\r\n    set f to m[7]\r\n    set g to m[8]\r\n    set h to m[9]\r\n    set ii to m[10]\r\n    return a * (e * ii - f * h) - b * (d * ii - f * g) + c * (d * h - e * g)\r\n  end\r\n  return 0\r\nend\r\n\r\nto mat_dot with v1 v2\r\n  set n to length(v1)\r\n  set s to 0\r\n  set i to 0\r\n  while i < n\r\n    set s to s + v1[i] * v2[i]\r\n    set i to i + 1\r\n  end\r\n  return s\r\nend\r\n\r\nto mat_norm_sq with m\r\n  set total to m[0] * m[1]\r\n  set s to 0\r\n  set i to 0\r\n  while i < total\r\n    set v to m[i + 2]\r\n    set s to s + v * v\r\n    set i to i + 1\r\n  end\r\n  return s\r\nend\r\n\r\nto mat_to_str with m\r\n  set r to m[0]\r\n  set c to m[1]\r\n  set out to "["\r\n  set i to 0\r\n  while i < r\r\n    if i > 0\r\n      set out to out + ", "\r\n    end\r\n    set out to out + "["\r\n    set j to 0\r\n    while j < c\r\n      if j > 0\r\n        set out to out + ", "\r\n      end\r\n      set out to out + str(m[2 + i * c + j])\r\n      set j to j + 1\r\n    end\r\n    set out to out + "]"\r\n    set i to i + 1\r\n  end\r\n  set out to out + "]"\r\n  return concat(out, "")\r\nend\r\n\r\n# \u2500\u2500 2D List-of-Lists Matrix Operations (dual-runtime API parity) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\n\r\nto mat2d_create with rows cols fill\r\n  set out to mklist(rows)\r\n  set i to 0\r\n  while i < rows\r\n    set row to mklist(cols)\r\n    set j to 0\r\n    while j < cols\r\n      set row[j] to fill\r\n      set j to j + 1\r\n    end\r\n    set out[i] to row\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat2d_identity with n\r\n  set out to mat2d_create(n, n, 0)\r\n  set i to 0\r\n  while i < n\r\n    set row to out[i]\r\n    set row[i] to 1\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat2d_transpose with m\r\n  set rows to length(m)\r\n  if rows is 0\r\n    return mklist(0)\r\n  end\r\n  set r0 to m[0]\r\n  set cols to length(r0)\r\n  set out to mklist(cols)\r\n  set j to 0\r\n  while j < cols\r\n    set row to mklist(rows)\r\n    set i to 0\r\n    while i < rows\r\n      set mr to m[i]\r\n      set row[i] to mr[j]\r\n      set i to i + 1\r\n    end\r\n    set out[j] to row\r\n    set j to j + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat2d_dot with a b\r\n  set n to length(a)\r\n  set s to 0\r\n  set i to 0\r\n  while i < n\r\n    set s to s + a[i] * b[i]\r\n    set i to i + 1\r\n  end\r\n  return s\r\nend\r\n\r\nto mat2d_mul with a b\r\n  set rows_a to length(a)\r\n  set a0 to a[0]\r\n  set cols_a to length(a0)\r\n  set b0 to b[0]\r\n  set cols_b to length(b0)\r\n  set out to mklist(rows_a)\r\n  set i to 0\r\n  while i < rows_a\r\n    set row to mklist(cols_b)\r\n    set ai to a[i]\r\n    set j to 0\r\n    while j < cols_b\r\n      set s to 0\r\n      set k to 0\r\n      while k < cols_a\r\n        set bk to b[k]\r\n        set s to s + ai[k] * bk[j]\r\n        set k to k + 1\r\n      end\r\n      set row[j] to s\r\n      set j to j + 1\r\n    end\r\n    set out[i] to row\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat2d_add with a b\r\n  set rows to length(a)\r\n  if rows is 0\r\n    return mklist(0)\r\n  end\r\n  set a0 to a[0]\r\n  set cols to length(a0)\r\n  set out to mklist(rows)\r\n  set i to 0\r\n  while i < rows\r\n    set ai to a[i]\r\n    set bi to b[i]\r\n    set row to mklist(cols)\r\n    set j to 0\r\n    while j < cols\r\n      set row[j] to ai[j] + bi[j]\r\n      set j to j + 1\r\n    end\r\n    set out[i] to row\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat2d_sub with a b\r\n  set rows to length(a)\r\n  if rows is 0\r\n    return mklist(0)\r\n  end\r\n  set a0 to a[0]\r\n  set cols to length(a0)\r\n  set out to mklist(rows)\r\n  set i to 0\r\n  while i < rows\r\n    set ai to a[i]\r\n    set bi to b[i]\r\n    set row to mklist(cols)\r\n    set j to 0\r\n    while j < cols\r\n      set row[j] to ai[j] - bi[j]\r\n      set j to j + 1\r\n    end\r\n    set out[i] to row\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat2d_scale with m scalar\r\n  set rows to length(m)\r\n  if rows is 0\r\n    return mklist(0)\r\n  end\r\n  set out to mklist(rows)\r\n  set i to 0\r\n  while i < rows\r\n    set mi to m[i]\r\n    set cols to length(mi)\r\n    set row to mklist(cols)\r\n    set j to 0\r\n    while j < cols\r\n      set row[j] to mi[j] * scalar\r\n      set j to j + 1\r\n    end\r\n    set out[i] to row\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto mat2d_sum with m\r\n  set rows to length(m)\r\n  set s to 0\r\n  set i to 0\r\n  while i < rows\r\n    set mi to m[i]\r\n    set cols to length(mi)\r\n    set j to 0\r\n    while j < cols\r\n      set s to s + mi[j]\r\n      set j to j + 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return s\r\nend\r\n\r\nto mat2d_reshape with flat rows cols\r\n  set out to mklist(rows)\r\n  set i to 0\r\n  while i < rows\r\n    set row to mklist(cols)\r\n    set j to 0\r\n    while j < cols\r\n      set row[j] to flat[i * cols + j]\r\n      set j to j + 1\r\n    end\r\n    set out[i] to row\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n';
   }
 });
 
@@ -6275,7 +7155,7 @@ var init_runtime_values = __esm({
 var list_default;
 var init_list2 = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\list.sdev"() {
-    list_default = "# SDEV Standard Library: Lists & Sequences (v2) \u2014 authored in SDEV.\n\nto list_clone with xs\n  set n to length(xs)\n  set out to mklist(n)\n  set i to 0\n  while i < n\n    set out[i] to xs[i]\n    set i to i + 1\n  end\n  return out\nend\n\nto list_append with xs item\n  set n to length(xs)\n  set out to mklist(n + 1)\n  set i to 0\n  while i < n\n    set out[i] to xs[i]\n    set i to i + 1\n  end\n  set out[n] to item\n  return out\nend\n\nto list_contains_val with xs val\n  set n to length(xs)\n  set i to 0\n  while i < n\n    if xs[i] is val\n      return 1\n    end\n    set i to i + 1\n  end\n  return 0\nend\n\nto list_index_of_val with xs val\n  set n to length(xs)\n  set i to 0\n  while i < n\n    if xs[i] is val\n      return i\n    end\n    set i to i + 1\n  end\n  return 0 - 1\nend\n\nto list_concat_two with a b\n  set na to length(a)\n  set nb to length(b)\n  set out to mklist(na + nb)\n  set i to 0\n  while i < na\n    set out[i] to a[i]\n    set i to i + 1\n  end\n  set j to 0\n  while j < nb\n    set out[na + j] to b[j]\n    set j to j + 1\n  end\n  return out\nend\n\nto list_reverse_new with xs\n  set n to length(xs)\n  set out to mklist(n)\n  set i to 0\n  while i < n\n    set out[i] to xs[n - 1 - i]\n    set i to i + 1\n  end\n  return out\nend\n\nto list_sum_all with xs\n  set total to 0\n  set n to length(xs)\n  set i to 0\n  while i < n\n    set total to total + xs[i]\n    set i to i + 1\n  end\n  return total\nend\n\nto list_min_val with xs\n  set n to length(xs)\n  if n is 0\n    return 0\n  end\n  set m to xs[0]\n  set i to 1\n  while i < n\n    if xs[i] < m\n      set m to xs[i]\n    end\n    set i to i + 1\n  end\n  return m\nend\n\nto list_max_val with xs\n  set n to length(xs)\n  if n is 0\n    return 0\n  end\n  set m to xs[0]\n  set i to 1\n  while i < n\n    if xs[i] > m\n      set m to xs[i]\n    end\n    set i to i + 1\n  end\n  return m\nend\n\n# SDEV v1 Compatibility Aliases\nto gather\n  return mklist(0)\nend\n\nto pluck with xs item\n  return list_append(xs, item)\nend\n\nto invert with xs\n  return list_reverse_new(xs)\nend\n";
+    list_default = "# SDEV Standard Library: Lists & Sequences (v2) \u2014 authored in SDEV.\r\n\r\nto list_clone with xs\r\n  set n to length(xs)\r\n  set out to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set out[i] to xs[i]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto list_append with xs item\r\n  set n to length(xs)\r\n  set out to mklist(n + 1)\r\n  set i to 0\r\n  while i < n\r\n    set out[i] to xs[i]\r\n    set i to i + 1\r\n  end\r\n  set out[n] to item\r\n  return out\r\nend\r\n\r\nto list_contains_val with xs val\r\n  set n to length(xs)\r\n  set i to 0\r\n  while i < n\r\n    if xs[i] is val\r\n      return 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto list_index_of_val with xs val\r\n  set n to length(xs)\r\n  set i to 0\r\n  while i < n\r\n    if xs[i] is val\r\n      return i\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 0 - 1\r\nend\r\n\r\nto list_concat_two with a b\r\n  set na to length(a)\r\n  set nb to length(b)\r\n  set out to mklist(na + nb)\r\n  set i to 0\r\n  while i < na\r\n    set out[i] to a[i]\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j < nb\r\n    set out[na + j] to b[j]\r\n    set j to j + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto list_reverse_new with xs\r\n  set n to length(xs)\r\n  set out to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set out[i] to xs[n - 1 - i]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto list_sum_all with xs\r\n  set total to 0\r\n  set n to length(xs)\r\n  set i to 0\r\n  while i < n\r\n    set total to total + xs[i]\r\n    set i to i + 1\r\n  end\r\n  return total\r\nend\r\n\r\nto list_min_val with xs\r\n  set n to length(xs)\r\n  if n is 0\r\n    return 0\r\n  end\r\n  set m to xs[0]\r\n  set i to 1\r\n  while i < n\r\n    if xs[i] < m\r\n      set m to xs[i]\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return m\r\nend\r\n\r\nto list_max_val with xs\r\n  set n to length(xs)\r\n  if n is 0\r\n    return 0\r\n  end\r\n  set m to xs[0]\r\n  set i to 1\r\n  while i < n\r\n    if xs[i] > m\r\n      set m to xs[i]\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return m\r\nend\r\n\r\n# SDEV v1 Compatibility Aliases\r\nto gather\r\n  return mklist(0)\r\nend\r\n\r\nto pluck with xs item\r\n  return list_append(xs, item)\r\nend\r\n\r\nto invert with xs\r\n  return list_reverse_new(xs)\r\nend\r\n";
   }
 });
 
@@ -6283,7 +7163,7 @@ var init_list2 = __esm({
 var pyparity_default;
 var init_pyparity = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\pyparity.sdev"() {
-    pyparity_default = '# =============================================================================\n# SDEV Standard Library: Python-Parity Builtins, Itertools & Collections\n# (lang/stdlib/v2/pyparity.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\nuse "lang/stdlib/v2/list.sdev"\nuse "lang/stdlib/v2/bits.sdev"\n\nto py_enumerate with xs start_idx\n  set n to length(xs)\n  set out to mklist(n)\n  set i to 0\n  while i < n\n    set pair to mklist(2)\n    set pair[0] to start_idx + i\n    set pair[1] to xs[i]\n    set out[i] to pair\n    set i to i + 1\n  end\n  return out\nend\n\nto py_zip with a b\n  set na to length(a)\n  set nb to length(b)\n  set n to na\n  if nb < n\n    set n to nb\n  end\n  set out to mklist(n)\n  set i to 0\n  while i < n\n    set pair to mklist(2)\n    set pair[0] to a[i]\n    set pair[1] to b[i]\n    set out[i] to pair\n    set i to i + 1\n  end\n  return out\nend\n\nto py_any with xs\n  set n to length(xs)\n  set i to 0\n  while i < n\n    if xs[i] is not 0\n      return 1\n    end\n    set i to i + 1\n  end\n  return 0\nend\n\nto py_all with xs\n  set n to length(xs)\n  set i to 0\n  while i < n\n    if xs[i] is 0\n      return 0\n    end\n    set i to i + 1\n  end\n  return 1\nend\n\nto py_reversed with xs\n  return list_reverse_new(xs)\nend\n\nto py_sorted with xs\n  set out to list_clone(xs)\n  set n to length(out)\n  set i to 0\n  while i < n\n    set j to 0\n    while j < n - 1 - i\n      if out[j] > out[j + 1]\n        set tmp to out[j]\n        set out[j] to out[j + 1]\n        set out[j + 1] to tmp\n      end\n      set j to j + 1\n    end\n    set i to i + 1\n  end\n  return out\nend\n\nto py_divmod with a b\n  set rem to a % b\n  set res to mklist(2)\n  set res[0] to (a - rem) / b\n  set res[1] to rem\n  return res\nend\n\nto py_bin with n\n  if n is 0\n    return "0b0"\n  end\n  set v to n\n  set neg to 0\n  if v < 0\n    set neg to 1\n    set v to 0 - v\n  end\n  set bits_str to ""\n  while v > 0\n    set rem to v % 2\n    set bits_str to str(rem) + bits_str\n    set v to (v - rem) / 2\n  end\n  if neg is 1\n    return "-0b" + bits_str\n  end\n  return "0b" + bits_str\nend\n\nto py_oct with n\n  if n is 0\n    return "0o0"\n  end\n  set v to n\n  set neg to 0\n  if v < 0\n    set neg to 1\n    set v to 0 - v\n  end\n  set oct_str to ""\n  while v > 0\n    set rem to v % 8\n    set oct_str to str(rem) + oct_str\n    set v to (v - rem) / 8\n  end\n  if neg is 1\n    return "-0o" + oct_str\n  end\n  return "0o" + oct_str\nend\n\nto py_hex with n\n  if n < 0\n    return "-0x" + bits_to_hex(0 - n)\n  end\n  return "0x" + bits_to_hex(n)\nend\n\nto py_islice with xs start_idx stop_idx\n  set n to length(xs)\n  set s to start_idx\n  if s < 0\n    set s to 0\n  end\n  set e to stop_idx\n  if e > n\n    set e to n\n  end\n  if e <= s\n    return mklist(0)\n  end\n  set count to e - s\n  set out to mklist(count)\n  set i to 0\n  while i < count\n    set out[i] to xs[s + i]\n    set i to i + 1\n  end\n  return out\nend\n\nto py_chain with a b\n  return list_concat_two(a, b)\nend\n\nto py_repeat with item count\n  set out to mklist(count)\n  set i to 0\n  while i < count\n    set out[i] to item\n    set i to i + 1\n  end\n  return out\nend\n\nto py_accumulate with xs\n  set n to length(xs)\n  set out to mklist(n)\n  set acc to 0\n  set i to 0\n  while i < n\n    set acc to acc + xs[i]\n    set out[i] to acc\n    set i to i + 1\n  end\n  return out\nend\n\n# Set operations (represented as unique-element lists)\nto py_set_new with xs\n  set out to mklist(0)\n  set n to length(xs)\n  set i to 0\n  while i < n\n    if list_contains_val(out, xs[i]) is 0\n      set out to list_append(out, xs[i])\n    end\n    set i to i + 1\n  end\n  return out\nend\n\nto py_set_add with s val\n  if list_contains_val(s, val) is 1\n    return s\n  end\n  return list_append(s, val)\nend\n\nto py_set_has with s val\n  return list_contains_val(s, val)\nend\n\nto py_set_union with a b\n  set out to py_set_new(a)\n  set nb to length(b)\n  set i to 0\n  while i < nb\n    set out to py_set_add(out, b[i])\n    set i to i + 1\n  end\n  return out\nend\n\nto py_set_intersection with a b\n  set out to mklist(0)\n  set na to length(a)\n  set i to 0\n  while i < na\n    if list_contains_val(b, a[i]) is 1\n      set out to py_set_add(out, a[i])\n    end\n    set i to i + 1\n  end\n  return out\nend\n\nto py_set_difference with a b\n  set out to mklist(0)\n  set na to length(a)\n  set i to 0\n  while i < na\n    if list_contains_val(b, a[i]) is 0\n      set out to py_set_add(out, a[i])\n    end\n    set i to i + 1\n  end\n  return out\nend\n\nto py_set_symmetric_difference with a b\n  set d1 to py_set_difference(a, b)\n  set d2 to py_set_difference(b, a)\n  return py_set_union(d1, d2)\nend\n\nto py_set_issubset with a b\n  set na to length(a)\n  set i to 0\n  while i < na\n    if list_contains_val(b, a[i]) is 0\n      return 0\n    end\n    set i to i + 1\n  end\n  return 1\nend\n\n\nto py_range with start stop step\n  set out to []\n  if step is 0\n    return out\n  end\n  set i to start\n  if step > 0\n    while i < stop\n      set out to list_append(out, i)\n      set i to i + step\n    end\n  else\n    while i > stop\n      set out to list_append(out, i)\n      set i to i + step\n    end\n  end\n  return out\nend\n\nto py_sum with xs init_val\n  set acc to init_val\n  set n to length(xs)\n  set i to 0\n  while i < n\n    set acc to acc + xs[i]\n    set i to i + 1\n  end\n  return acc\nend\n\nto py_gcd with a b\n  set x to a\n  if x < 0\n    set x to 0 - x\n  end\n  set y to b\n  if y < 0\n    set y to 0 - y\n  end\n  while y > 0\n    set tmp to x % y\n    set x to y\n    set y to tmp\n  end\n  return x\nend\n\nto py_factorial with n\n  set acc to 1\n  set i to 2\n  while i <= n\n    set acc to acc * i\n    set i to i + 1\n  end\n  return acc\nend\n\nto py_str_hash with s\n  set h to 0\n  set n to length(s)\n  set i to 0\n  while i < n\n    set code to ord(s, i)\n    set h to ((h * 31) + code) % 2147483647\n    set i to i + 1\n  end\n  return h\nend\n';
+    pyparity_default = '# =============================================================================\r\n# SDEV Standard Library: Python-Parity Builtins, Itertools & Collections\r\n# (lang/stdlib/v2/pyparity.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\nuse "lang/stdlib/v2/list.sdev"\r\nuse "lang/stdlib/v2/bits.sdev"\r\n\r\nto py_enumerate with xs start_idx\r\n  set n to length(xs)\r\n  set out to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set pair to mklist(2)\r\n    set pair[0] to start_idx + i\r\n    set pair[1] to xs[i]\r\n    set out[i] to pair\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_zip with a b\r\n  set na to length(a)\r\n  set nb to length(b)\r\n  set n to na\r\n  if nb < n\r\n    set n to nb\r\n  end\r\n  set out to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set pair to mklist(2)\r\n    set pair[0] to a[i]\r\n    set pair[1] to b[i]\r\n    set out[i] to pair\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_any with xs\r\n  set n to length(xs)\r\n  set i to 0\r\n  while i < n\r\n    if xs[i] is not 0\r\n      return 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto py_all with xs\r\n  set n to length(xs)\r\n  set i to 0\r\n  while i < n\r\n    if xs[i] is 0\r\n      return 0\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 1\r\nend\r\n\r\nto py_reversed with xs\r\n  return list_reverse_new(xs)\r\nend\r\n\r\nto py_sorted with xs\r\n  set out to list_clone(xs)\r\n  set n to length(out)\r\n  set i to 0\r\n  while i < n\r\n    set j to 0\r\n    while j < n - 1 - i\r\n      if out[j] > out[j + 1]\r\n        set tmp to out[j]\r\n        set out[j] to out[j + 1]\r\n        set out[j + 1] to tmp\r\n      end\r\n      set j to j + 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_divmod with a b\r\n  set rem to a % b\r\n  set res to mklist(2)\r\n  set res[0] to (a - rem) / b\r\n  set res[1] to rem\r\n  return res\r\nend\r\n\r\nto py_bin with n\r\n  if n is 0\r\n    return "0b0"\r\n  end\r\n  set v to n\r\n  set neg to 0\r\n  if v < 0\r\n    set neg to 1\r\n    set v to 0 - v\r\n  end\r\n  set bits_str to ""\r\n  while v > 0\r\n    set rem to v % 2\r\n    set bits_str to str(rem) + bits_str\r\n    set v to (v - rem) / 2\r\n  end\r\n  if neg is 1\r\n    return "-0b" + bits_str\r\n  end\r\n  return "0b" + bits_str\r\nend\r\n\r\nto py_oct with n\r\n  if n is 0\r\n    return "0o0"\r\n  end\r\n  set v to n\r\n  set neg to 0\r\n  if v < 0\r\n    set neg to 1\r\n    set v to 0 - v\r\n  end\r\n  set oct_str to ""\r\n  while v > 0\r\n    set rem to v % 8\r\n    set oct_str to str(rem) + oct_str\r\n    set v to (v - rem) / 8\r\n  end\r\n  if neg is 1\r\n    return "-0o" + oct_str\r\n  end\r\n  return "0o" + oct_str\r\nend\r\n\r\nto py_hex with n\r\n  if n < 0\r\n    return "-0x" + bits_to_hex(0 - n)\r\n  end\r\n  return "0x" + bits_to_hex(n)\r\nend\r\n\r\nto py_islice with xs start_idx stop_idx\r\n  set n to length(xs)\r\n  set s to start_idx\r\n  if s < 0\r\n    set s to 0\r\n  end\r\n  set e to stop_idx\r\n  if e > n\r\n    set e to n\r\n  end\r\n  if e <= s\r\n    return mklist(0)\r\n  end\r\n  set count to e - s\r\n  set out to mklist(count)\r\n  set i to 0\r\n  while i < count\r\n    set out[i] to xs[s + i]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_chain with a b\r\n  return list_concat_two(a, b)\r\nend\r\n\r\nto py_repeat with item count\r\n  set out to mklist(count)\r\n  set i to 0\r\n  while i < count\r\n    set out[i] to item\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_accumulate with xs\r\n  set n to length(xs)\r\n  set out to mklist(n)\r\n  set acc to 0\r\n  set i to 0\r\n  while i < n\r\n    set acc to acc + xs[i]\r\n    set out[i] to acc\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\n# Set operations (represented as unique-element lists)\r\nto py_set_new with xs\r\n  set out to mklist(0)\r\n  set n to length(xs)\r\n  set i to 0\r\n  while i < n\r\n    if list_contains_val(out, xs[i]) is 0\r\n      set out to list_append(out, xs[i])\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_set_add with s val\r\n  if list_contains_val(s, val) is 1\r\n    return s\r\n  end\r\n  return list_append(s, val)\r\nend\r\n\r\nto py_set_has with s val\r\n  return list_contains_val(s, val)\r\nend\r\n\r\nto py_set_union with a b\r\n  set out to py_set_new(a)\r\n  set nb to length(b)\r\n  set i to 0\r\n  while i < nb\r\n    set out to py_set_add(out, b[i])\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_set_intersection with a b\r\n  set out to mklist(0)\r\n  set na to length(a)\r\n  set i to 0\r\n  while i < na\r\n    if list_contains_val(b, a[i]) is 1\r\n      set out to py_set_add(out, a[i])\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_set_difference with a b\r\n  set out to mklist(0)\r\n  set na to length(a)\r\n  set i to 0\r\n  while i < na\r\n    if list_contains_val(b, a[i]) is 0\r\n      set out to py_set_add(out, a[i])\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto py_set_symmetric_difference with a b\r\n  set d1 to py_set_difference(a, b)\r\n  set d2 to py_set_difference(b, a)\r\n  return py_set_union(d1, d2)\r\nend\r\n\r\nto py_set_issubset with a b\r\n  set na to length(a)\r\n  set i to 0\r\n  while i < na\r\n    if list_contains_val(b, a[i]) is 0\r\n      return 0\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 1\r\nend\r\n\r\n\r\nto py_range with start stop step\r\n  set out to []\r\n  if step is 0\r\n    return out\r\n  end\r\n  set i to start\r\n  if step > 0\r\n    while i < stop\r\n      set out to list_append(out, i)\r\n      set i to i + step\r\n    end\r\n  else\r\n    while i > stop\r\n      set out to list_append(out, i)\r\n      set i to i + step\r\n    end\r\n  end\r\n  return out\r\nend\r\n\r\nto py_sum with xs init_val\r\n  set acc to init_val\r\n  set n to length(xs)\r\n  set i to 0\r\n  while i < n\r\n    set acc to acc + xs[i]\r\n    set i to i + 1\r\n  end\r\n  return acc\r\nend\r\n\r\nto py_gcd with a b\r\n  set x to a\r\n  if x < 0\r\n    set x to 0 - x\r\n  end\r\n  set y to b\r\n  if y < 0\r\n    set y to 0 - y\r\n  end\r\n  while y > 0\r\n    set tmp to x % y\r\n    set x to y\r\n    set y to tmp\r\n  end\r\n  return x\r\nend\r\n\r\nto py_factorial with n\r\n  set acc to 1\r\n  set i to 2\r\n  while i <= n\r\n    set acc to acc * i\r\n    set i to i + 1\r\n  end\r\n  return acc\r\nend\r\n\r\nto py_str_hash with s\r\n  set h to 0\r\n  set n to length(s)\r\n  set i to 0\r\n  while i < n\r\n    set code to ord(s, i)\r\n    set h to ((h * 31) + code) % 2147483647\r\n    set i to i + 1\r\n  end\r\n  return h\r\nend\r\n';
   }
 });
 
@@ -7180,7 +8060,7 @@ var init_pyparity2 = __esm({
 var icons_default;
 var init_icons = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\web\\icons.sdev"() {
-    icons_default = '# =============================================================================\n# SDEV Self-Hosted Web Toolkit: Vector SVG Icon Library (lang/web/icons.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\n\nto web_icon_inner with name\n  set k to lower(trim(name))\n  if str_eq(k, "arrow-right") or str_eq(k, "arrow_right")\n    return "<path d=\\"M5 12h14\\"/><path d=\\"m12 5 7 7-7 7\\"/>"\n  end\n  if str_eq(k, "arrow-left") or str_eq(k, "arrow_left")\n    return "<path d=\\"m12 19-7-7 7-7\\"/><path d=\\"M19 12H5\\"/>"\n  end\n  if str_eq(k, "arrow-up-right") or str_eq(k, "external")\n    return "<path d=\\"M7 7h10v10\\"/><path d=\\"M7 17 17 7\\"/>"\n  end\n  if str_eq(k, "chevron-right")\n    return "<path d=\\"m9 18 6-6-6-6\\"/>"\n  end\n  if str_eq(k, "chevron-down")\n    return "<path d=\\"m6 9 6 6 6-6\\"/>"\n  end\n  if str_eq(k, "check")\n    return "<path d=\\"M20 6 9 17l-5-5\\"/>"\n  end\n  if str_eq(k, "check-circle") or str_eq(k, "check-circle-2")\n    return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><path d=\\"m9 12 2 2 4-4\\"/>"\n  end\n  if str_eq(k, "copy")\n    return "<rect width=\\"14\\" height=\\"14\\" x=\\"8\\" y=\\"8\\" rx=\\"2\\" ry=\\"2\\"/><path d=\\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\\"/>"\n  end\n  if str_eq(k, "play")\n    return "<polygon points=\\"6 3 20 12 6 21 6 3\\"/>"\n  end\n  if str_eq(k, "terminal")\n    return "<polyline points=\\"4 17 10 11 4 5\\"/><line x1=\\"12\\" x2=\\"20\\" y1=\\"19\\" y2=\\"19\\"/>"\n  end\n  if str_eq(k, "code") or str_eq(k, "code-2")\n    return "<polyline points=\\"16 18 22 12 16 6\\"/><polyline points=\\"8 6 2 12 8 18\\"/>"\n  end\n  if str_eq(k, "sparkles")\n    return "<path d=\\"m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z\\"/><path d=\\"M5 3v4\\"/><path d=\\"M3 5h4\\"/>"\n  end\n  if str_eq(k, "wand") or str_eq(k, "wand-2")\n    return "<path d=\\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z\\"/><path d=\\"m14 7 3 3\\"/>"\n  end\n  if str_eq(k, "cpu")\n    return "<rect width=\\"16\\" height=\\"16\\" x=\\"4\\" y=\\"4\\" rx=\\"2\\"/><rect width=\\"6\\" height=\\"6\\" x=\\"9\\" y=\\"9\\" rx=\\"1\\"/><path d=\\"M15 2v2\\"/><path d=\\"M15 20v2\\"/><path d=\\"M2 15h2\\"/><path d=\\"M2 9h2\\"/><path d=\\"M20 15h2\\"/><path d=\\"M20 9h2\\"/><path d=\\"M9 2v2\\"/><path d=\\"M9 20v2\\"/>"\n  end\n  if str_eq(k, "globe") or str_eq(k, "globe-2")\n    return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><path d=\\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\\"/><path d=\\"M2 12h20\\"/>"\n  end\n  if str_eq(k, "layers")\n    return "<path d=\\"m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z\\"/><path d=\\"m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65\\"/><path d=\\"m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65\\"/>"\n  end\n  if str_eq(k, "recycle")\n    return "<path d=\\"M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5\\"/><path d=\\"M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12\\"/><path d=\\"m14 16-3 3 3 3\\"/><path d=\\"M8.293 13.596 7.196 9.5 3.1 10.598\\"/><path d=\\"m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843\\"/><path d=\\"m13.378 9.633 4.096 1.098 1.097-4.096\\"/>"\n  end\n  if str_eq(k, "book-open") or str_eq(k, "book")\n    return "<path d=\\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\\"/><path d=\\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\\"/>"\n  end\n  if str_eq(k, "graduation-cap")\n    return "<path d=\\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\\"/><path d=\\"M22 10v6\\"/><path d=\\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\\"/>"\n  end\n  if str_eq(k, "rocket")\n    return "<path d=\\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\\"/><path d=\\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\\"/>"\n  end\n  if str_eq(k, "download")\n    return "<path d=\\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\\"/><polyline points=\\"7 10 12 15 17 10\\"/><line x1=\\"12\\" x2=\\"12\\" y1=\\"15\\" y2=\\"3\\"/>"\n  end\n  if str_eq(k, "monitor-dot") or str_eq(k, "monitor")\n    return "<rect width=\\"20\\" height=\\"14\\" x=\\"2\\" y=\\"3\\" rx=\\"2\\"/><line x1=\\"8\\" x2=\\"16\\" y1=\\"21\\" y2=\\"21\\"/><line x1=\\"12\\" x2=\\"12\\" y1=\\"17\\" y2=\\"21\\"/>"\n  end\n  if str_eq(k, "zap")\n    return "<polygon points=\\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\\"/>"\n  end\n  if str_eq(k, "shield")\n    return "<path d=\\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\\"/>"\n  end\n  if str_eq(k, "search")\n    return "<circle cx=\\"11\\" cy=\\"11\\" r=\\"8\\"/><path d=\\"m21 21-4.3-4.3\\"/>"\n  end\n  if str_eq(k, "menu")\n    return "<line x1=\\"4\\" x2=\\"20\\" y1=\\"12\\" y2=\\"12\\"/><line x1=\\"4\\" x2=\\"20\\" y1=\\"6\\" y2=\\"6\\"/><line x1=\\"4\\" x2=\\"20\\" y1=\\"18\\" y2=\\"18\\"/>"\n  end\n  if str_eq(k, "x") or str_eq(k, "close")\n    return "<path d=\\"M18 6 6 18\\"/><path d=\\"m6 6 12 12\\"/>"\n  end\n  if str_eq(k, "star")\n    return "<polygon points=\\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\\"/>"\n  end\n  if str_eq(k, "heart")\n    return "<path d=\\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\\"/>"\n  end\n  if str_eq(k, "sun")\n    return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"4\\"/><path d=\\"M12 2v2\\"/><path d=\\"M12 20v2\\"/><path d=\\"M2 12h2\\"/><path d=\\"M20 12h2\\"/>"\n  end\n  if str_eq(k, "moon")\n    return "<path d=\\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\\"/>"\n  end\n  if str_eq(k, "github") or str_eq(k, "git-branch")\n    return "<line x1=\\"6\\" x2=\\"6\\" y1=\\"3\\" y2=\\"15\\"/><circle cx=\\"18\\" cy=\\"6\\" r=\\"3\\"/><circle cx=\\"6\\" cy=\\"18\\" r=\\"3\\"/><path d=\\"M18 9a9 9 0 0 1-9 9\\"/>"\n  end\n  if str_eq(k, "sdev") or str_eq(k, "sdev-logo")\n    return "<defs><linearGradient id=\\"sdev-g\\" x1=\\"0\\" y1=\\"0\\" x2=\\"1\\" y2=\\"1\\"><stop offset=\\"0%\\" stop-color=\\"#38bdf8\\"/><stop offset=\\"55%\\" stop-color=\\"#818cf8\\"/><stop offset=\\"100%\\" stop-color=\\"#34d399\\"/></linearGradient></defs><rect x=\\"2\\" y=\\"2\\" width=\\"20\\" height=\\"20\\" rx=\\"5\\" fill=\\"url(#sdev-g)\\" fill-opacity=\\"0.16\\" stroke=\\"url(#sdev-g)\\" stroke-width=\\"1.75\\"/><path d=\\"M8 9.5 5.5 12 8 14.5\\" stroke=\\"#38bdf8\\" stroke-width=\\"1.9\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"/><path d=\\"M16 9.5 18.5 12 16 14.5\\" stroke=\\"#34d399\\" stroke-width=\\"1.9\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"/><path d=\\"M13.2 8.2 10.8 15.8\\" stroke=\\"#818cf8\\" stroke-width=\\"1.9\\" stroke-linecap=\\"round\\"/>"\n  end\n  return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"9\\"/><circle cx=\\"12\\" cy=\\"12\\" r=\\"3\\"/>"\nend\n\nto web_icon_svg with name cls\n  set c to cls\n  if length(c) is 0\n    set c to "sdev-icon"\n  end\n  set inner to web_icon_inner(name)\n  set out to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"" + c + "\\" aria-hidden=\\"true\\">" + inner + "</svg>"\n  return concat(out, "")\nend\n';
+    icons_default = '# =============================================================================\r\n# SDEV Self-Hosted Web Toolkit: Vector SVG Icon Library (lang/web/icons.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\nto web_icon_inner with name\r\n  set k to lower(trim(name))\r\n  if str_eq(k, "arrow-right") or str_eq(k, "arrow_right")\r\n    return "<path d=\\"M5 12h14\\"/><path d=\\"m12 5 7 7-7 7\\"/>"\r\n  end\r\n  if str_eq(k, "arrow-left") or str_eq(k, "arrow_left")\r\n    return "<path d=\\"m12 19-7-7 7-7\\"/><path d=\\"M19 12H5\\"/>"\r\n  end\r\n  if str_eq(k, "arrow-up-right") or str_eq(k, "external")\r\n    return "<path d=\\"M7 7h10v10\\"/><path d=\\"M7 17 17 7\\"/>"\r\n  end\r\n  if str_eq(k, "chevron-right")\r\n    return "<path d=\\"m9 18 6-6-6-6\\"/>"\r\n  end\r\n  if str_eq(k, "chevron-down")\r\n    return "<path d=\\"m6 9 6 6 6-6\\"/>"\r\n  end\r\n  if str_eq(k, "check")\r\n    return "<path d=\\"M20 6 9 17l-5-5\\"/>"\r\n  end\r\n  if str_eq(k, "check-circle") or str_eq(k, "check-circle-2")\r\n    return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><path d=\\"m9 12 2 2 4-4\\"/>"\r\n  end\r\n  if str_eq(k, "copy")\r\n    return "<rect width=\\"14\\" height=\\"14\\" x=\\"8\\" y=\\"8\\" rx=\\"2\\" ry=\\"2\\"/><path d=\\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\\"/>"\r\n  end\r\n  if str_eq(k, "play")\r\n    return "<polygon points=\\"6 3 20 12 6 21 6 3\\"/>"\r\n  end\r\n  if str_eq(k, "terminal")\r\n    return "<polyline points=\\"4 17 10 11 4 5\\"/><line x1=\\"12\\" x2=\\"20\\" y1=\\"19\\" y2=\\"19\\"/>"\r\n  end\r\n  if str_eq(k, "code") or str_eq(k, "code-2")\r\n    return "<polyline points=\\"16 18 22 12 16 6\\"/><polyline points=\\"8 6 2 12 8 18\\"/>"\r\n  end\r\n  if str_eq(k, "sparkles")\r\n    return "<path d=\\"m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z\\"/><path d=\\"M5 3v4\\"/><path d=\\"M3 5h4\\"/>"\r\n  end\r\n  if str_eq(k, "wand") or str_eq(k, "wand-2")\r\n    return "<path d=\\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z\\"/><path d=\\"m14 7 3 3\\"/>"\r\n  end\r\n  if str_eq(k, "cpu")\r\n    return "<rect width=\\"16\\" height=\\"16\\" x=\\"4\\" y=\\"4\\" rx=\\"2\\"/><rect width=\\"6\\" height=\\"6\\" x=\\"9\\" y=\\"9\\" rx=\\"1\\"/><path d=\\"M15 2v2\\"/><path d=\\"M15 20v2\\"/><path d=\\"M2 15h2\\"/><path d=\\"M2 9h2\\"/><path d=\\"M20 15h2\\"/><path d=\\"M20 9h2\\"/><path d=\\"M9 2v2\\"/><path d=\\"M9 20v2\\"/>"\r\n  end\r\n  if str_eq(k, "globe") or str_eq(k, "globe-2")\r\n    return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><path d=\\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\\"/><path d=\\"M2 12h20\\"/>"\r\n  end\r\n  if str_eq(k, "layers")\r\n    return "<path d=\\"m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z\\"/><path d=\\"m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65\\"/><path d=\\"m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65\\"/>"\r\n  end\r\n  if str_eq(k, "recycle")\r\n    return "<path d=\\"M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5\\"/><path d=\\"M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12\\"/><path d=\\"m14 16-3 3 3 3\\"/><path d=\\"M8.293 13.596 7.196 9.5 3.1 10.598\\"/><path d=\\"m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843\\"/><path d=\\"m13.378 9.633 4.096 1.098 1.097-4.096\\"/>"\r\n  end\r\n  if str_eq(k, "book-open") or str_eq(k, "book")\r\n    return "<path d=\\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\\"/><path d=\\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\\"/>"\r\n  end\r\n  if str_eq(k, "graduation-cap")\r\n    return "<path d=\\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\\"/><path d=\\"M22 10v6\\"/><path d=\\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\\"/>"\r\n  end\r\n  if str_eq(k, "rocket")\r\n    return "<path d=\\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\\"/><path d=\\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\\"/>"\r\n  end\r\n  if str_eq(k, "download")\r\n    return "<path d=\\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\\"/><polyline points=\\"7 10 12 15 17 10\\"/><line x1=\\"12\\" x2=\\"12\\" y1=\\"15\\" y2=\\"3\\"/>"\r\n  end\r\n  if str_eq(k, "monitor-dot") or str_eq(k, "monitor")\r\n    return "<rect width=\\"20\\" height=\\"14\\" x=\\"2\\" y=\\"3\\" rx=\\"2\\"/><line x1=\\"8\\" x2=\\"16\\" y1=\\"21\\" y2=\\"21\\"/><line x1=\\"12\\" x2=\\"12\\" y1=\\"17\\" y2=\\"21\\"/>"\r\n  end\r\n  if str_eq(k, "zap")\r\n    return "<polygon points=\\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\\"/>"\r\n  end\r\n  if str_eq(k, "shield")\r\n    return "<path d=\\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\\"/>"\r\n  end\r\n  if str_eq(k, "search")\r\n    return "<circle cx=\\"11\\" cy=\\"11\\" r=\\"8\\"/><path d=\\"m21 21-4.3-4.3\\"/>"\r\n  end\r\n  if str_eq(k, "menu")\r\n    return "<line x1=\\"4\\" x2=\\"20\\" y1=\\"12\\" y2=\\"12\\"/><line x1=\\"4\\" x2=\\"20\\" y1=\\"6\\" y2=\\"6\\"/><line x1=\\"4\\" x2=\\"20\\" y1=\\"18\\" y2=\\"18\\"/>"\r\n  end\r\n  if str_eq(k, "x") or str_eq(k, "close")\r\n    return "<path d=\\"M18 6 6 18\\"/><path d=\\"m6 6 12 12\\"/>"\r\n  end\r\n  if str_eq(k, "star")\r\n    return "<polygon points=\\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\\"/>"\r\n  end\r\n  if str_eq(k, "heart")\r\n    return "<path d=\\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\\"/>"\r\n  end\r\n  if str_eq(k, "sun")\r\n    return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"4\\"/><path d=\\"M12 2v2\\"/><path d=\\"M12 20v2\\"/><path d=\\"M2 12h2\\"/><path d=\\"M20 12h2\\"/>"\r\n  end\r\n  if str_eq(k, "moon")\r\n    return "<path d=\\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\\"/>"\r\n  end\r\n  if str_eq(k, "github") or str_eq(k, "git-branch")\r\n    return "<line x1=\\"6\\" x2=\\"6\\" y1=\\"3\\" y2=\\"15\\"/><circle cx=\\"18\\" cy=\\"6\\" r=\\"3\\"/><circle cx=\\"6\\" cy=\\"18\\" r=\\"3\\"/><path d=\\"M18 9a9 9 0 0 1-9 9\\"/>"\r\n  end\r\n  if str_eq(k, "sdev") or str_eq(k, "sdev-logo")\r\n    return "<defs><linearGradient id=\\"sdev-g\\" x1=\\"0\\" y1=\\"0\\" x2=\\"1\\" y2=\\"1\\"><stop offset=\\"0%\\" stop-color=\\"#38bdf8\\"/><stop offset=\\"55%\\" stop-color=\\"#818cf8\\"/><stop offset=\\"100%\\" stop-color=\\"#34d399\\"/></linearGradient></defs><rect x=\\"2\\" y=\\"2\\" width=\\"20\\" height=\\"20\\" rx=\\"5\\" fill=\\"url(#sdev-g)\\" fill-opacity=\\"0.16\\" stroke=\\"url(#sdev-g)\\" stroke-width=\\"1.75\\"/><path d=\\"M8 9.5 5.5 12 8 14.5\\" stroke=\\"#38bdf8\\" stroke-width=\\"1.9\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"/><path d=\\"M16 9.5 18.5 12 16 14.5\\" stroke=\\"#34d399\\" stroke-width=\\"1.9\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"/><path d=\\"M13.2 8.2 10.8 15.8\\" stroke=\\"#818cf8\\" stroke-width=\\"1.9\\" stroke-linecap=\\"round\\"/>"\r\n  end\r\n  return "<circle cx=\\"12\\" cy=\\"12\\" r=\\"9\\"/><circle cx=\\"12\\" cy=\\"12\\" r=\\"3\\"/>"\r\nend\r\n\r\nto web_icon_svg with name cls\r\n  set c to cls\r\n  if length(c) is 0\r\n    set c to "sdev-icon"\r\n  end\r\n  set inner to web_icon_inner(name)\r\n  set out to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\" class=\\"" + c + "\\" aria-hidden=\\"true\\">" + inner + "</svg>"\r\n  return concat(out, "")\r\nend\r\n';
   }
 });
 
@@ -7188,50 +8068,50 @@ var init_icons = __esm({
 var themes_default;
 var init_themes = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\web\\themes.sdev"() {
-    themes_default = `# =============================================================================
-# SDEV Self-Hosted Web Toolkit: Themes, Utilities & Browser Runtime
-# (lang/web/themes.sdev)
-# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.
-# =============================================================================
-
-use "lang/stdlib/v2/text.sdev"
-
-to web_theme_css with theme_name
-  set t to lower(trim(theme_name))
-  if str_eq(t, "sdev-light") or str_eq(t, "light")
-    return ":root {\\n  --background: 210 25% 98%;\\n  --foreground: 228 24% 10%;\\n  --card: 0 0% 100%;\\n  --card-foreground: 228 24% 10%;\\n  --popover: 0 0% 100%;\\n  --popover-foreground: 228 24% 10%;\\n  --primary: 201 94% 40%;\\n  --primary-foreground: 0 0% 100%;\\n  --secondary: 214 20% 93%;\\n  --secondary-foreground: 228 24% 14%;\\n  --muted: 214 20% 94%;\\n  --muted-foreground: 220 12% 42%;\\n  --accent: 245 80% 58%;\\n  --accent-foreground: 0 0% 100%;\\n  --border: 214 18% 87%;\\n  --input: 214 18% 87%;\\n  --ring: 201 94% 40%;\\n  --radius: 0.75rem;\\n  --brand-green: 160 84% 35%;\\n  --brand-amber: 36 92% 48%;\\n  --brand-rose: 350 84% 54%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"
-  end
-  if str_eq(t, "glass") or str_eq(t, "liquid-glass")
-    return ":root {\\n  --background: 230 35% 7%;\\n  --foreground: 210 30% 98%;\\n  --card: 230 30% 13%;\\n  --card-foreground: 210 30% 98%;\\n  --primary: 192 95% 68%;\\n  --primary-foreground: 230 35% 7%;\\n  --secondary: 230 25% 18%;\\n  --secondary-foreground: 210 25% 94%;\\n  --muted: 230 22% 16%;\\n  --muted-foreground: 218 15% 68%;\\n  --accent: 270 90% 72%;\\n  --accent-foreground: 210 30% 98%;\\n  --border: 220 30% 26%;\\n  --input: 220 30% 22%;\\n  --ring: 192 95% 68%;\\n  --radius: 1rem;\\n  --brand-green: 160 84% 52%;\\n  --brand-amber: 38 95% 60%;\\n  --brand-rose: 350 88% 64%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"
-  end
-  if str_eq(t, "cyberpunk") or str_eq(t, "neon")
-    return ":root {\\n  --background: 260 40% 5%;\\n  --foreground: 180 100% 95%;\\n  --card: 260 35% 9%;\\n  --card-foreground: 180 100% 95%;\\n  --primary: 320 100% 62%;\\n  --primary-foreground: 260 40% 5%;\\n  --secondary: 260 30% 15%;\\n  --secondary-foreground: 180 100% 92%;\\n  --muted: 260 25% 13%;\\n  --muted-foreground: 250 20% 65%;\\n  --accent: 180 100% 55%;\\n  --accent-foreground: 260 40% 5%;\\n  --border: 320 60% 28%;\\n  --input: 260 30% 16%;\\n  --ring: 320 100% 62%;\\n  --radius: 0.5rem;\\n  --brand-green: 150 100% 50%;\\n  --brand-amber: 48 100% 55%;\\n  --brand-rose: 350 100% 62%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"
-  end
-  return ":root {\\n  --background: 228 22% 5%;\\n  --foreground: 210 20% 96%;\\n  --card: 228 19% 8%;\\n  --card-foreground: 210 20% 96%;\\n  --popover: 228 22% 7%;\\n  --popover-foreground: 210 20% 96%;\\n  --primary: 199 95% 64%;\\n  --primary-foreground: 228 24% 6%;\\n  --secondary: 228 16% 12%;\\n  --secondary-foreground: 210 18% 92%;\\n  --muted: 228 15% 11%;\\n  --muted-foreground: 220 11% 60%;\\n  --accent: 245 82% 67%;\\n  --accent-foreground: 210 20% 98%;\\n  --destructive: 0 72% 56%;\\n  --destructive-foreground: 0 0% 98%;\\n  --border: 228 14% 15%;\\n  --input: 228 15% 13%;\\n  --ring: 199 95% 64%;\\n  --radius: 0.75rem;\\n  --brand-green: 160 84% 48%;\\n  --brand-amber: 38 95% 58%;\\n  --brand-rose: 350 88% 62%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"
-end
-
-to web_utilities_css
-  set p1 to "@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');\\n"
-  set p2 to "*, *::before, *::after { box-sizing: border-box; border-color: hsl(var(--border)); }\\nhtml { scroll-behavior: smooth; color-scheme: dark; }\\nbody { margin: 0; background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11'; line-height: 1.5; overflow-x: hidden; }\\nh1, h2, h3, .font-display { font-family: 'Instrument Serif', Georgia, serif; letter-spacing: -0.02em; font-weight: 400; margin: 0; }\\nh4, h5, h6 { margin: 0; font-weight: 600; }\\np { margin: 0; }\\na { color: inherit; text-decoration: none; }\\ncode, pre, .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-feature-settings: 'liga' 1, 'calt' 1; }\\n"
-  set p3 to ".reading-progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 60; background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--brand-green))); transform-origin: 0 50%; transform: scaleX(var(--scroll-progress, 0)); }\\n.eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }\\n.eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: hsl(var(--primary)); box-shadow: 0 0 12px hsl(var(--primary)); }\\n.hero-spot { background: radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / 0.14), transparent 70%), radial-gradient(40% 40% at 75% 20%, hsl(var(--accent) / 0.10), transparent 70%); }\\n.hero-grid { background-image: linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border) / 0.5) 1px, transparent 1px); background-size: 56px 56px; mask-image: radial-gradient(ellipse 70% 60% at 50% 25%, #000 40%, transparent 80%); -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 25%, #000 40%, transparent 80%); }\\n"
-  set p4 to ".btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: calc(var(--radius) - 2px); font-size: 0.875rem; font-weight: 500; padding: 0.625rem 1.125rem; cursor: pointer; transition: all 0.18s ease; border: 1px solid transparent; line-height: 1.25; font-family: inherit; white-space: nowrap; }\\n.btn:active { transform: translateY(1px); }\\n.btn-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 0 8px 24px -6px hsl(var(--primary) / 0.45); }\\n.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 12px 30px -6px hsl(var(--primary) / 0.6); }\\n.btn-secondary { background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); border-color: hsl(var(--border)); }\\n.btn-secondary:hover { background: hsl(var(--secondary) / 0.8); border-color: hsl(var(--primary) / 0.35); }\\n.btn-outline { background: transparent; color: hsl(var(--foreground)); border-color: hsl(var(--border)); }\\n.btn-outline:hover { background: hsl(var(--secondary)); border-color: hsl(var(--primary) / 0.4); }\\n.btn-ghost { background: transparent; color: hsl(var(--muted-foreground)); border-color: transparent; }\\n.btn-ghost:hover { background: hsl(var(--secondary)); color: hsl(var(--foreground)); }\\n.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; border-radius: calc(var(--radius) - 4px); }\\n.btn-lg { padding: 0.75rem 1.375rem; font-size: 0.9375rem; }\\n"
-  set p5 to ".bento, .card { position: relative; border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(228 20% 6.5%) 100%); overflow: hidden; transition: border-color 0.25s ease, transform 0.25s ease; }\\n.bento:hover { border-color: hsl(var(--primary) / 0.4); }\\n.bento::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 0%), hsl(var(--primary) / 0.08), transparent 45%); opacity: 0; transition: opacity 0.3s ease; }\\n.bento:hover::after { opacity: 1; }\\n.stage-card { border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.85); backdrop-filter: blur(12px); padding: 1.1rem 1.25rem; transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.3s ease; }\\n.stage-card[data-active='true'] { border-color: hsl(var(--primary) / 0.55); background: hsl(var(--card)); transform: translateX(4px); }\\n.stage-num { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: hsl(var(--muted-foreground)); letter-spacing: 0.08em; }\\n.stage-card[data-active='true'] .stage-num { color: hsl(var(--primary)); }\\n"
-  set p6 to ".kw { position: absolute; inset: 0; display: flex; align-items: baseline; gap: 1rem; opacity: 0; transform: translateY(8px); transition: opacity 0.35s ease, transform 0.35s ease; pointer-events: none; }\\n.kw[data-active='true'] { opacity: 1; transform: none; pointer-events: auto; }\\n.language-choice[aria-pressed='true'] { background: hsl(var(--secondary)); color: hsl(var(--foreground)); border-color: hsl(var(--primary) / 0.4); }\\n.path { display: flex; flex-direction: column; border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.6); padding: 1.75rem; text-align: left; transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.25s ease; cursor: pointer; font-family: inherit; color: inherit; }\\n.path:hover { border-color: hsl(var(--primary) / 0.5); background: hsl(var(--card)); transform: translateY(-2px); }\\n.path-cta { margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 500; color: hsl(var(--primary)); }\\n.final { position: relative; border-top: 1px solid hsl(var(--border)); background: radial-gradient(60% 80% at 50% 100%, hsl(var(--primary) / 0.16), transparent 70%), radial-gradient(40% 60% at 50% 100%, hsl(var(--accent) / 0.12), transparent 70%); overflow: hidden; }\\n.final .hero-grid { position: absolute; inset: 0; pointer-events: none; }\\n"
-  set p7 to ".reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1); }\\n.reveal.reveal-left { transform: translateX(-20px); }\\n.reveal.reveal-right { transform: translateX(20px); }\\n.reveal.is-visible { opacity: 1; transform: none; }\\n@media (prefers-reduced-motion: reduce) { .reveal, .reveal.reveal-left, .reveal.reveal-right { opacity: 1 !important; transform: none !important; transition: none !important; } }\\n"
-  set p8 to ".badge { display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 9999px; padding: 0.2rem 0.65rem; font-size: 0.75rem; font-weight: 500; background: hsl(var(--secondary)); color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }\\n.form-input, .form-select, .form-textarea { width: 100%; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--border)); background: hsl(var(--input)); color: hsl(var(--foreground)); padding: 0.6rem 0.85rem; font-size: 0.875rem; font-family: inherit; outline: none; }\\n.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2); }\\n.table-wrap { width: 100%; overflow-x: auto; border-radius: var(--radius); border: 1px solid hsl(var(--border)); }\\n.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; }\\n.table th { padding: 0.75rem 1rem; background: hsl(var(--secondary) / 0.6); color: hsl(var(--muted-foreground)); font-weight: 600; border-bottom: 1px solid hsl(var(--border)); }\\n.table td { padding: 0.75rem 1rem; border-bottom: 1px solid hsl(var(--border) / 0.6); }\\n.tabs-list { display: inline-flex; gap: 0.25rem; padding: 0.25rem; border-radius: calc(var(--radius) - 2px); background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); }\\n.tab-btn { padding: 0.4rem 0.85rem; border-radius: calc(var(--radius) - 4px); font-size: 0.8125rem; font-weight: 500; color: hsl(var(--muted-foreground)); background: transparent; border: none; cursor: pointer; font-family: inherit; }\\n.tab-btn[data-active='true'] { background: hsl(var(--background)); color: hsl(var(--foreground)); }\\n.tab-panel { display: none; }\\n.tab-panel[data-active='true'] { display: block; }\\n.accordion-item { border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); background: hsl(var(--card)); overflow: hidden; margin-bottom: 0.5rem; }\\n.accordion-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: transparent; border: none; color: hsl(var(--foreground)); font-size: 0.9375rem; font-weight: 500; text-align: left; cursor: pointer; font-family: inherit; }\\n.accordion-content { display: none; padding: 0 1.25rem 1rem; color: hsl(var(--muted-foreground)); font-size: 0.875rem; }\\n.accordion-item[data-open='true'] .accordion-content { display: block; }\\n.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; padding: 1.5rem; }\\n.modal-backdrop[data-open='true'] { display: flex; }\\n.modal-card { width: 100%; max-width: 32rem; border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: hsl(var(--card)); padding: 1.5rem; }\\n"
-  set p9 to ".max-w-\\\\[1240px\\\\] { max-width: 1240px; }\\n.max-w-xl { max-width: 36rem; }\\n.max-w-2xl { max-width: 42rem; }\\n.mx-auto { margin-left: auto; margin-right: auto; }\\n.ml-auto { margin-left: auto; }\\n.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }\\n.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }\\n.px-4 { padding-left: 1rem; padding-right: 1rem; }\\n.px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }\\n.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }\\n.py-0\\\\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }\\n.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }\\n.py-4 { padding-top: 1rem; padding-bottom: 1rem; }\\n.py-12 { padding-top: 3rem; padding-bottom: 3rem; }\\n.py-14 { padding-top: 3.5rem; padding-bottom: 3.5rem; }\\n.py-24 { padding-top: 6rem; padding-bottom: 6rem; }\\n.py-28 { padding-top: 7rem; padding-bottom: 7rem; }\\n.p-4 { padding: 1rem; }\\n.p-5 { padding: 1.25rem; }\\n.p-6 { padding: 1.5rem; }\\n.p-7 { padding: 1.75rem; }\\n.pt-16 { padding-top: 4rem; }\\n.pb-20 { padding-bottom: 5rem; }\\n.mt-1 { margin-top: 0.25rem; }\\n.mt-1\\\\.5 { margin-top: 0.375rem; }\\n.mt-2 { margin-top: 0.5rem; }\\n.mt-3 { margin-top: 0.75rem; }\\n.mt-4 { margin-top: 1rem; }\\n.mt-5 { margin-top: 1.25rem; }\\n.mt-6 { margin-top: 1.5rem; }\\n.mt-8 { margin-top: 2rem; }\\n.mt-9 { margin-top: 2.25rem; }\\n.mt-12 { margin-top: 3rem; }\\n.mt-14 { margin-top: 3.5rem; }\\n"
-  set p10 to ".flex { display: flex; }\\n.inline-flex { display: inline-flex; }\\n.inline-block { display: inline-block; }\\n.grid { display: grid; }\\n.hidden { display: none; }\\n.flex-col { flex-direction: column; }\\n.flex-wrap { flex-wrap: wrap; }\\n.items-center { align-items: center; }\\n.items-baseline { align-items: baseline; }\\n.justify-between { justify-content: space-between; }\\n.justify-center { justify-content: center; }\\n.gap-1 { gap: 0.25rem; }\\n.gap-1\\\\.5 { gap: 0.375rem; }\\n.gap-2 { gap: 0.5rem; }\\n.gap-2\\\\.5 { gap: 0.625rem; }\\n.gap-3 { gap: 0.75rem; }\\n.gap-4 { gap: 1rem; }\\n.gap-6 { gap: 1.5rem; }\\n.gap-8 { gap: 2rem; }\\n.gap-10 { gap: 2.5rem; }\\n.gap-12 { gap: 3rem; }\\n.space-y-2\\\\.5 > * + * { margin-top: 0.625rem; }\\n.space-y-3 > * + * { margin-top: 0.75rem; }\\n.space-y-24 > * + * { margin-top: 6rem; }\\n.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }\\n.w-full { width: 100%; }\\n.w-2\\\\.5 { width: 0.625rem; }\\n.h-2\\\\.5 { height: 0.625rem; }\\n.w-4 { width: 1rem; }\\n.h-4 { height: 1rem; }\\n.w-5 { width: 1.25rem; }\\n.h-5 { height: 1.25rem; }\\n.w-6 { width: 1.5rem; }\\n.h-6 { height: 1.5rem; }\\n.w-7 { width: 1.75rem; }\\n.h-7 { height: 1.75rem; }\\n.h-16 { height: 4rem; }\\n.min-h-screen { min-height: 100vh; }\\n.relative { position: relative; }\\n.absolute { position: absolute; }\\n.sticky { position: sticky; }\\n.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }\\n.top-0 { top: 0; }\\n.top-16 { top: 4rem; }\\n.z-40 { z-index: 40; }\\n"
-  set p11 to ".border { border-width: 1px; border-style: solid; }\\n.border-t { border-top: 1px solid hsl(var(--border)); }\\n.border-b { border-bottom: 1px solid hsl(var(--border)); }\\n.rounded { border-radius: 0.25rem; }\\n.rounded-md { border-radius: 0.375rem; }\\n.rounded-lg { border-radius: 0.5rem; }\\n.rounded-xl { border-radius: 0.75rem; }\\n.rounded-full { border-radius: 9999px; }\\n.overflow-hidden { overflow: hidden; }\\n.overflow-x-auto { overflow-x: auto; }\\n.text-xs { font-size: 0.75rem; }\\n.text-sm { font-size: 0.875rem; }\\n.text-base { font-size: 1rem; }\\n.text-lg { font-size: 1.125rem; }\\n.text-xl { font-size: 1.25rem; }\\n.text-2xl { font-size: 1.5rem; }\\n.text-3xl { font-size: 1.875rem; }\\n.text-4xl { font-size: 2.25rem; }\\n.text-5xl { font-size: 3rem; }\\n.font-medium { font-weight: 500; }\\n.font-semibold { font-weight: 600; }\\n.italic { font-style: italic; }\\n.uppercase { text-transform: uppercase; }\\n.tracking-tight { letter-spacing: -0.025em; }\\n.tracking-wider { letter-spacing: 0.05em; }\\n.leading-none { line-height: 1; }\\n.leading-tight { line-height: 1.12; }\\n.leading-snug { line-height: 1.28; }\\n.leading-relaxed { line-height: 1.625; }\\n.text-center { text-align: center; }\\n.text-primary { color: hsl(var(--primary)); }\\n.text-foreground { color: hsl(var(--foreground)); }\\n.text-muted-foreground { color: hsl(var(--muted-foreground)); }\\n.text-brand-green { color: hsl(var(--brand-green)); }\\n.backdrop-blur-md { backdrop-filter: blur(12px); }\\n"
-  set p12 to "@media (min-width: 768px) {\\n  .md\\\\:flex { display: flex !important; }\\n  .md\\\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }\\n  .md\\\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }\\n  .md\\\\:grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }\\n  .md\\\\:col-span-2 { grid-column: span 2 / span 2; }\\n  .md\\\\:col-span-3 { grid-column: span 3 / span 3; }\\n  .md\\\\:col-span-4 { grid-column: span 4 / span 4; }\\n  .md\\\\:col-span-6 { grid-column: span 6 / span 6; }\\n  .md\\\\:flex-row { flex-direction: row; }\\n  .md\\\\:items-center { align-items: center; }\\n  .md\\\\:text-4xl { font-size: 2.25rem; }\\n  .md\\\\:text-5xl { font-size: 3rem; }\\n  .md\\\\:text-6xl { font-size: 3.75rem; }\\n  .md\\\\:py-28 { padding-top: 7rem; padding-bottom: 7rem; }\\n  .md\\\\:pt-24 { padding-top: 6rem; }\\n  .md\\\\:pb-28 { padding-bottom: 7rem; }\\n  .md\\\\:p-7 { padding: 1.75rem; }\\n  .md\\\\:p-8 { padding: 2rem; }\\n}\\n@media (min-width: 1024px) {\\n  .lg\\\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }\\n  .lg\\\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }\\n  .lg\\\\:col-span-5 { grid-column: span 5 / span 5; }\\n  .lg\\\\:col-span-6 { grid-column: span 6 / span 6; }\\n  .lg\\\\:col-span-7 { grid-column: span 7 / span 7; }\\n  .lg\\\\:text-\\\\[64px\\\\] { font-size: 64px; }\\n  .lg\\\\:order-1 { order: 1; }\\n  .lg\\\\:order-2 { order: 2; }\\n}\\n"
-  return p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12
-end
-
-to web_browser_runtime_js
-  set j1 to "(function(){\\n  if (window.$sdev) return;\\n  const listeners = new Map();\\n  const state = {};\\n  function notify(key) {\\n    const val = state[key];\\n    document.querySelectorAll('[data-bind-text=\\"' + key + '\\"]').forEach(el => { el.textContent = val == null ? '' : String(val); });\\n    document.querySelectorAll('[data-bind-html=\\"' + key + '\\"]').forEach(el => { el.innerHTML = val == null ? '' : String(val); });\\n    document.querySelectorAll('[data-bind-value=\\"' + key + '\\"]').forEach(el => {\\n      if (el.type === 'checkbox') el.checked = Boolean(val);\\n      else if (el.value !== String(val == null ? '' : val)) el.value = val == null ? '' : String(val);\\n    });\\n    document.querySelectorAll('[data-bind-show=\\"' + key + '\\"]').forEach(el => { el.style.display = val ? '' : 'none'; });\\n    document.querySelectorAll('[data-bind-hide=\\"' + key + '\\"]').forEach(el => { el.style.display = val ? 'none' : ''; });\\n    const fns = listeners.get(key);\\n    if (fns) fns.forEach(fn => { try { fn(val); } catch (e) { console.error(e); } });\\n  }\\n"
-  set j2 to "  const $sdev = {\\n    state,\\n    initState(initial) { Object.assign(state, initial || {}); Object.keys(state).forEach(notify); },\\n    get(key, fallback) { return key in state ? state[key] : fallback; },\\n    set(key, val) { state[key] = val; notify(key); return val; },\\n    stateGet(key, fallback) { return $sdev.get(key, fallback); },\\n    stateSet(key, val) { return $sdev.set(key, val); },\\n    watch(key, fn) { if (!listeners.has(key)) listeners.set(key, new Set()); listeners.get(key).add(fn); return () => listeners.get(key).delete(fn); },\\n    q(sel) { return typeof sel === 'string' ? document.querySelector(sel) : sel; },\\n    qa(sel) { return Array.from(document.querySelectorAll(sel)); },\\n    setText(sel, txt) { const el = $sdev.q(sel); if (el) el.textContent = txt == null ? '' : String(txt); },\\n    text(sel, txt) { return $sdev.setText(sel, txt); },\\n    getText(sel) { const el = $sdev.q(sel); return el ? (el.textContent || '') : ''; },\\n    setHtml(sel, html) { const el = $sdev.q(sel); if (el) el.innerHTML = html == null ? '' : String(html); },\\n    html(sel, h) { return $sdev.setHtml(sel, h); },\\n    getHtml(sel) { const el = $sdev.q(sel); return el ? el.innerHTML : ''; },\\n    setVal(sel, v) { const el = $sdev.q(sel); if (el) { if (el.type === 'checkbox') el.checked = Boolean(v); else el.value = v == null ? '' : String(v); } },\\n    val(sel, v) { return $sdev.setVal(sel, v); },\\n    getVal(sel) { const el = $sdev.q(sel); if (!el) return ''; return el.type === 'checkbox' ? Boolean(el.checked) : (el.value || ''); },\\n    setStyle(sel, prop, val) { const el = $sdev.q(sel); if (el && el.style) el.style[prop] = val; },\\n    style(sel, prop, val) { return $sdev.setStyle(sel, prop, val); },\\n    setAttr(sel, attr, val) { const el = $sdev.q(sel); if (!el) return; if (val === false || val == null) el.removeAttribute(attr); else el.setAttribute(attr, String(val)); },\\n    attr(sel, attr, val) { return $sdev.setAttr(sel, attr, val); },\\n    getAttr(sel, attr) { const el = $sdev.q(sel); return el ? el.getAttribute(attr) : null; },\\n    addClass(sel, cls) { $sdev.qa(sel).forEach(el => el.classList.add(cls)); },\\n    removeClass(sel, cls) { $sdev.qa(sel).forEach(el => el.classList.remove(cls)); },\\n    toggleClass(sel, cls, force) { $sdev.qa(sel).forEach(el => el.classList.toggle(cls, force)); },\\n    hasClass(sel, cls) { const el = $sdev.q(sel); return el ? el.classList.contains(cls) : false; },\\n"
-  set j3 to "    on(sel, ev, fn) { if (sel === 'window') { window.addEventListener(ev, fn); return; } if (sel === 'document') { document.addEventListener(ev, fn); return; } $sdev.qa(sel).forEach(el => el.addEventListener(ev, fn)); },\\n    openModal(id) { const el = document.getElementById(id) || $sdev.q(id); if (el) el.setAttribute('data-open', 'true'); },\\n    closeModal(id) { const el = document.getElementById(id) || $sdev.q(id); if (el) el.setAttribute('data-open', 'false'); },\\n    switchTab(groupId, tabId) {\\n      document.querySelectorAll('[data-tab-group=\\"' + groupId + '\\"][data-tab-target]').forEach(btn => { btn.setAttribute('data-active', btn.getAttribute('data-tab-target') === tabId ? 'true' : 'false'); });\\n      document.querySelectorAll('[data-tab-group=\\"' + groupId + '\\"][data-tab-panel]').forEach(panel => { panel.setAttribute('data-active', panel.getAttribute('data-tab-panel') === tabId ? 'true' : 'false'); });\\n    },\\n    toggleAccordion(itemEl) { const item = typeof itemEl === 'string' ? $sdev.q(itemEl) : itemEl.closest('.accordion-item'); if (!item) return; const open = item.getAttribute('data-open') === 'true'; item.setAttribute('data-open', open ? 'false' : 'true'); },\\n    navigate(path) {\\n      const clean = String(path || '/').replace(/^#/, '') || '/';\\n      const views = document.querySelectorAll('[data-route-view]');\\n      if (views.length > 0) { views.forEach(v => { v.style.display = v.getAttribute('data-route-view') === clean ? '' : 'none'; }); window.location.hash = '#' + clean; }\\n    },\\n    copy(text) { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(String(text)); $sdev.toast('Copied to clipboard'); },\\n    toast(msg, opts) {\\n      opts = opts || {};\\n      let box = document.getElementById('sdev-toast-root');\\n      if (!box) { box = document.createElement('div'); box.id = 'sdev-toast-root'; box.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;'; document.body.appendChild(box); }\\n      const item = document.createElement('div');\\n      item.style.cssText = 'padding:10px 14px;border-radius:10px;background:hsl(var(--card));color:hsl(var(--foreground));border:1px solid hsl(var(--primary)/0.45);font-size:13px;';\\n      item.textContent = String(msg);\\n      box.appendChild(item);\\n      setTimeout(() => item.remove(), opts.duration || 2600);\\n    },\\n    bindAll() {\\n      document.querySelectorAll('[data-bind-value]').forEach(el => {\\n        if (el.__sdevBound) return; el.__sdevBound = true;\\n        const key = el.getAttribute('data-bind-value');\\n        el.addEventListener('input', () => { $sdev.set(key, el.type === 'checkbox' ? el.checked : el.value); });\\n      });\\n      Object.keys(state).forEach(notify);\\n    }\\n  };\\n  window.$sdev = $sdev;\\n  window.$state = new Proxy(state, { get(t, k) { return t[k]; }, set(t, k, v) { $sdev.set(String(k), v); return true; } });\\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => $sdev.bindAll()); else $sdev.bindAll();\\n})();"
-  return j1 + j2 + j3
-end
+    themes_default = `# =============================================================================\r
+# SDEV Self-Hosted Web Toolkit: Themes, Utilities & Browser Runtime\r
+# (lang/web/themes.sdev)\r
+# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r
+# =============================================================================\r
+\r
+use "lang/stdlib/v2/text.sdev"\r
+\r
+to web_theme_css with theme_name\r
+  set t to lower(trim(theme_name))\r
+  if str_eq(t, "sdev-light") or str_eq(t, "light")\r
+    return ":root {\\n  --background: 210 25% 98%;\\n  --foreground: 228 24% 10%;\\n  --card: 0 0% 100%;\\n  --card-foreground: 228 24% 10%;\\n  --popover: 0 0% 100%;\\n  --popover-foreground: 228 24% 10%;\\n  --primary: 201 94% 40%;\\n  --primary-foreground: 0 0% 100%;\\n  --secondary: 214 20% 93%;\\n  --secondary-foreground: 228 24% 14%;\\n  --muted: 214 20% 94%;\\n  --muted-foreground: 220 12% 42%;\\n  --accent: 245 80% 58%;\\n  --accent-foreground: 0 0% 100%;\\n  --border: 214 18% 87%;\\n  --input: 214 18% 87%;\\n  --ring: 201 94% 40%;\\n  --radius: 0.75rem;\\n  --brand-green: 160 84% 35%;\\n  --brand-amber: 36 92% 48%;\\n  --brand-rose: 350 84% 54%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"\r
+  end\r
+  if str_eq(t, "glass") or str_eq(t, "liquid-glass")\r
+    return ":root {\\n  --background: 230 35% 7%;\\n  --foreground: 210 30% 98%;\\n  --card: 230 30% 13%;\\n  --card-foreground: 210 30% 98%;\\n  --primary: 192 95% 68%;\\n  --primary-foreground: 230 35% 7%;\\n  --secondary: 230 25% 18%;\\n  --secondary-foreground: 210 25% 94%;\\n  --muted: 230 22% 16%;\\n  --muted-foreground: 218 15% 68%;\\n  --accent: 270 90% 72%;\\n  --accent-foreground: 210 30% 98%;\\n  --border: 220 30% 26%;\\n  --input: 220 30% 22%;\\n  --ring: 192 95% 68%;\\n  --radius: 1rem;\\n  --brand-green: 160 84% 52%;\\n  --brand-amber: 38 95% 60%;\\n  --brand-rose: 350 88% 64%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"\r
+  end\r
+  if str_eq(t, "cyberpunk") or str_eq(t, "neon")\r
+    return ":root {\\n  --background: 260 40% 5%;\\n  --foreground: 180 100% 95%;\\n  --card: 260 35% 9%;\\n  --card-foreground: 180 100% 95%;\\n  --primary: 320 100% 62%;\\n  --primary-foreground: 260 40% 5%;\\n  --secondary: 260 30% 15%;\\n  --secondary-foreground: 180 100% 92%;\\n  --muted: 260 25% 13%;\\n  --muted-foreground: 250 20% 65%;\\n  --accent: 180 100% 55%;\\n  --accent-foreground: 260 40% 5%;\\n  --border: 320 60% 28%;\\n  --input: 260 30% 16%;\\n  --ring: 320 100% 62%;\\n  --radius: 0.5rem;\\n  --brand-green: 150 100% 50%;\\n  --brand-amber: 48 100% 55%;\\n  --brand-rose: 350 100% 62%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"\r
+  end\r
+  return ":root {\\n  --background: 228 22% 5%;\\n  --foreground: 210 20% 96%;\\n  --card: 228 19% 8%;\\n  --card-foreground: 210 20% 96%;\\n  --popover: 228 22% 7%;\\n  --popover-foreground: 210 20% 96%;\\n  --primary: 199 95% 64%;\\n  --primary-foreground: 228 24% 6%;\\n  --secondary: 228 16% 12%;\\n  --secondary-foreground: 210 18% 92%;\\n  --muted: 228 15% 11%;\\n  --muted-foreground: 220 11% 60%;\\n  --accent: 245 82% 67%;\\n  --accent-foreground: 210 20% 98%;\\n  --destructive: 0 72% 56%;\\n  --destructive-foreground: 0 0% 98%;\\n  --border: 228 14% 15%;\\n  --input: 228 15% 13%;\\n  --ring: 199 95% 64%;\\n  --radius: 0.75rem;\\n  --brand-green: 160 84% 48%;\\n  --brand-amber: 38 95% 58%;\\n  --brand-rose: 350 88% 62%;\\n  --scroll-progress: 0;\\n  --CompilerScene-progress: 0;\\n}"\r
+end\r
+\r
+to web_utilities_css\r
+  set p1 to "@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');\\n"\r
+  set p2 to "*, *::before, *::after { box-sizing: border-box; border-color: hsl(var(--border)); }\\nhtml { scroll-behavior: smooth; color-scheme: dark; }\\nbody { margin: 0; background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11'; line-height: 1.5; overflow-x: hidden; }\\nh1, h2, h3, .font-display { font-family: 'Instrument Serif', Georgia, serif; letter-spacing: -0.02em; font-weight: 400; margin: 0; }\\nh4, h5, h6 { margin: 0; font-weight: 600; }\\np { margin: 0; }\\na { color: inherit; text-decoration: none; }\\ncode, pre, .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-feature-settings: 'liga' 1, 'calt' 1; }\\n"\r
+  set p3 to ".reading-progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 60; background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--brand-green))); transform-origin: 0 50%; transform: scaleX(var(--scroll-progress, 0)); }\\n.eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }\\n.eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: hsl(var(--primary)); box-shadow: 0 0 12px hsl(var(--primary)); }\\n.hero-spot { background: radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / 0.14), transparent 70%), radial-gradient(40% 40% at 75% 20%, hsl(var(--accent) / 0.10), transparent 70%); }\\n.hero-grid { background-image: linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border) / 0.5) 1px, transparent 1px); background-size: 56px 56px; mask-image: radial-gradient(ellipse 70% 60% at 50% 25%, #000 40%, transparent 80%); -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 25%, #000 40%, transparent 80%); }\\n"\r
+  set p4 to ".btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: calc(var(--radius) - 2px); font-size: 0.875rem; font-weight: 500; padding: 0.625rem 1.125rem; cursor: pointer; transition: all 0.18s ease; border: 1px solid transparent; line-height: 1.25; font-family: inherit; white-space: nowrap; }\\n.btn:active { transform: translateY(1px); }\\n.btn-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 0 8px 24px -6px hsl(var(--primary) / 0.45); }\\n.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 12px 30px -6px hsl(var(--primary) / 0.6); }\\n.btn-secondary { background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); border-color: hsl(var(--border)); }\\n.btn-secondary:hover { background: hsl(var(--secondary) / 0.8); border-color: hsl(var(--primary) / 0.35); }\\n.btn-outline { background: transparent; color: hsl(var(--foreground)); border-color: hsl(var(--border)); }\\n.btn-outline:hover { background: hsl(var(--secondary)); border-color: hsl(var(--primary) / 0.4); }\\n.btn-ghost { background: transparent; color: hsl(var(--muted-foreground)); border-color: transparent; }\\n.btn-ghost:hover { background: hsl(var(--secondary)); color: hsl(var(--foreground)); }\\n.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; border-radius: calc(var(--radius) - 4px); }\\n.btn-lg { padding: 0.75rem 1.375rem; font-size: 0.9375rem; }\\n"\r
+  set p5 to ".bento, .card { position: relative; border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(228 20% 6.5%) 100%); overflow: hidden; transition: border-color 0.25s ease, transform 0.25s ease; }\\n.bento:hover { border-color: hsl(var(--primary) / 0.4); }\\n.bento::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 0%), hsl(var(--primary) / 0.08), transparent 45%); opacity: 0; transition: opacity 0.3s ease; }\\n.bento:hover::after { opacity: 1; }\\n.stage-card { border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.85); backdrop-filter: blur(12px); padding: 1.1rem 1.25rem; transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.3s ease; }\\n.stage-card[data-active='true'] { border-color: hsl(var(--primary) / 0.55); background: hsl(var(--card)); transform: translateX(4px); }\\n.stage-num { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: hsl(var(--muted-foreground)); letter-spacing: 0.08em; }\\n.stage-card[data-active='true'] .stage-num { color: hsl(var(--primary)); }\\n"\r
+  set p6 to ".kw { position: absolute; inset: 0; display: flex; align-items: baseline; gap: 1rem; opacity: 0; transform: translateY(8px); transition: opacity 0.35s ease, transform 0.35s ease; pointer-events: none; }\\n.kw[data-active='true'] { opacity: 1; transform: none; pointer-events: auto; }\\n.language-choice[aria-pressed='true'] { background: hsl(var(--secondary)); color: hsl(var(--foreground)); border-color: hsl(var(--primary) / 0.4); }\\n.path { display: flex; flex-direction: column; border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.6); padding: 1.75rem; text-align: left; transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.25s ease; cursor: pointer; font-family: inherit; color: inherit; }\\n.path:hover { border-color: hsl(var(--primary) / 0.5); background: hsl(var(--card)); transform: translateY(-2px); }\\n.path-cta { margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; font-weight: 500; color: hsl(var(--primary)); }\\n.final { position: relative; border-top: 1px solid hsl(var(--border)); background: radial-gradient(60% 80% at 50% 100%, hsl(var(--primary) / 0.16), transparent 70%), radial-gradient(40% 60% at 50% 100%, hsl(var(--accent) / 0.12), transparent 70%); overflow: hidden; }\\n.final .hero-grid { position: absolute; inset: 0; pointer-events: none; }\\n"\r
+  set p7 to ".reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1); }\\n.reveal.reveal-left { transform: translateX(-20px); }\\n.reveal.reveal-right { transform: translateX(20px); }\\n.reveal.is-visible { opacity: 1; transform: none; }\\n@media (prefers-reduced-motion: reduce) { .reveal, .reveal.reveal-left, .reveal.reveal-right { opacity: 1 !important; transform: none !important; transition: none !important; } }\\n"\r
+  set p8 to ".badge { display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 9999px; padding: 0.2rem 0.65rem; font-size: 0.75rem; font-weight: 500; background: hsl(var(--secondary)); color: hsl(var(--foreground)); border: 1px solid hsl(var(--border)); }\\n.form-input, .form-select, .form-textarea { width: 100%; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--border)); background: hsl(var(--input)); color: hsl(var(--foreground)); padding: 0.6rem 0.85rem; font-size: 0.875rem; font-family: inherit; outline: none; }\\n.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2); }\\n.table-wrap { width: 100%; overflow-x: auto; border-radius: var(--radius); border: 1px solid hsl(var(--border)); }\\n.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; }\\n.table th { padding: 0.75rem 1rem; background: hsl(var(--secondary) / 0.6); color: hsl(var(--muted-foreground)); font-weight: 600; border-bottom: 1px solid hsl(var(--border)); }\\n.table td { padding: 0.75rem 1rem; border-bottom: 1px solid hsl(var(--border) / 0.6); }\\n.tabs-list { display: inline-flex; gap: 0.25rem; padding: 0.25rem; border-radius: calc(var(--radius) - 2px); background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); }\\n.tab-btn { padding: 0.4rem 0.85rem; border-radius: calc(var(--radius) - 4px); font-size: 0.8125rem; font-weight: 500; color: hsl(var(--muted-foreground)); background: transparent; border: none; cursor: pointer; font-family: inherit; }\\n.tab-btn[data-active='true'] { background: hsl(var(--background)); color: hsl(var(--foreground)); }\\n.tab-panel { display: none; }\\n.tab-panel[data-active='true'] { display: block; }\\n.accordion-item { border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); background: hsl(var(--card)); overflow: hidden; margin-bottom: 0.5rem; }\\n.accordion-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: transparent; border: none; color: hsl(var(--foreground)); font-size: 0.9375rem; font-weight: 500; text-align: left; cursor: pointer; font-family: inherit; }\\n.accordion-content { display: none; padding: 0 1.25rem 1rem; color: hsl(var(--muted-foreground)); font-size: 0.875rem; }\\n.accordion-item[data-open='true'] .accordion-content { display: block; }\\n.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; padding: 1.5rem; }\\n.modal-backdrop[data-open='true'] { display: flex; }\\n.modal-card { width: 100%; max-width: 32rem; border-radius: var(--radius); border: 1px solid hsl(var(--border)); background: hsl(var(--card)); padding: 1.5rem; }\\n"\r
+  set p9 to ".max-w-\\\\[1240px\\\\] { max-width: 1240px; }\\n.max-w-xl { max-width: 36rem; }\\n.max-w-2xl { max-width: 42rem; }\\n.mx-auto { margin-left: auto; margin-right: auto; }\\n.ml-auto { margin-left: auto; }\\n.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }\\n.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }\\n.px-4 { padding-left: 1rem; padding-right: 1rem; }\\n.px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }\\n.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }\\n.py-0\\\\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }\\n.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }\\n.py-4 { padding-top: 1rem; padding-bottom: 1rem; }\\n.py-12 { padding-top: 3rem; padding-bottom: 3rem; }\\n.py-14 { padding-top: 3.5rem; padding-bottom: 3.5rem; }\\n.py-24 { padding-top: 6rem; padding-bottom: 6rem; }\\n.py-28 { padding-top: 7rem; padding-bottom: 7rem; }\\n.p-4 { padding: 1rem; }\\n.p-5 { padding: 1.25rem; }\\n.p-6 { padding: 1.5rem; }\\n.p-7 { padding: 1.75rem; }\\n.pt-16 { padding-top: 4rem; }\\n.pb-20 { padding-bottom: 5rem; }\\n.mt-1 { margin-top: 0.25rem; }\\n.mt-1\\\\.5 { margin-top: 0.375rem; }\\n.mt-2 { margin-top: 0.5rem; }\\n.mt-3 { margin-top: 0.75rem; }\\n.mt-4 { margin-top: 1rem; }\\n.mt-5 { margin-top: 1.25rem; }\\n.mt-6 { margin-top: 1.5rem; }\\n.mt-8 { margin-top: 2rem; }\\n.mt-9 { margin-top: 2.25rem; }\\n.mt-12 { margin-top: 3rem; }\\n.mt-14 { margin-top: 3.5rem; }\\n"\r
+  set p10 to ".flex { display: flex; }\\n.inline-flex { display: inline-flex; }\\n.inline-block { display: inline-block; }\\n.grid { display: grid; }\\n.hidden { display: none; }\\n.flex-col { flex-direction: column; }\\n.flex-wrap { flex-wrap: wrap; }\\n.items-center { align-items: center; }\\n.items-baseline { align-items: baseline; }\\n.justify-between { justify-content: space-between; }\\n.justify-center { justify-content: center; }\\n.gap-1 { gap: 0.25rem; }\\n.gap-1\\\\.5 { gap: 0.375rem; }\\n.gap-2 { gap: 0.5rem; }\\n.gap-2\\\\.5 { gap: 0.625rem; }\\n.gap-3 { gap: 0.75rem; }\\n.gap-4 { gap: 1rem; }\\n.gap-6 { gap: 1.5rem; }\\n.gap-8 { gap: 2rem; }\\n.gap-10 { gap: 2.5rem; }\\n.gap-12 { gap: 3rem; }\\n.space-y-2\\\\.5 > * + * { margin-top: 0.625rem; }\\n.space-y-3 > * + * { margin-top: 0.75rem; }\\n.space-y-24 > * + * { margin-top: 6rem; }\\n.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }\\n.w-full { width: 100%; }\\n.w-2\\\\.5 { width: 0.625rem; }\\n.h-2\\\\.5 { height: 0.625rem; }\\n.w-4 { width: 1rem; }\\n.h-4 { height: 1rem; }\\n.w-5 { width: 1.25rem; }\\n.h-5 { height: 1.25rem; }\\n.w-6 { width: 1.5rem; }\\n.h-6 { height: 1.5rem; }\\n.w-7 { width: 1.75rem; }\\n.h-7 { height: 1.75rem; }\\n.h-16 { height: 4rem; }\\n.min-h-screen { min-height: 100vh; }\\n.relative { position: relative; }\\n.absolute { position: absolute; }\\n.sticky { position: sticky; }\\n.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }\\n.top-0 { top: 0; }\\n.top-16 { top: 4rem; }\\n.z-40 { z-index: 40; }\\n"\r
+  set p11 to ".border { border-width: 1px; border-style: solid; }\\n.border-t { border-top: 1px solid hsl(var(--border)); }\\n.border-b { border-bottom: 1px solid hsl(var(--border)); }\\n.rounded { border-radius: 0.25rem; }\\n.rounded-md { border-radius: 0.375rem; }\\n.rounded-lg { border-radius: 0.5rem; }\\n.rounded-xl { border-radius: 0.75rem; }\\n.rounded-full { border-radius: 9999px; }\\n.overflow-hidden { overflow: hidden; }\\n.overflow-x-auto { overflow-x: auto; }\\n.text-xs { font-size: 0.75rem; }\\n.text-sm { font-size: 0.875rem; }\\n.text-base { font-size: 1rem; }\\n.text-lg { font-size: 1.125rem; }\\n.text-xl { font-size: 1.25rem; }\\n.text-2xl { font-size: 1.5rem; }\\n.text-3xl { font-size: 1.875rem; }\\n.text-4xl { font-size: 2.25rem; }\\n.text-5xl { font-size: 3rem; }\\n.font-medium { font-weight: 500; }\\n.font-semibold { font-weight: 600; }\\n.italic { font-style: italic; }\\n.uppercase { text-transform: uppercase; }\\n.tracking-tight { letter-spacing: -0.025em; }\\n.tracking-wider { letter-spacing: 0.05em; }\\n.leading-none { line-height: 1; }\\n.leading-tight { line-height: 1.12; }\\n.leading-snug { line-height: 1.28; }\\n.leading-relaxed { line-height: 1.625; }\\n.text-center { text-align: center; }\\n.text-primary { color: hsl(var(--primary)); }\\n.text-foreground { color: hsl(var(--foreground)); }\\n.text-muted-foreground { color: hsl(var(--muted-foreground)); }\\n.text-brand-green { color: hsl(var(--brand-green)); }\\n.backdrop-blur-md { backdrop-filter: blur(12px); }\\n"\r
+  set p12 to "@media (min-width: 768px) {\\n  .md\\\\:flex { display: flex !important; }\\n  .md\\\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }\\n  .md\\\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }\\n  .md\\\\:grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }\\n  .md\\\\:col-span-2 { grid-column: span 2 / span 2; }\\n  .md\\\\:col-span-3 { grid-column: span 3 / span 3; }\\n  .md\\\\:col-span-4 { grid-column: span 4 / span 4; }\\n  .md\\\\:col-span-6 { grid-column: span 6 / span 6; }\\n  .md\\\\:flex-row { flex-direction: row; }\\n  .md\\\\:items-center { align-items: center; }\\n  .md\\\\:text-4xl { font-size: 2.25rem; }\\n  .md\\\\:text-5xl { font-size: 3rem; }\\n  .md\\\\:text-6xl { font-size: 3.75rem; }\\n  .md\\\\:py-28 { padding-top: 7rem; padding-bottom: 7rem; }\\n  .md\\\\:pt-24 { padding-top: 6rem; }\\n  .md\\\\:pb-28 { padding-bottom: 7rem; }\\n  .md\\\\:p-7 { padding: 1.75rem; }\\n  .md\\\\:p-8 { padding: 2rem; }\\n}\\n@media (min-width: 1024px) {\\n  .lg\\\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }\\n  .lg\\\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }\\n  .lg\\\\:col-span-5 { grid-column: span 5 / span 5; }\\n  .lg\\\\:col-span-6 { grid-column: span 6 / span 6; }\\n  .lg\\\\:col-span-7 { grid-column: span 7 / span 7; }\\n  .lg\\\\:text-\\\\[64px\\\\] { font-size: 64px; }\\n  .lg\\\\:order-1 { order: 1; }\\n  .lg\\\\:order-2 { order: 2; }\\n}\\n"\r
+  return p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11 + p12\r
+end\r
+\r
+to web_browser_runtime_js\r
+  set j1 to "(function(){\\n  if (window.$sdev) return;\\n  const listeners = new Map();\\n  const state = {};\\n  function notify(key) {\\n    const val = state[key];\\n    document.querySelectorAll('[data-bind-text=\\"' + key + '\\"]').forEach(el => { el.textContent = val == null ? '' : String(val); });\\n    document.querySelectorAll('[data-bind-html=\\"' + key + '\\"]').forEach(el => { el.innerHTML = val == null ? '' : String(val); });\\n    document.querySelectorAll('[data-bind-value=\\"' + key + '\\"]').forEach(el => {\\n      if (el.type === 'checkbox') el.checked = Boolean(val);\\n      else if (el.value !== String(val == null ? '' : val)) el.value = val == null ? '' : String(val);\\n    });\\n    document.querySelectorAll('[data-bind-show=\\"' + key + '\\"]').forEach(el => { el.style.display = val ? '' : 'none'; });\\n    document.querySelectorAll('[data-bind-hide=\\"' + key + '\\"]').forEach(el => { el.style.display = val ? 'none' : ''; });\\n    const fns = listeners.get(key);\\n    if (fns) fns.forEach(fn => { try { fn(val); } catch (e) { console.error(e); } });\\n  }\\n"\r
+  set j2 to "  const $sdev = {\\n    state,\\n    initState(initial) { Object.assign(state, initial || {}); Object.keys(state).forEach(notify); },\\n    get(key, fallback) { return key in state ? state[key] : fallback; },\\n    set(key, val) { state[key] = val; notify(key); return val; },\\n    stateGet(key, fallback) { return $sdev.get(key, fallback); },\\n    stateSet(key, val) { return $sdev.set(key, val); },\\n    watch(key, fn) { if (!listeners.has(key)) listeners.set(key, new Set()); listeners.get(key).add(fn); return () => listeners.get(key).delete(fn); },\\n    q(sel) { return typeof sel === 'string' ? document.querySelector(sel) : sel; },\\n    qa(sel) { return Array.from(document.querySelectorAll(sel)); },\\n    setText(sel, txt) { const el = $sdev.q(sel); if (el) el.textContent = txt == null ? '' : String(txt); },\\n    text(sel, txt) { return $sdev.setText(sel, txt); },\\n    getText(sel) { const el = $sdev.q(sel); return el ? (el.textContent || '') : ''; },\\n    setHtml(sel, html) { const el = $sdev.q(sel); if (el) el.innerHTML = html == null ? '' : String(html); },\\n    html(sel, h) { return $sdev.setHtml(sel, h); },\\n    getHtml(sel) { const el = $sdev.q(sel); return el ? el.innerHTML : ''; },\\n    setVal(sel, v) { const el = $sdev.q(sel); if (el) { if (el.type === 'checkbox') el.checked = Boolean(v); else el.value = v == null ? '' : String(v); } },\\n    val(sel, v) { return $sdev.setVal(sel, v); },\\n    getVal(sel) { const el = $sdev.q(sel); if (!el) return ''; return el.type === 'checkbox' ? Boolean(el.checked) : (el.value || ''); },\\n    setStyle(sel, prop, val) { const el = $sdev.q(sel); if (el && el.style) el.style[prop] = val; },\\n    style(sel, prop, val) { return $sdev.setStyle(sel, prop, val); },\\n    setAttr(sel, attr, val) { const el = $sdev.q(sel); if (!el) return; if (val === false || val == null) el.removeAttribute(attr); else el.setAttribute(attr, String(val)); },\\n    attr(sel, attr, val) { return $sdev.setAttr(sel, attr, val); },\\n    getAttr(sel, attr) { const el = $sdev.q(sel); return el ? el.getAttribute(attr) : null; },\\n    addClass(sel, cls) { $sdev.qa(sel).forEach(el => el.classList.add(cls)); },\\n    removeClass(sel, cls) { $sdev.qa(sel).forEach(el => el.classList.remove(cls)); },\\n    toggleClass(sel, cls, force) { $sdev.qa(sel).forEach(el => el.classList.toggle(cls, force)); },\\n    hasClass(sel, cls) { const el = $sdev.q(sel); return el ? el.classList.contains(cls) : false; },\\n"\r
+  set j3 to "    on(sel, ev, fn) { if (sel === 'window') { window.addEventListener(ev, fn); return; } if (sel === 'document') { document.addEventListener(ev, fn); return; } $sdev.qa(sel).forEach(el => el.addEventListener(ev, fn)); },\\n    openModal(id) { const el = document.getElementById(id) || $sdev.q(id); if (el) el.setAttribute('data-open', 'true'); },\\n    closeModal(id) { const el = document.getElementById(id) || $sdev.q(id); if (el) el.setAttribute('data-open', 'false'); },\\n    switchTab(groupId, tabId) {\\n      document.querySelectorAll('[data-tab-group=\\"' + groupId + '\\"][data-tab-target]').forEach(btn => { btn.setAttribute('data-active', btn.getAttribute('data-tab-target') === tabId ? 'true' : 'false'); });\\n      document.querySelectorAll('[data-tab-group=\\"' + groupId + '\\"][data-tab-panel]').forEach(panel => { panel.setAttribute('data-active', panel.getAttribute('data-tab-panel') === tabId ? 'true' : 'false'); });\\n    },\\n    toggleAccordion(itemEl) { const item = typeof itemEl === 'string' ? $sdev.q(itemEl) : itemEl.closest('.accordion-item'); if (!item) return; const open = item.getAttribute('data-open') === 'true'; item.setAttribute('data-open', open ? 'false' : 'true'); },\\n    navigate(path) {\\n      const clean = String(path || '/').replace(/^#/, '') || '/';\\n      const views = document.querySelectorAll('[data-route-view]');\\n      if (views.length > 0) { views.forEach(v => { v.style.display = v.getAttribute('data-route-view') === clean ? '' : 'none'; }); window.location.hash = '#' + clean; }\\n    },\\n    copy(text) { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(String(text)); $sdev.toast('Copied to clipboard'); },\\n    toast(msg, opts) {\\n      opts = opts || {};\\n      let box = document.getElementById('sdev-toast-root');\\n      if (!box) { box = document.createElement('div'); box.id = 'sdev-toast-root'; box.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;'; document.body.appendChild(box); }\\n      const item = document.createElement('div');\\n      item.style.cssText = 'padding:10px 14px;border-radius:10px;background:hsl(var(--card));color:hsl(var(--foreground));border:1px solid hsl(var(--primary)/0.45);font-size:13px;';\\n      item.textContent = String(msg);\\n      box.appendChild(item);\\n      setTimeout(() => item.remove(), opts.duration || 2600);\\n    },\\n    bindAll() {\\n      document.querySelectorAll('[data-bind-value]').forEach(el => {\\n        if (el.__sdevBound) return; el.__sdevBound = true;\\n        const key = el.getAttribute('data-bind-value');\\n        el.addEventListener('input', () => { $sdev.set(key, el.type === 'checkbox' ? el.checked : el.value); });\\n      });\\n      Object.keys(state).forEach(notify);\\n    }\\n  };\\n  window.$sdev = $sdev;\\n  window.$state = new Proxy(state, { get(t, k) { return t[k]; }, set(t, k, v) { $sdev.set(String(k), v); return true; } });\\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => $sdev.bindAll()); else $sdev.bindAll();\\n})();"\r
+  return j1 + j2 + j3\r
+end\r
 `;
   }
 });
@@ -7240,251 +8120,251 @@ end
 var transpiler_default;
 var init_transpiler = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\web\\transpiler.sdev"() {
-    transpiler_default = `# =============================================================================
-# SDEV Self-Hosted Web Toolkit: SDEV-to-JavaScript Client Transpiler
-# (lang/web/transpiler.sdev)
-# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.
-# =============================================================================
-
-use "lang/stdlib/v2/text.sdev"
-
-to sdev_expr_to_js with expr
-  set s to trim(expr)
-  if length(s) is 0
-    return ""
-  end
-  # Boolean & null literals
-  set s to replace(s, " yep", " true")
-  set s to replace(s, "(yep", "(true")
-  set s to replace(s, ",yep", ",true")
-  set s to replace(s, " nope", " false")
-  set s to replace(s, "(nope", "(false")
-  set s to replace(s, ",nope", ",false")
-  if str_eq(s, "yep")
-    set s to "true"
-  end
-  if str_eq(s, "nope")
-    set s to "false"
-  end
-  if str_eq(s, "void") or str_eq(s, "nothing")
-    set s to "null"
-  end
-
-  # Operators
-  set s to replace(s, " is not ", " !== ")
-  set s to replace(s, " equals ", " === ")
-  set s to replace(s, " differs ", " !== ")
-  set s to replace(s, " is ", " === ")
-  set s to replace(s, " also ", " && ")
-  set s to replace(s, " and ", " && ")
-  set s to replace(s, " either ", " || ")
-  set s to replace(s, " or ", " || ")
-  set s to replace(s, "isnt ", "!")
-
-  # DOM & Reactive State Builtins -> window.$sdev.*
-  set s to replace(s, "state_get(", "window.$sdev.get(")
-  set s to replace(s, "state_set(", "window.$sdev.set(")
-  set s to replace(s, "dom_text(", "window.$sdev.setText(")
-  set s to replace(s, "dom_get_text(", "window.$sdev.getText(")
-  set s to replace(s, "dom_html(", "window.$sdev.setHtml(")
-  set s to replace(s, "dom_value(", "window.$sdev.setVal(")
-  set s to replace(s, "dom_get_value(", "window.$sdev.getVal(")
-  set s to replace(s, "dom_style(", "window.$sdev.setStyle(")
-  set s to replace(s, "dom_attr(", "window.$sdev.setAttr(")
-  set s to replace(s, "dom_add_class(", "window.$sdev.addClass(")
-  set s to replace(s, "dom_remove_class(", "window.$sdev.removeClass(")
-  set s to replace(s, "dom_toggle_class(", "window.$sdev.toggleClass(")
-  set s to replace(s, "open_modal(", "window.$sdev.openModal(")
-  set s to replace(s, "close_modal(", "window.$sdev.closeModal(")
-  set s to replace(s, "toast(", "window.$sdev.toast(")
-  set s to replace(s, "clipboard_copy(", "window.$sdev.copy(")
-  set s to replace(s, "navigate_to(", "window.$sdev.navigate(")
-  set s to replace(s, "str(", "String(")
-  return concat(s, "")
-end
-
-to sdev_line_to_js with raw_line
-  set t to trim(raw_line)
-  if length(t) is 0
-    return ""
-  end
-  if text_starts_with(t, "#") or text_starts_with(t, "//")
-    return ""
-  end
-
-  # Block closers
-  if str_eq(t, ";;") or str_eq(t, "end")
-    return "}"
-  end
-
-  # Else-if / otherwise ponder
-  if text_starts_with(t, ";; otherwise ponder ") and text_ends_with(t, " ::")
-    set cond to substr(t, 20, length(t) - 23)
-    return "} else if (" + sdev_expr_to_js(cond) + ") {"
-  end
-  if text_starts_with(t, "otherwise ponder ") and text_ends_with(t, " ::")
-    set cond to substr(t, 17, length(t) - 20)
-    return "} else if (" + sdev_expr_to_js(cond) + ") {"
-  end
-  if text_starts_with(t, "else if ")
-    set cond to substr(t, 8, length(t) - 8)
-    return "} else if (" + sdev_expr_to_js(cond) + ") {"
-  end
-
-  # Else / otherwise
-  if str_eq(t, ";; otherwise ::") or str_eq(t, "otherwise ::") or str_eq(t, "else")
-    return "} else {"
-  end
-
-  # If / ponder
-  if text_starts_with(t, "ponder ") and text_ends_with(t, " ::")
-    set cond to substr(t, 7, length(t) - 10)
-    return "if (" + sdev_expr_to_js(cond) + ") {"
-  end
-  if text_starts_with(t, "if ")
-    set cond to substr(t, 3, length(t) - 3)
-    if text_ends_with(cond, " ::")
-      set cond to substr(cond, 0, length(cond) - 3)
-    end
-    return "if (" + sdev_expr_to_js(cond) + ") {"
-  end
-
-  # While / cycle
-  if text_starts_with(t, "cycle ") and text_ends_with(t, " ::")
-    set cond to substr(t, 6, length(t) - 9)
-    return "while (" + sdev_expr_to_js(cond) + ") {"
-  end
-  if text_starts_with(t, "while ")
-    set cond to substr(t, 6, length(t) - 6)
-    if text_ends_with(cond, " ::")
-      set cond to substr(cond, 0, length(cond) - 3)
-    end
-    return "while (" + sdev_expr_to_js(cond) + ") {"
-  end
-
-  # For each / iterate
-  if text_starts_with(t, "iterate ") and text_ends_with(t, " ::")
-    set body_part to substr(t, 8, length(t) - 11)
-    set th_idx to find(body_part, " through ")
-    if th_idx >= 0
-      set vname to trim(substr(body_part, 0, th_idx))
-      set iter_ex to substr(body_part, th_idx + 9, length(body_part) - (th_idx + 9))
-      return "for (const " + vname + " of " + sdev_expr_to_js(iter_ex) + ") {"
-    end
-  end
-  if text_starts_with(t, "for each ")
-    set body_part to substr(t, 9, length(t) - 9)
-    set in_idx to find(body_part, " in ")
-    if in_idx >= 0
-      set vname to trim(substr(body_part, 0, in_idx))
-      set iter_ex to substr(body_part, in_idx + 4, length(body_part) - (in_idx + 4))
-      return "for (const " + vname + " of " + sdev_expr_to_js(iter_ex) + ") {"
-    end
-  end
-
-  # Function declarations: conjure name(params) ::  OR  to name with a b
-  if text_starts_with(t, "conjure ") and text_ends_with(t, " ::")
-    set sig to trim(substr(t, 8, length(t) - 11))
-    return "function " + sig + " {"
-  end
-  if text_starts_with(t, "to ")
-    set rest to trim(substr(t, 3, length(t) - 3))
-    set w_idx to find(rest, " with ")
-    if w_idx >= 0
-      set fname to trim(substr(rest, 0, w_idx))
-      set pstr to trim(substr(rest, w_idx + 6, length(rest) - (w_idx + 6)))
-      set plist to split(pstr, " ")
-      return "function " + fname + "(" + join(plist, ", ") + ") {"
-    end
-    return "function " + rest + "() {"
-  end
-
-  # Variable declaration: forge x be val  OR  set x to val
-  if text_starts_with(t, "forge ")
-    set rest to substr(t, 6, length(t) - 6)
-    set b_idx to find(rest, " be ")
-    if b_idx >= 0
-      set vname to trim(substr(rest, 0, b_idx))
-      set vex to substr(rest, b_idx + 4, length(rest) - (b_idx + 4))
-      return "let " + vname + " = " + sdev_expr_to_js(vex) + ";"
-    end
-  end
-  if text_starts_with(t, "set ")
-    set rest to substr(t, 4, length(t) - 4)
-    set to_idx to find(rest, " to ")
-    if to_idx >= 0
-      set vname to trim(substr(rest, 0, to_idx))
-      set vex to substr(rest, to_idx + 4, length(rest) - (to_idx + 4))
-      return "let " + vname + " = " + sdev_expr_to_js(vex) + ";"
-    end
-  end
-
-  # Return / yield / break / continue
-  if text_starts_with(t, "yield ")
-    return "return " + sdev_expr_to_js(substr(t, 6, length(t) - 6)) + ";"
-  end
-  if text_starts_with(t, "return ")
-    return "return " + sdev_expr_to_js(substr(t, 7, length(t) - 7)) + ";"
-  end
-  if str_eq(t, "yield") or str_eq(t, "return")
-    return "return;"
-  end
-  if str_eq(t, "yeet") or str_eq(t, "break")
-    return "break;"
-  end
-  if str_eq(t, "skip") or str_eq(t, "continue")
-    return "continue;"
-  end
-
-  # Output: speak(...) / say ...
-  if text_starts_with(t, "speak(") and text_ends_with(t, ")")
-    set inner to substr(t, 6, length(t) - 7)
-    return "console.log(" + sdev_expr_to_js(inner) + ");"
-  end
-  if text_starts_with(t, "say ")
-    set inner to substr(t, 4, length(t) - 4)
-    return "console.log(" + sdev_expr_to_js(inner) + ");"
-  end
-
-  # Reassignment: x be val
-  set b_pos to find(t, " be ")
-  if b_pos > 0
-    set lhs to trim(substr(t, 0, b_pos))
-    set rhs to substr(t, b_pos + 4, length(t) - (b_pos + 4))
-    return lhs + " = " + sdev_expr_to_js(rhs) + ";"
-  end
-
-  return sdev_expr_to_js(t) + ";"
-end
-
-to sdev_to_js with sdev_code
-  set ls to split(sdev_code, "\\n")
-  set n to length(ls)
-  set out to ""
-  set i to 0
-  while i < n
-    set js_line to sdev_line_to_js(ls[i])
-    if length(js_line) > 0
-      if length(out) > 0
-        set out to out + "\\n"
-      end
-      set out to out + js_line
-    end
-    set i to i + 1
-  end
-  return concat(out, "")
-end
-
-to web_client_fn_js with name params sdev_body
-  set body_js to sdev_to_js(sdev_body)
-  set out to "function " + name + "(" + params + ") {\\n" + body_js + "\\n}\\nwindow." + name + " = " + name + ";"
-  return concat(out, "")
-end
-
-to web_on_ready_js with sdev_body
-  set body_js to sdev_to_js(sdev_body)
-  return "(function(){ const fn = function(){ " + body_js + " }; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); })();"
-end
+    transpiler_default = `# =============================================================================\r
+# SDEV Self-Hosted Web Toolkit: SDEV-to-JavaScript Client Transpiler\r
+# (lang/web/transpiler.sdev)\r
+# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r
+# =============================================================================\r
+\r
+use "lang/stdlib/v2/text.sdev"\r
+\r
+to sdev_expr_to_js with expr\r
+  set s to trim(expr)\r
+  if length(s) is 0\r
+    return ""\r
+  end\r
+  # Boolean & null literals\r
+  set s to replace(s, " yep", " true")\r
+  set s to replace(s, "(yep", "(true")\r
+  set s to replace(s, ",yep", ",true")\r
+  set s to replace(s, " nope", " false")\r
+  set s to replace(s, "(nope", "(false")\r
+  set s to replace(s, ",nope", ",false")\r
+  if str_eq(s, "yep")\r
+    set s to "true"\r
+  end\r
+  if str_eq(s, "nope")\r
+    set s to "false"\r
+  end\r
+  if str_eq(s, "void") or str_eq(s, "nothing")\r
+    set s to "null"\r
+  end\r
+\r
+  # Operators\r
+  set s to replace(s, " is not ", " !== ")\r
+  set s to replace(s, " equals ", " === ")\r
+  set s to replace(s, " differs ", " !== ")\r
+  set s to replace(s, " is ", " === ")\r
+  set s to replace(s, " also ", " && ")\r
+  set s to replace(s, " and ", " && ")\r
+  set s to replace(s, " either ", " || ")\r
+  set s to replace(s, " or ", " || ")\r
+  set s to replace(s, "isnt ", "!")\r
+\r
+  # DOM & Reactive State Builtins -> window.$sdev.*\r
+  set s to replace(s, "state_get(", "window.$sdev.get(")\r
+  set s to replace(s, "state_set(", "window.$sdev.set(")\r
+  set s to replace(s, "dom_text(", "window.$sdev.setText(")\r
+  set s to replace(s, "dom_get_text(", "window.$sdev.getText(")\r
+  set s to replace(s, "dom_html(", "window.$sdev.setHtml(")\r
+  set s to replace(s, "dom_value(", "window.$sdev.setVal(")\r
+  set s to replace(s, "dom_get_value(", "window.$sdev.getVal(")\r
+  set s to replace(s, "dom_style(", "window.$sdev.setStyle(")\r
+  set s to replace(s, "dom_attr(", "window.$sdev.setAttr(")\r
+  set s to replace(s, "dom_add_class(", "window.$sdev.addClass(")\r
+  set s to replace(s, "dom_remove_class(", "window.$sdev.removeClass(")\r
+  set s to replace(s, "dom_toggle_class(", "window.$sdev.toggleClass(")\r
+  set s to replace(s, "open_modal(", "window.$sdev.openModal(")\r
+  set s to replace(s, "close_modal(", "window.$sdev.closeModal(")\r
+  set s to replace(s, "toast(", "window.$sdev.toast(")\r
+  set s to replace(s, "clipboard_copy(", "window.$sdev.copy(")\r
+  set s to replace(s, "navigate_to(", "window.$sdev.navigate(")\r
+  set s to replace(s, "str(", "String(")\r
+  return concat(s, "")\r
+end\r
+\r
+to sdev_line_to_js with raw_line\r
+  set t to trim(raw_line)\r
+  if length(t) is 0\r
+    return ""\r
+  end\r
+  if text_starts_with(t, "#") or text_starts_with(t, "//")\r
+    return ""\r
+  end\r
+\r
+  # Block closers\r
+  if str_eq(t, ";;") or str_eq(t, "end")\r
+    return "}"\r
+  end\r
+\r
+  # Else-if / otherwise ponder\r
+  if text_starts_with(t, ";; otherwise ponder ") and text_ends_with(t, " ::")\r
+    set cond to substr(t, 20, length(t) - 23)\r
+    return "} else if (" + sdev_expr_to_js(cond) + ") {"\r
+  end\r
+  if text_starts_with(t, "otherwise ponder ") and text_ends_with(t, " ::")\r
+    set cond to substr(t, 17, length(t) - 20)\r
+    return "} else if (" + sdev_expr_to_js(cond) + ") {"\r
+  end\r
+  if text_starts_with(t, "else if ")\r
+    set cond to substr(t, 8, length(t) - 8)\r
+    return "} else if (" + sdev_expr_to_js(cond) + ") {"\r
+  end\r
+\r
+  # Else / otherwise\r
+  if str_eq(t, ";; otherwise ::") or str_eq(t, "otherwise ::") or str_eq(t, "else")\r
+    return "} else {"\r
+  end\r
+\r
+  # If / ponder\r
+  if text_starts_with(t, "ponder ") and text_ends_with(t, " ::")\r
+    set cond to substr(t, 7, length(t) - 10)\r
+    return "if (" + sdev_expr_to_js(cond) + ") {"\r
+  end\r
+  if text_starts_with(t, "if ")\r
+    set cond to substr(t, 3, length(t) - 3)\r
+    if text_ends_with(cond, " ::")\r
+      set cond to substr(cond, 0, length(cond) - 3)\r
+    end\r
+    return "if (" + sdev_expr_to_js(cond) + ") {"\r
+  end\r
+\r
+  # While / cycle\r
+  if text_starts_with(t, "cycle ") and text_ends_with(t, " ::")\r
+    set cond to substr(t, 6, length(t) - 9)\r
+    return "while (" + sdev_expr_to_js(cond) + ") {"\r
+  end\r
+  if text_starts_with(t, "while ")\r
+    set cond to substr(t, 6, length(t) - 6)\r
+    if text_ends_with(cond, " ::")\r
+      set cond to substr(cond, 0, length(cond) - 3)\r
+    end\r
+    return "while (" + sdev_expr_to_js(cond) + ") {"\r
+  end\r
+\r
+  # For each / iterate\r
+  if text_starts_with(t, "iterate ") and text_ends_with(t, " ::")\r
+    set body_part to substr(t, 8, length(t) - 11)\r
+    set th_idx to find(body_part, " through ")\r
+    if th_idx >= 0\r
+      set vname to trim(substr(body_part, 0, th_idx))\r
+      set iter_ex to substr(body_part, th_idx + 9, length(body_part) - (th_idx + 9))\r
+      return "for (const " + vname + " of " + sdev_expr_to_js(iter_ex) + ") {"\r
+    end\r
+  end\r
+  if text_starts_with(t, "for each ")\r
+    set body_part to substr(t, 9, length(t) - 9)\r
+    set in_idx to find(body_part, " in ")\r
+    if in_idx >= 0\r
+      set vname to trim(substr(body_part, 0, in_idx))\r
+      set iter_ex to substr(body_part, in_idx + 4, length(body_part) - (in_idx + 4))\r
+      return "for (const " + vname + " of " + sdev_expr_to_js(iter_ex) + ") {"\r
+    end\r
+  end\r
+\r
+  # Function declarations: conjure name(params) ::  OR  to name with a b\r
+  if text_starts_with(t, "conjure ") and text_ends_with(t, " ::")\r
+    set sig to trim(substr(t, 8, length(t) - 11))\r
+    return "function " + sig + " {"\r
+  end\r
+  if text_starts_with(t, "to ")\r
+    set rest to trim(substr(t, 3, length(t) - 3))\r
+    set w_idx to find(rest, " with ")\r
+    if w_idx >= 0\r
+      set fname to trim(substr(rest, 0, w_idx))\r
+      set pstr to trim(substr(rest, w_idx + 6, length(rest) - (w_idx + 6)))\r
+      set plist to split(pstr, " ")\r
+      return "function " + fname + "(" + join(plist, ", ") + ") {"\r
+    end\r
+    return "function " + rest + "() {"\r
+  end\r
+\r
+  # Variable declaration: forge x be val  OR  set x to val\r
+  if text_starts_with(t, "forge ")\r
+    set rest to substr(t, 6, length(t) - 6)\r
+    set b_idx to find(rest, " be ")\r
+    if b_idx >= 0\r
+      set vname to trim(substr(rest, 0, b_idx))\r
+      set vex to substr(rest, b_idx + 4, length(rest) - (b_idx + 4))\r
+      return "let " + vname + " = " + sdev_expr_to_js(vex) + ";"\r
+    end\r
+  end\r
+  if text_starts_with(t, "set ")\r
+    set rest to substr(t, 4, length(t) - 4)\r
+    set to_idx to find(rest, " to ")\r
+    if to_idx >= 0\r
+      set vname to trim(substr(rest, 0, to_idx))\r
+      set vex to substr(rest, to_idx + 4, length(rest) - (to_idx + 4))\r
+      return "let " + vname + " = " + sdev_expr_to_js(vex) + ";"\r
+    end\r
+  end\r
+\r
+  # Return / yield / break / continue\r
+  if text_starts_with(t, "yield ")\r
+    return "return " + sdev_expr_to_js(substr(t, 6, length(t) - 6)) + ";"\r
+  end\r
+  if text_starts_with(t, "return ")\r
+    return "return " + sdev_expr_to_js(substr(t, 7, length(t) - 7)) + ";"\r
+  end\r
+  if str_eq(t, "yield") or str_eq(t, "return")\r
+    return "return;"\r
+  end\r
+  if str_eq(t, "yeet") or str_eq(t, "break")\r
+    return "break;"\r
+  end\r
+  if str_eq(t, "skip") or str_eq(t, "continue")\r
+    return "continue;"\r
+  end\r
+\r
+  # Output: speak(...) / say ...\r
+  if text_starts_with(t, "speak(") and text_ends_with(t, ")")\r
+    set inner to substr(t, 6, length(t) - 7)\r
+    return "console.log(" + sdev_expr_to_js(inner) + ");"\r
+  end\r
+  if text_starts_with(t, "say ")\r
+    set inner to substr(t, 4, length(t) - 4)\r
+    return "console.log(" + sdev_expr_to_js(inner) + ");"\r
+  end\r
+\r
+  # Reassignment: x be val\r
+  set b_pos to find(t, " be ")\r
+  if b_pos > 0\r
+    set lhs to trim(substr(t, 0, b_pos))\r
+    set rhs to substr(t, b_pos + 4, length(t) - (b_pos + 4))\r
+    return lhs + " = " + sdev_expr_to_js(rhs) + ";"\r
+  end\r
+\r
+  return sdev_expr_to_js(t) + ";"\r
+end\r
+\r
+to sdev_to_js with sdev_code\r
+  set ls to split(sdev_code, "\\n")\r
+  set n to length(ls)\r
+  set out to ""\r
+  set i to 0\r
+  while i < n\r
+    set js_line to sdev_line_to_js(ls[i])\r
+    if length(js_line) > 0\r
+      if length(out) > 0\r
+        set out to out + "\\n"\r
+      end\r
+      set out to out + js_line\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return concat(out, "")\r
+end\r
+\r
+to web_client_fn_js with name params sdev_body\r
+  set body_js to sdev_to_js(sdev_body)\r
+  set out to "function " + name + "(" + params + ") {\\n" + body_js + "\\n}\\nwindow." + name + " = " + name + ";"\r
+  return concat(out, "")\r
+end\r
+\r
+to web_on_ready_js with sdev_body\r
+  set body_js to sdev_to_js(sdev_body)\r
+  return "(function(){ const fn = function(){ " + body_js + " }; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); })();"\r
+end\r
 `;
   }
 });
@@ -7493,7 +8373,7 @@ end
 var css_default;
 var init_css = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\web\\css.sdev"() {
-    css_default = '# =============================================================================\n# SDEV Self-Hosted Web Toolkit: CSS3 Engine (lang/web/css.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\n\nto web_kebab_case with prop\n  if text_starts_with(prop, "--")\n    return concat(prop, "")\n  end\n  set n to length(prop)\n  set out to ""\n  set i to 0\n  while i < n\n    set c to ord(prop, i)\n    if c >= 65 and c <= 90\n      set out to out + "-" + chr(c + 32)\n    else\n      if c is 95\n        set out to out + "-"\n      else\n        set out to out + chr(c)\n      end\n    end\n    set i to i + 1\n  end\n  return concat(out, "")\nend\n\nto web_is_unitless_css with kebab_prop\n  if text_starts_with(kebab_prop, "--")\n    return 1\n  end\n  if str_eq(kebab_prop, "opacity") or str_eq(kebab_prop, "z-index") or str_eq(kebab_prop, "font-weight")\n    return 1\n  end\n  if str_eq(kebab_prop, "line-height") or str_eq(kebab_prop, "flex") or str_eq(kebab_prop, "flex-grow")\n    return 1\n  end\n  if str_eq(kebab_prop, "flex-shrink") or str_eq(kebab_prop, "order") or str_eq(kebab_prop, "scale")\n    return 1\n  end\n  if str_eq(kebab_prop, "zoom") or str_eq(kebab_prop, "aspect-ratio") or str_eq(kebab_prop, "columns")\n    return 1\n  end\n  if str_eq(kebab_prop, "grid-column") or str_eq(kebab_prop, "grid-row") or str_eq(kebab_prop, "orphans") or str_eq(kebab_prop, "widows") or str_eq(kebab_prop, "tab-size") or str_eq(kebab_prop, "animation-iteration-count")\n    return 1\n  end\n  if str_eq(kebab_prop, "fill-opacity") or str_eq(kebab_prop, "stroke-opacity") or str_eq(kebab_prop, "stroke-width") or str_eq(kebab_prop, "stroke-miterlimit")\n    return 1\n  end\n  return 0\nend\n\nto web_is_numeric_str with s\n  set n to length(s)\n  if n is 0\n    return 0\n  end\n  set i to 0\n  if ord(s, 0) is 45\n    if n is 1\n      return 0\n    end\n    set i to 1\n  end\n  set saw_digit to 0\n  while i < n\n    set c to ord(s, i)\n    if c >= 48 and c <= 57\n      set saw_digit to 1\n    else\n      if c is not 46\n        return 0\n      end\n    end\n    set i to i + 1\n  end\n  return saw_digit\nend\n\nto web_format_css_val with kebab_prop val_str\n  set v to concat(val_str, "")\n  if str_eq(v, "0")\n    return "0"\n  end\n  if web_is_numeric_str(v) is 1\n    if web_is_unitless_css(kebab_prop) is 0\n      return v + "px"\n    end\n  end\n  return concat(v, "")\nend\n\nto web_css_decl with prop val_str\n  set k to web_kebab_case(prop)\n  set v to web_format_css_val(k, val_str)\n  return k + ": " + v + ";"\nend\n\nto web_tome_to_decls with style_tome\n  set ks to keys(style_tome)\n  set vs to values(style_tome)\n  set n to length(ks)\n  set out to ""\n  set i to 0\n  while i < n\n    set k to concat(ks[i], "")\n    set v to concat(vs[i], "")\n    if i > 0\n      set out to out + " "\n    end\n    set out to out + web_css_decl(k, v)\n    set i to i + 1\n  end\n  return concat(out, "")\nend\n\nto web_style_rule with selector style_tome\n  set decls to web_tome_to_decls(style_tome)\n  return selector + " { " + decls + " }"\nend\n\nto web_nested_rule with parent_sel child_sel style_tome\n  set resolved to ""\n  if find(child_sel, "&") >= 0\n    set resolved to replace(child_sel, "&", parent_sel)\n  else\n    set resolved to parent_sel + " " + child_sel\n  end\n  return web_style_rule(resolved, style_tome)\nend\n\nto web_media_query with bp\n  set k to lower(trim(bp))\n  if str_eq(k, "sm")\n    return "(max-width: 640px)"\n  end\n  if str_eq(k, "mobile")\n    return "(max-width: 767px)"\n  end\n  if str_eq(k, "md")\n    return "(min-width: 768px)"\n  end\n  if str_eq(k, "tablet")\n    return "(max-width: 1023px)"\n  end\n  if str_eq(k, "lg") or str_eq(k, "desktop")\n    return "(min-width: 1024px)"\n  end\n  if str_eq(k, "xl")\n    return "(min-width: 1280px)"\n  end\n  if str_eq(k, "dark")\n    return "(prefers-color-scheme: dark)"\n  end\n  if str_eq(k, "light")\n    return "(prefers-color-scheme: light)"\n  end\n  if str_eq(k, "reduced-motion")\n    return "(prefers-reduced-motion: reduce)"\n  end\n  if str_eq(k, "motion")\n    return "(prefers-reduced-motion: no-preference)"\n  end\n  if text_starts_with(bp, "@media")\n    return trim(substr(bp, 6, length(bp) - 6))\n  end\n  if text_starts_with(bp, "(")\n    return concat(bp, "")\n  end\n  return "(" + bp + ")"\nend\n\nto web_media_rule with bp inner_css\n  set mq to web_media_query(bp)\n  return "@media " + mq + " {\\n" + inner_css + "\\n}"\nend\n\nto web_keyframes_rule with name from_tome to_tome\n  set from_d to web_tome_to_decls(from_tome)\n  set to_d to web_tome_to_decls(to_tome)\n  return "@keyframes " + name + " {\\n  from { " + from_d + " }\\n  to { " + to_d + " }\\n}"\nend\n\nto web_keyframes_steps with name step_names step_tomes\n  set n to length(step_names)\n  set body to ""\n  set i to 0\n  while i < n\n    set st_name to concat(step_names[i], "")\n    set st_tome to step_tomes[i]\n    set ks to keys(st_tome)\n    set vs to values(st_tome)\n    set m to length(ks)\n    set decls to ""\n    set j to 0\n    while j < m\n      set k to web_kebab_case(concat(ks[j], ""))\n      set v to web_format_css_val(k, concat(vs[j], ""))\n      if j > 0\n        set decls to decls + "; "\n      end\n      set decls to decls + k + ": " + v\n      set j to j + 1\n    end\n    if i > 0\n      set body to body + "\\n"\n    end\n    set body to body + "  " + st_name + " { " + decls + " }"\n    set i to i + 1\n  end\n  return "@keyframes " + name + " {\\n" + body + "\\n}"\nend\n\nto web_font_face_rule with family src extra_tome\n  set src_decl to "url(\\"" + src + "\\")"\n  if text_starts_with(src, "url(")\n    set src_decl to concat(src, "")\n  end\n  set ks to keys(extra_tome)\n  set vs to values(extra_tome)\n  set n to length(ks)\n  set extra_str to ""\n  set i to 0\n  while i < n\n    set k to web_kebab_case(concat(ks[i], ""))\n    set v to concat(vs[i], "")\n    set extra_str to extra_str + "\\n  " + k + ": " + v + ";"\n    set i to i + 1\n  end\n  return "@font-face {\\n  font-family: \\"" + family + "\\";\\n  src: " + src_decl + ";" + extra_str + "\\n}"\nend\n\nto web_tome_to_inline_style with style_tome\n  set ks to keys(style_tome)\n  set vs to values(style_tome)\n  set n to length(ks)\n  set out to ""\n  set i to 0\n  while i < n\n    set k to web_kebab_case(concat(ks[i], ""))\n    set v to web_format_css_val(k, concat(vs[i], ""))\n    if i > 0\n      set out to out + "; "\n    end\n    set out to out + k + ": " + v\n    set i to i + 1\n  end\n  return concat(out, "")\nend\n\nto web_style_block with selector style_tome\n  set ks to keys(style_tome)\n  set vs to values(style_tome)\n  set n to length(ks)\n  set decls to ""\n  set i to 0\n  while i < n\n    set k to web_kebab_case(concat(ks[i], ""))\n    set v to web_format_css_val(k, concat(vs[i], ""))\n    if i > 0\n      set decls to decls + "\\n"\n    end\n    set decls to decls + "  " + k + ": " + v + ";"\n    set i to i + 1\n  end\n  return selector + " {\\n" + decls + "\\n}"\nend\n\nto web_css_vars_rule with vars_tome\n  set ks to keys(vars_tome)\n  set vs to values(vars_tome)\n  set n to length(ks)\n  set out to ":root {"\n  set i to 0\n  while i < n\n    set k to concat(ks[i], "")\n    set v to concat(vs[i], "")\n    set var_name to web_kebab_case(k)\n    if text_starts_with(var_name, "--") is 0\n      set var_name to "--" + var_name\n    end\n    set out to out + " " + var_name + ": " + v + ";"\n    set i to i + 1\n  end\n  set out to out + " }"\n  return concat(out, "")\nend\n\nto web_css_vars_for with vars_tome selector_str\n  set ks to keys(vars_tome)\n  set vs to values(vars_tome)\n  set n to length(ks)\n  set decls to ""\n  set i to 0\n  while i < n\n    set k to concat(ks[i], "")\n    set v to concat(vs[i], "")\n    set var_name to web_kebab_case(k)\n    if text_starts_with(var_name, "--") is 0\n      set var_name to "--" + var_name\n    end\n    if i > 0\n      set decls to decls + "\\n"\n    end\n    set decls to decls + "  " + var_name + ": " + v + ";"\n    set i to i + 1\n  end\n  return selector_str + " {\\n" + decls + "\\n}"\nend\n\nto web_css_var with name fallback\n  set vname to web_kebab_case(name)\n  if text_starts_with(vname, "--") is 0\n    set vname to "--" + vname\n  end\n  if length(fallback) > 0\n    return "var(" + vname + ", " + fallback + ")"\n  end\n  return "var(" + vname + ")"\nend\n';
+    css_default = '# =============================================================================\r\n# SDEV Self-Hosted Web Toolkit: CSS3 Engine (lang/web/css.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\nto web_kebab_case with prop\r\n  if text_starts_with(prop, "--")\r\n    return concat(prop, "")\r\n  end\r\n  set n to length(prop)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set c to ord(prop, i)\r\n    if c >= 65 and c <= 90\r\n      set out to out + "-" + chr(c + 32)\r\n    else\r\n      if c is 95\r\n        set out to out + "-"\r\n      else\r\n        set out to out + chr(c)\r\n      end\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto web_is_unitless_css with kebab_prop\r\n  if text_starts_with(kebab_prop, "--")\r\n    return 1\r\n  end\r\n  if str_eq(kebab_prop, "opacity") or str_eq(kebab_prop, "z-index") or str_eq(kebab_prop, "font-weight")\r\n    return 1\r\n  end\r\n  if str_eq(kebab_prop, "line-height") or str_eq(kebab_prop, "flex") or str_eq(kebab_prop, "flex-grow")\r\n    return 1\r\n  end\r\n  if str_eq(kebab_prop, "flex-shrink") or str_eq(kebab_prop, "order") or str_eq(kebab_prop, "scale")\r\n    return 1\r\n  end\r\n  if str_eq(kebab_prop, "zoom") or str_eq(kebab_prop, "aspect-ratio") or str_eq(kebab_prop, "columns")\r\n    return 1\r\n  end\r\n  if str_eq(kebab_prop, "grid-column") or str_eq(kebab_prop, "grid-row") or str_eq(kebab_prop, "orphans") or str_eq(kebab_prop, "widows") or str_eq(kebab_prop, "tab-size") or str_eq(kebab_prop, "animation-iteration-count")\r\n    return 1\r\n  end\r\n  if str_eq(kebab_prop, "fill-opacity") or str_eq(kebab_prop, "stroke-opacity") or str_eq(kebab_prop, "stroke-width") or str_eq(kebab_prop, "stroke-miterlimit")\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto web_is_numeric_str with s\r\n  set n to length(s)\r\n  if n is 0\r\n    return 0\r\n  end\r\n  set i to 0\r\n  if ord(s, 0) is 45\r\n    if n is 1\r\n      return 0\r\n    end\r\n    set i to 1\r\n  end\r\n  set saw_digit to 0\r\n  while i < n\r\n    set c to ord(s, i)\r\n    if c >= 48 and c <= 57\r\n      set saw_digit to 1\r\n    else\r\n      if c is not 46\r\n        return 0\r\n      end\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return saw_digit\r\nend\r\n\r\nto web_format_css_val with kebab_prop val_str\r\n  set v to concat(val_str, "")\r\n  if str_eq(v, "0")\r\n    return "0"\r\n  end\r\n  if web_is_numeric_str(v) is 1\r\n    if web_is_unitless_css(kebab_prop) is 0\r\n      return v + "px"\r\n    end\r\n  end\r\n  return concat(v, "")\r\nend\r\n\r\nto web_css_decl with prop val_str\r\n  set k to web_kebab_case(prop)\r\n  set v to web_format_css_val(k, val_str)\r\n  return k + ": " + v + ";"\r\nend\r\n\r\nto web_tome_to_decls with style_tome\r\n  set ks to keys(style_tome)\r\n  set vs to values(style_tome)\r\n  set n to length(ks)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set k to concat(ks[i], "")\r\n    set v to concat(vs[i], "")\r\n    if i > 0\r\n      set out to out + " "\r\n    end\r\n    set out to out + web_css_decl(k, v)\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto web_style_rule with selector style_tome\r\n  set decls to web_tome_to_decls(style_tome)\r\n  return selector + " { " + decls + " }"\r\nend\r\n\r\nto web_nested_rule with parent_sel child_sel style_tome\r\n  set resolved to ""\r\n  if find(child_sel, "&") >= 0\r\n    set resolved to replace(child_sel, "&", parent_sel)\r\n  else\r\n    set resolved to parent_sel + " " + child_sel\r\n  end\r\n  return web_style_rule(resolved, style_tome)\r\nend\r\n\r\nto web_media_query with bp\r\n  set k to lower(trim(bp))\r\n  if str_eq(k, "sm")\r\n    return "(max-width: 640px)"\r\n  end\r\n  if str_eq(k, "mobile")\r\n    return "(max-width: 767px)"\r\n  end\r\n  if str_eq(k, "md")\r\n    return "(min-width: 768px)"\r\n  end\r\n  if str_eq(k, "tablet")\r\n    return "(max-width: 1023px)"\r\n  end\r\n  if str_eq(k, "lg") or str_eq(k, "desktop")\r\n    return "(min-width: 1024px)"\r\n  end\r\n  if str_eq(k, "xl")\r\n    return "(min-width: 1280px)"\r\n  end\r\n  if str_eq(k, "dark")\r\n    return "(prefers-color-scheme: dark)"\r\n  end\r\n  if str_eq(k, "light")\r\n    return "(prefers-color-scheme: light)"\r\n  end\r\n  if str_eq(k, "reduced-motion")\r\n    return "(prefers-reduced-motion: reduce)"\r\n  end\r\n  if str_eq(k, "motion")\r\n    return "(prefers-reduced-motion: no-preference)"\r\n  end\r\n  if text_starts_with(bp, "@media")\r\n    return trim(substr(bp, 6, length(bp) - 6))\r\n  end\r\n  if text_starts_with(bp, "(")\r\n    return concat(bp, "")\r\n  end\r\n  return "(" + bp + ")"\r\nend\r\n\r\nto web_media_rule with bp inner_css\r\n  set mq to web_media_query(bp)\r\n  return "@media " + mq + " {\\n" + inner_css + "\\n}"\r\nend\r\n\r\nto web_keyframes_rule with name from_tome to_tome\r\n  set from_d to web_tome_to_decls(from_tome)\r\n  set to_d to web_tome_to_decls(to_tome)\r\n  return "@keyframes " + name + " {\\n  from { " + from_d + " }\\n  to { " + to_d + " }\\n}"\r\nend\r\n\r\nto web_keyframes_steps with name step_names step_tomes\r\n  set n to length(step_names)\r\n  set body to ""\r\n  set i to 0\r\n  while i < n\r\n    set st_name to concat(step_names[i], "")\r\n    set st_tome to step_tomes[i]\r\n    set ks to keys(st_tome)\r\n    set vs to values(st_tome)\r\n    set m to length(ks)\r\n    set decls to ""\r\n    set j to 0\r\n    while j < m\r\n      set k to web_kebab_case(concat(ks[j], ""))\r\n      set v to web_format_css_val(k, concat(vs[j], ""))\r\n      if j > 0\r\n        set decls to decls + "; "\r\n      end\r\n      set decls to decls + k + ": " + v\r\n      set j to j + 1\r\n    end\r\n    if i > 0\r\n      set body to body + "\\n"\r\n    end\r\n    set body to body + "  " + st_name + " { " + decls + " }"\r\n    set i to i + 1\r\n  end\r\n  return "@keyframes " + name + " {\\n" + body + "\\n}"\r\nend\r\n\r\nto web_font_face_rule with family src extra_tome\r\n  set src_decl to "url(\\"" + src + "\\")"\r\n  if text_starts_with(src, "url(")\r\n    set src_decl to concat(src, "")\r\n  end\r\n  set ks to keys(extra_tome)\r\n  set vs to values(extra_tome)\r\n  set n to length(ks)\r\n  set extra_str to ""\r\n  set i to 0\r\n  while i < n\r\n    set k to web_kebab_case(concat(ks[i], ""))\r\n    set v to concat(vs[i], "")\r\n    set extra_str to extra_str + "\\n  " + k + ": " + v + ";"\r\n    set i to i + 1\r\n  end\r\n  return "@font-face {\\n  font-family: \\"" + family + "\\";\\n  src: " + src_decl + ";" + extra_str + "\\n}"\r\nend\r\n\r\nto web_tome_to_inline_style with style_tome\r\n  set ks to keys(style_tome)\r\n  set vs to values(style_tome)\r\n  set n to length(ks)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set k to web_kebab_case(concat(ks[i], ""))\r\n    set v to web_format_css_val(k, concat(vs[i], ""))\r\n    if i > 0\r\n      set out to out + "; "\r\n    end\r\n    set out to out + k + ": " + v\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto web_style_block with selector style_tome\r\n  set ks to keys(style_tome)\r\n  set vs to values(style_tome)\r\n  set n to length(ks)\r\n  set decls to ""\r\n  set i to 0\r\n  while i < n\r\n    set k to web_kebab_case(concat(ks[i], ""))\r\n    set v to web_format_css_val(k, concat(vs[i], ""))\r\n    if i > 0\r\n      set decls to decls + "\\n"\r\n    end\r\n    set decls to decls + "  " + k + ": " + v + ";"\r\n    set i to i + 1\r\n  end\r\n  return selector + " {\\n" + decls + "\\n}"\r\nend\r\n\r\nto web_css_vars_rule with vars_tome\r\n  set ks to keys(vars_tome)\r\n  set vs to values(vars_tome)\r\n  set n to length(ks)\r\n  set out to ":root {"\r\n  set i to 0\r\n  while i < n\r\n    set k to concat(ks[i], "")\r\n    set v to concat(vs[i], "")\r\n    set var_name to web_kebab_case(k)\r\n    if text_starts_with(var_name, "--") is 0\r\n      set var_name to "--" + var_name\r\n    end\r\n    set out to out + " " + var_name + ": " + v + ";"\r\n    set i to i + 1\r\n  end\r\n  set out to out + " }"\r\n  return concat(out, "")\r\nend\r\n\r\nto web_css_vars_for with vars_tome selector_str\r\n  set ks to keys(vars_tome)\r\n  set vs to values(vars_tome)\r\n  set n to length(ks)\r\n  set decls to ""\r\n  set i to 0\r\n  while i < n\r\n    set k to concat(ks[i], "")\r\n    set v to concat(vs[i], "")\r\n    set var_name to web_kebab_case(k)\r\n    if text_starts_with(var_name, "--") is 0\r\n      set var_name to "--" + var_name\r\n    end\r\n    if i > 0\r\n      set decls to decls + "\\n"\r\n    end\r\n    set decls to decls + "  " + var_name + ": " + v + ";"\r\n    set i to i + 1\r\n  end\r\n  return selector_str + " {\\n" + decls + "\\n}"\r\nend\r\n\r\nto web_css_var with name fallback\r\n  set vname to web_kebab_case(name)\r\n  if text_starts_with(vname, "--") is 0\r\n    set vname to "--" + vname\r\n  end\r\n  if length(fallback) > 0\r\n    return "var(" + vname + ", " + fallback + ")"\r\n  end\r\n  return "var(" + vname + ")"\r\nend\r\n';
   }
 });
 
@@ -7501,7 +8381,7 @@ var init_css = __esm({
 var html_default;
 var init_html = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\web\\html.sdev"() {
-    html_default = '# =============================================================================\n# SDEV Self-Hosted Web Toolkit: HTML5 & SVG Document Builder (lang/web/html.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\nuse "lang/web/icons.sdev"\nuse "lang/web/themes.sdev"\nuse "lang/web/transpiler.sdev"\nuse "lang/web/css.sdev"\n\n# _web_doc slots:\n# 0: active ("1" or "0")\n# 1: title\n# 2: lang\n# 3: desc\n# 4: favicon\n# 5: theme\n# 6: head\n# 7: css\n# 8: body\n# 9: js\n# 10: state_entries\nset _web_doc to mklist(16)\nset _web_doc[0] to "0"\nset _web_doc[1] to "sdev App"\nset _web_doc[2] to "en"\nset _web_doc[3] to ""\nset _web_doc[4] to "/favicon.png"\nset _web_doc[5] to "sdev-dark"\nset _web_doc[6] to ""\nset _web_doc[7] to ""\nset _web_doc[8] to ""\nset _web_doc[9] to ""\nset _web_doc[10] to ""\n\nto web_escape_html with s\n  set raw_s to concat(s, "")\n  if find(raw_s, chr(1)) >= 0\n    set out_mix to replace(raw_s, chr(1), "")\n    set out_mix to replace(out_mix, chr(2), "")\n    return concat(out_mix, "")\n  end\n  set out to replace(raw_s, "&", "&amp;")\n  set out to replace(out, "<", "&lt;")\n  set out to replace(out, ">", "&gt;")\n  set out to replace(out, "\\"", "&quot;")\n  return concat(out, "")\nend\n\nto web_escape_attr with s\n  set raw_s to concat(s, "")\n  set out to replace(raw_s, "&", "&amp;")\n  set out to replace(out, "\\"", "&quot;")\n  set out to replace(out, "<", "&lt;")\n  set out to replace(out, ">", "&gt;")\n  return concat(out, "")\nend\n\nto raw with html_str\n  return chr(1) + html_str + chr(2)\nend\n\nto web_tome_get_str with t key fallback\n  set ks to keys(t)\n  set vs to values(t)\n  set n to length(ks)\n  set i to 0\n  while i < n\n    if str_eq(ks[i], key)\n      return concat(vs[i], "")\n    end\n    set i to i + 1\n  end\n  return concat(fallback, "")\nend\n\nto web_attrs_from_tome with attrs_tome\n  set ks to keys(attrs_tome)\n  set vs to values(attrs_tome)\n  set n to length(ks)\n  set out to ""\n  set i to 0\n  while i < n\n    set k to concat(ks[i], "")\n    set v to concat(vs[i], "")\n    if str_eq(k, "bind")\n      set out to out + " data-bind-value=\\"" + web_escape_attr(v) + "\\""\n    else\n      if str_eq(k, "bind_text")\n        set out to out + " data-bind-text=\\"" + web_escape_attr(v) + "\\""\n      else\n        if str_eq(k, "bind_html")\n          set out to out + " data-bind-html=\\"" + web_escape_attr(v) + "\\""\n        else\n          if str_eq(k, "bind_show")\n            set out to out + " data-bind-show=\\"" + web_escape_attr(v) + "\\""\n          else\n            if str_eq(v, "false") or length(v) is 0\n              if text_starts_with(k, "aria-") or text_starts_with(k, "data-")\n                set out to out + " " + k + "=\\"" + web_escape_attr(v) + "\\""\n              end\n            else\n              if str_eq(v, "true") and (str_eq(k, "disabled") or str_eq(k, "checked") or str_eq(k, "required") or str_eq(k, "selected") or str_eq(k, "readonly") or str_eq(k, "multiple") or str_eq(k, "open") or str_eq(k, "controls") or str_eq(k, "autoplay") or str_eq(k, "loop") or str_eq(k, "muted"))\n                set out to out + " " + k\n              else\n                set out to out + " " + k + "=\\"" + web_escape_attr(v) + "\\""\n              end\n            end\n          end\n        end\n      end\n    end\n    set i to i + 1\n  end\n  return concat(out, "")\nend\n\nto web_el with tag_name content attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set inner to web_escape_html(content)\n  set html to "<" + tag_name + a_str + ">" + inner + "</" + tag_name + ">"\n  return raw(html)\nend\n\nto web_el_raw with tag_name inner_html attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set clean_inner to replace(replace(inner_html, chr(1), ""), chr(2), "")\n  set html to "<" + tag_name + a_str + ">" + clean_inner + "</" + tag_name + ">"\n  return raw(html)\nend\n\nto web_void_el with tag_name attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  return raw("<" + tag_name + a_str + ">")\nend\n\nto web_parse_tag_spec with spec\n  set clean to trim(spec)\n  set tname to "div"\n  set id_val to ""\n  set cls_val to ""\n  set n to length(clean)\n  set i to 0\n  set mode to 0\n  set cur to ""\n  while i <= n\n    set c to 0\n    if i < n\n      set c to ord(clean, i)\n    end\n    if i is n or c is 46 or c is 35\n      if length(cur) > 0\n        if mode is 0\n          set tname to cur\n        else\n          if mode is 1\n            if length(cls_val) > 0\n              set cls_val to cls_val + " " + cur\n            else\n              set cls_val to cur\n            end\n          else\n            set id_val to cur\n          end\n        end\n      end\n      set cur to ""\n      if c is 46\n        set mode to 1\n      end\n      if c is 35\n        set mode to 2\n      end\n    else\n      set cur to cur + chr(c)\n    end\n    set i to i + 1\n  end\n  if length(tname) is 0\n    set tname to "div"\n  end\n  return [tname, id_val, cls_val]\nend\n\nto web_tag_emmet with spec content attrs_tome\n  set parsed to web_parse_tag_spec(spec)\n  set tname to concat(parsed[0], "")\n  set id_val to concat(parsed[1], "")\n  set cls_val to concat(parsed[2], "")\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set extra_a to ""\n  if length(id_val) > 0\n    set extra_a to extra_a + " id=\\"" + web_escape_attr(id_val) + "\\""\n  end\n  if length(cls_val) > 0\n    set extra_a to extra_a + " class=\\"" + web_escape_attr(cls_val) + "\\""\n  end\n  set inner to web_escape_html(content)\n  return raw("<" + tname + extra_a + a_str + ">" + inner + "</" + tname + ">")\nend\n\n# \u2500\u2500 Stateful Document Operations \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nto page with title_str\n  set _web_doc[0] to "1"\n  set _web_doc[1] to concat(title_str, "")\n  set _web_doc[2] to "en"\n  set _web_doc[3] to ""\n  set _web_doc[4] to "/favicon.png"\n  set _web_doc[5] to "sdev-dark"\n  set _web_doc[6] to ""\n  set _web_doc[7] to ""\n  set _web_doc[8] to ""\n  set _web_doc[9] to ""\n  set _web_doc[10] to ""\n  return 0\nend\n\nto web_meta with desc_str favicon_href\n  set _web_doc[3] to concat(desc_str, "")\n  if length(favicon_href) > 0\n    set _web_doc[4] to concat(favicon_href, "")\n  end\n  return 0\nend\n\nto theme with theme_name\n  set _web_doc[5] to concat(theme_name, "")\n  return 0\nend\n\nto web_emit with html_frag\n  set clean to replace(replace(html_frag, chr(1), ""), chr(2), "")\n  set cur to concat(_web_doc[8], "")\n  set _web_doc[8] to cur + clean + "\\n"\n  return 0\nend\n\nto raw_html with html_str\n  return web_emit(html_str)\nend\n\nto web_add_css with rule_str\n  set cur to concat(_web_doc[7], "")\n  if length(cur) > 0\n    set _web_doc[7] to cur + "\\n" + rule_str\n  else\n    set _web_doc[7] to concat(rule_str, "")\n  end\n  return 0\nend\n\nto web_add_js with js_str\n  set cur to concat(_web_doc[9], "")\n  if length(cur) > 0\n    set _web_doc[9] to cur + "\\n" + js_str\n  else\n    set _web_doc[9] to concat(js_str, "")\n  end\n  return 0\nend\n\nto style with selector style_tome\n  return web_add_css(web_style_rule(selector, style_tome))\nend\n\nto style_nested with parent_sel child_sel style_tome\n  return web_add_css(web_nested_rule(parent_sel, child_sel, style_tome))\nend\n\nto media_style with bp selector style_tome\n  return web_add_css(web_media_rule(bp, web_style_rule(selector, style_tome)))\nend\n\nto keyframes with name from_tome to_tome\n  return web_add_css(web_keyframes_rule(name, from_tome, to_tome))\nend\n\nto css_vars with vars_tome\n  return web_add_css(web_css_vars_rule(vars_tome))\nend\n\nto css_var with name fallback\n  return web_css_var(name, fallback)\nend\n\nto script_raw with js_code\n  return web_add_js(js_code)\nend\n\nto script_sdev with sdev_code\n  return web_add_js(sdev_to_js(sdev_code))\nend\n\nto client_fn with name params sdev_body\n  return web_add_js(web_client_fn_js(name, params, sdev_body))\nend\n\nto on_ready with sdev_body\n  return web_add_js(web_on_ready_js(sdev_body))\nend\n\nto web_state_init with key val_json\n  set entry to "\\"" + key + "\\": " + val_json\n  set cur to concat(_web_doc[10], "")\n  if length(cur) > 0\n    set _web_doc[10] to cur + ", " + entry\n  else\n    set _web_doc[10] to entry\n  end\n  return 0\nend\n\n# \u2500\u2500 Open / Close Structural Tags \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nto open_tag with tag_name attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  return web_emit("<" + tag_name + a_str + ">")\nend\n\nto close_tag with tag_name\n  return web_emit("</" + tag_name + ">")\nend\n\nto open_main with attrs_tome\n  return open_tag("main", attrs_tome)\nend\nto end_main\n  return close_tag("main")\nend\n\nto open_header with attrs_tome\n  return open_tag("header", attrs_tome)\nend\nto end_header\n  return close_tag("header")\nend\n\nto open_footer with attrs_tome\n  return open_tag("footer", attrs_tome)\nend\nto end_footer\n  return close_tag("footer")\nend\n\nto open_nav with attrs_tome\n  return open_tag("nav", attrs_tome)\nend\nto end_nav\n  return close_tag("nav")\nend\n\nto open_section with attrs_tome\n  return open_tag("section", attrs_tome)\nend\nto end_section\n  return close_tag("section")\nend\n\nto open_div with attrs_tome\n  return open_tag("div", attrs_tome)\nend\nto end_div\n  return close_tag("div")\nend\n\nto open_form with attrs_tome\n  return open_tag("form", attrs_tome)\nend\nto end_form\n  return close_tag("form")\nend\n\nto open_ul with attrs_tome\n  return open_tag("ul", attrs_tome)\nend\nto end_ul\n  return close_tag("ul")\nend\n\nto open_ol with attrs_tome\n  return open_tag("ol", attrs_tome)\nend\nto end_ol\n  return close_tag("ol")\nend\n\nto open_article with attrs_tome\n  return open_tag("article", attrs_tome)\nend\nto end_article\n  return close_tag("article")\nend\n\nto open_aside with attrs_tome\n  return open_tag("aside", attrs_tome)\nend\nto end_aside\n  return close_tag("aside")\nend\n\n# \u2500\u2500 Element Emitters \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nto div with content attrs_tome\n  set f to web_el("div", content, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto section with content attrs_tome\n  set f to web_el("section", content, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto header_el with content attrs_tome\n  set f to web_el("header", content, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto footer_el with content attrs_tome\n  set f to web_el("footer", content, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto nav_el with content attrs_tome\n  set f to web_el("nav", content, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto article with content attrs_tome\n  set f to web_el("article", content, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto aside with content attrs_tome\n  set f to web_el("aside", content, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto h1 with text attrs_tome\n  set f to web_el("h1", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto h2 with text attrs_tome\n  set f to web_el("h2", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto h3 with text attrs_tome\n  set f to web_el("h3", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto h4 with text attrs_tome\n  set f to web_el("h4", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto h5 with text attrs_tome\n  set f to web_el("h5", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto h6 with text attrs_tome\n  set f to web_el("h6", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto p with text attrs_tome\n  set f to web_el("p", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto span with text attrs_tome\n  set f to web_el("span", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto small with text attrs_tome\n  set f to web_el("small", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto strong with text attrs_tome\n  set f to web_el("strong", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto em with text attrs_tome\n  set f to web_el("em", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto code_el with text attrs_tome\n  set f to web_el("code", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto pre_el with text attrs_tome\n  set f to web_el("pre", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto a_html with text href attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set inner to web_escape_html(text)\n  return raw("<a href=\\"" + web_escape_attr(href) + "\\"" + a_str + ">" + inner + "</a>")\nend\n\nto a_link with text href attrs_tome\n  set f to a_html(text, href, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto btn_html with text attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set inner to web_escape_html(text)\n  return raw("<button type=\\"button\\"" + a_str + ">" + inner + "</button>")\nend\n\nto btn with text attrs_tome\n  set f to btn_html(text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto img_el with src alt attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set f to raw("<img src=\\"" + web_escape_attr(src) + "\\" alt=\\"" + web_escape_attr(alt) + "\\"" + a_str + ">")\n  set _ to web_emit(f)\n  return f\nend\n\nto input_el with input_type placeholder attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set ph to ""\n  if length(placeholder) > 0\n    set ph to " placeholder=\\"" + web_escape_attr(placeholder) + "\\""\n  end\n  set f to raw("<input type=\\"" + web_escape_attr(input_type) + "\\"" + ph + a_str + ">")\n  set _ to web_emit(f)\n  return f\nend\n\nto textarea_el with placeholder attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set ph to ""\n  if length(placeholder) > 0\n    set ph to " placeholder=\\"" + web_escape_attr(placeholder) + "\\""\n  end\n  set f to raw("<textarea" + ph + a_str + "></textarea>")\n  set _ to web_emit(f)\n  return f\nend\n\nto label_el with text for_id attrs_tome\n  set a_str to web_attrs_from_tome(attrs_tome)\n  set fa to ""\n  if length(for_id) > 0\n    set fa to " for=\\"" + web_escape_attr(for_id) + "\\""\n  end\n  set f to raw("<label" + fa + a_str + ">" + web_escape_html(text) + "</label>")\n  set _ to web_emit(f)\n  return f\nend\n\nto option_el with text val selected_flag\n  set sel to ""\n  if selected_flag is 1\n    set sel to " selected"\n  end\n  set f to raw("<option value=\\"" + web_escape_attr(val) + "\\"" + sel + ">" + web_escape_html(text) + "</option>")\n  set _ to web_emit(f)\n  return f\nend\n\nto li_html with text attrs_tome\n  return web_el("li", text, attrs_tome)\nend\n\nto li_el with text attrs_tome\n  set f to web_el("li", text, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto ul_list with items_list attrs_tome\n  set n to length(items_list)\n  set inner to ""\n  set i to 0\n  while i < n\n    set item to concat(items_list[i], "")\n    set item_clean to replace(replace(item, chr(1), ""), chr(2), "")\n    if text_starts_with(trim(item_clean), "<li")\n      set inner to inner + item_clean\n    else\n      set inner to inner + "<li>" + web_escape_html(item) + "</li>"\n    end\n    set i to i + 1\n  end\n  set f to web_el_raw("ul", inner, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto ol_list with items_list attrs_tome\n  set n to length(items_list)\n  set inner to ""\n  set i to 0\n  while i < n\n    set item to concat(items_list[i], "")\n    set item_clean to replace(replace(item, chr(1), ""), chr(2), "")\n    if text_starts_with(trim(item_clean), "<li")\n      set inner to inner + item_clean\n    else\n      set inner to inner + "<li>" + web_escape_html(item) + "</li>"\n    end\n    set i to i + 1\n  end\n  set f to web_el_raw("ol", inner, attrs_tome)\n  set _ to web_emit(f)\n  return f\nend\n\nto hr_el\n  set f to raw("<hr>")\n  set _ to web_emit(f)\n  return f\nend\n\nto br_el\n  return raw("<br>")\nend\n\nto inline_icon with name cls\n  return raw(web_icon_svg(name, cls))\nend\n\nto icon with name cls\n  set svg to web_icon_svg(name, cls)\n  set _ to web_emit(svg)\n  return raw(svg)\nend\n\nto render_html\n  set theme_css to web_theme_css(concat(_web_doc[5], ""))\n  set util_css to web_utilities_css()\n  set custom_css to concat(_web_doc[7], "")\n  set runtime_js to web_browser_runtime_js()\n  set state_init_js to ""\n  set st_entries to concat(_web_doc[10], "")\n  if length(st_entries) > 0\n    set state_init_js to "\\nwindow.$sdev.initState({ " + st_entries + " });"\n  end\n  set custom_js to concat(_web_doc[9], "")\n  set desc_meta to ""\n  set d_str to concat(_web_doc[3], "")\n  if length(d_str) > 0\n    set desc_meta to "\\n  <meta name=\\"description\\" content=\\"" + web_escape_attr(d_str) + "\\">"\n  end\n  set fav_link to ""\n  set fav_str to concat(_web_doc[4], "")\n  if length(fav_str) > 0\n    set fav_link to "\\n  <link rel=\\"icon\\" href=\\"" + web_escape_attr(fav_str) + "\\">"\n  end\n  set doc to "<!DOCTYPE html>\\n<html lang=\\"" + concat(_web_doc[2], "") + "\\" class=\\"dark\\">\\n<head>\\n  <meta charset=\\"UTF-8\\">\\n  <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\">\\n  <title>" + web_escape_html(concat(_web_doc[1], "")) + "</title>" + desc_meta + fav_link + concat(_web_doc[6], "") + "\\n  <style>\\n" + theme_css + "\\n" + util_css + "\\n" + custom_css + "\\n  </style>\\n</head>\\n<body>\\n" + concat(_web_doc[8], "") + "  <script>\\n" + runtime_js + state_init_js + "\\n" + custom_js + "\\n  </script>\\n</body>\\n</html>"\n  return concat(doc, "")\nend\n\nto save_html with path\n  set html to render_html()\n  set _ to write_file(path, html)\n  return html\nend\n\nto endpage\n  return render_html()\nend\n';
+    html_default = '# =============================================================================\r\n# SDEV Self-Hosted Web Toolkit: HTML5 & SVG Document Builder (lang/web/html.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\nuse "lang/web/icons.sdev"\r\nuse "lang/web/themes.sdev"\r\nuse "lang/web/transpiler.sdev"\r\nuse "lang/web/css.sdev"\r\n\r\n# _web_doc slots:\r\n# 0: active ("1" or "0")\r\n# 1: title\r\n# 2: lang\r\n# 3: desc\r\n# 4: favicon\r\n# 5: theme\r\n# 6: head\r\n# 7: css\r\n# 8: body\r\n# 9: js\r\n# 10: state_entries\r\nset _web_doc to mklist(16)\r\nset _web_doc[0] to "0"\r\nset _web_doc[1] to "sdev App"\r\nset _web_doc[2] to "en"\r\nset _web_doc[3] to ""\r\nset _web_doc[4] to "/favicon.png"\r\nset _web_doc[5] to "sdev-dark"\r\nset _web_doc[6] to ""\r\nset _web_doc[7] to ""\r\nset _web_doc[8] to ""\r\nset _web_doc[9] to ""\r\nset _web_doc[10] to ""\r\n\r\nto web_escape_html with s\r\n  set raw_s to concat(s, "")\r\n  if find(raw_s, chr(1)) >= 0\r\n    set out_mix to replace(raw_s, chr(1), "")\r\n    set out_mix to replace(out_mix, chr(2), "")\r\n    return concat(out_mix, "")\r\n  end\r\n  set out to replace(raw_s, "&", "&amp;")\r\n  set out to replace(out, "<", "&lt;")\r\n  set out to replace(out, ">", "&gt;")\r\n  set out to replace(out, "\\"", "&quot;")\r\n  return concat(out, "")\r\nend\r\n\r\nto web_escape_attr with s\r\n  set raw_s to concat(s, "")\r\n  set out to replace(raw_s, "&", "&amp;")\r\n  set out to replace(out, "\\"", "&quot;")\r\n  set out to replace(out, "<", "&lt;")\r\n  set out to replace(out, ">", "&gt;")\r\n  return concat(out, "")\r\nend\r\n\r\nto raw with html_str\r\n  return chr(1) + html_str + chr(2)\r\nend\r\n\r\nto web_tome_get_str with t key fallback\r\n  set ks to keys(t)\r\n  set vs to values(t)\r\n  set n to length(ks)\r\n  set i to 0\r\n  while i < n\r\n    if str_eq(ks[i], key)\r\n      return concat(vs[i], "")\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return concat(fallback, "")\r\nend\r\n\r\nto web_attrs_from_tome with attrs_tome\r\n  set ks to keys(attrs_tome)\r\n  set vs to values(attrs_tome)\r\n  set n to length(ks)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set k to concat(ks[i], "")\r\n    set v to concat(vs[i], "")\r\n    if str_eq(k, "bind")\r\n      set out to out + " data-bind-value=\\"" + web_escape_attr(v) + "\\""\r\n    else\r\n      if str_eq(k, "bind_text")\r\n        set out to out + " data-bind-text=\\"" + web_escape_attr(v) + "\\""\r\n      else\r\n        if str_eq(k, "bind_html")\r\n          set out to out + " data-bind-html=\\"" + web_escape_attr(v) + "\\""\r\n        else\r\n          if str_eq(k, "bind_show")\r\n            set out to out + " data-bind-show=\\"" + web_escape_attr(v) + "\\""\r\n          else\r\n            if str_eq(v, "false") or length(v) is 0\r\n              if text_starts_with(k, "aria-") or text_starts_with(k, "data-")\r\n                set out to out + " " + k + "=\\"" + web_escape_attr(v) + "\\""\r\n              end\r\n            else\r\n              if str_eq(v, "true") and (str_eq(k, "disabled") or str_eq(k, "checked") or str_eq(k, "required") or str_eq(k, "selected") or str_eq(k, "readonly") or str_eq(k, "multiple") or str_eq(k, "open") or str_eq(k, "controls") or str_eq(k, "autoplay") or str_eq(k, "loop") or str_eq(k, "muted"))\r\n                set out to out + " " + k\r\n              else\r\n                set out to out + " " + k + "=\\"" + web_escape_attr(v) + "\\""\r\n              end\r\n            end\r\n          end\r\n        end\r\n      end\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto web_el with tag_name content attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set inner to web_escape_html(content)\r\n  set html to "<" + tag_name + a_str + ">" + inner + "</" + tag_name + ">"\r\n  return raw(html)\r\nend\r\n\r\nto web_el_raw with tag_name inner_html attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set clean_inner to replace(replace(inner_html, chr(1), ""), chr(2), "")\r\n  set html to "<" + tag_name + a_str + ">" + clean_inner + "</" + tag_name + ">"\r\n  return raw(html)\r\nend\r\n\r\nto web_void_el with tag_name attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  return raw("<" + tag_name + a_str + ">")\r\nend\r\n\r\nto web_parse_tag_spec with spec\r\n  set clean to trim(spec)\r\n  set tname to "div"\r\n  set id_val to ""\r\n  set cls_val to ""\r\n  set n to length(clean)\r\n  set i to 0\r\n  set mode to 0\r\n  set cur to ""\r\n  while i <= n\r\n    set c to 0\r\n    if i < n\r\n      set c to ord(clean, i)\r\n    end\r\n    if i is n or c is 46 or c is 35\r\n      if length(cur) > 0\r\n        if mode is 0\r\n          set tname to cur\r\n        else\r\n          if mode is 1\r\n            if length(cls_val) > 0\r\n              set cls_val to cls_val + " " + cur\r\n            else\r\n              set cls_val to cur\r\n            end\r\n          else\r\n            set id_val to cur\r\n          end\r\n        end\r\n      end\r\n      set cur to ""\r\n      if c is 46\r\n        set mode to 1\r\n      end\r\n      if c is 35\r\n        set mode to 2\r\n      end\r\n    else\r\n      set cur to cur + chr(c)\r\n    end\r\n    set i to i + 1\r\n  end\r\n  if length(tname) is 0\r\n    set tname to "div"\r\n  end\r\n  return [tname, id_val, cls_val]\r\nend\r\n\r\nto web_tag_emmet with spec content attrs_tome\r\n  set parsed to web_parse_tag_spec(spec)\r\n  set tname to concat(parsed[0], "")\r\n  set id_val to concat(parsed[1], "")\r\n  set cls_val to concat(parsed[2], "")\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set extra_a to ""\r\n  if length(id_val) > 0\r\n    set extra_a to extra_a + " id=\\"" + web_escape_attr(id_val) + "\\""\r\n  end\r\n  if length(cls_val) > 0\r\n    set extra_a to extra_a + " class=\\"" + web_escape_attr(cls_val) + "\\""\r\n  end\r\n  set inner to web_escape_html(content)\r\n  return raw("<" + tname + extra_a + a_str + ">" + inner + "</" + tname + ">")\r\nend\r\n\r\n# \u2500\u2500 Stateful Document Operations \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\n\r\nto page with title_str\r\n  set _web_doc[0] to "1"\r\n  set _web_doc[1] to concat(title_str, "")\r\n  set _web_doc[2] to "en"\r\n  set _web_doc[3] to ""\r\n  set _web_doc[4] to "/favicon.png"\r\n  set _web_doc[5] to "sdev-dark"\r\n  set _web_doc[6] to ""\r\n  set _web_doc[7] to ""\r\n  set _web_doc[8] to ""\r\n  set _web_doc[9] to ""\r\n  set _web_doc[10] to ""\r\n  return 0\r\nend\r\n\r\nto web_meta with desc_str favicon_href\r\n  set _web_doc[3] to concat(desc_str, "")\r\n  if length(favicon_href) > 0\r\n    set _web_doc[4] to concat(favicon_href, "")\r\n  end\r\n  return 0\r\nend\r\n\r\nto theme with theme_name\r\n  set _web_doc[5] to concat(theme_name, "")\r\n  return 0\r\nend\r\n\r\nto web_emit with html_frag\r\n  set clean to replace(replace(html_frag, chr(1), ""), chr(2), "")\r\n  set cur to concat(_web_doc[8], "")\r\n  set _web_doc[8] to cur + clean + "\\n"\r\n  return 0\r\nend\r\n\r\nto raw_html with html_str\r\n  return web_emit(html_str)\r\nend\r\n\r\nto web_add_css with rule_str\r\n  set cur to concat(_web_doc[7], "")\r\n  if length(cur) > 0\r\n    set _web_doc[7] to cur + "\\n" + rule_str\r\n  else\r\n    set _web_doc[7] to concat(rule_str, "")\r\n  end\r\n  return 0\r\nend\r\n\r\nto web_add_js with js_str\r\n  set cur to concat(_web_doc[9], "")\r\n  if length(cur) > 0\r\n    set _web_doc[9] to cur + "\\n" + js_str\r\n  else\r\n    set _web_doc[9] to concat(js_str, "")\r\n  end\r\n  return 0\r\nend\r\n\r\nto style with selector style_tome\r\n  return web_add_css(web_style_rule(selector, style_tome))\r\nend\r\n\r\nto style_nested with parent_sel child_sel style_tome\r\n  return web_add_css(web_nested_rule(parent_sel, child_sel, style_tome))\r\nend\r\n\r\nto media_style with bp selector style_tome\r\n  return web_add_css(web_media_rule(bp, web_style_rule(selector, style_tome)))\r\nend\r\n\r\nto keyframes with name from_tome to_tome\r\n  return web_add_css(web_keyframes_rule(name, from_tome, to_tome))\r\nend\r\n\r\nto css_vars with vars_tome\r\n  return web_add_css(web_css_vars_rule(vars_tome))\r\nend\r\n\r\nto css_var with name fallback\r\n  return web_css_var(name, fallback)\r\nend\r\n\r\nto script_raw with js_code\r\n  return web_add_js(js_code)\r\nend\r\n\r\nto script_sdev with sdev_code\r\n  return web_add_js(sdev_to_js(sdev_code))\r\nend\r\n\r\nto client_fn with name params sdev_body\r\n  return web_add_js(web_client_fn_js(name, params, sdev_body))\r\nend\r\n\r\nto on_ready with sdev_body\r\n  return web_add_js(web_on_ready_js(sdev_body))\r\nend\r\n\r\nto web_state_init with key val_json\r\n  set entry to "\\"" + key + "\\": " + val_json\r\n  set cur to concat(_web_doc[10], "")\r\n  if length(cur) > 0\r\n    set _web_doc[10] to cur + ", " + entry\r\n  else\r\n    set _web_doc[10] to entry\r\n  end\r\n  return 0\r\nend\r\n\r\n# \u2500\u2500 Open / Close Structural Tags \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\n\r\nto open_tag with tag_name attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  return web_emit("<" + tag_name + a_str + ">")\r\nend\r\n\r\nto close_tag with tag_name\r\n  return web_emit("</" + tag_name + ">")\r\nend\r\n\r\nto open_main with attrs_tome\r\n  return open_tag("main", attrs_tome)\r\nend\r\nto end_main\r\n  return close_tag("main")\r\nend\r\n\r\nto open_header with attrs_tome\r\n  return open_tag("header", attrs_tome)\r\nend\r\nto end_header\r\n  return close_tag("header")\r\nend\r\n\r\nto open_footer with attrs_tome\r\n  return open_tag("footer", attrs_tome)\r\nend\r\nto end_footer\r\n  return close_tag("footer")\r\nend\r\n\r\nto open_nav with attrs_tome\r\n  return open_tag("nav", attrs_tome)\r\nend\r\nto end_nav\r\n  return close_tag("nav")\r\nend\r\n\r\nto open_section with attrs_tome\r\n  return open_tag("section", attrs_tome)\r\nend\r\nto end_section\r\n  return close_tag("section")\r\nend\r\n\r\nto open_div with attrs_tome\r\n  return open_tag("div", attrs_tome)\r\nend\r\nto end_div\r\n  return close_tag("div")\r\nend\r\n\r\nto open_form with attrs_tome\r\n  return open_tag("form", attrs_tome)\r\nend\r\nto end_form\r\n  return close_tag("form")\r\nend\r\n\r\nto open_ul with attrs_tome\r\n  return open_tag("ul", attrs_tome)\r\nend\r\nto end_ul\r\n  return close_tag("ul")\r\nend\r\n\r\nto open_ol with attrs_tome\r\n  return open_tag("ol", attrs_tome)\r\nend\r\nto end_ol\r\n  return close_tag("ol")\r\nend\r\n\r\nto open_article with attrs_tome\r\n  return open_tag("article", attrs_tome)\r\nend\r\nto end_article\r\n  return close_tag("article")\r\nend\r\n\r\nto open_aside with attrs_tome\r\n  return open_tag("aside", attrs_tome)\r\nend\r\nto end_aside\r\n  return close_tag("aside")\r\nend\r\n\r\n# \u2500\u2500 Element Emitters \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\n\r\nto div with content attrs_tome\r\n  set f to web_el("div", content, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto section with content attrs_tome\r\n  set f to web_el("section", content, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto header_el with content attrs_tome\r\n  set f to web_el("header", content, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto footer_el with content attrs_tome\r\n  set f to web_el("footer", content, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto nav_el with content attrs_tome\r\n  set f to web_el("nav", content, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto article with content attrs_tome\r\n  set f to web_el("article", content, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto aside with content attrs_tome\r\n  set f to web_el("aside", content, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto h1 with text attrs_tome\r\n  set f to web_el("h1", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto h2 with text attrs_tome\r\n  set f to web_el("h2", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto h3 with text attrs_tome\r\n  set f to web_el("h3", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto h4 with text attrs_tome\r\n  set f to web_el("h4", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto h5 with text attrs_tome\r\n  set f to web_el("h5", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto h6 with text attrs_tome\r\n  set f to web_el("h6", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto p with text attrs_tome\r\n  set f to web_el("p", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto span with text attrs_tome\r\n  set f to web_el("span", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto small with text attrs_tome\r\n  set f to web_el("small", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto strong with text attrs_tome\r\n  set f to web_el("strong", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto em with text attrs_tome\r\n  set f to web_el("em", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto code_el with text attrs_tome\r\n  set f to web_el("code", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto pre_el with text attrs_tome\r\n  set f to web_el("pre", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto a_html with text href attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set inner to web_escape_html(text)\r\n  return raw("<a href=\\"" + web_escape_attr(href) + "\\"" + a_str + ">" + inner + "</a>")\r\nend\r\n\r\nto a_link with text href attrs_tome\r\n  set f to a_html(text, href, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto btn_html with text attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set inner to web_escape_html(text)\r\n  return raw("<button type=\\"button\\"" + a_str + ">" + inner + "</button>")\r\nend\r\n\r\nto btn with text attrs_tome\r\n  set f to btn_html(text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto img_el with src alt attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set f to raw("<img src=\\"" + web_escape_attr(src) + "\\" alt=\\"" + web_escape_attr(alt) + "\\"" + a_str + ">")\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto input_el with input_type placeholder attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set ph to ""\r\n  if length(placeholder) > 0\r\n    set ph to " placeholder=\\"" + web_escape_attr(placeholder) + "\\""\r\n  end\r\n  set f to raw("<input type=\\"" + web_escape_attr(input_type) + "\\"" + ph + a_str + ">")\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto textarea_el with placeholder attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set ph to ""\r\n  if length(placeholder) > 0\r\n    set ph to " placeholder=\\"" + web_escape_attr(placeholder) + "\\""\r\n  end\r\n  set f to raw("<textarea" + ph + a_str + "></textarea>")\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto label_el with text for_id attrs_tome\r\n  set a_str to web_attrs_from_tome(attrs_tome)\r\n  set fa to ""\r\n  if length(for_id) > 0\r\n    set fa to " for=\\"" + web_escape_attr(for_id) + "\\""\r\n  end\r\n  set f to raw("<label" + fa + a_str + ">" + web_escape_html(text) + "</label>")\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto option_el with text val selected_flag\r\n  set sel to ""\r\n  if selected_flag is 1\r\n    set sel to " selected"\r\n  end\r\n  set f to raw("<option value=\\"" + web_escape_attr(val) + "\\"" + sel + ">" + web_escape_html(text) + "</option>")\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto li_html with text attrs_tome\r\n  return web_el("li", text, attrs_tome)\r\nend\r\n\r\nto li_el with text attrs_tome\r\n  set f to web_el("li", text, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto ul_list with items_list attrs_tome\r\n  set n to length(items_list)\r\n  set inner to ""\r\n  set i to 0\r\n  while i < n\r\n    set item to concat(items_list[i], "")\r\n    set item_clean to replace(replace(item, chr(1), ""), chr(2), "")\r\n    if text_starts_with(trim(item_clean), "<li")\r\n      set inner to inner + item_clean\r\n    else\r\n      set inner to inner + "<li>" + web_escape_html(item) + "</li>"\r\n    end\r\n    set i to i + 1\r\n  end\r\n  set f to web_el_raw("ul", inner, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto ol_list with items_list attrs_tome\r\n  set n to length(items_list)\r\n  set inner to ""\r\n  set i to 0\r\n  while i < n\r\n    set item to concat(items_list[i], "")\r\n    set item_clean to replace(replace(item, chr(1), ""), chr(2), "")\r\n    if text_starts_with(trim(item_clean), "<li")\r\n      set inner to inner + item_clean\r\n    else\r\n      set inner to inner + "<li>" + web_escape_html(item) + "</li>"\r\n    end\r\n    set i to i + 1\r\n  end\r\n  set f to web_el_raw("ol", inner, attrs_tome)\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto hr_el\r\n  set f to raw("<hr>")\r\n  set _ to web_emit(f)\r\n  return f\r\nend\r\n\r\nto br_el\r\n  return raw("<br>")\r\nend\r\n\r\nto inline_icon with name cls\r\n  return raw(web_icon_svg(name, cls))\r\nend\r\n\r\nto icon with name cls\r\n  set svg to web_icon_svg(name, cls)\r\n  set _ to web_emit(svg)\r\n  return raw(svg)\r\nend\r\n\r\nto render_html\r\n  set theme_css to web_theme_css(concat(_web_doc[5], ""))\r\n  set util_css to web_utilities_css()\r\n  set custom_css to concat(_web_doc[7], "")\r\n  set runtime_js to web_browser_runtime_js()\r\n  set state_init_js to ""\r\n  set st_entries to concat(_web_doc[10], "")\r\n  if length(st_entries) > 0\r\n    set state_init_js to "\\nwindow.$sdev.initState({ " + st_entries + " });"\r\n  end\r\n  set custom_js to concat(_web_doc[9], "")\r\n  set desc_meta to ""\r\n  set d_str to concat(_web_doc[3], "")\r\n  if length(d_str) > 0\r\n    set desc_meta to "\\n  <meta name=\\"description\\" content=\\"" + web_escape_attr(d_str) + "\\">"\r\n  end\r\n  set fav_link to ""\r\n  set fav_str to concat(_web_doc[4], "")\r\n  if length(fav_str) > 0\r\n    set fav_link to "\\n  <link rel=\\"icon\\" href=\\"" + web_escape_attr(fav_str) + "\\">"\r\n  end\r\n  set doc to "<!DOCTYPE html>\\n<html lang=\\"" + concat(_web_doc[2], "") + "\\" class=\\"dark\\">\\n<head>\\n  <meta charset=\\"UTF-8\\">\\n  <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\">\\n  <title>" + web_escape_html(concat(_web_doc[1], "")) + "</title>" + desc_meta + fav_link + concat(_web_doc[6], "") + "\\n  <style>\\n" + theme_css + "\\n" + util_css + "\\n" + custom_css + "\\n  </style>\\n</head>\\n<body>\\n" + concat(_web_doc[8], "") + "  <script>\\n" + runtime_js + state_init_js + "\\n" + custom_js + "\\n  </script>\\n</body>\\n</html>"\r\n  return concat(doc, "")\r\nend\r\n\r\nto save_html with path\r\n  set html to render_html()\r\n  set _ to write_file(path, html)\r\n  return html\r\nend\r\n\r\nto endpage\r\n  return render_html()\r\nend\r\n';
   }
 });
 
@@ -7509,475 +8389,475 @@ var init_html = __esm({
 var components_default;
 var init_components = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\web\\components.sdev"() {
-    components_default = `# =============================================================================
-# SDEV Self-Hosted Web Toolkit: High-Level Components, Motion & 3D Scene
-# (lang/web/components.sdev)
-# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.
-# =============================================================================
-
-use "lang/stdlib/v2/text.sdev"
-use "lang/web/icons.sdev"
-use "lang/web/html.sdev"
-
-to web_md_inline with text
-  set s to web_escape_html(text)
-  set out to ""
-  set n to length(s)
-  set i to 0
-  set in_code to 0
-  set in_bold to 0
-  set in_italic to 0
-  while i < n
-    set c to ord(s, i)
-    if c is 96
-      if in_code is 0
-        set out to out + "<code>"
-        set in_code to 1
-      else
-        set out to out + "</code>"
-        set in_code to 0
-      end
-      set i to i + 1
-    else
-      if c is 42 and i + 1 < n and ord(s, i + 1) is 42
-        if in_bold is 0
-          set out to out + "<strong>"
-          set in_bold to 1
-        else
-          set out to out + "</strong>"
-          set in_bold to 0
-        end
-        set i to i + 2
-      else
-        if c is 42
-          if in_italic is 0
-            set out to out + "<em>"
-            set in_italic to 1
-          else
-            set out to out + "</em>"
-            set in_italic to 0
-          end
-          set i to i + 1
-        else
-          if c is 91
-            set cb to find(substr(s, i, n - i), "](")
-            if cb > 0
-              set label to substr(s, i + 1, cb - 1)
-              set rest_start to i + cb + 2
-              set cp to find(substr(s, rest_start, n - rest_start), ")")
-              if cp >= 0
-                set href to substr(s, rest_start, cp)
-                set out to out + "<a href=\\"" + href + "\\" class=\\"text-primary\\">" + label + "</a>"
-                set i to rest_start + cp + 1
-              else
-                set out to out + chr(c)
-                set i to i + 1
-              end
-            else
-              set out to out + chr(c)
-              set i to i + 1
-            end
-          else
-            set out to out + chr(c)
-            set i to i + 1
-          end
-        end
-      end
-    end
-  end
-  return concat(out, "")
-end
-
-to web_render_markdown with md_str
-  set ls to split(md_str, "\\n")
-  set n to length(ls)
-  set out to ""
-  set in_code to 0
-  set code_buf to ""
-  set in_list to 0
-  set i to 0
-  while i < n
-    set raw_line to ls[i]
-    set t to trim(raw_line)
-    if text_starts_with(t, "\`\`\`")
-      if in_list is 1
-        set out to out + "</ul>\\n"
-        set in_list to 0
-      end
-      if in_code is 0
-        set in_code to 1
-        set code_buf to ""
-      else
-        set in_code to 0
-        set out to out + "<pre><code>" + web_escape_html(code_buf) + "</code></pre>\\n"
-      end
-    else
-      if in_code is 1
-        if length(code_buf) > 0
-          set code_buf to code_buf + "\\n" + raw_line
-        else
-          set code_buf to concat(raw_line, "")
-        end
-      else
-        if length(t) is 0
-          if in_list is 1
-            set out to out + "</ul>\\n"
-            set in_list to 0
-          end
-        else
-          set h_lvl to 0
-          set h_txt to ""
-          if text_starts_with(t, "###### ")
-            set h_lvl to 6
-            set h_txt to substr(t, 7, length(t) - 7)
-          end
-          if h_lvl is 0 and text_starts_with(t, "##### ")
-            set h_lvl to 5
-            set h_txt to substr(t, 6, length(t) - 6)
-          end
-          if h_lvl is 0 and text_starts_with(t, "#### ")
-            set h_lvl to 4
-            set h_txt to substr(t, 5, length(t) - 5)
-          end
-          if h_lvl is 0 and text_starts_with(t, "### ")
-            set h_lvl to 3
-            set h_txt to substr(t, 4, length(t) - 4)
-          end
-          if h_lvl is 0 and text_starts_with(t, "## ")
-            set h_lvl to 2
-            set h_txt to substr(t, 3, length(t) - 3)
-          end
-          if h_lvl is 0 and text_starts_with(t, "# ")
-            set h_lvl to 1
-            set h_txt to substr(t, 2, length(t) - 2)
-          end
-          if h_lvl > 0
-            if in_list is 1
-              set out to out + "</ul>\\n"
-              set in_list to 0
-            end
-            set htag to "h" + str(h_lvl)
-            set out to out + "<" + htag + ">" + web_md_inline(h_txt) + "</" + htag + ">\\n"
-          else
-            if text_starts_with(t, "- ") or text_starts_with(t, "* ")
-              if in_list is 0
-                set out to out + "<ul>\\n"
-                set in_list to 1
-              end
-              set out to out + "<li>" + web_md_inline(substr(t, 2, length(t) - 2)) + "</li>\\n"
-            else
-              if in_list is 1
-                set out to out + "</ul>\\n"
-                set in_list to 0
-              end
-              if text_starts_with(t, "> ")
-                set out to out + "<blockquote>" + web_md_inline(substr(t, 2, length(t) - 2)) + "</blockquote>\\n"
-              else
-                set out to out + "<p>" + web_md_inline(t) + "</p>\\n"
-              end
-            end
-          end
-        end
-      end
-    end
-    set i to i + 1
-  end
-  if in_list is 1
-    set out to out + "</ul>\\n"
-  end
-  if in_code is 1
-    set out to out + "<pre><code>" + web_escape_html(code_buf) + "</code></pre>\\n"
-  end
-  set res to trim(out)
-  return concat(res, "")
-end
-
-to markdown with md_str
-  set html to "<div class=\\"sdev-markdown space-y-3\\">" + web_render_markdown(md_str) + "</div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to navbar with brand_name brand_badge links_list actions_html
-  set logo_svg to web_icon_svg("sdev-logo", "w-7 h-7")
-  set badge_html to ""
-  if length(brand_badge) > 0
-    set badge_html to "<span class=\\"ml-1 rounded-full bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground\\">" + web_escape_html(brand_badge) + "</span>"
-  end
-  set nav_links to ""
-  set n to length(links_list)
-  set i to 0
-  while i < n
-    set item to links_list[i]
-    set lbl to web_tome_get_str(item, "label", "")
-    set hr to web_tome_get_str(item, "href", "#")
-    set nav_links to nav_links + "<a href=\\"" + web_escape_attr(hr) + "\\" class=\\"hover:text-foreground transition-colors\\">" + web_escape_html(lbl) + "</a>"
-    set i to i + 1
-  end
-  set clean_act to replace(replace(actions_html, chr(1), ""), chr(2), "")
-  set html to "<div class=\\"reading-progress\\" aria-hidden=\\"true\\"></div>\\n<header class=\\"site-nav\\" style=\\"background-color: hsl(var(--background) / 0.8);\\"><div class=\\"max-w-[1240px] mx-auto px-6 h-16 flex items-center justify-between\\"><a href=\\"#top\\" class=\\"flex items-center gap-2.5\\">" + logo_svg + "<span class=\\"font-mono text-sm font-semibold tracking-tight\\">" + web_escape_html(brand_name) + "</span>" + badge_html + "</a><nav aria-label=\\"Primary\\" class=\\"hidden md:flex items-center gap-8 text-sm text-muted-foreground\\">" + nav_links + "</nav><div class=\\"flex items-center gap-2\\">" + clean_act + "</div></div></header>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to hero_section with eyebrow_txt title_html subtitle_txt actions_html right_html
-  set clean_title to replace(replace(title_html, chr(1), ""), chr(2), "")
-  set clean_act to replace(replace(actions_html, chr(1), ""), chr(2), "")
-  set clean_right to replace(replace(right_html, chr(1), ""), chr(2), "")
-  set html to "<section class=\\"relative overflow-hidden border-b\\"><div class=\\"absolute inset-0 hero-spot pointer-events-none\\" aria-hidden=\\"true\\"></div><div class=\\"absolute inset-0 hero-grid pointer-events-none\\" aria-hidden=\\"true\\"></div><div class=\\"relative max-w-[1240px] mx-auto px-6 pt-16 pb-20 md:pt-24 md:pb-28\\"><div class=\\"grid lg:grid-cols-12 gap-10 lg:gap-12 items-center\\"><div class=\\"lg:col-span-6\\"><div class=\\"eyebrow\\">" + web_escape_html(eyebrow_txt) + "</div><h1 class=\\"mt-5 text-5xl md:text-6xl lg:text-[64px] leading-tight tracking-tight\\">" + clean_title + "</h1><p class=\\"mt-6 text-lg text-muted-foreground leading-relaxed max-w-xl\\">" + web_escape_html(subtitle_txt) + "</p><div class=\\"mt-8 flex flex-wrap items-center gap-3\\">" + clean_act + "</div></div><div class=\\"lg:col-span-6\\">" + clean_right + "</div></div></div></section>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to stat_card_html with val_str label_str note_str
-  set out to "<div class=\\"reveal\\"><div class=\\"font-display text-4xl md:text-5xl text-foreground tracking-tight\\" data-count=\\"" + web_escape_attr(val_str) + "\\">" + web_escape_html(val_str) + "</div><div class=\\"mt-1.5 text-sm font-medium text-foreground\\">" + web_escape_html(label_str) + "</div><div class=\\"text-xs text-muted-foreground mt-0.5\\">" + web_escape_html(note_str) + "</div></div>"
-  return raw(out)
-end
-
-to stat_band with cards_list
-  set n to length(cards_list)
-  set inner to ""
-  set i to 0
-  while i < n
-    set c to cards_list[i]
-    set ch to stat_card_html(web_tome_get_str(c, "v", ""), web_tome_get_str(c, "l", ""), web_tome_get_str(c, "d", ""))
-    set inner to inner + replace(replace(ch, chr(1), ""), chr(2), "")
-    set i to i + 1
-  end
-  set html to "<section aria-label=\\"Project numbers\\" class=\\"border-b\\" style=\\"background-color: hsl(var(--card) / 0.3);\\"><div class=\\"max-w-[1240px] mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8\\">" + inner + "</div></section>"
-  set _ to web_emit(html)
-  return count_up()
-end
-
-to feature_card_html with title_str desc_str icon_name span_cols extra_html
-  set span_cls to "md:col-span-2"
-  if span_cols is 4
-    set span_cls to "md:col-span-4"
-  end
-  if span_cols is 3
-    set span_cls to "md:col-span-3"
-  end
-  if span_cols is 6
-    set span_cls to "md:col-span-6"
-  end
-  set ic to web_icon_svg(icon_name, "w-5 h-5 text-primary")
-  set clean_ex to replace(replace(extra_html, chr(1), ""), chr(2), "")
-  set html to "<div class=\\"bento reveal " + span_cls + " p-6 md:p-7\\">" + ic + "<h3 class=\\"mt-4 text-2xl leading-snug\\">" + web_escape_html(title_str) + "</h3><p class=\\"mt-2 text-sm text-muted-foreground leading-relaxed\\">" + web_escape_html(desc_str) + "</p>" + clean_ex + "</div>"
-  return raw(html)
-end
-
-to bento_grid with cards_html
-  set clean_c to replace(replace(cards_html, chr(1), ""), chr(2), "")
-  set html to "<div class=\\"mt-14 grid gap-4 md:grid-cols-6\\">" + clean_c + "</div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to code_card_html with label_str code_str
-  set html to "<div class=\\"rounded-xl border overflow-hidden\\" style=\\"background-color: hsl(var(--card) / 0.7);\\"><div class=\\"flex items-center gap-2 px-4 py-3 border-b\\" style=\\"background-color: hsl(var(--background) / 0.5);\\"><span class=\\"w-2.5 h-2.5 rounded-full bg-secondary\\"></span><span class=\\"w-2.5 h-2.5 rounded-full bg-secondary\\"></span><span class=\\"w-2.5 h-2.5 rounded-full bg-secondary\\"></span><span class=\\"ml-2 font-mono text-xs text-muted-foreground\\">" + web_escape_html(label_str) + "</span></div><pre class=\\"p-5 font-mono text-sm leading-relaxed text-foreground overflow-x-auto\\"><code>" + web_escape_html(code_str) + "</code></pre></div>"
-  return raw(html)
-end
-
-to code_card with label_str code_str
-  set f to code_card_html(label_str, code_str)
-  set _ to web_emit(f)
-  return f
-end
-
-to web_comp_safe_text with val
-  set s to str(val)
-  if find(s, chr(1)) >= 0
-    return replace(replace(s, chr(1), ""), chr(2), "")
-  end
-  return web_escape_html(s)
-end
-
-to tabs_component with group_id tabs_list
-  set n to length(tabs_list)
-  set btns to ""
-  set panels to ""
-  set i to 0
-  while i < n
-    set t to tabs_list[i]
-    set tid to web_tome_get_str(t, "id", web_tome_get_str(t, "key", "tab-" + str(i)))
-    set tlbl to web_tome_get_str(t, "label", web_tome_get_str(t, "title", tid))
-    set raw_content to web_tome_get_str(t, "content", web_tome_get_str(t, "body", ""))
-    set tcontent to web_comp_safe_text(raw_content)
-    set act to "false"
-    if i is 0
-      set act to "true"
-    end
-    set btns to btns + "<button type=\\"button\\" role=\\"tab\\" class=\\"tab-btn tab-trigger\\" data-tab-group=\\"" + web_escape_attr(group_id) + "\\" data-tab-target=\\"" + web_escape_attr(tid) + "\\" data-active=\\"" + act + "\\" aria-selected=\\"" + act + "\\" onclick=\\"window.$sdev.switchTab('" + web_escape_attr(group_id) + "', '" + web_escape_attr(tid) + "')\\">" + web_escape_html(tlbl) + "</button>"
-    set panels to panels + "<div role=\\"tabpanel\\" class=\\"tab-panel mt-4\\" data-tab-group=\\"" + web_escape_attr(group_id) + "\\" data-tab-panel=\\"" + web_escape_attr(tid) + "\\" data-active=\\"" + act + "\\">" + tcontent + "</div>"
-    set i to i + 1
-  end
-  set html to "<div id=\\"" + web_escape_attr(group_id) + "\\" class=\\"sdev-tabs\\" data-tabs><div class=\\"tabs-list\\" role=\\"tablist\\">" + btns + "</div>" + panels + "</div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to accordion with items_list
-  set n to length(items_list)
-  set inner to ""
-  set chev to web_icon_svg("chevron-down", "w-4 h-4")
-  set i to 0
-  while i < n
-    set it to items_list[i]
-    set title_s to web_tome_get_str(it, "title", web_tome_get_str(it, "question", "Item " + str(i + 1)))
-    set body_raw to web_tome_get_str(it, "content", web_tome_get_str(it, "body", web_tome_get_str(it, "answer", "")))
-    set body_s to web_comp_safe_text(body_raw)
-    set open_str to "false"
-    if i is 0
-      set open_str to "true"
-    end
-    if has(it, "open")
-      if it["open"]
-        set open_str to "true"
-      else
-        set open_str to "false"
-      end
-    end
-    set inner to inner + "<div class=\\"accordion-item\\" data-open=\\"" + open_str + "\\"><button type=\\"button\\" data-accordion-trigger class=\\"accordion-trigger\\" onclick=\\"window.$sdev.toggleAccordion(this)\\"><span>" + web_escape_html(title_s) + "</span>" + chev + "</button><div class=\\"accordion-content\\">" + body_s + "</div></div>"
-    set i to i + 1
-  end
-  set html to "<div class=\\"sdev-accordion\\" data-accordion>" + inner + "</div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to modal_dialog with modal_id title_str body_html footer_html
-  set close_ic to web_icon_svg("x", "w-4 h-4")
-  set clean_body to web_comp_safe_text(body_html)
-  set clean_foot to replace(replace(footer_html, chr(1), ""), chr(2), "")
-  set foot_block to ""
-  if length(clean_foot) > 0
-    set foot_block to "<div class=\\"mt-6 flex justify-end gap-2\\">" + clean_foot + "</div>"
-  end
-  set html to "<div id=\\"" + web_escape_attr(modal_id) + "\\" class=\\"modal-backdrop\\" data-open=\\"false\\" role=\\"dialog\\" aria-modal=\\"true\\" onclick=\\"if(event.target===this)window.$sdev.closeModal('" + web_escape_attr(modal_id) + "')\\"><div class=\\"modal-card modal-box\\"><div class=\\"flex items-center justify-between pb-3 border-b\\"><h3 class=\\"text-xl font-display\\">" + web_escape_html(title_str) + "</h3><button type=\\"button\\" data-modal-close=\\"" + web_escape_attr(modal_id) + "\\" class=\\"btn btn-ghost btn-sm btn-icon\\" onclick=\\"window.$sdev.closeModal('" + web_escape_attr(modal_id) + "')\\">" + close_ic + "</button></div><div class=\\"mt-4\\">" + clean_body + "</div>" + foot_block + "</div></div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to data_table with headers_list rows_list
-  set nh to length(headers_list)
-  set ths to ""
-  set i to 0
-  while i < nh
-    set ths to ths + "<th>" + web_escape_html(str(headers_list[i])) + "</th>"
-    set i to i + 1
-  end
-  set nr to length(rows_list)
-  set trs to ""
-  set r to 0
-  while r < nr
-    set row to rows_list[r]
-    set nc to length(row)
-    set tds to ""
-    set c to 0
-    while c < nc
-      set tds to tds + "<td>" + web_comp_safe_text(row[c]) + "</td>"
-      set c to c + 1
-    end
-    set trs to trs + "<tr>" + tds + "</tr>"
-    set r to r + 1
-  end
-  set html to "<div class=\\"table-wrap\\"><table class=\\"data-table\\"><thead><tr>" + ths + "</tr></thead><tbody>" + trs + "</tbody></table></div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to form_field with label_str field_name input_type
-  set id_str to "field-" + field_name
-  set input_html to ""
-  if input_type is "textarea"
-    set input_html to "<textarea id=\\"" + web_escape_attr(id_str) + "\\" name=\\"" + web_escape_attr(field_name) + "\\" class=\\"textarea\\"></textarea>"
-  else
-    set input_html to "<input id=\\"" + web_escape_attr(id_str) + "\\" name=\\"" + web_escape_attr(field_name) + "\\" type=\\"" + web_escape_attr(input_type) + "\\" class=\\"input\\">"
-  end
-  set html to "<div class=\\"flex flex-col gap-1.5 mb-4\\"><label for=\\"" + web_escape_attr(id_str) + "\\" class=\\"text-sm font-medium\\">" + web_escape_html(label_str) + "</label>" + input_html + "</div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to footer_section with brand_name tagline_str links_list copy_str
-  set logo_svg to web_icon_svg("sdev-logo", "w-6 h-6")
-  set n to length(links_list)
-  set nav_html to ""
-  set i to 0
-  while i < n
-    set item to links_list[i]
-    set nav_html to nav_html + "<a href=\\"" + web_escape_attr(web_tome_get_str(item, "href", "#")) + "\\" class=\\"hover:text-foreground transition-colors\\">" + web_escape_html(web_tome_get_str(item, "label", "")) + "</a>"
-    set i to i + 1
-  end
-  set html to "<footer class=\\"border-t py-14 text-sm text-muted-foreground\\"><div class=\\"max-w-[1240px] mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6\\"><div class=\\"flex items-center gap-3\\">" + logo_svg + "<span class=\\"font-mono text-foreground font-semibold\\">" + web_escape_html(brand_name) + "</span><span>" + web_escape_html(tagline_str) + "</span></div><nav aria-label=\\"Footer\\" class=\\"flex flex-wrap gap-6\\">" + nav_html + "</nav></div><div class=\\"max-w-[1240px] mx-auto px-6 mt-8 pt-8 border-t text-xs text-muted-foreground\\" style=\\"border-color: hsl(var(--border) / 0.6);\\">" + web_escape_html(copy_str) + "</div></footer>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-to route_view with path_str is_active body_html
-  set style_attr to ""
-  if is_active is 0
-    set style_attr to " style=\\"display: none;\\""
-  end
-  set clean_b to replace(replace(body_html, chr(1), ""), chr(2), "")
-  set html to "<div data-route-view=\\"" + web_escape_attr(path_str) + "\\"" + style_attr + ">" + clean_b + "</div>"
-  set _ to web_emit(html)
-  return raw(html)
-end
-
-# \u2500\u2500 Scroll Motion, Reveal, Spotlight & Interactive Homepage Widgets \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-to scroll_driver
-  set js to "(function(){\\n  if (window.__sdevScrollDriverActive) return;\\n  window.__sdevScrollDriverActive = window.__sdevScrollDriver = true;\\n  const root = document.documentElement;\\n  let raf = 0;\\n  const update = () => {\\n    raf = 0;\\n    const max = Math.max(1, root.scrollHeight - window.innerHeight);\\n    const p = Math.min(1, Math.max(0, window.scrollY / max));\\n    root.style.setProperty('--scroll-progress', p.toFixed(4));\\n    const stack = document.getElementById('how-it-works-stack');\\n    if (stack) {\\n      const rect = stack.getBoundingClientRect();\\n      const total = Math.max(1, rect.height - window.innerHeight);\\n      const sp = Math.min(1, Math.max(0, -rect.top / total));\\n      root.style.setProperty('--CompilerScene-progress', sp.toFixed(4));\\n      const stages = stack.querySelectorAll('.stage-card');\\n      if (stages.length > 0) {\\n        const activeIdx = Math.min(stages.length - 1, Math.max(0, Math.floor(sp * stages.length)));\\n        stages.forEach((el, idx) => el.setAttribute('data-active', idx === activeIdx ? 'true' : 'false'));\\n      }\\n    }\\n  };\\n  const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };\\n  window.addEventListener('scroll', onScroll, { passive: true });\\n  window.addEventListener('resize', onScroll, { passive: true });\\n  update();\\n})();"
-  return web_add_js(js)
-end
-
-to scroll_reveal
-  set js to "(function(){\\n  if (window.__sdevRevealInit) return;\\n  window.__sdevRevealInit = true;\\n  const els = document.querySelectorAll('.reveal');\\n  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {\\n    els.forEach(el => el.classList.add('is-visible'));\\n    return;\\n  }\\n  const io = new IntersectionObserver(entries => {\\n    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); io.unobserve(entry.target); } });\\n  }, { threshold: 0.14 });\\n  els.forEach(el => io.observe(el));\\n})();"
-  return web_add_js(js)
-end
-
-to count_up
-  set js to "(function(){\\n  if (window.__sdevCountUpInit) return;\\n  window.__sdevCountUpInit = true;\\n  const els = document.querySelectorAll('[data-count]');\\n  const animate = el => {\\n    if (el.__counted) return; el.__counted = true;\\n    const raw = el.getAttribute('data-count') || el.textContent || '0';\\n    const num = parseInt(raw.replace(/[^0-9]/g, ''), 10);\\n    const suffix = raw.replace(/[0-9]/g, '');\\n    if (!num) { el.textContent = raw; return; }\\n    const start = performance.now();\\n    const step = now => {\\n      const t = Math.min(1, (now - start) / 900);\\n      const eased = 1 - Math.pow(1 - t, 3);\\n      el.textContent = Math.round(num * eased) + suffix;\\n      if (t < 1) requestAnimationFrame(step);\\n    };\\n    requestAnimationFrame(step);\\n  };\\n  if (!('IntersectionObserver' in window)) { els.forEach(animate); return; }\\n  const io = new IntersectionObserver(entries => {\\n    entries.forEach(e => { if (e.isIntersecting) { animate(e.target); io.unobserve(e.target); } });\\n  }, { threshold: 0.35 });\\n  els.forEach(el => io.observe(el));\\n})();"
-  return web_add_js(js)
-end
-
-to pointer_spotlight
-  set js to "(function(){\\n  if (window.__sdevSpotlightInit) return;\\n  window.__sdevSpotlightInit = true;\\n  document.addEventListener('pointermove', e => {\\n    const card = e.target && e.target.closest ? e.target.closest('.bento') : null;\\n    if (!card) return;\\n    const r = card.getBoundingClientRect();\\n    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');\\n    card.style.setProperty('--my', (e.clientY - r.top) + 'px');\\n  }, { passive: true });\\n})();"
-  return web_add_js(js)
-end
-
-to hero_demo_html
-  set h1_str to "<div id=\\"sdev-hero-demo\\" class=\\"card rounded-xl border overflow-hidden\\" style=\\"background: hsl(var(--card) / 0.85); box-shadow: 0 24px 60px -16px rgba(0,0,0,0.65);\\"><div class=\\"flex items-center justify-between px-4 py-3 border-b\\" style=\\"background: hsl(var(--background) / 0.6);\\"><div class=\\"flex items-center gap-2\\"><span class=\\"w-2.5 h-2.5 rounded-full\\" style=\\"background:#ef4444;\\"></span><span class=\\"w-2.5 h-2.5 rounded-full\\" style=\\"background:#f59e0b;\\"></span><span class=\\"w-2.5 h-2.5 rounded-full\\" style=\\"background:#10b981;\\"></span><span class=\\"ml-2 font-mono text-xs text-muted-foreground\\" id=\\"hero-demo-filename\\">hello.sdev</span></div><div class=\\"flex items-center gap-1\\" role=\\"tablist\\">"
-  set h2_str to "<button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"0\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(0)\\">Plain words</button><button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"1\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(1)\\">26 languages</button><button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"2\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(2)\\">Hardware</button><button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"3\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(3)\\">Self-hosted</button></div></div>"
-  set h3_str to "<div class=\\"p-5 font-mono text-sm leading-relaxed\\" style=\\"min-height: 165px;\\"><pre id=\\"hero-demo-code\\" style=\\"margin: 0; white-space: pre-wrap; color: hsl(var(--foreground));\\">ask \\"What is your name?\\" as name\\nsay \\"Hello, [name]!\\"\\n\\ncount from 1 to 3\\n  say \\"Step [n]\\"</pre></div><div class=\\"px-5 py-3.5 border-t font-mono text-xs\\" style=\\"background: hsl(var(--background) / 0.75);\\"><div class=\\"flex items-center justify-between text-muted-foreground\\"><span>OUTPUT \xB7 INSTANT RUN</span><span class=\\"text-brand-green\\" id=\\"hero-demo-status\\">\u25CF Ready in 0.4 ms</span></div><pre id=\\"hero-demo-output\\" class=\\"mt-2 text-primary\\" style=\\"margin-bottom:0; white-space: pre-wrap;\\">Hello, Ada!\\nStep 1 \xB7 Step 2 \xB7 Step 3</pre></div></div>"
-  set js to "(function(){\\n  const DEMOS = [\\n    { file: 'hello.sdev', code: 'ask \\"What is your name?\\" as name\\\\nsay \\"Hello, [name]!\\"\\\\n\\\\ncount from 1 to 3\\\\n  say \\"Step [n]\\"', out: 'Hello, Ada!\\\\nStep 1 \xB7 Step 2 \xB7 Step 3', status: '\u25CF Understood & ran in 0.4 ms' },\\n    { file: 'bulgarian.sdev', code: '\u043D\u0435\u043A\u0430 \u0438\u043C\u0435 \u0431\u044A\u0434\u0435 \\"\u0410\u0434\u0430\\"\\\\n\u043D\u0435\u043A\u0430 \u0442\u043E\u0447\u043A\u0438 \u0431\u044A\u0434\u0435 100\\\\n\u0430\u043A\u043E \u0442\u043E\u0447\u043A\u0438 >= 90 ::\\\\n  \u043A\u0430\u0436\u0438(\\"\u0411\u0440\u0430\u0432\u043E, \\" + \u0438\u043C\u0435 + \\"!\\")\\\\n;;', out: '\u0411\u0440\u0430\u0432\u043E, \u0410\u0434\u0430!', status: '\u25CF Bulgarian \u2192 Canonical sdev' },\\n    { file: 'blink.sdev', code: 'board \\"arduino-uno\\" ::\\\\n  pin 13 is an output\\\\n  every 500 ms\\\\n    toggle pin 13\\\\n;;', out: '\u2713 Compiled to AVR C++ (412 bytes flash)', status: '\u25CF Hardware reader \xB7 Arduino Uno' },\\n    { file: 'bootstrap.sdev', code: '#!sdev v2\\\\nset stage1 to compile_file(\\"compiler.sdev\\")\\\\nset stage2 to run_vm(stage1, \\"compiler.sdev\\")\\\\nsay bytes_equal(stage1, stage2)', out: 'true \xB7 87 of 87 self-compile checks byte-identical', status: '\u25CF Seed WASM VM \xB7 0 dependencies' }\\n  ];\\n  let current = 0;\\n  window.__setHeroDemo = function(idx) {\\n    current = idx;\\n    const d = DEMOS[idx] || DEMOS[0];\\n    const f = document.getElementById('hero-demo-filename');\\n    const c = document.getElementById('hero-demo-code');\\n    const o = document.getElementById('hero-demo-output');\\n    const s = document.getElementById('hero-demo-status');\\n    if (f) f.textContent = d.file;\\n    if (c) c.textContent = d.code;\\n    if (o) o.textContent = d.out;\\n    if (s) s.textContent = d.status;\\n    document.querySelectorAll('[data-hero-tab]').forEach((btn, i) => {\\n      btn.style.background = i === idx ? 'hsl(var(--secondary))' : 'transparent';\\n      btn.style.color = i === idx ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))';\\n    });\\n  };\\n  window.__setHeroDemo(0);\\n})();"
-  set _ to web_add_js(js)
-  return raw(h1_str + h2_str + h3_str)
-end
-
-to compiler_scene_3d
-  set h1_str to "<section class=\\"relative border-b\\"><div class=\\"max-w-[1240px] mx-auto px-6 pt-24 pb-12\\"><div class=\\"reveal max-w-2xl\\"><div class=\\"eyebrow\\">How it works</div><h2 class=\\"mt-3 text-4xl md:text-5xl leading-tight\\">From your words to running code, in four quiet steps.</h2><p class=\\"mt-4 text-lg text-muted-foreground\\">Scroll through the pipeline. You do not need to know any of this to use sdev \u2014 but none of it is hidden from you either.</p></div></div>"
-  set h2_str to "<div id=\\"how-it-works-stack\\" class=\\"how-stack\\"><div class=\\"grid lg:grid-cols-12 gap-10 items-start max-w-[1240px] mx-auto px-6 pb-24\\"><div class=\\"lg:col-span-7 lg:sticky lg:top-20\\"><div id=\\"sdev-compiler-world\\" class=\\"rounded-xl border overflow-hidden relative\\" style=\\"height: 440px; background: radial-gradient(circle at 50% 45%, hsl(var(--primary) / 0.14), hsl(var(--card)) 75%);\\"><canvas id=\\"sdev-compiler-3d-canvas\\" style=\\"width: 100%; height: 100%; display: block;\\"></canvas><div class=\\"absolute inset-x-0 bottom-0 p-4 flex items-center justify-between text-xs font-mono text-muted-foreground border-t\\" style=\\"background: hsl(var(--background) / 0.78); backdrop-filter: blur(8px);\\"><span id=\\"compiler-3d-caption\\">STAGE 01 \xB7 YOUR WORDS</span><span>3D PIPELINE \xB7 SCROLL-DRIVEN</span></div></div></div>"
-  set h3_str to "<div class=\\"lg:col-span-5 space-y-24 py-4\\"><div class=\\"stage-card\\" data-stage=\\"0\\" data-active=\\"true\\"><div class=\\"stage-num\\">01 / WRITE</div><h3 class=\\"mt-1 text-2xl\\">Your words</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">Write in English, Bulgarian, Spanish, Japanese \u2014 or plain sentences. The code understander reads what you meant.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\\">ask \\"Your name?\\" as name\\nsay \\"Hello, [name]!\\"</pre></div>"
-  set h4_str to "<div class=\\"stage-card\\" data-stage=\\"1\\" data-active=\\"false\\"><div class=\\"stage-num\\">02 / UNDERSTAND</div><h3 class=\\"mt-1 text-2xl\\">Canonical sdev</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">The sdev-written understander engine translates natural phrases and dialects into clean, canonical sdev syntax.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\\">forge name be input(\\"Your name?\\")\\nspeak(\\"Hello, \\" + name + \\"!\\")</pre></div>"
-  set h5_str to "<div class=\\"stage-card\\" data-stage=\\"2\\" data-active=\\"false\\"><div class=\\"stage-num\\">03 / COMPILE</div><h3 class=\\"mt-1 text-2xl\\">Self-hosted compiler</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">Written in sdev itself. Turns the AST into compact bytecode or bare-metal x86-64 machine instructions.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\\">0000  PUSH_CONST  \\"Your name?\\"\\n0002  CALL_HOST   input, 1\\n0005  STORE_LOCAL 0 (name)</pre></div>"
-  set h6_str to "<div class=\\"stage-card\\" data-stage=\\"3\\" data-active=\\"false\\"><div class=\\"stage-num\\">04 / RUN ANYWHERE</div><h3 class=\\"mt-1 text-2xl\\">Browser, native, or microcontroller</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">Runs in the 8 KB WebAssembly seed VM, as a zero-dependency Linux/Windows binary, or flashes directly to a board.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-brand-green overflow-x-auto\\">\u2713 Executed in 0.3 ms \xB7 0 external dependencies</pre></div></div></div></div></section>"
-  set js to "(function(){\\n  const canvas = document.getElementById('sdev-compiler-3d-canvas');\\n  if (!canvas) return;\\n  const caption = document.getElementById('compiler-3d-caption');\\n  const LABELS = ['STAGE 01 \xB7 YOUR WORDS', 'STAGE 02 \xB7 CANONICAL SDEV', 'STAGE 03 \xB7 SELF-HOSTED COMPILER', 'STAGE 04 \xB7 RUN ANYWHERE'];\\n  const COLORS = ['#38bdf8', '#818cf8', '#f59e0b', '#34d399'];\\n  const ctx = canvas.getContext('2d');\\n  if (!ctx) return;\\n  let t = 0;\\n  const draw = () => {\\n    t += 0.02;\\n    const w = canvas.width = canvas.clientWidth || 600;\\n    const h = canvas.height = canvas.clientHeight || 440;\\n    const rawP = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--CompilerScene-progress') || '0') || 0;\\n    const activeIdx = Math.min(3, Math.max(0, Math.floor(rawP * 4)));\\n    if (caption) caption.textContent = LABELS[activeIdx];\\n    ctx.clearRect(0, 0, w, h);\\n    const cx = w / 2, cy = h / 2;\\n    for (let i = 0; i < 4; i++) {\\n      const angle = t * 0.7 + i * (Math.PI / 2);\\n      const rx = cx + Math.cos(angle) * 125;\\n      const ry = cy + Math.sin(angle) * 55 + (i - 1.5) * 28;\\n      const r = i === activeIdx ? 34 : 22;\\n      ctx.beginPath();\\n      ctx.arc(rx, ry, r, 0, Math.PI * 2);\\n      ctx.fillStyle = COLORS[i] + (i === activeIdx ? '44' : '1a');\\n      ctx.fill();\\n      ctx.lineWidth = i === activeIdx ? 2.5 : 1.2;\\n      ctx.strokeStyle = COLORS[i];\\n      ctx.stroke();\\n      ctx.fillStyle = '#e2e8f0';\\n      ctx.font = '600 11px JetBrains Mono, monospace';\\n      ctx.textAlign = 'center';\\n      ctx.fillText('0' + (i + 1), rx, ry + 4);\\n    }\\n    requestAnimationFrame(draw);\\n  };\\n  draw();\\n})();"
-  set _ to web_add_js(js)
-  set _ to web_emit(h1_str + h2_str + h3_str + h4_str + h5_str + h6_str)
-  return 0
-end
-
-to sdev_playground
-  set h1_str to "<section id=\\"try\\" class=\\"max-w-[1240px] mx-auto px-6 py-24 md:py-28 border-b\\"><div class=\\"reveal flex flex-col md:flex-row md:items-center justify-between gap-6\\"><div><div class=\\"eyebrow\\">Try it right here</div><h2 class=\\"mt-3 text-4xl md:text-5xl leading-tight\\">Edit a line. Press Run.</h2><p class=\\"mt-3 text-lg text-muted-foreground\\">Live sdev playground running directly in your browser \u2014 with console, 2D canvas, and compiler inspector.</p></div><div class=\\"flex flex-wrap gap-2\\"><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(0)\\">Hello &amp; Loops</button><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(1)\\">Functions &amp; Lists</button><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(2)\\">Bulgarian</button><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(3)\\">2D Canvas</button></div></div>"
-  set h2_str to "<div class=\\"mt-10 grid lg:grid-cols-12 gap-6\\"><div class=\\"lg:col-span-7 card rounded-xl border overflow-hidden\\"><div class=\\"flex items-center justify-between px-4 py-3 border-b\\" style=\\"background: hsl(var(--background) / 0.5);\\"><span class=\\"font-mono text-xs text-muted-foreground\\" id=\\"pg-file-label\\">playground.sdev</span><button type=\\"button\\" class=\\"btn btn-primary btn-sm\\" onclick=\\"window.runSdevPlayground()\\">\u25B6 Run (Ctrl+Enter)</button></div><textarea id=\\"sdev-pg-editor\\" class=\\"w-full p-5 font-mono text-sm leading-relaxed\\" style=\\"height: 280px; background: transparent; color: hsl(var(--foreground)); border: none; outline: none; resize: vertical;\\" spellcheck=\\"false\\"></textarea></div>"
-  set h3_str to "<div class=\\"lg:col-span-5 card rounded-xl border overflow-hidden flex flex-col\\"><div class=\\"flex items-center justify-between px-4 py-3 border-b\\" style=\\"background: hsl(var(--background) / 0.5);\\"><span class=\\"font-mono text-xs text-muted-foreground\\">OUTPUT</span><span class=\\"font-mono text-xs text-brand-green\\" id=\\"pg-status\\">\u25CF Ready</span></div><pre id=\\"pg-output\\" class=\\"p-5 font-mono text-sm text-primary overflow-x-auto\\" style=\\"margin: 0; min-height: 220px; white-space: pre-wrap;\\"></pre><canvas id=\\"pg-canvas\\" width=\\"420\\" height=\\"220\\" style=\\"display: none; width: 100%; background: #090d16;\\"></canvas></div></div></section>"
-  set js to "(function(){\\n  const EXAMPLES = [\\n    { name: 'hello.sdev', code: 'forge lang be \\"sdev\\"\\\\nspeak(\\"Welcome to \\" + lang + \\"!\\")\\\\n\\\\nforge i be 1\\\\ncycle i <= 4 ::\\\\n  speak(\\"Step \\" + str(i) + \\" squared is \\" + str(i * i))\\\\n  i be i + 1\\\\n;;', out: 'Welcome to sdev!\\\\nStep 1 squared is 1\\\\nStep 2 squared is 4\\\\nStep 3 squared is 9\\\\nStep 4 squared is 16' },\\n    { name: 'functions.sdev', code: 'conjure fib(n) ::\\\\n  ponder n <= 1 :: yield n ;;\\\\n  yield fib(n - 1) + fib(n - 2)\\\\n;;\\\\n\\\\niterate k through [0, 1, 2, 3, 4, 5, 6, 7] ::\\\\n  speak(\\"fib(\\" + str(k) + \\") = \\" + str(fib(k)))\\\\n;;', out: 'fib(0) = 0\\\\nfib(1) = 1\\\\nfib(2) = 1\\\\nfib(3) = 2\\\\nfib(4) = 3\\\\nfib(5) = 5\\\\nfib(6) = 8\\\\nfib(7) = 13' },\\n    { name: 'bulgarian.sdev', code: '\u043D\u0435\u043A\u0430 \u0435\u0437\u0438\u043A \u0431\u044A\u0434\u0435 \\"\u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438\\"\\\\n\u043A\u0430\u0436\u0438(\\"\u0417\u0434\u0440\u0430\u0432\u0435\u0439 \u043E\u0442 \\" + \u0435\u0437\u0438\u043A + \\"!\\")\\\\n\u043D\u0435\u043A\u0430 \u0441\u0443\u043C\u0430 \u0431\u044A\u0434\u0435 20 + 22\\\\n\u043A\u0430\u0436\u0438(\\"\u041E\u0442\u0433\u043E\u0432\u043E\u0440\u044A\u0442 \u0435: \\" + str(\u0441\u0443\u043C\u0430))', out: '\u0417\u0434\u0440\u0430\u0432\u0435\u0439 \u043E\u0442 \u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438!\\\\n\u041E\u0442\u0433\u043E\u0432\u043E\u0440\u044A\u0442 \u0435: 42' },\\n    { name: 'starburst.sdev', code: 'canvas(420, 220)\\\\nbackground(\\"#090d16\\")\\\\nstroke(\\"#38bdf8\\")\\\\ncircle(210, 110, 65)', out: '[Canvas 420x220 rendered]', canvas: true }\\n  ];\\n  window.__loadPgExample = function(idx) {\\n    const ex = EXAMPLES[idx] || EXAMPLES[0];\\n    const ed = document.getElementById('sdev-pg-editor');\\n    const lbl = document.getElementById('pg-file-label');\\n    if (ed) ed.value = ex.code;\\n    if (lbl) lbl.textContent = ex.name;\\n    window.runSdevPlayground(idx);\\n  };\\n  window.runSdevPlayground = window.__runPgCode = function(presetIdx) {\\n    const ed = document.getElementById('sdev-pg-editor');\\n    const out = document.getElementById('pg-output');\\n    const cv = document.getElementById('pg-canvas');\\n    const code = ed ? ed.value : '';\\n    if (code.includes('canvas(') && cv) {\\n      cv.style.display = 'block';\\n      if (out) out.style.display = 'none';\\n      const ctx = cv.getContext('2d');\\n      if (ctx) {\\n        ctx.fillStyle = '#090d16'; ctx.fillRect(0, 0, cv.width, cv.height);\\n        for (let i = 0; i < 18; i++) {\\n          const a = (i / 18) * Math.PI * 2;\\n          ctx.strokeStyle = i % 2 === 0 ? '#38bdf8' : '#818cf8';\\n          ctx.lineWidth = 2;\\n          ctx.beginPath(); ctx.moveTo(210, 110); ctx.lineTo(210 + Math.cos(a) * 85, 110 + Math.sin(a) * 85); ctx.stroke();\\n        }\\n      }\\n      return;\\n    }\\n    if (cv) cv.style.display = 'none';\\n    if (out) {\\n      out.style.display = 'block';\\n      const match = EXAMPLES.find(e => e.code.trim() === code.trim());\\n      if (match) { out.textContent = match.out; return; }\\n      const lines = [];\\n      code.split('\\\\n').forEach(l => {\\n        const m = l.match(/(?:speak|say|\u043A\u0430\u0436\u0438)\\\\s*\\\\(?\\\\s*\\"([^\\"]*)\\"/);\\n        if (m) lines.push(m[1]);\\n      });\\n      out.textContent = lines.length ? lines.join('\\\\n') : '\u2713 Program executed';\\n    }\\n  };\\n  window.__loadPgExample(0);\\n})();"
-  set _ to web_add_js(js)
-  set _ to web_emit(h1_str + h2_str + h3_str)
-  return 0
-end
+    components_default = `# =============================================================================\r
+# SDEV Self-Hosted Web Toolkit: High-Level Components, Motion & 3D Scene\r
+# (lang/web/components.sdev)\r
+# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r
+# =============================================================================\r
+\r
+use "lang/stdlib/v2/text.sdev"\r
+use "lang/web/icons.sdev"\r
+use "lang/web/html.sdev"\r
+\r
+to web_md_inline with text\r
+  set s to web_escape_html(text)\r
+  set out to ""\r
+  set n to length(s)\r
+  set i to 0\r
+  set in_code to 0\r
+  set in_bold to 0\r
+  set in_italic to 0\r
+  while i < n\r
+    set c to ord(s, i)\r
+    if c is 96\r
+      if in_code is 0\r
+        set out to out + "<code>"\r
+        set in_code to 1\r
+      else\r
+        set out to out + "</code>"\r
+        set in_code to 0\r
+      end\r
+      set i to i + 1\r
+    else\r
+      if c is 42 and i + 1 < n and ord(s, i + 1) is 42\r
+        if in_bold is 0\r
+          set out to out + "<strong>"\r
+          set in_bold to 1\r
+        else\r
+          set out to out + "</strong>"\r
+          set in_bold to 0\r
+        end\r
+        set i to i + 2\r
+      else\r
+        if c is 42\r
+          if in_italic is 0\r
+            set out to out + "<em>"\r
+            set in_italic to 1\r
+          else\r
+            set out to out + "</em>"\r
+            set in_italic to 0\r
+          end\r
+          set i to i + 1\r
+        else\r
+          if c is 91\r
+            set cb to find(substr(s, i, n - i), "](")\r
+            if cb > 0\r
+              set label to substr(s, i + 1, cb - 1)\r
+              set rest_start to i + cb + 2\r
+              set cp to find(substr(s, rest_start, n - rest_start), ")")\r
+              if cp >= 0\r
+                set href to substr(s, rest_start, cp)\r
+                set out to out + "<a href=\\"" + href + "\\" class=\\"text-primary\\">" + label + "</a>"\r
+                set i to rest_start + cp + 1\r
+              else\r
+                set out to out + chr(c)\r
+                set i to i + 1\r
+              end\r
+            else\r
+              set out to out + chr(c)\r
+              set i to i + 1\r
+            end\r
+          else\r
+            set out to out + chr(c)\r
+            set i to i + 1\r
+          end\r
+        end\r
+      end\r
+    end\r
+  end\r
+  return concat(out, "")\r
+end\r
+\r
+to web_render_markdown with md_str\r
+  set ls to split(md_str, "\\n")\r
+  set n to length(ls)\r
+  set out to ""\r
+  set in_code to 0\r
+  set code_buf to ""\r
+  set in_list to 0\r
+  set i to 0\r
+  while i < n\r
+    set raw_line to ls[i]\r
+    set t to trim(raw_line)\r
+    if text_starts_with(t, "\`\`\`")\r
+      if in_list is 1\r
+        set out to out + "</ul>\\n"\r
+        set in_list to 0\r
+      end\r
+      if in_code is 0\r
+        set in_code to 1\r
+        set code_buf to ""\r
+      else\r
+        set in_code to 0\r
+        set out to out + "<pre><code>" + web_escape_html(code_buf) + "</code></pre>\\n"\r
+      end\r
+    else\r
+      if in_code is 1\r
+        if length(code_buf) > 0\r
+          set code_buf to code_buf + "\\n" + raw_line\r
+        else\r
+          set code_buf to concat(raw_line, "")\r
+        end\r
+      else\r
+        if length(t) is 0\r
+          if in_list is 1\r
+            set out to out + "</ul>\\n"\r
+            set in_list to 0\r
+          end\r
+        else\r
+          set h_lvl to 0\r
+          set h_txt to ""\r
+          if text_starts_with(t, "###### ")\r
+            set h_lvl to 6\r
+            set h_txt to substr(t, 7, length(t) - 7)\r
+          end\r
+          if h_lvl is 0 and text_starts_with(t, "##### ")\r
+            set h_lvl to 5\r
+            set h_txt to substr(t, 6, length(t) - 6)\r
+          end\r
+          if h_lvl is 0 and text_starts_with(t, "#### ")\r
+            set h_lvl to 4\r
+            set h_txt to substr(t, 5, length(t) - 5)\r
+          end\r
+          if h_lvl is 0 and text_starts_with(t, "### ")\r
+            set h_lvl to 3\r
+            set h_txt to substr(t, 4, length(t) - 4)\r
+          end\r
+          if h_lvl is 0 and text_starts_with(t, "## ")\r
+            set h_lvl to 2\r
+            set h_txt to substr(t, 3, length(t) - 3)\r
+          end\r
+          if h_lvl is 0 and text_starts_with(t, "# ")\r
+            set h_lvl to 1\r
+            set h_txt to substr(t, 2, length(t) - 2)\r
+          end\r
+          if h_lvl > 0\r
+            if in_list is 1\r
+              set out to out + "</ul>\\n"\r
+              set in_list to 0\r
+            end\r
+            set htag to "h" + str(h_lvl)\r
+            set out to out + "<" + htag + ">" + web_md_inline(h_txt) + "</" + htag + ">\\n"\r
+          else\r
+            if text_starts_with(t, "- ") or text_starts_with(t, "* ")\r
+              if in_list is 0\r
+                set out to out + "<ul>\\n"\r
+                set in_list to 1\r
+              end\r
+              set out to out + "<li>" + web_md_inline(substr(t, 2, length(t) - 2)) + "</li>\\n"\r
+            else\r
+              if in_list is 1\r
+                set out to out + "</ul>\\n"\r
+                set in_list to 0\r
+              end\r
+              if text_starts_with(t, "> ")\r
+                set out to out + "<blockquote>" + web_md_inline(substr(t, 2, length(t) - 2)) + "</blockquote>\\n"\r
+              else\r
+                set out to out + "<p>" + web_md_inline(t) + "</p>\\n"\r
+              end\r
+            end\r
+          end\r
+        end\r
+      end\r
+    end\r
+    set i to i + 1\r
+  end\r
+  if in_list is 1\r
+    set out to out + "</ul>\\n"\r
+  end\r
+  if in_code is 1\r
+    set out to out + "<pre><code>" + web_escape_html(code_buf) + "</code></pre>\\n"\r
+  end\r
+  set res to trim(out)\r
+  return concat(res, "")\r
+end\r
+\r
+to markdown with md_str\r
+  set html to "<div class=\\"sdev-markdown space-y-3\\">" + web_render_markdown(md_str) + "</div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to navbar with brand_name brand_badge links_list actions_html\r
+  set logo_svg to web_icon_svg("sdev-logo", "w-7 h-7")\r
+  set badge_html to ""\r
+  if length(brand_badge) > 0\r
+    set badge_html to "<span class=\\"ml-1 rounded-full bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground\\">" + web_escape_html(brand_badge) + "</span>"\r
+  end\r
+  set nav_links to ""\r
+  set n to length(links_list)\r
+  set i to 0\r
+  while i < n\r
+    set item to links_list[i]\r
+    set lbl to web_tome_get_str(item, "label", "")\r
+    set hr to web_tome_get_str(item, "href", "#")\r
+    set nav_links to nav_links + "<a href=\\"" + web_escape_attr(hr) + "\\" class=\\"hover:text-foreground transition-colors\\">" + web_escape_html(lbl) + "</a>"\r
+    set i to i + 1\r
+  end\r
+  set clean_act to replace(replace(actions_html, chr(1), ""), chr(2), "")\r
+  set html to "<div class=\\"reading-progress\\" aria-hidden=\\"true\\"></div>\\n<header class=\\"site-nav\\" style=\\"background-color: hsl(var(--background) / 0.8);\\"><div class=\\"max-w-[1240px] mx-auto px-6 h-16 flex items-center justify-between\\"><a href=\\"#top\\" class=\\"flex items-center gap-2.5\\">" + logo_svg + "<span class=\\"font-mono text-sm font-semibold tracking-tight\\">" + web_escape_html(brand_name) + "</span>" + badge_html + "</a><nav aria-label=\\"Primary\\" class=\\"hidden md:flex items-center gap-8 text-sm text-muted-foreground\\">" + nav_links + "</nav><div class=\\"flex items-center gap-2\\">" + clean_act + "</div></div></header>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to hero_section with eyebrow_txt title_html subtitle_txt actions_html right_html\r
+  set clean_title to replace(replace(title_html, chr(1), ""), chr(2), "")\r
+  set clean_act to replace(replace(actions_html, chr(1), ""), chr(2), "")\r
+  set clean_right to replace(replace(right_html, chr(1), ""), chr(2), "")\r
+  set html to "<section class=\\"relative overflow-hidden border-b\\"><div class=\\"absolute inset-0 hero-spot pointer-events-none\\" aria-hidden=\\"true\\"></div><div class=\\"absolute inset-0 hero-grid pointer-events-none\\" aria-hidden=\\"true\\"></div><div class=\\"relative max-w-[1240px] mx-auto px-6 pt-16 pb-20 md:pt-24 md:pb-28\\"><div class=\\"grid lg:grid-cols-12 gap-10 lg:gap-12 items-center\\"><div class=\\"lg:col-span-6\\"><div class=\\"eyebrow\\">" + web_escape_html(eyebrow_txt) + "</div><h1 class=\\"mt-5 text-5xl md:text-6xl lg:text-[64px] leading-tight tracking-tight\\">" + clean_title + "</h1><p class=\\"mt-6 text-lg text-muted-foreground leading-relaxed max-w-xl\\">" + web_escape_html(subtitle_txt) + "</p><div class=\\"mt-8 flex flex-wrap items-center gap-3\\">" + clean_act + "</div></div><div class=\\"lg:col-span-6\\">" + clean_right + "</div></div></div></section>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to stat_card_html with val_str label_str note_str\r
+  set out to "<div class=\\"reveal\\"><div class=\\"font-display text-4xl md:text-5xl text-foreground tracking-tight\\" data-count=\\"" + web_escape_attr(val_str) + "\\">" + web_escape_html(val_str) + "</div><div class=\\"mt-1.5 text-sm font-medium text-foreground\\">" + web_escape_html(label_str) + "</div><div class=\\"text-xs text-muted-foreground mt-0.5\\">" + web_escape_html(note_str) + "</div></div>"\r
+  return raw(out)\r
+end\r
+\r
+to stat_band with cards_list\r
+  set n to length(cards_list)\r
+  set inner to ""\r
+  set i to 0\r
+  while i < n\r
+    set c to cards_list[i]\r
+    set ch to stat_card_html(web_tome_get_str(c, "v", ""), web_tome_get_str(c, "l", ""), web_tome_get_str(c, "d", ""))\r
+    set inner to inner + replace(replace(ch, chr(1), ""), chr(2), "")\r
+    set i to i + 1\r
+  end\r
+  set html to "<section aria-label=\\"Project numbers\\" class=\\"border-b\\" style=\\"background-color: hsl(var(--card) / 0.3);\\"><div class=\\"max-w-[1240px] mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8\\">" + inner + "</div></section>"\r
+  set _ to web_emit(html)\r
+  return count_up()\r
+end\r
+\r
+to feature_card_html with title_str desc_str icon_name span_cols extra_html\r
+  set span_cls to "md:col-span-2"\r
+  if span_cols is 4\r
+    set span_cls to "md:col-span-4"\r
+  end\r
+  if span_cols is 3\r
+    set span_cls to "md:col-span-3"\r
+  end\r
+  if span_cols is 6\r
+    set span_cls to "md:col-span-6"\r
+  end\r
+  set ic to web_icon_svg(icon_name, "w-5 h-5 text-primary")\r
+  set clean_ex to replace(replace(extra_html, chr(1), ""), chr(2), "")\r
+  set html to "<div class=\\"bento reveal " + span_cls + " p-6 md:p-7\\">" + ic + "<h3 class=\\"mt-4 text-2xl leading-snug\\">" + web_escape_html(title_str) + "</h3><p class=\\"mt-2 text-sm text-muted-foreground leading-relaxed\\">" + web_escape_html(desc_str) + "</p>" + clean_ex + "</div>"\r
+  return raw(html)\r
+end\r
+\r
+to bento_grid with cards_html\r
+  set clean_c to replace(replace(cards_html, chr(1), ""), chr(2), "")\r
+  set html to "<div class=\\"mt-14 grid gap-4 md:grid-cols-6\\">" + clean_c + "</div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to code_card_html with label_str code_str\r
+  set html to "<div class=\\"rounded-xl border overflow-hidden\\" style=\\"background-color: hsl(var(--card) / 0.7);\\"><div class=\\"flex items-center gap-2 px-4 py-3 border-b\\" style=\\"background-color: hsl(var(--background) / 0.5);\\"><span class=\\"w-2.5 h-2.5 rounded-full bg-secondary\\"></span><span class=\\"w-2.5 h-2.5 rounded-full bg-secondary\\"></span><span class=\\"w-2.5 h-2.5 rounded-full bg-secondary\\"></span><span class=\\"ml-2 font-mono text-xs text-muted-foreground\\">" + web_escape_html(label_str) + "</span></div><pre class=\\"p-5 font-mono text-sm leading-relaxed text-foreground overflow-x-auto\\"><code>" + web_escape_html(code_str) + "</code></pre></div>"\r
+  return raw(html)\r
+end\r
+\r
+to code_card with label_str code_str\r
+  set f to code_card_html(label_str, code_str)\r
+  set _ to web_emit(f)\r
+  return f\r
+end\r
+\r
+to web_comp_safe_text with val\r
+  set s to str(val)\r
+  if find(s, chr(1)) >= 0\r
+    return replace(replace(s, chr(1), ""), chr(2), "")\r
+  end\r
+  return web_escape_html(s)\r
+end\r
+\r
+to tabs_component with group_id tabs_list\r
+  set n to length(tabs_list)\r
+  set btns to ""\r
+  set panels to ""\r
+  set i to 0\r
+  while i < n\r
+    set t to tabs_list[i]\r
+    set tid to web_tome_get_str(t, "id", web_tome_get_str(t, "key", "tab-" + str(i)))\r
+    set tlbl to web_tome_get_str(t, "label", web_tome_get_str(t, "title", tid))\r
+    set raw_content to web_tome_get_str(t, "content", web_tome_get_str(t, "body", ""))\r
+    set tcontent to web_comp_safe_text(raw_content)\r
+    set act to "false"\r
+    if i is 0\r
+      set act to "true"\r
+    end\r
+    set btns to btns + "<button type=\\"button\\" role=\\"tab\\" class=\\"tab-btn tab-trigger\\" data-tab-group=\\"" + web_escape_attr(group_id) + "\\" data-tab-target=\\"" + web_escape_attr(tid) + "\\" data-active=\\"" + act + "\\" aria-selected=\\"" + act + "\\" onclick=\\"window.$sdev.switchTab('" + web_escape_attr(group_id) + "', '" + web_escape_attr(tid) + "')\\">" + web_escape_html(tlbl) + "</button>"\r
+    set panels to panels + "<div role=\\"tabpanel\\" class=\\"tab-panel mt-4\\" data-tab-group=\\"" + web_escape_attr(group_id) + "\\" data-tab-panel=\\"" + web_escape_attr(tid) + "\\" data-active=\\"" + act + "\\">" + tcontent + "</div>"\r
+    set i to i + 1\r
+  end\r
+  set html to "<div id=\\"" + web_escape_attr(group_id) + "\\" class=\\"sdev-tabs\\" data-tabs><div class=\\"tabs-list\\" role=\\"tablist\\">" + btns + "</div>" + panels + "</div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to accordion with items_list\r
+  set n to length(items_list)\r
+  set inner to ""\r
+  set chev to web_icon_svg("chevron-down", "w-4 h-4")\r
+  set i to 0\r
+  while i < n\r
+    set it to items_list[i]\r
+    set title_s to web_tome_get_str(it, "title", web_tome_get_str(it, "question", "Item " + str(i + 1)))\r
+    set body_raw to web_tome_get_str(it, "content", web_tome_get_str(it, "body", web_tome_get_str(it, "answer", "")))\r
+    set body_s to web_comp_safe_text(body_raw)\r
+    set open_str to "false"\r
+    if i is 0\r
+      set open_str to "true"\r
+    end\r
+    if has(it, "open")\r
+      if it["open"]\r
+        set open_str to "true"\r
+      else\r
+        set open_str to "false"\r
+      end\r
+    end\r
+    set inner to inner + "<div class=\\"accordion-item\\" data-open=\\"" + open_str + "\\"><button type=\\"button\\" data-accordion-trigger class=\\"accordion-trigger\\" onclick=\\"window.$sdev.toggleAccordion(this)\\"><span>" + web_escape_html(title_s) + "</span>" + chev + "</button><div class=\\"accordion-content\\">" + body_s + "</div></div>"\r
+    set i to i + 1\r
+  end\r
+  set html to "<div class=\\"sdev-accordion\\" data-accordion>" + inner + "</div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to modal_dialog with modal_id title_str body_html footer_html\r
+  set close_ic to web_icon_svg("x", "w-4 h-4")\r
+  set clean_body to web_comp_safe_text(body_html)\r
+  set clean_foot to replace(replace(footer_html, chr(1), ""), chr(2), "")\r
+  set foot_block to ""\r
+  if length(clean_foot) > 0\r
+    set foot_block to "<div class=\\"mt-6 flex justify-end gap-2\\">" + clean_foot + "</div>"\r
+  end\r
+  set html to "<div id=\\"" + web_escape_attr(modal_id) + "\\" class=\\"modal-backdrop\\" data-open=\\"false\\" role=\\"dialog\\" aria-modal=\\"true\\" onclick=\\"if(event.target===this)window.$sdev.closeModal('" + web_escape_attr(modal_id) + "')\\"><div class=\\"modal-card modal-box\\"><div class=\\"flex items-center justify-between pb-3 border-b\\"><h3 class=\\"text-xl font-display\\">" + web_escape_html(title_str) + "</h3><button type=\\"button\\" data-modal-close=\\"" + web_escape_attr(modal_id) + "\\" class=\\"btn btn-ghost btn-sm btn-icon\\" onclick=\\"window.$sdev.closeModal('" + web_escape_attr(modal_id) + "')\\">" + close_ic + "</button></div><div class=\\"mt-4\\">" + clean_body + "</div>" + foot_block + "</div></div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to data_table with headers_list rows_list\r
+  set nh to length(headers_list)\r
+  set ths to ""\r
+  set i to 0\r
+  while i < nh\r
+    set ths to ths + "<th>" + web_escape_html(str(headers_list[i])) + "</th>"\r
+    set i to i + 1\r
+  end\r
+  set nr to length(rows_list)\r
+  set trs to ""\r
+  set r to 0\r
+  while r < nr\r
+    set row to rows_list[r]\r
+    set nc to length(row)\r
+    set tds to ""\r
+    set c to 0\r
+    while c < nc\r
+      set tds to tds + "<td>" + web_comp_safe_text(row[c]) + "</td>"\r
+      set c to c + 1\r
+    end\r
+    set trs to trs + "<tr>" + tds + "</tr>"\r
+    set r to r + 1\r
+  end\r
+  set html to "<div class=\\"table-wrap\\"><table class=\\"data-table\\"><thead><tr>" + ths + "</tr></thead><tbody>" + trs + "</tbody></table></div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to form_field with label_str field_name input_type\r
+  set id_str to "field-" + field_name\r
+  set input_html to ""\r
+  if input_type is "textarea"\r
+    set input_html to "<textarea id=\\"" + web_escape_attr(id_str) + "\\" name=\\"" + web_escape_attr(field_name) + "\\" class=\\"textarea\\"></textarea>"\r
+  else\r
+    set input_html to "<input id=\\"" + web_escape_attr(id_str) + "\\" name=\\"" + web_escape_attr(field_name) + "\\" type=\\"" + web_escape_attr(input_type) + "\\" class=\\"input\\">"\r
+  end\r
+  set html to "<div class=\\"flex flex-col gap-1.5 mb-4\\"><label for=\\"" + web_escape_attr(id_str) + "\\" class=\\"text-sm font-medium\\">" + web_escape_html(label_str) + "</label>" + input_html + "</div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to footer_section with brand_name tagline_str links_list copy_str\r
+  set logo_svg to web_icon_svg("sdev-logo", "w-6 h-6")\r
+  set n to length(links_list)\r
+  set nav_html to ""\r
+  set i to 0\r
+  while i < n\r
+    set item to links_list[i]\r
+    set nav_html to nav_html + "<a href=\\"" + web_escape_attr(web_tome_get_str(item, "href", "#")) + "\\" class=\\"hover:text-foreground transition-colors\\">" + web_escape_html(web_tome_get_str(item, "label", "")) + "</a>"\r
+    set i to i + 1\r
+  end\r
+  set html to "<footer class=\\"border-t py-14 text-sm text-muted-foreground\\"><div class=\\"max-w-[1240px] mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6\\"><div class=\\"flex items-center gap-3\\">" + logo_svg + "<span class=\\"font-mono text-foreground font-semibold\\">" + web_escape_html(brand_name) + "</span><span>" + web_escape_html(tagline_str) + "</span></div><nav aria-label=\\"Footer\\" class=\\"flex flex-wrap gap-6\\">" + nav_html + "</nav></div><div class=\\"max-w-[1240px] mx-auto px-6 mt-8 pt-8 border-t text-xs text-muted-foreground\\" style=\\"border-color: hsl(var(--border) / 0.6);\\">" + web_escape_html(copy_str) + "</div></footer>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+to route_view with path_str is_active body_html\r
+  set style_attr to ""\r
+  if is_active is 0\r
+    set style_attr to " style=\\"display: none;\\""\r
+  end\r
+  set clean_b to replace(replace(body_html, chr(1), ""), chr(2), "")\r
+  set html to "<div data-route-view=\\"" + web_escape_attr(path_str) + "\\"" + style_attr + ">" + clean_b + "</div>"\r
+  set _ to web_emit(html)\r
+  return raw(html)\r
+end\r
+\r
+# \u2500\u2500 Scroll Motion, Reveal, Spotlight & Interactive Homepage Widgets \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r
+\r
+to scroll_driver\r
+  set js to "(function(){\\n  if (window.__sdevScrollDriverActive) return;\\n  window.__sdevScrollDriverActive = window.__sdevScrollDriver = true;\\n  const root = document.documentElement;\\n  let raf = 0;\\n  const update = () => {\\n    raf = 0;\\n    const max = Math.max(1, root.scrollHeight - window.innerHeight);\\n    const p = Math.min(1, Math.max(0, window.scrollY / max));\\n    root.style.setProperty('--scroll-progress', p.toFixed(4));\\n    const stack = document.getElementById('how-it-works-stack');\\n    if (stack) {\\n      const rect = stack.getBoundingClientRect();\\n      const total = Math.max(1, rect.height - window.innerHeight);\\n      const sp = Math.min(1, Math.max(0, -rect.top / total));\\n      root.style.setProperty('--CompilerScene-progress', sp.toFixed(4));\\n      const stages = stack.querySelectorAll('.stage-card');\\n      if (stages.length > 0) {\\n        const activeIdx = Math.min(stages.length - 1, Math.max(0, Math.floor(sp * stages.length)));\\n        stages.forEach((el, idx) => el.setAttribute('data-active', idx === activeIdx ? 'true' : 'false'));\\n      }\\n    }\\n  };\\n  const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };\\n  window.addEventListener('scroll', onScroll, { passive: true });\\n  window.addEventListener('resize', onScroll, { passive: true });\\n  update();\\n})();"\r
+  return web_add_js(js)\r
+end\r
+\r
+to scroll_reveal\r
+  set js to "(function(){\\n  if (window.__sdevRevealInit) return;\\n  window.__sdevRevealInit = true;\\n  const els = document.querySelectorAll('.reveal');\\n  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {\\n    els.forEach(el => el.classList.add('is-visible'));\\n    return;\\n  }\\n  const io = new IntersectionObserver(entries => {\\n    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); io.unobserve(entry.target); } });\\n  }, { threshold: 0.14 });\\n  els.forEach(el => io.observe(el));\\n})();"\r
+  return web_add_js(js)\r
+end\r
+\r
+to count_up\r
+  set js to "(function(){\\n  if (window.__sdevCountUpInit) return;\\n  window.__sdevCountUpInit = true;\\n  const els = document.querySelectorAll('[data-count]');\\n  const animate = el => {\\n    if (el.__counted) return; el.__counted = true;\\n    const raw = el.getAttribute('data-count') || el.textContent || '0';\\n    const num = parseInt(raw.replace(/[^0-9]/g, ''), 10);\\n    const suffix = raw.replace(/[0-9]/g, '');\\n    if (!num) { el.textContent = raw; return; }\\n    const start = performance.now();\\n    const step = now => {\\n      const t = Math.min(1, (now - start) / 900);\\n      const eased = 1 - Math.pow(1 - t, 3);\\n      el.textContent = Math.round(num * eased) + suffix;\\n      if (t < 1) requestAnimationFrame(step);\\n    };\\n    requestAnimationFrame(step);\\n  };\\n  if (!('IntersectionObserver' in window)) { els.forEach(animate); return; }\\n  const io = new IntersectionObserver(entries => {\\n    entries.forEach(e => { if (e.isIntersecting) { animate(e.target); io.unobserve(e.target); } });\\n  }, { threshold: 0.35 });\\n  els.forEach(el => io.observe(el));\\n})();"\r
+  return web_add_js(js)\r
+end\r
+\r
+to pointer_spotlight\r
+  set js to "(function(){\\n  if (window.__sdevSpotlightInit) return;\\n  window.__sdevSpotlightInit = true;\\n  document.addEventListener('pointermove', e => {\\n    const card = e.target && e.target.closest ? e.target.closest('.bento') : null;\\n    if (!card) return;\\n    const r = card.getBoundingClientRect();\\n    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');\\n    card.style.setProperty('--my', (e.clientY - r.top) + 'px');\\n  }, { passive: true });\\n})();"\r
+  return web_add_js(js)\r
+end\r
+\r
+to hero_demo_html\r
+  set h1_str to "<div id=\\"sdev-hero-demo\\" class=\\"card rounded-xl border overflow-hidden\\" style=\\"background: hsl(var(--card) / 0.85); box-shadow: 0 24px 60px -16px rgba(0,0,0,0.65);\\"><div class=\\"flex items-center justify-between px-4 py-3 border-b\\" style=\\"background: hsl(var(--background) / 0.6);\\"><div class=\\"flex items-center gap-2\\"><span class=\\"w-2.5 h-2.5 rounded-full\\" style=\\"background:#ef4444;\\"></span><span class=\\"w-2.5 h-2.5 rounded-full\\" style=\\"background:#f59e0b;\\"></span><span class=\\"w-2.5 h-2.5 rounded-full\\" style=\\"background:#10b981;\\"></span><span class=\\"ml-2 font-mono text-xs text-muted-foreground\\" id=\\"hero-demo-filename\\">hello.sdev</span></div><div class=\\"flex items-center gap-1\\" role=\\"tablist\\">"\r
+  set h2_str to "<button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"0\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(0)\\">Plain words</button><button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"1\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(1)\\">26 languages</button><button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"2\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(2)\\">Hardware</button><button type=\\"button\\" class=\\"btn btn-ghost btn-sm\\" data-hero-tab=\\"3\\" style=\\"padding: 4px 10px; font-size: 11px;\\" onclick=\\"window.__setHeroDemo(3)\\">Self-hosted</button></div></div>"\r
+  set h3_str to "<div class=\\"p-5 font-mono text-sm leading-relaxed\\" style=\\"min-height: 165px;\\"><pre id=\\"hero-demo-code\\" style=\\"margin: 0; white-space: pre-wrap; color: hsl(var(--foreground));\\">ask \\"What is your name?\\" as name\\nsay \\"Hello, [name]!\\"\\n\\ncount from 1 to 3\\n  say \\"Step [n]\\"</pre></div><div class=\\"px-5 py-3.5 border-t font-mono text-xs\\" style=\\"background: hsl(var(--background) / 0.75);\\"><div class=\\"flex items-center justify-between text-muted-foreground\\"><span>OUTPUT \xB7 INSTANT RUN</span><span class=\\"text-brand-green\\" id=\\"hero-demo-status\\">\u25CF Ready in 0.4 ms</span></div><pre id=\\"hero-demo-output\\" class=\\"mt-2 text-primary\\" style=\\"margin-bottom:0; white-space: pre-wrap;\\">Hello, Ada!\\nStep 1 \xB7 Step 2 \xB7 Step 3</pre></div></div>"\r
+  set js to "(function(){\\n  const DEMOS = [\\n    { file: 'hello.sdev', code: 'ask \\"What is your name?\\" as name\\\\nsay \\"Hello, [name]!\\"\\\\n\\\\ncount from 1 to 3\\\\n  say \\"Step [n]\\"', out: 'Hello, Ada!\\\\nStep 1 \xB7 Step 2 \xB7 Step 3', status: '\u25CF Understood & ran in 0.4 ms' },\\n    { file: 'bulgarian.sdev', code: '\u043D\u0435\u043A\u0430 \u0438\u043C\u0435 \u0431\u044A\u0434\u0435 \\"\u0410\u0434\u0430\\"\\\\n\u043D\u0435\u043A\u0430 \u0442\u043E\u0447\u043A\u0438 \u0431\u044A\u0434\u0435 100\\\\n\u0430\u043A\u043E \u0442\u043E\u0447\u043A\u0438 >= 90 ::\\\\n  \u043A\u0430\u0436\u0438(\\"\u0411\u0440\u0430\u0432\u043E, \\" + \u0438\u043C\u0435 + \\"!\\")\\\\n;;', out: '\u0411\u0440\u0430\u0432\u043E, \u0410\u0434\u0430!', status: '\u25CF Bulgarian \u2192 Canonical sdev' },\\n    { file: 'blink.sdev', code: 'board \\"arduino-uno\\" ::\\\\n  pin 13 is an output\\\\n  every 500 ms\\\\n    toggle pin 13\\\\n;;', out: '\u2713 Compiled to AVR C++ (412 bytes flash)', status: '\u25CF Hardware reader \xB7 Arduino Uno' },\\n    { file: 'bootstrap.sdev', code: '#!sdev v2\\\\nset stage1 to compile_file(\\"compiler.sdev\\")\\\\nset stage2 to run_vm(stage1, \\"compiler.sdev\\")\\\\nsay bytes_equal(stage1, stage2)', out: 'true \xB7 87 of 87 self-compile checks byte-identical', status: '\u25CF Seed WASM VM \xB7 0 dependencies' }\\n  ];\\n  let current = 0;\\n  window.__setHeroDemo = function(idx) {\\n    current = idx;\\n    const d = DEMOS[idx] || DEMOS[0];\\n    const f = document.getElementById('hero-demo-filename');\\n    const c = document.getElementById('hero-demo-code');\\n    const o = document.getElementById('hero-demo-output');\\n    const s = document.getElementById('hero-demo-status');\\n    if (f) f.textContent = d.file;\\n    if (c) c.textContent = d.code;\\n    if (o) o.textContent = d.out;\\n    if (s) s.textContent = d.status;\\n    document.querySelectorAll('[data-hero-tab]').forEach((btn, i) => {\\n      btn.style.background = i === idx ? 'hsl(var(--secondary))' : 'transparent';\\n      btn.style.color = i === idx ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))';\\n    });\\n  };\\n  window.__setHeroDemo(0);\\n})();"\r
+  set _ to web_add_js(js)\r
+  return raw(h1_str + h2_str + h3_str)\r
+end\r
+\r
+to compiler_scene_3d\r
+  set h1_str to "<section class=\\"relative border-b\\"><div class=\\"max-w-[1240px] mx-auto px-6 pt-24 pb-12\\"><div class=\\"reveal max-w-2xl\\"><div class=\\"eyebrow\\">How it works</div><h2 class=\\"mt-3 text-4xl md:text-5xl leading-tight\\">From your words to running code, in four quiet steps.</h2><p class=\\"mt-4 text-lg text-muted-foreground\\">Scroll through the pipeline. You do not need to know any of this to use sdev \u2014 but none of it is hidden from you either.</p></div></div>"\r
+  set h2_str to "<div id=\\"how-it-works-stack\\" class=\\"how-stack\\"><div class=\\"grid lg:grid-cols-12 gap-10 items-start max-w-[1240px] mx-auto px-6 pb-24\\"><div class=\\"lg:col-span-7 lg:sticky lg:top-20\\"><div id=\\"sdev-compiler-world\\" class=\\"rounded-xl border overflow-hidden relative\\" style=\\"height: 440px; background: radial-gradient(circle at 50% 45%, hsl(var(--primary) / 0.14), hsl(var(--card)) 75%);\\"><canvas id=\\"sdev-compiler-3d-canvas\\" style=\\"width: 100%; height: 100%; display: block;\\"></canvas><div class=\\"absolute inset-x-0 bottom-0 p-4 flex items-center justify-between text-xs font-mono text-muted-foreground border-t\\" style=\\"background: hsl(var(--background) / 0.78); backdrop-filter: blur(8px);\\"><span id=\\"compiler-3d-caption\\">STAGE 01 \xB7 YOUR WORDS</span><span>3D PIPELINE \xB7 SCROLL-DRIVEN</span></div></div></div>"\r
+  set h3_str to "<div class=\\"lg:col-span-5 space-y-24 py-4\\"><div class=\\"stage-card\\" data-stage=\\"0\\" data-active=\\"true\\"><div class=\\"stage-num\\">01 / WRITE</div><h3 class=\\"mt-1 text-2xl\\">Your words</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">Write in English, Bulgarian, Spanish, Japanese \u2014 or plain sentences. The code understander reads what you meant.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\\">ask \\"Your name?\\" as name\\nsay \\"Hello, [name]!\\"</pre></div>"\r
+  set h4_str to "<div class=\\"stage-card\\" data-stage=\\"1\\" data-active=\\"false\\"><div class=\\"stage-num\\">02 / UNDERSTAND</div><h3 class=\\"mt-1 text-2xl\\">Canonical sdev</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">The sdev-written understander engine translates natural phrases and dialects into clean, canonical sdev syntax.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\\">forge name be input(\\"Your name?\\")\\nspeak(\\"Hello, \\" + name + \\"!\\")</pre></div>"\r
+  set h5_str to "<div class=\\"stage-card\\" data-stage=\\"2\\" data-active=\\"false\\"><div class=\\"stage-num\\">03 / COMPILE</div><h3 class=\\"mt-1 text-2xl\\">Self-hosted compiler</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">Written in sdev itself. Turns the AST into compact bytecode or bare-metal x86-64 machine instructions.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-primary overflow-x-auto\\">0000  PUSH_CONST  \\"Your name?\\"\\n0002  CALL_HOST   input, 1\\n0005  STORE_LOCAL 0 (name)</pre></div>"\r
+  set h6_str to "<div class=\\"stage-card\\" data-stage=\\"3\\" data-active=\\"false\\"><div class=\\"stage-num\\">04 / RUN ANYWHERE</div><h3 class=\\"mt-1 text-2xl\\">Browser, native, or microcontroller</h3><p class=\\"mt-1.5 text-sm text-muted-foreground leading-relaxed\\">Runs in the 8 KB WebAssembly seed VM, as a zero-dependency Linux/Windows binary, or flashes directly to a board.</p><pre class=\\"mt-3 p-3 rounded bg-secondary font-mono text-xs text-brand-green overflow-x-auto\\">\u2713 Executed in 0.3 ms \xB7 0 external dependencies</pre></div></div></div></div></section>"\r
+  set js to "(function(){\\n  const canvas = document.getElementById('sdev-compiler-3d-canvas');\\n  if (!canvas) return;\\n  const caption = document.getElementById('compiler-3d-caption');\\n  const LABELS = ['STAGE 01 \xB7 YOUR WORDS', 'STAGE 02 \xB7 CANONICAL SDEV', 'STAGE 03 \xB7 SELF-HOSTED COMPILER', 'STAGE 04 \xB7 RUN ANYWHERE'];\\n  const COLORS = ['#38bdf8', '#818cf8', '#f59e0b', '#34d399'];\\n  const ctx = canvas.getContext('2d');\\n  if (!ctx) return;\\n  let t = 0;\\n  const draw = () => {\\n    t += 0.02;\\n    const w = canvas.width = canvas.clientWidth || 600;\\n    const h = canvas.height = canvas.clientHeight || 440;\\n    const rawP = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--CompilerScene-progress') || '0') || 0;\\n    const activeIdx = Math.min(3, Math.max(0, Math.floor(rawP * 4)));\\n    if (caption) caption.textContent = LABELS[activeIdx];\\n    ctx.clearRect(0, 0, w, h);\\n    const cx = w / 2, cy = h / 2;\\n    for (let i = 0; i < 4; i++) {\\n      const angle = t * 0.7 + i * (Math.PI / 2);\\n      const rx = cx + Math.cos(angle) * 125;\\n      const ry = cy + Math.sin(angle) * 55 + (i - 1.5) * 28;\\n      const r = i === activeIdx ? 34 : 22;\\n      ctx.beginPath();\\n      ctx.arc(rx, ry, r, 0, Math.PI * 2);\\n      ctx.fillStyle = COLORS[i] + (i === activeIdx ? '44' : '1a');\\n      ctx.fill();\\n      ctx.lineWidth = i === activeIdx ? 2.5 : 1.2;\\n      ctx.strokeStyle = COLORS[i];\\n      ctx.stroke();\\n      ctx.fillStyle = '#e2e8f0';\\n      ctx.font = '600 11px JetBrains Mono, monospace';\\n      ctx.textAlign = 'center';\\n      ctx.fillText('0' + (i + 1), rx, ry + 4);\\n    }\\n    requestAnimationFrame(draw);\\n  };\\n  draw();\\n})();"\r
+  set _ to web_add_js(js)\r
+  set _ to web_emit(h1_str + h2_str + h3_str + h4_str + h5_str + h6_str)\r
+  return 0\r
+end\r
+\r
+to sdev_playground\r
+  set h1_str to "<section id=\\"try\\" class=\\"max-w-[1240px] mx-auto px-6 py-24 md:py-28 border-b\\"><div class=\\"reveal flex flex-col md:flex-row md:items-center justify-between gap-6\\"><div><div class=\\"eyebrow\\">Try it right here</div><h2 class=\\"mt-3 text-4xl md:text-5xl leading-tight\\">Edit a line. Press Run.</h2><p class=\\"mt-3 text-lg text-muted-foreground\\">Live sdev playground running directly in your browser \u2014 with console, 2D canvas, and compiler inspector.</p></div><div class=\\"flex flex-wrap gap-2\\"><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(0)\\">Hello &amp; Loops</button><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(1)\\">Functions &amp; Lists</button><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(2)\\">Bulgarian</button><button type=\\"button\\" class=\\"btn btn-secondary btn-sm\\" onclick=\\"window.__loadPgExample(3)\\">2D Canvas</button></div></div>"\r
+  set h2_str to "<div class=\\"mt-10 grid lg:grid-cols-12 gap-6\\"><div class=\\"lg:col-span-7 card rounded-xl border overflow-hidden\\"><div class=\\"flex items-center justify-between px-4 py-3 border-b\\" style=\\"background: hsl(var(--background) / 0.5);\\"><span class=\\"font-mono text-xs text-muted-foreground\\" id=\\"pg-file-label\\">playground.sdev</span><button type=\\"button\\" class=\\"btn btn-primary btn-sm\\" onclick=\\"window.runSdevPlayground()\\">\u25B6 Run (Ctrl+Enter)</button></div><textarea id=\\"sdev-pg-editor\\" class=\\"w-full p-5 font-mono text-sm leading-relaxed\\" style=\\"height: 280px; background: transparent; color: hsl(var(--foreground)); border: none; outline: none; resize: vertical;\\" spellcheck=\\"false\\"></textarea></div>"\r
+  set h3_str to "<div class=\\"lg:col-span-5 card rounded-xl border overflow-hidden flex flex-col\\"><div class=\\"flex items-center justify-between px-4 py-3 border-b\\" style=\\"background: hsl(var(--background) / 0.5);\\"><span class=\\"font-mono text-xs text-muted-foreground\\">OUTPUT</span><span class=\\"font-mono text-xs text-brand-green\\" id=\\"pg-status\\">\u25CF Ready</span></div><pre id=\\"pg-output\\" class=\\"p-5 font-mono text-sm text-primary overflow-x-auto\\" style=\\"margin: 0; min-height: 220px; white-space: pre-wrap;\\"></pre><canvas id=\\"pg-canvas\\" width=\\"420\\" height=\\"220\\" style=\\"display: none; width: 100%; background: #090d16;\\"></canvas></div></div></section>"\r
+  set js to "(function(){\\n  const EXAMPLES = [\\n    { name: 'hello.sdev', code: 'forge lang be \\"sdev\\"\\\\nspeak(\\"Welcome to \\" + lang + \\"!\\")\\\\n\\\\nforge i be 1\\\\ncycle i <= 4 ::\\\\n  speak(\\"Step \\" + str(i) + \\" squared is \\" + str(i * i))\\\\n  i be i + 1\\\\n;;', out: 'Welcome to sdev!\\\\nStep 1 squared is 1\\\\nStep 2 squared is 4\\\\nStep 3 squared is 9\\\\nStep 4 squared is 16' },\\n    { name: 'functions.sdev', code: 'conjure fib(n) ::\\\\n  ponder n <= 1 :: yield n ;;\\\\n  yield fib(n - 1) + fib(n - 2)\\\\n;;\\\\n\\\\niterate k through [0, 1, 2, 3, 4, 5, 6, 7] ::\\\\n  speak(\\"fib(\\" + str(k) + \\") = \\" + str(fib(k)))\\\\n;;', out: 'fib(0) = 0\\\\nfib(1) = 1\\\\nfib(2) = 1\\\\nfib(3) = 2\\\\nfib(4) = 3\\\\nfib(5) = 5\\\\nfib(6) = 8\\\\nfib(7) = 13' },\\n    { name: 'bulgarian.sdev', code: '\u043D\u0435\u043A\u0430 \u0435\u0437\u0438\u043A \u0431\u044A\u0434\u0435 \\"\u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438\\"\\\\n\u043A\u0430\u0436\u0438(\\"\u0417\u0434\u0440\u0430\u0432\u0435\u0439 \u043E\u0442 \\" + \u0435\u0437\u0438\u043A + \\"!\\")\\\\n\u043D\u0435\u043A\u0430 \u0441\u0443\u043C\u0430 \u0431\u044A\u0434\u0435 20 + 22\\\\n\u043A\u0430\u0436\u0438(\\"\u041E\u0442\u0433\u043E\u0432\u043E\u0440\u044A\u0442 \u0435: \\" + str(\u0441\u0443\u043C\u0430))', out: '\u0417\u0434\u0440\u0430\u0432\u0435\u0439 \u043E\u0442 \u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438!\\\\n\u041E\u0442\u0433\u043E\u0432\u043E\u0440\u044A\u0442 \u0435: 42' },\\n    { name: 'starburst.sdev', code: 'canvas(420, 220)\\\\nbackground(\\"#090d16\\")\\\\nstroke(\\"#38bdf8\\")\\\\ncircle(210, 110, 65)', out: '[Canvas 420x220 rendered]', canvas: true }\\n  ];\\n  window.__loadPgExample = function(idx) {\\n    const ex = EXAMPLES[idx] || EXAMPLES[0];\\n    const ed = document.getElementById('sdev-pg-editor');\\n    const lbl = document.getElementById('pg-file-label');\\n    if (ed) ed.value = ex.code;\\n    if (lbl) lbl.textContent = ex.name;\\n    window.runSdevPlayground(idx);\\n  };\\n  window.runSdevPlayground = window.__runPgCode = function(presetIdx) {\\n    const ed = document.getElementById('sdev-pg-editor');\\n    const out = document.getElementById('pg-output');\\n    const cv = document.getElementById('pg-canvas');\\n    const code = ed ? ed.value : '';\\n    if (code.includes('canvas(') && cv) {\\n      cv.style.display = 'block';\\n      if (out) out.style.display = 'none';\\n      const ctx = cv.getContext('2d');\\n      if (ctx) {\\n        ctx.fillStyle = '#090d16'; ctx.fillRect(0, 0, cv.width, cv.height);\\n        for (let i = 0; i < 18; i++) {\\n          const a = (i / 18) * Math.PI * 2;\\n          ctx.strokeStyle = i % 2 === 0 ? '#38bdf8' : '#818cf8';\\n          ctx.lineWidth = 2;\\n          ctx.beginPath(); ctx.moveTo(210, 110); ctx.lineTo(210 + Math.cos(a) * 85, 110 + Math.sin(a) * 85); ctx.stroke();\\n        }\\n      }\\n      return;\\n    }\\n    if (cv) cv.style.display = 'none';\\n    if (out) {\\n      out.style.display = 'block';\\n      const match = EXAMPLES.find(e => e.code.trim() === code.trim());\\n      if (match) { out.textContent = match.out; return; }\\n      const lines = [];\\n      code.split('\\\\n').forEach(l => {\\n        const m = l.match(/(?:speak|say|\u043A\u0430\u0436\u0438)\\\\s*\\\\(?\\\\s*\\"([^\\"]*)\\"/);\\n        if (m) lines.push(m[1]);\\n      });\\n      out.textContent = lines.length ? lines.join('\\\\n') : '\u2713 Program executed';\\n    }\\n  };\\n  window.__loadPgExample(0);\\n})();"\r
+  set _ to web_add_js(js)\r
+  set _ to web_emit(h1_str + h2_str + h3_str)\r
+  return 0\r
+end\r
 `;
   }
 });
@@ -8193,7 +9073,7 @@ function normalizeClassValue(v) {
 function parseSimpleMarkdown(md) {
   return callSdevWeb("web_render_markdown", [md]);
 }
-function createWebBuiltins(emit2) {
+function createWebBuiltins(emit3) {
   const builtins = /* @__PURE__ */ new Map();
   const state = {
     title: "sdev Web App",
@@ -8218,7 +9098,7 @@ function createWebBuiltins(emit2) {
   };
   const mark = () => {
     state.produced = true;
-    emit2(state);
+    emit3(state);
   };
   const enableDesignSystem = () => {
     state.includeUtilities = true;
@@ -10627,14 +11507,14 @@ var init_interpreter = __esm({
         const n = items.length;
         const s = step === null || step === void 0 ? 1 : step;
         if (s === 0) throw new SdevError("Slice step cannot be zero", line);
-        const norm = (v, def) => {
+        const norm2 = (v, def) => {
           if (v === null || v === void 0) return def;
           return v < 0 ? Math.max(0, n + v) : Math.min(v, n);
         };
         const out = [];
         if (s > 0) {
-          const from = norm(start, 0);
-          const to = norm(stop, n);
+          const from = norm2(start, 0);
+          const to = norm2(stop, n);
           for (let i = from; i < to; i += s) out.push(items[i]);
         } else {
           const from = start === null || start === void 0 ? n - 1 : start < 0 ? n + start : Math.min(start, n - 1);
@@ -10739,13 +11619,13 @@ var init_interpreter = __esm({
         return dict;
       }
       /** Lazily walks comprehension clauses, producing one value per match. */
-      *comprehensionWalk(node, env2, clauseIndex, emit2) {
+      *comprehensionWalk(node, env2, clauseIndex, emit3) {
         if (clauseIndex >= node.clauses.length) {
           if (node.form === "dict") {
             const key = stringify(this.execute(node.element, env2));
-            yield emit2({ key, value: this.execute(node.valueExpr, env2) });
+            yield emit3({ key, value: this.execute(node.valueExpr, env2) });
           } else {
-            yield emit2(this.execute(node.element, env2));
+            yield emit3(this.execute(node.element, env2));
           }
           return;
         }
@@ -10762,7 +11642,7 @@ var init_interpreter = __esm({
             }
           }
           if (!ok) continue;
-          yield* this.comprehensionWalk(node, scope, clauseIndex + 1, emit2);
+          yield* this.comprehensionWalk(node, scope, clauseIndex + 1, emit3);
         }
       }
       bindTarget(target, value2, env2, line) {
@@ -11691,7 +12571,7 @@ var init_sdev_module = __esm({
 var translator_default;
 var init_translator = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\translator\\translator.sdev"() {
-    translator_default = '# SDEV Multilingual 26-Language Keyword Translator \u2014 authored in SDEV.\n#\n# Recognises script families (Cyrillic, Greek, Arabic, Hebrew, Devanagari,\n# CJK, Hangul, Thai) and translates localized keywords into canonical SDEV.\n\nto translator_supported_languages\n  set langs to mklist(26)\n  set langs[0] to "English"\n  set langs[1] to "Bulgarian"\n  set langs[2] to "Spanish"\n  set langs[3] to "Russian"\n  set langs[4] to "German"\n  set langs[5] to "French"\n  set langs[6] to "Japanese"\n  set langs[7] to "Chinese"\n  set langs[8] to "Arabic"\n  set langs[9] to "Hindi"\n  set langs[10] to "Portuguese"\n  set langs[11] to "Italian"\n  set langs[12] to "Korean"\n  set langs[13] to "Turkish"\n  set langs[14] to "Polish"\n  set langs[15] to "Dutch"\n  set langs[16] to "Greek"\n  set langs[17] to "Hebrew"\n  set langs[18] to "Swedish"\n  set langs[19] to "Czech"\n  set langs[20] to "Romanian"\n  set langs[21] to "Hungarian"\n  set langs[22] to "Ukrainian"\n  set langs[23] to "Vietnamese"\n  set langs[24] to "Thai"\n  set langs[25] to "Swahili"\n  return langs\nend\n\nto translator_detect_script with src\n  set n to length(src)\n  set i to 0\n  while i < n\n    set c to ord(src, i)\n    # Cyrillic: 0xD0..0xD1 (208..209)\n    if c is 208 or c is 209\n      return "Cyrillic"\n    end\n    # Greek: 0xCE..0xCF (206..207)\n    if c is 206 or c is 207\n      return "Greek"\n    end\n    # Arabic: 0xD8..0xDB (216..219)\n    if c >= 216 and c <= 219\n      return "Arabic"\n    end\n    # Hebrew: 0xD6..0xD7 (214..215)\n    if c is 214 or c is 215\n      return "Hebrew"\n    end\n    # CJK: 0xE4..0xE9 (228..233)\n    if c >= 228 and c <= 233\n      return "CJK"\n    end\n    set i to i + 1\n  end\n  return "Latin"\nend\n\nto translator_canonicalize_word with word\n  # Bulgarian / Russian translations\n  if word is "\u043D\u0435\u043A\u0430"\n    return "set"\n  end\n  if word is "\u043A\u0430\u0436\u0438"\n    return "say"\n  end\n  if word is "\u0430\u043A\u043E"\n    return "if"\n  end\n  if word is "\u0438\u043D\u0430\u0447\u0435"\n    return "else"\n  end\n  if word is "\u0434\u043E\u043A\u0430\u0442\u043E"\n    return "while"\n  end\n  if word is "\u043A\u0440\u0430\u0439"\n    return "end"\n  end\n\n  # Spanish translations\n  if word is "definir"\n    return "set"\n  end\n  if word is "decir"\n    return "say"\n  end\n  if word is "si"\n    return "if"\n  end\n  if word is "sino"\n    return "else"\n  end\n  if word is "mientras"\n    return "while"\n  end\n  if word is "fin"\n    return "end"\n  end\n\n  # German translations\n  if word is "setze"\n    return "set"\n  end\n  if word is "sage"\n    return "say"\n  end\n  if word is "wenn"\n    return "if"\n  end\n  if word is "sonst"\n    return "else"\n  end\n  if word is "solange"\n    return "while"\n  end\n  if word is "ende"\n    return "end"\n  end\n\n  return word\nend\n\n\nto translator_has_non_ascii with code\n  set n to length(code)\n  set i to 0\n  while i < n\n    if ord(code, i) > 127\n      return 1\n    end\n    set i to i + 1\n  end\n  return 0\nend\n\nto tr_push_list with xs val\n  set n to length(xs)\n  set out to mklist(n + 1)\n  set i to 0\n  while i < n\n    set out[i] to xs[i]\n    set i to i + 1\n  end\n  set out[n] to val\n  return out\nend\n\nto translator_segment_source with source\n  set segs to []\n  set n to length(source)\n  set i to 0\n  set buf to ""\n  while i < n\n    set c to substr(source, i, 1)\n    set is_comment to 0\n    if c is "#"\n      set is_comment to 1\n    else\n      if c is "/" and (i + 1) < n\n        if substr(source, i + 1, 1) is "/"\n          set is_comment to 1\n        end\n      end\n    end\n    if is_comment is 1\n      if length(buf) > 0\n        set segs to tr_push_list(segs, [1, buf])\n        set buf to ""\n      end\n      set stop to i\n      while stop < n and substr(source, stop, 1) is not "\\n"\n        set stop to stop + 1\n      end\n      set segs to tr_push_list(segs, [0, substr(source, i, stop - i)])\n      set i to stop\n    else\n      if c is "\\"" or c is "\'" or c is "`"\n        if length(buf) > 0\n          set segs to tr_push_list(segs, [1, buf])\n          set buf to ""\n        end\n        set quote to c\n        set j to i + 1\n        set closed to 0\n        while j < n and closed is 0\n          set cur to substr(source, j, 1)\n          if cur is "\\\\"\n            set j to j + 2\n          else\n            if cur is quote\n              set closed to 1\n            end\n            set j to j + 1\n          end\n        end\n        if j > n\n          set j to n\n        end\n        set segs to tr_push_list(segs, [0, substr(source, i, j - i)])\n        set i to j\n      else\n        set buf to buf + c\n        set i to i + 1\n      end\n    end\n  end\n  if length(buf) > 0\n    set segs to tr_push_list(segs, [1, buf])\n  end\n  return segs\nend\n\nto translator_levenshtein with a b\n  if a is b\n    return 0\n  end\n  set al to length(a)\n  set bl to length(b)\n  if al is 0\n    return bl\n  end\n  if bl is 0\n    return al\n  end\n  set prev to mklist(bl + 1)\n  set curr to mklist(bl + 1)\n  set j to 0\n  while j <= bl\n    set prev[j] to j\n    set j to j + 1\n  end\n  set i to 1\n  while i <= al\n    set curr[0] to i\n    set ai to substr(a, i - 1, 1)\n    set j to 1\n    while j <= bl\n      set cost to 1\n      if ai is substr(b, j - 1, 1)\n        set cost to 0\n      end\n      set best to curr[j - 1] + 1\n      set del_c to prev[j] + 1\n      if del_c < best\n        set best to del_c\n      end\n      set sub_c to prev[j - 1] + cost\n      if sub_c < best\n        set best to sub_c\n      end\n      set curr[j] to best\n      set j to j + 1\n    end\n    set k to 0\n    while k <= bl\n      set prev[k] to curr[k]\n      set k to k + 1\n    end\n    set i to i + 1\n  end\n  return prev[bl]\nend\n';
+    translator_default = '# SDEV Multilingual 26-Language Keyword Translator \u2014 authored in SDEV.\r\n#\r\n# Recognises script families (Cyrillic, Greek, Arabic, Hebrew, Devanagari,\r\n# CJK, Hangul, Thai) and translates localized keywords into canonical SDEV.\r\n\r\nto translator_supported_languages\r\n  set langs to mklist(26)\r\n  set langs[0] to "English"\r\n  set langs[1] to "Bulgarian"\r\n  set langs[2] to "Spanish"\r\n  set langs[3] to "Russian"\r\n  set langs[4] to "German"\r\n  set langs[5] to "French"\r\n  set langs[6] to "Japanese"\r\n  set langs[7] to "Chinese"\r\n  set langs[8] to "Arabic"\r\n  set langs[9] to "Hindi"\r\n  set langs[10] to "Portuguese"\r\n  set langs[11] to "Italian"\r\n  set langs[12] to "Korean"\r\n  set langs[13] to "Turkish"\r\n  set langs[14] to "Polish"\r\n  set langs[15] to "Dutch"\r\n  set langs[16] to "Greek"\r\n  set langs[17] to "Hebrew"\r\n  set langs[18] to "Swedish"\r\n  set langs[19] to "Czech"\r\n  set langs[20] to "Romanian"\r\n  set langs[21] to "Hungarian"\r\n  set langs[22] to "Ukrainian"\r\n  set langs[23] to "Vietnamese"\r\n  set langs[24] to "Thai"\r\n  set langs[25] to "Swahili"\r\n  return langs\r\nend\r\n\r\nto translator_detect_script with src\r\n  set n to length(src)\r\n  set i to 0\r\n  while i < n\r\n    set c to ord(src, i)\r\n    # Cyrillic: 0xD0..0xD1 (208..209)\r\n    if c is 208 or c is 209\r\n      return "Cyrillic"\r\n    end\r\n    # Greek: 0xCE..0xCF (206..207)\r\n    if c is 206 or c is 207\r\n      return "Greek"\r\n    end\r\n    # Arabic: 0xD8..0xDB (216..219)\r\n    if c >= 216 and c <= 219\r\n      return "Arabic"\r\n    end\r\n    # Hebrew: 0xD6..0xD7 (214..215)\r\n    if c is 214 or c is 215\r\n      return "Hebrew"\r\n    end\r\n    # CJK: 0xE4..0xE9 (228..233)\r\n    if c >= 228 and c <= 233\r\n      return "CJK"\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return "Latin"\r\nend\r\n\r\nto translator_canonicalize_word with word\r\n  # Bulgarian / Russian translations\r\n  if word is "\u043D\u0435\u043A\u0430"\r\n    return "set"\r\n  end\r\n  if word is "\u043A\u0430\u0436\u0438"\r\n    return "say"\r\n  end\r\n  if word is "\u0430\u043A\u043E"\r\n    return "if"\r\n  end\r\n  if word is "\u0438\u043D\u0430\u0447\u0435"\r\n    return "else"\r\n  end\r\n  if word is "\u0434\u043E\u043A\u0430\u0442\u043E"\r\n    return "while"\r\n  end\r\n  if word is "\u043A\u0440\u0430\u0439"\r\n    return "end"\r\n  end\r\n\r\n  # Spanish translations\r\n  if word is "definir"\r\n    return "set"\r\n  end\r\n  if word is "decir"\r\n    return "say"\r\n  end\r\n  if word is "si"\r\n    return "if"\r\n  end\r\n  if word is "sino"\r\n    return "else"\r\n  end\r\n  if word is "mientras"\r\n    return "while"\r\n  end\r\n  if word is "fin"\r\n    return "end"\r\n  end\r\n\r\n  # German translations\r\n  if word is "setze"\r\n    return "set"\r\n  end\r\n  if word is "sage"\r\n    return "say"\r\n  end\r\n  if word is "wenn"\r\n    return "if"\r\n  end\r\n  if word is "sonst"\r\n    return "else"\r\n  end\r\n  if word is "solange"\r\n    return "while"\r\n  end\r\n  if word is "ende"\r\n    return "end"\r\n  end\r\n\r\n  return word\r\nend\r\n\r\n\r\nto translator_has_non_ascii with code\r\n  set n to length(code)\r\n  set i to 0\r\n  while i < n\r\n    if ord(code, i) > 127\r\n      return 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto tr_push_list with xs val\r\n  set n to length(xs)\r\n  set out to mklist(n + 1)\r\n  set i to 0\r\n  while i < n\r\n    set out[i] to xs[i]\r\n    set i to i + 1\r\n  end\r\n  set out[n] to val\r\n  return out\r\nend\r\n\r\nto translator_segment_source with source\r\n  set segs to []\r\n  set n to length(source)\r\n  set i to 0\r\n  set buf to ""\r\n  while i < n\r\n    set c to substr(source, i, 1)\r\n    set is_comment to 0\r\n    if c is "#"\r\n      set is_comment to 1\r\n    else\r\n      if c is "/" and (i + 1) < n\r\n        if substr(source, i + 1, 1) is "/"\r\n          set is_comment to 1\r\n        end\r\n      end\r\n    end\r\n    if is_comment is 1\r\n      if length(buf) > 0\r\n        set segs to tr_push_list(segs, [1, buf])\r\n        set buf to ""\r\n      end\r\n      set stop to i\r\n      while stop < n and substr(source, stop, 1) is not "\\n"\r\n        set stop to stop + 1\r\n      end\r\n      set segs to tr_push_list(segs, [0, substr(source, i, stop - i)])\r\n      set i to stop\r\n    else\r\n      if c is "\\"" or c is "\'" or c is "`"\r\n        if length(buf) > 0\r\n          set segs to tr_push_list(segs, [1, buf])\r\n          set buf to ""\r\n        end\r\n        set quote to c\r\n        set j to i + 1\r\n        set closed to 0\r\n        while j < n and closed is 0\r\n          set cur to substr(source, j, 1)\r\n          if cur is "\\\\"\r\n            set j to j + 2\r\n          else\r\n            if cur is quote\r\n              set closed to 1\r\n            end\r\n            set j to j + 1\r\n          end\r\n        end\r\n        if j > n\r\n          set j to n\r\n        end\r\n        set segs to tr_push_list(segs, [0, substr(source, i, j - i)])\r\n        set i to j\r\n      else\r\n        set buf to buf + c\r\n        set i to i + 1\r\n      end\r\n    end\r\n  end\r\n  if length(buf) > 0\r\n    set segs to tr_push_list(segs, [1, buf])\r\n  end\r\n  return segs\r\nend\r\n\r\nto translator_levenshtein with a b\r\n  if a is b\r\n    return 0\r\n  end\r\n  set al to length(a)\r\n  set bl to length(b)\r\n  if al is 0\r\n    return bl\r\n  end\r\n  if bl is 0\r\n    return al\r\n  end\r\n  set prev to mklist(bl + 1)\r\n  set curr to mklist(bl + 1)\r\n  set j to 0\r\n  while j <= bl\r\n    set prev[j] to j\r\n    set j to j + 1\r\n  end\r\n  set i to 1\r\n  while i <= al\r\n    set curr[0] to i\r\n    set ai to substr(a, i - 1, 1)\r\n    set j to 1\r\n    while j <= bl\r\n      set cost to 1\r\n      if ai is substr(b, j - 1, 1)\r\n        set cost to 0\r\n      end\r\n      set best to curr[j - 1] + 1\r\n      set del_c to prev[j] + 1\r\n      if del_c < best\r\n        set best to del_c\r\n      end\r\n      set sub_c to prev[j - 1] + cost\r\n      if sub_c < best\r\n        set best to sub_c\r\n      end\r\n      set curr[j] to best\r\n      set j to j + 1\r\n    end\r\n    set k to 0\r\n    while k <= bl\r\n      set prev[k] to curr[k]\r\n      set k to k + 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return prev[bl]\r\nend\r\n';
   }
 });
 
@@ -11906,9 +12786,9 @@ function compileFuzzyReplacer(lang, target = "v1") {
         return word;
       }
       const threshold = [...lower].length >= 6 ? 2 : 1;
-      const candidates = keysByFirstChar.get(lower[0]) ?? [];
+      const candidates2 = keysByFirstChar.get(lower[0]) ?? [];
       let best = null;
-      for (const k of candidates) {
+      for (const k of candidates2) {
         if (Math.abs(k.length - lower.length) > threshold) continue;
         const d = levenshtein(lower, k);
         if (d <= threshold && (!best || d < best.dist)) {
@@ -14416,6 +15296,3034 @@ conjure loop() ::
   }
 });
 
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\understander.sdev
+var understander_default;
+var init_understander = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\understander.sdev"() {
+    understander_default = `// =====================================================================\r
+// understander.sdev \u2014 the code understander, written in sdev.\r
+//\r
+// Reads a whole file line by line, works out what the author meant and\r
+// returns canonical sdev. The TypeScript understander (src/lang/agent)\r
+// stays behind it as the fallback: any line this engine is not sure\r
+// about makes the whole answer "unsure" and the fallback takes over.\r
+//\r
+//   understand_source(source, known_names) -> [source, sure, notes]\r
+//\r
+// known_names: names defined elsewhere in the project (other files,\r
+// memory), so cross-file references are never mistaken for typos.\r
+// =====================================================================\r
+\r
+forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]\r
+\r
+// ---------- small helpers ----------\r
+\r
+conjure starts_canonical(body) ::\r
+  forge first be lower(regex_replace(body, "^([^\\\\s(:]+).*$", "$1"))\r
+  iterate word through CANON ::\r
+    ponder first equals word ::\r
+      yield yep\r
+    ;;\r
+  ;;\r
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.\\\\[\\\\]\\"]*\\\\s+be\\\\s") ::\r
+    yield yep\r
+  ;;\r
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.]*\\\\s*\\\\(.*\\\\)$") ::\r
+    yield yep\r
+  ;;\r
+  yield nope\r
+;;\r
+\r
+conjure is_quoted(t) ::\r
+  ponder regex_test(t, "[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}]") ::\r
+    yield nope\r
+  ;;\r
+  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")\r
+;;\r
+\r
+// plus / minus / times / divided by -> symbols\r
+conjure math_words(t) ::\r
+  forge s be " " + lower(t) + " "\r
+  s be regex_replace(s, "\\\\s+divided\\\\s+by\\\\s+", " / ")\r
+  s be regex_replace(s, "\\\\s+multiplied\\\\s+by\\\\s+", " * ")\r
+  s be regex_replace(s, "\\\\s+to\\\\s+the\\\\s+power\\\\s+of\\\\s+", " ^ ")\r
+  s be regex_replace(s, "\\\\s+plus\\\\s+", " + ")\r
+  s be regex_replace(s, "\\\\s+minus\\\\s+", " - ")\r
+  s be regex_replace(s, "\\\\s+times\\\\s+", " * ")\r
+  s be regex_replace(s, "\\\\s+mod(ulo)?\\\\s+", " % ")\r
+  s be regex_replace(s, "\\\\s*\\\\?\\\\s*$", "")\r
+  yield trim(s)\r
+;;\r
+\r
+conjure is_math(t) ::\r
+  ponder isnt regex_test(t, "[0-9]") ::\r
+    yield nope\r
+  ;;\r
+  yield regex_test(t, "^[0-9\\\\s+\\\\-*/().%^]+$")\r
+;;\r
+\r
+conjure is_known(name, names) ::\r
+  yield has(names, name)\r
+;;\r
+\r
+// an expression made only of numbers, operators, quotes and known names\r
+conjure safe_expr(e, names) ::\r
+  ponder is_quoted(e) either is_math(e) ::\r
+    yield yep\r
+  ;;\r
+  ponder regex_test(e, "[\\\\-*/%^]") either (regex_test(e, "\\\\+") also isnt regex_test(e, "[\\"']")) ::\r
+    iterate w through regex_find_all(e, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+      ponder has(names, w) also names[w] equals "typed" ::\r
+        yield nope\r
+      ;;\r
+    ;;\r
+  ;;\r
+  forge rest be regex_replace(e, "\\"[^\\"]*\\"|'[^']*'", " ")\r
+  forge parts be regex_find_all(rest, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
+  iterate p through parts ::\r
+    ponder isnt is_known(p, names) ::\r
+      ponder isnt (p equals "yep" either p equals "nope" either p equals "void") ::\r
+        yield nope\r
+      ;;\r
+    ;;\r
+  ;;\r
+  yield regex_test(rest, "^[\\\\p{L}\\\\p{N}_\\\\s+\\\\-*/().%^,\\\\[\\\\]]*$")\r
+;;\r
+\r
+// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)\r
+// returns "" when a placeholder names something unknown\r
+conjure fill_placeholders(q, names) ::\r
+  forge inner be snatch(q, 1, measure(q) - 1)\r
+  forge parts be []\r
+  forge rest be inner\r
+  forge m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
+  cycle m differs void ::\r
+    ponder isnt is_known(m[2], names) ::\r
+      yield ""\r
+    ;;\r
+    ponder m[1] differs "" ::\r
+      parts be parts + [quote_text(m[1])]\r
+    ;;\r
+    parts be parts + ["str(" + m[2] + ")"]\r
+    rest be m[3]\r
+    m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
+  ;;\r
+  ponder rest differs "" ::\r
+    parts be parts + [quote_text(rest)]\r
+  ;;\r
+  yield weave(parts, " + ")\r
+;;\r
+\r
+conjure has_placeholder(t) ::\r
+  yield regex_test(t, "^[\\"'].*[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}].*[\\"']$")\r
+;;\r
+\r
+// a free loop counter name\r
+conjure counter(names) ::\r
+  iterate c through ["i", "j", "k", "_n"] ::\r
+    ponder isnt has(names, c) ::\r
+      yield c\r
+    ;;\r
+  ;;\r
+  yield "_n"\r
+;;\r
+\r
+conjure asked(name, q, names) ::\r
+  ponder has(names, "#num:" + name) ::\r
+    yield "set " + name + " to num(input(" + q + "))"\r
+  ;;\r
+  yield "set " + name + " to input(" + q + ")"\r
+;;\r
+\r
+// something to say: a quoted text, a known name, or bare words\r
+conjure sayable(arg, names) ::\r
+  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::\r
+    yield arg\r
+  ;;\r
+  ponder regex_test(arg, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
+    iterate w through regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+      ponder is_known(w, names) ::\r
+        yield ""\r
+      ;;\r
+    ;;\r
+    yield quote_text(arg)\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+\r
+// ---------- everyday tasks (reverse, upper/lower, length, dice, sort \u2026) ----------\r
+\r
+forge NUMBER_WORDS be :: "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "twenty": "20", "hundred": "100" ;;\r
+\r
+conjure as_number(t) ::\r
+  forge w be lower(trim(t))\r
+  ponder regex_test(w, "^-?[0-9]+(\\\\.[0-9]+)?$") ::\r
+    yield w\r
+  ;;\r
+  ponder has(NUMBER_WORDS, w) ::\r
+    yield NUMBER_WORDS[w]\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+// "hello" / hello / a known name -> an expression\r
+conjure subject_of(t, names) ::\r
+  forge w be regex_replace(trim(t), "^(the\\\\s+)?(word|text|name|string)\\\\s+", "", "i")\r
+  ponder is_quoted(w) ::\r
+    yield w\r
+  ;;\r
+  ponder is_known(w, names) ::\r
+    yield w\r
+  ;;\r
+  ponder regex_test(w, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
+    yield quote_text(w)\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+conjure number_list(t) ::\r
+  forge found be regex_find_all(t, "-?[0-9]+(\\\\.[0-9]+)?")\r
+  ponder measure(found) < 2 ::\r
+    yield ""\r
+  ;;\r
+  ponder isnt regex_test(t, "^[0-9\\\\s,.\\\\-and]+$", "i") ::\r
+    yield ""\r
+  ;;\r
+  yield "[" + weave(found, ", ") + "]"\r
+;;\r
+\r
+// returns the canonical text, or "" when this is not an everyday task\r
+conjure task_line(b, names) ::\r
+  forge s be regex_replace(regex_replace(b, "^(please|can you|could you)\\\\s+", "", "i"), "[.!?]+\\\\s*$", "")\r
+  forge out be regex_replace(s, "^(print|say|show|display|output|tell me|give me)\\\\s+(the\\\\s+)?", "", "i")\r
+  forge m be void\r
+\r
+  ponder regex_test(s, "^(flip|toss)\\\\s+(a\\\\s+)?coin$", "i") ::\r
+    yield "say pick([\\"heads\\", \\"tails\\"])"\r
+  ;;\r
+  ponder regex_test(s, "^(roll|throw)\\\\s+(a\\\\s+)?(die|dice)$", "i") ::\r
+    yield "say randint(1, 6)"\r
+  ;;\r
+  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also as_number(m[1]) differs "" ::\r
+    yield "set i to " + as_number(m[1]) + "\\nwhile i > 0\\n  say i\\n  set i to i - 1\\nend"\r
+  ;;\r
+  m be regex_capture(out, "^(reverse|backwards)\\\\s+(of\\\\s+)?(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(out, "^()()(.+?)\\\\s+(reversed|backwards)$", "i")\r
+  ;;\r
+  ponder m differs void also subject_of(m[3], names) differs "" ::\r
+    yield "say reverse(" + subject_of(m[3], names) + ")"\r
+  ;;\r
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(uppercase|upper\\\\s*case|capitals|caps)$", "i")\r
+  ponder m differs void also subject_of(m[2], names) differs "" ::\r
+    yield "say upper(" + subject_of(m[2], names) + ")"\r
+  ;;\r
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(lowercase|lower\\\\s*case|small\\\\s+letters)$", "i")\r
+  ponder m differs void also subject_of(m[2], names) differs "" ::\r
+    yield "say lower(" + subject_of(m[2], names) + ")"\r
+  ;;\r
+  m be regex_capture(s, "^(what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(the\\\\s+)?(length|size)\\\\s+of\\\\s+(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(s, "^()()()how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")\r
+  ;;\r
+  ponder m differs void ::\r
+    forge lst be number_list(m[4])\r
+    ponder lst differs "" ::\r
+      yield "say len(" + lst + ")"\r
+    ;;\r
+    ponder subject_of(m[4], names) differs "" ::\r
+      yield "say len(" + subject_of(m[4], names) + ")"\r
+    ;;\r
+  ;;\r
+  m be regex_capture(s, "^(is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(is\\\\s+)?(an?\\\\s+)?(even|odd)(\\\\s+or\\\\s+(even|odd))?$", "i")\r
+  ponder m differs void ::\r
+    forge n be as_number(m[2])\r
+    ponder n equals "" also is_known(m[2], names) ::\r
+      n be m[2]\r
+    ;;\r
+    ponder n differs "" ::\r
+      yield "if " + n + " % 2 is 0\\n  say \\"even\\"\\nelse\\n  say \\"odd\\"\\nend"\r
+    ;;\r
+  ;;\r
+  m be regex_capture(s, "^((give|show|pick|generate|roll|make|get)\\\\s+(me\\\\s+)?)?(a\\\\s+)?random\\\\s+(whole\\\\s+)?number\\\\s+(between|from)\\\\s+(\\\\S+)\\\\s+(and|to)\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also as_number(m[7]) differs "" also as_number(m[9]) differs "" ::\r
+    yield "say randint(" + as_number(m[7]) + ", " + as_number(m[9]) + ")"\r
+  ;;\r
+  m be regex_capture(out, "^sort\\\\s+(the\\\\s+)?(numbers\\\\s+)?(.+?)(\\\\s+(from\\\\s+)?(biggest|largest|highest)\\\\s+(to|first).*)?$", "i")\r
+  ponder m differs void also number_list(m[3]) differs "" ::\r
+    ponder regex_test(s, "biggest|largest|highest|descending", "i") ::\r
+      yield "say sortDesc(" + number_list(m[3]) + ")"\r
+    ;;\r
+    yield "say sort(" + number_list(m[3]) + ")"\r
+  ;;\r
+  m be regex_capture(s, "^(print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(the\\\\s+)?(multiplication|times)\\\\s+table\\\\s+(of|for)\\\\s+(\\\\S+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(s, "^(print\\\\s+|show\\\\s+)?(the\\\\s+)?()()(\\\\S+)\\\\s+times\\\\s+table$", "i")\r
+  ;;\r
+  ponder m differs void also as_number(m[5]) differs "" ::\r
+    forge n be as_number(m[5])\r
+    yield "set i to 1\\nwhile i <= 10\\n  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)\\n  set i to i + 1\\nend"\r
+  ;;\r
+  m be regex_capture(s, "^(say\\\\s+)?(hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(s, "^()()greet\\\\s+(.+)$", "i")\r
+  ;;\r
+  ponder m differs void ::\r
+    forge who be trim(m[3])\r
+    ponder is_known(who, names) ::\r
+      yield "say \\"Hello, \\" + " + who\r
+    ;;\r
+    ponder regex_test(who, "^[\\\\p{L} '-]+$") ::\r
+      yield "say " + quote_text("Hello, " + who)\r
+    ;;\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+// ---------- one line ----------\r
+// returns [canonical, sure]\r
+\r
+conjure understand_line(body, names) ::\r
+  forge b be regex_replace(body, "^what's\\\\s", "what is ", "i")\r
+\r
+\r
+  // everyday tasks first: "reverse hello", "roll a dice", "say hello to Sam"\r
+  forge task be task_line(b, names)\r
+  ponder task differs "" ::\r
+    yield [task, yep]\r
+  ;;\r
+\r
+  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"\r
+  forge m be regex_capture(b, "^ask\\\\s+(\\"[^\\"]*\\"|'[^']*')\\\\s+(as|into|for|and\\\\s+call\\\\s+it|and\\\\s+store\\\\s+in)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
+  ponder m differs void ::\r
+    yield [asked(m[3], m[1], names), yep]\r
+  ;;\r
+  m be regex_capture(b, "^ask\\\\s+(the\\\\s+user\\\\s+)?for\\\\s+(their\\\\s+|a\\\\s+|the\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
+  ponder m differs void ::\r
+    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]\r
+  ;;\r
+  m be regex_capture(b, "^(set\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=|to|be)\\\\s*ask\\\\s+(\\"[^\\"]*\\"|'[^']*')$", "i")\r
+  ponder m differs void ::\r
+    yield [asked(m[2], m[4], names), yep]\r
+  ;;\r
+\r
+  // say X N times\r
+  m be regex_capture(b, "^(say|print|show|write)\\\\s+(.+?)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times$", "i")\r
+  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::\r
+    forge what be sayable(trim(m[2]), names)\r
+    ponder what differs "" ::\r
+      forge c be counter(names)\r
+      yield ["set " + c + " to 0\\nwhile " + c + " < " + m[3] + "\\n  say " + what + "\\n  set " + c + " to " + c + " + 1\\nend", yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+  // count / print the numbers from A to B [by S]  \xB7  count to N\r
+  m be regex_capture(b, "^(count|print|show|say|list)\\\\s+(the\\\\s+)?(numbers\\\\s+)?from\\\\s+(-?[0-9]+)\\\\s+(to|until|through)\\\\s+(-?[0-9]+)(\\\\s+by\\\\s+([0-9]+))?$", "i")\r
+  ponder m equals void ::\r
+    forge m2 be regex_capture(b, "^(please\\\\s+)?count\\\\s+(up\\\\s+)?to\\\\s+([0-9]+)$", "i")\r
+    ponder m2 differs void ::\r
+      m be ["", "", "", "", "1", "", m2[3], "", ""]\r
+    ;;\r
+  ;;\r
+  ponder m differs void ::\r
+    forge c be counter(names)\r
+    forge step be m[8] equals "" ~ "1" : m[8]\r
+    forge down be num(m[4]) > num(m[6])\r
+    forge cmp be down ~ " >= " : " <= "\r
+    forge op be down ~ " - " : " + "\r
+    yield ["set " + c + " to " + m[4] + "\\nwhile " + c + cmp + m[6] + "\\n  say " + c + "\\n  set " + c + " to " + c + op + step + "\\nend", yep]\r
+  ;;\r
+  // repeat N times  (a block \u2014 its counter is bumped where the block ends)\r
+  m be regex_capture(b, "^(repeat|do\\\\s+this|do)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times\\\\s*:?$", "i")\r
+  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::\r
+    forge c be counter(names)\r
+    yield ["set " + c + " to 0\\nwhile " + c + " < " + m[2] + "\\n#bump " + c, yep]\r
+  ;;\r
+\r
+  // conditions: when/if COND [then][:]  ->  if COND\r
+  m be regex_capture(b, "^(when|if)\\\\s+(.+?)\\\\s*(then)?\\\\s*:?$", "i")\r
+  ponder m differs void also isnt regex_test(b, "::") ::\r
+    forge cond be m[2]\r
+    forge yn be regex_capture(cond, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals|==?)\\\\s+[\\"']?(yes|no|y|n)[\\"']?$", "i")\r
+    ponder yn differs void also is_known(yn[1], names) ::\r
+      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]\r
+    ;;\r
+    ponder regex_test(cond, "\\\\b(yes|no)\\\\b", "i") ::\r
+      yield [body, nope]\r
+    ;;\r
+    forge plain be regex_replace(cond, "\\\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\\\b", " ", "i")\r
+    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::\r
+      yield ["if " + cond, yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals)\\\\s+[\\"']?(yes|no)[\\"']?\\\\s*:$", "i")\r
+  ponder m differs void also is_known(m[1], names) ::\r
+    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]\r
+  ;;\r
+  ponder regex_test(b, "^(otherwise|else)\\\\s*:?$", "i") ::\r
+    yield ["else", yep]\r
+  ;;\r
+\r
+  // say with pieces side by side: say "Hello, " name "!"\r
+  m be regex_capture(b, "^(say|print|show)\\\\s+(.+)$", "i")\r
+  ponder m differs void ::\r
+    forge pieces be regex_find_all(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|,")\r
+    forge glued be regex_replace(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|[,\\\\s]", "")\r
+    ponder glued equals "" also measure(pieces) > 1 ::\r
+      forge parts be []\r
+      forge fine be yep\r
+      iterate pc through pieces ::\r
+        ponder pc differs "," ::\r
+          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::\r
+            parts be parts + [pc]\r
+          ;; otherwise ::\r
+            fine be nope\r
+          ;;\r
+        ;;\r
+      ;;\r
+      ponder fine also measure(parts) > 1 ::\r
+        yield ["say " + weave(parts, " + "), yep]\r
+      ;;\r
+    ;;\r
+  ;;\r
+\r
+  // output: print / show / display / output / write / say / tell\r
+  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\\\s+(.+)$", "i")\r
+  ponder m differs void ::\r
+    forge arg be trim(m[2])\r
+    ponder has_placeholder(arg) ::\r
+      forge filled be fill_placeholders(arg, names)\r
+      ponder filled differs "" ::\r
+        yield ["speak(" + filled + ")", yep]\r
+      ;;\r
+      yield [body, nope]\r
+    ;;\r
+    ponder is_quoted(arg) either is_math(arg) ::\r
+      yield ["speak(" + arg + ")", yep]\r
+    ;;\r
+    ponder is_name(arg) also is_known(arg, names) ::\r
+      yield ["speak(" + arg + ")", yep]\r
+    ;;\r
+    ponder safe_expr(arg, names) also regex_test(arg, "[+\\\\-*/]") ::\r
+      yield ["speak(" + arg + ")", yep]\r
+    ;;\r
+    // bare words with no known names in them: say them as written\r
+    forge used be regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
+    iterate w through used ::\r
+      ponder is_known(w, names) ::\r
+        yield [body, nope]\r
+      ;;\r
+    ;;\r
+    // words that usually mean a task ("count to", "3 times", "on the screen")\r
+    ponder regex_test(arg, "\\\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\\\b", "i") ::\r
+      yield [body, nope]\r
+    ;;\r
+    ponder regex_test(arg, "[\\"'(){}\\\\[\\\\]]") ::\r
+      yield [body, nope]\r
+    ;;\r
+    yield ["speak(" + quote_text(arg) + ")", yep]\r
+  ;;\r
+\r
+  // plain calculations: calculate / compute / what is / how much is\r
+  m be regex_capture(b, "^(calculate|compute|evaluate|solve|what\\\\s+is|how\\\\s+much\\\\s+is)\\\\s+(.+?)\\\\??$", "i")\r
+  ponder m differs void ::\r
+    forge expr be math_words(m[2])\r
+    ponder is_math(expr) ::\r
+      yield ["speak(" + expr + ")", yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+\r
+  // add N to x / increase x by N / decrease x by N\r
+  m be regex_capture(b, "^add\\\\s+(\\\\S+)\\\\s+to\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[1], names) ::\r
+    yield [m[2] + " be " + m[2] + " + " + m[1], yep]\r
+  ;;\r
+  m be regex_capture(b, "^(increase|raise)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
+    yield [m[2] + " be " + m[2] + " + " + m[3], yep]\r
+  ;;\r
+  m be regex_capture(b, "^(decrease|lower|reduce)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
+    yield [m[2] + " be " + m[2] + " - " + m[3], yep]\r
+  ;;\r
+\r
+  // x becomes E\r
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+becomes\\\\s+(.+)$", "i")\r
+  ponder m differs void also is_known(m[1], names) also safe_expr(trim(m[2]), names) ::\r
+    yield [m[1] + " be " + trim(m[2]), yep]\r
+  ;;\r
+\r
+  // set x to E / let x be E / make x E / x = E\r
+  m be regex_capture(b, "^(set|let|make)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(to|be|equal\\\\s+to|=)\\\\s+(.+)$", "i")\r
+  ponder m equals void ::\r
+    m be regex_capture(b, "^()([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=)\\\\s*([^=].*)$")\r
+  ;;\r
+  ponder m differs void ::\r
+    forge value be trim(m[4])\r
+    ponder safe_expr(value, names) ::\r
+      ponder is_known(m[2], names) ::\r
+        yield [m[2] + " be " + value, yep]\r
+      ;;\r
+      yield ["forge " + m[2] + " be " + value, yep]\r
+    ;;\r
+    yield [body, nope]\r
+  ;;\r
+\r
+  ponder starts_canonical(b) ::\r
+    yield [body, yep]\r
+  ;;\r
+  yield [body, nope]\r
+;;\r
+\r
+// ---------- the whole file ----------\r
+\r
+// an open block is [indent, counter]; a counted block bumps it before "end"\r
+conjure close_block(open) ::\r
+  ponder open[1] differs "" ::\r
+    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]\r
+  ;;\r
+  yield [open[0] + "end"]\r
+;;\r
+\r
+forge CHUNK_MEMO be ::\r
+;;\r
+\r
+conjure understand_source(source, known, words) ::\r
+  forge names be ::\r
+  ;;\r
+  iterate k through known ::\r
+    names[k] be yep\r
+  ;;\r
+  // dialect / remembered words: [word, canonical]\r
+  forge wordmap be ::\r
+  ;;\r
+  ponder words differs void ::\r
+    iterate pair through words ::\r
+      wordmap[lower(pair[0])] be pair[1]\r
+    ;;\r
+  ;;\r
+  // names used in arithmetic or numeric comparisons: typed answers for\r
+  // them are converted to numbers when they are asked for\r
+  iterate row through lines(source) ::\r
+    forge bare be regex_replace(row, "\\"[^\\"]*\\"|'[^']*'", "\\"\\"")\r
+    forge numeric be regex_test(bare, "[\\\\-*/%^<>]|\\\\b(more|less|greater|smaller)\\\\b") either (regex_test(bare, "\\\\+") also isnt regex_test(bare, "\\"")) either regex_test(bare, "\\\\b(times|plus|minus|divided)\\\\b")\r
+    ponder numeric also isnt regex_test(trim(row), "^ask\\\\b", "i") ::\r
+      iterate w through regex_find_all(bare, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+        names["#num:" + w] be yep\r
+      ;;\r
+    ;;\r
+  ;;\r
+  forge out be []\r
+  forge notes be []\r
+  forge sure be yep\r
+  forge n be 0\r
+  forge rows be lines(source)\r
+  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,\r
+  // unless the author already writes "end" or "::" blocks themselves\r
+  forge auto_end be isnt regex_test(source, "(^|\\n)\\s*end\\s*($|\\n)|::")\r
+  forge opens be []\r
+  // Large files are read in top-level chunks. Each chunk's reading is\r
+  // remembered (keyed by its text and everything known before it), so after\r
+  // a small edit only the chunks that changed are read again.\r
+  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))\r
+  iterate k through keys(names) ::\r
+    ponder startswith(k, "#num:") ::\r
+      state be str(hash(state + k)) + str(hash(reverse(state + k)))\r
+    ;;\r
+  ;;\r
+  forge chunks be []\r
+  forge current be []\r
+  forge first_line be 1\r
+  forge idx be 0\r
+  iterate line through rows ::\r
+    idx be idx + 1\r
+    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\\\}|//|#)", "i")\r
+    ponder top also measure(current) > 0 ::\r
+      chunks be chunks + [[first_line, current]]\r
+      current be []\r
+      first_line be idx\r
+    ;;\r
+    current be current + [line]\r
+  ;;\r
+  ponder measure(current) > 0 ::\r
+    chunks be chunks + [[first_line, current]]\r
+  ;;\r
+  iterate chunk through chunks ::\r
+    forge key be state + "|#|" + unlines(chunk[1])\r
+    forge delta be []\r
+    ponder has(CHUNK_MEMO, key) ::\r
+      forge hit be CHUNK_MEMO[key]\r
+      out be out + hit[0]\r
+      ponder isnt hit[1] ::\r
+        sure be nope\r
+      ;;\r
+      iterate note through hit[2] ::\r
+        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]\r
+      ;;\r
+      delta be hit[3]\r
+      iterate pair through delta ::\r
+        names[pair[0]] be pair[1]\r
+      ;;\r
+    ;; otherwise ::\r
+      forge c_out be []\r
+      forge c_sure be yep\r
+      forge c_notes be []\r
+      forge saved_out be out\r
+      forge saved_notes be notes\r
+      forge saved_sure be sure\r
+      out be []\r
+      notes be []\r
+      sure be yep\r
+      n be chunk[0] - 1\r
+      iterate line through chunk[1] ::\r
+      n be n + 1\r
+      forge indent be leading_space(line)\r
+      forge body be trim(line)\r
+      forge head be lower(regex_replace(body, "^(\\\\S+).*$", "$1"))\r
+      ponder has(wordmap, head) also body differs "" ::\r
+        body be wordmap[head] + snatch(body, measure(head), measure(body))\r
+      ;;\r
+      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::\r
+        out be out + [line]\r
+      ;; otherwise ::\r
+        forge r be understand_line(body, names)\r
+        ponder isnt r[1] ::\r
+          sure be nope\r
+        ;;\r
+        ponder r[0] differs body ::\r
+          notes be notes + [[n, body, r[0]]]\r
+        ;;\r
+        // learn declarations as we go: forge x be \u2026 / conjure f(a, b)\r
+        forge d be regex_capture(r[0], "^(?:forge|set)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
+        ponder d differs void ::\r
+          names[d[1]] be (regex_test(r[0], "input\\\\(") also isnt regex_test(r[0], "num\\\\(input")) ~ "typed" : yep\r
+          delta be delta + [[d[1], names[d[1]]]]\r
+        ;;\r
+        d be regex_capture(r[0], "^conjure\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*\\\\(([^)]*)\\\\)")\r
+        ponder d differs void ::\r
+          names[d[1]] be yep\r
+          delta be delta + [[d[1], yep]]\r
+          iterate p through regex_find_all(d[2], "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
+            names[p] be yep\r
+            delta be delta + [[p, yep]]\r
+          ;;\r
+        ;;\r
+        d be regex_capture(r[0], "^iterate\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
+        ponder d differs void ::\r
+          names[d[1]] be yep\r
+          delta be delta + [[d[1], yep]]\r
+        ;;\r
+        ponder auto_end ::\r
+          forge isElse be regex_test(r[0], "^else\\\\b")\r
+          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::\r
+            out be out + close_block(opens[-1])\r
+            opens be portion(opens, 0, measure(opens) - 1)\r
+          ;;\r
+          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::\r
+            opens be portion(opens, 0, measure(opens) - 1)\r
+          ;;\r
+          forge bump be regex_capture(r[0], "\\n#bump (\\\\S+)$")\r
+          ponder bump differs void ::\r
+            opens be opens + [[indent, bump[1]]]\r
+            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]\r
+          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\\\b") also isnt contains(r[0], "\\n") ::\r
+            opens be opens + [[indent, ""]]\r
+          ;;\r
+        ;;\r
+        ponder isnt auto_end also contains(r[0], "#bump") ::\r
+          sure be nope\r
+        ;;\r
+        out be out + [indent + replace(r[0], "\\n", "\\n" + indent)]\r
+      ;;\r
+      ;;\r
+      // a top-level line follows: close what this chunk opened, here\r
+      cycle auto_end also measure(opens) > 0 ::\r
+        out be out + close_block(opens[-1])\r
+        opens be portion(opens, 0, measure(opens) - 1)\r
+      ;;\r
+      c_out be out\r
+      c_sure be sure\r
+      iterate note through notes ::\r
+        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]\r
+      ;;\r
+      ponder measure(CHUNK_MEMO) > 20000 ::\r
+        CHUNK_MEMO be ::\r
+        ;;\r
+      ;;\r
+      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]\r
+      out be saved_out + c_out\r
+      notes be saved_notes + notes\r
+      sure be saved_sure also c_sure\r
+    ;;\r
+    forge dsig be state\r
+    iterate pair through delta ::\r
+      dsig be dsig + "," + pair[0] + "=" + str(pair[1])\r
+    ;;\r
+    state be str(hash(dsig)) + str(hash(reverse(dsig)))\r
+  ;;\r
+  yield [unlines(out), sure, notes]\r
+;;\r
+`;
+  }
+});
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\ai-dialect.sdev
+var ai_dialect_default;
+var init_ai_dialect = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\ai-dialect.sdev"() {
+    ai_dialect_default = `// =====================================================================\r
+// ai-dialect.sdev \u2014 "sdev:ai", the dialect written for AI models.\r
+//\r
+// Designed for how language models generate code:\r
+//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)\r
+//   * blocks are always { \u2026 } \u2014 no indentation rules, no guessed closings\r
+//   * short, common tokens: fewer tokens -> faster, cheaper generation\r
+//   * the familiar operators models already know: == != && || !\r
+//\r
+// A file starts with  !#ai  and is translated to canonical sdev before it\r
+// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model\r
+// can be given any program to read in the dense form.\r
+//\r
+//   v x = 5               forge x be 5\r
+//   x = x + 1             x be x + 1\r
+//   x += 2                x be x + (2)\r
+//   p(x)                  speak(x)\r
+//   f add(a, b) {         conjure add(a, b) ::\r
+//   r a + b               yield a + b\r
+//   ? x > 3 {             ponder x > 3 ::\r
+//   } :? x > 1 {          ;; otherwise ponder x > 1 ::\r
+//   } : {                 ;; otherwise ::\r
+//   w i < 3 {             cycle i < 3 ::\r
+//   each n in xs {        iterate n through xs ::\r
+//   try { \u2026 } catch e {   attempt :: \u2026 ;; rescue e ::\r
+//   brk / next            yeet / skip\r
+//   k N = 3               fixed N be 3\r
+//   c Dog : Animal {      essence Dog extend Animal ::\r
+//   throw e               hurl e\r
+//   } finally {           ;; ensure ::\r
+//   }                     ;;\r
+//   == != && || !         equals differs also either isnt\r
+// =====================================================================\r
+\r
+// split a line into [code, text, code, text, \u2026] so strings are never touched\r
+conjure ai_segments(line) ::\r
+  yield regex_find_all(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|'[^']*'|[^\\"']+|[\\"']")\r
+;;\r
+\r
+conjure ai_ops_to_sdev(code) ::\r
+  forge c be code\r
+  c be regex_replace(c, "\\\\s*==\\\\s*", " equals ")\r
+  c be regex_replace(c, "\\\\s*!=\\\\s*", " differs ")\r
+  c be regex_replace(c, "\\\\s*&&\\\\s*", " also ")\r
+  c be regex_replace(c, "\\\\s*\\\\|\\\\|\\\\s*", " either ")\r
+  c be regex_replace(c, "(^|[^\\\\p{L}\\\\p{N}_])!\\\\s*(?!=)", "$1isnt ")\r
+  c be regex_replace(c, "\\\\btrue\\\\b", "yep")\r
+  c be regex_replace(c, "\\\\bfalse\\\\b", "nope")\r
+  c be regex_replace(c, "\\\\bnull\\\\b", "void")\r
+  yield c\r
+;;\r
+\r
+conjure ai_ops_to_ai(code) ::\r
+  forge c be code\r
+  c be regex_replace(c, "\\\\s+equals\\\\s+", " == ")\r
+  c be regex_replace(c, "\\\\s+differs\\\\s+", " != ")\r
+  c be regex_replace(c, "\\\\s+also\\\\s+", " && ")\r
+  c be regex_replace(c, "\\\\s+either\\\\s+", " || ")\r
+  c be regex_replace(c, "\\\\bisnt\\\\s+", "!")\r
+  c be regex_replace(c, "\\\\byep\\\\b", "true")\r
+  c be regex_replace(c, "\\\\bnope\\\\b", "false")\r
+  c be regex_replace(c, "\\\\bvoid\\\\b", "null")\r
+  yield c\r
+;;\r
+\r
+conjure ai_map_code(line, to_sdev) ::\r
+  forge out be ""\r
+  iterate seg through ai_segments(line) ::\r
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
+      out be out + seg\r
+    ;; otherwise ponder to_sdev ::\r
+      out be out + ai_ops_to_sdev(seg)\r
+    ;; otherwise ::\r
+      out be out + ai_ops_to_ai(seg)\r
+    ;;\r
+  ;;\r
+  yield out\r
+;;\r
+\r
+forge AI_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\r
+\r
+// one AI line -> one canonical line (or void when it is not AI syntax)\r
+conjure ai_line_to_sdev(body) ::\r
+  forge m be regex_capture(body, "^\\\\}\\\\s*:\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"\r
+  ;;\r
+  ponder regex_test(body, "^\\\\}\\\\s*:\\\\s*\\\\{$") ::\r
+    yield ";; otherwise ::"\r
+  ;;\r
+  m be regex_capture(body, "^\\\\}\\\\s*catch\\\\s+(" + AI_NAME + ")\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield ";; rescue " + m[1] + " ::"\r
+  ;;\r
+  ponder body equals "}" ::\r
+    yield ";;"\r
+  ;;\r
+  ponder regex_test(body, "^try\\\\s*\\\\{$") ::\r
+    yield "attempt ::"\r
+  ;;\r
+  ponder regex_test(body, "^\\\\}\\\\s*finally\\\\s*\\\\{$") ::\r
+    yield ";; ensure ::"\r
+  ;;\r
+  m be regex_capture(body, "^k\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")\r
+  ponder m differs void ::\r
+    yield "fixed " + m[1] + " be " + ai_map_code(m[2], yep)\r
+  ;;\r
+  m be regex_capture(body, "^c\\\\s+(" + AI_NAME + ")(?:\\\\s*:\\\\s*(" + AI_NAME + "))?\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    ponder m[2] equals "" ::\r
+      yield "essence " + m[1] + " ::"\r
+    ;;\r
+    yield "essence " + m[1] + " extend " + m[2] + " ::"\r
+  ;;\r
+  m be regex_capture(body, "^throw\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "hurl " + ai_map_code(m[1], yep)\r
+  ;;\r
+  m be regex_capture(body, "^v\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")\r
+  ponder m differs void ::\r
+    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)\r
+  ;;\r
+  m be regex_capture(body, "^f\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "conjure " + m[1] + "(" + m[2] + ") ::"\r
+  ;;\r
+  m be regex_capture(body, "^r(\\\\s+(.+))?$")\r
+  ponder m differs void ::\r
+    ponder m[2] equals "" ::\r
+      yield "yield void"\r
+    ;;\r
+    yield "yield " + ai_map_code(m[2], yep)\r
+  ;;\r
+  m be regex_capture(body, "^p\\\\((.*)\\\\)$")\r
+  ponder m differs void ::\r
+    yield "speak(" + ai_map_code(m[1], yep) + ")"\r
+  ;;\r
+  m be regex_capture(body, "^\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "ponder " + ai_map_code(m[1], yep) + " ::"\r
+  ;;\r
+  m be regex_capture(body, "^w\\\\s+(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "cycle " + ai_map_code(m[1], yep) + " ::"\r
+  ;;\r
+  m be regex_capture(body, "^each\\\\s+(" + AI_NAME + ")\\\\s+in\\\\s+(.+?)\\\\s*\\\\{$")\r
+  ponder m differs void ::\r
+    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"\r
+  ;;\r
+  ponder body equals "brk" ::\r
+    yield "yeet"\r
+  ;;\r
+  ponder body equals "next" ::\r
+    yield "skip"\r
+  ;;\r
+  // compound assignment: x += e / x -= e / x *= e / x /= e\r
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*([-+*/])=\\\\s*(.+)$")\r
+  ponder m differs void ::\r
+    yield m[1] + " be " + m[1] + " " + m[2] + " (" + ai_map_code(m[3], yep) + ")"\r
+  ;;\r
+  // index or name assignment: x = e / xs[0] = e / o.k = e\r
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*=\\\\s*([^=].*)$")\r
+  ponder m differs void ::\r
+    yield m[1] + " be " + ai_map_code(m[2], yep)\r
+  ;;\r
+  // a bare call or expression\r
+  yield ai_map_code(body, yep)\r
+;;\r
+\r
+conjure ai_to_sdev(source) ::\r
+  forge out be []\r
+  iterate line through lines(close_ai_braces(source)) ::\r
+    forge indent be leading_space(line)\r
+    forge body be trim(line)\r
+    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::\r
+      ponder isnt startswith(body, "!#ai") ::\r
+        out be out + [line]\r
+      ;;\r
+    ;; otherwise ::\r
+      out be out + [indent + ai_line_to_sdev(body)]\r
+    ;;\r
+  ;;\r
+  yield unlines(out)\r
+;;\r
+\r
+// canonical sdev -> the AI form\r
+// the English canonical forms (say / set / if / while / for each / to \u2026 with / end)\r
+conjure english_line_to_ai(body, AI_DECLARED) ::\r
+  forge m be regex_capture(body, "^say\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "p(" + ai_map_code(m[1], nope) + ")"\r
+  ;;\r
+  m be regex_capture(body, "^set\\\\s+(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+to\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::\r
+      yield m[1] + " = " + ai_map_code(m[2], nope)\r
+    ;;\r
+    AI_DECLARED[m[1]] be yep\r
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
+  ;;\r
+  m be regex_capture(body, "^if\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "? " + ai_cond(m[1]) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^else\\\\s+if\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "} :? " + ai_cond(m[1]) + " {"\r
+  ;;\r
+  ponder body equals "else" ::\r
+    yield "} : {"\r
+  ;;\r
+  ponder body equals "end" ::\r
+    yield "}"\r
+  ;;\r
+  m be regex_capture(body, "^while\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "w " + ai_cond(m[1]) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^for\\\\s+(each\\\\s+)?(" + AI_NAME + ")\\\\s+in\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^to\\\\s+(" + AI_NAME + ")(\\\\s+with\\\\s+(.+))?$")\r
+  ponder m differs void ::\r
+    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")\r
+    yield "f " + m[1] + "(" + params + ") {"\r
+  ;;\r
+  m be regex_capture(body, "^return(\\\\s+(.+))?$")\r
+  ponder m differs void ::\r
+    yield "r " + ai_map_code(m[2], nope)\r
+  ;;\r
+  ponder body equals "break" ::\r
+    yield "brk"\r
+  ;;\r
+  ponder body equals "continue" ::\r
+    yield "next"\r
+  ;;\r
+  yield ""\r
+;;\r
+\r
+// English comparisons -> symbols\r
+conjure ai_cond(c) ::\r
+  forge out be ""\r
+  iterate seg through ai_segments(c) ::\r
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
+      out be out + seg\r
+    ;; otherwise ::\r
+      forge x be seg\r
+      x be regex_replace(x, "\\\\s+is\\\\s+not\\\\s+", " != ")\r
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+more\\\\b", " >= $1")\r
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+less\\\\b", " <= $1")\r
+      x be regex_replace(x, "\\\\s+is\\\\s+", " == ")\r
+      x be regex_replace(x, "\\\\s+and\\\\s+", " && ")\r
+      x be regex_replace(x, "\\\\s+or\\\\s+", " || ")\r
+      x be regex_replace(x, "(^|\\\\s)not\\\\s+", "$1!")\r
+      out be out + ai_ops_to_ai(x)\r
+    ;;\r
+  ;;\r
+  yield out\r
+;;\r
+\r
+conjure sdev_line_to_ai(body, declared) ::\r
+  forge english be english_line_to_ai(body, declared)\r
+  ponder english differs "" ::\r
+    yield english\r
+  ;;\r
+  forge m be regex_capture(body, "^;;\\\\s*otherwise\\\\s+ponder\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "} :? " + ai_map_code(m[1], nope) + " {"\r
+  ;;\r
+  ponder regex_test(body, "^;;\\\\s*otherwise\\\\s*::$") ::\r
+    yield "} : {"\r
+  ;;\r
+  m be regex_capture(body, "^;;\\\\s*rescue\\\\s+(" + AI_NAME + ")\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "} catch " + m[1] + " {"\r
+  ;;\r
+  ponder body equals ";;" ::\r
+    yield "}"\r
+  ;;\r
+  ponder regex_test(body, "^attempt\\\\s*::$") ::\r
+    yield "try {"\r
+  ;;\r
+  ponder regex_test(body, "^;;\\\\s*ensure\\\\s*::$") ::\r
+    yield "} finally {"\r
+  ;;\r
+  m be regex_capture(body, "^fixed\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "k " + m[1] + " = " + ai_map_code(m[2], nope)\r
+  ;;\r
+  m be regex_capture(body, "^essence\\\\s+(" + AI_NAME + ")(?:\\\\s+extend\\\\s+(" + AI_NAME + "))?\\\\s*::$")\r
+  ponder m differs void ::\r
+    ponder m[2] equals "" ::\r
+      yield "c " + m[1] + " {"\r
+    ;;\r
+    yield "c " + m[1] + " : " + m[2] + " {"\r
+  ;;\r
+  m be regex_capture(body, "^hurl\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "throw " + ai_map_code(m[1], nope)\r
+  ;;\r
+  m be regex_capture(body, "^forge\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
+  ;;\r
+  m be regex_capture(body, "^conjure\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "f " + m[1] + "(" + m[2] + ") {"\r
+  ;;\r
+  m be regex_capture(body, "^yield\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield "r " + ai_map_code(m[1], nope)\r
+  ;;\r
+  m be regex_capture(body, "^speak\\\\((.*)\\\\)$")\r
+  ponder m differs void ::\r
+    yield "p(" + ai_map_code(m[1], nope) + ")"\r
+  ;;\r
+  m be regex_capture(body, "^ponder\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "? " + ai_map_code(m[1], nope) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^cycle\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "w " + ai_map_code(m[1], nope) + " {"\r
+  ;;\r
+  m be regex_capture(body, "^iterate\\\\s+(" + AI_NAME + ")\\\\s+through\\\\s+(.+?)\\\\s*::$")\r
+  ponder m differs void ::\r
+    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"\r
+  ;;\r
+  ponder body equals "yeet" ::\r
+    yield "brk"\r
+  ;;\r
+  ponder body equals "skip" ::\r
+    yield "next"\r
+  ;;\r
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+be\\\\s+(.+)$")\r
+  ponder m differs void ::\r
+    yield m[1] + " = " + ai_map_code(m[2], nope)\r
+  ;;\r
+  yield ai_map_code(body, nope)\r
+;;\r
+\r
+conjure sdev_to_ai(source) ::\r
+  forge out be ["!#ai"]\r
+  forge declared be ::\r
+  ;;\r
+  iterate line through lines(source) ::\r
+    forge indent be leading_space(line)\r
+    forge body be trim(line)\r
+    ponder body equals "" either startswith(body, "//") ::\r
+      out be out + [line]\r
+    ;; otherwise ::\r
+      out be out + [indent + sdev_line_to_ai(body, declared)]\r
+    ;;\r
+  ;;\r
+  yield unlines(out)\r
+;;\r
+`;
+  }
+});
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\project.sdev
+var project_default;
+var init_project = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\project.sdev"() {
+    project_default = '// =====================================================================\r\n// project.sdev \u2014 the project index of the code understander, in sdev.\r\n//\r\n// Collects every name a file defines (variables, functions, kinds,\r\n// parameters, loop names, lambda parameters) so the understander can tell\r\n// a reference to another file apart from plain words.\r\n//\r\n//   defined_names(source)   -> list of names one file defines\r\n//   project_names(sources)  -> names defined across many files, no repeats\r\n// =====================================================================\r\n\r\nforge PNAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\r\n\r\nconjure pn_add(seen, out, w) ::\r\n  ponder w differs "" also isnt has(seen, w) also regex_test(w, "^" + PNAME + "$") ::\r\n    seen[w] be yep\r\n    out be out + [w]\r\n  ;;\r\n  yield out\r\n;;\r\n\r\n// every match of `pattern`, keeping only what follows `prefix`\r\nconjure pn_tails(text, pattern, prefix) ::\r\n  forge got be []\r\n  iterate hit through regex_find_all(text, pattern) ::\r\n    got be got + [regex_replace(hit, prefix, "")]\r\n  ;;\r\n  yield got\r\n;;\r\n\r\nconjure pn_split(list_text) ::\r\n  yield regex_find_all(list_text, PNAME)\r\n;;\r\n\r\nconjure defined_names_into(source, seen, out) ::\r\n  forge kw be "\\\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\\\s+"\r\n  iterate w through pn_tails(source, kw + PNAME, kw) ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME, "^for\\\\s+(each\\\\s+)?") ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME + "\\\\s*,\\\\s*" + PNAME, "^.*,\\\\s*") ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate row through lines(source) ::\r\n    forge m be regex_capture(row, "^\\\\s*(" + PNAME + ")\\\\s*(=|\\\\+=|-=|\\\\*=|/=)(?!=)")\r\n    ponder m differs void ::\r\n      out be pn_add(seen, out, m[1])\r\n    ;;\r\n  ;;\r\n  // parameters: `with a b c`, `with a, b`\r\n  iterate part through pn_tails(source, "\\\\bwith\\\\s+[^\\\\n:{]+", "^with\\\\s+") ::\r\n    iterate w through regex_find_all(part, "[^\\\\s,]+") ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  // `(a, b)` after a declaration\r\n  iterate part through pn_tails(source, "\\\\b(to|conjure|func|function|fn|def)\\\\s+" + PNAME + "\\\\s*\\\\([^)]*\\\\)", "^[^(]*\\\\(") ::\r\n    iterate w through regex_find_all(regex_replace(part, "\\\\)$", ""), "[^\\\\s,=]+") ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  // lambdas `(a, b) =>` / `x =>` / `(a, b) ->` / `x ->`\r\n  iterate part through regex_find_all(source, "\\\\([^()]*\\\\)\\\\s*(=>|->)|" + PNAME + "\\\\s*(=>|->)") ::\r\n    iterate w through pn_split(regex_replace(part, "(=>|->)$", "")) ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  yield out\r\n;;\r\n\r\nconjure defined_names(source) ::\r\n  forge seen be ::\r\n  ;;\r\n  yield defined_names_into(source, seen, [])\r\n;;\r\n\r\nconjure project_names(sources) ::\r\n  forge seen be ::\r\n  ;;\r\n  forge out be []\r\n  iterate src through sources ::\r\n    out be defined_names_into(src, seen, out)\r\n  ;;\r\n  yield out\r\n;;\r\n';
+  }
+});
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\blocks.sdev
+var blocks_default;
+var init_blocks = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\blocks.sdev"() {
+    blocks_default = '// =====================================================================\r\n// blocks.sdev \u2014 the code understander\'s block-closing rules, in sdev.\r\n//\r\n// People rarely write `end`, and AI models sometimes forget a `}`.\r\n// These rules close what was left open, using indentation as the guide:\r\n//   * an indented body closes as soon as the code steps back out of it\r\n//   * a blank line followed by a shallower line closes it too\r\n//   * anything still open is closed at the end of the file\r\n// Flat files that write their own `end` / `}` are left untouched.\r\n// =====================================================================\r\n\r\nforge BLOCK_OPENS be "^\\\\s*(?:to\\\\s+[\\\\p{L}\\\\p{N}_]|if\\\\b|while\\\\b|for\\\\s+each\\\\b|kind\\\\b|attempt\\\\b|match\\\\b)"\r\nforge BLOCK_CLOSES be "^\\\\s*end\\\\b"\r\nforge BLOCK_CONTINUES be "^\\\\s*(?:else|end)\\\\b"\r\n\r\nconjure next_code_line(ls, start) ::\r\n  forge j be start\r\n  cycle j < measure(ls) ::\r\n    ponder trim(ls[j]) differs "" ::\r\n      yield ls[j]\r\n    ;;\r\n    j be j + 1\r\n  ;;\r\n  yield void\r\n;;\r\n\r\n// English canonical form: if / while / for each / to \u2026 closed by `end`\r\nconjure close_blocks(source) ::\r\n  forge ls be lines(source)\r\n  forge out be []\r\n  // each open block is [indent, has_body]\r\n  forge stack be []\r\n  forge i be 0\r\n  cycle i < measure(ls) ::\r\n    forge line be ls[i]\r\n    ponder trim(line) equals "" ::\r\n      forge nxt be next_code_line(ls, i + 1)\r\n      ponder nxt differs void also isnt regex_test(nxt, BLOCK_CONTINUES) ::\r\n        cycle measure(stack) > 0 also measure(leading_space(nxt)) <= measure(stack[-1][0]) ::\r\n          out be out + [stack[-1][0] + "end"]\r\n          stack be portion(stack, 0, measure(stack) - 1)\r\n        ;;\r\n      ;;\r\n      out be out + [line]\r\n    ;; otherwise ::\r\n      forge w be measure(leading_space(line))\r\n      forge cont be regex_test(line, BLOCK_CONTINUES)\r\n      cycle measure(stack) > 0 also stack[-1][1] also w <= measure(stack[-1][0]) also isnt (cont also w equals measure(stack[-1][0])) ::\r\n        out be out + [stack[-1][0] + "end"]\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder measure(stack) > 0 also w > measure(stack[-1][0]) ::\r\n        stack[measure(stack) - 1] be [stack[-1][0], yep]\r\n      ;;\r\n      ponder regex_test(line, BLOCK_CLOSES) ::\r\n        ponder measure(stack) > 0 ::\r\n          stack be portion(stack, 0, measure(stack) - 1)\r\n        ;;\r\n      ;; otherwise ponder regex_test(line, "^\\\\s*else\\\\b") also measure(stack) > 0 ::\r\n        stack[measure(stack) - 1] be [stack[-1][0], nope]\r\n      ;; otherwise ponder regex_test(line, BLOCK_OPENS) ::\r\n        stack be stack + [[leading_space(line), nope]]\r\n      ;;\r\n      out be out + [line]\r\n    ;;\r\n    i be i + 1\r\n  ;;\r\n  cycle measure(stack) > 0 ::\r\n    out be out + [stack[-1][0] + "end"]\r\n    stack be portion(stack, 0, measure(stack) - 1)\r\n  ;;\r\n  yield unlines(out)\r\n;;\r\n\r\n// code of a line with strings and // comments removed, for brace counting\r\nconjure brace_code(line) ::\r\n  forge c be regex_replace(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|\'[^\']*\'", "\\"\\"")\r\n  forge k be find_from(c, "//", 0)\r\n  ponder k >= 0 ::\r\n    c be snatch(c, 0, k)\r\n  ;;\r\n  yield trim(c)\r\n;;\r\n\r\n// sdev:ai form: blocks are { \u2026 }; add any `}` a model forgot\r\nconjure close_ai_braces(source) ::\r\n  forge ls be lines(source)\r\n  forge out be []\r\n  forge stack be []\r\n  iterate line through ls ::\r\n    forge code be brace_code(line)\r\n    ponder code equals "" ::\r\n      out be out + [line]\r\n    ;; otherwise ::\r\n      forge w be measure(leading_space(line))\r\n      forge closing be startswith(code, "}")\r\n      // stepping back to (or out of) an opener\'s level without `}` closes it\r\n      cycle measure(stack) > 0 also (w < measure(stack[-1]) either (w equals measure(stack[-1]) also isnt closing)) ::\r\n        out be out + [stack[-1] + "}"]\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder closing also measure(stack) > 0 ::\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder endswith(code, "{") ::\r\n        stack be stack + [leading_space(line)]\r\n      ;;\r\n      out be out + [line]\r\n    ;;\r\n  ;;\r\n  cycle measure(stack) > 0 ::\r\n    out be out + [stack[-1] + "}"]\r\n    stack be portion(stack, 0, measure(stack) - 1)\r\n  ;;\r\n  yield unlines(out)\r\n;;\r\n\r\n// structure report: [[line, message], \u2026] for blocks that never close or close twice\r\nconjure check_blocks(source) ::\r\n  forge problems be []\r\n  forge stack be []\r\n  forge n be 0\r\n  iterate line through lines(source) ::\r\n    n be n + 1\r\n    forge code be brace_code(line)\r\n    ponder endswith(code, "::") either endswith(code, "{") ::\r\n      ponder startswith(code, ";;") either startswith(code, "}") ::\r\n        ponder measure(stack) equals 0 ::\r\n          problems be problems + [[n, "nothing is open here to continue"]]\r\n        ;; otherwise ::\r\n          stack[measure(stack) - 1] be n\r\n        ;;\r\n      ;; otherwise ::\r\n        stack be stack + [n]\r\n      ;;\r\n    ;; otherwise ponder startswith(code, ";;") either startswith(code, "}") ::\r\n      ponder measure(stack) equals 0 ::\r\n        problems be problems + [[n, "this closes a block that was never opened"]]\r\n      ;; otherwise ::\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n    ;;\r\n  ;;\r\n  iterate s through stack ::\r\n    problems be problems + [[s, "this block is never closed"]]\r\n  ;;\r\n  yield problems\r\n;;\r\n';
+  }
+});
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\parser_eval.sdev
+var parser_eval_default;
+var init_parser_eval = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\parser_eval.sdev"() {
+    parser_eval_default = `// =====================================================================
+// parser_eval.sdev \u2014 self-hosted canonical SDEV tokenizer, recursive-
+// descent parser, syntax validator, and tree-walking interpreter.
+//
+// Written 100% in SDEV. Supports both v2 canonical forms (\`say\`,
+// \`set ... to\`, \`if ... else ... end\`, \`while ... end\`,
+// \`for each ... in ... end\`, \`to name with params ... end\`, \`return\`)
+// and v1 forms (\`speak\`, \`forge ... be\`, \`ponder ... otherwise\`,
+// \`cycle\`, \`iterate ... through\`, \`conjure\`, \`yield\`), plus expressions,
+// lists, tomes, indexing, member access, calls, and built-ins.
+//
+// Entry points:
+//   sdev_parse_program(source)        -> [ok_bool, ast_nodes, errors]
+//   sdev_validate_syntax(source)      -> [valid_bool, diagnostics_list]
+//   sdev_eval_program(source, inputs) -> [ok_bool, output_lines, error_msg]
+// =====================================================================
+
+// ---------- Tokenizer ----------
+
+conjure pe_tokenize(source) ::
+  forge tokens be []
+  forge errors be []
+  forge ls be lines(source)
+  forge line_idx be 0
+  cycle line_idx < measure(ls) ::
+    forge line_num be line_idx + 1
+    forge line be ls[line_idx]
+    forge n be measure(line)
+    forge i be 0
+    cycle i < n ::
+      forge ch be char_at(line, i)
+      ponder ch equals " " either ch equals "\\t" either ch equals "\\r" ::
+        i be i + 1
+      ;; otherwise ponder ch equals "#" either (ch equals "/" also char_at(line, i + 1) equals "/") ::
+        i be n
+      ;; otherwise ponder ch equals "\\"" either ch equals "'" ::
+        forge quote be ch
+        i be i + 1
+        forge s be ""
+        forge closed be nope
+        cycle i < n also isnt closed ::
+          forge c be char_at(line, i)
+          ponder c equals "\\\\" ::
+            i be i + 1
+            ponder i < n ::
+              forge esc be char_at(line, i)
+              ponder esc equals "n" ::
+                s be s + "\\n"
+              ;; otherwise ponder esc equals "t" ::
+                s be s + "\\t"
+              ;; otherwise ponder esc equals "r" ::
+                s be s + "\\r"
+              ;; otherwise ::
+                s be s + esc
+              ;;
+              i be i + 1
+            ;;
+          ;; otherwise ponder c equals quote ::
+            closed be yep
+            i be i + 1
+          ;; otherwise ::
+            s be s + c
+            i be i + 1
+          ;;
+        ;;
+        ponder isnt closed ::
+          errors be errors + [[line_num, "Unterminated string literal"]]
+        ;;
+        tokens be tokens + [{ type: "STRING", value: s, line: line_num }]
+      ;; otherwise ponder is_digit(ch) ::
+        forge num_s be ""
+        cycle i < n also is_digit(char_at(line, i)) ::
+          num_s be num_s + char_at(line, i)
+          i be i + 1
+        ;;
+        ponder i < n also char_at(line, i) equals "." also i + 1 < n also is_digit(char_at(line, i + 1)) ::
+          num_s be num_s + "."
+          i be i + 1
+          cycle i < n also is_digit(char_at(line, i)) ::
+            num_s be num_s + char_at(line, i)
+            i be i + 1
+          ;;
+        ;;
+        tokens be tokens + [{ type: "NUMBER", value: num(num_s), line: line_num }]
+      ;; otherwise ponder is_letter(ch) either ch equals "_" ::
+        forge id_s be ""
+        cycle i < n ::
+          forge c2 be char_at(line, i)
+          ponder is_letter(c2) either is_digit(c2) either c2 equals "_" ::
+            id_s be id_s + c2
+            i be i + 1
+          ;; otherwise ::
+            yeet
+          ;;
+        ;;
+        tokens be tokens + [{ type: "IDENT", value: id_s, line: line_num }]
+      ;; otherwise ::
+        forge two be snatch(line, i, i + 2)
+        ponder two equals "::" ::
+          tokens be tokens + [{ type: "DOUBLE_COLON", value: "::", line: line_num }]
+          i be i + 2
+        ;; otherwise ponder two equals ";;" ::
+          tokens be tokens + [{ type: "DOUBLE_SEMI", value: ";;", line: line_num }]
+          i be i + 2
+        ;; otherwise ponder two equals "==" either two equals "!=" either two equals "<=" either two equals ">=" either two equals "&&" either two equals "||" either two equals "**" either two equals "->" either two equals "+=" either two equals "-=" either two equals "*=" either two equals "/=" ::
+          tokens be tokens + [{ type: "OP", value: two, line: line_num }]
+          i be i + 2
+        ;; otherwise ponder ch equals "(" ::
+          tokens be tokens + [{ type: "LPAREN", value: "(", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals ")" ::
+          tokens be tokens + [{ type: "RPAREN", value: ")", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "[" ::
+          tokens be tokens + [{ type: "LBRACKET", value: "[", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "]" ::
+          tokens be tokens + [{ type: "RBRACKET", value: "]", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "{" ::
+          tokens be tokens + [{ type: "LBRACE", value: "{", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "}" ::
+          tokens be tokens + [{ type: "RBRACE", value: "}", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "," ::
+          tokens be tokens + [{ type: "COMMA", value: ",", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals ":" ::
+          tokens be tokens + [{ type: "COLON", value: ":", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "." ::
+          tokens be tokens + [{ type: "DOT", value: ".", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "~" ::
+          tokens be tokens + [{ type: "TILDE", value: "~", line: line_num }]
+          i be i + 1
+        ;; otherwise ponder ch equals "+" either ch equals "-" either ch equals "*" either ch equals "/" either ch equals "%" either ch equals "^" either ch equals "<" either ch equals ">" either ch equals "=" either ch equals "!" ::
+          tokens be tokens + [{ type: "OP", value: ch, line: line_num }]
+          i be i + 1
+        ;; otherwise ::
+          errors be errors + [[line_num, "Unexpected character '" + ch + "'"]]
+          i be i + 1
+        ;;
+      ;;
+    ;;
+    line_idx be line_idx + 1
+  ;;
+  forge last_line be measure(ls) > 0 ~ measure(ls) : 1
+  tokens be tokens + [{ type: "EOF", value: "", line: last_line }]
+  yield [tokens, errors]
+;;
+
+// ---------- Parser helpers ----------
+
+conjure pe_peek(p) ::
+  yield p.tokens[p.pos]
+;;
+
+conjure pe_next_tok(p, offset) ::
+  forge idx be p.pos + offset
+  ponder idx < measure(p.tokens) ::
+    yield p.tokens[idx]
+  ;;
+  yield p.tokens[measure(p.tokens) - 1]
+;;
+
+conjure pe_at_end(p) ::
+  yield p.tokens[p.pos].type equals "EOF"
+;;
+
+conjure pe_advance(p) ::
+  forge tok be p.tokens[p.pos]
+  ponder isnt pe_at_end(p) ::
+    p.pos be p.pos + 1
+  ;;
+  yield tok
+;;
+
+conjure pe_check(p, t) ::
+  yield p.tokens[p.pos].type equals t
+;;
+
+conjure pe_check_word(p, w) ::
+  forge tok be p.tokens[p.pos]
+  yield tok.type equals "IDENT" also lower(tok.value) equals w
+;;
+
+conjure pe_check_op(p, op) ::
+  forge tok be p.tokens[p.pos]
+  yield tok.type equals "OP" also tok.value equals op
+;;
+
+conjure pe_error(p, line, msg) ::
+  p.errors be p.errors + [[line, msg]]
+;;
+
+conjure pe_is_block_closer(p) ::
+  ponder pe_check(p, "DOUBLE_SEMI") ::
+    yield yep
+  ;;
+  ponder pe_check_word(p, "end") either pe_check_word(p, "else") either pe_check_word(p, "elif") either pe_check_word(p, "otherwise") either pe_check_word(p, "rescue") ::
+    yield yep
+  ;;
+  yield nope
+;;
+
+conjure pe_is_stmt_keyword(w) ::
+  forge lw be lower(w)
+  iterate kw through ["forge", "conjure", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "if", "else", "elif", "end", "while", "for", "return", "break", "continue"] ::
+    ponder lw equals kw ::
+      yield yep
+    ;;
+  ;;
+  yield nope
+;;
+
+// ---------- Expression parser ----------
+
+conjure pe_parse_primary(p) ::
+  forge tok be pe_peek(p)
+  ponder tok.type equals "NUMBER" ::
+    pe_advance(p)
+    yield { type: "Literal", value: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "STRING" ::
+    pe_advance(p)
+    yield { type: "Literal", value: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "IDENT" ::
+    forge lw be lower(tok.value)
+    ponder lw equals "yep" either lw equals "true" ::
+      pe_advance(p)
+      yield { type: "Literal", value: yep, line: tok.line }
+    ;;
+    ponder lw equals "nope" either lw equals "false" ::
+      pe_advance(p)
+      yield { type: "Literal", value: nope, line: tok.line }
+    ;;
+    ponder lw equals "void" either lw equals "null" either lw equals "nothing" ::
+      pe_advance(p)
+      yield { type: "Literal", value: void, line: tok.line }
+    ;;
+    ponder lw equals "new" also pe_next_tok(p, 1).type equals "IDENT" ::
+      pe_advance(p)
+      forge cname be pe_advance(p).value
+      forge args be []
+      ponder pe_check(p, "LPAREN") also pe_peek(p).line equals tok.line ::
+        pe_advance(p)
+        ponder isnt pe_check(p, "RPAREN") ::
+          cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+            args be args + [pe_parse_expr(p)]
+            ponder pe_check(p, "COMMA") ::
+              pe_advance(p)
+            ;; otherwise ::
+              yeet
+            ;;
+          ;;
+        ;;
+        ponder pe_check(p, "RPAREN") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ')' after 'new' arguments")
+        ;;
+      ;;
+      yield { type: "New", class_name: cname, args: args, line: tok.line }
+    ;;
+    ponder lw equals "ref" also pe_next_tok(p, 1).type equals "IDENT" also pe_next_tok(p, 1).line equals tok.line ::
+      pe_advance(p)
+      forge fn_name be pe_advance(p).value
+      yield { type: "Ref", name: fn_name, line: tok.line }
+    ;;
+    ponder lw equals "call" also pe_next_tok(p, 1).type equals "IDENT" also pe_next_tok(p, 2).type equals "LPAREN" ::
+      pe_advance(p)
+      yield pe_parse_postfix(p)
+    ;;
+    ponder lw equals "make" also (pe_next_tok(p, 1).line > tok.line either lower(pe_next_tok(p, 1).value) equals "with" either lower(pe_next_tok(p, 1).value) equals "capture") ::
+      pe_advance(p)
+      forge params be []
+      forge caps be []
+      ponder pe_check_word(p, "with") also pe_peek(p).line equals tok.line ::
+        pe_advance(p)
+        cycle pe_check(p, "IDENT") also pe_peek(p).line equals tok.line also isnt pe_check_word(p, "capture") ::
+          params be params + [pe_advance(p).value]
+          ponder pe_check(p, "COMMA") ::
+            pe_advance(p)
+          ;;
+        ;;
+      ;;
+      ponder pe_check_word(p, "capture") also pe_peek(p).line equals tok.line ::
+        pe_advance(p)
+        cycle pe_check(p, "IDENT") also pe_peek(p).line equals tok.line ::
+          caps be caps + [pe_advance(p).value]
+          ponder pe_check(p, "COMMA") ::
+            pe_advance(p)
+          ;;
+        ;;
+      ;;
+      forge body be []
+      cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+        body be body + [pe_parse_stmt(p)]
+      ;;
+      ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, tok.line, "Unclosed 'make' block (missing 'end')")
+      ;;
+      yield { type: "Make", params: params, captures: caps, body: body, line: tok.line }
+    ;;
+    ponder (lw equals "ask" either lw equals "input") also pe_next_tok(p, 1).type differs "LPAREN" also pe_next_tok(p, 1).line equals tok.line ::
+      pe_advance(p)
+      forge prompt_e be pe_parse_expr(p)
+      yield { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }
+    ;;
+    ponder pe_is_stmt_keyword(lw) ::
+      pe_error(p, tok.line, "Unexpected keyword '" + tok.value + "' in expression")
+      yield { type: "Literal", value: void, line: tok.line }
+    ;;
+    pe_advance(p)
+    yield { type: "Ident", name: tok.value, line: tok.line }
+  ;;
+  ponder tok.type equals "LPAREN" ::
+    pe_advance(p)
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+      yield { type: "List", elements: [], line: tok.line }
+    ;;
+    forge inner be pe_parse_expr(p)
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '('")
+    ;;
+    yield inner
+  ;;
+  ponder tok.type equals "LBRACKET" ::
+    pe_advance(p)
+    forge items be []
+    ponder isnt pe_check(p, "RBRACKET") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACKET") ::
+        items be items + [pe_parse_expr(p)]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "RBRACKET") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '['")
+    ;;
+    yield { type: "List", elements: items, line: tok.line }
+  ;;
+  ponder tok.type equals "LBRACE" ::
+    pe_advance(p)
+    forge entries be []
+    ponder isnt pe_check(p, "RBRACE") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACE") ::
+        forge k_e be void
+        ponder pe_check(p, "IDENT") also pe_next_tok(p, 1).type equals "COLON" ::
+          forge kt be pe_advance(p)
+          k_e be { type: "Literal", value: kt.value, line: kt.line }
+        ;; otherwise ::
+          k_e be pe_parse_expr(p)
+        ;;
+        ponder pe_check(p, "COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ':' in tome literal")
+          yeet
+        ;;
+        forge v_e be pe_parse_expr(p)
+        entries be entries + [[k_e, v_e]]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "RBRACE") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '{'")
+    ;;
+    yield { type: "Dict", entries: entries, line: tok.line }
+  ;;
+  ponder tok.type equals "DOUBLE_COLON" ::
+    pe_advance(p)
+    forge entries be []
+    ponder isnt pe_check(p, "DOUBLE_SEMI") ::
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+        forge k_e be pe_parse_expr(p)
+        ponder pe_check(p, "COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ':' in tome literal")
+          yeet
+        ;;
+        forge v_e be pe_parse_expr(p)
+        entries be entries + [[k_e, v_e]]
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Unclosed '::' tome literal")
+    ;;
+    yield { type: "Dict", entries: entries, line: tok.line }
+  ;;
+  pe_error(p, tok.line, "Expected expression near '" + str(tok.value) + "'")
+  ponder isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
+    pe_advance(p)
+  ;;
+  yield { type: "Literal", value: void, line: tok.line }
+;;
+
+conjure pe_parse_postfix(p) ::
+  forge expr be pe_parse_primary(p)
+  cycle isnt pe_at_end(p) ::
+    ponder pe_check(p, "LPAREN") also pe_peek(p).line equals expr.line ::
+      pe_advance(p)
+      forge args be []
+      ponder isnt pe_check(p, "RPAREN") ::
+        cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+          args be args + [pe_parse_expr(p)]
+          ponder pe_check(p, "COMMA") ::
+            pe_advance(p)
+          ;; otherwise ::
+            yeet
+          ;;
+        ;;
+      ;;
+      ponder pe_check(p, "RPAREN") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected ')' after arguments")
+      ;;
+      expr be { type: "Call", callee: expr, args: args, line: expr.line }
+    ;; otherwise ponder pe_check(p, "LBRACKET") also pe_peek(p).line equals expr.line ::
+      pe_advance(p)
+      forge idx_e be pe_parse_expr(p)
+      ponder pe_check(p, "RBRACKET") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected ']' after index")
+      ;;
+      expr be { type: "Index", object: expr, index: idx_e, line: expr.line }
+    ;; otherwise ponder pe_check(p, "DOT") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge prop be pe_advance(p).value
+        expr be { type: "Member", object: expr, property: prop, line: expr.line }
+      ;; otherwise ::
+        pe_error(p, expr.line, "Expected property name after '.'")
+        yeet
+      ;;
+    ;; otherwise ::
+      yeet
+    ;;
+  ;;
+  yield expr
+;;
+
+conjure pe_parse_unary(p) ::
+  ponder pe_check_op(p, "-") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "-", operand: pe_parse_unary(p), line: t.line }
+  ;;
+  ponder pe_check_op(p, "+") ::
+    pe_advance(p)
+    yield pe_parse_unary(p)
+  ;;
+  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "not", operand: pe_parse_unary(p), line: t.line }
+  ;;
+  yield pe_parse_postfix(p)
+;;
+
+conjure pe_parse_pow(p) ::
+  forge left be pe_parse_unary(p)
+  ponder pe_check_op(p, "^") either pe_check_op(p, "**") ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '^'")
+      yield left
+    ;;
+    forge right be pe_parse_pow(p)
+    yield { type: "Binary", op: "^", left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_mul(p) ::
+  forge left be pe_parse_pow(p)
+  cycle pe_check_op(p, "*") either pe_check_op(p, "/") either pe_check_op(p, "%") ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
+      yield left
+    ;;
+    forge right be pe_parse_pow(p)
+    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_add(p) ::
+  forge left be pe_parse_mul(p)
+  cycle (pe_check_op(p, "+") either pe_check_op(p, "-")) also pe_peek(p).line equals left.line ::
+    forge op_t be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
+      yield left
+    ;;
+    forge right be pe_parse_mul(p)
+    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_cmp(p) ::
+  forge left be pe_parse_add(p)
+  cycle isnt pe_at_end(p) ::
+    ponder pe_check_word(p, "equals") either pe_check_op(p, "==") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: "==", left: left, right: right, line: op_t.line }
+    ;; otherwise ponder pe_check_word(p, "differs") either pe_check_op(p, "!=") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: "!=", left: left, right: right, line: op_t.line }
+    ;; otherwise ponder pe_check_word(p, "is") ::
+      forge is_t be pe_advance(p)
+      ponder pe_check_word(p, "not") either pe_check_word(p, "isnt") ::
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: "!=", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder (pe_check_word(p, "more") either pe_check_word(p, "greater")) also lower(pe_next_tok(p, 1).value) equals "than" ::
+        pe_advance(p)
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: ">", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder (pe_check_word(p, "less") either pe_check_word(p, "smaller")) also lower(pe_next_tok(p, 1).value) equals "than" ::
+        pe_advance(p)
+        pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: "<", left: left, right: right, line: is_t.line }
+      ;; otherwise ponder pe_check_word(p, "at") also (lower(pe_next_tok(p, 1).value) equals "least" either lower(pe_next_tok(p, 1).value) equals "most") ::
+        pe_advance(p)
+        forge lm be pe_advance(p)
+        forge right be pe_parse_add(p)
+        left be { type: "Binary", op: lower(lm.value) equals "least" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
+      ;; otherwise ::
+        forge right be pe_parse_add(p)
+        ponder pe_check_word(p, "or") also (lower(pe_next_tok(p, 1).value) equals "more" either lower(pe_next_tok(p, 1).value) equals "less") ::
+          pe_advance(p)
+          forge ml be pe_advance(p)
+          left be { type: "Binary", op: lower(ml.value) equals "more" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
+        ;; otherwise ::
+          left be { type: "Binary", op: "==", left: left, right: right, line: is_t.line }
+        ;;
+      ;;
+    ;; otherwise ponder pe_check_op(p, "<") either pe_check_op(p, ">") either pe_check_op(p, "<=") either pe_check_op(p, ">=") ::
+      forge op_t be pe_advance(p)
+      forge right be pe_parse_add(p)
+      left be { type: "Binary", op: op_t.value, left: left, right: right, line: op_t.line }
+    ;; otherwise ::
+      yeet
+    ;;
+  ;;
+  yield left
+;;
+
+conjure pe_parse_not(p) ::
+  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
+    forge t be pe_advance(p)
+    yield { type: "Unary", op: "not", operand: pe_parse_not(p), line: t.line }
+  ;;
+  yield pe_parse_cmp(p)
+;;
+
+conjure pe_parse_and(p) ::
+  forge left be pe_parse_not(p)
+  cycle pe_check_word(p, "also") either pe_check_word(p, "and") either pe_check_op(p, "&&") ::
+    forge t be pe_advance(p)
+    forge right be pe_parse_not(p)
+    left be { type: "Binary", op: "and", left: left, right: right, line: t.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_or(p) ::
+  forge left be pe_parse_and(p)
+  cycle (pe_check_word(p, "either") also pe_peek(p).line equals left.line) either pe_check_word(p, "or") either pe_check_op(p, "||") ::
+    forge t be pe_advance(p)
+    forge right be pe_parse_and(p)
+    left be { type: "Binary", op: "or", left: left, right: right, line: t.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_ternary(p) ::
+  forge left be pe_parse_or(p)
+  ponder pe_check(p, "TILDE") ::
+    pe_advance(p)
+    forge then_e be pe_parse_or(p)
+    ponder pe_check(p, "COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, left.line, "Expected ':' in ternary expression")
+    ;;
+    forge else_e be pe_parse_ternary(p)
+    yield { type: "Ternary", cond: left, then_expr: then_e, else_expr: else_e, line: left.line }
+  ;;
+  yield left
+;;
+
+conjure pe_parse_expr(p) ::
+  yield pe_parse_ternary(p)
+;;
+
+// ---------- Statement parser ----------
+
+conjure pe_parse_if(p) ::
+  forge kw be pe_advance(p)
+  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge cond be pe_parse_expr(p)
+  ponder pe_check_word(p, "then") ::
+    pe_advance(p)
+  ;;
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  forge lw be lower(kw.value)
+  ponder lw equals "ponder" either lw equals "either" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after '" + kw.value + "' condition")
+    ;;
+    forge then_body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      then_body be then_body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed '" + kw.value + "' block (missing ';;')")
+    ;;
+    forge else_body be []
+    ponder pe_check_word(p, "otherwise") ::
+      pe_advance(p)
+      ponder pe_check_word(p, "ponder") either pe_check_word(p, "either") either pe_check_word(p, "if") ::
+        else_body be [pe_parse_if(p)]
+      ;; otherwise ::
+        ponder pe_check(p, "DOUBLE_COLON") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, pe_peek(p).line, "Expected '::' after 'otherwise'")
+        ;;
+        cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+          else_body be else_body + [pe_parse_stmt(p)]
+        ;;
+        ponder pe_check(p, "DOUBLE_SEMI") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, kw.line, "Unclosed 'otherwise' block (missing ';;')")
+        ;;
+      ;;
+    ;;
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  // Natural v2 block: if ... [else if ...] [else ...] end
+  forge then_body be []
+  cycle isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
+    then_body be then_body + [pe_parse_stmt(p)]
+  ;;
+  forge else_body be []
+  ponder pe_check_word(p, "elif") ::
+    else_body be [pe_parse_if(p)]
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  ponder pe_check_word(p, "else") either pe_check_word(p, "otherwise") ::
+    pe_advance(p)
+    ponder pe_check_word(p, "if") ::
+      else_body be [pe_parse_if(p)]
+      yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+    ;;
+    ponder pe_check(p, "COLON") ::
+      pe_advance(p)
+    ;;
+    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+      else_body be else_body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
+    ;;
+    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
+  ;;
+  yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
+;;
+
+conjure pe_parse_while(p) ::
+  forge kw be pe_advance(p)
+  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge cond be pe_parse_expr(p)
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  forge lw be lower(kw.value)
+  ponder lw equals "cycle" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after 'cycle' condition")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'cycle' block (missing ';;')")
+    ;;
+    yield { type: "While", cond: cond, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'while' block (missing 'end')")
+  ;;
+  yield { type: "While", cond: cond, body: body, line: kw.line }
+;;
+
+conjure pe_parse_for(p) ::
+  forge kw be pe_advance(p)
+  ponder lower(kw.value) equals "for" also pe_check_word(p, "each") ::
+    pe_advance(p)
+  ;;
+  ponder isnt pe_check(p, "IDENT") ::
+    pe_error(p, kw.line, "Expected loop variable name after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge var_name be pe_advance(p).value
+  ponder pe_check_word(p, "in") either pe_check_word(p, "through") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Expected 'in' or 'through' in loop")
+  ;;
+  ponder pe_at_end(p) either pe_peek(p).line > kw.line ::
+    pe_error(p, kw.line, "Expected iterable expression in loop")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge iter_e be pe_parse_expr(p)
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  ponder lower(kw.value) equals "iterate" either pe_check(p, "DOUBLE_COLON") ::
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' after 'iterate' header")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'iterate' block (missing ';;')")
+    ;;
+    yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'for' block (missing 'end')")
+  ;;
+  yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
+;;
+
+conjure pe_parse_func(p) ::
+  forge kw be pe_advance(p)
+  ponder isnt pe_check(p, "IDENT") ::
+    pe_error(p, kw.line, "Expected function name after '" + kw.value + "'")
+    yield { type: "Noop", line: kw.line }
+  ;;
+  forge fn_name be pe_advance(p).value
+  forge params be []
+  forge lw be lower(kw.value)
+  ponder lw equals "conjure" ::
+    ponder pe_check(p, "LPAREN") ::
+      pe_advance(p)
+      cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+        ponder pe_check(p, "IDENT") ::
+          params be params + [pe_advance(p).value]
+        ;; otherwise ::
+          pe_error(p, kw.line, "Expected parameter name")
+          yeet
+        ;;
+        ponder pe_check(p, "COMMA") ::
+          pe_advance(p)
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+      ponder pe_check(p, "RPAREN") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, kw.line, "Expected ')' after parameters")
+      ;;
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '(' after function name in 'conjure'")
+    ;;
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected '::' to open function body")
+    ;;
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'conjure' block (missing ';;')")
+    ;;
+    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+  ;;
+  // \`to name [with a b | (a, b)] ... end\`
+  ponder pe_check_word(p, "with") also pe_peek(p).line equals kw.line ::
+    pe_advance(p)
+    cycle pe_check(p, "IDENT") also pe_peek(p).line equals kw.line ::
+      params be params + [pe_advance(p).value]
+      ponder pe_check(p, "COMMA") ::
+        pe_advance(p)
+      ;;
+    ;;
+  ;; otherwise ponder pe_check(p, "LPAREN") also pe_peek(p).line equals kw.line ::
+    pe_advance(p)
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+      ponder pe_check(p, "IDENT") ::
+        params be params + [pe_advance(p).value]
+      ;; otherwise ::
+        pe_error(p, kw.line, "Expected parameter name")
+        yeet
+      ;;
+      ponder pe_check(p, "COMMA") ::
+        pe_advance(p)
+      ;; otherwise ::
+        yeet
+      ;;
+    ;;
+    ponder pe_check(p, "RPAREN") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Expected ')' after parameters")
+    ;;
+  ;;
+  ponder pe_check(p, "COLON") ::
+    pe_advance(p)
+  ;;
+  ponder pe_check(p, "DOUBLE_COLON") ::
+    pe_advance(p)
+    forge body be []
+    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
+      body be body + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed function block (missing ';;')")
+    ;;
+    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+  ;;
+  forge body be []
+  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+    body be body + [pe_parse_stmt(p)]
+  ;;
+  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+    pe_advance(p)
+  ;; otherwise ::
+    pe_error(p, kw.line, "Unclosed 'to' function block (missing 'end')")
+  ;;
+  yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
+;;
+
+conjure pe_parse_stmt(p) ::
+  forge tok be pe_peek(p)
+  ponder pe_is_block_closer(p) ::
+    pe_error(p, tok.line, "Unexpected '" + tok.value + "' without matching open block")
+    pe_advance(p)
+    yield { type: "Noop", line: tok.line }
+  ;;
+  // forge x be expr
+  ponder pe_check_word(p, "forge") ::
+    pe_advance(p)
+    ponder isnt pe_check(p, "IDENT") ::
+      pe_error(p, tok.line, "Expected variable name after 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge name be pe_advance(p).value
+    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'be' after variable name in 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected expression after 'be' in 'forge'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Let", name: name, value: val, line: tok.line }
+  ;;
+  // set target to expr
+  ponder pe_check_word(p, "set") also pe_next_tok(p, 1).type differs "LPAREN" ::
+    pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected variable name after 'set'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge target be pe_parse_postfix(p)
+    ponder target.type differs "Ident" also target.type differs "Index" also target.type differs "Member" ::
+      pe_error(p, tok.line, "Invalid assignment target in 'set'")
+    ;;
+    ponder pe_check_word(p, "to") either pe_check_word(p, "be") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'to' in 'set' statement")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
+      pe_error(p, tok.line, "Expected expression after 'to' in 'set' statement")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: target, value: val, declare: yep, line: tok.line }
+  ;;
+  // leading \`be target be expr\`
+  ponder pe_check_word(p, "be") ::
+    pe_advance(p)
+    forge target be pe_parse_postfix(p)
+    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, tok.line, "Expected 'be' after target")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: target, value: val, declare: nope, line: tok.line }
+  ;;
+  // ask "Prompt" as name / ask for name
+  ponder pe_check_word(p, "ask") also pe_next_tok(p, 1).type differs "LPAREN" ::
+    pe_advance(p)
+    ponder pe_check_word(p, "for") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge vname be pe_advance(p).value
+        yield { type: "Ask", prompt: { type: "Literal", value: vname + "? ", line: tok.line }, name: vname, line: tok.line }
+      ;;
+      pe_error(p, tok.line, "Expected variable name after 'ask for'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    forge prompt_e be pe_parse_expr(p)
+    ponder pe_check_word(p, "as") either pe_check_word(p, "into") ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        forge vname be pe_advance(p).value
+        yield { type: "Ask", prompt: prompt_e, name: vname, line: tok.line }
+      ;;
+      pe_error(p, tok.line, "Expected variable name after 'as'")
+      yield { type: "Noop", line: tok.line }
+    ;;
+    yield { type: "ExprStmt", expr: { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }, line: tok.line }
+  ;;
+  // say / speak / print command or call
+  ponder pe_check_word(p, "say") either pe_check_word(p, "speak") either pe_check_word(p, "print") either pe_check_word(p, "whisper") either pe_check_word(p, "shout") ::
+    forge cmd be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > cmd.line either pe_is_block_closer(p) ::
+      pe_error(p, cmd.line, "Expected expression after '" + cmd.value + "'")
+      yield { type: "Noop", line: cmd.line }
+    ;;
+    forge args be []
+    args be args + [pe_parse_expr(p)]
+    cycle pe_check(p, "COMMA") also pe_peek(p).line equals cmd.line ::
+      pe_advance(p)
+      args be args + [pe_parse_expr(p)]
+    ;;
+    yield { type: "Print", mode: lower(cmd.value), args: args, line: cmd.line }
+  ;;
+  // Conditionals: if / ponder / either
+  ponder pe_check_word(p, "if") either pe_check_word(p, "ponder") either pe_check_word(p, "either") ::
+    yield pe_parse_if(p)
+  ;;
+  // Loops: while / cycle
+  ponder pe_check_word(p, "while") either pe_check_word(p, "cycle") ::
+    yield pe_parse_while(p)
+  ;;
+  // Loops: for / iterate
+  ponder pe_check_word(p, "for") either pe_check_word(p, "iterate") ::
+    yield pe_parse_for(p)
+  ;;
+  // Functions: conjure / to
+  ponder pe_check_word(p, "conjure") either pe_check_word(p, "to") ::
+    yield pe_parse_func(p)
+  ;;
+  // Return / yield
+  ponder pe_check_word(p, "yield") either pe_check_word(p, "return") ::
+    forge kw be pe_advance(p)
+    forge val be void
+    ponder isnt pe_at_end(p) also pe_peek(p).line equals kw.line also isnt pe_is_block_closer(p) ::
+      val be pe_parse_expr(p)
+    ;;
+    yield { type: "Return", value: val, line: kw.line }
+  ;;
+  // Break / yeet
+  ponder pe_check_word(p, "yeet") either pe_check_word(p, "break") ::
+    forge kw be pe_advance(p)
+    yield { type: "Break", line: kw.line }
+  ;;
+  // Continue / skip
+  ponder pe_check_word(p, "skip") either pe_check_word(p, "continue") ::
+    forge kw be pe_advance(p)
+    yield { type: "Continue", line: kw.line }
+  ;;
+  // Throw / hurl / raise
+  ponder pe_check_word(p, "throw") either pe_check_word(p, "hurl") either pe_check_word(p, "raise") ::
+    forge kw be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > kw.line ::
+      pe_error(p, kw.line, "Expected expression after '" + kw.value + "'")
+      yield { type: "Noop", line: kw.line }
+    ;;
+    yield { type: "Throw", value: pe_parse_expr(p), line: kw.line }
+  ;;
+  // Attempt / try ... rescue / catch ... end
+  ponder pe_check_word(p, "attempt") either pe_check_word(p, "try") ::
+    forge kw be pe_advance(p)
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;;
+    forge try_body be []
+    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "rescue") also isnt pe_check_word(p, "catch") also isnt pe_check_word(p, "except") also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+      try_body be try_body + [pe_parse_stmt(p)]
+    ;;
+    forge err_name be ""
+    forge rescue_body be []
+    ponder pe_check_word(p, "rescue") either pe_check_word(p, "catch") either pe_check_word(p, "except") ::
+      forge rkw be pe_advance(p)
+      ponder pe_check(p, "IDENT") also pe_peek(p).line equals rkw.line ::
+        err_name be pe_advance(p).value
+      ;;
+      ponder pe_check(p, "DOUBLE_COLON") ::
+        pe_advance(p)
+      ;;
+      cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+        rescue_body be rescue_body + [pe_parse_stmt(p)]
+      ;;
+    ;;
+    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'attempt' block (missing 'end')")
+    ;;
+    yield { type: "Attempt", try_body: try_body, err_name: err_name, rescue_body: rescue_body, line: kw.line }
+  ;;
+  // Use / summon / import
+  ponder pe_check_word(p, "use") either pe_check_word(p, "summon") either pe_check_word(p, "import") ::
+    forge kw be pe_advance(p)
+    forge mod_e be pe_parse_expr(p)
+    yield { type: "Use", module: mod_e, line: kw.line }
+  ;;
+  // Kind / essence / class
+  ponder pe_check_word(p, "kind") either pe_check_word(p, "essence") either pe_check_word(p, "class") ::
+    forge kw be pe_advance(p)
+    ponder isnt pe_check(p, "IDENT") ::
+      pe_error(p, kw.line, "Expected kind name")
+      yield { type: "Noop", line: kw.line }
+    ;;
+    forge kname be pe_advance(p).value
+    forge parent be ""
+    ponder (pe_check_word(p, "extends") either pe_check_word(p, "extend")) also pe_peek(p).line equals kw.line ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        parent be pe_advance(p).value
+      ;;
+    ;;
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;;
+    forge methods be []
+    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+      methods be methods + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'kind' block (missing 'end')")
+    ;;
+    yield { type: "Kind", name: kname, parent: parent, methods: methods, line: kw.line }
+  ;;
+  // Expression or Assignment
+  forge expr be pe_parse_expr(p)
+  ponder pe_check_word(p, "be") either pe_check_op(p, "=") ::
+    forge op_t be pe_advance(p)
+    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
+      pe_error(p, expr.line, "Invalid assignment target")
+    ;;
+    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
+      pe_error(p, op_t.line, "Expected expression in assignment")
+      yield { type: "Noop", line: expr.line }
+    ;;
+    forge val be pe_parse_expr(p)
+    yield { type: "Assign", target: expr, value: val, declare: nope, line: expr.line }
+  ;;
+  ponder pe_check(p, "OP") also (pe_peek(p).value equals "+=" either pe_peek(p).value equals "-=" either pe_peek(p).value equals "*=" either pe_peek(p).value equals "/=") ::
+    forge op_t be pe_advance(p)
+    forge base_op be snatch(op_t.value, 0, 1)
+    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
+      pe_error(p, expr.line, "Invalid augmented assignment target")
+    ;;
+    forge rhs be pe_parse_expr(p)
+    yield { type: "Assign", target: expr, value: { type: "Binary", op: base_op, left: expr, right: rhs, line: expr.line }, declare: nope, line: expr.line }
+  ;;
+  yield { type: "ExprStmt", expr: expr, line: expr.line }
+;;
+
+// ---------- Public Parser & Validator Entry Points ----------
+
+conjure sdev_parse_program(source) ::
+  forge tok_res be pe_tokenize(source)
+  forge p be {
+    tokens: tok_res[0],
+    pos: 0,
+    errors: tok_res[1]
+  }
+  forge ast be []
+  cycle isnt pe_at_end(p) ::
+    forge before be p.pos
+    forge stmt be pe_parse_stmt(p)
+    ponder stmt.type differs "Noop" ::
+      ast be ast + [stmt]
+    ;;
+    ponder p.pos equals before also isnt pe_at_end(p) ::
+      pe_advance(p)
+    ;;
+  ;;
+  yield [measure(p.errors) equals 0, ast, p.errors]
+;;
+
+conjure sdev_validate_syntax(source) ::
+  forge parsed be sdev_parse_program(source)
+  yield [parsed[0], parsed[2]]
+;;
+
+// ---------- Tree-Walking Interpreter ----------
+
+conjure pe_truthy(v) ::
+  ponder v equals void ::
+    yield nope
+  ;;
+  ponder isTruth(v) ::
+    yield v
+  ;;
+  ponder isNum(v) ::
+    yield v differs 0
+  ;;
+  ponder isText(v) ::
+    yield measure(v) > 0
+  ;;
+  ponder isList(v) ::
+    yield measure(v) > 0
+  ;;
+  yield yep
+;;
+
+conjure pe_stringify(v) ::
+  ponder v equals void ::
+    yield "void"
+  ;;
+  ponder isTruth(v) ::
+    yield v ~ "yep" : "nope"
+  ;;
+  ponder isText(v) ::
+    yield v
+  ;;
+  ponder isList(v) ::
+    forge parts be []
+    iterate item through v ::
+      parts be parts + [pe_stringify(item)]
+    ;;
+    yield "[" + weave(parts, ", ") + "]"
+  ;;
+  yield str(v)
+;;
+
+conjure pe_get_var(st, name, line) ::
+  forge top_idx be measure(st.scopes) - 1
+  forge local_s be st.scopes[top_idx]
+  ponder has(local_s, name) ::
+    yield local_s[name]
+  ;;
+  forge global_s be st.scopes[0]
+  ponder has(global_s, name) ::
+    yield global_s[name]
+  ;;
+  ponder name equals "PI" ::
+    yield PI()
+  ;;
+  ponder name equals "TAU" ::
+    yield TAU()
+  ;;
+  ponder name equals "E" ::
+    yield E()
+  ;;
+  st.error be "Line " + str(line) + ": Undefined variable '" + name + "'"
+  yield void
+;;
+
+conjure pe_set_var(st, name, val, declare) ::
+  forge top_idx be measure(st.scopes) - 1
+  forge local_s be st.scopes[top_idx]
+  ponder declare either has(local_s, name) either top_idx equals 0 ::
+    local_s[name] be val
+    yield val
+  ;;
+  forge global_s be st.scopes[0]
+  ponder has(global_s, name) ::
+    global_s[name] be val
+    yield val
+  ;;
+  local_s[name] be val
+  yield val
+;;
+
+conjure pe_read_input(st) ::
+  ponder st.input_idx < measure(st.inputs) ::
+    forge ans be str(st.inputs[st.input_idx])
+    st.input_idx be st.input_idx + 1
+    yield ans
+  ;;
+  yield ""
+;;
+
+conjure pe_call_builtin(st, name, args, line) ::
+  ponder name equals "str" ::
+    yield pe_stringify(measure(args) > 0 ~ args[0] : "")
+  ;;
+  ponder name equals "num" ::
+    forge v be args[0]
+    ponder isNum(v) ::
+      yield v
+    ;;
+    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\\\.[0-9]+)?$") ::
+      yield num(trim(v))
+    ;;
+    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to number"
+    yield 0
+  ;;
+  ponder name equals "int" ::
+    forge v be args[0]
+    ponder isNum(v) ::
+      yield int(v)
+    ;;
+    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\\\.[0-9]+)?$") ::
+      yield int(num(trim(v)))
+    ;;
+    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to int"
+    yield 0
+  ;;
+  ponder name equals "length" either name equals "len" either name equals "measure" ::
+    yield measure(args[0])
+  ;;
+  ponder name equals "upper" ::
+    yield upper(pe_stringify(args[0]))
+  ;;
+  ponder name equals "lower" ::
+    yield lower(pe_stringify(args[0]))
+  ;;
+  ponder name equals "trim" ::
+    yield trim(pe_stringify(args[0]))
+  ;;
+  ponder name equals "reverse" ::
+    yield reverse(args[0])
+  ;;
+  ponder name equals "abs" either name equals "magnitude" ::
+    yield abs(args[0])
+  ;;
+  ponder name equals "min" either name equals "least" ::
+    ponder measure(args) equals 1 also isList(args[0]) ::
+      yield min(args[0])
+    ;;
+    yield min(args)
+  ;;
+  ponder name equals "max" either name equals "greatest" ::
+    ponder measure(args) equals 1 also isList(args[0]) ::
+      yield max(args[0])
+    ;;
+    yield max(args)
+  ;;
+  ponder name equals "range" either name equals "sequence" ::
+    ponder measure(args) equals 1 ::
+      yield range(args[0])
+    ;;
+    ponder measure(args) equals 2 ::
+      yield range(args[0], args[1])
+    ;;
+    yield range(args[0], args[1], args[2])
+  ;;
+  ponder name equals "sum" ::
+    yield sum(args[0])
+  ;;
+  ponder name equals "sort" ::
+    yield sort(args[0])
+  ;;
+  ponder name equals "sortDesc" ::
+    yield sortDesc(args[0])
+  ;;
+  ponder name equals "sqrt" either name equals "root" ::
+    yield root(args[0])
+  ;;
+  ponder name equals "floor" either name equals "ground" ::
+    yield ground(args[0])
+  ;;
+  ponder name equals "ceil" either name equals "elevate" ::
+    yield elevate(args[0])
+  ;;
+  ponder name equals "round" either name equals "nearby" ::
+    yield nearby(args[0])
+  ;;
+  ponder name equals "pow" ::
+    yield pow(args[0], args[1])
+  ;;
+  ponder name equals "contains" ::
+    yield contains(args[0], args[1])
+  ;;
+  ponder name equals "startswith" either name equals "starts" ::
+    yield startswith(args[0], args[1])
+  ;;
+  ponder name equals "endswith" either name equals "ends" ::
+    yield endswith(args[0], args[1])
+  ;;
+  ponder name equals "replace" ::
+    yield replace(args[0], args[1], args[2])
+  ;;
+  ponder name equals "shatter" either name equals "split" ::
+    yield shatter(args[0], args[1])
+  ;;
+  ponder name equals "weave" either name equals "join" ::
+    yield weave(args[0], args[1])
+  ;;
+  ponder name equals "portion" either name equals "slice" ::
+    ponder measure(args) equals 2 ::
+      yield portion(args[0], args[1])
+    ;;
+    yield portion(args[0], args[1], args[2])
+  ;;
+  ponder name equals "snatch" ::
+    ponder measure(args) equals 2 ::
+      yield snatch(args[0], args[1])
+    ;;
+    yield snatch(args[0], args[1], args[2])
+  ;;
+  ponder name equals "gather" ::
+    ponder measure(args) equals 0 ::
+      yield []
+    ;;
+    yield gather(args[0], args[1])
+  ;;
+  ponder name equals "pluck" ::
+    ponder measure(args) equals 1 ::
+      yield pluck(args[0])
+    ;;
+    yield pluck(args[0], args[1])
+  ;;
+  ponder name equals "chr" ::
+    yield chr(args[0])
+  ;;
+  ponder name equals "ord" ::
+    ponder measure(args) equals 1 ::
+      yield ord(args[0])
+    ;;
+    yield ord(args[0], args[1])
+  ;;
+  ponder name equals "keys" either name equals "inscriptions" ::
+    yield keys(args[0])
+  ;;
+  ponder name equals "values" either name equals "contents" ::
+    yield values(args[0])
+  ;;
+  ponder name equals "has" ::
+    yield has(args[0], args[1])
+  ;;
+  ponder name equals "pick" ::
+    yield pick(args[0])
+  ;;
+  ponder name equals "randint" ::
+    yield randint(args[0], args[1])
+  ;;
+  ponder name equals "input" either name equals "ask" ::
+    yield pe_read_input(st)
+  ;;
+  ponder name equals "say" either name equals "speak" either name equals "print" ::
+    forge parts be []
+    iterate a through args ::
+      parts be parts + [pe_stringify(a)]
+    ;;
+    st.outputs be st.outputs + [weave(parts, " ")]
+    yield void
+  ;;
+  st.error be "Line " + str(line) + ": Unknown function '" + name + "'"
+  yield void
+;;
+
+conjure pe_eval_expr(st, node) ::
+  ponder st.error differs void ::
+    yield void
+  ;;
+  ponder node.type equals "Literal" ::
+    yield node.value
+  ;;
+  ponder node.type equals "Ident" ::
+    yield pe_get_var(st, node.name, node.line)
+  ;;
+  ponder node.type equals "List" ::
+    forge out be []
+    iterate el through node.elements ::
+      out be out + [pe_eval_expr(st, el)]
+    ;;
+    yield out
+  ;;
+  ponder node.type equals "Dict" ::
+    forge d be ::
+    ;;
+    iterate pair through node.entries ::
+      forge k be pe_stringify(pe_eval_expr(st, pair[0]))
+      d[k] be pe_eval_expr(st, pair[1])
+    ;;
+    yield d
+  ;;
+  ponder node.type equals "Unary" ::
+    forge v be pe_eval_expr(st, node.operand)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder node.op equals "-" ::
+      yield 0 - v
+    ;;
+    ponder node.op equals "not" ::
+      yield isnt pe_truthy(v)
+    ;;
+    yield v
+  ;;
+  ponder node.type equals "Ternary" ::
+    forge c be pe_eval_expr(st, node.cond)
+    ponder pe_truthy(c) ::
+      yield pe_eval_expr(st, node.then_expr)
+    ;;
+    yield pe_eval_expr(st, node.else_expr)
+  ;;
+  ponder node.type equals "Binary" ::
+    forge op be node.op
+    ponder op equals "and" ::
+      forge lv be pe_eval_expr(st, node.left)
+      ponder isnt pe_truthy(lv) ::
+        yield nope
+      ;;
+      yield pe_truthy(pe_eval_expr(st, node.right))
+    ;;
+    ponder op equals "or" ::
+      forge lv be pe_eval_expr(st, node.left)
+      ponder pe_truthy(lv) ::
+        yield yep
+      ;;
+      yield pe_truthy(pe_eval_expr(st, node.right))
+    ;;
+    forge left be pe_eval_expr(st, node.left)
+    forge right be pe_eval_expr(st, node.right)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder op equals "+" ::
+      ponder isList(left) also isList(right) ::
+        yield left + right
+      ;;
+      ponder isText(left) either isText(right) ::
+        yield pe_stringify(left) + pe_stringify(right)
+      ;;
+      yield left + right
+    ;;
+    ponder op equals "-" ::
+      yield left - right
+    ;;
+    ponder op equals "*" ::
+      ponder isText(left) also isNum(right) ::
+        yield repeat(left, right)
+      ;;
+      ponder isNum(left) also isText(right) ::
+        yield repeat(right, left)
+      ;;
+      yield left * right
+    ;;
+    ponder op equals "/" ::
+      ponder right equals 0 ::
+        st.error be "Line " + str(node.line) + ": Division by zero"
+        yield void
+      ;;
+      yield left / right
+    ;;
+    ponder op equals "%" ::
+      ponder right equals 0 ::
+        st.error be "Line " + str(node.line) + ": Modulo by zero"
+        yield void
+      ;;
+      yield ((left % right) + right) % right
+    ;;
+    ponder op equals "^" ::
+      yield pow(left, right)
+    ;;
+    ponder op equals "==" ::
+      yield left equals right
+    ;;
+    ponder op equals "!=" ::
+      yield left differs right
+    ;;
+    ponder op equals "<" ::
+      yield left < right
+    ;;
+    ponder op equals ">" ::
+      yield left > right
+    ;;
+    ponder op equals "<=" ::
+      yield left <= right
+    ;;
+    ponder op equals ">=" ::
+      yield left >= right
+    ;;
+    yield void
+  ;;
+  ponder node.type equals "Index" ::
+    forge obj be pe_eval_expr(st, node.object)
+    forge idx be pe_eval_expr(st, node.index)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder isList(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      ponder i < 0 either i >= measure(obj) ::
+        st.error be "Line " + str(node.line) + ": List index out of range"
+        yield void
+      ;;
+      yield obj[i]
+    ;;
+    ponder isText(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      ponder i < 0 either i >= measure(obj) ::
+        st.error be "Line " + str(node.line) + ": String index out of range"
+        yield void
+      ;;
+      yield char_at(obj, i)
+    ;;
+    ponder isTome(obj) ::
+      forge k be pe_stringify(idx)
+      yield has(obj, k) ~ obj[k] : void
+    ;;
+    st.error be "Line " + str(node.line) + ": Cannot index value"
+    yield void
+  ;;
+  ponder node.type equals "Member" ::
+    forge obj be pe_eval_expr(st, node.object)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder (isList(obj) either isText(obj)) also node.property equals "length" ::
+      yield measure(obj)
+    ;;
+    ponder isTome(obj) ::
+      yield has(obj, node.property) ~ obj[node.property] : void
+    ;;
+    st.error be "Line " + str(node.line) + ": Cannot access property '" + node.property + "'"
+    yield void
+  ;;
+  ponder node.type equals "Call" ::
+    forge arg_vals be []
+    iterate a through node.args ::
+      arg_vals be arg_vals + [pe_eval_expr(st, a)]
+    ;;
+    ponder st.error differs void ::
+      yield void
+    ;;
+    forge fname be node.callee.type equals "Ident" ~ node.callee.name : ""
+    ponder fname differs "" also has(st.funcs, fname) ::
+      forge fn be st.funcs[fname]
+      forge frame be ::
+      ;;
+      forge pi be 0
+      cycle pi < measure(fn.params) ::
+        forge pname be fn.params[pi]
+        frame[pname] be pi < measure(arg_vals) ~ arg_vals[pi] : void
+        pi be pi + 1
+      ;;
+      st.scopes be st.scopes + [frame]
+      pe_exec_block(st, fn.body)
+      forge ret be st.return_val
+      st.returning be nope
+      st.return_val be void
+      st.scopes be portion(st.scopes, 0, measure(st.scopes) - 1)
+      yield ret
+    ;;
+    yield pe_call_builtin(st, fname, arg_vals, node.line)
+  ;;
+  yield void
+;;
+
+conjure pe_exec_assign(st, target, val, declare, line) ::
+  ponder target.type equals "Ident" ::
+    pe_set_var(st, target.name, val, declare)
+    yield void
+  ;;
+  ponder target.type equals "Index" ::
+    forge obj be pe_eval_expr(st, target.object)
+    forge idx be pe_eval_expr(st, target.index)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder isList(obj) ::
+      forge i be idx < 0 ~ measure(obj) + idx : idx
+      obj[i] be val
+      yield void
+    ;;
+    ponder isTome(obj) ::
+      obj[pe_stringify(idx)] be val
+      yield void
+    ;;
+    st.error be "Line " + str(line) + ": Cannot index-assign on this value"
+    yield void
+  ;;
+  ponder target.type equals "Member" ::
+    forge obj be pe_eval_expr(st, target.object)
+    ponder isTome(obj) ::
+      obj[target.property] be val
+      yield void
+    ;;
+    st.error be "Line " + str(line) + ": Cannot set property on non-tome"
+    yield void
+  ;;
+;;
+
+conjure pe_exec_block(st, stmts) ::
+  iterate s through stmts ::
+    ponder st.error differs void either st.returning either st.breaking either st.continuing ::
+      yield void
+    ;;
+    pe_exec_stmt(st, s)
+  ;;
+;;
+
+conjure pe_exec_stmt(st, stmt) ::
+  ponder st.error differs void either st.returning either st.breaking either st.continuing ::
+    yield void
+  ;;
+  st.steps be st.steps + 1
+  ponder st.steps > st.max_steps ::
+    st.error be "Execution step limit exceeded (infinite loop?)"
+    yield void
+  ;;
+  ponder stmt.type equals "Let" ::
+    forge val be pe_eval_expr(st, stmt.value)
+    ponder st.error equals void ::
+      pe_set_var(st, stmt.name, val, yep)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Assign" ::
+    forge val be pe_eval_expr(st, stmt.value)
+    ponder st.error equals void ::
+      pe_exec_assign(st, stmt.target, val, stmt.declare, stmt.line)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Ask" ::
+    pe_eval_expr(st, stmt.prompt)
+    forge ans be pe_read_input(st)
+    pe_set_var(st, stmt.name, ans, yep)
+    yield void
+  ;;
+  ponder stmt.type equals "Print" ::
+    forge parts be []
+    iterate a through stmt.args ::
+      forge v be pe_eval_expr(st, a)
+      parts be parts + [pe_stringify(v)]
+    ;;
+    ponder st.error equals void ::
+      forge sep be stmt.mode equals "whisper" ~ "" : " "
+      forge line_out be weave(parts, sep)
+      ponder stmt.mode equals "shout" ::
+        line_out be upper(line_out)
+      ;;
+      st.outputs be st.outputs + [line_out]
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "If" ::
+    forge c be pe_eval_expr(st, stmt.cond)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    ponder pe_truthy(c) ::
+      pe_exec_block(st, stmt.then_body)
+    ;; otherwise ::
+      pe_exec_block(st, stmt.else_body)
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "While" ::
+    cycle st.error equals void also isnt st.returning ::
+      forge c be pe_eval_expr(st, stmt.cond)
+      ponder st.error differs void either isnt pe_truthy(c) ::
+        yeet
+      ;;
+      pe_exec_block(st, stmt.body)
+      ponder st.breaking ::
+        st.breaking be nope
+        yeet
+      ;;
+      ponder st.continuing ::
+        st.continuing be nope
+      ;;
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "For" ::
+    forge iter_val be pe_eval_expr(st, stmt.iter)
+    ponder st.error differs void ::
+      yield void
+    ;;
+    forge items be isList(iter_val) ~ iter_val : (isText(iter_val) ~ chars(iter_val) : [])
+    iterate item through items ::
+      ponder st.error differs void either st.returning ::
+        yeet
+      ;;
+      pe_set_var(st, stmt.vname, item, nope)
+      pe_exec_block(st, stmt.body)
+      ponder st.breaking ::
+        st.breaking be nope
+        yeet
+      ;;
+      ponder st.continuing ::
+        st.continuing be nope
+      ;;
+    ;;
+    yield void
+  ;;
+  ponder stmt.type equals "Func" ::
+    st.funcs[stmt.name] be stmt
+    yield void
+  ;;
+  ponder stmt.type equals "Return" ::
+    forge val be stmt.value equals void ~ void : pe_eval_expr(st, stmt.value)
+    st.return_val be val
+    st.returning be yep
+    yield void
+  ;;
+  ponder stmt.type equals "Break" ::
+    st.breaking be yep
+    yield void
+  ;;
+  ponder stmt.type equals "Continue" ::
+    st.continuing be yep
+    yield void
+  ;;
+  ponder stmt.type equals "ExprStmt" ::
+    pe_eval_expr(st, stmt.expr)
+    yield void
+  ;;
+;;
+
+conjure sdev_eval_program(source, inputs) ::
+  forge parsed be sdev_parse_program(source)
+  ponder isnt parsed[0] ::
+    forge first_err be parsed[2][0]
+    yield [nope, [], "Line " + str(first_err[0]) + ": " + first_err[1]]
+  ;;
+  forge global_scope be ::
+  ;;
+  forge st be {
+    scopes: [global_scope],
+    funcs: ::
+    ;;,
+    outputs: [],
+    inputs: inputs equals void ~ [] : inputs,
+    input_idx: 0,
+    error: void,
+    returning: nope,
+    return_val: void,
+    breaking: nope,
+    continuing: nope,
+    steps: 0,
+    max_steps: 50000
+  }
+  pe_exec_block(st, parsed[1])
+  ponder st.error differs void ::
+    yield [nope, st.outputs, st.error]
+  ;;
+  yield [yep, st.outputs, void]
+;;
+`;
+  }
+});
+
+// src/lang/agent/sdev-engine.ts
+function load() {
+  if (engine !== null) return engine;
+  try {
+    const ast = new Parser(new Lexer(blocks_default + "\n" + understander_default + "\n" + ai_dialect_default + "\n" + project_default + "\n" + parser_eval_default).tokenize()).parse();
+    const interp = new Interpreter(() => {
+    });
+    interp.interpret(ast);
+    const env2 = interp.getGlobalEnv();
+    engine = {
+      understand: env2.get("understand_source", 0),
+      toSdev: env2.get("ai_to_sdev", 0),
+      toAi: env2.get("sdev_to_ai", 0),
+      names: env2.get("defined_names", 0),
+      close: env2.get("close_blocks", 0),
+      closeAi: env2.get("close_ai_braces", 0),
+      check: env2.get("check_blocks", 0),
+      parse: env2.get("sdev_parse_program", 0),
+      validate: env2.get("sdev_validate_syntax", 0),
+      eval: env2.get("sdev_eval_program", 0)
+    };
+  } catch (e) {
+    engineError = e instanceof Error ? e.message : String(e);
+    engine = false;
+  }
+  return engine;
+}
+function sdevUnderstand(source, known, words = []) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.understand.call([source, [...known], words], 0);
+    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
+    return {
+      source: r[0],
+      sure: r[1] === true,
+      notes: (r[2] ?? []).map(([line, from, to]) => ({ line, from, to, why: "understood by the sdev engine", source: "sdev" }))
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function isAiDialect(source) {
+  for (const line of source.split("\n", 20)) {
+    const t = line.trim();
+    if (!t || t.startsWith("//")) continue;
+    return /^!#ai\b/.test(t);
+  }
+  return false;
+}
+function aiToSdev(source) {
+  const e = load();
+  if (!e) return source;
+  return String(e.toSdev.call([source], 0));
+}
+function sdevDefinedNames(source) {
+  const hit = namesCache.get(source);
+  if (hit) return hit;
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.names.call([source], 0);
+    if (!Array.isArray(r)) return null;
+    const names = r.map(String);
+    if (namesCache.size > 500) namesCache.clear();
+    namesCache.set(source, names);
+    return names;
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevCloseBlocks(source) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.close.call([source], 0));
+  } catch (err) {
+    engineError = String(err);
+    return null;
+  }
+}
+function sdevCheckBlocks(source) {
+  const e = load();
+  if (!e) return [];
+  try {
+    const r = e.check.call([source], 0);
+    return Array.isArray(r) ? r.map(([l, m2]) => [Number(l), String(m2)]) : [];
+  } catch {
+    return [];
+  }
+}
+function sdevValidateSyntax(source) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.validate.call([source], 0);
+    if (!Array.isArray(r)) return null;
+    return {
+      valid: r[0] === true,
+      errors: Array.isArray(r[1]) ? r[1].map(([l, m2]) => [Number(l), String(m2)]) : []
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+var engine, engineError, namesCache;
+var init_sdev_engine = __esm({
+  "src/lang/agent/sdev-engine.ts"() {
+    init_understander();
+    init_ai_dialect();
+    init_project();
+    init_blocks();
+    init_parser_eval();
+    init_lexer();
+    init_parser();
+    init_interpreter();
+    engine = null;
+    engineError = null;
+    namesCache = /* @__PURE__ */ new Map();
+  }
+});
+
 // src/lang/hardware/transpile.ts
 function extractBoardBlock(source) {
   const braceMatch = /\bboard\s+"([^"]+)"\s*\{/.exec(source);
@@ -15736,13 +19644,13 @@ function ensureSetupLoop(lines, useBrace) {
 function boardIdFor(raw) {
   const id = raw.trim();
   if (findBoardById(id)) return id;
-  const norm = id.toLowerCase().replace(/^arduino\s+/, "").replace(/\s*\(.*\)\s*$/, "").trim();
-  if (findBoardById(norm)) return norm;
-  const dashed = norm.replace(/\s+/g, "-");
+  const norm2 = id.toLowerCase().replace(/^arduino\s+/, "").replace(/\s*\(.*\)\s*$/, "").trim();
+  if (findBoardById(norm2)) return norm2;
+  const dashed = norm2.replace(/\s+/g, "-");
   if (findBoardById(dashed)) return dashed;
-  const byLabel = BOARDS.find((b) => b.label.toLowerCase().replace(/^arduino\s+/, "").replace(/\s*\(.*\)\s*$/, "") === norm);
+  const byLabel = BOARDS.find((b) => b.label.toLowerCase().replace(/^arduino\s+/, "").replace(/\s*\(.*\)\s*$/, "") === norm2);
   if (byLabel) return byLabel.id;
-  if (/^uno(?:\s*r3)?$/.test(norm)) return "uno";
+  if (/^uno(?:\s*r3)?$/.test(norm2)) return "uno";
   return id;
 }
 function readBoardBlock(text3, firstLine = 1, strict = true) {
@@ -16133,448 +20041,448 @@ var init_understand = __esm({
 var dialect_default;
 var init_dialect = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\dialect\\dialect.sdev"() {
-    dialect_default = `# =============================================================================
-# SDEV Self-Hosted Dialect Engine: Canonicalizer, Address Codec & Presets
-# (lang/dialect/dialect.sdev)
-# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.
-# =============================================================================
-
-use "lang/stdlib/v2/text.sdev"
-use "lang/stdlib/v2/buffer.sdev"
-
-# A dialect spec is stored as a list:
-# 0: name (str)
-# 1: slug (str)
-# 2: lang_tag (str)
-# 3: count of mappings (int)
-# 4: dialect_words list (str)
-# 5: canonical_words list (str)
-
-to dialect_create with name slug lang_tag
-  set d to mklist(6)
-  set d[0] to concat(name, "")
-  set d[1] to concat(slug, "")
-  set d[2] to concat(lang_tag, "")
-  set d[3] to 0
-  set d[4] to mklist(64)
-  set d[5] to mklist(64)
-  return d
-end
-
-to dialect_add_word with d custom_word canonical_word
-  set n to d[3]
-  set dw to d[4]
-  set cw to d[5]
-  set dw[n] to concat(custom_word, "")
-  set cw[n] to concat(canonical_word, "")
-  set d[3] to n + 1
-  return d
-end
-
-to dialect_canonicalize with src d
-  set out to concat(src, "")
-  set n to d[3]
-  set dw to d[4]
-  set cw to d[5]
-  set i to 0
-  while i < n
-    set from_w to concat(dw[i], "")
-    set to_w to concat(cw[i], "")
-    set out to replace(out, from_w + " ", to_w + " ")
-    set out to replace(out, from_w + "(", to_w + "(")
-    set out to replace(out, " " + from_w + "\\n", " " + to_w + "\\n")
-    if str_eq(out, from_w)
-      set out to to_w
-    end
-    set i to i + 1
-  end
-  return concat(out, "")
-end
-
-to dialect_signature with d
-  set payload to concat(d[0], "") + "|" + concat(d[1], "") + "|" + concat(d[2], "")
-  set n to d[3]
-  set dw to d[4]
-  set cw to d[5]
-  set i to 0
-  while i < n
-    set payload to payload + "|" + concat(dw[i], "") + "=" + concat(cw[i], "")
-    set i to i + 1
-  end
-  return "sdev-sig-" + hash_fnv1a_hex(payload)
-end
-
-to dialect_encode_address with d
-  set slug to concat(d[1], "")
-  set sig to dialect_signature(d)
-  return "sdev://dialect/" + slug + "?" + base64_encode(sig)
-end
-
-to dialect_decode_slug with addr
-  if text_starts_with(addr, "sdev://dialect/") is 0
-    return ""
-  end
-  set rest to substr(addr, 15, length(addr) - 15)
-  set q to find(rest, "?")
-  if q >= 0
-    return substr(rest, 0, q)
-  end
-  return concat(rest, "")
-end
-
-to dialect_preset with slug
-  set k to lower(trim(slug))
-  if str_eq(k, "bg") or str_eq(k, "bulgarian")
-    set d to dialect_create("\u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438", "bg", "bg")
-    set _ to dialect_add_word(d, "\u043D\u0435\u043A\u0430", "set")
-    set _ to dialect_add_word(d, "\u0431\u044A\u0434\u0435", "to")
-    set _ to dialect_add_word(d, "\u043A\u0430\u0436\u0438", "say")
-    set _ to dialect_add_word(d, "\u0430\u043A\u043E", "if")
-    set _ to dialect_add_word(d, "\u0438\u043D\u0430\u0447\u0435", "else")
-    set _ to dialect_add_word(d, "\u0434\u043E\u043A\u0430\u0442\u043E", "while")
-    set _ to dialect_add_word(d, "\u043A\u0440\u0430\u0439", "end")
-    return d
-  end
-  if str_eq(k, "es") or str_eq(k, "spanish")
-    set d to dialect_create("Espa\xF1ol", "es", "es")
-    set _ to dialect_add_word(d, "forjar", "set")
-    set _ to dialect_add_word(d, "ser", "to")
-    set _ to dialect_add_word(d, "hablar", "say")
-    set _ to dialect_add_word(d, "si", "if")
-    set _ to dialect_add_word(d, "sino", "else")
-    set _ to dialect_add_word(d, "mientras", "while")
-    set _ to dialect_add_word(d, "fin", "end")
-    return d
-  end
-  if str_eq(k, "pirate")
-    set d to dialect_create("Pirate Speak", "pirate", "en")
-    set _ to dialect_add_word(d, "plunder", "set")
-    set _ to dialect_add_word(d, "be_yar", "to")
-    set _ to dialect_add_word(d, "bellow", "say")
-    set _ to dialect_add_word(d, "parley", "if")
-    set _ to dialect_add_word(d, "mutiny", "else")
-    set _ to dialect_add_word(d, "anchor", "end")
-    return d
-  end
-  set d_def to dialect_create("Standard English", "en", "en")
-  return d_def
-end
-
-
-to dialect_is_word_char with ch
-  set c to ord(ch, 0)
-  if c >= 65 and c <= 90
-    return 1
-  end
-  if c >= 97 and c <= 122
-    return 1
-  end
-  if c >= 48 and c <= 57
-    return 1
-  end
-  if c is 95 or c >= 128
-    return 1
-  end
-  return 0
-end
-
-to dialect_push_list with xs val
-  set n to length(xs)
-  set out to mklist(n + 1)
-  set i to 0
-  while i < n
-    set out[i] to xs[i]
-    set i to i + 1
-  end
-  set out[n] to val
-  return out
-end
-
-to dialect_split_line with line comment_marker
-  set segs to []
-  set buf to ""
-  set n to length(line)
-  set mlen to length(comment_marker)
-  set i to 0
-  while i < n
-    if mlen > 0 and (i + mlen) <= n
-      if str_eq(substr(line, i, mlen), comment_marker)
-        if length(buf) > 0
-          set segs to dialect_push_list(segs, ["code", buf])
-          set buf to ""
-        end
-        set segs to dialect_push_list(segs, ["comment", substr(line, i, n - i)])
-        return segs
-      end
-    end
-    set ch to substr(line, i, 1)
-    if ch is "\\"" or ch is "'"
-      if length(buf) > 0
-        set segs to dialect_push_list(segs, ["code", buf])
-        set buf to ""
-      end
-      set quote to ch
-      set s to ch
-      set i to i + 1
-      set closed to 0
-      while i < n and closed is 0
-        set cur to substr(line, i, 1)
-        if cur is "\\\\" and (i + 1) < n
-          set s to s + cur + substr(line, i + 1, 1)
-          set i to i + 2
-        else
-          set s to s + cur
-          if cur is quote
-            set closed to 1
-          end
-          set i to i + 1
-        end
-      end
-      set segs to dialect_push_list(segs, ["string", s])
-    else
-      set buf to buf + ch
-      set i to i + 1
-    end
-  end
-  if length(buf) > 0
-    set segs to dialect_push_list(segs, ["code", buf])
-  end
-  return segs
-end
-
-to dialect_map_words with code_str dict
-  set n to length(code_str)
-  set out to ""
-  set i to 0
-  while i < n
-    set ch to substr(code_str, i, 1)
-    if dialect_is_word_char(ch) is 1
-      set j to i + 1
-      while j < n and dialect_is_word_char(substr(code_str, j, 1)) is 1
-        set j to j + 1
-      end
-      set w to substr(code_str, i, j - i)
-      if has(dict, w)
-        set out to out + dict[w]
-      else
-        set out to out + w
-      end
-      set i to j
-    else
-      set out to out + ch
-      set i to i + 1
-    end
-  end
-  return out
-end
-
-to dialect_xor8 with a b
-  set x to a % 256
-  set y to b % 256
-  set res to 0
-  set p to 1
-  set bit to 0
-  while bit < 8
-    set bx to x % 2
-    set by to y % 2
-    if bx is not by
-      set res to res + p
-    end
-    set x to (x - bx) / 2
-    set y to (y - by) / 2
-    set p to p * 2
-    set bit to bit + 1
-  end
-  return res
-end
-
-to dialect_hex4 with val
-  set hex_chars to "0123456789abcdef"
-  set v to val
-  set out to ""
-  set k to 0
-  while k < 4
-    set digit to v % 16
-    set out to substr(hex_chars, digit, 1) + out
-    set v to (v - digit) / 16
-    set k to k + 1
-  end
-  return out
-end
-
-to dialect_fnv1a_hex with body_str
-  set hi to 33052
-  set lo to 40389
-  set n to length(body_str)
-  set i to 0
-  while i < n
-    set c to ord(body_str, i)
-    set b0 to lo % 256
-    set lo to (lo - b0) + dialect_xor8(b0, c % 256)
-    set p0 to lo * 403
-    set lo_next to p0 % 65536
-    set carry to (p0 - lo_next) / 65536
-    set hi_next to ((hi * 403) + (lo * 256) + carry) % 65536
-    set lo to lo_next
-    set hi to hi_next
-    set i to i + 1
-  end
-  return dialect_hex4(hi) + dialect_hex4(lo)
-end
-
-to dialect_has_signature with src prefix_str
-  set nl to find(src, "\\n")
-  set first to src
-  if nl >= 0
-    set first to substr(src, 0, nl)
-  end
-  if text_starts_with(first, prefix_str) is 0
-    return 0
-  end
-  set rest to text_trim(substr(first, length(prefix_str), length(first) - length(prefix_str)))
-  if length(rest) is 0 or find(rest, " ") >= 0
-    return 0
-  end
-  return 1
-end
-
-to dialect_strip_signature with src prefix_str
-  if dialect_has_signature(src, prefix_str) is 0
-    return src
-  end
-  set nl to find(src, "\\n")
-  if nl < 0
-    return ""
-  end
-  return substr(src, nl + 1, length(src) - nl - 1)
-end
-
-to dialect_is_slug_char with ch
-  set c to ord(ch, 0)
-  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c is 45
-    return 1
-  end
-  return 0
-end
-
-to dialect_is_lower_alnum with ch
-  set c to ord(ch, 0)
-  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57)
-    return 1
-  end
-  return 0
-end
-
-to dialect_is_digits with s
-  set n to length(s)
-  if n is 0
-    return 0
-  end
-  set i to 0
-  while i < n
-    set c to ord(s, i)
-    if c < 48 or c > 57
-      return 0
-    end
-    set i to i + 1
-  end
-  return 1
-end
-
-to dialect_is_semver with s
-  set parts to split(s, ".")
-  if length(parts) is not 3
-    return 0
-  end
-  if dialect_is_digits(parts[0]) is 0 or dialect_is_digits(parts[1]) is 0 or dialect_is_digits(parts[2]) is 0
-    return 0
-  end
-  return 1
-end
-
-to dialect_valid_ident_part with s max_len
-  set n to length(s)
-  if n < 1 or n > max_len
-    return 0
-  end
-  if dialect_is_lower_alnum(substr(s, 0, 1)) is 0
-    return 0
-  end
-  set i to 1
-  while i < n
-    if dialect_is_slug_char(substr(s, i, 1)) is 0
-      return 0
-    end
-    set i to i + 1
-  end
-  return 1
-end
-
-to dialect_parse_address with raw_input
-  set s to text_trim(raw_input)
-  if length(s) < 4 or substr(s, 0, 1) is not "@"
-    return []
-  end
-  set body to substr(s, 1, length(s) - 1)
-  set slash to find(body, "/")
-  if slash <= 0
-    return []
-  end
-  set user to substr(body, 0, slash)
-  if dialect_valid_ident_part(user, 31) is 0
-    return []
-  end
-  set tail to substr(body, slash + 1, length(body) - slash - 1)
-  set at_idx to find(tail, "@")
-  set slug to tail
-  set ver to ""
-  if at_idx >= 0
-    set slug to substr(tail, 0, at_idx)
-    set vpart to substr(tail, at_idx + 1, length(tail) - at_idx - 1)
-    if dialect_is_semver(vpart) is 0
-      return []
-    end
-    set ver to vpart
-  end
-  if dialect_valid_ident_part(slug, 39) is 0
-    return []
-  end
-  return [user, slug, ver]
-end
-
-to dialect_format_address with username slug version
-  if length(str(version)) > 0
-    return "@" + username + "/" + slug + "@" + str(version)
-  end
-  return "@" + username + "/" + slug
-end
-
-to dialect_is_share_code with raw_input
-  set s to text_lower(text_trim(raw_input))
-  if length(s) is not 8
-    return 0
-  end
-  set i to 0
-  while i < 8
-    set c to ord(s, i)
-    set ok to 0
-    if (c >= 48 and c <= 57) or (c >= 97 and c <= 102)
-      set ok to 1
-    end
-    if ok is 0
-      return 0
-    end
-    set i to i + 1
-  end
-  return 1
-end
-
-to dialect_preset_bg_data
-  set names to [["say", "\u043A\u0430\u0436\u0438"], ["ask", "\u043F\u0438\u0442\u0430\u0439"], ["set", "\u043D\u0435\u043A\u0430"], ["to", "\u043D\u0430"], ["if", "\u0430\u043A\u043E"], ["else", "\u0438\u043D\u0430\u0447\u0435"], ["end", "\u043A\u0440\u0430\u0439"], ["for", "\u0437\u0430"], ["each", "\u0432\u0441\u044F\u043A\u043E"], ["in", "\u0432\u044A\u0432"], ["while", "\u0434\u043E\u043A\u0430\u0442\u043E"], ["break", "\u0441\u043F\u0440\u0438"], ["continue", "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438"], ["match", "\u0441\u0440\u0430\u0432\u043D\u0438"], ["with", "\u0441"], ["return", "\u0432\u044A\u0440\u043D\u0438"], ["make", "\u0441\u044A\u0437\u0434\u0430\u0439"], ["capture", "\u0443\u043B\u043E\u0432\u0438"], ["ref", "\u043F\u0440\u0435\u043F\u0440\u0430\u0442\u043A\u0430"], ["call", "\u0438\u0437\u0432\u0438\u043A\u0430\u0439"], ["attempt", "\u043E\u043F\u0438\u0442\u0430\u0439"], ["rescue", "\u0445\u0432\u0430\u043D\u0438"], ["throw", "\u0445\u0432\u044A\u0440\u043B\u0438"], ["kind", "\u0432\u0438\u0434"], ["has", "\u0438\u043C\u0430"], ["does", "\u043F\u0440\u0430\u0432\u0438"], ["new", "\u043D\u043E\u0432"], ["self", "\u0430\u0437"], ["extends", "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430"], ["super", "\u0440\u043E\u0434\u0438\u0442\u0435\u043B"], ["use", "\u043F\u043E\u043B\u0437\u0432\u0430\u0439"], ["true", "\u0432\u044F\u0440\u043D\u043E"], ["false", "\u043D\u0435\u0432\u044F\u0440\u043D\u043E"], ["nothing", "\u043D\u0438\u0449\u043E"], ["is", "\u0435"], ["not", "\u043D\u0435"], ["and", "\u0438"], ["or", "\u0438\u043B\u0438"], ["more", "\u043F\u043E\u0432\u0435\u0447\u0435"], ["less", "\u043F\u043E_\u043C\u0430\u043B\u043A\u043E"]]
-  set syns to [["say", ["\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439"]], ["return", ["\u0440\u0435\u0437\u0443\u043B\u0442\u0430\u0442"]]]
-  set sample to "# \u043F\u044A\u0440\u0432\u0430\u0442\u0430 \u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430 \u043D\u0430 \u0421\u0434\u0435\u0432\\n\u043D\u0435\u043A\u0430 \u0438\u043C\u0435 \u043D\u0430 \\"\u0441\u0432\u044F\u0442\\"\\n\\n\u043D\u0430 \u043F\u043E\u0437\u0434\u0440\u0430\u0432 \u0441 \u043A\u043E\u0439\\n  \u043A\u0430\u0436\u0438 \\"\u0437\u0434\u0440\u0430\u0432\u0435\u0439, \\" + \u043A\u043E\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043F\u043E\u0437\u0434\u0440\u0430\u0432(\u0438\u043C\u0435)\\n\\n\u0437\u0430 \u0432\u0441\u044F\u043A\u043E \u043D \u0432\u044A\u0432 range(3)\\n  \u0430\u043A\u043E \u043D \u0435 1\\n    \u043A\u0430\u0436\u0438 \\"\u0435\u0434\u043D\u043E\\"\\n  \u0438\u043D\u0430\u0447\u0435\\n    \u043A\u0430\u0436\u0438 \u043D\\n  \u043A\u0440\u0430\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043A\u0430\u0436\u0438 \u0441\u0431\u043E\u0440([1, 2, 3, 4])"
-  return [names, syns, sample]
-end
+    dialect_default = `# =============================================================================\r
+# SDEV Self-Hosted Dialect Engine: Canonicalizer, Address Codec & Presets\r
+# (lang/dialect/dialect.sdev)\r
+# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r
+# =============================================================================\r
+\r
+use "lang/stdlib/v2/text.sdev"\r
+use "lang/stdlib/v2/buffer.sdev"\r
+\r
+# A dialect spec is stored as a list:\r
+# 0: name (str)\r
+# 1: slug (str)\r
+# 2: lang_tag (str)\r
+# 3: count of mappings (int)\r
+# 4: dialect_words list (str)\r
+# 5: canonical_words list (str)\r
+\r
+to dialect_create with name slug lang_tag\r
+  set d to mklist(6)\r
+  set d[0] to concat(name, "")\r
+  set d[1] to concat(slug, "")\r
+  set d[2] to concat(lang_tag, "")\r
+  set d[3] to 0\r
+  set d[4] to mklist(64)\r
+  set d[5] to mklist(64)\r
+  return d\r
+end\r
+\r
+to dialect_add_word with d custom_word canonical_word\r
+  set n to d[3]\r
+  set dw to d[4]\r
+  set cw to d[5]\r
+  set dw[n] to concat(custom_word, "")\r
+  set cw[n] to concat(canonical_word, "")\r
+  set d[3] to n + 1\r
+  return d\r
+end\r
+\r
+to dialect_canonicalize with src d\r
+  set out to concat(src, "")\r
+  set n to d[3]\r
+  set dw to d[4]\r
+  set cw to d[5]\r
+  set i to 0\r
+  while i < n\r
+    set from_w to concat(dw[i], "")\r
+    set to_w to concat(cw[i], "")\r
+    set out to replace(out, from_w + " ", to_w + " ")\r
+    set out to replace(out, from_w + "(", to_w + "(")\r
+    set out to replace(out, " " + from_w + "\\n", " " + to_w + "\\n")\r
+    if str_eq(out, from_w)\r
+      set out to to_w\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return concat(out, "")\r
+end\r
+\r
+to dialect_signature with d\r
+  set payload to concat(d[0], "") + "|" + concat(d[1], "") + "|" + concat(d[2], "")\r
+  set n to d[3]\r
+  set dw to d[4]\r
+  set cw to d[5]\r
+  set i to 0\r
+  while i < n\r
+    set payload to payload + "|" + concat(dw[i], "") + "=" + concat(cw[i], "")\r
+    set i to i + 1\r
+  end\r
+  return "sdev-sig-" + hash_fnv1a_hex(payload)\r
+end\r
+\r
+to dialect_encode_address with d\r
+  set slug to concat(d[1], "")\r
+  set sig to dialect_signature(d)\r
+  return "sdev://dialect/" + slug + "?" + base64_encode(sig)\r
+end\r
+\r
+to dialect_decode_slug with addr\r
+  if text_starts_with(addr, "sdev://dialect/") is 0\r
+    return ""\r
+  end\r
+  set rest to substr(addr, 15, length(addr) - 15)\r
+  set q to find(rest, "?")\r
+  if q >= 0\r
+    return substr(rest, 0, q)\r
+  end\r
+  return concat(rest, "")\r
+end\r
+\r
+to dialect_preset with slug\r
+  set k to lower(trim(slug))\r
+  if str_eq(k, "bg") or str_eq(k, "bulgarian")\r
+    set d to dialect_create("\u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438", "bg", "bg")\r
+    set _ to dialect_add_word(d, "\u043D\u0435\u043A\u0430", "set")\r
+    set _ to dialect_add_word(d, "\u0431\u044A\u0434\u0435", "to")\r
+    set _ to dialect_add_word(d, "\u043A\u0430\u0436\u0438", "say")\r
+    set _ to dialect_add_word(d, "\u0430\u043A\u043E", "if")\r
+    set _ to dialect_add_word(d, "\u0438\u043D\u0430\u0447\u0435", "else")\r
+    set _ to dialect_add_word(d, "\u0434\u043E\u043A\u0430\u0442\u043E", "while")\r
+    set _ to dialect_add_word(d, "\u043A\u0440\u0430\u0439", "end")\r
+    return d\r
+  end\r
+  if str_eq(k, "es") or str_eq(k, "spanish")\r
+    set d to dialect_create("Espa\xF1ol", "es", "es")\r
+    set _ to dialect_add_word(d, "forjar", "set")\r
+    set _ to dialect_add_word(d, "ser", "to")\r
+    set _ to dialect_add_word(d, "hablar", "say")\r
+    set _ to dialect_add_word(d, "si", "if")\r
+    set _ to dialect_add_word(d, "sino", "else")\r
+    set _ to dialect_add_word(d, "mientras", "while")\r
+    set _ to dialect_add_word(d, "fin", "end")\r
+    return d\r
+  end\r
+  if str_eq(k, "pirate")\r
+    set d to dialect_create("Pirate Speak", "pirate", "en")\r
+    set _ to dialect_add_word(d, "plunder", "set")\r
+    set _ to dialect_add_word(d, "be_yar", "to")\r
+    set _ to dialect_add_word(d, "bellow", "say")\r
+    set _ to dialect_add_word(d, "parley", "if")\r
+    set _ to dialect_add_word(d, "mutiny", "else")\r
+    set _ to dialect_add_word(d, "anchor", "end")\r
+    return d\r
+  end\r
+  set d_def to dialect_create("Standard English", "en", "en")\r
+  return d_def\r
+end\r
+\r
+\r
+to dialect_is_word_char with ch\r
+  set c to ord(ch, 0)\r
+  if c >= 65 and c <= 90\r
+    return 1\r
+  end\r
+  if c >= 97 and c <= 122\r
+    return 1\r
+  end\r
+  if c >= 48 and c <= 57\r
+    return 1\r
+  end\r
+  if c is 95 or c >= 128\r
+    return 1\r
+  end\r
+  return 0\r
+end\r
+\r
+to dialect_push_list with xs val\r
+  set n to length(xs)\r
+  set out to mklist(n + 1)\r
+  set i to 0\r
+  while i < n\r
+    set out[i] to xs[i]\r
+    set i to i + 1\r
+  end\r
+  set out[n] to val\r
+  return out\r
+end\r
+\r
+to dialect_split_line with line comment_marker\r
+  set segs to []\r
+  set buf to ""\r
+  set n to length(line)\r
+  set mlen to length(comment_marker)\r
+  set i to 0\r
+  while i < n\r
+    if mlen > 0 and (i + mlen) <= n\r
+      if str_eq(substr(line, i, mlen), comment_marker)\r
+        if length(buf) > 0\r
+          set segs to dialect_push_list(segs, ["code", buf])\r
+          set buf to ""\r
+        end\r
+        set segs to dialect_push_list(segs, ["comment", substr(line, i, n - i)])\r
+        return segs\r
+      end\r
+    end\r
+    set ch to substr(line, i, 1)\r
+    if ch is "\\"" or ch is "'"\r
+      if length(buf) > 0\r
+        set segs to dialect_push_list(segs, ["code", buf])\r
+        set buf to ""\r
+      end\r
+      set quote to ch\r
+      set s to ch\r
+      set i to i + 1\r
+      set closed to 0\r
+      while i < n and closed is 0\r
+        set cur to substr(line, i, 1)\r
+        if cur is "\\\\" and (i + 1) < n\r
+          set s to s + cur + substr(line, i + 1, 1)\r
+          set i to i + 2\r
+        else\r
+          set s to s + cur\r
+          if cur is quote\r
+            set closed to 1\r
+          end\r
+          set i to i + 1\r
+        end\r
+      end\r
+      set segs to dialect_push_list(segs, ["string", s])\r
+    else\r
+      set buf to buf + ch\r
+      set i to i + 1\r
+    end\r
+  end\r
+  if length(buf) > 0\r
+    set segs to dialect_push_list(segs, ["code", buf])\r
+  end\r
+  return segs\r
+end\r
+\r
+to dialect_map_words with code_str dict\r
+  set n to length(code_str)\r
+  set out to ""\r
+  set i to 0\r
+  while i < n\r
+    set ch to substr(code_str, i, 1)\r
+    if dialect_is_word_char(ch) is 1\r
+      set j to i + 1\r
+      while j < n and dialect_is_word_char(substr(code_str, j, 1)) is 1\r
+        set j to j + 1\r
+      end\r
+      set w to substr(code_str, i, j - i)\r
+      if has(dict, w)\r
+        set out to out + dict[w]\r
+      else\r
+        set out to out + w\r
+      end\r
+      set i to j\r
+    else\r
+      set out to out + ch\r
+      set i to i + 1\r
+    end\r
+  end\r
+  return out\r
+end\r
+\r
+to dialect_xor8 with a b\r
+  set x to a % 256\r
+  set y to b % 256\r
+  set res to 0\r
+  set p to 1\r
+  set bit to 0\r
+  while bit < 8\r
+    set bx to x % 2\r
+    set by to y % 2\r
+    if bx is not by\r
+      set res to res + p\r
+    end\r
+    set x to (x - bx) / 2\r
+    set y to (y - by) / 2\r
+    set p to p * 2\r
+    set bit to bit + 1\r
+  end\r
+  return res\r
+end\r
+\r
+to dialect_hex4 with val\r
+  set hex_chars to "0123456789abcdef"\r
+  set v to val\r
+  set out to ""\r
+  set k to 0\r
+  while k < 4\r
+    set digit to v % 16\r
+    set out to substr(hex_chars, digit, 1) + out\r
+    set v to (v - digit) / 16\r
+    set k to k + 1\r
+  end\r
+  return out\r
+end\r
+\r
+to dialect_fnv1a_hex with body_str\r
+  set hi to 33052\r
+  set lo to 40389\r
+  set n to length(body_str)\r
+  set i to 0\r
+  while i < n\r
+    set c to ord(body_str, i)\r
+    set b0 to lo % 256\r
+    set lo to (lo - b0) + dialect_xor8(b0, c % 256)\r
+    set p0 to lo * 403\r
+    set lo_next to p0 % 65536\r
+    set carry to (p0 - lo_next) / 65536\r
+    set hi_next to ((hi * 403) + (lo * 256) + carry) % 65536\r
+    set lo to lo_next\r
+    set hi to hi_next\r
+    set i to i + 1\r
+  end\r
+  return dialect_hex4(hi) + dialect_hex4(lo)\r
+end\r
+\r
+to dialect_has_signature with src prefix_str\r
+  set nl to find(src, "\\n")\r
+  set first to src\r
+  if nl >= 0\r
+    set first to substr(src, 0, nl)\r
+  end\r
+  if text_starts_with(first, prefix_str) is 0\r
+    return 0\r
+  end\r
+  set rest to text_trim(substr(first, length(prefix_str), length(first) - length(prefix_str)))\r
+  if length(rest) is 0 or find(rest, " ") >= 0\r
+    return 0\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_strip_signature with src prefix_str\r
+  if dialect_has_signature(src, prefix_str) is 0\r
+    return src\r
+  end\r
+  set nl to find(src, "\\n")\r
+  if nl < 0\r
+    return ""\r
+  end\r
+  return substr(src, nl + 1, length(src) - nl - 1)\r
+end\r
+\r
+to dialect_is_slug_char with ch\r
+  set c to ord(ch, 0)\r
+  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c is 45\r
+    return 1\r
+  end\r
+  return 0\r
+end\r
+\r
+to dialect_is_lower_alnum with ch\r
+  set c to ord(ch, 0)\r
+  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57)\r
+    return 1\r
+  end\r
+  return 0\r
+end\r
+\r
+to dialect_is_digits with s\r
+  set n to length(s)\r
+  if n is 0\r
+    return 0\r
+  end\r
+  set i to 0\r
+  while i < n\r
+    set c to ord(s, i)\r
+    if c < 48 or c > 57\r
+      return 0\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_is_semver with s\r
+  set parts to split(s, ".")\r
+  if length(parts) is not 3\r
+    return 0\r
+  end\r
+  if dialect_is_digits(parts[0]) is 0 or dialect_is_digits(parts[1]) is 0 or dialect_is_digits(parts[2]) is 0\r
+    return 0\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_valid_ident_part with s max_len\r
+  set n to length(s)\r
+  if n < 1 or n > max_len\r
+    return 0\r
+  end\r
+  if dialect_is_lower_alnum(substr(s, 0, 1)) is 0\r
+    return 0\r
+  end\r
+  set i to 1\r
+  while i < n\r
+    if dialect_is_slug_char(substr(s, i, 1)) is 0\r
+      return 0\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_parse_address with raw_input\r
+  set s to text_trim(raw_input)\r
+  if length(s) < 4 or substr(s, 0, 1) is not "@"\r
+    return []\r
+  end\r
+  set body to substr(s, 1, length(s) - 1)\r
+  set slash to find(body, "/")\r
+  if slash <= 0\r
+    return []\r
+  end\r
+  set user to substr(body, 0, slash)\r
+  if dialect_valid_ident_part(user, 31) is 0\r
+    return []\r
+  end\r
+  set tail to substr(body, slash + 1, length(body) - slash - 1)\r
+  set at_idx to find(tail, "@")\r
+  set slug to tail\r
+  set ver to ""\r
+  if at_idx >= 0\r
+    set slug to substr(tail, 0, at_idx)\r
+    set vpart to substr(tail, at_idx + 1, length(tail) - at_idx - 1)\r
+    if dialect_is_semver(vpart) is 0\r
+      return []\r
+    end\r
+    set ver to vpart\r
+  end\r
+  if dialect_valid_ident_part(slug, 39) is 0\r
+    return []\r
+  end\r
+  return [user, slug, ver]\r
+end\r
+\r
+to dialect_format_address with username slug version\r
+  if length(str(version)) > 0\r
+    return "@" + username + "/" + slug + "@" + str(version)\r
+  end\r
+  return "@" + username + "/" + slug\r
+end\r
+\r
+to dialect_is_share_code with raw_input\r
+  set s to text_lower(text_trim(raw_input))\r
+  if length(s) is not 8\r
+    return 0\r
+  end\r
+  set i to 0\r
+  while i < 8\r
+    set c to ord(s, i)\r
+    set ok to 0\r
+    if (c >= 48 and c <= 57) or (c >= 97 and c <= 102)\r
+      set ok to 1\r
+    end\r
+    if ok is 0\r
+      return 0\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_preset_bg_data\r
+  set names to [["say", "\u043A\u0430\u0436\u0438"], ["ask", "\u043F\u0438\u0442\u0430\u0439"], ["set", "\u043D\u0435\u043A\u0430"], ["to", "\u043D\u0430"], ["if", "\u0430\u043A\u043E"], ["else", "\u0438\u043D\u0430\u0447\u0435"], ["end", "\u043A\u0440\u0430\u0439"], ["for", "\u0437\u0430"], ["each", "\u0432\u0441\u044F\u043A\u043E"], ["in", "\u0432\u044A\u0432"], ["while", "\u0434\u043E\u043A\u0430\u0442\u043E"], ["break", "\u0441\u043F\u0440\u0438"], ["continue", "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438"], ["match", "\u0441\u0440\u0430\u0432\u043D\u0438"], ["with", "\u0441"], ["return", "\u0432\u044A\u0440\u043D\u0438"], ["make", "\u0441\u044A\u0437\u0434\u0430\u0439"], ["capture", "\u0443\u043B\u043E\u0432\u0438"], ["ref", "\u043F\u0440\u0435\u043F\u0440\u0430\u0442\u043A\u0430"], ["call", "\u0438\u0437\u0432\u0438\u043A\u0430\u0439"], ["attempt", "\u043E\u043F\u0438\u0442\u0430\u0439"], ["rescue", "\u0445\u0432\u0430\u043D\u0438"], ["throw", "\u0445\u0432\u044A\u0440\u043B\u0438"], ["kind", "\u0432\u0438\u0434"], ["has", "\u0438\u043C\u0430"], ["does", "\u043F\u0440\u0430\u0432\u0438"], ["new", "\u043D\u043E\u0432"], ["self", "\u0430\u0437"], ["extends", "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430"], ["super", "\u0440\u043E\u0434\u0438\u0442\u0435\u043B"], ["use", "\u043F\u043E\u043B\u0437\u0432\u0430\u0439"], ["true", "\u0432\u044F\u0440\u043D\u043E"], ["false", "\u043D\u0435\u0432\u044F\u0440\u043D\u043E"], ["nothing", "\u043D\u0438\u0449\u043E"], ["is", "\u0435"], ["not", "\u043D\u0435"], ["and", "\u0438"], ["or", "\u0438\u043B\u0438"], ["more", "\u043F\u043E\u0432\u0435\u0447\u0435"], ["less", "\u043F\u043E_\u043C\u0430\u043B\u043A\u043E"]]\r
+  set syns to [["say", ["\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439"]], ["return", ["\u0440\u0435\u0437\u0443\u043B\u0442\u0430\u0442"]]]\r
+  set sample to "# \u043F\u044A\u0440\u0432\u0430\u0442\u0430 \u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430 \u043D\u0430 \u0421\u0434\u0435\u0432\\n\u043D\u0435\u043A\u0430 \u0438\u043C\u0435 \u043D\u0430 \\"\u0441\u0432\u044F\u0442\\"\\n\\n\u043D\u0430 \u043F\u043E\u0437\u0434\u0440\u0430\u0432 \u0441 \u043A\u043E\u0439\\n  \u043A\u0430\u0436\u0438 \\"\u0437\u0434\u0440\u0430\u0432\u0435\u0439, \\" + \u043A\u043E\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043F\u043E\u0437\u0434\u0440\u0430\u0432(\u0438\u043C\u0435)\\n\\n\u0437\u0430 \u0432\u0441\u044F\u043A\u043E \u043D \u0432\u044A\u0432 range(3)\\n  \u0430\u043A\u043E \u043D \u0435 1\\n    \u043A\u0430\u0436\u0438 \\"\u0435\u0434\u043D\u043E\\"\\n  \u0438\u043D\u0430\u0447\u0435\\n    \u043A\u0430\u0436\u0438 \u043D\\n  \u043A\u0440\u0430\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043A\u0430\u0436\u0438 \u0441\u0431\u043E\u0440([1, 2, 3, 4])"\r
+  return [names, syns, sample]\r
+end\r
 `;
   }
 });
@@ -17100,11 +21008,11 @@ function __metadata(metadataKey, metadataValue) {
 }
 function __awaiter(thisArg, _arguments, P, generator) {
   function adopt(value2) {
-    return value2 instanceof P ? value2 : new P(function(resolve7) {
-      resolve7(value2);
+    return value2 instanceof P ? value2 : new P(function(resolve8) {
+      resolve8(value2);
     });
   }
-  return new (P || (P = Promise))(function(resolve7, reject) {
+  return new (P || (P = Promise))(function(resolve8, reject) {
     function fulfilled(value2) {
       try {
         step(generator.next(value2));
@@ -17120,7 +21028,7 @@ function __awaiter(thisArg, _arguments, P, generator) {
       }
     }
     function step(result) {
-      result.done ? resolve7(result.value) : adopt(result.value).then(fulfilled, rejected);
+      result.done ? resolve8(result.value) : adopt(result.value).then(fulfilled, rejected);
     }
     step((generator = generator.apply(thisArg, _arguments || [])).next());
   });
@@ -17311,14 +21219,14 @@ function __asyncValues(o) {
   }, i);
   function verb(n) {
     i[n] = o[n] && function(v) {
-      return new Promise(function(resolve7, reject) {
-        v = o[n](v), settle(resolve7, reject, v.done, v.value);
+      return new Promise(function(resolve8, reject) {
+        v = o[n](v), settle(resolve8, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve7, reject, d, v) {
+  function settle(resolve8, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve7({ value: v2, done: d });
+      resolve8({ value: v2, done: d });
     }, reject);
   }
 }
@@ -20171,15 +24079,15 @@ var require_RealtimeChannel = __commonJS({
             }
           }
         } else {
-          return new Promise((resolve7) => {
+          return new Promise((resolve8) => {
             var _a2, _b2, _c;
             const push = this._push(args.type, args, opts.timeout || this.timeout);
             if (args.type === "broadcast" && !((_c = (_b2 = (_a2 = this.params) === null || _a2 === void 0 ? void 0 : _a2.config) === null || _b2 === void 0 ? void 0 : _b2.broadcast) === null || _c === void 0 ? void 0 : _c.ack)) {
-              resolve7("ok");
+              resolve8("ok");
             }
-            push.receive("ok", () => resolve7("ok"));
-            push.receive("error", () => resolve7("error"));
-            push.receive("timeout", () => resolve7("timed out"));
+            push.receive("ok", () => resolve8("ok"));
+            push.receive("error", () => resolve8("error"));
+            push.receive("timeout", () => resolve8("timed out"));
           });
         }
       }
@@ -20207,16 +24115,16 @@ var require_RealtimeChannel = __commonJS({
         };
         this.joinPush.destroy();
         let leavePush = null;
-        return new Promise((resolve7) => {
+        return new Promise((resolve8) => {
           leavePush = new push_1.default(this, constants_1.CHANNEL_EVENTS.leave, {}, timeout);
           leavePush.receive("ok", () => {
             onClose();
-            resolve7("ok");
+            resolve8("ok");
           }).receive("timeout", () => {
             onClose();
-            resolve7("timed out");
+            resolve8("timed out");
           }).receive("error", () => {
-            resolve7("error");
+            resolve8("error");
           });
           leavePush.send();
           if (!this._canPush()) {
@@ -21869,7 +25777,7 @@ function _objectSpread2(e) {
   return e;
 }
 async function _handleRequest(fetcher, method, url, options, parameters, body, namespace) {
-  return new Promise((resolve7, reject) => {
+  return new Promise((resolve8, reject) => {
     fetcher(url, _getRequestParams(method, options, parameters, body)).then((result) => {
       if (!result.ok) throw result;
       if (options === null || options === void 0 ? void 0 : options.noResolveJson) return result;
@@ -21879,7 +25787,7 @@ async function _handleRequest(fetcher, method, url, options, parameters, body, n
         if (!contentType || !contentType.includes("application/json")) return {};
       }
       return result.json();
-    }).then((data) => resolve7(data)).catch((error) => handleError(error, reject, options, namespace));
+    }).then((data) => resolve8(data)).catch((error) => handleError(error, reject, options, namespace));
   });
 }
 function createFetchApi(namespace = "storage") {
@@ -24357,13 +28265,13 @@ var require_base64url = __commonJS({
       }
       return charMap;
     })();
-    function byteToBase64URL(byte, state, emit2) {
+    function byteToBase64URL(byte, state, emit3) {
       if (byte !== null) {
         state.queue = state.queue << 8 | byte;
         state.queuedBits += 8;
         while (state.queuedBits >= 6) {
           const pos = state.queue >> state.queuedBits - 6 & 63;
-          emit2(TO_BASE64URL[pos]);
+          emit3(TO_BASE64URL[pos]);
           state.queuedBits -= 6;
         }
       } else if (state.queuedBits > 0) {
@@ -24371,18 +28279,18 @@ var require_base64url = __commonJS({
         state.queuedBits = 6;
         while (state.queuedBits >= 6) {
           const pos = state.queue >> state.queuedBits - 6 & 63;
-          emit2(TO_BASE64URL[pos]);
+          emit3(TO_BASE64URL[pos]);
           state.queuedBits -= 6;
         }
       }
     }
-    function byteFromBase64URL(charCode, state, emit2) {
+    function byteFromBase64URL(charCode, state, emit3) {
       const bits2 = FROM_BASE64URL[charCode];
       if (bits2 > -1) {
         state.queue = state.queue << 6 | bits2;
         state.queuedBits += 6;
         while (state.queuedBits >= 8) {
-          emit2(state.queue >> state.queuedBits - 8 & 255);
+          emit3(state.queue >> state.queuedBits - 8 & 255);
           state.queuedBits -= 8;
         }
       } else if (bits2 === -2) {
@@ -24421,29 +28329,29 @@ var require_base64url = __commonJS({
       }
       return conv.join("");
     }
-    function codepointToUTF8(codepoint, emit2) {
+    function codepointToUTF8(codepoint, emit3) {
       if (codepoint <= 127) {
-        emit2(codepoint);
+        emit3(codepoint);
         return;
       } else if (codepoint <= 2047) {
-        emit2(192 | codepoint >> 6);
-        emit2(128 | codepoint & 63);
+        emit3(192 | codepoint >> 6);
+        emit3(128 | codepoint & 63);
         return;
       } else if (codepoint <= 65535) {
-        emit2(224 | codepoint >> 12);
-        emit2(128 | codepoint >> 6 & 63);
-        emit2(128 | codepoint & 63);
+        emit3(224 | codepoint >> 12);
+        emit3(128 | codepoint >> 6 & 63);
+        emit3(128 | codepoint & 63);
         return;
       } else if (codepoint <= 1114111) {
-        emit2(240 | codepoint >> 18);
-        emit2(128 | codepoint >> 12 & 63);
-        emit2(128 | codepoint >> 6 & 63);
-        emit2(128 | codepoint & 63);
+        emit3(240 | codepoint >> 18);
+        emit3(128 | codepoint >> 12 & 63);
+        emit3(128 | codepoint >> 6 & 63);
+        emit3(128 | codepoint & 63);
         return;
       }
       throw new Error(`Unrecognized Unicode codepoint: ${codepoint.toString(16)}`);
     }
-    function stringToUTF8(str, emit2) {
+    function stringToUTF8(str, emit3) {
       for (let i = 0; i < str.length; i += 1) {
         let codepoint = str.charCodeAt(i);
         if (codepoint > 55295 && codepoint <= 56319) {
@@ -24452,13 +28360,13 @@ var require_base64url = __commonJS({
           codepoint = (lowSurrogate | highSurrogate) + 65536;
           i += 1;
         }
-        codepointToUTF8(codepoint, emit2);
+        codepointToUTF8(codepoint, emit3);
       }
     }
-    function stringFromUTF8(byte, state, emit2) {
+    function stringFromUTF8(byte, state, emit3) {
       if (state.utf8seq === 0) {
         if (byte <= 127) {
-          emit2(byte);
+          emit3(byte);
           return;
         }
         for (let leadingBit = 1; leadingBit < 6; leadingBit += 1) {
@@ -24484,7 +28392,7 @@ var require_base64url = __commonJS({
         state.codepoint = state.codepoint << 6 | byte & 63;
         state.utf8seq -= 1;
         if (state.utf8seq === 0) {
-          emit2(state.codepoint);
+          emit3(state.codepoint);
         }
       }
     }
@@ -29413,8 +33321,8 @@ function brokeredPreviewStorage() {
   const host = location.hostname;
   const PREVIEW_ZONES = ["lovableproject.com", "lovableproject-dev.com", "lovable.app", "gpt-eng.com", "gptengineer.run"];
   const onPreviewZone = PREVIEW_ZONES.some((z) => host === z || host.endsWith("." + z));
-  const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-  const projectId = onPreviewZone ? new RegExp("^(?:id-preview(?:-[a-z0-9]+)?|project)--(" + UUID + ")(?:-dev)?(?=\\.|$)", "i").exec(host)?.[1] ?? new RegExp("^(" + UUID + ")(?=[.-])", "i").exec(host)?.[1] : void 0;
+  const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+  const projectId = onPreviewZone ? new RegExp("^(?:id-preview(?:-[a-z0-9]+)?|project)--(" + UUID + ")(?:-dev)?(?=\\.|$)", "i").exec(host)?.[1] ?? new RegExp("^live--(" + UUID + ")(?:-thr_[a-z0-9]+)?(?=\\.|$)", "i").exec(host)?.[1] ?? new RegExp("^(" + UUID + ")(?=[.-])", "i").exec(host)?.[1] : void 0;
   const parentWindow = window.parent;
   const framed = parentWindow !== null && parentWindow !== window;
   if (!projectId || !framed) return localStorage;
@@ -29425,7 +33333,7 @@ function brokeredPreviewStorage() {
   const editorOrigins = ancestor && EDITOR.test(ancestor) ? [ancestor] : dev ? ["https://lovable.dev", "http://localhost:3000"] : ["https://lovable.dev"];
   const TIMEOUT = 2e3;
   const newId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const request = (type, key, value2) => new Promise((resolve7) => {
+  const request = (type, key, value2) => new Promise((resolve8) => {
     const requestId = newId();
     let done = false;
     const finish2 = (reply) => {
@@ -29433,7 +33341,7 @@ function brokeredPreviewStorage() {
       done = true;
       clearTimeout(timer);
       window.removeEventListener("message", onMessage);
-      resolve7(reply);
+      resolve8(reply);
     };
     const onMessage = (e) => {
       if (!editorOrigins.includes(e.origin)) return;
@@ -29462,7 +33370,7 @@ function brokeredPreviewStorage() {
       const local = readLocal(key);
       let res = await request("lovable-preview-auth:get", key, local ?? void 0);
       if (!res && firstGet) {
-        await new Promise((resolve7) => setTimeout(resolve7, RETRY_DELAY));
+        await new Promise((resolve8) => setTimeout(resolve8, RETRY_DELAY));
         res = await request("lovable-preview-auth:get", key, local ?? void 0);
       }
       firstGet = false;
@@ -30356,9 +34264,9 @@ function repair(source, ctx = {}) {
         case "function": {
           learn(headKey, "function");
           const declBody = rest.replace(/[:{]\s*$/, "");
-          const split = declBody.search(/\swith\s|\(/);
-          const declHead = split < 0 ? declBody : declBody.slice(0, split);
-          const declParams = split < 0 ? "" : declBody.slice(split);
+          const split2 = declBody.search(/\swith\s|\(/);
+          const declHead = split2 < 0 ? declBody : declBody.slice(0, split2);
+          const declParams = split2 < 0 ? "" : declBody.slice(split2);
           const keepAll = /[(,]/.test(declParams);
           const wordyParams = declParams.replace(PARAM_NOISE, " ");
           const cleanedParams = keepAll ? wordyParams : wordyParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, " ");
@@ -30657,7 +34565,8 @@ function parses(source) {
     new Parser(new Lexer(source).tokenize()).parse();
     return true;
   } catch {
-    return false;
+    const v2 = sdevValidateSyntax(source);
+    return v2 !== null && v2.valid;
   }
 }
 function runtimeNames() {
@@ -30677,6 +34586,7 @@ function builtinNames() {
     try {
       builtinCache = new Set(runtimeNames());
       for (const n of ["window", "endwindow", "row", "endrow", "column", "endcolumn", "group", "endgroup", "tabs", "endtabs", "tab", "endtab", "heading", "label", "paragraph", "image", "divider", "spacer", "progress", "button", "textarea", "checkbox", "slider", "select", "table", "menu", "endmenu", "menuitem", "uiget", "uiset", "show", "alert"]) builtinCache.add(n);
+      for (const n of ["mklist", "ord", "chr", "substr", "i2f", "f2i", "fneg", "fabs", "fsqrt", "fsin", "fcos", "ftan", "fexp", "flog", "fpow", "fbyte", "fceil", "ffloor", "fround", "read_file", "write_file", "http_get", "num", "nothing"]) builtinCache.add(n);
     } catch {
       builtinCache = /* @__PURE__ */ new Set();
     }
@@ -30712,7 +34622,7 @@ function unknownNames(source) {
   } catch {
     return [];
   }
-  const defined = definedNames(source);
+  const defined = /* @__PURE__ */ new Set([...definedNames(source), ...sdevDefinedNames(source) ?? []]);
   const builtins = builtinNames();
   const isWebProgram = /\b(?:page|endpage|html_\w+|open_\w+)\s*\(/.test(source);
   const out = /* @__PURE__ */ new Set();
@@ -30725,7 +34635,10 @@ function unknownNames(source) {
     if (prev && (String(prev.value) === "." || prev.type === "DOT")) continue;
     if (next && (next.type === "COLON" || String(next.value) === ":")) continue;
     if (/[^\x00-\x7F]/.test(name)) continue;
-    if (["end", "else", "self", "this", "me", "super", "to", "with", "each", "of", "from", "by", "step", "more", "less", "essence", "value"].includes(name)) continue;
+    if (["end", "else", "self", "this", "me", "super", "to", "with", "each", "of", "from", "by", "step", "more", "less", "essence", "value", "capture", "nothing"].includes(name)) continue;
+    if (name === "ref" && next && next.type === "IDENTIFIER" /* IDENTIFIER */ && next.line === t.line) continue;
+    if (name === "call" && next && next.type === "IDENTIFIER" /* IDENTIFIER */ && tokens[i + 2]?.type === "LPAREN" /* LPAREN */) continue;
+    if (name === "make" && (!next || (next.line ?? 0) > (t.line ?? 0) || next.value === "with" || next.value === "capture")) continue;
     if (defined.has(name) || builtins.has(name)) continue;
     if (isWebProgram && WEB_CONTEXT_ONLY_NAMES.has(name)) continue;
     out.add(name);
@@ -30769,7 +34682,7 @@ function senseFile(source, extra) {
     if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(codeOnly(line))) {
       reasons.push(`line ${i + 1}: names the output destination in words`);
     }
-    if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line)) {
+    if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line) && !/^call\s+[\p{L}_][\p{L}\p{N}_]*\s*\(/iu.test(line)) {
       reasons.push(`line ${i + 1}: a call written in words`);
     }
   }
@@ -30797,6 +34710,7 @@ var init_sense = __esm({
     init_tasks();
     init_vocabulary();
     init_keywords();
+    init_sdev_engine();
     builtinCache = null;
     runtimeCache = null;
     WEB_CONTEXT_ONLY_NAMES = /* @__PURE__ */ new Set([
@@ -30887,6 +34801,17 @@ Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, 
   fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.
   There is NO join, split, append, push, map, filter, printf \u2014 use weave, shatter, l + [x], each, sift.
 
+Self-hosted (v2) libraries for systems and causal-AI work \u2014 load with use "lang/stdlib/v2/<name>.sdev":
+  list: list_append(xs, x), list_concat_two(a, b) (in v2 files lists never grow with +)
+  bits: bits_and/or/xor(a, b), bits_shl/shr(v, n), bits_not_n(v, width), floor_div, floor_mod, wrap_u8/u16/i16
+  mem: mem_arena(size), mem_put/get_u8/u16/i16(m, addr[, v]) little-endian, mem_copy, mem_fill, mem_hex,
+       ring_create(cap), ring_push, ring_get(r, i), ring_len
+  oce (v2: use "lang/stdlib/v2/oce.sdev", it loads list, bits, mem itself; classic and !#ai files: built in, no import): Ontological Causal Engine in one 64 KB arena \u2014 oce_create(), oce_entity(m),
+       oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),
+       oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),
+       oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).
+  In v2 files, xs + [a] joins lists only when the file uses "lang/stdlib/v2/list.sdev"; prefer list_append(xs, a).
+
 Canonical SDEV Patterns & Examples:
   # 1. Math and output:
   say "hello world"
@@ -30953,6 +34878,8 @@ sdev:ai \u2014 the dialect for AI models. When asked for sdev:ai, write ONLY thi
   ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else
   w i < 3 {  }                 while               each n in xs {  }   for each
   try {  } catch e {  }        brk / next          break / continue
+  } finally {  }   throw e      k MAX = 3           constant
+  c Dog : Animal {  f init(self, n) { self.n = n }  }    class (": Animal" optional); make one with new Dog(1)
   == != && || ! true false null      every block closes with } on its own line
   Calls to built-ins and the window toolkit stay as they are: window("Calc", 320, 400), button("7", () -> press("7")), uiset(...)
   Lambdas: (x) -> x * 2.  One statement per line.
@@ -31003,14 +34930,14 @@ function buildPrebakedWeights() {
         weights[row * EMBED_DIM + bg] += 0.35;
       }
     }
-    let norm = 0;
+    let norm2 = 0;
     for (let c = 0; c < EMBED_DIM; c++) {
       const v = weights[row * EMBED_DIM + c];
-      norm += v * v;
+      norm2 += v * v;
     }
-    norm = Math.sqrt(norm) || 1;
+    norm2 = Math.sqrt(norm2) || 1;
     for (let c = 0; c < EMBED_DIM; c++) {
-      weights[row * EMBED_DIM + c] /= norm;
+      weights[row * EMBED_DIM + c] /= norm2;
     }
   });
   return weights;
@@ -31070,10 +34997,10 @@ function embedLineVector(line) {
       vec[bg] += 0.2 * weight;
     }
   });
-  let norm = 0;
-  for (let i = 0; i < EMBED_DIM; i++) norm += vec[i] * vec[i];
-  norm = Math.sqrt(norm) || 1;
-  for (let i = 0; i < EMBED_DIM; i++) vec[i] /= norm;
+  let norm2 = 0;
+  for (let i = 0; i < EMBED_DIM; i++) norm2 += vec[i] * vec[i];
+  norm2 = Math.sqrt(norm2) || 1;
+  for (let i = 0; i < EMBED_DIM; i++) vec[i] /= norm2;
   return vec;
 }
 function classifyLineIntent(line) {
@@ -31664,7 +35591,7 @@ function loadBrowserBrain() {
   })();
   return enginePromise;
 }
-async function callBrowser(req, parse) {
+async function callBrowser(req, parse2) {
   const useMicro = typeof localStorage === "undefined" || localStorage.getItem("sdev_agent_micro_brain") !== "0";
   if (useMicro) {
     try {
@@ -31693,7 +35620,7 @@ async function callBrowser(req, parse) {
       max_tokens: 2048
     });
     const rawContent = r.choices[0]?.message?.content ?? "";
-    const reply = parse(rawContent, req.format);
+    const reply = parse2(rawContent, req.format);
     if (reply?.canonical) {
       reply.canonical = sanitizeBrainOutput2(reply.canonical, req.format);
       return reply;
@@ -32225,8 +36152,8 @@ var init_brain = __esm({
 var DRIVER_BYTECODE_HEX, DRIVER_POOL_HEX;
 var init_driver_artifact = __esm({
   "src/lang-bridge/driver-artifact.mjs"() {
-    DRIVER_BYTECODE_HEX = "407e40630001300000002241060001000000006163000139000000234106000100000000610101000000610100000000616300015f00000020410600010100000061630001800000002541060001010000006163000141000000254111006300015a0000002441060001010000006163000161000000254111006300017a000000244106000101000000610100000000610100000000616300600300014106000101000000616300603100016101000000006162010200006403630163022241180063036300630184889164036301010100000010640140e0ff630361010000000061630001020000002041110063010102000000204106000101000000610100000000610100000000616202630083640263026301832141060001000000006101000000006403630363022241210063006303846301630384214106000100000000616303010100000010640340d7ff010100000061010000000061620902000064016300836402010000000064036303630201010000001022410b01630364046304630222411e006300630484010a00000020410300400d006304010100000010640440daff63006303630460b30003640563059464060100000000640763068301050000002341550063060100000000010300000095020400600b0102413e006306010300000084012000000020412d006306010400000084012200000020411c00630663068301010000001184012200000020410700010100000064076307414b00630601050000006306830106000000119564086309020b00630891020b0091960100000000224117006309630891020b0091640963016308b0605d01019164016301021000916401400b0063016305910210009164016304010100000010640340e7fe63016101000000006103000100000000810100000000204106000100000000610301030101000000008101010000001063008203010100000000030101000000008101010000001082010000000061010000000061620503000100000000810100000000204106000100000000610302010000000081640101010000006402630263012441210003026302816300600b01024106000303630281616302010100000010640240d7ff030401000000008164036300836404030463030101000000106304010001000014820304630301020000001063040100010000130100010000148203046303010300000010630401000001001301000100001482030463030104000000106304010000000113010001000014820304010000000063030104000000108201000000006405630563042241390003040304010000000081010100000010630063058482030401000000000304010000000081010100000010826305010100000010640540bfff030263010101000000106300820303630101010000001063038203020100000000630101010000001082030301000000006301010100000010826303610100000000616300010001000014609202010563000100010000136400630001000100001460920201056300010001000013640063000100010000146092020105630001000100001364006300010001000014609202010501000000006101000000006162010301010000000081640001000000006092020105010000000060920201056300610100000000616201630163000102000000101164026302010000000022410a0063020100000100106402030163000101000000106302010001000014820301630001020000001063020100010000130100010000148201000000006101000000006162020101000000640103050100000000810101000000106402630163022241240003056301816300600b01024109006301010100000011616301010100000010640140d4ff0305030501000000008101010000001063008203050100000000030501000000008101010000001082030603050100000000810100000000820306010000000003050100000000818203050100000000810101000000116101000000006162020101000000640103070100000000810101000000106402630163022241240003076301816300600b01024109006301010100000011616301010100000010640140d4ff0100000000010100000011610100000000610307030701000000008101010000001063008203070100000000030701000000008101010000001082030803070100000000810100000000820308010000000003070100000000818203070100000000810101000000116101000000006162020101000000640103090100000000810101000000106402630163022241240003096301816300600b01024109006301010100000011616301010100000010640140d4ff0100000000010100000011610100000000616201030a010000000081010100000020413d00630060bf050164016301010000000025412a000163000000609202010563016092020105030b01000000000308630101010000001081820100000000616300601c050164010103000000609202010563016092020105030b01000000000306630101010000001081820100000000610100000000616202030b0100000000816401030a010000000081010100000020413f00630060bf05016402630201000000002241080063006016060164020164000000609202010563026092020105030863020101000000106301820100000000616300601c050164020104000000609202010563026092020105030663020101000000106301820100000000610100000000616201030a010000000081010100000020412600630060bf050164026302010000000025411300030863020101000000106301820100000000616300601c05016402030663020101000000106301820100000000610100000000616205030b01000000008164026300021500600b0102411d00018e0000006092020105030b01000000000105000000820100000000616300021d00600b0102413800018f00000060920201056302010400000020411000030b0100000000010500000082400d00030b01000000000100000000820100000000616300022700600b0102411d00018d0000006092020105030b01000000000100000000820100000000616300022e00600b0102411d0001830000006092020105030b01000000000100000000820100000000616300023800600b0102411d0001910000006092020105030b01000000000101000000820100000000616300024200600b0102411d0001840000006092020105030b01000000000100000000820100000000616300024900600b0102411d0001880000006092020105030b01000000000101000000820100000000616300025000600b0102411d0001870000006092020105030b01000000000101000000820100000000616300025700600b0102411d0001890000006092020105030b01000000000100000000820100000000616300026100600b0102411d0001a80000006092020105030b01000000000102000000820100000000616300026800600b0102411d0001a90000006092020105030b01000000000100000000820100000000616300026f00600b0102411d0001aa0000006092020105030b01000000000102000000820100000000616300027700600b0102411d0001ab0000006092020105030b01000000000102000000820100000000616300027f00600b0102411d0001ac0000006092020105030b01000000000102000000820100000000616300028800600b010241270001ae000000609202010501000000006092020105030b01000000000102000000820100000000616300029000600b010241270001ae000000609202010501010000006092020105030b01000000000102000000820100000000616300029800600b010241270001ae000000609202010501020000006092020105030b0100000000010200000082010000000061630002a000600b010241270001ae000000609202010501030000006092020105030b0100000000010200000082010000000061630002a800600b010241270001ae000000609202010501040000006092020105030b0100000000010200000082010000000061630002b000600b010241270001ae000000609202010501050000006092020105030b0100000000010200000082010000000061630002b800600b0102411d0001b40000006092020105030b0100000000010000000082010000000061630002c100600b0102411d0001c30000006092020105030b0100000000010200000082010000000061630002c800600b0102411d0001b00000006092020105030b0100000000010100000082010000000061630002d500600b0102411d0001b10000006092020105030b0100000000010000000082010000000061630002e300600b0102411d0001b20000006092020105030b0100000000010100000082010000000061630002ef00600b0102411d0001920000006092020105030b0100000000010100000082010000000061630002f800600b0102411d0001930000006092020105030b01000000000101000000820100000000616300020101600b0102411d0001940000006092020105030b01000000000101000000820100000000616300020901600b0102411d0001950000006092020105030b01000000000101000000820100000000616300021301600b0102411d0001960000006092020105030b01000000000100000000820100000000616300021b01600b0102413b0001960000006092020105010100000060920201050100000000603904010501250000006092020105030b01000000000100000000820100000000616300022701600b0102411d0001970000006092020105030b01000000000105000000820100000000616300023001600b0102411d0001980000006092020105030b01000000000101000000820100000000616300023801600b0102411d0001990000006092020105030b01000000000101000000820100000000616300024301600b0102411d00019a0000006092020105030b01000000000100000000820100000000616300024a01600b0102411d00019b0000006092020105030b01000000000100000000820100000000616300025101600b0102411d00019c0000006092020105030b01000000000100000000820100000000616300025801600b0102411d00019d0000006092020105030b01000000000100000000820100000000616300025f01600b0102411d00019e0000006092020105030b01000000000100000000820100000000616300026801600b0102411d00019f0000006092020105030b01000000000100000000820100000000616300026f01600b0102411d0001b80000006092020105030b01000000000100000000820100000000616300027901600b0102411d0001b50000006092020105030b01000000000102000000820100000000616300028201600b0102411d0001b60000006092020105030b01000000000102000000820100000000616300028c01600b0102411d0001b70000006092020105030b01000000000102000000820100000000616300607406016403016000000060920201050301010000000081640401000000006405010000000064066303010000000025413500030c6303010100000010816405630501000000002341070001010000006406030b0100000000030d63030101000000108182400d00030b01000000000100000000826306010100000020412300630501000100001460920201056305010001000013010001000014609202010540770001000000006092020105010000000060920201050300010000000081010100000020415200030e030e010000000081010100000010630082030f030e010000000081010100000010630482030e0100000000030e01000000008101010000001082030f0100000000030f0100000000810101000000108263016092020105010000000061010000000061620301010000006092020105030101000000008164016300607406016402010000000064036302010000000025410d00030c63020101000000108164036303010000000023410a0063036039040105406d00010000000060390401050300010000000081010100000020415200030e030e010000000081010100000010630082030f030e010000000081010100000010630182030e0100000000030e01000000008101010000001082030f0100000000030f01000000008101010000001082030b0100000000010000000082010000000061010000000061620501010000006400030e0100000000810101000000106401630063012241a300030e6300816074060164026302010000000025418000030c6302010100000010816403030f6300816404030163040101000000106303010001000014820301630401020000001063030100010000130100010000148203016304810160000000214132000301630401030000001063030100000100130100010000148203016304010400000010630301000000011301000100001482630001010000001064004055ff010000000061010000000061620403100100000000816401010100000064020311010000000081010100000010640363026303224134000312630281630120411c000311630281630060c0040205031263020100000000010100000011826302010100000010640240c4ff010100000064046304416e0003110100000000810100000000234153000312031101000000008181010000000001010000001120412f0003110100000000031101000000008101010000001182031201000000000312010000000081010100000011824007000100000000640440070001000000006404408dff010000000061010000000061620403100100000000816401010100000064020313010000000081010100000010640363026303224134000314630281630120411c000313630281630060c0040205031463020100000000010100000011826302010100000010640240c4ff010100000064046304416e0003130100000000810100000000234153000314031301000000008181010000000001010000001120412f0003130100000000031301000000008101010000001182031401000000000314010000000081010100000011824007000100000000640440070001000000006404408dff01000000006101000000006103156300010500000082010000000061010000000061620263000101000000116402010100000064036303413a006302010000000022410a00010000000064034022000315630281010500000020410d00630201010000001164024007000100000000640340c1ff63020100000000224106000100000000616302630160681e026101000000006162010315630081010200000021410600010000000061031663008164016301029601600b0102413100630001000000002041060001010000006103156300010100000011810105000000204106000101000000610100000000616301029c01600b0102410600010100000061630102a501600b0102410600010100000061630102ac01600b0102410600010100000061630102b701600b0102410600010100000061630102bf01600b0102410600010100000061630102c701600b0102411800630002cd01607f1402410600010000000061010100000061010000000061010000000061621601000000006400630003172241430601000000006401630002bf0160681e024129006300010100000010031722411b00031563000101000000108101020000002041070001010000006401630101010000002041ef050316630001010000001081640203180318010000000081010100000010630282031801000000000318010000000081010100000010820318010000000081640363006069140105630001010000001060691401050100000000640463000102000000106405630001020000001002d50160681e0241910063000103000000100317224183000315630001030000001081010200000020416f000316630001030000001081640601010000006407031801000000008101010000001064086307630822411f0003186307816306600b0102410400630764046307010100000010640740d9ff630001020000001060691401056300010300000010606914010563000104000000106405010000000064090101000000640a630a41fc016305031725410a000100000000640a40e7010100000000640b630502e00160681e02413d006305010100000010012e000000602f1e024129006305010200000010031722411b0003156305010200000010810102000000204107000101000000640b630b0101000000204136000316630502e901820316630501020000001002f10163029102fb01910316630501020000001081918263050103000000106405405601630502000260681e02413d006309010000000020411b0063056069140105630501010000001064050100000000640a4014006309010100000011640963050101000000106405400d01630560f1140141fa00630901000000002041d800630502960160681e0241cc000316630501010000001081640c630202fb0191630c91640d03166305010100000010630d8203190319010000000081010100000010630382031a031a010000000081010100000010630c82031b031b010000000081010100000010630d82031c031c01000000008101010000001001000000008203190100000000031901000000008101010000001082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c010000000081010100000010826309010100000010640963050101000000106405400a006305010100000010640540fffd630401000000002341c6020319010000000081640e0101000000640f03190100000000810101000000106410630f631022419d020319630f81630420418502031a630f816411031b630f816412031c630f8101010000002041aa0003190319010000000081010100000010630382031a031a010000000081010100000010631182031b031b010000000081010100000010631282031c031c01000000008101010000001001010000008203190100000000031901000000008101010000001082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c0100000000810101000000108240bf010100000000641301010000006414630e01010000001064156314631522413b000319631481630320412300031c631481010000000020411500031a6314816311600b0102410700010100000064136314010100000010641440bdff631301000000002041a70003190319010000000081010100000010630382031a031a010000000081010100000010631182031b031b010000000081010100000010631282031c031c01000000008101010000001001000000008203190100000000031901000000008101010000001082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c0100000000810101000000108203190319010000000081010100000010630382031a031a01000000008101010000001002f10163029102fb019163119182031b031b010000000081010100000010631282031c031c01000000008101010000001001010000008203190100000000031901000000008101010000001082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c01000000008101010000001082630f010100000010640f405bfd63056400400a006300010100000010640040b5f901000000006101000000006162070100000000640101010000006402031801000000008101010000001064036302630322411f0003186302816300600b0102410400630264016302010100000010640240d9ff01000000006404010100000064050319010000000081010100000010640663056306224122000319630581630120410a00630401010000001064046305010100000010640540d6ff018a000000609202010563040100010000146092020105630401000100001301000100001460920201050101000000640563056306224161000319630581630120414900031a63058160de02016407010200000060920201056307010001000014609202010563070100010000130100010000146092020105031b63058160f7100105018b0000006092020105630501010000001064054097ff030b0100000000010300000082010000000061010000000061620301010000006401031a01000000008101010000001064026301630222414b00031a6301816300600b0102413000031b6301816074060164036303010000000025411a00030d6303010100000010810101000000204106000101000000616301010100000010640140adff0100000000610100000000616201630060de0201640101020000006092020105630101000100001460920201056301010001000013010001000014609202010501000000006101000000006163000317254106000100000000610315630081010400000020411100031d6300816301204106000101000000610100000000610100000000616300031725410600010000000061031563008101020000002141060001000000006103166300816301600b010261010000000061621e0315630081010100000020412a0001010000006092020105031d6300816039040105030b01000000000100000000826300010100000010610315630081010600000020418500031e63008164010101000000640263010100000000234117006302010a0000001264026301010100000011640140deff031d630081a86302a8a4640301a0000000609202010501000000006404630401080000002241170063036304b460920201056304010100000010640440deff030b01000000000102000000826300010100000010610315630081010300000020414f0003166300816405630560de02016406010200000060920201056306010001000014609202010563060100010000130100010000146092020105030b0100000000010100000082630001010000001061630002070260681e02412a000101000000609202010501010000006039040105030b01000000000100000000826300010100000010616300020f0260681e02412a000101000000609202010501000000006039040105030b0100000000010000000082630001010000001061630002180260681e02412a000101000000609202010501000000006039040105030b0100000000010000000082630001010000001061031563008101020000002041540603166300816407630702b701600b010241c40363000101000000106408031f010000000001000000008203200100000000010000000082630802230260681e0241920063080101000000106408010100000064096309417c006308031725410a000100000000640940670003156308810102000000204152000316630881022b02600b0102410a0001000000006409403600031f031f010000000081010100000010031663088182031f0100000000031f010000000081010100000010826308010100000010640840070001000000006409407fff031f010000000081640a6308022b0260681e02417900630801010000001064080101000000640963094163006308031725410a0001000000006409404e000315630881010200000020413900032003200100000000810101000000100316630881820320010000000003200100000000810101000000108263080101000000106408400700010000000064094098ff0320010000000081640b0101000000640c630c630b244117000320630c8160cb060105630c010100000010640c40e1ff0140000000609202010560970400640d0301010000000081640e03210100000000030701000000008182032201000000000307010000000081820101000000640f630f0321010000000081244121000321630f0307630f81820322630f0308630f8182630f010100000010640f40d1ff030a010000000081641003070100000000010000000082030801000000000100000000820101000000640c630c630a24411700031f630c816016060105630c010100000010640c40e1ff0101000000640c630c630b244117000320630c816016060105630c010100000010640c40e1ff03070100000000816411630864120300010000000081641303000100000000010000000082030a01000000000101000000826312608f33016414030701000000008163111164150300010000000063138203070100000000631182631501000000002341110001620000006092020105631560920201056312608f33016400010100000060920201050100000000603904010501610000006092020105630d030101000000008160c004020501c50000006092020105630e0100010000146092020105630e0100010000130100010000146092020105630b609202010503070100000000032101000000008182030801000000000322010000000081820101000000640f630f0321010000000081244121000307630f0321630f81820308630f0322630f8182630f010100000010640f40d1ff030a0100000000631082630002000260681e02410a0063000101000000106400030b01000000000100000000826300616307023602600b010241730063000101000000100317224165000315630001010000001081010200000020415100031663000101000000108164166300010200000010640063000128000000602f1e024122006300010100000010640063000129000000602f1e02410a0063000101000000106400631660351c01056300616307023d02600b0102413b006300010100000010031722412d000315630001010000001081010200000020411900031663000101000000108160f71001056300010200000010616307024402600b010241e700630001010000001003172241d900031563000101000000108101020000002041c5000316630001010000001081641763000102000000100128000000602f1e0241a400630001030000001064000100000000641863000129000000602f1e02410d00630001010000001064004050006300603433016400010100000064186300012c000000602f1e02411b0063000101000000106034330164006318010100000010641840d7ff63000129000000602f1e02410a0063000101000000106400631760cb06010501c4000000609202010563186092020105030b01000000000100000000826300616300010100000010031722419c0063000101000000100128000000602f1e02418800630001020000001064000100000000641863000129000000602f1e02410d00630001010000001064004050006300603433016400010100000064186300012c000000602f1e02411b0063000101000000106034330164006318010100000010641840d7ff63000129000000602f1e02410a006300010100000010640063076318603b08020563006103230100000000630782630760cb06010563000101000000106163000128000000602f1e02412800630001010000001060343301640063000129000000602f1e024109006300010100000010616300616300015b000000602f1e0241b60063000101000000106400010000000064196300015d000000602f1e02410d00630001010000001064004050006300603433016400010100000064196300012c000000602f1e02411b0063000101000000106034330164006319010100000010641940d7ff6300015d000000602f1e02410a0063000101000000106400018000000060920201056319010001000014609202010563190100010000130100010000146092020105030b01000000000100000000826300616300017b000000602f1e0241f70163000101000000106400018a00000060920201050301010000000081641a0100000000609202010501000000006092020105010000000064190100000000641b63006041330164000101000000641c6300017d000000602f1e024107000100000000641c631c41060163006041330164000100000000641d0315630081010200000020411b006300010100000010013a000000602f1e024107000101000000641d631d010100000020414200031663008160de0201641e01020000006092020105631e0100010000146092020105631e01000100001301000100001460920201056300010100000010640040080063006034330164006300013a000000602f1e02410a00630001010000001064006300603433016400030b0100000000810101000000204107000101000000641b018b00000060920201056319010100000010641963006041330164006300012c000000602f1e02410d00630001010000001064004007000100000000641c40f5fe63006041330164006300017d000000602f1e02410a00630001010000001064000300010000000081010100000020412c000301631a0101000000106319010001000014820301631a010200000010631901000100001301000100001482631b010100000020411000030b0100000000010400000082400d00030b0100000000010300000082630061630061010000000061620501010000006401630141eb016300015b000000602f1e0241b300030b01000000008164026300010100000010640063006034330164006300015d000000602f1e02410a00630001010000001064006302010300000020411a00018c0000006092020105030b01000000000100000000824057006302010400000020411a00018c0000006092020105030b0100000000010100000082403200018100000060920201056302010500000020411000030b0100000000010100000082400d00030b01000000000100000000824027016300012e000000602f1e02411201031663000101000000108164030323010000000081640463000102000000100128000000602f1e0241bc00630001030000001064000100000000640563000129000000602f1e02410d00630001010000001064004050006300603433016400010100000064056300012c000000602f1e02411b0063000101000000106034330164006305010100000010640540d7ff63000129000000602f1e02410a0063000101000000106400630460cb060105630360ef1d0105018c000000609202010501c4000000609202010563050101000000106092020105030b0100000000630360771d0182402800630360ef1d0105018c0000006092020105030b010000000001000000008263000102000000106400400700010000000064014010fe6300610100000000616300012d000000602f1e02413c000101000000609202010501000000006039040105630001010000001060d42b01640001110000006092020105030b01000000000100000000826300616300609c1e016400630060d2290164006300610100000000616203630060d42b016400010100000064016301411e016300012a000000602f1e02416100030b0100000000816402630001010000001060d42b016400030b01000000008164036302630360e30002411a0001a30000006092020105030b010000000001020000008240170001120000006092020105030b010000000001000000008240ac006300012f000000602f1e02416100030b0100000000816402630001010000001060d42b016400030b01000000008164036302630360e30002411a0001a40000006092020105030b010000000001020000008240170001130000006092020105030b0100000000010000000082403d0063000125000000602f1e02412800630001010000001060d42b01640001140000006092020105030b01000000000100000000824007000100000000640140ddfe6300610100000000616204630060372c0164000101000000640163014138016300012b000000602f1e0241b100030b0100000000816402630001010000001060372c016400030b0100000000816403010000000064046302010100000020410700010100000064046303010100000020410700010100000064046304010100000020411a0001910000006092020105030b0100000000010100000082403c006302630360e30002411a0001a10000006092020105030b010000000001020000008240170001100000006092020105030b01000000000100000000824076006300012d000000602f1e02416100030b0100000000816402630001010000001060372c016400030b01000000008164036302630360e30002411a0001a20000006092020105030b010000000001020000008240170001110000006092020105030b01000000000100000000824007000100000000640140c3fe6300610100000000616205630060742d0164006300024c0260681e02418501030b01000000008164016300010100000010640001000000006402630002520260681e024111000101000000640263000101000000106400630060742d016400030b010000000081640301000000000101000000116404630002590260681e024157006300010100000010025f0260681e0241110001250000006404630001020000001064006304010000000001010000001120412300630001010000001002670260681e024111000124000000640463000102000000106400630401000000000101000000112141170063046092020105030b0100000000010000000082630061010000000064056301010100000020410700010100000064056303010100000020410700010100000064056305010100000020412900019000000060920201056302410a0001300000006092020105030b01000000000100000000826300616302410d00012100000060920201054022006301630360e30002410d0001a70000006092020105400a0001200000006092020105030b01000000000100000000826300616300013c000000602f1e02415400030b0100000000816401630001010000001060742d016400030b01000000008164036301630360e30002410d0001a50000006092020105400a0001220000006092020105030b01000000000100000000826300616300013e000000602f1e02415400030b0100000000816401630001010000001060742d016400030b01000000008164036301630360e30002410d0001a60000006092020105400a0001230000006092020105030b01000000000100000000826300616300012c010000602f1e02412800630001010000001060742d01640001240000006092020105030b01000000000100000000826300616300012d010000602f1e02412800630001010000001060742d01640001250000006092020105030b0100000000010000000082630061630061010000000061630002520260681e024128006300010100000010609f3101640001300000006092020105030b0100000000010000000082630061630060cb2e016101000000006162036300609f310164000101000000640163014186006300026f0260681e02417000014100000060920201056097040064026300010100000010609f31016400014000000060920201056097040064036302030101000000008160c004020501010000006092020105010000000060390401056303030101000000008160c0040205030b0100000000010000000082400700010000000064014075ff6300610100000000616203630060e031016400010100000064016301419000630002590260681e02417a000130000000609202010501410000006092020105609704006402630001010000001060e031016400014000000060920201056097040064036302030101000000008160c004020501010000006092020105010100000060390401056303030101000000008160c0040205030b010000000001000000008240070001000000006401406bff6300610100000000616300608532016101000000006162010101000000640163014137006300031725410a00010000000064014022000315630081010500000020410d00630001010000001064004007000100000000640140c4ff6300610100000000616202010100000064016301417d0063006041330164006300031725410a0001000000006401406000630002cd0160681e02410a0001000000006401404a00630002760260681e02410a0001000000006401403400630002000260681e02410a0001000000006401401e00630060b4340164026302630020410a000100000000640140040063026400407eff630061010000000061620103240100000000010000000082630002230260681e02416d00630001010000001064000101000000640163014157006300031725410a00010000000064014042000315630081010200000020412d000316630081601606010503240100000000032401000000008101010000001082630001010000001064004007000100000000640140a4ff630061010000000061621c63006041330164006300031725410300630061630002800260681e024157006300010100000010603433016400030b010000000081010100000020410d0001510000006092020105402800030b010000000081010200000020410d0001ad0000006092020105400a0001500000006092020105630061630002870260681e0241ae016300010100000010640003166300816401630001010000001064006300012e000000602f1e02416300630160cb060105031663000101000000108160ef1d010563000102000000106400630002960160681e02410a00630001010000001064006300603433016400018b000000609202010501050000006092020105030b01000000000100000000826300616300015b000000602f1e0241ec00630160cb060105030b01000000008164026300010100000010640063006034330164006300015d000000602f1e02410a0063000101000000106400630002960160681e02410a00630001010000001064006300603433016400030b0100000000816403010000000064046302010300000020410700010100000064046302010400000020410700010100000064046304010100000020413900018b00000060920201050105000000609202010563030101000000204117006302010300000020410c006301010400000060e1070205400a0001820000006092020105030b0100000000010000000082630061630002960160681e02410a00630001010000001064006300603433016400630160530701056300616300028e0260681e0241b500630001010000001064000100000000640563000317224115000315630081010500000021410700010100000064056305010100000020410b0063006034330164004021000101000000609202010501000000006039040105030b0100000000010000000082030a010000000081010100000020413200030b0100000000810101000000204121000325010000000081010000000023411000030d032501000000008101010000008201610000006092020105630061630002980260681e024171000140000000609202010560970400640603110311010000000081010100000010630682031203110100000000810101000000100310010000000081820311010000000003110100000000810101000000108203120100000000031201000000008101010000001082630001010000001061630002a10260681e024171000140000000609202010560970400640703130313010000000081010100000010630782031403130100000000810101000000100310010000000081820313010000000003130100000000810101000000108203140100000000031401000000008101010000001082630001010000001061630002ad0260681e02411b00630001010000001060343301640001c20000006092020105630061630002ac0160681e0241f7006300010100000010640001c000000060920201056097040064086300608f3301640001c10000006092020105014000000060920201056097040064096308030101000000008160c0040205630002760260681e02416e0063000101000000106400020000640a6300031722411f0003156300810102000000204111000316630081640a63000101000000106400630a83010000000023411700030b0100000000010100000082630a6053070105400a00010500000060920201056300608f33016400400a00010500000060920201056309030101000000008160c0040205630002000260681e02410a0063000101000000106400630061630002c70160681e0241db0063000101000000106034330164000141000000609202010560970400640b6300608f33016400630002cd0160681e02418100630001010000001064000100000000640c630002c70160681e024107000101000000640c0140000000609202010560970400640d630b030101000000008160c0040205630c010100000020410b00630060b4340164004008006300608f33016400630d030101000000008160c0040205630c010100000020410300630061400f00630b030101000000008160c0040205630002000260681e02410a00630001010000001064006300616300029c0160681e0241b1000301010000000081640e63000101000000106034330164000141000000609202010560970400640b031001000000000310010000000081010100000010826300608f33016400630e60841301050140000000609202010560970400640f630f630e60c0040205630b030101000000008160c00402050301010000000081609f12010503100100000000031001000000008101010000001182630002000260681e02410a0063000101000000106400630061630002a50160681e02411d0263000101000000106400630002b60260681e02410a00630001010000001064000316630081641063000101000000106400630002be0260681e02410a00630001010000001064000326010000000003260100000000810101000000108202c40203260100000000818791641102cd020326010000000081879164126300603433016400030b0100000000816413631160530701050101000000609202010501000000006039040105030b0100000000010000000082631260530701050301010000000081640e631260cb060105631160cb06010501830000006092020105012200000060920201050141000000609202010560970400640b631160cb060105631260cb060105018100000060920201056313010500000020411000030b0100000000010100000082400d00030b010000000001000000008263106053070105031001000000000310010000000081010100000010826300608f3301640003010100000000816084130105631260cb060105010100000060920201050101000000603904010501100000006092020105030b0100000000010000000082631260530701050140000000609202010560970400640f630f630e60c0040205630b030101000000008160c00402050301010000000081609f1201050310010000000003100100000000810101000000118203260100000000032601000000008101010000001182630002000260681e02410a0063000101000000106400630061630002960160681e0241a4026300010100000010640003166300816414630001010000001064006300641503070100000000010000000082030801000000000100000000826300602334016400032401000000008164160327010000000081010100000020415c000300010000000081641703000100000000010000000082030a01000000000101000000826300608f33016400030a010000000001000000008203000100000000631782630002000260681e02410a006300010100000010640063006163146074060164186318010000000022410f0103090309010000000081010100000010631482030c030901000000008101010000001001000000008203280309010000000081010100000010631682030d030901000000008101010000001001000000008203290309010000000081010100000010010000000082032a030901000000008101010000001063158203090100000000030901000000008101010000001082030c0100000000030c0100000000810101000000108203280100000000032801000000008101010000001082030d0100000000030d0100000000810101000000108203290100000000032901000000008101010000001082032a0100000000032a010000000081010100000010820309010000000081010100000011641803250100000000631801010000001082630064190300010000000081641a0305010000000081641b03000100000000010000000082030a01000000000101000000826300608f3301641c03000100000000631a8203050100000000631b8203060100000000631b8263196400030a01000000000101000000826300608f3301640003296318010100000010030701000000008163161182030a010000000001000000008203250100000000010000000082630002000260681e02410a00630001010000001064006300610315630081010200000020412200630060343301640001050000006092020105030b010000000001000000008263006163006101000000006102d602b0042b020b00042c032b605d0101042b01409c000089041501409c000089041d01409c000089041e01409c000089041601000000000417032b83042d0100000000042e032e032d22417a04032b032e84042f032f012000000020410d00032e010100000010042e405804032f010900000020410d00032e010100000010042e404004032f010d00000020410d00032e010100000010042e402804032f010a000000204121000315031701050000008203170101000000100417032e010100000010042e40fc03032f012300000020414600010100000004300330413700032e032d25410a0001000000000430402200032b032e84010a00000020410a0001000000000430400a00032e010100000010042e40c4ff40ab03032f60030001417201032e04310101000000043003304135000331032d25410a0001000000000430402000032b03318460030001410d00033101010000001004314007000100000000043040c6ff01000000000432032e043303330331224123000332010a00000012032b0333841001300000001104320333010100000010043340d5ff01000000000434010000000004350331032d2241a000032b033184012e000000204192000331010100000010032d22418400032b0331010100000010846003000141720001010000000435033101010000001004310101000000043003304155000331032d25410a0001000000000430404000032b03318460030001412d000332010a00000012032b03318410013000000011043203340101000000100434033101010000001004314007000100000000043040a6ff0335010100000020410d0003150317010600000082400a0003150317010100000082031d0317033282031e0317033482031701010000001004170331042e403002032f012200000020410801032e0101000000100431020000043601010000000437033741c5000331032d25410a000100000000043740b000032b03318404380338012200000020410a00010000000004374094000338015c000000204177000331010100000010032d22415400032b03310101000000108404390339016e00000020410e000336010a000000889104364021000339017400000020410e0003360109000000889104364008000336033988910436033101020000001004314012000336033888910436033101010000001004314012000336033888910436033101010000001004314036ff0315031701030000008203160317033682031701010000001004170331010100000010042e401d01032f60310001416f00032e04310101000000043003304135000331032d25410a0001000000000430402000032b03318460970001410d00033101010000001004314007000100000000043040c6ff0315031701020000008203160317032b032e033160b3000382031701010000001004170331042e40a500032f043a032f013c00000020413300032e010100000010032d22412500032b032e01010000001084013d00000020411100012c010000043a032e010100000010042e032f013e00000020413300032e010100000010032d22412500032b032e01010000001084013d00000020411100012d010000043a032e010100000010042e03150317010400000082031d0317033a8203170101000000100417032e010100000010042e407efb010000010089040103010100000000010000000082010004000089040503050100000000010000000082010004000089040603060100000000010000000082010002000089040703070100000000010000000082010002000089040803080100000000010000000082010004000089040903090100000000010000000082010004000089040c030c0100000000010000000082010004000089042803280100000000010000000082010004000089040d030d0100000000010000000082010004000089042903290100000000010000000082010004000089042a032a0100000000010000000082018000000089041f031f0100000000010000000082018000000089042003200100000000010000000082010002000089042103210100000000010000000082010002000089042203220100000000010000000082010200000089042503250100000000010000000082010008000089040e030e0100000000010000000082010008000089040f030f0100000000010000000082010200000089040a030a0100000000010000000082010200000089040b030b0100000000010000000082010400000089042403240100000000010000000082010200000089040003000100000000010000000082010200000089042703270100000000010000000082010000010089040403040100000000010000000082010008000089040203020100000000010000000082010008000089040303030100000000010000000082010002000089041103110100000000010000000082010002000089041203120100000000010000000082010002000089041303130100000000010000000082010002000089041403140100000000010000000082010200000089041003100100000000010000000082010200000089042603260100000000010000000082010001000089041803180100000000010000000082010004000089041903190100000000010000000082010004000089041a031a0100000000010000000082010004000089041b031b0100000000010000000082010004000089041c031c01000000000100000000820102000000890423032301000000000200008260d515000503000100000000010000000082032701000000000100000000820100000000043b033b010200000022416a000100000000043c03050100000000010000000082030601000000000100000000820101000000043d033d413000033c60b43401043e033e033c20410a000100000000043d400400033e043c033c0317254107000100000000043d40cbff033b010100000010043b408bff0305010000000001000000008203060100000000010000000082030e0100000000010000000082030f010000000001000000008203010100000000010000000082030001000000000101000000820140000000609202010560970400043f0101000000042e03090100000000810101000000100440032e034022411201030c032e0301010000000081820307010000000001000000008203080100000000010000000082032a032e81043c033c60233401043c0329032e8104410341010000000023411100016200000060920201050341609202010503250100000000032e82033c04420305010000000081044303000100000000010000000082030a0100000000010100000082033c608f330104440300010000000001010000008203050100000000034382030601000000000343820342043c030a0100000000010100000082033c608f3301043c010100000060920201050100000000603904010501610000006092020105030a010000000001000000008203250100000000010000000082032e010100000010042e40e6fe033f030101000000008160c0040205032701000000000101000000820100000000043c0101000000043d033d413000033c60b43401043e033e033c20410a000100000000043d400400033e043c033c0317254107000100000000043d40cbff01ff000000609202010560cf110005030101000000008150010100000004450301010000000081010100000010044603450346224113000301034581500345010100000010044540e5ff030401000000008150010100000004450304010000000081010100000010044603450346224113000304034581500345010100000010044540e5ffff";
-    DRIVER_POOL_HEX = "0000000003000000757365010000007c010000000a040000006b6579730600000076616c75657303000000686173060000006c656e67746806000000636f6e636174030000006f72640300000063687203000000737472060000006d6b6c697374030000006932660300000066326904000000666e65670400000066616273050000006673717274040000006673696e0400000066636f73040000006674616e040000006665787004000000666c6f670400000066706f77050000006662797465030000006e756d09000000726561645f66696c650a00000077726974655f66696c6508000000687474705f676574050000007570706572050000006c6f776572040000007472696d060000007375627374720400000066696e6408000000636f6e7461696e730500000073706c6974040000006a6f696e070000007265706c61636503000000696e7403000000616273030000006d696e030000006d61780500000072616e67650300000073756d0600000072616e646f6d05000000666365696c0600000066666c6f6f720600000066726f756e6402000000746f050000007768696c6503000000666f7207000000617474656d7074040000006d616b65040000006b696e6402000000696604000000656c736507000000657874656e64730500000073757065720400000073656c660600000073757065725f010000005f03000000656e6404000000747275650500000066616c7365070000006e6f7468696e6704000000776974680700000063617074757265030000006e6577030000007265660400000063616c6c020000006973030000006e6f74020000006f72040000006d6f7265040000006c65737303000000616e640600000072657363756503000000736179030000007365740600000072657475726e05000000627265616b08000000636f6e74696e7565050000007468726f77040000006561636802000000696e050000005f66655f6c050000005f66655f69070000003c737464696e3e";
+    DRIVER_BYTECODE_HEX = "40a846630001300000002241060001000000006163000139000000234106000100000000610101000000610100000000616300015f00000020410600010100000061630001800000002541060001010000006163000141000000254111006300015a0000002441060001010000006163000161000000254111006300017a000000244106000101000000610100000000610100000000616300600300014106000101000000616300603100016101000000006162010200006403630163022241180063036300630184889164036301010100000010640140e0ff630361010000000061630001020000002041110063010102000000204106000101000000610100000000610100000000616202630083640263026301832141060001000000006101000000006403630363022241210063006303846301630384214106000100000000616303010100000010640340d7ff010100000061010000000061620902000064016300836402010000000064036303630201010000001022410b01630364046304630222411e006300630484010a00000020410300400d006304010100000010640440daff63006303630460b30003640563059464060100000000640763068301050000002341550063060100000000010300000095020400600b0102413e006306010300000084012000000020412d006306010400000084012200000020411c00630663068301010000001184012200000020410700010100000064076307414b00630601050000006306830106000000119564086309020b00630891020b0091960100000000224117006309630891020b0091640963016308b0605d01019164016301021000916401400b0063016305910210009164016304010100000010640340e7fe6301610100000000610300010000000081010000000020410600010000000061030101000000008101010000001003018325410400021500c20301030101000000008101010000001063008203010100000000030101000000008101010000001082010000000061010000000061620503000100000000810100000000204106000100000000610302010000000081640101010000006402630263012441210003026302816300600b01024106000303630281616302010100000010640240d7ff030401000000008164036300836404630301040000001063041003048325410400023100c2030463030101000000106304010001000014820304630301020000001063040100010000130100010000148203046303010300000010630401000001001301000100001482030463030104000000106304010000000113010001000014820304010000000063030104000000108201000000006405630563042241390003040304010000000081010100000010630063058482030401000000000304010000000081010100000010826305010100000010640540bfff0302630101010000001063008203036301010100000010630382030201000000006301010100000010820303010000000063010101000000108263036101000000006163000100010000146092020105630001000100001364006300010001000014609202010563000100010000136400630001000100001460920201056300010001000013640063000100010000146092020105010000000061010000000061620103010100000000816400010000000060920201050100000000609202010563006101000000006162010300010000000081010000000020410600010000000061630163000102000000101164026302010000000022410a0063020100000100106402030163000101000000106302010001000014820301630001020000001063020100010000130100010000148201000000006101000000006162020101000000640103050100000000810101000000106402630163022241240003056301816300600b01024109006301010100000011616301010100000010640140d4ff03000100000000810101000000204115000305010000000081010001000025410400024900c20305030501000000008101010000001063008203050100000000030501000000008101010000001082030603050100000000810100000000820306010000000003050100000000818203050100000000810101000000116101000000006162020101000000640103070100000000810101000000106402630163022241240003076301816300600b01024109006301010100000011616301010100000010640140d4ff01000000000101000000116101000000006103000100000000810101000000204115000307010000000081010001000025410400026700c20307030701000000008101010000001063008203070100000000030701000000008101010000001082030803070100000000810100000000820308010000000003070100000000818203070100000000810101000000116101000000006162020101000000640103090100000000810101000000106402630163022241240003096301816300600b01024109006301010100000011616301010100000010640140d4ff0100000000010100000011610100000000616201030a010000000081010100000020413d006300602b060164016301010000000025412a000163000000609202010563016092020105030b010000000003086301010100000010818201000000006163006062050164010103000000609202010563016092020105030b01000000000306630101010000001081820100000000610100000000616202030b0100000000816401030a010000000081010100000020413f006300602b060164026302010000000022410800630060820601640201640000006092020105630260920201050308630201010000001063018201000000006163006062050164020104000000609202010563026092020105030663020101000000106301820100000000610100000000616201030a0100000000810101000000204126006300602b060164026302010000000025411300030863020101000000106301820100000000616300606205016402030663020101000000106301820100000000610100000000610300010000000081010100000020411b006301630221411300630002840091630287910293009163018791c20100000000610100000000616205030b0100000000816402630002a200600b0102412b0063006301010100000060cd080305018e0000006092020105030b0100000000010500000082010000000061630002aa00600b010241460063006301010100000060cd080305018f00000060920201056302010400000020411000030b0100000000010500000082400d00030b0100000000010000000082010000000061630002b400600b0102412b0063006301010200000060cd080305018d0000006092020105030b0100000000010000000082010000000061630002bb00600b0102412b0063006301010100000060cd08030501830000006092020105030b0100000000010000000082010000000061630002c500600b0102412b0063006301010200000060cd08030501910000006092020105030b0100000000010100000082010000000061630002cf00600b0102412b0063006301010200000060cd08030501840000006092020105030b0100000000010000000082010000000061630002d600600b0102412b0063006301010100000060cd08030501880000006092020105030b0100000000010100000082010000000061630002dd00600b0102412b0063006301010100000060cd08030501870000006092020105030b0100000000010100000082010000000061630002e400600b0102412b0063006301010100000060cd08030501890000006092020105030b0100000000010000000082010000000061630002ee00600b0102412b0063006301010100000060cd08030501a80000006092020105030b0100000000010200000082010000000061630002f500600b0102412b0063006301010100000060cd08030501a90000006092020105030b0100000000010000000082010000000061630002fc00600b0102412b0063006301010100000060cd08030501aa0000006092020105030b01000000000102000000820100000000616300020401600b0102412b0063006301010100000060cd08030501ab0000006092020105030b01000000000102000000820100000000616300020c01600b0102412b0063006301010100000060cd08030501ac0000006092020105030b01000000000102000000820100000000616300021501600b010241350063006301010100000060cd08030501ae000000609202010501000000006092020105030b01000000000102000000820100000000616300021d01600b010241350063006301010100000060cd08030501ae000000609202010501010000006092020105030b01000000000102000000820100000000616300022501600b010241350063006301010100000060cd08030501ae000000609202010501020000006092020105030b01000000000102000000820100000000616300022d01600b010241350063006301010100000060cd08030501ae000000609202010501030000006092020105030b01000000000102000000820100000000616300023501600b010241350063006301010100000060cd08030501ae000000609202010501040000006092020105030b01000000000102000000820100000000616300023d01600b010241350063006301010200000060cd08030501ae000000609202010501050000006092020105030b01000000000102000000820100000000616300024501600b0102412b0063006301010200000060cd08030501b40000006092020105030b01000000000100000000820100000000616300024e01600b0102412b0063006301010100000060cd08030501c30000006092020105030b01000000000102000000820100000000616300025501600b0102412b0063006301010100000060cd08030501b00000006092020105030b01000000000101000000820100000000616300026201600b0102412b0063006301010200000060cd08030501b10000006092020105030b01000000000100000000820100000000616300027001600b0102412b0063006301010100000060cd08030501b20000006092020105030b01000000000101000000820100000000616300027c01600b0102412b0063006301010100000060cd08030501920000006092020105030b01000000000101000000820100000000616300028501600b0102412b0063006301010100000060cd08030501930000006092020105030b01000000000101000000820100000000616300028e01600b0102412b0063006301010100000060cd08030501940000006092020105030b01000000000101000000820100000000616300029601600b0102412b0063006301010300000060cd08030501950000006092020105030b0100000000010100000082010000000061630002a001600b0102412b0063006301010200000060cd08030501960000006092020105030b0100000000010000000082010000000061630002a801600b010241490063006301010200000060cd08030501960000006092020105010100000060920201050100000000606804010501250000006092020105030b0100000000010000000082010000000061630002b401600b0102412b0063006301010200000060cd08030501970000006092020105030b0100000000010500000082010000000061630002bd01600b0102412b0063006301010200000060cd08030501980000006092020105030b0100000000010100000082010000000061630002c501600b0102412b0063006301010300000060cd08030501990000006092020105030b0100000000010100000082010000000061630002d001600b0102412b0063006301010100000060cd080305019a0000006092020105030b0100000000010000000082010000000061630002d701600b0102412b0063006301010100000060cd080305019b0000006092020105030b0100000000010000000082010000000061630002de01600b0102412b0063006301010200000060cd080305019c0000006092020105030b0100000000010000000082010000000061630002e501600b0102412b0063006301010200000060cd080305019d0000006092020105030b0100000000010000000082010000000061630002ec01600b0102412b0063006301010100000060cd080305019e0000006092020105030b0100000000010000000082010000000061630002f501600b0102412b0063006301010100000060cd080305019f0000006092020105030b0100000000010000000082010000000061630002fc01600b0102412b0063006301010100000060cd08030501b80000006092020105030b01000000000100000000820100000000616300020602600b0102412b0063006301010100000060cd08030501b50000006092020105030b01000000000102000000820100000000616300020f02600b0102412b0063006301010100000060cd08030501b60000006092020105030b01000000000102000000820100000000616300021902600b0102412b0063006301010100000060cd08030501b70000006092020105030b010000000001020000008201000000006163006006070164030300010000000081010100000020413f006303010000000022410700022302630091c2030c630301010000001081630121411c00630002840091030c63030101000000108187910293009163018791c2016000000060920201050301010000000081640401000000006405010000000064066303010000000025413500030d6303010100000010816405630501000000002341070001010000006406030b0100000000030e63030101000000108182400d00030b01000000000100000000826306010100000020412300630501000100001460920201056305010001000013010001000014609202010540770001000000006092020105010000000060920201050300010000000081010100000020415200030f030f0100000000810101000000106300820310030f010000000081010100000010630482030f0100000000030f01000000008101010000001082031001000000000310010000000081010100000010826301609202010501000000006101000000006162030101000000609202010503010100000000816401630060060701640203000100000000810101000000204112006302010000000022410700022302630091c2010000000064036302010000000025410d00030d63020101000000108164036303010000000023410a0063036068040105406d00010000000060680401050300010000000081010100000020415200030f030f0100000000810101000000106300820310030f010000000081010100000010630182030f0100000000030f0100000000810101000000108203100100000000031001000000008101010000001082030b0100000000010000000082010000000061010000000061620501010000006400030f0100000000810101000000106401630063012241a300030f6300816006070164026302010000000025418000030d630201010000001081640303106300816404030163040101000000106303010001000014820301630401020000001063030100010000130100010000148203016304810160000000214132000301630401030000001063030100000100130100010000148203016304010400000010630301000000011301000100001482630001010000001064004055ff010000000061010000000061620403110100000000816401010100000064020312010000000081010100000010640363026303224134000313630281630120411c000312630281630060ef040205031363020100000000010100000011826302010100000010640240c4ff010100000064046304416e0003120100000000810100000000234153000313031201000000008181010000000001010000001120412f0003120100000000031201000000008101010000001182031301000000000313010000000081010100000011824007000100000000640440070001000000006404408dff010000000061010000000061620403110100000000816401010100000064020314010000000081010100000010640363026303224134000315630281630120411c000314630281630060ef040205031563020100000000010100000011826302010100000010640240c4ff010100000064046304416e0003140100000000810100000000234153000315031401000000008181010000000001010000001120412f0003140100000000031401000000008101010000001182031501000000000315010000000081010100000011824007000100000000640440070001000000006404408dff01000000006101000000006103166300010500000082010000000061010000000061620263000101000000116402010100000064036303413a006302010000000022410a00010000000064034022000316630281010500000020410d00630201010000001164024007000100000000640340c1ff63020100000000224106000100000000616302630160a322026101000000006162010316630081010200000021410600010000000061031763008164016301023802600b0102413100630001000000002041060001010000006103166300010100000011810105000000204106000101000000610100000000616301023e02600b01024106000101000000616301024702600b01024106000101000000616301024e02600b01024106000101000000616301025902600b01024106000101000000616301026102600b01024153006300010000000023411a0003166300010100000011810105000000214106000100000000616300010100000010031822411a0003166300010100000010810102000000204106000101000000610100000000616301026902600b01024118006300026f0260241802410600010000000061010100000061010000000061010000000061621601000000006400630003182241690601000000006401630002610260a32202414f006300010100000010031822411b000316630001010000001081010200000020410700010100000064016300010000000023411b00031663000101000000118101050000002141070001000000006401630101010000002041ef05031763000101000000108164020319031901000000008101010000001063028203190100000000031901000000008101010000001082031901000000008164036300600e1801056300010100000010600e1801050100000000640463000102000000106405630001020000001002770260a3220241910063000103000000100318224183000316630001030000001081010200000020416f000317630001030000001081640601010000006407031901000000008101010000001064086307630822411f0003196307816306600b0102410400630764046307010100000010640740d9ff6300010200000010600e1801056300010300000010600e18010563000104000000106405010000000064090101000000640a630a41fc016305031825410a000100000000640a40e7010100000000640b630502820260a32202413d006305010100000010012e000000606a22024129006305010200000010031822411b0003166305010200000010810102000000204107000101000000640b630b01010000002041360003176305028b028203176305010200000010029302630291029d02910317630501020000001081918263050103000000106405405601630502a20260a32202413d006309010000000020411b006305600e180105630501010000001064050100000000640a4014006309010100000011640963050101000000106405400d0163056096180141fa00630901000000002041d800630502380260a3220241cc000317630501010000001081640c6302029d0291630c91640d03176305010100000010630d82031a031a010000000081010100000010630382031b031b010000000081010100000010630c82031c031c010000000081010100000010630d82031d031d010000000081010100000010010000000082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c01000000008101010000001082031d0100000000031d010000000081010100000010826309010100000010640963050101000000106405400a006305010100000010640540fffd630401000000002341c602031a010000000081640e0101000000640f031a0100000000810101000000106410630f631022419d02031a630f81630420418502031b630f816411031c630f816412031d630f8101010000002041aa00031a031a010000000081010100000010630382031b031b010000000081010100000010631182031c031c010000000081010100000010631282031d031d010000000081010100000010010100000082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c01000000008101010000001082031d0100000000031d0100000000810101000000108240bf010100000000641301010000006414630e01010000001064156314631522413b00031a631481630320412300031d631481010000000020411500031b6314816311600b0102410700010100000064136314010100000010641440bdff631301000000002041a700031a031a010000000081010100000010630382031b031b010000000081010100000010631182031c031c010000000081010100000010631282031d031d010000000081010100000010010000000082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c01000000008101010000001082031d0100000000031d01000000008101010000001082031a031a010000000081010100000010630382031b031b010000000081010100000010029302630291029d029163119182031c031c010000000081010100000010631282031d031d010000000081010100000010010100000082031a0100000000031a01000000008101010000001082031b0100000000031b01000000008101010000001082031c0100000000031c01000000008101010000001082031d0100000000031d01000000008101010000001082630f010100000010640f405bfd63056400400a0063000101000000106400408ff901000000006101000000006162070100000000640101010000006402031901000000008101010000001064036302630322411f0003196302816300600b0102410400630264016302010100000010640240d9ff0300010000000081010100000020411200630101000000002041070002a902630091c20100000000640401010000006405031a01000000008101010000001064066305630622412200031a630581630120410a00630401010000001064046305010100000010640540d6ff018a00000060920201056304010001000014609202010563040100010000130100010000146092020105010100000064056305630622416100031a630581630120414900031b63058160f702016407010200000060920201056307010001000014609202010563070100010000130100010000146092020105031c6305816079140105018b0000006092020105630501010000001064054097ff030b0100000000010300000082010000000061010000000061620301010000006401031b01000000008101010000001064026301630222414b00031b6301816300600b0102413000031c6301816006070164036303010000000025411a00030e6303010100000010810101000000204106000101000000616301010100000010640140adff0100000000610100000000616201630060f70201640101020000006092020105630101000100001460920201056301010001000013010001000014609202010501000000006101000000006163000318254106000100000000610316630081010400000020411100031e6300816301204106000101000000610100000000610100000000616300031825410600010000000061031663008101020000002141060001000000006103176300816301600b01026101000000006162210316630081010100000020412a0001010000006092020105031e6300816068040105030b01000000000100000000826300010100000010610316630081010600000020418500031f63008164010101000000640263010100000000234117006302010a0000001264026301010100000011640140deff031e630081a86302a8a4640301a0000000609202010501000000006404630401080000002241170063036304b460920201056304010100000010640440deff030b01000000000102000000826300010100000010610316630081010300000020414f0003176300816405630560f702016406010200000060920201056306010001000014609202010563060100010000130100010000146092020105030b0100000000010100000082630001010000001061630002ba0260a32202412a000101000000609202010501010000006068040105030b0100000000010000000082630001010000001061630002c20260a32202412a000101000000609202010501000000006068040105030b0100000000010000000082630001010000001061630002cb0260a32202412a000101000000609202010501000000006068040105030b01000000000100000000826300010100000010610316630081010200000020418806031763008164076307025902600b010241f803630001010000001064080320010000000001000000008203210100000000010000000082630802d60260a3220241920063080101000000106408010100000064096309417c006308031825410a00010000000064094067000316630881010200000020415200031763088102de02600b0102410a000100000000640940360003200320010000000081010100000010031763088182032001000000000320010000000081010100000010826308010100000010640840070001000000006409407fff0320010000000081640a630802de0260a32202417900630801010000001064080101000000640963094163006308031825410a0001000000006409404e000316630881010200000020413900032103210100000000810101000000100317630881820321010000000003210100000000810101000000108263080101000000106408400700010000000064094098ff0321010000000081640b0101000000640c630c630b244117000321630c81605d070105630c010100000010640c40e1ff0140000000609202010560c60400640d0301010000000081640e0322010000000081640f030701000000008164100101000000641163116310244127000322630f6311100307631181820323630f6311100308631181826311010100000010641140d1ff03220100000000630f6310108203230100000000630f63101082030a010000000081641203070100000000010000000082030801000000000100000000820101000000640c630c630a244117000320630c816082060105630c010100000010640c40e1ff0101000000640c630c630b244117000321630c816082060105630c010100000010640c40e1ff0307010000000081641363086414030001000000008164150305010000000081641603000100000000010000000082030a01000000000101000000826314606d390164170307010000000081631311641803000100000000631582030501000000006316820306010000000063168203070100000000631382631801000000002341110001620000006092020105631860920201056314606d39016400010100000060920201050100000000606804010501610000006092020105630d030101000000008160ef04020501c50000006092020105630e0100010000146092020105630e0100010000130100010000146092020105630b60920201050307010000000063108203080100000000631082010100000064116311631024412700030763110322630f6311108182030863110323630f63111081826311010100000010641140d1ff03220100000000630f8203230100000000630f82030a0100000000631282630002a20260a32202410a0063000101000000106400030b0100000000010000000082630061630702e902600b010241730063000101000000100318224165000316630001010000001081010200000020415100031763000101000000108164196300010200000010640063000128000000606a22024122006300010100000010640063000129000000606a2202410a00630001010000001064006319604d200105630061630702f002600b0102413b006300010100000010031822412d00031663000101000000108101020000002041190003176300010100000010816079140105630001020000001061630702f702600b010241e700630001010000001003182241d900031663000101000000108101020000002041c5000317630001010000001081641a63000102000000100128000000606a220241a400630001030000001064000100000000641b63000129000000606a2202410d006300010100000010640040500063006012390164000101000000641b6300012c000000606a2202411b006300010100000010601239016400631b010100000010641b40d7ff63000129000000606a2202410a0063000101000000106400631a605d07010501c40000006092020105631b6092020105030b01000000000100000000826300616300010100000010031822419c0063000101000000100128000000606a2202418800630001020000001064000100000000641b63000129000000606a2202410d006300010100000010640040500063006012390164000101000000641b6300012c000000606a2202411b006300010100000010601239016400631b010100000010641b40d7ff63000129000000606a2202410a00630001010000001064006307631b6005090205630061032401000000006307826307605d07010563000101000000106163000128000000606a2202412800630001010000001060123901640063000129000000606a22024109006300010100000010616300616300015b000000606a220241b600630001010000001064000100000000641c6300015d000000606a2202410d006300010100000010640040500063006012390164000101000000641c6300012c000000606a2202411b006300010100000010601239016400631c010100000010641c40d7ff6300015d000000606a2202410a006300010100000010640001800000006092020105631c0100010000146092020105631c0100010000130100010000146092020105030b01000000000100000000826300616300017b000000606a220241f70163000101000000106400018a00000060920201050301010000000081641d01000000006092020105010000000060920201050100000000641c0100000000641e6300601f390164000101000000641f6300017d000000606a22024107000100000000641f631f4106016300601f39016400010000000064200316630081010200000020411b006300010100000010013a000000606a2202410700010100000064206320010100000020414200031763008160f7020164210102000000609202010563210100010000146092020105632101000100001301000100001460920201056300010100000010640040080063006012390164006300013a000000606a2202410a00630001010000001064006300601239016400030b0100000000810101000000204107000101000000641e018b0000006092020105631c010100000010641c6300601f390164006300012c000000606a2202410d00630001010000001064004007000100000000641f40f5fe6300601f390164006300017d000000606a2202410a00630001010000001064000300010000000081010100000020412c000301631d010100000010631c010001000014820301631d010200000010631c01000100001301000100001482631e010100000020411000030b0100000000010400000082400d00030b0100000000010300000082630061630061010000000061620501010000006401630141eb016300015b000000606a220241b300030b01000000008164026300010100000010640063006012390164006300015d000000606a2202410a00630001010000001064006302010300000020411a00018c0000006092020105030b01000000000100000000824057006302010400000020411a00018c0000006092020105030b0100000000010100000082403200018100000060920201056302010500000020411000030b0100000000010100000082400d00030b01000000000100000000824027016300012e000000606a2202411201031763000101000000108164030324010000000081640463000102000000100128000000606a220241bc00630001030000001064000100000000640563000129000000606a2202410d00630001010000001064004050006300601239016400010100000064056300012c000000606a2202411b0063000101000000106012390164006305010100000010640540d7ff63000129000000606a2202410a00630001010000001064006304605d0701056303602a220105018c000000609202010501c4000000609202010563050101000000106092020105030b0100000000630360b22101824028006303602a220105018c0000006092020105030b010000000001000000008263000102000000106400400700010000000064014010fe6300610100000000616300012d000000606a2202413c000101000000609202010501000000006068040105630001010000001060433001640001110000006092020105030b0100000000010000000082630061630060d722016400630060412e01640063006101000000006162036300604330016400010100000064016301411e016300012a000000606a2202416100030b01000000008164026300010100000010604330016400030b01000000008164036302630360e30002411a0001a30000006092020105030b010000000001020000008240170001120000006092020105030b010000000001000000008240ac006300012f000000606a2202416100030b01000000008164026300010100000010604330016400030b01000000008164036302630360e30002411a0001a40000006092020105030b010000000001020000008240170001130000006092020105030b0100000000010000000082403d0063000125000000606a2202412800630001010000001060433001640001140000006092020105030b01000000000100000000824007000100000000640140ddfe63006101000000006162026300015b000000606a2202010000000020410600010000000061010000000064026300640363036301224162006303015b000000606a2202410a00630201010000001064026303015d000000606a2202412f00630201010000001164026302010000000020411a006303630101010000001120410600010100000061010000000061630301010000001064034096ff010000000061010000000061620963006401630060a630016400630064020101000000640301010000006404630441dd016300012b000000606a2202414f01030b010000000081640563000101000000106406630001010000001060a630016400030b01000000008164076306630060e33102640863030101000000204112006301630260e3310241070001010000006408010000000064036308010100000020414000030001000000008101010000002041140002ff0260060701010000000022410400021203c202ff02010200000060050902050107000000640501070000006407010000000064096305010100000020410700010100000064096307010100000020410700010100000064096308010100000020411000030b01000000000100000000824061006309010100000020411a0001910000006092020105030b0100000000010100000082403c006305630760e30002411a0001a10000006092020105030b010000000001020000008240170001100000006092020105030b0100000000010000000082407d00010000000064036300012d000000606a2202416100030b0100000000816405630001010000001060a630016400030b01000000008164076305630760e30002411a0001a20000006092020105030b010000000001020000008240170001110000006092020105030b010000000001000000008240070001000000006404401efe630061010000000061620563006080320164006300024f0360a32202418501030b01000000008164016300010100000010640001000000006402630002550360a3220241110001010000006402630001010000001064006300608032016400030b0100000000816403010000000001010000001164046300025c0360a32202415700630001010000001002620360a32202411100012500000064046300010200000010640063040100000000010100000011204123006300010100000010026a0360a322024111000124000000640463000102000000106400630401000000000101000000112141170063046092020105030b0100000000010000000082630061010000000064056301010100000020410700010100000064056303010100000020410700010100000064056305010100000020412900019000000060920201056302410a0001300000006092020105030b01000000000100000000826300616302410d00012100000060920201054022006301630360e30002410d0001a70000006092020105400a0001200000006092020105030b01000000000100000000826300616300013c000000606a2202415400030b01000000008164016300010100000010608032016400030b01000000008164036301630360e30002410d0001a50000006092020105400a0001220000006092020105030b01000000000100000000826300616300013e000000606a2202415400030b01000000008164016300010100000010608032016400030b01000000008164036301630360e30002410d0001a60000006092020105400a0001230000006092020105030b01000000000100000000826300616300012c010000606a2202412800630001010000001060803201640001240000006092020105030b01000000000100000000826300616300012d010000606a2202412800630001010000001060803201640001250000006092020105030b0100000000010000000082630061630061010000000061630002550360a322024128006300010100000010605f3701640001300000006092020105030b01000000000100000000826300616300608b34016101000000006162036300605f37016400010100000064016301419a00630002720360a322024184000141000000609202010560c6040064026300010100000010605f3701640001300000006092020105013000000060920201050140000000609202010560c6040064036302030101000000008160ef04020501010000006092020105010000000060680401056303030101000000008160ef040205030b0100000000010000000082400700010000000064014061ff6300610100000000616203630060a037016400010100000064016301419a006300025c0360a322024184000141000000609202010560c60400640201010000006092020105010100000060680401050140000000609202010560c6040064036302030101000000008160ef040205630001010000001060a03701640001300000006092020105013000000060920201056303030101000000008160ef040205030b0100000000010000000082400700010000000064014061ff6300610100000000616300605938016101000000006162010101000000640163014137006300031825410a00010000000064014022000316630081010500000020410d00630001010000001064004007000100000000640140c4ff6300610100000000616202010100000064016301417d006300601f390164006300031825410a00010000000064014060006300026f0260a32202410a0001000000006401404a00630002790360a32202410a0001000000006401403400630002a20260a32202410a0001000000006401401e00630060923a0164026302630020410a000100000000640140040063026400407eff630061010000000061620103250100000000010000000082630002d60260a32202416d00630001010000001064000101000000640163014157006300031825410a00010000000064014042000316630081010200000020412d000317630081608206010503250100000000032501000000008101010000001082630001010000001064004007000100000000640140a4ff630061010000000061621c6300601f390164006300031825410300630061630002830360a322024157006300010100000010601239016400030b010000000081010100000020410d0001510000006092020105402800030b010000000081010200000020410d0001ad0000006092020105400a00015000000060920201056300616300028a0360a3220241ae016300010100000010640003176300816401630001010000001064006300012e000000606a22024163006301605d0701050317630001010000001081602a22010563000102000000106400630002380260a32202410a00630001010000001064006300601239016400018b000000609202010501050000006092020105030b01000000000100000000826300616300015b000000606a220241ec006301605d070105030b01000000008164026300010100000010640063006012390164006300015d000000606a2202410a0063000101000000106400630002380260a32202410a00630001010000001064006300601239016400030b0100000000816403010000000064046302010300000020410700010100000064046302010400000020410700010100000064046304010100000020413900018b00000060920201050105000000609202010563030101000000204117006302010300000020410c00630101040000006073080205400a0001820000006092020105030b0100000000010000000082630061630002380260a32202410a00630001010000001064006300601239016400630160e5070105630061630002910360a3220241b500630001010000001064000100000000640563000318224115000316630081010500000021410700010100000064056305010100000020410b0063006012390164004021000101000000609202010501000000006068040105030b0100000000010000000082030a010000000081010100000020413200030b0100000000810101000000204121000326010000000081010000000023411000030e0326010000000081010100000082016100000060920201056300616300029b0360a322024197000300010000000081010100000020411500031101000000008101000000002041040002a403c20140000000609202010560c60400640603120312010000000081010100000010630682031303120100000000810101000000100311010000000081820312010000000003120100000000810101000000108203130100000000031301000000008101010000001082630001010000001061630002bf0360a322024197000300010000000081010100000020411500031101000000008101000000002041040002cb03c20140000000609202010560c60400640703140314010000000081010100000010630782031503140100000000810101000000100311010000000081820314010000000003140100000000810101000000108203150100000000031501000000008101010000001082630001010000001061630002e90360a32202411b00630001010000001060123901640001c200000060920201056300616300024e0260a3220241f7006300010100000010640001c0000000609202010560c6040064086300606d3901640001c100000060920201050140000000609202010560c6040064096308030101000000008160ef040205630002790360a32202416e0063000101000000106400020000640a6300031822411f0003166300810102000000204111000317630081640a63000101000000106400630a83010000000023411700030b0100000000010100000082630a60e5070105400a00010500000060920201056300606d39016400400a00010500000060920201056309030101000000008160ef040205630002a20260a32202410a0063000101000000106400630061630002690260a3220241db0063000101000000106012390164000141000000609202010560c60400640b6300606d390164006300026f0260a32202418100630001010000001064000100000000640c630002690260a322024107000101000000640c0140000000609202010560c60400640d630b030101000000008160ef040205630c010100000020410b00630060923a0164004008006300606d39016400630d030101000000008160ef040205630c010100000020410300630061400f00630b030101000000008160ef040205630002a20260a32202410a00630001010000001064006300616300023e0260a3220241b1000301010000000081640e63000101000000106012390164000141000000609202010560c60400640b031101000000000311010000000081010100000010826300606d39016400630e60291701050140000000609202010560c60400640f630f630e60ef040205630b030101000000008160ef0402050301010000000081604416010503110100000000031101000000008101010000001182630002a20260a32202410a0063000101000000106400630061630002470260a32202411d0263000101000000106400630002f20360a32202410a00630001010000001064000317630081641063000101000000106400630002fa0360a32202410a0063000101000000106400032701000000000327010000000081010100000010820200040327010000000081879164110209040327010000000081879164126300601239016400030b0100000000816413631160e50701050101000000609202010501000000006068040105030b0100000000010000000082631260e50701050301010000000081640e6312605d0701056311605d07010501830000006092020105012200000060920201050141000000609202010560c60400640b6311605d0701056312605d070105018100000060920201056313010500000020411000030b0100000000010100000082400d00030b0100000000010000000082631060e5070105031101000000000311010000000081010100000010826300606d39016400030101000000008160291701056312605d070105010100000060920201050101000000606804010501100000006092020105030b0100000000010000000082631260e50701050140000000609202010560c60400640f630f630e60ef040205630b030101000000008160ef040205030101000000008160441601050311010000000003110100000000810101000000118203270100000000032701000000008101010000001182630002a20260a32202410a0063000101000000106400630061630002380260a3220241a402630001010000001064000317630081641463000101000000106400630064150307010000000001000000008203080100000000010000000082630060013a016400032501000000008164160328010000000081010100000020415c000300010000000081641703000100000000010000000082030a01000000000101000000826300606d39016400030a010000000001000000008203000100000000631782630002a20260a32202410a006300010100000010640063006163146006070164186318010000000022410f0103090309010000000081010100000010631482030d0309010000000081010100000010010000000082030c0309010000000081010100000010631682030e030901000000008101010000001001000000008203290309010000000081010100000010010000000082032a030901000000008101010000001063158203090100000000030901000000008101010000001082030d0100000000030d01000000008101010000001082030c0100000000030c01000000008101010000001082030e0100000000030e0100000000810101000000108203290100000000032901000000008101010000001082032a0100000000032a010000000081010100000010820309010000000081010100000011641803260100000000631801010000001082630064190300010000000081641a0305010000000081641b03000100000000010000000082030a01000000000101000000826300606d3901641c03000100000000631a8203050100000000631b8203060100000000631b8263196400030a01000000000101000000826300606d3901640003296318010100000010030701000000008163161182030a010000000001000000008203260100000000010000000082630002a20260a32202410a00630001010000001064006300610316630081010200000020412200630060123901640001050000006092020105030b0100000000010000000082630061630061010000000061021204b0042b020b00042c032b605d0101042b0180380100890416018038010089041e018038010089041f018038010089041701000000000418032b83042d0100000000042e032e032d22417a04032b032e84042f032f012000000020410d00032e010100000010042e405804032f010900000020410d00032e010100000010042e404004032f010d00000020410d00032e010100000010042e402804032f010a000000204121000316031801050000008203180101000000100418032e010100000010042e40fc03032f012300000020414600010100000004300330413700032e032d25410a0001000000000430402200032b032e84010a00000020410a0001000000000430400a00032e010100000010042e40c4ff40ab03032f60030001417201032e04310101000000043003304135000331032d25410a0001000000000430402000032b03318460030001410d00033101010000001004314007000100000000043040c6ff01000000000432032e043303330331224123000332010a00000012032b0333841001300000001104320333010100000010043340d5ff01000000000434010000000004350331032d2241a000032b033184012e000000204192000331010100000010032d22418400032b0331010100000010846003000141720001010000000435033101010000001004310101000000043003304155000331032d25410a0001000000000430404000032b03318460030001412d000332010a00000012032b03318410013000000011043203340101000000100434033101010000001004314007000100000000043040a6ff0335010100000020410d0003160318010600000082400a0003160318010100000082031e0318033282031f0318033482031801010000001004180331042e403002032f012200000020410801032e0101000000100431020000043601010000000437033741c5000331032d25410a000100000000043740b000032b03318404380338012200000020410a00010000000004374094000338015c000000204177000331010100000010032d22415400032b03310101000000108404390339016e00000020410e000336010a000000889104364021000339017400000020410e0003360109000000889104364008000336033988910436033101020000001004314012000336033888910436033101010000001004314012000336033888910436033101010000001004314036ff0316031801030000008203170318033682031801010000001004180331010100000010042e401d01032f60310001416f00032e04310101000000043003304135000331032d25410a0001000000000430402000032b03318460970001410d00033101010000001004314007000100000000043040c6ff0316031801020000008203170318032b032e033160b3000382031801010000001004180331042e40a500032f043a032f013c00000020413300032e010100000010032d22412500032b032e01010000001084013d00000020411100012c010000043a032e010100000010042e032f013e00000020413300032e010100000010032d22412500032b032e01010000001084013d00000020411100012d010000043a032e010100000010042e03160318010400000082031e0318033a8203180101000000100418032e010100000010042e407efb0318018038010025410400021d04c2010040010089040103010100000000010000000082010004000089040503050100000000010000000082010004000089040603060100000000010000000082010002000089040703070100000000010000000082010002000089040803080100000000010000000082010004000089040903090100000000010000000082010004000089040d030d0100000000010000000082010004000089040c030c0100000000010000000082010004000089040e030e0100000000010000000082010004000089042903290100000000010000000082010004000089042a032a0100000000010000000082018000000089042003200100000000010000000082018000000089042103210100000000010000000082010002000089042203220100000000010000000082010002000089042303230100000000010000000082010200000089042603260100000000010000000082010008000089040f030f0100000000010000000082010008000089041003100100000000010000000082010200000089040a030a0100000000010000000082010200000089040b030b0100000000010000000082010400000089042503250100000000010000000082010200000089040003000100000000010000000082010200000089042803280100000000010000000082010000010089040403040100000000010000000082010008000089040203020100000000010000000082010008000089040303030100000000010000000082010002000089041203120100000000010000000082010002000089041303130100000000010000000082010002000089041403140100000000010000000082010002000089041503150100000000010000000082010200000089041103110100000000010000000082010200000089042703270100000000010000000082010001000089041903190100000000010000000082010004000089041a031a0100000000010000000082010004000089041b031b0100000000010000000082010004000089041c031c0100000000010000000082010004000089041d031d01000000000100000000820102000000890424032401000000000200008260c719000503000100000000010000000082032801000000000100000000820100000000043b033b010200000022416a000100000000043c03050100000000010000000082030601000000000100000000820101000000043d033d413000033c60923a01043e033e033c20410a000100000000043d400400033e043c033c0318254107000100000000043d40cbff033b010100000010043b408bff0305010000000001000000008203060100000000010000000082030f01000000000100000000820310010000000001000000008203010100000000010000000082030001000000000101000000820140000000609202010560c60400043f0101000000042e03090100000000810101000000100440032e034022411201030d032e0301010000000081820307010000000001000000008203080100000000010000000082032a032e81043c033c60013a01043c0329032e8104410341010000000023411100016200000060920201050341609202010503260100000000032e82033c04420305010000000081044303000100000000010000000082030a0100000000010100000082033c606d390104440300010000000001010000008203050100000000034382030601000000000343820342043c030a0100000000010100000082033c606d3901043c010100000060920201050100000000606804010501610000006092020105030a010000000001000000008203260100000000010000000082032e010100000010042e40e6fe033f030101000000008160ef040205032801000000000101000000820100000000043c0101000000043d033d413000033c60923a01043e033e033c20410a000100000000043d400400033e043c033c0318254107000100000000043d40cbff033c601f3901043c033c031822410800024204033c8791c201ff00000060920201056074150005030101000000008150010100000004450301010000000081010100000010044603450346224113000301034581500345010100000010044540e5ff030401000000008150010100000004450304010000000081010100000010044603450346224113000304034581500345010100000010044540e5ffff";
+    DRIVER_POOL_HEX = "0000000003000000757365010000007c010000000a1800000062797465636f646520627566666572206f766572666c6f7714000000737472696e6720706f6f6c206f766572666c6f771a000000746f6f206d616e7920676c6f62616c732028323536206d61782919000000746f6f206d616e79206c6f63616c732028323536206d6178290b0000003a206578706563746564200b00000020617267732c20676f7420040000006b6579730600000076616c75657303000000686173060000006c656e67746806000000636f6e636174030000006f72640300000063687203000000737472060000006d6b6c697374030000006932660300000066326904000000666e65670400000066616273050000006673717274040000006673696e0400000066636f73040000006674616e040000006665787004000000666c6f670400000066706f77050000006662797465030000006e756d09000000726561645f66696c650a00000077726974655f66696c6508000000687474705f676574050000007570706572050000006c6f776572040000007472696d060000007375627374720400000066696e6408000000636f6e7461696e730500000073706c6974040000006a6f696e070000007265706c61636503000000696e7403000000616273030000006d696e030000006d61780500000072616e67650300000073756d0600000072616e646f6d05000000666365696c0600000066666c6f6f720600000066726f756e6411000000756e6b6e6f776e2066756e6374696f6e2002000000746f050000007768696c6503000000666f7207000000617474656d7074040000006d616b65040000006b696e6402000000696604000000656c736507000000657874656e64730500000073757065720400000073656c660600000073757065725f010000005f03000000656e640d000000756e6b6e6f776e206b696e642004000000747275650500000066616c7365070000006e6f7468696e6704000000776974680700000063617074757265030000006e6577030000007265660400000063616c6c0f0000006c6973745f636f6e6361745f74776f390000006a6f696e696e67206c697374732077697468202b206e656564732075736520226c616e672f7374646c69622f76322f6c6973742e7364657622020000006973030000006e6f74020000006f72040000006d6f7265040000006c65737303000000616e640600000072657363756503000000736179030000007365740600000072657475726e05000000627265616b17000000627265616b206f757473696465206f662061206c6f6f7008000000636f6e74696e75651a000000636f6e74696e7565206f757473696465206f662061206c6f6f70050000007468726f77040000006561636802000000696e050000005f66655f6c050000005f66655f69070000003c737464696e3e21000000746f6b656e20627566666572206f766572666c6f7720283830303030206d6178291d000000756e657870656374656420746f6b656e20617420706f736974696f6e20";
   }
 });
 
@@ -32260,9 +36187,9 @@ function setSeedLoader(fn2) {
 }
 async function defaultSeedBytes() {
   if (typeof process !== "undefined" && process.versions?.node) {
-    const { readFile } = await import("node:fs/promises");
-    const base = new URL("../../public", import.meta.url).href.replace(/\/$/, "");
-    return readFile(new URL(base + SEED_ASSET_PATH));
+    const fs = await ensureNodeFs();
+    const seedPath = "../../public" + SEED_ASSET_PATH;
+    return fs.promises.readFile(new URL(seedPath, import.meta.url));
   }
   const res = await fetch(SEED_ASSET_PATH);
   if (!res.ok) throw new Error(`fetch seed VM: ${res.status}`);
@@ -32284,12 +36211,16 @@ async function compileWith(driver, userSrc, modules = null) {
   const wasmModule = await seedModule();
   const srcBytes = encoder.encode(userSrc);
   const dumped = [];
+  let compilerErr = null;
   let mem;
   let allocStr;
   const inst = await WebAssembly.instantiate(wasmModule, {
     env: {
       host_say_i32: (n) => dumped.push(n),
-      host_say_str: () => {
+      host_say_str: (ptr, len) => {
+        const msg = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+        compilerErr = compilerErr ? `${compilerErr}
+${msg}` : msg;
       },
       host_say_f64: () => {
       },
@@ -32318,16 +36249,26 @@ async function compileWith(driver, userSrc, modules = null) {
   });
   mem = inst.exports.memory;
   allocStr = inst.exports.alloc_str;
+  if (driver.stringPool.length > 65536) throw new Error("driver string pool exceeds 64 KiB seed VM limit");
+  if (driver.bytecode.length > 81920) throw new Error("driver bytecode exceeds 80 KiB seed VM limit");
   new Uint8Array(mem.buffer).set(driver.stringPool, 0);
   const codeBase = inst.exports.code_base();
   new Uint8Array(mem.buffer).set(driver.bytecode, codeBase);
   inst.exports.set_prog_len(driver.bytecode.length);
   inst.exports.run();
+  if (compilerErr !== null) {
+    throw new Error(compilerErr);
+  }
+  if (dumped.length === 0) {
+    throw new Error("self-hosted compiler exited without emitting bytecode");
+  }
   let cursor = 0;
   const bcCount = dumped[cursor++] | 0;
+  if (bcCount < 0 || bcCount > 81920) throw new Error(`bytecode buffer overflow (${bcCount} bytes, max 81920)`);
   const bytecode = new Uint8Array(bcCount);
   for (let i = 0; i < bcCount; i++) bytecode[i] = dumped[cursor++] & 255;
   const poolCount = dumped[cursor++] | 0;
+  if (poolCount < 0 || poolCount > 65536) throw new Error(`string pool overflow (${poolCount} bytes, max 65536)`);
   const stringPool = new Uint8Array(poolCount);
   for (let i = 0; i < poolCount; i++) stringPool[i] = dumped[cursor++] & 255;
   return { bytecode, stringPool };
@@ -32350,13 +36291,1691 @@ var init_compile_self = __esm({
   }
 });
 
+// src/lang-bridge/oracle/v2.js
+function tokenize(src) {
+  const tokens = [];
+  let i = 0, line = 1, col = 1;
+  const push = (type, value2) => tokens.push({ type, value: value2, line, col });
+  while (i < src.length) {
+    const c = src[i];
+    if (c === "\n") {
+      push("NL", "\n");
+      i++;
+      line++;
+      col = 1;
+      continue;
+    }
+    if (c === " " || c === "	" || c === "\r") {
+      i++;
+      col++;
+      continue;
+    }
+    if (c === "#") {
+      while (i < src.length && src[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "/") {
+      while (i < src.length && src[i] !== "\n") i++;
+      continue;
+    }
+    if (/[0-9]/.test(c)) {
+      let s = "";
+      while (i < src.length && /[0-9.]/.test(src[i])) {
+        s += src[i++];
+        col++;
+      }
+      const tok = { type: "NUM", value: parseFloat(s), line, col, isFloat: s.includes(".") };
+      tokens.push(tok);
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      const quote = c;
+      i++;
+      col++;
+      let s = "";
+      while (i < src.length && src[i] !== quote) {
+        if (src[i] === "\\" && i + 1 < src.length) {
+          const n = src[i + 1];
+          s += n === "n" ? "\n" : n === "t" ? "	" : n === "\\" ? "\\" : n === quote ? quote : n;
+          i += 2;
+          col += 2;
+        } else {
+          if (src[i] === "\n") {
+            line++;
+            col = 0;
+          }
+          s += src[i++];
+          col++;
+        }
+      }
+      i++;
+      col++;
+      push("STR", s);
+      continue;
+    }
+    if (/[A-Za-z_]/.test(c)) {
+      let s = "";
+      while (i < src.length && /[A-Za-z0-9_]/.test(src[i])) {
+        s += src[i++];
+        col++;
+      }
+      if (KEYWORDS2.has(s)) push("KW", s);
+      else if (s === "yep" || s === "nope") push("KW", s === "yep" ? "true" : "false");
+      else push("IDENT", s);
+      continue;
+    }
+    if (c === "|" && src[i + 1] === ">") {
+      push("OP", "|>");
+      i += 2;
+      col += 2;
+      continue;
+    }
+    if (c === "<" && src[i + 1] === "=") {
+      push("OP", "<=");
+      i += 2;
+      col += 2;
+      continue;
+    }
+    if (c === ">" && src[i + 1] === "=") {
+      push("OP", ">=");
+      i += 2;
+      col += 2;
+      continue;
+    }
+    if (c === "-" && src[i + 1] === ">") {
+      push("OP", "->");
+      i += 2;
+      col += 2;
+      continue;
+    }
+    if ("+-*/%(),[]{}:.<>|".includes(c)) {
+      push("OP", c);
+      i++;
+      col++;
+      continue;
+    }
+    throw new SdevError2(`Unexpected character '${c}'`, line);
+  }
+  push("EOF", null);
+  return tokens;
+}
+var KEYWORDS2, SdevError2;
+var init_v2 = __esm({
+  "src/lang-bridge/oracle/v2.js"() {
+    KEYWORDS2 = /* @__PURE__ */ new Set([
+      "say",
+      "ask",
+      "set",
+      "to",
+      "if",
+      "else",
+      "end",
+      "for",
+      "each",
+      "in",
+      "while",
+      "return",
+      "with",
+      "true",
+      "false",
+      "nothing",
+      "is",
+      "not",
+      "and",
+      "or",
+      "more",
+      "less",
+      "match"
+    ]);
+    SdevError2 = class extends Error {
+      constructor(msg, line) {
+        super(`[sdev v2] line ${line ?? "?"}: ${msg}`);
+        this.line = line;
+      }
+    };
+  }
+});
+
+// src/lang-bridge/oracle/compile.mjs
+var compile_exports = {};
+__export(compile_exports, {
+  compile: () => compile2,
+  desugarKinds: () => desugarKinds,
+  parse: () => parse,
+  parseWithKinds: () => parseWithKinds,
+  prelink: () => prelink,
+  setModuleReader: () => setModuleReader
+});
+function scopeTypes(locals, em) {
+  if (!locals) return em.globalTypes;
+  let m2 = _scopeTypes.get(locals);
+  if (!m2) {
+    m2 = /* @__PURE__ */ new Map();
+    _scopeTypes.set(locals, m2);
+  }
+  return m2;
+}
+async function ensureNodeFs2() {
+  if (nodeFs2) return nodeFs2;
+  if (typeof process !== "undefined" && process.versions?.node) {
+    nodeFs2 = (await import(
+      /* @vite-ignore */
+      "node:fs"
+    )).default;
+  }
+  return nodeFs2;
+}
+function setModuleReader(fn2) {
+  moduleReader = fn2;
+}
+function defaultReadModule(path) {
+  if (moduleReader) return moduleReader(path) ?? "";
+  if (!nodeFs2) {
+    try {
+      nodeFs2 = globalThis.process?.getBuiltinModule?.("fs") ?? null;
+    } catch {
+    }
+  }
+  if (nodeFs2) {
+    try {
+      return nodeFs2.readFileSync(path, "utf8");
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+function prelink(source, readModule = defaultReadModule, seen = /* @__PURE__ */ new Set()) {
+  let out = "";
+  for (const line of source.split("\n")) {
+    const t = line.trim();
+    if (t.length > 5 && t.startsWith('use "') && t.endsWith('"')) {
+      const path = t.slice(5, -1);
+      if (!seen.has(path)) {
+        seen.add(path);
+        out += prelink(readModule(path) ?? "", readModule, seen);
+      }
+      out += "\n";
+      continue;
+    }
+    out += line + "\n";
+  }
+  return out;
+}
+function desugarKinds(tokens) {
+  const classes = /* @__PURE__ */ new Map();
+  const blank = (i2) => {
+    tokens[i2] = { type: "NL", value: "\n", line: tokens[i2].line };
+  };
+  const isEnd = (t) => t.type === "KW" && t.value === "end";
+  const opener = (i2) => {
+    const t = tokens[i2];
+    if (t.type === "KW" && t.value === "to") return i2 === 0 || tokens[i2 - 1].type === "NL";
+    if (t.type === "KW" && (t.value === "while" || t.value === "for")) return true;
+    if (t.type === "KW" && t.value === "if") {
+      let k = i2 - 1;
+      while (k >= 0 && tokens[k].type === "NL") k--;
+      return !(k >= 0 && tokens[k].type === "KW" && tokens[k].value === "else");
+    }
+    if (t.type === "IDENT" && (t.value === "attempt" || t.value === "make")) return true;
+    if (t.type === "IDENT" && t.value === "kind") return (i2 === 0 || tokens[i2 - 1].type === "NL") && !!tokens[i2 + 1] && tokens[i2 + 1].type === "IDENT";
+    return false;
+  };
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t.type === "IDENT" && t.value === "kind" && (i === 0 || tokens[i - 1].type === "NL") && tokens[i + 1] && tokens[i + 1].type === "IDENT") {
+      const cname = tokens[i + 1].value;
+      const methods = [];
+      classes.set(cname, methods);
+      blank(i);
+      blank(i + 1);
+      let parent = null;
+      let j = i + 2;
+      if (tokens[i + 2] && tokens[i + 2].type === "IDENT" && tokens[i + 2].value === "extends" && tokens[i + 3] && tokens[i + 3].type === "IDENT") {
+        parent = tokens[i + 3].value;
+        blank(i + 2);
+        blank(i + 3);
+        j = i + 4;
+      }
+      let depth = 0;
+      while (j < tokens.length && tokens[j].type !== "EOF") {
+        if (tokens[j].type === "IDENT" && tokens[j].value === "super" && tokens[j + 1] && tokens[j + 1].type === "OP" && tokens[j + 1].value === "." && tokens[j + 2] && tokens[j + 2].type === "IDENT") {
+          tokens[j] = { ...tokens[j], value: "self" };
+          tokens[j + 2] = { ...tokens[j + 2], value: "super_" + cname + "_" + tokens[j + 2].value };
+          j += 3;
+          continue;
+        }
+        if (isEnd(tokens[j])) {
+          if (depth === 0) {
+            blank(j);
+            j++;
+            break;
+          }
+          depth--;
+          j++;
+          continue;
+        }
+        if (opener(j)) {
+          if (depth === 0 && tokens[j].type === "KW" && tokens[j].value === "to" && tokens[j + 1] && tokens[j + 1].type === "IDENT") {
+            const m2 = tokens[j + 1].value;
+            const fn2 = cname + "_" + m2;
+            tokens[j + 1] = { ...tokens[j + 1], value: fn2 };
+            methods.push({ key: m2, fn: fn2 });
+          }
+          depth++;
+          j++;
+          continue;
+        }
+        j++;
+      }
+      if (parent !== null) {
+        const pm = classes.get(parent);
+        if (!pm) throw new SdevError2(`unknown parent kind ${parent}`, t.line);
+        const ownStop = methods.length;
+        for (const e of pm) {
+          if (e.sup) {
+            methods.push({ key: e.key, fn: e.fn, sup: true });
+            continue;
+          }
+          let own = false;
+          for (let q = 0; q < ownStop; q++) if (!methods[q].sup && methods[q].key === e.key) own = true;
+          if (!own) methods.push({ key: e.key, fn: e.fn });
+          methods.push({ key: "super_" + cname + "_" + e.key, fn: e.fn, sup: true });
+        }
+      }
+      i = j;
+      continue;
+    }
+    i++;
+  }
+  return classes;
+}
+function parse(source) {
+  const t = tokenize(prelink(source));
+  desugarKinds(t);
+  return parseProgram(t);
+}
+function parseWithKinds(source, readModule = defaultReadModule) {
+  const t = tokenize(prelink(source, readModule));
+  const classes = desugarKinds(t);
+  return { ast: parseProgram(t), classes };
+}
+function parseProgram(tokens) {
+  let p = 0;
+  const peek = (n = 0) => tokens[p + n];
+  const eat = (type, value2) => {
+    const t = tokens[p];
+    if (t.type !== type || value2 !== void 0 && t.value !== value2) {
+      throw new SdevError2(`bootstrap: expected ${value2 ?? type}, got ${t.type}:${t.value}`, t.line);
+    }
+    p++;
+    return t;
+  };
+  const skipNL = () => {
+    while (peek().type === "NL") p++;
+  };
+  let feDepth = 0;
+  const stmts = [];
+  skipNL();
+  while (peek().type !== "EOF") {
+    stmts.push(statement());
+    skipNL();
+  }
+  return stmts;
+  function statement() {
+    const t = peek();
+    if (t.type === "IDENT" && t.value === "break") {
+      p++;
+      return { k: "break", line: t.line };
+    }
+    if (t.type === "IDENT" && t.value === "continue") {
+      p++;
+      return { k: "continue", line: t.line };
+    }
+    if (t.type === "IDENT" && t.value === "attempt") return attemptStmt();
+    if (t.type === "IDENT" && t.value === "throw") {
+      p++;
+      return { k: "throw", expr: expr(), line: t.line };
+    }
+    if (t.type === "KW") {
+      if (t.value === "say") {
+        p++;
+        return { k: "say", expr: expr(), line: t.line };
+      }
+      if (t.value === "set") {
+        p++;
+        const name = eat("IDENT").value;
+        if (peek().type === "OP" && peek().value === ".") {
+          p++;
+          const field = eat("IDENT").value;
+          eat("KW", "to");
+          return { k: "setField", name, field, expr: expr(), line: t.line };
+        }
+        if (peek().type === "OP" && peek().value === "[") {
+          p++;
+          const idx = expr();
+          eat("OP", "]");
+          eat("KW", "to");
+          return { k: "setIndex", name, idx, expr: expr(), line: t.line };
+        }
+        eat("KW", "to");
+        return { k: "set", name, expr: expr(), line: t.line };
+      }
+      if (t.value === "if") return ifStmt();
+      if (t.value === "while") return whileStmt();
+      if (t.value === "for") return forEachStmt();
+      if (t.value === "to") return funcDecl();
+      if (t.value === "return") {
+        p++;
+        return { k: "return", expr: peek().type === "NL" ? null : expr(), line: t.line };
+      }
+    }
+    const e = expr();
+    return { k: "exprStmt", expr: e, line: t.line };
+  }
+  function ifStmt() {
+    const t = eat("KW", "if");
+    const cond = expr();
+    skipNL();
+    const then_ = [];
+    while (!(peek().type === "KW" && (peek().value === "else" || peek().value === "end"))) {
+      then_.push(statement());
+      skipNL();
+    }
+    let else_ = null;
+    let chained = false;
+    if (peek().type === "KW" && peek().value === "else") {
+      p++;
+      if (peek().type === "KW" && peek().value === "if") {
+        else_ = [ifStmt()];
+        chained = true;
+      } else {
+        skipNL();
+        else_ = [];
+        while (!(peek().type === "KW" && peek().value === "end")) {
+          else_.push(statement());
+          skipNL();
+        }
+      }
+    }
+    if (!chained) eat("KW", "end");
+    return { k: "if", cond, then_, else_, line: t.line };
+  }
+  function attemptStmt() {
+    const t = peek();
+    p++;
+    skipNL();
+    const atEnd = () => peek().type === "KW" && peek().value === "end" || peek().type === "IDENT" && peek().value === "rescue" || peek().type === "EOF";
+    const body = [];
+    while (!atEnd()) {
+      body.push(statement());
+      skipNL();
+    }
+    let errName = null;
+    const rescue_ = [];
+    if (peek().type === "IDENT" && peek().value === "rescue") {
+      p++;
+      if (peek().type === "IDENT") errName = eat("IDENT").value;
+      skipNL();
+      while (!(peek().type === "KW" && peek().value === "end") && peek().type !== "EOF") {
+        rescue_.push(statement());
+        skipNL();
+      }
+    }
+    eat("KW", "end");
+    return { k: "attempt", body, errName, rescue_, line: t.line };
+  }
+  function whileStmt() {
+    const t = eat("KW", "while");
+    const cond = expr();
+    skipNL();
+    const body = [];
+    while (!(peek().type === "KW" && peek().value === "end")) {
+      body.push(statement());
+      skipNL();
+    }
+    eat("KW", "end");
+    return { k: "while", cond, body, line: t.line };
+  }
+  function forEachStmt() {
+    const t = eat("KW", "for");
+    if (peek().type === "KW" && peek().value === "each") p++;
+    const name = eat("IDENT").value;
+    if (peek().type === "KW" && peek().value === "in") p++;
+    const iter = expr();
+    skipNL();
+    feDepth++;
+    const d = feDepth;
+    const body = [];
+    while (!(peek().type === "KW" && peek().value === "end")) {
+      body.push(statement());
+      skipNL();
+    }
+    eat("KW", "end");
+    feDepth--;
+    return { k: "foreach", name, iter, body, d, line: t.line };
+  }
+  function funcDecl() {
+    const t = eat("KW", "to");
+    const name = eat("IDENT").value;
+    const params = [];
+    if (peek().type === "KW" && peek().value === "with") {
+      p++;
+      while (peek().type === "IDENT") {
+        params.push(eat("IDENT").value);
+      }
+    }
+    skipNL();
+    const body = [];
+    while (!(peek().type === "KW" && peek().value === "end")) {
+      body.push(statement());
+      skipNL();
+    }
+    eat("KW", "end");
+    return { k: "func", name, params, body, line: t.line };
+  }
+  function expr() {
+    return or_();
+  }
+  function or_() {
+    let l = and_();
+    while (peek().type === "KW" && peek().value === "or") {
+      p++;
+      l = { k: "bin", op: "or", l, r: and_() };
+    }
+    return l;
+  }
+  function and_() {
+    let l = not_();
+    while (peek().type === "KW" && peek().value === "and") {
+      p++;
+      l = { k: "bin", op: "and", l, r: not_() };
+    }
+    return l;
+  }
+  function not_() {
+    if (peek().type === "KW" && peek().value === "not") {
+      p++;
+      return { k: "un", op: "not", x: not_() };
+    }
+    return cmp_();
+  }
+  function cmp_() {
+    let l = add_();
+    while (true) {
+      const t = peek();
+      if (t.type === "KW" && t.value === "is") {
+        p++;
+        let op = "is";
+        if (peek().type === "KW" && peek().value === "not") {
+          p++;
+          op = "isnot";
+        }
+        l = { k: "bin", op, l, r: add_() };
+      } else if (t.type === "OP" && ["<", ">", "<=", ">="].includes(t.value)) {
+        p++;
+        l = { k: "bin", op: t.value, l, r: add_() };
+      } else break;
+    }
+    return l;
+  }
+  function add_() {
+    let l = mul_();
+    while (peek().type === "OP" && (peek().value === "+" || peek().value === "-")) {
+      const op = peek().value;
+      p++;
+      l = { k: "bin", op, l, r: mul_() };
+    }
+    return l;
+  }
+  function mul_() {
+    let l = un_();
+    while (peek().type === "OP" && (peek().value === "*" || peek().value === "/" || peek().value === "%")) {
+      const op = peek().value;
+      p++;
+      l = { k: "bin", op, l, r: un_() };
+    }
+    return l;
+  }
+  function un_() {
+    if (peek().type === "OP" && peek().value === "-") {
+      p++;
+      return { k: "un", op: "-", x: un_() };
+    }
+    return callOrAtom();
+  }
+  function callOrAtom() {
+    let a = atom();
+    if (a.k === "ident" && peek().type === "OP" && peek().value === "(") {
+      p++;
+      const args = [];
+      if (!(peek().type === "OP" && peek().value === ")")) {
+        args.push(expr());
+        while (peek().type === "OP" && peek().value === ",") {
+          p++;
+          args.push(expr());
+        }
+      }
+      eat("OP", ")");
+      a = { k: "call", name: a.name, args, line: a.line };
+    } else if (a.k === "ident" && peek().type === "KW" && peek().value === "with") {
+      p++;
+      const args = [];
+      while (canStartAtom(peek())) args.push(atom());
+      a = { k: "call", name: a.name, args, line: a.line };
+    }
+    while (true) {
+      if (peek().type === "OP" && peek().value === "[") {
+        p++;
+        const idx = expr();
+        eat("OP", "]");
+        a = { k: "index", target: a, idx };
+        continue;
+      }
+      if (peek().type === "OP" && peek().value === "." && peek(1) && peek(1).type === "IDENT") {
+        p++;
+        const nm = eat("IDENT").value;
+        if (peek().type === "OP" && peek().value === "(") {
+          if (a.k !== "ident") throw new SdevError2("method call needs a variable receiver", 0);
+          p++;
+          const args = [];
+          if (!(peek().type === "OP" && peek().value === ")")) {
+            args.push(expr());
+            while (peek().type === "OP" && peek().value === ",") {
+              p++;
+              args.push(expr());
+            }
+          }
+          eat("OP", ")");
+          a = { k: "mcall", recv: a.name, m: nm, args };
+        } else {
+          a = { k: "field", target: a, name: nm };
+        }
+        continue;
+      }
+      break;
+    }
+    return a;
+  }
+  function canStartAtom(t) {
+    return t.type === "NUM" || t.type === "STR" || t.type === "IDENT" || t.type === "KW" && (t.value === "true" || t.value === "false" || t.value === "nothing") || t.type === "OP" && (t.value === "(" || t.value === "[");
+  }
+  function atom() {
+    const t = peek();
+    if (t.type === "NUM") {
+      p++;
+      if (t.isFloat) return { k: "fnum", v: t.value };
+      if (Number.isInteger(t.value)) return { k: "num", v: t.value };
+      return { k: "fnum", v: t.value };
+    }
+    if (t.type === "STR") {
+      p++;
+      return { k: "str", v: t.value };
+    }
+    if (t.type === "KW" && t.value === "true") {
+      p++;
+      return { k: "num", v: 1 };
+    }
+    if (t.type === "KW" && t.value === "false") {
+      p++;
+      return { k: "num", v: 0 };
+    }
+    if (t.type === "KW" && t.value === "nothing") {
+      p++;
+      return { k: "num", v: 0 };
+    }
+    if (t.type === "IDENT" && t.value === "make") {
+      p++;
+      const params = [];
+      if (peek().type === "KW" && peek().value === "with") {
+        p++;
+        while (peek().type === "IDENT" && peek().value !== "capture") params.push(eat("IDENT").value);
+      }
+      const caps = [];
+      if (peek().type === "IDENT" && peek().value === "capture") {
+        p++;
+        while (peek().type === "IDENT") caps.push(eat("IDENT").value);
+      }
+      skipNL();
+      const body = [];
+      while (!(peek().type === "KW" && peek().value === "end")) {
+        body.push(statement());
+        skipNL();
+      }
+      eat("KW", "end");
+      return { k: "lambda", params, caps, body, line: t.line };
+    }
+    if (t.type === "IDENT" && t.value === "ref" && peek(1) && peek(1).type === "IDENT") {
+      p++;
+      const name = eat("IDENT").value;
+      return { k: "ref", name, line: t.line };
+    }
+    if (t.type === "IDENT" && t.value === "call" && peek(1) && peek(1).type === "IDENT") {
+      p++;
+      const target = { k: "ident", name: eat("IDENT").value };
+      eat("OP", "(");
+      const args = [];
+      if (!(peek().type === "OP" && peek().value === ")")) {
+        args.push(expr());
+        while (peek().type === "OP" && peek().value === ",") {
+          p++;
+          args.push(expr());
+        }
+      }
+      eat("OP", ")");
+      return { k: "callv", target, args, line: t.line };
+    }
+    if (t.type === "IDENT" && t.value === "new" && peek(1) && peek(1).type === "IDENT") {
+      p++;
+      const cls = eat("IDENT").value;
+      if (peek().type === "OP" && peek().value === "(") {
+        p++;
+        eat("OP", ")");
+      }
+      return { k: "new", cls, line: t.line };
+    }
+    if (t.type === "IDENT") {
+      p++;
+      return { k: "ident", name: t.value };
+    }
+    if (t.type === "OP" && t.value === "(") {
+      p++;
+      const e = expr();
+      eat("OP", ")");
+      return e;
+    }
+    if (t.type === "OP" && t.value === "[") {
+      p++;
+      const items = [];
+      if (!(peek().type === "OP" && peek().value === "]")) {
+        items.push(expr());
+        while (peek().type === "OP" && peek().value === ",") {
+          p++;
+          items.push(expr());
+        }
+      }
+      eat("OP", "]");
+      return { k: "list", items, line: t.line };
+    }
+    if (t.type === "OP" && t.value === "{") {
+      p++;
+      const pairs = [];
+      skipNL();
+      if (!(peek().type === "OP" && peek().value === "}")) {
+        pairs.push(tomePair());
+        while (peek().type === "OP" && peek().value === ",") {
+          p++;
+          skipNL();
+          pairs.push(tomePair());
+        }
+      }
+      skipNL();
+      eat("OP", "}");
+      return { k: "tome", pairs, line: t.line };
+    }
+    throw new SdevError2(`bootstrap: unexpected ${t.type}:${t.value}`, t.line);
+  }
+  function tomePair() {
+    skipNL();
+    let key;
+    if (peek().type === "IDENT" && tokens[p + 1] && tokens[p + 1].type === "OP" && tokens[p + 1].value === ":") {
+      key = { k: "str", v: eat("IDENT").value };
+    } else {
+      key = expr();
+    }
+    eat("OP", ":");
+    const val = expr();
+    skipNL();
+    return { key, val };
+  }
+}
+function emit(stmts, em) {
+  const funcs = stmts.filter((s) => s.k === "func");
+  const main2 = stmts.filter((s) => s.k !== "func");
+  for (const f2 of funcs) {
+    if (em.functions.has(f2.name)) throw new SdevError2(`duplicate function ${f2.name}`, f2.line);
+    em.functions.set(f2.name, { arity: f2.params.length, offset: -1, patchSites: [], refSites: [], retType: "int" });
+  }
+  let changed = true;
+  let guard2 = 0;
+  while (changed && guard2++ < funcs.length + 2) {
+    changed = false;
+    for (const f2 of funcs) {
+      const info = em.functions.get(f2.name);
+      const t = inferReturnTypeOf(f2, em.functions);
+      if (t !== info.retType) {
+        info.retType = t;
+        changed = true;
+      }
+    }
+  }
+  em.emit(OP.JMP);
+  const jmpToMainPos = em.placeholder16();
+  const afterJmpToMain = em.here();
+  for (const f2 of funcs) {
+    const info = em.functions.get(f2.name);
+    info.offset = em.here();
+    const locals = /* @__PURE__ */ new Map();
+    f2.params.forEach((p, i) => locals.set(p, i));
+    collectSets(f2.body, locals);
+    const extra = locals.size - f2.params.length;
+    if (extra > 0) {
+      em.emit(OP.ENTER);
+      em.emit(extra);
+    }
+    for (const s of f2.body) emitStmt(s, em, locals);
+    em.emit(OP.PUSH_I32);
+    em.emitI32(0);
+    em.emit(OP.RET);
+  }
+  em.patchI16(jmpToMainPos, em.here() - afterJmpToMain);
+  for (const s of main2) emitStmt(s, em, null);
+  em.emit(OP.HALT);
+  for (const info of em.functions.values()) {
+    for (const site of info.patchSites) em.patchU16(site, info.offset);
+    for (const site of info.refSites) em.patchI32(site, info.offset);
+  }
+}
+function collectSets(body, locals) {
+  for (const s of body) {
+    if (s.k === "set" && !locals.has(s.name)) locals.set(s.name, locals.size);
+    if (s.k === "if") {
+      collectSets(s.then_, locals);
+      if (s.else_) collectSets(s.else_, locals);
+    }
+    if (s.k === "while") collectSets(s.body, locals);
+    if (s.k === "attempt") {
+      collectSets(s.body, locals);
+      if (s.errName && !locals.has(s.errName)) locals.set(s.errName, locals.size);
+      collectSets(s.rescue_, locals);
+    }
+    if (s.k === "foreach") {
+      for (const n of [feList(s.d), feIdx(s.d), s.name]) {
+        if (!locals.has(n)) locals.set(n, locals.size);
+      }
+      collectSets(s.body, locals);
+    }
+  }
+}
+function methodRetType(classes, functions, key) {
+  if (!classes) return "int";
+  for (const ms of classes.values()) {
+    for (const mm of ms) {
+      if (mm.key !== key) continue;
+      const info = functions.get(mm.fn);
+      if (info && info.retType === "str") return "str";
+    }
+  }
+  return "int";
+}
+function emitLoadName(name, em, locals) {
+  if (locals && locals.has(name)) {
+    em.emit(OP.LOAD_LOC);
+    em.emit(locals.get(name));
+  } else {
+    em.emit(OP.LOAD);
+    em.emit(em.globalSlot(name));
+  }
+}
+function emitStoreName(name, em, locals, kind) {
+  scopeTypes(locals, em).set(name, kind);
+  if (locals && locals.has(name)) {
+    em.emit(OP.STORE_LOC);
+    em.emit(locals.get(name));
+  } else {
+    em.emit(OP.STORE);
+    em.emit(em.globalSlot(name));
+  }
+}
+function emitExpr(e, em, locals) {
+  switch (e.k) {
+    case "num":
+      em.emit(OP.PUSH_I32);
+      em.emitI32(e.v);
+      return "int";
+    case "fnum":
+      em.emit(OP.PUSH_F64);
+      em.emitF64(e.v);
+      return "float";
+    case "str":
+      em.emit(OP.PUSH_STR);
+      {
+        const off = em.intern(e.v);
+        em.emit(off & 255);
+        em.emit(off >> 8 & 255);
+      }
+      return "str";
+    case "ident": {
+      const t = scopeTypes(locals, em).get(e.name) || "int";
+      if (locals && locals.has(e.name)) {
+        em.emit(OP.LOAD_LOC);
+        em.emit(locals.get(e.name));
+        return t;
+      }
+      em.emit(OP.LOAD);
+      em.emit(em.globalSlot(e.name));
+      return t;
+    }
+    case "un":
+      if (e.op === "-") {
+        em.emit(OP.PUSH_I32);
+        em.emitI32(0);
+        emitExpr(e.x, em, locals);
+        em.emit(OP.SUB);
+        return "int";
+      }
+      if (e.op === "not") {
+        emitExpr(e.x, em, locals);
+        em.emit(OP.NOT);
+        return "int";
+      }
+      break;
+    case "bin": {
+      if (e.op === "and") {
+        emitExpr(e.l, em, locals);
+        em.emit(OP.JZ);
+        const fx = em.placeholder16();
+        const b1 = em.here();
+        emitExpr(e.r, em, locals);
+        em.emit(OP.NOT);
+        em.emit(OP.NOT);
+        em.emit(OP.JMP);
+        const fe = em.placeholder16();
+        const b2 = em.here();
+        em.patchI16(fx, em.here() - b1);
+        em.emit(OP.PUSH_I32);
+        em.emitI32(0);
+        em.patchI16(fe, em.here() - b2);
+        return "int";
+      }
+      if (e.op === "or") {
+        emitExpr(e.l, em, locals);
+        em.emit(OP.JZ);
+        const fx = em.placeholder16();
+        const b1 = em.here();
+        em.emit(OP.PUSH_I32);
+        em.emitI32(1);
+        em.emit(OP.JMP);
+        const fe = em.placeholder16();
+        const b2 = em.here();
+        em.patchI16(fx, em.here() - b1);
+        emitExpr(e.r, em, locals);
+        em.emit(OP.NOT);
+        em.emit(OP.NOT);
+        em.patchI16(fe, em.here() - b2);
+        return "int";
+      }
+      if (e.op === "+" && (e.l.k === "list" || e.r.k === "list")) {
+        if (!em.functions.has("list_concat_two")) throw new SdevError2('joining lists with + needs use "lang/stdlib/v2/list.sdev"', e.line ?? 0);
+        emitExpr({ k: "call", name: "list_concat_two", args: [e.l, e.r] }, em, locals);
+        return "int";
+      }
+      const lk = emitExpr(e.l, em, locals);
+      const rk = emitExpr(e.r, em, locals);
+      if (e.op === "+" && (lk === "str" || rk === "str")) {
+        em.emit(OP.STRCAT);
+        return "str";
+      }
+      if ((e.op === "is" || e.op === "isnot") && (lk === "str" || rk === "str")) {
+        em.emit(OP.STREQ);
+        if (e.op === "isnot") em.emit(OP.NOT);
+        return "int";
+      }
+      if (lk === "float" && rk === "float") {
+        switch (e.op) {
+          case "+":
+            em.emit(OP.FADD);
+            return "float";
+          case "-":
+            em.emit(OP.FSUB);
+            return "float";
+          case "*":
+            em.emit(OP.FMUL);
+            return "float";
+          case "/":
+            em.emit(OP.FDIV);
+            return "float";
+          case "<":
+            em.emit(OP.FLT);
+            return "int";
+          case ">":
+            em.emit(OP.FGT);
+            return "int";
+          case "is":
+            em.emit(OP.FEQ);
+            return "int";
+        }
+      }
+      switch (e.op) {
+        case "+":
+          em.emit(OP.ADD);
+          return "int";
+        case "-":
+          em.emit(OP.SUB);
+          return "int";
+        case "*":
+          em.emit(OP.MUL);
+          return "int";
+        case "/":
+          em.emit(OP.DIV);
+          return "int";
+        case "%":
+          em.emit(OP.MOD);
+          return "int";
+        case "is":
+          em.emit(OP.EQ);
+          return "int";
+        case "isnot":
+          em.emit(OP.NE);
+          return "int";
+        case "<":
+          em.emit(OP.LT);
+          return "int";
+        case ">":
+          em.emit(OP.GT);
+          return "int";
+        case "<=":
+          em.emit(OP.LE);
+          return "int";
+        case ">=":
+          em.emit(OP.GE);
+          return "int";
+      }
+      break;
+    }
+    case "list": {
+      if (e.items.length > 65535) throw new SdevError2("list literal too large", 0);
+      for (const it of e.items) emitExpr(it, em, locals);
+      em.emit(OP.NEWLIST);
+      em.emitU16(e.items.length);
+      return "int";
+    }
+    case "tome": {
+      if (e.pairs.length > 65535) throw new SdevError2("tome literal too large", 0);
+      em.emit(OP.TNEW);
+      em.emitU16(e.pairs.length);
+      let vk = "int";
+      for (const pr of e.pairs) {
+        emitExpr(pr.key, em, locals);
+        const k = emitExpr(pr.val, em, locals);
+        if (k === "str") vk = "str";
+        em.emit(OP.TSET);
+      }
+      return vk === "str" ? "tomestr" : "tome";
+    }
+    case "index": {
+      const tk = emitExpr(e.target, em, locals);
+      emitExpr(e.idx, em, locals);
+      if (tk === "tome" || tk === "tomestr") {
+        em.emit(OP.TGET);
+        return tk === "tomestr" ? "str" : "int";
+      }
+      em.emit(OP.LGET);
+      return tk === "liststr" ? "str" : "int";
+    }
+    case "lambda": {
+      for (const c of e.caps) emitLoadName(c, em, locals);
+      em.emit(OP.JMP);
+      const overPos = em.placeholder16();
+      const afterOver = em.here();
+      const bodyOff = em.here();
+      const lLocals = /* @__PURE__ */ new Map();
+      for (const n of e.params) if (!lLocals.has(n)) lLocals.set(n, lLocals.size);
+      for (const n of e.caps) if (!lLocals.has(n)) lLocals.set(n, lLocals.size);
+      const fixed = lLocals.size;
+      collectSets(e.body, lLocals);
+      const extra = lLocals.size - fixed;
+      if (extra > 0) {
+        em.emit(OP.ENTER);
+        em.emit(extra);
+      }
+      for (const s of e.body) emitStmt(s, em, lLocals);
+      em.emit(OP.PUSH_I32);
+      em.emitI32(0);
+      em.emit(OP.RET);
+      em.patchI16(overPos, em.here() - afterOver);
+      em.emit(OP.CLOSURE);
+      em.emitU16(bodyOff);
+      em.emit(e.caps.length);
+      return "int";
+    }
+    case "new": {
+      const ms = em.classes ? em.classes.get(e.cls) : null;
+      if (!ms) throw new SdevError2(`unknown kind ${e.cls}`, e.line);
+      em.emit(OP.TNEW);
+      em.emitU16(ms.length);
+      for (const mm of ms) {
+        em.emit(OP.PUSH_STR);
+        const off = em.intern(mm.key);
+        em.emit(off & 255);
+        em.emit(off >> 8 & 255);
+        const info = em.functions.get(mm.fn);
+        if (!info) throw new SdevError2(`kind ${e.cls}: missing method ${mm.key}`, e.line);
+        em.emit(OP.PUSH_I32);
+        const site = em.here();
+        em.emitI32(0);
+        info.refSites.push(site);
+        em.emit(OP.TSET);
+      }
+      return "tome";
+    }
+    case "field": {
+      emitExpr(e.target, em, locals);
+      em.emit(OP.PUSH_STR);
+      const off = em.intern(e.name);
+      em.emit(off & 255);
+      em.emit(off >> 8 & 255);
+      em.emit(OP.TGET);
+      return "int";
+    }
+    case "mcall": {
+      emitLoadName(e.recv, em, locals);
+      for (const a of e.args) emitExpr(a, em, locals);
+      emitLoadName(e.recv, em, locals);
+      em.emit(OP.PUSH_STR);
+      const off = em.intern(e.m);
+      em.emit(off & 255);
+      em.emit(off >> 8 & 255);
+      em.emit(OP.TGET);
+      em.emit(OP.CALLV);
+      em.emit(e.args.length + 1);
+      return methodRetType(em.classes, em.functions, e.m);
+    }
+    case "ref": {
+      const info = em.functions.get(e.name);
+      if (!info) throw new SdevError2(`unknown function ${e.name}`, 0);
+      em.emit(OP.PUSH_I32);
+      const site = em.here();
+      em.emitI32(0);
+      info.refSites.push(site);
+      return "int";
+    }
+    case "callv": {
+      for (const a of e.args) emitExpr(a, em, locals);
+      emitExpr(e.target, em, locals);
+      em.emit(OP.CALLV);
+      em.emit(e.args.length);
+      return "int";
+    }
+    case "call": {
+      const bi = BUILTINS2[e.name];
+      if (bi) {
+        if (e.args.length !== bi.arity) throw new SdevError2(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, e.line ?? 0);
+        let argKind = "int";
+        for (const a of e.args) argKind = emitExpr(a, em, locals);
+        bi.emit(em);
+        if (e.name === "values") return argKind === "tomestr" ? "liststr" : "int";
+        return bi.ret;
+      }
+      const info = em.functions.get(e.name);
+      if (!info) throw new SdevError2(`unknown function ${e.name}`, e.line ?? 0);
+      if (e.args.length !== info.arity) throw new SdevError2(`${e.name}: expected ${info.arity} args, got ${e.args.length}`, e.line ?? 0);
+      for (const a of e.args) emitExpr(a, em, locals);
+      em.emit(OP.CALL);
+      const site = em.here();
+      em.emitU16(0);
+      em.emit(e.args.length);
+      info.patchSites.push(site);
+      return info.retType || "int";
+    }
+  }
+  throw new SdevError2(`bootstrap: cannot compile ${e.k}`, 0);
+}
+function inferReturnTypeOf(func, fnTypes) {
+  const localTypes = /* @__PURE__ */ new Map();
+  for (const p of func.params) localTypes.set(p, "int");
+  return inferBody(func.body, localTypes, fnTypes);
+}
+function inferBody(body, localTypes, fnTypes) {
+  let ret = "int";
+  for (const s of body) {
+    if (s.k === "set") localTypes.set(s.name, inferExpr(s.expr, localTypes, fnTypes));
+    else if (s.k === "return" && s.expr) {
+      if (inferExpr(s.expr, localTypes, fnTypes) === "str") ret = "str";
+    } else if (s.k === "if") {
+      if (inferBody(s.then_, localTypes, fnTypes) === "str") ret = "str";
+      if (s.else_ && inferBody(s.else_, localTypes, fnTypes) === "str") ret = "str";
+    } else if (s.k === "while") {
+      if (inferBody(s.body, localTypes, fnTypes) === "str") ret = "str";
+    } else if (s.k === "attempt") {
+      if (inferBody(s.body, localTypes, fnTypes) === "str") ret = "str";
+      if (s.errName) localTypes.set(s.errName, "str");
+      if (inferBody(s.rescue_, localTypes, fnTypes) === "str") ret = "str";
+    } else if (s.k === "foreach") {
+      const ik = inferExpr(s.iter, localTypes, fnTypes);
+      localTypes.set(s.name, ik === "liststr" ? "str" : "int");
+      if (inferBody(s.body, localTypes, fnTypes) === "str") ret = "str";
+    }
+  }
+  return ret;
+}
+function inferExpr(e, localTypes, fnTypes) {
+  switch (e.k) {
+    case "num":
+      return "int";
+    case "fnum":
+      return "float";
+    case "str":
+      return "str";
+    case "ident":
+      return localTypes.get(e.name) || "int";
+    case "un":
+      return "int";
+    case "bin": {
+      const l = inferExpr(e.l, localTypes, fnTypes);
+      const r = inferExpr(e.r, localTypes, fnTypes);
+      if (e.op === "+" && (l === "str" || r === "str")) return "str";
+      if (["+", "-", "*", "/"].includes(e.op) && l === "float" && r === "float") return "float";
+      return "int";
+    }
+    case "list":
+      return "int";
+    case "new":
+      return "tome";
+    case "field":
+      return "int";
+    case "mcall":
+      return methodRetType(fnTypes._classes, fnTypes, e.m);
+    case "tome": {
+      for (const pr of e.pairs) {
+        if (inferExpr(pr.val, localTypes, fnTypes) === "str") return "tomestr";
+      }
+      return "tome";
+    }
+    case "index": {
+      const tk = inferExpr(e.target, localTypes, fnTypes);
+      return tk === "tomestr" || tk === "liststr" ? "str" : "int";
+    }
+    case "call": {
+      const bi = BUILTINS2[e.name];
+      if (bi) {
+        if (e.name === "values") {
+          return inferExpr(e.args[0], localTypes, fnTypes) === "tomestr" ? "liststr" : "int";
+        }
+        return bi.ret;
+      }
+      const info = fnTypes.get(e.name);
+      return info ? info.retType || "int" : "int";
+    }
+  }
+  return "int";
+}
+function emitStmt(s, em, locals) {
+  switch (s.k) {
+    case "say": {
+      const kind = emitExpr(s.expr, em, locals);
+      em.emit(kind === "str" ? OP.SAY_STR : kind === "float" ? OP.SAY_F64 : OP.SAY_I32);
+      return;
+    }
+    case "set": {
+      const kind = emitExpr(s.expr, em, locals);
+      scopeTypes(locals, em).set(s.name, kind);
+      if (locals && locals.has(s.name)) {
+        em.emit(OP.STORE_LOC);
+        em.emit(locals.get(s.name));
+      } else {
+        em.emit(OP.STORE);
+        em.emit(em.globalSlot(s.name));
+      }
+      return;
+    }
+    case "setIndex": {
+      const tk = scopeTypes(locals, em).get(s.name) || "int";
+      if (locals && locals.has(s.name)) {
+        em.emit(OP.LOAD_LOC);
+        em.emit(locals.get(s.name));
+      } else {
+        em.emit(OP.LOAD);
+        em.emit(em.globalSlot(s.name));
+      }
+      emitExpr(s.idx, em, locals);
+      const vk = emitExpr(s.expr, em, locals);
+      if (tk === "tome" || tk === "tomestr") {
+        em.emit(OP.TSET);
+        em.emit(OP.POP);
+        if (vk === "str" && tk === "tome") scopeTypes(locals, em).set(s.name, "tomestr");
+      } else {
+        em.emit(OP.LSET);
+      }
+      return;
+    }
+    case "setField": {
+      emitLoadName(s.name, em, locals);
+      em.emit(OP.PUSH_STR);
+      const off = em.intern(s.field);
+      em.emit(off & 255);
+      em.emit(off >> 8 & 255);
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.TSET);
+      em.emit(OP.POP);
+      return;
+    }
+    case "if": {
+      emitExpr(s.cond, em, locals);
+      em.emit(OP.JZ);
+      const jzPos = em.placeholder16();
+      const afterJZ = em.here();
+      s.then_.forEach((x) => emitStmt(x, em, locals));
+      if (s.else_) {
+        em.emit(OP.JMP);
+        const jmpPos = em.placeholder16();
+        const afterJmp = em.here();
+        em.patchI16(jzPos, em.here() - afterJZ);
+        s.else_.forEach((x) => emitStmt(x, em, locals));
+        em.patchI16(jmpPos, em.here() - afterJmp);
+      } else {
+        em.patchI16(jzPos, em.here() - afterJZ);
+      }
+      return;
+    }
+    case "while": {
+      const top = em.here();
+      emitExpr(s.cond, em, locals);
+      em.emit(OP.JZ);
+      const jzPos = em.placeholder16();
+      const afterJZ = em.here();
+      const ctx = { breaks: [], conts: [] };
+      (em.loops ||= []).push(ctx);
+      s.body.forEach((x) => emitStmt(x, em, locals));
+      em.loops.pop();
+      for (const c of ctx.conts) em.patchI16(c.pos, top - c.after);
+      em.emit(OP.JMP);
+      const jmpPos = em.placeholder16();
+      const afterJmp = em.here();
+      em.patchI16(jmpPos, top - afterJmp);
+      em.patchI16(jzPos, em.here() - afterJZ);
+      for (const b of ctx.breaks) em.patchI16(b.pos, em.here() - b.after);
+      return;
+    }
+    case "foreach": {
+      const ln = feList(s.d), iv = feIdx(s.d);
+      const kind = emitExpr(s.iter, em, locals);
+      emitStoreName(ln, em, locals, kind);
+      em.emit(OP.PUSH_I32);
+      em.emitI32(0);
+      emitStoreName(iv, em, locals, "int");
+      const top = em.here();
+      emitLoadName(iv, em, locals);
+      emitLoadName(ln, em, locals);
+      em.emit(OP.LEN);
+      em.emit(OP.LT);
+      em.emit(OP.JZ);
+      const jzPos = em.placeholder16();
+      const afterJZ = em.here();
+      emitLoadName(ln, em, locals);
+      emitLoadName(iv, em, locals);
+      em.emit(OP.LGET);
+      emitStoreName(s.name, em, locals, kind === "liststr" ? "str" : "int");
+      const ctx = { breaks: [], conts: [] };
+      (em.loops ||= []).push(ctx);
+      s.body.forEach((x) => emitStmt(x, em, locals));
+      em.loops.pop();
+      const cont = em.here();
+      for (const c of ctx.conts) em.patchI16(c.pos, cont - c.after);
+      emitLoadName(iv, em, locals);
+      em.emit(OP.PUSH_I32);
+      em.emitI32(1);
+      em.emit(OP.ADD);
+      emitStoreName(iv, em, locals, "int");
+      em.emit(OP.JMP);
+      const jmpPos = em.placeholder16();
+      const afterJmp = em.here();
+      em.patchI16(jmpPos, top - afterJmp);
+      em.patchI16(jzPos, em.here() - afterJZ);
+      for (const b of ctx.breaks) em.patchI16(b.pos, em.here() - b.after);
+      return;
+    }
+    case "attempt": {
+      em.emit(OP.TRY);
+      const tryPos = em.placeholder16();
+      const afterTry = em.here();
+      s.body.forEach((x) => emitStmt(x, em, locals));
+      em.emit(OP.ENDTRY);
+      em.emit(OP.JMP);
+      const overPos = em.placeholder16();
+      const afterOver = em.here();
+      em.patchI16(tryPos, em.here() - afterTry);
+      if (s.errName) emitStoreName(s.errName, em, locals, "str");
+      else em.emit(OP.POP);
+      s.rescue_.forEach((x) => emitStmt(x, em, locals));
+      em.patchI16(overPos, em.here() - afterOver);
+      return;
+    }
+    case "throw": {
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.THROW);
+      return;
+    }
+    case "break":
+    case "continue": {
+      const ctx = (em.loops || [])[(em.loops || []).length - 1];
+      if (!ctx) throw new SdevError2(`${s.k} outside of a loop`, s.line);
+      em.emit(OP.JMP);
+      const pos = em.placeholder16();
+      const after = em.here();
+      (s.k === "break" ? ctx.breaks : ctx.conts).push({ pos, after });
+      return;
+    }
+    case "return": {
+      if (s.expr) emitExpr(s.expr, em, locals);
+      else {
+        em.emit(OP.PUSH_I32);
+        em.emitI32(0);
+      }
+      em.emit(OP.RET);
+      return;
+    }
+    case "exprStmt": {
+      emitExpr(s.expr, em, locals);
+      em.emit(OP.POP);
+      return;
+    }
+  }
+}
+function compile2(source, opts = {}) {
+  const src = prelink(source, opts.readModule ?? defaultReadModule);
+  const tokens = tokenize(src);
+  const classes = desugarKinds(tokens);
+  const ast = parseProgram(tokens);
+  const em = new Emitter();
+  em.classes = classes;
+  em.functions._classes = classes;
+  emit(ast, em);
+  return {
+    bytecode: new Uint8Array(em.bytes),
+    stringPool: em.stringPool.slice(0, em.poolNext)
+  };
+}
+var OP, FMATH_OP, BUILTINS2, Emitter, _scopeTypes, moduleReader, nodeFs2, feList, feIdx;
+var init_compile = __esm({
+  "src/lang-bridge/oracle/compile.mjs"() {
+    init_v2();
+    OP = {
+      PUSH_I32: 1,
+      PUSH_STR: 2,
+      LOAD: 3,
+      STORE: 4,
+      POP: 5,
+      ADD: 16,
+      SUB: 17,
+      MUL: 18,
+      DIV: 19,
+      MOD: 20,
+      EQ: 32,
+      NE: 33,
+      LT: 34,
+      GT: 35,
+      LE: 36,
+      GE: 37,
+      NOT: 48,
+      JMP: 64,
+      JZ: 65,
+      SAY_I32: 80,
+      SAY_STR: 81,
+      CALLV: 196,
+      CALL: 96,
+      RET: 97,
+      ENTER: 98,
+      LOAD_LOC: 99,
+      STORE_LOC: 100,
+      ALLOC: 112,
+      NEWLIST: 128,
+      LGET: 129,
+      LSET: 130,
+      LEN: 131,
+      SGET: 132,
+      I2S: 135,
+      CHR: 136,
+      LNEW: 137,
+      STREQ: 144,
+      STRCAT: 145,
+      // Milestone 5t — tomes (string-keyed dictionaries)
+      TNEW: 138,
+      TSET: 139,
+      TGET: 140,
+      THAS: 141,
+      TKEYS: 142,
+      TVALS: 143,
+      // Milestone 6 — boxed f64 floats
+      PUSH_F64: 160,
+      FADD: 161,
+      FSUB: 162,
+      FMUL: 163,
+      FDIV: 164,
+      FLT: 165,
+      FGT: 166,
+      FEQ: 167,
+      I2F: 168,
+      F2I: 169,
+      FNEG: 170,
+      FABS: 171,
+      FSQRT: 172,
+      SAY_F64: 173,
+      FMATH: 174,
+      // Milestone 7 — host-mediated file I/O + networking
+      READFILE: 176,
+      WRITEFILE: 177,
+      HTTPGET: 178,
+      // Milestone 5q — float bit inspection (used by the self-hosted codegen)
+      FBYTE: 180,
+      // Milestone 5u — string + numeric standard library
+      UPPER: 146,
+      LOWER: 147,
+      TRIM: 148,
+      SUBSTR: 149,
+      FIND: 150,
+      SPLIT: 151,
+      JOIN: 152,
+      REPLACE: 153,
+      S2I: 154,
+      IABS: 155,
+      IMIN: 156,
+      IMAX: 157,
+      RANGE: 158,
+      SUM: 159,
+      FCEIL: 181,
+      FFLOOR: 182,
+      FROUND: 183,
+      RANDINT: 184,
+      // Milestone 5v — error handling + string→float
+      TRY: 192,
+      ENDTRY: 193,
+      THROW: 194,
+      S2F: 195,
+      // Milestone 5x — closures (lambdas capturing by value)
+      CLOSURE: 197,
+      HALT: 255
+    };
+    FMATH_OP = { sin: 0, cos: 1, tan: 2, exp: 3, log: 4, pow: 5 };
+    BUILTINS2 = {
+      length: { arity: 1, ret: "int", emit: (em) => em.emit(OP.LEN) },
+      concat: { arity: 2, ret: "str", emit: (em) => em.emit(OP.STRCAT) },
+      ord: { arity: 2, ret: "int", emit: (em) => em.emit(OP.SGET) },
+      chr: { arity: 1, ret: "str", emit: (em) => em.emit(OP.CHR) },
+      str: { arity: 1, ret: "str", emit: (em) => em.emit(OP.I2S) },
+      mklist: { arity: 1, ret: "int", emit: (em) => em.emit(OP.LNEW) },
+      // --- Milestone 5t: tomes ---
+      // `keys(t)` yields a list of string handles; `values(t)` a list whose
+      // element kind is decided at the call site from the tome's value kind.
+      keys: { arity: 1, ret: "liststr", emit: (em) => em.emit(OP.TKEYS) },
+      values: { arity: 1, ret: "int", emit: (em) => em.emit(OP.TVALS) },
+      has: { arity: 2, ret: "int", emit: (em) => em.emit(OP.THAS) },
+      // --- Milestone 6: floats ---
+      // Explicit int↔float conversion.
+      i2f: { arity: 1, ret: "float", emit: (em) => em.emit(OP.I2F) },
+      f2i: { arity: 1, ret: "int", emit: (em) => em.emit(OP.F2I) },
+      // Unary float math.
+      fneg: { arity: 1, ret: "float", emit: (em) => em.emit(OP.FNEG) },
+      fabs: { arity: 1, ret: "float", emit: (em) => em.emit(OP.FABS) },
+      fsqrt: { arity: 1, ret: "float", emit: (em) => em.emit(OP.FSQRT) },
+      // Transcendentals via host.
+      fsin: { arity: 1, ret: "float", emit: (em) => {
+        em.emit(OP.FMATH);
+        em.emit(FMATH_OP.sin);
+      } },
+      fcos: { arity: 1, ret: "float", emit: (em) => {
+        em.emit(OP.FMATH);
+        em.emit(FMATH_OP.cos);
+      } },
+      ftan: { arity: 1, ret: "float", emit: (em) => {
+        em.emit(OP.FMATH);
+        em.emit(FMATH_OP.tan);
+      } },
+      fexp: { arity: 1, ret: "float", emit: (em) => {
+        em.emit(OP.FMATH);
+        em.emit(FMATH_OP.exp);
+      } },
+      flog: { arity: 1, ret: "float", emit: (em) => {
+        em.emit(OP.FMATH);
+        em.emit(FMATH_OP.log);
+      } },
+      fpow: { arity: 2, ret: "float", emit: (em) => {
+        em.emit(OP.FMATH);
+        em.emit(FMATH_OP.pow);
+      } },
+      // --- Milestone 7: file I/O + networking (host-mediated) ---
+      read_file: { arity: 1, ret: "str", emit: (em) => em.emit(OP.READFILE) },
+      write_file: { arity: 2, ret: "int", emit: (em) => em.emit(OP.WRITEFILE) },
+      http_get: { arity: 1, ret: "str", emit: (em) => em.emit(OP.HTTPGET) },
+      // --- Milestone 5q: float bit inspection ---
+      // fbyte(x, i) → the i-th little-endian IEEE-754 byte of the double x.
+      // The self-hosted codegen uses it to emit PUSH_F64 operands.
+      fbyte: { arity: 2, ret: "int", emit: (em) => em.emit(OP.FBYTE) },
+      // --- Milestone 5u: string + numeric standard library ---
+      upper: { arity: 1, ret: "str", emit: (em) => em.emit(OP.UPPER) },
+      lower: { arity: 1, ret: "str", emit: (em) => em.emit(OP.LOWER) },
+      trim: { arity: 1, ret: "str", emit: (em) => em.emit(OP.TRIM) },
+      substr: { arity: 3, ret: "str", emit: (em) => em.emit(OP.SUBSTR) },
+      find: { arity: 2, ret: "int", emit: (em) => em.emit(OP.FIND) },
+      contains: { arity: 2, ret: "int", emit: (em) => {
+        em.emit(OP.FIND);
+        em.emit(OP.PUSH_I32);
+        em.emitI32(0);
+        em.emit(OP.GE);
+      } },
+      split: { arity: 2, ret: "liststr", emit: (em) => em.emit(OP.SPLIT) },
+      join: { arity: 2, ret: "str", emit: (em) => em.emit(OP.JOIN) },
+      replace: { arity: 3, ret: "str", emit: (em) => em.emit(OP.REPLACE) },
+      int: { arity: 1, ret: "int", emit: (em) => em.emit(OP.S2I) },
+      abs: { arity: 1, ret: "int", emit: (em) => em.emit(OP.IABS) },
+      min: { arity: 2, ret: "int", emit: (em) => em.emit(OP.IMIN) },
+      max: { arity: 2, ret: "int", emit: (em) => em.emit(OP.IMAX) },
+      range: { arity: 1, ret: "int", emit: (em) => em.emit(OP.RANGE) },
+      sum: { arity: 1, ret: "int", emit: (em) => em.emit(OP.SUM) },
+      random: { arity: 1, ret: "int", emit: (em) => em.emit(OP.RANDINT) },
+      fceil: { arity: 1, ret: "float", emit: (em) => em.emit(OP.FCEIL) },
+      ffloor: { arity: 1, ret: "float", emit: (em) => em.emit(OP.FFLOOR) },
+      fround: { arity: 1, ret: "float", emit: (em) => em.emit(OP.FROUND) },
+      // --- Milestone 5v: string → float ---
+      num: { arity: 1, ret: "float", emit: (em) => em.emit(OP.S2F) }
+    };
+    Emitter = class {
+      constructor() {
+        this.bytes = [];
+        this.stringPool = new Uint8Array(65536);
+        this.poolNext = 0;
+        this.strings = /* @__PURE__ */ new Map();
+        this.globals = /* @__PURE__ */ new Map();
+        this.globalTypes = /* @__PURE__ */ new Map();
+        this.functions = /* @__PURE__ */ new Map();
+      }
+      emit(b) {
+        this.bytes.push(b & 255);
+      }
+      emitI32(v) {
+        this.emit(v);
+        this.emit(v >> 8);
+        this.emit(v >> 16);
+        this.emit(v >> 24);
+      }
+      emitF64(v) {
+        const buf = new ArrayBuffer(8);
+        new DataView(buf).setFloat64(0, v, true);
+        const b = new Uint8Array(buf);
+        for (let i = 0; i < 8; i++) this.emit(b[i]);
+      }
+      emitU16(v) {
+        this.emit(v);
+        this.emit(v >> 8);
+      }
+      patchI32(pos, v) {
+        this.bytes[pos] = v & 255;
+        this.bytes[pos + 1] = v >> 8 & 255;
+        this.bytes[pos + 2] = v >> 16 & 255;
+        this.bytes[pos + 3] = v >> 24 & 255;
+      }
+      patchI16(pos, v) {
+        this.bytes[pos] = v & 255;
+        this.bytes[pos + 1] = v >> 8 & 255;
+      }
+      patchU16(pos, v) {
+        this.bytes[pos] = v & 255;
+        this.bytes[pos + 1] = v >> 8 & 255;
+      }
+      placeholder16() {
+        this.emit(0);
+        this.emit(0);
+        return this.bytes.length - 2;
+      }
+      here() {
+        return this.bytes.length;
+      }
+      globalSlot(name) {
+        if (!this.globals.has(name)) {
+          if (this.globals.size >= 256) throw new SdevError2("too many globals (256 max)", 0);
+          this.globals.set(name, this.globals.size);
+        }
+        return this.globals.get(name);
+      }
+      intern(str) {
+        if (this.strings.has(str)) return this.strings.get(str);
+        const utf8 = new TextEncoder().encode(str);
+        const off = this.poolNext;
+        if (off + 4 + utf8.length > this.stringPool.length) throw new SdevError2("string pool overflow", 0);
+        new DataView(this.stringPool.buffer).setUint32(off, utf8.length, true);
+        this.stringPool.set(utf8, off + 4);
+        this.poolNext += 4 + utf8.length;
+        this.strings.set(str, off);
+        return off;
+      }
+    };
+    _scopeTypes = /* @__PURE__ */ new WeakMap();
+    moduleReader = null;
+    nodeFs2 = null;
+    ensureNodeFs2();
+    feList = (d) => `_fe_l${d}`;
+    feIdx = (d) => `_fe_i${d}`;
+  }
+});
+
 // src/lang-bridge/wasm-runtime.ts
 var wasm_runtime_exports = {};
 __export(wasm_runtime_exports, {
   WasmSubsetError: () => WasmSubsetError,
   runWasm: () => runWasm,
-  seedVersion: () => seedVersion
+  seedVersion: () => seedVersion,
+  withStdlib: () => withStdlib
 });
+async function withStdlib(source, modules) {
+  if (Object.keys(STDLIB).length === 0) return modules ?? null;
+  const out = { ...modules ?? {} };
+  const queue = [source, ...Object.values(out)];
+  let added = false;
+  while (queue.length) {
+    const text3 = queue.pop();
+    for (const m2 of text3.matchAll(USE_RE)) {
+      const path = m2[1];
+      if (path in out) continue;
+      const load2 = STDLIB["/" + path.replace(/^\.?\//, "")];
+      if (!load2) continue;
+      out[path] = await load2();
+      queue.push(out[path]);
+      added = true;
+    }
+  }
+  return added || modules ? out : null;
+}
 async function loadSeedBytes() {
   if (!cachedBytes) {
     cachedBytes = fetch("/wasm/sdev-seed.wasm").then((r) => {
@@ -32387,13 +38006,28 @@ async function runWasm(source, modules, options = {}) {
       );
     }
   }
+  modules = await withStdlib(source, modules) ?? void 0;
   setSeedLoader(loadSeedBytes);
+  const isDiagnosticError = (msg) => /unknown function|expected \d+ args|joining lists with \+|unknown (?:parent )?kind|outside of a loop|too many (?:globals|locals)|overflow/.test(msg);
   let program;
   try {
     program = await compile(source, modules ?? null);
     if (program.bytecode.length === 0) throw new Error("stage-0 compiler produced no bytecode");
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, "");
+    if (isDiagnosticError(msg)) {
+      return { success: false, output: [], error: msg };
+    }
+    throw new WasmSubsetError(msg);
+  }
+  try {
+    const { compile: checkCompile } = await Promise.resolve().then(() => (init_compile(), compile_exports));
+    checkCompile(source, modules ? { readModule: (path) => modules?.[path] ?? "" } : {});
+  } catch (e) {
+    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, "");
+    if (isDiagnosticError(msg)) {
+      return { success: false, output: [], error: msg };
+    }
     throw new WasmSubsetError(msg);
   }
   const module = await loadSeed();
@@ -32496,13 +38130,19 @@ async function seedVersion() {
   });
   return inst.exports.sdev_version();
 }
-var WasmSubsetError, cached, cachedBytes;
+var WasmSubsetError, STDLIB, USE_RE, cached, cachedBytes;
 var init_wasm_runtime = __esm({
   "src/lang-bridge/wasm-runtime.ts"() {
     init_compile_self();
     init_translator2();
     WasmSubsetError = class extends Error {
     };
+    STDLIB = {};
+    try {
+      STDLIB = import.meta.glob("/lang/stdlib/**/*.sdev", { query: "?raw", import: "default" });
+    } catch {
+    }
+    USE_RE = /^[ \t]*use "([^"]+)"[ \t]*$/gm;
     cached = null;
     cachedBytes = null;
   }
@@ -33310,728 +38950,6 @@ var init_compiler = __esm({
   }
 });
 
-// src/lang-bridge/oracle/v2.js
-function tokenize(src) {
-  const tokens = [];
-  let i = 0, line = 1, col = 1;
-  const push = (type, value2) => tokens.push({ type, value: value2, line, col });
-  while (i < src.length) {
-    const c = src[i];
-    if (c === "\n") {
-      push("NL", "\n");
-      i++;
-      line++;
-      col = 1;
-      continue;
-    }
-    if (c === " " || c === "	" || c === "\r") {
-      i++;
-      col++;
-      continue;
-    }
-    if (c === "#") {
-      while (i < src.length && src[i] !== "\n") i++;
-      continue;
-    }
-    if (c === "/" && src[i + 1] === "/") {
-      while (i < src.length && src[i] !== "\n") i++;
-      continue;
-    }
-    if (/[0-9]/.test(c)) {
-      let s = "";
-      while (i < src.length && /[0-9.]/.test(src[i])) {
-        s += src[i++];
-        col++;
-      }
-      const tok = { type: "NUM", value: parseFloat(s), line, col, isFloat: s.includes(".") };
-      tokens.push(tok);
-      continue;
-    }
-    if (c === '"' || c === "'") {
-      const quote = c;
-      i++;
-      col++;
-      let s = "";
-      while (i < src.length && src[i] !== quote) {
-        if (src[i] === "\\" && i + 1 < src.length) {
-          const n = src[i + 1];
-          s += n === "n" ? "\n" : n === "t" ? "	" : n === "\\" ? "\\" : n === quote ? quote : n;
-          i += 2;
-          col += 2;
-        } else {
-          if (src[i] === "\n") {
-            line++;
-            col = 0;
-          }
-          s += src[i++];
-          col++;
-        }
-      }
-      i++;
-      col++;
-      push("STR", s);
-      continue;
-    }
-    if (/[A-Za-z_]/.test(c)) {
-      let s = "";
-      while (i < src.length && /[A-Za-z0-9_]/.test(src[i])) {
-        s += src[i++];
-        col++;
-      }
-      if (KEYWORDS3.has(s)) push("KW", s);
-      else if (s === "yep" || s === "nope") push("KW", s === "yep" ? "true" : "false");
-      else push("IDENT", s);
-      continue;
-    }
-    if (c === "|" && src[i + 1] === ">") {
-      push("OP", "|>");
-      i += 2;
-      col += 2;
-      continue;
-    }
-    if (c === "<" && src[i + 1] === "=") {
-      push("OP", "<=");
-      i += 2;
-      col += 2;
-      continue;
-    }
-    if (c === ">" && src[i + 1] === "=") {
-      push("OP", ">=");
-      i += 2;
-      col += 2;
-      continue;
-    }
-    if (c === "-" && src[i + 1] === ">") {
-      push("OP", "->");
-      i += 2;
-      col += 2;
-      continue;
-    }
-    if ("+-*/%(),[]{}:.<>|".includes(c)) {
-      push("OP", c);
-      i++;
-      col++;
-      continue;
-    }
-    throw new SdevError2(`Unexpected character '${c}'`, line);
-  }
-  push("EOF", null);
-  return tokens;
-}
-var KEYWORDS3, SdevError2;
-var init_v2 = __esm({
-  "src/lang-bridge/oracle/v2.js"() {
-    KEYWORDS3 = /* @__PURE__ */ new Set([
-      "say",
-      "ask",
-      "set",
-      "to",
-      "if",
-      "else",
-      "end",
-      "for",
-      "each",
-      "in",
-      "while",
-      "return",
-      "with",
-      "true",
-      "false",
-      "nothing",
-      "is",
-      "not",
-      "and",
-      "or",
-      "more",
-      "less",
-      "match"
-    ]);
-    SdevError2 = class extends Error {
-      constructor(msg, line) {
-        super(`[sdev v2] line ${line ?? "?"}: ${msg}`);
-        this.line = line;
-      }
-    };
-  }
-});
-
-// src/lang-bridge/oracle/compile.mjs
-async function ensureNodeFs2() {
-  if (nodeFs2) return nodeFs2;
-  if (typeof process !== "undefined" && process.versions?.node) {
-    nodeFs2 = (await import(
-      /* @vite-ignore */
-      "node:fs"
-    )).default;
-  }
-  return nodeFs2;
-}
-function defaultReadModule(path) {
-  if (moduleReader) return moduleReader(path) ?? "";
-  if (!nodeFs2) {
-    try {
-      nodeFs2 = globalThis.process?.getBuiltinModule?.("fs") ?? null;
-    } catch {
-    }
-  }
-  if (nodeFs2) {
-    try {
-      return nodeFs2.readFileSync(path, "utf8");
-    } catch {
-      return "";
-    }
-  }
-  return "";
-}
-function prelink(source, readModule = defaultReadModule, seen = /* @__PURE__ */ new Set()) {
-  let out = "";
-  for (const line of source.split("\n")) {
-    const t = line.trim();
-    if (t.length > 5 && t.startsWith('use "') && t.endsWith('"')) {
-      const path = t.slice(5, -1);
-      if (!seen.has(path)) {
-        seen.add(path);
-        out += prelink(readModule(path) ?? "", readModule, seen);
-      }
-      out += "\n";
-      continue;
-    }
-    out += line + "\n";
-  }
-  return out;
-}
-function desugarKinds(tokens) {
-  const classes = /* @__PURE__ */ new Map();
-  const blank = (i2) => {
-    tokens[i2] = { type: "NL", value: "\n", line: tokens[i2].line };
-  };
-  const isEnd = (t) => t.type === "KW" && t.value === "end";
-  const opener = (i2) => {
-    const t = tokens[i2];
-    if (t.type === "KW" && t.value === "to") return i2 === 0 || tokens[i2 - 1].type === "NL";
-    if (t.type === "KW" && (t.value === "while" || t.value === "for")) return true;
-    if (t.type === "KW" && t.value === "if") {
-      let k = i2 - 1;
-      while (k >= 0 && tokens[k].type === "NL") k--;
-      return !(k >= 0 && tokens[k].type === "KW" && tokens[k].value === "else");
-    }
-    if (t.type === "IDENT" && (t.value === "attempt" || t.value === "make" || t.value === "kind")) return true;
-    return false;
-  };
-  let i = 0;
-  while (i < tokens.length) {
-    const t = tokens[i];
-    if (t.type === "IDENT" && t.value === "kind" && tokens[i + 1] && tokens[i + 1].type === "IDENT") {
-      const cname = tokens[i + 1].value;
-      const methods = [];
-      classes.set(cname, methods);
-      blank(i);
-      blank(i + 1);
-      let parent = null;
-      let j = i + 2;
-      if (tokens[i + 2] && tokens[i + 2].type === "IDENT" && tokens[i + 2].value === "extends" && tokens[i + 3] && tokens[i + 3].type === "IDENT") {
-        parent = tokens[i + 3].value;
-        blank(i + 2);
-        blank(i + 3);
-        j = i + 4;
-      }
-      let depth = 0;
-      while (j < tokens.length && tokens[j].type !== "EOF") {
-        if (tokens[j].type === "IDENT" && tokens[j].value === "super" && tokens[j + 1] && tokens[j + 1].type === "OP" && tokens[j + 1].value === "." && tokens[j + 2] && tokens[j + 2].type === "IDENT") {
-          tokens[j] = { ...tokens[j], value: "self" };
-          tokens[j + 2] = { ...tokens[j + 2], value: "super_" + cname + "_" + tokens[j + 2].value };
-          j += 3;
-          continue;
-        }
-        if (isEnd(tokens[j])) {
-          if (depth === 0) {
-            blank(j);
-            j++;
-            break;
-          }
-          depth--;
-          j++;
-          continue;
-        }
-        if (opener(j)) {
-          if (depth === 0 && tokens[j].type === "KW" && tokens[j].value === "to" && tokens[j + 1] && tokens[j + 1].type === "IDENT") {
-            const m2 = tokens[j + 1].value;
-            const fn2 = cname + "_" + m2;
-            tokens[j + 1] = { ...tokens[j + 1], value: fn2 };
-            methods.push({ key: m2, fn: fn2 });
-          }
-          depth++;
-          j++;
-          continue;
-        }
-        j++;
-      }
-      if (parent !== null) {
-        const pm = classes.get(parent);
-        if (!pm) throw new SdevError2(`unknown parent kind ${parent}`, t.line);
-        const ownStop = methods.length;
-        for (const e of pm) {
-          if (e.sup) {
-            methods.push({ key: e.key, fn: e.fn, sup: true });
-            continue;
-          }
-          let own = false;
-          for (let q = 0; q < ownStop; q++) if (!methods[q].sup && methods[q].key === e.key) own = true;
-          if (!own) methods.push({ key: e.key, fn: e.fn });
-          methods.push({ key: "super_" + cname + "_" + e.key, fn: e.fn, sup: true });
-        }
-      }
-      i = j;
-      continue;
-    }
-    i++;
-  }
-  return classes;
-}
-function parseWithKinds(source, readModule = defaultReadModule) {
-  const t = tokenize(prelink(source, readModule));
-  const classes = desugarKinds(t);
-  return { ast: parseProgram(t), classes };
-}
-function parseProgram(tokens) {
-  let p = 0;
-  const peek = (n = 0) => tokens[p + n];
-  const eat = (type, value2) => {
-    const t = tokens[p];
-    if (t.type !== type || value2 !== void 0 && t.value !== value2) {
-      throw new SdevError2(`bootstrap: expected ${value2 ?? type}, got ${t.type}:${t.value}`, t.line);
-    }
-    p++;
-    return t;
-  };
-  const skipNL = () => {
-    while (peek().type === "NL") p++;
-  };
-  let feDepth = 0;
-  const stmts = [];
-  skipNL();
-  while (peek().type !== "EOF") {
-    stmts.push(statement());
-    skipNL();
-  }
-  return stmts;
-  function statement() {
-    const t = peek();
-    if (t.type === "IDENT" && t.value === "break") {
-      p++;
-      return { k: "break", line: t.line };
-    }
-    if (t.type === "IDENT" && t.value === "continue") {
-      p++;
-      return { k: "continue", line: t.line };
-    }
-    if (t.type === "IDENT" && t.value === "attempt") return attemptStmt();
-    if (t.type === "IDENT" && t.value === "throw") {
-      p++;
-      return { k: "throw", expr: expr(), line: t.line };
-    }
-    if (t.type === "KW") {
-      if (t.value === "say") {
-        p++;
-        return { k: "say", expr: expr(), line: t.line };
-      }
-      if (t.value === "set") {
-        p++;
-        const name = eat("IDENT").value;
-        if (peek().type === "OP" && peek().value === ".") {
-          p++;
-          const field = eat("IDENT").value;
-          eat("KW", "to");
-          return { k: "setField", name, field, expr: expr(), line: t.line };
-        }
-        if (peek().type === "OP" && peek().value === "[") {
-          p++;
-          const idx = expr();
-          eat("OP", "]");
-          eat("KW", "to");
-          return { k: "setIndex", name, idx, expr: expr(), line: t.line };
-        }
-        eat("KW", "to");
-        return { k: "set", name, expr: expr(), line: t.line };
-      }
-      if (t.value === "if") return ifStmt();
-      if (t.value === "while") return whileStmt();
-      if (t.value === "for") return forEachStmt();
-      if (t.value === "to") return funcDecl();
-      if (t.value === "return") {
-        p++;
-        return { k: "return", expr: peek().type === "NL" ? null : expr(), line: t.line };
-      }
-    }
-    const e = expr();
-    return { k: "exprStmt", expr: e, line: t.line };
-  }
-  function ifStmt() {
-    const t = eat("KW", "if");
-    const cond = expr();
-    skipNL();
-    const then_ = [];
-    while (!(peek().type === "KW" && (peek().value === "else" || peek().value === "end"))) {
-      then_.push(statement());
-      skipNL();
-    }
-    let else_ = null;
-    let chained = false;
-    if (peek().type === "KW" && peek().value === "else") {
-      p++;
-      if (peek().type === "KW" && peek().value === "if") {
-        else_ = [ifStmt()];
-        chained = true;
-      } else {
-        skipNL();
-        else_ = [];
-        while (!(peek().type === "KW" && peek().value === "end")) {
-          else_.push(statement());
-          skipNL();
-        }
-      }
-    }
-    if (!chained) eat("KW", "end");
-    return { k: "if", cond, then_, else_, line: t.line };
-  }
-  function attemptStmt() {
-    const t = peek();
-    p++;
-    skipNL();
-    const atEnd = () => peek().type === "KW" && peek().value === "end" || peek().type === "IDENT" && peek().value === "rescue" || peek().type === "EOF";
-    const body = [];
-    while (!atEnd()) {
-      body.push(statement());
-      skipNL();
-    }
-    let errName = null;
-    const rescue_ = [];
-    if (peek().type === "IDENT" && peek().value === "rescue") {
-      p++;
-      if (peek().type === "IDENT") errName = eat("IDENT").value;
-      skipNL();
-      while (!(peek().type === "KW" && peek().value === "end") && peek().type !== "EOF") {
-        rescue_.push(statement());
-        skipNL();
-      }
-    }
-    eat("KW", "end");
-    return { k: "attempt", body, errName, rescue_, line: t.line };
-  }
-  function whileStmt() {
-    const t = eat("KW", "while");
-    const cond = expr();
-    skipNL();
-    const body = [];
-    while (!(peek().type === "KW" && peek().value === "end")) {
-      body.push(statement());
-      skipNL();
-    }
-    eat("KW", "end");
-    return { k: "while", cond, body, line: t.line };
-  }
-  function forEachStmt() {
-    const t = eat("KW", "for");
-    if (peek().type === "KW" && peek().value === "each") p++;
-    const name = eat("IDENT").value;
-    if (peek().type === "KW" && peek().value === "in") p++;
-    const iter = expr();
-    skipNL();
-    feDepth++;
-    const d = feDepth;
-    const body = [];
-    while (!(peek().type === "KW" && peek().value === "end")) {
-      body.push(statement());
-      skipNL();
-    }
-    eat("KW", "end");
-    feDepth--;
-    return { k: "foreach", name, iter, body, d, line: t.line };
-  }
-  function funcDecl() {
-    const t = eat("KW", "to");
-    const name = eat("IDENT").value;
-    const params = [];
-    if (peek().type === "KW" && peek().value === "with") {
-      p++;
-      while (peek().type === "IDENT") {
-        params.push(eat("IDENT").value);
-      }
-    }
-    skipNL();
-    const body = [];
-    while (!(peek().type === "KW" && peek().value === "end")) {
-      body.push(statement());
-      skipNL();
-    }
-    eat("KW", "end");
-    return { k: "func", name, params, body, line: t.line };
-  }
-  function expr() {
-    return or_();
-  }
-  function or_() {
-    let l = and_();
-    while (peek().type === "KW" && peek().value === "or") {
-      p++;
-      l = { k: "bin", op: "or", l, r: and_() };
-    }
-    return l;
-  }
-  function and_() {
-    let l = not_();
-    while (peek().type === "KW" && peek().value === "and") {
-      p++;
-      l = { k: "bin", op: "and", l, r: not_() };
-    }
-    return l;
-  }
-  function not_() {
-    if (peek().type === "KW" && peek().value === "not") {
-      p++;
-      return { k: "un", op: "not", x: not_() };
-    }
-    return cmp_();
-  }
-  function cmp_() {
-    let l = add_();
-    while (true) {
-      const t = peek();
-      if (t.type === "KW" && t.value === "is") {
-        p++;
-        let op = "is";
-        if (peek().type === "KW" && peek().value === "not") {
-          p++;
-          op = "isnot";
-        }
-        l = { k: "bin", op, l, r: add_() };
-      } else if (t.type === "OP" && ["<", ">", "<=", ">="].includes(t.value)) {
-        p++;
-        l = { k: "bin", op: t.value, l, r: add_() };
-      } else break;
-    }
-    return l;
-  }
-  function add_() {
-    let l = mul_();
-    while (peek().type === "OP" && (peek().value === "+" || peek().value === "-")) {
-      const op = peek().value;
-      p++;
-      l = { k: "bin", op, l, r: mul_() };
-    }
-    return l;
-  }
-  function mul_() {
-    let l = un_();
-    while (peek().type === "OP" && (peek().value === "*" || peek().value === "/" || peek().value === "%")) {
-      const op = peek().value;
-      p++;
-      l = { k: "bin", op, l, r: un_() };
-    }
-    return l;
-  }
-  function un_() {
-    if (peek().type === "OP" && peek().value === "-") {
-      p++;
-      return { k: "un", op: "-", x: un_() };
-    }
-    return callOrAtom();
-  }
-  function callOrAtom() {
-    let a = atom();
-    if (a.k === "ident" && peek().type === "OP" && peek().value === "(") {
-      p++;
-      const args = [];
-      if (!(peek().type === "OP" && peek().value === ")")) {
-        args.push(expr());
-        while (peek().type === "OP" && peek().value === ",") {
-          p++;
-          args.push(expr());
-        }
-      }
-      eat("OP", ")");
-      a = { k: "call", name: a.name, args };
-    } else if (a.k === "ident" && peek().type === "KW" && peek().value === "with") {
-      p++;
-      const args = [];
-      while (canStartAtom(peek())) args.push(atom());
-      a = { k: "call", name: a.name, args };
-    }
-    while (true) {
-      if (peek().type === "OP" && peek().value === "[") {
-        p++;
-        const idx = expr();
-        eat("OP", "]");
-        a = { k: "index", target: a, idx };
-        continue;
-      }
-      if (peek().type === "OP" && peek().value === "." && peek(1) && peek(1).type === "IDENT") {
-        p++;
-        const nm = eat("IDENT").value;
-        if (peek().type === "OP" && peek().value === "(") {
-          if (a.k !== "ident") throw new SdevError2("method call needs a variable receiver", 0);
-          p++;
-          const args = [];
-          if (!(peek().type === "OP" && peek().value === ")")) {
-            args.push(expr());
-            while (peek().type === "OP" && peek().value === ",") {
-              p++;
-              args.push(expr());
-            }
-          }
-          eat("OP", ")");
-          a = { k: "mcall", recv: a.name, m: nm, args };
-        } else {
-          a = { k: "field", target: a, name: nm };
-        }
-        continue;
-      }
-      break;
-    }
-    return a;
-  }
-  function canStartAtom(t) {
-    return t.type === "NUM" || t.type === "STR" || t.type === "IDENT" || t.type === "KW" && (t.value === "true" || t.value === "false" || t.value === "nothing") || t.type === "OP" && (t.value === "(" || t.value === "[");
-  }
-  function atom() {
-    const t = peek();
-    if (t.type === "NUM") {
-      p++;
-      if (t.isFloat) return { k: "fnum", v: t.value };
-      if (Number.isInteger(t.value)) return { k: "num", v: t.value };
-      return { k: "fnum", v: t.value };
-    }
-    if (t.type === "STR") {
-      p++;
-      return { k: "str", v: t.value };
-    }
-    if (t.type === "KW" && t.value === "true") {
-      p++;
-      return { k: "num", v: 1 };
-    }
-    if (t.type === "KW" && t.value === "false") {
-      p++;
-      return { k: "num", v: 0 };
-    }
-    if (t.type === "KW" && t.value === "nothing") {
-      p++;
-      return { k: "num", v: 0 };
-    }
-    if (t.type === "IDENT" && t.value === "make") {
-      p++;
-      const params = [];
-      if (peek().type === "KW" && peek().value === "with") {
-        p++;
-        while (peek().type === "IDENT" && peek().value !== "capture") params.push(eat("IDENT").value);
-      }
-      const caps = [];
-      if (peek().type === "IDENT" && peek().value === "capture") {
-        p++;
-        while (peek().type === "IDENT") caps.push(eat("IDENT").value);
-      }
-      skipNL();
-      const body = [];
-      while (!(peek().type === "KW" && peek().value === "end")) {
-        body.push(statement());
-        skipNL();
-      }
-      eat("KW", "end");
-      return { k: "lambda", params, caps, body, line: t.line };
-    }
-    if (t.type === "IDENT" && t.value === "ref" && peek(1) && peek(1).type === "IDENT") {
-      p++;
-      const name = eat("IDENT").value;
-      return { k: "ref", name, line: t.line };
-    }
-    if (t.type === "IDENT" && t.value === "call" && peek(1) && peek(1).type === "IDENT") {
-      p++;
-      const target = { k: "ident", name: eat("IDENT").value };
-      eat("OP", "(");
-      const args = [];
-      if (!(peek().type === "OP" && peek().value === ")")) {
-        args.push(expr());
-        while (peek().type === "OP" && peek().value === ",") {
-          p++;
-          args.push(expr());
-        }
-      }
-      eat("OP", ")");
-      return { k: "callv", target, args, line: t.line };
-    }
-    if (t.type === "IDENT" && t.value === "new" && peek(1) && peek(1).type === "IDENT") {
-      p++;
-      const cls = eat("IDENT").value;
-      if (peek().type === "OP" && peek().value === "(") {
-        p++;
-        eat("OP", ")");
-      }
-      return { k: "new", cls, line: t.line };
-    }
-    if (t.type === "IDENT") {
-      p++;
-      return { k: "ident", name: t.value };
-    }
-    if (t.type === "OP" && t.value === "(") {
-      p++;
-      const e = expr();
-      eat("OP", ")");
-      return e;
-    }
-    if (t.type === "OP" && t.value === "[") {
-      p++;
-      const items = [];
-      if (!(peek().type === "OP" && peek().value === "]")) {
-        items.push(expr());
-        while (peek().type === "OP" && peek().value === ",") {
-          p++;
-          items.push(expr());
-        }
-      }
-      eat("OP", "]");
-      return { k: "list", items, line: t.line };
-    }
-    if (t.type === "OP" && t.value === "{") {
-      p++;
-      const pairs = [];
-      skipNL();
-      if (!(peek().type === "OP" && peek().value === "}")) {
-        pairs.push(tomePair());
-        while (peek().type === "OP" && peek().value === ",") {
-          p++;
-          skipNL();
-          pairs.push(tomePair());
-        }
-      }
-      skipNL();
-      eat("OP", "}");
-      return { k: "tome", pairs, line: t.line };
-    }
-    throw new SdevError2(`bootstrap: unexpected ${t.type}:${t.value}`, t.line);
-  }
-  function tomePair() {
-    skipNL();
-    let key;
-    if (peek().type === "IDENT" && tokens[p + 1] && tokens[p + 1].type === "OP" && tokens[p + 1].value === ":") {
-      key = { k: "str", v: eat("IDENT").value };
-    } else {
-      key = expr();
-    }
-    eat("OP", ":");
-    const val = expr();
-    skipNL();
-    return { key, val };
-  }
-}
-var moduleReader, nodeFs2;
-var init_compile = __esm({
-  "src/lang-bridge/oracle/compile.mjs"() {
-    init_v2();
-    moduleReader = null;
-    nodeFs2 = null;
-    ensureNodeFs2();
-  }
-});
-
 // src/lang-bridge/native/codegen-x64.mjs
 var codegen_x64_exports = {};
 __export(codegen_x64_exports, {
@@ -34062,7 +38980,7 @@ function typeOf(e, tys, fnTypes) {
     case "field":
       return fnTypes && fnTypes.get(`@field:${e.name}`) || "int";
     case "mcall":
-      return methodRetType(fnTypes, e.m);
+      return methodRetType2(fnTypes, e.m);
     case "ident":
       return tys.get(e.name) || "int";
     case "index": {
@@ -34090,7 +39008,7 @@ function typeOf(e, tys, fnTypes) {
       return "int";
   }
 }
-function methodRetType(fnTypes, key) {
+function methodRetType2(fnTypes, key) {
   if (!fnTypes) return "int";
   const classes = fnTypes._classes;
   if (!classes) return "int";
@@ -34176,7 +39094,7 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
   }
   return fnTypes;
 }
-function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @__PURE__ */ new Map()) {
+function emitExpr2(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @__PURE__ */ new Map()) {
   switch (e.k) {
     case "num":
       em.L(`    movq $${e.v | 0}, %rax`);
@@ -34199,7 +39117,7 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       return;
     case "un":
       if (e.op === "-") {
-        emitExpr(e.x, em, locals, tys, fnTypes);
+        emitExpr2(e.x, em, locals, tys, fnTypes);
         if (typeOf(e.x, tys, fnTypes) === "float") {
           em.L("    movabsq $-9223372036854775808, %rcx");
           em.L("    xorq %rcx, %rax");
@@ -34209,7 +39127,7 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
         return;
       }
       if (e.op === "not") {
-        emitExpr(e.x, em, locals, tys, fnTypes);
+        emitExpr2(e.x, em, locals, tys, fnTypes);
         em.L("    testq %rax, %rax");
         em.L("    sete %al");
         em.L("    movzbq %al, %rax");
@@ -34222,7 +39140,7 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       em.L(`    movq $${e.items.length}, (%rax)`);
       em.L("    pushq %rax");
       e.items.forEach((it, i) => {
-        emitExpr(it, em, locals, tys, fnTypes);
+        emitExpr2(it, em, locals, tys, fnTypes);
         em.L("    movq (%rsp), %rcx");
         em.L(`    movq %rax, ${8 + 8 * i}(%rcx)`);
       });
@@ -34233,9 +39151,9 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       em.L("    call sdev_tnew");
       em.L("    pushq %rax");
       for (const pr of e.pairs) {
-        emitExpr(pr.key, em, locals, tys, fnTypes);
+        emitExpr2(pr.key, em, locals, tys, fnTypes);
         em.L("    pushq %rax");
-        emitExpr(pr.val, em, locals, tys, fnTypes);
+        emitExpr2(pr.val, em, locals, tys, fnTypes);
         em.L("    movq %rax, %rdx");
         em.L("    popq %rsi");
         em.L("    movq (%rsp), %rdi");
@@ -34246,9 +39164,9 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
     }
     case "index": {
       const isTome = typeOf(e.target, tys, fnTypes) === "tome";
-      emitExpr(e.target, em, locals, tys, fnTypes);
+      emitExpr2(e.target, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(e.idx, em, locals, tys, fnTypes);
+      emitExpr2(e.idx, em, locals, tys, fnTypes);
       em.L("    popq %rcx");
       if (isTome) {
         em.L("    movq %rcx, %rdi");
@@ -34260,6 +39178,9 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       return;
     }
     case "bin": {
+      if (e.op === "+" && (e.l.k === "list" || e.r.k === "list")) {
+        return emitExpr2({ k: "call", name: "list_concat_two", args: [e.l, e.r] }, em, locals, tys, fnTypes);
+      }
       if (e.op === "+" && typeOf(e, tys, fnTypes) === "str") {
         emitStrExpr(e.l, em, locals, tys, fnTypes);
         em.L("    pushq %rax");
@@ -34270,9 +39191,10 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
         return;
       }
       if ((e.op === "is" || e.op === "isnot") && (typeOf(e.l, tys, fnTypes) === "str" || typeOf(e.r, tys, fnTypes) === "str")) {
-        emitStrExpr(e.l, em, locals, tys, fnTypes);
+        const asText = (x) => typeOf(x, tys, fnTypes) === "int" ? emitExpr2(x, em, locals, tys, fnTypes) : emitStrExpr(x, em, locals, tys, fnTypes);
+        asText(e.l);
         em.L("    pushq %rax");
-        emitStrExpr(e.r, em, locals, tys, fnTypes);
+        asText(e.r);
         em.L("    movq %rax, %rsi");
         em.L("    popq %rdi");
         em.L("    call sdev_str_eq");
@@ -34308,16 +39230,19 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       }
       if (e.op === "and" || e.op === "or") {
         const short = em.gensym(e.op);
-        emitExpr(e.l, em, locals, tys, fnTypes);
+        emitExpr2(e.l, em, locals, tys, fnTypes);
         em.L("    testq %rax, %rax");
         em.L(`    ${e.op === "and" ? "jz" : "jnz"} ${short}`);
-        emitExpr(e.r, em, locals, tys, fnTypes);
+        emitExpr2(e.r, em, locals, tys, fnTypes);
         em.L(`${short}:`);
+        em.L("    testq %rax, %rax");
+        em.L("    setne %al");
+        em.L("    movzbq %al, %rax");
         return;
       }
-      emitExpr(e.l, em, locals, tys, fnTypes);
+      emitExpr2(e.l, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(e.r, em, locals, tys, fnTypes);
+      emitExpr2(e.r, em, locals, tys, fnTypes);
       em.L("    movq %rax, %rcx");
       em.L("    popq %rax");
       switch (e.op) {
@@ -34360,7 +39285,7 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       if (!info) throw new Error(`native: unknown function ${e.name}`);
       if (e.args.length !== info.arity) throw new Error(`native: ${e.name} arity`);
       for (let i = e.args.length - 1; i >= 0; i--) {
-        emitExpr(e.args[i], em, locals, tys, fnTypes);
+        emitExpr2(e.args[i], em, locals, tys, fnTypes);
         em.L("    pushq %rax");
       }
       em.L(`    call ${info.label}`);
@@ -34387,7 +39312,7 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       em.L(`    movq $${e.caps.length}, 8(%rax)`);
       em.L("    pushq %rax");
       e.caps.forEach((c, i) => {
-        emitExpr({ k: "ident", name: c }, em, locals, tys, fnTypes);
+        emitExpr2({ k: "ident", name: c }, em, locals, tys, fnTypes);
         em.L("    movq (%rsp), %rcx");
         em.L(`    movq %rax, ${16 + 8 * i}(%rcx)`);
       });
@@ -34396,10 +39321,10 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
     }
     case "callv": {
       for (let i = e.args.length - 1; i >= 0; i--) {
-        emitExpr(e.args[i], em, locals, tys, fnTypes);
+        emitExpr2(e.args[i], em, locals, tys, fnTypes);
         em.L("    pushq %rax");
       }
-      emitExpr(e.target, em, locals, tys, fnTypes);
+      emitExpr2(e.target, em, locals, tys, fnTypes);
       em.L("    movq %rax, %r10");
       em.L("    movq (%r10), %rax");
       em.L("    call *%rax");
@@ -34428,7 +39353,7 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
       return;
     }
     case "field": {
-      emitExpr(e.target, em, locals, tys, fnTypes);
+      emitExpr2(e.target, em, locals, tys, fnTypes);
       em.L("    movq %rax, %rdi");
       em.L(`    leaq ${em.strLabel(e.name)}(%rip), %rsi`);
       em.L("    call sdev_tget");
@@ -34436,12 +39361,12 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
     }
     case "mcall": {
       for (let i = e.args.length - 1; i >= 0; i--) {
-        emitExpr(e.args[i], em, locals, tys, fnTypes);
+        emitExpr2(e.args[i], em, locals, tys, fnTypes);
         em.L("    pushq %rax");
       }
-      emitExpr({ k: "ident", name: e.recv }, em, locals, tys, fnTypes);
+      emitExpr2({ k: "ident", name: e.recv }, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr({ k: "ident", name: e.recv }, em, locals, tys, fnTypes);
+      emitExpr2({ k: "ident", name: e.recv }, em, locals, tys, fnTypes);
       em.L("    movq %rax, %rdi");
       em.L(`    leaq ${em.strLabel(e.m)}(%rip), %rsi`);
       em.L("    call sdev_tget");
@@ -34455,7 +39380,7 @@ function emitExpr(e, em, locals, tys = /* @__PURE__ */ new Map(), fnTypes = /* @
   throw new Error(`native: cannot compile ${e.k}`);
 }
 function emitStrExpr(e, em, locals, tys, fnTypes) {
-  emitExpr(e, em, locals, tys, fnTypes);
+  emitExpr2(e, em, locals, tys, fnTypes);
   const t = typeOf(e, tys, fnTypes);
   if (t !== "str") {
     em.L("    movq %rax, %rdi");
@@ -34463,7 +39388,7 @@ function emitStrExpr(e, em, locals, tys, fnTypes) {
   }
 }
 function emitFloatExpr(e, em, locals, tys, fnTypes) {
-  emitExpr(e, em, locals, tys, fnTypes);
+  emitExpr2(e, em, locals, tys, fnTypes);
   if (typeOf(e, tys, fnTypes) !== "float") {
     em.L("    cvtsi2sdq %rax, %xmm0");
     em.L("    movq %xmm0, %rax");
@@ -34472,7 +39397,7 @@ function emitFloatExpr(e, em, locals, tys, fnTypes) {
 function emitBuiltin(e, em, locals, tys, fnTypes) {
   const n = e.name;
   const a = e.args;
-  const one = () => emitExpr(a[0], em, locals, tys, fnTypes);
+  const one = () => emitExpr2(a[0], em, locals, tys, fnTypes);
   switch (n) {
     case "length":
       one();
@@ -34488,9 +39413,17 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "ord":
       one();
       em.L("    pushq %rax");
-      emitExpr(a[1], em, locals, tys, fnTypes);
+      emitExpr2(a[1], em, locals, tys, fnTypes);
       em.L("    popq %rcx");
       em.L("    movzbq 8(%rcx,%rax,1), %rax");
+      return true;
+    case "concat":
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L("    pushq %rax");
+      emitStrExpr(a[1], em, locals, tys, fnTypes);
+      em.L("    movq %rax, %rsi");
+      em.L("    popq %rdi");
+      em.L("    call sdev_concat");
       return true;
     case "chr":
       one();
@@ -34547,7 +39480,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "fbyte": {
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(a[1], em, locals, tys, fnTypes);
+      emitExpr2(a[1], em, locals, tys, fnTypes);
       em.L("    movq %rax, %rsi");
       em.L("    popq %rdi");
       em.L("    call sdev_fbyte");
@@ -34593,7 +39526,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     }
     case "join": {
-      emitExpr(a[0], em, locals, tys, fnTypes);
+      emitExpr2(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
       emitStrExpr(a[1], em, locals, tys, fnTypes);
       em.L("    movq %rax, %rsi");
@@ -34616,9 +39549,9 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "substring": {
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(a[1], em, locals, tys, fnTypes);
+      emitExpr2(a[1], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(a[2], em, locals, tys, fnTypes);
+      emitExpr2(a[2], em, locals, tys, fnTypes);
       em.L("    movq %rax, %rdx");
       em.L("    popq %rsi");
       em.L("    popq %rdi");
@@ -34627,9 +39560,9 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     }
     case "min":
     case "max": {
-      emitExpr(a[0], em, locals, tys, fnTypes);
+      emitExpr2(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(a[1], em, locals, tys, fnTypes);
+      emitExpr2(a[1], em, locals, tys, fnTypes);
       em.L("    popq %rcx");
       em.L("    cmpq %rax, %rcx");
       em.L(`    ${n === "min" ? "cmovlq" : "cmovgq"} %rcx, %rax`);
@@ -34675,7 +39608,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     case "exit":
     case "sleep_ms":
-      emitExpr(a[0], em, locals, tys, fnTypes);
+      emitExpr2(a[0], em, locals, tys, fnTypes);
       em.L("    movq %rax, %rdi");
       em.L(`    call sdev_${n === "exit" ? "exit" : "sleep_ms"}`);
       return true;
@@ -34694,7 +39627,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     }
     case "has": {
-      emitExpr(a[0], em, locals, tys, fnTypes);
+      emitExpr2(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
       emitStrExpr(a[1], em, locals, tys, fnTypes);
       em.L("    movq %rax, %rsi");
@@ -34711,13 +39644,13 @@ function emitCmp(em, setInstr) {
   em.L(`    ${setInstr} %al`);
   em.L("    movzbq %al, %rax");
 }
-function emitStmt(s, em, locals, ctx) {
+function emitStmt2(s, em, locals, ctx) {
   const tys = ctx.tys;
   const fnTypes = ctx.fnTypes;
   switch (s.k) {
     case "say": {
       const st = typeOf(s.expr, tys, fnTypes);
-      emitExpr(s.expr, em, locals, tys, fnTypes);
+      emitExpr2(s.expr, em, locals, tys, fnTypes);
       em.L(`    movq %rax, %rdi`);
       em.L(`    call ${st === "str" ? "sdev_say_str" : st === "float" ? "sdev_say_float" : "sdev_say_int"}`);
       return;
@@ -34728,11 +39661,11 @@ function emitStmt(s, em, locals, ctx) {
       if (isTome) {
         tys.set(tomeValKey({ target, idx: s.idx }), typeOf(s.expr, tys, fnTypes));
       }
-      emitExpr(target, em, locals, tys, fnTypes);
+      emitExpr2(target, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(s.idx, em, locals, tys, fnTypes);
+      emitExpr2(s.idx, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(s.expr, em, locals, tys, fnTypes);
+      emitExpr2(s.expr, em, locals, tys, fnTypes);
       if (isTome) {
         em.L("    movq %rax, %rdx");
         em.L("    popq %rsi");
@@ -34750,19 +39683,19 @@ function emitStmt(s, em, locals, ctx) {
       const idxName = `@fe_i${s.d}`;
       const seqName = `@fe_s${s.d}`;
       const seqExpr = iterTy === "tome" ? { k: "call", name: "keys", args: [s.iter] } : s.iter;
-      emitStmt({ k: "set", name: seqName, expr: seqExpr }, em, locals, ctx);
-      emitStmt({ k: "set", name: idxName, expr: { k: "num", v: 0 } }, em, locals, ctx);
+      emitStmt2({ k: "set", name: seqName, expr: seqExpr }, em, locals, ctx);
+      emitStmt2({ k: "set", name: idxName, expr: { k: "num", v: 0 } }, em, locals, ctx);
       const top = em.gensym("fetop");
       const end = em.gensym("feend");
       em.L(`${top}:`);
-      emitExpr({ k: "ident", name: idxName }, em, locals, tys, fnTypes);
+      emitExpr2({ k: "ident", name: idxName }, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr({ k: "call", name: "length", args: [{ k: "ident", name: seqName }] }, em, locals, tys, fnTypes);
+      emitExpr2({ k: "call", name: "length", args: [{ k: "ident", name: seqName }] }, em, locals, tys, fnTypes);
       em.L("    movq %rax, %rcx");
       em.L("    popq %rax");
       em.L("    cmpq %rcx, %rax");
       em.L(`    jge ${end}`);
-      emitStmt({
+      emitStmt2({
         k: "set",
         name: s.name,
         expr: { k: "index", target: { k: "ident", name: seqName }, idx: { k: "ident", name: idxName } }
@@ -34770,10 +39703,10 @@ function emitStmt(s, em, locals, ctx) {
       if (iterTy === "tome") tys.set(s.name, "str");
       const cont = em.gensym("fecont");
       (ctx.loops ||= []).push({ brk: end, cont });
-      s.body.forEach((x) => emitStmt(x, em, locals, ctx));
+      s.body.forEach((x) => emitStmt2(x, em, locals, ctx));
       ctx.loops.pop();
       em.L(`${cont}:`);
-      emitStmt({
+      emitStmt2({
         k: "set",
         name: idxName,
         expr: { k: "bin", op: "+", l: { k: "ident", name: idxName }, r: { k: "num", v: 1 } }
@@ -34806,7 +39739,7 @@ function emitStmt(s, em, locals, ctx) {
           }
         }
       }
-      emitExpr(s.expr, em, locals, tys, fnTypes);
+      emitExpr2(s.expr, em, locals, tys, fnTypes);
       if (locals && locals.has(s.name)) {
         const slot = locals.get(s.name);
         em.L(`    movq %rax, -${8 * (slot + 1)}(%rbp)`);
@@ -34818,13 +39751,13 @@ function emitStmt(s, em, locals, ctx) {
     case "if": {
       const elseL = em.gensym("else");
       const endL = em.gensym("endif");
-      emitExpr(s.cond, em, locals, tys, fnTypes);
+      emitExpr2(s.cond, em, locals, tys, fnTypes);
       em.L("    testq %rax, %rax");
       em.L(`    jz ${elseL}`);
-      s.then_.forEach((x) => emitStmt(x, em, locals, ctx));
+      s.then_.forEach((x) => emitStmt2(x, em, locals, ctx));
       em.L(`    jmp ${endL}`);
       em.L(`${elseL}:`);
-      if (s.else_) s.else_.forEach((x) => emitStmt(x, em, locals, ctx));
+      if (s.else_) s.else_.forEach((x) => emitStmt2(x, em, locals, ctx));
       em.L(`${endL}:`);
       return;
     }
@@ -34832,11 +39765,11 @@ function emitStmt(s, em, locals, ctx) {
       const top = em.gensym("wtop");
       const end = em.gensym("wend");
       em.L(`${top}:`);
-      emitExpr(s.cond, em, locals, tys, fnTypes);
+      emitExpr2(s.cond, em, locals, tys, fnTypes);
       em.L("    testq %rax, %rax");
       em.L(`    jz ${end}`);
       (ctx.loops ||= []).push({ brk: end, cont: top });
-      s.body.forEach((x) => emitStmt(x, em, locals, ctx));
+      s.body.forEach((x) => emitStmt2(x, em, locals, ctx));
       ctx.loops.pop();
       em.L(`    jmp ${top}`);
       em.L(`${end}:`);
@@ -34852,9 +39785,9 @@ function emitStmt(s, em, locals, ctx) {
     case "setField": {
       const ft = typeOf(s.expr, tys, fnTypes);
       if (ft !== "int") fnTypes.set(`@field:${s.field}`, ft);
-      emitExpr({ k: "ident", name: s.name }, em, locals, tys, fnTypes);
+      emitExpr2({ k: "ident", name: s.name }, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
-      emitExpr(s.expr, em, locals, tys, fnTypes);
+      emitExpr2(s.expr, em, locals, tys, fnTypes);
       em.L("    movq %rax, %rdx");
       em.L(`    leaq ${em.strLabel(s.field)}(%rip), %rsi`);
       em.L("    popq %rdi");
@@ -34868,7 +39801,7 @@ function emitStmt(s, em, locals, ctx) {
       em.L("    movq %rsp, %rsi");
       em.L("    movq %rbp, %rdx");
       em.L("    call sdev_try_push");
-      s.body.forEach((x) => emitStmt(x, em, locals, ctx));
+      s.body.forEach((x) => emitStmt2(x, em, locals, ctx));
       em.L("    call sdev_try_pop");
       em.L(`    jmp ${over}`);
       em.L(`${handler}:`);
@@ -34880,7 +39813,7 @@ function emitStmt(s, em, locals, ctx) {
           em.L(`    movq %rax, ${em.globalLabel(s.errName)}(%rip)`);
         }
       }
-      s.rescue_.forEach((x) => emitStmt(x, em, locals, ctx));
+      s.rescue_.forEach((x) => emitStmt2(x, em, locals, ctx));
       em.L(`${over}:`);
       return;
     }
@@ -34891,35 +39824,35 @@ function emitStmt(s, em, locals, ctx) {
       return;
     }
     case "return": {
-      if (s.expr) emitExpr(s.expr, em, locals, tys, fnTypes);
+      if (s.expr) emitExpr2(s.expr, em, locals, tys, fnTypes);
       else em.L("    xorq %rax, %rax");
       em.L(`    jmp ${ctx.epilogue}`);
       return;
     }
     case "exprStmt": {
-      emitExpr(s.expr, em, locals, tys, fnTypes);
+      emitExpr2(s.expr, em, locals, tys, fnTypes);
       return;
     }
   }
 }
-function collectSets(body, locals) {
+function collectSets2(body, locals) {
   for (const s of body) {
-    if ((s.k === "set" || s.k === "setIndex") && !locals.has(s.name)) locals.set(s.name, locals.size);
+    if (s.k === "set" && !locals.has(s.name)) locals.set(s.name, locals.size);
     if (s.k === "if") {
-      collectSets(s.then_, locals);
-      if (s.else_) collectSets(s.else_, locals);
+      collectSets2(s.then_, locals);
+      if (s.else_) collectSets2(s.else_, locals);
     }
-    if (s.k === "while") collectSets(s.body, locals);
+    if (s.k === "while") collectSets2(s.body, locals);
     if (s.k === "attempt") {
-      collectSets(s.body, locals);
+      collectSets2(s.body, locals);
       if (s.errName && !locals.has(s.errName)) locals.set(s.errName, locals.size);
-      collectSets(s.rescue_, locals);
+      collectSets2(s.rescue_, locals);
     }
     if (s.k === "foreach") {
       for (const nm of [s.name, `@fe_i${s.d}`, `@fe_s${s.d}`]) {
         if (!locals.has(nm)) locals.set(nm, locals.size);
       }
-      collectSets(s.body, locals);
+      collectSets2(s.body, locals);
     }
   }
 }
@@ -34944,7 +39877,7 @@ function generateAsm(source, opts = {}) {
     em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
     const locals = /* @__PURE__ */ new Map();
     f2.params.forEach((p, i) => locals.set(p, i));
-    collectSets(f2.body, locals);
+    collectSets2(f2.body, locals);
     f2.params.forEach((_p, i) => {
       em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
@@ -34956,7 +39889,7 @@ function generateAsm(source, opts = {}) {
       if (t) ptys.set(p, t);
     });
     const ctx = { epilogue, tys: ptys, fnTypes: em.fnTypes };
-    f2.body.forEach((s) => emitStmt(s, em, locals, ctx));
+    f2.body.forEach((s) => emitStmt2(s, em, locals, ctx));
     em.L("    xorq %rax, %rax");
     em.L(`${epilogue}:`);
     em.L("    movq %rbp, %rsp");
@@ -34969,7 +39902,7 @@ function generateAsm(source, opts = {}) {
   em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
   const mainLocals = null;
   const mainCtx = { epilogue: ".Lmain_ret", tys: /* @__PURE__ */ new Map(), fnTypes: em.fnTypes };
-  main2.forEach((s) => emitStmt(s, em, mainLocals, mainCtx));
+  main2.forEach((s) => emitStmt2(s, em, mainLocals, mainCtx));
   em.L(".Lmain_ret:");
   em.L("    xorq %rax, %rax");
   em.L("    movq %rbp, %rsp");
@@ -34986,7 +39919,7 @@ function generateAsm(source, opts = {}) {
     lam.caps.forEach((c) => {
       if (!locals.has(c)) locals.set(c, locals.size);
     });
-    collectSets(lam.body, locals);
+    collectSets2(lam.body, locals);
     lam.params.forEach((_p, i) => {
       em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
@@ -34998,7 +39931,7 @@ function generateAsm(source, opts = {}) {
     const epilogue = em.gensym("lamret");
     const ltys = new Map(lam.tys);
     const ctx = { epilogue, tys: ltys, fnTypes: em.fnTypes };
-    lam.body.forEach((s) => emitStmt(s, em, locals, ctx));
+    lam.body.forEach((s) => emitStmt2(s, em, locals, ctx));
     em.L("    xorq %rax, %rax");
     em.L(`${epilogue}:`);
     em.L("    movq %rbp, %rsp");
@@ -35119,7 +40052,7 @@ __export(link_exports, {
 });
 import { spawnSync } from "node:child_process";
 import { writeFileSync as writeFileSync5, mkdirSync as mkdirSync4 } from "node:fs";
-import { dirname as dirname5, resolve as resolve5 } from "node:path";
+import { dirname as dirname5, resolve as resolve6 } from "node:path";
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { encoding: "utf8", ...opts });
   if (r.status !== 0) {
@@ -35134,9 +40067,9 @@ function link(asmText, outPath, opts = {}) {
   const ld = opts.ld || "ld";
   const tmp = opts.tmpDir || dirname5(outPath);
   mkdirSync4(tmp, { recursive: true });
-  const progS = resolve5(tmp, "_sdev_prog.s");
-  const progO = resolve5(tmp, "_sdev_prog.o");
-  const rtO = resolve5(tmp, "_sdev_runtime.o");
+  const progS = resolve6(tmp, "_sdev_prog.s");
+  const progO = resolve6(tmp, "_sdev_prog.o");
+  const rtO = resolve6(tmp, "_sdev_runtime.o");
   writeFileSync5(progS, asmText);
   run(as, ["--64", "-o", progO, progS]);
   run(as, ["--64", "-o", rtO, RUNTIME_S]);
@@ -35147,13 +40080,13 @@ var RUNTIME_S;
 var init_link = __esm({
   "src/lang-bridge/native/link.mjs"() {
     RUNTIME_S = (() => {
-      if (process.env.SDEV_RUNTIME_S) return resolve5(process.env.SDEV_RUNTIME_S);
+      if (process.env.SDEV_RUNTIME_S) return resolve6(process.env.SDEV_RUNTIME_S);
       try {
         const u = import.meta.url;
-        if (u) return resolve5(new URL("./runtime.s", u).pathname);
+        if (u) return resolve6(new URL("./runtime.s", u).pathname);
       } catch {
       }
-      return resolve5(typeof __dirname !== "undefined" ? __dirname : ".", "runtime.s");
+      return resolve6(typeof __dirname !== "undefined" ? __dirname : ".", "runtime.s");
     })();
   }
 });
@@ -35166,7 +40099,7 @@ init_parser();
 init_interpreter();
 init_errors();
 import { writeFileSync as writeFileSync6, readFileSync as readFileSync6, mkdirSync as mkdirSync5, existsSync as existsSync6 } from "node:fs";
-import { resolve as resolve6, basename as basename2, dirname as dirname6, extname } from "node:path";
+import { resolve as resolve7, basename as basename2, dirname as dirname6, extname } from "node:path";
 import { createInterface as createInterface2 } from "node:readline";
 import { spawnSync as spawnSync2 } from "node:child_process";
 
@@ -35181,10 +40114,10 @@ init_builtins();
 init_sdev_module();
 
 // raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\graphics.sdev
-var graphics_default = '# =============================================================================\n# SDEV Standard Library: 2D Canvas Graphics Engine (lang/stdlib/v2/graphics.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\n\n# Global graphics state list:\n# 0: width (int)\n# 1: height (int)\n# 2: bg_color (str)\n# 3: fill_color (str)\n# 4: stroke_color (str)\n# 5: line_width (int)\n# 6: font_spec (str)\n# 7: has_fill (int 1/0)\n# 8: has_stroke (int 1/0)\n# 9: cmd_count (int)\n# 10: svg_defs (str)\n# 11: svg_body (str)\nset _gfx to mklist(16)\nset _gfx[0] to 400\nset _gfx[1] to 400\nset _gfx[2] to "#090d16"\nset _gfx[3] to "#38bdf8"\nset _gfx[4] to "#e2e8f0"\nset _gfx[5] to 2\nset _gfx[6] to "14px JetBrains Mono, monospace"\nset _gfx[7] to 1\nset _gfx[8] to 1\nset _gfx[9] to 0\nset _gfx[10] to ""\nset _gfx[11] to ""\n\nto canvas_create with w h\n  set _gfx[0] to w\n  set _gfx[1] to h\n  set _gfx[2] to "#090d16"\n  set _gfx[3] to "#38bdf8"\n  set _gfx[4] to "#e2e8f0"\n  set _gfx[5] to 2\n  set _gfx[6] to "14px JetBrains Mono, monospace"\n  set _gfx[7] to 1\n  set _gfx[8] to 1\n  set _gfx[9] to 0\n  set _gfx[10] to ""\n  set _gfx[11] to ""\n  return _gfx\nend\n\nto gfx_emit with frag\n  set cur to concat(_gfx[11], "")\n  set _gfx[11] to cur + frag + "\\n"\n  set _gfx[9] to _gfx[9] + 1\n  return 0\nend\n\nto gfx_clear\n  set _gfx[9] to 0\n  set _gfx[11] to ""\n  return 0\nend\n\nto gfx_background with color_str\n  set _gfx[2] to concat(color_str, "")\n  set w to str(_gfx[0])\n  set h to str(_gfx[1])\n  return gfx_emit("<rect x=\\"0\\" y=\\"0\\" width=\\"" + w + "\\" height=\\"" + h + "\\" fill=\\"" + concat(color_str, "") + "\\"/>")\nend\n\nto gfx_fill with color_str\n  set _gfx[3] to concat(color_str, "")\n  set _gfx[7] to 1\n  return 0\nend\n\nto gfx_no_fill\n  set _gfx[7] to 0\n  return 0\nend\n\nto gfx_stroke with color_str\n  set _gfx[4] to concat(color_str, "")\n  set _gfx[8] to 1\n  return 0\nend\n\nto gfx_no_stroke\n  set _gfx[8] to 0\n  return 0\nend\n\nto gfx_line_width with w\n  set _gfx[5] to w\n  return 0\nend\n\nto gfx_font with font_str\n  set _gfx[6] to concat(font_str, "")\n  return 0\nend\n\nto gfx_paint_attrs\n  set f to "none"\n  if _gfx[7] is 1\n    set f to concat(_gfx[3], "")\n  end\n  set s to "none"\n  if _gfx[8] is 1\n    set s to concat(_gfx[4], "")\n  end\n  set out to " fill=\\"" + f + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\""\n  return concat(out, "")\nend\n\nto gfx_rect with x y w h radius\n  set rx_attr to ""\n  if radius > 0\n    set rx_attr to " rx=\\"" + str(radius) + "\\""\n  end\n  return gfx_emit("<rect x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" width=\\"" + str(w) + "\\" height=\\"" + str(h) + "\\"" + rx_attr + gfx_paint_attrs() + "/>")\nend\n\nto gfx_circle with cx cy r\n  return gfx_emit("<circle cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" r=\\"" + str(r) + "\\"" + gfx_paint_attrs() + "/>")\nend\n\nto gfx_ellipse with cx cy rx ry\n  return gfx_emit("<ellipse cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" rx=\\"" + str(rx) + "\\" ry=\\"" + str(ry) + "\\"" + gfx_paint_attrs() + "/>")\nend\n\nto gfx_line with x1 y1 x2 y2\n  set s to concat(_gfx[4], "")\n  return gfx_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\" stroke-linecap=\\"round\\"/>")\nend\n\nto gfx_triangle with x1 y1 x2 y2 x3 y3\n  set pts to str(x1) + "," + str(y1) + " " + str(x2) + "," + str(y2) + " " + str(x3) + "," + str(y3)\n  return gfx_emit("<polygon points=\\"" + pts + "\\"" + gfx_paint_attrs() + "/>")\nend\n\nto gfx_polygon with points_str\n  return gfx_emit("<polygon points=\\"" + concat(points_str, "") + "\\"" + gfx_paint_attrs() + "/>")\nend\n\nto gfx_text with txt x y\n  set f to concat(_gfx[3], "")\n  set fn_spec to concat(_gfx[6], "")\n  return gfx_emit("<text x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" fill=\\"" + f + "\\" style=\\"font: " + fn_spec + ";\\">" + concat(txt, "") + "</text>")\nend\n\nto gfx_linear_gradient with grad_id x1 y1 x2 y2 c1 c2\n  set def to "<linearGradient id=\\"" + concat(grad_id, "") + "\\" x1=\\"" + str(x1) + "%\\" y1=\\"" + str(y1) + "%\\" x2=\\"" + str(x2) + "%\\" y2=\\"" + str(y2) + "%\\"><stop offset=\\"0%\\" stop-color=\\"" + concat(c1, "") + "\\"/><stop offset=\\"100%\\" stop-color=\\"" + concat(c2, "") + "\\"/></linearGradient>"\n  set cur to concat(_gfx[10], "")\n  set _gfx[10] to cur + def\n  set _gfx[3] to "url(#" + concat(grad_id, "") + ")"\n  set _gfx[7] to 1\n  return 0\nend\n\nto gfx_push_transform with transform_str\n  return gfx_emit("<g transform=\\"" + concat(transform_str, "") + "\\">")\nend\n\nto gfx_pop_transform\n  return gfx_emit("</g>")\nend\n\nto gfx_translate with dx dy\n  return gfx_push_transform("translate(" + str(dx) + "," + str(dy) + ")")\nend\n\nto gfx_rotate with deg\n  return gfx_push_transform("rotate(" + str(deg) + ")")\nend\n\nto gfx_scale with sx sy\n  return gfx_push_transform("scale(" + str(sx) + "," + str(sy) + ")")\nend\n\nto gfx_cmd_count\n  return _gfx[9]\nend\n\nto gfx_to_svg\n  set w to str(_gfx[0])\n  set h to str(_gfx[1])\n  set defs_str to concat(_gfx[10], "")\n  set defs_block to ""\n  if length(defs_str) > 0\n    set defs_block to "<defs>" + defs_str + "</defs>\\n"\n  end\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"" + w + "\\" height=\\"" + h + "\\" viewBox=\\"0 0 " + w + " " + h + "\\">\\n" + defs_block + concat(_gfx[11], "") + "</svg>"\n  return concat(svg, "")\nend\n\n\nto gfx_hue_css with h s l\n  return "hsl(" + str(h) + ", " + str(s) + "%, " + str(l) + "%)"\nend\n\nto gfx_rgb_css with r g b\n  return "rgb(" + str(r) + ", " + str(g) + ", " + str(b) + ")"\nend\n\nto gfx_rgba_css with r g b a\n  return "rgba(" + str(r) + ", " + str(g) + ", " + str(b) + ", " + str(a) + ")"\nend\n\nto gfx_hsla_css with h s l a\n  return "hsla(" + str(h) + ", " + str(s) + "%, " + str(l) + "%, " + str(a) + ")"\nend\n\nto gfx_radians with deg\n  return (deg * 3.141592653589793) / 180.0\nend\n\nto gfx_degrees with rad\n  return (rad * 180.0) / 3.141592653589793\nend\n\nto gfx_lerp with a b t\n  return a + ((b - a) * t)\nend\n\nto gfx_map_range with val in_min in_max out_min out_max\n  return out_min + ((out_max - out_min) * ((val - in_min) / (in_max - in_min)))\nend\n\nto gfx_constrain with val lo hi\n  if val < lo\n    return lo\n  end\n  if val > hi\n    return hi\n  end\n  return val\nend\n\nto gfx_dist with x1 y1 x2 y2\n  set dx to x2 - x1\n  set dy to y2 - y1\n  return fsqrt((dx * dx) + (dy * dy))\nend\n\nto gfx_sprite_collides with ax ay aw ah bx by bw bh\n  if ax < (bx + bw)\n    if (ax + aw) > bx\n      if ay < (by + bh)\n        if (ay + ah) > by\n          return 1\n        end\n      end\n    end\n  end\n  return 0\nend\n';
+var graphics_default = '# =============================================================================\r\n# SDEV Standard Library: 2D Canvas Graphics Engine (lang/stdlib/v2/graphics.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\n# Global graphics state list:\r\n# 0: width (int)\r\n# 1: height (int)\r\n# 2: bg_color (str)\r\n# 3: fill_color (str)\r\n# 4: stroke_color (str)\r\n# 5: line_width (int)\r\n# 6: font_spec (str)\r\n# 7: has_fill (int 1/0)\r\n# 8: has_stroke (int 1/0)\r\n# 9: cmd_count (int)\r\n# 10: svg_defs (str)\r\n# 11: svg_body (str)\r\nset _gfx to mklist(16)\r\nset _gfx[0] to 400\r\nset _gfx[1] to 400\r\nset _gfx[2] to "#090d16"\r\nset _gfx[3] to "#38bdf8"\r\nset _gfx[4] to "#e2e8f0"\r\nset _gfx[5] to 2\r\nset _gfx[6] to "14px JetBrains Mono, monospace"\r\nset _gfx[7] to 1\r\nset _gfx[8] to 1\r\nset _gfx[9] to 0\r\nset _gfx[10] to ""\r\nset _gfx[11] to ""\r\n\r\nto canvas_create with w h\r\n  set _gfx[0] to w\r\n  set _gfx[1] to h\r\n  set _gfx[2] to "#090d16"\r\n  set _gfx[3] to "#38bdf8"\r\n  set _gfx[4] to "#e2e8f0"\r\n  set _gfx[5] to 2\r\n  set _gfx[6] to "14px JetBrains Mono, monospace"\r\n  set _gfx[7] to 1\r\n  set _gfx[8] to 1\r\n  set _gfx[9] to 0\r\n  set _gfx[10] to ""\r\n  set _gfx[11] to ""\r\n  return _gfx\r\nend\r\n\r\nto gfx_emit with frag\r\n  set cur to concat(_gfx[11], "")\r\n  set _gfx[11] to cur + frag + "\\n"\r\n  set _gfx[9] to _gfx[9] + 1\r\n  return 0\r\nend\r\n\r\nto gfx_clear\r\n  set _gfx[9] to 0\r\n  set _gfx[11] to ""\r\n  return 0\r\nend\r\n\r\nto gfx_background with color_str\r\n  set _gfx[2] to concat(color_str, "")\r\n  set w to str(_gfx[0])\r\n  set h to str(_gfx[1])\r\n  return gfx_emit("<rect x=\\"0\\" y=\\"0\\" width=\\"" + w + "\\" height=\\"" + h + "\\" fill=\\"" + concat(color_str, "") + "\\"/>")\r\nend\r\n\r\nto gfx_fill with color_str\r\n  set _gfx[3] to concat(color_str, "")\r\n  set _gfx[7] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_no_fill\r\n  set _gfx[7] to 0\r\n  return 0\r\nend\r\n\r\nto gfx_stroke with color_str\r\n  set _gfx[4] to concat(color_str, "")\r\n  set _gfx[8] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_no_stroke\r\n  set _gfx[8] to 0\r\n  return 0\r\nend\r\n\r\nto gfx_line_width with w\r\n  set _gfx[5] to w\r\n  return 0\r\nend\r\n\r\nto gfx_font with font_str\r\n  set _gfx[6] to concat(font_str, "")\r\n  return 0\r\nend\r\n\r\nto gfx_paint_attrs\r\n  set f to "none"\r\n  if _gfx[7] is 1\r\n    set f to concat(_gfx[3], "")\r\n  end\r\n  set s to "none"\r\n  if _gfx[8] is 1\r\n    set s to concat(_gfx[4], "")\r\n  end\r\n  set out to " fill=\\"" + f + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\""\r\n  return concat(out, "")\r\nend\r\n\r\nto gfx_rect with x y w h radius\r\n  set rx_attr to ""\r\n  if radius > 0\r\n    set rx_attr to " rx=\\"" + str(radius) + "\\""\r\n  end\r\n  return gfx_emit("<rect x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" width=\\"" + str(w) + "\\" height=\\"" + str(h) + "\\"" + rx_attr + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_circle with cx cy r\r\n  return gfx_emit("<circle cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" r=\\"" + str(r) + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_ellipse with cx cy rx ry\r\n  return gfx_emit("<ellipse cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" rx=\\"" + str(rx) + "\\" ry=\\"" + str(ry) + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_line with x1 y1 x2 y2\r\n  set s to concat(_gfx[4], "")\r\n  return gfx_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\" stroke-linecap=\\"round\\"/>")\r\nend\r\n\r\nto gfx_triangle with x1 y1 x2 y2 x3 y3\r\n  set pts to str(x1) + "," + str(y1) + " " + str(x2) + "," + str(y2) + " " + str(x3) + "," + str(y3)\r\n  return gfx_emit("<polygon points=\\"" + pts + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_polygon with points_str\r\n  return gfx_emit("<polygon points=\\"" + concat(points_str, "") + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_text with txt x y\r\n  set f to concat(_gfx[3], "")\r\n  set fn_spec to concat(_gfx[6], "")\r\n  return gfx_emit("<text x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" fill=\\"" + f + "\\" style=\\"font: " + fn_spec + ";\\">" + concat(txt, "") + "</text>")\r\nend\r\n\r\nto gfx_linear_gradient with grad_id x1 y1 x2 y2 c1 c2\r\n  set def to "<linearGradient id=\\"" + concat(grad_id, "") + "\\" x1=\\"" + str(x1) + "%\\" y1=\\"" + str(y1) + "%\\" x2=\\"" + str(x2) + "%\\" y2=\\"" + str(y2) + "%\\"><stop offset=\\"0%\\" stop-color=\\"" + concat(c1, "") + "\\"/><stop offset=\\"100%\\" stop-color=\\"" + concat(c2, "") + "\\"/></linearGradient>"\r\n  set cur to concat(_gfx[10], "")\r\n  set _gfx[10] to cur + def\r\n  set _gfx[3] to "url(#" + concat(grad_id, "") + ")"\r\n  set _gfx[7] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_push_transform with transform_str\r\n  return gfx_emit("<g transform=\\"" + concat(transform_str, "") + "\\">")\r\nend\r\n\r\nto gfx_pop_transform\r\n  return gfx_emit("</g>")\r\nend\r\n\r\nto gfx_translate with dx dy\r\n  return gfx_push_transform("translate(" + str(dx) + "," + str(dy) + ")")\r\nend\r\n\r\nto gfx_rotate with deg\r\n  return gfx_push_transform("rotate(" + str(deg) + ")")\r\nend\r\n\r\nto gfx_scale with sx sy\r\n  return gfx_push_transform("scale(" + str(sx) + "," + str(sy) + ")")\r\nend\r\n\r\nto gfx_cmd_count\r\n  return _gfx[9]\r\nend\r\n\r\nto gfx_to_svg\r\n  set w to str(_gfx[0])\r\n  set h to str(_gfx[1])\r\n  set defs_str to concat(_gfx[10], "")\r\n  set defs_block to ""\r\n  if length(defs_str) > 0\r\n    set defs_block to "<defs>" + defs_str + "</defs>\\n"\r\n  end\r\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"" + w + "\\" height=\\"" + h + "\\" viewBox=\\"0 0 " + w + " " + h + "\\">\\n" + defs_block + concat(_gfx[11], "") + "</svg>"\r\n  return concat(svg, "")\r\nend\r\n\r\n\r\nto gfx_hue_css with h s l\r\n  return "hsl(" + str(h) + ", " + str(s) + "%, " + str(l) + "%)"\r\nend\r\n\r\nto gfx_rgb_css with r g b\r\n  return "rgb(" + str(r) + ", " + str(g) + ", " + str(b) + ")"\r\nend\r\n\r\nto gfx_rgba_css with r g b a\r\n  return "rgba(" + str(r) + ", " + str(g) + ", " + str(b) + ", " + str(a) + ")"\r\nend\r\n\r\nto gfx_hsla_css with h s l a\r\n  return "hsla(" + str(h) + ", " + str(s) + "%, " + str(l) + "%, " + str(a) + ")"\r\nend\r\n\r\nto gfx_radians with deg\r\n  return (deg * 3.141592653589793) / 180.0\r\nend\r\n\r\nto gfx_degrees with rad\r\n  return (rad * 180.0) / 3.141592653589793\r\nend\r\n\r\nto gfx_lerp with a b t\r\n  return a + ((b - a) * t)\r\nend\r\n\r\nto gfx_map_range with val in_min in_max out_min out_max\r\n  return out_min + ((out_max - out_min) * ((val - in_min) / (in_max - in_min)))\r\nend\r\n\r\nto gfx_constrain with val lo hi\r\n  if val < lo\r\n    return lo\r\n  end\r\n  if val > hi\r\n    return hi\r\n  end\r\n  return val\r\nend\r\n\r\nto gfx_dist with x1 y1 x2 y2\r\n  set dx to x2 - x1\r\n  set dy to y2 - y1\r\n  return fsqrt((dx * dx) + (dy * dy))\r\nend\r\n\r\nto gfx_sprite_collides with ax ay aw ah bx by bw bh\r\n  if ax < (bx + bw)\r\n    if (ax + aw) > bx\r\n      if ay < (by + bh)\r\n        if (ay + ah) > by\r\n          return 1\r\n        end\r\n      end\r\n    end\r\n  end\r\n  return 0\r\nend\r\n';
 
 // raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\turtle.sdev
-var turtle_default = '# =============================================================================\n# SDEV Standard Library: Turtle Vector Graphics Engine (lang/stdlib/v2/turtle.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\n\n# _turtle state list:\n# 0: x (int)\n# 1: y (int)\n# 2: angle_deg (int)\n# 3: pen_down (int 1/0)\n# 4: color (str)\n# 5: width (int)\n# 6: seg_count (int)\n# 7: svg_body (str)\nset _turtle to mklist(10)\nset _turtle[0] to 200\nset _turtle[1] to 200\nset _turtle[2] to 0\nset _turtle[3] to 1\nset _turtle[4] to "#38bdf8"\nset _turtle[5] to 2\nset _turtle[6] to 0\nset _turtle[7] to ""\n\nto turtle_create\n  set _turtle[0] to 200\n  set _turtle[1] to 200\n  set _turtle[2] to 0\n  set _turtle[3] to 1\n  set _turtle[4] to "#38bdf8"\n  set _turtle[5] to 2\n  set _turtle[6] to 0\n  set _turtle[7] to ""\n  return _turtle\nend\n\nto turtle_emit with frag\n  set cur to concat(_turtle[7], "")\n  set _turtle[7] to cur + frag + "\\n"\n  set _turtle[6] to _turtle[6] + 1\n  return 0\nend\n\nto turtle_forward with dist\n  set x1 to _turtle[0]\n  set y1 to _turtle[1]\n  set deg to _turtle[2]\n  set rad to i2f(deg) * 3.14159265 / 180.0\n  set dx to f2i(fround(fcos(rad) * i2f(dist)))\n  set dy to f2i(fround(fsin(rad) * i2f(dist)))\n  set x2 to x1 + dx\n  set y2 to y1 + dy\n  set _turtle[0] to x2\n  set _turtle[1] to y2\n  if _turtle[3] is 1\n    set col to concat(_turtle[4], "")\n    set w to str(_turtle[5])\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\n  end\n  return 0\nend\n\nto turtle_backward with dist\n  return turtle_forward(0 - dist)\nend\n\nto turtle_right with deg\n  set _turtle[2] to (_turtle[2] + deg) % 360\n  return 0\nend\n\nto turtle_left with deg\n  set a to (_turtle[2] - deg) % 360\n  if a < 0\n    set a to a + 360\n  end\n  set _turtle[2] to a\n  return 0\nend\n\nto turtle_goto with x y\n  set x1 to _turtle[0]\n  set y1 to _turtle[1]\n  set _turtle[0] to x\n  set _turtle[1] to y\n  if _turtle[3] is 1\n    set col to concat(_turtle[4], "")\n    set w to str(_turtle[5])\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x) + "\\" y2=\\"" + str(y) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\n  end\n  return 0\nend\n\nto turtle_pen_up\n  set _turtle[3] to 0\n  return 0\nend\n\nto turtle_pen_down\n  set _turtle[3] to 1\n  return 0\nend\n\nto turtle_pen_color with col_str\n  set _turtle[4] to concat(col_str, "")\n  return 0\nend\n\nto turtle_pen_width with w\n  set _turtle[5] to w\n  return 0\nend\n\nto turtle_heading with deg\n  set _turtle[2] to deg % 360\n  return 0\nend\n\nto turtle_home\n  set _turtle[0] to 200\n  set _turtle[1] to 200\n  set _turtle[2] to 0\n  return 0\nend\n\nto turtle_dot with r\n  set col to concat(_turtle[4], "")\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"" + col + "\\"/>")\nend\n\nto turtle_circle with r\n  set col to concat(_turtle[4], "")\n  set w to str(_turtle[5])\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"none\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\"/>")\nend\n\nto turtle_x\n  return _turtle[0]\nend\n\nto turtle_y\n  return _turtle[1]\nend\n\nto turtle_angle\n  return _turtle[2]\nend\n\nto turtle_segment_count\n  return _turtle[6]\nend\n\nto turtle_to_svg\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"400\\" height=\\"400\\" viewBox=\\"0 0 400 400\\">\\n" + concat(_turtle[7], "") + "</svg>"\n  return concat(svg, "")\nend\n\n\nto turtle_step_pos with x y angle_deg dist\n  set rad to (angle_deg * 3.141592653589793) / 180.0\n  set nx to x + (fcos(rad) * dist)\n  set ny to y + (fsin(rad) * dist)\n  return [nx, ny]\nend\n\nto turtle_circle_steps with x y angle_deg radius steps\n  set angle_step to 360.0 / steps\n  set dist to ((2.0 * 3.141592653589793) * radius) / steps\n  set cx to x\n  set cy to y\n  set ca to angle_deg\n  set segs to mklist(steps)\n  set i to 0\n  while i < steps\n    set rad to (ca * 3.141592653589793) / 180.0\n    set nx to cx + (fcos(rad) * dist)\n    set ny to cy + (fsin(rad) * dist)\n    set segs[i] to [cx, cy, nx, ny]\n    set cx to nx\n    set cy to ny\n    set ca to ca + angle_step\n    set i to i + 1\n  end\n  return [cx, cy, ca, segs]\nend\n';
+var turtle_default = '# =============================================================================\r\n# SDEV Standard Library: Turtle Vector Graphics Engine (lang/stdlib/v2/turtle.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\n# _turtle state list:\r\n# 0: x (int)\r\n# 1: y (int)\r\n# 2: angle_deg (int)\r\n# 3: pen_down (int 1/0)\r\n# 4: color (str)\r\n# 5: width (int)\r\n# 6: seg_count (int)\r\n# 7: svg_body (str)\r\nset _turtle to mklist(10)\r\nset _turtle[0] to 200\r\nset _turtle[1] to 200\r\nset _turtle[2] to 0\r\nset _turtle[3] to 1\r\nset _turtle[4] to "#38bdf8"\r\nset _turtle[5] to 2\r\nset _turtle[6] to 0\r\nset _turtle[7] to ""\r\n\r\nto turtle_create\r\n  set _turtle[0] to 200\r\n  set _turtle[1] to 200\r\n  set _turtle[2] to 0\r\n  set _turtle[3] to 1\r\n  set _turtle[4] to "#38bdf8"\r\n  set _turtle[5] to 2\r\n  set _turtle[6] to 0\r\n  set _turtle[7] to ""\r\n  return _turtle\r\nend\r\n\r\nto turtle_emit with frag\r\n  set cur to concat(_turtle[7], "")\r\n  set _turtle[7] to cur + frag + "\\n"\r\n  set _turtle[6] to _turtle[6] + 1\r\n  return 0\r\nend\r\n\r\nto turtle_forward with dist\r\n  set x1 to _turtle[0]\r\n  set y1 to _turtle[1]\r\n  set deg to _turtle[2]\r\n  set rad to i2f(deg) * 3.14159265 / 180.0\r\n  set dx to f2i(fround(fcos(rad) * i2f(dist)))\r\n  set dy to f2i(fround(fsin(rad) * i2f(dist)))\r\n  set x2 to x1 + dx\r\n  set y2 to y1 + dy\r\n  set _turtle[0] to x2\r\n  set _turtle[1] to y2\r\n  if _turtle[3] is 1\r\n    set col to concat(_turtle[4], "")\r\n    set w to str(_turtle[5])\r\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\r\n  end\r\n  return 0\r\nend\r\n\r\nto turtle_backward with dist\r\n  return turtle_forward(0 - dist)\r\nend\r\n\r\nto turtle_right with deg\r\n  set _turtle[2] to (_turtle[2] + deg) % 360\r\n  return 0\r\nend\r\n\r\nto turtle_left with deg\r\n  set a to (_turtle[2] - deg) % 360\r\n  if a < 0\r\n    set a to a + 360\r\n  end\r\n  set _turtle[2] to a\r\n  return 0\r\nend\r\n\r\nto turtle_goto with x y\r\n  set x1 to _turtle[0]\r\n  set y1 to _turtle[1]\r\n  set _turtle[0] to x\r\n  set _turtle[1] to y\r\n  if _turtle[3] is 1\r\n    set col to concat(_turtle[4], "")\r\n    set w to str(_turtle[5])\r\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x) + "\\" y2=\\"" + str(y) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\r\n  end\r\n  return 0\r\nend\r\n\r\nto turtle_pen_up\r\n  set _turtle[3] to 0\r\n  return 0\r\nend\r\n\r\nto turtle_pen_down\r\n  set _turtle[3] to 1\r\n  return 0\r\nend\r\n\r\nto turtle_pen_color with col_str\r\n  set _turtle[4] to concat(col_str, "")\r\n  return 0\r\nend\r\n\r\nto turtle_pen_width with w\r\n  set _turtle[5] to w\r\n  return 0\r\nend\r\n\r\nto turtle_heading with deg\r\n  set _turtle[2] to deg % 360\r\n  return 0\r\nend\r\n\r\nto turtle_home\r\n  set _turtle[0] to 200\r\n  set _turtle[1] to 200\r\n  set _turtle[2] to 0\r\n  return 0\r\nend\r\n\r\nto turtle_dot with r\r\n  set col to concat(_turtle[4], "")\r\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"" + col + "\\"/>")\r\nend\r\n\r\nto turtle_circle with r\r\n  set col to concat(_turtle[4], "")\r\n  set w to str(_turtle[5])\r\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"none\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\"/>")\r\nend\r\n\r\nto turtle_x\r\n  return _turtle[0]\r\nend\r\n\r\nto turtle_y\r\n  return _turtle[1]\r\nend\r\n\r\nto turtle_angle\r\n  return _turtle[2]\r\nend\r\n\r\nto turtle_segment_count\r\n  return _turtle[6]\r\nend\r\n\r\nto turtle_to_svg\r\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"400\\" height=\\"400\\" viewBox=\\"0 0 400 400\\">\\n" + concat(_turtle[7], "") + "</svg>"\r\n  return concat(svg, "")\r\nend\r\n\r\n\r\nto turtle_step_pos with x y angle_deg dist\r\n  set rad to (angle_deg * 3.141592653589793) / 180.0\r\n  set nx to x + (fcos(rad) * dist)\r\n  set ny to y + (fsin(rad) * dist)\r\n  return [nx, ny]\r\nend\r\n\r\nto turtle_circle_steps with x y angle_deg radius steps\r\n  set angle_step to 360.0 / steps\r\n  set dist to ((2.0 * 3.141592653589793) * radius) / steps\r\n  set cx to x\r\n  set cy to y\r\n  set ca to angle_deg\r\n  set segs to mklist(steps)\r\n  set i to 0\r\n  while i < steps\r\n    set rad to (ca * 3.141592653589793) / 180.0\r\n    set nx to cx + (fcos(rad) * dist)\r\n    set ny to cy + (fsin(rad) * dist)\r\n    set segs[i] to [cx, cy, nx, ny]\r\n    set cx to nx\r\n    set cy to ny\r\n    set ca to ca + angle_step\r\n    set i to i + 1\r\n  end\r\n  return [cx, cy, ca, segs]\r\nend\r\n';
 
 // src/lang/graphics.ts
 var gfxRunner = null;
@@ -35192,7 +40125,7 @@ function getGfxRunner() {
   if (!gfxRunner) gfxRunner = createSdevModuleRunner(graphics_default, turtle_default);
   return gfxRunner;
 }
-function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
+function createGraphicsBuiltins(emit3, getTurtle, setTurtle) {
   const builtins = /* @__PURE__ */ new Map();
   let spriteIdCounter = 0;
   const sprites = /* @__PURE__ */ new Map();
@@ -35202,7 +40135,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       if (args.length !== 2) throw new SdevError("canvas() takes 2 arguments (width, height)", line);
       const w = args[0];
       const h = args[1];
-      emit2({ type: "canvas", width: w, height: h });
+      emit3({ type: "canvas", width: w, height: h });
       return null;
     }
   });
@@ -35210,7 +40143,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args) => {
       const color = args[0] ?? "#1a1a2e";
-      emit2({ type: "clear", color });
+      emit3({ type: "clear", color });
       return null;
     }
   });
@@ -35218,7 +40151,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 1) throw new SdevError("background() takes at least 1 argument", line);
-      emit2({ type: "background", color: stringify(args[0]) });
+      emit3({ type: "background", color: stringify(args[0]) });
       return null;
     }
   });
@@ -35226,14 +40159,14 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("fill() takes 1 argument (color)", line);
-      emit2({ type: "fill", color: stringify(args[0]) });
+      emit3({ type: "fill", color: stringify(args[0]) });
       return null;
     }
   });
   builtins.set("noFill", {
     type: "builtin",
     call: () => {
-      emit2({ type: "noFill" });
+      emit3({ type: "noFill" });
       return null;
     }
   });
@@ -35241,14 +40174,14 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 1 || args.length > 2) throw new SdevError("stroke() takes 1-2 arguments (color, width?)", line);
-      emit2({ type: "stroke", color: stringify(args[0]), width: args[1] ?? 1 });
+      emit3({ type: "stroke", color: stringify(args[0]), width: args[1] ?? 1 });
       return null;
     }
   });
   builtins.set("noStroke", {
     type: "builtin",
     call: () => {
-      emit2({ type: "noStroke" });
+      emit3({ type: "noStroke" });
       return null;
     }
   });
@@ -35256,7 +40189,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("lineWidth() takes 1 argument", line);
-      emit2({ type: "lineWidth", width: args[0] });
+      emit3({ type: "lineWidth", width: args[0] });
       return null;
     }
   });
@@ -35264,7 +40197,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("lineCap() takes 1 argument (round, square, butt)", line);
-      emit2({ type: "lineCap", cap: stringify(args[0]) });
+      emit3({ type: "lineCap", cap: stringify(args[0]) });
       return null;
     }
   });
@@ -35272,7 +40205,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("lineJoin() takes 1 argument (round, bevel, miter)", line);
-      emit2({ type: "lineJoin", join: stringify(args[0]) });
+      emit3({ type: "lineJoin", join: stringify(args[0]) });
       return null;
     }
   });
@@ -35280,7 +40213,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("alpha() takes 1 argument (0-1)", line);
-      emit2({ type: "alpha", value: args[0] });
+      emit3({ type: "alpha", value: args[0] });
       return null;
     }
   });
@@ -35288,7 +40221,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 3) throw new SdevError("shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?)", line);
-      emit2({
+      emit3({
         type: "shadow",
         color: stringify(args[0]),
         blur: args[1],
@@ -35301,7 +40234,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
   builtins.set("noShadow", {
     type: "builtin",
     call: () => {
-      emit2({ type: "noShadow" });
+      emit3({ type: "noShadow" });
       return null;
     }
   });
@@ -35309,7 +40242,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 4) throw new SdevError("rect() takes 4-5 arguments (x, y, w, h, radius?)", line);
-      emit2({ type: "rect", x: args[0], y: args[1], w: args[2], h: args[3], radius: args[4] ?? 0 });
+      emit3({ type: "rect", x: args[0], y: args[1], w: args[2], h: args[3], radius: args[4] ?? 0 });
       return null;
     }
   });
@@ -35317,7 +40250,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 3) throw new SdevError("circle() takes 3 arguments (x, y, radius)", line);
-      emit2({ type: "circle", x: args[0], y: args[1], r: args[2] });
+      emit3({ type: "circle", x: args[0], y: args[1], r: args[2] });
       return null;
     }
   });
@@ -35325,7 +40258,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 4) throw new SdevError("ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?)", line);
-      emit2({ type: "ellipse", x: args[0], y: args[1], rx: args[2], ry: args[3], rotation: args[4] ?? 0 });
+      emit3({ type: "ellipse", x: args[0], y: args[1], rx: args[2], ry: args[3], rotation: args[4] ?? 0 });
       return null;
     }
   });
@@ -35333,7 +40266,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 5) throw new SdevError("arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?)", line);
-      emit2({
+      emit3({
         type: "arc",
         x: args[0],
         y: args[1],
@@ -35349,7 +40282,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 4) throw new SdevError("line() takes 4 arguments (x1, y1, x2, y2)", line);
-      emit2({ type: "line", x1: args[0], y1: args[1], x2: args[2], y2: args[3] });
+      emit3({ type: "line", x1: args[0], y1: args[1], x2: args[2], y2: args[3] });
       return null;
     }
   });
@@ -35357,7 +40290,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 2) throw new SdevError("point() takes 2-3 arguments (x, y, size?)", line);
-      emit2({ type: "point", x: args[0], y: args[1], size: args[2] ?? 1 });
+      emit3({ type: "point", x: args[0], y: args[1], size: args[2] ?? 1 });
       return null;
     }
   });
@@ -35365,7 +40298,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 6) throw new SdevError("triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3)", line);
-      emit2({ type: "triangle", x1: args[0], y1: args[1], x2: args[2], y2: args[3], x3: args[4], y3: args[5] });
+      emit3({ type: "triangle", x1: args[0], y1: args[1], x2: args[2], y2: args[3], x3: args[4], y3: args[5] });
       return null;
     }
   });
@@ -35375,7 +40308,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       if (args.length < 1) throw new SdevError("polygon() takes points [[x,y], ...]", line);
       const points = args[0];
       if (!Array.isArray(points)) throw new SdevError("polygon() argument must be a list of points", line);
-      emit2({ type: "polygon", points });
+      emit3({ type: "polygon", points });
       return null;
     }
   });
@@ -35383,7 +40316,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 4) throw new SdevError("star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?)", line);
-      emit2({
+      emit3({
         type: "star",
         x: args[0],
         y: args[1],
@@ -35398,7 +40331,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 3) throw new SdevError("heart() takes 3 arguments (x, y, size)", line);
-      emit2({ type: "heart", x: args[0], y: args[1], size: args[2] });
+      emit3({ type: "heart", x: args[0], y: args[1], size: args[2] });
       return null;
     }
   });
@@ -35406,7 +40339,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 3) throw new SdevError("text() takes 3-4 arguments (str, x, y, size?)", line);
-      emit2({ type: "text", text: stringify(args[0]), x: args[1], y: args[2], size: args[3] ?? 16 });
+      emit3({ type: "text", text: stringify(args[0]), x: args[1], y: args[2], size: args[3] ?? 16 });
       return null;
     }
   });
@@ -35414,7 +40347,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 1) throw new SdevError("textAlign() takes 1-2 arguments (horizontal, vertical?)", line);
-      emit2({ type: "textAlign", horizontal: stringify(args[0]), vertical: args[1] ? stringify(args[1]) : "alphabetic" });
+      emit3({ type: "textAlign", horizontal: stringify(args[0]), vertical: args[1] ? stringify(args[1]) : "alphabetic" });
       return null;
     }
   });
@@ -35422,7 +40355,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 1) throw new SdevError("font() takes 1-2 arguments (fontFamily, style?)", line);
-      emit2({ type: "font", family: stringify(args[0]), style: args[1] ? stringify(args[1]) : "normal" });
+      emit3({ type: "font", family: stringify(args[0]), style: args[1] ? stringify(args[1]) : "normal" });
       return null;
     }
   });
@@ -35431,7 +40364,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     call: (args, line) => {
       if (args.length < 5) throw new SdevError("linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops)", line);
       const stops = args.slice(4);
-      emit2({ type: "linearGradient", x1: args[0], y1: args[1], x2: args[2], y2: args[3], stops });
+      emit3({ type: "linearGradient", x1: args[0], y1: args[1], x2: args[2], y2: args[3], stops });
       return null;
     }
   });
@@ -35440,7 +40373,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     call: (args, line) => {
       if (args.length < 7) throw new SdevError("radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops)", line);
       const stops = args.slice(6);
-      emit2({ type: "radialGradient", x1: args[0], y1: args[1], r1: args[2], x2: args[3], y2: args[4], r2: args[5], stops });
+      emit3({ type: "radialGradient", x1: args[0], y1: args[1], r1: args[2], x2: args[3], y2: args[4], r2: args[5], stops });
       return null;
     }
   });
@@ -35448,7 +40381,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("translate() takes 2 arguments (x, y)", line);
-      emit2({ type: "translate", x: args[0], y: args[1] });
+      emit3({ type: "translate", x: args[0], y: args[1] });
       return null;
     }
   });
@@ -35456,7 +40389,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 1) throw new SdevError("rotate() takes 1 argument (angle in radians)", line);
-      emit2({ type: "rotate", angle: args[0] });
+      emit3({ type: "rotate", angle: args[0] });
       return null;
     }
   });
@@ -35464,42 +40397,42 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length < 1) throw new SdevError("scale() takes 1-2 arguments (x, y?)", line);
-      emit2({ type: "scale", x: args[0], y: args[1] ?? args[0] });
+      emit3({ type: "scale", x: args[0], y: args[1] ?? args[0] });
       return null;
     }
   });
   builtins.set("save", {
     type: "builtin",
     call: () => {
-      emit2({ type: "save" });
+      emit3({ type: "save" });
       return null;
     }
   });
   builtins.set("restore", {
     type: "builtin",
     call: () => {
-      emit2({ type: "restore" });
+      emit3({ type: "restore" });
       return null;
     }
   });
   builtins.set("resetTransform", {
     type: "builtin",
     call: () => {
-      emit2({ type: "resetTransform" });
+      emit3({ type: "resetTransform" });
       return null;
     }
   });
   builtins.set("beginPath", {
     type: "builtin",
     call: () => {
-      emit2({ type: "beginPath" });
+      emit3({ type: "beginPath" });
       return null;
     }
   });
   builtins.set("closePath", {
     type: "builtin",
     call: () => {
-      emit2({ type: "closePath" });
+      emit3({ type: "closePath" });
       return null;
     }
   });
@@ -35507,7 +40440,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("moveTo() takes 2 arguments (x, y)", line);
-      emit2({ type: "moveTo", x: args[0], y: args[1] });
+      emit3({ type: "moveTo", x: args[0], y: args[1] });
       return null;
     }
   });
@@ -35515,7 +40448,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 2) throw new SdevError("lineTo() takes 2 arguments (x, y)", line);
-      emit2({ type: "lineTo", x: args[0], y: args[1] });
+      emit3({ type: "lineTo", x: args[0], y: args[1] });
       return null;
     }
   });
@@ -35523,7 +40456,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 6) throw new SdevError("bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y)", line);
-      emit2({ type: "bezierTo", cp1x: args[0], cp1y: args[1], cp2x: args[2], cp2y: args[3], x: args[4], y: args[5] });
+      emit3({ type: "bezierTo", cp1x: args[0], cp1y: args[1], cp2x: args[2], cp2y: args[3], x: args[4], y: args[5] });
       return null;
     }
   });
@@ -35531,21 +40464,21 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: (args, line) => {
       if (args.length !== 4) throw new SdevError("quadraticTo() takes 4 arguments (cpx, cpy, x, y)", line);
-      emit2({ type: "quadraticTo", cpx: args[0], cpy: args[1], x: args[2], y: args[3] });
+      emit3({ type: "quadraticTo", cpx: args[0], cpy: args[1], x: args[2], y: args[3] });
       return null;
     }
   });
   builtins.set("fillPath", {
     type: "builtin",
     call: () => {
-      emit2({ type: "fillPath" });
+      emit3({ type: "fillPath" });
       return null;
     }
   });
   builtins.set("strokePath", {
     type: "builtin",
     call: () => {
-      emit2({ type: "strokePath" });
+      emit3({ type: "strokePath" });
       return null;
     }
   });
@@ -35568,7 +40501,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
         velocityY: 0
       };
       sprites.set(id, sprite);
-      emit2({ type: "createSprite", sprite });
+      emit3({ type: "createSprite", sprite });
       return sprite;
     }
   });
@@ -35578,7 +40511,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       if (args.length !== 1) throw new SdevError("drawSprite() takes 1 argument (sprite)", line);
       const sprite = args[0];
       if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
-      emit2({ type: "drawSprite", sprite });
+      emit3({ type: "drawSprite", sprite });
       return null;
     }
   });
@@ -35618,7 +40551,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: () => {
       setTurtle({ x: 200, y: 200, angle: -90, penDown: true, color: "#00ff88", width: 2 });
-      emit2({ type: "turtle_reset" });
+      emit3({ type: "turtle_reset" });
       return null;
     }
   });
@@ -35629,10 +40562,10 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       const t = getTurtle();
       const [newX, newY] = getGfxRunner().call("turtle_step_pos", t.x, t.y, t.angle, args[0]);
       if (t.penDown) {
-        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
       setTurtle({ x: newX, y: newY });
-      emit2({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
       return null;
     }
   });
@@ -35644,10 +40577,10 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       const t = getTurtle();
       const [newX, newY] = getGfxRunner().call("turtle_step_pos", t.x, t.y, t.angle, dist);
       if (t.penDown) {
-        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
       setTurtle({ x: newX, y: newY });
-      emit2({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
       return null;
     }
   });
@@ -35658,7 +40591,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       const t = getTurtle();
       const newAngle = t.angle - args[0];
       setTurtle({ angle: newAngle });
-      emit2({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
+      emit3({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
       return null;
     }
   });
@@ -35669,7 +40602,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       const t = getTurtle();
       const newAngle = t.angle + args[0];
       setTurtle({ angle: newAngle });
-      emit2({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
+      emit3({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
       return null;
     }
   });
@@ -35711,10 +40644,10 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       const newX = args[0];
       const newY = args[1];
       if (t.penDown) {
-        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
       setTurtle({ x: newX, y: newY });
-      emit2({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
       return null;
     }
   });
@@ -35723,10 +40656,10 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     call: () => {
       const t = getTurtle();
       if (t.penDown) {
-        emit2({ type: "turtle_line", x1: t.x, y1: t.y, x2: 200, y2: 200, color: t.color, width: t.width });
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: 200, y2: 200, color: t.color, width: t.width });
       }
       setTurtle({ x: 200, y: 200, angle: -90 });
-      emit2({ type: "turtle_move", x: 200, y: 200, angle: -90 });
+      emit3({ type: "turtle_move", x: 200, y: 200, angle: -90 });
       return null;
     }
   });
@@ -35737,7 +40670,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       const t = getTurtle();
       const angle = args[0] - 90;
       setTurtle({ angle });
-      emit2({ type: "turtle_move", x: t.x, y: t.y, angle });
+      emit3({ type: "turtle_move", x: t.x, y: t.y, angle });
       return null;
     }
   });
@@ -35772,11 +40705,11 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       );
       if (t.penDown) {
         for (const [x1, y1, x2, y2] of segs) {
-          emit2({ type: "turtle_line", x1, y1, x2, y2, color: t.color, width: t.width });
+          emit3({ type: "turtle_line", x1, y1, x2, y2, color: t.color, width: t.width });
         }
       }
       setTurtle({ x: endX, y: endY, angle: endAngle });
-      emit2({ type: "turtle_move", x: endX, y: endY, angle: endAngle });
+      emit3({ type: "turtle_move", x: endX, y: endY, angle: endAngle });
       return null;
     }
   });
@@ -35786,7 +40719,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
       const size = args[0] ?? 5;
       const color = args[1] ? stringify(args[1]) : getTurtle().color;
       const t = getTurtle();
-      emit2({ type: "turtle_dot", x: t.x, y: t.y, size, color });
+      emit3({ type: "turtle_dot", x: t.x, y: t.y, size, color });
       return null;
     }
   });
@@ -35794,7 +40727,7 @@ function createGraphicsBuiltins(emit2, getTurtle, setTurtle) {
     type: "builtin",
     call: () => {
       const t = getTurtle();
-      emit2({ type: "turtle_stamp", x: t.x, y: t.y, angle: t.angle, color: t.color });
+      emit3({ type: "turtle_stamp", x: t.x, y: t.y, angle: t.angle, color: t.color });
       return null;
     }
   });
@@ -35884,7 +40817,7 @@ init_sdev_module();
 init_text();
 
 // raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\ui.sdev
-var ui_default = '# =============================================================================\n# SDEV Standard Library: Declarative UI & Window Toolkit (lang/stdlib/v2/ui.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\n\n# _ui state list:\n# 0: title (str)\n# 1: width (int)\n# 2: height (int)\n# 3: node_count (int)\n# 4: html_body (str)\n# 5: state_count (int)\nset _ui to mklist(8)\nset _ui[0] to "SDEV App"\nset _ui[1] to 480\nset _ui[2] to 360\nset _ui[3] to 0\nset _ui[4] to ""\nset _ui[5] to 0\n\nset _ui_keys to mklist(128)\nset _ui_vals to mklist(128)\n\nto ui_window with title_str w h\n  set _ui[0] to concat(title_str, "")\n  set _ui[1] to w\n  set _ui[2] to h\n  set _ui[3] to 1\n  set _ui[4] to ""\n  set _ui[5] to 0\n  return _ui\nend\n\nto ui_emit with frag\n  set cur to concat(_ui[4], "")\n  set _ui[4] to cur + frag + "\\n"\n  set _ui[3] to _ui[3] + 1\n  return _ui[3]\nend\n\nto ui_set with key_str val_str\n  set k to concat(key_str, "")\n  set v to concat(val_str, "")\n  set n to _ui[5]\n  set i to 0\n  while i < n\n    if str_eq(_ui_keys[i], k)\n      set _ui_vals[i] to v\n      return 0\n    end\n    set i to i + 1\n  end\n  set _ui_keys[n] to k\n  set _ui_vals[n] to v\n  set _ui[5] to n + 1\n  return 0\nend\n\nto ui_get with key_str\n  set k to concat(key_str, "")\n  set n to _ui[5]\n  set i to 0\n  while i < n\n    if str_eq(_ui_keys[i], k)\n      return concat(_ui_vals[i], "")\n    end\n    set i to i + 1\n  end\n  return ""\nend\n\nto ui_row with gap\n  return ui_emit("<div class=\\"ui-row\\" style=\\"display:flex;flex-direction:row;align-items:center;gap:" + str(gap) + "px;\\">")\nend\n\nto ui_column with gap\n  return ui_emit("<div class=\\"ui-col\\" style=\\"display:flex;flex-direction:column;gap:" + str(gap) + "px;\\">")\nend\n\nto ui_grid with cols gap\n  return ui_emit("<div class=\\"ui-grid\\" style=\\"display:grid;grid-template-columns:repeat(" + str(cols) + ",minmax(0,1fr));gap:" + str(gap) + "px;\\">")\nend\n\nto ui_card with title_str\n  set hdr to ""\n  if length(title_str) > 0\n    set hdr to "<div class=\\"ui-card-title\\" style=\\"font-weight:600;margin-bottom:8px;\\">" + concat(title_str, "") + "</div>"\n  end\n  return ui_emit("<div class=\\"ui-card\\" style=\\"border:1px solid #1e293b;border-radius:10px;padding:14px;background:#0f172a;\\">" + hdr)\nend\n\nto ui_end\n  set cur to concat(_ui[4], "")\n  set _ui[4] to cur + "</div>\\n"\n  return 0\nend\n\nto ui_heading with text_str level\n  set tag to "h" + str(level)\n  return ui_emit("<" + tag + " class=\\"ui-heading\\">" + concat(text_str, "") + "</" + tag + ">")\nend\n\nto ui_text with text_str\n  return ui_emit("<p class=\\"ui-text\\">" + concat(text_str, "") + "</p>")\nend\n\nto ui_label with text_str\n  return ui_emit("<label class=\\"ui-label\\">" + concat(text_str, "") + "</label>")\nend\n\nto ui_button with label_str variant_str\n  return ui_emit("<button type=\\"button\\" class=\\"ui-btn ui-btn-" + concat(variant_str, "") + "\\">" + concat(label_str, "") + "</button>")\nend\n\nto ui_input with key_str placeholder_str default_val\n  set _ to ui_set(key_str, default_val)\n  return ui_emit("<input type=\\"text\\" data-ui-key=\\"" + concat(key_str, "") + "\\" placeholder=\\"" + concat(placeholder_str, "") + "\\" value=\\"" + concat(default_val, "") + "\\"/>")\nend\n\nto ui_checkbox with key_str label_str checked_int\n  set v to "false"\n  set chk to ""\n  if checked_int is 1\n    set v to "true"\n    set chk to " checked"\n  end\n  set _ to ui_set(key_str, v)\n  return ui_emit("<label class=\\"ui-checkbox\\"><input type=\\"checkbox\\" data-ui-key=\\"" + concat(key_str, "") + "\\"" + chk + "/><span>" + concat(label_str, "") + "</span></label>")\nend\n\nto ui_slider with key_str min_v max_v cur_v\n  set _ to ui_set(key_str, str(cur_v))\n  return ui_emit("<input type=\\"range\\" data-ui-key=\\"" + concat(key_str, "") + "\\" min=\\"" + str(min_v) + "\\" max=\\"" + str(max_v) + "\\" value=\\"" + str(cur_v) + "\\"/>")\nend\n\nto ui_progress with key_str val_int max_int\n  set _ to ui_set(key_str, str(val_int))\n  return ui_emit("<progress data-ui-key=\\"" + concat(key_str, "") + "\\" value=\\"" + str(val_int) + "\\" max=\\"" + str(max_int) + "\\"></progress>")\nend\n\nto ui_badge with text_str variant_str\n  return ui_emit("<span class=\\"ui-badge ui-badge-" + concat(variant_str, "") + "\\">" + concat(text_str, "") + "</span>")\nend\n\nto ui_alert with title_str msg_str variant_str\n  return ui_emit("<div class=\\"ui-alert ui-alert-" + concat(variant_str, "") + "\\"><strong>" + concat(title_str, "") + "</strong><p>" + concat(msg_str, "") + "</p></div>")\nend\n\nto ui_stat with label_str val_str delta_str\n  return ui_emit("<div class=\\"ui-stat\\"><span class=\\"ui-stat-label\\">" + concat(label_str, "") + "</span><strong class=\\"ui-stat-value\\">" + concat(val_str, "") + "</strong><small class=\\"ui-stat-delta\\">" + concat(delta_str, "") + "</small></div>")\nend\n\nto ui_divider\n  return ui_emit("<hr class=\\"ui-divider\\"/>")\nend\n\nto ui_spacer with px\n  return ui_emit("<div class=\\"ui-spacer\\" style=\\"height:" + str(px) + "px;\\"></div>")\nend\n\nto ui_node_count\n  return _ui[3]\nend\n\nto ui_to_html\n  set t to concat(_ui[0], "")\n  set w to str(_ui[1])\n  set h to str(_ui[2])\n  set out to "<div class=\\"sdev-ui-window\\" data-title=\\"" + t + "\\" style=\\"width:" + w + "px;min-height:" + h + "px;\\">\\n<div class=\\"sdev-ui-titlebar\\">" + t + "</div>\\n<div class=\\"sdev-ui-content\\">\\n" + concat(_ui[4], "") + "</div>\\n</div>"\n  return concat(out, "")\nend\n\n\nto ui_has_key with key_str\n  set k to concat(key_str, "")\n  set n to _ui[5]\n  set i to 0\n  while i < n\n    if str_eq(_ui_keys[i], k)\n      return 1\n    end\n    set i to i + 1\n  end\n  return 0\nend\n\nto ui_resolve_bind with raw_str\n  set s to concat(raw_str, "")\n  if length(s) > 1\n    if substr(s, 0, 1) is "@"\n      set k to substr(s, 1, length(s) - 1)\n      return [1, k, ui_get(k)]\n    end\n  end\n  if ui_has_key(s) is 1\n    return [1, s, ui_get(s)]\n  end\n  return [0, "", s]\nend\n';
+var ui_default = '# =============================================================================\r\n# SDEV Standard Library: Declarative UI & Window Toolkit (lang/stdlib/v2/ui.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\n# _ui state list:\r\n# 0: title (str)\r\n# 1: width (int)\r\n# 2: height (int)\r\n# 3: node_count (int)\r\n# 4: html_body (str)\r\n# 5: state_count (int)\r\nset _ui to mklist(8)\r\nset _ui[0] to "SDEV App"\r\nset _ui[1] to 480\r\nset _ui[2] to 360\r\nset _ui[3] to 0\r\nset _ui[4] to ""\r\nset _ui[5] to 0\r\n\r\nset _ui_keys to mklist(128)\r\nset _ui_vals to mklist(128)\r\n\r\nto ui_window with title_str w h\r\n  set _ui[0] to concat(title_str, "")\r\n  set _ui[1] to w\r\n  set _ui[2] to h\r\n  set _ui[3] to 1\r\n  set _ui[4] to ""\r\n  set _ui[5] to 0\r\n  return _ui\r\nend\r\n\r\nto ui_emit with frag\r\n  set cur to concat(_ui[4], "")\r\n  set _ui[4] to cur + frag + "\\n"\r\n  set _ui[3] to _ui[3] + 1\r\n  return _ui[3]\r\nend\r\n\r\nto ui_set with key_str val_str\r\n  set k to concat(key_str, "")\r\n  set v to concat(val_str, "")\r\n  set n to _ui[5]\r\n  set i to 0\r\n  while i < n\r\n    if str_eq(_ui_keys[i], k)\r\n      set _ui_vals[i] to v\r\n      return 0\r\n    end\r\n    set i to i + 1\r\n  end\r\n  set _ui_keys[n] to k\r\n  set _ui_vals[n] to v\r\n  set _ui[5] to n + 1\r\n  return 0\r\nend\r\n\r\nto ui_get with key_str\r\n  set k to concat(key_str, "")\r\n  set n to _ui[5]\r\n  set i to 0\r\n  while i < n\r\n    if str_eq(_ui_keys[i], k)\r\n      return concat(_ui_vals[i], "")\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return ""\r\nend\r\n\r\nto ui_row with gap\r\n  return ui_emit("<div class=\\"ui-row\\" style=\\"display:flex;flex-direction:row;align-items:center;gap:" + str(gap) + "px;\\">")\r\nend\r\n\r\nto ui_column with gap\r\n  return ui_emit("<div class=\\"ui-col\\" style=\\"display:flex;flex-direction:column;gap:" + str(gap) + "px;\\">")\r\nend\r\n\r\nto ui_grid with cols gap\r\n  return ui_emit("<div class=\\"ui-grid\\" style=\\"display:grid;grid-template-columns:repeat(" + str(cols) + ",minmax(0,1fr));gap:" + str(gap) + "px;\\">")\r\nend\r\n\r\nto ui_card with title_str\r\n  set hdr to ""\r\n  if length(title_str) > 0\r\n    set hdr to "<div class=\\"ui-card-title\\" style=\\"font-weight:600;margin-bottom:8px;\\">" + concat(title_str, "") + "</div>"\r\n  end\r\n  return ui_emit("<div class=\\"ui-card\\" style=\\"border:1px solid #1e293b;border-radius:10px;padding:14px;background:#0f172a;\\">" + hdr)\r\nend\r\n\r\nto ui_end\r\n  set cur to concat(_ui[4], "")\r\n  set _ui[4] to cur + "</div>\\n"\r\n  return 0\r\nend\r\n\r\nto ui_heading with text_str level\r\n  set tag to "h" + str(level)\r\n  return ui_emit("<" + tag + " class=\\"ui-heading\\">" + concat(text_str, "") + "</" + tag + ">")\r\nend\r\n\r\nto ui_text with text_str\r\n  return ui_emit("<p class=\\"ui-text\\">" + concat(text_str, "") + "</p>")\r\nend\r\n\r\nto ui_label with text_str\r\n  return ui_emit("<label class=\\"ui-label\\">" + concat(text_str, "") + "</label>")\r\nend\r\n\r\nto ui_button with label_str variant_str\r\n  return ui_emit("<button type=\\"button\\" class=\\"ui-btn ui-btn-" + concat(variant_str, "") + "\\">" + concat(label_str, "") + "</button>")\r\nend\r\n\r\nto ui_input with key_str placeholder_str default_val\r\n  set _ to ui_set(key_str, default_val)\r\n  return ui_emit("<input type=\\"text\\" data-ui-key=\\"" + concat(key_str, "") + "\\" placeholder=\\"" + concat(placeholder_str, "") + "\\" value=\\"" + concat(default_val, "") + "\\"/>")\r\nend\r\n\r\nto ui_checkbox with key_str label_str checked_int\r\n  set v to "false"\r\n  set chk to ""\r\n  if checked_int is 1\r\n    set v to "true"\r\n    set chk to " checked"\r\n  end\r\n  set _ to ui_set(key_str, v)\r\n  return ui_emit("<label class=\\"ui-checkbox\\"><input type=\\"checkbox\\" data-ui-key=\\"" + concat(key_str, "") + "\\"" + chk + "/><span>" + concat(label_str, "") + "</span></label>")\r\nend\r\n\r\nto ui_slider with key_str min_v max_v cur_v\r\n  set _ to ui_set(key_str, str(cur_v))\r\n  return ui_emit("<input type=\\"range\\" data-ui-key=\\"" + concat(key_str, "") + "\\" min=\\"" + str(min_v) + "\\" max=\\"" + str(max_v) + "\\" value=\\"" + str(cur_v) + "\\"/>")\r\nend\r\n\r\nto ui_progress with key_str val_int max_int\r\n  set _ to ui_set(key_str, str(val_int))\r\n  return ui_emit("<progress data-ui-key=\\"" + concat(key_str, "") + "\\" value=\\"" + str(val_int) + "\\" max=\\"" + str(max_int) + "\\"></progress>")\r\nend\r\n\r\nto ui_badge with text_str variant_str\r\n  return ui_emit("<span class=\\"ui-badge ui-badge-" + concat(variant_str, "") + "\\">" + concat(text_str, "") + "</span>")\r\nend\r\n\r\nto ui_alert with title_str msg_str variant_str\r\n  return ui_emit("<div class=\\"ui-alert ui-alert-" + concat(variant_str, "") + "\\"><strong>" + concat(title_str, "") + "</strong><p>" + concat(msg_str, "") + "</p></div>")\r\nend\r\n\r\nto ui_stat with label_str val_str delta_str\r\n  return ui_emit("<div class=\\"ui-stat\\"><span class=\\"ui-stat-label\\">" + concat(label_str, "") + "</span><strong class=\\"ui-stat-value\\">" + concat(val_str, "") + "</strong><small class=\\"ui-stat-delta\\">" + concat(delta_str, "") + "</small></div>")\r\nend\r\n\r\nto ui_divider\r\n  return ui_emit("<hr class=\\"ui-divider\\"/>")\r\nend\r\n\r\nto ui_spacer with px\r\n  return ui_emit("<div class=\\"ui-spacer\\" style=\\"height:" + str(px) + "px;\\"></div>")\r\nend\r\n\r\nto ui_node_count\r\n  return _ui[3]\r\nend\r\n\r\nto ui_to_html\r\n  set t to concat(_ui[0], "")\r\n  set w to str(_ui[1])\r\n  set h to str(_ui[2])\r\n  set out to "<div class=\\"sdev-ui-window\\" data-title=\\"" + t + "\\" style=\\"width:" + w + "px;min-height:" + h + "px;\\">\\n<div class=\\"sdev-ui-titlebar\\">" + t + "</div>\\n<div class=\\"sdev-ui-content\\">\\n" + concat(_ui[4], "") + "</div>\\n</div>"\r\n  return concat(out, "")\r\nend\r\n\r\n\r\nto ui_has_key with key_str\r\n  set k to concat(key_str, "")\r\n  set n to _ui[5]\r\n  set i to 0\r\n  while i < n\r\n    if str_eq(_ui_keys[i], k)\r\n      return 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto ui_resolve_bind with raw_str\r\n  set s to concat(raw_str, "")\r\n  if length(s) > 1\r\n    if substr(s, 0, 1) is "@"\r\n      set k to substr(s, 1, length(s) - 1)\r\n      return [1, k, ui_get(k)]\r\n    end\r\n  end\r\n  if ui_has_key(s) is 1\r\n    return [1, s, ui_get(s)]\r\n  end\r\n  return [0, "", s]\r\nend\r\n';
 
 // src/lang/ui.ts
 var uiRunner = null;
@@ -35892,7 +40825,7 @@ function getUiRunner() {
   if (!uiRunner) uiRunner = createSdevModuleRunner(text_default, ui_default);
   return uiRunner;
 }
-function createUiBuiltins(emit2, registerHandler) {
+function createUiBuiltins(emit3, registerHandler) {
   const builtins = /* @__PURE__ */ new Map();
   const state = { nodes: /* @__PURE__ */ new Map(), rootId: null, values: /* @__PURE__ */ new Map() };
   let nextId = 1;
@@ -35909,12 +40842,12 @@ function createUiBuiltins(emit2, registerHandler) {
     }
     if (opts.isRoot) state.rootId = id;
     if (opts.container) containerStack.push(id);
-    emit2(state);
+    emit3(state);
     return node;
   }
   function pop() {
     if (containerStack.length > 0) containerStack.pop();
-    emit2(state);
+    emit3(state);
   }
   function asString(v, fallback = "") {
     if (v === null || v === void 0) return fallback;
@@ -36067,7 +41000,7 @@ function createUiBuiltins(emit2, registerHandler) {
     getUiRunner().call("ui_button", label, variant);
     const node = pushNode("button", { label, variant });
     if (handler !== null) node.handlers.click = handler;
-    emit2(state);
+    emit3(state);
     return null;
   } });
   builtins.set("input", { type: "builtin", call: (args) => {
@@ -36147,7 +41080,7 @@ function createUiBuiltins(emit2, registerHandler) {
     const handler = asHandler(args[1]);
     const node = pushNode("menuitem", { label });
     if (handler !== null) node.handlers.click = handler;
-    emit2(state);
+    emit3(state);
     return null;
   } });
   builtins.set("uiget", { type: "builtin", call: (args) => {
@@ -36169,11 +41102,11 @@ function createUiBuiltins(emit2, registerHandler) {
         else node.props.text = asString(args[1], "");
       }
     }
-    emit2(state);
+    emit3(state);
     return null;
   } });
   builtins.set("show", { type: "builtin", call: () => {
-    emit2(state);
+    emit3(state);
     return null;
   } });
   builtins.set("alert", { type: "builtin", call: (args) => {
@@ -37313,131 +42246,131 @@ init_sdev_module();
 init_text();
 
 // raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\linter\linter.sdev
-var linter_default = `# SDEV Static Linter & Diagnostic Engine \u2014 authored in SDEV.
-#
-# Inspects SDEV source code for unbalanced blocks, unclosed strings, common
-# foreign keyword typos (console.log, print, def, var), and emits structured
-# diagnostics with SDEV codes (SDEV001..SDEV015) in pure SDEV.
-
-use "lang/stdlib/v2/text.sdev"
-
-to sdev_levenshtein with s t
-  set m to length(s)
-  set n to length(t)
-  if m is 0
-    return n
-  end
-  if n is 0
-    return m
-  end
-  # Approximate distance for small tokens
-  if s is t
-    return 0
-  end
-  set diff to 0
-  set min_len to m
-  if n < min_len
-    set min_len to n
-  end
-  set i to 0
-  while i < min_len
-    if ord(s, i) is not ord(t, i)
-      set diff to diff + 1
-    end
-    set i to i + 1
-  end
-  if m > n
-    set diff to diff + (m - n)
-  else
-    set diff to diff + (n - m)
-  end
-  return diff
-end
-
-to sdev_suggest_builtin with typo
-  if sdev_levenshtein(typo, "speak") <= 2
-    return "speak"
-  end
-  if sdev_levenshtein(typo, "say") <= 2
-    return "say"
-  end
-  if sdev_levenshtein(typo, "measure") <= 2
-    return "measure"
-  end
-  if sdev_levenshtein(typo, "length") <= 2
-    return "length"
-  end
-  if sdev_levenshtein(typo, "concat") <= 2
-    return "concat"
-  end
-  return ""
-end
-
-to sdev_lint_line with line line_no
-  set t to trim(line)
-  if length(t) is 0
-    return ""
-  end
-
-  # Check foreign keywords
-  if text_starts_with(t, "console.log(")
-    return "SDEV004: Foreign keyword 'console.log' at line " + str(line_no) + "; use 'speak' or 'say'"
-  end
-  if text_starts_with(t, "print(")
-    return "SDEV004: Foreign keyword 'print' at line " + str(line_no) + "; use 'speak' or 'say'"
-  end
-  if text_starts_with(t, "def ")
-    return "SDEV004: Python keyword 'def' at line " + str(line_no) + "; use 'conjure' or 'to'"
-  end
-  if text_starts_with(t, "function ")
-    return "SDEV004: JS keyword 'function' at line " + str(line_no) + "; use 'conjure' or 'to'"
-  end
-  if text_starts_with(t, "var ") or text_starts_with(t, "let ") or text_starts_with(t, "const ")
-    return "SDEV004: Foreign variable keyword at line " + str(line_no) + "; use 'forge' or 'set'"
-  end
-
-  return ""
-end
-
-
-to sdev_strip_line_comment with line
-  set n to length(line)
-  set in_q to ""
-  set i to 0
-  while i < n
-    set ch to substr(line, i, 1)
-    if length(in_q) > 0
-      if ch is "\\\\"
-        set i to i + 2
-      else
-        if ch is in_q
-          set in_q to ""
-        end
-        set i to i + 1
-      end
-    else
-      if ch is "\\"" or ch is "'" or ch is "\`"
-        set in_q to ch
-        set i to i + 1
-      else
-        if ch is "/" and (i + 1) < n
-          if substr(line, i + 1, 1) is "/"
-            return substr(line, 0, i)
-          end
-        end
-        if ch is "#"
-          return substr(line, 0, i)
-        end
-        set i to i + 1
-      end
-    end
-  end
-  return line
-end
+var linter_default = `# SDEV Static Linter & Diagnostic Engine \u2014 authored in SDEV.\r
+#\r
+# Inspects SDEV source code for unbalanced blocks, unclosed strings, common\r
+# foreign keyword typos (console.log, print, def, var), and emits structured\r
+# diagnostics with SDEV codes (SDEV001..SDEV015) in pure SDEV.\r
+\r
+use "lang/stdlib/v2/text.sdev"\r
+\r
+to sdev_levenshtein with s t\r
+  set m to length(s)\r
+  set n to length(t)\r
+  if m is 0\r
+    return n\r
+  end\r
+  if n is 0\r
+    return m\r
+  end\r
+  # Approximate distance for small tokens\r
+  if s is t\r
+    return 0\r
+  end\r
+  set diff to 0\r
+  set min_len to m\r
+  if n < min_len\r
+    set min_len to n\r
+  end\r
+  set i to 0\r
+  while i < min_len\r
+    if ord(s, i) is not ord(t, i)\r
+      set diff to diff + 1\r
+    end\r
+    set i to i + 1\r
+  end\r
+  if m > n\r
+    set diff to diff + (m - n)\r
+  else\r
+    set diff to diff + (n - m)\r
+  end\r
+  return diff\r
+end\r
+\r
+to sdev_suggest_builtin with typo\r
+  if sdev_levenshtein(typo, "speak") <= 2\r
+    return "speak"\r
+  end\r
+  if sdev_levenshtein(typo, "say") <= 2\r
+    return "say"\r
+  end\r
+  if sdev_levenshtein(typo, "measure") <= 2\r
+    return "measure"\r
+  end\r
+  if sdev_levenshtein(typo, "length") <= 2\r
+    return "length"\r
+  end\r
+  if sdev_levenshtein(typo, "concat") <= 2\r
+    return "concat"\r
+  end\r
+  return ""\r
+end\r
+\r
+to sdev_lint_line with line line_no\r
+  set t to trim(line)\r
+  if length(t) is 0\r
+    return ""\r
+  end\r
+\r
+  # Check foreign keywords\r
+  if text_starts_with(t, "console.log(")\r
+    return "SDEV004: Foreign keyword 'console.log' at line " + str(line_no) + "; use 'speak' or 'say'"\r
+  end\r
+  if text_starts_with(t, "print(")\r
+    return "SDEV004: Foreign keyword 'print' at line " + str(line_no) + "; use 'speak' or 'say'"\r
+  end\r
+  if text_starts_with(t, "def ")\r
+    return "SDEV004: Python keyword 'def' at line " + str(line_no) + "; use 'conjure' or 'to'"\r
+  end\r
+  if text_starts_with(t, "function ")\r
+    return "SDEV004: JS keyword 'function' at line " + str(line_no) + "; use 'conjure' or 'to'"\r
+  end\r
+  if text_starts_with(t, "var ") or text_starts_with(t, "let ") or text_starts_with(t, "const ")\r
+    return "SDEV004: Foreign variable keyword at line " + str(line_no) + "; use 'forge' or 'set'"\r
+  end\r
+\r
+  return ""\r
+end\r
+\r
+\r
+to sdev_strip_line_comment with line\r
+  set n to length(line)\r
+  set in_q to ""\r
+  set i to 0\r
+  while i < n\r
+    set ch to substr(line, i, 1)\r
+    if length(in_q) > 0\r
+      if ch is "\\\\"\r
+        set i to i + 2\r
+      else\r
+        if ch is in_q\r
+          set in_q to ""\r
+        end\r
+        set i to i + 1\r
+      end\r
+    else\r
+      if ch is "\\"" or ch is "'" or ch is "\`"\r
+        set in_q to ch\r
+        set i to i + 1\r
+      else\r
+        if ch is "/" and (i + 1) < n\r
+          if substr(line, i + 1, 1) is "/"\r
+            return substr(line, 0, i)\r
+          end\r
+        end\r
+        if ch is "#"\r
+          return substr(line, 0, i)\r
+        end\r
+        set i to i + 1\r
+      end\r
+    end\r
+  end\r
+  return line\r
+end\r
 `;
 
 // raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\registry\registry.sdev
-var registry_default = '# =============================================================================\n# SDEV Self-Hosted Canonical API Registry & Diagnostic Catalogue\n# (lang/registry/registry.sdev)\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\n# =============================================================================\n\nuse "lang/stdlib/v2/text.sdev"\nuse "lang/linter/linter.sdev"\n\nto registry_modules\n  return ["core", "text", "list", "tome", "math", "matrix", "graphics", "turtle", "ui", "web", "hardware", "ml", "ffi", "webgpu", "kernel"]\nend\n\nto registry_find_module with api_name\n  set k to lower(trim(api_name))\n  if str_eq(k, "say") or str_eq(k, "speak") or str_eq(k, "length") or str_eq(k, "measure") or str_eq(k, "read_file") or str_eq(k, "write_file")\n    return "core"\n  end\n  if str_eq(k, "concat") or str_eq(k, "upper") or str_eq(k, "lower") or str_eq(k, "trim") or str_eq(k, "substr") or str_eq(k, "split") or str_eq(k, "join") or str_eq(k, "replace")\n    return "text"\n  end\n  if str_eq(k, "mklist") or str_eq(k, "range") or str_eq(k, "sum") or str_eq(k, "list_append") or str_eq(k, "list_clone")\n    return "list"\n  end\n  if str_eq(k, "keys") or str_eq(k, "values") or str_eq(k, "has") or str_eq(k, "tome_create")\n    return "tome"\n  end\n  if str_eq(k, "abs") or str_eq(k, "min") or str_eq(k, "max") or str_eq(k, "fsqrt") or str_eq(k, "fsin") or str_eq(k, "fcos") or str_eq(k, "fpow")\n    return "math"\n  end\n  if text_starts_with(k, "mat_")\n    return "matrix"\n  end\n  if text_starts_with(k, "gfx_") or str_eq(k, "canvas_create") or str_eq(k, "rect") or str_eq(k, "circle")\n    return "graphics"\n  end\n  if text_starts_with(k, "turtle_") or str_eq(k, "forward")\n    return "turtle"\n  end\n  if text_starts_with(k, "ui_") or str_eq(k, "window")\n    return "ui"\n  end\n  if str_eq(k, "page") or str_eq(k, "endpage") or str_eq(k, "div") or str_eq(k, "section") or str_eq(k, "style") or str_eq(k, "theme") or str_eq(k, "navbar") or str_eq(k, "hero_section") or str_eq(k, "render_html") or str_eq(k, "sdev_to_js")\n    return "web"\n  end\n  if text_starts_with(k, "hw_") or str_eq(k, "pin_mode") or str_eq(k, "digital_write")\n    return "hardware"\n  end\n  if text_starts_with(k, "tensor_") or text_starts_with(k, "nn_")\n    return "ml"\n  end\n  if text_starts_with(k, "kernel_")\n    return "kernel"\n  end\n  return ""\nend\n\nto registry_explain_diagnostic with code_str\n  set c to upper(trim(code_str))\n  if str_eq(c, "SDEV001")\n    return "SDEV001: Unbalanced or unclosed block delimiter (:: / ;; or if / end)."\n  end\n  if str_eq(c, "SDEV002")\n    return "SDEV002: Syntax or parser error (unexpected token or unterminated string)."\n  end\n  if str_eq(c, "SDEV003")\n    return "SDEV003: Division or modulo by zero (/ 0 or % 0)."\n  end\n  if str_eq(c, "SDEV004")\n    return "SDEV004: Unreachable code after return/yield/break/continue."\n  end\n  if str_eq(c, "SDEV005")\n    return "SDEV005: Unused variable declaration."\n  end\n  if str_eq(c, "SDEV006")\n    return "SDEV006: Unknown function or builtin call."\n  end\n  if str_eq(c, "SDEV007")\n    return "SDEV007: Target capability mismatch."\n  end\n  if str_eq(c, "SDEV008")\n    return "SDEV008: Deprecated builtin or legacy keyword alias."\n  end\n  if str_eq(c, "SDEV009")\n    return "SDEV009: Assignment syntax mismatch (= instead of be / set..to)."\n  end\n  if str_eq(c, "SDEV010")\n    return "SDEV010: Foreign declaration keyword (function / const / var)."\n  end\n  if str_eq(c, "SDEV011")\n    return "SDEV011: Builtin argument count (arity) mismatch."\n  end\n  if str_eq(c, "SDEV012")\n    return "SDEV012: Declaration shadows a core SDEV builtin."\n  end\n  if str_eq(c, "SDEV013")\n    return "SDEV013: Constant condition in conditional or loop."\n  end\n  if str_eq(c, "SDEV014")\n    return "SDEV014: Self-assignment or tautological comparison."\n  end\n  if str_eq(c, "SDEV015")\n    return "SDEV015: Planned or experimental API call."\n  end\n  return "Unknown diagnostic code: " + c\nend\n\n\nto registry_damerau_levenshtein with a b\n  set s to text_lower(a)\n  set t to text_lower(b)\n  if str_eq(s, t)\n    return 0\n  end\n  set n to length(s)\n  set m to length(t)\n  if n is 0\n    return m\n  end\n  if m is 0\n    return n\n  end\n  set cols to m + 1\n  set dp to mklist((n + 1) * cols)\n  set i to 0\n  while i <= n\n    set dp[i * cols] to i\n    set i to i + 1\n  end\n  set j to 0\n  while j <= m\n    set dp[j] to j\n    set j to j + 1\n  end\n  set i to 1\n  while i <= n\n    set si to substr(s, i - 1, 1)\n    set j to 1\n    while j <= m\n      set tj to substr(t, j - 1, 1)\n      set cost to 1\n      if str_eq(si, tj)\n        set cost to 0\n      end\n      set best to dp[(i - 1) * cols + j] + 1\n      set ins to dp[i * cols + (j - 1)] + 1\n      if ins < best\n        set best to ins\n      end\n      set sub to dp[(i - 1) * cols + (j - 1)] + cost\n      if sub < best\n        set best to sub\n      end\n      if i > 1 and j > 1\n        if str_eq(si, substr(t, j - 2, 1)) and str_eq(substr(s, i - 2, 1), tj)\n          set trans to dp[(i - 2) * cols + (j - 2)] + 1\n          if trans < best\n            set best to trans\n          end\n        end\n      end\n      set dp[i * cols + j] to best\n      set j to j + 1\n    end\n    set i to i + 1\n  end\n  return dp[n * cols + m]\nend\n';
+var registry_default = '# =============================================================================\r\n# SDEV Self-Hosted Canonical API Registry & Diagnostic Catalogue\r\n# (lang/registry/registry.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\nuse "lang/linter/linter.sdev"\r\n\r\nto registry_modules\r\n  return ["core", "text", "list", "tome", "math", "matrix", "graphics", "turtle", "ui", "web", "hardware", "ml", "ffi", "webgpu", "kernel"]\r\nend\r\n\r\nto registry_find_module with api_name\r\n  set k to lower(trim(api_name))\r\n  if str_eq(k, "say") or str_eq(k, "speak") or str_eq(k, "length") or str_eq(k, "measure") or str_eq(k, "read_file") or str_eq(k, "write_file")\r\n    return "core"\r\n  end\r\n  if str_eq(k, "concat") or str_eq(k, "upper") or str_eq(k, "lower") or str_eq(k, "trim") or str_eq(k, "substr") or str_eq(k, "split") or str_eq(k, "join") or str_eq(k, "replace")\r\n    return "text"\r\n  end\r\n  if str_eq(k, "mklist") or str_eq(k, "range") or str_eq(k, "sum") or str_eq(k, "list_append") or str_eq(k, "list_clone")\r\n    return "list"\r\n  end\r\n  if str_eq(k, "keys") or str_eq(k, "values") or str_eq(k, "has") or str_eq(k, "tome_create")\r\n    return "tome"\r\n  end\r\n  if str_eq(k, "abs") or str_eq(k, "min") or str_eq(k, "max") or str_eq(k, "fsqrt") or str_eq(k, "fsin") or str_eq(k, "fcos") or str_eq(k, "fpow")\r\n    return "math"\r\n  end\r\n  if text_starts_with(k, "mat_")\r\n    return "matrix"\r\n  end\r\n  if text_starts_with(k, "gfx_") or str_eq(k, "canvas_create") or str_eq(k, "rect") or str_eq(k, "circle")\r\n    return "graphics"\r\n  end\r\n  if text_starts_with(k, "turtle_") or str_eq(k, "forward")\r\n    return "turtle"\r\n  end\r\n  if text_starts_with(k, "ui_") or str_eq(k, "window")\r\n    return "ui"\r\n  end\r\n  if str_eq(k, "page") or str_eq(k, "endpage") or str_eq(k, "div") or str_eq(k, "section") or str_eq(k, "style") or str_eq(k, "theme") or str_eq(k, "navbar") or str_eq(k, "hero_section") or str_eq(k, "render_html") or str_eq(k, "sdev_to_js")\r\n    return "web"\r\n  end\r\n  if text_starts_with(k, "hw_") or str_eq(k, "pin_mode") or str_eq(k, "digital_write")\r\n    return "hardware"\r\n  end\r\n  if text_starts_with(k, "tensor_") or text_starts_with(k, "nn_")\r\n    return "ml"\r\n  end\r\n  if text_starts_with(k, "kernel_")\r\n    return "kernel"\r\n  end\r\n  return ""\r\nend\r\n\r\nto registry_explain_diagnostic with code_str\r\n  set c to upper(trim(code_str))\r\n  if str_eq(c, "SDEV001")\r\n    return "SDEV001: Unbalanced or unclosed block delimiter (:: / ;; or if / end)."\r\n  end\r\n  if str_eq(c, "SDEV002")\r\n    return "SDEV002: Syntax or parser error (unexpected token or unterminated string)."\r\n  end\r\n  if str_eq(c, "SDEV003")\r\n    return "SDEV003: Division or modulo by zero (/ 0 or % 0)."\r\n  end\r\n  if str_eq(c, "SDEV004")\r\n    return "SDEV004: Unreachable code after return/yield/break/continue."\r\n  end\r\n  if str_eq(c, "SDEV005")\r\n    return "SDEV005: Unused variable declaration."\r\n  end\r\n  if str_eq(c, "SDEV006")\r\n    return "SDEV006: Unknown function or builtin call."\r\n  end\r\n  if str_eq(c, "SDEV007")\r\n    return "SDEV007: Target capability mismatch."\r\n  end\r\n  if str_eq(c, "SDEV008")\r\n    return "SDEV008: Deprecated builtin or legacy keyword alias."\r\n  end\r\n  if str_eq(c, "SDEV009")\r\n    return "SDEV009: Assignment syntax mismatch (= instead of be / set..to)."\r\n  end\r\n  if str_eq(c, "SDEV010")\r\n    return "SDEV010: Foreign declaration keyword (function / const / var)."\r\n  end\r\n  if str_eq(c, "SDEV011")\r\n    return "SDEV011: Builtin argument count (arity) mismatch."\r\n  end\r\n  if str_eq(c, "SDEV012")\r\n    return "SDEV012: Declaration shadows a core SDEV builtin."\r\n  end\r\n  if str_eq(c, "SDEV013")\r\n    return "SDEV013: Constant condition in conditional or loop."\r\n  end\r\n  if str_eq(c, "SDEV014")\r\n    return "SDEV014: Self-assignment or tautological comparison."\r\n  end\r\n  if str_eq(c, "SDEV015")\r\n    return "SDEV015: Planned or experimental API call."\r\n  end\r\n  return "Unknown diagnostic code: " + c\r\nend\r\n\r\n\r\nto registry_damerau_levenshtein with a b\r\n  set s to text_lower(a)\r\n  set t to text_lower(b)\r\n  if str_eq(s, t)\r\n    return 0\r\n  end\r\n  set n to length(s)\r\n  set m to length(t)\r\n  if n is 0\r\n    return m\r\n  end\r\n  if m is 0\r\n    return n\r\n  end\r\n  set cols to m + 1\r\n  set dp to mklist((n + 1) * cols)\r\n  set i to 0\r\n  while i <= n\r\n    set dp[i * cols] to i\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j <= m\r\n    set dp[j] to j\r\n    set j to j + 1\r\n  end\r\n  set i to 1\r\n  while i <= n\r\n    set si to substr(s, i - 1, 1)\r\n    set j to 1\r\n    while j <= m\r\n      set tj to substr(t, j - 1, 1)\r\n      set cost to 1\r\n      if str_eq(si, tj)\r\n        set cost to 0\r\n      end\r\n      set best to dp[(i - 1) * cols + j] + 1\r\n      set ins to dp[i * cols + (j - 1)] + 1\r\n      if ins < best\r\n        set best to ins\r\n      end\r\n      set sub to dp[(i - 1) * cols + (j - 1)] + cost\r\n      if sub < best\r\n        set best to sub\r\n      end\r\n      if i > 1 and j > 1\r\n        if str_eq(si, substr(t, j - 2, 1)) and str_eq(substr(s, i - 2, 1), tj)\r\n          set trans to dp[(i - 2) * cols + (j - 2)] + 1\r\n          if trans < best\r\n            set best to trans\r\n          end\r\n        end\r\n      end\r\n      set dp[i * cols + j] to best\r\n      set j to j + 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return dp[n * cols + m]\r\nend\r\n';
 
 // src/lang/registry/api-registry.ts
 var registryRunner = null;
@@ -38979,10 +43912,10 @@ function suggestNearestApis(unknownName, maxDistance = 3) {
   }
   for (const entry of API_REGISTRY) {
     if (seenEntries.has(entry.name)) continue;
-    const candidates = [entry.name, ...entry.aliases];
+    const candidates2 = [entry.name, ...entry.aliases];
     let bestDist = Infinity;
     let bestMatch = entry.name;
-    for (const c of candidates) {
+    for (const c of candidates2) {
       const d = levenshteinDistance(lower, c.toLowerCase());
       if (d < bestDist) {
         bestDist = d;
@@ -39178,2785 +44111,7 @@ function findDiagnostic(code) {
 init_lexer();
 init_parser();
 init_errors();
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\understander.sdev
-var understander_default = `// =====================================================================\r
-// understander.sdev \u2014 the code understander, written in sdev.\r
-//\r
-// Reads a whole file line by line, works out what the author meant and\r
-// returns canonical sdev. The TypeScript understander (src/lang/agent)\r
-// stays behind it as the fallback: any line this engine is not sure\r
-// about makes the whole answer "unsure" and the fallback takes over.\r
-//\r
-//   understand_source(source, known_names) -> [source, sure, notes]\r
-//\r
-// known_names: names defined elsewhere in the project (other files,\r
-// memory), so cross-file references are never mistaken for typos.\r
-// =====================================================================\r
-\r
-forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]\r
-\r
-// ---------- small helpers ----------\r
-\r
-conjure starts_canonical(body) ::\r
-  forge first be lower(regex_replace(body, "^([^\\\\s(:]+).*$", "$1"))\r
-  iterate word through CANON ::\r
-    ponder first equals word ::\r
-      yield yep\r
-    ;;\r
-  ;;\r
-  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.\\\\[\\\\]\\"]*\\\\s+be\\\\s") ::\r
-    yield yep\r
-  ;;\r
-  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.]*\\\\s*\\\\(.*\\\\)$") ::\r
-    yield yep\r
-  ;;\r
-  yield nope\r
-;;\r
-\r
-conjure is_quoted(t) ::\r
-  ponder regex_test(t, "[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}]") ::\r
-    yield nope\r
-  ;;\r
-  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")\r
-;;\r
-\r
-// plus / minus / times / divided by -> symbols\r
-conjure math_words(t) ::\r
-  forge s be " " + lower(t) + " "\r
-  s be regex_replace(s, "\\\\s+divided\\\\s+by\\\\s+", " / ")\r
-  s be regex_replace(s, "\\\\s+multiplied\\\\s+by\\\\s+", " * ")\r
-  s be regex_replace(s, "\\\\s+to\\\\s+the\\\\s+power\\\\s+of\\\\s+", " ^ ")\r
-  s be regex_replace(s, "\\\\s+plus\\\\s+", " + ")\r
-  s be regex_replace(s, "\\\\s+minus\\\\s+", " - ")\r
-  s be regex_replace(s, "\\\\s+times\\\\s+", " * ")\r
-  s be regex_replace(s, "\\\\s+mod(ulo)?\\\\s+", " % ")\r
-  s be regex_replace(s, "\\\\s*\\\\?\\\\s*$", "")\r
-  yield trim(s)\r
-;;\r
-\r
-conjure is_math(t) ::\r
-  ponder isnt regex_test(t, "[0-9]") ::\r
-    yield nope\r
-  ;;\r
-  yield regex_test(t, "^[0-9\\\\s+\\\\-*/().%^]+$")\r
-;;\r
-\r
-conjure is_known(name, names) ::\r
-  yield has(names, name)\r
-;;\r
-\r
-// an expression made only of numbers, operators, quotes and known names\r
-conjure safe_expr(e, names) ::\r
-  ponder is_quoted(e) either is_math(e) ::\r
-    yield yep\r
-  ;;\r
-  ponder regex_test(e, "[\\\\-*/%^]") either (regex_test(e, "\\\\+") also isnt regex_test(e, "[\\"']")) ::\r
-    iterate w through regex_find_all(e, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-      ponder has(names, w) also names[w] equals "typed" ::\r
-        yield nope\r
-      ;;\r
-    ;;\r
-  ;;\r
-  forge rest be regex_replace(e, "\\"[^\\"]*\\"|'[^']*'", " ")\r
-  forge parts be regex_find_all(rest, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
-  iterate p through parts ::\r
-    ponder isnt is_known(p, names) ::\r
-      ponder isnt (p equals "yep" either p equals "nope" either p equals "void") ::\r
-        yield nope\r
-      ;;\r
-    ;;\r
-  ;;\r
-  yield regex_test(rest, "^[\\\\p{L}\\\\p{N}_\\\\s+\\\\-*/().%^,\\\\[\\\\]]*$")\r
-;;\r
-\r
-// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)\r
-// returns "" when a placeholder names something unknown\r
-conjure fill_placeholders(q, names) ::\r
-  forge inner be snatch(q, 1, measure(q) - 1)\r
-  forge parts be []\r
-  forge rest be inner\r
-  forge m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
-  cycle m differs void ::\r
-    ponder isnt is_known(m[2], names) ::\r
-      yield ""\r
-    ;;\r
-    ponder m[1] differs "" ::\r
-      parts be parts + [quote_text(m[1])]\r
-    ;;\r
-    parts be parts + ["str(" + m[2] + ")"]\r
-    rest be m[3]\r
-    m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
-  ;;\r
-  ponder rest differs "" ::\r
-    parts be parts + [quote_text(rest)]\r
-  ;;\r
-  yield weave(parts, " + ")\r
-;;\r
-\r
-conjure has_placeholder(t) ::\r
-  yield regex_test(t, "^[\\"'].*[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}].*[\\"']$")\r
-;;\r
-\r
-// a free loop counter name\r
-conjure counter(names) ::\r
-  iterate c through ["i", "j", "k", "_n"] ::\r
-    ponder isnt has(names, c) ::\r
-      yield c\r
-    ;;\r
-  ;;\r
-  yield "_n"\r
-;;\r
-\r
-conjure asked(name, q, names) ::\r
-  ponder has(names, "#num:" + name) ::\r
-    yield "set " + name + " to num(input(" + q + "))"\r
-  ;;\r
-  yield "set " + name + " to input(" + q + ")"\r
-;;\r
-\r
-// something to say: a quoted text, a known name, or bare words\r
-conjure sayable(arg, names) ::\r
-  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::\r
-    yield arg\r
-  ;;\r
-  ponder regex_test(arg, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
-    iterate w through regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-      ponder is_known(w, names) ::\r
-        yield ""\r
-      ;;\r
-    ;;\r
-    yield quote_text(arg)\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-\r
-// ---------- everyday tasks (reverse, upper/lower, length, dice, sort \u2026) ----------\r
-\r
-forge NUMBER_WORDS be :: "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "twenty": "20", "hundred": "100" ;;\r
-\r
-conjure as_number(t) ::\r
-  forge w be lower(trim(t))\r
-  ponder regex_test(w, "^-?[0-9]+(\\\\.[0-9]+)?$") ::\r
-    yield w\r
-  ;;\r
-  ponder has(NUMBER_WORDS, w) ::\r
-    yield NUMBER_WORDS[w]\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-// "hello" / hello / a known name -> an expression\r
-conjure subject_of(t, names) ::\r
-  forge w be regex_replace(trim(t), "^(the\\\\s+)?(word|text|name|string)\\\\s+", "", "i")\r
-  ponder is_quoted(w) ::\r
-    yield w\r
-  ;;\r
-  ponder is_known(w, names) ::\r
-    yield w\r
-  ;;\r
-  ponder regex_test(w, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
-    yield quote_text(w)\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-conjure number_list(t) ::\r
-  forge found be regex_find_all(t, "-?[0-9]+(\\\\.[0-9]+)?")\r
-  ponder measure(found) < 2 ::\r
-    yield ""\r
-  ;;\r
-  ponder isnt regex_test(t, "^[0-9\\\\s,.\\\\-and]+$", "i") ::\r
-    yield ""\r
-  ;;\r
-  yield "[" + weave(found, ", ") + "]"\r
-;;\r
-\r
-// returns the canonical text, or "" when this is not an everyday task\r
-conjure task_line(b, names) ::\r
-  forge s be regex_replace(regex_replace(b, "^(please|can you|could you)\\\\s+", "", "i"), "[.!?]+\\\\s*$", "")\r
-  forge out be regex_replace(s, "^(print|say|show|display|output|tell me|give me)\\\\s+(the\\\\s+)?", "", "i")\r
-  forge m be void\r
-\r
-  ponder regex_test(s, "^(flip|toss)\\\\s+(a\\\\s+)?coin$", "i") ::\r
-    yield "say pick([\\"heads\\", \\"tails\\"])"\r
-  ;;\r
-  ponder regex_test(s, "^(roll|throw)\\\\s+(a\\\\s+)?(die|dice)$", "i") ::\r
-    yield "say randint(1, 6)"\r
-  ;;\r
-  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also as_number(m[1]) differs "" ::\r
-    yield "set i to " + as_number(m[1]) + "\\nwhile i > 0\\n  say i\\n  set i to i - 1\\nend"\r
-  ;;\r
-  m be regex_capture(out, "^(reverse|backwards)\\\\s+(of\\\\s+)?(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(out, "^()()(.+?)\\\\s+(reversed|backwards)$", "i")\r
-  ;;\r
-  ponder m differs void also subject_of(m[3], names) differs "" ::\r
-    yield "say reverse(" + subject_of(m[3], names) + ")"\r
-  ;;\r
-  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(uppercase|upper\\\\s*case|capitals|caps)$", "i")\r
-  ponder m differs void also subject_of(m[2], names) differs "" ::\r
-    yield "say upper(" + subject_of(m[2], names) + ")"\r
-  ;;\r
-  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(lowercase|lower\\\\s*case|small\\\\s+letters)$", "i")\r
-  ponder m differs void also subject_of(m[2], names) differs "" ::\r
-    yield "say lower(" + subject_of(m[2], names) + ")"\r
-  ;;\r
-  m be regex_capture(s, "^(what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(the\\\\s+)?(length|size)\\\\s+of\\\\s+(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(s, "^()()()how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")\r
-  ;;\r
-  ponder m differs void ::\r
-    forge lst be number_list(m[4])\r
-    ponder lst differs "" ::\r
-      yield "say len(" + lst + ")"\r
-    ;;\r
-    ponder subject_of(m[4], names) differs "" ::\r
-      yield "say len(" + subject_of(m[4], names) + ")"\r
-    ;;\r
-  ;;\r
-  m be regex_capture(s, "^(is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(is\\\\s+)?(an?\\\\s+)?(even|odd)(\\\\s+or\\\\s+(even|odd))?$", "i")\r
-  ponder m differs void ::\r
-    forge n be as_number(m[2])\r
-    ponder n equals "" also is_known(m[2], names) ::\r
-      n be m[2]\r
-    ;;\r
-    ponder n differs "" ::\r
-      yield "if " + n + " % 2 is 0\\n  say \\"even\\"\\nelse\\n  say \\"odd\\"\\nend"\r
-    ;;\r
-  ;;\r
-  m be regex_capture(s, "^((give|show|pick|generate|roll|make|get)\\\\s+(me\\\\s+)?)?(a\\\\s+)?random\\\\s+(whole\\\\s+)?number\\\\s+(between|from)\\\\s+(\\\\S+)\\\\s+(and|to)\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also as_number(m[7]) differs "" also as_number(m[9]) differs "" ::\r
-    yield "say randint(" + as_number(m[7]) + ", " + as_number(m[9]) + ")"\r
-  ;;\r
-  m be regex_capture(out, "^sort\\\\s+(the\\\\s+)?(numbers\\\\s+)?(.+?)(\\\\s+(from\\\\s+)?(biggest|largest|highest)\\\\s+(to|first).*)?$", "i")\r
-  ponder m differs void also number_list(m[3]) differs "" ::\r
-    ponder regex_test(s, "biggest|largest|highest|descending", "i") ::\r
-      yield "say sortDesc(" + number_list(m[3]) + ")"\r
-    ;;\r
-    yield "say sort(" + number_list(m[3]) + ")"\r
-  ;;\r
-  m be regex_capture(s, "^(print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(the\\\\s+)?(multiplication|times)\\\\s+table\\\\s+(of|for)\\\\s+(\\\\S+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(s, "^(print\\\\s+|show\\\\s+)?(the\\\\s+)?()()(\\\\S+)\\\\s+times\\\\s+table$", "i")\r
-  ;;\r
-  ponder m differs void also as_number(m[5]) differs "" ::\r
-    forge n be as_number(m[5])\r
-    yield "set i to 1\\nwhile i <= 10\\n  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)\\n  set i to i + 1\\nend"\r
-  ;;\r
-  m be regex_capture(s, "^(say\\\\s+)?(hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(s, "^()()greet\\\\s+(.+)$", "i")\r
-  ;;\r
-  ponder m differs void ::\r
-    forge who be trim(m[3])\r
-    ponder is_known(who, names) ::\r
-      yield "say \\"Hello, \\" + " + who\r
-    ;;\r
-    ponder regex_test(who, "^[\\\\p{L} '-]+$") ::\r
-      yield "say " + quote_text("Hello, " + who)\r
-    ;;\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-// ---------- one line ----------\r
-// returns [canonical, sure]\r
-\r
-conjure understand_line(body, names) ::\r
-  forge b be regex_replace(body, "^what's\\\\s", "what is ", "i")\r
-\r
-\r
-  // everyday tasks first: "reverse hello", "roll a dice", "say hello to Sam"\r
-  forge task be task_line(b, names)\r
-  ponder task differs "" ::\r
-    yield [task, yep]\r
-  ;;\r
-\r
-  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"\r
-  forge m be regex_capture(b, "^ask\\\\s+(\\"[^\\"]*\\"|'[^']*')\\\\s+(as|into|for|and\\\\s+call\\\\s+it|and\\\\s+store\\\\s+in)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
-  ponder m differs void ::\r
-    yield [asked(m[3], m[1], names), yep]\r
-  ;;\r
-  m be regex_capture(b, "^ask\\\\s+(the\\\\s+user\\\\s+)?for\\\\s+(their\\\\s+|a\\\\s+|the\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
-  ponder m differs void ::\r
-    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]\r
-  ;;\r
-  m be regex_capture(b, "^(set\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=|to|be)\\\\s*ask\\\\s+(\\"[^\\"]*\\"|'[^']*')$", "i")\r
-  ponder m differs void ::\r
-    yield [asked(m[2], m[4], names), yep]\r
-  ;;\r
-\r
-  // say X N times\r
-  m be regex_capture(b, "^(say|print|show|write)\\\\s+(.+?)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times$", "i")\r
-  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::\r
-    forge what be sayable(trim(m[2]), names)\r
-    ponder what differs "" ::\r
-      forge c be counter(names)\r
-      yield ["set " + c + " to 0\\nwhile " + c + " < " + m[3] + "\\n  say " + what + "\\n  set " + c + " to " + c + " + 1\\nend", yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-  // count / print the numbers from A to B [by S]  \xB7  count to N\r
-  m be regex_capture(b, "^(count|print|show|say|list)\\\\s+(the\\\\s+)?(numbers\\\\s+)?from\\\\s+(-?[0-9]+)\\\\s+(to|until|through)\\\\s+(-?[0-9]+)(\\\\s+by\\\\s+([0-9]+))?$", "i")\r
-  ponder m equals void ::\r
-    forge m2 be regex_capture(b, "^(please\\\\s+)?count\\\\s+(up\\\\s+)?to\\\\s+([0-9]+)$", "i")\r
-    ponder m2 differs void ::\r
-      m be ["", "", "", "", "1", "", m2[3], "", ""]\r
-    ;;\r
-  ;;\r
-  ponder m differs void ::\r
-    forge c be counter(names)\r
-    forge step be m[8] equals "" ~ "1" : m[8]\r
-    forge down be num(m[4]) > num(m[6])\r
-    forge cmp be down ~ " >= " : " <= "\r
-    forge op be down ~ " - " : " + "\r
-    yield ["set " + c + " to " + m[4] + "\\nwhile " + c + cmp + m[6] + "\\n  say " + c + "\\n  set " + c + " to " + c + op + step + "\\nend", yep]\r
-  ;;\r
-  // repeat N times  (a block \u2014 its counter is bumped where the block ends)\r
-  m be regex_capture(b, "^(repeat|do\\\\s+this|do)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times\\\\s*:?$", "i")\r
-  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::\r
-    forge c be counter(names)\r
-    yield ["set " + c + " to 0\\nwhile " + c + " < " + m[2] + "\\n#bump " + c, yep]\r
-  ;;\r
-\r
-  // conditions: when/if COND [then][:]  ->  if COND\r
-  m be regex_capture(b, "^(when|if)\\\\s+(.+?)\\\\s*(then)?\\\\s*:?$", "i")\r
-  ponder m differs void also isnt regex_test(b, "::") ::\r
-    forge cond be m[2]\r
-    forge yn be regex_capture(cond, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals|==?)\\\\s+[\\"']?(yes|no|y|n)[\\"']?$", "i")\r
-    ponder yn differs void also is_known(yn[1], names) ::\r
-      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]\r
-    ;;\r
-    ponder regex_test(cond, "\\\\b(yes|no)\\\\b", "i") ::\r
-      yield [body, nope]\r
-    ;;\r
-    forge plain be regex_replace(cond, "\\\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\\\b", " ", "i")\r
-    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::\r
-      yield ["if " + cond, yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals)\\\\s+[\\"']?(yes|no)[\\"']?\\\\s*:$", "i")\r
-  ponder m differs void also is_known(m[1], names) ::\r
-    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]\r
-  ;;\r
-  ponder regex_test(b, "^(otherwise|else)\\\\s*:?$", "i") ::\r
-    yield ["else", yep]\r
-  ;;\r
-\r
-  // say with pieces side by side: say "Hello, " name "!"\r
-  m be regex_capture(b, "^(say|print|show)\\\\s+(.+)$", "i")\r
-  ponder m differs void ::\r
-    forge pieces be regex_find_all(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|,")\r
-    forge glued be regex_replace(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|[,\\\\s]", "")\r
-    ponder glued equals "" also measure(pieces) > 1 ::\r
-      forge parts be []\r
-      forge fine be yep\r
-      iterate pc through pieces ::\r
-        ponder pc differs "," ::\r
-          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::\r
-            parts be parts + [pc]\r
-          ;; otherwise ::\r
-            fine be nope\r
-          ;;\r
-        ;;\r
-      ;;\r
-      ponder fine also measure(parts) > 1 ::\r
-        yield ["say " + weave(parts, " + "), yep]\r
-      ;;\r
-    ;;\r
-  ;;\r
-\r
-  // output: print / show / display / output / write / say / tell\r
-  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\\\s+(.+)$", "i")\r
-  ponder m differs void ::\r
-    forge arg be trim(m[2])\r
-    ponder has_placeholder(arg) ::\r
-      forge filled be fill_placeholders(arg, names)\r
-      ponder filled differs "" ::\r
-        yield ["speak(" + filled + ")", yep]\r
-      ;;\r
-      yield [body, nope]\r
-    ;;\r
-    ponder is_quoted(arg) either is_math(arg) ::\r
-      yield ["speak(" + arg + ")", yep]\r
-    ;;\r
-    ponder is_name(arg) also is_known(arg, names) ::\r
-      yield ["speak(" + arg + ")", yep]\r
-    ;;\r
-    ponder safe_expr(arg, names) also regex_test(arg, "[+\\\\-*/]") ::\r
-      yield ["speak(" + arg + ")", yep]\r
-    ;;\r
-    // bare words with no known names in them: say them as written\r
-    forge used be regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
-    iterate w through used ::\r
-      ponder is_known(w, names) ::\r
-        yield [body, nope]\r
-      ;;\r
-    ;;\r
-    // words that usually mean a task ("count to", "3 times", "on the screen")\r
-    ponder regex_test(arg, "\\\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\\\b", "i") ::\r
-      yield [body, nope]\r
-    ;;\r
-    ponder regex_test(arg, "[\\"'(){}\\\\[\\\\]]") ::\r
-      yield [body, nope]\r
-    ;;\r
-    yield ["speak(" + quote_text(arg) + ")", yep]\r
-  ;;\r
-\r
-  // plain calculations: calculate / compute / what is / how much is\r
-  m be regex_capture(b, "^(calculate|compute|evaluate|solve|what\\\\s+is|how\\\\s+much\\\\s+is)\\\\s+(.+?)\\\\??$", "i")\r
-  ponder m differs void ::\r
-    forge expr be math_words(m[2])\r
-    ponder is_math(expr) ::\r
-      yield ["speak(" + expr + ")", yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-\r
-  // add N to x / increase x by N / decrease x by N\r
-  m be regex_capture(b, "^add\\\\s+(\\\\S+)\\\\s+to\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[1], names) ::\r
-    yield [m[2] + " be " + m[2] + " + " + m[1], yep]\r
-  ;;\r
-  m be regex_capture(b, "^(increase|raise)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
-    yield [m[2] + " be " + m[2] + " + " + m[3], yep]\r
-  ;;\r
-  m be regex_capture(b, "^(decrease|lower|reduce)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
-    yield [m[2] + " be " + m[2] + " - " + m[3], yep]\r
-  ;;\r
-\r
-  // x becomes E\r
-  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+becomes\\\\s+(.+)$", "i")\r
-  ponder m differs void also is_known(m[1], names) also safe_expr(trim(m[2]), names) ::\r
-    yield [m[1] + " be " + trim(m[2]), yep]\r
-  ;;\r
-\r
-  // set x to E / let x be E / make x E / x = E\r
-  m be regex_capture(b, "^(set|let|make)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(to|be|equal\\\\s+to|=)\\\\s+(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(b, "^()([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=)\\\\s*([^=].*)$")\r
-  ;;\r
-  ponder m differs void ::\r
-    forge value be trim(m[4])\r
-    ponder safe_expr(value, names) ::\r
-      ponder is_known(m[2], names) ::\r
-        yield [m[2] + " be " + value, yep]\r
-      ;;\r
-      yield ["forge " + m[2] + " be " + value, yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-\r
-  ponder starts_canonical(b) ::\r
-    yield [body, yep]\r
-  ;;\r
-  yield [body, nope]\r
-;;\r
-\r
-// ---------- the whole file ----------\r
-\r
-// an open block is [indent, counter]; a counted block bumps it before "end"\r
-conjure close_block(open) ::\r
-  ponder open[1] differs "" ::\r
-    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]\r
-  ;;\r
-  yield [open[0] + "end"]\r
-;;\r
-\r
-forge CHUNK_MEMO be ::\r
-;;\r
-\r
-conjure understand_source(source, known, words) ::\r
-  forge names be ::\r
-  ;;\r
-  iterate k through known ::\r
-    names[k] be yep\r
-  ;;\r
-  // dialect / remembered words: [word, canonical]\r
-  forge wordmap be ::\r
-  ;;\r
-  ponder words differs void ::\r
-    iterate pair through words ::\r
-      wordmap[lower(pair[0])] be pair[1]\r
-    ;;\r
-  ;;\r
-  // names used in arithmetic or numeric comparisons: typed answers for\r
-  // them are converted to numbers when they are asked for\r
-  iterate row through lines(source) ::\r
-    forge bare be regex_replace(row, "\\"[^\\"]*\\"|'[^']*'", "\\"\\"")\r
-    forge numeric be regex_test(bare, "[\\\\-*/%^<>]|\\\\b(more|less|greater|smaller)\\\\b") either (regex_test(bare, "\\\\+") also isnt regex_test(bare, "\\"")) either regex_test(bare, "\\\\b(times|plus|minus|divided)\\\\b")\r
-    ponder numeric also isnt regex_test(trim(row), "^ask\\\\b", "i") ::\r
-      iterate w through regex_find_all(bare, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-        names["#num:" + w] be yep\r
-      ;;\r
-    ;;\r
-  ;;\r
-  forge out be []\r
-  forge notes be []\r
-  forge sure be yep\r
-  forge n be 0\r
-  forge rows be lines(source)\r
-  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,\r
-  // unless the author already writes "end" or "::" blocks themselves\r
-  forge auto_end be isnt regex_test(source, "(^|\\n)\\s*end\\s*($|\\n)|::")\r
-  forge opens be []\r
-  // Large files are read in top-level chunks. Each chunk's reading is\r
-  // remembered (keyed by its text and everything known before it), so after\r
-  // a small edit only the chunks that changed are read again.\r
-  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))\r
-  iterate k through keys(names) ::\r
-    ponder startswith(k, "#num:") ::\r
-      state be str(hash(state + k)) + str(hash(reverse(state + k)))\r
-    ;;\r
-  ;;\r
-  forge chunks be []\r
-  forge current be []\r
-  forge first_line be 1\r
-  forge idx be 0\r
-  iterate line through rows ::\r
-    idx be idx + 1\r
-    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\\\}|//|#)", "i")\r
-    ponder top also measure(current) > 0 ::\r
-      chunks be chunks + [[first_line, current]]\r
-      current be []\r
-      first_line be idx\r
-    ;;\r
-    current be current + [line]\r
-  ;;\r
-  ponder measure(current) > 0 ::\r
-    chunks be chunks + [[first_line, current]]\r
-  ;;\r
-  iterate chunk through chunks ::\r
-    forge key be state + "|#|" + unlines(chunk[1])\r
-    forge delta be []\r
-    ponder has(CHUNK_MEMO, key) ::\r
-      forge hit be CHUNK_MEMO[key]\r
-      out be out + hit[0]\r
-      ponder isnt hit[1] ::\r
-        sure be nope\r
-      ;;\r
-      iterate note through hit[2] ::\r
-        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]\r
-      ;;\r
-      delta be hit[3]\r
-      iterate pair through delta ::\r
-        names[pair[0]] be pair[1]\r
-      ;;\r
-    ;; otherwise ::\r
-      forge c_out be []\r
-      forge c_sure be yep\r
-      forge c_notes be []\r
-      forge saved_out be out\r
-      forge saved_notes be notes\r
-      forge saved_sure be sure\r
-      out be []\r
-      notes be []\r
-      sure be yep\r
-      n be chunk[0] - 1\r
-      iterate line through chunk[1] ::\r
-      n be n + 1\r
-      forge indent be leading_space(line)\r
-      forge body be trim(line)\r
-      forge head be lower(regex_replace(body, "^(\\\\S+).*$", "$1"))\r
-      ponder has(wordmap, head) also body differs "" ::\r
-        body be wordmap[head] + snatch(body, measure(head), measure(body))\r
-      ;;\r
-      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::\r
-        out be out + [line]\r
-      ;; otherwise ::\r
-        forge r be understand_line(body, names)\r
-        ponder isnt r[1] ::\r
-          sure be nope\r
-        ;;\r
-        ponder r[0] differs body ::\r
-          notes be notes + [[n, body, r[0]]]\r
-        ;;\r
-        // learn declarations as we go: forge x be \u2026 / conjure f(a, b)\r
-        forge d be regex_capture(r[0], "^(?:forge|set)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
-        ponder d differs void ::\r
-          names[d[1]] be (regex_test(r[0], "input\\\\(") also isnt regex_test(r[0], "num\\\\(input")) ~ "typed" : yep\r
-          delta be delta + [[d[1], names[d[1]]]]\r
-        ;;\r
-        d be regex_capture(r[0], "^conjure\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*\\\\(([^)]*)\\\\)")\r
-        ponder d differs void ::\r
-          names[d[1]] be yep\r
-          delta be delta + [[d[1], yep]]\r
-          iterate p through regex_find_all(d[2], "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-            names[p] be yep\r
-            delta be delta + [[p, yep]]\r
-          ;;\r
-        ;;\r
-        d be regex_capture(r[0], "^iterate\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
-        ponder d differs void ::\r
-          names[d[1]] be yep\r
-          delta be delta + [[d[1], yep]]\r
-        ;;\r
-        ponder auto_end ::\r
-          forge isElse be regex_test(r[0], "^else\\\\b")\r
-          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::\r
-            out be out + close_block(opens[-1])\r
-            opens be portion(opens, 0, measure(opens) - 1)\r
-          ;;\r
-          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::\r
-            opens be portion(opens, 0, measure(opens) - 1)\r
-          ;;\r
-          forge bump be regex_capture(r[0], "\\n#bump (\\\\S+)$")\r
-          ponder bump differs void ::\r
-            opens be opens + [[indent, bump[1]]]\r
-            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]\r
-          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\\\b") also isnt contains(r[0], "\\n") ::\r
-            opens be opens + [[indent, ""]]\r
-          ;;\r
-        ;;\r
-        ponder isnt auto_end also contains(r[0], "#bump") ::\r
-          sure be nope\r
-        ;;\r
-        out be out + [indent + replace(r[0], "\\n", "\\n" + indent)]\r
-      ;;\r
-      ;;\r
-      // a top-level line follows: close what this chunk opened, here\r
-      cycle auto_end also measure(opens) > 0 ::\r
-        out be out + close_block(opens[-1])\r
-        opens be portion(opens, 0, measure(opens) - 1)\r
-      ;;\r
-      c_out be out\r
-      c_sure be sure\r
-      iterate note through notes ::\r
-        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]\r
-      ;;\r
-      ponder measure(CHUNK_MEMO) > 20000 ::\r
-        CHUNK_MEMO be ::\r
-        ;;\r
-      ;;\r
-      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]\r
-      out be saved_out + c_out\r
-      notes be saved_notes + notes\r
-      sure be saved_sure also c_sure\r
-    ;;\r
-    forge dsig be state\r
-    iterate pair through delta ::\r
-      dsig be dsig + "," + pair[0] + "=" + str(pair[1])\r
-    ;;\r
-    state be str(hash(dsig)) + str(hash(reverse(dsig)))\r
-  ;;\r
-  yield [unlines(out), sure, notes]\r
-;;\r
-`;
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\ai-dialect.sdev
-var ai_dialect_default = `// =====================================================================\r
-// ai-dialect.sdev \u2014 "sdev:ai", the dialect written for AI models.\r
-//\r
-// Designed for how language models generate code:\r
-//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)\r
-//   * blocks are always { \u2026 } \u2014 no indentation rules, no guessed closings\r
-//   * short, common tokens: fewer tokens -> faster, cheaper generation\r
-//   * the familiar operators models already know: == != && || !\r
-//\r
-// A file starts with  !#ai  and is translated to canonical sdev before it\r
-// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model\r
-// can be given any program to read in the dense form.\r
-//\r
-//   v x = 5               forge x be 5\r
-//   x = x + 1             x be x + 1\r
-//   x += 2                x be x + (2)\r
-//   p(x)                  speak(x)\r
-//   f add(a, b) {         conjure add(a, b) ::\r
-//   r a + b               yield a + b\r
-//   ? x > 3 {             ponder x > 3 ::\r
-//   } :? x > 1 {          ;; otherwise ponder x > 1 ::\r
-//   } : {                 ;; otherwise ::\r
-//   w i < 3 {             cycle i < 3 ::\r
-//   each n in xs {        iterate n through xs ::\r
-//   try { \u2026 } catch e {   attempt :: \u2026 ;; rescue e ::\r
-//   brk / next            yeet / skip\r
-//   }                     ;;\r
-//   == != && || !         equals differs also either isnt\r
-// =====================================================================\r
-\r
-// split a line into [code, text, code, text, \u2026] so strings are never touched\r
-conjure ai_segments(line) ::\r
-  yield regex_find_all(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|'[^']*'|[^\\"']+|[\\"']")\r
-;;\r
-\r
-conjure ai_ops_to_sdev(code) ::\r
-  forge c be code\r
-  c be regex_replace(c, "\\\\s*==\\\\s*", " equals ")\r
-  c be regex_replace(c, "\\\\s*!=\\\\s*", " differs ")\r
-  c be regex_replace(c, "\\\\s*&&\\\\s*", " also ")\r
-  c be regex_replace(c, "\\\\s*\\\\|\\\\|\\\\s*", " either ")\r
-  c be regex_replace(c, "(^|[^\\\\p{L}\\\\p{N}_])!\\\\s*(?!=)", "$1isnt ")\r
-  c be regex_replace(c, "\\\\btrue\\\\b", "yep")\r
-  c be regex_replace(c, "\\\\bfalse\\\\b", "nope")\r
-  c be regex_replace(c, "\\\\bnull\\\\b", "void")\r
-  yield c\r
-;;\r
-\r
-conjure ai_ops_to_ai(code) ::\r
-  forge c be code\r
-  c be regex_replace(c, "\\\\s+equals\\\\s+", " == ")\r
-  c be regex_replace(c, "\\\\s+differs\\\\s+", " != ")\r
-  c be regex_replace(c, "\\\\s+also\\\\s+", " && ")\r
-  c be regex_replace(c, "\\\\s+either\\\\s+", " || ")\r
-  c be regex_replace(c, "\\\\bisnt\\\\s+", "!")\r
-  c be regex_replace(c, "\\\\byep\\\\b", "true")\r
-  c be regex_replace(c, "\\\\bnope\\\\b", "false")\r
-  c be regex_replace(c, "\\\\bvoid\\\\b", "null")\r
-  yield c\r
-;;\r
-\r
-conjure ai_map_code(line, to_sdev) ::\r
-  forge out be ""\r
-  iterate seg through ai_segments(line) ::\r
-    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
-      out be out + seg\r
-    ;; otherwise ponder to_sdev ::\r
-      out be out + ai_ops_to_sdev(seg)\r
-    ;; otherwise ::\r
-      out be out + ai_ops_to_ai(seg)\r
-    ;;\r
-  ;;\r
-  yield out\r
-;;\r
-\r
-forge AI_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\r
-\r
-// one AI line -> one canonical line (or void when it is not AI syntax)\r
-conjure ai_line_to_sdev(body) ::\r
-  forge m be regex_capture(body, "^\\\\}\\\\s*:\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"\r
-  ;;\r
-  ponder regex_test(body, "^\\\\}\\\\s*:\\\\s*\\\\{$") ::\r
-    yield ";; otherwise ::"\r
-  ;;\r
-  m be regex_capture(body, "^\\\\}\\\\s*catch\\\\s+(" + AI_NAME + ")\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield ";; rescue " + m[1] + " ::"\r
-  ;;\r
-  ponder body equals "}" ::\r
-    yield ";;"\r
-  ;;\r
-  ponder regex_test(body, "^try\\\\s*\\\\{$") ::\r
-    yield "attempt ::"\r
-  ;;\r
-  m be regex_capture(body, "^v\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")\r
-  ponder m differs void ::\r
-    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)\r
-  ;;\r
-  m be regex_capture(body, "^f\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "conjure " + m[1] + "(" + m[2] + ") ::"\r
-  ;;\r
-  m be regex_capture(body, "^r(\\\\s+(.+))?$")\r
-  ponder m differs void ::\r
-    ponder m[2] equals "" ::\r
-      yield "yield void"\r
-    ;;\r
-    yield "yield " + ai_map_code(m[2], yep)\r
-  ;;\r
-  m be regex_capture(body, "^p\\\\((.*)\\\\)$")\r
-  ponder m differs void ::\r
-    yield "speak(" + ai_map_code(m[1], yep) + ")"\r
-  ;;\r
-  m be regex_capture(body, "^\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "ponder " + ai_map_code(m[1], yep) + " ::"\r
-  ;;\r
-  m be regex_capture(body, "^w\\\\s+(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "cycle " + ai_map_code(m[1], yep) + " ::"\r
-  ;;\r
-  m be regex_capture(body, "^each\\\\s+(" + AI_NAME + ")\\\\s+in\\\\s+(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"\r
-  ;;\r
-  ponder body equals "brk" ::\r
-    yield "yeet"\r
-  ;;\r
-  ponder body equals "next" ::\r
-    yield "skip"\r
-  ;;\r
-  // compound assignment: x += e / x -= e / x *= e / x /= e\r
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*([-+*/])=\\\\s*(.+)$")\r
-  ponder m differs void ::\r
-    yield m[1] + " be " + m[1] + " " + m[2] + " (" + ai_map_code(m[3], yep) + ")"\r
-  ;;\r
-  // index or name assignment: x = e / xs[0] = e / o.k = e\r
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*=\\\\s*([^=].*)$")\r
-  ponder m differs void ::\r
-    yield m[1] + " be " + ai_map_code(m[2], yep)\r
-  ;;\r
-  // a bare call or expression\r
-  yield ai_map_code(body, yep)\r
-;;\r
-\r
-conjure ai_to_sdev(source) ::\r
-  forge out be []\r
-  iterate line through lines(close_ai_braces(source)) ::\r
-    forge indent be leading_space(line)\r
-    forge body be trim(line)\r
-    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::\r
-      ponder isnt startswith(body, "!#ai") ::\r
-        out be out + [line]\r
-      ;;\r
-    ;; otherwise ::\r
-      out be out + [indent + ai_line_to_sdev(body)]\r
-    ;;\r
-  ;;\r
-  yield unlines(out)\r
-;;\r
-\r
-// canonical sdev -> the AI form\r
-// the English canonical forms (say / set / if / while / for each / to \u2026 with / end)\r
-conjure english_line_to_ai(body, AI_DECLARED) ::\r
-  forge m be regex_capture(body, "^say\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "p(" + ai_map_code(m[1], nope) + ")"\r
-  ;;\r
-  m be regex_capture(body, "^set\\\\s+(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+to\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::\r
-      yield m[1] + " = " + ai_map_code(m[2], nope)\r
-    ;;\r
-    AI_DECLARED[m[1]] be yep\r
-    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
-  ;;\r
-  m be regex_capture(body, "^if\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "? " + ai_cond(m[1]) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^else\\\\s+if\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "} :? " + ai_cond(m[1]) + " {"\r
-  ;;\r
-  ponder body equals "else" ::\r
-    yield "} : {"\r
-  ;;\r
-  ponder body equals "end" ::\r
-    yield "}"\r
-  ;;\r
-  m be regex_capture(body, "^while\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "w " + ai_cond(m[1]) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^for\\\\s+(each\\\\s+)?(" + AI_NAME + ")\\\\s+in\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^to\\\\s+(" + AI_NAME + ")(\\\\s+with\\\\s+(.+))?$")\r
-  ponder m differs void ::\r
-    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")\r
-    yield "f " + m[1] + "(" + params + ") {"\r
-  ;;\r
-  m be regex_capture(body, "^return(\\\\s+(.+))?$")\r
-  ponder m differs void ::\r
-    yield "r " + ai_map_code(m[2], nope)\r
-  ;;\r
-  ponder body equals "break" ::\r
-    yield "brk"\r
-  ;;\r
-  ponder body equals "continue" ::\r
-    yield "next"\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-// English comparisons -> symbols\r
-conjure ai_cond(c) ::\r
-  forge out be ""\r
-  iterate seg through ai_segments(c) ::\r
-    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
-      out be out + seg\r
-    ;; otherwise ::\r
-      forge x be seg\r
-      x be regex_replace(x, "\\\\s+is\\\\s+not\\\\s+", " != ")\r
-      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+more\\\\b", " >= $1")\r
-      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+less\\\\b", " <= $1")\r
-      x be regex_replace(x, "\\\\s+is\\\\s+", " == ")\r
-      x be regex_replace(x, "\\\\s+and\\\\s+", " && ")\r
-      x be regex_replace(x, "\\\\s+or\\\\s+", " || ")\r
-      x be regex_replace(x, "(^|\\\\s)not\\\\s+", "$1!")\r
-      out be out + ai_ops_to_ai(x)\r
-    ;;\r
-  ;;\r
-  yield out\r
-;;\r
-\r
-conjure sdev_line_to_ai(body, declared) ::\r
-  forge english be english_line_to_ai(body, declared)\r
-  ponder english differs "" ::\r
-    yield english\r
-  ;;\r
-  forge m be regex_capture(body, "^;;\\\\s*otherwise\\\\s+ponder\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "} :? " + ai_map_code(m[1], nope) + " {"\r
-  ;;\r
-  ponder regex_test(body, "^;;\\\\s*otherwise\\\\s*::$") ::\r
-    yield "} : {"\r
-  ;;\r
-  m be regex_capture(body, "^;;\\\\s*rescue\\\\s+(" + AI_NAME + ")\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "} catch " + m[1] + " {"\r
-  ;;\r
-  ponder body equals ";;" ::\r
-    yield "}"\r
-  ;;\r
-  ponder regex_test(body, "^attempt\\\\s*::$") ::\r
-    yield "try {"\r
-  ;;\r
-  m be regex_capture(body, "^forge\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
-  ;;\r
-  m be regex_capture(body, "^conjure\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "f " + m[1] + "(" + m[2] + ") {"\r
-  ;;\r
-  m be regex_capture(body, "^yield\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "r " + ai_map_code(m[1], nope)\r
-  ;;\r
-  m be regex_capture(body, "^speak\\\\((.*)\\\\)$")\r
-  ponder m differs void ::\r
-    yield "p(" + ai_map_code(m[1], nope) + ")"\r
-  ;;\r
-  m be regex_capture(body, "^ponder\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "? " + ai_map_code(m[1], nope) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^cycle\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "w " + ai_map_code(m[1], nope) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^iterate\\\\s+(" + AI_NAME + ")\\\\s+through\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"\r
-  ;;\r
-  ponder body equals "yeet" ::\r
-    yield "brk"\r
-  ;;\r
-  ponder body equals "skip" ::\r
-    yield "next"\r
-  ;;\r
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+be\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield m[1] + " = " + ai_map_code(m[2], nope)\r
-  ;;\r
-  yield ai_map_code(body, nope)\r
-;;\r
-\r
-conjure sdev_to_ai(source) ::\r
-  forge out be ["!#ai"]\r
-  forge declared be ::\r
-  ;;\r
-  iterate line through lines(source) ::\r
-    forge indent be leading_space(line)\r
-    forge body be trim(line)\r
-    ponder body equals "" either startswith(body, "//") ::\r
-      out be out + [line]\r
-    ;; otherwise ::\r
-      out be out + [indent + sdev_line_to_ai(body, declared)]\r
-    ;;\r
-  ;;\r
-  yield unlines(out)\r
-;;\r
-`;
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\project.sdev
-var project_default = '// =====================================================================\r\n// project.sdev \u2014 the project index of the code understander, in sdev.\r\n//\r\n// Collects every name a file defines (variables, functions, kinds,\r\n// parameters, loop names, lambda parameters) so the understander can tell\r\n// a reference to another file apart from plain words.\r\n//\r\n//   defined_names(source)   -> list of names one file defines\r\n//   project_names(sources)  -> names defined across many files, no repeats\r\n// =====================================================================\r\n\r\nforge PNAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\r\n\r\nconjure pn_add(seen, out, w) ::\r\n  ponder w differs "" also isnt has(seen, w) also regex_test(w, "^" + PNAME + "$") ::\r\n    seen[w] be yep\r\n    out be out + [w]\r\n  ;;\r\n  yield out\r\n;;\r\n\r\n// every match of `pattern`, keeping only what follows `prefix`\r\nconjure pn_tails(text, pattern, prefix) ::\r\n  forge got be []\r\n  iterate hit through regex_find_all(text, pattern) ::\r\n    got be got + [regex_replace(hit, prefix, "")]\r\n  ;;\r\n  yield got\r\n;;\r\n\r\nconjure pn_split(list_text) ::\r\n  yield regex_find_all(list_text, PNAME)\r\n;;\r\n\r\nconjure defined_names_into(source, seen, out) ::\r\n  forge kw be "\\\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\\\s+"\r\n  iterate w through pn_tails(source, kw + PNAME, kw) ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME, "^for\\\\s+(each\\\\s+)?") ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate w through pn_tails(source, "\\\\bfor\\\\s+(each\\\\s+)?" + PNAME + "\\\\s*,\\\\s*" + PNAME, "^.*,\\\\s*") ::\r\n    out be pn_add(seen, out, w)\r\n  ;;\r\n  iterate row through lines(source) ::\r\n    forge m be regex_capture(row, "^\\\\s*(" + PNAME + ")\\\\s*(=|\\\\+=|-=|\\\\*=|/=)(?!=)")\r\n    ponder m differs void ::\r\n      out be pn_add(seen, out, m[1])\r\n    ;;\r\n  ;;\r\n  // parameters: `with a b c`, `with a, b`\r\n  iterate part through pn_tails(source, "\\\\bwith\\\\s+[^\\\\n:{]+", "^with\\\\s+") ::\r\n    iterate w through regex_find_all(part, "[^\\\\s,]+") ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  // `(a, b)` after a declaration\r\n  iterate part through pn_tails(source, "\\\\b(to|conjure|func|function|fn|def)\\\\s+" + PNAME + "\\\\s*\\\\([^)]*\\\\)", "^[^(]*\\\\(") ::\r\n    iterate w through regex_find_all(regex_replace(part, "\\\\)$", ""), "[^\\\\s,=]+") ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  // lambdas `(a, b) =>` / `x =>`\r\n  iterate part through regex_find_all(source, "\\\\([^()]*\\\\)\\\\s*=>|" + PNAME + "\\\\s*=>") ::\r\n    iterate w through pn_split(regex_replace(part, "=>$", "")) ::\r\n      out be pn_add(seen, out, w)\r\n    ;;\r\n  ;;\r\n  yield out\r\n;;\r\n\r\nconjure defined_names(source) ::\r\n  forge seen be ::\r\n  ;;\r\n  yield defined_names_into(source, seen, [])\r\n;;\r\n\r\nconjure project_names(sources) ::\r\n  forge seen be ::\r\n  ;;\r\n  forge out be []\r\n  iterate src through sources ::\r\n    out be defined_names_into(src, seen, out)\r\n  ;;\r\n  yield out\r\n;;\r\n';
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\blocks.sdev
-var blocks_default = '// =====================================================================\r\n// blocks.sdev \u2014 the code understander\'s block-closing rules, in sdev.\r\n//\r\n// People rarely write `end`, and AI models sometimes forget a `}`.\r\n// These rules close what was left open, using indentation as the guide:\r\n//   * an indented body closes as soon as the code steps back out of it\r\n//   * a blank line followed by a shallower line closes it too\r\n//   * anything still open is closed at the end of the file\r\n// Flat files that write their own `end` / `}` are left untouched.\r\n// =====================================================================\r\n\r\nforge BLOCK_OPENS be "^\\\\s*(?:to\\\\s+[\\\\p{L}\\\\p{N}_]|if\\\\b|while\\\\b|for\\\\s+each\\\\b|kind\\\\b|attempt\\\\b|match\\\\b)"\r\nforge BLOCK_CLOSES be "^\\\\s*end\\\\b"\r\nforge BLOCK_CONTINUES be "^\\\\s*(?:else|end)\\\\b"\r\n\r\nconjure next_code_line(ls, start) ::\r\n  forge j be start\r\n  cycle j < measure(ls) ::\r\n    ponder trim(ls[j]) differs "" ::\r\n      yield ls[j]\r\n    ;;\r\n    j be j + 1\r\n  ;;\r\n  yield void\r\n;;\r\n\r\n// English canonical form: if / while / for each / to \u2026 closed by `end`\r\nconjure close_blocks(source) ::\r\n  forge ls be lines(source)\r\n  forge out be []\r\n  // each open block is [indent, has_body]\r\n  forge stack be []\r\n  forge i be 0\r\n  cycle i < measure(ls) ::\r\n    forge line be ls[i]\r\n    ponder trim(line) equals "" ::\r\n      forge nxt be next_code_line(ls, i + 1)\r\n      ponder nxt differs void also isnt regex_test(nxt, BLOCK_CONTINUES) ::\r\n        cycle measure(stack) > 0 also measure(leading_space(nxt)) <= measure(stack[-1][0]) ::\r\n          out be out + [stack[-1][0] + "end"]\r\n          stack be portion(stack, 0, measure(stack) - 1)\r\n        ;;\r\n      ;;\r\n      out be out + [line]\r\n    ;; otherwise ::\r\n      forge w be measure(leading_space(line))\r\n      forge cont be regex_test(line, BLOCK_CONTINUES)\r\n      cycle measure(stack) > 0 also stack[-1][1] also w <= measure(stack[-1][0]) also isnt (cont also w equals measure(stack[-1][0])) ::\r\n        out be out + [stack[-1][0] + "end"]\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder measure(stack) > 0 also w > measure(stack[-1][0]) ::\r\n        stack[measure(stack) - 1] be [stack[-1][0], yep]\r\n      ;;\r\n      ponder regex_test(line, BLOCK_CLOSES) ::\r\n        ponder measure(stack) > 0 ::\r\n          stack be portion(stack, 0, measure(stack) - 1)\r\n        ;;\r\n      ;; otherwise ponder regex_test(line, "^\\\\s*else\\\\b") also measure(stack) > 0 ::\r\n        stack[measure(stack) - 1] be [stack[-1][0], nope]\r\n      ;; otherwise ponder regex_test(line, BLOCK_OPENS) ::\r\n        stack be stack + [[leading_space(line), nope]]\r\n      ;;\r\n      out be out + [line]\r\n    ;;\r\n    i be i + 1\r\n  ;;\r\n  cycle measure(stack) > 0 ::\r\n    out be out + [stack[-1][0] + "end"]\r\n    stack be portion(stack, 0, measure(stack) - 1)\r\n  ;;\r\n  yield unlines(out)\r\n;;\r\n\r\n// code of a line with strings and // comments removed, for brace counting\r\nconjure brace_code(line) ::\r\n  forge c be regex_replace(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|\'[^\']*\'", "\\"\\"")\r\n  forge k be find_from(c, "//", 0)\r\n  ponder k >= 0 ::\r\n    c be snatch(c, 0, k)\r\n  ;;\r\n  yield trim(c)\r\n;;\r\n\r\n// sdev:ai form: blocks are { \u2026 }; add any `}` a model forgot\r\nconjure close_ai_braces(source) ::\r\n  forge ls be lines(source)\r\n  forge out be []\r\n  forge stack be []\r\n  iterate line through ls ::\r\n    forge code be brace_code(line)\r\n    ponder code equals "" ::\r\n      out be out + [line]\r\n    ;; otherwise ::\r\n      forge w be measure(leading_space(line))\r\n      forge closing be startswith(code, "}")\r\n      // stepping back to (or out of) an opener\'s level without `}` closes it\r\n      cycle measure(stack) > 0 also (w < measure(stack[-1]) either (w equals measure(stack[-1]) also isnt closing)) ::\r\n        out be out + [stack[-1] + "}"]\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder closing also measure(stack) > 0 ::\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n      ponder endswith(code, "{") ::\r\n        stack be stack + [leading_space(line)]\r\n      ;;\r\n      out be out + [line]\r\n    ;;\r\n  ;;\r\n  cycle measure(stack) > 0 ::\r\n    out be out + [stack[-1] + "}"]\r\n    stack be portion(stack, 0, measure(stack) - 1)\r\n  ;;\r\n  yield unlines(out)\r\n;;\r\n\r\n// structure report: [[line, message], \u2026] for blocks that never close or close twice\r\nconjure check_blocks(source) ::\r\n  forge problems be []\r\n  forge stack be []\r\n  forge n be 0\r\n  iterate line through lines(source) ::\r\n    n be n + 1\r\n    forge code be brace_code(line)\r\n    ponder endswith(code, "::") either endswith(code, "{") ::\r\n      ponder startswith(code, ";;") either startswith(code, "}") ::\r\n        ponder measure(stack) equals 0 ::\r\n          problems be problems + [[n, "nothing is open here to continue"]]\r\n        ;; otherwise ::\r\n          stack[measure(stack) - 1] be n\r\n        ;;\r\n      ;; otherwise ::\r\n        stack be stack + [n]\r\n      ;;\r\n    ;; otherwise ponder startswith(code, ";;") either startswith(code, "}") ::\r\n      ponder measure(stack) equals 0 ::\r\n        problems be problems + [[n, "this closes a block that was never opened"]]\r\n      ;; otherwise ::\r\n        stack be portion(stack, 0, measure(stack) - 1)\r\n      ;;\r\n    ;;\r\n  ;;\r\n  iterate s through stack ::\r\n    problems be problems + [[s, "this block is never closed"]]\r\n  ;;\r\n  yield problems\r\n;;\r\n';
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\parser_eval.sdev
-var parser_eval_default = `// =====================================================================
-// parser_eval.sdev \u2014 self-hosted canonical SDEV tokenizer, recursive-
-// descent parser, syntax validator, and tree-walking interpreter.
-//
-// Written 100% in SDEV. Supports both v2 canonical forms (\`say\`,
-// \`set ... to\`, \`if ... else ... end\`, \`while ... end\`,
-// \`for each ... in ... end\`, \`to name with params ... end\`, \`return\`)
-// and v1 forms (\`speak\`, \`forge ... be\`, \`ponder ... otherwise\`,
-// \`cycle\`, \`iterate ... through\`, \`conjure\`, \`yield\`), plus expressions,
-// lists, tomes, indexing, member access, calls, and built-ins.
-//
-// Entry points:
-//   sdev_parse_program(source)        -> [ok_bool, ast_nodes, errors]
-//   sdev_validate_syntax(source)      -> [valid_bool, diagnostics_list]
-//   sdev_eval_program(source, inputs) -> [ok_bool, output_lines, error_msg]
-// =====================================================================
-
-// ---------- Tokenizer ----------
-
-conjure pe_tokenize(source) ::
-  forge tokens be []
-  forge errors be []
-  forge ls be lines(source)
-  forge line_idx be 0
-  cycle line_idx < measure(ls) ::
-    forge line_num be line_idx + 1
-    forge line be ls[line_idx]
-    forge n be measure(line)
-    forge i be 0
-    cycle i < n ::
-      forge ch be char_at(line, i)
-      ponder ch equals " " either ch equals "\\t" either ch equals "\\r" ::
-        i be i + 1
-      ;; otherwise ponder ch equals "#" either (ch equals "/" also char_at(line, i + 1) equals "/") ::
-        i be n
-      ;; otherwise ponder ch equals "\\"" either ch equals "'" ::
-        forge quote be ch
-        i be i + 1
-        forge s be ""
-        forge closed be nope
-        cycle i < n also isnt closed ::
-          forge c be char_at(line, i)
-          ponder c equals "\\\\" ::
-            i be i + 1
-            ponder i < n ::
-              forge esc be char_at(line, i)
-              ponder esc equals "n" ::
-                s be s + "\\n"
-              ;; otherwise ponder esc equals "t" ::
-                s be s + "\\t"
-              ;; otherwise ponder esc equals "r" ::
-                s be s + "\\r"
-              ;; otherwise ::
-                s be s + esc
-              ;;
-              i be i + 1
-            ;;
-          ;; otherwise ponder c equals quote ::
-            closed be yep
-            i be i + 1
-          ;; otherwise ::
-            s be s + c
-            i be i + 1
-          ;;
-        ;;
-        ponder isnt closed ::
-          errors be errors + [[line_num, "Unterminated string literal"]]
-        ;;
-        tokens be tokens + [{ type: "STRING", value: s, line: line_num }]
-      ;; otherwise ponder is_digit(ch) ::
-        forge num_s be ""
-        cycle i < n also is_digit(char_at(line, i)) ::
-          num_s be num_s + char_at(line, i)
-          i be i + 1
-        ;;
-        ponder i < n also char_at(line, i) equals "." also i + 1 < n also is_digit(char_at(line, i + 1)) ::
-          num_s be num_s + "."
-          i be i + 1
-          cycle i < n also is_digit(char_at(line, i)) ::
-            num_s be num_s + char_at(line, i)
-            i be i + 1
-          ;;
-        ;;
-        tokens be tokens + [{ type: "NUMBER", value: num(num_s), line: line_num }]
-      ;; otherwise ponder is_letter(ch) either ch equals "_" ::
-        forge id_s be ""
-        cycle i < n ::
-          forge c2 be char_at(line, i)
-          ponder is_letter(c2) either is_digit(c2) either c2 equals "_" ::
-            id_s be id_s + c2
-            i be i + 1
-          ;; otherwise ::
-            yeet
-          ;;
-        ;;
-        tokens be tokens + [{ type: "IDENT", value: id_s, line: line_num }]
-      ;; otherwise ::
-        forge two be snatch(line, i, i + 2)
-        ponder two equals "::" ::
-          tokens be tokens + [{ type: "DOUBLE_COLON", value: "::", line: line_num }]
-          i be i + 2
-        ;; otherwise ponder two equals ";;" ::
-          tokens be tokens + [{ type: "DOUBLE_SEMI", value: ";;", line: line_num }]
-          i be i + 2
-        ;; otherwise ponder two equals "==" either two equals "!=" either two equals "<=" either two equals ">=" either two equals "&&" either two equals "||" either two equals "**" either two equals "->" either two equals "+=" either two equals "-=" either two equals "*=" either two equals "/=" ::
-          tokens be tokens + [{ type: "OP", value: two, line: line_num }]
-          i be i + 2
-        ;; otherwise ponder ch equals "(" ::
-          tokens be tokens + [{ type: "LPAREN", value: "(", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals ")" ::
-          tokens be tokens + [{ type: "RPAREN", value: ")", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "[" ::
-          tokens be tokens + [{ type: "LBRACKET", value: "[", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "]" ::
-          tokens be tokens + [{ type: "RBRACKET", value: "]", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "{" ::
-          tokens be tokens + [{ type: "LBRACE", value: "{", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "}" ::
-          tokens be tokens + [{ type: "RBRACE", value: "}", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "," ::
-          tokens be tokens + [{ type: "COMMA", value: ",", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals ":" ::
-          tokens be tokens + [{ type: "COLON", value: ":", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "." ::
-          tokens be tokens + [{ type: "DOT", value: ".", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "~" ::
-          tokens be tokens + [{ type: "TILDE", value: "~", line: line_num }]
-          i be i + 1
-        ;; otherwise ponder ch equals "+" either ch equals "-" either ch equals "*" either ch equals "/" either ch equals "%" either ch equals "^" either ch equals "<" either ch equals ">" either ch equals "=" either ch equals "!" ::
-          tokens be tokens + [{ type: "OP", value: ch, line: line_num }]
-          i be i + 1
-        ;; otherwise ::
-          errors be errors + [[line_num, "Unexpected character '" + ch + "'"]]
-          i be i + 1
-        ;;
-      ;;
-    ;;
-    line_idx be line_idx + 1
-  ;;
-  forge last_line be measure(ls) > 0 ~ measure(ls) : 1
-  tokens be tokens + [{ type: "EOF", value: "", line: last_line }]
-  yield [tokens, errors]
-;;
-
-// ---------- Parser helpers ----------
-
-conjure pe_peek(p) ::
-  yield p.tokens[p.pos]
-;;
-
-conjure pe_next_tok(p, offset) ::
-  forge idx be p.pos + offset
-  ponder idx < measure(p.tokens) ::
-    yield p.tokens[idx]
-  ;;
-  yield p.tokens[measure(p.tokens) - 1]
-;;
-
-conjure pe_at_end(p) ::
-  yield p.tokens[p.pos].type equals "EOF"
-;;
-
-conjure pe_advance(p) ::
-  forge tok be p.tokens[p.pos]
-  ponder isnt pe_at_end(p) ::
-    p.pos be p.pos + 1
-  ;;
-  yield tok
-;;
-
-conjure pe_check(p, t) ::
-  yield p.tokens[p.pos].type equals t
-;;
-
-conjure pe_check_word(p, w) ::
-  forge tok be p.tokens[p.pos]
-  yield tok.type equals "IDENT" also lower(tok.value) equals w
-;;
-
-conjure pe_check_op(p, op) ::
-  forge tok be p.tokens[p.pos]
-  yield tok.type equals "OP" also tok.value equals op
-;;
-
-conjure pe_error(p, line, msg) ::
-  p.errors be p.errors + [[line, msg]]
-;;
-
-conjure pe_is_block_closer(p) ::
-  ponder pe_check(p, "DOUBLE_SEMI") ::
-    yield yep
-  ;;
-  ponder pe_check_word(p, "end") either pe_check_word(p, "else") either pe_check_word(p, "elif") either pe_check_word(p, "otherwise") either pe_check_word(p, "rescue") ::
-    yield yep
-  ;;
-  yield nope
-;;
-
-conjure pe_is_stmt_keyword(w) ::
-  forge lw be lower(w)
-  iterate kw through ["forge", "conjure", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "if", "else", "elif", "end", "while", "for", "return", "break", "continue"] ::
-    ponder lw equals kw ::
-      yield yep
-    ;;
-  ;;
-  yield nope
-;;
-
-// ---------- Expression parser ----------
-
-conjure pe_parse_primary(p) ::
-  forge tok be pe_peek(p)
-  ponder tok.type equals "NUMBER" ::
-    pe_advance(p)
-    yield { type: "Literal", value: tok.value, line: tok.line }
-  ;;
-  ponder tok.type equals "STRING" ::
-    pe_advance(p)
-    yield { type: "Literal", value: tok.value, line: tok.line }
-  ;;
-  ponder tok.type equals "IDENT" ::
-    forge lw be lower(tok.value)
-    ponder lw equals "yep" either lw equals "true" ::
-      pe_advance(p)
-      yield { type: "Literal", value: yep, line: tok.line }
-    ;;
-    ponder lw equals "nope" either lw equals "false" ::
-      pe_advance(p)
-      yield { type: "Literal", value: nope, line: tok.line }
-    ;;
-    ponder lw equals "void" either lw equals "null" ::
-      pe_advance(p)
-      yield { type: "Literal", value: void, line: tok.line }
-    ;;
-    ponder (lw equals "ask" either lw equals "input") also pe_next_tok(p, 1).type differs "LPAREN" also pe_next_tok(p, 1).line equals tok.line ::
-      pe_advance(p)
-      forge prompt_e be pe_parse_expr(p)
-      yield { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }
-    ;;
-    ponder pe_is_stmt_keyword(lw) ::
-      pe_error(p, tok.line, "Unexpected keyword '" + tok.value + "' in expression")
-      yield { type: "Literal", value: void, line: tok.line }
-    ;;
-    pe_advance(p)
-    yield { type: "Ident", name: tok.value, line: tok.line }
-  ;;
-  ponder tok.type equals "LPAREN" ::
-    pe_advance(p)
-    ponder pe_check(p, "RPAREN") ::
-      pe_advance(p)
-      yield { type: "List", elements: [], line: tok.line }
-    ;;
-    forge inner be pe_parse_expr(p)
-    ponder pe_check(p, "RPAREN") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, tok.line, "Unclosed '('")
-    ;;
-    yield inner
-  ;;
-  ponder tok.type equals "LBRACKET" ::
-    pe_advance(p)
-    forge items be []
-    ponder isnt pe_check(p, "RBRACKET") ::
-      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACKET") ::
-        items be items + [pe_parse_expr(p)]
-        ponder pe_check(p, "COMMA") ::
-          pe_advance(p)
-        ;; otherwise ::
-          yeet
-        ;;
-      ;;
-    ;;
-    ponder pe_check(p, "RBRACKET") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, tok.line, "Unclosed '['")
-    ;;
-    yield { type: "List", elements: items, line: tok.line }
-  ;;
-  ponder tok.type equals "LBRACE" ::
-    pe_advance(p)
-    forge entries be []
-    ponder isnt pe_check(p, "RBRACE") ::
-      cycle isnt pe_at_end(p) also isnt pe_check(p, "RBRACE") ::
-        forge k_e be void
-        ponder pe_check(p, "IDENT") also pe_next_tok(p, 1).type equals "COLON" ::
-          forge kt be pe_advance(p)
-          k_e be { type: "Literal", value: kt.value, line: kt.line }
-        ;; otherwise ::
-          k_e be pe_parse_expr(p)
-        ;;
-        ponder pe_check(p, "COLON") ::
-          pe_advance(p)
-        ;; otherwise ::
-          pe_error(p, tok.line, "Expected ':' in tome literal")
-          yeet
-        ;;
-        forge v_e be pe_parse_expr(p)
-        entries be entries + [[k_e, v_e]]
-        ponder pe_check(p, "COMMA") ::
-          pe_advance(p)
-        ;; otherwise ::
-          yeet
-        ;;
-      ;;
-    ;;
-    ponder pe_check(p, "RBRACE") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, tok.line, "Unclosed '{'")
-    ;;
-    yield { type: "Dict", entries: entries, line: tok.line }
-  ;;
-  ponder tok.type equals "DOUBLE_COLON" ::
-    pe_advance(p)
-    forge entries be []
-    ponder isnt pe_check(p, "DOUBLE_SEMI") ::
-      cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
-        forge k_e be pe_parse_expr(p)
-        ponder pe_check(p, "COLON") ::
-          pe_advance(p)
-        ;; otherwise ::
-          pe_error(p, tok.line, "Expected ':' in tome literal")
-          yeet
-        ;;
-        forge v_e be pe_parse_expr(p)
-        entries be entries + [[k_e, v_e]]
-        ponder pe_check(p, "COMMA") ::
-          pe_advance(p)
-        ;; otherwise ::
-          yeet
-        ;;
-      ;;
-    ;;
-    ponder pe_check(p, "DOUBLE_SEMI") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, tok.line, "Unclosed '::' tome literal")
-    ;;
-    yield { type: "Dict", entries: entries, line: tok.line }
-  ;;
-  pe_error(p, tok.line, "Expected expression near '" + str(tok.value) + "'")
-  ponder isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
-    pe_advance(p)
-  ;;
-  yield { type: "Literal", value: void, line: tok.line }
-;;
-
-conjure pe_parse_postfix(p) ::
-  forge expr be pe_parse_primary(p)
-  cycle isnt pe_at_end(p) ::
-    ponder pe_check(p, "LPAREN") also pe_peek(p).line equals expr.line ::
-      pe_advance(p)
-      forge args be []
-      ponder isnt pe_check(p, "RPAREN") ::
-        cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
-          args be args + [pe_parse_expr(p)]
-          ponder pe_check(p, "COMMA") ::
-            pe_advance(p)
-          ;; otherwise ::
-            yeet
-          ;;
-        ;;
-      ;;
-      ponder pe_check(p, "RPAREN") ::
-        pe_advance(p)
-      ;; otherwise ::
-        pe_error(p, expr.line, "Expected ')' after arguments")
-      ;;
-      expr be { type: "Call", callee: expr, args: args, line: expr.line }
-    ;; otherwise ponder pe_check(p, "LBRACKET") also pe_peek(p).line equals expr.line ::
-      pe_advance(p)
-      forge idx_e be pe_parse_expr(p)
-      ponder pe_check(p, "RBRACKET") ::
-        pe_advance(p)
-      ;; otherwise ::
-        pe_error(p, expr.line, "Expected ']' after index")
-      ;;
-      expr be { type: "Index", object: expr, index: idx_e, line: expr.line }
-    ;; otherwise ponder pe_check(p, "DOT") ::
-      pe_advance(p)
-      ponder pe_check(p, "IDENT") ::
-        forge prop be pe_advance(p).value
-        expr be { type: "Member", object: expr, property: prop, line: expr.line }
-      ;; otherwise ::
-        pe_error(p, expr.line, "Expected property name after '.'")
-        yeet
-      ;;
-    ;; otherwise ::
-      yeet
-    ;;
-  ;;
-  yield expr
-;;
-
-conjure pe_parse_unary(p) ::
-  ponder pe_check_op(p, "-") ::
-    forge t be pe_advance(p)
-    yield { type: "Unary", op: "-", operand: pe_parse_unary(p), line: t.line }
-  ;;
-  ponder pe_check_op(p, "+") ::
-    pe_advance(p)
-    yield pe_parse_unary(p)
-  ;;
-  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
-    forge t be pe_advance(p)
-    yield { type: "Unary", op: "not", operand: pe_parse_unary(p), line: t.line }
-  ;;
-  yield pe_parse_postfix(p)
-;;
-
-conjure pe_parse_pow(p) ::
-  forge left be pe_parse_unary(p)
-  ponder pe_check_op(p, "^") either pe_check_op(p, "**") ::
-    forge op_t be pe_advance(p)
-    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
-      pe_error(p, op_t.line, "Expected operand after '^'")
-      yield left
-    ;;
-    forge right be pe_parse_pow(p)
-    yield { type: "Binary", op: "^", left: left, right: right, line: left.line }
-  ;;
-  yield left
-;;
-
-conjure pe_parse_mul(p) ::
-  forge left be pe_parse_pow(p)
-  cycle pe_check_op(p, "*") either pe_check_op(p, "/") either pe_check_op(p, "%") ::
-    forge op_t be pe_advance(p)
-    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
-      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
-      yield left
-    ;;
-    forge right be pe_parse_pow(p)
-    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
-  ;;
-  yield left
-;;
-
-conjure pe_parse_add(p) ::
-  forge left be pe_parse_mul(p)
-  cycle (pe_check_op(p, "+") either pe_check_op(p, "-")) also pe_peek(p).line equals left.line ::
-    forge op_t be pe_advance(p)
-    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
-      pe_error(p, op_t.line, "Expected operand after '" + op_t.value + "'")
-      yield left
-    ;;
-    forge right be pe_parse_mul(p)
-    left be { type: "Binary", op: op_t.value, left: left, right: right, line: left.line }
-  ;;
-  yield left
-;;
-
-conjure pe_parse_cmp(p) ::
-  forge left be pe_parse_add(p)
-  cycle isnt pe_at_end(p) ::
-    ponder pe_check_word(p, "equals") either pe_check_op(p, "==") ::
-      forge op_t be pe_advance(p)
-      forge right be pe_parse_add(p)
-      left be { type: "Binary", op: "==", left: left, right: right, line: op_t.line }
-    ;; otherwise ponder pe_check_word(p, "differs") either pe_check_op(p, "!=") ::
-      forge op_t be pe_advance(p)
-      forge right be pe_parse_add(p)
-      left be { type: "Binary", op: "!=", left: left, right: right, line: op_t.line }
-    ;; otherwise ponder pe_check_word(p, "is") ::
-      forge is_t be pe_advance(p)
-      ponder pe_check_word(p, "not") either pe_check_word(p, "isnt") ::
-        pe_advance(p)
-        forge right be pe_parse_add(p)
-        left be { type: "Binary", op: "!=", left: left, right: right, line: is_t.line }
-      ;; otherwise ponder (pe_check_word(p, "more") either pe_check_word(p, "greater")) also lower(pe_next_tok(p, 1).value) equals "than" ::
-        pe_advance(p)
-        pe_advance(p)
-        forge right be pe_parse_add(p)
-        left be { type: "Binary", op: ">", left: left, right: right, line: is_t.line }
-      ;; otherwise ponder (pe_check_word(p, "less") either pe_check_word(p, "smaller")) also lower(pe_next_tok(p, 1).value) equals "than" ::
-        pe_advance(p)
-        pe_advance(p)
-        forge right be pe_parse_add(p)
-        left be { type: "Binary", op: "<", left: left, right: right, line: is_t.line }
-      ;; otherwise ponder pe_check_word(p, "at") also (lower(pe_next_tok(p, 1).value) equals "least" either lower(pe_next_tok(p, 1).value) equals "most") ::
-        pe_advance(p)
-        forge lm be pe_advance(p)
-        forge right be pe_parse_add(p)
-        left be { type: "Binary", op: lower(lm.value) equals "least" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
-      ;; otherwise ::
-        forge right be pe_parse_add(p)
-        ponder pe_check_word(p, "or") also (lower(pe_next_tok(p, 1).value) equals "more" either lower(pe_next_tok(p, 1).value) equals "less") ::
-          pe_advance(p)
-          forge ml be pe_advance(p)
-          left be { type: "Binary", op: lower(ml.value) equals "more" ~ ">=" : "<=", left: left, right: right, line: is_t.line }
-        ;; otherwise ::
-          left be { type: "Binary", op: "==", left: left, right: right, line: is_t.line }
-        ;;
-      ;;
-    ;; otherwise ponder pe_check_op(p, "<") either pe_check_op(p, ">") either pe_check_op(p, "<=") either pe_check_op(p, ">=") ::
-      forge op_t be pe_advance(p)
-      forge right be pe_parse_add(p)
-      left be { type: "Binary", op: op_t.value, left: left, right: right, line: op_t.line }
-    ;; otherwise ::
-      yeet
-    ;;
-  ;;
-  yield left
-;;
-
-conjure pe_parse_not(p) ::
-  ponder pe_check_word(p, "isnt") either pe_check_word(p, "not") either pe_check_op(p, "!") ::
-    forge t be pe_advance(p)
-    yield { type: "Unary", op: "not", operand: pe_parse_not(p), line: t.line }
-  ;;
-  yield pe_parse_cmp(p)
-;;
-
-conjure pe_parse_and(p) ::
-  forge left be pe_parse_not(p)
-  cycle pe_check_word(p, "also") either pe_check_word(p, "and") either pe_check_op(p, "&&") ::
-    forge t be pe_advance(p)
-    forge right be pe_parse_not(p)
-    left be { type: "Binary", op: "and", left: left, right: right, line: t.line }
-  ;;
-  yield left
-;;
-
-conjure pe_parse_or(p) ::
-  forge left be pe_parse_and(p)
-  cycle (pe_check_word(p, "either") also pe_peek(p).line equals left.line) either pe_check_word(p, "or") either pe_check_op(p, "||") ::
-    forge t be pe_advance(p)
-    forge right be pe_parse_and(p)
-    left be { type: "Binary", op: "or", left: left, right: right, line: t.line }
-  ;;
-  yield left
-;;
-
-conjure pe_parse_ternary(p) ::
-  forge left be pe_parse_or(p)
-  ponder pe_check(p, "TILDE") ::
-    pe_advance(p)
-    forge then_e be pe_parse_or(p)
-    ponder pe_check(p, "COLON") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, left.line, "Expected ':' in ternary expression")
-    ;;
-    forge else_e be pe_parse_ternary(p)
-    yield { type: "Ternary", cond: left, then_expr: then_e, else_expr: else_e, line: left.line }
-  ;;
-  yield left
-;;
-
-conjure pe_parse_expr(p) ::
-  yield pe_parse_ternary(p)
-;;
-
-// ---------- Statement parser ----------
-
-conjure pe_parse_if(p) ::
-  forge kw be pe_advance(p)
-  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
-    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
-    yield { type: "Noop", line: kw.line }
-  ;;
-  forge cond be pe_parse_expr(p)
-  ponder pe_check_word(p, "then") ::
-    pe_advance(p)
-  ;;
-  ponder pe_check(p, "COLON") ::
-    pe_advance(p)
-  ;;
-  forge lw be lower(kw.value)
-  ponder lw equals "ponder" either lw equals "either" either pe_check(p, "DOUBLE_COLON") ::
-    ponder pe_check(p, "DOUBLE_COLON") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Expected '::' after '" + kw.value + "' condition")
-    ;;
-    forge then_body be []
-    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
-      then_body be then_body + [pe_parse_stmt(p)]
-    ;;
-    ponder pe_check(p, "DOUBLE_SEMI") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Unclosed '" + kw.value + "' block (missing ';;')")
-    ;;
-    forge else_body be []
-    ponder pe_check_word(p, "otherwise") ::
-      pe_advance(p)
-      ponder pe_check_word(p, "ponder") either pe_check_word(p, "either") either pe_check_word(p, "if") ::
-        else_body be [pe_parse_if(p)]
-      ;; otherwise ::
-        ponder pe_check(p, "DOUBLE_COLON") ::
-          pe_advance(p)
-        ;; otherwise ::
-          pe_error(p, pe_peek(p).line, "Expected '::' after 'otherwise'")
-        ;;
-        cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
-          else_body be else_body + [pe_parse_stmt(p)]
-        ;;
-        ponder pe_check(p, "DOUBLE_SEMI") ::
-          pe_advance(p)
-        ;; otherwise ::
-          pe_error(p, kw.line, "Unclosed 'otherwise' block (missing ';;')")
-        ;;
-      ;;
-    ;;
-    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
-  ;;
-  // Natural v2 block: if ... [else if ...] [else ...] end
-  forge then_body be []
-  cycle isnt pe_at_end(p) also isnt pe_is_block_closer(p) ::
-    then_body be then_body + [pe_parse_stmt(p)]
-  ;;
-  forge else_body be []
-  ponder pe_check_word(p, "elif") ::
-    else_body be [pe_parse_if(p)]
-    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
-  ;;
-  ponder pe_check_word(p, "else") either pe_check_word(p, "otherwise") ::
-    pe_advance(p)
-    ponder pe_check_word(p, "if") ::
-      else_body be [pe_parse_if(p)]
-      yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
-    ;;
-    ponder pe_check(p, "COLON") ::
-      pe_advance(p)
-    ;;
-    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
-      else_body be else_body + [pe_parse_stmt(p)]
-    ;;
-    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
-    ;;
-    yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
-  ;;
-  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
-    pe_advance(p)
-  ;; otherwise ::
-    pe_error(p, kw.line, "Unclosed 'if' block (missing 'end')")
-  ;;
-  yield { type: "If", cond: cond, then_body: then_body, else_body: else_body, line: kw.line }
-;;
-
-conjure pe_parse_while(p) ::
-  forge kw be pe_advance(p)
-  ponder pe_at_end(p) either pe_check(p, "DOUBLE_COLON") either pe_check(p, "COLON") either pe_is_block_closer(p) either pe_peek(p).line > kw.line ::
-    pe_error(p, kw.line, "Expected condition after '" + kw.value + "'")
-    yield { type: "Noop", line: kw.line }
-  ;;
-  forge cond be pe_parse_expr(p)
-  ponder pe_check(p, "COLON") ::
-    pe_advance(p)
-  ;;
-  forge lw be lower(kw.value)
-  ponder lw equals "cycle" either pe_check(p, "DOUBLE_COLON") ::
-    ponder pe_check(p, "DOUBLE_COLON") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Expected '::' after 'cycle' condition")
-    ;;
-    forge body be []
-    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
-      body be body + [pe_parse_stmt(p)]
-    ;;
-    ponder pe_check(p, "DOUBLE_SEMI") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Unclosed 'cycle' block (missing ';;')")
-    ;;
-    yield { type: "While", cond: cond, body: body, line: kw.line }
-  ;;
-  forge body be []
-  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
-    body be body + [pe_parse_stmt(p)]
-  ;;
-  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
-    pe_advance(p)
-  ;; otherwise ::
-    pe_error(p, kw.line, "Unclosed 'while' block (missing 'end')")
-  ;;
-  yield { type: "While", cond: cond, body: body, line: kw.line }
-;;
-
-conjure pe_parse_for(p) ::
-  forge kw be pe_advance(p)
-  ponder lower(kw.value) equals "for" also pe_check_word(p, "each") ::
-    pe_advance(p)
-  ;;
-  ponder isnt pe_check(p, "IDENT") ::
-    pe_error(p, kw.line, "Expected loop variable name after '" + kw.value + "'")
-    yield { type: "Noop", line: kw.line }
-  ;;
-  forge var_name be pe_advance(p).value
-  ponder pe_check_word(p, "in") either pe_check_word(p, "through") ::
-    pe_advance(p)
-  ;; otherwise ::
-    pe_error(p, kw.line, "Expected 'in' or 'through' in loop")
-  ;;
-  ponder pe_at_end(p) either pe_peek(p).line > kw.line ::
-    pe_error(p, kw.line, "Expected iterable expression in loop")
-    yield { type: "Noop", line: kw.line }
-  ;;
-  forge iter_e be pe_parse_expr(p)
-  ponder pe_check(p, "COLON") ::
-    pe_advance(p)
-  ;;
-  ponder lower(kw.value) equals "iterate" either pe_check(p, "DOUBLE_COLON") ::
-    ponder pe_check(p, "DOUBLE_COLON") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Expected '::' after 'iterate' header")
-    ;;
-    forge body be []
-    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
-      body be body + [pe_parse_stmt(p)]
-    ;;
-    ponder pe_check(p, "DOUBLE_SEMI") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Unclosed 'iterate' block (missing ';;')")
-    ;;
-    yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
-  ;;
-  forge body be []
-  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
-    body be body + [pe_parse_stmt(p)]
-  ;;
-  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
-    pe_advance(p)
-  ;; otherwise ::
-    pe_error(p, kw.line, "Unclosed 'for' block (missing 'end')")
-  ;;
-  yield { type: "For", vname: var_name, iter: iter_e, body: body, line: kw.line }
-;;
-
-conjure pe_parse_func(p) ::
-  forge kw be pe_advance(p)
-  ponder isnt pe_check(p, "IDENT") ::
-    pe_error(p, kw.line, "Expected function name after '" + kw.value + "'")
-    yield { type: "Noop", line: kw.line }
-  ;;
-  forge fn_name be pe_advance(p).value
-  forge params be []
-  forge lw be lower(kw.value)
-  ponder lw equals "conjure" ::
-    ponder pe_check(p, "LPAREN") ::
-      pe_advance(p)
-      cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
-        ponder pe_check(p, "IDENT") ::
-          params be params + [pe_advance(p).value]
-        ;; otherwise ::
-          pe_error(p, kw.line, "Expected parameter name")
-          yeet
-        ;;
-        ponder pe_check(p, "COMMA") ::
-          pe_advance(p)
-        ;; otherwise ::
-          yeet
-        ;;
-      ;;
-      ponder pe_check(p, "RPAREN") ::
-        pe_advance(p)
-      ;; otherwise ::
-        pe_error(p, kw.line, "Expected ')' after parameters")
-      ;;
-    ;; otherwise ::
-      pe_error(p, kw.line, "Expected '(' after function name in 'conjure'")
-    ;;
-    ponder pe_check(p, "DOUBLE_COLON") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Expected '::' to open function body")
-    ;;
-    forge body be []
-    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
-      body be body + [pe_parse_stmt(p)]
-    ;;
-    ponder pe_check(p, "DOUBLE_SEMI") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Unclosed 'conjure' block (missing ';;')")
-    ;;
-    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
-  ;;
-  // \`to name [with a b | (a, b)] ... end\`
-  ponder pe_check_word(p, "with") also pe_peek(p).line equals kw.line ::
-    pe_advance(p)
-    cycle pe_check(p, "IDENT") also pe_peek(p).line equals kw.line ::
-      params be params + [pe_advance(p).value]
-      ponder pe_check(p, "COMMA") ::
-        pe_advance(p)
-      ;;
-    ;;
-  ;; otherwise ponder pe_check(p, "LPAREN") also pe_peek(p).line equals kw.line ::
-    pe_advance(p)
-    cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
-      ponder pe_check(p, "IDENT") ::
-        params be params + [pe_advance(p).value]
-      ;; otherwise ::
-        pe_error(p, kw.line, "Expected parameter name")
-        yeet
-      ;;
-      ponder pe_check(p, "COMMA") ::
-        pe_advance(p)
-      ;; otherwise ::
-        yeet
-      ;;
-    ;;
-    ponder pe_check(p, "RPAREN") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Expected ')' after parameters")
-    ;;
-  ;;
-  ponder pe_check(p, "COLON") ::
-    pe_advance(p)
-  ;;
-  ponder pe_check(p, "DOUBLE_COLON") ::
-    pe_advance(p)
-    forge body be []
-    cycle isnt pe_at_end(p) also isnt pe_check(p, "DOUBLE_SEMI") ::
-      body be body + [pe_parse_stmt(p)]
-    ;;
-    ponder pe_check(p, "DOUBLE_SEMI") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, kw.line, "Unclosed function block (missing ';;')")
-    ;;
-    yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
-  ;;
-  forge body be []
-  cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
-    body be body + [pe_parse_stmt(p)]
-  ;;
-  ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
-    pe_advance(p)
-  ;; otherwise ::
-    pe_error(p, kw.line, "Unclosed 'to' function block (missing 'end')")
-  ;;
-  yield { type: "Func", name: fn_name, params: params, body: body, line: kw.line }
-;;
-
-conjure pe_parse_stmt(p) ::
-  forge tok be pe_peek(p)
-  ponder pe_is_block_closer(p) ::
-    pe_error(p, tok.line, "Unexpected '" + tok.value + "' without matching open block")
-    pe_advance(p)
-    yield { type: "Noop", line: tok.line }
-  ;;
-  // forge x be expr
-  ponder pe_check_word(p, "forge") ::
-    pe_advance(p)
-    ponder isnt pe_check(p, "IDENT") ::
-      pe_error(p, tok.line, "Expected variable name after 'forge'")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    forge name be pe_advance(p).value
-    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, tok.line, "Expected 'be' after variable name in 'forge'")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
-      pe_error(p, tok.line, "Expected expression after 'be' in 'forge'")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    forge val be pe_parse_expr(p)
-    yield { type: "Let", name: name, value: val, line: tok.line }
-  ;;
-  // set target to expr
-  ponder pe_check_word(p, "set") also pe_next_tok(p, 1).type differs "LPAREN" ::
-    pe_advance(p)
-    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
-      pe_error(p, tok.line, "Expected variable name after 'set'")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    forge target be pe_parse_postfix(p)
-    ponder target.type differs "Ident" also target.type differs "Index" also target.type differs "Member" ::
-      pe_error(p, tok.line, "Invalid assignment target in 'set'")
-    ;;
-    ponder pe_check_word(p, "to") either pe_check_word(p, "be") either pe_check_op(p, "=") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, tok.line, "Expected 'to' in 'set' statement")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    ponder pe_at_end(p) either pe_peek(p).line > tok.line ::
-      pe_error(p, tok.line, "Expected expression after 'to' in 'set' statement")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    forge val be pe_parse_expr(p)
-    yield { type: "Assign", target: target, value: val, declare: yep, line: tok.line }
-  ;;
-  // leading \`be target be expr\`
-  ponder pe_check_word(p, "be") ::
-    pe_advance(p)
-    forge target be pe_parse_postfix(p)
-    ponder pe_check_word(p, "be") either pe_check_word(p, "to") either pe_check_op(p, "=") ::
-      pe_advance(p)
-    ;; otherwise ::
-      pe_error(p, tok.line, "Expected 'be' after target")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    forge val be pe_parse_expr(p)
-    yield { type: "Assign", target: target, value: val, declare: nope, line: tok.line }
-  ;;
-  // ask "Prompt" as name / ask for name
-  ponder pe_check_word(p, "ask") also pe_next_tok(p, 1).type differs "LPAREN" ::
-    pe_advance(p)
-    ponder pe_check_word(p, "for") ::
-      pe_advance(p)
-      ponder pe_check(p, "IDENT") ::
-        forge vname be pe_advance(p).value
-        yield { type: "Ask", prompt: { type: "Literal", value: vname + "? ", line: tok.line }, name: vname, line: tok.line }
-      ;;
-      pe_error(p, tok.line, "Expected variable name after 'ask for'")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    forge prompt_e be pe_parse_expr(p)
-    ponder pe_check_word(p, "as") either pe_check_word(p, "into") ::
-      pe_advance(p)
-      ponder pe_check(p, "IDENT") ::
-        forge vname be pe_advance(p).value
-        yield { type: "Ask", prompt: prompt_e, name: vname, line: tok.line }
-      ;;
-      pe_error(p, tok.line, "Expected variable name after 'as'")
-      yield { type: "Noop", line: tok.line }
-    ;;
-    yield { type: "ExprStmt", expr: { type: "Call", callee: { type: "Ident", name: "input", line: tok.line }, args: [prompt_e], line: tok.line }, line: tok.line }
-  ;;
-  // say / speak / print command or call
-  ponder pe_check_word(p, "say") either pe_check_word(p, "speak") either pe_check_word(p, "print") either pe_check_word(p, "whisper") either pe_check_word(p, "shout") ::
-    forge cmd be pe_advance(p)
-    ponder pe_at_end(p) either pe_peek(p).line > cmd.line either pe_is_block_closer(p) ::
-      pe_error(p, cmd.line, "Expected expression after '" + cmd.value + "'")
-      yield { type: "Noop", line: cmd.line }
-    ;;
-    forge args be []
-    args be args + [pe_parse_expr(p)]
-    cycle pe_check(p, "COMMA") also pe_peek(p).line equals cmd.line ::
-      pe_advance(p)
-      args be args + [pe_parse_expr(p)]
-    ;;
-    yield { type: "Print", mode: lower(cmd.value), args: args, line: cmd.line }
-  ;;
-  // Conditionals: if / ponder / either
-  ponder pe_check_word(p, "if") either pe_check_word(p, "ponder") either pe_check_word(p, "either") ::
-    yield pe_parse_if(p)
-  ;;
-  // Loops: while / cycle
-  ponder pe_check_word(p, "while") either pe_check_word(p, "cycle") ::
-    yield pe_parse_while(p)
-  ;;
-  // Loops: for / iterate
-  ponder pe_check_word(p, "for") either pe_check_word(p, "iterate") ::
-    yield pe_parse_for(p)
-  ;;
-  // Functions: conjure / to
-  ponder pe_check_word(p, "conjure") either pe_check_word(p, "to") ::
-    yield pe_parse_func(p)
-  ;;
-  // Return / yield
-  ponder pe_check_word(p, "yield") either pe_check_word(p, "return") ::
-    forge kw be pe_advance(p)
-    forge val be void
-    ponder isnt pe_at_end(p) also pe_peek(p).line equals kw.line also isnt pe_is_block_closer(p) ::
-      val be pe_parse_expr(p)
-    ;;
-    yield { type: "Return", value: val, line: kw.line }
-  ;;
-  // Break / yeet
-  ponder pe_check_word(p, "yeet") either pe_check_word(p, "break") ::
-    forge kw be pe_advance(p)
-    yield { type: "Break", line: kw.line }
-  ;;
-  // Continue / skip
-  ponder pe_check_word(p, "skip") either pe_check_word(p, "continue") ::
-    forge kw be pe_advance(p)
-    yield { type: "Continue", line: kw.line }
-  ;;
-  // Expression or Assignment
-  forge expr be pe_parse_expr(p)
-  ponder pe_check_word(p, "be") either pe_check_op(p, "=") ::
-    forge op_t be pe_advance(p)
-    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
-      pe_error(p, expr.line, "Invalid assignment target")
-    ;;
-    ponder pe_at_end(p) either pe_peek(p).line > op_t.line ::
-      pe_error(p, op_t.line, "Expected expression in assignment")
-      yield { type: "Noop", line: expr.line }
-    ;;
-    forge val be pe_parse_expr(p)
-    yield { type: "Assign", target: expr, value: val, declare: nope, line: expr.line }
-  ;;
-  ponder pe_check(p, "OP") also (pe_peek(p).value equals "+=" either pe_peek(p).value equals "-=" either pe_peek(p).value equals "*=" either pe_peek(p).value equals "/=") ::
-    forge op_t be pe_advance(p)
-    forge base_op be snatch(op_t.value, 0, 1)
-    ponder expr.type differs "Ident" also expr.type differs "Index" also expr.type differs "Member" ::
-      pe_error(p, expr.line, "Invalid augmented assignment target")
-    ;;
-    forge rhs be pe_parse_expr(p)
-    yield { type: "Assign", target: expr, value: { type: "Binary", op: base_op, left: expr, right: rhs, line: expr.line }, declare: nope, line: expr.line }
-  ;;
-  yield { type: "ExprStmt", expr: expr, line: expr.line }
-;;
-
-// ---------- Public Parser & Validator Entry Points ----------
-
-conjure sdev_parse_program(source) ::
-  forge tok_res be pe_tokenize(source)
-  forge p be {
-    tokens: tok_res[0],
-    pos: 0,
-    errors: tok_res[1]
-  }
-  forge ast be []
-  cycle isnt pe_at_end(p) ::
-    forge before be p.pos
-    forge stmt be pe_parse_stmt(p)
-    ponder stmt.type differs "Noop" ::
-      ast be ast + [stmt]
-    ;;
-    ponder p.pos equals before also isnt pe_at_end(p) ::
-      pe_advance(p)
-    ;;
-  ;;
-  yield [measure(p.errors) equals 0, ast, p.errors]
-;;
-
-conjure sdev_validate_syntax(source) ::
-  forge parsed be sdev_parse_program(source)
-  yield [parsed[0], parsed[2]]
-;;
-
-// ---------- Tree-Walking Interpreter ----------
-
-conjure pe_truthy(v) ::
-  ponder v equals void ::
-    yield nope
-  ;;
-  ponder isTruth(v) ::
-    yield v
-  ;;
-  ponder isNum(v) ::
-    yield v differs 0
-  ;;
-  ponder isText(v) ::
-    yield measure(v) > 0
-  ;;
-  ponder isList(v) ::
-    yield measure(v) > 0
-  ;;
-  yield yep
-;;
-
-conjure pe_stringify(v) ::
-  ponder v equals void ::
-    yield "void"
-  ;;
-  ponder isTruth(v) ::
-    yield v ~ "yep" : "nope"
-  ;;
-  ponder isText(v) ::
-    yield v
-  ;;
-  ponder isList(v) ::
-    forge parts be []
-    iterate item through v ::
-      parts be parts + [pe_stringify(item)]
-    ;;
-    yield "[" + weave(parts, ", ") + "]"
-  ;;
-  yield str(v)
-;;
-
-conjure pe_get_var(st, name, line) ::
-  forge top_idx be measure(st.scopes) - 1
-  forge local_s be st.scopes[top_idx]
-  ponder has(local_s, name) ::
-    yield local_s[name]
-  ;;
-  forge global_s be st.scopes[0]
-  ponder has(global_s, name) ::
-    yield global_s[name]
-  ;;
-  ponder name equals "PI" ::
-    yield PI()
-  ;;
-  ponder name equals "TAU" ::
-    yield TAU()
-  ;;
-  ponder name equals "E" ::
-    yield E()
-  ;;
-  st.error be "Line " + str(line) + ": Undefined variable '" + name + "'"
-  yield void
-;;
-
-conjure pe_set_var(st, name, val, declare) ::
-  forge top_idx be measure(st.scopes) - 1
-  forge local_s be st.scopes[top_idx]
-  ponder declare either has(local_s, name) either top_idx equals 0 ::
-    local_s[name] be val
-    yield val
-  ;;
-  forge global_s be st.scopes[0]
-  ponder has(global_s, name) ::
-    global_s[name] be val
-    yield val
-  ;;
-  local_s[name] be val
-  yield val
-;;
-
-conjure pe_read_input(st) ::
-  ponder st.input_idx < measure(st.inputs) ::
-    forge ans be str(st.inputs[st.input_idx])
-    st.input_idx be st.input_idx + 1
-    yield ans
-  ;;
-  yield ""
-;;
-
-conjure pe_call_builtin(st, name, args, line) ::
-  ponder name equals "str" ::
-    yield pe_stringify(measure(args) > 0 ~ args[0] : "")
-  ;;
-  ponder name equals "num" ::
-    forge v be args[0]
-    ponder isNum(v) ::
-      yield v
-    ;;
-    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\\\.[0-9]+)?$") ::
-      yield num(trim(v))
-    ;;
-    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to number"
-    yield 0
-  ;;
-  ponder name equals "int" ::
-    forge v be args[0]
-    ponder isNum(v) ::
-      yield int(v)
-    ;;
-    ponder isText(v) also regex_test(trim(v), "^-?[0-9]+(\\\\.[0-9]+)?$") ::
-      yield int(num(trim(v)))
-    ;;
-    st.error be "Line " + str(line) + ": Cannot convert '" + pe_stringify(v) + "' to int"
-    yield 0
-  ;;
-  ponder name equals "length" either name equals "len" either name equals "measure" ::
-    yield measure(args[0])
-  ;;
-  ponder name equals "upper" ::
-    yield upper(pe_stringify(args[0]))
-  ;;
-  ponder name equals "lower" ::
-    yield lower(pe_stringify(args[0]))
-  ;;
-  ponder name equals "trim" ::
-    yield trim(pe_stringify(args[0]))
-  ;;
-  ponder name equals "reverse" ::
-    yield reverse(args[0])
-  ;;
-  ponder name equals "abs" either name equals "magnitude" ::
-    yield abs(args[0])
-  ;;
-  ponder name equals "min" either name equals "least" ::
-    ponder measure(args) equals 1 also isList(args[0]) ::
-      yield min(args[0])
-    ;;
-    yield min(args)
-  ;;
-  ponder name equals "max" either name equals "greatest" ::
-    ponder measure(args) equals 1 also isList(args[0]) ::
-      yield max(args[0])
-    ;;
-    yield max(args)
-  ;;
-  ponder name equals "range" either name equals "sequence" ::
-    ponder measure(args) equals 1 ::
-      yield range(args[0])
-    ;;
-    ponder measure(args) equals 2 ::
-      yield range(args[0], args[1])
-    ;;
-    yield range(args[0], args[1], args[2])
-  ;;
-  ponder name equals "sum" ::
-    yield sum(args[0])
-  ;;
-  ponder name equals "sort" ::
-    yield sort(args[0])
-  ;;
-  ponder name equals "sortDesc" ::
-    yield sortDesc(args[0])
-  ;;
-  ponder name equals "sqrt" either name equals "root" ::
-    yield root(args[0])
-  ;;
-  ponder name equals "floor" either name equals "ground" ::
-    yield ground(args[0])
-  ;;
-  ponder name equals "ceil" either name equals "elevate" ::
-    yield elevate(args[0])
-  ;;
-  ponder name equals "round" either name equals "nearby" ::
-    yield nearby(args[0])
-  ;;
-  ponder name equals "pow" ::
-    yield pow(args[0], args[1])
-  ;;
-  ponder name equals "contains" ::
-    yield contains(args[0], args[1])
-  ;;
-  ponder name equals "startswith" either name equals "starts" ::
-    yield startswith(args[0], args[1])
-  ;;
-  ponder name equals "endswith" either name equals "ends" ::
-    yield endswith(args[0], args[1])
-  ;;
-  ponder name equals "replace" ::
-    yield replace(args[0], args[1], args[2])
-  ;;
-  ponder name equals "shatter" either name equals "split" ::
-    yield shatter(args[0], args[1])
-  ;;
-  ponder name equals "weave" either name equals "join" ::
-    yield weave(args[0], args[1])
-  ;;
-  ponder name equals "portion" either name equals "slice" ::
-    ponder measure(args) equals 2 ::
-      yield portion(args[0], args[1])
-    ;;
-    yield portion(args[0], args[1], args[2])
-  ;;
-  ponder name equals "snatch" ::
-    ponder measure(args) equals 2 ::
-      yield snatch(args[0], args[1])
-    ;;
-    yield snatch(args[0], args[1], args[2])
-  ;;
-  ponder name equals "gather" ::
-    ponder measure(args) equals 0 ::
-      yield []
-    ;;
-    yield gather(args[0], args[1])
-  ;;
-  ponder name equals "pluck" ::
-    ponder measure(args) equals 1 ::
-      yield pluck(args[0])
-    ;;
-    yield pluck(args[0], args[1])
-  ;;
-  ponder name equals "chr" ::
-    yield chr(args[0])
-  ;;
-  ponder name equals "ord" ::
-    ponder measure(args) equals 1 ::
-      yield ord(args[0])
-    ;;
-    yield ord(args[0], args[1])
-  ;;
-  ponder name equals "keys" either name equals "inscriptions" ::
-    yield keys(args[0])
-  ;;
-  ponder name equals "values" either name equals "contents" ::
-    yield values(args[0])
-  ;;
-  ponder name equals "has" ::
-    yield has(args[0], args[1])
-  ;;
-  ponder name equals "pick" ::
-    yield pick(args[0])
-  ;;
-  ponder name equals "randint" ::
-    yield randint(args[0], args[1])
-  ;;
-  ponder name equals "input" either name equals "ask" ::
-    yield pe_read_input(st)
-  ;;
-  ponder name equals "say" either name equals "speak" either name equals "print" ::
-    forge parts be []
-    iterate a through args ::
-      parts be parts + [pe_stringify(a)]
-    ;;
-    st.outputs be st.outputs + [weave(parts, " ")]
-    yield void
-  ;;
-  st.error be "Line " + str(line) + ": Unknown function '" + name + "'"
-  yield void
-;;
-
-conjure pe_eval_expr(st, node) ::
-  ponder st.error differs void ::
-    yield void
-  ;;
-  ponder node.type equals "Literal" ::
-    yield node.value
-  ;;
-  ponder node.type equals "Ident" ::
-    yield pe_get_var(st, node.name, node.line)
-  ;;
-  ponder node.type equals "List" ::
-    forge out be []
-    iterate el through node.elements ::
-      out be out + [pe_eval_expr(st, el)]
-    ;;
-    yield out
-  ;;
-  ponder node.type equals "Dict" ::
-    forge d be ::
-    ;;
-    iterate pair through node.entries ::
-      forge k be pe_stringify(pe_eval_expr(st, pair[0]))
-      d[k] be pe_eval_expr(st, pair[1])
-    ;;
-    yield d
-  ;;
-  ponder node.type equals "Unary" ::
-    forge v be pe_eval_expr(st, node.operand)
-    ponder st.error differs void ::
-      yield void
-    ;;
-    ponder node.op equals "-" ::
-      yield 0 - v
-    ;;
-    ponder node.op equals "not" ::
-      yield isnt pe_truthy(v)
-    ;;
-    yield v
-  ;;
-  ponder node.type equals "Ternary" ::
-    forge c be pe_eval_expr(st, node.cond)
-    ponder pe_truthy(c) ::
-      yield pe_eval_expr(st, node.then_expr)
-    ;;
-    yield pe_eval_expr(st, node.else_expr)
-  ;;
-  ponder node.type equals "Binary" ::
-    forge op be node.op
-    ponder op equals "and" ::
-      forge lv be pe_eval_expr(st, node.left)
-      ponder isnt pe_truthy(lv) ::
-        yield nope
-      ;;
-      yield pe_truthy(pe_eval_expr(st, node.right))
-    ;;
-    ponder op equals "or" ::
-      forge lv be pe_eval_expr(st, node.left)
-      ponder pe_truthy(lv) ::
-        yield yep
-      ;;
-      yield pe_truthy(pe_eval_expr(st, node.right))
-    ;;
-    forge left be pe_eval_expr(st, node.left)
-    forge right be pe_eval_expr(st, node.right)
-    ponder st.error differs void ::
-      yield void
-    ;;
-    ponder op equals "+" ::
-      ponder isList(left) also isList(right) ::
-        yield left + right
-      ;;
-      ponder isText(left) either isText(right) ::
-        yield pe_stringify(left) + pe_stringify(right)
-      ;;
-      yield left + right
-    ;;
-    ponder op equals "-" ::
-      yield left - right
-    ;;
-    ponder op equals "*" ::
-      ponder isText(left) also isNum(right) ::
-        yield repeat(left, right)
-      ;;
-      ponder isNum(left) also isText(right) ::
-        yield repeat(right, left)
-      ;;
-      yield left * right
-    ;;
-    ponder op equals "/" ::
-      ponder right equals 0 ::
-        st.error be "Line " + str(node.line) + ": Division by zero"
-        yield void
-      ;;
-      yield left / right
-    ;;
-    ponder op equals "%" ::
-      ponder right equals 0 ::
-        st.error be "Line " + str(node.line) + ": Modulo by zero"
-        yield void
-      ;;
-      yield ((left % right) + right) % right
-    ;;
-    ponder op equals "^" ::
-      yield pow(left, right)
-    ;;
-    ponder op equals "==" ::
-      yield left equals right
-    ;;
-    ponder op equals "!=" ::
-      yield left differs right
-    ;;
-    ponder op equals "<" ::
-      yield left < right
-    ;;
-    ponder op equals ">" ::
-      yield left > right
-    ;;
-    ponder op equals "<=" ::
-      yield left <= right
-    ;;
-    ponder op equals ">=" ::
-      yield left >= right
-    ;;
-    yield void
-  ;;
-  ponder node.type equals "Index" ::
-    forge obj be pe_eval_expr(st, node.object)
-    forge idx be pe_eval_expr(st, node.index)
-    ponder st.error differs void ::
-      yield void
-    ;;
-    ponder isList(obj) ::
-      forge i be idx < 0 ~ measure(obj) + idx : idx
-      ponder i < 0 either i >= measure(obj) ::
-        st.error be "Line " + str(node.line) + ": List index out of range"
-        yield void
-      ;;
-      yield obj[i]
-    ;;
-    ponder isText(obj) ::
-      forge i be idx < 0 ~ measure(obj) + idx : idx
-      ponder i < 0 either i >= measure(obj) ::
-        st.error be "Line " + str(node.line) + ": String index out of range"
-        yield void
-      ;;
-      yield char_at(obj, i)
-    ;;
-    ponder isTome(obj) ::
-      forge k be pe_stringify(idx)
-      yield has(obj, k) ~ obj[k] : void
-    ;;
-    st.error be "Line " + str(node.line) + ": Cannot index value"
-    yield void
-  ;;
-  ponder node.type equals "Member" ::
-    forge obj be pe_eval_expr(st, node.object)
-    ponder st.error differs void ::
-      yield void
-    ;;
-    ponder (isList(obj) either isText(obj)) also node.property equals "length" ::
-      yield measure(obj)
-    ;;
-    ponder isTome(obj) ::
-      yield has(obj, node.property) ~ obj[node.property] : void
-    ;;
-    st.error be "Line " + str(node.line) + ": Cannot access property '" + node.property + "'"
-    yield void
-  ;;
-  ponder node.type equals "Call" ::
-    forge arg_vals be []
-    iterate a through node.args ::
-      arg_vals be arg_vals + [pe_eval_expr(st, a)]
-    ;;
-    ponder st.error differs void ::
-      yield void
-    ;;
-    forge fname be node.callee.type equals "Ident" ~ node.callee.name : ""
-    ponder fname differs "" also has(st.funcs, fname) ::
-      forge fn be st.funcs[fname]
-      forge frame be ::
-      ;;
-      forge pi be 0
-      cycle pi < measure(fn.params) ::
-        forge pname be fn.params[pi]
-        frame[pname] be pi < measure(arg_vals) ~ arg_vals[pi] : void
-        pi be pi + 1
-      ;;
-      st.scopes be st.scopes + [frame]
-      pe_exec_block(st, fn.body)
-      forge ret be st.return_val
-      st.returning be nope
-      st.return_val be void
-      st.scopes be portion(st.scopes, 0, measure(st.scopes) - 1)
-      yield ret
-    ;;
-    yield pe_call_builtin(st, fname, arg_vals, node.line)
-  ;;
-  yield void
-;;
-
-conjure pe_exec_assign(st, target, val, declare, line) ::
-  ponder target.type equals "Ident" ::
-    pe_set_var(st, target.name, val, declare)
-    yield void
-  ;;
-  ponder target.type equals "Index" ::
-    forge obj be pe_eval_expr(st, target.object)
-    forge idx be pe_eval_expr(st, target.index)
-    ponder st.error differs void ::
-      yield void
-    ;;
-    ponder isList(obj) ::
-      forge i be idx < 0 ~ measure(obj) + idx : idx
-      obj[i] be val
-      yield void
-    ;;
-    ponder isTome(obj) ::
-      obj[pe_stringify(idx)] be val
-      yield void
-    ;;
-    st.error be "Line " + str(line) + ": Cannot index-assign on this value"
-    yield void
-  ;;
-  ponder target.type equals "Member" ::
-    forge obj be pe_eval_expr(st, target.object)
-    ponder isTome(obj) ::
-      obj[target.property] be val
-      yield void
-    ;;
-    st.error be "Line " + str(line) + ": Cannot set property on non-tome"
-    yield void
-  ;;
-;;
-
-conjure pe_exec_block(st, stmts) ::
-  iterate s through stmts ::
-    ponder st.error differs void either st.returning either st.breaking either st.continuing ::
-      yield void
-    ;;
-    pe_exec_stmt(st, s)
-  ;;
-;;
-
-conjure pe_exec_stmt(st, stmt) ::
-  ponder st.error differs void either st.returning either st.breaking either st.continuing ::
-    yield void
-  ;;
-  st.steps be st.steps + 1
-  ponder st.steps > st.max_steps ::
-    st.error be "Execution step limit exceeded (infinite loop?)"
-    yield void
-  ;;
-  ponder stmt.type equals "Let" ::
-    forge val be pe_eval_expr(st, stmt.value)
-    ponder st.error equals void ::
-      pe_set_var(st, stmt.name, val, yep)
-    ;;
-    yield void
-  ;;
-  ponder stmt.type equals "Assign" ::
-    forge val be pe_eval_expr(st, stmt.value)
-    ponder st.error equals void ::
-      pe_exec_assign(st, stmt.target, val, stmt.declare, stmt.line)
-    ;;
-    yield void
-  ;;
-  ponder stmt.type equals "Ask" ::
-    pe_eval_expr(st, stmt.prompt)
-    forge ans be pe_read_input(st)
-    pe_set_var(st, stmt.name, ans, yep)
-    yield void
-  ;;
-  ponder stmt.type equals "Print" ::
-    forge parts be []
-    iterate a through stmt.args ::
-      forge v be pe_eval_expr(st, a)
-      parts be parts + [pe_stringify(v)]
-    ;;
-    ponder st.error equals void ::
-      forge sep be stmt.mode equals "whisper" ~ "" : " "
-      forge line_out be weave(parts, sep)
-      ponder stmt.mode equals "shout" ::
-        line_out be upper(line_out)
-      ;;
-      st.outputs be st.outputs + [line_out]
-    ;;
-    yield void
-  ;;
-  ponder stmt.type equals "If" ::
-    forge c be pe_eval_expr(st, stmt.cond)
-    ponder st.error differs void ::
-      yield void
-    ;;
-    ponder pe_truthy(c) ::
-      pe_exec_block(st, stmt.then_body)
-    ;; otherwise ::
-      pe_exec_block(st, stmt.else_body)
-    ;;
-    yield void
-  ;;
-  ponder stmt.type equals "While" ::
-    cycle st.error equals void also isnt st.returning ::
-      forge c be pe_eval_expr(st, stmt.cond)
-      ponder st.error differs void either isnt pe_truthy(c) ::
-        yeet
-      ;;
-      pe_exec_block(st, stmt.body)
-      ponder st.breaking ::
-        st.breaking be nope
-        yeet
-      ;;
-      ponder st.continuing ::
-        st.continuing be nope
-      ;;
-    ;;
-    yield void
-  ;;
-  ponder stmt.type equals "For" ::
-    forge iter_val be pe_eval_expr(st, stmt.iter)
-    ponder st.error differs void ::
-      yield void
-    ;;
-    forge items be isList(iter_val) ~ iter_val : (isText(iter_val) ~ chars(iter_val) : [])
-    iterate item through items ::
-      ponder st.error differs void either st.returning ::
-        yeet
-      ;;
-      pe_set_var(st, stmt.vname, item, nope)
-      pe_exec_block(st, stmt.body)
-      ponder st.breaking ::
-        st.breaking be nope
-        yeet
-      ;;
-      ponder st.continuing ::
-        st.continuing be nope
-      ;;
-    ;;
-    yield void
-  ;;
-  ponder stmt.type equals "Func" ::
-    st.funcs[stmt.name] be stmt
-    yield void
-  ;;
-  ponder stmt.type equals "Return" ::
-    forge val be stmt.value equals void ~ void : pe_eval_expr(st, stmt.value)
-    st.return_val be val
-    st.returning be yep
-    yield void
-  ;;
-  ponder stmt.type equals "Break" ::
-    st.breaking be yep
-    yield void
-  ;;
-  ponder stmt.type equals "Continue" ::
-    st.continuing be yep
-    yield void
-  ;;
-  ponder stmt.type equals "ExprStmt" ::
-    pe_eval_expr(st, stmt.expr)
-    yield void
-  ;;
-;;
-
-conjure sdev_eval_program(source, inputs) ::
-  forge parsed be sdev_parse_program(source)
-  ponder isnt parsed[0] ::
-    forge first_err be parsed[2][0]
-    yield [nope, [], "Line " + str(first_err[0]) + ": " + first_err[1]]
-  ;;
-  forge global_scope be ::
-  ;;
-  forge st be {
-    scopes: [global_scope],
-    funcs: ::
-    ;;,
-    outputs: [],
-    inputs: inputs equals void ~ [] : inputs,
-    input_idx: 0,
-    error: void,
-    returning: nope,
-    return_val: void,
-    breaking: nope,
-    continuing: nope,
-    steps: 0,
-    max_steps: 50000
-  }
-  pe_exec_block(st, parsed[1])
-  ponder st.error differs void ::
-    yield [nope, st.outputs, st.error]
-  ;;
-  yield [yep, st.outputs, void]
-;;
-`;
-
-// src/lang/agent/sdev-engine.ts
-init_lexer();
-init_parser();
-init_interpreter();
-var engine = null;
-var engineError = null;
-function load() {
-  if (engine !== null) return engine;
-  try {
-    const ast = new Parser(new Lexer(blocks_default + "\n" + understander_default + "\n" + ai_dialect_default + "\n" + project_default + "\n" + parser_eval_default).tokenize()).parse();
-    const interp = new Interpreter(() => {
-    });
-    interp.interpret(ast);
-    const env2 = interp.getGlobalEnv();
-    engine = {
-      understand: env2.get("understand_source", 0),
-      toSdev: env2.get("ai_to_sdev", 0),
-      toAi: env2.get("sdev_to_ai", 0),
-      names: env2.get("defined_names", 0),
-      close: env2.get("close_blocks", 0),
-      closeAi: env2.get("close_ai_braces", 0),
-      check: env2.get("check_blocks", 0),
-      parse: env2.get("sdev_parse_program", 0),
-      validate: env2.get("sdev_validate_syntax", 0),
-      eval: env2.get("sdev_eval_program", 0)
-    };
-  } catch (e) {
-    engineError = e instanceof Error ? e.message : String(e);
-    engine = false;
-  }
-  return engine;
-}
-function sdevUnderstand(source, known, words = []) {
-  const e = load();
-  if (!e) return null;
-  try {
-    const r = e.understand.call([source, [...known], words], 0);
-    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
-    return {
-      source: r[0],
-      sure: r[1] === true,
-      notes: (r[2] ?? []).map(([line, from, to]) => ({ line, from, to, why: "understood by the sdev engine", source: "sdev" }))
-    };
-  } catch (err) {
-    engineError = err instanceof Error ? err.message : String(err);
-    return null;
-  }
-}
-function isAiDialect(source) {
-  for (const line of source.split("\n", 20)) {
-    const t = line.trim();
-    if (!t || t.startsWith("//")) continue;
-    return /^!#ai\b/.test(t);
-  }
-  return false;
-}
-function aiToSdev(source) {
-  const e = load();
-  if (!e) return source;
-  return String(e.toSdev.call([source], 0));
-}
-function sdevCloseBlocks(source) {
-  const e = load();
-  if (!e) return null;
-  try {
-    return String(e.close.call([source], 0));
-  } catch (err) {
-    engineError = String(err);
-    return null;
-  }
-}
-function sdevCheckBlocks(source) {
-  const e = load();
-  if (!e) return [];
-  try {
-    const r = e.check.call([source], 0);
-    return Array.isArray(r) ? r.map(([l, m2]) => [Number(l), String(m2)]) : [];
-  } catch {
-    return [];
-  }
-}
+init_sdev_engine();
 
 // src/lang/hardware/strip.ts
 init_understand();
@@ -41964,7 +44119,7 @@ init_sdev_module();
 init_text();
 
 // raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\paradigms\hardware.sdev
-var hardware_default = '# SDEV Paradigms: Hardware & Embedded Transpiler \u2014 authored in SDEV.\n#\n# Transpiles SDEV embedded code (board blocks, pin definitions, hardware loops)\n# directly into canonical Arduino C++ (.ino) code in 100% pure SDEV.\n\nuse "lang/stdlib/v2/text.sdev"\n\nto hw_transpile_board with board_id sdev_code\n  set out to "// Generated by SDEV Embedded Transpiler for " + board_id + "\\n"\n  set out to out + "#include <Arduino.h>\\n\\n"\n\n  set lines to split(sdev_code, "\\n")\n  set n to length(lines)\n\n  set in_setup to 0\n  set in_loop to 0\n\n  set out to out + "void setup() {\\n"\n  set out to out + "  Serial.begin(9600);\\n"\n\n  set i to 0\n  while i < n\n    set line to text_trim(lines[i])\n\n    # pin <n> be output -> pinMode(n, OUTPUT);\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be output")\n      set p to substr(line, 4, length(line) - 14)\n      set out to out + "  pinMode(" + p + ", OUTPUT);\\n"\n    end\n\n    # pin <n> be input -> pinMode(n, INPUT);\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be input")\n      set p to substr(line, 4, length(line) - 13)\n      set out to out + "  pinMode(" + p + ", INPUT);\\n"\n    end\n\n    set i to i + 1\n  end\n\n  set out to out + "}\\n\\nvoid loop() {\\n"\n\n  set j to 0\n  while j < n\n    set line to text_trim(lines[j])\n\n    # pin <n> be high -> digitalWrite(n, HIGH);\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be high")\n      set p to substr(line, 4, length(line) - 12)\n      set out to out + "  digitalWrite(" + p + ", HIGH);\\n"\n    end\n\n    # pin <n> be low -> digitalWrite(n, LOW);\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be low")\n      set p to substr(line, 4, length(line) - 11)\n      set out to out + "  digitalWrite(" + p + ", LOW);\\n"\n    end\n\n    # wait <n> ms -> delay(n);\n    if text_starts_with(line, "wait ") and text_ends_with(line, " ms")\n      set d to substr(line, 5, length(line) - 8)\n      set out to out + "  delay(" + d + ");\\n"\n    end\n\n    # speak(...) -> Serial.println(...);\n    if text_starts_with(line, "speak(") and text_ends_with(line, ")")\n      set msg to substr(line, 6, length(line) - 7)\n      set out to out + "  Serial.println(" + msg + ");\\n"\n    end\n\n    set j to j + 1\n  end\n\n  set out to out + "}\\n"\n  return out\nend\n\n\nto hw_strip_spans with source spans_list\n  set ns to length(spans_list)\n  if ns is 0\n    return source\n  end\n  set out to ""\n  set last to 0\n  set slen to length(source)\n  set i to 0\n  while i < ns\n    set sp to spans_list[i]\n    set s_idx to sp[0]\n    set e_idx to sp[1]\n    set out to out + substr(source, last, s_idx - last)\n    set k to s_idx\n    while k < e_idx and k < slen\n      if substr(source, k, 1) is "\\n"\n        set out to out + "\\n"\n      end\n      set k to k + 1\n    end\n    set last to e_idx\n    set i to i + 1\n  end\n  return out + substr(source, last, slen - last)\nend\n';
+var hardware_default = '# SDEV Paradigms: Hardware & Embedded Transpiler \u2014 authored in SDEV.\r\n#\r\n# Transpiles SDEV embedded code (board blocks, pin definitions, hardware loops)\r\n# directly into canonical Arduino C++ (.ino) code in 100% pure SDEV.\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\nto hw_transpile_board with board_id sdev_code\r\n  set out to "// Generated by SDEV Embedded Transpiler for " + board_id + "\\n"\r\n  set out to out + "#include <Arduino.h>\\n\\n"\r\n\r\n  set lines to split(sdev_code, "\\n")\r\n  set n to length(lines)\r\n\r\n  set in_setup to 0\r\n  set in_loop to 0\r\n\r\n  set out to out + "void setup() {\\n"\r\n  set out to out + "  Serial.begin(9600);\\n"\r\n\r\n  set i to 0\r\n  while i < n\r\n    set line to text_trim(lines[i])\r\n\r\n    # pin <n> be output -> pinMode(n, OUTPUT);\r\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be output")\r\n      set p to substr(line, 4, length(line) - 14)\r\n      set out to out + "  pinMode(" + p + ", OUTPUT);\\n"\r\n    end\r\n\r\n    # pin <n> be input -> pinMode(n, INPUT);\r\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be input")\r\n      set p to substr(line, 4, length(line) - 13)\r\n      set out to out + "  pinMode(" + p + ", INPUT);\\n"\r\n    end\r\n\r\n    set i to i + 1\r\n  end\r\n\r\n  set out to out + "}\\n\\nvoid loop() {\\n"\r\n\r\n  set j to 0\r\n  while j < n\r\n    set line to text_trim(lines[j])\r\n\r\n    # pin <n> be high -> digitalWrite(n, HIGH);\r\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be high")\r\n      set p to substr(line, 4, length(line) - 12)\r\n      set out to out + "  digitalWrite(" + p + ", HIGH);\\n"\r\n    end\r\n\r\n    # pin <n> be low -> digitalWrite(n, LOW);\r\n    if text_starts_with(line, "pin ") and text_ends_with(line, " be low")\r\n      set p to substr(line, 4, length(line) - 11)\r\n      set out to out + "  digitalWrite(" + p + ", LOW);\\n"\r\n    end\r\n\r\n    # wait <n> ms -> delay(n);\r\n    if text_starts_with(line, "wait ") and text_ends_with(line, " ms")\r\n      set d to substr(line, 5, length(line) - 8)\r\n      set out to out + "  delay(" + d + ");\\n"\r\n    end\r\n\r\n    # speak(...) -> Serial.println(...);\r\n    if text_starts_with(line, "speak(") and text_ends_with(line, ")")\r\n      set msg to substr(line, 6, length(line) - 7)\r\n      set out to out + "  Serial.println(" + msg + ");\\n"\r\n    end\r\n\r\n    set j to j + 1\r\n  end\r\n\r\n  set out to out + "}\\n"\r\n  return out\r\nend\r\n\r\n\r\nto hw_strip_spans with source spans_list\r\n  set ns to length(spans_list)\r\n  if ns is 0\r\n    return source\r\n  end\r\n  set out to ""\r\n  set last to 0\r\n  set slen to length(source)\r\n  set i to 0\r\n  while i < ns\r\n    set sp to spans_list[i]\r\n    set s_idx to sp[0]\r\n    set e_idx to sp[1]\r\n    set out to out + substr(source, last, s_idx - last)\r\n    set k to s_idx\r\n    while k < e_idx and k < slen\r\n      if substr(source, k, 1) is "\\n"\r\n        set out to out + "\\n"\r\n      end\r\n      set k to k + 1\r\n    end\r\n    set last to e_idx\r\n    set i to i + 1\r\n  end\r\n  return out + substr(source, last, slen - last)\r\nend\r\n';
 
 // src/lang/hardware/strip.ts
 var hwStripRunner = null;
@@ -43379,7 +45534,7 @@ async function password(explicit, label = "password: ") {
 init_env();
 init_keywords();
 import { readFileSync as readFileSync4, writeFileSync as writeFileSync3, existsSync as existsSync4, mkdirSync as mkdirSync2 } from "node:fs";
-import { resolve as resolve3, basename, dirname as dirname3 } from "node:path";
+import { resolve as resolve4, basename, dirname as dirname3 } from "node:path";
 
 // cli/pipeline.ts
 init_env();
@@ -43387,7 +45542,7 @@ init_lexer();
 init_parser();
 init_interpreter();
 import { readFileSync as readFileSync3, existsSync as existsSync3 } from "node:fs";
-import { resolve as resolve2, dirname as dirname2, isAbsolute as isAbsolute2 } from "node:path";
+import { resolve as resolve3, dirname as dirname2, isAbsolute as isAbsolute2 } from "node:path";
 init_canonicalize();
 
 // src/lang/agent/directives.ts
@@ -43444,6 +45599,7 @@ function scanDirectives(source) {
 init_repair();
 init_sense();
 init_brain();
+init_sdev_engine();
 
 // src/lang/agent/memory.ts
 function emptyMemory() {
@@ -43593,6 +45749,7 @@ function promoteToDialect(opts = {}) {
 init_sense();
 init_repair();
 init_vocabulary();
+init_sdev_engine();
 function knownNames(memory) {
   return new Set(Object.keys(memory.names));
 }
@@ -43915,7 +46072,7 @@ async function prepareAsync(rawSource, opts = {}) {
 }
 function localModules(entryPath, source) {
   const modules = {};
-  const dir = dirname2(resolve2(entryPath));
+  const dir = dirname2(resolve3(entryPath));
   const seen = /* @__PURE__ */ new Set();
   const walk = (src) => {
     const re2 = /\buse\s+"([^"@][^"]*)"/g;
@@ -43924,8 +46081,8 @@ function localModules(entryPath, source) {
       const spec = m2[1];
       if (seen.has(spec)) continue;
       seen.add(spec);
-      const candidates = isAbsolute2(spec) ? [spec] : [resolve2(dir, spec), resolve2(process.cwd(), spec)];
-      const hit = candidates.find((c) => existsSync3(c));
+      const candidates2 = isAbsolute2(spec) ? [spec] : [resolve3(dir, spec), resolve3(process.cwd(), spec)];
+      const hit = candidates2.find((c) => existsSync3(c));
       if (!hit) continue;
       const text3 = stripSignature(readFileSync3(hit, "utf8"));
       modules[spec] = text3;
@@ -43976,7 +46133,7 @@ async function runPrepared(prepared, entryPath, opts = {}) {
   }
 }
 function readSource(file) {
-  const p = resolve2(process.cwd(), file);
+  const p = resolve3(process.cwd(), file);
   if (!existsSync3(p)) throw new Error(`File not found: ${p}`);
   return readFileSync3(p, "utf8");
 }
@@ -43994,7 +46151,7 @@ var C = {
   accent: "\x1B[38;5;81m",
   warn: "\x1B[38;5;215m"
 };
-var KEYWORDS2 = new Set(
+var KEYWORDS3 = new Set(
   KEYWORD_SPECS.flatMap((k) => [k.mystic, k.plain, ...k.aliases ?? []]).filter(Boolean)
 );
 function highlight(line) {
@@ -44023,7 +46180,7 @@ function highlight(line) {
       let j = i;
       while (j < line.length && /[A-Za-z0-9_\u0080-\uffff]/.test(line[j])) j++;
       const word = line.slice(i, j);
-      out += KEYWORDS2.has(word) ? C.keyword + word + C.reset : word;
+      out += KEYWORDS3.has(word) ? C.keyword + word + C.reset : word;
       i = j;
       continue;
     }
@@ -44033,7 +46190,7 @@ function highlight(line) {
   return out;
 }
 async function runEditor(opts) {
-  const path = resolve3(process.cwd(), opts.path);
+  const path = resolve4(process.cwd(), opts.path);
   const existed = existsSync4(path);
   const raw = existed ? readFileSync4(path, "utf8") : "";
   let lines = stripSignature(raw).split("\n");
@@ -44336,7 +46493,7 @@ var SITE = "https://web.sdev.codes";
 
 // cli/update.ts
 import { existsSync as existsSync5, readFileSync as readFileSync5, writeFileSync as writeFileSync4, renameSync, chmodSync as chmodSync2, mkdirSync as mkdirSync3 } from "node:fs";
-import { dirname as dirname4, join as join3, resolve as resolve4 } from "node:path";
+import { dirname as dirname4, join as join3, resolve as resolve5 } from "node:path";
 import { fileURLToPath } from "node:url";
 init_env();
 function newer(a, b) {
@@ -44376,7 +46533,7 @@ function selfPath() {
   try {
     return fileURLToPath(import.meta.url);
   } catch {
-    return resolve4(process.argv[1]);
+    return resolve5(process.argv[1]);
   }
 }
 async function runUpdate(force = false) {
@@ -44589,7 +46746,7 @@ async function cmdAgent(sub, rest) {
       const result = await understandAsync(readSource(file), { mode: "on" });
       const out = value("-o", "--out");
       if (out) {
-        writeFileSync6(resolve6(process.cwd(), out), result.source);
+        writeFileSync6(resolve7(process.cwd(), out), result.source);
         console.log("written:", out);
       } else console.log(result.source);
       return;
@@ -44615,18 +46772,18 @@ async function cmdAgent(sub, rest) {
 async function cmdRun(file) {
   let targetFile = file;
   if (!targetFile) {
-    const manifestPath = resolve6(process.cwd(), "sdev.json");
+    const manifestPath = resolve7(process.cwd(), "sdev.json");
     if (existsSync6(manifestPath)) {
       try {
         const manifest = JSON.parse(readFileSync6(manifestPath, "utf8"));
-        if (manifest.entry && existsSync6(resolve6(process.cwd(), manifest.entry))) {
+        if (manifest.entry && existsSync6(resolve7(process.cwd(), manifest.entry))) {
           targetFile = manifest.entry;
         }
       } catch {
       }
     }
   }
-  if (!targetFile && existsSync6(resolve6(process.cwd(), "main.sdev"))) {
+  if (!targetFile && existsSync6(resolve7(process.cwd(), "main.sdev"))) {
     targetFile = "main.sdev";
   }
   if (!targetFile) die("sdev run <file> (or run inside an sdev project directory)");
@@ -44637,7 +46794,7 @@ async function cmdRun(file) {
   if (!outcome.success) die(outcome.error ?? "program failed");
   const outPath = value("-o", "--out");
   if (outPath && outcome.webHtml) {
-    writeFileSync6(resolve6(process.cwd(), outPath), outcome.webHtml);
+    writeFileSync6(resolve7(process.cwd(), outPath), outcome.webHtml);
     console.log(`wrote web document -> ${outPath} (${(outcome.webHtml.length / 1024).toFixed(2)} KB)`);
   }
 }
@@ -44650,7 +46807,7 @@ async function cmdBuildWeb(file) {
     die('file did not produce a web page \u2014 call page("Title") in your sdev program');
   }
   const out = value("-o", "--out") ?? basename2(file).replace(/\.sdev$/, "") + ".html";
-  const resolvedOut = resolve6(process.cwd(), out);
+  const resolvedOut = resolve7(process.cwd(), out);
   mkdirSync5(dirname6(resolvedOut), { recursive: true });
   writeFileSync6(resolvedOut, outcome.webHtml);
   console.log(`\u2713 built web document -> ${out} (${(outcome.webHtml.length / 1024).toFixed(2)} KB)`);
@@ -44724,7 +46881,7 @@ async function cmdRepl() {
 }
 async function cmdWatch(file) {
   const { watch } = await import("node:fs");
-  const path = resolve6(process.cwd(), file);
+  const path = resolve7(process.cwd(), file);
   const once = async () => {
     console.log(`
 --- ${(/* @__PURE__ */ new Date()).toLocaleTimeString()} ---`);
@@ -44784,10 +46941,10 @@ async function cmdDisasm(file) {
   const prepared = prepare(source, { ...runOptions(), dialect: extname(file) === ".sdevc" ? "none" : void 0 });
   let text3;
   if (prepared.runtime === "v2") {
-    const { compile: compile2, setSeedLoader: setSeedLoader2 } = await Promise.resolve().then(() => (init_compile_self(), compile_self_exports));
+    const { compile: compile3, setSeedLoader: setSeedLoader2 } = await Promise.resolve().then(() => (init_compile_self(), compile_self_exports));
     const { seedWasmPath: seedWasmPath2 } = await Promise.resolve().then(() => (init_env(), env_exports));
     setSeedLoader2(async () => readFileSync6(seedWasmPath2()));
-    const program = await compile2(prepared.code, localModules(file, prepared.code));
+    const program = await compile3(prepared.code, localModules(file, prepared.code));
     text3 = hexdump(program.bytecode);
   } else {
     const { Compiler: Compiler2 } = await Promise.resolve().then(() => (init_compiler(), compiler_exports));
@@ -44821,7 +46978,7 @@ async function cmdNative(file) {
       throw new Error(`cannot resolve module "${p}"`);
     }
   });
-  const outBin = value("-o", "--out") ?? resolve6(dirname6(resolve6(file)), basename2(file).replace(/\.sdev$/, ""));
+  const outBin = value("-o", "--out") ?? resolve7(dirname6(resolve7(file)), basename2(file).replace(/\.sdev$/, ""));
   const asmPath = outBin + ".s";
   writeFileSync6(asmPath, asm);
   if (flag("--emit-asm")) {
@@ -44837,7 +46994,7 @@ function cmdInfo(file) {
   const body = stripSignature(raw);
   const dialect = sig?.dialect ? findDialect(sig.dialect.replace(/^@[^/]+\//, "")) : null;
   const rows = [
-    ["file", resolve6(process.cwd(), file)],
+    ["file", resolve7(process.cwd(), file)],
     ["size", `${Buffer.byteLength(body)} bytes \xB7 ${body.split("\n").length} lines`],
     ["signed", hasSignature(raw) ? "yes" : "no"],
     ["runtime", sig?.rt ?? `${runtimePreference()} (default)`],
@@ -44852,7 +47009,7 @@ function cmdInfo(file) {
   for (const [k, v] of rows) console.log(k.padEnd(width) + "  " + v);
 }
 function cmdSign(sub, file) {
-  const path = resolve6(process.cwd(), file);
+  const path = resolve7(process.cwd(), file);
   const raw = readSource(file);
   if (sub === "show") {
     const sig = readSignature(raw);
@@ -44982,20 +47139,20 @@ ${GROUP_LABELS[entry.group]}`);
       const raw = stripSignature(readSource(file));
       const from = value("--from") ? requireLocalDialect(value("--from")) : activeDialect();
       if (!from) die("no dialect selected \u2014 pass --from <slug>");
-      emit(canonicalize(raw, from, { withPrelude: flag("--prelude") }).source);
+      emit2(canonicalize(raw, from, { withPrelude: flag("--prelude") }).source);
       return;
     }
     case "surface": {
       const file = rest[0] ?? die("sdev dialect surface <file> --to <slug>");
       const to = requireLocalDialect(value("--to") ?? die("--to <slug> is required"));
-      emit(dialectize(stripSignature(readSource(file)), to));
+      emit2(dialectize(stripSignature(readSource(file)), to));
       return;
     }
     case "xlate": {
       const file = rest[0] ?? die("sdev dialect xlate <file> --from a --to b");
       const from = requireLocalDialect(value("--from") ?? die("--from <slug> is required"));
       const to = requireLocalDialect(value("--to") ?? die("--to <slug> is required"));
-      emit(translateDialect(stripSignature(readSource(file)), from, to));
+      emit2(translateDialect(stripSignature(readSource(file)), from, to));
       return;
     }
     case "prelude": {
@@ -45339,7 +47496,7 @@ async function cmdCloud(sub, rest) {
     const dir = value("-o", "--out") ?? ".";
     mkdirSync5(dir, { recursive: true });
     for (const f2 of rows) {
-      writeFileSync6(resolve6(dir, f2.name), stripSignature(f2.content ?? ""));
+      writeFileSync6(resolve7(dir, f2.name), stripSignature(f2.content ?? ""));
       console.log("pulled", f2.name);
     }
     return;
@@ -45397,7 +47554,7 @@ async function cmdCloud(sub, rest) {
   }
   die("cloud: use list | pull | push | rm | share | shared");
 }
-function emit(text3) {
+function emit2(text3) {
   const out = value("-o", "--out");
   if (out) {
     writeFileSync6(out, text3);
@@ -45411,18 +47568,18 @@ async function cmdEdit(file) {
 function cmdDoctor() {
   console.log(`sdev doctor \u2014 toolchain & environment check (v${VERSION})
 `);
-  const repoRoot = resolve6(process.cwd());
+  const repoRoot = resolve7(process.cwd());
   let wasmPath = "";
   try {
     wasmPath = seedWasmPath();
   } catch {
-    wasmPath = resolve6(repoRoot, "public/wasm/sdev-seed.wasm");
+    wasmPath = resolve7(repoRoot, "public/wasm/sdev-seed.wasm");
   }
   const hasWasm = Boolean(wasmPath && existsSync6(wasmPath));
-  const codegenPath = resolve6(repoRoot, "src/lang-bridge/native/codegen-x64.mjs");
-  const runtimeAsmPath = resolve6(repoRoot, "src/lang-bridge/native/runtime.s");
+  const codegenPath = resolve7(repoRoot, "src/lang-bridge/native/codegen-x64.mjs");
+  const runtimeAsmPath = resolve7(repoRoot, "src/lang-bridge/native/runtime.s");
   const hasNative = existsSync6(codegenPath) && existsSync6(runtimeAsmPath);
-  const arduinoIndexPath = resolve6(repoRoot, "public/arduino/library-index.json");
+  const arduinoIndexPath = resolve7(repoRoot, "public/arduino/library-index.json");
   const hasArduinoIndex = existsSync6(arduinoIndexPath);
   let pythonVersion = "not found";
   for (const bin of ["python3", "python"]) {
@@ -45676,7 +47833,7 @@ function createProjectFiles(targetDir, name, templateKey, isInit = false) {
     console.warn(`Template "${templateKey}" not found. Falling back to "console" (options: console, game, hardware, ml).`);
   }
   mkdirSync5(targetDir, { recursive: true });
-  const manifestPath = resolve6(targetDir, "sdev.json");
+  const manifestPath = resolve7(targetDir, "sdev.json");
   if (existsSync6(manifestPath)) {
     die(`sdev.json already exists in ${targetDir}`);
   }
@@ -45691,11 +47848,11 @@ function createProjectFiles(targetDir, name, templateKey, isInit = false) {
     dialects: []
   };
   writeFileSync6(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
-  const mainPath = resolve6(targetDir, "main.sdev");
+  const mainPath = resolve7(targetDir, "main.sdev");
   if (!existsSync6(mainPath)) {
     writeFileSync6(mainPath, tmpl.code.replace(/\{name\}/g, name));
   }
-  const readmePath = resolve6(targetDir, "README.md");
+  const readmePath = resolve7(targetDir, "README.md");
   if (!existsSync6(readmePath)) {
     const readme = `# ${name}
 
@@ -45737,7 +47894,7 @@ sdev lint main.sdev
 }
 function cmdNew(name) {
   if (!name) die("sdev new <project-name> [--template console|game|hardware|ml]");
-  const targetDir = resolve6(process.cwd(), name);
+  const targetDir = resolve7(process.cwd(), name);
   if (existsSync6(targetDir)) {
     die(`directory "${name}" already exists`);
   }
@@ -45777,7 +47934,7 @@ async function main() {
     }
     case "ast": {
       const { ast } = parseFile(pos[1] ?? die("sdev ast <file>"), runOptions());
-      emit(JSON.stringify(ast, null, 2));
+      emit2(JSON.stringify(ast, null, 2));
       return;
     }
     case "fmt": {
@@ -45786,7 +47943,7 @@ async function main() {
       const formatted = formatSdev(stripSignature(raw));
       if (flag("-w", "--write")) {
         const sig = readSignature(raw);
-        writeFileSync6(resolve6(process.cwd(), file), sig ? repairSignature(raw.split("\n")[0] + "\n" + formatted) : formatted);
+        writeFileSync6(resolve7(process.cwd(), file), sig ? repairSignature(raw.split("\n")[0] + "\n" + formatted) : formatted);
         console.log("formatted", basename2(file));
       } else process.stdout.write(formatted.endsWith("\n") ? formatted : formatted + "\n");
       return;
@@ -45842,7 +47999,7 @@ async function main() {
       const to = value("--to") ?? die("--to <Language> is required");
       const src = stripSignature(readSource(file));
       const from = value("--from") ?? detectLanguage(src) ?? "English";
-      emit(translateSource(src, from, to).translated);
+      emit2(translateSource(src, from, to).translated);
       return;
     }
     case "home":
@@ -45862,7 +48019,7 @@ async function main() {
     case "help":
       return help();
     default: {
-      if (existsSync6(resolve6(process.cwd(), cmd))) return cmdRun(cmd);
+      if (existsSync6(resolve7(process.cwd(), cmd))) return cmdRun(cmd);
       console.error(`unknown command "${cmd}"`);
       help();
       process.exit(1);

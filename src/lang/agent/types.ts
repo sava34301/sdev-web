@@ -32,6 +32,8 @@ export interface UnderstandOptions {
   engine?: 'auto' | 'ts';
   /** names defined in other project files, so cross-file references resolve */
   projectNames?: string[];
+  /** ignore cached whole-file and line memories for this run and re-understand from scratch */
+  fresh?: boolean;
 }
 
 export interface UnderstandResult {

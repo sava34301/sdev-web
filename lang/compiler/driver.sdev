@@ -25,11 +25,11 @@ set src to prelink_source(src)
 # byte, or 300 for <= and 301 for >=), 5 newline, 6 float (tk_num = digits,
 # tk_num2 = decimal scale).
 
-set tk_kind to mklist(40000)
-set tk_num  to mklist(40000)
-set tk_num2 to mklist(40000)
+set tk_kind to mklist(80000)
+set tk_num  to mklist(80000)
+set tk_num2 to mklist(80000)
 
-set tk_txt  to mklist(40000)
+set tk_txt  to mklist(80000)
 set tk_count to 0
 set _srclen to length(src)
 set _i to 0
@@ -211,9 +211,13 @@ while _i < _srclen
   end
 end
 
+if tk_count >= 80000
+  throw "token buffer overflow (80000 max)"
+end
+
 # ---- drive: two collect passes, then emit functions and the main body -----
 
-set bc to mklist(65536)
+set bc to mklist(81920)
 set bc[0] to 0
 set sym_names to mklist(1024)
 set sym_names[0] to 0
@@ -375,6 +379,10 @@ while going
   if pos >= tk_count
     set going to 0
   end
+end
+set pos to skip_nl(pos)
+if pos < tk_count
+  throw "unexpected token at position " + str(pos)
 end
 emit_byte(255)
 resolve_pending_calls()

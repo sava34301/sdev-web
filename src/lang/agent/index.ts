@@ -13,7 +13,7 @@
 import { scanDirectives, type AgentMode, type BrainMode } from './directives';
 import { repair, closeBlocks } from './repair';
 import { senseFile, parses, unknownNames, parseError } from './sense';
-import { think, online } from './brain';
+import { think, online, brainSettings } from './brain';
 import { sdevUnderstand, isAiDialect, aiToSdev, sdevCloseBlocks } from './sdev-engine';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
@@ -77,6 +77,12 @@ function begin(source: string, opts: UnderstandOptions): Prepared {
     memory.results = {};
     memory.agent = AGENT_VERSION;
     saveMemory(memory);
+  }
+  if (opts.fresh) {
+    for (const line of stripped.split('\n')) {
+      const k = line.trim();
+      if (k && memory.lines[k]) delete memory.lines[k];
+    }
   }
   return { mode, brain, learn, stripped, memory, boards, original };
 }
@@ -228,9 +234,15 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
 
   // Already understood this exact file before? Reuse it — no thinking twice.
   const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
-  const cached = recallResult(prep.memory, key);
-  if (cached !== null) {
-    return { source: cached, changed: cached !== prep.original, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
+  if (opts.fresh) {
+    if (prep.memory.results?.[key]) delete prep.memory.results[key];
+  } else {
+    const cached = recallResult(prep.memory, key);
+    if (cached !== null) {
+      lastUnderstood.set(source, cached);
+      if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value as string);
+      return { source: cached, changed: cached !== prep.original, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: 'none', cached: true };
+    }
   }
 
   const rules = runRules(prep, opts);
@@ -265,6 +277,8 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   finish(prep, current, rules.learned);
   lastUnderstood.set(source, current);
   if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value as string);
+  lastUnderstoodBrain.set(source, brainUsed);
+  if (lastUnderstoodBrain.size > 20) lastUnderstoodBrain.delete(lastUnderstoodBrain.keys().next().value as string);
 
   return {
     source: out,
@@ -293,30 +307,37 @@ async function askBrainAboutBoards(
   const unresolved: number[] = [];
   let used: 'none' | 'local' | 'online' = 'none';
   const mode = prep.brain === 'auto' && !online() ? 'local' : prep.brain;
+  const modes: BrainMode[] =
+    mode === 'auto'
+      ? (brainSettings().allowOnline && online() ? ['local', 'online'] : ['local'])
+      : [mode];
+
   for (let i = 0; i < out.length; i++) {
-    const bad = unknownBoardLines(out[i]);
+    let bad = unknownBoardLines(out[i]);
     if (bad.length === 0) continue;
-    const lines = out[i].split('\n');
-    const { reply, used: by } = await think({
-      source: prep.boards[i].text,
-      draft: out[i],
-      unresolved: bad,
-      vocabulary: {},
-      problems: [...BOARD_GUIDE, 'Rewrite these lines into the hardware language: ' + bad.map((n) => lines[n - 1].trim()).join(' | ').slice(0, 240)],
-      format: 'canonical',
-    }, mode, opts.localUrl);
-    const answer = reply?.canonical ?? '';
-    const span = by !== 'none' ? findBoardSpans(answer)[0] : undefined;
-    if (span) {
-      // the brain's block goes through the reader too, so its loose bits are tidied the same way
-      const candidate = readBoardBlock(answer.slice(span.start, span.end), 1, span.strict).text;
-      const left = unknownBoardLines(candidate);
-      if (left.length < bad.length) {
-        out[i] = candidate;
-        used = by;
-        notes.push({ line: prep.boards[i].line, from: '', to: '', why: `hardware: the AI read ${bad.length - left.length} line${bad.length - left.length === 1 ? '' : 's'} the rules could not`, source: 'brain' });
-        unresolved.push(...left.map((n) => prep.boards[i].line + n - 1));
-        continue;
+    for (const targetMode of modes) {
+      if (bad.length === 0) break;
+      const lines = out[i].split('\n');
+      const { reply, used: by } = await think({
+        source: prep.boards[i].text,
+        draft: out[i],
+        unresolved: bad,
+        vocabulary: {},
+        problems: [...BOARD_GUIDE, 'Rewrite these lines into the hardware language: ' + bad.map((n) => lines[n - 1].trim()).join(' | ').slice(0, 240)],
+        format: 'canonical',
+      }, targetMode, opts.localUrl);
+      const answer = reply?.canonical ?? '';
+      const span = by !== 'none' ? findBoardSpans(answer)[0] : undefined;
+      if (span) {
+        // the brain's block goes through the reader too, so its loose bits are tidied the same way
+        const candidate = readBoardBlock(answer.slice(span.start, span.end), 1, span.strict).text;
+        const left = unknownBoardLines(candidate);
+        if (left.length < bad.length) {
+          out[i] = candidate;
+          used = by;
+          notes.push({ line: prep.boards[i].line, from: '', to: '', why: `hardware: the AI read ${bad.length - left.length} line${bad.length - left.length === 1 ? '' : 's'} the rules could not`, source: 'brain' });
+          bad = left;
+        }
       }
     }
     unresolved.push(...bad.map((n) => prep.boards[i].line + n - 1));
@@ -354,22 +375,42 @@ async function askBrain(
   // Writing a whole program from a request: let the model use sdev:ai.
   const writing = isRequest(prep.stripped);
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const { reply, used } = await think(
-      { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems, format: writing ? 'ai' : 'canonical' },
-      mode, opts.localUrl,
-    );
-    if (!reply?.canonical || used === 'none') break;
-    // Whole programs come back in sdev:ai; turn them into canonical sdev here.
-    if (isAiDialect(reply.canonical)) reply.canonical = aiToSdev(reply.canonical);
-    const s = score(reply.canonical);
-    if (s < bestScore || (s === bestScore && (preferReply || extraProblems.length > 0) && !best)) {
-      best = { source: reply.canonical, used };
-      bestScore = s;
-      for (const [word, intent] of Object.entries(reply.words ?? {})) if (prep.learn) rememberWord(prep.memory, word, intent as Intent);
+  const runAttempts = async (targetMode: BrainMode) => {
+    problems = best ? [...extraProblems, ...problemsOf(best.source)] : [...extraProblems, ...problemsOf(draft)];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { reply, used } = await think(
+        { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems, format: writing ? 'ai' : 'canonical' },
+        targetMode, opts.localUrl,
+      );
+      if (!reply?.canonical || used === 'none') break;
+      // Whole programs come back in sdev:ai; turn them into canonical sdev here.
+      if (isAiDialect(reply.canonical)) reply.canonical = aiToSdev(reply.canonical);
+      const s = score(reply.canonical);
+      if (
+        s < bestScore ||
+        (s === bestScore && (preferReply || extraProblems.length > 0) &&
+          (!best || (targetMode === 'online' && best.used === 'local' && best.source.trim() === draft.trim())))
+      ) {
+        best = { source: reply.canonical, used };
+        bestScore = s;
+        for (const [word, intent] of Object.entries(reply.words ?? {})) if (prep.learn) rememberWord(prep.memory, word, intent as Intent);
+      }
+      if (s === 0) break;
+      problems = [...extraProblems, ...problemsOf(best?.source ?? reply.canonical)];
     }
-    if (s === 0) break;
-    problems = problemsOf(reply.canonical);
+  };
+
+  if (mode === 'auto') {
+    await runAttempts('local');
+    const needsOnlineFallback =
+      !best ||
+      bestScore > 0 ||
+      (extraProblems.length > 0 && best.source.trim() === draft.trim());
+    if (needsOnlineFallback && brainSettings().allowOnline && online()) {
+      await runAttempts('online');
+    }
+  } else {
+    await runAttempts(mode);
   }
   if (!best) return null;
 
@@ -396,14 +437,21 @@ export async function reconsider(source: string, error: string, opts: Understand
   const prep = begin(source, opts);
   if (prep.mode === 'off' || prep.brain === 'none') return null;
   const draft = (lastUnderstood.get(source) ?? prep.stripped);
+  const effectivePrep =
+    prep.brain === 'auto' && lastUnderstoodBrain.get(source) === 'local' && brainSettings().allowOnline && online()
+      ? { ...prep, brain: 'online' as BrainMode }
+      : prep;
   const notes: UnderstandResult['notes'] = [];
-  const improved = await askBrain(prep, opts, draft, [], [`it failed when run: ${error}`], notes, true);
+  const improved = await askBrain(effectivePrep, opts, draft, [], [`it failed when run: ${error}`], notes, true);
   if (!improved || improved.source.trim() === draft.trim()) return null;
   finish(prep, improved.source, {});
+  lastUnderstood.set(source, improved.source);
+  lastUnderstoodBrain.set(source, improved.used);
   return { source: unmaskBoardBlocks(improved.source, prep.boards, readBoardPieces(prep.boards).texts), changed: true, mode: prep.mode, notes, learned: {}, unresolved: [], brainUsed: improved.used };
 }
 
 const lastUnderstood = new Map<string, string>();
+const lastUnderstoodBrain = new Map<string, 'none' | 'local' | 'online'>();
 
 /** Just strip the directives — used by tooling that must not rewrite code. */
 export function stripAgentDirectives(source: string): string {

@@ -61,9 +61,9 @@ conjure defined_names_into(source, seen, out) ::
       out be pn_add(seen, out, w)
     ;;
   ;;
-  // lambdas `(a, b) =>` / `x =>`
-  iterate part through regex_find_all(source, "\\([^()]*\\)\\s*=>|" + PNAME + "\\s*=>") ::
-    iterate w through pn_split(regex_replace(part, "=>$", "")) ::
+  // lambdas `(a, b) =>` / `x =>` / `(a, b) ->` / `x ->`
+  iterate part through regex_find_all(source, "\\([^()]*\\)\\s*(=>|->)|" + PNAME + "\\s*(=>|->)") ::
+    iterate w through pn_split(regex_replace(part, "(=>|->)$", "")) ::
       out be pn_add(seen, out, w)
     ;;
   ;;

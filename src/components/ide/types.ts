@@ -6,7 +6,14 @@ export interface IdeFile {
   folderId?: string | null; // null = root
   cloudId?: string | null;  // backing cloud row id (when synced)
   /** hidden: what the understander made of this exact content, so a re-run skips the thinking */
-  understood?: { key: string; source: string };
+  understood?: {
+    key: string;
+    source: string;
+    notesCount?: number;
+    brainUsed?: 'none' | 'local' | 'online';
+    fromCache?: boolean;
+    detectedLanguage?: string | null;
+  };
 }
 
 export interface IdeFolder {

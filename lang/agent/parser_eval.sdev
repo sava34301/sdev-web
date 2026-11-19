@@ -237,9 +237,75 @@ conjure pe_parse_primary(p) ::
       pe_advance(p)
       yield { type: "Literal", value: nope, line: tok.line }
     ;;
-    ponder lw equals "void" either lw equals "null" ::
+    ponder lw equals "void" either lw equals "null" either lw equals "nothing" ::
       pe_advance(p)
       yield { type: "Literal", value: void, line: tok.line }
+    ;;
+    ponder lw equals "new" also pe_next_tok(p, 1).type equals "IDENT" ::
+      pe_advance(p)
+      forge cname be pe_advance(p).value
+      forge args be []
+      ponder pe_check(p, "LPAREN") also pe_peek(p).line equals tok.line ::
+        pe_advance(p)
+        ponder isnt pe_check(p, "RPAREN") ::
+          cycle isnt pe_at_end(p) also isnt pe_check(p, "RPAREN") ::
+            args be args + [pe_parse_expr(p)]
+            ponder pe_check(p, "COMMA") ::
+              pe_advance(p)
+            ;; otherwise ::
+              yeet
+            ;;
+          ;;
+        ;;
+        ponder pe_check(p, "RPAREN") ::
+          pe_advance(p)
+        ;; otherwise ::
+          pe_error(p, tok.line, "Expected ')' after 'new' arguments")
+        ;;
+      ;;
+      yield { type: "New", class_name: cname, args: args, line: tok.line }
+    ;;
+    ponder lw equals "ref" also pe_next_tok(p, 1).type equals "IDENT" also pe_next_tok(p, 1).line equals tok.line ::
+      pe_advance(p)
+      forge fn_name be pe_advance(p).value
+      yield { type: "Ref", name: fn_name, line: tok.line }
+    ;;
+    ponder lw equals "call" also pe_next_tok(p, 1).type equals "IDENT" also pe_next_tok(p, 2).type equals "LPAREN" ::
+      pe_advance(p)
+      yield pe_parse_postfix(p)
+    ;;
+    ponder lw equals "make" also (pe_next_tok(p, 1).line > tok.line either lower(pe_next_tok(p, 1).value) equals "with" either lower(pe_next_tok(p, 1).value) equals "capture") ::
+      pe_advance(p)
+      forge params be []
+      forge caps be []
+      ponder pe_check_word(p, "with") also pe_peek(p).line equals tok.line ::
+        pe_advance(p)
+        cycle pe_check(p, "IDENT") also pe_peek(p).line equals tok.line also isnt pe_check_word(p, "capture") ::
+          params be params + [pe_advance(p).value]
+          ponder pe_check(p, "COMMA") ::
+            pe_advance(p)
+          ;;
+        ;;
+      ;;
+      ponder pe_check_word(p, "capture") also pe_peek(p).line equals tok.line ::
+        pe_advance(p)
+        cycle pe_check(p, "IDENT") also pe_peek(p).line equals tok.line ::
+          caps be caps + [pe_advance(p).value]
+          ponder pe_check(p, "COMMA") ::
+            pe_advance(p)
+          ;;
+        ;;
+      ;;
+      forge body be []
+      cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+        body be body + [pe_parse_stmt(p)]
+      ;;
+      ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+        pe_advance(p)
+      ;; otherwise ::
+        pe_error(p, tok.line, "Unclosed 'make' block (missing 'end')")
+      ;;
+      yield { type: "Make", params: params, captures: caps, body: body, line: tok.line }
     ;;
     ponder (lw equals "ask" either lw equals "input") also pe_next_tok(p, 1).type differs "LPAREN" also pe_next_tok(p, 1).line equals tok.line ::
       pe_advance(p)
@@ -990,6 +1056,81 @@ conjure pe_parse_stmt(p) ::
   ponder pe_check_word(p, "skip") either pe_check_word(p, "continue") ::
     forge kw be pe_advance(p)
     yield { type: "Continue", line: kw.line }
+  ;;
+  // Throw / hurl / raise
+  ponder pe_check_word(p, "throw") either pe_check_word(p, "hurl") either pe_check_word(p, "raise") ::
+    forge kw be pe_advance(p)
+    ponder pe_at_end(p) either pe_peek(p).line > kw.line ::
+      pe_error(p, kw.line, "Expected expression after '" + kw.value + "'")
+      yield { type: "Noop", line: kw.line }
+    ;;
+    yield { type: "Throw", value: pe_parse_expr(p), line: kw.line }
+  ;;
+  // Attempt / try ... rescue / catch ... end
+  ponder pe_check_word(p, "attempt") either pe_check_word(p, "try") ::
+    forge kw be pe_advance(p)
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;;
+    forge try_body be []
+    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "rescue") also isnt pe_check_word(p, "catch") also isnt pe_check_word(p, "except") also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+      try_body be try_body + [pe_parse_stmt(p)]
+    ;;
+    forge err_name be ""
+    forge rescue_body be []
+    ponder pe_check_word(p, "rescue") either pe_check_word(p, "catch") either pe_check_word(p, "except") ::
+      forge rkw be pe_advance(p)
+      ponder pe_check(p, "IDENT") also pe_peek(p).line equals rkw.line ::
+        err_name be pe_advance(p).value
+      ;;
+      ponder pe_check(p, "DOUBLE_COLON") ::
+        pe_advance(p)
+      ;;
+      cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+        rescue_body be rescue_body + [pe_parse_stmt(p)]
+      ;;
+    ;;
+    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'attempt' block (missing 'end')")
+    ;;
+    yield { type: "Attempt", try_body: try_body, err_name: err_name, rescue_body: rescue_body, line: kw.line }
+  ;;
+  // Use / summon / import
+  ponder pe_check_word(p, "use") either pe_check_word(p, "summon") either pe_check_word(p, "import") ::
+    forge kw be pe_advance(p)
+    forge mod_e be pe_parse_expr(p)
+    yield { type: "Use", module: mod_e, line: kw.line }
+  ;;
+  // Kind / essence / class
+  ponder pe_check_word(p, "kind") either pe_check_word(p, "essence") either pe_check_word(p, "class") ::
+    forge kw be pe_advance(p)
+    ponder isnt pe_check(p, "IDENT") ::
+      pe_error(p, kw.line, "Expected kind name")
+      yield { type: "Noop", line: kw.line }
+    ;;
+    forge kname be pe_advance(p).value
+    forge parent be ""
+    ponder (pe_check_word(p, "extends") either pe_check_word(p, "extend")) also pe_peek(p).line equals kw.line ::
+      pe_advance(p)
+      ponder pe_check(p, "IDENT") ::
+        parent be pe_advance(p).value
+      ;;
+    ;;
+    ponder pe_check(p, "DOUBLE_COLON") ::
+      pe_advance(p)
+    ;;
+    forge methods be []
+    cycle isnt pe_at_end(p) also isnt pe_check_word(p, "end") also isnt pe_check(p, "DOUBLE_SEMI") ::
+      methods be methods + [pe_parse_stmt(p)]
+    ;;
+    ponder pe_check_word(p, "end") either pe_check(p, "DOUBLE_SEMI") ::
+      pe_advance(p)
+    ;; otherwise ::
+      pe_error(p, kw.line, "Unclosed 'kind' block (missing 'end')")
+    ;;
+    yield { type: "Kind", name: kname, parent: parent, methods: methods, line: kw.line }
   ;;
   // Expression or Assignment
   forge expr be pe_parse_expr(p)

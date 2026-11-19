@@ -23,6 +23,8 @@ export interface FileSignature {
   libs?: string[];
   /** dialect this file was translated from, if any */
   origin?: string | null;
+  /** canonical sdev translation produced by the understander / translator */
+  translated?: string | null;
   /** fnv-1a checksum of the body, hex */
   sum?: string;
   /** last write, epoch ms */

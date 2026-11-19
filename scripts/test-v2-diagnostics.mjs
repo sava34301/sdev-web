@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { compile as selfCompile } from '../src/lang-bridge/compile-self.mjs';
 
 const dir = mkdtempSync(join(tmpdir(), 'sdev-v2-'));
 let pass = 0, fail = 0;
@@ -36,6 +37,38 @@ r = runSrc('andor', 'say 2 and 3\nsay 0 or 5\nsay 0 and 1\nsay 0 or 0\nsay 2 or 
 check('and / or give 0 or 1', r.out === '1\n1\n0\n0\n1\n', r);
 r = runSrc('short-circuit', 'to rhs\n  say "right side"\n  return 2\nend\nsay 0 and rhs()\nsay 1 or rhs()\nsay 1 and rhs()\nsay 0 or rhs()\n');
 check('and / or evaluate the right side only when needed', r.out === '0\n1\nright side\n1\nright side\n1\n', r);
+
+// Nested `make` closures inside a function must not clobber enclosing local slots
+r = runSrc('nested-make', [
+  'to outer_fn with x y',
+  '  set f to make with a capture x',
+  '    set g to make with b capture a',
+  '      return a + b + 1',
+  '    end',
+  '    return x + call g(10)',
+  '  end',
+  '  return y + call f(5)',
+  'end',
+  'say outer_fn(100, 2000)',
+].join('\n'));
+check('nested make closures preserve enclosing local slots', r.out === '2116\n', r);
+
+// Direct self-hosted compiler error channel (without oracle/compile.mjs)
+async function selfCompileErr(src) {
+  try {
+    await selfCompile(src);
+    return null;
+  } catch (e) {
+    return String(e?.message ?? e);
+  }
+}
+
+check('self-hosted compiler error channel: unknown function', /unknown function zzz/.test((await selfCompileErr('say zzz(1)\n')) ?? ''));
+check('self-hosted compiler error channel: wrong arity', /g: expected 2 args, got 1/.test((await selfCompileErr('to g with a b\n  return a\nend\nsay g(1)\n')) ?? ''));
+check('self-hosted compiler error channel: builtin arity', /length: expected 1 args, got 2/.test((await selfCompileErr('say length("a", "b")\n')) ?? ''));
+check('self-hosted compiler error channel: list + without list.sdev', /joining lists with \+ needs use/.test((await selfCompileErr('set xs to [1] + [2]\n')) ?? ''));
+check('self-hosted compiler error channel: unknown kind', /unknown kind Ghost/.test((await selfCompileErr('set g to new Ghost()\n')) ?? ''));
+check('self-hosted compiler error channel: break outside loop', /break outside of a loop/.test((await selfCompileErr('break\n')) ?? ''));
 
 console.log(`\nv2 diagnostics: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

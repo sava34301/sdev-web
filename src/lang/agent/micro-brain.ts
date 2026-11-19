@@ -15,7 +15,7 @@
  */
 
 import type { BrainRequest, BrainReply } from './brain';
-import { parses } from './sense';
+import { parses, unknownNames } from './sense';
 
 export const MICRO_BRAIN_CACHE_KEY = 'sdev-micro-brain-v1';
 export const MICRO_BRAIN_VERSION = '1.0.0';
@@ -826,16 +826,25 @@ export async function callMicroBrain(
 
   // 1. Natural Language problem requests solver
   const nlSolved = solveNaturalLanguageRequest(req.source) || (req.draft ? solveNaturalLanguageRequest(req.draft) : null);
-  if (nlSolved && parses(nlSolved)) {
+  if (nlSolved && parses(nlSolved) && unknownNames(nlSolved).length === 0) {
     return {
       canonical: nlSolved,
       notes: 'Solved via SDEV Pre-Baked WebGPU Micro-Brain NL solver (<1ms).',
     };
   }
 
+  // Whole-program requests that did not match the NL solver need full WebLLM / Website AI
+  if (req.format === 'ai') {
+    return null;
+  }
+
   // 2. Speculative code translator for foreign code
+  const hasProblems = req.unresolved.length > 0 || (req.problems?.length ?? 0) > 0;
+  const accepts = (canonical: string, changed: boolean) =>
+    parses(canonical) && unknownNames(canonical).length === 0 && (changed || !hasProblems);
+
   const result = runMicroBrainTranslation(target);
-  if (parses(result.canonical)) {
+  if (accepts(result.canonical, result.changed)) {
     return {
       canonical: result.canonical,
       notes: result.notes,
@@ -844,7 +853,7 @@ export async function callMicroBrain(
   // Also try on original source if draft had partial edits
   if (req.source && req.source !== target) {
     const fromOriginal = runMicroBrainTranslation(req.source);
-    if (parses(fromOriginal.canonical)) {
+    if (accepts(fromOriginal.canonical, fromOriginal.changed)) {
       return {
         canonical: fromOriginal.canonical,
         notes: fromOriginal.notes,

@@ -112,27 +112,34 @@ export async function runWasm(
   // Compile source to bytecode via the self-hosted compiler shim.
   modules = (await withStdlib(source, modules)) ?? undefined;
   setSeedLoader(loadSeedBytes);
+  const isDiagnosticError = (msg: string) =>
+    /unknown function|expected \d+ args|joining lists with \+|unknown (?:parent )?kind|outside of a loop|too many (?:globals|locals)|overflow/.test(msg);
+
   let program: { bytecode: Uint8Array; stringPool: Uint8Array };
   try {
     program = await selfCompile(source, modules ?? null);
     if (program.bytecode.length === 0) throw new Error('stage-0 compiler produced no bytecode');
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    // Signal "not in stage-0 subset" so the dispatcher can fall back to JS v2.
+    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, '');
+    if (isDiagnosticError(msg)) {
+      return { success: false, output: [], error: msg };
+    }
+    // Signal "not in stage-0 subset" so the dispatcher can fall back to the understander.
     throw new WasmSubsetError(msg);
   }
 
-  // The self-hosted compiler has no error channel, so an unknown function,
-  // a wrong argument count or a list joined without the list library would
-  // run silently with wrong results. The reference compiler names them.
+  // Cross-check with the reference compiler so any syntax or semantic issue
+  // that did not halt early is either surfaced as a diagnostic or routed to
+  // the understander via WasmSubsetError instead of running a partial program.
   try {
     const { compile: checkCompile } = await import('./oracle/compile.mjs');
     checkCompile(source, modules ? { readModule: (path: string) => modules?.[path] ?? '' } : {});
   } catch (e) {
-    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line 0: /, '');
-    if (/unknown function|expected \d+ args|joining lists with \+/.test(msg)) {
+    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, '');
+    if (isDiagnosticError(msg)) {
       return { success: false, output: [], error: msg };
     }
+    throw new WasmSubsetError(msg);
   }
 
   const module = await loadSeed();

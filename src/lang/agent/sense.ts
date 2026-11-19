@@ -14,6 +14,7 @@ import { mathRequest } from './math';
 import { taskRequest } from './tasks';
 import { baseWordMap, CANONICAL, type Intent } from './vocabulary';
 import { KEYWORD_TOKEN_BY_WORD } from '@/lang/keywords';
+import { sdevDefinedNames, sdevValidateSyntax } from './sdev-engine';
 
 export interface Sense {
   parses: boolean;
@@ -33,7 +34,8 @@ export function parses(source: string): boolean {
     new Parser(new Lexer(source).tokenize()).parse();
     return true;
   } catch {
-    return false;
+    const v2 = sdevValidateSyntax(source);
+    return v2 !== null && v2.valid;
   }
 }
 
@@ -60,6 +62,8 @@ export function builtinNames(): Set<string> {
       builtinCache = new Set(runtimeNames());
       // the window toolkit (window, button, label, uiget, …) is there in the IDE too
       for (const n of ['window','endwindow','row','endrow','column','endcolumn','group','endgroup','tabs','endtabs','tab','endtab','heading','label','paragraph','image','divider','spacer','progress','button','textarea','checkbox','slider','select','table','menu','endmenu','menuitem','uiget','uiset','show','alert']) builtinCache.add(n);
+      // v2 seed-VM builtins
+      for (const n of ['mklist','ord','chr','substr','i2f','f2i','fneg','fabs','fsqrt','fsin','fcos','ftan','fexp','flog','fpow','fbyte','fceil','ffloor','fround','read_file','write_file','http_get','num','nothing']) builtinCache.add(n);
     } catch { builtinCache = new Set(); }
   }
   return builtinCache;
@@ -97,9 +101,9 @@ export function definedNames(source: string): Set<string> {
  * (`a.b`) and record keys (`{ key: 1 }`) are not counted.
  */
 export function unknownNames(source: string): string[] {
-  let tokens: { type: string; value: unknown }[];
-  try { tokens = new Lexer(source).tokenize() as unknown as { type: string; value: unknown }[]; } catch { return []; }
-  const defined = definedNames(source);
+  let tokens: { type: string; value: unknown; line?: number }[];
+  try { tokens = new Lexer(source).tokenize() as unknown as { type: string; value: unknown; line?: number }[]; } catch { return []; }
+  const defined = new Set([...definedNames(source), ...(sdevDefinedNames(source) ?? [])]);
   const builtins = builtinNames();
   const isWebProgram = /\b(?:page|endpage|html_\w+|open_\w+)\s*\(/.test(source);
   const out = new Set<string>();
@@ -112,7 +116,10 @@ export function unknownNames(source: string): string[] {
     if (prev && (String(prev.value) === '.' || prev.type === 'DOT')) continue;
     if (next && (next.type === 'COLON' || String(next.value) === ':') ) continue;
     if (/[^\x00-\x7F]/.test(name)) continue;
-    if (['end', 'else', 'self', 'this', 'me', 'super', 'to', 'with', 'each', 'of', 'from', 'by', 'step', 'more', 'less', 'essence', 'value'].includes(name)) continue;
+    if (['end', 'else', 'self', 'this', 'me', 'super', 'to', 'with', 'each', 'of', 'from', 'by', 'step', 'more', 'less', 'essence', 'value', 'capture', 'nothing'].includes(name)) continue;
+    if (name === 'ref' && next && next.type === TokenType.IDENTIFIER && next.line === t.line) continue;
+    if (name === 'call' && next && next.type === TokenType.IDENTIFIER && tokens[i + 2]?.type === TokenType.LPAREN) continue;
+    if (name === 'make' && (!next || (next.line ?? 0) > (t.line ?? 0) || next.value === 'with' || next.value === 'capture')) continue;
     if (defined.has(name) || builtins.has(name)) continue;
     if (isWebProgram && WEB_CONTEXT_ONLY_NAMES.has(name)) continue;
     out.add(name);
@@ -182,8 +189,8 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
     if (/\b(?:to|on|in|into|out)\s+(?:the\s+)?(?:terminal|console|screen|display|stdout)\b/i.test(codeOnly(line))) {
       reasons.push(`line ${i + 1}: names the output destination in words`);
     }
-    // "call greet with 2"
-    if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line)) {
+    // "call greet with 2" (but not v2 indirect call `call fn(x)`)
+    if (/^(?:call|run|invoke|execute|use)\s+[\p{L}\p{N}_]+/iu.test(line) && !/^call\s+[\p{L}_][\p{L}\p{N}_]*\s*\(/iu.test(line)) {
       reasons.push(`line ${i + 1}: a call written in words`);
     }
   }

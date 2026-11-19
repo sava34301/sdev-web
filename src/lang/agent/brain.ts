@@ -157,12 +157,13 @@ export const BRAIN_KEYS = {
 } as const;
 
 export function brainSettings(): BrainSettings {
+  const defaultOnline = typeof window !== 'undefined' ? '1' : '';
   return {
     localUrl: stored(BRAIN_KEYS.url) || env('SDEV_AGENT_LOCAL_URL') || DEFAULT_LOCAL_URL,
     localModel: stored(BRAIN_KEYS.model) || env('SDEV_AGENT_LOCAL_MODEL') || DEFAULT_LOCAL_MODEL,
     browser: (stored(BRAIN_KEYS.browser) ?? '1') !== '0',
     customLocal: !!(stored(BRAIN_KEYS.url) || env('SDEV_AGENT_LOCAL_URL')),
-    allowOnline: (stored(BRAIN_KEYS.online) ?? env('SDEV_AGENT_ONLINE') ?? '') === '1',
+    allowOnline: (stored(BRAIN_KEYS.online) ?? env('SDEV_AGENT_ONLINE') ?? defaultOnline) === '1',
   };
 }
 

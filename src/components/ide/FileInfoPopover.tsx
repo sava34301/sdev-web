@@ -12,6 +12,8 @@ interface Props {
   content: string;
   cloudId?: string | null;
   runtime: string;
+  /** understood / translated canonical source stored on the file, if any */
+  translatedSource?: string | null;
 }
 
 /** Library pins the open file actually imports: `use "@user/lib@1.0.0"`. */
@@ -37,7 +39,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
  * dialect and libraries the open file is written against, plus the checksum
  * the IDE stamps on save.
  */
-export function FileInfoPopover({ fileName, content, cloudId, runtime }: Props) {
+export function FileInfoPopover({ fileName, content, cloudId, runtime, translatedSource }: Props) {
   const { active } = useDialects();
 
   const info = useMemo(() => {
@@ -87,6 +89,11 @@ export function FileInfoPopover({ fileName, content, cloudId, runtime }: Props) 
             {info.existing?.ts ? new Date(info.existing.ts).toLocaleString() : 'on next save'}
           </Row>
           {info.existing?.origin && <Row label="Translated from">{info.existing.origin}</Row>}
+          {(translatedSource || info.existing?.translated) && (
+            <Row label="Translation">
+              <Badge variant="outline" className="text-[10px]">included in file</Badge>
+            </Row>
+          )}
           <Row label="Signature">
             {info.stale ? (
               <Badge variant="destructive" className="text-[10px]">stale — repaired on save</Badge>

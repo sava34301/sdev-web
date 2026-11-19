@@ -85,12 +85,16 @@ export async function compileWith(driver, userSrc, modules = null) {
   const wasmModule = await seedModule();
   const srcBytes = encoder.encode(userSrc);
   const dumped = [];
+  let compilerErr = null;
   let mem;
   let allocStr;
   const inst = await WebAssembly.instantiate(wasmModule, {
     env: {
       host_say_i32: (n) => dumped.push(n),
-      host_say_str: () => {},
+      host_say_str: (ptr, len) => {
+        const msg = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+        compilerErr = compilerErr ? `${compilerErr}\n${msg}` : msg;
+      },
       host_say_f64: () => {},
       host_fmath: (op, a, b) => [Math.sin, Math.cos, Math.tan, Math.exp, Math.log, (x, y) => Math.pow(x, y)][op](a, b),
       host_read_file: (ptr, len) => {
@@ -113,17 +117,28 @@ export async function compileWith(driver, userSrc, modules = null) {
   });
   mem = inst.exports.memory;
   allocStr = inst.exports.alloc_str;
+  if (driver.stringPool.length > 0x10000) throw new Error('driver string pool exceeds 64 KiB seed VM limit');
+  if (driver.bytecode.length > 0x14000) throw new Error('driver bytecode exceeds 80 KiB seed VM limit');
   new Uint8Array(mem.buffer).set(driver.stringPool, 0);
   const codeBase = inst.exports.code_base();
   new Uint8Array(mem.buffer).set(driver.bytecode, codeBase);
   inst.exports.set_prog_len(driver.bytecode.length);
   inst.exports.run();
 
+  if (compilerErr !== null) {
+    throw new Error(compilerErr);
+  }
+  if (dumped.length === 0) {
+    throw new Error('self-hosted compiler exited without emitting bytecode');
+  }
+
   let cursor = 0;
   const bcCount = dumped[cursor++] | 0;
+  if (bcCount < 0 || bcCount > 0x14000) throw new Error(`bytecode buffer overflow (${bcCount} bytes, max 81920)`);
   const bytecode = new Uint8Array(bcCount);
   for (let i = 0; i < bcCount; i++) bytecode[i] = dumped[cursor++] & 0xff;
   const poolCount = dumped[cursor++] | 0;
+  if (poolCount < 0 || poolCount > 0x10000) throw new Error(`string pool overflow (${poolCount} bytes, max 65536)`);
   const stringPool = new Uint8Array(poolCount);
   for (let i = 0; i < poolCount; i++) stringPool[i] = dumped[cursor++] & 0xff;
   return { bytecode, stringPool };

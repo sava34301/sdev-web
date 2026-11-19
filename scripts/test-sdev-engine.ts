@@ -215,6 +215,24 @@ ok('strings untouched', canon.includes('"five == "'));
   // 7. Runtime errors reported cleanly
   const evDivZero = sdevEvalProgram('say 10 / 0');
   ok('sdevEvalProgram: division by zero error', evDivZero !== null && !evDivZero.ok && !!evDivZero.error, JSON.stringify(evDivZero));
+
+  // 8. Canonical v2 constructs (make/capture, ref/call, attempt/rescue, v2 builtins) validate and stay untouched
+  const { parses, unknownNames } = await import('../src/lang/agent/sense');
+  const v2CanonicalSamples = [
+    'set n to 10\nset add to make with a capture n\n  return a + n\nend\nsay call add(5)',
+    'to twice with n\n  return n * 2\nend\nset f to ref twice\nsay call f(21)',
+    'attempt\n  say "a"\n  throw "boom"\nrescue e\n  say e\nend',
+    'set xs to mklist(4)\nsay f2i(num("42.9")) + ord("Z", 0)',
+  ];
+  for (const v2Src of v2CanonicalSamples) {
+    const label = v2Src.split('\n')[0];
+    ok(`v2 canonical parses + zero unknownNames + untouched: ${label}`,
+      parses(v2Src) &&
+      unknownNames(v2Src).length === 0 &&
+      !!sdevValidateSyntax(v2Src)?.valid &&
+      understand(v2Src).source === v2Src,
+      JSON.stringify({ parses: parses(v2Src), unknown: unknownNames(v2Src), valid: sdevValidateSyntax(v2Src) }));
+  }
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

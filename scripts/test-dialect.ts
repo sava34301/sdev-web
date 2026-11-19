@@ -90,6 +90,18 @@ check('tampered signature stale', isSignatureStale(tampered), true);
 check('repaired signature fresh', isSignatureStale(repairSignature(tampered)), false);
 check('signature line is a comment', signed.startsWith('#'), true);
 
+// signature with embedded understander/translator canonical output
+const signedWithTranslated = writeSignature('говори "здравей"\n', {
+  rt: 'v1',
+  dialect: null,
+  dialectVersion: null,
+  libs: [],
+  origin: null,
+  translated: 'say "здравей"\n',
+});
+check('signature keeps translated field', readSignature(signedWithTranslated)?.translated, 'say "здравей"\n');
+check('signature body stays user-written', stripSignature(signedWithTranslated), 'говори "здравей"\n');
+
 if (failures.length) {
   console.error(`\n${failures.length} FAILED:\n` + failures.join('\n\n'));
   process.exit(1);
