@@ -5,13 +5,22 @@ This directory is the **desktop** backend: it compiles SDEV to real x86-64 assem
 
 ## Files
 
-- `codegen_x64.sdev` — SDEV-authored x86-64 GAS assembly codegen and feature catalogue.
+- `codegen_x64.sdev` — SDEV-authored x86-64 GAS assembly codegen (`x64_compile_bytecode`) and feature catalogue.
 - `runtime_x64.sdev` — SDEV-authored System V AMD64 assembly runtime generator (`_start`, `sdev_say_int`, `sdev_say_str`, syscalls).
 - `link.sdev` — SDEV-authored native ELF assembler and linker driver.
+- `build.sdev` — SDEV-authored standalone native build driver (`sdev-vm native <prog.sdev> -o <out>`).
+- `pe_x64.sdev` — SDEV-authored Windows PE/COFF (`.exe`) emitter.
 
-The host bridge and pre-built asm runtime live under `src/lang-bridge/native/` and `bin/runtime.s`.
+The host bridge, zero-host VM (`sdev-vm.c`), and pre-built asm runtime live under `src/lang-bridge/native/` and `bin/runtime.s`. See `docs/ZERO_HOST.md` for the full zero-host architecture.
 
-## Usage (CLI)
+## Usage (Zero-Host CLI)
+
+```bash
+./bin/sdev-vm native prog.sdev -o prog
+./prog
+```
+
+## Usage (Node.js Bridge)
 
 ```bash
 node scripts/sdev-native.mjs prog.sdev -o prog

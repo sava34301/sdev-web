@@ -28,20 +28,20 @@ const LOCAL_SLOTS = 32;
 // and `+` can pick addq vs sdev_concat.
 // ---------------------------------------------------------------------------
 
-const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'join',
+const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'substr', 'join',
   // Milestone 6g — host I/O
-  'read_file', 'input', 'env']);
-const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'has', 'min', 'max', 'int',
+  'read_file', 'input', 'env', 'http_get']);
+const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'find', 'has', 'min', 'max', 'int',
   'write_file', 'file_exists', 'append_file', 'now_ms',
   // Milestone 6i — sequence + numeric library
   'sum', 'f2i', 'fbyte']);
 const LIST_BUILTINS = new Set(['list_new', 'mklist', 'split', 'keys', 'values', 'args', 'range']);
 const TOME_BUILTINS = new Set(['tome_new', 'tset']);
 // Milestone 6e — builtins that yield an IEEE-754 double (raw bits in a word).
-const FLOAT_BUILTINS = new Set(['sqrt', 'floor', 'ceil', 'round', 'sin', 'cos',
-  'exp', 'log', 'pow', 'random', 'num',
+const FLOAT_BUILTINS = new Set(['sqrt', 'fsqrt', 'floor', 'ffloor', 'ceil', 'fceil', 'round', 'fround',
+  'sin', 'fsin', 'cos', 'fcos', 'exp', 'fexp', 'log', 'flog', 'pow', 'fpow', 'random', 'num',
   // Milestone 6i
-  'tan', 'fabs', 'fneg', 'i2f']);
+  'tan', 'ftan', 'fabs', 'fneg', 'i2f']);
 
 
 // The 64-bit pattern of a double, as an unsigned decimal for `movabsq`.
@@ -72,6 +72,9 @@ function typeOf(e, tys, fnTypes) {
       const tt = typeOf(e.target, tys, fnTypes);
       if (tt === 'tome') return tys.get(tomeValKey(e)) || 'int';
       const base = e.target.k === 'ident' ? e.target.name : null;
+      if (base && e.idx && e.idx.k === 'num' && e.idx.v === 0 && tys.has(`@elem0:${base}`)) {
+        return tys.get(`@elem0:${base}`);
+      }
       return (base && tys.get(`@elem:${base}`)) || 'int';
     }
     case 'un': return e.op === '-' ? typeOf(e.x, tys, fnTypes) : 'int';
@@ -83,6 +86,7 @@ function typeOf(e, tys, fnTypes) {
           (typeOf(e.l, tys, fnTypes) === 'float' || typeOf(e.r, tys, fnTypes) === 'float')) return 'float';
       return 'int';
     case 'call':
+      if (e.name === 'random' && e.args && e.args.length === 1) return 'int';
       if (FLOAT_BUILTINS.has(e.name)) return 'float';
       if (STR_BUILTINS.has(e.name)) return 'str';
       if (LIST_BUILTINS.has(e.name)) return 'list';
@@ -133,7 +137,9 @@ function tomeValKey(e) {
 // evaluated with the types known for its own assignments. Params are ints.
 function inferFnTypes(funcs, mainBody = [], classes = null) {
   const fnTypes = new Map();
+  const globalTys = new Map();
   fnTypes._classes = classes;
+  fnTypes._globals = globalTys;
   const byName = new Map(funcs.map(f => [f.name, f]));
 
   // Milestone 6e: parameter kinds are inferred from call sites, so a function
@@ -157,18 +163,62 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
       else if (v && typeof v === 'object') noteCalls(v, tys);
     }
   };
-  for (let pass = 0; pass < 3; pass++) {
-    for (const f of [...funcs, { name: null, params: [], body: mainBody }]) {
-      const tys = new Map();
+  for (let pass = 0; pass < 20; pass++) {
+    const beforeFn = fnTypes.size;
+    const beforeGlob = globalTys.size;
+    for (const f of [{ name: null, params: [], body: mainBody }, ...funcs]) {
+      const tys = new Map(globalTys);
+      const localNames = new Set(f.params || []);
+      if (f.name) {
+        const tmpLoc = new Map();
+        (f.params || []).forEach((p, i) => tmpLoc.set(p, i));
+        collectSets(f.body, tmpLoc);
+        for (const k of tmpLoc.keys()) localNames.add(k);
+      }
       for (const [i, p] of (f.params || []).entries()) {
         const t = f.name && fnTypes.get(`@param:${f.name}:${i}`);
         if (t) tys.set(p, t);
       }
-      let t = 'int';
+      let t = (f.name && fnTypes.get(f.name)) || 'int';
       const walk = (body) => {
         for (const s of body) {
           noteCalls(s, tys);
-          if (s.k === 'set') tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+          if (s.k === 'set') {
+            const vt = typeOf(s.expr, tys, fnTypes);
+            tys.set(s.name, vt);
+            if (!f.name || !localNames.has(s.name)) {
+              if (vt !== 'int') globalTys.set(s.name, vt);
+            }
+            if (vt === 'list') {
+              const et = elemTypeOf(s.expr, tys, fnTypes);
+              if (et !== 'int') {
+                tys.set(`@elem:${s.name}`, et);
+                if (!f.name || !localNames.has(s.name)) globalTys.set(`@elem:${s.name}`, et);
+              }
+            }
+          }
+          if (s.k === 'setIndex') {
+            const target = { k: 'ident', name: s.name };
+            const isTome = typeOf(target, tys, fnTypes) === 'tome';
+            const vt = typeOf(s.expr, tys, fnTypes);
+            if (isTome) {
+              if (vt !== 'int') {
+                const tk = tomeValKey({ target, idx: s.idx });
+                tys.set(tk, vt);
+                if (!f.name || !localNames.has(s.name)) globalTys.set(tk, vt);
+              }
+            } else if (s.idx && s.idx.k === 'num' && s.idx.v === 0) {
+              tys.set(`@elem0:${s.name}`, vt);
+              if (!f.name || !localNames.has(s.name)) globalTys.set(`@elem0:${s.name}`, vt);
+              if (vt !== 'int' && !tys.has(`@elem:${s.name}`)) {
+                tys.set(`@elem:${s.name}`, vt);
+                if (!f.name || !localNames.has(s.name)) globalTys.set(`@elem:${s.name}`, vt);
+              }
+            } else if (vt !== 'int') {
+              tys.set(`@elem:${s.name}`, vt);
+              if (!f.name || !localNames.has(s.name)) globalTys.set(`@elem:${s.name}`, vt);
+            }
+          }
           // Milestone 6f: remember the kind written into each field name, so
           // `say p.name` picks say_str.
           if (s.k === 'setField') {
@@ -191,8 +241,9 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
       };
 
       walk(f.body);
-      if (f.name) fnTypes.set(f.name, t);
+      if (f.name && t !== 'int') fnTypes.set(f.name, t);
     }
+    if (fnTypes.size === beforeFn && globalTys.size === beforeGlob && pass >= 2) break;
   }
   return fnTypes;
 }
@@ -578,13 +629,16 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     // ---- Milestone 6e: floats ----
     case 'sqrt': case 'floor': case 'ceil': case 'round':
-    case 'sin': case 'cos': case 'exp': case 'log': {
+    case 'sin': case 'cos': case 'exp': case 'log':
+    case 'fsqrt': case 'ffloor': case 'fceil': case 'fround':
+    case 'fsin': case 'fcos': case 'fexp': case 'flog': {
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
       em.L('    movq %rax, %rdi');
-      em.L(`    call sdev_f${n}`);
+      em.L(`    call sdev_${n.startsWith('f') && n !== 'floor' ? n : 'f' + n}`);
       return true;
     }
-    case 'pow': {
+    case 'pow':
+    case 'fpow': {
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
       em.L('    pushq %rax');
       emitFloatExpr(a[1], em, locals, tys, fnTypes);
@@ -594,6 +648,17 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     }
     case 'random':
+      if (a.length === 1) {
+        emitExpr(a[0], em, locals, tys, fnTypes);
+        em.L('    pushq %rax');
+        em.L('    call sdev_random');
+        em.L('    movq %rax, %xmm0');
+        em.L('    popq %rcx');
+        em.L('    cvtsi2sdq %rcx, %xmm1');
+        em.L('    mulsd %xmm1, %xmm0');
+        em.L('    cvttsd2siq %xmm0, %rax');
+        return true;
+      }
       em.L('    call sdev_random');
       return true;
     // ---- Milestone 6i: sequence + numeric library ----
@@ -610,6 +675,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L('    call sdev_i2f');
       return true;
     case 'tan':
+    case 'ftan':
     case 'fabs':
     case 'fneg':
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
@@ -631,7 +697,15 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L('    movq %rax, %rdi');
       em.L('    call sdev_num');
       return true;
-    case 'int': {                   // int(f) — truncate a float toward zero
+    case 'int': {                   // int(f) or int(s) — truncate toward zero
+      if (typeOf(a[0], tys, fnTypes) === 'str') {
+        emitStrExpr(a[0], em, locals, tys, fnTypes);
+        em.L('    movq %rax, %rdi');
+        em.L('    call sdev_num');
+        em.L('    movq %rax, %xmm0');
+        em.L('    cvttsd2siq %xmm0, %rax');
+        return true;
+      }
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
       em.L('    movq %rax, %xmm0');
       em.L('    cvttsd2si %xmm0, %rax');
@@ -657,13 +731,14 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     case 'contains':
     case 'index_of':
+    case 'find':
     case 'split': {
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       em.L('    pushq %rax');
       emitStrExpr(a[1], em, locals, tys, fnTypes);
       em.L('    movq %rax, %rsi');
       em.L('    popq %rdi');
-      em.L(`    call sdev_${n === 'index_of' ? 'index_of' : n}`);
+      em.L(`    call sdev_${n === 'index_of' || n === 'find' ? 'index_of' : n}`);
       return true;
     }
     case 'join': {
@@ -687,7 +762,8 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L('    call sdev_replace');
       return true;
     }
-    case 'substring': {
+    case 'substring':
+    case 'substr': {
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       em.L('    pushq %rax');
       emitExpr(a[1], em, locals, tys, fnTypes);
@@ -697,6 +773,11 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L('    popq %rsi');
       em.L('    popq %rdi');
       em.L('    call sdev_substr');
+      return true;
+    }
+    case 'http_get': {
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L('    call sdev_empty');
       return true;
     }
     // ---- Milestone 6d: integer math ----
@@ -807,8 +888,13 @@ function emitStmt(s, em, locals, ctx) {
     case 'setIndex': {
       const target = { k: 'ident', name: s.name };
       const isTome = typeOf(target, tys, fnTypes) === 'tome';
+      const valTy = typeOf(s.expr, tys, fnTypes);
       if (isTome) {
-        tys.set(tomeValKey({ target, idx: s.idx }), typeOf(s.expr, tys, fnTypes));
+        tys.set(tomeValKey({ target, idx: s.idx }), valTy);
+      } else if (s.idx && s.idx.k === 'num' && s.idx.v === 0) {
+        tys.set(`@elem0:${s.name}`, valTy);
+      } else if (valTy !== 'int') {
+        tys.set(`@elem:${s.name}`, valTy);
       }
       emitExpr(target, em, locals, tys, fnTypes);
       em.L('    pushq %rax');
@@ -1044,26 +1130,41 @@ export function generateAsm(source, opts = {}) {
   // Function bodies
   for (const f of funcs) {
     const info = em.functions.get(f.name);
-    em.L(`${info.label}:`);
-    em.L('    pushq %rbp');
-    em.L('    movq %rsp, %rbp');
-    em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
-    // Params: caller pushed right→left, then `call` pushed return addr.
-    // So arg[0] is at 16(%rbp), arg[1] at 24(%rbp), ...
     const locals = new Map();
     f.params.forEach((p, i) => locals.set(p, i));
     collectSets(f.body, locals);
+    const frameSlots = Math.max(LOCAL_SLOTS, ((locals.size + 1) & ~1));
+    em.L(`${info.label}:`);
+    em.L('    pushq %rbp');
+    em.L('    movq %rsp, %rbp');
+    em.L(`    subq $${8 * frameSlots}, %rsp`);
+    // Zero-initialize all local slots so any read-before-write local is 0,
+    // and initialize string-typed non-param locals to an empty string literal.
+    const emptyLbl = em.strLabel('');
+    em.L('    xorq %rax, %rax');
+    for (let si = f.params.length; si < locals.size; si++) {
+      em.L(`    movq %rax, -${8 * (si + 1)}(%rbp)`);
+    }
+    // Params: caller pushed right→left, then `call` pushed return addr.
+    // So arg[0] is at 16(%rbp), arg[1] at 24(%rbp), ...
     // Copy params from stack into local slots.
     f.params.forEach((_p, i) => {
       em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
     });
     const epilogue = em.gensym('ret');
-    const ptys = new Map();
+    const ptys = new Map(em.fnTypes._globals || []);
     f.params.forEach((p, i) => {
       const t = em.fnTypes.get(`@param:${f.name}:${i}`);
       if (t) ptys.set(p, t);
+      else ptys.delete(p);
     });
+    for (const [lname, slot] of locals.entries()) {
+      if (slot >= f.params.length && ptys.get(lname) === 'str') {
+        em.L(`    leaq ${emptyLbl}(%rip), %rax`);
+        em.L(`    movq %rax, -${8 * (slot + 1)}(%rbp)`);
+      }
+    }
     const ctx = { epilogue, tys: ptys, fnTypes: em.fnTypes };
     f.body.forEach(s => emitStmt(s, em, locals, ctx));
     // Implicit return 0
@@ -1080,7 +1181,7 @@ export function generateAsm(source, opts = {}) {
   em.L('    movq %rsp, %rbp');
   em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
   const mainLocals = null; // globals only
-  const mainCtx = { epilogue: '.Lmain_ret', tys: new Map(), fnTypes: em.fnTypes };
+  const mainCtx = { epilogue: '.Lmain_ret', tys: new Map(em.fnTypes._globals || []), fnTypes: em.fnTypes };
   main.forEach(s => emitStmt(s, em, mainLocals, mainCtx));
   em.L('.Lmain_ret:');
   em.L('    xorq %rax, %rax');
@@ -1093,14 +1194,15 @@ export function generateAsm(source, opts = {}) {
   // the call site loaded just before `call *code`.
   for (let li = 0; li < em.lambdas.length; li++) {
     const lam = em.lambdas[li];
-    em.L(`${lam.label}:`);
-    em.L('    pushq %rbp');
-    em.L('    movq %rsp, %rbp');
-    em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
     const locals = new Map();
     lam.params.forEach((p, i) => locals.set(p, i));
     lam.caps.forEach((c) => { if (!locals.has(c)) locals.set(c, locals.size); });
     collectSets(lam.body, locals);
+    const frameSlots = Math.max(LOCAL_SLOTS, ((locals.size + 1) & ~1));
+    em.L(`${lam.label}:`);
+    em.L('    pushq %rbp');
+    em.L('    movq %rsp, %rbp');
+    em.L(`    subq $${8 * frameSlots}, %rsp`);
     lam.params.forEach((_p, i) => {
       em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);

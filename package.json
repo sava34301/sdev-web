@@ -37,6 +37,7 @@
     "test:self-lexer": "node bin/sdevhost.mjs scripts/test-self-lexer.sdev",
     "test:self-parser": "node bin/sdevhost.mjs scripts/test-self-parser.sdev",
     "test:self-codegen": "node bin/sdevhost.mjs scripts/test-self-codegen.sdev",
+    "test:self-v1": "node bin/sdevhost.mjs scripts/test-self-v1-compiler.sdev",
     "test:fixed-point": "node bin/sdevhost.mjs scripts/test-shim-fixed-point.sdev",
     "test:agent": "node scripts/run-ts.mjs scripts/test-agent.ts",
     "test:understander-docs": "node scripts/run-ts.mjs scripts/test-understander-docs.ts",

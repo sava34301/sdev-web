@@ -31,7 +31,7 @@ _start:
     movq %rcx, sdev_envp(%rip)
     call sdev_main
     movq $60, %rax          # sys_exit
-    xorq %rdi, %rdi
+    movq sdev_exit_code(%rip), %rdi
     syscall
 
 # ---- sdev_say_str(struct { i64 len; char bytes[len]; } *) ----
@@ -115,9 +115,9 @@ sdev_alloc:
     pushq %rdi
     movq $9, %rax                   # sys_mmap
     xorq %rdi, %rdi                 # addr = NULL
-    movq $67108864, %rsi            # 64 MiB
+    movq $536870912, %rsi           # 512 MiB
     movq $3, %rdx                   # PROT_READ|PROT_WRITE
-    movq $34, %r10                  # MAP_PRIVATE|MAP_ANONYMOUS
+    movq $16418, %r10               # MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE
     movq $-1, %r8
     xorq %r9, %r9
     syscall
@@ -133,6 +133,14 @@ sdev_alloc:
 # ---- sdev_concat(ptr a, ptr b) -> ptr ----
     .globl sdev_concat
 sdev_concat:
+    testq %rdi, %rdi
+    jnz .Lcat_rdi_ok
+    leaq .Lstr_empty(%rip), %rdi
+.Lcat_rdi_ok:
+    testq %rsi, %rsi
+    jnz .Lcat_rsi_ok
+    leaq .Lstr_empty(%rip), %rsi
+.Lcat_rsi_ok:
     pushq %rbp
     movq %rsp, %rbp
     pushq %rbx
@@ -273,6 +281,14 @@ sdev_empty:
 # ---- sdev_str_eq(a, b) -> 0/1 ----
     .globl sdev_str_eq
 sdev_str_eq:
+    testq %rdi, %rdi
+    jnz .Lseq_rdi_ok
+    leaq .Lstr_empty(%rip), %rdi
+.Lseq_rdi_ok:
+    testq %rsi, %rsi
+    jnz .Lseq_rsi_ok
+    leaq .Lstr_empty(%rip), %rsi
+.Lseq_rsi_ok:
     movq (%rdi), %rcx
     cmpq (%rsi), %rcx
     jne 2f
@@ -295,6 +311,14 @@ sdev_str_eq:
 # ---- sdev_index_of(hay, needle) -> index or -1 ----
     .globl sdev_index_of
 sdev_index_of:
+    testq %rdi, %rdi
+    jnz .Lidx_rdi_ok
+    leaq .Lstr_empty(%rip), %rdi
+.Lidx_rdi_ok:
+    testq %rsi, %rsi
+    jnz .Lidx_rsi_ok
+    leaq .Lstr_empty(%rip), %rsi
+.Lidx_rsi_ok:
     pushq %rbx
     movq (%rdi), %r10
     movq (%rsi), %r11
@@ -339,6 +363,10 @@ sdev_contains:
 # ---- sdev_substr(s, start, len) -> ptr ----
     .globl sdev_substr
 sdev_substr:
+    testq %rdi, %rdi
+    jnz .Lsub_rdi_ok
+    leaq .Lstr_empty(%rip), %rdi
+.Lsub_rdi_ok:
     pushq %rbp
     movq %rsp, %rbp
     pushq %rbx
@@ -1212,8 +1240,250 @@ sdev_read_file:
     pushq %r12
     pushq %r13
     pushq %r14
+    movq %rdi, %r12
+    # Check for "<stdin>"
+    leaq .Lstr_stdin(%rip), %rsi
+    call sdev_str_eq
+    testq %rax, %rax
+    jnz .Lrf_stdin
+    # Check for "sdev:args"
+    movq %r12, %rdi
+    leaq .Lstr_sdev_args(%rip), %rsi
+    call sdev_str_eq
+    testq %rax, %rax
+    jnz .Lrf_sdev_args
+    # Check for "sdev:exec:" prefix
+    movq %r12, %rdi
+    leaq .Lstr_sdev_exec(%rip), %rsi
+    call sdev_index_of
+    testq %rax, %rax
+    jz .Lrf_sdev_exec
+    # Check for "sdev:ls:" prefix
+    movq %r12, %rdi
+    leaq .Lstr_sdev_ls(%rip), %rsi
+    call sdev_index_of
+    testq %rax, %rax
+    jz .Lrf_sdev_ls
+    movq %r12, %rdi
     call sdev_cstr
     movq %rax, %rbx
+    jmp .Lrf_open
+
+.Lrf_sdev_args:
+    call sdev_args
+    movq %rax, %rdi
+    leaq .Lstr_nl(%rip), %rsi
+    call sdev_join
+    jmp .Lrf_ret
+
+.Lrf_sdev_exec:
+    movq %r12, %rdi
+    movq $10, %rsi
+    movq (%r12), %rdx
+    subq $10, %rdx
+    call sdev_substr
+    movq %rax, %rdi
+    call sdev_cstr
+    movq %rax, %rbx                 # cmd_cstr
+    subq $48, %rsp                  # [0..7]=pipefds, [8..15]=wstatus, [16..47]=argv[4]
+    leaq (%rsp), %rdi
+    movq $22, %rax                  # sys_pipe
+    syscall
+    testq %rax, %rax
+    js .Lrf_exec_fail
+    movq $57, %rax                  # sys_fork
+    syscall
+    testq %rax, %rax
+    js .Lrf_exec_fail
+    jz .Lrf_exec_child
+    # Parent: %rax = child pid
+    movq %rax, %r12
+    movl 4(%rsp), %edi              # close write_fd
+    movq $3, %rax
+    syscall
+    movq $1048576, %r13             # 1 MiB output buffer
+    leaq 8(%r13), %rdi
+    call sdev_alloc
+    movq %rax, %r14                 # out_str
+    xorq %rbx, %rbx                 # bytes read
+.Lrf_exec_read:
+    cmpq %r13, %rbx
+    jge .Lrf_exec_read_done
+    movq $0, %rax                   # sys_read(read_fd, ...)
+    movl (%rsp), %edi
+    leaq 8(%r14,%rbx,1), %rsi
+    movq %r13, %rdx
+    subq %rbx, %rdx
+    syscall
+    testq %rax, %rax
+    jle .Lrf_exec_read_done
+    addq %rax, %rbx
+    jmp .Lrf_exec_read
+.Lrf_exec_read_done:
+    movq %rbx, (%r14)
+    movl (%rsp), %edi               # close read_fd
+    movq $3, %rax
+    syscall
+    movl $0, 8(%rsp)
+    movq $61, %rax                  # sys_wait4(pid, &wstatus, 0, NULL)
+    movq %r12, %rdi
+    leaq 8(%rsp), %rsi
+    xorq %rdx, %rdx
+    xorq %r10, %r10
+    syscall
+    movl 8(%rsp), %edi
+    shrl $8, %edi
+    andl $255, %edi
+    addq $48, %rsp
+    call sdev_str_int
+    movq %rax, %rdi
+    leaq .Lstr_nl(%rip), %rsi
+    call sdev_concat
+    movq %rax, %rdi
+    movq %r14, %rsi
+    call sdev_concat
+    jmp .Lrf_ret
+
+.Lrf_exec_child:
+    movl (%rsp), %edi               # close read_fd
+    movq $3, %rax
+    syscall
+    movl 4(%rsp), %edi              # dup2(write_fd, 1)
+    movq $1, %rsi
+    movq $33, %rax
+    syscall
+    movl 4(%rsp), %edi              # dup2(write_fd, 2)
+    movq $2, %rsi
+    movq $33, %rax
+    syscall
+    movl 4(%rsp), %edi              # close write_fd
+    movq $3, %rax
+    syscall
+    leaq .Lcstr_bin_sh(%rip), %rax
+    movq %rax, 16(%rsp)
+    leaq .Lcstr_dash_c(%rip), %rax
+    movq %rax, 24(%rsp)
+    movq %rbx, 32(%rsp)
+    movq $0, 40(%rsp)
+    movq $59, %rax                  # sys_execve("/bin/sh", argv, envp)
+    leaq .Lcstr_bin_sh(%rip), %rdi
+    leaq 16(%rsp), %rsi
+    movq sdev_envp(%rip), %rdx
+    syscall
+    movq $60, %rax                  # sys_exit(127)
+    movq $127, %rdi
+    syscall
+
+.Lrf_exec_fail:
+    addq $48, %rsp
+    jmp .Lrf_fail
+
+.Lrf_sdev_ls:
+    movq %r12, %rdi
+    movq $8, %rsi
+    movq (%r12), %rdx
+    subq $8, %rdx
+    call sdev_substr
+    movq %rax, %rdi
+    call sdev_cstr
+    movq %rax, %rdi
+    movq $2, %rax                   # sys_open(dir, O_RDONLY, 0)
+    xorq %rsi, %rsi
+    xorq %rdx, %rdx
+    syscall
+    testq %rax, %rax
+    js .Lrf_fail
+    movq %rax, %r12                 # dir fd
+    movq $32768, %rdi
+    call sdev_alloc
+    movq %rax, %r13                 # dirent buffer
+    call sdev_empty
+    movq %rax, %r14                 # accumulated result string
+.Lrf_ls_read:
+    movq $217, %rax                 # sys_getdents64(fd, buf, 32768)
+    movq %r12, %rdi
+    movq %r13, %rsi
+    movq $32768, %rdx
+    syscall
+    testq %rax, %rax
+    jle .Lrf_ls_done
+    movq %rax, %rbx                 # nread
+    pushq %r15
+    xorq %r15, %r15                 # offset in buffer
+.Lrf_ls_entry:
+    cmpq %rbx, %r15
+    jge .Lrf_ls_next_batch
+    leaq 19(%r13,%r15,1), %rdi      # d_name
+    # Skip "." and ".."
+    cmpb $46, (%rdi)
+    jne .Lrf_ls_keep
+    cmpb $0, 1(%rdi)
+    je .Lrf_ls_step
+    cmpb $46, 1(%rdi)
+    jne .Lrf_ls_keep
+    cmpb $0, 2(%rdi)
+    je .Lrf_ls_step
+.Lrf_ls_keep:
+    call sdev_from_cstr
+    pushq %rax
+    cmpq $0, (%r14)
+    je .Lrf_ls_first
+    movq %r14, %rdi
+    leaq .Lstr_nl(%rip), %rsi
+    call sdev_concat
+    movq %rax, %r14
+.Lrf_ls_first:
+    movq %r14, %rdi
+    popq %rsi
+    call sdev_concat
+    movq %rax, %r14
+.Lrf_ls_step:
+    movzwq 16(%r13,%r15,1), %rax    # d_reclen
+    addq %rax, %r15
+    jmp .Lrf_ls_entry
+.Lrf_ls_next_batch:
+    popq %r15
+    jmp .Lrf_ls_read
+.Lrf_ls_done:
+    movq $3, %rax                   # sys_close(dir_fd)
+    movq %r12, %rdi
+    syscall
+    movq %r14, %rax
+    jmp .Lrf_ret
+
+.Lrf_stdin:
+    # If argv[1] was provided, read that file; otherwise read fd 0 until EOF.
+    cmpq $2, sdev_argc(%rip)
+    jl .Lrf_stdin_fd0
+    movq sdev_argv(%rip), %rax
+    movq 8(%rax), %rbx              # argv[1] is already a NUL-terminated C string
+    jmp .Lrf_open
+
+.Lrf_stdin_fd0:
+    movq $4194304, %r13             # 4 MiB buffer for stdin stream
+    leaq 8(%r13), %rdi
+    call sdev_alloc
+    movq %rax, %rbx
+    xorq %r14, %r14
+.Lrf_stdin_loop:
+    cmpq %r13, %r14
+    jge .Lrf_stdin_done
+    movq $0, %rax                   # sys_read(0, ...)
+    xorq %rdi, %rdi
+    leaq 8(%rbx,%r14,1), %rsi
+    movq %r13, %rdx
+    subq %r14, %rdx
+    syscall
+    testq %rax, %rax
+    jle .Lrf_stdin_done
+    addq %rax, %r14
+    jmp .Lrf_stdin_loop
+.Lrf_stdin_done:
+    movq %r14, (%rbx)
+    movq %rbx, %rax
+    jmp .Lrf_ret
+
+.Lrf_open:
     movq $2, %rax                   # sys_open
     movq %rbx, %rdi
     xorq %rsi, %rsi                 # O_RDONLY
@@ -1280,9 +1550,66 @@ sdev_write_file:
     pushq %r12
     pushq %r13
     pushq %r14
+    movq %rdi, %r12                 # path
     movq %rsi, %r13                 # data
+    # Check for "sdev:err"
+    leaq .Lstr_sdev_err(%rip), %rsi
+    call sdev_str_eq
+    testq %rax, %rax
+    jnz .Lwf_sdev_err
+    # Check for "sdev:exit:" prefix
+    movq %r12, %rdi
+    leaq .Lstr_sdev_exit(%rip), %rsi
+    call sdev_index_of
+    testq %rax, %rax
+    jz .Lwf_sdev_exit
+    # Check for "sdev:append:" prefix
+    movq %r12, %rdi
+    leaq .Lstr_sdev_append(%rip), %rsi
+    call sdev_index_of
+    testq %rax, %rax
+    jz .Lwf_sdev_append
+    movq %r12, %rdi
     call sdev_cstr                  # %rdi = path
     movq %rax, %rbx
+    jmp .Lwf_open
+
+.Lwf_sdev_append:
+    movq %r12, %rdi
+    movq $12, %rsi
+    movq (%r12), %rdx
+    subq $12, %rdx
+    call sdev_substr
+    movq %rax, %rdi
+    movq %r13, %rsi
+    call sdev_append_file
+    xorq %rax, %rax
+    jmp .Lwf_ret
+
+.Lwf_sdev_err:
+    movq $1, %rax                   # sys_write(2, data+8, data.len)
+    movq $2, %rdi
+    leaq 8(%r13), %rsi
+    movq (%r13), %rdx
+    syscall
+    xorq %rax, %rax
+    jmp .Lwf_ret
+
+.Lwf_sdev_exit:
+    movq %r12, %rdi
+    movq $10, %rsi
+    movq (%r12), %rdx
+    subq $10, %rdx
+    call sdev_substr
+    movq %rax, %rdi
+    call sdev_num
+    movq %rax, %xmm0
+    cvttsd2siq %xmm0, %rax
+    movq %rax, sdev_exit_code(%rip)
+    xorq %rax, %rax
+    jmp .Lwf_ret
+
+.Lwf_open:
     movq $2, %rax                   # sys_open
     movq %rbx, %rdi
     movq $577, %rsi                 # O_WRONLY|O_CREAT|O_TRUNC
@@ -1715,11 +2042,55 @@ sdev_hstack:
     .space 1536
 sdev_rng:
     .long 0
+    .align 8
+sdev_exit_code:
+    .quad 0
 
     .section .rodata
 nl: .byte 10
 .Luncaught:
     .quad 10
     .ascii "uncaught: "
+    .byte 0
+.Lstr_stdin:
+    .quad 7
+    .ascii "<stdin>"
+    .byte 0
+.Lstr_sdev_args:
+    .quad 9
+    .ascii "sdev:args"
+    .byte 0
+.Lstr_sdev_err:
+    .quad 8
+    .ascii "sdev:err"
+    .byte 0
+.Lstr_sdev_exit:
+    .quad 10
+    .ascii "sdev:exit:"
+    .byte 0
+.Lstr_sdev_append:
+    .quad 12
+    .ascii "sdev:append:"
+    .byte 0
+.Lstr_sdev_exec:
+    .quad 10
+    .ascii "sdev:exec:"
+    .byte 0
+.Lstr_sdev_ls:
+    .quad 8
+    .ascii "sdev:ls:"
+    .byte 0
+.Lcstr_bin_sh:
+    .ascii "/bin/sh"
+    .byte 0
+.Lcstr_dash_c:
+    .ascii "-c"
+    .byte 0
+.Lstr_nl:
+    .quad 1
+    .byte 10
+    .byte 0
+.Lstr_empty:
+    .quad 0
     .byte 0
 

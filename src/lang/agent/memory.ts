@@ -1,9 +1,8 @@
 /**
- * Agent memory — what the agent has learned from the programs this user
- * already ran. It is plain JSON so it can live in localStorage (browser),
- * ~/.sdev/agent-memory.json (CLI) or be shipped into a dialect.
+ * Agent memory store + thin bridge to `lang/agent/memory.sdev`.
  */
 import type { Intent } from './vocabulary';
+import { sdevMemoryLearnNames, sdevMemoryUnderstandKey } from './sdev-engine';
 
 export interface AgentMemory {
   version: 1;
@@ -85,6 +84,7 @@ export function saveMemory(memory: AgentMemory): void {
 }
 
 const MAX_LINES = 500;
+const MAX_RESULTS = 100;
 
 export function rememberWord(memory: AgentMemory, word: string, intent: Intent): void {
   const key = word.toLowerCase();
@@ -113,11 +113,9 @@ export function rememberLine(memory: AgentMemory, original: string, canonical: s
 /** Learn the shape of a program the user ran successfully. */
 export function learnFromProgram(memory: AgentMemory, canonical: string): void {
   memory.programs += 1;
-  const re = /^\s*set\s+([\p{L}\p{N}_]+)\s+to\b/gmu;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(canonical))) rememberName(memory, m[1]);
-  const fn = /^\s*to\s+([\p{L}\p{N}_]+)\b/gmu;
-  while ((m = fn.exec(canonical))) rememberName(memory, m[1]);
+  for (const name of sdevMemoryLearnNames(canonical) ?? []) {
+    rememberName(memory, name);
+  }
 }
 
 export function memoryWordMap(memory: AgentMemory): Map<string, Intent> {
@@ -130,17 +128,8 @@ export function memoryWordMap(memory: AgentMemory): Map<string, Intent> {
 
 /** Stable short hash of a file plus everything that changes how it is read. */
 export function understandKey(source: string, extra = ''): string {
-  let h1 = 0x811c9dc5, h2 = 0x01000193;
-  const s = source + '\u0000' + extra;
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 16777619);
-    h2 = Math.imul(h2 ^ c, 2246822507);
-  }
-  return (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36) + s.length.toString(36);
+  return sdevMemoryUnderstandKey(source, extra) ?? `${source.length}:${extra.length}`;
 }
-
-const MAX_RESULTS = 100;
 
 export function recallResult(memory: AgentMemory, key: string): string | null {
   return memory.results?.[key]?.source ?? null;

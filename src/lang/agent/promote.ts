@@ -1,15 +1,12 @@
 /**
- * Promote what the agent learned into a real dialect.
- *
- * Everything the agent understands informally (the user's own words for
- * `say`, `set`, `if`, …) becomes dialect synonyms, so the code then runs
- * through the ordinary canonicalizer with no AI involved at all.
+ * Thin bridge to `memory_promote_words` in `lang/agent/memory.sdev`.
  */
 import { emptyDialect, type DialectSpec } from '@/lang/dialect/spec';
 import { slugify } from '@/lib/utils';
 import { CANONICAL, type Intent } from './vocabulary';
 import type { AgentMemory } from './memory';
 import type { UnderstandResult } from './types';
+import { sdevPromoteWords } from './sdev-engine';
 
 export interface PromoteOptions {
   name?: string;
@@ -21,34 +18,18 @@ export interface PromoteOptions {
   rename?: boolean;
 }
 
-
 export function promoteToDialect(opts: PromoteOptions = {}): DialectSpec {
   const name = opts.name ?? 'My way of writing';
   const spec = emptyDialect({ name, slug: opts.slug ?? slugify(name), description: 'Learned by the understanding agent.' });
-
-  const pairs: [string, Intent][] = [
-    ...Object.entries(opts.used ?? {}).map(([w, i]) => [w, i] as [string, Intent]),
-    ...Object.entries(opts.memory?.words ?? {}).map(([w, e]) => [w, e.intent] as [string, Intent]),
+  const pairs: [string, string][] = [
+    ...Object.entries(opts.used ?? {}).map(([w, i]) => [w, i] as [string, string]),
+    ...Object.entries(opts.memory?.words ?? {}).map(([w, e]) => [w, e.intent] as [string, string]),
   ];
-
-  const byCanonical = new Map<string, Set<string>>();
-  for (const [word, intent] of pairs) {
-    const canonical = CANONICAL[intent];
-    if (!canonical || word === canonical) continue;
-    if (!/^[\p{L}\p{N}_]+$/u.test(word)) continue;
-    if (!byCanonical.has(canonical)) byCanonical.set(canonical, new Set());
-    byCanonical.get(canonical)!.add(word);
+  const promoted = sdevPromoteWords(pairs, CANONICAL, Boolean(opts.rename));
+  if (promoted) {
+    Object.assign(spec.synonyms, promoted.synonyms);
+    if (opts.rename) Object.assign(spec.names, promoted.names);
   }
-
-  const taken = new Set<string>();
-  for (const [canonical, words] of byCanonical) {
-    const list = [...words].filter((w) => !taken.has(w));
-    if (!list.length) continue;
-    list.forEach((w) => taken.add(w));
-    spec.synonyms[canonical] = list;
-    if (opts.rename) spec.names[canonical] = list[0];
-  }
-
   return spec;
 }
 

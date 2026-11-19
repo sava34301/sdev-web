@@ -1,0 +1,1111 @@
+// =====================================================================
+// brain.sdev — Directives, LLM output sanitizer, JSON/code reply parser,
+// Micro-Brain NL solver & speculative translator, WebLLM->online
+// fallback rules, and IDE translation helpers, written in sdev.
+// =====================================================================
+
+forge BR_NAME be "[a-zA-Z_]\\w*"
+forge BR_NL_NAME be "[\\p{L}_][\\p{L}\\p{N}_]*"
+
+// ---------- 1. Directive scanner ----------
+// Returns [mode, brain, learn, found, stripped_source]
+conjure scan_directives(source) ::
+  forge mode be ""
+  forge brain be ""
+  forge learn be void
+  forge found be nope
+  forge out be []
+  iterate line through shatter(source, "\n") ::
+    forge m be regex_capture(trim(line), "^!#\\s*agent\\s*:\\s*([a-z]+)(?:\\s*:\\s*([a-z]+))?$", "i")
+    ponder m equals void ::
+      out be out + [line]
+    ;; otherwise ::
+      found be yep
+      forge head be lower(m[1])
+      forge tail be lower(m[2])
+      ponder head equals "off" ::
+        mode be "off"
+      ;; otherwise ponder head equals "on" ::
+        ponder mode equals "off" either mode equals "" ::
+          mode be "on"
+        ;;
+      ;; otherwise ponder head equals "auto" ::
+        ponder mode equals "" ::
+          mode be "auto"
+        ;;
+        brain be "auto"
+      ;; otherwise ponder head equals "strict" ::
+        mode be "strict"
+      ;; otherwise ponder head equals "local" ::
+        brain be "local"
+        ponder mode equals "" ::
+          mode be "on"
+        ;;
+      ;; otherwise ponder head equals "online" ::
+        brain be "online"
+        ponder mode equals "" ::
+          mode be "on"
+        ;;
+      ;; otherwise ponder head equals "nobrain" either head equals "rules" ::
+        brain be "none"
+      ;; otherwise ponder head equals "learn" ::
+        learn be (tail differs "off" also tail differs "no")
+      ;;
+      out be out + [""]
+    ;;
+  ;;
+  yield [mode, brain, learn, found, found ~ weave(out, "\n") : source]
+;;
+
+// ---------- 2. Natural-language request detector ----------
+conjure is_request(source) ::
+  forge rows be []
+  iterate raw through lines(source) ::
+    forge t be trim(raw)
+    ponder t differs "" also isnt startswith(t, "#") also isnt startswith(t, "//") ::
+      rows be rows + [t]
+    ;;
+  ;;
+  ponder measure(rows) equals 0 either measure(rows) > 6 ::
+    yield nope
+  ;;
+  iterate row through rows ::
+    ponder regex_test(row, "[=(){}\\[\\]]|::|;;") also isnt regex_test(row, "^[\\p{L}\\s,.'\"!?-]+$") ::
+      yield nope
+    ;;
+  ;;
+  forge text be weave(rows, " ")
+  forge verb be "^(please\\s+)?(make|build|create|write|code|generate|design|program|draw|give\\s+me|show\\s+me|i\\s+want|i\\s+need|i'd\\s+like|can\\s+you|could\\s+you|let's|lets)\\b"
+  forge thing be "\\b(window|app|application|program|game|calculator|form|page|site|website|tool|todo|to-do|list|clock|timer|stopwatch|converter|quiz|interface|gui|ui|button|buttons|menu|counter|chat|editor|notes?|tracker|dashboard|generator|simulator|animation|drawing)\\b"
+  yield regex_test(text, verb, "i") also regex_test(text, thing, "i") also measure(words(text)) >= 3
+;;
+
+// ---------- 3. Local server endpoint normalizer ----------
+// Returns [base_url, chat_url, models_url, tags_url, is_ollama_native]
+conjure normalize_local_endpoints(raw_input) ::
+  forge u be trim(raw_input)
+  ponder u equals "" ::
+    u be "http://127.0.0.1:11434"
+  ;;
+  ponder isnt regex_test(u, "^https?://", "i") ::
+    u be "http://" + u
+  ;;
+  u be regex_replace(u, "/+$", "")
+  ponder regex_test(u, "/api/chat$", "i") ::
+    forge base be regex_replace(u, "/api/chat$", "", "i")
+    yield [base, u, base + "/v1/models", base + "/api/tags", yep]
+  ;;
+  ponder regex_test(u, "/v1/chat/completions$", "i") ::
+    forge base be regex_replace(u, "/v1/chat/completions$", "", "i")
+    yield [base, u, base + "/v1/models", base + "/api/tags", nope]
+  ;;
+  forge base be regex_replace(u, "/v1$", "", "i")
+  yield [base, base + "/v1/chat/completions", base + "/v1/models", base + "/api/tags", nope]
+;;
+
+// ---------- 4. LLM brain output sanitizer ----------
+conjure br_comma_args(raw) ::
+  forge trimmed be trim(raw)
+  ponder trimmed equals "" ::
+    yield ""
+  ;;
+  forge parts be []
+  iterate a through shatter(trimmed, ",") ::
+    forge p be trim(a)
+    ponder p differs "" ::
+      parts be parts + [p]
+    ;;
+  ;;
+  yield weave(parts, " ")
+;;
+
+conjure sanitize_brain_output(code, format) ::
+  ponder code equals "" ::
+    yield ""
+  ;;
+  forge text be trim(code)
+  forge fence_m be regex_capture(text, "^```(?:[a-zA-Z0-9_:-]+)?\\r?\\n([\\s\\S]*?)\\r?\\n```$")
+  ponder fence_m differs void ::
+    text be trim(fence_m[1])
+  ;;
+
+  forge has_ai_markers be regex_test(text, "^\\s*!#ai\\b", "m") either regex_test(text, "^\\s*(?:v\\s+[a-zA-Z_]|f\\s+[a-zA-Z_]\\w*\\s*\\(|p\\s*\\(|\\?\\s+.+?\\{|each\\s+[a-zA-Z_]\\w*\\s+in\\b)", "m")
+  ponder has_ai_markers either format equals "ai" ::
+    ponder isnt regex_test(text, "^\\s*!#ai\\b", "m") ::
+      text be "!#ai\n" + text
+    ;;
+    forge open_b be measure(regex_find_all(text, "\\{"))
+    forge close_b be measure(regex_find_all(text, "\\}"))
+    ponder open_b > close_b ::
+      text be text + "\n" + repeat("}", open_b - close_b)
+    ;;
+    yield text
+  ;;
+
+  forge ls be lines(text)
+  forge n be measure(ls)
+  forge out be []
+  forge i be 0
+  cycle i < n ::
+    forge line be ls[i]
+    forge trimmed be trim(line)
+    forge skip_line be nope
+    ponder i equals 0 also regex_test(trimmed, "^(?:here\\s+is|sure|certainly|this\\s+program|below\\s+is|the\\s+following|here's)\\b", "i") ::
+      skip_line be yep
+    ;;
+    ponder i equals n - 1 also regex_test(trimmed, "^(?:hope\\s+this|let\\s+me\\s+know|feel\\s+free|enjoy|cheers)\\b", "i") ::
+      skip_line be yep
+    ;;
+    ponder isnt skip_line ::
+      line be regex_replace(line, "^(\\s*)print\\s*\\((.*)\\)\\s*;?$", "$1say $2")
+      line be regex_replace(line, "^(\\s*)console\\.log\\s*\\((.*)\\)\\s*;?$", "$1say $2")
+      line be regex_replace(line, "^(\\s*)echo\\s+(.*)$", "$1say $2")
+      line be regex_replace(line, "^(\\s*)(?:let|var|const)\\s+([a-zA-Z_]\\w*)\\s*=\\s*(.+?);?$", "$1set $2 to $3")
+
+      forge def_m be regex_capture(line, "^(\\s*)def\\s+([a-zA-Z_]\\w*)\\s*\\(([^)]*)\\)\\s*:?\\s*$")
+      ponder def_m differs void ::
+        forge args_s be br_comma_args(def_m[3])
+        line be def_m[1] + "to " + def_m[2] + (args_s differs "" ~ " with " + args_s : "")
+      ;;
+
+      forge fn_m be regex_capture(line, "^(\\s*)function\\s+([a-zA-Z_]\\w*)\\s*\\(([^)]*)\\)\\s*\\{?\\s*$")
+      ponder fn_m differs void ::
+        forge args_s be br_comma_args(fn_m[3])
+        line be fn_m[1] + "to " + fn_m[2] + (args_s differs "" ~ " with " + args_s : "")
+      ;;
+
+      line be regex_replace(line, "^(\\s*)elif\\s+(.*?)\\s*:?\\s*$", "$1else if $2")
+      line be regex_replace(line, "^(\\s*)for\\s+(?:each\\s+)?([a-zA-Z_]\\w*)\\s+in\\s+range\\s*\\(([^)]+)\\)\\s*:?\\s*$", "$1for each $2 in sequence($3)")
+      line be regex_replace(line, "^(\\s*)for\\s+([a-zA-Z_]\\w*)\\s+in\\s+([a-zA-Z_][\\w.\\[\\]]*)\\s*:?\\s*$", "$1for each $2 in $3")
+      line be regex_replace(line, "^(\\s*(?:if\\b|else\\b|while\\b|for\\s+each\\b|to\\b).*?)\\s*:\\s*$", "$1")
+      out be out + [line]
+    ;;
+    i be i + 1
+  ;;
+
+  yield close_blocks(unlines(out))
+;;
+
+// ---------- 5. Brain reply parser ----------
+conjure br_extract_json_reply(raw_json, format) ::
+  attempt ::
+    forge j be unetch(raw_json)
+    ponder essence(j) equals "tome" also has(j, "canonical") also essence(j["canonical"]) equals "text" ::
+      forge notes be (has(j, "notes") also essence(j["notes"]) equals "text") ~ j["notes"] : void
+      forge w be (has(j, "words") also essence(j["words"]) equals "tome") ~ j["words"] : void
+      yield [sanitize_brain_output(j["canonical"], format), notes, w]
+    ;;
+  ;; rescue _err ::
+    yield void
+  ;;
+  yield void
+;;
+
+// Returns [canonical, notes_or_void, words_or_void] or void
+conjure parse_brain_reply(text, format) ::
+  forge trimmed be trim(text)
+  ponder trimmed equals "" ::
+    yield void
+  ;;
+
+  // 1. Direct JSON
+  forge direct be br_extract_json_reply(trimmed, format)
+  ponder direct differs void ::
+    yield direct
+  ;;
+
+  // 2. Markdown code fences
+  forge fences be regex_find_all(trimmed, "```(?:json|sdev|sdev:ai)?\\s*[\\s\\S]*?\\s*```", "i")
+  iterate fence through fences ::
+    forge fm be regex_capture(fence, "^```(?:json|sdev|sdev:ai)?\\s*([\\s\\S]*?)\\s*```$", "i")
+    ponder fm differs void ::
+      forge block be trim(fm[1])
+      forge jr be br_extract_json_reply(block, format)
+      ponder jr differs void ::
+        yield jr
+      ;;
+      ponder measure(block) > 0 also isnt startswith(block, "{") ::
+        yield [sanitize_brain_output(block, format), void, void]
+      ;;
+    ;;
+  ;;
+
+  // 3. Embedded JSON object with "canonical" key
+  forge jm be regex_capture(trimmed, "(\\{[\\s\\S]*?\"canonical\"\\s*:[\\s\\S]*?\\})")
+  ponder jm differs void ::
+    forge er be br_extract_json_reply(jm[1], format)
+    ponder er differs void ::
+      yield er
+    ;;
+    forge cm be regex_capture(jm[1], "\"canonical\"\\s*:\\s*\"([\\s\\S]*?)\"\\s*(?:,\\s*\"notes\"|\\})")
+    ponder cm differs void ::
+      forge unescaped be replace(replace(cm[1], "\\n", "\n"), "\\\"", "\"")
+      yield [sanitize_brain_output(unescaped, format), void, void]
+    ;;
+  ;;
+
+  // 4. Bare code fallback
+  forge bare be regex_replace(trimmed, "^```[a-zA-Z0-9_-]*\\s*", "", "i")
+  bare be trim(regex_replace(bare, "```\\s*$", "", "i"))
+  ponder bare equals "" ::
+    yield void
+  ;;
+  yield [sanitize_brain_output(bare, format), void, void]
+;;
+
+// ---------- 6. Micro-Brain Natural Language Solver ----------
+conjure solve_nl_request(prompt) ::
+  forge lower_p be lower(trim(prompt))
+  ponder lower_p equals "" ::
+    yield void
+  ;;
+
+  // 1. FizzBuzz
+  forge fizz_m be regex_capture(lower_p, "\\bfizz\\s*buzz(?:\\s+(?:up\\s+to|to)\\s+(\\d+))?\\b")
+  ponder fizz_m differs void ::
+    forge limit be fizz_m[1] differs "" ~ int(fizz_m[1]) : 15
+    yield unlines([
+      "for each i in sequence(1, " + str(limit + 1) + ")",
+      "  if i % 15 == 0",
+      "    say \"FizzBuzz\"",
+      "  else if i % 3 == 0",
+      "    say \"Fizz\"",
+      "  else if i % 5 == 0",
+      "    say \"Buzz\"",
+      "  else",
+      "    say i",
+      "  end",
+      "end"
+    ])
+  ;;
+
+  // 2. Circle area
+  forge circle_m be regex_capture(lower_p, "\\barea\\s+of\\s+(?:a\\s+)?circle\\s+(?:with\\s+)?(?:radius\\s+)?(?:of\\s+)?(\\d+(?:\\.\\d+)?)")
+  ponder circle_m differs void ::
+    yield unlines([
+      "set r to " + circle_m[1],
+      "set pi to 3.141592653589793",
+      "say pi * r * r"
+    ])
+  ;;
+
+  // 3. Sorted shopping list
+  forge shop_m be regex_capture(lower_p, "(?:shopping\\s+list|list)\\s+with\\s+(.+?)\\s+and\\s+print\\s+it\\s+sorted")
+  ponder shop_m differs void ::
+    forge norm_items be regex_replace(shop_m[1], "\\band\\b", ",")
+    forge items be []
+    iterate part through shatter(norm_items, ",") ::
+      forge clean be trim(part)
+      ponder clean differs "" ::
+        items be items + [clean]
+      ;;
+    ;;
+    yield unlines([
+      "set items to " + etch(items),
+      "for each item in sort(items)",
+      "  say item",
+      "end"
+    ])
+  ;;
+
+  // 4. Even or odd numbers
+  forge parity_m be regex_capture(lower_p, "\\b(even|odd)\\s+numbers?\\s+(?:between|from)\\s+(\\d+)\\s+(?:and|to)\\s+(\\d+)")
+  ponder parity_m differs void ::
+    forge mod_val be parity_m[1] equals "even" ~ "0" : "1"
+    forge b_end be int(parity_m[3]) + 1
+    yield unlines([
+      "for each i in sequence(" + parity_m[2] + ", " + str(b_end) + ")",
+      "  if i % 2 == " + mod_val,
+      "    say i",
+      "  end",
+      "end"
+    ])
+  ;;
+
+  // 5a. Celsius to Fahrenheit
+  forge ctof_m be regex_capture(lower_p, "\\bconvert\\s+(\\d+(?:\\.\\d+)?)\\s*(?:degrees?\\s+)?celsius\\s+to\\s+fahrenheit\\b")
+  ponder ctof_m differs void ::
+    yield unlines([
+      "set c to " + ctof_m[1],
+      "say c * 9 / 5 + 32"
+    ])
+  ;;
+
+  // 5b. Fahrenheit to Celsius
+  forge ftoc_m be regex_capture(lower_p, "\\bconvert\\s+(\\d+(?:\\.\\d+)?)\\s*(?:degrees?\\s+)?fahrenheit\\s+to\\s+celsius\\b")
+  ponder ftoc_m differs void ::
+    yield unlines([
+      "set f to " + ftoc_m[1],
+      "say (f - 32) * 5 / 9"
+    ])
+  ;;
+
+  // 6. Max or min number
+  forge mm_m be regex_capture(lower_p, "\\b(biggest|largest|maximum|max|smallest|minimum|min)\\s+number\\s+in\\s+([0-9,\\s\\band]+)")
+  ponder mm_m differs void ::
+    forge is_max be regex_test(mm_m[1], "big|large|max")
+    forge nums be regex_find_all(mm_m[2], "-?\\d+(?:\\.\\d+)?")
+    ponder measure(nums) > 0 ::
+      forge op be is_max ~ "max" : "min"
+      yield unlines([
+        "set numbers to [" + weave(nums, ", ") + "]",
+        "say " + op + "(numbers)"
+      ])
+    ;;
+  ;;
+
+  // 7. Function that doubles / triples / squares
+  forge fnop_m be regex_capture(lower_p, "\\bfunction\\s+that\\s+(doubles|triples|squares)\\s+(?:a\\s+number\\s+)?and\\s+use\\s+it\\s+on\\s+(\\d+(?:\\.\\d+)?)")
+  ponder fnop_m differs void ::
+    forge op be fnop_m[1]
+    forge expr be op equals "doubles" ~ "n * 2" : (op equals "triples" ~ "n * 3" : "n * n")
+    forge fn_name be op equals "doubles" ~ "double" : (op equals "triples" ~ "triple" : "square")
+    yield unlines([
+      "to " + fn_name + " with n",
+      "  return " + expr,
+      "end",
+      "say " + fn_name + "(" + fnop_m[2] + ")"
+    ])
+  ;;
+
+  // 8. Palindrome
+  forge pal_m be regex_capture(lower_p, "\\b(?:check\\s+if\\s+|is\\s+)?[\"']?([a-zA-Z0-9]+)[\"']?\\s+(?:a\\s+)?palindrome\\b")
+  ponder pal_m differs void also pal_m[1] differs "" ::
+    forge w be pal_m[1]
+    yield unlines([
+      "set word to \"" + w + "\"",
+      "if word is weave(reverse(chars(word)), \"\")",
+      "  say \"" + w + " is a palindrome\"",
+      "else",
+      "  say \"not a palindrome\"",
+      "end"
+    ])
+  ;;
+
+  // 9. Count vowels
+  forge vowel_m be regex_capture(lower_p, "\\bvowels\\s+(?:are\\s+)?in\\s+(?:the\\s+word\\s+)?[\"']?([a-zA-Z]+)[\"']?")
+  ponder vowel_m differs void also vowel_m[1] differs "" ::
+    yield unlines([
+      "set word to \"" + vowel_m[1] + "\"",
+      "set vowels to [\"a\", \"e\", \"i\", \"o\", \"u\"]",
+      "set total to 0",
+      "for each ch in chars(lower(word))",
+      "  if contains(vowels, ch)",
+      "    set total to total + 1",
+      "  end",
+      "end",
+      "say total"
+    ])
+  ;;
+
+  // 10. Fibonacci
+  forge fib_m be regex_capture(lower_p, "\\bfirst\\s+(\\d+)\\s+fibonacci\\b")
+  ponder fib_m differs void ::
+    yield unlines([
+      "set a to 0",
+      "set b to 1",
+      "say a",
+      "say b",
+      "for each i in sequence(2, " + fib_m[1] + ")",
+      "  set c to a + b",
+      "  say c",
+      "  set a to b",
+      "  set b to c",
+      "end"
+    ])
+  ;;
+
+  // 11. Sum A to B
+  forge sum_m be regex_capture(lower_p, "\\bsum\\s+(?:all\\s+)?numbers?\\s+(?:from\\s+)?(\\d+)\\s+to\\s+(\\d+)")
+  ponder sum_m differs void ::
+    forge b_end be int(sum_m[2]) + 1
+    yield unlines([
+      "set total to 0",
+      "for each i in sequence(" + sum_m[1] + ", " + str(b_end) + ")",
+      "  set total to total + i",
+      "end",
+      "say total"
+    ])
+  ;;
+
+  // 12. Person record
+  forge person_m be regex_capture(lower_p, "\\bperson\\s+named\\s+([a-zA-Z]+)\\s+who\\s+is\\s+(\\d+)\\s+and\\s+print\\s+(?:her|his|their)?\\s*name\\s+and\\s+age")
+  ponder person_m differs void ::
+    forge raw_name be person_m[1]
+    forge cap_name be upper(portion(raw_name, 0, 1)) + portion(raw_name, 1)
+    yield unlines([
+      "set person to {name: \"" + cap_name + "\", age: " + person_m[2] + "}",
+      "say person.name",
+      "say person.age"
+    ])
+  ;;
+
+  // 13. Factorial
+  forge fact_m be regex_capture(lower_p, "\\bfactorial\\s+of\\s+(\\d+)\\b")
+  ponder fact_m differs void ::
+    forge n_end be int(fact_m[1]) + 1
+    yield unlines([
+      "set total to 1",
+      "for each i in sequence(1, " + str(n_end) + ")",
+      "  set total to total * i",
+      "end",
+      "say total"
+    ])
+  ;;
+
+  yield void
+;;
+
+// ---------- 7. Micro-Brain Speculative Code Translator ----------
+conjure normalize_expr_speculative(expr) ::
+  forge e be trim(expr)
+  e be regex_replace(e, ";+\\s*$", "")
+  e be regex_replace(e, "\\btrue\\b", "yep", "i")
+  e be regex_replace(e, "\\bfalse\\b", "nope", "i")
+  e be regex_replace(e, "\\bnull\\b|\\bNone\\b|\\bnil\\b", "void")
+  e be replace(e, "===", " equals ")
+  e be replace(e, "==", " equals ")
+  e be replace(e, "!==", " differs ")
+  e be replace(e, "!=", " differs ")
+  e be regex_replace(e, "\\bis equal to\\b", "equals", "i")
+  e be regex_replace(e, "\\bis not equal to\\b", "differs", "i")
+  e be regex_replace(e, "\\bis greater than or equal to\\b", ">=", "i")
+  e be regex_replace(e, "\\bis less than or equal to\\b", "<=", "i")
+  e be regex_replace(e, "\\bis greater than\\b", ">", "i")
+  e be regex_replace(e, "\\bis less than\\b", "<", "i")
+  e be replace(e, "&&", " and ")
+  e be replace(e, "||", " or ")
+  e be regex_replace(e, "\\s+", " ")
+  yield trim(e)
+;;
+
+// Returns [line, opened_block, closed_block, reopened_block]
+conjure translate_line_speculative(raw_line) ::
+  forge indent be leading_space(raw_line)
+  forge trimmed be trim(raw_line)
+
+  ponder trimmed equals "" either startswith(trimmed, "//") ::
+    yield [raw_line, nope, nope, nope]
+  ;;
+  ponder startswith(trimmed, "#") also isnt startswith(trimmed, "!#") ::
+    yield [indent + "// " + trim(portion(trimmed, 1)), nope, nope, nope]
+  ;;
+  ponder startswith(trimmed, "!#") ::
+    yield [raw_line, nope, nope, nope]
+  ;;
+  ponder regex_test(trimmed, "^(?:;;|\\}|end(?:\\s+\\w+)?|done|fi|od)$", "i") ::
+    yield [indent + ";;", nope, yep, nope]
+  ;;
+  ponder regex_test(trimmed, "^(?:\\}\\s*)?(?:else|otherwise)\\s*:?\\s*\\{?$", "i") ::
+    yield [indent + "otherwise ::", nope, nope, yep]
+  ;;
+
+  forge elif_m be regex_capture(trimmed, "^(?:\\}\\s*)?(?:elif|elseif|else\\s+if|otherwise\\s+if|otherwise\\s+ponder)\\s+(.+?)\\s*(?::|\\{|::)?$", "i")
+  ponder elif_m differs void ::
+    forge cond be regex_replace(elif_m[1], "^\\(|\\)$", "")
+    yield [indent + "otherwise ponder " + normalize_expr_speculative(cond) + " ::", nope, nope, yep]
+  ;;
+
+  forge fn_m be regex_capture(trimmed, "^(?:def|function|fn|func|to|conjure|define(?:\\s+a)?(?:\\s+function)?)\\s+(" + BR_NAME + ")\\s*\\(([^)]*)\\)\\s*(?:->\\s*\\w+\\s*)?(?::|\\{|::)?$", "i")
+  ponder fn_m differs void ::
+    yield [indent + "conjure " + fn_m[1] + "(" + trim(fn_m[2]) + ") ::", yep, nope, nope]
+  ;;
+
+  forge nlfn_m be regex_capture(trimmed, "^(?:create|make|define)\\s+(?:a\\s+)?function\\s+(" + BR_NAME + ")(?:\\s+(?:with|taking)\\s+(.+?))?\\s*:?$", "i")
+  ponder nlfn_m differs void ::
+    forge args be regex_replace(nlfn_m[2], "\\band\\b", ",")
+    args be regex_replace(args, "\\s+", "")
+    yield [indent + "conjure " + nlfn_m[1] + "(" + args + ") ::", yep, nope, nope]
+  ;;
+
+  forge cls_m be regex_capture(trimmed, "^(?:class|struct|essence|craft)\\s+(" + BR_NAME + ")\\s*(?::|\\{|::)?$", "i")
+  ponder cls_m differs void ::
+    yield [indent + "essence " + cls_m[1] + " ::", yep, nope, nope]
+  ;;
+
+  forge ret_m be regex_capture(trimmed, "^(?:return|give(?:\\s+back)?|yield|send\\s+back)\\s+(.+)$", "i")
+  ponder ret_m differs void ::
+    yield [indent + "yield " + normalize_expr_speculative(ret_m[1]), nope, nope, nope]
+  ;;
+
+  forge con_m be regex_capture(trimmed, "^(?:console\\.log|System\\.out\\.println|fmt\\.Println|print|println|puts|echo)\\s*\\((.*)\\)\\s*;?$", "i")
+  ponder con_m differs void ::
+    yield [indent + "speak(" + normalize_expr_speculative(con_m[1]) + ")", nope, nope, nope]
+  ;;
+
+  forge bare_p be regex_capture(trimmed, "^(?:print|say|display|show|output|echo|speak)\\s+(?!\\()(.+)$", "i")
+  ponder bare_p differs void ::
+    yield [indent + "speak(" + normalize_expr_speculative(bare_p[1]) + ")", nope, nope, nope]
+  ;;
+
+  forge rep_m be regex_capture(trimmed, "^repeat\\s+(\\d+|\\w+)\\s+times\\s*(?::|\\{|::)?$", "i")
+  ponder rep_m differs void ::
+    yield [indent + "within _step be range(0, " + rep_m[1] + ") ::", yep, nope, nope]
+  ;;
+
+  forge ft_m be regex_capture(trimmed, "^for\\s+(" + BR_NAME + ")\\s+from\\s+(.+?)\\s+to\\s+(.+?)\\s*(?::|\\{|::)?$", "i")
+  ponder ft_m differs void ::
+    yield [indent + "within " + ft_m[1] + " be range(" + normalize_expr_speculative(ft_m[2]) + ", " + normalize_expr_speculative(ft_m[3]) + " + 1) ::", yep, nope, nope]
+  ;;
+
+  forge fi_m be regex_capture(trimmed, "^(?:for|foreach|within)\\s+(?:each\\s+)?(" + BR_NAME + ")\\s+(?:in|of|be|through|from)\\s+(.+?)\\s*(?::|\\{|::)?$", "i")
+  ponder fi_m differs void ::
+    yield [indent + "within " + fi_m[1] + " be " + normalize_expr_speculative(fi_m[2]) + " ::", yep, nope, nope]
+  ;;
+
+  forge wh_m be regex_capture(trimmed, "^(?:while|loop\\s+while|repeat\\s+while|cycle)\\s*\\(?(.+?)\\)?\\s*(?::|\\{|::)?$", "i")
+  ponder wh_m differs void ::
+    yield [indent + "cycle " + normalize_expr_speculative(wh_m[1]) + " ::", yep, nope, nope]
+  ;;
+
+  forge if_m be regex_capture(trimmed, "^(?:if|when|ponder)\\s*\\(?(.+?)\\)?\\s*(?:then\\s*)?(?::|\\{|::)?$", "i")
+  ponder if_m differs void also (endswith(trimmed, ":") either endswith(trimmed, "{") either endswith(trimmed, "::") either regex_test(trimmed, "\\bthen$", "i") either regex_test(trimmed, "^(?:if|when)\\b", "i")) ::
+    forge raw_c be trim(regex_replace(if_m[1], "\\s+then$", "", "i"))
+    yield [indent + "ponder " + normalize_expr_speculative(raw_c) + " ::", yep, nope, nope]
+  ;;
+
+  forge vd_m be regex_capture(trimmed, "^(?:let|const|var|set|forge|create|define)\\s+(" + BR_NAME + ")\\s*(?:=|to|as|be|is)\\s*(.+)$", "i")
+  ponder vd_m differs void ::
+    yield [indent + "forge " + vd_m[1] + " be " + normalize_expr_speculative(vd_m[2]), nope, nope, nope]
+  ;;
+
+  forge inc_m be regex_capture(trimmed, "^(" + BR_NAME + ")\\s*(\\+\\+|--)\\s*;?$")
+  ponder inc_m differs void ::
+    forge op be inc_m[2] equals "++" ~ "+" : "-"
+    yield [indent + inc_m[1] + " be " + inc_m[1] + " " + op + " 1", nope, nope, nope]
+  ;;
+
+  forge aug_m be regex_capture(trimmed, "^(" + BR_NAME + ")\\s*(\\+=|-=|\\*=|/=)\\s*(.+?)\\s*;?$")
+  ponder aug_m differs void ::
+    forge op be portion(aug_m[2], 0, 1)
+    yield [indent + aug_m[1] + " be " + aug_m[1] + " " + op + " (" + normalize_expr_speculative(aug_m[3]) + ")", nope, nope, nope]
+  ;;
+
+  forge add_m be regex_capture(trimmed, "^add\\s+(.+?)\\s+to\\s+(" + BR_NAME + ")$", "i")
+  ponder add_m differs void ::
+    yield [indent + add_m[2] + " be " + add_m[2] + " + " + normalize_expr_speculative(add_m[1]), nope, nope, nope]
+  ;;
+
+  forge asn_m be regex_capture(trimmed, "^(" + BR_NAME + "(?:\\." + BR_NAME + ")?)\\s*=\\s*(?!=)(.+?)\\s*;?$")
+  ponder asn_m differs void ::
+    forge lhs be asn_m[1]
+    forge rhs be normalize_expr_speculative(asn_m[2])
+    forge kw be contains(lhs, ".") ~ (lhs + " be " + rhs) : ("forge " + lhs + " be " + rhs)
+    yield [indent + kw, nope, nope, nope]
+  ;;
+
+  forge cleaned_t be regex_replace(trimmed, ";+\\s*$", "")
+  yield [indent + cleaned_t, endswith(trimmed, "::"), trimmed equals ";;", nope]
+;;
+
+// Returns [canonical, changed]
+conjure run_micro_brain_translation(source) ::
+  forge raw_lines be lines(source)
+  forge out_lines be []
+  forge stack be []
+  iterate raw through raw_lines ::
+    forge trimmed be trim(raw)
+    ponder trimmed equals "" ::
+      out_lines be out_lines + [""]
+    ;; otherwise ::
+      forge cur_indent be measure(replace(leading_space(raw), "\t", "  "))
+      forge tr be translate_line_speculative(raw)
+      forge t_line be tr[0]
+      forge opened be tr[1]
+      forge closed be tr[2]
+      forge reopened be tr[3]
+
+      ponder isnt closed also isnt reopened also isnt startswith(trimmed, "//") also isnt startswith(trimmed, "#") ::
+        cycle measure(stack) > 0 also cur_indent <= stack[-1] ::
+          forge ci be stack[-1]
+          stack be portion(stack, 0, measure(stack) - 1)
+          out_lines be out_lines + [repeat(" ", ci) + ";;"]
+        ;;
+      ;; otherwise ponder reopened ::
+        cycle measure(stack) > 1 also cur_indent < stack[-1] ::
+          forge ci be stack[-1]
+          stack be portion(stack, 0, measure(stack) - 1)
+          out_lines be out_lines + [repeat(" ", ci) + ";;"]
+        ;;
+      ;;
+
+      ponder closed also measure(stack) > 0 ::
+        stack be portion(stack, 0, measure(stack) - 1)
+      ;;
+
+      out_lines be out_lines + [t_line]
+
+      ponder opened ::
+        stack be stack + [cur_indent]
+      ;;
+    ;;
+  ;;
+
+  cycle measure(stack) > 0 ::
+    forge ci be stack[-1]
+    stack be portion(stack, 0, measure(stack) - 1)
+    out_lines be out_lines + [repeat(" ", ci) + ";;"]
+  ;;
+
+  forge canonical be weave(out_lines, "\n")
+  yield [canonical, trim(canonical) differs trim(source)]
+;;
+
+conjure micro_brain_accepts(parses_ok, unknown_count, changed, unresolved_count, problems_count) ::
+  yield parses_ok also unknown_count equals 0 also (changed either (unresolved_count equals 0 also problems_count equals 0))
+;;
+
+// ---------- 8. WebLLM -> Website AI fallback & scoring ----------
+conjure brain_candidate_score(parses_ok, unknown_count, extra_problems_count) ::
+  forge base be (parses_ok ~ 0 : 100) + unknown_count
+  yield base + (extra_problems_count > 0 ~ 50 : 0)
+;;
+
+conjure brain_needs_online_fallback(has_best, best_score, extra_problems_count, best_source, draft_source) ::
+  ponder isnt has_best either best_score > 0 ::
+    yield yep
+  ;;
+  yield extra_problems_count > 0 also trim(best_source) equals trim(draft_source)
+;;
+
+conjure reconsider_brain_mode(prep_brain, last_used_brain, allow_online, is_online) ::
+  ponder prep_brain equals "auto" also last_used_brain equals "local" also allow_online also is_online ::
+    yield "online"
+  ;;
+  yield prep_brain
+;;
+
+// ---------- 9. File translation & download helpers ----------
+conjure translation_has_diff(written_body, translated_source) ::
+  ponder translated_source equals void either translated_source equals "" ::
+    yield nope
+  ;;
+  yield trim(translated_source) differs trim(written_body)
+;;
+
+conjure translation_download_name(file_name, variant, has_diff) ::
+  ponder variant differs "translated" either isnt has_diff ::
+    yield file_name
+  ;;
+  ponder endswith(lower(file_name), ".sdev") ::
+    yield regex_replace(file_name, "(?:\\.translated)?\\.sdev$", ".translated.sdev", "i")
+  ;;
+  yield file_name + ".translated.sdev"
+;;
+
+conjure translation_banner_text(from_cache, detected_lang, brain_used) ::
+  forge prefix be from_cache ~ "⚡ Cached translation" : "✨ Translated"
+  ponder detected_lang differs void also detected_lang differs "" also detected_lang differs "English" ::
+    yield prefix + " from " + detected_lang + " → canonical sdev"
+  ;;
+  ponder brain_used equals "online" ::
+    yield prefix + " via Website AI → canonical sdev"
+  ;;
+  ponder brain_used equals "local" ::
+    yield prefix + " via Built-in AI → canonical sdev"
+  ;;
+  yield prefix + " by understander → canonical sdev"
+;;
+
+// ---------- 10. Brain prompt builders ----------
+forge BR_SYSTEM_PROMPT be unlines([
+  "You are the understanding agent of the sdev programming language.",
+  "A person wrote something — a program, a half-program, or a plain request in any human language",
+  "(\"calculate 23-21\", \"count from 1 to 10\", \"ask my name and greet me\", \"make a shopping list and print it sorted\").",
+  "Turn it into a complete, WORKING sdev program that does what they meant. Output only code in the JSON field.",
+  "",
+  "Canonical sdev you must write (verified syntax):",
+  "  say X                          print (say \"a\" + str(n) to join text and numbers)",
+  "  set NAME to VALUE              create or change a variable",
+  "  set name to input(\"Prompt? \")  read text; num(input(\"…\")) reads a number",
+  "  if COND / else / end           blocks close with end (indent bodies 2 spaces)",
+  "  while COND / end",
+  "  for each x in LIST / end       for each i in sequence(1, 11) counts 1..10; sequence(n) is 0..n-1",
+  "  to NAME with a b / return X / end   declare a function, call it as NAME(1, 2)",
+  "  break, continue, true, false, nothing",
+  "  comparisons: is, is not, ==, !=, >, <, >=, <=      logic: and, or, not",
+  "  operators: + - * / % **         comments start with #",
+  "  lists [1, 2, 3], l[0], l + [4] appends; records {name: \"Sam\", age: 3}, r.name, r[\"age\"]",
+  "  lambdas: (x) -> x * 2",
+  "",
+  "Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, sqrt, min, max, pow,",
+  "  random, randint(a, b), pick(list), shuffle, sum, average, sort, sortDesc, reverse, unique, count(list, x),",
+  "  first, last, upper, lower, trim, replace(s, a, b), contains(s_or_list, x), startswith, endswith,",
+  "  chars(s), weave(list, sep) joins, shatter(s, sep) splits, sift(list, fn) filters, each(list, fn) maps,",
+  "  fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.",
+  "  There is NO join, split, append, push, map, filter, printf — use weave, shatter, l + [x], each, sift.",
+  "",
+  "Self-hosted (v2) libraries for systems and causal-AI work — load with use \"lang/stdlib/v2/<name>.sdev\":",
+  "  list: list_append(xs, x), list_concat_two(a, b) (in v2 files lists never grow with +)",
+  "  bits: bits_and/or/xor(a, b), bits_shl/shr(v, n), bits_not_n(v, width), floor_div, floor_mod, wrap_u8/u16/i16",
+  "  mem: mem_arena(size), mem_put/get_u8/u16/i16(m, addr[, v]) little-endian, mem_copy, mem_fill, mem_hex,",
+  "       ring_create(cap), ring_push, ring_get(r, i), ring_len",
+  "  oce (v2: use \"lang/stdlib/v2/oce.sdev\", it loads list, bits, mem itself; classic and !#ai files: built in, no import): Ontological Causal Engine in one 64 KB arena — oce_create(), oce_entity(m),",
+  "       oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),",
+  "       oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),",
+  "       oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).",
+  "  In v2 files, xs + [a] joins lists only when the file uses \"lang/stdlib/v2/list.sdev\"; prefer list_append(xs, a).",
+  "",
+  "Canonical SDEV Patterns & Examples:",
+  "  # 1. Math and output:",
+  "  say \"hello world\"",
+  "  say 23 - 21",
+  "",
+  "  # 2. Functions and calls:",
+  "  to double with n",
+  "    return n * 2",
+  "  end",
+  "  say double(21)",
+  "",
+  "  # 3. Loops (counting from 1 to 10):",
+  "  for each i in sequence(1, 11)",
+  "    say i",
+  "  end",
+  "",
+  "  # 4. Sorting lists:",
+  "  set items to [\"milk\", \"eggs\", \"bread\"]",
+  "  say sort(items)",
+  "",
+  "  # 5. Records / Objects:",
+  "  set person to {name: \"Ana\", age: 30}",
+  "  say person.name",
+  "  say person.age",
+  "",
+  "  # 6. Palindrome check:",
+  "  set w to \"racecar\"",
+  "  if w is weave(reverse(chars(w)), \"\")",
+  "    say \"palindrome\"",
+  "  else",
+  "    say \"not palindrome\"",
+  "  end",
+  "",
+  "Window toolkit (the IDE shows a real window):",
+  "  window(\"Title\", width, height) … endwindow()   row() … endrow()   column() … endcolumn()",
+  "  heading(\"text\")  label(\"text\")  label(\"@key\") shows the live value of key",
+  "  input(\"key\", \"placeholder\")   the typed text is uiget(\"key\")",
+  "  button(\"Text\", () -> handler())   handler is a function or lambda, run on click",
+  "  uiget(\"key\") reads a value, uiset(\"key\", value) changes it and refreshes labels bound with \"@key\"",
+  "  evaluate(\"2 + 3 * 4\") safely computes an arithmetic expression held in text (use it for calculators)",
+  "  Define functions BEFORE window(); put every widget between window() and endwindow().",
+  "",
+  "Requests in plain words:",
+  "- If the source is a request (\"make a window that is a calculator\", \"build a quiz game\"), write the WHOLE",
+  "  working program that does it — complete, not a sketch. Anything with \"window\", \"app\", \"buttons\" or a",
+  "  visual interface uses the window toolkit.",
+  "",
+  "Rules:",
+  "- CRITICAL: NEVER output Python syntax (NO \"def\", NO \"print\", NO \"range()\", NO \"elif\", NO trailing colons :).",
+  "- CRITICAL: NEVER output JavaScript syntax (NO \"console.log\", NO \"function\", NO \"let\", NO \"var\", NO \"const\", NO \"===\").",
+  "- Every function, if, while, and for each block MUST be closed with \"end\" on its own line.",
+  "- Compute with code; never hard-code an answer the program should work out.",
+  "- Keep the author's own code and identifiers exactly as written (any language/script); only fix what is wrong.",
+  "- If the author's code already works, return it unchanged.",
+  "- Bare words meant as text become quoted strings.",
+  "- Never add prose, markdown fences or explanations outside the JSON. Return ONLY JSON: {\"canonical\": \"<program>\", \"notes\": \"<short note>\"}"
+])
+
+forge BR_AI_DIALECT_PROMPT be unlines([
+  "",
+  "",
+  "sdev:ai — the dialect for AI models. When asked for sdev:ai, write ONLY this form:",
+  "  !#ai                         MUST be the very first line",
+  "  v x = 5                      declare            x = x + 1       change (also xs[0] = 1, r.k = 2)",
+  "  p(x)                         print",
+  "  f add(a, b) {                function            r a + b         return",
+  "  ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else",
+  "  w i < 3 {  }                 while               each n in xs {  }   for each",
+  "  try {  } catch e {  }        brk / next          break / continue",
+  "  } finally {  }   throw e      k MAX = 3           constant",
+  "  c Dog : Animal {  f init(self, n) { self.n = n }  }    class (\": Animal\" optional); make one with new Dog(1)",
+  "  == != && || ! true false null      every block closes with } on its own line",
+  "  Calls to built-ins and the window toolkit stay as they are: window(\"Calc\", 320, 400), button(\"7\", () -> press(\"7\")), uiset(...)",
+  "  Lambdas: (x) -> x * 2.  One statement per line.",
+  "",
+  "Example:",
+  "  !#ai",
+  "  f press(k) {",
+  "    uiset(\"display\", uiget(\"display\") + k)",
+  "  }",
+  "  window(\"Calculator\", 320, 400)",
+  "  input(\"display\", \"0\")",
+  "  button(\"7\", () -> press(\"7\"))",
+  "  button(\"=\", () -> uiset(\"display\", str(evaluate(uiget(\"display\")))))",
+  "  endwindow()"
+])
+
+conjure brain_instructions(format) ::
+  ponder format equals "ai" ::
+    yield BR_SYSTEM_PROMPT + BR_AI_DIALECT_PROMPT
+  ;;
+  yield BR_SYSTEM_PROMPT
+;;
+
+conjure brain_input(source, draft, unresolved, vocab_json, problems, format) ::
+  forge src_cut be portion(str(source), 0, 40000)
+  forge draft_cut be portion(draft equals void ~ "" : str(draft), 0, 40000)
+  forge unres_line be "It resolved every line, but the result may still be wrong."
+  ponder unresolved differs void also measure(unresolved) > 0 ::
+    unres_line be "Lines it could not resolve: " + weave(unresolved, ", ")
+  ;;
+  forge prob_line be ""
+  ponder problems differs void also measure(problems) > 0 ::
+    forge ps be []
+    forge lim be measure(problems) < 10 ~ measure(problems) : 10
+    forge k be 0
+    cycle k < lim ::
+      ps be ps + [portion(str(problems[k]), 0, 300)]
+      k be k + 1
+    ;;
+    prob_line be "That draft still has these problems — fix them:\n- " + weave(ps, "\n- ")
+  ;;
+  forge tail_line be format equals "ai" ~ "Return the whole program in sdev:ai (described below), starting with the line !#ai." : "Return the whole program as canonical sdev."
+  yield unlines([
+    "The author wrote this program:",
+    "```", src_cut, "```",
+    "",
+    "A rule engine already produced this draft of canonical sdev:",
+    "```", draft_cut, "```",
+    "",
+    unres_line,
+    "",
+    "Words this author is known to use (word -> meaning): " + (vocab_json equals "" ~ "{}" : vocab_json),
+    "",
+    prob_line,
+    "",
+    tail_line
+  ])
+;;
+
+// ---------- 11. SDev Doctor prompts & parser ----------
+conjure doctor_system_prompt() ::
+  yield unlines([
+    "You are SDev Doctor — an expert AI assistant that diagnoses and repairs code in the SDEV programming language.",
+    "SDEV is a modern multi-paradigm language. It supports clean syntax, immutable fixed bindings, functions, pattern matching, SQL queries, and math/graphics builtins.",
+    "Analyze the user's code, fix any syntax or logical bugs, and explain your changes clearly.",
+    "Return ONLY valid JSON matching this schema:",
+    "{",
+    "  \"fixed_code\": \"<the complete repaired source code>\",",
+    "  \"explanation\": \"<2-4 sentences explaining what the program does>\",",
+    "  \"changes\": \"<markdown bullet list of exact fixes made and why>\",",
+    "  \"how_it_works\": \"<concise markdown explanation of how the repaired code runs>\",",
+    "  \"confidence\": \"high\" | \"medium\" | \"low\"",
+    "}"
+  ])
+;;
+
+conjure doctor_user_prompt(code, error_msg, note) ::
+  forge parts be []
+  ponder note differs void also note differs "" ::
+    parts be parts + ["User Note: " + note]
+  ;;
+  ponder error_msg differs void also error_msg differs "" ::
+    parts be parts + ["Reported Error: " + error_msg]
+  ;;
+  parts be parts + ["Source Code:\n```sdev\n" + code + "\n```"]
+  parts be parts + ["Please diagnose, repair, and explain the code as valid JSON."]
+  yield weave(parts, "\n\n")
+;;
+
+// Returns [fixed_code, explanation, changes, how_it_works, confidence] or void
+conjure parse_doctor_fix(raw_text) ::
+  forge cleaned be trim(raw_text)
+  cleaned be regex_replace(cleaned, "^```(?:json)?\\s*", "", "i")
+  cleaned be trim(regex_replace(cleaned, "```\\s*$", ""))
+  ponder cleaned equals "" ::
+    yield void
+  ;;
+  attempt ::
+    forge p be unetch(cleaned)
+    ponder essence(p) equals "tome" also has(p, "fixed_code") also essence(p["fixed_code"]) equals "text" ::
+      forge expl be (has(p, "explanation") also essence(p["explanation"]) equals "text" also p["explanation"] differs "") ~ p["explanation"] : "Analyzed and repaired by local model server."
+      forge chg be (has(p, "changes") also essence(p["changes"]) equals "text" also p["changes"] differs "") ~ p["changes"] : "- Corrected syntax and formatting."
+      forge how be (has(p, "how_it_works") also essence(p["how_it_works"]) equals "text" also p["how_it_works"] differs "") ~ p["how_it_works"] : "The program runs through statements sequentially."
+      forge c_raw be has(p, "confidence") ~ str(p["confidence"]) : "medium"
+      forge conf be (c_raw equals "high" either c_raw equals "medium" either c_raw equals "low") ~ c_raw : "medium"
+      yield [p["fixed_code"], expl, chg, how, conf]
+    ;;
+  ;; rescue _err ::
+    yield [cleaned, "Repaired by local model server.", "- Automatically adapted code to valid SDEV syntax.", "Runs sequentially.", "medium"]
+  ;;
+  yield [cleaned, "Repaired by local model server.", "- Automatically adapted code to valid SDEV syntax.", "Runs sequentially.", "medium"]
+;;
+
+// ---------- 12. Local server probe helpers ----------
+conjure probe_server_type(base_url) ::
+  ponder contains(base_url, "1234") ::
+    yield "LM Studio"
+  ;;
+  ponder contains(base_url, "11434") ::
+    yield "Ollama"
+  ;;
+  ponder contains(base_url, "8080") ::
+    yield "llama.cpp"
+  ;;
+  yield "OpenAI-Compatible"
+;;
+
+conjure probe_cors_hint(base_url) ::
+  ponder contains(base_url, "1234") ::
+    yield "In LM Studio: Open the Local Server tab and toggle ON \"Enable CORS\". Web browsers block requests from web apps unless CORS is enabled."
+  ;;
+  ponder contains(base_url, "11434") ::
+    yield "In Ollama: Start Ollama with OLLAMA_ORIGINS=\"*\" (e.g., in PowerShell: $env:OLLAMA_ORIGINS=\"*\" ; ollama serve)."
+  ;;
+  yield "Ensure the model server is running and configured with Cross-Origin Resource Sharing (CORS) allowed."
+;;
+
+// ---------- 13. Micro-Brain 64-dim Intent Classifier ----------
+forge BR_INTENT_SPECS be [
+  ["PRINT", ["print", "println", "console", "log", "echo", "say", "display", "show", "output", "write", "speak", "puts"]],
+  ["LET", ["let", "var", "const", "set", "create", "define", "variable", "make", "forge", "int", "float", "string", "auto"]],
+  ["FUNC_DEF", ["def", "function", "fn", "func", "proc", "procedure", "method", "sub", "to", "conjure", "define"]],
+  ["RETURN", ["return", "give", "send", "result", "output", "yield", "back"]],
+  ["IF", ["if", "when", "whenever", "check", "whether", "ponder", "suppose"]],
+  ["ELIF", ["elif", "elseif", "else if", "otherwise if"]],
+  ["ELSE", ["else", "otherwise", "fallback", "default"]],
+  ["WHILE", ["while", "until", "loop", "repeat while", "as long as", "cycle"]],
+  ["FOR_EACH", ["for", "foreach", "each", "every", "iterate", "within", "in", "through"]],
+  ["FOR_RANGE", ["repeat", "times", "range", "from", "to", "count"]],
+  ["CLASS_DEF", ["class", "struct", "type", "object", "blueprint", "essence", "craft"]],
+  ["BLOCK_END", ["end", "endif", "endfor", "endwhile", "endfunction", "done", "fi", "od", "}", ";;"]]
+]
+
+conjure br_xor8(a, b) ::
+  forge x be a % 256
+  forge y be b % 256
+  forge res be 0
+  forge p be 1
+  forge bit be 0
+  cycle bit < 8 ::
+    forge bx be x % 2
+    forge by be y % 2
+    ponder bx differs by ::
+      res be res + p
+    ;;
+    x be (x - bx) / 2
+    y be (y - by) / 2
+    p be p * 2
+    bit be bit + 1
+  ;;
+  yield res
+;;
+
+conjure br_mul16_step(hi, lo, m_hi, m_lo) ::
+  forge p0 be lo * m_lo
+  forge lo_next be p0 % 65536
+  forge carry be (p0 - lo_next) / 65536
+  forge hi_next be (hi * m_lo + lo * m_hi + carry) % 65536
+  yield [hi_next, lo_next]
+;;
+
+conjure hash_token_64(token) ::
+  // 2166136261 -> hi 33052, lo 40389; 16777619 -> hi 256, lo 403
+  forge h_hi be 33052
+  forge h_lo be 40389
+  forge n be measure(token)
+  forge i be 0
+  cycle i < n ::
+    forge c be ord(token, i)
+    forge b0 be h_lo % 256
+    h_lo be (h_lo - b0) + br_xor8(b0, c % 256)
+    forge r be br_mul16_step(h_hi, h_lo, 256, 403)
+    h_hi be r[0]
+    h_lo be r[1]
+    i be i + 1
+  ;;
+  forge u32 be h_hi * 65536 + h_lo
+  forge s32 be h_hi >= 32768 ~ (4294967296 - u32) : u32
+  yield s32 % 64
+;;
+
+conjure br_zero_vec64() ::
+  forge v be []
+  forge i be 0
+  cycle i < 64 ::
+    v be v + [0]
+    i be i + 1
+  ;;
+  yield v
+;;
+
+conjure br_norm_vec64(v) ::
+  forge norm be 0
+  forge i be 0
+  cycle i < 64 ::
+    norm be norm + v[i] * v[i]
+    i be i + 1
+  ;;
+  forge root be norm > 0 ~ sqrt(norm) : 1
+  i be 0
+  cycle i < 64 ::
+    v[i] be v[i] / root
+    i be i + 1
+  ;;
+  yield v
+;;
+
+conjure br_build_proto_weights() ::
+  forge rows be []
+  iterate spec through BR_INTENT_SPECS ::
+    forge v be br_zero_vec64()
+    iterate kw through spec[1] ::
+      forge lk be lower(kw)
+      forge idx be hash_token_64(lk)
+      v[idx] be v[idx] + 1.5
+      forge kn be measure(lk)
+      forge j be 0
+      cycle j < kn - 1 ::
+        forge bg be hash_token_64(portion(lk, j, j + 2))
+        v[bg] be v[bg] + 0.35
+        j be j + 1
+      ;;
+    ;;
+    rows be rows + [[spec[0], br_norm_vec64(v)]]
+  ;;
+  yield rows
+;;
+
+forge BR_INTENT_ROWS be br_build_proto_weights()
+
+conjure embed_line_vector(line) ::
+  forge v be br_zero_vec64()
+  forge cleaned be trim(regex_replace(lower(line), "[^a-z0-9_]+", " "))
+  forge toks be cleaned equals "" ~ [] : words(cleaned)
+  forge idx be 0
+  iterate tok through toks ::
+    forge w be idx equals 0 ~ 2.0 : (idx equals 1 ~ 1.2 : 0.6)
+    forge h be hash_token_64(tok)
+    v[h] be v[h] + w
+    forge tn be measure(tok)
+    forge j be 0
+    cycle j < tn - 1 ::
+      forge bg be hash_token_64(portion(tok, j, j + 2))
+      v[bg] be v[bg] + 0.2 * w
+      j be j + 1
+    ;;
+    idx be idx + 1
+  ;;
+  yield br_norm_vec64(v)
+;;
+
+// Returns [intent, score]
+conjure classify_line_intent(line) ::
+  forge vec be embed_line_vector(line)
+  forge best_intent be "PRINT"
+  forge best_score be -1000000
+  iterate row through BR_INTENT_ROWS ::
+    forge weights be row[1]
+    forge dot be 0
+    forge c be 0
+    cycle c < 64 ::
+      dot be dot + weights[c] * vec[c]
+      c be c + 1
+    ;;
+    ponder dot > best_score ::
+      best_score be dot
+      best_intent be row[0]
+    ;;
+  ;;
+  yield [best_intent, round(best_score * 10000) / 10000]
+;;
+

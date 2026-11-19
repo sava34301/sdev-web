@@ -14,7 +14,17 @@ import { scanDirectives, type AgentMode, type BrainMode } from './directives';
 import { repair, closeBlocks } from './repair';
 import { senseFile, parses, unknownNames, parseError } from './sense';
 import { think, online, brainSettings } from './brain';
-import { sdevUnderstand, isAiDialect, aiToSdev, sdevCloseBlocks } from './sdev-engine';
+import {
+  sdevUnderstand,
+  isAiDialect,
+  aiToSdev,
+  sdevCloseBlocks,
+  sdevIsRequest,
+  sdevBrainCandidateScore,
+  sdevBrainNeedsOnlineFallback,
+  sdevReconsiderBrainMode,
+  sdevMemoryApplyLines,
+} from './sdev-engine';
 import {
   loadMemory, saveMemory, memoryWordMap, rememberWord, rememberLine,
   learnFromProgram, type AgentMemory, understandKey, recallResult, rememberResult,
@@ -38,15 +48,7 @@ function knownNames(memory: AgentMemory): Set<string> {
 }
 
 function applyMemoryLines(source: string, memory: AgentMemory): { source: string; hit: boolean } {
-  let hit = false;
-  const out = source.split('\n').map((line) => {
-    const entry = memory.lines[line.trim()];
-    if (!entry) return line;
-    hit = true;
-    const indent = line.match(/^\s*/)?.[0] ?? '';
-    return indent + entry.canonical;
-  });
-  return { source: out.join('\n'), hit };
+  return sdevMemoryApplyLines(source, memory.lines) ?? { source, hit: false };
 }
 
 interface Prepared {
@@ -125,13 +127,7 @@ export { sdevUnderstand, isAiDialect, aiToSdev, sdevToAi, sdevDefinedNames, sdev
  * only mangle it, so it goes straight to the brain.
  */
 export function isRequest(source: string): boolean {
-  const rows = source.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#') && !l.startsWith('//'));
-  if (!rows.length || rows.length > 6) return false;
-  if (rows.some((l) => /[=(){}[\]]|::|;;/.test(l) && !/^[\p{L}\s,.'"!?-]+$/u.test(l))) return false;
-  const text = rows.join(' ');
-  const verb = /^(please\s+)?(make|build|create|write|code|generate|design|program|draw|give\s+me|show\s+me|i\s+want|i\s+need|i'd\s+like|can\s+you|could\s+you|let's|lets)\b/i;
-  const thing = /\b(window|app|application|program|game|calculator|form|page|site|website|tool|todo|to-do|list|clock|timer|stopwatch|converter|quiz|interface|gui|ui|button|buttons|menu|counter|chat|editor|notes?|tracker|dashboard|generator|simulator|animation|drawing)\b/i;
-  return verb.test(text) && thing.test(text) && text.split(/\s+/).length >= 3;
+  return sdevIsRequest(source) ?? false;
 }
 
 function runRules(prep: Prepared, opts: UnderstandOptions) {
@@ -368,9 +364,15 @@ async function askBrain(
   const vocabulary: Record<string, string> = {};
   for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
   const mode = prep.brain === 'auto' && !online() ? 'local' : prep.brain;
-  const score = (src: string) => (parses(src) ? 0 : 100) + unknownNames(src).length;
+  const score = (src: string) => {
+    const pOk = parses(src);
+    const unk = unknownNames(src).length;
+    return sdevBrainCandidateScore(pOk, unk, 0) ?? ((pOk ? 0 : 100) + unk);
+  };
   let best: { source: string; used: 'local' | 'online' } | null = null;
-  let bestScore = score(draft) + (extraProblems.length ? 50 : 0);
+  let bestScore =
+    sdevBrainCandidateScore(parses(draft), unknownNames(draft).length, extraProblems.length) ??
+    (score(draft) + (extraProblems.length ? 50 : 0));
   let problems = [...extraProblems, ...problemsOf(draft)];
   // Writing a whole program from a request: let the model use sdev:ai.
   const writing = isRequest(prep.stripped);
@@ -403,9 +405,8 @@ async function askBrain(
   if (mode === 'auto') {
     await runAttempts('local');
     const needsOnlineFallback =
-      !best ||
-      bestScore > 0 ||
-      (extraProblems.length > 0 && best.source.trim() === draft.trim());
+      sdevBrainNeedsOnlineFallback(best !== null, bestScore, extraProblems.length, best?.source ?? '', draft) ??
+      (!best || bestScore > 0 || (extraProblems.length > 0 && best.source.trim() === draft.trim()));
     if (needsOnlineFallback && brainSettings().allowOnline && online()) {
       await runAttempts('online');
     }
@@ -437,10 +438,12 @@ export async function reconsider(source: string, error: string, opts: Understand
   const prep = begin(source, opts);
   if (prep.mode === 'off' || prep.brain === 'none') return null;
   const draft = (lastUnderstood.get(source) ?? prep.stripped);
-  const effectivePrep =
-    prep.brain === 'auto' && lastUnderstoodBrain.get(source) === 'local' && brainSettings().allowOnline && online()
-      ? { ...prep, brain: 'online' as BrainMode }
-      : prep;
+  const nextBrain =
+    sdevReconsiderBrainMode(prep.brain, lastUnderstoodBrain.get(source) ?? 'none', brainSettings().allowOnline, online()) ??
+    (prep.brain === 'auto' && lastUnderstoodBrain.get(source) === 'local' && brainSettings().allowOnline && online()
+      ? ('online' as BrainMode)
+      : prep.brain);
+  const effectivePrep = nextBrain !== prep.brain ? { ...prep, brain: nextBrain } : prep;
   const notes: UnderstandResult['notes'] = [];
   const improved = await askBrain(effectivePrep, opts, draft, [], [`it failed when run: ${error}`], notes, true);
   if (!improved || improved.source.trim() === draft.trim()) return null;

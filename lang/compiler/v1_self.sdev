@@ -1,0 +1,2957 @@
+# SDEV v1 Self-Hosted Compiler — authored 100% in SDEV v1 syntax.
+#
+# Self-compiling SDEV v1 -> Seed VM bytecode compiler + driver.
+# Reads SDEV v1 source from virtual <stdin>, compiles via v1_compile_source,
+# and writes: <bc_len> <bc_bytes...> <pool_len> <pool_bytes...>
+
+
+forge cg_tk_kind be mklist(80000)
+forge cg_tk_num be mklist(80000)
+forge cg_tk_num2 be mklist(80000)
+forge cg_tk_txt be mklist(80000)
+forge cg_tk_state be mklist(2)
+
+forge cg_bc be mklist(81920)
+forge cg_pool_bytes be mklist(65536)
+forge cg_pool_keys be mklist(2048)
+forge cg_pool_offs be mklist(2048)
+
+forge cg_sym_names be mklist(1024)
+forge cg_sym_types be mklist(1024)
+forge cg_loc_names be mklist(512)
+forge cg_loc_types be mklist(512)
+
+forge cg_fn_names be mklist(1024)
+forge cg_fn_offsets be mklist(1024)
+forge cg_fn_arities be mklist(1024)
+forge cg_fn_ret_types be mklist(1024)
+forge cg_fn_extras be mklist(1024)
+forge cg_fn_body_start be mklist(1024)
+forge cg_fn_param_base be mklist(1024)
+forge cg_fn_param_seen be mklist(4096)
+
+forge cg_lam_names be mklist(128)
+forge cg_lam_caps be mklist(128)
+forge cg_lsav_names be mklist(512)
+forge cg_lsav_types be mklist(512)
+
+forge cg_cur_fn be mklist(2)
+forge cg_pend_names be mklist(2048)
+forge cg_pend_pos be mklist(2048)
+forge cg_in_func be mklist(2)
+forge cg_expr_type be mklist(2)
+forge cg_scratch be mklist(16)
+forge cg_emit_enabled be mklist(2)
+forge cg_skip_fn_defs be mklist(2)
+
+forge cg_brk_pos be mklist(512)
+forge cg_brk_dep be mklist(512)
+forge cg_cnt_pos be mklist(512)
+forge cg_cnt_dep be mklist(512)
+forge cg_loop_depth be mklist(2)
+forge cg_fe_depth be mklist(2)
+forge cg_tmp_depth be mklist(2)
+
+forge cg_cls_names be mklist(256)
+forge cg_mth_cls be mklist(1024)
+forge cg_mth_key be mklist(1024)
+forge cg_mth_fn be mklist(1024)
+forge cg_mth_sup be mklist(1024)
+
+forge cg_fld_names be mklist(512)
+forge cg_fld_types be mklist(512)
+forge cg_mat_ends be mklist(512)
+
+forge cg_pre_seen be mklist(2)
+
+forge cg_bi_tbl be "|keys:1:142:5|inscriptions:1:142:5|values:1:143:6|contents:1:143:6|has:2:141:0|length:1:131:0|len:1:131:0|measure:1:131:0|chr:1:136:1|mklist:1:137:6|i2f:1:168:2|f2i:1:169:0|fneg:1:170:2|fabs:1:171:2|fbyte:2:180:0|read_file:1:176:1|write_file:2:177:0|http_get:1:178:1|upper:1:146:1|lower:1:147:1|trim:1:148:1|substr:3:149:1|find:2:150:0|locate:2:150:0|indexOf:2:150:0|split:2:151:5|shatter:2:151:5|join:2:152:1|weave:2:152:1|replace:3:153:1|min:2:156:0|least:2:156:0|max:2:157:0|greatest:2:157:0|range:1:158:6|sequence:1:158:6|sum:1:159:0|random:1:184:0|fceil:1:181:2|ffloor:1:182:2|fround:1:183:2|panic:1:194:0|throw:1:194:0|get:2:140:0|set:3:139:0|"
+forge cg_fm_tbl be "|fsin:0|sin:0|fcos:1|cos:1|ftan:2|tan:2|fexp:3|exp:3|flog:4|log:4|fpow:5|ceil:6|elevate:6|floor:7|ground:7|round:8|nearby:8|fsqrt:9|sqrt:9|root:9|"
+forge cg_hlp_tbl be "|startswith:sw:2:0|starts:sw:2:0|endswith:ew:2:0|ends:ew:2:0|each:each:2:6|sift:sift:2:6|fold:fold:3:0|randint:ri:2:0|lines:lines:1:5|unlines:unlines:1:1|contains:cnt:2:0|char_at:ca:2:1|charAt:ca:2:1|PI:pi:0:2|TAU:tau:0:2|E:e:0:2|"
+forge cg_rt_src be "conjure __v1_sw(s, p) ::\n  ponder len(s) < len(p) :: yield 0 ;;\n  yield concat(substr(s, 0, len(p)), \"\") equals p\n;;\nconjure __v1_ew(s, p) ::\n  ponder len(s) < len(p) :: yield 0 ;;\n  yield concat(substr(s, len(s) - len(p), len(p)), \"\") equals p\n;;\nconjure __v1_srep(s, n) ::\n  forge o be \"\"\n  cycle n > 0 ::\n    o be concat(o, s)\n    n -= 1\n  ;;\n  yield o\n;;\nconjure __v1_srev(s) ::\n  forge o be \"\"\n  forge i be len(s) - 1\n  cycle i >= 0 ::\n    o be concat(o, chr(ord(s, i)))\n    i -= 1\n  ;;\n  yield o\n;;\nconjure __v1_sslice(s, a, b) ::\n  ponder b < 0 :: b be len(s) ;;\n  forge c be b - a\n  ponder c < 0 :: c be 0 ;;\n  yield substr(s, a, c)\n;;\nconjure __v1_lcopy(dst, doff, src, soff, cnt, rev) ::\n  forge i be 0\n  cycle i < cnt ::\n    forge si be soff + i\n    ponder rev :: si be cnt - 1 - i ;;\n    dst[doff + i] be src[si]\n    i += 1\n  ;;\n  yield dst\n;;\nconjure __v1_lcat(a, b) ::\n  forge na be len(a)\n  forge nb be len(b)\n  forge o be __v1_lcopy(mklist(na + nb), 0, a, 0, na, 0)\n  yield __v1_lcopy(o, na, b, 0, nb, 0)\n;;\nconjure __v1_lslice(xs, a, b) ::\n  ponder b < 0 :: b be len(xs) ;;\n  forge c be b - a\n  ponder c < 0 :: c be 0 ;;\n  yield __v1_lcopy(mklist(c), 0, xs, a, c, 0)\n;;\nconjure __v1_lclone(xs) ::\n  forge n be len(xs)\n  yield __v1_lcopy(mklist(n), 0, xs, 0, n, 0)\n;;\nconjure __v1_lrev(xs) ::\n  forge n be len(xs)\n  yield __v1_lcopy(mklist(n), 0, xs, 0, n, 1)\n;;\nconjure __v1_lappend(xs, v) ::\n  forge n be len(xs)\n  forge o be __v1_lcopy(mklist(n + 1), 0, xs, 0, n, 0)\n  o[n] be v\n  yield o\n;;\nconjure __v1_lpop_rest(xs) ::\n  forge n be len(xs) - 1\n  yield __v1_lcopy(mklist(n), 0, xs, 0, n, 0)\n;;\nconjure __v1_range(s, e, st) ::\n  forge n be (e - s + st - 1) / st\n  ponder st < 0 :: n be (s - e - st - 1) / (0 - st) ;;\n  ponder n < 0 :: n be 0 ;;\n  forge o be mklist(n)\n  forge i be 0\n  cycle i < n ::\n    o[i] be s + i * st\n    i += 1\n  ;;\n  yield o\n;;\nconjure __v1_each(xs, fn) ::\n  forge n be len(xs)\n  forge o be mklist(n)\n  forge i be 0\n  cycle i < n ::\n    o[i] be call fn(xs[i])\n    i += 1\n  ;;\n  yield o\n;;\nconjure __v1_sift(xs, fn) ::\n  forge n be len(xs)\n  forge o be mklist(n)\n  forge c be 0\n  forge i be 0\n  cycle i < n ::\n    ponder call fn(xs[i]) ::\n      o[c] be xs[i]\n      c += 1\n    ;;\n    i += 1\n  ;;\n  yield __v1_lcopy(mklist(c), 0, o, 0, c, 0)\n;;\nconjure __v1_fold(xs, acc, fn) ::\n  forge n be len(xs)\n  forge i be 0\n  cycle i < n ::\n    acc be call fn(acc, xs[i])\n    i += 1\n  ;;\n  yield acc\n;;\nconjure __v1_lstr(xs) ::\n  forge n be len(xs)\n  forge o be \"[\"\n  forge i be 0\n  cycle i < n ::\n    ponder i > 0 :: o be concat(o, \", \") ;;\n    o be concat(o, str(xs[i]))\n    i += 1\n  ;;\n  yield concat(o, \"]\")\n;;\nconjure __v1_ri(a, b) ::\n  yield a + random(b - a + 1)\n;;\nconjure __v1_lines(s) ::\n  yield split(s, \"\\n\")\n;;\nconjure __v1_unlines(xs) ::\n  yield join(xs, \"\\n\")\n;;\nconjure __v1_powi(a, b) ::\n  yield a ** b\n;;\nconjure __v1_powif(a, b) ::\n  yield i2f(a) ** b\n;;\nconjure __v1_cnt(a, b) ::\n  yield find(a, b) >= 0\n;;\nconjure __v1_ca(s, i) ::\n  yield chr(ord(s, i))\n;;\nconjure __v1_tname(k) ::\n  ponder k equals 1 :: yield \"text\" ;;\n  ponder k equals 3 either k equals 4 :: yield \"tome\" ;;\n  ponder k equals 5 either k equals 6 :: yield \"list\" ;;\n  yield \"number\"\n;;\nconjure __v1_pi() :: yield 3.141592653589793 ;;\nconjure __v1_tau() :: yield 6.283185307179586 ;;\nconjure __v1_e() :: yield 2.718281828459045 ;;\n"
+
+# ---- Character & String Helpers -------------------------------------------
+
+conjure cg_is_digit(c) ::
+  ponder c >= 48 also c <= 57 ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_hex_val(c) ::
+  ponder cg_is_digit(c) ::
+    yield c - 48
+  ;;
+  ponder c >= 65 also c <= 70 ::
+    yield c - 55
+  ;;
+  ponder c >= 97 also c <= 102 ::
+    yield c - 87
+  ;;
+  yield 0 - 1
+;;
+
+conjure cg_is_alpha(c) ::
+  ponder c equals 95 either (c >= 65 also c <= 90) either (c >= 97 also c <= 122) ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_is_quote(c) ::
+  ponder c equals 34 either c equals 39 either c equals 96 ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_str_eq(a, b) ::
+  ponder concat(a, "") equals b ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_in(pat, w) ::
+  ponder find(pat, concat("|", concat(w, "|"))) >= 0 ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_both_float(a, b) ::
+  ponder a equals 2 also b equals 2 ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+# ---- Prelinker (use / summon / link) --------------------------------------
+
+conjure cg_prelink_source(s) ::
+  forge lines be split(s, "\n")
+  forge n be length(lines)
+  forge out be ""
+  forge i be 0
+  cycle i < n ::
+    forge line be lines[i]
+    forge t be trim(line)
+    forge tn be length(t)
+    forge path be ""
+    forge qp be find(t, " \"")
+    ponder qp > 0 also ord(t, tn - 1) equals 34 also cg_in("|use|link|summon|", substr(t, 0, qp)) ::
+      forge path be substr(t, qp + 2, tn - qp - 3)
+    ;;
+    ponder length(path) > 0 ::
+      ponder find(cg_pre_seen[0], concat("|", concat(path, "|"))) < 0 ::
+        cg_pre_seen[0] be concat(cg_pre_seen[0], concat(path, "|"))
+        forge mod_src be read_file(path)
+        ponder length(mod_src) > 0 ::
+          forge out be concat(out, cg_prelink_source(mod_src))
+        ;;
+      ;;
+      forge out be concat(out, "\n")
+    otherwise ::
+      forge out be concat(out, concat(line, "\n"))
+    ;;
+    forge i be i + 1
+  ;;
+  yield out
+;;
+
+# ---- Tokenizer (with f-string desugaring) ---------------------------------
+
+conjure cg_push_tok(kind, num, num2, txt) ::
+  forge c be cg_tk_state[0]
+  ponder c >= length(cg_tk_kind) ::
+    hurl "token buffer overflow"
+  ;;
+  cg_tk_kind[c] be kind
+  cg_tk_num[c] be num
+  cg_tk_num2[c] be num2
+  cg_tk_txt[c] be txt
+  cg_tk_state[0] be c + 1
+  yield 0
+;;
+
+conjure cg_two_op(c, nx) ::
+  ponder c <= 32 either nx <= 32 ::
+    yield 0
+  ;;
+  forge tbl be " ::302 ;;303 <=300 >=301 ==304 !=305 <>305 ->306 =>307 |>308 +=310 -=311 *=312 /=313 %=314 :=315 **316 {|317 |}318 &&319 ||320 "
+  forge p be find(tbl, concat(" ", concat(chr(c), chr(nx))))
+  ponder p < 0 ::
+    yield 0
+  ;;
+  yield (ord(tbl, p + 3) - 48) * 100 + (ord(tbl, p + 4) - 48) * 10 + (ord(tbl, p + 5) - 48)
+;;
+
+conjure cg_scan_string(src, start_j, quote, is_raw) ::
+  forge n be length(src)
+  forge j be start_j
+  forge buf be ""
+  cycle j < n ::
+    forge q be ord(src, j)
+    ponder q equals quote ::
+      yeet
+    otherwise ponder q equals 92 also is_raw equals 0 also j + 1 < n ::
+      forge e be ord(src, j + 1)
+      ponder e equals 110 ::
+        forge ch be chr(10)
+      otherwise ponder e equals 116 ::
+        forge ch be chr(9)
+      otherwise ponder e equals 114 ::
+        forge ch be chr(13)
+      otherwise ponder e equals 48 ::
+        forge ch be chr(0)
+      otherwise ::
+        forge ch be chr(e)
+      ;;
+      forge buf be concat(buf, ch)
+      forge j be j + 2
+    otherwise ::
+      forge buf be concat(buf, chr(q))
+      forge j be j + 1
+    ;;
+  ;;
+  cg_scratch[0] be buf
+  yield j + 1
+;;
+
+conjure cg_scan_digits(src, i, base) ::
+  forge n be length(src)
+  forge v be 0
+  forge sc be 0
+  cycle i < n ::
+    forge d be ord(src, i)
+    ponder d equals 95 ::
+      forge i be i + 1
+    otherwise ::
+      forge hv be cg_hex_val(d)
+      ponder hv >= 0 also hv < base ::
+        forge v be v * base + hv
+        forge sc be sc + 1
+        forge i be i + 1
+      otherwise ::
+        yeet
+      ;;
+    ;;
+  ;;
+  cg_scratch[1] be v
+  cg_scratch[2] be sc
+  yield i
+;;
+
+conjure cg_emit_fstr_tokens(content) ::
+  cg_push_tok(4, 40, 0, "")
+  cg_push_tok(3, 0, 0, "")
+  forge n be length(content)
+  forge i be 0
+  forge lit be ""
+  cycle i < n ::
+    forge c be ord(content, i)
+    ponder (c equals 123 either c equals 125) also i + 1 < n also ord(content, i + 1) equals c ::
+      forge lit be concat(lit, chr(c))
+      forge i be i + 2
+    otherwise ponder c equals 123 ::
+      ponder length(lit) > 0 ::
+        cg_push_tok(4, 43, 0, "")
+        cg_push_tok(3, 0, 0, lit)
+        forge lit be ""
+      ;;
+      forge j be i + 1
+      forge depth be 1
+      cycle j < n also depth > 0 ::
+        forge ch be ord(content, j)
+        ponder cg_is_quote(ch) ::
+          forge j be cg_scan_string(content, j + 1, ch, 0)
+        otherwise ::
+          ponder ch equals 123 ::
+            forge depth be depth + 1
+          otherwise ponder ch equals 125 ::
+            forge depth be depth - 1
+            ponder depth equals 0 ::
+              yeet
+            ;;
+          ;;
+          forge j be j + 1
+        ;;
+      ;;
+      cg_push_tok(4, 43, 0, "")
+      cg_push_tok(2, 0, 0, "__v1_fstr_val")
+      cg_push_tok(4, 40, 0, "")
+      cg_tokenize_into(substr(content, i + 1, j - i - 1))
+      cg_push_tok(4, 41, 0, "")
+      forge i be j + 1
+    otherwise ::
+      forge lit be concat(lit, chr(c))
+      forge i be i + 1
+    ;;
+  ;;
+  ponder length(lit) > 0 ::
+    cg_push_tok(4, 43, 0, "")
+    cg_push_tok(3, 0, 0, lit)
+  ;;
+  cg_push_tok(4, 41, 0, "")
+  yield 0
+;;
+
+conjure cg_tokenize_into(src) ::
+  forge n be length(src)
+  forge i be 0
+  cycle i < n ::
+    forge c be ord(src, i)
+    forge nx be 0 - 1
+    ponder i + 1 < n ::
+      forge nx be ord(src, i + 1)
+    ;;
+    ponder c equals 32 either c equals 9 either c equals 13 ::
+      forge i be i + 1
+    otherwise ponder c equals 10 either (c equals 59 also nx differs 59) ::
+      cg_push_tok(5, 0, 0, "")
+      forge i be i + 1
+    otherwise ponder c equals 35 either (c equals 47 also nx equals 47) ::
+      cycle i < n also ord(src, i) differs 10 ::
+        forge i be i + 1
+      ;;
+    otherwise ponder c equals 47 also nx equals 42 ::
+      forge i be i + 2
+      cycle i < n ::
+        ponder ord(src, i) equals 42 also i + 1 < n also ord(src, i + 1) equals 47 ::
+          forge i be i + 2
+          yeet
+        ;;
+        forge i be i + 1
+      ;;
+    otherwise ponder cg_is_quote(c) ::
+      forge i be cg_scan_string(src, i + 1, c, 0)
+      cg_push_tok(3, 0, 0, cg_scratch[0])
+    otherwise ponder cg_is_quote(nx) also find("fFrRbB", chr(c)) >= 0 ::
+      forge i be cg_scan_string(src, i + 2, nx, c equals 114 either c equals 82)
+      ponder c equals 102 either c equals 70 ::
+        cg_emit_fstr_tokens(cg_scratch[0])
+      otherwise ::
+        cg_push_tok(3, 0, 0, cg_scratch[0])
+      ;;
+    otherwise ponder cg_is_digit(c) ::
+      forge bi be 0 - 1
+      ponder c equals 48 also nx > 0 ::
+        forge bi be find("xXbBoO", chr(nx))
+      ;;
+      ponder bi >= 0 ::
+        forge base be 16
+        ponder bi >= 4 ::
+          forge base be 8
+        otherwise ponder bi >= 2 ::
+          forge base be 2
+        ;;
+        forge i be cg_scan_digits(src, i + 2, base)
+        cg_push_tok(1, cg_scratch[1], 0, "")
+      otherwise ::
+        forge i be cg_scan_digits(src, i, 10)
+        forge v be cg_scratch[1]
+        ponder i + 1 < n also ord(src, i) equals 46 also cg_is_digit(ord(src, i + 1)) ::
+          forge i be cg_scan_digits(src, i + 1, 10)
+          forge sc be cg_scratch[2]
+          forge p10 be 1
+          forge k be 0
+          cycle k < sc ::
+            forge p10 be p10 * 10
+            forge k be k + 1
+          ;;
+          cg_push_tok(6, v * p10 + cg_scratch[1], sc, "")
+        otherwise ::
+          cg_push_tok(1, v, 0, "")
+        ;;
+      ;;
+    otherwise ponder cg_is_alpha(c) ::
+      forge j be i
+      cycle j < n also (cg_is_alpha(ord(src, j)) either cg_is_digit(ord(src, j))) ::
+        forge j be j + 1
+      ;;
+      cg_push_tok(2, 0, 0, substr(src, i, j - i))
+      forge i be j
+    otherwise ::
+      forge op2 be cg_two_op(c, nx)
+      ponder op2 > 0 ::
+        cg_push_tok(4, op2, 0, "")
+        forge i be i + 2
+      otherwise ::
+        cg_push_tok(4, c, 0, "")
+        forge i be i + 1
+      ;;
+    ;;
+  ;;
+;;
+
+# ---- Bytecode & String Pool Emission --------------------------------------
+
+conjure cg_emit_byte(b) ::
+  ponder isnt cg_emit_enabled[0] ::
+    yield 0
+  ;;
+  ponder cg_bc[0] + 1 >= length(cg_bc) ::
+    hurl "bytecode overflow"
+  ;;
+  cg_bc[cg_bc[0] + 1] be b
+  cg_bc[0] be cg_bc[0] + 1
+;;
+
+conjure cg_emit2(a, b) ::
+  cg_emit_byte(a)
+  cg_emit_byte(b)
+;;
+
+conjure cg_op_t(b, t) ::
+  cg_emit_byte(b)
+  cg_expr_type[0] be t
+;;
+
+conjure cg_intern_str(s) ::
+  ponder isnt cg_emit_enabled[0] ::
+    yield 0
+  ;;
+  forge n be cg_pool_keys[0]
+  forge k be 1
+  cycle k <= n ::
+    ponder cg_str_eq(cg_pool_keys[k], s) ::
+      yield cg_pool_offs[k]
+    ;;
+    forge k be k + 1
+  ;;
+  forge off be cg_pool_bytes[0]
+  forge slen be length(s)
+  ponder off + 4 + slen >= length(cg_pool_bytes) ::
+    hurl "string pool overflow"
+  ;;
+  cg_pool_bytes[off + 1] be slen % 256
+  cg_pool_bytes[off + 2] be (slen / 256) % 256
+  cg_pool_bytes[off + 3] be (slen / 65536) % 256
+  cg_pool_bytes[off + 4] be (slen / 16777216) % 256
+  cg_pool_bytes[0] be off + 4
+  forge i be 0
+  cycle i < slen ::
+    cg_pool_bytes[cg_pool_bytes[0] + 1] be ord(s, i)
+    cg_pool_bytes[0] be cg_pool_bytes[0] + 1
+    forge i be i + 1
+  ;;
+  forge n be n + 1
+  cg_pool_keys[n] be s
+  cg_pool_offs[n] be off
+  cg_pool_keys[0] be n
+  yield off
+;;
+
+conjure cg_emit_u16(v) ::
+  cg_emit2(v % 256, (v / 256) % 256)
+;;
+
+conjure cg_emit_i32(v) ::
+  cg_emit_u16(v % 65536)
+  cg_emit_u16((v / 65536) % 65536)
+;;
+
+conjure cg_emit_push_str(s) ::
+  forge off be cg_intern_str(s)
+  cg_emit_byte(2)
+  cg_emit_u16(off)
+;;
+
+conjure cg_emit_push_i32(v) ::
+  cg_emit_byte(1)
+  cg_emit_i32(v)
+;;
+
+conjure cg_emit_push_f64(fval) ::
+  cg_emit_byte(160)
+  forge fb be 0
+  cycle fb < 8 ::
+    cg_emit_byte(fbyte(fval, fb))
+    forge fb be fb + 1
+  ;;
+;;
+
+conjure cg_emit_jmp(op) ::
+  cg_emit_byte(op)
+  forge p be cg_bc[0]
+  cg_emit2(0, 0)
+  yield p
+;;
+
+conjure cg_patch_i16(pos, target) ::
+  ponder isnt cg_emit_enabled[0] ::
+    yield 0
+  ;;
+  forge off be target - (pos + 2)
+  ponder off < 0 ::
+    forge off be off + 65536
+  ;;
+  cg_bc[pos + 1] be off % 256
+  cg_bc[pos + 2] be (off / 256) % 256
+;;
+
+conjure cg_emit_back(target) ::
+  forge p be cg_emit_jmp(64)
+  cg_patch_i16(p, target)
+;;
+
+# ---- Symbol & Type Tables -------------------------------------------------
+
+conjure cg_find_in_tbl(tbl_names, tbl_count, name) ::
+  forge k be 1
+  forge stop be tbl_count + 1
+  cycle k < stop ::
+    ponder cg_str_eq(tbl_names[k], name) ::
+      yield k - 1
+    ;;
+    forge k be k + 1
+  ;;
+  yield 0 - 1
+;;
+
+conjure cg_intern_name(name) ::
+  forge k be cg_find_in_tbl(cg_sym_names, cg_sym_names[0], name)
+  ponder k >= 0 ::
+    yield k
+  ;;
+  forge n be cg_sym_names[0]
+  ponder cg_emit_enabled[0] also n >= 256 ::
+    hurl "too many globals (256 max)"
+  ;;
+  forge n be n + 1
+  cg_sym_names[n] be name
+  cg_sym_types[n] be 0
+  cg_sym_names[0] be n
+  yield n - 1
+;;
+
+conjure cg_add_local(name) ::
+  forge n be cg_loc_names[0]
+  ponder cg_emit_enabled[0] also n >= 256 ::
+    hurl "too many locals (256 max)"
+  ;;
+  forge n be n + 1
+  cg_loc_names[n] be name
+  cg_loc_types[n] be 0
+  cg_loc_names[0] be n
+  yield n - 1
+;;
+
+conjure cg_emit_load_ident(name) ::
+  ponder cg_in_func[0] ::
+    forge slot be cg_find_in_tbl(cg_loc_names, cg_loc_names[0], name)
+    ponder slot >= 0 ::
+      cg_emit2(99, slot)
+      cg_expr_type[0] be cg_loc_types[slot + 1]
+      yield 0
+    ;;
+  ;;
+  forge slot be cg_intern_name(name)
+  cg_emit2(3, slot)
+  cg_expr_type[0] be cg_sym_types[slot + 1]
+;;
+
+conjure cg_emit_store_ident(name) ::
+  forge t be cg_expr_type[0]
+  ponder cg_in_func[0] ::
+    forge slot be cg_find_in_tbl(cg_loc_names, cg_loc_names[0], name)
+    ponder slot < 0 ::
+      forge slot be cg_add_local(name)
+    ;;
+    cg_emit2(100, slot)
+    cg_loc_types[slot + 1] be t
+    yield 0
+  ;;
+  forge slot be cg_intern_name(name)
+  cg_emit2(4, slot)
+  cg_sym_types[slot + 1] be t
+;;
+
+conjure cg_set_ident_type(name, t) ::
+  ponder cg_in_func[0] ::
+    forge slot be cg_find_in_tbl(cg_loc_names, cg_loc_names[0], name)
+    ponder slot >= 0 ::
+      cg_loc_types[slot + 1] be t
+      yield 0
+    ;;
+  ;;
+  forge slot be cg_intern_name(name)
+  cg_sym_types[slot + 1] be t
+;;
+
+conjure cg_record_field_type(name, t) ::
+  forge k be cg_find_in_tbl(cg_fld_names, cg_fld_names[0], name)
+  ponder k >= 0 ::
+    ponder t equals 1 either t equals 2 ::
+      cg_fld_types[k + 1] be t
+    ;;
+    yield 0
+  ;;
+  forge n be cg_fld_names[0] + 1
+  ponder n < length(cg_fld_names) ::
+    cg_fld_names[n] be name
+    cg_fld_types[n] be t
+    cg_fld_names[0] be n
+  ;;
+;;
+
+conjure cg_record_param_type(fn_idx, arg_i, t) ::
+  forge pslot be cg_fn_param_base[fn_idx + 1] + arg_i
+  ponder pslot >= length(cg_fn_param_seen) ::
+    yield 0
+  ;;
+  forge cur be cg_fn_param_seen[pslot]
+  forge code be 3
+  ponder t equals 1 either t equals 2 ::
+    forge code be t
+  ;;
+  ponder cur equals 0 ::
+    cg_fn_param_seen[pslot] be code
+  otherwise ponder cur differs code ::
+    cg_fn_param_seen[pslot] be 3
+  ;;
+;;
+
+conjure cg_apply_param_types(fn_idx, n_params) ::
+  forge base be cg_fn_param_base[fn_idx + 1]
+  forge k be 0
+  cycle k < n_params ::
+    ponder base + k < length(cg_fn_param_seen) ::
+      forge code be cg_fn_param_seen[base + k]
+      ponder code equals 1 either code equals 2 ::
+        cg_loc_types[k + 1] be code
+      ;;
+    ;;
+    forge k be k + 1
+  ;;
+;;
+
+# ---- Token Classifiers ----------------------------------------------------
+
+conjure cg_is_op_c(pos, c) ::
+  ponder pos < cg_tk_state[0] also cg_tk_kind[pos] equals 4 also cg_tk_num[pos] equals c ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_is_word(pos, w) ::
+  ponder pos < cg_tk_state[0] also cg_tk_kind[pos] equals 2 ::
+    yield cg_str_eq(cg_tk_txt[pos], w)
+  ;;
+  yield 0
+;;
+
+conjure cg_word_in(pos, pat) ::
+  ponder pos < cg_tk_state[0] also cg_tk_kind[pos] equals 2 ::
+    yield cg_in(pat, cg_tk_txt[pos])
+  ;;
+  yield 0
+;;
+
+conjure cg_skip_nl(pos) ::
+  cycle pos < cg_tk_state[0] also cg_tk_kind[pos] equals 5 ::
+    forge pos be pos + 1
+  ;;
+  yield pos
+;;
+
+conjure cg_opt_c(pos, c) ::
+  ponder cg_is_op_c(pos, c) ::
+    yield pos + 1
+  ;;
+  yield pos
+;;
+
+conjure cg_eat_end(pos) ::
+  ponder cg_is_op_c(pos, 303) either cg_is_word(pos, "end") ::
+    yield pos + 1
+  ;;
+  yield pos
+;;
+
+conjure cg_eat_rparen(pos) ::
+  yield cg_opt_c(cg_skip_nl(pos), 41)
+;;
+
+conjure cg_patch_list(pos_arr, dep_arr, target) ::
+  forge d be cg_loop_depth[0]
+  forge k be 1
+  forge stop be pos_arr[0] + 1
+  cycle k < stop ::
+    ponder dep_arr[k] equals d ::
+      cg_patch_i16(pos_arr[k], target)
+      dep_arr[k] be 0 - 1
+    ;;
+    forge k be k + 1
+  ;;
+  cycle pos_arr[0] > 0 also dep_arr[pos_arr[0]] equals 0 - 1 ::
+    pos_arr[0] be pos_arr[0] - 1
+    dep_arr[0] be dep_arr[0] - 1
+  ;;
+  yield 0
+;;
+
+# ---- Essence / Class Desugaring -------------------------------------------
+
+conjure cg_add_mth(ci, mkey, mfn, sup) ::
+  forge mc be cg_mth_cls[0] + 1
+  cg_mth_cls[mc] be ci
+  cg_mth_key[mc] be mkey
+  cg_mth_fn[mc] be mfn
+  cg_mth_sup[mc] be sup
+  cg_mth_cls[0] be mc
+  yield 0
+;;
+
+conjure cg_is_stmt_start(j) ::
+  ponder j equals 0 either cg_tk_kind[j - 1] equals 5 either cg_is_op_c(j - 1, 302) either cg_is_op_c(j - 1, 303) ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_is_essence_opener(j) ::
+  ponder cg_tk_kind[j] differs 2 ::
+    yield 0
+  ;;
+  forge w be cg_tk_txt[j]
+  ponder cg_in("|conjure|func|def|cycle|while|iterate|within|for|attempt|try|make|spell|enfold|", w) ::
+    yield 1
+  ;;
+  ponder cg_str_eq(w, "to") also (j equals 0 either cg_tk_kind[j - 1] equals 5) ::
+    yield 1
+  ;;
+  ponder cg_in("|discern|match|", w) ::
+    yield cg_is_stmt_start(j)
+  ;;
+  ponder cg_in("|essence|kind|class|", w) also cg_is_stmt_start(j) also j + 1 < cg_tk_state[0] also cg_tk_kind[j + 1] equals 2 ::
+    yield 1
+  ;;
+  ponder cg_in("|ponder|either|if|", w) ::
+    forge k be j - 1
+    cycle k >= 0 also cg_tk_kind[k] equals 5 ::
+      forge k be k - 1
+    ;;
+    ponder k >= 0 also cg_word_in(k, "|otherwise|else|") ::
+      yield 0
+    ;;
+    ponder cg_str_eq(w, "either") also isnt cg_is_stmt_start(j) ::
+      yield 0
+    ;;
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_desugar_essences() ::
+  cg_cls_names[0] be 0
+  cg_mth_cls[0] be 0
+  forge tc be cg_tk_state[0]
+  forge i be 0
+  cycle i < tc ::
+    ponder cg_word_in(i, "|essence|kind|class|") also cg_is_stmt_start(i) also i + 1 < tc also cg_tk_kind[i + 1] equals 2 ::
+      forge cname be cg_tk_txt[i + 1]
+      forge cidx be cg_cls_names[0] + 1
+      cg_cls_names[cidx] be cname
+      cg_cls_names[0] be cidx
+      cg_tk_kind[i] be 5
+      cg_tk_kind[i + 1] be 5
+      forge pidx be 0
+      forge j be i + 2
+      ponder cg_word_in(j, "|extend|extends|") also j + 1 < tc also cg_tk_kind[j + 1] equals 2 ::
+        forge pidx be cg_find_in_tbl(cg_cls_names, cidx, cg_tk_txt[j + 1]) + 1
+        cg_tk_kind[j] be 5
+        cg_tk_kind[j + 1] be 5
+        forge j be j + 2
+      ;;
+      ponder cg_is_op_c(j, 302) ::
+        cg_tk_kind[j] be 5
+        forge j be j + 1
+      ;;
+      forge depth be 0
+      cycle j < tc ::
+        ponder cg_is_word(j, "me") ::
+          cg_tk_txt[j] be "self"
+        otherwise ponder cg_word_in(j, "|super|ancestor|") also cg_is_op_c(j + 1, 46) also j + 2 < tc also cg_tk_kind[j + 2] equals 2 ::
+          cg_tk_txt[j] be "self"
+          cg_tk_txt[j + 2] be concat("super_", concat(cname, concat("_", cg_tk_txt[j + 2])))
+          forge j be j + 2
+        otherwise ponder cg_is_word(j, "end") either cg_is_op_c(j, 303) ::
+          ponder depth equals 0 ::
+            cg_tk_kind[j] be 5
+            forge j be j + 1
+            yeet
+          ;;
+          ponder isnt (cg_is_op_c(j, 303) also cg_word_in(cg_skip_nl(j + 1), "|otherwise|elsewise|elif|else|rescue|catch|except|ensure|finally|")) ::
+            forge depth be depth - 1
+          ;;
+        otherwise ponder cg_is_essence_opener(j) ::
+          ponder depth equals 0 also cg_word_in(j, "|conjure|to|func|def|") ::
+            forge mname be cg_tk_txt[j + 1]
+            forge mfn be concat(cname, concat("_", mname))
+            cg_tk_txt[j + 1] be mfn
+            cg_add_mth(cidx, mname, mfn, 0)
+          ;;
+          forge depth be depth + 1
+        ;;
+        forge j be j + 1
+      ;;
+      ponder pidx > 0 ::
+        forge own_stop be cg_mth_cls[0]
+        forge m be 1
+        cycle m <= own_stop ::
+          ponder cg_mth_cls[m] equals pidx ::
+            forge pkey be cg_mth_key[m]
+            forge pfn be cg_mth_fn[m]
+            ponder cg_mth_sup[m] equals 1 ::
+              cg_add_mth(cidx, pkey, pfn, 1)
+            otherwise ::
+              ponder length(cg_find_method_fn(cidx, pkey)) equals 0 ::
+                cg_add_mth(cidx, pkey, pfn, 0)
+              ;;
+              cg_add_mth(cidx, concat("super_", concat(cname, concat("_", pkey))), pfn, 1)
+            ;;
+          ;;
+          forge m be m + 1
+        ;;
+      ;;
+      forge i be j
+    otherwise ::
+      forge i be i + 1
+    ;;
+  ;;
+  yield 0
+;;
+
+conjure cg_find_method_fn(cidx, key) ::
+  forge m be 1
+  forge stop be cg_mth_cls[0] + 1
+  cycle m < stop ::
+    ponder cg_mth_cls[m] equals cidx also cg_mth_sup[m] equals 0 also cg_str_eq(cg_mth_key[m], key) ::
+      yield cg_mth_fn[m]
+    ;;
+    forge m be m + 1
+  ;;
+  yield ""
+;;
+
+conjure cg_method_ret_type(name) ::
+  forge m be 1
+  forge stop be cg_mth_cls[0] + 1
+  cycle m < stop ::
+    ponder cg_str_eq(cg_mth_key[m], name) ::
+      forge fi be cg_find_in_tbl(cg_fn_names, cg_fn_names[0], cg_mth_fn[m])
+      ponder fi >= 0 also cg_fn_ret_types[fi + 1] equals 1 ::
+        yield 1
+      ;;
+    ;;
+    forge m be m + 1
+  ;;
+  yield 0
+;;
+
+# ---- Calls & Builtins -----------------------------------------------------
+
+conjure cg_check_arity(name, got, want) ::
+  ponder cg_emit_enabled[0] also got differs want ::
+    hurl concat("arity ", name)
+  ;;
+;;
+
+conjure cg_add_pend(name, patch_pos) ::
+  ponder cg_emit_enabled[0] ::
+    forge p be cg_pend_names[0] + 1
+    cg_pend_names[p] be name
+    cg_pend_pos[p] be patch_pos
+    cg_pend_names[0] be p
+  ;;
+;;
+
+conjure cg_emit_ref(name) ::
+  cg_emit_byte(1)
+  forge patch_pos be cg_bc[0]
+  forge idx be cg_find_in_tbl(cg_fn_names, cg_fn_names[0], name)
+  ponder cg_emit_enabled[0] also idx < 0 ::
+    hurl concat("unknown ", name)
+  ;;
+  forge target be 0
+  ponder idx >= 0 ::
+    forge target be cg_fn_offsets[idx + 1]
+  ;;
+  ponder target > 0 ::
+    cg_emit_i32(target)
+  otherwise ::
+    cg_emit_i32(0)
+    cg_add_pend(name, patch_pos)
+  ;;
+  cg_expr_type[0] be 0
+;;
+
+conjure cg_emit_new(cname) ::
+  forge cf be cg_find_in_tbl(cg_cls_names, cg_cls_names[0], cname)
+  forge ci be cf + 1
+  ponder cg_emit_enabled[0] also cf < 0 ::
+    hurl concat("unknown ", cname)
+  ;;
+  forge n be 0
+  forge m be 1
+  forge mstop be cg_mth_cls[0] + 1
+  cycle m < mstop ::
+    ponder cg_mth_cls[m] equals ci ::
+      forge n be n + 1
+    ;;
+    forge m be m + 1
+  ;;
+  cg_emit_byte(138)
+  cg_emit_u16(n)
+  forge m be 1
+  cycle m < mstop ::
+    ponder cg_mth_cls[m] equals ci ::
+      cg_emit_push_str(cg_mth_key[m])
+      cg_emit_ref(cg_mth_fn[m])
+      cg_emit_byte(139)
+    ;;
+    forge m be m + 1
+  ;;
+  cg_expr_type[0] be 3
+;;
+
+conjure cg_resolve_pending_calls() ::
+  forge r be 1
+  forge stop be cg_pend_names[0] + 1
+  cycle r < stop ::
+    forge idx be cg_find_in_tbl(cg_fn_names, cg_fn_names[0], cg_pend_names[r])
+    ponder idx >= 0 ::
+      forge target be cg_fn_offsets[idx + 1]
+      forge pos be cg_pend_pos[r]
+      cg_bc[pos + 1] be target % 256
+      cg_bc[pos + 2] be (target / 256) % 256
+      ponder cg_bc[pos] differs 96 ::
+        cg_bc[pos + 3] be (target / 65536) % 256
+        cg_bc[pos + 4] be (target / 16777216) % 256
+      ;;
+    ;;
+    forge r be r + 1
+  ;;
+;;
+
+conjure cg_lookup_bi(tbl, name) ::
+  forge p be find(tbl, concat("|", concat(name, ":")))
+  ponder p < 0 ::
+    yield 0
+  ;;
+  forge q be p + length(name) + 2
+  forge tn be length(tbl)
+  forge slot be 0
+  cycle q < tn also slot < 3 ::
+    forge val be 0
+    cycle q < tn ::
+      forge ch be ord(tbl, q)
+      ponder ch equals 58 either ch equals 124 ::
+        forge q be q + 1
+        yeet
+      ;;
+      forge val be val * 10 + (ch - 48)
+      forge q be q + 1
+    ;;
+    cg_scratch[slot] be val
+    forge slot be slot + 1
+    ponder q > 0 also ord(tbl, q - 1) equals 124 ::
+      yeet
+    ;;
+  ;;
+  yield 1
+;;
+
+conjure cg_emit_fn_call(name, nargs, ret_t) ::
+  forge idx be cg_find_in_tbl(cg_fn_names, cg_fn_names[0], name)
+  ponder cg_emit_enabled[0] also (idx < 0 either cg_fn_arities[idx + 1] differs nargs) ::
+    hurl concat("bad call ", name)
+  ;;
+  cg_emit_byte(96)
+  forge patch_pos be cg_bc[0]
+  forge target be 0
+  ponder idx >= 0 ::
+    forge target be cg_fn_offsets[idx + 1]
+    ponder ret_t < 0 ::
+      cg_expr_type[0] be cg_fn_ret_types[idx + 1]
+    otherwise ::
+      cg_expr_type[0] be ret_t
+    ;;
+  otherwise ::
+    cg_expr_type[0] be 0
+  ;;
+  ponder target > 0 ::
+    cg_emit_u16(target)
+  otherwise ::
+    cg_emit_u16(0)
+    cg_add_pend(name, patch_pos)
+  ;;
+  cg_emit_byte(nargs)
+;;
+
+conjure cg_tmp(pfx) ::
+  yield concat(pfx, str(cg_tmp_depth[0]))
+;;
+
+conjure cg_lookup_hlp(name, nargs) ::
+  forge p be find(cg_hlp_tbl, concat("|", concat(name, ":")))
+  ponder p < 0 ::
+    yield 0
+  ;;
+  forge q be p + length(name) + 2
+  forge s be q
+  cycle ord(cg_hlp_tbl, s) differs 58 ::
+    forge s be s + 1
+  ;;
+  forge sfx be substr(cg_hlp_tbl, q, s - q)
+  forge want be ord(cg_hlp_tbl, s + 1) - 48
+  forge rt be ord(cg_hlp_tbl, s + 3) - 48
+  cg_check_arity(name, nargs, want)
+  cg_emit_fn_call(concat("__v1_", sfx), want, rt)
+  yield 1
+;;
+
+conjure cg_emit_call(name, nargs, arg0k, lastk) ::
+  ponder cg_lookup_bi(cg_bi_tbl, name) ::
+    ponder cg_scratch[1] equals 158 also nargs > 1 ::
+      ponder nargs equals 2 ::
+        cg_emit_push_i32(1)
+      otherwise ::
+        cg_check_arity(name, nargs, 3)
+      ;;
+      cg_emit_fn_call("__v1_range", 3, 6)
+      yield 0
+    ;;
+    cg_check_arity(name, nargs, cg_scratch[0])
+    forge op be cg_scratch[1]
+    forge rt be cg_scratch[2]
+    ponder op equals 143 also lastk equals 4 ::
+      forge rt be 5
+    otherwise ponder op equals 140 also arg0k equals 4 ::
+      forge rt be 1
+    otherwise ponder op equals 139 ::
+      forge rt be arg0k
+    ;;
+    cg_op_t(op, rt)
+    yield 0
+  ;;
+  ponder cg_lookup_bi(cg_fm_tbl, name) ::
+    forge fop be cg_scratch[0]
+    ponder fop equals 5 either fop equals 9 ::
+      forge w be 1
+      ponder fop equals 5 ::
+        forge w be 2
+      ;;
+      cg_check_arity(name, nargs, w)
+      ponder lastk equals 0 ::
+        cg_emit_byte(168)
+      ;;
+      ponder fop equals 9 ::
+        cg_op_t(172, 2)
+      otherwise ::
+        cg_emit2(174, 5)
+        cg_expr_type[0] be 2
+      ;;
+    otherwise ponder fop >= 6 ::
+      cg_check_arity(name, nargs, 1)
+      ponder lastk equals 2 ::
+        cg_emit2(181 + (fop - 6), 169)
+      ;;
+      cg_expr_type[0] be 0
+    otherwise ::
+      cg_check_arity(name, nargs, 1)
+      ponder lastk equals 0 ::
+        cg_emit_byte(168)
+      ;;
+      cg_emit2(174, fop)
+      cg_expr_type[0] be 2
+    ;;
+    yield 0
+  ;;
+  ponder cg_lookup_hlp(name, nargs) ::
+    yield 0
+  ;;
+  ponder cg_in("|concat|etch|", name) ::
+    ponder nargs < 2 ::
+      cg_check_arity(name, nargs, 2)
+    ;;
+    forge k be 1
+    cycle k < nargs ::
+      cg_emit_byte(145)
+      forge k be k + 1
+    ;;
+    cg_expr_type[0] be 1
+    yield 0
+  ;;
+  ponder cg_str_eq(name, "ord") ::
+    ponder nargs equals 1 ::
+      cg_emit_push_i32(0)
+    otherwise ::
+      cg_check_arity(name, nargs, 2)
+    ;;
+    cg_op_t(132, 0)
+    yield 0
+  ;;
+  ponder cg_in("|str|num|int|", name) ::
+    cg_check_arity(name, nargs, 1)
+    ponder cg_str_eq(name, "str") ::
+      ponder lastk equals 2 ::
+        cg_emit2(169, 135)
+      otherwise ponder lastk differs 1 ::
+        cg_emit_byte(135)
+      ;;
+      cg_expr_type[0] be 1
+    otherwise ponder cg_str_eq(name, "num") ::
+      ponder lastk equals 1 ::
+        cg_emit_byte(195)
+      otherwise ponder lastk equals 0 ::
+        cg_emit_byte(168)
+      ;;
+      cg_expr_type[0] be 2
+    otherwise ::
+      ponder lastk equals 1 ::
+        cg_emit_byte(154)
+      otherwise ponder lastk equals 2 ::
+        cg_emit_byte(169)
+      ;;
+      cg_expr_type[0] be 0
+    ;;
+    yield 0
+  ;;
+  ponder cg_in("|abs|magnitude|", name) ::
+    cg_check_arity(name, nargs, 1)
+    cg_op_t(155 + (lastk equals 2) * 16, (lastk equals 2) * 2)
+    yield 0
+  ;;
+  ponder cg_str_eq(name, "pow") ::
+    cg_check_arity(name, nargs, 2)
+    ponder arg0k equals 0 also lastk equals 0 ::
+      cg_emit_fn_call("__v1_powi", 2, 0)
+    otherwise ponder arg0k equals 0 ::
+      cg_emit_fn_call("__v1_powif", 2, 2)
+    otherwise ::
+      ponder lastk equals 0 ::
+        cg_emit_byte(168)
+      ;;
+      cg_emit2(174, 5)
+      cg_expr_type[0] be 2
+    ;;
+    yield 0
+  ;;
+  ponder cg_in("|clone|reverse|invert|", name) ::
+    cg_check_arity(name, nargs, 1)
+    ponder cg_str_eq(name, "clone") ::
+      ponder lastk equals 1 ::
+        cg_expr_type[0] be 1
+      otherwise ::
+        cg_emit_fn_call("__v1_lclone", 1, lastk)
+      ;;
+    otherwise ponder lastk equals 1 ::
+      cg_emit_fn_call("__v1_srev", 1, 1)
+    otherwise ::
+      cg_emit_fn_call("__v1_lrev", 1, lastk)
+    ;;
+    yield 0
+  ;;
+  ponder cg_in("|snatch|portion|", name) ::
+    ponder cg_str_eq(name, "snatch") also nargs equals 2 also arg0k differs 1 ::
+      cg_op_t(129, 0)
+      yield 0
+    ;;
+    ponder nargs equals 2 ::
+      cg_emit_push_i32(0 - 1)
+    ;;
+    ponder arg0k equals 1 ::
+      cg_emit_fn_call("__v1_sslice", 3, 1)
+    otherwise ::
+      cg_emit_fn_call("__v1_lslice", 3, arg0k)
+    ;;
+    yield 0
+  ;;
+  ponder cg_in("|essence|gettype|typeof|", name) ::
+    cg_check_arity(name, nargs, 1)
+    cg_emit_byte(5)
+    cg_emit_push_i32(arg0k)
+    cg_emit_fn_call("__v1_tname", 1, 1)
+    yield 0
+  ;;
+  cg_emit_fn_call(name, nargs, 0 - 1)
+;;
+
+# ---- Shared Arg-List & Inline Builtin Helpers ------------------------------
+
+conjure cg_parse_arg_list(pos, rec_name, rec_off) ::
+  forge pos be cg_skip_nl(pos + 1)
+  cg_scratch[3] be 0
+  cg_scratch[4] be 0
+  cg_scratch[5] be 0
+  ponder cg_is_op_c(pos, 41) ::
+    yield pos + 1
+  ;;
+  forge nargs be 0
+  forge going be 1
+  cycle going ::
+    forge pos be cg_parse_expr(pos)
+    forge k be cg_expr_type[0]
+    ponder nargs equals 0 ::
+      cg_scratch[4] be k
+    ;;
+    cg_scratch[5] be k
+    ponder isnt cg_emit_enabled[0] also length(rec_name) > 0 ::
+      forge fi be cg_find_in_tbl(cg_fn_names, cg_fn_names[0], rec_name)
+      ponder fi >= 0 ::
+        cg_record_param_type(fi, rec_off + nargs, k)
+      ;;
+    ;;
+    forge nargs be nargs + 1
+    forge pos be cg_skip_nl(pos)
+    ponder cg_is_op_c(pos, 44) ::
+      forge pos be cg_skip_nl(pos + 1)
+    otherwise ::
+      forge going be 0
+    ;;
+  ;;
+  cg_scratch[3] be nargs
+  yield cg_eat_rparen(pos)
+;;
+
+conjure cg_emit_append_or_pop(pos) ::
+  forge ap be cg_skip_nl(pos + 1)
+  ponder cg_is_op_c(ap, 41) ::
+    cg_emit_byte(128)
+    cg_emit_u16(0)
+    cg_expr_type[0] be 6
+    yield ap + 1
+  ;;
+  forge xs_nm be ""
+  ponder cg_tk_kind[ap] equals 2 also (cg_is_op_c(ap + 1, 44) either cg_is_op_c(ap + 1, 41)) ::
+    forge xs_nm be cg_tk_txt[ap]
+  ;;
+  forge ap be cg_parse_expr(ap)
+  forge xk be cg_expr_type[0]
+  ponder cg_is_op_c(cg_skip_nl(ap), 44) ::
+    forge ap be cg_eat_rparen(cg_parse_expr(cg_skip_nl(cg_skip_nl(ap) + 1)))
+    cg_emit_fn_call("__v1_lappend", 2, xk)
+    ponder length(xs_nm) > 0 ::
+      cg_emit_store_ident(xs_nm)
+      cg_emit_load_ident(xs_nm)
+    ;;
+    yield ap
+  ;;
+  forge ap be cg_eat_rparen(ap)
+  cg_tmp_depth[0] be cg_tmp_depth[0] + 1
+  forge d be str(cg_tmp_depth[0])
+  forge xs_t be concat("_px", d)
+  forge rv_t be concat("_pr", d)
+  cg_emit_store_ident(xs_t)
+  cg_emit_load_ident(xs_t)
+  cg_emit_load_ident(xs_t)
+  cg_emit_byte(131)
+  cg_emit_push_i32(1)
+  cg_emit2(17, 129)
+  cg_emit_store_ident(rv_t)
+  ponder length(xs_nm) > 0 ::
+    cg_emit_load_ident(xs_t)
+    cg_emit_fn_call("__v1_lpop_rest", 1, xk)
+    cg_emit_store_ident(xs_nm)
+  ;;
+  cg_emit_load_ident(rv_t)
+  ponder xk equals 5 ::
+    cg_expr_type[0] be 1
+  otherwise ::
+    cg_expr_type[0] be 0
+  ;;
+  cg_tmp_depth[0] be cg_tmp_depth[0] - 1
+  yield ap
+;;
+
+# ---- Closures & Lambdas (make / spell / arrow) ----------------------------
+
+conjure cg_step_depth(pos, d) ::
+  forge c be 0
+  ponder cg_tk_kind[pos] equals 4 ::
+    forge c be cg_tk_num[pos]
+  ;;
+  ponder c equals 40 either c equals 91 either c equals 123 ::
+    yield d + 1
+  ;;
+  ponder c equals 41 either c equals 93 either c equals 125 ::
+    yield d - 1
+  ;;
+  yield d
+;;
+
+conjure cg_find_expr_end(pos) ::
+  forge p be pos
+  forge d be 0
+  cycle p < cg_tk_state[0] ::
+    forge nd be cg_step_depth(p, d)
+    ponder nd < 0 ::
+      yield p
+    ;;
+    ponder nd differs d ::
+      forge d be nd
+    otherwise ponder d equals 0 also (cg_tk_kind[p] equals 5 either cg_is_op_c(p, 44) either cg_is_op_c(p, 303) either cg_word_in(p, "|end|for|iterate|if|ponder|")) ::
+      yield p
+    ;;
+    forge p be p + 1
+  ;;
+  yield p
+;;
+
+conjure cg_collect_auto_caps(start_p, end_p) ::
+  forge kws be "|yep|nope|void|true|false|nothing|none|null|equals|differs|is|not|isnt|also|and|either|or|forge|be|set|to|yield|return|ponder|if|otherwise|else|end|cycle|while|iterate|through|for|in|each|speak|say|"
+  forge p be start_p
+  cycle p < end_p ::
+    ponder cg_tk_kind[p] equals 2 also isnt cg_is_op_c(p + 1, 40) also isnt (p > 0 also cg_is_op_c(p - 1, 46)) ::
+      forge w be cg_tk_txt[p]
+      ponder isnt cg_in(kws, w) ::
+        ponder (cg_in_func[0] also cg_find_in_tbl(cg_loc_names, cg_loc_names[0], w) >= 0) either cg_find_in_tbl(cg_sym_names, cg_sym_names[0], w) >= 0 ::
+          ponder cg_find_in_tbl(cg_lam_names, cg_lam_names[0], w) < 0 also cg_find_in_tbl(cg_lam_caps, cg_lam_caps[0], w) < 0 ::
+            cg_lam_caps[cg_lam_caps[0] + 1] be w
+            cg_lam_caps[0] be cg_lam_caps[0] + 1
+          ;;
+        ;;
+      ;;
+    ;;
+    forge p be p + 1
+  ;;
+  yield 0
+;;
+
+conjure cg_emit_closure(body_pos, is_expr_body, has_explicit_caps) ::
+  ponder isnt has_explicit_caps ::
+    forge span_end be body_pos
+    ponder is_expr_body ::
+      forge span_end be cg_find_expr_end(body_pos)
+    otherwise ::
+      forge d be 0
+      forge sp be body_pos
+      cycle sp < cg_tk_state[0] ::
+        ponder cg_is_op_c(sp, 303) either cg_is_word(sp, "end") ::
+          ponder d equals 0 ::
+            forge span_end be sp
+            yeet
+          ;;
+          forge d be d - 1
+        otherwise ponder cg_is_essence_opener(sp) ::
+          forge d be d + 1
+        ;;
+        forge sp be sp + 1
+      ;;
+    ;;
+    cg_collect_auto_caps(body_pos, span_end)
+  ;;
+  forge lnparams be cg_lam_names[0]
+  forge lncaps be cg_lam_caps[0]
+  forge c_list be mklist(lncaps + 1)
+  forge p_list be mklist(lnparams + 1)
+  forge k be 1
+  cycle k <= lnparams ::
+    p_list[k] be cg_lam_names[k]
+    forge k be k + 1
+  ;;
+  forge k be 1
+  cycle k <= lncaps ::
+    c_list[k] be cg_lam_caps[k]
+    cg_emit_load_ident(c_list[k])
+    forge k be k + 1
+  ;;
+  forge lover be cg_emit_jmp(64)
+  forge lbody_off be cg_bc[0]
+
+  forge lbase be cg_lsav_names[0]
+  forge lsn be cg_loc_names[0]
+  forge lsi be 1
+  cycle lsi <= lsn ::
+    cg_lsav_names[lbase + lsi] be cg_loc_names[lsi]
+    cg_lsav_types[lbase + lsi] be cg_loc_types[lsi]
+    forge lsi be lsi + 1
+  ;;
+  cg_lsav_names[0] be lbase + lsn
+  cg_lsav_types[0] be lbase + lsn
+  forge lsave_in be cg_in_func[0]
+  cg_loc_names[0] be 0
+  cg_loc_types[0] be 0
+  forge k be 1
+  cycle k <= lnparams ::
+    cg_add_local(p_list[k])
+    forge k be k + 1
+  ;;
+  forge k be 1
+  cycle k <= lncaps ::
+    cg_add_local(c_list[k])
+    forge k be k + 1
+  ;;
+  forge lfixed be cg_loc_names[0]
+
+  forge lsave_emit be cg_emit_enabled[0]
+  forge lsave_syms be cg_sym_names[0]
+  forge lsave_td be cg_tmp_depth[0]
+  cg_emit_enabled[0] be 0
+  cg_in_func[0] be 1
+  ponder is_expr_body ::
+    cg_parse_expr(body_pos)
+  otherwise ::
+    cg_parse_block(body_pos)
+  ;;
+  forge lextras be cg_loc_names[0] - lfixed
+  cg_emit_enabled[0] be lsave_emit
+  cg_sym_names[0] be lsave_syms
+  cg_tmp_depth[0] be lsave_td
+  cg_loc_names[0] be lfixed
+
+  ponder lextras > 0 ::
+    cg_emit2(98, lextras)
+  ;;
+  cg_in_func[0] be 1
+  ponder is_expr_body ::
+    forge end_pos be cg_parse_expr(body_pos)
+    cg_emit_byte(97)
+  otherwise ::
+    forge end_pos be cg_parse_block(body_pos)
+    cg_emit_push_i32(0)
+    cg_emit_byte(97)
+    forge end_pos be cg_eat_end(end_pos)
+  ;;
+  cg_patch_i16(lover, cg_bc[0])
+  cg_emit_byte(197)
+  cg_emit_u16(lbody_off)
+  cg_emit_byte(lncaps)
+
+  cg_loc_names[0] be lsn
+  forge lsi be 1
+  cycle lsi <= lsn ::
+    cg_loc_names[lsi] be cg_lsav_names[lbase + lsi]
+    cg_loc_types[lsi] be cg_lsav_types[lbase + lsi]
+    forge lsi be lsi + 1
+  ;;
+  cg_lsav_names[0] be lbase
+  cg_in_func[0] be lsave_in
+  cg_expr_type[0] be 0
+  yield end_pos
+;;
+
+# ---- Expressions ----------------------------------------------------------
+
+conjure cg_emit_list_comprehension(elt_pos) ::
+  forge p be elt_pos
+  forge d be 0
+  forge tc be cg_tk_state[0]
+  forge lkw be 0 - 1
+  cycle p < tc ::
+    forge nd be cg_step_depth(p, d)
+    ponder nd < 0 ::
+      yeet
+    ;;
+    ponder nd differs d ::
+      forge d be nd
+    otherwise ponder d equals 0 also cg_word_in(p, "|for|iterate|") ::
+      forge lkw be p
+      yeet
+    otherwise ponder d equals 0 also cg_is_op_c(p, 44) ::
+      yeet
+    ;;
+    forge p be p + 1
+  ;;
+  ponder lkw < 0 ::
+    yield 0 - 1
+  ;;
+  forge q be lkw + 1
+  ponder cg_is_word(q, "each") ::
+    forge q be q + 1
+  ;;
+  forge vname be cg_tk_txt[q]
+  forge q be q + 1
+  ponder cg_word_in(q, "|in|through|be|") ::
+    forge q be q + 1
+  ;;
+  forge q be cg_parse_expr(q)
+  ponder cg_word_in(q, "|if|ponder|") ::
+    cg_lam_names[0] be 1
+    cg_lam_names[1] be vname
+    cg_lam_caps[0] be 0
+    forge q be cg_emit_closure(q + 1, 1, 0)
+    cg_emit_fn_call("__v1_sift", 2, 6)
+  ;;
+  cg_lam_names[0] be 1
+  cg_lam_names[1] be vname
+  cg_lam_caps[0] be 0
+  cg_emit_closure(elt_pos, 1, 0)
+  cg_emit_fn_call("__v1_each", 2, 6)
+  yield cg_opt_c(cg_skip_nl(q), 93)
+;;
+
+conjure cg_collect_lam_words(pos, end_c, arr) ::
+  forge tc be cg_tk_state[0]
+  cycle pos < tc ::
+    ponder end_c > 0 also cg_is_op_c(pos, end_c) ::
+      yield pos + 1
+    ;;
+    ponder end_c equals 0 also (cg_tk_kind[pos] differs 2 either cg_is_word(pos, "capture")) ::
+      yield pos
+    ;;
+    ponder cg_tk_kind[pos] equals 2 ::
+      arr[arr[0] + 1] be cg_tk_txt[pos]
+      arr[0] be arr[0] + 1
+    ;;
+    forge pos be pos + 1
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_lambda(pos, is_paren) ::
+  cg_lam_names[0] be 0
+  cg_lam_caps[0] be 0
+  ponder is_paren ::
+    forge lpos be cg_collect_lam_words(pos + 1, 41, cg_lam_names)
+    yield cg_emit_closure(lpos + 1, 1, 0)
+  ;;
+  forge lpos be pos + 1
+  ponder cg_is_op_c(lpos, 40) ::
+    forge lpos be cg_collect_lam_words(lpos + 1, 41, cg_lam_names)
+  otherwise ponder cg_is_word(lpos, "with") ::
+    forge lpos be cg_collect_lam_words(lpos + 1, 0, cg_lam_names)
+  ;;
+  forge exp_caps be 0
+  ponder cg_is_word(lpos, "capture") ::
+    forge exp_caps be 1
+    forge lpos be lpos + 1
+    cycle lpos < cg_tk_state[0] also cg_tk_kind[lpos] equals 2 ::
+      cg_lam_caps[cg_lam_caps[0] + 1] be cg_tk_txt[lpos]
+      cg_lam_caps[0] be cg_lam_caps[0] + 1
+      forge lpos be cg_opt_c(lpos + 1, 44)
+    ;;
+  ;;
+  ponder cg_is_op_c(lpos, 306) ::
+    yield cg_emit_closure(lpos + 1, 1, exp_caps)
+  ;;
+  yield cg_emit_closure(cg_opt_c(lpos, 302), 0, exp_caps)
+;;
+
+conjure cg_parse_seq_lit(pos, close_c, start_n) ::
+  forge pos be cg_skip_nl(pos)
+  ponder cg_is_op_c(pos, close_c) also start_n equals 0 ::
+    cg_emit_byte(128)
+    cg_emit_u16(0)
+    cg_expr_type[0] be 6
+    yield pos + 1
+  ;;
+  forge n be start_n
+  forge all_str be 1
+  forge going be 1
+  ponder cg_is_op_c(pos, close_c) ::
+    forge going be 0
+  ;;
+  cycle going ::
+    forge pos be cg_parse_expr(pos)
+    ponder cg_expr_type[0] differs 1 ::
+      forge all_str be 0
+    ;;
+    forge n be n + 1
+    forge pos be cg_skip_nl(pos)
+    ponder cg_is_op_c(pos, 44) ::
+      forge pos be cg_skip_nl(pos + 1)
+      ponder cg_is_op_c(pos, close_c) ::
+        forge going be 0
+      ;;
+    otherwise ::
+      forge going be 0
+    ;;
+  ;;
+  forge pos be cg_opt_c(pos, close_c)
+  cg_emit_byte(128)
+  cg_emit_u16(n)
+  ponder all_str also start_n equals 0 ::
+    cg_expr_type[0] be 5
+  otherwise ::
+    cg_expr_type[0] be 6
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_atom(pos) ::
+  forge tc be cg_tk_state[0]
+  ponder pos >= tc ::
+    yield pos
+  ;;
+  forge knd be cg_tk_kind[pos]
+  ponder knd equals 1 ::
+    cg_emit_push_i32(cg_tk_num[pos])
+    cg_expr_type[0] be 0
+    yield pos + 1
+  ;;
+  ponder knd equals 6 ::
+    forge fscale be cg_tk_num2[pos]
+    forge fdiv be 1
+    cycle fscale > 0 ::
+      forge fdiv be fdiv * 10
+      forge fscale be fscale - 1
+    ;;
+    cg_emit_push_f64(i2f(cg_tk_num[pos]) / i2f(fdiv))
+    cg_expr_type[0] be 2
+    yield pos + 1
+  ;;
+  ponder knd equals 3 ::
+    cg_emit_push_str(cg_tk_txt[pos])
+    cg_expr_type[0] be 1
+    yield pos + 1
+  ;;
+  ponder knd equals 2 ::
+    forge name be cg_tk_txt[pos]
+    ponder cg_in("|yep|true|nope|false|void|null|none|nothing|", name) ::
+      cg_emit_push_i32(cg_in("|yep|true|", name))
+      cg_expr_type[0] be 0
+      yield pos + 1
+    ;;
+    ponder cg_in("|PI|TAU|E|", name) also isnt cg_is_op_c(pos + 1, 40) ::
+      cg_emit_call(name, 0, 0, 0)
+      yield pos + 1
+    ;;
+    ponder cg_str_eq(name, "__v1_fstr_val") also cg_is_op_c(pos + 1, 40) ::
+      forge pos be cg_eat_rparen(cg_parse_expr(pos + 2))
+      cg_emit_coerce_to_str(cg_expr_type[0])
+      cg_expr_type[0] be 1
+      yield pos
+    ;;
+    ponder cg_is_op_c(pos + 1, 306) ::
+      cg_lam_names[0] be 1
+      cg_lam_names[1] be name
+      cg_lam_caps[0] be 0
+      yield cg_emit_closure(pos + 2, 1, 0)
+    ;;
+    forge is_ctor be 0
+    forge cn be ""
+    ponder cg_in("|new|spell|make|", name) also pos + 1 < tc also cg_tk_kind[pos + 1] equals 2 also cg_find_in_tbl(cg_cls_names, cg_cls_names[0], cg_tk_txt[pos + 1]) >= 0 ::
+      forge is_ctor be 1
+      forge cn be cg_tk_txt[pos + 1]
+      forge pos be pos + 2
+    otherwise ponder cg_find_in_tbl(cg_cls_names, cg_cls_names[0], name) >= 0 also cg_is_op_c(pos + 1, 40) ::
+      forge is_ctor be 1
+      forge cn be name
+      forge pos be pos + 1
+    ;;
+    ponder is_ctor ::
+      cg_emit_new(cn)
+      forge init_fn be cg_find_method_fn(cg_find_in_tbl(cg_cls_names, cg_cls_names[0], cn) + 1, "init")
+      ponder cg_is_op_c(pos, 40) ::
+        ponder length(init_fn) > 0 ::
+          cg_tmp_depth[0] be cg_tmp_depth[0] + 1
+          forge obj_t be cg_tmp("_nw")
+          cg_emit_store_ident(obj_t)
+          cg_emit_load_ident(obj_t)
+          forge pos be cg_parse_arg_list(pos, init_fn, 1)
+          cg_emit_call(init_fn, cg_scratch[3] + 1, 3, cg_scratch[5])
+          cg_emit_byte(5)
+          cg_emit_load_ident(obj_t)
+          cg_tmp_depth[0] be cg_tmp_depth[0] - 1
+        otherwise ::
+          forge pos be cg_eat_rparen(pos + 1)
+        ;;
+      ;;
+      cg_expr_type[0] be 3
+      yield pos
+    ;;
+    ponder cg_in("|spell|make|", name) ::
+      yield cg_parse_lambda(pos, 0)
+    ;;
+    ponder cg_str_eq(name, "new") also pos + 1 < tc also cg_tk_kind[pos + 1] equals 2 ::
+      ponder cg_emit_enabled[0] ::
+        hurl concat("unknown ", cg_tk_txt[pos + 1])
+      ;;
+      yield pos + 2
+    ;;
+    ponder cg_str_eq(name, "ref") also pos + 1 < tc also cg_tk_kind[pos + 1] equals 2 ::
+      cg_emit_ref(cg_tk_txt[pos + 1])
+      yield pos + 2
+    ;;
+    ponder cg_str_eq(name, "call") also pos + 1 < tc also cg_tk_kind[pos + 1] equals 2 also cg_is_op_c(pos + 2, 40) ::
+      forge fname be cg_tk_txt[pos + 1]
+      forge pos be cg_parse_arg_list(pos + 2, "", 0)
+      cg_emit_load_ident(fname)
+      cg_emit2(196, cg_scratch[3])
+      cg_expr_type[0] be 0
+      yield pos
+    ;;
+    ponder cg_is_op_c(pos + 1, 40) ::
+      ponder cg_in("|gather|pluck|", name) ::
+        yield cg_emit_append_or_pop(pos + 1)
+      ;;
+      ponder cg_str_eq(name, "morph") ::
+        forge ap be cg_parse_expr(cg_skip_nl(pos + 2))
+        forge vk be cg_expr_type[0]
+        forge ap be cg_skip_nl(ap)
+        ponder cg_is_op_c(ap, 44) ::
+          forge ap be cg_skip_nl(ap + 1)
+          forge tc0 be ord(cg_tk_txt[ap], 0)
+          forge ap be cg_eat_rparen(ap + 1)
+          ponder tc0 equals 116 ::
+            cg_emit_coerce_to_str(vk)
+            cg_expr_type[0] be 1
+          otherwise ponder tc0 equals 110 either tc0 equals 105 ::
+            ponder vk equals 1 ::
+              cg_emit_byte(195)
+              cg_expr_type[0] be 2
+            ;;
+          otherwise ::
+            cg_emit2(48, 48)
+            cg_expr_type[0] be 0
+          ;;
+        ;;
+        yield ap
+      ;;
+      forge pos be cg_parse_arg_list(pos + 1, name, 0)
+      cg_emit_call(name, cg_scratch[3], cg_scratch[4], cg_scratch[5])
+      yield pos
+    ;;
+    cg_emit_load_ident(name)
+    yield pos + 1
+  ;;
+  ponder cg_is_op_c(pos, 40) ::
+    forge p be pos + 1
+    forge d be 1
+    cycle p < tc also d > 0 ::
+      forge d be cg_step_depth(p, d)
+      forge p be p + 1
+    ;;
+    ponder d equals 0 also cg_is_op_c(p, 306) ::
+      yield cg_parse_lambda(pos, 1)
+    ;;
+    forge pos be cg_skip_nl(pos + 1)
+    ponder cg_is_op_c(pos, 41) ::
+      cg_emit_byte(128)
+      cg_emit_u16(0)
+      cg_expr_type[0] be 6
+      yield pos + 1
+    ;;
+    ponder cg_tk_kind[pos] equals 2 also cg_is_op_c(pos + 1, 315) ::
+      forge wname be cg_tk_txt[pos]
+      forge pos be cg_parse_expr(pos + 2)
+      forge wk be cg_expr_type[0]
+      cg_emit_store_ident(wname)
+      cg_emit_load_ident(wname)
+      cg_expr_type[0] be wk
+      yield cg_eat_rparen(pos)
+    ;;
+    forge pos be cg_parse_expr(pos)
+    forge k0 be cg_expr_type[0]
+    forge pos be cg_skip_nl(pos)
+    ponder cg_is_op_c(pos, 44) ::
+      yield cg_parse_seq_lit(cg_skip_nl(pos + 1), 41, 1)
+    ;;
+    forge pos be cg_eat_rparen(pos)
+    cg_expr_type[0] be k0
+    yield pos
+  ;;
+  ponder cg_is_op_c(pos, 91) either cg_is_op_c(pos, 317) ::
+    forge close_c be 93
+    ponder cg_is_op_c(pos, 317) ::
+      forge close_c be 318
+    otherwise ::
+      forge cp be cg_emit_list_comprehension(cg_skip_nl(pos + 1))
+      ponder cp >= 0 ::
+        yield cp
+      ;;
+    ;;
+    yield cg_parse_seq_lit(pos + 1, close_c, 0)
+  ;;
+  ponder cg_is_op_c(pos, 123) either cg_is_op_c(pos, 302) ::
+    forge close_c be 125
+    ponder cg_is_op_c(pos, 302) ::
+      forge close_c be 303
+    ;;
+    forge pos be cg_skip_nl(pos + 1)
+    cg_emit_byte(138)
+    forge cap_pos be cg_bc[0]
+    cg_emit2(0, 0)
+    forge n be 0
+    forge vk be 0
+    cycle pos < tc also isnt cg_is_op_c(pos, close_c) ::
+      ponder cg_tk_kind[pos] equals 2 also cg_is_op_c(pos + 1, 58) ::
+        cg_emit_push_str(cg_tk_txt[pos])
+        forge pos be pos + 1
+      otherwise ::
+        forge pos be cg_parse_expr(pos)
+      ;;
+      forge pos be cg_parse_expr(cg_skip_nl(cg_opt_c(pos, 58)))
+      ponder cg_expr_type[0] equals 1 ::
+        forge vk be 1
+      ;;
+      cg_emit_byte(139)
+      forge n be n + 1
+      forge pos be cg_skip_nl(pos)
+      ponder cg_is_op_c(pos, 44) ::
+        forge pos be cg_skip_nl(pos + 1)
+      otherwise ::
+        yeet
+      ;;
+    ;;
+    forge pos be cg_opt_c(pos, close_c)
+    ponder cg_emit_enabled[0] ::
+      cg_bc[cap_pos + 1] be n % 256
+      cg_bc[cap_pos + 2] be (n / 256) % 256
+    ;;
+    ponder vk equals 1 ::
+      cg_expr_type[0] be 4
+    otherwise ::
+      cg_expr_type[0] be 3
+    ;;
+    yield pos
+  ;;
+  yield pos
+;;
+
+conjure cg_is_slice_span(pos) ::
+  forge p be pos
+  forge d be 0
+  cycle p < cg_tk_state[0] ::
+    forge nd be cg_step_depth(p, d)
+    ponder nd < 0 ::
+      yield 0
+    ;;
+    ponder nd differs d ::
+      forge d be nd
+    otherwise ponder d equals 0 also cg_is_op_c(p, 58) ::
+      yield 1
+    ;;
+    forge p be p + 1
+  ;;
+  yield 0
+;;
+
+conjure cg_parse_postfix(pos) ::
+  cycle 1 ::
+    ponder cg_is_op_c(pos, 91) ::
+      forge tk be cg_expr_type[0]
+      ponder cg_is_slice_span(pos + 1) ::
+        forge pos be pos + 1
+        ponder cg_is_op_c(pos, 58) ::
+          cg_emit_push_i32(0)
+        otherwise ::
+          forge pos be cg_parse_expr(pos)
+        ;;
+        forge pos be cg_opt_c(pos, 58)
+        ponder cg_is_op_c(pos, 93) ::
+          cg_emit_push_i32(0 - 1)
+        otherwise ::
+          forge pos be cg_parse_expr(pos)
+        ;;
+        forge pos be cg_opt_c(pos, 93)
+        ponder tk equals 1 ::
+          cg_emit_fn_call("__v1_sslice", 3, 1)
+        otherwise ::
+          cg_emit_fn_call("__v1_lslice", 3, tk)
+        ;;
+      otherwise ::
+        forge pos be cg_opt_c(cg_parse_expr(pos + 1), 93)
+        ponder tk equals 3 either tk equals 4 ::
+          cg_op_t(140, tk equals 4)
+        otherwise ponder tk equals 1 ::
+          cg_emit2(132, 136)
+          cg_expr_type[0] be 1
+        otherwise ::
+          cg_op_t(129, tk equals 5)
+        ;;
+      ;;
+    otherwise ponder cg_is_op_c(pos, 46) also pos + 1 < cg_tk_state[0] also cg_tk_kind[pos + 1] equals 2 ::
+      forge mname be cg_tk_txt[pos + 1]
+      ponder cg_is_op_c(pos + 2, 40) ::
+        cg_tmp_depth[0] be cg_tmp_depth[0] + 1
+        forge recv_t be cg_tmp("_mcr")
+        cg_emit_store_ident(recv_t)
+        cg_emit_load_ident(recv_t)
+        forge pos be cg_parse_arg_list(pos + 2, "", 0)
+        cg_emit_load_ident(recv_t)
+        cg_emit_push_str(mname)
+        cg_emit2(140, 196)
+        cg_emit_byte(cg_scratch[3] + 1)
+        cg_tmp_depth[0] be cg_tmp_depth[0] - 1
+        cg_expr_type[0] be cg_method_ret_type(mname)
+      otherwise ::
+        cg_emit_push_str(mname)
+        cg_emit_byte(140)
+        forge fk be cg_find_in_tbl(cg_fld_names, cg_fld_names[0], mname)
+        ponder fk >= 0 ::
+          cg_expr_type[0] be cg_fld_types[fk + 1]
+        otherwise ::
+          cg_expr_type[0] be 0
+        ;;
+        forge pos be pos + 2
+      ;;
+    otherwise ::
+      yeet
+    ;;
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_unary(pos) ::
+  ponder cg_is_op_c(pos, 45) ::
+    forge pos be cg_parse_unary(pos + 1)
+    ponder cg_expr_type[0] equals 2 ::
+      cg_emit_byte(170)
+    otherwise ::
+      cg_emit_push_i32(0 - 1)
+      cg_op_t(18, 0)
+    ;;
+    yield pos
+  ;;
+  ponder cg_is_op_c(pos, 43) ::
+    yield cg_parse_unary(pos + 1)
+  ;;
+  ponder cg_is_op_c(pos, 33) ::
+    forge pos be cg_parse_unary(pos + 1)
+    cg_op_t(48, 0)
+    yield pos
+  ;;
+  forge pos be cg_parse_postfix(cg_parse_atom(pos))
+  ponder cg_is_op_c(pos, 94) either cg_is_op_c(pos, 316) ::
+    forge lk be cg_expr_type[0]
+    ponder lk equals 0 ::
+      cg_emit_byte(168)
+    ;;
+    forge pos be cg_parse_unary(pos + 1)
+    forge rk be cg_expr_type[0]
+    ponder rk equals 0 ::
+      cg_emit_byte(168)
+    ;;
+    cg_emit2(174, 5)
+    ponder lk equals 0 also rk equals 0 ::
+      cg_op_t(169, 0)
+    otherwise ::
+      cg_expr_type[0] be 2
+    ;;
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_mul(pos) ::
+  forge pos be cg_parse_unary(pos)
+  cycle cg_is_op_c(pos, 42) either cg_is_op_c(pos, 47) either cg_is_op_c(pos, 37) ::
+    forge c be cg_tk_num[pos]
+    forge lk be cg_expr_type[0]
+    forge pos be cg_parse_unary(pos + 1)
+    forge rk be cg_expr_type[0]
+    ponder c equals 37 ::
+      cg_op_t(20, 0)
+    otherwise ponder c equals 42 also lk equals 1 also rk equals 0 ::
+      cg_emit_fn_call("__v1_srep", 2, 1)
+    otherwise ponder cg_both_float(lk, rk) ::
+      cg_op_t(163 + (c equals 47), 2)
+    otherwise ::
+      cg_op_t(18 + (c equals 47), 0)
+    ;;
+  ;;
+  yield pos
+;;
+
+conjure cg_emit_str_concat_coerce(lk, rk) ::
+  ponder lk equals 0 ::
+    cg_tmp_depth[0] be cg_tmp_depth[0] + 1
+    forge rt be cg_tmp("_scr")
+    cg_emit_store_ident(rt)
+    cg_emit_byte(135)
+    cg_emit_load_ident(rt)
+    cg_tmp_depth[0] be cg_tmp_depth[0] - 1
+  otherwise ponder rk equals 0 ::
+    cg_emit_byte(135)
+  ;;
+  cg_op_t(145, 1)
+;;
+
+conjure cg_parse_add(pos) ::
+  forge pos be cg_parse_mul(pos)
+  cycle cg_is_op_c(pos, 43) either cg_is_op_c(pos, 45) ::
+    forge is_add be cg_is_op_c(pos, 43)
+    forge lk be cg_expr_type[0]
+    forge pos be cg_parse_mul(pos + 1)
+    forge rk be cg_expr_type[0]
+    ponder is_add ::
+      ponder (lk equals 5 either lk equals 6) also (rk equals 5 either rk equals 6) ::
+        cg_emit_fn_call("__v1_lcat", 2, 6)
+      otherwise ponder lk equals 1 either rk equals 1 ::
+        cg_emit_str_concat_coerce(lk, rk)
+      otherwise ponder cg_both_float(lk, rk) ::
+        cg_op_t(161, 2)
+      otherwise ::
+        cg_op_t(16, 0)
+      ;;
+    otherwise ponder cg_both_float(lk, rk) ::
+      cg_op_t(162, 2)
+    otherwise ::
+      cg_op_t(17, 0)
+    ;;
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_cmp(pos) ::
+  forge pos be cg_parse_add(pos)
+  cycle 1 ::
+    forge is_eq be 0
+    forge neg be 0
+    ponder cg_word_in(pos, "|equals|same|") either cg_is_op_c(pos, 304) ::
+      forge is_eq be 1
+      forge pos be pos + 1
+    otherwise ponder cg_is_word(pos, "differs") either cg_is_op_c(pos, 305) ::
+      forge is_eq be 1
+      forge neg be 1
+      forge pos be pos + 1
+    otherwise ponder cg_is_word(pos, "is") ::
+      forge is_eq be 1
+      forge pos be pos + 1
+      ponder cg_word_in(pos, "|not|isnt|") ::
+        forge neg be 1
+        forge pos be pos + 1
+      ;;
+    ;;
+    ponder is_eq ::
+      forge lk be cg_expr_type[0]
+      forge pos be cg_parse_add(pos)
+      forge rk be cg_expr_type[0]
+      ponder cg_is_word(pos, "or") also cg_word_in(pos + 1, "|more|less|") ::
+        cg_op_t(36 + cg_is_word(pos + 1, "more"), 0)
+        forge pos be pos + 2
+      otherwise ponder lk equals 1 either rk equals 1 ::
+        cg_op_t(144, 0)
+        ponder neg ::
+          cg_emit_byte(48)
+        ;;
+      otherwise ponder cg_both_float(lk, rk) ::
+        cg_op_t(167, 0)
+        ponder neg ::
+          cg_emit_byte(48)
+        ;;
+      otherwise ::
+        cg_op_t(32 + neg, 0)
+      ;;
+    otherwise ponder cg_is_op_c(pos, 60) either cg_is_op_c(pos, 62) either cg_is_op_c(pos, 300) either cg_is_op_c(pos, 301) ::
+      forge c be cg_tk_num[pos]
+      forge lk be cg_expr_type[0]
+      forge pos be cg_parse_add(pos + 1)
+      ponder cg_both_float(lk, cg_expr_type[0]) ::
+        cg_op_t(165 + (c equals 62 either c equals 300), 0)
+        ponder c equals 300 either c equals 301 ::
+          cg_emit_byte(48)
+        ;;
+      otherwise ponder c equals 60 either c equals 62 ::
+        cg_op_t(34 + (c equals 62), 0)
+      otherwise ::
+        cg_op_t(36 + (c equals 301), 0)
+      ;;
+    otherwise ::
+      yeet
+    ;;
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_not(pos) ::
+  ponder cg_word_in(pos, "|isnt|not|") ::
+    forge pos be cg_parse_not(pos + 1)
+    cg_op_t(48, 0)
+    yield pos
+  ;;
+  yield cg_parse_cmp(pos)
+;;
+
+conjure cg_parse_and(pos) ::
+  forge pos be cg_parse_not(pos)
+  cycle cg_word_in(pos, "|also|and|") either cg_is_op_c(pos, 319) ::
+    forge fx be cg_emit_jmp(65)
+    forge pos be cg_parse_not(pos + 1)
+    cg_emit2(48, 48)
+    forge fe be cg_emit_jmp(64)
+    cg_patch_i16(fx, cg_bc[0])
+    cg_emit_push_i32(0)
+    cg_patch_i16(fe, cg_bc[0])
+    cg_expr_type[0] be 0
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_or(pos) ::
+  forge pos be cg_parse_and(pos)
+  cycle cg_word_in(pos, "|either|or|") either cg_is_op_c(pos, 320) ::
+    forge fx be cg_emit_jmp(65)
+    cg_emit_push_i32(1)
+    forge fe be cg_emit_jmp(64)
+    cg_patch_i16(fx, cg_bc[0])
+    forge pos be cg_parse_and(pos + 1)
+    cg_emit2(48, 48)
+    cg_patch_i16(fe, cg_bc[0])
+    cg_expr_type[0] be 0
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_ternary(pos) ::
+  forge pos be cg_parse_or(pos)
+  ponder cg_is_op_c(pos, 126) ::
+    forge jz be cg_emit_jmp(65)
+    forge pos be cg_parse_or(pos + 1)
+    forge tk be cg_expr_type[0]
+    forge jmp be cg_emit_jmp(64)
+    cg_patch_i16(jz, cg_bc[0])
+    forge pos be cg_parse_ternary(cg_opt_c(pos, 58))
+    cg_patch_i16(jmp, cg_bc[0])
+    ponder tk equals 1 either cg_expr_type[0] equals 1 ::
+      cg_expr_type[0] be 1
+    otherwise ::
+      cg_expr_type[0] be tk
+    ;;
+  ;;
+  yield pos
+;;
+
+conjure cg_parse_expr(pos) ::
+  forge pos be cg_parse_ternary(pos)
+  cycle cg_is_op_c(pos, 308) ::
+    forge lk be cg_expr_type[0]
+    forge pos be pos + 1
+    ponder cg_tk_kind[pos] equals 2 also isnt cg_is_op_c(pos + 1, 40) also isnt cg_is_op_c(pos + 1, 306) ::
+      forge fname be cg_tk_txt[pos]
+      ponder cg_find_in_tbl(cg_fn_names, cg_fn_names[0], fname) >= 0 either cg_in("|length|measure|upper|lower|trim|sum|str|abs|", fname) ::
+        ponder isnt cg_emit_enabled[0] ::
+          forge fi be cg_find_in_tbl(cg_fn_names, cg_fn_names[0], fname)
+          ponder fi >= 0 ::
+            cg_record_param_type(fi, 0, lk)
+          ;;
+        ;;
+        cg_emit_call(fname, 1, lk, lk)
+        forge pos be pos + 1
+      otherwise ::
+        forge pos be cg_parse_ternary(pos)
+        cg_emit2(196, 1)
+        cg_expr_type[0] be 0
+      ;;
+    otherwise ::
+      forge pos be cg_parse_ternary(pos)
+      cg_emit2(196, 1)
+      cg_expr_type[0] be 0
+    ;;
+  ;;
+  yield pos
+;;
+
+# ---- Statements -----------------------------------------------------------
+
+conjure cg_parse_block(pos) ::
+  cycle pos < cg_tk_state[0] ::
+    forge pos be cg_skip_nl(pos)
+    ponder pos >= cg_tk_state[0] either cg_is_op_c(pos, 303) either cg_word_in(pos, "|end|otherwise|else|elsewise|elif|rescue|catch|except|ensure|finally|omen|case|") ::
+      yeet
+    ;;
+    forge new_pos be cg_parse_stmt(pos)
+    ponder new_pos equals pos ::
+      yeet
+    ;;
+    forge pos be new_pos
+  ;;
+  yield pos
+;;
+
+conjure cg_emit_coerce_to_str(k) ::
+  ponder k equals 1 ::
+    yield 0
+  ;;
+  ponder k equals 2 ::
+    cg_emit2(169, 135)
+    yield 0
+  ;;
+  ponder k equals 5 either k equals 6 ::
+    cg_emit_fn_call("__v1_lstr", 1, 1)
+    yield 0
+  ;;
+  cg_emit_byte(135)
+  yield 0
+;;
+
+conjure cg_stmt_speak(pos, mode) ::
+  ponder cg_is_word(pos, "shout") ::
+    forge mode be 1
+  otherwise ponder cg_is_word(pos, "whisper") ::
+    forge mode be 2
+  ;;
+  forge pos be pos + 1
+  forge has_paren be 0
+  ponder cg_is_op_c(pos, 40) ::
+    forge has_paren be 1
+    forge pos be cg_skip_nl(pos + 1)
+    ponder cg_is_op_c(pos, 41) ::
+      cg_emit_push_str("")
+      cg_emit_byte(81)
+      yield pos + 1
+    ;;
+  ;;
+  forge pos be cg_parse_expr(pos)
+  forge k0 be cg_expr_type[0]
+  ponder isnt cg_is_op_c(pos, 44) ::
+    ponder has_paren ::
+      forge pos be cg_eat_rparen(pos)
+    ;;
+    ponder mode equals 1 ::
+      cg_emit_coerce_to_str(k0)
+      cg_emit2(146, 81)
+    otherwise ponder k0 equals 1 ::
+      cg_emit_byte(81)
+    otherwise ponder k0 equals 2 ::
+      cg_emit_byte(173)
+    otherwise ponder k0 equals 5 either k0 equals 6 ::
+      cg_emit_coerce_to_str(k0)
+      cg_emit_byte(81)
+    otherwise ::
+      cg_emit_byte(80)
+    ;;
+    yield pos
+  ;;
+  cg_emit_coerce_to_str(k0)
+  cycle cg_is_op_c(cg_skip_nl(pos), 44) ::
+    forge pos be cg_skip_nl(pos) + 1
+    ponder mode differs 2 ::
+      cg_emit_push_str(" ")
+      cg_emit_byte(145)
+    ;;
+    forge pos be cg_parse_expr(cg_skip_nl(pos))
+    cg_emit_coerce_to_str(cg_expr_type[0])
+    cg_emit_byte(145)
+  ;;
+  ponder has_paren ::
+    forge pos be cg_eat_rparen(pos)
+  ;;
+  ponder mode equals 1 ::
+    cg_emit_byte(146)
+  ;;
+  cg_emit_byte(81)
+  yield pos
+;;
+
+conjure cg_stmt_forge(pos) ::
+  forge pos be pos + 1
+  forge names be mklist(16)
+  forge ncount be 0
+  cycle 1 ::
+    forge pos be cg_opt_c(pos, 42)
+    names[ncount] be cg_tk_txt[pos]
+    forge ncount be ncount + 1
+    forge pos be pos + 1
+    ponder isnt cg_is_op_c(pos, 44) ::
+      yeet
+    ;;
+    forge pos be pos + 1
+  ;;
+  ponder cg_is_op_c(pos, 58) ::
+    forge pos be pos + 1
+    cycle pos < cg_tk_state[0] also cg_tk_kind[pos] differs 5 also isnt cg_is_word(pos, "be") also isnt cg_is_op_c(pos, 61) ::
+      forge pos be pos + 1
+    ;;
+  ;;
+  ponder isnt cg_is_word(pos, "be") also isnt cg_is_op_c(pos, 61) ::
+    forge k be 0
+    cycle k < ncount ::
+      cg_emit_push_i32(0)
+      cg_expr_type[0] be 0
+      cg_emit_store_ident(names[k])
+      forge k be k + 1
+    ;;
+    yield pos
+  ;;
+  forge pos be cg_parse_expr(pos + 1)
+  ponder ncount equals 1 ::
+    cg_emit_store_ident(names[0])
+    yield pos
+  ;;
+  cg_tmp_depth[0] be cg_tmp_depth[0] + 1
+  forge dt be cg_tmp("_ds")
+  cg_emit_store_ident(dt)
+  forge k be 0
+  cycle k < ncount ::
+    cg_emit_load_ident(dt)
+    cg_emit_push_i32(k)
+    cg_op_t(129, 0)
+    cg_emit_store_ident(names[k])
+    forge k be k + 1
+  ;;
+  cg_tmp_depth[0] be cg_tmp_depth[0] - 1
+  yield pos
+;;
+
+conjure cg_aug_op(pos) ::
+  ponder pos < cg_tk_state[0] also cg_tk_kind[pos] equals 4 also cg_tk_num[pos] >= 310 also cg_tk_num[pos] <= 314 ::
+    yield cg_tk_num[pos]
+  ;;
+  yield 0
+;;
+
+conjure cg_skip_assign_kw(pos) ::
+  ponder cg_word_in(pos, "|be|to|") either cg_is_op_c(pos, 61) ::
+    yield pos + 1
+  ;;
+  yield pos
+;;
+
+conjure cg_stmt_target_assign(pos, skip_lead) ::
+  ponder skip_lead ::
+    forge pos be pos + 1
+  ;;
+  forge name be cg_tk_txt[pos]
+  forge pos be pos + 1
+  ponder cg_is_op_c(pos, 46) ::
+    forge fname be cg_tk_txt[pos + 1]
+    forge pos be pos + 2
+    forge aop be cg_aug_op(pos)
+    cg_emit_load_ident(name)
+    cg_emit_push_str(fname)
+    ponder aop > 0 ::
+      cg_emit_load_ident(name)
+      cg_emit_push_str(fname)
+      cg_emit_byte(140)
+      forge pos be cg_parse_expr(pos + 1)
+      cg_emit_byte(16 + (aop - 310))
+    otherwise ::
+      forge pos be cg_parse_expr(cg_skip_assign_kw(pos))
+      cg_record_field_type(fname, cg_expr_type[0])
+    ;;
+    cg_emit2(139, 5)
+    cg_expr_type[0] be 0
+    yield pos
+  ;;
+  ponder cg_is_op_c(pos, 91) ::
+    cg_emit_load_ident(name)
+    forge tk be cg_expr_type[0]
+    forge pos be cg_opt_c(cg_parse_expr(pos + 1), 93)
+    forge aop be cg_aug_op(pos)
+    ponder aop > 0 ::
+      cg_tmp_depth[0] be cg_tmp_depth[0] + 1
+      forge idx_t be cg_tmp("_aii")
+      cg_emit_store_ident(idx_t)
+      cg_emit_byte(5)
+      cg_emit_load_ident(name)
+      cg_emit_load_ident(idx_t)
+      cg_emit_load_ident(name)
+      cg_emit_load_ident(idx_t)
+      ponder tk equals 3 either tk equals 4 ::
+        cg_emit_byte(140)
+      otherwise ::
+        cg_emit_byte(129)
+      ;;
+      forge pos be cg_parse_expr(pos + 1)
+      cg_emit_byte(16 + (aop - 310))
+      cg_tmp_depth[0] be cg_tmp_depth[0] - 1
+    otherwise ::
+      forge pos be cg_parse_expr(cg_skip_assign_kw(pos))
+    ;;
+    ponder tk equals 3 either tk equals 4 ::
+      cg_emit2(139, 5)
+      ponder cg_expr_type[0] equals 1 also tk equals 3 ::
+        cg_set_ident_type(name, 4)
+      ;;
+    otherwise ::
+      cg_emit_byte(130)
+    ;;
+    cg_expr_type[0] be 0
+    yield pos
+  ;;
+  forge aop be cg_aug_op(pos)
+  ponder aop > 0 ::
+    cg_emit_load_ident(name)
+    forge lk be cg_expr_type[0]
+    forge pos be cg_parse_expr(pos + 1)
+    forge rk be cg_expr_type[0]
+    ponder aop equals 310 also (lk equals 1 either rk equals 1) ::
+      cg_emit_str_concat_coerce(lk, rk)
+    otherwise ponder cg_both_float(lk, rk) ::
+      cg_emit_byte(161 + (aop - 310))
+      cg_expr_type[0] be 2
+    otherwise ::
+      cg_emit_byte(16 + (aop - 310))
+      cg_expr_type[0] be 0
+    ;;
+    cg_emit_store_ident(name)
+    yield pos
+  ;;
+  forge pos be cg_parse_expr(cg_skip_assign_kw(pos))
+  cg_emit_store_ident(name)
+  yield pos
+;;
+
+conjure cg_peek_bare_assign(pos) ::
+  forge tc be cg_tk_state[0]
+  ponder pos >= tc either cg_tk_kind[pos] differs 2 ::
+    yield 0
+  ;;
+  forge p be pos + 1
+  cycle p < tc ::
+    ponder cg_is_op_c(p, 46) also p + 1 < tc also cg_tk_kind[p + 1] equals 2 ::
+      forge p be p + 2
+    otherwise ponder cg_is_op_c(p, 91) ::
+      forge p be p + 1
+      forge d be 1
+      cycle p < tc also d > 0 ::
+        forge d be cg_step_depth(p, d)
+        forge p be p + 1
+      ;;
+    otherwise ::
+      yeet
+    ;;
+  ;;
+  ponder p < tc also (cg_is_word(p, "be") either cg_is_op_c(p, 61) either cg_aug_op(p) > 0) ::
+    yield 1
+  ;;
+  yield 0
+;;
+
+conjure cg_stmt_if(pos) ::
+  forge pos be cg_opt_c(cg_parse_expr(pos + 1), 302)
+  forge jz be cg_emit_jmp(65)
+  forge pos be cg_parse_block(pos)
+  ponder cg_is_op_c(pos, 303) ::
+    cg_patch_i16(jz, cg_bc[0])
+    yield pos + 1
+  ;;
+  ponder cg_word_in(pos, "|otherwise|else|elsewise|elif|") ::
+    forge jmp be cg_emit_jmp(64)
+    cg_patch_i16(jz, cg_bc[0])
+    ponder cg_word_in(pos, "|elsewise|elif|") ::
+      forge pos be cg_stmt_if(pos)
+      cg_patch_i16(jmp, cg_bc[0])
+      yield pos
+    ;;
+    forge pos be pos + 1
+    ponder cg_word_in(pos, "|ponder|either|if|") ::
+      forge pos be cg_stmt_if(pos)
+      cg_patch_i16(jmp, cg_bc[0])
+      yield pos
+    ;;
+    forge pos be cg_parse_block(cg_opt_c(pos, 302))
+    cg_patch_i16(jmp, cg_bc[0])
+    yield cg_eat_end(pos)
+  ;;
+  cg_patch_i16(jz, cg_bc[0])
+  ponder cg_is_word(pos, "end") ::
+    yield pos + 1
+  ;;
+  yield pos
+;;
+
+conjure cg_stmt_while(pos) ::
+  forge loop_top be cg_bc[0]
+  forge pos be cg_opt_c(cg_parse_expr(pos + 1), 302)
+  forge jz be cg_emit_jmp(65)
+  cg_loop_depth[0] be cg_loop_depth[0] + 1
+  forge pos be cg_parse_block(pos)
+  cg_patch_list(cg_cnt_pos, cg_cnt_dep, loop_top)
+  cg_emit_back(loop_top)
+  cg_patch_i16(jz, cg_bc[0])
+  cg_patch_list(cg_brk_pos, cg_brk_dep, cg_bc[0])
+  cg_loop_depth[0] be cg_loop_depth[0] - 1
+  yield cg_eat_end(pos)
+;;
+
+conjure cg_stmt_for(pos) ::
+  forge pos be pos + 1
+  ponder cg_is_word(pos, "each") ::
+    forge pos be pos + 1
+  ;;
+  forge vname be cg_tk_txt[pos]
+  forge pos be pos + 1
+  ponder cg_word_in(pos, "|through|be|in|") ::
+    forge pos be pos + 1
+  ;;
+  cg_fe_depth[0] be cg_fe_depth[0] + 1
+  forge d be str(cg_fe_depth[0])
+  forge lname be concat("_fel", d)
+  forge iname be concat("_fei", d)
+  forge pos be cg_opt_c(cg_parse_expr(pos), 302)
+  forge ik be cg_expr_type[0]
+  cg_emit_store_ident(lname)
+  cg_emit_push_i32(0)
+  cg_expr_type[0] be 0
+  cg_emit_store_ident(iname)
+  forge loop_top be cg_bc[0]
+  cg_emit_load_ident(iname)
+  cg_emit_load_ident(lname)
+  cg_emit2(131, 34)
+  forge jz be cg_emit_jmp(65)
+  cg_emit_load_ident(lname)
+  cg_emit_load_ident(iname)
+  ponder ik equals 1 ::
+    cg_emit2(132, 136)
+    cg_expr_type[0] be 1
+  otherwise ::
+    cg_op_t(129, ik equals 5)
+  ;;
+  cg_emit_store_ident(vname)
+  cg_loop_depth[0] be cg_loop_depth[0] + 1
+  forge pos be cg_parse_block(pos)
+  cg_patch_list(cg_cnt_pos, cg_cnt_dep, cg_bc[0])
+  cg_emit_load_ident(iname)
+  cg_emit_push_i32(1)
+  cg_op_t(16, 0)
+  cg_emit_store_ident(iname)
+  cg_emit_back(loop_top)
+  cg_patch_i16(jz, cg_bc[0])
+  cg_patch_list(cg_brk_pos, cg_brk_dep, cg_bc[0])
+  cg_loop_depth[0] be cg_loop_depth[0] - 1
+  cg_fe_depth[0] be cg_fe_depth[0] - 1
+  yield cg_eat_end(pos)
+;;
+
+conjure cg_stmt_attempt(pos) ::
+  forge pos be cg_opt_c(pos + 1, 302)
+  forge tryp be cg_emit_jmp(192)
+  forge pos be cg_parse_block(pos)
+  cg_emit_byte(193)
+  forge overp be cg_emit_jmp(64)
+  cg_patch_i16(tryp, cg_bc[0])
+  forge ate be cg_is_op_c(pos, 303)
+  ponder ate ::
+    forge pos be pos + 1
+  ;;
+  forge look be cg_skip_nl(pos)
+  ponder cg_word_in(look, "|rescue|catch|except|") ::
+    forge pos be look + 1
+    forge ename be ""
+    ponder pos < cg_tk_state[0] also cg_tk_kind[pos] equals 2 also isnt cg_is_op_c(pos, 302) ::
+      forge ename be cg_tk_txt[pos]
+      forge pos be pos + 1
+    ;;
+    ponder cg_word_in(pos, "|as|alias|") ::
+      forge ename be cg_tk_txt[pos + 1]
+      forge pos be pos + 2
+    ;;
+    forge pos be cg_opt_c(pos, 302)
+    ponder length(ename) > 0 ::
+      cg_expr_type[0] be 1
+      cg_emit_store_ident(ename)
+    otherwise ::
+      cg_emit_byte(5)
+    ;;
+    forge pos be cg_parse_block(pos)
+    forge ate be cg_is_op_c(pos, 303)
+    ponder ate ::
+      forge pos be pos + 1
+    ;;
+  otherwise ::
+    cg_emit_byte(5)
+  ;;
+  cg_patch_i16(overp, cg_bc[0])
+  forge look2 be cg_skip_nl(pos)
+  ponder cg_word_in(look2, "|ensure|finally|") ::
+    yield cg_eat_end(cg_parse_block(cg_opt_c(look2 + 1, 302)))
+  ;;
+  ponder isnt ate also cg_is_word(pos, "end") ::
+    yield pos + 1
+  ;;
+  yield pos
+;;
+
+conjure cg_emit_pat_opt(pos, subj_t) ::
+  ponder cg_is_word(pos, "_") ::
+    cg_emit_push_i32(1)
+    yield pos + 1
+  ;;
+  ponder cg_tk_kind[pos] equals 2 also isnt cg_is_op_c(pos + 1, 40) also isnt cg_word_in(pos, "|yep|nope|true|false|void|nothing|") ::
+    cg_emit_load_ident(subj_t)
+    cg_emit_store_ident(cg_tk_txt[pos])
+    cg_emit_push_i32(1)
+    yield pos + 1
+  ;;
+  cg_emit_load_ident(subj_t)
+  forge lk be cg_expr_type[0]
+  forge pos be cg_parse_unary(pos)
+  forge rk be cg_expr_type[0]
+  ponder lk equals 1 either rk equals 1 ::
+    cg_emit_byte(144)
+  otherwise ponder cg_both_float(lk, rk) ::
+    cg_emit_byte(167)
+  otherwise ::
+    cg_emit_byte(32)
+  ;;
+  yield pos
+;;
+
+conjure cg_stmt_discern(pos) ::
+  forge pos be cg_opt_c(cg_parse_expr(pos + 1), 302)
+  cg_tmp_depth[0] be cg_tmp_depth[0] + 1
+  forge subj_t be cg_tmp("_mts")
+  cg_emit_store_ident(subj_t)
+  forge base be cg_mat_ends[0]
+  forge pos be cg_skip_nl(pos)
+  cycle cg_word_in(pos, "|omen|case|") ::
+    forge pos be cg_emit_pat_opt(pos + 1, subj_t)
+    cycle cg_is_op_c(pos, 124) ::
+      forge jp be cg_emit_jmp(65)
+      cg_emit_push_i32(1)
+      forge je be cg_emit_jmp(64)
+      cg_patch_i16(jp, cg_bc[0])
+      forge pos be cg_emit_pat_opt(pos + 1, subj_t)
+      cg_patch_i16(je, cg_bc[0])
+    ;;
+    ponder cg_word_in(pos, "|when|guard|") ::
+      forge jg be cg_emit_jmp(65)
+      forge pos be cg_parse_expr(pos + 1)
+      forge jge be cg_emit_jmp(64)
+      cg_patch_i16(jg, cg_bc[0])
+      cg_emit_push_i32(0)
+      cg_patch_i16(jge, cg_bc[0])
+    ;;
+    forge pos be cg_opt_c(cg_opt_c(cg_opt_c(pos, 302), 307), 58)
+    forge skip_arm be cg_emit_jmp(65)
+    forge pos be cg_opt_c(cg_parse_block(pos), 303)
+    cg_mat_ends[cg_mat_ends[0] + 1] be cg_emit_jmp(64)
+    cg_mat_ends[0] be cg_mat_ends[0] + 1
+    cg_patch_i16(skip_arm, cg_bc[0])
+    forge pos be cg_skip_nl(pos)
+  ;;
+  forge pos be cg_eat_end(pos)
+  forge k be base + 1
+  cycle k <= cg_mat_ends[0] ::
+    cg_patch_i16(cg_mat_ends[k], cg_bc[0])
+    forge k be k + 1
+  ;;
+  cg_mat_ends[0] be base
+  cg_tmp_depth[0] be cg_tmp_depth[0] - 1
+  yield pos
+;;
+
+conjure cg_parse_params(pos) ::
+  cg_scratch[0] be 0
+  ponder pos > 0 also cg_find_in_tbl(cg_mth_fn, cg_mth_cls[0], cg_tk_txt[pos - 1]) >= 0 ::
+    cg_add_local("self")
+    cg_scratch[0] be 1
+  ;;
+  forge is_p be cg_is_op_c(pos, 40)
+  ponder is_p either cg_is_word(pos, "with") ::
+    forge pos be pos + 1
+    cycle pos < cg_tk_state[0] ::
+      ponder is_p also cg_is_op_c(pos, 41) ::
+        forge pos be pos + 1
+        yeet
+      ;;
+      ponder isnt is_p also cg_tk_kind[pos] differs 2 ::
+        yeet
+      ;;
+      ponder cg_tk_kind[pos] equals 2 ::
+        ponder isnt (cg_scratch[0] equals 1 also cg_str_eq(cg_tk_txt[pos], "self")) ::
+          cg_add_local(cg_tk_txt[pos])
+          cg_scratch[0] be cg_scratch[0] + 1
+        ;;
+        forge pos be pos + 1
+        ponder is_p also (cg_is_op_c(pos, 58) either cg_is_op_c(pos, 61) either cg_is_word(pos, "be")) ::
+          forge pos be pos + 1
+          cycle pos < cg_tk_state[0] also isnt cg_is_op_c(pos, 44) also isnt cg_is_op_c(pos, 41) ::
+            forge pos be pos + 1
+          ;;
+        ;;
+      otherwise ::
+        forge pos be pos + 1
+      ;;
+    ;;
+  ;;
+  ponder cg_is_op_c(pos, 306) ::
+    forge pos be pos + 1
+    cycle pos < cg_tk_state[0] also cg_tk_kind[pos] differs 5 also isnt cg_is_op_c(pos, 302) ::
+      forge pos be pos + 1
+    ;;
+  ;;
+  yield cg_opt_c(pos, 302)
+;;
+
+conjure cg_stmt_func(pos) ::
+  forge fname be cg_tk_txt[pos + 1]
+  forge body_start_pos be pos + 2
+  cg_loc_names[0] be 0
+  cg_loc_types[0] be 0
+  forge pos be cg_parse_params(body_start_pos)
+  forge n_params be cg_scratch[0]
+  ponder cg_skip_fn_defs[0] ::
+    forge save_emit be cg_emit_enabled[0]
+    cg_emit_enabled[0] be 0
+    cg_in_func[0] be 1
+    forge pos be cg_parse_block(pos)
+    cg_in_func[0] be 0
+    cg_emit_enabled[0] be save_emit
+    yield cg_eat_end(pos)
+  ;;
+  forge idx be cg_find_in_tbl(cg_fn_names, cg_fn_names[0], fname)
+  ponder idx < 0 ::
+    forge fn_i be cg_fn_names[0] + 1
+    cg_fn_names[fn_i] be fname
+    cg_fn_offsets[fn_i] be 0
+    cg_fn_arities[fn_i] be n_params
+    cg_fn_ret_types[fn_i] be 0
+    cg_fn_extras[fn_i] be 0
+    cg_fn_body_start[fn_i] be body_start_pos
+    forge pbase be cg_fn_param_seen[0] + 1
+    cg_fn_param_base[fn_i] be pbase
+    forge pk be 0
+    cycle pk < n_params ::
+      cg_fn_param_seen[pbase + pk] be 0
+      forge pk be pk + 1
+    ;;
+    cg_fn_param_seen[0] be cg_fn_param_seen[0] + n_params
+    cg_fn_names[0] be fn_i
+    forge idx be fn_i - 1
+  ;;
+  cg_apply_param_types(idx, n_params)
+  cg_cur_fn[0] be idx + 1
+  forge pre_syms be cg_sym_names[0]
+  cg_in_func[0] be 1
+  forge pos be cg_parse_block(pos)
+  cg_sym_names[0] be pre_syms
+  cg_fn_extras[idx + 1] be cg_loc_names[0] - n_params
+  cg_in_func[0] be 0
+  cg_cur_fn[0] be 0
+  yield cg_eat_end(pos)
+;;
+
+conjure cg_push_loop_jp(arr_p, arr_d, jp) ::
+  forge n be arr_p[0] + 1
+  arr_p[n] be jp
+  arr_d[n] be cg_loop_depth[0]
+  arr_p[0] be n
+  yield 0
+;;
+
+conjure cg_parse_stmt(pos) ::
+  forge pos be cg_skip_nl(pos)
+  forge tc be cg_tk_state[0]
+  ponder pos >= tc ::
+    yield pos
+  ;;
+  ponder cg_word_in(pos, "|speak|say|print|println|shout|whisper|") ::
+    yield cg_stmt_speak(pos, 0)
+  ;;
+  ponder cg_word_in(pos, "|forge|fixed|let|const|") ::
+    yield cg_stmt_forge(pos)
+  ;;
+  ponder cg_word_in(pos, "|be|set|") ::
+    yield cg_stmt_target_assign(pos, 1)
+  ;;
+  ponder cg_word_in(pos, "|yield|return|") ::
+    forge pos be pos + 1
+    ponder pos >= tc either cg_tk_kind[pos] equals 5 either cg_is_op_c(pos, 303) either cg_word_in(pos, "|end|otherwise|else|elsewise|elif|rescue|catch|except|ensure|finally|omen|case|") ::
+      cg_emit_push_i32(0)
+      cg_expr_type[0] be 0
+    otherwise ::
+      forge pos be cg_parse_expr(pos)
+    ;;
+    ponder cg_in_func[0] also cg_cur_fn[0] > 0 ::
+      ponder cg_expr_type[0] equals 1 ::
+        cg_fn_ret_types[cg_cur_fn[0]] be 1
+      otherwise ponder cg_expr_type[0] equals 2 also cg_fn_ret_types[cg_cur_fn[0]] equals 0 ::
+        cg_fn_ret_types[cg_cur_fn[0]] be 2
+      ;;
+    ;;
+    cg_emit_byte(97)
+    yield pos
+  ;;
+  ponder cg_word_in(pos, "|yeet|break|skip|continue|") ::
+    ponder cg_emit_enabled[0] also cg_loop_depth[0] equals 0 ::
+      hurl "loop jump outside loop"
+    ;;
+    forge jp be cg_emit_jmp(64)
+    ponder cg_word_in(pos, "|yeet|break|") ::
+      cg_push_loop_jp(cg_brk_pos, cg_brk_dep, jp)
+    otherwise ::
+      cg_push_loop_jp(cg_cnt_pos, cg_cnt_dep, jp)
+    ;;
+    yield pos + 1
+  ;;
+  ponder cg_word_in(pos, "|idle|pass|") ::
+    yield pos + 1
+  ;;
+  ponder cg_word_in(pos, "|hurl|raise|throw|") ::
+    forge pos be cg_parse_expr(pos + 1)
+    cg_emit_byte(194)
+    yield pos
+  ;;
+  ponder cg_word_in(pos, "|insist|assert|") ::
+    forge pos be cg_parse_expr(pos + 1)
+    forge jfail be cg_emit_jmp(65)
+    forge jpass be cg_emit_jmp(64)
+    cg_patch_i16(jfail, cg_bc[0])
+    ponder cg_is_op_c(pos, 44) ::
+      forge pos be cg_parse_expr(pos + 1)
+    otherwise ::
+      cg_emit_push_str("AssertionError: condition failed")
+    ;;
+    cg_emit_byte(194)
+    cg_patch_i16(jpass, cg_bc[0])
+    yield pos
+  ;;
+  ponder cg_word_in(pos, "|attempt|try|") ::
+    yield cg_stmt_attempt(pos)
+  ;;
+  ponder cg_word_in(pos, "|ponder|either|if|") ::
+    yield cg_stmt_if(pos)
+  ;;
+  ponder cg_word_in(pos, "|cycle|while|") ::
+    yield cg_stmt_while(pos)
+  ;;
+  ponder cg_word_in(pos, "|iterate|within|for|") ::
+    yield cg_stmt_for(pos)
+  ;;
+  ponder cg_word_in(pos, "|discern|match|") ::
+    yield cg_stmt_discern(pos)
+  ;;
+  ponder cg_word_in(pos, "|enfold|with|") ::
+    forge pos be cg_parse_expr(pos + 1)
+    ponder cg_word_in(pos, "|alias|as|") ::
+      cg_emit_store_ident(cg_tk_txt[pos + 1])
+      forge pos be pos + 2
+    otherwise ::
+      cg_emit_byte(5)
+    ;;
+    yield cg_eat_end(cg_parse_block(cg_opt_c(pos, 302)))
+  ;;
+  ponder cg_word_in(pos, "|banish|del|") ::
+    forge pos be pos + 1
+    ponder cg_tk_kind[pos] equals 2 also isnt cg_is_op_c(pos + 1, 91) also isnt cg_is_op_c(pos + 1, 46) ::
+      cg_emit_push_i32(0)
+      cg_expr_type[0] be 0
+      cg_emit_store_ident(cg_tk_txt[pos])
+      yield pos + 1
+    ;;
+    yield cg_parse_expr(pos)
+  ;;
+  ponder cg_word_in(pos, "|conjure|to|func|def|") ::
+    yield cg_stmt_func(pos)
+  ;;
+  ponder cg_peek_bare_assign(pos) > 0 ::
+    yield cg_stmt_target_assign(pos, 0)
+  ;;
+  ponder cg_tk_kind[pos] equals 2 either cg_tk_kind[pos] equals 1 either cg_tk_kind[pos] equals 3 either cg_is_op_c(pos, 40) either cg_is_op_c(pos, 91) ::
+    forge pos be cg_parse_expr(pos)
+    cg_emit_byte(5)
+    cg_expr_type[0] be 0
+    yield pos
+  ;;
+  yield pos
+;;
+
+# ---- Top-Level Compilation Driver -----------------------------------------
+
+conjure cg_run_pass(skip_defs) ::
+  cg_sym_names[0] be 0
+  cg_sym_types[0] be 0
+  cg_in_func[0] be 0
+  cg_cur_fn[0] be 0
+  cg_loop_depth[0] be 0
+  cg_fe_depth[0] be 0
+  cg_tmp_depth[0] be 0
+  cg_brk_pos[0] be 0
+  cg_brk_dep[0] be 0
+  cg_cnt_pos[0] be 0
+  cg_cnt_dep[0] be 0
+  cg_skip_fn_defs[0] be skip_defs
+  forge pos be 0
+  cycle pos < cg_tk_state[0] ::
+    forge new_pos be cg_parse_stmt(pos)
+    ponder new_pos equals pos ::
+      yeet
+    ;;
+    forge pos be new_pos
+  ;;
+  yield pos
+;;
+
+conjure v1_compile_source(src) ::
+  cg_pre_seen[0] be "|"
+  forge linked be cg_prelink_source(src)
+  forge full_src be concat(cg_rt_src, linked)
+  cg_tk_state[0] be 0
+  cg_tokenize_into(full_src)
+  cg_desugar_essences()
+
+  cg_bc[0] be 0
+  cg_pool_bytes[0] be 0
+  cg_pool_keys[0] be 0
+  cg_pool_offs[0] be 0
+  cg_fn_names[0] be 0
+  cg_fn_offsets[0] be 0
+  cg_fn_arities[0] be 0
+  cg_fn_ret_types[0] be 0
+  cg_fn_extras[0] be 0
+  cg_fn_body_start[0] be 0
+  cg_fn_param_base[0] be 0
+  cg_fn_param_seen[0] be 0
+  cg_fld_names[0] be 0
+  cg_fld_types[0] be 0
+
+  # Pass 1: 3 iterations to converge functions, return types, param types, and field types
+  cg_emit_enabled[0] be 0
+  forge iter be 0
+  cycle iter < 3 ::
+    cg_run_pass(0)
+    forge iter be iter + 1
+  ;;
+
+  # Pass 2: Emit main first (offset 0, no i16 JMP overflow), HALT, then hoisted functions
+  cg_pend_names[0] be 0
+  cg_pend_pos[0] be 0
+  cg_bc[0] be 0
+  cg_emit_enabled[0] be 1
+  forge pos be cg_skip_nl(cg_run_pass(1))
+  ponder pos < cg_tk_state[0] ::
+    hurl concat("unexpected token at position ", str(pos))
+  ;;
+  cg_emit_byte(255)
+
+  forge i be 1
+  forge fstop be cg_fn_names[0] + 1
+  cycle i < fstop ::
+    cg_fn_offsets[i] be cg_bc[0]
+    cg_loc_names[0] be 0
+    cg_loc_types[0] be 0
+    forge pos be cg_parse_params(cg_fn_body_start[i])
+    ponder cg_fn_extras[i] > 0 ::
+      cg_emit2(98, cg_fn_extras[i])
+    ;;
+    forge np be cg_fn_arities[i]
+    cg_apply_param_types(i - 1, np)
+    cg_cur_fn[0] be i
+    forge pre_syms be cg_sym_names[0]
+    cg_emit_enabled[0] be 0
+    cg_in_func[0] be 1
+    cg_fe_depth[0] be 0
+    cg_tmp_depth[0] be 0
+    cg_parse_block(pos)
+    cg_emit_enabled[0] be 1
+    cg_sym_names[0] be pre_syms
+    cg_apply_param_types(i - 1, np)
+    cg_fe_depth[0] be 0
+    cg_tmp_depth[0] be 0
+    cg_in_func[0] be 1
+    cg_parse_block(pos)
+    cg_in_func[0] be 0
+    cg_cur_fn[0] be 0
+    cg_emit_push_i32(0)
+    cg_emit_byte(97)
+    forge i be i + 1
+  ;;
+
+  cg_resolve_pending_calls()
+;;
+
+forge v1_drv_src be read_file("<stdin>")
+v1_compile_source(v1_drv_src)
+
+forge v1_drv_bc_len be cg_bc[0]
+speak(v1_drv_bc_len)
+forge v1_drv_i be 1
+cycle v1_drv_i <= v1_drv_bc_len ::
+  speak(cg_bc[v1_drv_i])
+  v1_drv_i += 1
+;;
+
+forge v1_drv_pool_len be cg_pool_bytes[0]
+speak(v1_drv_pool_len)
+forge v1_drv_j be 1
+cycle v1_drv_j <= v1_drv_pool_len ::
+  speak(cg_pool_bytes[v1_drv_j])
+  v1_drv_j += 1
+;;

@@ -1,91 +1,402 @@
 # SDEV v1-to-v2 Frontend Transpiler — authored in SDEV.
 #
-# Translates legacy SDEV v1 mystical syntax into canonical SDEV v2 syntax.
+# Translates SDEV v1 syntax (`forge`/`be`, `conjure`, `essence`, `ponder`/
+# `otherwise`, `cycle`/`iterate`, `attempt`/`rescue`/`hurl`, `speak`, `yield`,
+# `yeet`/`skip`, `::`/`;;`, v1 operators & builtins) into canonical SDEV v2.
 
 use "lang/stdlib/v2/text.sdev"
+
+to v1_fe_is_alnum with ch
+  return ch is 95 or (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122) or (ch >= 48 and ch <= 57)
+end
+
+to v1_fe_word_map with w
+  if w is "equals" or w is "same"
+    return "is"
+  end
+  if w is "differs"
+    return "is not"
+  end
+  if w is "also"
+    return "and"
+  end
+  if w is "either"
+    return "or"
+  end
+  if w is "isnt"
+    return "not"
+  end
+  if w is "yep"
+    return "true"
+  end
+  if w is "nope"
+    return "false"
+  end
+  if w is "void" or w is "nothing" or w is "none"
+    return "null"
+  end
+  if w is "me"
+    return "self"
+  end
+  if w is "ancestor"
+    return "super"
+  end
+  if w is "etch"
+    return "ord"
+  end
+  if w is "measure"
+    return "len"
+  end
+  if w is "shatter"
+    return "split"
+  end
+  if w is "weave"
+    return "join"
+  end
+  if w is "gather"
+    return "append"
+  end
+  if w is "pluck"
+    return "pop"
+  end
+  if w is "least"
+    return "min"
+  end
+  if w is "greatest"
+    return "max"
+  end
+  if w is "sequence"
+    return "range"
+  end
+  if w is "inscriptions"
+    return "keys"
+  end
+  if w is "contents"
+    return "values"
+  end
+  return w
+end
+
+to v1_transpile_expr with expr
+  set n to length(expr)
+  set i to 0
+  set out to ""
+  while i < n
+    set c to ord(expr, i)
+    if c is 34 or c is 39
+      set q to c
+      set start to i
+      set i to i + 1
+      while i < n
+        set ch to ord(expr, i)
+        set i to i + 1
+        if ch is 92 and i < n
+          set i to i + 1
+        else if ch is q
+          break
+        end
+      end
+      set out to concat(out, substr(expr, start, i - start))
+    else if c is 95 or (c >= 65 and c <= 90) or (c >= 97 and c <= 122)
+      set j to i
+      while j < n and v1_fe_is_alnum(ord(expr, j))
+        set j to j + 1
+      end
+      set w to substr(expr, i, j - i)
+      set out to concat(out, v1_fe_word_map(w))
+      set i to j
+    else if i + 1 < n
+      set c2 to ord(expr, i + 1)
+      set two to concat(chr(c), chr(c2))
+      if two is "=="
+        set out to concat(out, "is")
+        set i to i + 2
+      else if two is "!=" or two is "<>"
+        set out to concat(out, "is not")
+        set i to i + 2
+      else if two is "&&"
+        set out to concat(out, "and")
+        set i to i + 2
+      else if two is "||"
+        set out to concat(out, "or")
+        set i to i + 2
+      else
+        set out to concat(out, chr(c))
+        set i to i + 1
+      end
+    else
+      set out to concat(out, chr(c))
+      set i to i + 1
+    end
+  end
+  return out
+end
+
+to v1_fe_find_top_be with s
+  set n to length(s)
+  set i to 0
+  set depth to 0
+  while i < n
+    set c to ord(s, i)
+    if c is 34 or c is 39
+      set q to c
+      set i to i + 1
+      while i < n
+        set ch to ord(s, i)
+        set i to i + 1
+        if ch is 92 and i < n
+          set i to i + 1
+        else if ch is q
+          break
+        end
+      end
+    else
+      if c is 40 or c is 91 or c is 123
+        set depth to depth + 1
+      else if (c is 41 or c is 93 or c is 125) and depth > 0
+        set depth to depth - 1
+      else if depth is 0 and i + 4 <= n and substr(s, i, 4) is " be "
+        return i
+      end
+      set i to i + 1
+    end
+  end
+  return 0 - 1
+end
+
+to v1_fe_split_params with pstr
+  set parts to split(trim(pstr), ",")
+  set out to ""
+  set i to 0
+  set n to length(parts)
+  while i < n
+    set p to trim(parts[i])
+    if p is "me" and i is 0
+      set p to ""
+    end
+    if length(p) > 0
+      if length(out) > 0
+        set out to concat(out, concat(" ", p))
+      else
+        set out to p
+      end
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to v1_fe_strip_colon with s
+  set t to trim(s)
+  if text_ends_with(t, "::")
+    return trim(substr(t, 0, length(t) - 2))
+  end
+  return t
+end
 
 to v1_transpile_line with line
   set t to trim(line)
   if length(t) is 0
     return line
   end
+  set nline to length(line)
+  set ind_n to 0
+  while ind_n < nline and (ord(line, ind_n) is 32 or ord(line, ind_n) is 9)
+    set ind_n to ind_n + 1
+  end
+  set ind to substr(line, 0, ind_n)
 
-  # Blocks: ;; -> end
+  if text_starts_with(t, "#")
+    return line
+  end
+  if text_starts_with(t, "//")
+    return concat(ind, concat("#", substr(t, 2, length(t) - 2)))
+  end
+
   if t is ";;"
-    return "end"
+    return concat(ind, "end")
   end
 
-  # Statements
-  # speak(x) -> say x
+  # Inline single-line ponder: `ponder cond :: stmt ;;`
+  if (text_starts_with(t, "ponder ") or text_starts_with(t, "either ")) and text_ends_with(t, ";;")
+    set dcol to find(t, "::")
+    if dcol > 7
+      set cond to trim(substr(t, 7, dcol - 7))
+      set body to trim(substr(t, dcol + 2, length(t) - dcol - 4))
+      return concat(ind, concat("if ", concat(v1_transpile_expr(cond), concat("\n", concat(v1_transpile_line(concat(ind, concat("  ", body))), concat("\n", concat(ind, "end")))))))
+    end
+  end
+
+  if t is "otherwise ::"
+    return concat(ind, "else")
+  end
+  if text_starts_with(t, "otherwise ponder ")
+    set cond to v1_fe_strip_colon(substr(t, 17, length(t) - 17))
+    return concat(ind, concat("else if ", v1_transpile_expr(cond)))
+  end
+  if text_starts_with(t, "elsewise ")
+    set cond to v1_fe_strip_colon(substr(t, 9, length(t) - 9))
+    return concat(ind, concat("else if ", v1_transpile_expr(cond)))
+  end
+  if text_starts_with(t, "elif ")
+    set cond to v1_fe_strip_colon(substr(t, 5, length(t) - 5))
+    return concat(ind, concat("else if ", v1_transpile_expr(cond)))
+  end
+  if text_starts_with(t, "ponder ") or text_starts_with(t, "either ")
+    set cond to v1_fe_strip_colon(substr(t, 7, length(t) - 7))
+    return concat(ind, concat("if ", v1_transpile_expr(cond)))
+  end
+  if text_starts_with(t, "cycle ")
+    set cond to v1_fe_strip_colon(substr(t, 6, length(t) - 6))
+    return concat(ind, concat("while ", v1_transpile_expr(cond)))
+  end
+
+  # iterate / for loops
+  if text_starts_with(t, "iterate ")
+    set hdr to v1_fe_strip_colon(substr(t, 8, length(t) - 8))
+    if text_starts_with(hdr, "each ")
+      set hdr to trim(substr(hdr, 5, length(hdr) - 5))
+    end
+    set sp to find(hdr, " through ")
+    set klen to 9
+    if sp < 0
+      set sp to find(hdr, " in ")
+      set klen to 4
+    end
+    if sp < 0
+      set sp to find(hdr, " be ")
+      set klen to 4
+    end
+    if sp > 0
+      set vn to trim(substr(hdr, 0, sp))
+      set seq to trim(substr(hdr, sp + klen, length(hdr) - sp - klen))
+      return concat(ind, concat("for each ", concat(vn, concat(" in ", v1_transpile_expr(seq)))))
+    end
+  end
+
+  # conjure / essence / attempt / rescue / ensure / summon / hurl
+  if text_starts_with(t, "conjure ")
+    set hdr to v1_fe_strip_colon(substr(t, 8, length(t) - 8))
+    set lp to find(hdr, "(")
+    set rp to find(hdr, ")")
+    if lp > 0 and rp > lp
+      set fnm to trim(substr(hdr, 0, lp))
+      set plist to v1_fe_split_params(substr(hdr, lp + 1, rp - lp - 1))
+      if length(plist) > 0
+        return concat(ind, concat("to ", concat(fnm, concat(" with ", plist))))
+      end
+      return concat(ind, concat("to ", fnm))
+    end
+    return concat(ind, concat("to ", hdr))
+  end
+
+  if text_starts_with(t, "essence ")
+    set hdr to v1_fe_strip_colon(substr(t, 8, length(t) - 8))
+    set ep to find(hdr, " extend ")
+    if ep > 0
+      set cn to trim(substr(hdr, 0, ep))
+      set pn to trim(substr(hdr, ep + 8, length(hdr) - ep - 8))
+      return concat(ind, concat("kind ", concat(cn, concat(" extends ", pn))))
+    end
+    return concat(ind, concat("kind ", hdr))
+  end
+
+  if t is "attempt ::" or t is "attempt"
+    return concat(ind, "try")
+  end
+  if t is "ensure ::" or t is "ensure"
+    return concat(ind, "finally")
+  end
+  if text_starts_with(t, "rescue ")
+    set ev to v1_fe_strip_colon(substr(t, 7, length(t) - 7))
+    if length(ev) > 0
+      return concat(ind, concat("catch ", ev))
+    end
+    return concat(ind, "catch")
+  end
+  if t is "rescue ::"
+    return concat(ind, "catch")
+  end
+  if text_starts_with(t, "hurl ")
+    return concat(ind, concat("throw ", v1_transpile_expr(substr(t, 5, length(t) - 5))))
+  end
+  if text_starts_with(t, "summon ")
+    return concat(ind, concat("use ", trim(substr(t, 7, length(t) - 7))))
+  end
+
+  # speak(x) / shout(x) / whisper(x)
   if text_starts_with(t, "speak(") and text_ends_with(t, ")")
-    set inner to substr(t, 6, length(t) - 7)
-    return "say " + inner
+    return concat(ind, concat("say ", v1_transpile_expr(substr(t, 6, length(t) - 7))))
   end
-
-  # yield -> return
+  if text_starts_with(t, "shout(") and text_ends_with(t, ")")
+    return concat(ind, concat("say upper(", concat(v1_transpile_expr(substr(t, 6, length(t) - 7)), ")")))
+  end
+  if text_starts_with(t, "whisper(") and text_ends_with(t, ")")
+    return concat(ind, concat("say lower(", concat(v1_transpile_expr(substr(t, 8, length(t) - 9)), ")")))
+  end
   if text_starts_with(t, "yield ")
-    return "return " + substr(t, 6, length(t) - 6)
+    return concat(ind, concat("return ", v1_transpile_expr(substr(t, 6, length(t) - 6))))
   end
   if t is "yield"
-    return "return"
+    return concat(ind, "return")
   end
-
-  # yeet -> break, skip -> continue
   if t is "yeet"
-    return "break"
+    return concat(ind, "break")
   end
   if t is "skip"
-    return "continue"
+    return concat(ind, "continue")
   end
 
-  # otherwise :: -> else
-  if t is "otherwise ::"
-    return "else"
-  end
-
-  # otherwise ponder cond :: -> else if cond
-  if text_starts_with(t, "otherwise ponder ") and text_ends_with(t, " ::")
-    set cond to substr(t, 17, length(t) - 19)
-    return "else if " + cond
-  end
-
-  # ponder cond :: -> if cond
-  if text_starts_with(t, "ponder ") and text_ends_with(t, " ::")
-    set cond to substr(t, 7, length(t) - 9)
-    return "if " + cond
-  end
-
-  # either cond :: -> if cond
-  if text_starts_with(t, "either ") and text_ends_with(t, " ::")
-    set cond to substr(t, 7, length(t) - 9)
-    return "if " + cond
-  end
-
-  # cycle cond :: -> while cond
-  if text_starts_with(t, "cycle ") and text_ends_with(t, " ::")
-    set cond to substr(t, 6, length(t) - 8)
-    return "while " + cond
-  end
-
-  # forge x be v -> set x to v
-  if text_starts_with(t, "forge ")
+  # forge x be v / fixed x be v / be x be v
+  if text_starts_with(t, "forge ") or text_starts_with(t, "fixed ")
     set rest to substr(t, 6, length(t) - 6)
-    set parts to split(rest, " be ")
-    if length(parts) is 2
-      return "set " + trim(parts[0]) + " to " + trim(parts[1])
+    set bp to v1_fe_find_top_be(rest)
+    if bp > 0
+      set lhs to v1_transpile_expr(trim(substr(rest, 0, bp)))
+      set rhs to v1_transpile_expr(trim(substr(rest, bp + 4, length(rest) - bp - 4)))
+      return concat(ind, concat("set ", concat(lhs, concat(" to ", rhs))))
     end
   end
-
-  # be x be v -> set x to v
   if text_starts_with(t, "be ")
     set rest to substr(t, 3, length(t) - 3)
-    set parts to split(rest, " be ")
-    if length(parts) is 2
-      return "set " + trim(parts[0]) + " to " + trim(parts[1])
+    set bp to v1_fe_find_top_be(rest)
+    if bp > 0
+      set lhs to v1_transpile_expr(trim(substr(rest, 0, bp)))
+      set rhs to v1_transpile_expr(trim(substr(rest, bp + 4, length(rest) - bp - 4)))
+      return concat(ind, concat("set ", concat(lhs, concat(" to ", rhs))))
     end
   end
 
-  return line
+  # Compound assignments += -= *= /=
+  set aop_idx to find(t, " += ")
+  set aop_ch to "+"
+  if aop_idx < 0
+    set aop_idx to find(t, " -= ")
+    set aop_ch to "-"
+  end
+  if aop_idx < 0
+    set aop_idx to find(t, " *= ")
+    set aop_ch to "*"
+  end
+  if aop_idx < 0
+    set aop_idx to find(t, " /= ")
+    set aop_ch to "/"
+  end
+  if aop_idx > 0
+    set lhs to v1_transpile_expr(trim(substr(t, 0, aop_idx)))
+    set rhs to v1_transpile_expr(trim(substr(t, aop_idx + 4, length(t) - aop_idx - 4)))
+    return concat(ind, concat("set ", concat(lhs, concat(" to ", concat(lhs, concat(" ", concat(aop_ch, concat(" (", concat(rhs, ")")))))))))
+  end
+
+  # Bare `x be expr` assignment
+  set bpos to v1_fe_find_top_be(t)
+  if bpos > 0
+    set lhs to v1_transpile_expr(trim(substr(t, 0, bpos)))
+    set rhs to v1_transpile_expr(trim(substr(t, bpos + 4, length(t) - bpos - 4)))
+    return concat(ind, concat("set ", concat(lhs, concat(" to ", rhs))))
+  end
+
+  return concat(ind, v1_transpile_expr(t))
 end
 
 to v1_to_v2_source with src
@@ -94,7 +405,12 @@ to v1_to_v2_source with src
   set out to ""
   set i to 0
   while i < n
-    set out to out + v1_transpile_line(lines[i]) + "\n"
+    set ln to lines[i]
+    if i is 0 and trim(ln) is "#!sdev v1"
+      set out to concat(out, "# v1 -> v2\n")
+    else
+      set out to concat(out, concat(v1_transpile_line(ln), "\n"))
+    end
     set i to i + 1
   end
   return out

@@ -1,0 +1,87 @@
+# SDEV native build driver — 100% SDEV, runs on the zero-host VM.
+#
+#   sdev-vm lang/native/build.sdev <program.sdev> [-o out] [--asm-only]
+#
+# 1. compiles <program.sdev> with the self-hosted compiler (host key
+#    sdev:compile:self:<path>, answered natively by sdev-vm),
+# 2. translates the bytecode to x86-64 assembly with codegen_x64.sdev,
+# 3. assembles + links it against bin/runtime.s into a static Linux ELF.
+#
+# No Node.js, no JavaScript compiler takes part.
+
+use "lang/native/codegen_x64.sdev"
+use "lang/native/link.sdev"
+
+to hex_nibble with c
+  if c >= 97
+    return c - 87
+  end
+  return c - 48
+end
+
+# "<hex bytes>" -> list of ints
+to hex_to_list with h
+  set n to length(h) / 2
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to hex_nibble(ord(h, i * 2)) * 16 + hex_nibble(ord(h, i * 2 + 1))
+    set i to i + 1
+  end
+  return out
+end
+
+set argv to split(read_file("sdev:args"), "\n")
+set src_path to ""
+set out_path to ""
+set asm_only to 0
+set ai to 0
+while ai < length(argv)
+  set a to argv[ai]
+  if a is "-o"
+    set out_path to argv[ai + 1]
+    set ai to ai + 1
+  else
+    if a is "--asm-only"
+      set asm_only to 1
+    else
+      if length(a) > 0
+        set src_path to a
+      end
+    end
+  end
+  set ai to ai + 1
+end
+
+if length(src_path) is 0
+  write_file("sdev:err", "usage: sdev-vm lang/native/build.sdev <program.sdev> [-o out] [--asm-only]\n")
+  write_file("sdev:exit:2", "")
+else
+  if length(out_path) is 0
+    set out_path to replace(src_path, ".sdev", "")
+  end
+  set compiled to read_file("sdev:compile:self:" + src_path)
+  if find(compiled, "error") is 0
+    write_file("sdev:err", "sdev: " + src_path + ": " + substr(compiled, 6, length(compiled) - 6) + "\n")
+    write_file("sdev:exit:1", "")
+  else
+    set sp to find(compiled, " ")
+    set bc to hex_to_list(substr(compiled, 0, sp))
+    set pool to hex_to_list(substr(compiled, sp + 1, length(compiled) - sp - 1))
+    set asm to x64_compile_bytecode(bc, pool)
+    set asm_path to out_path + ".s"
+    set _ to write_file(asm_path, asm)
+    if asm_only is 1
+      say "wrote " + asm_path
+    else
+      set cmd to "as --64 -o " + out_path + ".o " + asm_path + " && as --64 -o " + out_path + ".rt.o bin/runtime.s && ld -o " + out_path + " " + out_path + ".rt.o " + out_path + ".o && rm -f " + out_path + ".o " + out_path + ".rt.o"
+      set res to read_file("sdev:exec:" + cmd)
+      if find(res, "0\n") is 0
+        say "wrote " + out_path + " (static Linux ELF, built by pure SDEV)"
+      else
+        write_file("sdev:err", res)
+        write_file("sdev:exit:1", "")
+      end
+    end
+  end
+end

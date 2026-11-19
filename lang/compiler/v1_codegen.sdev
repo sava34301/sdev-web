@@ -1,0 +1,2936 @@
+# SDEV v1 Self-Hosted Bytecode Codegen — authored in pure SDEV.
+#
+# Compiles SDEV v1 source code into Seed VM bytecode & string pool
+# (< 28 KB hoisted bytecode so Seed VM drivers compile cleanly on Seed VM).
+
+set cg_tk_kind  to mklist(80000)
+set cg_tk_num   to mklist(80000)
+set cg_tk_num2  to mklist(80000)
+set cg_tk_txt   to mklist(80000)
+set cg_tk_state to mklist(2)
+
+set cg_bc to mklist(81920)
+set cg_pool_bytes to mklist(65536)
+set cg_pool_keys  to mklist(2048)
+set cg_pool_offs  to mklist(2048)
+
+set cg_sym_names to mklist(1024)
+set cg_sym_types to mklist(1024)
+set cg_loc_names to mklist(512)
+set cg_loc_types to mklist(512)
+
+set cg_fn_names      to mklist(1024)
+set cg_fn_offsets    to mklist(1024)
+set cg_fn_arities    to mklist(1024)
+set cg_fn_ret_types  to mklist(1024)
+set cg_fn_extras     to mklist(1024)
+set cg_fn_body_start to mklist(1024)
+set cg_fn_param_base to mklist(1024)
+set cg_fn_param_seen to mklist(4096)
+
+set cg_lam_names  to mklist(128)
+set cg_lam_caps   to mklist(128)
+set cg_lsav_names to mklist(512)
+set cg_lsav_types to mklist(512)
+
+set cg_cur_fn       to mklist(2)
+set cg_pend_names   to mklist(2048)
+set cg_pend_pos     to mklist(2048)
+set cg_in_func      to mklist(2)
+set cg_expr_type    to mklist(2)
+set cg_scratch      to mklist(16)
+set cg_emit_enabled to mklist(2)
+set cg_skip_fn_defs to mklist(2)
+
+set cg_brk_pos    to mklist(512)
+set cg_brk_dep    to mklist(512)
+set cg_cnt_pos    to mklist(512)
+set cg_cnt_dep    to mklist(512)
+set cg_loop_depth to mklist(2)
+set cg_fe_depth   to mklist(2)
+set cg_tmp_depth  to mklist(2)
+
+set cg_cls_names to mklist(256)
+set cg_mth_cls   to mklist(1024)
+set cg_mth_key   to mklist(1024)
+set cg_mth_fn    to mklist(1024)
+set cg_mth_sup   to mklist(1024)
+
+set cg_fld_names to mklist(512)
+set cg_fld_types to mklist(512)
+set cg_mat_ends to mklist(512)
+
+set cg_pre_seen to mklist(2)
+
+set cg_bi_tbl to "|keys:1:142:5|inscriptions:1:142:5|values:1:143:6|contents:1:143:6|has:2:141:0|length:1:131:0|len:1:131:0|measure:1:131:0|chr:1:136:1|mklist:1:137:6|i2f:1:168:2|f2i:1:169:0|fneg:1:170:2|fabs:1:171:2|fbyte:2:180:0|read_file:1:176:1|write_file:2:177:0|http_get:1:178:1|upper:1:146:1|lower:1:147:1|trim:1:148:1|substr:3:149:1|find:2:150:0|locate:2:150:0|indexOf:2:150:0|split:2:151:5|shatter:2:151:5|join:2:152:1|weave:2:152:1|replace:3:153:1|min:2:156:0|least:2:156:0|max:2:157:0|greatest:2:157:0|range:1:158:6|sequence:1:158:6|sum:1:159:0|random:1:184:0|fceil:1:181:2|ffloor:1:182:2|fround:1:183:2|panic:1:194:0|throw:1:194:0|get:2:140:0|set:3:139:0|"
+set cg_fm_tbl to "|fsin:0|sin:0|fcos:1|cos:1|ftan:2|tan:2|fexp:3|exp:3|flog:4|log:4|fpow:5|ceil:6|elevate:6|floor:7|ground:7|round:8|nearby:8|fsqrt:9|sqrt:9|root:9|"
+set cg_hlp_tbl to "|startswith:sw:2:0|starts:sw:2:0|endswith:ew:2:0|ends:ew:2:0|each:each:2:6|sift:sift:2:6|fold:fold:3:0|randint:ri:2:0|lines:lines:1:5|unlines:unlines:1:1|contains:cnt:2:0|char_at:ca:2:1|charAt:ca:2:1|PI:pi:0:2|TAU:tau:0:2|E:e:0:2|"
+set cg_rt_src to "conjure __v1_sw(s, p) ::\n  ponder len(s) < len(p) :: yield 0 ;;\n  yield concat(substr(s, 0, len(p)), \"\") equals p\n;;\nconjure __v1_ew(s, p) ::\n  ponder len(s) < len(p) :: yield 0 ;;\n  yield concat(substr(s, len(s) - len(p), len(p)), \"\") equals p\n;;\nconjure __v1_srep(s, n) ::\n  forge o be \"\"\n  cycle n > 0 ::\n    o be concat(o, s)\n    n -= 1\n  ;;\n  yield o\n;;\nconjure __v1_srev(s) ::\n  forge o be \"\"\n  forge i be len(s) - 1\n  cycle i >= 0 ::\n    o be concat(o, chr(ord(s, i)))\n    i -= 1\n  ;;\n  yield o\n;;\nconjure __v1_sslice(s, a, b) ::\n  ponder b < 0 :: b be len(s) ;;\n  forge c be b - a\n  ponder c < 0 :: c be 0 ;;\n  yield substr(s, a, c)\n;;\nconjure __v1_lcopy(dst, doff, src, soff, cnt, rev) ::\n  forge i be 0\n  cycle i < cnt ::\n    forge si be soff + i\n    ponder rev :: si be cnt - 1 - i ;;\n    dst[doff + i] be src[si]\n    i += 1\n  ;;\n  yield dst\n;;\nconjure __v1_lcat(a, b) ::\n  forge na be len(a)\n  forge nb be len(b)\n  forge o be __v1_lcopy(mklist(na + nb), 0, a, 0, na, 0)\n  yield __v1_lcopy(o, na, b, 0, nb, 0)\n;;\nconjure __v1_lslice(xs, a, b) ::\n  ponder b < 0 :: b be len(xs) ;;\n  forge c be b - a\n  ponder c < 0 :: c be 0 ;;\n  yield __v1_lcopy(mklist(c), 0, xs, a, c, 0)\n;;\nconjure __v1_lclone(xs) ::\n  forge n be len(xs)\n  yield __v1_lcopy(mklist(n), 0, xs, 0, n, 0)\n;;\nconjure __v1_lrev(xs) ::\n  forge n be len(xs)\n  yield __v1_lcopy(mklist(n), 0, xs, 0, n, 1)\n;;\nconjure __v1_lappend(xs, v) ::\n  forge n be len(xs)\n  forge o be __v1_lcopy(mklist(n + 1), 0, xs, 0, n, 0)\n  o[n] be v\n  yield o\n;;\nconjure __v1_lpop_rest(xs) ::\n  forge n be len(xs) - 1\n  yield __v1_lcopy(mklist(n), 0, xs, 0, n, 0)\n;;\nconjure __v1_range(s, e, st) ::\n  forge n be (e - s + st - 1) / st\n  ponder st < 0 :: n be (s - e - st - 1) / (0 - st) ;;\n  ponder n < 0 :: n be 0 ;;\n  forge o be mklist(n)\n  forge i be 0\n  cycle i < n ::\n    o[i] be s + i * st\n    i += 1\n  ;;\n  yield o\n;;\nconjure __v1_each(xs, fn) ::\n  forge n be len(xs)\n  forge o be mklist(n)\n  forge i be 0\n  cycle i < n ::\n    o[i] be call fn(xs[i])\n    i += 1\n  ;;\n  yield o\n;;\nconjure __v1_sift(xs, fn) ::\n  forge n be len(xs)\n  forge o be mklist(n)\n  forge c be 0\n  forge i be 0\n  cycle i < n ::\n    ponder call fn(xs[i]) ::\n      o[c] be xs[i]\n      c += 1\n    ;;\n    i += 1\n  ;;\n  yield __v1_lcopy(mklist(c), 0, o, 0, c, 0)\n;;\nconjure __v1_fold(xs, acc, fn) ::\n  forge n be len(xs)\n  forge i be 0\n  cycle i < n ::\n    acc be call fn(acc, xs[i])\n    i += 1\n  ;;\n  yield acc\n;;\nconjure __v1_lstr(xs) ::\n  forge n be len(xs)\n  forge o be \"[\"\n  forge i be 0\n  cycle i < n ::\n    ponder i > 0 :: o be concat(o, \", \") ;;\n    o be concat(o, str(xs[i]))\n    i += 1\n  ;;\n  yield concat(o, \"]\")\n;;\nconjure __v1_ri(a, b) ::\n  yield a + random(b - a + 1)\n;;\nconjure __v1_lines(s) ::\n  yield split(s, \"\\n\")\n;;\nconjure __v1_unlines(xs) ::\n  yield join(xs, \"\\n\")\n;;\nconjure __v1_powi(a, b) ::\n  yield a ** b\n;;\nconjure __v1_powif(a, b) ::\n  yield i2f(a) ** b\n;;\nconjure __v1_cnt(a, b) ::\n  yield find(a, b) >= 0\n;;\nconjure __v1_ca(s, i) ::\n  yield chr(ord(s, i))\n;;\nconjure __v1_tname(k) ::\n  ponder k equals 1 :: yield \"text\" ;;\n  ponder k equals 3 either k equals 4 :: yield \"tome\" ;;\n  ponder k equals 5 either k equals 6 :: yield \"list\" ;;\n  yield \"number\"\n;;\nconjure __v1_pi() :: yield 3.141592653589793 ;;\nconjure __v1_tau() :: yield 6.283185307179586 ;;\nconjure __v1_e() :: yield 2.718281828459045 ;;\n"
+
+# ---- Character & String Helpers -------------------------------------------
+
+to cg_is_digit with c
+  if c >= 48 and c <= 57
+    return 1
+  end
+  return 0
+end
+
+to cg_hex_val with c
+  if cg_is_digit(c)
+    return c - 48
+  end
+  if c >= 65 and c <= 70
+    return c - 55
+  end
+  if c >= 97 and c <= 102
+    return c - 87
+  end
+  return 0 - 1
+end
+
+to cg_is_alpha with c
+  if c is 95 or (c >= 65 and c <= 90) or (c >= 97 and c <= 122)
+    return 1
+  end
+  return 0
+end
+
+to cg_is_quote with c
+  if c is 34 or c is 39 or c is 96
+    return 1
+  end
+  return 0
+end
+
+to cg_str_eq with a b
+  if concat(a, "") is b
+    return 1
+  end
+  return 0
+end
+
+to cg_in with pat w
+  if find(pat, concat("|", concat(w, "|"))) >= 0
+    return 1
+  end
+  return 0
+end
+
+to cg_both_float with a b
+  if a is 2 and b is 2
+    return 1
+  end
+  return 0
+end
+
+# ---- Prelinker (use / summon / link) --------------------------------------
+
+to cg_prelink_source with s
+  set lines to split(s, "\n")
+  set n to length(lines)
+  set out to ""
+  set i to 0
+  while i < n
+    set line to lines[i]
+    set t to trim(line)
+    set tn to length(t)
+    set path to ""
+    set qp to find(t, " \"")
+    if qp > 0 and ord(t, tn - 1) is 34 and cg_in("|use|link|summon|", substr(t, 0, qp))
+      set path to substr(t, qp + 2, tn - qp - 3)
+    end
+    if length(path) > 0
+      if find(cg_pre_seen[0], concat("|", concat(path, "|"))) < 0
+        set cg_pre_seen[0] to concat(cg_pre_seen[0], concat(path, "|"))
+        set mod_src to read_file(path)
+        if length(mod_src) > 0
+          set out to concat(out, cg_prelink_source(mod_src))
+        end
+      end
+      set out to concat(out, "\n")
+    else
+      set out to concat(out, concat(line, "\n"))
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+# ---- Tokenizer (with f-string desugaring) ---------------------------------
+
+to cg_push_tok with kind num num2 txt
+  set c to cg_tk_state[0]
+  if c >= length(cg_tk_kind)
+    throw "token buffer overflow"
+  end
+  set cg_tk_kind[c] to kind
+  set cg_tk_num[c] to num
+  set cg_tk_num2[c] to num2
+  set cg_tk_txt[c] to txt
+  set cg_tk_state[0] to c + 1
+  return 0
+end
+
+to cg_two_op with c nx
+  if c <= 32 or nx <= 32
+    return 0
+  end
+  set tbl to " ::302 ;;303 <=300 >=301 ==304 !=305 <>305 ->306 =>307 |>308 +=310 -=311 *=312 /=313 %=314 :=315 **316 {|317 |}318 &&319 ||320 "
+  set p to find(tbl, concat(" ", concat(chr(c), chr(nx))))
+  if p < 0
+    return 0
+  end
+  return (ord(tbl, p + 3) - 48) * 100 + (ord(tbl, p + 4) - 48) * 10 + (ord(tbl, p + 5) - 48)
+end
+
+to cg_scan_string with src start_j quote is_raw
+  set n to length(src)
+  set j to start_j
+  set buf to ""
+  while j < n
+    set q to ord(src, j)
+    if q is quote
+      break
+    else if q is 92 and is_raw is 0 and j + 1 < n
+      set e to ord(src, j + 1)
+      if e is 110
+        set ch to chr(10)
+      else if e is 116
+        set ch to chr(9)
+      else if e is 114
+        set ch to chr(13)
+      else if e is 48
+        set ch to chr(0)
+      else
+        set ch to chr(e)
+      end
+      set buf to concat(buf, ch)
+      set j to j + 2
+    else
+      set buf to concat(buf, chr(q))
+      set j to j + 1
+    end
+  end
+  set cg_scratch[0] to buf
+  return j + 1
+end
+
+to cg_scan_digits with src i base
+  set n to length(src)
+  set v to 0
+  set sc to 0
+  while i < n
+    set d to ord(src, i)
+    if d is 95
+      set i to i + 1
+    else
+      set hv to cg_hex_val(d)
+      if hv >= 0 and hv < base
+        set v to v * base + hv
+        set sc to sc + 1
+        set i to i + 1
+      else
+        break
+      end
+    end
+  end
+  set cg_scratch[1] to v
+  set cg_scratch[2] to sc
+  return i
+end
+
+to cg_emit_fstr_tokens with content
+  cg_push_tok(4, 40, 0, "")
+  cg_push_tok(3, 0, 0, "")
+  set n to length(content)
+  set i to 0
+  set lit to ""
+  while i < n
+    set c to ord(content, i)
+    if (c is 123 or c is 125) and i + 1 < n and ord(content, i + 1) is c
+      set lit to concat(lit, chr(c))
+      set i to i + 2
+    else if c is 123
+      if length(lit) > 0
+        cg_push_tok(4, 43, 0, "")
+        cg_push_tok(3, 0, 0, lit)
+        set lit to ""
+      end
+      set j to i + 1
+      set depth to 1
+      while j < n and depth > 0
+        set ch to ord(content, j)
+        if cg_is_quote(ch)
+          set j to cg_scan_string(content, j + 1, ch, 0)
+        else
+          if ch is 123
+            set depth to depth + 1
+          else if ch is 125
+            set depth to depth - 1
+            if depth is 0
+              break
+            end
+          end
+          set j to j + 1
+        end
+      end
+      cg_push_tok(4, 43, 0, "")
+      cg_push_tok(2, 0, 0, "__v1_fstr_val")
+      cg_push_tok(4, 40, 0, "")
+      cg_tokenize_into(substr(content, i + 1, j - i - 1))
+      cg_push_tok(4, 41, 0, "")
+      set i to j + 1
+    else
+      set lit to concat(lit, chr(c))
+      set i to i + 1
+    end
+  end
+  if length(lit) > 0
+    cg_push_tok(4, 43, 0, "")
+    cg_push_tok(3, 0, 0, lit)
+  end
+  cg_push_tok(4, 41, 0, "")
+  return 0
+end
+
+to cg_tokenize_into with src
+  set n to length(src)
+  set i to 0
+  while i < n
+    set c to ord(src, i)
+    set nx to 0 - 1
+    if i + 1 < n
+      set nx to ord(src, i + 1)
+    end
+    if c is 32 or c is 9 or c is 13
+      set i to i + 1
+    else if c is 10 or (c is 59 and nx is not 59)
+      cg_push_tok(5, 0, 0, "")
+      set i to i + 1
+    else if c is 35 or (c is 47 and nx is 47)
+      while i < n and ord(src, i) is not 10
+        set i to i + 1
+      end
+    else if c is 47 and nx is 42
+      set i to i + 2
+      while i < n
+        if ord(src, i) is 42 and i + 1 < n and ord(src, i + 1) is 47
+          set i to i + 2
+          break
+        end
+        set i to i + 1
+      end
+    else if cg_is_quote(c)
+      set i to cg_scan_string(src, i + 1, c, 0)
+      cg_push_tok(3, 0, 0, cg_scratch[0])
+    else if cg_is_quote(nx) and find("fFrRbB", chr(c)) >= 0
+      set i to cg_scan_string(src, i + 2, nx, c is 114 or c is 82)
+      if c is 102 or c is 70
+        cg_emit_fstr_tokens(cg_scratch[0])
+      else
+        cg_push_tok(3, 0, 0, cg_scratch[0])
+      end
+    else if cg_is_digit(c)
+      set bi to 0 - 1
+      if c is 48 and nx > 0
+        set bi to find("xXbBoO", chr(nx))
+      end
+      if bi >= 0
+        set base to 16
+        if bi >= 4
+          set base to 8
+        else if bi >= 2
+          set base to 2
+        end
+        set i to cg_scan_digits(src, i + 2, base)
+        cg_push_tok(1, cg_scratch[1], 0, "")
+      else
+        set i to cg_scan_digits(src, i, 10)
+        set v to cg_scratch[1]
+        if i + 1 < n and ord(src, i) is 46 and cg_is_digit(ord(src, i + 1))
+          set i to cg_scan_digits(src, i + 1, 10)
+          set sc to cg_scratch[2]
+          set p10 to 1
+          set k to 0
+          while k < sc
+            set p10 to p10 * 10
+            set k to k + 1
+          end
+          cg_push_tok(6, v * p10 + cg_scratch[1], sc, "")
+        else
+          cg_push_tok(1, v, 0, "")
+        end
+      end
+    else if cg_is_alpha(c)
+      set j to i
+      while j < n and (cg_is_alpha(ord(src, j)) or cg_is_digit(ord(src, j)))
+        set j to j + 1
+      end
+      cg_push_tok(2, 0, 0, substr(src, i, j - i))
+      set i to j
+    else
+      set op2 to cg_two_op(c, nx)
+      if op2 > 0
+        cg_push_tok(4, op2, 0, "")
+        set i to i + 2
+      else
+        cg_push_tok(4, c, 0, "")
+        set i to i + 1
+      end
+    end
+  end
+end
+
+# ---- Bytecode & String Pool Emission --------------------------------------
+
+to cg_emit_byte with b
+  if not cg_emit_enabled[0]
+    return 0
+  end
+  if cg_bc[0] + 1 >= length(cg_bc)
+    throw "bytecode overflow"
+  end
+  set cg_bc[cg_bc[0] + 1] to b
+  set cg_bc[0] to cg_bc[0] + 1
+end
+
+to cg_emit2 with a b
+  cg_emit_byte(a)
+  cg_emit_byte(b)
+end
+
+to cg_op_t with b t
+  cg_emit_byte(b)
+  set cg_expr_type[0] to t
+end
+
+to cg_intern_str with s
+  if not cg_emit_enabled[0]
+    return 0
+  end
+  set n to cg_pool_keys[0]
+  set k to 1
+  while k <= n
+    if cg_str_eq(cg_pool_keys[k], s)
+      return cg_pool_offs[k]
+    end
+    set k to k + 1
+  end
+  set off to cg_pool_bytes[0]
+  set slen to length(s)
+  if off + 4 + slen >= length(cg_pool_bytes)
+    throw "string pool overflow"
+  end
+  set cg_pool_bytes[off + 1] to slen % 256
+  set cg_pool_bytes[off + 2] to (slen / 256) % 256
+  set cg_pool_bytes[off + 3] to (slen / 65536) % 256
+  set cg_pool_bytes[off + 4] to (slen / 16777216) % 256
+  set cg_pool_bytes[0] to off + 4
+  set i to 0
+  while i < slen
+    set cg_pool_bytes[cg_pool_bytes[0] + 1] to ord(s, i)
+    set cg_pool_bytes[0] to cg_pool_bytes[0] + 1
+    set i to i + 1
+  end
+  set n to n + 1
+  set cg_pool_keys[n] to s
+  set cg_pool_offs[n] to off
+  set cg_pool_keys[0] to n
+  return off
+end
+
+to cg_emit_u16 with v
+  cg_emit2(v % 256, (v / 256) % 256)
+end
+
+to cg_emit_i32 with v
+  cg_emit_u16(v % 65536)
+  cg_emit_u16((v / 65536) % 65536)
+end
+
+to cg_emit_push_str with s
+  set off to cg_intern_str(s)
+  cg_emit_byte(2)
+  cg_emit_u16(off)
+end
+
+to cg_emit_push_i32 with v
+  cg_emit_byte(1)
+  cg_emit_i32(v)
+end
+
+to cg_emit_push_f64 with fval
+  cg_emit_byte(160)
+  set fb to 0
+  while fb < 8
+    cg_emit_byte(fbyte(fval, fb))
+    set fb to fb + 1
+  end
+end
+
+to cg_emit_jmp with op
+  cg_emit_byte(op)
+  set p to cg_bc[0]
+  cg_emit2(0, 0)
+  return p
+end
+
+to cg_patch_i16 with pos target
+  if not cg_emit_enabled[0]
+    return 0
+  end
+  set off to target - (pos + 2)
+  if off < 0
+    set off to off + 65536
+  end
+  set cg_bc[pos + 1] to off % 256
+  set cg_bc[pos + 2] to (off / 256) % 256
+end
+
+to cg_emit_back with target
+  set p to cg_emit_jmp(64)
+  cg_patch_i16(p, target)
+end
+
+# ---- Symbol & Type Tables -------------------------------------------------
+
+to cg_find_in_tbl with tbl_names tbl_count name
+  set k to 1
+  set stop to tbl_count + 1
+  while k < stop
+    if cg_str_eq(tbl_names[k], name)
+      return k - 1
+    end
+    set k to k + 1
+  end
+  return 0 - 1
+end
+
+to cg_intern_name with name
+  set k to cg_find_in_tbl(cg_sym_names, cg_sym_names[0], name)
+  if k >= 0
+    return k
+  end
+  set n to cg_sym_names[0]
+  if cg_emit_enabled[0] and n >= 256
+    throw "too many globals (256 max)"
+  end
+  set n to n + 1
+  set cg_sym_names[n] to name
+  set cg_sym_types[n] to 0
+  set cg_sym_names[0] to n
+  return n - 1
+end
+
+to cg_add_local with name
+  set n to cg_loc_names[0]
+  if cg_emit_enabled[0] and n >= 256
+    throw "too many locals (256 max)"
+  end
+  set n to n + 1
+  set cg_loc_names[n] to name
+  set cg_loc_types[n] to 0
+  set cg_loc_names[0] to n
+  return n - 1
+end
+
+to cg_emit_load_ident with name
+  if cg_in_func[0]
+    set slot to cg_find_in_tbl(cg_loc_names, cg_loc_names[0], name)
+    if slot >= 0
+      cg_emit2(99, slot)
+      set cg_expr_type[0] to cg_loc_types[slot + 1]
+      return 0
+    end
+  end
+  set slot to cg_intern_name(name)
+  cg_emit2(3, slot)
+  set cg_expr_type[0] to cg_sym_types[slot + 1]
+end
+
+to cg_emit_store_ident with name
+  set t to cg_expr_type[0]
+  if cg_in_func[0]
+    set slot to cg_find_in_tbl(cg_loc_names, cg_loc_names[0], name)
+    if slot < 0
+      set slot to cg_add_local(name)
+    end
+    cg_emit2(100, slot)
+    set cg_loc_types[slot + 1] to t
+    return 0
+  end
+  set slot to cg_intern_name(name)
+  cg_emit2(4, slot)
+  set cg_sym_types[slot + 1] to t
+end
+
+to cg_set_ident_type with name t
+  if cg_in_func[0]
+    set slot to cg_find_in_tbl(cg_loc_names, cg_loc_names[0], name)
+    if slot >= 0
+      set cg_loc_types[slot + 1] to t
+      return 0
+    end
+  end
+  set slot to cg_intern_name(name)
+  set cg_sym_types[slot + 1] to t
+end
+
+to cg_record_field_type with name t
+  set k to cg_find_in_tbl(cg_fld_names, cg_fld_names[0], name)
+  if k >= 0
+    if t is 1 or t is 2
+      set cg_fld_types[k + 1] to t
+    end
+    return 0
+  end
+  set n to cg_fld_names[0] + 1
+  if n < length(cg_fld_names)
+    set cg_fld_names[n] to name
+    set cg_fld_types[n] to t
+    set cg_fld_names[0] to n
+  end
+end
+
+to cg_record_param_type with fn_idx arg_i t
+  set pslot to cg_fn_param_base[fn_idx + 1] + arg_i
+  if pslot >= length(cg_fn_param_seen)
+    return 0
+  end
+  set cur to cg_fn_param_seen[pslot]
+  set code to 3
+  if t is 1 or t is 2
+    set code to t
+  end
+  if cur is 0
+    set cg_fn_param_seen[pslot] to code
+  else if cur is not code
+    set cg_fn_param_seen[pslot] to 3
+  end
+end
+
+to cg_apply_param_types with fn_idx n_params
+  set base to cg_fn_param_base[fn_idx + 1]
+  set k to 0
+  while k < n_params
+    if base + k < length(cg_fn_param_seen)
+      set code to cg_fn_param_seen[base + k]
+      if code is 1 or code is 2
+        set cg_loc_types[k + 1] to code
+      end
+    end
+    set k to k + 1
+  end
+end
+
+# ---- Token Classifiers ----------------------------------------------------
+
+to cg_is_op_c with pos c
+  if pos < cg_tk_state[0] and cg_tk_kind[pos] is 4 and cg_tk_num[pos] is c
+    return 1
+  end
+  return 0
+end
+
+to cg_is_word with pos w
+  if pos < cg_tk_state[0] and cg_tk_kind[pos] is 2
+    return cg_str_eq(cg_tk_txt[pos], w)
+  end
+  return 0
+end
+
+to cg_word_in with pos pat
+  if pos < cg_tk_state[0] and cg_tk_kind[pos] is 2
+    return cg_in(pat, cg_tk_txt[pos])
+  end
+  return 0
+end
+
+to cg_skip_nl with pos
+  while pos < cg_tk_state[0] and cg_tk_kind[pos] is 5
+    set pos to pos + 1
+  end
+  return pos
+end
+
+to cg_opt_c with pos c
+  if cg_is_op_c(pos, c)
+    return pos + 1
+  end
+  return pos
+end
+
+to cg_eat_end with pos
+  if cg_is_op_c(pos, 303) or cg_is_word(pos, "end")
+    return pos + 1
+  end
+  return pos
+end
+
+to cg_eat_rparen with pos
+  return cg_opt_c(cg_skip_nl(pos), 41)
+end
+
+to cg_patch_list with pos_arr dep_arr target
+  set d to cg_loop_depth[0]
+  set k to 1
+  set stop to pos_arr[0] + 1
+  while k < stop
+    if dep_arr[k] is d
+      cg_patch_i16(pos_arr[k], target)
+      set dep_arr[k] to 0 - 1
+    end
+    set k to k + 1
+  end
+  while pos_arr[0] > 0 and dep_arr[pos_arr[0]] is 0 - 1
+    set pos_arr[0] to pos_arr[0] - 1
+    set dep_arr[0] to dep_arr[0] - 1
+  end
+  return 0
+end
+
+# ---- Essence / Class Desugaring -------------------------------------------
+
+to cg_add_mth with ci mkey mfn sup
+  set mc to cg_mth_cls[0] + 1
+  set cg_mth_cls[mc] to ci
+  set cg_mth_key[mc] to mkey
+  set cg_mth_fn[mc] to mfn
+  set cg_mth_sup[mc] to sup
+  set cg_mth_cls[0] to mc
+  return 0
+end
+
+to cg_is_stmt_start with j
+  if j is 0 or cg_tk_kind[j - 1] is 5 or cg_is_op_c(j - 1, 302) or cg_is_op_c(j - 1, 303)
+    return 1
+  end
+  return 0
+end
+
+to cg_is_essence_opener with j
+  if cg_tk_kind[j] is not 2
+    return 0
+  end
+  set w to cg_tk_txt[j]
+  if cg_in("|conjure|func|def|cycle|while|iterate|within|for|attempt|try|make|spell|enfold|", w)
+    return 1
+  end
+  if cg_str_eq(w, "to") and (j is 0 or cg_tk_kind[j - 1] is 5)
+    return 1
+  end
+  if cg_in("|discern|match|", w)
+    return cg_is_stmt_start(j)
+  end
+  if cg_in("|essence|kind|class|", w) and cg_is_stmt_start(j) and j + 1 < cg_tk_state[0] and cg_tk_kind[j + 1] is 2
+    return 1
+  end
+  if cg_in("|ponder|either|if|", w)
+    set k to j - 1
+    while k >= 0 and cg_tk_kind[k] is 5
+      set k to k - 1
+    end
+    if k >= 0 and cg_word_in(k, "|otherwise|else|")
+      return 0
+    end
+    if cg_str_eq(w, "either") and not cg_is_stmt_start(j)
+      return 0
+    end
+    return 1
+  end
+  return 0
+end
+
+to cg_desugar_essences
+  set cg_cls_names[0] to 0
+  set cg_mth_cls[0] to 0
+  set tc to cg_tk_state[0]
+  set i to 0
+  while i < tc
+    if cg_word_in(i, "|essence|kind|class|") and cg_is_stmt_start(i) and i + 1 < tc and cg_tk_kind[i + 1] is 2
+      set cname to cg_tk_txt[i + 1]
+      set cidx to cg_cls_names[0] + 1
+      set cg_cls_names[cidx] to cname
+      set cg_cls_names[0] to cidx
+      set cg_tk_kind[i] to 5
+      set cg_tk_kind[i + 1] to 5
+      set pidx to 0
+      set j to i + 2
+      if cg_word_in(j, "|extend|extends|") and j + 1 < tc and cg_tk_kind[j + 1] is 2
+        set pidx to cg_find_in_tbl(cg_cls_names, cidx, cg_tk_txt[j + 1]) + 1
+        set cg_tk_kind[j] to 5
+        set cg_tk_kind[j + 1] to 5
+        set j to j + 2
+      end
+      if cg_is_op_c(j, 302)
+        set cg_tk_kind[j] to 5
+        set j to j + 1
+      end
+      set depth to 0
+      while j < tc
+        if cg_is_word(j, "me")
+          set cg_tk_txt[j] to "self"
+        else if cg_word_in(j, "|super|ancestor|") and cg_is_op_c(j + 1, 46) and j + 2 < tc and cg_tk_kind[j + 2] is 2
+          set cg_tk_txt[j] to "self"
+          set cg_tk_txt[j + 2] to concat("super_", concat(cname, concat("_", cg_tk_txt[j + 2])))
+          set j to j + 2
+        else if cg_is_word(j, "end") or cg_is_op_c(j, 303)
+          if depth is 0
+            set cg_tk_kind[j] to 5
+            set j to j + 1
+            break
+          end
+          if not (cg_is_op_c(j, 303) and cg_word_in(cg_skip_nl(j + 1), "|otherwise|elsewise|elif|else|rescue|catch|except|ensure|finally|"))
+            set depth to depth - 1
+          end
+        else if cg_is_essence_opener(j)
+          if depth is 0 and cg_word_in(j, "|conjure|to|func|def|")
+            set mname to cg_tk_txt[j + 1]
+            set mfn to concat(cname, concat("_", mname))
+            set cg_tk_txt[j + 1] to mfn
+            cg_add_mth(cidx, mname, mfn, 0)
+          end
+          set depth to depth + 1
+        end
+        set j to j + 1
+      end
+      if pidx > 0
+        set own_stop to cg_mth_cls[0]
+        set m to 1
+        while m <= own_stop
+          if cg_mth_cls[m] is pidx
+            set pkey to cg_mth_key[m]
+            set pfn to cg_mth_fn[m]
+            if cg_mth_sup[m] is 1
+              cg_add_mth(cidx, pkey, pfn, 1)
+            else
+              if length(cg_find_method_fn(cidx, pkey)) is 0
+                cg_add_mth(cidx, pkey, pfn, 0)
+              end
+              cg_add_mth(cidx, concat("super_", concat(cname, concat("_", pkey))), pfn, 1)
+            end
+          end
+          set m to m + 1
+        end
+      end
+      set i to j
+    else
+      set i to i + 1
+    end
+  end
+  return 0
+end
+
+to cg_find_method_fn with cidx key
+  set m to 1
+  set stop to cg_mth_cls[0] + 1
+  while m < stop
+    if cg_mth_cls[m] is cidx and cg_mth_sup[m] is 0 and cg_str_eq(cg_mth_key[m], key)
+      return cg_mth_fn[m]
+    end
+    set m to m + 1
+  end
+  return ""
+end
+
+to cg_method_ret_type with name
+  set m to 1
+  set stop to cg_mth_cls[0] + 1
+  while m < stop
+    if cg_str_eq(cg_mth_key[m], name)
+      set fi to cg_find_in_tbl(cg_fn_names, cg_fn_names[0], cg_mth_fn[m])
+      if fi >= 0 and cg_fn_ret_types[fi + 1] is 1
+        return 1
+      end
+    end
+    set m to m + 1
+  end
+  return 0
+end
+
+# ---- Calls & Builtins -----------------------------------------------------
+
+to cg_check_arity with name got want
+  if cg_emit_enabled[0] and got is not want
+    throw concat("arity ", name)
+  end
+end
+
+to cg_add_pend with name patch_pos
+  if cg_emit_enabled[0]
+    set p to cg_pend_names[0] + 1
+    set cg_pend_names[p] to name
+    set cg_pend_pos[p] to patch_pos
+    set cg_pend_names[0] to p
+  end
+end
+
+to cg_emit_ref with name
+  cg_emit_byte(1)
+  set patch_pos to cg_bc[0]
+  set idx to cg_find_in_tbl(cg_fn_names, cg_fn_names[0], name)
+  if cg_emit_enabled[0] and idx < 0
+    throw concat("unknown ", name)
+  end
+  set target to 0
+  if idx >= 0
+    set target to cg_fn_offsets[idx + 1]
+  end
+  if target > 0
+    cg_emit_i32(target)
+  else
+    cg_emit_i32(0)
+    cg_add_pend(name, patch_pos)
+  end
+  set cg_expr_type[0] to 0
+end
+
+to cg_emit_new with cname
+  set cf to cg_find_in_tbl(cg_cls_names, cg_cls_names[0], cname)
+  set ci to cf + 1
+  if cg_emit_enabled[0] and cf < 0
+    throw concat("unknown ", cname)
+  end
+  set n to 0
+  set m to 1
+  set mstop to cg_mth_cls[0] + 1
+  while m < mstop
+    if cg_mth_cls[m] is ci
+      set n to n + 1
+    end
+    set m to m + 1
+  end
+  cg_emit_byte(138)
+  cg_emit_u16(n)
+  set m to 1
+  while m < mstop
+    if cg_mth_cls[m] is ci
+      cg_emit_push_str(cg_mth_key[m])
+      cg_emit_ref(cg_mth_fn[m])
+      cg_emit_byte(139)
+    end
+    set m to m + 1
+  end
+  set cg_expr_type[0] to 3
+end
+
+to cg_resolve_pending_calls
+  set r to 1
+  set stop to cg_pend_names[0] + 1
+  while r < stop
+    set idx to cg_find_in_tbl(cg_fn_names, cg_fn_names[0], cg_pend_names[r])
+    if idx >= 0
+      set target to cg_fn_offsets[idx + 1]
+      set pos to cg_pend_pos[r]
+      set cg_bc[pos + 1] to target % 256
+      set cg_bc[pos + 2] to (target / 256) % 256
+      if cg_bc[pos] is not 96
+        set cg_bc[pos + 3] to (target / 65536) % 256
+        set cg_bc[pos + 4] to (target / 16777216) % 256
+      end
+    end
+    set r to r + 1
+  end
+end
+
+to cg_lookup_bi with tbl name
+  set p to find(tbl, concat("|", concat(name, ":")))
+  if p < 0
+    return 0
+  end
+  set q to p + length(name) + 2
+  set tn to length(tbl)
+  set slot to 0
+  while q < tn and slot < 3
+    set val to 0
+    while q < tn
+      set ch to ord(tbl, q)
+      if ch is 58 or ch is 124
+        set q to q + 1
+        break
+      end
+      set val to val * 10 + (ch - 48)
+      set q to q + 1
+    end
+    set cg_scratch[slot] to val
+    set slot to slot + 1
+    if q > 0 and ord(tbl, q - 1) is 124
+      break
+    end
+  end
+  return 1
+end
+
+to cg_emit_fn_call with name nargs ret_t
+  set idx to cg_find_in_tbl(cg_fn_names, cg_fn_names[0], name)
+  if cg_emit_enabled[0] and (idx < 0 or cg_fn_arities[idx + 1] is not nargs)
+    throw concat("bad call ", name)
+  end
+  cg_emit_byte(96)
+  set patch_pos to cg_bc[0]
+  set target to 0
+  if idx >= 0
+    set target to cg_fn_offsets[idx + 1]
+    if ret_t < 0
+      set cg_expr_type[0] to cg_fn_ret_types[idx + 1]
+    else
+      set cg_expr_type[0] to ret_t
+    end
+  else
+    set cg_expr_type[0] to 0
+  end
+  if target > 0
+    cg_emit_u16(target)
+  else
+    cg_emit_u16(0)
+    cg_add_pend(name, patch_pos)
+  end
+  cg_emit_byte(nargs)
+end
+
+to cg_tmp with pfx
+  return concat(pfx, str(cg_tmp_depth[0]))
+end
+
+to cg_lookup_hlp with name nargs
+  set p to find(cg_hlp_tbl, concat("|", concat(name, ":")))
+  if p < 0
+    return 0
+  end
+  set q to p + length(name) + 2
+  set s to q
+  while ord(cg_hlp_tbl, s) is not 58
+    set s to s + 1
+  end
+  set sfx to substr(cg_hlp_tbl, q, s - q)
+  set want to ord(cg_hlp_tbl, s + 1) - 48
+  set rt to ord(cg_hlp_tbl, s + 3) - 48
+  cg_check_arity(name, nargs, want)
+  cg_emit_fn_call(concat("__v1_", sfx), want, rt)
+  return 1
+end
+
+to cg_emit_call with name nargs arg0k lastk
+  if cg_lookup_bi(cg_bi_tbl, name)
+    if cg_scratch[1] is 158 and nargs > 1
+      if nargs is 2
+        cg_emit_push_i32(1)
+      else
+        cg_check_arity(name, nargs, 3)
+      end
+      cg_emit_fn_call("__v1_range", 3, 6)
+      return 0
+    end
+    cg_check_arity(name, nargs, cg_scratch[0])
+    set op to cg_scratch[1]
+    set rt to cg_scratch[2]
+    if op is 143 and lastk is 4
+      set rt to 5
+    else if op is 140 and arg0k is 4
+      set rt to 1
+    else if op is 139
+      set rt to arg0k
+    end
+    cg_op_t(op, rt)
+    return 0
+  end
+  if cg_lookup_bi(cg_fm_tbl, name)
+    set fop to cg_scratch[0]
+    if fop is 5 or fop is 9
+      set w to 1
+      if fop is 5
+        set w to 2
+      end
+      cg_check_arity(name, nargs, w)
+      if lastk is 0
+        cg_emit_byte(168)
+      end
+      if fop is 9
+        cg_op_t(172, 2)
+      else
+        cg_emit2(174, 5)
+        set cg_expr_type[0] to 2
+      end
+    else if fop >= 6
+      cg_check_arity(name, nargs, 1)
+      if lastk is 2
+        cg_emit2(181 + (fop - 6), 169)
+      end
+      set cg_expr_type[0] to 0
+    else
+      cg_check_arity(name, nargs, 1)
+      if lastk is 0
+        cg_emit_byte(168)
+      end
+      cg_emit2(174, fop)
+      set cg_expr_type[0] to 2
+    end
+    return 0
+  end
+  if cg_lookup_hlp(name, nargs)
+    return 0
+  end
+  if cg_in("|concat|etch|", name)
+    if nargs < 2
+      cg_check_arity(name, nargs, 2)
+    end
+    set k to 1
+    while k < nargs
+      cg_emit_byte(145)
+      set k to k + 1
+    end
+    set cg_expr_type[0] to 1
+    return 0
+  end
+  if cg_str_eq(name, "ord")
+    if nargs is 1
+      cg_emit_push_i32(0)
+    else
+      cg_check_arity(name, nargs, 2)
+    end
+    cg_op_t(132, 0)
+    return 0
+  end
+  if cg_in("|str|num|int|", name)
+    cg_check_arity(name, nargs, 1)
+    if cg_str_eq(name, "str")
+      if lastk is 2
+        cg_emit2(169, 135)
+      else if lastk is not 1
+        cg_emit_byte(135)
+      end
+      set cg_expr_type[0] to 1
+    else if cg_str_eq(name, "num")
+      if lastk is 1
+        cg_emit_byte(195)
+      else if lastk is 0
+        cg_emit_byte(168)
+      end
+      set cg_expr_type[0] to 2
+    else
+      if lastk is 1
+        cg_emit_byte(154)
+      else if lastk is 2
+        cg_emit_byte(169)
+      end
+      set cg_expr_type[0] to 0
+    end
+    return 0
+  end
+  if cg_in("|abs|magnitude|", name)
+    cg_check_arity(name, nargs, 1)
+    cg_op_t(155 + (lastk is 2) * 16, (lastk is 2) * 2)
+    return 0
+  end
+  if cg_str_eq(name, "pow")
+    cg_check_arity(name, nargs, 2)
+    if arg0k is 0 and lastk is 0
+      cg_emit_fn_call("__v1_powi", 2, 0)
+    else if arg0k is 0
+      cg_emit_fn_call("__v1_powif", 2, 2)
+    else
+      if lastk is 0
+        cg_emit_byte(168)
+      end
+      cg_emit2(174, 5)
+      set cg_expr_type[0] to 2
+    end
+    return 0
+  end
+  if cg_in("|clone|reverse|invert|", name)
+    cg_check_arity(name, nargs, 1)
+    if cg_str_eq(name, "clone")
+      if lastk is 1
+        set cg_expr_type[0] to 1
+      else
+        cg_emit_fn_call("__v1_lclone", 1, lastk)
+      end
+    else if lastk is 1
+      cg_emit_fn_call("__v1_srev", 1, 1)
+    else
+      cg_emit_fn_call("__v1_lrev", 1, lastk)
+    end
+    return 0
+  end
+  if cg_in("|snatch|portion|", name)
+    if cg_str_eq(name, "snatch") and nargs is 2 and arg0k is not 1
+      cg_op_t(129, 0)
+      return 0
+    end
+    if nargs is 2
+      cg_emit_push_i32(0 - 1)
+    end
+    if arg0k is 1
+      cg_emit_fn_call("__v1_sslice", 3, 1)
+    else
+      cg_emit_fn_call("__v1_lslice", 3, arg0k)
+    end
+    return 0
+  end
+  if cg_in("|essence|gettype|typeof|", name)
+    cg_check_arity(name, nargs, 1)
+    cg_emit_byte(5)
+    cg_emit_push_i32(arg0k)
+    cg_emit_fn_call("__v1_tname", 1, 1)
+    return 0
+  end
+  cg_emit_fn_call(name, nargs, 0 - 1)
+end
+
+# ---- Shared Arg-List & Inline Builtin Helpers ------------------------------
+
+to cg_parse_arg_list with pos rec_name rec_off
+  set pos to cg_skip_nl(pos + 1)
+  set cg_scratch[3] to 0
+  set cg_scratch[4] to 0
+  set cg_scratch[5] to 0
+  if cg_is_op_c(pos, 41)
+    return pos + 1
+  end
+  set nargs to 0
+  set going to 1
+  while going
+    set pos to cg_parse_expr(pos)
+    set k to cg_expr_type[0]
+    if nargs is 0
+      set cg_scratch[4] to k
+    end
+    set cg_scratch[5] to k
+    if not cg_emit_enabled[0] and length(rec_name) > 0
+      set fi to cg_find_in_tbl(cg_fn_names, cg_fn_names[0], rec_name)
+      if fi >= 0
+        cg_record_param_type(fi, rec_off + nargs, k)
+      end
+    end
+    set nargs to nargs + 1
+    set pos to cg_skip_nl(pos)
+    if cg_is_op_c(pos, 44)
+      set pos to cg_skip_nl(pos + 1)
+    else
+      set going to 0
+    end
+  end
+  set cg_scratch[3] to nargs
+  return cg_eat_rparen(pos)
+end
+
+to cg_emit_append_or_pop with pos
+  set ap to cg_skip_nl(pos + 1)
+  if cg_is_op_c(ap, 41)
+    cg_emit_byte(128)
+    cg_emit_u16(0)
+    set cg_expr_type[0] to 6
+    return ap + 1
+  end
+  set xs_nm to ""
+  if cg_tk_kind[ap] is 2 and (cg_is_op_c(ap + 1, 44) or cg_is_op_c(ap + 1, 41))
+    set xs_nm to cg_tk_txt[ap]
+  end
+  set ap to cg_parse_expr(ap)
+  set xk to cg_expr_type[0]
+  if cg_is_op_c(cg_skip_nl(ap), 44)
+    set ap to cg_eat_rparen(cg_parse_expr(cg_skip_nl(cg_skip_nl(ap) + 1)))
+    cg_emit_fn_call("__v1_lappend", 2, xk)
+    if length(xs_nm) > 0
+      cg_emit_store_ident(xs_nm)
+      cg_emit_load_ident(xs_nm)
+    end
+    return ap
+  end
+  set ap to cg_eat_rparen(ap)
+  set cg_tmp_depth[0] to cg_tmp_depth[0] + 1
+  set d to str(cg_tmp_depth[0])
+  set xs_t to concat("_px", d)
+  set rv_t to concat("_pr", d)
+  cg_emit_store_ident(xs_t)
+  cg_emit_load_ident(xs_t)
+  cg_emit_load_ident(xs_t)
+  cg_emit_byte(131)
+  cg_emit_push_i32(1)
+  cg_emit2(17, 129)
+  cg_emit_store_ident(rv_t)
+  if length(xs_nm) > 0
+    cg_emit_load_ident(xs_t)
+    cg_emit_fn_call("__v1_lpop_rest", 1, xk)
+    cg_emit_store_ident(xs_nm)
+  end
+  cg_emit_load_ident(rv_t)
+  if xk is 5
+    set cg_expr_type[0] to 1
+  else
+    set cg_expr_type[0] to 0
+  end
+  set cg_tmp_depth[0] to cg_tmp_depth[0] - 1
+  return ap
+end
+
+# ---- Closures & Lambdas (make / spell / arrow) ----------------------------
+
+to cg_step_depth with pos d
+  set c to 0
+  if cg_tk_kind[pos] is 4
+    set c to cg_tk_num[pos]
+  end
+  if c is 40 or c is 91 or c is 123
+    return d + 1
+  end
+  if c is 41 or c is 93 or c is 125
+    return d - 1
+  end
+  return d
+end
+
+to cg_find_expr_end with pos
+  set p to pos
+  set d to 0
+  while p < cg_tk_state[0]
+    set nd to cg_step_depth(p, d)
+    if nd < 0
+      return p
+    end
+    if nd is not d
+      set d to nd
+    else if d is 0 and (cg_tk_kind[p] is 5 or cg_is_op_c(p, 44) or cg_is_op_c(p, 303) or cg_word_in(p, "|end|for|iterate|if|ponder|"))
+      return p
+    end
+    set p to p + 1
+  end
+  return p
+end
+
+to cg_collect_auto_caps with start_p end_p
+  set kws to "|yep|nope|void|true|false|nothing|none|null|equals|differs|is|not|isnt|also|and|either|or|forge|be|set|to|yield|return|ponder|if|otherwise|else|end|cycle|while|iterate|through|for|in|each|speak|say|"
+  set p to start_p
+  while p < end_p
+    if cg_tk_kind[p] is 2 and not cg_is_op_c(p + 1, 40) and not (p > 0 and cg_is_op_c(p - 1, 46))
+      set w to cg_tk_txt[p]
+      if not cg_in(kws, w)
+        if (cg_in_func[0] and cg_find_in_tbl(cg_loc_names, cg_loc_names[0], w) >= 0) or cg_find_in_tbl(cg_sym_names, cg_sym_names[0], w) >= 0
+          if cg_find_in_tbl(cg_lam_names, cg_lam_names[0], w) < 0 and cg_find_in_tbl(cg_lam_caps, cg_lam_caps[0], w) < 0
+            set cg_lam_caps[cg_lam_caps[0] + 1] to w
+            set cg_lam_caps[0] to cg_lam_caps[0] + 1
+          end
+        end
+      end
+    end
+    set p to p + 1
+  end
+  return 0
+end
+
+to cg_emit_closure with body_pos is_expr_body has_explicit_caps
+  if not has_explicit_caps
+    set span_end to body_pos
+    if is_expr_body
+      set span_end to cg_find_expr_end(body_pos)
+    else
+      set d to 0
+      set sp to body_pos
+      while sp < cg_tk_state[0]
+        if cg_is_op_c(sp, 303) or cg_is_word(sp, "end")
+          if d is 0
+            set span_end to sp
+            break
+          end
+          set d to d - 1
+        else if cg_is_essence_opener(sp)
+          set d to d + 1
+        end
+        set sp to sp + 1
+      end
+    end
+    cg_collect_auto_caps(body_pos, span_end)
+  end
+  set lnparams to cg_lam_names[0]
+  set lncaps to cg_lam_caps[0]
+  set c_list to mklist(lncaps + 1)
+  set p_list to mklist(lnparams + 1)
+  set k to 1
+  while k <= lnparams
+    set p_list[k] to cg_lam_names[k]
+    set k to k + 1
+  end
+  set k to 1
+  while k <= lncaps
+    set c_list[k] to cg_lam_caps[k]
+    cg_emit_load_ident(c_list[k])
+    set k to k + 1
+  end
+  set lover to cg_emit_jmp(64)
+  set lbody_off to cg_bc[0]
+
+  set lbase to cg_lsav_names[0]
+  set lsn to cg_loc_names[0]
+  set lsi to 1
+  while lsi <= lsn
+    set cg_lsav_names[lbase + lsi] to cg_loc_names[lsi]
+    set cg_lsav_types[lbase + lsi] to cg_loc_types[lsi]
+    set lsi to lsi + 1
+  end
+  set cg_lsav_names[0] to lbase + lsn
+  set cg_lsav_types[0] to lbase + lsn
+  set lsave_in to cg_in_func[0]
+  set cg_loc_names[0] to 0
+  set cg_loc_types[0] to 0
+  set k to 1
+  while k <= lnparams
+    cg_add_local(p_list[k])
+    set k to k + 1
+  end
+  set k to 1
+  while k <= lncaps
+    cg_add_local(c_list[k])
+    set k to k + 1
+  end
+  set lfixed to cg_loc_names[0]
+
+  set lsave_emit to cg_emit_enabled[0]
+  set lsave_syms to cg_sym_names[0]
+  set lsave_td to cg_tmp_depth[0]
+  set cg_emit_enabled[0] to 0
+  set cg_in_func[0] to 1
+  if is_expr_body
+    cg_parse_expr(body_pos)
+  else
+    cg_parse_block(body_pos)
+  end
+  set lextras to cg_loc_names[0] - lfixed
+  set cg_emit_enabled[0] to lsave_emit
+  set cg_sym_names[0] to lsave_syms
+  set cg_tmp_depth[0] to lsave_td
+  set cg_loc_names[0] to lfixed
+
+  if lextras > 0
+    cg_emit2(98, lextras)
+  end
+  set cg_in_func[0] to 1
+  if is_expr_body
+    set end_pos to cg_parse_expr(body_pos)
+    cg_emit_byte(97)
+  else
+    set end_pos to cg_parse_block(body_pos)
+    cg_emit_push_i32(0)
+    cg_emit_byte(97)
+    set end_pos to cg_eat_end(end_pos)
+  end
+  cg_patch_i16(lover, cg_bc[0])
+  cg_emit_byte(197)
+  cg_emit_u16(lbody_off)
+  cg_emit_byte(lncaps)
+
+  set cg_loc_names[0] to lsn
+  set lsi to 1
+  while lsi <= lsn
+    set cg_loc_names[lsi] to cg_lsav_names[lbase + lsi]
+    set cg_loc_types[lsi] to cg_lsav_types[lbase + lsi]
+    set lsi to lsi + 1
+  end
+  set cg_lsav_names[0] to lbase
+  set cg_in_func[0] to lsave_in
+  set cg_expr_type[0] to 0
+  return end_pos
+end
+
+# ---- Expressions ----------------------------------------------------------
+
+to cg_emit_list_comprehension with elt_pos
+  set p to elt_pos
+  set d to 0
+  set tc to cg_tk_state[0]
+  set lkw to 0 - 1
+  while p < tc
+    set nd to cg_step_depth(p, d)
+    if nd < 0
+      break
+    end
+    if nd is not d
+      set d to nd
+    else if d is 0 and cg_word_in(p, "|for|iterate|")
+      set lkw to p
+      break
+    else if d is 0 and cg_is_op_c(p, 44)
+      break
+    end
+    set p to p + 1
+  end
+  if lkw < 0
+    return 0 - 1
+  end
+  set q to lkw + 1
+  if cg_is_word(q, "each")
+    set q to q + 1
+  end
+  set vname to cg_tk_txt[q]
+  set q to q + 1
+  if cg_word_in(q, "|in|through|be|")
+    set q to q + 1
+  end
+  set q to cg_parse_expr(q)
+  if cg_word_in(q, "|if|ponder|")
+    set cg_lam_names[0] to 1
+    set cg_lam_names[1] to vname
+    set cg_lam_caps[0] to 0
+    set q to cg_emit_closure(q + 1, 1, 0)
+    cg_emit_fn_call("__v1_sift", 2, 6)
+  end
+  set cg_lam_names[0] to 1
+  set cg_lam_names[1] to vname
+  set cg_lam_caps[0] to 0
+  cg_emit_closure(elt_pos, 1, 0)
+  cg_emit_fn_call("__v1_each", 2, 6)
+  return cg_opt_c(cg_skip_nl(q), 93)
+end
+
+to cg_collect_lam_words with pos end_c arr
+  set tc to cg_tk_state[0]
+  while pos < tc
+    if end_c > 0 and cg_is_op_c(pos, end_c)
+      return pos + 1
+    end
+    if end_c is 0 and (cg_tk_kind[pos] is not 2 or cg_is_word(pos, "capture"))
+      return pos
+    end
+    if cg_tk_kind[pos] is 2
+      set arr[arr[0] + 1] to cg_tk_txt[pos]
+      set arr[0] to arr[0] + 1
+    end
+    set pos to pos + 1
+  end
+  return pos
+end
+
+to cg_parse_lambda with pos is_paren
+  set cg_lam_names[0] to 0
+  set cg_lam_caps[0] to 0
+  if is_paren
+    set lpos to cg_collect_lam_words(pos + 1, 41, cg_lam_names)
+    return cg_emit_closure(lpos + 1, 1, 0)
+  end
+  set lpos to pos + 1
+  if cg_is_op_c(lpos, 40)
+    set lpos to cg_collect_lam_words(lpos + 1, 41, cg_lam_names)
+  else if cg_is_word(lpos, "with")
+    set lpos to cg_collect_lam_words(lpos + 1, 0, cg_lam_names)
+  end
+  set exp_caps to 0
+  if cg_is_word(lpos, "capture")
+    set exp_caps to 1
+    set lpos to lpos + 1
+    while lpos < cg_tk_state[0] and cg_tk_kind[lpos] is 2
+      set cg_lam_caps[cg_lam_caps[0] + 1] to cg_tk_txt[lpos]
+      set cg_lam_caps[0] to cg_lam_caps[0] + 1
+      set lpos to cg_opt_c(lpos + 1, 44)
+    end
+  end
+  if cg_is_op_c(lpos, 306)
+    return cg_emit_closure(lpos + 1, 1, exp_caps)
+  end
+  return cg_emit_closure(cg_opt_c(lpos, 302), 0, exp_caps)
+end
+
+to cg_parse_seq_lit with pos close_c start_n
+  set pos to cg_skip_nl(pos)
+  if cg_is_op_c(pos, close_c) and start_n is 0
+    cg_emit_byte(128)
+    cg_emit_u16(0)
+    set cg_expr_type[0] to 6
+    return pos + 1
+  end
+  set n to start_n
+  set all_str to 1
+  set going to 1
+  if cg_is_op_c(pos, close_c)
+    set going to 0
+  end
+  while going
+    set pos to cg_parse_expr(pos)
+    if cg_expr_type[0] is not 1
+      set all_str to 0
+    end
+    set n to n + 1
+    set pos to cg_skip_nl(pos)
+    if cg_is_op_c(pos, 44)
+      set pos to cg_skip_nl(pos + 1)
+      if cg_is_op_c(pos, close_c)
+        set going to 0
+      end
+    else
+      set going to 0
+    end
+  end
+  set pos to cg_opt_c(pos, close_c)
+  cg_emit_byte(128)
+  cg_emit_u16(n)
+  if all_str and start_n is 0
+    set cg_expr_type[0] to 5
+  else
+    set cg_expr_type[0] to 6
+  end
+  return pos
+end
+
+to cg_parse_atom with pos
+  set tc to cg_tk_state[0]
+  if pos >= tc
+    return pos
+  end
+  set knd to cg_tk_kind[pos]
+  if knd is 1
+    cg_emit_push_i32(cg_tk_num[pos])
+    set cg_expr_type[0] to 0
+    return pos + 1
+  end
+  if knd is 6
+    set fscale to cg_tk_num2[pos]
+    set fdiv to 1
+    while fscale > 0
+      set fdiv to fdiv * 10
+      set fscale to fscale - 1
+    end
+    cg_emit_push_f64(i2f(cg_tk_num[pos]) / i2f(fdiv))
+    set cg_expr_type[0] to 2
+    return pos + 1
+  end
+  if knd is 3
+    cg_emit_push_str(cg_tk_txt[pos])
+    set cg_expr_type[0] to 1
+    return pos + 1
+  end
+  if knd is 2
+    set name to cg_tk_txt[pos]
+    if cg_in("|yep|true|nope|false|void|null|none|nothing|", name)
+      cg_emit_push_i32(cg_in("|yep|true|", name))
+      set cg_expr_type[0] to 0
+      return pos + 1
+    end
+    if cg_in("|PI|TAU|E|", name) and not cg_is_op_c(pos + 1, 40)
+      cg_emit_call(name, 0, 0, 0)
+      return pos + 1
+    end
+    if cg_str_eq(name, "__v1_fstr_val") and cg_is_op_c(pos + 1, 40)
+      set pos to cg_eat_rparen(cg_parse_expr(pos + 2))
+      cg_emit_coerce_to_str(cg_expr_type[0])
+      set cg_expr_type[0] to 1
+      return pos
+    end
+    if cg_is_op_c(pos + 1, 306)
+      set cg_lam_names[0] to 1
+      set cg_lam_names[1] to name
+      set cg_lam_caps[0] to 0
+      return cg_emit_closure(pos + 2, 1, 0)
+    end
+    set is_ctor to 0
+    set cn to ""
+    if cg_in("|new|spell|make|", name) and pos + 1 < tc and cg_tk_kind[pos + 1] is 2 and cg_find_in_tbl(cg_cls_names, cg_cls_names[0], cg_tk_txt[pos + 1]) >= 0
+      set is_ctor to 1
+      set cn to cg_tk_txt[pos + 1]
+      set pos to pos + 2
+    else if cg_find_in_tbl(cg_cls_names, cg_cls_names[0], name) >= 0 and cg_is_op_c(pos + 1, 40)
+      set is_ctor to 1
+      set cn to name
+      set pos to pos + 1
+    end
+    if is_ctor
+      cg_emit_new(cn)
+      set init_fn to cg_find_method_fn(cg_find_in_tbl(cg_cls_names, cg_cls_names[0], cn) + 1, "init")
+      if cg_is_op_c(pos, 40)
+        if length(init_fn) > 0
+          set cg_tmp_depth[0] to cg_tmp_depth[0] + 1
+          set obj_t to cg_tmp("_nw")
+          cg_emit_store_ident(obj_t)
+          cg_emit_load_ident(obj_t)
+          set pos to cg_parse_arg_list(pos, init_fn, 1)
+          cg_emit_call(init_fn, cg_scratch[3] + 1, 3, cg_scratch[5])
+          cg_emit_byte(5)
+          cg_emit_load_ident(obj_t)
+          set cg_tmp_depth[0] to cg_tmp_depth[0] - 1
+        else
+          set pos to cg_eat_rparen(pos + 1)
+        end
+      end
+      set cg_expr_type[0] to 3
+      return pos
+    end
+    if cg_in("|spell|make|", name)
+      return cg_parse_lambda(pos, 0)
+    end
+    if cg_str_eq(name, "new") and pos + 1 < tc and cg_tk_kind[pos + 1] is 2
+      if cg_emit_enabled[0]
+        throw concat("unknown ", cg_tk_txt[pos + 1])
+      end
+      return pos + 2
+    end
+    if cg_str_eq(name, "ref") and pos + 1 < tc and cg_tk_kind[pos + 1] is 2
+      cg_emit_ref(cg_tk_txt[pos + 1])
+      return pos + 2
+    end
+    if cg_str_eq(name, "call") and pos + 1 < tc and cg_tk_kind[pos + 1] is 2 and cg_is_op_c(pos + 2, 40)
+      set fname to cg_tk_txt[pos + 1]
+      set pos to cg_parse_arg_list(pos + 2, "", 0)
+      cg_emit_load_ident(fname)
+      cg_emit2(196, cg_scratch[3])
+      set cg_expr_type[0] to 0
+      return pos
+    end
+    if cg_is_op_c(pos + 1, 40)
+      if cg_in("|gather|pluck|", name)
+        return cg_emit_append_or_pop(pos + 1)
+      end
+      if cg_str_eq(name, "morph")
+        set ap to cg_parse_expr(cg_skip_nl(pos + 2))
+        set vk to cg_expr_type[0]
+        set ap to cg_skip_nl(ap)
+        if cg_is_op_c(ap, 44)
+          set ap to cg_skip_nl(ap + 1)
+          set tc0 to ord(cg_tk_txt[ap], 0)
+          set ap to cg_eat_rparen(ap + 1)
+          if tc0 is 116
+            cg_emit_coerce_to_str(vk)
+            set cg_expr_type[0] to 1
+          else if tc0 is 110 or tc0 is 105
+            if vk is 1
+              cg_emit_byte(195)
+              set cg_expr_type[0] to 2
+            end
+          else
+            cg_emit2(48, 48)
+            set cg_expr_type[0] to 0
+          end
+        end
+        return ap
+      end
+      set pos to cg_parse_arg_list(pos + 1, name, 0)
+      cg_emit_call(name, cg_scratch[3], cg_scratch[4], cg_scratch[5])
+      return pos
+    end
+    cg_emit_load_ident(name)
+    return pos + 1
+  end
+  if cg_is_op_c(pos, 40)
+    set p to pos + 1
+    set d to 1
+    while p < tc and d > 0
+      set d to cg_step_depth(p, d)
+      set p to p + 1
+    end
+    if d is 0 and cg_is_op_c(p, 306)
+      return cg_parse_lambda(pos, 1)
+    end
+    set pos to cg_skip_nl(pos + 1)
+    if cg_is_op_c(pos, 41)
+      cg_emit_byte(128)
+      cg_emit_u16(0)
+      set cg_expr_type[0] to 6
+      return pos + 1
+    end
+    if cg_tk_kind[pos] is 2 and cg_is_op_c(pos + 1, 315)
+      set wname to cg_tk_txt[pos]
+      set pos to cg_parse_expr(pos + 2)
+      set wk to cg_expr_type[0]
+      cg_emit_store_ident(wname)
+      cg_emit_load_ident(wname)
+      set cg_expr_type[0] to wk
+      return cg_eat_rparen(pos)
+    end
+    set pos to cg_parse_expr(pos)
+    set k0 to cg_expr_type[0]
+    set pos to cg_skip_nl(pos)
+    if cg_is_op_c(pos, 44)
+      return cg_parse_seq_lit(cg_skip_nl(pos + 1), 41, 1)
+    end
+    set pos to cg_eat_rparen(pos)
+    set cg_expr_type[0] to k0
+    return pos
+  end
+  if cg_is_op_c(pos, 91) or cg_is_op_c(pos, 317)
+    set close_c to 93
+    if cg_is_op_c(pos, 317)
+      set close_c to 318
+    else
+      set cp to cg_emit_list_comprehension(cg_skip_nl(pos + 1))
+      if cp >= 0
+        return cp
+      end
+    end
+    return cg_parse_seq_lit(pos + 1, close_c, 0)
+  end
+  if cg_is_op_c(pos, 123) or cg_is_op_c(pos, 302)
+    set close_c to 125
+    if cg_is_op_c(pos, 302)
+      set close_c to 303
+    end
+    set pos to cg_skip_nl(pos + 1)
+    cg_emit_byte(138)
+    set cap_pos to cg_bc[0]
+    cg_emit2(0, 0)
+    set n to 0
+    set vk to 0
+    while pos < tc and not cg_is_op_c(pos, close_c)
+      if cg_tk_kind[pos] is 2 and cg_is_op_c(pos + 1, 58)
+        cg_emit_push_str(cg_tk_txt[pos])
+        set pos to pos + 1
+      else
+        set pos to cg_parse_expr(pos)
+      end
+      set pos to cg_parse_expr(cg_skip_nl(cg_opt_c(pos, 58)))
+      if cg_expr_type[0] is 1
+        set vk to 1
+      end
+      cg_emit_byte(139)
+      set n to n + 1
+      set pos to cg_skip_nl(pos)
+      if cg_is_op_c(pos, 44)
+        set pos to cg_skip_nl(pos + 1)
+      else
+        break
+      end
+    end
+    set pos to cg_opt_c(pos, close_c)
+    if cg_emit_enabled[0]
+      set cg_bc[cap_pos + 1] to n % 256
+      set cg_bc[cap_pos + 2] to (n / 256) % 256
+    end
+    if vk is 1
+      set cg_expr_type[0] to 4
+    else
+      set cg_expr_type[0] to 3
+    end
+    return pos
+  end
+  return pos
+end
+
+to cg_is_slice_span with pos
+  set p to pos
+  set d to 0
+  while p < cg_tk_state[0]
+    set nd to cg_step_depth(p, d)
+    if nd < 0
+      return 0
+    end
+    if nd is not d
+      set d to nd
+    else if d is 0 and cg_is_op_c(p, 58)
+      return 1
+    end
+    set p to p + 1
+  end
+  return 0
+end
+
+to cg_parse_postfix with pos
+  while 1
+    if cg_is_op_c(pos, 91)
+      set tk to cg_expr_type[0]
+      if cg_is_slice_span(pos + 1)
+        set pos to pos + 1
+        if cg_is_op_c(pos, 58)
+          cg_emit_push_i32(0)
+        else
+          set pos to cg_parse_expr(pos)
+        end
+        set pos to cg_opt_c(pos, 58)
+        if cg_is_op_c(pos, 93)
+          cg_emit_push_i32(0 - 1)
+        else
+          set pos to cg_parse_expr(pos)
+        end
+        set pos to cg_opt_c(pos, 93)
+        if tk is 1
+          cg_emit_fn_call("__v1_sslice", 3, 1)
+        else
+          cg_emit_fn_call("__v1_lslice", 3, tk)
+        end
+      else
+        set pos to cg_opt_c(cg_parse_expr(pos + 1), 93)
+        if tk is 3 or tk is 4
+          cg_op_t(140, tk is 4)
+        else if tk is 1
+          cg_emit2(132, 136)
+          set cg_expr_type[0] to 1
+        else
+          cg_op_t(129, tk is 5)
+        end
+      end
+    else if cg_is_op_c(pos, 46) and pos + 1 < cg_tk_state[0] and cg_tk_kind[pos + 1] is 2
+      set mname to cg_tk_txt[pos + 1]
+      if cg_is_op_c(pos + 2, 40)
+        set cg_tmp_depth[0] to cg_tmp_depth[0] + 1
+        set recv_t to cg_tmp("_mcr")
+        cg_emit_store_ident(recv_t)
+        cg_emit_load_ident(recv_t)
+        set pos to cg_parse_arg_list(pos + 2, "", 0)
+        cg_emit_load_ident(recv_t)
+        cg_emit_push_str(mname)
+        cg_emit2(140, 196)
+        cg_emit_byte(cg_scratch[3] + 1)
+        set cg_tmp_depth[0] to cg_tmp_depth[0] - 1
+        set cg_expr_type[0] to cg_method_ret_type(mname)
+      else
+        cg_emit_push_str(mname)
+        cg_emit_byte(140)
+        set fk to cg_find_in_tbl(cg_fld_names, cg_fld_names[0], mname)
+        if fk >= 0
+          set cg_expr_type[0] to cg_fld_types[fk + 1]
+        else
+          set cg_expr_type[0] to 0
+        end
+        set pos to pos + 2
+      end
+    else
+      break
+    end
+  end
+  return pos
+end
+
+to cg_parse_unary with pos
+  if cg_is_op_c(pos, 45)
+    set pos to cg_parse_unary(pos + 1)
+    if cg_expr_type[0] is 2
+      cg_emit_byte(170)
+    else
+      cg_emit_push_i32(0 - 1)
+      cg_op_t(18, 0)
+    end
+    return pos
+  end
+  if cg_is_op_c(pos, 43)
+    return cg_parse_unary(pos + 1)
+  end
+  if cg_is_op_c(pos, 33)
+    set pos to cg_parse_unary(pos + 1)
+    cg_op_t(48, 0)
+    return pos
+  end
+  set pos to cg_parse_postfix(cg_parse_atom(pos))
+  if cg_is_op_c(pos, 94) or cg_is_op_c(pos, 316)
+    set lk to cg_expr_type[0]
+    if lk is 0
+      cg_emit_byte(168)
+    end
+    set pos to cg_parse_unary(pos + 1)
+    set rk to cg_expr_type[0]
+    if rk is 0
+      cg_emit_byte(168)
+    end
+    cg_emit2(174, 5)
+    if lk is 0 and rk is 0
+      cg_op_t(169, 0)
+    else
+      set cg_expr_type[0] to 2
+    end
+  end
+  return pos
+end
+
+to cg_parse_mul with pos
+  set pos to cg_parse_unary(pos)
+  while cg_is_op_c(pos, 42) or cg_is_op_c(pos, 47) or cg_is_op_c(pos, 37)
+    set c to cg_tk_num[pos]
+    set lk to cg_expr_type[0]
+    set pos to cg_parse_unary(pos + 1)
+    set rk to cg_expr_type[0]
+    if c is 37
+      cg_op_t(20, 0)
+    else if c is 42 and lk is 1 and rk is 0
+      cg_emit_fn_call("__v1_srep", 2, 1)
+    else if cg_both_float(lk, rk)
+      cg_op_t(163 + (c is 47), 2)
+    else
+      cg_op_t(18 + (c is 47), 0)
+    end
+  end
+  return pos
+end
+
+to cg_emit_str_concat_coerce with lk rk
+  if lk is 0
+    set cg_tmp_depth[0] to cg_tmp_depth[0] + 1
+    set rt to cg_tmp("_scr")
+    cg_emit_store_ident(rt)
+    cg_emit_byte(135)
+    cg_emit_load_ident(rt)
+    set cg_tmp_depth[0] to cg_tmp_depth[0] - 1
+  else if rk is 0
+    cg_emit_byte(135)
+  end
+  cg_op_t(145, 1)
+end
+
+to cg_parse_add with pos
+  set pos to cg_parse_mul(pos)
+  while cg_is_op_c(pos, 43) or cg_is_op_c(pos, 45)
+    set is_add to cg_is_op_c(pos, 43)
+    set lk to cg_expr_type[0]
+    set pos to cg_parse_mul(pos + 1)
+    set rk to cg_expr_type[0]
+    if is_add
+      if (lk is 5 or lk is 6) and (rk is 5 or rk is 6)
+        cg_emit_fn_call("__v1_lcat", 2, 6)
+      else if lk is 1 or rk is 1
+        cg_emit_str_concat_coerce(lk, rk)
+      else if cg_both_float(lk, rk)
+        cg_op_t(161, 2)
+      else
+        cg_op_t(16, 0)
+      end
+    else if cg_both_float(lk, rk)
+      cg_op_t(162, 2)
+    else
+      cg_op_t(17, 0)
+    end
+  end
+  return pos
+end
+
+to cg_parse_cmp with pos
+  set pos to cg_parse_add(pos)
+  while 1
+    set is_eq to 0
+    set neg to 0
+    if cg_word_in(pos, "|equals|same|") or cg_is_op_c(pos, 304)
+      set is_eq to 1
+      set pos to pos + 1
+    else if cg_is_word(pos, "differs") or cg_is_op_c(pos, 305)
+      set is_eq to 1
+      set neg to 1
+      set pos to pos + 1
+    else if cg_is_word(pos, "is")
+      set is_eq to 1
+      set pos to pos + 1
+      if cg_word_in(pos, "|not|isnt|")
+        set neg to 1
+        set pos to pos + 1
+      end
+    end
+    if is_eq
+      set lk to cg_expr_type[0]
+      set pos to cg_parse_add(pos)
+      set rk to cg_expr_type[0]
+      if cg_is_word(pos, "or") and cg_word_in(pos + 1, "|more|less|")
+        cg_op_t(36 + cg_is_word(pos + 1, "more"), 0)
+        set pos to pos + 2
+      else if lk is 1 or rk is 1
+        cg_op_t(144, 0)
+        if neg
+          cg_emit_byte(48)
+        end
+      else if cg_both_float(lk, rk)
+        cg_op_t(167, 0)
+        if neg
+          cg_emit_byte(48)
+        end
+      else
+        cg_op_t(32 + neg, 0)
+      end
+    else if cg_is_op_c(pos, 60) or cg_is_op_c(pos, 62) or cg_is_op_c(pos, 300) or cg_is_op_c(pos, 301)
+      set c to cg_tk_num[pos]
+      set lk to cg_expr_type[0]
+      set pos to cg_parse_add(pos + 1)
+      if cg_both_float(lk, cg_expr_type[0])
+        cg_op_t(165 + (c is 62 or c is 300), 0)
+        if c is 300 or c is 301
+          cg_emit_byte(48)
+        end
+      else if c is 60 or c is 62
+        cg_op_t(34 + (c is 62), 0)
+      else
+        cg_op_t(36 + (c is 301), 0)
+      end
+    else
+      break
+    end
+  end
+  return pos
+end
+
+to cg_parse_not with pos
+  if cg_word_in(pos, "|isnt|not|")
+    set pos to cg_parse_not(pos + 1)
+    cg_op_t(48, 0)
+    return pos
+  end
+  return cg_parse_cmp(pos)
+end
+
+to cg_parse_and with pos
+  set pos to cg_parse_not(pos)
+  while cg_word_in(pos, "|also|and|") or cg_is_op_c(pos, 319)
+    set fx to cg_emit_jmp(65)
+    set pos to cg_parse_not(pos + 1)
+    cg_emit2(48, 48)
+    set fe to cg_emit_jmp(64)
+    cg_patch_i16(fx, cg_bc[0])
+    cg_emit_push_i32(0)
+    cg_patch_i16(fe, cg_bc[0])
+    set cg_expr_type[0] to 0
+  end
+  return pos
+end
+
+to cg_parse_or with pos
+  set pos to cg_parse_and(pos)
+  while cg_word_in(pos, "|either|or|") or cg_is_op_c(pos, 320)
+    set fx to cg_emit_jmp(65)
+    cg_emit_push_i32(1)
+    set fe to cg_emit_jmp(64)
+    cg_patch_i16(fx, cg_bc[0])
+    set pos to cg_parse_and(pos + 1)
+    cg_emit2(48, 48)
+    cg_patch_i16(fe, cg_bc[0])
+    set cg_expr_type[0] to 0
+  end
+  return pos
+end
+
+to cg_parse_ternary with pos
+  set pos to cg_parse_or(pos)
+  if cg_is_op_c(pos, 126)
+    set jz to cg_emit_jmp(65)
+    set pos to cg_parse_or(pos + 1)
+    set tk to cg_expr_type[0]
+    set jmp to cg_emit_jmp(64)
+    cg_patch_i16(jz, cg_bc[0])
+    set pos to cg_parse_ternary(cg_opt_c(pos, 58))
+    cg_patch_i16(jmp, cg_bc[0])
+    if tk is 1 or cg_expr_type[0] is 1
+      set cg_expr_type[0] to 1
+    else
+      set cg_expr_type[0] to tk
+    end
+  end
+  return pos
+end
+
+to cg_parse_expr with pos
+  set pos to cg_parse_ternary(pos)
+  while cg_is_op_c(pos, 308)
+    set lk to cg_expr_type[0]
+    set pos to pos + 1
+    if cg_tk_kind[pos] is 2 and not cg_is_op_c(pos + 1, 40) and not cg_is_op_c(pos + 1, 306)
+      set fname to cg_tk_txt[pos]
+      if cg_find_in_tbl(cg_fn_names, cg_fn_names[0], fname) >= 0 or cg_in("|length|measure|upper|lower|trim|sum|str|abs|", fname)
+        if not cg_emit_enabled[0]
+          set fi to cg_find_in_tbl(cg_fn_names, cg_fn_names[0], fname)
+          if fi >= 0
+            cg_record_param_type(fi, 0, lk)
+          end
+        end
+        cg_emit_call(fname, 1, lk, lk)
+        set pos to pos + 1
+      else
+        set pos to cg_parse_ternary(pos)
+        cg_emit2(196, 1)
+        set cg_expr_type[0] to 0
+      end
+    else
+      set pos to cg_parse_ternary(pos)
+      cg_emit2(196, 1)
+      set cg_expr_type[0] to 0
+    end
+  end
+  return pos
+end
+
+# ---- Statements -----------------------------------------------------------
+
+to cg_parse_block with pos
+  while pos < cg_tk_state[0]
+    set pos to cg_skip_nl(pos)
+    if pos >= cg_tk_state[0] or cg_is_op_c(pos, 303) or cg_word_in(pos, "|end|otherwise|else|elsewise|elif|rescue|catch|except|ensure|finally|omen|case|")
+      break
+    end
+    set new_pos to cg_parse_stmt(pos)
+    if new_pos is pos
+      break
+    end
+    set pos to new_pos
+  end
+  return pos
+end
+
+to cg_emit_coerce_to_str with k
+  if k is 1
+    return 0
+  end
+  if k is 2
+    cg_emit2(169, 135)
+    return 0
+  end
+  if k is 5 or k is 6
+    cg_emit_fn_call("__v1_lstr", 1, 1)
+    return 0
+  end
+  cg_emit_byte(135)
+  return 0
+end
+
+to cg_stmt_speak with pos mode
+  if cg_is_word(pos, "shout")
+    set mode to 1
+  else if cg_is_word(pos, "whisper")
+    set mode to 2
+  end
+  set pos to pos + 1
+  set has_paren to 0
+  if cg_is_op_c(pos, 40)
+    set has_paren to 1
+    set pos to cg_skip_nl(pos + 1)
+    if cg_is_op_c(pos, 41)
+      cg_emit_push_str("")
+      cg_emit_byte(81)
+      return pos + 1
+    end
+  end
+  set pos to cg_parse_expr(pos)
+  set k0 to cg_expr_type[0]
+  if not cg_is_op_c(pos, 44)
+    if has_paren
+      set pos to cg_eat_rparen(pos)
+    end
+    if mode is 1
+      cg_emit_coerce_to_str(k0)
+      cg_emit2(146, 81)
+    else if k0 is 1
+      cg_emit_byte(81)
+    else if k0 is 2
+      cg_emit_byte(173)
+    else if k0 is 5 or k0 is 6
+      cg_emit_coerce_to_str(k0)
+      cg_emit_byte(81)
+    else
+      cg_emit_byte(80)
+    end
+    return pos
+  end
+  cg_emit_coerce_to_str(k0)
+  while cg_is_op_c(cg_skip_nl(pos), 44)
+    set pos to cg_skip_nl(pos) + 1
+    if mode is not 2
+      cg_emit_push_str(" ")
+      cg_emit_byte(145)
+    end
+    set pos to cg_parse_expr(cg_skip_nl(pos))
+    cg_emit_coerce_to_str(cg_expr_type[0])
+    cg_emit_byte(145)
+  end
+  if has_paren
+    set pos to cg_eat_rparen(pos)
+  end
+  if mode is 1
+    cg_emit_byte(146)
+  end
+  cg_emit_byte(81)
+  return pos
+end
+
+to cg_stmt_forge with pos
+  set pos to pos + 1
+  set names to mklist(16)
+  set ncount to 0
+  while 1
+    set pos to cg_opt_c(pos, 42)
+    set names[ncount] to cg_tk_txt[pos]
+    set ncount to ncount + 1
+    set pos to pos + 1
+    if not cg_is_op_c(pos, 44)
+      break
+    end
+    set pos to pos + 1
+  end
+  if cg_is_op_c(pos, 58)
+    set pos to pos + 1
+    while pos < cg_tk_state[0] and cg_tk_kind[pos] is not 5 and not cg_is_word(pos, "be") and not cg_is_op_c(pos, 61)
+      set pos to pos + 1
+    end
+  end
+  if not cg_is_word(pos, "be") and not cg_is_op_c(pos, 61)
+    set k to 0
+    while k < ncount
+      cg_emit_push_i32(0)
+      set cg_expr_type[0] to 0
+      cg_emit_store_ident(names[k])
+      set k to k + 1
+    end
+    return pos
+  end
+  set pos to cg_parse_expr(pos + 1)
+  if ncount is 1
+    cg_emit_store_ident(names[0])
+    return pos
+  end
+  set cg_tmp_depth[0] to cg_tmp_depth[0] + 1
+  set dt to cg_tmp("_ds")
+  cg_emit_store_ident(dt)
+  set k to 0
+  while k < ncount
+    cg_emit_load_ident(dt)
+    cg_emit_push_i32(k)
+    cg_op_t(129, 0)
+    cg_emit_store_ident(names[k])
+    set k to k + 1
+  end
+  set cg_tmp_depth[0] to cg_tmp_depth[0] - 1
+  return pos
+end
+
+to cg_aug_op with pos
+  if pos < cg_tk_state[0] and cg_tk_kind[pos] is 4 and cg_tk_num[pos] >= 310 and cg_tk_num[pos] <= 314
+    return cg_tk_num[pos]
+  end
+  return 0
+end
+
+to cg_skip_assign_kw with pos
+  if cg_word_in(pos, "|be|to|") or cg_is_op_c(pos, 61)
+    return pos + 1
+  end
+  return pos
+end
+
+to cg_stmt_target_assign with pos skip_lead
+  if skip_lead
+    set pos to pos + 1
+  end
+  set name to cg_tk_txt[pos]
+  set pos to pos + 1
+  if cg_is_op_c(pos, 46)
+    set fname to cg_tk_txt[pos + 1]
+    set pos to pos + 2
+    set aop to cg_aug_op(pos)
+    cg_emit_load_ident(name)
+    cg_emit_push_str(fname)
+    if aop > 0
+      cg_emit_load_ident(name)
+      cg_emit_push_str(fname)
+      cg_emit_byte(140)
+      set pos to cg_parse_expr(pos + 1)
+      cg_emit_byte(16 + (aop - 310))
+    else
+      set pos to cg_parse_expr(cg_skip_assign_kw(pos))
+      cg_record_field_type(fname, cg_expr_type[0])
+    end
+    cg_emit2(139, 5)
+    set cg_expr_type[0] to 0
+    return pos
+  end
+  if cg_is_op_c(pos, 91)
+    cg_emit_load_ident(name)
+    set tk to cg_expr_type[0]
+    set pos to cg_opt_c(cg_parse_expr(pos + 1), 93)
+    set aop to cg_aug_op(pos)
+    if aop > 0
+      set cg_tmp_depth[0] to cg_tmp_depth[0] + 1
+      set idx_t to cg_tmp("_aii")
+      cg_emit_store_ident(idx_t)
+      cg_emit_byte(5)
+      cg_emit_load_ident(name)
+      cg_emit_load_ident(idx_t)
+      cg_emit_load_ident(name)
+      cg_emit_load_ident(idx_t)
+      if tk is 3 or tk is 4
+        cg_emit_byte(140)
+      else
+        cg_emit_byte(129)
+      end
+      set pos to cg_parse_expr(pos + 1)
+      cg_emit_byte(16 + (aop - 310))
+      set cg_tmp_depth[0] to cg_tmp_depth[0] - 1
+    else
+      set pos to cg_parse_expr(cg_skip_assign_kw(pos))
+    end
+    if tk is 3 or tk is 4
+      cg_emit2(139, 5)
+      if cg_expr_type[0] is 1 and tk is 3
+        cg_set_ident_type(name, 4)
+      end
+    else
+      cg_emit_byte(130)
+    end
+    set cg_expr_type[0] to 0
+    return pos
+  end
+  set aop to cg_aug_op(pos)
+  if aop > 0
+    cg_emit_load_ident(name)
+    set lk to cg_expr_type[0]
+    set pos to cg_parse_expr(pos + 1)
+    set rk to cg_expr_type[0]
+    if aop is 310 and (lk is 1 or rk is 1)
+      cg_emit_str_concat_coerce(lk, rk)
+    else if cg_both_float(lk, rk)
+      cg_emit_byte(161 + (aop - 310))
+      set cg_expr_type[0] to 2
+    else
+      cg_emit_byte(16 + (aop - 310))
+      set cg_expr_type[0] to 0
+    end
+    cg_emit_store_ident(name)
+    return pos
+  end
+  set pos to cg_parse_expr(cg_skip_assign_kw(pos))
+  cg_emit_store_ident(name)
+  return pos
+end
+
+to cg_peek_bare_assign with pos
+  set tc to cg_tk_state[0]
+  if pos >= tc or cg_tk_kind[pos] is not 2
+    return 0
+  end
+  set p to pos + 1
+  while p < tc
+    if cg_is_op_c(p, 46) and p + 1 < tc and cg_tk_kind[p + 1] is 2
+      set p to p + 2
+    else if cg_is_op_c(p, 91)
+      set p to p + 1
+      set d to 1
+      while p < tc and d > 0
+        set d to cg_step_depth(p, d)
+        set p to p + 1
+      end
+    else
+      break
+    end
+  end
+  if p < tc and (cg_is_word(p, "be") or cg_is_op_c(p, 61) or cg_aug_op(p) > 0)
+    return 1
+  end
+  return 0
+end
+
+to cg_stmt_if with pos
+  set pos to cg_opt_c(cg_parse_expr(pos + 1), 302)
+  set jz to cg_emit_jmp(65)
+  set pos to cg_parse_block(pos)
+  if cg_is_op_c(pos, 303)
+    cg_patch_i16(jz, cg_bc[0])
+    return pos + 1
+  end
+  if cg_word_in(pos, "|otherwise|else|elsewise|elif|")
+    set jmp to cg_emit_jmp(64)
+    cg_patch_i16(jz, cg_bc[0])
+    if cg_word_in(pos, "|elsewise|elif|")
+      set pos to cg_stmt_if(pos)
+      cg_patch_i16(jmp, cg_bc[0])
+      return pos
+    end
+    set pos to pos + 1
+    if cg_word_in(pos, "|ponder|either|if|")
+      set pos to cg_stmt_if(pos)
+      cg_patch_i16(jmp, cg_bc[0])
+      return pos
+    end
+    set pos to cg_parse_block(cg_opt_c(pos, 302))
+    cg_patch_i16(jmp, cg_bc[0])
+    return cg_eat_end(pos)
+  end
+  cg_patch_i16(jz, cg_bc[0])
+  if cg_is_word(pos, "end")
+    return pos + 1
+  end
+  return pos
+end
+
+to cg_stmt_while with pos
+  set loop_top to cg_bc[0]
+  set pos to cg_opt_c(cg_parse_expr(pos + 1), 302)
+  set jz to cg_emit_jmp(65)
+  set cg_loop_depth[0] to cg_loop_depth[0] + 1
+  set pos to cg_parse_block(pos)
+  cg_patch_list(cg_cnt_pos, cg_cnt_dep, loop_top)
+  cg_emit_back(loop_top)
+  cg_patch_i16(jz, cg_bc[0])
+  cg_patch_list(cg_brk_pos, cg_brk_dep, cg_bc[0])
+  set cg_loop_depth[0] to cg_loop_depth[0] - 1
+  return cg_eat_end(pos)
+end
+
+to cg_stmt_for with pos
+  set pos to pos + 1
+  if cg_is_word(pos, "each")
+    set pos to pos + 1
+  end
+  set vname to cg_tk_txt[pos]
+  set pos to pos + 1
+  if cg_word_in(pos, "|through|be|in|")
+    set pos to pos + 1
+  end
+  set cg_fe_depth[0] to cg_fe_depth[0] + 1
+  set d to str(cg_fe_depth[0])
+  set lname to concat("_fel", d)
+  set iname to concat("_fei", d)
+  set pos to cg_opt_c(cg_parse_expr(pos), 302)
+  set ik to cg_expr_type[0]
+  cg_emit_store_ident(lname)
+  cg_emit_push_i32(0)
+  set cg_expr_type[0] to 0
+  cg_emit_store_ident(iname)
+  set loop_top to cg_bc[0]
+  cg_emit_load_ident(iname)
+  cg_emit_load_ident(lname)
+  cg_emit2(131, 34)
+  set jz to cg_emit_jmp(65)
+  cg_emit_load_ident(lname)
+  cg_emit_load_ident(iname)
+  if ik is 1
+    cg_emit2(132, 136)
+    set cg_expr_type[0] to 1
+  else
+    cg_op_t(129, ik is 5)
+  end
+  cg_emit_store_ident(vname)
+  set cg_loop_depth[0] to cg_loop_depth[0] + 1
+  set pos to cg_parse_block(pos)
+  cg_patch_list(cg_cnt_pos, cg_cnt_dep, cg_bc[0])
+  cg_emit_load_ident(iname)
+  cg_emit_push_i32(1)
+  cg_op_t(16, 0)
+  cg_emit_store_ident(iname)
+  cg_emit_back(loop_top)
+  cg_patch_i16(jz, cg_bc[0])
+  cg_patch_list(cg_brk_pos, cg_brk_dep, cg_bc[0])
+  set cg_loop_depth[0] to cg_loop_depth[0] - 1
+  set cg_fe_depth[0] to cg_fe_depth[0] - 1
+  return cg_eat_end(pos)
+end
+
+to cg_stmt_attempt with pos
+  set pos to cg_opt_c(pos + 1, 302)
+  set tryp to cg_emit_jmp(192)
+  set pos to cg_parse_block(pos)
+  cg_emit_byte(193)
+  set overp to cg_emit_jmp(64)
+  cg_patch_i16(tryp, cg_bc[0])
+  set ate to cg_is_op_c(pos, 303)
+  if ate
+    set pos to pos + 1
+  end
+  set look to cg_skip_nl(pos)
+  if cg_word_in(look, "|rescue|catch|except|")
+    set pos to look + 1
+    set ename to ""
+    if pos < cg_tk_state[0] and cg_tk_kind[pos] is 2 and not cg_is_op_c(pos, 302)
+      set ename to cg_tk_txt[pos]
+      set pos to pos + 1
+    end
+    if cg_word_in(pos, "|as|alias|")
+      set ename to cg_tk_txt[pos + 1]
+      set pos to pos + 2
+    end
+    set pos to cg_opt_c(pos, 302)
+    if length(ename) > 0
+      set cg_expr_type[0] to 1
+      cg_emit_store_ident(ename)
+    else
+      cg_emit_byte(5)
+    end
+    set pos to cg_parse_block(pos)
+    set ate to cg_is_op_c(pos, 303)
+    if ate
+      set pos to pos + 1
+    end
+  else
+    cg_emit_byte(5)
+  end
+  cg_patch_i16(overp, cg_bc[0])
+  set look2 to cg_skip_nl(pos)
+  if cg_word_in(look2, "|ensure|finally|")
+    return cg_eat_end(cg_parse_block(cg_opt_c(look2 + 1, 302)))
+  end
+  if not ate and cg_is_word(pos, "end")
+    return pos + 1
+  end
+  return pos
+end
+
+to cg_emit_pat_opt with pos subj_t
+  if cg_is_word(pos, "_")
+    cg_emit_push_i32(1)
+    return pos + 1
+  end
+  if cg_tk_kind[pos] is 2 and not cg_is_op_c(pos + 1, 40) and not cg_word_in(pos, "|yep|nope|true|false|void|nothing|")
+    cg_emit_load_ident(subj_t)
+    cg_emit_store_ident(cg_tk_txt[pos])
+    cg_emit_push_i32(1)
+    return pos + 1
+  end
+  cg_emit_load_ident(subj_t)
+  set lk to cg_expr_type[0]
+  set pos to cg_parse_unary(pos)
+  set rk to cg_expr_type[0]
+  if lk is 1 or rk is 1
+    cg_emit_byte(144)
+  else if cg_both_float(lk, rk)
+    cg_emit_byte(167)
+  else
+    cg_emit_byte(32)
+  end
+  return pos
+end
+
+to cg_stmt_discern with pos
+  set pos to cg_opt_c(cg_parse_expr(pos + 1), 302)
+  set cg_tmp_depth[0] to cg_tmp_depth[0] + 1
+  set subj_t to cg_tmp("_mts")
+  cg_emit_store_ident(subj_t)
+  set base to cg_mat_ends[0]
+  set pos to cg_skip_nl(pos)
+  while cg_word_in(pos, "|omen|case|")
+    set pos to cg_emit_pat_opt(pos + 1, subj_t)
+    while cg_is_op_c(pos, 124)
+      set jp to cg_emit_jmp(65)
+      cg_emit_push_i32(1)
+      set je to cg_emit_jmp(64)
+      cg_patch_i16(jp, cg_bc[0])
+      set pos to cg_emit_pat_opt(pos + 1, subj_t)
+      cg_patch_i16(je, cg_bc[0])
+    end
+    if cg_word_in(pos, "|when|guard|")
+      set jg to cg_emit_jmp(65)
+      set pos to cg_parse_expr(pos + 1)
+      set jge to cg_emit_jmp(64)
+      cg_patch_i16(jg, cg_bc[0])
+      cg_emit_push_i32(0)
+      cg_patch_i16(jge, cg_bc[0])
+    end
+    set pos to cg_opt_c(cg_opt_c(cg_opt_c(pos, 302), 307), 58)
+    set skip_arm to cg_emit_jmp(65)
+    set pos to cg_opt_c(cg_parse_block(pos), 303)
+    set cg_mat_ends[cg_mat_ends[0] + 1] to cg_emit_jmp(64)
+    set cg_mat_ends[0] to cg_mat_ends[0] + 1
+    cg_patch_i16(skip_arm, cg_bc[0])
+    set pos to cg_skip_nl(pos)
+  end
+  set pos to cg_eat_end(pos)
+  set k to base + 1
+  while k <= cg_mat_ends[0]
+    cg_patch_i16(cg_mat_ends[k], cg_bc[0])
+    set k to k + 1
+  end
+  set cg_mat_ends[0] to base
+  set cg_tmp_depth[0] to cg_tmp_depth[0] - 1
+  return pos
+end
+
+to cg_parse_params with pos
+  set cg_scratch[0] to 0
+  if pos > 0 and cg_find_in_tbl(cg_mth_fn, cg_mth_cls[0], cg_tk_txt[pos - 1]) >= 0
+    cg_add_local("self")
+    set cg_scratch[0] to 1
+  end
+  set is_p to cg_is_op_c(pos, 40)
+  if is_p or cg_is_word(pos, "with")
+    set pos to pos + 1
+    while pos < cg_tk_state[0]
+      if is_p and cg_is_op_c(pos, 41)
+        set pos to pos + 1
+        break
+      end
+      if not is_p and cg_tk_kind[pos] is not 2
+        break
+      end
+      if cg_tk_kind[pos] is 2
+        if not (cg_scratch[0] is 1 and cg_str_eq(cg_tk_txt[pos], "self"))
+          cg_add_local(cg_tk_txt[pos])
+          set cg_scratch[0] to cg_scratch[0] + 1
+        end
+        set pos to pos + 1
+        if is_p and (cg_is_op_c(pos, 58) or cg_is_op_c(pos, 61) or cg_is_word(pos, "be"))
+          set pos to pos + 1
+          while pos < cg_tk_state[0] and not cg_is_op_c(pos, 44) and not cg_is_op_c(pos, 41)
+            set pos to pos + 1
+          end
+        end
+      else
+        set pos to pos + 1
+      end
+    end
+  end
+  if cg_is_op_c(pos, 306)
+    set pos to pos + 1
+    while pos < cg_tk_state[0] and cg_tk_kind[pos] is not 5 and not cg_is_op_c(pos, 302)
+      set pos to pos + 1
+    end
+  end
+  return cg_opt_c(pos, 302)
+end
+
+to cg_stmt_func with pos
+  set fname to cg_tk_txt[pos + 1]
+  set body_start_pos to pos + 2
+  set cg_loc_names[0] to 0
+  set cg_loc_types[0] to 0
+  set pos to cg_parse_params(body_start_pos)
+  set n_params to cg_scratch[0]
+  if cg_skip_fn_defs[0]
+    set save_emit to cg_emit_enabled[0]
+    set cg_emit_enabled[0] to 0
+    set cg_in_func[0] to 1
+    set pos to cg_parse_block(pos)
+    set cg_in_func[0] to 0
+    set cg_emit_enabled[0] to save_emit
+    return cg_eat_end(pos)
+  end
+  set idx to cg_find_in_tbl(cg_fn_names, cg_fn_names[0], fname)
+  if idx < 0
+    set fn_i to cg_fn_names[0] + 1
+    set cg_fn_names[fn_i] to fname
+    set cg_fn_offsets[fn_i] to 0
+    set cg_fn_arities[fn_i] to n_params
+    set cg_fn_ret_types[fn_i] to 0
+    set cg_fn_extras[fn_i] to 0
+    set cg_fn_body_start[fn_i] to body_start_pos
+    set pbase to cg_fn_param_seen[0] + 1
+    set cg_fn_param_base[fn_i] to pbase
+    set pk to 0
+    while pk < n_params
+      set cg_fn_param_seen[pbase + pk] to 0
+      set pk to pk + 1
+    end
+    set cg_fn_param_seen[0] to cg_fn_param_seen[0] + n_params
+    set cg_fn_names[0] to fn_i
+    set idx to fn_i - 1
+  end
+  cg_apply_param_types(idx, n_params)
+  set cg_cur_fn[0] to idx + 1
+  set pre_syms to cg_sym_names[0]
+  set cg_in_func[0] to 1
+  set pos to cg_parse_block(pos)
+  set cg_sym_names[0] to pre_syms
+  set cg_fn_extras[idx + 1] to cg_loc_names[0] - n_params
+  set cg_in_func[0] to 0
+  set cg_cur_fn[0] to 0
+  return cg_eat_end(pos)
+end
+
+to cg_push_loop_jp with arr_p arr_d jp
+  set n to arr_p[0] + 1
+  set arr_p[n] to jp
+  set arr_d[n] to cg_loop_depth[0]
+  set arr_p[0] to n
+  return 0
+end
+
+to cg_parse_stmt with pos
+  set pos to cg_skip_nl(pos)
+  set tc to cg_tk_state[0]
+  if pos >= tc
+    return pos
+  end
+  if cg_word_in(pos, "|speak|say|print|println|shout|whisper|")
+    return cg_stmt_speak(pos, 0)
+  end
+  if cg_word_in(pos, "|forge|fixed|let|const|")
+    return cg_stmt_forge(pos)
+  end
+  if cg_word_in(pos, "|be|set|")
+    return cg_stmt_target_assign(pos, 1)
+  end
+  if cg_word_in(pos, "|yield|return|")
+    set pos to pos + 1
+    if pos >= tc or cg_tk_kind[pos] is 5 or cg_is_op_c(pos, 303) or cg_word_in(pos, "|end|otherwise|else|elsewise|elif|rescue|catch|except|ensure|finally|omen|case|")
+      cg_emit_push_i32(0)
+      set cg_expr_type[0] to 0
+    else
+      set pos to cg_parse_expr(pos)
+    end
+    if cg_in_func[0] and cg_cur_fn[0] > 0
+      if cg_expr_type[0] is 1
+        set cg_fn_ret_types[cg_cur_fn[0]] to 1
+      else if cg_expr_type[0] is 2 and cg_fn_ret_types[cg_cur_fn[0]] is 0
+        set cg_fn_ret_types[cg_cur_fn[0]] to 2
+      end
+    end
+    cg_emit_byte(97)
+    return pos
+  end
+  if cg_word_in(pos, "|yeet|break|skip|continue|")
+    if cg_emit_enabled[0] and cg_loop_depth[0] is 0
+      throw "loop jump outside loop"
+    end
+    set jp to cg_emit_jmp(64)
+    if cg_word_in(pos, "|yeet|break|")
+      cg_push_loop_jp(cg_brk_pos, cg_brk_dep, jp)
+    else
+      cg_push_loop_jp(cg_cnt_pos, cg_cnt_dep, jp)
+    end
+    return pos + 1
+  end
+  if cg_word_in(pos, "|idle|pass|")
+    return pos + 1
+  end
+  if cg_word_in(pos, "|hurl|raise|throw|")
+    set pos to cg_parse_expr(pos + 1)
+    cg_emit_byte(194)
+    return pos
+  end
+  if cg_word_in(pos, "|insist|assert|")
+    set pos to cg_parse_expr(pos + 1)
+    set jfail to cg_emit_jmp(65)
+    set jpass to cg_emit_jmp(64)
+    cg_patch_i16(jfail, cg_bc[0])
+    if cg_is_op_c(pos, 44)
+      set pos to cg_parse_expr(pos + 1)
+    else
+      cg_emit_push_str("AssertionError: condition failed")
+    end
+    cg_emit_byte(194)
+    cg_patch_i16(jpass, cg_bc[0])
+    return pos
+  end
+  if cg_word_in(pos, "|attempt|try|")
+    return cg_stmt_attempt(pos)
+  end
+  if cg_word_in(pos, "|ponder|either|if|")
+    return cg_stmt_if(pos)
+  end
+  if cg_word_in(pos, "|cycle|while|")
+    return cg_stmt_while(pos)
+  end
+  if cg_word_in(pos, "|iterate|within|for|")
+    return cg_stmt_for(pos)
+  end
+  if cg_word_in(pos, "|discern|match|")
+    return cg_stmt_discern(pos)
+  end
+  if cg_word_in(pos, "|enfold|with|")
+    set pos to cg_parse_expr(pos + 1)
+    if cg_word_in(pos, "|alias|as|")
+      cg_emit_store_ident(cg_tk_txt[pos + 1])
+      set pos to pos + 2
+    else
+      cg_emit_byte(5)
+    end
+    return cg_eat_end(cg_parse_block(cg_opt_c(pos, 302)))
+  end
+  if cg_word_in(pos, "|banish|del|")
+    set pos to pos + 1
+    if cg_tk_kind[pos] is 2 and not cg_is_op_c(pos + 1, 91) and not cg_is_op_c(pos + 1, 46)
+      cg_emit_push_i32(0)
+      set cg_expr_type[0] to 0
+      cg_emit_store_ident(cg_tk_txt[pos])
+      return pos + 1
+    end
+    return cg_parse_expr(pos)
+  end
+  if cg_word_in(pos, "|conjure|to|func|def|")
+    return cg_stmt_func(pos)
+  end
+  if cg_peek_bare_assign(pos) > 0
+    return cg_stmt_target_assign(pos, 0)
+  end
+  if cg_tk_kind[pos] is 2 or cg_tk_kind[pos] is 1 or cg_tk_kind[pos] is 3 or cg_is_op_c(pos, 40) or cg_is_op_c(pos, 91)
+    set pos to cg_parse_expr(pos)
+    cg_emit_byte(5)
+    set cg_expr_type[0] to 0
+    return pos
+  end
+  return pos
+end
+
+# ---- Top-Level Compilation Driver -----------------------------------------
+
+to cg_run_pass with skip_defs
+  set cg_sym_names[0] to 0
+  set cg_sym_types[0] to 0
+  set cg_in_func[0] to 0
+  set cg_cur_fn[0] to 0
+  set cg_loop_depth[0] to 0
+  set cg_fe_depth[0] to 0
+  set cg_tmp_depth[0] to 0
+  set cg_brk_pos[0] to 0
+  set cg_brk_dep[0] to 0
+  set cg_cnt_pos[0] to 0
+  set cg_cnt_dep[0] to 0
+  set cg_skip_fn_defs[0] to skip_defs
+  set pos to 0
+  while pos < cg_tk_state[0]
+    set new_pos to cg_parse_stmt(pos)
+    if new_pos is pos
+      break
+    end
+    set pos to new_pos
+  end
+  return pos
+end
+
+to v1_compile_source with src
+  set cg_pre_seen[0] to "|"
+  set linked to cg_prelink_source(src)
+  set full_src to concat(cg_rt_src, linked)
+  set cg_tk_state[0] to 0
+  cg_tokenize_into(full_src)
+  cg_desugar_essences()
+
+  set cg_bc[0] to 0
+  set cg_pool_bytes[0] to 0
+  set cg_pool_keys[0] to 0
+  set cg_pool_offs[0] to 0
+  set cg_fn_names[0] to 0
+  set cg_fn_offsets[0] to 0
+  set cg_fn_arities[0] to 0
+  set cg_fn_ret_types[0] to 0
+  set cg_fn_extras[0] to 0
+  set cg_fn_body_start[0] to 0
+  set cg_fn_param_base[0] to 0
+  set cg_fn_param_seen[0] to 0
+  set cg_fld_names[0] to 0
+  set cg_fld_types[0] to 0
+
+  # Pass 1: 3 iterations to converge functions, return types, param types, and field types
+  set cg_emit_enabled[0] to 0
+  set iter to 0
+  while iter < 3
+    cg_run_pass(0)
+    set iter to iter + 1
+  end
+
+  # Pass 2: Emit main first (offset 0, no i16 JMP overflow), HALT, then hoisted functions
+  set cg_pend_names[0] to 0
+  set cg_pend_pos[0] to 0
+  set cg_bc[0] to 0
+  set cg_emit_enabled[0] to 1
+  set pos to cg_skip_nl(cg_run_pass(1))
+  if pos < cg_tk_state[0]
+    throw concat("unexpected token at position ", str(pos))
+  end
+  cg_emit_byte(255)
+
+  set i to 1
+  set fstop to cg_fn_names[0] + 1
+  while i < fstop
+    set cg_fn_offsets[i] to cg_bc[0]
+    set cg_loc_names[0] to 0
+    set cg_loc_types[0] to 0
+    set pos to cg_parse_params(cg_fn_body_start[i])
+    if cg_fn_extras[i] > 0
+      cg_emit2(98, cg_fn_extras[i])
+    end
+    set np to cg_fn_arities[i]
+    cg_apply_param_types(i - 1, np)
+    set cg_cur_fn[0] to i
+    set pre_syms to cg_sym_names[0]
+    set cg_emit_enabled[0] to 0
+    set cg_in_func[0] to 1
+    set cg_fe_depth[0] to 0
+    set cg_tmp_depth[0] to 0
+    cg_parse_block(pos)
+    set cg_emit_enabled[0] to 1
+    set cg_sym_names[0] to pre_syms
+    cg_apply_param_types(i - 1, np)
+    set cg_fe_depth[0] to 0
+    set cg_tmp_depth[0] to 0
+    set cg_in_func[0] to 1
+    cg_parse_block(pos)
+    set cg_in_func[0] to 0
+    set cg_cur_fn[0] to 0
+    cg_emit_push_i32(0)
+    cg_emit_byte(97)
+    set i to i + 1
+  end
+
+  cg_resolve_pending_calls()
+end

@@ -13,6 +13,11 @@ import { PersonalPanel } from '@/components/ide/PersonalPanel';
 import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
+import {
+  sdevTranslationHasDiff,
+  sdevTranslationDownloadName,
+  sdevTranslationBannerText,
+} from '@/lang/agent/sdev-engine';
 import { resolveLibraries } from '@/lang/dialect/registry';
 import { applyExtensions } from '@/lang/dialect/extensions';
 
@@ -530,8 +535,8 @@ export default function IDEPage() {
   const activePlainBody = activeFile ? stripSignature(activeFile.content) : '';
   const hasTranslation = Boolean(
     activeFile &&
-    translatedSourceForActive &&
-    translatedSourceForActive.trim() !== activePlainBody.trim()
+    (sdevTranslationHasDiff(activePlainBody, translatedSourceForActive) ??
+      (translatedSourceForActive && translatedSourceForActive.trim() !== activePlainBody.trim()))
   );
 
   // Import code from a Gist (sessionStorage) on mount
@@ -1235,12 +1240,16 @@ export default function IDEPage() {
         } : f)));
       }
       bodyToDownload = embeddedTranslated;
-      fileNameToDownload = activeFile.name.endsWith('.sdev')
-        ? activeFile.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev')
-        : `${activeFile.name}.translated.sdev`;
+      fileNameToDownload = sdevTranslationDownloadName(activeFile.name, variant, true) ?? (
+        activeFile.name.endsWith('.sdev')
+          ? activeFile.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev')
+          : `${activeFile.name}.translated.sdev`
+      );
     }
 
-    const hasDiff = Boolean(embeddedTranslated && embeddedTranslated.trim() !== stripSignature(activeFile.content).trim());
+    const hasDiff =
+      sdevTranslationHasDiff(stripSignature(activeFile.content), embeddedTranslated) ??
+      Boolean(embeddedTranslated && embeddedTranslated.trim() !== stripSignature(activeFile.content).trim());
     const signed = writeSignature(bodyToDownload, {
       rt: runtime,
       dialect: variant === 'translated' ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
@@ -1265,11 +1274,15 @@ export default function IDEPage() {
       // round-trips with its runtime, dialect, library pins and translation intact.
       const existing = readSignature(file.content);
       const cachedTranslated = file.understood?.source ?? translatedContent.get(file.id) ?? existing?.translated ?? null;
-      const hasDiff = Boolean(cachedTranslated && cachedTranslated.trim() !== stripSignature(file.content).trim());
+      const hasDiff =
+        sdevTranslationHasDiff(stripSignature(file.content), cachedTranslated) ??
+        Boolean(cachedTranslated && cachedTranslated.trim() !== stripSignature(file.content).trim());
       const body = variant === 'translated' && hasDiff && cachedTranslated ? cachedTranslated : file.content;
-      const outName = variant === 'translated' && hasDiff
-        ? (file.name.endsWith('.sdev') ? file.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev') : `${file.name}.translated.sdev`)
-        : file.name;
+      const outName =
+        sdevTranslationDownloadName(file.name, variant, hasDiff) ??
+        (variant === 'translated' && hasDiff
+          ? (file.name.endsWith('.sdev') ? file.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev') : `${file.name}.translated.sdev`)
+          : file.name);
       const signed = writeSignature(body, {
         rt: runtime,
         dialect: variant === 'translated' && hasDiff ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
@@ -2034,14 +2047,22 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                       <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border-b border-primary/20 text-xs font-mono">
                         <CheckCircle2 className="w-3 h-3 text-primary flex-shrink-0" />
                         <span className="text-primary truncate">
-                          {activeFile?.understood?.fromCache ? '⚡ Cached translation' : '✨ Translated'}
-                          {activeFile?.understood?.detectedLanguage && activeFile.understood.detectedLanguage !== 'English'
-                            ? <> from <strong>{activeFile.understood.detectedLanguage}</strong> → canonical sdev</>
-                            : activeFile?.understood?.brainUsed === 'online'
-                              ? ' via Website AI → canonical sdev'
-                              : activeFile?.understood?.brainUsed === 'local'
-                                ? ' via Built-in AI → canonical sdev'
-                                : ' by understander → canonical sdev'}
+                          {sdevTranslationBannerText(
+                            Boolean(activeFile?.understood?.fromCache),
+                            activeFile?.understood?.detectedLanguage,
+                            activeFile?.understood?.brainUsed,
+                          ) ?? (
+                            <>
+                              {activeFile?.understood?.fromCache ? '⚡ Cached translation' : '✨ Translated'}
+                              {activeFile?.understood?.detectedLanguage && activeFile.understood.detectedLanguage !== 'English'
+                                ? <> from <strong>{activeFile.understood.detectedLanguage}</strong> → canonical sdev</>
+                                : activeFile?.understood?.brainUsed === 'online'
+                                  ? ' via Website AI → canonical sdev'
+                                  : activeFile?.understood?.brainUsed === 'local'
+                                    ? ' via Built-in AI → canonical sdev'
+                                    : ' by understander → canonical sdev'}
+                            </>
+                          )}
                         </span>
                         <div className="ml-auto flex items-center gap-3 flex-shrink-0">
                           <button

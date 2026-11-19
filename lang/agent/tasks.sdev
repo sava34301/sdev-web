@@ -1,0 +1,245 @@
+// =====================================================================
+// tasks.sdev — Everyday plain-sentence requests, written in sdev.
+// =====================================================================
+
+forge TASK_NUM_WORDS be ::
+  "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+  "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+  "eleven": "11", "twelve": "12", "thirteen": "13", "fourteen": "14", "fifteen": "15",
+  "sixteen": "16", "seventeen": "17", "eighteen": "18", "nineteen": "19", "twenty": "20",
+  "thirty": "30", "forty": "40", "fifty": "50", "sixty": "60", "seventy": "70",
+  "eighty": "80", "ninety": "90", "hundred": "100", "thousand": "1000", "million": "1000000"
+;;
+
+forge TASK_PLEASE_RE be "^(?:please|can you|could you|would you|i want to|i want you to|i need to|i'd like to|let'?s|now|then|and)\\s+"
+forge TASK_OUT_RE be "^(?:say|print|show|display|output|tell me|give me|show me|write|list)\\s+"
+
+conjure task_num(w) ::
+  forge t be lower(trim(w))
+  ponder regex_test(t, "^-?\\d+(?:\\.\\d+)?$") ::
+    yield t
+  ;;
+  ponder has(TASK_NUM_WORDS, t) ::
+    yield TASK_NUM_WORDS[t]
+  ;;
+  yield void
+;;
+
+conjure task_is_quoted(t) ::
+  ponder regex_test(t, "^\\u0000\\d+\\u0000$") ::
+    yield yep
+  ;;
+  yield regex_test(t, "^(\"[^\"]*\"|'[^']*')$")
+;;
+
+conjure task_text(w) ::
+  forge t be trim(regex_replace(trim(w), "^(?:the\\s+)?(?:word|text|string|name|sentence|phrase)\\s+", "", "i"))
+  ponder task_is_quoted(t) ::
+    yield t
+  ;;
+  forge q be regex_capture(t, "^[\"'“](.*)[\"'”]$")
+  ponder q differs void ::
+    yield quote_text(q[1])
+  ;;
+  yield quote_text(t)
+;;
+
+conjure task_nums(list_str) ::
+  forge norm be regex_replace(trim(list_str), "\\s*,\\s*|\\s+and\\s+|\\s+", "\n", "i")
+  forge out be []
+  iterate part through shatter(norm, "\n") ::
+    forge p be trim(part)
+    ponder p differs "" ::
+      forge n be task_num(p)
+      ponder n equals void ::
+        yield void
+      ;;
+      out be out + [n]
+    ;;
+  ;;
+  ponder measure(out) equals 0 ::
+    yield void
+  ;;
+  yield out
+;;
+
+conjure task_subject(w, known_map) ::
+  forge tw be trim(w)
+  ponder has(known_map, tw) ::
+    yield tw
+  ;;
+  yield task_text(w)
+;;
+
+conjure task_request(stmt, known_list) ::
+  forge known_map be ::
+  ;;
+  iterate k through known_list ::
+    known_map[k] be yep
+  ;;
+
+  forge s be trim(stmt)
+  cycle regex_test(s, TASK_PLEASE_RE, "i") ::
+    s be regex_replace(s, TASK_PLEASE_RE, "", "i")
+  ;;
+  s be trim(regex_replace(s, "[.!?]+\\s*$", ""))
+  ponder s equals "" ::
+    yield void
+  ;;
+
+  forge ws be words(s)
+  forge head be measure(ws) > 0 ~ lower(ws[0]) : ""
+  ponder has(known_map, head) ::
+    yield void
+  ;;
+
+  // 1. counting / ranges
+  forge m be regex_capture(s, "^(?:count|print|show|say|list|display|output|write)?\\s*(?:all\\s+)?(?:the\\s+)?(?:numbers?\\s+)?(?:from\\s+)?(\\S+)\\s+(?:to|through|until|till|-)\\s+(\\S+)(?:\\s+by\\s+(\\S+))?$", "i")
+  ponder m differs void also regex_test(s, "^(?:count|print|show|say|list|display|output|write|numbers?|from)", "i") ::
+    forge a be task_num(m[1])
+    forge b be task_num(m[2])
+    forge step be m[3] differs "" ~ task_num(m[3]) : "1"
+    ponder a differs void also b differs void also step differs void ::
+      ponder num(a) > num(b) ::
+        yield ["set i to " + a, "while i >= " + b, "  say i", "  set i to i - " + step, "end"]
+      ;;
+      yield ["set i to " + a, "while i <= " + b, "  say i", "  set i to i + " + step, "end"]
+    ;;
+  ;;
+
+  m be regex_capture(s, "^count\\s+(?:up\\s+)?to\\s+(\\S+)$", "i")
+  ponder m differs void ::
+    forge b be task_num(m[1])
+    ponder b differs void ::
+      yield ["set i to 1", "while i <= " + b, "  say i", "  set i to i + 1", "end"]
+    ;;
+  ;;
+
+  m be regex_capture(s, "^count\\s+down\\s+from\\s+(\\S+)$", "i")
+  ponder m differs void ::
+    forge a be task_num(m[1])
+    ponder a differs void ::
+      yield ["set i to " + a, "while i > 0", "  say i", "  set i to i - 1", "end"]
+    ;;
+  ;;
+
+  // 2. repetition
+  m be regex_capture(s, "^(?:say|print|show|write|display|output|repeat)\\s+(.+?)\\s+(\\S+)\\s+times$", "i")
+  ponder m differs void ::
+    forge cnt be task_num(m[2])
+    ponder cnt differs void ::
+      forge what be task_subject(m[1], known_map)
+      yield ["set i to 0", "while i < " + cnt, "  say " + what, "  set i to i + 1", "end"]
+    ;;
+  ;;
+
+  ponder regex_test(s, "^(?:flip|toss)\\s+(?:a\\s+)?coin$", "i") ::
+    yield ["say pick([\"heads\", \"tails\"])"]
+  ;;
+
+  // 3. text operations
+  forge s_no_out be regex_replace(s, TASK_OUT_RE, "", "i")
+  m be regex_capture(s_no_out, "^(?:reverse|backwards?)\\s+(?:of\\s+)?(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s_no_out, "^(.+?)\\s+(?:reversed|backwards)$", "i")
+  ;;
+  ponder m differs void ::
+    yield ["say reverse(" + task_subject(m[1], known_map) + ")"]
+  ;;
+
+  m be regex_capture(s_no_out, "^(?:make\\s+)?(.+?)\\s+(?:in\\s+)?(?:uppercase|upper\\s*case|capitals|caps)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s_no_out, "^(?:uppercase|capitalize all)\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge arg be regex_test(s, "^make\\s", "i") ~ task_text(m[1]) : task_subject(m[1], known_map)
+    yield ["say upper(" + arg + ")"]
+  ;;
+
+  m be regex_capture(s_no_out, "^(?:make\\s+)?(.+?)\\s+(?:in\\s+)?(?:lowercase|lower\\s*case|small letters)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s_no_out, "^lowercase\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge arg be regex_test(s, "^make\\s", "i") ~ task_text(m[1]) : task_subject(m[1], known_map)
+    yield ["say lower(" + arg + ")"]
+  ;;
+
+  m be regex_capture(s, "^(?:what\\s+is\\s+|what's\\s+|show\\s+|tell\\s+me\\s+|give\\s+me\\s+)?(?:the\\s+)?(?:length|size)\\s+of\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^how\\s+(?:many|much)\\s+(?:letters|characters|chars)\\s+(?:are\\s+)?(?:in|does)\\s+(.+?)(?:\\s+have)?$", "i")
+  ;;
+  ponder m equals void ::
+    m be regex_capture(s, "^how\\s+long\\s+is\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge ns be task_nums(m[1])
+    ponder ns differs void also measure(ns) > 1 ::
+      yield ["say len([" + weave(ns, ", ") + "])"]
+    ;;
+    yield ["say len(" + task_subject(m[1], known_map) + ")"]
+  ;;
+
+  // 4. even / odd
+  m be regex_capture(s, "^(?:is|check if|check whether|tell me if)\\s+(\\S+)\\s+(?:is\\s+)?(?:an?\\s+)?(even|odd)(?:\\s+or\\s+(?:even|odd))?$", "i")
+  ponder m differs void ::
+    forge n be task_num(m[1])
+    ponder n equals void also has(known_map, m[1]) ::
+      n be m[1]
+    ;;
+    ponder n differs void ::
+      yield ["if " + n + " % 2 is 0", "  say \"even\"", "else", "  say \"odd\"", "end"]
+    ;;
+  ;;
+
+  // 5. random numbers
+  m be regex_capture(s, "^(?:(?:give|show|pick|generate|roll|make|get)\\s+(?:me\\s+)?)?(?:a\\s+)?random\\s+(?:whole\\s+)?number\\s+(?:between|from)\\s+(\\S+)\\s+(?:and|to)\\s+(\\S+)$", "i")
+  ponder m differs void ::
+    forge a be task_num(m[1])
+    forge b be task_num(m[2])
+    ponder a differs void also b differs void ::
+      yield ["say randint(" + a + ", " + b + ")"]
+    ;;
+  ;;
+  ponder regex_test(s, "^(?:roll\\s+(?:a\\s+)?(?:die|dice)|throw\\s+(?:a\\s+)?dice?)$", "i") ::
+    yield ["say randint(1, 6)"]
+  ;;
+
+  // 6. sorting
+  m be regex_capture(s_no_out, "^sort\\s+(?:the\\s+)?(?:numbers\\s+)?(.+?)(?:\\s+(?:from\\s+)?(?:biggest|largest|highest)\\s+(?:to|first).*)?$", "i")
+  ponder m differs void ::
+    forge ns be task_nums(m[1])
+    ponder ns differs void ::
+      forge desc be regex_test(s, "biggest|largest|highest|descending", "i")
+      forge fn be desc ~ "sortDesc" : "sort"
+      yield ["say " + fn + "([" + weave(ns, ", ") + "])"]
+    ;;
+  ;;
+
+  // 7. times tables
+  m be regex_capture(s, "^(?:print\\s+|show\\s+|make\\s+|write\\s+)?(?:the\\s+)?(?:multiplication|times)\\s+table\\s+(?:of|for)\\s+(\\S+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^(?:print\\s+|show\\s+)?(?:the\\s+)?(\\S+)\\s+times\\s+table$", "i")
+  ;;
+  ponder m differs void ::
+    forge n be task_num(m[1])
+    ponder n differs void ::
+      yield ["set i to 1", "while i <= 10", "  say str(" + n + ") + \" x \" + str(i) + \" = \" + str(" + n + " * i)", "  set i to i + 1", "end"]
+    ;;
+  ;;
+
+  // 8. greetings
+  m be regex_capture(s, "^(?:say\\s+)?(?:hello|hi|hey)\\s+to\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^greet\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge who be trim(m[1])
+    ponder has(known_map, who) ::
+      yield ["say \"Hello, \" + " + who]
+    ;;
+    yield ["say " + quote_text("Hello, " + who)]
+  ;;
+
+  yield void
+;;

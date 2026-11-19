@@ -1,0 +1,227 @@
+// =====================================================================
+// memory.sdev — Understander hashing, memory line application, program
+// name learning, dialect promotion, and board unmasking, in sdev.
+// =====================================================================
+
+forge MEM_B36 be "0123456789abcdefghijklmnopqrstuvwxyz"
+
+conjure mem_xor8(a, b) ::
+  forge x be a % 256
+  forge y be b % 256
+  forge res be 0
+  forge p be 1
+  forge bit be 0
+  cycle bit < 8 ::
+    forge bx be x % 2
+    forge by be y % 2
+    ponder bx differs by ::
+      res be res + p
+    ;;
+    x be (x - bx) / 2
+    y be (y - by) / 2
+    p be p * 2
+    bit be bit + 1
+  ;;
+  yield res
+;;
+
+conjure mem_mul16_step(hi, lo, m_hi, m_lo) ::
+  forge p0 be lo * m_lo
+  forge lo_next be p0 % 65536
+  forge carry be (p0 - lo_next) / 65536
+  forge hi_next be (hi * m_lo + lo * m_hi + carry) % 65536
+  yield [hi_next, lo_next]
+;;
+
+conjure mem_u32_base36(hi, lo) ::
+  forge val be hi * 65536 + lo
+  ponder val equals 0 ::
+    yield "0"
+  ;;
+  forge out be ""
+  cycle val > 0 ::
+    forge d be val % 36
+    out be portion(MEM_B36, d, d + 1) + out
+    val be (val - d) / 36
+  ;;
+  yield out
+;;
+
+conjure memory_understand_key(source, extra) ::
+  forge s be source + chr(0) + extra
+  // FNV-1a 32-bit (0x811c9dc5 -> hi 33052, lo 40389; prime 16777619 -> 256, 403)
+  // Secondary 32-bit hash (0x01000193 -> hi 256, lo 403; prime 2246822507 -> 34283, 51819)
+  forge h1_hi be 33052
+  forge h1_lo be 40389
+  forge h2_hi be 256
+  forge h2_lo be 403
+  forge n be measure(s)
+  forge i be 0
+  cycle i < n ::
+    forge c be ord(s, i)
+    forge b1 be h1_lo % 256
+    h1_lo be (h1_lo - b1) + mem_xor8(b1, c % 256)
+    forge r1 be mem_mul16_step(h1_hi, h1_lo, 256, 403)
+    h1_hi be r1[0]
+    h1_lo be r1[1]
+
+    forge b2 be h2_lo % 256
+    h2_lo be (h2_lo - b2) + mem_xor8(b2, c % 256)
+    forge r2 be mem_mul16_step(h2_hi, h2_lo, 34283, 51819)
+    h2_hi be r2[0]
+    h2_lo be r2[1]
+    i be i + 1
+  ;;
+  yield mem_u32_base36(h1_hi, h1_lo) + mem_u32_base36(h2_hi, h2_lo) + mem_u32_base36(0, n)
+;;
+
+// Returns [rewritten_source, hit]
+conjure memory_apply_lines(source, lines_tome) ::
+  forge hit be nope
+  forge out be []
+  iterate line through shatter(source, "\n") ::
+    forge k be trim(line)
+    ponder k differs "" also has(lines_tome, k) ::
+      forge entry be lines_tome[k]
+      ponder essence(entry) equals "tome" also has(entry, "canonical") ::
+        hit be yep
+        out be out + [leading_space(line) + str(entry["canonical"])]
+      ;; otherwise ::
+        out be out + [line]
+      ;;
+    ;; otherwise ::
+      out be out + [line]
+    ;;
+  ;;
+  yield [hit ~ weave(out, "\n") : source, hit]
+;;
+
+conjure memory_learn_names(canonical) ::
+  forge found be []
+  forge seen be ::
+  ;;
+  iterate hit through regex_find_all(canonical, "^\\s*set\\s+([\\p{L}\\p{N}_]+)\\s+to\\b", "m") ::
+    forge cap be regex_capture(hit, "^\\s*set\\s+([\\p{L}\\p{N}_]+)\\s+to\\b")
+    ponder cap differs void also isnt has(seen, cap[1]) ::
+      seen[cap[1]] be yep
+      found be found + [cap[1]]
+    ;;
+  ;;
+  iterate hit through regex_find_all(canonical, "^\\s*to\\s+([\\p{L}\\p{N}_]+)\\b", "m") ::
+    forge cap be regex_capture(hit, "^\\s*to\\s+([\\p{L}\\p{N}_]+)\\b")
+    ponder cap differs void also isnt has(seen, cap[1]) ::
+      seen[cap[1]] be yep
+      found be found + [cap[1]]
+    ;;
+  ;;
+  yield found
+;;
+
+// pairs: [[word, intent], ...], canonical_map: { intent -> canonical_word }
+// Returns [names_tome, synonyms_tome]
+conjure memory_promote_words(pairs, canonical_map, rename) ::
+  forge by_canon be ::
+  ;;
+  forge order be []
+  iterate pair through pairs ::
+    forge word be str(pair[0])
+    forge intent be str(pair[1])
+    ponder has(canonical_map, intent) ::
+      forge canon be str(canonical_map[intent])
+      ponder word differs canon also regex_test(word, "^[\\p{L}\\p{N}_]+$") ::
+        ponder isnt has(by_canon, canon) ::
+          by_canon[canon] be []
+          order be order + [canon]
+        ;;
+        forge existing be by_canon[canon]
+        forge dup be nope
+        iterate w through existing ::
+          ponder w equals word ::
+            dup be yep
+          ;;
+        ;;
+        ponder isnt dup ::
+          by_canon[canon] be existing + [word]
+        ;;
+      ;;
+    ;;
+  ;;
+
+  forge taken be ::
+  ;;
+  forge names_out be ::
+  ;;
+  forge syns_out be ::
+  ;;
+  iterate canon through order ::
+    forge list_w be []
+    iterate w through by_canon[canon] ::
+      ponder isnt has(taken, w) ::
+        taken[w] be yep
+        list_w be list_w + [w]
+      ;;
+    ;;
+    ponder measure(list_w) > 0 ::
+      syns_out[canon] be list_w
+      ponder rename ::
+        names_out[canon] be list_w[0]
+      ;;
+    ;;
+  ;;
+  yield [names_out, syns_out]
+;;
+
+conjure boards_unmask(source, block_line_counts, texts) ::
+  forge t_count be measure(texts)
+  ponder t_count equals 0 ::
+    yield source
+  ;;
+  forge used be ::
+  ;;
+  forge ls be shatter(source, "\n")
+  forge n_ls be measure(ls)
+  forge out be []
+  forge i be 0
+  cycle i < n_ls ::
+    forge line be ls[i]
+    forge m be regex_capture(line, "^[ \\t]*# sdev:board-block (\\d+)[ \\t]*$")
+    ponder m differs void ::
+      forge idx be int(m[1])
+      forge idx_k be str(idx)
+      ponder idx >= 0 also idx < t_count also isnt has(used, idx_k) ::
+        used[idx_k] be yep
+        out be out + [texts[idx]]
+        forge blanks be 0
+        forge k be i + 1
+        cycle k < n_ls also trim(ls[k]) equals "" ::
+          blanks be blanks + 1
+          k be k + 1
+        ;;
+        forge max_skip be int(block_line_counts[idx]) - 1
+        forge skip_n be blanks < max_skip ~ blanks : max_skip
+        ponder skip_n > 0 ::
+          i be i + skip_n
+        ;;
+      ;; otherwise ::
+        out be out + [line]
+      ;;
+    ;; otherwise ::
+      out be out + [line]
+    ;;
+    i be i + 1
+  ;;
+
+  forge result be weave(out, "\n")
+  forge missing be []
+  forge j be 0
+  cycle j < t_count ::
+    ponder isnt has(used, str(j)) ::
+      missing be missing + [texts[j]]
+    ;;
+    j be j + 1
+  ;;
+  ponder measure(missing) > 0 ::
+    result be regex_replace(result, "\\s*$", "") + "\n\n" + weave(missing, "\n\n") + "\n"
+  ;;
+  yield result
+;;

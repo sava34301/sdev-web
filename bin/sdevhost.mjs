@@ -44,6 +44,23 @@ async function oracle() {
   return oracleCompile;
 }
 
+// Recursively collect `use "..."` / `summon "..."` modules referenced by src.
+function collectModules(src, seen = {}) {
+  for (const m of src.matchAll(/^\s*(?:use|summon)\s+"([^"]+)"/gm)) {
+    const p = m[1];
+    if (!Object.prototype.hasOwnProperty.call(seen, p)) {
+      try {
+        const modSrc = readFileSync(p, 'utf8');
+        seen[p] = modSrc;
+        collectModules(modSrc, seen);
+      } catch {
+        // Leave missing modules to host/compiler error handling.
+      }
+    }
+  }
+  return seen;
+}
+
 // The compiler that the current lang/compiler/driver.sdev produces, built by
 // the shipped compiler. Used for stage-2 / stage-3 fixed-point checks.
 let stage2 = null;
@@ -53,6 +70,33 @@ async function stage2Driver() {
     stage2 = await selfCompile(src);
   }
   return stage2;
+}
+
+let v1Drv = null;
+async function v1Driver() {
+  if (!v1Drv) {
+    const src = readFileSync('lang/compiler/v1_driver.sdev', 'utf8');
+    v1Drv = await selfCompile(src, collectModules(src));
+  }
+  return v1Drv;
+}
+
+let v1SelfDrv = null;
+async function v1SelfDriver() {
+  if (!v1SelfDrv) {
+    const src = readFileSync('lang/compiler/v1_self.sdev', 'utf8');
+    v1SelfDrv = await compileWith(await v1Driver(), src, collectModules(src));
+  }
+  return v1SelfDrv;
+}
+
+let v1SelfSt2Drv = null;
+async function v1SelfStage2Driver() {
+  if (!v1SelfSt2Drv) {
+    const src = readFileSync('lang/compiler/v1_self.sdev', 'utf8');
+    v1SelfSt2Drv = await compileWith(await v1SelfDriver(), src, collectModules(src));
+  }
+  return v1SelfSt2Drv;
 }
 
 // Anything the SDEV program may ask for that needs async work is resolved
@@ -79,14 +123,44 @@ async function prefetch(scriptSrc, args) {
       put(key, `${hex(r.bytecode)} ${hex(r.stringPool)}`);
       continue;
     }
-    const m = /^sdev:compile:(self|stage2|boot):(.+)$/.exec(key);
+    if (key === 'sdev:driver:v1') {
+      try {
+        const d = await v1Driver();
+        put(key, `${hex(d.bytecode)} ${hex(d.stringPool)}`);
+      } catch (e) {
+        put(key, `error ${e?.message ?? e}`);
+      }
+      continue;
+    }
+    if (key === 'sdev:driver:v1-self') {
+      try {
+        const d = await v1SelfDriver();
+        put(key, `${hex(d.bytecode)} ${hex(d.stringPool)}`);
+      } catch (e) {
+        put(key, `error ${e?.message ?? e}`);
+      }
+      continue;
+    }
+    if (key === 'sdev:driver:v1-self-stage2') {
+      try {
+        const d = await v1SelfStage2Driver();
+        put(key, `${hex(d.bytecode)} ${hex(d.stringPool)}`);
+      } catch (e) {
+        put(key, `error ${e?.message ?? e}`);
+      }
+      continue;
+    }
+    const m = /^sdev:compile:(self|stage2|boot|v1|v1-self|v1-self-stage2):(.+)$/.exec(key);
     if (!m) continue;
     const [, mode, path] = m;
     try {
       const src = readFileSync(path, 'utf8');
-      const r = mode === 'self' ? await selfCompile(src)
-        : mode === 'stage2' ? await compileWith(await stage2Driver(), src)
-        : (await oracle())(src);
+      const r = mode === 'self' ? await selfCompile(src, collectModules(src))
+        : mode === 'stage2' ? await compileWith(await stage2Driver(), src, collectModules(src))
+        : mode === 'v1' ? await compileWith(await v1Driver(), src, collectModules(src))
+        : mode === 'v1-self' ? await compileWith(await v1SelfDriver(), src, collectModules(src))
+        : mode === 'v1-self-stage2' ? await compileWith(await v1SelfStage2Driver(), src, collectModules(src))
+        : (await oracle())(src, collectModules(src));
       put(key, `${hex(r.bytecode)} ${hex(r.stringPool)}`);
     } catch (e) {
       put(key, `error ${e?.message ?? e}`);
@@ -97,20 +171,33 @@ async function prefetch(scriptSrc, args) {
 }
 
 async function main() {
-  const [scriptPath, ...args] = process.argv.slice(2);
+  const rawArgs = process.argv.slice(2);
+  let v1Mode = false;
+  if (rawArgs[0] === '--v1') {
+    v1Mode = true;
+    rawArgs.shift();
+  }
+  const [scriptPath, ...args] = rawArgs;
   if (!scriptPath) {
-    console.error('usage: node bin/sdevhost.mjs <program.sdev> [args...]');
+    console.error('usage: node bin/sdevhost.mjs [--v1] <program.sdev> [args...]');
     process.exit(2);
   }
   const scriptSrc = readFileSync(scriptPath, 'utf8');
+  if (scriptSrc.split(/\r?\n/, 1)[0].trim() === '#!sdev v1') {
+    v1Mode = true;
+  }
   const table = await prefetch(scriptSrc, args);
 
   // Validate with both the reference compiler and the self-hosted compiler's
   // error channel so any syntax, arity, symbol or capacity error is reported.
   let program;
   try {
-    (await oracle())(scriptSrc);
-    program = await selfCompile(scriptSrc);
+    if (v1Mode) {
+      program = await compileWith(await v1Driver(), scriptSrc, collectModules(scriptSrc));
+    } else {
+      (await oracle())(scriptSrc);
+      program = await selfCompile(scriptSrc);
+    }
   } catch (e) {
     const msg = String(e?.message ?? e).replace(/^\[sdev v2\] line \d+: /, '');
     process.stderr.write(`sdev: ${scriptPath}: ${msg}\n`);

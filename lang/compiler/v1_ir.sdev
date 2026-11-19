@@ -1,0 +1,1086 @@
+# SDEV v1 High-Level Stack IR Compiler, Disassembler & VM — authored in pure SDEV.
+#
+# Targets the SDEV v1 high-level IR opcode set:
+#   PUSH_NUM, PUSH_STR, PUSH_BOOL, PUSH_NULL, LOAD, STORE, DEFINE,
+#   ADD, SUB, MUL, DIV, MOD, POW, NEG, EQ, NEQ, LT, GT, LTE, GTE,
+#   AND, OR, NOT, JUMP, JUMP_IF_FALSE, JUMP_IF_TRUE, MAKE_FUNC, CALL,
+#   RETURN, MAKE_LIST, MAKE_DICT, INDEX_GET, INDEX_SET, MEMBER_GET,
+#   MEMBER_SET, POP, DUP, SWAP, HALT
+
+set ir_tk_k   to mklist(16384)
+set ir_tk_v   to mklist(16384)
+set ir_tk_n   to mklist(2)
+
+set ir_ops    to mklist(16384)
+set ir_a1     to mklist(16384)
+set ir_a2     to mklist(16384)
+set ir_pc     to mklist(2)
+set ir_fn_ips to mklist(512)
+set ir_fn_nms to mklist(512)
+set ir_fn_ps  to mklist(512)
+set ir_fn_c   to mklist(2)
+set ir_lp_brk to mklist(256)
+set ir_lp_dep to mklist(2)
+set ir_for_id to mklist(2)
+
+# ---- Tokenizer ------------------------------------------------------------
+
+to ir_push with k v
+  set idx to ir_tk_n[0]
+  set ir_tk_k[idx] to k
+  set ir_tk_v[idx] to v
+  set ir_tk_n[0] to idx + 1
+end
+
+to ir_two with c nx
+  if c <= 32 or nx <= 32
+    return ""
+  end
+  set s to concat(chr(c), chr(nx))
+  if find(" :: ;; <= >= == != <> -> ** += -= *= /= %= && || ", concat(" ", concat(s, " "))) >= 0
+    return s
+  end
+  return ""
+end
+
+to ir_tokenize with src
+  set ir_tk_n[0] to 0
+  set n to length(src)
+  set i to 0
+  while i < n
+    set c to ord(src, i)
+    set nx to 0 - 1
+    if i + 1 < n
+      set nx to ord(src, i + 1)
+    end
+    if c is 32 or c is 9 or c is 13
+      set i to i + 1
+    else if c is 10 or (c is 59 and nx is not 59)
+      ir_push(5, "\n")
+      set i to i + 1
+    else if c is 35 or (c is 47 and nx is 47)
+      while i < n and ord(src, i) is not 10
+        set i to i + 1
+      end
+    else if c is 34 or c is 39
+      set q to c
+      set j to i + 1
+      set buf to ""
+      while j < n
+        set ch to ord(src, j)
+        if ch is q
+          break
+        else if ch is 92 and j + 1 < n
+          set e to ord(src, j + 1)
+          if e is 110
+            set buf to concat(buf, chr(10))
+          else if e is 116
+            set buf to concat(buf, chr(9))
+          else
+            set buf to concat(buf, chr(e))
+          end
+          set j to j + 2
+        else
+          set buf to concat(buf, chr(ch))
+          set j to j + 1
+        end
+      end
+      ir_push(3, buf)
+      set i to j + 1
+    else if c >= 48 and c <= 57
+      set v to 0
+      while i < n and ord(src, i) >= 48 and ord(src, i) <= 57
+        set v to v * 10 + (ord(src, i) - 48)
+        set i to i + 1
+      end
+      ir_push(1, v)
+    else if c is 95 or (c >= 65 and c <= 90) or (c >= 97 and c <= 122)
+      set j to i
+      while j < n
+        set ch to ord(src, j)
+        if ch is 95 or (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122) or (ch >= 48 and ch <= 57)
+          set j to j + 1
+        else
+          break
+        end
+      end
+      ir_push(2, substr(src, i, j - i))
+      set i to j
+    else
+      set t2 to ir_two(c, nx)
+      if length(t2) > 0
+        ir_push(4, t2)
+        set i to i + 2
+      else
+        ir_push(4, chr(c))
+        set i to i + 1
+      end
+    end
+  end
+end
+
+# ---- IR Emitter Helpers ---------------------------------------------------
+
+to ir_emit with op a1 a2
+  set idx to ir_pc[0]
+  set ir_ops[idx] to op
+  set ir_a1[idx] to a1
+  set ir_a2[idx] to a2
+  set ir_pc[0] to idx + 1
+  return idx
+end
+
+to ir_skip_nl with pos
+  while pos < ir_tk_n[0] and ir_tk_k[pos] is 5
+    set pos to pos + 1
+  end
+  return pos
+end
+
+to ir_is_v with pos s
+  if pos < ir_tk_n[0] and ir_tk_k[pos] is not 1 and concat(ir_tk_v[pos], "") is s
+    return 1
+  end
+  return 0
+end
+
+to ir_word_in with pos pat
+  if pos < ir_tk_n[0] and ir_tk_k[pos] is 2 and find(pat, concat("|", concat(ir_tk_v[pos], "|"))) >= 0
+    return 1
+  end
+  return 0
+end
+
+to ir_eat with pos s
+  if ir_is_v(pos, s)
+    return pos + 1
+  end
+  return pos
+end
+
+# ---- Recursive Descent IR Compiler ----------------------------------------
+
+to ir_comp_atom with pos
+  if pos >= ir_tk_n[0]
+    return pos
+  end
+  set k to ir_tk_k[pos]
+  set v to ir_tk_v[pos]
+  if k is 1
+    ir_emit("PUSH_NUM", v, 0)
+    return pos + 1
+  end
+  if k is 3
+    ir_emit("PUSH_STR", v, 0)
+    return pos + 1
+  end
+  if k is 2
+    if find("|yep|true|", concat("|", concat(v, "|"))) >= 0
+      ir_emit("PUSH_BOOL", 1, 0)
+      return pos + 1
+    end
+    if find("|nope|false|", concat("|", concat(v, "|"))) >= 0
+      ir_emit("PUSH_BOOL", 0, 0)
+      return pos + 1
+    end
+    if find("|void|null|none|nothing|", concat("|", concat(v, "|"))) >= 0
+      ir_emit("PUSH_NULL", 0, 0)
+      return pos + 1
+    end
+    if ir_is_v(pos + 1, "(")
+      ir_emit("LOAD", v, 0)
+      set pos to ir_skip_nl(pos + 2)
+      set argc to 0
+      if not ir_is_v(pos, ")")
+        while 1
+          set pos to ir_comp_expr(pos)
+          set argc to argc + 1
+          set pos to ir_skip_nl(pos)
+          if ir_is_v(pos, ",")
+            set pos to ir_skip_nl(pos + 1)
+          else
+            break
+          end
+        end
+      end
+      set pos to ir_eat(pos, ")")
+      ir_emit("CALL", argc, 0)
+      return pos
+    end
+    ir_emit("LOAD", v, 0)
+    return pos + 1
+  end
+  if ir_is_v(pos, "(")
+    set pos to ir_comp_expr(ir_skip_nl(pos + 1))
+    return ir_eat(ir_skip_nl(pos), ")")
+  end
+  if ir_is_v(pos, "[")
+    set pos to ir_skip_nl(pos + 1)
+    set n to 0
+    while pos < ir_tk_n[0] and not ir_is_v(pos, "]")
+      set pos to ir_comp_expr(pos)
+      set n to n + 1
+      set pos to ir_skip_nl(pos)
+      if ir_is_v(pos, ",")
+        set pos to ir_skip_nl(pos + 1)
+      else
+        break
+      end
+    end
+    ir_emit("MAKE_LIST", n, 0)
+    return ir_eat(pos, "]")
+  end
+  if ir_is_v(pos, "{") or ir_is_v(pos, "::")
+    set ec to "}"
+    if ir_is_v(pos, "::")
+      set ec to ";;"
+    end
+    set pos to ir_skip_nl(pos + 1)
+    set n to 0
+    while pos < ir_tk_n[0] and not ir_is_v(pos, ec)
+      if ir_tk_k[pos] is 2 and ir_is_v(pos + 1, ":")
+        ir_emit("PUSH_STR", ir_tk_v[pos], 0)
+        set pos to pos + 1
+      else
+        set pos to ir_comp_expr(pos)
+      end
+      set pos to ir_comp_expr(ir_skip_nl(ir_eat(pos, ":")))
+      set n to n + 1
+      set pos to ir_skip_nl(pos)
+      if ir_is_v(pos, ",")
+        set pos to ir_skip_nl(pos + 1)
+      else
+        break
+      end
+    end
+    ir_emit("MAKE_DICT", n, 0)
+    return ir_eat(pos, ec)
+  end
+  return pos
+end
+
+to ir_comp_post with pos
+  set pos to ir_comp_atom(pos)
+  while pos < ir_tk_n[0]
+    if ir_is_v(pos, "[")
+      set pos to ir_eat(ir_comp_expr(pos + 1), "]")
+      ir_emit("INDEX_GET", 0, 0)
+    else if ir_is_v(pos, ".") and pos + 1 < ir_tk_n[0] and ir_tk_k[pos + 1] is 2
+      set m to ir_tk_v[pos + 1]
+      if ir_is_v(pos + 2, "(")
+        ir_emit("MEMBER_GET", m, 0)
+        set pos to ir_skip_nl(pos + 3)
+        set argc to 0
+        if not ir_is_v(pos, ")")
+          while 1
+            set pos to ir_comp_expr(pos)
+            set argc to argc + 1
+            set pos to ir_skip_nl(pos)
+            if ir_is_v(pos, ",")
+              set pos to ir_skip_nl(pos + 1)
+            else
+              break
+            end
+          end
+        end
+        set pos to ir_eat(pos, ")")
+        ir_emit("CALL", argc, 0)
+      else
+        ir_emit("MEMBER_GET", m, 0)
+        set pos to pos + 2
+      end
+    else
+      break
+    end
+  end
+  return pos
+end
+
+to ir_comp_un with pos
+  if ir_is_v(pos, "-")
+    set pos to ir_comp_un(pos + 1)
+    ir_emit("NEG", 0, 0)
+    return pos
+  end
+  if ir_is_v(pos, "!") or ir_word_in(pos, "|isnt|not|")
+    set pos to ir_comp_un(pos + 1)
+    ir_emit("NOT", 0, 0)
+    return pos
+  end
+  set pos to ir_comp_post(pos)
+  if ir_is_v(pos, "**") or ir_is_v(pos, "^")
+    set pos to ir_comp_un(pos + 1)
+    ir_emit("POW", 0, 0)
+  end
+  return pos
+end
+
+to ir_comp_mul with pos
+  set pos to ir_comp_un(pos)
+  while ir_is_v(pos, "*") or ir_is_v(pos, "/") or ir_is_v(pos, "%")
+    set s to concat(ir_tk_v[pos], "")
+    set pos to ir_comp_un(pos + 1)
+    if s is "*"
+      ir_emit("MUL", 0, 0)
+    else if s is "/"
+      ir_emit("DIV", 0, 0)
+    else
+      ir_emit("MOD", 0, 0)
+    end
+  end
+  return pos
+end
+
+to ir_comp_add with pos
+  set pos to ir_comp_mul(pos)
+  while ir_is_v(pos, "+") or ir_is_v(pos, "-")
+    set s to concat(ir_tk_v[pos], "")
+    set pos to ir_comp_mul(pos + 1)
+    if s is "+"
+      ir_emit("ADD", 0, 0)
+    else
+      ir_emit("SUB", 0, 0)
+    end
+  end
+  return pos
+end
+
+to ir_comp_cmp with pos
+  set pos to ir_comp_add(pos)
+  while pos < ir_tk_n[0]
+    set op to ""
+    if ir_word_in(pos, "|equals|same|") or ir_is_v(pos, "==")
+      set op to "EQ"
+      set pos to pos + 1
+    else if ir_is_v(pos, "differs") or ir_is_v(pos, "!=") or ir_is_v(pos, "<>")
+      set op to "NEQ"
+      set pos to pos + 1
+    else if ir_is_v(pos, "is")
+      set op to "EQ"
+      set pos to pos + 1
+      if ir_word_in(pos, "|not|isnt|")
+        set op to "NEQ"
+        set pos to pos + 1
+      end
+    else if ir_is_v(pos, "<")
+      set op to "LT"
+      set pos to pos + 1
+    else if ir_is_v(pos, ">")
+      set op to "GT"
+      set pos to pos + 1
+    else if ir_is_v(pos, "<=")
+      set op to "LTE"
+      set pos to pos + 1
+    else if ir_is_v(pos, ">=")
+      set op to "GTE"
+      set pos to pos + 1
+    else
+      break
+    end
+    set pos to ir_comp_add(pos)
+    ir_emit(op, 0, 0)
+  end
+  return pos
+end
+
+to ir_comp_and with pos
+  set pos to ir_comp_cmp(pos)
+  while ir_word_in(pos, "|also|and|") or ir_is_v(pos, "&&")
+    set jf to ir_emit("JUMP_IF_FALSE", 0, 0)
+    ir_emit("POP", 0, 0)
+    set pos to ir_comp_cmp(pos + 1)
+    set jp to ir_emit("JUMP", 0, 0)
+    set ir_a1[jf] to ir_pc[0]
+    ir_emit("POP", 0, 0)
+    ir_emit("PUSH_BOOL", 0, 0)
+    set ir_a1[jp] to ir_pc[0]
+  end
+  return pos
+end
+
+to ir_comp_expr with pos
+  set pos to ir_comp_and(pos)
+  while ir_word_in(pos, "|either|or|") or ir_is_v(pos, "||")
+    set jt to ir_emit("JUMP_IF_TRUE", 0, 0)
+    ir_emit("POP", 0, 0)
+    set pos to ir_comp_and(pos + 1)
+    set jp to ir_emit("JUMP", 0, 0)
+    set ir_a1[jt] to ir_pc[0]
+    ir_emit("POP", 0, 0)
+    ir_emit("PUSH_BOOL", 1, 0)
+    set ir_a1[jp] to ir_pc[0]
+  end
+  return pos
+end
+
+to ir_comp_block with pos
+  while pos < ir_tk_n[0]
+    set pos to ir_skip_nl(pos)
+    if pos >= ir_tk_n[0] or ir_is_v(pos, ";;") or ir_word_in(pos, "|end|otherwise|else|elsewise|elif|")
+      break
+    end
+    set np to ir_comp_stmt(pos)
+    if np is pos
+      break
+    end
+    set pos to np
+  end
+  return pos
+end
+
+to ir_comp_stmt with pos
+  set pos to ir_skip_nl(pos)
+  if pos >= ir_tk_n[0]
+    return pos
+  end
+  if ir_word_in(pos, "|speak|say|print|println|")
+    ir_emit("LOAD", "speak", 0)
+    set pos to pos + 1
+    set has_p to ir_is_v(pos, "(")
+    if has_p
+      set pos to pos + 1
+    end
+    set argc to 0
+    if not (has_p and ir_is_v(pos, ")"))
+      while 1
+        set pos to ir_comp_expr(pos)
+        set argc to argc + 1
+        if ir_is_v(pos, ",")
+          set pos to pos + 1
+        else
+          break
+        end
+      end
+    end
+    if has_p
+      set pos to ir_eat(pos, ")")
+    end
+    ir_emit("CALL", argc, 0)
+    ir_emit("POP", 0, 0)
+    return pos
+  end
+  if ir_word_in(pos, "|forge|fixed|let|const|be|set|")
+    set is_def to ir_word_in(pos, "|forge|fixed|let|const|")
+    set nm to ir_tk_v[pos + 1]
+    set pos to pos + 2
+    if ir_word_in(pos, "|be|to|") or ir_is_v(pos, "=")
+      set pos to pos + 1
+    end
+    set pos to ir_comp_expr(pos)
+    if is_def
+      ir_emit("DEFINE", nm, 0)
+    else
+      ir_emit("STORE", nm, 0)
+    end
+    return pos
+  end
+  if ir_word_in(pos, "|yield|return|")
+    set pos to pos + 1
+    if pos >= ir_tk_n[0] or ir_tk_k[pos] is 5 or ir_is_v(pos, ";;") or ir_word_in(pos, "|end|otherwise|else|")
+      ir_emit("PUSH_NULL", 0, 0)
+    else
+      set pos to ir_comp_expr(pos)
+    end
+    ir_emit("RETURN", 0, 0)
+    return pos
+  end
+  if ir_word_in(pos, "|ponder|either|if|")
+    set pos to ir_eat(ir_comp_expr(pos + 1), "::")
+    set jf to ir_emit("JUMP_IF_FALSE", 0, 0)
+    ir_emit("POP", 0, 0)
+    set pos to ir_comp_block(pos)
+    if ir_is_v(pos, ";;")
+      set je to ir_emit("JUMP", 0, 0)
+      set ir_a1[jf] to ir_pc[0]
+      ir_emit("POP", 0, 0)
+      set ir_a1[je] to ir_pc[0]
+      return pos + 1
+    end
+    if ir_word_in(pos, "|otherwise|else|elsewise|elif|")
+      set je to ir_emit("JUMP", 0, 0)
+      set ir_a1[jf] to ir_pc[0]
+      ir_emit("POP", 0, 0)
+      if ir_word_in(pos, "|elsewise|elif|")
+        set pos to ir_comp_stmt(pos)
+      else if ir_word_in(pos + 1, "|ponder|either|if|")
+        set pos to ir_comp_stmt(pos + 1)
+      else
+        set pos to ir_comp_block(ir_eat(pos + 1, "::"))
+        if ir_is_v(pos, ";;") or ir_is_v(pos, "end")
+          set pos to pos + 1
+        end
+      end
+      set ir_a1[je] to ir_pc[0]
+      return pos
+    end
+    set je to ir_emit("JUMP", 0, 0)
+    set ir_a1[jf] to ir_pc[0]
+    ir_emit("POP", 0, 0)
+    set ir_a1[je] to ir_pc[0]
+    if ir_is_v(pos, "end")
+      return pos + 1
+    end
+    return pos
+  end
+  if ir_word_in(pos, "|cycle|while|")
+    set top to ir_pc[0]
+    set pos to ir_eat(ir_comp_expr(pos + 1), "::")
+    set jf to ir_emit("JUMP_IF_FALSE", 0, 0)
+    ir_emit("POP", 0, 0)
+    set pos to ir_comp_block(pos)
+    ir_emit("JUMP", top, 0)
+    set ir_a1[jf] to ir_pc[0]
+    ir_emit("POP", 0, 0)
+    if ir_is_v(pos, ";;") or ir_is_v(pos, "end")
+      return pos + 1
+    end
+    return pos
+  end
+  if ir_word_in(pos, "|conjure|to|func|def|")
+    set fnm to ir_tk_v[pos + 1]
+    set pos to pos + 2
+    set pnames to mklist(32)
+    set np to 0
+    if ir_is_v(pos, "(")
+      set pos to pos + 1
+      while pos < ir_tk_n[0] and not ir_is_v(pos, ")")
+        if ir_tk_k[pos] is 2
+          set pnames[np] to ir_tk_v[pos]
+          set np to np + 1
+        end
+        set pos to pos + 1
+      end
+      set pos to ir_eat(pos, ")")
+    else if ir_is_v(pos, "with")
+      set pos to pos + 1
+      while pos < ir_tk_n[0] and ir_tk_k[pos] is 2
+        set pnames[np] to ir_tk_v[pos]
+        set np to np + 1
+        set pos to pos + 1
+      end
+    end
+    set pos to ir_eat(pos, "::")
+    set over to ir_emit("JUMP", 0, 0)
+    set entry to ir_pc[0]
+    set pos to ir_comp_block(pos)
+    ir_emit("PUSH_NULL", 0, 0)
+    ir_emit("RETURN", 0, 0)
+    set ir_a1[over] to ir_pc[0]
+    if ir_is_v(pos, ";;") or ir_is_v(pos, "end")
+      set pos to pos + 1
+    end
+    set fc to ir_fn_c[0]
+    set ir_fn_nms[fc] to fnm
+    set ir_fn_ips[fc] to entry
+    set ir_fn_ps[fc] to pnames
+    set ir_fn_c[0] to fc + 1
+    ir_emit("MAKE_FUNC", fc, np)
+    ir_emit("DEFINE", fnm, 0)
+    return pos
+  end
+  # Bare target assignment (`x be v`, `x[i] be v`, `x.f be v`, `x += v`)
+  if ir_tk_k[pos] is 2
+    set nm to ir_tk_v[pos]
+    if ir_is_v(pos + 1, "be") or ir_is_v(pos + 1, "=")
+      set pos to ir_comp_expr(pos + 2)
+      ir_emit("STORE", nm, 0)
+      return pos
+    end
+    if ir_is_v(pos + 1, "+=") or ir_is_v(pos + 1, "-=") or ir_is_v(pos + 1, "*=") or ir_is_v(pos + 1, "/=")
+      set opch to substr(ir_tk_v[pos + 1], 0, 1)
+      ir_emit("LOAD", nm, 0)
+      set pos to ir_comp_expr(pos + 2)
+      if concat(opch, "") is "+"
+        ir_emit("ADD", 0, 0)
+      else if concat(opch, "") is "-"
+        ir_emit("SUB", 0, 0)
+      else if concat(opch, "") is "*"
+        ir_emit("MUL", 0, 0)
+      else
+        ir_emit("DIV", 0, 0)
+      end
+      ir_emit("STORE", nm, 0)
+      return pos
+    end
+    if ir_is_v(pos + 1, "[")
+      ir_emit("LOAD", nm, 0)
+      set p2 to ir_eat(ir_comp_expr(pos + 2), "]")
+      if ir_is_v(p2, "be") or ir_is_v(p2, "=")
+        set p2 to ir_comp_expr(p2 + 1)
+        ir_emit("INDEX_SET", 0, 0)
+        ir_emit("POP", 0, 0)
+        return p2
+      end
+      set ir_pc[0] to ir_pc[0] - 1
+    end
+    if ir_is_v(pos + 1, ".") and pos + 2 < ir_tk_n[0] and (ir_is_v(pos + 3, "be") or ir_is_v(pos + 3, "="))
+      ir_emit("LOAD", nm, 0)
+      set pos to ir_comp_expr(pos + 4)
+      ir_emit("MEMBER_SET", ir_tk_v[pos + 2], 0)
+      ir_emit("POP", 0, 0)
+      return pos
+    end
+  end
+  set pos to ir_comp_expr(pos)
+  ir_emit("POP", 0, 0)
+  return pos
+end
+
+to v1_ir_compile with src
+  ir_tokenize(src)
+  set ir_pc[0] to 0
+  set ir_fn_c[0] to 0
+  set ir_lp_dep[0] to 0
+  set ir_for_id[0] to 0
+  set pos to 0
+  while pos < ir_tk_n[0]
+    set pos to ir_skip_nl(pos)
+    if pos >= ir_tk_n[0]
+      break
+    end
+    set np to ir_comp_stmt(pos)
+    if np is pos
+      break
+    end
+    set pos to np
+  end
+  ir_emit("HALT", 0, 0)
+  set n to ir_pc[0]
+  set ops to mklist(n)
+  set a1 to mklist(n)
+  set a2 to mklist(n)
+  set i to 0
+  while i < n
+    set ops[i] to ir_ops[i]
+    set a1[i] to ir_a1[i]
+    set a2[i] to ir_a2[i]
+    set i to i + 1
+  end
+  set fc to ir_fn_c[0]
+  set fn_ips to mklist(fc)
+  set fn_nms to mklist(fc)
+  set fn_ps to mklist(fc)
+  set j to 0
+  while j < fc
+    set fn_ips[j] to ir_fn_ips[j]
+    set fn_nms[j] to ir_fn_nms[j]
+    set fn_ps[j] to ir_fn_ps[j]
+    set j to j + 1
+  end
+  set chunk to {}
+  set chunk["ops"] to ops
+  set chunk["a1"] to a1
+  set chunk["a2"] to a2
+  set chunk["n"] to n
+  set chunk["fn_ips"] to fn_ips
+  set chunk["fn_nms"] to fn_nms
+  set chunk["fn_ps"] to fn_ps
+  return chunk
+end
+
+# ---- IR Disassembler ------------------------------------------------------
+
+to v1_ir_disassemble with chunk
+  set ops to chunk["ops"]
+  set a1 to chunk["a1"]
+  set a2 to chunk["a2"]
+  set n to chunk["n"]
+  set out to ""
+  set i to 0
+  while i < n
+    set op to concat(ops[i], "")
+    set line to concat(str(i), concat(": ", op))
+    if find("|PUSH_NUM|PUSH_BOOL|JUMP|JUMP_IF_FALSE|JUMP_IF_TRUE|CALL|MAKE_LIST|MAKE_DICT|", concat("|", concat(op, "|"))) >= 0
+      set line to concat(line, concat(" ", str(a1[i])))
+    else if find("|PUSH_STR|LOAD|STORE|DEFINE|MEMBER_GET|MEMBER_SET|", concat("|", concat(op, "|"))) >= 0
+      set line to concat(line, concat(" ", concat(a1[i], "")))
+    else if op is "MAKE_FUNC"
+      set line to concat(line, concat(" ", concat(str(a1[i]), concat(" arity=", str(a2[i])))))
+    end
+    set out to concat(out, concat(line, "\n"))
+    set i to i + 1
+  end
+  return out
+end
+
+# ---- IR Stack VM Runner ---------------------------------------------------
+
+to ir_val_str with v
+  set tag to v[0]
+  if tag is 0
+    return "void"
+  end
+  if tag is 1
+    return str(v[1])
+  end
+  if tag is 2
+    return concat(v[1], "")
+  end
+  if tag is 3
+    if v[1]
+      return "true"
+    end
+    return "false"
+  end
+  if tag is 4
+    set xs to v[1]
+    set nx to v[2]
+    set out to "["
+    set k to 0
+    while k < nx
+      if k > 0
+        set out to concat(out, ", ")
+      end
+      set out to concat(out, ir_val_str(xs[k]))
+      set k to k + 1
+    end
+    return concat(out, "]")
+  end
+  if tag is 5
+    return "<tome>"
+  end
+  if tag is 6
+    return "<fn>"
+  end
+  return "<val>"
+end
+
+to ir_vnum with v
+  return v[1]
+end
+
+to ir_vbool with v
+  set tag to v[0]
+  if tag is 0
+    return 0
+  end
+  if tag is 2
+    return length(concat(v[1], "")) > 0
+  end
+  if tag is 4
+    return v[2] > 0
+  end
+  return v[1] is not 0
+end
+
+to ir_mkval with tag payload extra
+  set box to mklist(3)
+  set box[0] to tag
+  set box[1] to payload
+  set box[2] to extra
+  return box
+end
+
+to v1_ir_run with chunk
+  set ops to chunk["ops"]
+  set a1 to chunk["a1"]
+  set a2 to chunk["a2"]
+  set n to chunk["n"]
+  set fn_ips to chunk["fn_ips"]
+  set fn_ps to chunk["fn_ps"]
+
+  set stk to mklist(2048)
+  set sp to 0
+  set globs to {}
+  set globs["speak"] to ir_mkval(7, "speak", 0)
+  set globs["say"] to ir_mkval(7, "speak", 0)
+  set globs["print"] to ir_mkval(7, "speak", 0)
+  set globs["len"] to ir_mkval(7, "len", 0)
+  set globs["length"] to ir_mkval(7, "len", 0)
+  set globs["str"] to ir_mkval(7, "str", 0)
+
+  set frames_env to mklist(256)
+  set frames_ip to mklist(256)
+  set fdepth to 0
+  set cur_env to globs
+  set out to ""
+  set out_has to 0
+  set ip to 0
+
+  while ip < n
+    set op to concat(ops[ip], "")
+    set v1 to a1[ip]
+    set v2 to a2[ip]
+    set ip to ip + 1
+
+    if op is "HALT"
+      break
+    else if op is "PUSH_NUM"
+      set stk[sp] to ir_mkval(1, v1, 0)
+      set sp to sp + 1
+    else if op is "PUSH_STR"
+      set stk[sp] to ir_mkval(2, v1, 0)
+      set sp to sp + 1
+    else if op is "PUSH_BOOL"
+      set stk[sp] to ir_mkval(3, v1, 0)
+      set sp to sp + 1
+    else if op is "PUSH_NULL"
+      set stk[sp] to ir_mkval(0, 0, 0)
+      set sp to sp + 1
+    else if op is "POP"
+      set sp to sp - 1
+    else if op is "DUP"
+      set stk[sp] to stk[sp - 1]
+      set sp to sp + 1
+    else if op is "SWAP"
+      set tmp to stk[sp - 1]
+      set stk[sp - 1] to stk[sp - 2]
+      set stk[sp - 2] to tmp
+    else if op is "DEFINE"
+      set sp to sp - 1
+      set cur_env[concat(v1, "")] to stk[sp]
+    else if op is "STORE"
+      set sp to sp - 1
+      set nm to concat(v1, "")
+      if fdepth > 0 and has(cur_env, nm)
+        set cur_env[nm] to stk[sp]
+      else if has(globs, nm)
+        set globs[nm] to stk[sp]
+      else
+        set cur_env[nm] to stk[sp]
+      end
+    else if op is "LOAD"
+      set nm to concat(v1, "")
+      if has(cur_env, nm)
+        set stk[sp] to cur_env[nm]
+      else if has(globs, nm)
+        set stk[sp] to globs[nm]
+      else
+        set stk[sp] to ir_mkval(0, 0, 0)
+      end
+      set sp to sp + 1
+    else if op is "NEG"
+      set x to stk[sp - 1]
+      set stk[sp - 1] to ir_mkval(1, 0 - ir_vnum(x), 0)
+    else if op is "NOT"
+      set x to stk[sp - 1]
+      set b to 0
+      if not ir_vbool(x)
+        set b to 1
+      end
+      set stk[sp - 1] to ir_mkval(3, b, 0)
+    else if op is "ADD"
+      set b to stk[sp - 1]
+      set a to stk[sp - 2]
+      set sp to sp - 1
+      if a[0] is 2 or b[0] is 2
+        set stk[sp - 1] to ir_mkval(2, concat(ir_val_str(a), ir_val_str(b)), 0)
+      else
+        set stk[sp - 1] to ir_mkval(1, ir_vnum(a) + ir_vnum(b), 0)
+      end
+    else if op is "SUB" or op is "MUL" or op is "DIV" or op is "MOD" or op is "POW"
+      set b to ir_vnum(stk[sp - 1])
+      set a to ir_vnum(stk[sp - 2])
+      set sp to sp - 1
+      set r to 0
+      if op is "SUB"
+        set r to a - b
+      else if op is "MUL"
+        set r to a * b
+      else if op is "DIV"
+        set r to a / b
+      else if op is "MOD"
+        set r to a % b
+      else
+        set r to 1
+        set pk to 0
+        while pk < b
+          set r to r * a
+          set pk to pk + 1
+        end
+      end
+      set stk[sp - 1] to ir_mkval(1, r, 0)
+    else if op is "EQ" or op is "NEQ"
+      set b to stk[sp - 1]
+      set a to stk[sp - 2]
+      set sp to sp - 1
+      set eqv to 0
+      if a[0] is 2 and b[0] is 2
+        if concat(a[1], "") is b[1]
+          set eqv to 1
+        end
+      else if a[0] is b[0] and a[1] is b[1]
+        set eqv to 1
+      end
+      if op is "NEQ"
+        if eqv
+          set eqv to 0
+        else
+          set eqv to 1
+        end
+      end
+      set stk[sp - 1] to ir_mkval(3, eqv, 0)
+    else if op is "LT" or op is "GT" or op is "LTE" or op is "GTE"
+      set b to ir_vnum(stk[sp - 1])
+      set a to ir_vnum(stk[sp - 2])
+      set sp to sp - 1
+      set res to 0
+      if op is "LT" and a < b
+        set res to 1
+      else if op is "GT" and a > b
+        set res to 1
+      else if op is "LTE" and a <= b
+        set res to 1
+      else if op is "GTE" and a >= b
+        set res to 1
+      end
+      set stk[sp - 1] to ir_mkval(3, res, 0)
+    else if op is "JUMP"
+      set ip to v1
+    else if op is "JUMP_IF_FALSE"
+      if not ir_vbool(stk[sp - 1])
+        set ip to v1
+      end
+    else if op is "JUMP_IF_TRUE"
+      if ir_vbool(stk[sp - 1])
+        set ip to v1
+      end
+    else if op is "MAKE_LIST"
+      set xs to mklist(v1)
+      set k to v1 - 1
+      while k >= 0
+        set sp to sp - 1
+        set xs[k] to stk[sp]
+        set k to k - 1
+      end
+      set stk[sp] to ir_mkval(4, xs, v1)
+      set sp to sp + 1
+    else if op is "MAKE_DICT"
+      set d to {}
+      set k to 0
+      set pairs to mklist(v1 * 2)
+      set pi to v1 * 2 - 1
+      while pi >= 0
+        set sp to sp - 1
+        set pairs[pi] to stk[sp]
+        set pi to pi - 1
+      end
+      while k < v1
+        set kv to ir_val_str(pairs[k * 2])
+        set d[kv] to pairs[k * 2 + 1]
+        set k to k + 1
+      end
+      set stk[sp] to ir_mkval(5, d, 0)
+      set sp to sp + 1
+    else if op is "INDEX_GET"
+      set idx to stk[sp - 1]
+      set col to stk[sp - 2]
+      set sp to sp - 1
+      if col[0] is 4
+        set xs to col[1]
+        set stk[sp - 1] to xs[ir_vnum(idx)]
+      else
+        set d to col[1]
+        set kstr to ir_val_str(idx)
+        if has(d, kstr)
+          set stk[sp - 1] to d[kstr]
+        else
+          set stk[sp - 1] to ir_mkval(0, 0, 0)
+        end
+      end
+    else if op is "INDEX_SET"
+      set val to stk[sp - 1]
+      set idx to stk[sp - 2]
+      set col to stk[sp - 3]
+      set sp to sp - 2
+      if col[0] is 4
+        set xs to col[1]
+        set xs[ir_vnum(idx)] to val
+      else
+        set d to col[1]
+        set d[ir_val_str(idx)] to val
+      end
+      set stk[sp - 1] to val
+    else if op is "MEMBER_GET"
+      set obj to stk[sp - 1]
+      set d to obj[1]
+      set fk to concat(v1, "")
+      if has(d, fk)
+        set stk[sp - 1] to d[fk]
+      else
+        set stk[sp - 1] to ir_mkval(0, 0, 0)
+      end
+    else if op is "MEMBER_SET"
+      set val to stk[sp - 1]
+      set obj to stk[sp - 2]
+      set sp to sp - 1
+      set d to obj[1]
+      set d[concat(v1, "")] to val
+      set stk[sp - 1] to val
+    else if op is "MAKE_FUNC"
+      set stk[sp] to ir_mkval(6, v1, v2)
+      set sp to sp + 1
+    else if op is "CALL"
+      set argc to v1
+      set fnval to stk[sp - argc - 1]
+      if fnval[0] is 7
+        set bnm to concat(fnval[1], "")
+        if bnm is "speak"
+          set ln to ""
+          set ai to 0
+          while ai < argc
+            if ai > 0
+              set ln to concat(ln, " ")
+            end
+            set ln to concat(ln, ir_val_str(stk[sp - argc + ai]))
+            set ai to ai + 1
+          end
+          if out_has
+            set out to concat(out, concat("\n", ln))
+          else
+            set out to ln
+            set out_has to 1
+          end
+          set sp to sp - argc
+          set stk[sp - 1] to ir_mkval(0, 0, 0)
+        else if bnm is "len"
+          set arg to stk[sp - 1]
+          set sp to sp - argc
+          if arg[0] is 4
+            set stk[sp - 1] to ir_mkval(1, arg[2], 0)
+          else if arg[0] is 2
+            set stk[sp - 1] to ir_mkval(1, length(concat(arg[1], "")), 0)
+          else
+            set stk[sp - 1] to ir_mkval(1, 0, 0)
+          end
+        else if bnm is "str"
+          set arg to stk[sp - 1]
+          set sp to sp - argc
+          set stk[sp - 1] to ir_mkval(2, ir_val_str(arg), 0)
+        end
+      else if fnval[0] is 6
+        set fidx to fnval[1]
+        set pnames to fn_ps[fidx]
+        set nenv to {}
+        set ai to 0
+        while ai < argc
+          set nenv[concat(pnames[ai], "")] to stk[sp - argc + ai]
+          set ai to ai + 1
+        end
+        set sp to sp - argc - 1
+        set frames_env[fdepth] to cur_env
+        set frames_ip[fdepth] to ip
+        set fdepth to fdepth + 1
+        set cur_env to nenv
+        set ip to fn_ips[fidx]
+      else
+        set sp to sp - argc
+        set stk[sp - 1] to ir_mkval(0, 0, 0)
+      end
+    else if op is "RETURN"
+      set retv to stk[sp - 1]
+      set sp to sp - 1
+      if fdepth is 0
+        set stk[sp] to retv
+        set sp to sp + 1
+        break
+      end
+      set fdepth to fdepth - 1
+      set cur_env to frames_env[fdepth]
+      set ip to frames_ip[fdepth]
+      set stk[sp] to retv
+      set sp to sp + 1
+    end
+  end
+  return out
+end

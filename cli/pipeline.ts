@@ -16,6 +16,7 @@ import { Parser } from '@/lang/parser';
 import { Interpreter } from '@/lang/interpreter';
 import type { WebState } from '@/lang/web';
 import { stripBoardBlocks } from '@/lang/hardware/strip';
+import { resolveLinks, type LinkableFile } from '@/lang/linker';
 import { canonicalize } from '@/lang/dialect/canonicalize';
 import { applyExtensions } from '@/lang/dialect/extensions';
 import { resolveLibraries } from '@/lang/dialect/registry';
@@ -139,6 +140,31 @@ export function localModules(entryPath: string, source: string): Record<string, 
   return modules;
 }
 
+/** Local `link "path"` files, read relative to the file then the CWD. */
+export function localLinkFiles(entryPath: string | null, source: string): LinkableFile[] {
+  const files: LinkableFile[] = [];
+  const dir = entryPath ? dirname(resolve(entryPath)) : process.cwd();
+  const seen = new Set<string>();
+
+  const walk = (src: string) => {
+    const re = /^[ \t]*link\b[^\n"']*["']([^"'\n]+)["'](?:\s+as\s+[A-Za-z_][A-Za-z0-9_]*)?[ \t]*;?[ \t]*$/gm;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) {
+      const spec = m[1];
+      if (seen.has(spec)) continue;
+      seen.add(spec);
+      const candidates = isAbsolute(spec) ? [spec] : [resolve(dir, spec), resolve(process.cwd(), spec)];
+      const hit = candidates.find((c) => existsSync(c));
+      if (!hit) continue;
+      const content = stripSignature(readFileSync(hit, 'utf8'));
+      files.push({ name: spec, content });
+      walk(content);
+    }
+  };
+  walk(source);
+  return files;
+}
+
 export interface RunOutcome {
   success: boolean;
   error?: string;
@@ -177,7 +203,10 @@ export async function runPrepared(
   }
 
   try {
-    const lexer = new Lexer(stripBoardBlocks(prepared.code), {
+    const linked = resolveLinks(prepared.code, localLinkFiles(entryPath, prepared.code), {
+      entryName: entryPath ?? '<entry>',
+    });
+    const lexer = new Lexer(stripBoardBlocks(linked), {
       sourceLanguage: opts.lang ?? 'auto',
       dialect: prepared.dialect,
     });

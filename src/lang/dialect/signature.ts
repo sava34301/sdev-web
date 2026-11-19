@@ -34,7 +34,6 @@ export interface FileSignature {
 import { getDialectRunner } from './dialect-runner';
 
 export const SIGNATURE_PREFIX = '#\u27E8sdev\u27E9 ';
-const SIGNATURE_RE = /^#\u27E8sdev\u27E9\s+(\S+)\s*$/;
 
 function toBase64Url(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -61,11 +60,10 @@ export function hasSignature(source: string): boolean {
 
 /** Read the signature, or null for a plain canonical file. */
 export function readSignature(source: string): FileSignature | null {
-  const first = source.split('\n', 1)[0] ?? '';
-  const m = first.match(SIGNATURE_RE);
-  if (!m) return null;
+  const payload = getDialectRunner().callStr('dialect_extract_signature_payload', source, SIGNATURE_PREFIX);
+  if (!payload) return null;
   try {
-    const parsed = JSON.parse(fromBase64Url(m[1])) as FileSignature;
+    const parsed = JSON.parse(fromBase64Url(payload)) as FileSignature;
     return parsed && parsed.v === 1 ? parsed : null;
   } catch {
     return null;
@@ -86,7 +84,12 @@ export function writeSignature(source: string, sig: Omit<FileSignature, 'v' | 's
     sum: checksum(body),
     ts: Date.now(),
   };
-  return `${SIGNATURE_PREFIX}${toBase64Url(JSON.stringify(full))}\n${body}`;
+  return getDialectRunner().callStr(
+    'dialect_format_signature_line',
+    SIGNATURE_PREFIX,
+    toBase64Url(JSON.stringify(full)),
+    body,
+  );
 }
 
 /** True when the body no longer matches the recorded checksum. */

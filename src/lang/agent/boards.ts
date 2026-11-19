@@ -1,18 +1,7 @@
-/**
- * Hardware `board "<id>" { ... }` / `board "<id>" :: ... ;;` blocks are
- * firmware, not sdev: they are turned into Arduino C++ by
- * `src/lang/hardware/transpile.ts` and stripped before any sdev runtime runs.
- *
- * The understander therefore sets them aside before its sdev rules and AI
- * read the file, and reads them with the hardware reader instead
- * (`src/lang/hardware/understand.ts`): lines the transpiler already knows stay
- * exactly as written, loose ones ("turn on the led", "wait one second",
- * Python-style `loop:` blocks) become the hardware language.
- */
 import { findBoardSpans, readBoardBlock, type BoardNote } from '../hardware/understand';
+import { sdevBoardsUnmask } from './sdev-engine';
 
 const MARK = '# sdev:board-block ';
-const MARK_RE = /^[ \t]*# sdev:board-block (\d+)[ \t]*$/;
 
 export interface BoardPiece {
   text: string;
@@ -58,28 +47,10 @@ export function readBoardPieces(blocks: BoardPiece[]): { texts: string[]; notes:
   return { texts, notes, unresolved };
 }
 
-/** Put the board blocks back (`texts[i]` replaces marker i). A marker the AI dropped is restored at the end of the file. */
+/** Put the board blocks back (`texts[i]` replaces marker i). */
 export function unmaskBoardBlocks(source: string, blocks: BoardPiece[], texts: string[] = blocks.map((b) => b.text)): string {
   if (texts.length === 0) return source;
-  const used = new Set<number>();
-  const lines = source.split('\n');
-  const out: string[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const m = MARK_RE.exec(lines[i]);
-    const n = m ? Number(m[1]) : -1;
-    if (n < 0 || n >= texts.length || used.has(n)) { out.push(lines[i]); continue; }
-    used.add(n);
-    out.push(texts[n]);
-    // drop the blank lines that stood in for the block's other lines
-    let blanks = 0;
-    let k = i + 1;
-    while (k < lines.length && lines[k].trim() === '') { blanks++; k++; }
-    i += Math.min(blanks, blocks[n].text.split('\n').length - 1);
-  }
-  let result = out.join('\n');
-  const missing = texts.filter((_, n) => !used.has(n));
-  if (missing.length) result = result.replace(/\s*$/, '') + '\n\n' + missing.join('\n\n') + '\n';
-  return result;
+  return sdevBoardsUnmask(source, blocks.map((b) => b.text.split('\n').length), texts) ?? source;
 }
 
 /** The file without its board blocks — what the sdev side of the file looks like. */

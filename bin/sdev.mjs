@@ -1529,8 +1529,8 @@ var init_parser = __esm({
       parseNot() {
         if (this.check("ISNT" /* ISNT */) && this.tokens[this.pos + 1]?.type !== "THROUGH" /* THROUGH */) {
           const t = this.advance();
-          const operand2 = this.parseNot();
-          return { type: "UnaryExpr", operator: "isnt", operand: operand2, line: t.line };
+          const operand = this.parseNot();
+          return { type: "UnaryExpr", operator: "isnt", operand, line: t.line };
         }
         return this.parseEquality();
       }
@@ -1655,16 +1655,16 @@ var init_parser = __esm({
         if (this.match("MINUS" /* MINUS */, "ISNT" /* ISNT */)) {
           const operator = this.previous().value === "-" ? "-" : "isnt";
           const line = this.previous().line;
-          const operand2 = this.parseUnary();
-          return { type: "UnaryExpr", operator, operand: operand2, line };
+          const operand = this.parseUnary();
+          return { type: "UnaryExpr", operator, operand, line };
         }
         if (this.match("PLUS" /* PLUS */)) {
           return this.parseUnary();
         }
         if (this.match("AWAIT" /* AWAIT */)) {
           const awaitLine = this.previous().line;
-          const operand2 = this.parseUnary();
-          return { type: "AwaitExpr", operand: operand2, line: awaitLine };
+          const operand = this.parseUnary();
+          return { type: "AwaitExpr", operand, line: awaitLine };
         }
         if (this.check("EMIT" /* EMIT */) || this.check("DELEGATE" /* DELEGATE */)) {
           const t = this.advance();
@@ -2056,29 +2056,29 @@ var init_parser = __esm({
        */
       buildFString(template, line) {
         const parts = [];
-        let text3 = "";
+        let text2 = "";
         let i = 0;
         while (i < template.length) {
           const ch = template[i];
           if (ch === "{" && template[i + 1] === "{") {
-            text3 += "{";
+            text2 += "{";
             i += 2;
             continue;
           }
           if (ch === "}" && template[i + 1] === "}") {
-            text3 += "}";
+            text2 += "}";
             i += 2;
             continue;
           }
           if (ch === "{") {
             if (this.isEscapedOrRegexBrace(template, i)) {
-              text3 += ch;
+              text2 += ch;
               i++;
               continue;
             }
-            if (text3) {
-              parts.push({ kind: "text", value: text3 });
-              text3 = "";
+            if (text2) {
+              parts.push({ kind: "text", value: text2 });
+              text2 = "";
             }
             let depth = 1;
             let body = "";
@@ -2125,14 +2125,14 @@ var init_parser = __esm({
               const sub = new _Parser(this.lexTemplate(body, line));
               parts.push({ kind: "expr", expr: sub.parseExpression(), spec, conv, debug });
             } catch {
-              text3 += "{" + body + (spec ? ":" + spec : "") + "}";
+              text2 += "{" + body + (spec ? ":" + spec : "") + "}";
             }
             continue;
           }
-          text3 += ch;
+          text2 += ch;
           i++;
         }
-        if (text3) parts.push({ kind: "text", value: text3 });
+        if (text2) parts.push({ kind: "text", value: text2 });
         return { type: "FStringExpr", parts, line };
       }
       /**
@@ -2431,9 +2431,9 @@ function registerIo(builtins, output) {
         case "number":
           if (typeof val === "number") return val;
           if (typeof val === "string") {
-            const num2 = parseFloat(val);
-            if (isNaN(num2)) throw new SdevError(`Cannot morph '${val}' to number`, line);
-            return num2;
+            const num = parseFloat(val);
+            if (isNaN(num)) throw new SdevError(`Cannot morph '${val}' to number`, line);
+            return num;
           }
           throw new SdevError("Cannot morph to number", line);
         case "text":
@@ -4492,9 +4492,9 @@ var init_regex = __esm({
 });
 
 // src/lang/builtins/regex-guard.ts
-function regexProblem(pattern, text3) {
+function regexProblem(pattern, text2) {
   if (pattern.length > MAX_REGEX_PATTERN) return `Pattern is too long (max ${MAX_REGEX_PATTERN} characters)`;
-  if (text3.length > MAX_REGEX_TEXT) return `Text is too long for a pattern search (max ${MAX_REGEX_TEXT} characters)`;
+  if (text2.length > MAX_REGEX_TEXT) return `Text is too long for a pattern search (max ${MAX_REGEX_TEXT} characters)`;
   if (NESTED_QUANTIFIER.test(pattern)) {
     return "Pattern repeats a group that itself repeats, which can freeze the page \u2014 simplify it";
   }
@@ -4510,8 +4510,8 @@ var init_regex_guard = __esm({
 });
 
 // src/lang/builtins/regex.ts
-function guard(text3, pattern, line) {
-  const p = regexProblem(pattern, text3);
+function guard(text2, pattern, line) {
+  const p = regexProblem(pattern, text2);
   if (p) throw new SdevError(p, line);
 }
 function getRegexRunner() {
@@ -4842,9 +4842,9 @@ function registerBuffer(builtins, _output) {
         return getBufRunner().callStr("buf_to_str", sdevList);
       } };
       obj.fromString = { type: "builtin", call: (a) => {
-        const list2 = getBufRunner().call("buf_from_str", String(a[0] ?? ""));
+        const list = getBufRunner().call("buf_from_str", String(a[0] ?? ""));
         data.fill(0);
-        for (let i = 0; i < Math.min(size, list2.length); i++) data[i] = list2[i] & 255;
+        for (let i = 0; i < Math.min(size, list.length); i++) data[i] = list[i] & 255;
         syncToList();
         return null;
       } };
@@ -5520,8 +5520,8 @@ function oce_describe(m2, names) {
   }
   return out;
 }
-function oce_motifs(text3, threshold) {
-  const bytes = new TextEncoder().encode(text3);
+function oce_motifs(text2, threshold) {
+  const bytes = new TextEncoder().encode(text2);
   let seq = Array.from(bytes);
   const rules = [];
   let next = 256;
@@ -6208,9 +6208,9 @@ function registerSql(builtins, _output) {
       for (const r of right) {
         if (!r || typeof r !== "object") continue;
         const k = stringify(r[rightKey]);
-        const list2 = rightMap.get(k) ?? [];
-        list2.push(r);
-        rightMap.set(k, list2);
+        const list = rightMap.get(k) ?? [];
+        list.push(r);
+        rightMap.set(k, list);
       }
       const out = [];
       for (const l of left) {
@@ -6518,11 +6518,11 @@ function createAdvancedBuiltins(output) {
               headers: options.headers,
               body: options.body ? JSON.stringify(options.body) : void 0
             });
-            const text3 = await response.text();
+            const text2 = await response.text();
             try {
-              return JSON.parse(text3);
+              return JSON.parse(text2);
             } catch {
-              return text3;
+              return text2;
             }
           } catch (e) {
             throw new SdevError(`Network error: ${e}`, line);
@@ -7210,88 +7210,88 @@ function repr(value2) {
   return String(value2);
 }
 function formatValue(value2, spec, conv) {
-  let text3;
-  if (conv === "r") text3 = repr(value2);
-  else if (conv === "a") text3 = repr(value2);
-  else text3 = displayText(value2);
-  if (!spec) return text3;
+  let text2;
+  if (conv === "r") text2 = repr(value2);
+  else if (conv === "a") text2 = repr(value2);
+  else text2 = displayText(value2);
+  if (!spec) return text2;
   const m2 = /^(?:(.)?([<>^]))?([+\- ])?(#)?(0)?(\d+)?(,)?(?:\.(\d+))?([bcdeEfFgGnosxX%])?$/.exec(spec);
-  if (!m2) return text3;
+  if (!m2) return text2;
   const [, fillRaw, align, sign, alt, zero, widthRaw, comma, precRaw, kind] = m2;
   const width = widthRaw ? parseInt(widthRaw, 10) : 0;
   const prec = precRaw ? parseInt(precRaw, 10) : void 0;
   if (kind && "bcdeEfFgGnosxX%".includes(kind) && kind !== "s") {
-    const num2 = Number(value2);
+    const num = Number(value2);
     switch (kind) {
       case "b":
-        text3 = (num2 >>> 0).toString(2);
+        text2 = (num >>> 0).toString(2);
         break;
       case "o":
-        text3 = (num2 >>> 0).toString(8);
+        text2 = (num >>> 0).toString(8);
         break;
       case "x":
-        text3 = (num2 >>> 0).toString(16);
+        text2 = (num >>> 0).toString(16);
         break;
       case "X":
-        text3 = (num2 >>> 0).toString(16).toUpperCase();
+        text2 = (num >>> 0).toString(16).toUpperCase();
         break;
       case "c":
-        text3 = String.fromCharCode(num2);
+        text2 = String.fromCharCode(num);
         break;
       case "d":
       case "n":
-        text3 = String(Math.trunc(num2));
+        text2 = String(Math.trunc(num));
         break;
       case "e":
-        text3 = num2.toExponential(prec ?? 6);
+        text2 = num.toExponential(prec ?? 6);
         break;
       case "E":
-        text3 = num2.toExponential(prec ?? 6).toUpperCase();
+        text2 = num.toExponential(prec ?? 6).toUpperCase();
         break;
       case "f":
       case "F":
-        text3 = num2.toFixed(prec ?? 6);
+        text2 = num.toFixed(prec ?? 6);
         break;
       case "g":
       case "G":
-        text3 = prec !== void 0 ? num2.toPrecision(prec) : String(num2);
+        text2 = prec !== void 0 ? num.toPrecision(prec) : String(num);
         break;
       case "%":
-        text3 = (num2 * 100).toFixed(prec ?? 6) + "%";
+        text2 = (num * 100).toFixed(prec ?? 6) + "%";
         break;
     }
-    if (alt && kind === "x") text3 = "0x" + text3;
-    if (alt && kind === "b") text3 = "0b" + text3;
-    if (alt && kind === "o") text3 = "0o" + text3;
+    if (alt && kind === "x") text2 = "0x" + text2;
+    if (alt && kind === "b") text2 = "0b" + text2;
+    if (alt && kind === "o") text2 = "0o" + text2;
   } else if (prec !== void 0 && typeof value2 === "number") {
-    text3 = value2.toFixed(prec);
+    text2 = value2.toFixed(prec);
   } else if (prec !== void 0 && typeof value2 === "string") {
-    text3 = value2.slice(0, prec);
+    text2 = value2.slice(0, prec);
   }
   if (comma) {
-    const [ip, fp] = text3.split(".");
-    text3 = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (fp ? "." + fp : "");
+    const [ip, fp] = text2.split(".");
+    text2 = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (fp ? "." + fp : "");
   }
-  if (sign === "+" && typeof value2 === "number" && Number(value2) >= 0) text3 = "+" + text3;
-  if (sign === " " && typeof value2 === "number" && Number(value2) >= 0) text3 = " " + text3;
-  if (width && text3.length < width) {
+  if (sign === "+" && typeof value2 === "number" && Number(value2) >= 0) text2 = "+" + text2;
+  if (sign === " " && typeof value2 === "number" && Number(value2) >= 0) text2 = " " + text2;
+  if (width && text2.length < width) {
     const fill = fillRaw ?? (zero ? "0" : " ");
-    const pad = fill.repeat(width - text3.length);
+    const pad = fill.repeat(width - text2.length);
     const defaultAlign = typeof value2 === "number" ? ">" : "<";
     switch (align ?? (zero ? ">" : defaultAlign)) {
       case ">":
-        text3 = pad + text3;
+        text2 = pad + text2;
         break;
       case "^": {
         const left = Math.floor(pad.length / 2);
-        text3 = pad.slice(0, left) + text3 + pad.slice(left);
+        text2 = pad.slice(0, left) + text2 + pad.slice(left);
         break;
       }
       default:
-        text3 = text3 + pad;
+        text2 = text2 + pad;
     }
   }
-  return text3;
+  return text2;
 }
 function displayText(value2) {
   if (value2 === null || value2 === void 0) return "void";
@@ -7310,8 +7310,8 @@ function displayText(value2) {
 function createParityBuiltins(output, host) {
   const b = /* @__PURE__ */ new Map();
   const add = (name, impl) => b.set(name, fn(name, impl));
-  const list2 = (v, line) => [...host.iterate(v, line)];
-  const num2 = (v) => typeof v === "number" ? v : Number(v);
+  const list = (v, line) => [...host.iterate(v, line)];
+  const num = (v) => typeof v === "number" ? v : Number(v);
   add("print", (args) => {
     const { pos, kw } = splitKwargs(args);
     const sep = kw.sep === void 0 ? " " : String(kw.sep);
@@ -7323,31 +7323,31 @@ function createParityBuiltins(output, host) {
   add("repr", (args) => repr(args[0]));
   add("int", (args) => {
     const [v, base] = args;
-    if (typeof v === "string") return parseInt(v.trim(), base ? num2(base) : 10) || 0;
+    if (typeof v === "string") return parseInt(v.trim(), base ? num(base) : 10) || 0;
     if (typeof v === "boolean") return v ? 1 : 0;
-    return Math.trunc(num2(v));
+    return Math.trunc(num(v));
   });
   add("float", (args) => args.length ? parseFloat(String(args[0])) : 0);
   add("bool", (args) => host.truthy(args[0]));
-  add("complexish", (args) => ({ real: num2(args[0]), imag: num2(args[1] ?? 0) }));
+  add("complexish", (args) => ({ real: num(args[0]), imag: num(args[1] ?? 0) }));
   add("bytes", (args, line) => {
     const v = args[0];
     if (typeof v === "string") return new Uint8Array([...v].map((c) => c.charCodeAt(0)));
     if (typeof v === "number") return new Uint8Array(v);
-    return new Uint8Array(list2(v, line).map((x) => num2(x) & 255));
+    return new Uint8Array(list(v, line).map((x) => num(x) & 255));
   });
-  add("list", (args, line) => args.length ? list2(args[0], line) : []);
-  add("tuple", (args, line) => makeTuple(args.length ? list2(args[0], line) : []));
-  add("set", (args, line) => new SdevSet(args.length ? list2(args[0], line) : []));
-  add("frozenset", (args, line) => new SdevSet(args.length ? list2(args[0], line) : [], true));
+  add("list", (args, line) => args.length ? list(args[0], line) : []);
+  add("tuple", (args, line) => makeTuple(args.length ? list(args[0], line) : []));
+  add("set", (args, line) => new SdevSet(args.length ? list(args[0], line) : []));
+  add("frozenset", (args, line) => new SdevSet(args.length ? list(args[0], line) : [], true));
   add("dict", (args, line) => {
     const { pos, kw } = splitKwargs(args);
     const out = {};
     if (pos.length && pos[0] && typeof pos[0] === "object" && !Array.isArray(pos[0])) {
       Object.assign(out, pos[0]);
     } else if (pos.length) {
-      for (const pair of list2(pos[0], line)) {
-        const [k, v] = list2(pair, line);
+      for (const pair of list(pos[0], line)) {
+        const [k, v] = list(pair, line);
         out[stringify(k)] = v;
       }
     }
@@ -7363,20 +7363,20 @@ function createParityBuiltins(output, host) {
     throw new SdevError("len() needs a sized value", line);
   });
   add("range", (args) => {
-    const [a, bb, c] = args.map((x) => x === void 0 ? void 0 : num2(x));
+    const [a, bb, c] = args.map((x) => x === void 0 ? void 0 : num(x));
     const start = bb === void 0 ? 0 : a;
     const stop = bb === void 0 ? a : bb;
     const step = c === void 0 ? 1 : c;
     return getPyRunner().call("py_range", start, stop, step);
   });
   add("enumerate", (args, line) => {
-    const items = list2(args[0], line);
-    const start = args[1] === void 0 ? 0 : num2(args[1]);
+    const items = list(args[0], line);
+    const start = args[1] === void 0 ? 0 : num(args[1]);
     const pairs = getPyRunner().call("py_enumerate", items, start);
     return pairs.map((p) => makeTuple(p));
   });
   add("zip", (args, line) => {
-    const cols = args.map((a) => list2(a, line));
+    const cols = args.map((a) => list(a, line));
     if (cols.length === 2) {
       const pairs = getPyRunner().call("py_zip", cols[0], cols[1]);
       return pairs.map((p) => makeTuple(p));
@@ -7389,7 +7389,7 @@ function createParityBuiltins(output, host) {
   add("zip_longest", (args, line) => {
     const { pos, kw } = splitKwargs(args);
     const filler = kw.fillvalue ?? null;
-    const cols = pos.map((a) => list2(a, line));
+    const cols = pos.map((a) => list(a, line));
     const n = cols.length ? Math.max(...cols.map((c) => c.length)) : 0;
     const out = [];
     for (let i = 0; i < n; i++) out.push(makeTuple(cols.map((c) => i < c.length ? c[i] : filler)));
@@ -7397,7 +7397,7 @@ function createParityBuiltins(output, host) {
   });
   add("map", (args, line) => {
     const f2 = args[0];
-    const cols = args.slice(1).map((a) => list2(a, line));
+    const cols = args.slice(1).map((a) => list(a, line));
     const n = cols.length ? Math.min(...cols.map((c) => c.length)) : 0;
     const out = [];
     for (let i = 0; i < n; i++) out.push(host.call(f2, cols.map((c) => c[i]), line));
@@ -7405,19 +7405,19 @@ function createParityBuiltins(output, host) {
   });
   add("filter", (args, line) => {
     const [f2, seq] = args;
-    return list2(seq, line).filter((v) => f2 === null ? host.truthy(v) : host.truthy(host.call(f2, [v], line)));
+    return list(seq, line).filter((v) => f2 === null ? host.truthy(v) : host.truthy(host.call(f2, [v], line)));
   });
   add("any", (args, line) => {
-    const flags = list2(args[0], line).map((v) => host.truthy(v) ? 1 : 0);
+    const flags = list(args[0], line).map((v) => host.truthy(v) ? 1 : 0);
     return Boolean(getPyRunner().call("py_any", flags));
   });
   add("all", (args, line) => {
-    const flags = list2(args[0], line).map((v) => host.truthy(v) ? 1 : 0);
+    const flags = list(args[0], line).map((v) => host.truthy(v) ? 1 : 0);
     return Boolean(getPyRunner().call("py_all", flags));
   });
   add("sorted", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const items = list2(pos[0], line);
+    const items = list(pos[0], line);
     const key = kw.key ?? pos[1];
     const reverse = host.truthy(kw.reverse);
     if (!key && items.every((v) => typeof v === "number" || typeof v === "string")) {
@@ -7434,10 +7434,10 @@ function createParityBuiltins(output, host) {
     const out = scored.map((s) => s.v);
     return reverse ? out.reverse() : out;
   });
-  add("reversed", (args, line) => getPyRunner().call("py_reversed", list2(args[0], line)));
+  add("reversed", (args, line) => getPyRunner().call("py_reversed", list(args[0], line)));
   add("min", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const items = pos.length === 1 ? list2(pos[0], line) : pos;
+    const items = pos.length === 1 ? list(pos[0], line) : pos;
     if (!items.length) return kw.default ?? null;
     const key = kw.key;
     return items.reduce((best, v) => {
@@ -7448,7 +7448,7 @@ function createParityBuiltins(output, host) {
   });
   add("max", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const items = pos.length === 1 ? list2(pos[0], line) : pos;
+    const items = pos.length === 1 ? list(pos[0], line) : pos;
     if (!items.length) return kw.default ?? null;
     const key = kw.key;
     return items.reduce((best, v) => {
@@ -7458,7 +7458,7 @@ function createParityBuiltins(output, host) {
     });
   });
   add("sum", (args, line) => {
-    const items = list2(args[0], line);
+    const items = list(args[0], line);
     const init = args[1] ?? 0;
     if (items.every((v) => typeof v === "number") && typeof init === "number") {
       return getPyRunner().call("py_sum", items, init);
@@ -7467,15 +7467,15 @@ function createParityBuiltins(output, host) {
     for (const v of items) acc = acc + v;
     return acc;
   });
-  add("abs", (args) => Math.abs(num2(args[0])));
+  add("abs", (args) => Math.abs(num(args[0])));
   add("round", (args) => {
-    const n = num2(args[0]);
-    const d = args[1] === void 0 ? 0 : num2(args[1]);
+    const n = num(args[0]);
+    const d = args[1] === void 0 ? 0 : num(args[1]);
     const f2 = Math.pow(10, d);
     return Math.round(n * f2) / f2;
   });
   add("pow", (args) => {
-    const [a, e, m2] = args.map(num2);
+    const [a, e, m2] = args.map(num);
     if (args[2] === void 0) return Math.pow(a, e);
     let result = 1;
     let base = a % m2;
@@ -7488,7 +7488,7 @@ function createParityBuiltins(output, host) {
     return result;
   });
   add("divmod", (args) => {
-    const [a, bb] = args.map(num2);
+    const [a, bb] = args.map(num);
     if (Number.isInteger(a) && Number.isInteger(bb) && a >= 0 && bb > 0) {
       const res = getPyRunner().call("py_divmod", a, bb);
       return makeTuple(res);
@@ -7496,15 +7496,15 @@ function createParityBuiltins(output, host) {
     return makeTuple([Math.floor(a / bb), (a % bb + bb) % bb]);
   });
   add("bin", (args) => {
-    const n = Math.trunc(num2(args[0])) >>> 0;
+    const n = Math.trunc(num(args[0])) >>> 0;
     return getPyRunner().callStr("py_bin", n);
   });
   add("oct", (args) => {
-    const n = Math.trunc(num2(args[0])) >>> 0;
+    const n = Math.trunc(num(args[0])) >>> 0;
     return getPyRunner().callStr("py_oct", n);
   });
   add("hex", (args) => {
-    const n = Math.trunc(num2(args[0])) >>> 0;
+    const n = Math.trunc(num(args[0])) >>> 0;
     return getPyRunner().callStr("py_hex", n);
   });
   add("type", (args) => {
@@ -7604,7 +7604,7 @@ function createParityBuiltins(output, host) {
     if (isGenerator(g)) g.close();
     return null;
   });
-  add("collect", (args, line) => list2(args[0], line));
+  add("collect", (args, line) => list(args[0], line));
   add("property", (args) => args[0]);
   add("staticmethod", (args) => args[0]);
   add("classmethod", (args) => args[0]);
@@ -7628,7 +7628,7 @@ function createParityBuiltins(output, host) {
   });
   add("reduce", (args, line) => {
     const [f2, seq, initial] = args;
-    const items = list2(seq, line);
+    const items = list(seq, line);
     let acc;
     let start = 0;
     if (args.length > 2) acc = initial;
@@ -7641,8 +7641,8 @@ function createParityBuiltins(output, host) {
   });
   add("dataclass", (args) => args[0]);
   add("count", (args) => {
-    let i = args[0] === void 0 ? 0 : num2(args[0]);
-    const step = args[1] === void 0 ? 1 : num2(args[1]);
+    let i = args[0] === void 0 ? 0 : num(args[0]);
+    const step = args[1] === void 0 ? 1 : num(args[1]);
     const it = function* () {
       for (; ; ) {
         yield i;
@@ -7652,7 +7652,7 @@ function createParityBuiltins(output, host) {
     return makeGenerator(it);
   });
   add("cycle", (args, line) => {
-    const items = list2(args[0], line);
+    const items = list(args[0], line);
     const it = function* () {
       if (!items.length) return null;
       for (; ; ) for (const v of items) yield v;
@@ -7665,21 +7665,21 @@ function createParityBuiltins(output, host) {
       if (times === void 0) {
         for (; ; ) yield v;
       }
-      for (let i = 0; i < num2(times); i++) yield v;
+      for (let i = 0; i < num(times); i++) yield v;
       return null;
     }();
     return makeGenerator(it);
   });
   add("chain", (args, line) => {
-    if (args.length === 2) return getPyRunner().call("py_chain", list2(args[0], line), list2(args[1], line));
-    return args.flatMap((a) => list2(a, line));
+    if (args.length === 2) return getPyRunner().call("py_chain", list(args[0], line), list(args[1], line));
+    return args.flatMap((a) => list(a, line));
   });
   add("islice", (args, line) => {
     const [seq, a, bb, c] = args;
     const items = [];
-    const start = bb === void 0 ? 0 : num2(a);
-    const stop = bb === void 0 ? a === void 0 ? Infinity : num2(a) : num2(bb);
-    const step = c === void 0 ? 1 : num2(c);
+    const start = bb === void 0 ? 0 : num(a);
+    const stop = bb === void 0 ? a === void 0 ? Infinity : num(a) : num(bb);
+    const step = c === void 0 ? 1 : num(c);
     let i = 0;
     for (const v of host.iterate(seq, line)) {
       if (i >= stop) break;
@@ -7690,8 +7690,8 @@ function createParityBuiltins(output, host) {
   });
   add("product", (args, line) => {
     const { pos, kw } = splitKwargs(args);
-    const repeatN = kw.repeat === void 0 ? 1 : num2(kw.repeat);
-    let pools = pos.map((a) => list2(a, line));
+    const repeatN = kw.repeat === void 0 ? 1 : num(kw.repeat);
+    let pools = pos.map((a) => list(a, line));
     if (repeatN > 1) {
       const base = pools;
       pools = [];
@@ -7706,8 +7706,8 @@ function createParityBuiltins(output, host) {
     return result.map(makeTuple);
   });
   add("permutations", (args, line) => {
-    const items = list2(args[0], line);
-    const r = args[1] === void 0 ? items.length : num2(args[1]);
+    const items = list(args[0], line);
+    const r = args[1] === void 0 ? items.length : num(args[1]);
     const out = [];
     const walk = (current, remaining) => {
       if (current.length === r) {
@@ -7720,8 +7720,8 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("combinations", (args, line) => {
-    const items = list2(args[0], line);
-    const r = num2(args[1]);
+    const items = list(args[0], line);
+    const r = num(args[1]);
     const out = [];
     const walk = (start, current) => {
       if (current.length === r) {
@@ -7734,7 +7734,7 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("accumulate", (args, line) => {
-    const items = list2(args[0], line);
+    const items = list(args[0], line);
     const f2 = args[1];
     if (!f2 && items.every((v) => typeof v === "number")) {
       return getPyRunner().call("py_accumulate", items);
@@ -7748,7 +7748,7 @@ function createParityBuiltins(output, host) {
     return out;
   });
   add("groupby", (args, line) => {
-    const items = list2(args[0], line);
+    const items = list(args[0], line);
     const key = args[1];
     const out = [];
     let currentKey = Symbol("none");
@@ -7767,7 +7767,7 @@ function createParityBuiltins(output, host) {
   });
   add("Counter", (args, line) => {
     const counts = {};
-    for (const v of list2(args[0] ?? [], line)) {
+    for (const v of list(args[0] ?? [], line)) {
       const k = stringify(v);
       counts[k] = (counts[k] ?? 0) + 1;
     }
@@ -7786,7 +7786,7 @@ function createParityBuiltins(output, host) {
     });
   });
   add("namedtuple", (args, line) => {
-    const fields = typeof args[1] === "string" ? String(args[1]).split(/[\s,]+/) : list2(args[1], line).map(String);
+    const fields = typeof args[1] === "string" ? String(args[1]).split(/[\s,]+/) : list(args[1], line).map(String);
     return fn(String(args[0]), (values) => {
       const out = {};
       fields.forEach((f2, i) => {
@@ -7795,23 +7795,23 @@ function createParityBuiltins(output, host) {
       return out;
     });
   });
-  add("deque", (args, line) => args.length ? list2(args[0], line) : []);
+  add("deque", (args, line) => args.length ? list(args[0], line) : []);
   add("OrderedDict", (args) => ({ ...args[0] ?? {} }));
-  add("union", (args, line) => new SdevSet(args.flatMap((a) => list2(a, line))));
+  add("union", (args, line) => new SdevSet(args.flatMap((a) => list(a, line))));
   add("intersection", (args, line) => {
-    const [first, ...rest] = args.map((a) => new SdevSet(list2(a, line)));
+    const [first, ...rest] = args.map((a) => new SdevSet(list(a, line)));
     return new SdevSet(first.values().filter((v) => rest.every((s) => s.has(v))));
   });
   add("difference", (args, line) => {
-    const [first, ...rest] = args.map((a) => new SdevSet(list2(a, line)));
+    const [first, ...rest] = args.map((a) => new SdevSet(list(a, line)));
     return new SdevSet(first.values().filter((v) => !rest.some((s) => s.has(v))));
   });
   add("symmetric_difference", (args, line) => {
-    const [a, bb] = args.map((x) => new SdevSet(list2(x, line)));
+    const [a, bb] = args.map((x) => new SdevSet(list(x, line)));
     return new SdevSet([...a.values().filter((v) => !bb.has(v)), ...bb.values().filter((v) => !a.has(v))]);
   });
   add("issubset", (args, line) => {
-    const [a, bb] = args.map((x) => new SdevSet(list2(x, line)));
+    const [a, bb] = args.map((x) => new SdevSet(list(x, line)));
     return a.values().every((v) => bb.has(v));
   });
   add("set_add", (args) => {
@@ -7843,7 +7843,7 @@ function createParityBuiltins(output, host) {
   });
   add("pop", (args) => {
     const [o, k, d] = args;
-    if (Array.isArray(o)) return o.length ? k === void 0 ? o.pop() : o.splice(num2(k), 1)[0] : d ?? null;
+    if (Array.isArray(o)) return o.length ? k === void 0 ? o.pop() : o.splice(num(k), 1)[0] : d ?? null;
     const obj = o;
     const key = stringify(k);
     if (!(key in obj)) return d ?? null;
@@ -7855,15 +7855,15 @@ function createParityBuiltins(output, host) {
     const [target, start, stop, step, value2] = args;
     if (!Array.isArray(target)) throw new SdevError("Only lists support slice assignment", line);
     const n = target.length;
-    const s = start === null || start === void 0 ? 0 : num2(start) < 0 ? n + num2(start) : num2(start);
-    const e = stop === null || stop === void 0 ? n : num2(stop) < 0 ? n + num2(stop) : Math.min(num2(stop), n);
-    const items = list2(value2, line);
-    if (step === null || step === void 0 || num2(step) === 1) {
+    const s = start === null || start === void 0 ? 0 : num(start) < 0 ? n + num(start) : num(start);
+    const e = stop === null || stop === void 0 ? n : num(stop) < 0 ? n + num(stop) : Math.min(num(stop), n);
+    const items = list(value2, line);
+    if (step === null || step === void 0 || num(step) === 1) {
       target.splice(s, Math.max(0, e - s), ...items);
       return target;
     }
     let idx = 0;
-    for (let i = s; i < e && idx < items.length; i += num2(step)) target[i] = items[idx++];
+    for (let i = s; i < e && idx < items.length; i += num(step)) target[i] = items[idx++];
     return target;
   });
   const EXCEPTIONS = [
@@ -7912,27 +7912,27 @@ function createParityBuiltins(output, host) {
     tau: Math.PI * 2,
     inf: Infinity,
     nan: NaN,
-    sqrt: fn("sqrt", (a) => Math.sqrt(num2(a[0]))),
-    floor: fn("floor", (a) => Math.floor(num2(a[0]))),
-    ceil: fn("ceil", (a) => Math.ceil(num2(a[0]))),
-    trunc: fn("trunc", (a) => Math.trunc(num2(a[0]))),
-    fabs: fn("fabs", (a) => Math.abs(num2(a[0]))),
-    exp: fn("exp", (a) => Math.exp(num2(a[0]))),
-    log: fn("log", (a) => a[1] === void 0 ? Math.log(num2(a[0])) : Math.log(num2(a[0])) / Math.log(num2(a[1]))),
-    log2: fn("log2", (a) => Math.log2(num2(a[0]))),
-    log10: fn("log10", (a) => Math.log10(num2(a[0]))),
-    sin: fn("sin", (a) => Math.sin(num2(a[0]))),
-    cos: fn("cos", (a) => Math.cos(num2(a[0]))),
-    tan: fn("tan", (a) => Math.tan(num2(a[0]))),
-    asin: fn("asin", (a) => Math.asin(num2(a[0]))),
-    acos: fn("acos", (a) => Math.acos(num2(a[0]))),
-    atan: fn("atan", (a) => Math.atan(num2(a[0]))),
-    atan2: fn("atan2", (a) => Math.atan2(num2(a[0]), num2(a[1]))),
-    hypot: fn("hypot", (a) => Math.hypot(...a.map(num2))),
-    gcd: fn("gcd", (a) => getPyRunner().call("py_gcd", Math.trunc(num2(a[0])), Math.trunc(num2(a[1])))),
-    factorial: fn("factorial", (a) => getPyRunner().call("py_factorial", Math.trunc(num2(a[0])))),
-    isnan: fn("isnan", (a) => Number.isNaN(num2(a[0]))),
-    isinf: fn("isinf", (a) => !Number.isFinite(num2(a[0])) && !Number.isNaN(num2(a[0])))
+    sqrt: fn("sqrt", (a) => Math.sqrt(num(a[0]))),
+    floor: fn("floor", (a) => Math.floor(num(a[0]))),
+    ceil: fn("ceil", (a) => Math.ceil(num(a[0]))),
+    trunc: fn("trunc", (a) => Math.trunc(num(a[0]))),
+    fabs: fn("fabs", (a) => Math.abs(num(a[0]))),
+    exp: fn("exp", (a) => Math.exp(num(a[0]))),
+    log: fn("log", (a) => a[1] === void 0 ? Math.log(num(a[0])) : Math.log(num(a[0])) / Math.log(num(a[1]))),
+    log2: fn("log2", (a) => Math.log2(num(a[0]))),
+    log10: fn("log10", (a) => Math.log10(num(a[0]))),
+    sin: fn("sin", (a) => Math.sin(num(a[0]))),
+    cos: fn("cos", (a) => Math.cos(num(a[0]))),
+    tan: fn("tan", (a) => Math.tan(num(a[0]))),
+    asin: fn("asin", (a) => Math.asin(num(a[0]))),
+    acos: fn("acos", (a) => Math.acos(num(a[0]))),
+    atan: fn("atan", (a) => Math.atan(num(a[0]))),
+    atan2: fn("atan2", (a) => Math.atan2(num(a[0]), num(a[1]))),
+    hypot: fn("hypot", (a) => Math.hypot(...a.map(num))),
+    gcd: fn("gcd", (a) => getPyRunner().call("py_gcd", Math.trunc(num(a[0])), Math.trunc(num(a[1])))),
+    factorial: fn("factorial", (a) => getPyRunner().call("py_factorial", Math.trunc(num(a[0])))),
+    isnan: fn("isnan", (a) => Number.isNaN(num(a[0]))),
+    isinf: fn("isinf", (a) => !Number.isFinite(num(a[0])) && !Number.isNaN(num(a[0])))
   });
   const jsonModule = moduleTome({
     dumps: fn("dumps", (a) => JSON.stringify(a[0])),
@@ -7940,10 +7940,10 @@ function createParityBuiltins(output, host) {
   });
   const randomModule = moduleTome({
     random: fn("random", () => Math.random()),
-    randint: fn("randint", (a) => Math.floor(Math.random() * (num2(a[1]) - num2(a[0]) + 1)) + num2(a[0])),
-    uniform: fn("uniform", (a) => Math.random() * (num2(a[1]) - num2(a[0])) + num2(a[0])),
+    randint: fn("randint", (a) => Math.floor(Math.random() * (num(a[1]) - num(a[0]) + 1)) + num(a[0])),
+    uniform: fn("uniform", (a) => Math.random() * (num(a[1]) - num(a[0])) + num(a[0])),
     choice: fn("choice", (a, line) => {
-      const items = list2(a[0], line);
+      const items = list(a[0], line);
       return items[Math.floor(Math.random() * items.length)];
     }),
     shuffle: fn("shuffle", (a) => {
@@ -7955,8 +7955,8 @@ function createParityBuiltins(output, host) {
       return xs;
     }),
     sample: fn("sample", (a, line) => {
-      const items = [...list2(a[0], line)];
-      const k = num2(a[1]);
+      const items = [...list(a[0], line)];
+      const k = num(a[1]);
       const out = [];
       for (let i = 0; i < k && items.length; i++) out.push(items.splice(Math.floor(Math.random() * items.length), 1)[0]);
       return out;
@@ -8035,7 +8035,7 @@ function createParityBuiltins(output, host) {
   }
   add("truthy", (args) => host.truthy(args[0]));
   add("is_generator", (args) => isGenerator(args[0]));
-  add("freeze", (args, line) => new SdevSet(list2(args[0], line), true));
+  add("freeze", (args, line) => new SdevSet(list(args[0], line), true));
   add("ascii", (args) => repr(args[0]));
   add("sdev_isTruthy", (args) => isTruthy(args[0]));
   return b;
@@ -9210,17 +9210,17 @@ ${body}
     return parts.length ? " " + parts.join(" ") : "";
   }
   function parseElArgs(tag, args) {
-    let text3 = "";
+    let text2 = "";
     let rawHtml;
     const attrs = {};
     let childrenFn;
     let childrenList;
     if (tag === "a" && args.length >= 2 && typeof args[0] === "string" && typeof args[1] === "string") {
-      text3 = args[0];
+      text2 = args[0];
       attrs.href = args[1];
       if (isPlainObject(args[2])) Object.assign(attrs, args[2]);
       if (isFunction(args[3])) childrenFn = args[3];
-      return { text: text3, attrs, childrenFn };
+      return { text: text2, attrs, childrenFn };
     }
     if (tag === "img" && args.length >= 1 && typeof args[0] === "string") {
       attrs.src = args[0];
@@ -9230,16 +9230,16 @@ ${body}
       return { text: "", attrs };
     }
     if (tag === "button" && args.length >= 2 && typeof args[0] === "string" && isFunction(args[1])) {
-      text3 = args[0];
+      text2 = args[0];
       const fn2 = args[1];
       if (isPlainObject(args[2])) Object.assign(attrs, args[2]);
       const transpiled = sdevFuncToJs(fn2);
       if (transpiled && !/\b(div|span|p|h[1-6]|icon|img|svg|raw_html|tag|open)\s*\(/.test(transpiled.body)) {
         attrs.onclick = fn2;
-        return { text: text3, attrs };
+        return { text: text2, attrs };
       }
       childrenFn = fn2;
-      return { text: text3, attrs, childrenFn };
+      return { text: text2, attrs, childrenFn };
     }
     for (const arg of args) {
       if (arg === null || arg === void 0) continue;
@@ -9250,20 +9250,20 @@ ${body}
       } else if (isPlainObject(arg)) {
         Object.assign(attrs, arg);
       } else {
-        text3 += (text3 ? " " : "") + asStr(arg);
+        text2 += (text2 ? " " : "") + asStr(arg);
       }
     }
     if (typeof attrs.html === "string") rawHtml = attrs.html;
     else if (typeof attrs.innerHTML === "string") rawHtml = attrs.innerHTML;
-    if (typeof attrs.text === "string" && !text3) text3 = attrs.text;
+    if (typeof attrs.text === "string" && !text2) text2 = attrs.text;
     if (isFunction(attrs.children) && !childrenFn) childrenFn = attrs.children;
     if (Array.isArray(attrs.children) && !childrenList) childrenList = attrs.children;
-    return { text: text3, rawHtml, attrs, childrenFn, childrenList };
+    return { text: text2, rawHtml, attrs, childrenFn, childrenList };
   }
   function renderElementToString(rawTagSpec, args) {
     const spec = parseTagSpec(rawTagSpec);
     const tag = spec.tag;
-    const { text: text3, rawHtml, attrs, childrenFn, childrenList } = parseElArgs(tag, args);
+    const { text: text2, rawHtml, attrs, childrenFn, childrenList } = parseElArgs(tag, args);
     const attrStr = renderAttrs(attrs, spec);
     if (VOID_TAGS.has(tag)) {
       return `<${tag}${attrStr}>`;
@@ -9271,8 +9271,8 @@ ${body}
     let inner = "";
     if (rawHtml !== void 0) {
       inner += stripSafeMarkers(rawHtml);
-    } else if (text3) {
-      inner += renderSafeText(text3);
+    } else if (text2) {
+      inner += renderSafeText(text2);
     }
     if (childrenList) {
       for (const item of childrenList) {
@@ -10543,16 +10543,16 @@ ${cssRuleFromDict(sel, dict)}
     return emitElement("textarea", [{ ...placeholder ? { placeholder } : {}, ...attrs }]);
   } });
   builtins.set("label_el", { type: "builtin", call: (args) => {
-    const text3 = args[0];
+    const text2 = args[0];
     const forId = asStr(args[1], "");
     const attrs = isPlainObject(args[2]) ? args[2] : {};
-    return emitElement("label", [text3, { ...forId ? { for: forId } : {}, ...attrs }]);
+    return emitElement("label", [text2, { ...forId ? { for: forId } : {}, ...attrs }]);
   } });
   builtins.set("option_el", { type: "builtin", call: (args) => {
-    const text3 = args[0];
+    const text2 = args[0];
     const value2 = asStr(args[1], "");
     const selected = Boolean(args[2]);
-    return emitElement("option", [text3, { value: value2, ...selected ? { selected: true } : {} }]);
+    return emitElement("option", [text2, { value: value2, ...selected ? { selected: true } : {} }]);
   } });
   builtins.set("li_html", { type: "builtin", call: (args) => {
     const attrs = isPlainObject(args[1]) ? args[1] : {};
@@ -11260,8 +11260,8 @@ var init_interpreter = __esm({
             continue;
           }
           const value2 = yield* this.ev(part.expr, env2);
-          const text3 = formatValue(value2, part.spec, part.conv);
-          out += part.debug ? `${part.debug}=${text3}` : text3;
+          const text2 = formatValue(value2, part.spec, part.conv);
+          out += part.debug ? `${part.debug}=${text2}` : text2;
         }
         return out;
       }
@@ -11394,17 +11394,17 @@ var init_interpreter = __esm({
         });
       }
       *evUnary(node, env2) {
-        const operand2 = yield* this.ev(node.operand, env2);
+        const operand = yield* this.ev(node.operand, env2);
         switch (node.operator) {
           case "-": {
-            const m2 = this.protocolMethod(operand2, "on_neg");
+            const m2 = this.protocolMethod(operand, "on_neg");
             if (m2) return m2.call([], node.line);
-            if (typeof operand2 === "number") return -operand2;
-            if (typeof operand2 === "string" && operand2.trim() !== "" && !isNaN(Number(operand2))) return -Number(operand2);
+            if (typeof operand === "number") return -operand;
+            if (typeof operand === "string" && operand.trim() !== "" && !isNaN(Number(operand))) return -Number(operand);
             throw new SdevError("Cannot use '-' with non-number", node.line);
           }
           case "isnt":
-            return !this.truthy(operand2);
+            return !this.truthy(operand);
           default:
             throw new SdevError(`Unknown unary operator: ${node.operator}`, node.line);
         }
@@ -11689,8 +11689,8 @@ var init_interpreter = __esm({
       }
       *evAugAssign(node, env2) {
         const current = yield* this.ev(node.target, env2);
-        const operand2 = yield* this.ev(node.value, env2);
-        const updated = this.applyBinary(node.operator, current, operand2, node.line);
+        const operand = yield* this.ev(node.value, env2);
+        const updated = this.applyBinary(node.operator, current, operand, node.line);
         if (node.target.type === "Identifier") {
           env2.set(node.target.name, updated, node.line);
         } else if (node.target.type === "IndexExpr") {
@@ -12208,8 +12208,8 @@ var init_interpreter = __esm({
           const lists = seqs.map((s) => [...s]).filter((s) => s.length);
           while (lists.length) {
             let head2;
-            for (const list2 of lists) {
-              const candidate = list2[0];
+            for (const list of lists) {
+              const candidate = list[0];
               if (!lists.some((other) => other.slice(1).includes(candidate))) {
                 head2 = candidate;
                 break;
@@ -12219,7 +12219,7 @@ var init_interpreter = __esm({
               return seqs.flat().filter((c, i, a) => a.indexOf(c) === i);
             }
             result.push(head2);
-            for (const list2 of lists) if (list2[0] === head2) list2.shift();
+            for (const list of lists) if (list[0] === head2) list.shift();
             for (let i = lists.length - 1; i >= 0; i--) if (!lists[i].length) lists.splice(i, 1);
           }
           return result;
@@ -12630,7 +12630,7 @@ function compileReplacer(lang, target = "v1") {
 }
 function segmentSource(source) {
   const raw = getTranslatorRunner().call("translator_segment_source", source);
-  return raw.map(([codeFlag, text3]) => ({ code: codeFlag === 1, text: text3 }));
+  return raw.map(([codeFlag, text2]) => ({ code: codeFlag === 1, text: text2 }));
 }
 function hasNonAscii(code) {
   return Number(getTranslatorRunner().call("translator_has_non_ascii", code)) === 1;
@@ -12642,10 +12642,10 @@ function detectLanguage(source, protect) {
   ) || []).length;
   let bestLang = null;
   let bestScore = 0;
-  const hasWholeWord = (text3, word) => {
+  const hasWholeWord = (text2, word) => {
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/_/g, "[\\s_]+");
     const re2 = new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, "u");
-    return re2.test(text3);
+    return re2.test(text2);
   };
   for (const lang of SUPPORTED_LANGUAGES) {
     const table = KEYWORD_TABLES[lang];
@@ -12676,7 +12676,7 @@ function dialectWords(spec) {
   const words = /* @__PURE__ */ new Set();
   if (!spec) return words;
   for (const w of Object.values(spec.names ?? {})) words.add(w);
-  for (const list2 of Object.values(spec.synonyms ?? {})) for (const w of list2) words.add(w);
+  for (const list of Object.values(spec.synonyms ?? {})) for (const w of list) words.add(w);
   for (const fn2 of spec.constructs?.functions ?? []) words.add(fn2.name);
   return words;
 }
@@ -18199,11 +18199,565 @@ conjure sdev_eval_program(source, inputs) ::
   }
 });
 
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\brain.sdev
+var brain_default;
+var init_brain = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\brain.sdev"() {
+    brain_default = '// =====================================================================\n// brain.sdev \u2014 Directives, LLM output sanitizer, JSON/code reply parser,\n// Micro-Brain NL solver & speculative translator, WebLLM->online\n// fallback rules, and IDE translation helpers, written in sdev.\n// =====================================================================\n\nforge BR_NAME be "[a-zA-Z_]\\\\w*"\nforge BR_NL_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\n\n// ---------- 1. Directive scanner ----------\n// Returns [mode, brain, learn, found, stripped_source]\nconjure scan_directives(source) ::\n  forge mode be ""\n  forge brain be ""\n  forge learn be void\n  forge found be nope\n  forge out be []\n  iterate line through shatter(source, "\\n") ::\n    forge m be regex_capture(trim(line), "^!#\\\\s*agent\\\\s*:\\\\s*([a-z]+)(?:\\\\s*:\\\\s*([a-z]+))?$", "i")\n    ponder m equals void ::\n      out be out + [line]\n    ;; otherwise ::\n      found be yep\n      forge head be lower(m[1])\n      forge tail be lower(m[2])\n      ponder head equals "off" ::\n        mode be "off"\n      ;; otherwise ponder head equals "on" ::\n        ponder mode equals "off" either mode equals "" ::\n          mode be "on"\n        ;;\n      ;; otherwise ponder head equals "auto" ::\n        ponder mode equals "" ::\n          mode be "auto"\n        ;;\n        brain be "auto"\n      ;; otherwise ponder head equals "strict" ::\n        mode be "strict"\n      ;; otherwise ponder head equals "local" ::\n        brain be "local"\n        ponder mode equals "" ::\n          mode be "on"\n        ;;\n      ;; otherwise ponder head equals "online" ::\n        brain be "online"\n        ponder mode equals "" ::\n          mode be "on"\n        ;;\n      ;; otherwise ponder head equals "nobrain" either head equals "rules" ::\n        brain be "none"\n      ;; otherwise ponder head equals "learn" ::\n        learn be (tail differs "off" also tail differs "no")\n      ;;\n      out be out + [""]\n    ;;\n  ;;\n  yield [mode, brain, learn, found, found ~ weave(out, "\\n") : source]\n;;\n\n// ---------- 2. Natural-language request detector ----------\nconjure is_request(source) ::\n  forge rows be []\n  iterate raw through lines(source) ::\n    forge t be trim(raw)\n    ponder t differs "" also isnt startswith(t, "#") also isnt startswith(t, "//") ::\n      rows be rows + [t]\n    ;;\n  ;;\n  ponder measure(rows) equals 0 either measure(rows) > 6 ::\n    yield nope\n  ;;\n  iterate row through rows ::\n    ponder regex_test(row, "[=(){}\\\\[\\\\]]|::|;;") also isnt regex_test(row, "^[\\\\p{L}\\\\s,.\'\\"!?-]+$") ::\n      yield nope\n    ;;\n  ;;\n  forge text be weave(rows, " ")\n  forge verb be "^(please\\\\s+)?(make|build|create|write|code|generate|design|program|draw|give\\\\s+me|show\\\\s+me|i\\\\s+want|i\\\\s+need|i\'d\\\\s+like|can\\\\s+you|could\\\\s+you|let\'s|lets)\\\\b"\n  forge thing be "\\\\b(window|app|application|program|game|calculator|form|page|site|website|tool|todo|to-do|list|clock|timer|stopwatch|converter|quiz|interface|gui|ui|button|buttons|menu|counter|chat|editor|notes?|tracker|dashboard|generator|simulator|animation|drawing)\\\\b"\n  yield regex_test(text, verb, "i") also regex_test(text, thing, "i") also measure(words(text)) >= 3\n;;\n\n// ---------- 3. Local server endpoint normalizer ----------\n// Returns [base_url, chat_url, models_url, tags_url, is_ollama_native]\nconjure normalize_local_endpoints(raw_input) ::\n  forge u be trim(raw_input)\n  ponder u equals "" ::\n    u be "http://127.0.0.1:11434"\n  ;;\n  ponder isnt regex_test(u, "^https?://", "i") ::\n    u be "http://" + u\n  ;;\n  u be regex_replace(u, "/+$", "")\n  ponder regex_test(u, "/api/chat$", "i") ::\n    forge base be regex_replace(u, "/api/chat$", "", "i")\n    yield [base, u, base + "/v1/models", base + "/api/tags", yep]\n  ;;\n  ponder regex_test(u, "/v1/chat/completions$", "i") ::\n    forge base be regex_replace(u, "/v1/chat/completions$", "", "i")\n    yield [base, u, base + "/v1/models", base + "/api/tags", nope]\n  ;;\n  forge base be regex_replace(u, "/v1$", "", "i")\n  yield [base, base + "/v1/chat/completions", base + "/v1/models", base + "/api/tags", nope]\n;;\n\n// ---------- 4. LLM brain output sanitizer ----------\nconjure br_comma_args(raw) ::\n  forge trimmed be trim(raw)\n  ponder trimmed equals "" ::\n    yield ""\n  ;;\n  forge parts be []\n  iterate a through shatter(trimmed, ",") ::\n    forge p be trim(a)\n    ponder p differs "" ::\n      parts be parts + [p]\n    ;;\n  ;;\n  yield weave(parts, " ")\n;;\n\nconjure sanitize_brain_output(code, format) ::\n  ponder code equals "" ::\n    yield ""\n  ;;\n  forge text be trim(code)\n  forge fence_m be regex_capture(text, "^```(?:[a-zA-Z0-9_:-]+)?\\\\r?\\\\n([\\\\s\\\\S]*?)\\\\r?\\\\n```$")\n  ponder fence_m differs void ::\n    text be trim(fence_m[1])\n  ;;\n\n  forge has_ai_markers be regex_test(text, "^\\\\s*!#ai\\\\b", "m") either regex_test(text, "^\\\\s*(?:v\\\\s+[a-zA-Z_]|f\\\\s+[a-zA-Z_]\\\\w*\\\\s*\\\\(|p\\\\s*\\\\(|\\\\?\\\\s+.+?\\\\{|each\\\\s+[a-zA-Z_]\\\\w*\\\\s+in\\\\b)", "m")\n  ponder has_ai_markers either format equals "ai" ::\n    ponder isnt regex_test(text, "^\\\\s*!#ai\\\\b", "m") ::\n      text be "!#ai\\n" + text\n    ;;\n    forge open_b be measure(regex_find_all(text, "\\\\{"))\n    forge close_b be measure(regex_find_all(text, "\\\\}"))\n    ponder open_b > close_b ::\n      text be text + "\\n" + repeat("}", open_b - close_b)\n    ;;\n    yield text\n  ;;\n\n  forge ls be lines(text)\n  forge n be measure(ls)\n  forge out be []\n  forge i be 0\n  cycle i < n ::\n    forge line be ls[i]\n    forge trimmed be trim(line)\n    forge skip_line be nope\n    ponder i equals 0 also regex_test(trimmed, "^(?:here\\\\s+is|sure|certainly|this\\\\s+program|below\\\\s+is|the\\\\s+following|here\'s)\\\\b", "i") ::\n      skip_line be yep\n    ;;\n    ponder i equals n - 1 also regex_test(trimmed, "^(?:hope\\\\s+this|let\\\\s+me\\\\s+know|feel\\\\s+free|enjoy|cheers)\\\\b", "i") ::\n      skip_line be yep\n    ;;\n    ponder isnt skip_line ::\n      line be regex_replace(line, "^(\\\\s*)print\\\\s*\\\\((.*)\\\\)\\\\s*;?$", "$1say $2")\n      line be regex_replace(line, "^(\\\\s*)console\\\\.log\\\\s*\\\\((.*)\\\\)\\\\s*;?$", "$1say $2")\n      line be regex_replace(line, "^(\\\\s*)echo\\\\s+(.*)$", "$1say $2")\n      line be regex_replace(line, "^(\\\\s*)(?:let|var|const)\\\\s+([a-zA-Z_]\\\\w*)\\\\s*=\\\\s*(.+?);?$", "$1set $2 to $3")\n\n      forge def_m be regex_capture(line, "^(\\\\s*)def\\\\s+([a-zA-Z_]\\\\w*)\\\\s*\\\\(([^)]*)\\\\)\\\\s*:?\\\\s*$")\n      ponder def_m differs void ::\n        forge args_s be br_comma_args(def_m[3])\n        line be def_m[1] + "to " + def_m[2] + (args_s differs "" ~ " with " + args_s : "")\n      ;;\n\n      forge fn_m be regex_capture(line, "^(\\\\s*)function\\\\s+([a-zA-Z_]\\\\w*)\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{?\\\\s*$")\n      ponder fn_m differs void ::\n        forge args_s be br_comma_args(fn_m[3])\n        line be fn_m[1] + "to " + fn_m[2] + (args_s differs "" ~ " with " + args_s : "")\n      ;;\n\n      line be regex_replace(line, "^(\\\\s*)elif\\\\s+(.*?)\\\\s*:?\\\\s*$", "$1else if $2")\n      line be regex_replace(line, "^(\\\\s*)for\\\\s+(?:each\\\\s+)?([a-zA-Z_]\\\\w*)\\\\s+in\\\\s+range\\\\s*\\\\(([^)]+)\\\\)\\\\s*:?\\\\s*$", "$1for each $2 in sequence($3)")\n      line be regex_replace(line, "^(\\\\s*)for\\\\s+([a-zA-Z_]\\\\w*)\\\\s+in\\\\s+([a-zA-Z_][\\\\w.\\\\[\\\\]]*)\\\\s*:?\\\\s*$", "$1for each $2 in $3")\n      line be regex_replace(line, "^(\\\\s*(?:if\\\\b|else\\\\b|while\\\\b|for\\\\s+each\\\\b|to\\\\b).*?)\\\\s*:\\\\s*$", "$1")\n      out be out + [line]\n    ;;\n    i be i + 1\n  ;;\n\n  yield close_blocks(unlines(out))\n;;\n\n// ---------- 5. Brain reply parser ----------\nconjure br_extract_json_reply(raw_json, format) ::\n  attempt ::\n    forge j be unetch(raw_json)\n    ponder essence(j) equals "tome" also has(j, "canonical") also essence(j["canonical"]) equals "text" ::\n      forge notes be (has(j, "notes") also essence(j["notes"]) equals "text") ~ j["notes"] : void\n      forge w be (has(j, "words") also essence(j["words"]) equals "tome") ~ j["words"] : void\n      yield [sanitize_brain_output(j["canonical"], format), notes, w]\n    ;;\n  ;; rescue _err ::\n    yield void\n  ;;\n  yield void\n;;\n\n// Returns [canonical, notes_or_void, words_or_void] or void\nconjure parse_brain_reply(text, format) ::\n  forge trimmed be trim(text)\n  ponder trimmed equals "" ::\n    yield void\n  ;;\n\n  // 1. Direct JSON\n  forge direct be br_extract_json_reply(trimmed, format)\n  ponder direct differs void ::\n    yield direct\n  ;;\n\n  // 2. Markdown code fences\n  forge fences be regex_find_all(trimmed, "```(?:json|sdev|sdev:ai)?\\\\s*[\\\\s\\\\S]*?\\\\s*```", "i")\n  iterate fence through fences ::\n    forge fm be regex_capture(fence, "^```(?:json|sdev|sdev:ai)?\\\\s*([\\\\s\\\\S]*?)\\\\s*```$", "i")\n    ponder fm differs void ::\n      forge block be trim(fm[1])\n      forge jr be br_extract_json_reply(block, format)\n      ponder jr differs void ::\n        yield jr\n      ;;\n      ponder measure(block) > 0 also isnt startswith(block, "{") ::\n        yield [sanitize_brain_output(block, format), void, void]\n      ;;\n    ;;\n  ;;\n\n  // 3. Embedded JSON object with "canonical" key\n  forge jm be regex_capture(trimmed, "(\\\\{[\\\\s\\\\S]*?\\"canonical\\"\\\\s*:[\\\\s\\\\S]*?\\\\})")\n  ponder jm differs void ::\n    forge er be br_extract_json_reply(jm[1], format)\n    ponder er differs void ::\n      yield er\n    ;;\n    forge cm be regex_capture(jm[1], "\\"canonical\\"\\\\s*:\\\\s*\\"([\\\\s\\\\S]*?)\\"\\\\s*(?:,\\\\s*\\"notes\\"|\\\\})")\n    ponder cm differs void ::\n      forge unescaped be replace(replace(cm[1], "\\\\n", "\\n"), "\\\\\\"", "\\"")\n      yield [sanitize_brain_output(unescaped, format), void, void]\n    ;;\n  ;;\n\n  // 4. Bare code fallback\n  forge bare be regex_replace(trimmed, "^```[a-zA-Z0-9_-]*\\\\s*", "", "i")\n  bare be trim(regex_replace(bare, "```\\\\s*$", "", "i"))\n  ponder bare equals "" ::\n    yield void\n  ;;\n  yield [sanitize_brain_output(bare, format), void, void]\n;;\n\n// ---------- 6. Micro-Brain Natural Language Solver ----------\nconjure solve_nl_request(prompt) ::\n  forge lower_p be lower(trim(prompt))\n  ponder lower_p equals "" ::\n    yield void\n  ;;\n\n  // 1. FizzBuzz\n  forge fizz_m be regex_capture(lower_p, "\\\\bfizz\\\\s*buzz(?:\\\\s+(?:up\\\\s+to|to)\\\\s+(\\\\d+))?\\\\b")\n  ponder fizz_m differs void ::\n    forge limit be fizz_m[1] differs "" ~ int(fizz_m[1]) : 15\n    yield unlines([\n      "for each i in sequence(1, " + str(limit + 1) + ")",\n      "  if i % 15 == 0",\n      "    say \\"FizzBuzz\\"",\n      "  else if i % 3 == 0",\n      "    say \\"Fizz\\"",\n      "  else if i % 5 == 0",\n      "    say \\"Buzz\\"",\n      "  else",\n      "    say i",\n      "  end",\n      "end"\n    ])\n  ;;\n\n  // 2. Circle area\n  forge circle_m be regex_capture(lower_p, "\\\\barea\\\\s+of\\\\s+(?:a\\\\s+)?circle\\\\s+(?:with\\\\s+)?(?:radius\\\\s+)?(?:of\\\\s+)?(\\\\d+(?:\\\\.\\\\d+)?)")\n  ponder circle_m differs void ::\n    yield unlines([\n      "set r to " + circle_m[1],\n      "set pi to 3.141592653589793",\n      "say pi * r * r"\n    ])\n  ;;\n\n  // 3. Sorted shopping list\n  forge shop_m be regex_capture(lower_p, "(?:shopping\\\\s+list|list)\\\\s+with\\\\s+(.+?)\\\\s+and\\\\s+print\\\\s+it\\\\s+sorted")\n  ponder shop_m differs void ::\n    forge norm_items be regex_replace(shop_m[1], "\\\\band\\\\b", ",")\n    forge items be []\n    iterate part through shatter(norm_items, ",") ::\n      forge clean be trim(part)\n      ponder clean differs "" ::\n        items be items + [clean]\n      ;;\n    ;;\n    yield unlines([\n      "set items to " + etch(items),\n      "for each item in sort(items)",\n      "  say item",\n      "end"\n    ])\n  ;;\n\n  // 4. Even or odd numbers\n  forge parity_m be regex_capture(lower_p, "\\\\b(even|odd)\\\\s+numbers?\\\\s+(?:between|from)\\\\s+(\\\\d+)\\\\s+(?:and|to)\\\\s+(\\\\d+)")\n  ponder parity_m differs void ::\n    forge mod_val be parity_m[1] equals "even" ~ "0" : "1"\n    forge b_end be int(parity_m[3]) + 1\n    yield unlines([\n      "for each i in sequence(" + parity_m[2] + ", " + str(b_end) + ")",\n      "  if i % 2 == " + mod_val,\n      "    say i",\n      "  end",\n      "end"\n    ])\n  ;;\n\n  // 5a. Celsius to Fahrenheit\n  forge ctof_m be regex_capture(lower_p, "\\\\bconvert\\\\s+(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*(?:degrees?\\\\s+)?celsius\\\\s+to\\\\s+fahrenheit\\\\b")\n  ponder ctof_m differs void ::\n    yield unlines([\n      "set c to " + ctof_m[1],\n      "say c * 9 / 5 + 32"\n    ])\n  ;;\n\n  // 5b. Fahrenheit to Celsius\n  forge ftoc_m be regex_capture(lower_p, "\\\\bconvert\\\\s+(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*(?:degrees?\\\\s+)?fahrenheit\\\\s+to\\\\s+celsius\\\\b")\n  ponder ftoc_m differs void ::\n    yield unlines([\n      "set f to " + ftoc_m[1],\n      "say (f - 32) * 5 / 9"\n    ])\n  ;;\n\n  // 6. Max or min number\n  forge mm_m be regex_capture(lower_p, "\\\\b(biggest|largest|maximum|max|smallest|minimum|min)\\\\s+number\\\\s+in\\\\s+([0-9,\\\\s\\\\band]+)")\n  ponder mm_m differs void ::\n    forge is_max be regex_test(mm_m[1], "big|large|max")\n    forge nums be regex_find_all(mm_m[2], "-?\\\\d+(?:\\\\.\\\\d+)?")\n    ponder measure(nums) > 0 ::\n      forge op be is_max ~ "max" : "min"\n      yield unlines([\n        "set numbers to [" + weave(nums, ", ") + "]",\n        "say " + op + "(numbers)"\n      ])\n    ;;\n  ;;\n\n  // 7. Function that doubles / triples / squares\n  forge fnop_m be regex_capture(lower_p, "\\\\bfunction\\\\s+that\\\\s+(doubles|triples|squares)\\\\s+(?:a\\\\s+number\\\\s+)?and\\\\s+use\\\\s+it\\\\s+on\\\\s+(\\\\d+(?:\\\\.\\\\d+)?)")\n  ponder fnop_m differs void ::\n    forge op be fnop_m[1]\n    forge expr be op equals "doubles" ~ "n * 2" : (op equals "triples" ~ "n * 3" : "n * n")\n    forge fn_name be op equals "doubles" ~ "double" : (op equals "triples" ~ "triple" : "square")\n    yield unlines([\n      "to " + fn_name + " with n",\n      "  return " + expr,\n      "end",\n      "say " + fn_name + "(" + fnop_m[2] + ")"\n    ])\n  ;;\n\n  // 8. Palindrome\n  forge pal_m be regex_capture(lower_p, "\\\\b(?:check\\\\s+if\\\\s+|is\\\\s+)?[\\"\']?([a-zA-Z0-9]+)[\\"\']?\\\\s+(?:a\\\\s+)?palindrome\\\\b")\n  ponder pal_m differs void also pal_m[1] differs "" ::\n    forge w be pal_m[1]\n    yield unlines([\n      "set word to \\"" + w + "\\"",\n      "if word is weave(reverse(chars(word)), \\"\\")",\n      "  say \\"" + w + " is a palindrome\\"",\n      "else",\n      "  say \\"not a palindrome\\"",\n      "end"\n    ])\n  ;;\n\n  // 9. Count vowels\n  forge vowel_m be regex_capture(lower_p, "\\\\bvowels\\\\s+(?:are\\\\s+)?in\\\\s+(?:the\\\\s+word\\\\s+)?[\\"\']?([a-zA-Z]+)[\\"\']?")\n  ponder vowel_m differs void also vowel_m[1] differs "" ::\n    yield unlines([\n      "set word to \\"" + vowel_m[1] + "\\"",\n      "set vowels to [\\"a\\", \\"e\\", \\"i\\", \\"o\\", \\"u\\"]",\n      "set total to 0",\n      "for each ch in chars(lower(word))",\n      "  if contains(vowels, ch)",\n      "    set total to total + 1",\n      "  end",\n      "end",\n      "say total"\n    ])\n  ;;\n\n  // 10. Fibonacci\n  forge fib_m be regex_capture(lower_p, "\\\\bfirst\\\\s+(\\\\d+)\\\\s+fibonacci\\\\b")\n  ponder fib_m differs void ::\n    yield unlines([\n      "set a to 0",\n      "set b to 1",\n      "say a",\n      "say b",\n      "for each i in sequence(2, " + fib_m[1] + ")",\n      "  set c to a + b",\n      "  say c",\n      "  set a to b",\n      "  set b to c",\n      "end"\n    ])\n  ;;\n\n  // 11. Sum A to B\n  forge sum_m be regex_capture(lower_p, "\\\\bsum\\\\s+(?:all\\\\s+)?numbers?\\\\s+(?:from\\\\s+)?(\\\\d+)\\\\s+to\\\\s+(\\\\d+)")\n  ponder sum_m differs void ::\n    forge b_end be int(sum_m[2]) + 1\n    yield unlines([\n      "set total to 0",\n      "for each i in sequence(" + sum_m[1] + ", " + str(b_end) + ")",\n      "  set total to total + i",\n      "end",\n      "say total"\n    ])\n  ;;\n\n  // 12. Person record\n  forge person_m be regex_capture(lower_p, "\\\\bperson\\\\s+named\\\\s+([a-zA-Z]+)\\\\s+who\\\\s+is\\\\s+(\\\\d+)\\\\s+and\\\\s+print\\\\s+(?:her|his|their)?\\\\s*name\\\\s+and\\\\s+age")\n  ponder person_m differs void ::\n    forge raw_name be person_m[1]\n    forge cap_name be upper(portion(raw_name, 0, 1)) + portion(raw_name, 1)\n    yield unlines([\n      "set person to {name: \\"" + cap_name + "\\", age: " + person_m[2] + "}",\n      "say person.name",\n      "say person.age"\n    ])\n  ;;\n\n  // 13. Factorial\n  forge fact_m be regex_capture(lower_p, "\\\\bfactorial\\\\s+of\\\\s+(\\\\d+)\\\\b")\n  ponder fact_m differs void ::\n    forge n_end be int(fact_m[1]) + 1\n    yield unlines([\n      "set total to 1",\n      "for each i in sequence(1, " + str(n_end) + ")",\n      "  set total to total * i",\n      "end",\n      "say total"\n    ])\n  ;;\n\n  yield void\n;;\n\n// ---------- 7. Micro-Brain Speculative Code Translator ----------\nconjure normalize_expr_speculative(expr) ::\n  forge e be trim(expr)\n  e be regex_replace(e, ";+\\\\s*$", "")\n  e be regex_replace(e, "\\\\btrue\\\\b", "yep", "i")\n  e be regex_replace(e, "\\\\bfalse\\\\b", "nope", "i")\n  e be regex_replace(e, "\\\\bnull\\\\b|\\\\bNone\\\\b|\\\\bnil\\\\b", "void")\n  e be replace(e, "===", " equals ")\n  e be replace(e, "==", " equals ")\n  e be replace(e, "!==", " differs ")\n  e be replace(e, "!=", " differs ")\n  e be regex_replace(e, "\\\\bis equal to\\\\b", "equals", "i")\n  e be regex_replace(e, "\\\\bis not equal to\\\\b", "differs", "i")\n  e be regex_replace(e, "\\\\bis greater than or equal to\\\\b", ">=", "i")\n  e be regex_replace(e, "\\\\bis less than or equal to\\\\b", "<=", "i")\n  e be regex_replace(e, "\\\\bis greater than\\\\b", ">", "i")\n  e be regex_replace(e, "\\\\bis less than\\\\b", "<", "i")\n  e be replace(e, "&&", " and ")\n  e be replace(e, "||", " or ")\n  e be regex_replace(e, "\\\\s+", " ")\n  yield trim(e)\n;;\n\n// Returns [line, opened_block, closed_block, reopened_block]\nconjure translate_line_speculative(raw_line) ::\n  forge indent be leading_space(raw_line)\n  forge trimmed be trim(raw_line)\n\n  ponder trimmed equals "" either startswith(trimmed, "//") ::\n    yield [raw_line, nope, nope, nope]\n  ;;\n  ponder startswith(trimmed, "#") also isnt startswith(trimmed, "!#") ::\n    yield [indent + "// " + trim(portion(trimmed, 1)), nope, nope, nope]\n  ;;\n  ponder startswith(trimmed, "!#") ::\n    yield [raw_line, nope, nope, nope]\n  ;;\n  ponder regex_test(trimmed, "^(?:;;|\\\\}|end(?:\\\\s+\\\\w+)?|done|fi|od)$", "i") ::\n    yield [indent + ";;", nope, yep, nope]\n  ;;\n  ponder regex_test(trimmed, "^(?:\\\\}\\\\s*)?(?:else|otherwise)\\\\s*:?\\\\s*\\\\{?$", "i") ::\n    yield [indent + "otherwise ::", nope, nope, yep]\n  ;;\n\n  forge elif_m be regex_capture(trimmed, "^(?:\\\\}\\\\s*)?(?:elif|elseif|else\\\\s+if|otherwise\\\\s+if|otherwise\\\\s+ponder)\\\\s+(.+?)\\\\s*(?::|\\\\{|::)?$", "i")\n  ponder elif_m differs void ::\n    forge cond be regex_replace(elif_m[1], "^\\\\(|\\\\)$", "")\n    yield [indent + "otherwise ponder " + normalize_expr_speculative(cond) + " ::", nope, nope, yep]\n  ;;\n\n  forge fn_m be regex_capture(trimmed, "^(?:def|function|fn|func|to|conjure|define(?:\\\\s+a)?(?:\\\\s+function)?)\\\\s+(" + BR_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*(?:->\\\\s*\\\\w+\\\\s*)?(?::|\\\\{|::)?$", "i")\n  ponder fn_m differs void ::\n    yield [indent + "conjure " + fn_m[1] + "(" + trim(fn_m[2]) + ") ::", yep, nope, nope]\n  ;;\n\n  forge nlfn_m be regex_capture(trimmed, "^(?:create|make|define)\\\\s+(?:a\\\\s+)?function\\\\s+(" + BR_NAME + ")(?:\\\\s+(?:with|taking)\\\\s+(.+?))?\\\\s*:?$", "i")\n  ponder nlfn_m differs void ::\n    forge args be regex_replace(nlfn_m[2], "\\\\band\\\\b", ",")\n    args be regex_replace(args, "\\\\s+", "")\n    yield [indent + "conjure " + nlfn_m[1] + "(" + args + ") ::", yep, nope, nope]\n  ;;\n\n  forge cls_m be regex_capture(trimmed, "^(?:class|struct|essence|craft)\\\\s+(" + BR_NAME + ")\\\\s*(?::|\\\\{|::)?$", "i")\n  ponder cls_m differs void ::\n    yield [indent + "essence " + cls_m[1] + " ::", yep, nope, nope]\n  ;;\n\n  forge ret_m be regex_capture(trimmed, "^(?:return|give(?:\\\\s+back)?|yield|send\\\\s+back)\\\\s+(.+)$", "i")\n  ponder ret_m differs void ::\n    yield [indent + "yield " + normalize_expr_speculative(ret_m[1]), nope, nope, nope]\n  ;;\n\n  forge con_m be regex_capture(trimmed, "^(?:console\\\\.log|System\\\\.out\\\\.println|fmt\\\\.Println|print|println|puts|echo)\\\\s*\\\\((.*)\\\\)\\\\s*;?$", "i")\n  ponder con_m differs void ::\n    yield [indent + "speak(" + normalize_expr_speculative(con_m[1]) + ")", nope, nope, nope]\n  ;;\n\n  forge bare_p be regex_capture(trimmed, "^(?:print|say|display|show|output|echo|speak)\\\\s+(?!\\\\()(.+)$", "i")\n  ponder bare_p differs void ::\n    yield [indent + "speak(" + normalize_expr_speculative(bare_p[1]) + ")", nope, nope, nope]\n  ;;\n\n  forge rep_m be regex_capture(trimmed, "^repeat\\\\s+(\\\\d+|\\\\w+)\\\\s+times\\\\s*(?::|\\\\{|::)?$", "i")\n  ponder rep_m differs void ::\n    yield [indent + "within _step be range(0, " + rep_m[1] + ") ::", yep, nope, nope]\n  ;;\n\n  forge ft_m be regex_capture(trimmed, "^for\\\\s+(" + BR_NAME + ")\\\\s+from\\\\s+(.+?)\\\\s+to\\\\s+(.+?)\\\\s*(?::|\\\\{|::)?$", "i")\n  ponder ft_m differs void ::\n    yield [indent + "within " + ft_m[1] + " be range(" + normalize_expr_speculative(ft_m[2]) + ", " + normalize_expr_speculative(ft_m[3]) + " + 1) ::", yep, nope, nope]\n  ;;\n\n  forge fi_m be regex_capture(trimmed, "^(?:for|foreach|within)\\\\s+(?:each\\\\s+)?(" + BR_NAME + ")\\\\s+(?:in|of|be|through|from)\\\\s+(.+?)\\\\s*(?::|\\\\{|::)?$", "i")\n  ponder fi_m differs void ::\n    yield [indent + "within " + fi_m[1] + " be " + normalize_expr_speculative(fi_m[2]) + " ::", yep, nope, nope]\n  ;;\n\n  forge wh_m be regex_capture(trimmed, "^(?:while|loop\\\\s+while|repeat\\\\s+while|cycle)\\\\s*\\\\(?(.+?)\\\\)?\\\\s*(?::|\\\\{|::)?$", "i")\n  ponder wh_m differs void ::\n    yield [indent + "cycle " + normalize_expr_speculative(wh_m[1]) + " ::", yep, nope, nope]\n  ;;\n\n  forge if_m be regex_capture(trimmed, "^(?:if|when|ponder)\\\\s*\\\\(?(.+?)\\\\)?\\\\s*(?:then\\\\s*)?(?::|\\\\{|::)?$", "i")\n  ponder if_m differs void also (endswith(trimmed, ":") either endswith(trimmed, "{") either endswith(trimmed, "::") either regex_test(trimmed, "\\\\bthen$", "i") either regex_test(trimmed, "^(?:if|when)\\\\b", "i")) ::\n    forge raw_c be trim(regex_replace(if_m[1], "\\\\s+then$", "", "i"))\n    yield [indent + "ponder " + normalize_expr_speculative(raw_c) + " ::", yep, nope, nope]\n  ;;\n\n  forge vd_m be regex_capture(trimmed, "^(?:let|const|var|set|forge|create|define)\\\\s+(" + BR_NAME + ")\\\\s*(?:=|to|as|be|is)\\\\s*(.+)$", "i")\n  ponder vd_m differs void ::\n    yield [indent + "forge " + vd_m[1] + " be " + normalize_expr_speculative(vd_m[2]), nope, nope, nope]\n  ;;\n\n  forge inc_m be regex_capture(trimmed, "^(" + BR_NAME + ")\\\\s*(\\\\+\\\\+|--)\\\\s*;?$")\n  ponder inc_m differs void ::\n    forge op be inc_m[2] equals "++" ~ "+" : "-"\n    yield [indent + inc_m[1] + " be " + inc_m[1] + " " + op + " 1", nope, nope, nope]\n  ;;\n\n  forge aug_m be regex_capture(trimmed, "^(" + BR_NAME + ")\\\\s*(\\\\+=|-=|\\\\*=|/=)\\\\s*(.+?)\\\\s*;?$")\n  ponder aug_m differs void ::\n    forge op be portion(aug_m[2], 0, 1)\n    yield [indent + aug_m[1] + " be " + aug_m[1] + " " + op + " (" + normalize_expr_speculative(aug_m[3]) + ")", nope, nope, nope]\n  ;;\n\n  forge add_m be regex_capture(trimmed, "^add\\\\s+(.+?)\\\\s+to\\\\s+(" + BR_NAME + ")$", "i")\n  ponder add_m differs void ::\n    yield [indent + add_m[2] + " be " + add_m[2] + " + " + normalize_expr_speculative(add_m[1]), nope, nope, nope]\n  ;;\n\n  forge asn_m be regex_capture(trimmed, "^(" + BR_NAME + "(?:\\\\." + BR_NAME + ")?)\\\\s*=\\\\s*(?!=)(.+?)\\\\s*;?$")\n  ponder asn_m differs void ::\n    forge lhs be asn_m[1]\n    forge rhs be normalize_expr_speculative(asn_m[2])\n    forge kw be contains(lhs, ".") ~ (lhs + " be " + rhs) : ("forge " + lhs + " be " + rhs)\n    yield [indent + kw, nope, nope, nope]\n  ;;\n\n  forge cleaned_t be regex_replace(trimmed, ";+\\\\s*$", "")\n  yield [indent + cleaned_t, endswith(trimmed, "::"), trimmed equals ";;", nope]\n;;\n\n// Returns [canonical, changed]\nconjure run_micro_brain_translation(source) ::\n  forge raw_lines be lines(source)\n  forge out_lines be []\n  forge stack be []\n  iterate raw through raw_lines ::\n    forge trimmed be trim(raw)\n    ponder trimmed equals "" ::\n      out_lines be out_lines + [""]\n    ;; otherwise ::\n      forge cur_indent be measure(replace(leading_space(raw), "\\t", "  "))\n      forge tr be translate_line_speculative(raw)\n      forge t_line be tr[0]\n      forge opened be tr[1]\n      forge closed be tr[2]\n      forge reopened be tr[3]\n\n      ponder isnt closed also isnt reopened also isnt startswith(trimmed, "//") also isnt startswith(trimmed, "#") ::\n        cycle measure(stack) > 0 also cur_indent <= stack[-1] ::\n          forge ci be stack[-1]\n          stack be portion(stack, 0, measure(stack) - 1)\n          out_lines be out_lines + [repeat(" ", ci) + ";;"]\n        ;;\n      ;; otherwise ponder reopened ::\n        cycle measure(stack) > 1 also cur_indent < stack[-1] ::\n          forge ci be stack[-1]\n          stack be portion(stack, 0, measure(stack) - 1)\n          out_lines be out_lines + [repeat(" ", ci) + ";;"]\n        ;;\n      ;;\n\n      ponder closed also measure(stack) > 0 ::\n        stack be portion(stack, 0, measure(stack) - 1)\n      ;;\n\n      out_lines be out_lines + [t_line]\n\n      ponder opened ::\n        stack be stack + [cur_indent]\n      ;;\n    ;;\n  ;;\n\n  cycle measure(stack) > 0 ::\n    forge ci be stack[-1]\n    stack be portion(stack, 0, measure(stack) - 1)\n    out_lines be out_lines + [repeat(" ", ci) + ";;"]\n  ;;\n\n  forge canonical be weave(out_lines, "\\n")\n  yield [canonical, trim(canonical) differs trim(source)]\n;;\n\nconjure micro_brain_accepts(parses_ok, unknown_count, changed, unresolved_count, problems_count) ::\n  yield parses_ok also unknown_count equals 0 also (changed either (unresolved_count equals 0 also problems_count equals 0))\n;;\n\n// ---------- 8. WebLLM -> Website AI fallback & scoring ----------\nconjure brain_candidate_score(parses_ok, unknown_count, extra_problems_count) ::\n  forge base be (parses_ok ~ 0 : 100) + unknown_count\n  yield base + (extra_problems_count > 0 ~ 50 : 0)\n;;\n\nconjure brain_needs_online_fallback(has_best, best_score, extra_problems_count, best_source, draft_source) ::\n  ponder isnt has_best either best_score > 0 ::\n    yield yep\n  ;;\n  yield extra_problems_count > 0 also trim(best_source) equals trim(draft_source)\n;;\n\nconjure reconsider_brain_mode(prep_brain, last_used_brain, allow_online, is_online) ::\n  ponder prep_brain equals "auto" also last_used_brain equals "local" also allow_online also is_online ::\n    yield "online"\n  ;;\n  yield prep_brain\n;;\n\n// ---------- 9. File translation & download helpers ----------\nconjure translation_has_diff(written_body, translated_source) ::\n  ponder translated_source equals void either translated_source equals "" ::\n    yield nope\n  ;;\n  yield trim(translated_source) differs trim(written_body)\n;;\n\nconjure translation_download_name(file_name, variant, has_diff) ::\n  ponder variant differs "translated" either isnt has_diff ::\n    yield file_name\n  ;;\n  ponder endswith(lower(file_name), ".sdev") ::\n    yield regex_replace(file_name, "(?:\\\\.translated)?\\\\.sdev$", ".translated.sdev", "i")\n  ;;\n  yield file_name + ".translated.sdev"\n;;\n\nconjure translation_banner_text(from_cache, detected_lang, brain_used) ::\n  forge prefix be from_cache ~ "\u26A1 Cached translation" : "\u2728 Translated"\n  ponder detected_lang differs void also detected_lang differs "" also detected_lang differs "English" ::\n    yield prefix + " from " + detected_lang + " \u2192 canonical sdev"\n  ;;\n  ponder brain_used equals "online" ::\n    yield prefix + " via Website AI \u2192 canonical sdev"\n  ;;\n  ponder brain_used equals "local" ::\n    yield prefix + " via Built-in AI \u2192 canonical sdev"\n  ;;\n  yield prefix + " by understander \u2192 canonical sdev"\n;;\n\n// ---------- 10. Brain prompt builders ----------\nforge BR_SYSTEM_PROMPT be unlines([\n  "You are the understanding agent of the sdev programming language.",\n  "A person wrote something \u2014 a program, a half-program, or a plain request in any human language",\n  "(\\"calculate 23-21\\", \\"count from 1 to 10\\", \\"ask my name and greet me\\", \\"make a shopping list and print it sorted\\").",\n  "Turn it into a complete, WORKING sdev program that does what they meant. Output only code in the JSON field.",\n  "",\n  "Canonical sdev you must write (verified syntax):",\n  "  say X                          print (say \\"a\\" + str(n) to join text and numbers)",\n  "  set NAME to VALUE              create or change a variable",\n  "  set name to input(\\"Prompt? \\")  read text; num(input(\\"\u2026\\")) reads a number",\n  "  if COND / else / end           blocks close with end (indent bodies 2 spaces)",\n  "  while COND / end",\n  "  for each x in LIST / end       for each i in sequence(1, 11) counts 1..10; sequence(n) is 0..n-1",\n  "  to NAME with a b / return X / end   declare a function, call it as NAME(1, 2)",\n  "  break, continue, true, false, nothing",\n  "  comparisons: is, is not, ==, !=, >, <, >=, <=      logic: and, or, not",\n  "  operators: + - * / % **         comments start with #",\n  "  lists [1, 2, 3], l[0], l + [4] appends; records {name: \\"Sam\\", age: 3}, r.name, r[\\"age\\"]",\n  "  lambdas: (x) -> x * 2",\n  "",\n  "Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, sqrt, min, max, pow,",\n  "  random, randint(a, b), pick(list), shuffle, sum, average, sort, sortDesc, reverse, unique, count(list, x),",\n  "  first, last, upper, lower, trim, replace(s, a, b), contains(s_or_list, x), startswith, endswith,",\n  "  chars(s), weave(list, sep) joins, shatter(s, sep) splits, sift(list, fn) filters, each(list, fn) maps,",\n  "  fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.",\n  "  There is NO join, split, append, push, map, filter, printf \u2014 use weave, shatter, l + [x], each, sift.",\n  "",\n  "Self-hosted (v2) libraries for systems and causal-AI work \u2014 load with use \\"lang/stdlib/v2/<name>.sdev\\":",\n  "  list: list_append(xs, x), list_concat_two(a, b) (in v2 files lists never grow with +)",\n  "  bits: bits_and/or/xor(a, b), bits_shl/shr(v, n), bits_not_n(v, width), floor_div, floor_mod, wrap_u8/u16/i16",\n  "  mem: mem_arena(size), mem_put/get_u8/u16/i16(m, addr[, v]) little-endian, mem_copy, mem_fill, mem_hex,",\n  "       ring_create(cap), ring_push, ring_get(r, i), ring_len",\n  "  oce (v2: use \\"lang/stdlib/v2/oce.sdev\\", it loads list, bits, mem itself; classic and !#ai files: built in, no import): Ontological Causal Engine in one 64 KB arena \u2014 oce_create(), oce_entity(m),",\n  "       oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),",\n  "       oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),",\n  "       oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).",\n  "  In v2 files, xs + [a] joins lists only when the file uses \\"lang/stdlib/v2/list.sdev\\"; prefer list_append(xs, a).",\n  "",\n  "Canonical SDEV Patterns & Examples:",\n  "  # 1. Math and output:",\n  "  say \\"hello world\\"",\n  "  say 23 - 21",\n  "",\n  "  # 2. Functions and calls:",\n  "  to double with n",\n  "    return n * 2",\n  "  end",\n  "  say double(21)",\n  "",\n  "  # 3. Loops (counting from 1 to 10):",\n  "  for each i in sequence(1, 11)",\n  "    say i",\n  "  end",\n  "",\n  "  # 4. Sorting lists:",\n  "  set items to [\\"milk\\", \\"eggs\\", \\"bread\\"]",\n  "  say sort(items)",\n  "",\n  "  # 5. Records / Objects:",\n  "  set person to {name: \\"Ana\\", age: 30}",\n  "  say person.name",\n  "  say person.age",\n  "",\n  "  # 6. Palindrome check:",\n  "  set w to \\"racecar\\"",\n  "  if w is weave(reverse(chars(w)), \\"\\")",\n  "    say \\"palindrome\\"",\n  "  else",\n  "    say \\"not palindrome\\"",\n  "  end",\n  "",\n  "Window toolkit (the IDE shows a real window):",\n  "  window(\\"Title\\", width, height) \u2026 endwindow()   row() \u2026 endrow()   column() \u2026 endcolumn()",\n  "  heading(\\"text\\")  label(\\"text\\")  label(\\"@key\\") shows the live value of key",\n  "  input(\\"key\\", \\"placeholder\\")   the typed text is uiget(\\"key\\")",\n  "  button(\\"Text\\", () -> handler())   handler is a function or lambda, run on click",\n  "  uiget(\\"key\\") reads a value, uiset(\\"key\\", value) changes it and refreshes labels bound with \\"@key\\"",\n  "  evaluate(\\"2 + 3 * 4\\") safely computes an arithmetic expression held in text (use it for calculators)",\n  "  Define functions BEFORE window(); put every widget between window() and endwindow().",\n  "",\n  "Requests in plain words:",\n  "- If the source is a request (\\"make a window that is a calculator\\", \\"build a quiz game\\"), write the WHOLE",\n  "  working program that does it \u2014 complete, not a sketch. Anything with \\"window\\", \\"app\\", \\"buttons\\" or a",\n  "  visual interface uses the window toolkit.",\n  "",\n  "Rules:",\n  "- CRITICAL: NEVER output Python syntax (NO \\"def\\", NO \\"print\\", NO \\"range()\\", NO \\"elif\\", NO trailing colons :).",\n  "- CRITICAL: NEVER output JavaScript syntax (NO \\"console.log\\", NO \\"function\\", NO \\"let\\", NO \\"var\\", NO \\"const\\", NO \\"===\\").",\n  "- Every function, if, while, and for each block MUST be closed with \\"end\\" on its own line.",\n  "- Compute with code; never hard-code an answer the program should work out.",\n  "- Keep the author\'s own code and identifiers exactly as written (any language/script); only fix what is wrong.",\n  "- If the author\'s code already works, return it unchanged.",\n  "- Bare words meant as text become quoted strings.",\n  "- Never add prose, markdown fences or explanations outside the JSON. Return ONLY JSON: {\\"canonical\\": \\"<program>\\", \\"notes\\": \\"<short note>\\"}"\n])\n\nforge BR_AI_DIALECT_PROMPT be unlines([\n  "",\n  "",\n  "sdev:ai \u2014 the dialect for AI models. When asked for sdev:ai, write ONLY this form:",\n  "  !#ai                         MUST be the very first line",\n  "  v x = 5                      declare            x = x + 1       change (also xs[0] = 1, r.k = 2)",\n  "  p(x)                         print",\n  "  f add(a, b) {                function            r a + b         return",\n  "  ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else",\n  "  w i < 3 {  }                 while               each n in xs {  }   for each",\n  "  try {  } catch e {  }        brk / next          break / continue",\n  "  } finally {  }   throw e      k MAX = 3           constant",\n  "  c Dog : Animal {  f init(self, n) { self.n = n }  }    class (\\": Animal\\" optional); make one with new Dog(1)",\n  "  == != && || ! true false null      every block closes with } on its own line",\n  "  Calls to built-ins and the window toolkit stay as they are: window(\\"Calc\\", 320, 400), button(\\"7\\", () -> press(\\"7\\")), uiset(...)",\n  "  Lambdas: (x) -> x * 2.  One statement per line.",\n  "",\n  "Example:",\n  "  !#ai",\n  "  f press(k) {",\n  "    uiset(\\"display\\", uiget(\\"display\\") + k)",\n  "  }",\n  "  window(\\"Calculator\\", 320, 400)",\n  "  input(\\"display\\", \\"0\\")",\n  "  button(\\"7\\", () -> press(\\"7\\"))",\n  "  button(\\"=\\", () -> uiset(\\"display\\", str(evaluate(uiget(\\"display\\")))))",\n  "  endwindow()"\n])\n\nconjure brain_instructions(format) ::\n  ponder format equals "ai" ::\n    yield BR_SYSTEM_PROMPT + BR_AI_DIALECT_PROMPT\n  ;;\n  yield BR_SYSTEM_PROMPT\n;;\n\nconjure brain_input(source, draft, unresolved, vocab_json, problems, format) ::\n  forge src_cut be portion(str(source), 0, 40000)\n  forge draft_cut be portion(draft equals void ~ "" : str(draft), 0, 40000)\n  forge unres_line be "It resolved every line, but the result may still be wrong."\n  ponder unresolved differs void also measure(unresolved) > 0 ::\n    unres_line be "Lines it could not resolve: " + weave(unresolved, ", ")\n  ;;\n  forge prob_line be ""\n  ponder problems differs void also measure(problems) > 0 ::\n    forge ps be []\n    forge lim be measure(problems) < 10 ~ measure(problems) : 10\n    forge k be 0\n    cycle k < lim ::\n      ps be ps + [portion(str(problems[k]), 0, 300)]\n      k be k + 1\n    ;;\n    prob_line be "That draft still has these problems \u2014 fix them:\\n- " + weave(ps, "\\n- ")\n  ;;\n  forge tail_line be format equals "ai" ~ "Return the whole program in sdev:ai (described below), starting with the line !#ai." : "Return the whole program as canonical sdev."\n  yield unlines([\n    "The author wrote this program:",\n    "```", src_cut, "```",\n    "",\n    "A rule engine already produced this draft of canonical sdev:",\n    "```", draft_cut, "```",\n    "",\n    unres_line,\n    "",\n    "Words this author is known to use (word -> meaning): " + (vocab_json equals "" ~ "{}" : vocab_json),\n    "",\n    prob_line,\n    "",\n    tail_line\n  ])\n;;\n\n// ---------- 11. SDev Doctor prompts & parser ----------\nconjure doctor_system_prompt() ::\n  yield unlines([\n    "You are SDev Doctor \u2014 an expert AI assistant that diagnoses and repairs code in the SDEV programming language.",\n    "SDEV is a modern multi-paradigm language. It supports clean syntax, immutable fixed bindings, functions, pattern matching, SQL queries, and math/graphics builtins.",\n    "Analyze the user\'s code, fix any syntax or logical bugs, and explain your changes clearly.",\n    "Return ONLY valid JSON matching this schema:",\n    "{",\n    "  \\"fixed_code\\": \\"<the complete repaired source code>\\",",\n    "  \\"explanation\\": \\"<2-4 sentences explaining what the program does>\\",",\n    "  \\"changes\\": \\"<markdown bullet list of exact fixes made and why>\\",",\n    "  \\"how_it_works\\": \\"<concise markdown explanation of how the repaired code runs>\\",",\n    "  \\"confidence\\": \\"high\\" | \\"medium\\" | \\"low\\"",\n    "}"\n  ])\n;;\n\nconjure doctor_user_prompt(code, error_msg, note) ::\n  forge parts be []\n  ponder note differs void also note differs "" ::\n    parts be parts + ["User Note: " + note]\n  ;;\n  ponder error_msg differs void also error_msg differs "" ::\n    parts be parts + ["Reported Error: " + error_msg]\n  ;;\n  parts be parts + ["Source Code:\\n```sdev\\n" + code + "\\n```"]\n  parts be parts + ["Please diagnose, repair, and explain the code as valid JSON."]\n  yield weave(parts, "\\n\\n")\n;;\n\n// Returns [fixed_code, explanation, changes, how_it_works, confidence] or void\nconjure parse_doctor_fix(raw_text) ::\n  forge cleaned be trim(raw_text)\n  cleaned be regex_replace(cleaned, "^```(?:json)?\\\\s*", "", "i")\n  cleaned be trim(regex_replace(cleaned, "```\\\\s*$", ""))\n  ponder cleaned equals "" ::\n    yield void\n  ;;\n  attempt ::\n    forge p be unetch(cleaned)\n    ponder essence(p) equals "tome" also has(p, "fixed_code") also essence(p["fixed_code"]) equals "text" ::\n      forge expl be (has(p, "explanation") also essence(p["explanation"]) equals "text" also p["explanation"] differs "") ~ p["explanation"] : "Analyzed and repaired by local model server."\n      forge chg be (has(p, "changes") also essence(p["changes"]) equals "text" also p["changes"] differs "") ~ p["changes"] : "- Corrected syntax and formatting."\n      forge how be (has(p, "how_it_works") also essence(p["how_it_works"]) equals "text" also p["how_it_works"] differs "") ~ p["how_it_works"] : "The program runs through statements sequentially."\n      forge c_raw be has(p, "confidence") ~ str(p["confidence"]) : "medium"\n      forge conf be (c_raw equals "high" either c_raw equals "medium" either c_raw equals "low") ~ c_raw : "medium"\n      yield [p["fixed_code"], expl, chg, how, conf]\n    ;;\n  ;; rescue _err ::\n    yield [cleaned, "Repaired by local model server.", "- Automatically adapted code to valid SDEV syntax.", "Runs sequentially.", "medium"]\n  ;;\n  yield [cleaned, "Repaired by local model server.", "- Automatically adapted code to valid SDEV syntax.", "Runs sequentially.", "medium"]\n;;\n\n// ---------- 12. Local server probe helpers ----------\nconjure probe_server_type(base_url) ::\n  ponder contains(base_url, "1234") ::\n    yield "LM Studio"\n  ;;\n  ponder contains(base_url, "11434") ::\n    yield "Ollama"\n  ;;\n  ponder contains(base_url, "8080") ::\n    yield "llama.cpp"\n  ;;\n  yield "OpenAI-Compatible"\n;;\n\nconjure probe_cors_hint(base_url) ::\n  ponder contains(base_url, "1234") ::\n    yield "In LM Studio: Open the Local Server tab and toggle ON \\"Enable CORS\\". Web browsers block requests from web apps unless CORS is enabled."\n  ;;\n  ponder contains(base_url, "11434") ::\n    yield "In Ollama: Start Ollama with OLLAMA_ORIGINS=\\"*\\" (e.g., in PowerShell: $env:OLLAMA_ORIGINS=\\"*\\" ; ollama serve)."\n  ;;\n  yield "Ensure the model server is running and configured with Cross-Origin Resource Sharing (CORS) allowed."\n;;\n\n// ---------- 13. Micro-Brain 64-dim Intent Classifier ----------\nforge BR_INTENT_SPECS be [\n  ["PRINT", ["print", "println", "console", "log", "echo", "say", "display", "show", "output", "write", "speak", "puts"]],\n  ["LET", ["let", "var", "const", "set", "create", "define", "variable", "make", "forge", "int", "float", "string", "auto"]],\n  ["FUNC_DEF", ["def", "function", "fn", "func", "proc", "procedure", "method", "sub", "to", "conjure", "define"]],\n  ["RETURN", ["return", "give", "send", "result", "output", "yield", "back"]],\n  ["IF", ["if", "when", "whenever", "check", "whether", "ponder", "suppose"]],\n  ["ELIF", ["elif", "elseif", "else if", "otherwise if"]],\n  ["ELSE", ["else", "otherwise", "fallback", "default"]],\n  ["WHILE", ["while", "until", "loop", "repeat while", "as long as", "cycle"]],\n  ["FOR_EACH", ["for", "foreach", "each", "every", "iterate", "within", "in", "through"]],\n  ["FOR_RANGE", ["repeat", "times", "range", "from", "to", "count"]],\n  ["CLASS_DEF", ["class", "struct", "type", "object", "blueprint", "essence", "craft"]],\n  ["BLOCK_END", ["end", "endif", "endfor", "endwhile", "endfunction", "done", "fi", "od", "}", ";;"]]\n]\n\nconjure br_xor8(a, b) ::\n  forge x be a % 256\n  forge y be b % 256\n  forge res be 0\n  forge p be 1\n  forge bit be 0\n  cycle bit < 8 ::\n    forge bx be x % 2\n    forge by be y % 2\n    ponder bx differs by ::\n      res be res + p\n    ;;\n    x be (x - bx) / 2\n    y be (y - by) / 2\n    p be p * 2\n    bit be bit + 1\n  ;;\n  yield res\n;;\n\nconjure br_mul16_step(hi, lo, m_hi, m_lo) ::\n  forge p0 be lo * m_lo\n  forge lo_next be p0 % 65536\n  forge carry be (p0 - lo_next) / 65536\n  forge hi_next be (hi * m_lo + lo * m_hi + carry) % 65536\n  yield [hi_next, lo_next]\n;;\n\nconjure hash_token_64(token) ::\n  // 2166136261 -> hi 33052, lo 40389; 16777619 -> hi 256, lo 403\n  forge h_hi be 33052\n  forge h_lo be 40389\n  forge n be measure(token)\n  forge i be 0\n  cycle i < n ::\n    forge c be ord(token, i)\n    forge b0 be h_lo % 256\n    h_lo be (h_lo - b0) + br_xor8(b0, c % 256)\n    forge r be br_mul16_step(h_hi, h_lo, 256, 403)\n    h_hi be r[0]\n    h_lo be r[1]\n    i be i + 1\n  ;;\n  forge u32 be h_hi * 65536 + h_lo\n  forge s32 be h_hi >= 32768 ~ (4294967296 - u32) : u32\n  yield s32 % 64\n;;\n\nconjure br_zero_vec64() ::\n  forge v be []\n  forge i be 0\n  cycle i < 64 ::\n    v be v + [0]\n    i be i + 1\n  ;;\n  yield v\n;;\n\nconjure br_norm_vec64(v) ::\n  forge norm be 0\n  forge i be 0\n  cycle i < 64 ::\n    norm be norm + v[i] * v[i]\n    i be i + 1\n  ;;\n  forge root be norm > 0 ~ sqrt(norm) : 1\n  i be 0\n  cycle i < 64 ::\n    v[i] be v[i] / root\n    i be i + 1\n  ;;\n  yield v\n;;\n\nconjure br_build_proto_weights() ::\n  forge rows be []\n  iterate spec through BR_INTENT_SPECS ::\n    forge v be br_zero_vec64()\n    iterate kw through spec[1] ::\n      forge lk be lower(kw)\n      forge idx be hash_token_64(lk)\n      v[idx] be v[idx] + 1.5\n      forge kn be measure(lk)\n      forge j be 0\n      cycle j < kn - 1 ::\n        forge bg be hash_token_64(portion(lk, j, j + 2))\n        v[bg] be v[bg] + 0.35\n        j be j + 1\n      ;;\n    ;;\n    rows be rows + [[spec[0], br_norm_vec64(v)]]\n  ;;\n  yield rows\n;;\n\nforge BR_INTENT_ROWS be br_build_proto_weights()\n\nconjure embed_line_vector(line) ::\n  forge v be br_zero_vec64()\n  forge cleaned be trim(regex_replace(lower(line), "[^a-z0-9_]+", " "))\n  forge toks be cleaned equals "" ~ [] : words(cleaned)\n  forge idx be 0\n  iterate tok through toks ::\n    forge w be idx equals 0 ~ 2.0 : (idx equals 1 ~ 1.2 : 0.6)\n    forge h be hash_token_64(tok)\n    v[h] be v[h] + w\n    forge tn be measure(tok)\n    forge j be 0\n    cycle j < tn - 1 ::\n      forge bg be hash_token_64(portion(tok, j, j + 2))\n      v[bg] be v[bg] + 0.2 * w\n      j be j + 1\n    ;;\n    idx be idx + 1\n  ;;\n  yield br_norm_vec64(v)\n;;\n\n// Returns [intent, score]\nconjure classify_line_intent(line) ::\n  forge vec be embed_line_vector(line)\n  forge best_intent be "PRINT"\n  forge best_score be -1000000\n  iterate row through BR_INTENT_ROWS ::\n    forge weights be row[1]\n    forge dot be 0\n    forge c be 0\n    cycle c < 64 ::\n      dot be dot + weights[c] * vec[c]\n      c be c + 1\n    ;;\n    ponder dot > best_score ::\n      best_score be dot\n      best_intent be row[0]\n    ;;\n  ;;\n  yield [best_intent, round(best_score * 10000) / 10000]\n;;\n\n';
+  }
+});
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\math.sdev
+var math_default;
+var init_math2 = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\math.sdev"() {
+    math_default = `// =====================================================================
+// math.sdev \u2014 Plain-words arithmetic solver, written in sdev.
+// =====================================================================
+
+forge MATH_NUM_WORDS be ::
+  "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+  "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+  "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+  "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
+  "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+  "eighty": 80, "ninety": 90, "hundred": 100, "thousand": 1000, "million": 1000000
+;;
+
+forge MATH_FUNCS be ::
+  "sqrt": yep, "abs": yep, "round": yep, "floor": yep, "ceil": yep, "min": yep, "max": yep
+;;
+
+forge MATH_POLITE_RE be "^(?:please|can you|could you|would you|i want to|i need to|i want you to|let'?s|now)\\\\s+"
+forge MATH_VERB_RE be "^(?:calculate|calc|compute|evaluate|eval|solve|work\\\\s+out|figure\\\\s+out|find(?:\\\\s+out)?|tell\\\\s+me|give\\\\s+me|show\\\\s+me|print|display|output|say|what\\\\s+is|what'?s|whats|what\\\\s+are|how\\\\s+much\\\\s+is|how\\\\s+much\\\\s+are|how\\\\s+many\\\\s+is|result\\\\s+of|answer)\\\\b\\\\s*"
+
+conjure math_number_words(s) ::
+  forge toks be regex_find_all(s, "[a-zA-Z]+|[^a-zA-Z]+")
+  forge n be measure(toks)
+  forge out be []
+  forge i be 0
+  cycle i < n ::
+    forge w be lower(toks[i])
+    ponder has(MATH_NUM_WORDS, w) ::
+      forge total be 0
+      forge cur be 0
+      cycle i < n ::
+        forge tw be lower(toks[i])
+        ponder has(MATH_NUM_WORDS, tw) ::
+          forge v be MATH_NUM_WORDS[tw]
+          ponder v equals 100 ::
+            cur be (cur equals 0 ~ 1 : cur) * 100
+          ;; otherwise ponder v >= 1000 ::
+            total be total + (cur equals 0 ~ 1 : cur) * v
+            cur be 0
+          ;; otherwise ::
+            cur be cur + v
+          ;;
+          i be i + 1
+          ponder i + 1 < n also regex_test(toks[i], "^[\\\\s-]+$") also has(MATH_NUM_WORDS, lower(toks[i + 1])) ::
+            i be i + 1
+          ;; otherwise ponder i + 3 < n also regex_test(toks[i], "^[\\\\s-]+$") also lower(toks[i + 1]) equals "and" also regex_test(toks[i + 2], "^\\\\s+$") also has(MATH_NUM_WORDS, lower(toks[i + 3])) ::
+            i be i + 3
+          ;; otherwise ::
+            yeet
+          ;;
+        ;; otherwise ::
+          yeet
+        ;;
+      ;;
+      out be out + [str(total + cur)]
+    ;; otherwise ::
+      out be out + [toks[i]]
+      i be i + 1
+    ;;
+  ;;
+  yield weave(out, "")
+;;
+
+conjure math_operand(s) ::
+  yield trim(regex_replace(s, "^the\\\\s+", "", "i"))
+;;
+
+conjure math_list(s) ::
+  forge norm be regex_replace(s, "\\\\s*,\\\\s*|\\\\s+and\\\\s+|\\\\s+&\\\\s+|\\\\s+", "\\n", "i")
+  forge out be []
+  iterate item through shatter(norm, "\\n") ::
+    forge t be trim(item)
+    ponder t differs "" ::
+      out be out + [math_operand(t)]
+    ;;
+  ;;
+  yield out
+;;
+
+conjure math_operators(s) ::
+  forge t be s
+  t be regex_replace(t, "\\\\bmultiplied\\\\s+by\\\\b", " * ", "i")
+  t be regex_replace(t, "\\\\bdivided\\\\s+by\\\\b", " / ", "i")
+  t be regex_replace(t, "\\\\b(?:raised\\\\s+)?to\\\\s+the\\\\s+power\\\\s+of\\\\b", " ** ", "i")
+  t be regex_replace(t, "\\\\bto\\\\s+the\\\\s+(\\\\d+)(?:st|nd|rd|th)\\\\s+power\\\\b", " ** $1", "i")
+  t be regex_replace(t, "\\\\bpower\\\\b", " ** ", "i")
+  t be regex_replace(t, "(\\\\S+)\\\\s+squared\\\\b", "($1 ** 2)", "i")
+  t be regex_replace(t, "(\\\\S+)\\\\s+cubed\\\\b", "($1 ** 3)", "i")
+  t be regex_replace(t, "\\\\bsquare\\\\s+root\\\\s+of\\\\s+(\\\\S+)", "sqrt($1)", "i")
+  t be regex_replace(t, "\\\\bsqrt\\\\s+(?!\\\\()(\\\\S+)", "sqrt($1)", "i")
+  t be regex_replace(t, "\\\\b(?:the\\\\s+)?square\\\\s+of\\\\s+(\\\\S+)", "($1 ** 2)", "i")
+  t be regex_replace(t, "\\\\b(?:the\\\\s+)?cube\\\\s+of\\\\s+(\\\\S+)", "($1 ** 3)", "i")
+  t be regex_replace(t, "\\\\babsolute\\\\s+value\\\\s+of\\\\s+(\\\\S+)", "abs($1)", "i")
+  t be regex_replace(t, "(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*(?:%|percent)\\\\s+of\\\\s+(\\\\S+)", "($1 * $2 / 100)", "i")
+  t be regex_replace(t, "(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*(?:%|percent)(?![\\\\d(A-Za-z_])", "($1 / 100)", "i")
+  t be regex_replace(t, "\\\\b(?:plus|add|added\\\\s+to|and)\\\\b", " + ", "i")
+  t be regex_replace(t, "\\\\b(?:minus|less|take\\\\s+away)\\\\b", " - ", "i")
+  t be regex_replace(t, "\\\\b(?:times|multiply)\\\\b", " * ", "i")
+  t be regex_replace(t, "(\\\\d)\\\\s*[x\xD7]\\\\s*(\\\\d)", "$1 * $2")
+  t be regex_replace(t, "[\xD7]", " * ")
+  t be regex_replace(t, "[\xF7]", " / ")
+  t be replace(t, "^", " ** ")
+  t be regex_replace(t, "\\\\b(?:over)\\\\b", " / ", "i")
+  t be regex_replace(t, "\\\\b(?:mod|modulo|remainder\\\\s+of)\\\\b", " % ", "i")
+  t be regex_replace(t, "\\\\s+", " ")
+  yield trim(t)
+;;
+
+conjure math_valid(expr, known_map) ::
+  ponder expr equals "" ::
+    yield nope
+  ;;
+  forge names be regex_find_all(expr, "[A-Za-z_]\\\\w*")
+  forge has_known be nope
+  iterate w through names ::
+    ponder has(known_map, w) ::
+      has_known be yep
+    ;;
+    ponder isnt has(MATH_FUNCS, w) also isnt has(known_map, w) ::
+      yield nope
+    ;;
+  ;;
+  ponder isnt regex_test(expr, "\\\\d") also isnt has_known ::
+    yield nope
+  ;;
+  ponder isnt regex_test(expr, "^[\\\\w\\\\s.+*/%(),-]+$") ::
+    yield nope
+  ;;
+  forge depth be 0
+  forge n be measure(expr)
+  forge i be 0
+  cycle i < n ::
+    forge ch be portion(expr, i, i + 1)
+    ponder ch equals "(" ::
+      depth be depth + 1
+    ;; otherwise ponder ch equals ")" ::
+      depth be depth - 1
+      ponder depth < 0 ::
+        yield nope
+      ;;
+    ;;
+    i be i + 1
+  ;;
+  ponder depth differs 0 ::
+    yield nope
+  ;;
+  ponder regex_test(expr, "[\\\\w.)]\\\\s+[\\\\w.(]") ::
+    yield nope
+  ;;
+  ponder regex_test(expr, "[+*/%-]\\\\s*$") either regex_test(expr, "^\\\\s*[*/%]") either regex_test(expr, "[+*/%-]\\\\s*[*/%]\\\\s*[*/%]") ::
+    yield nope
+  ;;
+  yield yep
+;;
+
+conjure math_request(stmt, known_list) ::
+  forge known_map be ::
+  ;;
+  iterate k through known_list ::
+    known_map[k] be yep
+  ;;
+
+  forge raw be trim(regex_replace(trim(stmt), "[?.!=]+\\\\s*$", ""))
+  ponder raw equals "" ::
+    yield void
+  ;;
+
+  forge s be math_number_words(raw)
+  forge trimmed_s be s
+  cycle regex_test(trimmed_s, MATH_POLITE_RE, "i") ::
+    trimmed_s be regex_replace(trimmed_s, MATH_POLITE_RE, "", "i")
+  ;;
+  forge had_lead be regex_test(trimmed_s, MATH_VERB_RE, "i")
+  ponder had_lead ::
+    s be regex_replace(trimmed_s, MATH_VERB_RE, "", "i")
+  ;;
+  s be regex_replace(s, "^(?:the\\\\s+)?(?:value|result|answer)\\\\s+of\\\\s+", "", "i")
+  s be trim(regex_replace(s, "^the\\\\s+", "", "i"))
+
+  forge expr be void
+  forge m be regex_capture(s, "^sum\\\\s+of\\\\s+(.+)$", "i")
+  ponder m differs void ::
+    expr be weave(math_list(m[1]), " + ")
+  ;; otherwise ::
+    m be regex_capture(s, "^product\\\\s+of\\\\s+(.+)$", "i")
+    ponder m differs void ::
+      expr be weave(math_list(m[1]), " * ")
+    ;; otherwise ::
+      m be regex_capture(s, "^(?:average|mean)\\\\s+of\\\\s+(.+)$", "i")
+      ponder m differs void ::
+        forge xs be math_list(m[1])
+        expr be "(" + weave(xs, " + ") + ") / " + str(measure(xs))
+      ;; otherwise ::
+        m be regex_capture(s, "^difference\\\\s+(?:between|of)\\\\s+(\\\\S+)\\\\s+and\\\\s+(\\\\S+)$", "i")
+        ponder m differs void ::
+          expr be m[1] + " - " + m[2]
+        ;; otherwise ::
+          m be regex_capture(s, "^quotient\\\\s+of\\\\s+(\\\\S+)\\\\s+and\\\\s+(\\\\S+)$", "i")
+          ponder m differs void ::
+            expr be m[1] + " / " + m[2]
+          ;; otherwise ::
+            m be regex_capture(s, "^(?:max(?:imum)?|largest|biggest)\\\\s+of\\\\s+(.+)$", "i")
+            ponder m differs void ::
+              expr be "max(" + weave(math_list(m[1]), ", ") + ")"
+            ;; otherwise ::
+              m be regex_capture(s, "^(?:min(?:imum)?|smallest)\\\\s+of\\\\s+(.+)$", "i")
+              ponder m differs void ::
+                expr be "min(" + weave(math_list(m[1]), ", ") + ")"
+              ;; otherwise ::
+                m be regex_capture(s, "^subtract\\\\s+(\\\\S+)\\\\s+from\\\\s+(\\\\S+)$", "i")
+                ponder m differs void ::
+                  expr be m[2] + " - " + m[1]
+                ;; otherwise ::
+                  m be regex_capture(s, "^take\\\\s+(\\\\S+)\\\\s+(?:away\\\\s+)?from\\\\s+(\\\\S+)$", "i")
+                  ponder m differs void ::
+                    expr be m[2] + " - " + m[1]
+                  ;; otherwise ::
+                    m be regex_capture(s, "^add\\\\s+(.+?)\\\\s+to\\\\s+(\\\\S+)$", "i")
+                    ponder m differs void ::
+                      expr be m[1] + " + " + m[2]
+                    ;; otherwise ::
+                      m be regex_capture(s, "^add\\\\s+(.+)$", "i")
+                      ponder m differs void ::
+                        expr be weave(math_list(m[1]), " + ")
+                      ;; otherwise ::
+                        m be regex_capture(s, "^multiply\\\\s+(\\\\S+)\\\\s+(?:by|and|with|times)\\\\s+(\\\\S+)$", "i")
+                        ponder m differs void ::
+                          expr be m[1] + " * " + m[2]
+                        ;; otherwise ::
+                          m be regex_capture(s, "^divide\\\\s+(\\\\S+)\\\\s+(?:by|into)\\\\s+(\\\\S+)$", "i")
+                          ponder m differs void ::
+                            expr be m[1] + " / " + m[2]
+                          ;; otherwise ::
+                            m be regex_capture(s, "^(\\\\S+)\\\\s+divided\\\\s+into\\\\s+(\\\\S+)$", "i")
+                            ponder m differs void ::
+                              expr be m[2] + " / " + m[1]
+                            ;; otherwise ::
+                              m be regex_capture(s, "^(?:square|squared)\\\\s+(\\\\S+)$", "i")
+                              ponder m differs void ::
+                                expr be m[1] + " ** 2"
+                              ;; otherwise ::
+                                m be regex_capture(s, "^round\\\\s+(.+)$", "i")
+                                ponder m differs void ::
+                                  expr be "round(" + math_operators(m[1]) + ")"
+                                ;; otherwise ::
+                                  expr be s
+                                ;;
+                              ;;
+                            ;;
+                          ;;
+                        ;;
+                      ;;
+                    ;;
+                  ;;
+                ;;
+              ;;
+            ;;
+          ;;
+        ;;
+      ;;
+    ;;
+  ;;
+
+  ponder expr equals void ::
+    yield void
+  ;;
+  expr be math_operators(expr)
+  ponder isnt math_valid(expr, known_map) ::
+    yield void
+  ;;
+  forge computes be regex_test(expr, "[+*/%-]|\\\\b(?:sqrt|abs|round|min|max|floor|ceil)\\\\(")
+  ponder isnt computes also isnt had_lead ::
+    yield void
+  ;;
+  yield expr
+;;
+`;
+  }
+});
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\tasks.sdev
+var tasks_default;
+var init_tasks = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\tasks.sdev"() {
+    tasks_default = `// =====================================================================
+// tasks.sdev \u2014 Everyday plain-sentence requests, written in sdev.
+// =====================================================================
+
+forge TASK_NUM_WORDS be ::
+  "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+  "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+  "eleven": "11", "twelve": "12", "thirteen": "13", "fourteen": "14", "fifteen": "15",
+  "sixteen": "16", "seventeen": "17", "eighteen": "18", "nineteen": "19", "twenty": "20",
+  "thirty": "30", "forty": "40", "fifty": "50", "sixty": "60", "seventy": "70",
+  "eighty": "80", "ninety": "90", "hundred": "100", "thousand": "1000", "million": "1000000"
+;;
+
+forge TASK_PLEASE_RE be "^(?:please|can you|could you|would you|i want to|i want you to|i need to|i'd like to|let'?s|now|then|and)\\\\s+"
+forge TASK_OUT_RE be "^(?:say|print|show|display|output|tell me|give me|show me|write|list)\\\\s+"
+
+conjure task_num(w) ::
+  forge t be lower(trim(w))
+  ponder regex_test(t, "^-?\\\\d+(?:\\\\.\\\\d+)?$") ::
+    yield t
+  ;;
+  ponder has(TASK_NUM_WORDS, t) ::
+    yield TASK_NUM_WORDS[t]
+  ;;
+  yield void
+;;
+
+conjure task_is_quoted(t) ::
+  ponder regex_test(t, "^\\\\u0000\\\\d+\\\\u0000$") ::
+    yield yep
+  ;;
+  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")
+;;
+
+conjure task_text(w) ::
+  forge t be trim(regex_replace(trim(w), "^(?:the\\\\s+)?(?:word|text|string|name|sentence|phrase)\\\\s+", "", "i"))
+  ponder task_is_quoted(t) ::
+    yield t
+  ;;
+  forge q be regex_capture(t, "^[\\"'\u201C](.*)[\\"'\u201D]$")
+  ponder q differs void ::
+    yield quote_text(q[1])
+  ;;
+  yield quote_text(t)
+;;
+
+conjure task_nums(list_str) ::
+  forge norm be regex_replace(trim(list_str), "\\\\s*,\\\\s*|\\\\s+and\\\\s+|\\\\s+", "\\n", "i")
+  forge out be []
+  iterate part through shatter(norm, "\\n") ::
+    forge p be trim(part)
+    ponder p differs "" ::
+      forge n be task_num(p)
+      ponder n equals void ::
+        yield void
+      ;;
+      out be out + [n]
+    ;;
+  ;;
+  ponder measure(out) equals 0 ::
+    yield void
+  ;;
+  yield out
+;;
+
+conjure task_subject(w, known_map) ::
+  forge tw be trim(w)
+  ponder has(known_map, tw) ::
+    yield tw
+  ;;
+  yield task_text(w)
+;;
+
+conjure task_request(stmt, known_list) ::
+  forge known_map be ::
+  ;;
+  iterate k through known_list ::
+    known_map[k] be yep
+  ;;
+
+  forge s be trim(stmt)
+  cycle regex_test(s, TASK_PLEASE_RE, "i") ::
+    s be regex_replace(s, TASK_PLEASE_RE, "", "i")
+  ;;
+  s be trim(regex_replace(s, "[.!?]+\\\\s*$", ""))
+  ponder s equals "" ::
+    yield void
+  ;;
+
+  forge ws be words(s)
+  forge head be measure(ws) > 0 ~ lower(ws[0]) : ""
+  ponder has(known_map, head) ::
+    yield void
+  ;;
+
+  // 1. counting / ranges
+  forge m be regex_capture(s, "^(?:count|print|show|say|list|display|output|write)?\\\\s*(?:all\\\\s+)?(?:the\\\\s+)?(?:numbers?\\\\s+)?(?:from\\\\s+)?(\\\\S+)\\\\s+(?:to|through|until|till|-)\\\\s+(\\\\S+)(?:\\\\s+by\\\\s+(\\\\S+))?$", "i")
+  ponder m differs void also regex_test(s, "^(?:count|print|show|say|list|display|output|write|numbers?|from)", "i") ::
+    forge a be task_num(m[1])
+    forge b be task_num(m[2])
+    forge step be m[3] differs "" ~ task_num(m[3]) : "1"
+    ponder a differs void also b differs void also step differs void ::
+      ponder num(a) > num(b) ::
+        yield ["set i to " + a, "while i >= " + b, "  say i", "  set i to i - " + step, "end"]
+      ;;
+      yield ["set i to " + a, "while i <= " + b, "  say i", "  set i to i + " + step, "end"]
+    ;;
+  ;;
+
+  m be regex_capture(s, "^count\\\\s+(?:up\\\\s+)?to\\\\s+(\\\\S+)$", "i")
+  ponder m differs void ::
+    forge b be task_num(m[1])
+    ponder b differs void ::
+      yield ["set i to 1", "while i <= " + b, "  say i", "  set i to i + 1", "end"]
+    ;;
+  ;;
+
+  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")
+  ponder m differs void ::
+    forge a be task_num(m[1])
+    ponder a differs void ::
+      yield ["set i to " + a, "while i > 0", "  say i", "  set i to i - 1", "end"]
+    ;;
+  ;;
+
+  // 2. repetition
+  m be regex_capture(s, "^(?:say|print|show|write|display|output|repeat)\\\\s+(.+?)\\\\s+(\\\\S+)\\\\s+times$", "i")
+  ponder m differs void ::
+    forge cnt be task_num(m[2])
+    ponder cnt differs void ::
+      forge what be task_subject(m[1], known_map)
+      yield ["set i to 0", "while i < " + cnt, "  say " + what, "  set i to i + 1", "end"]
+    ;;
+  ;;
+
+  ponder regex_test(s, "^(?:flip|toss)\\\\s+(?:a\\\\s+)?coin$", "i") ::
+    yield ["say pick([\\"heads\\", \\"tails\\"])"]
+  ;;
+
+  // 3. text operations
+  forge s_no_out be regex_replace(s, TASK_OUT_RE, "", "i")
+  m be regex_capture(s_no_out, "^(?:reverse|backwards?)\\\\s+(?:of\\\\s+)?(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s_no_out, "^(.+?)\\\\s+(?:reversed|backwards)$", "i")
+  ;;
+  ponder m differs void ::
+    yield ["say reverse(" + task_subject(m[1], known_map) + ")"]
+  ;;
+
+  m be regex_capture(s_no_out, "^(?:make\\\\s+)?(.+?)\\\\s+(?:in\\\\s+)?(?:uppercase|upper\\\\s*case|capitals|caps)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s_no_out, "^(?:uppercase|capitalize all)\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge arg be regex_test(s, "^make\\\\s", "i") ~ task_text(m[1]) : task_subject(m[1], known_map)
+    yield ["say upper(" + arg + ")"]
+  ;;
+
+  m be regex_capture(s_no_out, "^(?:make\\\\s+)?(.+?)\\\\s+(?:in\\\\s+)?(?:lowercase|lower\\\\s*case|small letters)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s_no_out, "^lowercase\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge arg be regex_test(s, "^make\\\\s", "i") ~ task_text(m[1]) : task_subject(m[1], known_map)
+    yield ["say lower(" + arg + ")"]
+  ;;
+
+  m be regex_capture(s, "^(?:what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(?:the\\\\s+)?(?:length|size)\\\\s+of\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^how\\\\s+(?:many|much)\\\\s+(?:letters|characters|chars)\\\\s+(?:are\\\\s+)?(?:in|does)\\\\s+(.+?)(?:\\\\s+have)?$", "i")
+  ;;
+  ponder m equals void ::
+    m be regex_capture(s, "^how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge ns be task_nums(m[1])
+    ponder ns differs void also measure(ns) > 1 ::
+      yield ["say len([" + weave(ns, ", ") + "])"]
+    ;;
+    yield ["say len(" + task_subject(m[1], known_map) + ")"]
+  ;;
+
+  // 4. even / odd
+  m be regex_capture(s, "^(?:is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(?:is\\\\s+)?(?:an?\\\\s+)?(even|odd)(?:\\\\s+or\\\\s+(?:even|odd))?$", "i")
+  ponder m differs void ::
+    forge n be task_num(m[1])
+    ponder n equals void also has(known_map, m[1]) ::
+      n be m[1]
+    ;;
+    ponder n differs void ::
+      yield ["if " + n + " % 2 is 0", "  say \\"even\\"", "else", "  say \\"odd\\"", "end"]
+    ;;
+  ;;
+
+  // 5. random numbers
+  m be regex_capture(s, "^(?:(?:give|show|pick|generate|roll|make|get)\\\\s+(?:me\\\\s+)?)?(?:a\\\\s+)?random\\\\s+(?:whole\\\\s+)?number\\\\s+(?:between|from)\\\\s+(\\\\S+)\\\\s+(?:and|to)\\\\s+(\\\\S+)$", "i")
+  ponder m differs void ::
+    forge a be task_num(m[1])
+    forge b be task_num(m[2])
+    ponder a differs void also b differs void ::
+      yield ["say randint(" + a + ", " + b + ")"]
+    ;;
+  ;;
+  ponder regex_test(s, "^(?:roll\\\\s+(?:a\\\\s+)?(?:die|dice)|throw\\\\s+(?:a\\\\s+)?dice?)$", "i") ::
+    yield ["say randint(1, 6)"]
+  ;;
+
+  // 6. sorting
+  m be regex_capture(s_no_out, "^sort\\\\s+(?:the\\\\s+)?(?:numbers\\\\s+)?(.+?)(?:\\\\s+(?:from\\\\s+)?(?:biggest|largest|highest)\\\\s+(?:to|first).*)?$", "i")
+  ponder m differs void ::
+    forge ns be task_nums(m[1])
+    ponder ns differs void ::
+      forge desc be regex_test(s, "biggest|largest|highest|descending", "i")
+      forge fn be desc ~ "sortDesc" : "sort"
+      yield ["say " + fn + "([" + weave(ns, ", ") + "])"]
+    ;;
+  ;;
+
+  // 7. times tables
+  m be regex_capture(s, "^(?:print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(?:the\\\\s+)?(?:multiplication|times)\\\\s+table\\\\s+(?:of|for)\\\\s+(\\\\S+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^(?:print\\\\s+|show\\\\s+)?(?:the\\\\s+)?(\\\\S+)\\\\s+times\\\\s+table$", "i")
+  ;;
+  ponder m differs void ::
+    forge n be task_num(m[1])
+    ponder n differs void ::
+      yield ["set i to 1", "while i <= 10", "  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)", "  set i to i + 1", "end"]
+    ;;
+  ;;
+
+  // 8. greetings
+  m be regex_capture(s, "^(?:say\\\\s+)?(?:hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^greet\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge who be trim(m[1])
+    ponder has(known_map, who) ::
+      yield ["say \\"Hello, \\" + " + who]
+    ;;
+    yield ["say " + quote_text("Hello, " + who)]
+  ;;
+
+  yield void
+;;
+`;
+  }
+});
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\agent\memory.sdev
+var memory_default;
+var init_memory = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\memory.sdev"() {
+    memory_default = '// =====================================================================\n// memory.sdev \u2014 Understander hashing, memory line application, program\n// name learning, dialect promotion, and board unmasking, in sdev.\n// =====================================================================\n\nforge MEM_B36 be "0123456789abcdefghijklmnopqrstuvwxyz"\n\nconjure mem_xor8(a, b) ::\n  forge x be a % 256\n  forge y be b % 256\n  forge res be 0\n  forge p be 1\n  forge bit be 0\n  cycle bit < 8 ::\n    forge bx be x % 2\n    forge by be y % 2\n    ponder bx differs by ::\n      res be res + p\n    ;;\n    x be (x - bx) / 2\n    y be (y - by) / 2\n    p be p * 2\n    bit be bit + 1\n  ;;\n  yield res\n;;\n\nconjure mem_mul16_step(hi, lo, m_hi, m_lo) ::\n  forge p0 be lo * m_lo\n  forge lo_next be p0 % 65536\n  forge carry be (p0 - lo_next) / 65536\n  forge hi_next be (hi * m_lo + lo * m_hi + carry) % 65536\n  yield [hi_next, lo_next]\n;;\n\nconjure mem_u32_base36(hi, lo) ::\n  forge val be hi * 65536 + lo\n  ponder val equals 0 ::\n    yield "0"\n  ;;\n  forge out be ""\n  cycle val > 0 ::\n    forge d be val % 36\n    out be portion(MEM_B36, d, d + 1) + out\n    val be (val - d) / 36\n  ;;\n  yield out\n;;\n\nconjure memory_understand_key(source, extra) ::\n  forge s be source + chr(0) + extra\n  // FNV-1a 32-bit (0x811c9dc5 -> hi 33052, lo 40389; prime 16777619 -> 256, 403)\n  // Secondary 32-bit hash (0x01000193 -> hi 256, lo 403; prime 2246822507 -> 34283, 51819)\n  forge h1_hi be 33052\n  forge h1_lo be 40389\n  forge h2_hi be 256\n  forge h2_lo be 403\n  forge n be measure(s)\n  forge i be 0\n  cycle i < n ::\n    forge c be ord(s, i)\n    forge b1 be h1_lo % 256\n    h1_lo be (h1_lo - b1) + mem_xor8(b1, c % 256)\n    forge r1 be mem_mul16_step(h1_hi, h1_lo, 256, 403)\n    h1_hi be r1[0]\n    h1_lo be r1[1]\n\n    forge b2 be h2_lo % 256\n    h2_lo be (h2_lo - b2) + mem_xor8(b2, c % 256)\n    forge r2 be mem_mul16_step(h2_hi, h2_lo, 34283, 51819)\n    h2_hi be r2[0]\n    h2_lo be r2[1]\n    i be i + 1\n  ;;\n  yield mem_u32_base36(h1_hi, h1_lo) + mem_u32_base36(h2_hi, h2_lo) + mem_u32_base36(0, n)\n;;\n\n// Returns [rewritten_source, hit]\nconjure memory_apply_lines(source, lines_tome) ::\n  forge hit be nope\n  forge out be []\n  iterate line through shatter(source, "\\n") ::\n    forge k be trim(line)\n    ponder k differs "" also has(lines_tome, k) ::\n      forge entry be lines_tome[k]\n      ponder essence(entry) equals "tome" also has(entry, "canonical") ::\n        hit be yep\n        out be out + [leading_space(line) + str(entry["canonical"])]\n      ;; otherwise ::\n        out be out + [line]\n      ;;\n    ;; otherwise ::\n      out be out + [line]\n    ;;\n  ;;\n  yield [hit ~ weave(out, "\\n") : source, hit]\n;;\n\nconjure memory_learn_names(canonical) ::\n  forge found be []\n  forge seen be ::\n  ;;\n  iterate hit through regex_find_all(canonical, "^\\\\s*set\\\\s+([\\\\p{L}\\\\p{N}_]+)\\\\s+to\\\\b", "m") ::\n    forge cap be regex_capture(hit, "^\\\\s*set\\\\s+([\\\\p{L}\\\\p{N}_]+)\\\\s+to\\\\b")\n    ponder cap differs void also isnt has(seen, cap[1]) ::\n      seen[cap[1]] be yep\n      found be found + [cap[1]]\n    ;;\n  ;;\n  iterate hit through regex_find_all(canonical, "^\\\\s*to\\\\s+([\\\\p{L}\\\\p{N}_]+)\\\\b", "m") ::\n    forge cap be regex_capture(hit, "^\\\\s*to\\\\s+([\\\\p{L}\\\\p{N}_]+)\\\\b")\n    ponder cap differs void also isnt has(seen, cap[1]) ::\n      seen[cap[1]] be yep\n      found be found + [cap[1]]\n    ;;\n  ;;\n  yield found\n;;\n\n// pairs: [[word, intent], ...], canonical_map: { intent -> canonical_word }\n// Returns [names_tome, synonyms_tome]\nconjure memory_promote_words(pairs, canonical_map, rename) ::\n  forge by_canon be ::\n  ;;\n  forge order be []\n  iterate pair through pairs ::\n    forge word be str(pair[0])\n    forge intent be str(pair[1])\n    ponder has(canonical_map, intent) ::\n      forge canon be str(canonical_map[intent])\n      ponder word differs canon also regex_test(word, "^[\\\\p{L}\\\\p{N}_]+$") ::\n        ponder isnt has(by_canon, canon) ::\n          by_canon[canon] be []\n          order be order + [canon]\n        ;;\n        forge existing be by_canon[canon]\n        forge dup be nope\n        iterate w through existing ::\n          ponder w equals word ::\n            dup be yep\n          ;;\n        ;;\n        ponder isnt dup ::\n          by_canon[canon] be existing + [word]\n        ;;\n      ;;\n    ;;\n  ;;\n\n  forge taken be ::\n  ;;\n  forge names_out be ::\n  ;;\n  forge syns_out be ::\n  ;;\n  iterate canon through order ::\n    forge list_w be []\n    iterate w through by_canon[canon] ::\n      ponder isnt has(taken, w) ::\n        taken[w] be yep\n        list_w be list_w + [w]\n      ;;\n    ;;\n    ponder measure(list_w) > 0 ::\n      syns_out[canon] be list_w\n      ponder rename ::\n        names_out[canon] be list_w[0]\n      ;;\n    ;;\n  ;;\n  yield [names_out, syns_out]\n;;\n\nconjure boards_unmask(source, block_line_counts, texts) ::\n  forge t_count be measure(texts)\n  ponder t_count equals 0 ::\n    yield source\n  ;;\n  forge used be ::\n  ;;\n  forge ls be shatter(source, "\\n")\n  forge n_ls be measure(ls)\n  forge out be []\n  forge i be 0\n  cycle i < n_ls ::\n    forge line be ls[i]\n    forge m be regex_capture(line, "^[ \\\\t]*# sdev:board-block (\\\\d+)[ \\\\t]*$")\n    ponder m differs void ::\n      forge idx be int(m[1])\n      forge idx_k be str(idx)\n      ponder idx >= 0 also idx < t_count also isnt has(used, idx_k) ::\n        used[idx_k] be yep\n        out be out + [texts[idx]]\n        forge blanks be 0\n        forge k be i + 1\n        cycle k < n_ls also trim(ls[k]) equals "" ::\n          blanks be blanks + 1\n          k be k + 1\n        ;;\n        forge max_skip be int(block_line_counts[idx]) - 1\n        forge skip_n be blanks < max_skip ~ blanks : max_skip\n        ponder skip_n > 0 ::\n          i be i + skip_n\n        ;;\n      ;; otherwise ::\n        out be out + [line]\n      ;;\n    ;; otherwise ::\n      out be out + [line]\n    ;;\n    i be i + 1\n  ;;\n\n  forge result be weave(out, "\\n")\n  forge missing be []\n  forge j be 0\n  cycle j < t_count ::\n    ponder isnt has(used, str(j)) ::\n      missing be missing + [texts[j]]\n    ;;\n    j be j + 1\n  ;;\n  ponder measure(missing) > 0 ::\n    result be regex_replace(result, "\\\\s*$", "") + "\\n\\n" + weave(missing, "\\n\\n") + "\\n"\n  ;;\n  yield result\n;;\n';
+  }
+});
+
 // src/lang/agent/sdev-engine.ts
 function load() {
   if (engine !== null) return engine;
   try {
-    const ast = new Parser(new Lexer(blocks_default + "\n" + understander_default + "\n" + ai_dialect_default + "\n" + project_default + "\n" + parser_eval_default).tokenize()).parse();
+    const src = blocks_default + "\n" + understander_default + "\n" + ai_dialect_default + "\n" + project_default + "\n" + parser_eval_default + "\n" + brain_default + "\n" + math_default + "\n" + tasks_default + "\n" + memory_default;
+    const ast = new Parser(new Lexer(src).tokenize()).parse();
     const interp = new Interpreter(() => {
     });
     interp.interpret(ast);
@@ -18218,7 +18772,37 @@ function load() {
       check: env2.get("check_blocks", 0),
       parse: env2.get("sdev_parse_program", 0),
       validate: env2.get("sdev_validate_syntax", 0),
-      eval: env2.get("sdev_eval_program", 0)
+      eval: env2.get("sdev_eval_program", 0),
+      scanDirectives: env2.get("scan_directives", 0),
+      isRequest: env2.get("is_request", 0),
+      normalizeLocalEndpoints: env2.get("normalize_local_endpoints", 0),
+      sanitizeBrainOutput: env2.get("sanitize_brain_output", 0),
+      parseBrainReply: env2.get("parse_brain_reply", 0),
+      solveNlRequest: env2.get("solve_nl_request", 0),
+      translateLineSpeculative: env2.get("translate_line_speculative", 0),
+      runMicroBrainTranslation: env2.get("run_micro_brain_translation", 0),
+      microBrainAccepts: env2.get("micro_brain_accepts", 0),
+      brainCandidateScore: env2.get("brain_candidate_score", 0),
+      brainNeedsOnlineFallback: env2.get("brain_needs_online_fallback", 0),
+      reconsiderBrainMode: env2.get("reconsider_brain_mode", 0),
+      translationHasDiff: env2.get("translation_has_diff", 0),
+      translationDownloadName: env2.get("translation_download_name", 0),
+      translationBannerText: env2.get("translation_banner_text", 0),
+      mathRequest: env2.get("math_request", 0),
+      taskRequest: env2.get("task_request", 0),
+      memoryUnderstandKey: env2.get("memory_understand_key", 0),
+      memoryApplyLines: env2.get("memory_apply_lines", 0),
+      memoryLearnNames: env2.get("memory_learn_names", 0),
+      promoteWords: env2.get("memory_promote_words", 0),
+      boardsUnmask: env2.get("boards_unmask", 0),
+      brainInstructions: env2.get("brain_instructions", 0),
+      brainInput: env2.get("brain_input", 0),
+      doctorSystemPrompt: env2.get("doctor_system_prompt", 0),
+      doctorUserPrompt: env2.get("doctor_user_prompt", 0),
+      parseDoctorFix: env2.get("parse_doctor_fix", 0),
+      probeServerType: env2.get("probe_server_type", 0),
+      probeCorsHint: env2.get("probe_cors_hint", 0),
+      classifyLineIntent: env2.get("classify_line_intent", 0)
     };
   } catch (e) {
     engineError = e instanceof Error ? e.message : String(e);
@@ -18307,6 +18891,313 @@ function sdevValidateSyntax(source) {
     return null;
   }
 }
+function sdevScanDirectives(source) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.scanDirectives.call([source], 0);
+    if (!Array.isArray(r) || r.length < 5) return null;
+    return {
+      mode: r[0] || null,
+      brain: r[1] || null,
+      learn: typeof r[2] === "boolean" ? r[2] : null,
+      found: r[3] === true,
+      source: String(r[4] ?? source)
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevIsRequest(source) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return e.isRequest.call([source], 0) === true;
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevNormalizeLocalEndpoints(rawInput = "") {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.normalizeLocalEndpoints.call([rawInput], 0);
+    if (!Array.isArray(r) || r.length < 5) return null;
+    return {
+      baseUrl: String(r[0]),
+      chatUrl: String(r[1]),
+      modelsUrl: String(r[2]),
+      tagsUrl: String(r[3]),
+      isOllamaNative: r[4] === true
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevSanitizeBrainOutput(code, format) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.sanitizeBrainOutput.call([code, format ?? "canonical"], 0) ?? "");
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevParseBrainReply(text2, format) {
+  const e = load();
+  if (!e) return void 0;
+  try {
+    const r = e.parseBrainReply.call([text2, format ?? "canonical"], 0);
+    if (r == null) return null;
+    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
+    return {
+      canonical: r[0],
+      notes: typeof r[1] === "string" && r[1] ? r[1] : void 0,
+      words: r[2] && typeof r[2] === "object" ? r[2] : void 0
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return void 0;
+  }
+}
+function sdevSolveNlRequest(prompt) {
+  const e = load();
+  if (!e) return void 0;
+  try {
+    const r = e.solveNlRequest.call([prompt], 0);
+    return typeof r === "string" ? r : null;
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return void 0;
+  }
+}
+function sdevTranslateLineSpeculative(rawLine) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.translateLineSpeculative.call([rawLine], 0);
+    if (!Array.isArray(r) || r.length < 4) return null;
+    return {
+      line: String(r[0]),
+      openedBlock: r[1] === true,
+      closedBlock: r[2] === true,
+      reopenedBlock: r[3] === true
+    };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevRunMicroBrainTranslation(source) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.runMicroBrainTranslation.call([source], 0);
+    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
+    return { canonical: r[0], changed: r[1] === true };
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevMicroBrainAccepts(parsesOk, unknownCount, changed, unresolvedCount, problemsCount) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return e.microBrainAccepts.call([parsesOk, unknownCount, changed, unresolvedCount, problemsCount], 0) === true;
+  } catch {
+    return null;
+  }
+}
+function sdevBrainCandidateScore(parsesOk, unknownCount, extraProblemsCount) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return Number(e.brainCandidateScore.call([parsesOk, unknownCount, extraProblemsCount], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevBrainNeedsOnlineFallback(hasBest, bestScore, extraProblemsCount, bestSource, draftSource) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return e.brainNeedsOnlineFallback.call([hasBest, bestScore, extraProblemsCount, bestSource, draftSource], 0) === true;
+  } catch {
+    return null;
+  }
+}
+function sdevMathRequest(stmt, known = []) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.mathRequest.call([stmt, [...known]], 0);
+    return typeof r === "string" ? r : null;
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevTaskRequest(stmt, known = []) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.taskRequest.call([stmt, [...known]], 0);
+    return Array.isArray(r) ? r.map(String) : null;
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+function sdevMemoryUnderstandKey(source, extra = "") {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.memoryUnderstandKey.call([source, extra], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevMemoryApplyLines(source, linesTome) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.memoryApplyLines.call([source, linesTome], 0);
+    if (!Array.isArray(r) || typeof r[0] !== "string") return null;
+    return { source: r[0], hit: r[1] === true };
+  } catch {
+    return null;
+  }
+}
+function sdevMemoryLearnNames(canonical) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.memoryLearnNames.call([canonical], 0);
+    return Array.isArray(r) ? r.map(String) : null;
+  } catch {
+    return null;
+  }
+}
+function sdevPromoteWords(pairs, canonicalMap, rename) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.promoteWords.call([pairs, canonicalMap, rename], 0);
+    if (!Array.isArray(r) || r.length < 2) return null;
+    return { names: r[0] ?? {}, synonyms: r[1] ?? {} };
+  } catch {
+    return null;
+  }
+}
+function sdevBoardsUnmask(source, blockLineCounts, texts) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.boardsUnmask.call([source, blockLineCounts, texts], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevBrainInstructions(format) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.brainInstructions.call([format ?? "canonical"], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevBrainInput(req) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(
+      e.brainInput.call(
+        [
+          req.source,
+          req.draft ?? "",
+          req.unresolved ?? [],
+          JSON.stringify(req.vocabulary ?? {}),
+          req.problems ?? [],
+          req.format ?? "canonical"
+        ],
+        0
+      )
+    );
+  } catch {
+    return null;
+  }
+}
+function sdevDoctorSystemPrompt() {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.doctorSystemPrompt.call([], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevDoctorUserPrompt(code, error, note) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.doctorUserPrompt.call([code, error ?? "", note ?? ""], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevParseDoctorFix(rawText) {
+  const e = load();
+  if (!e) return void 0;
+  try {
+    const r = e.parseDoctorFix.call([rawText], 0);
+    if (!Array.isArray(r) || r.length < 5) return null;
+    const conf = r[4] === "high" || r[4] === "medium" || r[4] === "low" ? r[4] : "medium";
+    return {
+      fixed_code: String(r[0]),
+      explanation: String(r[1]),
+      changes: String(r[2]),
+      how_it_works: String(r[3]),
+      confidence: conf
+    };
+  } catch {
+    return void 0;
+  }
+}
+function sdevProbeServerType(baseUrl) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.probeServerType.call([baseUrl], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevProbeCorsHint(baseUrl) {
+  const e = load();
+  if (!e) return null;
+  try {
+    return String(e.probeCorsHint.call([baseUrl], 0));
+  } catch {
+    return null;
+  }
+}
+function sdevClassifyLineIntent(line) {
+  const e = load();
+  if (!e) return null;
+  try {
+    const r = e.classifyLineIntent.call([line], 0);
+    if (!Array.isArray(r) || r.length < 2) return null;
+    return { intent: r[0], score: Number(r[1]) };
+  } catch {
+    return null;
+  }
+}
 var engine, engineError, namesCache;
 var init_sdev_engine = __esm({
   "src/lang/agent/sdev-engine.ts"() {
@@ -18315,6 +19206,10 @@ var init_sdev_engine = __esm({
     init_project();
     init_blocks();
     init_parser_eval();
+    init_brain();
+    init_math2();
+    init_tasks();
+    init_memory();
     init_lexer();
     init_parser();
     init_interpreter();
@@ -19653,10 +20548,10 @@ function boardIdFor(raw) {
   if (/^uno(?:\s*r3)?$/.test(norm2)) return "uno";
   return id;
 }
-function readBoardBlock(text3, firstLine = 1, strict = true) {
+function readBoardBlock(text2, firstLine = 1, strict = true) {
   const notes = [];
   const unresolved = [];
-  const lines = text3.split("\n");
+  const lines = text2.split("\n");
   const header = HEADER_RE.exec(lines[0]);
   let headerOut = lines[0];
   let useBrace = false;
@@ -20034,858 +20929,6 @@ var init_understand = __esm({
       'Time: wait 500 (milliseconds) | wait 2 seconds | wait 10 us. Serial: serial begin 9600 | speak("text", value). Sound: tone 8 440 200 | notone 8.',
       "Logic: forge x be 0 | x be x + 1 | ponder x > 3 :: ... ;; otherwise :: ... ;; | cycle x < 10 :: ... ;; | within i be sequence(0, 10) :: ... ;;. Arduino C++ calls like digitalWrite(13, HIGH) and Serial.println(x) are also valid."
     ];
-  }
-});
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\dialect\dialect.sdev
-var dialect_default;
-var init_dialect = __esm({
-  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\dialect\\dialect.sdev"() {
-    dialect_default = `# =============================================================================\r
-# SDEV Self-Hosted Dialect Engine: Canonicalizer, Address Codec & Presets\r
-# (lang/dialect/dialect.sdev)\r
-# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r
-# =============================================================================\r
-\r
-use "lang/stdlib/v2/text.sdev"\r
-use "lang/stdlib/v2/buffer.sdev"\r
-\r
-# A dialect spec is stored as a list:\r
-# 0: name (str)\r
-# 1: slug (str)\r
-# 2: lang_tag (str)\r
-# 3: count of mappings (int)\r
-# 4: dialect_words list (str)\r
-# 5: canonical_words list (str)\r
-\r
-to dialect_create with name slug lang_tag\r
-  set d to mklist(6)\r
-  set d[0] to concat(name, "")\r
-  set d[1] to concat(slug, "")\r
-  set d[2] to concat(lang_tag, "")\r
-  set d[3] to 0\r
-  set d[4] to mklist(64)\r
-  set d[5] to mklist(64)\r
-  return d\r
-end\r
-\r
-to dialect_add_word with d custom_word canonical_word\r
-  set n to d[3]\r
-  set dw to d[4]\r
-  set cw to d[5]\r
-  set dw[n] to concat(custom_word, "")\r
-  set cw[n] to concat(canonical_word, "")\r
-  set d[3] to n + 1\r
-  return d\r
-end\r
-\r
-to dialect_canonicalize with src d\r
-  set out to concat(src, "")\r
-  set n to d[3]\r
-  set dw to d[4]\r
-  set cw to d[5]\r
-  set i to 0\r
-  while i < n\r
-    set from_w to concat(dw[i], "")\r
-    set to_w to concat(cw[i], "")\r
-    set out to replace(out, from_w + " ", to_w + " ")\r
-    set out to replace(out, from_w + "(", to_w + "(")\r
-    set out to replace(out, " " + from_w + "\\n", " " + to_w + "\\n")\r
-    if str_eq(out, from_w)\r
-      set out to to_w\r
-    end\r
-    set i to i + 1\r
-  end\r
-  return concat(out, "")\r
-end\r
-\r
-to dialect_signature with d\r
-  set payload to concat(d[0], "") + "|" + concat(d[1], "") + "|" + concat(d[2], "")\r
-  set n to d[3]\r
-  set dw to d[4]\r
-  set cw to d[5]\r
-  set i to 0\r
-  while i < n\r
-    set payload to payload + "|" + concat(dw[i], "") + "=" + concat(cw[i], "")\r
-    set i to i + 1\r
-  end\r
-  return "sdev-sig-" + hash_fnv1a_hex(payload)\r
-end\r
-\r
-to dialect_encode_address with d\r
-  set slug to concat(d[1], "")\r
-  set sig to dialect_signature(d)\r
-  return "sdev://dialect/" + slug + "?" + base64_encode(sig)\r
-end\r
-\r
-to dialect_decode_slug with addr\r
-  if text_starts_with(addr, "sdev://dialect/") is 0\r
-    return ""\r
-  end\r
-  set rest to substr(addr, 15, length(addr) - 15)\r
-  set q to find(rest, "?")\r
-  if q >= 0\r
-    return substr(rest, 0, q)\r
-  end\r
-  return concat(rest, "")\r
-end\r
-\r
-to dialect_preset with slug\r
-  set k to lower(trim(slug))\r
-  if str_eq(k, "bg") or str_eq(k, "bulgarian")\r
-    set d to dialect_create("\u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438", "bg", "bg")\r
-    set _ to dialect_add_word(d, "\u043D\u0435\u043A\u0430", "set")\r
-    set _ to dialect_add_word(d, "\u0431\u044A\u0434\u0435", "to")\r
-    set _ to dialect_add_word(d, "\u043A\u0430\u0436\u0438", "say")\r
-    set _ to dialect_add_word(d, "\u0430\u043A\u043E", "if")\r
-    set _ to dialect_add_word(d, "\u0438\u043D\u0430\u0447\u0435", "else")\r
-    set _ to dialect_add_word(d, "\u0434\u043E\u043A\u0430\u0442\u043E", "while")\r
-    set _ to dialect_add_word(d, "\u043A\u0440\u0430\u0439", "end")\r
-    return d\r
-  end\r
-  if str_eq(k, "es") or str_eq(k, "spanish")\r
-    set d to dialect_create("Espa\xF1ol", "es", "es")\r
-    set _ to dialect_add_word(d, "forjar", "set")\r
-    set _ to dialect_add_word(d, "ser", "to")\r
-    set _ to dialect_add_word(d, "hablar", "say")\r
-    set _ to dialect_add_word(d, "si", "if")\r
-    set _ to dialect_add_word(d, "sino", "else")\r
-    set _ to dialect_add_word(d, "mientras", "while")\r
-    set _ to dialect_add_word(d, "fin", "end")\r
-    return d\r
-  end\r
-  if str_eq(k, "pirate")\r
-    set d to dialect_create("Pirate Speak", "pirate", "en")\r
-    set _ to dialect_add_word(d, "plunder", "set")\r
-    set _ to dialect_add_word(d, "be_yar", "to")\r
-    set _ to dialect_add_word(d, "bellow", "say")\r
-    set _ to dialect_add_word(d, "parley", "if")\r
-    set _ to dialect_add_word(d, "mutiny", "else")\r
-    set _ to dialect_add_word(d, "anchor", "end")\r
-    return d\r
-  end\r
-  set d_def to dialect_create("Standard English", "en", "en")\r
-  return d_def\r
-end\r
-\r
-\r
-to dialect_is_word_char with ch\r
-  set c to ord(ch, 0)\r
-  if c >= 65 and c <= 90\r
-    return 1\r
-  end\r
-  if c >= 97 and c <= 122\r
-    return 1\r
-  end\r
-  if c >= 48 and c <= 57\r
-    return 1\r
-  end\r
-  if c is 95 or c >= 128\r
-    return 1\r
-  end\r
-  return 0\r
-end\r
-\r
-to dialect_push_list with xs val\r
-  set n to length(xs)\r
-  set out to mklist(n + 1)\r
-  set i to 0\r
-  while i < n\r
-    set out[i] to xs[i]\r
-    set i to i + 1\r
-  end\r
-  set out[n] to val\r
-  return out\r
-end\r
-\r
-to dialect_split_line with line comment_marker\r
-  set segs to []\r
-  set buf to ""\r
-  set n to length(line)\r
-  set mlen to length(comment_marker)\r
-  set i to 0\r
-  while i < n\r
-    if mlen > 0 and (i + mlen) <= n\r
-      if str_eq(substr(line, i, mlen), comment_marker)\r
-        if length(buf) > 0\r
-          set segs to dialect_push_list(segs, ["code", buf])\r
-          set buf to ""\r
-        end\r
-        set segs to dialect_push_list(segs, ["comment", substr(line, i, n - i)])\r
-        return segs\r
-      end\r
-    end\r
-    set ch to substr(line, i, 1)\r
-    if ch is "\\"" or ch is "'"\r
-      if length(buf) > 0\r
-        set segs to dialect_push_list(segs, ["code", buf])\r
-        set buf to ""\r
-      end\r
-      set quote to ch\r
-      set s to ch\r
-      set i to i + 1\r
-      set closed to 0\r
-      while i < n and closed is 0\r
-        set cur to substr(line, i, 1)\r
-        if cur is "\\\\" and (i + 1) < n\r
-          set s to s + cur + substr(line, i + 1, 1)\r
-          set i to i + 2\r
-        else\r
-          set s to s + cur\r
-          if cur is quote\r
-            set closed to 1\r
-          end\r
-          set i to i + 1\r
-        end\r
-      end\r
-      set segs to dialect_push_list(segs, ["string", s])\r
-    else\r
-      set buf to buf + ch\r
-      set i to i + 1\r
-    end\r
-  end\r
-  if length(buf) > 0\r
-    set segs to dialect_push_list(segs, ["code", buf])\r
-  end\r
-  return segs\r
-end\r
-\r
-to dialect_map_words with code_str dict\r
-  set n to length(code_str)\r
-  set out to ""\r
-  set i to 0\r
-  while i < n\r
-    set ch to substr(code_str, i, 1)\r
-    if dialect_is_word_char(ch) is 1\r
-      set j to i + 1\r
-      while j < n and dialect_is_word_char(substr(code_str, j, 1)) is 1\r
-        set j to j + 1\r
-      end\r
-      set w to substr(code_str, i, j - i)\r
-      if has(dict, w)\r
-        set out to out + dict[w]\r
-      else\r
-        set out to out + w\r
-      end\r
-      set i to j\r
-    else\r
-      set out to out + ch\r
-      set i to i + 1\r
-    end\r
-  end\r
-  return out\r
-end\r
-\r
-to dialect_xor8 with a b\r
-  set x to a % 256\r
-  set y to b % 256\r
-  set res to 0\r
-  set p to 1\r
-  set bit to 0\r
-  while bit < 8\r
-    set bx to x % 2\r
-    set by to y % 2\r
-    if bx is not by\r
-      set res to res + p\r
-    end\r
-    set x to (x - bx) / 2\r
-    set y to (y - by) / 2\r
-    set p to p * 2\r
-    set bit to bit + 1\r
-  end\r
-  return res\r
-end\r
-\r
-to dialect_hex4 with val\r
-  set hex_chars to "0123456789abcdef"\r
-  set v to val\r
-  set out to ""\r
-  set k to 0\r
-  while k < 4\r
-    set digit to v % 16\r
-    set out to substr(hex_chars, digit, 1) + out\r
-    set v to (v - digit) / 16\r
-    set k to k + 1\r
-  end\r
-  return out\r
-end\r
-\r
-to dialect_fnv1a_hex with body_str\r
-  set hi to 33052\r
-  set lo to 40389\r
-  set n to length(body_str)\r
-  set i to 0\r
-  while i < n\r
-    set c to ord(body_str, i)\r
-    set b0 to lo % 256\r
-    set lo to (lo - b0) + dialect_xor8(b0, c % 256)\r
-    set p0 to lo * 403\r
-    set lo_next to p0 % 65536\r
-    set carry to (p0 - lo_next) / 65536\r
-    set hi_next to ((hi * 403) + (lo * 256) + carry) % 65536\r
-    set lo to lo_next\r
-    set hi to hi_next\r
-    set i to i + 1\r
-  end\r
-  return dialect_hex4(hi) + dialect_hex4(lo)\r
-end\r
-\r
-to dialect_has_signature with src prefix_str\r
-  set nl to find(src, "\\n")\r
-  set first to src\r
-  if nl >= 0\r
-    set first to substr(src, 0, nl)\r
-  end\r
-  if text_starts_with(first, prefix_str) is 0\r
-    return 0\r
-  end\r
-  set rest to text_trim(substr(first, length(prefix_str), length(first) - length(prefix_str)))\r
-  if length(rest) is 0 or find(rest, " ") >= 0\r
-    return 0\r
-  end\r
-  return 1\r
-end\r
-\r
-to dialect_strip_signature with src prefix_str\r
-  if dialect_has_signature(src, prefix_str) is 0\r
-    return src\r
-  end\r
-  set nl to find(src, "\\n")\r
-  if nl < 0\r
-    return ""\r
-  end\r
-  return substr(src, nl + 1, length(src) - nl - 1)\r
-end\r
-\r
-to dialect_is_slug_char with ch\r
-  set c to ord(ch, 0)\r
-  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c is 45\r
-    return 1\r
-  end\r
-  return 0\r
-end\r
-\r
-to dialect_is_lower_alnum with ch\r
-  set c to ord(ch, 0)\r
-  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57)\r
-    return 1\r
-  end\r
-  return 0\r
-end\r
-\r
-to dialect_is_digits with s\r
-  set n to length(s)\r
-  if n is 0\r
-    return 0\r
-  end\r
-  set i to 0\r
-  while i < n\r
-    set c to ord(s, i)\r
-    if c < 48 or c > 57\r
-      return 0\r
-    end\r
-    set i to i + 1\r
-  end\r
-  return 1\r
-end\r
-\r
-to dialect_is_semver with s\r
-  set parts to split(s, ".")\r
-  if length(parts) is not 3\r
-    return 0\r
-  end\r
-  if dialect_is_digits(parts[0]) is 0 or dialect_is_digits(parts[1]) is 0 or dialect_is_digits(parts[2]) is 0\r
-    return 0\r
-  end\r
-  return 1\r
-end\r
-\r
-to dialect_valid_ident_part with s max_len\r
-  set n to length(s)\r
-  if n < 1 or n > max_len\r
-    return 0\r
-  end\r
-  if dialect_is_lower_alnum(substr(s, 0, 1)) is 0\r
-    return 0\r
-  end\r
-  set i to 1\r
-  while i < n\r
-    if dialect_is_slug_char(substr(s, i, 1)) is 0\r
-      return 0\r
-    end\r
-    set i to i + 1\r
-  end\r
-  return 1\r
-end\r
-\r
-to dialect_parse_address with raw_input\r
-  set s to text_trim(raw_input)\r
-  if length(s) < 4 or substr(s, 0, 1) is not "@"\r
-    return []\r
-  end\r
-  set body to substr(s, 1, length(s) - 1)\r
-  set slash to find(body, "/")\r
-  if slash <= 0\r
-    return []\r
-  end\r
-  set user to substr(body, 0, slash)\r
-  if dialect_valid_ident_part(user, 31) is 0\r
-    return []\r
-  end\r
-  set tail to substr(body, slash + 1, length(body) - slash - 1)\r
-  set at_idx to find(tail, "@")\r
-  set slug to tail\r
-  set ver to ""\r
-  if at_idx >= 0\r
-    set slug to substr(tail, 0, at_idx)\r
-    set vpart to substr(tail, at_idx + 1, length(tail) - at_idx - 1)\r
-    if dialect_is_semver(vpart) is 0\r
-      return []\r
-    end\r
-    set ver to vpart\r
-  end\r
-  if dialect_valid_ident_part(slug, 39) is 0\r
-    return []\r
-  end\r
-  return [user, slug, ver]\r
-end\r
-\r
-to dialect_format_address with username slug version\r
-  if length(str(version)) > 0\r
-    return "@" + username + "/" + slug + "@" + str(version)\r
-  end\r
-  return "@" + username + "/" + slug\r
-end\r
-\r
-to dialect_is_share_code with raw_input\r
-  set s to text_lower(text_trim(raw_input))\r
-  if length(s) is not 8\r
-    return 0\r
-  end\r
-  set i to 0\r
-  while i < 8\r
-    set c to ord(s, i)\r
-    set ok to 0\r
-    if (c >= 48 and c <= 57) or (c >= 97 and c <= 102)\r
-      set ok to 1\r
-    end\r
-    if ok is 0\r
-      return 0\r
-    end\r
-    set i to i + 1\r
-  end\r
-  return 1\r
-end\r
-\r
-to dialect_preset_bg_data\r
-  set names to [["say", "\u043A\u0430\u0436\u0438"], ["ask", "\u043F\u0438\u0442\u0430\u0439"], ["set", "\u043D\u0435\u043A\u0430"], ["to", "\u043D\u0430"], ["if", "\u0430\u043A\u043E"], ["else", "\u0438\u043D\u0430\u0447\u0435"], ["end", "\u043A\u0440\u0430\u0439"], ["for", "\u0437\u0430"], ["each", "\u0432\u0441\u044F\u043A\u043E"], ["in", "\u0432\u044A\u0432"], ["while", "\u0434\u043E\u043A\u0430\u0442\u043E"], ["break", "\u0441\u043F\u0440\u0438"], ["continue", "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438"], ["match", "\u0441\u0440\u0430\u0432\u043D\u0438"], ["with", "\u0441"], ["return", "\u0432\u044A\u0440\u043D\u0438"], ["make", "\u0441\u044A\u0437\u0434\u0430\u0439"], ["capture", "\u0443\u043B\u043E\u0432\u0438"], ["ref", "\u043F\u0440\u0435\u043F\u0440\u0430\u0442\u043A\u0430"], ["call", "\u0438\u0437\u0432\u0438\u043A\u0430\u0439"], ["attempt", "\u043E\u043F\u0438\u0442\u0430\u0439"], ["rescue", "\u0445\u0432\u0430\u043D\u0438"], ["throw", "\u0445\u0432\u044A\u0440\u043B\u0438"], ["kind", "\u0432\u0438\u0434"], ["has", "\u0438\u043C\u0430"], ["does", "\u043F\u0440\u0430\u0432\u0438"], ["new", "\u043D\u043E\u0432"], ["self", "\u0430\u0437"], ["extends", "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430"], ["super", "\u0440\u043E\u0434\u0438\u0442\u0435\u043B"], ["use", "\u043F\u043E\u043B\u0437\u0432\u0430\u0439"], ["true", "\u0432\u044F\u0440\u043D\u043E"], ["false", "\u043D\u0435\u0432\u044F\u0440\u043D\u043E"], ["nothing", "\u043D\u0438\u0449\u043E"], ["is", "\u0435"], ["not", "\u043D\u0435"], ["and", "\u0438"], ["or", "\u0438\u043B\u0438"], ["more", "\u043F\u043E\u0432\u0435\u0447\u0435"], ["less", "\u043F\u043E_\u043C\u0430\u043B\u043A\u043E"]]\r
-  set syns to [["say", ["\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439"]], ["return", ["\u0440\u0435\u0437\u0443\u043B\u0442\u0430\u0442"]]]\r
-  set sample to "# \u043F\u044A\u0440\u0432\u0430\u0442\u0430 \u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430 \u043D\u0430 \u0421\u0434\u0435\u0432\\n\u043D\u0435\u043A\u0430 \u0438\u043C\u0435 \u043D\u0430 \\"\u0441\u0432\u044F\u0442\\"\\n\\n\u043D\u0430 \u043F\u043E\u0437\u0434\u0440\u0430\u0432 \u0441 \u043A\u043E\u0439\\n  \u043A\u0430\u0436\u0438 \\"\u0437\u0434\u0440\u0430\u0432\u0435\u0439, \\" + \u043A\u043E\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043F\u043E\u0437\u0434\u0440\u0430\u0432(\u0438\u043C\u0435)\\n\\n\u0437\u0430 \u0432\u0441\u044F\u043A\u043E \u043D \u0432\u044A\u0432 range(3)\\n  \u0430\u043A\u043E \u043D \u0435 1\\n    \u043A\u0430\u0436\u0438 \\"\u0435\u0434\u043D\u043E\\"\\n  \u0438\u043D\u0430\u0447\u0435\\n    \u043A\u0430\u0436\u0438 \u043D\\n  \u043A\u0440\u0430\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043A\u0430\u0436\u0438 \u0441\u0431\u043E\u0440([1, 2, 3, 4])"\r
-  return [names, syns, sample]\r
-end\r
-`;
-  }
-});
-
-// src/lang/dialect/dialect-runner.ts
-function getDialectRunner() {
-  if (!dialectRunner) {
-    dialectRunner = createSdevModuleRunner(
-      text_default,
-      bits_default,
-      buffer_default,
-      dialect_default
-    );
-  }
-  return dialectRunner;
-}
-var dialectRunner;
-var init_dialect_runner = __esm({
-  "src/lang/dialect/dialect-runner.ts"() {
-    init_sdev_module();
-    init_text();
-    init_bits();
-    init_buffer();
-    init_dialect();
-    dialectRunner = null;
-  }
-});
-
-// src/lang/dialect/catalog.ts
-var CATALOG, CATALOG_WORDS, CATALOG_BY_WORD, GROUP_LABELS;
-var init_catalog = __esm({
-  "src/lang/dialect/catalog.ts"() {
-    CATALOG = [
-      // ---- core ---------------------------------------------------------
-      { word: "say", group: "core", kind: "keyword", about: "print a value" },
-      { word: "ask", group: "core", kind: "keyword", about: "read a line of input" },
-      { word: "set", group: "core", kind: "keyword", about: "declare or reassign a variable" },
-      { word: "to", group: "core", kind: "keyword", about: "target of a set / start of a function" },
-      // ---- control flow -------------------------------------------------
-      { word: "if", group: "control", kind: "keyword", about: "conditional block" },
-      { word: "else", group: "control", kind: "keyword", about: "alternative branch" },
-      { word: "end", group: "control", kind: "keyword", about: "close a block" },
-      { word: "for", group: "control", kind: "keyword", about: "start of a loop" },
-      { word: "each", group: "control", kind: "keyword", about: "loop over every item" },
-      { word: "in", group: "control", kind: "keyword", about: "the sequence a loop walks" },
-      { word: "while", group: "control", kind: "keyword", about: "loop while a condition holds" },
-      { word: "break", group: "control", kind: "keyword", about: "leave the loop" },
-      { word: "continue", group: "control", kind: "keyword", about: "skip to the next iteration" },
-      { word: "match", group: "control", kind: "keyword", about: "structural match" },
-      // ---- functions ----------------------------------------------------
-      { word: "with", group: "functions", kind: "keyword", about: "parameter / argument list" },
-      { word: "return", group: "functions", kind: "keyword", about: "return a value" },
-      { word: "make", group: "functions", kind: "keyword", about: "lambda literal" },
-      { word: "capture", group: "functions", kind: "keyword", about: "closure capture list" },
-      { word: "ref", group: "functions", kind: "keyword", about: "take a function as a value" },
-      { word: "call", group: "functions", kind: "keyword", about: "call a function value" },
-      // ---- errors -------------------------------------------------------
-      { word: "attempt", group: "errors", kind: "keyword", about: "guarded block" },
-      { word: "rescue", group: "errors", kind: "keyword", about: "handle a raised error" },
-      { word: "throw", group: "errors", kind: "keyword", about: "raise an error" },
-      // ---- objects ------------------------------------------------------
-      { word: "kind", group: "objects", kind: "keyword", about: "define a kind (class)" },
-      { word: "has", group: "objects", kind: "keyword", about: "declare a field" },
-      { word: "does", group: "objects", kind: "keyword", about: "declare a method" },
-      { word: "new", group: "objects", kind: "keyword", about: "instantiate a kind" },
-      { word: "self", group: "objects", kind: "keyword", about: "the receiver inside a method" },
-      { word: "extends", group: "objects", kind: "keyword", about: "inherit from another kind" },
-      { word: "super", group: "objects", kind: "keyword", about: "parent-kind dispatch" },
-      // ---- modules ------------------------------------------------------
-      { word: "use", group: "modules", kind: "keyword", about: "import a module or library" },
-      // ---- literals -----------------------------------------------------
-      { word: "true", group: "literals", kind: "keyword", about: "boolean true" },
-      { word: "false", group: "literals", kind: "keyword", about: "boolean false" },
-      { word: "nothing", group: "literals", kind: "keyword", about: "the empty value" },
-      // ---- word operators -----------------------------------------------
-      { word: "is", group: "operators", kind: "keyword", about: "equality comparison" },
-      { word: "not", group: "operators", kind: "keyword", about: "logical negation" },
-      { word: "and", group: "operators", kind: "keyword", about: "logical and" },
-      { word: "or", group: "operators", kind: "keyword", about: "logical or" },
-      { word: "more", group: "operators", kind: "keyword", about: '"or more" \u2014 greater or equal' },
-      { word: "less", group: "operators", kind: "keyword", about: '"or less" \u2014 less or equal' },
-      // ---- builtins -----------------------------------------------------
-      ...[
-        ["range", "numbers from 0 up to n"],
-        ["len", "length of a list, tome or text"],
-        ["sum", "add every number in a list"],
-        ["str", "value as text"],
-        ["text", "value as text"],
-        ["num", "text as a number"],
-        ["ord", "character to byte value"],
-        ["chr", "byte value to character"],
-        ["upper", "uppercase text"],
-        ["lower", "lowercase text"],
-        ["trim", "strip surrounding spaces"],
-        ["split", "split text into a list"],
-        ["join", "join a list into text"],
-        ["find", "position of a needle"],
-        ["replace", "replace every occurrence"],
-        ["abs", "absolute value"],
-        ["min", "smaller of two numbers"],
-        ["max", "larger of two numbers"],
-        ["floor", "round down"],
-        ["ceil", "round up"],
-        ["sqrt", "square root"],
-        ["pow", "raise to a power"],
-        ["random", "deterministic pseudo-random number"],
-        ["keys", "keys of a tome"],
-        ["values", "values of a tome"],
-        ["read_file", "read a file as text"],
-        ["write_file", "write text to a file"],
-        ["append_file", "append text to a file"],
-        ["file_exists", "does a path exist"],
-        ["input", "read a line from stdin"],
-        ["args", "command line arguments"],
-        ["env", "environment variable"],
-        ["exit", "stop with a status code"],
-        ["now_ms", "milliseconds since the epoch"],
-        ["sleep_ms", "pause execution"],
-        ["say_err", "print to standard error"]
-      ].map(([word, about]) => ({ word, about, group: "builtins", kind: "builtin" }))
-    ];
-    CATALOG_WORDS = CATALOG.map((e) => e.word);
-    CATALOG_BY_WORD = Object.fromEntries(
-      CATALOG.map((e) => [e.word, e])
-    );
-    GROUP_LABELS = {
-      core: "Core",
-      control: "Control flow",
-      functions: "Functions",
-      errors: "Errors",
-      objects: "Kinds & objects",
-      modules: "Modules",
-      literals: "Literals",
-      operators: "Word operators",
-      builtins: "Builtins"
-    };
-  }
-});
-
-// src/lang/dialect/spec.ts
-function emptyDialect(partial = {}) {
-  return {
-    specVersion: 1,
-    meta: {
-      name: partial.name ?? "My sdev",
-      slug: partial.slug ?? "my-sdev",
-      languages: partial.languages ?? ["en"],
-      description: partial.description ?? "",
-      version: partial.version ?? "1.0.0",
-      extends: partial.extends ?? null,
-      visibility: partial.visibility ?? "private"
-    },
-    names: Object.fromEntries(CATALOG_WORDS.map((w) => [w, w])),
-    synonyms: {},
-    style: { ...DEFAULT_STYLE },
-    constructs: { functions: [], operators: [] }
-  };
-}
-function inherit(base, child) {
-  return {
-    ...child,
-    names: { ...base.names, ...child.names },
-    synonyms: { ...base.synonyms, ...child.synonyms },
-    style: { ...base.style, ...child.style },
-    constructs: {
-      functions: [...base.constructs.functions, ...child.constructs.functions],
-      operators: [...base.constructs.operators, ...child.constructs.operators]
-    }
-  };
-}
-function validateDialect(spec) {
-  const issues = [];
-  if (!SLUG_RE.test(spec.meta.slug)) {
-    issues.push({ level: "error", field: "meta.slug", message: "Slug must be 2\u201340 lowercase letters, digits or dashes." });
-  }
-  if (!spec.meta.name.trim()) {
-    issues.push({ level: "error", field: "meta.name", message: "Give the dialect a display name." });
-  }
-  if (!/^\d+\.\d+\.\d+$/.test(spec.meta.version)) {
-    issues.push({ level: "error", field: "meta.version", message: "Version must look like 1.0.0." });
-  }
-  const seen = /* @__PURE__ */ new Map();
-  for (const entry of CATALOG) {
-    const word = spec.names[entry.word];
-    if (!word || !word.trim()) {
-      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${entry.word}" has no word in this dialect.` });
-      continue;
-    }
-    if (!WORD_RE.test(word)) {
-      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${word}" is not a valid word \u2014 letters, digits and _ only, no spaces.` });
-      continue;
-    }
-    const all = [word, ...spec.synonyms[entry.word] ?? []];
-    for (const w of all) {
-      if (!WORD_RE.test(w)) {
-        issues.push({ level: "error", field: `synonyms.${entry.word}`, message: `"${w}" is not a valid word.` });
-        continue;
-      }
-      const owner = seen.get(w);
-      if (owner && owner !== entry.word) {
-        issues.push({ level: "error", field: `names.${entry.word}`, message: `"${w}" is already used for "${owner}".` });
-      } else {
-        seen.set(w, entry.word);
-      }
-    }
-  }
-  if (!spec.style.commentMarker || /[\p{L}\p{N}\s]/u.test(spec.style.commentMarker)) {
-    issues.push({ level: "error", field: "style.commentMarker", message: "Comment marker must be punctuation, e.g. # or //." });
-  }
-  if (spec.style.blockStyle === "braces" && seen.has("}")) {
-    issues.push({ level: "error", field: "style.blockStyle", message: 'Brace style conflicts with a word named "}".' });
-  }
-  const fnNames = /* @__PURE__ */ new Set();
-  for (const fn2 of spec.constructs.functions) {
-    if (!WORD_RE.test(fn2.name)) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is not a valid function name.` });
-    }
-    if (seen.has(fn2.name)) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" collides with the word for "${seen.get(fn2.name)}".` });
-    }
-    if (fnNames.has(fn2.name)) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is declared twice.` });
-    }
-    fnNames.add(fn2.name);
-    if (!fn2.source.trim()) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: "Function has no sdev body." });
-    }
-  }
-  const opSymbols = /* @__PURE__ */ new Set();
-  for (const op of spec.constructs.operators) {
-    if (!OP_RE.test(op.symbol)) {
-      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" must be 1\u20133 punctuation characters.` });
-    }
-    if (["+", "-", "*", "/", "%", "=", "<", ">", "(", ")", "[", "]", ",", "|>"].includes(op.symbol)) {
-      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is already an sdev operator.` });
-    }
-    if (opSymbols.has(op.symbol)) {
-      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is declared twice.` });
-    }
-    opSymbols.add(op.symbol);
-    if (!fnNames.has(op.fn) && !CATALOG_BY_WORD[op.fn]) {
-      issues.push({ level: "warning", field: `constructs.operators.${op.symbol}`, message: `Desugars to "${op.fn}", which this dialect does not define.` });
-    }
-  }
-  return issues;
-}
-function isPublishable(spec) {
-  return validateDialect(spec).every((i) => i.level !== "error");
-}
-function preludeSource(spec) {
-  if (spec.constructs.functions.length === 0) return "";
-  return spec.constructs.functions.map((f2) => f2.source.trim()).join("\n\n") + "\n";
-}
-var DEFAULT_STYLE, WORD_RE, SLUG_RE, OP_RE;
-var init_spec = __esm({
-  "src/lang/dialect/spec.ts"() {
-    init_catalog();
-    DEFAULT_STYLE = {
-      blockStyle: "word",
-      commentMarker: "#",
-      stringQuote: '"',
-      assignment: "set-to",
-      argSeparator: "space"
-    };
-    WORD_RE = /^[\p{L}\p{N}_][\p{L}\p{N}_]*$/u;
-    SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
-    OP_RE = /^[^\p{L}\p{N}\s_"'#]{1,3}$/u;
-  }
-});
-
-// src/lang/dialect/canonicalize.ts
-function splitLine(line, commentMarker) {
-  const raw = getDialectRunner().call("dialect_split_line", line, commentMarker);
-  return raw.map(([kind, text3]) => ({ kind, text: text3 }));
-}
-function mapWords(code, dict) {
-  const dictObj = {};
-  for (const [k, v] of dict) dictObj[k] = v;
-  return getDialectRunner().callStr("dialect_map_words", code, dictObj);
-}
-function forwardDict(spec) {
-  const dict = /* @__PURE__ */ new Map();
-  for (const canonical of CATALOG_WORDS) {
-    const word = spec.names[canonical] ?? canonical;
-    dict.set(word, canonical);
-    for (const syn of spec.synonyms[canonical] ?? []) dict.set(syn, canonical);
-  }
-  return dict;
-}
-function reverseDict(spec) {
-  const dict = /* @__PURE__ */ new Map();
-  for (const canonical of CATALOG_WORDS) {
-    const word = spec.names[canonical] ?? canonical;
-    if (word !== canonical) dict.set(canonical, word);
-  }
-  return dict;
-}
-function escapeRe(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function desugarOperators(code, spec) {
-  let out = code;
-  const ops = [...spec.constructs.operators].sort((a, b) => b.symbol.length - a.symbol.length);
-  const atom = String.raw`(?:[\p{L}\p{N}_]+(?:\([^()]*\))?|"[^"]*")`;
-  for (const op of ops) {
-    const re2 = new RegExp(`(${atom})\\s*${escapeRe(op.symbol)}\\s*(${atom})`, "gu");
-    for (let pass = 0; pass < 8; pass++) {
-      const next = out.replace(re2, (_m, a, b) => `${op.fn}(${a}, ${b})`);
-      if (next === out) break;
-      out = next;
-    }
-  }
-  return out;
-}
-function rewriteAssignmentForward(code, spec) {
-  const form = spec.style.assignment;
-  if (form === "equals") {
-    return code.replace(
-      /^(\s*)([\p{L}\p{N}_]+)\s*=\s*(?!=)(.+)$/u,
-      (_m, ws, name, rhs) => `${ws}set ${name} to ${rhs}`
-    );
-  }
-  if (form === "arrow") {
-    return code.replace(
-      /^(\s*)(.+?)\s*->\s*([\p{L}\p{N}_]+)\s*$/u,
-      (_m, ws, rhs, name) => `${ws}set ${name} to ${rhs}`
-    );
-  }
-  return code;
-}
-function rewriteAssignmentReverse(code, spec) {
-  const form = spec.style.assignment;
-  const m2 = code.match(/^(\s*)set\s+([\p{L}\p{N}_]+)\s+to\s+(.+)$/u);
-  if (!m2) return code;
-  const [, ws, name, rhs] = m2;
-  if (form === "equals") return `${ws}${name} = ${rhs}`;
-  if (form === "arrow") return `${ws}${rhs} -> ${name}`;
-  return code;
-}
-function mask(segs) {
-  const strings = [];
-  let comment = null;
-  let line = "";
-  for (const seg of segs) {
-    if (seg.kind === "string") {
-      line += `${PLACEHOLDER}${strings.length}${PLACEHOLDER}`;
-      strings.push(seg.text);
-    } else if (seg.kind === "comment") {
-      comment = seg.text;
-    } else {
-      line += seg.text;
-    }
-  }
-  return { line, strings, comment };
-}
-function unmask(line, strings) {
-  return line.replace(/\u0000(\d+)\u0000/g, (_m, i) => strings[Number(i)]);
-}
-function canonicalize(source, spec, opts = {}) {
-  const marker = spec.style.commentMarker || DEFAULT_STYLE.commentMarker;
-  const dict = forwardDict(spec);
-  const braces = spec.style.blockStyle === "braces";
-  const lines = source.split("\n").map((raw) => {
-    const { line, strings, comment } = mask(splitLine(raw, marker));
-    let code = mapWords(line, dict);
-    if (spec.constructs.operators.length) code = desugarOperators(code, spec);
-    if (braces) code = code.replace(/\s*\{\s*$/, "").replace(/^(\s*)\}\s*$/, "$1end");
-    code = rewriteAssignmentForward(code, spec);
-    const canonicalComment = comment === null ? "" : "#" + comment.slice(marker.length);
-    return (unmask(code, strings) + canonicalComment).replace(/\s+$/, "");
-  });
-  const prelude = opts.withPrelude === false ? "" : preludeSource(spec);
-  const body = lines.join("\n");
-  return { source: prelude ? `${prelude}
-${body}` : body, prelude };
-}
-function dialectize(source, spec) {
-  const marker = spec.style.commentMarker || DEFAULT_STYLE.commentMarker;
-  const dict = reverseDict(spec);
-  const braces = spec.style.blockStyle === "braces";
-  return source.split("\n").map((raw) => {
-    const { line, strings, comment } = mask(splitLine(raw, "#"));
-    let code = rewriteAssignmentReverse(line, spec);
-    if (braces) {
-      if (/^\s*end\s*$/.test(code)) code = code.replace(/^(\s*)end\s*$/, "$1}");
-      else if (BLOCK_OPENERS.test(code)) code = `${code.replace(/\s+$/, "")} {`;
-    }
-    code = mapWords(code, dict);
-    const dialectComment = comment === null ? "" : marker + comment.slice(1);
-    return (unmask(code, strings) + dialectComment).replace(/\s+$/, "");
-  }).join("\n");
-}
-function translateDialect(source, from, to) {
-  return dialectize(canonicalize(source, from, { withPrelude: false }).source, to);
-}
-var PLACEHOLDER, BLOCK_OPENERS;
-var init_canonicalize = __esm({
-  "src/lang/dialect/canonicalize.ts"() {
-    init_spec();
-    init_catalog();
-    init_dialect_runner();
-    PLACEHOLDER = "\0";
-    BLOCK_OPENERS = /^\s*(if|else|for|while|to|kind|does|attempt|rescue|make)\b/;
   }
 });
 
@@ -25231,9 +25274,9 @@ function createFetchClient(options) {
         },
         body: body ? JSON.stringify(body) : void 0
       });
-      const text3 = await res.text();
+      const text2 = await res.text();
       const isJson = (res.headers.get("content-type") || "").includes("application/json");
-      const data = isJson && text3 ? JSON.parse(text3) : text3;
+      const data = isJson && text2 ? JSON.parse(text2) : text2;
       if (!res.ok) {
         const errBody = isJson ? data : void 0;
         const errorDetail = errBody?.error;
@@ -33599,887 +33642,22 @@ var init_vocabulary = __esm({
 });
 
 // src/lang/agent/math.ts
-function numberWords(s) {
-  return s.replace(/\b(?:(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million)(?:[\s-]+(?:and\s+)?(?=zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million))?)+\b/gi, (m2) => {
-    let total = 0, cur = 0;
-    for (const w of m2.toLowerCase().split(/[\s-]+/)) {
-      if (w === "and") continue;
-      const v = NUMBER_WORDS2[w];
-      if (v === void 0) return m2;
-      if (v === 100) cur = (cur || 1) * 100;
-      else if (v >= 1e3) {
-        total += (cur || 1) * v;
-        cur = 0;
-      } else cur += v;
-    }
-    return String(total + cur);
-  });
-}
-function list(s) {
-  return s.split(/\s*,\s*|\s+and\s+|\s+&\s+|\s+/).map((x) => x.trim()).filter(Boolean);
-}
-function operators(s) {
-  return s.replace(/\bmultiplied\s+by\b/gi, " * ").replace(/\bdivided\s+by\b/gi, " / ").replace(/\b(?:raised\s+)?to\s+the\s+power\s+of\b/gi, " ** ").replace(/\bto\s+the\s+(\d+)(?:st|nd|rd|th)\s+power\b/gi, " ** $1").replace(/\bpower\b/gi, " ** ").replace(/(\S+)\s+squared\b/gi, "($1 ** 2)").replace(/(\S+)\s+cubed\b/gi, "($1 ** 3)").replace(/\bsquare\s+root\s+of\s+(\S+)/gi, "sqrt($1)").replace(/\bsqrt\s+(?!\()(\S+)/gi, "sqrt($1)").replace(/\b(?:the\s+)?square\s+of\s+(\S+)/gi, "($1 ** 2)").replace(/\b(?:the\s+)?cube\s+of\s+(\S+)/gi, "($1 ** 3)").replace(/\babsolute\s+value\s+of\s+(\S+)/gi, "abs($1)").replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+of\s+(\S+)/gi, "($1 * $2 / 100)").replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)(?!\s*[\d(A-Za-z_])/gi, "($1 / 100)").replace(/\b(?:plus|add|added\s+to|and)\b/gi, " + ").replace(/\b(?:minus|less|take\s+away)\b/gi, " - ").replace(/\b(?:times|multiply)\b/gi, " * ").replace(/(\d)\s*[x×]\s*(\d)/g, "$1 * $2").replace(/[×]/g, " * ").replace(/[÷]/g, " / ").replace(/\^/g, " ** ").replace(/\b(?:over)\b/gi, " / ").replace(/\b(?:mod|modulo|remainder\s+of)\b/gi, " % ").replace(/\s+/g, " ").trim();
-}
-function valid(expr, known) {
-  if (!expr || !/\d/.test(expr) && ![...expr.matchAll(/[A-Za-z_]\w*/g)].some((m2) => known.has(m2[0]))) return false;
-  if (!/^[\w\s.+\-*/%(),]+$/.test(expr)) return false;
-  for (const m2 of expr.matchAll(/[A-Za-z_]\w*/g)) {
-    if (!FUNCS.has(m2[0]) && !known.has(m2[0])) return false;
-  }
-  let depth = 0;
-  for (const c of expr) {
-    if (c === "(") depth++;
-    if (c === ")") depth--;
-    if (depth < 0) return false;
-  }
-  if (depth !== 0) return false;
-  if (/[\w.)]\s+[\w.(]/.test(expr)) return false;
-  if (/[+\-*/%]\s*$/.test(expr) || /^\s*[*/%]/.test(expr) || /[+*/%]\s*[*/%]\s*[*/%]/.test(expr)) return false;
-  return true;
-}
-function operand(s) {
-  return s.replace(/^the\s+/i, "").trim();
-}
 function mathRequest(stmt, known = /* @__PURE__ */ new Set()) {
-  const raw = stmt.trim().replace(/[?.!=]+\s*$/, "").trim();
-  if (!raw) return null;
-  let s = numberWords(raw);
-  const hadLead = LEAD.test(s);
-  s = s.replace(LEAD, "").replace(/^(?:the\s+)?(?:value|result|answer)\s+of\s+/i, "").replace(/^the\s+/i, "").trim();
-  let m2;
-  let expr = null;
-  if (m2 = s.match(/^sum\s+of\s+(.+)$/i)) expr = list(m2[1]).map(operand).join(" + ");
-  else if (m2 = s.match(/^product\s+of\s+(.+)$/i)) expr = list(m2[1]).map(operand).join(" * ");
-  else if (m2 = s.match(/^(?:average|mean)\s+of\s+(.+)$/i)) {
-    const l = list(m2[1]).map(operand);
-    expr = `(${l.join(" + ")}) / ${l.length}`;
-  } else if (m2 = s.match(/^difference\s+(?:between|of)\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m2[1]} - ${m2[2]}`;
-  else if (m2 = s.match(/^quotient\s+of\s+(\S+)\s+and\s+(\S+)$/i)) expr = `${m2[1]} / ${m2[2]}`;
-  else if (m2 = s.match(/^(?:max(?:imum)?|largest|biggest)\s+of\s+(.+)$/i)) expr = `max(${list(m2[1]).join(", ")})`;
-  else if (m2 = s.match(/^(?:min(?:imum)?|smallest)\s+of\s+(.+)$/i)) expr = `min(${list(m2[1]).join(", ")})`;
-  else if (m2 = s.match(/^subtract\s+(\S+)\s+from\s+(\S+)$/i)) expr = `${m2[2]} - ${m2[1]}`;
-  else if (m2 = s.match(/^take\s+(\S+)\s+(?:away\s+)?from\s+(\S+)$/i)) expr = `${m2[2]} - ${m2[1]}`;
-  else if (m2 = s.match(/^add\s+(.+?)\s+to\s+(\S+)$/i)) expr = `${m2[1]} + ${m2[2]}`;
-  else if (m2 = s.match(/^add\s+(.+)$/i)) expr = list(m2[1]).join(" + ");
-  else if (m2 = s.match(/^multiply\s+(\S+)\s+(?:by|and|with|times)\s+(\S+)$/i)) expr = `${m2[1]} * ${m2[2]}`;
-  else if (m2 = s.match(/^divide\s+(\S+)\s+(?:by|into)\s+(\S+)$/i)) expr = `${m2[1]} / ${m2[2]}`;
-  else if (m2 = s.match(/^(\S+)\s+divided\s+into\s+(\S+)$/i)) expr = `${m2[2]} / ${m2[1]}`;
-  else if (m2 = s.match(/^(?:square|squared)\s+(\S+)$/i)) expr = `${m2[1]} ** 2`;
-  else if (m2 = s.match(/^round\s+(.+)$/i)) expr = `round(${operators(m2[1])})`;
-  else expr = s;
-  expr = expr ? operators(expr) : null;
-  if (!expr || !valid(expr, known)) return null;
-  const computes = /[+\-*/%]|\b(?:sqrt|abs|round|min|max|floor|ceil)\(/.test(expr);
-  if (!computes && !hadLead) return null;
-  return expr;
+  return sdevMathRequest(stmt, known);
 }
-var LEAD, FUNCS;
-var init_math2 = __esm({
+var init_math3 = __esm({
   "src/lang/agent/math.ts"() {
-    init_vocabulary();
-    LEAD = /^(?:(?:please|can you|could you|would you|i want to|i need to|i want you to|let'?s|now)\s+)*(?:calculate|calc|compute|evaluate|eval|solve|work\s+out|figure\s+out|find(?:\s+out)?|tell\s+me|give\s+me|show\s+me|print|display|output|say|what\s+is|what'?s|whats|what\s+are|how\s+much\s+is|how\s+much\s+are|how\s+many\s+is|result\s+of|answer)\b\s*/i;
-    FUNCS = /* @__PURE__ */ new Set(["sqrt", "abs", "round", "floor", "ceil", "min", "max"]);
+    init_sdev_engine();
   }
 });
 
 // src/lang/agent/tasks.ts
-function num(w) {
-  const t = w.trim().toLowerCase();
-  if (/^-?\d+(?:\.\d+)?$/.test(t)) return t;
-  if (t in NUMBER_WORDS2) return String(NUMBER_WORDS2[t]);
-  return null;
+function taskRequest(stmt, known = /* @__PURE__ */ new Set(), _quoted) {
+  return sdevTaskRequest(stmt, known);
 }
-function text2(w) {
-  const t = w.trim().replace(/^(?:the\s+)?(?:word|text|string|name|sentence|phrase)\s+/i, "").trim();
-  if (isQuoted(t)) return t;
-  const q = t.match(/^["'“](.*)["'”]$/);
-  return JSON.stringify(q ? q[1] : t);
-}
-function nums(list2) {
-  const parts = list2.split(/\s*,\s*|\s+and\s+|\s+/).filter(Boolean);
-  const out = parts.map(num);
-  return out.every((x) => x !== null) && out.length ? out : null;
-}
-function taskRequest(stmt, known = /* @__PURE__ */ new Set(), quoted) {
-  if (quoted) isQuoted = quoted;
-  const s = stmt.trim().replace(PLEASE, "").replace(/[.!?]+\s*$/, "").trim();
-  const head2 = s.split(/\s+/)[0]?.toLowerCase() ?? "";
-  if (known.has(head2)) return null;
-  let m2;
-  if ((m2 = s.match(/^(?:count|print|show|say|list|display|output|write)?\s*(?:all\s+)?(?:the\s+)?(?:numbers?\s+)?(?:from\s+)?(\S+)\s+(?:to|through|until|till|-)\s+(\S+)(?:\s+by\s+(\S+))?$/i)) && /^(?:count|print|show|say|list|display|output|write|numbers?|from)/i.test(s)) {
-    const a = num(m2[1]), b = num(m2[2]), step = m2[3] ? num(m2[3]) : "1";
-    if (a !== null && b !== null && step !== null) {
-      const down = Number(a) > Number(b);
-      return down ? [`set i to ${a}`, `while i >= ${b}`, "  say i", `  set i to i - ${step}`, "end"] : [`set i to ${a}`, `while i <= ${b}`, "  say i", `  set i to i + ${step}`, "end"];
-    }
-  }
-  if ((m2 = s.match(/^count\s+(?:up\s+)?to\s+(\S+)$/i)) && num(m2[1]) !== null) {
-    return ["set i to 1", `while i <= ${num(m2[1])}`, "  say i", "  set i to i + 1", "end"];
-  }
-  if ((m2 = s.match(/^count\s+down\s+from\s+(\S+)$/i)) && num(m2[1]) !== null) {
-    return [`set i to ${num(m2[1])}`, "while i > 0", "  say i", "  set i to i - 1", "end"];
-  }
-  if ((m2 = s.match(/^(?:say|print|show|write|display|output|repeat)\s+(.+?)\s+(\S+)\s+times$/i)) && num(m2[2]) !== null) {
-    const what = known.has(m2[1].trim()) ? m2[1].trim() : text2(m2[1]);
-    return ["set i to 0", `while i < ${num(m2[2])}`, `  say ${what}`, "  set i to i + 1", "end"];
-  }
-  if (/^(?:flip|toss)\s+(?:a\s+)?coin$/i.test(s)) return ['say pick(["heads", "tails"])'];
-  const subject = (w) => known.has(w.trim()) ? w.trim() : text2(w);
-  if ((m2 = s.replace(OUT, "").match(/^(?:reverse|backwards?)\s+(?:of\s+)?(.+)$/i)) || (m2 = s.replace(OUT, "").match(/^(.+?)\s+(?:reversed|backwards)$/i))) {
-    return [`say reverse(${subject(m2[1])})`];
-  }
-  if ((m2 = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:uppercase|upper\s*case|capitals|caps)$/i)) || (m2 = s.replace(OUT, "").match(/^(?:uppercase|capitalize all)\s+(.+)$/i))) {
-    return [`say upper(${/^make\s/i.test(s) ? text2(m2[1]) : subject(m2[1])})`];
-  }
-  if ((m2 = s.replace(OUT, "").match(/^(?:make\s+)?(.+?)\s+(?:in\s+)?(?:lowercase|lower\s*case|small letters)$/i)) || (m2 = s.replace(OUT, "").match(/^lowercase\s+(.+)$/i))) {
-    return [`say lower(${/^make\s/i.test(s) ? text2(m2[1]) : subject(m2[1])})`];
-  }
-  if ((m2 = s.match(/^(?:what\s+is\s+|what's\s+|show\s+|tell\s+me\s+|give\s+me\s+)?(?:the\s+)?(?:length|size)\s+of\s+(.+)$/i)) || (m2 = s.match(/^how\s+(?:many|much)\s+(?:letters|characters|chars)\s+(?:are\s+)?(?:in|does)\s+(.+?)(?:\s+have)?$/i)) || (m2 = s.match(/^how\s+long\s+is\s+(.+)$/i))) {
-    const n = nums(m2[1]);
-    return [`say len(${n && n.length > 1 ? `[${n.join(", ")}]` : subject(m2[1])})`];
-  }
-  if (m2 = s.match(/^(?:is|check if|check whether|tell me if)\s+(\S+)\s+(?:is\s+)?(?:an?\s+)?(even|odd)(?:\s+or\s+(?:even|odd))?$/i)) {
-    const n = num(m2[1]) ?? (known.has(m2[1]) ? m2[1] : null);
-    if (n !== null) return [`if ${n} % 2 is 0`, '  say "even"', "else", '  say "odd"', "end"];
-  }
-  if (m2 = s.match(/^(?:(?:give|show|pick|generate|roll|make|get)\s+(?:me\s+)?)?(?:a\s+)?random\s+(?:whole\s+)?number\s+(?:between|from)\s+(\S+)\s+(?:and|to)\s+(\S+)$/i)) {
-    const a = num(m2[1]), b = num(m2[2]);
-    if (a !== null && b !== null) return [`say randint(${a}, ${b})`];
-  }
-  if (/^(?:roll\s+(?:a\s+)?(?:die|dice)|throw\s+(?:a\s+)?dice?)$/i.test(s)) return ["say randint(1, 6)"];
-  if (m2 = s.replace(OUT, "").match(/^sort\s+(?:the\s+)?(?:numbers\s+)?(.+?)(?:\s+(?:from\s+)?(?:biggest|largest|highest)\s+(?:to|first).*)?$/i)) {
-    const n = nums(m2[1]);
-    const desc = /biggest|largest|highest|descending/i.test(s);
-    if (n) return [desc ? `say sortDesc([${n.join(", ")}])` : `say sort([${n.join(", ")}])`];
-  }
-  if ((m2 = s.match(/^(?:print\s+|show\s+|make\s+|write\s+)?(?:the\s+)?(?:multiplication|times)\s+table\s+(?:of|for)\s+(\S+)$/i)) || (m2 = s.match(/^(?:print\s+|show\s+)?(?:the\s+)?(\S+)\s+times\s+table$/i))) {
-    const n = num(m2[1]);
-    if (n !== null) return ["set i to 1", "while i <= 10", `  say str(${n}) + " x " + str(i) + " = " + str(${n} * i)`, "  set i to i + 1", "end"];
-  }
-  if ((m2 = s.match(/^(?:say\s+)?(?:hello|hi|hey)\s+to\s+(.+)$/i)) || (m2 = s.match(/^greet\s+(.+)$/i))) {
-    const who = m2[1].trim();
-    return [known.has(who) ? `say "Hello, " + ${who}` : `say ${JSON.stringify(`Hello, ${who}`)}`];
-  }
-  return null;
-}
-var PLEASE, OUT, isQuoted;
-var init_tasks = __esm({
+var init_tasks2 = __esm({
   "src/lang/agent/tasks.ts"() {
-    init_vocabulary();
-    PLEASE = /^(?:(?:please|can you|could you|would you|i want to|i want you to|i need to|i'd like to|let'?s|now|then|and)\s+)*/i;
-    OUT = /^(?:say|print|show|display|output|tell me|give me|show me|write|list)\s+/i;
-    isQuoted = () => false;
-  }
-});
-
-// src/lang/agent/repair.ts
-function mask2(raw) {
-  const strings = [];
-  let line = "";
-  let comment = "";
-  let i = 0;
-  while (i < raw.length) {
-    const c = raw[i];
-    if (c === "#" || c === "/" && raw[i + 1] === "/") {
-      comment = " #" + raw.slice(i).replace(/^#|^\/\//, "");
-      break;
-    }
-    if (c === '"' || c === "'" || c === "`") {
-      const quote = c;
-      let s = "";
-      i++;
-      while (i < raw.length && raw[i] !== quote) {
-        if (raw[i] === "\\" && i + 1 < raw.length) {
-          s += raw[i] + raw[i + 1];
-          i += 2;
-          continue;
-        }
-        s += raw[i];
-        i++;
-      }
-      i++;
-      line += `${PLACEHOLDER2}${strings.length}${PLACEHOLDER2}`;
-      strings.push('"' + s.replace(/"/g, '\\"') + '"');
-      continue;
-    }
-    line += c;
-    i++;
-  }
-  return { line, strings, comment };
-}
-function unmask2(line, strings) {
-  return line.replace(/\u0000(\d+)\u0000/g, (_m, i) => strings[Number(i)]);
-}
-function isMaskedString(token) {
-  return /^\u0000\d+\u0000$/.test(token);
-}
-function safeName(raw) {
-  const cleaned = raw.replace(/[^\p{L}\p{N}_]/gu, "_").replace(/^_+|_+$/g, "");
-  if (!cleaned) return "value";
-  return /^[\p{N}]/u.test(cleaned) ? "n" + cleaned : cleaned;
-}
-function unwrap(raw) {
-  const s = raw.trim();
-  if (!s.startsWith("(") || !s.endsWith(")")) return s;
-  let depth = 0;
-  for (let i = 0; i < s.length; i++) {
-    if (s[i] === "(") depth++;
-    else if (s[i] === ")") {
-      depth--;
-      if (depth === 0 && i < s.length - 1) return s;
-    }
-  }
-  return depth === 0 ? s.slice(1, -1).trim() : s;
-}
-function targetName(raw) {
-  if (/^[\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*|\[[^\]]+\])+$/u.test(raw)) return raw;
-  return safeName(raw);
-}
-function wordsOf(line) {
-  return line.trim().split(/\s+/).filter(Boolean);
-}
-function splitStatements2(line) {
-  return line.split(";").map((s) => s.trim()).filter((s) => s.length > 0);
-}
-function numberWord(token) {
-  const parts = token.toLowerCase().split(/[\s-]+/);
-  if (!parts.every((p) => p in NUMBER_WORDS2)) return null;
-  let total = 0;
-  let current = 0;
-  for (const p of parts) {
-    const v = NUMBER_WORDS2[p];
-    if (v === 100) current = (current || 1) * 100;
-    else if (v >= 1e3) {
-      total += (current || 1) * v;
-      current = 0;
-    } else current += v;
-  }
-  return String(total + current);
-}
-function expression(rest, known, renames) {
-  if (renames?.size) {
-    rest = rest.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
-  }
-  const trimmed = rest.trim();
-  if (!trimmed) return "nothing";
-  const literal = LITERALS[trimmed.toLowerCase()];
-  if (literal) return literal;
-  if (/^[\u0000\d(]/.test(trimmed) && !/\u0000\s+\u0000/.test(trimmed)) {
-    if (isMaskedString(trimmed) || /^[\d.]+$/.test(trimmed) || trimmed.startsWith("(")) return trimmed;
-  }
-  const tokens = wordsOf(trimmed);
-  const ownName = tokens.length === 1 && known.has(tokens[0]);
-  const numeric = ownName ? null : numberWord(tokens.join(" "));
-  if (numeric !== null) return numeric;
-  const understood = tokens.every((t) => {
-    if (isMaskedString(t)) return true;
-    if (/^[\d.]+$/.test(t)) return true;
-    if (/^[-+*/%<>=!,()[\]]+$/.test(t)) return true;
-    const bare = t.replace(/[(),[\]]/g, "");
-    if (!bare) return true;
-    if (RESERVED.has(bare) || BUILTINS.has(bare)) return true;
-    if (known.has(bare)) return true;
-    if (/[(.[]/.test(t)) return true;
-    return false;
-  });
-  if (understood) return joinOperands(tokens);
-  const allBare = tokens.every((t) => !isMaskedString(t));
-  const codeOperator = /[|&^~@$\\]/.test(trimmed);
-  const codePunctuation = /[\w\u0000)\]][.:][\w\u0000([]/.test(trimmed);
-  const codeLiteral = /^\{[\s\S]*\}$/.test(trimmed) || /^\[[\s\S]*\]$/.test(trimmed);
-  if (codeOperator || codePunctuation || codeLiteral) return trimmed;
-  if (allBare && !tokens.some((t) => known.has(t))) return '"' + tokens.join(" ").replace(/"/g, '\\"') + '"';
-  const isValue = (t) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || BUILTINS.has(t) || /[(.[]/.test(t);
-  const pieces = [];
-  for (const t of tokens) {
-    if (/^[-+*/%]$/.test(t)) pieces.push({ kind: "op", v: t });
-    else if (isValue(t)) pieces.push({ kind: "value", v: t });
-    else if (pieces.length && pieces[pieces.length - 1].kind === "text") pieces[pieces.length - 1].v += " " + t;
-    else pieces.push({ kind: "text", v: t });
-  }
-  const parts = pieces.map((p, i) => {
-    if (p.kind !== "text") return p.v;
-    const before = i > 0 && pieces[i - 1].kind === "value" ? " " : "";
-    const after = i < pieces.length - 1 && pieces[i + 1].kind === "value" ? " " : "";
-    return '"' + (before + p.v + after).replace(/"/g, '\\"') + '"';
-  });
-  return joinOperands(parts);
-}
-function joinOperands(tokens) {
-  const operand2 = (t) => !/^[-+*/%<>=!,]+$/.test(t) && !RESERVED.has(t) && !t.endsWith("(") && !t.endsWith(",") && !t.startsWith(")");
-  const out = [];
-  tokens.forEach((t, i) => {
-    if (i > 0 && operand2(tokens[i - 1]) && operand2(t) && !t.startsWith("(")) out.push("+");
-    out.push(t);
-  });
-  return out.join(" ");
-}
-function condition(rest, known, renames, info = {}) {
-  let out = " " + rest.trim() + " ";
-  if (renames?.size) out = out.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
-  for (const [re2, to] of COMPARISONS) out = out.replace(re2, to);
-  out = out.replace(/\bthen\b/gi, " ").replace(/[:{]\s*$/, " ").replace(/\s*==\s*/g, " is ").replace(/\s*!=\s*/g, " is not ").replace(/\s*>=\s*/g, " is or more ").replace(/\s*<=\s*/g, " is or less ").replace(/\s+/g, " ").trim();
-  const toks = out.split(" ");
-  const mapped = toks.map((t, i) => {
-    if (isMaskedString(t) || known.has(t)) return t;
-    if (numberWord(t) !== null) return numberWord(t);
-    if (/^[\p{L}_][\p{L}\p{N}_]*$/u.test(t) && !RESERVED.has(t.toLowerCase()) && !BUILTINS.has(t)) {
-      const prev = toks[i - 1]?.toLowerCase();
-      if (prev === "is" || prev === "not" || prev === "equals") return '"' + t.toLowerCase() + '"';
-    }
-    return t;
-  });
-  for (let i = 0; i + 2 < mapped.length; i++) {
-    const name = mapped[i];
-    if (!info.textAsks?.has(name) || mapped[i + 1] !== "is") continue;
-    const j = mapped[i + 2] === "not" ? i + 3 : i + 2;
-    const lit = mapped[j];
-    if (!lit || !(isMaskedString(lit) || /^".*"$/.test(lit))) continue;
-    if (isMaskedString(lit) && info.strings) {
-      const k = Number(lit.slice(1, -1));
-      info.strings[k] = info.strings[k].toLowerCase().replace(/^"\s+|\s+"$/g, '"');
-    }
-    mapped[i] = `lower(trim(${name}))`;
-  }
-  return mapped.join(" ");
-}
-function parseAsk(rest) {
-  const r = rest.trim().replace(/^(?:the\s+)?(?:user|person|player|them)\s+(?:for\s+)?/i, "").replace(/^\(|\)$/g, "").trim();
-  let m2 = r.match(ASK_INTO);
-  if (m2) return { name: m2[2], prompt: m2[1] ?? null };
-  m2 = r.match(ASK_PROMPT_ONLY);
-  if (m2) return { name: "answer", prompt: m2[1] };
-  m2 = r.match(ASK_NAME_ONLY);
-  if (m2) return { name: m2[1], prompt: null };
-  return null;
-}
-function scanAsks(lines, words) {
-  const asks = /* @__PURE__ */ new Map();
-  const masked = [];
-  for (const raw of lines) {
-    const { line, strings } = mask2(raw);
-    masked.push(line);
-    const text3 = (t) => t ? unmask2(t, strings) : "";
-    for (const stmt0 of splitStatements2(line)) {
-      const stmt = stmt0.replace(FILLER_HEAD, "").trim();
-      const toks = wordsOf(stmt);
-      if (!toks.length) continue;
-      if (words.get(toks[0].toLowerCase()) === "ask") {
-        const f2 = parseAsk(stmt.slice(toks[0].length));
-        if (f2) asks.set(f2.name, text3(f2.prompt));
-        continue;
-      }
-      const m2 = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
-      if (m2) {
-        const rt = wordsOf(m2[2]);
-        if (rt[0] && words.get(rt[0].toLowerCase().replace(/\($/, "")) === "ask") asks.set(m2[1], text3(rt[1]));
-      }
-    }
-  }
-  const numeric = /* @__PURE__ */ new Set();
-  const body = masked.join("\n");
-  const edge = "(?<![\\p{L}\\p{N}_])";
-  const tail = "(?![\\p{L}\\p{N}_])";
-  const names = [...asks.keys()];
-  for (const [name, prompt] of asks) {
-    if (/\b(?:number|numbers|how\s+(?:many|much|old|far|long|tall)|age|amount|count|price|total)\b|\d/i.test(prompt)) {
-      numeric.add(name);
-      continue;
-    }
-    const n = escapeRe(name);
-    const arithmetic = new RegExp(`${edge}${n}${tail}\\s*[-*/%]|[-*/%]\\s*${edge}${n}${tail}`, "u");
-    const againstNumber = new RegExp(
-      `${edge}${n}${tail}\\s*(?:is(?:\\s+not)?|equals|==|!=|>=|<=|>|<|is\\s+(?:greater|less|more|bigger|smaller)(?:\\s+than)?|(?:greater|less|more|bigger|smaller)\\s+than)\\s*-?\\d`,
-      "iu"
-    );
-    const plusNumber = new RegExp(`${edge}${n}${tail}\\s*\\+\\s*\\d|\\d\\s*\\+\\s*${edge}${n}${tail}`, "u");
-    if (arithmetic.test(body) || againstNumber.test(body) || plusNumber.test(body)) numeric.add(name);
-  }
-  for (const a of names) for (const b of names) {
-    if (new RegExp(`${edge}${escapeRe(a)}${tail}\\s*\\+\\s*${edge}${escapeRe(b)}${tail}`, "u").test(body)) {
-      numeric.add(a);
-      numeric.add(b);
-    }
-  }
-  return { asks, numeric };
-}
-function fillPlaceholders(literal, known) {
-  const inner = literal.slice(1, -1);
-  const re2 = /\[([\p{L}_][\p{L}\p{N}_]*)\]|\{([\p{L}_][\p{L}\p{N}_]*)\}/gu;
-  if (![...inner.matchAll(re2)].some((m2) => known.has(m2[1] ?? m2[2]))) return literal;
-  const pieces = [];
-  let last = 0;
-  for (const m2 of inner.matchAll(re2)) {
-    const name = m2[1] ?? m2[2];
-    if (!known.has(name)) continue;
-    if (m2.index > last) pieces.push('"' + inner.slice(last, m2.index) + '"');
-    pieces.push(`str(${name})`);
-    last = m2.index + m2[0].length;
-  }
-  if (last < inner.length) pieces.push('"' + inner.slice(last) + '"');
-  return "(" + pieces.join(" + ") + ")";
-}
-function counting(stmt) {
-  const s = stmt.replace(/[.:]\s*$/, "").trim();
-  let m2 = s.match(new RegExp(`^(?:add|plus)\\s+(.+?)\\s+(?:to|onto)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
-  if (m2) return { name: m2[2], op: "+", by: m2[1] };
-  m2 = s.match(new RegExp(`^(?:subtract|take|remove|minus)\\s+(.+?)\\s+(?:from|off)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
-  if (m2) return { name: m2[2], op: "-", by: m2[1] };
-  m2 = s.match(new RegExp(`^(increase|raise|bump|increment|decrease|reduce|decrement)\\s+(?:the\\s+)?(${NAME_PAT})(?:\\s+by\\s+(.+))?$`, "iu"));
-  if (m2) return { name: m2[2], op: /^(?:decrease|reduce|decrement)$/i.test(m2[1]) ? "-" : "+", by: m2[3] ?? "1" };
-  m2 = s.match(new RegExp(`^(${NAME_PAT})\\s*(\\+\\+|--)$`, "u"));
-  if (m2) return { name: m2[1], op: m2[2] === "++" ? "+" : "-", by: "1" };
-  m2 = s.match(new RegExp(`^(${NAME_PAT})\\s*([+-])=\\s*(.+)$`, "u"));
-  if (m2) return { name: m2[1], op: m2[2], by: m2[3] };
-  return null;
-}
-function collectNames(lines, words, seed) {
-  const names = new Set(seed ?? []);
-  const nameable = (w) => {
-    const i = words.get(w.toLowerCase());
-    return !i || NAMEABLE_INTENTS.has(i);
-  };
-  for (const raw of lines) {
-    const { line } = mask2(raw);
-    for (const stmt of splitStatements2(line)) {
-      const toks = wordsOf(stmt);
-      if (!toks.length) continue;
-      const head2 = words.get(toks[0].toLowerCase());
-      if (/^(?:rescue|catch|except|iterate)$/i.test(toks[0]) && toks[1]) {
-        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
-        continue;
-      }
-      if (head2 === "ask") {
-        const f2 = parseAsk(stmt.slice(toks[0].length));
-        if (f2) names.add(f2.name);
-        continue;
-      }
-      if (head2 === "set" && toks[1]) {
-        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
-        continue;
-      }
-      if (head2 === "function" && toks[1]) {
-        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
-        for (const p of toks.slice(2)) if (!words.has(p.toLowerCase()) && p !== "with") names.add(p);
-        continue;
-      }
-      if (head2 === "for") {
-        const each = toks.findIndex((t) => words.get(t.toLowerCase()) === "in");
-        if (each > 1) names.add(toks[each - 1]);
-        continue;
-      }
-      const m2 = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
-      if (m2 && nameable(m2[1]) && (!head2 || NAMEABLE_INTENTS.has(head2)) && !/^(?:if|when|while)$/i.test(toks[0])) names.add(m2[1]);
-    }
-  }
-  return names;
-}
-function repair(source, ctx = {}) {
-  const words = baseWordMap();
-  const ownWords = /* @__PURE__ */ new Set();
-  for (const [w, i] of ctx.extraWords ?? []) {
-    words.set(w.toLowerCase(), i);
-    ownWords.add(w.toLowerCase());
-  }
-  const rawLines = source.split("\n").map((l) => l.replace(/^(\s*)(what|that|it|how|who|where)'s\b/i, "$1$2 is"));
-  const known = collectNames(rawLines, words, ctx.knownNames);
-  const { asks, numeric } = scanAsks(rawLines, words);
-  for (const name of asks.keys()) known.add(name);
-  const textAsks = new Set([...asks.keys()].filter((n) => !numeric.has(n)));
-  const askValue = (name, prompt) => {
-    const read = `input(${prompt ?? `"${name}? "`})`;
-    return `set ${name} to ${numeric.has(name) ? `num(${read})` : read}`;
-  };
-  const askRhs = (rhs) => {
-    const t = wordsOf(rhs);
-    if (!t.length || words.get(t[0].toLowerCase().replace(/\($/, "")) !== "ask") return void 0;
-    const tail = unwrap(t.slice(1).join(" "));
-    if (!tail) return null;
-    return isMaskedString(tail) ? tail : void 0;
-  };
-  const nameable = (w) => {
-    const intent = words.get(w.toLowerCase());
-    return !intent || NAMEABLE_INTENTS.has(intent);
-  };
-  const nextIndented = (index) => {
-    const here = rawLines[index].match(/^\s*/)?.[0].length ?? 0;
-    for (let j = index + 1; j < rawLines.length; j++) {
-      if (!rawLines[j].trim()) continue;
-      return (rawLines[j].match(/^\s*/)?.[0].length ?? 0) > here;
-    }
-    return false;
-  };
-  const renames = /* @__PURE__ */ new Map();
-  const notes = [];
-  const learned = {};
-  const unresolved = [];
-  let changed = false;
-  const note = (line, from, to, why) => {
-    if (from.trim() === to.trim()) return;
-    changed = true;
-    notes.push({ line, from: from.trim(), to: to.trim(), why, source: "rules" });
-  };
-  const learn = (word, intent) => {
-    const lower = word.toLowerCase();
-    if (lower !== CANONICAL[intent]) learned[lower] = intent;
-  };
-  const out = rawLines.map((raw, index) => {
-    const lineNo = index + 1;
-    if (!raw.trim()) return raw;
-    const indent = raw.match(/^\s*/)?.[0] ?? "";
-    const { line, strings, comment } = mask2(raw);
-    if (!line.trim()) return raw;
-    for (let s = 0; s < strings.length; s++) strings[s] = fillPlaceholders(strings[s], known);
-    const cond = (r) => condition(r, known, renames, { textAsks, strings });
-    const firstWord = line.trim().split(/[\s(]+/)[0]?.toLowerCase() ?? "";
-    if (/[^\x00-\x7F]/.test(line) && !ownWords.has(firstWord.replace(/[(:]$/, ""))) {
-      unresolved.push(lineNo);
-      return raw;
-    }
-    const statements = splitStatements2(line);
-    const rewritten = [];
-    for (const original of statements) {
-      const stmt = original.replace(FILLER_HEAD, "").trim() || original;
-      const toks = wordsOf(stmt);
-      if (!toks.length) continue;
-      const head2 = toks[0];
-      const headKey = head2.toLowerCase().replace(/[(:]$/, "");
-      let intent = words.get(headKey);
-      const rest = unwrap(stmt.slice(stmt.indexOf(head2) + head2.length));
-      const counted = counting(stmt);
-      if (counted) {
-        known.add(counted.name);
-        rewritten.push(`set ${counted.name} to ${counted.name} ${counted.op} ${expression(counted.by, known, renames)}`);
-        continue;
-      }
-      const task = taskRequest(stmt, known, isMaskedString);
-      if (task) {
-        rewritten.push(...task);
-        for (const t of task) {
-          const v = t.match(/^\s*set (\w+) to/)?.[1];
-          if (v) known.add(v);
-        }
-        continue;
-      }
-      const math2 = mathRequest(stmt, known);
-      if (math2 !== null) {
-        rewritten.push(math2.startsWith("(") ? `say (${math2})` : `say ${math2}`);
-        continue;
-      }
-      const selfAssign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
-      if (intent && selfAssign && selfAssign[1] === head2 && nameable(head2)) intent = void 0;
-      if (!intent && /[:{]\s*$/.test(stmt) && nextIndented(index) && /\s(?:is|equals|==|!=|>|<|>=|<=)\s/i.test(" " + stmt + " ")) {
-        rewritten.push(`if ${cond(stmt.replace(/[:{]\s*$/, ""))}`);
-        continue;
-      }
-      const callBase = stmt.match(/^([\p{L}\p{N}_]+)\s*\(/u)?.[1];
-      if (callBase && (known.has(callBase) || ctx.knownNames?.has(callBase))) {
-        rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
-        continue;
-      }
-      if (stmt === "}" || intent === "end") {
-        rewritten.push("end");
-        if (intent === "end") learn(headKey, "end");
-        continue;
-      }
-      switch (intent) {
-        case "say": {
-          learn(headKey, "say");
-          const what = rest.replace(SAY_TARGET, "").trim() || rest;
-          const bare = what.split(/\s+/).filter((w) => /^[A-Za-z]+$/.test(w) && !known.has(w));
-          if (bare.length >= 4 && !/\u0000/.test(what)) unresolved.push(lineNo);
-          rewritten.push(`say ${expression(what, known, renames)}`);
-          continue;
-        }
-        case "ask": {
-          learn(headKey, "ask");
-          const form = parseAsk(stmt.slice(head2.length));
-          if (form) {
-            known.add(form.name);
-            rewritten.push(askValue(form.name, form.prompt));
-            continue;
-          }
-          rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to input()` : "input()");
-          continue;
-        }
-        case "set": {
-          learn(headKey, "set");
-          const m2 = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
-          if (m2) {
-            const name = safeName(m2[1]);
-            if (name !== m2[1]) renames.set(m2[1], name);
-            known.add(name);
-            const asked = askRhs(m2[2]);
-            rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(m2[2], known, renames)}`);
-            continue;
-          }
-          const parts = wordsOf(rest);
-          if (parts.length >= 2) {
-            known.add(parts[0]);
-            const tail = parts.slice(1);
-            if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
-            rewritten.push(`set ${targetName(parts[0])} to ${expression(tail.join(" "), known, renames)}`);
-            continue;
-          }
-          rewritten.push(stmt);
-          continue;
-        }
-        case "if":
-          learn(headKey, "if");
-          rewritten.push(`if ${cond(rest)}`);
-          continue;
-        case "else": {
-          learn(headKey, "else");
-          const tail = rest.replace(/^[:{]\s*|[:{]\s*$/g, "").trim();
-          rewritten.push(tail ? `else ${cond(tail)}` : "else");
-          continue;
-        }
-        case "while":
-          learn(headKey, "while");
-          rewritten.push(`while ${cond(rest)}`);
-          continue;
-        case "for": {
-          learn(headKey, "for");
-          const parts = wordsOf(rest).filter((t) => words.get(t.toLowerCase()) !== "for");
-          const at = parts.findIndex((t) => words.get(t.toLowerCase()) === "in");
-          if (at > 0) {
-            const name = parts[at - 1];
-            known.add(name);
-            rewritten.push(`for each ${name} in ${parts.slice(at + 1).join(" ").replace(/[:{]\s*$/, "").trim()}`);
-            continue;
-          }
-          rewritten.push(`for ${rest}`);
-          continue;
-        }
-        case "return":
-          learn(headKey, "return");
-          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|value|of)\s+|^an?\s+(?=[\p{L}_][\p{L}\p{N}_]*\s*$)/iu, ""), known, renames)}` : "return");
-          continue;
-        case "break":
-        case "continue":
-          learn(headKey, intent);
-          rewritten.push(CANONICAL[intent]);
-          continue;
-        case "function": {
-          learn(headKey, "function");
-          const declBody = rest.replace(/[:{]\s*$/, "");
-          const split2 = declBody.search(/\swith\s|\(/);
-          const declHead = split2 < 0 ? declBody : declBody.slice(0, split2);
-          const declParams = split2 < 0 ? "" : declBody.slice(split2);
-          const keepAll = /[(,]/.test(declParams);
-          const wordyParams = declParams.replace(PARAM_NOISE, " ");
-          const cleanedParams = keepAll ? wordyParams : wordyParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, " ");
-          const cleanedDecl = (declHead.replace(DECL_NOISE, " ") + " " + cleanedParams).replace(/\s+/g, " ").trim();
-          const parts = wordsOf(cleanedDecl);
-          if (!parts.length) {
-            rewritten.push(stmt);
-            continue;
-          }
-          const rawName = parts[0].replace(/\(.*$/, "");
-          const name = safeName(rawName);
-          if (name !== rawName) renames.set(rawName, name);
-          const inParens = parts[0].includes("(") ? [parts[0].slice(parts[0].indexOf("("))] : [];
-          const params = [...inParens, ...parts.slice(1)].join(" ").replace(/^\(([^()]*)\)$/, "$1").replace(/,/g, " ").split(/\s+/).filter((p) => p && words.get(p.toLowerCase()) !== "in" && p !== "with").map((p) => {
-            const safe = safeName(p);
-            if (safe !== p) renames.set(p, safe);
-            return safe;
-          });
-          known.add(name);
-          params.forEach((p) => known.add(p));
-          rewritten.push(params.length ? `to ${name} with ${params.join(" ")}` : `to ${name}`);
-          continue;
-        }
-        default:
-          break;
-      }
-      const assign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
-      if (assign && nameable(assign[1])) {
-        const name = safeName(assign[1]);
-        if (name !== assign[1]) renames.set(assign[1], name);
-        known.add(name);
-        const asked = askRhs(assign[2]);
-        rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(assign[2], known, renames)}`);
-        continue;
-      }
-      if (/^(?:call|run|do|invoke|execute|use)$/i.test(headKey) && toks.length >= 2) {
-        const target = safeName(toks[1]);
-        const args = wordsOf(rest).slice(1).filter((t) => !/^(?:with|and|using|,)$/i.test(t)).map((t) => (renames.get(t) ?? t).replace(/,$/, ""));
-        rewritten.push(`${target}(${args.join(", ")})`);
-        continue;
-      }
-      if (/^[\p{L}\p{N}_]+(?:\.[\p{L}\p{N}_]+)*\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head2) || BUILTINS.has(headKey)) {
-        rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
-        continue;
-      }
-      if (ctx.strict) {
-        rewritten.push(stmt);
-        unresolved.push(lineNo);
-        continue;
-      }
-      if (toks.length === 1 && !isMaskedString(toks[0])) {
-        rewritten.push(`say "${toks[0]}"`);
-        continue;
-      }
-      rewritten.push(stmt);
-      unresolved.push(lineNo);
-    }
-    const joined = rewritten.join("\n" + indent);
-    if ([...joined.matchAll(/"([^"\u0000]*)"/g)].some((m2) => m2[1].trim().split(/\s+/).length >= 4) && !unresolved.includes(lineNo)) unresolved.push(lineNo);
-    const result = indent + unmask2(joined, strings) + comment;
-    note(lineNo, raw, result, "understood as canonical sdev");
-    return result;
-  });
-  return { source: out.join("\n"), notes, learned, unresolved, changed };
-}
-function closeBlocks(source) {
-  const lines = source.split("\n");
-  const out = [];
-  const stack = [];
-  const width = (s) => s.match(/^\s*/)?.[0].length ?? 0;
-  const top = () => stack[stack.length - 1];
-  const nextCode = (from) => {
-    for (let j = from; j < lines.length; j++) if (lines[j].trim()) return lines[j];
-    return null;
-  };
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) {
-      const next = nextCode(i + 1);
-      while (stack.length && next !== null && !/^\s*(?:else|end)\b/.test(next) && width(next) <= top().indent.length) {
-        out.push(stack.pop().indent + "end");
-      }
-      out.push(line);
-      continue;
-    }
-    const w = width(line);
-    const continues = /^\s*(?:else|end)\b/.test(line);
-    while (stack.length && top().body && w <= top().indent.length && !(continues && w === top().indent.length)) {
-      out.push(stack.pop().indent + "end");
-    }
-    if (stack.length && w > top().indent.length) top().body = true;
-    if (CLOSES.test(line)) stack.pop();
-    else if (/^\s*else\b/.test(line) && stack.length) top().body = false;
-    else if (OPENS.test(line)) stack.push({ indent: line.match(/^\s*/)?.[0] ?? "", body: false });
-    out.push(line);
-  }
-  while (stack.length) out.push(stack.pop().indent + "end");
-  return out.join("\n");
-}
-var PLACEHOLDER2, RESERVED, BUILTINS, FILLER_HEAD, DECL_NOISE, PARAM_NOISE, SAY_TARGET, LITERALS, ASSIGN_RE, ASSIGN_SYMBOL_RE, NAMEABLE_INTENTS, NAME_PAT, ASK_INTO, ASK_PROMPT_ONLY, ASK_NAME_ONLY, OPENS, CLOSES;
-var init_repair = __esm({
-  "src/lang/agent/repair.ts"() {
-    init_vocabulary();
-    init_math2();
-    init_tasks();
-    init_canonicalize();
-    PLACEHOLDER2 = "\0";
-    RESERVED = /* @__PURE__ */ new Set([
-      "say",
-      "ask",
-      "set",
-      "to",
-      "if",
-      "else",
-      "end",
-      "for",
-      "each",
-      "in",
-      "while",
-      "break",
-      "continue",
-      "with",
-      "return",
-      "make",
-      "capture",
-      "ref",
-      "call",
-      "attempt",
-      "rescue",
-      "throw",
-      "kind",
-      "has",
-      "does",
-      "new",
-      "self",
-      "extends",
-      "super",
-      "use",
-      "true",
-      "false",
-      "nothing",
-      "is",
-      "not",
-      "and",
-      "or",
-      "more",
-      "less",
-      "match"
-    ]);
-    BUILTINS = /* @__PURE__ */ new Set([
-      "range",
-      "len",
-      "sum",
-      "str",
-      "text",
-      "num",
-      "ord",
-      "chr",
-      "upper",
-      "lower",
-      "trim",
-      "split",
-      "join",
-      "find",
-      "replace",
-      "abs",
-      "min",
-      "max",
-      "floor",
-      "ceil",
-      "sqrt",
-      "pow",
-      "random",
-      "keys",
-      "values",
-      "read_file",
-      "write_file",
-      "append_file",
-      "file_exists",
-      "input",
-      "args",
-      "env",
-      "exit",
-      "now_ms",
-      "sleep_ms",
-      "say_err"
-    ]);
-    FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
-    DECL_NOISE = /\b(?:called|named|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
-    PARAM_NOISE = /\b(?:called|named|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
-    SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
-    LITERALS = (() => {
-      const out = {};
-      for (const w of VOCABULARY.nothing) out[w] = "nothing";
-      for (const w of VOCABULARY.true) out[w] = "true";
-      for (const w of VOCABULARY.false) out[w] = "false";
-      return out;
-    })();
-    ASSIGN_RE = new RegExp(
-      `^([\\p{L}\\p{N}_]+)\\s+(?:${ASSIGN_PHRASES.filter((p) => /^[a-zа-я ]+$/i.test(p)).sort((a, b) => b.length - a.length).join("|")})\\s+(.+)$`,
-      "iu"
-    );
-    ASSIGN_SYMBOL_RE = /^([\p{L}\p{N}_]+)\s*(?::=|<-|=(?!=))\s*(.+)$/u;
-    NAMEABLE_INTENTS = /* @__PURE__ */ new Set(["return", "true", "false", "nothing", "in", "and", "or", "not", "continue", "break"]);
-    NAME_PAT = "[\\p{L}_][\\p{L}\\p{N}_]*";
-    ASK_INTO = new RegExp(
-      `^(?:for\\s+)?(\\u0000\\d+\\u0000)?\\s*,?\\s*(?:(?:and\\s+)?(?:save|store|put|keep|remember|call|name)(?:\\s+it|\\s+the\\s+answer)?(?:\\s+(?:as|in|into|to))?|as|into|in|to|->|=>)\\s+(?:the\\s+|a\\s+)?(${NAME_PAT})\\s*[.:]?$`,
-      "iu"
-    );
-    ASK_PROMPT_ONLY = /^(?:for\s+)?(\u0000\d+\u0000)\s*[.:]?$/u;
-    ASK_NAME_ONLY = new RegExp(`^(?:for\\s+)?(?:(?:the|a|an|their|your|his|her|my)\\s+)?(${NAME_PAT})\\s*[?.:]?$`, "iu");
-    OPENS = /^\s*(?:to\s+[\p{L}\p{N}_]|if\b|while\b|for\s+each\b|kind\b|attempt\b|match\b)/u;
-    CLOSES = /^\s*end\b/;
+    init_sdev_engine();
   }
 });
 
@@ -34492,10 +33670,10 @@ function maskBoardBlocks(source) {
   let last = 0;
   for (const s of spans) {
     out += source.slice(last, s.start);
-    const text3 = source.slice(s.start, s.end);
+    const text2 = source.slice(s.start, s.end);
     const line = source.slice(0, s.start).split("\n").length;
-    out += MARK + blocks.length + "\n".repeat(text3.split("\n").length - 1);
-    blocks.push({ text: text3, strict: s.strict, line });
+    out += MARK + blocks.length + "\n".repeat(text2.split("\n").length - 1);
+    blocks.push({ text: text2, strict: s.strict, line });
     last = s.end;
   }
   return { source: out + source.slice(last), blocks };
@@ -34514,40 +33692,17 @@ function readBoardPieces(blocks) {
 }
 function unmaskBoardBlocks(source, blocks, texts = blocks.map((b) => b.text)) {
   if (texts.length === 0) return source;
-  const used = /* @__PURE__ */ new Set();
-  const lines = source.split("\n");
-  const out = [];
-  for (let i = 0; i < lines.length; i++) {
-    const m2 = MARK_RE.exec(lines[i]);
-    const n = m2 ? Number(m2[1]) : -1;
-    if (n < 0 || n >= texts.length || used.has(n)) {
-      out.push(lines[i]);
-      continue;
-    }
-    used.add(n);
-    out.push(texts[n]);
-    let blanks = 0;
-    let k = i + 1;
-    while (k < lines.length && lines[k].trim() === "") {
-      blanks++;
-      k++;
-    }
-    i += Math.min(blanks, blocks[n].text.split("\n").length - 1);
-  }
-  let result = out.join("\n");
-  const missing = texts.filter((_, n) => !used.has(n));
-  if (missing.length) result = result.replace(/\s*$/, "") + "\n\n" + missing.join("\n\n") + "\n";
-  return result;
+  return sdevBoardsUnmask(source, blocks.map((b) => b.text.split("\n").length), texts) ?? source;
 }
 function withoutBoardBlocks(source) {
   return maskBoardBlocks(source).source;
 }
-var MARK, MARK_RE;
+var MARK;
 var init_boards = __esm({
   "src/lang/agent/boards.ts"() {
     init_understand();
+    init_sdev_engine();
     MARK = "# sdev:board-block ";
-    MARK_RE = /^[ \t]*# sdev:board-block (\d+)[ \t]*$/;
   }
 });
 
@@ -34706,8 +33861,8 @@ var init_sense = __esm({
     init_parser();
     init_interpreter();
     init_tokens();
-    init_math2();
-    init_tasks();
+    init_math3();
+    init_tasks2();
     init_vocabulary();
     init_keywords();
     init_sdev_engine();
@@ -34741,159 +33896,18 @@ var init_sense = __esm({
 // src/lang/agent/brain-prompt.ts
 var brain_prompt_exports = {};
 __export(brain_prompt_exports, {
-  AI_DIALECT: () => AI_DIALECT,
-  SYSTEM: () => SYSTEM,
   brainInput: () => brainInput,
   brainInstructions: () => brainInstructions
 });
 function brainInstructions(format) {
-  return format === "ai" ? SYSTEM + AI_DIALECT : SYSTEM;
+  return sdevBrainInstructions(format) ?? "";
 }
 function brainInput(req) {
-  const body = { ...req, source: req.source.slice(0, 4e4) };
-  const source = body.source;
-  return [
-    "The author wrote this program:",
-    "```",
-    source,
-    "```",
-    "",
-    "A rule engine already produced this draft of canonical sdev:",
-    "```",
-    (body.draft ?? "").slice(0, 4e4),
-    "```",
-    "",
-    body.unresolved?.length ? `Lines it could not resolve: ${body.unresolved.join(", ")}` : "It resolved every line, but the result may still be wrong.",
-    "",
-    "Words this author is known to use (word -> meaning): " + JSON.stringify(body.vocabulary ?? {}),
-    "",
-    body.problems?.length ? "That draft still has these problems \u2014 fix them:\n- " + body.problems.slice(0, 10).map((p) => String(p).slice(0, 300)).join("\n- ") : "",
-    "",
-    body.format === "ai" ? "Return the whole program in sdev:ai (described below), starting with the line !#ai." : "Return the whole program as canonical sdev."
-  ].join("\n");
+  return sdevBrainInput(req) ?? req.source;
 }
-var SYSTEM, AI_DIALECT;
 var init_brain_prompt = __esm({
   "src/lang/agent/brain-prompt.ts"() {
-    SYSTEM = `You are the understanding agent of the sdev programming language.
-A person wrote something \u2014 a program, a half-program, or a plain request in any human language
-("calculate 23-21", "count from 1 to 10", "ask my name and greet me", "make a shopping list and print it sorted").
-Turn it into a complete, WORKING sdev program that does what they meant. Output only code in the JSON field.
-
-Canonical sdev you must write (verified syntax):
-  say X                          print (say "a" + str(n) to join text and numbers)
-  set NAME to VALUE              create or change a variable
-  set name to input("Prompt? ")  read text; num(input("\u2026")) reads a number
-  if COND / else / end           blocks close with end (indent bodies 2 spaces)
-  while COND / end
-  for each x in LIST / end       for each i in sequence(1, 11) counts 1..10; sequence(n) is 0..n-1
-  to NAME with a b / return X / end   declare a function, call it as NAME(1, 2)
-  break, continue, true, false, nothing
-  comparisons: is, is not, ==, !=, >, <, >=, <=      logic: and, or, not
-  operators: + - * / % **         comments start with #
-  lists [1, 2, 3], l[0], l + [4] appends; records {name: "Sam", age: 3}, r.name, r["age"]
-  lambdas: (x) -> x * 2
-
-Built-ins (use these exact names): len, str, num, int, round, floor, ceil, abs, sqrt, min, max, pow,
-  random, randint(a, b), pick(list), shuffle, sum, average, sort, sortDesc, reverse, unique, count(list, x),
-  first, last, upper, lower, trim, replace(s, a, b), contains(s_or_list, x), startswith, endswith,
-  chars(s), weave(list, sep) joins, shatter(s, sep) splits, sift(list, fn) filters, each(list, fn) maps,
-  fold(list, fn, start), toFixed(n, digits), keys(r), values(r), now(), typeof.
-  There is NO join, split, append, push, map, filter, printf \u2014 use weave, shatter, l + [x], each, sift.
-
-Self-hosted (v2) libraries for systems and causal-AI work \u2014 load with use "lang/stdlib/v2/<name>.sdev":
-  list: list_append(xs, x), list_concat_two(a, b) (in v2 files lists never grow with +)
-  bits: bits_and/or/xor(a, b), bits_shl/shr(v, n), bits_not_n(v, width), floor_div, floor_mod, wrap_u8/u16/i16
-  mem: mem_arena(size), mem_put/get_u8/u16/i16(m, addr[, v]) little-endian, mem_copy, mem_fill, mem_hex,
-       ring_create(cap), ring_push, ring_get(r, i), ring_len
-  oce (v2: use "lang/stdlib/v2/oce.sdev", it loads list, bits, mem itself; classic and !#ai files: built in, no import): Ontological Causal Engine in one 64 KB arena \u2014 oce_create(), oce_entity(m),
-       oce_medium(m, prop, v), oce_observe(m, rows) learns laws from observations, oce_intervene(m, e, p, v) is do(),
-       oce_imagine(m, e, p, v, ticks) + oce_imagined(m, e, p) counterfactuals, oce_describe(m, names),
-       oce_mdl_bits(m), oce_motifs(text, threshold), oce_sequence_rule(xs), oce_ca_rule(rows).
-  In v2 files, xs + [a] joins lists only when the file uses "lang/stdlib/v2/list.sdev"; prefer list_append(xs, a).
-
-Canonical SDEV Patterns & Examples:
-  # 1. Math and output:
-  say "hello world"
-  say 23 - 21
-
-  # 2. Functions and calls:
-  to double with n
-    return n * 2
-  end
-  say double(21)
-
-  # 3. Loops (counting from 1 to 10):
-  for each i in sequence(1, 11)
-    say i
-  end
-
-  # 4. Sorting lists:
-  set items to ["milk", "eggs", "bread"]
-  say sort(items)
-
-  # 5. Records / Objects:
-  set person to {name: "Ana", age: 30}
-  say person.name
-  say person.age
-
-  # 6. Palindrome check:
-  set w to "racecar"
-  if w is weave(reverse(chars(w)), "")
-    say "palindrome"
-  else
-    say "not palindrome"
-  end
-
-Window toolkit (the IDE shows a real window):
-  window("Title", width, height) \u2026 endwindow()   row() \u2026 endrow()   column() \u2026 endcolumn()
-  heading("text")  label("text")  label("@key") shows the live value of key
-  input("key", "placeholder")   the typed text is uiget("key")
-  button("Text", () -> handler())   handler is a function or lambda, run on click
-  uiget("key") reads a value, uiset("key", value) changes it and refreshes labels bound with "@key"
-  evaluate("2 + 3 * 4") safely computes an arithmetic expression held in text (use it for calculators)
-  Define functions BEFORE window(); put every widget between window() and endwindow().
-
-Requests in plain words:
-- If the source is a request ("make a window that is a calculator", "build a quiz game"), write the WHOLE
-  working program that does it \u2014 complete, not a sketch. Anything with "window", "app", "buttons" or a
-  visual interface uses the window toolkit.
-
-Rules:
-- CRITICAL: NEVER output Python syntax (NO "def", NO "print", NO "range()", NO "elif", NO trailing colons :).
-- CRITICAL: NEVER output JavaScript syntax (NO "console.log", NO "function", NO "let", NO "var", NO "const", NO "===").
-- Every function, if, while, and for each block MUST be closed with "end" on its own line.
-- Compute with code; never hard-code an answer the program should work out.
-- Keep the author's own code and identifiers exactly as written (any language/script); only fix what is wrong.
-- If the author's code already works, return it unchanged.
-- Bare words meant as text become quoted strings.
-- Never add prose, markdown fences or explanations outside the JSON. Return ONLY JSON: {"canonical": "<program>", "notes": "<short note>"}`;
-    AI_DIALECT = `
-
-sdev:ai \u2014 the dialect for AI models. When asked for sdev:ai, write ONLY this form:
-  !#ai                         MUST be the very first line
-  v x = 5                      declare            x = x + 1       change (also xs[0] = 1, r.k = 2)
-  p(x)                         print
-  f add(a, b) {                function            r a + b         return
-  ? x > 3 {   } :? x > 1 {   } : {   }             if / else if / else
-  w i < 3 {  }                 while               each n in xs {  }   for each
-  try {  } catch e {  }        brk / next          break / continue
-  } finally {  }   throw e      k MAX = 3           constant
-  c Dog : Animal {  f init(self, n) { self.n = n }  }    class (": Animal" optional); make one with new Dog(1)
-  == != && || ! true false null      every block closes with } on its own line
-  Calls to built-ins and the window toolkit stay as they are: window("Calc", 320, 400), button("7", () -> press("7")), uiset(...)
-  Lambdas: (x) -> x * 2.  One statement per line.
-
-Example:
-  !#ai
-  f press(k) {
-    uiset("display", uiget("display") + k)
-  }
-  window("Calculator", 320, 400)
-  input("display", "0")
-  button("7", () -> press("7"))
-  button("=", () -> uiset("display", str(evaluate(uiget("display")))))
-  endwindow()`;
+    init_sdev_engine();
   }
 });
 
@@ -34904,58 +33918,21 @@ __export(micro_brain_exports, {
   MICRO_BRAIN_VERSION: () => MICRO_BRAIN_VERSION,
   callMicroBrain: () => callMicroBrain,
   classifyLineIntent: () => classifyLineIntent,
-  embedLineVector: () => embedLineVector,
   getMicroBrainStats: () => getMicroBrainStats,
   initMicroBrainCache: () => initMicroBrainCache,
   runMicroBrainTranslation: () => runMicroBrainTranslation,
   solveNaturalLanguageRequest: () => solveNaturalLanguageRequest,
   translateLineSpeculative: () => translateLineSpeculative
 });
-function hashToken(token) {
-  let h = 2166136261;
-  for (let i = 0; i < token.length; i++) {
-    h ^= token.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Math.abs(h) % EMBED_DIM;
-}
-function buildPrebakedWeights() {
-  const weights = new Float32Array(INTENT_PROTOTYPES.length * EMBED_DIM);
-  INTENT_PROTOTYPES.forEach((proto, row) => {
-    for (const kw of proto.keywords) {
-      const idx = hashToken(kw.toLowerCase());
-      weights[row * EMBED_DIM + idx] += 1.5;
-      for (let i = 0; i < kw.length - 1; i++) {
-        const bg = hashToken(kw.slice(i, i + 2).toLowerCase());
-        weights[row * EMBED_DIM + bg] += 0.35;
-      }
-    }
-    let norm2 = 0;
-    for (let c = 0; c < EMBED_DIM; c++) {
-      const v = weights[row * EMBED_DIM + c];
-      norm2 += v * v;
-    }
-    norm2 = Math.sqrt(norm2) || 1;
-    for (let c = 0; c < EMBED_DIM; c++) {
-      weights[row * EMBED_DIM + c] /= norm2;
-    }
-  });
-  return weights;
-}
 async function initMicroBrainCache() {
   if (typeof window !== "undefined" && "caches" in window) {
     try {
       const cache2 = await window.caches.open(MICRO_BRAIN_CACHE_KEY);
-      const existing = await cache2.match("/__sdev_micro_brain_weights.bin");
-      if (!existing) {
-        const blob = new Blob([PREBAKED_WEIGHTS.buffer], { type: "application/octet-stream" });
+      if (!await cache2.match("/__sdev_micro_brain_weights.bin")) {
         await cache2.put(
           "/__sdev_micro_brain_weights.bin",
-          new Response(blob, {
-            headers: {
-              "Content-Type": "application/octet-stream",
-              "X-Sdev-Micro-Brain": MICRO_BRAIN_VERSION
-            }
+          new Response(new Blob([new Float32Array(12 * 64).buffer], { type: "application/octet-stream" }), {
+            headers: { "Content-Type": "application/octet-stream", "X-Sdev-Micro-Brain": MICRO_BRAIN_VERSION }
           })
         );
       }
@@ -34967,8 +33944,7 @@ async function initMicroBrainCache() {
   if (typeof navigator !== "undefined" && "gpu" in navigator) {
     try {
       const gpu = navigator.gpu;
-      const adapter = await gpu?.requestAdapter?.();
-      if (adapter) webgpuAccelerated = true;
+      webgpuAccelerated = Boolean(await gpu?.requestAdapter?.());
     } catch {
       webgpuAccelerated = false;
     }
@@ -34976,562 +33952,58 @@ async function initMicroBrainCache() {
   return getMicroBrainStats();
 }
 function getMicroBrainStats() {
-  return {
-    version: MICRO_BRAIN_VERSION,
-    weightBytes: PREBAKED_WEIGHTS.byteLength,
-    cachedInStorage,
-    webgpuAccelerated,
-    translationsCompleted,
-    lastLatencyMs
-  };
-}
-function embedLineVector(line) {
-  const vec = new Float32Array(EMBED_DIM);
-  const tokens = line.toLowerCase().replace(/[^a-z0-9_]+/g, " ").trim().split(/\s+/).filter(Boolean);
-  tokens.forEach((tok, idx) => {
-    const weight = idx === 0 ? 2 : idx === 1 ? 1.2 : 0.6;
-    const h = hashToken(tok);
-    vec[h] += weight;
-    for (let i = 0; i < tok.length - 1; i++) {
-      const bg = hashToken(tok.slice(i, i + 2));
-      vec[bg] += 0.2 * weight;
-    }
-  });
-  let norm2 = 0;
-  for (let i = 0; i < EMBED_DIM; i++) norm2 += vec[i] * vec[i];
-  norm2 = Math.sqrt(norm2) || 1;
-  for (let i = 0; i < EMBED_DIM; i++) vec[i] /= norm2;
-  return vec;
+  return { version: MICRO_BRAIN_VERSION, weightBytes: WEIGHT_BYTES, cachedInStorage, webgpuAccelerated, translationsCompleted, lastLatencyMs };
 }
 function classifyLineIntent(line) {
-  const vec = embedLineVector(line);
-  let bestIntent = "PRINT";
-  let bestScore = -Infinity;
-  for (let row = 0; row < INTENT_PROTOTYPES.length; row++) {
-    let dot = 0;
-    const offset = row * EMBED_DIM;
-    for (let c = 0; c < EMBED_DIM; c++) {
-      dot += PREBAKED_WEIGHTS[offset + c] * vec[c];
-    }
-    if (dot > bestScore) {
-      bestScore = dot;
-      bestIntent = INTENT_PROTOTYPES[row].intent;
-    }
-  }
-  return { intent: bestIntent, score: Number(bestScore.toFixed(4)) };
-}
-function normalizeExpression(expr) {
-  return expr.trim().replace(/;+\s*$/, "").replace(/\btrue\b/gi, "yep").replace(/\bfalse\b/gi, "nope").replace(/\bnull\b|\bNone\b|\bnil\b/g, "void").replace(/===/g, " equals ").replace(/==/g, " equals ").replace(/!==/g, " differs ").replace(/!=/g, " differs ").replace(/\bis equal to\b/gi, "equals").replace(/\bis not equal to\b/gi, "differs").replace(/\bis greater than or equal to\b/gi, ">=").replace(/\bis less than or equal to\b/gi, "<=").replace(/\bis greater than\b/gi, ">").replace(/\bis less than\b/gi, "<").replace(/\&&/g, " and ").replace(/\|\|/g, " or ").replace(/\s+/g, " ").trim();
+  return sdevClassifyLineIntent(line) ?? { intent: "PRINT", score: 0 };
 }
 function translateLineSpeculative(rawLine) {
-  const indentMatch = rawLine.match(/^(\s*)/);
-  const indent = indentMatch ? indentMatch[1] : "";
-  const trimmed = rawLine.trim();
-  if (!trimmed || trimmed.startsWith("//")) {
-    return { line: rawLine, openedBlock: false, closedBlock: false, reopenedBlock: false };
-  }
-  if (trimmed.startsWith("#") && !trimmed.startsWith("!#")) {
-    return {
-      line: `${indent}// ${trimmed.slice(1).trim()}`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  if (trimmed.startsWith("!#")) {
-    return { line: rawLine, openedBlock: false, closedBlock: false, reopenedBlock: false };
-  }
-  if (/^(?:;;|\}|end(?:\s+\w+)?|done|fi|od)$/i.test(trimmed)) {
-    return { line: `${indent};;`, openedBlock: false, closedBlock: true, reopenedBlock: false };
-  }
-  if (/^(?:\}\s*)?(?:else|otherwise)\s*:?\s*\{?$/i.test(trimmed)) {
-    return { line: `${indent}otherwise ::`, openedBlock: false, closedBlock: false, reopenedBlock: true };
-  }
-  const elifMatch = /^(?:\}\s*)?(?:elif|elseif|else\s+if|otherwise\s+if|otherwise\s+ponder)\s+(.+?)\s*(?::|\{|::)?$/i.exec(trimmed);
-  if (elifMatch) {
-    const cond = normalizeExpression(elifMatch[1].replace(/^\(|\)$/g, ""));
-    return {
-      line: `${indent}otherwise ponder ${cond} ::`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: true
-    };
-  }
-  const fnMatch = /^(?:def|function|fn|func|to|conjure|define(?:\s+a)?(?:\s+function)?)\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*(?:->\s*\w+\s*)?(?::|\{|::)?$/i.exec(trimmed);
-  if (fnMatch) {
-    return {
-      line: `${indent}conjure ${fnMatch[1]}(${fnMatch[2].trim()}) ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const nlFn = /^(?:create|make|define)\s+(?:a\s+)?function\s+([a-zA-Z_]\w*)(?:\s+(?:with|taking)\s+(.+?))?\s*:?$/i.exec(trimmed);
-  if (nlFn) {
-    const args = (nlFn[2] ?? "").replace(/\band\b/g, ",").replace(/\s+/g, "");
-    return {
-      line: `${indent}conjure ${nlFn[1]}(${args}) ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const clsMatch = /^(?:class|struct|essence|craft)\s+([a-zA-Z_]\w*)\s*(?::|\{|::)?$/i.exec(trimmed);
-  if (clsMatch) {
-    return {
-      line: `${indent}essence ${clsMatch[1]} ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const retMatch = /^(?:return|give(?:\s+back)?|yield|send\s+back)\s+(.+)$/i.exec(trimmed);
-  if (retMatch) {
-    return {
-      line: `${indent}yield ${normalizeExpression(retMatch[1])}`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const consoleMatch = /^(?:console\.log|System\.out\.println|fmt\.Println|print|println|puts|echo)\s*\((.*)\)\s*;?$/i.exec(trimmed);
-  if (consoleMatch) {
-    return {
-      line: `${indent}speak(${normalizeExpression(consoleMatch[1])})`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const barePrint = /^(?:print|say|display|show|output|echo|speak)\s+(?!\()(.+)$/i.exec(trimmed);
-  if (barePrint) {
-    const inner = normalizeExpression(barePrint[1]);
-    return {
-      line: `${indent}speak(${inner})`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const repeatTimes = /^repeat\s+(\d+|\w+)\s+times\s*(?::|\{|::)?$/i.exec(trimmed);
-  if (repeatTimes) {
-    return {
-      line: `${indent}within _step be range(0, ${repeatTimes[1]}) ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const forFromTo = /^for\s+([a-zA-Z_]\w*)\s+from\s+(.+?)\s+to\s+(.+?)\s*(?::|\{|::)?$/i.exec(trimmed);
-  if (forFromTo) {
-    return {
-      line: `${indent}within ${forFromTo[1]} be range(${normalizeExpression(forFromTo[2])}, ${normalizeExpression(forFromTo[3])} + 1) ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const forIn = /^(?:for|foreach|within)\s+(?:each\s+)?([a-zA-Z_]\w*)\s+(?:in|of|be|through|from)\s+(.+?)\s*(?::|\{|::)?$/i.exec(trimmed);
-  if (forIn) {
-    return {
-      line: `${indent}within ${forIn[1]} be ${normalizeExpression(forIn[2])} ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const whileMatch = /^(?:while|loop\s+while|repeat\s+while|cycle)\s*\(?(.+?)\)?\s*(?::|\{|::)?$/i.exec(trimmed);
-  if (whileMatch) {
-    return {
-      line: `${indent}cycle ${normalizeExpression(whileMatch[1])} ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const ifMatch = /^(?:if|when|ponder)\s*\(?(.+?)\)?\s*(?:then\s*)?(?::|\{|::)?$/i.exec(trimmed);
-  if (ifMatch && (trimmed.endsWith(":") || trimmed.endsWith("{") || trimmed.endsWith("::") || /\bthen$/i.test(trimmed) || /^(?:if|when)\b/i.test(trimmed))) {
-    const rawCond = ifMatch[1].replace(/\s+then$/i, "").trim();
-    return {
-      line: `${indent}ponder ${normalizeExpression(rawCond)} ::`,
-      openedBlock: true,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const varDecl = /^(?:let|const|var|set|forge|create|define)\s+([a-zA-Z_]\w*)\s*(?:=|to|as|be|is)\s*(.+)$/i.exec(trimmed);
-  if (varDecl) {
-    return {
-      line: `${indent}forge ${varDecl[1]} be ${normalizeExpression(varDecl[2])}`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const incShorthand = /^([a-zA-Z_]\w*)\s*(\+\+|--)\s*;?$/.exec(trimmed);
-  if (incShorthand) {
-    const op = incShorthand[2] === "++" ? "+" : "-";
-    return {
-      line: `${indent}${incShorthand[1]} be ${incShorthand[1]} ${op} 1`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const augMatch = /^([a-zA-Z_]\w*)\s*(\+=|-=|\*=|\/=)\s*(.+?)\s*;?$/.exec(trimmed);
-  if (augMatch) {
-    const op = augMatch[2][0];
-    return {
-      line: `${indent}${augMatch[1]} be ${augMatch[1]} ${op} (${normalizeExpression(augMatch[3])})`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const addToMatch = /^add\s+(.+?)\s+to\s+([a-zA-Z_]\w*)$/i.exec(trimmed);
-  if (addToMatch) {
-    return {
-      line: `${indent}${addToMatch[2]} be ${addToMatch[2]} + ${normalizeExpression(addToMatch[1])}`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  const assignMatch = /^([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)?)\s*=\s*(?!=)(.+?)\s*;?$/.exec(trimmed);
-  if (assignMatch) {
-    const lhs = assignMatch[1];
-    const rhs = normalizeExpression(assignMatch[2]);
-    const kw = lhs.includes(".") ? `${lhs} be ${rhs}` : `forge ${lhs} be ${rhs}`;
-    return {
-      line: `${indent}${kw}`,
-      openedBlock: false,
-      closedBlock: false,
-      reopenedBlock: false
-    };
-  }
-  return {
-    line: `${indent}${trimmed.replace(/;+\s*$/, "")}`,
-    openedBlock: trimmed.endsWith("::"),
-    closedBlock: trimmed === ";;",
-    reopenedBlock: false
-  };
+  return sdevTranslateLineSpeculative(rawLine) ?? { line: rawLine, openedBlock: false, closedBlock: false, reopenedBlock: false };
 }
 function runMicroBrainTranslation(source) {
   const t0 = performance.now();
-  const rawLines = source.split(/\r?\n/);
-  const outLines = [];
-  const blockIndentStack = [];
-  for (let i = 0; i < rawLines.length; i++) {
-    const raw = rawLines[i];
-    const trimmed = raw.trim();
-    if (!trimmed) {
-      outLines.push("");
-      continue;
-    }
-    const currentIndent = (raw.match(/^(\s*)/)?.[1] ?? "").replace(/\t/g, "  ").length;
-    const translated = translateLineSpeculative(raw);
-    if (!translated.closedBlock && !translated.reopenedBlock && !trimmed.startsWith("//") && !trimmed.startsWith("#")) {
-      while (blockIndentStack.length > 0 && currentIndent <= blockIndentStack[blockIndentStack.length - 1]) {
-        const closedIndent = blockIndentStack.pop();
-        outLines.push(`${" ".repeat(closedIndent)};;`);
-      }
-    } else if (translated.reopenedBlock) {
-      while (blockIndentStack.length > 1 && currentIndent < blockIndentStack[blockIndentStack.length - 1]) {
-        const closedIndent = blockIndentStack.pop();
-        outLines.push(`${" ".repeat(closedIndent)};;`);
-      }
-    }
-    if (translated.closedBlock) {
-      if (blockIndentStack.length > 0) blockIndentStack.pop();
-    }
-    outLines.push(translated.line);
-    if (translated.openedBlock) {
-      blockIndentStack.push(currentIndent);
-    }
-  }
-  while (blockIndentStack.length > 0) {
-    const closedIndent = blockIndentStack.pop();
-    outLines.push(`${" ".repeat(closedIndent)};;`);
-  }
-  const canonical = outLines.join("\n");
+  const res = sdevRunMicroBrainTranslation(source) ?? { canonical: source, changed: false };
   lastLatencyMs = Number((performance.now() - t0).toFixed(2));
   translationsCompleted += 1;
   return {
-    canonical,
+    canonical: res.canonical,
     notes: `Translated locally via SDEV Micro-Brain (${lastLatencyMs}ms, 0 MB cloud traffic).`,
-    changed: canonical.trim() !== source.trim()
+    changed: res.changed
   };
 }
 function solveNaturalLanguageRequest(prompt) {
-  const p = prompt.trim();
-  const lower = p.toLowerCase();
-  const fizzMatch = lower.match(/\bfizz\s*buzz(?:\s+(?:up\s+to|to)\s+(\d+))?\b/);
-  if (fizzMatch) {
-    const limit = fizzMatch[1] ? parseInt(fizzMatch[1], 10) : 15;
-    return [
-      `for each i in sequence(1, ${limit + 1})`,
-      "  if i % 15 == 0",
-      '    say "FizzBuzz"',
-      "  else if i % 3 == 0",
-      '    say "Fizz"',
-      "  else if i % 5 == 0",
-      '    say "Buzz"',
-      "  else",
-      "    say i",
-      "  end",
-      "end"
-    ].join("\n");
-  }
-  const circleMatch = lower.match(/\barea\s+of\s+(?:a\s+)?circle\s+(?:with\s+)?(?:radius\s+)?(?:of\s+)?(\d+(?:\.\d+)?)/);
-  if (circleMatch) {
-    const r = circleMatch[1];
-    return [
-      `set r to ${r}`,
-      "set pi to 3.141592653589793",
-      "say pi * r * r"
-    ].join("\n");
-  }
-  const shopMatch = lower.match(/(?:shopping\s+list|list)\s+with\s+(.+?)\s+and\s+print\s+it\s+sorted/);
-  if (shopMatch) {
-    const rawItems = shopMatch[1].split(/,|\band\b/).map((s) => s.trim()).filter(Boolean);
-    const items = JSON.stringify(rawItems);
-    return [
-      `set items to ${items}`,
-      "for each item in sort(items)",
-      "  say item",
-      "end"
-    ].join("\n");
-  }
-  const evenOddMatch = lower.match(/\b(even|odd)\s+numbers?\s+(?:between|from)\s+(\d+)\s+(?:and|to)\s+(\d+)/);
-  if (evenOddMatch) {
-    const parity = evenOddMatch[1];
-    const a = parseInt(evenOddMatch[2], 10);
-    const b = parseInt(evenOddMatch[3], 10);
-    const modVal = parity === "even" ? 0 : 1;
-    return [
-      `for each i in sequence(${a}, ${b + 1})`,
-      `  if i % 2 == ${modVal}`,
-      "    say i",
-      "  end",
-      "end"
-    ].join("\n");
-  }
-  const cToFMatch = lower.match(/\bconvert\s+(\d+(?:\.\d+)?)\s*(?:degrees?\s+)?celsius\s+to\s+fahrenheit\b/);
-  if (cToFMatch) {
-    const c = cToFMatch[1];
-    return [
-      `set c to ${c}`,
-      "say c * 9 / 5 + 32"
-    ].join("\n");
-  }
-  const fToCMatch = lower.match(/\bconvert\s+(\d+(?:\.\d+)?)\s*(?:degrees?\s+)?fahrenheit\s+to\s+celsius\b/);
-  if (fToCMatch) {
-    const f2 = fToCMatch[1];
-    return [
-      `set f to ${f2}`,
-      "say (f - 32) * 5 / 9"
-    ].join("\n");
-  }
-  const maxMinMatch = lower.match(/\b(biggest|largest|maximum|max|smallest|minimum|min)\s+number\s+in\s+([0-9,\s\band]+)/);
-  if (maxMinMatch) {
-    const isMax = /big|large|max/.test(maxMinMatch[1]);
-    const nums2 = maxMinMatch[2].split(/,|\band\b|\s+/).map((s) => s.trim()).filter((s) => /^-?\d+(?:\.\d+)?$/.test(s));
-    if (nums2.length > 0) {
-      return [
-        `set numbers to [${nums2.join(", ")}]`,
-        `say ${isMax ? "max" : "min"}(numbers)`
-      ].join("\n");
-    }
-  }
-  const fnOpMatch = lower.match(/\bfunction\s+that\s+(doubles|triples|squares)\s+(?:a\s+number\s+)?and\s+use\s+it\s+on\s+(\d+(?:\.\d+)?)/);
-  if (fnOpMatch) {
-    const op = fnOpMatch[1];
-    const val = fnOpMatch[2];
-    const expr = op === "doubles" ? "n * 2" : op === "triples" ? "n * 3" : "n * n";
-    const fnName = op === "doubles" ? "double" : op === "triples" ? "triple" : "square";
-    return [
-      `to ${fnName} with n`,
-      `  return ${expr}`,
-      "end",
-      `say ${fnName}(${val})`
-    ].join("\n");
-  }
-  const palMatch = lower.match(/\b(?:check\s+if\s+|is\s+)?["']?([a-zA-Z0-9]+)["']?\s+(?:a\s+)?palindrome\b/);
-  if (palMatch && palMatch[1]) {
-    const word = palMatch[1];
-    return [
-      `set word to "${word}"`,
-      'if word is weave(reverse(chars(word)), "")',
-      `  say "${word} is a palindrome"`,
-      "else",
-      '  say "not a palindrome"',
-      "end"
-    ].join("\n");
-  }
-  const vowelMatch = lower.match(/\bvowels\s+(?:are\s+)?in\s+(?:the\s+word\s+)?["']?([a-zA-Z]+)["']?/);
-  if (vowelMatch && vowelMatch[1]) {
-    const word = vowelMatch[1];
-    return [
-      `set word to "${word}"`,
-      'set vowels to ["a", "e", "i", "o", "u"]',
-      "set total to 0",
-      "for each ch in chars(lower(word))",
-      "  if contains(vowels, ch)",
-      "    set total to total + 1",
-      "  end",
-      "end",
-      "say total"
-    ].join("\n");
-  }
-  const fibMatch = lower.match(/\bfirst\s+(\d+)\s+fibonacci\b/);
-  if (fibMatch) {
-    const n = parseInt(fibMatch[1], 10);
-    return [
-      "set a to 0",
-      "set b to 1",
-      "say a",
-      "say b",
-      `for each i in sequence(2, ${n})`,
-      "  set c to a + b",
-      "  say c",
-      "  set a to b",
-      "  set b to c",
-      "end"
-    ].join("\n");
-  }
-  const sumMatch = lower.match(/\bsum\s+(?:all\s+)?numbers?\s+(?:from\s+)?(\d+)\s+to\s+(\d+)/);
-  if (sumMatch) {
-    const a = parseInt(sumMatch[1], 10);
-    const b = parseInt(sumMatch[2], 10);
-    return [
-      "set total to 0",
-      `for each i in sequence(${a}, ${b + 1})`,
-      "  set total to total + i",
-      "end",
-      "say total"
-    ].join("\n");
-  }
-  const personMatch = lower.match(/\bperson\s+named\s+([a-zA-Z]+)\s+who\s+is\s+(\d+)\s+and\s+print\s+(?:her|his|their)?\s*name\s+and\s+age/);
-  if (personMatch) {
-    const name = personMatch[1].charAt(0).toUpperCase() + personMatch[1].slice(1);
-    const age = personMatch[2];
-    return [
-      `set person to {name: "${name}", age: ${age}}`,
-      "say person.name",
-      "say person.age"
-    ].join("\n");
-  }
-  const factMatch = lower.match(/\bfactorial\s+of\s+(\d+)\b/);
-  if (factMatch) {
-    const n = parseInt(factMatch[1], 10);
-    return [
-      "set total to 1",
-      `for each i in sequence(1, ${n + 1})`,
-      "  set total to total * i",
-      "end",
-      "say total"
-    ].join("\n");
-  }
-  return null;
+  const res = sdevSolveNlRequest(prompt);
+  return res === void 0 ? null : res;
 }
 async function callMicroBrain(req) {
   await initMicroBrainCache();
   const target = req.draft || req.source;
   const nlSolved = solveNaturalLanguageRequest(req.source) || (req.draft ? solveNaturalLanguageRequest(req.draft) : null);
-  if (nlSolved && parses(nlSolved)) {
-    return {
-      canonical: nlSolved,
-      notes: "Solved via SDEV Pre-Baked WebGPU Micro-Brain NL solver (<1ms)."
-    };
+  if (nlSolved && parses(nlSolved) && unknownNames(nlSolved).length === 0) {
+    return { canonical: nlSolved, notes: "Solved via SDEV Pre-Baked WebGPU Micro-Brain NL solver (<1ms)." };
   }
+  if (req.format === "ai") return null;
+  const accepts = (canonical, changed) => {
+    const pOk = parses(canonical);
+    const unkCount = unknownNames(canonical).length;
+    return sdevMicroBrainAccepts(pOk, unkCount, changed, req.unresolved.length, req.problems?.length ?? 0) ?? false;
+  };
   const result = runMicroBrainTranslation(target);
-  if (parses(result.canonical)) {
-    return {
-      canonical: result.canonical,
-      notes: result.notes
-    };
-  }
+  if (accepts(result.canonical, result.changed)) return { canonical: result.canonical, notes: result.notes };
   if (req.source && req.source !== target) {
     const fromOriginal = runMicroBrainTranslation(req.source);
-    if (parses(fromOriginal.canonical)) {
-      return {
-        canonical: fromOriginal.canonical,
-        notes: fromOriginal.notes
-      };
-    }
+    if (accepts(fromOriginal.canonical, fromOriginal.changed)) return { canonical: fromOriginal.canonical, notes: fromOriginal.notes };
   }
   return null;
 }
-var MICRO_BRAIN_CACHE_KEY, MICRO_BRAIN_VERSION, INTENT_PROTOTYPES, EMBED_DIM, PREBAKED_WEIGHTS, cachedInStorage, webgpuAccelerated, translationsCompleted, lastLatencyMs;
+var MICRO_BRAIN_CACHE_KEY, MICRO_BRAIN_VERSION, WEIGHT_BYTES, cachedInStorage, webgpuAccelerated, translationsCompleted, lastLatencyMs;
 var init_micro_brain = __esm({
   "src/lang/agent/micro-brain.ts"() {
     init_sense();
+    init_sdev_engine();
     MICRO_BRAIN_CACHE_KEY = "sdev-micro-brain-v1";
     MICRO_BRAIN_VERSION = "1.0.0";
-    INTENT_PROTOTYPES = [
-      {
-        intent: "PRINT",
-        keywords: ["print", "println", "console", "log", "echo", "say", "display", "show", "output", "write", "speak", "puts"],
-        canonicalTemplate: "speak($EXPR)"
-      },
-      {
-        intent: "LET",
-        keywords: ["let", "var", "const", "set", "create", "define", "variable", "make", "forge", "int", "float", "string", "auto"],
-        canonicalTemplate: "forge $NAME be $EXPR"
-      },
-      {
-        intent: "FUNC_DEF",
-        keywords: ["def", "function", "fn", "func", "proc", "procedure", "method", "sub", "to", "conjure", "define"],
-        canonicalTemplate: "conjure $NAME($ARGS) ::"
-      },
-      {
-        intent: "RETURN",
-        keywords: ["return", "give", "send", "result", "output", "yield", "back"],
-        canonicalTemplate: "yield $EXPR"
-      },
-      {
-        intent: "IF",
-        keywords: ["if", "when", "whenever", "check", "whether", "ponder", "suppose"],
-        canonicalTemplate: "ponder $COND ::"
-      },
-      {
-        intent: "ELIF",
-        keywords: ["elif", "elseif", "else if", "otherwise if"],
-        canonicalTemplate: "otherwise ponder $COND ::"
-      },
-      {
-        intent: "ELSE",
-        keywords: ["else", "otherwise", "fallback", "default"],
-        canonicalTemplate: "otherwise ::"
-      },
-      {
-        intent: "WHILE",
-        keywords: ["while", "until", "loop", "repeat while", "as long as", "cycle"],
-        canonicalTemplate: "cycle $COND ::"
-      },
-      {
-        intent: "FOR_EACH",
-        keywords: ["for", "foreach", "each", "every", "iterate", "within", "in", "through"],
-        canonicalTemplate: "within $ITEM be $LIST ::"
-      },
-      {
-        intent: "FOR_RANGE",
-        keywords: ["repeat", "times", "range", "from", "to", "count"],
-        canonicalTemplate: "within $VAR be range($START, $END) ::"
-      },
-      {
-        intent: "CLASS_DEF",
-        keywords: ["class", "struct", "type", "object", "blueprint", "essence", "craft"],
-        canonicalTemplate: "essence $NAME ::"
-      },
-      {
-        intent: "BLOCK_END",
-        keywords: ["end", "endif", "endfor", "endwhile", "endfunction", "done", "fi", "od", "}", ";;"],
-        canonicalTemplate: ";;"
-      }
-    ];
-    EMBED_DIM = 64;
-    PREBAKED_WEIGHTS = buildPrebakedWeights();
+    WEIGHT_BYTES = 12 * 64 * 4;
     cachedInStorage = false;
     webgpuAccelerated = false;
     translationsCompleted = 0;
@@ -35608,7 +34080,7 @@ async function callBrowser(req, parse2) {
   if (!engine2) return null;
   try {
     const { brainInstructions: brainInstructions2, brainInput: brainInput2 } = await Promise.resolve().then(() => (init_brain_prompt(), brain_prompt_exports));
-    const { sanitizeBrainOutput: sanitizeBrainOutput2 } = await Promise.resolve().then(() => (init_brain(), brain_exports));
+    const { sanitizeBrainOutput: sanitizeBrainOutput2 } = await Promise.resolve().then(() => (init_brain2(), brain_exports));
     const r = await engine2.chat.completions.create({
       messages: [
         { role: "system", content: brainInstructions2(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
@@ -35657,39 +34129,11 @@ __export(brain_exports, {
   think: () => think
 });
 function normalizeLocalEndpoints(rawInput) {
-  let u = (rawInput ?? "").trim();
-  if (!u) u = "http://127.0.0.1:11434";
-  if (!/^https?:\/\//i.test(u)) u = "http://" + u;
-  u = u.replace(/\/+$/, "");
-  if (/\/api\/chat$/i.test(u)) {
-    const base2 = u.replace(/\/api\/chat$/i, "");
-    return {
-      baseUrl: base2,
-      chatUrl: u,
-      modelsUrl: base2 + "/v1/models",
-      tagsUrl: base2 + "/api/tags",
-      isOllamaNative: true
-    };
-  }
-  if (/\/v1\/chat\/completions$/i.test(u)) {
-    const base2 = u.replace(/\/v1\/chat\/completions$/i, "");
-    return {
-      baseUrl: base2,
-      chatUrl: u,
-      modelsUrl: base2 + "/v1/models",
-      tagsUrl: base2 + "/api/tags",
-      isOllamaNative: false
-    };
-  }
-  let base = u;
-  if (/\/v1$/i.test(base)) {
-    base = base.replace(/\/v1$/i, "");
-  }
-  return {
-    baseUrl: base,
-    chatUrl: base + "/v1/chat/completions",
-    modelsUrl: base + "/v1/models",
-    tagsUrl: base + "/api/tags",
+  return sdevNormalizeLocalEndpoints(rawInput ?? "") ?? {
+    baseUrl: "http://127.0.0.1:11434",
+    chatUrl: DEFAULT_LOCAL_URL,
+    modelsUrl: "http://127.0.0.1:11434/v1/models",
+    tagsUrl: "http://127.0.0.1:11434/api/tags",
     isOllamaNative: false
   };
 }
@@ -35718,12 +34162,13 @@ function stored(key) {
   }
 }
 function brainSettings() {
+  const defaultOnline = typeof window !== "undefined" ? "1" : "";
   return {
     localUrl: stored(BRAIN_KEYS.url) || env("SDEV_AGENT_LOCAL_URL") || DEFAULT_LOCAL_URL,
     localModel: stored(BRAIN_KEYS.model) || env("SDEV_AGENT_LOCAL_MODEL") || DEFAULT_LOCAL_MODEL,
     browser: (stored(BRAIN_KEYS.browser) ?? "1") !== "0",
     customLocal: !!(stored(BRAIN_KEYS.url) || env("SDEV_AGENT_LOCAL_URL")),
-    allowOnline: (stored(BRAIN_KEYS.online) ?? env("SDEV_AGENT_ONLINE") ?? "") === "1"
+    allowOnline: (stored(BRAIN_KEYS.online) ?? env("SDEV_AGENT_ONLINE") ?? defaultOnline) === "1"
   };
 }
 function online() {
@@ -35731,232 +34176,93 @@ function online() {
   return nav?.onLine ?? true;
 }
 function sanitizeBrainOutput(code, format) {
-  if (!code) return "";
-  let text3 = code.trim();
-  text3 = text3.replace(/^```(?:[a-zA-Z0-9_:-]+)?\n([\s\S]*?)\n```$/g, "$1").trim();
-  const hasAiDialectMarkers = /^\s*!#ai\b/m.test(text3) || /^\s*(?:v\s+[a-zA-Z_]|f\s+[a-zA-Z_]\w*\s*\(|p\s*\(|\?\s+.+?\{|each\s+[a-zA-Z_]\w*\s+in\b)/m.test(text3);
-  if (hasAiDialectMarkers || format === "ai") {
-    if (!/^\s*!#ai\b/m.test(text3)) {
-      text3 = `!#ai
-${text3}`;
-    }
-    const openBraces = (text3.match(/\{/g) || []).length;
-    const closeBraces = (text3.match(/\}/g) || []).length;
-    if (openBraces > closeBraces) {
-      text3 = text3 + "\n" + "}".repeat(openBraces - closeBraces);
-    }
-    return text3;
-  }
-  const lines = text3.split("\n");
-  const out = [];
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-    const trimmed = line.trim();
-    if (i === 0 && /^(?:here\s+is|sure|certainly|this\s+program|below\s+is|the\s+following|here's)\b/i.test(trimmed)) {
-      continue;
-    }
-    if (i === lines.length - 1 && /^(?:hope\s+this|let\s+me\s+know|feel\s+free|enjoy|cheers)\b/i.test(trimmed)) {
-      continue;
-    }
-    line = line.replace(/^(\s*)print\s*\((.*)\)\s*;?$/, "$1say $2");
-    line = line.replace(/^(\s*)console\.log\s*\((.*)\)\s*;?$/, "$1say $2");
-    line = line.replace(/^(\s*)echo\s+(.*)$/, "$1say $2");
-    line = line.replace(/^(\s*)(?:let|var|const)\s+([a-zA-Z_]\w*)\s*=\s*(.+?);?$/, "$1set $2 to $3");
-    line = line.replace(/^(\s*)def\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*:?\s*$/, (_m, pad, fn2, args) => {
-      const argList = args.trim() ? args.split(",").map((a) => a.trim()).filter(Boolean).join(" ") : "";
-      return `${pad}to ${fn2}${argList ? " with " + argList : ""}`;
-    });
-    line = line.replace(/^(\s*)function\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*\{?\s*$/, (_m, pad, fn2, args) => {
-      const argList = args.trim() ? args.split(",").map((a) => a.trim()).filter(Boolean).join(" ") : "";
-      return `${pad}to ${fn2}${argList ? " with " + argList : ""}`;
-    });
-    line = line.replace(/^(\s*)elif\s+(.*?)\s*:?\s*$/, "$1else if $2");
-    line = line.replace(/^(\s*)for\s+(?:each\s+)?([a-zA-Z_]\w*)\s+in\s+range\s*\(([^)]+)\)\s*:?\s*$/, "$1for each $2 in sequence($3)");
-    line = line.replace(/^(\s*)for\s+([a-zA-Z_]\w*)\s+in\s+([a-zA-Z_][\w.[\]]*)\s*:?\s*$/, "$1for each $2 in $3");
-    line = line.replace(/^(\s*(?:if\b|else\b|while\b|for\s+each\b|to\b).*?)\s*:\s*$/, "$1");
-    out.push(line);
-  }
-  const cleaned = out.join("\n");
-  return closeBlocks(cleaned);
+  return sdevSanitizeBrainOutput(code, format) ?? code;
 }
-function parseReply(text3, format) {
-  if (!text3 || !text3.trim()) return null;
-  const trimmed = text3.trim();
+function parseReply(text2, format) {
+  return sdevParseBrainReply(text2, format) ?? null;
+}
+async function chatWithLocalServer(endpoints, model, messages, temperature, timeoutMs) {
+  let res = null;
   try {
-    const j = JSON.parse(trimmed);
-    if (typeof j?.canonical === "string") {
-      return {
-        canonical: sanitizeBrainOutput(j.canonical, format),
-        notes: j.notes ?? void 0,
-        words: j.words ?? void 0
-      };
-    }
+    res = await fetchWithTimeout(endpoints.chatUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer not-needed" },
+      body: JSON.stringify({ model: model || "default", messages, temperature, stream: false, response_format: { type: "json_object" } })
+    }, timeoutMs);
   } catch {
   }
-  const codeBlockRegex = /```(?:json|sdev|sdev:ai)?\s*([\s\S]*?)\s*```/gi;
-  let match;
-  while ((match = codeBlockRegex.exec(trimmed)) !== null) {
-    const block = match[1].trim();
+  if (res && res.status === 400) {
     try {
-      const j = JSON.parse(block);
-      if (typeof j?.canonical === "string") {
-        return {
-          canonical: sanitizeBrainOutput(j.canonical, format),
-          notes: j.notes ?? void 0,
-          words: j.words ?? void 0
-        };
-      }
+      res = await fetchWithTimeout(endpoints.chatUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer not-needed" },
+        body: JSON.stringify({ model: model || "default", messages, temperature, stream: false })
+      }, timeoutMs);
     } catch {
     }
-    if (block.length > 0 && !block.startsWith("{")) {
-      return { canonical: sanitizeBrainOutput(block, format) };
-    }
   }
-  const jsonObjectMatch = /\{[\s\S]*?"canonical"\s*:\s*[\s\S]*?\}/.exec(trimmed);
-  if (jsonObjectMatch) {
+  if ((!res || res.status === 404 || res.status === 405) && endpoints.baseUrl) {
     try {
-      const j = JSON.parse(jsonObjectMatch[0]);
-      if (typeof j?.canonical === "string") {
-        return {
-          canonical: sanitizeBrainOutput(j.canonical, format),
-          notes: j.notes ?? void 0,
-          words: j.words ?? void 0
-        };
-      }
+      res = await fetchWithTimeout(endpoints.baseUrl + "/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: model || "default", messages, stream: false, format: "json" })
+      }, timeoutMs);
     } catch {
-      const canonMatch = /"canonical"\s*:\s*"([\s\S]*?)"\s*(?:,\s*"notes"|\})/.exec(jsonObjectMatch[0]);
-      if (canonMatch) {
-        return { canonical: sanitizeBrainOutput(canonMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'), format) };
-      }
     }
   }
-  const cleanedPreamble = trimmed.replace(/^```[a-zA-Z0-9_-]*\s*/i, "").replace(/```\s*$/i, "").trim();
-  return cleanedPreamble ? { canonical: sanitizeBrainOutput(cleanedPreamble, format) } : null;
+  if (!res || !res.ok) return null;
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content ?? json.message?.content ?? "";
 }
 async function callLocal(req, url, model) {
   try {
     const endpoints = normalizeLocalEndpoints(url);
     if (!/\/chat\/completions\/?$|\/api\/chat\/?$/.test(endpoints.chatUrl) && !/\/chat\/completions\/?$|\/api\/chat\/?$/.test(url)) {
       try {
-        const res2 = await fetchWithTimeout(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(req)
-        }, 3e4);
-        if (res2.ok) {
-          const json2 = await res2.json();
-          return typeof json2?.canonical === "string" ? json2 : null;
+        const res = await fetchWithTimeout(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) }, 3e4);
+        if (res.ok) {
+          const json = await res.json();
+          return typeof json?.canonical === "string" ? json : null;
         }
       } catch {
       }
     }
     const { brainInstructions: brainInstructions2, brainInput: brainInput2 } = await Promise.resolve().then(() => (init_brain_prompt(), brain_prompt_exports));
-    const messages = [
-      {
-        role: "system",
-        content: brainInstructions2(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}'
-      },
+    const text2 = await chatWithLocalServer(endpoints, model, [
+      { role: "system", content: brainInstructions2(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
       { role: "user", content: brainInput2(req) }
-    ];
-    let res = null;
-    try {
-      res = await fetchWithTimeout(endpoints.chatUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer not-needed"
-        },
-        body: JSON.stringify({
-          model: model || "default",
-          messages,
-          temperature: 0.1,
-          stream: false,
-          response_format: { type: "json_object" }
-        })
-      }, 45e3);
-    } catch {
-    }
-    if (res && res.status === 400) {
-      try {
-        res = await fetchWithTimeout(endpoints.chatUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer not-needed"
-          },
-          body: JSON.stringify({
-            model: model || "default",
-            messages,
-            temperature: 0.1,
-            stream: false
-          })
-        }, 45e3);
-      } catch {
-      }
-    }
-    if ((!res || res.status === 404 || res.status === 405) && endpoints.baseUrl) {
-      try {
-        res = await fetchWithTimeout(endpoints.baseUrl + "/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: model || "default",
-            messages,
-            stream: false,
-            format: "json"
-          })
-        }, 45e3);
-      } catch {
-      }
-    }
-    if (!res || !res.ok) return null;
-    const json = await res.json();
-    const text3 = json.choices?.[0]?.message?.content ?? json.message?.content ?? "";
-    return parseReply(text3);
+    ], 0.1, 45e3);
+    return text2 !== null ? parseReply(text2, req.format) : null;
   } catch {
     return null;
   }
 }
 async function probeLocalServer(url = brainSettings().localUrl) {
   const endpoints = normalizeLocalEndpoints(url);
-  const result = {
-    ok: false,
-    models: [],
-    baseUrl: endpoints.baseUrl,
-    chatUrl: endpoints.chatUrl
-  };
+  const result = { ok: false, models: [], baseUrl: endpoints.baseUrl, chatUrl: endpoints.chatUrl };
   try {
     let modelsRes = null;
     try {
-      modelsRes = await fetchWithTimeout(endpoints.modelsUrl, {
-        headers: { "Authorization": "Bearer not-needed" }
-      }, 5e3);
+      modelsRes = await fetchWithTimeout(endpoints.modelsUrl, { headers: { Authorization: "Bearer not-needed" } }, 5e3);
     } catch (e) {
       const errStr = e instanceof Error ? e.message : String(e);
-      const isCorsOrNet = errStr.includes("fetch") || errStr.includes("NetworkError") || errStr.includes("Failed to fetch") || errStr.includes("abort");
-      if (isCorsOrNet) {
+      if (errStr.includes("fetch") || errStr.includes("NetworkError") || errStr.includes("Failed to fetch") || errStr.includes("abort")) {
         result.isCors = true;
         result.error = `Network or CORS block reaching ${endpoints.baseUrl}.`;
-        if (endpoints.baseUrl.includes("1234")) {
-          result.serverType = "LM Studio";
-          result.hint = 'In LM Studio: Open the Local Server tab and toggle ON "Enable CORS". Web browsers block requests from web apps unless CORS is enabled.';
-        } else if (endpoints.baseUrl.includes("11434")) {
-          result.serverType = "Ollama";
-          result.hint = 'In Ollama: Start Ollama with OLLAMA_ORIGINS="*" (e.g., in PowerShell: $env:OLLAMA_ORIGINS="*" ; ollama serve).';
-        } else {
-          result.hint = "Ensure the model server is running and configured with Cross-Origin Resource Sharing (CORS) allowed.";
-        }
+        result.serverType = endpoints.baseUrl.includes("1234") ? "LM Studio" : endpoints.baseUrl.includes("11434") ? "Ollama" : void 0;
+        result.hint = sdevProbeCorsHint(endpoints.baseUrl) ?? void 0;
         return result;
       }
     }
     if (modelsRes && modelsRes.ok) {
       const data = await modelsRes.json();
-      const list2 = (data.data ?? []).map((m2) => m2.id || m2.name || "").filter(Boolean);
-      if (list2.length > 0) {
+      const list = (data.data ?? []).map((m2) => m2.id || m2.name || "").filter(Boolean);
+      if (list.length > 0) {
         result.ok = true;
-        result.models = list2;
-        result.activeModel = list2[0];
-        result.serverType = endpoints.baseUrl.includes("1234") ? "LM Studio" : endpoints.baseUrl.includes("11434") ? "Ollama" : endpoints.baseUrl.includes("8080") ? "llama.cpp" : "OpenAI-Compatible";
+        result.models = list;
+        result.activeModel = list[0];
+        result.serverType = sdevProbeServerType(endpoints.baseUrl) ?? "OpenAI-Compatible";
         return result;
       }
     }
@@ -35964,10 +34270,10 @@ async function probeLocalServer(url = brainSettings().localUrl) {
       const tagsRes = await fetchWithTimeout(endpoints.tagsUrl, {}, 5e3);
       if (tagsRes && tagsRes.ok) {
         const data = await tagsRes.json();
-        const list2 = (data.models ?? []).map((m2) => m2.name || "").filter(Boolean);
+        const list = (data.models ?? []).map((m2) => m2.name || "").filter(Boolean);
         result.ok = true;
-        result.models = list2;
-        result.activeModel = list2[0];
+        result.models = list;
+        result.activeModel = list[0];
         result.serverType = "Ollama";
         return result;
       }
@@ -35983,108 +34289,11 @@ async function probeLocalServer(url = brainSettings().localUrl) {
 async function callLocalFix(code, error, note, url = brainSettings().localUrl, model = brainSettings().localModel) {
   try {
     const endpoints = normalizeLocalEndpoints(url);
-    const system = `You are SDev Doctor \u2014 an expert AI assistant that diagnoses and repairs code in the SDEV programming language.
-SDEV is a modern multi-paradigm language. It supports clean syntax, immutable fixed bindings, functions, pattern matching, SQL queries, and math/graphics builtins.
-Analyze the user's code, fix any syntax or logical bugs, and explain your changes clearly.
-Return ONLY valid JSON matching this schema:
-{
-  "fixed_code": "<the complete repaired source code>",
-  "explanation": "<2-4 sentences explaining what the program does>",
-  "changes": "<markdown bullet list of exact fixes made and why>",
-  "how_it_works": "<concise markdown explanation of how the repaired code runs>",
-  "confidence": "high" | "medium" | "low"
-}`;
-    const userPrompt = [
-      note ? `User Note: ${note}` : null,
-      error ? `Reported Error: ${error}` : null,
-      `Source Code:
-\`\`\`sdev
-${code}
-\`\`\``,
-      "Please diagnose, repair, and explain the code as valid JSON."
-    ].filter(Boolean).join("\n\n");
-    const messages = [
-      { role: "system", content: system },
-      { role: "user", content: userPrompt }
-    ];
-    let res = null;
-    try {
-      res = await fetchWithTimeout(endpoints.chatUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer not-needed"
-        },
-        body: JSON.stringify({
-          model: model || "default",
-          messages,
-          temperature: 0.2,
-          stream: false,
-          response_format: { type: "json_object" }
-        })
-      }, 35e3);
-    } catch {
-    }
-    if (res && res.status === 400) {
-      try {
-        res = await fetchWithTimeout(endpoints.chatUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer not-needed"
-          },
-          body: JSON.stringify({
-            model: model || "default",
-            messages,
-            temperature: 0.2,
-            stream: false
-          })
-        }, 35e3);
-      } catch {
-      }
-    }
-    if ((!res || res.status === 404 || res.status === 405) && endpoints.baseUrl) {
-      try {
-        res = await fetchWithTimeout(endpoints.baseUrl + "/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: model || "default",
-            messages,
-            stream: false,
-            format: "json"
-          })
-        }, 35e3);
-      } catch {
-      }
-    }
-    if (!res || !res.ok) return null;
-    const json = await res.json();
-    const text3 = json.choices?.[0]?.message?.content ?? json.message?.content ?? "";
-    const cleaned = text3.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
-    try {
-      const parsed = JSON.parse(cleaned);
-      if (typeof parsed?.fixed_code === "string") {
-        return {
-          fixed_code: parsed.fixed_code,
-          explanation: parsed.explanation || "Analyzed and repaired by local model server.",
-          changes: parsed.changes || "- Corrected syntax and formatting.",
-          how_it_works: parsed.how_it_works || "The program runs through statements sequentially.",
-          confidence: parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low" ? parsed.confidence : "medium"
-        };
-      }
-    } catch {
-      if (cleaned.length > 0) {
-        return {
-          fixed_code: cleaned,
-          explanation: "Repaired by local model server.",
-          changes: "- Automatically adapted code to valid SDEV syntax.",
-          how_it_works: "Runs sequentially.",
-          confidence: "medium"
-        };
-      }
-    }
-    return null;
+    const text2 = await chatWithLocalServer(endpoints, model, [
+      { role: "system", content: sdevDoctorSystemPrompt() ?? "" },
+      { role: "user", content: sdevDoctorUserPrompt(code, error, note) ?? code }
+    ], 0.2, 35e3);
+    return text2 ? sdevParseDoctorFix(text2) ?? null : null;
   } catch {
     return null;
   }
@@ -36110,8 +34319,7 @@ async function think(req, mode, localUrl) {
       const reply = await callLocal(req, url, cfg.localModel);
       if (reply) return { reply, used: "local" };
     }
-    const inBrowser = typeof window !== "undefined";
-    if (inBrowser && cfg.browser) {
+    if (typeof window !== "undefined" && cfg.browser) {
       const { callBrowser: callBrowser2 } = await Promise.resolve().then(() => (init_browser_brain(), browser_brain_exports));
       const reply = await callBrowser2(req, parseReply);
       if (reply) return { reply, used: "local" };
@@ -36133,9 +34341,9 @@ async function think(req, mode, localUrl) {
   return { reply: null, used: "none" };
 }
 var DEFAULT_LOCAL_URL, DEFAULT_LOCAL_MODEL, BRAIN_KEYS, lastBrainMissing;
-var init_brain = __esm({
+var init_brain2 = __esm({
   "src/lang/agent/brain.ts"() {
-    init_repair();
+    init_sdev_engine();
     DEFAULT_LOCAL_URL = "http://127.0.0.1:11434/v1/chat/completions";
     DEFAULT_LOCAL_MODEL = "qwen2.5-coder:7b";
     BRAIN_KEYS = {
@@ -36229,15 +34437,15 @@ ${msg}` : msg;
         const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
         let bytes = srcBytes;
         if (path !== "<stdin>") {
-          let text3 = modules && Object.prototype.hasOwnProperty.call(modules, path) ? modules[path] : null;
-          if (text3 == null && nodeFs) {
+          let text2 = modules && Object.prototype.hasOwnProperty.call(modules, path) ? modules[path] : null;
+          if (text2 == null && nodeFs) {
             try {
-              text3 = nodeFs.readFileSync(path, "utf8");
+              text2 = nodeFs.readFileSync(path, "utf8");
             } catch {
-              text3 = "";
+              text2 = "";
             }
           }
-          bytes = encoder.encode(text3 ?? "");
+          bytes = encoder.encode(text2 ?? "");
         }
         const dst = allocStr(bytes.length);
         new Uint8Array(mem.buffer, dst + 4, bytes.length).set(bytes);
@@ -37963,8 +36171,8 @@ async function withStdlib(source, modules) {
   const queue = [source, ...Object.values(out)];
   let added = false;
   while (queue.length) {
-    const text3 = queue.pop();
-    for (const m2 of text3.matchAll(USE_RE)) {
+    const text2 = queue.pop();
+    for (const m2 of text2.matchAll(USE_RE)) {
       const path = m2[1];
       if (path in out) continue;
       const load2 = STDLIB["/" + path.replace(/^\.?\//, "")];
@@ -38188,8 +36396,8 @@ function disassemble(fn2, indent = "") {
   lines.push(`${indent}${label}:`);
   fn2.code.forEach((ins, i) => {
     const op = ins.op.padEnd(18);
-    const operand2 = ins.operand !== void 0 ? String(ins.operand) : "";
-    lines.push(`${indent}  ${String(i).padStart(4, "0")}  ${op} ${operand2}`);
+    const operand = ins.operand !== void 0 ? String(ins.operand) : "";
+    lines.push(`${indent}  ${String(i).padStart(4, "0")}  ${op} ${operand}`);
   });
   for (const nested of fn2.functions) {
     lines.push("");
@@ -38285,8 +36493,8 @@ var init_compiler = __esm({
         this.name = name;
         this.params = params;
       }
-      emit(op, operand2, line) {
-        this.code.push({ op, operand: operand2, line });
+      emit(op, operand, line) {
+        this.code.push({ op, operand, line });
         return this.code.length - 1;
       }
       emitJump(op, line) {
@@ -40944,22 +39152,22 @@ function createUiBuiltins(emit3, registerHandler) {
     return { text: s };
   }
   builtins.set("heading", { type: "builtin", call: (args) => {
-    const { text: text3, bind } = resolveTextArg(args[0]);
+    const { text: text2, bind } = resolveTextArg(args[0]);
     const level = asNumber(args[1], 1);
-    getUiRunner().call("ui_heading", text3, level);
-    pushNode("heading", { text: text3, bind, level });
+    getUiRunner().call("ui_heading", text2, level);
+    pushNode("heading", { text: text2, bind, level });
     return null;
   } });
   builtins.set("label", { type: "builtin", call: (args) => {
-    const { text: text3, bind } = resolveTextArg(args[0]);
-    getUiRunner().call("ui_label", text3);
-    pushNode("label", { text: text3, bind });
+    const { text: text2, bind } = resolveTextArg(args[0]);
+    getUiRunner().call("ui_label", text2);
+    pushNode("label", { text: text2, bind });
     return null;
   } });
   builtins.set("paragraph", { type: "builtin", call: (args) => {
-    const { text: text3, bind } = resolveTextArg(args[0]);
-    getUiRunner().call("ui_text", text3);
-    pushNode("paragraph", { text: text3, bind });
+    const { text: text2, bind } = resolveTextArg(args[0]);
+    getUiRunner().call("ui_text", text2);
+    pushNode("paragraph", { text: text2, bind });
     return null;
   } });
   builtins.set("image", { type: "builtin", call: (args) => {
@@ -41459,18 +39667,18 @@ var HAL = class {
   listDevices() {
     return Array.from(this.devices.keys());
   }
-  registerInterrupt(num2, handler) {
-    this.interruptHandlers.set(num2, handler);
+  registerInterrupt(num, handler) {
+    this.interruptHandlers.set(num, handler);
   }
-  triggerInterrupt(num2) {
-    this.pendingInterrupts.push(num2);
+  triggerInterrupt(num) {
+    this.pendingInterrupts.push(num);
   }
   processPendingInterrupts(line) {
     while (this.pendingInterrupts.length > 0) {
-      const num2 = this.pendingInterrupts.shift();
-      const handler = this.interruptHandlers.get(num2);
+      const num = this.pendingInterrupts.shift();
+      const handler = this.interruptHandlers.get(num);
       if (handler) {
-        handler.call([num2], line);
+        handler.call([num], line);
       }
     }
   }
@@ -41663,10 +39871,10 @@ var Kernel = class {
     this.syscalls.register("time", () => Date.now());
     this.syscalls.register("uptime", () => this.booted ? Date.now() : 0);
     this.syscalls.register("interrupt", (args, line) => {
-      const num2 = Number(args[0]);
+      const num = Number(args[0]);
       const handler = args[1];
       if (!handler || typeof handler !== "object" || !("call" in handler)) throw new SdevError("interrupt handler must be a function", line);
-      hal.registerInterrupt(num2, handler);
+      hal.registerInterrupt(num, handler);
       return null;
     }, "kernel");
     this.syscalls.register("get_privilege", () => this.privilegeLevel);
@@ -44843,18 +43051,497 @@ function formatSdev(code, indentSize = 2) {
   return out.join("\n").replace(/\n{3,}/g, "\n\n");
 }
 
+// src/lang/dialect/dialect-runner.ts
+init_sdev_module();
+init_text();
+init_bits();
+init_buffer();
+
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\dialect\dialect.sdev
+var dialect_default = `# =============================================================================\r
+# SDEV Self-Hosted Dialect Engine: Canonicalizer, Address Codec & Presets\r
+# (lang/dialect/dialect.sdev)\r
+# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r
+# =============================================================================\r
+\r
+use "lang/stdlib/v2/text.sdev"\r
+use "lang/stdlib/v2/buffer.sdev"\r
+\r
+# A dialect spec is stored as a list:\r
+# 0: name (str)\r
+# 1: slug (str)\r
+# 2: lang_tag (str)\r
+# 3: count of mappings (int)\r
+# 4: dialect_words list (str)\r
+# 5: canonical_words list (str)\r
+\r
+to dialect_create with name slug lang_tag\r
+  set d to mklist(6)\r
+  set d[0] to concat(name, "")\r
+  set d[1] to concat(slug, "")\r
+  set d[2] to concat(lang_tag, "")\r
+  set d[3] to 0\r
+  set d[4] to mklist(64)\r
+  set d[5] to mklist(64)\r
+  return d\r
+end\r
+\r
+to dialect_add_word with d custom_word canonical_word\r
+  set n to d[3]\r
+  set dw to d[4]\r
+  set cw to d[5]\r
+  set dw[n] to concat(custom_word, "")\r
+  set cw[n] to concat(canonical_word, "")\r
+  set d[3] to n + 1\r
+  return d\r
+end\r
+\r
+to dialect_canonicalize with src d\r
+  set out to concat(src, "")\r
+  set n to d[3]\r
+  set dw to d[4]\r
+  set cw to d[5]\r
+  set i to 0\r
+  while i < n\r
+    set from_w to concat(dw[i], "")\r
+    set to_w to concat(cw[i], "")\r
+    set out to replace(out, from_w + " ", to_w + " ")\r
+    set out to replace(out, from_w + "(", to_w + "(")\r
+    set out to replace(out, " " + from_w + "\\n", " " + to_w + "\\n")\r
+    if str_eq(out, from_w)\r
+      set out to to_w\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return concat(out, "")\r
+end\r
+\r
+to dialect_signature with d\r
+  set payload to concat(d[0], "") + "|" + concat(d[1], "") + "|" + concat(d[2], "")\r
+  set n to d[3]\r
+  set dw to d[4]\r
+  set cw to d[5]\r
+  set i to 0\r
+  while i < n\r
+    set payload to payload + "|" + concat(dw[i], "") + "=" + concat(cw[i], "")\r
+    set i to i + 1\r
+  end\r
+  return "sdev-sig-" + hash_fnv1a_hex(payload)\r
+end\r
+\r
+to dialect_encode_address with d\r
+  set slug to concat(d[1], "")\r
+  set sig to dialect_signature(d)\r
+  return "sdev://dialect/" + slug + "?" + base64_encode(sig)\r
+end\r
+\r
+to dialect_decode_slug with addr\r
+  if text_starts_with(addr, "sdev://dialect/") is 0\r
+    return ""\r
+  end\r
+  set rest to substr(addr, 15, length(addr) - 15)\r
+  set q to find(rest, "?")\r
+  if q >= 0\r
+    return substr(rest, 0, q)\r
+  end\r
+  return concat(rest, "")\r
+end\r
+\r
+to dialect_preset with slug\r
+  set k to lower(trim(slug))\r
+  if str_eq(k, "bg") or str_eq(k, "bulgarian")\r
+    set d to dialect_create("\u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438", "bg", "bg")\r
+    set _ to dialect_add_word(d, "\u043D\u0435\u043A\u0430", "set")\r
+    set _ to dialect_add_word(d, "\u0431\u044A\u0434\u0435", "to")\r
+    set _ to dialect_add_word(d, "\u043A\u0430\u0436\u0438", "say")\r
+    set _ to dialect_add_word(d, "\u0430\u043A\u043E", "if")\r
+    set _ to dialect_add_word(d, "\u0438\u043D\u0430\u0447\u0435", "else")\r
+    set _ to dialect_add_word(d, "\u0434\u043E\u043A\u0430\u0442\u043E", "while")\r
+    set _ to dialect_add_word(d, "\u043A\u0440\u0430\u0439", "end")\r
+    return d\r
+  end\r
+  if str_eq(k, "es") or str_eq(k, "spanish")\r
+    set d to dialect_create("Espa\xF1ol", "es", "es")\r
+    set _ to dialect_add_word(d, "forjar", "set")\r
+    set _ to dialect_add_word(d, "ser", "to")\r
+    set _ to dialect_add_word(d, "hablar", "say")\r
+    set _ to dialect_add_word(d, "si", "if")\r
+    set _ to dialect_add_word(d, "sino", "else")\r
+    set _ to dialect_add_word(d, "mientras", "while")\r
+    set _ to dialect_add_word(d, "fin", "end")\r
+    return d\r
+  end\r
+  if str_eq(k, "pirate")\r
+    set d to dialect_create("Pirate Speak", "pirate", "en")\r
+    set _ to dialect_add_word(d, "plunder", "set")\r
+    set _ to dialect_add_word(d, "be_yar", "to")\r
+    set _ to dialect_add_word(d, "bellow", "say")\r
+    set _ to dialect_add_word(d, "parley", "if")\r
+    set _ to dialect_add_word(d, "mutiny", "else")\r
+    set _ to dialect_add_word(d, "anchor", "end")\r
+    return d\r
+  end\r
+  set d_def to dialect_create("Standard English", "en", "en")\r
+  return d_def\r
+end\r
+\r
+\r
+to dialect_is_word_char with ch\r
+  set c to ord(ch, 0)\r
+  if c >= 65 and c <= 90\r
+    return 1\r
+  end\r
+  if c >= 97 and c <= 122\r
+    return 1\r
+  end\r
+  if c >= 48 and c <= 57\r
+    return 1\r
+  end\r
+  if c is 95 or c >= 128\r
+    return 1\r
+  end\r
+  return 0\r
+end\r
+\r
+to dialect_push_list with xs val\r
+  set n to length(xs)\r
+  set out to mklist(n + 1)\r
+  set i to 0\r
+  while i < n\r
+    set out[i] to xs[i]\r
+    set i to i + 1\r
+  end\r
+  set out[n] to val\r
+  return out\r
+end\r
+\r
+to dialect_split_line with line comment_marker\r
+  set segs to []\r
+  set buf to ""\r
+  set n to length(line)\r
+  set mlen to length(comment_marker)\r
+  set i to 0\r
+  while i < n\r
+    if mlen > 0 and (i + mlen) <= n\r
+      if str_eq(substr(line, i, mlen), comment_marker)\r
+        if length(buf) > 0\r
+          set segs to dialect_push_list(segs, ["code", buf])\r
+          set buf to ""\r
+        end\r
+        set segs to dialect_push_list(segs, ["comment", substr(line, i, n - i)])\r
+        return segs\r
+      end\r
+    end\r
+    set ch to substr(line, i, 1)\r
+    if ch is "\\"" or ch is "'"\r
+      if length(buf) > 0\r
+        set segs to dialect_push_list(segs, ["code", buf])\r
+        set buf to ""\r
+      end\r
+      set quote to ch\r
+      set s to ch\r
+      set i to i + 1\r
+      set closed to 0\r
+      while i < n and closed is 0\r
+        set cur to substr(line, i, 1)\r
+        if cur is "\\\\" and (i + 1) < n\r
+          set s to s + cur + substr(line, i + 1, 1)\r
+          set i to i + 2\r
+        else\r
+          set s to s + cur\r
+          if cur is quote\r
+            set closed to 1\r
+          end\r
+          set i to i + 1\r
+        end\r
+      end\r
+      set segs to dialect_push_list(segs, ["string", s])\r
+    else\r
+      set buf to buf + ch\r
+      set i to i + 1\r
+    end\r
+  end\r
+  if length(buf) > 0\r
+    set segs to dialect_push_list(segs, ["code", buf])\r
+  end\r
+  return segs\r
+end\r
+\r
+to dialect_map_words with code_str dict\r
+  set n to length(code_str)\r
+  set out to ""\r
+  set i to 0\r
+  while i < n\r
+    set ch to substr(code_str, i, 1)\r
+    if dialect_is_word_char(ch) is 1\r
+      set j to i + 1\r
+      while j < n and dialect_is_word_char(substr(code_str, j, 1)) is 1\r
+        set j to j + 1\r
+      end\r
+      set w to substr(code_str, i, j - i)\r
+      if has(dict, w)\r
+        set out to out + dict[w]\r
+      else\r
+        set out to out + w\r
+      end\r
+      set i to j\r
+    else\r
+      set out to out + ch\r
+      set i to i + 1\r
+    end\r
+  end\r
+  return out\r
+end\r
+\r
+to dialect_xor8 with a b\r
+  set x to a % 256\r
+  set y to b % 256\r
+  set res to 0\r
+  set p to 1\r
+  set bit to 0\r
+  while bit < 8\r
+    set bx to x % 2\r
+    set by to y % 2\r
+    if bx is not by\r
+      set res to res + p\r
+    end\r
+    set x to (x - bx) / 2\r
+    set y to (y - by) / 2\r
+    set p to p * 2\r
+    set bit to bit + 1\r
+  end\r
+  return res\r
+end\r
+\r
+to dialect_hex4 with val\r
+  set hex_chars to "0123456789abcdef"\r
+  set v to val\r
+  set out to ""\r
+  set k to 0\r
+  while k < 4\r
+    set digit to v % 16\r
+    set out to substr(hex_chars, digit, 1) + out\r
+    set v to (v - digit) / 16\r
+    set k to k + 1\r
+  end\r
+  return out\r
+end\r
+\r
+to dialect_fnv1a_hex with body_str\r
+  set hi to 33052\r
+  set lo to 40389\r
+  set n to length(body_str)\r
+  set i to 0\r
+  while i < n\r
+    set c to ord(body_str, i)\r
+    set b0 to lo % 256\r
+    set lo to (lo - b0) + dialect_xor8(b0, c % 256)\r
+    set p0 to lo * 403\r
+    set lo_next to p0 % 65536\r
+    set carry to (p0 - lo_next) / 65536\r
+    set hi_next to ((hi * 403) + (lo * 256) + carry) % 65536\r
+    set lo to lo_next\r
+    set hi to hi_next\r
+    set i to i + 1\r
+  end\r
+  return dialect_hex4(hi) + dialect_hex4(lo)\r
+end\r
+\r
+to dialect_has_signature with src prefix_str\r
+  set nl to find(src, "\\n")\r
+  set first to src\r
+  if nl >= 0\r
+    set first to substr(src, 0, nl)\r
+  end\r
+  if text_starts_with(first, prefix_str) is 0\r
+    return 0\r
+  end\r
+  set rest to text_trim(substr(first, length(prefix_str), length(first) - length(prefix_str)))\r
+  if length(rest) is 0 or find(rest, " ") >= 0\r
+    return 0\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_strip_signature with src prefix_str\r
+  if dialect_has_signature(src, prefix_str) is 0\r
+    return src\r
+  end\r
+  set nl to find(src, "\\n")\r
+  if nl < 0\r
+    return ""\r
+  end\r
+  return substr(src, nl + 1, length(src) - nl - 1)\r
+end\r
+\r
+to dialect_extract_signature_payload with src prefix_str\r
+  if dialect_has_signature(src, prefix_str) is 0\r
+    return ""\r
+  end\r
+  set nl to find(src, "\\n")\r
+  set first to src\r
+  if nl >= 0\r
+    set first to substr(src, 0, nl)\r
+  end\r
+  return text_trim(substr(first, length(prefix_str), length(first) - length(prefix_str)))\r
+end\r
+\r
+to dialect_format_signature_line with prefix_str encoded_payload body\r
+  return prefix_str + encoded_payload + "\\n" + body\r
+end\r
+\r
+to dialect_is_slug_char with ch\r
+  set c to ord(ch, 0)\r
+  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c is 45\r
+    return 1\r
+  end\r
+  return 0\r
+end\r
+\r
+to dialect_is_lower_alnum with ch\r
+  set c to ord(ch, 0)\r
+  if (c >= 97 and c <= 122) or (c >= 48 and c <= 57)\r
+    return 1\r
+  end\r
+  return 0\r
+end\r
+\r
+to dialect_is_digits with s\r
+  set n to length(s)\r
+  if n is 0\r
+    return 0\r
+  end\r
+  set i to 0\r
+  while i < n\r
+    set c to ord(s, i)\r
+    if c < 48 or c > 57\r
+      return 0\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_is_semver with s\r
+  set parts to split(s, ".")\r
+  if length(parts) is not 3\r
+    return 0\r
+  end\r
+  if dialect_is_digits(parts[0]) is 0 or dialect_is_digits(parts[1]) is 0 or dialect_is_digits(parts[2]) is 0\r
+    return 0\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_valid_ident_part with s max_len\r
+  set n to length(s)\r
+  if n < 1 or n > max_len\r
+    return 0\r
+  end\r
+  if dialect_is_lower_alnum(substr(s, 0, 1)) is 0\r
+    return 0\r
+  end\r
+  set i to 1\r
+  while i < n\r
+    if dialect_is_slug_char(substr(s, i, 1)) is 0\r
+      return 0\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_parse_address with raw_input\r
+  set s to text_trim(raw_input)\r
+  if length(s) < 4 or substr(s, 0, 1) is not "@"\r
+    return []\r
+  end\r
+  set body to substr(s, 1, length(s) - 1)\r
+  set slash to find(body, "/")\r
+  if slash <= 0\r
+    return []\r
+  end\r
+  set user to substr(body, 0, slash)\r
+  if dialect_valid_ident_part(user, 31) is 0\r
+    return []\r
+  end\r
+  set tail to substr(body, slash + 1, length(body) - slash - 1)\r
+  set at_idx to find(tail, "@")\r
+  set slug to tail\r
+  set ver to ""\r
+  if at_idx >= 0\r
+    set slug to substr(tail, 0, at_idx)\r
+    set vpart to substr(tail, at_idx + 1, length(tail) - at_idx - 1)\r
+    if dialect_is_semver(vpart) is 0\r
+      return []\r
+    end\r
+    set ver to vpart\r
+  end\r
+  if dialect_valid_ident_part(slug, 39) is 0\r
+    return []\r
+  end\r
+  return [user, slug, ver]\r
+end\r
+\r
+to dialect_format_address with username slug version\r
+  if length(str(version)) > 0\r
+    return "@" + username + "/" + slug + "@" + str(version)\r
+  end\r
+  return "@" + username + "/" + slug\r
+end\r
+\r
+to dialect_is_share_code with raw_input\r
+  set s to text_lower(text_trim(raw_input))\r
+  if length(s) is not 8\r
+    return 0\r
+  end\r
+  set i to 0\r
+  while i < 8\r
+    set c to ord(s, i)\r
+    set ok to 0\r
+    if (c >= 48 and c <= 57) or (c >= 97 and c <= 102)\r
+      set ok to 1\r
+    end\r
+    if ok is 0\r
+      return 0\r
+    end\r
+    set i to i + 1\r
+  end\r
+  return 1\r
+end\r
+\r
+to dialect_preset_bg_data\r
+  set names to [["say", "\u043A\u0430\u0436\u0438"], ["ask", "\u043F\u0438\u0442\u0430\u0439"], ["set", "\u043D\u0435\u043A\u0430"], ["to", "\u043D\u0430"], ["if", "\u0430\u043A\u043E"], ["else", "\u0438\u043D\u0430\u0447\u0435"], ["end", "\u043A\u0440\u0430\u0439"], ["for", "\u0437\u0430"], ["each", "\u0432\u0441\u044F\u043A\u043E"], ["in", "\u0432\u044A\u0432"], ["while", "\u0434\u043E\u043A\u0430\u0442\u043E"], ["break", "\u0441\u043F\u0440\u0438"], ["continue", "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438"], ["match", "\u0441\u0440\u0430\u0432\u043D\u0438"], ["with", "\u0441"], ["return", "\u0432\u044A\u0440\u043D\u0438"], ["make", "\u0441\u044A\u0437\u0434\u0430\u0439"], ["capture", "\u0443\u043B\u043E\u0432\u0438"], ["ref", "\u043F\u0440\u0435\u043F\u0440\u0430\u0442\u043A\u0430"], ["call", "\u0438\u0437\u0432\u0438\u043A\u0430\u0439"], ["attempt", "\u043E\u043F\u0438\u0442\u0430\u0439"], ["rescue", "\u0445\u0432\u0430\u043D\u0438"], ["throw", "\u0445\u0432\u044A\u0440\u043B\u0438"], ["kind", "\u0432\u0438\u0434"], ["has", "\u0438\u043C\u0430"], ["does", "\u043F\u0440\u0430\u0432\u0438"], ["new", "\u043D\u043E\u0432"], ["self", "\u0430\u0437"], ["extends", "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430"], ["super", "\u0440\u043E\u0434\u0438\u0442\u0435\u043B"], ["use", "\u043F\u043E\u043B\u0437\u0432\u0430\u0439"], ["true", "\u0432\u044F\u0440\u043D\u043E"], ["false", "\u043D\u0435\u0432\u044F\u0440\u043D\u043E"], ["nothing", "\u043D\u0438\u0449\u043E"], ["is", "\u0435"], ["not", "\u043D\u0435"], ["and", "\u0438"], ["or", "\u0438\u043B\u0438"], ["more", "\u043F\u043E\u0432\u0435\u0447\u0435"], ["less", "\u043F\u043E_\u043C\u0430\u043B\u043A\u043E"]]\r
+  set syns to [["say", ["\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439"]], ["return", ["\u0440\u0435\u0437\u0443\u043B\u0442\u0430\u0442"]]]\r
+  set sample to "# \u043F\u044A\u0440\u0432\u0430\u0442\u0430 \u043C\u0438 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u0430 \u043D\u0430 \u0421\u0434\u0435\u0432\\n\u043D\u0435\u043A\u0430 \u0438\u043C\u0435 \u043D\u0430 \\"\u0441\u0432\u044F\u0442\\"\\n\\n\u043D\u0430 \u043F\u043E\u0437\u0434\u0440\u0430\u0432 \u0441 \u043A\u043E\u0439\\n  \u043A\u0430\u0436\u0438 \\"\u0437\u0434\u0440\u0430\u0432\u0435\u0439, \\" + \u043A\u043E\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043F\u043E\u0437\u0434\u0440\u0430\u0432(\u0438\u043C\u0435)\\n\\n\u0437\u0430 \u0432\u0441\u044F\u043A\u043E \u043D \u0432\u044A\u0432 range(3)\\n  \u0430\u043A\u043E \u043D \u0435 1\\n    \u043A\u0430\u0436\u0438 \\"\u0435\u0434\u043D\u043E\\"\\n  \u0438\u043D\u0430\u0447\u0435\\n    \u043A\u0430\u0436\u0438 \u043D\\n  \u043A\u0440\u0430\u0439\\n\u043A\u0440\u0430\u0439\\n\\n\u043A\u0430\u0436\u0438 \u0441\u0431\u043E\u0440([1, 2, 3, 4])"\r
+  return [names, syns, sample]\r
+end\r
+`;
+
+// src/lang/dialect/dialect-runner.ts
+var dialectRunner = null;
+function getDialectRunner() {
+  if (!dialectRunner) {
+    dialectRunner = createSdevModuleRunner(
+      text_default,
+      bits_default,
+      buffer_default,
+      dialect_default
+    );
+  }
+  return dialectRunner;
+}
+
 // src/lang/dialect/signature.ts
-init_dialect_runner();
 var SIGNATURE_PREFIX = "#\u27E8sdev\u27E9 ";
-var SIGNATURE_RE = /^#\u27E8sdev\u27E9\s+(\S+)\s*$/;
-function toBase64Url(text3) {
-  const bytes = new TextEncoder().encode(text3);
+function toBase64Url(text2) {
+  const bytes = new TextEncoder().encode(text2);
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-function fromBase64Url(text3) {
-  const padded = text3.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text3.length + 3) % 4);
+function fromBase64Url(text2) {
+  const padded = text2.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text2.length + 3) % 4);
   const bin = atob(padded);
   const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
   return new TextDecoder().decode(bytes);
@@ -44866,11 +43553,10 @@ function hasSignature(source) {
   return Number(getDialectRunner().call("dialect_has_signature", source, SIGNATURE_PREFIX)) === 1;
 }
 function readSignature(source) {
-  const first = source.split("\n", 1)[0] ?? "";
-  const m2 = first.match(SIGNATURE_RE);
-  if (!m2) return null;
+  const payload = getDialectRunner().callStr("dialect_extract_signature_payload", source, SIGNATURE_PREFIX);
+  if (!payload) return null;
   try {
-    const parsed = JSON.parse(fromBase64Url(m2[1]));
+    const parsed = JSON.parse(fromBase64Url(payload));
     return parsed && parsed.v === 1 ? parsed : null;
   } catch {
     return null;
@@ -44887,8 +43573,12 @@ function writeSignature(source, sig) {
     sum: checksum(body),
     ts: Date.now()
   };
-  return `${SIGNATURE_PREFIX}${toBase64Url(JSON.stringify(full))}
-${body}`;
+  return getDialectRunner().callStr(
+    "dialect_format_signature_line",
+    SIGNATURE_PREFIX,
+    toBase64Url(JSON.stringify(full)),
+    body
+  );
 }
 function isSignatureStale(source) {
   const sig = readSignature(source);
@@ -44902,13 +43592,366 @@ function repairSignature(source) {
   return writeSignature(source, rest);
 }
 
-// cli/index.ts
-init_spec();
-init_canonicalize();
+// src/lang/dialect/catalog.ts
+var CATALOG = [
+  // ---- core ---------------------------------------------------------
+  { word: "say", group: "core", kind: "keyword", about: "print a value" },
+  { word: "ask", group: "core", kind: "keyword", about: "read a line of input" },
+  { word: "set", group: "core", kind: "keyword", about: "declare or reassign a variable" },
+  { word: "to", group: "core", kind: "keyword", about: "target of a set / start of a function" },
+  // ---- control flow -------------------------------------------------
+  { word: "if", group: "control", kind: "keyword", about: "conditional block" },
+  { word: "else", group: "control", kind: "keyword", about: "alternative branch" },
+  { word: "end", group: "control", kind: "keyword", about: "close a block" },
+  { word: "for", group: "control", kind: "keyword", about: "start of a loop" },
+  { word: "each", group: "control", kind: "keyword", about: "loop over every item" },
+  { word: "in", group: "control", kind: "keyword", about: "the sequence a loop walks" },
+  { word: "while", group: "control", kind: "keyword", about: "loop while a condition holds" },
+  { word: "break", group: "control", kind: "keyword", about: "leave the loop" },
+  { word: "continue", group: "control", kind: "keyword", about: "skip to the next iteration" },
+  { word: "match", group: "control", kind: "keyword", about: "structural match" },
+  // ---- functions ----------------------------------------------------
+  { word: "with", group: "functions", kind: "keyword", about: "parameter / argument list" },
+  { word: "return", group: "functions", kind: "keyword", about: "return a value" },
+  { word: "make", group: "functions", kind: "keyword", about: "lambda literal" },
+  { word: "capture", group: "functions", kind: "keyword", about: "closure capture list" },
+  { word: "ref", group: "functions", kind: "keyword", about: "take a function as a value" },
+  { word: "call", group: "functions", kind: "keyword", about: "call a function value" },
+  // ---- errors -------------------------------------------------------
+  { word: "attempt", group: "errors", kind: "keyword", about: "guarded block" },
+  { word: "rescue", group: "errors", kind: "keyword", about: "handle a raised error" },
+  { word: "throw", group: "errors", kind: "keyword", about: "raise an error" },
+  // ---- objects ------------------------------------------------------
+  { word: "kind", group: "objects", kind: "keyword", about: "define a kind (class)" },
+  { word: "has", group: "objects", kind: "keyword", about: "declare a field" },
+  { word: "does", group: "objects", kind: "keyword", about: "declare a method" },
+  { word: "new", group: "objects", kind: "keyword", about: "instantiate a kind" },
+  { word: "self", group: "objects", kind: "keyword", about: "the receiver inside a method" },
+  { word: "extends", group: "objects", kind: "keyword", about: "inherit from another kind" },
+  { word: "super", group: "objects", kind: "keyword", about: "parent-kind dispatch" },
+  // ---- modules ------------------------------------------------------
+  { word: "use", group: "modules", kind: "keyword", about: "import a module or library" },
+  // ---- literals -----------------------------------------------------
+  { word: "true", group: "literals", kind: "keyword", about: "boolean true" },
+  { word: "false", group: "literals", kind: "keyword", about: "boolean false" },
+  { word: "nothing", group: "literals", kind: "keyword", about: "the empty value" },
+  // ---- word operators -----------------------------------------------
+  { word: "is", group: "operators", kind: "keyword", about: "equality comparison" },
+  { word: "not", group: "operators", kind: "keyword", about: "logical negation" },
+  { word: "and", group: "operators", kind: "keyword", about: "logical and" },
+  { word: "or", group: "operators", kind: "keyword", about: "logical or" },
+  { word: "more", group: "operators", kind: "keyword", about: '"or more" \u2014 greater or equal' },
+  { word: "less", group: "operators", kind: "keyword", about: '"or less" \u2014 less or equal' },
+  // ---- builtins -----------------------------------------------------
+  ...[
+    ["range", "numbers from 0 up to n"],
+    ["len", "length of a list, tome or text"],
+    ["sum", "add every number in a list"],
+    ["str", "value as text"],
+    ["text", "value as text"],
+    ["num", "text as a number"],
+    ["ord", "character to byte value"],
+    ["chr", "byte value to character"],
+    ["upper", "uppercase text"],
+    ["lower", "lowercase text"],
+    ["trim", "strip surrounding spaces"],
+    ["split", "split text into a list"],
+    ["join", "join a list into text"],
+    ["find", "position of a needle"],
+    ["replace", "replace every occurrence"],
+    ["abs", "absolute value"],
+    ["min", "smaller of two numbers"],
+    ["max", "larger of two numbers"],
+    ["floor", "round down"],
+    ["ceil", "round up"],
+    ["sqrt", "square root"],
+    ["pow", "raise to a power"],
+    ["random", "deterministic pseudo-random number"],
+    ["keys", "keys of a tome"],
+    ["values", "values of a tome"],
+    ["read_file", "read a file as text"],
+    ["write_file", "write text to a file"],
+    ["append_file", "append text to a file"],
+    ["file_exists", "does a path exist"],
+    ["input", "read a line from stdin"],
+    ["args", "command line arguments"],
+    ["env", "environment variable"],
+    ["exit", "stop with a status code"],
+    ["now_ms", "milliseconds since the epoch"],
+    ["sleep_ms", "pause execution"],
+    ["say_err", "print to standard error"]
+  ].map(([word, about]) => ({ word, about, group: "builtins", kind: "builtin" }))
+];
+var CATALOG_WORDS = CATALOG.map((e) => e.word);
+var CATALOG_BY_WORD = Object.fromEntries(
+  CATALOG.map((e) => [e.word, e])
+);
+var GROUP_LABELS = {
+  core: "Core",
+  control: "Control flow",
+  functions: "Functions",
+  errors: "Errors",
+  objects: "Kinds & objects",
+  modules: "Modules",
+  literals: "Literals",
+  operators: "Word operators",
+  builtins: "Builtins"
+};
+
+// src/lang/dialect/spec.ts
+var DEFAULT_STYLE = {
+  blockStyle: "word",
+  commentMarker: "#",
+  stringQuote: '"',
+  assignment: "set-to",
+  argSeparator: "space"
+};
+function emptyDialect(partial = {}) {
+  return {
+    specVersion: 1,
+    meta: {
+      name: partial.name ?? "My sdev",
+      slug: partial.slug ?? "my-sdev",
+      languages: partial.languages ?? ["en"],
+      description: partial.description ?? "",
+      version: partial.version ?? "1.0.0",
+      extends: partial.extends ?? null,
+      visibility: partial.visibility ?? "private"
+    },
+    names: Object.fromEntries(CATALOG_WORDS.map((w) => [w, w])),
+    synonyms: {},
+    style: { ...DEFAULT_STYLE },
+    constructs: { functions: [], operators: [] }
+  };
+}
+function inherit(base, child) {
+  return {
+    ...child,
+    names: { ...base.names, ...child.names },
+    synonyms: { ...base.synonyms, ...child.synonyms },
+    style: { ...base.style, ...child.style },
+    constructs: {
+      functions: [...base.constructs.functions, ...child.constructs.functions],
+      operators: [...base.constructs.operators, ...child.constructs.operators]
+    }
+  };
+}
+var WORD_RE = /^[\p{L}\p{N}_][\p{L}\p{N}_]*$/u;
+var SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
+var OP_RE = /^[^\p{L}\p{N}\s_"'#]{1,3}$/u;
+function validateDialect(spec) {
+  const issues = [];
+  if (!SLUG_RE.test(spec.meta.slug)) {
+    issues.push({ level: "error", field: "meta.slug", message: "Slug must be 2\u201340 lowercase letters, digits or dashes." });
+  }
+  if (!spec.meta.name.trim()) {
+    issues.push({ level: "error", field: "meta.name", message: "Give the dialect a display name." });
+  }
+  if (!/^\d+\.\d+\.\d+$/.test(spec.meta.version)) {
+    issues.push({ level: "error", field: "meta.version", message: "Version must look like 1.0.0." });
+  }
+  const seen = /* @__PURE__ */ new Map();
+  for (const entry of CATALOG) {
+    const word = spec.names[entry.word];
+    if (!word || !word.trim()) {
+      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${entry.word}" has no word in this dialect.` });
+      continue;
+    }
+    if (!WORD_RE.test(word)) {
+      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${word}" is not a valid word \u2014 letters, digits and _ only, no spaces.` });
+      continue;
+    }
+    const all = [word, ...spec.synonyms[entry.word] ?? []];
+    for (const w of all) {
+      if (!WORD_RE.test(w)) {
+        issues.push({ level: "error", field: `synonyms.${entry.word}`, message: `"${w}" is not a valid word.` });
+        continue;
+      }
+      const owner = seen.get(w);
+      if (owner && owner !== entry.word) {
+        issues.push({ level: "error", field: `names.${entry.word}`, message: `"${w}" is already used for "${owner}".` });
+      } else {
+        seen.set(w, entry.word);
+      }
+    }
+  }
+  if (!spec.style.commentMarker || /[\p{L}\p{N}\s]/u.test(spec.style.commentMarker)) {
+    issues.push({ level: "error", field: "style.commentMarker", message: "Comment marker must be punctuation, e.g. # or //." });
+  }
+  if (spec.style.blockStyle === "braces" && seen.has("}")) {
+    issues.push({ level: "error", field: "style.blockStyle", message: 'Brace style conflicts with a word named "}".' });
+  }
+  const fnNames = /* @__PURE__ */ new Set();
+  for (const fn2 of spec.constructs.functions) {
+    if (!WORD_RE.test(fn2.name)) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is not a valid function name.` });
+    }
+    if (seen.has(fn2.name)) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" collides with the word for "${seen.get(fn2.name)}".` });
+    }
+    if (fnNames.has(fn2.name)) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is declared twice.` });
+    }
+    fnNames.add(fn2.name);
+    if (!fn2.source.trim()) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: "Function has no sdev body." });
+    }
+  }
+  const opSymbols = /* @__PURE__ */ new Set();
+  for (const op of spec.constructs.operators) {
+    if (!OP_RE.test(op.symbol)) {
+      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" must be 1\u20133 punctuation characters.` });
+    }
+    if (["+", "-", "*", "/", "%", "=", "<", ">", "(", ")", "[", "]", ",", "|>"].includes(op.symbol)) {
+      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is already an sdev operator.` });
+    }
+    if (opSymbols.has(op.symbol)) {
+      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is declared twice.` });
+    }
+    opSymbols.add(op.symbol);
+    if (!fnNames.has(op.fn) && !CATALOG_BY_WORD[op.fn]) {
+      issues.push({ level: "warning", field: `constructs.operators.${op.symbol}`, message: `Desugars to "${op.fn}", which this dialect does not define.` });
+    }
+  }
+  return issues;
+}
+function isPublishable(spec) {
+  return validateDialect(spec).every((i) => i.level !== "error");
+}
+function preludeSource(spec) {
+  if (spec.constructs.functions.length === 0) return "";
+  return spec.constructs.functions.map((f2) => f2.source.trim()).join("\n\n") + "\n";
+}
+
+// src/lang/dialect/canonicalize.ts
+function splitLine(line, commentMarker) {
+  const raw = getDialectRunner().call("dialect_split_line", line, commentMarker);
+  return raw.map(([kind, text2]) => ({ kind, text: text2 }));
+}
+function mapWords(code, dict) {
+  const dictObj = {};
+  for (const [k, v] of dict) dictObj[k] = v;
+  return getDialectRunner().callStr("dialect_map_words", code, dictObj);
+}
+function forwardDict(spec) {
+  const dict = /* @__PURE__ */ new Map();
+  for (const canonical of CATALOG_WORDS) {
+    const word = spec.names[canonical] ?? canonical;
+    dict.set(word, canonical);
+    for (const syn of spec.synonyms[canonical] ?? []) dict.set(syn, canonical);
+  }
+  return dict;
+}
+function reverseDict(spec) {
+  const dict = /* @__PURE__ */ new Map();
+  for (const canonical of CATALOG_WORDS) {
+    const word = spec.names[canonical] ?? canonical;
+    if (word !== canonical) dict.set(canonical, word);
+  }
+  return dict;
+}
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function desugarOperators(code, spec) {
+  let out = code;
+  const ops = [...spec.constructs.operators].sort((a, b) => b.symbol.length - a.symbol.length);
+  const atom = String.raw`(?:[\p{L}\p{N}_]+(?:\([^()]*\))?|"[^"]*")`;
+  for (const op of ops) {
+    const re2 = new RegExp(`(${atom})\\s*${escapeRe(op.symbol)}\\s*(${atom})`, "gu");
+    for (let pass = 0; pass < 8; pass++) {
+      const next = out.replace(re2, (_m, a, b) => `${op.fn}(${a}, ${b})`);
+      if (next === out) break;
+      out = next;
+    }
+  }
+  return out;
+}
+function rewriteAssignmentForward(code, spec) {
+  const form = spec.style.assignment;
+  if (form === "equals") {
+    return code.replace(
+      /^(\s*)([\p{L}\p{N}_]+)\s*=\s*(?!=)(.+)$/u,
+      (_m, ws, name, rhs) => `${ws}set ${name} to ${rhs}`
+    );
+  }
+  if (form === "arrow") {
+    return code.replace(
+      /^(\s*)(.+?)\s*->\s*([\p{L}\p{N}_]+)\s*$/u,
+      (_m, ws, rhs, name) => `${ws}set ${name} to ${rhs}`
+    );
+  }
+  return code;
+}
+function rewriteAssignmentReverse(code, spec) {
+  const form = spec.style.assignment;
+  const m2 = code.match(/^(\s*)set\s+([\p{L}\p{N}_]+)\s+to\s+(.+)$/u);
+  if (!m2) return code;
+  const [, ws, name, rhs] = m2;
+  if (form === "equals") return `${ws}${name} = ${rhs}`;
+  if (form === "arrow") return `${ws}${rhs} -> ${name}`;
+  return code;
+}
+var PLACEHOLDER = "\0";
+function mask(segs) {
+  const strings = [];
+  let comment = null;
+  let line = "";
+  for (const seg of segs) {
+    if (seg.kind === "string") {
+      line += `${PLACEHOLDER}${strings.length}${PLACEHOLDER}`;
+      strings.push(seg.text);
+    } else if (seg.kind === "comment") {
+      comment = seg.text;
+    } else {
+      line += seg.text;
+    }
+  }
+  return { line, strings, comment };
+}
+function unmask(line, strings) {
+  return line.replace(/\u0000(\d+)\u0000/g, (_m, i) => strings[Number(i)]);
+}
+var BLOCK_OPENERS = /^\s*(if|else|for|while|to|kind|does|attempt|rescue|make)\b/;
+function canonicalize(source, spec, opts = {}) {
+  const marker = spec.style.commentMarker || DEFAULT_STYLE.commentMarker;
+  const dict = forwardDict(spec);
+  const braces = spec.style.blockStyle === "braces";
+  const lines = source.split("\n").map((raw) => {
+    const { line, strings, comment } = mask(splitLine(raw, marker));
+    let code = mapWords(line, dict);
+    if (spec.constructs.operators.length) code = desugarOperators(code, spec);
+    if (braces) code = code.replace(/\s*\{\s*$/, "").replace(/^(\s*)\}\s*$/, "$1end");
+    code = rewriteAssignmentForward(code, spec);
+    const canonicalComment = comment === null ? "" : "#" + comment.slice(marker.length);
+    return (unmask(code, strings) + canonicalComment).replace(/\s+$/, "");
+  });
+  const prelude = opts.withPrelude === false ? "" : preludeSource(spec);
+  const body = lines.join("\n");
+  return { source: prelude ? `${prelude}
+${body}` : body, prelude };
+}
+function dialectize(source, spec) {
+  const marker = spec.style.commentMarker || DEFAULT_STYLE.commentMarker;
+  const dict = reverseDict(spec);
+  const braces = spec.style.blockStyle === "braces";
+  return source.split("\n").map((raw) => {
+    const { line, strings, comment } = mask(splitLine(raw, "#"));
+    let code = rewriteAssignmentReverse(line, spec);
+    if (braces) {
+      if (/^\s*end\s*$/.test(code)) code = code.replace(/^(\s*)end\s*$/, "$1}");
+      else if (BLOCK_OPENERS.test(code)) code = `${code.replace(/\s+$/, "")} {`;
+    }
+    code = mapWords(code, dict);
+    const dialectComment = comment === null ? "" : marker + comment.slice(1);
+    return (unmask(code, strings) + dialectComment).replace(/\s+$/, "");
+  }).join("\n");
+}
+function translateDialect(source, from, to) {
+  return dialectize(canonicalize(source, from, { withPrelude: false }).source, to);
+}
 
 // src/lang/dialect/presets.ts
-init_spec();
-init_dialect_runner();
 function bulgarianPreset() {
   const [namePairs, synPairs, sample] = getDialectRunner().call("dialect_preset_bg_data");
   const spec = emptyDialect({
@@ -44942,10 +43985,6 @@ function presetList() {
 function findPreset(slug) {
   return DIALECT_PRESETS[slug] ?? null;
 }
-
-// src/lang/dialect/docs.ts
-init_catalog();
-init_canonicalize();
 
 // src/lang/dialect/sample.ts
 var SAMPLE = [
@@ -45048,7 +44087,6 @@ function generateDialectDocs(spec) {
 }
 
 // src/lang/dialect/address.ts
-init_dialect_runner();
 function parseAddress(input) {
   const res = getDialectRunner().call("dialect_parse_address", input);
   if (!res || res.length === 0) return null;
@@ -45067,9 +44105,6 @@ function parseReference(input) {
   if (isShareCode(trimmed)) return { kind: "code", code: trimmed.toLowerCase() };
   return null;
 }
-
-// cli/index.ts
-init_catalog();
 
 // src/lang/dialect/registry.ts
 init_client();
@@ -45162,7 +44197,6 @@ function importOfflineBundle(json) {
 
 // src/lang/dialect/extensions.ts
 init_client();
-init_canonicalize();
 var CACHE_KEY2 = "sdev_extensions_cache";
 var ENABLED_KEY = "sdev_extensions_enabled";
 var db2 = supabase;
@@ -45249,7 +44283,6 @@ ${body}` : body;
 
 // cli/store.ts
 init_env();
-init_spec();
 var DIALECTS_KEY = "sdev_dialects";
 var ACTIVE_KEY = "sdev_active_dialect";
 var RUNTIME_KEY = "sdev_runtime";
@@ -45543,65 +44576,790 @@ init_parser();
 init_interpreter();
 import { readFileSync as readFileSync3, existsSync as existsSync3 } from "node:fs";
 import { resolve as resolve3, dirname as dirname2, isAbsolute as isAbsolute2 } from "node:path";
-init_canonicalize();
+
+// src/lang/linker.ts
+var LINK_RE = /^[ \t]*link\b[^\n"']*["']([^"'\n]+)["'](?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?[ \t]*;?[ \t]*$/gm;
+function findFile(files, target) {
+  const exact = files.find((f2) => f2.name === target);
+  if (exact) return exact;
+  const ci = files.find((f2) => f2.name.toLowerCase() === target.toLowerCase());
+  if (ci) return ci;
+  const base = target.replace(/\.sdev$/i, "");
+  return files.find((f2) => f2.name.replace(/\.sdev$/i, "").toLowerCase() === base.toLowerCase());
+}
+function applyNamespacePrefix(source, prefix) {
+  const names = /* @__PURE__ */ new Set();
+  const decl = /^[ \t]*(?:conjure|forge)\s+([A-Za-z_][A-Za-z0-9_]*)/gm;
+  let m2;
+  while (m2 = decl.exec(source)) names.add(m2[1]);
+  if (names.size === 0) return source;
+  let out = source;
+  for (const n of names) {
+    const re2 = new RegExp(`\\b${n}\\b`, "g");
+    out = out.replace(re2, `${prefix}_${n}`);
+  }
+  return out;
+}
+function resolveLinks(source, files, options = {}) {
+  const visiting = /* @__PURE__ */ new Set();
+  const resolved = /* @__PURE__ */ new Set();
+  const expand = (code, fromName) => {
+    return code.replace(LINK_RE, (raw, target, alias) => {
+      const file = findFile(files, target);
+      if (!file) {
+        return `
+// [link] file not found: ${target}
+forge __link_error be "Cannot link \\"${target}\\" \u2014 file not found"
+`;
+      }
+      if (file.name === fromName || visiting.has(file.name)) {
+        return `
+// [link] cyclic import skipped: ${file.name}
+`;
+      }
+      if (resolved.has(file.name) && !alias) {
+        return `
+// [link] already linked: ${file.name}
+`;
+      }
+      visiting.add(file.name);
+      let body = expand(file.content, file.name);
+      if (alias) body = applyNamespacePrefix(body, alias);
+      visiting.delete(file.name);
+      resolved.add(file.name);
+      return `
+// \u2500\u2500 linked from ${file.name}${alias ? ` as ${alias}` : ""} \u2500\u2500
+${body}
+// \u2500\u2500 end ${file.name} \u2500\u2500
+`;
+    });
+  };
+  return expand(source, options.entryName ?? "<entry>");
+}
 
 // src/lang/agent/directives.ts
-var DIRECTIVE_RE = /^\s*!#\s*agent\s*:\s*([a-z]+)(?:\s*:\s*([a-z]+))?\s*$/i;
+init_sdev_engine();
 function scanDirectives(source) {
-  let mode = null;
-  let brain = null;
-  let learn = null;
-  let found = false;
-  const lines = source.split("\n").map((line) => {
-    const m2 = line.match(DIRECTIVE_RE);
-    if (!m2) return line;
-    found = true;
-    const head2 = m2[1].toLowerCase();
-    const tail = (m2[2] ?? "").toLowerCase();
-    switch (head2) {
-      case "off":
-        mode = "off";
-        break;
-      case "on":
-        mode = mode === "off" ? "on" : mode ?? "on";
-        break;
-      case "auto":
-        mode = mode ?? "auto";
-        brain = "auto";
-        break;
-      case "strict":
-        mode = "strict";
-        break;
-      case "local":
-        brain = "local";
-        mode = mode ?? "on";
-        break;
-      case "online":
-        brain = "online";
-        mode = mode ?? "on";
-        break;
-      case "nobrain":
-      case "rules":
-        brain = "none";
-        break;
-      case "learn":
-        learn = tail !== "off" && tail !== "no";
-        break;
-      default:
-        break;
+  return sdevScanDirectives(source) ?? {
+    mode: null,
+    brain: null,
+    learn: null,
+    found: false,
+    source
+  };
+}
+
+// src/lang/agent/repair.ts
+init_vocabulary();
+init_math3();
+init_tasks2();
+var PLACEHOLDER2 = "\0";
+function mask2(raw) {
+  const strings = [];
+  let line = "";
+  let comment = "";
+  let i = 0;
+  while (i < raw.length) {
+    const c = raw[i];
+    if (c === "#" || c === "/" && raw[i + 1] === "/") {
+      comment = " #" + raw.slice(i).replace(/^#|^\/\//, "");
+      break;
     }
-    return "";
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      let s = "";
+      i++;
+      while (i < raw.length && raw[i] !== quote) {
+        if (raw[i] === "\\" && i + 1 < raw.length) {
+          s += raw[i] + raw[i + 1];
+          i += 2;
+          continue;
+        }
+        s += raw[i];
+        i++;
+      }
+      i++;
+      line += `${PLACEHOLDER2}${strings.length}${PLACEHOLDER2}`;
+      strings.push('"' + s.replace(/"/g, '\\"') + '"');
+      continue;
+    }
+    line += c;
+    i++;
+  }
+  return { line, strings, comment };
+}
+function unmask2(line, strings) {
+  return line.replace(/\u0000(\d+)\u0000/g, (_m, i) => strings[Number(i)]);
+}
+function isMaskedString(token) {
+  return /^\u0000\d+\u0000$/.test(token);
+}
+var RESERVED = /* @__PURE__ */ new Set([
+  "say",
+  "ask",
+  "set",
+  "to",
+  "if",
+  "else",
+  "end",
+  "for",
+  "each",
+  "in",
+  "while",
+  "break",
+  "continue",
+  "with",
+  "return",
+  "make",
+  "capture",
+  "ref",
+  "call",
+  "attempt",
+  "rescue",
+  "throw",
+  "kind",
+  "has",
+  "does",
+  "new",
+  "self",
+  "extends",
+  "super",
+  "use",
+  "true",
+  "false",
+  "nothing",
+  "is",
+  "not",
+  "and",
+  "or",
+  "more",
+  "less",
+  "match"
+]);
+var BUILTINS = /* @__PURE__ */ new Set([
+  "range",
+  "len",
+  "sum",
+  "str",
+  "text",
+  "num",
+  "ord",
+  "chr",
+  "upper",
+  "lower",
+  "trim",
+  "split",
+  "join",
+  "find",
+  "replace",
+  "abs",
+  "min",
+  "max",
+  "floor",
+  "ceil",
+  "sqrt",
+  "pow",
+  "random",
+  "keys",
+  "values",
+  "read_file",
+  "write_file",
+  "append_file",
+  "file_exists",
+  "input",
+  "args",
+  "env",
+  "exit",
+  "now_ms",
+  "sleep_ms",
+  "say_err"
+]);
+var FILLER_HEAD = /^(?:i\s+(?:want|need|would\s+like|wanna|will|'d\s+like)|we\s+(?:want|need|should)|please|let\s*'?s|can\s+you|could\s+you|now|then|first|also|and)\s+(?:to\s+)?/i;
+var DECL_NOISE = /\b(?:called|named|a|an|the|new|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
+var PARAM_NOISE = /\b(?:called|named|variable|variables|parameter|parameters|argument|arguments|that|which|takes|taking|accepts)\b/gi;
+var SAY_TARGET = /^(?:(?:out|to|on|in|into|at)\s+)?(?:the\s+)?(?:terminal|console|screen|output|display|stdout)\s*(?::|,)?\s*/i;
+function safeName(raw) {
+  const cleaned = raw.replace(/[^\p{L}\p{N}_]/gu, "_").replace(/^_+|_+$/g, "");
+  if (!cleaned) return "value";
+  return /^[\p{N}]/u.test(cleaned) ? "n" + cleaned : cleaned;
+}
+function unwrap(raw) {
+  const s = raw.trim();
+  if (!s.startsWith("(") || !s.endsWith(")")) return s;
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "(") depth++;
+    else if (s[i] === ")") {
+      depth--;
+      if (depth === 0 && i < s.length - 1) return s;
+    }
+  }
+  return depth === 0 ? s.slice(1, -1).trim() : s;
+}
+function targetName(raw) {
+  if (/^[\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*|\[[^\]]+\])+$/u.test(raw)) return raw;
+  return safeName(raw);
+}
+function wordsOf(line) {
+  return line.trim().split(/\s+/).filter(Boolean);
+}
+function splitStatements2(line) {
+  return line.split(";").map((s) => s.trim()).filter((s) => s.length > 0);
+}
+function numberWord(token) {
+  const parts = token.toLowerCase().split(/[\s-]+/);
+  if (!parts.every((p) => p in NUMBER_WORDS2)) return null;
+  let total = 0;
+  let current = 0;
+  for (const p of parts) {
+    const v = NUMBER_WORDS2[p];
+    if (v === 100) current = (current || 1) * 100;
+    else if (v >= 1e3) {
+      total += (current || 1) * v;
+      current = 0;
+    } else current += v;
+  }
+  return String(total + current);
+}
+var LITERALS = (() => {
+  const out = {};
+  for (const w of VOCABULARY.nothing) out[w] = "nothing";
+  for (const w of VOCABULARY.true) out[w] = "true";
+  for (const w of VOCABULARY.false) out[w] = "false";
+  return out;
+})();
+function expression(rest, known, renames) {
+  if (renames?.size) {
+    rest = rest.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
+  }
+  const trimmed = rest.trim();
+  if (!trimmed) return "nothing";
+  const literal = LITERALS[trimmed.toLowerCase()];
+  if (literal) return literal;
+  if (/^[\u0000\d(]/.test(trimmed) && !/\u0000\s+\u0000/.test(trimmed)) {
+    if (isMaskedString(trimmed) || /^[\d.]+$/.test(trimmed) || trimmed.startsWith("(")) return trimmed;
+  }
+  const tokens = wordsOf(trimmed);
+  const ownName = tokens.length === 1 && known.has(tokens[0]);
+  const numeric = ownName ? null : numberWord(tokens.join(" "));
+  if (numeric !== null) return numeric;
+  const understood = tokens.every((t) => {
+    if (isMaskedString(t)) return true;
+    if (/^[\d.]+$/.test(t)) return true;
+    if (/^[-+*/%<>=!,()[\]]+$/.test(t)) return true;
+    const bare = t.replace(/[(),[\]]/g, "");
+    if (!bare) return true;
+    if (RESERVED.has(bare) || BUILTINS.has(bare)) return true;
+    if (known.has(bare)) return true;
+    if (/[(.[]/.test(t)) return true;
+    return false;
   });
-  return { mode, brain, learn, found, source: lines.join("\n") };
+  if (understood) return joinOperands(tokens);
+  const allBare = tokens.every((t) => !isMaskedString(t));
+  const codeOperator = /[|&^~@$\\]/.test(trimmed);
+  const codePunctuation = /[\w\u0000)\]][.:][\w\u0000([]/.test(trimmed);
+  const codeLiteral = /^\{[\s\S]*\}$/.test(trimmed) || /^\[[\s\S]*\]$/.test(trimmed);
+  if (codeOperator || codePunctuation || codeLiteral) return trimmed;
+  if (allBare && !tokens.some((t) => known.has(t))) return '"' + tokens.join(" ").replace(/"/g, '\\"') + '"';
+  const isValue = (t) => isMaskedString(t) || /^[\d.]+$/.test(t) || known.has(t) || BUILTINS.has(t) || /[(.[]/.test(t);
+  const pieces = [];
+  for (const t of tokens) {
+    if (/^[-+*/%]$/.test(t)) pieces.push({ kind: "op", v: t });
+    else if (isValue(t)) pieces.push({ kind: "value", v: t });
+    else if (pieces.length && pieces[pieces.length - 1].kind === "text") pieces[pieces.length - 1].v += " " + t;
+    else pieces.push({ kind: "text", v: t });
+  }
+  const parts = pieces.map((p, i) => {
+    if (p.kind !== "text") return p.v;
+    const before = i > 0 && pieces[i - 1].kind === "value" ? " " : "";
+    const after = i < pieces.length - 1 && pieces[i + 1].kind === "value" ? " " : "";
+    return '"' + (before + p.v + after).replace(/"/g, '\\"') + '"';
+  });
+  return joinOperands(parts);
+}
+function joinOperands(tokens) {
+  const operand = (t) => !/^[-+*/%<>=!,]+$/.test(t) && !RESERVED.has(t) && !t.endsWith("(") && !t.endsWith(",") && !t.startsWith(")");
+  const out = [];
+  tokens.forEach((t, i) => {
+    if (i > 0 && operand(tokens[i - 1]) && operand(t) && !t.startsWith("(")) out.push("+");
+    out.push(t);
+  });
+  return out.join(" ");
+}
+function condition(rest, known, renames, info = {}) {
+  let out = " " + rest.trim() + " ";
+  if (renames?.size) out = out.replace(/[\p{L}\p{N}_]+/gu, (t) => renames.get(t) ?? t);
+  for (const [re2, to] of COMPARISONS) out = out.replace(re2, to);
+  out = out.replace(/\bthen\b/gi, " ").replace(/[:{]\s*$/, " ").replace(/\s*==\s*/g, " is ").replace(/\s*!=\s*/g, " is not ").replace(/\s*>=\s*/g, " is or more ").replace(/\s*<=\s*/g, " is or less ").replace(/\s+/g, " ").trim();
+  const toks = out.split(" ");
+  const mapped = toks.map((t, i) => {
+    if (isMaskedString(t) || known.has(t)) return t;
+    if (numberWord(t) !== null) return numberWord(t);
+    if (/^[\p{L}_][\p{L}\p{N}_]*$/u.test(t) && !RESERVED.has(t.toLowerCase()) && !BUILTINS.has(t)) {
+      const prev = toks[i - 1]?.toLowerCase();
+      if (prev === "is" || prev === "not" || prev === "equals") return '"' + t.toLowerCase() + '"';
+    }
+    return t;
+  });
+  for (let i = 0; i + 2 < mapped.length; i++) {
+    const name = mapped[i];
+    if (!info.textAsks?.has(name) || mapped[i + 1] !== "is") continue;
+    const j = mapped[i + 2] === "not" ? i + 3 : i + 2;
+    const lit = mapped[j];
+    if (!lit || !(isMaskedString(lit) || /^".*"$/.test(lit))) continue;
+    if (isMaskedString(lit) && info.strings) {
+      const k = Number(lit.slice(1, -1));
+      info.strings[k] = info.strings[k].toLowerCase().replace(/^"\s+|\s+"$/g, '"');
+    }
+    mapped[i] = `lower(trim(${name}))`;
+  }
+  return mapped.join(" ");
+}
+var ASSIGN_RE = new RegExp(
+  `^([\\p{L}\\p{N}_]+)\\s+(?:${ASSIGN_PHRASES.filter((p) => /^[a-zа-я ]+$/i.test(p)).sort((a, b) => b.length - a.length).join("|")})\\s+(.+)$`,
+  "iu"
+);
+var ASSIGN_SYMBOL_RE = /^([\p{L}\p{N}_]+)\s*(?::=|<-|=(?!=))\s*(.+)$/u;
+var NAMEABLE_INTENTS = /* @__PURE__ */ new Set(["return", "true", "false", "nothing", "in", "and", "or", "not", "continue", "break"]);
+var NAME_PAT = "[\\p{L}_][\\p{L}\\p{N}_]*";
+var ASK_INTO = new RegExp(
+  `^(?:for\\s+)?(\\u0000\\d+\\u0000)?\\s*,?\\s*(?:(?:and\\s+)?(?:save|store|put|keep|remember|call|name)(?:\\s+it|\\s+the\\s+answer)?(?:\\s+(?:as|in|into|to))?|as|into|in|to|->|=>)\\s+(?:the\\s+|a\\s+)?(${NAME_PAT})\\s*[.:]?$`,
+  "iu"
+);
+var ASK_PROMPT_ONLY = /^(?:for\s+)?(\u0000\d+\u0000)\s*[.:]?$/u;
+var ASK_NAME_ONLY = new RegExp(`^(?:for\\s+)?(?:(?:the|a|an|their|your|his|her|my)\\s+)?(${NAME_PAT})\\s*[?.:]?$`, "iu");
+function parseAsk(rest) {
+  const r = rest.trim().replace(/^(?:the\s+)?(?:user|person|player|them)\s+(?:for\s+)?/i, "").replace(/^\(|\)$/g, "").trim();
+  let m2 = r.match(ASK_INTO);
+  if (m2) return { name: m2[2], prompt: m2[1] ?? null };
+  m2 = r.match(ASK_PROMPT_ONLY);
+  if (m2) return { name: "answer", prompt: m2[1] };
+  m2 = r.match(ASK_NAME_ONLY);
+  if (m2) return { name: m2[1], prompt: null };
+  return null;
+}
+function scanAsks(lines, words) {
+  const asks = /* @__PURE__ */ new Map();
+  const masked = [];
+  for (const raw of lines) {
+    const { line, strings } = mask2(raw);
+    masked.push(line);
+    const text2 = (t) => t ? unmask2(t, strings) : "";
+    for (const stmt0 of splitStatements2(line)) {
+      const stmt = stmt0.replace(FILLER_HEAD, "").trim();
+      const toks = wordsOf(stmt);
+      if (!toks.length) continue;
+      if (words.get(toks[0].toLowerCase()) === "ask") {
+        const f2 = parseAsk(stmt.slice(toks[0].length));
+        if (f2) asks.set(f2.name, text2(f2.prompt));
+        continue;
+      }
+      const m2 = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m2) {
+        const rt = wordsOf(m2[2]);
+        if (rt[0] && words.get(rt[0].toLowerCase().replace(/\($/, "")) === "ask") asks.set(m2[1], text2(rt[1]));
+      }
+    }
+  }
+  const numeric = /* @__PURE__ */ new Set();
+  const body = masked.join("\n");
+  const edge = "(?<![\\p{L}\\p{N}_])";
+  const tail = "(?![\\p{L}\\p{N}_])";
+  const names = [...asks.keys()];
+  for (const [name, prompt] of asks) {
+    if (/\b(?:number|numbers|how\s+(?:many|much|old|far|long|tall)|age|amount|count|price|total)\b|\d/i.test(prompt)) {
+      numeric.add(name);
+      continue;
+    }
+    const n = escapeRe(name);
+    const arithmetic = new RegExp(`${edge}${n}${tail}\\s*[-*/%]|[-*/%]\\s*${edge}${n}${tail}`, "u");
+    const againstNumber = new RegExp(
+      `${edge}${n}${tail}\\s*(?:is(?:\\s+not)?|equals|==|!=|>=|<=|>|<|is\\s+(?:greater|less|more|bigger|smaller)(?:\\s+than)?|(?:greater|less|more|bigger|smaller)\\s+than)\\s*-?\\d`,
+      "iu"
+    );
+    const plusNumber = new RegExp(`${edge}${n}${tail}\\s*\\+\\s*\\d|\\d\\s*\\+\\s*${edge}${n}${tail}`, "u");
+    if (arithmetic.test(body) || againstNumber.test(body) || plusNumber.test(body)) numeric.add(name);
+  }
+  for (const a of names) for (const b of names) {
+    if (new RegExp(`${edge}${escapeRe(a)}${tail}\\s*\\+\\s*${edge}${escapeRe(b)}${tail}`, "u").test(body)) {
+      numeric.add(a);
+      numeric.add(b);
+    }
+  }
+  return { asks, numeric };
+}
+function fillPlaceholders(literal, known) {
+  const inner = literal.slice(1, -1);
+  const re2 = /\[([\p{L}_][\p{L}\p{N}_]*)\]|\{([\p{L}_][\p{L}\p{N}_]*)\}/gu;
+  if (![...inner.matchAll(re2)].some((m2) => known.has(m2[1] ?? m2[2]))) return literal;
+  const pieces = [];
+  let last = 0;
+  for (const m2 of inner.matchAll(re2)) {
+    const name = m2[1] ?? m2[2];
+    if (!known.has(name)) continue;
+    if (m2.index > last) pieces.push('"' + inner.slice(last, m2.index) + '"');
+    pieces.push(`str(${name})`);
+    last = m2.index + m2[0].length;
+  }
+  if (last < inner.length) pieces.push('"' + inner.slice(last) + '"');
+  return "(" + pieces.join(" + ") + ")";
+}
+function counting(stmt) {
+  const s = stmt.replace(/[.:]\s*$/, "").trim();
+  let m2 = s.match(new RegExp(`^(?:add|plus)\\s+(.+?)\\s+(?:to|onto)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
+  if (m2) return { name: m2[2], op: "+", by: m2[1] };
+  m2 = s.match(new RegExp(`^(?:subtract|take|remove|minus)\\s+(.+?)\\s+(?:from|off)\\s+(?:the\\s+)?(${NAME_PAT})$`, "iu"));
+  if (m2) return { name: m2[2], op: "-", by: m2[1] };
+  m2 = s.match(new RegExp(`^(increase|raise|bump|increment|decrease|reduce|decrement)\\s+(?:the\\s+)?(${NAME_PAT})(?:\\s+by\\s+(.+))?$`, "iu"));
+  if (m2) return { name: m2[2], op: /^(?:decrease|reduce|decrement)$/i.test(m2[1]) ? "-" : "+", by: m2[3] ?? "1" };
+  m2 = s.match(new RegExp(`^(${NAME_PAT})\\s*(\\+\\+|--)$`, "u"));
+  if (m2) return { name: m2[1], op: m2[2] === "++" ? "+" : "-", by: "1" };
+  m2 = s.match(new RegExp(`^(${NAME_PAT})\\s*([+-])=\\s*(.+)$`, "u"));
+  if (m2) return { name: m2[1], op: m2[2], by: m2[3] };
+  return null;
+}
+function collectNames(lines, words, seed) {
+  const names = new Set(seed ?? []);
+  const nameable = (w) => {
+    const i = words.get(w.toLowerCase());
+    return !i || NAMEABLE_INTENTS.has(i);
+  };
+  for (const raw of lines) {
+    const { line } = mask2(raw);
+    for (const stmt of splitStatements2(line)) {
+      const toks = wordsOf(stmt);
+      if (!toks.length) continue;
+      const head2 = words.get(toks[0].toLowerCase());
+      if (/^(?:rescue|catch|except|iterate)$/i.test(toks[0]) && toks[1]) {
+        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
+        continue;
+      }
+      if (head2 === "ask") {
+        const f2 = parseAsk(stmt.slice(toks[0].length));
+        if (f2) names.add(f2.name);
+        continue;
+      }
+      if (head2 === "set" && toks[1]) {
+        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
+        continue;
+      }
+      if (head2 === "function" && toks[1]) {
+        names.add(toks[1].replace(/[^\p{L}\p{N}_]/gu, ""));
+        for (const p of toks.slice(2)) if (!words.has(p.toLowerCase()) && p !== "with") names.add(p);
+        continue;
+      }
+      if (head2 === "for") {
+        const each = toks.findIndex((t) => words.get(t.toLowerCase()) === "in");
+        if (each > 1) names.add(toks[each - 1]);
+        continue;
+      }
+      const m2 = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (m2 && nameable(m2[1]) && (!head2 || NAMEABLE_INTENTS.has(head2)) && !/^(?:if|when|while)$/i.test(toks[0])) names.add(m2[1]);
+    }
+  }
+  return names;
+}
+function repair(source, ctx = {}) {
+  const words = baseWordMap();
+  const ownWords = /* @__PURE__ */ new Set();
+  for (const [w, i] of ctx.extraWords ?? []) {
+    words.set(w.toLowerCase(), i);
+    ownWords.add(w.toLowerCase());
+  }
+  const rawLines = source.split("\n").map((l) => l.replace(/^(\s*)(what|that|it|how|who|where)'s\b/i, "$1$2 is"));
+  const known = collectNames(rawLines, words, ctx.knownNames);
+  const { asks, numeric } = scanAsks(rawLines, words);
+  for (const name of asks.keys()) known.add(name);
+  const textAsks = new Set([...asks.keys()].filter((n) => !numeric.has(n)));
+  const askValue = (name, prompt) => {
+    const read = `input(${prompt ?? `"${name}? "`})`;
+    return `set ${name} to ${numeric.has(name) ? `num(${read})` : read}`;
+  };
+  const askRhs = (rhs) => {
+    const t = wordsOf(rhs);
+    if (!t.length || words.get(t[0].toLowerCase().replace(/\($/, "")) !== "ask") return void 0;
+    const tail = unwrap(t.slice(1).join(" "));
+    if (!tail) return null;
+    return isMaskedString(tail) ? tail : void 0;
+  };
+  const nameable = (w) => {
+    const intent = words.get(w.toLowerCase());
+    return !intent || NAMEABLE_INTENTS.has(intent);
+  };
+  const nextIndented = (index) => {
+    const here = rawLines[index].match(/^\s*/)?.[0].length ?? 0;
+    for (let j = index + 1; j < rawLines.length; j++) {
+      if (!rawLines[j].trim()) continue;
+      return (rawLines[j].match(/^\s*/)?.[0].length ?? 0) > here;
+    }
+    return false;
+  };
+  const renames = /* @__PURE__ */ new Map();
+  const notes = [];
+  const learned = {};
+  const unresolved = [];
+  let changed = false;
+  const note = (line, from, to, why) => {
+    if (from.trim() === to.trim()) return;
+    changed = true;
+    notes.push({ line, from: from.trim(), to: to.trim(), why, source: "rules" });
+  };
+  const learn = (word, intent) => {
+    const lower = word.toLowerCase();
+    if (lower !== CANONICAL[intent]) learned[lower] = intent;
+  };
+  const out = rawLines.map((raw, index) => {
+    const lineNo = index + 1;
+    if (!raw.trim()) return raw;
+    const indent = raw.match(/^\s*/)?.[0] ?? "";
+    const { line, strings, comment } = mask2(raw);
+    if (!line.trim()) return raw;
+    for (let s = 0; s < strings.length; s++) strings[s] = fillPlaceholders(strings[s], known);
+    const cond = (r) => condition(r, known, renames, { textAsks, strings });
+    const firstWord = line.trim().split(/[\s(]+/)[0]?.toLowerCase() ?? "";
+    if (/[^\x00-\x7F]/.test(line) && !ownWords.has(firstWord.replace(/[(:]$/, ""))) {
+      unresolved.push(lineNo);
+      return raw;
+    }
+    const statements = splitStatements2(line);
+    const rewritten = [];
+    for (const original of statements) {
+      const stmt = original.replace(FILLER_HEAD, "").trim() || original;
+      const toks = wordsOf(stmt);
+      if (!toks.length) continue;
+      const head2 = toks[0];
+      const headKey = head2.toLowerCase().replace(/[(:]$/, "");
+      let intent = words.get(headKey);
+      const rest = unwrap(stmt.slice(stmt.indexOf(head2) + head2.length));
+      const counted = counting(stmt);
+      if (counted) {
+        known.add(counted.name);
+        rewritten.push(`set ${counted.name} to ${counted.name} ${counted.op} ${expression(counted.by, known, renames)}`);
+        continue;
+      }
+      const task = taskRequest(stmt, known, isMaskedString);
+      if (task) {
+        rewritten.push(...task);
+        for (const t of task) {
+          const v = t.match(/^\s*set (\w+) to/)?.[1];
+          if (v) known.add(v);
+        }
+        continue;
+      }
+      const math2 = mathRequest(stmt, known);
+      if (math2 !== null) {
+        rewritten.push(math2.startsWith("(") ? `say (${math2})` : `say ${math2}`);
+        continue;
+      }
+      const selfAssign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (intent && selfAssign && selfAssign[1] === head2 && nameable(head2)) intent = void 0;
+      if (!intent && /[:{]\s*$/.test(stmt) && nextIndented(index) && /\s(?:is|equals|==|!=|>|<|>=|<=)\s/i.test(" " + stmt + " ")) {
+        rewritten.push(`if ${cond(stmt.replace(/[:{]\s*$/, ""))}`);
+        continue;
+      }
+      const callBase = stmt.match(/^([\p{L}\p{N}_]+)\s*\(/u)?.[1];
+      if (callBase && (known.has(callBase) || ctx.knownNames?.has(callBase))) {
+        rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
+        continue;
+      }
+      if (stmt === "}" || intent === "end") {
+        rewritten.push("end");
+        if (intent === "end") learn(headKey, "end");
+        continue;
+      }
+      switch (intent) {
+        case "say": {
+          learn(headKey, "say");
+          const what = rest.replace(SAY_TARGET, "").trim() || rest;
+          const bare = what.split(/\s+/).filter((w) => /^[A-Za-z]+$/.test(w) && !known.has(w));
+          if (bare.length >= 4 && !/\u0000/.test(what)) unresolved.push(lineNo);
+          rewritten.push(`say ${expression(what, known, renames)}`);
+          continue;
+        }
+        case "ask": {
+          learn(headKey, "ask");
+          const form = parseAsk(stmt.slice(head2.length));
+          if (form) {
+            known.add(form.name);
+            rewritten.push(askValue(form.name, form.prompt));
+            continue;
+          }
+          rewritten.push(rest ? `set ${rest.split(/\s+/)[0]} to input()` : "input()");
+          continue;
+        }
+        case "set": {
+          learn(headKey, "set");
+          const m2 = rest.match(ASSIGN_RE) ?? rest.match(ASSIGN_SYMBOL_RE);
+          if (m2) {
+            const name = safeName(m2[1]);
+            if (name !== m2[1]) renames.set(m2[1], name);
+            known.add(name);
+            const asked = askRhs(m2[2]);
+            rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(m2[2], known, renames)}`);
+            continue;
+          }
+          const parts = wordsOf(rest);
+          if (parts.length >= 2) {
+            known.add(parts[0]);
+            const tail = parts.slice(1);
+            if (/^(?:to|be|is|as|=|:=|<-|equals)$/i.test(tail[0])) tail.shift();
+            rewritten.push(`set ${targetName(parts[0])} to ${expression(tail.join(" "), known, renames)}`);
+            continue;
+          }
+          rewritten.push(stmt);
+          continue;
+        }
+        case "if":
+          learn(headKey, "if");
+          rewritten.push(`if ${cond(rest)}`);
+          continue;
+        case "else": {
+          learn(headKey, "else");
+          const tail = rest.replace(/^[:{]\s*|[:{]\s*$/g, "").trim();
+          rewritten.push(tail ? `else ${cond(tail)}` : "else");
+          continue;
+        }
+        case "while":
+          learn(headKey, "while");
+          rewritten.push(`while ${cond(rest)}`);
+          continue;
+        case "for": {
+          learn(headKey, "for");
+          const parts = wordsOf(rest).filter((t) => words.get(t.toLowerCase()) !== "for");
+          const at = parts.findIndex((t) => words.get(t.toLowerCase()) === "in");
+          if (at > 0) {
+            const name = parts[at - 1];
+            known.add(name);
+            rewritten.push(`for each ${name} in ${parts.slice(at + 1).join(" ").replace(/[:{]\s*$/, "").trim()}`);
+            continue;
+          }
+          rewritten.push(`for ${rest}`);
+          continue;
+        }
+        case "return":
+          learn(headKey, "return");
+          rewritten.push(rest ? `return ${expression(rest.replace(/^(?:back|the|value|of)\s+|^an?\s+(?=[\p{L}_][\p{L}\p{N}_]*\s*$)/iu, ""), known, renames)}` : "return");
+          continue;
+        case "break":
+        case "continue":
+          learn(headKey, intent);
+          rewritten.push(CANONICAL[intent]);
+          continue;
+        case "function": {
+          learn(headKey, "function");
+          const declBody = rest.replace(/[:{]\s*$/, "");
+          const split2 = declBody.search(/\swith\s|\(/);
+          const declHead = split2 < 0 ? declBody : declBody.slice(0, split2);
+          const declParams = split2 < 0 ? "" : declBody.slice(split2);
+          const keepAll = /[(,]/.test(declParams);
+          const wordyParams = declParams.replace(PARAM_NOISE, " ");
+          const cleanedParams = keepAll ? wordyParams : wordyParams.replace(/\b(?:a|an|the)\s+(?=[\p{L}_]{2,})/giu, " ");
+          const cleanedDecl = (declHead.replace(DECL_NOISE, " ") + " " + cleanedParams).replace(/\s+/g, " ").trim();
+          const parts = wordsOf(cleanedDecl);
+          if (!parts.length) {
+            rewritten.push(stmt);
+            continue;
+          }
+          const rawName = parts[0].replace(/\(.*$/, "");
+          const name = safeName(rawName);
+          if (name !== rawName) renames.set(rawName, name);
+          const inParens = parts[0].includes("(") ? [parts[0].slice(parts[0].indexOf("("))] : [];
+          const params = [...inParens, ...parts.slice(1)].join(" ").replace(/^\(([^()]*)\)$/, "$1").replace(/,/g, " ").split(/\s+/).filter((p) => p && words.get(p.toLowerCase()) !== "in" && p !== "with").map((p) => {
+            const safe = safeName(p);
+            if (safe !== p) renames.set(p, safe);
+            return safe;
+          });
+          known.add(name);
+          params.forEach((p) => known.add(p));
+          rewritten.push(params.length ? `to ${name} with ${params.join(" ")}` : `to ${name}`);
+          continue;
+        }
+        default:
+          break;
+      }
+      const assign = stmt.match(ASSIGN_SYMBOL_RE) ?? stmt.match(ASSIGN_RE);
+      if (assign && nameable(assign[1])) {
+        const name = safeName(assign[1]);
+        if (name !== assign[1]) renames.set(assign[1], name);
+        known.add(name);
+        const asked = askRhs(assign[2]);
+        rewritten.push(asked !== void 0 ? askValue(name, asked) : `set ${name} to ${expression(assign[2], known, renames)}`);
+        continue;
+      }
+      if (/^(?:call|run|do|invoke|execute|use)$/i.test(headKey) && toks.length >= 2) {
+        const target = safeName(toks[1]);
+        const args = wordsOf(rest).slice(1).filter((t) => !/^(?:with|and|using|,)$/i.test(t)).map((t) => (renames.get(t) ?? t).replace(/,$/, ""));
+        rewritten.push(`${target}(${args.join(", ")})`);
+        continue;
+      }
+      if (/^[\p{L}\p{N}_]+(?:\.[\p{L}\p{N}_]+)*\s*\(/u.test(stmt) || RESERVED.has(headKey) || known.has(head2) || BUILTINS.has(headKey)) {
+        rewritten.push(stmt.replace(/[:{]\s*$/, "").trim());
+        continue;
+      }
+      if (ctx.strict) {
+        rewritten.push(stmt);
+        unresolved.push(lineNo);
+        continue;
+      }
+      if (toks.length === 1 && !isMaskedString(toks[0])) {
+        rewritten.push(`say "${toks[0]}"`);
+        continue;
+      }
+      rewritten.push(stmt);
+      unresolved.push(lineNo);
+    }
+    const joined = rewritten.join("\n" + indent);
+    if ([...joined.matchAll(/"([^"\u0000]*)"/g)].some((m2) => m2[1].trim().split(/\s+/).length >= 4) && !unresolved.includes(lineNo)) unresolved.push(lineNo);
+    const result = indent + unmask2(joined, strings) + comment;
+    note(lineNo, raw, result, "understood as canonical sdev");
+    return result;
+  });
+  return { source: out.join("\n"), notes, learned, unresolved, changed };
+}
+var OPENS = /^\s*(?:to\s+[\p{L}\p{N}_]|if\b|while\b|for\s+each\b|kind\b|attempt\b|match\b)/u;
+var CLOSES = /^\s*end\b/;
+function closeBlocks(source) {
+  const lines = source.split("\n");
+  const out = [];
+  const stack = [];
+  const width = (s) => s.match(/^\s*/)?.[0].length ?? 0;
+  const top = () => stack[stack.length - 1];
+  const nextCode = (from) => {
+    for (let j = from; j < lines.length; j++) if (lines[j].trim()) return lines[j];
+    return null;
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) {
+      const next = nextCode(i + 1);
+      while (stack.length && next !== null && !/^\s*(?:else|end)\b/.test(next) && width(next) <= top().indent.length) {
+        out.push(stack.pop().indent + "end");
+      }
+      out.push(line);
+      continue;
+    }
+    const w = width(line);
+    const continues = /^\s*(?:else|end)\b/.test(line);
+    while (stack.length && top().body && w <= top().indent.length && !(continues && w === top().indent.length)) {
+      out.push(stack.pop().indent + "end");
+    }
+    if (stack.length && w > top().indent.length) top().body = true;
+    if (CLOSES.test(line)) stack.pop();
+    else if (/^\s*else\b/.test(line) && stack.length) top().body = false;
+    else if (OPENS.test(line)) stack.push({ indent: line.match(/^\s*/)?.[0] ?? "", body: false });
+    out.push(line);
+  }
+  while (stack.length) out.push(stack.pop().indent + "end");
+  return out.join("\n");
 }
 
 // src/lang/agent/index.ts
-init_repair();
 init_sense();
-init_brain();
+init_brain2();
 init_sdev_engine();
 
 // src/lang/agent/memory.ts
+init_sdev_engine();
 function emptyMemory() {
   return { version: 1, words: {}, names: {}, lines: {}, programs: 0, updated: 0 };
 }
@@ -45647,6 +45405,7 @@ function saveMemory(memory) {
   active.save(memory);
 }
 var MAX_LINES = 500;
+var MAX_RESULTS = 100;
 function rememberWord(memory, word, intent) {
   const key = word.toLowerCase();
   const prev = memory.words[key];
@@ -45667,11 +45426,9 @@ function rememberLine(memory, original, canonical) {
 }
 function learnFromProgram(memory, canonical) {
   memory.programs += 1;
-  const re2 = /^\s*set\s+([\p{L}\p{N}_]+)\s+to\b/gmu;
-  let m2;
-  while (m2 = re2.exec(canonical)) rememberName(memory, m2[1]);
-  const fn2 = /^\s*to\s+([\p{L}\p{N}_]+)\b/gmu;
-  while (m2 = fn2.exec(canonical)) rememberName(memory, m2[1]);
+  for (const name of sdevMemoryLearnNames(canonical) ?? []) {
+    rememberName(memory, name);
+  }
 }
 function memoryWordMap(memory) {
   const map = /* @__PURE__ */ new Map();
@@ -45681,16 +45438,8 @@ function memoryWordMap(memory) {
   return map;
 }
 function understandKey(source, extra = "") {
-  let h1 = 2166136261, h2 = 16777619;
-  const s = source + "\0" + extra;
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 16777619);
-    h2 = Math.imul(h2 ^ c, 2246822507);
-  }
-  return (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36) + s.length.toString(36);
+  return sdevMemoryUnderstandKey(source, extra) ?? `${source.length}:${extra.length}`;
 }
-var MAX_RESULTS = 100;
 function recallResult(memory, key) {
   return memory.results?.[key]?.source ?? null;
 }
@@ -45708,17 +45457,15 @@ init_boards();
 init_understand();
 init_vocabulary();
 
-// src/lang/agent/promote.ts
-init_spec();
-
 // src/lib/utils.ts
-function slugify(text3, fallback = "sdev") {
-  const slug = text3.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
+function slugify(text2, fallback = "sdev") {
+  const slug = text2.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
   return slug || fallback;
 }
 
 // src/lang/agent/promote.ts
 init_vocabulary();
+init_sdev_engine();
 function promoteToDialect(opts = {}) {
   const name = opts.name ?? "My way of writing";
   const spec = emptyDialect({ name, slug: opts.slug ?? slugify(name), description: "Learned by the understanding agent." });
@@ -45726,43 +45473,23 @@ function promoteToDialect(opts = {}) {
     ...Object.entries(opts.used ?? {}).map(([w, i]) => [w, i]),
     ...Object.entries(opts.memory?.words ?? {}).map(([w, e]) => [w, e.intent])
   ];
-  const byCanonical = /* @__PURE__ */ new Map();
-  for (const [word, intent] of pairs) {
-    const canonical = CANONICAL[intent];
-    if (!canonical || word === canonical) continue;
-    if (!/^[\p{L}\p{N}_]+$/u.test(word)) continue;
-    if (!byCanonical.has(canonical)) byCanonical.set(canonical, /* @__PURE__ */ new Set());
-    byCanonical.get(canonical).add(word);
-  }
-  const taken = /* @__PURE__ */ new Set();
-  for (const [canonical, words] of byCanonical) {
-    const list2 = [...words].filter((w) => !taken.has(w));
-    if (!list2.length) continue;
-    list2.forEach((w) => taken.add(w));
-    spec.synonyms[canonical] = list2;
-    if (opts.rename) spec.names[canonical] = list2[0];
+  const promoted = sdevPromoteWords(pairs, CANONICAL, Boolean(opts.rename));
+  if (promoted) {
+    Object.assign(spec.synonyms, promoted.synonyms);
+    if (opts.rename) Object.assign(spec.names, promoted.names);
   }
   return spec;
 }
 
 // src/lang/agent/index.ts
 init_sense();
-init_repair();
 init_vocabulary();
 init_sdev_engine();
 function knownNames(memory) {
   return new Set(Object.keys(memory.names));
 }
 function applyMemoryLines(source, memory) {
-  let hit = false;
-  const out = source.split("\n").map((line) => {
-    const entry = memory.lines[line.trim()];
-    if (!entry) return line;
-    hit = true;
-    const indent = line.match(/^\s*/)?.[0] ?? "";
-    return indent + entry.canonical;
-  });
-  return { source: out.join("\n"), hit };
+  return sdevMemoryApplyLines(source, memory.lines) ?? { source, hit: false };
 }
 function begin(source, opts) {
   const directives = scanDirectives(source);
@@ -45777,6 +45504,12 @@ function begin(source, opts) {
     memory.results = {};
     memory.agent = AGENT_VERSION;
     saveMemory(memory);
+  }
+  if (opts.fresh) {
+    for (const line of stripped.split("\n")) {
+      const k = line.trim();
+      if (k && memory.lines[k]) delete memory.lines[k];
+    }
   }
   return { mode, brain, learn, stripped, memory, boards, original };
 }
@@ -45795,23 +45528,17 @@ function dialectWordMap(opts) {
     const intent = canonicalToIntent.get(canonical);
     if (intent && word) map.set(word.toLowerCase(), intent);
   }
-  for (const [canonical, list2] of Object.entries(synonyms)) {
+  for (const [canonical, list] of Object.entries(synonyms)) {
     const intent = canonicalToIntent.get(canonical);
     if (!intent) continue;
-    for (const word of list2 ?? []) map.set(word.toLowerCase(), intent);
+    for (const word of list ?? []) map.set(word.toLowerCase(), intent);
   }
   return map;
 }
 var AGENT_VERSION = "u8";
 var lastEngine = "ts";
 function isRequest(source) {
-  const rows = source.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && !l.startsWith("//"));
-  if (!rows.length || rows.length > 6) return false;
-  if (rows.some((l) => /[=(){}[\]]|::|;;/.test(l) && !/^[\p{L}\s,.'"!?-]+$/u.test(l))) return false;
-  const text3 = rows.join(" ");
-  const verb = /^(please\s+)?(make|build|create|write|code|generate|design|program|draw|give\s+me|show\s+me|i\s+want|i\s+need|i'd\s+like|can\s+you|could\s+you|let's|lets)\b/i;
-  const thing = /\b(window|app|application|program|game|calculator|form|page|site|website|tool|todo|to-do|list|clock|timer|stopwatch|converter|quiz|interface|gui|ui|button|buttons|menu|counter|chat|editor|notes?|tracker|dashboard|generator|simulator|animation|drawing)\b/i;
-  return verb.test(text3) && thing.test(text3) && text3.split(/\s+/).length >= 3;
+  return sdevIsRequest(source) ?? false;
 }
 function runRules(prep, opts) {
   const request = isRequest(prep.stripped);
@@ -45891,9 +45618,15 @@ async function understandAsync(source, opts = {}) {
   const prep = begin(source, opts);
   if (prep.mode === "off") return skip(prep.original, "off");
   const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
-  const cached2 = recallResult(prep.memory, key);
-  if (cached2 !== null) {
-    return { source: cached2, changed: cached2 !== prep.original, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: "none", cached: true };
+  if (opts.fresh) {
+    if (prep.memory.results?.[key]) delete prep.memory.results[key];
+  } else {
+    const cached2 = recallResult(prep.memory, key);
+    if (cached2 !== null) {
+      lastUnderstood.set(source, cached2);
+      if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value);
+      return { source: cached2, changed: cached2 !== prep.original, mode: prep.mode, notes: [], learned: {}, unresolved: [], brainUsed: "none", cached: true };
+    }
   }
   const rules = runRules(prep, opts);
   let current = rules.source;
@@ -45921,6 +45654,8 @@ async function understandAsync(source, opts = {}) {
   finish(prep, current, rules.learned);
   lastUnderstood.set(source, current);
   if (lastUnderstood.size > 20) lastUnderstood.delete(lastUnderstood.keys().next().value);
+  lastUnderstoodBrain.set(source, brainUsed);
+  if (lastUnderstoodBrain.size > 20) lastUnderstoodBrain.delete(lastUnderstoodBrain.keys().next().value);
   return {
     source: out,
     changed: out !== prep.original,
@@ -45939,29 +45674,32 @@ async function askBrainAboutBoards(prep, opts, texts, notes) {
   const unresolved = [];
   let used = "none";
   const mode = prep.brain === "auto" && !online() ? "local" : prep.brain;
+  const modes = mode === "auto" ? brainSettings().allowOnline && online() ? ["local", "online"] : ["local"] : [mode];
   for (let i = 0; i < out.length; i++) {
-    const bad = unknownBoardLines(out[i]);
+    let bad = unknownBoardLines(out[i]);
     if (bad.length === 0) continue;
-    const lines = out[i].split("\n");
-    const { reply, used: by } = await think({
-      source: prep.boards[i].text,
-      draft: out[i],
-      unresolved: bad,
-      vocabulary: {},
-      problems: [...BOARD_GUIDE, "Rewrite these lines into the hardware language: " + bad.map((n) => lines[n - 1].trim()).join(" | ").slice(0, 240)],
-      format: "canonical"
-    }, mode, opts.localUrl);
-    const answer = reply?.canonical ?? "";
-    const span = by !== "none" ? findBoardSpans(answer)[0] : void 0;
-    if (span) {
-      const candidate = readBoardBlock(answer.slice(span.start, span.end), 1, span.strict).text;
-      const left = unknownBoardLines(candidate);
-      if (left.length < bad.length) {
-        out[i] = candidate;
-        used = by;
-        notes.push({ line: prep.boards[i].line, from: "", to: "", why: `hardware: the AI read ${bad.length - left.length} line${bad.length - left.length === 1 ? "" : "s"} the rules could not`, source: "brain" });
-        unresolved.push(...left.map((n) => prep.boards[i].line + n - 1));
-        continue;
+    for (const targetMode of modes) {
+      if (bad.length === 0) break;
+      const lines = out[i].split("\n");
+      const { reply, used: by } = await think({
+        source: prep.boards[i].text,
+        draft: out[i],
+        unresolved: bad,
+        vocabulary: {},
+        problems: [...BOARD_GUIDE, "Rewrite these lines into the hardware language: " + bad.map((n) => lines[n - 1].trim()).join(" | ").slice(0, 240)],
+        format: "canonical"
+      }, targetMode, opts.localUrl);
+      const answer = reply?.canonical ?? "";
+      const span = by !== "none" ? findBoardSpans(answer)[0] : void 0;
+      if (span) {
+        const candidate = readBoardBlock(answer.slice(span.start, span.end), 1, span.strict).text;
+        const left = unknownBoardLines(candidate);
+        if (left.length < bad.length) {
+          out[i] = candidate;
+          used = by;
+          notes.push({ line: prep.boards[i].line, from: "", to: "", why: `hardware: the AI read ${bad.length - left.length} line${bad.length - left.length === 1 ? "" : "s"} the rules could not`, source: "brain" });
+          bad = left;
+        }
       }
     }
     unresolved.push(...bad.map((n) => prep.boards[i].line + n - 1));
@@ -45981,27 +45719,43 @@ async function askBrain(prep, opts, draft, unresolved, extraProblems, notes, pre
   const vocabulary = {};
   for (const [word, entry] of Object.entries(prep.memory.words)) vocabulary[word] = entry.intent;
   const mode = prep.brain === "auto" && !online() ? "local" : prep.brain;
-  const score = (src) => (parses(src) ? 0 : 100) + unknownNames(src).length;
+  const score = (src) => {
+    const pOk = parses(src);
+    const unk = unknownNames(src).length;
+    return sdevBrainCandidateScore(pOk, unk, 0) ?? (pOk ? 0 : 100) + unk;
+  };
   let best = null;
-  let bestScore = score(draft) + (extraProblems.length ? 50 : 0);
+  let bestScore = sdevBrainCandidateScore(parses(draft), unknownNames(draft).length, extraProblems.length) ?? score(draft) + (extraProblems.length ? 50 : 0);
   let problems = [...extraProblems, ...problemsOf(draft)];
   const writing = isRequest(prep.stripped);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const { reply, used } = await think(
-      { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems, format: writing ? "ai" : "canonical" },
-      mode,
-      opts.localUrl
-    );
-    if (!reply?.canonical || used === "none") break;
-    if (isAiDialect(reply.canonical)) reply.canonical = aiToSdev(reply.canonical);
-    const s = score(reply.canonical);
-    if (s < bestScore || s === bestScore && (preferReply || extraProblems.length > 0) && !best) {
-      best = { source: reply.canonical, used };
-      bestScore = s;
-      for (const [word, intent] of Object.entries(reply.words ?? {})) if (prep.learn) rememberWord(prep.memory, word, intent);
+  const runAttempts = async (targetMode) => {
+    problems = best ? [...extraProblems, ...problemsOf(best.source)] : [...extraProblems, ...problemsOf(draft)];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { reply, used } = await think(
+        { source: prep.stripped, draft: best?.source ?? draft, unresolved, vocabulary, problems, format: writing ? "ai" : "canonical" },
+        targetMode,
+        opts.localUrl
+      );
+      if (!reply?.canonical || used === "none") break;
+      if (isAiDialect(reply.canonical)) reply.canonical = aiToSdev(reply.canonical);
+      const s = score(reply.canonical);
+      if (s < bestScore || s === bestScore && (preferReply || extraProblems.length > 0) && (!best || targetMode === "online" && best.used === "local" && best.source.trim() === draft.trim())) {
+        best = { source: reply.canonical, used };
+        bestScore = s;
+        for (const [word, intent] of Object.entries(reply.words ?? {})) if (prep.learn) rememberWord(prep.memory, word, intent);
+      }
+      if (s === 0) break;
+      problems = [...extraProblems, ...problemsOf(best?.source ?? reply.canonical)];
     }
-    if (s === 0) break;
-    problems = problemsOf(reply.canonical);
+  };
+  if (mode === "auto") {
+    await runAttempts("local");
+    const needsOnlineFallback = sdevBrainNeedsOnlineFallback(best !== null, bestScore, extraProblems.length, best?.source ?? "", draft) ?? (!best || bestScore > 0 || extraProblems.length > 0 && best.source.trim() === draft.trim());
+    if (needsOnlineFallback && brainSettings().allowOnline && online()) {
+      await runAttempts("online");
+    }
+  } else {
+    await runAttempts(mode);
   }
   if (!best) return null;
   const before = draft.split("\n");
@@ -46017,6 +45771,7 @@ async function askBrain(prep, opts, draft, unresolved, extraProblems, notes, pre
   return best;
 }
 var lastUnderstood = /* @__PURE__ */ new Map();
+var lastUnderstoodBrain = /* @__PURE__ */ new Map();
 
 // cli/pipeline.ts
 function explainAgent(result) {
@@ -46084,13 +45839,35 @@ function localModules(entryPath, source) {
       const candidates2 = isAbsolute2(spec) ? [spec] : [resolve3(dir, spec), resolve3(process.cwd(), spec)];
       const hit = candidates2.find((c) => existsSync3(c));
       if (!hit) continue;
-      const text3 = stripSignature(readFileSync3(hit, "utf8"));
-      modules[spec] = text3;
-      walk(text3);
+      const text2 = stripSignature(readFileSync3(hit, "utf8"));
+      modules[spec] = text2;
+      walk(text2);
     }
   };
   walk(source);
   return modules;
+}
+function localLinkFiles(entryPath, source) {
+  const files = [];
+  const dir = entryPath ? dirname2(resolve3(entryPath)) : process.cwd();
+  const seen = /* @__PURE__ */ new Set();
+  const walk = (src) => {
+    const re2 = /^[ \t]*link\b[^\n"']*["']([^"'\n]+)["'](?:\s+as\s+[A-Za-z_][A-Za-z0-9_]*)?[ \t]*;?[ \t]*$/gm;
+    let m2;
+    while (m2 = re2.exec(src)) {
+      const spec = m2[1];
+      if (seen.has(spec)) continue;
+      seen.add(spec);
+      const candidates2 = isAbsolute2(spec) ? [spec] : [resolve3(dir, spec), resolve3(process.cwd(), spec)];
+      const hit = candidates2.find((c) => existsSync3(c));
+      if (!hit) continue;
+      const content = stripSignature(readFileSync3(hit, "utf8"));
+      files.push({ name: spec, content });
+      walk(content);
+    }
+  };
+  walk(source);
+  return files;
 }
 async function runPrepared(prepared, entryPath, opts = {}) {
   const say = (line) => process.stdout.write(line + "\n");
@@ -46116,7 +45893,10 @@ async function runPrepared(prepared, entryPath, opts = {}) {
     }
   }
   try {
-    const lexer = new Lexer(stripBoardBlocks(prepared.code), {
+    const linked = resolveLinks(prepared.code, localLinkFiles(entryPath, prepared.code), {
+      entryName: entryPath ?? "<entry>"
+    });
+    const lexer = new Lexer(stripBoardBlocks(linked), {
       sourceLanguage: opts.lang ?? "auto",
       dialect: prepared.dialect
     });
@@ -46226,9 +46006,9 @@ async function runEditor(opts) {
       const idx = top + r;
       parts.push("\x1B[K");
       if (idx < lines.length) {
-        const num2 = String(idx + 1).padStart(gw - 1, " ");
+        const num = String(idx + 1).padStart(gw - 1, " ");
         const slice = lines[idx].slice(left, left + textCols());
-        parts.push(C.gutter + num2 + " " + C.reset + highlight(slice));
+        parts.push(C.gutter + num + " " + C.reset + highlight(slice));
       } else {
         parts.push(C.gutter + "~" + C.reset);
       }
@@ -46939,24 +46719,24 @@ async function cmdRunBc(file) {
 async function cmdDisasm(file) {
   const source = extname(file) === ".sdevc" ? loadContainer(file).source : stripSignature(readSource(file));
   const prepared = prepare(source, { ...runOptions(), dialect: extname(file) === ".sdevc" ? "none" : void 0 });
-  let text3;
+  let text2;
   if (prepared.runtime === "v2") {
     const { compile: compile3, setSeedLoader: setSeedLoader2 } = await Promise.resolve().then(() => (init_compile_self(), compile_self_exports));
     const { seedWasmPath: seedWasmPath2 } = await Promise.resolve().then(() => (init_env(), env_exports));
     setSeedLoader2(async () => readFileSync6(seedWasmPath2()));
     const program = await compile3(prepared.code, localModules(file, prepared.code));
-    text3 = hexdump(program.bytecode);
+    text2 = hexdump(program.bytecode);
   } else {
     const { Compiler: Compiler2 } = await Promise.resolve().then(() => (init_compiler(), compiler_exports));
     const { disassemble: disassemble2 } = await Promise.resolve().then(() => (init_bytecode(), bytecode_exports));
     const ast = new Parser(new Lexer(prepared.code).tokenize()).parse();
-    text3 = disassemble2(new Compiler2().compile(ast).entry);
+    text2 = disassemble2(new Compiler2().compile(ast).entry);
   }
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync6(out, text3);
+    writeFileSync6(out, text2);
     console.log("wrote", out);
-  } else console.log(text3);
+  } else console.log(text2);
 }
 function hexdump(bytes) {
   const lines = [];
@@ -47114,12 +46894,12 @@ async function cmdDialect(sub, rest) {
     }
     case "docs": {
       const spec = requireLocalDialect(rest[0] ?? die("sdev dialect docs <slug>"));
-      const text3 = generateDialectDocs(spec);
+      const text2 = generateDialectDocs(spec);
       const out = value("-o", "--out");
       if (out) {
-        writeFileSync6(out, text3);
+        writeFileSync6(out, text2);
         console.log("wrote", out, `(template v${TEMPLATE_VERSION})`);
-      } else console.log(text3);
+      } else console.log(text2);
       return;
     }
     case "words": {
@@ -47554,12 +47334,12 @@ async function cmdCloud(sub, rest) {
   }
   die("cloud: use list | pull | push | rm | share | shared");
 }
-function emit2(text3) {
+function emit2(text2) {
   const out = value("-o", "--out");
   if (out) {
-    writeFileSync6(out, text3);
+    writeFileSync6(out, text2);
     console.log("wrote", out);
-  } else process.stdout.write(text3.endsWith("\n") ? text3 : text3 + "\n");
+  } else process.stdout.write(text2.endsWith("\n") ? text2 : text2 + "\n");
 }
 async function cmdEdit(file) {
   if (!file) die("sdev edit <file.sdev>");

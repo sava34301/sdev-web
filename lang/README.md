@@ -14,10 +14,16 @@ This directory contains the core source code for the **SDEV programming language
 ```
 lang/
 ├── compiler/              # Self-hosted compiler toolchain
-│   ├── lexer.sdev         # Tokenizer: splits SDEV source code into tokens
-│   ├── parser.sdev        # Recursive-descent AST parser
-│   ├── codegen.sdev       # Bytecode generator: AST -> bytecode & string pool
-│   └── driver.sdev        # Compiler driver: compiles source code to runnable bytecode
+│   ├── lexer.sdev         # Tokenizer: splits SDEV v2 source code into tokens
+│   ├── parser.sdev        # Recursive-descent AST parser (SDEV v2)
+│   ├── codegen.sdev       # Bytecode generator: AST -> bytecode & string pool (SDEV v2)
+│   ├── driver.sdev        # Compiler driver: compiles SDEV v2 source to runnable bytecode
+│   ├── v1_lexer.sdev      # SDEV v1 tokenizer (digits/hex/bin/oct, f-strings, ::/;;, words)
+│   ├── v1_parser.sdev     # SDEV v1 recursive-descent RPN parser
+│   ├── v1_codegen.sdev    # SDEV v1 -> Seed VM bytecode & string pool compiler
+│   ├── v1_driver.sdev     # SDEV v1 standalone compiler driver
+│   ├── v1_self.sdev       # Self-compiling SDEV v1 compiler authored 100% in SDEV v1 (Stage 2 == Stage 3)
+│   └── v1_ir.sdev         # SDEV v1 high-level stack IR compiler, disassembler & VM
 ├── bootstrap/             # Stage-0 bootstrap & VM bytecode emitter
 │   ├── seed_vm.sdev       # WebAssembly bytecode emitter & LEB128 encoding
 │   └── bootstrap.sdev     # Stage-0 bootstrap bytecode compiler
@@ -62,7 +68,7 @@ lang/
 ├── translator/            # Natural language keyword translation
 │   └── translator.sdev    # 26-language keyword translator & script detector
 ├── legacy/                # Compatibility frontends
-│   └── v1_frontend.sdev   # SDEV v1 mystical syntax to v2 canonical syntax translator
+│   └── v1_frontend.sdev   # Full SDEV v1-to-v2 syntax & expression transpiler (`v1_transpile_expr`, `v1_transpile_line`, `v1_to_v2_source`)
 ├── linter/                # Diagnostic linter
 │   └── linter.sdev        # Levenshtein distance, spelling corrections, linting rules
 ├── agent/                 # SDEV Understander & dialect agents
@@ -121,6 +127,7 @@ The entire language toolchain is tested using the SDEV host environment:
 | **Lexer** | `npm run test:self-lexer` | Self-hosted lexer tokenizer suite |
 | **Parser** | `npm run test:self-parser` | Self-hosted AST parser suite |
 | **Codegen** | `npm run test:self-codegen` | 52/52 bytecode emission test cases |
+| **v1 Compiler** | `npm run test:self-v1` | Self-hosted v1 lexer, parser, codegen, `v1_self` fixed point, IR, and frontend |
 | **Fixed-Point** | `npm run test:fixed-point` | Shim and bootstrap fixed-point parity |
 | **WASM Runtime** | `node scripts/test-wasm-runtime.mjs` | Seed VM bytecode execution (73/73 passed) |
 | **Native x86-64** | `wsl node scripts/test-native.mjs` | Bare-metal Linux ELF generation (81/81 passed) |

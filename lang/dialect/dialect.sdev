@@ -314,6 +314,22 @@ to dialect_strip_signature with src prefix_str
   return substr(src, nl + 1, length(src) - nl - 1)
 end
 
+to dialect_extract_signature_payload with src prefix_str
+  if dialect_has_signature(src, prefix_str) is 0
+    return ""
+  end
+  set nl to find(src, "\n")
+  set first to src
+  if nl >= 0
+    set first to substr(src, 0, nl)
+  end
+  return text_trim(substr(first, length(prefix_str), length(first) - length(prefix_str)))
+end
+
+to dialect_format_signature_line with prefix_str encoded_payload body
+  return prefix_str + encoded_payload + "\n" + body
+end
+
 to dialect_is_slug_char with ch
   set c to ord(ch, 0)
   if (c >= 97 and c <= 122) or (c >= 48 and c <= 57) or c is 45
