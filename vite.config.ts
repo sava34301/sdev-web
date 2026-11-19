@@ -26,6 +26,11 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // The MCP SDK treats Windows drive paths as npm packages. Resolve its
+      // generated entry import from the project root before it can do that.
+      ...(process.platform === "win32" && {
+        [path.resolve(__dirname, "src/lib/mcp/index.ts")]: "./src/lib/mcp/index.ts",
+      }),
     },
   },
   };
