@@ -3,10 +3,10 @@
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
-import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@3.0.4";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@3.3.0";
 
 // src/lib/mcp/tools/files.ts
-import { defineTool, ToolError } from "npm:@lovable.dev/mcp-js@3.0.4";
+import { defineTool, ToolError } from "npm:@lovable.dev/mcp-js@3.3.0";
 import { z } from "npm:zod@^3.25.76";
 
 // src/lib/mcp/supabase.ts
@@ -114,7 +114,7 @@ var saveFile = defineTool({
 });
 
 // src/lib/mcp/tools/community.ts
-import { defineTool as defineTool2, ToolError as ToolError2 } from "npm:@lovable.dev/mcp-js@3.0.4";
+import { defineTool as defineTool2, ToolError as ToolError2 } from "npm:@lovable.dev/mcp-js@3.3.0";
 import { z as z2 } from "npm:zod@^3.25.76";
 var listDialects = defineTool2({
   name: "list_dialects",
@@ -193,5 +193,5 @@ var mcp_default = defineMcp({
 });
 
 // lovable-mcp-supabase-entry.ts
-import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@3.0.4/stacks/supabase";
+import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@3.3.0/stacks/supabase";
 Deno.serve(createSupabaseHandler(mcp_default, { functionName: "mcp" }));

@@ -820,6 +820,16 @@ export default function IDEPage() {
     if (understood.notes.length) {
       setStatusMsg(`Agent understood ${understood.notes.length} line${understood.notes.length === 1 ? '' : 's'}`);
     }
+    if (reunderstand && !brainMissing) {
+      const via = understood.brainUsed === 'online'
+        ? 'via Website AI'
+        : understood.brainUsed === 'local'
+          ? 'via Built-in AI'
+          : canonicalSrc.trim() !== writtenSrc.trim()
+            ? 'by understander rules'
+            : '(already canonical sdev)';
+      toast.success(`Re-understood ${via}`);
+    }
     // Enabled extensions are wired into the prelude: their operators are
     // desugared to calls and their function bodies run ahead of the program.
     const rawSrc = applyExtensions(canonicalSrc);

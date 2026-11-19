@@ -232,6 +232,7 @@ export async function understandAsync(source: string, opts: UnderstandOptions = 
   const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
   if (opts.fresh) {
     if (prep.memory.results?.[key]) delete prep.memory.results[key];
+    saveMemory(prep.memory);
   } else {
     const cached = recallResult(prep.memory, key);
     if (cached !== null) {
