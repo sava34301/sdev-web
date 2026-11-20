@@ -1,19 +1,17 @@
 # SDEV Desktop IDE (Electron shell)
 
 A real, out-of-browser SDEV IDE. It bundles the same UI as the web IDE
-(`/ide`) and adds a native-assembly compile path:
+(`/ide`), including Personal SDEV, the Understanding Agent (`@webllm` / local / cloud), Time-Travel Debugger, Hardware Simulator, and native-executable compile paths:
 
-- **Web IDE** → runs SDEV inside WebAssembly (browser's own assembly).
-- **Desktop IDE** → same UI, plus **"Build Native"** which pipes your
-  program through `lang/native/codegen-x64.mjs` + `as` + `ld` and produces
-  a real x86-64 Linux ELF you can execute on your machine.
+- **Web IDE** -> runs SDEV inside WebAssembly (and can download a WASI 0.2 component or build native via cloud/local).
+- **Desktop IDE** -> same UI, plus **"Build Native"** which emits either a **Linux x86-64 static ELF** (`as` + `ld`) or a **standalone Windows PE/COFF `.exe`** (`pe.mjs` — zero C compiler needed on Windows).
+
+See also: [Desktop App, VS Code & MCP](../docs/05-ide-and-tooling/desktop-vscode-and-mcp.md) and [Zero-Host Native & Windows PE](../docs/06-compiler-and-internals/zero-host-native-and-pe.md).
 
 ## Requirements on the host
 - Node.js 20+
-- `binutils` on `PATH` (`as`, `ld`) for the native backend
-  - Linux: `sudo apt install binutils` / `pacman -S binutils`
-  - macOS: `xcode-select --install` (uses `as`/`ld64`, Linux ELF target
-    needs a cross-binutils; see `lang/native/README.md`)
+- On Linux/macOS: `binutils` on `PATH` (`as`, `ld`) for ELF native builds (`SDEV_RUNTIME_S` overrides runtime assembly path)
+- On Windows: no external assembler needed when targeting PE/COFF `.exe` via `pe.mjs` / `pe_x64.sdev`
 
 ## Dev loop
 

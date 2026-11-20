@@ -50,11 +50,13 @@ set_review_hook(conjure(path, body) :: yield yep ;;)
 
 evolve_forever(
     model, sources,
-    "https://ai.gateway.lovable.dev/v1/chat",
-    "$LOVABLE_API_KEY",
+    "https://api.openai.com/v1/chat/completions",
+    "$SDEV_AI_API_KEY",
     24
 )
 ```
+
+> Server-side gateway routing lives in `supabase/functions/_shared/ai.ts`, using your configured OpenAI-compatible provider (`SDEV_AI_API_KEY` / `SDEV_AI_BASE_URL` / `SDEV_AI_MODEL`).
 
 ## Routing rules
 
@@ -62,7 +64,7 @@ evolve_forever(
 
 - `parse*` → `lang/compiler/parser.sdev`
 - `lex*` → `lang/compiler/lexer.sdev`
-- `doc*` → `public/SDEV_DOCUMENTATION.md`
+- `doc*` → `docs/02-language/v1-reference.md`
 - everything else → `lang/stdlib/ml/nn.sdev`
 
 Extend `SDEV_SOURCE_FILES` and `pick_target` to widen or narrow

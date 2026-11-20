@@ -33,9 +33,10 @@ modules expect:
 Every command that touches source runs the same steps as the IDE:
 
 ```
-file -> strip signature -> canonicalize through the active dialect
-     -> apply enabled extensions -> resolve `use` modules and libraries
-     -> v1 interpreter | v2 self-hosted compiler + seed VM
+file -> strip signature -> preprocess !#ai (if present)
+     -> canonicalize through active dialect / extensions / signatures
+     -> resolve `use` modules & @user/lib libraries
+     -> v1 interpreter | v2 self-hosted compiler + seed VM | native ELF / Windows PE .exe | WASI 0.2
 ```
 
 Runtime selection: `--runtime`, then a `#!sdev v2` shebang, then the file's
@@ -43,14 +44,17 @@ signature, then the stored default (`sdev runtime v2`).
 
 ## Commands
 
-Running: `run`, `repl`, `watch`, `check`, `ast`, `fmt`
-Building: `compile`, `run-bc`, `disasm`, `native`
-Files: `info`, `sign show|stamp|verify|strip`
-Dialects: `dialect list|new|set|use|show|validate|docs|words|canon|surface|xlate|prelude|extend|install|publish|export|import|remove`
-Extensions: `ext list|enable|disable|add|sync|prelude`
-Libraries: `lib list|add|remove|pins|export|import`
-Cloud: `auth login|signup|code|token|reset|refresh|status|whoami|logout`, `cloud list|pull|push`
-Settings: `runtime`, `languages`, `translate`, `home`, `version`
+- Running: `run`, `repl`, `watch`, `check`, `ast`, `fmt`, `understand`
+- Building & Targets: `compile`, `run-bc`, `disasm`, `native` (Linux ELF / Windows PE `.exe`), WASI 0.2 component export
+- Editing: `edit` / `ide` (terminal code editor)
+- Files: `info`, `sign show|stamp|verify|strip`
+- Personal SDEV (Dialects): `dialect list|new|set|use|show|validate|docs|words|canon|surface|xlate|prelude|extend|install|publish|export|import|remove`
+- Extensions & Signatures: `ext list|enable|disable|add|sync|prelude`
+- Libraries: `lib list|add|remove|pins|export|import`
+- Cloud: `auth login|signup|code|token|reset|refresh|status|whoami|logout`, `cloud list|pull|push`
+- Settings & Meta: `runtime`, `languages`, `translate`, `home`, `version`, `update`
+
+See [CLI & Terminal Editor](../docs/05-ide-and-tooling/cli-and-terminal-editor.md), [Personal SDEV](../docs/02-language/personal-dialects-and-libraries.md), and [Environment Variables](../docs/08-operations/environment-variables.md).
 
 ## Signing in
 

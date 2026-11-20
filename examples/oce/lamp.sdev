@@ -1,5 +1,5 @@
 #!sdev v2
-# Learn a lamp: brightness grows only while the switch is on. Guide: SDEV_OCE_DEVELOPER_GUIDE.md
+# Learn a lamp: brightness grows only while the switch is on. Guide: docs/04-ai-and-causal-engine/oce-developer-guide.md
 use "lang/stdlib/v2/oce.sdev"
 
 set m to oce_create()

@@ -144,3 +144,13 @@ speak(lm_complete(model, v, "hello", 40, 0.8, 5))  // prompt, tokens, temp, k
 Autograd gained the pieces this needs: `d_softmax_ce(logits, targets)` with
 its `bw_sce` backward rule, `zero_grads`, `clip_grads(params, max_norm)`,
 and `adam_new` / `adam_step`.
+
+## Batched Forward Passes & Binary Checkpoints (M15)
+
+Milestone M15 extends the ML stack with batched execution, accelerated matmul dispatch, and compact binary checkpoints:
+
+- `linear_forward_batch(layer, batch_x)` — batched dense layer forward pass (`nn.sdev`).
+- `sequential_forward_batch(model, batch_x)` — batched sequential model pass (`nn.sdev`).
+- `gpt_forward_batch(model, batch_token_seqs)` — batched decoder transformer inference (`transformer.sdev`).
+- `best_matmul(dev, blas, a, b)` — automatic dispatch cascade: CUDA (`cublasDgemm`) → BLAS (`cblas_dgemm`) → pure-SDEV CPU (`cuda.sdev`).
+- `save_checkpoint_bin(path, model, step, loss)` / `load_checkpoint_bin(path, model)` — compact `SDEVML01` binary checkpoint format (`train.sdev`).

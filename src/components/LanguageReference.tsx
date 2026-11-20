@@ -25,7 +25,7 @@ to greet with who
 end
 greet with "world"
 \`\`\`
-Full guide: /SDEV_V2_DOCUMENTATION.md`,
+Full guide: /documentation/02-language/v2-prism-guide.md (or /docs/v2)`,
   },
   {
     title: 'Variables',

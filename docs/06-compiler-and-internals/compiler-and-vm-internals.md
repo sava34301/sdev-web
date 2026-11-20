@@ -1,37 +1,36 @@
 # SDEV Internals — the self-hosted compiler
 
 This is a contributor document. If you just want to write SDEV, read
-`SDEV_V2_DOCUMENTATION.md` instead.
+[v2 "Prism" Guide](../02-language/v2-prism-guide.md) instead.
 
-## Two backends, one language
+## Multi-Backend Execution Architecture
 
-SDEV ships **two** code-generators from the same parser:
+SDEV runs across **four** coordinated execution paths from one language core:
 
-| Target        | Backend                     | Runs where                | Emits              |
-| ------------- | --------------------------- | ------------------------- | ------------------ |
-| **Web IDE**   | `lang/bootstrap/` (WAT seed VM) | Any browser              | WebAssembly bytecode |
-| **Desktop**   | `lang/native/codegen-x64.mjs` | Linux/macOS CLI          | x86-64 GAS assembly → ELF |
+| Target | Backend | Runs where | Emits |
+| --- | --- | --- | --- |
+| **Web IDE** | `src/lang-bridge/seed/seed.wat` (WAT Seed VM) | Any browser | WebAssembly bytecode |
+| **Zero-Host VM** | `bin/sdev-vm` (`src/lang-bridge/native/sdev-vm.c`) | Linux / native host (no Node/Wasm) | Native VM + embedded `driver-embedded.h` |
+| **Native ELF** | `lang/native/codegen_x64.sdev` & `codegen-x64.mjs` | Linux / macOS CLI & Electron | x86-64 GAS assembly → static ELF |
+| **Windows PE** | `src/lang-bridge/native/pe.mjs` & `lang/native/pe_x64.sdev` | Windows console | Standalone 64-bit PE32+ `.exe` (no libc/MSVC) |
 
 The browser can only execute JS and WASM, so the web IDE stays on
 WebAssembly — the browser's *native* assembly. For an actual on-disk
 executable you can `objdump -d` and `strace`, use the native backend
-(`node scripts/sdev-native.mjs prog.sdev -o prog`). Both backends share
+(`node scripts/sdev-native.mjs prog.sdev -o prog` or `./bin/sdev-vm native prog.sdev -o prog`). Both backends share
 the same lexer, parser, and language semantics.
 
 
 ## Where we are today
 
-**Milestone 1 (launch) — shipped:**
-- `lang/runtime/v2.js` — full v2 language in pure JavaScript (zero TypeScript
-  in the language execution path).
+**Milestone 1 (launch) — shipped (superseded by full self-hosting):**
+- Originally shipped as `lang/runtime/v2.js`; now 100% replaced by the pure-SDEV self-hosted compiler (`lang/compiler/*.sdev`) + Seed VM (`src/lang-bridge/seed/seed.wat`).
 
 **Milestone 2 (WASM stage-0) — shipped:**
-- `lang/bootstrap/seed.wat` — hand-written WebAssembly Text stack VM,
+- `src/lang-bridge/seed/seed.wat` — hand-written WebAssembly Text stack VM,
   compiled to `public/wasm/sdev-seed.wasm`.
-- `lang/bootstrap/compile.mjs` — bootstrap compiler: SDEV v2 source → VM
-  bytecode.
-- `src/lang-bridge/wasm-runtime.ts` — browser loader with automatic JS
-  fallback for out-of-subset features.
+- `src/lang-bridge/oracle/compile.mjs` — reference/oracle compiler (no longer on the runtime path; used only as a pre-flight diagnostic oracle and fixed-point check).
+- `src/lang-bridge/wasm-runtime.ts` — browser loader with transitive `withStdlib()` module loading and pre-flight compiler diagnostics.
 
 **Milestone 3 (call frames + recursion) — shipped:**
 - Seed VM expanded with five new opcodes: `CALL`, `RET`, `ENTER`,
@@ -1430,7 +1429,7 @@ In alignment with the self-hosting propositions:
 - **Pure SDEV Formatter (`lang/formatter/formatter.sdev`)**:
   Formally formats SDEV code with configurable indentation (2 or 4 spaces), handling block openers (`::`, `to`, `if`, `while`, `for each`) and closers (`;;`, `end`) with full idempotency and string preservation.
 - **Pure SDEV Master Test Runner (`scripts/test-all.sdev`)**:
-  Replaces third-party test runners by driving all 18 language core test suites sequentially via host shell dispatch. Executes under `bin/sdevhost.mjs scripts/test-all.sdev` (`npm test`) with 100% pass rate in ~12 seconds.
+  Replaces third-party test runners by driving all **22** core test suites sequentially via host shell dispatch (`npm test` → `node bin/sdevhost.mjs scripts/test-all.sdev`).
 - **Parity & Multi-Language Parity Suites (`scripts/test-parity.sdev`, `scripts/test-multi-language-features.sdev`)**:
   Enforces 209 language features across JS builtins, seed VM, and Python interpreter with zero gaps.
 
@@ -1444,10 +1443,35 @@ In alignment with the self-hosting propositions:
 - `TupleLiteral` & `SetLiteral`: Sequence bytecode emission for immutable tuples and distinct sets.
 - `ComprehensionExpr`: List, set, and dict comprehensions compiled directly into loops with filtering conditions and accumulator initialization.
 - `WithStatement`: Context manager entry/exit protocol binding aliases and executing body blocks.
+- **Class Inheritance & `super` MRO:** `src/lang/interpreter.ts` passes owning classes into `makeFunction` and binds `super` via MRO after the owning class; `src/lang/compiler.ts` (`compileClass`) propagates inherited methods, binds `super` onto `self`, strips `self` from closure params, and falls back to inherited `init` constructors.
 
-### 8.3 Zero-Cost Native Windows PE/COFF (.exe) Generator (`src/lang-bridge/native/pe.mjs`)
+### 8.3 Zero-Cost Native Windows PE/COFF (.exe) Generator (`src/lang-bridge/native/pe.mjs` & `lang/native/pe_x64.sdev`)
 Produces native 64-bit Windows console executables (PE32+) directly from raw machine code without requiring external C toolchains (MSVC, GCC, Clang) or paid annual EV/OV code-signing certificates:
 - **Binary Layout**: DOS stub, PE header, COFF header (Machine AMD64 `0x8664`), Optional Header (PE32+ `0x020B`, Subsystem Windows CUI `3`).
 - **Imports**: Direct construction of `.rdata` section with Import Directory Table, Import Lookup Table (ILT), and Import Address Table (IAT) resolving `KERNEL32.dll` (`GetStdHandle`, `WriteFile`, `ExitProcess`).
 - **Machine Code (.text)**: Emits Win64 ABI-compliant x86-64 instructions with 16-byte stack alignment, shadow space reservation (32 bytes), and console I/O handle management.
 - **CLI Integration**: `scripts/sdev-native.mjs` targets Windows PE by default on Windows (`node scripts/sdev-native.mjs <file.sdev> -o <file.exe>`) and static ELF on Linux.
+
+---
+
+## 9. Self-Hosted v1 Compiler, Zero-Host Toolchain & Pre-Flight Diagnostics (November 2026)
+
+### 9.1 6-Layer Self-Hosted v1 Compiler (`lang/compiler/v1_*.sdev` & `lang/legacy/v1_frontend.sdev`)
+- `v1_lexer.sdev`: Pure-SDEV v1 tokenizer supporting decimal/hex/binary/octal numbers, floats, f-strings, `::` / `;;`, and v1 keywords.
+- `v1_parser.sdev`: Pure-SDEV recursive-descent parser emitting canonical RPN nodes.
+- `v1_codegen.sdev` & `v1_driver.sdev`: Compiles SDEV v1 source directly to Seed VM bytecode + string pool (`< 28 KB`).
+- `v1_self.sdev`: Self-compiling SDEV v1 compiler authored **100% in SDEV v1 syntax** (`forge`, `conjure`, `ponder`, `::`/`;;`) achieving byte-identical **3-stage fixed point** (`Stage 1 == Stage 2 == Stage 3`), verified by `npm run test:self-v1`.
+- `v1_ir.sdev`: High-level stack IR compiler, disassembler, and VM (`PUSH_NUM`, `MAKE_FUNC`, `MEMBER_GET`, etc.).
+- `v1_frontend.sdev`: Full SDEV v1-to-v2 syntax and expression transpiler (`v1_to_v2_source`).
+
+### 9.2 Zero-Host Native VM & Self-Compiled x86-64 Driver
+- **`bin/sdev-vm`** (`src/lang-bridge/native/sdev-vm.c` + `driver-embedded.h`): Standalone native C implementation of the Seed VM with embedded self-hosted compiler and `sdev:` host protocol — executes `.sdev`, `.sdevc`, and native builds with zero Node.js or WebAssembly.
+- **`bin/sdev-driver`** + **`lang/native/codegen_x64.sdev`** + **`lang/native/build.sdev`**: Self-compiled static Linux x86-64 compiler achieving byte-identical native fixed-point self-compilation (`20,933` bytes bytecode / `1,123` bytes string pool). See [Zero-Host Architecture](zero-host-native-and-pe.md).
+
+### 9.3 v2 Pre-Flight Compiler Diagnostics & Website Module Loading
+- Both `bin/sdevhost.mjs` and browser `runWasm` check every v2 program with `src/lang-bridge/oracle/compile.mjs` before executing on the Seed VM, catching unknown functions, wrong argument counts, unknown `kind`, `break` outside loops, and `list + [...]` without `use "lang/stdlib/v2/list.sdev"`.
+- List concatenation with `+` (`a + b` when either side is a list literal) lowers to `list_concat_two` identically across the self-hosted, reference, and native compilers (`scripts/test-v2-diagnostics.mjs`).
+- `withStdlib()` in `src/lang-bridge/wasm-runtime.ts` lazily resolves transitive `use "lang/stdlib/..."` imports in the browser IDE.
+
+### 9.4 Pure-SDEV Subsystems & Website Toolkit (`lang/web/`, `lang/agent/`, `lang/stdlib/v2/`)
+All core language tools — HTML5/CSS3/client-JS web toolkit (`lang/web/*` powering `lang/web/sdev-website.sdev`), OCE causal engine (`oce.sdev`), dialects (`dialect.sdev`), API registry (`registry.sdev`), linter (`linter.sdev`), notebooks (`notebook.sdev`), WASI (`wasi.sdev`), 26-language translator (`translator.sdev`), and understanding agent (`lang/agent/*.sdev`) — execute directly on the self-hosted compiler and Seed VM, keeping `src/lang/**` as thin TypeScript bridges (`createSdevModuleRunner`).

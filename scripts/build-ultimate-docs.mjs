@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds public/SDEV_ULTIMATE_DOCUMENTATION.md — the single, complete sdev
+// Builds docs/01-overview/ultimate-reference.md — the single, complete sdev
 // reference. It stitches together every hand-written guide in the repository
 // and appends machine-generated appendices (builtin index, opcode table,
 // keyword table, stdlib index, parity matrix, repo map, toolchain index) so
@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = process.cwd();
-const OUT = path.join(ROOT, 'public/SDEV_ULTIMATE_DOCUMENTATION.md');
+const OUT = path.join(ROOT, 'docs/01-overview/ultimate-reference.md');
 
 const read = (p) => {
   try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch { return ''; }
@@ -39,7 +39,22 @@ const verbatim = (s) => s.replace(/\r\n/g, '\n').trim();
 // Generated appendix: builtin index (v1 TypeScript runtime)
 // ---------------------------------------------------------------------------
 const BUILTIN_MODULES = [
-  ['builtins.ts', 'Core standard library — I/O, types, math, collections, strings, regex, time'],
+  ['builtins/io.ts', 'I/O — output (`speak`/`say`, `whisper`, `shout`), input, formatting'],
+  ['builtins/types.ts', 'Types — `essence`, `morph`, `int`, `num`, `str`, casts'],
+  ['builtins/math.ts', 'Math — arithmetic, trigonometry, constants, stats'],
+  ['builtins/list.ts', 'Collections & lists — list builders, transforms, sorting'],
+  ['builtins/dict.ts', 'Tomes / dictionaries — keys, values, merging, lookup'],
+  ['builtins/string.ts', 'Strings — splitting, joining, searching, formatting'],
+  ['builtins/text.ts', 'Text processing — padding, wrapping, diffing, cases'],
+  ['builtins/regex.ts', 'Regular expressions (with ReDoS guard)'],
+  ['builtins/time.ts', 'Date, wall-clock time, timers, formatting'],
+  ['builtins/json.ts', 'JSON encoding and decoding'],
+  ['builtins/functional.ts', 'Higher-order functional helpers (`map`, `filter`, `reduce`, `compose`)'],
+  ['builtins/buffer.ts', 'Binary byte buffers and typed encoding'],
+  ['builtins/host.ts', 'Host bridge functions (`read_file`, `write_file`, `http_get`)'],
+  ['builtins/sql.ts', 'Embedded relational/SQL query builtins'],
+  ['builtins/oce.ts', 'Ontological Causal Engine (`bits`, `mem`, `ring`, `oce` dual-runtime parity)'],
+  ['builtins/misc.ts', 'Utilities, randomness, debugging helpers'],
   ['advanced.ts', 'Pro layer — file I/O, hashing, base64, JSON, async, OS glue, buffers, FFI bridge'],
   ['matrix.ts', 'Matrix and linear algebra'],
   ['graphics.ts', 'Canvas 2D drawing and turtle graphics'],
@@ -444,6 +459,24 @@ function parseBuiltins(src, file) {
     if (m) marks.push({ name: m[1], line: i });
   });
   const out = [];
+  if (file === 'builtins/oce.ts') {
+    lines.forEach((line, i) => {
+      for (const m of line.matchAll(/\['([A-Za-z_][A-Za-z_0-9]*)',\s*[A-Za-z_0-9]+,\s*(\d+)\]/g)) {
+        const [, name, arityStr] = m;
+        const arity = Number(arityStr);
+        const sig = `${name}(${ARGNAMES.slice(0, arity).join(', ')})`;
+        out.push({
+          name,
+          sig,
+          desc: BUILTIN_DOCS[`${file}:${name}`] || BUILTIN_DOCS[name] || 'Ontological Causal Engine / bits / memory primitive.',
+          errs: [],
+          line: i + 1,
+          file,
+          section: 'OCE / bits / mem / ring',
+        });
+      }
+    });
+  }
   let section = '';
   for (let k = 0; k < marks.length; k++) {
     const { name, line } = marks[k];
@@ -605,7 +638,7 @@ const OPCODE_DOCS = {
 };
 
 function opcodeTable() {
-  const src = read('lang/bootstrap/seed.wat');
+  const src = read('src/lang-bridge/seed/seed.wat');
   const lines = src.split('\n');
   const rows = [];
   const addRow = (code, name, meaning) => {
@@ -636,7 +669,7 @@ function opcodeTable() {
 }
 
 function memoryMap() {
-  const src = read('lang/bootstrap/seed.wat');
+  const src = read('src/lang-bridge/seed/seed.wat');
   const rows = [...src.matchAll(/^;;\s+(0x[0-9A-Fa-f]+\.\.0x[0-9A-Fa-f]+)\s+(.*)$/gm)]
     .map((m) => `| \`${m[1]}\` | ${m[2].trim()} |`);
   return rows.length ? `\n| Range | Region |\n| --- | --- |\n${rows.join('\n')}\n` : '';
@@ -744,7 +777,7 @@ function sdevIndex(dirs) {
 // Generated appendix: parity matrix (from the registry + agent report)
 // ---------------------------------------------------------------------------
 function parityAppendix() {
-  const doc = read('public/SDEV_PARITY_DOCUMENTATION.md');
+  const doc = read('docs/06-compiler-and-internals/track-parity-matrix.md');
   const m = /<!-- PARITY:BEGIN -->([\s\S]*?)<!-- PARITY:END -->/.exec(doc);
   let out = m ? m[1].trim() : '_parity matrix unavailable_';
   try {
@@ -759,16 +792,27 @@ function parityAppendix() {
 // ---------------------------------------------------------------------------
 function repoMap() {
   const groups = [
-    ['lang/bootstrap', 'JS bootstrap compiler + hand-written WebAssembly seed VM'],
-    ['lang/compiler', 'The self-hosted compiler, written in sdev'],
-    ['lang/native', 'x86-64 GAS backend, assembly runtime, linker driver'],
-    ['lang/runtime', 'v2 reference runtime (JS, legacy oracle)'],
-    ['lang/stdlib', 'Standard library written in sdev (ML, FFI, WebGPU, CUDA)'],
+    ['lang/bootstrap', 'Stage-0 bootstrap & Seed VM encoder'],
+    ['lang/compiler', 'Self-hosted v2 & v1 compilers written in sdev'],
+    ['lang/native', 'x86-64 GAS backend, ELF linker, zero-host build driver & Windows PE emitter'],
+    ['lang/runtime', 'Pure-SDEV bytecode VM, virtual OS kernel, notebooks & WASI 0.2 helpers'],
+    ['lang/stdlib', 'Standard library written in sdev (v2 core, OCE, ML/LLM, FFI, WebGPU, CUDA)'],
+    ['lang/web', 'Self-hosted website builder, HTML/CSS/theming/icons & components'],
+    ['lang/dialect', 'Personal SDEV dialect rules and canonicalizers'],
+    ['lang/formatter', 'Pure-SDEV canonical code formatter'],
+    ['lang/linter', 'Pure-SDEV static linter & spelling diagnostics'],
+    ['lang/registry', 'Pure-SDEV API registry index'],
+    ['lang/legacy', 'v1-to-v2 compatibility frontend transpiler'],
+    ['lang/translator', '26-language natural keyword translator'],
+    ['lang/paradigms', 'Multi-paradigm extensions (functional ADTs, systems, data, hardware)'],
+    ['lang/agent', 'Code understander, !#ai dialect & local brain agents'],
     ['lang/parity', 'Feature registry, parity agent, generated report'],
-    ['src/lang', 'v1 TypeScript reference implementation'],
-    ['src/lang-bridge', 'Runtime selection + WASM bridge for the browser IDE'],
-    ['electron', 'Desktop IDE shell with native build/run IPC'],
-    ['scripts', 'Build drivers and the full test-gate suite'],
+    ['src/lang', 'TypeScript interpreter, modular builtins, hardware transpiler/simulator, registry, linter, WASI'],
+    ['src/lang-bridge', 'Seed VM WAT/WASM, driver artifact, oracle compiler, zero-host C VM & Windows PE emitter'],
+    ['cli', 'Unified CLI (`sdev`), REPL, `sdev edit` terminal editor & local store'],
+    ['electron', 'Desktop IDE shell with native ELF & Windows PE build/run IPC'],
+    ['extension', 'Official VS Code extension (`SDEV-language`)'],
+    ['scripts', 'Build drivers, doc generators, release packager & test gates'],
   ];
   let out = '';
   for (const [dir, desc] of groups) {
@@ -781,11 +825,12 @@ function repoMap() {
 }
 
 function toolchainIndex() {
-  const files = walk('scripts').filter((f) => /\.(mjs|ts|py)$/.test(f)).sort();
+  const files = walk('scripts').filter((f) => /\.(mjs|ts|py|sdev)$/.test(f)).sort();
   const rows = files.map((f) => {
     const src = read(f);
     const c = (/^(?:#!.*\n)?(?:\/\/|#)\s*(.+)$/m.exec(src) || [, ''])[1];
-    return `| \`node ${f}\` | ${c.replace(/\|/g, '\\|').slice(0, 120)} |`;
+    const cmd = f.endsWith('.sdev') ? `node bin/sdevhost.mjs ${f}` : f.endsWith('.ts') ? `node scripts/run-ts.mjs ${f}` : `node ${f}`;
+    return `| \`${cmd}\` | ${c.replace(/\|/g, '\\|').slice(0, 120)} |`;
   });
   return `\n| Command | Purpose |\n| --- | --- |\n${rows.join('\n')}\n`;
 }
@@ -794,7 +839,7 @@ function toolchainIndex() {
 // Hand-written spine
 // ---------------------------------------------------------------------------
 const bi = builtinIndex();
-const stdlib = sdevIndex(['lang/stdlib', 'lang/compiler', 'lang/parity']);
+const stdlib = sdevIndex(['lang']);
 const now = new Date().toISOString().slice(0, 10);
 
 const PARTS = [];
@@ -818,7 +863,7 @@ This book has three layers.
 
 1. **Part I — Orientation.** What sdev is, why it exists, how the pieces fit
    together. Read this once, top to bottom.
-2. **Parts II–VIII — The guides.** Every hand-written sdev guide, inlined
+2. **Parts II–VIII — The guides.** Every structured guide from \`docs/\`, inlined
    verbatim and re-levelled so the table of contents stays flat. Nothing was
    summarised or dropped.
 3. **Part IX — Generated reference.** Tables extracted directly from the
@@ -834,21 +879,23 @@ the commit that produced this file.
 
 ### What sdev is
 
-sdev is a programming language with two surface dialects and three execution
-tracks.
+sdev is a multi-paradigm, multilingual, self-hosting programming language uniting
+four authoring surfaces and multiple native/managed execution targets.
 
-| | Dialect | Idea |
+| | Surface Form | Idea |
 | --- | --- | --- |
-| **v1** | \`forge x be 10\` / \`speak(x)\` | The original expressive dialect: unique keywords, classes, closures, canvas, web DSL, GIS. |
-| **v2 "Prism"** | \`set x to 10\` / \`say x\` | The beginner-first dialect: English words, no sigils, same power behind opt-in blocks. |
+| **v1** | \`forge x be 10\` / \`speak(x)\` | Classic expressive syntax: unique keywords, classes, closures, canvas, web DSL, GIS, OCE parity. |
+| **v2 "Prism"** | \`set x to 10\` / \`say x\` | Self-hosted indentation dialect: English words, classes (\`make\`/\`kind\`/\`has\`), \`+\` with \`list_concat_two\`. |
+| **sdev:ai (\`!#ai\`)** | Intent-driven lines | Translated into canonical sdev by \`lang/agent/ai-dialect.sdev\` inside the Understanding Agent. |
+| **Personal SDEV** | \`!#dialect\`, \`!#ext\`, \`!#sig\`, \`@user/lib\` | User-authored dialects, syntax/operator signatures, extensions, and shareable libraries. |
 
 | Track | Where it runs | How it executes |
 | --- | --- | --- |
-| **v1 TypeScript interpreter** | Browser IDE, Node CLI | Lexer → parser → tree-walking interpreter, with a bytecode compiler + stack VM alongside. |
-| **v2 self-hosted compiler** | Browser IDE (WASM) | sdev source compiled by a compiler *written in sdev*, executing on a hand-written WebAssembly seed VM. |
-| **native x86-64 backend** | Linux / macOS CLI, Electron desktop IDE | The same AST emitted as GAS assembly, assembled with \`as\`, linked with \`ld\` into a static ELF with no libc. |
+| **v1 TypeScript & Python interpreters** | Browser IDE, CLI, Python | Lexer -> parser -> tree-walking interpreter + bytecode compiler/VM; shared OCE/pyparity builtins. |
+| **v2 self-hosted compiler** | Browser IDE (WASM), CLI, \`bin/sdev-vm\` | sdev source compiled by a compiler *written in sdev*, executing on the WebAssembly Seed VM (\`src/lang-bridge/seed/seed.wat\`) or zero-host C VM. |
+| **Native x86-64 & WASI 0.2** | Linux, Windows, Desktop IDE | GAS x86-64 static Linux ELF (\`as\`/\`ld\`), standalone Windows PE/COFF \`.exe\` (\`pe.mjs\` / \`pe_x64.sdev\`), or WASI 0.2 components. |
 
-All three tracks are measured against one canonical feature registry. See
+All core tracks are measured against one canonical feature registry. See
 *Part IX — Parity matrix*.
 
 ### Why it exists
@@ -863,37 +910,41 @@ Three reasons, in order of weight.
    behind opt-in blocks — \`systems\` for pointers and FFI, \`match\` for
    algebraic pattern matching, query syntax for data, \`board\` for hardware —
    so a beginner never sees them and an expert never hits a wall.
-3. **Own the whole stack.** The compiler is written in sdev. The VM is
-   hand-written WebAssembly. The native backend emits raw assembly. There is
-   no hidden layer someone else controls.
+3. **Own the whole stack.** The compiler, standard library, website toolkit,
+   causal engine (OCE), linter, formatter, and code understander are written
+   in sdev, executing on the Seed VM, zero-host native VM, ELF/PE native code,
+   or WASI 0.2 components.
 
 ### The self-hosting fixed point
 
 The property the whole project is organised around:
 
 \`\`\`text
-  compiler.sdev  --compiled by-->  JS bootstrap  -->  bytecode A
+  compiler.sdev  --compiled by-->  oracle        -->  bytecode A
   compiler.sdev  --compiled by-->  bytecode A    -->  bytecode B
   assert A == B          (byte-identical, not merely equivalent)
 \`\`\`
 
-When A equals B byte for byte, the JavaScript bootstrap is no longer part of
-the language — it is only a build-time oracle. sdev compiles sdev. The gate
-that enforces this lives in \`scripts/test-self-toolchain.mjs\` and runs in CI
-on every change.
+When A equals B byte for byte, the bootstrap oracle is no longer part of
+the language — sdev compiles sdev. Self-hosted v1 (\`lang/compiler/v1_self.sdev\`)
+likewise passes a Stage 2 == Stage 3 fixed point alongside the 22-suite
+\`scripts/test-all.sdev\` harness.
 
 ### The layer cake
 
 \`\`\`text
    your program (.sdev)
         │
-        ├── v1 path ──► lexer.ts → parser.ts → interpreter.ts        (tree walk)
-        │                                    └► compiler.ts → vm.ts  (bytecode)
+        ├── Personal / !#ai / Understander ──► dialect / ai-dialect.sdev / understander.sdev
+        │
+        ├── v1 path ──► lexer.ts → parser.ts → interpreter.ts / sdev-interpreter.py
         │
         └── v2 path ──► lexer.sdev → parser.sdev → codegen.sdev      (all sdev)
                                      │
-                                     ├──► seed VM (WebAssembly)      browser
-                                     └──► codegen-x64.mjs → as → ld  native
+                                     ├──► Seed VM (WASM) / WASI 0.2  browser & portable
+                                     ├──► bin/sdev-vm (zero-host C)  terminal / embedded
+                                     ├──► codegen_x64 + as + ld      static Linux ELF
+                                     └──► pe.mjs / pe_x64.sdev       Windows PE .exe
 \`\`\`
 
 ### Choosing a runtime
@@ -912,8 +963,7 @@ set x to 10
 say x
 \`\`\`
 
-Globally, in the IDE: **Settings → Runtime**. Without a shebang the default is
-**v1**.
+Globally, in the IDE via **Settings → Runtime**, or in the CLI via \`sdev runtime v2\`. Without a shebang, the browser IDE defaults to v1/auto-detect while the CLI respects stored settings.
 
 ### Sixty-second tour
 
@@ -958,40 +1008,77 @@ iterate n through nums ::
 // Inlined guides
 // ---------------------------------------------------------------------------
 const GUIDES = [
-  ['Part II — The language', [
-    ['public/SDEV_V2_DOCUMENTATION.md', 'sdev v2 "Prism" — language guide'],
-    ['public/SDEV_MULTI_PARADIGM_DOCUMENTATION.md', 'Multi-Language Parity & Modern Paradigms (SQL, Kotlin, Rust, C++)'],
-    ['public/SDEV_DOCUMENTATION.md', 'Full v1 language reference'],
+  ['Part II — Language & Personal SDEV', [
+    ['docs/02-language/v2-prism-guide.md', 'sdev v2 "Prism" — language guide'],
+    ['docs/02-language/ai-syntax-reference.md', 'sdev:ai — AI syntax reference'],
+    ['docs/02-language/personal-dialects-and-libraries.md', 'Personal SDEV — dialects, extensions, signatures & @user/lib'],
+    ['docs/02-language/multi-paradigm-parity.md', 'Multi-Language Parity & Modern Paradigms (SQL, Kotlin, Rust, C++)'],
+    ['docs/02-language/v1-reference.md', 'Full v1 language reference'],
+    ['docs/02-language/python-parity-reference.md', 'Python feature-parity reference'],
   ]],
-  ['Part III — The complete narrative guide', [
-    ['public/SDEV_FULL_DOCUMENTATION.md', 'Complete documentation (architecture to evolution loop)'],
+  ['Part III — Language overview', [
+    ['docs/01-overview/language-overview.md', 'Language overview & architecture summary'],
   ]],
-  ['Part IV — Implementation internals', [
-    ['public/SDEV_INTERNALS.md', 'Compiler, VM, kernel and roadmap internals'],
-    ['lang/README.md', 'lang/ — language sources overview'],
-    ['lang/native/README.md', 'Native x86-64 backend'],
-    ['electron/README.md', 'Desktop IDE shell'],
+  ['Part IV — Standard library & AI / OCE', [
+    ['docs/03-standard-library/v2-stdlib-and-web-toolkit.md', 'Self-hosted v2 stdlib & Website Toolkit (lang/web/)'],
+    ['docs/04-ai-and-causal-engine/understanding-agent-and-local-brain.md', 'Understanding Agent & local 3-tier AI brain'],
+    ['docs/04-ai-and-causal-engine/oce-library-reference.md', 'Ontological Causal Engine (OCE) library reference'],
+    ['docs/04-ai-and-causal-engine/oce-developer-guide.md', 'Ontological Causal Engine (OCE) developer guide'],
   ]],
-  ['Part V — Python parity', [
-    ['public/SDEV_PYTHON_PARITY_DOCUMENTATION.md', 'Python feature-parity reference'],
+  ['Part V — IDE, CLI, registry & packaging', [
+    ['docs/05-ide-and-tooling/ide-and-debugging-tools.md', 'Web IDE, Time-Travel Debugger, Runtime Explorer & Live Classroom'],
+    ['docs/05-ide-and-tooling/cli-and-terminal-editor.md', 'Unified CLI & terminal editor (`sdev edit`)'],
+    ['docs/05-ide-and-tooling/api-registry-and-linter.md', 'Canonical API Registry (881 entries) & static linter (`SDEV001`–`SDEV015`)'],
+    ['docs/05-ide-and-tooling/desktop-vscode-and-mcp.md', 'Desktop app, VS Code extension & MCP server'],
+    ['cli/README.md', 'CLI README'],
+    ['electron/README.md', 'Desktop IDE shell README'],
+    ['extension/README.md', 'VS Code extension README'],
   ]],
-  ['Part V — Track parity', [
-    ['public/SDEV_PARITY_DOCUMENTATION.md', 'Parity registry, agent and matrix'],
+  ['Part VI — Compiler, VM, native targets & parity', [
+    ['docs/06-compiler-and-internals/compiler-and-vm-internals.md', 'Compiler, VM, kernel & self-hosting internals'],
+    ['docs/06-compiler-and-internals/zero-host-native-and-pe.md', 'Zero-host native C VM, Linux ELF & Windows PE .exe'],
+    ['docs/06-compiler-and-internals/wasi-component-model.md', 'WASI 0.2 Component Model'],
+    ['docs/06-compiler-and-internals/track-parity-matrix.md', 'Track parity registry, agent & matrix'],
+    ['lang/README.md', 'lang/ — self-hosted language sources overview'],
+    ['lang/native/README.md', 'Native x86-64 backend README'],
   ]],
-  ['Part VI — Machine learning and LLMs', [
-    ['public/SDEV_ML_DOCUMENTATION.md', 'ML & LLM standard library'],
-    ['public/SDEV_AUTOEVOLVE_DOCUMENTATION.md', 'Autonomous evolution loop'],
+  ['Part VII — Machine learning & hardware acceleration', [
+    ['docs/03-standard-library/ml-and-llm-stdlib.md', 'ML & LLM standard library'],
+    ['docs/03-standard-library/autonomous-evolution.md', 'Autonomous evolution loop'],
+    ['docs/03-standard-library/ffi-and-native-accel.md', 'FFI & native acceleration'],
+    ['docs/03-standard-library/webgpu-acceleration.md', 'WebGPU compute acceleration'],
+    ['docs/03-standard-library/cuda-fast-path.md', 'CUDA fast path'],
   ]],
-  ['Part VII — Acceleration and interop', [
-    ['public/SDEV_FFI_DOCUMENTATION.md', 'FFI and native acceleration'],
-    ['public/SDEV_WEBGPU_DOCUMENTATION.md', 'WebGPU compute'],
-    ['public/SDEV_CUDA_DOCUMENTATION.md', 'CUDA fast path'],
-  ]],
-  ['Part VIII — Domains', [
-    ['public/SDEV_HARDWARE_DOCUMENTATION.md', 'Hardware and boards'],
-    ['public/SDEV_LEAFLET_DOCUMENTATION.md', 'Leaflet, mapping and GIS'],
+  ['Part VIII — Domains, operations & history', [
+    ['docs/07-domains/hardware-and-boards.md', 'Hardware, 30 boards, 10,232 libraries & browser simulator'],
+    ['docs/07-domains/leaflet-and-gis.md', 'Leaflet, mapping & GIS reference'],
+    ['docs/08-operations/contributing-guide.md', 'Contributing guide'],
+    ['docs/08-operations/environment-variables.md', 'Environment variables reference'],
+    ['docs/08-operations/operations-runbook.md', 'Operations runbook'],
+    ['docs/09-project/complete-project-history.md', 'Complete project history'],
   ]],
 ];
+
+function rewriteRelLinks(md, fromFile) {
+  const fromDir = path.posix.dirname(fromFile.replace(/\\/g, '/'));
+  const outDir = 'docs/01-overview';
+  const lines = md.split('\n');
+  let fence = false;
+  return lines.map((line) => {
+    if (/^\s*```/.test(line)) { fence = !fence; return line; }
+    if (fence) return line;
+    return line.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (full, label, href) => {
+      if (/^(?:[a-z]+:|#|\/)/i.test(href)) return full;
+      const hashIdx = href.indexOf('#');
+      const relPart = hashIdx >= 0 ? href.slice(0, hashIdx) : href;
+      const anchor = hashIdx >= 0 ? href.slice(hashIdx) : '';
+      if (!relPart.endsWith('.md')) return full;
+      const target = path.posix.normalize(path.posix.join(fromDir, relPart));
+      const newRel = path.posix.relative(outDir, target);
+      return `[${label}](${newRel}${anchor})`;
+    });
+  }).join('\n');
+}
 
 for (const [partTitle, docs] of GUIDES) {
   push(`\n## ${partTitle}\n`);
@@ -1000,7 +1087,7 @@ for (const [partTitle, docs] of GUIDES) {
     const body = verbatim(read(file));
     // Drop the guide's own H1 — the section heading replaces it.
     const withoutH1 = body.replace(/^#\s+.*\n/, '');
-    push(`\n### ${title}\n\n_Source: \`${file}\`_\n\n${shiftHeadings(withoutH1, 2)}\n\n---\n`);
+    push(`\n### ${title}\n\n_Source: \`${file}\`_\n\n${shiftHeadings(rewriteRelLinks(withoutH1, file), 2)}\n\n---\n`);
   }
 }
 
@@ -1048,14 +1135,15 @@ ${toolchainIndex()}
 
 | Term | Meaning |
 | --- | --- |
-| **bootstrap** | \`lang/bootstrap/compile.mjs\`, the JavaScript compiler used only to build the first self-hosted artifact and as a test oracle. |
-| **seed VM** | \`lang/bootstrap/seed.wat\`, a hand-written WebAssembly stack machine that executes sdev bytecode in the browser. |
-| **driver artifact** | \`lang/compiler/driver-artifact.mjs\`, the pre-compiled, source-independent self-hosted compiler baked in as Base64. |
+| **bootstrap** | \`src/lang-bridge/oracle/compile.mjs\`, the JavaScript compiler used only as a build-time oracle and for tests. |
+| **seed VM** | \`src/lang-bridge/seed/seed.wat\`, a hand-written WebAssembly stack machine that executes sdev bytecode in the browser. |
+| **driver artifact** | \`src/lang-bridge/driver-artifact.mjs\`, the pre-compiled, source-independent self-hosted compiler baked in as Base64. |
+| **zero-host VM** | \`src/lang-bridge/native/sdev-vm.c\` -> \`bin/sdev-vm\`, standalone native C VM & compiler driver requiring no Node/browser host. |
 | **fixed point** | The state where the self-hosted compiler compiles itself to byte-identical output. |
 | **track** | One execution path: v1 interpreter, v2 self-hosted, or native x86-64. |
 | **parity agent** | \`lang/parity/agent.sdev\`, written in sdev, that audits every track against the registry and regenerates the matrix. |
 | **tome** | sdev's dictionary / map type. |
-| **summon** | The decentralised package system that pulls modules from GitHub Gists. |
+| **summon** | The decentralised package system that pulls modules from GitHub Gists (alongside \`use "@user/lib"\` libraries). |
 
 ## Appendix B — Regenerating this document
 
@@ -1063,8 +1151,8 @@ ${toolchainIndex()}
 node scripts/build-ultimate-docs.mjs
 \`\`\`
 
-The generator reads every guide under \`public/\` plus the READMEs, then derives
-the reference tables straight from \`src/lang/\`, \`lang/\`, and \`scripts/\`. If a
+The generator reads the structured guides under \`docs/\` plus the component READMEs, then derives
+the reference tables straight from \`src/lang/\`, \`src/lang-bridge/\`, \`lang/\`, \`cli/\`, and \`scripts/\`. If a
 builtin is added or an opcode changes, re-running the generator is the only
 step required to bring this document back in sync.
 `);

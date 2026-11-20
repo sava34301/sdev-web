@@ -27,8 +27,8 @@ forge SDEV_SOURCE_FILES be [
     "lang/stdlib/ml/tensor.sdev",
     "lang/stdlib/ml/nn.sdev",
     "lang/stdlib/ml/transformer.sdev",
-    "public/SDEV_DOCUMENTATION.md",
-    "public/SDEV_ML_DOCUMENTATION.md"
+    "docs/02-language/v1-reference.md",
+    "docs/03-standard-library/ml-and-llm-stdlib.md"
 ]
 
 conjure is_allowed(path) ::
@@ -135,10 +135,10 @@ conjure pick_target(demand) ::
     // topics into the docs file; everything else into the ML
     // stdlib so the model can grow its own capabilities.
     forge k be top_topic(demand)
-    either k equals void :: yield "public/SDEV_ML_DOCUMENTATION.md" ;;
+    either k equals void :: yield "docs/03-standard-library/ml-and-llm-stdlib.md" ;;
     either contains(k, "parse") also yep :: yield "lang/compiler/parser.sdev" ;;
     either contains(k, "lex")   also yep :: yield "lang/compiler/lexer.sdev" ;;
-    either contains(k, "doc")   also yep :: yield "public/SDEV_DOCUMENTATION.md" ;;
+    either contains(k, "doc")   also yep :: yield "docs/02-language/v1-reference.md" ;;
     yield "lang/stdlib/ml/nn.sdev"
 ;;
 

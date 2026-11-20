@@ -20,8 +20,10 @@ Official VS Code support for the **sdev** programming language — both tracks:
 - 🛠 **Build Native Executable** — emits x86-64 GNU assembly and links a static binary
 - ✂️ **Run selection** — `Ctrl+Shift+Enter` / `Cmd+Shift+Enter`
 - 📦 **Everything bundled** — v1 JS interpreter, v1 Python interpreter, the v2 seed VM (`.wasm`),
-  the self-hosted compiler driver and the native backend. Only Node.js is required.
-- 🌐 **Playground & docs** commands
+  the self-hosted compiler driver, and the unified CLI (`bin/sdev.mjs` synced by `node scripts/release.mjs` from `release.json`). Only Node.js is required.
+- 🌐 **Playground & docs** commands (opens `/docs`, backed by [`docs/`](../docs/README.md))
+
+See also: [Desktop App, VS Code & MCP](../docs/05-ide-and-tooling/desktop-vscode-and-mcp.md).
 
 ## Commands
 
@@ -85,10 +87,10 @@ Press `Ctrl+Alt+Enter` to compile and run it on the seed VM, or run
 ## Installation (manual / `.vsix`)
 
 ```
-code --install-extension sdev-language-1.2.0.vsix
+code --install-extension SDEV-language-5.1.0.vsix
 ```
 
-…or in VS Code: **Extensions panel → ⋯ menu → Install from VSIX…**
+...or download/package via `node scripts/release.mjs` (which bundles `bin/sdev.mjs` and aligns the version with `release.json`), or in VS Code: **Extensions panel -> `...` menu -> Install from VSIX...**
 
 ## License
 

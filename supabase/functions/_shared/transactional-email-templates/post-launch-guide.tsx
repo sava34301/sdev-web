@@ -17,9 +17,9 @@ const Email = ({
   name,
   siteUrl = 'https://sdev.codes',
   docsUrl = 'https://sdev.codes/docs',
-  leafletDocsUrl = 'https://sdev.codes/SDEV_LEAFLET_DOCUMENTATION.md',
+  leafletDocsUrl = 'https://sdev.codes/documentation/07-domains/leaflet-and-gis.md',
   ideUrl = 'https://sdev.codes/ide',
-  bookUrl = 'https://sdev.codes/sdev-book-en.md',
+  bookUrl = 'https://sdev.codes/documentation/01-overview/the-sdev-book-en.md',
   githubUrl = 'https://github.com',
 }: Props) => (
   <Html lang="en" dir="ltr">

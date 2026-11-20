@@ -1,6 +1,6 @@
-# SDEV — The Complete Project Record (Expanded Edition, v5)
+# SDEV — The Complete Project Record (Expanded Edition, v7)
 
-> Everything discussed, built, decided, rejected, planned and imagined for the SDEV Programming Language, from the first message to today — now updated with the 100% self-hosted pure SDEV language milestone engineered and verified in **Antigravity**.
+> Everything discussed, built, decided, rejected, planned and imagined for the SDEV Programming Language, from the first message to today — now updated through November 2026 with the pure-SDEV website toolkit, Ontological Causal Engine (OCE), 3-stage self-hosted v1 compiler, zero-host native VM (`bin/sdev-vm`), self-compiled x86-64 toolchain (`bin/sdev-driver`), file-stored translations, Run without Understanding mode, portable MCP deployment, and structured documentation hub.
 
 | | |
 |---|---|
@@ -12,8 +12,8 @@
 | **Licence** | "SDEV Programming Language © 2026 by Sava Milanov is licensed under Creative Commons Attribution-ShareAlike 4.0 International" |
 | **Public launch** | 12 July 2026, 14:00 Sofia time (UTC+3) |
 | **Current tool version** | 5.1.0 (one version for IDE, CLI, VS Code extension and desktop app) |
-| **Period covered** | 11 December 2025 → 31 October 2026 (780+ chat messages across Lovable and **Antigravity**) |
-| **Edition** | v5 — expanded & updated in **Antigravity**. Supersedes `SDEV_Complete_Project_History.md` (v1, v2, v3, and v4). |
+| **Period covered** | 11 December 2025 → 20 November 2026 (across Lovable and **Antigravity**) |
+| **Edition** | v7 — consolidated & expanded. Supersedes `SDEV_Complete_Project_History.md` (v1–v6). |
 
 ---
 
@@ -1456,3 +1456,69 @@ On 31 October 2026, the SDEV language achieved comprehensive multi-language pari
    - Production Vite bundle builds with 0 errors.
 
 *All enhancements, refactoring, and multi-language feature completions documented above were designed, implemented, and verified in **Antigravity**.*
+
+
+---
+
+## 11. Self-Hosting Propositions & Zero-Cost Native Windows PE Backend (Built in Antigravity)
+
+In November 2026, following architectural deliberation, SDEV executed Proposition 1 of the self-hosting milestones, compiler internals expansion, and native executable generation in **Antigravity**:
+
+1. **Pure Self-Hosted SDEV Master Test Runner (`scripts/test-all.sdev`)**:
+   - Replaced Node.js-based test runners with a 100% pure SDEV master test runner authored in `scripts/test-all.sdev`.
+   - Wired `npm test` directly to `node bin/sdevhost.mjs scripts/test-all.sdev`.
+   - Drives 18 core test suites sequentially through host shell dispatch, testing the self-toolchain, driver artifact, self-lexer, self-parser, self-codegen, self-stdlib v2, self-subsystems, shim fixed-point, parity gate, formatter, parser literals, multi-language parity, local model server, understander SDEV engine, understander agent, WASM runtime, compiler internals, and native Windows PE suite.
+   - All 18 suites execute with 100% pass rate in ~12 seconds.
+
+2. **Self-Hosted Code Formatter (`lang/formatter/formatter.sdev`)**:
+   - Authored the formal code formatter entirely in pure SDEV.
+   - Supports 2- and 4-space indentation, block opening (`::`, `to`, `if`, `while`, `for each`) and closing (`;;`, `end`), string literal and comment colon safety, and full idempotence.
+   - Verified via pure SDEV test suite `scripts/test-formatter.sdev` (8/8 cases pass).
+
+3. **Compiler Internals (Bytecode & AST Parity)**:
+   - Added bytecode compilation in `src/lang/compiler.ts` for Python, Kotlin, and Rust parity constructs:
+     - `AugAssignStatement`: In-place operators (`+=`, `-=`, `*=`, `/=`, etc.) for variables and indexed collections.
+     - `AssertStatement`: Assertions with custom error panic jump instructions.
+     - `PassStatement`: Bytecode NOP statement.
+     - `WalrusExpr` (`:=`): Inline assignment leaving value on operand stack.
+     - `SliceExpr`: Bytecode list and string slicing via `portion`.
+     - `TupleLiteral` & `SetLiteral`: Immutable sequence and set bytecode generation.
+     - `ComprehensionExpr`: List, set, and dict comprehensions compiled directly to bytecode loops with filtering.
+     - `WithStatement`: Resource management context manager lifecycle execution.
+   - Verified via `scripts/test-compiler-features.ts` (9/9 cases pass).
+
+4. **Zero-Cost Standalone Windows PE/COFF (.exe) Generator (`src/lang-bridge/native/pe.mjs`)**:
+   - Built a native Windows binary emitter that compiles directly to 64-bit Windows console executables (PE32+) without GCC, Clang, MSVC, external linkers, or annual code-signing certificate fees ($200–$400/yr).
+   - Generates compliant PE headers, COFF AMD64 headers, Section Table (`.text`, `.rdata`), and Win64 API Import Address Table for `KERNEL32.dll` (`GetStdHandle`, `WriteFile`, `ExitProcess`).
+   - Integrated into `scripts/sdev-native.mjs` (`--target windows`, `--format pe`) producing ready-to-run `.exe` binaries on Windows console.
+   - Verified via `scripts/test-native-pe.ts` with real process spawning on Windows (10/10 cases pass).
+
+---
+
+## 12. Pure-SDEV Subsystems, Ontological Causal Engine (OCE), Zero-Host Toolchain & IDE Controls (November 2026)
+
+Between 13 and 20 November 2026, SDEV completed its full self-hosted subsystem migration, weightless causal AI engine, zero-host execution stack, and IDE understanding workflow:
+
+1. **IDE Debugging, Simulation, Benchmarking & Collaboration Tools (`4ba80a9`, `c364fb9`)**:
+   - Added **Time-Travel Debugger** (`TimeTravelDebugger.tsx`, Chrono step scrubber, variable snapshots, Prism AST view, canvas snapshot sync), **Live Interactive Scratchpad** (`eval-live.ts`), **Micro-Benchmarking** (`benchmark.ts`, p50/p95/p99), **Literate Markdown Notebooks** (`notebook.ts`), **In-Browser Hardware Simulator** (`simulator.ts`, `HardwareSimulatorCanvas.tsx`), **Live Classroom & Pair Rooms** (Lamport-clock CRDT `live-room.ts`, BroadcastChannel + Supabase Realtime), **WASI 0.2 Component Model Export** (`wasi-component.ts`, `.wit` + `.wasm` + TypeScript/Python/Rust/Go glue), and operational docs (`contributing-guide.md`, `operations-runbook.md`, `environment-variables.md`).
+
+2. **Website Toolkit & Pure-SDEV Language Subsystems (`90944d0`, `bf5cda5`)**:
+   - Authored SDEV's HTML5/CSS3/client-JS website toolkit in `lang/web/` (`html.sdev`, `css.sdev`, `components.sdev`, `icons.sdev`, `themes.sdev`, `transpiler.sdev`, and the official landing site `lang/web/sdev-website.sdev`).
+   - Ported graphics, turtle kinematics, reactive UI, 2D matrices, regex/glob matching, byte buffers, Python-parity helpers, dialect signatures, API registry scoring, linter comment stripping, translator segmentation, hardware block stripping, PE/WASI emission, and notebook/benchmark logic into pure `.sdev` modules under `lang/` (`createSdevModuleRunner`), growing `scripts/test-all.sdev` to **22 suites**.
+
+3. **Ontological Causal Engine — OCE (`bf5cda5`, `b2d331f`, `f33a46c`)**:
+   - Implemented the weightless, token-free 64 KB causal learner in `lang/stdlib/v2/oce.sdev` (built on `bits.sdev` and `mem.sdev`) with line-for-line parity in `src/lang/builtins/oce.ts` (classic & `!#ai`) and `public/sdev-interpreter.py`, gated by `npm run test:oce` (35 checks) and `npm run test:oce-parity` (8/8).
+   - Added website `use "lang/stdlib/..."` lazy module resolution (`withStdlib()` in `wasm-runtime.ts`) and v2 pre-flight compiler diagnostics (`scripts/test-v2-diagnostics.mjs`) catching unknown functions, wrong argument counts, unknown `kind`, `break` outside loops, and `list + [...]` without `list.sdev`.
+
+4. **Self-Hosted v1 Compiler & Zero-Host Execution (`c2e0878`)**:
+   - Built the 6-layer self-hosted v1 compiler (`lang/compiler/v1_lexer.sdev`, `v1_parser.sdev`, `v1_codegen.sdev`, `v1_driver.sdev`, `v1_ir.sdev`, `lang/legacy/v1_frontend.sdev`, and 100% pure-v1 `v1_self.sdev` passing 3-stage fixed point `Stage 1 == Stage 2 == Stage 3`).
+   - Built **Path A** (`bin/sdev-vm`, C native Seed VM with embedded `driver-embedded.h` and `sdev:` host protocol — zero Node.js/Wasm) and **Path B** (`bin/sdev-driver` + `lang/native/codegen_x64.sdev` + `lang/native/build.sdev`, achieving byte-identical native self-compilation).
+
+5. **File-Stored Translations, Run without Understanding & Reliability Fixes (`28d1cb6`, `d79cca9`, `07be1de`, `8cdcb74`, `45a0ef1`, `03e6202`)**:
+   - Stored canonical translations in `IdeFile.understood` and `#⟨sdev⟩` `FileSignature.translated`, with IDE **Preview** toggle, **Download translated (`.sdev`)**, **Re-understand**, and automatic escalation from Micro-Brain/WebLLM to website AI (`sdev-agent`).
+   - Added **Run without Understanding** (`Ctrl+Shift+Enter` via Run menu, Run split-button, and Command Palette) and persisted cache invalidation on Re-understand even when learning is off.
+   - Fixed `super` MRO method resolution and constructor inheritance in both `src/lang/interpreter.ts` and `src/lang/compiler.ts`.
+   - Fixed portable MCP edge function bundling (`supabase/functions/mcp/index.ts`, Windows entry alias in `vite.config.ts`, `scripts/test-mcp-deployment.mjs`).
+
+6. **Structured Documentation Hub (20 November 2026)**:
+   - Consolidated duplicated guides, eliminated drift between `README.md` / `docs/` / `public/`, added dedicated guides for every new subsystem, organized all documentation into categorized `docs/01-*` through `docs/09-*` paths served cleanly via Vite at `/documentation/` and `/docs`, and refreshed all generators (`build-ultimate-docs.mjs`, `gen-hardware-docs.ts`, `test-understander-docs.ts`, `test-parity.ts`).

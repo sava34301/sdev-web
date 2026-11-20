@@ -1,26 +1,36 @@
 # sdev
 
-> sdev is a modern programming language with a browser-based IDE, dual Python/JavaScript runtimes, and built-in graphics, mapping, and GIS capabilities.
+> sdev is a multi-paradigm, multilingual, self-hosting programming language with a browser & desktop IDE, CLI toolchain, dual Python/JS/WASM/native runtimes, Personal SDEV dialects & libraries, an Ontological Causal Engine (OCE), and built-in UI, graphics, hardware simulation, and GIS capabilities.
 
-sdev features a radically unique syntax (keywords like `forge`, `be`, `conjure`) designed to differ from Python, JavaScript, and Go. It ships with parity across a Python interpreter (for professional/desktop use) and a JS/TS interpreter (for the web IDE and Leaflet integration). The language includes a standard library, bytecode VM, virtual kernel, multi-language keyword support (26 languages), a decentralized package system that loads libraries from GitHub Gists via the `summon` keyword, and a built-in Web DSL (`page`, `h1`, `style`, `onclick`, `raw_html`/`raw_css`/`raw_js`, …) that compiles to a full HTML document rendered in the IDE's WEB preview panel.
+sdev unites classic readable syntax (`forge`, `be`, `conjure`), indentation-based self-hosted sdev v2 "Prism" (`set`, `fn`, `say`, `make`/`kind`/`has`), intent-driven `sdev:ai` (`!#ai`), and user-authored Personal SDEV (`!#dialect`, `!#ext`, `!#sig`, `@user/lib`). It targets the browser WASM Seed VM, zero-host native x86-64 ELF & Windows PE `.exe`, WASI 0.2 components, TypeScript/JS, and Python runtimes, plus a built-in Web DSL, 26-language keyword translation, Arduino/MCU transpilation & WebUSB/UF2 flashing across 30 boards, and a local 3-tier AI Understanding Agent (WebGPU WebLLM -> local server -> cloud).
 
 ## Pages
 
-- [Home](/): Try sdev in your browser — language overview, live playground, examples, and downloads.
-- [IDE](/ide): Full-featured web IDE with file tree, terminal, debugger, and live canvas preview.
-- [Documentation](/docs): Complete language reference, the sdev Book (EN/BG), and Leaflet/GIS guide.
-- [Programming language design guide](/docs/self-hosting-design-guide): How the sdev compiler is written in sdev, runs on a hand-written WebAssembly stack VM, and compiles itself to byte-identical bytecode.
-- [Sign in](/auth): Create an account to save files to the cloud and share gists.
-- [Account](/account): Manage profile, cloud files, public gists, and run history.
+- [Home](/): Language overview, live playground, examples, and downloads.
+- [IDE](/ide): Full-featured web IDE with file tree, Time-Travel Debugger, Runtime Explorer, Live Classroom, Hardware Simulator, Assistant, and live canvas/HTML preview.
+- [Documentation Hub](/docs): Complete structured documentation browser with category tabs and search.
+- [Programming Language Design Guide](/docs/self-hosting-design-guide): How the self-hosted sdev compiler is written in sdev and compiles itself to byte-identical bytecode on the Seed VM.
+- [Dialects](/dialects) · [Libraries](/libraries) · [Extensions](/extensions) · [Explore](/explore): Personal SDEV hub for user dialects, `@user/lib` packages, and community extensions.
+- [Sign in](/auth) & [Account](/account): Manage profile, cloud files, public gists, and run history.
 
-## Docs
+## Docs (`/documentation/`)
 
-- [Ultimate Documentation](/SDEV_ULTIMATE_DOCUMENTATION.md): Everything about sdev in one file — language, runtimes, compiler, VM, native backend, stdlib, ML stack, hardware, GIS, and generated reference tables.
-- [Language Reference](/SDEV_DOCUMENTATION.md): Full syntax, keywords, OOP, concurrency, and standard library reference.
-- [Python Parity Reference](/SDEV_PYTHON_PARITY_DOCUMENTATION.md): Every Python feature and its sdev equivalent, with side-by-side examples and per-track status.
-- [Leaflet & GIS Reference](/SDEV_LEAFLET_DOCUMENTATION.md): Mapping, geospatial, and Leaflet interop documentation.
-- [The sdev Book (EN)](/sdev-book-en.md): Long-form tutorial and language guide in English.
-- [Книгата за sdev (BG)](/sdev-book-bg.md): Long-form tutorial and language guide in Bulgarian.
+- [Documentation Index](/documentation/README.md): Structured guide index across all categories.
+- [Language Overview](/documentation/01-overview/language-overview.md): High-level walkthrough across all sdev surfaces and targets.
+- [Ultimate Documentation](/documentation/01-overview/ultimate-reference.md): Everything about sdev in one generated compendium.
+- [sdev v1 Reference](/documentation/02-language/v1-reference.md): Classic syntax, keywords, OOP, concurrency, and standard library reference.
+- [sdev v2 "Prism" Guide](/documentation/02-language/v2-prism-guide.md): Self-hosted indentation syntax, classes, modules, and native/WASM execution.
+- [sdev:ai Syntax Reference](/documentation/02-language/ai-syntax-reference.md): Intent-driven `!#ai` dialect and Understanding Agent rules.
+- [Personal SDEV & @user/lib](/documentation/02-language/personal-dialects-and-libraries.md): Authoring `!#dialect`, `!#ext`, `!#sig`, and shareable libraries.
+- [Self-Hosted v2 Stdlib & Website Toolkit](/documentation/03-standard-library/v2-stdlib-and-web-toolkit.md): Pure-SDEV stdlib modules and `lang/web/` HTML/CSS/JS DSL.
+- [Understanding Agent & Local AI Brain](/documentation/04-ai-and-causal-engine/understanding-agent-and-local-brain.md): Deterministic rule engine + WebGPU WebLLM / local / cloud fallback.
+- [OCE Library Reference](/documentation/04-ai-and-causal-engine/oce-library-reference.md): Ontological Causal Engine (`bits`, `mem`, `ring`, `oce`) with cross-runtime parity.
+- [IDE, CLI, Registry, Desktop & MCP Guides](/documentation/05-ide-and-tooling/ide-and-debugging-tools.md): Debugging, CLI `sdev edit`, 881-entry `API_REGISTRY` & `SDEV001`–`SDEV015` linter, Electron, VS Code, and MCP.
+- [Compiler, Zero-Host Native & WASI 0.2](/documentation/06-compiler-and-internals/compiler-and-vm-internals.md): Seed VM, ELF / Windows PE `.exe`, WASI 0.2 components, and Track Parity Matrix.
+- [Python Parity Reference](/documentation/02-language/python-parity-reference.md): Python feature parity and side-by-side examples.
+- [Hardware & Boards](/documentation/07-domains/hardware-and-boards.md): 30 boards, 10,232 Arduino libraries, browser simulator, and upload protocols.
+- [Leaflet & GIS Reference](/documentation/07-domains/leaflet-and-gis.md): Mapping, geospatial, and Leaflet interop documentation.
+- [The sdev Book (EN)](/documentation/01-overview/the-sdev-book-en.md) · [Книгата за sdev (BG)](/documentation/01-overview/the-sdev-book-bg.md): Long-form books in English and Bulgarian.
 
 ## Optional
 

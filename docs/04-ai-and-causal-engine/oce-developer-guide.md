@@ -1,7 +1,7 @@
 # OCE Developer Guide — Building with the Causal Engine
 
 This guide takes you from your first program to adding new features to the engine itself.
-For the full list of functions, see **OCE — Causal Engine Library** on the Docs page.
+For the full list of functions, see [OCE — Causal Engine Library](oce-library-reference.md).
 
 ---
 
@@ -247,7 +247,7 @@ To look at nodes, use `oce_node_count(m)`, `oce_n_op/conf/a/b/out/delta(m, i)` a
    npm run test:v2-diagnostics
    npm test
    ```
-7. **Update** the function table in `SDEV_OCE_DOCUMENTATION.md`.
+7. **Update** the function table in [oce-library-reference.md](oce-library-reference.md).
 
 ### Good first features to build
 - Laws with **two conditions** (a chain of guard nodes; the format already supports it).

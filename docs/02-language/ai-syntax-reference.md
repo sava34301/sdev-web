@@ -104,6 +104,12 @@ This prints `caught: cannot divide by zero` and then `done`.
 ## Common mistakes
 
 - **Forgetting `!#ai`.** Without the first line the file is read as canonical sdev, and `v x = 5` will not mean anything.
-- **Indentation-only blocks.** The AI syntax always needs `{ }` — a line like `? x > 3` with an indented line under it is not a block.
+- **Indentation-only blocks.** The AI syntax always needs `{ }` — a line like `? x > 3` with an indented line under it is not a block. (Note: `sdevCloseAiBraces` automatically closes missing trailing `}` blocks when repairing LLM outputs.)
 - **Splitting a statement across lines.** Each statement lives on one line; only blocks span lines.
 - **Using canonical words inside conditions.** Write `x == 3 && y != 4`, not `x equals 3 also y differs 4` — the translator adds the canonical words for you.
+
+## Built-in Causal Engine & Tooling Integration
+
+- On the website, `!#ai` files have all OCE (`oce_*`), `bits_*`, and `mem_*` functions built in (see `examples/oce/gravity-ai.sdev`). Note that the standalone Python interpreter requires classic syntax and does not execute `!#ai` files yet.
+- Plain-language requests in the IDE (such as `"make a window that is a calculator"`) are routed directly through the Understanding Agent (`lang/agent/ai-dialect.sdev` & `brain.sdev`) and converted into canonical SDEV.
+- Use **Edit → Open as sdev:ai** / **Open as plain sdev** in the Web IDE to convert files cleanly in either direction. See [Understanding Agent & Local AI Brain](../04-ai-and-causal-engine/understanding-agent-and-local-brain.md).

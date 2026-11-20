@@ -67,9 +67,9 @@ conjure harvest_keywords(counts, body) ::
 
 // ---------- documentation sync ----------
 conjure update_docs(section, body) ::
-    forge cur be read_file("public/SDEV_DOCUMENTATION.md")
+    forge cur be read_file("docs/02-language/v1-reference.md")
     forge stamped be cur + "\n\n## " + section + "\n" + body + "\n"
-    self_propose("public/SDEV_DOCUMENTATION.md", stamped)
+    self_propose("docs/02-language/v1-reference.md", stamped)
 ;;
 
 // ---------- weight rewriting ----------

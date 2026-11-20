@@ -124,7 +124,7 @@ export function DownloadablesDropdown({ code }: DownloadablesDropdownProps) {
     //  - Registers .sdev file association with proper icon + verb
     //  - Adds C:\sdev\bin to the user PATH
     //  - Drops multilingual example files (EN / BG / ES / FR / RU / ZH)
-    //  - Bundles latest docs (SDEV_DOCUMENTATION.md + Leaflet docs + book) offline
+    //  - Bundles latest docs (v1-reference.md + leaflet-and-gis.md + book PDFs) offline
     //  - Optional VS Code extension auto-install if `code` is on PATH
     const origin = 'https://web.sdev.codes';
     const batchScript = `@echo off
@@ -204,13 +204,13 @@ pause & exit /b 1
 
 echo  [4/8] Downloading offline documentation + book...
 if defined DL (
-  call :fetch   "%BASEURL%/SDEV_DOCUMENTATION.md"         "%DOCS%\\SDEV_DOCUMENTATION.md"         text
-  call :fetch   "%BASEURL%/SDEV_LEAFLET_DOCUMENTATION.md" "%DOCS%\\SDEV_LEAFLET_DOCUMENTATION.md" text
+  call :fetch   "%BASEURL%/documentation/02-language/v1-reference.md"    "%DOCS%\\v1-reference.md"         text
+  call :fetch   "%BASEURL%/documentation/07-domains/leaflet-and-gis.md"   "%DOCS%\\leaflet-and-gis.md"      text
   call :fetchopt "%BASEURL%/sdev-book-en.pdf"             "%DOCS%\\sdev-book-en.pdf"              pdf
   call :fetchopt "%BASEURL%/sdev-book-bg.pdf"             "%DOCS%\\sdev-book-bg.pdf"              pdf
 ) else (
-  call :psfetch  "%BASEURL%/SDEV_DOCUMENTATION.md"         "%DOCS%\\SDEV_DOCUMENTATION.md"         text
-  call :psfetch  "%BASEURL%/SDEV_LEAFLET_DOCUMENTATION.md" "%DOCS%\\SDEV_LEAFLET_DOCUMENTATION.md" text
+  call :psfetch  "%BASEURL%/documentation/02-language/v1-reference.md"    "%DOCS%\\v1-reference.md"         text
+  call :psfetch  "%BASEURL%/documentation/07-domains/leaflet-and-gis.md"   "%DOCS%\\leaflet-and-gis.md"      text
   call :psfetch  "%BASEURL%/sdev-book-en.pdf"              "%DOCS%\\sdev-book-en.pdf"              pdf
   call :psfetch  "%BASEURL%/sdev-book-bg.pdf"              "%DOCS%\\sdev-book-bg.pdf"              pdf
 )
@@ -302,8 +302,8 @@ echo     sdev-repl                              ^<- interactive REPL
 echo     sdev-translate %EXAMPLES%\\hello.bg.sdev  ^<- show translated English sdev
 echo     sdev-languages                         ^<- list all 25 supported languages
 echo.
-echo   Docs:           %DOCS%\\SDEV_DOCUMENTATION.md
-echo   Leaflet/GIS:    %DOCS%\\SDEV_LEAFLET_DOCUMENTATION.md
+echo   Docs:           %DOCS%\\v1-reference.md
+echo   Leaflet/GIS:    %DOCS%\\leaflet-and-gis.md
 echo   Online:         %BASEURL%/docs
 echo.
 echo  Press any key to open the sdev folder...

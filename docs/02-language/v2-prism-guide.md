@@ -681,6 +681,7 @@ say sum(range(5))   # 10
 Lists of text work the same way and pair with `join`:
 
 ```sdev
+#!sdev v2
 set names to ["ada", "alan", "grace"]
 say join(names, ", ")
 ```
@@ -689,6 +690,22 @@ Output:
 ```
 ada, alan, grace
 ```
+
+### Joining and Appending Lists (`+` and `list.sdev`)
+
+When either side of `+` is written as a list literal (`[...]`), the self-hosted, reference, and native compilers compile `a + b` via `list_concat_two` (requiring `use "lang/stdlib/v2/list.sdev"`):
+
+```sdev
+#!sdev v2
+use "lang/stdlib/v2/list.sdev"
+set xs to [1, 2]
+set ys to xs + [3]
+say ys[2]
+```
+
+- Calling `xs + ys` when both sides are variables requires `list_concat_two(xs, ys)`.
+- To push one item in place, use `list_append(xs, item)`.
+- Using `+` with a list without importing `list.sdev` fails at compile time with a clear diagnostic telling you to add `use "lang/stdlib/v2/list.sdev"`.
 
 ---
 
@@ -950,10 +967,10 @@ Two invariants are enforced on every change:
   currently across 66 cases, alongside 45 runtime regression cases.
 
 Feature coverage across v1, v2 and the native track is declared in
-`lang/parity/features.json` and audited by the sdev-written agent in
-`lang/parity/agent.sdev`. Opcode tables, memory layout and the full milestone
-log live in `SDEV_INTERNALS.md`; the parity matrix lives in
-`SDEV_PARITY_DOCUMENTATION.md`.
+\`lang/parity/features.json\` and audited by the sdev-written agent in
+\`lang/parity/agent.sdev\`. Opcode tables, memory layout and the full milestone
+log live in [Compiler & VM Internals](../06-compiler-and-internals/compiler-and-vm-internals.md); the parity matrix lives in
+[Track Parity Matrix](../06-compiler-and-internals/track-parity-matrix.md).
 
 ---
 
@@ -997,8 +1014,8 @@ board "uno"
 end
 ```
 
-See `SDEV_HARDWARE_DOCUMENTATION.md` for the full board reference, and
-`SDEV_ML_DOCUMENTATION.md` for the tensor / transformer / self-evolution stack.
+See [Hardware & Boards](../07-domains/hardware-and-boards.md) for the full board reference, and
+[ML & LLM Stdlib](../03-standard-library/ml-and-llm-stdlib.md) for the tensor / transformer / self-evolution stack.
 
 ---
 
@@ -1349,7 +1366,7 @@ Notes:
 - Capture is by value at creation time; there is no shared mutable cell.
 - A closure body has its own locals; `set` inside the body never touches the
   enclosing scope.
-- Closures do not nest inside another `make` body yet.
+- Nested `make` closures inside functions preserve enclosing local slots cleanly.
 - Under the hood a closure is a heap object holding the code offset, the
   capture count and the captured values (opcode `CLOSURE` 0xC5); `call`
   (`CALLV` 0xC4) appends the captures after the arguments as extra locals.
@@ -1386,6 +1403,7 @@ say c.n           # 7
 ```
 
 Rules:
+- Only a line that **starts** with `kind Name` declares a class. Elsewhere, `kind` is an ordinary identifier usable as a variable, parameter, or field name (`set kind to "ball"`).
 - `kind Name` … `end` declares the kind. Inside it, every method is an
   ordinary `to NAME with …` block whose **first parameter is the receiver**.
   Call it `self` by convention — it is a plain parameter, not a keyword.
@@ -1479,10 +1497,11 @@ say triple(14)      # 42
 Rules:
 
 - The directive must be the whole line: `use "path"` (double quotes).
-- Paths are resolved by the host — the CLI and desktop IDE read them from
-  disk relative to the working directory; the browser IDE resolves them
-  against your workspace files.
-- Modules may `use` other modules; nesting is unlimited.
+- Paths are resolved by the host — the CLI, zero-host VM, and desktop IDE read them from
+  disk relative to the working directory; the **browser IDE** lazily loads every standard library
+  module under `lang/stdlib/**/*.sdev` (`withStdlib()`), resolves `@user/lib@version` packages
+  via the Library Registry, and resolves workspace files.
+- Modules may `use` other modules; transitive dependencies and nesting are resolved automatically.
 - **Include-once**: a path already pulled in is skipped the second time, so
   diamond dependencies (`a` uses `c`, `b` uses `c`, main uses both) are
   safe and `c` is emitted exactly once.
@@ -1543,6 +1562,20 @@ const { translated } = translateForDialect(src, 'auto', activeDialect, 'v2');
 
 ---
 
+## Pre-Flight Compiler Diagnostics
+
+Because the self-hosted v2 compiler runs directly on the Seed VM with no runtime error channel of its own, both `bin/sdevhost.mjs` and the browser `runWasm` bridge validate programs with the reference compiler (`src/lang-bridge/oracle/compile.mjs`) before execution and surface exact diagnostics instead of silent wrong results:
+
+| Mistake | Error Reported |
+| --- | --- |
+| Calling an undeclared function | `unknown function <name>` |
+| Wrong argument count | `<fn>: expected <n> args, got <m>` |
+| `list + list` without `list.sdev` | Prompts you to add `use "lang/stdlib/v2/list.sdev"` |
+| Instantiating an undeclared `kind` | `unknown kind <Name>` |
+| `break` outside a loop | `break outside of a loop` |
+
+---
+
 ## Not Yet in v2
 
 v2 is the newer track; some v1 features have not landed yet. Use v1 (or the
@@ -1552,13 +1585,13 @@ machine-checked list is `lang/parity/report.json`.
 | Feature | v1 | v2 | Notes |
 |---------|----|----|-------|
 | Classes (`essence` / `new`) | yes | `kind` / `new` | see "Kinds" above |
-| Inheritance (`extend`, `super`) | yes | planned | next OOP milestone |
+| Inheritance (`extend`, `super`) | yes | `extends` / `super` | single inheritance chain supported (multiple inheritance in v1 only) |
 | Lambdas / closures (`(x) -> x * 2`) | yes | `make … capture … end` | plus `ref` / `call` function values |
-| Imports | `summon` (Gist) | `use "path"` | see "Modules" above; no Gist fetch in v2 yet |
+| Imports | `summon` (Gist) | `use "path"` & `use "@user/lib"` | works on CLI, native, and website (`lang/stdlib/v2/*` bundled) |
 | Async / await / spawn | yes | planned | |
 | Ternary `~` | yes | use `if` / `else` | |
 | Sets, Maps, Queues, Stacks, LinkedList | yes | build from lists / tomes | |
-| Matrix & graphics APIs | yes | v1 track | canvas and turtle stay in v1 |
+| Matrix & graphics APIs | yes | `lang/stdlib/v2/matrix.sdev`, `graphics.sdev`, `turtle.sdev` | pure-SDEV v2 modules + SVG emission |
 
 
 ---
@@ -1740,9 +1773,12 @@ The agent works in three layers, in this order:
    assignment, conditions, loops, functions and comparisons. Offline, instant.
 2. **Memory** — every program you run teaches it your own words. The next file
    that uses them needs no thinking at all.
-3. **AI brain** — only when lines still make no sense. Online it uses the
-   hosted brain; offline, or when you ask for it, a local brain at
-   `SDEV_AGENT_LOCAL_URL` (default `http://127.0.0.1:11434/sdev-agent`).
+3. **AI brain** — only when lines still make no sense. By default SDEV uses its
+   zero-install, free local AI tiers first: the pre-baked **Micro-Brain** (`<50MB` WebGPU/SIMD),
+   in-browser **WebLLM** (`Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC`), or a self-hosted local
+   model server (**Ollama**, **LM Studio**, **llama.cpp**, **LocalAI** via `SDEV_AGENT_LOCAL_URL`).
+   It escalates to the website edge function (`sdev-agent`) when `!#agent:online` is set or enabled
+   in Settings. See [Understanding Agent & Local AI](../04-ai-and-causal-engine/understanding-agent-and-local-brain.md).
 
 Directives, written anywhere in the file:
 
@@ -1757,7 +1793,9 @@ Directives, written anywhere in the file:
 | `!#agent:learn:off` | Do not learn from this file |
 
 A file the agent's reading cannot run falls back to the file as written, so the
-agent can never make a working program stop working.
+agent can never make a working program stop working. In the IDE, you can also run
+without the understander at any time with **Run without Understanding** (`Ctrl+Shift+Enter`),
+force a fresh reading with **Re-understand**, or toggle the canonical translation **Preview**.
 
 From the command line:
 

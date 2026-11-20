@@ -1639,7 +1639,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   <button className="ide-menu-btn font-mono">Help</button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-52 bg-card border-border/50">
-                  <DropdownMenuItem onClick={() => window.open('/SDEV_DOCUMENTATION.md', '_blank')} className="text-xs gap-2 cursor-pointer">
+                  <DropdownMenuItem onClick={() => window.open('/documentation/02-language/v1-reference.md', '_blank')} className="text-xs gap-2 cursor-pointer">
                     <BookOpen className="w-3.5 h-3.5" /> Documentation
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowCommandPalette(true)} className="text-xs gap-2 cursor-pointer">

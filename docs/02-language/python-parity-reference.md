@@ -275,8 +275,15 @@ Bundled parity modules: `math`, `random`, `json`, `re`, `time`, `datetime`,
 ## 14. Track coverage
 
 The Python-parity surface described here is implemented on the **v1
-interpreter track** (browser IDE and Node CLI). The self-hosted v2
-compiler and the native x86-64 backend track the core language subset
-listed in the [Track Parity Matrix](/docs?doc=parity); the parity agent
-(`lang/parity/agent.sdev`) fails CI whenever a required feature regresses
-on any track.
+interpreter track** (browser IDE, Node CLI, and standalone Python interpreter
+`public/sdev-interpreter.py`), alongside pure-SDEV v2 parity helpers in
+`lang/stdlib/v2/pyparity.sdev`. The self-hosted v2 compiler and the native
+x86-64 backend track the core language subset listed in the
+[Track Parity Matrix](../06-compiler-and-internals/track-parity-matrix.md);
+the parity agent (`lang/parity/agent.sdev`) fails CI whenever a required
+feature regresses on any track.
+
+Recent Python interpreter parity additions:
+- Consistent `==`, `!=`, and `str()` behavior matching the browser runtime across expressions and OCE examples.
+- Built-in `oce_*`, `bits_*`, `mem_*`, and `ring_*` causal-engine functions matching `lang/stdlib/v2/oce.sdev` and `src/lang/builtins/oce.ts` (tested by `npm run test:oce-parity`).
+- Note: the standalone Python interpreter executes classic SDEV (`forge`/`be`); `!#ai` files require the web/Node pipeline (`lang/agent/ai-dialect.sdev`).

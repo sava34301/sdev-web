@@ -67,3 +67,19 @@ True C++-style zero-host: SDEV's own compiler and native backend compiled to sta
 ```
 
 The resulting bytecode (20,933 bytes) and string pool (1,123 bytes) match the baked self-hosted driver byte-for-byte.
+
+---
+
+## Path C — Zero-Cost Windows x86-64 PE/COFF (`.exe`) Emitter
+
+On Windows, SDEV generates standalone 64-bit console executables (`PE32+`) directly from raw machine code without Visual Studio, MSVC, MinGW/GCC, or paid EV/OV signing certificates:
+
+- **Host Emitter:** `src/lang-bridge/native/pe.mjs` — generates DOS stub, `PE\0\0` signature, COFF AMD64 (`0x8664`) header, PE32+ Optional Header (`0x020B`, CUI subsystem `3`), `.text` section (Win64 ABI 16-byte stack alignment + 32-byte shadow space), and `.rdata` import table (`KERNEL32.dll`: `GetStdHandle`, `WriteFile`, `ExitProcess`).
+- **Pure-SDEV PE Emitter:** `lang/native/pe_x64.sdev` (`pe_build_minimal_exe`, `pe_verify_header`).
+
+```bash
+node scripts/sdev-native.mjs program.sdev -o program.exe --target windows --format pe
+.\program.exe
+```
+
+Verified by `node scripts/run-ts.mjs scripts/test-native-pe.ts` (10 cases) and `npm run test:native` (81 Linux ELF cases via WSL).

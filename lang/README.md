@@ -27,60 +27,93 @@ lang/
 ├── bootstrap/             # Stage-0 bootstrap & VM bytecode emitter
 │   ├── seed_vm.sdev       # WebAssembly bytecode emitter & LEB128 encoding
 │   └── bootstrap.sdev     # Stage-0 bootstrap bytecode compiler
-├── runtime/               # Virtual Machine & OS Kernel
-│   ├── vm.sdev            # Stack-based bytecode virtual machine & disassembler
-│   └── kernel.sdev        # Virtual OS Kernel: VFS, process scheduler, pipes, syscalls
-├── native/                # Native x86-64 code generation & linking
-│   ├── codegen_x64.sdev   # x86-64 machine code instruction generator
-│   ├── runtime_x64.sdev   # System V AMD64 runtime generator
-│   ├── link.sdev          # Standalone ELF linker driver
-│   └── README.md          # Native backend documentation
-├── stdlib/                # Standard Library
-│   ├── v2/                # Core v2 modular standard library
-│   │   ├── text.sdev      # String manipulation, padding, reversal, v1 aliases
-│   │   ├── list.sdev      # List manipulation, fold, filter, map, sorting
-│   │   ├── tome.sdev      # Key-value map/dictionary operations
-│   │   ├── math.sdev      # Math utilities, gcd/lcm, primes, stats, clamp
-│   │   ├── bits.sdev      # Bitwise shifts, bitmask tests, popcount, hex
-│   │   ├── time.sdev      # Time calculations, leap years, duration formatting
-│   │   ├── func.sdev      # Functional combinators, take, drop, compose
-│   │   ├── json.sdev      # JSON serialization and escape sequences
-│   │   ├── types.sdev     # Dynamic type checking, conversions, coalesce
-│   │   └── random.sdev    # Linear Congruential PRNG
-│   ├── ml/                # Machine learning standard library
-│   │   ├── tensor.sdev    # N-dimensional tensor operations
-│   │   ├── autograd.sdev  # Reverse-mode automatic differentiation
-│   │   ├── nn.sdev        # Neural network layers (dense, activation, loss)
-│   │   ├── transformer.sdev # Attention and transformer architectures
-│   │   ├── train.sdev     # Optimizers, training loops, checkpoints
-│   │   ├── data.sdev      # Datasets, tokenization, batching
-│   │   ├── cuda.sdev      # Hardware accelerator dispatch
-│   │   ├── self_modify.sdev # Code introspection & self-modification
-│   │   └── auto_evolve.sdev # Automated code evolution & benchmarking
-│   ├── ffi.sdev           # Foreign Function Interface bindings
-│   ├── testkit.sdev       # Unit test assertion framework
-│   └── webgpu.sdev        # WebGPU shader & compute dispatch
-├── paradigms/             # Multi-paradigm extensions
-│   ├── functional.sdev    # Algebraic Data Types (`Option`, `Result`) and pattern matching
-│   ├── systems.sdev       # Linear memory arenas, pointers, structs, peek/poke
-│   ├── data.sdev          # DataFrames, columnar tables, CSV & Markdown serialization
-│   └── hardware.sdev      # Microcontroller hardware transpiler (Arduino / C++)
-├── translator/            # Natural language keyword translation
-│   └── translator.sdev    # 26-language keyword translator & script detector
-├── legacy/                # Compatibility frontends
-│   └── v1_frontend.sdev   # Full SDEV v1-to-v2 syntax & expression transpiler (`v1_transpile_expr`, `v1_transpile_line`, `v1_to_v2_source`)
-├── linter/                # Diagnostic linter
-│   └── linter.sdev        # Levenshtein distance, spelling corrections, linting rules
-├── agent/                 # SDEV Understander & dialect agents
-│   ├── ai-dialect.sdev    # AI conversational dialect translator
-│   ├── blocks.sdev        # Block delimiter analyzer & balancer
-│   ├── parser_eval.sdev   # AST evaluation engine in SDEV
-│   ├── project.sdev       # Multi-file project indexer & resolver
-│   └── understander.sdev  # Natural English to canonical SDEV code understander
-└── parity/                # Parity test tracking
-    ├── agent.sdev         # Parity validation agent in pure SDEV
-    ├── features.json      # 209 language features across v1, v2, and native tracks
-    └── report.json        # Auto-generated verification report (0 missing required features)
+│   ├── native/                # Native x86-64 code generation & linking
+│   │   ├── build.sdev         # Standalone native build driver (`sdev-vm native`)
+│   │   ├── codegen_x64.sdev   # x86-64 machine code instruction generator
+│   │   ├── runtime_x64.sdev   # System V AMD64 runtime generator
+│   │   ├── link.sdev          # Standalone ELF linker driver
+│   │   ├── pe_x64.sdev        # Windows PE/COFF (`.exe`) emitter
+│   │   └── README.md          # Native backend documentation
+│   ├── runtime/               # Virtual Machine, OS Kernel, Notebooks & WASI
+│   │   ├── vm.sdev            # Stack-based bytecode virtual machine & disassembler
+│   │   ├── kernel.sdev        # Virtual OS Kernel: VFS, process scheduler, pipes, syscalls
+│   │   ├── notebook.sdev      # Self-hosted notebook execution helpers
+│   │   └── wasi.sdev          # WASI 0.2 runtime & component helpers
+│   ├── stdlib/                # Standard Library
+│   │   ├── v2/                # Core v2 pure-SDEV standard library (21 modules)
+│   │   │   ├── bits.sdev      # Bitwise shifts, bitmask tests, popcount, hex
+│   │   │   ├── buffer.sdev    # Byte buffer operations
+│   │   │   ├── func.sdev      # Functional combinators, take, drop, compose
+│   │   │   ├── graphics.sdev  # Canvas 2D drawing primitives
+│   │   │   ├── json.sdev      # JSON serialization and escape sequences
+│   │   │   ├── list.sdev      # List manipulation, fold, filter, map, sorting
+│   │   │   ├── math.sdev      # Math utilities, gcd/lcm, primes, stats, clamp
+│   │   │   ├── matrix.sdev    # Matrix and linear algebra helpers
+│   │   │   ├── mem.sdev       # Byte-addressed linear arena memory (used by OCE)
+│   │   │   ├── oce.sdev       # Ontological Causal Engine core
+│   │   │   ├── pyparity.sdev  # Python parity helpers
+│   │   │   ├── random.sdev    # Linear Congruential PRNG
+│   │   │   ├── regex.sdev     # Pure-SDEV pattern matching helpers
+│   │   │   ├── sql.sdev       # SQL query helpers
+│   │   │   ├── text.sdev      # String manipulation, padding, reversal, v1 aliases
+│   │   │   ├── time.sdev      # Time calculations, leap years, duration formatting
+│   │   │   ├── tome.sdev      # Key-value map/dictionary operations
+│   │   │   ├── turtle.sdev    # Turtle graphics primitives
+│   │   │   ├── types.sdev     # Dynamic type checking, conversions, coalesce
+│   │   │   ├── ui.sdev        # App widget DSL helpers
+│   │   │   └── web.sdev       # Web DOM/HTML DSL helpers
+│   │   ├── ml/                # Machine learning standard library
+│   │   │   ├── tensor.sdev    # N-dimensional tensor operations
+│   │   │   ├── autograd.sdev  # Reverse-mode automatic differentiation
+│   │   │   ├── nn.sdev        # Neural network layers (dense, activation, loss)
+│   │   │   ├── transformer.sdev # Attention and transformer architectures
+│   │   │   ├── train.sdev     # Optimizers, training loops, checkpoints
+│   │   │   ├── data.sdev      # Datasets, tokenization, batching
+│   │   │   ├── cuda.sdev      # Hardware accelerator dispatch
+│   │   │   ├── self_modify.sdev # Code introspection & self-modification
+│   │   │   └── auto_evolve.sdev # Automated code evolution & benchmarking
+│   │   ├── ffi.sdev           # Foreign Function Interface bindings
+│   │   ├── testkit.sdev       # Unit test assertion framework
+│   │   └── webgpu.sdev        # WebGPU shader & compute dispatch
+│   ├── web/                   # Self-hosted website & UI toolkit
+│   │   ├── html.sdev          # HTML element builders & SSR renderer
+│   │   ├── css.sdev           # Utility & component stylesheet builders
+│   │   ├── themes.sdev        # Design tokens & theme presets
+│   │   ├── icons.sdev         # SVG icon helpers
+│   │   ├── components.sdev    # Composite web components
+│   │   ├── transpiler.sdev    # Site bundle / TSX-to-SDEV helpers
+│   │   └── sdev-website.sdev  # Self-hosted sdev documentation/website builder
+│   ├── dialect/               # Personal SDEV dialect definitions & rules
+│   │   └── dialect.sdev       # `!#dialect` / `!#ext` / `!#sig` canonicalizer helpers
+│   ├── formatter/             # Source code formatter
+│   │   └── formatter.sdev     # Pure-SDEV canonical formatting rules
+│   ├── registry/              # Canonical API registry mirror
+│   │   └── registry.sdev      # Pure-SDEV API registry index & lookup helpers
+│   ├── paradigms/             # Multi-paradigm extensions
+│   │   ├── functional.sdev    # Algebraic Data Types (`Option`, `Result`) and pattern matching
+│   │   ├── systems.sdev       # Linear memory arenas, pointers, structs, peek/poke
+│   │   ├── data.sdev          # DataFrames, columnar tables, CSV & Markdown serialization
+│   │   └── hardware.sdev      # Microcontroller hardware transpiler (Arduino / C++)
+│   ├── translator/            # Natural language keyword translation
+│   │   └── translator.sdev    # 26-language keyword translator & script detector
+│   ├── legacy/                # Compatibility frontends
+│   │   └── v1_frontend.sdev   # Full SDEV v1-to-v2 syntax & expression transpiler (`v1_transpile_expr`, `v1_transpile_line`, `v1_to_v2_source`)
+│   ├── linter/                # Diagnostic linter
+│   │   └── linter.sdev        # Levenshtein distance, spelling corrections, linting rules
+│   ├── agent/                 # SDEV Understander, local reasoning & dialect agents
+│   │   ├── ai-dialect.sdev    # `!#ai` conversational dialect translator
+│   │   ├── blocks.sdev        # Block delimiter analyzer & balancer (`board`, `js`, blocks)
+│   │   ├── brain.sdev         # Agent reasoning helpers
+│   │   ├── math.sdev          # Agent math evaluation helpers
+│   │   ├── memory.sdev        # Agent conversation/context memory helpers
+│   │   ├── parser_eval.sdev   # AST evaluation engine in SDEV
+│   │   ├── project.sdev       # Multi-file project indexer & resolver
+│   │   ├── tasks.sdev         # Agent task planning helpers
+│   │   └── understander.sdev  # Rule-first canonical SDEV code understander
+│   └── parity/                # Parity test tracking
+│       ├── agent.sdev         # Parity validation agent in pure SDEV
+│       ├── features.json      # 209 language features across v1, v2, and native tracks
+│       └── report.json        # Auto-generated verification report (0 missing required features)
 ```
 
 ---
@@ -110,27 +143,29 @@ The native compiler produces bare-metal x86-64 machine code:
 ### 4. Virtual Machine & Operating System Kernel (`lang/runtime/`)
 - **`vm.sdev`**: Stack-based bytecode virtual machine capable of stepping, disassembling, and executing SDEV bytecode with full call-frame management and arithmetic/control-flow opcode dispatch.
 - **`kernel.sdev`**: Virtual operating system kernel with an in-memory Virtual File System (VFS), process table, round-robin scheduler, inter-process pipes, environment variables, and POSIX-like system calls (`sys_read`, `sys_write`, `sys_spawn`, `sys_open`).
+- **`notebook.sdev`** & **`wasi.sdev`**: Self-hosted notebook execution and WASI 0.2 component model support.
 
-### 5. Standard Library (`lang/stdlib/v2/`)
-Modular, high-performance standard library components covering strings (`text.sdev`), lists (`list.sdev`), associative dictionaries (`tome.sdev`), advanced arithmetic & prime testing (`math.sdev`), bitwise manipulation (`bits.sdev`), calendar/clock calculations (`time.sdev`), functional combinators (`func.sdev`), JSON encoding (`json.sdev`), runtime type introspection (`types.sdev`), and pseudo-random number generation (`random.sdev`).
+### 5. Standard Library & Website Toolkit (`lang/stdlib/v2/`, `lang/web/`)
+Modular pure-SDEV v2 standard library covering strings (`text.sdev`), lists (`list.sdev`), associative dictionaries (`tome.sdev`), math (`math.sdev`), bitwise logic (`bits.sdev`), arena memory (`mem.sdev`), the Ontological Causal Engine (`oce.sdev`), calendar/clock calculations (`time.sdev`), functional combinators (`func.sdev`), JSON (`json.sdev`), runtime types (`types.sdev`), PRNG (`random.sdev`), regex, SQL, matrices, graphics, turtle, UI, Web, and Python parity helpers. `lang/web/` adds a self-hosted HTML/CSS/theming/SVG website builder (`sdev-website.sdev`).
+
+See the full structured documentation index in [`docs/README.md`](../docs/README.md), including [Compiler & VM Internals](../docs/06-compiler-and-internals/compiler-and-vm-internals.md) and [Self-Hosted v2 Stdlib & Website Toolkit](../docs/03-standard-library/v2-stdlib-and-web-toolkit.md).
 
 ---
 
 ## Test Verification
 
-The entire language toolchain is tested using the SDEV host environment:
+The entire language toolchain is tested using the SDEV host environment (`node bin/sdevhost.mjs scripts/test-all.sdev` runs all 22 suites):
 
 | Test Suite | Command | Description |
 | :--- | :--- | :--- |
+| **Unified Harness** | `node bin/sdevhost.mjs scripts/test-all.sdev` | Runs all 22 self-hosted compiler, stdlib, agent & subsystem suites |
 | **Toolchain** | `npm run test:toolchain` | Lexer, parser, and codegen self-compilation |
 | **Driver** | `npm run test:driver` | Standalone driver artifact verification |
-| **Lexer** | `npm run test:self-lexer` | Self-hosted lexer tokenizer suite |
-| **Parser** | `npm run test:self-parser` | Self-hosted AST parser suite |
-| **Codegen** | `npm run test:self-codegen` | 52/52 bytecode emission test cases |
-| **v1 Compiler** | `npm run test:self-v1` | Self-hosted v1 lexer, parser, codegen, `v1_self` fixed point, IR, and frontend |
+| **v1 Compiler** | `npm run test:self-v1` | Self-hosted v1 lexer, parser, codegen, `v1_self` Stage 2 == Stage 3 fixed point, IR, and frontend |
 | **Fixed-Point** | `npm run test:fixed-point` | Shim and bootstrap fixed-point parity |
-| **WASM Runtime** | `node scripts/test-wasm-runtime.mjs` | Seed VM bytecode execution (73/73 passed) |
-| **Native x86-64** | `wsl node scripts/test-native.mjs` | Bare-metal Linux ELF generation (81/81 passed) |
-| **Self-Hosted Stdlib** | `node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev` | All 10 v2 stdlib modules |
+| **WASM Runtime** | `node scripts/test-wasm-runtime.mjs` | Seed VM bytecode execution suite |
+| **Native x86-64** | `node scripts/test-native.mjs` | Bare-metal Linux ELF / Windows PE generation & execution |
+| **Self-Hosted Stdlib** | `node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev` | Core v2 stdlib modules |
 | **Self-Hosted Subsystems** | `node bin/sdevhost.mjs scripts/test-selfhosted-subsystems.sdev` | VM, Kernel, Translator, Frontend, Paradigms, Linter |
-| **Parity Gate** | `node scripts/run-ts.mjs scripts/test-parity.ts` | 209 features across 3 tracks (0 missing required) |
+| **OCE Parity** | `npm run test:oce-parity` | Dual-runtime parity across Seed VM, JS builtins & Python interpreter |
+| **Parity Gate** | `npm run test:parity` | 209 features across 3 tracks (`lang/parity/features.json`) |

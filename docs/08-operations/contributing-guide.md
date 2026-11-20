@@ -25,10 +25,12 @@ Before modifying code, familiarize yourself with our project architectural guide
      node scripts/release.mjs
      ```
 5. **Documentation Generation**:
-   - `README.md` and `public/SDEV_ULTIMATE_DOCUMENTATION.md` are generated artifacts. Do not manually edit them. Update the source markdown files or implementation, then execute:
+   - `docs/01-overview/ultimate-reference.md` and `docs/07-domains/hardware-and-boards.md` are generated artifacts. Do not manually edit `ultimate-reference.md`. Update the source markdown files under `docs/` or implementation, then execute:
      ```bash
      node scripts/build-ultimate-docs.mjs
+     npm run docs:hardware
      ```
+   - `README.md` at the repository root is the human-curated project overview and structured index to `docs/`. Keep it synchronized when adding or renaming guides.
 
 ---
 
@@ -53,7 +55,7 @@ Copy the template file to configure your local environment:
 ```bash
 cp .env.example .env
 ```
-Refer to [docs/ENV.md](file:///c:/Users/User/Documents/sdev-web-anti/sdev-web/docs/ENV.md) for full descriptions of all variables.
+Refer to [environment-variables.md](environment-variables.md) for full descriptions of all variables.
 
 ---
 
@@ -98,16 +100,22 @@ SDEV maintains extensive test coverage across the language parser, compiler, sta
 
 | Category | Command | Description |
 | :--- | :--- | :--- |
-| **Full Suite** | `npm test` | Runs comprehensive language test suite (`scripts/test-all.sdev`). |
+| **Full Suite** | `npm test` | Runs all 22 pure-SDEV core suites (`scripts/test-all.sdev`). |
+| **Self-Hosted v1** | `npm run test:self-v1` | Tests 6-layer self-hosted v1 compiler & 3-stage `v1_self.sdev` fixed point. |
+| **Web Toolkit** | `npm run test:self-web && npm run test:website && npm run test:web` | Tests self-hosted `lang/web/` HTML/CSS/transpiler, official site, and TS/Python parity. |
+| **OCE Parity** | `npm run test:oce && npm run test:oce-parity` | Tests 64 KB Ontological Causal Engine across v2, native, classic, and Python. |
+| **v2 Diagnostics** | `npm run test:v2-diagnostics` | Verifies v2 pre-flight error reporting, `list +`, contextual `kind`, and nested closures. |
+| **API & Linter** | `npm run test:registry` | Tests 881 APIs, `SDEV001`–`SDEV015`, Studio Chrono, and cloud sync (93 checks). |
 | **TDD Features** | `npm run test:tdd-features` | Tests live scratchpad, micro-benchmarker, and literate notebooks. |
 | **AI Understander** | `npm run test:brain-benchmarks` | Benchmarks MicroBrain natural language translations & sanitizer. |
-| **Agent Docs** | `npm run test:understander-docs`| Verifies all documented code examples pass through understander. |
+| **Agent Docs** | `npm run test:understander-docs` | Verifies all documented code examples pass through understander. |
 | **Expansion** | `npm run test:expansion` | Tests extended stdlib, data structures, and algorithms. |
-| **Parity** | `npm run test:parity` | Verifies dual-dialect (v1 vs v2 Prism) parity. |
+| **Parity** | `npm run test:parity` | Verifies dual-dialect (v1 vs v2 Prism) parity across 209 features. |
 | **WASM Runtime** | `npm run test:wasm-runtime` | Tests WebAssembly compiler target execution. |
 | **Native Backend** | `npm run test:native` | Executes native x86-64 GNU assembler/linker tests in WSL/Linux. |
-| **Hardware** | `npm run test:board-db` | Validates microcontroller definitions and pin mappings. |
-| **Machine Learning**| `npm run test:ml` | Tests matrix manipulation, tensors, and linear regression. |
+| **MCP Deployment** | `node --test scripts/test-mcp-deployment.mjs` | Ensures `supabase/functions/mcp/index.ts` uses portable imports only. |
+| **Hardware** | `npm run test:board-db` | Validates 30 microcontroller definitions and pin mappings. |
+| **Machine Learning** | `npm run test:ml` | Tests matrix manipulation, tensors, M15 checkpoints, and training. |
 | **Self-Hosting** | `npm run test:toolchain` | Tests the self-hosted compiler toolchain pipeline. |
 | **Security** | `npm run security:scan` | Executes ECC AgentShield security vulnerability scan. |
 

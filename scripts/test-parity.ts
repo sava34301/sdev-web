@@ -21,7 +21,7 @@ import { resolveLinks, type LinkableFile } from '../src/lang/linker';
 };
 
 const REGISTRY = 'lang/parity/features.json';
-const DOCS = ['public/SDEV_PARITY_DOCUMENTATION.md', 'public/SDEV_INTERNALS.md'];
+const DOCS = ['docs/06-compiler-and-internals/track-parity-matrix.md', 'docs/06-compiler-and-internals/compiler-and-vm-internals.md'];
 
 // The agent parses the registry line-by-line. Validate the same file with a
 // real JSON parser so a malformed or reshaped registry fails loudly here.

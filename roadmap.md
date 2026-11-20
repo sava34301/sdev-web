@@ -20,7 +20,7 @@ code that browsers, Node and Electron require in order to start SDEV at all.
 - [x] Every Library Manager library usable with `use "Name"` (compact index of all libraries)
 - [x] Compile on the website with no install (hosted builder for supported boards, own build server for the rest)
 - [x] Upload from the browser: STK500v1, STK500v2, AVR109, SAM-BA, DFU (WebUSB), esptool, UF2
-- [x] Full hardware documentation generated from the command catalogue (`scripts/gen-hardware-docs.ts` → `public/SDEV_HARDWARE_DOCUMENTATION.md`)
+- [x] Full hardware documentation generated from the command catalogue (`scripts/gen-hardware-docs.ts` → `docs/07-domains/hardware-and-boards.md`)
 - [x] Tests: translator, protocol simulators, real compiles of every example (`scripts/test-transpile.ts`, `src/lang/hardware/board-db.test.ts`)
 - [x] Canonical API registry (`src/lang/registry/api-registry.ts`), static linter (`src/lang/linter.ts`), Runtime Explorer panel (`src/components/ide/RuntimeExplorerPanel.tsx`), CLI `doctor`/`explain`/`lint`/`api`, and Studio compiler & cloud persistence wiring
 

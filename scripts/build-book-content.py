@@ -3,7 +3,7 @@
 Generate the comprehensive sdev book in EN and BG.
 
 Strategy:
-- Start from the original SDEV_DOCUMENTATION.md (2921 lines, the proven source of truth)
+- Start from the original docs/02-language/v1-reference.md (2921 lines, the proven source of truth)
 - Add a designed front-matter (preface, what's new in this edition, conventions)
 - Append major NEW sections covering features added since the original docs:
     * UI Toolkit deep dive (windows, buttons, inputs, layout, customization)
@@ -1875,19 +1875,19 @@ def build_en():
     parts = []
     parts.append(front_matter_en())
     parts.append("# Part I — The Language\n\nThis part is the canonical sdev reference. It is comprehensive: every keyword, every built-in, every operator. If you only ever read one part of the book, read this one.\n\n---\n\n")
-    parts.append(read('public/SDEV_DOCUMENTATION.md'))
+    parts.append(read('docs/02-language/v1-reference.md'))
     parts.append("\n\n---\n\n")
     parts.append(ui_deep_dive_en())
     parts.append(widget_cards(WIDGETS, 'en'))
     parts.append(tutorials_en())
     parts.append("# Appendix A — Maps & GIS (Leaflet)\n\nFull reference for the mapping subsystem.\n\n---\n\n")
-    parts.append(read('public/SDEV_LEAFLET_DOCUMENTATION.md'))
+    parts.append(read('docs/07-domains/leaflet-and-gis.md'))
     parts.append("\n\n---\n\n")
     parts.append(glossary(GLOSS_EN, "Appendix B — Glossary"))
     parts.append("# Appendix C — Index of tutorials\n\n| # | Title | Teaches |\n|---|-------|---------|\n")
     for i, (t, d) in enumerate(TUTORIALS_EN, 1):
         parts.append(f"| {i} | {t} | {d} |\n")
-    parts.append("\n---\n\n## Colophon\n\nThis book was generated from the sdev source repository on 2026-05-03. The body is set in DejaVu Serif, headings in DejaVu Sans Bold, code in DejaVu Sans Mono. The PDF is rendered with ReportLab. Source markdown lives in the project's `public/` directory.\n")
+    parts.append("\n---\n\n## Colophon\n\nThis book was generated from the sdev source repository on 2026-05-03. The body is set in DejaVu Serif, headings in DejaVu Sans Bold, code in DejaVu Sans Mono. The PDF is rendered with ReportLab. Source markdown lives in the project's `docs/` directory.\n")
     return ''.join(parts)
 
 def build_bg():
@@ -1897,13 +1897,13 @@ def build_bg():
     parts.append(read('/tmp/bg-seed.md').replace('',''))  # body of the existing 1638-line BG book
     parts.append("\n\n---\n\n")
     parts.append("## Допълнение към Част I — Оригинален английски справочник\n\nЗа пълнота тук е приложен оригиналният английски справочник, тъй като той съдържа последните технически детайли (синтаксис на оператори, имена на вградени функции, които не се превеждат).\n\n---\n\n")
-    parts.append(read('public/SDEV_DOCUMENTATION.md'))
+    parts.append(read('docs/02-language/v1-reference.md'))
     parts.append("\n\n---\n\n")
     parts.append(ui_deep_dive_bg())
     parts.append(widget_cards(WIDGETS_BG, 'bg'))
     parts.append(tutorials_bg())
     parts.append("# Приложение А — Карти и GIS (Leaflet)\n\nПълен справочник за картографската подсистема (на английски — имената на функциите са еднакви и в двата езика).\n\n---\n\n")
-    parts.append(read('public/SDEV_LEAFLET_DOCUMENTATION.md'))
+    parts.append(read('docs/07-domains/leaflet-and-gis.md'))
     parts.append("\n\n---\n\n")
     parts.append(glossary(GLOSS_BG, "Приложение Б — Речник"))
     parts.append("# Приложение В — Индекс на уроците\n\n| # | Заглавие | Учи на |\n|---|----------|--------|\n")
@@ -1916,9 +1916,9 @@ def build_bg():
 if __name__ == '__main__':
     en = build_en()
     bg = build_bg()
-    with open(os.path.join(ROOT, 'public/sdev-book-en.md'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(ROOT, 'docs/01-overview/the-sdev-book-en.md'), 'w', encoding='utf-8') as f:
         f.write(en)
-    with open(os.path.join(ROOT, 'public/sdev-book-bg.md'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(ROOT, 'docs/01-overview/the-sdev-book-bg.md'), 'w', encoding='utf-8') as f:
         f.write(bg)
     en_lines = en.count('\n'); bg_lines = bg.count('\n')
     print(f'EN: {en_lines} lines, {len(en)//1024} KB')

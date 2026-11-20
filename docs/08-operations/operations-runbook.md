@@ -8,12 +8,12 @@ This operations runbook outlines deployment processes, runtime infrastructure, e
 
 | Component | Technology | Hosting / Distribution | Core Dependencies |
 | :--- | :--- | :--- | :--- |
-| **Web IDE & Landing** | React 18, Vite, Tailwind CSS, CodeMirror | Vercel / Netlify / Static CDN | WebGPU, WebAssembly, Web Serial |
-| **Edge Functions** | Deno, Supabase Edge Functions | Supabase Cloud | OpenAI API, Ollama/OpenAI-compat |
-| **On-Device Brain** | MLC WebLLM (`@mlc-ai/web-llm`) | In-browser WebGPU runtime | Browser WebGPU API (Chrome 113+) |
-| **Desktop IDE** | Electron, Node.js | Linux / macOS / Windows binaries | Local filesystem, native shell |
-| **CLI & Host** | Node.js standalone executable | npm / GitHub Releases | Node.js v18+ |
-| **Hardware Cloud Build** | Cloud compiler microservice | Containerized Arduino CLI | `arduino-cli`, GCC avr/arm toolchains |
+| **Web IDE & Landing** | React 18, Vite, Tailwind CSS, CodeMirror 6 | Vercel / Netlify / Static CDN | WebGPU, WebAssembly, Web Serial, WebUSB |
+| **Edge Functions** | Deno, Supabase Edge Functions | Supabase Cloud | `sdev-agent`, `sdev-chat`, `sdev-fix`, `compile-firmware`, `draft-dialect`, `translate-*`, `mcp` |
+| **On-Device Brain** | Micro-Brain + MLC WebLLM (`@mlc-ai/web-llm`) | In-browser WebGPU runtime | Browser WebGPU API (Chrome 113+) |
+| **Desktop IDE** | Electron, Node.js | Linux / macOS / Windows binaries | Local filesystem, native shell (`as`/`ld`) |
+| **CLI & Zero-Host** | `bin/sdev.mjs` (Node.js) & `bin/sdev-vm` (native C) | npm / GitHub Releases / native OS | Node.js v18+ (optional with `bin/sdev-vm`) |
+| **Hardware Cloud Build** | Cloud compiler microservice (`compile-firmware`) | Containerized Arduino CLI / Wokwi | `arduino-cli`, GCC avr/arm toolchains |
 
 ---
 
@@ -37,19 +37,16 @@ The frontend builds as an optimized Single Page Application (SPA).
    ```
 
 ### 2.2 Supabase Edge Functions
-Server-side functions handle optional cloud AI inference (`sdev-agent`) and remote hardware compilation (`arduino-build`).
+Server-side functions handle optional cloud AI inference (`sdev-agent`, `sdev-chat`, `sdev-fix`, `draft-dialect`, `translate-*`), remote hardware compilation (`compile-firmware`), and the OAuth MCP server (`mcp`).
 
-1. **Deploying `sdev-agent`**:
+1. **Deploying AI & Tooling Functions**:
    ```bash
-   supabase functions deploy sdev-agent --project-ref <PROJECT_ID>
+   supabase functions deploy sdev-agent sdev-chat sdev-fix mcp compile-firmware --project-ref <PROJECT_ID>
    ```
-2. **Deploying `arduino-build`**:
+   Verify portable MCP bundle before deploying (`node --test scripts/test-mcp-deployment.mjs`).
+2. **Setting Edge Secrets**:
    ```bash
-   supabase functions deploy arduino-build --project-ref <PROJECT_ID>
-   ```
-3. **Setting Edge Secrets**:
-   ```bash
-   supabase secrets set SDEV_AI_API_KEY="your-key" SDEV_AI_URL="https://api.openai.com/v1" SDEV_AI_MODEL="gpt-4o-mini"
+   supabase secrets set SDEV_AI_API_KEY="your-key" SDEV_AI_BASE_URL="https://api.openai.com/v1" SDEV_AI_MODEL="gpt-4o-mini"
    ```
 
 ### 2.3 Desktop Application Packaging
@@ -100,20 +97,20 @@ Developers can point their browser or CLI to a local LLM server without cloud de
 ### Tier 3: Hosted Edge Gateway
 When a file explicitly specifies `!#agent:online` or cloud mode is selected:
 - The app sends inference requests to the Supabase Edge Function `/sdev-agent`.
-- Configure `SDEV_AI_API_KEY` and `SDEV_AI_URL` in Supabase project secrets.
+- Configure `SDEV_AI_API_KEY` and `SDEV_AI_BASE_URL` (plus optional `SDEV_AI_MODEL`, `SDEV_AI_MODEL_FAST`, `SDEV_AI_MODEL_STRONG`) in Supabase project secrets.
 
 ---
 
 ## 4. Hardware & Microcontroller Operations
 
-### Web Serial API Flashing
-- The Web IDE connects directly to Arduino, ESP32, Raspberry Pi Pico, and BBC micro:bit boards via the browser Web Serial API.
+### Web Serial & WebUSB API Flashing
+- The Web IDE connects directly to 30 supported boards (Arduino Uno R3/R4, Mega, Leonardo, Micro, MKR, Zero, Due, Giga, Portenta, ESP32/C3/S2/S3, ESP8266, Raspberry Pi Pico/W, ATtiny85, Teensy 4.1) via browser Web Serial, WebUSB (DFU), and File System Access API (UF2).
 - **Requirements**: Chromium-based browsers (Chrome, Edge, Opera) over HTTPS or `localhost`.
 - **Baud Rate**: Default is `115200` baud.
 
-### Cloud Compilation (`arduino-build`)
-- When local tools are unavailable, the IDE dispatches C++ firmware code to `VITE_ARDUINO_BUILD_URL`.
-- The service invokes `arduino-cli compile --fqbn <board_fqbn>` and returns the binary `.hex` or `.bin` stream for direct Web Serial flashing.
+### Cloud Compilation (`compile-firmware`)
+- When local tools are unavailable, the IDE dispatches C++ firmware code to the Supabase `compile-firmware` Edge Function (or a custom local `tools/arduino-build-server/server.mjs` at `VITE_ARDUINO_BUILD_URL`).
+- Verified boards compile via Wokwi Hexi or `arduino-cli compile --fqbn <board_fqbn>` and return `.hex`/`.bin` payloads for direct browser flashing.
 
 ---
 

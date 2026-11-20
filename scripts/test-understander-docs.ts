@@ -10,14 +10,20 @@ let memory: AgentMemory = emptyMemory();
 setMemoryStore({ load: () => memory, save: (m) => { memory = m; } });
 const verbose = process.env.V === '1';
 let total = 0, okRun = 0, changed = 0, broke = 0, diff = 0, v2changed = 0, v2total = 0;
-const docs = process.argv.length > 2 ? process.argv.slice(2) : ['public/SDEV_DOCUMENTATION.md', 'public/sdev-book-en.md', 'public/SDEV_FULL_DOCUMENTATION.md', 'public/SDEV_V2_DOCUMENTATION.md', 'public/SDEV_HARDWARE_DOCUMENTATION.md'];
+const docs = process.argv.length > 2 ? process.argv.slice(2) : [
+  'docs/02-language/v1-reference.md',
+  'docs/01-overview/the-sdev-book-en.md',
+  'docs/01-overview/language-overview.md',
+  'docs/02-language/v2-prism-guide.md',
+  'docs/07-domains/hardware-and-boards.md',
+];
 for (const d of docs) {
   const text = readFileSync(d, 'utf8');
   const blocks = d.endsWith('.sdev') ? [text] : [...text.matchAll(/```sdev[^\n]*\n([\s\S]*?)```/g)].map(m => m[1]);
   for (const src of blocks) {
     total++;
     memory = emptyMemory();
-    const isV2 = /^#!sdev v2/m.test(src) || d.includes('V2');
+    const isV2 = /^#!sdev v2/m.test(src) || d.includes('V2') || d.includes('v2-prism') || d.includes('v2-stdlib') || d.includes('oce-');
     let u; try { u = understand(src); } catch (e) { broke++; console.log('THREW', d, String(e).slice(0, 200)); continue; }
     const rewritten = u.source.trim() !== src.trim();
     if (isV2) { v2total++; if (rewritten) { v2changed++; if (verbose) { console.log(`\n=== V2 REWRITE ${d}`); const A = src.split('\n'), B = u.source.split('\n'); for (let i = 0; i < Math.max(A.length, B.length); i++) if ((A[i] ?? '').trim() !== (B[i] ?? '').trim()) console.log(`  L${i + 1}: ${JSON.stringify(A[i])} -> ${JSON.stringify(B[i])}`); } } continue; }

@@ -1,7 +1,7 @@
 # lang/native — SDEV native x86-64 assembly backend
 
 The **browser IDE** runs SDEV on WebAssembly (see `lang/bootstrap/seed_vm.sdev` and `src/lang-bridge/seed/`).
-This directory is the **desktop** backend: it compiles SDEV to real x86-64 assembly (GAS/AT&T syntax) and links it into a static Linux ELF without libc.
+This directory is the **desktop / native** backend: it compiles SDEV to real x86-64 assembly (GAS/AT&T syntax) linked into a static Linux ELF without libc, or directly into standalone Windows PE/COFF (`.exe`) executables.
 
 ## Files
 
@@ -11,7 +11,7 @@ This directory is the **desktop** backend: it compiles SDEV to real x86-64 assem
 - `build.sdev` — SDEV-authored standalone native build driver (`sdev-vm native <prog.sdev> -o <out>`).
 - `pe_x64.sdev` — SDEV-authored Windows PE/COFF (`.exe`) emitter.
 
-The host bridge, zero-host VM (`sdev-vm.c`), and pre-built asm runtime live under `src/lang-bridge/native/` and `bin/runtime.s`. See `docs/ZERO_HOST.md` for the full zero-host architecture.
+The host bridge, zero-host VM (`sdev-vm.c`), and pre-built asm runtime live under `src/lang-bridge/native/` and `bin/runtime.s` (with `pe.mjs` for Node-hosted PE generation). See [`docs/06-compiler-and-internals/zero-host-native-and-pe.md`](../../docs/06-compiler-and-internals/zero-host-native-and-pe.md) for the full zero-host and Windows PE architecture.
 
 ## Usage (Zero-Host CLI)
 

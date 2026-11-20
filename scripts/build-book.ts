@@ -1,5 +1,5 @@
 // Generates the giant sdev Book in English and Bulgarian.
-// Target: substantially larger than SDEV_DOCUMENTATION.md (~67KB).
+// Target: substantially larger than docs/02-language/v1-reference.md (~67KB).
 import fs from 'fs';
 import path from 'path';
 
@@ -324,7 +324,7 @@ const EN_CHAPTERS: Chapter[] = [
   },
   {
     title: 'The Standard Library',
-    intro: 'A reference of the most-used built-in functions. The complete list is in `SDEV_DOCUMENTATION.md`.',
+    intro: 'A reference of the most-used built-in functions. The complete list is in `docs/02-language/v1-reference.md`.',
     sections: [
       { title: 'Built-in Function Table', body: '| Function | Description |\n|---|---|\n' + BUILTINS_TABLE.map(([n,d]) => `| \`${n}\` | ${d} |`).join('\n') },
       { title: 'I/O', body: '`speak`, `whisper`, `shout`, `ask`, `readFile`, `writeFile`, `appendFile`, `exists`, `delete`, `listdir`.' },
@@ -465,7 +465,7 @@ const EN_CHAPTERS: Chapter[] = [
     sections: [
       { title: 'A. Keyword Reference', body: 'Complete keyword list:\n\n`' + KEYWORDS.join('`, `') + '`' },
       { title: 'B. Operator Reference', body: '`+ - * / % ** //`, `== != < > <= >=`, `and or not`, `equals differs above below`, `in`, `=>`, `|>`.' },
-      { title: 'C. Built-in Function Index', body: 'See Chapter 17 (The Standard Library). The complete index is in `SDEV_DOCUMENTATION.md`.' },
+      { title: 'C. Built-in Function Index', body: 'See Chapter 17 (The Standard Library). The complete index is in `docs/02-language/v1-reference.md`.' },
       { title: 'D. Source Languages', body: 'sdev source files may be written in: English, Bulgarian, Russian, Spanish, French, German, Italian, Portuguese, Polish, Romanian, Ukrainian, Greek, Turkish, Arabic, Hebrew, Hindi, Chinese (Simplified), Chinese (Traditional), Japanese, Korean, Vietnamese, Thai, Indonesian, Dutch, Swedish, Czech.' },
       { title: 'E. Bytecode Opcodes', body: '`LOAD_CONST`, `LOAD_NAME`, `STORE_NAME`, `LOAD_ATTR`, `STORE_ATTR`, `LOAD_INDEX`, `STORE_INDEX`, `BINARY_OP`, `UNARY_OP`, `CALL`, `RETURN`, `JUMP`, `JUMP_IF_FALSE`, `JUMP_IF_TRUE`, `MAKE_FUNCTION`, `MAKE_CLOSURE`, `BUILD_LIST`, `BUILD_DICT`, `IMPORT`, `RAISE`, `TRY_BEGIN`, `TRY_END`, `YIELD`, `AWAIT`, `SPAWN`, `HALT`.' },
       { title: 'F. Syscall Table', body: '`open`, `close`, `read`, `write`, `seek`, `stat`, `mkdir`, `rmdir`, `unlink`, `rename`, `sleep`, `fork`, `wait`, `kill`, `pipe`, `socket`, `connect`, `listen`, `accept`, `send`, `recv`, `time`, `getenv`, `setenv`, `gc`.' },
@@ -884,7 +884,7 @@ function render(chapters: Chapter[], title: string, lang: 'en' | 'bg'): string {
 const en = render(EN_CHAPTERS, 'The sdev Book', 'en');
 const bg = render(BG_CHAPTERS, 'Книгата за sdev', 'bg');
 
-fs.writeFileSync(path.join('public', 'sdev-book-en.md'), en);
-fs.writeFileSync(path.join('public', 'sdev-book-bg.md'), bg);
+fs.writeFileSync(path.join('docs', '01-overview', 'the-sdev-book-en.md'), en);
+fs.writeFileSync(path.join('docs', '01-overview', 'the-sdev-book-bg.md'), bg);
 console.log(`EN: ${en.length} chars (${en.split('\n').length} lines)`);
 console.log(`BG: ${bg.length} chars (${bg.split('\n').length} lines)`);

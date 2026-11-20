@@ -994,6 +994,10 @@ tesla.honk()              // Tesla Model 3: Beep beep!
 tesla.charge()            // Tesla Model 3 fully charged!
 ```
 
+> **Inheritance & `super` Semantics:** Both the tree-walking interpreter (`src/lang/interpreter.ts`) and the v1 bytecode compiler (`src/lang/compiler.ts`) bind `super` using the class MRO starting after the owning class, propagate inherited methods onto subclass instances, and automatically fall back to an inherited `init` constructor when a subclass omits its own.
+
+> **Contextual `kind`:** `kind` is only treated as a class-declaration keyword when it opens a declaration (`kind Name`); elsewhere it works normally as a variable or parameter name.
+
 ### Properties and Computed Properties
 
 ```sdev
@@ -3068,7 +3072,7 @@ Use **Open in new tab** to pop it out, or **Download** to save the `.html` file.
 
 ## Hardware / Microcontrollers
 
-sdev can program Arduino, ESP32, ESP8266, Raspberry Pi Pico, Teensy, and more via the `board { }` DSL. Full reference lives in **`SDEV_HARDWARE_DOCUMENTATION.md`**.
+sdev can program Arduino, ESP32, ESP8266, Raspberry Pi Pico, Teensy, and more via the \`board { }\` DSL. Full reference lives in [**Hardware & Boards**](../07-domains/hardware-and-boards.md).
 
 Quick blink:
 
@@ -3239,3 +3243,15 @@ speak(mem_peek_u8(a, ptr))
 speak(mem_peek_i16(a, ptr + 1))
 speak(mem_peek_i32(a, ptr + 3))
 ```
+
+---
+
+## 29. Built-in Ontological Causal Engine (OCE) & Bit/Memory Primitives
+
+Classic v1 (`forge` / `be`), `!#ai` files, and the standalone Python interpreter (`public/sdev-interpreter.py`) include the 64 KB weightless Ontological Causal Engine (`oce_*`), bit manipulation (`bits_*`), byte arena (`mem_*`), and ring buffer (`ring_*`) primitives built in — matching `lang/stdlib/v2/oce.sdev` line for line.
+
+See [OCE Library Reference](../04-ai-and-causal-engine/oce-library-reference.md) and [OCE Developer Guide](../04-ai-and-causal-engine/oce-developer-guide.md) for the complete API and examples (`examples/oce/gravity-classic.sdev`, `examples/oce/lamp-classic.sdev`).
+
+### Safe Arithmetic Evaluation — `evaluate()`
+
+`evaluate(expr)` safely evaluates arithmetic expressions stored in text strings (e.g. `"7 + 8 * 2"` → `23`), useful for calculator apps and interactive tools across both JavaScript and Python runtimes.

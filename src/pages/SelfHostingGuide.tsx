@@ -380,7 +380,7 @@ node bin/sdevhost.mjs scripts/test-driver-artifact.sdev  # checked-in driver has
 node scripts/test-native.mjs                             # x86-64 backend`}</Code>
           <P>
             For the full milestone-by-milestone log, read{' '}
-            <a href="/SDEV_INTERNALS.md" className="text-primary hover:underline">Compiler &amp; VM Internals</a> in the{' '}
+            <Link to="/docs/internals" className="text-primary hover:underline">Compiler &amp; VM Internals</Link> in the{' '}
             <Link to="/docs" className="text-primary hover:underline">documentation</Link>.
           </P>
 

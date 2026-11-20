@@ -10,16 +10,23 @@ that ties together all of the focused guides:
 
 | Focused guide | Covers |
 | --- | --- |
-| `SDEV_DOCUMENTATION.md` | v1 language reference |
-| `SDEV_V2_DOCUMENTATION.md` | v2 "Prism" beginner surface |
-| `SDEV_INTERNALS.md` | Compiler, VM, bootstrap, native backend |
-| `SDEV_ML_DOCUMENTATION.md` | Tensors, autograd, nn, transformers, data |
-| `SDEV_FFI_DOCUMENTATION.md` | Native library binding |
-| `SDEV_WEBGPU_DOCUMENTATION.md` | Browser GPU compute |
-| `SDEV_CUDA_DOCUMENTATION.md` | cuBLAS fast path |
-| `SDEV_AUTOEVOLVE_DOCUMENTATION.md` | Self-modification loop |
-| `SDEV_LEAFLET_DOCUMENTATION.md` | Mapping / GIS DSL |
-| `SDEV_HARDWARE_DOCUMENTATION.md` | Boards and firmware |
+| [v1 Language Reference](../02-language/v1-reference.md) | v1 classic/mystic syntax, OOP, stdlib |
+| [v2 "Prism" Guide](../02-language/v2-prism-guide.md) | v2 plain-English syntax, diagnostics, modules |
+| [AI Syntax Reference](../02-language/ai-syntax-reference.md) | Compact `!#ai` dialect for LLMs |
+| [Personal SDEV](../02-language/personal-dialects-and-libraries.md) | Custom dialects, extensions, `#⟨sdev⟩` signatures, `@user/lib` |
+| [v2 Stdlib & Web Toolkit](../03-standard-library/v2-stdlib-and-web-toolkit.md) | 21 pure-SDEV v2 stdlib modules & `lang/web/` |
+| [ML & LLM Stdlib](../03-standard-library/ml-and-llm-stdlib.md) | Tensors, autograd, nn, transformers, data, M15 checkpoints |
+| [FFI & Native Acceleration](../03-standard-library/ffi-and-native-accel.md) | Native library binding & BLAS dispatch |
+| [WebGPU Acceleration](../03-standard-library/webgpu-acceleration.md) | Browser WGSL GPU compute |
+| [CUDA Fast Path](../03-standard-library/cuda-fast-path.md) | cuBLAS fast path |
+| [Autonomous Evolution](../03-standard-library/autonomous-evolution.md) | Gated self-modification loop |
+| [Understanding Agent & Local AI](../04-ai-and-causal-engine/understanding-agent-and-local-brain.md) | SDEV understander, Micro-Brain, WebLLM & local servers |
+| [OCE Library & Dev Guide](../04-ai-and-causal-engine/oce-library-reference.md) | Weightless 64 KB Ontological Causal Engine |
+| [IDE & Debugging Tools](../05-ide-and-tooling/ide-and-debugging-tools.md) | Time-Travel Debugger, Scratchpad, Notebooks, Classroom |
+| [Compiler & VM Internals](../06-compiler-and-internals/compiler-and-vm-internals.md) | Self-hosted v1/v2 compilers, Seed VM, kernel |
+| [Zero-Host Native & Windows PE](../06-compiler-and-internals/zero-host-native-and-pe.md) | `bin/sdev-vm`, `bin/sdev-driver`, ELF & `.exe` |
+| [Hardware & Boards](../07-domains/hardware-and-boards.md) | 30 MCUs, simulator, 10,232 Arduino libs, 7 uploaders |
+| [Leaflet & GIS](../07-domains/leaflet-and-gis.md) | Mapping / GIS DSL |
 
 ---
 
@@ -43,14 +50,18 @@ cycle i < 10 ::
 ;;
 ```
 
-There are two surface dialects:
+There are four ways people write SDEV, all compiling to the same underlying runtimes:
 
-- **v1** — the full professional language (`forge`, `conjure`, `::`/`;;`,
-  classes, dict "tomes", the whole standard library). Everything in the
-  ML stack is written in v1.
-- **v2 "Prism"** — a beginner-first surface (`set … to`, `say`,
-  `if/else/end`, `for each … in … end`) implemented in
-  `lang/runtime/v2.js` as dependency-free plain JavaScript.
+- **v1 (Classic / Mystic)** — the full professional language (`forge`, `conjure`, `::`/`;;`,
+  classes with `essence`/`extend`/`super`, dict "tomes", the whole standard library).
+- **v2 "Prism"** — a beginner-first English surface (`set … to`, `say`,
+  `if/else/end`, `for each … in … end`) compiled by the **100% pure-SDEV self-hosted
+  compiler** (`lang/compiler/*.sdev`) onto the WebAssembly Seed VM, zero-host native VM (`bin/sdev-vm`),
+  or native machine code (Linux x86-64 ELF & Windows PE `.exe`).
+- **`sdev:ai` (`!#ai`)** — a compact brace-delimited dialect optimized for AI generation,
+  translated to canonical SDEV by `lang/agent/ai-dialect.sdev`.
+- **Personal Dialects** — custom user-defined keywords, operators, and scripts authored
+  as data via Dialect Studio (`/dialects`).
 
 Pick per file with a shebang, or globally with
 `localStorage.sdev_runtime = "v2"`:
@@ -67,8 +78,7 @@ set x to 10
 say x
 ```
 
-`src/lang-bridge/bridge.ts` is the only TypeScript left in the v2
-execution path; it chooses the runtime and delegates.
+All TypeScript host bridges live in `src/lang-bridge/`, leaving `lang/` 100% pure `.sdev` source code.
 
 ---
 
@@ -172,35 +182,32 @@ reports cycles with a clear error.
 
 ---
 
-## 3. Architecture: two tracks
+## 3. Architecture: execution tracks
 
-sdev deliberately runs on two independent execution tracks.
+sdev runs across independent execution tracks from a single pure-SDEV language core:
 
 ```text
-          ┌──────────────── Track A: browser ────────────────┐
-source ─► lexer ─► parser ─► interpreter ──────► IDE panels
-                         └─► compiler ─► bytecode ─► seed VM (WASM)
+          ┌──────────────── Track A: Browser & WASM ────────────────┐
+source ─► understander ─► v1 lexer/parser/interpreter/bytecode VM
+                      └─► v2 self-hosted compiler (.sdev) ─► seed VM (WASM)
 
-          ┌──────────────── Track B: native ─────────────────┐
-source ─► lexer ─► parser ─► codegen-x64 ─► .s ─► as/ld ─► binary
+          ┌──────────────── Track B: Zero-Host & Native ────────────┐
+source ─► bin/sdev-vm (native C Seed VM + embedded driver, no Node/Wasm)
+       └─► codegen_x64 (.sdev/.mjs) / pe.mjs ─► Linux ELF or Windows .exe
 ```
 
-**Track A (browser IDE)** runs entirely on WebAssembly. The hand-written
-seed VM lives in `lang/bootstrap/seed.wat`, and `lang/bootstrap/compile.mjs`
-is the bootstrap compiler that feeds it.
+**Track A (Browser IDE & WASM):** Runs the v1 TypeScript interpreter/bytecode VM and the self-hosted v2 compiler on the hand-written WebAssembly Seed VM (`src/lang-bridge/seed/seed.wat` → `public/wasm/sdev-seed.wasm`).
 
-**Track B (native)** emits real x86-64 GAS/AT&T assembly — not WASM —
-for Linux and macOS:
-
-- `lang/native/codegen-x64.mjs` — instruction selection and emission
-- `lang/native/runtime.s` — the assembly runtime (entry, syscalls, heap)
-- `lang/native/link.mjs` — assembles and links with the system toolchain
-- `scripts/sdev-native.mjs` — the CLI driver
-- `scripts/test-native.mjs` — the regression suite
+**Track B (Zero-Host & Native):**
+- `bin/sdev-vm` (`src/lang-bridge/native/sdev-vm.c` + `driver-embedded.h`) runs `.sdev` and `.sdevc` programs with zero Node.js or WebAssembly runtime.
+- `bin/sdev-driver` + `lang/native/codegen_x64.sdev` / `build.sdev` / `src/lang-bridge/native/codegen-x64.mjs` / `runtime.s` emit static x86-64 Linux ELF binaries with zero libc.
+- `src/lang-bridge/native/pe.mjs` + `lang/native/pe_x64.sdev` emit zero-cost 64-bit Windows PE/COFF (`.exe`) executables directly without MSVC/GCC/Clang.
 
 ```bash
-node scripts/sdev-native.mjs build program.sdev -o program
+node scripts/sdev-native.mjs program.sdev -o program
 ./program
+# Or zero-host on Linux:
+./bin/sdev-vm native program.sdev -o program
 ```
 
 ---
@@ -220,10 +227,9 @@ format. It grew milestone by milestone:
 | M6 | Boxed `f64` floats — 15 float opcodes plus host math imports |
 | M7 | Host-mediated I/O — `READFILE`, `WRITEFILE`, `HTTPGET` |
 | M5n | Widened VM and constant-pool regions for large sources |
+| M5q–M5x | `FBYTE`, `TRY`/`ENDTRY`/`THROW`, `S2F`, `CALLV`, `CLOSURE`, `STREQ` (`0x90`) |
 
-The bootstrap compiler `lang/bootstrap/compile.mjs` is a two-pass emitter
-(pass 1 resolves labels and symbol tables, pass 2 emits bytes) producing a
-`{ bytecode, stringPool }` pair.
+The bootstrap compiler `src/lang-bridge/oracle/compile.mjs` serves strictly as a build-time differential oracle. Both `lang/compiler/*.sdev` (v2) and `lang/compiler/v1_self.sdev` (v1) self-compile to byte-identical fixed points.
 
 Host I/O is provided by the embedder: Node uses `fs` and `curl`; the
 browser falls back to `localStorage` and `XMLHttpRequest`.
@@ -248,13 +254,11 @@ fixed point**: compiling the compiler with itself produces the exact same
 bytes as the JavaScript bootstrap.
 
 ```bash
-node bin/sdevhost.mjs scripts/test-self-toolchain.sdev
-# ✓ lang/compiler/lexer.sdev:   byte-identical  (bc=746,  pool=41)
-# ✓ lang/compiler/parser.sdev:  byte-identical  (bc=380,  pool=38)
-# ✓ lang/compiler/codegen.sdev: byte-identical  (bc=5730, pool=136)
-
-node scripts/test-shim-fixed-point.mjs
-# ✓ shim fixed-point: 43/43 cases byte-identical
+npm test                                                # 22 pure-SDEV core suites via scripts/test-all.sdev
+# Individual suites:
+node bin/sdevhost.mjs scripts/test-self-toolchain.sdev  # byte-identity across the toolchain
+node bin/sdevhost.mjs scripts/test-self-v1-compiler.sdev # 3-stage v1 self-hosted compiler fixed point
+node bin/sdevhost.mjs scripts/test-shim-fixed-point.sdev # 88-case fixed-point suite
 ```
 
 Reaching that point required forward references, return-type tracking,
@@ -409,8 +413,8 @@ The loop: mine demand → draft a patch → review → apply → fine-tune.
 | `evolve_weights(model, url, key, prompts, epochs, lr)` | Distill and SGD-step |
 | `evolve_tick(...)` / `evolve_forever(...)` | One tick / long-running driver |
 
-Routing: `parse*` → `parser.sdev`, `lex*` → `lexer.sdev`, `doc*` →
-`SDEV_DOCUMENTATION.md`, everything else → `nn.sdev`.
+Routing: `parse*` → `lang/compiler/parser.sdev`, `lex*` → `lang/compiler/lexer.sdev`, `doc*` →
+`docs/02-language/v1-reference.md`, everything else → `lang/stdlib/ml/nn.sdev`.
 
 ```sdev
 link "stdlib/ml/auto_evolve.sdev"
@@ -423,41 +427,35 @@ the hook must explicitly return `yep`.
 
 ---
 
-## 10. Tooling and distribution
+## 10. Ecosystem, Subsystems & Tooling
 
 | Surface | Where |
 | --- | --- |
-| Browser IDE | `src/pages/IDE.tsx` — editor, terminal, canvas, app and web preview, problems panel, command palette |
-| Playground | `src/pages/Index.tsx` — shareable `?code=` links |
-| Desktop IDE | `electron/main.cjs` + `preload.cjs`, with Build Native / Run Native IPC |
-| VS Code extension | `extension/` — grammar, snippets, bundled interpreter |
-| npm CLI | published via `.github/workflows/npm-publish.yml` |
-| Windows installer | standalone batch installer with bundled editor |
-| Single-file HTML | `public/sdev-interpreter.js` |
-| Gist packages | `summon "GIST_ID"` |
-| 26-language keyword translator | `src/lang/translator.ts`, 500+ mappings |
+| Browser IDE | `src/pages/IDE.tsx` — editor, Time-Travel Debugger, Live Scratchpad, Notebooks, Benchmarking, Live Classroom, Hardware Simulator, Runtime Explorer (`F1`), Run without Understanding (`Ctrl+Shift+Enter`) |
+| Playground | `src/pages/Index.tsx` — scroll-driven 3D compiler scene, shareable `?code=` links |
+| Personal SDEV | `/dialects`, `/extensions`, `/libraries`, `/explore`, `/my` — `#⟨sdev⟩` signatures & `@user/lib` registry |
+| Self-Hosted Stdlib & Web | `lang/stdlib/v2/*` (21 modules), `lang/web/*` (HTML5/CSS3/client-JS rendering `sdev-website.sdev`), `lang/stdlib/v2/oce.sdev` (OCE Causal Engine) |
+| Understanding Agent | `lang/agent/*` — SDEV-first understanding rules, `sdev:ai` (`!#ai`), Micro-Brain, WebLLM, Ollama/LM Studio, `sdev-agent` |
+| API Registry & Linter | `src/lang/registry/api-registry.ts` (881 APIs), `src/lang/linter.ts` (`SDEV001`–`SDEV015`), `lang/formatter/formatter.sdev` |
+| Zero-Host & Native | `bin/sdev-vm` (native C Seed VM), `bin/sdev-driver` (self-compiled ELF), `pe.mjs` / `pe_x64.sdev` (Windows `.exe`), WASI 0.2 `.wit`/`.wasm` |
+| Desktop, VS Code, CLI & MCP | `electron/`, `extension/` (`sdev-language.vsix`), `cli/` (`bin/sdev.mjs`), `supabase/functions/mcp/` |
+| Single-file JS/Python | `public/sdev-interpreter.js`, `public/sdev-interpreter.py` |
+| 26-language keyword translator | `lang/translator/translator.sdev`, `src/lang/translator.ts` |
 
 ---
 
 ## 11. Test suites
 
 ```bash
-node scripts/test-wasm-runtime.mjs      # seed VM opcodes
-node scripts/test-native.mjs            # x86-64 backend
-node scripts/test-self-lexer.mjs        # self-hosted lexer vs JS reference
-node scripts/test-self-parser.mjs       # self-hosted parser
-node scripts/test-self-codegen.mjs      # self-hosted codegen
-node bin/sdevhost.mjs scripts/test-self-toolchain.sdev    # byte-identity across the toolchain
-node scripts/test-shim-fixed-point.mjs  # 43-case fixed-point suite
-bunx tsx scripts/test-ml-stdlib.ts      # ML stack executed end to end
-bunx tsx scripts/test-translator.ts     # 26-language translation
+npm test                                 # 22 pure-SDEV suites (scripts/test-all.sdev)
+npm run test:oce-parity                  # OCE parity across v2 VM, native, classic, Python (8/8)
+npm run test:v2-diagnostics              # v2 pre-flight diagnostics & list + checks
+npm run test:registry                    # 881 APIs, SDEV001..SDEV015, Studio & Chrono (93 checks)
+npm run test:tdd-features                # Live Scratchpad, Benchmarking, Literate Notebooks
+npm run test:understander-docs           # Regression gate over all documented examples
+npm run test:ml                          # ML stack & M15 checkpoints executed end to end
+npm run test:native                      # x86-64 Linux ELF backend (81/81 via WSL)
 ```
-
-`test-ml-stdlib.ts` runs real programs — matmul, the gradient of x²,
-a linear layer whose loss must decrease, tokenizer round-trip, softmax
-summing to 1, a GPT forward pass with the right logits shape, generation
-length, the self-modification gate, the evolution whitelist, and graceful
-accelerator fallback.
 
 ---
 
@@ -465,25 +463,15 @@ accelerator fallback.
 
 | # | Milestone |
 | --- | --- |
-| 1 | v2 "Prism" runtime in pure JS; lang-bridge |
-| 2 | Bootstrap scaffolding: seed WASM, compiler skeleton |
-| 3 | Call frames and recursion in the seed VM |
-| 4 | Heap, lists, string concatenation |
-| 5a–5b | Byte primitives; `mklist`; self-hosted lexer |
-| 5c–5g | Self-hosted parser, codegen, globals, control flow, functions |
-| 5h–5n | Semantic then byte-identical fixed point; compile-self shim; widened regions |
-| 6 | Boxed f64 floating point |
-| 7 | Host file I/O and networking |
-| 8 | ML stdlib: tensor, autograd, nn, transformer, data, self_modify |
-| 9 | FFI with BLAS/cuBLAS wrappers |
-| 10 | WebGPU acceleration |
-| 11 | CUDA fast path |
-| 12 | Autonomous evolution loop |
-| 13 | ML host bindings; the stack actually executes on the interpreter |
-| 14 | LM training: softmax cross-entropy autograd, Adam + clipping, top-k sampling, checkpoints (`train.sdev`) |
-
-Alongside those: the native x86-64 track, the Electron desktop IDE, the
-launch site and carousel, and the two-minute Remotion pitch video.
+| 1–4 | v2 "Prism" design, Stage-0 seed WASM, call frames & recursion, heap/lists/strings |
+| 5a–5n | Byte primitives; self-hosted lexer, parser, codegen; byte-identical fixed point |
+| 5q–5x | `FBYTE`, `TRY`/`ENDTRY`/`THROW`, `S2F`, `CALLV`, `CLOSURE`, `STREQ` (`0x90`) |
+| 6–7 | Boxed f64 floating point; host file I/O and networking |
+| 8–15 | Full ML/LLM stdlib: tensor, autograd, nn, transformer, FFI, WebGPU, CUDA, auto-evolve, M14 LM training, M15 batched ops & `SDEVML01` checkpoints |
+| Parity & Multi-Paradigm | 209-feature parity agent (`lang/parity/agent.sdev`), Python parity, SQL/Kotlin/Rust/C++ paradigms |
+| Self-Hosted Core & Web | 100% pure-SDEV `lang/` core, `lang/web/*` toolkit & `sdev-website.sdev`, 21 v2 stdlib modules, `v1_self.sdev` 3-stage fixed point |
+| OCE & Diagnostics | 64 KB Ontological Causal Engine (`oce.sdev`) across all runtimes, website `use` loading, v2 pre-flight error channel |
+| Zero-Host & IDE Tools | `bin/sdev-vm`, self-compiled `bin/sdev-driver`, Windows PE `.exe`, WASI 0.2, Time-Travel Debugger, Scratchpad, Notebooks, Live Classroom, Hardware Simulator, Run without Understanding |
 
 ---
 

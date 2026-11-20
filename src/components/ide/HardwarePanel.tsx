@@ -351,7 +351,7 @@ export function HardwarePanel({ source, onAppendLog, onInsertCode }: Props) {
           size="sm"
           variant="ghost"
           className="h-6 px-1.5 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
-          onClick={() => window.open('/SDEV_HARDWARE_DOCUMENTATION.md', '_blank')}
+          onClick={() => window.open('/documentation/07-domains/hardware-and-boards.md', '_blank')}
           title="Open Hardware Reference Documentation"
         >
           <BookOpen className="w-3 h-3" /> Docs

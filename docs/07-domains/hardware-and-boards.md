@@ -1718,3 +1718,12 @@ The IDE bundles the complete Arduino Library Manager catalogue at `/arduino/libr
 5. **`dfu` (`flashDfuWebUsb`)**: USB DFU 1.1 & DfuSe over **WebUSB** (`DFU_DNLOAD=1`, `DFU_GETSTATUS=3`, `DFU_CLRSTATUS=4`, DfuSe Set Address Pointer `0x21` to `flashBase`, 1024-byte blocks starting at `wValue=2`, zero-length manifest). Used by Arduino Uno R4 Minima, Giga R1 WiFi, and Portenta H7.
 6. **`esptool` (`flashEsp`)**: Espressif ROM bootloader SLIP framing (`0xC0` frame end, `0xDB 0xDC` / `0xDB 0xDD` escapes, `SYNC=0x08`, `FLASH_BEGIN=0x02`, `FLASH_DATA=0x03`, `FLASH_END=0x04`) with DTR/RTS auto-reset. Used by ESP32, ESP32-C3, ESP32-S2, ESP32-S3, Nano ESP32, and ESP8266.
 7. **`uf2` (`buildUf2FromHexOrBin` + `flashUf2`)**: Generates 512-byte RP2040 UF2 blocks (`magicStart0=0x0A324655`, `magicStart1=0x9E5D5157`, `familyId=0xE48BFF56`, `magicEnd=0x0AB16F30`, 256-byte payloads at `0x10000000`) and writes directly to the `RPI-RP2` USB volume via `showDirectoryPicker` or downloads `.uf2`. Used by Raspberry Pi Pico, Pico W, and Arduino Nano RP2040 Connect.
+
+---
+
+## 8. In-Browser Hardware Simulator
+
+When physical hardware is not connected, `src/lang/hardware/simulator.ts` and the IDE canvas component (`src/components/ide/HardwareSimulatorCanvas.tsx`) simulate `board "<id>"` blocks and transpiled Arduino C++ sketches directly in the browser:
+
+- **Pin state & modes (`PinMode`, `PinState`)**: Tracks `UNSET`, `INPUT`, `OUTPUT`, `INPUT_PULLUP`, `PWM` (`0..255`), `SERVO` (`servoAngle` `0..180`), `analog` (`0..1023` on `A0..A5`), and buzzer `toneHz`.
+- **Interactive virtual breadboard (`HardwareSimState`)**: Interactive `analogInputs` sliders, digital `buttonStates` toggles, built-in LED indicator, `neopixels` RGB strip state, servo angle, serial log + `serialRxQueue` monitor, and cycle/timing event trace (`SimulatorEvent`: `pin`, `serial`, `wait`, `tone`, `servo`, `neopixel`, `setup`, `loop`).

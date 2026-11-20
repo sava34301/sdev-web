@@ -316,13 +316,13 @@ def build(md_path, out_path, title, subtitle, lang, toc_label, edition_label, ex
 
 if __name__ == '__main__':
     os.makedirs('/mnt/documents', exist_ok=True)
-    build('public/sdev-book-en.md', '/mnt/documents/sdev-book-en.pdf',
+    build('docs/01-overview/the-sdev-book-en.md', '/mnt/documents/sdev-book-en.pdf',
           title='The sdev Book',
           subtitle='A Complete Guide to the sdev Programming Language',
           lang='en', toc_label='Table of Contents',
           edition_label='First Edition · 2026',
-          extra_md_paths=['public/SDEV_DOCUMENTATION.md'])
-    build('public/sdev-book-bg.md', '/mnt/documents/sdev-book-bg.pdf',
+          extra_md_paths=['docs/02-language/v1-reference.md'])
+    build('docs/01-overview/the-sdev-book-bg.md', '/mnt/documents/sdev-book-bg.pdf',
           title='Книгата за sdev',
           subtitle='Пълно ръководство за програмния език sdev',
           lang='bg', toc_label='Съдържание',

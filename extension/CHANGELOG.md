@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.1.0 — Unified CLI integration, Personal SDEV & structured docs
+
+- **Unified release pipeline (`release.json`)**: version synced across Web IDE, CLI (`bin/sdev.mjs`), Electron desktop shell, and VS Code extension via `node scripts/release.mjs`.
+- **CLI-powered toolchain**: bundles `bin/sdev.mjs` alongside v1 JS/Python interpreters and WASM Seed VM, supporting Personal SDEV dialects (`!#dialect`), extensions (`!#ext`), file signatures (`sign`), `!#ai`, v2 Prism, and native builds.
+- **Documentation links**: updated references to the structured `docs/` hub (`docs/05-ide-and-tooling/desktop-vscode-and-mcp.md`).
+
 ## 1.2.0 — v2 track, native builds, hardware & ML
 
 - **sdev v2 support**: highlighting for `say`, `set … to`, `to … with … end`, `if / else if / else`,
