@@ -75,8 +75,8 @@ function load(): Engine | false {
   if (engine !== null) return engine;
   try {
     const src = BLOCKS + '\n' + UNDERSTANDER + '\n' + AI_DIALECT + '\n' + PROJECT + '\n' + PARSER_EVAL + '\n' + BRAIN + '\n' + MATH + '\n' + TASKS + '\n' + MEMORY;
-    const ast = new Parser(new Lexer(src).tokenize()).parse();
-    const interp = new Interpreter(() => {});
+    const ast = new Parser(new Lexer(src, { translate: false }).tokenize()).parse();
+    const interp = new Interpreter(() => {}, { bindWeb: false });
     interp.interpret(ast);
     const env = interp.getGlobalEnv();
     engine = {

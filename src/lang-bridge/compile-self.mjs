@@ -43,7 +43,11 @@ let seedLoader = null;
 
 // Hosts can override how the seed VM binary is obtained (the browser
 // bridge hands us a fetch-based loader).
-export function setSeedLoader(fn) { seedLoader = fn; cachedModule = null; }
+export function setSeedLoader(fn) {
+  if (seedLoader === fn) return;
+  seedLoader = fn;
+  cachedModule = null;
+}
 
 // The seed binary is a static asset served from `public/wasm/`. It is never
 // imported — the browser fetches it by URL, Node reads it off disk at

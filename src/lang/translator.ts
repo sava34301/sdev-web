@@ -15,14 +15,6 @@
  * supported via underscore-joined keys in the keyword tables.
  */
 import { V1_TO_V2, V2_EXTRA, TAG_TO_LANGUAGE } from './translator-v2';
-import { createSdevModuleRunner, type SdevModuleRunner } from './sdev-module';
-import SDEV_TRANSLATOR_SRC from '../../lang/translator/translator.sdev?raw';
-
-let translatorRunner: SdevModuleRunner | null = null;
-function getTranslatorRunner(): SdevModuleRunner {
-  if (!translatorRunner) translatorRunner = createSdevModuleRunner(SDEV_TRANSLATOR_SRC);
-  return translatorRunner;
-}
 
 // ============================================================
 // Keyword tables — foreign word → canonical English sdev keyword
@@ -645,18 +637,96 @@ function compileReplacer(lang: string, target: TranslationTarget = 'v1'): (s: st
 interface Segment { code: boolean; text: string; }
 
 function segmentSource(source: string): Segment[] {
-  const raw = getTranslatorRunner().call('translator_segment_source', source) as Array<[number, string]>;
-  return raw.map(([codeFlag, text]) => ({ code: codeFlag === 1, text }));
+  const segs: Segment[] = [];
+  const n = source.length;
+  let i = 0;
+  let codeStart = 0;
+
+  while (i < n) {
+    const c = source.charCodeAt(i);
+    // '#' (35) or '//' (47, 47)
+    if (c === 35 || (c === 47 && i + 1 < n && source.charCodeAt(i + 1) === 47)) {
+      if (i > codeStart) segs.push({ code: true, text: source.slice(codeStart, i) });
+      let stop = source.indexOf('\n', i);
+      if (stop === -1) stop = n;
+      segs.push({ code: false, text: source.slice(i, stop) });
+      i = stop;
+      codeStart = i;
+      continue;
+    }
+    // '"' (34), "'" (39), '`' (96)
+    if (c === 34 || c === 39 || c === 96) {
+      if (i > codeStart) segs.push({ code: true, text: source.slice(codeStart, i) });
+      let j = i + 1;
+      while (j < n) {
+        const cur = source.charCodeAt(j);
+        if (cur === 92) { // '\'
+          j += 2;
+        } else if (cur === c) {
+          j++;
+          break;
+        } else {
+          j++;
+        }
+      }
+      if (j > n) j = n;
+      segs.push({ code: false, text: source.slice(i, j) });
+      i = j;
+      codeStart = i;
+      continue;
+    }
+    i++;
+  }
+  if (codeStart < n) segs.push({ code: true, text: source.slice(codeStart) });
+  return segs;
 }
 
 // ============================================================
 // Public API
 // ============================================================
 
+const NON_ASCII_RE = /[^\x00-\x7F]/;
+
 /** Returns true if `code` contains non-ASCII chars (likely foreign script). */
 export function hasNonAscii(code: string): boolean {
-  return Number(getTranslatorRunner().call('translator_has_non_ascii', code)) === 1;
+  return NON_ASCII_RE.test(code);
 }
+
+interface DetectTable {
+  lang: string;
+  singles: Array<[string, number]>;
+  phrases: Array<[string, string, RegExp, number]>;
+}
+
+let DETECT_TABLES: DetectTable[] | null = null;
+function getDetectTables(): DetectTable[] {
+  if (DETECT_TABLES) return DETECT_TABLES;
+  DETECT_TABLES = SUPPORTED_LANGUAGES.map((lang) => {
+    const singles: Array<[string, number]> = [];
+    const phrases: Array<[string, string, RegExp, number]> = [];
+    const addWords = (tbl: Record<string, string> | undefined) => {
+      if (!tbl) return;
+      for (const word of Object.keys(tbl)) {
+        if (word.length === 1 && word.charCodeAt(0) < 128) continue;
+        const weight = NON_ASCII_RE.test(word) ? 2 : 1;
+        if (word.includes('_')) {
+          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[\\s_]+');
+          const re = new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, 'u');
+          phrases.push([word, word.split('_')[0], re, weight]);
+        } else {
+          singles.push([word, weight]);
+        }
+      }
+    };
+    addWords(KEYWORD_TABLES[lang]);
+    addWords(V2_EXTRA[lang]);
+    return { lang, singles, phrases };
+  });
+  return DETECT_TABLES;
+}
+
+const ENGLISH_SIGNAL_RE = /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind|page|endpage|style|styles|theme|window|canvas|board)\b/g;
+const WORD_TOKEN_RE = /[\p{L}\p{N}_]+/gu;
 
 /**
  * Auto-detect the source language by counting keyword hits per table.
@@ -670,34 +740,30 @@ export function detectLanguage(source: string, protect?: ReadonlySet<string>): s
     .join('\n');
 
   // Quick English check — hits on either surface or declarative builtins mean the code is already sdev.
-  const englishHits = (codeOnly.match(
-    /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind|page|endpage|style|styles|theme|window|canvas|board)\b/g,
-  ) || []).length;
+  const englishHits = (codeOnly.match(ENGLISH_SIGNAL_RE) || []).length;
+
+  const words = new Set<string>();
+  const matches = codeOnly.match(WORD_TOKEN_RE);
+  if (matches) {
+    for (let i = 0; i < matches.length; i++) words.add(matches[i]);
+  }
+  if (words.size === 0) return null;
 
   let bestLang: string | null = null;
   let bestScore = 0;
 
-  const hasWholeWord = (text: string, word: string): boolean => {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[\\s_]+');
-    const re = new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, 'u');
-    return re.test(text);
-  };
-
-  for (const lang of SUPPORTED_LANGUAGES) {
-    const table = KEYWORD_TABLES[lang];
+  for (const { lang, singles, phrases } of getDetectTables()) {
     let score = 0;
-    for (const word of Object.keys(table)) {
-      if (protect?.has(word)) continue;
-      if (word.length === 1 && word.charCodeAt(0) < 128) continue;
-      if (codeOnly.includes(word.split('_')[0]) && hasWholeWord(codeOnly, word)) {
-        score += hasNonAscii(word) ? 2 : 1;
+    for (let i = 0; i < singles.length; i++) {
+      const [word, weight] = singles[i];
+      if (words.has(word) && !protect?.has(word)) {
+        score += weight;
       }
     }
-    for (const word of Object.keys(V2_EXTRA[lang] ?? {})) {
-      if (protect?.has(word)) continue;
-      if (word.length === 1 && word.charCodeAt(0) < 128) continue;
-      if (codeOnly.includes(word.split('_')[0]) && hasWholeWord(codeOnly, word)) {
-        score += hasNonAscii(word) ? 2 : 1;
+    for (let i = 0; i < phrases.length; i++) {
+      const [word, first, re, weight] = phrases[i];
+      if (!protect?.has(word) && (words.has(word) || words.has(first)) && re.test(codeOnly)) {
+        score += weight;
       }
     }
     if (score > bestScore) {
@@ -843,7 +909,29 @@ export function translateForDialect(
 // ============================================================
 
 function levenshtein(a: string, b: string): number {
-  return Number(getTranslatorRunner().call('translator_levenshtein', a, b));
+  if (a === b) return 0;
+  const al = a.length;
+  const bl = b.length;
+  if (al === 0) return bl;
+  if (bl === 0) return al;
+  const prev = new Int32Array(bl + 1);
+  const curr = new Int32Array(bl + 1);
+  for (let j = 0; j <= bl; j++) prev[j] = j;
+  for (let i = 1; i <= al; i++) {
+    curr[0] = i;
+    const ai = a.charCodeAt(i - 1);
+    for (let j = 1; j <= bl; j++) {
+      const cost = ai === b.charCodeAt(j - 1) ? 0 : 1;
+      let best = curr[j - 1] + 1;
+      const del = prev[j] + 1;
+      if (del < best) best = del;
+      const sub = prev[j - 1] + cost;
+      if (sub < best) best = sub;
+      curr[j] = best;
+    }
+    prev.set(curr);
+  }
+  return prev[bl];
 }
 
 const FUZZY_REPLACERS: Record<string, (s: string, protect?: ReadonlySet<string>) => string> = {};

@@ -56,6 +56,81 @@ type RichFunction = SdevFunction & { meta?: CallableMeta };
 
 const MAX_ITERATIONS = 1_000_000;
 
+const blockScopeCache = new WeakMap<AST.BlockStatement, boolean>();
+
+function stmtDeclaresInScope(node: AST.ASTNode): boolean {
+  switch (node.type) {
+    case 'LetStatement':
+    case 'FuncDeclaration':
+    case 'ClassDeclaration':
+    case 'ImportStatement':
+    case 'DelStatement':
+    case 'WalrusExpr':
+      return true;
+    case 'AssignStatement':
+      return Boolean(node.declare) || stmtDeclaresInScope(node.value);
+    case 'ExpressionStatement':
+      return stmtDeclaresInScope(node.expression);
+    case 'ReturnStatement':
+      return node.value ? stmtDeclaresInScope(node.value) : false;
+    case 'IfStatement':
+      return stmtDeclaresInScope(node.condition)
+        || (node.thenBranch.type !== 'BlockStatement' && stmtDeclaresInScope(node.thenBranch))
+        || (node.elseBranch !== undefined && node.elseBranch.type !== 'BlockStatement' && stmtDeclaresInScope(node.elseBranch));
+    case 'WhileStatement':
+      return stmtDeclaresInScope(node.condition);
+    case 'BinaryExpr':
+      return stmtDeclaresInScope(node.left) || stmtDeclaresInScope(node.right);
+    case 'UnaryExpr':
+      return stmtDeclaresInScope(node.operand);
+    case 'TernaryExpr':
+      return stmtDeclaresInScope(node.condition) || stmtDeclaresInScope(node.thenExpr) || stmtDeclaresInScope(node.elseExpr);
+    case 'CallExpr':
+      if (stmtDeclaresInScope(node.callee)) return true;
+      for (let i = 0; i < node.args.length; i++) if (stmtDeclaresInScope(node.args[i])) return true;
+      return false;
+    case 'IndexExpr':
+      return stmtDeclaresInScope(node.object) || stmtDeclaresInScope(node.index);
+    case 'MemberExpr':
+      return stmtDeclaresInScope(node.object);
+    case 'AugAssignStatement':
+      return stmtDeclaresInScope(node.value);
+    case 'IndexAssignStatement':
+      return stmtDeclaresInScope(node.object) || stmtDeclaresInScope(node.index) || stmtDeclaresInScope(node.value);
+    case 'MemberAssignStatement':
+      return stmtDeclaresInScope(node.object) || stmtDeclaresInScope(node.value);
+    case 'NumberLiteral':
+    case 'StringLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'Identifier':
+    case 'BreakStatement':
+    case 'ContinueStatement':
+    case 'PassStatement':
+    case 'ScopeStatement':
+    case 'BlockStatement':
+    case 'LambdaExpr':
+      return false;
+    default:
+      return true;
+  }
+}
+
+function blockNeedsScope(block: AST.BlockStatement): boolean {
+  let cached = blockScopeCache.get(block);
+  if (cached !== undefined) return cached;
+  cached = false;
+  const stmts = block.statements;
+  for (let i = 0; i < stmts.length; i++) {
+    if (stmtDeclaresInScope(stmts[i])) {
+      cached = true;
+      break;
+    }
+  }
+  blockScopeCache.set(block, cached);
+  return cached;
+}
+
 export class Interpreter {
   private globalEnv: Environment;
   private output: OutputCallback;
@@ -138,16 +213,358 @@ export class Interpreter {
   }
 
   // ==========================================================
-  // Driver: runs the generator-based evaluator to completion.
+  // Driver: synchronous fast-path for all non-generator code.
+  // Generator functions use `generatorBody` -> `ev` directly.
   // A stray `emit` outside a generator body is a hard error.
   // ==========================================================
   private execute(node: AST.ASTNode, env: Environment): unknown {
+    return this.evalSync(node, env);
+  }
+
+  private runGen(node: AST.ASTNode, env: Environment): unknown {
     const it = this.ev(node, env);
     const step = it.next();
-    while (!step.done) {
+    if (!step.done) {
       throw new SdevError("'emit' is only valid inside a generator function", node.line);
     }
     return step.value;
+  }
+
+  private evalSync(node: AST.ASTNode, env: Environment): unknown {
+    switch (node.type) {
+      case 'NumberLiteral': return node.value;
+      case 'StringLiteral': return node.value;
+      case 'BooleanLiteral': return node.value;
+      case 'NullLiteral': return null;
+      case 'Identifier': return env.get(node.name, node.line);
+      case 'BinaryExpr': {
+        const op = node.operator;
+        if (op === 'also') {
+          const left = this.evalSync(node.left, env);
+          if (!this.truthy(left)) return left;
+          return this.evalSync(node.right, env);
+        }
+        if (op === 'either') {
+          const left = this.evalSync(node.left, env);
+          if (this.truthy(left)) return left;
+          return this.evalSync(node.right, env);
+        }
+        const left = this.evalSync(node.left, env);
+        const right = this.evalSync(node.right, env);
+        return this.applyBinary(op, left, right, node.line);
+      }
+      case 'UnaryExpr': {
+        const operand = this.evalSync(node.operand, env);
+        if (node.operator === '-') {
+          if (typeof operand === 'number') return -operand;
+          const m = this.protocolMethod(operand, 'on_neg');
+          if (m) return m.call([], node.line);
+          if (typeof operand === 'string' && operand.trim() !== '' && !isNaN(Number(operand))) return -Number(operand);
+          throw new SdevError("Cannot use '-' with non-number", node.line);
+        }
+        if (node.operator === 'isnt') return !this.truthy(operand);
+        throw new SdevError(`Unknown unary operator: ${node.operator}`, node.line);
+      }
+      case 'CallExpr': {
+        const callee = this.evalSync(node.callee, env);
+        const argNodes = node.args;
+        const n = argNodes.length;
+        if (n === 0) return this.callValue(callee, [], node.line);
+        let hasSpecial = false;
+        for (let i = 0; i < n; i++) {
+          const t = argNodes[i].type;
+          if (t === 'StarExpr' || t === 'KeywordArg') { hasSpecial = true; break; }
+        }
+        if (!hasSpecial) {
+          const args = new Array<unknown>(n);
+          for (let i = 0; i < n; i++) args[i] = this.evalSync(argNodes[i], env);
+          return this.callValue(callee, args, node.line);
+        }
+        const args: unknown[] = [];
+        const kwargs: Record<string, unknown> = {};
+        for (let i = 0; i < n; i++) {
+          const an = argNodes[i];
+          if (an.type === 'StarExpr') {
+            const v = this.evalSync(an.operand, env);
+            if (an.double) {
+              if (v && typeof v === 'object' && !Array.isArray(v)) Object.assign(kwargs, v as Record<string, unknown>);
+            } else {
+              for (const item of this.iterableOf(v, an.line)) args.push(item);
+            }
+          } else if (an.type === 'KeywordArg') {
+            kwargs[an.name] = this.evalSync(an.value, env);
+          } else {
+            args.push(this.evalSync(an, env));
+          }
+        }
+        return this.callValue(callee, args, node.line, kwargs);
+      }
+      case 'IndexExpr': {
+        const obj = this.evalSync(node.object, env);
+        const index = this.evalSync(node.index, env);
+        return this.getIndex(obj, index, node.line);
+      }
+      case 'MemberExpr': {
+        const obj = this.evalSync(node.object, env);
+        return this.getMember(obj, node.property, node.line);
+      }
+      case 'AssignStatement': {
+        const value = this.evalSync(node.value, env);
+        if (node.declare && !env.has(node.name)) env.define(node.name, value);
+        else env.set(node.name, value, node.line);
+        return value;
+      }
+      case 'LetStatement': {
+        const value = this.evalSync(node.value, env);
+        if (node.targets && node.targets.length > 1) {
+          const items = [...this.iterableOf(value, node.line)];
+          const star = node.starIndex;
+          if (star === undefined) {
+            node.targets.forEach((name, i) => {
+              const v = items[i] === undefined ? null : items[i];
+              if (node.isFixed) env.defineFixed(name, v);
+              else env.define(name, v);
+            });
+          } else {
+            const after = node.targets.length - star - 1;
+            node.targets.forEach((name, i) => {
+              let v: unknown;
+              if (i < star) v = items[i] === undefined ? null : items[i];
+              else if (i === star) v = items.slice(star, items.length - after);
+              else v = items[items.length - (node.targets!.length - i)] ?? null;
+              if (node.isFixed) env.defineFixed(name, v);
+              else env.define(name, v);
+            });
+          }
+          return value;
+        }
+        if (node.isFixed) env.defineFixed(node.name, value);
+        else env.define(node.name, value);
+        return value;
+      }
+      case 'BlockStatement': {
+        const blockEnv = blockNeedsScope(node) ? new Environment(env) : env;
+        let result: unknown = null;
+        const stmts = node.statements;
+        for (let i = 0; i < stmts.length; i++) result = this.evalSync(stmts[i], blockEnv);
+        return result;
+      }
+      case 'IfStatement': {
+        if (this.truthy(this.evalSync(node.condition, env))) return this.evalSync(node.thenBranch, env);
+        if (node.elseBranch) return this.evalSync(node.elseBranch, env);
+        return null;
+      }
+      case 'WhileStatement': {
+        let result: unknown = null;
+        let iterations = 0;
+        let broke = false;
+        while (this.truthy(this.evalSync(node.condition, env))) {
+          try {
+            result = this.evalSync(node.body, env);
+          } catch (e) {
+            if (e instanceof BreakSignal) { broke = true; break; }
+            if (!(e instanceof ContinueSignal)) throw e;
+          }
+          if (++iterations > MAX_ITERATIONS) {
+            throw new SdevError('Maximum loop iterations exceeded (possible infinite loop)', node.line);
+          }
+        }
+        if (!broke && node.elseBlock) this.evalSync(node.elseBlock, env);
+        return result;
+      }
+      case 'ForEachStatement':
+      case 'ForInStatement': {
+        const iterable = this.evalSync(node.iterable, env);
+        const targets: string | string[] = node.type === 'ForEachStatement' ? (node.variables ?? node.variable) : node.variable;
+        let result: unknown = null;
+        let iterations = 0;
+        let broke = false;
+        for (const item of this.iterableOf(iterable, node.line)) {
+          const loopEnv = new Environment(env);
+          this.bindTarget(targets, item, loopEnv, node.line);
+          try {
+            result = this.evalSync(node.body, loopEnv);
+          } catch (e) {
+            if (e instanceof BreakSignal) { broke = true; break; }
+            if (!(e instanceof ContinueSignal)) throw e;
+          }
+          if (++iterations > MAX_ITERATIONS) {
+            throw new SdevError('Maximum loop iterations exceeded', node.line);
+          }
+        }
+        if (!broke && node.type === 'ForEachStatement' && node.elseBlock) this.evalSync(node.elseBlock, env);
+        return result;
+      }
+      case 'ReturnStatement': {
+        const value = node.value ? this.evalSync(node.value, env) : null;
+        throw new ReturnException(value);
+      }
+      case 'ExpressionStatement': return this.evalSync(node.expression, env);
+      case 'AugAssignStatement': {
+        const current = this.evalSync(node.target, env);
+        const operand = this.evalSync(node.value, env);
+        const updated = this.applyBinary(node.operator, current, operand, node.line);
+        if (node.target.type === 'Identifier') {
+          env.set(node.target.name, updated, node.line);
+        } else if (node.target.type === 'IndexExpr') {
+          const obj = this.evalSync(node.target.object, env);
+          const index = this.evalSync(node.target.index, env);
+          this.setIndex(obj, index, updated, node.line);
+        } else if (node.target.type === 'MemberExpr') {
+          const obj = this.evalSync(node.target.object, env);
+          this.setMember(obj, node.target.property, updated, node.line);
+        } else {
+          throw new SdevError('Invalid augmented assignment target', node.line);
+        }
+        return updated;
+      }
+      case 'IndexAssignStatement': {
+        const obj = this.evalSync(node.object, env);
+        const index = this.evalSync(node.index, env);
+        const value = this.evalSync(node.value, env);
+        return this.setIndex(obj, index, value, node.line);
+      }
+      case 'MemberAssignStatement': {
+        const obj = this.evalSync(node.object, env);
+        const value = this.evalSync(node.value, env);
+        return this.setMember(obj, node.property, value, node.line);
+      }
+      case 'ArrayLiteral': return this.evalSequenceSync(node.elements, env);
+      case 'TupleLiteral': return makeTuple(this.evalSequenceSync(node.elements, env));
+      case 'SetLiteral': return new SdevSet(this.evalSequenceSync(node.elements, env));
+      case 'DictLiteral': {
+        const result: Record<string, unknown> = {};
+        for (const entry of node.entries) {
+          if (entry.key.type === 'StarExpr' && entry.key.double) {
+            const spread = this.evalSync(entry.key.operand, env);
+            if (spread && typeof spread === 'object') Object.assign(result, spread as Record<string, unknown>);
+            continue;
+          }
+          const key = stringify(this.evalSync(entry.key, env));
+          result[key] = this.evalSync(entry.value, env);
+        }
+        return result;
+      }
+      case 'SliceExpr': {
+        const obj = this.evalSync(node.object, env);
+        const start = node.start ? (this.evalSync(node.start, env) as number | null) : null;
+        const stop = node.stop ? (this.evalSync(node.stop, env) as number | null) : null;
+        const step = node.step ? (this.evalSync(node.step, env) as number | null) : null;
+        return this.sliceValue(obj, start, stop, step, node.line);
+      }
+      case 'TernaryExpr':
+        return this.truthy(this.evalSync(node.condition, env))
+          ? this.evalSync(node.thenExpr, env)
+          : this.evalSync(node.elseExpr, env);
+      case 'FStringExpr': {
+        let out = '';
+        for (const part of node.parts) {
+          if (part.kind === 'text') {
+            out += part.value;
+          } else {
+            const value = this.evalSync(part.expr, env);
+            out += formatValue(value, part.formatSpec, part.conversion);
+          }
+        }
+        return out;
+      }
+      case 'FuncDeclaration': {
+        let fn: unknown = this.makeFunction(node, env);
+        if (node.decorators?.length) {
+          for (const dec of [...node.decorators].reverse()) {
+            const decorator = this.evalSync(dec, env);
+            fn = this.callValue(decorator, [fn], node.line);
+          }
+        }
+        env.define(node.name, fn);
+        return null;
+      }
+      case 'LambdaExpr': return this.makeLambda(node, env);
+      case 'WalrusExpr': {
+        const value = this.evalSync(node.value, env);
+        env.define(node.name, value);
+        return value;
+      }
+      case 'AwaitExpr': return this.awaitValue(this.evalSync(node.operand, env), node.line);
+      case 'StarExpr': return this.evalSync(node.operand, env);
+      case 'KeywordArg': return this.evalSync(node.value, env);
+      case 'EllipsisLiteral': return '...';
+      case 'BytesLiteral': {
+        const bytes = new Uint8Array(node.value.length);
+        for (let i = 0; i < node.value.length; i++) bytes[i] = node.value.charCodeAt(i) & 0xff;
+        return bytes;
+      }
+      case 'Program': {
+        let result: unknown = null;
+        for (const stmt of node.statements) result = this.evalSync(stmt, env);
+        return result;
+      }
+      case 'RaiseStatement': {
+        if (!node.error) throw new SdevRaise('re-raise outside of a rescue block');
+        const err = this.evalSync(node.error, env);
+        const cause = node.cause ? this.evalSync(node.cause, env) : undefined;
+        throw new SdevRaise(err, cause);
+      }
+      case 'AssertStatement': {
+        const ok = this.truthy(this.evalSync(node.condition, env));
+        if (!ok) {
+          const msg = node.message ? stringify(this.evalSync(node.message, env)) : 'assertion failed';
+          throw new SdevRaise(this.makeError('AssertionError', msg));
+        }
+        return null;
+      }
+      case 'TryStatement': {
+        const handlers = node.handlers ?? [{ types: [], alias: node.errorVar, body: node.catchBlock }];
+        let result: unknown = null;
+        try {
+          try {
+            result = this.evalSync(node.tryBlock, env);
+            if (node.elseBlock) result = this.evalSync(node.elseBlock, env);
+          } catch (e) {
+            if (e instanceof ReturnException || e instanceof BreakSignal || e instanceof ContinueSignal) throw e;
+            const raised: unknown = e instanceof SdevRaise
+              ? e.value
+              : this.makeError(e instanceof SdevError ? 'RuntimeError' : 'Error', e instanceof Error ? e.message : String(e));
+            for (const handler of handlers) {
+              if (!this.handlerMatches(handler, raised, env, node.line)) continue;
+              const catchEnv = new Environment(env);
+              if (handler.alias) {
+                catchEnv.define(handler.alias, node.handlers ? raised : this.errorMessage(raised));
+              }
+              catchEnv.define('__error__', raised);
+              return this.evalSync(handler.body, catchEnv);
+            }
+            throw e;
+          }
+        } finally {
+          if (node.finallyBlock) this.evalSync(node.finallyBlock, env);
+        }
+        return result;
+      }
+      case 'ScopeStatement': return null;
+      case 'PassStatement': return null;
+      case 'ImportStatement': return this.evImport(node, env);
+      case 'BreakStatement': throw new BreakSignal();
+      case 'ContinueStatement': throw new ContinueSignal();
+      case 'EmitExpr':
+        throw new SdevError("'emit' is only valid inside a generator function", node.line);
+      default:
+        return this.runGen(node, env);
+    }
+  }
+
+  private evalSequenceSync(nodes: AST.ASTNode[], env: Environment): unknown[] {
+    const out: unknown[] = [];
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      if (n.type === 'StarExpr' && !n.double) {
+        const spread = this.evalSync(n.operand, env);
+        for (const item of this.iterableOf(spread, n.line)) out.push(item);
+        continue;
+      }
+      out.push(this.evalSync(n, env));
+    }
+    return out;
   }
 
   // ==========================================================
@@ -330,15 +747,65 @@ export class Interpreter {
   }
 
   applyBinary(operator: string, left: unknown, right: unknown, line: number): unknown {
-    // Protocol dispatch on user objects
-    const slot = PROTOCOL_SLOTS[operator];
-    if (slot) {
-      const lm = this.protocolMethod(left, slot);
-      if (lm) return lm.call([right], line);
-      const rslot = REFLECTED_SLOTS[operator];
-      if (rslot) {
-        const rm = this.protocolMethod(right, rslot);
-        if (rm) return rm.call([left], line);
+    // Fast-path for number-number operations (no protocol lookup, no closure allocation)
+    if (typeof left === 'number' && typeof right === 'number') {
+      switch (operator) {
+        case '+': return left + right;
+        case '-': return left - right;
+        case '*': return left * right;
+        case '<': return left < right;
+        case '>': return left > right;
+        case '<=': return left <= right;
+        case '>=': return left >= right;
+        case 'equals': return left === right;
+        case 'differs': case '<>': return left !== right;
+        case '/':
+          if (right === 0) throw new SdevRaise(this.makeError('ZeroDivisionError', 'division by zero'));
+          return left / right;
+        case '\\':
+          if (right === 0) throw new SdevRaise(this.makeError('ZeroDivisionError', 'division by zero'));
+          return Math.floor(left / right);
+        case '%':
+          if (right === 0) throw new SdevRaise(this.makeError('ZeroDivisionError', 'modulo by zero'));
+          return ((left % right) + right) % right;
+        case '^': return Math.pow(left, right);
+        case '&': return left & right;
+        case '|': return left | right;
+        case '<<': return left << right;
+        case '>>': return left >> right;
+        case 'is': return left === right;
+        case 'is not': return left !== right;
+      }
+    }
+
+    // Fast-path for string-string operations
+    if (typeof left === 'string' && typeof right === 'string') {
+      switch (operator) {
+        case '+': return left + right;
+        case 'equals': return left === right;
+        case 'differs': case '<>': return left !== right;
+        case '<': return left < right;
+        case '>': return left > right;
+        case '<=': return left <= right;
+        case '>=': return left >= right;
+        case 'is': return left === right;
+        case 'is not': return left !== right;
+        case 'in': return right.includes(left);
+        case 'not in': return !right.includes(left);
+      }
+    }
+
+    // Protocol dispatch on user objects (only when at least one operand is an object)
+    if ((left !== null && typeof left === 'object') || (right !== null && typeof right === 'object')) {
+      const slot = PROTOCOL_SLOTS[operator];
+      if (slot) {
+        const lm = this.protocolMethod(left, slot);
+        if (lm) return lm.call([right], line);
+        const rslot = REFLECTED_SLOTS[operator];
+        if (rslot) {
+          const rm = this.protocolMethod(right, rslot);
+          if (rm) return rm.call([left], line);
+        }
       }
     }
 
@@ -508,9 +975,6 @@ export class Interpreter {
   }
 
   getIndex(obj: unknown, index: unknown, line: number): unknown {
-    const m = this.protocolMethod(obj, 'on_get');
-    if (m) return m.call([index], line);
-
     if (Array.isArray(obj)) {
       if (typeof index !== 'number') throw new SdevError('List index must be a number', line);
       const idx = index < 0 ? obj.length + index : index;
@@ -526,6 +990,10 @@ export class Interpreter {
         throw new SdevRaise(this.makeError('IndexError', 'string index out of range'));
       }
       return obj[idx];
+    }
+    if (obj !== null && typeof obj === 'object') {
+      const m = this.protocolMethod(obj, 'on_get');
+      if (m) return m.call([index], line);
     }
     if (obj instanceof Uint8Array) {
       const idx = (index as number) < 0 ? obj.length + (index as number) : (index as number);
@@ -789,9 +1257,6 @@ export class Interpreter {
   }
 
   setIndex(obj: unknown, index: unknown, value: unknown, line: number): unknown {
-    const m = this.protocolMethod(obj, 'on_set');
-    if (m) return m.call([index, value], line);
-
     if (Array.isArray(obj)) {
       if (typeof index !== 'number') throw new SdevError('List index must be a number', line);
       const idx = index < 0 ? obj.length + index : index;
@@ -799,7 +1264,9 @@ export class Interpreter {
       obj[idx] = value;
       return value;
     }
-    if (obj && typeof obj === 'object') {
+    if (obj !== null && typeof obj === 'object') {
+      const m = this.protocolMethod(obj, 'on_set');
+      if (m) return m.call([index, value], line);
       (obj as Record<string, unknown>)[stringify(index)] = value;
       return value;
     }
@@ -1083,14 +1550,28 @@ export class Interpreter {
 
   private makeFunction(node: AST.FuncDeclaration, env: Environment, boundName?: string, ownerClass?: SdevClass): RichFunction {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
-      const self = this;
+    const self = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
+    const simpleParams = specs.every((s) => s.kind === 'normal' && !s.default);
+    const paramNames = simpleParams ? specs.map((s) => s.name) : null;
+    const paramCount = specs.length;
 
     const fn: RichFunction = {
       type: 'user',
       call: (args: unknown[], callLine: number) => {
         const funcEnv = new Environment(env);
-        self.bindParams(specs, args, funcEnv, callLine, node.name);
+        if (paramNames !== null) {
+          const last = args.length > 0 ? args[args.length - 1] : null;
+          if (last && typeof last === 'object' && (last as { __kwargs?: boolean }).__kwargs) {
+            self.bindParams(specs, args, funcEnv, callLine, node.name);
+          } else {
+            for (let i = 0; i < paramCount; i++) {
+              funcEnv.define(paramNames[i], i < args.length ? args[i] : null);
+            }
+          }
+        } else {
+          self.bindParams(specs, args, funcEnv, callLine, node.name);
+        }
 
         const receiver = args[0];
         if (ownerClass && receiver && typeof receiver === 'object') {
@@ -1118,7 +1599,7 @@ export class Interpreter {
         }
 
         try {
-          self.execute(node.body, funcEnv);
+          self.evalSync(node.body, funcEnv);
           return null;
         } catch (e) {
           if (e instanceof ReturnException) return e.value;
@@ -1154,15 +1635,29 @@ export class Interpreter {
 
   private makeLambda(node: AST.LambdaExpr, env: Environment): RichFunction {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
-      const self = this;
+    const self = this;
     const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
+    const simpleParams = specs.every((s) => s.kind === 'normal' && !s.default);
+    const paramNames = simpleParams ? specs.map((s) => s.name) : null;
+    const paramCount = specs.length;
     return {
       type: 'lambda',
       call: (args: unknown[], callLine: number) => {
         const lambdaEnv = new Environment(env);
-        self.bindParams(specs, args, lambdaEnv, callLine, '<lambda>');
+        if (paramNames !== null) {
+          const last = args.length > 0 ? args[args.length - 1] : null;
+          if (last && typeof last === 'object' && (last as { __kwargs?: boolean }).__kwargs) {
+            self.bindParams(specs, args, lambdaEnv, callLine, '<lambda>');
+          } else {
+            for (let i = 0; i < paramCount; i++) {
+              lambdaEnv.define(paramNames[i], i < args.length ? args[i] : null);
+            }
+          }
+        } else {
+          self.bindParams(specs, args, lambdaEnv, callLine, '<lambda>');
+        }
         try {
-          return self.execute(node.body, lambdaEnv);
+          return self.evalSync(node.body, lambdaEnv);
         } catch (e) {
           if (e instanceof ReturnException) return e.value;
           throw e;

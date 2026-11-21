@@ -731,15 +731,17 @@ export default function IDEPage() {
     // The file's hidden signature never reaches the compiler, and a dialect
     // source is canonicalized to plain sdev v2 first — the toolchain itself
     // is untouched by dialects.
-    const [{ canonicalize }, { applyExtensions }] = await Promise.all([
-      import('@/lang/dialect/canonicalize'), import('@/lang/dialect/extensions'),
-    ]);
     const activeDialect = getActiveDialect();
     const strippedSrc = stripSignature(activeFile.content);
-    const dialectSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
-    const { asWritten, wordsNeedReading } = await import('@/lang/agent');
+    const dialectSrc = activeDialect
+      ? (await import('@/lang/dialect/canonicalize')).canonicalize(strippedSrc, activeDialect).source
+      : strippedSrc;
+    const { applyExtensions } = await import('@/lang/dialect/extensions');
     // the file as its author wrote it: directives out, sdev:ai made canonical, nothing else
-    const writtenSrc = asWritten(dialectSrc);
+    const hasDirectives = dialectSrc.includes('!#');
+    const writtenSrc = hasDirectives
+      ? (await import('@/lang/agent')).asWritten(dialectSrc)
+      : dialectSrc;
     const runtimePref = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || null;
     // Runtime is chosen from the user's own file, before the prelude is added.
     const wantsV2 = (src: string) => {
@@ -758,8 +760,10 @@ export default function IDEPage() {
       // library registry (cached locally, so it also works offline).
       const { resolveLibraries } = await import('@/lang/dialect/registry');
       const moduleMap: Record<string, string> = await resolveLibraries(body);
+      const canonicalizeFn = activeDialect ? (await import('@/lang/dialect/canonicalize')).canonicalize : null;
       for (const f of files) {
-        const source = activeDialect ? canonicalize(stripSignature(f.content), activeDialect).source : stripSignature(f.content);
+        const stripped = stripSignature(f.content);
+        const source = canonicalizeFn && activeDialect ? canonicalizeFn(stripped, activeDialect).source : stripped;
         moduleMap[f.name] = source;
         moduleMap['./' + f.name] = source;
       }
@@ -781,7 +785,7 @@ export default function IDEPage() {
     // The understander only reads a v2 file when the self-hosted compiler
     // cannot compile it as written, so it can never break a working program.
     let v2AsWrittenError: string | null = null;
-    if (overrideSrc === undefined && wantsV2(writtenSrc) && (noUnderstand || !wordsNeedReading(writtenSrc))) {
+    if (overrideSrc === undefined && wantsV2(writtenSrc) && (noUnderstand || !(await import('@/lang/agent')).wordsNeedReading(writtenSrc))) {
       setIsRunning(true);
       setStatusMsg(noUnderstand ? 'Running (v2 · without understanding)…' : 'Running (v2 · self-hosted)…');
       setUiState(null); setWebState(null);
@@ -971,60 +975,64 @@ export default function IDEPage() {
     // ─── Hybrid translation pre-pass ───
     // Stage 1: dictionary + fuzzy (sync, in Lexer). Stage 2: smart fallback
     // only fires when foreign-script words remain after stage 1.
-    try {
-      const { translateSource } = await import('@/lang/translator');
-      const stage1 = translateSource(code, selectedLanguage, { target: 'v1', dialect: activeDialect });
-      const humanLangDetected = stage1.detectedLanguage && stage1.detectedLanguage !== 'English' ? stage1.detectedLanguage : null;
-      const stripped = stage1.translated
-        .replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '')
-        .replace(/(\/\/|#)[^\n]*/g, '');
-      if (/[\u00A0-\uFFFF]{3,}/.test(stripped)) {
-        setStatusMsg('Translating with Smart Translator…');
-        try {
-          const { data } = await supabase.functions.invoke('translate-fuzzy', {
-            body: { code: stage1.translated, original: code, sourceLanguage: stage1.detectedLanguage ?? selectedLanguage },
-          });
-          if (data?.translated) {
-            code = data.translated;
-            if (data.usedAI) toast.info('Translated using fallback engine');
-          } else {
+    if (selectedLanguage !== 'English') {
+      try {
+        const { translateSource } = await import('@/lang/translator');
+        const stage1 = translateSource(code, selectedLanguage, { target: 'v1', dialect: activeDialect });
+        const humanLangDetected = stage1.detectedLanguage && stage1.detectedLanguage !== 'English' ? stage1.detectedLanguage : null;
+        const stripped = stage1.translated
+          .replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '')
+          .replace(/(\/\/|#)[^\n]*/g, '');
+        if (/[\u00A0-\uFFFF]{3,}/.test(stripped)) {
+          setStatusMsg('Translating with Smart Translator…');
+          try {
+            const { data } = await supabase.functions.invoke('translate-fuzzy', {
+              body: { code: stage1.translated, original: code, sourceLanguage: stage1.detectedLanguage ?? selectedLanguage },
+            });
+            if (data?.translated) {
+              code = data.translated;
+              if (data.usedAI) toast.info('Translated using fallback engine');
+            } else {
+              code = stage1.translated;
+            }
+          } catch {
             code = stage1.translated;
           }
-        } catch {
+        } else {
           code = stage1.translated;
         }
-      } else {
-        code = stage1.translated;
-      }
-      if (humanLangDetected || code.trim() !== stripBoardBlocks(rawSrc).trim()) {
-        const translatedCode = code;
-        const fileId = activeFile.id;
-        setTranslatedContent(prev => {
-          const next = new Map(prev);
-          next.set(fileId, translatedCode);
-          return next;
-        });
-        setFiles((prev) => prev.map((f) => (f.id === fileId ? {
-          ...f,
-          understood: {
-            ...baseUnderstoodMeta,
-            source: translatedCode,
-            detectedLanguage: humanLangDetected,
-          },
-        } : f)));
-      }
-    } catch {/* fallback to raw lexer */}
+        if (humanLangDetected || code.trim() !== stripBoardBlocks(rawSrc).trim()) {
+          const translatedCode = code;
+          const fileId = activeFile.id;
+          setTranslatedContent(prev => {
+            const next = new Map(prev);
+            next.set(fileId, translatedCode);
+            return next;
+          });
+          setFiles((prev) => prev.map((f) => (f.id === fileId ? {
+            ...f,
+            understood: {
+              ...baseUnderstoodMeta,
+              source: translatedCode,
+              detectedLanguage: humanLangDetected,
+            },
+          } : f)));
+        }
+      } catch {/* fallback to raw lexer */}
+    }
 
     // ─── Module linking ───
     // Resolve `link "file.sdev"` directives by inlining other workspace files.
-    try {
-      const { resolveLinks } = await import('@/lang/linker');
-      code = resolveLinks(
-        code,
-        files.map(f => ({ name: f.name, content: f.content })),
-        { entryName: activeFile.name }
-      );
-    } catch {/* linker is best-effort */}
+    if (/\blink\s+["']/.test(code)) {
+      try {
+        const { resolveLinks } = await import('@/lang/linker');
+        code = resolveLinks(
+          code,
+          files.map(f => ({ name: f.name, content: f.content })),
+          { entryName: activeFile.name }
+        );
+      } catch {/* linker is best-effort */}
+    }
 
     // Translation already applied above — disable Lexer's built-in pass.
     const lexerOpts = { sourceLanguage: 'English' as const, translate: false };
@@ -1036,130 +1044,90 @@ export default function IDEPage() {
         import('@/lang/lexer'), import('@/lang/parser'), import('@/lang/interpreter'),
         import('@/lang/graphics'), import('@/lang/ui'), import('@/lang/web'),
       ]);
-      if (runMode === 'interpreter') {
-        const lexer = new Lexer(code, lexerOpts);
-        const tokens = lexer.tokenize();
-        const parser = new Parser(tokens);
-        const ast = parser.parse();
-        const interpreter = new Interpreter((msg) => outputLines.push(msg));
-        const env = interpreter.getGlobalEnv();
-        const gfx = createGraphicsBuiltins(
-          (cmd) => commands.push(cmd),
-          () => turtleState,
-          (state) => { turtleState = { ...turtleState, ...state }; }
-        );
-        gfx.forEach((fn, name) => env.define(name, fn));
-        const runtimeInput = env.get('input', 0) as { type: 'builtin' | 'user' | 'lambda'; call: (args: unknown[], line: number) => unknown };
-        // ── UI toolkit builtins ──
-        uiHandlersRef.current.clear();
-        uiHandlerIdRef.current = 0;
-        let producedUi = false;
-        const ui = createUiBuiltins(
-          (s) => {
-            producedUi = true;
-            uiStateRef.current = s;
+      const lexer = new Lexer(code, lexerOpts);
+      const tokens = lexer.tokenize();
+      const parser = new Parser(tokens);
+      const ast = parser.parse();
+      const interpreter = new Interpreter((msg) => outputLines.push(msg), { bindWeb: false });
+      const env = interpreter.getGlobalEnv();
+      const gfx = createGraphicsBuiltins(
+        (cmd) => commands.push(cmd),
+        () => turtleState,
+        (state) => { turtleState = { ...turtleState, ...state }; }
+      );
+      gfx.forEach((fn, name) => env.define(name, fn));
+      const runtimeInput = env.get('input', 0) as { type: 'builtin' | 'user' | 'lambda'; call: (args: unknown[], line: number) => unknown };
+      // ── UI toolkit builtins ──
+      uiHandlersRef.current.clear();
+      uiHandlerIdRef.current = 0;
+      let interpreting = true;
+      let producedUi = false;
+      let pendingUi: UiState | null = null;
+      const ui = createUiBuiltins(
+        (s) => {
+          producedUi = true;
+          uiStateRef.current = s;
+          if (interpreting) {
+            pendingUi = s;
+          } else {
             setUiState({ nodes: new Map(s.nodes), rootId: s.rootId, values: new Map(s.values) });
+          }
+        },
+        (cb) => { const id = ++uiHandlerIdRef.current; uiHandlersRef.current.set(id, cb); return id; }
+      );
+      const uiInput = ui.get('input');
+      ui.forEach((fn, name) => {
+        if (name !== 'input') env.define(name, fn);
+      });
+      if (uiInput) {
+        env.define('input', {
+          type: 'builtin',
+          call: (args: unknown[], line: number) => {
+            const hasUiRoot = uiStateRef.current?.rootId != null;
+            if (hasUiRoot && args.length <= 2) return uiInput.call(args, line);
+            return runtimeInput.call(args, line);
           },
-          (cb) => { const id = ++uiHandlerIdRef.current; uiHandlersRef.current.set(id, cb); return id; }
-        );
-        const uiInput = ui.get('input');
-        ui.forEach((fn, name) => {
-          if (name !== 'input') env.define(name, fn);
         });
-        if (uiInput) {
-          env.define('input', {
-            type: 'builtin',
-            call: (args: unknown[], line: number) => {
-              const hasUiRoot = uiStateRef.current?.rootId != null;
-              if (hasUiRoot && args.length <= 2) return uiInput.call(args, line);
-              return runtimeInput.call(args, line);
-            },
-          });
-        }
-        // ── Web (HTML/CSS/JS) builtins ──
-        let producedWeb = false;
-        const web = createWebBuiltins((s) => {
-          producedWeb = true;
-          setWebState({
-            ...s,
-            head: [...s.head],
-            stack: s.stack.map(b => [...b]),
-            css: [...s.css],
-            js: [...s.js],
-            moduleJs: [...(s.moduleJs ?? [])],
-          });
-        });
-        bindWebBuiltinsToEnv(env, web, { hasUiRoot: () => uiStateRef.current?.rootId != null });
-        interpreter.interpret(ast);
-        if (producedWeb) setBottomPanel('web');
-        else if (producedUi) { setBottomPanel('app'); }
-      } else {
-        // "Compiler" mode — uses the rebuilt sdev compiler pipeline:
-        //   parse → compile-to-container → execute via the full Interpreter
-        // This gives the compiler full feature parity with the interpreter
-        // (classes, methods, OOP, UI, graphics, all builtins) instead of the
-        // limited stack VM, while still producing a real bytecode chunk for
-        // disassembly/export in the Compiler panel.
-        const lexer = new Lexer(code, lexerOpts);
-        const tokens = lexer.tokenize();
-        const parser = new Parser(tokens);
-        const ast = parser.parse();
-        // Best-effort compile to bytecode (for IR/export). Unsupported features
-        // are ignored — execution still uses the interpreter below.
-        try { const { Compiler } = await import('@/lang/compiler'); new Compiler().compile(ast); } catch { /* IR unsupported for this program */ }
-
-        const interpreter = new Interpreter((msg) => outputLines.push(msg));
-        const env = interpreter.getGlobalEnv();
-        const gfx = createGraphicsBuiltins(
-          (cmd) => commands.push(cmd),
-          () => turtleState,
-          (state) => { turtleState = { ...turtleState, ...state }; }
-        );
-        gfx.forEach((fn, name) => env.define(name, fn));
-        const runtimeInput = env.get('input', 0) as { type: 'builtin' | 'user' | 'lambda'; call: (args: unknown[], line: number) => unknown };
-        uiHandlersRef.current.clear();
-        uiHandlerIdRef.current = 0;
-        let producedUi = false;
-        const ui = createUiBuiltins(
-          (s) => {
-            producedUi = true;
-            uiStateRef.current = s;
-            setUiState({ nodes: new Map(s.nodes), rootId: s.rootId, values: new Map(s.values) });
-          },
-          (cb) => { const id = ++uiHandlerIdRef.current; uiHandlersRef.current.set(id, cb); return id; }
-        );
-        const uiInput = ui.get('input');
-        ui.forEach((fn, name) => {
-          if (name !== 'input') env.define(name, fn);
-        });
-        if (uiInput) {
-          env.define('input', {
-            type: 'builtin',
-            call: (args: unknown[], line: number) => {
-              const hasUiRoot = uiStateRef.current?.rootId != null;
-              if (hasUiRoot && args.length <= 2) return uiInput.call(args, line);
-              return runtimeInput.call(args, line);
-            },
-          });
-        }
-        // ── Web (HTML/CSS/JS) builtins ──
-        let producedWeb = false;
-        const web = createWebBuiltins((s) => {
-          producedWeb = true;
-          setWebState({
-            ...s,
-            head: [...s.head],
-            stack: s.stack.map(b => [...b]),
-            css: [...s.css],
-            js: [...s.js],
-            moduleJs: [...(s.moduleJs ?? [])],
-          });
-        });
-        bindWebBuiltinsToEnv(env, web, { hasUiRoot: () => uiStateRef.current?.rootId != null });
-        interpreter.interpret(ast);
-        if (producedWeb) setBottomPanel('web');
-        else if (producedUi) { setBottomPanel('app'); }
       }
+      // ── Web (HTML/CSS/JS) builtins ──
+      let producedWeb = false;
+      let pendingWeb: WebState | null = null;
+      const web = createWebBuiltins((s) => {
+        producedWeb = true;
+        if (interpreting) {
+          pendingWeb = s;
+        } else {
+          setWebState({
+            ...s,
+            head: [...s.head],
+            stack: s.stack.map(b => [...b]),
+            css: [...s.css],
+            js: [...s.js],
+            moduleJs: [...(s.moduleJs ?? [])],
+          });
+        }
+      });
+      bindWebBuiltinsToEnv(env, web, { hasUiRoot: () => uiStateRef.current?.rootId != null });
+      try {
+        interpreter.interpret(ast);
+      } finally {
+        interpreting = false;
+      }
+      if (pendingUi) {
+        setUiState({ nodes: new Map(pendingUi.nodes), rootId: pendingUi.rootId, values: new Map(pendingUi.values) });
+      }
+      if (pendingWeb) {
+        setWebState({
+          ...pendingWeb,
+          head: [...pendingWeb.head],
+          stack: pendingWeb.stack.map(b => [...b]),
+          css: [...pendingWeb.css],
+          js: [...pendingWeb.js],
+          moduleJs: [...(pendingWeb.moduleJs ?? [])],
+        });
+      }
+      if (producedWeb) setBottomPanel('web');
+      else if (producedUi) { setBottomPanel('app'); }
 
       const elapsed = Math.round((performance.now() - t0) * 10) / 10;
       setOutput(outputLines);

@@ -60,6 +60,20 @@ interface SeedExports {
 
 let cached: Promise<WebAssembly.Module> | null = null;
 let cachedBytes: Promise<ArrayBuffer> | null = null;
+let cachedOracleCompile: ((src: string, opts?: { readModule?: (p: string) => string }) => unknown) | null = null;
+const compiledProgramCache = new Map<string, { bytecode: Uint8Array; stringPool: Uint8Array }>();
+const COMPILED_CACHE_MAX = 16;
+
+function compiledCacheKey(source: string, modules?: Record<string, string>): string {
+  if (!modules) return source;
+  const keys = Object.keys(modules).sort();
+  let key = source + '\0';
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    key += k + '\0' + modules[k] + '\0';
+  }
+  return key;
+}
 
 async function loadSeedBytes(): Promise<ArrayBuffer> {
   if (!cachedBytes) {
@@ -71,9 +85,7 @@ async function loadSeedBytes(): Promise<ArrayBuffer> {
 
 async function loadSeed(): Promise<WebAssembly.Module> {
   if (!cached) {
-    cached = fetch('/wasm/sdev-seed.wasm')
-      .then(r => { if (!r.ok) throw new Error(`fetch sdev-seed.wasm: ${r.status}`); return r.arrayBuffer(); })
-      .then(buf => WebAssembly.compile(buf));
+    cached = loadSeedBytes().then(buf => WebAssembly.compile(buf));
   }
   return cached;
 }
@@ -115,31 +127,42 @@ export async function runWasm(
   const isDiagnosticError = (msg: string) =>
     /unknown function|expected \d+ args|joining lists with \+|unknown (?:parent )?kind|outside of a loop|too many (?:globals|locals)|overflow/.test(msg);
 
-  let program: { bytecode: Uint8Array; stringPool: Uint8Array };
-  try {
-    program = await selfCompile(source, modules ?? null);
-    if (program.bytecode.length === 0) throw new Error('stage-0 compiler produced no bytecode');
-  } catch (e) {
-    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, '');
-    if (isDiagnosticError(msg)) {
-      return { success: false, output: [], error: msg };
+  // Check with the reference compiler first so syntax or semantic issues fail
+  // fast without spinning up the WASM self-hosted compiler.
+  const cacheKey = compiledCacheKey(source, modules);
+  let program = compiledProgramCache.get(cacheKey);
+  if (!program) {
+    try {
+      if (!cachedOracleCompile) {
+        const oracle = await import('./oracle/compile.mjs');
+        cachedOracleCompile = oracle.compile;
+      }
+      cachedOracleCompile(source, modules ? { readModule: (path: string) => modules?.[path] ?? '' } : {});
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, '');
+      if (isDiagnosticError(msg)) {
+        return { success: false, output: [], error: msg };
+      }
+      throw new WasmSubsetError(msg);
     }
-    // Signal "not in stage-0 subset" so the dispatcher can fall back to the understander.
-    throw new WasmSubsetError(msg);
-  }
 
-  // Cross-check with the reference compiler so any syntax or semantic issue
-  // that did not halt early is either surfaced as a diagnostic or routed to
-  // the understander via WasmSubsetError instead of running a partial program.
-  try {
-    const { compile: checkCompile } = await import('./oracle/compile.mjs');
-    checkCompile(source, modules ? { readModule: (path: string) => modules?.[path] ?? '' } : {});
-  } catch (e) {
-    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, '');
-    if (isDiagnosticError(msg)) {
-      return { success: false, output: [], error: msg };
+    try {
+      program = await selfCompile(source, modules ?? null);
+      if (program.bytecode.length === 0) throw new Error('stage-0 compiler produced no bytecode');
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, '');
+      if (isDiagnosticError(msg)) {
+        return { success: false, output: [], error: msg };
+      }
+      // Signal "not in stage-0 subset" so the dispatcher can fall back to the understander.
+      throw new WasmSubsetError(msg);
     }
-    throw new WasmSubsetError(msg);
+
+    if (compiledProgramCache.size >= COMPILED_CACHE_MAX) {
+      const oldest = compiledProgramCache.keys().next().value;
+      if (oldest !== undefined) compiledProgramCache.delete(oldest);
+    }
+    compiledProgramCache.set(cacheKey, program);
   }
 
   const module = await loadSeed();
