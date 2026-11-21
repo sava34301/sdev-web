@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { emptyDialect, isPublishable, type DialectSpec } from '@/lang/dialect/spec';
-import { parseReference } from '@/lang/dialect/address';
 
 const LOCAL_KEY = 'sdev_dialects';
 const ACTIVE_KEY = 'sdev_active_dialect';
@@ -142,6 +141,7 @@ export function useDialects() {
 
   /** Fetch someone else's dialect by @user/slug or share code and install it locally. */
   const install = useCallback(async (reference: string) => {
+    const { parseReference } = await import('@/lang/dialect/address');
     const parsed = parseReference(reference);
     if (!parsed) throw new Error('Use @username/dialect or an 8-character share code.');
     let row: { spec: DialectSpec } | null = null;
@@ -155,7 +155,8 @@ export function useDialects() {
       row = data;
     }
     if (!row?.spec) throw new Error('That dialect is not available.');
-    persist([...readLocalDialects().filter((d) => d.meta.slug !== row!.spec.meta.slug), row.spec]);
+    const spec = row.spec;
+    persist([...readLocalDialects().filter((d) => d.meta.slug !== spec.meta.slug), spec]);
     return row.spec;
   }, [persist]);
 

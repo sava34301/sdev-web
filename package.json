@@ -21,6 +21,7 @@
     "test:website": "node bin/sdevhost.mjs lang/web/sdev-website.sdev",
     "test:oce": "node bin/sdevhost.mjs scripts/test-oce.sdev",
     "test:oce-parity": "bun scripts/test-oce-parity.ts",
+    "test:ide-loading": "bun scripts/test-ide-loading.ts",
     "test:v2-diagnostics": "node scripts/test-v2-diagnostics.mjs",
     "test:parity": "node bin/sdevhost.mjs scripts/test-parity.sdev",
     "test:formatter": "node bin/sdevhost.mjs scripts/test-formatter.sdev",

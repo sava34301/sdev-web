@@ -4,6 +4,10 @@ Goal: every piece of the project that *can* be written in SDEV is written in
 SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
+## Current task — IDE loading
+- [x] Keep homepage and unopened IDE tools out of the startup download
+- [x] Verify account loading, editing, program output, persistent terminal state, hardware tools and mobile editor
+
 ## Current task — OCE causal engine in SDEV
 - [x] bits / mem / oce v2 libraries, 35-check test, gravity example (VM + native identical)
 - [x] Compiler fix: `and` / `or` left the stack unbalanced (self-compiles byte-identical)

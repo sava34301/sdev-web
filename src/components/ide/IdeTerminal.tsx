@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Trash2, Clock, ChevronRight, TerminalSquare } from 'lucide-react';
-import { Lexer } from '@/lang/lexer';
-import { Parser } from '@/lang/parser';
-import { Interpreter } from '@/lang/interpreter';
-import { SdevError } from '@/lang/errors';
+import type { Interpreter } from '@/lang/interpreter';
 
 interface Props {
   lines: string[];
@@ -27,20 +24,22 @@ export function IdeTerminal({ lines, error, execTime, onClear }: Props) {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [histIdx, setHistIdx] = useState<number>(-1);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
 
   const interpRef = useRef<Interpreter | null>(null);
 
   // Lazily create the persistent REPL environment
-  const ensureEnv = () => {
+  const ensureEnv = (Runtime: typeof Interpreter) => {
     if (!interpRef.current) {
       const out = (msg: string) => setRepl(r => [...r, { kind: 'out', text: msg }]);
-      interpRef.current = new Interpreter(out);
+      interpRef.current = new Runtime(out);
     }
-    return { interp: interpRef.current! };
+    return { interp: interpRef.current };
   };
 
-  const runRepl = (src: string) => {
-    if (!src.trim()) return;
+  const runRepl = async (src: string) => {
+    if (!src.trim() || busyRef.current) return;
     setRepl(r => [...r, { kind: 'in', text: src }]);
     setHistory(h => [...h, src]);
     setHistIdx(-1);
@@ -56,13 +55,21 @@ export function IdeTerminal({ lines, error, execTime, onClear }: Props) {
     }
 
     try {
-      const { interp } = ensureEnv();
+      busyRef.current = true;
+      setBusy(true);
+      const [{ Lexer }, { Parser }, { Interpreter }] = await Promise.all([
+        import('@/lang/lexer'), import('@/lang/parser'), import('@/lang/interpreter'),
+      ]);
+      const { interp } = ensureEnv(Interpreter);
       const tokens = new Lexer(src).tokenize();
       const ast = new Parser(tokens).parse();
       interp.interpret(ast);
     } catch (e) {
-      const msg = e instanceof SdevError ? e.message : String(e);
+      const msg = e instanceof Error ? e.message : String(e);
       setRepl(r => [...r, { kind: 'err', text: msg }]);
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
     }
   };
 
@@ -176,6 +183,7 @@ export function IdeTerminal({ lines, error, execTime, onClear }: Props) {
           <input
             ref={inputRef}
             value={input}
+            disabled={busy}
             onChange={e => setInput(e.target.value)}
             onKeyDown={onKey}
             placeholder="type sdev expression…  (↑/↓ history · :help)"

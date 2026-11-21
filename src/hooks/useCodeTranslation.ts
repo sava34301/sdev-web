@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { translateSource as coreTranslate, hasNonAscii } from '@/lang/translator';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -55,7 +54,8 @@ export function useCodeTranslation() {
 
     try {
       // ─── Stage 1: dictionary + fuzzy (synchronous, offline) ───
-      const { translated, detectedLanguage } = coreTranslate(code, sourceLanguage);
+      const { translateSource } = await import('@/lang/translator');
+      const { translated, detectedLanguage } = translateSource(code, sourceLanguage);
 
       // ─── Stage 2: AI fallback if foreign words remain ───
       if (hasForeignKeywordsLeft(translated)) {
@@ -107,6 +107,6 @@ export function useCodeTranslation() {
 
 // Heuristic: does this code likely contain non-English keywords?
 export function mightNeedTranslation(code: string): boolean {
-  if (hasNonAscii(code)) return true;
+  if (/[^\x00-\x7F]/.test(code)) return true;
   return !/\b(forge|conjure|ponder|cycle|speak|yield|essence)\b/.test(code);
 }

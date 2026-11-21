@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -9,9 +9,9 @@ import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
 import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
 import { FileInfoPopover } from '@/components/ide/FileInfoPopover';
-import { PersonalPanel } from '@/components/ide/PersonalPanel';
+const PersonalPanel = lazy(() => import('@/components/ide/PersonalPanel').then(m => ({ default: m.PersonalPanel })));
 import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
-import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
+
 import { stripSignature, writeSignature, readSignature, checksum, buildTranslationRecipe } from '@/lang/dialect/signature';
 
 function translationHasDiff(writtenBody: string, translatedSource: string | null | undefined): boolean {
@@ -24,27 +24,28 @@ function translationDownloadName(fileName: string, variant: 'written' | 'transla
     ? fileName.replace(/(\.translated)?\.sdev$/i, '.translated.sdev')
     : `${fileName}.translated.sdev`;
 }
-import { resolveLibraries } from '@/lang/dialect/registry';
-import { applyExtensions } from '@/lang/dialect/extensions';
 
-import { IdeCommandPalette } from '@/components/ide/IdeCommandPalette';
-import { IdeSearchPanel } from '@/components/ide/IdeSearchPanel';
-import { IdeSettingsPanel } from '@/components/ide/IdeSettingsPanel';
-import { IdeOutline } from '@/components/ide/IdeOutline';
-import { IdeProblems, lintSdev, type Problem } from '@/components/ide/IdeProblems';
+
+
+const IdeCommandPalette = lazy(() => import('@/components/ide/IdeCommandPalette').then(m => ({ default: m.IdeCommandPalette })));
+const IdeSearchPanel = lazy(() => import('@/components/ide/IdeSearchPanel').then(m => ({ default: m.IdeSearchPanel })));
+const IdeSettingsPanel = lazy(() => import('@/components/ide/IdeSettingsPanel').then(m => ({ default: m.IdeSettingsPanel })));
+const IdeOutline = lazy(() => import('@/components/ide/IdeOutline').then(m => ({ default: m.IdeOutline })));
+import type { Problem } from '@/components/ide/lintSdev';
+const IdeProblems = lazy(() => import('@/components/ide/IdeProblems').then(m => ({ default: m.IdeProblems })));
 import { IdeBreadcrumbs } from '@/components/ide/IdeBreadcrumbs';
 import { IdeGoToLine } from '@/components/ide/IdeGoToLine';
-import { IdeAssistantPanel } from '@/components/ide/IdeAssistantPanel';
+const IdeAssistantPanel = lazy(() => import('@/components/ide/IdeAssistantPanel').then(m => ({ default: m.IdeAssistantPanel })));
 import { formatSdev } from '@/components/ide/formatSdev';
 import { CanvasPanel, CanvasHandle } from '@/components/CanvasPanel';
 import type { GraphicsCommand, TurtleState } from '@/lang/graphics';
-import { createGraphicsBuiltins } from '@/lang/graphics';
-import { Lexer } from '@/lang/lexer';
-import { Parser } from '@/lang/parser';
-import { Interpreter } from '@/lang/interpreter';
-import { SdevError } from '@/lang/errors';
+
+
+
+
+
 import { supabase } from '@/integrations/supabase/client';
-import { Compiler } from '@/lang/compiler';
+
 
 import { Button } from '@/components/ui/button';
 import {
@@ -54,29 +55,29 @@ import {
   Bug, Palette, X, Languages, RefreshCw, CheckCircle2, Eye, EyeOff,
   AlertCircle, Hash, Wand2, ListTree, ArrowRight, Sparkles, Github, Globe, Usb, Users, History, Boxes,
 } from 'lucide-react';
-import { HardwarePanel } from '@/components/ide/HardwarePanel';
-import { RuntimeExplorerPanel } from '@/components/ide/RuntimeExplorerPanel';
-import { TimeTravelDebugger } from '@/components/ide/TimeTravelDebugger';
-import { LiveClassroomPanel } from '@/components/ide/LiveClassroomPanel';
-import { LiveScratchpadPanel } from '@/components/ide/LiveScratchpadPanel';
-import { WasiComponentDialog } from '@/components/ide/WasiComponentDialog';
-import { findApi, searchApis } from '@/lang/registry/api-registry';
-import { GitHubPushDialog } from '@/components/ide/GitHubPushDialog';
+const HardwarePanel = lazy(() => import('@/components/ide/HardwarePanel').then(m => ({ default: m.HardwarePanel })));
+const RuntimeExplorerPanel = lazy(() => import('@/components/ide/RuntimeExplorerPanel').then(m => ({ default: m.RuntimeExplorerPanel })));
+const TimeTravelDebugger = lazy(() => import('@/components/ide/TimeTravelDebugger').then(m => ({ default: m.TimeTravelDebugger })));
+const LiveClassroomPanel = lazy(() => import('@/components/ide/LiveClassroomPanel').then(m => ({ default: m.LiveClassroomPanel })));
+const LiveScratchpadPanel = lazy(() => import('@/components/ide/LiveScratchpadPanel').then(m => ({ default: m.LiveScratchpadPanel })));
+const WasiComponentDialog = lazy(() => import('@/components/ide/WasiComponentDialog').then(m => ({ default: m.WasiComponentDialog })));
+
+const GitHubPushDialog = lazy(() => import('@/components/ide/GitHubPushDialog').then(m => ({ default: m.GitHubPushDialog })));
 import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
 import { toast } from 'sonner';
-import { stripBoardBlocks } from '@/lang/hardware/strip';
+
 import type { IdeFile, IdeFolder, SidePanel, IdeSettings } from '@/components/ide/types';
-import { createUiBuiltins, type UiState, type UiCallback } from '@/lang/ui';
-import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/web';
-import { AppPreviewPanel } from '@/components/ide/AppPreviewPanel';
-import { WebPreviewPanel } from '@/components/ide/WebPreviewPanel';
+import type { UiState, UiCallback } from '@/lang/ui';
+import type { WebState } from '@/lang/web';
+const AppPreviewPanel = lazy(() => import('@/components/ide/AppPreviewPanel').then(m => ({ default: m.AppPreviewPanel })));
+const WebPreviewPanel = lazy(() => import('@/components/ide/WebPreviewPanel').then(m => ({ default: m.WebPreviewPanel })));
 import { useWorkspaceSync } from '@/hooks/useWorkspaceSync';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useCodeTranslation, mightNeedTranslation } from '@/hooks/useCodeTranslation';
+import { useCodeTranslation } from '@/hooks/useCodeTranslation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserMenu } from '@/components/ide/UserMenu';
 import { useCloudFiles } from '@/hooks/useCloudFiles';
@@ -645,9 +646,15 @@ export default function IDEPage() {
       if (e.key === 'F1') {
         e.preventDefault();
         const word = editorRef.current?.getWordAtCursor?.();
-        if (word && (findApi(word) || searchApis(word).length > 0)) {
-          setSidePanel('runtime');
-          setRuntimeQuery(word);
+        if (word) {
+          void import('@/lang/registry/api-registry').then(({ findApi, searchApis }) => {
+            if (findApi(word) || searchApis(word).length > 0) {
+              setSidePanel('runtime');
+              setRuntimeQuery(word);
+            } else {
+              setShowCommandPalette(true);
+            }
+          });
           return;
         }
         setShowCommandPalette(true);
@@ -663,10 +670,19 @@ export default function IDEPage() {
   }, [activeFile]);
 
   // Live linting (problems)
-  const problems: Problem[] = useMemo(
-    () => activeFile ? lintSdev(activeFile.content) : [],
-    [activeFile]
-  );
+  const [problems, setProblems] = useState<Problem[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    setProblems([]);
+    const timer = setTimeout(() => {
+      void import('@/components/ide/lintSdev').then(async ({ lintEditorFile }) => {
+        if (cancelled) return;
+        const result = activeFile ? await lintEditorFile(activeFile.content) : [];
+        if (!cancelled) setProblems(result);
+      });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [activeFile?.id, activeFile?.content]);
 
   const formatCurrent = useCallback(() => {
     if (!activeFile) return;
@@ -715,6 +731,9 @@ export default function IDEPage() {
     // The file's hidden signature never reaches the compiler, and a dialect
     // source is canonicalized to plain sdev v2 first — the toolchain itself
     // is untouched by dialects.
+    const [{ canonicalize }, { applyExtensions }] = await Promise.all([
+      import('@/lang/dialect/canonicalize'), import('@/lang/dialect/extensions'),
+    ]);
     const activeDialect = getActiveDialect();
     const strippedSrc = stripSignature(activeFile.content);
     const dialectSrc = activeDialect ? canonicalize(strippedSrc, activeDialect).source : strippedSrc;
@@ -737,6 +756,7 @@ export default function IDEPage() {
       // Milestone 5z: `use "path"` resolves against the workspace files.
       // Personal SDEV: `use "@user/lib@1.2.0"` resolves through the
       // library registry (cached locally, so it also works offline).
+      const { resolveLibraries } = await import('@/lang/dialect/registry');
       const moduleMap: Record<string, string> = await resolveLibraries(body);
       for (const f of files) {
         const source = activeDialect ? canonicalize(stripSignature(f.content), activeDialect).source : stripSignature(f.content);
@@ -937,6 +957,7 @@ export default function IDEPage() {
 
 
 
+    const { stripBoardBlocks } = await import('@/lang/hardware/strip');
     let code = stripBoardBlocks(rawSrc);
     const outputLines: string[] = [];
     const commands: GraphicsCommand[] = [];
@@ -1011,6 +1032,10 @@ export default function IDEPage() {
     const t0 = performance.now();
 
     try {
+      const [{ Lexer }, { Parser }, { Interpreter }, { createGraphicsBuiltins }, { createUiBuiltins }, { createWebBuiltins, bindWebBuiltinsToEnv }] = await Promise.all([
+        import('@/lang/lexer'), import('@/lang/parser'), import('@/lang/interpreter'),
+        import('@/lang/graphics'), import('@/lang/ui'), import('@/lang/web'),
+      ]);
       if (runMode === 'interpreter') {
         const lexer = new Lexer(code, lexerOpts);
         const tokens = lexer.tokenize();
@@ -1081,7 +1106,7 @@ export default function IDEPage() {
         const ast = parser.parse();
         // Best-effort compile to bytecode (for IR/export). Unsupported features
         // are ignored — execution still uses the interpreter below.
-        try { new Compiler().compile(ast); } catch { /* IR unsupported for this program */ }
+        try { const { Compiler } = await import('@/lang/compiler'); new Compiler().compile(ast); } catch { /* IR unsupported for this program */ }
 
         const interpreter = new Interpreter((msg) => outputLines.push(msg));
         const env = interpreter.getGlobalEnv();
@@ -1148,7 +1173,7 @@ export default function IDEPage() {
       setStatusMsg(noUnderstand ? `✓ Done in ${elapsed}ms (without understanding)` : `✓ Done in ${elapsed}ms`);
       recordRun(activeFile.name, activeFile.content, outputLines.join('\n'), 'success', elapsed);
     } catch (e) {
-      const msg = e instanceof SdevError || e instanceof Error
+      const msg = e instanceof Error
         ? e.message
         : typeof e === 'object' && e !== null ? (() => { try { return JSON.stringify(e); } catch { return String(e); } })() : String(e);
       const rewritten = canonicalSrc.trim() !== writtenSrc.trim();
@@ -1308,6 +1333,7 @@ export default function IDEPage() {
 
     if (variant === 'translated') {
       if (!embeddedTranslated) {
+        const { canonicalize } = await import('@/lang/dialect/canonicalize');
         const stripped = stripSignature(activeFile.content);
         const dialectSrc = dialect ? canonicalize(stripped, dialect).source : stripped;
         const { understandAsync, definedNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
@@ -1478,7 +1504,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
       const inputEl = e.target as HTMLInputElement;
       Array.from(inputEl.files || []).forEach(file => {
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
           const raw = (ev.target?.result as string) ?? '';
           // Signature-aware open: a file remembers the dialect it was written
           // in, so we can show it in the words this IDE is currently using.
@@ -1490,6 +1516,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           if (sig?.dialect && sig.dialect !== (active?.meta.slug ?? null)) {
             const source = findLocalDialect(sig.dialect);
             if (source) {
+              const { canonicalize, translateDialect } = await import('@/lang/dialect/canonicalize');
               content = active
                 ? translateDialect(stripSignature(raw), source, active)
                 : canonicalize(stripSignature(raw), source, { withPrelude: false }).source;
@@ -2079,6 +2106,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
             {sidePanel && (
               <>
                 <ResizablePanel defaultSize={18} minSize={12} maxSize={35} className="ide-sidepanel flex min-h-0 flex-col">
+                  <Suspense fallback={<div role="status" className="p-3 text-xs text-muted-foreground">Loading…</div>}>
                   <h2 className="sr-only">Workspace files and tools</h2>
                   {sidePanel === 'explorer' && (
                     <IdeFileTree
@@ -2157,6 +2185,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   {sidePanel === 'settings' && (
                     <IdeSettingsPanel settings={settings} onChange={setSettings} />
                   )}
+                  </Suspense>
                 </ResizablePanel>
                 <ResizableHandle withHandle />
               </>
@@ -2338,6 +2367,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                     )}
                   </div>
 
+                  <Suspense fallback={<div role="status" className="p-3 text-xs text-muted-foreground">Loading…</div>}>
                   {bottomPanel === 'terminal' && (
                     <>
                     <h2 className="sr-only">Terminal output</h2>
@@ -2403,6 +2433,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   {bottomPanel === 'problems' && (
                     <IdeProblems problems={problems} onJump={(line) => editorRef.current?.jumpToLine(line)} />
                   )}
+                  </Suspense>
                 </ResizablePanel>
               </ResizablePanelGroup>
             </ResizablePanel>
@@ -2437,6 +2468,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           }
         />
 
+        <Suspense fallback={null}>
         {/* Command Palette */}
         {showCommandPalette && (
           <IdeCommandPalette
@@ -2457,18 +2489,19 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           onGo={(line) => editorRef.current?.jumpToLine(line)}
         />
 
-        <GitHubPushDialog
+        {showGitHubPush && <GitHubPushDialog
           open={showGitHubPush}
           onOpenChange={setShowGitHubPush}
           files={files}
-        />
+        />}
 
-        <WasiComponentDialog
+        {showWasiDialog && <WasiComponentDialog
           open={showWasiDialog}
           onOpenChange={setShowWasiDialog}
           source={activeFile?.content ?? ''}
           fileName={activeFile?.name ?? 'module.sdev'}
-        />
+        />}
+        </Suspense>
 
         <DesktopNativeButton getSource={() => activeFile?.content ?? ''} />
       </div>

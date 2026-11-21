@@ -3,7 +3,7 @@ import { FileText, Cloud, CloudOff } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { useDialects } from '@/hooks/useDialects';
-import { cachedLibraries } from '@/lang/dialect/registry';
+import { cachedLibraries } from '@/lang/dialect/library-cache';
 import { checksum, readSignature, stripSignature } from '@/lang/dialect/signature';
 
 interface Props {
