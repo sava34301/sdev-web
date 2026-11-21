@@ -7,6 +7,7 @@ code that browsers, Node and Electron require in order to start SDEV at all.
 ## Current task — IDE loading
 - [x] Keep homepage and unopened IDE tools out of the startup download
 - [x] Verify account loading, editing, program output, persistent terminal state, hardware tools and mobile editor
+- [x] Sweep IDE entry links, imports, cloud hydration/saving and all deferred tools; fix offline desktop entry selection and extend regression coverage (installed desktop and live deployment not verified)
 
 ## Current task — OCE causal engine in SDEV
 - [x] bits / mem / oce v2 libraries, 35-check test, gravity example (VM + native identical)

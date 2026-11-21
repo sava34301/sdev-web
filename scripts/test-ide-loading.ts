@@ -4,6 +4,8 @@ import path from 'node:path';
 import ts from 'typescript';
 import { lintEditorFile } from '../src/components/ide/lintSdev';
 import { lintSdev } from '../src/components/ide/IdeProblems';
+import { BrowserRouter, HashRouter } from 'react-router-dom';
+import { appRouterForProtocol } from '../src/lib/app-router';
 
 // Follow real static dependencies, not comments or dynamic imports. A new
 // indirect import of an engine should fail this gate too.
@@ -35,10 +37,19 @@ for (const deferred of [
   'src/lang/web.ts', 'src/lang/hardware/understand.ts',
   'src/components/ide/HardwarePanel.tsx', 'src/components/ide/IdeAssistantPanel.tsx',
   'src/components/ide/TimeTravelDebugger.tsx', 'src/components/ide/LiveScratchpadPanel.tsx',
+  ...['PersonalPanel', 'IdeCommandPalette', 'IdeSearchPanel', 'IdeSettingsPanel',
+    'IdeOutline', 'RuntimeExplorerPanel', 'LiveClassroomPanel', 'WasiComponentDialog',
+    'GitHubPushDialog', 'AppPreviewPanel', 'WebPreviewPanel']
+    .map(name => `src/components/ide/${name}.tsx`),
 ]) {
   assert.equal(startup.has(path.resolve(deferred)), false, `${deferred} must not block opening the editor`);
 }
 console.log('PASS: initial editor dependencies exclude homepage, engines and optional tools');
+
+assert.equal(appRouterForProtocol('file:'), HashRouter);
+assert.equal(appRouterForProtocol('https:'), BrowserRouter);
+assert.equal(appRouterForProtocol('http:'), BrowserRouter);
+console.log('PASS: offline desktop uses its #/ide entry; hosted URLs keep browser routing');
 
 for (const source of [
   'forge value be 12\nspeak(value)',

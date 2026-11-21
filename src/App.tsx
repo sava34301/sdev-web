@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import { appRouterForProtocol } from "@/lib/app-router";
 const Index = lazy(() => import("./pages/Index"));
 
 const Launch = lazy(() => import("./pages/Launch"));
@@ -31,13 +32,14 @@ const PageFallback = () => (
 );
 
 const queryClient = new QueryClient();
+const AppRouter = appRouterForProtocol(window.location.protocol);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <AppRouter>
         <Suspense fallback={<PageFallback />}>
           <Routes>
             {/* sdev has launched — the site is fully public */}
@@ -69,7 +71,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
+      </AppRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
