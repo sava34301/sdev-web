@@ -501,6 +501,7 @@ export function sdevReconsiderBrainMode(
 }
 
 export function sdevTranslationHasDiff(writtenBody: string, translatedSource: string | null | undefined): boolean | null {
+  if (!translatedSource) return false;
   const e = load();
   if (!e) return null;
   try {

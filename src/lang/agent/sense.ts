@@ -9,6 +9,7 @@ import { withoutBoardBlocks } from './boards';
 import { Lexer } from '@/lang/lexer';
 import { Parser } from '@/lang/parser';
 import { Interpreter } from '@/lang/interpreter';
+import { createGraphicsBuiltins } from '@/lang/graphics';
 import { TokenType } from '@/lang/tokens';
 import { mathRequest } from './math';
 import { taskRequest } from './tasks';
@@ -62,6 +63,15 @@ export function builtinNames(): Set<string> {
       builtinCache = new Set(runtimeNames());
       // the window toolkit (window, button, label, uiget, …) is there in the IDE too
       for (const n of ['window','endwindow','row','endrow','column','endcolumn','group','endgroup','tabs','endtabs','tab','endtab','heading','label','paragraph','image','divider','spacer','progress','button','textarea','checkbox','slider','select','table','menu','endmenu','menuitem','uiget','uiset','show','alert']) builtinCache.add(n);
+      // graphics / turtle builtins available in the IDE runtime
+      try {
+        const gfx = createGraphicsBuiltins(
+          () => {},
+          () => ({ x: 0, y: 0, angle: 0, penDown: true, color: '#000', width: 1 }),
+          () => {},
+        );
+        for (const k of gfx.keys()) builtinCache.add(k);
+      } catch { /* best-effort */ }
       // v2 seed-VM builtins
       for (const n of ['mklist','ord','chr','substr','i2f','f2i','fneg','fabs','fsqrt','fsin','fcos','ftan','fexp','flog','fpow','fbyte','fceil','ffloor','fround','read_file','write_file','http_get','num','nothing']) builtinCache.add(n);
     } catch { builtinCache = new Set(); }
@@ -103,7 +113,8 @@ export function definedNames(source: string): Set<string> {
 export function unknownNames(source: string): string[] {
   let tokens: { type: string; value: unknown; line?: number }[];
   try { tokens = new Lexer(source).tokenize() as unknown as { type: string; value: unknown; line?: number }[]; } catch { return []; }
-  const defined = new Set([...definedNames(source), ...(sdevDefinedNames(source) ?? [])]);
+  const defined = definedNames(source);
+  let sdevDefined: Set<string> | null = null;
   const builtins = builtinNames();
   const isWebProgram = /\b(?:page|endpage|html_\w+|open_\w+)\s*\(/.test(source);
   const out = new Set<string>();
@@ -122,6 +133,8 @@ export function unknownNames(source: string): string[] {
     if (name === 'make' && (!next || (next.line ?? 0) > (t.line ?? 0) || next.value === 'with' || next.value === 'capture')) continue;
     if (defined.has(name) || builtins.has(name)) continue;
     if (isWebProgram && WEB_CONTEXT_ONLY_NAMES.has(name)) continue;
+    if (sdevDefined === null) sdevDefined = new Set(sdevDefinedNames(source) ?? []);
+    if (sdevDefined.has(name)) continue;
     out.add(name);
   }
   return [...out];
@@ -161,7 +174,8 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
     const line = lines[i].trim();
     if (!line || line.startsWith('#') || line.startsWith('//')) continue;
     const head = line.split(/[\s(]+/)[0].toLowerCase();
-    if ((head !== 'say' && mathRequest(line) !== null) || taskRequest(line) !== null) {
+    const canonicalHead = line === ';;' || line === '}' || isSdevWord(head, line);
+    if (!canonicalHead && ((head !== 'say' && mathRequest(line) !== null) || taskRequest(line) !== null)) {
       reasons.push(`line ${i + 1}: a calculation asked for in words`);
       continue;
     }

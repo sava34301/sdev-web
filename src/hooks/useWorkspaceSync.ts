@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
 import type { IdeFile, IdeFolder } from '@/components/ide/types';
+import { checksum, readSignature, stripSignature, writeSignature } from '@/lang/dialect/signature';
 
 interface SnapshotInput {
   files: IdeFile[];
@@ -65,12 +66,28 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
       const files: IdeFile[] = (filesData ?? []).map(f => {
         const localId = `c-${f.id}`;
         fileCloudMap.current.set(localId, f.id);
+        const raw = f.content ?? '';
+        const sig = readSignature(raw);
+        const body = stripSignature(raw);
+        const bodySum = checksum(body);
+        const sigValid = Boolean(sig?.translated && (!sig.sum || sig.sum === bodySum));
         return {
           id: localId,
           name: f.name,
-          content: f.content,
+          content: body,
           folderId: f.folder_id ? `cf-${f.folder_id}` : null,
           cloudId: f.id,
+          understood: sigValid && sig?.translated
+            ? {
+                key: '',
+                bodySum,
+                source: sig.translated,
+                brainUsed: sig.brain ?? 'none',
+                fromCache: true,
+                detectedLanguage: sig.lang ?? null,
+                recipeOps: sig.recipe?.length,
+              }
+            : undefined,
         };
       });
       const openIds = files.filter(f => filesData!.find(x => x.id === f.cloudId)?.is_open).map(f => f.id);
@@ -144,11 +161,27 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
         const folderCloudId = file.folderId
           ? (snap.folders.find(f => f.id === file.folderId)?.cloudId ?? folderCloudMap.current.get(file.folderId) ?? null)
           : null;
+        const body = stripSignature(file.content);
+        const existingSig = readSignature(file.content);
+        const understoodSrc = file.understood?.source;
+        const hasUnderstoodDiff = Boolean(understoodSrc && understoodSrc.trim() !== body.trim());
+        const persistedContent = hasUnderstoodDiff && understoodSrc
+          ? writeSignature(body, {
+              rt: existingSig?.rt ?? ((typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1'),
+              dialect: existingSig?.dialect ?? null,
+              dialectVersion: existingSig?.dialectVersion ?? null,
+              libs: existingSig?.libs ?? [],
+              origin: existingSig?.origin ?? null,
+              translated: understoodSrc,
+              brain: file.understood?.brainUsed ?? existingSig?.brain ?? null,
+              lang: file.understood?.detectedLanguage ?? existingSig?.lang ?? null,
+            })
+          : file.content;
         return {
           id: cloudId,
           user_id: user.id,
           name: file.name,
-          content: file.content,
+          content: persistedContent,
           folder_id: folderCloudId,
           is_open: snap.openIds.includes(file.id),
           is_active: file.id === snap.activeId,

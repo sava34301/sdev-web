@@ -6,7 +6,10 @@
  */
 import { emptyDialect, validateDialect, type DialectSpec } from '../src/lang/dialect/spec';
 import { canonicalize, dialectize, translateDialect } from '../src/lang/dialect/canonicalize';
-import { readSignature, stripSignature, writeSignature, isSignatureStale, repairSignature } from '../src/lang/dialect/signature';
+import {
+  readSignature, stripSignature, writeSignature, isSignatureStale, repairSignature,
+  buildTranslationRecipe, applyTranslationRecipe, checksum,
+} from '../src/lang/dialect/signature';
 
 let pass = 0;
 const failures: string[] = [];
@@ -90,7 +93,7 @@ check('tampered signature stale', isSignatureStale(tampered), true);
 check('repaired signature fresh', isSignatureStale(repairSignature(tampered)), false);
 check('signature line is a comment', signed.startsWith('#'), true);
 
-// signature with embedded understander/translator canonical output
+// signature with embedded understander/translator canonical output (stored as compact recipe)
 const signedWithTranslated = writeSignature('говори "здравей"\n', {
   rt: 'v1',
   dialect: null,
@@ -98,9 +101,23 @@ const signedWithTranslated = writeSignature('говори "здравей"\n', {
   libs: [],
   origin: null,
   translated: 'say "здравей"\n',
+  brain: 'local',
 });
 check('signature keeps translated field', readSignature(signedWithTranslated)?.translated, 'say "здравей"\n');
+check('signature stores compact recipe', Array.isArray(readSignature(signedWithTranslated)?.recipe), true);
+check('signature keeps brain metadata', readSignature(signedWithTranslated)?.brain, 'local');
 check('signature body stays user-written', stripSignature(signedWithTranslated), 'говори "здравей"\n');
+
+// compact recipe on a larger file only stores changed hunks and reproduces exact output
+const bigWritten = Array.from({ length: 50 }, (_, i) => (i === 25 ? 'print "hello"' : `forge v${i} be ${i}`)).join('\n') + '\n';
+const bigCanon = Array.from({ length: 50 }, (_, i) => (i === 25 ? 'speak("hello")' : `forge v${i} be ${i}`)).join('\n') + '\n';
+const bigRecipe = buildTranslationRecipe(bigWritten, bigCanon);
+check('recipe has only 1 op for 1 changed line', bigRecipe.length, 1);
+check('recipe reproduces exact canonical output', applyTranslationRecipe(bigWritten, bigRecipe), bigCanon);
+const bigSigned = writeSignature(bigWritten, { rt: 'v1', dialect: null, translated: bigCanon });
+check('signed recipe header is much smaller than full body', bigSigned.indexOf('\n') < bigCanon.length / 2, true);
+check('signed recipe reconstructs exact output', readSignature(bigSigned)?.translated, bigCanon);
+check('checksum matches deterministic fnv1a', checksum('say "hi"\n').length, 8);
 
 if (failures.length) {
   console.error(`\n${failures.length} FAILED:\n` + failures.join('\n\n'));

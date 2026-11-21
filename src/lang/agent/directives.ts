@@ -16,6 +16,9 @@ export interface DirectiveScan extends AgentDirectives {
 }
 
 export function scanDirectives(source: string): DirectiveScan {
+  if (!source.includes('!#')) {
+    return { mode: null, brain: null, learn: null, found: false, source };
+  }
   return (
     sdevScanDirectives(source) ?? {
       mode: null,

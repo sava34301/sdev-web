@@ -12,12 +12,18 @@ import { FileInfoPopover } from '@/components/ide/FileInfoPopover';
 import { PersonalPanel } from '@/components/ide/PersonalPanel';
 import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
-import { stripSignature, writeSignature, readSignature } from '@/lang/dialect/signature';
-import {
-  sdevTranslationHasDiff,
-  sdevTranslationDownloadName,
-  sdevTranslationBannerText,
-} from '@/lang/agent/sdev-engine';
+import { stripSignature, writeSignature, readSignature, checksum, buildTranslationRecipe } from '@/lang/dialect/signature';
+
+function translationHasDiff(writtenBody: string, translatedSource: string | null | undefined): boolean {
+  return Boolean(translatedSource && translatedSource.trim() !== writtenBody.trim());
+}
+
+function translationDownloadName(fileName: string, variant: 'written' | 'translated', hasDiff: boolean): string {
+  if (variant !== 'translated' || !hasDiff) return fileName;
+  return fileName.endsWith('.sdev')
+    ? fileName.replace(/(\.translated)?\.sdev$/i, '.translated.sdev')
+    : `${fileName}.translated.sdev`;
+}
 import { resolveLibraries } from '@/lang/dialect/registry';
 import { applyExtensions } from '@/lang/dialect/extensions';
 
@@ -533,11 +539,7 @@ export default function IDEPage() {
     ? (activeFile.understood?.source ?? translatedContent.get(activeFile.id) ?? readSignature(activeFile.content)?.translated ?? null)
     : null;
   const activePlainBody = activeFile ? stripSignature(activeFile.content) : '';
-  const hasTranslation = Boolean(
-    activeFile &&
-    (sdevTranslationHasDiff(activePlainBody, translatedSourceForActive) ??
-      (translatedSourceForActive && translatedSourceForActive.trim() !== activePlainBody.trim()))
-  );
+  const hasTranslation = Boolean(activeFile && translationHasDiff(activePlainBody, translatedSourceForActive));
 
   // Import code from a Gist (sessionStorage) on mount
   useEffect(() => {
@@ -564,7 +566,28 @@ export default function IDEPage() {
       const { data } = await supabase.from('code_files').select('*').eq('id', cloudParam).maybeSingle();
       if (!data) return;
       const id = nextFileId();
-      const file: IdeFile = { id, name: data.name, content: stripSignature(data.content ?? ''), cloudId: data.id };
+      const rawCloud = data.content ?? '';
+      const cloudSig = readSignature(rawCloud);
+      const cloudBody = stripSignature(rawCloud);
+      const cloudSum = checksum(cloudBody);
+      const cloudSigValid = Boolean(cloudSig?.translated && (!cloudSig.sum || cloudSig.sum === cloudSum));
+      const file: IdeFile = {
+        id,
+        name: data.name,
+        content: cloudBody,
+        cloudId: data.id,
+        understood: cloudSigValid && cloudSig?.translated
+          ? {
+              key: '',
+              bodySum: cloudSum,
+              source: cloudSig.translated,
+              brainUsed: cloudSig.brain ?? 'none',
+              fromCache: true,
+              detectedLanguage: cloudSig.lang ?? null,
+              recipeOps: cloudSig.recipe?.length,
+            }
+          : undefined,
+      };
       setFiles(prev => [...prev, file]);
       setOpenIds(prev => [...prev, id]);
       setActiveId(id);
@@ -769,22 +792,54 @@ export default function IDEPage() {
     // writes into canonical sdev — before any runtime or codegen sees it.
     // `!#agent:off` in the file switches it off; `!#agent: local|online`
     // chooses where its smart core runs.
-    const { understandAsync } = await import('@/lang/agent');
-    const { definedNames, sdevProjectNames } = await import('@/lang/agent');
-    // the project index is written in sdev (lang/agent/project.sdev); cached per file
-    const projectNames = sdevProjectNames(files.filter((f) => f.id !== activeFile.id).map((f) => f.content), definedNames);
-    // The file keeps a hidden copy of what the understander made of it; when
-    // the content hasn't changed, re-runs use that copy and skip the thinking.
-    const { understandKey, AGENT_VERSION } = await import('@/lang/agent');
-    const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, activeDialect ?? null, projectNames]));
-    const saved = !reunderstand && !noUnderstand && activeFile.understood?.key === fileKey ? activeFile.understood.source : null;
+    const bodySum = checksum(strippedSrc);
+    const savedBySum =
+      !reunderstand &&
+      !noUnderstand &&
+      !activeDialect &&
+      activeFile.understood?.bodySum === bodySum
+        ? activeFile.understood.source
+        : null;
+
+    let fileKey = activeFile.understood?.key ?? '';
+    let saved: string | null = savedBySum;
+    let skipUnderstandForValid = false;
+
+    if (overrideSrc === undefined && !noUnderstand && saved === null) {
+      const { senseFile, definedNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
+      const { withoutBoardBlocks } = await import('@/lang/agent/boards');
+      // Fast check: valid canonical sdev reaches the compiler directly with zero AI / engine overhead.
+      const quickSense = !reunderstand ? senseFile(withoutBoardBlocks(writtenSrc)) : null;
+      if (quickSense && !quickSense.suspicious && quickSense.parses) {
+        skipUnderstandForValid = true;
+      } else {
+        const projectNamesSet = new Set<string>();
+        for (const f of files) {
+          if (f.id === activeFile.id) continue;
+          for (const n of definedNames(stripSignature(f.content))) projectNamesSet.add(n);
+        }
+        const projectNames = [...projectNamesSet];
+        fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, activeDialect ?? null, projectNames]));
+        if (!reunderstand && activeFile.understood?.key === fileKey) {
+          saved = activeFile.understood.source;
+        }
+      }
+    }
+
     const understood = overrideSrc !== undefined
       ? { source: overrideSrc, notes: [{ line: 0 }], brainUsed: 'none' as const, cached: false }
-      : noUnderstand
+      : noUnderstand || skipUnderstandForValid
         ? { source: writtenSrc, notes: [] as unknown[], brainUsed: 'none' as const, cached: false }
         : saved !== null
           ? { source: saved, notes: [] as unknown[], brainUsed: activeFile.understood?.brainUsed ?? ('none' as const), cached: true }
           : await (async () => {
+              const { understandAsync, definedNames } = await import('@/lang/agent');
+              const projectNamesSet = new Set<string>();
+              for (const f of files) {
+                if (f.id === activeFile.id) continue;
+                for (const n of definedNames(stripSignature(f.content))) projectNamesSet.add(n);
+              }
+              const projectNames = [...projectNamesSet];
               // show the built-in AI's first-time preparation in the status bar
               const { onBrowserBrain } = await import('@/lang/agent/browser-brain');
               const off = onBrowserBrain((b) => {
@@ -792,8 +847,10 @@ export default function IDEPage() {
               });
               try { return await understandAsync(dialectSrc, { dialect: activeDialect, projectNames, fresh: reunderstand }); } finally { off(); }
             })();
-    const { lastBrainMissing } = await import('@/lang/agent/brain');
-    const brainMissing = overrideSrc === undefined && !noUnderstand && saved === null && lastBrainMissing;
+    const brainMissing =
+      overrideSrc === undefined && !noUnderstand && !skipUnderstandForValid && saved === null
+        ? (await import('@/lang/agent/brain')).lastBrainMissing
+        : false;
     if (brainMissing) {
       const { browserBrainStatus } = await import('@/lang/agent/browser-brain');
       const b = browserBrainStatus();
@@ -801,15 +858,20 @@ export default function IDEPage() {
         ? b.text + ' Try Chrome or Edge, or switch on the website AI in Settings → Code understander AI.'
         : 'The understander could not finish this file. Try again, or switch on the website AI in Settings → Code understander AI.');
     }
+    const recipeOpsCount = translationHasDiff(strippedSrc, understood.source)
+      ? buildTranslationRecipe(strippedSrc, understood.source).length
+      : 0;
     const baseUnderstoodMeta = {
       key: fileKey,
+      bodySum,
       source: understood.source,
       notesCount: understood.notes.length,
       brainUsed: understood.brainUsed,
       fromCache: saved !== null || Boolean('cached' in understood && understood.cached),
       detectedLanguage: activeFile.understood?.detectedLanguage ?? null,
+      recipeOps: recipeOpsCount || undefined,
     };
-    if (overrideSrc === undefined && !noUnderstand && saved === null && !brainMissing) {
+    if (overrideSrc === undefined && !noUnderstand && !skipUnderstandForValid && saved === null && !brainMissing) {
       const fileId = activeFile.id;
       setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, understood: baseUnderstoodMeta } : f)));
     } else if (overrideSrc !== undefined) {
@@ -1248,8 +1310,13 @@ export default function IDEPage() {
       if (!embeddedTranslated) {
         const stripped = stripSignature(activeFile.content);
         const dialectSrc = dialect ? canonicalize(stripped, dialect).source : stripped;
-        const { understandAsync, definedNames, sdevProjectNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
-        const projectNames = sdevProjectNames(files.filter((f) => f.id !== activeFile.id).map((f) => f.content), definedNames);
+        const { understandAsync, definedNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
+        const projectNamesSet = new Set<string>();
+        for (const f of files) {
+          if (f.id === activeFile.id) continue;
+          for (const n of definedNames(stripSignature(f.content))) projectNamesSet.add(n);
+        }
+        const projectNames = [...projectNamesSet];
         const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, dialect ?? null, projectNames]));
         const res = await understandAsync(dialectSrc, { dialect, projectNames });
         embeddedTranslated = res.source;
@@ -1258,24 +1325,21 @@ export default function IDEPage() {
           ...f,
           understood: {
             key: fileKey,
+            bodySum: checksum(stripped),
             source: res.source,
             notesCount: res.notes.length,
             brainUsed: res.brainUsed,
             fromCache: !!res.cached,
+            recipeOps: translationHasDiff(stripped, res.source) ? buildTranslationRecipe(stripped, res.source).length : undefined,
           },
         } : f)));
       }
       bodyToDownload = embeddedTranslated;
-      fileNameToDownload = sdevTranslationDownloadName(activeFile.name, variant, true) ?? (
-        activeFile.name.endsWith('.sdev')
-          ? activeFile.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev')
-          : `${activeFile.name}.translated.sdev`
-      );
+      fileNameToDownload = translationDownloadName(activeFile.name, variant, true);
     }
 
-    const hasDiff =
-      sdevTranslationHasDiff(stripSignature(activeFile.content), embeddedTranslated) ??
-      Boolean(embeddedTranslated && embeddedTranslated.trim() !== stripSignature(activeFile.content).trim());
+    const strippedForDiff = stripSignature(activeFile.content);
+    const hasDiff = translationHasDiff(strippedForDiff, embeddedTranslated);
     const signed = writeSignature(bodyToDownload, {
       rt: runtime,
       dialect: variant === 'translated' ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
@@ -1283,6 +1347,8 @@ export default function IDEPage() {
       libs: existing?.libs ?? [],
       origin: variant === 'translated' ? (dialect ? dialect.meta.slug : existing?.origin ?? null) : (existing?.origin ?? null),
       translated: variant === 'written' && hasDiff ? embeddedTranslated : undefined,
+      brain: variant === 'written' && hasDiff ? (activeFile.understood?.brainUsed ?? existing?.brain ?? null) : undefined,
+      lang: variant === 'written' && hasDiff ? (activeFile.understood?.detectedLanguage ?? existing?.lang ?? null) : undefined,
     });
     const blob = new Blob([signed], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -1299,16 +1365,11 @@ export default function IDEPage() {
       // Same signature the single-file export writes, so a whole workspace
       // round-trips with its runtime, dialect, library pins and translation intact.
       const existing = readSignature(file.content);
+      const strippedFileBody = stripSignature(file.content);
       const cachedTranslated = file.understood?.source ?? translatedContent.get(file.id) ?? existing?.translated ?? null;
-      const hasDiff =
-        sdevTranslationHasDiff(stripSignature(file.content), cachedTranslated) ??
-        Boolean(cachedTranslated && cachedTranslated.trim() !== stripSignature(file.content).trim());
+      const hasDiff = translationHasDiff(strippedFileBody, cachedTranslated);
       const body = variant === 'translated' && hasDiff && cachedTranslated ? cachedTranslated : file.content;
-      const outName =
-        sdevTranslationDownloadName(file.name, variant, hasDiff) ??
-        (variant === 'translated' && hasDiff
-          ? (file.name.endsWith('.sdev') ? file.name.replace(/(\.translated)?\.sdev$/i, '.translated.sdev') : `${file.name}.translated.sdev`)
-          : file.name);
+      const outName = translationDownloadName(file.name, variant, hasDiff);
       const signed = writeSignature(body, {
         rt: runtime,
         dialect: variant === 'translated' && hasDiff ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
@@ -1316,6 +1377,8 @@ export default function IDEPage() {
         libs: existing?.libs ?? [],
         origin: variant === 'translated' && hasDiff ? (dialect ? dialect.meta.slug : existing?.origin ?? null) : (existing?.origin ?? null),
         translated: variant === 'written' && hasDiff ? cachedTranslated : undefined,
+        brain: variant === 'written' && hasDiff ? (file.understood?.brainUsed ?? existing?.brain ?? null) : undefined,
+        lang: variant === 'written' && hasDiff ? (file.understood?.detectedLanguage ?? existing?.lang ?? null) : undefined,
       });
       const blob = new Blob([signed], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
@@ -1436,12 +1499,22 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
             }
           }
           const id = nextFileId();
+          const uploadedSum = checksum(content);
+          const sigValid = Boolean(sig?.translated && (!sig.sum || sig.sum === uploadedSum));
           const newFile: IdeFile = {
             id,
             name: file.name,
             content,
-            understood: sig?.translated
-              ? { key: '', source: sig.translated, fromCache: true }
+            understood: sigValid && sig?.translated
+              ? {
+                  key: '',
+                  bodySum: uploadedSum,
+                  source: sig.translated,
+                  brainUsed: sig.brain ?? 'none',
+                  fromCache: true,
+                  detectedLanguage: sig.lang ?? null,
+                  recipeOps: sig.recipe?.length,
+                }
               : undefined,
           };
           setFiles(prev => [...prev, newFile]);
@@ -2101,22 +2174,14 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                       <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border-b border-primary/20 text-xs font-mono">
                         <CheckCircle2 className="w-3 h-3 text-primary flex-shrink-0" />
                         <span className="text-primary truncate">
-                          {sdevTranslationBannerText(
-                            Boolean(activeFile?.understood?.fromCache),
-                            activeFile?.understood?.detectedLanguage,
-                            activeFile?.understood?.brainUsed,
-                          ) ?? (
-                            <>
-                              {activeFile?.understood?.fromCache ? '⚡ Cached translation' : '✨ Translated'}
-                              {activeFile?.understood?.detectedLanguage && activeFile.understood.detectedLanguage !== 'English'
-                                ? <> from <strong>{activeFile.understood.detectedLanguage}</strong> → canonical sdev</>
-                                : activeFile?.understood?.brainUsed === 'online'
-                                  ? ' via Website AI → canonical sdev'
-                                  : activeFile?.understood?.brainUsed === 'local'
-                                    ? ' via Built-in AI → canonical sdev'
-                                    : ' by understander → canonical sdev'}
-                            </>
-                          )}
+                          {activeFile?.understood?.fromCache ? '⚡ Cached translation' : '✨ Translated'}
+                          {activeFile?.understood?.detectedLanguage && activeFile.understood.detectedLanguage !== 'English'
+                            ? <> from <strong>{activeFile.understood.detectedLanguage}</strong> → canonical sdev</>
+                            : activeFile?.understood?.brainUsed === 'online'
+                              ? ' via Website AI → canonical sdev'
+                              : activeFile?.understood?.brainUsed === 'local'
+                                ? ' via Built-in AI → canonical sdev'
+                                : ' by understander → canonical sdev'}
                         </span>
                         <div className="ml-auto flex items-center gap-3 flex-shrink-0">
                           <button
@@ -2364,6 +2429,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   cloudId={cloudIds[activeFile.id] ?? activeFile.cloudId ?? null}
                   runtime={runMode === 'vm' ? 'v2' : (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1'}
                   translatedSource={hasTranslation ? translatedSourceForActive : null}
+                  recipeOps={activeFile.understood?.recipeOps}
                 />
               )}
               <DialectSwitcher />

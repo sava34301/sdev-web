@@ -8,11 +8,15 @@ export interface IdeFile {
   /** hidden: what the understander made of this exact content, so a re-run skips the thinking */
   understood?: {
     key: string;
+    /** fnv-1a checksum of the stripped written body this reading belongs to */
+    bodySum?: string;
     source: string;
     notesCount?: number;
     brainUsed?: 'none' | 'local' | 'online';
     fromCache?: boolean;
     detectedLanguage?: string | null;
+    /** number of compact recipe ops when stored/loaded via the hidden file signature */
+    recipeOps?: number;
   };
 }
 
