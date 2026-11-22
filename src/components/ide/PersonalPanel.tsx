@@ -76,6 +76,7 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
       ? translateDialect(content, active, target)
       : canonicalize(content, active, { withPrelude: false }).source;
     onReplaceContent(next);
+    activate(target?.meta.slug ?? null);
     toast.success(target ? `Rewritten in ${target.meta.name}` : 'Rewritten in canonical sdev');
   };
 

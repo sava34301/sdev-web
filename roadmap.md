@@ -4,6 +4,10 @@ Goal: every piece of the project that *can* be written in SDEV is written in
 SDEV. What stays in JavaScript is only the irreducible host boundary — the
 code that browsers, Node and Electron require in order to start SDEV at all.
 
+## Current task — dialect problems
+- [x] Repair deterministic dialect execution, pure .sdev export, branch braces, translation selection and missing/invalid definition errors
+- [x] Run dialect regressions (49 checks), preset/loading/parser suites and signed-in editor export/run/error checks; live deployment not verified
+
 ## Current task — IDE loading
 - [x] Keep homepage and unopened IDE tools out of the startup download
 - [x] Verify account loading, editing, program output, persistent terminal state, hardware tools and mobile editor

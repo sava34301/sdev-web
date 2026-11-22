@@ -121,11 +121,11 @@ export default function Dialects() {
 
   const handleExport = () => {
     if (!draft) return;
-    const blob = new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' });
+    const blob = new Blob([serializeDialectToSdev(draft)], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${draft.meta.slug}.dialect.json`;
+    a.download = `${draft.meta.slug}.dialect.sdev`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -6,6 +6,7 @@
  */
 import { emptyDialect, validateDialect, type DialectSpec } from '../src/lang/dialect/spec';
 import { canonicalize, dialectize, translateDialect } from '../src/lang/dialect/canonicalize';
+import { resolveDialectSource } from '../src/lang/dialect/resolve';
 import {
   serializeDialectToSdev,
   parseDialectFromSdev,
@@ -152,6 +153,25 @@ check('sdev dialect collection slugs', bundleParsed.map((d) => d.meta.slug), ['b
 const dirRes = extractDialectDirective('#!dialect ./bg.dialect.sdev\nкажи "здравей"');
 check('dialect directive target', dirRes?.target, './bg.dialect.sdev');
 check('dialect directive stripped', dirRes?.stripped, 'кажи "здравей"');
+
+check('brace else branches compile', canonicalize('ако вярно {\n  кажи 1\n} иначе {\n  кажи 2\n}', bg).source,
+  'if true\n  say 1\nelse\n  say 2\nend');
+check('workspace dialect overrides active dialect', resolveDialectSource(
+  '#!dialect ./bg.dialect.sdev\nкажи 42', terse,
+  [{ name: 'bg.dialect.sdev', content: bgSdev }], () => null).source, 'say 42');
+check('installed directive resolves without workspace file', resolveDialectSource(
+  '#!dialect bulgarski\nкажи 42', null, [], slug => slug === 'bulgarski' ? bg : null).source, 'say 42');
+for (const [name, source, files] of [
+  ['missing dialect', '#!dialect missing.sdev\nsay 42', []],
+  ['not a dialect', '#!dialect ordinary.sdev\nsay 42', [{ name: 'ordinary.sdev', content: 'say 1' }]],
+] as const) {
+  let rejected = false;
+  try { resolveDialectSource(source, bg, [...files], () => null); } catch { rejected = true; }
+  check(`${name} does not silently use active dialect`, rejected, true);
+}
+let invalidRejected = false;
+try { resolveDialectSource('say 42', clash, [], () => null); } catch { invalidRejected = true; }
+check('invalid dialect rejected before compilation', invalidRejected, true);
 
 if (failures.length) {
   console.error(`\n${failures.length} FAILED:\n` + failures.join('\n\n'));
