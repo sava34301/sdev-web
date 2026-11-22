@@ -101,7 +101,7 @@ set _ to record(run_suite("Self-Hosted All Features Suite (45 cases)", "./bin/sd
 set _ to record(run_suite("SDEV Website Built in SDEV", "./bin/sdev lang/web/sdev-website.sdev"))
 
 # 19. Zero-Host Pure-SDEV CLI, Native ELF & Windows PE32+ Suite
-set _ to record(run_suite("Zero-Host Pure-SDEV CLI & Native Targets (12 cases)", "./bin/sdev scripts/test-zero-host-cli.sdev"))
+set _ to record(run_suite("Zero-Host Pure-SDEV CLI & Native Targets (19 cases)", "./bin/sdev scripts/test-zero-host-cli.sdev"))
 
 # 20. Complete Hardware Subsystem in Pure SDEV
 set _ to record(run_suite("Complete Hardware Subsystem in Pure SDEV", "./bin/sdev scripts/test-hardware-full.sdev"))

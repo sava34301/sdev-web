@@ -30,16 +30,18 @@ SDEV supports **zero-host execution** on native OS processes without Node.js, V8
 
 ```bash
 ./bin/sdev doctor                         # Audit 0 foreign files & toolchain health
-./bin/sdev bootstrap                      # Verify Stage-1 == Stage-2 == Stage-3 fixed point
-./bin/sdev test                           # Run all 19 zero-host pure-SDEV test suites
+./bin/sdev bootstrap [--v1]               # Verify Stage-1 == Stage-2 == Stage-3 fixed points (v2 & v1)
+./bin/sdev test                           # Run all zero-host pure-SDEV test suites
 ./bin/sdev run program.sdev               # Run an SDEV v2 program
 ./bin/sdev run --v1 classic.sdev          # Run an SDEV v1 program
-./bin/sdev native program.sdev -o prog    # Compile to a static Linux x86-64 ELF binary via pure SDEV
-./bin/sdev compile program.sdev -o a.sdevc # Compile to an SDEVC4 bytecode container
+./bin/sdev eval [--v1] "<code>"           # Evaluate an inline v2/v1 snippet
+./bin/sdev native [--v1] prog.sdev -o bin # Compile v2 or v1 to a static Linux x86-64 ELF binary
+./bin/sdev compile [--v1] p.sdev -o a.sdevc # Compile v2 or v1 to an SDEVC4 container
 ./bin/sdev run-bc a.sdevc                 # Execute an SDEVC4 bytecode container
 ./bin/sdev pe app.exe 0                   # Emit a standalone Windows x86-64 PE32+ (.exe)
-./bin/sdev check program.sdev             # Validate syntax, arity, and symbols
-./bin/sdev disasm program.sdev            # Disassemble compiled bytecode
+./bin/sdev check [--v1] program.sdev      # Validate syntax, arity, and symbols
+./bin/sdev disasm [--v1] program.sdev     # Disassemble compiled v2/v1 bytecode
+./bin/sdev-v1-driver lang/compiler/v1_self.sdev # Bare-metal pure-v1 ELF compiler driver
 ./bin/sdev lint program.sdev              # Run pure-SDEV static linter (SDEV001..SDEV015)
 ./bin/sdev fmt program.sdev -w            # Format SDEV source code
 ./bin/sdev translate program.sdev         # Translate localized keywords across 26 human languages

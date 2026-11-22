@@ -12,7 +12,7 @@ sdev_main:
     leaq .Lbss_locstack(%rip), %r14
     leaq .Lbss_callstack(%rip), %r13
 .Lpc_0:
-    jmp .Lpc_28718
+    jmp .Lpc_28974
 .Lpc_3:
     movq $0, (%r15)
     addq $8, %r15
@@ -62460,300 +62460,34 @@ sdev_main:
     addq $8, %r15
     jmp *%rcx
 .Lpc_27486:
-    leaq .Lpool_5648(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27489:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27490:
-    leaq .Lpool_179(%rip), %rax
-    movq %rax, (%r15)
+.Lpc_27488:
+    movq $1, (%r15)
     addq $8, %r15
 .Lpc_27493:
     subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27494:
-    leaq .Lpool_5702(%rip), %rax
-    movq %rax, (%r15)
+    movq (%r15), %rax
+    movq %rax, 8(%r14)
+.Lpc_27495:
+    movq $0, (%r15)
     addq $8, %r15
-.Lpc_27497:
+.Lpc_27500:
     subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27498:
-    leaq .Lpool_5711(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27501:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
+    movq (%r15), %rax
+    movq %rax, 16(%r14)
 .Lpc_27502:
-    leaq .Lpool_179(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27505:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27506:
-    leaq .Lpool_5741(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27509:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27510:
-    leaq .Lpool_5795(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27513:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27514:
-    leaq .Lpool_5876(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27517:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27518:
-    leaq .Lpool_5948(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27521:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27522:
-    leaq .Lpool_6028(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27525:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27526:
-    leaq .Lpool_6105(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27529:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27530:
-    leaq .Lpool_6194(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27533:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27534:
-    leaq .Lpool_6280(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27537:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27538:
-    leaq .Lpool_179(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27541:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27542:
-    leaq .Lpool_6353(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27545:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27546:
-    leaq .Lpool_6399(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27549:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27550:
-    leaq .Lpool_6475(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27553:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27554:
-    leaq .Lpool_6548(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27557:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27558:
-    leaq .Lpool_6625(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27561:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27562:
-    leaq .Lpool_6705(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27565:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27566:
-    leaq .Lpool_6795(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27569:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27570:
-    leaq .Lpool_6881(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27573:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27574:
-    leaq .Lpool_6971(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27577:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27578:
-    leaq .Lpool_7053(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27581:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27582:
-    leaq .Lpool_179(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27585:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27586:
-    leaq .Lpool_7125(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27589:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27590:
-    leaq .Lpool_7156(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27593:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27594:
-    leaq .Lpool_7236(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27597:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27598:
-    leaq .Lpool_7328(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27601:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27602:
-    leaq .Lpool_7413(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27605:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27606:
-    leaq .Lpool_7506(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27609:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_27610:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_27615:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $16, %r13
-    movq (%r13), %rcx
-    movq 8(%r13), %r14
-    movq %rax, (%r15)
-    addq $8, %r15
-    jmp *%rcx
-.Lpc_27616:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_27621:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $16, %r13
-    movq (%r13), %rcx
-    movq 8(%r13), %r14
-    movq %rax, (%r15)
-    addq $8, %r15
-    jmp *%rcx
-.Lpc_27622:
-.Lpc_27624:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27626:
+.Lpc_27504:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27627:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 8(%r14)
-.Lpc_27629:
-    movq 8(%r14), %rax
-    movq %rax, (%r15)
+.Lpc_27505:
+    movq $2, (%r15)
     addq $8, %r15
-.Lpc_27631:
-    movq $3, (%r15)
-    addq $8, %r15
-.Lpc_27636:
+.Lpc_27510:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -62763,47 +62497,36 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27637:
+.Lpc_27511:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_27665
-.Lpc_27640:
+    je .Lpc_27532
+.Lpc_27514:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27642:
-    movq 8(%r14), %rax
-    movq %rax, (%r15)
+.Lpc_27516:
+    movq $1, (%r15)
     addq $8, %r15
-.Lpc_27644:
-    movq $3, (%r15)
-    addq $8, %r15
-.Lpc_27649:
-    subq $8, %r15
-    movq (%r15), %rcx
+.Lpc_27521:
     subq $8, %r15
     movq (%r15), %rax
-    subq %rcx, %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27650:
-    movq $3, (%r15)
-    addq $8, %r15
-.Lpc_27655:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
+.Lpc_27522:
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_substr
+    call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27656:
-    leaq .Lpool_7526(%rip), %rax
+.Lpc_27523:
+    leaq .Lpool_5648(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27659:
+.Lpc_27526:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -62811,33 +62534,76 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27660:
+.Lpc_27527:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27661:
+.Lpc_27528:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27662:
-    jmp .Lpc_27670
-.Lpc_27665:
+.Lpc_27529:
+    jmp .Lpc_27537
+.Lpc_27532:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_27670:
+.Lpc_27537:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_27679
-.Lpc_27673:
+    je .Lpc_27554
+.Lpc_27540:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_27678:
+.Lpc_27545:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 16(%r14)
+.Lpc_27547:
+    movq $2, (%r15)
+    addq $8, %r15
+.Lpc_27552:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 8(%r14)
+.Lpc_27554:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27556:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27557:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27559:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setle %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27560:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27567
+.Lpc_27563:
+    leaq .Lpool_179(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27566:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -62846,12 +62612,277 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_27679:
+.Lpc_27567:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27569:
     movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
+.Lpc_27571:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27572:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_trim
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27573:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 24(%r14)
+.Lpc_27575:
+    movq 16(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27577:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_27582:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27583:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27609
+.Lpc_27586:
+    movq 24(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27588:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27589:
+    leaq .Lpool_2430(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27592:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_index_of
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27593:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_27598:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27599:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27609
+.Lpc_27602:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_27607:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 16(%r14)
+.Lpc_27609:
+    movq 16(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27611:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_27616:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27617:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27627
+.Lpc_27620:
+    leaq .Lpool_5656(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27623:
+    movq 24(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27625:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27626:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_27627:
+    leaq .Lpool_5676(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27630:
+    movq 24(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27632:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27633:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_27634:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_27639:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_27640:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27642:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27643:
+    movq $2, (%r15)
+    addq $8, %r15
+.Lpc_27648:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27649:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27670
+.Lpc_27652:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27654:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_27659:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27660:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_trim
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27661:
+    leaq .Lpool_5648(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27664:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27665:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27666:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27667:
+    jmp .Lpc_27675
+.Lpc_27670:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_27675:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27692
+.Lpc_27678:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27680:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
 .Lpc_27681:
-    movq $4, (%r15)
+    movq $3, (%r15)
     addq $8, %r15
 .Lpc_27686:
     subq $8, %r15
@@ -62866,79 +62897,49 @@ sdev_main:
 .Lpc_27687:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_27715
-.Lpc_27690:
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27688:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27689:
+    jmp .Lpc_27697
+.Lpc_27692:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_27697:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27710
+.Lpc_27700:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27692:
-    movq 8(%r14), %rax
-    movq %rax, (%r15)
+.Lpc_27702:
+    movq $2, (%r15)
     addq $8, %r15
-.Lpc_27694:
-    movq $4, (%r15)
-    addq $8, %r15
-.Lpc_27699:
-    subq $8, %r15
-    movq (%r15), %rcx
+.Lpc_27707:
     subq $8, %r15
     movq (%r15), %rax
-    subq %rcx, %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27700:
-    movq $4, (%r15)
-    addq $8, %r15
-.Lpc_27705:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
+.Lpc_27708:
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_substr
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27706:
-    leaq .Lpool_7533(%rip), %rax
+    call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27709:
     subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27710:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27711:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27712:
-    jmp .Lpc_27720
-.Lpc_27715:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_27720:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27729
-.Lpc_27723:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_27728:
-    subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
     movq (%r13), %rcx
@@ -62946,14 +62947,20 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_27729:
-    movq 8(%r14), %rax
+.Lpc_27710:
+    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27731:
-    movq $3, (%r15)
+.Lpc_27712:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27736:
+.Lpc_27713:
+    movq $2, (%r15)
+    addq $8, %r15
+.Lpc_27718:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -62963,281 +62970,317 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27737:
+.Lpc_27719:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_27765
-.Lpc_27740:
+    je .Lpc_27732
+.Lpc_27722:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27742:
-    movq 8(%r14), %rax
+.Lpc_27724:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_27729:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27744:
-    movq $3, (%r15)
+.Lpc_27730:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_trim
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27731:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_27732:
+    leaq .Lpool_179(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27735:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_27736:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_27741:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_27742:
+    leaq .Lpool_5698(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27745:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27746:
+    leaq .Lpool_179(%rip), %rax
+    movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27749:
     subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_27750:
-    movq $3, (%r15)
+    leaq .Lpool_5752(%rip), %rax
+    movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27755:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
+.Lpc_27753:
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_substr
+    call sdev_say_str
+.Lpc_27754:
+    leaq .Lpool_5761(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27756:
-    leaq .Lpool_7541(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27759:
-    subq $8, %r15
-    movq (%r15), %rsi
+.Lpc_27757:
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27760:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
+    call sdev_say_str
+.Lpc_27758:
+    leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27761:
     subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_27762:
-    jmp .Lpc_27770
-.Lpc_27765:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_27770:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27779
-.Lpc_27773:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_27778:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $16, %r13
-    movq (%r13), %rcx
-    movq 8(%r13), %r14
+    leaq .Lpool_5791(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-    jmp *%rcx
-.Lpc_27779:
-    movq 8(%r14), %rax
+.Lpc_27765:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27766:
+    leaq .Lpool_5845(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27769:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27770:
+    leaq .Lpool_5931(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27773:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27774:
+    leaq .Lpool_6014(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27777:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27778:
+    leaq .Lpool_6099(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27781:
-    movq $4, (%r15)
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27782:
+    leaq .Lpool_6181(%rip), %rax
+    movq %rax, (%r15)
     addq $8, %r15
+.Lpc_27785:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_27786:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    cmpq %rcx, %rax
-    setge %al
-    movzbq %al, %rax
+    leaq .Lpool_6275(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27787:
+.Lpc_27789:
     subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27815
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_27790:
-    movq 0(%r14), %rax
+    leaq .Lpool_6366(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27792:
-    movq 8(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
+.Lpc_27793:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_27794:
-    movq $4, (%r15)
-    addq $8, %r15
-.Lpc_27799:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
+    leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27800:
-    movq $4, (%r15)
+.Lpc_27797:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27798:
+    leaq .Lpool_6444(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27801:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27802:
+    leaq .Lpool_6490(%rip), %rax
+    movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27805:
     subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
     movq (%r15), %rdi
-    call sdev_substr
-    movq %rax, (%r15)
-    addq $8, %r15
+    call sdev_say_str
 .Lpc_27806:
-    leaq .Lpool_7548(%rip), %rax
+    leaq .Lpool_6571(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27809:
     subq $8, %r15
-    movq (%r15), %rsi
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27810:
+    leaq .Lpool_6649(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27813:
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_str_eq
+    call sdev_say_str
+.Lpc_27814:
+    leaq .Lpool_6731(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27810:
+.Lpc_27817:
     subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27818:
+    leaq .Lpool_6816(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27811:
+.Lpc_27821:
     subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27822:
+    leaq .Lpool_6911(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27812:
-    jmp .Lpc_27820
-.Lpc_27815:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_27820:
+.Lpc_27825:
     subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27829
-.Lpc_27823:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_27828:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $16, %r13
-    movq (%r13), %rcx
-    movq 8(%r13), %r14
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27826:
+    leaq .Lpool_7002(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-    jmp *%rcx
 .Lpc_27829:
-    movq 8(%r14), %rax
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27830:
+    leaq .Lpool_7097(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27831:
-    movq $3, (%r15)
-    addq $8, %r15
-.Lpc_27836:
+.Lpc_27833:
     subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    cmpq %rcx, %rax
-    setge %al
-    movzbq %al, %rax
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27834:
+    leaq .Lpool_7184(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27837:
     subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27865
-.Lpc_27840:
-    movq 0(%r14), %rax
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27838:
+    leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
+.Lpc_27841:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_27842:
-    movq 8(%r14), %rax
+    leaq .Lpool_7261(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27844:
-    movq $3, (%r15)
+.Lpc_27845:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27846:
+    leaq .Lpool_7292(%rip), %rax
+    movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27849:
     subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_27850:
-    movq $3, (%r15)
+    leaq .Lpool_7377(%rip), %rax
+    movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27855:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
+.Lpc_27853:
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_substr
+    call sdev_say_str
+.Lpc_27854:
+    leaq .Lpool_7482(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27856:
-    leaq .Lpool_7556(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27859:
-    subq $8, %r15
-    movq (%r15), %rsi
+.Lpc_27857:
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27860:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
+    call sdev_say_str
+.Lpc_27858:
+    leaq .Lpool_7572(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27861:
     subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27862:
+    leaq .Lpool_7670(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27862:
-    jmp .Lpc_27870
 .Lpc_27865:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_27866:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_27870:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27879
-.Lpc_27873:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_27878:
+.Lpc_27871:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -63246,114 +63289,41 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_27879:
-    movq 8(%r14), %rax
-    movq %rax, (%r15)
+.Lpc_27872:
+    movq $0, (%r15)
     addq $8, %r15
-.Lpc_27881:
-    movq $4, (%r15)
-    addq $8, %r15
-.Lpc_27886:
-    subq $8, %r15
-    movq (%r15), %rcx
+.Lpc_27877:
     subq $8, %r15
     movq (%r15), %rax
-    cmpq %rcx, %rax
-    setge %al
-    movzbq %al, %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_27878:
+.Lpc_27880:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27882:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27883:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 8(%r14)
+.Lpc_27885:
+    movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_27887:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27915
-.Lpc_27890:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
+    movq $3, (%r15)
     addq $8, %r15
 .Lpc_27892:
-    movq 8(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27894:
-    movq $4, (%r15)
-    addq $8, %r15
-.Lpc_27899:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27900:
-    movq $4, (%r15)
-    addq $8, %r15
-.Lpc_27905:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_substr
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27906:
-    leaq .Lpool_7563(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27909:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27910:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27911:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27912:
-    jmp .Lpc_27920
-.Lpc_27915:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_27920:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_27929
-.Lpc_27923:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_27928:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $16, %r13
-    movq (%r13), %rcx
-    movq 8(%r13), %r14
-    movq %rax, (%r15)
-    addq $8, %r15
-    jmp *%rcx
-.Lpc_27929:
-    movq 8(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_27931:
-    movq $5, (%r15)
-    addq $8, %r15
-.Lpc_27936:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -63363,22 +63333,22 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27937:
+.Lpc_27893:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_27965
-.Lpc_27940:
+    je .Lpc_27921
+.Lpc_27896:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27942:
+.Lpc_27898:
     movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27944:
-    movq $5, (%r15)
+.Lpc_27900:
+    movq $3, (%r15)
     addq $8, %r15
-.Lpc_27949:
+.Lpc_27905:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -63386,10 +63356,10 @@ sdev_main:
     subq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27950:
-    movq $5, (%r15)
+.Lpc_27906:
+    movq $3, (%r15)
     addq $8, %r15
-.Lpc_27955:
+.Lpc_27911:
     subq $8, %r15
     movq (%r15), %rdx
     subq $8, %r15
@@ -63399,11 +63369,11 @@ sdev_main:
     call sdev_substr
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27956:
-    leaq .Lpool_7571(%rip), %rax
+.Lpc_27912:
+    leaq .Lpool_7690(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27959:
+.Lpc_27915:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -63411,33 +63381,33 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27960:
+.Lpc_27916:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27961:
+.Lpc_27917:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27962:
-    jmp .Lpc_27970
-.Lpc_27965:
+.Lpc_27918:
+    jmp .Lpc_27926
+.Lpc_27921:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_27970:
+.Lpc_27926:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_27979
-.Lpc_27973:
+    je .Lpc_27935
+.Lpc_27929:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_27978:
+.Lpc_27934:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -63446,8 +63416,96 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_27979:
+.Lpc_27935:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27937:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_27942:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27943:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27971
+.Lpc_27946:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27948:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27950:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_27955:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27956:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_27961:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27962:
+    leaq .Lpool_7697(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27965:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27966:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27967:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27968:
+    jmp .Lpc_27976
+.Lpc_27971:
     movq $0, (%r15)
+    addq $8, %r15
+.Lpc_27976:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_27985
+.Lpc_27979:
+    movq $1, (%r15)
     addq $8, %r15
 .Lpc_27984:
     subq $8, %r15
@@ -63459,9 +63517,97 @@ sdev_main:
     addq $8, %r15
     jmp *%rcx
 .Lpc_27985:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27987:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_27992:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27993:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28021
+.Lpc_27996:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_27998:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28000:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_28005:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28006:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_28011:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28012:
+    leaq .Lpool_7705(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28015:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28016:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28017:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28018:
+    jmp .Lpc_28026
+.Lpc_28021:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_27990:
+.Lpc_28026:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28035
+.Lpc_28029:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_28034:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -63470,16 +63616,440 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_27991:
-.Lpc_27993:
-    leaq .Lpool_7580(%rip), %rax
+.Lpc_28035:
+    movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27996:
+.Lpc_28037:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_28042:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28043:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28071
+.Lpc_28046:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27998:
+.Lpc_28048:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28050:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_28055:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28056:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_28061:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28062:
+    leaq .Lpool_7712(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28065:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28066:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28067:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28068:
+    jmp .Lpc_28076
+.Lpc_28071:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_28076:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28085
+.Lpc_28079:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_28084:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28085:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28087:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_28092:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28093:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28121
+.Lpc_28096:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28098:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28100:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_28105:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28106:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_28111:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28112:
+    leaq .Lpool_7720(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28115:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28116:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28117:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28118:
+    jmp .Lpc_28126
+.Lpc_28121:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_28126:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28135
+.Lpc_28129:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_28134:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28135:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28137:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_28142:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28143:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28171
+.Lpc_28146:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28148:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28150:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_28155:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28156:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_28161:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28162:
+    leaq .Lpool_7727(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28165:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28166:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28167:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28168:
+    jmp .Lpc_28176
+.Lpc_28171:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_28176:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28185
+.Lpc_28179:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_28184:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28185:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28187:
+    movq $5, (%r15)
+    addq $8, %r15
+.Lpc_28192:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28193:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28221
+.Lpc_28196:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28198:
+    movq 8(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28200:
+    movq $5, (%r15)
+    addq $8, %r15
+.Lpc_28205:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28206:
+    movq $5, (%r15)
+    addq $8, %r15
+.Lpc_28211:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28212:
+    leaq .Lpool_7735(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28215:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28216:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28217:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28218:
+    jmp .Lpc_28226
+.Lpc_28221:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_28226:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_28235
+.Lpc_28229:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_28234:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28235:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_28240:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28241:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_28246:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28247:
+.Lpc_28249:
+    leaq .Lpool_7744(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28252:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28254:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -63487,30 +64057,30 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_27999:
+.Lpc_28255:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28000:
+.Lpc_28256:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 8(%r14)
-.Lpc_28002:
+.Lpc_28258:
     movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28004:
+.Lpc_28260:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28005:
+.Lpc_28261:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28010:
+.Lpc_28266:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -63520,14 +64090,14 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28011:
+.Lpc_28267:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28020
-.Lpc_28014:
+    je .Lpc_28276
+.Lpc_28270:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28019:
+.Lpc_28275:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -63536,15 +64106,15 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_28020:
+.Lpc_28276:
     movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28022:
+.Lpc_28278:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28025:
+.Lpc_28281:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -63552,39 +64122,39 @@ sdev_main:
     call sdev_split
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28026:
+.Lpc_28282:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 16(%r14)
-.Lpc_28028:
+.Lpc_28284:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28033:
+.Lpc_28289:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 24(%r14)
-.Lpc_28035:
+.Lpc_28291:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28040:
+.Lpc_28296:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 32(%r14)
-.Lpc_28042:
+.Lpc_28298:
     movq 32(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28044:
+.Lpc_28300:
     movq 16(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28046:
+.Lpc_28302:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28047:
+.Lpc_28303:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -63594,19 +64164,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28048:
+.Lpc_28304:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28122
-.Lpc_28051:
+    je .Lpc_28378
+.Lpc_28307:
     movq 16(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28053:
+.Lpc_28309:
     movq 32(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28055:
+.Lpc_28311:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -63614,24 +64184,24 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28056:
+.Lpc_28312:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 40(%r14)
-.Lpc_28058:
+.Lpc_28314:
     movq 40(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28060:
+.Lpc_28316:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28061:
+.Lpc_28317:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28066:
+.Lpc_28322:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -63641,16 +64211,16 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28067:
+.Lpc_28323:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28109
-.Lpc_28070:
+    je .Lpc_28365
+.Lpc_28326:
     movq 40(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28072:
-    leaq .Lpc_28076(%rip), %rax
+.Lpc_28328:
+    leaq .Lpc_28332(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -63662,11 +64232,11 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-    jmp .Lpc_27622
-.Lpc_28076:
+    jmp .Lpc_27878
+.Lpc_28332:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28081:
+.Lpc_28337:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -63676,752 +64246,62 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28082:
+.Lpc_28338:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28109
-.Lpc_28085:
-    leaq .Lpool_7592(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28088:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28090:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28091:
-    leaq .Lpool_780(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28094:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28095:
-    movq 40(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28097:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28098:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_28099:
-    movq 24(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28101:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_28106:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28107:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 24(%r14)
-.Lpc_28109:
-    movq 32(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28111:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_28116:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28117:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 32(%r14)
-.Lpc_28119:
-    jmp .Lpc_28042
-.Lpc_28122:
-    movq 24(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28124:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $16, %r13
-    movq (%r13), %rcx
-    movq 8(%r13), %r14
-    movq %rax, (%r15)
-    addq $8, %r15
-    jmp *%rcx
-.Lpc_28125:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_28130:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $16, %r13
-    movq (%r13), %rcx
-    movq 8(%r13), %r14
-    movq %rax, (%r15)
-    addq $8, %r15
-    jmp *%rcx
-.Lpc_28131:
-.Lpc_28133:
-    leaq .Lpool_7625(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28136:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_28137:
-    leaq .Lpool_7693(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28140:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_28141:
-    leaq .Lpool_7625(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28144:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_28145:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_28150:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28152:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28154:
-    leaq .Lpool_3014(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28157:
-    leaq .Lpc_28161(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28161:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28162:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28164:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28166:
-    leaq .Lpool_7739(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28169:
-    leaq .Lpc_28173(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28173:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28174:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28176:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28178:
-    leaq .Lpool_7746(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28181:
-    leaq .Lpc_28185(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28185:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28186:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28188:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28190:
-    leaq .Lpool_7753(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28193:
-    leaq .Lpc_28197(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28197:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28198:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28200:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28202:
-    leaq .Lpool_7764(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28205:
-    leaq .Lpc_28209(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28209:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28210:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28212:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28214:
-    leaq .Lpool_7772(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28217:
-    leaq .Lpc_28221(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28221:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28222:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28224:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28226:
-    leaq .Lpool_7789(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28229:
-    leaq .Lpc_28233(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28233:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28234:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28236:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28238:
-    leaq .Lpool_7804(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28241:
-    leaq .Lpc_28245(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28245:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28246:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28248:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28250:
-    leaq .Lpool_7820(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28253:
-    leaq .Lpc_28257(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28257:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28258:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28260:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28262:
-    leaq .Lpool_7835(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28265:
-    leaq .Lpc_28269(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28269:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28270:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28272:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28274:
-    leaq .Lpool_7853(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28277:
-    leaq .Lpc_28281(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28281:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28282:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28284:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28286:
-    leaq .Lpool_7871(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28289:
-    leaq .Lpc_28293(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28293:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28294:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28296:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28298:
-    leaq .Lpool_7889(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28301:
-    leaq .Lpc_28305(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28305:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28306:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28308:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28310:
-    leaq .Lpool_7903(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28313:
-    leaq .Lpc_28317(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28317:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28318:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28320:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28322:
-    leaq .Lpool_7915(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28325:
-    leaq .Lpc_28329(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28329:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28330:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28332:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28334:
-    leaq .Lpool_7922(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28337:
-    leaq .Lpc_28341(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
+    je .Lpc_28365
 .Lpc_28341:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
+    leaq .Lpool_7756(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28342:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
 .Lpc_28344:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28346:
-    leaq .Lpool_7934(%rip), %rax
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28349:
-    leaq .Lpc_28353(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
+.Lpc_28347:
+    leaq .Lpool_780(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28350:
     subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28351:
+    movq 40(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
 .Lpc_28353:
     subq $8, %r15
-    movq (%r15), %rcx
+    movq (%r15), %rsi
     subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
+    movq (%r15), %rdi
+    call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28354:
     subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28356:
-    movq 0(%r14), %rax
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_28355:
+    movq 24(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28358:
-    leaq .Lpool_7953(%rip), %rax
-    movq %rax, (%r15)
+.Lpc_28357:
+    movq $1, (%r15)
     addq $8, %r15
-.Lpc_28361:
-    leaq .Lpc_28365(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28365:
+.Lpc_28362:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -64429,122 +64309,98 @@ sdev_main:
     addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28366:
+.Lpc_28363:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28368:
-    movq 0(%r14), %rax
+    movq %rax, 24(%r14)
+.Lpc_28365:
+    movq 32(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28370:
-    leaq .Lpool_7966(%rip), %rax
+.Lpc_28367:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_28372:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28373:
-    leaq .Lpc_28377(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28377:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
+    movq %rax, 32(%r14)
+.Lpc_28375:
+    jmp .Lpc_28298
 .Lpc_28378:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
+    movq 24(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
 .Lpc_28380:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28382:
-    leaq .Lpool_7984(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28385:
-    leaq .Lpc_28389(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28381:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_28386:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $16, %r13
+    movq (%r13), %rcx
+    movq 8(%r13), %r14
+    movq %rax, (%r15)
+    addq $8, %r15
+    jmp *%rcx
+.Lpc_28387:
 .Lpc_28389:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
+    leaq .Lpool_7789(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28390:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
 .Lpc_28392:
-    movq 0(%r14), %rax
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_28393:
+    leaq .Lpool_7857(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28394:
-    leaq .Lpool_7997(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
+.Lpc_28396:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
 .Lpc_28397:
-    leaq .Lpc_28401(%rip), %rax
-    movq %rax, (%r13)
-    movq %r14, 8(%r13)
-    addq $16, %r13
-    addq $2048, %r14
-    movq %r14, %rdi
-    xorq %rax, %rax
-    movq $256, %rcx
-    rep stosq
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28401:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
+    leaq .Lpool_7789(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28402:
+.Lpc_28400:
     subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28404:
-    movq 0(%r14), %rax
-    movq %rax, (%r15)
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_28401:
+    movq $0, (%r15)
     addq $8, %r15
 .Lpc_28406:
-    leaq .Lpool_8008(%rip), %rax
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28408:
+    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28409:
-    leaq .Lpc_28413(%rip), %rax
+.Lpc_28410:
+    leaq .Lpool_3014(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28413:
+    leaq .Lpc_28417(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -64556,29 +64412,29 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28413:
+    jmp .Lpc_28247
+.Lpc_28417:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
     movq (%r15), %rax
     addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28414:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28416:
-    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28418:
-    leaq .Lpool_8022(%rip), %rax
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28420:
+    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28421:
-    leaq .Lpc_28425(%rip), %rax
+.Lpc_28422:
+    leaq .Lpool_7903(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28425:
+    leaq .Lpc_28429(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -64590,29 +64446,29 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28425:
+    jmp .Lpc_28247
+.Lpc_28429:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
     movq (%r15), %rax
     addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28426:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28428:
-    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28430:
-    leaq .Lpool_8032(%rip), %rax
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28432:
+    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28433:
-    leaq .Lpc_28437(%rip), %rax
+.Lpc_28434:
+    leaq .Lpool_7910(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28437:
+    leaq .Lpc_28441(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -64624,29 +64480,29 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28437:
+    jmp .Lpc_28247
+.Lpc_28441:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
     movq (%r15), %rax
     addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28438:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28440:
-    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28442:
-    leaq .Lpool_8045(%rip), %rax
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28444:
+    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28445:
-    leaq .Lpc_28449(%rip), %rax
+.Lpc_28446:
+    leaq .Lpool_7917(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28449:
+    leaq .Lpc_28453(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -64658,29 +64514,29 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28449:
+    jmp .Lpc_28247
+.Lpc_28453:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
     movq (%r15), %rax
     addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28450:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28452:
-    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28454:
-    leaq .Lpool_8056(%rip), %rax
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28456:
+    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28457:
-    leaq .Lpc_28461(%rip), %rax
+.Lpc_28458:
+    leaq .Lpool_7928(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28461:
+    leaq .Lpc_28465(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -64692,29 +64548,29 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28461:
+    jmp .Lpc_28247
+.Lpc_28465:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
     movq (%r15), %rax
     addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28462:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, 0(%r14)
-.Lpc_28464:
-    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
 .Lpc_28466:
-    leaq .Lpool_8065(%rip), %rax
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28468:
+    movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28469:
-    leaq .Lpc_28473(%rip), %rax
+.Lpc_28470:
+    leaq .Lpool_7936(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28473:
+    leaq .Lpc_28477(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -64726,8 +64582,8 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-    jmp .Lpc_27991
-.Lpc_28473:
+    jmp .Lpc_28247
+.Lpc_28477:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -64735,18 +64591,732 @@ sdev_main:
     addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28474:
+.Lpc_28478:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 0(%r14)
-.Lpc_28476:
+.Lpc_28480:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28478:
+.Lpc_28482:
+    leaq .Lpool_7953(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28485:
+    leaq .Lpc_28489(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28489:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28490:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28492:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28494:
+    leaq .Lpool_7968(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28497:
+    leaq .Lpc_28501(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28501:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28502:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28504:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28506:
+    leaq .Lpool_7984(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28509:
+    leaq .Lpc_28513(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28513:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28514:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28516:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28518:
+    leaq .Lpool_7999(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28521:
+    leaq .Lpc_28525(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28525:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28526:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28528:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28530:
+    leaq .Lpool_8017(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28533:
+    leaq .Lpc_28537(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28537:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28538:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28540:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28542:
+    leaq .Lpool_8035(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28545:
+    leaq .Lpc_28549(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28549:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28550:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28552:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28554:
+    leaq .Lpool_8053(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28557:
+    leaq .Lpc_28561(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28561:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28562:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28564:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28566:
+    leaq .Lpool_8067(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28569:
+    leaq .Lpc_28573(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28573:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28574:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28576:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28578:
+    leaq .Lpool_8079(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28581:
+    leaq .Lpc_28585(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28585:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28586:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28588:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28590:
+    leaq .Lpool_8086(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28593:
+    leaq .Lpc_28597(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28597:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28598:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28600:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28602:
+    leaq .Lpool_8098(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28605:
+    leaq .Lpc_28609(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28609:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28610:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28612:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28614:
+    leaq .Lpool_8117(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28617:
+    leaq .Lpc_28621(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28621:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28622:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28624:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28626:
+    leaq .Lpool_8130(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28629:
+    leaq .Lpc_28633(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28633:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28634:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28636:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28638:
+    leaq .Lpool_8148(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28641:
+    leaq .Lpc_28645(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28645:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28646:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28648:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28650:
+    leaq .Lpool_8161(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28653:
+    leaq .Lpc_28657(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28657:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28658:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28660:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28662:
+    leaq .Lpool_8172(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28665:
+    leaq .Lpc_28669(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28669:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28670:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28672:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28674:
+    leaq .Lpool_8186(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28677:
+    leaq .Lpc_28681(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28681:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28682:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28684:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28686:
+    leaq .Lpool_8196(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28689:
+    leaq .Lpc_28693(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28693:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28694:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28696:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28698:
+    leaq .Lpool_8209(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28701:
+    leaq .Lpc_28705(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28705:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28706:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28708:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28710:
+    leaq .Lpool_8220(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28713:
+    leaq .Lpc_28717(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28717:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28718:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28720:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28722:
+    leaq .Lpool_8229(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28725:
+    leaq .Lpc_28729(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_28247
+.Lpc_28729:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28730:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+.Lpc_28732:
+    movq 0(%r14), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_28734:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28483:
+.Lpc_28739:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -64756,35 +65326,35 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28484:
+.Lpc_28740:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28494
-.Lpc_28487:
-    leaq .Lpool_8071(%rip), %rax
+    je .Lpc_28750
+.Lpc_28743:
+    leaq .Lpool_8235(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28490:
+.Lpc_28746:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28491:
-    jmp .Lpc_28520
-.Lpc_28494:
-    leaq .Lpool_8143(%rip), %rax
+.Lpc_28747:
+    jmp .Lpc_28776
+.Lpc_28750:
+    leaq .Lpool_8307(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28497:
+.Lpc_28753:
     movq 0(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28499:
+.Lpc_28755:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28500:
+.Lpc_28756:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -64792,11 +65362,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28501:
-    leaq .Lpool_8174(%rip), %rax
+.Lpc_28757:
+    leaq .Lpool_8338(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28504:
+.Lpc_28760:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -64804,19 +65374,19 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28505:
+.Lpc_28761:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28506:
-    leaq .Lpool_8198(%rip), %rax
+.Lpc_28762:
+    leaq .Lpool_8362(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28509:
+.Lpc_28765:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28512:
+.Lpc_28768:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -64824,12 +65394,12 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28513:
+.Lpc_28769:
     subq $8, %r15
-.Lpc_28514:
+.Lpc_28770:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28519:
+.Lpc_28775:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -64838,34 +65408,34 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_28520:
-    leaq .Lpool_8213(%rip), %rax
+.Lpc_28776:
+    leaq .Lpool_8377(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28523:
+.Lpc_28779:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28524:
+.Lpc_28780:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 8(%r14)
-.Lpc_28526:
+.Lpc_28782:
     movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28528:
+.Lpc_28784:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28529:
+.Lpc_28785:
     movq $1000, (%r15)
     addq $8, %r15
-.Lpc_28534:
+.Lpc_28790:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -64875,31 +65445,31 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28535:
+.Lpc_28791:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28554
-.Lpc_28538:
-    leaq .Lpool_8230(%rip), %rax
+    je .Lpc_28810
+.Lpc_28794:
+    leaq .Lpool_8394(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28541:
+.Lpc_28797:
     movq 8(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28543:
+.Lpc_28799:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28544:
+.Lpc_28800:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28545:
+.Lpc_28801:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -64907,11 +65477,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28546:
-    leaq .Lpool_8294(%rip), %rax
+.Lpc_28802:
+    leaq .Lpool_8458(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28549:
+.Lpc_28805:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -64919,29 +65489,29 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28550:
+.Lpc_28806:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28551:
-    jmp .Lpc_28572
-.Lpc_28554:
-    leaq .Lpool_8305(%rip), %rax
+.Lpc_28807:
+    jmp .Lpc_28828
+.Lpc_28810:
+    leaq .Lpool_8469(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28557:
+.Lpc_28813:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28558:
-    leaq .Lpool_8198(%rip), %rax
+.Lpc_28814:
+    leaq .Lpool_8362(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28561:
+.Lpc_28817:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28564:
+.Lpc_28820:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -64949,12 +65519,12 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28565:
+.Lpc_28821:
     subq $8, %r15
-.Lpc_28566:
+.Lpc_28822:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28571:
+.Lpc_28827:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -64963,34 +65533,34 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_28572:
-    leaq .Lpool_8336(%rip), %rax
+.Lpc_28828:
+    leaq .Lpool_8500(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28575:
+.Lpc_28831:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28576:
+.Lpc_28832:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 16(%r14)
-.Lpc_28578:
+.Lpc_28834:
     movq 16(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28580:
+.Lpc_28836:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28581:
+.Lpc_28837:
     movq $1000, (%r15)
     addq $8, %r15
-.Lpc_28586:
+.Lpc_28842:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -65000,37 +65570,37 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28587:
+.Lpc_28843:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28597
-.Lpc_28590:
-    leaq .Lpool_8357(%rip), %rax
+    je .Lpc_28853
+.Lpc_28846:
+    leaq .Lpool_8521(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28593:
+.Lpc_28849:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28594:
-    jmp .Lpc_28615
-.Lpc_28597:
-    leaq .Lpool_8413(%rip), %rax
+.Lpc_28850:
+    jmp .Lpc_28871
+.Lpc_28853:
+    leaq .Lpool_8577(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28600:
+.Lpc_28856:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28601:
-    leaq .Lpool_8198(%rip), %rax
+.Lpc_28857:
+    leaq .Lpool_8362(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28604:
+.Lpc_28860:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28607:
+.Lpc_28863:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65038,12 +65608,12 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28608:
+.Lpc_28864:
     subq $8, %r15
-.Lpc_28609:
+.Lpc_28865:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28614:
+.Lpc_28870:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -65052,34 +65622,34 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_28615:
-    leaq .Lpool_8455(%rip), %rax
+.Lpc_28871:
+    leaq .Lpool_8619(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28618:
+.Lpc_28874:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28619:
+.Lpc_28875:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 24(%r14)
-.Lpc_28621:
+.Lpc_28877:
     movq 24(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28623:
+.Lpc_28879:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28624:
+.Lpc_28880:
     movq $1000, (%r15)
     addq $8, %r15
-.Lpc_28629:
+.Lpc_28885:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -65089,19 +65659,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28630:
+.Lpc_28886:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28650
-.Lpc_28633:
+    je .Lpc_28906
+.Lpc_28889:
     movq 24(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28635:
-    leaq .Lpool_8473(%rip), %rax
+.Lpc_28891:
+    leaq .Lpool_8637(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28638:
+.Lpc_28894:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65109,10 +65679,10 @@ sdev_main:
     call sdev_index_of
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28639:
+.Lpc_28895:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28644:
+.Lpc_28900:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -65122,56 +65692,56 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28645:
+.Lpc_28901:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28646:
+.Lpc_28902:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28647:
-    jmp .Lpc_28655
-.Lpc_28650:
+.Lpc_28903:
+    jmp .Lpc_28911
+.Lpc_28906:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28655:
+.Lpc_28911:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28665
-.Lpc_28658:
-    leaq .Lpool_8483(%rip), %rax
+    je .Lpc_28921
+.Lpc_28914:
+    leaq .Lpool_8647(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28661:
+.Lpc_28917:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28662:
-    jmp .Lpc_28683
-.Lpc_28665:
-    leaq .Lpool_8530(%rip), %rax
+.Lpc_28918:
+    jmp .Lpc_28939
+.Lpc_28921:
+    leaq .Lpool_8694(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28668:
+.Lpc_28924:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28669:
-    leaq .Lpool_8198(%rip), %rax
+.Lpc_28925:
+    leaq .Lpool_8362(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28672:
+.Lpc_28928:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28675:
+.Lpc_28931:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65179,12 +65749,12 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28676:
+.Lpc_28932:
     subq $8, %r15
-.Lpc_28677:
+.Lpc_28933:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28682:
+.Lpc_28938:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -65193,8 +65763,8 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_28683:
-    leaq .Lpc_28687(%rip), %rax
+.Lpc_28939:
+    leaq .Lpc_28943(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -65204,31 +65774,31 @@ sdev_main:
     movq $256, %rcx
     rep stosq
     jmp .Lpc_8277
-.Lpc_28687:
+.Lpc_28943:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, 32(%r14)
-.Lpc_28689:
-    leaq .Lpool_8577(%rip), %rax
+.Lpc_28945:
+    leaq .Lpool_8741(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28692:
+.Lpc_28948:
     movq 32(%r14), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28694:
+.Lpc_28950:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28695:
+.Lpc_28951:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28696:
+.Lpc_28952:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65236,11 +65806,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28697:
-    leaq .Lpool_8612(%rip), %rax
+.Lpc_28953:
+    leaq .Lpool_8776(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28700:
+.Lpc_28956:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65248,22 +65818,22 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28701:
+.Lpc_28957:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28702:
-    leaq .Lpool_8638(%rip), %rax
+.Lpc_28958:
+    leaq .Lpool_8802(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28705:
+.Lpc_28961:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28706:
+.Lpc_28962:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28711:
+.Lpc_28967:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -65272,10 +65842,10 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_28712:
+.Lpc_28968:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28717:
+.Lpc_28973:
     subq $8, %r15
     movq (%r15), %rax
     subq $16, %r13
@@ -65284,29 +65854,29 @@ sdev_main:
     movq %rax, (%r15)
     addq $8, %r15
     jmp *%rcx
-.Lpc_28718:
-    leaq .Lpool_8684(%rip), %rax
+.Lpc_28974:
+    leaq .Lpool_8848(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28721:
+.Lpc_28977:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28722:
+.Lpc_28978:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+0(%rip)
-.Lpc_28724:
+.Lpc_28980:
     movq .Lbss_globals+0(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28726:
+.Lpc_28982:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28729:
+.Lpc_28985:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65314,32 +65884,32 @@ sdev_main:
     call sdev_split
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28730:
+.Lpc_28986:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+8(%rip)
-.Lpc_28732:
+.Lpc_28988:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28735:
+.Lpc_28991:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+16(%rip)
-.Lpc_28737:
+.Lpc_28993:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28739:
+.Lpc_28995:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28740:
+.Lpc_28996:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28745:
+.Lpc_29001:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -65349,18 +65919,18 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28746:
+.Lpc_29002:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28760
-.Lpc_28749:
+    je .Lpc_29016
+.Lpc_29005:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28751:
+.Lpc_29007:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28756:
+.Lpc_29012:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -65368,30 +65938,30 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28757:
+.Lpc_29013:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28758:
+.Lpc_29014:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+16(%rip)
-.Lpc_28760:
+.Lpc_29016:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28762:
+.Lpc_29018:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28763:
+.Lpc_29019:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28768:
+.Lpc_29024:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -65401,24 +65971,24 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28769:
+.Lpc_29025:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28780
-.Lpc_28772:
+    je .Lpc_29036
+.Lpc_29028:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28777:
-    jmp .Lpc_28788
-.Lpc_28780:
+.Lpc_29033:
+    jmp .Lpc_29044
+.Lpc_29036:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28782:
-    leaq .Lpool_8697(%rip), %rax
+.Lpc_29038:
+    leaq .Lpool_8861(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28785:
+.Lpc_29041:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65426,38 +65996,38 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28786:
+.Lpc_29042:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28787:
+.Lpc_29043:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28788:
+.Lpc_29044:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28799
-.Lpc_28791:
+    je .Lpc_29055
+.Lpc_29047:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28796:
-    jmp .Lpc_28807
-.Lpc_28799:
+.Lpc_29052:
+    jmp .Lpc_29063
+.Lpc_29055:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28801:
-    leaq .Lpool_8705(%rip), %rax
+.Lpc_29057:
+    leaq .Lpool_8869(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28804:
+.Lpc_29060:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65465,38 +66035,38 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28805:
+.Lpc_29061:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28806:
+.Lpc_29062:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28807:
+.Lpc_29063:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28818
-.Lpc_28810:
+    je .Lpc_29074
+.Lpc_29066:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28815:
-    jmp .Lpc_28826
-.Lpc_28818:
+.Lpc_29071:
+    jmp .Lpc_29082
+.Lpc_29074:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28820:
-    leaq .Lpool_8715(%rip), %rax
+.Lpc_29076:
+    leaq .Lpool_8879(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28823:
+.Lpc_29079:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65504,26 +66074,26 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28824:
+.Lpc_29080:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28825:
+.Lpc_29081:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28826:
+.Lpc_29082:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28838
-.Lpc_28829:
-    leaq .Lpc_28833(%rip), %rax
+    je .Lpc_29094
+.Lpc_29085:
+    leaq .Lpc_29089(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -65532,22 +66102,22 @@ sdev_main:
     xorq %rax, %rax
     movq $256, %rcx
     rep stosq
-    jmp .Lpc_27486
-.Lpc_28833:
+    jmp .Lpc_27742
+.Lpc_29089:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+24(%rip)
-.Lpc_28835:
-    jmp .Lpc_30820
-.Lpc_28838:
+.Lpc_29091:
+    jmp .Lpc_31337
+.Lpc_29094:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28840:
-    leaq .Lpool_8721(%rip), %rax
+.Lpc_29096:
+    leaq .Lpool_8885(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28843:
+.Lpc_29099:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65555,24 +66125,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28844:
+.Lpc_29100:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28855
-.Lpc_28847:
+    je .Lpc_29111
+.Lpc_29103:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28852:
-    jmp .Lpc_28863
-.Lpc_28855:
+.Lpc_29108:
+    jmp .Lpc_29119
+.Lpc_29111:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28857:
-    leaq .Lpool_8732(%rip), %rax
+.Lpc_29113:
+    leaq .Lpool_8896(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28860:
+.Lpc_29116:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65580,38 +66150,38 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28861:
+.Lpc_29117:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28862:
+.Lpc_29118:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28863:
+.Lpc_29119:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28874
-.Lpc_28866:
+    je .Lpc_29130
+.Lpc_29122:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_28871:
-    jmp .Lpc_28882
-.Lpc_28874:
+.Lpc_29127:
+    jmp .Lpc_29138
+.Lpc_29130:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28876:
-    leaq .Lpool_8745(%rip), %rax
+.Lpc_29132:
+    leaq .Lpool_8909(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28879:
+.Lpc_29135:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65619,43 +66189,43 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28880:
+.Lpc_29136:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28881:
+.Lpc_29137:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28882:
+.Lpc_29138:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28892
-.Lpc_28885:
-    leaq .Lpool_8751(%rip), %rax
+    je .Lpc_29148
+.Lpc_29141:
+    leaq .Lpool_8915(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28888:
+.Lpc_29144:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_28889:
-    jmp .Lpc_30820
-.Lpc_28892:
+.Lpc_29145:
+    jmp .Lpc_31337
+.Lpc_29148:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28894:
-    leaq .Lpool_8803(%rip), %rax
+.Lpc_29150:
+    leaq .Lpool_8967(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28897:
+.Lpc_29153:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65663,12 +66233,12 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28898:
+.Lpc_29154:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28910
-.Lpc_28901:
-    leaq .Lpc_28905(%rip), %rax
+    je .Lpc_29166
+.Lpc_29157:
+    leaq .Lpc_29161(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -65677,22 +66247,22 @@ sdev_main:
     xorq %rax, %rax
     movq $256, %rcx
     rep stosq
-    jmp .Lpc_28131
-.Lpc_28905:
+    jmp .Lpc_28387
+.Lpc_29161:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+24(%rip)
-.Lpc_28907:
-    jmp .Lpc_30820
-.Lpc_28910:
+.Lpc_29163:
+    jmp .Lpc_31337
+.Lpc_29166:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28912:
-    leaq .Lpool_8813(%rip), %rax
+.Lpc_29168:
+    leaq .Lpool_8977(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28915:
+.Lpc_29171:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65700,46 +66270,68 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28916:
+.Lpc_29172:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29069
-.Lpc_28919:
+    je .Lpc_29326
+.Lpc_29175:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28921:
+.Lpc_29177:
+    leaq .Lpc_29181(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_27486
+.Lpc_29181:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+32(%rip)
+.Lpc_29183:
+    movq .Lbss_globals+32(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29185:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28922:
-    movq $2, (%r15)
+.Lpc_29186:
+    movq $0, (%r15)
     addq $8, %r15
-.Lpc_28927:
+.Lpc_29191:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
     movq (%r15), %rax
     cmpq %rcx, %rax
-    setl %al
+    sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28928:
+.Lpc_29192:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_28950
-.Lpc_28931:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_29214
+.Lpc_29195:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28934:
-    leaq .Lpool_8834(%rip), %rax
+.Lpc_29198:
+    leaq .Lpool_8998(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28937:
+.Lpc_29201:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65747,17 +66339,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28938:
+.Lpc_29202:
     subq $8, %r15
-.Lpc_28939:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_29203:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28942:
+.Lpc_29206:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28945:
+.Lpc_29209:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65765,70 +66357,55 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28946:
+.Lpc_29210:
     subq $8, %r15
-.Lpc_28947:
-    jmp .Lpc_29066
-.Lpc_28950:
+.Lpc_29211:
+    jmp .Lpc_29323
+.Lpc_29214:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28952:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_28957:
+.Lpc_29216:
+    leaq .Lpc_29220(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
     subq $8, %r15
     movq (%r15), %rax
-    subq $8, %r15
-    movq (%r15), %rcx
-    movq 8(%rcx,%rax,8), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28958:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_trim
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28959:
+    movq %rax, 0(%r14)
+    jmp .Lpc_27640
+.Lpc_29220:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+32(%rip)
-.Lpc_28961:
-    leaq .Lpool_8883(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28964:
+    movq %rax, .Lbss_globals+40(%rip)
+.Lpc_29222:
     movq .Lbss_globals+32(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28966:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28967:
+.Lpc_29224:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28968:
+.Lpc_29225:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+40(%rip)
-.Lpc_28970:
-    movq .Lbss_globals+40(%rip), %rax
+    movq %rax, .Lbss_globals+48(%rip)
+.Lpc_29227:
+    movq .Lbss_globals+48(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28972:
-    leaq .Lpool_8473(%rip), %rax
+.Lpc_29229:
+    leaq .Lpool_8637(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28975:
+.Lpc_29232:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65836,10 +66413,10 @@ sdev_main:
     call sdev_index_of
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28976:
+.Lpc_29233:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_28981:
+.Lpc_29238:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -65849,63 +66426,63 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28982:
+.Lpc_29239:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29033
-.Lpc_28985:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_29290
+.Lpc_29242:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28988:
-    leaq .Lpool_8905(%rip), %rax
+.Lpc_29245:
+    leaq .Lpool_9054(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_28991:
-    movq .Lbss_globals+32(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28993:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28994:
-    leaq .Lpool_8915(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28997:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_28998:
+.Lpc_29248:
     movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29000:
+.Lpc_29250:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29251:
+    leaq .Lpool_9064(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29254:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29255:
+    movq .Lbss_globals+48(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29257:
     movq $6, (%r15)
     addq $8, %r15
-.Lpc_29005:
-    movq .Lbss_globals+40(%rip), %rax
+.Lpc_29262:
+    movq .Lbss_globals+48(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29007:
+.Lpc_29264:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29008:
+.Lpc_29265:
     movq $6, (%r15)
     addq $8, %r15
-.Lpc_29013:
+.Lpc_29270:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -65913,7 +66490,7 @@ sdev_main:
     subq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29014:
+.Lpc_29271:
     subq $8, %r15
     movq (%r15), %rdx
     subq $8, %r15
@@ -65923,7 +66500,7 @@ sdev_main:
     call sdev_substr
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29015:
+.Lpc_29272:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65931,11 +66508,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29016:
+.Lpc_29273:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29019:
+.Lpc_29276:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65943,7 +66520,7 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29020:
+.Lpc_29277:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65951,17 +66528,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29021:
+.Lpc_29278:
     subq $8, %r15
-.Lpc_29022:
-    leaq .Lpool_8198(%rip), %rax
+.Lpc_29279:
+    leaq .Lpool_8362(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29025:
+.Lpc_29282:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29028:
+.Lpc_29285:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65969,19 +66546,19 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29029:
+.Lpc_29286:
     subq $8, %r15
-.Lpc_29030:
-    jmp .Lpc_29066
-.Lpc_29033:
-    movq .Lbss_globals+40(%rip), %rax
+.Lpc_29287:
+    jmp .Lpc_29323
+.Lpc_29290:
+    movq .Lbss_globals+48(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29035:
+.Lpc_29292:
     leaq .Lpool_790(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29038:
+.Lpc_29295:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -65989,19 +66566,19 @@ sdev_main:
     call sdev_index_of
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29039:
+.Lpc_29296:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+48(%rip)
-.Lpc_29041:
-    leaq .Lpool_8921(%rip), %rax
+    movq %rax, .Lbss_globals+56(%rip)
+.Lpc_29298:
+    leaq .Lpool_9070(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29044:
-    movq .Lbss_globals+32(%rip), %rax
+.Lpc_29301:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29046:
+.Lpc_29303:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66009,11 +66586,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29047:
-    leaq .Lpool_8929(%rip), %rax
+.Lpc_29304:
+    leaq .Lpool_9078(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29050:
+.Lpc_29307:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66021,14 +66598,14 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29051:
-    movq .Lbss_globals+48(%rip), %rax
+.Lpc_29308:
+    movq .Lbss_globals+56(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29053:
+.Lpc_29310:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29058:
+.Lpc_29315:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66037,13 +66614,13 @@ sdev_main:
     idivq %rcx
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29059:
+.Lpc_29316:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29060:
+.Lpc_29317:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66051,11 +66628,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29061:
-    leaq .Lpool_8956(%rip), %rax
+.Lpc_29318:
+    leaq .Lpool_9105(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29064:
+.Lpc_29321:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66063,21 +66640,21 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29065:
+.Lpc_29322:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29066:
-    jmp .Lpc_30820
-.Lpc_29069:
+.Lpc_29323:
+    jmp .Lpc_31337
+.Lpc_29326:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29071:
-    leaq .Lpool_8976(%rip), %rax
+.Lpc_29328:
+    leaq .Lpool_9125(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29074:
+.Lpc_29331:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66085,146 +66662,46 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29075:
+.Lpc_29332:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29230
-.Lpc_29078:
+    je .Lpc_29488
+.Lpc_29335:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29080:
+.Lpc_29337:
+    leaq .Lpc_29341(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_27486
+.Lpc_29341:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+32(%rip)
+.Lpc_29343:
+    movq .Lbss_globals+32(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29345:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29081:
-    movq $2, (%r15)
-    addq $8, %r15
-.Lpc_29086:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    cmpq %rcx, %rax
-    setl %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29087:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_29109
-.Lpc_29090:
-    leaq .Lpool_8822(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29093:
-    leaq .Lpool_8986(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29096:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_write_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29097:
-    subq $8, %r15
-.Lpc_29098:
-    leaq .Lpool_8868(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29101:
-    leaq .Lpool_179(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29104:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_write_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29105:
-    subq $8, %r15
-.Lpc_29106:
-    jmp .Lpc_29227
-.Lpc_29109:
-    movq .Lbss_globals+8(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29111:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_29116:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $8, %r15
-    movq (%r15), %rcx
-    movq 8(%rcx,%rax,8), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29117:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_trim
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29118:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+32(%rip)
-.Lpc_29120:
-    leaq .Lpool_8883(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29123:
-    movq .Lbss_globals+32(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29125:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29126:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_read_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29127:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+40(%rip)
-.Lpc_29129:
-    movq .Lbss_globals+40(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29131:
-    leaq .Lpool_8473(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29134:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_index_of
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29135:
+.Lpc_29346:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29140:
+.Lpc_29351:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66234,101 +66711,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29141:
+.Lpc_29352:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29192
-.Lpc_29144:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_29374
+.Lpc_29355:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29147:
-    leaq .Lpool_8905(%rip), %rax
+.Lpc_29358:
+    leaq .Lpool_9135(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29150:
-    movq .Lbss_globals+32(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29152:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29153:
-    leaq .Lpool_8915(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29156:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29157:
-    movq .Lbss_globals+40(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29159:
-    movq $6, (%r15)
-    addq $8, %r15
-.Lpc_29164:
-    movq .Lbss_globals+40(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29166:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq (%rax), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29167:
-    movq $6, (%r15)
-    addq $8, %r15
-.Lpc_29172:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29173:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_substr
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29174:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29175:
-    leaq .Lpool_329(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29178:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29179:
+.Lpc_29361:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66336,17 +66731,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29180:
+.Lpc_29362:
     subq $8, %r15
-.Lpc_29181:
-    leaq .Lpool_8198(%rip), %rax
+.Lpc_29363:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29184:
+.Lpc_29366:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29187:
+.Lpc_29369:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66354,19 +66749,55 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29188:
+.Lpc_29370:
     subq $8, %r15
-.Lpc_29189:
-    jmp .Lpc_29227
-.Lpc_29192:
-    movq .Lbss_globals+40(%rip), %rax
+.Lpc_29371:
+    jmp .Lpc_29485
+.Lpc_29374:
+    movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29194:
-    leaq .Lpool_790(%rip), %rax
+.Lpc_29376:
+    leaq .Lpc_29380(%rip), %rax
+    movq %rax, (%r13)
+    movq %r14, 8(%r13)
+    addq $16, %r13
+    addq $2048, %r14
+    movq %r14, %rdi
+    xorq %rax, %rax
+    movq $256, %rcx
+    rep stosq
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, 0(%r14)
+    jmp .Lpc_27640
+.Lpc_29380:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+40(%rip)
+.Lpc_29382:
+    movq .Lbss_globals+32(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29197:
+.Lpc_29384:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29385:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+48(%rip)
+.Lpc_29387:
+    movq .Lbss_globals+48(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29389:
+    leaq .Lpool_8637(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29392:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66374,22 +66805,84 @@ sdev_main:
     call sdev_index_of
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29198:
+.Lpc_29393:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_29398:
+    subq $8, %r15
+    movq (%r15), %rcx
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+48(%rip)
-.Lpc_29200:
+    cmpq %rcx, %rax
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29399:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_29450
+.Lpc_29402:
+    leaq .Lpool_8986(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29405:
+    leaq .Lpool_9054(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29408:
     movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29202:
-    movq $0, (%r15)
+.Lpc_29410:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29207:
+.Lpc_29411:
+    leaq .Lpool_9064(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29414:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29415:
     movq .Lbss_globals+48(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29209:
+.Lpc_29417:
+    movq $6, (%r15)
+    addq $8, %r15
+.Lpc_29422:
+    movq .Lbss_globals+48(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29424:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29425:
+    movq $6, (%r15)
+    addq $8, %r15
+.Lpc_29430:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29431:
     subq $8, %r15
     movq (%r15), %rdx
     subq $8, %r15
@@ -66399,8 +66892,99 @@ sdev_main:
     call sdev_substr
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29210:
-    leaq .Lpc_29214(%rip), %rax
+.Lpc_29432:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29433:
+    leaq .Lpool_329(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29436:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29437:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29438:
+    subq $8, %r15
+.Lpc_29439:
+    leaq .Lpool_8362(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29442:
+    leaq .Lpool_179(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29445:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29446:
+    subq $8, %r15
+.Lpc_29447:
+    jmp .Lpc_29485
+.Lpc_29450:
+    movq .Lbss_globals+48(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29452:
+    leaq .Lpool_790(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29455:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_index_of
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29456:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+56(%rip)
+.Lpc_29458:
+    movq .Lbss_globals+48(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29460:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_29465:
+    movq .Lbss_globals+56(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29467:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29468:
+    leaq .Lpc_29472(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -66413,16 +66997,16 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_27383
-.Lpc_29214:
+.Lpc_29472:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+56(%rip)
-.Lpc_29216:
-    movq .Lbss_globals+56(%rip), %rax
+    movq %rax, .Lbss_globals+64(%rip)
+.Lpc_29474:
+    movq .Lbss_globals+64(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29218:
-    leaq .Lpc_29222(%rip), %rax
+.Lpc_29476:
+    leaq .Lpc_29480(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -66435,11 +67019,11 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_1465
-.Lpc_29222:
+.Lpc_29480:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29225:
+.Lpc_29483:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66447,21 +67031,21 @@ sdev_main:
     call sdev_join
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29226:
+.Lpc_29484:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29227:
-    jmp .Lpc_30820
-.Lpc_29230:
+.Lpc_29485:
+    jmp .Lpc_31337
+.Lpc_29488:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29232:
-    leaq .Lpool_9021(%rip), %rax
+.Lpc_29490:
+    leaq .Lpool_9177(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29235:
+.Lpc_29493:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66469,24 +67053,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29236:
+.Lpc_29494:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29431
-.Lpc_29239:
+    je .Lpc_29689
+.Lpc_29497:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29241:
+.Lpc_29499:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29242:
+.Lpc_29500:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29247:
+.Lpc_29505:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66496,19 +67080,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29248:
+.Lpc_29506:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29270
-.Lpc_29251:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_29528
+.Lpc_29509:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29254:
-    leaq .Lpool_9029(%rip), %rax
+.Lpc_29512:
+    leaq .Lpool_9185(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29257:
+.Lpc_29515:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66516,17 +67100,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29258:
+.Lpc_29516:
     subq $8, %r15
-.Lpc_29259:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_29517:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29262:
+.Lpc_29520:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29265:
+.Lpc_29523:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66534,18 +67118,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29266:
+.Lpc_29524:
     subq $8, %r15
-.Lpc_29267:
-    jmp .Lpc_29428
-.Lpc_29270:
+.Lpc_29525:
+    jmp .Lpc_29686
+.Lpc_29528:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29272:
+.Lpc_29530:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29277:
+.Lpc_29535:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -66553,39 +67137,39 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29278:
+.Lpc_29536:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29279:
+.Lpc_29537:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+32(%rip)
-.Lpc_29281:
-    movq .Lbss_globals+32(%rip), %rax
+    movq %rax, .Lbss_globals+40(%rip)
+.Lpc_29539:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29283:
+.Lpc_29541:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29284:
+.Lpc_29542:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+64(%rip)
-.Lpc_29286:
-    movq .Lbss_globals+64(%rip), %rax
+    movq %rax, .Lbss_globals+72(%rip)
+.Lpc_29544:
+    movq .Lbss_globals+72(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29288:
+.Lpc_29546:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29291:
+.Lpc_29549:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66593,39 +67177,39 @@ sdev_main:
     call sdev_split
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29292:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+72(%rip)
-.Lpc_29294:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_29299:
+.Lpc_29550:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+80(%rip)
-.Lpc_29301:
+.Lpc_29552:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29306:
+.Lpc_29557:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+88(%rip)
-.Lpc_29308:
-    movq .Lbss_globals+88(%rip), %rax
+.Lpc_29559:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_29564:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+96(%rip)
+.Lpc_29566:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29310:
-    movq .Lbss_globals+72(%rip), %rax
+.Lpc_29568:
+    movq .Lbss_globals+80(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29312:
+.Lpc_29570:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29313:
+.Lpc_29571:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66635,19 +67219,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29314:
+.Lpc_29572:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29395
-.Lpc_29317:
-    movq .Lbss_globals+72(%rip), %rax
+    je .Lpc_29653
+.Lpc_29575:
+    movq .Lbss_globals+80(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29319:
-    movq .Lbss_globals+88(%rip), %rax
+.Lpc_29577:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29321:
+.Lpc_29579:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -66655,14 +67239,14 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29322:
-    movq .Lbss_globals+88(%rip), %rax
+.Lpc_29580:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29324:
+.Lpc_29582:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29329:
+.Lpc_29587:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66670,8 +67254,8 @@ sdev_main:
     addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29330:
-    leaq .Lpc_29334(%rip), %rax
+.Lpc_29588:
+    leaq .Lpc_29592(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -66687,24 +67271,24 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_6743
-.Lpc_29334:
+.Lpc_29592:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+96(%rip)
-.Lpc_29336:
-    movq .Lbss_globals+96(%rip), %rax
+    movq %rax, .Lbss_globals+104(%rip)
+.Lpc_29594:
+    movq .Lbss_globals+104(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29338:
+.Lpc_29596:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29339:
+.Lpc_29597:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29344:
+.Lpc_29602:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66714,19 +67298,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29345:
+.Lpc_29603:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29382
-.Lpc_29348:
-    movq .Lbss_globals+32(%rip), %rax
+    je .Lpc_29640
+.Lpc_29606:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29350:
-    leaq .Lpool_9062(%rip), %rax
+.Lpc_29608:
+    leaq .Lpool_9218(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29353:
+.Lpc_29611:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66734,14 +67318,14 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29354:
-    movq .Lbss_globals+88(%rip), %rax
+.Lpc_29612:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29356:
+.Lpc_29614:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29361:
+.Lpc_29619:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66749,13 +67333,13 @@ sdev_main:
     addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29362:
+.Lpc_29620:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29363:
+.Lpc_29621:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66763,11 +67347,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29364:
-    leaq .Lpool_8915(%rip), %rax
+.Lpc_29622:
+    leaq .Lpool_9064(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29367:
+.Lpc_29625:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66775,11 +67359,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29368:
-    movq .Lbss_globals+96(%rip), %rax
+.Lpc_29626:
+    movq .Lbss_globals+104(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29370:
+.Lpc_29628:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66787,37 +67371,18 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29371:
+.Lpc_29629:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29372:
-    movq .Lbss_globals+80(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29374:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_29379:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29380:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+80(%rip)
-.Lpc_29382:
+.Lpc_29630:
     movq .Lbss_globals+88(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29384:
+.Lpc_29632:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29389:
+.Lpc_29637:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66825,20 +67390,39 @@ sdev_main:
     addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29390:
+.Lpc_29638:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+88(%rip)
-.Lpc_29392:
-    jmp .Lpc_29308
-.Lpc_29395:
-    movq .Lbss_globals+80(%rip), %rax
+.Lpc_29640:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29397:
+.Lpc_29642:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_29647:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29648:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+96(%rip)
+.Lpc_29650:
+    jmp .Lpc_29566
+.Lpc_29653:
+    movq .Lbss_globals+88(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29655:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29402:
+.Lpc_29660:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66848,19 +67432,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29403:
+.Lpc_29661:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29420
-.Lpc_29406:
-    leaq .Lpool_8921(%rip), %rax
+    je .Lpc_29678
+.Lpc_29664:
+    leaq .Lpool_9070(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29409:
-    movq .Lbss_globals+32(%rip), %rax
+.Lpc_29667:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29411:
+.Lpc_29669:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66868,11 +67452,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29412:
-    leaq .Lpool_9067(%rip), %rax
+.Lpc_29670:
+    leaq .Lpool_9223(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29415:
+.Lpc_29673:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66880,21 +67464,21 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29416:
+.Lpc_29674:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29417:
-    jmp .Lpc_29428
-.Lpc_29420:
-    leaq .Lpool_8198(%rip), %rax
+.Lpc_29675:
+    jmp .Lpc_29686
+.Lpc_29678:
+    leaq .Lpool_8362(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29423:
+.Lpc_29681:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29426:
+.Lpc_29684:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66902,19 +67486,19 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29427:
+.Lpc_29685:
     subq $8, %r15
-.Lpc_29428:
-    jmp .Lpc_30820
-.Lpc_29431:
+.Lpc_29686:
+    jmp .Lpc_31337
+.Lpc_29689:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29433:
-    leaq .Lpool_9086(%rip), %rax
+.Lpc_29691:
+    leaq .Lpool_9242(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29436:
+.Lpc_29694:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66922,24 +67506,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29437:
+.Lpc_29695:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29561
-.Lpc_29440:
+    je .Lpc_29819
+.Lpc_29698:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29442:
+.Lpc_29700:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29443:
+.Lpc_29701:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29448:
+.Lpc_29706:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -66949,19 +67533,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29449:
+.Lpc_29707:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29471
-.Lpc_29452:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_29729
+.Lpc_29710:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29455:
-    leaq .Lpool_9093(%rip), %rax
+.Lpc_29713:
+    leaq .Lpool_9249(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29458:
+.Lpc_29716:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66969,17 +67553,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29459:
+.Lpc_29717:
     subq $8, %r15
-.Lpc_29460:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_29718:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29463:
+.Lpc_29721:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29466:
+.Lpc_29724:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -66987,18 +67571,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29467:
+.Lpc_29725:
     subq $8, %r15
-.Lpc_29468:
-    jmp .Lpc_29558
-.Lpc_29471:
+.Lpc_29726:
+    jmp .Lpc_29816
+.Lpc_29729:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29473:
+.Lpc_29731:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29478:
+.Lpc_29736:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67006,31 +67590,31 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29479:
+.Lpc_29737:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29480:
+.Lpc_29738:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+32(%rip)
-.Lpc_29482:
-    movq .Lbss_globals+32(%rip), %rax
+    movq %rax, .Lbss_globals+40(%rip)
+.Lpc_29740:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29484:
+.Lpc_29742:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29485:
+.Lpc_29743:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29490:
-    leaq .Lpc_29494(%rip), %rax
+.Lpc_29748:
+    leaq .Lpc_29752(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -67046,24 +67630,24 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_7976
-.Lpc_29494:
+.Lpc_29752:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+104(%rip)
-.Lpc_29496:
+    movq %rax, .Lbss_globals+112(%rip)
+.Lpc_29754:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29498:
+.Lpc_29756:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29499:
+.Lpc_29757:
     movq $3, (%r15)
     addq $8, %r15
-.Lpc_29504:
+.Lpc_29762:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -67073,18 +67657,18 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29505:
+.Lpc_29763:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29526
-.Lpc_29508:
+    je .Lpc_29784
+.Lpc_29766:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29510:
+.Lpc_29768:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29515:
+.Lpc_29773:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67092,17 +67676,17 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29516:
+.Lpc_29774:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29517:
-    leaq .Lpool_9130(%rip), %rax
+.Lpc_29775:
+    leaq .Lpool_9286(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29520:
+.Lpc_29778:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67110,42 +67694,42 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29521:
+.Lpc_29779:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29522:
+.Lpc_29780:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29523:
-    jmp .Lpc_29531
-.Lpc_29526:
+.Lpc_29781:
+    jmp .Lpc_29789
+.Lpc_29784:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29531:
+.Lpc_29789:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29555
-.Lpc_29534:
-    movq .Lbss_globals+32(%rip), %rax
+    je .Lpc_29813
+.Lpc_29792:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29536:
-    movq .Lbss_globals+104(%rip), %rax
+.Lpc_29794:
+    movq .Lbss_globals+112(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29538:
+.Lpc_29796:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29541:
+.Lpc_29799:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67153,7 +67737,7 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29542:
+.Lpc_29800:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67161,19 +67745,19 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29543:
+.Lpc_29801:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+24(%rip)
-.Lpc_29545:
-    leaq .Lpool_9136(%rip), %rax
+.Lpc_29803:
+    leaq .Lpool_9292(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29548:
-    movq .Lbss_globals+32(%rip), %rax
+.Lpc_29806:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29550:
+.Lpc_29808:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67181,31 +67765,31 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29551:
+.Lpc_29809:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29552:
-    jmp .Lpc_29558
-.Lpc_29555:
-    movq .Lbss_globals+104(%rip), %rax
+.Lpc_29810:
+    jmp .Lpc_29816
+.Lpc_29813:
+    movq .Lbss_globals+112(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29557:
+.Lpc_29815:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29558:
-    jmp .Lpc_30820
-.Lpc_29561:
+.Lpc_29816:
+    jmp .Lpc_31337
+.Lpc_29819:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29563:
-    leaq .Lpool_9150(%rip), %rax
+.Lpc_29821:
+    leaq .Lpool_9306(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29566:
+.Lpc_29824:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67213,24 +67797,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29567:
+.Lpc_29825:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29699
-.Lpc_29570:
+    je .Lpc_29957
+.Lpc_29828:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29572:
+.Lpc_29830:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29573:
+.Lpc_29831:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29578:
+.Lpc_29836:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -67240,19 +67824,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29579:
+.Lpc_29837:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29601
-.Lpc_29582:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_29859
+.Lpc_29840:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29585:
-    leaq .Lpool_9163(%rip), %rax
+.Lpc_29843:
+    leaq .Lpool_9319(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29588:
+.Lpc_29846:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67260,17 +67844,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29589:
+.Lpc_29847:
     subq $8, %r15
-.Lpc_29590:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_29848:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29593:
+.Lpc_29851:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29596:
+.Lpc_29854:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67278,18 +67862,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29597:
+.Lpc_29855:
     subq $8, %r15
-.Lpc_29598:
-    jmp .Lpc_29696
-.Lpc_29601:
+.Lpc_29856:
+    jmp .Lpc_29954
+.Lpc_29859:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29603:
+.Lpc_29861:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29608:
+.Lpc_29866:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67297,36 +67881,36 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29609:
+.Lpc_29867:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29610:
+.Lpc_29868:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+32(%rip)
-.Lpc_29612:
-    movq .Lbss_globals+32(%rip), %rax
+    movq %rax, .Lbss_globals+40(%rip)
+.Lpc_29870:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29614:
+.Lpc_29872:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29615:
+.Lpc_29873:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+64(%rip)
-.Lpc_29617:
-    movq .Lbss_globals+64(%rip), %rax
+    movq %rax, .Lbss_globals+72(%rip)
+.Lpc_29875:
+    movq .Lbss_globals+72(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29619:
-    leaq .Lpc_29623(%rip), %rax
+.Lpc_29877:
+    leaq .Lpc_29881(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -67339,19 +67923,19 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_8582
-.Lpc_29623:
+.Lpc_29881:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+112(%rip)
-.Lpc_29625:
-    leaq .Lpool_9201(%rip), %rax
+    movq %rax, .Lbss_globals+120(%rip)
+.Lpc_29883:
+    leaq .Lpool_9357(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29628:
-    movq .Lbss_globals+112(%rip), %rax
+.Lpc_29886:
+    movq .Lbss_globals+120(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29630:
+.Lpc_29888:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67359,19 +67943,19 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29631:
+.Lpc_29889:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29632:
-    movq .Lbss_globals+64(%rip), %rax
+.Lpc_29890:
+    movq .Lbss_globals+72(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29634:
+.Lpc_29892:
     leaq .Lpool_790(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29637:
+.Lpc_29895:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67379,21 +67963,21 @@ sdev_main:
     call sdev_split
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29638:
+.Lpc_29896:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+120(%rip)
-.Lpc_29640:
-    movq .Lbss_globals+120(%rip), %rax
+    movq %rax, .Lbss_globals+128(%rip)
+.Lpc_29898:
+    movq .Lbss_globals+128(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29642:
+.Lpc_29900:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29643:
+.Lpc_29901:
     subq $8, %r15
     movq (%r15), %rax
     pushq %rax
@@ -67403,32 +67987,32 @@ sdev_main:
     movq %rcx, (%rax)
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29644:
+.Lpc_29902:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+128(%rip)
-.Lpc_29646:
+    movq %rax, .Lbss_globals+136(%rip)
+.Lpc_29904:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29651:
+.Lpc_29909:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+88(%rip)
-.Lpc_29653:
-    movq .Lbss_globals+88(%rip), %rax
+    movq %rax, .Lbss_globals+96(%rip)
+.Lpc_29911:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29655:
-    movq .Lbss_globals+120(%rip), %rax
+.Lpc_29913:
+    movq .Lbss_globals+128(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29657:
+.Lpc_29915:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29658:
+.Lpc_29916:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -67438,27 +68022,27 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29659:
+.Lpc_29917:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29689
-.Lpc_29662:
+    je .Lpc_29947
+.Lpc_29920:
+    movq .Lbss_globals+136(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29922:
+    movq .Lbss_globals+96(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_29924:
     movq .Lbss_globals+128(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29664:
-    movq .Lbss_globals+88(%rip), %rax
+.Lpc_29926:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29666:
-    movq .Lbss_globals+120(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29668:
-    movq .Lbss_globals+88(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29670:
+.Lpc_29928:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67466,8 +68050,8 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29671:
-    leaq .Lpc_29675(%rip), %rax
+.Lpc_29929:
+    leaq .Lpc_29933(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -67480,7 +68064,7 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_8814
-.Lpc_29675:
+.Lpc_29933:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67488,14 +68072,14 @@ sdev_main:
     subq $8, %r15
     movq (%r15), %rcx
     movq %rax, 8(%rcx,%rdx,8)
-.Lpc_29676:
-    movq .Lbss_globals+88(%rip), %rax
+.Lpc_29934:
+    movq .Lbss_globals+96(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29678:
+.Lpc_29936:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29683:
+.Lpc_29941:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -67503,21 +68087,21 @@ sdev_main:
     addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29684:
+.Lpc_29942:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+88(%rip)
-.Lpc_29686:
-    jmp .Lpc_29653
-.Lpc_29689:
-    movq .Lbss_globals+128(%rip), %rax
+    movq %rax, .Lbss_globals+96(%rip)
+.Lpc_29944:
+    jmp .Lpc_29911
+.Lpc_29947:
+    movq .Lbss_globals+136(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29691:
+.Lpc_29949:
     leaq .Lpool_790(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29694:
+.Lpc_29952:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67525,21 +68109,21 @@ sdev_main:
     call sdev_join
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29695:
+.Lpc_29953:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29696:
-    jmp .Lpc_30820
-.Lpc_29699:
+.Lpc_29954:
+    jmp .Lpc_31337
+.Lpc_29957:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29701:
-    leaq .Lpool_9231(%rip), %rax
+.Lpc_29959:
+    leaq .Lpool_9387(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29704:
+.Lpc_29962:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67547,24 +68131,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29705:
+.Lpc_29963:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29761
-.Lpc_29708:
+    je .Lpc_30019
+.Lpc_29966:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29710:
+.Lpc_29968:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29711:
+.Lpc_29969:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29716:
+.Lpc_29974:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -67574,19 +68158,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29717:
+.Lpc_29975:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29739
-.Lpc_29720:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_29997
+.Lpc_29978:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29723:
-    leaq .Lpool_9237(%rip), %rax
+.Lpc_29981:
+    leaq .Lpool_9393(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29726:
+.Lpc_29984:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67594,17 +68178,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29727:
+.Lpc_29985:
     subq $8, %r15
-.Lpc_29728:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_29986:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29731:
+.Lpc_29989:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29734:
+.Lpc_29992:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67612,18 +68196,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29735:
+.Lpc_29993:
     subq $8, %r15
-.Lpc_29736:
-    jmp .Lpc_29758
-.Lpc_29739:
+.Lpc_29994:
+    jmp .Lpc_30016
+.Lpc_29997:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29741:
+.Lpc_29999:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29746:
+.Lpc_30004:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67631,28 +68215,28 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29747:
+.Lpc_30005:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29748:
+.Lpc_30006:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+32(%rip)
-.Lpc_29750:
-    movq .Lbss_globals+32(%rip), %rax
+    movq %rax, .Lbss_globals+40(%rip)
+.Lpc_30008:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29752:
+.Lpc_30010:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29753:
-    leaq .Lpc_29757(%rip), %rax
+.Lpc_30011:
+    leaq .Lpc_30015(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -67665,21 +68249,21 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_13945
-.Lpc_29757:
+.Lpc_30015:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29758:
-    jmp .Lpc_30820
-.Lpc_29761:
+.Lpc_30016:
+    jmp .Lpc_31337
+.Lpc_30019:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29763:
-    leaq .Lpool_9268(%rip), %rax
+.Lpc_30021:
+    leaq .Lpool_9424(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29766:
+.Lpc_30024:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67687,24 +68271,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29767:
+.Lpc_30025:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29993
-.Lpc_29770:
+    je .Lpc_30251
+.Lpc_30028:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29772:
+.Lpc_30030:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29773:
+.Lpc_30031:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_29778:
+.Lpc_30036:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -67714,19 +68298,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29779:
+.Lpc_30037:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29801
-.Lpc_29782:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_30059
+.Lpc_30040:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29785:
-    leaq .Lpool_9274(%rip), %rax
+.Lpc_30043:
+    leaq .Lpool_9430(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29788:
+.Lpc_30046:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67734,17 +68318,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29789:
+.Lpc_30047:
     subq $8, %r15
-.Lpc_29790:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_30048:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29793:
+.Lpc_30051:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29796:
+.Lpc_30054:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67752,18 +68336,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29797:
+.Lpc_30055:
     subq $8, %r15
-.Lpc_29798:
-    jmp .Lpc_29990
-.Lpc_29801:
+.Lpc_30056:
+    jmp .Lpc_30248
+.Lpc_30059:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29803:
+.Lpc_30061:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_29808:
+.Lpc_30066:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67771,30 +68355,30 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29809:
+.Lpc_30067:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29810:
+.Lpc_30068:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+136(%rip)
-.Lpc_29812:
+    movq %rax, .Lbss_globals+144(%rip)
+.Lpc_30070:
     movq $13, (%r15)
     addq $8, %r15
-.Lpc_29817:
+.Lpc_30075:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_chr
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29818:
+.Lpc_30076:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29821:
+.Lpc_30079:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67802,125 +68386,19 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29822:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+144(%rip)
-.Lpc_29824:
-    leaq .Lpool_9325(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29827:
-    movq .Lbss_globals+144(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29829:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29830:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+96(%rip)
-.Lpc_29832:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_29837:
+.Lpc_30080:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+152(%rip)
-.Lpc_29839:
-    movq .Lbss_globals+8(%rip), %rax
+.Lpc_30082:
+    leaq .Lpool_9481(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29841:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq (%rax), %rax
+.Lpc_30085:
+    movq .Lbss_globals+152(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29842:
-    movq $3, (%r15)
-    addq $8, %r15
-.Lpc_29847:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    cmpq %rcx, %rax
-    setge %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29848:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_29955
-.Lpc_29851:
-    movq .Lbss_globals+8(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29853:
-    movq $2, (%r15)
-    addq $8, %r15
-.Lpc_29858:
-    subq $8, %r15
-    movq (%r15), %rax
-    subq $8, %r15
-    movq (%r15), %rcx
-    movq 8(%rcx,%rax,8), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29859:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_trim
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29860:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+160(%rip)
-.Lpc_29862:
-    movq .Lbss_globals+8(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29864:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq (%rax), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29865:
-    movq $4, (%r15)
-    addq $8, %r15
-.Lpc_29870:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    cmpq %rcx, %rax
-    setge %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29871:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_29896
-.Lpc_29874:
-    movq .Lbss_globals+160(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29876:
-    movq .Lbss_globals+144(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_29878:
+.Lpc_30087:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -67928,18 +68406,52 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29879:
+.Lpc_30088:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+96(%rip)
-.Lpc_29881:
+    movq %rax, .Lbss_globals+104(%rip)
+.Lpc_30090:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_30095:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+160(%rip)
+.Lpc_30097:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29883:
+.Lpc_30099:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30100:
     movq $3, (%r15)
     addq $8, %r15
-.Lpc_29888:
+.Lpc_30105:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30106:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_30213
+.Lpc_30109:
+    movq .Lbss_globals+8(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30111:
+    movq $2, (%r15)
+    addq $8, %r15
+.Lpc_30116:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67947,13 +68459,85 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29889:
+.Lpc_30117:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29890:
+.Lpc_30118:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+168(%rip)
+.Lpc_30120:
+    movq .Lbss_globals+8(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30122:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30123:
+    movq $4, (%r15)
+    addq $8, %r15
+.Lpc_30128:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30129:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_30154
+.Lpc_30132:
+    movq .Lbss_globals+168(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30134:
+    movq .Lbss_globals+152(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30136:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30137:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+104(%rip)
+.Lpc_30139:
+    movq .Lbss_globals+8(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30141:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_30146:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30147:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_trim
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30148:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_num
@@ -67961,20 +68545,20 @@ sdev_main:
     cvttsd2siq %xmm0, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29891:
+.Lpc_30149:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+152(%rip)
-.Lpc_29893:
-    jmp .Lpc_29955
-.Lpc_29896:
-    movq .Lbss_globals+160(%rip), %rax
+    movq %rax, .Lbss_globals+160(%rip)
+.Lpc_30151:
+    jmp .Lpc_30213
+.Lpc_30154:
+    movq .Lbss_globals+168(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29898:
+.Lpc_30156:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29903:
+.Lpc_30161:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -67982,10 +68566,10 @@ sdev_main:
     movzbq 8(%rcx,%rax,1), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29904:
+.Lpc_30162:
     movq $48, (%r15)
     addq $8, %r15
-.Lpc_29909:
+.Lpc_30167:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -67995,18 +68579,18 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29910:
+.Lpc_30168:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29932
-.Lpc_29913:
-    movq .Lbss_globals+160(%rip), %rax
+    je .Lpc_30190
+.Lpc_30171:
+    movq .Lbss_globals+168(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29915:
+.Lpc_30173:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29920:
+.Lpc_30178:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -68014,10 +68598,10 @@ sdev_main:
     movzbq 8(%rcx,%rax,1), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29921:
+.Lpc_30179:
     movq $57, (%r15)
     addq $8, %r15
-.Lpc_29926:
+.Lpc_30184:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68027,34 +68611,34 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29927:
+.Lpc_30185:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29928:
+.Lpc_30186:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29929:
-    jmp .Lpc_29937
-.Lpc_29932:
+.Lpc_30187:
+    jmp .Lpc_30195
+.Lpc_30190:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_29937:
+.Lpc_30195:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_29948
-.Lpc_29940:
-    movq .Lbss_globals+160(%rip), %rax
+    je .Lpc_30206
+.Lpc_30198:
+    movq .Lbss_globals+168(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29942:
+.Lpc_30200:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_num
@@ -68062,21 +68646,21 @@ sdev_main:
     cvttsd2siq %xmm0, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29943:
+.Lpc_30201:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+152(%rip)
-.Lpc_29945:
-    jmp .Lpc_29955
-.Lpc_29948:
-    movq .Lbss_globals+160(%rip), %rax
+    movq %rax, .Lbss_globals+160(%rip)
+.Lpc_30203:
+    jmp .Lpc_30213
+.Lpc_30206:
+    movq .Lbss_globals+168(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29950:
-    movq .Lbss_globals+144(%rip), %rax
+.Lpc_30208:
+    movq .Lbss_globals+152(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29952:
+.Lpc_30210:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68084,24 +68668,24 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29953:
+.Lpc_30211:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+96(%rip)
-.Lpc_29955:
-    movq .Lbss_globals+136(%rip), %rax
+    movq %rax, .Lbss_globals+104(%rip)
+.Lpc_30213:
+    movq .Lbss_globals+144(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29957:
-    movq .Lbss_globals+96(%rip), %rax
+.Lpc_30215:
+    movq .Lbss_globals+104(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29959:
-    movq .Lbss_globals+152(%rip), %rax
+.Lpc_30217:
+    movq .Lbss_globals+160(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29961:
-    leaq .Lpc_29965(%rip), %rax
+.Lpc_30219:
+    leaq .Lpc_30223(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -68120,25 +68704,25 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_17564
-.Lpc_29965:
+.Lpc_30223:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+168(%rip)
-.Lpc_29967:
-    leaq .Lpool_9392(%rip), %rax
+    movq %rax, .Lbss_globals+176(%rip)
+.Lpc_30225:
+    leaq .Lpool_9548(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29970:
-    movq .Lbss_globals+168(%rip), %rax
+.Lpc_30228:
+    movq .Lbss_globals+176(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29972:
+.Lpc_30230:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29973:
+.Lpc_30231:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68146,11 +68730,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29974:
-    leaq .Lpool_9447(%rip), %rax
+.Lpc_30232:
+    leaq .Lpool_9603(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29977:
+.Lpc_30235:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68158,17 +68742,17 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29978:
-    movq .Lbss_globals+152(%rip), %rax
+.Lpc_30236:
+    movq .Lbss_globals+160(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29980:
+.Lpc_30238:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29981:
+.Lpc_30239:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68176,11 +68760,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29982:
-    leaq .Lpool_9469(%rip), %rax
+.Lpc_30240:
+    leaq .Lpool_9625(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29985:
+.Lpc_30243:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68188,11 +68772,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29986:
-    movq .Lbss_globals+136(%rip), %rax
+.Lpc_30244:
+    movq .Lbss_globals+144(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29988:
+.Lpc_30246:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68200,21 +68784,21 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29989:
+.Lpc_30247:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_29990:
-    jmp .Lpc_30820
-.Lpc_29993:
+.Lpc_30248:
+    jmp .Lpc_31337
+.Lpc_30251:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29995:
-    leaq .Lpool_9478(%rip), %rax
+.Lpc_30253:
+    leaq .Lpool_9634(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29998:
+.Lpc_30256:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68222,24 +68806,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_29999:
+.Lpc_30257:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30157
-.Lpc_30002:
+    je .Lpc_30476
+.Lpc_30260:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30004:
+.Lpc_30262:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30005:
+.Lpc_30263:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_30010:
+.Lpc_30268:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68249,19 +68833,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30011:
+.Lpc_30269:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30033
-.Lpc_30014:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_30291
+.Lpc_30272:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30017:
-    leaq .Lpool_9486(%rip), %rax
+.Lpc_30275:
+    leaq .Lpool_9642(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30020:
+.Lpc_30278:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68269,17 +68853,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30021:
+.Lpc_30279:
     subq $8, %r15
-.Lpc_30022:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_30280:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30025:
+.Lpc_30283:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30028:
+.Lpc_30286:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68287,18 +68871,26 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30029:
+.Lpc_30287:
     subq $8, %r15
-.Lpc_30030:
-    jmp .Lpc_30154
-.Lpc_30033:
+.Lpc_30288:
+    jmp .Lpc_30473
+.Lpc_30291:
+    leaq .Lpool_179(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30294:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+184(%rip)
+.Lpc_30296:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30035:
+.Lpc_30298:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30040:
+.Lpc_30303:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -68306,31 +68898,141 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30041:
+.Lpc_30304:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+176(%rip)
-.Lpc_30043:
-    leaq .Lpool_9516(%rip), %rax
+    movq %rax, .Lbss_globals+192(%rip)
+.Lpc_30306:
+    movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30046:
+.Lpc_30308:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_30313:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30314:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_trim
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30315:
+    leaq .Lpool_5648(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30318:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30319:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_30336
+.Lpc_30322:
+    movq .Lbss_globals+8(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30324:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30325:
+    movq $3, (%r15)
+    addq $8, %r15
+.Lpc_30330:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30331:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30332:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30333:
+    jmp .Lpc_30341
+.Lpc_30336:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_30341:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_30359
+.Lpc_30344:
+    leaq .Lpool_9679(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30347:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+184(%rip)
-.Lpc_30048:
-    movq .Lbss_globals+184(%rip), %rax
+.Lpc_30349:
+    movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30050:
-    movq .Lbss_globals+176(%rip), %rax
+.Lpc_30351:
+    movq $2, (%r15)
+    addq $8, %r15
+.Lpc_30356:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30052:
+.Lpc_30357:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+192(%rip)
+.Lpc_30359:
+    leaq .Lpool_9688(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30362:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+200(%rip)
+.Lpc_30364:
+    movq .Lbss_globals+200(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30366:
+    movq .Lbss_globals+192(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30368:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30055:
+.Lpc_30371:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68338,7 +69040,7 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30056:
+.Lpc_30372:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68346,19 +69048,19 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30057:
+.Lpc_30373:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+24(%rip)
-.Lpc_30059:
-    leaq .Lpool_9534(%rip), %rax
+.Lpc_30375:
+    leaq .Lpool_9706(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30062:
+.Lpc_30378:
     movq .Lbss_globals+184(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30064:
+.Lpc_30380:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68366,11 +69068,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30065:
-    leaq .Lpool_9559(%rip), %rax
+.Lpc_30381:
+    movq .Lbss_globals+200(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30068:
+.Lpc_30383:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68378,11 +69080,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30069:
-    movq .Lbss_globals+184(%rip), %rax
+.Lpc_30384:
+    leaq .Lpool_9731(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30071:
+.Lpc_30387:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68390,25 +69092,37 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30072:
+.Lpc_30388:
+    movq .Lbss_globals+200(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30390:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30391:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30073:
+.Lpc_30392:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+192(%rip)
-.Lpc_30075:
-    movq .Lbss_globals+192(%rip), %rax
+    movq %rax, .Lbss_globals+208(%rip)
+.Lpc_30394:
+    movq .Lbss_globals+208(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30077:
+.Lpc_30396:
     leaq .Lpool_329(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30080:
+.Lpc_30399:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68416,22 +69130,22 @@ sdev_main:
     call sdev_index_of
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30081:
+.Lpc_30400:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+200(%rip)
-.Lpc_30083:
-    movq .Lbss_globals+192(%rip), %rax
+    movq %rax, .Lbss_globals+216(%rip)
+.Lpc_30402:
+    movq .Lbss_globals+208(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30085:
+.Lpc_30404:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_30090:
-    movq .Lbss_globals+200(%rip), %rax
+.Lpc_30409:
+    movq .Lbss_globals+216(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30092:
+.Lpc_30411:
     subq $8, %r15
     movq (%r15), %rdx
     subq $8, %r15
@@ -68441,22 +69155,22 @@ sdev_main:
     call sdev_substr
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30093:
+.Lpc_30412:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+208(%rip)
-.Lpc_30095:
-    movq .Lbss_globals+192(%rip), %rax
+    movq %rax, .Lbss_globals+224(%rip)
+.Lpc_30414:
+    movq .Lbss_globals+208(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30097:
-    movq .Lbss_globals+200(%rip), %rax
+.Lpc_30416:
+    movq .Lbss_globals+216(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30099:
+.Lpc_30418:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30104:
+.Lpc_30423:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68464,21 +69178,21 @@ sdev_main:
     addq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30105:
-    movq .Lbss_globals+192(%rip), %rax
+.Lpc_30424:
+    movq .Lbss_globals+208(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30107:
+.Lpc_30426:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30108:
-    movq .Lbss_globals+200(%rip), %rax
+.Lpc_30427:
+    movq .Lbss_globals+216(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30110:
+.Lpc_30429:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68486,10 +69200,10 @@ sdev_main:
     subq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30111:
+.Lpc_30430:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30116:
+.Lpc_30435:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68497,7 +69211,7 @@ sdev_main:
     subq %rcx, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30117:
+.Lpc_30436:
     subq $8, %r15
     movq (%r15), %rdx
     subq $8, %r15
@@ -68507,30 +69221,30 @@ sdev_main:
     call sdev_substr
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30118:
+.Lpc_30437:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30119:
+.Lpc_30438:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+216(%rip)
-.Lpc_30121:
-    movq .Lbss_globals+216(%rip), %rax
+    movq %rax, .Lbss_globals+232(%rip)
+.Lpc_30440:
+    movq .Lbss_globals+232(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30123:
+.Lpc_30442:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30124:
+.Lpc_30443:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_30129:
+.Lpc_30448:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68540,27 +69254,27 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30130:
+.Lpc_30449:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30136
-.Lpc_30133:
-    movq .Lbss_globals+216(%rip), %rax
+    je .Lpc_30455
+.Lpc_30452:
+    movq .Lbss_globals+232(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30135:
+.Lpc_30454:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30136:
-    movq .Lbss_globals+208(%rip), %rax
+.Lpc_30455:
+    movq .Lbss_globals+224(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30138:
+.Lpc_30457:
     leaq .Lpool_2637(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30141:
+.Lpc_30460:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68568,26 +69282,26 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30142:
+.Lpc_30461:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30143:
+.Lpc_30462:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30154
-.Lpc_30146:
-    leaq .Lpool_8198(%rip), %rax
+    je .Lpc_30473
+.Lpc_30465:
+    leaq .Lpool_8362(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30149:
+.Lpc_30468:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30152:
+.Lpc_30471:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68595,19 +69309,19 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30153:
+.Lpc_30472:
     subq $8, %r15
-.Lpc_30154:
-    jmp .Lpc_30820
-.Lpc_30157:
+.Lpc_30473:
+    jmp .Lpc_31337
+.Lpc_30476:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30159:
-    leaq .Lpool_9573(%rip), %rax
+.Lpc_30478:
+    leaq .Lpool_9745(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30162:
+.Lpc_30481:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68615,24 +69329,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30163:
+.Lpc_30482:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30268
-.Lpc_30166:
+    je .Lpc_30587
+.Lpc_30485:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30168:
+.Lpc_30487:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30169:
+.Lpc_30488:
     movq $3, (%r15)
     addq $8, %r15
-.Lpc_30174:
+.Lpc_30493:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68642,19 +69356,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30175:
+.Lpc_30494:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30197
-.Lpc_30178:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_30516
+.Lpc_30497:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30181:
-    leaq .Lpool_9584(%rip), %rax
+.Lpc_30500:
+    leaq .Lpool_9756(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30184:
+.Lpc_30503:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68662,17 +69376,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30185:
+.Lpc_30504:
     subq $8, %r15
-.Lpc_30186:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_30505:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30189:
+.Lpc_30508:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30192:
+.Lpc_30511:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68680,18 +69394,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30193:
+.Lpc_30512:
     subq $8, %r15
-.Lpc_30194:
-    jmp .Lpc_30265
-.Lpc_30197:
+.Lpc_30513:
+    jmp .Lpc_30584
+.Lpc_30516:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30199:
+.Lpc_30518:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30204:
+.Lpc_30523:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -68699,24 +69413,24 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30205:
+.Lpc_30524:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30206:
+.Lpc_30525:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+224(%rip)
-.Lpc_30208:
+    movq %rax, .Lbss_globals+240(%rip)
+.Lpc_30527:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30210:
+.Lpc_30529:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_30215:
+.Lpc_30534:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -68724,22 +69438,22 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30216:
+.Lpc_30535:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30217:
+.Lpc_30536:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+32(%rip)
-.Lpc_30219:
-    movq .Lbss_globals+224(%rip), %rax
+    movq %rax, .Lbss_globals+40(%rip)
+.Lpc_30538:
+    movq .Lbss_globals+240(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30221:
-    leaq .Lpc_30225(%rip), %rax
+.Lpc_30540:
+    leaq .Lpc_30544(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -68752,22 +69466,22 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_21689
-.Lpc_30225:
+.Lpc_30544:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+232(%rip)
-.Lpc_30227:
-    leaq .Lpool_9638(%rip), %rax
+    movq %rax, .Lbss_globals+248(%rip)
+.Lpc_30546:
+    leaq .Lpool_9810(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30230:
-    movq .Lbss_globals+232(%rip), %rax
+.Lpc_30549:
+    movq .Lbss_globals+248(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30232:
+.Lpc_30551:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_30237:
+.Lpc_30556:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -68775,7 +69489,7 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30238:
+.Lpc_30557:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68783,11 +69497,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30239:
+.Lpc_30558:
     leaq .Lpool_2424(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30242:
+.Lpc_30561:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68795,12 +69509,12 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30243:
-    movq .Lbss_globals+232(%rip), %rax
+.Lpc_30562:
+    movq .Lbss_globals+248(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30245:
-    leaq .Lpc_30249(%rip), %rax
+.Lpc_30564:
+    leaq .Lpc_30568(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -68813,7 +69527,7 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_21555
-.Lpc_30249:
+.Lpc_30568:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68821,11 +69535,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30250:
+.Lpc_30569:
     leaq .Lpool_1974(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30253:
+.Lpc_30572:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68833,26 +69547,26 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30254:
+.Lpc_30573:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30255:
-    movq .Lbss_globals+32(%rip), %rax
+.Lpc_30574:
+    movq .Lbss_globals+40(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30257:
+.Lpc_30576:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30258:
-    movq .Lbss_globals+232(%rip), %rax
+.Lpc_30577:
+    movq .Lbss_globals+248(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30260:
-    leaq .Lpc_30264(%rip), %rax
+.Lpc_30579:
+    leaq .Lpc_30583(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -68868,21 +69582,21 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_21221
-.Lpc_30264:
+.Lpc_30583:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30265:
-    jmp .Lpc_30820
-.Lpc_30268:
+.Lpc_30584:
+    jmp .Lpc_31337
+.Lpc_30587:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30270:
-    leaq .Lpool_9653(%rip), %rax
+.Lpc_30589:
+    leaq .Lpool_9825(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30273:
+.Lpc_30592:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -68890,24 +69604,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30274:
+.Lpc_30593:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30405
-.Lpc_30277:
+    je .Lpc_30724
+.Lpc_30596:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30279:
+.Lpc_30598:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30280:
+.Lpc_30599:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_30285:
+.Lpc_30604:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68917,23 +69631,23 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30286:
+.Lpc_30605:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30297
-.Lpc_30289:
+    je .Lpc_30616
+.Lpc_30608:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30294:
-    jmp .Lpc_30315
-.Lpc_30297:
+.Lpc_30613:
+    jmp .Lpc_30634
+.Lpc_30616:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30299:
+.Lpc_30618:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30304:
+.Lpc_30623:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -68941,22 +69655,22 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30305:
+.Lpc_30624:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30306:
+.Lpc_30625:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30307:
+.Lpc_30626:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_30312:
+.Lpc_30631:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -68966,26 +69680,26 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30313:
+.Lpc_30632:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30314:
+.Lpc_30633:
     subq $8, %r15
     cmpq $0, (%r15)
     sete %al
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30315:
+.Lpc_30634:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30347
-.Lpc_30318:
-    leaq .Lpc_30322(%rip), %rax
+    je .Lpc_30666
+.Lpc_30637:
+    leaq .Lpc_30641(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -68995,31 +69709,31 @@ sdev_main:
     movq $256, %rcx
     rep stosq
     jmp .Lpc_25327
-.Lpc_30322:
+.Lpc_30641:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+240(%rip)
-.Lpc_30324:
-    leaq .Lpool_9660(%rip), %rax
+    movq %rax, .Lbss_globals+256(%rip)
+.Lpc_30643:
+    leaq .Lpool_9832(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30327:
-    movq .Lbss_globals+240(%rip), %rax
+.Lpc_30646:
+    movq .Lbss_globals+256(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30329:
+.Lpc_30648:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30330:
+.Lpc_30649:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_str_int
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30331:
+.Lpc_30650:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69027,11 +69741,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30332:
-    leaq .Lpool_9692(%rip), %rax
+.Lpc_30651:
+    leaq .Lpool_9864(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30335:
+.Lpc_30654:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69039,15 +69753,15 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30336:
-    movq .Lbss_globals+240(%rip), %rax
+.Lpc_30655:
+    movq .Lbss_globals+256(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30338:
-    leaq .Lpool_9699(%rip), %rax
+.Lpc_30657:
+    leaq .Lpool_9871(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30341:
+.Lpc_30660:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69055,7 +69769,7 @@ sdev_main:
     call sdev_join
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30342:
+.Lpc_30661:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69063,20 +69777,20 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30343:
+.Lpc_30662:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30344:
-    jmp .Lpc_30402
-.Lpc_30347:
+.Lpc_30663:
+    jmp .Lpc_30721
+.Lpc_30666:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30349:
+.Lpc_30668:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30354:
+.Lpc_30673:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -69084,22 +69798,22 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30355:
+.Lpc_30674:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30356:
+.Lpc_30675:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+248(%rip)
-.Lpc_30358:
-    movq .Lbss_globals+248(%rip), %rax
+    movq %rax, .Lbss_globals+264(%rip)
+.Lpc_30677:
+    movq .Lbss_globals+264(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30360:
-    leaq .Lpc_30364(%rip), %rax
+.Lpc_30679:
+    leaq .Lpc_30683(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -69112,24 +69826,24 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_25382
-.Lpc_30364:
+.Lpc_30683:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+256(%rip)
-.Lpc_30366:
-    movq .Lbss_globals+256(%rip), %rax
+    movq %rax, .Lbss_globals+272(%rip)
+.Lpc_30685:
+    movq .Lbss_globals+272(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30368:
+.Lpc_30687:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30369:
+.Lpc_30688:
     movq $0, (%r15)
     addq $8, %r15
-.Lpc_30374:
+.Lpc_30693:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -69139,19 +69853,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30375:
+.Lpc_30694:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30395
-.Lpc_30378:
-    movq .Lbss_globals+248(%rip), %rax
+    je .Lpc_30714
+.Lpc_30697:
+    movq .Lbss_globals+264(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30380:
-    leaq .Lpool_9705(%rip), %rax
+.Lpc_30699:
+    leaq .Lpool_9877(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30383:
+.Lpc_30702:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69159,11 +69873,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30384:
-    movq .Lbss_globals+256(%rip), %rax
+.Lpc_30703:
+    movq .Lbss_globals+272(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30386:
+.Lpc_30705:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69171,11 +69885,11 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30387:
+.Lpc_30706:
     leaq .Lpool_770(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30390:
+.Lpc_30709:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69183,21 +69897,21 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30391:
+.Lpc_30710:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30392:
-    jmp .Lpc_30402
-.Lpc_30395:
-    movq .Lbss_globals+248(%rip), %rax
+.Lpc_30711:
+    jmp .Lpc_30721
+.Lpc_30714:
+    movq .Lbss_globals+264(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30397:
-    leaq .Lpool_9721(%rip), %rax
+.Lpc_30716:
+    leaq .Lpool_9893(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30400:
+.Lpc_30719:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69205,21 +69919,21 @@ sdev_main:
     call sdev_concat
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30401:
+.Lpc_30720:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30402:
-    jmp .Lpc_30820
-.Lpc_30405:
+.Lpc_30721:
+    jmp .Lpc_31337
+.Lpc_30724:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30407:
-    leaq .Lpool_9764(%rip), %rax
+.Lpc_30726:
+    leaq .Lpool_9936(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30410:
+.Lpc_30729:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69227,24 +69941,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30411:
+.Lpc_30730:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30461
-.Lpc_30414:
+    je .Lpc_30780
+.Lpc_30733:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30416:
+.Lpc_30735:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30417:
+.Lpc_30736:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_30422:
+.Lpc_30741:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -69254,19 +69968,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30423:
+.Lpc_30742:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30445
-.Lpc_30426:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_30764
+.Lpc_30745:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30429:
-    leaq .Lpool_9775(%rip), %rax
+.Lpc_30748:
+    leaq .Lpool_9947(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30432:
+.Lpc_30751:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69274,17 +69988,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30433:
+.Lpc_30752:
     subq $8, %r15
-.Lpc_30434:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_30753:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30437:
+.Lpc_30756:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30440:
+.Lpc_30759:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69292,18 +70006,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30441:
+.Lpc_30760:
     subq $8, %r15
-.Lpc_30442:
-    jmp .Lpc_30458
-.Lpc_30445:
+.Lpc_30761:
+    jmp .Lpc_30777
+.Lpc_30764:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30447:
+.Lpc_30766:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30452:
+.Lpc_30771:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -69311,8 +70025,8 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30453:
-    leaq .Lpc_30457(%rip), %rax
+.Lpc_30772:
+    leaq .Lpc_30776(%rip), %rax
     movq %rax, (%r13)
     movq %r14, 8(%r13)
     addq $16, %r13
@@ -69325,21 +70039,21 @@ sdev_main:
     movq (%r15), %rax
     movq %rax, 0(%r14)
     jmp .Lpc_26532
-.Lpc_30457:
+.Lpc_30776:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30458:
-    jmp .Lpc_30820
-.Lpc_30461:
+.Lpc_30777:
+    jmp .Lpc_31337
+.Lpc_30780:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30463:
+.Lpc_30782:
     leaq .Lpool_3417(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30466:
+.Lpc_30785:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69347,24 +70061,24 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30467:
+.Lpc_30786:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30580
-.Lpc_30470:
+    je .Lpc_30899
+.Lpc_30789:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30472:
+.Lpc_30791:
     subq $8, %r15
     movq (%r15), %rax
     movq (%rax), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30473:
+.Lpc_30792:
     movq $2, (%r15)
     addq $8, %r15
-.Lpc_30478:
+.Lpc_30797:
     subq $8, %r15
     movq (%r15), %rcx
     subq $8, %r15
@@ -69374,19 +70088,19 @@ sdev_main:
     movzbq %al, %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30479:
+.Lpc_30798:
     subq $8, %r15
     cmpq $0, (%r15)
-    je .Lpc_30501
-.Lpc_30482:
-    leaq .Lpool_8822(%rip), %rax
+    je .Lpc_30820
+.Lpc_30801:
+    leaq .Lpool_8986(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30485:
-    leaq .Lpool_9818(%rip), %rax
+.Lpc_30804:
+    leaq .Lpool_9990(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30488:
+.Lpc_30807:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69394,17 +70108,17 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30489:
+.Lpc_30808:
     subq $8, %r15
-.Lpc_30490:
-    leaq .Lpool_8868(%rip), %rax
+.Lpc_30809:
+    leaq .Lpool_9039(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30493:
+.Lpc_30812:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30496:
+.Lpc_30815:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -69412,18 +70126,18 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30497:
+.Lpc_30816:
     subq $8, %r15
-.Lpc_30498:
-    jmp .Lpc_30577
-.Lpc_30501:
+.Lpc_30817:
+    jmp .Lpc_30896
+.Lpc_30820:
     movq .Lbss_globals+8(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30503:
+.Lpc_30822:
     movq $1, (%r15)
     addq $8, %r15
-.Lpc_30508:
+.Lpc_30827:
     subq $8, %r15
     movq (%r15), %rax
     subq $8, %r15
@@ -69431,633 +70145,221 @@ sdev_main:
     movq 8(%rcx,%rax,8), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30509:
+.Lpc_30828:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_trim
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30510:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+264(%rip)
-.Lpc_30512:
-    leaq .Lpool_9852(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30515:
-    movq .Lbss_globals+264(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30517:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30518:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_read_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30519:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+24(%rip)
-.Lpc_30521:
-    movq .Lbss_globals+264(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30523:
-    leaq .Lpool_9875(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30526:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30527:
-    leaq .Lpool_9889(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30530:
-    movq .Lbss_globals+264(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30532:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30533:
-    leaq .Lpool_9906(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30536:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30537:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_write_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30538:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+24(%rip)
-.Lpc_30540:
-    movq .Lbss_globals+264(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30542:
-    leaq .Lpool_9957(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30545:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30546:
-    leaq .Lpool_9971(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30549:
-    movq .Lbss_globals+264(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30551:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30552:
-    leaq .Lpool_9977(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30555:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30556:
-    movq .Lbss_globals+264(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30558:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30559:
-    leaq .Lpool_10020(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30562:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30563:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_write_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30564:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+24(%rip)
-.Lpc_30566:
-    leaq .Lpool_10027(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30569:
-    movq .Lbss_globals+264(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30571:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30572:
-    leaq .Lpool_10064(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30575:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_concat
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30576:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_30577:
-    jmp .Lpc_30820
-.Lpc_30580:
-    movq .Lbss_globals+16(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30582:
-    leaq .Lpool_4113(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30585:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30586:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_30630
-.Lpc_30589:
-    leaq .Lpool_10092(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30592:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_read_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30593:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+192(%rip)
-.Lpc_30595:
-    movq .Lbss_globals+192(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30597:
-    leaq .Lpool_329(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30600:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_index_of
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30601:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+200(%rip)
-.Lpc_30603:
-    movq .Lbss_globals+192(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30605:
-    movq .Lbss_globals+200(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30607:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_30612:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30613:
-    movq .Lbss_globals+192(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30615:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq (%rax), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30616:
-    movq .Lbss_globals+200(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30618:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30619:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_30624:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30625:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_substr
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30626:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_30627:
-    jmp .Lpc_30820
-.Lpc_30630:
-    movq .Lbss_globals+16(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30632:
-    leaq .Lpool_10143(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30635:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30636:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_30710
-.Lpc_30639:
-    leaq .Lpool_10151(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30642:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_read_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30643:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+192(%rip)
-.Lpc_30645:
-    movq .Lbss_globals+192(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30647:
-    leaq .Lpool_329(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30650:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_index_of
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30651:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+200(%rip)
-.Lpc_30653:
-    movq .Lbss_globals+192(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30655:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_30660:
-    movq .Lbss_globals+200(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30662:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_substr
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30663:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+208(%rip)
-.Lpc_30665:
-    movq .Lbss_globals+192(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30667:
-    movq .Lbss_globals+200(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30669:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_30674:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    addq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30675:
-    movq .Lbss_globals+192(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30677:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq (%rax), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30678:
-    movq .Lbss_globals+200(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30680:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30681:
-    movq $1, (%r15)
-    addq $8, %r15
-.Lpc_30686:
-    subq $8, %r15
-    movq (%r15), %rcx
-    subq $8, %r15
-    movq (%r15), %rax
-    subq %rcx, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30687:
-    subq $8, %r15
-    movq (%r15), %rdx
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_substr
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30688:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_30689:
-    movq .Lbss_globals+208(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30691:
-    leaq .Lpool_2637(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30694:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30695:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30696:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_30707
-.Lpc_30699:
-    leaq .Lpool_8198(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30702:
-    leaq .Lpool_179(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30705:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_write_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30706:
-    subq $8, %r15
-.Lpc_30707:
-    jmp .Lpc_30820
-.Lpc_30710:
-    movq .Lbss_globals+16(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30712:
-    leaq .Lpool_10197(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30715:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30716:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_30797
-.Lpc_30719:
-    leaq .Lpool_10210(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30722:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_30723:
-    leaq .Lpool_10298(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30726:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_read_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30727:
-    subq $8, %r15
-    movq (%r15), %rax
-    movq %rax, .Lbss_globals+272(%rip)
-.Lpc_30729:
-    leaq .Lpool_10345(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30732:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_say_str
-.Lpc_30733:
-    leaq .Lpool_10434(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30736:
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_read_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30737:
+.Lpc_30829:
     subq $8, %r15
     movq (%r15), %rax
     movq %rax, .Lbss_globals+280(%rip)
-.Lpc_30739:
-    leaq .Lpool_8336(%rip), %rax
+.Lpc_30831:
+    leaq .Lpool_10024(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30742:
+.Lpc_30834:
+    movq .Lbss_globals+280(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30836:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30837:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30743:
+.Lpc_30838:
     subq $8, %r15
     movq (%r15), %rax
-    movq %rax, .Lbss_globals+288(%rip)
-.Lpc_30745:
-    movq .Lbss_globals+272(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30747:
-    movq .Lbss_globals+288(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30749:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_str_eq
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30750:
-    subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_30763
-.Lpc_30753:
+    movq %rax, .Lbss_globals+24(%rip)
+.Lpc_30840:
     movq .Lbss_globals+280(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30755:
-    movq .Lbss_globals+272(%rip), %rax
+.Lpc_30842:
+    leaq .Lpool_10047(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30757:
+.Lpc_30845:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30846:
+    leaq .Lpool_10061(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30849:
+    movq .Lbss_globals+280(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30851:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30852:
+    leaq .Lpool_10078(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30855:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30856:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30857:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+24(%rip)
+.Lpc_30859:
+    movq .Lbss_globals+280(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30861:
+    leaq .Lpool_10129(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30864:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30865:
+    leaq .Lpool_10143(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30868:
+    movq .Lbss_globals+280(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30870:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30871:
+    leaq .Lpool_10149(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30874:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30875:
+    movq .Lbss_globals+280(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30877:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30878:
+    leaq .Lpool_10192(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30881:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30882:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30883:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+24(%rip)
+.Lpc_30885:
+    leaq .Lpool_10199(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30888:
+    movq .Lbss_globals+280(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30890:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30891:
+    leaq .Lpool_10236(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30894:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30895:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_30896:
+    jmp .Lpc_31337
+.Lpc_30899:
+    movq .Lbss_globals+16(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30901:
+    leaq .Lpool_4113(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30904:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -70065,128 +70367,293 @@ sdev_main:
     call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30758:
+.Lpc_30905:
     subq $8, %r15
     cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
+    je .Lpc_30949
+.Lpc_30908:
+    leaq .Lpool_10264(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30759:
+.Lpc_30911:
     subq $8, %r15
-    cmpq $0, (%r15)
-    sete %al
-    movzbq %al, %rax
+    movq (%r15), %rdi
+    call sdev_read_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30760:
-    jmp .Lpc_30768
-.Lpc_30763:
-    movq $0, (%r15)
-    addq $8, %r15
-.Lpc_30768:
+.Lpc_30912:
     subq $8, %r15
-    cmpq $0, (%r15)
-    je .Lpc_30778
-.Lpc_30771:
-    leaq .Lpool_10483(%rip), %rax
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+208(%rip)
+.Lpc_30914:
+    movq .Lbss_globals+208(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30774:
+.Lpc_30916:
+    leaq .Lpool_329(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30919:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_index_of
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30920:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+216(%rip)
+.Lpc_30922:
+    movq .Lbss_globals+208(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30924:
+    movq .Lbss_globals+216(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30926:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_30931:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30932:
+    movq .Lbss_globals+208(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30934:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30935:
+    movq .Lbss_globals+216(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30937:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30938:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_30943:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30944:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30945:
     subq $8, %r15
     movq (%r15), %rdi
     call sdev_say_str
-.Lpc_30775:
-    jmp .Lpc_30794
-.Lpc_30778:
-    leaq .Lpool_8822(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30781:
-    leaq .Lpool_10559(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30784:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_write_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30785:
-    subq $8, %r15
-.Lpc_30786:
-    leaq .Lpool_8198(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30789:
-    leaq .Lpool_179(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30792:
-    subq $8, %r15
-    movq (%r15), %rsi
-    subq $8, %r15
-    movq (%r15), %rdi
-    call sdev_write_file
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30793:
-    subq $8, %r15
-.Lpc_30794:
-    jmp .Lpc_30820
-.Lpc_30797:
-    leaq .Lpool_8822(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30800:
-    leaq .Lpool_10589(%rip), %rax
-    movq %rax, (%r15)
-    addq $8, %r15
-.Lpc_30803:
+.Lpc_30946:
+    jmp .Lpc_31337
+.Lpc_30949:
     movq .Lbss_globals+16(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30805:
+.Lpc_30951:
+    leaq .Lpool_10315(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30954:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_concat
+    call sdev_str_eq
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30806:
-    leaq .Lpool_10616(%rip), %rax
+.Lpc_30955:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31029
+.Lpc_30958:
+    leaq .Lpool_10323(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30809:
+.Lpc_30961:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30962:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+208(%rip)
+.Lpc_30964:
+    movq .Lbss_globals+208(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30966:
+    leaq .Lpool_329(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30969:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_concat
+    call sdev_index_of
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30810:
+.Lpc_30970:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+216(%rip)
+.Lpc_30972:
+    movq .Lbss_globals+208(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30974:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_30979:
+    movq .Lbss_globals+216(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30981:
+    subq $8, %r15
+    movq (%r15), %rdx
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
     movq (%r15), %rdi
-    call sdev_write_file
+    call sdev_substr
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30811:
+.Lpc_30982:
     subq $8, %r15
-.Lpc_30812:
-    leaq .Lpool_8868(%rip), %rax
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+224(%rip)
+.Lpc_30984:
+    movq .Lbss_globals+208(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30815:
+.Lpc_30986:
+    movq .Lbss_globals+216(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30988:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_30993:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    addq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30994:
+    movq .Lbss_globals+208(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30996:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30997:
+    movq .Lbss_globals+216(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_30999:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31000:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_31005:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    subq %rcx, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31006:
+    subq $8, %r15
+    movq (%r15), %rdx
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_substr
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31007:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31008:
+    movq .Lbss_globals+224(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31010:
+    leaq .Lpool_2637(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31013:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31014:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31015:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31026
+.Lpc_31018:
+    leaq .Lpool_8362(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31021:
     leaq .Lpool_179(%rip), %rax
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30818:
+.Lpc_31024:
     subq $8, %r15
     movq (%r15), %rsi
     subq $8, %r15
@@ -70194,9 +70661,653 @@ sdev_main:
     call sdev_write_file
     movq %rax, (%r15)
     addq $8, %r15
-.Lpc_30819:
+.Lpc_31025:
     subq $8, %r15
-.Lpc_30820:
+.Lpc_31026:
+    jmp .Lpc_31337
+.Lpc_31029:
+    movq .Lbss_globals+16(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31031:
+    leaq .Lpool_10369(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31034:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31035:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31314
+.Lpc_31038:
+    movq .Lbss_globals+8(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31040:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31041:
+    movq $2, (%r15)
+    addq $8, %r15
+.Lpc_31046:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setge %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31047:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31068
+.Lpc_31050:
+    movq .Lbss_globals+8(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31052:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_31057:
+    subq $8, %r15
+    movq (%r15), %rax
+    subq $8, %r15
+    movq (%r15), %rcx
+    movq 8(%rcx,%rax,8), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31058:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_trim
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31059:
+    leaq .Lpool_5648(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31062:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31063:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31064:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31065:
+    jmp .Lpc_31073
+.Lpc_31068:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31073:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+288(%rip)
+.Lpc_31075:
+    movq $1, (%r15)
+    addq $8, %r15
+.Lpc_31080:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+296(%rip)
+.Lpc_31082:
+    movq .Lbss_globals+288(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31084:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31089:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31090:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31167
+.Lpc_31093:
+    leaq .Lpool_10382(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31096:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31097:
+    leaq .Lpool_10475(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31100:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31101:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+304(%rip)
+.Lpc_31103:
+    leaq .Lpool_10522(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31106:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31107:
+    leaq .Lpool_10616(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31110:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31111:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+312(%rip)
+.Lpc_31113:
+    leaq .Lpool_8500(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31116:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31117:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+320(%rip)
+.Lpc_31119:
+    movq .Lbss_globals+304(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31121:
+    movq .Lbss_globals+320(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31123:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31124:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31137
+.Lpc_31127:
+    movq .Lbss_globals+312(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31129:
+    movq .Lbss_globals+304(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31131:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31132:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31133:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31134:
+    jmp .Lpc_31142
+.Lpc_31137:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31142:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31152
+.Lpc_31145:
+    leaq .Lpool_10665(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31148:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31149:
+    jmp .Lpc_31167
+.Lpc_31152:
+    leaq .Lpool_8986(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31155:
+    leaq .Lpool_10746(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31158:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31159:
+    subq $8, %r15
+.Lpc_31160:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31165:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+296(%rip)
+.Lpc_31167:
+    leaq .Lpool_10781(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31170:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31171:
+    leaq .Lpool_10865(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31174:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31175:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+328(%rip)
+.Lpc_31177:
+    leaq .Lpool_10888(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31180:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31181:
+    leaq .Lpool_10970(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31184:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31185:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+336(%rip)
+.Lpc_31187:
+    leaq .Lpool_11000(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31190:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31191:
+    leaq .Lpool_11082(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31194:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_read_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31195:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+344(%rip)
+.Lpc_31197:
+    movq .Lbss_globals+328(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31199:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq (%rax), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31200:
+    movq $1000, (%r15)
+    addq $8, %r15
+.Lpc_31205:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setg %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31206:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31226
+.Lpc_31209:
+    movq .Lbss_globals+328(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31211:
+    leaq .Lpool_8637(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31214:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_index_of
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31215:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31220:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    setne %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31221:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31222:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31223:
+    jmp .Lpc_31231
+.Lpc_31226:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31231:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31244
+.Lpc_31234:
+    movq .Lbss_globals+328(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31236:
+    movq .Lbss_globals+336(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31238:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31239:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31240:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31241:
+    jmp .Lpc_31249
+.Lpc_31244:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31249:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31262
+.Lpc_31252:
+    movq .Lbss_globals+336(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31254:
+    movq .Lbss_globals+344(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31256:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_str_eq
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31257:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31258:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31259:
+    jmp .Lpc_31267
+.Lpc_31262:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31267:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31277
+.Lpc_31270:
+    leaq .Lpool_11140(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31273:
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_say_str
+.Lpc_31274:
+    jmp .Lpc_31292
+.Lpc_31277:
+    leaq .Lpool_8986(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31280:
+    leaq .Lpool_11229(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31283:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31284:
+    subq $8, %r15
+.Lpc_31285:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31290:
+    subq $8, %r15
+    movq (%r15), %rax
+    movq %rax, .Lbss_globals+296(%rip)
+.Lpc_31292:
+    movq .Lbss_globals+296(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31294:
+    movq $0, (%r15)
+    addq $8, %r15
+.Lpc_31299:
+    subq $8, %r15
+    movq (%r15), %rcx
+    subq $8, %r15
+    movq (%r15), %rax
+    cmpq %rcx, %rax
+    sete %al
+    movzbq %al, %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31300:
+    subq $8, %r15
+    cmpq $0, (%r15)
+    je .Lpc_31311
+.Lpc_31303:
+    leaq .Lpool_8362(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31306:
+    leaq .Lpool_179(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31309:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31310:
+    subq $8, %r15
+.Lpc_31311:
+    jmp .Lpc_31337
+.Lpc_31314:
+    leaq .Lpool_8986(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31317:
+    leaq .Lpool_11264(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31320:
+    movq .Lbss_globals+16(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31322:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31323:
+    leaq .Lpool_11291(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31326:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_concat
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31327:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31328:
+    subq $8, %r15
+.Lpc_31329:
+    leaq .Lpool_9039(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31332:
+    leaq .Lpool_179(%rip), %rax
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31335:
+    subq $8, %r15
+    movq (%r15), %rsi
+    subq $8, %r15
+    movq (%r15), %rdi
+    call sdev_write_file
+    movq %rax, (%r15)
+    addq $8, %r15
+.Lpc_31336:
+    subq $8, %r15
+.Lpc_31337:
     jmp .Lmain_done
 .Lmain_done:
     xorq %rax, %rax
@@ -75857,6 +76968,56 @@ sdev_main:
     .byte 0
     .align 8
 .Lpool_5648:
+    .quad 4
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 0
+    .align 8
+.Lpool_5656:
+    .quad 16
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 58
+    .byte 99
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 101
+    .byte 58
+    .byte 118
+    .byte 49
+    .byte 58
+    .byte 0
+    .align 8
+.Lpool_5676:
+    .quad 18
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 58
+    .byte 99
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 101
+    .byte 58
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 58
+    .byte 0
+    .align 8
+.Lpool_5698:
     .quad 50
     .byte 115
     .byte 100
@@ -75910,7 +77071,7 @@ sdev_main:
     .byte 110
     .byte 0
     .align 8
-.Lpool_5702:
+.Lpool_5752:
     .quad 5
     .byte 85
     .byte 83
@@ -75919,7 +77080,7 @@ sdev_main:
     .byte 69
     .byte 0
     .align 8
-.Lpool_5711:
+.Lpool_5761:
     .quad 26
     .byte 32
     .byte 32
@@ -75949,7 +77110,7 @@ sdev_main:
     .byte 93
     .byte 0
     .align 8
-.Lpool_5741:
+.Lpool_5791:
     .quad 50
     .byte 69
     .byte 88
@@ -76003,8 +77164,8 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_5795:
-    .quad 77
+.Lpool_5845:
+    .quad 82
     .byte 32
     .byte 32
     .byte 114
@@ -76039,6 +77200,11 @@ sdev_main:
     .byte 46
     .byte 46
     .byte 93
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76084,14 +77250,21 @@ sdev_main:
     .byte 109
     .byte 0
     .align 8
-.Lpool_5876:
-    .quad 68
+.Lpool_5931:
+    .quad 79
     .byte 32
     .byte 32
     .byte 101
     .byte 118
     .byte 97
     .byte 108
+    .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
     .byte 32
     .byte 34
     .byte 60
@@ -76101,8 +77274,6 @@ sdev_main:
     .byte 101
     .byte 62
     .byte 34
-    .byte 32
-    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76147,6 +77318,12 @@ sdev_main:
     .byte 69
     .byte 86
     .byte 32
+    .byte 118
+    .byte 50
+    .byte 47
+    .byte 118
+    .byte 49
+    .byte 32
     .byte 115
     .byte 110
     .byte 105
@@ -76156,8 +77333,8 @@ sdev_main:
     .byte 116
     .byte 0
     .align 8
-.Lpool_5948:
-    .quad 76
+.Lpool_6014:
+    .quad 81
     .byte 32
     .byte 32
     .byte 99
@@ -76167,6 +77344,13 @@ sdev_main:
     .byte 105
     .byte 108
     .byte 101
+    .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
     .byte 32
     .byte 60
     .byte 102
@@ -76187,13 +77371,11 @@ sdev_main:
     .byte 111
     .byte 117
     .byte 116
-    .byte 46
-    .byte 115
-    .byte 100
-    .byte 101
-    .byte 118
-    .byte 99
     .byte 93
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 67
     .byte 111
@@ -76236,8 +77418,8 @@ sdev_main:
     .byte 114
     .byte 0
     .align 8
-.Lpool_6028:
-    .quad 73
+.Lpool_6099:
+    .quad 78
     .byte 32
     .byte 32
     .byte 114
@@ -76269,6 +77451,11 @@ sdev_main:
     .byte 46
     .byte 46
     .byte 93
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76313,8 +77500,8 @@ sdev_main:
     .byte 114
     .byte 0
     .align 8
-.Lpool_6105:
-    .quad 85
+.Lpool_6181:
+    .quad 90
     .byte 32
     .byte 32
     .byte 110
@@ -76323,6 +77510,13 @@ sdev_main:
     .byte 105
     .byte 118
     .byte 101
+    .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
     .byte 32
     .byte 60
     .byte 102
@@ -76344,8 +77538,6 @@ sdev_main:
     .byte 117
     .byte 116
     .byte 93
-    .byte 32
-    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76402,8 +77594,8 @@ sdev_main:
     .byte 121
     .byte 0
     .align 8
-.Lpool_6194:
-    .quad 82
+.Lpool_6275:
+    .quad 87
     .byte 32
     .byte 32
     .byte 112
@@ -76436,6 +77628,11 @@ sdev_main:
     .byte 100
     .byte 101
     .byte 93
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76488,8 +77685,8 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_6280:
-    .quad 69
+.Lpool_6366:
+    .quad 74
     .byte 32
     .byte 32
     .byte 110
@@ -76501,6 +77698,11 @@ sdev_main:
     .byte 105
     .byte 114
     .byte 62
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76561,7 +77763,7 @@ sdev_main:
     .byte 116
     .byte 0
     .align 8
-.Lpool_6353:
+.Lpool_6444:
     .quad 42
     .byte 73
     .byte 78
@@ -76607,8 +77809,8 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_6399:
-    .quad 72
+.Lpool_6490:
+    .quad 77
     .byte 32
     .byte 32
     .byte 99
@@ -76616,6 +77818,13 @@ sdev_main:
     .byte 101
     .byte 99
     .byte 107
+    .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
     .byte 32
     .byte 60
     .byte 102
@@ -76628,8 +77837,6 @@ sdev_main:
     .byte 101
     .byte 118
     .byte 62
-    .byte 32
-    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76683,8 +77890,8 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_6475:
-    .quad 69
+.Lpool_6571:
+    .quad 74
     .byte 32
     .byte 32
     .byte 100
@@ -76693,6 +77900,13 @@ sdev_main:
     .byte 97
     .byte 115
     .byte 109
+    .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
     .byte 32
     .byte 60
     .byte 102
@@ -76705,8 +77919,6 @@ sdev_main:
     .byte 101
     .byte 118
     .byte 62
-    .byte 32
-    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76756,8 +77968,8 @@ sdev_main:
     .byte 101
     .byte 0
     .align 8
-.Lpool_6548:
-    .quad 73
+.Lpool_6649:
+    .quad 78
     .byte 32
     .byte 32
     .byte 108
@@ -76776,6 +77988,11 @@ sdev_main:
     .byte 101
     .byte 118
     .byte 62
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76833,8 +78050,8 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_6625:
-    .quad 76
+.Lpool_6731:
+    .quad 81
     .byte 32
     .byte 32
     .byte 102
@@ -76857,6 +78074,11 @@ sdev_main:
     .byte 45
     .byte 119
     .byte 93
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -76913,8 +78135,8 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_6705:
-    .quad 86
+.Lpool_6816:
+    .quad 91
     .byte 32
     .byte 32
     .byte 116
@@ -76938,6 +78160,11 @@ sdev_main:
     .byte 101
     .byte 118
     .byte 62
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77003,8 +78230,8 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_6795:
-    .quad 82
+.Lpool_6911:
+    .quad 87
     .byte 32
     .byte 32
     .byte 100
@@ -77033,6 +78260,11 @@ sdev_main:
     .byte 101
     .byte 118
     .byte 62
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77089,8 +78321,8 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_6881:
-    .quad 86
+.Lpool_7002:
+    .quad 91
     .byte 32
     .byte 32
     .byte 118
@@ -77107,6 +78339,11 @@ sdev_main:
     .byte 101
     .byte 118
     .byte 62
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77179,8 +78416,8 @@ sdev_main:
     .byte 50
     .byte 0
     .align 8
-.Lpool_6971:
-    .quad 78
+.Lpool_7097:
+    .quad 83
     .byte 32
     .byte 32
     .byte 97
@@ -77193,6 +78430,11 @@ sdev_main:
     .byte 109
     .byte 101
     .byte 93
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77261,8 +78503,8 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7053:
-    .quad 68
+.Lpool_7184:
+    .quad 73
     .byte 32
     .byte 32
     .byte 101
@@ -77291,6 +78533,11 @@ sdev_main:
     .byte 49
     .byte 53
     .byte 62
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77333,7 +78580,7 @@ sdev_main:
     .byte 101
     .byte 0
     .align 8
-.Lpool_7125:
+.Lpool_7261:
     .quad 27
     .byte 83
     .byte 69
@@ -77364,14 +78611,19 @@ sdev_main:
     .byte 78
     .byte 0
     .align 8
-.Lpool_7156:
-    .quad 76
+.Lpool_7292:
+    .quad 81
     .byte 32
     .byte 32
     .byte 116
     .byte 101
     .byte 115
     .byte 116
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77444,8 +78696,8 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7236:
-    .quad 88
+.Lpool_7377:
+    .quad 101
     .byte 32
     .byte 32
     .byte 98
@@ -77458,7 +78710,12 @@ sdev_main:
     .byte 97
     .byte 112
     .byte 32
-    .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
     .byte 32
     .byte 32
     .byte 32
@@ -77490,19 +78747,16 @@ sdev_main:
     .byte 102
     .byte 121
     .byte 32
-    .byte 110
-    .byte 97
+    .byte 83
     .byte 116
-    .byte 105
-    .byte 118
+    .byte 97
+    .byte 103
     .byte 101
-    .byte 32
-    .byte 120
-    .byte 56
-    .byte 54
     .byte 45
-    .byte 54
-    .byte 52
+    .byte 49
+    .byte 32
+    .byte 61
+    .byte 61
     .byte 32
     .byte 83
     .byte 116
@@ -77534,15 +78788,31 @@ sdev_main:
     .byte 105
     .byte 110
     .byte 116
+    .byte 115
+    .byte 32
+    .byte 40
+    .byte 118
+    .byte 50
+    .byte 32
+    .byte 38
+    .byte 32
+    .byte 118
+    .byte 49
+    .byte 41
     .byte 0
     .align 8
-.Lpool_7328:
-    .quad 81
+.Lpool_7482:
+    .quad 86
     .byte 32
     .byte 32
     .byte 119
     .byte 101
     .byte 98
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77621,8 +78891,8 @@ sdev_main:
     .byte 86
     .byte 0
     .align 8
-.Lpool_7413:
-    .quad 89
+.Lpool_7572:
+    .quad 94
     .byte 32
     .byte 32
     .byte 100
@@ -77631,6 +78901,11 @@ sdev_main:
     .byte 116
     .byte 111
     .byte 114
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
+    .byte 32
     .byte 32
     .byte 32
     .byte 32
@@ -77714,7 +78989,7 @@ sdev_main:
     .byte 121
     .byte 0
     .align 8
-.Lpool_7506:
+.Lpool_7670:
     .quad 16
     .byte 32
     .byte 32
@@ -77734,14 +79009,14 @@ sdev_main:
     .byte 112
     .byte 0
     .align 8
-.Lpool_7526:
+.Lpool_7690:
     .quad 3
     .byte 46
     .byte 106
     .byte 115
     .byte 0
     .align 8
-.Lpool_7533:
+.Lpool_7697:
     .quad 4
     .byte 46
     .byte 109
@@ -77749,14 +79024,14 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7541:
+.Lpool_7705:
     .quad 3
     .byte 46
     .byte 116
     .byte 115
     .byte 0
     .align 8
-.Lpool_7548:
+.Lpool_7712:
     .quad 4
     .byte 46
     .byte 116
@@ -77764,14 +79039,14 @@ sdev_main:
     .byte 120
     .byte 0
     .align 8
-.Lpool_7556:
+.Lpool_7720:
     .quad 3
     .byte 46
     .byte 112
     .byte 121
     .byte 0
     .align 8
-.Lpool_7563:
+.Lpool_7727:
     .quad 4
     .byte 46
     .byte 119
@@ -77779,7 +79054,7 @@ sdev_main:
     .byte 116
     .byte 0
     .align 8
-.Lpool_7571:
+.Lpool_7735:
     .quad 5
     .byte 46
     .byte 119
@@ -77788,7 +79063,7 @@ sdev_main:
     .byte 109
     .byte 0
     .align 8
-.Lpool_7580:
+.Lpool_7744:
     .quad 8
     .byte 115
     .byte 100
@@ -77800,7 +79075,7 @@ sdev_main:
     .byte 58
     .byte 0
     .align 8
-.Lpool_7592:
+.Lpool_7756:
     .quad 29
     .byte 32
     .byte 32
@@ -77833,7 +79108,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_7625:
+.Lpool_7789:
     .quad 64
     .byte 61
     .byte 61
@@ -77901,7 +79176,7 @@ sdev_main:
     .byte 61
     .byte 0
     .align 8
-.Lpool_7693:
+.Lpool_7857:
     .quad 42
     .byte 32
     .byte 32
@@ -77947,21 +79222,21 @@ sdev_main:
     .byte 114
     .byte 0
     .align 8
-.Lpool_7739:
+.Lpool_7903:
     .quad 3
     .byte 98
     .byte 105
     .byte 110
     .byte 0
     .align 8
-.Lpool_7746:
+.Lpool_7910:
     .quad 3
     .byte 99
     .byte 108
     .byte 105
     .byte 0
     .align 8
-.Lpool_7753:
+.Lpool_7917:
     .quad 7
     .byte 115
     .byte 99
@@ -77972,7 +79247,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7764:
+.Lpool_7928:
     .quad 4
     .byte 108
     .byte 97
@@ -77980,7 +79255,7 @@ sdev_main:
     .byte 103
     .byte 0
     .align 8
-.Lpool_7772:
+.Lpool_7936:
     .quad 13
     .byte 108
     .byte 97
@@ -77997,7 +79272,7 @@ sdev_main:
     .byte 114
     .byte 0
     .align 8
-.Lpool_7789:
+.Lpool_7953:
     .quad 11
     .byte 108
     .byte 97
@@ -78012,7 +79287,7 @@ sdev_main:
     .byte 101
     .byte 0
     .align 8
-.Lpool_7804:
+.Lpool_7968:
     .quad 12
     .byte 108
     .byte 97
@@ -78028,7 +79303,7 @@ sdev_main:
     .byte 101
     .byte 0
     .align 8
-.Lpool_7820:
+.Lpool_7984:
     .quad 11
     .byte 108
     .byte 97
@@ -78043,7 +79318,7 @@ sdev_main:
     .byte 98
     .byte 0
     .align 8
-.Lpool_7835:
+.Lpool_7999:
     .quad 14
     .byte 108
     .byte 97
@@ -78061,7 +79336,7 @@ sdev_main:
     .byte 50
     .byte 0
     .align 8
-.Lpool_7853:
+.Lpool_8017:
     .quad 14
     .byte 108
     .byte 97
@@ -78079,7 +79354,7 @@ sdev_main:
     .byte 108
     .byte 0
     .align 8
-.Lpool_7871:
+.Lpool_8035:
     .quad 14
     .byte 108
     .byte 97
@@ -78097,7 +79372,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7889:
+.Lpool_8053:
     .quad 10
     .byte 108
     .byte 97
@@ -78111,7 +79386,7 @@ sdev_main:
     .byte 116
     .byte 0
     .align 8
-.Lpool_7903:
+.Lpool_8067:
     .quad 8
     .byte 108
     .byte 97
@@ -78123,14 +79398,14 @@ sdev_main:
     .byte 98
     .byte 0
     .align 8
-.Lpool_7915:
+.Lpool_8079:
     .quad 3
     .byte 115
     .byte 114
     .byte 99
     .byte 0
     .align 8
-.Lpool_7922:
+.Lpool_8086:
     .quad 8
     .byte 115
     .byte 114
@@ -78142,7 +79417,7 @@ sdev_main:
     .byte 103
     .byte 0
     .align 8
-.Lpool_7934:
+.Lpool_8098:
     .quad 15
     .byte 115
     .byte 114
@@ -78161,7 +79436,7 @@ sdev_main:
     .byte 101
     .byte 0
     .align 8
-.Lpool_7953:
+.Lpool_8117:
     .quad 9
     .byte 115
     .byte 114
@@ -78174,7 +79449,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7966:
+.Lpool_8130:
     .quad 14
     .byte 115
     .byte 114
@@ -78192,7 +79467,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7984:
+.Lpool_8148:
     .quad 9
     .byte 115
     .byte 114
@@ -78205,7 +79480,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_7997:
+.Lpool_8161:
     .quad 7
     .byte 115
     .byte 114
@@ -78216,7 +79491,7 @@ sdev_main:
     .byte 98
     .byte 0
     .align 8
-.Lpool_8008:
+.Lpool_8172:
     .quad 10
     .byte 115
     .byte 114
@@ -78230,7 +79505,7 @@ sdev_main:
     .byte 111
     .byte 0
     .align 8
-.Lpool_8022:
+.Lpool_8186:
     .quad 6
     .byte 112
     .byte 117
@@ -78240,7 +79515,7 @@ sdev_main:
     .byte 99
     .byte 0
     .align 8
-.Lpool_8032:
+.Lpool_8196:
     .quad 9
     .byte 101
     .byte 120
@@ -78253,7 +79528,7 @@ sdev_main:
     .byte 110
     .byte 0
     .align 8
-.Lpool_8045:
+.Lpool_8209:
     .quad 7
     .byte 100
     .byte 114
@@ -78264,7 +79539,7 @@ sdev_main:
     .byte 101
     .byte 0
     .align 8
-.Lpool_8056:
+.Lpool_8220:
     .quad 5
     .byte 116
     .byte 111
@@ -78273,13 +79548,13 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_8065:
+.Lpool_8229:
     .quad 2
     .byte 65
     .byte 73
     .byte 0
     .align 8
-.Lpool_8071:
+.Lpool_8235:
     .quad 68
     .byte 32
     .byte 32
@@ -78351,7 +79626,7 @@ sdev_main:
     .byte 100
     .byte 0
     .align 8
-.Lpool_8143:
+.Lpool_8307:
     .quad 27
     .byte 32
     .byte 32
@@ -78382,7 +79657,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_8174:
+.Lpool_8338:
     .quad 20
     .byte 32
     .byte 102
@@ -78406,7 +79681,7 @@ sdev_main:
     .byte 100
     .byte 0
     .align 8
-.Lpool_8198:
+.Lpool_8362:
     .quad 11
     .byte 115
     .byte 100
@@ -78421,7 +79696,7 @@ sdev_main:
     .byte 49
     .byte 0
     .align 8
-.Lpool_8213:
+.Lpool_8377:
     .quad 13
     .byte 98
     .byte 105
@@ -78438,7 +79713,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_8230:
+.Lpool_8394:
     .quad 60
     .byte 32
     .byte 32
@@ -78502,7 +79777,7 @@ sdev_main:
     .byte 40
     .byte 0
     .align 8
-.Lpool_8294:
+.Lpool_8458:
     .quad 7
     .byte 32
     .byte 98
@@ -78513,7 +79788,7 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_8305:
+.Lpool_8469:
     .quad 27
     .byte 32
     .byte 32
@@ -78544,7 +79819,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_8336:
+.Lpool_8500:
     .quad 17
     .byte 115
     .byte 100
@@ -78565,7 +79840,7 @@ sdev_main:
     .byte 100
     .byte 0
     .align 8
-.Lpool_8357:
+.Lpool_8521:
     .quad 52
     .byte 32
     .byte 32
@@ -78621,7 +79896,7 @@ sdev_main:
     .byte 121
     .byte 0
     .align 8
-.Lpool_8413:
+.Lpool_8577:
     .quad 38
     .byte 32
     .byte 32
@@ -78663,7 +79938,7 @@ sdev_main:
     .byte 114
     .byte 0
     .align 8
-.Lpool_8455:
+.Lpool_8619:
     .quad 14
     .byte 115
     .byte 100
@@ -78681,7 +79956,7 @@ sdev_main:
     .byte 49
     .byte 0
     .align 8
-.Lpool_8473:
+.Lpool_8637:
     .quad 6
     .byte 101
     .byte 114
@@ -78691,7 +79966,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_8483:
+.Lpool_8647:
     .quad 43
     .byte 32
     .byte 32
@@ -78738,7 +80013,7 @@ sdev_main:
     .byte 121
     .byte 0
     .align 8
-.Lpool_8530:
+.Lpool_8694:
     .quad 43
     .byte 32
     .byte 32
@@ -78785,7 +80060,7 @@ sdev_main:
     .byte 100
     .byte 0
     .align 8
-.Lpool_8577:
+.Lpool_8741:
     .quad 31
     .byte 32
     .byte 32
@@ -78820,7 +80095,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_8612:
+.Lpool_8776:
     .quad 22
     .byte 32
     .byte 104
@@ -78846,7 +80121,7 @@ sdev_main:
     .byte 121
     .byte 0
     .align 8
-.Lpool_8638:
+.Lpool_8802:
     .quad 42
     .byte 32
     .byte 32
@@ -78892,7 +80167,7 @@ sdev_main:
     .byte 68
     .byte 0
     .align 8
-.Lpool_8684:
+.Lpool_8848:
     .quad 9
     .byte 115
     .byte 100
@@ -78905,7 +80180,7 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_8697:
+.Lpool_8861:
     .quad 4
     .byte 104
     .byte 101
@@ -78913,7 +80188,7 @@ sdev_main:
     .byte 112
     .byte 0
     .align 8
-.Lpool_8705:
+.Lpool_8869:
     .quad 6
     .byte 45
     .byte 45
@@ -78923,13 +80198,13 @@ sdev_main:
     .byte 112
     .byte 0
     .align 8
-.Lpool_8715:
+.Lpool_8879:
     .quad 2
     .byte 45
     .byte 104
     .byte 0
     .align 8
-.Lpool_8721:
+.Lpool_8885:
     .quad 7
     .byte 118
     .byte 101
@@ -78940,7 +80215,7 @@ sdev_main:
     .byte 110
     .byte 0
     .align 8
-.Lpool_8732:
+.Lpool_8896:
     .quad 9
     .byte 45
     .byte 45
@@ -78953,13 +80228,13 @@ sdev_main:
     .byte 110
     .byte 0
     .align 8
-.Lpool_8745:
+.Lpool_8909:
     .quad 2
     .byte 45
     .byte 118
     .byte 0
     .align 8
-.Lpool_8751:
+.Lpool_8915:
     .quad 48
     .byte 115
     .byte 100
@@ -79011,7 +80286,7 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_8803:
+.Lpool_8967:
     .quad 6
     .byte 100
     .byte 111
@@ -79021,7 +80296,7 @@ sdev_main:
     .byte 114
     .byte 0
     .align 8
-.Lpool_8813:
+.Lpool_8977:
     .quad 5
     .byte 99
     .byte 104
@@ -79030,7 +80305,7 @@ sdev_main:
     .byte 107
     .byte 0
     .align 8
-.Lpool_8822:
+.Lpool_8986:
     .quad 8
     .byte 115
     .byte 100
@@ -79042,8 +80317,8 @@ sdev_main:
     .byte 114
     .byte 0
     .align 8
-.Lpool_8834:
-    .quad 30
+.Lpool_8998:
+    .quad 37
     .byte 117
     .byte 115
     .byte 97
@@ -79062,6 +80337,13 @@ sdev_main:
     .byte 99
     .byte 107
     .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
     .byte 60
     .byte 102
     .byte 105
@@ -79076,7 +80358,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_8868:
+.Lpool_9039:
     .quad 11
     .byte 115
     .byte 100
@@ -79091,29 +80373,7 @@ sdev_main:
     .byte 50
     .byte 0
     .align 8
-.Lpool_8883:
-    .quad 18
-    .byte 115
-    .byte 100
-    .byte 101
-    .byte 118
-    .byte 58
-    .byte 99
-    .byte 111
-    .byte 109
-    .byte 112
-    .byte 105
-    .byte 108
-    .byte 101
-    .byte 58
-    .byte 115
-    .byte 101
-    .byte 108
-    .byte 102
-    .byte 58
-    .byte 0
-    .align 8
-.Lpool_8905:
+.Lpool_9054:
     .quad 6
     .byte 115
     .byte 100
@@ -79123,13 +80383,13 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_8915:
+.Lpool_9064:
     .quad 2
     .byte 58
     .byte 32
     .byte 0
     .align 8
-.Lpool_8921:
+.Lpool_9070:
     .quad 4
     .byte 226
     .byte 156
@@ -79137,7 +80397,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_8929:
+.Lpool_9078:
     .quad 23
     .byte 58
     .byte 32
@@ -79164,7 +80424,7 @@ sdev_main:
     .byte 40
     .byte 0
     .align 8
-.Lpool_8956:
+.Lpool_9105:
     .quad 16
     .byte 32
     .byte 98
@@ -79184,7 +80444,7 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_8976:
+.Lpool_9125:
     .quad 6
     .byte 100
     .byte 105
@@ -79194,8 +80454,8 @@ sdev_main:
     .byte 109
     .byte 0
     .align 8
-.Lpool_8986:
-    .quad 31
+.Lpool_9135:
+    .quad 38
     .byte 117
     .byte 115
     .byte 97
@@ -79215,6 +80475,13 @@ sdev_main:
     .byte 115
     .byte 109
     .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
     .byte 60
     .byte 102
     .byte 105
@@ -79229,7 +80496,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9021:
+.Lpool_9177:
     .quad 4
     .byte 108
     .byte 105
@@ -79237,7 +80504,7 @@ sdev_main:
     .byte 116
     .byte 0
     .align 8
-.Lpool_9029:
+.Lpool_9185:
     .quad 29
     .byte 117
     .byte 115
@@ -79270,12 +80537,12 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9062:
+.Lpool_9218:
     .quad 1
     .byte 58
     .byte 0
     .align 8
-.Lpool_9067:
+.Lpool_9223:
     .quad 15
     .byte 58
     .byte 32
@@ -79294,14 +80561,14 @@ sdev_main:
     .byte 115
     .byte 0
     .align 8
-.Lpool_9086:
+.Lpool_9242:
     .quad 3
     .byte 102
     .byte 109
     .byte 116
     .byte 0
     .align 8
-.Lpool_9093:
+.Lpool_9249:
     .quad 33
     .byte 117
     .byte 115
@@ -79338,13 +80605,13 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9130:
+.Lpool_9286:
     .quad 2
     .byte 45
     .byte 119
     .byte 0
     .align 8
-.Lpool_9136:
+.Lpool_9292:
     .quad 10
     .byte 102
     .byte 111
@@ -79358,7 +80625,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9150:
+.Lpool_9306:
     .quad 9
     .byte 116
     .byte 114
@@ -79371,7 +80638,7 @@ sdev_main:
     .byte 101
     .byte 0
     .align 8
-.Lpool_9163:
+.Lpool_9319:
     .quad 34
     .byte 117
     .byte 115
@@ -79409,7 +80676,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9201:
+.Lpool_9357:
     .quad 26
     .byte 35
     .byte 32
@@ -79439,13 +80706,13 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9231:
+.Lpool_9387:
     .quad 2
     .byte 118
     .byte 49
     .byte 0
     .align 8
-.Lpool_9237:
+.Lpool_9393:
     .quad 27
     .byte 117
     .byte 115
@@ -79476,13 +80743,13 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9268:
+.Lpool_9424:
     .quad 2
     .byte 112
     .byte 101
     .byte 0
     .align 8
-.Lpool_9274:
+.Lpool_9430:
     .quad 47
     .byte 117
     .byte 115
@@ -79533,7 +80800,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9325:
+.Lpool_9481:
     .quad 63
     .byte 72
     .byte 101
@@ -79600,7 +80867,7 @@ sdev_main:
     .byte 33
     .byte 0
     .align 8
-.Lpool_9392:
+.Lpool_9548:
     .quad 51
     .byte 226
     .byte 156
@@ -79655,7 +80922,7 @@ sdev_main:
     .byte 40
     .byte 0
     .align 8
-.Lpool_9447:
+.Lpool_9603:
     .quad 18
     .byte 32
     .byte 98
@@ -79677,7 +80944,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9469:
+.Lpool_9625:
     .quad 5
     .byte 41
     .byte 32
@@ -79686,7 +80953,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9478:
+.Lpool_9634:
     .quad 4
     .byte 101
     .byte 118
@@ -79694,8 +80961,8 @@ sdev_main:
     .byte 108
     .byte 0
     .align 8
-.Lpool_9486:
-    .quad 26
+.Lpool_9642:
+    .quad 33
     .byte 117
     .byte 115
     .byte 97
@@ -79713,6 +80980,13 @@ sdev_main:
     .byte 97
     .byte 108
     .byte 32
+    .byte 91
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
     .byte 34
     .byte 60
     .byte 99
@@ -79724,7 +80998,16 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9516:
+.Lpool_9679:
+    .quad 5
+    .byte 45
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 32
+    .byte 0
+    .align 8
+.Lpool_9688:
     .quad 14
     .byte 46
     .byte 116
@@ -79742,7 +81025,7 @@ sdev_main:
     .byte 118
     .byte 0
     .align 8
-.Lpool_9534:
+.Lpool_9706:
     .quad 21
     .byte 115
     .byte 100
@@ -79767,7 +81050,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9559:
+.Lpool_9731:
     .quad 10
     .byte 32
     .byte 38
@@ -79781,7 +81064,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9573:
+.Lpool_9745:
     .quad 7
     .byte 100
     .byte 105
@@ -79792,7 +81075,7 @@ sdev_main:
     .byte 116
     .byte 0
     .align 8
-.Lpool_9584:
+.Lpool_9756:
     .quad 50
     .byte 117
     .byte 115
@@ -79846,7 +81129,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9638:
+.Lpool_9810:
     .quad 11
     .byte 35
     .byte 32
@@ -79861,14 +81144,14 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9653:
+.Lpool_9825:
     .quad 3
     .byte 97
     .byte 112
     .byte 105
     .byte 0
     .align 8
-.Lpool_9660:
+.Lpool_9832:
     .quad 28
     .byte 67
     .byte 97
@@ -79900,20 +81183,20 @@ sdev_main:
     .byte 40
     .byte 0
     .align 8
-.Lpool_9692:
+.Lpool_9864:
     .quad 3
     .byte 41
     .byte 58
     .byte 32
     .byte 0
     .align 8
-.Lpool_9699:
+.Lpool_9871:
     .quad 2
     .byte 44
     .byte 32
     .byte 0
     .align 8
-.Lpool_9705:
+.Lpool_9877:
     .quad 12
     .byte 32
     .byte 45
@@ -79929,7 +81212,7 @@ sdev_main:
     .byte 39
     .byte 0
     .align 8
-.Lpool_9721:
+.Lpool_9893:
     .quad 39
     .byte 32
     .byte 45
@@ -79972,7 +81255,7 @@ sdev_main:
     .byte 121
     .byte 0
     .align 8
-.Lpool_9764:
+.Lpool_9936:
     .quad 7
     .byte 101
     .byte 120
@@ -79983,7 +81266,7 @@ sdev_main:
     .byte 110
     .byte 0
     .align 8
-.Lpool_9775:
+.Lpool_9947:
     .quad 39
     .byte 117
     .byte 115
@@ -80026,7 +81309,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9818:
+.Lpool_9990:
     .quad 30
     .byte 117
     .byte 115
@@ -80060,7 +81343,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9852:
+.Lpool_10024:
     .quad 19
     .byte 115
     .byte 100
@@ -80083,7 +81366,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_9875:
+.Lpool_10047:
     .quad 10
     .byte 47
     .byte 115
@@ -80097,7 +81380,7 @@ sdev_main:
     .byte 110
     .byte 0
     .align 8
-.Lpool_9889:
+.Lpool_10061:
     .quad 13
     .byte 123
     .byte 10
@@ -80114,7 +81397,7 @@ sdev_main:
     .byte 34
     .byte 0
     .align 8
-.Lpool_9906:
+.Lpool_10078:
     .quad 47
     .byte 34
     .byte 44
@@ -80165,7 +81448,7 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_9957:
+.Lpool_10129:
     .quad 10
     .byte 47
     .byte 109
@@ -80179,13 +81462,13 @@ sdev_main:
     .byte 118
     .byte 0
     .align 8
-.Lpool_9971:
+.Lpool_10143:
     .quad 2
     .byte 35
     .byte 32
     .byte 0
     .align 8
-.Lpool_9977:
+.Lpool_10149:
     .quad 39
     .byte 32
     .byte 226
@@ -80228,14 +81511,14 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_10020:
+.Lpool_10192:
     .quad 3
     .byte 33
     .byte 34
     .byte 10
     .byte 0
     .align 8
-.Lpool_10027:
+.Lpool_10199:
     .quad 33
     .byte 226
     .byte 156
@@ -80272,7 +81555,7 @@ sdev_main:
     .byte 32
     .byte 0
     .align 8
-.Lpool_10064:
+.Lpool_10236:
     .quad 24
     .byte 47
     .byte 32
@@ -80300,7 +81583,7 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_10092:
+.Lpool_10264:
     .quad 47
     .byte 115
     .byte 100
@@ -80351,7 +81634,7 @@ sdev_main:
     .byte 118
     .byte 0
     .align 8
-.Lpool_10143:
+.Lpool_10315:
     .quad 4
     .byte 116
     .byte 101
@@ -80359,7 +81642,7 @@ sdev_main:
     .byte 116
     .byte 0
     .align 8
-.Lpool_10151:
+.Lpool_10323:
     .quad 42
     .byte 115
     .byte 100
@@ -80405,7 +81688,7 @@ sdev_main:
     .byte 118
     .byte 0
     .align 8
-.Lpool_10197:
+.Lpool_10369:
     .quad 9
     .byte 98
     .byte 111
@@ -80418,11 +81701,16 @@ sdev_main:
     .byte 112
     .byte 0
     .align 8
-.Lpool_10210:
-    .quad 84
+.Lpool_10382:
+    .quad 89
     .byte 226
     .byte 150
     .byte 182
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 50
+    .byte 93
     .byte 32
     .byte 83
     .byte 116
@@ -80506,7 +81794,7 @@ sdev_main:
     .byte 46
     .byte 0
     .align 8
-.Lpool_10298:
+.Lpool_10475:
     .quad 43
     .byte 115
     .byte 100
@@ -80553,11 +81841,16 @@ sdev_main:
     .byte 118
     .byte 0
     .align 8
-.Lpool_10345:
-    .quad 85
+.Lpool_10522:
+    .quad 90
     .byte 226
     .byte 150
     .byte 182
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 50
+    .byte 93
     .byte 32
     .byte 83
     .byte 116
@@ -80642,7 +81935,7 @@ sdev_main:
     .byte 46
     .byte 0
     .align 8
-.Lpool_10434:
+.Lpool_10616:
     .quad 45
     .byte 115
     .byte 100
@@ -80691,11 +81984,16 @@ sdev_main:
     .byte 118
     .byte 0
     .align 8
-.Lpool_10483:
-    .quad 72
+.Lpool_10665:
+    .quad 77
     .byte 226
     .byte 156
     .byte 147
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 50
+    .byte 93
     .byte 32
     .byte 70
     .byte 105
@@ -80767,11 +82065,16 @@ sdev_main:
     .byte 41
     .byte 0
     .align 8
-.Lpool_10559:
-    .quad 26
+.Lpool_10746:
+    .quad 31
     .byte 226
     .byte 156
     .byte 151
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 50
+    .byte 93
     .byte 32
     .byte 70
     .byte 105
@@ -80797,7 +82100,490 @@ sdev_main:
     .byte 10
     .byte 0
     .align 8
-.Lpool_10589:
+.Lpool_10781:
+    .quad 80
+    .byte 226
+    .byte 150
+    .byte 182
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 49
+    .byte 58
+    .byte 32
+    .byte 67
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 105
+    .byte 110
+    .byte 103
+    .byte 32
+    .byte 112
+    .byte 117
+    .byte 114
+    .byte 101
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 32
+    .byte 108
+    .byte 97
+    .byte 110
+    .byte 103
+    .byte 47
+    .byte 99
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 101
+    .byte 114
+    .byte 47
+    .byte 118
+    .byte 49
+    .byte 95
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 46
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 32
+    .byte 119
+    .byte 105
+    .byte 116
+    .byte 104
+    .byte 32
+    .byte 118
+    .byte 49
+    .byte 95
+    .byte 100
+    .byte 114
+    .byte 105
+    .byte 118
+    .byte 101
+    .byte 114
+    .byte 46
+    .byte 46
+    .byte 46
+    .byte 0
+    .align 8
+.Lpool_10865:
+    .quad 19
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 58
+    .byte 100
+    .byte 114
+    .byte 105
+    .byte 118
+    .byte 101
+    .byte 114
+    .byte 58
+    .byte 118
+    .byte 49
+    .byte 45
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 0
+    .align 8
+.Lpool_10888:
+    .quad 78
+    .byte 226
+    .byte 150
+    .byte 182
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 50
+    .byte 58
+    .byte 32
+    .byte 67
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 105
+    .byte 110
+    .byte 103
+    .byte 32
+    .byte 112
+    .byte 117
+    .byte 114
+    .byte 101
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 32
+    .byte 108
+    .byte 97
+    .byte 110
+    .byte 103
+    .byte 47
+    .byte 99
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 101
+    .byte 114
+    .byte 47
+    .byte 118
+    .byte 49
+    .byte 95
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 46
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 32
+    .byte 119
+    .byte 105
+    .byte 116
+    .byte 104
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 49
+    .byte 46
+    .byte 46
+    .byte 46
+    .byte 0
+    .align 8
+.Lpool_10970:
+    .quad 26
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 58
+    .byte 100
+    .byte 114
+    .byte 105
+    .byte 118
+    .byte 101
+    .byte 114
+    .byte 58
+    .byte 118
+    .byte 49
+    .byte 45
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 45
+    .byte 115
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 50
+    .byte 0
+    .align 8
+.Lpool_11000:
+    .quad 78
+    .byte 226
+    .byte 150
+    .byte 182
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 51
+    .byte 58
+    .byte 32
+    .byte 67
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 105
+    .byte 110
+    .byte 103
+    .byte 32
+    .byte 112
+    .byte 117
+    .byte 114
+    .byte 101
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 32
+    .byte 108
+    .byte 97
+    .byte 110
+    .byte 103
+    .byte 47
+    .byte 99
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 101
+    .byte 114
+    .byte 47
+    .byte 118
+    .byte 49
+    .byte 95
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 46
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 32
+    .byte 119
+    .byte 105
+    .byte 116
+    .byte 104
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 50
+    .byte 46
+    .byte 46
+    .byte 46
+    .byte 0
+    .align 8
+.Lpool_11082:
+    .quad 54
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 58
+    .byte 99
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 101
+    .byte 58
+    .byte 118
+    .byte 49
+    .byte 45
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 45
+    .byte 115
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 50
+    .byte 58
+    .byte 108
+    .byte 97
+    .byte 110
+    .byte 103
+    .byte 47
+    .byte 99
+    .byte 111
+    .byte 109
+    .byte 112
+    .byte 105
+    .byte 108
+    .byte 101
+    .byte 114
+    .byte 47
+    .byte 118
+    .byte 49
+    .byte 95
+    .byte 115
+    .byte 101
+    .byte 108
+    .byte 102
+    .byte 46
+    .byte 115
+    .byte 100
+    .byte 101
+    .byte 118
+    .byte 0
+    .align 8
+.Lpool_11140:
+    .quad 85
+    .byte 226
+    .byte 156
+    .byte 147
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
+    .byte 80
+    .byte 117
+    .byte 114
+    .byte 101
+    .byte 45
+    .byte 118
+    .byte 49
+    .byte 32
+    .byte 70
+    .byte 105
+    .byte 120
+    .byte 101
+    .byte 100
+    .byte 45
+    .byte 80
+    .byte 111
+    .byte 105
+    .byte 110
+    .byte 116
+    .byte 32
+    .byte 86
+    .byte 101
+    .byte 114
+    .byte 105
+    .byte 102
+    .byte 105
+    .byte 101
+    .byte 100
+    .byte 58
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 49
+    .byte 32
+    .byte 61
+    .byte 61
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 50
+    .byte 32
+    .byte 61
+    .byte 61
+    .byte 32
+    .byte 83
+    .byte 116
+    .byte 97
+    .byte 103
+    .byte 101
+    .byte 32
+    .byte 51
+    .byte 32
+    .byte 40
+    .byte 98
+    .byte 121
+    .byte 116
+    .byte 101
+    .byte 45
+    .byte 105
+    .byte 100
+    .byte 101
+    .byte 110
+    .byte 116
+    .byte 105
+    .byte 99
+    .byte 97
+    .byte 108
+    .byte 41
+    .byte 0
+    .align 8
+.Lpool_11229:
+    .quad 31
+    .byte 226
+    .byte 156
+    .byte 151
+    .byte 32
+    .byte 91
+    .byte 118
+    .byte 49
+    .byte 93
+    .byte 32
+    .byte 70
+    .byte 105
+    .byte 120
+    .byte 101
+    .byte 100
+    .byte 45
+    .byte 80
+    .byte 111
+    .byte 105
+    .byte 110
+    .byte 116
+    .byte 32
+    .byte 109
+    .byte 105
+    .byte 115
+    .byte 109
+    .byte 97
+    .byte 116
+    .byte 99
+    .byte 104
+    .byte 33
+    .byte 10
+    .byte 0
+    .align 8
+.Lpool_11264:
     .quad 23
     .byte 115
     .byte 100
@@ -80824,7 +82610,7 @@ sdev_main:
     .byte 39
     .byte 0
     .align 8
-.Lpool_10616:
+.Lpool_11291:
     .quad 20
     .byte 39
     .byte 46

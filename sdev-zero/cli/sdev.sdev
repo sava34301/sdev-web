@@ -34,6 +34,38 @@ to hex_to_bytes with h
   return out
 end
 
+to pick_compile_key with argv
+  set idx to 1
+  set v1_flag to 0
+  if length(argv) >= 2 and trim(argv[1]) is "--v1"
+    set v1_flag to 1
+    set idx to 2
+  end
+  if length(argv) <= idx
+    return ""
+  end
+  set target to trim(argv[idx])
+  if v1_flag is 0
+    if find(read_file(target), "#!sdev v1") is 0
+      set v1_flag to 1
+    end
+  end
+  if v1_flag is 1
+    return "sdev:compile:v1:" + target
+  end
+  return "sdev:compile:self:" + target
+end
+
+to pick_target_name with argv
+  if length(argv) >= 2 and trim(argv[1]) is "--v1" and length(argv) >= 3
+    return trim(argv[2])
+  end
+  if length(argv) >= 2
+    return trim(argv[1])
+  end
+  return ""
+end
+
 to print_help
   say "sdev v4.0.0 — 100% Pure-SDEV Zero-Host Toolchain"
   say ""
@@ -41,30 +73,30 @@ to print_help
   say "  sdev <command> [options]"
   say ""
   say "EXECUTION & COMPILATION (Zero Node.js / Zero Wasm)"
-  say "  run [--v1] <file.sdev> [args...]   Compile and run an SDEV v2 or v1 program"
-  say "  eval \"<code>\"                      Evaluate an inline SDEV snippet"
-  say "  compile <file.sdev> [-o out.sdevc] Compile to an SDEVC4 bytecode container"
-  say "  run-bc <file.sdevc> [args...]      Execute an SDEVC4 bytecode container"
-  say "  native <file.sdev> [-o out]        Compile to a standalone native x86-64 ELF binary"
-  say "  pe <out.exe> [msg] [exit_code]     Emit a standalone Windows x86-64 PE32+ (.exe)"
-  say "  new <dir>                          Scaffold a new pure-SDEV project"
+  say "  run [--v1] <file.sdev> [args...]        Compile and run an SDEV v2 or v1 program"
+  say "  eval [--v1] \"<code>\"                    Evaluate an inline SDEV v2/v1 snippet"
+  say "  compile [--v1] <file.sdev> [-o out]     Compile to an SDEVC4 bytecode container"
+  say "  run-bc <file.sdevc> [args...]           Execute an SDEVC4 bytecode container"
+  say "  native [--v1] <file.sdev> [-o out]      Compile to a standalone native x86-64 ELF binary"
+  say "  pe <out.exe> [msg] [exit_code]          Emit a standalone Windows x86-64 PE32+ (.exe)"
+  say "  new <dir>                               Scaffold a new pure-SDEV project"
   say ""
   say "INSPECTION & CODE QUALITY (100% Pure SDEV)"
-  say "  check <file.sdev>                  Validate syntax, arity, and symbols"
-  say "  disasm <file.sdev>                 Compile and disassemble bytecode"
-  say "  lint <file.sdev>                   Run static linter (SDEV001..SDEV015)"
-  say "  fmt <file.sdev> [-w]               Format SDEV source (-w writes in place)"
-  say "  translate <file.sdev>              Detect script & translate keywords (26 languages)"
-  say "  dialect <slug> <file.sdev>         Canonicalize preset dialect (bg/es/py/mystic)"
-  say "  v1 <file.sdev>                     Transpile SDEV v1 mystical syntax to canonical v2"
-  say "  api [name]                         Inspect canonical API modules & functions"
-  say "  explain <SDEV001..SDEV015>         Explain a diagnostic error code"
+  say "  check [--v1] <file.sdev>                Validate syntax, arity, and symbols"
+  say "  disasm [--v1] <file.sdev>               Compile and disassemble bytecode"
+  say "  lint <file.sdev>                        Run static linter (SDEV001..SDEV015)"
+  say "  fmt <file.sdev> [-w]                    Format SDEV source (-w writes in place)"
+  say "  translate <file.sdev>                   Detect script & translate keywords (26 languages)"
+  say "  dialect <slug> <file.sdev>              Canonicalize preset dialect (bg/es/py/mystic)"
+  say "  v1 <file.sdev>                          Transpile SDEV v1 mystical syntax to canonical v2"
+  say "  api [name]                              Inspect canonical API modules & functions"
+  say "  explain <SDEV001..SDEV015>              Explain a diagnostic error code"
   say ""
   say "SELF-HOSTING & VERIFICATION"
-  say "  test                               Run all zero-host pure-SDEV test suites"
-  say "  bootstrap                          Verify native x86-64 Stage-2 == Stage-3 fixed point"
-  say "  web                                Build the complete SDEV website in pure SDEV"
-  say "  doctor                             Audit zero-host toolchain & zero-foreign-file purity"
+  say "  test                                    Run all zero-host pure-SDEV test suites"
+  say "  bootstrap [--v1]                        Verify Stage-1 == Stage-2 == Stage-3 fixed points (v2 & v1)"
+  say "  web                                     Build the complete SDEV website in pure SDEV"
+  say "  doctor                                  Audit zero-host toolchain & zero-foreign-file purity"
   say "  version | help"
   return 0
 end
@@ -207,12 +239,13 @@ else
       set _ to cmd_doctor()
     else
       if cmd is "check"
-        if length(argv) < 2
-          write_file("sdev:err", "usage: sdev check <file.sdev>\n")
+        set ckey to pick_compile_key(argv)
+        if length(ckey) is 0
+          write_file("sdev:err", "usage: sdev check [--v1] <file.sdev>\n")
           write_file("sdev:exit:2", "")
         else
-          set target to trim(argv[1])
-          set c to read_file("sdev:compile:self:" + target)
+          set target to pick_target_name(argv)
+          set c to read_file(ckey)
           if find(c, "error ") is 0
             write_file("sdev:err", "sdev: " + target + ": " + substr(c, 6, length(c) - 6) + "\n")
             write_file("sdev:exit:1", "")
@@ -223,12 +256,13 @@ else
         end
       else
         if cmd is "disasm"
-          if length(argv) < 2
-            write_file("sdev:err", "usage: sdev disasm <file.sdev>\n")
+          set ckey to pick_compile_key(argv)
+          if length(ckey) is 0
+            write_file("sdev:err", "usage: sdev disasm [--v1] <file.sdev>\n")
             write_file("sdev:exit:2", "")
           else
-            set target to trim(argv[1])
-            set c to read_file("sdev:compile:self:" + target)
+            set target to pick_target_name(argv)
+            set c to read_file(ckey)
             if find(c, "error ") is 0
               write_file("sdev:err", "sdev: " + target + ": " + substr(c, 6, length(c) - 6) + "\n")
               write_file("sdev:exit:1", "")
@@ -335,13 +369,18 @@ else
                   else
                     if cmd is "eval"
                       if length(argv) < 2
-                        write_file("sdev:err", "usage: sdev eval \"<code>\"\n")
+                        write_file("sdev:err", "usage: sdev eval [--v1] \"<code>\"\n")
                         write_file("sdev:exit:2", "")
                       else
+                        set ev_flag to ""
                         set snippet to argv[1]
+                        if trim(argv[1]) is "--v1" and length(argv) >= 3
+                          set ev_flag to "--v1 "
+                          set snippet to argv[2]
+                        end
                         set tmp_f to ".tmp_eval.sdev"
                         set _ to write_file(tmp_f, snippet + "\n")
-                        set res to read_file("sdev:exec:./bin/sdev " + tmp_f + " && rm -f " + tmp_f)
+                        set res to read_file("sdev:exec:./bin/sdev " + ev_flag + tmp_f + " && rm -f " + tmp_f)
                         set nl to find(res, "\n")
                         set st to substr(res, 0, nl)
                         set out to trim(substr(res, nl + 1, length(res) - nl - 1))
@@ -414,15 +453,34 @@ else
                         end
                       else
                         if cmd is "bootstrap"
-                          say "▶ Stage 1: Compiling lang/compiler/driver.sdev with embedded self-hosted driver..."
-                          set s1 to read_file("sdev:compile:self:lang/compiler/driver.sdev")
-                          say "▶ Stage 2: Compiling lang/compiler/driver.sdev with freshly built Stage-2 driver..."
-                          set s2 to read_file("sdev:compile:stage2:lang/compiler/driver.sdev")
-                          set baked to read_file("sdev:driver:baked")
-                          if s1 is baked and s2 is s1
-                            say "✓ Fixed-Point Verified: Stage 1 == Stage 2 == Stage 3 (byte-identical)"
+                          set v1_only to length(argv) >= 2 and trim(argv[1]) is "--v1"
+                          set boot_ok to 1
+                          if v1_only is 0
+                            say "▶ [v2] Stage 1: Compiling lang/compiler/driver.sdev with embedded self-hosted driver..."
+                            set s1 to read_file("sdev:compile:self:lang/compiler/driver.sdev")
+                            say "▶ [v2] Stage 2: Compiling lang/compiler/driver.sdev with freshly built Stage-2 driver..."
+                            set s2 to read_file("sdev:compile:stage2:lang/compiler/driver.sdev")
+                            set baked to read_file("sdev:driver:baked")
+                            if s1 is baked and s2 is s1
+                              say "✓ [v2] Fixed-Point Verified: Stage 1 == Stage 2 == Stage 3 (byte-identical)"
+                            else
+                              write_file("sdev:err", "✗ [v2] Fixed-Point mismatch!\n")
+                              set boot_ok to 0
+                            end
+                          end
+                          say "▶ [v1] Stage 1: Compiling pure-v1 lang/compiler/v1_self.sdev with v1_driver..."
+                          set v1_s1 to read_file("sdev:driver:v1-self")
+                          say "▶ [v1] Stage 2: Compiling pure-v1 lang/compiler/v1_self.sdev with Stage 1..."
+                          set v1_s2 to read_file("sdev:driver:v1-self-stage2")
+                          say "▶ [v1] Stage 3: Compiling pure-v1 lang/compiler/v1_self.sdev with Stage 2..."
+                          set v1_s3 to read_file("sdev:compile:v1-self-stage2:lang/compiler/v1_self.sdev")
+                          if length(v1_s1) > 1000 and find(v1_s1, "error ") is not 0 and v1_s1 is v1_s2 and v1_s2 is v1_s3
+                            say "✓ [v1] Pure-v1 Fixed-Point Verified: Stage 1 == Stage 2 == Stage 3 (byte-identical)"
                           else
-                            write_file("sdev:err", "✗ Fixed-Point mismatch!\n")
+                            write_file("sdev:err", "✗ [v1] Fixed-Point mismatch!\n")
+                            set boot_ok to 0
+                          end
+                          if boot_ok is 0
                             write_file("sdev:exit:1", "")
                           end
                         else

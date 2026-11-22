@@ -164,12 +164,21 @@ end
 
 # ---- Pure-SDEV Bytecode -> x86-64 Native Assembly Compiler ----------------
 
-# Instruction length of the opcodes handled by x64_extra_op.
+# Instruction length of an opcode in SDEV bytecode.
 to x64_extra_len with op
   if op is 160
     return 9
   end
-  if op is 174
+  if op is 96 or op is 197
+    return 4
+  end
+  if op is 2 or op is 64 or op is 65 or op is 128 or op is 138 or op is 192
+    return 3
+  end
+  if op is 1
+    return 5
+  end
+  if op is 3 or op is 4 or op is 98 or op is 99 or op is 100 or op is 174 or op is 196
     return 2
   end
   return 1
@@ -233,6 +242,24 @@ to x64_extra_op with bc pc
   if op is 183
     return "    subq $8, %r15\n    movq (%r15), %rdi\n    call sdev_fround\n" + pushax
   end
+  if op is 184
+    return "    subq $8, %r15\n    movq (%r15), %r12\n    call sdev_random\n    cmpq $0, %r12\n    jle 1f\n    movq %rax, %xmm0\n    cvtsi2sdq %r12, %xmm1\n    mulsd %xmm1, %xmm0\n    cvttsd2siq %xmm0, %rax\n    jmp 2f\n1:  xorq %rax, %rax\n2:\n" + pushax
+  end
+  if op is 193
+    return "    movq .Lbss_xdep(%rip), %rax\n    testq %rax, %rax\n    jle 1f\n    decq %rax\n    movq %rax, .Lbss_xdep(%rip)\n1:  call sdev_try_pop\n"
+  end
+  if op is 197
+    set target to bc[pc + 1] + bc[pc + 2] * 256
+    set ncaps to bc[pc + 3]
+    set tot to 24 + ncaps * 8
+    set cs to "    movq $" + str(tot) + ", %rdi\n    call sdev_alloc\n    movq $-777777, (%rax)\n    movq $" + str(target) + ", 8(%rax)\n    movq $" + str(ncaps) + ", 16(%rax)\n"
+    set ck to ncaps - 1
+    while ck >= 0
+      set cs to cs + "    subq $8, %r15\n    movq (%r15), %rcx\n    movq %rcx, " + str(24 + ck * 8) + "(%rax)\n"
+      set ck to ck - 1
+    end
+    return cs + pushax
+  end
   if op is 174
     set m to bc[pc + 1]
     if m is 5
@@ -284,11 +311,77 @@ to x64_compile_bytecode with bc pool
   set pool_list to mklist(4096)
   set pool_cnt to 0
 
+  # Pre-scan valid instruction boundaries and indirect call / try targets.
+  set insn_ok to mklist(n + 1)
+  set spc to 0
+  set has_callv to 0
+  set has_try to 0
+  while spc < n
+    set insn_ok[spc] to 1
+    set sop to bc[spc]
+    if sop is 196
+      set has_callv to 1
+    end
+    if sop is 192
+      set has_try to 1
+    end
+    set spc to spc + x64_extra_len(sop)
+  end
+
+  set fn_seen to mklist(n + 1)
+  set fn_list to mklist(2048)
+  set fn_cnt to 0
+  if has_callv is 1
+    set spc to 0
+    while spc < n
+      set sop to bc[spc]
+      set cand to 0 - 1
+      if sop is 96 or sop is 197
+        set cand to bc[spc + 1] + bc[spc + 2] * 256
+      else if sop is 1
+        set cand to x64_sign32(bc[spc + 1], bc[spc + 2], bc[spc + 3], bc[spc + 4])
+      end
+      if cand > 0 and cand < n and insn_ok[cand] is 1 and fn_seen[cand] is 0
+        set fn_seen[cand] to 1
+        set fn_list[fn_cnt] to cand
+        set fn_cnt to fn_cnt + 1
+      end
+      set spc to spc + x64_extra_len(sop)
+    end
+  end
+
+  set try_pcs to mklist(256)
+  set try_hs to mklist(256)
+  set try_cnt to 0
+
   set pc to 0
   while pc < n
     set op to bc[pc]
     set chunks[ccnt] to ".Lpc_" + str(pc) + ":\n"
     set ccnt to ccnt + 1
+
+    if op is 192
+      set off to x64_sign16(bc[pc + 1] + bc[pc + 2] * 256)
+      set hpc to pc + 3 + off
+      set try_pcs[try_cnt] to pc
+      set try_hs[try_cnt] to hpc
+      set try_cnt to try_cnt + 1
+      set ts to "    movq .Lbss_xdep(%rip), %rax\n    imulq $24, %rax, %rcx\n    leaq .Lbss_xctx(%rip), %rsi\n    addq %rcx, %rsi\n"
+      set ts to ts + "    movq %r15, (%rsi)\n    movq %r14, 8(%rsi)\n    movq %r13, 16(%rsi)\n    incq %rax\n    movq %rax, .Lbss_xdep(%rip)\n"
+      set ts to ts + "    leaq .Ltry_land_" + str(pc) + "(%rip), %rdi\n    movq %rsp, %rsi\n    movq %rbp, %rdx\n    call sdev_try_push\n"
+      set chunks[ccnt] to ts
+      set ccnt to ccnt + 1
+      set pc to pc + 3
+      continue
+    end
+    if op is 196
+      set nargs to bc[pc + 1]
+      set next_pc to pc + 2
+      set chunks[ccnt] to "    leaq .Lpc_" + str(next_pc) + "(%rip), %rsi\n    movq $" + str(nargs) + ", %rdx\n    jmp .Lrt_callv\n"
+      set ccnt to ccnt + 1
+      set pc to pc + 2
+      continue
+    end
 
     # Float + misc opcodes live in a helper so the main chain stays flat.
     set extra to x64_extra_op(bc, pc)
@@ -688,8 +781,54 @@ to x64_compile_bytecode with bc pool
   set chunks[ccnt] to ".Lmain_done:\n    xorq %rax, %rax\n    popq %r15\n    popq %r14\n    popq %r13\n    popq %r12\n    popq %rbp\n    ret\n"
   set ccnt to ccnt + 1
 
+  if try_cnt > 0
+    set tk to 0
+    while tk < try_cnt
+      set tpc to try_pcs[tk]
+      set thpc to try_hs[tk]
+      set ls to ".Ltry_land_" + str(tpc) + ":\n"
+      set ls to ls + "    movq .Lbss_xdep(%rip), %rcx\n    testq %rcx, %rcx\n    jle 1f\n    decq %rcx\n    movq %rcx, .Lbss_xdep(%rip)\n"
+      set ls to ls + "    imulq $24, %rcx, %rcx\n    leaq .Lbss_xctx(%rip), %rsi\n    addq %rcx, %rsi\n"
+      set ls to ls + "    movq (%rsi), %r15\n    movq 8(%rsi), %r14\n    movq 16(%rsi), %r13\n"
+      set ls to ls + "1:  movq %rax, (%r15)\n    addq $8, %r15\n    jmp .Lpc_" + str(thpc) + "\n"
+      set chunks[ccnt] to ls
+      set ccnt to ccnt + 1
+      set tk to tk + 1
+    end
+  end
+
+  if has_callv is 1
+    set rt to ".Lrt_callv:\n"
+    set rt to rt + "    subq $8, %r15\n    movq (%r15), %r8\n"
+    set rt to rt + "    movq %rsi, (%r13)\n    movq %r14, 8(%r13)\n    addq $16, %r13\n    addq $2048, %r14\n"
+    set rt to rt + "    movq %r14, %rdi\n    xorq %rax, %rax\n    movq $256, %rcx\n    rep stosq\n"
+    set rt to rt + "    movq %rdx, %rcx\n    subq $1, %rcx\n"
+    set rt to rt + ".Lcallv_arg_loop:\n    cmpq $0, %rcx\n    jl .Lcallv_args_done\n    subq $8, %r15\n    movq (%r15), %rax\n    movq %rax, (%r14,%rcx,8)\n    subq $1, %rcx\n    jmp .Lcallv_arg_loop\n"
+    set rt to rt + ".Lcallv_args_done:\n    cmpq $65536, %r8\n    jb .Lcallv_lookup\n    movq (%r8), %rax\n    cmpq $-777777, %rax\n    jne .Lcallv_lookup\n"
+    set rt to rt + "    movq 16(%r8), %rcx\n    xorq %rdi, %rdi\n"
+    set rt to rt + ".Lcallv_cap_loop:\n    cmpq %rcx, %rdi\n    jge .Lcallv_cap_done\n    movq 24(%r8,%rdi,8), %rax\n    movq %rdx, %rsi\n    addq %rdi, %rsi\n    movq %rax, (%r14,%rsi,8)\n    incq %rdi\n    jmp .Lcallv_cap_loop\n"
+    set rt to rt + ".Lcallv_cap_done:\n    movq 8(%r8), %r8\n"
+    set rt to rt + ".Lcallv_lookup:\n    leaq .Lfn_tbl(%rip), %r10\n"
+    set rt to rt + ".Lcallv_tbl_loop:\n    movq (%r10), %rax\n    cmpq $-1, %rax\n    je .Lmain_done\n    cmpq %r8, %rax\n    je .Lcallv_hit\n    addq $16, %r10\n    jmp .Lcallv_tbl_loop\n"
+    set rt to rt + ".Lcallv_hit:\n    jmp *8(%r10)\n"
+    set chunks[ccnt] to rt
+    set ccnt to ccnt + 1
+  end
+
   set chunks[ccnt] to "    .section .rodata\n    .align 8\n"
   set ccnt to ccnt + 1
+
+  if has_callv is 1
+    set ft to ".Lfn_tbl:\n"
+    set fi to 0
+    while fi < fn_cnt
+      set ft to ft + "    .quad " + str(fn_list[fi]) + ", .Lpc_" + str(fn_list[fi]) + "\n"
+      set fi to fi + 1
+    end
+    set ft to ft + "    .quad -1, 0\n"
+    set chunks[ccnt] to ft
+    set ccnt to ccnt + 1
+  end
 
   set pi to 0
   while pi < pool_cnt
@@ -707,7 +846,11 @@ to x64_compile_bytecode with bc pool
     set pi to pi + 1
   end
 
-  set chunks[ccnt] to "    .bss\n    .align 8\n.Lbss_globals:\n    .space 2048\n.Lbss_opstack:\n    .space 65536\n.Lbss_locstack:\n    .space 4194304\n.Lbss_callstack:\n    .space 65536\n"
+  set extra_bss to ""
+  if try_cnt > 0
+    set extra_bss to ".Lbss_xdep:\n    .quad 0\n.Lbss_xctx:\n    .space 1536\n"
+  end
+  set chunks[ccnt] to "    .bss\n    .align 8\n.Lbss_globals:\n    .space 2048\n.Lbss_opstack:\n    .space 65536\n.Lbss_locstack:\n    .space 4194304\n.Lbss_callstack:\n    .space 65536\n" + extra_bss
   set ccnt to ccnt + 1
 
   set out_list to mklist(ccnt)

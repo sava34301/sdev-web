@@ -1442,11 +1442,11 @@ static void print_usage(void) {
   printf(
     "sdev-vm — Zero-Host Native SDEV Virtual Machine & Self-Hosted Compiler\n\n"
     "USAGE\n"
-    "  sdev-vm <program.sdev> [args...]           Compile and run an SDEV program\n"
-    "  sdev-vm run <program.sdev> [args...]       Compile and run an SDEV program\n"
-    "  sdev-vm compile <program.sdev> [-o out]    Compile to an SDEVC4 bytecode container\n"
-    "  sdev-vm run-bc <program.sdevc> [args...]   Execute an SDEVC4 bytecode container\n"
-    "  sdev-vm native <program.sdev> [-o out]     Compile to a standalone native ELF via pure SDEV\n"
+    "  sdev-vm [--v1] <program.sdev> [args...]         Compile and run an SDEV v2/v1 program\n"
+    "  sdev-vm run [--v1] <program.sdev> [args...]     Compile and run an SDEV v2/v1 program\n"
+    "  sdev-vm compile [--v1] <program.sdev> [-o out]  Compile to an SDEVC4 bytecode container\n"
+    "  sdev-vm run-bc <program.sdevc> [args...]        Execute an SDEVC4 bytecode container\n"
+    "  sdev-vm native [--v1] <program.sdev> [-o out]   Compile to a standalone native ELF via pure SDEV\n"
     "  sdev-vm --version | --help\n"
   );
 }
@@ -1502,6 +1502,41 @@ static int check_v1_fixed_reassignment(const char *src, char *bad_name, size_t b
   return 0;
 }
 
+static int has_v1_shebang(const char *src, size_t slen) {
+  return slen >= 9 && strncmp(src, "#!sdev v1", 9) == 0 &&
+         (slen == 9 || src[9] == '\n' || src[9] == '\r');
+}
+
+static int compile_source_mode(
+  int v1_mode, const char *script_path, const char *src, size_t slen,
+  uint8_t **bc, uint32_t *bc_len, uint8_t **pool, uint32_t *pool_len
+) {
+  char *err = NULL;
+  const uint8_t *dbc = BAKED_DRIVER_BC;
+  uint32_t dbcl = BAKED_DRIVER_BC_LEN;
+  const uint8_t *dpool = BAKED_DRIVER_POOL;
+  uint32_t dpl = BAKED_DRIVER_POOL_LEN;
+  if (v1_mode) {
+    char bad_fixed[64];
+    if (check_v1_fixed_reassignment(src, bad_fixed, sizeof(bad_fixed))) {
+      fprintf(stderr, "sdev: %s: Cannot reassign fixed constant '%s'\n", script_path, bad_fixed);
+      return 0;
+    }
+    if (!ensure_v1_driver(&err)) {
+      fprintf(stderr, "sdev: %s: %s\n", script_path, err ? err : "v1 driver error");
+      free(err);
+      return 0;
+    }
+    dbc = g_v1_bc; dbcl = g_v1_bc_len; dpool = g_v1_pool; dpl = g_v1_pool_len;
+  }
+  if (!compile_with_driver(dbc, dbcl, dpool, dpl, src, slen, bc, bc_len, pool, pool_len, &err)) {
+    fprintf(stderr, "sdev: %s: %s\n", script_path, err ? err : "compile error");
+    free(err);
+    return 0;
+  }
+  return 1;
+}
+
 int main(int argc, char **argv) {
   // Delegate high-level pure-SDEV CLI subcommands to cli/sdev.sdev if available
   if (argc >= 2 && (is_cli_subcommand(argv[1]) ||
@@ -1545,16 +1580,19 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  // Subcommand: compile <file.sdev> [-o out.sdevc]
+  // Subcommand: compile [--v1] <file.sdev> [-o out.sdevc]
   if (strcmp(argv[1], "compile") == 0) {
-    if (argc < 3) {
-      fprintf(stderr, "usage: sdev-vm compile <file.sdev> [-o out.sdevc]\n");
-      return 2;
-    }
-    const char *src_path = argv[2];
+    int c_v1 = 0;
+    const char *src_path = NULL;
     const char *out_path = NULL;
-    for (int i = 3; i < argc - 1; i++) {
-      if (strcmp(argv[i], "-o") == 0) out_path = argv[i + 1];
+    for (int i = 2; i < argc; i++) {
+      if (strcmp(argv[i], "--v1") == 0) c_v1 = 1;
+      else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) out_path = argv[++i];
+      else if (!src_path) src_path = argv[i];
+    }
+    if (!src_path) {
+      fprintf(stderr, "usage: sdev-vm compile [--v1] <file.sdev> [-o out.sdevc]\n");
+      return 2;
     }
     char default_out[512];
     if (!out_path) {
@@ -1567,15 +1605,10 @@ int main(int argc, char **argv) {
       fprintf(stderr, "sdev-vm: cannot read %s\n", src_path);
       return 1;
     }
+    if (!c_v1 && has_v1_shebang(src, slen)) c_v1 = 1;
     uint8_t *bc = NULL, *pool = NULL;
     uint32_t bc_len = 0, pool_len = 0;
-    char *err = NULL;
-    if (!compile_with_driver(
-          BAKED_DRIVER_BC, BAKED_DRIVER_BC_LEN,
-          BAKED_DRIVER_POOL, BAKED_DRIVER_POOL_LEN,
-          src, slen, &bc, &bc_len, &pool, &pool_len, &err)) {
-      fprintf(stderr, "sdev: %s: %s\n", src_path, err ? err : "compile error");
-      free(err);
+    if (!compile_source_mode(c_v1, src_path, src, slen, &bc, &bc_len, &pool, &pool_len)) {
       free(src);
       return 1;
     }
@@ -1684,37 +1717,13 @@ int main(int argc, char **argv) {
     fprintf(stderr, "sdev-vm: cannot open %s\n", script_path);
     return 1;
   }
-  if (!v1_mode && strncmp(src, "#!sdev v1", 9) == 0) {
+  if (!v1_mode && has_v1_shebang(src, slen)) {
     v1_mode = 1;
   }
 
   uint8_t *bc = NULL, *pool = NULL;
   uint32_t bc_len = 0, pool_len = 0;
-  char *err = NULL;
-  const uint8_t *dbc = BAKED_DRIVER_BC;
-  uint32_t dbcl = BAKED_DRIVER_BC_LEN;
-  const uint8_t *dpool = BAKED_DRIVER_POOL;
-  uint32_t dpl = BAKED_DRIVER_POOL_LEN;
-  if (v1_mode) {
-    char bad_fixed[64];
-    if (check_v1_fixed_reassignment(src, bad_fixed, sizeof(bad_fixed))) {
-      fprintf(stderr, "sdev: %s: Cannot reassign fixed constant '%s'\n", script_path, bad_fixed);
-      free(src);
-      return 1;
-    }
-    if (!ensure_v1_driver(&err)) {
-      fprintf(stderr, "sdev: %s: %s\n", script_path, err ? err : "v1 driver error");
-      free(err);
-      free(src);
-      return 1;
-    }
-    dbc = g_v1_bc; dbcl = g_v1_bc_len; dpool = g_v1_pool; dpl = g_v1_pool_len;
-  }
-  if (!compile_with_driver(
-        dbc, dbcl, dpool, dpl,
-        src, slen, &bc, &bc_len, &pool, &pool_len, &err)) {
-    fprintf(stderr, "sdev: %s: %s\n", script_path, err ? err : "compile error");
-    free(err);
+  if (!compile_source_mode(v1_mode, script_path, src, slen, &bc, &bc_len, &pool, &pool_len)) {
     free(src);
     return 1;
   }

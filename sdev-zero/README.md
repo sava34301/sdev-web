@@ -10,7 +10,8 @@
 sdev-zero/
 ├── bin/
 │   ├── sdev          # Native Zero-Host SDEV VM + Embedded Self-Hosted Compiler (v2 & v1)
-│   ├── sdev-driver   # 74 KB Static Linux x86-64 ELF Compiler (compiled from driver.sdev, zero libc)
+│   ├── sdev-driver   # 74 KB Static Linux x86-64 ELF v2 Compiler (compiled from driver.sdev, zero libc)
+│   ├── sdev-v1-driver# Static Linux x86-64 ELF v1 Compiler (compiled from pure-v1 v1_self.sdev, zero libc)
 │   ├── sdev-cli      # Static Linux x86-64 ELF CLI (compiled from cli/sdev.sdev by pure SDEV, zero libc)
 │   ├── sdev-win.exe  # 2 KB Standalone Windows x86-64 PE32+ Console Executable (built by pure-SDEV pe_x64.sdev)
 │   └── runtime.s     # System V AMD64 Linux syscall assembly runtime (zero libc)
@@ -65,23 +66,24 @@ Run from inside `sdev-zero/`:
 # Verify zero-foreign-file purity (.js / .mjs / .ts / .wasm = 0) & toolchain health
 ./bin/sdev doctor
 
-# Verify Stage-1 == Stage-2 == Stage-3 self-compilation fixed point
+# Verify Stage-1 == Stage-2 == Stage-3 self-compilation fixed points (v2 & v1)
 ./bin/sdev bootstrap
+./bin/sdev bootstrap --v1
 
-# Run all 20 zero-host pure-SDEV test suites
+# Run all zero-host pure-SDEV test suites
 ./bin/sdev test
 
 # Run any SDEV v2 or v1 program, or evaluate an inline snippet
 ./bin/sdev run program.sdev
 ./bin/sdev run --v1 classic_program.sdev
-./bin/sdev eval "say 6 * 7"
+./bin/sdev eval [--v1] "say 6 * 7"
 
 # Compile to a standalone static Linux x86-64 ELF binary (via pure-SDEV codegen_x64.sdev)
-./bin/sdev native program.sdev -o program
+./bin/sdev native [--v1] program.sdev -o program
 ./program
 
 # Compile to an SDEVC4 bytecode container and run it
-./bin/sdev compile program.sdev -o program.sdevc
+./bin/sdev compile [--v1] program.sdev -o program.sdevc
 ./bin/sdev run-bc program.sdevc
 
 # Emit a standalone 2 KB Windows x86-64 PE32+ Console Executable (.exe) in pure SDEV
@@ -91,8 +93,8 @@ Run from inside `sdev-zero/`:
 ./bin/sdev new my_app
 
 # Inspect, lint, format, translate, canonicalize dialects, or transpile
-./bin/sdev check program.sdev
-./bin/sdev disasm program.sdev
+./bin/sdev check [--v1] program.sdev
+./bin/sdev disasm [--v1] program.sdev
 ./bin/sdev lint program.sdev
 ./bin/sdev fmt program.sdev -w
 ./bin/sdev translate program.sdev
