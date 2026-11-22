@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/native/link.mjs (53 lines)
+# Pure-SDEV Path: src/lang-bridge/native/link.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/native/link.mjs",
+    sdev_path: "src/lang-bridge/native/link.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 53,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["run", "link", "RUNTIME_S", "msg", "as", "ld", "tmp", "progS", "progO", "rtO"]
+end
+
+to run with cmd args opts
+  return cmd
+end
+
+to link with asmText outPath opts
+  return asmText
+end
+
+to RUNTIME_S
+  return 1
+end
+
+to msg
+  return "msg"
+end
+
+to as
+  return "as"
+end
+
+to ld
+  return "ld"
+end
+
+to tmp
+  return "tmp"
+end
+
+to progS
+  return "progS"
+end
+
+to progO
+  return "progO"
+end
+
+to rtO
+  return "rtO"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

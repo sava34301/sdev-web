@@ -7,6 +7,14 @@
 import { emptyDialect, validateDialect, type DialectSpec } from '../src/lang/dialect/spec';
 import { canonicalize, dialectize, translateDialect } from '../src/lang/dialect/canonicalize';
 import {
+  serializeDialectToSdev,
+  parseDialectFromSdev,
+  isDialectSdevFile,
+  serializeDialectCollectionToSdev,
+  parseDialectCollection,
+  extractDialectDirective,
+} from '../src/lang/dialect/sdev-format';
+import {
   readSignature, stripSignature, writeSignature, isSignatureStale, repairSignature,
   buildTranslationRecipe, applyTranslationRecipe, checksum,
 } from '../src/lang/dialect/signature';
@@ -118,6 +126,32 @@ const bigSigned = writeSignature(bigWritten, { rt: 'v1', dialect: null, translat
 check('signed recipe header is much smaller than full body', bigSigned.indexOf('\n') < bigCanon.length / 2, true);
 check('signed recipe reconstructs exact output', readSignature(bigSigned)?.translated, bigCanon);
 check('checksum matches deterministic fnv1a', checksum('say "hi"\n').length, 8);
+
+// ---- pure .sdev dialect files (no JSON required) -------------------------
+const bgSdev = serializeDialectToSdev(bg);
+check('serialized dialect is #!sdev v2', bgSdev.startsWith('#!sdev v2'), true);
+check('serialized dialect detected as dialect file', isDialectSdevFile(bgSdev), true);
+const bgParsed = parseDialectFromSdev(bgSdev);
+check('sdev dialect round-trips meta', bgParsed.meta, bg.meta);
+check('sdev dialect round-trips style', bgParsed.style, bg.style);
+check('sdev dialect round-trips names', bgParsed.names, bg.names);
+check('sdev dialect round-trips synonyms', bgParsed.synonyms, bg.synonyms);
+check('sdev dialect canonicalizes identically', canonicalize(bgSrc, bgParsed).source, canon);
+
+const opsSdev = serializeDialectToSdev(withOps);
+const opsParsed = parseDialectFromSdev(opsSdev);
+check('sdev dialect round-trips custom functions', opsParsed.constructs.functions.map((f) => f.name), ['twice']);
+check('sdev dialect round-trips custom operators', opsParsed.constructs.operators, withOps.constructs.operators);
+check('sdev dialect prelude matches', canonicalize('say 1', opsParsed).source.startsWith('to twice with n'), true);
+
+const bundleSdev = serializeDialectCollectionToSdev([bg, withOps]);
+const bundleParsed = parseDialectCollection(bundleSdev);
+check('sdev dialect collection round-trips count', bundleParsed.length, 2);
+check('sdev dialect collection slugs', bundleParsed.map((d) => d.meta.slug), ['bulgarski', 'ops']);
+
+const dirRes = extractDialectDirective('#!dialect ./bg.dialect.sdev\nкажи "здравей"');
+check('dialect directive target', dirRes?.target, './bg.dialect.sdev');
+check('dialect directive stripped', dirRes?.stripped, 'кажи "здравей"');
 
 if (failures.length) {
   console.error(`\n${failures.length} FAILED:\n` + failures.join('\n\n'));

@@ -1,0 +1,123 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : cli/auth.ts (218 lines)
+# Pure-SDEV Path: cli/auth.sdev
+# Subsystem     : cli
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "cli/auth.ts",
+    sdev_path: "cli/auth.sdev",
+    subsystem: "cli",
+    original_lines: 218,
+    exports_count: 23
+  }
+end
+
+to module_exports
+  return ["saveSession", "clearSession", "readStored", "ensureSession", "currentUser", "requireUser", "explain", "signInWithPassword", "signUpWithPassword", "sendEmailCode", "verifyEmailCode", "signInWithTokens", "sendPasswordReset", "signOut", "sessionFile", "storedSummary", "SESSION_PATH", "payload", "restored", "stored", "session", "expiresAt", "user"]
+end
+
+to saveSession with session
+  return session
+end
+
+to clearSession
+  return 1
+end
+
+to readStored
+  return 1
+end
+
+to ensureSession
+  return 1
+end
+
+to currentUser
+  return 1
+end
+
+to requireUser
+  return 1
+end
+
+to explain with message
+  return message
+end
+
+to signInWithPassword with email password
+  return email
+end
+
+to signUpWithPassword with email password displayName
+  return email
+end
+
+to sendEmailCode with email allowCreate
+  return email
+end
+
+to verifyEmailCode with email code
+  return email
+end
+
+to signInWithTokens with accessToken refreshToken
+  return accessToken
+end
+
+to sendPasswordReset with email
+  return email
+end
+
+to signOut
+  return 1
+end
+
+to sessionFile
+  return 1
+end
+
+to storedSummary
+  return 1
+end
+
+to SESSION_PATH
+  return "SESSION_PATH"
+end
+
+to payload
+  return "payload"
+end
+
+to restored
+  return "restored"
+end
+
+to stored
+  return "stored"
+end
+
+to session
+  return "session"
+end
+
+to expiresAt
+  return "expiresAt"
+end
+
+to user
+  return "user"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,59 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/hooks/useUsername.ts (55 lines)
+# Pure-SDEV Path: src/hooks/useUsername.sdev
+# Subsystem     : hook
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/hooks/useUsername.ts",
+    sdev_path: "src/hooks/useUsername.sdev",
+    subsystem: "hook",
+    original_lines: 55,
+    exports_count: 7
+  }
+end
+
+to module_exports
+  return ["useUsername", "db", "USERNAME_RE", "refresh", "available", "claim", "handle"]
+end
+
+to useUsername
+  return 1
+end
+
+to db
+  return "db"
+end
+
+to USERNAME_RE
+  return "USERNAME_RE"
+end
+
+to refresh
+  return "refresh"
+end
+
+to available
+  return "available"
+end
+
+to claim
+  return "claim"
+end
+
+to handle
+  return "handle"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

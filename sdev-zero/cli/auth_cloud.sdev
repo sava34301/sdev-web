@@ -1,0 +1,41 @@
+# ============================================================
+# SDEV CLI Subsystem — Authentication, Cloud Registry & Prompts
+# (sdev-zero/cli/auth_cloud.sdev)
+# 100% Pure SDEV port of cli/auth.ts, cli/cloud.ts & cli/prompt.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/dialect/dialect.sdev"
+
+to cli_auth_session with username token
+  set authed to 0
+  if length(text_trim(username)) > 0 and length(text_trim(token)) > 0
+    set authed to 1
+  end
+  return {
+    authenticated: authed,
+    username: text_trim(username),
+    token: text_trim(token)
+  }
+end
+
+to cli_cloud_format_publish_payload with session dialect_spec sample_code
+  if session["authenticated"] is 0
+    return { ok: 0, error: "Not authenticated. Run 'sdev login' first.", address: "" }
+  end
+  set addr to "@" + session["username"] + "/" + dialect_spec["slug"] + "@" + dialect_spec["version"]
+  return {
+    ok: 1,
+    error: "",
+    address: addr,
+    share_code: substr(hash_fnv1a_hex(addr), 0, 8),
+    sample: sample_code
+  }
+end
+
+to cli_format_prompt with label default_val
+  if length(text_trim(default_val)) > 0
+    return "? " + label + " (" + default_val + "): "
+  end
+  return "? " + label + ": "
+end

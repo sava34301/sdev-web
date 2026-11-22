@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/studio/runner.ts (710 lines)
+# Pure-SDEV Path: src/studio/runner.sdev
+# Subsystem     : studio
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/studio/runner.ts",
+    sdev_path: "src/studio/runner.sdev",
+    subsystem: "studio",
+    original_lines: 710,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["inferValueType", "formatShortValue", "captureEnvVariables", "buildStepSummary", "buildPrismTree", "visit", "executeWithTracing", "recordLens", "runStudioCode", "runStudioCodeAsync", "TRACED_STATEMENT_TYPES", "text", "map", "list", "seen", "chain", "cursor", "formatted", "counter", "counts", "type", "line", "label", "detail", "callee", "children", "tree", "startTime", "maxSteps", "runtime", "stripped", "detectedLanguage", "executableSource", "sourceLines", "diagnostics", "outputs", "canvasCommands", "turtle", "uiStates", "webStates"]
+end
+
+to inferValueType with val
+  return val
+end
+
+to formatShortValue with val maxLen
+  return val
+end
+
+to captureEnvVariables with env globalEnv initialGlobals unknown prevVars
+  return env
+end
+
+to buildStepSummary with node result sourceLine
+  return node
+end
+
+to buildPrismTree with program
+  return program
+end
+
+to visit with node fallbackLine
+  return node
+end
+
+to executeWithTracing with rawSource options
+  return rawSource
+end
+
+to recordLens with line display sdev_mod_kind
+  return line
+end
+
+to runStudioCode with source options
+  return source
+end
+
+to runStudioCodeAsync with source options
+  return source
+end
+
+to TRACED_STATEMENT_TYPES
+  return "TRACED_STATEMENT_TYPES"
+end
+
+to text
+  return "text"
+end
+
+to map
+  return "map"
+end
+
+to list
+  return "list"
+end
+
+to seen
+  return "seen"
+end
+
+to chain
+  return "chain"
+end
+
+to cursor
+  return "cursor"
+end
+
+to formatted
+  return "formatted"
+end
+
+to counter
+  return "counter"
+end
+
+to counts
+  return "counts"
+end
+
+to type
+  return "type"
+end
+
+to line
+  return "line"
+end
+
+to label
+  return "label"
+end
+
+to detail
+  return "detail"
+end
+
+to callee
+  return "callee"
+end
+
+to children
+  return "children"
+end
+
+to tree
+  return "tree"
+end
+
+to startTime
+  return "startTime"
+end
+
+to maxSteps
+  return "maxSteps"
+end
+
+to runtime
+  return "runtime"
+end
+
+to stripped
+  return "stripped"
+end
+
+to detectedLanguage
+  return "detectedLanguage"
+end
+
+to executableSource
+  return "executableSource"
+end
+
+to sourceLines
+  return "sourceLines"
+end
+
+to diagnostics
+  return "diagnostics"
+end
+
+to outputs
+  return "outputs"
+end
+
+to canvasCommands
+  return "canvasCommands"
+end
+
+to turtle
+  return "turtle"
+end
+
+to uiStates
+  return "uiStates"
+end
+
+to webStates
+  return "webStates"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

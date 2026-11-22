@@ -1,0 +1,28 @@
+# SDEV Standard Library: Test Runner Harness (v2) — authored in SDEV.
+
+use "lang/stdlib/testkit.sdev"
+use "lang/stdlib/v2/text.sdev"
+
+to test_begin with title
+  say "=== " + title + " ==="
+  return title
+end
+
+to assert_eq with ts actual expected msg
+  set _ to check(msg, actual is expected)
+  return ts
+end
+
+to assert_str_eq with ts actual expected msg
+  set _ to check(msg, str_same(actual, expected))
+  return ts
+end
+
+to assert_true with ts cond msg
+  set _ to check(msg, cond)
+  return ts
+end
+
+to test_summary with ts
+  return tk_report(concat(ts, ""))
+end

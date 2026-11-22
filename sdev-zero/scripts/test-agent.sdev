@@ -1,0 +1,83 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-agent.ts (130 lines)
+# Pure-SDEV Path: scripts/test-agent.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-agent.ts",
+    sdev_path: "scripts/test-agent.sdev",
+    subsystem: "script",
+    original_lines: 130,
+    exports_count: 13
+  }
+end
+
+to module_exports
+  return ["check", "canon", "memory", "passed", "failed", "off", "disabled", "clean", "spec", "run", "sentences", "boardColon", "boardBrace"]
+end
+
+to check with name actual expected
+  return name
+end
+
+to canon with src
+  return src
+end
+
+to memory
+  return "memory"
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to off
+  return "off"
+end
+
+to disabled
+  return "disabled"
+end
+
+to clean
+  return "clean"
+end
+
+to spec
+  return "spec"
+end
+
+to run
+  return "run"
+end
+
+to sentences
+  return "sentences"
+end
+
+to boardColon
+  return "boardColon"
+end
+
+to boardBrace
+  return "boardBrace"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

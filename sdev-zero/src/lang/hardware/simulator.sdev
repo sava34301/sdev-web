@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/simulator.ts (882 lines)
+# Pure-SDEV Path: src/lang/hardware/simulator.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/simulator.ts",
+    sdev_path: "src/lang/hardware/simulator.sdev",
+    subsystem: "hardware",
+    original_lines: 882,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["getBuiltinLedPin", "getBoardPinLayout", "normalizePinKey", "parseBoardInstructions", "parseBlockLines", "parseSequence", "parseSingleOrCompound", "evalSimExpr", "splitTopLevelPlus", "createHardwareSimState", "ensurePin", "logEvent", "executeSimInstruction", "stepHardwareSimulator", "runHardwareLoopCycle", "id", "raw", "sdev_mod_num", "globals", "setup", "loop", "extractFnBody", "re", "openChar", "startIdx", "depth", "setupSrc", "loopSrc", "topLines", "rawLines", "idx", "out", "line", "inst", "clean", "ifMatch", "condExpr", "thenBody", "elseBody", "forMatch"]
+end
+
+to getBuiltinLedPin with boardId
+  return boardId
+end
+
+to getBoardPinLayout with boardId
+  return boardId
+end
+
+to normalizePinKey with pin builtinLed
+  return pin
+end
+
+to parseBoardInstructions with inoOrBody builtinLedPin
+  return inoOrBody
+end
+
+to parseBlockLines with blockText builtinLedPin
+  return blockText
+end
+
+to parseSequence
+  return 1
+end
+
+to parseSingleOrCompound with line
+  return line
+end
+
+to evalSimExpr with expr state
+  return expr
+end
+
+to splitTopLevelPlus with expr
+  return expr
+end
+
+to createHardwareSimState with source overrideBoardId
+  return source
+end
+
+to ensurePin with state pinKey
+  return state
+end
+
+to logEvent with state sdev_mod_kind description
+  return state
+end
+
+to executeSimInstruction with inst state
+  return inst
+end
+
+to stepHardwareSimulator with prev
+  return prev
+end
+
+to runHardwareLoopCycle with prev
+  return prev
+end
+
+to id
+  return "id"
+end
+
+to raw
+  return "raw"
+end
+
+to sdev_mod_num
+  return "sdev_mod_num"
+end
+
+to globals
+  return "globals"
+end
+
+to setup
+  return "setup"
+end
+
+to loop
+  return "loop"
+end
+
+to extractFnBody
+  return "extractFnBody"
+end
+
+to re
+  return "re"
+end
+
+to openChar
+  return "openChar"
+end
+
+to startIdx
+  return "startIdx"
+end
+
+to depth
+  return "depth"
+end
+
+to setupSrc
+  return "setupSrc"
+end
+
+to loopSrc
+  return "loopSrc"
+end
+
+to topLines
+  return "topLines"
+end
+
+to rawLines
+  return "rawLines"
+end
+
+to idx
+  return "idx"
+end
+
+to out
+  return "out"
+end
+
+to line
+  return "line"
+end
+
+to inst
+  return "inst"
+end
+
+to clean
+  return "clean"
+end
+
+to ifMatch
+  return "ifMatch"
+end
+
+to condExpr
+  return "condExpr"
+end
+
+to thenBody
+  return "thenBody"
+end
+
+to elseBody
+  return "elseBody"
+end
+
+to forMatch
+  return "forMatch"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,142 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/send-transactional-email/index.ts (385 lines)
+# Pure-SDEV Path: supabase/functions/send-transactional-email/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/send-transactional-email/index.ts",
+    sdev_path: "supabase/functions/send-transactional-email/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 385,
+    exports_count: 24
+  }
+end
+
+to module_exports
+  return ["maskEmail", "generateToken", "isServiceRoleRequest", "at", "SITE_NAME", "SENDER_DOMAIN", "FROM_DOMAIN", "bytes", "authHeader", "token", "json", "claims", "supabaseUrl", "supabaseServiceKey", "templateName", "body", "template", "effectiveRecipient", "supabase", "normalizedEmail", "unsubscribeToken", "html", "plainText", "resolvedSubject"]
+end
+
+to maskEmail with e
+  return {
+    status: 200,
+    handler: "maskEmail",
+    route: "supabase/functions/send-transactional-email/index.ts",
+    payload: e
+  }
+end
+
+to generateToken
+  return {
+    status: 200,
+    handler: "generateToken",
+    route: "supabase/functions/send-transactional-email/index.ts",
+    payload: ""
+  }
+end
+
+to isServiceRoleRequest with req
+  return {
+    status: 200,
+    handler: "isServiceRoleRequest",
+    route: "supabase/functions/send-transactional-email/index.ts",
+    payload: req
+  }
+end
+
+to at
+  return "at"
+end
+
+to SITE_NAME
+  return "SITE_NAME"
+end
+
+to SENDER_DOMAIN
+  return "SENDER_DOMAIN"
+end
+
+to FROM_DOMAIN
+  return "FROM_DOMAIN"
+end
+
+to bytes
+  return "bytes"
+end
+
+to authHeader
+  return "authHeader"
+end
+
+to token
+  return "token"
+end
+
+to json
+  return "json"
+end
+
+to claims
+  return "claims"
+end
+
+to supabaseUrl
+  return "supabaseUrl"
+end
+
+to supabaseServiceKey
+  return "supabaseServiceKey"
+end
+
+to templateName
+  return "templateName"
+end
+
+to body
+  return "body"
+end
+
+to template
+  return "template"
+end
+
+to effectiveRecipient
+  return "effectiveRecipient"
+end
+
+to supabase
+  return "supabase"
+end
+
+to normalizedEmail
+  return "normalizedEmail"
+end
+
+to unsubscribeToken
+  return "unsubscribeToken"
+end
+
+to html
+  return "html"
+end
+
+to plainText
+  return "plainText"
+end
+
+to resolvedSubject
+  return "resolvedSubject"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

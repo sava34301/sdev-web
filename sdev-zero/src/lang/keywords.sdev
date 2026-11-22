@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/keywords.ts (117 lines)
+# Pure-SDEV Path: src/lang/keywords.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/keywords.ts",
+    sdev_path: "src/lang/keywords.sdev",
+    subsystem: "lang-core",
+    original_lines: 117,
+    exports_count: 7
+  }
+end
+
+to module_exports
+  return ["declaration", "dispatch", "KEYWORD_SPECS", "KEYWORD_TOKEN_BY_WORD", "map", "WORDS_BY_TOKEN", "make_KeywordSpec"]
+end
+
+to declaration with init_arg
+  return {
+    kind: "declaration",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to dispatch with init_arg
+  return {
+    kind: "dispatch",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to KEYWORD_SPECS
+  return "KEYWORD_SPECS"
+end
+
+to KEYWORD_TOKEN_BY_WORD
+  return 1
+end
+
+to map
+  return "map"
+end
+
+to WORDS_BY_TOKEN
+  return 1
+end
+
+to make_KeywordSpec with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

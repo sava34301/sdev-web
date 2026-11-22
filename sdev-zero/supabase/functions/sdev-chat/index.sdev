@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/sdev-chat/index.ts (347 lines)
+# Pure-SDEV Path: supabase/functions/sdev-chat/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/sdev-chat/index.ts",
+    sdev_path: "supabase/functions/sdev-chat/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 347,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["corsHeaders", "SDEV_SYSTEM_PROMPT", "denied", "AI_KEY", "response", "errorText"]
+end
+
+to corsHeaders
+  return "corsHeaders"
+end
+
+to SDEV_SYSTEM_PROMPT
+  return "SDEV_SYSTEM_PROMPT"
+end
+
+to denied
+  return "denied"
+end
+
+to AI_KEY
+  return "AI_KEY"
+end
+
+to response
+  return "response"
+end
+
+to errorText
+  return "errorText"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

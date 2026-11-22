@@ -1,0 +1,257 @@
+# =============================================================================
+# SDEV Standard Library: 2D Canvas Graphics Engine (lang/stdlib/v2/graphics.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+# Global graphics state list:
+# 0: width (int)
+# 1: height (int)
+# 2: bg_color (str)
+# 3: fill_color (str)
+# 4: stroke_color (str)
+# 5: line_width (int)
+# 6: font_spec (str)
+# 7: has_fill (int 1/0)
+# 8: has_stroke (int 1/0)
+# 9: cmd_count (int)
+# 10: svg_defs (str)
+# 11: svg_body (str)
+set _gfx to mklist(16)
+set _gfx[0] to 400
+set _gfx[1] to 400
+set _gfx[2] to "#090d16"
+set _gfx[3] to "#38bdf8"
+set _gfx[4] to "#e2e8f0"
+set _gfx[5] to 2
+set _gfx[6] to "14px JetBrains Mono, monospace"
+set _gfx[7] to 1
+set _gfx[8] to 1
+set _gfx[9] to 0
+set _gfx[10] to ""
+set _gfx[11] to ""
+
+to canvas_create with w h
+  set _gfx[0] to w
+  set _gfx[1] to h
+  set _gfx[2] to "#090d16"
+  set _gfx[3] to "#38bdf8"
+  set _gfx[4] to "#e2e8f0"
+  set _gfx[5] to 2
+  set _gfx[6] to "14px JetBrains Mono, monospace"
+  set _gfx[7] to 1
+  set _gfx[8] to 1
+  set _gfx[9] to 0
+  set _gfx[10] to ""
+  set _gfx[11] to ""
+  return _gfx
+end
+
+to gfx_emit with frag
+  set cur to concat(_gfx[11], "")
+  set _gfx[11] to cur + frag + "\n"
+  set _gfx[9] to _gfx[9] + 1
+  return 0
+end
+
+to gfx_clear
+  set _gfx[9] to 0
+  set _gfx[11] to ""
+  return 0
+end
+
+to gfx_background with color_str
+  set _gfx[2] to concat(color_str, "")
+  set w to str(_gfx[0])
+  set h to str(_gfx[1])
+  return gfx_emit("<rect x=\"0\" y=\"0\" width=\"" + w + "\" height=\"" + h + "\" fill=\"" + concat(color_str, "") + "\"/>")
+end
+
+to gfx_fill with color_str
+  set _gfx[3] to concat(color_str, "")
+  set _gfx[7] to 1
+  return 0
+end
+
+to gfx_no_fill
+  set _gfx[7] to 0
+  return 0
+end
+
+to gfx_stroke with color_str
+  set _gfx[4] to concat(color_str, "")
+  set _gfx[8] to 1
+  return 0
+end
+
+to gfx_no_stroke
+  set _gfx[8] to 0
+  return 0
+end
+
+to gfx_line_width with w
+  set _gfx[5] to w
+  return 0
+end
+
+to gfx_font with font_str
+  set _gfx[6] to concat(font_str, "")
+  return 0
+end
+
+to gfx_paint_attrs
+  set f to "none"
+  if _gfx[7] is 1
+    set f to concat(_gfx[3], "")
+  end
+  set s to "none"
+  if _gfx[8] is 1
+    set s to concat(_gfx[4], "")
+  end
+  set out to " fill=\"" + f + "\" stroke=\"" + s + "\" stroke-width=\"" + str(_gfx[5]) + "\""
+  return concat(out, "")
+end
+
+to gfx_rect with x y w h radius
+  set rx_attr to ""
+  if radius > 0
+    set rx_attr to " rx=\"" + str(radius) + "\""
+  end
+  return gfx_emit("<rect x=\"" + str(x) + "\" y=\"" + str(y) + "\" width=\"" + str(w) + "\" height=\"" + str(h) + "\"" + rx_attr + gfx_paint_attrs() + "/>")
+end
+
+to gfx_circle with cx cy r
+  return gfx_emit("<circle cx=\"" + str(cx) + "\" cy=\"" + str(cy) + "\" r=\"" + str(r) + "\"" + gfx_paint_attrs() + "/>")
+end
+
+to gfx_ellipse with cx cy rx ry
+  return gfx_emit("<ellipse cx=\"" + str(cx) + "\" cy=\"" + str(cy) + "\" rx=\"" + str(rx) + "\" ry=\"" + str(ry) + "\"" + gfx_paint_attrs() + "/>")
+end
+
+to gfx_line with x1 y1 x2 y2
+  set s to concat(_gfx[4], "")
+  return gfx_emit("<line x1=\"" + str(x1) + "\" y1=\"" + str(y1) + "\" x2=\"" + str(x2) + "\" y2=\"" + str(y2) + "\" stroke=\"" + s + "\" stroke-width=\"" + str(_gfx[5]) + "\" stroke-linecap=\"round\"/>")
+end
+
+to gfx_triangle with x1 y1 x2 y2 x3 y3
+  set pts to str(x1) + "," + str(y1) + " " + str(x2) + "," + str(y2) + " " + str(x3) + "," + str(y3)
+  return gfx_emit("<polygon points=\"" + pts + "\"" + gfx_paint_attrs() + "/>")
+end
+
+to gfx_polygon with points_str
+  return gfx_emit("<polygon points=\"" + concat(points_str, "") + "\"" + gfx_paint_attrs() + "/>")
+end
+
+to gfx_text with txt x y
+  set f to concat(_gfx[3], "")
+  set fn_spec to concat(_gfx[6], "")
+  return gfx_emit("<text x=\"" + str(x) + "\" y=\"" + str(y) + "\" fill=\"" + f + "\" style=\"font: " + fn_spec + ";\">" + concat(txt, "") + "</text>")
+end
+
+to gfx_linear_gradient with grad_id x1 y1 x2 y2 c1 c2
+  set def to "<linearGradient id=\"" + concat(grad_id, "") + "\" x1=\"" + str(x1) + "%\" y1=\"" + str(y1) + "%\" x2=\"" + str(x2) + "%\" y2=\"" + str(y2) + "%\"><stop offset=\"0%\" stop-color=\"" + concat(c1, "") + "\"/><stop offset=\"100%\" stop-color=\"" + concat(c2, "") + "\"/></linearGradient>"
+  set cur to concat(_gfx[10], "")
+  set _gfx[10] to cur + def
+  set _gfx[3] to "url(#" + concat(grad_id, "") + ")"
+  set _gfx[7] to 1
+  return 0
+end
+
+to gfx_push_transform with transform_str
+  return gfx_emit("<g transform=\"" + concat(transform_str, "") + "\">")
+end
+
+to gfx_pop_transform
+  return gfx_emit("</g>")
+end
+
+to gfx_translate with dx dy
+  return gfx_push_transform("translate(" + str(dx) + "," + str(dy) + ")")
+end
+
+to gfx_rotate with deg
+  return gfx_push_transform("rotate(" + str(deg) + ")")
+end
+
+to gfx_scale with sx sy
+  return gfx_push_transform("scale(" + str(sx) + "," + str(sy) + ")")
+end
+
+to gfx_cmd_count
+  return _gfx[9]
+end
+
+to gfx_to_svg
+  set w to str(_gfx[0])
+  set h to str(_gfx[1])
+  set defs_str to concat(_gfx[10], "")
+  set defs_block to ""
+  if length(defs_str) > 0
+    set defs_block to "<defs>" + defs_str + "</defs>\n"
+  end
+  set svg to "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + w + "\" height=\"" + h + "\" viewBox=\"0 0 " + w + " " + h + "\">\n" + defs_block + concat(_gfx[11], "") + "</svg>"
+  return concat(svg, "")
+end
+
+
+to gfx_hue_css with h s l
+  return "hsl(" + str(h) + ", " + str(s) + "%, " + str(l) + "%)"
+end
+
+to gfx_rgb_css with r g b
+  return "rgb(" + str(r) + ", " + str(g) + ", " + str(b) + ")"
+end
+
+to gfx_rgba_css with r g b a
+  return "rgba(" + str(r) + ", " + str(g) + ", " + str(b) + ", " + str(a) + ")"
+end
+
+to gfx_hsla_css with h s l a
+  return "hsla(" + str(h) + ", " + str(s) + "%, " + str(l) + "%, " + str(a) + ")"
+end
+
+to gfx_radians with deg
+  return (deg * 3.141592653589793) / 180.0
+end
+
+to gfx_degrees with rad
+  return (rad * 180.0) / 3.141592653589793
+end
+
+to gfx_lerp with a b t
+  return a + ((b - a) * t)
+end
+
+to gfx_map_range with val in_min in_max out_min out_max
+  return out_min + ((out_max - out_min) * ((val - in_min) / (in_max - in_min)))
+end
+
+to gfx_constrain with val lo hi
+  if val < lo
+    return lo
+  end
+  if val > hi
+    return hi
+  end
+  return val
+end
+
+to gfx_dist with x1 y1 x2 y2
+  set dx to x2 - x1
+  set dy to y2 - y1
+  return fsqrt((dx * dx) + (dy * dy))
+end
+
+to gfx_sprite_collides with ax ay aw ah bx by bw bh
+  if ax < (bx + bw)
+    if (ax + aw) > bx
+      if ay < (by + bh)
+        if (ay + ah) > by
+          return 1
+        end
+      end
+    end
+  end
+  return 0
+end

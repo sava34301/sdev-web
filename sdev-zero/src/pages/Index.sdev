@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Index.tsx (798 lines)
+# Pure-SDEV Path: src/pages/Index.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Index.tsx",
+    sdev_path: "src/pages/Index.sdev",
+    subsystem: "page",
+    original_lines: 798,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["DEFAULT_CODE", "STEPS", "SCENE_PANELS", "KEYWORD_LANGS", "clamp01", "Index", "navigate", "canvasRef", "playgroundRef", "howRef", "stackRef", "heroRef", "statsRef", "pageRef", "runCode", "outputLines", "commands", "turtleState", "t0", "lexer", "tokens", "parser", "ast", "interpreter", "env", "gfxBuiltins", "producedWeb", "webBuiltins", "t1", "handleExampleSelect", "handleTranslatedCode", "handleClearOutput", "handleCopyCode", "handleShare", "encoded", "shared", "openInIde", "codeRef", "go", "current"]
+end
+
+to DEFAULT_CODE
+  return "<sdev-view component=\"DEFAULT_CODE\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to STEPS
+  return "<sdev-view component=\"STEPS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to SCENE_PANELS
+  return "<sdev-view component=\"SCENE_PANELS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to KEYWORD_LANGS
+  return "<sdev-view component=\"KEYWORD_LANGS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to clamp01 with v
+  return "<sdev-view component=\"clamp01\" subsystem=\"page\">" + str(v) + "</sdev-view>"
+end
+
+to Index
+  return "<sdev-view component=\"Index\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to canvasRef
+  return "<sdev-view component=\"canvasRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to playgroundRef
+  return "<sdev-view component=\"playgroundRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to howRef
+  return "<sdev-view component=\"howRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to stackRef
+  return "<sdev-view component=\"stackRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to heroRef
+  return "<sdev-view component=\"heroRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to statsRef
+  return "<sdev-view component=\"statsRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to pageRef
+  return "<sdev-view component=\"pageRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to runCode
+  return "<sdev-view component=\"runCode\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to outputLines
+  return "<sdev-view component=\"outputLines\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to commands
+  return "<sdev-view component=\"commands\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to turtleState
+  return "<sdev-view component=\"turtleState\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to t0
+  return "<sdev-view component=\"t0\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to lexer
+  return "<sdev-view component=\"lexer\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to tokens
+  return "<sdev-view component=\"tokens\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to parser
+  return "<sdev-view component=\"parser\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to ast
+  return "<sdev-view component=\"ast\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to interpreter
+  return "<sdev-view component=\"interpreter\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to env
+  return "<sdev-view component=\"env\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to gfxBuiltins
+  return "<sdev-view component=\"gfxBuiltins\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to producedWeb
+  return "<sdev-view component=\"producedWeb\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to webBuiltins
+  return "<sdev-view component=\"webBuiltins\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to t1
+  return "<sdev-view component=\"t1\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleExampleSelect
+  return "<sdev-view component=\"handleExampleSelect\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleTranslatedCode
+  return "<sdev-view component=\"handleTranslatedCode\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleClearOutput
+  return "<sdev-view component=\"handleClearOutput\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleCopyCode
+  return "<sdev-view component=\"handleCopyCode\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleShare
+  return "<sdev-view component=\"handleShare\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to encoded
+  return "<sdev-view component=\"encoded\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to shared
+  return "<sdev-view component=\"shared\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to openInIde
+  return "<sdev-view component=\"openInIde\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to codeRef
+  return "<sdev-view component=\"codeRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to go
+  return "<sdev-view component=\"go\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to current
+  return "<sdev-view component=\"current\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

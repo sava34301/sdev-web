@@ -1,0 +1,75 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/alert-dialog.tsx (104 lines)
+# Pure-SDEV Path: src/components/ui/alert-dialog.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/alert-dialog.tsx",
+    sdev_path: "src/components/ui/alert-dialog.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 104,
+    exports_count: 11
+  }
+end
+
+to module_exports
+  return ["AlertDialog", "AlertDialogTrigger", "AlertDialogPortal", "AlertDialogOverlay", "AlertDialogContent", "AlertDialogHeader", "AlertDialogFooter", "AlertDialogTitle", "AlertDialogDescription", "AlertDialogAction", "AlertDialogCancel"]
+end
+
+to AlertDialog
+  return "<sdev-view component=\"AlertDialog\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogTrigger
+  return "<sdev-view component=\"AlertDialogTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogPortal
+  return "<sdev-view component=\"AlertDialogPortal\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogOverlay
+  return "<sdev-view component=\"AlertDialogOverlay\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogContent
+  return "<sdev-view component=\"AlertDialogContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogHeader with props
+  return "<sdev-view component=\"AlertDialogHeader\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to AlertDialogFooter with props
+  return "<sdev-view component=\"AlertDialogFooter\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to AlertDialogTitle
+  return "<sdev-view component=\"AlertDialogTitle\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogDescription
+  return "<sdev-view component=\"AlertDialogDescription\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogAction
+  return "<sdev-view component=\"AlertDialogAction\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to AlertDialogCancel
+  return "<sdev-view component=\"AlertDialogCancel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

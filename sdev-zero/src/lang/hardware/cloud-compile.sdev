@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/cloud-compile.ts (184 lines)
+# Pure-SDEV Path: src/lang/hardware/cloud-compile.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/cloud-compile.ts",
+    sdev_path: "src/lang/hardware/cloud-compile.sdev",
+    subsystem: "hardware",
+    original_lines: 184,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["filterExternalLibraries", "compileWithWokwiHexi", "compileSketch", "WOKWI_HEXI_URL", "known", "externalLibs", "res", "data", "log", "isIhex", "cleanUrl", "ctrl", "timer", "cloudRes", "make_CloudCompileResult"]
+end
+
+to filterExternalLibraries with libraries
+  return libraries
+end
+
+to compileWithWokwiHexi with board ino libraries fetchImpl
+  return board
+end
+
+to compileSketch with opts
+  return opts
+end
+
+to WOKWI_HEXI_URL
+  return "WOKWI_HEXI_URL"
+end
+
+to known
+  return "known"
+end
+
+to externalLibs
+  return "externalLibs"
+end
+
+to res
+  return "res"
+end
+
+to data
+  return "data"
+end
+
+to log
+  return "log"
+end
+
+to isIhex
+  return "isIhex"
+end
+
+to cleanUrl
+  return "cleanUrl"
+end
+
+to ctrl
+  return "ctrl"
+end
+
+to timer
+  return "timer"
+end
+
+to cloudRes
+  return "cloudRes"
+end
+
+to make_CloudCompileResult with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

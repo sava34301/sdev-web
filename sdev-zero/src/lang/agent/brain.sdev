@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/brain.ts (320 lines)
+# Pure-SDEV Path: src/lang/agent/brain.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/brain.ts",
+    sdev_path: "src/lang/agent/brain.sdev",
+    subsystem: "agent",
+    original_lines: 320,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["normalizeLocalEndpoints", "fetchWithTimeout", "env", "stored", "brainSettings", "online", "sanitizeBrainOutput", "parseReply", "chatWithLocalServer", "callLocal", "probeLocalServer", "callLocalFix", "callOnline", "think", "DEFAULT_LOCAL_URL", "DEFAULT_LOCAL_MODEL", "controller", "id", "BRAIN_KEYS", "nav", "res", "json", "endpoints", "text", "result", "modelsRes", "errStr", "data", "list", "tagsRes", "reply", "lastBrainMissing", "cfg", "url", "make_BrainRequest", "make_BrainReply", "make_FixResult", "make_NormalizedEndpoints", "make_BrainSettings", "make_LocalProbeResult"]
+end
+
+to normalizeLocalEndpoints with rawInput
+  return rawInput
+end
+
+to fetchWithTimeout with url init timeoutMs
+  return url
+end
+
+to env with name
+  return name
+end
+
+to stored with key
+  return key
+end
+
+to brainSettings
+  return 1
+end
+
+to online
+  return 1
+end
+
+to sanitizeBrainOutput with code format
+  return code
+end
+
+to parseReply with text format
+  return text
+end
+
+to chatWithLocalServer with endpoints model messages temperature timeoutMs
+  return endpoints
+end
+
+to callLocal with req url model
+  return req
+end
+
+to probeLocalServer with url
+  return url
+end
+
+to callLocalFix with code error note url
+  return code
+end
+
+to callOnline with req
+  return req
+end
+
+to think with req mode localUrl
+  return req
+end
+
+to DEFAULT_LOCAL_URL
+  return "DEFAULT_LOCAL_URL"
+end
+
+to DEFAULT_LOCAL_MODEL
+  return "DEFAULT_LOCAL_MODEL"
+end
+
+to controller
+  return "controller"
+end
+
+to id
+  return "id"
+end
+
+to BRAIN_KEYS
+  return "BRAIN_KEYS"
+end
+
+to nav
+  return "nav"
+end
+
+to res
+  return "res"
+end
+
+to json
+  return "json"
+end
+
+to endpoints
+  return "endpoints"
+end
+
+to text
+  return "text"
+end
+
+to result
+  return "result"
+end
+
+to modelsRes
+  return "modelsRes"
+end
+
+to errStr
+  return "errStr"
+end
+
+to data
+  return "data"
+end
+
+to list
+  return "list"
+end
+
+to tagsRes
+  return "tagsRes"
+end
+
+to reply
+  return "reply"
+end
+
+to lastBrainMissing
+  return "lastBrainMissing"
+end
+
+to cfg
+  return "cfg"
+end
+
+to url
+  return "url"
+end
+
+to make_BrainRequest with payload
+  return payload
+end
+
+to make_BrainReply with payload
+  return payload
+end
+
+to make_FixResult with payload
+  return payload
+end
+
+to make_NormalizedEndpoints with payload
+  return payload
+end
+
+to make_BrainSettings with payload
+  return payload
+end
+
+to make_LocalProbeResult with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

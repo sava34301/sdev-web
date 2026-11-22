@@ -1,0 +1,851 @@
+# SDEV v1 Recursive-Descent Parser — authored in pure SDEV.
+#
+# Reads tokens from the global token arrays (`tk_kind`, `tk_num`, `tk_num2`,
+# `tk_txt`, `tk_count`) and emits canonical Reverse Polish Notation (RPN)
+# nodes into `rpn_out` (and optionally to stdout via `say`).
+#
+# Token kinds expected:
+#   1 = INT (tk_num)
+#   2 = IDENT / keyword (tk_txt)
+#   3 = STRING (tk_txt)
+#   4 = OP / punct (tk_num: ASCII or multi-char codes 300..320)
+#   5 = NL
+#   6 = FLOAT (tk_num = mantissa, tk_num2 = scale)
+#   7 = FSTRING (tk_txt)
+
+set rpn_out to mklist(8192)
+set rpn_meta to mklist(2)
+set rpn_meta[0] to 0
+set rpn_meta[1] to 0
+
+to v1_p_str_eq with a b
+  if concat(a, "") is b
+    return 1
+  end
+  return 0
+end
+
+to v1_rpn_reset with echo_flag
+  set rpn_meta[0] to 0
+  set rpn_meta[1] to echo_flag
+  return 0
+end
+
+to v1_p_emit_rpn with s
+  set n to rpn_meta[0]
+  if n < length(rpn_out)
+    set rpn_out[n] to concat(s, "")
+    set rpn_meta[0] to n + 1
+  end
+  if rpn_meta[1] is 1
+    say concat(s, "")
+  end
+  return 0
+end
+
+to v1_rpn_results
+  set n to rpn_meta[0]
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to rpn_out[i]
+    set i to i + 1
+  end
+  return out
+end
+
+to v1_p_op_code with op
+  if v1_p_str_eq(op, "<=") is 1
+    return 300
+  end
+  if v1_p_str_eq(op, ">=") is 1
+    return 301
+  end
+  if v1_p_str_eq(op, "::") is 1
+    return 302
+  end
+  if v1_p_str_eq(op, ";;") is 1
+    return 303
+  end
+  if v1_p_str_eq(op, "==") is 1
+    return 304
+  end
+  if v1_p_str_eq(op, "!=") is 1 or v1_p_str_eq(op, "<>") is 1
+    return 305
+  end
+  if v1_p_str_eq(op, "->") is 1
+    return 306
+  end
+  if v1_p_str_eq(op, "=>") is 1
+    return 307
+  end
+  if v1_p_str_eq(op, "|>") is 1
+    return 308
+  end
+  if v1_p_str_eq(op, "+=") is 1
+    return 310
+  end
+  if v1_p_str_eq(op, "-=") is 1
+    return 311
+  end
+  if v1_p_str_eq(op, "*=") is 1
+    return 312
+  end
+  if v1_p_str_eq(op, "/=") is 1
+    return 313
+  end
+  if v1_p_str_eq(op, "%=") is 1
+    return 314
+  end
+  if v1_p_str_eq(op, ":=") is 1
+    return 315
+  end
+  if v1_p_str_eq(op, "**") is 1
+    return 316
+  end
+  if v1_p_str_eq(op, "{|") is 1
+    return 317
+  end
+  if v1_p_str_eq(op, "|}") is 1
+    return 318
+  end
+  if v1_p_str_eq(op, "&&") is 1
+    return 319
+  end
+  if v1_p_str_eq(op, "||") is 1
+    return 320
+  end
+  if length(op) >= 1
+    return ord(op, 0)
+  end
+  return 0
+end
+
+# Load tokens from a `v1_lex_list()` array into the global token buffers.
+# Returns the loaded token count (caller assigns `set tk_count to ...`).
+to v1_p_load_tokens with toks k_arr n_arr n2_arr txt_arr
+  set total to length(toks)
+  set c to 0
+  set i to 0
+  while i < total
+    set rec to concat(toks[i], "")
+    if v1_p_str_eq(rec, "EOF") is 1
+      set i to total
+    else if v1_p_str_eq(rec, "NL") is 1
+      set k_arr[c] to 5
+      set n_arr[c] to 0
+      set n2_arr[c] to 0
+      set txt_arr[c] to ""
+      set c to c + 1
+      set i to i + 1
+    else if find(rec, "N=") is 0
+      set k_arr[c] to 1
+      set n_arr[c] to int(substr(rec, 2, length(rec) - 2))
+      set n2_arr[c] to 0
+      set txt_arr[c] to ""
+      set c to c + 1
+      set i to i + 1
+    else if find(rec, "F=") is 0
+      set body to substr(rec, 2, length(rec) - 2)
+      set col to find(body, ":")
+      set k_arr[c] to 6
+      set n_arr[c] to int(substr(body, 0, col))
+      set n2_arr[c] to int(substr(body, col + 1, length(body) - col - 1))
+      set txt_arr[c] to ""
+      set c to c + 1
+      set i to i + 1
+    else if find(rec, "I=") is 0
+      set k_arr[c] to 2
+      set n_arr[c] to 0
+      set n2_arr[c] to 0
+      set txt_arr[c] to substr(rec, 2, length(rec) - 2)
+      set c to c + 1
+      set i to i + 1
+    else if find(rec, "S=") is 0
+      set k_arr[c] to 3
+      set n_arr[c] to 0
+      set n2_arr[c] to 0
+      set txt_arr[c] to substr(rec, 2, length(rec) - 2)
+      set c to c + 1
+      set i to i + 1
+    else if find(rec, "FS=") is 0
+      set k_arr[c] to 7
+      set n_arr[c] to 0
+      set n2_arr[c] to 0
+      set txt_arr[c] to substr(rec, 3, length(rec) - 3)
+      set c to c + 1
+      set i to i + 1
+    else if find(rec, "P=") is 0
+      set op to substr(rec, 2, length(rec) - 2)
+      set k_arr[c] to 4
+      set n_arr[c] to v1_p_op_code(op)
+      set n2_arr[c] to 0
+      set txt_arr[c] to op
+      set c to c + 1
+      set i to i + 1
+    else
+      set i to i + 1
+    end
+  end
+  return c
+end
+
+# ---- Token predicates -----------------------------------------------------
+
+to v1_p_is_op with pos c
+  if pos >= tk_count
+    return 0
+  end
+  if tk_kind[pos] is 4
+    if tk_num[pos] is c
+      return 1
+    end
+  end
+  return 0
+end
+
+to v1_p_is_word with pos w
+  if pos >= tk_count
+    return 0
+  end
+  if tk_kind[pos] is 2
+    return v1_p_str_eq(tk_txt[pos], w)
+  end
+  return 0
+end
+
+to v1_p_skip_nl with pos
+  while pos < tk_count and tk_kind[pos] is 5
+    set pos to pos + 1
+  end
+  return pos
+end
+
+# ---- Expression parser (RPN) ----------------------------------------------
+
+to v1_rpn_atom with pos
+  if pos >= tk_count
+    return pos
+  end
+  if tk_kind[pos] is 1
+    set _ to v1_p_emit_rpn(concat("N=", str(tk_num[pos])))
+    return pos + 1
+  end
+  if tk_kind[pos] is 6
+    set _ to v1_p_emit_rpn(concat("F=", concat(str(tk_num[pos]), concat(":", str(tk_num2[pos])))))
+    return pos + 1
+  end
+  if tk_kind[pos] is 3
+    set _ to v1_p_emit_rpn(concat("S=", tk_txt[pos]))
+    return pos + 1
+  end
+  if tk_kind[pos] is 7
+    set _ to v1_p_emit_rpn(concat("FS=", tk_txt[pos]))
+    return pos + 1
+  end
+  if tk_kind[pos] is 2
+    set w to tk_txt[pos]
+    if v1_p_str_eq(w, "yep") is 1 or v1_p_str_eq(w, "true") is 1
+      set _ to v1_p_emit_rpn("B=1")
+      return pos + 1
+    end
+    if v1_p_str_eq(w, "nope") is 1 or v1_p_str_eq(w, "false") is 1
+      set _ to v1_p_emit_rpn("B=0")
+      return pos + 1
+    end
+    if v1_p_str_eq(w, "void") is 1 or v1_p_str_eq(w, "null") is 1 or v1_p_str_eq(w, "none") is 1 or v1_p_str_eq(w, "nothing") is 1
+      set _ to v1_p_emit_rpn("VOID")
+      return pos + 1
+    end
+    if v1_p_is_op(pos + 1, 40) is 1
+      set pos to pos + 2
+      set nargs to 0
+      if v1_p_is_op(pos, 41) is 1
+        set pos to pos + 1
+      else
+        set pos to v1_parse_rpn_expr(pos)
+        set nargs to 1
+        while v1_p_is_op(pos, 44) is 1
+          set pos to v1_parse_rpn_expr(pos + 1)
+          set nargs to nargs + 1
+        end
+        if v1_p_is_op(pos, 41) is 1
+          set pos to pos + 1
+        end
+      end
+      set _ to v1_p_emit_rpn(concat("CALL=", concat(w, concat("/", str(nargs)))))
+      return pos
+    end
+    set _ to v1_p_emit_rpn(concat("I=", w))
+    return pos + 1
+  end
+  # Parenthesized expression '(' expr ')'
+  if v1_p_is_op(pos, 40) is 1
+    set pos to v1_parse_rpn_expr(pos + 1)
+    if v1_p_is_op(pos, 41) is 1
+      return pos + 1
+    end
+    return pos
+  end
+  # List literal '[' ... ']' or Set literal '{|' ... '|}'
+  if v1_p_is_op(pos, 91) is 1 or v1_p_is_op(pos, 317) is 1
+    set close_code to 93
+    if v1_p_is_op(pos, 317) is 1
+      set close_code to 318
+    end
+    set pos to v1_p_skip_nl(pos + 1)
+    set n to 0
+    if v1_p_is_op(pos, close_code) is 1
+      set pos to pos + 1
+    else
+      set pos to v1_parse_rpn_expr(pos)
+      set n to 1
+      set pos to v1_p_skip_nl(pos)
+      while v1_p_is_op(pos, 44) is 1
+        set pos to v1_p_skip_nl(pos + 1)
+        if v1_p_is_op(pos, close_code) is 1
+          break
+        end
+        set pos to v1_parse_rpn_expr(pos)
+        set n to n + 1
+        set pos to v1_p_skip_nl(pos)
+      end
+      if v1_p_is_op(pos, close_code) is 1
+        set pos to pos + 1
+      end
+    end
+    set _ to v1_p_emit_rpn(concat("LIST=", str(n)))
+    return pos
+  end
+  # Tome literal '{' ... '}' or '::' ... ';;'
+  if v1_p_is_op(pos, 123) is 1 or v1_p_is_op(pos, 302) is 1
+    set close_code to 125
+    if v1_p_is_op(pos, 302) is 1
+      set close_code to 303
+    end
+    set pos to v1_p_skip_nl(pos + 1)
+    set n to 0
+    while pos < tk_count and v1_p_is_op(pos, close_code) is 0
+      if tk_kind[pos] is 2 and v1_p_is_op(pos + 1, 58) is 1
+        set _ to v1_p_emit_rpn(concat("S=", tk_txt[pos]))
+        set pos to pos + 2
+      else
+        set pos to v1_parse_rpn_expr(pos)
+        if v1_p_is_op(pos, 58) is 1
+          set pos to pos + 1
+        end
+      end
+      set pos to v1_parse_rpn_expr(pos)
+      set n to n + 1
+      set pos to v1_p_skip_nl(pos)
+      if v1_p_is_op(pos, 44) is 1
+        set pos to v1_p_skip_nl(pos + 1)
+      else
+        if v1_p_is_op(pos, close_code) is 0
+          set pos to pos
+        end
+      end
+    end
+    if v1_p_is_op(pos, close_code) is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn(concat("TOME=", str(n)))
+    return pos
+  end
+  return pos
+end
+
+to v1_rpn_postfix with pos
+  set pos to v1_rpn_atom(pos)
+  set going to 1
+  while going is 1
+    if v1_p_is_op(pos, 91) is 1
+      set pos to v1_parse_rpn_expr(pos + 1)
+      if v1_p_is_op(pos, 93) is 1
+        set pos to pos + 1
+      end
+      set _ to v1_p_emit_rpn("INDEX")
+    else if v1_p_is_op(pos, 46) is 1 and pos + 1 < tk_count and tk_kind[pos + 1] is 2
+      set mname to tk_txt[pos + 1]
+      if v1_p_is_op(pos + 2, 40) is 1
+        set pos to pos + 3
+        set nargs to 0
+        if v1_p_is_op(pos, 41) is 1
+          set pos to pos + 1
+        else
+          set pos to v1_parse_rpn_expr(pos)
+          set nargs to 1
+          while v1_p_is_op(pos, 44) is 1
+            set pos to v1_parse_rpn_expr(pos + 1)
+            set nargs to nargs + 1
+          end
+          if v1_p_is_op(pos, 41) is 1
+            set pos to pos + 1
+          end
+        end
+        set _ to v1_p_emit_rpn(concat("MCALL=", concat(mname, concat("/", str(nargs)))))
+      else
+        set _ to v1_p_emit_rpn(concat("MEMBER=", mname))
+        set pos to pos + 2
+      end
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to v1_rpn_pow with pos
+  set pos to v1_rpn_postfix(pos)
+  if v1_p_is_op(pos, 94) is 1 or v1_p_is_op(pos, 316) is 1
+    set pos to v1_rpn_unary(pos + 1)
+    set _ to v1_p_emit_rpn("OP=^")
+  end
+  return pos
+end
+
+to v1_rpn_unary with pos
+  if v1_p_is_op(pos, 45) is 1
+    set pos to v1_rpn_unary(pos + 1)
+    set _ to v1_p_emit_rpn("NEG")
+    return pos
+  end
+  if v1_p_is_op(pos, 43) is 1
+    return v1_rpn_unary(pos + 1)
+  end
+  if v1_p_is_word(pos, "isnt") is 1 or v1_p_is_word(pos, "not") is 1 or v1_p_is_op(pos, 33) is 1
+    set pos to v1_rpn_unary(pos + 1)
+    set _ to v1_p_emit_rpn("NOT")
+    return pos
+  end
+  return v1_rpn_pow(pos)
+end
+
+to v1_rpn_mul with pos
+  set pos to v1_rpn_unary(pos)
+  set going to 1
+  while going is 1
+    if v1_p_is_op(pos, 42) is 1
+      set pos to v1_rpn_unary(pos + 1)
+      set _ to v1_p_emit_rpn("OP=*")
+    else if v1_p_is_op(pos, 47) is 1
+      set pos to v1_rpn_unary(pos + 1)
+      set _ to v1_p_emit_rpn("OP=/")
+    else if v1_p_is_op(pos, 37) is 1
+      set pos to v1_rpn_unary(pos + 1)
+      set _ to v1_p_emit_rpn("OP=%")
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to v1_rpn_add with pos
+  set pos to v1_rpn_mul(pos)
+  set going to 1
+  while going is 1
+    if v1_p_is_op(pos, 43) is 1
+      set pos to v1_rpn_mul(pos + 1)
+      set _ to v1_p_emit_rpn("OP=+")
+    else if v1_p_is_op(pos, 45) is 1
+      set pos to v1_rpn_mul(pos + 1)
+      set _ to v1_p_emit_rpn("OP=-")
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to v1_rpn_cmp with pos
+  set pos to v1_rpn_add(pos)
+  set going to 1
+  while going is 1
+    if v1_p_is_word(pos, "equals") is 1 or v1_p_is_op(pos, 304) is 1
+      set pos to v1_rpn_add(pos + 1)
+      set _ to v1_p_emit_rpn("OP===")
+    else if v1_p_is_word(pos, "differs") is 1 or v1_p_is_op(pos, 305) is 1
+      set pos to v1_rpn_add(pos + 1)
+      set _ to v1_p_emit_rpn("OP=!=")
+    else if v1_p_is_word(pos, "is") is 1
+      if v1_p_is_word(pos + 1, "not") is 1
+        set pos to v1_rpn_add(pos + 2)
+        set _ to v1_p_emit_rpn("OP=!=")
+      else
+        set pos to v1_rpn_add(pos + 1)
+        set _ to v1_p_emit_rpn("OP===")
+      end
+    else if v1_p_is_op(pos, 60) is 1
+      set pos to v1_rpn_add(pos + 1)
+      set _ to v1_p_emit_rpn("OP=<")
+    else if v1_p_is_op(pos, 62) is 1
+      set pos to v1_rpn_add(pos + 1)
+      set _ to v1_p_emit_rpn("OP=>")
+    else if v1_p_is_op(pos, 300) is 1
+      set pos to v1_rpn_add(pos + 1)
+      set _ to v1_p_emit_rpn("OP=<=")
+    else if v1_p_is_op(pos, 301) is 1
+      set pos to v1_rpn_add(pos + 1)
+      set _ to v1_p_emit_rpn("OP=>=")
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to v1_rpn_and with pos
+  set pos to v1_rpn_cmp(pos)
+  set going to 1
+  while going is 1
+    if v1_p_is_word(pos, "also") is 1 or v1_p_is_word(pos, "and") is 1 or v1_p_is_op(pos, 319) is 1
+      set pos to v1_rpn_cmp(pos + 1)
+      set _ to v1_p_emit_rpn("OP=and")
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to v1_rpn_or with pos
+  set pos to v1_rpn_and(pos)
+  set going to 1
+  while going is 1
+    if v1_p_is_word(pos, "either") is 1 or v1_p_is_word(pos, "or") is 1 or v1_p_is_op(pos, 320) is 1
+      set pos to v1_rpn_and(pos + 1)
+      set _ to v1_p_emit_rpn("OP=or")
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to v1_rpn_ternary with pos
+  set pos to v1_rpn_or(pos)
+  if v1_p_is_op(pos, 126) is 1
+    set pos to v1_rpn_or(pos + 1)
+    if v1_p_is_op(pos, 58) is 1
+      set pos to pos + 1
+    end
+    set pos to v1_rpn_ternary(pos)
+    set _ to v1_p_emit_rpn("TERNARY")
+  end
+  return pos
+end
+
+to v1_rpn_pipe with pos
+  set pos to v1_rpn_ternary(pos)
+  set going to 1
+  while going is 1
+    if v1_p_is_op(pos, 308) is 1
+      set pos to v1_rpn_ternary(pos + 1)
+      set _ to v1_p_emit_rpn("PIPE")
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to v1_parse_rpn_expr with pos
+  return v1_rpn_pipe(pos)
+end
+
+# ---- Statement parser (RPN) -----------------------------------------------
+
+to v1_rpn_block with pos
+  set going to 1
+  while going is 1
+    set pos to v1_p_skip_nl(pos)
+    if pos >= tk_count
+      set going to 0
+    else if v1_p_is_op(pos, 303) is 1 or v1_p_is_word(pos, "end") is 1 or v1_p_is_word(pos, "otherwise") is 1 or v1_p_is_word(pos, "else") is 1 or v1_p_is_word(pos, "elsewise") is 1 or v1_p_is_word(pos, "elif") is 1 or v1_p_is_word(pos, "rescue") is 1 or v1_p_is_word(pos, "ensure") is 1
+      set going to 0
+    else
+      set next_pos to v1_parse_rpn_stmt(pos)
+      if next_pos is pos
+        set going to 0
+      else
+        set pos to next_pos
+      end
+    end
+  end
+  return pos
+end
+
+to v1_parse_rpn_stmt with pos
+  set pos to v1_p_skip_nl(pos)
+  if pos >= tk_count
+    return pos
+  end
+  # forge name be expr
+  if v1_p_is_word(pos, "forge") is 1 or v1_p_is_word(pos, "fixed") is 1
+    set vname to tk_txt[pos + 1]
+    set pos to pos + 2
+    if v1_p_is_word(pos, "be") is 1 or v1_p_is_op(pos, 61) is 1
+      set pos to v1_parse_rpn_expr(pos + 1)
+    else
+      set _ to v1_p_emit_rpn("VOID")
+    end
+    set _ to v1_p_emit_rpn(concat("STMT=FORGE:", vname))
+    return pos
+  end
+  # be name be expr  /  set name to expr
+  if v1_p_is_word(pos, "be") is 1 or v1_p_is_word(pos, "set") is 1
+    set vname to tk_txt[pos + 1]
+    set pos to pos + 2
+    if v1_p_is_word(pos, "be") is 1 or v1_p_is_word(pos, "to") is 1 or v1_p_is_op(pos, 61) is 1
+      set pos to v1_parse_rpn_expr(pos + 1)
+    end
+    set _ to v1_p_emit_rpn(concat("STMT=ASSIGN:", vname))
+    return pos
+  end
+  # speak(args...) / say expr
+  if v1_p_is_word(pos, "speak") is 1 or v1_p_is_word(pos, "say") is 1 or v1_p_is_word(pos, "print") is 1
+    set pos to pos + 1
+    set nargs to 0
+    if v1_p_is_op(pos, 40) is 1
+      set pos to pos + 1
+      if v1_p_is_op(pos, 41) is 1
+        set pos to pos + 1
+      else
+        set pos to v1_parse_rpn_expr(pos)
+        set nargs to 1
+        while v1_p_is_op(pos, 44) is 1
+          set pos to v1_parse_rpn_expr(pos + 1)
+          set nargs to nargs + 1
+        end
+        if v1_p_is_op(pos, 41) is 1
+          set pos to pos + 1
+        end
+      end
+    else
+      set pos to v1_parse_rpn_expr(pos)
+      set nargs to 1
+      while v1_p_is_op(pos, 44) is 1
+        set pos to v1_parse_rpn_expr(pos + 1)
+        set nargs to nargs + 1
+      end
+    end
+    set _ to v1_p_emit_rpn(concat("STMT=SPEAK:", str(nargs)))
+    return pos
+  end
+  # ponder / either / if / elsewise / elif
+  if v1_p_is_word(pos, "ponder") is 1 or v1_p_is_word(pos, "either") is 1 or v1_p_is_word(pos, "if") is 1 or v1_p_is_word(pos, "elsewise") is 1 or v1_p_is_word(pos, "elif") is 1
+    set pos to v1_parse_rpn_expr(pos + 1)
+    if v1_p_is_op(pos, 302) is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=IF_BEGIN")
+    set pos to v1_rpn_block(pos)
+    if v1_p_is_op(pos, 303) is 1
+      set pos to pos + 1
+    end
+    set pos to v1_p_skip_nl(pos)
+    if v1_p_is_word(pos, "elsewise") is 1 or v1_p_is_word(pos, "elif") is 1
+      set _ to v1_p_emit_rpn("STMT=ELSE")
+      set pos to v1_parse_rpn_stmt(pos)
+      set _ to v1_p_emit_rpn("STMT=IF_END")
+      return pos
+    end
+    if v1_p_is_word(pos, "otherwise") is 1 or v1_p_is_word(pos, "else") is 1
+      set _ to v1_p_emit_rpn("STMT=ELSE")
+      set pos to pos + 1
+      if v1_p_is_word(pos, "ponder") is 1 or v1_p_is_word(pos, "either") is 1 or v1_p_is_word(pos, "if") is 1
+        set pos to v1_parse_rpn_stmt(pos)
+        set _ to v1_p_emit_rpn("STMT=IF_END")
+        return pos
+      end
+      if v1_p_is_op(pos, 302) is 1
+        set pos to pos + 1
+      end
+      set pos to v1_rpn_block(pos)
+      if v1_p_is_op(pos, 303) is 1 or v1_p_is_word(pos, "end") is 1
+        set pos to pos + 1
+      end
+    else if v1_p_is_word(pos, "end") is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=IF_END")
+    return pos
+  end
+  # cycle / while
+  if v1_p_is_word(pos, "cycle") is 1 or v1_p_is_word(pos, "while") is 1
+    set pos to v1_parse_rpn_expr(pos + 1)
+    if v1_p_is_op(pos, 302) is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=WHILE_BEGIN")
+    set pos to v1_rpn_block(pos)
+    if v1_p_is_op(pos, 303) is 1 or v1_p_is_word(pos, "end") is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=WHILE_END")
+    return pos
+  end
+  # iterate / within / for
+  if v1_p_is_word(pos, "iterate") is 1 or v1_p_is_word(pos, "within") is 1 or v1_p_is_word(pos, "for") is 1
+    set pos to pos + 1
+    if v1_p_is_word(pos, "each") is 1
+      set pos to pos + 1
+    end
+    set vname to tk_txt[pos]
+    set pos to pos + 1
+    if v1_p_is_word(pos, "through") is 1 or v1_p_is_word(pos, "be") is 1 or v1_p_is_word(pos, "in") is 1
+      set pos to pos + 1
+    end
+    set pos to v1_parse_rpn_expr(pos)
+    if v1_p_is_op(pos, 302) is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn(concat("STMT=FOR_BEGIN:", vname))
+    set pos to v1_rpn_block(pos)
+    if v1_p_is_op(pos, 303) is 1 or v1_p_is_word(pos, "end") is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=FOR_END")
+    return pos
+  end
+  # conjure / to / func / def
+  if v1_p_is_word(pos, "conjure") is 1 or v1_p_is_word(pos, "to") is 1 or v1_p_is_word(pos, "func") is 1 or v1_p_is_word(pos, "def") is 1
+    set fname to tk_txt[pos + 1]
+    set pos to pos + 2
+    set nargs to 0
+    if v1_p_is_op(pos, 40) is 1
+      set pos to pos + 1
+      while pos < tk_count and v1_p_is_op(pos, 41) is 0
+        if tk_kind[pos] is 2
+          set nargs to nargs + 1
+        end
+        set pos to pos + 1
+      end
+      if v1_p_is_op(pos, 41) is 1
+        set pos to pos + 1
+      end
+    else if v1_p_is_word(pos, "with") is 1
+      set pos to pos + 1
+      while pos < tk_count and tk_kind[pos] is 2
+        set nargs to nargs + 1
+        set pos to pos + 1
+      end
+    end
+    if v1_p_is_op(pos, 302) is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn(concat("STMT=FN_BEGIN:", concat(fname, concat("/", str(nargs)))))
+    set pos to v1_rpn_block(pos)
+    if v1_p_is_op(pos, 303) is 1 or v1_p_is_word(pos, "end") is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=FN_END")
+    return pos
+  end
+  # attempt / try ... rescue / catch ...
+  if v1_p_is_word(pos, "attempt") is 1 or v1_p_is_word(pos, "try") is 1
+    set pos to pos + 1
+    if v1_p_is_op(pos, 302) is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=TRY_BEGIN")
+    set pos to v1_rpn_block(pos)
+    if v1_p_is_op(pos, 303) is 1
+      set pos to pos + 1
+    end
+    set pos to v1_p_skip_nl(pos)
+    if v1_p_is_word(pos, "rescue") is 1 or v1_p_is_word(pos, "catch") is 1 or v1_p_is_word(pos, "except") is 1
+      set pos to pos + 1
+      set ename to ""
+      if pos < tk_count and tk_kind[pos] is 2 and v1_p_is_op(pos + 1, 302) is 0
+        set ename to tk_txt[pos]
+        set pos to pos + 1
+      end
+      if v1_p_is_op(pos, 302) is 1
+        set pos to pos + 1
+      end
+      set _ to v1_p_emit_rpn(concat("STMT=CATCH:", ename))
+      set pos to v1_rpn_block(pos)
+      if v1_p_is_op(pos, 303) is 1 or v1_p_is_word(pos, "end") is 1
+        set pos to pos + 1
+      end
+    else if v1_p_is_word(pos, "end") is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=TRY_END")
+    return pos
+  end
+  # hurl / raise / throw
+  if v1_p_is_word(pos, "hurl") is 1 or v1_p_is_word(pos, "raise") is 1 or v1_p_is_word(pos, "throw") is 1
+    set pos to v1_parse_rpn_expr(pos + 1)
+    set _ to v1_p_emit_rpn("STMT=THROW")
+    return pos
+  end
+  # essence / kind / class
+  if v1_p_is_word(pos, "essence") is 1 or v1_p_is_word(pos, "kind") is 1 or v1_p_is_word(pos, "class") is 1
+    set cname to tk_txt[pos + 1]
+    set pos to pos + 2
+    if (v1_p_is_word(pos, "extend") is 1 or v1_p_is_word(pos, "extends") is 1) and pos + 1 < tk_count
+      set pos to pos + 2
+    end
+    if v1_p_is_op(pos, 302) is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn(concat("STMT=CLASS_BEGIN:", cname))
+    set pos to v1_rpn_block(pos)
+    if v1_p_is_op(pos, 303) is 1 or v1_p_is_word(pos, "end") is 1
+      set pos to pos + 1
+    end
+    set _ to v1_p_emit_rpn("STMT=CLASS_END")
+    return pos
+  end
+  # yield / return
+  if v1_p_is_word(pos, "yield") is 1 or v1_p_is_word(pos, "return") is 1
+    set pos to pos + 1
+    if pos < tk_count and tk_kind[pos] is not 5 and v1_p_is_op(pos, 303) is 0
+      set pos to v1_parse_rpn_expr(pos)
+      set _ to v1_p_emit_rpn("STMT=RETURN:1")
+    else
+      set _ to v1_p_emit_rpn("STMT=RETURN:0")
+    end
+    return pos
+  end
+  if v1_p_is_word(pos, "yeet") is 1 or v1_p_is_word(pos, "break") is 1
+    set _ to v1_p_emit_rpn("STMT=BREAK")
+    return pos + 1
+  end
+  if v1_p_is_word(pos, "skip") is 1 or v1_p_is_word(pos, "continue") is 1
+    set _ to v1_p_emit_rpn("STMT=CONTINUE")
+    return pos + 1
+  end
+  if v1_p_is_word(pos, "idle") is 1 or v1_p_is_word(pos, "pass") is 1
+    set _ to v1_p_emit_rpn("STMT=PASS")
+    return pos + 1
+  end
+  # Bare assignment: ident (be | = | += | -= | *= | /= | %=) expr
+  if tk_kind[pos] is 2 and pos + 1 < tk_count
+    if v1_p_is_word(pos + 1, "be") is 1 or v1_p_is_op(pos + 1, 61) is 1
+      set vname to tk_txt[pos]
+      set pos to v1_parse_rpn_expr(pos + 2)
+      set _ to v1_p_emit_rpn(concat("STMT=ASSIGN:", vname))
+      return pos
+    end
+    if tk_kind[pos + 1] is 4 and tk_num[pos + 1] >= 310 and tk_num[pos + 1] <= 314
+      set vname to tk_txt[pos]
+      set _ to v1_p_emit_rpn(concat("I=", vname))
+      set op_ch to substr(tk_txt[pos + 1], 0, 1)
+      set pos to v1_parse_rpn_expr(pos + 2)
+      set _ to v1_p_emit_rpn(concat("OP=", op_ch))
+      set _ to v1_p_emit_rpn(concat("STMT=ASSIGN:", vname))
+      return pos
+    end
+  end
+  # Expression statement
+  if tk_kind[pos] is 2 or tk_kind[pos] is 1 or tk_kind[pos] is 3 or v1_p_is_op(pos, 40) is 1 or v1_p_is_op(pos, 91) is 1
+    set pos to v1_parse_rpn_expr(pos)
+    set _ to v1_p_emit_rpn("STMT=EXPR")
+    return pos
+  end
+  return pos
+end

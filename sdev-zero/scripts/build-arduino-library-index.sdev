@@ -1,0 +1,35 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-arduino-library-index.py (36 lines)
+# Pure-SDEV Path: scripts/build-arduino-library-index.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-arduino-library-index.py",
+    sdev_path: "scripts/build-arduino-library-index.sdev",
+    subsystem: "script",
+    original_lines: 36,
+    exports_count: 1
+  }
+end
+
+to module_exports
+  return ["ver"]
+end
+
+to ver with v
+  return v
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

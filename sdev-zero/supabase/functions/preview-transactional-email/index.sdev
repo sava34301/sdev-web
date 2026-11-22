@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/preview-transactional-email/index.ts (96 lines)
+# Pure-SDEV Path: supabase/functions/preview-transactional-email/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/preview-transactional-email/index.ts",
+    sdev_path: "supabase/functions/preview-transactional-email/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 96,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["apiKey", "authHeader", "token", "templateNames", "results", "entry", "displayName", "html", "resolvedSubject"]
+end
+
+to apiKey
+  return "apiKey"
+end
+
+to authHeader
+  return "authHeader"
+end
+
+to token
+  return "token"
+end
+
+to templateNames
+  return "templateNames"
+end
+
+to results
+  return "results"
+end
+
+to entry
+  return "entry"
+end
+
+to displayName
+  return "displayName"
+end
+
+to html
+  return "html"
+end
+
+to resolvedSubject
+  return "resolvedSubject"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

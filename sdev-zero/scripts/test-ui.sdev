@@ -1,0 +1,95 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-ui.ts (91 lines)
+# Pure-SDEV Path: scripts/test-ui.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-ui.ts",
+    sdev_path: "scripts/test-ui.sdev",
+    subsystem: "script",
+    original_lines: 91,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["check", "sdev_mod_call", "passed", "failed", "lastState", "emit", "handlerIdCounter", "registerHandler", "builtins", "fn", "windowNode", "rowNode", "buttonNode", "progressNode", "clicked", "actionNode"]
+end
+
+to check with name actual expected
+  return name
+end
+
+to sdev_mod_call with name args
+  return name
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to lastState
+  return "lastState"
+end
+
+to emit with state
+  return state
+end
+
+to handlerIdCounter
+  return "handlerIdCounter"
+end
+
+to registerHandler with cb
+  return cb
+end
+
+to builtins
+  return "builtins"
+end
+
+to fn
+  return "fn"
+end
+
+to windowNode
+  return "windowNode"
+end
+
+to rowNode
+  return "rowNode"
+end
+
+to buttonNode
+  return "buttonNode"
+end
+
+to progressNode
+  return "progressNode"
+end
+
+to clicked
+  return "clicked"
+end
+
+to actionNode
+  return "actionNode"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

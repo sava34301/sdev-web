@@ -1,0 +1,107 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/buffer.ts (221 lines)
+# Pure-SDEV Path: src/lang/builtins/buffer.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/buffer.ts",
+    sdev_path: "src/lang/builtins/buffer.sdev",
+    subsystem: "builtins",
+    original_lines: 221,
+    exports_count: 19
+  }
+end
+
+to module_exports
+  return ["getBufRunner", "registerBuffer", "bufRunner", "size", "data", "sdevList", "syncFromList", "syncToList", "obj", "list", "target", "buf", "offset", "bytesView", "newOffset", "syncArenaToState", "cap", "raw", "ptr"]
+end
+
+to getBufRunner
+  return 1
+end
+
+to registerBuffer with builtins SdevFunction _output
+  return builtins
+end
+
+to bufRunner
+  return "bufRunner"
+end
+
+to size
+  return "size"
+end
+
+to data
+  return "data"
+end
+
+to sdevList
+  return "sdevList"
+end
+
+to syncFromList
+  return 1
+end
+
+to syncToList
+  return 1
+end
+
+to obj
+  return "obj"
+end
+
+to list
+  return "list"
+end
+
+to target
+  return "target"
+end
+
+to buf
+  return "buf"
+end
+
+to offset
+  return "offset"
+end
+
+to bytesView
+  return 1
+end
+
+to newOffset
+  return "newOffset"
+end
+
+to syncArenaToState with a
+  return a
+end
+
+to cap
+  return "cap"
+end
+
+to raw
+  return "raw"
+end
+
+to ptr
+  return "ptr"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

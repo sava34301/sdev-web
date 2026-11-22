@@ -69,9 +69,245 @@ to pe_verify_header with buf
   if buf[0] < 70
     return 0
   end
-  # Check 'M', 'Z' at [1..2] and 'P', 'E' at [65..66]
-  if buf[1] is 77 and buf[2] is 90 and buf[65] is 80 and buf[66] is 69
-    return 1
+  # Check 'M', 'Z' at [1..2] and 'P', 'E' at [65..66] or [129..130]
+  if buf[1] is 77 and buf[2] is 90
+    if buf[65] is 80 and buf[66] is 69
+      return 1
+    end
+    if buf[0] >= 132 and buf[129] is 80 and buf[130] is 69
+      return 1
+    end
   end
   return 0
+end
+
+to pe_put_u8 with buf off b
+  set v to b % 256
+  if v < 0
+    set v to v + 256
+  end
+  set buf[off + 1] to v
+  return 0
+end
+
+to pe_put_u16 with buf off v
+  set _ to pe_put_u8(buf, off, v % 256)
+  set _ to pe_put_u8(buf, off + 1, (v / 256) % 256)
+  return 0
+end
+
+to pe_put_u32 with buf off v
+  set u to v
+  set b0 to u % 256
+  if b0 < 0
+    set b0 to b0 + 256
+  end
+  set u to (u - b0) / 256
+  set b1 to u % 256
+  if b1 < 0
+    set b1 to b1 + 256
+  end
+  set u to (u - b1) / 256
+  set b2 to u % 256
+  if b2 < 0
+    set b2 to b2 + 256
+  end
+  set u to (u - b2) / 256
+  set b3 to u % 256
+  if b3 < 0
+    set b3 to b3 + 256
+  end
+  set _ to pe_put_u8(buf, off, b0)
+  set _ to pe_put_u8(buf, off + 1, b1)
+  set _ to pe_put_u8(buf, off + 2, b2)
+  set _ to pe_put_u8(buf, off + 3, b3)
+  return 0
+end
+
+to pe_put_str with buf off s
+  set n to length(s)
+  set i to 0
+  while i < n
+    set _ to pe_put_u8(buf, off + i, ord(s, i))
+    set i to i + 1
+  end
+  return 0
+end
+
+# Builds a complete 2,048-byte 64-bit Windows PE32+ Console Executable (.exe)
+# in 100% pure SDEV that prints `msg_text` via KERNEL32.dll (GetStdHandle,
+# WriteFile, ExitProcess) and exits with `exit_code`.
+to pe_build_console_exe with msg_text exit_code
+  set buf to mklist(2049)
+  set buf[0] to 2048
+  set zi to 1
+  while zi <= 2048
+    set buf[zi] to 0
+    set zi to zi + 1
+  end
+
+  # 1. DOS Header + Stub + PE Signature
+  set _ to pe_put_str(buf, 0, "MZ")
+  set _ to pe_put_u32(buf, 60, 128)
+  set _ to pe_put_str(buf, 64, "This program cannot be run in DOS mode." + chr(13) + chr(13) + "\n$")
+  set _ to pe_put_str(buf, 128, "PE")
+
+  # 2. COFF Header (offset 132 = 0x84)
+  set _ to pe_put_u16(buf, 132, 34404)
+  set _ to pe_put_u16(buf, 134, 2)
+  set _ to pe_put_u16(buf, 148, 240)
+  set _ to pe_put_u16(buf, 150, 34)
+
+  # 3. Optional Header PE32+ (offset 152 = 0x98)
+  set _ to pe_put_u16(buf, 152, 523)
+  set _ to pe_put_u8(buf, 154, 14)
+  set _ to pe_put_u32(buf, 156, 4096)
+  set _ to pe_put_u32(buf, 160, 4096)
+  set _ to pe_put_u32(buf, 168, 4096)
+  set _ to pe_put_u32(buf, 172, 4096)
+  set _ to pe_put_u32(buf, 176, 0)
+  set _ to pe_put_u32(buf, 180, 1)
+  set _ to pe_put_u32(buf, 184, 4096)
+  set _ to pe_put_u32(buf, 188, 512)
+  set _ to pe_put_u16(buf, 192, 6)
+  set _ to pe_put_u16(buf, 200, 6)
+  set _ to pe_put_u32(buf, 208, 12288)
+  set _ to pe_put_u32(buf, 212, 512)
+  set _ to pe_put_u16(buf, 220, 3)
+  set _ to pe_put_u16(buf, 222, 33120)
+  set _ to pe_put_u32(buf, 224, 1048576)
+  set _ to pe_put_u32(buf, 232, 4096)
+  set _ to pe_put_u32(buf, 240, 1048576)
+  set _ to pe_put_u32(buf, 248, 4096)
+  set _ to pe_put_u32(buf, 260, 16)
+  # Data Directory [1] Import Table (RVA 0x2000 = 8192, size 40)
+  set _ to pe_put_u32(buf, 272, 8192)
+  set _ to pe_put_u32(buf, 276, 40)
+  # Data Directory [12] IAT (RVA 0x2050 = 8272, size 32)
+  set _ to pe_put_u32(buf, 360, 8272)
+  set _ to pe_put_u32(buf, 364, 32)
+
+  # 4. Section Headers (offset 392 = 0x188)
+  set _ to pe_put_str(buf, 392, ".text")
+  set _ to pe_put_u32(buf, 400, 4096)
+  set _ to pe_put_u32(buf, 404, 4096)
+  set _ to pe_put_u32(buf, 408, 512)
+  set _ to pe_put_u32(buf, 412, 512)
+  set _ to pe_put_u32(buf, 428, 1610612768)
+
+  set _ to pe_put_str(buf, 432, ".rdata")
+  set _ to pe_put_u32(buf, 440, 4096)
+  set _ to pe_put_u32(buf, 444, 8192)
+  set _ to pe_put_u32(buf, 448, 1024)
+  set _ to pe_put_u32(buf, 452, 1024)
+  # Characteristics = 0xC0000040 (InitData | Read | Write): low bytes 0x40,0,0,0xC0
+  set _ to pe_put_u8(buf, 468, 64)
+  set _ to pe_put_u8(buf, 469, 0)
+  set _ to pe_put_u8(buf, 470, 0)
+  set _ to pe_put_u8(buf, 471, 192)
+
+  # 5. .rdata Section (file offset 1024 = 0x400, RVA 0x2000 = 8192)
+  set _ to pe_put_u32(buf, 1024 + 0, 8232)
+  set _ to pe_put_u32(buf, 1024 + 12, 8368)
+  set _ to pe_put_u32(buf, 1024 + 16, 8272)
+  # ILT at +40 (0x28), IAT at +80 (0x50)
+  set _ to pe_put_u32(buf, 1024 + 40, 8312)
+  set _ to pe_put_u32(buf, 1024 + 48, 8336)
+  set _ to pe_put_u32(buf, 1024 + 56, 8352)
+  set _ to pe_put_u32(buf, 1024 + 80, 8312)
+  set _ to pe_put_u32(buf, 1024 + 88, 8336)
+  set _ to pe_put_u32(buf, 1024 + 96, 8352)
+  # Hint/Names & DLL Name
+  set _ to pe_put_str(buf, 1024 + 122, "GetStdHandle")
+  set _ to pe_put_str(buf, 1024 + 146, "WriteFile")
+  set _ to pe_put_str(buf, 1024 + 162, "ExitProcess")
+  set _ to pe_put_str(buf, 1024 + 176, "KERNEL32.dll")
+  # Message at +192 (0xC0, RVA 0x20C0 = 8384)
+  set mlen to length(msg_text)
+  if mlen > 800
+    set mlen to 800
+  end
+  set _ to pe_put_str(buf, 1024 + 192, substr(msg_text, 0, mlen))
+
+  # 6. .text Section (file offset 512 = 0x200, RVA 0x1000 = 4096)
+  set t to 512
+  # sub rsp, 56 (48 83 EC 38)
+  set _ to pe_put_u8(buf, t + 0, 72)
+  set _ to pe_put_u8(buf, t + 1, 131)
+  set _ to pe_put_u8(buf, t + 2, 236)
+  set _ to pe_put_u8(buf, t + 3, 56)
+  # mov ecx, -11 (B9 F5 FF FF FF)
+  set _ to pe_put_u8(buf, t + 4, 185)
+  set _ to pe_put_u8(buf, t + 5, 245)
+  set _ to pe_put_u8(buf, t + 6, 255)
+  set _ to pe_put_u8(buf, t + 7, 255)
+  set _ to pe_put_u8(buf, t + 8, 255)
+  # call [RIP + rel32] -> IAT_GetStdHandle (0x2050 = 8272); next RIP = 4096 + 15 = 4111
+  set _ to pe_put_u8(buf, t + 9, 255)
+  set _ to pe_put_u8(buf, t + 10, 21)
+  set _ to pe_put_u32(buf, t + 11, 8272 - 4111)
+  # mov rbx, rax (48 89 C3)
+  set _ to pe_put_u8(buf, t + 15, 72)
+  set _ to pe_put_u8(buf, t + 16, 137)
+  set _ to pe_put_u8(buf, t + 17, 195)
+  # mov rcx, rbx (48 89 D9)
+  set _ to pe_put_u8(buf, t + 18, 72)
+  set _ to pe_put_u8(buf, t + 19, 137)
+  set _ to pe_put_u8(buf, t + 20, 217)
+  # lea rdx, [RIP + rel32] -> msg (0x20C0 = 8384); next RIP = 4096 + 28 = 4124
+  set _ to pe_put_u8(buf, t + 21, 72)
+  set _ to pe_put_u8(buf, t + 22, 141)
+  set _ to pe_put_u8(buf, t + 23, 21)
+  set _ to pe_put_u32(buf, t + 24, 8384 - 4124)
+  # mov r8d, mlen (41 B8 <mlen32>)
+  set _ to pe_put_u8(buf, t + 28, 65)
+  set _ to pe_put_u8(buf, t + 29, 184)
+  set _ to pe_put_u32(buf, t + 30, mlen)
+  # lea r9, [rsp + 40] (4C 8D 4C 24 28)
+  set _ to pe_put_u8(buf, t + 34, 76)
+  set _ to pe_put_u8(buf, t + 35, 141)
+  set _ to pe_put_u8(buf, t + 36, 76)
+  set _ to pe_put_u8(buf, t + 37, 36)
+  set _ to pe_put_u8(buf, t + 38, 40)
+  # mov qword [rsp + 32], 0 (48 C7 44 24 20 00 00 00 00)
+  set _ to pe_put_u8(buf, t + 39, 72)
+  set _ to pe_put_u8(buf, t + 40, 199)
+  set _ to pe_put_u8(buf, t + 41, 68)
+  set _ to pe_put_u8(buf, t + 42, 36)
+  set _ to pe_put_u8(buf, t + 43, 32)
+  # call [RIP + rel32] -> IAT_WriteFile (0x2058 = 8280); next RIP = 4096 + 54 = 4150
+  set _ to pe_put_u8(buf, t + 48, 255)
+  set _ to pe_put_u8(buf, t + 49, 21)
+  set _ to pe_put_u32(buf, t + 50, 8280 - 4150)
+  # mov ecx, exit_code (B9 <exit_code32>)
+  set _ to pe_put_u8(buf, t + 54, 185)
+  set _ to pe_put_u32(buf, t + 55, exit_code)
+  # call [RIP + rel32] -> IAT_ExitProcess (0x2060 = 8288); next RIP = 4096 + 65 = 4161
+  set _ to pe_put_u8(buf, t + 59, 255)
+  set _ to pe_put_u8(buf, t + 60, 21)
+  set _ to pe_put_u32(buf, t + 61, 8288 - 4161)
+
+  return buf
+end
+
+to pe_to_hex with buf
+  set hex_chars to "0123456789abcdef"
+  set n to buf[0]
+  set parts to mklist(n)
+  set i to 0
+  while i < n
+    set b to buf[i + 1]
+    set hi to (b / 16) % 16
+    set lo to b % 16
+    set parts[i] to substr(hex_chars, hi, 1) + substr(hex_chars, lo, 1)
+    set i to i + 1
+  end
+  return join(parts, "")
+end
+
+to pe_write_exe with path msg_text exit_code
+  set buf to pe_build_console_exe(msg_text, exit_code)
+  set h to pe_to_hex(buf)
+  set _ to write_file("sdev:write_hex:" + path, h)
+  return buf[0]
 end

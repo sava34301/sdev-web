@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : remotion-pitch/src/scenes/SceneWhy.tsx (112 lines)
+# Pure-SDEV Path: remotion-pitch/src/scenes/SceneWhy.sdev
+# Subsystem     : remotion-video
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "remotion-pitch/src/scenes/SceneWhy.tsx",
+    sdev_path: "remotion-pitch/src/scenes/SceneWhy.sdev",
+    subsystem: "remotion-video",
+    original_lines: 112,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["SceneWhy", "frame", "label", "headline", "leftIn", "rightIn", "strike", "closer"]
+end
+
+to SceneWhy
+  return 1
+end
+
+to frame
+  return "frame"
+end
+
+to label
+  return "label"
+end
+
+to headline
+  return "headline"
+end
+
+to leftIn
+  return "leftIn"
+end
+
+to rightIn
+  return "rightIn"
+end
+
+to strike
+  return "strike"
+end
+
+to closer
+  return "closer"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

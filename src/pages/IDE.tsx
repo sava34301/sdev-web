@@ -731,8 +731,26 @@ export default function IDEPage() {
     // The file's hidden signature never reaches the compiler, and a dialect
     // source is canonicalized to plain sdev v2 first — the toolchain itself
     // is untouched by dialects.
-    const activeDialect = getActiveDialect();
-    const strippedSrc = stripSignature(activeFile.content);
+    let activeDialect = getActiveDialect();
+    let strippedSrc = stripSignature(activeFile.content);
+    // Support `#!dialect <file.sdev|slug>` so a dialect can live right in a workspace .sdev file.
+    if (strippedSrc.includes('#!dialect')) {
+      const { extractDialectDirective, isDialectSdevFile, parseDialectFromSdev } = await import('@/lang/dialect/sdev-format');
+      const dir = extractDialectDirective(strippedSrc);
+      if (dir) {
+        strippedSrc = dir.stripped;
+        const targetNorm = dir.target.replace(/^\.\//, '');
+        const wsFile = files.find((f) => f.name === dir.target || f.name === targetNorm);
+        if (wsFile) {
+          const wsBody = stripSignature(wsFile.content);
+          if (isDialectSdevFile(wsBody)) activeDialect = parseDialectFromSdev(wsBody);
+        } else {
+          const { findLocalDialect } = await import('@/hooks/useDialects');
+          const local = findLocalDialect(dir.target);
+          if (local) activeDialect = local;
+        }
+      }
+    }
     const dialectSrc = activeDialect
       ? (await import('@/lang/dialect/canonicalize')).canonicalize(strippedSrc, activeDialect).source
       : strippedSrc;
@@ -748,7 +766,7 @@ export default function IDEPage() {
       const head10 = src.split('\n', 10).map(l => l.trim());
       const shebangV2 = head10.some(l => l.startsWith('#!sdev v2'));
       const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
-      return shebangV2 || (!shebangV1 && (runtimePref === 'v2' || runtimePref === 'v2-wasm'));
+      return shebangV2 || (!shebangV1 && (Boolean(activeDialect) || runtimePref === 'v2' || runtimePref === 'v2-wasm'));
     };
     // Compile + run with the self-hosted v2 toolchain. Returns null when the
     // compiler cannot compile the source (so the caller can decide what next).

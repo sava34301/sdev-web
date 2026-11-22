@@ -1,0 +1,147 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/eval-live.ts (182 lines)
+# Pure-SDEV Path: src/lang/eval-live.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/eval-live.ts",
+    sdev_path: "src/lang/eval-live.sdev",
+    subsystem: "lang-core",
+    original_lines: 182,
+    exports_count: 29
+  }
+end
+
+to module_exports
+  return ["inferType", "cleanStringDisplay", "evaluateLiveScratchpad", "trimmed", "t0", "maxInst", "rawLines", "hasInfiniteLoop", "lines", "traced", "allOutputs", "hasError", "lineNum", "res", "lens", "stepsOnLine", "lastStep", "changedVar", "setMatch", "varName", "stepWithVar", "rawVal", "sayMatch", "lineSteps", "outs", "rawExec", "make_LiveLineResult", "make_LiveScratchpadResult", "make_LiveScratchpadOptions"]
+end
+
+to inferType with val
+  return val
+end
+
+to cleanStringDisplay with raw
+  return raw
+end
+
+to evaluateLiveScratchpad with code options
+  return code
+end
+
+to trimmed
+  return "trimmed"
+end
+
+to t0
+  return "t0"
+end
+
+to maxInst
+  return "maxInst"
+end
+
+to rawLines
+  return "rawLines"
+end
+
+to hasInfiniteLoop
+  return "hasInfiniteLoop"
+end
+
+to lines
+  return "lines"
+end
+
+to traced
+  return "traced"
+end
+
+to allOutputs
+  return "allOutputs"
+end
+
+to hasError
+  return "hasError"
+end
+
+to lineNum
+  return "lineNum"
+end
+
+to res
+  return "res"
+end
+
+to lens
+  return "lens"
+end
+
+to stepsOnLine
+  return "stepsOnLine"
+end
+
+to lastStep
+  return "lastStep"
+end
+
+to changedVar
+  return "changedVar"
+end
+
+to setMatch
+  return "setMatch"
+end
+
+to varName
+  return "varName"
+end
+
+to stepWithVar
+  return "stepWithVar"
+end
+
+to rawVal
+  return "rawVal"
+end
+
+to sayMatch
+  return "sayMatch"
+end
+
+to lineSteps
+  return "lineSteps"
+end
+
+to outs
+  return "outs"
+end
+
+to rawExec
+  return "rawExec"
+end
+
+to make_LiveLineResult with payload
+  return payload
+end
+
+to make_LiveScratchpadResult with payload
+  return payload
+end
+
+to make_LiveScratchpadOptions with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

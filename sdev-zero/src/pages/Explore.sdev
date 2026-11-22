@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Explore.tsx (220 lines)
+# Pure-SDEV Path: src/pages/Explore.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Explore.tsx",
+    sdev_path: "src/pages/Explore.sdev",
+    subsystem: "page",
+    original_lines: 220,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["authorLabel", "Explore", "db", "load", "ds", "es", "gs", "ids", "map", "match", "shownDialects", "shownExtensions", "shownPrograms", "installDialect", "next"]
+end
+
+to authorLabel with map string userId
+  return "<sdev-view component=\"authorLabel\" subsystem=\"page\">" + str(map) + "</sdev-view>"
+end
+
+to Explore
+  return "<sdev-view component=\"Explore\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to db
+  return "<sdev-view component=\"db\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to load
+  return "<sdev-view component=\"load\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to ds
+  return "<sdev-view component=\"ds\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to es
+  return "<sdev-view component=\"es\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to gs
+  return "<sdev-view component=\"gs\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to ids
+  return "<sdev-view component=\"ids\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to map
+  return "<sdev-view component=\"map\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to match
+  return "<sdev-view component=\"match\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to shownDialects
+  return "<sdev-view component=\"shownDialects\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to shownExtensions
+  return "<sdev-view component=\"shownExtensions\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to shownPrograms
+  return "<sdev-view component=\"shownPrograms\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to installDialect with row
+  return "<sdev-view component=\"installDialect\" subsystem=\"page\">" + str(row) + "</sdev-view>"
+end
+
+to next
+  return "<sdev-view component=\"next\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

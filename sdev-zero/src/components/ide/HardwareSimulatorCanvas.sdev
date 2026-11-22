@@ -1,0 +1,135 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/HardwareSimulatorCanvas.tsx (419 lines)
+# Pure-SDEV Path: src/components/ide/HardwareSimulatorCanvas.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/HardwareSimulatorCanvas.tsx",
+    sdev_path: "src/components/ide/HardwareSimulatorCanvas.sdev",
+    subsystem: "ide-component",
+    original_lines: 419,
+    exports_count: 26
+  }
+end
+
+to module_exports
+  return ["HardwareSimulatorCanvas", "lastSerialCountRef", "added", "timer", "handleStep", "handleCycle", "handleReset", "toggleButton", "nextPressed", "nextPins", "updateAnalog", "builtinPinKey", "builtinPinState", "builtinLedOn", "builtinBrightness", "digitalPinList", "analogPinKeys", "currentInstruction", "key", "isHigh", "pwmPct", "pressed", "val", "sensorName", "lit", "cssColor"]
+end
+
+to HardwareSimulatorCanvas with boardId onSerialLine
+  return "<sdev-view component=\"HardwareSimulatorCanvas\" subsystem=\"ide-component\">" + str(boardId) + "</sdev-view>"
+end
+
+to lastSerialCountRef
+  return "<sdev-view component=\"lastSerialCountRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to added
+  return "<sdev-view component=\"added\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to timer
+  return "<sdev-view component=\"timer\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleStep
+  return "<sdev-view component=\"handleStep\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleCycle
+  return "<sdev-view component=\"handleCycle\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleReset
+  return "<sdev-view component=\"handleReset\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to toggleButton with pin
+  return "<sdev-view component=\"toggleButton\" subsystem=\"ide-component\">" + str(pin) + "</sdev-view>"
+end
+
+to nextPressed
+  return "<sdev-view component=\"nextPressed\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to nextPins
+  return "<sdev-view component=\"nextPins\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to updateAnalog with pin val
+  return "<sdev-view component=\"updateAnalog\" subsystem=\"ide-component\">" + str(pin) + "</sdev-view>"
+end
+
+to builtinPinKey
+  return "<sdev-view component=\"builtinPinKey\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to builtinPinState
+  return "<sdev-view component=\"builtinPinState\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to builtinLedOn
+  return "<sdev-view component=\"builtinLedOn\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to builtinBrightness
+  return "<sdev-view component=\"builtinBrightness\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to digitalPinList
+  return "<sdev-view component=\"digitalPinList\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to analogPinKeys
+  return "<sdev-view component=\"analogPinKeys\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to currentInstruction
+  return "<sdev-view component=\"currentInstruction\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to key
+  return "<sdev-view component=\"key\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to isHigh
+  return "<sdev-view component=\"isHigh\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to pwmPct
+  return "<sdev-view component=\"pwmPct\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to pressed
+  return "<sdev-view component=\"pressed\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to val
+  return "<sdev-view component=\"val\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sensorName
+  return "<sdev-view component=\"sensorName\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to lit
+  return "<sdev-view component=\"lit\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to cssColor
+  return "<sdev-view component=\"cssColor\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

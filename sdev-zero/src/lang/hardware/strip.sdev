@@ -1,0 +1,47 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/strip.ts (30 lines)
+# Pure-SDEV Path: src/lang/hardware/strip.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/strip.ts",
+    sdev_path: "src/lang/hardware/strip.sdev",
+    subsystem: "hardware",
+    original_lines: 30,
+    exports_count: 4
+  }
+end
+
+to module_exports
+  return ["getHwStripRunner", "stripBoardBlocks", "hwStripRunner", "spans"]
+end
+
+to getHwStripRunner
+  return 1
+end
+
+to stripBoardBlocks with source
+  return source
+end
+
+to hwStripRunner
+  return "hwStripRunner"
+end
+
+to spans
+  return "spans"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

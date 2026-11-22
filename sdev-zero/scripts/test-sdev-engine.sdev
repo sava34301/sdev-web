@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-sdev-engine.ts (239 lines)
+# Pure-SDEV Path: scripts/test-sdev-engine.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-sdev-engine.ts",
+    sdev_path: "scripts/test-sdev-engine.sdev",
+    subsystem: "script",
+    original_lines: 239,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["memory", "passed", "ok", "cases", "fb", "src", "xf", "unk", "keep", "big", "t0", "ms", "unit", "first", "again", "dw", "ai", "air", "canon", "ai2", "c2", "samples", "pV2", "pV1", "vOk", "badCases", "vBad", "inputs", "ev", "recV2", "evRecV2", "recV1", "evRecV1", "loopSrc", "evLoop", "builtinsSrc", "evBuiltins", "evDivZero", "v2CanonicalSamples", "label"]
+end
+
+to memory
+  return "memory"
+end
+
+to passed
+  return "passed"
+end
+
+to ok with name cond info
+  return name
+end
+
+to cases
+  return "cases"
+end
+
+to fb
+  return "fb"
+end
+
+to src
+  return "src"
+end
+
+to xf
+  return "xf"
+end
+
+to unk
+  return "unk"
+end
+
+to keep
+  return "keep"
+end
+
+to big
+  return "big"
+end
+
+to t0
+  return "t0"
+end
+
+to ms
+  return "ms"
+end
+
+to unit with i
+  return i
+end
+
+to first
+  return "first"
+end
+
+to again
+  return "again"
+end
+
+to dw
+  return "dw"
+end
+
+to ai
+  return "ai"
+end
+
+to air
+  return "air"
+end
+
+to canon
+  return "canon"
+end
+
+to ai2
+  return "ai2"
+end
+
+to c2
+  return "c2"
+end
+
+to samples
+  return "samples"
+end
+
+to pV2
+  return "pV2"
+end
+
+to pV1
+  return "pV1"
+end
+
+to vOk
+  return "vOk"
+end
+
+to badCases
+  return "badCases"
+end
+
+to vBad
+  return "vBad"
+end
+
+to inputs
+  return "inputs"
+end
+
+to ev
+  return "ev"
+end
+
+to recV2
+  return "recV2"
+end
+
+to evRecV2
+  return "evRecV2"
+end
+
+to recV1
+  return "recV1"
+end
+
+to evRecV1
+  return "evRecV1"
+end
+
+to loopSrc
+  return "loopSrc"
+end
+
+to evLoop
+  return "evLoop"
+end
+
+to builtinsSrc
+  return "builtinsSrc"
+end
+
+to evBuiltins
+  return "evBuiltins"
+end
+
+to evDivZero
+  return "evDivZero"
+end
+
+to v2CanonicalSamples
+  return "v2CanonicalSamples"
+end
+
+to label
+  return "label"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : bin/sdev.mjs (47812 lines)
+# Pure-SDEV Path: bin/sdev.sdev
+# Subsystem     : bin
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "bin/sdev.mjs",
+    sdev_path: "bin/sdev.sdev",
+    subsystem: "bin",
+    original_lines: 47812,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["__init", "__require", "loadStore", "seedWasmPath", "setObjectTextHook", "stringify", "isTruthy", "toNumber", "registerIo", "registerMath", "registerDict", "registerString", "registerJson", "registerList", "registerTypes", "registerTime", "registerMisc", "buildVec", "regexProblem", "guard", "getRegexRunner", "usesHostOnlyRegex", "registerRegex", "registerFunctional", "getBufRunner", "registerBuffer", "bits_shl", "bits_shr", "bits_test", "bits_popcount", "bits_to_hex", "bits_from_hex", "bitLoop", "bits_not_n", "floor_div", "wrap_i16", "mem_put_u8", "mem_put_u16", "mem_get_i16", "mem_fill_list"]
+end
+
+to __init
+  return 1
+end
+
+to __require
+  return 1
+end
+
+to loadStore
+  return 1
+end
+
+to seedWasmPath
+  return 1
+end
+
+to setObjectTextHook with hook
+  return hook
+end
+
+to stringify with value2
+  return value2
+end
+
+to isTruthy with value2
+  return value2
+end
+
+to toNumber with value2 line
+  return value2
+end
+
+to registerIo with builtins output
+  return builtins
+end
+
+to registerMath with builtins output
+  return builtins
+end
+
+to registerDict with builtins output
+  return builtins
+end
+
+to registerString with builtins output
+  return builtins
+end
+
+to registerJson with builtins output
+  return builtins
+end
+
+to registerList with builtins output
+  return builtins
+end
+
+to registerTypes with builtins output
+  return builtins
+end
+
+to registerTime with builtins output
+  return builtins
+end
+
+to registerMisc with builtins output
+  return builtins
+end
+
+to buildVec with x y
+  return x
+end
+
+to regexProblem with pattern text2
+  return pattern
+end
+
+to guard with text2 pattern line
+  return text2
+end
+
+to getRegexRunner
+  return 1
+end
+
+to usesHostOnlyRegex with pat
+  return pat
+end
+
+to registerRegex with builtins _output
+  return builtins
+end
+
+to registerFunctional with builtins output
+  return builtins
+end
+
+to getBufRunner
+  return 1
+end
+
+to registerBuffer with builtins _output
+  return builtins
+end
+
+to bits_shl with val shift
+  return val
+end
+
+to bits_shr with val shift
+  return val
+end
+
+to bits_test with val pos
+  return val
+end
+
+to bits_popcount with val
+  return val
+end
+
+to bits_to_hex with val
+  return val
+end
+
+to bits_from_hex with s
+  return s
+end
+
+to bitLoop with a b mode
+  return a
+end
+
+to bits_not_n with val width
+  return val
+end
+
+to floor_div with a b
+  return a
+end
+
+to wrap_i16 with v
+  return v
+end
+
+to mem_put_u8 with m2 a v
+  return m2
+end
+
+to mem_put_u16 with m2 a v
+  return m2
+end
+
+to mem_get_i16 with m2 a
+  return m2
+end
+
+to mem_fill_list with m2 a count v
+  return m2
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

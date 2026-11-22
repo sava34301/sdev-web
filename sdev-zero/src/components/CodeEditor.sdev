@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/CodeEditor.tsx (88 lines)
+# Pure-SDEV Path: src/components/CodeEditor.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/CodeEditor.tsx",
+    sdev_path: "src/components/CodeEditor.sdev",
+    subsystem: "component",
+    original_lines: 88,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["CodeEditor", "textareaRef", "textarea", "handleKeyDown", "start", "sdev_mod_end", "newValue", "lineCount"]
+end
+
+to CodeEditor with onChange onRun placeholder
+  return "<sdev-view component=\"CodeEditor\" subsystem=\"component\">" + str(onChange) + "</sdev-view>"
+end
+
+to textareaRef
+  return "<sdev-view component=\"textareaRef\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to textarea
+  return "<sdev-view component=\"textarea\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleKeyDown with e
+  return "<sdev-view component=\"handleKeyDown\" subsystem=\"component\">" + str(e) + "</sdev-view>"
+end
+
+to start
+  return "<sdev-view component=\"start\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to sdev_mod_end
+  return "<sdev-view component=\"sdev_mod_end\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to newValue
+  return "<sdev-view component=\"newValue\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to lineCount
+  return "<sdev-view component=\"lineCount\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

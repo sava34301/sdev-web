@@ -1,19 +1,20 @@
 # Personal SDEV — Dialects, Extensions, File Signatures & Library Registry
 
-Personal SDEV lets anyone write SDEV in their own words, script family, operators, and custom functions without modifying or forking the self-hosted compiler. **A dialect is data, not a compiler fork** — a reversible canonicalizer sits in front of `lexer.sdev` / `parser.sdev` / `codegen.sdev`.
+Personal SDEV lets anyone build their own syntax — their own words, script family, style, operators, and custom functions — **without using the AI code understander** and without modifying or forking the self-hosted compiler. **A dialect is a pure `.sdev` data file, not a compiler fork or an AI prompt** — a deterministic, reversible canonicalizer translates dialect code straight into canonical sdev v2 and feeds it directly into `lexer.sdev` / `parser.sdev` / `codegen.sdev`.
 
 ```text
-dialect source ──canonicalize──▶ canonical sdev v2 ──▶ lexer ▶ parser ▶ codegen ▶ seed VM / native
-       ▲                                  │
-       └──────────── dialectize ──────────┘   (lossless reverse)
+dialect source ──canonicalize (no AI)──▶ canonical sdev v2 ──▶ lexer ▶ parser ▶ codegen ▶ seed VM / native
+       ▲                                       │
+       └────────────── dialectize ─────────────┘   (lossless reverse)
 ```
 
 ---
 
 ## 1. Custom Dialects & Dialect Studio (`/dialects`)
 
-- **Source Modules:** `src/lang/dialect/spec.ts`, `catalog.ts`, `canonicalize.ts`, `presets.ts`, `docs.ts`, and pure-SDEV engine `lang/dialect/dialect.sdev`.
-- **Web UI:** Open `/dialects` (or the **Personal sdev** sidebar panel in `/ide`) to create, edit, validate, preview, and publish dialects.
+- **Source Modules:** `src/lang/dialect/sdev-format.ts`, `spec.ts`, `catalog.ts`, `canonicalize.ts`, `presets.ts`, `docs.ts`, and pure-SDEV engine `lang/dialect/dialect.sdev`.
+- **Web UI:** Open `/dialects` (or the **Personal sdev** sidebar panel in `/ide`) to create, edit, validate, preview, download as `.dialect.sdev`, and publish dialects.
+- **Pure `.sdev` Dialect Files (No JSON Required):** Dialects are authored, exported, imported, and run directly as `#!sdev v2` files (`dialect_meta`, `dialect_style`, `dialect_words`, `dialect_synonyms`, `dialect_operators`, plus any custom `to ... end` functions). Use them straight from the CLI (`sdev run app.sdev --dialect my.dialect.sdev`, `sdev dialect export/import`) or in any file header (`#!dialect my.dialect.sdev`). Both the IDE and CLI bypass the AI code understander for dialect files and feed the canonicalized v2 source directly into the v2 compiler.
 
 A `DialectSpec` contains four parts:
 

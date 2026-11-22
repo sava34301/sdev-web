@@ -1,0 +1,130 @@
+# ============================================================
+# SDEV Hardware Subsystem — Natural-English Hardware Reader (understand.sdev)
+# 100% Pure SDEV port of src/lang/hardware/understand.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to hw_number_word with word
+  set w to lower(text_trim(word))
+  if w is "one" or w is "a" or w is "an"
+    return "1"
+  end
+  if w is "two"
+    return "2"
+  end
+  if w is "three"
+    return "3"
+  end
+  if w is "four"
+    return "4"
+  end
+  if w is "five"
+    return "5"
+  end
+  if w is "ten"
+    return "10"
+  end
+  return w
+end
+
+to hw_understand_line with raw_line
+  set line to text_trim(raw_line)
+  if length(line) is 0
+    return ""
+  end
+  if text_starts_with(line, "//") or text_starts_with(line, "#")
+    return line
+  end
+
+  set low to lower(line)
+
+  # "turn on pin <N>" / "turn pin <N> on" / "switch on pin <N>"
+  if text_starts_with(low, "turn on pin ")
+    set p to text_trim(substr(line, 12, length(line) - 12))
+    return "pin " + p + " on"
+  end
+  if text_starts_with(low, "switch on pin ")
+    set p to text_trim(substr(line, 14, length(line) - 14))
+    return "pin " + p + " on"
+  end
+  if text_starts_with(low, "turn off pin ")
+    set p to text_trim(substr(line, 13, length(line) - 13))
+    return "pin " + p + " off"
+  end
+  if text_starts_with(low, "switch off pin ")
+    set p to text_trim(substr(line, 15, length(line) - 15))
+    return "pin " + p + " off"
+  end
+
+  # "toggle pin <N>" / "flip pin <N>"
+  if text_starts_with(low, "toggle pin ")
+    set p to text_trim(substr(line, 11, length(line) - 11))
+    return "pin " + p + " toggle"
+  end
+  if text_starts_with(low, "flip pin ")
+    set p to text_trim(substr(line, 9, length(line) - 9))
+    return "pin " + p + " toggle"
+  end
+
+  # "set pin <N> as output" / "make pin <N> output" / "configure pin <N> as input"
+  if text_starts_with(low, "set pin ") and text_ends_with(low, " as output")
+    set p to text_trim(substr(line, 8, length(line) - 18))
+    return "pin " + p + " be output"
+  end
+  if text_starts_with(low, "set pin ") and text_ends_with(low, " as input")
+    set p to text_trim(substr(line, 8, length(line) - 17))
+    return "pin " + p + " be input"
+  end
+  if text_starts_with(low, "make pin ") and text_ends_with(low, " output")
+    set p to text_trim(substr(line, 9, length(line) - 16))
+    return "pin " + p + " be output"
+  end
+
+  # "wait half a second"
+  if low is "wait half a second" or low is "pause half a second"
+    return "wait 500 ms"
+  end
+
+  # "wait <N> second" / "wait <N> seconds"
+  if text_starts_with(low, "wait ") and text_ends_with(low, " seconds")
+    set num_str to hw_number_word(substr(line, 5, length(line) - 13))
+    return "wait " + num_str + "000 ms"
+  end
+  if text_starts_with(low, "wait ") and text_ends_with(low, " second")
+    set num_str to hw_number_word(substr(line, 5, length(line) - 12))
+    return "wait " + num_str + "000 ms"
+  end
+
+  # "blink led" / "turn on led" / "turn off led"
+  if low is "turn on led" or low is "led on"
+    return "pin 13 on"
+  end
+  if low is "turn off led" or low is "led off"
+    return "pin 13 off"
+  end
+  if low is "toggle led"
+    return "pin 13 toggle"
+  end
+
+  # "say <msg>" -> speak(<msg>)
+  if text_starts_with(low, "say ")
+    set arg to text_trim(substr(line, 4, length(line) - 4))
+    return "speak(" + arg + ")"
+  end
+
+  return line
+end
+
+to hw_understand_body with body_src
+  set lines to split(body_src, "\n")
+  set n to length(lines)
+  set out to []
+  set i to 0
+  while i < n
+    set translated to hw_understand_line(lines[i])
+    set out to out + [translated]
+    set i to i + 1
+  end
+  return join(out, "\n")
+end

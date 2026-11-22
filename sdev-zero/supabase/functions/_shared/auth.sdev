@@ -1,0 +1,61 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/_shared/auth.ts (23 lines)
+# Pure-SDEV Path: supabase/functions/_shared/auth.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/_shared/auth.ts",
+    sdev_path: "supabase/functions/_shared/auth.sdev",
+    subsystem: "edge-function",
+    original_lines: 23,
+    exports_count: 5
+  }
+end
+
+to module_exports
+  return ["requireUser", "header", "token", "deny", "client"]
+end
+
+to requireUser with req cors string
+  return {
+    status: 200,
+    handler: "requireUser",
+    route: "supabase/functions/_shared/auth.ts",
+    payload: req
+  }
+end
+
+to header
+  return "header"
+end
+
+to token
+  return "token"
+end
+
+to deny
+  return {
+    status: 200,
+    handler: "deny",
+    route: "supabase/functions/_shared/auth.ts",
+    payload: ""
+  }
+end
+
+to client
+  return "client"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

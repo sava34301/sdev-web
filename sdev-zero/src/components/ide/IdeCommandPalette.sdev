@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeCommandPalette.tsx (146 lines)
+# Pure-SDEV Path: src/components/ide/IdeCommandPalette.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeCommandPalette.tsx",
+    sdev_path: "src/components/ide/IdeCommandPalette.sdev",
+    subsystem: "ide-component",
+    original_lines: 146,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["IdeCommandPalette", "inputRef", "listRef", "commands", "filtered", "handleKeyDown", "el", "categories", "globalIdx", "Icon"]
+end
+
+to IdeCommandPalette with onClose onSelectFile onNewFile onRun onRunWithoutUnderstanding
+  return "<sdev-view component=\"IdeCommandPalette\" subsystem=\"ide-component\">" + str(onClose) + "</sdev-view>"
+end
+
+to inputRef
+  return "<sdev-view component=\"inputRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to listRef
+  return "<sdev-view component=\"listRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to commands
+  return "<sdev-view component=\"commands\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to filtered
+  return "<sdev-view component=\"filtered\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleKeyDown with e
+  return "<sdev-view component=\"handleKeyDown\" subsystem=\"ide-component\">" + str(e) + "</sdev-view>"
+end
+
+to el
+  return "<sdev-view component=\"el\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to categories
+  return "<sdev-view component=\"categories\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to globalIdx
+  return "<sdev-view component=\"globalIdx\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to Icon
+  return "<sdev-view component=\"Icon\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

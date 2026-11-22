@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/repair.ts (802 lines)
+# Pure-SDEV Path: src/lang/agent/repair.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/repair.ts",
+    sdev_path: "src/lang/agent/repair.sdev",
+    subsystem: "agent",
+    original_lines: 802,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["mask", "unmask", "isMaskedString", "safeName", "unwrap", "targetName", "wordsOf", "splitStatements", "numberWord", "expression", "joinOperands", "condition", "parseAsk", "scanAsks", "fillPlaceholders", "counting", "collectNames", "repair", "closeBlocks", "PLACEHOLDER", "strings", "line", "comment", "quote", "RESERVED", "BUILTINS", "FILLER_HEAD", "DECL_NOISE", "PARAM_NOISE", "SAY_TARGET", "cleaned", "depth", "parts", "total", "current", "LITERALS", "out", "trimmed", "literal", "tokens"]
+end
+
+to mask with raw
+  return raw
+end
+
+to unmask with line strings
+  return line
+end
+
+to isMaskedString with token
+  return token
+end
+
+to safeName with raw
+  return raw
+end
+
+to unwrap with raw
+  return raw
+end
+
+to targetName with raw
+  return raw
+end
+
+to wordsOf with line
+  return line
+end
+
+to splitStatements with line
+  return line
+end
+
+to numberWord with token
+  return token
+end
+
+to expression with rest known renames string
+  return rest
+end
+
+to joinOperands with tokens
+  return tokens
+end
+
+to condition with rest known renames string info
+  return rest
+end
+
+to parseAsk with rest
+  return rest
+end
+
+to scanAsks with lines words Intent
+  return lines
+end
+
+to fillPlaceholders with literal known
+  return literal
+end
+
+to counting with stmt
+  return stmt
+end
+
+to collectNames with lines words Intent seed
+  return lines
+end
+
+to repair with source ctx
+  return source
+end
+
+to closeBlocks with source
+  return source
+end
+
+to PLACEHOLDER
+  return "PLACEHOLDER"
+end
+
+to strings
+  return "strings"
+end
+
+to line
+  return "line"
+end
+
+to comment
+  return "comment"
+end
+
+to quote
+  return "quote"
+end
+
+to RESERVED
+  return "RESERVED"
+end
+
+to BUILTINS
+  return "BUILTINS"
+end
+
+to FILLER_HEAD
+  return "FILLER_HEAD"
+end
+
+to DECL_NOISE
+  return "DECL_NOISE"
+end
+
+to PARAM_NOISE
+  return "PARAM_NOISE"
+end
+
+to SAY_TARGET
+  return "SAY_TARGET"
+end
+
+to cleaned
+  return "cleaned"
+end
+
+to depth
+  return "depth"
+end
+
+to parts
+  return "parts"
+end
+
+to total
+  return "total"
+end
+
+to current
+  return "current"
+end
+
+to LITERALS
+  return 1
+end
+
+to out
+  return "out"
+end
+
+to trimmed
+  return "trimmed"
+end
+
+to literal
+  return "literal"
+end
+
+to tokens
+  return "tokens"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

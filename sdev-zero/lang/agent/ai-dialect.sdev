@@ -1,0 +1,357 @@
+// =====================================================================
+// ai-dialect.sdev — "sdev:ai", the dialect written for AI models.
+//
+// Designed for how language models generate code:
+//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)
+//   * blocks are always { … } — no indentation rules, no guessed closings
+//   * short, common tokens: fewer tokens -> faster, cheaper generation
+//   * the familiar operators models already know: == != && || !
+//
+// A file starts with  !#ai  and is translated to canonical sdev before it
+// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model
+// can be given any program to read in the dense form.
+//
+//   v x = 5               forge x be 5
+//   x = x + 1             x be x + 1
+//   x += 2                x be x + (2)
+//   p(x)                  speak(x)
+//   f add(a, b) {         conjure add(a, b) ::
+//   r a + b               yield a + b
+//   ? x > 3 {             ponder x > 3 ::
+//   } :? x > 1 {          ;; otherwise ponder x > 1 ::
+//   } : {                 ;; otherwise ::
+//   w i < 3 {             cycle i < 3 ::
+//   each n in xs {        iterate n through xs ::
+//   try { … } catch e {   attempt :: … ;; rescue e ::
+//   brk / next            yeet / skip
+//   k N = 3               fixed N be 3
+//   c Dog : Animal {      essence Dog extend Animal ::
+//   throw e               hurl e
+//   } finally {           ;; ensure ::
+//   }                     ;;
+//   == != && || !         equals differs also either isnt
+// =====================================================================
+
+// split a line into [code, text, code, text, …] so strings are never touched
+conjure ai_segments(line) ::
+  yield regex_find_all(line, "\"(?:\\\\.|[^\"\\\\])*\"|'[^']*'|[^\"']+|[\"']")
+;;
+
+conjure ai_ops_to_sdev(code) ::
+  forge c be code
+  c be regex_replace(c, "\\s*==\\s*", " equals ")
+  c be regex_replace(c, "\\s*!=\\s*", " differs ")
+  c be regex_replace(c, "\\s*&&\\s*", " also ")
+  c be regex_replace(c, "\\s*\\|\\|\\s*", " either ")
+  c be regex_replace(c, "(^|[^\\p{L}\\p{N}_])!\\s*(?!=)", "$1isnt ")
+  c be regex_replace(c, "\\btrue\\b", "yep")
+  c be regex_replace(c, "\\bfalse\\b", "nope")
+  c be regex_replace(c, "\\bnull\\b", "void")
+  yield c
+;;
+
+conjure ai_ops_to_ai(code) ::
+  forge c be code
+  c be regex_replace(c, "\\s+equals\\s+", " == ")
+  c be regex_replace(c, "\\s+differs\\s+", " != ")
+  c be regex_replace(c, "\\s+also\\s+", " && ")
+  c be regex_replace(c, "\\s+either\\s+", " || ")
+  c be regex_replace(c, "\\bisnt\\s+", "!")
+  c be regex_replace(c, "\\byep\\b", "true")
+  c be regex_replace(c, "\\bnope\\b", "false")
+  c be regex_replace(c, "\\bvoid\\b", "null")
+  yield c
+;;
+
+conjure ai_map_code(line, to_sdev) ::
+  forge out be ""
+  iterate seg through ai_segments(line) ::
+    ponder startswith(seg, "\"") either startswith(seg, "'") ::
+      out be out + seg
+    ;; otherwise ponder to_sdev ::
+      out be out + ai_ops_to_sdev(seg)
+    ;; otherwise ::
+      out be out + ai_ops_to_ai(seg)
+    ;;
+  ;;
+  yield out
+;;
+
+forge AI_NAME be "[\\p{L}_][\\p{L}\\p{N}_]*"
+
+// one AI line -> one canonical line (or void when it is not AI syntax)
+conjure ai_line_to_sdev(body) ::
+  forge m be regex_capture(body, "^\\}\\s*:\\?\\s*(.+?)\\s*\\{$")
+  ponder m differs void ::
+    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  ponder regex_test(body, "^\\}\\s*:\\s*\\{$") ::
+    yield ";; otherwise ::"
+  ;;
+  m be regex_capture(body, "^\\}\\s*catch\\s+(" + AI_NAME + ")\\s*\\{$")
+  ponder m differs void ::
+    yield ";; rescue " + m[1] + " ::"
+  ;;
+  ponder body equals "}" ::
+    yield ";;"
+  ;;
+  ponder regex_test(body, "^try\\s*\\{$") ::
+    yield "attempt ::"
+  ;;
+  ponder regex_test(body, "^\\}\\s*finally\\s*\\{$") ::
+    yield ";; ensure ::"
+  ;;
+  m be regex_capture(body, "^k\\s+(" + AI_NAME + ")\\s*=\\s*(.+)$")
+  ponder m differs void ::
+    yield "fixed " + m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^c\\s+(" + AI_NAME + ")(?:\\s*:\\s*(" + AI_NAME + "))?\\s*\\{$")
+  ponder m differs void ::
+    ponder m[2] equals "" ::
+      yield "essence " + m[1] + " ::"
+    ;;
+    yield "essence " + m[1] + " extend " + m[2] + " ::"
+  ;;
+  m be regex_capture(body, "^throw\\s+(.+)$")
+  ponder m differs void ::
+    yield "hurl " + ai_map_code(m[1], yep)
+  ;;
+  m be regex_capture(body, "^v\\s+(" + AI_NAME + ")\\s*=\\s*(.+)$")
+  ponder m differs void ::
+    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^f\\s+(" + AI_NAME + ")\\s*\\(([^)]*)\\)\\s*\\{$")
+  ponder m differs void ::
+    yield "conjure " + m[1] + "(" + m[2] + ") ::"
+  ;;
+  m be regex_capture(body, "^r(\\s+(.+))?$")
+  ponder m differs void ::
+    ponder m[2] equals "" ::
+      yield "yield void"
+    ;;
+    yield "yield " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^p\\((.*)\\)$")
+  ponder m differs void ::
+    yield "speak(" + ai_map_code(m[1], yep) + ")"
+  ;;
+  m be regex_capture(body, "^\\?\\s*(.+?)\\s*\\{$")
+  ponder m differs void ::
+    yield "ponder " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  m be regex_capture(body, "^w\\s+(.+?)\\s*\\{$")
+  ponder m differs void ::
+    yield "cycle " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  m be regex_capture(body, "^each\\s+(" + AI_NAME + ")\\s+in\\s+(.+?)\\s*\\{$")
+  ponder m differs void ::
+    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"
+  ;;
+  ponder body equals "brk" ::
+    yield "yeet"
+  ;;
+  ponder body equals "next" ::
+    yield "skip"
+  ;;
+  // compound assignment: x += e / x -= e / x *= e / x /= e
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\[[^\\]]+\\]|\\." + AI_NAME + ")*)\\s*([-+*/])=\\s*(.+)$")
+  ponder m differs void ::
+    yield m[1] + " be " + m[1] + " " + m[2] + " (" + ai_map_code(m[3], yep) + ")"
+  ;;
+  // index or name assignment: x = e / xs[0] = e / o.k = e
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\[[^\\]]+\\]|\\." + AI_NAME + ")*)\\s*=\\s*([^=].*)$")
+  ponder m differs void ::
+    yield m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  // a bare call or expression
+  yield ai_map_code(body, yep)
+;;
+
+conjure ai_to_sdev(source) ::
+  forge out be []
+  iterate line through lines(close_ai_braces(source)) ::
+    forge indent be leading_space(line)
+    forge body be trim(line)
+    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::
+      ponder isnt startswith(body, "!#ai") ::
+        out be out + [line]
+      ;;
+    ;; otherwise ::
+      out be out + [indent + ai_line_to_sdev(body)]
+    ;;
+  ;;
+  yield unlines(out)
+;;
+
+// canonical sdev -> the AI form
+// the English canonical forms (say / set / if / while / for each / to … with / end)
+conjure english_line_to_ai(body, AI_DECLARED) ::
+  forge m be regex_capture(body, "^say\\s+(.+)$")
+  ponder m differs void ::
+    yield "p(" + ai_map_code(m[1], nope) + ")"
+  ;;
+  m be regex_capture(body, "^set\\s+(" + AI_NAME + "(?:\\[[^\\]]+\\]|\\." + AI_NAME + ")*)\\s+to\\s+(.+)$")
+  ponder m differs void ::
+    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::
+      yield m[1] + " = " + ai_map_code(m[2], nope)
+    ;;
+    AI_DECLARED[m[1]] be yep
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^if\\s+(.+)$")
+  ponder m differs void ::
+    yield "? " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^else\\s+if\\s+(.+)$")
+  ponder m differs void ::
+    yield "} :? " + ai_cond(m[1]) + " {"
+  ;;
+  ponder body equals "else" ::
+    yield "} : {"
+  ;;
+  ponder body equals "end" ::
+    yield "}"
+  ;;
+  m be regex_capture(body, "^while\\s+(.+)$")
+  ponder m differs void ::
+    yield "w " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^for\\s+(each\\s+)?(" + AI_NAME + ")\\s+in\\s+(.+)$")
+  ponder m differs void ::
+    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"
+  ;;
+  m be regex_capture(body, "^to\\s+(" + AI_NAME + ")(\\s+with\\s+(.+))?$")
+  ponder m differs void ::
+    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")
+    yield "f " + m[1] + "(" + params + ") {"
+  ;;
+  m be regex_capture(body, "^return(\\s+(.+))?$")
+  ponder m differs void ::
+    yield "r " + ai_map_code(m[2], nope)
+  ;;
+  ponder body equals "break" ::
+    yield "brk"
+  ;;
+  ponder body equals "continue" ::
+    yield "next"
+  ;;
+  yield ""
+;;
+
+// English comparisons -> symbols
+conjure ai_cond(c) ::
+  forge out be ""
+  iterate seg through ai_segments(c) ::
+    ponder startswith(seg, "\"") either startswith(seg, "'") ::
+      out be out + seg
+    ;; otherwise ::
+      forge x be seg
+      x be regex_replace(x, "\\s+is\\s+not\\s+", " != ")
+      x be regex_replace(x, "\\s+is\\s+(\\S+)\\s+or\\s+more\\b", " >= $1")
+      x be regex_replace(x, "\\s+is\\s+(\\S+)\\s+or\\s+less\\b", " <= $1")
+      x be regex_replace(x, "\\s+is\\s+", " == ")
+      x be regex_replace(x, "\\s+and\\s+", " && ")
+      x be regex_replace(x, "\\s+or\\s+", " || ")
+      x be regex_replace(x, "(^|\\s)not\\s+", "$1!")
+      out be out + ai_ops_to_ai(x)
+    ;;
+  ;;
+  yield out
+;;
+
+conjure sdev_line_to_ai(body, declared) ::
+  forge english be english_line_to_ai(body, declared)
+  ponder english differs "" ::
+    yield english
+  ;;
+  forge m be regex_capture(body, "^;;\\s*otherwise\\s+ponder\\s+(.+?)\\s*::$")
+  ponder m differs void ::
+    yield "} :? " + ai_map_code(m[1], nope) + " {"
+  ;;
+  ponder regex_test(body, "^;;\\s*otherwise\\s*::$") ::
+    yield "} : {"
+  ;;
+  m be regex_capture(body, "^;;\\s*rescue\\s+(" + AI_NAME + ")\\s*::$")
+  ponder m differs void ::
+    yield "} catch " + m[1] + " {"
+  ;;
+  ponder body equals ";;" ::
+    yield "}"
+  ;;
+  ponder regex_test(body, "^attempt\\s*::$") ::
+    yield "try {"
+  ;;
+  ponder regex_test(body, "^;;\\s*ensure\\s*::$") ::
+    yield "} finally {"
+  ;;
+  m be regex_capture(body, "^fixed\\s+(" + AI_NAME + ")\\s+be\\s+(.+)$")
+  ponder m differs void ::
+    yield "k " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^essence\\s+(" + AI_NAME + ")(?:\\s+extend\\s+(" + AI_NAME + "))?\\s*::$")
+  ponder m differs void ::
+    ponder m[2] equals "" ::
+      yield "c " + m[1] + " {"
+    ;;
+    yield "c " + m[1] + " : " + m[2] + " {"
+  ;;
+  m be regex_capture(body, "^hurl\\s+(.+)$")
+  ponder m differs void ::
+    yield "throw " + ai_map_code(m[1], nope)
+  ;;
+  m be regex_capture(body, "^forge\\s+(" + AI_NAME + ")\\s+be\\s+(.+)$")
+  ponder m differs void ::
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^conjure\\s+(" + AI_NAME + ")\\s*\\(([^)]*)\\)\\s*::$")
+  ponder m differs void ::
+    yield "f " + m[1] + "(" + m[2] + ") {"
+  ;;
+  m be regex_capture(body, "^yield\\s+(.+)$")
+  ponder m differs void ::
+    yield "r " + ai_map_code(m[1], nope)
+  ;;
+  m be regex_capture(body, "^speak\\((.*)\\)$")
+  ponder m differs void ::
+    yield "p(" + ai_map_code(m[1], nope) + ")"
+  ;;
+  m be regex_capture(body, "^ponder\\s+(.+?)\\s*::$")
+  ponder m differs void ::
+    yield "? " + ai_map_code(m[1], nope) + " {"
+  ;;
+  m be regex_capture(body, "^cycle\\s+(.+?)\\s*::$")
+  ponder m differs void ::
+    yield "w " + ai_map_code(m[1], nope) + " {"
+  ;;
+  m be regex_capture(body, "^iterate\\s+(" + AI_NAME + ")\\s+through\\s+(.+?)\\s*::$")
+  ponder m differs void ::
+    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"
+  ;;
+  ponder body equals "yeet" ::
+    yield "brk"
+  ;;
+  ponder body equals "skip" ::
+    yield "next"
+  ;;
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\[[^\\]]+\\]|\\." + AI_NAME + ")*)\\s+be\\s+(.+)$")
+  ponder m differs void ::
+    yield m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  yield ai_map_code(body, nope)
+;;
+
+conjure sdev_to_ai(source) ::
+  forge out be ["!#ai"]
+  forge declared be ::
+  ;;
+  iterate line through lines(source) ::
+    forge indent be leading_space(line)
+    forge body be trim(line)
+    ponder body equals "" either startswith(body, "//") ::
+      out be out + [line]
+    ;; otherwise ::
+      out be out + [indent + sdev_line_to_ai(body, declared)]
+    ;;
+  ;;
+  yield unlines(out)
+;;

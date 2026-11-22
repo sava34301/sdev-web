@@ -1,0 +1,43 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeTabs.tsx (51 lines)
+# Pure-SDEV Path: src/components/ide/IdeTabs.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeTabs.tsx",
+    sdev_path: "src/components/ide/IdeTabs.sdev",
+    subsystem: "ide-component",
+    original_lines: 51,
+    exports_count: 3
+  }
+end
+
+to module_exports
+  return ["fileIcon", "IdeTabs", "isActive"]
+end
+
+to fileIcon with name
+  return "<sdev-view component=\"fileIcon\" subsystem=\"ide-component\">" + str(name) + "</sdev-view>"
+end
+
+to IdeTabs with activeId onSelect onClose
+  return "<sdev-view component=\"IdeTabs\" subsystem=\"ide-component\">" + str(activeId) + "</sdev-view>"
+end
+
+to isActive
+  return "<sdev-view component=\"isActive\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

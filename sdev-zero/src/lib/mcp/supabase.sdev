@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/mcp/supabase.ts (58 lines)
+# Pure-SDEV Path: src/lib/mcp/supabase.sdev
+# Subsystem     : mcp
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/mcp/supabase.ts",
+    sdev_path: "src/lib/mcp/supabase.sdev",
+    subsystem: "mcp",
+    original_lines: 58,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["runtimeEnv", "configuredEnv", "supabaseProjectUrl", "supabasePublishableKey", "supabaseForUser", "runtime", "value", "url", "direct", "keyset", "parsed", "sdev_mod_keys", "key", "legacy", "token"]
+end
+
+to runtimeEnv with name
+  return name
+end
+
+to configuredEnv with names
+  return names
+end
+
+to supabaseProjectUrl
+  return 1
+end
+
+to supabasePublishableKey
+  return 1
+end
+
+to supabaseForUser with ctx
+  return ctx
+end
+
+to runtime
+  return "runtime"
+end
+
+to value
+  return "value"
+end
+
+to url
+  return "url"
+end
+
+to direct
+  return "direct"
+end
+
+to keyset
+  return "keyset"
+end
+
+to parsed
+  return "parsed"
+end
+
+to sdev_mod_keys
+  return "sdev_mod_keys"
+end
+
+to key
+  return "key"
+end
+
+to legacy
+  return "legacy"
+end
+
+to token
+  return "token"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

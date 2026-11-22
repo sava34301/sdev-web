@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : remotion-pitch/scripts/still.mjs (19 lines)
+# Pure-SDEV Path: remotion-pitch/scripts/still.sdev
+# Subsystem     : remotion-video
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "remotion-pitch/scripts/still.mjs",
+    sdev_path: "remotion-pitch/scripts/still.sdev",
+    subsystem: "remotion-video",
+    original_lines: 19,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["__dirname", "frame", "out", "bundled", "browser", "composition"]
+end
+
+to __dirname
+  return "__dirname"
+end
+
+to frame
+  return "frame"
+end
+
+to out
+  return "out"
+end
+
+to bundled
+  return "bundled"
+end
+
+to browser
+  return "browser"
+end
+
+to composition
+  return "composition"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

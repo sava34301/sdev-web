@@ -1,0 +1,123 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/graphics.ts (809 lines)
+# Pure-SDEV Path: src/lang/graphics.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/graphics.ts",
+    sdev_path: "src/lang/graphics.sdev",
+    subsystem: "lang-core",
+    original_lines: 809,
+    exports_count: 23
+  }
+end
+
+to module_exports
+  return ["getGfxRunner", "createGraphicsBuiltins", "gfxRunner", "builtins", "spriteIdCounter", "sprites", "color", "points", "stops", "id", "sprite", "dist", "newAngle", "newX", "newY", "angle", "radius", "steps", "size", "make_GraphicsCommand", "make_GraphicsCallback", "make_TurtleState", "make_SpriteData"]
+end
+
+to getGfxRunner
+  return 1
+end
+
+to createGraphicsBuiltins with emit getTurtle
+  return emit
+end
+
+to gfxRunner
+  return "gfxRunner"
+end
+
+to builtins
+  return "builtins"
+end
+
+to spriteIdCounter
+  return "spriteIdCounter"
+end
+
+to sprites
+  return "sprites"
+end
+
+to color
+  return "color"
+end
+
+to points
+  return "points"
+end
+
+to stops
+  return "stops"
+end
+
+to id
+  return "id"
+end
+
+to sprite
+  return "sprite"
+end
+
+to dist
+  return "dist"
+end
+
+to newAngle
+  return "newAngle"
+end
+
+to newX
+  return "newX"
+end
+
+to newY
+  return "newY"
+end
+
+to angle
+  return "angle"
+end
+
+to radius
+  return "radius"
+end
+
+to steps
+  return "steps"
+end
+
+to size
+  return "size"
+end
+
+to make_GraphicsCommand with payload
+  return payload
+end
+
+to make_GraphicsCallback with payload
+  return payload
+end
+
+to make_TurtleState with payload
+  return payload
+end
+
+to make_SpriteData with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

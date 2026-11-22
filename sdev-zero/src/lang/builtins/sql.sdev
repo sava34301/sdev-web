@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/sql.ts (341 lines)
+# Pure-SDEV Path: src/lang/builtins/sql.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/sql.ts",
+    sdev_path: "src/lang/builtins/sql.sdev",
+    subsystem: "builtins",
+    original_lines: 341,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["registerSql", "records", "colList", "obj", "fn", "res", "key", "asc", "copy", "va", "vb", "sa", "sb", "count", "offset", "seen", "out", "repr", "left", "right", "leftKey", "rightKey", "joinType", "rightMap", "list", "matches", "groupKey", "aggCol", "aggType", "groups", "gVal", "gKey", "entry", "numVal", "aggVal", "col", "total", "val", "minVal", "maxVal"]
+end
+
+to registerSql with builtins SdevFunction _output
+  return builtins
+end
+
+to records
+  return "records"
+end
+
+to colList
+  return "colList"
+end
+
+to obj
+  return "obj"
+end
+
+to fn
+  return "fn"
+end
+
+to res
+  return "res"
+end
+
+to key
+  return "key"
+end
+
+to asc
+  return "asc"
+end
+
+to copy
+  return "copy"
+end
+
+to va
+  return "va"
+end
+
+to vb
+  return "vb"
+end
+
+to sa
+  return "sa"
+end
+
+to sb
+  return "sb"
+end
+
+to count
+  return "count"
+end
+
+to offset
+  return "offset"
+end
+
+to seen
+  return "seen"
+end
+
+to out
+  return "out"
+end
+
+to repr
+  return "repr"
+end
+
+to left
+  return "left"
+end
+
+to right
+  return "right"
+end
+
+to leftKey
+  return "leftKey"
+end
+
+to rightKey
+  return "rightKey"
+end
+
+to joinType
+  return "joinType"
+end
+
+to rightMap
+  return "rightMap"
+end
+
+to list
+  return "list"
+end
+
+to matches
+  return "matches"
+end
+
+to groupKey
+  return "groupKey"
+end
+
+to aggCol
+  return "aggCol"
+end
+
+to aggType
+  return "aggType"
+end
+
+to groups
+  return "groups"
+end
+
+to gVal
+  return "gVal"
+end
+
+to gKey
+  return "gKey"
+end
+
+to entry
+  return "entry"
+end
+
+to numVal
+  return "numVal"
+end
+
+to aggVal
+  return "aggVal"
+end
+
+to col
+  return "col"
+end
+
+to total
+  return "total"
+end
+
+to val
+  return "val"
+end
+
+to minVal
+  return "minVal"
+end
+
+to maxVal
+  return "maxVal"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

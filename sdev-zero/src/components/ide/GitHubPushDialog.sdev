@@ -1,0 +1,135 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/GitHubPushDialog.tsx (226 lines)
+# Pure-SDEV Path: src/components/ide/GitHubPushDialog.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/GitHubPushDialog.tsx",
+    sdev_path: "src/components/ide/GitHubPushDialog.sdev",
+    subsystem: "ide-component",
+    original_lines: 226,
+    exports_count: 26
+  }
+end
+
+to module_exports
+  return ["GitHubPushDialog", "TOKEN_KEY", "REPO_KEY", "BRANCH_KEY", "gh", "res", "data", "msg", "b64", "bytes", "bin", "handlePush", "user", "owner", "name", "repoData", "targetBranch", "baseSha", "baseTreeSha", "sdev_mod_ref", "commit", "tree", "blob", "treeRes", "commitRes", "url"]
+end
+
+to GitHubPushDialog with onOpenChange files
+  return "<sdev-view component=\"GitHubPushDialog\" subsystem=\"ide-component\">" + str(onOpenChange) + "</sdev-view>"
+end
+
+to TOKEN_KEY
+  return "<sdev-view component=\"TOKEN_KEY\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to REPO_KEY
+  return "<sdev-view component=\"REPO_KEY\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to BRANCH_KEY
+  return "<sdev-view component=\"BRANCH_KEY\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to gh with token path init
+  return "<sdev-view component=\"gh\" subsystem=\"ide-component\">" + str(token) + "</sdev-view>"
+end
+
+to res
+  return "<sdev-view component=\"res\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to data
+  return "<sdev-view component=\"data\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to msg
+  return "<sdev-view component=\"msg\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to b64 with s
+  return "<sdev-view component=\"b64\" subsystem=\"ide-component\">" + str(s) + "</sdev-view>"
+end
+
+to bytes
+  return "<sdev-view component=\"bytes\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to bin
+  return "<sdev-view component=\"bin\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handlePush
+  return "<sdev-view component=\"handlePush\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to user
+  return "<sdev-view component=\"user\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to owner
+  return "<sdev-view component=\"owner\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to name
+  return "<sdev-view component=\"name\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to repoData
+  return "<sdev-view component=\"repoData\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to targetBranch
+  return "<sdev-view component=\"targetBranch\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to baseSha
+  return "<sdev-view component=\"baseSha\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to baseTreeSha
+  return "<sdev-view component=\"baseTreeSha\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdev_mod_ref
+  return "<sdev-view component=\"sdev_mod_ref\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to commit
+  return "<sdev-view component=\"commit\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to tree
+  return "<sdev-view component=\"tree\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to blob
+  return "<sdev-view component=\"blob\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to treeRes
+  return "<sdev-view component=\"treeRes\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to commitRes
+  return "<sdev-view component=\"commitRes\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

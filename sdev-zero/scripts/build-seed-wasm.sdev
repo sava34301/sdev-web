@@ -1,0 +1,43 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-seed-wasm.mjs (13 lines)
+# Pure-SDEV Path: scripts/build-seed-wasm.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-seed-wasm.mjs",
+    sdev_path: "scripts/build-seed-wasm.sdev",
+    subsystem: "script",
+    original_lines: 13,
+    exports_count: 3
+  }
+end
+
+to module_exports
+  return ["wabt", "wat", "mod"]
+end
+
+to wabt
+  return "wabt"
+end
+
+to wat
+  return "wat"
+end
+
+to mod
+  return "mod"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

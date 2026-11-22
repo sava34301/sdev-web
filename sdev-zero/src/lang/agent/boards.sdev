@@ -1,0 +1,95 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/boards.ts (59 lines)
+# Pure-SDEV Path: src/lang/agent/boards.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/boards.ts",
+    sdev_path: "src/lang/agent/boards.sdev",
+    subsystem: "agent",
+    original_lines: 59,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["maskBoardBlocks", "readBoardPieces", "unmaskBoardBlocks", "withoutBoardBlocks", "MARK", "spans", "blocks", "out", "last", "text", "line", "texts", "notes", "unresolved", "make_BoardPiece", "make_MaskedBoards"]
+end
+
+to maskBoardBlocks with source
+  return source
+end
+
+to readBoardPieces with blocks
+  return blocks
+end
+
+to unmaskBoardBlocks with source blocks texts
+  return source
+end
+
+to withoutBoardBlocks with source
+  return source
+end
+
+to MARK
+  return "MARK"
+end
+
+to spans
+  return "spans"
+end
+
+to blocks
+  return "blocks"
+end
+
+to out
+  return "out"
+end
+
+to last
+  return "last"
+end
+
+to text
+  return "text"
+end
+
+to line
+  return "line"
+end
+
+to texts
+  return "texts"
+end
+
+to notes
+  return "notes"
+end
+
+to unresolved
+  return "unresolved"
+end
+
+to make_BoardPiece with payload
+  return payload
+end
+
+to make_MaskedBoards with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

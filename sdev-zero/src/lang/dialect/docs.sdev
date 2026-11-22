@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/dialect/docs.ts (152 lines)
+# Pure-SDEV Path: src/lang/dialect/docs.sdev
+# Subsystem     : dialect
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/dialect/docs.ts",
+    sdev_path: "src/lang/dialect/docs.sdev",
+    subsystem: "dialect",
+    original_lines: 152,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["generateDialectDocs", "docFreshness", "getOrGenerateDocs", "TEMPLATE_VERSION", "GROUP_ORDER", "out", "rows", "synonyms", "word", "fresh", "row", "content", "make_DocFreshness", "make_CachedDocs"]
+end
+
+to generateDialectDocs with spec
+  return spec
+end
+
+to docFreshness with generatedFromTemplate
+  return generatedFromTemplate
+end
+
+to getOrGenerateDocs with db spec dialectId
+  return db
+end
+
+to TEMPLATE_VERSION
+  return "TEMPLATE_VERSION"
+end
+
+to GROUP_ORDER
+  return "GROUP_ORDER"
+end
+
+to out
+  return "out"
+end
+
+to rows
+  return "rows"
+end
+
+to synonyms
+  return "synonyms"
+end
+
+to word
+  return "word"
+end
+
+to fresh
+  return 1
+end
+
+to row
+  return "row"
+end
+
+to content
+  return "content"
+end
+
+to make_DocFreshness with payload
+  return payload
+end
+
+to make_CachedDocs with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

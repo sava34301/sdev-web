@@ -1,0 +1,141 @@
+# ============================================================
+# SDEV Hardware Subsystem — Arduino C++ (.ino) Transpiler (transpile.sdev)
+# 100% Pure SDEV port of src/lang/hardware/transpile.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/hardware/board_db.sdev"
+use "lang/hardware/arduino_api.sdev"
+use "lang/hardware/strip.sdev"
+use "lang/hardware/understand.sdev"
+
+to transpile_board_body with board_id raw_body
+  set board to find_board_by_id(board_id)
+  set body to hw_understand_body(raw_body)
+  set lines to split(body, "\n")
+  set n to length(lines)
+
+  set includes to ["#include <Arduino.h>"]
+  set setup_lines to ["  Serial.begin(" + str(board["baud"]) + ");"]
+  set loop_lines to []
+  set auto_outputs to "|"
+
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    if length(line) > 0 and not text_starts_with(line, "#") and not text_starts_with(line, "//")
+      # use "<Library>"
+      if text_starts_with(line, "use \"") and text_ends_with(line, "\"")
+        set lib_name to substr(line, 5, length(line) - 6)
+        set lib_info to find_arduino_library(lib_name)
+        set includes to includes + [lib_info["header"]]
+      end
+
+      # pin <N> be output / input / input_pullup
+      if text_starts_with(line, "pin ") and text_ends_with(line, " be output")
+        set p to text_trim(substr(line, 4, length(line) - 14))
+        set setup_lines to setup_lines + ["  pinMode(" + p + ", OUTPUT);"]
+        set auto_outputs to auto_outputs + p + "|"
+      end
+      if text_starts_with(line, "pin ") and text_ends_with(line, " be input")
+        set p to text_trim(substr(line, 4, length(line) - 13))
+        set setup_lines to setup_lines + ["  pinMode(" + p + ", INPUT);"]
+      end
+      if text_starts_with(line, "pin ") and text_ends_with(line, " be pullup")
+        set p to text_trim(substr(line, 4, length(line) - 14))
+        set setup_lines to setup_lines + ["  pinMode(" + p + ", INPUT_PULLUP);"]
+      end
+
+      # pin <N> be high / pin <N> on
+      if text_starts_with(line, "pin ") and (text_ends_with(line, " be high") or text_ends_with(line, " on"))
+        set cut_len to 12
+        if text_ends_with(line, " on")
+          set cut_len to 7
+        end
+        set p to text_trim(substr(line, 4, length(line) - cut_len))
+        if index_of(auto_outputs, "|" + p + "|") < 0
+          set setup_lines to setup_lines + ["  pinMode(" + p + ", OUTPUT);"]
+          set auto_outputs to auto_outputs + p + "|"
+        end
+        set loop_lines to loop_lines + ["  digitalWrite(" + p + ", HIGH);"]
+      end
+
+      # pin <N> be low / pin <N> off
+      if text_starts_with(line, "pin ") and (text_ends_with(line, " be low") or text_ends_with(line, " off"))
+        set cut_len to 11
+        if text_ends_with(line, " off")
+          set cut_len to 8
+        end
+        set p to text_trim(substr(line, 4, length(line) - cut_len))
+        if index_of(auto_outputs, "|" + p + "|") < 0
+          set setup_lines to setup_lines + ["  pinMode(" + p + ", OUTPUT);"]
+          set auto_outputs to auto_outputs + p + "|"
+        end
+        set loop_lines to loop_lines + ["  digitalWrite(" + p + ", LOW);"]
+      end
+
+      # pin <N> toggle
+      if text_starts_with(line, "pin ") and text_ends_with(line, " toggle")
+        set p to text_trim(substr(line, 4, length(line) - 11))
+        if index_of(auto_outputs, "|" + p + "|") < 0
+          set setup_lines to setup_lines + ["  pinMode(" + p + ", OUTPUT);"]
+          set auto_outputs to auto_outputs + p + "|"
+        end
+        set loop_lines to loop_lines + ["  digitalWrite(" + p + ", !digitalRead(" + p + "));"]
+      end
+
+      # pin <N> pwm <V>
+      if text_starts_with(line, "pin ") and index_of(line, " pwm ") > 0
+        set pwm_idx to index_of(line, " pwm ")
+        set p to text_trim(substr(line, 4, pwm_idx - 4))
+        set v to text_trim(substr(line, pwm_idx + 5, length(line) - (pwm_idx + 5)))
+        set loop_lines to loop_lines + ["  analogWrite(" + p + ", " + v + ");"]
+      end
+
+      # tone <P> <HZ>
+      if text_starts_with(line, "tone ")
+        set rest to text_trim(substr(line, 5, length(line) - 5))
+        set sp to index_of(rest, " ")
+        if sp > 0
+          set p to substr(rest, 0, sp)
+          set hz to text_trim(substr(rest, sp + 1, length(rest) - (sp + 1)))
+          set loop_lines to loop_lines + ["  tone(" + p + ", " + hz + ");"]
+        end
+      end
+
+      # notone <P>
+      if text_starts_with(line, "notone ")
+        set p to text_trim(substr(line, 7, length(line) - 7))
+        set loop_lines to loop_lines + ["  noTone(" + p + ");"]
+      end
+
+      # wait <N> ms / wait <N>
+      if text_starts_with(line, "wait ")
+        set d to text_trim(substr(line, 5, length(line) - 5))
+        if text_ends_with(d, " ms")
+          set d to text_trim(substr(d, 0, length(d) - 3))
+        end
+        set loop_lines to loop_lines + ["  delay(" + d + ");"]
+      end
+
+      # speak(<msg>)
+      if text_starts_with(line, "speak(") and text_ends_with(line, ")")
+        set msg to substr(line, 6, length(line) - 7)
+        set loop_lines to loop_lines + ["  Serial.println(" + msg + ");"]
+      end
+    end
+    set i to i + 1
+  end
+
+  set header_comment to "// Transpiled by SDEV Zero-Host Hardware Engine for " + board["name"] + " (" + board["fqbn"] + ")\n"
+  set ino to header_comment + join(includes, "\n") + "\n\nvoid setup() {\n" + join(setup_lines, "\n") + "\n}\n\nvoid loop() {\n" + join(loop_lines, "\n") + "\n}\n"
+  return ino
+end
+
+to transpile_board_source with source
+  set blk to extract_board_block(source)
+  if blk["found"] is 0
+    return ""
+  end
+  return transpile_board_body(blk["board_id"], blk["body"])
+end

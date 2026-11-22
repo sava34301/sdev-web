@@ -1,0 +1,51 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/types.ts (44 lines)
+# Pure-SDEV Path: src/components/ide/types.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/types.ts",
+    sdev_path: "src/components/ide/types.sdev",
+    subsystem: "ide-component",
+    original_lines: 44,
+    exports_count: 5
+  }
+end
+
+to module_exports
+  return ["make_IdeFile", "make_IdeFolder", "make_RunMode", "make_SidePanel", "make_IdeSettings"]
+end
+
+to make_IdeFile with payload
+  return "<sdev-view component=\"make_IdeFile\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to make_IdeFolder with payload
+  return "<sdev-view component=\"make_IdeFolder\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to make_RunMode with payload
+  return "<sdev-view component=\"make_RunMode\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to make_SidePanel with payload
+  return "<sdev-view component=\"make_SidePanel\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to make_IdeSettings with payload
+  return "<sdev-view component=\"make_IdeSettings\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

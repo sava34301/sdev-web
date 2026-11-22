@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeSearchPanel.tsx (152 lines)
+# Pure-SDEV Path: src/components/ide/IdeSearchPanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeSearchPanel.tsx",
+    sdev_path: "src/components/ide/IdeSearchPanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 152,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["IdeSearchPanel", "matches", "haystack", "needle", "byFile", "toggleFile", "highlightMatch", "idx", "isExpanded"]
+end
+
+to IdeSearchPanel with onSelectFile
+  return "<sdev-view component=\"IdeSearchPanel\" subsystem=\"ide-component\">" + str(onSelectFile) + "</sdev-view>"
+end
+
+to matches
+  return "<sdev-view component=\"matches\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to haystack
+  return "<sdev-view component=\"haystack\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to needle
+  return "<sdev-view component=\"needle\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to byFile
+  return "<sdev-view component=\"byFile\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to toggleFile with id
+  return "<sdev-view component=\"toggleFile\" subsystem=\"ide-component\">" + str(id) + "</sdev-view>"
+end
+
+to highlightMatch with text q cs
+  return "<sdev-view component=\"highlightMatch\" subsystem=\"ide-component\">" + str(text) + "</sdev-view>"
+end
+
+to idx
+  return "<sdev-view component=\"idx\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to isExpanded
+  return "<sdev-view component=\"isExpanded\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

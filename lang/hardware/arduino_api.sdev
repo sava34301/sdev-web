@@ -1,0 +1,110 @@
+# ============================================================
+# SDEV Hardware Subsystem — Arduino API Catalogue (arduino_api.sdev)
+# 100% Pure SDEV port of src/lang/hardware/arduino-api.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to arduino_core_functions
+  return ["pinMode", "digitalWrite", "digitalRead", "analogRead", "analogWrite", "analogReference", "analogReadResolution", "analogWriteResolution", "tone", "noTone", "pulseIn", "pulseInLong", "shiftOut", "shiftIn", "delay", "delayMicroseconds", "millis", "micros", "abs", "constrain", "map", "max", "min", "pow", "sq", "sqrt", "sin", "cos", "tan", "randomSeed", "random", "lowByte", "highByte", "bitRead", "bitWrite", "bitSet", "bitClear", "bit", "attachInterrupt", "detachInterrupt", "interrupts", "noInterrupts"]
+end
+
+to arduino_constants
+  return ["HIGH", "LOW", "INPUT", "OUTPUT", "INPUT_PULLUP", "INPUT_PULLDOWN", "LED_BUILTIN", "MSBFIRST", "LSBFIRST", "CHANGE", "RISING", "FALLING", "DEFAULT", "INTERNAL", "EXTERNAL", "PI", "HALF_PI", "TWO_PI", "DEG_TO_RAD", "RAD_TO_DEG", "SERIAL_8N1"]
+end
+
+to find_arduino_library with raw_name
+  set name to lower(text_trim(raw_name))
+  if name is "servo" or name is "servo.h"
+    return {
+      name: "Servo",
+      header: "#include <Servo.h>",
+      bundled: 1,
+      category: "Actuators",
+      summary: "Control RC hobby servo motors (0 to 180 degrees)."
+    }
+  end
+  if name is "wire" or name is "wire.h" or name is "i2c"
+    return {
+      name: "Wire",
+      header: "#include <Wire.h>",
+      bundled: 1,
+      category: "Communication",
+      summary: "Two-wire I2C/TWI bus communication."
+    }
+  end
+  if name is "spi" or name is "spi.h"
+    return {
+      name: "SPI",
+      header: "#include <SPI.h>",
+      bundled: 1,
+      category: "Communication",
+      summary: "Serial Peripheral Interface (SPI) bus communication."
+    }
+  end
+  if name is "eeprom" or name is "eeprom.h"
+    return {
+      name: "EEPROM",
+      header: "#include <EEPROM.h>",
+      bundled: 1,
+      category: "Storage",
+      summary: "Non-volatile byte storage on MCU EEPROM."
+    }
+  end
+  if name is "liquidcrystal" or name is "lcd"
+    return {
+      name: "LiquidCrystal",
+      header: "#include <LiquidCrystal.h>",
+      bundled: 1,
+      category: "Displays",
+      summary: "Hitachi HD44780 character LCD driver."
+    }
+  end
+  if name is "neopixel" or name is "adafruit_neopixel" or name is "ws2812"
+    return {
+      name: "Adafruit NeoPixel",
+      header: "#include <Adafruit_NeoPixel.h>",
+      bundled: 0,
+      category: "LEDs",
+      summary: "WS2812 / SK6812 addressable RGB LED strips and rings."
+    }
+  end
+  if name is "dht" or name is "dht.h"
+    return {
+      name: "DHT sensor library",
+      header: "#include <DHT.h>",
+      bundled: 0,
+      category: "Sensors",
+      summary: "DHT11 / DHT22 digital temperature and humidity sensors."
+    }
+  end
+  if name is "wifi" or name is "wifi.h"
+    return {
+      name: "WiFi",
+      header: "#include <WiFi.h>",
+      bundled: 1,
+      category: "Networking",
+      summary: "WiFi station and access point connectivity."
+    }
+  end
+  return {
+    name: raw_name,
+    header: "#include <" + raw_name + ".h>",
+    bundled: 0,
+    category: "External",
+    summary: "External Arduino library."
+  }
+end
+
+to is_arduino_function with fn_name
+  set fns to arduino_core_functions()
+  set n to length(fns)
+  set i to 0
+  while i < n
+    if fns[i] is fn_name
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end

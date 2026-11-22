@@ -1,5 +1,11 @@
 # SDEV Standard Library: Text & Strings (v2) — authored in SDEV.
 
+use "lang/stdlib/v2/list.sdev"
+
+to index_of with s sub
+  return find(s, sub)
+end
+
 to str_eq with a b
   if concat(a, "") is b
     return 1

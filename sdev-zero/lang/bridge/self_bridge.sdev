@@ -1,0 +1,57 @@
+# ============================================================
+# SDEV Language Bridge — Pure-SDEV Self-Compiler Bridge & Oracle Runner
+# (sdev-zero/lang/bridge/self_bridge.sdev)
+# 100% Pure SDEV replacement for self-host.mjs, compile-self.mjs,
+# driver-artifact.mjs, oracle/compile.mjs & oracle/v2.js
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/runtime/vm.sdev"
+
+to bridge_parse_driver_stream with raw_stream
+  return vm_from_driver_stream(raw_stream)
+end
+
+to bridge_compile_v2_source with file_path
+  return read_file("sdev:compile:self:" + file_path)
+end
+
+to bridge_compile_v2_stage2 with file_path
+  return read_file("sdev:compile:stage2:" + file_path)
+end
+
+to bridge_compile_v1_source with file_path
+  return read_file("sdev:compile:v1-self:" + file_path)
+end
+
+to bridge_verify_driver_fixed_point
+  set baked to read_file("sdev:driver:baked")
+  set fresh to read_file("sdev:driver:fresh")
+  set sp to index_of(baked, " ")
+  set bc_len to 0
+  set pool_len to 0
+  if sp > 0
+    set bc_len to sp / 2
+    set pool_len to (length(baked) - (sp + 1)) / 2
+  end
+  set match_flag to 0
+  if str_eq(baked, fresh) and bc_len is 20933 and pool_len is 1123
+    set match_flag to 1
+  end
+  return {
+    identical: match_flag,
+    bc_len: bc_len,
+    pool_len: pool_len
+  }
+end
+
+to bridge_execute_on_pure_vm with driver_stream
+  set vm to vm_from_driver_stream(driver_stream)
+  set out to vm_run(vm, 100000)
+  return {
+    output: out,
+    out_count: vm["out_count"],
+    sp: vm["sp"],
+    pc: vm["pc"]
+  }
+end

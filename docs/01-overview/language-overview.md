@@ -50,7 +50,7 @@ cycle i < 10 ::
 ;;
 ```
 
-There are four ways people write SDEV, all compiling to the same underlying runtimes:
+There are five ways people write SDEV, all compiling to the same underlying runtimes:
 
 - **v1 (Classic / Mystic)** — the full professional language (`forge`, `conjure`, `::`/`;;`,
   classes with `essence`/`extend`/`super`, dict "tomes", the whole standard library).
@@ -58,10 +58,15 @@ There are four ways people write SDEV, all compiling to the same underlying runt
   `if/else/end`, `for each … in … end`) compiled by the **100% pure-SDEV self-hosted
   compiler** (`lang/compiler/*.sdev`) onto the WebAssembly Seed VM, zero-host native VM (`bin/sdev-vm`),
   or native machine code (Linux x86-64 ELF & Windows PE `.exe`).
+- **Syntax-Free SDEV (Code Understander)** — the version of SDEV with **no fixed syntax**:
+  anyone can write and learn in whatever way makes sense to them, and the Understanding Agent
+  turns their intent into canonical SDEV.
+- **Personal Dialects (`.sdev` dialect files)** — custom user-defined syntax (keywords,
+  style, operators, and helper functions) authored as pure `.sdev` files via Dialect Studio
+  (`/dialects`) or `sdev dialect`. Dialects translate automatically and deterministically into
+  canonical SDEV v2 straight into the v2 compiler — **without** using the AI code understander.
 - **`sdev:ai` (`!#ai`)** — a compact brace-delimited dialect optimized for AI generation,
   translated to canonical SDEV by `lang/agent/ai-dialect.sdev`.
-- **Personal Dialects** — custom user-defined keywords, operators, and scripts authored
-  as data via Dialect Studio (`/dialects`).
 
 Pick per file with a shebang, or globally with
 `localStorage.sdev_runtime = "v2"`:

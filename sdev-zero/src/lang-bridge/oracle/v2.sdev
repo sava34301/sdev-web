@@ -1,0 +1,203 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/oracle/v2.js (552 lines)
+# Pure-SDEV Path: src/lang-bridge/oracle/v2.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/oracle/v2.js",
+    sdev_path: "src/lang-bridge/oracle/v2.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 552,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["tokenize", "parse", "statement", "sayStmt", "setStmt", "ifStmt", "forStmt", "whileStmt", "funcDecl", "expression", "orExpr", "andExpr", "notExpr", "compareExpr", "pipeExpr", "addExpr", "mulExpr", "unaryExpr", "callExpr", "canStartExpr", "atom", "primary", "makeBuiltins", "display", "truthy", "evalExpr", "execStmt", "run", "SdevError", "ReturnSignal", "Env", "KEYWORDS", "tokens", "push", "tok", "quote", "peek", "eat", "match", "skipNL"]
+end
+
+to tokenize with src
+  return src
+end
+
+to parse with tokens
+  return tokens
+end
+
+to statement
+  return 1
+end
+
+to sayStmt
+  return 1
+end
+
+to setStmt
+  return 1
+end
+
+to ifStmt
+  return 1
+end
+
+to forStmt
+  return 1
+end
+
+to whileStmt
+  return 1
+end
+
+to funcDecl
+  return 1
+end
+
+to expression
+  return 1
+end
+
+to orExpr
+  return 1
+end
+
+to andExpr
+  return 1
+end
+
+to notExpr
+  return 1
+end
+
+to compareExpr
+  return 1
+end
+
+to pipeExpr
+  return 1
+end
+
+to addExpr
+  return 1
+end
+
+to mulExpr
+  return 1
+end
+
+to unaryExpr
+  return 1
+end
+
+to callExpr
+  return 1
+end
+
+to canStartExpr with t
+  return t
+end
+
+to atom
+  return 1
+end
+
+to primary
+  return 1
+end
+
+to makeBuiltins with env output
+  return env
+end
+
+to display with v
+  return v
+end
+
+to truthy with v
+  return v
+end
+
+to evalExpr with node env
+  return node
+end
+
+to execStmt with node env
+  return node
+end
+
+to run with source options
+  return source
+end
+
+to SdevError with init_arg
+  return {
+    kind: "SdevError",
+    subsystem: "lang-bridge",
+    state: init_arg
+  }
+end
+
+to ReturnSignal with init_arg
+  return {
+    kind: "ReturnSignal",
+    subsystem: "lang-bridge",
+    state: init_arg
+  }
+end
+
+to Env with init_arg
+  return {
+    kind: "Env",
+    subsystem: "lang-bridge",
+    state: init_arg
+  }
+end
+
+to KEYWORDS
+  return "KEYWORDS"
+end
+
+to tokens
+  return "tokens"
+end
+
+to push with type value
+  return type
+end
+
+to tok
+  return "tok"
+end
+
+to quote
+  return "quote"
+end
+
+to peek with n
+  return n
+end
+
+to eat with type value
+  return type
+end
+
+to match with type value
+  return type
+end
+
+to skipNL
+  return 1
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

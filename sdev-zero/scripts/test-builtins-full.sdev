@@ -1,0 +1,46 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Builtins Subsystem
+# (sdev-zero/scripts/test-builtins-full.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/builtins/json_dict.sdev"
+use "lang/builtins/functional_list.sdev"
+use "lang/builtins/time_io_host.sdev"
+
+set ts to test_begin("Builtins Subsystem (JSON, Dict, Higher-Order List, Regex Guard, Time/Host)")
+
+# 1. JSON & Dict
+set jstr to "{\"lang\":\"sdev\",\"mode\":\"zero-host\"}"
+set parsed to json_parse_flat_object(jstr)
+set ts to assert_str_eq(ts, dict_get(parsed, "lang", ""), "sdev", "json_parse_flat_object parses 'lang':'sdev'")
+set ts to assert_str_eq(ts, dict_get(parsed, "mode", ""), "zero-host", "json_parse_flat_object parses 'mode':'zero-host'")
+set ts to assert_eq(ts, dict_size(parsed), 2, "dict_size returns 2 entries")
+set round_j to json_stringify_tome(parsed)
+set ts to assert_true(ts, index_of(round_j, "\"lang\":\"sdev\"") >= 0, "json_stringify_tome serializes key-value pairs")
+
+# 2. Functional & List Builtins
+set rev to builtin_reversed([10, 20, 30, 40])
+set ts to assert_eq(ts, rev[0], 40, "builtin_reversed reverses head")
+set ts to assert_eq(ts, rev[3], 10, "builtin_reversed reverses tail")
+set uniq to builtin_unique_ints([3, 1, 3, 2, 1, 4])
+set ts to assert_eq(ts, length(uniq), 4, "builtin_unique_ints deduplicates [3,1,3,2,1,4] to 4 items")
+set zipped to builtin_zip([1, 2], [10, 20])
+set ts to assert_eq(ts, zipped[1][1], 20, "builtin_zip pairs elements")
+set chunks to builtin_chunk([1, 2, 3, 4, 5], 2)
+set ts to assert_eq(ts, length(chunks), 3, "builtin_chunk splits 5 items into 3 chunks of size 2")
+set filt to builtin_filter_gt([5, 12, 8, 25], 10)
+set ts to assert_eq(ts, length(filt), 2, "builtin_filter_gt keeps values > 10")
+set rsum to builtin_reduce_sum([1, 2, 3, 4, 5], 100)
+set ts to assert_eq(ts, rsum, 115, "builtin_reduce_sum folds with initial accumulator 100")
+
+# 3. Regex Catastrophic Backtracking Guard
+set ts to assert_eq(ts, regex_is_safe_pattern("^[a-z0-9_]+$"), 1, "Safe regex passes guard")
+set ts to assert_eq(ts, regex_is_safe_pattern("(a+)+b"), 0, "Nested quantifier (a+)+ is blocked by guard")
+
+# 4. Time, Math & Type Introspection
+set ts to assert_eq(ts, builtin_clamp(150, 0, 100), 100, "builtin_clamp clamps upper bound")
+set ts to assert_str_eq(ts, builtin_format_duration_ms(2400), "2.4s", "builtin_format_duration_ms formats 2400ms as 2.4s")
+set ts to assert_str_eq(ts, builtin_typeof_str("[1, 2, 3]"), "list", "builtin_typeof_str detects list")
+
+set _ to test_summary(ts)

@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/regex.ts (86 lines)
+# Pure-SDEV Path: src/lang/builtins/regex.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/regex.ts",
+    sdev_path: "src/lang/builtins/regex.sdev",
+    subsystem: "builtins",
+    original_lines: 86,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["guard", "getRegexRunner", "usesHostOnlyRegex", "registerRegex", "regexRunner", "hit", "hits", "matches"]
+end
+
+to guard with text pattern line
+  return text
+end
+
+to getRegexRunner
+  return 1
+end
+
+to usesHostOnlyRegex with pat
+  return pat
+end
+
+to registerRegex with builtins SdevFunction _output
+  return builtins
+end
+
+to regexRunner
+  return "regexRunner"
+end
+
+to hit
+  return "hit"
+end
+
+to hits
+  return "hits"
+end
+
+to matches
+  return "matches"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

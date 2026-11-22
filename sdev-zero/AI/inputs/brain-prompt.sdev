@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : AI/inputs/brain-prompt.ts (141 lines)
+# Pure-SDEV Path: AI/inputs/brain-prompt.sdev
+# Subsystem     : config-tooling
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "AI/inputs/brain-prompt.ts",
+    sdev_path: "AI/inputs/brain-prompt.sdev",
+    subsystem: "config-tooling",
+    original_lines: 141,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["brainInstructions", "brainInput", "SYSTEM", "AI_DIALECT", "body", "source"]
+end
+
+to brainInstructions with format
+  return format
+end
+
+to brainInput with req
+  return req
+end
+
+to SYSTEM
+  return "SYSTEM"
+end
+
+to AI_DIALECT
+  return "AI_DIALECT"
+end
+
+to body
+  return "body"
+end
+
+to source
+  return "source"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

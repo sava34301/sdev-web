@@ -1,0 +1,64 @@
+# ============================================================
+# SDEV Builtins Subsystem — Time, Type Introspection, Math & Host I/O
+# (sdev-zero/lang/builtins/time_io_host.sdev)
+# 100% Pure SDEV port of time.ts, types.ts, math.ts, io.ts, host.ts & utils.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to builtin_clamp with x lo hi
+  if x < lo
+    return lo
+  end
+  if x > hi
+    return hi
+  end
+  return x
+end
+
+to builtin_sign with x
+  if x > 0
+    return 1
+  end
+  if x < 0
+    return 0 - 1
+  end
+  return 0
+end
+
+to builtin_format_duration_ms with ms
+  if ms < 1000
+    return str(ms) + "ms"
+  end
+  set secs to ms / 1000
+  set rem to ms % 1000
+  return str(secs) + "." + str(rem / 100) + "s"
+end
+
+to builtin_typeof_str with raw_repr
+  set s to text_trim(raw_repr)
+  if s is "true" or s is "false"
+    return "boolean"
+  end
+  if s is "nothing" or s is "void"
+    return "nothing"
+  end
+  if text_starts_with(s, "[") and text_ends_with(s, "]")
+    return "list"
+  end
+  if text_starts_with(s, "{") and text_ends_with(s, "}")
+    return "tome"
+  end
+  if text_starts_with(s, "\"") and text_ends_with(s, "\"")
+    return "string"
+  end
+  return "number"
+end
+
+to host_file_exists with path
+  set content to read_file(path)
+  if length(content) > 0
+    return 1
+  end
+  return 0
+end

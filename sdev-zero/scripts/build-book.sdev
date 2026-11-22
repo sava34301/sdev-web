@@ -1,0 +1,111 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-book.ts (890 lines)
+# Pure-SDEV Path: scripts/build-book.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-book.ts",
+    sdev_path: "scripts/build-book.sdev",
+    subsystem: "script",
+    original_lines: 890,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["slug", "render", "definitions", "sdev_mod_values", "fields", "rather", "names", "CODE", "KEYWORDS", "BUILTINS_TABLE", "EN_CHAPTERS", "BG_CHAPTERS", "lines", "en", "bg"]
+end
+
+to slug with s
+  return s
+end
+
+to render with chapters title lang
+  return chapters
+end
+
+to definitions with init_arg
+  return {
+    kind: "definitions",
+    subsystem: "script",
+    state: init_arg
+  }
+end
+
+to sdev_mod_values with init_arg
+  return {
+    kind: "sdev_mod_values",
+    subsystem: "script",
+    state: init_arg
+  }
+end
+
+to fields with init_arg
+  return {
+    kind: "fields",
+    subsystem: "script",
+    state: init_arg
+  }
+end
+
+to rather with init_arg
+  return {
+    kind: "rather",
+    subsystem: "script",
+    state: init_arg
+  }
+end
+
+to names with init_arg
+  return {
+    kind: "names",
+    subsystem: "script",
+    state: init_arg
+  }
+end
+
+to CODE with s
+  return s
+end
+
+to KEYWORDS
+  return "KEYWORDS"
+end
+
+to BUILTINS_TABLE
+  return "BUILTINS_TABLE"
+end
+
+to EN_CHAPTERS
+  return "EN_CHAPTERS"
+end
+
+to BG_CHAPTERS
+  return "BG_CHAPTERS"
+end
+
+to lines
+  return "lines"
+end
+
+to en
+  return "en"
+end
+
+to bg
+  return "bg"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

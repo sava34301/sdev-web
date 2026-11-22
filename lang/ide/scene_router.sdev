@@ -1,0 +1,63 @@
+# ============================================================
+# SDEV IDE & Homepage Engine — App Router, 3D Scene Math & Launch Gate
+# (sdev-zero/lang/ide/scene_router.sdev)
+# 100% Pure SDEV port of src/lib/app-router.ts, launchGate.ts,
+# inviteCode.ts, countdownI18n.ts, googleCalendar.ts & compilerScene.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+# Project Architecture Rule:
+# Select hash routing only for `file:` desktop entries and browser routing
+# for hosted entries, so bundled `index.html#/ide` opens the IDE.
+to app_router_for_protocol with protocol_str
+  if text_trim(protocol_str) is "file:"
+    return "HashRouter"
+  end
+  return "BrowserRouter"
+end
+
+# 3D Compiler Scene scroll progress math (port of compilerScene.ts)
+# Progress p is in 0..1000 (milli-units of scroll progress 0.000..1.000)
+to scene_smoothstep_milli with start_m end_m p_m
+  if p_m <= start_m
+    return 0
+  end
+  if p_m >= end_m
+    return 1000
+  end
+  set span to end_m - start_m
+  set t_m to ((p_m - start_m) * 1000) / span
+  return t_m
+end
+
+to scene_compute_rig_state with scroll_milli
+  set stage_m to scroll_milli * 3
+  if stage_m > 1400
+    set stage_m to 1400
+  end
+  set assembly_m to scene_smoothstep_milli(400, 700, scroll_milli)
+  set split_m to scene_smoothstep_milli(720, 960, scroll_milli)
+  set rot_y_m to (0 - 550) + ((scroll_milli * 1050) / 1000)
+  return {
+    stage_milli: stage_m,
+    assembly_milli: assembly_m,
+    split_milli: split_m,
+    rot_y_milli: rot_y_m
+  }
+end
+
+to launch_verify_invite_code with raw_code
+  set code to upper(text_trim(raw_code))
+  if text_starts_with(code, "SDEV-") and length(code) >= 9
+    return 1
+  end
+  return 0
+end
+
+to google_calendar_event_url with title details iso_start iso_end
+  set base to "https://calendar.google.com/calendar/render?action=TEMPLATE"
+  set t to replace(title, " ", "+")
+  set d to replace(details, " ", "+")
+  return base + "&text=" + t + "&details=" + d + "&dates=" + iso_start + "/" + iso_end
+end

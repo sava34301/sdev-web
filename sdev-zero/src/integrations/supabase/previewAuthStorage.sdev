@@ -1,0 +1,155 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/integrations/supabase/previewAuthStorage.ts (144 lines)
+# Pure-SDEV Path: src/integrations/supabase/previewAuthStorage.sdev
+# Subsystem     : config-tooling
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/integrations/supabase/previewAuthStorage.ts",
+    sdev_path: "src/integrations/supabase/previewAuthStorage.sdev",
+    subsystem: "config-tooling",
+    original_lines: 144,
+    exports_count: 31
+  }
+end
+
+to module_exports
+  return ["readBrokerReply", "brokeredPreviewStorage", "RESULT", "host", "PREVIEW_ZONES", "onPreviewZone", "UUID", "projectId", "parentWindow", "framed", "dev", "EDITOR", "ancestorOrigins", "ancestor", "editorOrigins", "TIMEOUT", "newId", "request", "requestId", "done", "finish", "onMessage", "reply", "timer", "msg", "firstGet", "RETRY_DELAY", "readLocal", "local", "res", "make_PreviewAuthStorage"]
+end
+
+to readBrokerReply with data requestId
+  return data
+end
+
+to brokeredPreviewStorage
+  return 1
+end
+
+to RESULT
+  return "RESULT"
+end
+
+to host
+  return "host"
+end
+
+to PREVIEW_ZONES
+  return "PREVIEW_ZONES"
+end
+
+to onPreviewZone
+  return "onPreviewZone"
+end
+
+to UUID
+  return "UUID"
+end
+
+to projectId
+  return "projectId"
+end
+
+to parentWindow
+  return "parentWindow"
+end
+
+to framed
+  return "framed"
+end
+
+to dev
+  return "dev"
+end
+
+to EDITOR
+  return "EDITOR"
+end
+
+to ancestorOrigins
+  return "ancestorOrigins"
+end
+
+to ancestor
+  return "ancestor"
+end
+
+to editorOrigins
+  return "editorOrigins"
+end
+
+to TIMEOUT
+  return "TIMEOUT"
+end
+
+to newId
+  return 1
+end
+
+to request
+  return "request"
+end
+
+to requestId
+  return "requestId"
+end
+
+to done
+  return "done"
+end
+
+to finish with reply
+  return reply
+end
+
+to onMessage with e
+  return e
+end
+
+to reply
+  return "reply"
+end
+
+to timer
+  return "timer"
+end
+
+to msg
+  return "msg"
+end
+
+to firstGet
+  return "firstGet"
+end
+
+to RETRY_DELAY
+  return "RETRY_DELAY"
+end
+
+to readLocal
+  return "readLocal"
+end
+
+to local
+  return "local"
+end
+
+to res
+  return "res"
+end
+
+to make_PreviewAuthStorage with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

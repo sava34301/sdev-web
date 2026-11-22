@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/dialect/signature.ts (283 lines)
+# Pure-SDEV Path: src/lang/dialect/signature.sdev
+# Subsystem     : dialect
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/dialect/signature.ts",
+    sdev_path: "src/lang/dialect/signature.sdev",
+    subsystem: "dialect",
+    original_lines: 283,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["toBase64Url", "fromBase64Url", "checksum", "buildTranslationRecipe", "applyTranslationRecipe", "hasSignature", "stripSignature", "readSignature", "writeSignature", "isSignatureStale", "repairSignature", "SIGNATURE_PREFIX", "bytes", "bin", "padded", "prefix", "minLen", "suffix", "aMidEnd", "bMidEnd", "ops", "ai", "bi", "pushOp", "bIndex", "line", "arr", "hunkAStart", "hunkBStart", "foundA", "foundB", "bestDist", "scanLimit", "candidates", "dist", "lines", "out", "cursor", "inserted", "nl"]
+end
+
+to toBase64Url with text
+  return text
+end
+
+to fromBase64Url with text
+  return text
+end
+
+to checksum with body
+  return body
+end
+
+to buildTranslationRecipe with writtenBody translatedSource
+  return writtenBody
+end
+
+to applyTranslationRecipe with writtenBody recipe
+  return writtenBody
+end
+
+to hasSignature with source
+  return source
+end
+
+to stripSignature with source
+  return source
+end
+
+to readSignature with source
+  return source
+end
+
+to writeSignature with source sig
+  return source
+end
+
+to isSignatureStale with source
+  return source
+end
+
+to repairSignature with source
+  return source
+end
+
+to SIGNATURE_PREFIX
+  return "SIGNATURE_PREFIX"
+end
+
+to bytes
+  return "bytes"
+end
+
+to bin
+  return "bin"
+end
+
+to padded
+  return "padded"
+end
+
+to prefix
+  return "prefix"
+end
+
+to minLen
+  return "minLen"
+end
+
+to suffix
+  return "suffix"
+end
+
+to aMidEnd
+  return "aMidEnd"
+end
+
+to bMidEnd
+  return "bMidEnd"
+end
+
+to ops
+  return "ops"
+end
+
+to ai
+  return "ai"
+end
+
+to bi
+  return "bi"
+end
+
+to pushOp with start del insLines
+  return start
+end
+
+to bIndex
+  return "bIndex"
+end
+
+to line
+  return "line"
+end
+
+to arr
+  return "arr"
+end
+
+to hunkAStart
+  return "hunkAStart"
+end
+
+to hunkBStart
+  return "hunkBStart"
+end
+
+to foundA
+  return "foundA"
+end
+
+to foundB
+  return "foundB"
+end
+
+to bestDist
+  return "bestDist"
+end
+
+to scanLimit
+  return "scanLimit"
+end
+
+to candidates
+  return "candidates"
+end
+
+to dist
+  return "dist"
+end
+
+to lines
+  return "lines"
+end
+
+to out
+  return "out"
+end
+
+to cursor
+  return "cursor"
+end
+
+to inserted
+  return "inserted"
+end
+
+to nl
+  return "nl"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

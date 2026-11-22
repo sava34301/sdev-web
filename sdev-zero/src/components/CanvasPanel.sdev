@@ -1,0 +1,179 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/CanvasPanel.tsx (544 lines)
+# Pure-SDEV Path: src/components/CanvasPanel.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/CanvasPanel.tsx",
+    sdev_path: "src/components/CanvasPanel.sdev",
+    subsystem: "component",
+    original_lines: 544,
+    exports_count: 37
+  }
+end
+
+to module_exports
+  return ["CanvasPanel", "canvasRef", "ctxRef", "canvasSize", "displayWidth", "displayHeight", "turtleRef", "ctx", "canvas", "currentFill", "currentStroke", "currentWidth", "currentFont", "currentFontFamily", "hasFill", "hasStroke", "radius", "size", "pts", "outer", "inner", "points", "angle", "px", "py", "hx", "hy", "grad", "stops", "rgrad", "rstops", "sprite", "tx", "ty", "ta", "tsize", "make_CanvasHandle"]
+end
+
+to CanvasPanel
+  return "<sdev-view component=\"CanvasPanel\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to canvasRef
+  return "<sdev-view component=\"canvasRef\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to ctxRef
+  return "<sdev-view component=\"ctxRef\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to canvasSize
+  return "<sdev-view component=\"canvasSize\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to displayWidth
+  return "<sdev-view component=\"displayWidth\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to displayHeight
+  return "<sdev-view component=\"displayHeight\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to turtleRef
+  return "<sdev-view component=\"turtleRef\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to ctx
+  return "<sdev-view component=\"ctx\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to canvas
+  return "<sdev-view component=\"canvas\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to currentFill
+  return "<sdev-view component=\"currentFill\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to currentStroke
+  return "<sdev-view component=\"currentStroke\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to currentWidth
+  return "<sdev-view component=\"currentWidth\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to currentFont
+  return "<sdev-view component=\"currentFont\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to currentFontFamily
+  return "<sdev-view component=\"currentFontFamily\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to hasFill
+  return "<sdev-view component=\"hasFill\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to hasStroke
+  return "<sdev-view component=\"hasStroke\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to radius
+  return "<sdev-view component=\"radius\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to size
+  return "<sdev-view component=\"size\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to pts
+  return "<sdev-view component=\"pts\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to outer
+  return "<sdev-view component=\"outer\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to inner
+  return "<sdev-view component=\"inner\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to points
+  return "<sdev-view component=\"points\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to angle
+  return "<sdev-view component=\"angle\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to px
+  return "<sdev-view component=\"px\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to py
+  return "<sdev-view component=\"py\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to hx
+  return "<sdev-view component=\"hx\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to hy
+  return "<sdev-view component=\"hy\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to grad
+  return "<sdev-view component=\"grad\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to stops
+  return "<sdev-view component=\"stops\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to rgrad
+  return "<sdev-view component=\"rgrad\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to rstops
+  return "<sdev-view component=\"rstops\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to sprite
+  return "<sdev-view component=\"sprite\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to tx
+  return "<sdev-view component=\"tx\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to ty
+  return "<sdev-view component=\"ty\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to ta
+  return "<sdev-view component=\"ta\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to tsize
+  return "<sdev-view component=\"tsize\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to make_CanvasHandle with payload
+  return "<sdev-view component=\"make_CanvasHandle\" subsystem=\"component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

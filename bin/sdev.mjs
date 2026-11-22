@@ -554,6 +554,2197 @@ var init_translator_v2 = __esm({
   }
 });
 
+// src/lang/translator.ts
+function effectiveTable(lang, target = "v1") {
+  const base = KEYWORD_TABLES[lang];
+  if (!base) return null;
+  if (target === "v1") return base;
+  const key = `${lang}|v2`;
+  if (EFFECTIVE_TABLES[key]) return EFFECTIVE_TABLES[key];
+  const table = {};
+  for (const [foreign, canonical] of Object.entries(base)) {
+    table[foreign] = V1_TO_V2[canonical] ?? canonical;
+  }
+  Object.assign(table, V2_EXTRA[lang] ?? {});
+  EFFECTIVE_TABLES[key] = table;
+  return table;
+}
+function buildPhraseNormalizations(lang, target = "v1") {
+  const key = `${lang}|${target}`;
+  if (PHRASE_NORMALIZATIONS[key]) return PHRASE_NORMALIZATIONS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return PHRASE_NORMALIZATIONS[key] = [];
+  const phrases = Object.keys(table).filter((k) => k.includes("_"));
+  const result = phrases.map((p) => {
+    const spaced = p.replace(/_/g, "\\s+");
+    return [new RegExp(`(^|[^\\p{L}\\p{N}_])${spaced}(?=$|[^\\p{L}\\p{N}_])`, "gu"), `$1${p}`];
+  });
+  PHRASE_NORMALIZATIONS[key] = result;
+  return result;
+}
+function compileReplacer(lang, target = "v1") {
+  const key = `${lang}|${target}`;
+  if (COMPILED_REPLACERS[key]) return COMPILED_REPLACERS[key];
+  const table = effectiveTable(lang, target);
+  if (!table) return COMPILED_REPLACERS[key] = (s) => s;
+  const entries = Object.entries(table).sort((a, b) => b[0].length - a[0].length);
+  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = entries.map(([k]) => escape(k)).join("|");
+  if (!pattern) return COMPILED_REPLACERS[key] = (s) => s;
+  const re2 = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, "gu");
+  const map = new Map(entries);
+  const fn2 = (src, protect) => {
+    return src.replace(re2, (_m, pre, word) => {
+      if (protect?.has(word)) return pre + word;
+      const repl = map.get(word) ?? word;
+      return pre + repl;
+    });
+  };
+  COMPILED_REPLACERS[key] = fn2;
+  return fn2;
+}
+function segmentSource(source) {
+  const segs = [];
+  const n = source.length;
+  let i = 0;
+  let codeStart = 0;
+  while (i < n) {
+    const c = source.charCodeAt(i);
+    if (c === 35 || c === 47 && i + 1 < n && source.charCodeAt(i + 1) === 47) {
+      if (i > codeStart) segs.push({ code: true, text: source.slice(codeStart, i) });
+      let stop = source.indexOf("\n", i);
+      if (stop === -1) stop = n;
+      segs.push({ code: false, text: source.slice(i, stop) });
+      i = stop;
+      codeStart = i;
+      continue;
+    }
+    if (c === 34 || c === 39 || c === 96) {
+      if (i > codeStart) segs.push({ code: true, text: source.slice(codeStart, i) });
+      let j = i + 1;
+      while (j < n) {
+        const cur = source.charCodeAt(j);
+        if (cur === 92) {
+          j += 2;
+        } else if (cur === c) {
+          j++;
+          break;
+        } else {
+          j++;
+        }
+      }
+      if (j > n) j = n;
+      segs.push({ code: false, text: source.slice(i, j) });
+      i = j;
+      codeStart = i;
+      continue;
+    }
+    i++;
+  }
+  if (codeStart < n) segs.push({ code: true, text: source.slice(codeStart) });
+  return segs;
+}
+function getDetectTables() {
+  if (DETECT_TABLES) return DETECT_TABLES;
+  DETECT_TABLES = SUPPORTED_LANGUAGES.map((lang) => {
+    const singles = [];
+    const phrases = [];
+    const addWords = (tbl) => {
+      if (!tbl) return;
+      for (const word of Object.keys(tbl)) {
+        if (word.length === 1 && word.charCodeAt(0) < 128) continue;
+        const weight = NON_ASCII_RE.test(word) ? 2 : 1;
+        if (word.includes("_")) {
+          const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/_/g, "[\\s_]+");
+          const re2 = new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, "u");
+          phrases.push([word, word.split("_")[0], re2, weight]);
+        } else {
+          singles.push([word, weight]);
+        }
+      }
+    };
+    addWords(KEYWORD_TABLES[lang]);
+    addWords(V2_EXTRA[lang]);
+    return { lang, singles, phrases };
+  });
+  return DETECT_TABLES;
+}
+function detectLanguage(source, protect) {
+  const codeOnly2 = segmentSource(source).filter((s) => s.code).map((s) => s.text).join("\n");
+  const englishHits = (codeOnly2.match(ENGLISH_SIGNAL_RE) || []).length;
+  const words = /* @__PURE__ */ new Set();
+  const matches = codeOnly2.match(WORD_TOKEN_RE);
+  if (matches) {
+    for (let i = 0; i < matches.length; i++) words.add(matches[i]);
+  }
+  if (words.size === 0) return null;
+  let bestLang = null;
+  let bestScore = 0;
+  for (const { lang, singles, phrases } of getDetectTables()) {
+    let score = 0;
+    for (let i = 0; i < singles.length; i++) {
+      const [word, weight] = singles[i];
+      if (words.has(word) && !protect?.has(word)) {
+        score += weight;
+      }
+    }
+    for (let i = 0; i < phrases.length; i++) {
+      const [word, first, re2, weight] = phrases[i];
+      if (!protect?.has(word) && (words.has(word) || words.has(first)) && re2.test(codeOnly2)) {
+        score += weight;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestLang = lang;
+    }
+  }
+  if (bestScore >= 2 && bestScore > englishHits) return bestLang;
+  return null;
+}
+function dialectWords(spec) {
+  const words = /* @__PURE__ */ new Set();
+  if (!spec) return words;
+  for (const w of Object.values(spec.names ?? {})) words.add(w);
+  for (const list of Object.values(spec.synonyms ?? {})) for (const w of list) words.add(w);
+  for (const fn2 of spec.constructs?.functions ?? []) words.add(fn2.name);
+  return words;
+}
+function dialectLanguageHint(spec) {
+  for (const tag of spec?.meta?.languages ?? []) {
+    const name = TAG_TO_LANGUAGE[tag.toLowerCase().split("-")[0]];
+    if (name && name !== "English" && KEYWORD_TABLES[name]) return name;
+  }
+  return null;
+}
+function translateSource(source, sourceLanguage = "auto", options = {}) {
+  if (!source) return { translated: source, detectedLanguage: null };
+  const target = options.target ?? "v1";
+  const protect = /* @__PURE__ */ new Set([...options.protect ?? [], ...dialectWords(options.dialect)]);
+  let lang = sourceLanguage;
+  if (lang === "English") return { translated: source, detectedLanguage: "English" };
+  if (!lang || lang === "auto") {
+    lang = detectLanguage(source, protect) ?? dialectLanguageHint(options.dialect);
+    if (!lang) return { translated: source, detectedLanguage: null };
+  }
+  if (!KEYWORD_TABLES[lang]) {
+    return { translated: source, detectedLanguage: null };
+  }
+  const replace = compileReplacer(lang, target);
+  const phraseNorms = buildPhraseNormalizations(lang, target);
+  const fuzzy = compileFuzzyReplacer(lang, target);
+  const segments = segmentSource(source);
+  const translated = segments.map((seg) => {
+    if (!seg.code) return seg.text;
+    let t = seg.text;
+    for (const [re2, repl] of phraseNorms) {
+      t = t.replace(re2, repl);
+    }
+    t = replace(t, protect);
+    t = fuzzy(t, protect);
+    if (target === "v1") {
+      t = t.replace(/\bforge(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, "conjure$1");
+    } else {
+      t = t.replace(/\bset(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, "to$1");
+      t = t.split("\n").map(
+        (line) => /^\s*(if|while)\b/.test(line) ? line.replace(/(^\s*(?:if|while)\b[^\n]*?)\s+to\s+/, "$1 is ") : line
+      ).join("\n");
+    }
+    return t;
+  }).join("");
+  return { translated, detectedLanguage: lang };
+}
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const al = a.length;
+  const bl = b.length;
+  if (al === 0) return bl;
+  if (bl === 0) return al;
+  const prev = new Int32Array(bl + 1);
+  const curr = new Int32Array(bl + 1);
+  for (let j = 0; j <= bl; j++) prev[j] = j;
+  for (let i = 1; i <= al; i++) {
+    curr[0] = i;
+    const ai = a.charCodeAt(i - 1);
+    for (let j = 1; j <= bl; j++) {
+      const cost = ai === b.charCodeAt(j - 1) ? 0 : 1;
+      let best = curr[j - 1] + 1;
+      const del = prev[j] + 1;
+      if (del < best) best = del;
+      const sub = prev[j - 1] + cost;
+      if (sub < best) best = sub;
+      curr[j] = best;
+    }
+    prev.set(curr);
+  }
+  return prev[bl];
+}
+function compileFuzzyReplacer(lang, target = "v1") {
+  const cacheKey = `${lang}|${target}`;
+  if (FUZZY_REPLACERS[cacheKey]) return FUZZY_REPLACERS[cacheKey];
+  const table = effectiveTable(lang, target);
+  if (!table) return FUZZY_REPLACERS[cacheKey] = (s) => s;
+  const keys = Object.keys(table).filter((k) => !k.includes("_") && [...k].length >= 3);
+  const keysByFirstChar = /* @__PURE__ */ new Map();
+  for (const k of keys) {
+    const c = k[0].toLowerCase();
+    if (!keysByFirstChar.has(c)) keysByFirstChar.set(c, []);
+    keysByFirstChar.get(c).push(k);
+  }
+  const wordRe = /[\p{L}][\p{L}\p{N}_]*/gu;
+  const IDENT_INTRODUCERS = /* @__PURE__ */ new Set([
+    "forge",
+    "be",
+    "new",
+    "essence",
+    "conjure",
+    "extend",
+    "summon",
+    "within",
+    // v2 surface equivalents
+    "set",
+    "to",
+    "kind",
+    "use",
+    "in",
+    "extends",
+    "has",
+    "does"
+  ]);
+  const fn2 = (src, protect) => {
+    let prevToken = "";
+    return src.replace(wordRe, (word, offset) => {
+      if (/^[\x00-\x7F]+$/.test(word)) {
+        prevToken = word.toLowerCase();
+        return word;
+      }
+      if (protect?.has(word)) {
+        prevToken = word.toLowerCase();
+        return word;
+      }
+      const lower = word.toLowerCase();
+      if (table[lower]) {
+        const out = table[lower];
+        prevToken = out;
+        return out;
+      }
+      const prevChar = offset > 0 ? src[offset - 1] : "";
+      if (prevChar === "." || IDENT_INTRODUCERS.has(prevToken)) {
+        prevToken = lower;
+        return word;
+      }
+      if ([...lower].length < 4) {
+        prevToken = lower;
+        return word;
+      }
+      const threshold = [...lower].length >= 6 ? 2 : 1;
+      const candidates2 = keysByFirstChar.get(lower[0]) ?? [];
+      let best = null;
+      for (const k of candidates2) {
+        if (Math.abs(k.length - lower.length) > threshold) continue;
+        const d = levenshtein(lower, k);
+        if (d <= threshold && (!best || d < best.dist)) {
+          best = { key: k, dist: d };
+          if (d === 0) break;
+        }
+      }
+      if (best) {
+        const out = table[best.key];
+        prevToken = out;
+        return out;
+      }
+      prevToken = lower;
+      return word;
+    });
+  };
+  FUZZY_REPLACERS[cacheKey] = fn2;
+  return fn2;
+}
+var KEYWORD_TABLES, SUPPORTED_LANGUAGES, EFFECTIVE_TABLES, PHRASE_NORMALIZATIONS, COMPILED_REPLACERS, NON_ASCII_RE, DETECT_TABLES, ENGLISH_SIGNAL_RE, WORD_TOKEN_RE, FUZZY_REPLACERS;
+var init_translator = __esm({
+  "src/lang/translator.ts"() {
+    init_translator_v2();
+    KEYWORD_TABLES = {
+      Spanish: {
+        "forjar": "forge",
+        "ser": "be",
+        "conjurar": "conjure",
+        "rendir": "yield",
+        "ponderar": "ponder",
+        "sino": "otherwise",
+        "ciclo": "cycle",
+        "iterar": "iterate",
+        "trav\xE9s": "through",
+        "por": "through",
+        "dentro": "within",
+        "lanzar": "yeet",
+        "saltar": "skip",
+        "hablar": "speak",
+        "mostrar": "speak",
+        "decir": "speak",
+        "esencia": "essence",
+        "extender": "extend",
+        "propio": "self",
+        "padre": "super",
+        "nuevo": "new",
+        "intento": "attempt",
+        "intentar": "attempt",
+        "rescatar": "rescue",
+        "tambi\xE9n": "also",
+        "cualquiera": "either",
+        "o": "either",
+        "no_es": "isnt",
+        "igual": "equals",
+        "difiere": "differs",
+        "s\xED": "yep",
+        "no": "nope",
+        "vac\xEDo": "void",
+        "invocar": "summon",
+        "as\xEDncrono": "async",
+        "esperar": "await",
+        "generar": "spawn",
+        "verdadero": "yep",
+        "falso": "nope",
+        "nulo": "void",
+        "clase": "essence",
+        "retornar": "yield",
+        "devolver": "yield",
+        "mientras": "cycle",
+        "para": "iterate",
+        "si": "ponder",
+        "romper": "yeet",
+        "continuar": "skip",
+        "y": "also",
+        "importar": "summon",
+        "funci\xF3n": "conjure",
+        "crear": "new"
+      },
+      French: {
+        "forger": "forge",
+        "\xEAtre": "be",
+        "est": "be",
+        "\xE9voquer": "conjure",
+        "rendre": "yield",
+        "retourner": "yield",
+        "r\xE9fl\xE9chir": "ponder",
+        "si": "ponder",
+        "sinon": "otherwise",
+        "boucle": "cycle",
+        "tantque": "cycle",
+        "it\xE9rer": "iterate",
+        "pour": "iterate",
+        "\xE0_travers": "through",
+        "dans": "within",
+        "jeter": "yeet",
+        "sauter": "skip",
+        "parler": "speak",
+        "dire": "speak",
+        "afficher": "speak",
+        "classe": "essence",
+        "\xE9tendre": "extend",
+        "soi": "self",
+        "parent": "super",
+        "nouveau": "new",
+        "essayer": "attempt",
+        "tenter": "attempt",
+        "secourir": "rescue",
+        "attraper": "rescue",
+        "aussi": "also",
+        "et": "also",
+        "soit": "either",
+        "ou": "either",
+        "nest_pas": "isnt",
+        "pas": "isnt",
+        "\xE9gal": "equals",
+        "diff\xE8re": "differs",
+        "oui": "yep",
+        "vrai": "yep",
+        "non": "nope",
+        "faux": "nope",
+        "vide": "void",
+        "nul": "void",
+        "invoquer": "summon",
+        "importer": "summon",
+        "asynchrone": "async",
+        "attendre": "await",
+        "engendrer": "spawn",
+        "fonction": "conjure",
+        "cr\xE9er": "new"
+      },
+      German: {
+        "schmieden": "forge",
+        "erstellen": "forge",
+        "sein": "be",
+        "ist": "be",
+        "beschw\xF6ren": "conjure",
+        "funktion": "conjure",
+        "ergeben": "yield",
+        "zur\xFCckgeben": "yield",
+        "\xFCberlegen": "ponder",
+        "wenn": "ponder",
+        "sonst": "otherwise",
+        "ansonsten": "otherwise",
+        "schleife": "cycle",
+        "solange": "cycle",
+        "iterieren": "iterate",
+        "f\xFCr": "iterate",
+        "durch": "through",
+        "innerhalb": "within",
+        "werfen": "yeet",
+        "\xFCberspringen": "skip",
+        "sprechen": "speak",
+        "sagen": "speak",
+        "ausgeben": "speak",
+        "zeigen": "speak",
+        "wesen": "essence",
+        "klasse": "essence",
+        "erweitern": "extend",
+        "selbst": "self",
+        "eltern": "super",
+        "neu": "new",
+        "versuch": "attempt",
+        "versuchen": "attempt",
+        "retten": "rescue",
+        "fangen": "rescue",
+        "auch": "also",
+        "und": "also",
+        "oder": "either",
+        "nicht": "isnt",
+        "gleich": "equals",
+        "unterscheidet": "differs",
+        "ja": "yep",
+        "wahr": "yep",
+        "nein": "nope",
+        "falsch": "nope",
+        "leer": "void",
+        "null": "void",
+        "herbeirufen": "summon",
+        "importieren": "summon",
+        "asynchron": "async",
+        "warten": "await",
+        "erzeugen": "spawn"
+      },
+      Portuguese: {
+        "forjar": "forge",
+        "criar": "forge",
+        "ser": "be",
+        "\xE9": "be",
+        "conjurar": "conjure",
+        "fun\xE7\xE3o": "conjure",
+        "render": "yield",
+        "retornar": "yield",
+        "devolver": "yield",
+        "ponderar": "ponder",
+        "se": "ponder",
+        "sen\xE3o": "otherwise",
+        "ciclo": "cycle",
+        "enquanto": "cycle",
+        "iterar": "iterate",
+        "para": "iterate",
+        "atrav\xE9s": "through",
+        "dentro": "within",
+        "em": "within",
+        "lan\xE7ar": "yeet",
+        "pular": "skip",
+        "falar": "speak",
+        "mostrar": "speak",
+        "exibir": "speak",
+        "dizer": "speak",
+        "ess\xEAncia": "essence",
+        "classe": "essence",
+        "estender": "extend",
+        "pr\xF3prio": "self",
+        "pai": "super",
+        "novo": "new",
+        "tentar": "attempt",
+        "resgatar": "rescue",
+        "capturar": "rescue",
+        "tamb\xE9m": "also",
+        "e": "also",
+        "ou": "either",
+        "n\xE3o_\xE9": "isnt",
+        "igual": "equals",
+        "difere": "differs",
+        "sim": "yep",
+        "verdadeiro": "yep",
+        "n\xE3o": "nope",
+        "falso": "nope",
+        "vazio": "void",
+        "nulo": "void",
+        "invocar": "summon",
+        "importar": "summon",
+        "ass\xEDncrono": "async",
+        "aguardar": "await",
+        "gerar": "spawn"
+      },
+      Italian: {
+        "forgiare": "forge",
+        "creare": "forge",
+        "essere": "be",
+        "\xE8": "be",
+        "evocare": "conjure",
+        "funzione": "conjure",
+        "cedere": "yield",
+        "restituire": "yield",
+        "ritornare": "yield",
+        "ponderare": "ponder",
+        "se": "ponder",
+        "altrimenti": "otherwise",
+        "ciclo": "cycle",
+        "mentre": "cycle",
+        "iterare": "iterate",
+        "per": "iterate",
+        "attraverso": "through",
+        "dentro": "within",
+        "in": "within",
+        "lanciare": "yeet",
+        "saltare": "skip",
+        "parlare": "speak",
+        "mostrare": "speak",
+        "dire": "speak",
+        "stampare": "speak",
+        "essenza": "essence",
+        "classe": "essence",
+        "estendere": "extend",
+        "s\xE9": "self",
+        "genitore": "super",
+        "nuovo": "new",
+        "tentare": "attempt",
+        "provare": "attempt",
+        "salvare": "rescue",
+        "catturare": "rescue",
+        "anche": "also",
+        "e": "also",
+        "oppure": "either",
+        "o": "either",
+        "non_\xE8": "isnt",
+        "uguale": "equals",
+        "diverso": "differs",
+        "s\xEC": "yep",
+        "vero": "yep",
+        "no": "nope",
+        "falso": "nope",
+        "vuoto": "void",
+        "nullo": "void",
+        "invocare": "summon",
+        "importare": "summon",
+        "asincrono": "async",
+        "attendere": "await",
+        "generare": "spawn"
+      },
+      Dutch: {
+        "smeden": "forge",
+        "maken": "forge",
+        "zijn": "be",
+        "is": "be",
+        "oproepen": "conjure",
+        "functie": "conjure",
+        "opleveren": "yield",
+        "teruggeven": "yield",
+        "overdenken": "ponder",
+        "als": "ponder",
+        "anders": "otherwise",
+        "lus": "cycle",
+        "zolang": "cycle",
+        "itereren": "iterate",
+        "voor": "iterate",
+        "door": "through",
+        "binnen": "within",
+        "in": "within",
+        "gooien": "yeet",
+        "overslaan": "skip",
+        "spreken": "speak",
+        "zeggen": "speak",
+        "tonen": "speak",
+        "wezen": "essence",
+        "klasse": "essence",
+        "uitbreiden": "extend",
+        "zelf": "self",
+        "ouder": "super",
+        "nieuw": "new",
+        "proberen": "attempt",
+        "redden": "rescue",
+        "vangen": "rescue",
+        "ook": "also",
+        "en": "also",
+        "of": "either",
+        "niet": "isnt",
+        "gelijk": "equals",
+        "verschilt": "differs",
+        "ja": "yep",
+        "waar": "yep",
+        "nee": "nope",
+        "onwaar": "nope",
+        "leeg": "void",
+        "nul": "void",
+        "aanroepen": "summon",
+        "importeren": "summon",
+        "asynchroon": "async",
+        "wachten": "await",
+        "voortbrengen": "spawn"
+      },
+      Russian: {
+        "\u043A\u043E\u0432\u0430\u0442\u044C": "forge",
+        "\u0441\u043E\u0437\u0434\u0430\u0442\u044C": "forge",
+        "\u0431\u044B\u0442\u044C": "be",
+        "\u0435\u0441\u0442\u044C": "be",
+        "\u0432\u044B\u0437\u0432\u0430\u0442\u044C": "conjure",
+        "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
+        "\u0432\u0435\u0440\u043D\u0443\u0442\u044C": "yield",
+        "\u043E\u0431\u0434\u0443\u043C\u0430\u0442\u044C": "ponder",
+        "\u0435\u0441\u043B\u0438": "ponder",
+        "\u0438\u043D\u0430\u0447\u0435": "otherwise",
+        "\u0446\u0438\u043A\u043B": "cycle",
+        "\u043F\u043E\u043A\u0430": "cycle",
+        "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C": "iterate",
+        "\u0434\u043B\u044F": "iterate",
+        "\u0447\u0435\u0440\u0435\u0437": "through",
+        "\u0432\u043D\u0443\u0442\u0440\u0438": "within",
+        "\u0432": "within",
+        "\u0431\u0440\u043E\u0441\u0438\u0442\u044C": "yeet",
+        "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C": "skip",
+        "\u0441\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
+        "\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C": "speak",
+        "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
+        "\u0432\u044B\u0432\u0435\u0441\u0442\u0438": "speak",
+        "\u043F\u0435\u0447\u0430\u0442\u044C": "speak",
+        "\u0441\u0443\u0449\u043D\u043E\u0441\u0442\u044C": "essence",
+        "\u043A\u043B\u0430\u0441\u0441": "essence",
+        "\u0440\u0430\u0441\u0448\u0438\u0440\u0438\u0442\u044C": "extend",
+        "\u0441\u0435\u0431\u044F": "self",
+        "\u043F\u0440\u0435\u0434\u043E\u043A": "super",
+        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044C": "super",
+        "\u043D\u043E\u0432\u044B\u0439": "new",
+        "\u043F\u043E\u043F\u044B\u0442\u043A\u0430": "attempt",
+        "\u043F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C": "attempt",
+        "\u0441\u043F\u0430\u0441\u0442\u0438": "rescue",
+        "\u043F\u043E\u0439\u043C\u0430\u0442\u044C": "rescue",
+        "\u0442\u0430\u043A\u0436\u0435": "also",
+        "\u0438": "also",
+        "\u0438\u043B\u0438": "either",
+        "\u043D\u0435": "isnt",
+        "\u0440\u0430\u0432\u043D\u043E": "equals",
+        "\u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F": "differs",
+        "\u0434\u0430": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
+        "\u043D\u0435\u0442": "nope",
+        "\u043B\u043E\u0436\u044C": "nope",
+        "\u043F\u0443\u0441\u0442\u043E": "void",
+        "\u043D\u0438\u0447\u0442\u043E": "void",
+        "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u044C": "summon",
+        "\u0438\u043C\u043F\u043E\u0440\u0442": "summon",
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u044B\u0439": "async",
+        "\u0436\u0434\u0430\u0442\u044C": "await",
+        "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u044C": "spawn"
+      },
+      Chinese: {
+        "\u94F8\u9020": "forge",
+        "\u521B\u5EFA": "forge",
+        "\u662F": "be",
+        "\u8D4B\u503C": "be",
+        "\u53EC\u5524": "conjure",
+        "\u51FD\u6570": "conjure",
+        "\u4EA7\u51FA": "yield",
+        "\u8FD4\u56DE": "yield",
+        "\u601D\u8003": "ponder",
+        "\u5982\u679C": "ponder",
+        "\u5426\u5219": "otherwise",
+        "\u5FAA\u73AF": "cycle",
+        "\u5F53": "cycle",
+        "\u904D\u5386": "iterate",
+        "\u4E3A": "iterate",
+        "\u901A\u8FC7": "through",
+        "\u5728\u5185": "within",
+        "\u5728": "within",
+        "\u629B\u51FA": "yeet",
+        "\u8DF3\u8FC7": "skip",
+        "\u8BF4": "speak",
+        "\u8F93\u51FA": "speak",
+        "\u6253\u5370": "speak",
+        "\u663E\u793A": "speak",
+        "\u672C\u8D28": "essence",
+        "\u7C7B": "essence",
+        "\u6269\u5C55": "extend",
+        "\u81EA\u5DF1": "self",
+        "\u7236\u7C7B": "super",
+        "\u65B0": "new",
+        "\u5C1D\u8BD5": "attempt",
+        "\u62EF\u6551": "rescue",
+        "\u6355\u83B7": "rescue",
+        "\u5E76\u4E14": "also",
+        "\u548C": "also",
+        "\u6216\u8005": "either",
+        "\u6216": "either",
+        "\u4E0D\u662F": "isnt",
+        "\u7B49\u4E8E": "equals",
+        "\u4E0D\u540C": "differs",
+        "\u662F\u7684": "yep",
+        "\u771F": "yep",
+        "\u4E0D": "nope",
+        "\u5047": "nope",
+        "\u7A7A": "void",
+        "\u65E0": "void",
+        "\u5BFC\u5165": "summon",
+        "\u5F02\u6B65": "async",
+        "\u7B49\u5F85": "await",
+        "\u751F\u6210": "spawn"
+      },
+      Japanese: {
+        "\u935B\u9020": "forge",
+        "\u4F5C\u6210": "forge",
+        "\u3067\u3042\u308B": "be",
+        "\u306F": "be",
+        "\u53EC\u559A": "conjure",
+        "\u95A2\u6570": "conjure",
+        "\u8FD4\u3059": "yield",
+        "\u8003\u3048\u308B": "ponder",
+        "\u3082\u3057": "ponder",
+        "\u305D\u308C\u4EE5\u5916": "otherwise",
+        "\u30EB\u30FC\u30D7": "cycle",
+        "\u9593": "cycle",
+        "\u53CD\u5FA9": "iterate",
+        "\u7E70\u308A\u8FD4\u3059": "iterate",
+        "\u901A\u3057\u3066": "through",
+        "\u306E\u4E2D\u3067": "within",
+        "\u6295\u3052\u308B": "yeet",
+        "\u30B9\u30AD\u30C3\u30D7": "skip",
+        "\u8A00\u3046": "speak",
+        "\u8868\u793A": "speak",
+        "\u51FA\u529B": "speak",
+        "\u5370\u5237": "speak",
+        "\u672C\u8CEA": "essence",
+        "\u30AF\u30E9\u30B9": "essence",
+        "\u62E1\u5F35": "extend",
+        "\u81EA\u5206": "self",
+        "\u89AA": "super",
+        "\u65B0\u3057\u3044": "new",
+        "\u8A66\u3059": "attempt",
+        "\u6551\u51FA": "rescue",
+        "\u307E\u305F": "also",
+        "\u304B\u3064": "also",
+        "\u307E\u305F\u306F": "either",
+        "\u3067\u306F\u306A\u3044": "isnt",
+        "\u7B49\u3057\u3044": "equals",
+        "\u7570\u306A\u308B": "differs",
+        "\u306F\u3044": "yep",
+        "\u771F": "yep",
+        "\u3044\u3044\u3048": "nope",
+        "\u507D": "nope",
+        "\u7A7A": "void",
+        "\u30A4\u30F3\u30DD\u30FC\u30C8": "summon",
+        "\u975E\u540C\u671F": "async",
+        "\u5F85\u3064": "await",
+        "\u751F\u6210": "spawn"
+      },
+      Korean: {
+        "\uB2E8\uC870": "forge",
+        "\uB9CC\uB4E4\uB2E4": "forge",
+        "\uC774\uB2E4": "be",
+        "\uC18C\uD658": "conjure",
+        "\uD568\uC218": "conjure",
+        "\uBC18\uD658": "yield",
+        "\uB3CC\uB824\uC8FC\uB2E4": "yield",
+        "\uC0DD\uAC01": "ponder",
+        "\uB9CC\uC57D": "ponder",
+        "\uC544\uB2C8\uBA74": "otherwise",
+        "\uC21C\uD658": "cycle",
+        "\uB3D9\uC548": "cycle",
+        "\uBC18\uBCF5": "iterate",
+        "\uC704\uD574": "iterate",
+        "\uD1B5\uD574": "through",
+        "\uC548\uC5D0\uC11C": "within",
+        "\uB358\uC9C0\uB2E4": "yeet",
+        "\uAC74\uB108\uB6F0\uAE30": "skip",
+        "\uB9D0\uD558\uB2E4": "speak",
+        "\uCD9C\uB825": "speak",
+        "\uBCF4\uC5EC\uC8FC\uB2E4": "speak",
+        "\uBCF8\uC9C8": "essence",
+        "\uD074\uB798\uC2A4": "essence",
+        "\uD655\uC7A5": "extend",
+        "\uC790\uC2E0": "self",
+        "\uBD80\uBAA8": "super",
+        "\uC0C8": "new",
+        "\uC0C8\uB85C\uC6B4": "new",
+        "\uC2DC\uB3C4": "attempt",
+        "\uAD6C\uCD9C": "rescue",
+        "\uADF8\uB9AC\uACE0": "also",
+        "\uB610\uB294": "either",
+        "\uC544\uB2C8\uB2E4": "isnt",
+        "\uAC19\uB2E4": "equals",
+        "\uB2E4\uB974\uB2E4": "differs",
+        "\uC608": "yep",
+        "\uCC38": "yep",
+        "\uC544\uB2C8\uC624": "nope",
+        "\uAC70\uC9D3": "nope",
+        "\uBE44\uC5B4\uC788\uB2E4": "void",
+        "\uAC00\uC838\uC624\uAE30": "summon",
+        "\uBE44\uB3D9\uAE30": "async",
+        "\uAE30\uB2E4\uB9AC\uB2E4": "await",
+        "\uC0DD\uC131": "spawn"
+      },
+      Arabic: {
+        "\u0635\u0646\u0639": "forge",
+        "\u0625\u0646\u0634\u0627\u0621": "forge",
+        "\u064A\u0643\u0648\u0646": "be",
+        "\u0647\u0648": "be",
+        "\u0627\u0633\u062A\u062F\u0639\u0627\u0621": "conjure",
+        "\u062F\u0627\u0644\u0629": "conjure",
+        "\u0625\u0631\u062C\u0627\u0639": "yield",
+        "\u0631\u062F": "yield",
+        "\u062A\u0623\u0645\u0644": "ponder",
+        "\u0625\u0630\u0627": "ponder",
+        "\u0648\u0625\u0644\u0627": "otherwise",
+        "\u062E\u0644\u0627\u0641": "otherwise",
+        "\u062D\u0644\u0642\u0629": "cycle",
+        "\u0637\u0627\u0644\u0645\u0627": "cycle",
+        "\u062A\u0643\u0631\u0627\u0631": "iterate",
+        "\u0644\u0643\u0644": "iterate",
+        "\u0639\u0628\u0631": "through",
+        "\u062E\u0644\u0627\u0644": "through",
+        "\u062F\u0627\u062E\u0644": "within",
+        "\u0641\u064A": "within",
+        "\u0631\u0645\u064A": "yeet",
+        "\u062A\u062E\u0637\u064A": "skip",
+        "\u0642\u0644": "speak",
+        "\u062A\u062D\u062F\u062B": "speak",
+        "\u0627\u0637\u0628\u0639": "speak",
+        "\u0627\u0639\u0631\u0636": "speak",
+        "\u062C\u0648\u0647\u0631": "essence",
+        "\u0641\u0626\u0629": "essence",
+        "\u0635\u0646\u0641": "essence",
+        "\u062A\u0648\u0633\u064A\u0639": "extend",
+        "\u0630\u0627\u062A": "self",
+        "\u0646\u0641\u0633": "self",
+        "\u0623\u0628": "super",
+        "\u062C\u062F\u064A\u062F": "new",
+        "\u0645\u062D\u0627\u0648\u0644\u0629": "attempt",
+        "\u062D\u0627\u0648\u0644": "attempt",
+        "\u0625\u0646\u0642\u0627\u0630": "rescue",
+        "\u0627\u0644\u062A\u0642\u0627\u0637": "rescue",
+        "\u0623\u064A\u0636\u0627": "also",
+        "\u0648": "also",
+        "\u0623\u0648": "either",
+        "\u0644\u064A\u0633": "isnt",
+        "\u064A\u0633\u0627\u0648\u064A": "equals",
+        "\u064A\u062E\u062A\u0644\u0641": "differs",
+        "\u0646\u0639\u0645": "yep",
+        "\u0635\u062D\u064A\u062D": "yep",
+        "\u0644\u0627": "nope",
+        "\u062E\u0637\u0623": "nope",
+        "\u0641\u0627\u0631\u063A": "void",
+        "\u0639\u062F\u0645": "void",
+        "\u0627\u0633\u062A\u064A\u0631\u0627\u062F": "summon",
+        "\u063A\u064A\u0631_\u0645\u062A\u0632\u0627\u0645\u0646": "async",
+        "\u0627\u0646\u062A\u0638\u0627\u0631": "await",
+        "\u062A\u0648\u0644\u064A\u062F": "spawn"
+      },
+      Hindi: {
+        "\u0917\u0922\u093C\u0928\u093E": "forge",
+        "\u092C\u0928\u093E\u0928\u093E": "forge",
+        "\u0939\u094B\u0928\u093E": "be",
+        "\u0939\u0948": "be",
+        "\u092C\u0941\u0932\u093E\u0928\u093E": "conjure",
+        "\u092B\u0932\u0928": "conjure",
+        "\u0915\u093E\u0930\u094D\u092F": "conjure",
+        "\u0932\u094C\u091F\u093E\u0928\u093E": "yield",
+        "\u0935\u093E\u092A\u0938\u0940": "yield",
+        "\u0938\u094B\u091A\u0928\u093E": "ponder",
+        "\u0905\u0917\u0930": "ponder",
+        "\u092F\u0926\u093F": "ponder",
+        "\u0935\u0930\u0928\u093E": "otherwise",
+        "\u0905\u0928\u094D\u092F\u0925\u093E": "otherwise",
+        "\u091A\u0915\u094D\u0930": "cycle",
+        "\u091C\u092C\u0924\u0915": "cycle",
+        "\u0926\u094B\u0939\u0930\u093E\u0928\u093E": "iterate",
+        "\u0939\u0947\u0924\u0941": "iterate",
+        "\u0926\u094D\u0935\u093E\u0930\u093E": "through",
+        "\u0905\u0902\u0926\u0930": "within",
+        "\u092E\u0947\u0902": "within",
+        "\u092B\u0947\u0902\u0915\u0928\u093E": "yeet",
+        "\u091B\u094B\u0921\u093C\u0928\u093E": "skip",
+        "\u092C\u094B\u0932\u0928\u093E": "speak",
+        "\u0926\u093F\u0916\u093E\u0928\u093E": "speak",
+        "\u091B\u093E\u092A\u0928\u093E": "speak",
+        "\u0938\u093E\u0930": "essence",
+        "\u0935\u0930\u094D\u0917": "essence",
+        "\u0935\u093F\u0938\u094D\u0924\u093E\u0930": "extend",
+        "\u0938\u094D\u0935\u092F\u0902": "self",
+        "\u0905\u092D\u093F\u092D\u093E\u0935\u0915": "super",
+        "\u0928\u092F\u093E": "new",
+        "\u092A\u094D\u0930\u092F\u093E\u0938": "attempt",
+        "\u0915\u094B\u0936\u093F\u0936": "attempt",
+        "\u092C\u091A\u093E\u0928\u093E": "rescue",
+        "\u092A\u0915\u0921\u093C\u0928\u093E": "rescue",
+        "\u092D\u0940": "also",
+        "\u0914\u0930": "also",
+        "\u092F\u093E": "either",
+        "\u0928\u0939\u0940\u0902": "isnt",
+        "\u092C\u0930\u093E\u092C\u0930": "equals",
+        "\u092D\u093F\u0928\u094D\u0928": "differs",
+        "\u0939\u093E\u0902": "yep",
+        "\u0938\u0924\u094D\u092F": "yep",
+        "\u0905\u0938\u0924\u094D\u092F": "nope",
+        "\u0930\u093F\u0915\u094D\u0924": "void",
+        "\u0936\u0942\u0928\u094D\u092F": "void",
+        "\u0906\u092F\u093E\u0924": "summon",
+        "\u0905\u0938\u092E\u0915\u093E\u0932\u093F\u0915": "async",
+        "\u092A\u094D\u0930\u0924\u0940\u0915\u094D\u0937\u093E": "await",
+        "\u0909\u0924\u094D\u092A\u0928\u094D\u0928": "spawn"
+      },
+      Turkish: {
+        "d\xF6vmek": "forge",
+        "olu\u015Ftur": "forge",
+        "olmak": "be",
+        "olsun": "be",
+        "\xE7a\u011F\u0131r": "conjure",
+        "fonksiyon": "conjure",
+        "i\u015Flev": "conjure",
+        "d\xF6nd\xFCr": "yield",
+        "ver": "yield",
+        "d\xFC\u015F\xFCn": "ponder",
+        "e\u011Fer": "ponder",
+        "yoksa": "otherwise",
+        "de\u011Filse": "otherwise",
+        "d\xF6ng\xFC": "cycle",
+        "iken": "cycle",
+        "tekrarla": "iterate",
+        "i\xE7in": "iterate",
+        "boyunca": "through",
+        "i\xE7inde": "within",
+        "at": "yeet",
+        "atla": "skip",
+        "s\xF6yle": "speak",
+        "g\xF6ster": "speak",
+        "yazd\u0131r": "speak",
+        "\xF6z": "essence",
+        "s\u0131n\u0131f": "essence",
+        "geni\u015Flet": "extend",
+        "kendi": "self",
+        "\xFCst": "super",
+        "yeni": "new",
+        "dene": "attempt",
+        "kurtar": "rescue",
+        "yakala": "rescue",
+        "da": "also",
+        "ve": "also",
+        "veya": "either",
+        "de\u011Fil": "isnt",
+        "e\u015Fit": "equals",
+        "farkl\u0131": "differs",
+        "evet": "yep",
+        "do\u011Fru": "yep",
+        "hay\u0131r": "nope",
+        "yanl\u0131\u015F": "nope",
+        "bo\u015F": "void",
+        "\xE7a\u011F\u0131rmak": "summon",
+        "i\xE7eaktar": "summon",
+        "e\u015Fzamans\u0131z": "async",
+        "bekle": "await",
+        "\xFCret": "spawn"
+      },
+      Polish: {
+        "ku\u0107": "forge",
+        "utw\xF3rz": "forge",
+        "by\u0107": "be",
+        "jest": "be",
+        "przywo\u0142aj": "summon",
+        "funkcja": "conjure",
+        "zwr\xF3\u0107": "yield",
+        "oddaj": "yield",
+        "rozwa\u017C": "ponder",
+        "je\u015Bli": "ponder",
+        "je\u017Celi": "ponder",
+        "inaczej": "otherwise",
+        "p\u0119tla": "cycle",
+        "dop\xF3ki": "cycle",
+        "iteruj": "iterate",
+        "dla": "iterate",
+        "przez": "through",
+        "wewn\u0105trz": "within",
+        "w": "within",
+        "rzu\u0107": "yeet",
+        "pomi\u0144": "skip",
+        "m\xF3w": "speak",
+        "powiedz": "speak",
+        "poka\u017C": "speak",
+        "wypisz": "speak",
+        "istota": "essence",
+        "klasa": "essence",
+        "rozszerz": "extend",
+        "sam": "self",
+        "rodzic": "super",
+        "nowy": "new",
+        "nowe": "new",
+        "pr\xF3buj": "attempt",
+        "spr\xF3buj": "attempt",
+        "ratuj": "rescue",
+        "z\u0142ap": "rescue",
+        "te\u017C": "also",
+        "i": "also",
+        "lub": "either",
+        "albo": "either",
+        "nie": "isnt",
+        "r\xF3wne": "equals",
+        "r\xF3\u017Cni": "differs",
+        "tak": "yep",
+        "prawda": "yep",
+        "fa\u0142sz": "nope",
+        "pusty": "void",
+        "importuj": "summon",
+        "asynchroniczny": "async",
+        "czekaj": "await",
+        "stw\xF3rz": "spawn"
+      },
+      Swedish: {
+        "smida": "forge",
+        "skapa": "forge",
+        "vara": "be",
+        "\xE4r": "be",
+        "framkalla": "conjure",
+        "funktion": "conjure",
+        "ge": "yield",
+        "returnera": "yield",
+        "fundera": "ponder",
+        "om": "ponder",
+        "annars": "otherwise",
+        "slinga": "cycle",
+        "medan": "cycle",
+        "iterera": "iterate",
+        "f\xF6r": "iterate",
+        "genom": "through",
+        "inom": "within",
+        "i": "within",
+        "kasta": "yeet",
+        "hoppa": "skip",
+        "tala": "speak",
+        "visa": "speak",
+        "skriv": "speak",
+        "v\xE4sen": "essence",
+        "klass": "essence",
+        "ut\xF6ka": "extend",
+        "sj\xE4lv": "self",
+        "f\xF6r\xE4lder": "super",
+        "ny": "new",
+        "f\xF6rs\xF6k": "attempt",
+        "r\xE4dda": "rescue",
+        "f\xE5nga": "rescue",
+        "ocks\xE5": "also",
+        "och": "also",
+        "eller": "either",
+        "inte": "isnt",
+        "lika": "equals",
+        "skiljer": "differs",
+        "ja": "yep",
+        "sant": "yep",
+        "nej": "nope",
+        "falskt": "nope",
+        "tom": "void",
+        "\xE5kalla": "summon",
+        "importera": "summon",
+        "asynkron": "async",
+        "v\xE4nta": "await",
+        "skapa_process": "spawn"
+      },
+      Norwegian: {
+        "smi": "forge",
+        "lage": "forge",
+        "v\xE6re": "be",
+        "er": "be",
+        "fremkalle": "conjure",
+        "funksjon": "conjure",
+        "gi": "yield",
+        "returnere": "yield",
+        "tenke": "ponder",
+        "hvis": "ponder",
+        "ellers": "otherwise",
+        "sl\xF8yfe": "cycle",
+        "mens": "cycle",
+        "iterere": "iterate",
+        "for": "iterate",
+        "gjennom": "through",
+        "innen": "within",
+        "i": "within",
+        "kaste": "yeet",
+        "hoppe": "skip",
+        "snakke": "speak",
+        "vise": "speak",
+        "skriv": "speak",
+        "vesen": "essence",
+        "klasse": "essence",
+        "utvide": "extend",
+        "selv": "self",
+        "forelder": "super",
+        "ny": "new",
+        "fors\xF8k": "attempt",
+        "redde": "rescue",
+        "fange": "rescue",
+        "ogs\xE5": "also",
+        "og": "also",
+        "eller": "either",
+        "ikke": "isnt",
+        "lik": "equals",
+        "forskjellig": "differs",
+        "ja": "yep",
+        "sant": "yep",
+        "nei": "nope",
+        "usant": "nope",
+        "tom": "void",
+        "p\xE5kalle": "summon",
+        "importere": "summon",
+        "asynkron": "async",
+        "vente": "await",
+        "starte": "spawn"
+      },
+      Danish: {
+        "smede": "forge",
+        "skabe": "forge",
+        "v\xE6re": "be",
+        "er": "be",
+        "fremkalde": "conjure",
+        "funktion": "conjure",
+        "give": "yield",
+        "returnere": "yield",
+        "overveje": "ponder",
+        "hvis": "ponder",
+        "ellers": "otherwise",
+        "sl\xF8jfe": "cycle",
+        "mens": "cycle",
+        "iterere": "iterate",
+        "for": "iterate",
+        "igennem": "through",
+        "inden": "within",
+        "i": "within",
+        "kaste": "yeet",
+        "springe": "skip",
+        "tale": "speak",
+        "vise": "speak",
+        "skriv": "speak",
+        "v\xE6sen": "essence",
+        "klasse": "essence",
+        "udvide": "extend",
+        "selv": "self",
+        "for\xE6lder": "super",
+        "ny": "new",
+        "fors\xF8g": "attempt",
+        "redde": "rescue",
+        "fange": "rescue",
+        "ogs\xE5": "also",
+        "og": "also",
+        "eller": "either",
+        "ikke": "isnt",
+        "lig": "equals",
+        "anderledes": "differs",
+        "ja": "yep",
+        "sand": "yep",
+        "nej": "nope",
+        "falsk": "nope",
+        "tom": "void",
+        "p\xE5kalde": "summon",
+        "importere": "summon",
+        "asynkron": "async",
+        "vente": "await",
+        "starte": "spawn"
+      },
+      Finnish: {
+        "takoa": "forge",
+        "luoda": "forge",
+        "olla": "be",
+        "on": "be",
+        "loitsia": "conjure",
+        "funktio": "conjure",
+        "tuottaa": "yield",
+        "palauttaa": "yield",
+        "pohtia": "ponder",
+        "jos": "ponder",
+        "muuten": "otherwise",
+        "silmukka": "cycle",
+        "kun": "cycle",
+        "iteroida": "iterate",
+        "jokaiselle": "iterate",
+        "l\xE4pi": "through",
+        "sis\xE4ll\xE4": "within",
+        "kohdassa": "within",
+        "heitt\xE4\xE4": "yeet",
+        "ohittaa": "skip",
+        "puhua": "speak",
+        "n\xE4ytt\xE4\xE4": "speak",
+        "tulostaa": "speak",
+        "olemus": "essence",
+        "luokka": "essence",
+        "laajentaa": "extend",
+        "itse": "self",
+        "ylempi": "super",
+        "uusi": "new",
+        "yrit\xE4": "attempt",
+        "pelasta": "rescue",
+        "kiinni": "rescue",
+        "my\xF6s": "also",
+        "ja": "also",
+        "tai": "either",
+        "ei": "isnt",
+        "yht\xE4suuri": "equals",
+        "eroaa": "differs",
+        "kyll\xE4": "yep",
+        "tosi": "yep",
+        "ep\xE4tosi": "nope",
+        "tyhj\xE4": "void",
+        "kutsu": "summon",
+        "tuo": "summon",
+        "asynkroninen": "async",
+        "odota": "await",
+        "synnyt\xE4": "spawn"
+      },
+      Greek: {
+        "\u03C3\u03C6\u03C5\u03C1\u03B7\u03BB\u03B1\u03C4\u03CE": "forge",
+        "\u03B4\u03B7\u03BC\u03B9\u03BF\u03C5\u03C1\u03B3\u03CE": "forge",
+        "\u03B5\u03AF\u03BD\u03B1\u03B9": "be",
+        "\u03BA\u03B1\u03BB\u03CE": "conjure",
+        "\u03C3\u03C5\u03BD\u03AC\u03C1\u03C4\u03B7\u03C3\u03B7": "conjure",
+        "\u03B5\u03C0\u03B9\u03C3\u03C4\u03C1\u03AD\u03C6\u03C9": "yield",
+        "\u03C3\u03BA\u03AD\u03C6\u03C4\u03BF\u03BC\u03B1\u03B9": "ponder",
+        "\u03B1\u03BD": "ponder",
+        "\u03B1\u03BB\u03BB\u03B9\u03CE\u03C2": "otherwise",
+        "\u03B2\u03C1\u03CC\u03C7\u03BF\u03C2": "cycle",
+        "\u03CC\u03C3\u03BF": "cycle",
+        "\u03B5\u03C0\u03B1\u03BD\u03B1\u03BB\u03B1\u03BC\u03B2\u03AC\u03BD\u03C9": "iterate",
+        "\u03B3\u03B9\u03B1": "iterate",
+        "\u03BC\u03AD\u03C3\u03C9": "through",
+        "\u03BC\u03AD\u03C3\u03B1": "within",
+        "\u03C3\u03B5": "within",
+        "\u03C0\u03B5\u03C4\u03AC\u03C9": "yeet",
+        "\u03C0\u03B1\u03C1\u03B1\u03BA\u03AC\u03BC\u03C0\u03C4\u03C9": "skip",
+        "\u03BC\u03B9\u03BB\u03AC\u03C9": "speak",
+        "\u03B5\u03BC\u03C6\u03AC\u03BD\u03B9\u03C3\u03B5": "speak",
+        "\u03C4\u03CD\u03C0\u03C9\u03C3\u03B5": "speak",
+        "\u03BF\u03C5\u03C3\u03AF\u03B1": "essence",
+        "\u03BA\u03BB\u03AC\u03C3\u03B7": "essence",
+        "\u03B5\u03C0\u03B5\u03BA\u03C4\u03B5\u03AF\u03BD\u03C9": "extend",
+        "\u03B5\u03B1\u03C5\u03C4\u03CC\u03C2": "self",
+        "\u03B3\u03BF\u03BD\u03AD\u03B1\u03C2": "super",
+        "\u03BD\u03AD\u03BF": "new",
+        "\u03B4\u03BF\u03BA\u03B9\u03BC\u03AE": "attempt",
+        "\u03C3\u03CE\u03B6\u03C9": "rescue",
+        "\u03C0\u03B9\u03AC\u03BD\u03C9": "rescue",
+        "\u03B5\u03C0\u03AF\u03C3\u03B7\u03C2": "also",
+        "\u03BA\u03B1\u03B9": "also",
+        "\u03AE": "either",
+        "\u03B4\u03B5\u03BD": "isnt",
+        "\u03AF\u03C3\u03BF": "equals",
+        "\u03B4\u03B9\u03B1\u03C6\u03AD\u03C1\u03B5\u03B9": "differs",
+        "\u03BD\u03B1\u03B9": "yep",
+        "\u03B1\u03BB\u03B7\u03B8\u03AD\u03C2": "yep",
+        "\u03CC\u03C7\u03B9": "nope",
+        "\u03C8\u03B5\u03C5\u03B4\u03AD\u03C2": "nope",
+        "\u03BA\u03B5\u03BD\u03CC": "void",
+        "\u03B5\u03B9\u03C3\u03B1\u03B3\u03C9\u03B3\u03AE": "summon",
+        "\u03B1\u03C3\u03CD\u03B3\u03C7\u03C1\u03BF\u03BD\u03BF": "async",
+        "\u03C0\u03B5\u03C1\u03B9\u03BC\u03AD\u03BD\u03C9": "await",
+        "\u03C0\u03B1\u03C1\u03AC\u03B3\u03C9": "spawn"
+      },
+      Hebrew: {
+        "\u05DC\u05D7\u05E9\u05DC": "forge",
+        "\u05DC\u05D9\u05E6\u05D5\u05E8": "forge",
+        "\u05DC\u05D4\u05D9\u05D5\u05EA": "be",
+        "\u05D4\u05D5\u05D0": "be",
+        "\u05DC\u05D6\u05DE\u05DF": "conjure",
+        "\u05E4\u05D5\u05E0\u05E7\u05E6\u05D9\u05D4": "conjure",
+        "\u05DC\u05D4\u05D7\u05D6\u05D9\u05E8": "yield",
+        "\u05DC\u05D7\u05E9\u05D5\u05D1": "ponder",
+        "\u05D0\u05DD": "ponder",
+        "\u05D0\u05D7\u05E8\u05EA": "otherwise",
+        "\u05DC\u05D5\u05DC\u05D0\u05D4": "cycle",
+        "\u05DB\u05DC\u05E2\u05D5\u05D3": "cycle",
+        "\u05DC\u05D7\u05D6\u05D5\u05E8": "iterate",
+        "\u05DC\u05DB\u05DC": "iterate",
+        "\u05D3\u05E8\u05DA": "through",
+        "\u05D1\u05EA\u05D5\u05DA": "within",
+        "\u05DC\u05D6\u05E8\u05D5\u05E7": "yeet",
+        "\u05DC\u05D3\u05DC\u05D2": "skip",
+        "\u05DC\u05D3\u05D1\u05E8": "speak",
+        "\u05DC\u05D4\u05E6\u05D9\u05D2": "speak",
+        "\u05DC\u05D4\u05D3\u05E4\u05D9\u05E1": "speak",
+        "\u05DE\u05D4\u05D5\u05EA": "essence",
+        "\u05DE\u05D7\u05DC\u05E7\u05D4": "essence",
+        "\u05DC\u05D4\u05E8\u05D7\u05D9\u05D1": "extend",
+        "\u05E2\u05E6\u05DE\u05D9": "self",
+        "\u05D4\u05D5\u05E8\u05D4": "super",
+        "\u05D7\u05D3\u05E9": "new",
+        "\u05DC\u05E0\u05E1\u05D5\u05EA": "attempt",
+        "\u05DC\u05D4\u05E6\u05D9\u05DC": "rescue",
+        "\u05DC\u05EA\u05E4\u05D5\u05E1": "rescue",
+        "\u05D2\u05DD": "also",
+        "\u05D5": "also",
+        "\u05D0\u05D5": "either",
+        "\u05DC\u05D0": "isnt",
+        "\u05E9\u05D5\u05D5\u05D4": "equals",
+        "\u05E9\u05D5\u05E0\u05D4": "differs",
+        "\u05DB\u05DF": "yep",
+        "\u05D0\u05DE\u05EA": "yep",
+        "\u05E9\u05E7\u05E8": "nope",
+        "\u05E8\u05D9\u05E7": "void",
+        "\u05DC\u05D9\u05D9\u05D1\u05D0": "summon",
+        "\u05D0\u05E1\u05D9\u05E0\u05DB\u05E8\u05D5\u05E0\u05D9": "async",
+        "\u05DC\u05D7\u05DB\u05D5\u05EA": "await",
+        "\u05DC\u05D4\u05D5\u05DC\u05D9\u05D3": "spawn"
+      },
+      Ukrainian: {
+        "\u043A\u0443\u0432\u0430\u0442\u0438": "forge",
+        "\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438": "forge",
+        "\u0431\u0443\u0442\u0438": "be",
+        "\u0454": "be",
+        "\u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438": "conjure",
+        "\u0444\u0443\u043D\u043A\u0446\u0456\u044F": "conjure",
+        "\u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438": "yield",
+        "\u043E\u0431\u043C\u0456\u0440\u043A\u0443\u0432\u0430\u0442\u0438": "ponder",
+        "\u044F\u043A\u0449\u043E": "ponder",
+        "\u0456\u043D\u0430\u043A\u0448\u0435": "otherwise",
+        "\u0446\u0438\u043A\u043B": "cycle",
+        "\u043F\u043E\u043A\u0438": "cycle",
+        "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u0438": "iterate",
+        "\u0434\u043B\u044F": "iterate",
+        "\u0447\u0435\u0440\u0435\u0437": "through",
+        "\u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456": "within",
+        "\u0432": "within",
+        "\u043A\u0438\u043D\u0443\u0442\u0438": "yeet",
+        "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438": "skip",
+        "\u0441\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
+        "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
+        "\u0432\u0438\u0432\u0435\u0441\u0442\u0438": "speak",
+        "\u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C": "essence",
+        "\u043A\u043B\u0430\u0441": "essence",
+        "\u0440\u043E\u0437\u0448\u0438\u0440\u0438\u0442\u0438": "extend",
+        "\u0441\u0435\u0431\u0435": "self",
+        "\u0431\u0430\u0442\u044C\u043A\u043E": "super",
+        "\u043D\u043E\u0432\u0438\u0439": "new",
+        "\u0441\u043F\u0440\u043E\u0431\u0430": "attempt",
+        "\u0441\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u0442\u0438": "attempt",
+        "\u0432\u0440\u044F\u0442\u0443\u0432\u0430\u0442\u0438": "rescue",
+        "\u0437\u043B\u043E\u0432\u0438\u0442\u0438": "rescue",
+        "\u0442\u0430\u043A\u043E\u0436": "also",
+        "\u0456": "also",
+        "\u0430\u0431\u043E": "either",
+        "\u043D\u0435": "isnt",
+        "\u0434\u043E\u0440\u0456\u0432\u043D\u044E\u0454": "equals",
+        "\u0432\u0456\u0434\u0440\u0456\u0437\u043D\u044F\u0454\u0442\u044C\u0441\u044F": "differs",
+        "\u0442\u0430\u043A": "yep",
+        "\u0456\u0441\u0442\u0438\u043D\u0430": "yep",
+        "\u043D\u0456": "nope",
+        "\u0445\u0438\u0431\u0430": "nope",
+        "\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E": "void",
+        "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u0438": "summon",
+        "\u0456\u043C\u043F\u043E\u0440\u0442": "summon",
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u0438\u0439": "async",
+        "\u0447\u0435\u043A\u0430\u0442\u0438": "await",
+        "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u0438": "spawn"
+      },
+      Czech: {
+        "kovat": "forge",
+        "vytvo\u0159it": "forge",
+        "b\xFDt": "be",
+        "je": "be",
+        "vyvolat": "conjure",
+        "funkce": "conjure",
+        "vr\xE1tit": "yield",
+        "uv\xE1\u017Eit": "ponder",
+        "pokud": "ponder",
+        "jinak": "otherwise",
+        "smy\u010Dka": "cycle",
+        "dokud": "cycle",
+        "iterovat": "iterate",
+        "pro": "iterate",
+        "skrz": "through",
+        "uvnit\u0159": "within",
+        "v": "within",
+        "hodit": "yeet",
+        "p\u0159esko\u010Dit": "skip",
+        "\u0159\xEDci": "speak",
+        "zobrazit": "speak",
+        "vytisknout": "speak",
+        "podstata": "essence",
+        "t\u0159\xEDda": "essence",
+        "roz\u0161\xED\u0159it": "extend",
+        "s\xE1m": "self",
+        "rodi\u010D": "super",
+        "nov\xFD": "new",
+        "zkusit": "attempt",
+        "zachr\xE1nit": "rescue",
+        "chytit": "rescue",
+        "tak\xE9": "also",
+        "a": "also",
+        "nebo": "either",
+        "nen\xED": "isnt",
+        "rovn\xE1": "equals",
+        "li\u0161\xED": "differs",
+        "ano": "yep",
+        "pravda": "yep",
+        "ne": "nope",
+        "nepravda": "nope",
+        "pr\xE1zdn\xFD": "void",
+        "importovat": "summon",
+        "asynchronn\xED": "async",
+        "\u010Dekat": "await",
+        "vytvo\u0159it_proces": "spawn"
+      },
+      Romanian: {
+        "forja": "forge",
+        "crea": "forge",
+        "fi": "be",
+        "este": "be",
+        "evoca": "conjure",
+        "func\u021Bie": "conjure",
+        "func\u021Bia": "conjure",
+        "\xEEntoarce": "yield",
+        "returna": "yield",
+        "g\xE2ndi": "ponder",
+        "dac\u0103": "ponder",
+        "altfel": "otherwise",
+        "bucl\u0103": "cycle",
+        "c\xE2ttimp": "cycle",
+        "itera": "iterate",
+        "pentru": "iterate",
+        "prin": "through",
+        "\xEEn_interior": "within",
+        "\xEEn": "within",
+        "arunca": "yeet",
+        "s\u0103ri": "skip",
+        "spune": "speak",
+        "arat\u0103": "speak",
+        "afi\u0219eaz\u0103": "speak",
+        "esen\u021B\u0103": "essence",
+        "clas\u0103": "essence",
+        "extinde": "extend",
+        "sine": "self",
+        "p\u0103rinte": "super",
+        "nou": "new",
+        "\xEEncearc\u0103": "attempt",
+        "salveaz\u0103": "rescue",
+        "prinde": "rescue",
+        "de_asemenea": "also",
+        "\u0219i": "also",
+        "sau": "either",
+        "nu_este": "isnt",
+        "egal": "equals",
+        "difer\u0103": "differs",
+        "da": "yep",
+        "adev\u0103rat": "yep",
+        "nu": "nope",
+        "fals": "nope",
+        "gol": "void",
+        "importa": "summon",
+        "asincron": "async",
+        "a\u0219teapt\u0103": "await",
+        "genera": "spawn"
+      },
+      Hungarian: {
+        "kov\xE1csol": "forge",
+        "l\xE9trehoz": "forge",
+        "lenni": "be",
+        "legyen": "be",
+        "id\xE9z": "conjure",
+        "f\xFCggv\xE9ny": "conjure",
+        "visszaad": "yield",
+        "fontol": "ponder",
+        "ha": "ponder",
+        "k\xFCl\xF6nben": "otherwise",
+        "ciklus": "cycle",
+        "am\xEDg": "cycle",
+        "iter\xE1l": "iterate",
+        "minden": "iterate",
+        "kereszt\xFCl": "through",
+        "bel\xFCl": "within",
+        "ban": "within",
+        "dob": "yeet",
+        "\xE1tugor": "skip",
+        "mond": "speak",
+        "mutat": "speak",
+        "ki\xEDr": "speak",
+        "l\xE9nyeg": "essence",
+        "oszt\xE1ly": "essence",
+        "b\u0151v\xEDt": "extend",
+        "maga": "self",
+        "sz\xFCl\u0151": "super",
+        "\xFAj": "new",
+        "pr\xF3ba": "attempt",
+        "megpr\xF3b\xE1l": "attempt",
+        "ment": "rescue",
+        "elkap": "rescue",
+        "is": "also",
+        "\xE9s": "also",
+        "vagy": "either",
+        "nem": "isnt",
+        "egyenl\u0151": "equals",
+        "k\xFCl\xF6nb\xF6zik": "differs",
+        "igen": "yep",
+        "igaz": "yep",
+        "hamis": "nope",
+        "\xFCres": "void",
+        "beh\xEDv": "summon",
+        "import\xE1l": "summon",
+        "aszinkron": "async",
+        "v\xE1r": "await",
+        "ind\xEDt": "spawn"
+      },
+      Bulgarian: {
+        // forge — create / declare a variable. Accept many natural verbs.
+        "\u0438\u0437\u043A\u043E\u0432\u0430": "forge",
+        "\u0438\u0437\u043A\u043E\u0432\u0430\u0439": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u0439": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u043C": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043C": "forge",
+        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435": "forge",
+        "\u043D\u0430\u043F\u0440\u0430\u0432\u0438": "forge",
+        "\u043D\u0430\u043F\u0440\u0430\u0432\u044F": "forge",
+        "\u043F\u0440\u0430\u0432\u044F": "forge",
+        "\u043D\u0435\u043A\u0430": "forge",
+        "\u0434\u0435\u0444\u0438\u043D\u0438\u0440\u0430\u0439": "forge",
+        "\u0434\u0435\u0444\u0438\u043D\u0438\u0446\u0438\u044F": "forge",
+        "\u043E\u0431\u044F\u0432\u0438": "forge",
+        "\u043E\u0431\u044F\u0432\u044F\u0432\u0430\u043C": "forge",
+        "\u043F\u0440\u0438\u0435\u043C\u0438": "forge",
+        "\u0432\u0437\u0435\u043C\u0438": "forge",
+        "\u0438\u043C\u0430\u043C\u0435": "forge",
+        "\u0438\u043C\u0430\u043C": "forge",
+        // be — assignment / equality binding
+        "\u0431\u044A\u0434\u0435": "be",
+        "\u0434\u0430_\u0431\u044A\u0434\u0435": "be",
+        "\u0431\u044A\u0434\u0430": "be",
+        "\u0435": "be",
+        "\u0434\u0430_\u0435": "be",
+        "\u0441\u0430": "be",
+        "\u0441\u0442\u0430\u0432\u0430": "be",
+        "\u0434\u0430_\u0441\u0442\u0430\u043D\u0435": "be",
+        "\u0441\u0442\u0430\u043D\u0435": "be",
+        "\u0440\u0430\u0432\u043D\u044F\u0432\u0430\u043D\u0435": "be",
+        "\u043F\u0440\u0438\u0441\u0432\u043E\u0439": "be",
+        "\u043F\u0440\u0438\u0441\u0432\u043E\u044F\u0432\u0430\u043C": "be",
+        "\u0441\u044A\u0441_\u0441\u0442\u043E\u0439\u043D\u043E\u0441\u0442": "be",
+        // conjure — function / method definition
+        "\u0438\u0437\u0432\u0438\u043A\u0430\u0439": "conjure",
+        "\u0438\u0437\u0432\u0438\u043A\u0432\u0430\u043D\u0435": "conjure",
+        "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
+        "\u043C\u0435\u0442\u043E\u0434": "conjure",
+        "\u043F\u0440\u043E\u0446\u0435\u0434\u0443\u0440\u0430": "conjure",
+        "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u0438\u0440\u0430\u0439": "conjure",
+        // yield — return value
+        "\u0432\u044A\u0440\u043D\u0438": "yield",
+        "\u0432\u0440\u044A\u0449\u0430\u043C": "yield",
+        "\u0432\u0440\u044A\u0449\u0430\u0439": "yield",
+        "\u043E\u0442\u0433\u043E\u0432\u043E\u0440\u0438": "yield",
+        "\u0434\u0430\u0439": "yield",
+        // ponder — if / conditional
+        "\u043E\u0431\u043C\u0438\u0441\u043B\u0438": "ponder",
+        "\u0430\u043A\u043E": "ponder",
+        "\u043A\u043E\u0433\u0430\u0442\u043E": "ponder",
+        "\u0432_\u0441\u043B\u0443\u0447\u0430\u0439": "ponder",
+        "\u043F\u0440\u0438_\u0443\u0441\u043B\u043E\u0432\u0438\u0435": "ponder",
+        "\u043F\u0440\u043E\u0432\u0435\u0440\u0438": "ponder",
+        // otherwise — else
+        "\u0438\u043D\u0430\u0447\u0435": "otherwise",
+        "\u0432_\u043F\u0440\u043E\u0442\u0438\u0432\u0435\u043D_\u0441\u043B\u0443\u0447\u0430\u0439": "otherwise",
+        "\u0438\u043D\u0430\u0447\u0435_\u0430\u043A\u043E": "otherwise",
+        "\u043E\u0431\u0440\u0430\u0442\u043D\u043E": "otherwise",
+        "\u0430\u043A\u043E_\u043D\u0435": "otherwise",
+        // cycle — while loop
+        "\u0446\u0438\u043A\u044A\u043B": "cycle",
+        "\u0434\u043E\u043A\u0430\u0442\u043E": "cycle",
+        "\u043F\u043E\u0432\u0442\u0430\u0440\u044F\u0439": "cycle",
+        "\u043F\u043E\u0432\u0442\u043E\u0440\u0438": "cycle",
+        "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0430\u0432\u0430\u0439": "cycle",
+        "\u0432\u044A\u0440\u0442\u0438": "cycle",
+        "\u0432\u044A\u0440\u0442\u0438_\u0441\u0435": "cycle",
+        // iterate — for loop
+        "\u043E\u0431\u0445\u043E\u0434\u0438": "iterate",
+        "\u043E\u0431\u0445\u043E\u0436\u0434\u0430\u0439": "iterate",
+        "\u0437\u0430_\u0432\u0441\u0435\u043A\u0438": "iterate",
+        "\u0437\u0430": "iterate",
+        "\u0432\u0441\u0435\u043A\u0438": "iterate",
+        "\u0438\u0442\u0435\u0440\u0438\u0440\u0430\u0439": "iterate",
+        "\u043C\u0438\u043D\u0430\u0432\u0430\u0439_\u043F\u0440\u0435\u0437": "iterate",
+        // through — over a collection
+        "\u043F\u0440\u0435\u0437": "through",
+        "\u043F\u043E": "through",
+        "\u043D\u0430\u0434": "through",
+        // within — in / inside
+        "\u0432\u044A\u0442\u0440\u0435": "within",
+        "\u0432\u044A\u0442\u0440\u0435_\u0432": "within",
+        "\u0432": "within",
+        "\u0441\u0440\u0435\u0434": "within",
+        // yeet — throw / break
+        "\u0445\u0432\u044A\u0440\u043B\u0438": "yeet",
+        "\u0445\u0432\u044A\u0440\u043B\u044F\u043C": "yeet",
+        "\u0441\u0447\u0443\u043F\u0438": "yeet",
+        "\u043F\u0440\u0435\u043A\u044A\u0441\u043D\u0438": "yeet",
+        "\u0441\u043F\u0440\u0438": "yeet",
+        "\u0438\u0437\u043B\u0435\u0437": "yeet",
+        "\u043A\u0440\u0430\u0439": "yeet",
+        // skip — continue
+        "\u043F\u0440\u0435\u0441\u043A\u043E\u0447\u0438": "skip",
+        "\u043F\u0440\u043E\u043F\u0443\u0441\u043D\u0438": "skip",
+        "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438": "skip",
+        "\u0441\u043B\u0435\u0434\u0432\u0430\u0449": "skip",
+        // speak — print / output
+        "\u043A\u0430\u0436\u0438": "speak",
+        "\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
+        "\u0438\u0437\u043A\u0440\u0435\u0449\u0438": "speak",
+        "\u043F\u043E\u043A\u0430\u0436\u0438": "speak",
+        "\u043F\u043E\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
+        "\u0438\u0437\u0432\u0435\u0434\u0438": "speak",
+        "\u0438\u0437\u0432\u0435\u0436\u0434\u0430\u0439": "speak",
+        "\u043E\u0442\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
+        "\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
+        "\u0438\u0437\u043F\u0438\u0448\u0438": "speak",
+        "\u043F\u0438\u0448\u0438": "speak",
+        "\u043D\u0430\u043F\u0438\u0448\u0438": "speak",
+        "\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439": "speak",
+        "\u043F\u0440\u0438\u043D\u0442": "speak",
+        "\u043B\u043E\u0433\u043D\u0438": "speak",
+        "\u0441\u044A\u043E\u0431\u0449\u0438": "speak",
+        // essence — class
+        "\u0441\u044A\u0449\u043D\u043E\u0441\u0442": "essence",
+        "\u043A\u043B\u0430\u0441": "essence",
+        "\u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430": "essence",
+        "\u0435\u0441\u0435\u043D\u0446\u0438\u044F": "essence",
+        "\u0435\u0441\u0435\u043D\u0446\u0438\u044F_\u043D\u0430": "essence",
+        // extend — inherit
+        "\u0440\u0430\u0437\u0448\u0438\u0440\u0438": "extend",
+        "\u0440\u0430\u0437\u0448\u0438\u0440\u044F\u0432\u0430\u043D\u0435": "extend",
+        "\u043D\u0430\u0441\u043B\u0435\u0434\u0438": "extend",
+        "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430\u043D\u0435": "extend",
+        "\u043F\u0440\u043E\u0438\u0437\u043B\u0438\u0437\u0430": "extend",
+        // self / super
+        "\u0441\u0435\u0431\u0435_\u0441\u0438": "self",
+        "\u0441\u0435\u0431\u0435": "self",
+        "\u0442\u043E\u0437\u0438": "self",
+        "\u0442\u0430\u0437\u0438": "self",
+        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B": "super",
+        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F\u0442": "super",
+        "\u043D\u0430\u0441\u043B\u0435\u0434\u043D\u0438\u043A": "super",
+        "\u0431\u0430\u0449\u0430": "super",
+        // new — instantiate
+        "\u043D\u043E\u0432": "new",
+        "\u043D\u043E\u0432\u043E": "new",
+        "\u043D\u043E\u0432\u0430": "new",
+        "\u0441\u044A\u0437\u0434\u0430\u0439_\u043D\u043E\u0432": "new",
+        "\u0438\u043D\u0441\u0442\u0430\u043D\u0446\u0438\u044F": "new",
+        // init — constructor method name (not a keyword, but the runtime looks for `init`)
+        "\u0438\u043D\u0438\u0442": "init",
+        "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440": "init",
+        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435_\u043D\u0430": "init",
+        "\u043D\u0430\u0447\u0430\u043B\u043E": "init",
+        // attempt / rescue
+        "\u043E\u043F\u0438\u0442\u0430\u0439": "attempt",
+        "\u043E\u043F\u0438\u0442\u0432\u0430\u0439": "attempt",
+        "\u043F\u0440\u043E\u0431\u0432\u0430\u0439": "attempt",
+        "\u043E\u043F\u0438\u0442_\u0437\u0430": "attempt",
+        "\u0441\u043F\u0430\u0441\u0438": "rescue",
+        "\u0445\u0432\u0430\u043D\u0438": "rescue",
+        "\u043F\u0440\u0438\u0445\u0432\u0430\u043D\u0438": "rescue",
+        "\u043F\u0440\u0438_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
+        "\u0430\u043A\u043E_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
+        "\u0443\u043B\u043E\u0432\u0438": "rescue",
+        // logical
+        "\u0441\u044A\u0449\u043E": "also",
+        "\u0438": "also",
+        "\u043A\u0430\u043A\u0442\u043E_\u0438": "also",
+        "\u0438\u043B\u0438": "either",
+        "\u0431\u0438\u043B\u043E_\u0442\u043E": "either",
+        "\u043D\u0435_\u0435": "isnt",
+        "\u043D\u0435": "isnt",
+        "\u0440\u0430\u0432\u043D\u043E": "equals",
+        "\u0440\u0430\u0432\u043D\u043E_\u043D\u0430": "equals",
+        "\u0435\u0434\u043D\u0430\u043A\u0432\u043E": "equals",
+        "\u0441\u044A\u0449\u043E\u0442\u043E": "equals",
+        "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E": "differs",
+        "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E_\u043E\u0442": "differs",
+        "\u043D\u0435_\u0440\u0430\u0432\u043D\u043E": "differs",
+        // booleans
+        "\u0434\u0430": "yep",
+        "\u0432\u044F\u0440\u043D\u043E": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u043D\u043E": "yep",
+        "\u0438\u0441\u0442\u0438\u043D\u0441\u043A\u043E": "yep",
+        "\u043D\u0435\u0432\u044F\u0440\u043D\u043E": "nope",
+        "\u043B\u044A\u0436\u0430": "nope",
+        "\u0433\u0440\u0435\u0448\u043D\u043E": "nope",
+        "\u043D\u0435\u0438\u0441\u0442\u0438\u043D\u0430": "nope",
+        // void / null
+        "\u043F\u0440\u0430\u0437\u043D\u043E": "void",
+        "\u043D\u0438\u0449\u043E": "void",
+        "\u043D\u0443\u043B\u0430": "void",
+        "\u043D\u0443\u043B\u0435\u0432\u0430": "void",
+        "\u043B\u0438\u043F\u0441\u0432\u0430": "void",
+        // summon — import
+        "\u043F\u0440\u0438\u0437\u043E\u0432\u0438": "summon",
+        "\u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u0430\u0439": "summon",
+        "\u0432\u043D\u0435\u0441\u0438": "summon",
+        "\u0432\u043A\u0430\u0440\u0430\u0439": "summon",
+        "\u0432\u043A\u043B\u044E\u0447\u0438": "summon",
+        "\u0437\u0430\u0440\u0435\u0434\u0438": "summon",
+        "\u0438\u0437\u043F\u043E\u043B\u0437\u0432\u0430\u0439": "summon",
+        // async / await / spawn
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0435\u043D": "async",
+        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u043E": "async",
+        "\u043F\u0430\u0440\u0430\u043B\u0435\u043B\u043D\u043E": "async",
+        "\u0438\u0437\u0447\u0430\u043A\u0430\u0439": "await",
+        "\u0447\u0430\u043A\u0430\u0439": "await",
+        "\u043F\u043E\u0447\u0430\u043A\u0430\u0439": "await",
+        "\u043F\u043E\u0440\u043E\u0434\u0438": "spawn",
+        "\u0441\u0442\u0430\u0440\u0442\u0438\u0440\u0430\u0439": "spawn",
+        "\u043F\u0443\u0441\u043D\u0438": "spawn",
+        "\u0438\u0437\u043F\u044A\u043B\u043D\u0438": "spawn"
+      }
+    };
+    SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
+    EFFECTIVE_TABLES = {};
+    PHRASE_NORMALIZATIONS = {};
+    COMPILED_REPLACERS = {};
+    NON_ASCII_RE = /[^\x00-\x7F]/;
+    DETECT_TABLES = null;
+    ENGLISH_SIGNAL_RE = /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind|page|endpage|style|styles|theme|window|canvas|board)\b/g;
+    WORD_TOKEN_RE = /[\p{L}\p{N}_]+/gu;
+    FUZZY_REPLACERS = {};
+  }
+});
+
+// src/lang/lexer.ts
+var Lexer;
+var init_lexer = __esm({
+  "src/lang/lexer.ts"() {
+    init_tokens();
+    init_errors();
+    init_translator();
+    Lexer = class {
+      source;
+      pos = 0;
+      line = 1;
+      column = 1;
+      tokens = [];
+      /** Language detected (or used) by the built-in translator, if any. */
+      detectedLanguage;
+      constructor(source, options = {}) {
+        const { sourceLanguage = "auto", translate = true, dialect = null } = options;
+        if (translate && sourceLanguage !== "English" && sourceLanguage !== null) {
+          const result = translateSource(source, sourceLanguage, { target: "v1", dialect });
+          this.source = result.translated;
+          this.detectedLanguage = result.detectedLanguage;
+        } else {
+          this.source = source;
+          this.detectedLanguage = null;
+        }
+      }
+      tokenize() {
+        while (!this.isAtEnd()) {
+          this.scanToken();
+        }
+        this.tokens.push({ type: "EOF" /* EOF */, value: "", line: this.line, column: this.column });
+        return this.tokens;
+      }
+      scanToken() {
+        this.skipWhitespace();
+        if (this.isAtEnd()) return;
+        const startColumn = this.column;
+        const char = this.advance();
+        const singleTokens = {
+          "(": "LPAREN" /* LPAREN */,
+          ")": "RPAREN" /* RPAREN */,
+          "[": "LBRACKET" /* LBRACKET */,
+          "]": "RBRACKET" /* RBRACKET */,
+          ",": "COMMA" /* COMMA */,
+          "~": "TILDE" /* TILDE */,
+          "&": "AMP" /* AMP */
+        };
+        if (singleTokens[char]) {
+          this.addToken(singleTokens[char], char, startColumn);
+          return;
+        }
+        if (char === "{") {
+          if (this.peek() === "|") {
+            this.advance();
+            this.addToken("LSET" /* LSET */, "{|", startColumn);
+          } else {
+            this.addToken("LBRACE" /* LBRACE */, "{", startColumn);
+          }
+          return;
+        }
+        if (char === "}") {
+          this.addToken("RBRACE" /* RBRACE */, "}", startColumn);
+          return;
+        }
+        if (char === ".") {
+          if (this.peek() === "." && this.peekNext() === ".") {
+            this.advance();
+            this.advance();
+            this.addToken("ELLIPSIS" /* ELLIPSIS */, "...", startColumn);
+          } else {
+            this.addToken("DOT" /* DOT */, ".", startColumn);
+          }
+          return;
+        }
+        if (char === "+" || char === "%" || char === "^") {
+          if (this.peek() === "=") {
+            this.advance();
+            this.addToken("AUGASSIGN" /* AUGASSIGN */, char + "=", startColumn);
+          } else {
+            const map = {
+              "+": "PLUS" /* PLUS */,
+              "%": "PERCENT" /* PERCENT */,
+              "^": "CARET" /* CARET */
+            };
+            this.addToken(map[char], char, startColumn);
+          }
+          return;
+        }
+        if (char === "*") {
+          if (this.peek() === "*") {
+            this.advance();
+            if (this.peek() === "=") {
+              this.advance();
+              this.addToken("AUGASSIGN" /* AUGASSIGN */, "**=", startColumn);
+            } else {
+              this.addToken("STARSTAR" /* STARSTAR */, "**", startColumn);
+            }
+          } else if (this.peek() === "=") {
+            this.advance();
+            this.addToken("AUGASSIGN" /* AUGASSIGN */, "*=", startColumn);
+          } else {
+            this.addToken("STAR" /* STAR */, "*", startColumn);
+          }
+          return;
+        }
+        if (char === "\\") {
+          if (this.peek() === "=") {
+            this.advance();
+            this.addToken("AUGASSIGN" /* AUGASSIGN */, "\\=", startColumn);
+          } else {
+            this.addToken("BACKSLASH" /* BACKSLASH */, "\\", startColumn);
+          }
+          return;
+        }
+        if (char === "@") {
+          if (this.peek() === "=") {
+            this.advance();
+            this.addToken("AUGASSIGN" /* AUGASSIGN */, "@=", startColumn);
+          } else {
+            this.addToken("AT" /* AT */, "@", startColumn);
+          }
+          return;
+        }
+        if (char === "=") {
+          if (this.peek() === "=") {
+            this.advance();
+            this.addToken("EQUALS" /* EQUALS */, "==", startColumn);
+          } else if (this.peek() === ">") {
+            this.advance();
+            this.addToken("FATARROW" /* FATARROW */, "=>", startColumn);
+          } else {
+            this.addToken("BE" /* BE */, "=", startColumn);
+          }
+          return;
+        }
+        if (char === "!") {
+          if (this.peek() === "=") {
+            this.advance();
+            this.addToken("DIFFERS" /* DIFFERS */, "!=", startColumn);
+          } else {
+            this.addToken("ISNT" /* ISNT */, "!", startColumn);
+          }
+          return;
+        }
+        if (char === "-") {
+          if (this.peek() === ">") {
+            this.advance();
+            this.addToken("ARROW" /* ARROW */, "->", startColumn);
+          } else if (this.peek() === "=") {
+            this.advance();
+            this.addToken("AUGASSIGN" /* AUGASSIGN */, "-=", startColumn);
+          } else {
+            this.addToken("MINUS" /* MINUS */, char, startColumn);
+          }
+          return;
+        }
+        if (char === "|") {
+          if (this.peek() === ">") {
+            this.advance();
+            this.addToken("PIPE" /* PIPE */, "|>", startColumn);
+          } else if (this.peek() === "}") {
+            this.advance();
+            this.addToken("RSET" /* RSET */, "|}", startColumn);
+          } else {
+            this.addToken("BAR" /* BAR */, "|", startColumn);
+          }
+          return;
+        }
+        if (char === ":") {
+          if (this.peek() === ":") {
+            this.advance();
+            this.addToken("DOUBLE_COLON" /* DOUBLE_COLON */, "::", startColumn);
+          } else if (this.peek() === "=") {
+            this.advance();
+            this.addToken("WALRUS" /* WALRUS */, ":=", startColumn);
+          } else {
+            this.addToken("COLON" /* COLON */, ":", startColumn);
+          }
+          return;
+        }
+        if (char === ";") {
+          if (this.peek() === ";") {
+            this.advance();
+            this.addToken("DOUBLE_SEMI" /* DOUBLE_SEMI */, ";;", startColumn);
+          }
+          return;
+        }
+        if (char === "/") {
+          if (this.peek() === "/") {
+            while (!this.isAtEnd() && this.peek() !== "\n") {
+              this.advance();
+            }
+            return;
+          }
+          if (this.peek() === "*") {
+            this.advance();
+            while (!this.isAtEnd() && !(this.peek() === "*" && this.peekNext() === "/")) {
+              if (this.peek() === "\n") {
+                this.line++;
+                this.column = 0;
+              }
+              this.advance();
+            }
+            if (!this.isAtEnd()) {
+              this.advance();
+              this.advance();
+            }
+            return;
+          }
+          if (this.peek() === "=") {
+            this.advance();
+            this.addToken("AUGASSIGN" /* AUGASSIGN */, "/=", startColumn);
+            return;
+          }
+          this.addToken("SLASH" /* SLASH */, char, startColumn);
+          return;
+        }
+        if (char === "#") {
+          while (!this.isAtEnd() && this.peek() !== "\n") {
+            this.advance();
+          }
+          return;
+        }
+        if (char === "<") {
+          if (this.peek() === ">") {
+            this.advance();
+            this.addToken("DIFFERS" /* DIFFERS */, "<>", startColumn);
+          } else if (this.peek() === "=") {
+            this.advance();
+            this.addToken("ATMOST" /* ATMOST */, "<=", startColumn);
+          } else if (this.peek() === "<") {
+            this.advance();
+            this.addToken("SHL" /* SHL */, "<<", startColumn);
+          } else {
+            this.addToken("LESS" /* LESS */, "<", startColumn);
+          }
+          return;
+        }
+        if (char === ">") {
+          if (this.peek() === "=") {
+            this.advance();
+            this.addToken("ATLEAST" /* ATLEAST */, ">=", startColumn);
+          } else if (this.peek() === ">") {
+            this.advance();
+            this.addToken("SHR" /* SHR */, ">>", startColumn);
+          } else {
+            this.addToken("MORE" /* MORE */, ">", startColumn);
+          }
+          return;
+        }
+        if ((char === "f" || char === "F" || char === "r" || char === "R" || char === "b" || char === "B") && (this.peek() === '"' || this.peek() === "'" || this.peek() === "`")) {
+          const prefix = char.toLowerCase();
+          const quote = this.advance();
+          this.scanString(quote, startColumn, prefix);
+          return;
+        }
+        if (char === '"' || char === "'" || char === "`") {
+          this.scanString(char, startColumn);
+          return;
+        }
+        if (this.isDigit(char)) {
+          this.scanNumber(char, startColumn);
+          return;
+        }
+        if (this.isAlpha(char)) {
+          this.scanIdentifier(char, startColumn);
+          return;
+        }
+        throw new SdevError(`Unexpected character: '${char}'`, this.line, startColumn);
+      }
+      scanString(quote, startColumn, prefix = "") {
+        let triple = false;
+        if (this.peek() === quote && this.peekNext() === quote) {
+          this.advance();
+          this.advance();
+          triple = true;
+        }
+        const raw = prefix === "r";
+        let value2 = "";
+        const atTerminator = () => {
+          if (triple) {
+            return this.peek() === quote && this.peekNext() === quote && this.source[this.pos + 2] === quote;
+          }
+          return this.peek() === quote;
+        };
+        while (!this.isAtEnd() && !atTerminator()) {
+          if (this.peek() === "\n") {
+            if (quote === "`" || triple) {
+              value2 += this.advance();
+              this.line++;
+              this.column = 1;
+              continue;
+            }
+            throw new SdevError("Unterminated string", this.line, startColumn);
+          }
+          if (this.peek() === "\\" && !raw) {
+            this.advance();
+            const escaped = this.advance();
+            const escapes = {
+              "n": "\n",
+              "t": "	",
+              "r": "\r",
+              "0": "\0",
+              "a": "\x07",
+              "b": "\b",
+              "f": "\f",
+              "v": "\v",
+              "\\": "\\",
+              '"': '"',
+              "'": "'",
+              "`": "`"
+            };
+            if (escaped === "u" && this.peek() === "{") {
+              this.advance();
+              let hex = "";
+              while (!this.isAtEnd() && this.peek() !== "}") hex += this.advance();
+              this.advance();
+              value2 += String.fromCodePoint(parseInt(hex, 16) || 0);
+              continue;
+            }
+            if (escaped === "x") {
+              let hex = "";
+              for (let i = 0; i < 2 && this.isHexDigit(this.peek()); i++) hex += this.advance();
+              value2 += String.fromCharCode(parseInt(hex, 16) || 0);
+              continue;
+            }
+            value2 += escapes[escaped] ?? escaped;
+          } else if (this.peek() === "\\" && raw) {
+            value2 += this.advance();
+            if (!this.isAtEnd()) value2 += this.advance();
+          } else {
+            value2 += this.advance();
+          }
+        }
+        if (this.isAtEnd()) {
+          throw new SdevError("Unterminated string", this.line, startColumn);
+        }
+        this.advance();
+        if (triple) {
+          this.advance();
+          this.advance();
+        }
+        if (prefix === "f") {
+          this.addToken("FSTRING" /* FSTRING */, value2, startColumn);
+        } else if (prefix === "b") {
+          this.addToken("BYTES" /* BYTES */, value2, startColumn);
+        } else {
+          this.addToken("STRING" /* STRING */, value2, startColumn);
+        }
+      }
+      scanNumber(first, startColumn) {
+        let value2 = first;
+        if (first === "0" && /[xXbBoO]/.test(this.peek())) {
+          const marker = this.advance().toLowerCase();
+          let raw = "";
+          while (this.isHexDigit(this.peek()) || this.peek() === "_") {
+            const c = this.advance();
+            if (c !== "_") raw += c;
+          }
+          const radix = marker === "x" ? 16 : marker === "b" ? 2 : 8;
+          this.addToken("NUMBER" /* NUMBER */, String(parseInt(raw, radix)), startColumn);
+          return;
+        }
+        const digits = () => {
+          while (this.isDigit(this.peek()) || this.peek() === "_" && this.isDigit(this.peekNext())) {
+            const c = this.advance();
+            if (c !== "_") value2 += c;
+          }
+        };
+        digits();
+        if (this.peek() === "." && this.isDigit(this.peekNext())) {
+          value2 += this.advance();
+          digits();
+        }
+        if ((this.peek() === "e" || this.peek() === "E") && (this.isDigit(this.peekNext()) || this.peekNext() === "+" || this.peekNext() === "-")) {
+          value2 += this.advance();
+          if (this.peek() === "+" || this.peek() === "-") {
+            value2 += this.advance();
+          }
+          digits();
+        }
+        this.addToken("NUMBER" /* NUMBER */, value2, startColumn);
+      }
+      scanIdentifier(first, startColumn) {
+        let value2 = first;
+        while (this.isAlphaNumeric(this.peek())) {
+          value2 += this.advance();
+        }
+        const type = KEYWORDS[value2] ?? "IDENTIFIER" /* IDENTIFIER */;
+        this.addToken(type, value2, startColumn);
+      }
+      skipWhitespace() {
+        while (!this.isAtEnd()) {
+          const char = this.peek();
+          if (char === " " || char === "	" || char === "\r") {
+            this.advance();
+          } else if (char === "\n") {
+            this.line++;
+            this.column = 0;
+            this.advance();
+          } else {
+            break;
+          }
+        }
+      }
+      isAtEnd() {
+        return this.pos >= this.source.length;
+      }
+      peek() {
+        return this.source[this.pos] ?? "\0";
+      }
+      peekNext() {
+        return this.source[this.pos + 1] ?? "\0";
+      }
+      advance() {
+        const char = this.source[this.pos];
+        this.pos++;
+        this.column++;
+        return char;
+      }
+      addToken(type, value2, column) {
+        this.tokens.push({ type, value: value2, line: this.line, column });
+      }
+      isDigit(char) {
+        return char >= "0" && char <= "9";
+      }
+      isHexDigit(char) {
+        return char >= "0" && char <= "9" || char >= "a" && char <= "f" || char >= "A" && char <= "F";
+      }
+      isAlpha(char) {
+        return char >= "a" && char <= "z" || char >= "A" && char <= "Z" || char === "_" || new RegExp("\\p{L}", "u").test(char);
+      }
+      isAlphaNumeric(char) {
+        return this.isAlpha(char) || this.isDigit(char);
+      }
+    };
+  }
+});
+
 // src/lang/parser.ts
 var FIXED_WORDS, Parser;
 var init_parser = __esm({
@@ -2244,7 +4435,7 @@ var init_environment = __esm({
     init_errors();
     Environment = class {
       values = /* @__PURE__ */ new Map();
-      fixed = /* @__PURE__ */ new Set();
+      fixed = null;
       parent;
       constructor(parent) {
         this.parent = parent;
@@ -2254,45 +4445,51 @@ var init_environment = __esm({
       }
       defineFixed(name, value2) {
         this.values.set(name, value2);
+        if (this.fixed === null) this.fixed = /* @__PURE__ */ new Set();
         this.fixed.add(name);
       }
       isFixed(name) {
-        if (this.fixed.has(name)) return true;
-        if (this.parent) return this.parent.isFixed(name);
+        let cur = this;
+        while (cur !== void 0) {
+          if (cur.fixed !== null && cur.fixed.has(name)) return true;
+          cur = cur.parent;
+        }
         return false;
       }
       hasOwn(name) {
         return this.values.has(name);
       }
       get(name, line) {
-        if (this.values.has(name)) {
-          return this.values.get(name);
-        }
-        if (this.parent) {
-          return this.parent.get(name, line);
+        let cur = this;
+        while (cur !== void 0) {
+          const v = cur.values.get(name);
+          if (v !== void 0 || cur.values.has(name)) {
+            return v;
+          }
+          cur = cur.parent;
         }
         throw new SdevError(`Undefined variable: '${name}'`, line);
       }
       set(name, value2, line) {
-        if (this.values.has(name)) {
-          if (this.fixed.has(name)) {
-            throw new SdevError(`Cannot reassign fixed variable '${name}'`, line);
+        let cur = this;
+        while (cur !== void 0) {
+          if (cur.values.has(name)) {
+            if (cur.fixed !== null && cur.fixed.has(name)) {
+              throw new SdevError(`Cannot reassign fixed variable '${name}'`, line);
+            }
+            cur.values.set(name, value2);
+            return;
           }
-          this.values.set(name, value2);
-          return;
-        }
-        if (this.parent) {
-          if (this.parent.isFixed(name)) {
-            throw new SdevError(`Cannot reassign fixed variable '${name}'`, line);
-          }
-          this.parent.set(name, value2, line);
-          return;
+          cur = cur.parent;
         }
         throw new SdevError(`Undefined variable: '${name}'`, line);
       }
       has(name) {
-        if (this.values.has(name)) return true;
-        if (this.parent) return this.parent.has(name);
+        let cur = this;
+        while (cur !== void 0) {
+          if (cur.values.has(name)) return true;
+          cur = cur.parent;
+        }
         return false;
       }
     };
@@ -4475,11 +6672,105 @@ var init_misc = __esm({
   }
 });
 
+// src/lang/sdev-module.ts
+function stripUseLines(src) {
+  return src.split("\n").filter((l) => !l.trim().startsWith('use "')).join("\n");
+}
+function bindSeedVmPrimitives(env2) {
+  const def = (name, call) => env2.define(name, { type: "builtin", call });
+  def("length", (a) => {
+    const x = a[0];
+    if (x == null) return 0;
+    if (typeof x === "string" || Array.isArray(x)) return x.length;
+    if (typeof x === "object") return Object.keys(x).length;
+    return 0;
+  });
+  def("substr", (a) => {
+    const s = String(a[0] ?? "");
+    const start = Math.max(0, Number(a[1] ?? 0));
+    const n = Math.max(0, Number(a[2] ?? s.length));
+    return s.slice(start, start + n);
+  });
+  def("mklist", (a) => Array.from({ length: Math.max(0, Number(a[0] ?? 0)) }, () => null));
+  def("find", (a) => {
+    if (typeof a[0] === "string") return a[0].indexOf(String(a[1] ?? ""));
+    if (Array.isArray(a[0])) {
+      const fn2 = a[1];
+      if (fn2 && typeof fn2.call === "function") {
+        for (const item of a[0]) if (fn2.call([item], 0)) return item;
+        return null;
+      }
+      return a[0].indexOf(a[1]);
+    }
+    return -1;
+  });
+  def("concat", (a) => {
+    if (Array.isArray(a[0])) return [].concat(...a);
+    return a.map((x) => x === null || x === void 0 ? "" : typeof x === "object" ? stringify(x) : String(x)).join("");
+  });
+  def("split", (a) => String(a[0] ?? "").split(String(a[1] ?? "")));
+  def("join", (a) => Array.isArray(a[0]) ? a[0].map((x) => x == null ? "" : String(x)).join(String(a[1] ?? "")) : "");
+  def("write_file", () => 0);
+  def("i2f", (a) => Number(a[0] ?? 0));
+  def("f2i", (a) => Math.trunc(Number(a[0] ?? 0)));
+  def("fround", (a) => Math.round(Number(a[0] ?? 0)));
+  def("ffloor", (a) => Math.floor(Number(a[0] ?? 0)));
+  def("fceil", (a) => Math.ceil(Number(a[0] ?? 0)));
+  def("fabs", (a) => Math.abs(Number(a[0] ?? 0)));
+  def("fsqrt", (a) => Math.sqrt(Number(a[0] ?? 0)));
+  def("fsin", (a) => Math.sin(Number(a[0] ?? 0)));
+  def("fcos", (a) => Math.cos(Number(a[0] ?? 0)));
+  def("ftan", (a) => Math.tan(Number(a[0] ?? 0)));
+  def("fexp", (a) => Math.exp(Number(a[0] ?? 0)));
+  def("flog", (a) => Math.log(Number(a[0] ?? 1)));
+  def("fpow", (a) => Math.pow(Number(a[0] ?? 0), Number(a[1] ?? 1)));
+}
+function createSdevModuleRunner(...rawSources) {
+  const uniqueSources = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const s of rawSources) {
+    if (!seen.has(s)) {
+      seen.add(s);
+      uniqueSources.push(stripUseLines(s));
+    }
+  }
+  const combined = uniqueSources.join("\n");
+  const tokens = new Lexer(combined, { translate: false }).tokenize();
+  const ast = new Parser(tokens).parse();
+  const interp = new Interpreter(() => {
+  }, { bindWeb: false });
+  const env2 = interp.getGlobalEnv();
+  bindSeedVmPrimitives(env2);
+  interp.interpret(ast);
+  return {
+    env: env2,
+    call: (fnName, ...args) => {
+      const fn2 = env2.get(fnName, 0);
+      return fn2.call(args, 0);
+    },
+    callStr: (fnName, ...args) => {
+      const fn2 = env2.get(fnName, 0);
+      const res = fn2.call(args, 0);
+      return typeof res === "string" ? res.replace(/[\x01\x02]/g, "") : String(res ?? "");
+    },
+    getVar: (name) => env2.get(name, 0),
+    setVar: (name, val) => env2.define(name, val)
+  };
+}
+var init_sdev_module = __esm({
+  "src/lang/sdev-module.ts"() {
+    init_lexer();
+    init_parser();
+    init_interpreter();
+    init_builtins();
+  }
+});
+
 // raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\text.sdev
 var text_default;
 var init_text = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\text.sdev"() {
-    text_default = '# SDEV Standard Library: Text & Strings (v2) \u2014 authored in SDEV.\r\n\r\nto str_eq with a b\r\n  if concat(a, "") is b\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_upper with s\r\n  return upper(s)\r\nend\r\n\r\nto text_lower with s\r\n  return lower(s)\r\nend\r\n\r\nto text_trim with s\r\n  return trim(s)\r\nend\r\n\r\nto text_contains with s sub\r\n  return contains(s, sub)\r\nend\r\n\r\nto text_replace with s target rep\r\n  return replace(s, target, rep)\r\nend\r\n\r\nto text_split with s delim\r\n  return split(s, delim)\r\nend\r\n\r\nto text_join with items delim\r\n  return join(items, delim)\r\nend\r\n\r\nto text_starts_with with s prefix\r\n  set lp to length(prefix)\r\n  if length(s) < lp\r\n    return 0\r\n  end\r\n  if substr(s, 0, lp) is prefix\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_ends_with with s suffix\r\n  set ls to length(s)\r\n  set lsf to length(suffix)\r\n  if ls < lsf\r\n    return 0\r\n  end\r\n  if substr(s, ls - lsf, lsf) is suffix\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_repeat with s count\r\n  set out to ""\r\n  set i to 0\r\n  while i < count\r\n    set out to out + s\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto text_pad_left with s target_len pad_char\r\n  set cur to length(s)\r\n  if cur >= target_len\r\n    return s\r\n  end\r\n  return text_repeat(pad_char, target_len - cur) + s\r\nend\r\n\r\nto text_pad_right with s target_len pad_char\r\n  set cur to length(s)\r\n  if cur >= target_len\r\n    return s\r\n  end\r\n  return s + text_repeat(pad_char, target_len - cur)\r\nend\r\n\r\nto text_reverse with s\r\n  set n to length(s)\r\n  set out to ""\r\n  set i to n - 1\r\n  while i >= 0\r\n    set out to out + chr(ord(s, i))\r\n    set i to i - 1\r\n  end\r\n  return out\r\nend\r\n\r\n# SDEV v1 Compatibility Aliases\r\nto etch with a b\r\n  return a + b\r\nend\r\n\r\nto shatter with s delim\r\n  return text_split(s, delim)\r\nend\r\n\r\nto weave with list delim\r\n  return text_join(list, delim)\r\nend\r\n';
+    text_default = '# SDEV Standard Library: Text & Strings (v2) \u2014 authored in SDEV.\r\n\r\nuse "lang/stdlib/v2/list.sdev"\r\n\r\nto index_of with s sub\r\n  return find(s, sub)\r\nend\r\n\r\nto str_eq with a b\r\n  if concat(a, "") is b\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_upper with s\r\n  return upper(s)\r\nend\r\n\r\nto text_lower with s\r\n  return lower(s)\r\nend\r\n\r\nto text_trim with s\r\n  return trim(s)\r\nend\r\n\r\nto text_contains with s sub\r\n  return contains(s, sub)\r\nend\r\n\r\nto text_replace with s target rep\r\n  return replace(s, target, rep)\r\nend\r\n\r\nto text_split with s delim\r\n  return split(s, delim)\r\nend\r\n\r\nto text_join with items delim\r\n  return join(items, delim)\r\nend\r\n\r\nto text_starts_with with s prefix\r\n  set lp to length(prefix)\r\n  if length(s) < lp\r\n    return 0\r\n  end\r\n  if substr(s, 0, lp) is prefix\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_ends_with with s suffix\r\n  set ls to length(s)\r\n  set lsf to length(suffix)\r\n  if ls < lsf\r\n    return 0\r\n  end\r\n  if substr(s, ls - lsf, lsf) is suffix\r\n    return 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto text_repeat with s count\r\n  set out to ""\r\n  set i to 0\r\n  while i < count\r\n    set out to out + s\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto text_pad_left with s target_len pad_char\r\n  set cur to length(s)\r\n  if cur >= target_len\r\n    return s\r\n  end\r\n  return text_repeat(pad_char, target_len - cur) + s\r\nend\r\n\r\nto text_pad_right with s target_len pad_char\r\n  set cur to length(s)\r\n  if cur >= target_len\r\n    return s\r\n  end\r\n  return s + text_repeat(pad_char, target_len - cur)\r\nend\r\n\r\nto text_reverse with s\r\n  set n to length(s)\r\n  set out to ""\r\n  set i to n - 1\r\n  while i >= 0\r\n    set out to out + chr(ord(s, i))\r\n    set i to i - 1\r\n  end\r\n  return out\r\nend\r\n\r\n# SDEV v1 Compatibility Aliases\r\nto etch with a b\r\n  return a + b\r\nend\r\n\r\nto shatter with s delim\r\n  return text_split(s, delim)\r\nend\r\n\r\nto weave with list delim\r\n  return text_join(list, delim)\r\nend\r\n';
   }
 });
 
@@ -4785,7 +7076,7 @@ var init_bits = __esm({
 var buffer_default;
 var init_buffer = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\buffer.sdev"() {
-    buffer_default = '# =============================================================================\r\n# SDEV Standard Library: Byte Buffers, Hex, Base64 & Hashing\r\n# (lang/stdlib/v2/buffer.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\nuse "lang/stdlib/v2/bits.sdev"\r\n\r\nto buf_from_str with s\r\n  set n to length(s)\r\n  set b to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set b[i] to ord(s, i)\r\n    set i to i + 1\r\n  end\r\n  return b\r\nend\r\n\r\nto buf_to_str with b\r\n  set n to length(b)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set out to out + chr(b[i])\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto buf_len with b\r\n  return length(b)\r\nend\r\n\r\nto buf_get with b idx\r\n  return b[idx]\r\nend\r\n\r\nto buf_set with b idx val\r\n  set b[idx] to val % 256\r\n  return b\r\nend\r\n\r\nto buf_slice with b start_idx end_idx\r\n  set count to end_idx - start_idx\r\n  if count < 0\r\n    set count to 0\r\n  end\r\n  set out to mklist(count)\r\n  set i to 0\r\n  while i < count\r\n    set out[i] to b[start_idx + i]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto buf_concat with a b\r\n  set na to length(a)\r\n  set nb to length(b)\r\n  set out to mklist(na + nb)\r\n  set i to 0\r\n  while i < na\r\n    set out[i] to a[i]\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j < nb\r\n    set out[na + j] to b[j]\r\n    set j to j + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto buf_equals with a b\r\n  set na to length(a)\r\n  if na is not length(b)\r\n    return 0\r\n  end\r\n  set i to 0\r\n  while i < na\r\n    if a[i] is not b[i]\r\n      return 0\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 1\r\nend\r\n\r\nto buf_to_hex with b\r\n  set n to length(b)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set hx to bits_to_hex(b[i])\r\n    if length(hx) is 1\r\n      set hx to "0" + hx\r\n    end\r\n    set out to out + hx\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto buf_from_hex with hex_str\r\n  set clean to trim(hex_str)\r\n  set n to length(clean) / 2\r\n  set out to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set pair to substr(clean, i * 2, 2)\r\n    set out[i] to bits_from_hex(pair)\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto base64_encode with s\r\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\r\n  set n to length(s)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set b0 to ord(s, i)\r\n    set rem to n - i\r\n    set b1 to 0\r\n    set b2 to 0\r\n    if rem > 1\r\n      set b1 to ord(s, i + 1)\r\n    end\r\n    if rem > 2\r\n      set b2 to ord(s, i + 2)\r\n    end\r\n    set triplet to b0 * 65536 + b1 * 256 + b2\r\n    set c0 to (triplet / 262144) % 64\r\n    set c1 to (triplet / 4096) % 64\r\n    set c2 to (triplet / 64) % 64\r\n    set c3 to triplet % 64\r\n    set out to out + substr(alpha, c0, 1) + substr(alpha, c1, 1)\r\n    if rem > 1\r\n      set out to out + substr(alpha, c2, 1)\r\n    else\r\n      set out to out + "="\r\n    end\r\n    if rem > 2\r\n      set out to out + substr(alpha, c3, 1)\r\n    else\r\n      set out to out + "="\r\n    end\r\n    set i to i + 3\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto base64_decode with b64_str\r\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\r\n  set n to length(b64_str)\r\n  set out to ""\r\n  set i to 0\r\n  while i + 3 < n\r\n    set ch0 to substr(b64_str, i, 1)\r\n    set ch1 to substr(b64_str, i + 1, 1)\r\n    set ch2 to substr(b64_str, i + 2, 1)\r\n    set ch3 to substr(b64_str, i + 3, 1)\r\n    set v0 to find(alpha, ch0)\r\n    set v1 to find(alpha, ch1)\r\n    set v2 to 0\r\n    if str_eq(ch2, "=") is 0\r\n      set v2 to find(alpha, ch2)\r\n    end\r\n    set v3 to 0\r\n    if str_eq(ch3, "=") is 0\r\n      set v3 to find(alpha, ch3)\r\n    end\r\n    set triplet to v0 * 262144 + v1 * 4096 + v2 * 64 + v3\r\n    set b0 to (triplet / 65536) % 256\r\n    set b1 to (triplet / 256) % 256\r\n    set b2 to triplet % 256\r\n    set out to out + chr(b0)\r\n    if str_eq(ch2, "=") is 0\r\n      set out to out + chr(b1)\r\n    end\r\n    if str_eq(ch3, "=") is 0\r\n      set out to out + chr(b2)\r\n    end\r\n    set i to i + 4\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto hash_djb2 with s\r\n  set h to 5381\r\n  set n to length(s)\r\n  set i to 0\r\n  while i < n\r\n    set h to ((h * 33) + ord(s, i)) % 2147483647\r\n    set i to i + 1\r\n  end\r\n  return h\r\nend\r\n\r\nto hash_fnv1a_hex with s\r\n  set h to hash_djb2(s)\r\n  return bits_to_hex(h)\r\nend\r\n\r\n# \u2500\u2500 Arena Memory Operations (Pure SDEV) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\n\r\nto buf_byte with val\r\n  set b to val % 256\r\n  if b < 0\r\n    set b to b + 256\r\n  end\r\n  return b\r\nend\r\n\r\nto mem_arena_new with cap\r\n  set a to mklist(3)\r\n  set bytes to mklist(cap)\r\n  set i to 0\r\n  while i < cap\r\n    set bytes[i] to 0\r\n    set i to i + 1\r\n  end\r\n  set a[0] to bytes\r\n  set a[1] to cap\r\n  set a[2] to 0\r\n  return a\r\nend\r\n\r\nto mem_arena_alloc with a n\r\n  set cur to a[2]\r\n  set next_off to cur + n\r\n  if next_off > a[1]\r\n    return 0 - 1\r\n  end\r\n  set a[2] to next_off\r\n  return cur\r\nend\r\n\r\nto mem_arena_reset with a\r\n  set a[2] to 0\r\n  return 0\r\nend\r\n\r\nto mem_arena_poke_u8 with bytes ptr val\r\n  set bytes[ptr] to buf_byte(val)\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_u8 with bytes ptr\r\n  return buf_byte(bytes[ptr])\r\nend\r\n\r\nto mem_arena_poke_i16 with bytes ptr val\r\n  set u to val\r\n  if u < 0\r\n    set u to u + 65536\r\n  end\r\n  set b0 to u % 256\r\n  set b1 to ((u - b0) / 256) % 256\r\n  set bytes[ptr] to b0\r\n  set bytes[ptr + 1] to b1\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_i16 with bytes ptr\r\n  set b0 to buf_byte(bytes[ptr])\r\n  set b1 to buf_byte(bytes[ptr + 1])\r\n  set v to b0 + b1 * 256\r\n  if v >= 32768\r\n    set v to v - 65536\r\n  end\r\n  return v\r\nend\r\n\r\nto mem_arena_poke_i32 with bytes ptr val\r\n  set u to val\r\n  if u < 0\r\n    set u to u + 4294967296\r\n  end\r\n  set b0 to u % 256\r\n  set r1 to (u - b0) / 256\r\n  set b1 to r1 % 256\r\n  set r2 to (r1 - b1) / 256\r\n  set b2 to r2 % 256\r\n  set r3 to (r2 - b2) / 256\r\n  set b3 to r3 % 256\r\n  set bytes[ptr] to b0\r\n  set bytes[ptr + 1] to b1\r\n  set bytes[ptr + 2] to b2\r\n  set bytes[ptr + 3] to b3\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_i32 with bytes ptr\r\n  set b0 to buf_byte(bytes[ptr])\r\n  set b1 to buf_byte(bytes[ptr + 1])\r\n  set b2 to buf_byte(bytes[ptr + 2])\r\n  set b3 to buf_byte(bytes[ptr + 3])\r\n  set v to b0 + b1 * 256 + b2 * 65536 + b3 * 16777216\r\n  if b3 >= 128\r\n    set v to v - 4294967296\r\n  end\r\n  return v\r\nend\r\n\r\nto mem_arena_fill with bytes ptr n val\r\n  set b to buf_byte(val)\r\n  set i to 0\r\n  while i < n\r\n    set bytes[ptr + i] to b\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto mem_arena_copy with bytes dst src n\r\n  set tmp to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set tmp[i] to bytes[src + i]\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j < n\r\n    set bytes[dst + j] to tmp[j]\r\n    set j to j + 1\r\n  end\r\n  return 0\r\nend\r\n';
+    buffer_default = '# =============================================================================\r\n# SDEV Standard Library: Byte Buffers, Hex, Base64 & Hashing\r\n# (lang/stdlib/v2/buffer.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\nuse "lang/stdlib/v2/bits.sdev"\r\n\r\nto buf_from_str with s\r\n  set n to length(s)\r\n  set b to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set b[i] to ord(s, i)\r\n    set i to i + 1\r\n  end\r\n  return b\r\nend\r\n\r\nto buf_to_str with b\r\n  set n to length(b)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set out to out + chr(b[i])\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto buf_len with b\r\n  return length(b)\r\nend\r\n\r\nto buf_get with b idx\r\n  return b[idx]\r\nend\r\n\r\nto buf_set with b idx val\r\n  set b[idx] to val % 256\r\n  return b\r\nend\r\n\r\nto buf_slice with b start_idx end_idx\r\n  set count to end_idx - start_idx\r\n  if count < 0\r\n    set count to 0\r\n  end\r\n  set out to mklist(count)\r\n  set i to 0\r\n  while i < count\r\n    set out[i] to b[start_idx + i]\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto buf_concat with a b\r\n  set na to length(a)\r\n  set nb to length(b)\r\n  set out to mklist(na + nb)\r\n  set i to 0\r\n  while i < na\r\n    set out[i] to a[i]\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j < nb\r\n    set out[na + j] to b[j]\r\n    set j to j + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto buf_equals with a b\r\n  set na to length(a)\r\n  if na is not length(b)\r\n    return 0\r\n  end\r\n  set i to 0\r\n  while i < na\r\n    if a[i] is not b[i]\r\n      return 0\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 1\r\nend\r\n\r\nto buf_to_hex with b\r\n  set n to length(b)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set hx to bits_to_hex(b[i])\r\n    if length(hx) is 1\r\n      set hx to "0" + hx\r\n    end\r\n    set out to out + hx\r\n    set i to i + 1\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto buf_from_hex with hex_str\r\n  set clean to trim(hex_str)\r\n  set n to length(clean) / 2\r\n  set out to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set pair to substr(clean, i * 2, 2)\r\n    set out[i] to bits_from_hex(pair)\r\n    set i to i + 1\r\n  end\r\n  return out\r\nend\r\n\r\nto base64_encode with s\r\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\r\n  set n to length(s)\r\n  set out to ""\r\n  set i to 0\r\n  while i < n\r\n    set b0 to ord(s, i)\r\n    set rem to n - i\r\n    set b1 to 0\r\n    set b2 to 0\r\n    if rem > 1\r\n      set b1 to ord(s, i + 1)\r\n    end\r\n    if rem > 2\r\n      set b2 to ord(s, i + 2)\r\n    end\r\n    set triplet to b0 * 65536 + b1 * 256 + b2\r\n    set c0 to (triplet / 262144) % 64\r\n    set c1 to (triplet / 4096) % 64\r\n    set c2 to (triplet / 64) % 64\r\n    set c3 to triplet % 64\r\n    set out to out + substr(alpha, c0, 1) + substr(alpha, c1, 1)\r\n    if rem > 1\r\n      set out to out + substr(alpha, c2, 1)\r\n    else\r\n      set out to out + "="\r\n    end\r\n    if rem > 2\r\n      set out to out + substr(alpha, c3, 1)\r\n    else\r\n      set out to out + "="\r\n    end\r\n    set i to i + 3\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto base64_decode with b64_str\r\n  set alpha to "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"\r\n  set n to length(b64_str)\r\n  set out to ""\r\n  set i to 0\r\n  while i + 3 < n\r\n    set ch0 to substr(b64_str, i, 1)\r\n    set ch1 to substr(b64_str, i + 1, 1)\r\n    set ch2 to substr(b64_str, i + 2, 1)\r\n    set ch3 to substr(b64_str, i + 3, 1)\r\n    set v0 to find(alpha, ch0)\r\n    set v1 to find(alpha, ch1)\r\n    set v2 to 0\r\n    if str_eq(ch2, "=") is 0\r\n      set v2 to find(alpha, ch2)\r\n    end\r\n    set v3 to 0\r\n    if str_eq(ch3, "=") is 0\r\n      set v3 to find(alpha, ch3)\r\n    end\r\n    set triplet to v0 * 262144 + v1 * 4096 + v2 * 64 + v3\r\n    set b0 to (triplet / 65536) % 256\r\n    set b1 to (triplet / 256) % 256\r\n    set b2 to triplet % 256\r\n    set out to out + chr(b0)\r\n    if str_eq(ch2, "=") is 0\r\n      set out to out + chr(b1)\r\n    end\r\n    if str_eq(ch3, "=") is 0\r\n      set out to out + chr(b2)\r\n    end\r\n    set i to i + 4\r\n  end\r\n  return concat(out, "")\r\nend\r\n\r\nto hash_djb2 with s\r\n  set h to 5381\r\n  set n to length(s)\r\n  set i to 0\r\n  while i < n\r\n    set h to ((h * 33) + ord(s, i)) % 33554393\r\n    set i to i + 1\r\n  end\r\n  return h\r\nend\r\n\r\nto hash_fnv1a_hex with s\r\n  set h to hash_djb2(s)\r\n  return concat(bits_to_hex(h), "")\r\nend\r\n\r\n# \u2500\u2500 Arena Memory Operations (Pure SDEV) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\n\r\nto buf_byte with val\r\n  set b to val % 256\r\n  if b < 0\r\n    set b to b + 256\r\n  end\r\n  return b\r\nend\r\n\r\nto mem_arena_new with cap\r\n  set a to mklist(3)\r\n  set bytes to mklist(cap)\r\n  set i to 0\r\n  while i < cap\r\n    set bytes[i] to 0\r\n    set i to i + 1\r\n  end\r\n  set a[0] to bytes\r\n  set a[1] to cap\r\n  set a[2] to 0\r\n  return a\r\nend\r\n\r\nto mem_arena_alloc with a n\r\n  set cur to a[2]\r\n  set next_off to cur + n\r\n  if next_off > a[1]\r\n    return 0 - 1\r\n  end\r\n  set a[2] to next_off\r\n  return cur\r\nend\r\n\r\nto mem_arena_reset with a\r\n  set a[2] to 0\r\n  return 0\r\nend\r\n\r\nto mem_arena_poke_u8 with bytes ptr val\r\n  set bytes[ptr] to buf_byte(val)\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_u8 with bytes ptr\r\n  return buf_byte(bytes[ptr])\r\nend\r\n\r\nto mem_arena_poke_i16 with bytes ptr val\r\n  set u to val\r\n  if u < 0\r\n    set u to u + 65536\r\n  end\r\n  set b0 to u % 256\r\n  set b1 to ((u - b0) / 256) % 256\r\n  set bytes[ptr] to b0\r\n  set bytes[ptr + 1] to b1\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_i16 with bytes ptr\r\n  set b0 to buf_byte(bytes[ptr])\r\n  set b1 to buf_byte(bytes[ptr + 1])\r\n  set v to b0 + b1 * 256\r\n  if v >= 32768\r\n    set v to v - 65536\r\n  end\r\n  return v\r\nend\r\n\r\nto mem_arena_poke_i32 with bytes ptr val\r\n  set u to val\r\n  if u < 0\r\n    set u to u + 4294967296\r\n  end\r\n  set b0 to u % 256\r\n  set r1 to (u - b0) / 256\r\n  set b1 to r1 % 256\r\n  set r2 to (r1 - b1) / 256\r\n  set b2 to r2 % 256\r\n  set r3 to (r2 - b2) / 256\r\n  set b3 to r3 % 256\r\n  set bytes[ptr] to b0\r\n  set bytes[ptr + 1] to b1\r\n  set bytes[ptr + 2] to b2\r\n  set bytes[ptr + 3] to b3\r\n  return 0\r\nend\r\n\r\nto mem_arena_peek_i32 with bytes ptr\r\n  set b0 to buf_byte(bytes[ptr])\r\n  set b1 to buf_byte(bytes[ptr + 1])\r\n  set b2 to buf_byte(bytes[ptr + 2])\r\n  set b3 to buf_byte(bytes[ptr + 3])\r\n  set v to b0 + b1 * 256 + b2 * 65536 + b3 * 16777216\r\n  if b3 >= 128\r\n    set v to v - 4294967296\r\n  end\r\n  return v\r\nend\r\n\r\nto mem_arena_fill with bytes ptr n val\r\n  set b to buf_byte(val)\r\n  set i to 0\r\n  while i < n\r\n    set bytes[ptr + i] to b\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto mem_arena_copy with bytes dst src n\r\n  set tmp to mklist(n)\r\n  set i to 0\r\n  while i < n\r\n    set tmp[i] to bytes[src + i]\r\n    set i to i + 1\r\n  end\r\n  set j to 0\r\n  while j < n\r\n    set bytes[dst + j] to tmp[j]\r\n    set j to j + 1\r\n  end\r\n  return 0\r\nend\r\n';
   }
 });
 
@@ -10979,7 +13270,76 @@ var init_web = __esm({
 });
 
 // src/lang/interpreter.ts
-var BreakSignal, ContinueSignal, MAX_ITERATIONS, Interpreter;
+function stmtDeclaresInScope(node) {
+  switch (node.type) {
+    case "LetStatement":
+    case "FuncDeclaration":
+    case "ClassDeclaration":
+    case "ImportStatement":
+    case "DelStatement":
+    case "WalrusExpr":
+      return true;
+    case "AssignStatement":
+      return Boolean(node.declare) || stmtDeclaresInScope(node.value);
+    case "ExpressionStatement":
+      return stmtDeclaresInScope(node.expression);
+    case "ReturnStatement":
+      return node.value ? stmtDeclaresInScope(node.value) : false;
+    case "IfStatement":
+      return stmtDeclaresInScope(node.condition) || node.thenBranch.type !== "BlockStatement" && stmtDeclaresInScope(node.thenBranch) || node.elseBranch !== void 0 && node.elseBranch.type !== "BlockStatement" && stmtDeclaresInScope(node.elseBranch);
+    case "WhileStatement":
+      return stmtDeclaresInScope(node.condition);
+    case "BinaryExpr":
+      return stmtDeclaresInScope(node.left) || stmtDeclaresInScope(node.right);
+    case "UnaryExpr":
+      return stmtDeclaresInScope(node.operand);
+    case "TernaryExpr":
+      return stmtDeclaresInScope(node.condition) || stmtDeclaresInScope(node.thenExpr) || stmtDeclaresInScope(node.elseExpr);
+    case "CallExpr":
+      if (stmtDeclaresInScope(node.callee)) return true;
+      for (let i = 0; i < node.args.length; i++) if (stmtDeclaresInScope(node.args[i])) return true;
+      return false;
+    case "IndexExpr":
+      return stmtDeclaresInScope(node.object) || stmtDeclaresInScope(node.index);
+    case "MemberExpr":
+      return stmtDeclaresInScope(node.object);
+    case "AugAssignStatement":
+      return stmtDeclaresInScope(node.value);
+    case "IndexAssignStatement":
+      return stmtDeclaresInScope(node.object) || stmtDeclaresInScope(node.index) || stmtDeclaresInScope(node.value);
+    case "MemberAssignStatement":
+      return stmtDeclaresInScope(node.object) || stmtDeclaresInScope(node.value);
+    case "NumberLiteral":
+    case "StringLiteral":
+    case "BooleanLiteral":
+    case "NullLiteral":
+    case "Identifier":
+    case "BreakStatement":
+    case "ContinueStatement":
+    case "PassStatement":
+    case "ScopeStatement":
+    case "BlockStatement":
+    case "LambdaExpr":
+      return false;
+    default:
+      return true;
+  }
+}
+function blockNeedsScope(block) {
+  let cached2 = blockScopeCache.get(block);
+  if (cached2 !== void 0) return cached2;
+  cached2 = false;
+  const stmts = block.statements;
+  for (let i = 0; i < stmts.length; i++) {
+    if (stmtDeclaresInScope(stmts[i])) {
+      cached2 = true;
+      break;
+    }
+  }
+  blockScopeCache.set(block, cached2);
+  return cached2;
+}
+var BreakSignal, ContinueSignal, MAX_ITERATIONS, blockScopeCache, Interpreter;
 var init_interpreter = __esm({
   "src/lang/interpreter.ts"() {
     init_environment();
@@ -10995,6 +13355,7 @@ var init_interpreter = __esm({
     ContinueSignal = class {
     };
     MAX_ITERATIONS = 1e6;
+    blockScopeCache = /* @__PURE__ */ new WeakMap();
     Interpreter = class {
       globalEnv;
       output;
@@ -11059,16 +13420,379 @@ var init_interpreter = __esm({
         return result;
       }
       // ==========================================================
-      // Driver: runs the generator-based evaluator to completion.
+      // Driver: synchronous fast-path for all non-generator code.
+      // Generator functions use `generatorBody` -> `ev` directly.
       // A stray `emit` outside a generator body is a hard error.
       // ==========================================================
       execute(node, env2) {
+        return this.evalSync(node, env2);
+      }
+      runGen(node, env2) {
         const it = this.ev(node, env2);
         const step = it.next();
-        while (!step.done) {
+        if (!step.done) {
           throw new SdevError("'emit' is only valid inside a generator function", node.line);
         }
         return step.value;
+      }
+      evalSync(node, env2) {
+        switch (node.type) {
+          case "NumberLiteral":
+            return node.value;
+          case "StringLiteral":
+            return node.value;
+          case "BooleanLiteral":
+            return node.value;
+          case "NullLiteral":
+            return null;
+          case "Identifier":
+            return env2.get(node.name, node.line);
+          case "BinaryExpr": {
+            const op = node.operator;
+            if (op === "also") {
+              const left2 = this.evalSync(node.left, env2);
+              if (!this.truthy(left2)) return left2;
+              return this.evalSync(node.right, env2);
+            }
+            if (op === "either") {
+              const left2 = this.evalSync(node.left, env2);
+              if (this.truthy(left2)) return left2;
+              return this.evalSync(node.right, env2);
+            }
+            const left = this.evalSync(node.left, env2);
+            const right = this.evalSync(node.right, env2);
+            return this.applyBinary(op, left, right, node.line);
+          }
+          case "UnaryExpr": {
+            const operand = this.evalSync(node.operand, env2);
+            if (node.operator === "-") {
+              if (typeof operand === "number") return -operand;
+              const m2 = this.protocolMethod(operand, "on_neg");
+              if (m2) return m2.call([], node.line);
+              if (typeof operand === "string" && operand.trim() !== "" && !isNaN(Number(operand))) return -Number(operand);
+              throw new SdevError("Cannot use '-' with non-number", node.line);
+            }
+            if (node.operator === "isnt") return !this.truthy(operand);
+            throw new SdevError(`Unknown unary operator: ${node.operator}`, node.line);
+          }
+          case "CallExpr": {
+            const callee = this.evalSync(node.callee, env2);
+            const argNodes = node.args;
+            const n = argNodes.length;
+            if (n === 0) return this.callValue(callee, [], node.line);
+            let hasSpecial = false;
+            for (let i = 0; i < n; i++) {
+              const t = argNodes[i].type;
+              if (t === "StarExpr" || t === "KeywordArg") {
+                hasSpecial = true;
+                break;
+              }
+            }
+            if (!hasSpecial) {
+              const args2 = new Array(n);
+              for (let i = 0; i < n; i++) args2[i] = this.evalSync(argNodes[i], env2);
+              return this.callValue(callee, args2, node.line);
+            }
+            const args = [];
+            const kwargs = {};
+            for (let i = 0; i < n; i++) {
+              const an = argNodes[i];
+              if (an.type === "StarExpr") {
+                const v = this.evalSync(an.operand, env2);
+                if (an.double) {
+                  if (v && typeof v === "object" && !Array.isArray(v)) Object.assign(kwargs, v);
+                } else {
+                  for (const item of this.iterableOf(v, an.line)) args.push(item);
+                }
+              } else if (an.type === "KeywordArg") {
+                kwargs[an.name] = this.evalSync(an.value, env2);
+              } else {
+                args.push(this.evalSync(an, env2));
+              }
+            }
+            return this.callValue(callee, args, node.line, kwargs);
+          }
+          case "IndexExpr": {
+            const obj = this.evalSync(node.object, env2);
+            const index = this.evalSync(node.index, env2);
+            return this.getIndex(obj, index, node.line);
+          }
+          case "MemberExpr": {
+            const obj = this.evalSync(node.object, env2);
+            return this.getMember(obj, node.property, node.line);
+          }
+          case "AssignStatement": {
+            const value2 = this.evalSync(node.value, env2);
+            if (node.declare && !env2.has(node.name)) env2.define(node.name, value2);
+            else env2.set(node.name, value2, node.line);
+            return value2;
+          }
+          case "LetStatement": {
+            const value2 = this.evalSync(node.value, env2);
+            if (node.targets && node.targets.length > 1) {
+              const items = [...this.iterableOf(value2, node.line)];
+              const star = node.starIndex;
+              if (star === void 0) {
+                node.targets.forEach((name, i) => {
+                  const v = items[i] === void 0 ? null : items[i];
+                  if (node.isFixed) env2.defineFixed(name, v);
+                  else env2.define(name, v);
+                });
+              } else {
+                const after = node.targets.length - star - 1;
+                node.targets.forEach((name, i) => {
+                  let v;
+                  if (i < star) v = items[i] === void 0 ? null : items[i];
+                  else if (i === star) v = items.slice(star, items.length - after);
+                  else v = items[items.length - (node.targets.length - i)] ?? null;
+                  if (node.isFixed) env2.defineFixed(name, v);
+                  else env2.define(name, v);
+                });
+              }
+              return value2;
+            }
+            if (node.isFixed) env2.defineFixed(node.name, value2);
+            else env2.define(node.name, value2);
+            return value2;
+          }
+          case "BlockStatement": {
+            const blockEnv = blockNeedsScope(node) ? new Environment(env2) : env2;
+            let result = null;
+            const stmts = node.statements;
+            for (let i = 0; i < stmts.length; i++) result = this.evalSync(stmts[i], blockEnv);
+            return result;
+          }
+          case "IfStatement": {
+            if (this.truthy(this.evalSync(node.condition, env2))) return this.evalSync(node.thenBranch, env2);
+            if (node.elseBranch) return this.evalSync(node.elseBranch, env2);
+            return null;
+          }
+          case "WhileStatement": {
+            let result = null;
+            let iterations = 0;
+            let broke = false;
+            while (this.truthy(this.evalSync(node.condition, env2))) {
+              try {
+                result = this.evalSync(node.body, env2);
+              } catch (e) {
+                if (e instanceof BreakSignal) {
+                  broke = true;
+                  break;
+                }
+                if (!(e instanceof ContinueSignal)) throw e;
+              }
+              if (++iterations > MAX_ITERATIONS) {
+                throw new SdevError("Maximum loop iterations exceeded (possible infinite loop)", node.line);
+              }
+            }
+            if (!broke && node.elseBlock) this.evalSync(node.elseBlock, env2);
+            return result;
+          }
+          case "ForEachStatement":
+          case "ForInStatement": {
+            const iterable = this.evalSync(node.iterable, env2);
+            const targets = node.type === "ForEachStatement" ? node.variables ?? node.variable : node.variable;
+            let result = null;
+            let iterations = 0;
+            let broke = false;
+            for (const item of this.iterableOf(iterable, node.line)) {
+              const loopEnv = new Environment(env2);
+              this.bindTarget(targets, item, loopEnv, node.line);
+              try {
+                result = this.evalSync(node.body, loopEnv);
+              } catch (e) {
+                if (e instanceof BreakSignal) {
+                  broke = true;
+                  break;
+                }
+                if (!(e instanceof ContinueSignal)) throw e;
+              }
+              if (++iterations > MAX_ITERATIONS) {
+                throw new SdevError("Maximum loop iterations exceeded", node.line);
+              }
+            }
+            if (!broke && node.type === "ForEachStatement" && node.elseBlock) this.evalSync(node.elseBlock, env2);
+            return result;
+          }
+          case "ReturnStatement": {
+            const value2 = node.value ? this.evalSync(node.value, env2) : null;
+            throw new ReturnException(value2);
+          }
+          case "ExpressionStatement":
+            return this.evalSync(node.expression, env2);
+          case "AugAssignStatement": {
+            const current = this.evalSync(node.target, env2);
+            const operand = this.evalSync(node.value, env2);
+            const updated = this.applyBinary(node.operator, current, operand, node.line);
+            if (node.target.type === "Identifier") {
+              env2.set(node.target.name, updated, node.line);
+            } else if (node.target.type === "IndexExpr") {
+              const obj = this.evalSync(node.target.object, env2);
+              const index = this.evalSync(node.target.index, env2);
+              this.setIndex(obj, index, updated, node.line);
+            } else if (node.target.type === "MemberExpr") {
+              const obj = this.evalSync(node.target.object, env2);
+              this.setMember(obj, node.target.property, updated, node.line);
+            } else {
+              throw new SdevError("Invalid augmented assignment target", node.line);
+            }
+            return updated;
+          }
+          case "IndexAssignStatement": {
+            const obj = this.evalSync(node.object, env2);
+            const index = this.evalSync(node.index, env2);
+            const value2 = this.evalSync(node.value, env2);
+            return this.setIndex(obj, index, value2, node.line);
+          }
+          case "MemberAssignStatement": {
+            const obj = this.evalSync(node.object, env2);
+            const value2 = this.evalSync(node.value, env2);
+            return this.setMember(obj, node.property, value2, node.line);
+          }
+          case "ArrayLiteral":
+            return this.evalSequenceSync(node.elements, env2);
+          case "TupleLiteral":
+            return makeTuple(this.evalSequenceSync(node.elements, env2));
+          case "SetLiteral":
+            return new SdevSet(this.evalSequenceSync(node.elements, env2));
+          case "DictLiteral": {
+            const result = {};
+            for (const entry of node.entries) {
+              if (entry.key.type === "StarExpr" && entry.key.double) {
+                const spread = this.evalSync(entry.key.operand, env2);
+                if (spread && typeof spread === "object") Object.assign(result, spread);
+                continue;
+              }
+              const key = stringify(this.evalSync(entry.key, env2));
+              result[key] = this.evalSync(entry.value, env2);
+            }
+            return result;
+          }
+          case "SliceExpr": {
+            const obj = this.evalSync(node.object, env2);
+            const start = node.start ? this.evalSync(node.start, env2) : null;
+            const stop = node.stop ? this.evalSync(node.stop, env2) : null;
+            const step = node.step ? this.evalSync(node.step, env2) : null;
+            return this.sliceValue(obj, start, stop, step, node.line);
+          }
+          case "TernaryExpr":
+            return this.truthy(this.evalSync(node.condition, env2)) ? this.evalSync(node.thenExpr, env2) : this.evalSync(node.elseExpr, env2);
+          case "FStringExpr": {
+            let out = "";
+            for (const part of node.parts) {
+              if (part.kind === "text") {
+                out += part.value;
+              } else {
+                const value2 = this.evalSync(part.expr, env2);
+                out += formatValue(value2, part.formatSpec, part.conversion);
+              }
+            }
+            return out;
+          }
+          case "FuncDeclaration": {
+            let fn2 = this.makeFunction(node, env2);
+            if (node.decorators?.length) {
+              for (const dec of [...node.decorators].reverse()) {
+                const decorator = this.evalSync(dec, env2);
+                fn2 = this.callValue(decorator, [fn2], node.line);
+              }
+            }
+            env2.define(node.name, fn2);
+            return null;
+          }
+          case "LambdaExpr":
+            return this.makeLambda(node, env2);
+          case "WalrusExpr": {
+            const value2 = this.evalSync(node.value, env2);
+            env2.define(node.name, value2);
+            return value2;
+          }
+          case "AwaitExpr":
+            return this.awaitValue(this.evalSync(node.operand, env2), node.line);
+          case "StarExpr":
+            return this.evalSync(node.operand, env2);
+          case "KeywordArg":
+            return this.evalSync(node.value, env2);
+          case "EllipsisLiteral":
+            return "...";
+          case "BytesLiteral": {
+            const bytes = new Uint8Array(node.value.length);
+            for (let i = 0; i < node.value.length; i++) bytes[i] = node.value.charCodeAt(i) & 255;
+            return bytes;
+          }
+          case "Program": {
+            let result = null;
+            for (const stmt of node.statements) result = this.evalSync(stmt, env2);
+            return result;
+          }
+          case "RaiseStatement": {
+            if (!node.error) throw new SdevRaise("re-raise outside of a rescue block");
+            const err = this.evalSync(node.error, env2);
+            const cause = node.cause ? this.evalSync(node.cause, env2) : void 0;
+            throw new SdevRaise(err, cause);
+          }
+          case "AssertStatement": {
+            const ok = this.truthy(this.evalSync(node.condition, env2));
+            if (!ok) {
+              const msg = node.message ? stringify(this.evalSync(node.message, env2)) : "assertion failed";
+              throw new SdevRaise(this.makeError("AssertionError", msg));
+            }
+            return null;
+          }
+          case "TryStatement": {
+            const handlers = node.handlers ?? [{ types: [], alias: node.errorVar, body: node.catchBlock }];
+            let result = null;
+            try {
+              try {
+                result = this.evalSync(node.tryBlock, env2);
+                if (node.elseBlock) result = this.evalSync(node.elseBlock, env2);
+              } catch (e) {
+                if (e instanceof ReturnException || e instanceof BreakSignal || e instanceof ContinueSignal) throw e;
+                const raised = e instanceof SdevRaise ? e.value : this.makeError(e instanceof SdevError ? "RuntimeError" : "Error", e instanceof Error ? e.message : String(e));
+                for (const handler of handlers) {
+                  if (!this.handlerMatches(handler, raised, env2, node.line)) continue;
+                  const catchEnv = new Environment(env2);
+                  if (handler.alias) {
+                    catchEnv.define(handler.alias, node.handlers ? raised : this.errorMessage(raised));
+                  }
+                  catchEnv.define("__error__", raised);
+                  return this.evalSync(handler.body, catchEnv);
+                }
+                throw e;
+              }
+            } finally {
+              if (node.finallyBlock) this.evalSync(node.finallyBlock, env2);
+            }
+            return result;
+          }
+          case "ScopeStatement":
+            return null;
+          case "PassStatement":
+            return null;
+          case "ImportStatement":
+            return this.evImport(node, env2);
+          case "BreakStatement":
+            throw new BreakSignal();
+          case "ContinueStatement":
+            throw new ContinueSignal();
+          case "EmitExpr":
+            throw new SdevError("'emit' is only valid inside a generator function", node.line);
+          default:
+            return this.runGen(node, env2);
+        }
+      }
+      evalSequenceSync(nodes, env2) {
+        const out = [];
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i];
+          if (n.type === "StarExpr" && !n.double) {
+            const spread = this.evalSync(n.operand, env2);
+            for (const item of this.iterableOf(spread, n.line)) out.push(item);
+            continue;
+          }
+          out.push(this.evalSync(n, env2));
+        }
+        return out;
       }
       // ==========================================================
       // Evaluator
@@ -11284,14 +14008,89 @@ var init_interpreter = __esm({
         return this.applyBinary(node.operator, left, right, node.line);
       }
       applyBinary(operator, left, right, line) {
-        const slot = PROTOCOL_SLOTS[operator];
-        if (slot) {
-          const lm = this.protocolMethod(left, slot);
-          if (lm) return lm.call([right], line);
-          const rslot = REFLECTED_SLOTS[operator];
-          if (rslot) {
-            const rm = this.protocolMethod(right, rslot);
-            if (rm) return rm.call([left], line);
+        if (typeof left === "number" && typeof right === "number") {
+          switch (operator) {
+            case "+":
+              return left + right;
+            case "-":
+              return left - right;
+            case "*":
+              return left * right;
+            case "<":
+              return left < right;
+            case ">":
+              return left > right;
+            case "<=":
+              return left <= right;
+            case ">=":
+              return left >= right;
+            case "equals":
+              return left === right;
+            case "differs":
+            case "<>":
+              return left !== right;
+            case "/":
+              if (right === 0) throw new SdevRaise(this.makeError("ZeroDivisionError", "division by zero"));
+              return left / right;
+            case "\\":
+              if (right === 0) throw new SdevRaise(this.makeError("ZeroDivisionError", "division by zero"));
+              return Math.floor(left / right);
+            case "%":
+              if (right === 0) throw new SdevRaise(this.makeError("ZeroDivisionError", "modulo by zero"));
+              return (left % right + right) % right;
+            case "^":
+              return Math.pow(left, right);
+            case "&":
+              return left & right;
+            case "|":
+              return left | right;
+            case "<<":
+              return left << right;
+            case ">>":
+              return left >> right;
+            case "is":
+              return left === right;
+            case "is not":
+              return left !== right;
+          }
+        }
+        if (typeof left === "string" && typeof right === "string") {
+          switch (operator) {
+            case "+":
+              return left + right;
+            case "equals":
+              return left === right;
+            case "differs":
+            case "<>":
+              return left !== right;
+            case "<":
+              return left < right;
+            case ">":
+              return left > right;
+            case "<=":
+              return left <= right;
+            case ">=":
+              return left >= right;
+            case "is":
+              return left === right;
+            case "is not":
+              return left !== right;
+            case "in":
+              return right.includes(left);
+            case "not in":
+              return !right.includes(left);
+          }
+        }
+        if (left !== null && typeof left === "object" || right !== null && typeof right === "object") {
+          const slot = PROTOCOL_SLOTS[operator];
+          if (slot) {
+            const lm = this.protocolMethod(left, slot);
+            if (lm) return lm.call([right], line);
+            const rslot = REFLECTED_SLOTS[operator];
+            if (rslot) {
+              const rm = this.protocolMethod(right, rslot);
+              if (rm) return rm.call([left], line);
+            }
           }
         }
         switch (operator) {
@@ -11463,8 +14262,6 @@ var init_interpreter = __esm({
         return this.getIndex(obj, index, node.line);
       }
       getIndex(obj, index, line) {
-        const m2 = this.protocolMethod(obj, "on_get");
-        if (m2) return m2.call([index], line);
         if (Array.isArray(obj)) {
           if (typeof index !== "number") throw new SdevError("List index must be a number", line);
           const idx = index < 0 ? obj.length + index : index;
@@ -11480,6 +14277,10 @@ var init_interpreter = __esm({
             throw new SdevRaise(this.makeError("IndexError", "string index out of range"));
           }
           return obj[idx];
+        }
+        if (obj !== null && typeof obj === "object") {
+          const m2 = this.protocolMethod(obj, "on_get");
+          if (m2) return m2.call([index], line);
         }
         if (obj instanceof Uint8Array) {
           const idx = index < 0 ? obj.length + index : index;
@@ -11712,8 +14513,6 @@ var init_interpreter = __esm({
         return this.setIndex(obj, index, value2, node.line);
       }
       setIndex(obj, index, value2, line) {
-        const m2 = this.protocolMethod(obj, "on_set");
-        if (m2) return m2.call([index, value2], line);
         if (Array.isArray(obj)) {
           if (typeof index !== "number") throw new SdevError("List index must be a number", line);
           const idx = index < 0 ? obj.length + index : index;
@@ -11721,7 +14520,9 @@ var init_interpreter = __esm({
           obj[idx] = value2;
           return value2;
         }
-        if (obj && typeof obj === "object") {
+        if (obj !== null && typeof obj === "object") {
+          const m2 = this.protocolMethod(obj, "on_set");
+          if (m2) return m2.call([index, value2], line);
           obj[stringify(index)] = value2;
           return value2;
         }
@@ -11997,20 +14798,53 @@ var init_interpreter = __esm({
         env2.define(node.name, fn2);
         return null;
       }
-      makeFunction(node, env2, boundName) {
+      makeFunction(node, env2, boundName, ownerClass) {
         const self2 = this;
         const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: "normal" }));
+        const simpleParams = specs.every((s) => s.kind === "normal" && !s.default);
+        const paramNames = simpleParams ? specs.map((s) => s.name) : null;
+        const paramCount = specs.length;
         const fn2 = {
           type: "user",
           call: (args, callLine) => {
             const funcEnv = new Environment(env2);
-            self2.bindParams(specs, args, funcEnv, callLine, node.name);
+            if (paramNames !== null) {
+              const last = args.length > 0 ? args[args.length - 1] : null;
+              if (last && typeof last === "object" && last.__kwargs) {
+                self2.bindParams(specs, args, funcEnv, callLine, node.name);
+              } else {
+                for (let i = 0; i < paramCount; i++) {
+                  funcEnv.define(paramNames[i], i < args.length ? args[i] : null);
+                }
+              }
+            } else {
+              self2.bindParams(specs, args, funcEnv, callLine, node.name);
+            }
+            const receiver = args[0];
+            if (ownerClass && receiver && typeof receiver === "object") {
+              const instClass = receiver.__class__ ?? ownerClass;
+              const idx = instClass.mro.indexOf(ownerClass);
+              const rest = idx >= 0 ? instClass.mro.slice(idx + 1) : ownerClass.mro.slice(1);
+              if (rest.length > 0) {
+                const superProxy = {};
+                for (const base of rest) {
+                  base.methods.forEach((method, name) => {
+                    if (name in superProxy) return;
+                    superProxy[name] = {
+                      type: "user",
+                      call: (callArgs, line) => method.call([receiver, ...callArgs], line)
+                    };
+                  });
+                }
+                funcEnv.define("super", superProxy);
+              }
+            }
             if (node.isGenerator) {
               const iter = self2.generatorBody(node.body, funcEnv);
               return makeGenerator(iter);
             }
             try {
-              self2.execute(node.body, funcEnv);
+              self2.evalSync(node.body, funcEnv);
               return null;
             } catch (e) {
               if (e instanceof ReturnException) return e.value;
@@ -12045,13 +14879,27 @@ var init_interpreter = __esm({
       makeLambda(node, env2) {
         const self2 = this;
         const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: "normal" }));
+        const simpleParams = specs.every((s) => s.kind === "normal" && !s.default);
+        const paramNames = simpleParams ? specs.map((s) => s.name) : null;
+        const paramCount = specs.length;
         return {
           type: "lambda",
           call: (args, callLine) => {
             const lambdaEnv = new Environment(env2);
-            self2.bindParams(specs, args, lambdaEnv, callLine, "<lambda>");
+            if (paramNames !== null) {
+              const last = args.length > 0 ? args[args.length - 1] : null;
+              if (last && typeof last === "object" && last.__kwargs) {
+                self2.bindParams(specs, args, lambdaEnv, callLine, "<lambda>");
+              } else {
+                for (let i = 0; i < paramCount; i++) {
+                  lambdaEnv.define(paramNames[i], i < args.length ? args[i] : null);
+                }
+              }
+            } else {
+              self2.bindParams(specs, args, lambdaEnv, callLine, "<lambda>");
+            }
             try {
-              return self2.execute(node.body, lambdaEnv);
+              return self2.evalSync(node.body, lambdaEnv);
             } catch (e) {
               if (e instanceof ReturnException) return e.value;
               throw e;
@@ -12153,7 +15001,7 @@ var init_interpreter = __esm({
         const classEnv = new Environment(env2);
         classEnv.define(node.name, klass);
         for (const method of node.methods) {
-          const raw = this.makeFunction(method, classEnv, `${node.name}.${method.name}`);
+          const raw = this.makeFunction(method, classEnv, `${node.name}.${method.name}`, klass);
           const decorators = (method.decorators ?? []).map((d) => this.describeDecorator(d));
           if (decorators.includes("property")) {
             const entry = klass.props.get(method.name) ?? {};
@@ -12473,2222 +15321,721 @@ var init_interpreter = __esm({
   }
 });
 
-// src/lang/sdev-module.ts
-function stripUseLines(src) {
-  return src.split("\n").filter((l) => !l.trim().startsWith('use "')).join("\n");
-}
-function bindSeedVmPrimitives(env2) {
-  const def = (name, call) => env2.define(name, { type: "builtin", call });
-  def("length", (a) => {
-    const x = a[0];
-    if (x == null) return 0;
-    if (typeof x === "string" || Array.isArray(x)) return x.length;
-    if (typeof x === "object") return Object.keys(x).length;
-    return 0;
-  });
-  def("substr", (a) => {
-    const s = String(a[0] ?? "");
-    const start = Math.max(0, Number(a[1] ?? 0));
-    const n = Math.max(0, Number(a[2] ?? s.length));
-    return s.slice(start, start + n);
-  });
-  def("mklist", (a) => Array.from({ length: Math.max(0, Number(a[0] ?? 0)) }, () => null));
-  def("find", (a) => {
-    if (typeof a[0] === "string") return a[0].indexOf(String(a[1] ?? ""));
-    if (Array.isArray(a[0])) {
-      const fn2 = a[1];
-      if (fn2 && typeof fn2.call === "function") {
-        for (const item of a[0]) if (fn2.call([item], 0)) return item;
-        return null;
-      }
-      return a[0].indexOf(a[1]);
-    }
-    return -1;
-  });
-  def("concat", (a) => {
-    if (Array.isArray(a[0])) return [].concat(...a);
-    return a.map((x) => x === null || x === void 0 ? "" : typeof x === "object" ? stringify(x) : String(x)).join("");
-  });
-  def("split", (a) => String(a[0] ?? "").split(String(a[1] ?? "")));
-  def("join", (a) => Array.isArray(a[0]) ? a[0].map((x) => x == null ? "" : String(x)).join(String(a[1] ?? "")) : "");
-  def("write_file", () => 0);
-  def("i2f", (a) => Number(a[0] ?? 0));
-  def("f2i", (a) => Math.trunc(Number(a[0] ?? 0)));
-  def("fround", (a) => Math.round(Number(a[0] ?? 0)));
-  def("ffloor", (a) => Math.floor(Number(a[0] ?? 0)));
-  def("fceil", (a) => Math.ceil(Number(a[0] ?? 0)));
-  def("fabs", (a) => Math.abs(Number(a[0] ?? 0)));
-  def("fsqrt", (a) => Math.sqrt(Number(a[0] ?? 0)));
-  def("fsin", (a) => Math.sin(Number(a[0] ?? 0)));
-  def("fcos", (a) => Math.cos(Number(a[0] ?? 0)));
-  def("ftan", (a) => Math.tan(Number(a[0] ?? 0)));
-  def("fexp", (a) => Math.exp(Number(a[0] ?? 0)));
-  def("flog", (a) => Math.log(Number(a[0] ?? 1)));
-  def("fpow", (a) => Math.pow(Number(a[0] ?? 0), Number(a[1] ?? 1)));
-}
-function createSdevModuleRunner(...rawSources) {
-  const uniqueSources = [];
-  const seen = /* @__PURE__ */ new Set();
-  for (const s of rawSources) {
-    if (!seen.has(s)) {
-      seen.add(s);
-      uniqueSources.push(stripUseLines(s));
-    }
-  }
-  const combined = uniqueSources.join("\n");
-  const tokens = new Lexer(combined, { translate: false }).tokenize();
-  const ast = new Parser(tokens).parse();
-  const interp = new Interpreter(() => {
-  }, { bindWeb: false });
-  const env2 = interp.getGlobalEnv();
-  bindSeedVmPrimitives(env2);
-  interp.interpret(ast);
-  return {
-    env: env2,
-    call: (fnName, ...args) => {
-      const fn2 = env2.get(fnName, 0);
-      return fn2.call(args, 0);
-    },
-    callStr: (fnName, ...args) => {
-      const fn2 = env2.get(fnName, 0);
-      const res = fn2.call(args, 0);
-      return typeof res === "string" ? res.replace(/[\x01\x02]/g, "") : String(res ?? "");
-    },
-    getVar: (name) => env2.get(name, 0),
-    setVar: (name, val) => env2.define(name, val)
-  };
-}
-var init_sdev_module = __esm({
-  "src/lang/sdev-module.ts"() {
-    init_lexer();
-    init_parser();
-    init_interpreter();
-    init_builtins();
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\graphics.sdev
+var graphics_default;
+var init_graphics = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\graphics.sdev"() {
+    graphics_default = '# =============================================================================\r\n# SDEV Standard Library: 2D Canvas Graphics Engine (lang/stdlib/v2/graphics.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\n# Global graphics state list:\r\n# 0: width (int)\r\n# 1: height (int)\r\n# 2: bg_color (str)\r\n# 3: fill_color (str)\r\n# 4: stroke_color (str)\r\n# 5: line_width (int)\r\n# 6: font_spec (str)\r\n# 7: has_fill (int 1/0)\r\n# 8: has_stroke (int 1/0)\r\n# 9: cmd_count (int)\r\n# 10: svg_defs (str)\r\n# 11: svg_body (str)\r\nset _gfx to mklist(16)\r\nset _gfx[0] to 400\r\nset _gfx[1] to 400\r\nset _gfx[2] to "#090d16"\r\nset _gfx[3] to "#38bdf8"\r\nset _gfx[4] to "#e2e8f0"\r\nset _gfx[5] to 2\r\nset _gfx[6] to "14px JetBrains Mono, monospace"\r\nset _gfx[7] to 1\r\nset _gfx[8] to 1\r\nset _gfx[9] to 0\r\nset _gfx[10] to ""\r\nset _gfx[11] to ""\r\n\r\nto canvas_create with w h\r\n  set _gfx[0] to w\r\n  set _gfx[1] to h\r\n  set _gfx[2] to "#090d16"\r\n  set _gfx[3] to "#38bdf8"\r\n  set _gfx[4] to "#e2e8f0"\r\n  set _gfx[5] to 2\r\n  set _gfx[6] to "14px JetBrains Mono, monospace"\r\n  set _gfx[7] to 1\r\n  set _gfx[8] to 1\r\n  set _gfx[9] to 0\r\n  set _gfx[10] to ""\r\n  set _gfx[11] to ""\r\n  return _gfx\r\nend\r\n\r\nto gfx_emit with frag\r\n  set cur to concat(_gfx[11], "")\r\n  set _gfx[11] to cur + frag + "\\n"\r\n  set _gfx[9] to _gfx[9] + 1\r\n  return 0\r\nend\r\n\r\nto gfx_clear\r\n  set _gfx[9] to 0\r\n  set _gfx[11] to ""\r\n  return 0\r\nend\r\n\r\nto gfx_background with color_str\r\n  set _gfx[2] to concat(color_str, "")\r\n  set w to str(_gfx[0])\r\n  set h to str(_gfx[1])\r\n  return gfx_emit("<rect x=\\"0\\" y=\\"0\\" width=\\"" + w + "\\" height=\\"" + h + "\\" fill=\\"" + concat(color_str, "") + "\\"/>")\r\nend\r\n\r\nto gfx_fill with color_str\r\n  set _gfx[3] to concat(color_str, "")\r\n  set _gfx[7] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_no_fill\r\n  set _gfx[7] to 0\r\n  return 0\r\nend\r\n\r\nto gfx_stroke with color_str\r\n  set _gfx[4] to concat(color_str, "")\r\n  set _gfx[8] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_no_stroke\r\n  set _gfx[8] to 0\r\n  return 0\r\nend\r\n\r\nto gfx_line_width with w\r\n  set _gfx[5] to w\r\n  return 0\r\nend\r\n\r\nto gfx_font with font_str\r\n  set _gfx[6] to concat(font_str, "")\r\n  return 0\r\nend\r\n\r\nto gfx_paint_attrs\r\n  set f to "none"\r\n  if _gfx[7] is 1\r\n    set f to concat(_gfx[3], "")\r\n  end\r\n  set s to "none"\r\n  if _gfx[8] is 1\r\n    set s to concat(_gfx[4], "")\r\n  end\r\n  set out to " fill=\\"" + f + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\""\r\n  return concat(out, "")\r\nend\r\n\r\nto gfx_rect with x y w h radius\r\n  set rx_attr to ""\r\n  if radius > 0\r\n    set rx_attr to " rx=\\"" + str(radius) + "\\""\r\n  end\r\n  return gfx_emit("<rect x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" width=\\"" + str(w) + "\\" height=\\"" + str(h) + "\\"" + rx_attr + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_circle with cx cy r\r\n  return gfx_emit("<circle cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" r=\\"" + str(r) + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_ellipse with cx cy rx ry\r\n  return gfx_emit("<ellipse cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" rx=\\"" + str(rx) + "\\" ry=\\"" + str(ry) + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_line with x1 y1 x2 y2\r\n  set s to concat(_gfx[4], "")\r\n  return gfx_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\" stroke-linecap=\\"round\\"/>")\r\nend\r\n\r\nto gfx_triangle with x1 y1 x2 y2 x3 y3\r\n  set pts to str(x1) + "," + str(y1) + " " + str(x2) + "," + str(y2) + " " + str(x3) + "," + str(y3)\r\n  return gfx_emit("<polygon points=\\"" + pts + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_polygon with points_str\r\n  return gfx_emit("<polygon points=\\"" + concat(points_str, "") + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_text with txt x y\r\n  set f to concat(_gfx[3], "")\r\n  set fn_spec to concat(_gfx[6], "")\r\n  return gfx_emit("<text x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" fill=\\"" + f + "\\" style=\\"font: " + fn_spec + ";\\">" + concat(txt, "") + "</text>")\r\nend\r\n\r\nto gfx_linear_gradient with grad_id x1 y1 x2 y2 c1 c2\r\n  set def to "<linearGradient id=\\"" + concat(grad_id, "") + "\\" x1=\\"" + str(x1) + "%\\" y1=\\"" + str(y1) + "%\\" x2=\\"" + str(x2) + "%\\" y2=\\"" + str(y2) + "%\\"><stop offset=\\"0%\\" stop-color=\\"" + concat(c1, "") + "\\"/><stop offset=\\"100%\\" stop-color=\\"" + concat(c2, "") + "\\"/></linearGradient>"\r\n  set cur to concat(_gfx[10], "")\r\n  set _gfx[10] to cur + def\r\n  set _gfx[3] to "url(#" + concat(grad_id, "") + ")"\r\n  set _gfx[7] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_push_transform with transform_str\r\n  return gfx_emit("<g transform=\\"" + concat(transform_str, "") + "\\">")\r\nend\r\n\r\nto gfx_pop_transform\r\n  return gfx_emit("</g>")\r\nend\r\n\r\nto gfx_translate with dx dy\r\n  return gfx_push_transform("translate(" + str(dx) + "," + str(dy) + ")")\r\nend\r\n\r\nto gfx_rotate with deg\r\n  return gfx_push_transform("rotate(" + str(deg) + ")")\r\nend\r\n\r\nto gfx_scale with sx sy\r\n  return gfx_push_transform("scale(" + str(sx) + "," + str(sy) + ")")\r\nend\r\n\r\nto gfx_cmd_count\r\n  return _gfx[9]\r\nend\r\n\r\nto gfx_to_svg\r\n  set w to str(_gfx[0])\r\n  set h to str(_gfx[1])\r\n  set defs_str to concat(_gfx[10], "")\r\n  set defs_block to ""\r\n  if length(defs_str) > 0\r\n    set defs_block to "<defs>" + defs_str + "</defs>\\n"\r\n  end\r\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"" + w + "\\" height=\\"" + h + "\\" viewBox=\\"0 0 " + w + " " + h + "\\">\\n" + defs_block + concat(_gfx[11], "") + "</svg>"\r\n  return concat(svg, "")\r\nend\r\n\r\n\r\nto gfx_hue_css with h s l\r\n  return "hsl(" + str(h) + ", " + str(s) + "%, " + str(l) + "%)"\r\nend\r\n\r\nto gfx_rgb_css with r g b\r\n  return "rgb(" + str(r) + ", " + str(g) + ", " + str(b) + ")"\r\nend\r\n\r\nto gfx_rgba_css with r g b a\r\n  return "rgba(" + str(r) + ", " + str(g) + ", " + str(b) + ", " + str(a) + ")"\r\nend\r\n\r\nto gfx_hsla_css with h s l a\r\n  return "hsla(" + str(h) + ", " + str(s) + "%, " + str(l) + "%, " + str(a) + ")"\r\nend\r\n\r\nto gfx_radians with deg\r\n  return (deg * 3.141592653589793) / 180.0\r\nend\r\n\r\nto gfx_degrees with rad\r\n  return (rad * 180.0) / 3.141592653589793\r\nend\r\n\r\nto gfx_lerp with a b t\r\n  return a + ((b - a) * t)\r\nend\r\n\r\nto gfx_map_range with val in_min in_max out_min out_max\r\n  return out_min + ((out_max - out_min) * ((val - in_min) / (in_max - in_min)))\r\nend\r\n\r\nto gfx_constrain with val lo hi\r\n  if val < lo\r\n    return lo\r\n  end\r\n  if val > hi\r\n    return hi\r\n  end\r\n  return val\r\nend\r\n\r\nto gfx_dist with x1 y1 x2 y2\r\n  set dx to x2 - x1\r\n  set dy to y2 - y1\r\n  return fsqrt((dx * dx) + (dy * dy))\r\nend\r\n\r\nto gfx_sprite_collides with ax ay aw ah bx by bw bh\r\n  if ax < (bx + bw)\r\n    if (ax + aw) > bx\r\n      if ay < (by + bh)\r\n        if (ay + ah) > by\r\n          return 1\r\n        end\r\n      end\r\n    end\r\n  end\r\n  return 0\r\nend\r\n';
   }
 });
 
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\translator\translator.sdev
-var translator_default;
-var init_translator = __esm({
-  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\translator\\translator.sdev"() {
-    translator_default = '# SDEV Multilingual 26-Language Keyword Translator \u2014 authored in SDEV.\r\n#\r\n# Recognises script families (Cyrillic, Greek, Arabic, Hebrew, Devanagari,\r\n# CJK, Hangul, Thai) and translates localized keywords into canonical SDEV.\r\n\r\nto translator_supported_languages\r\n  set langs to mklist(26)\r\n  set langs[0] to "English"\r\n  set langs[1] to "Bulgarian"\r\n  set langs[2] to "Spanish"\r\n  set langs[3] to "Russian"\r\n  set langs[4] to "German"\r\n  set langs[5] to "French"\r\n  set langs[6] to "Japanese"\r\n  set langs[7] to "Chinese"\r\n  set langs[8] to "Arabic"\r\n  set langs[9] to "Hindi"\r\n  set langs[10] to "Portuguese"\r\n  set langs[11] to "Italian"\r\n  set langs[12] to "Korean"\r\n  set langs[13] to "Turkish"\r\n  set langs[14] to "Polish"\r\n  set langs[15] to "Dutch"\r\n  set langs[16] to "Greek"\r\n  set langs[17] to "Hebrew"\r\n  set langs[18] to "Swedish"\r\n  set langs[19] to "Czech"\r\n  set langs[20] to "Romanian"\r\n  set langs[21] to "Hungarian"\r\n  set langs[22] to "Ukrainian"\r\n  set langs[23] to "Vietnamese"\r\n  set langs[24] to "Thai"\r\n  set langs[25] to "Swahili"\r\n  return langs\r\nend\r\n\r\nto translator_detect_script with src\r\n  set n to length(src)\r\n  set i to 0\r\n  while i < n\r\n    set c to ord(src, i)\r\n    # Cyrillic: 0xD0..0xD1 (208..209)\r\n    if c is 208 or c is 209\r\n      return "Cyrillic"\r\n    end\r\n    # Greek: 0xCE..0xCF (206..207)\r\n    if c is 206 or c is 207\r\n      return "Greek"\r\n    end\r\n    # Arabic: 0xD8..0xDB (216..219)\r\n    if c >= 216 and c <= 219\r\n      return "Arabic"\r\n    end\r\n    # Hebrew: 0xD6..0xD7 (214..215)\r\n    if c is 214 or c is 215\r\n      return "Hebrew"\r\n    end\r\n    # CJK: 0xE4..0xE9 (228..233)\r\n    if c >= 228 and c <= 233\r\n      return "CJK"\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return "Latin"\r\nend\r\n\r\nto translator_canonicalize_word with word\r\n  # Bulgarian / Russian translations\r\n  if word is "\u043D\u0435\u043A\u0430"\r\n    return "set"\r\n  end\r\n  if word is "\u043A\u0430\u0436\u0438"\r\n    return "say"\r\n  end\r\n  if word is "\u0430\u043A\u043E"\r\n    return "if"\r\n  end\r\n  if word is "\u0438\u043D\u0430\u0447\u0435"\r\n    return "else"\r\n  end\r\n  if word is "\u0434\u043E\u043A\u0430\u0442\u043E"\r\n    return "while"\r\n  end\r\n  if word is "\u043A\u0440\u0430\u0439"\r\n    return "end"\r\n  end\r\n\r\n  # Spanish translations\r\n  if word is "definir"\r\n    return "set"\r\n  end\r\n  if word is "decir"\r\n    return "say"\r\n  end\r\n  if word is "si"\r\n    return "if"\r\n  end\r\n  if word is "sino"\r\n    return "else"\r\n  end\r\n  if word is "mientras"\r\n    return "while"\r\n  end\r\n  if word is "fin"\r\n    return "end"\r\n  end\r\n\r\n  # German translations\r\n  if word is "setze"\r\n    return "set"\r\n  end\r\n  if word is "sage"\r\n    return "say"\r\n  end\r\n  if word is "wenn"\r\n    return "if"\r\n  end\r\n  if word is "sonst"\r\n    return "else"\r\n  end\r\n  if word is "solange"\r\n    return "while"\r\n  end\r\n  if word is "ende"\r\n    return "end"\r\n  end\r\n\r\n  return word\r\nend\r\n\r\n\r\nto translator_has_non_ascii with code\r\n  set n to length(code)\r\n  set i to 0\r\n  while i < n\r\n    if ord(code, i) > 127\r\n      return 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return 0\r\nend\r\n\r\nto tr_push_list with xs val\r\n  set n to length(xs)\r\n  set out to mklist(n + 1)\r\n  set i to 0\r\n  while i < n\r\n    set out[i] to xs[i]\r\n    set i to i + 1\r\n  end\r\n  set out[n] to val\r\n  return out\r\nend\r\n\r\nto translator_segment_source with source\r\n  set segs to []\r\n  set n to length(source)\r\n  set i to 0\r\n  set buf to ""\r\n  while i < n\r\n    set c to substr(source, i, 1)\r\n    set is_comment to 0\r\n    if c is "#"\r\n      set is_comment to 1\r\n    else\r\n      if c is "/" and (i + 1) < n\r\n        if substr(source, i + 1, 1) is "/"\r\n          set is_comment to 1\r\n        end\r\n      end\r\n    end\r\n    if is_comment is 1\r\n      if length(buf) > 0\r\n        set segs to tr_push_list(segs, [1, buf])\r\n        set buf to ""\r\n      end\r\n      set stop to i\r\n      while stop < n and substr(source, stop, 1) is not "\\n"\r\n        set stop to stop + 1\r\n      end\r\n      set segs to tr_push_list(segs, [0, substr(source, i, stop - i)])\r\n      set i to stop\r\n    else\r\n      if c is "\\"" or c is "\'" or c is "`"\r\n        if length(buf) > 0\r\n          set segs to tr_push_list(segs, [1, buf])\r\n          set buf to ""\r\n        end\r\n        set quote to c\r\n        set j to i + 1\r\n        set closed to 0\r\n        while j < n and closed is 0\r\n          set cur to substr(source, j, 1)\r\n          if cur is "\\\\"\r\n            set j to j + 2\r\n          else\r\n            if cur is quote\r\n              set closed to 1\r\n            end\r\n            set j to j + 1\r\n          end\r\n        end\r\n        if j > n\r\n          set j to n\r\n        end\r\n        set segs to tr_push_list(segs, [0, substr(source, i, j - i)])\r\n        set i to j\r\n      else\r\n        set buf to buf + c\r\n        set i to i + 1\r\n      end\r\n    end\r\n  end\r\n  if length(buf) > 0\r\n    set segs to tr_push_list(segs, [1, buf])\r\n  end\r\n  return segs\r\nend\r\n\r\nto translator_levenshtein with a b\r\n  if a is b\r\n    return 0\r\n  end\r\n  set al to length(a)\r\n  set bl to length(b)\r\n  if al is 0\r\n    return bl\r\n  end\r\n  if bl is 0\r\n    return al\r\n  end\r\n  set prev to mklist(bl + 1)\r\n  set curr to mklist(bl + 1)\r\n  set j to 0\r\n  while j <= bl\r\n    set prev[j] to j\r\n    set j to j + 1\r\n  end\r\n  set i to 1\r\n  while i <= al\r\n    set curr[0] to i\r\n    set ai to substr(a, i - 1, 1)\r\n    set j to 1\r\n    while j <= bl\r\n      set cost to 1\r\n      if ai is substr(b, j - 1, 1)\r\n        set cost to 0\r\n      end\r\n      set best to curr[j - 1] + 1\r\n      set del_c to prev[j] + 1\r\n      if del_c < best\r\n        set best to del_c\r\n      end\r\n      set sub_c to prev[j - 1] + cost\r\n      if sub_c < best\r\n        set best to sub_c\r\n      end\r\n      set curr[j] to best\r\n      set j to j + 1\r\n    end\r\n    set k to 0\r\n    while k <= bl\r\n      set prev[k] to curr[k]\r\n      set k to k + 1\r\n    end\r\n    set i to i + 1\r\n  end\r\n  return prev[bl]\r\nend\r\n';
+// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\turtle.sdev
+var turtle_default;
+var init_turtle = __esm({
+  "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\stdlib\\v2\\turtle.sdev"() {
+    turtle_default = '# =============================================================================\r\n# SDEV Standard Library: Turtle Vector Graphics Engine (lang/stdlib/v2/turtle.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\n# _turtle state list:\r\n# 0: x (int)\r\n# 1: y (int)\r\n# 2: angle_deg (int)\r\n# 3: pen_down (int 1/0)\r\n# 4: color (str)\r\n# 5: width (int)\r\n# 6: seg_count (int)\r\n# 7: svg_body (str)\r\nset _turtle to mklist(10)\r\nset _turtle[0] to 200\r\nset _turtle[1] to 200\r\nset _turtle[2] to 0\r\nset _turtle[3] to 1\r\nset _turtle[4] to "#38bdf8"\r\nset _turtle[5] to 2\r\nset _turtle[6] to 0\r\nset _turtle[7] to ""\r\n\r\nto turtle_create\r\n  set _turtle[0] to 200\r\n  set _turtle[1] to 200\r\n  set _turtle[2] to 0\r\n  set _turtle[3] to 1\r\n  set _turtle[4] to "#38bdf8"\r\n  set _turtle[5] to 2\r\n  set _turtle[6] to 0\r\n  set _turtle[7] to ""\r\n  return _turtle\r\nend\r\n\r\nto turtle_emit with frag\r\n  set cur to concat(_turtle[7], "")\r\n  set _turtle[7] to cur + frag + "\\n"\r\n  set _turtle[6] to _turtle[6] + 1\r\n  return 0\r\nend\r\n\r\nto turtle_forward with dist\r\n  set x1 to _turtle[0]\r\n  set y1 to _turtle[1]\r\n  set deg to _turtle[2]\r\n  set rad to i2f(deg) * 3.14159265 / 180.0\r\n  set dx to f2i(fround(fcos(rad) * i2f(dist)))\r\n  set dy to f2i(fround(fsin(rad) * i2f(dist)))\r\n  set x2 to x1 + dx\r\n  set y2 to y1 + dy\r\n  set _turtle[0] to x2\r\n  set _turtle[1] to y2\r\n  if _turtle[3] is 1\r\n    set col to concat(_turtle[4], "")\r\n    set w to str(_turtle[5])\r\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\r\n  end\r\n  return 0\r\nend\r\n\r\nto turtle_backward with dist\r\n  return turtle_forward(0 - dist)\r\nend\r\n\r\nto turtle_right with deg\r\n  set _turtle[2] to (_turtle[2] + deg) % 360\r\n  return 0\r\nend\r\n\r\nto turtle_left with deg\r\n  set a to (_turtle[2] - deg) % 360\r\n  if a < 0\r\n    set a to a + 360\r\n  end\r\n  set _turtle[2] to a\r\n  return 0\r\nend\r\n\r\nto turtle_goto with x y\r\n  set x1 to _turtle[0]\r\n  set y1 to _turtle[1]\r\n  set _turtle[0] to x\r\n  set _turtle[1] to y\r\n  if _turtle[3] is 1\r\n    set col to concat(_turtle[4], "")\r\n    set w to str(_turtle[5])\r\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x) + "\\" y2=\\"" + str(y) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\r\n  end\r\n  return 0\r\nend\r\n\r\nto turtle_pen_up\r\n  set _turtle[3] to 0\r\n  return 0\r\nend\r\n\r\nto turtle_pen_down\r\n  set _turtle[3] to 1\r\n  return 0\r\nend\r\n\r\nto turtle_pen_color with col_str\r\n  set _turtle[4] to concat(col_str, "")\r\n  return 0\r\nend\r\n\r\nto turtle_pen_width with w\r\n  set _turtle[5] to w\r\n  return 0\r\nend\r\n\r\nto turtle_heading with deg\r\n  set _turtle[2] to deg % 360\r\n  return 0\r\nend\r\n\r\nto turtle_home\r\n  set _turtle[0] to 200\r\n  set _turtle[1] to 200\r\n  set _turtle[2] to 0\r\n  return 0\r\nend\r\n\r\nto turtle_dot with r\r\n  set col to concat(_turtle[4], "")\r\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"" + col + "\\"/>")\r\nend\r\n\r\nto turtle_circle with r\r\n  set col to concat(_turtle[4], "")\r\n  set w to str(_turtle[5])\r\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"none\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\"/>")\r\nend\r\n\r\nto turtle_x\r\n  return _turtle[0]\r\nend\r\n\r\nto turtle_y\r\n  return _turtle[1]\r\nend\r\n\r\nto turtle_angle\r\n  return _turtle[2]\r\nend\r\n\r\nto turtle_segment_count\r\n  return _turtle[6]\r\nend\r\n\r\nto turtle_to_svg\r\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"400\\" height=\\"400\\" viewBox=\\"0 0 400 400\\">\\n" + concat(_turtle[7], "") + "</svg>"\r\n  return concat(svg, "")\r\nend\r\n\r\n\r\nto turtle_step_pos with x y angle_deg dist\r\n  set rad to (angle_deg * 3.141592653589793) / 180.0\r\n  set nx to x + (fcos(rad) * dist)\r\n  set ny to y + (fsin(rad) * dist)\r\n  return [nx, ny]\r\nend\r\n\r\nto turtle_circle_steps with x y angle_deg radius steps\r\n  set angle_step to 360.0 / steps\r\n  set dist to ((2.0 * 3.141592653589793) * radius) / steps\r\n  set cx to x\r\n  set cy to y\r\n  set ca to angle_deg\r\n  set segs to mklist(steps)\r\n  set i to 0\r\n  while i < steps\r\n    set rad to (ca * 3.141592653589793) / 180.0\r\n    set nx to cx + (fcos(rad) * dist)\r\n    set ny to cy + (fsin(rad) * dist)\r\n    set segs[i] to [cx, cy, nx, ny]\r\n    set cx to nx\r\n    set cy to ny\r\n    set ca to ca + angle_step\r\n    set i to i + 1\r\n  end\r\n  return [cx, cy, ca, segs]\r\nend\r\n';
   }
 });
 
-// src/lang/translator.ts
-function getTranslatorRunner() {
-  if (!translatorRunner) translatorRunner = createSdevModuleRunner(translator_default);
-  return translatorRunner;
+// src/lang/graphics.ts
+function getGfxRunner() {
+  if (!gfxRunner) gfxRunner = createSdevModuleRunner(graphics_default, turtle_default);
+  return gfxRunner;
 }
-function effectiveTable(lang, target = "v1") {
-  const base = KEYWORD_TABLES[lang];
-  if (!base) return null;
-  if (target === "v1") return base;
-  const key = `${lang}|v2`;
-  if (EFFECTIVE_TABLES[key]) return EFFECTIVE_TABLES[key];
-  const table = {};
-  for (const [foreign, canonical] of Object.entries(base)) {
-    table[foreign] = V1_TO_V2[canonical] ?? canonical;
-  }
-  Object.assign(table, V2_EXTRA[lang] ?? {});
-  EFFECTIVE_TABLES[key] = table;
-  return table;
-}
-function buildPhraseNormalizations(lang, target = "v1") {
-  const key = `${lang}|${target}`;
-  if (PHRASE_NORMALIZATIONS[key]) return PHRASE_NORMALIZATIONS[key];
-  const table = effectiveTable(lang, target);
-  if (!table) return PHRASE_NORMALIZATIONS[key] = [];
-  const phrases = Object.keys(table).filter((k) => k.includes("_"));
-  const result = phrases.map((p) => {
-    const spaced = p.replace(/_/g, "\\s+");
-    return [new RegExp(`(^|[^\\p{L}\\p{N}_])${spaced}(?=$|[^\\p{L}\\p{N}_])`, "gu"), `$1${p}`];
+function createGraphicsBuiltins(emit3, getTurtle, setTurtle) {
+  const builtins = /* @__PURE__ */ new Map();
+  let spriteIdCounter = 0;
+  const sprites = /* @__PURE__ */ new Map();
+  builtins.set("canvas", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("canvas() takes 2 arguments (width, height)", line);
+      const w = args[0];
+      const h = args[1];
+      emit3({ type: "canvas", width: w, height: h });
+      return null;
+    }
   });
-  PHRASE_NORMALIZATIONS[key] = result;
-  return result;
-}
-function compileReplacer(lang, target = "v1") {
-  const key = `${lang}|${target}`;
-  if (COMPILED_REPLACERS[key]) return COMPILED_REPLACERS[key];
-  const table = effectiveTable(lang, target);
-  if (!table) return COMPILED_REPLACERS[key] = (s) => s;
-  const entries = Object.entries(table).sort((a, b) => b[0].length - a[0].length);
-  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = entries.map(([k]) => escape(k)).join("|");
-  if (!pattern) return COMPILED_REPLACERS[key] = (s) => s;
-  const re2 = new RegExp(`(^|[^\\p{L}\\p{N}_])(${pattern})(?=$|[^\\p{L}\\p{N}_])`, "gu");
-  const map = new Map(entries);
-  const fn2 = (src, protect) => {
-    return src.replace(re2, (_m, pre, word) => {
-      if (protect?.has(word)) return pre + word;
-      const repl = map.get(word) ?? word;
-      return pre + repl;
-    });
-  };
-  COMPILED_REPLACERS[key] = fn2;
-  return fn2;
-}
-function segmentSource(source) {
-  const raw = getTranslatorRunner().call("translator_segment_source", source);
-  return raw.map(([codeFlag, text2]) => ({ code: codeFlag === 1, text: text2 }));
-}
-function hasNonAscii(code) {
-  return Number(getTranslatorRunner().call("translator_has_non_ascii", code)) === 1;
-}
-function detectLanguage(source, protect) {
-  const codeOnly2 = segmentSource(source).filter((s) => s.code).map((s) => s.text).join("\n");
-  const englishHits = (codeOnly2.match(
-    /\b(forge|be|conjure|ponder|cycle|speak|yield|set|say|if|else|end|while|return|kind|page|endpage|style|styles|theme|window|canvas|board)\b/g
-  ) || []).length;
-  let bestLang = null;
-  let bestScore = 0;
-  const hasWholeWord = (text2, word) => {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/_/g, "[\\s_]+");
-    const re2 = new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, "u");
-    return re2.test(text2);
-  };
-  for (const lang of SUPPORTED_LANGUAGES) {
-    const table = KEYWORD_TABLES[lang];
-    let score = 0;
-    for (const word of Object.keys(table)) {
-      if (protect?.has(word)) continue;
-      if (word.length === 1 && word.charCodeAt(0) < 128) continue;
-      if (codeOnly2.includes(word.split("_")[0]) && hasWholeWord(codeOnly2, word)) {
-        score += hasNonAscii(word) ? 2 : 1;
-      }
+  builtins.set("clear", {
+    type: "builtin",
+    call: (args) => {
+      const color = args[0] ?? "#1a1a2e";
+      emit3({ type: "clear", color });
+      return null;
     }
-    for (const word of Object.keys(V2_EXTRA[lang] ?? {})) {
-      if (protect?.has(word)) continue;
-      if (word.length === 1 && word.charCodeAt(0) < 128) continue;
-      if (codeOnly2.includes(word.split("_")[0]) && hasWholeWord(codeOnly2, word)) {
-        score += hasNonAscii(word) ? 2 : 1;
-      }
+  });
+  builtins.set("background", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("background() takes at least 1 argument", line);
+      emit3({ type: "background", color: stringify(args[0]) });
+      return null;
     }
-    if (score > bestScore) {
-      bestScore = score;
-      bestLang = lang;
+  });
+  builtins.set("fill", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("fill() takes 1 argument (color)", line);
+      emit3({ type: "fill", color: stringify(args[0]) });
+      return null;
     }
-  }
-  if (bestScore >= 2 && bestScore > englishHits) return bestLang;
-  return null;
-}
-function dialectWords(spec) {
-  const words = /* @__PURE__ */ new Set();
-  if (!spec) return words;
-  for (const w of Object.values(spec.names ?? {})) words.add(w);
-  for (const list of Object.values(spec.synonyms ?? {})) for (const w of list) words.add(w);
-  for (const fn2 of spec.constructs?.functions ?? []) words.add(fn2.name);
-  return words;
-}
-function dialectLanguageHint(spec) {
-  for (const tag of spec?.meta?.languages ?? []) {
-    const name = TAG_TO_LANGUAGE[tag.toLowerCase().split("-")[0]];
-    if (name && name !== "English" && KEYWORD_TABLES[name]) return name;
-  }
-  return null;
-}
-function translateSource(source, sourceLanguage = "auto", options = {}) {
-  if (!source) return { translated: source, detectedLanguage: null };
-  const target = options.target ?? "v1";
-  const protect = /* @__PURE__ */ new Set([...options.protect ?? [], ...dialectWords(options.dialect)]);
-  let lang = sourceLanguage;
-  if (lang === "English") return { translated: source, detectedLanguage: "English" };
-  if (!lang || lang === "auto") {
-    lang = detectLanguage(source, protect) ?? dialectLanguageHint(options.dialect);
-    if (!lang) return { translated: source, detectedLanguage: null };
-  }
-  if (!KEYWORD_TABLES[lang]) {
-    return { translated: source, detectedLanguage: null };
-  }
-  const replace = compileReplacer(lang, target);
-  const phraseNorms = buildPhraseNormalizations(lang, target);
-  const fuzzy = compileFuzzyReplacer(lang, target);
-  const segments = segmentSource(source);
-  const translated = segments.map((seg) => {
-    if (!seg.code) return seg.text;
-    let t = seg.text;
-    for (const [re2, repl] of phraseNorms) {
-      t = t.replace(re2, repl);
+  });
+  builtins.set("noFill", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "noFill" });
+      return null;
     }
-    t = replace(t, protect);
-    t = fuzzy(t, protect);
-    if (target === "v1") {
-      t = t.replace(/\bforge(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*\()/gu, "conjure$1");
-    } else {
-      t = t.replace(/\bset(\s+(?:[\p{L}_][\p{L}\p{N}_]*\s*\.\s*)*[\p{L}_][\p{L}\p{N}_]*\s*(?:\(|with\b))/gu, "to$1");
-      t = t.split("\n").map(
-        (line) => /^\s*(if|while)\b/.test(line) ? line.replace(/(^\s*(?:if|while)\b[^\n]*?)\s+to\s+/, "$1 is ") : line
-      ).join("\n");
+  });
+  builtins.set("stroke", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1 || args.length > 2) throw new SdevError("stroke() takes 1-2 arguments (color, width?)", line);
+      emit3({ type: "stroke", color: stringify(args[0]), width: args[1] ?? 1 });
+      return null;
     }
-    return t;
-  }).join("");
-  return { translated, detectedLanguage: lang };
-}
-function levenshtein(a, b) {
-  return Number(getTranslatorRunner().call("translator_levenshtein", a, b));
-}
-function compileFuzzyReplacer(lang, target = "v1") {
-  const cacheKey = `${lang}|${target}`;
-  if (FUZZY_REPLACERS[cacheKey]) return FUZZY_REPLACERS[cacheKey];
-  const table = effectiveTable(lang, target);
-  if (!table) return FUZZY_REPLACERS[cacheKey] = (s) => s;
-  const keys = Object.keys(table).filter((k) => !k.includes("_") && [...k].length >= 3);
-  const keysByFirstChar = /* @__PURE__ */ new Map();
-  for (const k of keys) {
-    const c = k[0].toLowerCase();
-    if (!keysByFirstChar.has(c)) keysByFirstChar.set(c, []);
-    keysByFirstChar.get(c).push(k);
-  }
-  const wordRe = /[\p{L}][\p{L}\p{N}_]*/gu;
-  const IDENT_INTRODUCERS = /* @__PURE__ */ new Set([
-    "forge",
-    "be",
-    "new",
-    "essence",
-    "conjure",
-    "extend",
-    "summon",
-    "within",
-    // v2 surface equivalents
-    "set",
-    "to",
-    "kind",
-    "use",
-    "in",
-    "extends",
-    "has",
-    "does"
-  ]);
-  const fn2 = (src, protect) => {
-    let prevToken = "";
-    return src.replace(wordRe, (word, offset) => {
-      if (/^[\x00-\x7F]+$/.test(word)) {
-        prevToken = word.toLowerCase();
-        return word;
+  });
+  builtins.set("noStroke", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "noStroke" });
+      return null;
+    }
+  });
+  builtins.set("lineWidth", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("lineWidth() takes 1 argument", line);
+      emit3({ type: "lineWidth", width: args[0] });
+      return null;
+    }
+  });
+  builtins.set("lineCap", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("lineCap() takes 1 argument (round, square, butt)", line);
+      emit3({ type: "lineCap", cap: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("lineJoin", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("lineJoin() takes 1 argument (round, bevel, miter)", line);
+      emit3({ type: "lineJoin", join: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("alpha", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("alpha() takes 1 argument (0-1)", line);
+      emit3({ type: "alpha", value: args[0] });
+      return null;
+    }
+  });
+  builtins.set("shadow", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 3) throw new SdevError("shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?)", line);
+      emit3({
+        type: "shadow",
+        color: stringify(args[0]),
+        blur: args[1],
+        offsetX: args[2],
+        offsetY: args[3] ?? args[2]
+      });
+      return null;
+    }
+  });
+  builtins.set("noShadow", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "noShadow" });
+      return null;
+    }
+  });
+  builtins.set("rect", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("rect() takes 4-5 arguments (x, y, w, h, radius?)", line);
+      emit3({ type: "rect", x: args[0], y: args[1], w: args[2], h: args[3], radius: args[4] ?? 0 });
+      return null;
+    }
+  });
+  builtins.set("circle", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("circle() takes 3 arguments (x, y, radius)", line);
+      emit3({ type: "circle", x: args[0], y: args[1], r: args[2] });
+      return null;
+    }
+  });
+  builtins.set("ellipse", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?)", line);
+      emit3({ type: "ellipse", x: args[0], y: args[1], rx: args[2], ry: args[3], rotation: args[4] ?? 0 });
+      return null;
+    }
+  });
+  builtins.set("arc", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 5) throw new SdevError("arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?)", line);
+      emit3({
+        type: "arc",
+        x: args[0],
+        y: args[1],
+        r: args[2],
+        start: args[3],
+        end: args[4],
+        ccw: args[5] ?? false
+      });
+      return null;
+    }
+  });
+  builtins.set("line", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("line() takes 4 arguments (x1, y1, x2, y2)", line);
+      emit3({ type: "line", x1: args[0], y1: args[1], x2: args[2], y2: args[3] });
+      return null;
+    }
+  });
+  builtins.set("point", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 2) throw new SdevError("point() takes 2-3 arguments (x, y, size?)", line);
+      emit3({ type: "point", x: args[0], y: args[1], size: args[2] ?? 1 });
+      return null;
+    }
+  });
+  builtins.set("triangle", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 6) throw new SdevError("triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3)", line);
+      emit3({ type: "triangle", x1: args[0], y1: args[1], x2: args[2], y2: args[3], x3: args[4], y3: args[5] });
+      return null;
+    }
+  });
+  builtins.set("polygon", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("polygon() takes points [[x,y], ...]", line);
+      const points = args[0];
+      if (!Array.isArray(points)) throw new SdevError("polygon() argument must be a list of points", line);
+      emit3({ type: "polygon", points });
+      return null;
+    }
+  });
+  builtins.set("star", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?)", line);
+      emit3({
+        type: "star",
+        x: args[0],
+        y: args[1],
+        outer: args[2],
+        inner: args[3],
+        points: args[4] ?? 5
+      });
+      return null;
+    }
+  });
+  builtins.set("heart", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("heart() takes 3 arguments (x, y, size)", line);
+      emit3({ type: "heart", x: args[0], y: args[1], size: args[2] });
+      return null;
+    }
+  });
+  builtins.set("text", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 3) throw new SdevError("text() takes 3-4 arguments (str, x, y, size?)", line);
+      emit3({ type: "text", text: stringify(args[0]), x: args[1], y: args[2], size: args[3] ?? 16 });
+      return null;
+    }
+  });
+  builtins.set("textAlign", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("textAlign() takes 1-2 arguments (horizontal, vertical?)", line);
+      emit3({ type: "textAlign", horizontal: stringify(args[0]), vertical: args[1] ? stringify(args[1]) : "alphabetic" });
+      return null;
+    }
+  });
+  builtins.set("font", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("font() takes 1-2 arguments (fontFamily, style?)", line);
+      emit3({ type: "font", family: stringify(args[0]), style: args[1] ? stringify(args[1]) : "normal" });
+      return null;
+    }
+  });
+  builtins.set("linearGradient", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 5) throw new SdevError("linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops)", line);
+      const stops = args.slice(4);
+      emit3({ type: "linearGradient", x1: args[0], y1: args[1], x2: args[2], y2: args[3], stops });
+      return null;
+    }
+  });
+  builtins.set("radialGradient", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 7) throw new SdevError("radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops)", line);
+      const stops = args.slice(6);
+      emit3({ type: "radialGradient", x1: args[0], y1: args[1], r1: args[2], x2: args[3], y2: args[4], r2: args[5], stops });
+      return null;
+    }
+  });
+  builtins.set("translate", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("translate() takes 2 arguments (x, y)", line);
+      emit3({ type: "translate", x: args[0], y: args[1] });
+      return null;
+    }
+  });
+  builtins.set("rotate", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("rotate() takes 1 argument (angle in radians)", line);
+      emit3({ type: "rotate", angle: args[0] });
+      return null;
+    }
+  });
+  builtins.set("scale", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("scale() takes 1-2 arguments (x, y?)", line);
+      emit3({ type: "scale", x: args[0], y: args[1] ?? args[0] });
+      return null;
+    }
+  });
+  builtins.set("save", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "save" });
+      return null;
+    }
+  });
+  builtins.set("restore", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "restore" });
+      return null;
+    }
+  });
+  builtins.set("resetTransform", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "resetTransform" });
+      return null;
+    }
+  });
+  builtins.set("beginPath", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "beginPath" });
+      return null;
+    }
+  });
+  builtins.set("closePath", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "closePath" });
+      return null;
+    }
+  });
+  builtins.set("moveTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("moveTo() takes 2 arguments (x, y)", line);
+      emit3({ type: "moveTo", x: args[0], y: args[1] });
+      return null;
+    }
+  });
+  builtins.set("lineTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("lineTo() takes 2 arguments (x, y)", line);
+      emit3({ type: "lineTo", x: args[0], y: args[1] });
+      return null;
+    }
+  });
+  builtins.set("bezierTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 6) throw new SdevError("bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y)", line);
+      emit3({ type: "bezierTo", cp1x: args[0], cp1y: args[1], cp2x: args[2], cp2y: args[3], x: args[4], y: args[5] });
+      return null;
+    }
+  });
+  builtins.set("quadraticTo", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("quadraticTo() takes 4 arguments (cpx, cpy, x, y)", line);
+      emit3({ type: "quadraticTo", cpx: args[0], cpy: args[1], x: args[2], y: args[3] });
+      return null;
+    }
+  });
+  builtins.set("fillPath", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "fillPath" });
+      return null;
+    }
+  });
+  builtins.set("strokePath", {
+    type: "builtin",
+    call: () => {
+      emit3({ type: "strokePath" });
+      return null;
+    }
+  });
+  builtins.set("createSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 4) throw new SdevError("createSprite() takes 4-5 arguments (x, y, width, height, color?)", line);
+      const id = spriteIdCounter++;
+      const sprite = {
+        id,
+        x: args[0],
+        y: args[1],
+        width: args[2],
+        height: args[3],
+        color: args[4] ? stringify(args[4]) : "#ffffff",
+        rotation: 0,
+        scale: 1,
+        visible: true,
+        velocityX: 0,
+        velocityY: 0
+      };
+      sprites.set(id, sprite);
+      emit3({ type: "createSprite", sprite });
+      return sprite;
+    }
+  });
+  builtins.set("drawSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("drawSprite() takes 1 argument (sprite)", line);
+      const sprite = args[0];
+      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
+      emit3({ type: "drawSprite", sprite });
+      return null;
+    }
+  });
+  builtins.set("moveSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("moveSprite() takes 3 arguments (sprite, dx, dy)", line);
+      const sprite = args[0];
+      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
+      sprite.x += args[1];
+      sprite.y += args[2];
+      return sprite;
+    }
+  });
+  builtins.set("updateSprite", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("updateSprite() takes 1 argument (sprite)", line);
+      const sprite = args[0];
+      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
+      sprite.x += sprite.velocityX;
+      sprite.y += sprite.velocityY;
+      return sprite;
+    }
+  });
+  builtins.set("spriteCollides", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("spriteCollides() takes 2 arguments (sprite1, sprite2)", line);
+      const a = args[0];
+      const b = args[1];
+      if (!a || !b) throw new SdevError("Invalid sprites", line);
+      return Boolean(getGfxRunner().call("gfx_sprite_collides", a.x, a.y, a.width, a.height, b.x, b.y, b.width, b.height));
+    }
+  });
+  builtins.set("turtle", {
+    type: "builtin",
+    call: () => {
+      setTurtle({ x: 200, y: 200, angle: -90, penDown: true, color: "#00ff88", width: 2 });
+      emit3({ type: "turtle_reset" });
+      return null;
+    }
+  });
+  builtins.set("forward", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("forward() takes 1 argument (distance)", line);
+      const t = getTurtle();
+      const [newX, newY] = getGfxRunner().call("turtle_step_pos", t.x, t.y, t.angle, args[0]);
+      if (t.penDown) {
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
-      if (protect?.has(word)) {
-        prevToken = word.toLowerCase();
-        return word;
+      setTurtle({ x: newX, y: newY });
+      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      return null;
+    }
+  });
+  builtins.set("backward", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("backward() takes 1 argument (distance)", line);
+      const dist = -args[0];
+      const t = getTurtle();
+      const [newX, newY] = getGfxRunner().call("turtle_step_pos", t.x, t.y, t.angle, dist);
+      if (t.penDown) {
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
-      const lower = word.toLowerCase();
-      if (table[lower]) {
-        const out = table[lower];
-        prevToken = out;
-        return out;
+      setTurtle({ x: newX, y: newY });
+      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      return null;
+    }
+  });
+  builtins.set("left", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("left() takes 1 argument (degrees)", line);
+      const t = getTurtle();
+      const newAngle = t.angle - args[0];
+      setTurtle({ angle: newAngle });
+      emit3({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
+      return null;
+    }
+  });
+  builtins.set("right", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("right() takes 1 argument (degrees)", line);
+      const t = getTurtle();
+      const newAngle = t.angle + args[0];
+      setTurtle({ angle: newAngle });
+      emit3({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
+      return null;
+    }
+  });
+  builtins.set("penup", {
+    type: "builtin",
+    call: () => {
+      setTurtle({ penDown: false });
+      return null;
+    }
+  });
+  builtins.set("pendown", {
+    type: "builtin",
+    call: () => {
+      setTurtle({ penDown: true });
+      return null;
+    }
+  });
+  builtins.set("pencolor", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("pencolor() takes 1 argument (color)", line);
+      setTurtle({ color: stringify(args[0]) });
+      return null;
+    }
+  });
+  builtins.set("penwidth", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("penwidth() takes 1 argument (width)", line);
+      setTurtle({ width: args[0] });
+      return null;
+    }
+  });
+  builtins.set("goto", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 2) throw new SdevError("goto() takes 2 arguments (x, y)", line);
+      const t = getTurtle();
+      const newX = args[0];
+      const newY = args[1];
+      if (t.penDown) {
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
       }
-      const prevChar = offset > 0 ? src[offset - 1] : "";
-      if (prevChar === "." || IDENT_INTRODUCERS.has(prevToken)) {
-        prevToken = lower;
-        return word;
+      setTurtle({ x: newX, y: newY });
+      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
+      return null;
+    }
+  });
+  builtins.set("home", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      if (t.penDown) {
+        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: 200, y2: 200, color: t.color, width: t.width });
       }
-      if ([...lower].length < 4) {
-        prevToken = lower;
-        return word;
-      }
-      const threshold = [...lower].length >= 6 ? 2 : 1;
-      const candidates2 = keysByFirstChar.get(lower[0]) ?? [];
-      let best = null;
-      for (const k of candidates2) {
-        if (Math.abs(k.length - lower.length) > threshold) continue;
-        const d = levenshtein(lower, k);
-        if (d <= threshold && (!best || d < best.dist)) {
-          best = { key: k, dist: d };
-          if (d === 0) break;
+      setTurtle({ x: 200, y: 200, angle: -90 });
+      emit3({ type: "turtle_move", x: 200, y: 200, angle: -90 });
+      return null;
+    }
+  });
+  builtins.set("setheading", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("setheading() takes 1 argument (angle)", line);
+      const t = getTurtle();
+      const angle = args[0] - 90;
+      setTurtle({ angle });
+      emit3({ type: "turtle_move", x: t.x, y: t.y, angle });
+      return null;
+    }
+  });
+  builtins.set("heading", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      return (t.angle + 90) % 360;
+    }
+  });
+  builtins.set("pos", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      return [t.x, t.y];
+    }
+  });
+  builtins.set("turtleCircle", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1) throw new SdevError("turtleCircle() takes 1-2 arguments (radius, steps?)", line);
+      const radius = args[0];
+      const steps = args[1] ?? 36;
+      const t = getTurtle();
+      const [endX, endY, endAngle, segs] = getGfxRunner().call(
+        "turtle_circle_steps",
+        t.x,
+        t.y,
+        t.angle,
+        radius,
+        steps
+      );
+      if (t.penDown) {
+        for (const [x1, y1, x2, y2] of segs) {
+          emit3({ type: "turtle_line", x1, y1, x2, y2, color: t.color, width: t.width });
         }
       }
-      if (best) {
-        const out = table[best.key];
-        prevToken = out;
-        return out;
-      }
-      prevToken = lower;
-      return word;
-    });
-  };
-  FUZZY_REPLACERS[cacheKey] = fn2;
-  return fn2;
+      setTurtle({ x: endX, y: endY, angle: endAngle });
+      emit3({ type: "turtle_move", x: endX, y: endY, angle: endAngle });
+      return null;
+    }
+  });
+  builtins.set("dot", {
+    type: "builtin",
+    call: (args, line) => {
+      const size = args[0] ?? 5;
+      const color = args[1] ? stringify(args[1]) : getTurtle().color;
+      const t = getTurtle();
+      emit3({ type: "turtle_dot", x: t.x, y: t.y, size, color });
+      return null;
+    }
+  });
+  builtins.set("stamp", {
+    type: "builtin",
+    call: () => {
+      const t = getTurtle();
+      emit3({ type: "turtle_stamp", x: t.x, y: t.y, angle: t.angle, color: t.color });
+      return null;
+    }
+  });
+  builtins.set("hue", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length < 1 || args.length > 3) throw new SdevError("hue() takes 1-3 arguments (h, s?, l?)", line);
+      return getGfxRunner().callStr("gfx_hue_css", args[0], args[1] ?? 100, args[2] ?? 50);
+    }
+  });
+  builtins.set("rgb", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("rgb() takes 3 arguments (r, g, b)", line);
+      return getGfxRunner().callStr("gfx_rgb_css", args[0], args[1], args[2]);
+    }
+  });
+  builtins.set("rgba", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("rgba() takes 4 arguments (r, g, b, a)", line);
+      return getGfxRunner().callStr("gfx_rgba_css", args[0], args[1], args[2], args[3]);
+    }
+  });
+  builtins.set("hsla", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("hsla() takes 4 arguments (h, s, l, a)", line);
+      return getGfxRunner().callStr("gfx_hsla_css", args[0], args[1], args[2], args[3]);
+    }
+  });
+  builtins.set("randomColor", {
+    type: "builtin",
+    call: () => {
+      const h = Math.floor(Math.random() * 360);
+      return getGfxRunner().callStr("gfx_hue_css", h, 70, 60);
+    }
+  });
+  builtins.set("radians", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("radians() takes 1 argument (degrees)", line);
+      return getGfxRunner().call("gfx_radians", args[0]);
+    }
+  });
+  builtins.set("degrees", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 1) throw new SdevError("degrees() takes 1 argument (radians)", line);
+      return getGfxRunner().call("gfx_degrees", args[0]);
+    }
+  });
+  builtins.set("lerp", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("lerp() takes 3 arguments (a, b, t)", line);
+      return getGfxRunner().call("gfx_lerp", args[0], args[1], args[2]);
+    }
+  });
+  builtins.set("mapRange", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 5) throw new SdevError("mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax)", line);
+      return getGfxRunner().call("gfx_map_range", args[0], args[1], args[2], args[3], args[4]);
+    }
+  });
+  builtins.set("constrain", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 3) throw new SdevError("constrain() takes 3 arguments (value, min, max)", line);
+      return getGfxRunner().call("gfx_constrain", args[0], args[1], args[2]);
+    }
+  });
+  builtins.set("dist", {
+    type: "builtin",
+    call: (args, line) => {
+      if (args.length !== 4) throw new SdevError("dist() takes 4 arguments (x1, y1, x2, y2)", line);
+      return getGfxRunner().call("gfx_dist", args[0], args[1], args[2], args[3]);
+    }
+  });
+  return builtins;
 }
-var translatorRunner, KEYWORD_TABLES, SUPPORTED_LANGUAGES, EFFECTIVE_TABLES, PHRASE_NORMALIZATIONS, COMPILED_REPLACERS, FUZZY_REPLACERS;
-var init_translator2 = __esm({
-  "src/lang/translator.ts"() {
-    init_translator_v2();
-    init_sdev_module();
-    init_translator();
-    translatorRunner = null;
-    KEYWORD_TABLES = {
-      Spanish: {
-        "forjar": "forge",
-        "ser": "be",
-        "conjurar": "conjure",
-        "rendir": "yield",
-        "ponderar": "ponder",
-        "sino": "otherwise",
-        "ciclo": "cycle",
-        "iterar": "iterate",
-        "trav\xE9s": "through",
-        "por": "through",
-        "dentro": "within",
-        "lanzar": "yeet",
-        "saltar": "skip",
-        "hablar": "speak",
-        "mostrar": "speak",
-        "decir": "speak",
-        "esencia": "essence",
-        "extender": "extend",
-        "propio": "self",
-        "padre": "super",
-        "nuevo": "new",
-        "intento": "attempt",
-        "intentar": "attempt",
-        "rescatar": "rescue",
-        "tambi\xE9n": "also",
-        "cualquiera": "either",
-        "o": "either",
-        "no_es": "isnt",
-        "igual": "equals",
-        "difiere": "differs",
-        "s\xED": "yep",
-        "no": "nope",
-        "vac\xEDo": "void",
-        "invocar": "summon",
-        "as\xEDncrono": "async",
-        "esperar": "await",
-        "generar": "spawn",
-        "verdadero": "yep",
-        "falso": "nope",
-        "nulo": "void",
-        "clase": "essence",
-        "retornar": "yield",
-        "devolver": "yield",
-        "mientras": "cycle",
-        "para": "iterate",
-        "si": "ponder",
-        "romper": "yeet",
-        "continuar": "skip",
-        "y": "also",
-        "importar": "summon",
-        "funci\xF3n": "conjure",
-        "crear": "new"
-      },
-      French: {
-        "forger": "forge",
-        "\xEAtre": "be",
-        "est": "be",
-        "\xE9voquer": "conjure",
-        "rendre": "yield",
-        "retourner": "yield",
-        "r\xE9fl\xE9chir": "ponder",
-        "si": "ponder",
-        "sinon": "otherwise",
-        "boucle": "cycle",
-        "tantque": "cycle",
-        "it\xE9rer": "iterate",
-        "pour": "iterate",
-        "\xE0_travers": "through",
-        "dans": "within",
-        "jeter": "yeet",
-        "sauter": "skip",
-        "parler": "speak",
-        "dire": "speak",
-        "afficher": "speak",
-        "classe": "essence",
-        "\xE9tendre": "extend",
-        "soi": "self",
-        "parent": "super",
-        "nouveau": "new",
-        "essayer": "attempt",
-        "tenter": "attempt",
-        "secourir": "rescue",
-        "attraper": "rescue",
-        "aussi": "also",
-        "et": "also",
-        "soit": "either",
-        "ou": "either",
-        "nest_pas": "isnt",
-        "pas": "isnt",
-        "\xE9gal": "equals",
-        "diff\xE8re": "differs",
-        "oui": "yep",
-        "vrai": "yep",
-        "non": "nope",
-        "faux": "nope",
-        "vide": "void",
-        "nul": "void",
-        "invoquer": "summon",
-        "importer": "summon",
-        "asynchrone": "async",
-        "attendre": "await",
-        "engendrer": "spawn",
-        "fonction": "conjure",
-        "cr\xE9er": "new"
-      },
-      German: {
-        "schmieden": "forge",
-        "erstellen": "forge",
-        "sein": "be",
-        "ist": "be",
-        "beschw\xF6ren": "conjure",
-        "funktion": "conjure",
-        "ergeben": "yield",
-        "zur\xFCckgeben": "yield",
-        "\xFCberlegen": "ponder",
-        "wenn": "ponder",
-        "sonst": "otherwise",
-        "ansonsten": "otherwise",
-        "schleife": "cycle",
-        "solange": "cycle",
-        "iterieren": "iterate",
-        "f\xFCr": "iterate",
-        "durch": "through",
-        "innerhalb": "within",
-        "werfen": "yeet",
-        "\xFCberspringen": "skip",
-        "sprechen": "speak",
-        "sagen": "speak",
-        "ausgeben": "speak",
-        "zeigen": "speak",
-        "wesen": "essence",
-        "klasse": "essence",
-        "erweitern": "extend",
-        "selbst": "self",
-        "eltern": "super",
-        "neu": "new",
-        "versuch": "attempt",
-        "versuchen": "attempt",
-        "retten": "rescue",
-        "fangen": "rescue",
-        "auch": "also",
-        "und": "also",
-        "oder": "either",
-        "nicht": "isnt",
-        "gleich": "equals",
-        "unterscheidet": "differs",
-        "ja": "yep",
-        "wahr": "yep",
-        "nein": "nope",
-        "falsch": "nope",
-        "leer": "void",
-        "null": "void",
-        "herbeirufen": "summon",
-        "importieren": "summon",
-        "asynchron": "async",
-        "warten": "await",
-        "erzeugen": "spawn"
-      },
-      Portuguese: {
-        "forjar": "forge",
-        "criar": "forge",
-        "ser": "be",
-        "\xE9": "be",
-        "conjurar": "conjure",
-        "fun\xE7\xE3o": "conjure",
-        "render": "yield",
-        "retornar": "yield",
-        "devolver": "yield",
-        "ponderar": "ponder",
-        "se": "ponder",
-        "sen\xE3o": "otherwise",
-        "ciclo": "cycle",
-        "enquanto": "cycle",
-        "iterar": "iterate",
-        "para": "iterate",
-        "atrav\xE9s": "through",
-        "dentro": "within",
-        "em": "within",
-        "lan\xE7ar": "yeet",
-        "pular": "skip",
-        "falar": "speak",
-        "mostrar": "speak",
-        "exibir": "speak",
-        "dizer": "speak",
-        "ess\xEAncia": "essence",
-        "classe": "essence",
-        "estender": "extend",
-        "pr\xF3prio": "self",
-        "pai": "super",
-        "novo": "new",
-        "tentar": "attempt",
-        "resgatar": "rescue",
-        "capturar": "rescue",
-        "tamb\xE9m": "also",
-        "e": "also",
-        "ou": "either",
-        "n\xE3o_\xE9": "isnt",
-        "igual": "equals",
-        "difere": "differs",
-        "sim": "yep",
-        "verdadeiro": "yep",
-        "n\xE3o": "nope",
-        "falso": "nope",
-        "vazio": "void",
-        "nulo": "void",
-        "invocar": "summon",
-        "importar": "summon",
-        "ass\xEDncrono": "async",
-        "aguardar": "await",
-        "gerar": "spawn"
-      },
-      Italian: {
-        "forgiare": "forge",
-        "creare": "forge",
-        "essere": "be",
-        "\xE8": "be",
-        "evocare": "conjure",
-        "funzione": "conjure",
-        "cedere": "yield",
-        "restituire": "yield",
-        "ritornare": "yield",
-        "ponderare": "ponder",
-        "se": "ponder",
-        "altrimenti": "otherwise",
-        "ciclo": "cycle",
-        "mentre": "cycle",
-        "iterare": "iterate",
-        "per": "iterate",
-        "attraverso": "through",
-        "dentro": "within",
-        "in": "within",
-        "lanciare": "yeet",
-        "saltare": "skip",
-        "parlare": "speak",
-        "mostrare": "speak",
-        "dire": "speak",
-        "stampare": "speak",
-        "essenza": "essence",
-        "classe": "essence",
-        "estendere": "extend",
-        "s\xE9": "self",
-        "genitore": "super",
-        "nuovo": "new",
-        "tentare": "attempt",
-        "provare": "attempt",
-        "salvare": "rescue",
-        "catturare": "rescue",
-        "anche": "also",
-        "e": "also",
-        "oppure": "either",
-        "o": "either",
-        "non_\xE8": "isnt",
-        "uguale": "equals",
-        "diverso": "differs",
-        "s\xEC": "yep",
-        "vero": "yep",
-        "no": "nope",
-        "falso": "nope",
-        "vuoto": "void",
-        "nullo": "void",
-        "invocare": "summon",
-        "importare": "summon",
-        "asincrono": "async",
-        "attendere": "await",
-        "generare": "spawn"
-      },
-      Dutch: {
-        "smeden": "forge",
-        "maken": "forge",
-        "zijn": "be",
-        "is": "be",
-        "oproepen": "conjure",
-        "functie": "conjure",
-        "opleveren": "yield",
-        "teruggeven": "yield",
-        "overdenken": "ponder",
-        "als": "ponder",
-        "anders": "otherwise",
-        "lus": "cycle",
-        "zolang": "cycle",
-        "itereren": "iterate",
-        "voor": "iterate",
-        "door": "through",
-        "binnen": "within",
-        "in": "within",
-        "gooien": "yeet",
-        "overslaan": "skip",
-        "spreken": "speak",
-        "zeggen": "speak",
-        "tonen": "speak",
-        "wezen": "essence",
-        "klasse": "essence",
-        "uitbreiden": "extend",
-        "zelf": "self",
-        "ouder": "super",
-        "nieuw": "new",
-        "proberen": "attempt",
-        "redden": "rescue",
-        "vangen": "rescue",
-        "ook": "also",
-        "en": "also",
-        "of": "either",
-        "niet": "isnt",
-        "gelijk": "equals",
-        "verschilt": "differs",
-        "ja": "yep",
-        "waar": "yep",
-        "nee": "nope",
-        "onwaar": "nope",
-        "leeg": "void",
-        "nul": "void",
-        "aanroepen": "summon",
-        "importeren": "summon",
-        "asynchroon": "async",
-        "wachten": "await",
-        "voortbrengen": "spawn"
-      },
-      Russian: {
-        "\u043A\u043E\u0432\u0430\u0442\u044C": "forge",
-        "\u0441\u043E\u0437\u0434\u0430\u0442\u044C": "forge",
-        "\u0431\u044B\u0442\u044C": "be",
-        "\u0435\u0441\u0442\u044C": "be",
-        "\u0432\u044B\u0437\u0432\u0430\u0442\u044C": "conjure",
-        "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
-        "\u0432\u0435\u0440\u043D\u0443\u0442\u044C": "yield",
-        "\u043E\u0431\u0434\u0443\u043C\u0430\u0442\u044C": "ponder",
-        "\u0435\u0441\u043B\u0438": "ponder",
-        "\u0438\u043D\u0430\u0447\u0435": "otherwise",
-        "\u0446\u0438\u043A\u043B": "cycle",
-        "\u043F\u043E\u043A\u0430": "cycle",
-        "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C": "iterate",
-        "\u0434\u043B\u044F": "iterate",
-        "\u0447\u0435\u0440\u0435\u0437": "through",
-        "\u0432\u043D\u0443\u0442\u0440\u0438": "within",
-        "\u0432": "within",
-        "\u0431\u0440\u043E\u0441\u0438\u0442\u044C": "yeet",
-        "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C": "skip",
-        "\u0441\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
-        "\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C": "speak",
-        "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C": "speak",
-        "\u0432\u044B\u0432\u0435\u0441\u0442\u0438": "speak",
-        "\u043F\u0435\u0447\u0430\u0442\u044C": "speak",
-        "\u0441\u0443\u0449\u043D\u043E\u0441\u0442\u044C": "essence",
-        "\u043A\u043B\u0430\u0441\u0441": "essence",
-        "\u0440\u0430\u0441\u0448\u0438\u0440\u0438\u0442\u044C": "extend",
-        "\u0441\u0435\u0431\u044F": "self",
-        "\u043F\u0440\u0435\u0434\u043E\u043A": "super",
-        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044C": "super",
-        "\u043D\u043E\u0432\u044B\u0439": "new",
-        "\u043F\u043E\u043F\u044B\u0442\u043A\u0430": "attempt",
-        "\u043F\u043E\u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C": "attempt",
-        "\u0441\u043F\u0430\u0441\u0442\u0438": "rescue",
-        "\u043F\u043E\u0439\u043C\u0430\u0442\u044C": "rescue",
-        "\u0442\u0430\u043A\u0436\u0435": "also",
-        "\u0438": "also",
-        "\u0438\u043B\u0438": "either",
-        "\u043D\u0435": "isnt",
-        "\u0440\u0430\u0432\u043D\u043E": "equals",
-        "\u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F": "differs",
-        "\u0434\u0430": "yep",
-        "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
-        "\u043D\u0435\u0442": "nope",
-        "\u043B\u043E\u0436\u044C": "nope",
-        "\u043F\u0443\u0441\u0442\u043E": "void",
-        "\u043D\u0438\u0447\u0442\u043E": "void",
-        "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u044C": "summon",
-        "\u0438\u043C\u043F\u043E\u0440\u0442": "summon",
-        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u044B\u0439": "async",
-        "\u0436\u0434\u0430\u0442\u044C": "await",
-        "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u044C": "spawn"
-      },
-      Chinese: {
-        "\u94F8\u9020": "forge",
-        "\u521B\u5EFA": "forge",
-        "\u662F": "be",
-        "\u8D4B\u503C": "be",
-        "\u53EC\u5524": "conjure",
-        "\u51FD\u6570": "conjure",
-        "\u4EA7\u51FA": "yield",
-        "\u8FD4\u56DE": "yield",
-        "\u601D\u8003": "ponder",
-        "\u5982\u679C": "ponder",
-        "\u5426\u5219": "otherwise",
-        "\u5FAA\u73AF": "cycle",
-        "\u5F53": "cycle",
-        "\u904D\u5386": "iterate",
-        "\u4E3A": "iterate",
-        "\u901A\u8FC7": "through",
-        "\u5728\u5185": "within",
-        "\u5728": "within",
-        "\u629B\u51FA": "yeet",
-        "\u8DF3\u8FC7": "skip",
-        "\u8BF4": "speak",
-        "\u8F93\u51FA": "speak",
-        "\u6253\u5370": "speak",
-        "\u663E\u793A": "speak",
-        "\u672C\u8D28": "essence",
-        "\u7C7B": "essence",
-        "\u6269\u5C55": "extend",
-        "\u81EA\u5DF1": "self",
-        "\u7236\u7C7B": "super",
-        "\u65B0": "new",
-        "\u5C1D\u8BD5": "attempt",
-        "\u62EF\u6551": "rescue",
-        "\u6355\u83B7": "rescue",
-        "\u5E76\u4E14": "also",
-        "\u548C": "also",
-        "\u6216\u8005": "either",
-        "\u6216": "either",
-        "\u4E0D\u662F": "isnt",
-        "\u7B49\u4E8E": "equals",
-        "\u4E0D\u540C": "differs",
-        "\u662F\u7684": "yep",
-        "\u771F": "yep",
-        "\u4E0D": "nope",
-        "\u5047": "nope",
-        "\u7A7A": "void",
-        "\u65E0": "void",
-        "\u5BFC\u5165": "summon",
-        "\u5F02\u6B65": "async",
-        "\u7B49\u5F85": "await",
-        "\u751F\u6210": "spawn"
-      },
-      Japanese: {
-        "\u935B\u9020": "forge",
-        "\u4F5C\u6210": "forge",
-        "\u3067\u3042\u308B": "be",
-        "\u306F": "be",
-        "\u53EC\u559A": "conjure",
-        "\u95A2\u6570": "conjure",
-        "\u8FD4\u3059": "yield",
-        "\u8003\u3048\u308B": "ponder",
-        "\u3082\u3057": "ponder",
-        "\u305D\u308C\u4EE5\u5916": "otherwise",
-        "\u30EB\u30FC\u30D7": "cycle",
-        "\u9593": "cycle",
-        "\u53CD\u5FA9": "iterate",
-        "\u7E70\u308A\u8FD4\u3059": "iterate",
-        "\u901A\u3057\u3066": "through",
-        "\u306E\u4E2D\u3067": "within",
-        "\u6295\u3052\u308B": "yeet",
-        "\u30B9\u30AD\u30C3\u30D7": "skip",
-        "\u8A00\u3046": "speak",
-        "\u8868\u793A": "speak",
-        "\u51FA\u529B": "speak",
-        "\u5370\u5237": "speak",
-        "\u672C\u8CEA": "essence",
-        "\u30AF\u30E9\u30B9": "essence",
-        "\u62E1\u5F35": "extend",
-        "\u81EA\u5206": "self",
-        "\u89AA": "super",
-        "\u65B0\u3057\u3044": "new",
-        "\u8A66\u3059": "attempt",
-        "\u6551\u51FA": "rescue",
-        "\u307E\u305F": "also",
-        "\u304B\u3064": "also",
-        "\u307E\u305F\u306F": "either",
-        "\u3067\u306F\u306A\u3044": "isnt",
-        "\u7B49\u3057\u3044": "equals",
-        "\u7570\u306A\u308B": "differs",
-        "\u306F\u3044": "yep",
-        "\u771F": "yep",
-        "\u3044\u3044\u3048": "nope",
-        "\u507D": "nope",
-        "\u7A7A": "void",
-        "\u30A4\u30F3\u30DD\u30FC\u30C8": "summon",
-        "\u975E\u540C\u671F": "async",
-        "\u5F85\u3064": "await",
-        "\u751F\u6210": "spawn"
-      },
-      Korean: {
-        "\uB2E8\uC870": "forge",
-        "\uB9CC\uB4E4\uB2E4": "forge",
-        "\uC774\uB2E4": "be",
-        "\uC18C\uD658": "conjure",
-        "\uD568\uC218": "conjure",
-        "\uBC18\uD658": "yield",
-        "\uB3CC\uB824\uC8FC\uB2E4": "yield",
-        "\uC0DD\uAC01": "ponder",
-        "\uB9CC\uC57D": "ponder",
-        "\uC544\uB2C8\uBA74": "otherwise",
-        "\uC21C\uD658": "cycle",
-        "\uB3D9\uC548": "cycle",
-        "\uBC18\uBCF5": "iterate",
-        "\uC704\uD574": "iterate",
-        "\uD1B5\uD574": "through",
-        "\uC548\uC5D0\uC11C": "within",
-        "\uB358\uC9C0\uB2E4": "yeet",
-        "\uAC74\uB108\uB6F0\uAE30": "skip",
-        "\uB9D0\uD558\uB2E4": "speak",
-        "\uCD9C\uB825": "speak",
-        "\uBCF4\uC5EC\uC8FC\uB2E4": "speak",
-        "\uBCF8\uC9C8": "essence",
-        "\uD074\uB798\uC2A4": "essence",
-        "\uD655\uC7A5": "extend",
-        "\uC790\uC2E0": "self",
-        "\uBD80\uBAA8": "super",
-        "\uC0C8": "new",
-        "\uC0C8\uB85C\uC6B4": "new",
-        "\uC2DC\uB3C4": "attempt",
-        "\uAD6C\uCD9C": "rescue",
-        "\uADF8\uB9AC\uACE0": "also",
-        "\uB610\uB294": "either",
-        "\uC544\uB2C8\uB2E4": "isnt",
-        "\uAC19\uB2E4": "equals",
-        "\uB2E4\uB974\uB2E4": "differs",
-        "\uC608": "yep",
-        "\uCC38": "yep",
-        "\uC544\uB2C8\uC624": "nope",
-        "\uAC70\uC9D3": "nope",
-        "\uBE44\uC5B4\uC788\uB2E4": "void",
-        "\uAC00\uC838\uC624\uAE30": "summon",
-        "\uBE44\uB3D9\uAE30": "async",
-        "\uAE30\uB2E4\uB9AC\uB2E4": "await",
-        "\uC0DD\uC131": "spawn"
-      },
-      Arabic: {
-        "\u0635\u0646\u0639": "forge",
-        "\u0625\u0646\u0634\u0627\u0621": "forge",
-        "\u064A\u0643\u0648\u0646": "be",
-        "\u0647\u0648": "be",
-        "\u0627\u0633\u062A\u062F\u0639\u0627\u0621": "conjure",
-        "\u062F\u0627\u0644\u0629": "conjure",
-        "\u0625\u0631\u062C\u0627\u0639": "yield",
-        "\u0631\u062F": "yield",
-        "\u062A\u0623\u0645\u0644": "ponder",
-        "\u0625\u0630\u0627": "ponder",
-        "\u0648\u0625\u0644\u0627": "otherwise",
-        "\u062E\u0644\u0627\u0641": "otherwise",
-        "\u062D\u0644\u0642\u0629": "cycle",
-        "\u0637\u0627\u0644\u0645\u0627": "cycle",
-        "\u062A\u0643\u0631\u0627\u0631": "iterate",
-        "\u0644\u0643\u0644": "iterate",
-        "\u0639\u0628\u0631": "through",
-        "\u062E\u0644\u0627\u0644": "through",
-        "\u062F\u0627\u062E\u0644": "within",
-        "\u0641\u064A": "within",
-        "\u0631\u0645\u064A": "yeet",
-        "\u062A\u062E\u0637\u064A": "skip",
-        "\u0642\u0644": "speak",
-        "\u062A\u062D\u062F\u062B": "speak",
-        "\u0627\u0637\u0628\u0639": "speak",
-        "\u0627\u0639\u0631\u0636": "speak",
-        "\u062C\u0648\u0647\u0631": "essence",
-        "\u0641\u0626\u0629": "essence",
-        "\u0635\u0646\u0641": "essence",
-        "\u062A\u0648\u0633\u064A\u0639": "extend",
-        "\u0630\u0627\u062A": "self",
-        "\u0646\u0641\u0633": "self",
-        "\u0623\u0628": "super",
-        "\u062C\u062F\u064A\u062F": "new",
-        "\u0645\u062D\u0627\u0648\u0644\u0629": "attempt",
-        "\u062D\u0627\u0648\u0644": "attempt",
-        "\u0625\u0646\u0642\u0627\u0630": "rescue",
-        "\u0627\u0644\u062A\u0642\u0627\u0637": "rescue",
-        "\u0623\u064A\u0636\u0627": "also",
-        "\u0648": "also",
-        "\u0623\u0648": "either",
-        "\u0644\u064A\u0633": "isnt",
-        "\u064A\u0633\u0627\u0648\u064A": "equals",
-        "\u064A\u062E\u062A\u0644\u0641": "differs",
-        "\u0646\u0639\u0645": "yep",
-        "\u0635\u062D\u064A\u062D": "yep",
-        "\u0644\u0627": "nope",
-        "\u062E\u0637\u0623": "nope",
-        "\u0641\u0627\u0631\u063A": "void",
-        "\u0639\u062F\u0645": "void",
-        "\u0627\u0633\u062A\u064A\u0631\u0627\u062F": "summon",
-        "\u063A\u064A\u0631_\u0645\u062A\u0632\u0627\u0645\u0646": "async",
-        "\u0627\u0646\u062A\u0638\u0627\u0631": "await",
-        "\u062A\u0648\u0644\u064A\u062F": "spawn"
-      },
-      Hindi: {
-        "\u0917\u0922\u093C\u0928\u093E": "forge",
-        "\u092C\u0928\u093E\u0928\u093E": "forge",
-        "\u0939\u094B\u0928\u093E": "be",
-        "\u0939\u0948": "be",
-        "\u092C\u0941\u0932\u093E\u0928\u093E": "conjure",
-        "\u092B\u0932\u0928": "conjure",
-        "\u0915\u093E\u0930\u094D\u092F": "conjure",
-        "\u0932\u094C\u091F\u093E\u0928\u093E": "yield",
-        "\u0935\u093E\u092A\u0938\u0940": "yield",
-        "\u0938\u094B\u091A\u0928\u093E": "ponder",
-        "\u0905\u0917\u0930": "ponder",
-        "\u092F\u0926\u093F": "ponder",
-        "\u0935\u0930\u0928\u093E": "otherwise",
-        "\u0905\u0928\u094D\u092F\u0925\u093E": "otherwise",
-        "\u091A\u0915\u094D\u0930": "cycle",
-        "\u091C\u092C\u0924\u0915": "cycle",
-        "\u0926\u094B\u0939\u0930\u093E\u0928\u093E": "iterate",
-        "\u0939\u0947\u0924\u0941": "iterate",
-        "\u0926\u094D\u0935\u093E\u0930\u093E": "through",
-        "\u0905\u0902\u0926\u0930": "within",
-        "\u092E\u0947\u0902": "within",
-        "\u092B\u0947\u0902\u0915\u0928\u093E": "yeet",
-        "\u091B\u094B\u0921\u093C\u0928\u093E": "skip",
-        "\u092C\u094B\u0932\u0928\u093E": "speak",
-        "\u0926\u093F\u0916\u093E\u0928\u093E": "speak",
-        "\u091B\u093E\u092A\u0928\u093E": "speak",
-        "\u0938\u093E\u0930": "essence",
-        "\u0935\u0930\u094D\u0917": "essence",
-        "\u0935\u093F\u0938\u094D\u0924\u093E\u0930": "extend",
-        "\u0938\u094D\u0935\u092F\u0902": "self",
-        "\u0905\u092D\u093F\u092D\u093E\u0935\u0915": "super",
-        "\u0928\u092F\u093E": "new",
-        "\u092A\u094D\u0930\u092F\u093E\u0938": "attempt",
-        "\u0915\u094B\u0936\u093F\u0936": "attempt",
-        "\u092C\u091A\u093E\u0928\u093E": "rescue",
-        "\u092A\u0915\u0921\u093C\u0928\u093E": "rescue",
-        "\u092D\u0940": "also",
-        "\u0914\u0930": "also",
-        "\u092F\u093E": "either",
-        "\u0928\u0939\u0940\u0902": "isnt",
-        "\u092C\u0930\u093E\u092C\u0930": "equals",
-        "\u092D\u093F\u0928\u094D\u0928": "differs",
-        "\u0939\u093E\u0902": "yep",
-        "\u0938\u0924\u094D\u092F": "yep",
-        "\u0905\u0938\u0924\u094D\u092F": "nope",
-        "\u0930\u093F\u0915\u094D\u0924": "void",
-        "\u0936\u0942\u0928\u094D\u092F": "void",
-        "\u0906\u092F\u093E\u0924": "summon",
-        "\u0905\u0938\u092E\u0915\u093E\u0932\u093F\u0915": "async",
-        "\u092A\u094D\u0930\u0924\u0940\u0915\u094D\u0937\u093E": "await",
-        "\u0909\u0924\u094D\u092A\u0928\u094D\u0928": "spawn"
-      },
-      Turkish: {
-        "d\xF6vmek": "forge",
-        "olu\u015Ftur": "forge",
-        "olmak": "be",
-        "olsun": "be",
-        "\xE7a\u011F\u0131r": "conjure",
-        "fonksiyon": "conjure",
-        "i\u015Flev": "conjure",
-        "d\xF6nd\xFCr": "yield",
-        "ver": "yield",
-        "d\xFC\u015F\xFCn": "ponder",
-        "e\u011Fer": "ponder",
-        "yoksa": "otherwise",
-        "de\u011Filse": "otherwise",
-        "d\xF6ng\xFC": "cycle",
-        "iken": "cycle",
-        "tekrarla": "iterate",
-        "i\xE7in": "iterate",
-        "boyunca": "through",
-        "i\xE7inde": "within",
-        "at": "yeet",
-        "atla": "skip",
-        "s\xF6yle": "speak",
-        "g\xF6ster": "speak",
-        "yazd\u0131r": "speak",
-        "\xF6z": "essence",
-        "s\u0131n\u0131f": "essence",
-        "geni\u015Flet": "extend",
-        "kendi": "self",
-        "\xFCst": "super",
-        "yeni": "new",
-        "dene": "attempt",
-        "kurtar": "rescue",
-        "yakala": "rescue",
-        "da": "also",
-        "ve": "also",
-        "veya": "either",
-        "de\u011Fil": "isnt",
-        "e\u015Fit": "equals",
-        "farkl\u0131": "differs",
-        "evet": "yep",
-        "do\u011Fru": "yep",
-        "hay\u0131r": "nope",
-        "yanl\u0131\u015F": "nope",
-        "bo\u015F": "void",
-        "\xE7a\u011F\u0131rmak": "summon",
-        "i\xE7eaktar": "summon",
-        "e\u015Fzamans\u0131z": "async",
-        "bekle": "await",
-        "\xFCret": "spawn"
-      },
-      Polish: {
-        "ku\u0107": "forge",
-        "utw\xF3rz": "forge",
-        "by\u0107": "be",
-        "jest": "be",
-        "przywo\u0142aj": "summon",
-        "funkcja": "conjure",
-        "zwr\xF3\u0107": "yield",
-        "oddaj": "yield",
-        "rozwa\u017C": "ponder",
-        "je\u015Bli": "ponder",
-        "je\u017Celi": "ponder",
-        "inaczej": "otherwise",
-        "p\u0119tla": "cycle",
-        "dop\xF3ki": "cycle",
-        "iteruj": "iterate",
-        "dla": "iterate",
-        "przez": "through",
-        "wewn\u0105trz": "within",
-        "w": "within",
-        "rzu\u0107": "yeet",
-        "pomi\u0144": "skip",
-        "m\xF3w": "speak",
-        "powiedz": "speak",
-        "poka\u017C": "speak",
-        "wypisz": "speak",
-        "istota": "essence",
-        "klasa": "essence",
-        "rozszerz": "extend",
-        "sam": "self",
-        "rodzic": "super",
-        "nowy": "new",
-        "nowe": "new",
-        "pr\xF3buj": "attempt",
-        "spr\xF3buj": "attempt",
-        "ratuj": "rescue",
-        "z\u0142ap": "rescue",
-        "te\u017C": "also",
-        "i": "also",
-        "lub": "either",
-        "albo": "either",
-        "nie": "isnt",
-        "r\xF3wne": "equals",
-        "r\xF3\u017Cni": "differs",
-        "tak": "yep",
-        "prawda": "yep",
-        "fa\u0142sz": "nope",
-        "pusty": "void",
-        "importuj": "summon",
-        "asynchroniczny": "async",
-        "czekaj": "await",
-        "stw\xF3rz": "spawn"
-      },
-      Swedish: {
-        "smida": "forge",
-        "skapa": "forge",
-        "vara": "be",
-        "\xE4r": "be",
-        "framkalla": "conjure",
-        "funktion": "conjure",
-        "ge": "yield",
-        "returnera": "yield",
-        "fundera": "ponder",
-        "om": "ponder",
-        "annars": "otherwise",
-        "slinga": "cycle",
-        "medan": "cycle",
-        "iterera": "iterate",
-        "f\xF6r": "iterate",
-        "genom": "through",
-        "inom": "within",
-        "i": "within",
-        "kasta": "yeet",
-        "hoppa": "skip",
-        "tala": "speak",
-        "visa": "speak",
-        "skriv": "speak",
-        "v\xE4sen": "essence",
-        "klass": "essence",
-        "ut\xF6ka": "extend",
-        "sj\xE4lv": "self",
-        "f\xF6r\xE4lder": "super",
-        "ny": "new",
-        "f\xF6rs\xF6k": "attempt",
-        "r\xE4dda": "rescue",
-        "f\xE5nga": "rescue",
-        "ocks\xE5": "also",
-        "och": "also",
-        "eller": "either",
-        "inte": "isnt",
-        "lika": "equals",
-        "skiljer": "differs",
-        "ja": "yep",
-        "sant": "yep",
-        "nej": "nope",
-        "falskt": "nope",
-        "tom": "void",
-        "\xE5kalla": "summon",
-        "importera": "summon",
-        "asynkron": "async",
-        "v\xE4nta": "await",
-        "skapa_process": "spawn"
-      },
-      Norwegian: {
-        "smi": "forge",
-        "lage": "forge",
-        "v\xE6re": "be",
-        "er": "be",
-        "fremkalle": "conjure",
-        "funksjon": "conjure",
-        "gi": "yield",
-        "returnere": "yield",
-        "tenke": "ponder",
-        "hvis": "ponder",
-        "ellers": "otherwise",
-        "sl\xF8yfe": "cycle",
-        "mens": "cycle",
-        "iterere": "iterate",
-        "for": "iterate",
-        "gjennom": "through",
-        "innen": "within",
-        "i": "within",
-        "kaste": "yeet",
-        "hoppe": "skip",
-        "snakke": "speak",
-        "vise": "speak",
-        "skriv": "speak",
-        "vesen": "essence",
-        "klasse": "essence",
-        "utvide": "extend",
-        "selv": "self",
-        "forelder": "super",
-        "ny": "new",
-        "fors\xF8k": "attempt",
-        "redde": "rescue",
-        "fange": "rescue",
-        "ogs\xE5": "also",
-        "og": "also",
-        "eller": "either",
-        "ikke": "isnt",
-        "lik": "equals",
-        "forskjellig": "differs",
-        "ja": "yep",
-        "sant": "yep",
-        "nei": "nope",
-        "usant": "nope",
-        "tom": "void",
-        "p\xE5kalle": "summon",
-        "importere": "summon",
-        "asynkron": "async",
-        "vente": "await",
-        "starte": "spawn"
-      },
-      Danish: {
-        "smede": "forge",
-        "skabe": "forge",
-        "v\xE6re": "be",
-        "er": "be",
-        "fremkalde": "conjure",
-        "funktion": "conjure",
-        "give": "yield",
-        "returnere": "yield",
-        "overveje": "ponder",
-        "hvis": "ponder",
-        "ellers": "otherwise",
-        "sl\xF8jfe": "cycle",
-        "mens": "cycle",
-        "iterere": "iterate",
-        "for": "iterate",
-        "igennem": "through",
-        "inden": "within",
-        "i": "within",
-        "kaste": "yeet",
-        "springe": "skip",
-        "tale": "speak",
-        "vise": "speak",
-        "skriv": "speak",
-        "v\xE6sen": "essence",
-        "klasse": "essence",
-        "udvide": "extend",
-        "selv": "self",
-        "for\xE6lder": "super",
-        "ny": "new",
-        "fors\xF8g": "attempt",
-        "redde": "rescue",
-        "fange": "rescue",
-        "ogs\xE5": "also",
-        "og": "also",
-        "eller": "either",
-        "ikke": "isnt",
-        "lig": "equals",
-        "anderledes": "differs",
-        "ja": "yep",
-        "sand": "yep",
-        "nej": "nope",
-        "falsk": "nope",
-        "tom": "void",
-        "p\xE5kalde": "summon",
-        "importere": "summon",
-        "asynkron": "async",
-        "vente": "await",
-        "starte": "spawn"
-      },
-      Finnish: {
-        "takoa": "forge",
-        "luoda": "forge",
-        "olla": "be",
-        "on": "be",
-        "loitsia": "conjure",
-        "funktio": "conjure",
-        "tuottaa": "yield",
-        "palauttaa": "yield",
-        "pohtia": "ponder",
-        "jos": "ponder",
-        "muuten": "otherwise",
-        "silmukka": "cycle",
-        "kun": "cycle",
-        "iteroida": "iterate",
-        "jokaiselle": "iterate",
-        "l\xE4pi": "through",
-        "sis\xE4ll\xE4": "within",
-        "kohdassa": "within",
-        "heitt\xE4\xE4": "yeet",
-        "ohittaa": "skip",
-        "puhua": "speak",
-        "n\xE4ytt\xE4\xE4": "speak",
-        "tulostaa": "speak",
-        "olemus": "essence",
-        "luokka": "essence",
-        "laajentaa": "extend",
-        "itse": "self",
-        "ylempi": "super",
-        "uusi": "new",
-        "yrit\xE4": "attempt",
-        "pelasta": "rescue",
-        "kiinni": "rescue",
-        "my\xF6s": "also",
-        "ja": "also",
-        "tai": "either",
-        "ei": "isnt",
-        "yht\xE4suuri": "equals",
-        "eroaa": "differs",
-        "kyll\xE4": "yep",
-        "tosi": "yep",
-        "ep\xE4tosi": "nope",
-        "tyhj\xE4": "void",
-        "kutsu": "summon",
-        "tuo": "summon",
-        "asynkroninen": "async",
-        "odota": "await",
-        "synnyt\xE4": "spawn"
-      },
-      Greek: {
-        "\u03C3\u03C6\u03C5\u03C1\u03B7\u03BB\u03B1\u03C4\u03CE": "forge",
-        "\u03B4\u03B7\u03BC\u03B9\u03BF\u03C5\u03C1\u03B3\u03CE": "forge",
-        "\u03B5\u03AF\u03BD\u03B1\u03B9": "be",
-        "\u03BA\u03B1\u03BB\u03CE": "conjure",
-        "\u03C3\u03C5\u03BD\u03AC\u03C1\u03C4\u03B7\u03C3\u03B7": "conjure",
-        "\u03B5\u03C0\u03B9\u03C3\u03C4\u03C1\u03AD\u03C6\u03C9": "yield",
-        "\u03C3\u03BA\u03AD\u03C6\u03C4\u03BF\u03BC\u03B1\u03B9": "ponder",
-        "\u03B1\u03BD": "ponder",
-        "\u03B1\u03BB\u03BB\u03B9\u03CE\u03C2": "otherwise",
-        "\u03B2\u03C1\u03CC\u03C7\u03BF\u03C2": "cycle",
-        "\u03CC\u03C3\u03BF": "cycle",
-        "\u03B5\u03C0\u03B1\u03BD\u03B1\u03BB\u03B1\u03BC\u03B2\u03AC\u03BD\u03C9": "iterate",
-        "\u03B3\u03B9\u03B1": "iterate",
-        "\u03BC\u03AD\u03C3\u03C9": "through",
-        "\u03BC\u03AD\u03C3\u03B1": "within",
-        "\u03C3\u03B5": "within",
-        "\u03C0\u03B5\u03C4\u03AC\u03C9": "yeet",
-        "\u03C0\u03B1\u03C1\u03B1\u03BA\u03AC\u03BC\u03C0\u03C4\u03C9": "skip",
-        "\u03BC\u03B9\u03BB\u03AC\u03C9": "speak",
-        "\u03B5\u03BC\u03C6\u03AC\u03BD\u03B9\u03C3\u03B5": "speak",
-        "\u03C4\u03CD\u03C0\u03C9\u03C3\u03B5": "speak",
-        "\u03BF\u03C5\u03C3\u03AF\u03B1": "essence",
-        "\u03BA\u03BB\u03AC\u03C3\u03B7": "essence",
-        "\u03B5\u03C0\u03B5\u03BA\u03C4\u03B5\u03AF\u03BD\u03C9": "extend",
-        "\u03B5\u03B1\u03C5\u03C4\u03CC\u03C2": "self",
-        "\u03B3\u03BF\u03BD\u03AD\u03B1\u03C2": "super",
-        "\u03BD\u03AD\u03BF": "new",
-        "\u03B4\u03BF\u03BA\u03B9\u03BC\u03AE": "attempt",
-        "\u03C3\u03CE\u03B6\u03C9": "rescue",
-        "\u03C0\u03B9\u03AC\u03BD\u03C9": "rescue",
-        "\u03B5\u03C0\u03AF\u03C3\u03B7\u03C2": "also",
-        "\u03BA\u03B1\u03B9": "also",
-        "\u03AE": "either",
-        "\u03B4\u03B5\u03BD": "isnt",
-        "\u03AF\u03C3\u03BF": "equals",
-        "\u03B4\u03B9\u03B1\u03C6\u03AD\u03C1\u03B5\u03B9": "differs",
-        "\u03BD\u03B1\u03B9": "yep",
-        "\u03B1\u03BB\u03B7\u03B8\u03AD\u03C2": "yep",
-        "\u03CC\u03C7\u03B9": "nope",
-        "\u03C8\u03B5\u03C5\u03B4\u03AD\u03C2": "nope",
-        "\u03BA\u03B5\u03BD\u03CC": "void",
-        "\u03B5\u03B9\u03C3\u03B1\u03B3\u03C9\u03B3\u03AE": "summon",
-        "\u03B1\u03C3\u03CD\u03B3\u03C7\u03C1\u03BF\u03BD\u03BF": "async",
-        "\u03C0\u03B5\u03C1\u03B9\u03BC\u03AD\u03BD\u03C9": "await",
-        "\u03C0\u03B1\u03C1\u03AC\u03B3\u03C9": "spawn"
-      },
-      Hebrew: {
-        "\u05DC\u05D7\u05E9\u05DC": "forge",
-        "\u05DC\u05D9\u05E6\u05D5\u05E8": "forge",
-        "\u05DC\u05D4\u05D9\u05D5\u05EA": "be",
-        "\u05D4\u05D5\u05D0": "be",
-        "\u05DC\u05D6\u05DE\u05DF": "conjure",
-        "\u05E4\u05D5\u05E0\u05E7\u05E6\u05D9\u05D4": "conjure",
-        "\u05DC\u05D4\u05D7\u05D6\u05D9\u05E8": "yield",
-        "\u05DC\u05D7\u05E9\u05D5\u05D1": "ponder",
-        "\u05D0\u05DD": "ponder",
-        "\u05D0\u05D7\u05E8\u05EA": "otherwise",
-        "\u05DC\u05D5\u05DC\u05D0\u05D4": "cycle",
-        "\u05DB\u05DC\u05E2\u05D5\u05D3": "cycle",
-        "\u05DC\u05D7\u05D6\u05D5\u05E8": "iterate",
-        "\u05DC\u05DB\u05DC": "iterate",
-        "\u05D3\u05E8\u05DA": "through",
-        "\u05D1\u05EA\u05D5\u05DA": "within",
-        "\u05DC\u05D6\u05E8\u05D5\u05E7": "yeet",
-        "\u05DC\u05D3\u05DC\u05D2": "skip",
-        "\u05DC\u05D3\u05D1\u05E8": "speak",
-        "\u05DC\u05D4\u05E6\u05D9\u05D2": "speak",
-        "\u05DC\u05D4\u05D3\u05E4\u05D9\u05E1": "speak",
-        "\u05DE\u05D4\u05D5\u05EA": "essence",
-        "\u05DE\u05D7\u05DC\u05E7\u05D4": "essence",
-        "\u05DC\u05D4\u05E8\u05D7\u05D9\u05D1": "extend",
-        "\u05E2\u05E6\u05DE\u05D9": "self",
-        "\u05D4\u05D5\u05E8\u05D4": "super",
-        "\u05D7\u05D3\u05E9": "new",
-        "\u05DC\u05E0\u05E1\u05D5\u05EA": "attempt",
-        "\u05DC\u05D4\u05E6\u05D9\u05DC": "rescue",
-        "\u05DC\u05EA\u05E4\u05D5\u05E1": "rescue",
-        "\u05D2\u05DD": "also",
-        "\u05D5": "also",
-        "\u05D0\u05D5": "either",
-        "\u05DC\u05D0": "isnt",
-        "\u05E9\u05D5\u05D5\u05D4": "equals",
-        "\u05E9\u05D5\u05E0\u05D4": "differs",
-        "\u05DB\u05DF": "yep",
-        "\u05D0\u05DE\u05EA": "yep",
-        "\u05E9\u05E7\u05E8": "nope",
-        "\u05E8\u05D9\u05E7": "void",
-        "\u05DC\u05D9\u05D9\u05D1\u05D0": "summon",
-        "\u05D0\u05E1\u05D9\u05E0\u05DB\u05E8\u05D5\u05E0\u05D9": "async",
-        "\u05DC\u05D7\u05DB\u05D5\u05EA": "await",
-        "\u05DC\u05D4\u05D5\u05DC\u05D9\u05D3": "spawn"
-      },
-      Ukrainian: {
-        "\u043A\u0443\u0432\u0430\u0442\u0438": "forge",
-        "\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438": "forge",
-        "\u0431\u0443\u0442\u0438": "be",
-        "\u0454": "be",
-        "\u0432\u0438\u043A\u043B\u0438\u043A\u0430\u0442\u0438": "conjure",
-        "\u0444\u0443\u043D\u043A\u0446\u0456\u044F": "conjure",
-        "\u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438": "yield",
-        "\u043E\u0431\u043C\u0456\u0440\u043A\u0443\u0432\u0430\u0442\u0438": "ponder",
-        "\u044F\u043A\u0449\u043E": "ponder",
-        "\u0456\u043D\u0430\u043A\u0448\u0435": "otherwise",
-        "\u0446\u0438\u043A\u043B": "cycle",
-        "\u043F\u043E\u043A\u0438": "cycle",
-        "\u043F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u0438": "iterate",
-        "\u0434\u043B\u044F": "iterate",
-        "\u0447\u0435\u0440\u0435\u0437": "through",
-        "\u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456": "within",
-        "\u0432": "within",
-        "\u043A\u0438\u043D\u0443\u0442\u0438": "yeet",
-        "\u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438": "skip",
-        "\u0441\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
-        "\u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438": "speak",
-        "\u0432\u0438\u0432\u0435\u0441\u0442\u0438": "speak",
-        "\u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C": "essence",
-        "\u043A\u043B\u0430\u0441": "essence",
-        "\u0440\u043E\u0437\u0448\u0438\u0440\u0438\u0442\u0438": "extend",
-        "\u0441\u0435\u0431\u0435": "self",
-        "\u0431\u0430\u0442\u044C\u043A\u043E": "super",
-        "\u043D\u043E\u0432\u0438\u0439": "new",
-        "\u0441\u043F\u0440\u043E\u0431\u0430": "attempt",
-        "\u0441\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u0442\u0438": "attempt",
-        "\u0432\u0440\u044F\u0442\u0443\u0432\u0430\u0442\u0438": "rescue",
-        "\u0437\u043B\u043E\u0432\u0438\u0442\u0438": "rescue",
-        "\u0442\u0430\u043A\u043E\u0436": "also",
-        "\u0456": "also",
-        "\u0430\u0431\u043E": "either",
-        "\u043D\u0435": "isnt",
-        "\u0434\u043E\u0440\u0456\u0432\u043D\u044E\u0454": "equals",
-        "\u0432\u0456\u0434\u0440\u0456\u0437\u043D\u044F\u0454\u0442\u044C\u0441\u044F": "differs",
-        "\u0442\u0430\u043A": "yep",
-        "\u0456\u0441\u0442\u0438\u043D\u0430": "yep",
-        "\u043D\u0456": "nope",
-        "\u0445\u0438\u0431\u0430": "nope",
-        "\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E": "void",
-        "\u043F\u0440\u0438\u0437\u0432\u0430\u0442\u0438": "summon",
-        "\u0456\u043C\u043F\u043E\u0440\u0442": "summon",
-        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u0438\u0439": "async",
-        "\u0447\u0435\u043A\u0430\u0442\u0438": "await",
-        "\u043F\u043E\u0440\u043E\u0434\u0438\u0442\u0438": "spawn"
-      },
-      Czech: {
-        "kovat": "forge",
-        "vytvo\u0159it": "forge",
-        "b\xFDt": "be",
-        "je": "be",
-        "vyvolat": "conjure",
-        "funkce": "conjure",
-        "vr\xE1tit": "yield",
-        "uv\xE1\u017Eit": "ponder",
-        "pokud": "ponder",
-        "jinak": "otherwise",
-        "smy\u010Dka": "cycle",
-        "dokud": "cycle",
-        "iterovat": "iterate",
-        "pro": "iterate",
-        "skrz": "through",
-        "uvnit\u0159": "within",
-        "v": "within",
-        "hodit": "yeet",
-        "p\u0159esko\u010Dit": "skip",
-        "\u0159\xEDci": "speak",
-        "zobrazit": "speak",
-        "vytisknout": "speak",
-        "podstata": "essence",
-        "t\u0159\xEDda": "essence",
-        "roz\u0161\xED\u0159it": "extend",
-        "s\xE1m": "self",
-        "rodi\u010D": "super",
-        "nov\xFD": "new",
-        "zkusit": "attempt",
-        "zachr\xE1nit": "rescue",
-        "chytit": "rescue",
-        "tak\xE9": "also",
-        "a": "also",
-        "nebo": "either",
-        "nen\xED": "isnt",
-        "rovn\xE1": "equals",
-        "li\u0161\xED": "differs",
-        "ano": "yep",
-        "pravda": "yep",
-        "ne": "nope",
-        "nepravda": "nope",
-        "pr\xE1zdn\xFD": "void",
-        "importovat": "summon",
-        "asynchronn\xED": "async",
-        "\u010Dekat": "await",
-        "vytvo\u0159it_proces": "spawn"
-      },
-      Romanian: {
-        "forja": "forge",
-        "crea": "forge",
-        "fi": "be",
-        "este": "be",
-        "evoca": "conjure",
-        "func\u021Bie": "conjure",
-        "func\u021Bia": "conjure",
-        "\xEEntoarce": "yield",
-        "returna": "yield",
-        "g\xE2ndi": "ponder",
-        "dac\u0103": "ponder",
-        "altfel": "otherwise",
-        "bucl\u0103": "cycle",
-        "c\xE2ttimp": "cycle",
-        "itera": "iterate",
-        "pentru": "iterate",
-        "prin": "through",
-        "\xEEn_interior": "within",
-        "\xEEn": "within",
-        "arunca": "yeet",
-        "s\u0103ri": "skip",
-        "spune": "speak",
-        "arat\u0103": "speak",
-        "afi\u0219eaz\u0103": "speak",
-        "esen\u021B\u0103": "essence",
-        "clas\u0103": "essence",
-        "extinde": "extend",
-        "sine": "self",
-        "p\u0103rinte": "super",
-        "nou": "new",
-        "\xEEncearc\u0103": "attempt",
-        "salveaz\u0103": "rescue",
-        "prinde": "rescue",
-        "de_asemenea": "also",
-        "\u0219i": "also",
-        "sau": "either",
-        "nu_este": "isnt",
-        "egal": "equals",
-        "difer\u0103": "differs",
-        "da": "yep",
-        "adev\u0103rat": "yep",
-        "nu": "nope",
-        "fals": "nope",
-        "gol": "void",
-        "importa": "summon",
-        "asincron": "async",
-        "a\u0219teapt\u0103": "await",
-        "genera": "spawn"
-      },
-      Hungarian: {
-        "kov\xE1csol": "forge",
-        "l\xE9trehoz": "forge",
-        "lenni": "be",
-        "legyen": "be",
-        "id\xE9z": "conjure",
-        "f\xFCggv\xE9ny": "conjure",
-        "visszaad": "yield",
-        "fontol": "ponder",
-        "ha": "ponder",
-        "k\xFCl\xF6nben": "otherwise",
-        "ciklus": "cycle",
-        "am\xEDg": "cycle",
-        "iter\xE1l": "iterate",
-        "minden": "iterate",
-        "kereszt\xFCl": "through",
-        "bel\xFCl": "within",
-        "ban": "within",
-        "dob": "yeet",
-        "\xE1tugor": "skip",
-        "mond": "speak",
-        "mutat": "speak",
-        "ki\xEDr": "speak",
-        "l\xE9nyeg": "essence",
-        "oszt\xE1ly": "essence",
-        "b\u0151v\xEDt": "extend",
-        "maga": "self",
-        "sz\xFCl\u0151": "super",
-        "\xFAj": "new",
-        "pr\xF3ba": "attempt",
-        "megpr\xF3b\xE1l": "attempt",
-        "ment": "rescue",
-        "elkap": "rescue",
-        "is": "also",
-        "\xE9s": "also",
-        "vagy": "either",
-        "nem": "isnt",
-        "egyenl\u0151": "equals",
-        "k\xFCl\xF6nb\xF6zik": "differs",
-        "igen": "yep",
-        "igaz": "yep",
-        "hamis": "nope",
-        "\xFCres": "void",
-        "beh\xEDv": "summon",
-        "import\xE1l": "summon",
-        "aszinkron": "async",
-        "v\xE1r": "await",
-        "ind\xEDt": "spawn"
-      },
-      Bulgarian: {
-        // forge — create / declare a variable. Accept many natural verbs.
-        "\u0438\u0437\u043A\u043E\u0432\u0430": "forge",
-        "\u0438\u0437\u043A\u043E\u0432\u0430\u0439": "forge",
-        "\u0441\u044A\u0437\u0434\u0430\u0439": "forge",
-        "\u0441\u044A\u0437\u0434\u0430\u043C": "forge",
-        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043C": "forge",
-        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435": "forge",
-        "\u043D\u0430\u043F\u0440\u0430\u0432\u0438": "forge",
-        "\u043D\u0430\u043F\u0440\u0430\u0432\u044F": "forge",
-        "\u043F\u0440\u0430\u0432\u044F": "forge",
-        "\u043D\u0435\u043A\u0430": "forge",
-        "\u0434\u0435\u0444\u0438\u043D\u0438\u0440\u0430\u0439": "forge",
-        "\u0434\u0435\u0444\u0438\u043D\u0438\u0446\u0438\u044F": "forge",
-        "\u043E\u0431\u044F\u0432\u0438": "forge",
-        "\u043E\u0431\u044F\u0432\u044F\u0432\u0430\u043C": "forge",
-        "\u043F\u0440\u0438\u0435\u043C\u0438": "forge",
-        "\u0432\u0437\u0435\u043C\u0438": "forge",
-        "\u0438\u043C\u0430\u043C\u0435": "forge",
-        "\u0438\u043C\u0430\u043C": "forge",
-        // be — assignment / equality binding
-        "\u0431\u044A\u0434\u0435": "be",
-        "\u0434\u0430_\u0431\u044A\u0434\u0435": "be",
-        "\u0431\u044A\u0434\u0430": "be",
-        "\u0435": "be",
-        "\u0434\u0430_\u0435": "be",
-        "\u0441\u0430": "be",
-        "\u0441\u0442\u0430\u0432\u0430": "be",
-        "\u0434\u0430_\u0441\u0442\u0430\u043D\u0435": "be",
-        "\u0441\u0442\u0430\u043D\u0435": "be",
-        "\u0440\u0430\u0432\u043D\u044F\u0432\u0430\u043D\u0435": "be",
-        "\u043F\u0440\u0438\u0441\u0432\u043E\u0439": "be",
-        "\u043F\u0440\u0438\u0441\u0432\u043E\u044F\u0432\u0430\u043C": "be",
-        "\u0441\u044A\u0441_\u0441\u0442\u043E\u0439\u043D\u043E\u0441\u0442": "be",
-        // conjure — function / method definition
-        "\u0438\u0437\u0432\u0438\u043A\u0430\u0439": "conjure",
-        "\u0438\u0437\u0432\u0438\u043A\u0432\u0430\u043D\u0435": "conjure",
-        "\u0444\u0443\u043D\u043A\u0446\u0438\u044F": "conjure",
-        "\u043C\u0435\u0442\u043E\u0434": "conjure",
-        "\u043F\u0440\u043E\u0446\u0435\u0434\u0443\u0440\u0430": "conjure",
-        "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u0438\u0440\u0430\u0439": "conjure",
-        // yield — return value
-        "\u0432\u044A\u0440\u043D\u0438": "yield",
-        "\u0432\u0440\u044A\u0449\u0430\u043C": "yield",
-        "\u0432\u0440\u044A\u0449\u0430\u0439": "yield",
-        "\u043E\u0442\u0433\u043E\u0432\u043E\u0440\u0438": "yield",
-        "\u0434\u0430\u0439": "yield",
-        // ponder — if / conditional
-        "\u043E\u0431\u043C\u0438\u0441\u043B\u0438": "ponder",
-        "\u0430\u043A\u043E": "ponder",
-        "\u043A\u043E\u0433\u0430\u0442\u043E": "ponder",
-        "\u0432_\u0441\u043B\u0443\u0447\u0430\u0439": "ponder",
-        "\u043F\u0440\u0438_\u0443\u0441\u043B\u043E\u0432\u0438\u0435": "ponder",
-        "\u043F\u0440\u043E\u0432\u0435\u0440\u0438": "ponder",
-        // otherwise — else
-        "\u0438\u043D\u0430\u0447\u0435": "otherwise",
-        "\u0432_\u043F\u0440\u043E\u0442\u0438\u0432\u0435\u043D_\u0441\u043B\u0443\u0447\u0430\u0439": "otherwise",
-        "\u0438\u043D\u0430\u0447\u0435_\u0430\u043A\u043E": "otherwise",
-        "\u043E\u0431\u0440\u0430\u0442\u043D\u043E": "otherwise",
-        "\u0430\u043A\u043E_\u043D\u0435": "otherwise",
-        // cycle — while loop
-        "\u0446\u0438\u043A\u044A\u043B": "cycle",
-        "\u0434\u043E\u043A\u0430\u0442\u043E": "cycle",
-        "\u043F\u043E\u0432\u0442\u0430\u0440\u044F\u0439": "cycle",
-        "\u043F\u043E\u0432\u0442\u043E\u0440\u0438": "cycle",
-        "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0430\u0432\u0430\u0439": "cycle",
-        "\u0432\u044A\u0440\u0442\u0438": "cycle",
-        "\u0432\u044A\u0440\u0442\u0438_\u0441\u0435": "cycle",
-        // iterate — for loop
-        "\u043E\u0431\u0445\u043E\u0434\u0438": "iterate",
-        "\u043E\u0431\u0445\u043E\u0436\u0434\u0430\u0439": "iterate",
-        "\u0437\u0430_\u0432\u0441\u0435\u043A\u0438": "iterate",
-        "\u0437\u0430": "iterate",
-        "\u0432\u0441\u0435\u043A\u0438": "iterate",
-        "\u0438\u0442\u0435\u0440\u0438\u0440\u0430\u0439": "iterate",
-        "\u043C\u0438\u043D\u0430\u0432\u0430\u0439_\u043F\u0440\u0435\u0437": "iterate",
-        // through — over a collection
-        "\u043F\u0440\u0435\u0437": "through",
-        "\u043F\u043E": "through",
-        "\u043D\u0430\u0434": "through",
-        // within — in / inside
-        "\u0432\u044A\u0442\u0440\u0435": "within",
-        "\u0432\u044A\u0442\u0440\u0435_\u0432": "within",
-        "\u0432": "within",
-        "\u0441\u0440\u0435\u0434": "within",
-        // yeet — throw / break
-        "\u0445\u0432\u044A\u0440\u043B\u0438": "yeet",
-        "\u0445\u0432\u044A\u0440\u043B\u044F\u043C": "yeet",
-        "\u0441\u0447\u0443\u043F\u0438": "yeet",
-        "\u043F\u0440\u0435\u043A\u044A\u0441\u043D\u0438": "yeet",
-        "\u0441\u043F\u0440\u0438": "yeet",
-        "\u0438\u0437\u043B\u0435\u0437": "yeet",
-        "\u043A\u0440\u0430\u0439": "yeet",
-        // skip — continue
-        "\u043F\u0440\u0435\u0441\u043A\u043E\u0447\u0438": "skip",
-        "\u043F\u0440\u043E\u043F\u0443\u0441\u043D\u0438": "skip",
-        "\u043F\u0440\u043E\u0434\u044A\u043B\u0436\u0438": "skip",
-        "\u0441\u043B\u0435\u0434\u0432\u0430\u0449": "skip",
-        // speak — print / output
-        "\u043A\u0430\u0436\u0438": "speak",
-        "\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
-        "\u0438\u0437\u043A\u0440\u0435\u0449\u0438": "speak",
-        "\u043F\u043E\u043A\u0430\u0436\u0438": "speak",
-        "\u043F\u043E\u043A\u0430\u0437\u0432\u0430\u0439": "speak",
-        "\u0438\u0437\u0432\u0435\u0434\u0438": "speak",
-        "\u0438\u0437\u0432\u0435\u0436\u0434\u0430\u0439": "speak",
-        "\u043E\u0442\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
-        "\u043F\u0435\u0447\u0430\u0442\u0430\u0439": "speak",
-        "\u0438\u0437\u043F\u0438\u0448\u0438": "speak",
-        "\u043F\u0438\u0448\u0438": "speak",
-        "\u043D\u0430\u043F\u0438\u0448\u0438": "speak",
-        "\u043F\u0440\u0438\u043D\u0442\u0438\u0440\u0430\u0439": "speak",
-        "\u043F\u0440\u0438\u043D\u0442": "speak",
-        "\u043B\u043E\u0433\u043D\u0438": "speak",
-        "\u0441\u044A\u043E\u0431\u0449\u0438": "speak",
-        // essence — class
-        "\u0441\u044A\u0449\u043D\u043E\u0441\u0442": "essence",
-        "\u043A\u043B\u0430\u0441": "essence",
-        "\u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430": "essence",
-        "\u0435\u0441\u0435\u043D\u0446\u0438\u044F": "essence",
-        "\u0435\u0441\u0435\u043D\u0446\u0438\u044F_\u043D\u0430": "essence",
-        // extend — inherit
-        "\u0440\u0430\u0437\u0448\u0438\u0440\u0438": "extend",
-        "\u0440\u0430\u0437\u0448\u0438\u0440\u044F\u0432\u0430\u043D\u0435": "extend",
-        "\u043D\u0430\u0441\u043B\u0435\u0434\u0438": "extend",
-        "\u043D\u0430\u0441\u043B\u0435\u0434\u044F\u0432\u0430\u043D\u0435": "extend",
-        "\u043F\u0440\u043E\u0438\u0437\u043B\u0438\u0437\u0430": "extend",
-        // self / super
-        "\u0441\u0435\u0431\u0435_\u0441\u0438": "self",
-        "\u0441\u0435\u0431\u0435": "self",
-        "\u0442\u043E\u0437\u0438": "self",
-        "\u0442\u0430\u0437\u0438": "self",
-        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B": "super",
-        "\u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F\u0442": "super",
-        "\u043D\u0430\u0441\u043B\u0435\u0434\u043D\u0438\u043A": "super",
-        "\u0431\u0430\u0449\u0430": "super",
-        // new — instantiate
-        "\u043D\u043E\u0432": "new",
-        "\u043D\u043E\u0432\u043E": "new",
-        "\u043D\u043E\u0432\u0430": "new",
-        "\u0441\u044A\u0437\u0434\u0430\u0439_\u043D\u043E\u0432": "new",
-        "\u0438\u043D\u0441\u0442\u0430\u043D\u0446\u0438\u044F": "new",
-        // init — constructor method name (not a keyword, but the runtime looks for `init`)
-        "\u0438\u043D\u0438\u0442": "init",
-        "\u043A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440": "init",
-        "\u0441\u044A\u0437\u0434\u0430\u0432\u0430\u043D\u0435_\u043D\u0430": "init",
-        "\u043D\u0430\u0447\u0430\u043B\u043E": "init",
-        // attempt / rescue
-        "\u043E\u043F\u0438\u0442\u0430\u0439": "attempt",
-        "\u043E\u043F\u0438\u0442\u0432\u0430\u0439": "attempt",
-        "\u043F\u0440\u043E\u0431\u0432\u0430\u0439": "attempt",
-        "\u043E\u043F\u0438\u0442_\u0437\u0430": "attempt",
-        "\u0441\u043F\u0430\u0441\u0438": "rescue",
-        "\u0445\u0432\u0430\u043D\u0438": "rescue",
-        "\u043F\u0440\u0438\u0445\u0432\u0430\u043D\u0438": "rescue",
-        "\u043F\u0440\u0438_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
-        "\u0430\u043A\u043E_\u0433\u0440\u0435\u0448\u043A\u0430": "rescue",
-        "\u0443\u043B\u043E\u0432\u0438": "rescue",
-        // logical
-        "\u0441\u044A\u0449\u043E": "also",
-        "\u0438": "also",
-        "\u043A\u0430\u043A\u0442\u043E_\u0438": "also",
-        "\u0438\u043B\u0438": "either",
-        "\u0431\u0438\u043B\u043E_\u0442\u043E": "either",
-        "\u043D\u0435_\u0435": "isnt",
-        "\u043D\u0435": "isnt",
-        "\u0440\u0430\u0432\u043D\u043E": "equals",
-        "\u0440\u0430\u0432\u043D\u043E_\u043D\u0430": "equals",
-        "\u0435\u0434\u043D\u0430\u043A\u0432\u043E": "equals",
-        "\u0441\u044A\u0449\u043E\u0442\u043E": "equals",
-        "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E": "differs",
-        "\u0440\u0430\u0437\u043B\u0438\u0447\u043D\u043E_\u043E\u0442": "differs",
-        "\u043D\u0435_\u0440\u0430\u0432\u043D\u043E": "differs",
-        // booleans
-        "\u0434\u0430": "yep",
-        "\u0432\u044F\u0440\u043D\u043E": "yep",
-        "\u0438\u0441\u0442\u0438\u043D\u0430": "yep",
-        "\u0438\u0441\u0442\u0438\u043D\u043D\u043E": "yep",
-        "\u0438\u0441\u0442\u0438\u043D\u0441\u043A\u043E": "yep",
-        "\u043D\u0435\u0432\u044F\u0440\u043D\u043E": "nope",
-        "\u043B\u044A\u0436\u0430": "nope",
-        "\u0433\u0440\u0435\u0448\u043D\u043E": "nope",
-        "\u043D\u0435\u0438\u0441\u0442\u0438\u043D\u0430": "nope",
-        // void / null
-        "\u043F\u0440\u0430\u0437\u043D\u043E": "void",
-        "\u043D\u0438\u0449\u043E": "void",
-        "\u043D\u0443\u043B\u0430": "void",
-        "\u043D\u0443\u043B\u0435\u0432\u0430": "void",
-        "\u043B\u0438\u043F\u0441\u0432\u0430": "void",
-        // summon — import
-        "\u043F\u0440\u0438\u0437\u043E\u0432\u0438": "summon",
-        "\u0438\u043C\u043F\u043E\u0440\u0442\u0438\u0440\u0430\u0439": "summon",
-        "\u0432\u043D\u0435\u0441\u0438": "summon",
-        "\u0432\u043A\u0430\u0440\u0430\u0439": "summon",
-        "\u0432\u043A\u043B\u044E\u0447\u0438": "summon",
-        "\u0437\u0430\u0440\u0435\u0434\u0438": "summon",
-        "\u0438\u0437\u043F\u043E\u043B\u0437\u0432\u0430\u0439": "summon",
-        // async / await / spawn
-        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0435\u043D": "async",
-        "\u0430\u0441\u0438\u043D\u0445\u0440\u043E\u043D\u043D\u043E": "async",
-        "\u043F\u0430\u0440\u0430\u043B\u0435\u043B\u043D\u043E": "async",
-        "\u0438\u0437\u0447\u0430\u043A\u0430\u0439": "await",
-        "\u0447\u0430\u043A\u0430\u0439": "await",
-        "\u043F\u043E\u0447\u0430\u043A\u0430\u0439": "await",
-        "\u043F\u043E\u0440\u043E\u0434\u0438": "spawn",
-        "\u0441\u0442\u0430\u0440\u0442\u0438\u0440\u0430\u0439": "spawn",
-        "\u043F\u0443\u0441\u043D\u0438": "spawn",
-        "\u0438\u0437\u043F\u044A\u043B\u043D\u0438": "spawn"
-      }
-    };
-    SUPPORTED_LANGUAGES = Object.keys(KEYWORD_TABLES);
-    EFFECTIVE_TABLES = {};
-    PHRASE_NORMALIZATIONS = {};
-    COMPILED_REPLACERS = {};
-    FUZZY_REPLACERS = {};
-  }
-});
-
-// src/lang/lexer.ts
-var Lexer;
-var init_lexer = __esm({
-  "src/lang/lexer.ts"() {
-    init_tokens();
+var gfxRunner;
+var init_graphics2 = __esm({
+  "src/lang/graphics.ts"() {
     init_errors();
-    init_translator2();
-    Lexer = class {
-      source;
-      pos = 0;
-      line = 1;
-      column = 1;
-      tokens = [];
-      /** Language detected (or used) by the built-in translator, if any. */
-      detectedLanguage;
-      constructor(source, options = {}) {
-        const { sourceLanguage = "auto", translate = true, dialect = null } = options;
-        if (translate && sourceLanguage !== "English" && sourceLanguage !== null) {
-          const result = translateSource(source, sourceLanguage, { target: "v1", dialect });
-          this.source = result.translated;
-          this.detectedLanguage = result.detectedLanguage;
-        } else {
-          this.source = source;
-          this.detectedLanguage = null;
-        }
-      }
-      tokenize() {
-        while (!this.isAtEnd()) {
-          this.scanToken();
-        }
-        this.tokens.push({ type: "EOF" /* EOF */, value: "", line: this.line, column: this.column });
-        return this.tokens;
-      }
-      scanToken() {
-        this.skipWhitespace();
-        if (this.isAtEnd()) return;
-        const startColumn = this.column;
-        const char = this.advance();
-        const singleTokens = {
-          "(": "LPAREN" /* LPAREN */,
-          ")": "RPAREN" /* RPAREN */,
-          "[": "LBRACKET" /* LBRACKET */,
-          "]": "RBRACKET" /* RBRACKET */,
-          ",": "COMMA" /* COMMA */,
-          "~": "TILDE" /* TILDE */,
-          "&": "AMP" /* AMP */
-        };
-        if (singleTokens[char]) {
-          this.addToken(singleTokens[char], char, startColumn);
-          return;
-        }
-        if (char === "{") {
-          if (this.peek() === "|") {
-            this.advance();
-            this.addToken("LSET" /* LSET */, "{|", startColumn);
-          } else {
-            this.addToken("LBRACE" /* LBRACE */, "{", startColumn);
-          }
-          return;
-        }
-        if (char === "}") {
-          this.addToken("RBRACE" /* RBRACE */, "}", startColumn);
-          return;
-        }
-        if (char === ".") {
-          if (this.peek() === "." && this.peekNext() === ".") {
-            this.advance();
-            this.advance();
-            this.addToken("ELLIPSIS" /* ELLIPSIS */, "...", startColumn);
-          } else {
-            this.addToken("DOT" /* DOT */, ".", startColumn);
-          }
-          return;
-        }
-        if (char === "+" || char === "%" || char === "^") {
-          if (this.peek() === "=") {
-            this.advance();
-            this.addToken("AUGASSIGN" /* AUGASSIGN */, char + "=", startColumn);
-          } else {
-            const map = {
-              "+": "PLUS" /* PLUS */,
-              "%": "PERCENT" /* PERCENT */,
-              "^": "CARET" /* CARET */
-            };
-            this.addToken(map[char], char, startColumn);
-          }
-          return;
-        }
-        if (char === "*") {
-          if (this.peek() === "*") {
-            this.advance();
-            if (this.peek() === "=") {
-              this.advance();
-              this.addToken("AUGASSIGN" /* AUGASSIGN */, "**=", startColumn);
-            } else {
-              this.addToken("STARSTAR" /* STARSTAR */, "**", startColumn);
-            }
-          } else if (this.peek() === "=") {
-            this.advance();
-            this.addToken("AUGASSIGN" /* AUGASSIGN */, "*=", startColumn);
-          } else {
-            this.addToken("STAR" /* STAR */, "*", startColumn);
-          }
-          return;
-        }
-        if (char === "\\") {
-          if (this.peek() === "=") {
-            this.advance();
-            this.addToken("AUGASSIGN" /* AUGASSIGN */, "\\=", startColumn);
-          } else {
-            this.addToken("BACKSLASH" /* BACKSLASH */, "\\", startColumn);
-          }
-          return;
-        }
-        if (char === "@") {
-          if (this.peek() === "=") {
-            this.advance();
-            this.addToken("AUGASSIGN" /* AUGASSIGN */, "@=", startColumn);
-          } else {
-            this.addToken("AT" /* AT */, "@", startColumn);
-          }
-          return;
-        }
-        if (char === "=") {
-          if (this.peek() === "=") {
-            this.advance();
-            this.addToken("EQUALS" /* EQUALS */, "==", startColumn);
-          } else if (this.peek() === ">") {
-            this.advance();
-            this.addToken("FATARROW" /* FATARROW */, "=>", startColumn);
-          } else {
-            this.addToken("BE" /* BE */, "=", startColumn);
-          }
-          return;
-        }
-        if (char === "!") {
-          if (this.peek() === "=") {
-            this.advance();
-            this.addToken("DIFFERS" /* DIFFERS */, "!=", startColumn);
-          } else {
-            this.addToken("ISNT" /* ISNT */, "!", startColumn);
-          }
-          return;
-        }
-        if (char === "-") {
-          if (this.peek() === ">") {
-            this.advance();
-            this.addToken("ARROW" /* ARROW */, "->", startColumn);
-          } else if (this.peek() === "=") {
-            this.advance();
-            this.addToken("AUGASSIGN" /* AUGASSIGN */, "-=", startColumn);
-          } else {
-            this.addToken("MINUS" /* MINUS */, char, startColumn);
-          }
-          return;
-        }
-        if (char === "|") {
-          if (this.peek() === ">") {
-            this.advance();
-            this.addToken("PIPE" /* PIPE */, "|>", startColumn);
-          } else if (this.peek() === "}") {
-            this.advance();
-            this.addToken("RSET" /* RSET */, "|}", startColumn);
-          } else {
-            this.addToken("BAR" /* BAR */, "|", startColumn);
-          }
-          return;
-        }
-        if (char === ":") {
-          if (this.peek() === ":") {
-            this.advance();
-            this.addToken("DOUBLE_COLON" /* DOUBLE_COLON */, "::", startColumn);
-          } else if (this.peek() === "=") {
-            this.advance();
-            this.addToken("WALRUS" /* WALRUS */, ":=", startColumn);
-          } else {
-            this.addToken("COLON" /* COLON */, ":", startColumn);
-          }
-          return;
-        }
-        if (char === ";") {
-          if (this.peek() === ";") {
-            this.advance();
-            this.addToken("DOUBLE_SEMI" /* DOUBLE_SEMI */, ";;", startColumn);
-          }
-          return;
-        }
-        if (char === "/") {
-          if (this.peek() === "/") {
-            while (!this.isAtEnd() && this.peek() !== "\n") {
-              this.advance();
-            }
-            return;
-          }
-          if (this.peek() === "*") {
-            this.advance();
-            while (!this.isAtEnd() && !(this.peek() === "*" && this.peekNext() === "/")) {
-              if (this.peek() === "\n") {
-                this.line++;
-                this.column = 0;
-              }
-              this.advance();
-            }
-            if (!this.isAtEnd()) {
-              this.advance();
-              this.advance();
-            }
-            return;
-          }
-          if (this.peek() === "=") {
-            this.advance();
-            this.addToken("AUGASSIGN" /* AUGASSIGN */, "/=", startColumn);
-            return;
-          }
-          this.addToken("SLASH" /* SLASH */, char, startColumn);
-          return;
-        }
-        if (char === "#") {
-          while (!this.isAtEnd() && this.peek() !== "\n") {
-            this.advance();
-          }
-          return;
-        }
-        if (char === "<") {
-          if (this.peek() === ">") {
-            this.advance();
-            this.addToken("DIFFERS" /* DIFFERS */, "<>", startColumn);
-          } else if (this.peek() === "=") {
-            this.advance();
-            this.addToken("ATMOST" /* ATMOST */, "<=", startColumn);
-          } else if (this.peek() === "<") {
-            this.advance();
-            this.addToken("SHL" /* SHL */, "<<", startColumn);
-          } else {
-            this.addToken("LESS" /* LESS */, "<", startColumn);
-          }
-          return;
-        }
-        if (char === ">") {
-          if (this.peek() === "=") {
-            this.advance();
-            this.addToken("ATLEAST" /* ATLEAST */, ">=", startColumn);
-          } else if (this.peek() === ">") {
-            this.advance();
-            this.addToken("SHR" /* SHR */, ">>", startColumn);
-          } else {
-            this.addToken("MORE" /* MORE */, ">", startColumn);
-          }
-          return;
-        }
-        if ((char === "f" || char === "F" || char === "r" || char === "R" || char === "b" || char === "B") && (this.peek() === '"' || this.peek() === "'" || this.peek() === "`")) {
-          const prefix = char.toLowerCase();
-          const quote = this.advance();
-          this.scanString(quote, startColumn, prefix);
-          return;
-        }
-        if (char === '"' || char === "'" || char === "`") {
-          this.scanString(char, startColumn);
-          return;
-        }
-        if (this.isDigit(char)) {
-          this.scanNumber(char, startColumn);
-          return;
-        }
-        if (this.isAlpha(char)) {
-          this.scanIdentifier(char, startColumn);
-          return;
-        }
-        throw new SdevError(`Unexpected character: '${char}'`, this.line, startColumn);
-      }
-      scanString(quote, startColumn, prefix = "") {
-        let triple = false;
-        if (this.peek() === quote && this.peekNext() === quote) {
-          this.advance();
-          this.advance();
-          triple = true;
-        }
-        const raw = prefix === "r";
-        let value2 = "";
-        const atTerminator = () => {
-          if (triple) {
-            return this.peek() === quote && this.peekNext() === quote && this.source[this.pos + 2] === quote;
-          }
-          return this.peek() === quote;
-        };
-        while (!this.isAtEnd() && !atTerminator()) {
-          if (this.peek() === "\n") {
-            if (quote === "`" || triple) {
-              value2 += this.advance();
-              this.line++;
-              this.column = 1;
-              continue;
-            }
-            throw new SdevError("Unterminated string", this.line, startColumn);
-          }
-          if (this.peek() === "\\" && !raw) {
-            this.advance();
-            const escaped = this.advance();
-            const escapes = {
-              "n": "\n",
-              "t": "	",
-              "r": "\r",
-              "0": "\0",
-              "a": "\x07",
-              "b": "\b",
-              "f": "\f",
-              "v": "\v",
-              "\\": "\\",
-              '"': '"',
-              "'": "'",
-              "`": "`"
-            };
-            if (escaped === "u" && this.peek() === "{") {
-              this.advance();
-              let hex = "";
-              while (!this.isAtEnd() && this.peek() !== "}") hex += this.advance();
-              this.advance();
-              value2 += String.fromCodePoint(parseInt(hex, 16) || 0);
-              continue;
-            }
-            if (escaped === "x") {
-              let hex = "";
-              for (let i = 0; i < 2 && this.isHexDigit(this.peek()); i++) hex += this.advance();
-              value2 += String.fromCharCode(parseInt(hex, 16) || 0);
-              continue;
-            }
-            value2 += escapes[escaped] ?? escaped;
-          } else if (this.peek() === "\\" && raw) {
-            value2 += this.advance();
-            if (!this.isAtEnd()) value2 += this.advance();
-          } else {
-            value2 += this.advance();
-          }
-        }
-        if (this.isAtEnd()) {
-          throw new SdevError("Unterminated string", this.line, startColumn);
-        }
-        this.advance();
-        if (triple) {
-          this.advance();
-          this.advance();
-        }
-        if (prefix === "f") {
-          this.addToken("FSTRING" /* FSTRING */, value2, startColumn);
-        } else if (prefix === "b") {
-          this.addToken("BYTES" /* BYTES */, value2, startColumn);
-        } else {
-          this.addToken("STRING" /* STRING */, value2, startColumn);
-        }
-      }
-      scanNumber(first, startColumn) {
-        let value2 = first;
-        if (first === "0" && /[xXbBoO]/.test(this.peek())) {
-          const marker = this.advance().toLowerCase();
-          let raw = "";
-          while (this.isHexDigit(this.peek()) || this.peek() === "_") {
-            const c = this.advance();
-            if (c !== "_") raw += c;
-          }
-          const radix = marker === "x" ? 16 : marker === "b" ? 2 : 8;
-          this.addToken("NUMBER" /* NUMBER */, String(parseInt(raw, radix)), startColumn);
-          return;
-        }
-        const digits = () => {
-          while (this.isDigit(this.peek()) || this.peek() === "_" && this.isDigit(this.peekNext())) {
-            const c = this.advance();
-            if (c !== "_") value2 += c;
-          }
-        };
-        digits();
-        if (this.peek() === "." && this.isDigit(this.peekNext())) {
-          value2 += this.advance();
-          digits();
-        }
-        if ((this.peek() === "e" || this.peek() === "E") && (this.isDigit(this.peekNext()) || this.peekNext() === "+" || this.peekNext() === "-")) {
-          value2 += this.advance();
-          if (this.peek() === "+" || this.peek() === "-") {
-            value2 += this.advance();
-          }
-          digits();
-        }
-        this.addToken("NUMBER" /* NUMBER */, value2, startColumn);
-      }
-      scanIdentifier(first, startColumn) {
-        let value2 = first;
-        while (this.isAlphaNumeric(this.peek())) {
-          value2 += this.advance();
-        }
-        const type = KEYWORDS[value2] ?? "IDENTIFIER" /* IDENTIFIER */;
-        this.addToken(type, value2, startColumn);
-      }
-      skipWhitespace() {
-        while (!this.isAtEnd()) {
-          const char = this.peek();
-          if (char === " " || char === "	" || char === "\r") {
-            this.advance();
-          } else if (char === "\n") {
-            this.line++;
-            this.column = 0;
-            this.advance();
-          } else {
-            break;
-          }
-        }
-      }
-      isAtEnd() {
-        return this.pos >= this.source.length;
-      }
-      peek() {
-        return this.source[this.pos] ?? "\0";
-      }
-      peekNext() {
-        return this.source[this.pos + 1] ?? "\0";
-      }
-      advance() {
-        const char = this.source[this.pos];
-        this.pos++;
-        this.column++;
-        return char;
-      }
-      addToken(type, value2, column) {
-        this.tokens.push({ type, value: value2, line: this.line, column });
-      }
-      isDigit(char) {
-        return char >= "0" && char <= "9";
-      }
-      isHexDigit(char) {
-        return char >= "0" && char <= "9" || char >= "a" && char <= "f" || char >= "A" && char <= "F";
-      }
-      isAlpha(char) {
-        return char >= "a" && char <= "z" || char >= "A" && char <= "Z" || char === "_" || new RegExp("\\p{L}", "u").test(char);
-      }
-      isAlphaNumeric(char) {
-        return this.isAlpha(char) || this.isDigit(char);
-      }
-    };
+    init_builtins();
+    init_sdev_module();
+    init_graphics();
+    init_turtle();
+    gfxRunner = null;
   }
 });
 
@@ -15300,673 +16647,673 @@ conjure loop() ::
 var understander_default;
 var init_understander = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\understander.sdev"() {
-    understander_default = `// =====================================================================\r
-// understander.sdev \u2014 the code understander, written in sdev.\r
-//\r
-// Reads a whole file line by line, works out what the author meant and\r
-// returns canonical sdev. The TypeScript understander (src/lang/agent)\r
-// stays behind it as the fallback: any line this engine is not sure\r
-// about makes the whole answer "unsure" and the fallback takes over.\r
-//\r
-//   understand_source(source, known_names) -> [source, sure, notes]\r
-//\r
-// known_names: names defined elsewhere in the project (other files,\r
-// memory), so cross-file references are never mistaken for typos.\r
-// =====================================================================\r
-\r
-forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]\r
-\r
-// ---------- small helpers ----------\r
-\r
-conjure starts_canonical(body) ::\r
-  forge first be lower(regex_replace(body, "^([^\\\\s(:]+).*$", "$1"))\r
-  iterate word through CANON ::\r
-    ponder first equals word ::\r
-      yield yep\r
-    ;;\r
-  ;;\r
-  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.\\\\[\\\\]\\"]*\\\\s+be\\\\s") ::\r
-    yield yep\r
-  ;;\r
-  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.]*\\\\s*\\\\(.*\\\\)$") ::\r
-    yield yep\r
-  ;;\r
-  yield nope\r
-;;\r
-\r
-conjure is_quoted(t) ::\r
-  ponder regex_test(t, "[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}]") ::\r
-    yield nope\r
-  ;;\r
-  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")\r
-;;\r
-\r
-// plus / minus / times / divided by -> symbols\r
-conjure math_words(t) ::\r
-  forge s be " " + lower(t) + " "\r
-  s be regex_replace(s, "\\\\s+divided\\\\s+by\\\\s+", " / ")\r
-  s be regex_replace(s, "\\\\s+multiplied\\\\s+by\\\\s+", " * ")\r
-  s be regex_replace(s, "\\\\s+to\\\\s+the\\\\s+power\\\\s+of\\\\s+", " ^ ")\r
-  s be regex_replace(s, "\\\\s+plus\\\\s+", " + ")\r
-  s be regex_replace(s, "\\\\s+minus\\\\s+", " - ")\r
-  s be regex_replace(s, "\\\\s+times\\\\s+", " * ")\r
-  s be regex_replace(s, "\\\\s+mod(ulo)?\\\\s+", " % ")\r
-  s be regex_replace(s, "\\\\s*\\\\?\\\\s*$", "")\r
-  yield trim(s)\r
-;;\r
-\r
-conjure is_math(t) ::\r
-  ponder isnt regex_test(t, "[0-9]") ::\r
-    yield nope\r
-  ;;\r
-  yield regex_test(t, "^[0-9\\\\s+\\\\-*/().%^]+$")\r
-;;\r
-\r
-conjure is_known(name, names) ::\r
-  yield has(names, name)\r
-;;\r
-\r
-// an expression made only of numbers, operators, quotes and known names\r
-conjure safe_expr(e, names) ::\r
-  ponder is_quoted(e) either is_math(e) ::\r
-    yield yep\r
-  ;;\r
-  ponder regex_test(e, "[\\\\-*/%^]") either (regex_test(e, "\\\\+") also isnt regex_test(e, "[\\"']")) ::\r
-    iterate w through regex_find_all(e, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-      ponder has(names, w) also names[w] equals "typed" ::\r
-        yield nope\r
-      ;;\r
-    ;;\r
-  ;;\r
-  forge rest be regex_replace(e, "\\"[^\\"]*\\"|'[^']*'", " ")\r
-  forge parts be regex_find_all(rest, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
-  iterate p through parts ::\r
-    ponder isnt is_known(p, names) ::\r
-      ponder isnt (p equals "yep" either p equals "nope" either p equals "void") ::\r
-        yield nope\r
-      ;;\r
-    ;;\r
-  ;;\r
-  yield regex_test(rest, "^[\\\\p{L}\\\\p{N}_\\\\s+\\\\-*/().%^,\\\\[\\\\]]*$")\r
-;;\r
-\r
-// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)\r
-// returns "" when a placeholder names something unknown\r
-conjure fill_placeholders(q, names) ::\r
-  forge inner be snatch(q, 1, measure(q) - 1)\r
-  forge parts be []\r
-  forge rest be inner\r
-  forge m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
-  cycle m differs void ::\r
-    ponder isnt is_known(m[2], names) ::\r
-      yield ""\r
-    ;;\r
-    ponder m[1] differs "" ::\r
-      parts be parts + [quote_text(m[1])]\r
-    ;;\r
-    parts be parts + ["str(" + m[2] + ")"]\r
-    rest be m[3]\r
-    m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")\r
-  ;;\r
-  ponder rest differs "" ::\r
-    parts be parts + [quote_text(rest)]\r
-  ;;\r
-  yield weave(parts, " + ")\r
-;;\r
-\r
-conjure has_placeholder(t) ::\r
-  yield regex_test(t, "^[\\"'].*[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}].*[\\"']$")\r
-;;\r
-\r
-// a free loop counter name\r
-conjure counter(names) ::\r
-  iterate c through ["i", "j", "k", "_n"] ::\r
-    ponder isnt has(names, c) ::\r
-      yield c\r
-    ;;\r
-  ;;\r
-  yield "_n"\r
-;;\r
-\r
-conjure asked(name, q, names) ::\r
-  ponder has(names, "#num:" + name) ::\r
-    yield "set " + name + " to num(input(" + q + "))"\r
-  ;;\r
-  yield "set " + name + " to input(" + q + ")"\r
-;;\r
-\r
-// something to say: a quoted text, a known name, or bare words\r
-conjure sayable(arg, names) ::\r
-  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::\r
-    yield arg\r
-  ;;\r
-  ponder regex_test(arg, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
-    iterate w through regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-      ponder is_known(w, names) ::\r
-        yield ""\r
-      ;;\r
-    ;;\r
-    yield quote_text(arg)\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-\r
-// ---------- everyday tasks (reverse, upper/lower, length, dice, sort \u2026) ----------\r
-\r
-forge NUMBER_WORDS be :: "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "twenty": "20", "hundred": "100" ;;\r
-\r
-conjure as_number(t) ::\r
-  forge w be lower(trim(t))\r
-  ponder regex_test(w, "^-?[0-9]+(\\\\.[0-9]+)?$") ::\r
-    yield w\r
-  ;;\r
-  ponder has(NUMBER_WORDS, w) ::\r
-    yield NUMBER_WORDS[w]\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-// "hello" / hello / a known name -> an expression\r
-conjure subject_of(t, names) ::\r
-  forge w be regex_replace(trim(t), "^(the\\\\s+)?(word|text|name|string)\\\\s+", "", "i")\r
-  ponder is_quoted(w) ::\r
-    yield w\r
-  ;;\r
-  ponder is_known(w, names) ::\r
-    yield w\r
-  ;;\r
-  ponder regex_test(w, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::\r
-    yield quote_text(w)\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-conjure number_list(t) ::\r
-  forge found be regex_find_all(t, "-?[0-9]+(\\\\.[0-9]+)?")\r
-  ponder measure(found) < 2 ::\r
-    yield ""\r
-  ;;\r
-  ponder isnt regex_test(t, "^[0-9\\\\s,.\\\\-and]+$", "i") ::\r
-    yield ""\r
-  ;;\r
-  yield "[" + weave(found, ", ") + "]"\r
-;;\r
-\r
-// returns the canonical text, or "" when this is not an everyday task\r
-conjure task_line(b, names) ::\r
-  forge s be regex_replace(regex_replace(b, "^(please|can you|could you)\\\\s+", "", "i"), "[.!?]+\\\\s*$", "")\r
-  forge out be regex_replace(s, "^(print|say|show|display|output|tell me|give me)\\\\s+(the\\\\s+)?", "", "i")\r
-  forge m be void\r
-\r
-  ponder regex_test(s, "^(flip|toss)\\\\s+(a\\\\s+)?coin$", "i") ::\r
-    yield "say pick([\\"heads\\", \\"tails\\"])"\r
-  ;;\r
-  ponder regex_test(s, "^(roll|throw)\\\\s+(a\\\\s+)?(die|dice)$", "i") ::\r
-    yield "say randint(1, 6)"\r
-  ;;\r
-  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also as_number(m[1]) differs "" ::\r
-    yield "set i to " + as_number(m[1]) + "\\nwhile i > 0\\n  say i\\n  set i to i - 1\\nend"\r
-  ;;\r
-  m be regex_capture(out, "^(reverse|backwards)\\\\s+(of\\\\s+)?(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(out, "^()()(.+?)\\\\s+(reversed|backwards)$", "i")\r
-  ;;\r
-  ponder m differs void also subject_of(m[3], names) differs "" ::\r
-    yield "say reverse(" + subject_of(m[3], names) + ")"\r
-  ;;\r
-  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(uppercase|upper\\\\s*case|capitals|caps)$", "i")\r
-  ponder m differs void also subject_of(m[2], names) differs "" ::\r
-    yield "say upper(" + subject_of(m[2], names) + ")"\r
-  ;;\r
-  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(lowercase|lower\\\\s*case|small\\\\s+letters)$", "i")\r
-  ponder m differs void also subject_of(m[2], names) differs "" ::\r
-    yield "say lower(" + subject_of(m[2], names) + ")"\r
-  ;;\r
-  m be regex_capture(s, "^(what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(the\\\\s+)?(length|size)\\\\s+of\\\\s+(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(s, "^()()()how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")\r
-  ;;\r
-  ponder m differs void ::\r
-    forge lst be number_list(m[4])\r
-    ponder lst differs "" ::\r
-      yield "say len(" + lst + ")"\r
-    ;;\r
-    ponder subject_of(m[4], names) differs "" ::\r
-      yield "say len(" + subject_of(m[4], names) + ")"\r
-    ;;\r
-  ;;\r
-  m be regex_capture(s, "^(is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(is\\\\s+)?(an?\\\\s+)?(even|odd)(\\\\s+or\\\\s+(even|odd))?$", "i")\r
-  ponder m differs void ::\r
-    forge n be as_number(m[2])\r
-    ponder n equals "" also is_known(m[2], names) ::\r
-      n be m[2]\r
-    ;;\r
-    ponder n differs "" ::\r
-      yield "if " + n + " % 2 is 0\\n  say \\"even\\"\\nelse\\n  say \\"odd\\"\\nend"\r
-    ;;\r
-  ;;\r
-  m be regex_capture(s, "^((give|show|pick|generate|roll|make|get)\\\\s+(me\\\\s+)?)?(a\\\\s+)?random\\\\s+(whole\\\\s+)?number\\\\s+(between|from)\\\\s+(\\\\S+)\\\\s+(and|to)\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also as_number(m[7]) differs "" also as_number(m[9]) differs "" ::\r
-    yield "say randint(" + as_number(m[7]) + ", " + as_number(m[9]) + ")"\r
-  ;;\r
-  m be regex_capture(out, "^sort\\\\s+(the\\\\s+)?(numbers\\\\s+)?(.+?)(\\\\s+(from\\\\s+)?(biggest|largest|highest)\\\\s+(to|first).*)?$", "i")\r
-  ponder m differs void also number_list(m[3]) differs "" ::\r
-    ponder regex_test(s, "biggest|largest|highest|descending", "i") ::\r
-      yield "say sortDesc(" + number_list(m[3]) + ")"\r
-    ;;\r
-    yield "say sort(" + number_list(m[3]) + ")"\r
-  ;;\r
-  m be regex_capture(s, "^(print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(the\\\\s+)?(multiplication|times)\\\\s+table\\\\s+(of|for)\\\\s+(\\\\S+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(s, "^(print\\\\s+|show\\\\s+)?(the\\\\s+)?()()(\\\\S+)\\\\s+times\\\\s+table$", "i")\r
-  ;;\r
-  ponder m differs void also as_number(m[5]) differs "" ::\r
-    forge n be as_number(m[5])\r
-    yield "set i to 1\\nwhile i <= 10\\n  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)\\n  set i to i + 1\\nend"\r
-  ;;\r
-  m be regex_capture(s, "^(say\\\\s+)?(hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(s, "^()()greet\\\\s+(.+)$", "i")\r
-  ;;\r
-  ponder m differs void ::\r
-    forge who be trim(m[3])\r
-    ponder is_known(who, names) ::\r
-      yield "say \\"Hello, \\" + " + who\r
-    ;;\r
-    ponder regex_test(who, "^[\\\\p{L} '-]+$") ::\r
-      yield "say " + quote_text("Hello, " + who)\r
-    ;;\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-// ---------- one line ----------\r
-// returns [canonical, sure]\r
-\r
-conjure understand_line(body, names) ::\r
-  forge b be regex_replace(body, "^what's\\\\s", "what is ", "i")\r
-\r
-\r
-  // everyday tasks first: "reverse hello", "roll a dice", "say hello to Sam"\r
-  forge task be task_line(b, names)\r
-  ponder task differs "" ::\r
-    yield [task, yep]\r
-  ;;\r
-\r
-  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"\r
-  forge m be regex_capture(b, "^ask\\\\s+(\\"[^\\"]*\\"|'[^']*')\\\\s+(as|into|for|and\\\\s+call\\\\s+it|and\\\\s+store\\\\s+in)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
-  ponder m differs void ::\r
-    yield [asked(m[3], m[1], names), yep]\r
-  ;;\r
-  m be regex_capture(b, "^ask\\\\s+(the\\\\s+user\\\\s+)?for\\\\s+(their\\\\s+|a\\\\s+|the\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
-  ponder m differs void ::\r
-    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]\r
-  ;;\r
-  m be regex_capture(b, "^(set\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=|to|be)\\\\s*ask\\\\s+(\\"[^\\"]*\\"|'[^']*')$", "i")\r
-  ponder m differs void ::\r
-    yield [asked(m[2], m[4], names), yep]\r
-  ;;\r
-\r
-  // say X N times\r
-  m be regex_capture(b, "^(say|print|show|write)\\\\s+(.+?)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times$", "i")\r
-  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::\r
-    forge what be sayable(trim(m[2]), names)\r
-    ponder what differs "" ::\r
-      forge c be counter(names)\r
-      yield ["set " + c + " to 0\\nwhile " + c + " < " + m[3] + "\\n  say " + what + "\\n  set " + c + " to " + c + " + 1\\nend", yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-  // count / print the numbers from A to B [by S]  \xB7  count to N\r
-  m be regex_capture(b, "^(count|print|show|say|list)\\\\s+(the\\\\s+)?(numbers\\\\s+)?from\\\\s+(-?[0-9]+)\\\\s+(to|until|through)\\\\s+(-?[0-9]+)(\\\\s+by\\\\s+([0-9]+))?$", "i")\r
-  ponder m equals void ::\r
-    forge m2 be regex_capture(b, "^(please\\\\s+)?count\\\\s+(up\\\\s+)?to\\\\s+([0-9]+)$", "i")\r
-    ponder m2 differs void ::\r
-      m be ["", "", "", "", "1", "", m2[3], "", ""]\r
-    ;;\r
-  ;;\r
-  ponder m differs void ::\r
-    forge c be counter(names)\r
-    forge step be m[8] equals "" ~ "1" : m[8]\r
-    forge down be num(m[4]) > num(m[6])\r
-    forge cmp be down ~ " >= " : " <= "\r
-    forge op be down ~ " - " : " + "\r
-    yield ["set " + c + " to " + m[4] + "\\nwhile " + c + cmp + m[6] + "\\n  say " + c + "\\n  set " + c + " to " + c + op + step + "\\nend", yep]\r
-  ;;\r
-  // repeat N times  (a block \u2014 its counter is bumped where the block ends)\r
-  m be regex_capture(b, "^(repeat|do\\\\s+this|do)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times\\\\s*:?$", "i")\r
-  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::\r
-    forge c be counter(names)\r
-    yield ["set " + c + " to 0\\nwhile " + c + " < " + m[2] + "\\n#bump " + c, yep]\r
-  ;;\r
-\r
-  // conditions: when/if COND [then][:]  ->  if COND\r
-  m be regex_capture(b, "^(when|if)\\\\s+(.+?)\\\\s*(then)?\\\\s*:?$", "i")\r
-  ponder m differs void also isnt regex_test(b, "::") ::\r
-    forge cond be m[2]\r
-    forge yn be regex_capture(cond, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals|==?)\\\\s+[\\"']?(yes|no|y|n)[\\"']?$", "i")\r
-    ponder yn differs void also is_known(yn[1], names) ::\r
-      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]\r
-    ;;\r
-    ponder regex_test(cond, "\\\\b(yes|no)\\\\b", "i") ::\r
-      yield [body, nope]\r
-    ;;\r
-    forge plain be regex_replace(cond, "\\\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\\\b", " ", "i")\r
-    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::\r
-      yield ["if " + cond, yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals)\\\\s+[\\"']?(yes|no)[\\"']?\\\\s*:$", "i")\r
-  ponder m differs void also is_known(m[1], names) ::\r
-    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]\r
-  ;;\r
-  ponder regex_test(b, "^(otherwise|else)\\\\s*:?$", "i") ::\r
-    yield ["else", yep]\r
-  ;;\r
-\r
-  // say with pieces side by side: say "Hello, " name "!"\r
-  m be regex_capture(b, "^(say|print|show)\\\\s+(.+)$", "i")\r
-  ponder m differs void ::\r
-    forge pieces be regex_find_all(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|,")\r
-    forge glued be regex_replace(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|[,\\\\s]", "")\r
-    ponder glued equals "" also measure(pieces) > 1 ::\r
-      forge parts be []\r
-      forge fine be yep\r
-      iterate pc through pieces ::\r
-        ponder pc differs "," ::\r
-          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::\r
-            parts be parts + [pc]\r
-          ;; otherwise ::\r
-            fine be nope\r
-          ;;\r
-        ;;\r
-      ;;\r
-      ponder fine also measure(parts) > 1 ::\r
-        yield ["say " + weave(parts, " + "), yep]\r
-      ;;\r
-    ;;\r
-  ;;\r
-\r
-  // output: print / show / display / output / write / say / tell\r
-  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\\\s+(.+)$", "i")\r
-  ponder m differs void ::\r
-    forge arg be trim(m[2])\r
-    ponder has_placeholder(arg) ::\r
-      forge filled be fill_placeholders(arg, names)\r
-      ponder filled differs "" ::\r
-        yield ["speak(" + filled + ")", yep]\r
-      ;;\r
-      yield [body, nope]\r
-    ;;\r
-    ponder is_quoted(arg) either is_math(arg) ::\r
-      yield ["speak(" + arg + ")", yep]\r
-    ;;\r
-    ponder is_name(arg) also is_known(arg, names) ::\r
-      yield ["speak(" + arg + ")", yep]\r
-    ;;\r
-    ponder safe_expr(arg, names) also regex_test(arg, "[+\\\\-*/]") ::\r
-      yield ["speak(" + arg + ")", yep]\r
-    ;;\r
-    // bare words with no known names in them: say them as written\r
-    forge used be regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")\r
-    iterate w through used ::\r
-      ponder is_known(w, names) ::\r
-        yield [body, nope]\r
-      ;;\r
-    ;;\r
-    // words that usually mean a task ("count to", "3 times", "on the screen")\r
-    ponder regex_test(arg, "\\\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\\\b", "i") ::\r
-      yield [body, nope]\r
-    ;;\r
-    ponder regex_test(arg, "[\\"'(){}\\\\[\\\\]]") ::\r
-      yield [body, nope]\r
-    ;;\r
-    yield ["speak(" + quote_text(arg) + ")", yep]\r
-  ;;\r
-\r
-  // plain calculations: calculate / compute / what is / how much is\r
-  m be regex_capture(b, "^(calculate|compute|evaluate|solve|what\\\\s+is|how\\\\s+much\\\\s+is)\\\\s+(.+?)\\\\??$", "i")\r
-  ponder m differs void ::\r
-    forge expr be math_words(m[2])\r
-    ponder is_math(expr) ::\r
-      yield ["speak(" + expr + ")", yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-\r
-  // add N to x / increase x by N / decrease x by N\r
-  m be regex_capture(b, "^add\\\\s+(\\\\S+)\\\\s+to\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")\r
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[1], names) ::\r
-    yield [m[2] + " be " + m[2] + " + " + m[1], yep]\r
-  ;;\r
-  m be regex_capture(b, "^(increase|raise)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
-    yield [m[2] + " be " + m[2] + " + " + m[3], yep]\r
-  ;;\r
-  m be regex_capture(b, "^(decrease|lower|reduce)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")\r
-  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::\r
-    yield [m[2] + " be " + m[2] + " - " + m[3], yep]\r
-  ;;\r
-\r
-  // x becomes E\r
-  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+becomes\\\\s+(.+)$", "i")\r
-  ponder m differs void also is_known(m[1], names) also safe_expr(trim(m[2]), names) ::\r
-    yield [m[1] + " be " + trim(m[2]), yep]\r
-  ;;\r
-\r
-  // set x to E / let x be E / make x E / x = E\r
-  m be regex_capture(b, "^(set|let|make)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(to|be|equal\\\\s+to|=)\\\\s+(.+)$", "i")\r
-  ponder m equals void ::\r
-    m be regex_capture(b, "^()([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=)\\\\s*([^=].*)$")\r
-  ;;\r
-  ponder m differs void ::\r
-    forge value be trim(m[4])\r
-    ponder safe_expr(value, names) ::\r
-      ponder is_known(m[2], names) ::\r
-        yield [m[2] + " be " + value, yep]\r
-      ;;\r
-      yield ["forge " + m[2] + " be " + value, yep]\r
-    ;;\r
-    yield [body, nope]\r
-  ;;\r
-\r
-  ponder starts_canonical(b) ::\r
-    yield [body, yep]\r
-  ;;\r
-  yield [body, nope]\r
-;;\r
-\r
-// ---------- the whole file ----------\r
-\r
-// an open block is [indent, counter]; a counted block bumps it before "end"\r
-conjure close_block(open) ::\r
-  ponder open[1] differs "" ::\r
-    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]\r
-  ;;\r
-  yield [open[0] + "end"]\r
-;;\r
-\r
-forge CHUNK_MEMO be ::\r
-;;\r
-\r
-conjure understand_source(source, known, words) ::\r
-  forge names be ::\r
-  ;;\r
-  iterate k through known ::\r
-    names[k] be yep\r
-  ;;\r
-  // dialect / remembered words: [word, canonical]\r
-  forge wordmap be ::\r
-  ;;\r
-  ponder words differs void ::\r
-    iterate pair through words ::\r
-      wordmap[lower(pair[0])] be pair[1]\r
-    ;;\r
-  ;;\r
-  // names used in arithmetic or numeric comparisons: typed answers for\r
-  // them are converted to numbers when they are asked for\r
-  iterate row through lines(source) ::\r
-    forge bare be regex_replace(row, "\\"[^\\"]*\\"|'[^']*'", "\\"\\"")\r
-    forge numeric be regex_test(bare, "[\\\\-*/%^<>]|\\\\b(more|less|greater|smaller)\\\\b") either (regex_test(bare, "\\\\+") also isnt regex_test(bare, "\\"")) either regex_test(bare, "\\\\b(times|plus|minus|divided)\\\\b")\r
-    ponder numeric also isnt regex_test(trim(row), "^ask\\\\b", "i") ::\r
-      iterate w through regex_find_all(bare, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-        names["#num:" + w] be yep\r
-      ;;\r
-    ;;\r
-  ;;\r
-  forge out be []\r
-  forge notes be []\r
-  forge sure be yep\r
-  forge n be 0\r
-  forge rows be lines(source)\r
-  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,\r
-  // unless the author already writes "end" or "::" blocks themselves\r
-  forge auto_end be isnt regex_test(source, "(^|\\n)\\s*end\\s*($|\\n)|::")\r
-  forge opens be []\r
-  // Large files are read in top-level chunks. Each chunk's reading is\r
-  // remembered (keyed by its text and everything known before it), so after\r
-  // a small edit only the chunks that changed are read again.\r
-  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))\r
-  iterate k through keys(names) ::\r
-    ponder startswith(k, "#num:") ::\r
-      state be str(hash(state + k)) + str(hash(reverse(state + k)))\r
-    ;;\r
-  ;;\r
-  forge chunks be []\r
-  forge current be []\r
-  forge first_line be 1\r
-  forge idx be 0\r
-  iterate line through rows ::\r
-    idx be idx + 1\r
-    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\\\}|//|#)", "i")\r
-    ponder top also measure(current) > 0 ::\r
-      chunks be chunks + [[first_line, current]]\r
-      current be []\r
-      first_line be idx\r
-    ;;\r
-    current be current + [line]\r
-  ;;\r
-  ponder measure(current) > 0 ::\r
-    chunks be chunks + [[first_line, current]]\r
-  ;;\r
-  iterate chunk through chunks ::\r
-    forge key be state + "|#|" + unlines(chunk[1])\r
-    forge delta be []\r
-    ponder has(CHUNK_MEMO, key) ::\r
-      forge hit be CHUNK_MEMO[key]\r
-      out be out + hit[0]\r
-      ponder isnt hit[1] ::\r
-        sure be nope\r
-      ;;\r
-      iterate note through hit[2] ::\r
-        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]\r
-      ;;\r
-      delta be hit[3]\r
-      iterate pair through delta ::\r
-        names[pair[0]] be pair[1]\r
-      ;;\r
-    ;; otherwise ::\r
-      forge c_out be []\r
-      forge c_sure be yep\r
-      forge c_notes be []\r
-      forge saved_out be out\r
-      forge saved_notes be notes\r
-      forge saved_sure be sure\r
-      out be []\r
-      notes be []\r
-      sure be yep\r
-      n be chunk[0] - 1\r
-      iterate line through chunk[1] ::\r
-      n be n + 1\r
-      forge indent be leading_space(line)\r
-      forge body be trim(line)\r
-      forge head be lower(regex_replace(body, "^(\\\\S+).*$", "$1"))\r
-      ponder has(wordmap, head) also body differs "" ::\r
-        body be wordmap[head] + snatch(body, measure(head), measure(body))\r
-      ;;\r
-      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::\r
-        out be out + [line]\r
-      ;; otherwise ::\r
-        forge r be understand_line(body, names)\r
-        ponder isnt r[1] ::\r
-          sure be nope\r
-        ;;\r
-        ponder r[0] differs body ::\r
-          notes be notes + [[n, body, r[0]]]\r
-        ;;\r
-        // learn declarations as we go: forge x be \u2026 / conjure f(a, b)\r
-        forge d be regex_capture(r[0], "^(?:forge|set)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
-        ponder d differs void ::\r
-          names[d[1]] be (regex_test(r[0], "input\\\\(") also isnt regex_test(r[0], "num\\\\(input")) ~ "typed" : yep\r
-          delta be delta + [[d[1], names[d[1]]]]\r
-        ;;\r
-        d be regex_capture(r[0], "^conjure\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*\\\\(([^)]*)\\\\)")\r
-        ponder d differs void ::\r
-          names[d[1]] be yep\r
-          delta be delta + [[d[1], yep]]\r
-          iterate p through regex_find_all(d[2], "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::\r
-            names[p] be yep\r
-            delta be delta + [[p, yep]]\r
-          ;;\r
-        ;;\r
-        d be regex_capture(r[0], "^iterate\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")\r
-        ponder d differs void ::\r
-          names[d[1]] be yep\r
-          delta be delta + [[d[1], yep]]\r
-        ;;\r
-        ponder auto_end ::\r
-          forge isElse be regex_test(r[0], "^else\\\\b")\r
-          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::\r
-            out be out + close_block(opens[-1])\r
-            opens be portion(opens, 0, measure(opens) - 1)\r
-          ;;\r
-          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::\r
-            opens be portion(opens, 0, measure(opens) - 1)\r
-          ;;\r
-          forge bump be regex_capture(r[0], "\\n#bump (\\\\S+)$")\r
-          ponder bump differs void ::\r
-            opens be opens + [[indent, bump[1]]]\r
-            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]\r
-          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\\\b") also isnt contains(r[0], "\\n") ::\r
-            opens be opens + [[indent, ""]]\r
-          ;;\r
-        ;;\r
-        ponder isnt auto_end also contains(r[0], "#bump") ::\r
-          sure be nope\r
-        ;;\r
-        out be out + [indent + replace(r[0], "\\n", "\\n" + indent)]\r
-      ;;\r
-      ;;\r
-      // a top-level line follows: close what this chunk opened, here\r
-      cycle auto_end also measure(opens) > 0 ::\r
-        out be out + close_block(opens[-1])\r
-        opens be portion(opens, 0, measure(opens) - 1)\r
-      ;;\r
-      c_out be out\r
-      c_sure be sure\r
-      iterate note through notes ::\r
-        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]\r
-      ;;\r
-      ponder measure(CHUNK_MEMO) > 20000 ::\r
-        CHUNK_MEMO be ::\r
-        ;;\r
-      ;;\r
-      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]\r
-      out be saved_out + c_out\r
-      notes be saved_notes + notes\r
-      sure be saved_sure also c_sure\r
-    ;;\r
-    forge dsig be state\r
-    iterate pair through delta ::\r
-      dsig be dsig + "," + pair[0] + "=" + str(pair[1])\r
-    ;;\r
-    state be str(hash(dsig)) + str(hash(reverse(dsig)))\r
-  ;;\r
-  yield [unlines(out), sure, notes]\r
-;;\r
+    understander_default = `// =====================================================================
+// understander.sdev \u2014 the code understander, written in sdev.
+//
+// Reads a whole file line by line, works out what the author meant and
+// returns canonical sdev. The TypeScript understander (src/lang/agent)
+// stays behind it as the fallback: any line this engine is not sure
+// about makes the whole answer "unsure" and the fallback takes over.
+//
+//   understand_source(source, known_names) -> [source, sure, notes]
+//
+// known_names: names defined elsewhere in the project (other files,
+// memory), so cross-file references are never mistaken for typos.
+// =====================================================================
+
+forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]
+
+// ---------- small helpers ----------
+
+conjure starts_canonical(body) ::
+  forge first be lower(regex_replace(body, "^([^\\\\s(:]+).*$", "$1"))
+  iterate word through CANON ::
+    ponder first equals word ::
+      yield yep
+    ;;
+  ;;
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.\\\\[\\\\]\\"]*\\\\s+be\\\\s") ::
+    yield yep
+  ;;
+  ponder regex_test(body, "^[\\\\p{L}_][\\\\p{L}\\\\p{N}_.]*\\\\s*\\\\(.*\\\\)$") ::
+    yield yep
+  ;;
+  yield nope
+;;
+
+conjure is_quoted(t) ::
+  ponder regex_test(t, "[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}]") ::
+    yield nope
+  ;;
+  yield regex_test(t, "^(\\"[^\\"]*\\"|'[^']*')$")
+;;
+
+// plus / minus / times / divided by -> symbols
+conjure math_words(t) ::
+  forge s be " " + lower(t) + " "
+  s be regex_replace(s, "\\\\s+divided\\\\s+by\\\\s+", " / ")
+  s be regex_replace(s, "\\\\s+multiplied\\\\s+by\\\\s+", " * ")
+  s be regex_replace(s, "\\\\s+to\\\\s+the\\\\s+power\\\\s+of\\\\s+", " ^ ")
+  s be regex_replace(s, "\\\\s+plus\\\\s+", " + ")
+  s be regex_replace(s, "\\\\s+minus\\\\s+", " - ")
+  s be regex_replace(s, "\\\\s+times\\\\s+", " * ")
+  s be regex_replace(s, "\\\\s+mod(ulo)?\\\\s+", " % ")
+  s be regex_replace(s, "\\\\s*\\\\?\\\\s*$", "")
+  yield trim(s)
+;;
+
+conjure is_math(t) ::
+  ponder isnt regex_test(t, "[0-9]") ::
+    yield nope
+  ;;
+  yield regex_test(t, "^[0-9\\\\s+\\\\-*/().%^]+$")
+;;
+
+conjure is_known(name, names) ::
+  yield has(names, name)
+;;
+
+// an expression made only of numbers, operators, quotes and known names
+conjure safe_expr(e, names) ::
+  ponder is_quoted(e) either is_math(e) ::
+    yield yep
+  ;;
+  ponder regex_test(e, "[\\\\-*/%^]") either (regex_test(e, "\\\\+") also isnt regex_test(e, "[\\"']")) ::
+    iterate w through regex_find_all(e, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+      ponder has(names, w) also names[w] equals "typed" ::
+        yield nope
+      ;;
+    ;;
+  ;;
+  forge rest be regex_replace(e, "\\"[^\\"]*\\"|'[^']*'", " ")
+  forge parts be regex_find_all(rest, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")
+  iterate p through parts ::
+    ponder isnt is_known(p, names) ::
+      ponder isnt (p equals "yep" either p equals "nope" either p equals "void") ::
+        yield nope
+      ;;
+    ;;
+  ;;
+  yield regex_test(rest, "^[\\\\p{L}\\\\p{N}_\\\\s+\\\\-*/().%^,\\\\[\\\\]]*$")
+;;
+
+// "Hello, [name]" / "Hi {name}!"  ->  "Hello, " + str(name)
+// returns "" when a placeholder names something unknown
+conjure fill_placeholders(q, names) ::
+  forge inner be snatch(q, 1, measure(q) - 1)
+  forge parts be []
+  forge rest be inner
+  forge m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")
+  cycle m differs void ::
+    ponder isnt is_known(m[2], names) ::
+      yield ""
+    ;;
+    ponder m[1] differs "" ::
+      parts be parts + [quote_text(m[1])]
+    ;;
+    parts be parts + ["str(" + m[2] + ")"]
+    rest be m[3]
+    m be regex_capture(rest, "^([^\\\\[{]*)[\\\\[{]([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)[\\\\]}](.*)$", "s")
+  ;;
+  ponder rest differs "" ::
+    parts be parts + [quote_text(rest)]
+  ;;
+  yield weave(parts, " + ")
+;;
+
+conjure has_placeholder(t) ::
+  yield regex_test(t, "^[\\"'].*[\\\\[{][\\\\p{L}_][\\\\p{L}\\\\p{N}_]*[\\\\]}].*[\\"']$")
+;;
+
+// a free loop counter name
+conjure counter(names) ::
+  iterate c through ["i", "j", "k", "_n"] ::
+    ponder isnt has(names, c) ::
+      yield c
+    ;;
+  ;;
+  yield "_n"
+;;
+
+conjure asked(name, q, names) ::
+  ponder has(names, "#num:" + name) ::
+    yield "set " + name + " to num(input(" + q + "))"
+  ;;
+  yield "set " + name + " to input(" + q + ")"
+;;
+
+// something to say: a quoted text, a known name, or bare words
+conjure sayable(arg, names) ::
+  ponder is_quoted(arg) either is_math(arg) either is_known(arg, names) ::
+    yield arg
+  ;;
+  ponder regex_test(arg, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::
+    iterate w through regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+      ponder is_known(w, names) ::
+        yield ""
+      ;;
+    ;;
+    yield quote_text(arg)
+  ;;
+  yield ""
+;;
+
+
+// ---------- everyday tasks (reverse, upper/lower, length, dice, sort \u2026) ----------
+
+forge NUMBER_WORDS be :: "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "twenty": "20", "hundred": "100" ;;
+
+conjure as_number(t) ::
+  forge w be lower(trim(t))
+  ponder regex_test(w, "^-?[0-9]+(\\\\.[0-9]+)?$") ::
+    yield w
+  ;;
+  ponder has(NUMBER_WORDS, w) ::
+    yield NUMBER_WORDS[w]
+  ;;
+  yield ""
+;;
+
+// "hello" / hello / a known name -> an expression
+conjure subject_of(t, names) ::
+  forge w be regex_replace(trim(t), "^(the\\\\s+)?(word|text|name|string)\\\\s+", "", "i")
+  ponder is_quoted(w) ::
+    yield w
+  ;;
+  ponder is_known(w, names) ::
+    yield w
+  ;;
+  ponder regex_test(w, "^[\\\\p{L}\\\\p{N} ,.!?'-]+$") ::
+    yield quote_text(w)
+  ;;
+  yield ""
+;;
+
+conjure number_list(t) ::
+  forge found be regex_find_all(t, "-?[0-9]+(\\\\.[0-9]+)?")
+  ponder measure(found) < 2 ::
+    yield ""
+  ;;
+  ponder isnt regex_test(t, "^[0-9\\\\s,.\\\\-and]+$", "i") ::
+    yield ""
+  ;;
+  yield "[" + weave(found, ", ") + "]"
+;;
+
+// returns the canonical text, or "" when this is not an everyday task
+conjure task_line(b, names) ::
+  forge s be regex_replace(regex_replace(b, "^(please|can you|could you)\\\\s+", "", "i"), "[.!?]+\\\\s*$", "")
+  forge out be regex_replace(s, "^(print|say|show|display|output|tell me|give me)\\\\s+(the\\\\s+)?", "", "i")
+  forge m be void
+
+  ponder regex_test(s, "^(flip|toss)\\\\s+(a\\\\s+)?coin$", "i") ::
+    yield "say pick([\\"heads\\", \\"tails\\"])"
+  ;;
+  ponder regex_test(s, "^(roll|throw)\\\\s+(a\\\\s+)?(die|dice)$", "i") ::
+    yield "say randint(1, 6)"
+  ;;
+  m be regex_capture(s, "^count\\\\s+down\\\\s+from\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also as_number(m[1]) differs "" ::
+    yield "set i to " + as_number(m[1]) + "\\nwhile i > 0\\n  say i\\n  set i to i - 1\\nend"
+  ;;
+  m be regex_capture(out, "^(reverse|backwards)\\\\s+(of\\\\s+)?(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(out, "^()()(.+?)\\\\s+(reversed|backwards)$", "i")
+  ;;
+  ponder m differs void also subject_of(m[3], names) differs "" ::
+    yield "say reverse(" + subject_of(m[3], names) + ")"
+  ;;
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(uppercase|upper\\\\s*case|capitals|caps)$", "i")
+  ponder m differs void also subject_of(m[2], names) differs "" ::
+    yield "say upper(" + subject_of(m[2], names) + ")"
+  ;;
+  m be regex_capture(out, "^(make\\\\s+)?(.+?)\\\\s+(in\\\\s+)?(lowercase|lower\\\\s*case|small\\\\s+letters)$", "i")
+  ponder m differs void also subject_of(m[2], names) differs "" ::
+    yield "say lower(" + subject_of(m[2], names) + ")"
+  ;;
+  m be regex_capture(s, "^(what\\\\s+is\\\\s+|what's\\\\s+|show\\\\s+|tell\\\\s+me\\\\s+|give\\\\s+me\\\\s+)?(the\\\\s+)?(length|size)\\\\s+of\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^()()()how\\\\s+long\\\\s+is\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge lst be number_list(m[4])
+    ponder lst differs "" ::
+      yield "say len(" + lst + ")"
+    ;;
+    ponder subject_of(m[4], names) differs "" ::
+      yield "say len(" + subject_of(m[4], names) + ")"
+    ;;
+  ;;
+  m be regex_capture(s, "^(is|check if|check whether|tell me if)\\\\s+(\\\\S+)\\\\s+(is\\\\s+)?(an?\\\\s+)?(even|odd)(\\\\s+or\\\\s+(even|odd))?$", "i")
+  ponder m differs void ::
+    forge n be as_number(m[2])
+    ponder n equals "" also is_known(m[2], names) ::
+      n be m[2]
+    ;;
+    ponder n differs "" ::
+      yield "if " + n + " % 2 is 0\\n  say \\"even\\"\\nelse\\n  say \\"odd\\"\\nend"
+    ;;
+  ;;
+  m be regex_capture(s, "^((give|show|pick|generate|roll|make|get)\\\\s+(me\\\\s+)?)?(a\\\\s+)?random\\\\s+(whole\\\\s+)?number\\\\s+(between|from)\\\\s+(\\\\S+)\\\\s+(and|to)\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also as_number(m[7]) differs "" also as_number(m[9]) differs "" ::
+    yield "say randint(" + as_number(m[7]) + ", " + as_number(m[9]) + ")"
+  ;;
+  m be regex_capture(out, "^sort\\\\s+(the\\\\s+)?(numbers\\\\s+)?(.+?)(\\\\s+(from\\\\s+)?(biggest|largest|highest)\\\\s+(to|first).*)?$", "i")
+  ponder m differs void also number_list(m[3]) differs "" ::
+    ponder regex_test(s, "biggest|largest|highest|descending", "i") ::
+      yield "say sortDesc(" + number_list(m[3]) + ")"
+    ;;
+    yield "say sort(" + number_list(m[3]) + ")"
+  ;;
+  m be regex_capture(s, "^(print\\\\s+|show\\\\s+|make\\\\s+|write\\\\s+)?(the\\\\s+)?(multiplication|times)\\\\s+table\\\\s+(of|for)\\\\s+(\\\\S+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^(print\\\\s+|show\\\\s+)?(the\\\\s+)?()()(\\\\S+)\\\\s+times\\\\s+table$", "i")
+  ;;
+  ponder m differs void also as_number(m[5]) differs "" ::
+    forge n be as_number(m[5])
+    yield "set i to 1\\nwhile i <= 10\\n  say str(" + n + ") + \\" x \\" + str(i) + \\" = \\" + str(" + n + " * i)\\n  set i to i + 1\\nend"
+  ;;
+  m be regex_capture(s, "^(say\\\\s+)?(hello|hi|hey)\\\\s+to\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(s, "^()()greet\\\\s+(.+)$", "i")
+  ;;
+  ponder m differs void ::
+    forge who be trim(m[3])
+    ponder is_known(who, names) ::
+      yield "say \\"Hello, \\" + " + who
+    ;;
+    ponder regex_test(who, "^[\\\\p{L} '-]+$") ::
+      yield "say " + quote_text("Hello, " + who)
+    ;;
+  ;;
+  yield ""
+;;
+
+// ---------- one line ----------
+// returns [canonical, sure]
+
+conjure understand_line(body, names) ::
+  forge b be regex_replace(body, "^what's\\\\s", "what is ", "i")
+
+
+  // everyday tasks first: "reverse hello", "roll a dice", "say hello to Sam"
+  forge task be task_line(b, names)
+  ponder task differs "" ::
+    yield [task, yep]
+  ;;
+
+  // questions: ask "Q" as name / ask for name / name = ask "Q" / set name to ask "Q"
+  forge m be regex_capture(b, "^ask\\\\s+(\\"[^\\"]*\\"|'[^']*')\\\\s+(as|into|for|and\\\\s+call\\\\s+it|and\\\\s+store\\\\s+in)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
+  ponder m differs void ::
+    yield [asked(m[3], m[1], names), yep]
+  ;;
+  m be regex_capture(b, "^ask\\\\s+(the\\\\s+user\\\\s+)?for\\\\s+(their\\\\s+|a\\\\s+|the\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
+  ponder m differs void ::
+    yield [asked(m[3], quote_text(m[3] + "? "), names), yep]
+  ;;
+  m be regex_capture(b, "^(set\\\\s+)?([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=|to|be)\\\\s*ask\\\\s+(\\"[^\\"]*\\"|'[^']*')$", "i")
+  ponder m differs void ::
+    yield [asked(m[2], m[4], names), yep]
+  ;;
+
+  // say X N times
+  m be regex_capture(b, "^(say|print|show|write)\\\\s+(.+?)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times$", "i")
+  ponder m differs void also (is_digit(m[3]) either is_known(m[3], names)) ::
+    forge what be sayable(trim(m[2]), names)
+    ponder what differs "" ::
+      forge c be counter(names)
+      yield ["set " + c + " to 0\\nwhile " + c + " < " + m[3] + "\\n  say " + what + "\\n  set " + c + " to " + c + " + 1\\nend", yep]
+    ;;
+    yield [body, nope]
+  ;;
+  // count / print the numbers from A to B [by S]  \xB7  count to N
+  m be regex_capture(b, "^(count|print|show|say|list)\\\\s+(the\\\\s+)?(numbers\\\\s+)?from\\\\s+(-?[0-9]+)\\\\s+(to|until|through)\\\\s+(-?[0-9]+)(\\\\s+by\\\\s+([0-9]+))?$", "i")
+  ponder m equals void ::
+    forge m2 be regex_capture(b, "^(please\\\\s+)?count\\\\s+(up\\\\s+)?to\\\\s+([0-9]+)$", "i")
+    ponder m2 differs void ::
+      m be ["", "", "", "", "1", "", m2[3], "", ""]
+    ;;
+  ;;
+  ponder m differs void ::
+    forge c be counter(names)
+    forge step be m[8] equals "" ~ "1" : m[8]
+    forge down be num(m[4]) > num(m[6])
+    forge cmp be down ~ " >= " : " <= "
+    forge op be down ~ " - " : " + "
+    yield ["set " + c + " to " + m[4] + "\\nwhile " + c + cmp + m[6] + "\\n  say " + c + "\\n  set " + c + " to " + c + op + step + "\\nend", yep]
+  ;;
+  // repeat N times  (a block \u2014 its counter is bumped where the block ends)
+  m be regex_capture(b, "^(repeat|do\\\\s+this|do)\\\\s+(\\\\d+|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+times\\\\s*:?$", "i")
+  ponder m differs void also (is_digit(m[2]) either is_known(m[2], names)) ::
+    forge c be counter(names)
+    yield ["set " + c + " to 0\\nwhile " + c + " < " + m[2] + "\\n#bump " + c, yep]
+  ;;
+
+  // conditions: when/if COND [then][:]  ->  if COND
+  m be regex_capture(b, "^(when|if)\\\\s+(.+?)\\\\s*(then)?\\\\s*:?$", "i")
+  ponder m differs void also isnt regex_test(b, "::") ::
+    forge cond be m[2]
+    forge yn be regex_capture(cond, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals|==?)\\\\s+[\\"']?(yes|no|y|n)[\\"']?$", "i")
+    ponder yn differs void also is_known(yn[1], names) ::
+      yield ["if lower(trim(" + yn[1] + ")) is " + quote_text(lower(yn[3])), yep]
+    ;;
+    ponder regex_test(cond, "\\\\b(yes|no)\\\\b", "i") ::
+      yield [body, nope]
+    ;;
+    forge plain be regex_replace(cond, "\\\\s+(is|equals|or|and|not|more|less|than|at|least|most|greater|smaller)\\\\b", " ", "i")
+    ponder safe_expr(regex_replace(plain, "[<>=!]", " "), names) ::
+      yield ["if " + cond, yep]
+    ;;
+    yield [body, nope]
+  ;;
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(is|equals)\\\\s+[\\"']?(yes|no)[\\"']?\\\\s*:$", "i")
+  ponder m differs void also is_known(m[1], names) ::
+    yield ["if lower(trim(" + m[1] + ")) is " + quote_text(lower(m[3])), yep]
+  ;;
+  ponder regex_test(b, "^(otherwise|else)\\\\s*:?$", "i") ::
+    yield ["else", yep]
+  ;;
+
+  // say with pieces side by side: say "Hello, " name "!"
+  m be regex_capture(b, "^(say|print|show)\\\\s+(.+)$", "i")
+  ponder m differs void ::
+    forge pieces be regex_find_all(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|,")
+    forge glued be regex_replace(m[2], "\\"[^\\"]*\\"|'[^']*'|[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*|[0-9.]+|[,\\\\s]", "")
+    ponder glued equals "" also measure(pieces) > 1 ::
+      forge parts be []
+      forge fine be yep
+      iterate pc through pieces ::
+        ponder pc differs "," ::
+          ponder is_quoted(pc) either is_math(pc) either is_known(pc, names) ::
+            parts be parts + [pc]
+          ;; otherwise ::
+            fine be nope
+          ;;
+        ;;
+      ;;
+      ponder fine also measure(parts) > 1 ::
+        yield ["say " + weave(parts, " + "), yep]
+      ;;
+    ;;
+  ;;
+
+  // output: print / show / display / output / write / say / tell
+  m be regex_capture(b, "^(print|show|display|output|write|say|tell me)\\\\s+(.+)$", "i")
+  ponder m differs void ::
+    forge arg be trim(m[2])
+    ponder has_placeholder(arg) ::
+      forge filled be fill_placeholders(arg, names)
+      ponder filled differs "" ::
+        yield ["speak(" + filled + ")", yep]
+      ;;
+      yield [body, nope]
+    ;;
+    ponder is_quoted(arg) either is_math(arg) ::
+      yield ["speak(" + arg + ")", yep]
+    ;;
+    ponder is_name(arg) also is_known(arg, names) ::
+      yield ["speak(" + arg + ")", yep]
+    ;;
+    ponder safe_expr(arg, names) also regex_test(arg, "[+\\\\-*/]") ::
+      yield ["speak(" + arg + ")", yep]
+    ;;
+    // bare words with no known names in them: say them as written
+    forge used be regex_find_all(arg, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*")
+    iterate w through used ::
+      ponder is_known(w, names) ::
+        yield [body, nope]
+      ;;
+    ;;
+    // words that usually mean a task ("count to", "3 times", "on the screen")
+    ponder regex_test(arg, "\\\\b(to|from|times|numbers?|on|the|screen|terminal|console|by|each|every|until|through|of|in|with)\\\\b", "i") ::
+      yield [body, nope]
+    ;;
+    ponder regex_test(arg, "[\\"'(){}\\\\[\\\\]]") ::
+      yield [body, nope]
+    ;;
+    yield ["speak(" + quote_text(arg) + ")", yep]
+  ;;
+
+  // plain calculations: calculate / compute / what is / how much is
+  m be regex_capture(b, "^(calculate|compute|evaluate|solve|what\\\\s+is|how\\\\s+much\\\\s+is)\\\\s+(.+?)\\\\??$", "i")
+  ponder m differs void ::
+    forge expr be math_words(m[2])
+    ponder is_math(expr) ::
+      yield ["speak(" + expr + ")", yep]
+    ;;
+    yield [body, nope]
+  ;;
+
+  // add N to x / increase x by N / decrease x by N
+  m be regex_capture(b, "^add\\\\s+(\\\\S+)\\\\s+to\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)$", "i")
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[1], names) ::
+    yield [m[2] + " be " + m[2] + " + " + m[1], yep]
+  ;;
+  m be regex_capture(b, "^(increase|raise)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::
+    yield [m[2] + " be " + m[2] + " + " + m[3], yep]
+  ;;
+  m be regex_capture(b, "^(decrease|lower|reduce)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+by\\\\s+(\\\\S+)$", "i")
+  ponder m differs void also is_known(m[2], names) also safe_expr(m[3], names) ::
+    yield [m[2] + " be " + m[2] + " - " + m[3], yep]
+  ;;
+
+  // x becomes E
+  m be regex_capture(b, "^([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+becomes\\\\s+(.+)$", "i")
+  ponder m differs void also is_known(m[1], names) also safe_expr(trim(m[2]), names) ::
+    yield [m[1] + " be " + trim(m[2]), yep]
+  ;;
+
+  // set x to E / let x be E / make x E / x = E
+  m be regex_capture(b, "^(set|let|make)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s+(to|be|equal\\\\s+to|=)\\\\s+(.+)$", "i")
+  ponder m equals void ::
+    m be regex_capture(b, "^()([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*(=)\\\\s*([^=].*)$")
+  ;;
+  ponder m differs void ::
+    forge value be trim(m[4])
+    ponder safe_expr(value, names) ::
+      ponder is_known(m[2], names) ::
+        yield [m[2] + " be " + value, yep]
+      ;;
+      yield ["forge " + m[2] + " be " + value, yep]
+    ;;
+    yield [body, nope]
+  ;;
+
+  ponder starts_canonical(b) ::
+    yield [body, yep]
+  ;;
+  yield [body, nope]
+;;
+
+// ---------- the whole file ----------
+
+// an open block is [indent, counter]; a counted block bumps it before "end"
+conjure close_block(open) ::
+  ponder open[1] differs "" ::
+    yield [open[0] + "  set " + open[1] + " to " + open[1] + " + 1", open[0] + "end"]
+  ;;
+  yield [open[0] + "end"]
+;;
+
+forge CHUNK_MEMO be ::
+;;
+
+conjure understand_source(source, known, words) ::
+  forge names be ::
+  ;;
+  iterate k through known ::
+    names[k] be yep
+  ;;
+  // dialect / remembered words: [word, canonical]
+  forge wordmap be ::
+  ;;
+  ponder words differs void ::
+    iterate pair through words ::
+      wordmap[lower(pair[0])] be pair[1]
+    ;;
+  ;;
+  // names used in arithmetic or numeric comparisons: typed answers for
+  // them are converted to numbers when they are asked for
+  iterate row through lines(source) ::
+    forge bare be regex_replace(row, "\\"[^\\"]*\\"|'[^']*'", "\\"\\"")
+    forge numeric be regex_test(bare, "[\\\\-*/%^<>]|\\\\b(more|less|greater|smaller)\\\\b") either (regex_test(bare, "\\\\+") also isnt regex_test(bare, "\\"")) either regex_test(bare, "\\\\b(times|plus|minus|divided)\\\\b")
+    ponder numeric also isnt regex_test(trim(row), "^ask\\\\b", "i") ::
+      iterate w through regex_find_all(bare, "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+        names["#num:" + w] be yep
+      ;;
+    ;;
+  ;;
+  forge out be []
+  forge notes be []
+  forge sure be yep
+  forge n be 0
+  forge rows be lines(source)
+  // blocks opened by "if"/"else"/"while"/"for" are closed by indentation,
+  // unless the author already writes "end" or "::" blocks themselves
+  forge auto_end be isnt regex_test(source, "(^|\\n)\\s*end\\s*($|\\n)|::")
+  forge opens be []
+  // Large files are read in top-level chunks. Each chunk's reading is
+  // remembered (keyed by its text and everything known before it), so after
+  // a small edit only the chunks that changed are read again.
+  forge state be str(hash(unlines(known))) + ":" + str(len(known)) + ":" + str(auto_end) + ":" + str(len(words equals void ~ [] : words))
+  iterate k through keys(names) ::
+    ponder startswith(k, "#num:") ::
+      state be str(hash(state + k)) + str(hash(reverse(state + k)))
+    ;;
+  ;;
+  forge chunks be []
+  forge current be []
+  forge first_line be 1
+  forge idx be 0
+  iterate line through rows ::
+    idx be idx + 1
+    forge top be line differs "" also leading_space(line) equals "" also isnt regex_test(trim(line), "^(else|otherwise|elif|end|;;|\\\\}|//|#)", "i")
+    ponder top also measure(current) > 0 ::
+      chunks be chunks + [[first_line, current]]
+      current be []
+      first_line be idx
+    ;;
+    current be current + [line]
+  ;;
+  ponder measure(current) > 0 ::
+    chunks be chunks + [[first_line, current]]
+  ;;
+  iterate chunk through chunks ::
+    forge key be state + "|#|" + unlines(chunk[1])
+    forge delta be []
+    ponder has(CHUNK_MEMO, key) ::
+      forge hit be CHUNK_MEMO[key]
+      out be out + hit[0]
+      ponder isnt hit[1] ::
+        sure be nope
+      ;;
+      iterate note through hit[2] ::
+        notes be notes + [[note[0] + chunk[0] - 1, note[1], note[2]]]
+      ;;
+      delta be hit[3]
+      iterate pair through delta ::
+        names[pair[0]] be pair[1]
+      ;;
+    ;; otherwise ::
+      forge c_out be []
+      forge c_sure be yep
+      forge c_notes be []
+      forge saved_out be out
+      forge saved_notes be notes
+      forge saved_sure be sure
+      out be []
+      notes be []
+      sure be yep
+      n be chunk[0] - 1
+      iterate line through chunk[1] ::
+      n be n + 1
+      forge indent be leading_space(line)
+      forge body be trim(line)
+      forge head be lower(regex_replace(body, "^(\\\\S+).*$", "$1"))
+      ponder has(wordmap, head) also body differs "" ::
+        body be wordmap[head] + snatch(body, measure(head), measure(body))
+      ;;
+      ponder body equals "" either startswith(body, "//") either startswith(body, "#") ::
+        out be out + [line]
+      ;; otherwise ::
+        forge r be understand_line(body, names)
+        ponder isnt r[1] ::
+          sure be nope
+        ;;
+        ponder r[0] differs body ::
+          notes be notes + [[n, body, r[0]]]
+        ;;
+        // learn declarations as we go: forge x be \u2026 / conjure f(a, b)
+        forge d be regex_capture(r[0], "^(?:forge|set)\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")
+        ponder d differs void ::
+          names[d[1]] be (regex_test(r[0], "input\\\\(") also isnt regex_test(r[0], "num\\\\(input")) ~ "typed" : yep
+          delta be delta + [[d[1], names[d[1]]]]
+        ;;
+        d be regex_capture(r[0], "^conjure\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)\\\\s*\\\\(([^)]*)\\\\)")
+        ponder d differs void ::
+          names[d[1]] be yep
+          delta be delta + [[d[1], yep]]
+          iterate p through regex_find_all(d[2], "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*") ::
+            names[p] be yep
+            delta be delta + [[p, yep]]
+          ;;
+        ;;
+        d be regex_capture(r[0], "^iterate\\\\s+([\\\\p{L}_][\\\\p{L}\\\\p{N}_]*)")
+        ponder d differs void ::
+          names[d[1]] be yep
+          delta be delta + [[d[1], yep]]
+        ;;
+        ponder auto_end ::
+          forge isElse be regex_test(r[0], "^else\\\\b")
+          cycle measure(opens) > 0 also (measure(indent) < measure(opens[-1][0]) either (measure(indent) equals measure(opens[-1][0]) also isnt isElse)) ::
+            out be out + close_block(opens[-1])
+            opens be portion(opens, 0, measure(opens) - 1)
+          ;;
+          ponder isElse also measure(opens) > 0 also measure(indent) equals measure(opens[-1][0]) ::
+            opens be portion(opens, 0, measure(opens) - 1)
+          ;;
+          forge bump be regex_capture(r[0], "\\n#bump (\\\\S+)$")
+          ponder bump differs void ::
+            opens be opens + [[indent, bump[1]]]
+            r be [snatch(r[0], 0, measure(r[0]) - measure(bump[0])), r[1]]
+          ;; otherwise ponder regex_test(r[0], "^(if|else|while|for|repeat)\\\\b") also isnt contains(r[0], "\\n") ::
+            opens be opens + [[indent, ""]]
+          ;;
+        ;;
+        ponder isnt auto_end also contains(r[0], "#bump") ::
+          sure be nope
+        ;;
+        out be out + [indent + replace(r[0], "\\n", "\\n" + indent)]
+      ;;
+      ;;
+      // a top-level line follows: close what this chunk opened, here
+      cycle auto_end also measure(opens) > 0 ::
+        out be out + close_block(opens[-1])
+        opens be portion(opens, 0, measure(opens) - 1)
+      ;;
+      c_out be out
+      c_sure be sure
+      iterate note through notes ::
+        c_notes be c_notes + [[note[0] - chunk[0] + 1, note[1], note[2]]]
+      ;;
+      ponder measure(CHUNK_MEMO) > 20000 ::
+        CHUNK_MEMO be ::
+        ;;
+      ;;
+      CHUNK_MEMO[key] be [c_out, c_sure, c_notes, delta]
+      out be saved_out + c_out
+      notes be saved_notes + notes
+      sure be saved_sure also c_sure
+    ;;
+    forge dsig be state
+    iterate pair through delta ::
+      dsig be dsig + "," + pair[0] + "=" + str(pair[1])
+    ;;
+    state be str(hash(dsig)) + str(hash(reverse(dsig)))
+  ;;
+  yield [unlines(out), sure, notes]
+;;
 `;
   }
 });
@@ -15975,363 +17322,363 @@ conjure understand_source(source, known, words) ::\r
 var ai_dialect_default;
 var init_ai_dialect = __esm({
   "raw:C:\\Users\\User\\Documents\\sdev-web-anti\\sdev-web\\lang\\agent\\ai-dialect.sdev"() {
-    ai_dialect_default = `// =====================================================================\r
-// ai-dialect.sdev \u2014 "sdev:ai", the dialect written for AI models.\r
-//\r
-// Designed for how language models generate code:\r
-//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)\r
-//   * blocks are always { \u2026 } \u2014 no indentation rules, no guessed closings\r
-//   * short, common tokens: fewer tokens -> faster, cheaper generation\r
-//   * the familiar operators models already know: == != && || !\r
-//\r
-// A file starts with  !#ai  and is translated to canonical sdev before it\r
-// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model\r
-// can be given any program to read in the dense form.\r
-//\r
-//   v x = 5               forge x be 5\r
-//   x = x + 1             x be x + 1\r
-//   x += 2                x be x + (2)\r
-//   p(x)                  speak(x)\r
-//   f add(a, b) {         conjure add(a, b) ::\r
-//   r a + b               yield a + b\r
-//   ? x > 3 {             ponder x > 3 ::\r
-//   } :? x > 1 {          ;; otherwise ponder x > 1 ::\r
-//   } : {                 ;; otherwise ::\r
-//   w i < 3 {             cycle i < 3 ::\r
-//   each n in xs {        iterate n through xs ::\r
-//   try { \u2026 } catch e {   attempt :: \u2026 ;; rescue e ::\r
-//   brk / next            yeet / skip\r
-//   k N = 3               fixed N be 3\r
-//   c Dog : Animal {      essence Dog extend Animal ::\r
-//   throw e               hurl e\r
-//   } finally {           ;; ensure ::\r
-//   }                     ;;\r
-//   == != && || !         equals differs also either isnt\r
-// =====================================================================\r
-\r
-// split a line into [code, text, code, text, \u2026] so strings are never touched\r
-conjure ai_segments(line) ::\r
-  yield regex_find_all(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|'[^']*'|[^\\"']+|[\\"']")\r
-;;\r
-\r
-conjure ai_ops_to_sdev(code) ::\r
-  forge c be code\r
-  c be regex_replace(c, "\\\\s*==\\\\s*", " equals ")\r
-  c be regex_replace(c, "\\\\s*!=\\\\s*", " differs ")\r
-  c be regex_replace(c, "\\\\s*&&\\\\s*", " also ")\r
-  c be regex_replace(c, "\\\\s*\\\\|\\\\|\\\\s*", " either ")\r
-  c be regex_replace(c, "(^|[^\\\\p{L}\\\\p{N}_])!\\\\s*(?!=)", "$1isnt ")\r
-  c be regex_replace(c, "\\\\btrue\\\\b", "yep")\r
-  c be regex_replace(c, "\\\\bfalse\\\\b", "nope")\r
-  c be regex_replace(c, "\\\\bnull\\\\b", "void")\r
-  yield c\r
-;;\r
-\r
-conjure ai_ops_to_ai(code) ::\r
-  forge c be code\r
-  c be regex_replace(c, "\\\\s+equals\\\\s+", " == ")\r
-  c be regex_replace(c, "\\\\s+differs\\\\s+", " != ")\r
-  c be regex_replace(c, "\\\\s+also\\\\s+", " && ")\r
-  c be regex_replace(c, "\\\\s+either\\\\s+", " || ")\r
-  c be regex_replace(c, "\\\\bisnt\\\\s+", "!")\r
-  c be regex_replace(c, "\\\\byep\\\\b", "true")\r
-  c be regex_replace(c, "\\\\bnope\\\\b", "false")\r
-  c be regex_replace(c, "\\\\bvoid\\\\b", "null")\r
-  yield c\r
-;;\r
-\r
-conjure ai_map_code(line, to_sdev) ::\r
-  forge out be ""\r
-  iterate seg through ai_segments(line) ::\r
-    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
-      out be out + seg\r
-    ;; otherwise ponder to_sdev ::\r
-      out be out + ai_ops_to_sdev(seg)\r
-    ;; otherwise ::\r
-      out be out + ai_ops_to_ai(seg)\r
-    ;;\r
-  ;;\r
-  yield out\r
-;;\r
-\r
-forge AI_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"\r
-\r
-// one AI line -> one canonical line (or void when it is not AI syntax)\r
-conjure ai_line_to_sdev(body) ::\r
-  forge m be regex_capture(body, "^\\\\}\\\\s*:\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"\r
-  ;;\r
-  ponder regex_test(body, "^\\\\}\\\\s*:\\\\s*\\\\{$") ::\r
-    yield ";; otherwise ::"\r
-  ;;\r
-  m be regex_capture(body, "^\\\\}\\\\s*catch\\\\s+(" + AI_NAME + ")\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield ";; rescue " + m[1] + " ::"\r
-  ;;\r
-  ponder body equals "}" ::\r
-    yield ";;"\r
-  ;;\r
-  ponder regex_test(body, "^try\\\\s*\\\\{$") ::\r
-    yield "attempt ::"\r
-  ;;\r
-  ponder regex_test(body, "^\\\\}\\\\s*finally\\\\s*\\\\{$") ::\r
-    yield ";; ensure ::"\r
-  ;;\r
-  m be regex_capture(body, "^k\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")\r
-  ponder m differs void ::\r
-    yield "fixed " + m[1] + " be " + ai_map_code(m[2], yep)\r
-  ;;\r
-  m be regex_capture(body, "^c\\\\s+(" + AI_NAME + ")(?:\\\\s*:\\\\s*(" + AI_NAME + "))?\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    ponder m[2] equals "" ::\r
-      yield "essence " + m[1] + " ::"\r
-    ;;\r
-    yield "essence " + m[1] + " extend " + m[2] + " ::"\r
-  ;;\r
-  m be regex_capture(body, "^throw\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "hurl " + ai_map_code(m[1], yep)\r
-  ;;\r
-  m be regex_capture(body, "^v\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")\r
-  ponder m differs void ::\r
-    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)\r
-  ;;\r
-  m be regex_capture(body, "^f\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "conjure " + m[1] + "(" + m[2] + ") ::"\r
-  ;;\r
-  m be regex_capture(body, "^r(\\\\s+(.+))?$")\r
-  ponder m differs void ::\r
-    ponder m[2] equals "" ::\r
-      yield "yield void"\r
-    ;;\r
-    yield "yield " + ai_map_code(m[2], yep)\r
-  ;;\r
-  m be regex_capture(body, "^p\\\\((.*)\\\\)$")\r
-  ponder m differs void ::\r
-    yield "speak(" + ai_map_code(m[1], yep) + ")"\r
-  ;;\r
-  m be regex_capture(body, "^\\\\?\\\\s*(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "ponder " + ai_map_code(m[1], yep) + " ::"\r
-  ;;\r
-  m be regex_capture(body, "^w\\\\s+(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "cycle " + ai_map_code(m[1], yep) + " ::"\r
-  ;;\r
-  m be regex_capture(body, "^each\\\\s+(" + AI_NAME + ")\\\\s+in\\\\s+(.+?)\\\\s*\\\\{$")\r
-  ponder m differs void ::\r
-    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"\r
-  ;;\r
-  ponder body equals "brk" ::\r
-    yield "yeet"\r
-  ;;\r
-  ponder body equals "next" ::\r
-    yield "skip"\r
-  ;;\r
-  // compound assignment: x += e / x -= e / x *= e / x /= e\r
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*([-+*/])=\\\\s*(.+)$")\r
-  ponder m differs void ::\r
-    yield m[1] + " be " + m[1] + " " + m[2] + " (" + ai_map_code(m[3], yep) + ")"\r
-  ;;\r
-  // index or name assignment: x = e / xs[0] = e / o.k = e\r
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*=\\\\s*([^=].*)$")\r
-  ponder m differs void ::\r
-    yield m[1] + " be " + ai_map_code(m[2], yep)\r
-  ;;\r
-  // a bare call or expression\r
-  yield ai_map_code(body, yep)\r
-;;\r
-\r
-conjure ai_to_sdev(source) ::\r
-  forge out be []\r
-  iterate line through lines(close_ai_braces(source)) ::\r
-    forge indent be leading_space(line)\r
-    forge body be trim(line)\r
-    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::\r
-      ponder isnt startswith(body, "!#ai") ::\r
-        out be out + [line]\r
-      ;;\r
-    ;; otherwise ::\r
-      out be out + [indent + ai_line_to_sdev(body)]\r
-    ;;\r
-  ;;\r
-  yield unlines(out)\r
-;;\r
-\r
-// canonical sdev -> the AI form\r
-// the English canonical forms (say / set / if / while / for each / to \u2026 with / end)\r
-conjure english_line_to_ai(body, AI_DECLARED) ::\r
-  forge m be regex_capture(body, "^say\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "p(" + ai_map_code(m[1], nope) + ")"\r
-  ;;\r
-  m be regex_capture(body, "^set\\\\s+(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+to\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::\r
-      yield m[1] + " = " + ai_map_code(m[2], nope)\r
-    ;;\r
-    AI_DECLARED[m[1]] be yep\r
-    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
-  ;;\r
-  m be regex_capture(body, "^if\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "? " + ai_cond(m[1]) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^else\\\\s+if\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "} :? " + ai_cond(m[1]) + " {"\r
-  ;;\r
-  ponder body equals "else" ::\r
-    yield "} : {"\r
-  ;;\r
-  ponder body equals "end" ::\r
-    yield "}"\r
-  ;;\r
-  m be regex_capture(body, "^while\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "w " + ai_cond(m[1]) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^for\\\\s+(each\\\\s+)?(" + AI_NAME + ")\\\\s+in\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^to\\\\s+(" + AI_NAME + ")(\\\\s+with\\\\s+(.+))?$")\r
-  ponder m differs void ::\r
-    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")\r
-    yield "f " + m[1] + "(" + params + ") {"\r
-  ;;\r
-  m be regex_capture(body, "^return(\\\\s+(.+))?$")\r
-  ponder m differs void ::\r
-    yield "r " + ai_map_code(m[2], nope)\r
-  ;;\r
-  ponder body equals "break" ::\r
-    yield "brk"\r
-  ;;\r
-  ponder body equals "continue" ::\r
-    yield "next"\r
-  ;;\r
-  yield ""\r
-;;\r
-\r
-// English comparisons -> symbols\r
-conjure ai_cond(c) ::\r
-  forge out be ""\r
-  iterate seg through ai_segments(c) ::\r
-    ponder startswith(seg, "\\"") either startswith(seg, "'") ::\r
-      out be out + seg\r
-    ;; otherwise ::\r
-      forge x be seg\r
-      x be regex_replace(x, "\\\\s+is\\\\s+not\\\\s+", " != ")\r
-      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+more\\\\b", " >= $1")\r
-      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+less\\\\b", " <= $1")\r
-      x be regex_replace(x, "\\\\s+is\\\\s+", " == ")\r
-      x be regex_replace(x, "\\\\s+and\\\\s+", " && ")\r
-      x be regex_replace(x, "\\\\s+or\\\\s+", " || ")\r
-      x be regex_replace(x, "(^|\\\\s)not\\\\s+", "$1!")\r
-      out be out + ai_ops_to_ai(x)\r
-    ;;\r
-  ;;\r
-  yield out\r
-;;\r
-\r
-conjure sdev_line_to_ai(body, declared) ::\r
-  forge english be english_line_to_ai(body, declared)\r
-  ponder english differs "" ::\r
-    yield english\r
-  ;;\r
-  forge m be regex_capture(body, "^;;\\\\s*otherwise\\\\s+ponder\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "} :? " + ai_map_code(m[1], nope) + " {"\r
-  ;;\r
-  ponder regex_test(body, "^;;\\\\s*otherwise\\\\s*::$") ::\r
-    yield "} : {"\r
-  ;;\r
-  m be regex_capture(body, "^;;\\\\s*rescue\\\\s+(" + AI_NAME + ")\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "} catch " + m[1] + " {"\r
-  ;;\r
-  ponder body equals ";;" ::\r
-    yield "}"\r
-  ;;\r
-  ponder regex_test(body, "^attempt\\\\s*::$") ::\r
-    yield "try {"\r
-  ;;\r
-  ponder regex_test(body, "^;;\\\\s*ensure\\\\s*::$") ::\r
-    yield "} finally {"\r
-  ;;\r
-  m be regex_capture(body, "^fixed\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "k " + m[1] + " = " + ai_map_code(m[2], nope)\r
-  ;;\r
-  m be regex_capture(body, "^essence\\\\s+(" + AI_NAME + ")(?:\\\\s+extend\\\\s+(" + AI_NAME + "))?\\\\s*::$")\r
-  ponder m differs void ::\r
-    ponder m[2] equals "" ::\r
-      yield "c " + m[1] + " {"\r
-    ;;\r
-    yield "c " + m[1] + " : " + m[2] + " {"\r
-  ;;\r
-  m be regex_capture(body, "^hurl\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "throw " + ai_map_code(m[1], nope)\r
-  ;;\r
-  m be regex_capture(body, "^forge\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)\r
-  ;;\r
-  m be regex_capture(body, "^conjure\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "f " + m[1] + "(" + m[2] + ") {"\r
-  ;;\r
-  m be regex_capture(body, "^yield\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield "r " + ai_map_code(m[1], nope)\r
-  ;;\r
-  m be regex_capture(body, "^speak\\\\((.*)\\\\)$")\r
-  ponder m differs void ::\r
-    yield "p(" + ai_map_code(m[1], nope) + ")"\r
-  ;;\r
-  m be regex_capture(body, "^ponder\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "? " + ai_map_code(m[1], nope) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^cycle\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "w " + ai_map_code(m[1], nope) + " {"\r
-  ;;\r
-  m be regex_capture(body, "^iterate\\\\s+(" + AI_NAME + ")\\\\s+through\\\\s+(.+?)\\\\s*::$")\r
-  ponder m differs void ::\r
-    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"\r
-  ;;\r
-  ponder body equals "yeet" ::\r
-    yield "brk"\r
-  ;;\r
-  ponder body equals "skip" ::\r
-    yield "next"\r
-  ;;\r
-  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+be\\\\s+(.+)$")\r
-  ponder m differs void ::\r
-    yield m[1] + " = " + ai_map_code(m[2], nope)\r
-  ;;\r
-  yield ai_map_code(body, nope)\r
-;;\r
-\r
-conjure sdev_to_ai(source) ::\r
-  forge out be ["!#ai"]\r
-  forge declared be ::\r
-  ;;\r
-  iterate line through lines(source) ::\r
-    forge indent be leading_space(line)\r
-    forge body be trim(line)\r
-    ponder body equals "" either startswith(body, "//") ::\r
-      out be out + [line]\r
-    ;; otherwise ::\r
-      out be out + [indent + sdev_line_to_ai(body, declared)]\r
-    ;;\r
-  ;;\r
-  yield unlines(out)\r
-;;\r
+    ai_dialect_default = `// =====================================================================
+// ai-dialect.sdev \u2014 "sdev:ai", the dialect written for AI models.
+//
+// Designed for how language models generate code:
+//   * every statement says what it is in its first token (v, f, r, p, ?, w, each)
+//   * blocks are always { \u2026 } \u2014 no indentation rules, no guessed closings
+//   * short, common tokens: fewer tokens -> faster, cheaper generation
+//   * the familiar operators models already know: == != && || !
+//
+// A file starts with  !#ai  and is translated to canonical sdev before it
+// runs. sdev_to_ai turns canonical sdev back into the AI form, so a model
+// can be given any program to read in the dense form.
+//
+//   v x = 5               forge x be 5
+//   x = x + 1             x be x + 1
+//   x += 2                x be x + (2)
+//   p(x)                  speak(x)
+//   f add(a, b) {         conjure add(a, b) ::
+//   r a + b               yield a + b
+//   ? x > 3 {             ponder x > 3 ::
+//   } :? x > 1 {          ;; otherwise ponder x > 1 ::
+//   } : {                 ;; otherwise ::
+//   w i < 3 {             cycle i < 3 ::
+//   each n in xs {        iterate n through xs ::
+//   try { \u2026 } catch e {   attempt :: \u2026 ;; rescue e ::
+//   brk / next            yeet / skip
+//   k N = 3               fixed N be 3
+//   c Dog : Animal {      essence Dog extend Animal ::
+//   throw e               hurl e
+//   } finally {           ;; ensure ::
+//   }                     ;;
+//   == != && || !         equals differs also either isnt
+// =====================================================================
+
+// split a line into [code, text, code, text, \u2026] so strings are never touched
+conjure ai_segments(line) ::
+  yield regex_find_all(line, "\\"(?:\\\\\\\\.|[^\\"\\\\\\\\])*\\"|'[^']*'|[^\\"']+|[\\"']")
+;;
+
+conjure ai_ops_to_sdev(code) ::
+  forge c be code
+  c be regex_replace(c, "\\\\s*==\\\\s*", " equals ")
+  c be regex_replace(c, "\\\\s*!=\\\\s*", " differs ")
+  c be regex_replace(c, "\\\\s*&&\\\\s*", " also ")
+  c be regex_replace(c, "\\\\s*\\\\|\\\\|\\\\s*", " either ")
+  c be regex_replace(c, "(^|[^\\\\p{L}\\\\p{N}_])!\\\\s*(?!=)", "$1isnt ")
+  c be regex_replace(c, "\\\\btrue\\\\b", "yep")
+  c be regex_replace(c, "\\\\bfalse\\\\b", "nope")
+  c be regex_replace(c, "\\\\bnull\\\\b", "void")
+  yield c
+;;
+
+conjure ai_ops_to_ai(code) ::
+  forge c be code
+  c be regex_replace(c, "\\\\s+equals\\\\s+", " == ")
+  c be regex_replace(c, "\\\\s+differs\\\\s+", " != ")
+  c be regex_replace(c, "\\\\s+also\\\\s+", " && ")
+  c be regex_replace(c, "\\\\s+either\\\\s+", " || ")
+  c be regex_replace(c, "\\\\bisnt\\\\s+", "!")
+  c be regex_replace(c, "\\\\byep\\\\b", "true")
+  c be regex_replace(c, "\\\\bnope\\\\b", "false")
+  c be regex_replace(c, "\\\\bvoid\\\\b", "null")
+  yield c
+;;
+
+conjure ai_map_code(line, to_sdev) ::
+  forge out be ""
+  iterate seg through ai_segments(line) ::
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::
+      out be out + seg
+    ;; otherwise ponder to_sdev ::
+      out be out + ai_ops_to_sdev(seg)
+    ;; otherwise ::
+      out be out + ai_ops_to_ai(seg)
+    ;;
+  ;;
+  yield out
+;;
+
+forge AI_NAME be "[\\\\p{L}_][\\\\p{L}\\\\p{N}_]*"
+
+// one AI line -> one canonical line (or void when it is not AI syntax)
+conjure ai_line_to_sdev(body) ::
+  forge m be regex_capture(body, "^\\\\}\\\\s*:\\\\?\\\\s*(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield ";; otherwise ponder " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  ponder regex_test(body, "^\\\\}\\\\s*:\\\\s*\\\\{$") ::
+    yield ";; otherwise ::"
+  ;;
+  m be regex_capture(body, "^\\\\}\\\\s*catch\\\\s+(" + AI_NAME + ")\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield ";; rescue " + m[1] + " ::"
+  ;;
+  ponder body equals "}" ::
+    yield ";;"
+  ;;
+  ponder regex_test(body, "^try\\\\s*\\\\{$") ::
+    yield "attempt ::"
+  ;;
+  ponder regex_test(body, "^\\\\}\\\\s*finally\\\\s*\\\\{$") ::
+    yield ";; ensure ::"
+  ;;
+  m be regex_capture(body, "^k\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")
+  ponder m differs void ::
+    yield "fixed " + m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^c\\\\s+(" + AI_NAME + ")(?:\\\\s*:\\\\s*(" + AI_NAME + "))?\\\\s*\\\\{$")
+  ponder m differs void ::
+    ponder m[2] equals "" ::
+      yield "essence " + m[1] + " ::"
+    ;;
+    yield "essence " + m[1] + " extend " + m[2] + " ::"
+  ;;
+  m be regex_capture(body, "^throw\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "hurl " + ai_map_code(m[1], yep)
+  ;;
+  m be regex_capture(body, "^v\\\\s+(" + AI_NAME + ")\\\\s*=\\\\s*(.+)$")
+  ponder m differs void ::
+    yield "forge " + m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^f\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "conjure " + m[1] + "(" + m[2] + ") ::"
+  ;;
+  m be regex_capture(body, "^r(\\\\s+(.+))?$")
+  ponder m differs void ::
+    ponder m[2] equals "" ::
+      yield "yield void"
+    ;;
+    yield "yield " + ai_map_code(m[2], yep)
+  ;;
+  m be regex_capture(body, "^p\\\\((.*)\\\\)$")
+  ponder m differs void ::
+    yield "speak(" + ai_map_code(m[1], yep) + ")"
+  ;;
+  m be regex_capture(body, "^\\\\?\\\\s*(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "ponder " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  m be regex_capture(body, "^w\\\\s+(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "cycle " + ai_map_code(m[1], yep) + " ::"
+  ;;
+  m be regex_capture(body, "^each\\\\s+(" + AI_NAME + ")\\\\s+in\\\\s+(.+?)\\\\s*\\\\{$")
+  ponder m differs void ::
+    yield "iterate " + m[1] + " through " + ai_map_code(m[2], yep) + " ::"
+  ;;
+  ponder body equals "brk" ::
+    yield "yeet"
+  ;;
+  ponder body equals "next" ::
+    yield "skip"
+  ;;
+  // compound assignment: x += e / x -= e / x *= e / x /= e
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*([-+*/])=\\\\s*(.+)$")
+  ponder m differs void ::
+    yield m[1] + " be " + m[1] + " " + m[2] + " (" + ai_map_code(m[3], yep) + ")"
+  ;;
+  // index or name assignment: x = e / xs[0] = e / o.k = e
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s*=\\\\s*([^=].*)$")
+  ponder m differs void ::
+    yield m[1] + " be " + ai_map_code(m[2], yep)
+  ;;
+  // a bare call or expression
+  yield ai_map_code(body, yep)
+;;
+
+conjure ai_to_sdev(source) ::
+  forge out be []
+  iterate line through lines(close_ai_braces(source)) ::
+    forge indent be leading_space(line)
+    forge body be trim(line)
+    ponder body equals "" either startswith(body, "//") either startswith(body, "!#ai") ::
+      ponder isnt startswith(body, "!#ai") ::
+        out be out + [line]
+      ;;
+    ;; otherwise ::
+      out be out + [indent + ai_line_to_sdev(body)]
+    ;;
+  ;;
+  yield unlines(out)
+;;
+
+// canonical sdev -> the AI form
+// the English canonical forms (say / set / if / while / for each / to \u2026 with / end)
+conjure english_line_to_ai(body, AI_DECLARED) ::
+  forge m be regex_capture(body, "^say\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "p(" + ai_map_code(m[1], nope) + ")"
+  ;;
+  m be regex_capture(body, "^set\\\\s+(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+to\\\\s+(.+)$")
+  ponder m differs void ::
+    ponder has(AI_DECLARED, m[1]) either contains(m[1], "[") either contains(m[1], ".") ::
+      yield m[1] + " = " + ai_map_code(m[2], nope)
+    ;;
+    AI_DECLARED[m[1]] be yep
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^if\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "? " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^else\\\\s+if\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "} :? " + ai_cond(m[1]) + " {"
+  ;;
+  ponder body equals "else" ::
+    yield "} : {"
+  ;;
+  ponder body equals "end" ::
+    yield "}"
+  ;;
+  m be regex_capture(body, "^while\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "w " + ai_cond(m[1]) + " {"
+  ;;
+  m be regex_capture(body, "^for\\\\s+(each\\\\s+)?(" + AI_NAME + ")\\\\s+in\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "each " + m[2] + " in " + ai_map_code(m[3], nope) + " {"
+  ;;
+  m be regex_capture(body, "^to\\\\s+(" + AI_NAME + ")(\\\\s+with\\\\s+(.+))?$")
+  ponder m differs void ::
+    forge params be m[3] equals "" ~ "" : weave(words(m[3]), ", ")
+    yield "f " + m[1] + "(" + params + ") {"
+  ;;
+  m be regex_capture(body, "^return(\\\\s+(.+))?$")
+  ponder m differs void ::
+    yield "r " + ai_map_code(m[2], nope)
+  ;;
+  ponder body equals "break" ::
+    yield "brk"
+  ;;
+  ponder body equals "continue" ::
+    yield "next"
+  ;;
+  yield ""
+;;
+
+// English comparisons -> symbols
+conjure ai_cond(c) ::
+  forge out be ""
+  iterate seg through ai_segments(c) ::
+    ponder startswith(seg, "\\"") either startswith(seg, "'") ::
+      out be out + seg
+    ;; otherwise ::
+      forge x be seg
+      x be regex_replace(x, "\\\\s+is\\\\s+not\\\\s+", " != ")
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+more\\\\b", " >= $1")
+      x be regex_replace(x, "\\\\s+is\\\\s+(\\\\S+)\\\\s+or\\\\s+less\\\\b", " <= $1")
+      x be regex_replace(x, "\\\\s+is\\\\s+", " == ")
+      x be regex_replace(x, "\\\\s+and\\\\s+", " && ")
+      x be regex_replace(x, "\\\\s+or\\\\s+", " || ")
+      x be regex_replace(x, "(^|\\\\s)not\\\\s+", "$1!")
+      out be out + ai_ops_to_ai(x)
+    ;;
+  ;;
+  yield out
+;;
+
+conjure sdev_line_to_ai(body, declared) ::
+  forge english be english_line_to_ai(body, declared)
+  ponder english differs "" ::
+    yield english
+  ;;
+  forge m be regex_capture(body, "^;;\\\\s*otherwise\\\\s+ponder\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "} :? " + ai_map_code(m[1], nope) + " {"
+  ;;
+  ponder regex_test(body, "^;;\\\\s*otherwise\\\\s*::$") ::
+    yield "} : {"
+  ;;
+  m be regex_capture(body, "^;;\\\\s*rescue\\\\s+(" + AI_NAME + ")\\\\s*::$")
+  ponder m differs void ::
+    yield "} catch " + m[1] + " {"
+  ;;
+  ponder body equals ";;" ::
+    yield "}"
+  ;;
+  ponder regex_test(body, "^attempt\\\\s*::$") ::
+    yield "try {"
+  ;;
+  ponder regex_test(body, "^;;\\\\s*ensure\\\\s*::$") ::
+    yield "} finally {"
+  ;;
+  m be regex_capture(body, "^fixed\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "k " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^essence\\\\s+(" + AI_NAME + ")(?:\\\\s+extend\\\\s+(" + AI_NAME + "))?\\\\s*::$")
+  ponder m differs void ::
+    ponder m[2] equals "" ::
+      yield "c " + m[1] + " {"
+    ;;
+    yield "c " + m[1] + " : " + m[2] + " {"
+  ;;
+  m be regex_capture(body, "^hurl\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "throw " + ai_map_code(m[1], nope)
+  ;;
+  m be regex_capture(body, "^forge\\\\s+(" + AI_NAME + ")\\\\s+be\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "v " + m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  m be regex_capture(body, "^conjure\\\\s+(" + AI_NAME + ")\\\\s*\\\\(([^)]*)\\\\)\\\\s*::$")
+  ponder m differs void ::
+    yield "f " + m[1] + "(" + m[2] + ") {"
+  ;;
+  m be regex_capture(body, "^yield\\\\s+(.+)$")
+  ponder m differs void ::
+    yield "r " + ai_map_code(m[1], nope)
+  ;;
+  m be regex_capture(body, "^speak\\\\((.*)\\\\)$")
+  ponder m differs void ::
+    yield "p(" + ai_map_code(m[1], nope) + ")"
+  ;;
+  m be regex_capture(body, "^ponder\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "? " + ai_map_code(m[1], nope) + " {"
+  ;;
+  m be regex_capture(body, "^cycle\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "w " + ai_map_code(m[1], nope) + " {"
+  ;;
+  m be regex_capture(body, "^iterate\\\\s+(" + AI_NAME + ")\\\\s+through\\\\s+(.+?)\\\\s*::$")
+  ponder m differs void ::
+    yield "each " + m[1] + " in " + ai_map_code(m[2], nope) + " {"
+  ;;
+  ponder body equals "yeet" ::
+    yield "brk"
+  ;;
+  ponder body equals "skip" ::
+    yield "next"
+  ;;
+  m be regex_capture(body, "^(" + AI_NAME + "(?:\\\\[[^\\\\]]+\\\\]|\\\\." + AI_NAME + ")*)\\\\s+be\\\\s+(.+)$")
+  ponder m differs void ::
+    yield m[1] + " = " + ai_map_code(m[2], nope)
+  ;;
+  yield ai_map_code(body, nope)
+;;
+
+conjure sdev_to_ai(source) ::
+  forge out be ["!#ai"]
+  forge declared be ::
+  ;;
+  iterate line through lines(source) ::
+    forge indent be leading_space(line)
+    forge body be trim(line)
+    ponder body equals "" either startswith(body, "//") ::
+      out be out + [line]
+    ;; otherwise ::
+      out be out + [indent + sdev_line_to_ai(body, declared)]
+    ;;
+  ;;
+  yield unlines(out)
+;;
 `;
   }
 });
@@ -18757,9 +20104,9 @@ function load() {
   if (engine !== null) return engine;
   try {
     const src = blocks_default + "\n" + understander_default + "\n" + ai_dialect_default + "\n" + project_default + "\n" + parser_eval_default + "\n" + brain_default + "\n" + math_default + "\n" + tasks_default + "\n" + memory_default;
-    const ast = new Parser(new Lexer(src).tokenize()).parse();
+    const ast = new Parser(new Lexer(src, { translate: false }).tokenize()).parse();
     const interp = new Interpreter(() => {
-    });
+    }, { bindWeb: false });
     interp.interpret(ast);
     const env2 = interp.getGlobalEnv();
     engine = {
@@ -33741,6 +35088,17 @@ function builtinNames() {
     try {
       builtinCache = new Set(runtimeNames());
       for (const n of ["window", "endwindow", "row", "endrow", "column", "endcolumn", "group", "endgroup", "tabs", "endtabs", "tab", "endtab", "heading", "label", "paragraph", "image", "divider", "spacer", "progress", "button", "textarea", "checkbox", "slider", "select", "table", "menu", "endmenu", "menuitem", "uiget", "uiset", "show", "alert"]) builtinCache.add(n);
+      try {
+        const gfx = createGraphicsBuiltins(
+          () => {
+          },
+          () => ({ x: 0, y: 0, angle: 0, penDown: true, color: "#000", width: 1 }),
+          () => {
+          }
+        );
+        for (const k of gfx.keys()) builtinCache.add(k);
+      } catch {
+      }
       for (const n of ["mklist", "ord", "chr", "substr", "i2f", "f2i", "fneg", "fabs", "fsqrt", "fsin", "fcos", "ftan", "fexp", "flog", "fpow", "fbyte", "fceil", "ffloor", "fround", "read_file", "write_file", "http_get", "num", "nothing"]) builtinCache.add(n);
     } catch {
       builtinCache = /* @__PURE__ */ new Set();
@@ -33777,7 +35135,8 @@ function unknownNames(source) {
   } catch {
     return [];
   }
-  const defined = /* @__PURE__ */ new Set([...definedNames(source), ...sdevDefinedNames(source) ?? []]);
+  const defined = definedNames(source);
+  let sdevDefined = null;
   const builtins = builtinNames();
   const isWebProgram = /\b(?:page|endpage|html_\w+|open_\w+)\s*\(/.test(source);
   const out = /* @__PURE__ */ new Set();
@@ -33796,6 +35155,8 @@ function unknownNames(source) {
     if (name === "make" && (!next || (next.line ?? 0) > (t.line ?? 0) || next.value === "with" || next.value === "capture")) continue;
     if (defined.has(name) || builtins.has(name)) continue;
     if (isWebProgram && WEB_CONTEXT_ONLY_NAMES.has(name)) continue;
+    if (sdevDefined === null) sdevDefined = new Set(sdevDefinedNames(source) ?? []);
+    if (sdevDefined.has(name)) continue;
     out.add(name);
   }
   return [...out];
@@ -33814,7 +35175,8 @@ function senseFile(source, extra) {
     const line = lines[i].trim();
     if (!line || line.startsWith("#") || line.startsWith("//")) continue;
     const head2 = line.split(/[\s(]+/)[0].toLowerCase();
-    if (head2 !== "say" && mathRequest(line) !== null || taskRequest(line) !== null) {
+    const canonicalHead = line === ";;" || line === "}" || isSdevWord(head2, line);
+    if (!canonicalHead && (head2 !== "say" && mathRequest(line) !== null || taskRequest(line) !== null)) {
       reasons.push(`line ${i + 1}: a calculation asked for in words`);
       continue;
     }
@@ -33853,6 +35215,9 @@ function senseFile(source, extra) {
   const working = ok && unknown.size === 0 && reasons.every((r) => STYLE_ONLY.test(r));
   return { parses: ok, suspicious: !ok || reasons.length > 0 && !working, reasons, working };
 }
+function wordsNeedReading(source) {
+  return senseFile(withoutBoardBlocks(source)).reasons.some((r) => /is not canonical sdev|asks for input in words|names the output destination/.test(r) && !/"[^"]*[^\x00-\x7F][^"]*"/.test(r));
+}
 var builtinCache, runtimeCache, WEB_CONTEXT_ONLY_NAMES, NAME, NON_CANONICAL_HEAD, STYLE_ONLY;
 var init_sense = __esm({
   "src/lang/agent/sense.ts"() {
@@ -33860,6 +35225,7 @@ var init_sense = __esm({
     init_lexer();
     init_parser();
     init_interpreter();
+    init_graphics2();
     init_tokens();
     init_math3();
     init_tasks2();
@@ -34162,13 +35528,13 @@ function stored(key) {
   }
 }
 function brainSettings() {
-  const defaultOnline = typeof window !== "undefined" ? "1" : "";
   return {
     localUrl: stored(BRAIN_KEYS.url) || env("SDEV_AGENT_LOCAL_URL") || DEFAULT_LOCAL_URL,
     localModel: stored(BRAIN_KEYS.model) || env("SDEV_AGENT_LOCAL_MODEL") || DEFAULT_LOCAL_MODEL,
     browser: (stored(BRAIN_KEYS.browser) ?? "1") !== "0",
     customLocal: !!(stored(BRAIN_KEYS.url) || env("SDEV_AGENT_LOCAL_URL")),
-    allowOnline: (stored(BRAIN_KEYS.online) ?? env("SDEV_AGENT_ONLINE") ?? defaultOnline) === "1"
+    // Website AI is opt-in (Settings toggle or `!#agent:online`) so everyday use costs no credits.
+    allowOnline: (stored(BRAIN_KEYS.online) ?? env("SDEV_AGENT_ONLINE") ?? "") === "1"
   };
 }
 function online() {
@@ -34390,6 +35756,7 @@ function hexToBytes(hex) {
   return out;
 }
 function setSeedLoader(fn2) {
+  if (seedLoader === fn2) return;
   seedLoader = fn2;
   cachedModule = null;
 }
@@ -36184,6 +37551,16 @@ async function withStdlib(source, modules) {
   }
   return added || modules ? out : null;
 }
+function compiledCacheKey(source, modules) {
+  if (!modules) return source;
+  const keys = Object.keys(modules).sort();
+  let key = source + "\0";
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    key += k + "\0" + modules[k] + "\0";
+  }
+  return key;
+}
 async function loadSeedBytes() {
   if (!cachedBytes) {
     cachedBytes = fetch("/wasm/sdev-seed.wasm").then((r) => {
@@ -36195,10 +37572,7 @@ async function loadSeedBytes() {
 }
 async function loadSeed() {
   if (!cached) {
-    cached = fetch("/wasm/sdev-seed.wasm").then((r) => {
-      if (!r.ok) throw new Error(`fetch sdev-seed.wasm: ${r.status}`);
-      return r.arrayBuffer();
-    }).then((buf) => WebAssembly.compile(buf));
+    cached = loadSeedBytes().then((buf) => WebAssembly.compile(buf));
   }
   return cached;
 }
@@ -36217,26 +37591,37 @@ async function runWasm(source, modules, options = {}) {
   modules = await withStdlib(source, modules) ?? void 0;
   setSeedLoader(loadSeedBytes);
   const isDiagnosticError = (msg) => /unknown function|expected \d+ args|joining lists with \+|unknown (?:parent )?kind|outside of a loop|too many (?:globals|locals)|overflow/.test(msg);
-  let program;
-  try {
-    program = await compile(source, modules ?? null);
-    if (program.bytecode.length === 0) throw new Error("stage-0 compiler produced no bytecode");
-  } catch (e) {
-    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, "");
-    if (isDiagnosticError(msg)) {
-      return { success: false, output: [], error: msg };
+  const cacheKey = compiledCacheKey(source, modules);
+  let program = compiledProgramCache.get(cacheKey);
+  if (!program) {
+    try {
+      if (!cachedOracleCompile) {
+        const oracle = await Promise.resolve().then(() => (init_compile(), compile_exports));
+        cachedOracleCompile = oracle.compile;
+      }
+      cachedOracleCompile(source, modules ? { readModule: (path) => modules?.[path] ?? "" } : {});
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, "");
+      if (isDiagnosticError(msg)) {
+        return { success: false, output: [], error: msg };
+      }
+      throw new WasmSubsetError(msg);
     }
-    throw new WasmSubsetError(msg);
-  }
-  try {
-    const { compile: checkCompile } = await Promise.resolve().then(() => (init_compile(), compile_exports));
-    checkCompile(source, modules ? { readModule: (path) => modules?.[path] ?? "" } : {});
-  } catch (e) {
-    const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, "");
-    if (isDiagnosticError(msg)) {
-      return { success: false, output: [], error: msg };
+    try {
+      program = await compile(source, modules ?? null);
+      if (program.bytecode.length === 0) throw new Error("stage-0 compiler produced no bytecode");
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).replace(/^\[sdev v2\] line \d+: /, "");
+      if (isDiagnosticError(msg)) {
+        return { success: false, output: [], error: msg };
+      }
+      throw new WasmSubsetError(msg);
     }
-    throw new WasmSubsetError(msg);
+    if (compiledProgramCache.size >= COMPILED_CACHE_MAX) {
+      const oldest = compiledProgramCache.keys().next().value;
+      if (oldest !== void 0) compiledProgramCache.delete(oldest);
+    }
+    compiledProgramCache.set(cacheKey, program);
   }
   const module = await loadSeed();
   let mem;
@@ -36338,11 +37723,11 @@ async function seedVersion() {
   });
   return inst.exports.sdev_version();
 }
-var WasmSubsetError, STDLIB, USE_RE, cached, cachedBytes;
+var WasmSubsetError, STDLIB, USE_RE, cached, cachedBytes, cachedOracleCompile, compiledProgramCache, COMPILED_CACHE_MAX;
 var init_wasm_runtime = __esm({
   "src/lang-bridge/wasm-runtime.ts"() {
     init_compile_self();
-    init_translator2();
+    init_translator();
     WasmSubsetError = class extends Error {
     };
     STDLIB = {};
@@ -36353,6 +37738,9 @@ var init_wasm_runtime = __esm({
     USE_RE = /^[ \t]*use "([^"]+)"[ \t]*$/gm;
     cached = null;
     cachedBytes = null;
+    cachedOracleCompile = null;
+    compiledProgramCache = /* @__PURE__ */ new Map();
+    COMPILED_CACHE_MAX = 16;
   }
 });
 
@@ -36514,10 +37902,12 @@ var init_compiler = __esm({
       constants = { numbers: [], strings: [] };
       fixedVariables = /* @__PURE__ */ new Set();
       debugInfo = { sourceMap: [], localNames: [] };
+      classNodes = /* @__PURE__ */ new Map();
       compile(program) {
         this.constants = { numbers: [], strings: [] };
         this.debugInfo = { sourceMap: [], localNames: [] };
         this.fixedVariables = /* @__PURE__ */ new Set();
+        this.classNodes.clear();
         const fn2 = new FunctionCompiler("", []);
         this.compileStatements(program.statements, fn2);
         fn2.emit("HALT" /* HALT */, void 0, 0);
@@ -37120,31 +38510,68 @@ var init_compiler = __esm({
         fn2.emit("CALL" /* CALL */, 2, node.line);
         fn2.emit("POP" /* POP */, void 0, node.line);
       }
+      collectSuperMethods(node, seen = /* @__PURE__ */ new Set()) {
+        const bases = node.superClasses?.length ? node.superClasses : node.superClass ? [node.superClass] : [];
+        const out = [];
+        for (const baseName of bases) {
+          if (seen.has(baseName)) continue;
+          seen.add(baseName);
+          const baseNode = this.classNodes.get(baseName);
+          if (!baseNode) continue;
+          out.push(...baseNode.methods, ...this.collectSuperMethods(baseNode, seen));
+        }
+        return out;
+      }
+      compileMethodClosure(method, ctorFn, line) {
+        const params = method.params.filter((p) => p !== "self");
+        const methodFn = new FunctionCompiler(method.name, params);
+        this.compileStatements(method.body.statements, methodFn);
+        methodFn.emit("PUSH_NULL" /* PUSH_NULL */, void 0, line);
+        methodFn.emit("RETURN" /* RETURN */, void 0, line);
+        const methodDef = { name: method.name, params, code: methodFn.code, functions: methodFn.functions };
+        const methodIdx = ctorFn.functions.length;
+        ctorFn.functions.push(methodDef);
+        return methodIdx;
+      }
       compileClass(node, fn2) {
+        this.classNodes.set(node.name, node);
         const ctorFn = new FunctionCompiler(node.name, []);
-        const initMethod = node.methods.find((m2) => m2.name === "init");
+        const superMethods = this.collectSuperMethods(node);
+        const initMethod = node.methods.find((m2) => m2.name === "init") ?? superMethods.find((m2) => m2.name === "init");
         const otherMethods = node.methods.filter((m2) => m2.name !== "init");
         if (initMethod) {
           ctorFn.params = initMethod.params.filter((p) => p !== "self");
         }
         ctorFn.emit("MAKE_DICT" /* MAKE_DICT */, 0, node.line);
         ctorFn.emit("DEFINE" /* DEFINE */, "self", node.line);
+        if (superMethods.length > 0) {
+          ctorFn.emit("MAKE_DICT" /* MAKE_DICT */, 0, node.line);
+          ctorFn.emit("DEFINE" /* DEFINE */, "super", node.line);
+          const boundSuper = /* @__PURE__ */ new Set();
+          for (const sm of superMethods) {
+            if (boundSuper.has(sm.name)) continue;
+            boundSuper.add(sm.name);
+            const methodIdx = this.compileMethodClosure(sm, ctorFn, node.line);
+            ctorFn.emit("LOAD" /* LOAD */, "super", node.line);
+            ctorFn.emit("MAKE_FUNC" /* MAKE_FUNC */, methodIdx, node.line);
+            ctorFn.emit("MEMBER_SET" /* MEMBER_SET */, sm.name, node.line);
+            if (sm.name !== "init") {
+              ctorFn.emit("LOAD" /* LOAD */, "self", node.line);
+              ctorFn.emit("MAKE_FUNC" /* MAKE_FUNC */, methodIdx, node.line);
+              ctorFn.emit("MEMBER_SET" /* MEMBER_SET */, sm.name, node.line);
+            }
+          }
+        }
+        for (const method of otherMethods) {
+          const methodIdx = this.compileMethodClosure(method, ctorFn, node.line);
+          ctorFn.emit("LOAD" /* LOAD */, "self", node.line);
+          ctorFn.emit("MAKE_FUNC" /* MAKE_FUNC */, methodIdx, node.line);
+          ctorFn.emit("MEMBER_SET" /* MEMBER_SET */, method.name, node.line);
+        }
         if (initMethod) {
           for (const stmt of initMethod.body.statements) {
             this.compileNode(stmt, ctorFn);
           }
-        }
-        for (const method of otherMethods) {
-          const methodFn = new FunctionCompiler(method.name, method.params);
-          this.compileStatements(method.body.statements, methodFn);
-          methodFn.emit("PUSH_NULL" /* PUSH_NULL */, void 0, node.line);
-          methodFn.emit("RETURN" /* RETURN */, void 0, node.line);
-          const methodDef = { name: method.name, params: method.params, code: methodFn.code, functions: methodFn.functions };
-          const methodIdx = ctorFn.functions.length;
-          ctorFn.functions.push(methodDef);
-          ctorFn.emit("LOAD" /* LOAD */, "self", node.line);
-          ctorFn.emit("MAKE_FUNC" /* MAKE_FUNC */, methodIdx, node.line);
-          ctorFn.emit("MEMBER_SET" /* MEMBER_SET */, method.name, node.line);
         }
         ctorFn.emit("LOAD" /* LOAD */, "self", node.line);
         ctorFn.emit("RETURN" /* RETURN */, void 0, node.line);
@@ -37195,6 +38622,9 @@ function typeOf(e, tys, fnTypes) {
       const tt = typeOf(e.target, tys, fnTypes);
       if (tt === "tome") return tys.get(tomeValKey(e)) || "int";
       const base = e.target.k === "ident" ? e.target.name : null;
+      if (base && e.idx && e.idx.k === "num" && e.idx.v === 0 && tys.has(`@elem0:${base}`)) {
+        return tys.get(`@elem0:${base}`);
+      }
       return base && tys.get(`@elem:${base}`) || "int";
     }
     case "un":
@@ -37206,6 +38636,7 @@ function typeOf(e, tys, fnTypes) {
       if ("+-*/".includes(e.op) && e.op.length === 1 && (typeOf(e.l, tys, fnTypes) === "float" || typeOf(e.r, tys, fnTypes) === "float")) return "float";
       return "int";
     case "call":
+      if (e.name === "random" && e.args && e.args.length === 1) return "int";
       if (FLOAT_BUILTINS.has(e.name)) return "float";
       if (STR_BUILTINS.has(e.name)) return "str";
       if (LIST_BUILTINS.has(e.name)) return "list";
@@ -37242,7 +38673,9 @@ function tomeValKey(e) {
 }
 function inferFnTypes(funcs, mainBody = [], classes = null) {
   const fnTypes = /* @__PURE__ */ new Map();
+  const globalTys = /* @__PURE__ */ new Map();
   fnTypes._classes = classes;
+  fnTypes._globals = globalTys;
   const byName = new Map(funcs.map((f2) => [f2.name, f2]));
   const noteCalls = (e, tys) => {
     if (!e || typeof e !== "object") return;
@@ -37263,18 +38696,62 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
       else if (v && typeof v === "object") noteCalls(v, tys);
     }
   };
-  for (let pass = 0; pass < 3; pass++) {
-    for (const f2 of [...funcs, { name: null, params: [], body: mainBody }]) {
-      const tys = /* @__PURE__ */ new Map();
+  for (let pass = 0; pass < 20; pass++) {
+    const beforeFn = fnTypes.size;
+    const beforeGlob = globalTys.size;
+    for (const f2 of [{ name: null, params: [], body: mainBody }, ...funcs]) {
+      const tys = new Map(globalTys);
+      const localNames = new Set(f2.params || []);
+      if (f2.name) {
+        const tmpLoc = /* @__PURE__ */ new Map();
+        (f2.params || []).forEach((p, i) => tmpLoc.set(p, i));
+        collectSets2(f2.body, tmpLoc);
+        for (const k of tmpLoc.keys()) localNames.add(k);
+      }
       for (const [i, p] of (f2.params || []).entries()) {
         const t2 = f2.name && fnTypes.get(`@param:${f2.name}:${i}`);
         if (t2) tys.set(p, t2);
       }
-      let t = "int";
+      let t = f2.name && fnTypes.get(f2.name) || "int";
       const walk = (body) => {
         for (const s of body) {
           noteCalls(s, tys);
-          if (s.k === "set") tys.set(s.name, typeOf(s.expr, tys, fnTypes));
+          if (s.k === "set") {
+            const vt = typeOf(s.expr, tys, fnTypes);
+            tys.set(s.name, vt);
+            if (!f2.name || !localNames.has(s.name)) {
+              if (vt !== "int") globalTys.set(s.name, vt);
+            }
+            if (vt === "list") {
+              const et = elemTypeOf(s.expr, tys, fnTypes);
+              if (et !== "int") {
+                tys.set(`@elem:${s.name}`, et);
+                if (!f2.name || !localNames.has(s.name)) globalTys.set(`@elem:${s.name}`, et);
+              }
+            }
+          }
+          if (s.k === "setIndex") {
+            const target = { k: "ident", name: s.name };
+            const isTome = typeOf(target, tys, fnTypes) === "tome";
+            const vt = typeOf(s.expr, tys, fnTypes);
+            if (isTome) {
+              if (vt !== "int") {
+                const tk = tomeValKey({ target, idx: s.idx });
+                tys.set(tk, vt);
+                if (!f2.name || !localNames.has(s.name)) globalTys.set(tk, vt);
+              }
+            } else if (s.idx && s.idx.k === "num" && s.idx.v === 0) {
+              tys.set(`@elem0:${s.name}`, vt);
+              if (!f2.name || !localNames.has(s.name)) globalTys.set(`@elem0:${s.name}`, vt);
+              if (vt !== "int" && !tys.has(`@elem:${s.name}`)) {
+                tys.set(`@elem:${s.name}`, vt);
+                if (!f2.name || !localNames.has(s.name)) globalTys.set(`@elem:${s.name}`, vt);
+              }
+            } else if (vt !== "int") {
+              tys.set(`@elem:${s.name}`, vt);
+              if (!f2.name || !localNames.has(s.name)) globalTys.set(`@elem:${s.name}`, vt);
+            }
+          }
           if (s.k === "setField") {
             const ft = typeOf(s.expr, tys, fnTypes);
             if (ft !== "int") fnTypes.set(`@field:${s.field}`, ft);
@@ -37297,8 +38774,9 @@ function inferFnTypes(funcs, mainBody = [], classes = null) {
         }
       };
       walk(f2.body);
-      if (f2.name) fnTypes.set(f2.name, t);
+      if (f2.name && t !== "int") fnTypes.set(f2.name, t);
     }
+    if (fnTypes.size === beforeFn && globalTys.size === beforeGlob && pass >= 2) break;
   }
   return fnTypes;
 }
@@ -37648,13 +39126,22 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
     case "sin":
     case "cos":
     case "exp":
-    case "log": {
+    case "log":
+    case "fsqrt":
+    case "ffloor":
+    case "fceil":
+    case "fround":
+    case "fsin":
+    case "fcos":
+    case "fexp":
+    case "flog": {
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
       em.L("    movq %rax, %rdi");
-      em.L(`    call sdev_f${n}`);
+      em.L(`    call sdev_${n.startsWith("f") && n !== "floor" ? n : "f" + n}`);
       return true;
     }
-    case "pow": {
+    case "pow":
+    case "fpow": {
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
       emitFloatExpr(a[1], em, locals, tys, fnTypes);
@@ -37664,6 +39151,17 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     }
     case "random":
+      if (a.length === 1) {
+        emitExpr2(a[0], em, locals, tys, fnTypes);
+        em.L("    pushq %rax");
+        em.L("    call sdev_random");
+        em.L("    movq %rax, %xmm0");
+        em.L("    popq %rcx");
+        em.L("    cvtsi2sdq %rcx, %xmm1");
+        em.L("    mulsd %xmm1, %xmm0");
+        em.L("    cvttsd2siq %xmm0, %rax");
+        return true;
+      }
       em.L("    call sdev_random");
       return true;
     case "range":
@@ -37679,6 +39177,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    call sdev_i2f");
       return true;
     case "tan":
+    case "ftan":
     case "fabs":
     case "fneg":
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
@@ -37700,6 +39199,14 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    call sdev_num");
       return true;
     case "int": {
+      if (typeOf(a[0], tys, fnTypes) === "str") {
+        emitStrExpr(a[0], em, locals, tys, fnTypes);
+        em.L("    movq %rax, %rdi");
+        em.L("    call sdev_num");
+        em.L("    movq %rax, %xmm0");
+        em.L("    cvttsd2siq %xmm0, %rax");
+        return true;
+      }
       emitFloatExpr(a[0], em, locals, tys, fnTypes);
       em.L("    movq %rax, %xmm0");
       em.L("    cvttsd2si %xmm0, %rax");
@@ -37724,13 +39231,14 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       return true;
     case "contains":
     case "index_of":
+    case "find":
     case "split": {
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
       emitStrExpr(a[1], em, locals, tys, fnTypes);
       em.L("    movq %rax, %rsi");
       em.L("    popq %rdi");
-      em.L(`    call sdev_${n === "index_of" ? "index_of" : n}`);
+      em.L(`    call sdev_${n === "index_of" || n === "find" ? "index_of" : n}`);
       return true;
     }
     case "join": {
@@ -37754,7 +39262,8 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    call sdev_replace");
       return true;
     }
-    case "substring": {
+    case "substring":
+    case "substr": {
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       em.L("    pushq %rax");
       emitExpr2(a[1], em, locals, tys, fnTypes);
@@ -37764,6 +39273,11 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L("    popq %rsi");
       em.L("    popq %rdi");
       em.L("    call sdev_substr");
+      return true;
+    }
+    case "http_get": {
+      emitStrExpr(a[0], em, locals, tys, fnTypes);
+      em.L("    call sdev_empty");
       return true;
     }
     case "min":
@@ -37866,8 +39380,13 @@ function emitStmt2(s, em, locals, ctx) {
     case "setIndex": {
       const target = { k: "ident", name: s.name };
       const isTome = typeOf(target, tys, fnTypes) === "tome";
+      const valTy = typeOf(s.expr, tys, fnTypes);
       if (isTome) {
-        tys.set(tomeValKey({ target, idx: s.idx }), typeOf(s.expr, tys, fnTypes));
+        tys.set(tomeValKey({ target, idx: s.idx }), valTy);
+      } else if (s.idx && s.idx.k === "num" && s.idx.v === 0) {
+        tys.set(`@elem0:${s.name}`, valTy);
+      } else if (valTy !== "int") {
+        tys.set(`@elem:${s.name}`, valTy);
       }
       emitExpr2(target, em, locals, tys, fnTypes);
       em.L("    pushq %rax");
@@ -38079,23 +39598,36 @@ function generateAsm(source, opts = {}) {
   em.L("    .globl sdev_main");
   for (const f2 of funcs) {
     const info = em.functions.get(f2.name);
-    em.L(`${info.label}:`);
-    em.L("    pushq %rbp");
-    em.L("    movq %rsp, %rbp");
-    em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
     const locals = /* @__PURE__ */ new Map();
     f2.params.forEach((p, i) => locals.set(p, i));
     collectSets2(f2.body, locals);
+    const frameSlots = Math.max(LOCAL_SLOTS, locals.size + 1 & ~1);
+    em.L(`${info.label}:`);
+    em.L("    pushq %rbp");
+    em.L("    movq %rsp, %rbp");
+    em.L(`    subq $${8 * frameSlots}, %rsp`);
+    const emptyLbl = em.strLabel("");
+    em.L("    xorq %rax, %rax");
+    for (let si = f2.params.length; si < locals.size; si++) {
+      em.L(`    movq %rax, -${8 * (si + 1)}(%rbp)`);
+    }
     f2.params.forEach((_p, i) => {
       em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
     });
     const epilogue = em.gensym("ret");
-    const ptys = /* @__PURE__ */ new Map();
+    const ptys = new Map(em.fnTypes._globals || []);
     f2.params.forEach((p, i) => {
       const t = em.fnTypes.get(`@param:${f2.name}:${i}`);
       if (t) ptys.set(p, t);
+      else ptys.delete(p);
     });
+    for (const [lname, slot] of locals.entries()) {
+      if (slot >= f2.params.length && ptys.get(lname) === "str") {
+        em.L(`    leaq ${emptyLbl}(%rip), %rax`);
+        em.L(`    movq %rax, -${8 * (slot + 1)}(%rbp)`);
+      }
+    }
     const ctx = { epilogue, tys: ptys, fnTypes: em.fnTypes };
     f2.body.forEach((s) => emitStmt2(s, em, locals, ctx));
     em.L("    xorq %rax, %rax");
@@ -38109,7 +39641,7 @@ function generateAsm(source, opts = {}) {
   em.L("    movq %rsp, %rbp");
   em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
   const mainLocals = null;
-  const mainCtx = { epilogue: ".Lmain_ret", tys: /* @__PURE__ */ new Map(), fnTypes: em.fnTypes };
+  const mainCtx = { epilogue: ".Lmain_ret", tys: new Map(em.fnTypes._globals || []), fnTypes: em.fnTypes };
   main2.forEach((s) => emitStmt2(s, em, mainLocals, mainCtx));
   em.L(".Lmain_ret:");
   em.L("    xorq %rax, %rax");
@@ -38118,16 +39650,17 @@ function generateAsm(source, opts = {}) {
   em.L("    ret");
   for (let li = 0; li < em.lambdas.length; li++) {
     const lam = em.lambdas[li];
-    em.L(`${lam.label}:`);
-    em.L("    pushq %rbp");
-    em.L("    movq %rsp, %rbp");
-    em.L(`    subq $${8 * LOCAL_SLOTS}, %rsp`);
     const locals = /* @__PURE__ */ new Map();
     lam.params.forEach((p, i) => locals.set(p, i));
     lam.caps.forEach((c) => {
       if (!locals.has(c)) locals.set(c, locals.size);
     });
     collectSets2(lam.body, locals);
+    const frameSlots = Math.max(LOCAL_SLOTS, locals.size + 1 & ~1);
+    em.L(`${lam.label}:`);
+    em.L("    pushq %rbp");
+    em.L("    movq %rsp, %rbp");
+    em.L(`    subq $${8 * frameSlots}, %rsp`);
     lam.params.forEach((_p, i) => {
       em.L(`    movq ${16 + 8 * i}(%rbp), %rax`);
       em.L(`    movq %rax, -${8 * (i + 1)}(%rbp)`);
@@ -38176,11 +39709,13 @@ var init_codegen_x64 = __esm({
       "trim",
       "replace",
       "substring",
+      "substr",
       "join",
       // Milestone 6g — host I/O
       "read_file",
       "input",
-      "env"
+      "env",
+      "http_get"
     ]);
     INT_BUILTINS = /* @__PURE__ */ new Set([
       "length",
@@ -38188,6 +39723,7 @@ var init_codegen_x64 = __esm({
       "abs",
       "contains",
       "index_of",
+      "find",
       "has",
       "min",
       "max",
@@ -38205,18 +39741,28 @@ var init_codegen_x64 = __esm({
     TOME_BUILTINS = /* @__PURE__ */ new Set(["tome_new", "tset"]);
     FLOAT_BUILTINS = /* @__PURE__ */ new Set([
       "sqrt",
+      "fsqrt",
       "floor",
+      "ffloor",
       "ceil",
+      "fceil",
       "round",
+      "fround",
       "sin",
+      "fsin",
       "cos",
+      "fcos",
       "exp",
+      "fexp",
       "log",
+      "flog",
       "pow",
+      "fpow",
       "random",
       "num",
       // Milestone 6i
       "tan",
+      "ftan",
       "fabs",
       "fneg",
       "i2f"
@@ -38315,709 +39861,7 @@ import { spawnSync as spawnSync2 } from "node:child_process";
 init_builtins();
 init_advanced();
 init_matrix2();
-
-// src/lang/graphics.ts
-init_errors();
-init_builtins();
-init_sdev_module();
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\graphics.sdev
-var graphics_default = '# =============================================================================\r\n# SDEV Standard Library: 2D Canvas Graphics Engine (lang/stdlib/v2/graphics.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\n# Global graphics state list:\r\n# 0: width (int)\r\n# 1: height (int)\r\n# 2: bg_color (str)\r\n# 3: fill_color (str)\r\n# 4: stroke_color (str)\r\n# 5: line_width (int)\r\n# 6: font_spec (str)\r\n# 7: has_fill (int 1/0)\r\n# 8: has_stroke (int 1/0)\r\n# 9: cmd_count (int)\r\n# 10: svg_defs (str)\r\n# 11: svg_body (str)\r\nset _gfx to mklist(16)\r\nset _gfx[0] to 400\r\nset _gfx[1] to 400\r\nset _gfx[2] to "#090d16"\r\nset _gfx[3] to "#38bdf8"\r\nset _gfx[4] to "#e2e8f0"\r\nset _gfx[5] to 2\r\nset _gfx[6] to "14px JetBrains Mono, monospace"\r\nset _gfx[7] to 1\r\nset _gfx[8] to 1\r\nset _gfx[9] to 0\r\nset _gfx[10] to ""\r\nset _gfx[11] to ""\r\n\r\nto canvas_create with w h\r\n  set _gfx[0] to w\r\n  set _gfx[1] to h\r\n  set _gfx[2] to "#090d16"\r\n  set _gfx[3] to "#38bdf8"\r\n  set _gfx[4] to "#e2e8f0"\r\n  set _gfx[5] to 2\r\n  set _gfx[6] to "14px JetBrains Mono, monospace"\r\n  set _gfx[7] to 1\r\n  set _gfx[8] to 1\r\n  set _gfx[9] to 0\r\n  set _gfx[10] to ""\r\n  set _gfx[11] to ""\r\n  return _gfx\r\nend\r\n\r\nto gfx_emit with frag\r\n  set cur to concat(_gfx[11], "")\r\n  set _gfx[11] to cur + frag + "\\n"\r\n  set _gfx[9] to _gfx[9] + 1\r\n  return 0\r\nend\r\n\r\nto gfx_clear\r\n  set _gfx[9] to 0\r\n  set _gfx[11] to ""\r\n  return 0\r\nend\r\n\r\nto gfx_background with color_str\r\n  set _gfx[2] to concat(color_str, "")\r\n  set w to str(_gfx[0])\r\n  set h to str(_gfx[1])\r\n  return gfx_emit("<rect x=\\"0\\" y=\\"0\\" width=\\"" + w + "\\" height=\\"" + h + "\\" fill=\\"" + concat(color_str, "") + "\\"/>")\r\nend\r\n\r\nto gfx_fill with color_str\r\n  set _gfx[3] to concat(color_str, "")\r\n  set _gfx[7] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_no_fill\r\n  set _gfx[7] to 0\r\n  return 0\r\nend\r\n\r\nto gfx_stroke with color_str\r\n  set _gfx[4] to concat(color_str, "")\r\n  set _gfx[8] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_no_stroke\r\n  set _gfx[8] to 0\r\n  return 0\r\nend\r\n\r\nto gfx_line_width with w\r\n  set _gfx[5] to w\r\n  return 0\r\nend\r\n\r\nto gfx_font with font_str\r\n  set _gfx[6] to concat(font_str, "")\r\n  return 0\r\nend\r\n\r\nto gfx_paint_attrs\r\n  set f to "none"\r\n  if _gfx[7] is 1\r\n    set f to concat(_gfx[3], "")\r\n  end\r\n  set s to "none"\r\n  if _gfx[8] is 1\r\n    set s to concat(_gfx[4], "")\r\n  end\r\n  set out to " fill=\\"" + f + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\""\r\n  return concat(out, "")\r\nend\r\n\r\nto gfx_rect with x y w h radius\r\n  set rx_attr to ""\r\n  if radius > 0\r\n    set rx_attr to " rx=\\"" + str(radius) + "\\""\r\n  end\r\n  return gfx_emit("<rect x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" width=\\"" + str(w) + "\\" height=\\"" + str(h) + "\\"" + rx_attr + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_circle with cx cy r\r\n  return gfx_emit("<circle cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" r=\\"" + str(r) + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_ellipse with cx cy rx ry\r\n  return gfx_emit("<ellipse cx=\\"" + str(cx) + "\\" cy=\\"" + str(cy) + "\\" rx=\\"" + str(rx) + "\\" ry=\\"" + str(ry) + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_line with x1 y1 x2 y2\r\n  set s to concat(_gfx[4], "")\r\n  return gfx_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + s + "\\" stroke-width=\\"" + str(_gfx[5]) + "\\" stroke-linecap=\\"round\\"/>")\r\nend\r\n\r\nto gfx_triangle with x1 y1 x2 y2 x3 y3\r\n  set pts to str(x1) + "," + str(y1) + " " + str(x2) + "," + str(y2) + " " + str(x3) + "," + str(y3)\r\n  return gfx_emit("<polygon points=\\"" + pts + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_polygon with points_str\r\n  return gfx_emit("<polygon points=\\"" + concat(points_str, "") + "\\"" + gfx_paint_attrs() + "/>")\r\nend\r\n\r\nto gfx_text with txt x y\r\n  set f to concat(_gfx[3], "")\r\n  set fn_spec to concat(_gfx[6], "")\r\n  return gfx_emit("<text x=\\"" + str(x) + "\\" y=\\"" + str(y) + "\\" fill=\\"" + f + "\\" style=\\"font: " + fn_spec + ";\\">" + concat(txt, "") + "</text>")\r\nend\r\n\r\nto gfx_linear_gradient with grad_id x1 y1 x2 y2 c1 c2\r\n  set def to "<linearGradient id=\\"" + concat(grad_id, "") + "\\" x1=\\"" + str(x1) + "%\\" y1=\\"" + str(y1) + "%\\" x2=\\"" + str(x2) + "%\\" y2=\\"" + str(y2) + "%\\"><stop offset=\\"0%\\" stop-color=\\"" + concat(c1, "") + "\\"/><stop offset=\\"100%\\" stop-color=\\"" + concat(c2, "") + "\\"/></linearGradient>"\r\n  set cur to concat(_gfx[10], "")\r\n  set _gfx[10] to cur + def\r\n  set _gfx[3] to "url(#" + concat(grad_id, "") + ")"\r\n  set _gfx[7] to 1\r\n  return 0\r\nend\r\n\r\nto gfx_push_transform with transform_str\r\n  return gfx_emit("<g transform=\\"" + concat(transform_str, "") + "\\">")\r\nend\r\n\r\nto gfx_pop_transform\r\n  return gfx_emit("</g>")\r\nend\r\n\r\nto gfx_translate with dx dy\r\n  return gfx_push_transform("translate(" + str(dx) + "," + str(dy) + ")")\r\nend\r\n\r\nto gfx_rotate with deg\r\n  return gfx_push_transform("rotate(" + str(deg) + ")")\r\nend\r\n\r\nto gfx_scale with sx sy\r\n  return gfx_push_transform("scale(" + str(sx) + "," + str(sy) + ")")\r\nend\r\n\r\nto gfx_cmd_count\r\n  return _gfx[9]\r\nend\r\n\r\nto gfx_to_svg\r\n  set w to str(_gfx[0])\r\n  set h to str(_gfx[1])\r\n  set defs_str to concat(_gfx[10], "")\r\n  set defs_block to ""\r\n  if length(defs_str) > 0\r\n    set defs_block to "<defs>" + defs_str + "</defs>\\n"\r\n  end\r\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"" + w + "\\" height=\\"" + h + "\\" viewBox=\\"0 0 " + w + " " + h + "\\">\\n" + defs_block + concat(_gfx[11], "") + "</svg>"\r\n  return concat(svg, "")\r\nend\r\n\r\n\r\nto gfx_hue_css with h s l\r\n  return "hsl(" + str(h) + ", " + str(s) + "%, " + str(l) + "%)"\r\nend\r\n\r\nto gfx_rgb_css with r g b\r\n  return "rgb(" + str(r) + ", " + str(g) + ", " + str(b) + ")"\r\nend\r\n\r\nto gfx_rgba_css with r g b a\r\n  return "rgba(" + str(r) + ", " + str(g) + ", " + str(b) + ", " + str(a) + ")"\r\nend\r\n\r\nto gfx_hsla_css with h s l a\r\n  return "hsla(" + str(h) + ", " + str(s) + "%, " + str(l) + "%, " + str(a) + ")"\r\nend\r\n\r\nto gfx_radians with deg\r\n  return (deg * 3.141592653589793) / 180.0\r\nend\r\n\r\nto gfx_degrees with rad\r\n  return (rad * 180.0) / 3.141592653589793\r\nend\r\n\r\nto gfx_lerp with a b t\r\n  return a + ((b - a) * t)\r\nend\r\n\r\nto gfx_map_range with val in_min in_max out_min out_max\r\n  return out_min + ((out_max - out_min) * ((val - in_min) / (in_max - in_min)))\r\nend\r\n\r\nto gfx_constrain with val lo hi\r\n  if val < lo\r\n    return lo\r\n  end\r\n  if val > hi\r\n    return hi\r\n  end\r\n  return val\r\nend\r\n\r\nto gfx_dist with x1 y1 x2 y2\r\n  set dx to x2 - x1\r\n  set dy to y2 - y1\r\n  return fsqrt((dx * dx) + (dy * dy))\r\nend\r\n\r\nto gfx_sprite_collides with ax ay aw ah bx by bw bh\r\n  if ax < (bx + bw)\r\n    if (ax + aw) > bx\r\n      if ay < (by + bh)\r\n        if (ay + ah) > by\r\n          return 1\r\n        end\r\n      end\r\n    end\r\n  end\r\n  return 0\r\nend\r\n';
-
-// raw:C:\Users\User\Documents\sdev-web-anti\sdev-web\lang\stdlib\v2\turtle.sdev
-var turtle_default = '# =============================================================================\r\n# SDEV Standard Library: Turtle Vector Graphics Engine (lang/stdlib/v2/turtle.sdev)\r\n# Authored in 100% pure SDEV \u2014 compiled by the self-hosted SDEV compiler.\r\n# =============================================================================\r\n\r\nuse "lang/stdlib/v2/text.sdev"\r\n\r\n# _turtle state list:\r\n# 0: x (int)\r\n# 1: y (int)\r\n# 2: angle_deg (int)\r\n# 3: pen_down (int 1/0)\r\n# 4: color (str)\r\n# 5: width (int)\r\n# 6: seg_count (int)\r\n# 7: svg_body (str)\r\nset _turtle to mklist(10)\r\nset _turtle[0] to 200\r\nset _turtle[1] to 200\r\nset _turtle[2] to 0\r\nset _turtle[3] to 1\r\nset _turtle[4] to "#38bdf8"\r\nset _turtle[5] to 2\r\nset _turtle[6] to 0\r\nset _turtle[7] to ""\r\n\r\nto turtle_create\r\n  set _turtle[0] to 200\r\n  set _turtle[1] to 200\r\n  set _turtle[2] to 0\r\n  set _turtle[3] to 1\r\n  set _turtle[4] to "#38bdf8"\r\n  set _turtle[5] to 2\r\n  set _turtle[6] to 0\r\n  set _turtle[7] to ""\r\n  return _turtle\r\nend\r\n\r\nto turtle_emit with frag\r\n  set cur to concat(_turtle[7], "")\r\n  set _turtle[7] to cur + frag + "\\n"\r\n  set _turtle[6] to _turtle[6] + 1\r\n  return 0\r\nend\r\n\r\nto turtle_forward with dist\r\n  set x1 to _turtle[0]\r\n  set y1 to _turtle[1]\r\n  set deg to _turtle[2]\r\n  set rad to i2f(deg) * 3.14159265 / 180.0\r\n  set dx to f2i(fround(fcos(rad) * i2f(dist)))\r\n  set dy to f2i(fround(fsin(rad) * i2f(dist)))\r\n  set x2 to x1 + dx\r\n  set y2 to y1 + dy\r\n  set _turtle[0] to x2\r\n  set _turtle[1] to y2\r\n  if _turtle[3] is 1\r\n    set col to concat(_turtle[4], "")\r\n    set w to str(_turtle[5])\r\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x2) + "\\" y2=\\"" + str(y2) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\r\n  end\r\n  return 0\r\nend\r\n\r\nto turtle_backward with dist\r\n  return turtle_forward(0 - dist)\r\nend\r\n\r\nto turtle_right with deg\r\n  set _turtle[2] to (_turtle[2] + deg) % 360\r\n  return 0\r\nend\r\n\r\nto turtle_left with deg\r\n  set a to (_turtle[2] - deg) % 360\r\n  if a < 0\r\n    set a to a + 360\r\n  end\r\n  set _turtle[2] to a\r\n  return 0\r\nend\r\n\r\nto turtle_goto with x y\r\n  set x1 to _turtle[0]\r\n  set y1 to _turtle[1]\r\n  set _turtle[0] to x\r\n  set _turtle[1] to y\r\n  if _turtle[3] is 1\r\n    set col to concat(_turtle[4], "")\r\n    set w to str(_turtle[5])\r\n    set _ to turtle_emit("<line x1=\\"" + str(x1) + "\\" y1=\\"" + str(y1) + "\\" x2=\\"" + str(x) + "\\" y2=\\"" + str(y) + "\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\" stroke-linecap=\\"round\\"/>")\r\n  end\r\n  return 0\r\nend\r\n\r\nto turtle_pen_up\r\n  set _turtle[3] to 0\r\n  return 0\r\nend\r\n\r\nto turtle_pen_down\r\n  set _turtle[3] to 1\r\n  return 0\r\nend\r\n\r\nto turtle_pen_color with col_str\r\n  set _turtle[4] to concat(col_str, "")\r\n  return 0\r\nend\r\n\r\nto turtle_pen_width with w\r\n  set _turtle[5] to w\r\n  return 0\r\nend\r\n\r\nto turtle_heading with deg\r\n  set _turtle[2] to deg % 360\r\n  return 0\r\nend\r\n\r\nto turtle_home\r\n  set _turtle[0] to 200\r\n  set _turtle[1] to 200\r\n  set _turtle[2] to 0\r\n  return 0\r\nend\r\n\r\nto turtle_dot with r\r\n  set col to concat(_turtle[4], "")\r\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"" + col + "\\"/>")\r\nend\r\n\r\nto turtle_circle with r\r\n  set col to concat(_turtle[4], "")\r\n  set w to str(_turtle[5])\r\n  return turtle_emit("<circle cx=\\"" + str(_turtle[0]) + "\\" cy=\\"" + str(_turtle[1]) + "\\" r=\\"" + str(r) + "\\" fill=\\"none\\" stroke=\\"" + col + "\\" stroke-width=\\"" + w + "\\"/>")\r\nend\r\n\r\nto turtle_x\r\n  return _turtle[0]\r\nend\r\n\r\nto turtle_y\r\n  return _turtle[1]\r\nend\r\n\r\nto turtle_angle\r\n  return _turtle[2]\r\nend\r\n\r\nto turtle_segment_count\r\n  return _turtle[6]\r\nend\r\n\r\nto turtle_to_svg\r\n  set svg to "<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"400\\" height=\\"400\\" viewBox=\\"0 0 400 400\\">\\n" + concat(_turtle[7], "") + "</svg>"\r\n  return concat(svg, "")\r\nend\r\n\r\n\r\nto turtle_step_pos with x y angle_deg dist\r\n  set rad to (angle_deg * 3.141592653589793) / 180.0\r\n  set nx to x + (fcos(rad) * dist)\r\n  set ny to y + (fsin(rad) * dist)\r\n  return [nx, ny]\r\nend\r\n\r\nto turtle_circle_steps with x y angle_deg radius steps\r\n  set angle_step to 360.0 / steps\r\n  set dist to ((2.0 * 3.141592653589793) * radius) / steps\r\n  set cx to x\r\n  set cy to y\r\n  set ca to angle_deg\r\n  set segs to mklist(steps)\r\n  set i to 0\r\n  while i < steps\r\n    set rad to (ca * 3.141592653589793) / 180.0\r\n    set nx to cx + (fcos(rad) * dist)\r\n    set ny to cy + (fsin(rad) * dist)\r\n    set segs[i] to [cx, cy, nx, ny]\r\n    set cx to nx\r\n    set cy to ny\r\n    set ca to ca + angle_step\r\n    set i to i + 1\r\n  end\r\n  return [cx, cy, ca, segs]\r\nend\r\n';
-
-// src/lang/graphics.ts
-var gfxRunner = null;
-function getGfxRunner() {
-  if (!gfxRunner) gfxRunner = createSdevModuleRunner(graphics_default, turtle_default);
-  return gfxRunner;
-}
-function createGraphicsBuiltins(emit3, getTurtle, setTurtle) {
-  const builtins = /* @__PURE__ */ new Map();
-  let spriteIdCounter = 0;
-  const sprites = /* @__PURE__ */ new Map();
-  builtins.set("canvas", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("canvas() takes 2 arguments (width, height)", line);
-      const w = args[0];
-      const h = args[1];
-      emit3({ type: "canvas", width: w, height: h });
-      return null;
-    }
-  });
-  builtins.set("clear", {
-    type: "builtin",
-    call: (args) => {
-      const color = args[0] ?? "#1a1a2e";
-      emit3({ type: "clear", color });
-      return null;
-    }
-  });
-  builtins.set("background", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1) throw new SdevError("background() takes at least 1 argument", line);
-      emit3({ type: "background", color: stringify(args[0]) });
-      return null;
-    }
-  });
-  builtins.set("fill", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("fill() takes 1 argument (color)", line);
-      emit3({ type: "fill", color: stringify(args[0]) });
-      return null;
-    }
-  });
-  builtins.set("noFill", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "noFill" });
-      return null;
-    }
-  });
-  builtins.set("stroke", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1 || args.length > 2) throw new SdevError("stroke() takes 1-2 arguments (color, width?)", line);
-      emit3({ type: "stroke", color: stringify(args[0]), width: args[1] ?? 1 });
-      return null;
-    }
-  });
-  builtins.set("noStroke", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "noStroke" });
-      return null;
-    }
-  });
-  builtins.set("lineWidth", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("lineWidth() takes 1 argument", line);
-      emit3({ type: "lineWidth", width: args[0] });
-      return null;
-    }
-  });
-  builtins.set("lineCap", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("lineCap() takes 1 argument (round, square, butt)", line);
-      emit3({ type: "lineCap", cap: stringify(args[0]) });
-      return null;
-    }
-  });
-  builtins.set("lineJoin", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("lineJoin() takes 1 argument (round, bevel, miter)", line);
-      emit3({ type: "lineJoin", join: stringify(args[0]) });
-      return null;
-    }
-  });
-  builtins.set("alpha", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("alpha() takes 1 argument (0-1)", line);
-      emit3({ type: "alpha", value: args[0] });
-      return null;
-    }
-  });
-  builtins.set("shadow", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 3) throw new SdevError("shadow() takes 3-4 arguments (color, blur, offsetX, offsetY?)", line);
-      emit3({
-        type: "shadow",
-        color: stringify(args[0]),
-        blur: args[1],
-        offsetX: args[2],
-        offsetY: args[3] ?? args[2]
-      });
-      return null;
-    }
-  });
-  builtins.set("noShadow", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "noShadow" });
-      return null;
-    }
-  });
-  builtins.set("rect", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 4) throw new SdevError("rect() takes 4-5 arguments (x, y, w, h, radius?)", line);
-      emit3({ type: "rect", x: args[0], y: args[1], w: args[2], h: args[3], radius: args[4] ?? 0 });
-      return null;
-    }
-  });
-  builtins.set("circle", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("circle() takes 3 arguments (x, y, radius)", line);
-      emit3({ type: "circle", x: args[0], y: args[1], r: args[2] });
-      return null;
-    }
-  });
-  builtins.set("ellipse", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 4) throw new SdevError("ellipse() takes 4-5 arguments (x, y, rx, ry, rotation?)", line);
-      emit3({ type: "ellipse", x: args[0], y: args[1], rx: args[2], ry: args[3], rotation: args[4] ?? 0 });
-      return null;
-    }
-  });
-  builtins.set("arc", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 5) throw new SdevError("arc() takes 5-6 arguments (x, y, radius, startAngle, endAngle, anticlockwise?)", line);
-      emit3({
-        type: "arc",
-        x: args[0],
-        y: args[1],
-        r: args[2],
-        start: args[3],
-        end: args[4],
-        ccw: args[5] ?? false
-      });
-      return null;
-    }
-  });
-  builtins.set("line", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 4) throw new SdevError("line() takes 4 arguments (x1, y1, x2, y2)", line);
-      emit3({ type: "line", x1: args[0], y1: args[1], x2: args[2], y2: args[3] });
-      return null;
-    }
-  });
-  builtins.set("point", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 2) throw new SdevError("point() takes 2-3 arguments (x, y, size?)", line);
-      emit3({ type: "point", x: args[0], y: args[1], size: args[2] ?? 1 });
-      return null;
-    }
-  });
-  builtins.set("triangle", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 6) throw new SdevError("triangle() takes 6 arguments (x1, y1, x2, y2, x3, y3)", line);
-      emit3({ type: "triangle", x1: args[0], y1: args[1], x2: args[2], y2: args[3], x3: args[4], y3: args[5] });
-      return null;
-    }
-  });
-  builtins.set("polygon", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1) throw new SdevError("polygon() takes points [[x,y], ...]", line);
-      const points = args[0];
-      if (!Array.isArray(points)) throw new SdevError("polygon() argument must be a list of points", line);
-      emit3({ type: "polygon", points });
-      return null;
-    }
-  });
-  builtins.set("star", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 4) throw new SdevError("star() takes 4-5 arguments (x, y, outerRadius, innerRadius, points?)", line);
-      emit3({
-        type: "star",
-        x: args[0],
-        y: args[1],
-        outer: args[2],
-        inner: args[3],
-        points: args[4] ?? 5
-      });
-      return null;
-    }
-  });
-  builtins.set("heart", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("heart() takes 3 arguments (x, y, size)", line);
-      emit3({ type: "heart", x: args[0], y: args[1], size: args[2] });
-      return null;
-    }
-  });
-  builtins.set("text", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 3) throw new SdevError("text() takes 3-4 arguments (str, x, y, size?)", line);
-      emit3({ type: "text", text: stringify(args[0]), x: args[1], y: args[2], size: args[3] ?? 16 });
-      return null;
-    }
-  });
-  builtins.set("textAlign", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1) throw new SdevError("textAlign() takes 1-2 arguments (horizontal, vertical?)", line);
-      emit3({ type: "textAlign", horizontal: stringify(args[0]), vertical: args[1] ? stringify(args[1]) : "alphabetic" });
-      return null;
-    }
-  });
-  builtins.set("font", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1) throw new SdevError("font() takes 1-2 arguments (fontFamily, style?)", line);
-      emit3({ type: "font", family: stringify(args[0]), style: args[1] ? stringify(args[1]) : "normal" });
-      return null;
-    }
-  });
-  builtins.set("linearGradient", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 5) throw new SdevError("linearGradient() takes 5+ arguments (x1, y1, x2, y2, ...colorStops)", line);
-      const stops = args.slice(4);
-      emit3({ type: "linearGradient", x1: args[0], y1: args[1], x2: args[2], y2: args[3], stops });
-      return null;
-    }
-  });
-  builtins.set("radialGradient", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 7) throw new SdevError("radialGradient() takes 7+ arguments (x1, y1, r1, x2, y2, r2, ...colorStops)", line);
-      const stops = args.slice(6);
-      emit3({ type: "radialGradient", x1: args[0], y1: args[1], r1: args[2], x2: args[3], y2: args[4], r2: args[5], stops });
-      return null;
-    }
-  });
-  builtins.set("translate", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("translate() takes 2 arguments (x, y)", line);
-      emit3({ type: "translate", x: args[0], y: args[1] });
-      return null;
-    }
-  });
-  builtins.set("rotate", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("rotate() takes 1 argument (angle in radians)", line);
-      emit3({ type: "rotate", angle: args[0] });
-      return null;
-    }
-  });
-  builtins.set("scale", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1) throw new SdevError("scale() takes 1-2 arguments (x, y?)", line);
-      emit3({ type: "scale", x: args[0], y: args[1] ?? args[0] });
-      return null;
-    }
-  });
-  builtins.set("save", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "save" });
-      return null;
-    }
-  });
-  builtins.set("restore", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "restore" });
-      return null;
-    }
-  });
-  builtins.set("resetTransform", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "resetTransform" });
-      return null;
-    }
-  });
-  builtins.set("beginPath", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "beginPath" });
-      return null;
-    }
-  });
-  builtins.set("closePath", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "closePath" });
-      return null;
-    }
-  });
-  builtins.set("moveTo", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("moveTo() takes 2 arguments (x, y)", line);
-      emit3({ type: "moveTo", x: args[0], y: args[1] });
-      return null;
-    }
-  });
-  builtins.set("lineTo", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("lineTo() takes 2 arguments (x, y)", line);
-      emit3({ type: "lineTo", x: args[0], y: args[1] });
-      return null;
-    }
-  });
-  builtins.set("bezierTo", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 6) throw new SdevError("bezierTo() takes 6 arguments (cp1x, cp1y, cp2x, cp2y, x, y)", line);
-      emit3({ type: "bezierTo", cp1x: args[0], cp1y: args[1], cp2x: args[2], cp2y: args[3], x: args[4], y: args[5] });
-      return null;
-    }
-  });
-  builtins.set("quadraticTo", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 4) throw new SdevError("quadraticTo() takes 4 arguments (cpx, cpy, x, y)", line);
-      emit3({ type: "quadraticTo", cpx: args[0], cpy: args[1], x: args[2], y: args[3] });
-      return null;
-    }
-  });
-  builtins.set("fillPath", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "fillPath" });
-      return null;
-    }
-  });
-  builtins.set("strokePath", {
-    type: "builtin",
-    call: () => {
-      emit3({ type: "strokePath" });
-      return null;
-    }
-  });
-  builtins.set("createSprite", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 4) throw new SdevError("createSprite() takes 4-5 arguments (x, y, width, height, color?)", line);
-      const id = spriteIdCounter++;
-      const sprite = {
-        id,
-        x: args[0],
-        y: args[1],
-        width: args[2],
-        height: args[3],
-        color: args[4] ? stringify(args[4]) : "#ffffff",
-        rotation: 0,
-        scale: 1,
-        visible: true,
-        velocityX: 0,
-        velocityY: 0
-      };
-      sprites.set(id, sprite);
-      emit3({ type: "createSprite", sprite });
-      return sprite;
-    }
-  });
-  builtins.set("drawSprite", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("drawSprite() takes 1 argument (sprite)", line);
-      const sprite = args[0];
-      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
-      emit3({ type: "drawSprite", sprite });
-      return null;
-    }
-  });
-  builtins.set("moveSprite", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("moveSprite() takes 3 arguments (sprite, dx, dy)", line);
-      const sprite = args[0];
-      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
-      sprite.x += args[1];
-      sprite.y += args[2];
-      return sprite;
-    }
-  });
-  builtins.set("updateSprite", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("updateSprite() takes 1 argument (sprite)", line);
-      const sprite = args[0];
-      if (!sprite || typeof sprite.id !== "number") throw new SdevError("Invalid sprite", line);
-      sprite.x += sprite.velocityX;
-      sprite.y += sprite.velocityY;
-      return sprite;
-    }
-  });
-  builtins.set("spriteCollides", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("spriteCollides() takes 2 arguments (sprite1, sprite2)", line);
-      const a = args[0];
-      const b = args[1];
-      if (!a || !b) throw new SdevError("Invalid sprites", line);
-      return Boolean(getGfxRunner().call("gfx_sprite_collides", a.x, a.y, a.width, a.height, b.x, b.y, b.width, b.height));
-    }
-  });
-  builtins.set("turtle", {
-    type: "builtin",
-    call: () => {
-      setTurtle({ x: 200, y: 200, angle: -90, penDown: true, color: "#00ff88", width: 2 });
-      emit3({ type: "turtle_reset" });
-      return null;
-    }
-  });
-  builtins.set("forward", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("forward() takes 1 argument (distance)", line);
-      const t = getTurtle();
-      const [newX, newY] = getGfxRunner().call("turtle_step_pos", t.x, t.y, t.angle, args[0]);
-      if (t.penDown) {
-        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
-      }
-      setTurtle({ x: newX, y: newY });
-      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
-      return null;
-    }
-  });
-  builtins.set("backward", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("backward() takes 1 argument (distance)", line);
-      const dist = -args[0];
-      const t = getTurtle();
-      const [newX, newY] = getGfxRunner().call("turtle_step_pos", t.x, t.y, t.angle, dist);
-      if (t.penDown) {
-        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
-      }
-      setTurtle({ x: newX, y: newY });
-      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
-      return null;
-    }
-  });
-  builtins.set("left", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("left() takes 1 argument (degrees)", line);
-      const t = getTurtle();
-      const newAngle = t.angle - args[0];
-      setTurtle({ angle: newAngle });
-      emit3({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
-      return null;
-    }
-  });
-  builtins.set("right", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("right() takes 1 argument (degrees)", line);
-      const t = getTurtle();
-      const newAngle = t.angle + args[0];
-      setTurtle({ angle: newAngle });
-      emit3({ type: "turtle_move", x: t.x, y: t.y, angle: newAngle });
-      return null;
-    }
-  });
-  builtins.set("penup", {
-    type: "builtin",
-    call: () => {
-      setTurtle({ penDown: false });
-      return null;
-    }
-  });
-  builtins.set("pendown", {
-    type: "builtin",
-    call: () => {
-      setTurtle({ penDown: true });
-      return null;
-    }
-  });
-  builtins.set("pencolor", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("pencolor() takes 1 argument (color)", line);
-      setTurtle({ color: stringify(args[0]) });
-      return null;
-    }
-  });
-  builtins.set("penwidth", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("penwidth() takes 1 argument (width)", line);
-      setTurtle({ width: args[0] });
-      return null;
-    }
-  });
-  builtins.set("goto", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 2) throw new SdevError("goto() takes 2 arguments (x, y)", line);
-      const t = getTurtle();
-      const newX = args[0];
-      const newY = args[1];
-      if (t.penDown) {
-        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: newX, y2: newY, color: t.color, width: t.width });
-      }
-      setTurtle({ x: newX, y: newY });
-      emit3({ type: "turtle_move", x: newX, y: newY, angle: t.angle });
-      return null;
-    }
-  });
-  builtins.set("home", {
-    type: "builtin",
-    call: () => {
-      const t = getTurtle();
-      if (t.penDown) {
-        emit3({ type: "turtle_line", x1: t.x, y1: t.y, x2: 200, y2: 200, color: t.color, width: t.width });
-      }
-      setTurtle({ x: 200, y: 200, angle: -90 });
-      emit3({ type: "turtle_move", x: 200, y: 200, angle: -90 });
-      return null;
-    }
-  });
-  builtins.set("setheading", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("setheading() takes 1 argument (angle)", line);
-      const t = getTurtle();
-      const angle = args[0] - 90;
-      setTurtle({ angle });
-      emit3({ type: "turtle_move", x: t.x, y: t.y, angle });
-      return null;
-    }
-  });
-  builtins.set("heading", {
-    type: "builtin",
-    call: () => {
-      const t = getTurtle();
-      return (t.angle + 90) % 360;
-    }
-  });
-  builtins.set("pos", {
-    type: "builtin",
-    call: () => {
-      const t = getTurtle();
-      return [t.x, t.y];
-    }
-  });
-  builtins.set("turtleCircle", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1) throw new SdevError("turtleCircle() takes 1-2 arguments (radius, steps?)", line);
-      const radius = args[0];
-      const steps = args[1] ?? 36;
-      const t = getTurtle();
-      const [endX, endY, endAngle, segs] = getGfxRunner().call(
-        "turtle_circle_steps",
-        t.x,
-        t.y,
-        t.angle,
-        radius,
-        steps
-      );
-      if (t.penDown) {
-        for (const [x1, y1, x2, y2] of segs) {
-          emit3({ type: "turtle_line", x1, y1, x2, y2, color: t.color, width: t.width });
-        }
-      }
-      setTurtle({ x: endX, y: endY, angle: endAngle });
-      emit3({ type: "turtle_move", x: endX, y: endY, angle: endAngle });
-      return null;
-    }
-  });
-  builtins.set("dot", {
-    type: "builtin",
-    call: (args, line) => {
-      const size = args[0] ?? 5;
-      const color = args[1] ? stringify(args[1]) : getTurtle().color;
-      const t = getTurtle();
-      emit3({ type: "turtle_dot", x: t.x, y: t.y, size, color });
-      return null;
-    }
-  });
-  builtins.set("stamp", {
-    type: "builtin",
-    call: () => {
-      const t = getTurtle();
-      emit3({ type: "turtle_stamp", x: t.x, y: t.y, angle: t.angle, color: t.color });
-      return null;
-    }
-  });
-  builtins.set("hue", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length < 1 || args.length > 3) throw new SdevError("hue() takes 1-3 arguments (h, s?, l?)", line);
-      return getGfxRunner().callStr("gfx_hue_css", args[0], args[1] ?? 100, args[2] ?? 50);
-    }
-  });
-  builtins.set("rgb", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("rgb() takes 3 arguments (r, g, b)", line);
-      return getGfxRunner().callStr("gfx_rgb_css", args[0], args[1], args[2]);
-    }
-  });
-  builtins.set("rgba", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 4) throw new SdevError("rgba() takes 4 arguments (r, g, b, a)", line);
-      return getGfxRunner().callStr("gfx_rgba_css", args[0], args[1], args[2], args[3]);
-    }
-  });
-  builtins.set("hsla", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 4) throw new SdevError("hsla() takes 4 arguments (h, s, l, a)", line);
-      return getGfxRunner().callStr("gfx_hsla_css", args[0], args[1], args[2], args[3]);
-    }
-  });
-  builtins.set("randomColor", {
-    type: "builtin",
-    call: () => {
-      const h = Math.floor(Math.random() * 360);
-      return getGfxRunner().callStr("gfx_hue_css", h, 70, 60);
-    }
-  });
-  builtins.set("radians", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("radians() takes 1 argument (degrees)", line);
-      return getGfxRunner().call("gfx_radians", args[0]);
-    }
-  });
-  builtins.set("degrees", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 1) throw new SdevError("degrees() takes 1 argument (radians)", line);
-      return getGfxRunner().call("gfx_degrees", args[0]);
-    }
-  });
-  builtins.set("lerp", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("lerp() takes 3 arguments (a, b, t)", line);
-      return getGfxRunner().call("gfx_lerp", args[0], args[1], args[2]);
-    }
-  });
-  builtins.set("mapRange", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 5) throw new SdevError("mapRange() takes 5 arguments (value, inMin, inMax, outMin, outMax)", line);
-      return getGfxRunner().call("gfx_map_range", args[0], args[1], args[2], args[3], args[4]);
-    }
-  });
-  builtins.set("constrain", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 3) throw new SdevError("constrain() takes 3 arguments (value, min, max)", line);
-      return getGfxRunner().call("gfx_constrain", args[0], args[1], args[2]);
-    }
-  });
-  builtins.set("dist", {
-    type: "builtin",
-    call: (args, line) => {
-      if (args.length !== 4) throw new SdevError("dist() takes 4 arguments (x1, y1, x2, y2)", line);
-      return getGfxRunner().call("gfx_dist", args[0], args[1], args[2], args[3]);
-    }
-  });
-  return builtins;
-}
+init_graphics2();
 
 // src/lang/ui.ts
 init_builtins();
@@ -43003,7 +43847,7 @@ function lintSdevSource(source, options = {}) {
 }
 
 // cli/index.ts
-init_translator2();
+init_translator();
 
 // src/components/ide/formatSdev.ts
 function formatSdev(code, indentSize = 2) {
@@ -43049,6 +43893,712 @@ function formatSdev(code, indentSize = 2) {
     depth = Math.max(0, depth + opens2 - closes2);
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
+// src/lang/dialect/signature.ts
+var SIGNATURE_PREFIX = "#\u27E8sdev\u27E9 ";
+function toBase64Url(text2) {
+  const bytes = new TextEncoder().encode(text2);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function fromBase64Url(text2) {
+  const padded = text2.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text2.length + 3) % 4);
+  const bin = atob(padded);
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function checksum(body) {
+  let h = 2166136261;
+  for (let i = 0; i < body.length; i++) {
+    h ^= body.charCodeAt(i) & 255;
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+function buildTranslationRecipe(writtenBody, translatedSource) {
+  if (writtenBody === translatedSource) return [];
+  const a = writtenBody.split("\n");
+  const b = translatedSource.split("\n");
+  let prefix = 0;
+  const minLen = Math.min(a.length, b.length);
+  while (prefix < minLen && a[prefix] === b[prefix]) prefix++;
+  let suffix = 0;
+  while (suffix < minLen - prefix && a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) {
+    suffix++;
+  }
+  const aMidEnd = a.length - suffix;
+  const bMidEnd = b.length - suffix;
+  const ops = [];
+  let ai = prefix;
+  let bi = prefix;
+  const pushOp = (start, del, insLines) => {
+    if (del === 0 && insLines.length === 0) return;
+    if (insLines.length === 0) ops.push([start, del]);
+    else ops.push([start, del, insLines.join("\n")]);
+  };
+  const bIndex = /* @__PURE__ */ new Map();
+  for (let j = bi; j < bMidEnd; j++) {
+    const line = b[j];
+    let arr = bIndex.get(line);
+    if (!arr) {
+      arr = [];
+      bIndex.set(line, arr);
+    }
+    if (arr.length < 16) arr.push(j);
+  }
+  while (ai < aMidEnd || bi < bMidEnd) {
+    if (ai < aMidEnd && bi < bMidEnd && a[ai] === b[bi]) {
+      ai++;
+      bi++;
+      continue;
+    }
+    const hunkAStart = ai;
+    const hunkBStart = bi;
+    let foundA = -1;
+    let foundB = -1;
+    let bestDist = Infinity;
+    const scanLimit = Math.min(aMidEnd, ai + 32);
+    for (let i = ai; i < scanLimit; i++) {
+      const candidates2 = bIndex.get(a[i]);
+      if (!candidates2) continue;
+      for (const j of candidates2) {
+        if (j < bi) continue;
+        if (j - bi > 32) break;
+        const dist = i - ai + (j - bi);
+        if (dist < bestDist) {
+          bestDist = dist;
+          foundA = i;
+          foundB = j;
+        }
+        break;
+      }
+      if (bestDist <= 2) break;
+    }
+    if (foundA >= 0 && foundB >= 0) {
+      pushOp(hunkAStart, foundA - hunkAStart, b.slice(hunkBStart, foundB));
+      ai = foundA;
+      bi = foundB;
+    } else {
+      pushOp(hunkAStart, aMidEnd - hunkAStart, b.slice(hunkBStart, bMidEnd));
+      ai = aMidEnd;
+      bi = bMidEnd;
+    }
+  }
+  return ops;
+}
+function applyTranslationRecipe(writtenBody, recipe) {
+  if (!recipe.length) return writtenBody;
+  const lines = writtenBody.split("\n");
+  const out = [];
+  let cursor = 0;
+  for (const op of recipe) {
+    const [start, del, insertText] = op;
+    if (start > cursor) {
+      for (let i = cursor; i < Math.min(start, lines.length); i++) out.push(lines[i]);
+    }
+    if (insertText !== void 0) {
+      const inserted = insertText.split("\n");
+      for (let i = 0; i < inserted.length; i++) out.push(inserted[i]);
+    }
+    cursor = Math.max(cursor, start + del);
+  }
+  for (let i = cursor; i < lines.length; i++) out.push(lines[i]);
+  return out.join("\n");
+}
+function hasSignature(source) {
+  return source.startsWith(SIGNATURE_PREFIX);
+}
+function stripSignature(source) {
+  if (!source.startsWith(SIGNATURE_PREFIX)) return source;
+  const nl = source.indexOf("\n");
+  return nl < 0 ? "" : source.slice(nl + 1);
+}
+function readSignature(source) {
+  if (!source.startsWith(SIGNATURE_PREFIX)) return null;
+  const nl = source.indexOf("\n");
+  const first = nl < 0 ? source : source.slice(0, nl);
+  const payload = first.slice(SIGNATURE_PREFIX.length).trim();
+  if (!payload) return null;
+  try {
+    const parsed = JSON.parse(fromBase64Url(payload));
+    if (!parsed || parsed.v !== 1) return null;
+    if (!parsed.translated && Array.isArray(parsed.recipe) && parsed.recipe.length > 0) {
+      const body = nl < 0 ? "" : source.slice(nl + 1);
+      parsed.translated = applyTranslationRecipe(body, parsed.recipe);
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function writeSignature(source, sig) {
+  const body = stripSignature(source);
+  const { translated, recipe: explicitRecipe, ...rest } = sig;
+  let recipe;
+  let rawTranslated;
+  if (explicitRecipe && explicitRecipe.length > 0) {
+    recipe = explicitRecipe;
+  } else if (translated && translated !== body) {
+    const built = buildTranslationRecipe(body, translated);
+    if (built.length > 0 && applyTranslationRecipe(body, built) === translated) {
+      recipe = built;
+    } else {
+      rawTranslated = translated;
+    }
+  }
+  const full = {
+    v: 1,
+    ...rest,
+    ...recipe ? { recipe } : {},
+    ...rawTranslated ? { translated: rawTranslated } : {},
+    sum: checksum(body),
+    ts: Date.now()
+  };
+  return `${SIGNATURE_PREFIX}${toBase64Url(JSON.stringify(full))}
+${body}`;
+}
+function isSignatureStale(source) {
+  const sig = readSignature(source);
+  if (!sig || !sig.sum) return false;
+  return checksum(stripSignature(source)) !== sig.sum;
+}
+function repairSignature(source) {
+  const sig = readSignature(source);
+  if (!sig) return source;
+  const { v: _v, sum: _sum, ts: _ts, ...rest } = sig;
+  return writeSignature(source, rest);
+}
+
+// src/lang/dialect/catalog.ts
+var CATALOG = [
+  // ---- core ---------------------------------------------------------
+  { word: "say", group: "core", kind: "keyword", about: "print a value" },
+  { word: "ask", group: "core", kind: "keyword", about: "read a line of input" },
+  { word: "set", group: "core", kind: "keyword", about: "declare or reassign a variable" },
+  { word: "to", group: "core", kind: "keyword", about: "target of a set / start of a function" },
+  // ---- control flow -------------------------------------------------
+  { word: "if", group: "control", kind: "keyword", about: "conditional block" },
+  { word: "else", group: "control", kind: "keyword", about: "alternative branch" },
+  { word: "end", group: "control", kind: "keyword", about: "close a block" },
+  { word: "for", group: "control", kind: "keyword", about: "start of a loop" },
+  { word: "each", group: "control", kind: "keyword", about: "loop over every item" },
+  { word: "in", group: "control", kind: "keyword", about: "the sequence a loop walks" },
+  { word: "while", group: "control", kind: "keyword", about: "loop while a condition holds" },
+  { word: "break", group: "control", kind: "keyword", about: "leave the loop" },
+  { word: "continue", group: "control", kind: "keyword", about: "skip to the next iteration" },
+  { word: "match", group: "control", kind: "keyword", about: "structural match" },
+  // ---- functions ----------------------------------------------------
+  { word: "with", group: "functions", kind: "keyword", about: "parameter / argument list" },
+  { word: "return", group: "functions", kind: "keyword", about: "return a value" },
+  { word: "make", group: "functions", kind: "keyword", about: "lambda literal" },
+  { word: "capture", group: "functions", kind: "keyword", about: "closure capture list" },
+  { word: "ref", group: "functions", kind: "keyword", about: "take a function as a value" },
+  { word: "call", group: "functions", kind: "keyword", about: "call a function value" },
+  // ---- errors -------------------------------------------------------
+  { word: "attempt", group: "errors", kind: "keyword", about: "guarded block" },
+  { word: "rescue", group: "errors", kind: "keyword", about: "handle a raised error" },
+  { word: "throw", group: "errors", kind: "keyword", about: "raise an error" },
+  // ---- objects ------------------------------------------------------
+  { word: "kind", group: "objects", kind: "keyword", about: "define a kind (class)" },
+  { word: "has", group: "objects", kind: "keyword", about: "declare a field" },
+  { word: "does", group: "objects", kind: "keyword", about: "declare a method" },
+  { word: "new", group: "objects", kind: "keyword", about: "instantiate a kind" },
+  { word: "self", group: "objects", kind: "keyword", about: "the receiver inside a method" },
+  { word: "extends", group: "objects", kind: "keyword", about: "inherit from another kind" },
+  { word: "super", group: "objects", kind: "keyword", about: "parent-kind dispatch" },
+  // ---- modules ------------------------------------------------------
+  { word: "use", group: "modules", kind: "keyword", about: "import a module or library" },
+  // ---- literals -----------------------------------------------------
+  { word: "true", group: "literals", kind: "keyword", about: "boolean true" },
+  { word: "false", group: "literals", kind: "keyword", about: "boolean false" },
+  { word: "nothing", group: "literals", kind: "keyword", about: "the empty value" },
+  // ---- word operators -----------------------------------------------
+  { word: "is", group: "operators", kind: "keyword", about: "equality comparison" },
+  { word: "not", group: "operators", kind: "keyword", about: "logical negation" },
+  { word: "and", group: "operators", kind: "keyword", about: "logical and" },
+  { word: "or", group: "operators", kind: "keyword", about: "logical or" },
+  { word: "more", group: "operators", kind: "keyword", about: '"or more" \u2014 greater or equal' },
+  { word: "less", group: "operators", kind: "keyword", about: '"or less" \u2014 less or equal' },
+  // ---- builtins -----------------------------------------------------
+  ...[
+    ["range", "numbers from 0 up to n"],
+    ["len", "length of a list, tome or text"],
+    ["sum", "add every number in a list"],
+    ["str", "value as text"],
+    ["text", "value as text"],
+    ["num", "text as a number"],
+    ["ord", "character to byte value"],
+    ["chr", "byte value to character"],
+    ["upper", "uppercase text"],
+    ["lower", "lowercase text"],
+    ["trim", "strip surrounding spaces"],
+    ["split", "split text into a list"],
+    ["join", "join a list into text"],
+    ["find", "position of a needle"],
+    ["replace", "replace every occurrence"],
+    ["abs", "absolute value"],
+    ["min", "smaller of two numbers"],
+    ["max", "larger of two numbers"],
+    ["floor", "round down"],
+    ["ceil", "round up"],
+    ["sqrt", "square root"],
+    ["pow", "raise to a power"],
+    ["random", "deterministic pseudo-random number"],
+    ["keys", "keys of a tome"],
+    ["values", "values of a tome"],
+    ["read_file", "read a file as text"],
+    ["write_file", "write text to a file"],
+    ["append_file", "append text to a file"],
+    ["file_exists", "does a path exist"],
+    ["input", "read a line from stdin"],
+    ["args", "command line arguments"],
+    ["env", "environment variable"],
+    ["exit", "stop with a status code"],
+    ["now_ms", "milliseconds since the epoch"],
+    ["sleep_ms", "pause execution"],
+    ["say_err", "print to standard error"]
+  ].map(([word, about]) => ({ word, about, group: "builtins", kind: "builtin" }))
+];
+var CATALOG_WORDS = CATALOG.map((e) => e.word);
+var CATALOG_BY_WORD = Object.fromEntries(
+  CATALOG.map((e) => [e.word, e])
+);
+var GROUP_LABELS = {
+  core: "Core",
+  control: "Control flow",
+  functions: "Functions",
+  errors: "Errors",
+  objects: "Kinds & objects",
+  modules: "Modules",
+  literals: "Literals",
+  operators: "Word operators",
+  builtins: "Builtins"
+};
+
+// src/lang/dialect/spec.ts
+var DEFAULT_STYLE = {
+  blockStyle: "word",
+  commentMarker: "#",
+  stringQuote: '"',
+  assignment: "set-to",
+  argSeparator: "space"
+};
+function emptyDialect(partial = {}) {
+  return {
+    specVersion: 1,
+    meta: {
+      name: partial.name ?? "My sdev",
+      slug: partial.slug ?? "my-sdev",
+      languages: partial.languages ?? ["en"],
+      description: partial.description ?? "",
+      version: partial.version ?? "1.0.0",
+      extends: partial.extends ?? null,
+      visibility: partial.visibility ?? "private"
+    },
+    names: Object.fromEntries(CATALOG_WORDS.map((w) => [w, w])),
+    synonyms: {},
+    style: { ...DEFAULT_STYLE },
+    constructs: { functions: [], operators: [] }
+  };
+}
+function inherit(base, child) {
+  return {
+    ...child,
+    names: { ...base.names, ...child.names },
+    synonyms: { ...base.synonyms, ...child.synonyms },
+    style: { ...base.style, ...child.style },
+    constructs: {
+      functions: [...base.constructs.functions, ...child.constructs.functions],
+      operators: [...base.constructs.operators, ...child.constructs.operators]
+    }
+  };
+}
+var WORD_RE = /^[\p{L}\p{N}_][\p{L}\p{N}_]*$/u;
+var SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
+var OP_RE = /^[^\p{L}\p{N}\s_"'#]{1,3}$/u;
+function validateDialect(spec) {
+  const issues = [];
+  if (!SLUG_RE.test(spec.meta.slug)) {
+    issues.push({ level: "error", field: "meta.slug", message: "Slug must be 2\u201340 lowercase letters, digits or dashes." });
+  }
+  if (!spec.meta.name.trim()) {
+    issues.push({ level: "error", field: "meta.name", message: "Give the dialect a display name." });
+  }
+  if (!/^\d+\.\d+\.\d+$/.test(spec.meta.version)) {
+    issues.push({ level: "error", field: "meta.version", message: "Version must look like 1.0.0." });
+  }
+  const seen = /* @__PURE__ */ new Map();
+  for (const entry of CATALOG) {
+    const word = spec.names[entry.word];
+    if (!word || !word.trim()) {
+      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${entry.word}" has no word in this dialect.` });
+      continue;
+    }
+    if (!WORD_RE.test(word)) {
+      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${word}" is not a valid word \u2014 letters, digits and _ only, no spaces.` });
+      continue;
+    }
+    const all = [word, ...spec.synonyms[entry.word] ?? []];
+    for (const w of all) {
+      if (!WORD_RE.test(w)) {
+        issues.push({ level: "error", field: `synonyms.${entry.word}`, message: `"${w}" is not a valid word.` });
+        continue;
+      }
+      const owner = seen.get(w);
+      if (owner && owner !== entry.word) {
+        issues.push({ level: "error", field: `names.${entry.word}`, message: `"${w}" is already used for "${owner}".` });
+      } else {
+        seen.set(w, entry.word);
+      }
+    }
+  }
+  if (!spec.style.commentMarker || /[\p{L}\p{N}\s]/u.test(spec.style.commentMarker)) {
+    issues.push({ level: "error", field: "style.commentMarker", message: "Comment marker must be punctuation, e.g. # or //." });
+  }
+  if (spec.style.blockStyle === "braces" && seen.has("}")) {
+    issues.push({ level: "error", field: "style.blockStyle", message: 'Brace style conflicts with a word named "}".' });
+  }
+  const fnNames = /* @__PURE__ */ new Set();
+  for (const fn2 of spec.constructs.functions) {
+    if (!WORD_RE.test(fn2.name)) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is not a valid function name.` });
+    }
+    if (seen.has(fn2.name)) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" collides with the word for "${seen.get(fn2.name)}".` });
+    }
+    if (fnNames.has(fn2.name)) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is declared twice.` });
+    }
+    fnNames.add(fn2.name);
+    if (!fn2.source.trim()) {
+      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: "Function has no sdev body." });
+    }
+  }
+  const opSymbols = /* @__PURE__ */ new Set();
+  for (const op of spec.constructs.operators) {
+    if (!OP_RE.test(op.symbol)) {
+      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" must be 1\u20133 punctuation characters.` });
+    }
+    if (["+", "-", "*", "/", "%", "=", "<", ">", "(", ")", "[", "]", ",", "|>"].includes(op.symbol)) {
+      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is already an sdev operator.` });
+    }
+    if (opSymbols.has(op.symbol)) {
+      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is declared twice.` });
+    }
+    opSymbols.add(op.symbol);
+    if (!fnNames.has(op.fn) && !CATALOG_BY_WORD[op.fn]) {
+      issues.push({ level: "warning", field: `constructs.operators.${op.symbol}`, message: `Desugars to "${op.fn}", which this dialect does not define.` });
+    }
+  }
+  return issues;
+}
+function isPublishable(spec) {
+  return validateDialect(spec).every((i) => i.level !== "error");
+}
+function preludeSource(spec) {
+  if (spec.constructs.functions.length === 0) return "";
+  return spec.constructs.functions.map((f2) => f2.source.trim()).join("\n\n") + "\n";
+}
+
+// src/lang/dialect/sdev-format.ts
+var RESERVED_DIALECT_FNS = /* @__PURE__ */ new Set([
+  "dialect_meta",
+  "dialect_style",
+  "dialect_words",
+  "dialect_synonyms",
+  "dialect_operators"
+]);
+function quoteSdev(value2) {
+  return '"' + value2.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t") + '"';
+}
+function unquoteSdev(raw) {
+  const inner = raw.slice(1, -1);
+  let out = "";
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch === "\\" && i + 1 < inner.length) {
+      const next = inner[++i];
+      if (next === "n") out += "\n";
+      else if (next === "r") out += "\r";
+      else if (next === "t") out += "	";
+      else out += next;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+function serializeDialectToSdev(spec) {
+  const lines = [
+    "#!sdev v2",
+    `# Personal SDEV Dialect: ${spec.meta.name} (${spec.meta.slug})`,
+    "# Pure .sdev dialect definition \u2014 feeds directly into the sdev v2 compiler.",
+    "",
+    "to dialect_meta",
+    `  return [${[
+      spec.meta.name,
+      spec.meta.slug,
+      spec.meta.version,
+      (spec.meta.languages ?? ["en"]).join(","),
+      spec.meta.visibility ?? "private",
+      spec.meta.extends ?? "",
+      spec.meta.description ?? ""
+    ].map(quoteSdev).join(", ")}]`,
+    "end",
+    "",
+    "to dialect_style",
+    `  return [${[
+      spec.style.blockStyle ?? DEFAULT_STYLE.blockStyle,
+      spec.style.commentMarker ?? DEFAULT_STYLE.commentMarker,
+      spec.style.stringQuote ?? DEFAULT_STYLE.stringQuote,
+      spec.style.assignment ?? DEFAULT_STYLE.assignment,
+      spec.style.argSeparator ?? DEFAULT_STYLE.argSeparator
+    ].map(quoteSdev).join(", ")}]`,
+    "end",
+    ""
+  ];
+  const wordPairs = [];
+  for (const canonical of CATALOG_WORDS) {
+    const mapped = spec.names[canonical];
+    if (mapped && mapped !== canonical) wordPairs.push([canonical, mapped]);
+  }
+  lines.push("to dialect_words");
+  if (wordPairs.length === 0) {
+    lines.push("  return []");
+  } else {
+    lines.push("  return [");
+    wordPairs.forEach(([c, w], idx) => {
+      const comma = idx < wordPairs.length - 1 ? "," : "";
+      lines.push(`    [${quoteSdev(c)}, ${quoteSdev(w)}]${comma}`);
+    });
+    lines.push("  ]");
+  }
+  lines.push("end", "");
+  const synEntries = Object.entries(spec.synonyms ?? {}).filter(([, list]) => list && list.length > 0);
+  lines.push("to dialect_synonyms");
+  if (synEntries.length === 0) {
+    lines.push("  return []");
+  } else {
+    lines.push("  return [");
+    synEntries.forEach(([canonical, list], idx) => {
+      const comma = idx < synEntries.length - 1 ? "," : "";
+      lines.push(`    [${[canonical, ...list].map(quoteSdev).join(", ")}]${comma}`);
+    });
+    lines.push("  ]");
+  }
+  lines.push("end", "");
+  const ops = spec.constructs?.operators ?? [];
+  lines.push("to dialect_operators");
+  if (ops.length === 0) {
+    lines.push("  return []");
+  } else {
+    lines.push("  return [");
+    ops.forEach((op, idx) => {
+      const comma = idx < ops.length - 1 ? "," : "";
+      lines.push(
+        `    [${[op.symbol, String(op.precedence ?? 2), op.fn, op.about ?? ""].map(quoteSdev).join(", ")}]${comma}`
+      );
+    });
+    lines.push("  ]");
+  }
+  lines.push("end");
+  const fns = spec.constructs?.functions ?? [];
+  if (fns.length > 0) {
+    lines.push("", "# Custom dialect functions");
+    for (const fn2 of fns) {
+      if (fn2.about) lines.push(`# about: ${fn2.about}`);
+      lines.push(fn2.source.trim(), "");
+    }
+  }
+  return lines.join("\n").trimEnd() + "\n";
+}
+function isDialectSdevFile(source) {
+  return /^\s*to\s+dialect_(?:meta|words)\b/m.test(source);
+}
+function extractStringList(text2) {
+  const out = [];
+  const re2 = /"(?:\\.|[^"\\])*"/g;
+  let m2;
+  while (m2 = re2.exec(text2)) out.push(unquoteSdev(m2[0]));
+  return out;
+}
+function extractNestedStringLists(body) {
+  const rows = [];
+  let depth = 0;
+  let inStr = false;
+  let escaped = false;
+  let rowStart = -1;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (inStr) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === "#") {
+      while (i < body.length && body[i] !== "\n") i++;
+      continue;
+    }
+    if (ch === '"') {
+      inStr = true;
+      continue;
+    }
+    if (ch === "[") {
+      depth++;
+      if (depth === 2) rowStart = i;
+    } else if (ch === "]") {
+      if (depth === 2 && rowStart >= 0) {
+        rows.push(extractStringList(body.slice(rowStart, i + 1)));
+        rowStart = -1;
+      }
+      depth = Math.max(0, depth - 1);
+    }
+  }
+  return rows;
+}
+function extractTopLevelFunctions(source) {
+  const lines = source.replace(/\r\n/g, "\n").split("\n");
+  const fns = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const startMatch = line.match(/^\s*to\s+([\p{L}\p{N}_]+)\b/u);
+    if (!startMatch) {
+      i++;
+      continue;
+    }
+    let about;
+    if (i > 0) {
+      const prev = lines[i - 1].trim();
+      const aboutMatch = prev.match(/^#\s*about:\s*(.+)$/i);
+      if (aboutMatch) about = aboutMatch[1].trim();
+    }
+    const name = startMatch[1];
+    const fnLines = [line];
+    let depth = 1;
+    i++;
+    while (i < lines.length && depth > 0) {
+      const cur = lines[i];
+      const trimmed = cur.replace(/#.*$/, "").trim();
+      if (/^(if|for|while|to|kind|does|attempt|make)\b/.test(trimmed)) {
+        depth++;
+      } else if (/^end\b/.test(trimmed)) {
+        depth--;
+      }
+      fnLines.push(cur);
+      i++;
+    }
+    const full = fnLines.join("\n");
+    const body = fnLines.slice(1, fnLines.length - 1).join("\n");
+    fns.push({ name, about, body, source: full });
+  }
+  return fns;
+}
+function parseDialectFromSdev(source) {
+  const fns = extractTopLevelFunctions(source);
+  const byName = /* @__PURE__ */ new Map();
+  for (const fn2 of fns) byName.set(fn2.name, fn2);
+  const metaVals = byName.has("dialect_meta") ? extractStringList(byName.get("dialect_meta").body) : [];
+  const name = metaVals[0] || "My sdev";
+  const slug = metaVals[1] || "my-sdev";
+  const version3 = metaVals[2] || "1.0.0";
+  const languages = (metaVals[3] || "en").split(",").map((s) => s.trim()).filter(Boolean);
+  const visRaw = metaVals[4];
+  const visibility = visRaw === "public" || visRaw === "unlisted" || visRaw === "private" ? visRaw : "private";
+  const extendsSlug = metaVals[5] ? metaVals[5] : null;
+  const description = metaVals[6] ?? "";
+  const spec = emptyDialect({
+    name,
+    slug,
+    version: version3,
+    languages: languages.length ? languages : ["en"],
+    visibility,
+    extends: extendsSlug,
+    description
+  });
+  if (byName.has("dialect_style")) {
+    const styleVals = extractStringList(byName.get("dialect_style").body);
+    if (styleVals[0] === "word" || styleVals[0] === "braces") spec.style.blockStyle = styleVals[0];
+    if (styleVals[1]) spec.style.commentMarker = styleVals[1];
+    if (styleVals[2] === '"' || styleVals[2] === "'") spec.style.stringQuote = styleVals[2];
+    if (styleVals[3] === "set-to" || styleVals[3] === "equals" || styleVals[3] === "arrow") {
+      spec.style.assignment = styleVals[3];
+    }
+    if (styleVals[4] === "space" || styleVals[4] === "comma") spec.style.argSeparator = styleVals[4];
+  }
+  if (byName.has("dialect_words")) {
+    for (const row of extractNestedStringLists(byName.get("dialect_words").body)) {
+      if (row.length >= 2 && row[0] && row[1]) spec.names[row[0]] = row[1];
+    }
+  }
+  if (byName.has("dialect_synonyms")) {
+    for (const row of extractNestedStringLists(byName.get("dialect_synonyms").body)) {
+      if (row.length >= 2 && row[0]) spec.synonyms[row[0]] = row.slice(1).filter(Boolean);
+    }
+  }
+  if (byName.has("dialect_operators")) {
+    const ops = [];
+    for (const row of extractNestedStringLists(byName.get("dialect_operators").body)) {
+      if (row.length >= 3 && row[0] && row[2]) {
+        const prec = Number(row[1]);
+        ops.push({
+          symbol: row[0],
+          precedence: Number.isFinite(prec) ? prec : 2,
+          fn: row[2],
+          ...row[3] ? { about: row[3] } : {}
+        });
+      }
+    }
+    spec.constructs.operators = ops;
+  }
+  const customFns = [];
+  for (const fn2 of fns) {
+    if (RESERVED_DIALECT_FNS.has(fn2.name)) continue;
+    customFns.push({
+      name: fn2.name,
+      source: fn2.source,
+      ...fn2.about ? { about: fn2.about } : {}
+    });
+  }
+  spec.constructs.functions = customFns;
+  return spec;
+}
+var COLLECTION_DIVIDER = "# === sdev-dialect ===";
+function serializeDialectCollectionToSdev(specs) {
+  if (specs.length === 1) return serializeDialectToSdev(specs[0]);
+  return specs.map((s) => `${COLLECTION_DIVIDER}
+${serializeDialectToSdev(s)}`).join("\n");
+}
+function parseDialectCollection(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) return parsed;
+    if ("dialects" in parsed && Array.isArray(parsed.dialects)) return parsed.dialects;
+    if ("meta" in parsed) return [parsed];
+    return [];
+  }
+  if (trimmed.includes(COLLECTION_DIVIDER)) {
+    return trimmed.split(COLLECTION_DIVIDER).map((part) => part.trim()).filter((part) => part.length > 0 && isDialectSdevFile(part)).map(parseDialectFromSdev);
+  }
+  return isDialectSdevFile(trimmed) ? [parseDialectFromSdev(trimmed)] : [];
+}
+function extractDialectDirective(source) {
+  const lines = source.split("\n");
+  const limit = Math.min(lines.length, 10);
+  for (let i = 0; i < limit; i++) {
+    const m2 = lines[i].trim().match(/^#!dialect\s+(.+?)\s*$/);
+    if (m2) {
+      const target = m2[1].replace(/^["']|["']$/g, "").trim();
+      const rest = [...lines.slice(0, i), ...lines.slice(i + 1)].join("\n");
+      return { target, stripped: rest };
+    }
+  }
+  return null;
 }
 
 // src/lang/dialect/dialect-runner.ts
@@ -43532,297 +45082,6 @@ function getDialectRunner() {
   return dialectRunner;
 }
 
-// src/lang/dialect/signature.ts
-var SIGNATURE_PREFIX = "#\u27E8sdev\u27E9 ";
-function toBase64Url(text2) {
-  const bytes = new TextEncoder().encode(text2);
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-function fromBase64Url(text2) {
-  const padded = text2.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((text2.length + 3) % 4);
-  const bin = atob(padded);
-  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-function checksum(body) {
-  return getDialectRunner().callStr("dialect_fnv1a_hex", body);
-}
-function hasSignature(source) {
-  return Number(getDialectRunner().call("dialect_has_signature", source, SIGNATURE_PREFIX)) === 1;
-}
-function readSignature(source) {
-  const payload = getDialectRunner().callStr("dialect_extract_signature_payload", source, SIGNATURE_PREFIX);
-  if (!payload) return null;
-  try {
-    const parsed = JSON.parse(fromBase64Url(payload));
-    return parsed && parsed.v === 1 ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-function stripSignature(source) {
-  return getDialectRunner().callStr("dialect_strip_signature", source, SIGNATURE_PREFIX);
-}
-function writeSignature(source, sig) {
-  const body = stripSignature(source);
-  const full = {
-    v: 1,
-    ...sig,
-    sum: checksum(body),
-    ts: Date.now()
-  };
-  return getDialectRunner().callStr(
-    "dialect_format_signature_line",
-    SIGNATURE_PREFIX,
-    toBase64Url(JSON.stringify(full)),
-    body
-  );
-}
-function isSignatureStale(source) {
-  const sig = readSignature(source);
-  if (!sig || !sig.sum) return false;
-  return checksum(stripSignature(source)) !== sig.sum;
-}
-function repairSignature(source) {
-  const sig = readSignature(source);
-  if (!sig) return source;
-  const { v: _v, sum: _sum, ts: _ts, ...rest } = sig;
-  return writeSignature(source, rest);
-}
-
-// src/lang/dialect/catalog.ts
-var CATALOG = [
-  // ---- core ---------------------------------------------------------
-  { word: "say", group: "core", kind: "keyword", about: "print a value" },
-  { word: "ask", group: "core", kind: "keyword", about: "read a line of input" },
-  { word: "set", group: "core", kind: "keyword", about: "declare or reassign a variable" },
-  { word: "to", group: "core", kind: "keyword", about: "target of a set / start of a function" },
-  // ---- control flow -------------------------------------------------
-  { word: "if", group: "control", kind: "keyword", about: "conditional block" },
-  { word: "else", group: "control", kind: "keyword", about: "alternative branch" },
-  { word: "end", group: "control", kind: "keyword", about: "close a block" },
-  { word: "for", group: "control", kind: "keyword", about: "start of a loop" },
-  { word: "each", group: "control", kind: "keyword", about: "loop over every item" },
-  { word: "in", group: "control", kind: "keyword", about: "the sequence a loop walks" },
-  { word: "while", group: "control", kind: "keyword", about: "loop while a condition holds" },
-  { word: "break", group: "control", kind: "keyword", about: "leave the loop" },
-  { word: "continue", group: "control", kind: "keyword", about: "skip to the next iteration" },
-  { word: "match", group: "control", kind: "keyword", about: "structural match" },
-  // ---- functions ----------------------------------------------------
-  { word: "with", group: "functions", kind: "keyword", about: "parameter / argument list" },
-  { word: "return", group: "functions", kind: "keyword", about: "return a value" },
-  { word: "make", group: "functions", kind: "keyword", about: "lambda literal" },
-  { word: "capture", group: "functions", kind: "keyword", about: "closure capture list" },
-  { word: "ref", group: "functions", kind: "keyword", about: "take a function as a value" },
-  { word: "call", group: "functions", kind: "keyword", about: "call a function value" },
-  // ---- errors -------------------------------------------------------
-  { word: "attempt", group: "errors", kind: "keyword", about: "guarded block" },
-  { word: "rescue", group: "errors", kind: "keyword", about: "handle a raised error" },
-  { word: "throw", group: "errors", kind: "keyword", about: "raise an error" },
-  // ---- objects ------------------------------------------------------
-  { word: "kind", group: "objects", kind: "keyword", about: "define a kind (class)" },
-  { word: "has", group: "objects", kind: "keyword", about: "declare a field" },
-  { word: "does", group: "objects", kind: "keyword", about: "declare a method" },
-  { word: "new", group: "objects", kind: "keyword", about: "instantiate a kind" },
-  { word: "self", group: "objects", kind: "keyword", about: "the receiver inside a method" },
-  { word: "extends", group: "objects", kind: "keyword", about: "inherit from another kind" },
-  { word: "super", group: "objects", kind: "keyword", about: "parent-kind dispatch" },
-  // ---- modules ------------------------------------------------------
-  { word: "use", group: "modules", kind: "keyword", about: "import a module or library" },
-  // ---- literals -----------------------------------------------------
-  { word: "true", group: "literals", kind: "keyword", about: "boolean true" },
-  { word: "false", group: "literals", kind: "keyword", about: "boolean false" },
-  { word: "nothing", group: "literals", kind: "keyword", about: "the empty value" },
-  // ---- word operators -----------------------------------------------
-  { word: "is", group: "operators", kind: "keyword", about: "equality comparison" },
-  { word: "not", group: "operators", kind: "keyword", about: "logical negation" },
-  { word: "and", group: "operators", kind: "keyword", about: "logical and" },
-  { word: "or", group: "operators", kind: "keyword", about: "logical or" },
-  { word: "more", group: "operators", kind: "keyword", about: '"or more" \u2014 greater or equal' },
-  { word: "less", group: "operators", kind: "keyword", about: '"or less" \u2014 less or equal' },
-  // ---- builtins -----------------------------------------------------
-  ...[
-    ["range", "numbers from 0 up to n"],
-    ["len", "length of a list, tome or text"],
-    ["sum", "add every number in a list"],
-    ["str", "value as text"],
-    ["text", "value as text"],
-    ["num", "text as a number"],
-    ["ord", "character to byte value"],
-    ["chr", "byte value to character"],
-    ["upper", "uppercase text"],
-    ["lower", "lowercase text"],
-    ["trim", "strip surrounding spaces"],
-    ["split", "split text into a list"],
-    ["join", "join a list into text"],
-    ["find", "position of a needle"],
-    ["replace", "replace every occurrence"],
-    ["abs", "absolute value"],
-    ["min", "smaller of two numbers"],
-    ["max", "larger of two numbers"],
-    ["floor", "round down"],
-    ["ceil", "round up"],
-    ["sqrt", "square root"],
-    ["pow", "raise to a power"],
-    ["random", "deterministic pseudo-random number"],
-    ["keys", "keys of a tome"],
-    ["values", "values of a tome"],
-    ["read_file", "read a file as text"],
-    ["write_file", "write text to a file"],
-    ["append_file", "append text to a file"],
-    ["file_exists", "does a path exist"],
-    ["input", "read a line from stdin"],
-    ["args", "command line arguments"],
-    ["env", "environment variable"],
-    ["exit", "stop with a status code"],
-    ["now_ms", "milliseconds since the epoch"],
-    ["sleep_ms", "pause execution"],
-    ["say_err", "print to standard error"]
-  ].map(([word, about]) => ({ word, about, group: "builtins", kind: "builtin" }))
-];
-var CATALOG_WORDS = CATALOG.map((e) => e.word);
-var CATALOG_BY_WORD = Object.fromEntries(
-  CATALOG.map((e) => [e.word, e])
-);
-var GROUP_LABELS = {
-  core: "Core",
-  control: "Control flow",
-  functions: "Functions",
-  errors: "Errors",
-  objects: "Kinds & objects",
-  modules: "Modules",
-  literals: "Literals",
-  operators: "Word operators",
-  builtins: "Builtins"
-};
-
-// src/lang/dialect/spec.ts
-var DEFAULT_STYLE = {
-  blockStyle: "word",
-  commentMarker: "#",
-  stringQuote: '"',
-  assignment: "set-to",
-  argSeparator: "space"
-};
-function emptyDialect(partial = {}) {
-  return {
-    specVersion: 1,
-    meta: {
-      name: partial.name ?? "My sdev",
-      slug: partial.slug ?? "my-sdev",
-      languages: partial.languages ?? ["en"],
-      description: partial.description ?? "",
-      version: partial.version ?? "1.0.0",
-      extends: partial.extends ?? null,
-      visibility: partial.visibility ?? "private"
-    },
-    names: Object.fromEntries(CATALOG_WORDS.map((w) => [w, w])),
-    synonyms: {},
-    style: { ...DEFAULT_STYLE },
-    constructs: { functions: [], operators: [] }
-  };
-}
-function inherit(base, child) {
-  return {
-    ...child,
-    names: { ...base.names, ...child.names },
-    synonyms: { ...base.synonyms, ...child.synonyms },
-    style: { ...base.style, ...child.style },
-    constructs: {
-      functions: [...base.constructs.functions, ...child.constructs.functions],
-      operators: [...base.constructs.operators, ...child.constructs.operators]
-    }
-  };
-}
-var WORD_RE = /^[\p{L}\p{N}_][\p{L}\p{N}_]*$/u;
-var SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
-var OP_RE = /^[^\p{L}\p{N}\s_"'#]{1,3}$/u;
-function validateDialect(spec) {
-  const issues = [];
-  if (!SLUG_RE.test(spec.meta.slug)) {
-    issues.push({ level: "error", field: "meta.slug", message: "Slug must be 2\u201340 lowercase letters, digits or dashes." });
-  }
-  if (!spec.meta.name.trim()) {
-    issues.push({ level: "error", field: "meta.name", message: "Give the dialect a display name." });
-  }
-  if (!/^\d+\.\d+\.\d+$/.test(spec.meta.version)) {
-    issues.push({ level: "error", field: "meta.version", message: "Version must look like 1.0.0." });
-  }
-  const seen = /* @__PURE__ */ new Map();
-  for (const entry of CATALOG) {
-    const word = spec.names[entry.word];
-    if (!word || !word.trim()) {
-      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${entry.word}" has no word in this dialect.` });
-      continue;
-    }
-    if (!WORD_RE.test(word)) {
-      issues.push({ level: "error", field: `names.${entry.word}`, message: `"${word}" is not a valid word \u2014 letters, digits and _ only, no spaces.` });
-      continue;
-    }
-    const all = [word, ...spec.synonyms[entry.word] ?? []];
-    for (const w of all) {
-      if (!WORD_RE.test(w)) {
-        issues.push({ level: "error", field: `synonyms.${entry.word}`, message: `"${w}" is not a valid word.` });
-        continue;
-      }
-      const owner = seen.get(w);
-      if (owner && owner !== entry.word) {
-        issues.push({ level: "error", field: `names.${entry.word}`, message: `"${w}" is already used for "${owner}".` });
-      } else {
-        seen.set(w, entry.word);
-      }
-    }
-  }
-  if (!spec.style.commentMarker || /[\p{L}\p{N}\s]/u.test(spec.style.commentMarker)) {
-    issues.push({ level: "error", field: "style.commentMarker", message: "Comment marker must be punctuation, e.g. # or //." });
-  }
-  if (spec.style.blockStyle === "braces" && seen.has("}")) {
-    issues.push({ level: "error", field: "style.blockStyle", message: 'Brace style conflicts with a word named "}".' });
-  }
-  const fnNames = /* @__PURE__ */ new Set();
-  for (const fn2 of spec.constructs.functions) {
-    if (!WORD_RE.test(fn2.name)) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is not a valid function name.` });
-    }
-    if (seen.has(fn2.name)) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" collides with the word for "${seen.get(fn2.name)}".` });
-    }
-    if (fnNames.has(fn2.name)) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: `"${fn2.name}" is declared twice.` });
-    }
-    fnNames.add(fn2.name);
-    if (!fn2.source.trim()) {
-      issues.push({ level: "error", field: `constructs.functions.${fn2.name}`, message: "Function has no sdev body." });
-    }
-  }
-  const opSymbols = /* @__PURE__ */ new Set();
-  for (const op of spec.constructs.operators) {
-    if (!OP_RE.test(op.symbol)) {
-      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" must be 1\u20133 punctuation characters.` });
-    }
-    if (["+", "-", "*", "/", "%", "=", "<", ">", "(", ")", "[", "]", ",", "|>"].includes(op.symbol)) {
-      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is already an sdev operator.` });
-    }
-    if (opSymbols.has(op.symbol)) {
-      issues.push({ level: "error", field: `constructs.operators.${op.symbol}`, message: `"${op.symbol}" is declared twice.` });
-    }
-    opSymbols.add(op.symbol);
-    if (!fnNames.has(op.fn) && !CATALOG_BY_WORD[op.fn]) {
-      issues.push({ level: "warning", field: `constructs.operators.${op.symbol}`, message: `Desugars to "${op.fn}", which this dialect does not define.` });
-    }
-  }
-  return issues;
-}
-function isPublishable(spec) {
-  return validateDialect(spec).every((i) => i.level !== "error");
-}
-function preludeSource(spec) {
-  if (spec.constructs.functions.length === 0) return "";
-  return spec.constructs.functions.map((f2) => f2.source.trim()).join("\n\n") + "\n";
-}
-
 // src/lang/dialect/canonicalize.ts
 function splitLine(line, commentMarker) {
   const raw = getDialectRunner().call("dialect_split_line", line, commentMarker);
@@ -44108,7 +45367,8 @@ function parseReference(input) {
 
 // src/lang/dialect/registry.ts
 init_client();
-var db = supabase;
+
+// src/lang/dialect/library-cache.ts
 var CACHE_KEY = "sdev_library_cache";
 function readCache() {
   if (typeof localStorage === "undefined") return {};
@@ -44135,6 +45395,9 @@ function forgetBundle(address) {
   delete cache2[address];
   writeCache(cache2);
 }
+
+// src/lang/dialect/registry.ts
+var db = supabase;
 function libraryReferences(source) {
   const refs = [];
   const re2 = /\buse\s+"(@[^"]+)"/g;
@@ -44640,6 +45903,9 @@ ${body}
 // src/lang/agent/directives.ts
 init_sdev_engine();
 function scanDirectives(source) {
+  if (!source.includes("!#")) {
+    return { mode: null, brain: null, learn: null, found: false, source };
+  }
   return sdevScanDirectives(source) ?? {
     mode: null,
     brain: null,
@@ -45620,6 +46886,7 @@ async function understandAsync(source, opts = {}) {
   const key = understandKey(source, JSON.stringify([AGENT_VERSION, opts.dialect ?? null, opts.projectNames ?? [], prep.mode, prep.brain]));
   if (opts.fresh) {
     if (prep.memory.results?.[key]) delete prep.memory.results[key];
+    saveMemory(prep.memory);
   } else {
     const cached2 = recallResult(prep.memory, key);
     if (cached2 !== null) {
@@ -45790,11 +47057,25 @@ function shebangRuntime(source) {
   }
   return null;
 }
+function loadDialectFile(ref) {
+  const candidates2 = isAbsolute2(ref) ? [ref] : [resolve3(process.cwd(), ref)];
+  const hit = candidates2.find((p) => existsSync3(p));
+  if (!hit) return null;
+  const src = stripSignature(readFileSync3(hit, "utf8"));
+  if (!isDialectSdevFile(src)) {
+    throw new Error(`"${ref}" is not a valid .sdev dialect file (expected "to dialect_meta" or "to dialect_words").`);
+  }
+  return parseDialectFromSdev(src);
+}
 function resolveDialect(sig, opt) {
   if (opt === "none") return null;
   if (opt) {
+    if (opt.endsWith(".sdev") || existsSync3(resolve3(process.cwd(), opt))) {
+      const fromFile = loadDialectFile(opt);
+      if (fromFile) return fromFile;
+    }
     const found = findDialect(opt);
-    if (!found) throw new Error(`No local dialect "${opt}". Run: sdev dialect list`);
+    if (!found) throw new Error(`No local dialect or .sdev dialect file "${opt}". Run: sdev dialect list`);
     return found;
   }
   if (sig?.dialect) {
@@ -45803,26 +47084,44 @@ function resolveDialect(sig, opt) {
   }
   return activeDialect();
 }
+function shouldSkipUnderstander(code, dialect, runtime, agentMode) {
+  if (agentMode === "off") return true;
+  if (agentMode === "on") return false;
+  if (dialect) return true;
+  if (runtime === "v2" && !wordsNeedReading(code)) return true;
+  const quick = senseFile(code);
+  return !quick.suspicious && quick.parses;
+}
 function prepare(rawSource, opts = {}) {
   const signature = readSignature(rawSource);
-  const body = stripBoardBlocks(stripSignature(rawSource));
-  const dialect = resolveDialect(signature, opts.dialect);
+  let body = stripBoardBlocks(stripSignature(rawSource));
+  const directive = extractDialectDirective(body);
+  if (directive) body = directive.stripped;
+  const dialect = resolveDialect(signature, opts.dialect ?? directive?.target);
   let code = dialect ? canonicalize(body, dialect).source : body;
-  const agent = understand(code, { mode: opts.agent, brain: opts.brain, dialect });
-  code = agent.source;
+  const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === "v2" ? "v2" : null) ?? (dialect ? "v2" : null) ?? runtimePreference();
+  let agent = null;
+  if (!shouldSkipUnderstander(code, dialect, runtime, opts.agent)) {
+    agent = understand(code, { mode: opts.agent, brain: opts.brain, dialect });
+    code = agent.source;
+  }
   if (!opts.noExt) code = applyExtensions(code);
-  const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === "v2" ? "v2" : null) ?? runtimePreference();
   return { code, signature, dialect, runtime, agent };
 }
 async function prepareAsync(rawSource, opts = {}) {
   const signature = readSignature(rawSource);
-  const body = stripBoardBlocks(stripSignature(rawSource));
-  const dialect = resolveDialect(signature, opts.dialect);
+  let body = stripBoardBlocks(stripSignature(rawSource));
+  const directive = extractDialectDirective(body);
+  if (directive) body = directive.stripped;
+  const dialect = resolveDialect(signature, opts.dialect ?? directive?.target);
   let code = dialect ? canonicalize(body, dialect).source : body;
-  const agent = await understandAsync(code, { mode: opts.agent, brain: opts.brain, dialect });
-  code = agent.source;
+  const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === "v2" ? "v2" : null) ?? (dialect ? "v2" : null) ?? runtimePreference();
+  let agent = null;
+  if (!shouldSkipUnderstander(code, dialect, runtime, opts.agent)) {
+    agent = await understandAsync(code, { mode: opts.agent, brain: opts.brain, dialect });
+    code = agent.source;
+  }
   if (!opts.noExt) code = applyExtensions(code);
-  const runtime = opts.runtime ?? shebangRuntime(body) ?? (signature?.rt === "v2" ? "v2" : null) ?? runtimePreference();
   return { code, signature, dialect, runtime, agent };
 }
 function localModules(entryPath, source) {
@@ -46437,6 +47736,7 @@ DIALECTS
   dialect new <slug> --name "Name"    Create one
   dialect use <slug|none>             Choose the active dialect
   dialect show <slug>                 Inspect words and style
+  dialect source <slug> [-o file]     Emit the dialect as a pure .sdev file
   dialect validate <slug>             Check it is publishable
   dialect docs <slug> [-o file]       Generate its documentation
   dialect canon <file> [--from slug]  Dialect source -> canonical sdev
@@ -46446,7 +47746,8 @@ DIALECTS
   dialect install <@user/slug|code>   Install someone else's dialect
   dialect publish <slug>              Publish yours
   dialect pull | dialect sync         Fetch / two-way sync with your account
-  dialect export|import <file>
+  dialect export [slug] [-o file]     Export dialect(s) as a .sdev file
+  dialect import <file.sdev>          Import dialect(s) from a .sdev file
   dialect remove <slug>
 
 EXTENSIONS
@@ -46484,7 +47785,7 @@ SETTINGS
   update [--force]        Update sdev to the newest version (checked daily)
 
 OPTIONS
-  --dialect <slug|none>   Override the dialect for this run
+  --dialect <slug|file.sdev|none>   Override the dialect for this run (slug or .sdev file)
   --runtime <v1|v2>       Override the runtime
   --no-ext                Ignore enabled extensions
   --lang <Language>       Source language for the lexer
@@ -46978,16 +48279,23 @@ ${GROUP_LABELS[entry.group]}`);
       console.log(`published ${handle ? "@" + handle + "/" : ""}${published.meta.slug} v${published.meta.version}`);
       return;
     }
+    case "source": {
+      const spec = requireLocalDialect(rest[0] ?? die("sdev dialect source <slug>"));
+      emit2(serializeDialectToSdev(spec));
+      return;
+    }
     case "export": {
-      const out = value("-o", "--out") ?? rest[0] ?? "sdev-dialects.json";
-      writeFileSync6(out, JSON.stringify({ format: "sdev-dialects", version: 1, dialects: listDialects() }, null, 2));
+      const targetSlug = rest[0] && !rest[0].includes(".") ? rest[0] : null;
+      const specs = targetSlug ? [requireLocalDialect(targetSlug)] : listDialects();
+      const defaultOut = targetSlug ? `${targetSlug}.dialect.sdev` : "sdev-dialects.sdev";
+      const out = value("-o", "--out") ?? (!targetSlug && rest[0] ? rest[0] : defaultOut);
+      writeFileSync6(out, serializeDialectCollectionToSdev(specs));
       console.log("wrote", out);
       return;
     }
     case "import": {
-      const file = rest[0] ?? die("sdev dialect import <file>");
-      const parsed = JSON.parse(readSource(file));
-      const specs = parsed.dialects ?? [];
+      const file = rest[0] ?? die("sdev dialect import <file.sdev>");
+      const specs = parseDialectCollection(readSource(file));
       for (const s of specs) saveDialect(s);
       console.log(`imported ${specs.length} dialect(s)`);
       return;

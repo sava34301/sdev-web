@@ -1,0 +1,122 @@
+# ============================================================
+# SDEV Hardware Subsystem — Board Block Finder & Stripper (strip.sdev)
+# 100% Pure SDEV port of src/lang/hardware/strip.ts & block spans
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to extract_board_block with source
+  set pos to index_of(source, "board \"")
+  if pos < 0
+    return { found: 0, board_id: "", body: "", start_idx: 0, end_idx: 0 }
+  end
+  set id_start to pos + 7
+  set slen to length(source)
+  set q_end to id_start
+  while q_end < slen and substr(source, q_end, 1) is not "\""
+    set q_end to q_end + 1
+  end
+  if q_end >= slen
+    return { found: 0, board_id: "", body: "", start_idx: 0, end_idx: 0 }
+  end
+  set board_id to substr(source, id_start, q_end - id_start)
+
+  set k to q_end + 1
+  while k < slen and (substr(source, k, 1) is " " or substr(source, k, 1) is "\t")
+    set k to k + 1
+  end
+
+  # Style 1: board "<id>" { ... }
+  if k < slen and substr(source, k, 1) is "{"
+    set body_start to k + 1
+    set depth to 1
+    set i to body_start
+    while i < slen and depth > 0
+      set ch to substr(source, i, 1)
+      if ch is "{"
+        set depth to depth + 1
+      end
+      if ch is "}"
+        set depth to depth - 1
+      end
+      set i to i + 1
+    end
+    if depth is 0
+      return {
+        found: 1,
+        board_id: board_id,
+        body: substr(source, body_start, (i - 1) - body_start),
+        start_idx: pos,
+        end_idx: i
+      }
+    end
+    # Unclosed brace block: consume to end of file
+    return {
+      found: 1,
+      board_id: board_id,
+      body: substr(source, body_start, slen - body_start),
+      start_idx: pos,
+      end_idx: slen
+    }
+  end
+
+  # Style 2: board "<id>" :: ... ;;
+  if k + 1 < slen and substr(source, k, 2) is "::"
+    set body_start to k + 2
+    set depth to 1
+    set i to body_start
+    while i + 1 < slen and depth > 0
+      set two to substr(source, i, 2)
+      if two is "::"
+        set depth to depth + 1
+        set i to i + 2
+      else
+        if two is ";;"
+          set depth to depth - 1
+          if depth is 0
+            return {
+              found: 1,
+              board_id: board_id,
+              body: substr(source, body_start, i - body_start),
+              start_idx: pos,
+              end_idx: i + 2
+            }
+          end
+          set i to i + 2
+        else
+          set i to i + 1
+        end
+      end
+    end
+    return {
+      found: 1,
+      board_id: board_id,
+      body: substr(source, body_start, slen - body_start),
+      start_idx: pos,
+      end_idx: slen
+    }
+  end
+
+  return { found: 0, board_id: "", body: "", start_idx: 0, end_idx: 0 }
+end
+
+to strip_board_blocks with source
+  set blk to extract_board_block(source)
+  if blk["found"] is 0
+    return source
+  end
+  set s_idx to blk["start_idx"]
+  set e_idx to blk["end_idx"]
+  set slen to length(source)
+  set prefix to substr(source, 0, s_idx)
+  set suffix to substr(source, e_idx, slen - e_idx)
+  set newlines to ""
+  set k to s_idx
+  while k < e_idx and k < slen
+    if substr(source, k, 1) is "\n"
+      set newlines to newlines + "\n"
+    end
+    set k to k + 1
+  end
+  return strip_board_blocks(prefix + newlines + suffix)
+end

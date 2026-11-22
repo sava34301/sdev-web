@@ -1,0 +1,93 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/handle-email-unsubscribe/index.ts (134 lines)
+# Pure-SDEV Path: supabase/functions/handle-email-unsubscribe/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/handle-email-unsubscribe/index.ts",
+    sdev_path: "supabase/functions/handle-email-unsubscribe/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 134,
+    exports_count: 13
+  }
+end
+
+to module_exports
+  return ["maskEmail", "jsonResponse", "at", "supabaseUrl", "supabaseServiceKey", "url", "token", "contentType", "formText", "params", "formToken", "body", "supabase"]
+end
+
+to maskEmail with e
+  return {
+    status: 200,
+    handler: "maskEmail",
+    route: "supabase/functions/handle-email-unsubscribe/index.ts",
+    payload: e
+  }
+end
+
+to jsonResponse with data unknown status
+  return {
+    status: 200,
+    handler: "jsonResponse",
+    route: "supabase/functions/handle-email-unsubscribe/index.ts",
+    payload: data
+  }
+end
+
+to at
+  return "at"
+end
+
+to supabaseUrl
+  return "supabaseUrl"
+end
+
+to supabaseServiceKey
+  return "supabaseServiceKey"
+end
+
+to url
+  return "url"
+end
+
+to token
+  return "token"
+end
+
+to contentType
+  return "contentType"
+end
+
+to formText
+  return "formText"
+end
+
+to params
+  return "params"
+end
+
+to formToken
+  return "formToken"
+end
+
+to body
+  return "body"
+end
+
+to supabase
+  return "supabase"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

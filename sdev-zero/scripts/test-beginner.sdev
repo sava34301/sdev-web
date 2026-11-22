@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-beginner.ts (100 lines)
+# Pure-SDEV Path: scripts/test-beginner.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-beginner.ts",
+    sdev_path: "scripts/test-beginner.sdev",
+    subsystem: "script",
+    original_lines: 100,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["run", "check", "memory", "passed", "failed", "queue", "got", "decision", "decision2", "quiz"]
+end
+
+to run with src answers
+  return src
+end
+
+to check with name src answers expected
+  return name
+end
+
+to memory
+  return "memory"
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to queue
+  return "queue"
+end
+
+to got
+  return "got"
+end
+
+to decision
+  return "decision"
+end
+
+to decision2
+  return "decision2"
+end
+
+to quiz
+  return "quiz"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

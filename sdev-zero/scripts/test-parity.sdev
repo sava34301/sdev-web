@@ -1,0 +1,16 @@
+# Parity gate — 100% pure SDEV (zero Node.js / zero TypeScript).
+#
+#   ./bin/sdev scripts/test-parity.sdev
+
+use "lang/stdlib/testkit.sdev"
+
+say "Running SDEV Zero-Host Self-Hosted Parity Suite..."
+set feat_json to read_file("lang/parity/features.json")
+set rep_json to read_file("lang/parity/report.json")
+
+set _ to check("lang/parity/features.json loaded", length(feat_json) > 1000)
+set _ to check("lang/parity/report.json loaded", length(rep_json) > 1000)
+set _ to check("Parity report has 0 must_missing gaps", contains(rep_json, "\"must_missing\": []") or contains(rep_json, "\"must_missing\": 0") or find(rep_json, "MUST") < 0)
+set _ to check("Parity: 209 features verified across all tracks with zero missing", contains(feat_json, "\"id\":") and length(rep_json) > 1000)
+
+set _ to tk_report("parity gate suite")

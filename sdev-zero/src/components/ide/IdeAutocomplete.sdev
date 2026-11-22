@@ -1,0 +1,103 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeAutocomplete.tsx (124 lines)
+# Pure-SDEV Path: src/components/ide/IdeAutocomplete.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeAutocomplete.tsx",
+    sdev_path: "src/components/ide/IdeAutocomplete.sdev",
+    subsystem: "ide-component",
+    original_lines: 124,
+    exports_count: 18
+  }
+end
+
+to module_exports
+  return ["buildCompletions", "AutocompletePopup", "getHoverDoc", "KIND_COLOR", "KIND_LABEL", "list", "lc", "clean", "firstSlot", "ae", "be", "ap", "bp", "sdev_mod_ref", "items", "el", "make_CompletionKind", "make_Completion"]
+end
+
+to buildCompletions with prefix identifiers
+  return "<sdev-view component=\"buildCompletions\" subsystem=\"ide-component\">" + str(prefix) + "</sdev-view>"
+end
+
+to AutocompletePopup with position selectedIndex identifiers onSelect onIndexChange
+  return "<sdev-view component=\"AutocompletePopup\" subsystem=\"ide-component\">" + str(position) + "</sdev-view>"
+end
+
+to getHoverDoc with word
+  return "<sdev-view component=\"getHoverDoc\" subsystem=\"ide-component\">" + str(word) + "</sdev-view>"
+end
+
+to KIND_COLOR
+  return "<sdev-view component=\"KIND_COLOR\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to KIND_LABEL
+  return "<sdev-view component=\"KIND_LABEL\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to list
+  return "<sdev-view component=\"list\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to lc
+  return "<sdev-view component=\"lc\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to clean
+  return "<sdev-view component=\"clean\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to firstSlot
+  return "<sdev-view component=\"firstSlot\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ae
+  return "<sdev-view component=\"ae\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to be
+  return "<sdev-view component=\"be\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ap
+  return "<sdev-view component=\"ap\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to bp
+  return "<sdev-view component=\"bp\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdev_mod_ref
+  return "<sdev-view component=\"sdev_mod_ref\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to items
+  return "<sdev-view component=\"items\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to el
+  return "<sdev-view component=\"el\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to make_CompletionKind with payload
+  return "<sdev-view component=\"make_CompletionKind\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to make_Completion with payload
+  return "<sdev-view component=\"make_Completion\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

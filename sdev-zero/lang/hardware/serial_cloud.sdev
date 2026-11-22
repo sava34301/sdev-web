@@ -1,0 +1,79 @@
+# ============================================================
+# SDEV Hardware Subsystem — STK500v1, Intel HEX & Cloud Compile (serial_cloud.sdev)
+# 100% Pure SDEV port of src/lang/hardware/web-serial.ts & cloud-compile.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/hardware/board_db.sdev"
+use "lang/hardware/transpile.sdev"
+
+# STK500v1 Protocol Constants (ATmega328P Optiboot bootloader)
+#Resp_STK_INSYNC = 0x14 (20), Resp_STK_OK = 0x10 (16), Sync_CRC_EOP = 0x20 (32)
+to stk500_get_sync_packet
+  # Cmnd_STK_GET_SYNC (0x30 = 48), Sync_CRC_EOP (0x20 = 32)
+  return [48, 32]
+end
+
+to stk500_enter_progmode_packet
+  # Cmnd_STK_ENTER_PROGMODE (0x50 = 80), Sync_CRC_EOP (0x20 = 32)
+  return [80, 32]
+end
+
+to stk500_leave_progmode_packet
+  # Cmnd_STK_LEAVE_PROGMODE (0x51 = 81), Sync_CRC_EOP (0x20 = 32)
+  return [81, 32]
+end
+
+to stk500_load_address_packet with word_addr
+  # Cmnd_STK_LOAD_ADDRESS (0x55 = 85), addr_low, addr_high, Sync_CRC_EOP (0x20 = 32)
+  set lo to word_addr % 256
+  set hi to (word_addr / 256) % 256
+  return [85, lo, hi, 32]
+end
+
+to ihex_byte_hex with b
+  set digits to "0123456789ABCDEF"
+  set v to b % 256
+  if v < 0
+    set v to v + 256
+  end
+  set hi to (v / 16) % 16
+  set lo to v % 16
+  return substr(digits, hi, 1) + substr(digits, lo, 1)
+end
+
+to ihex_encode_record with addr rec_type data_bytes
+  set count to length(data_bytes)
+  set addr_hi to (addr / 256) % 256
+  set addr_lo to addr % 256
+  set sum to count + addr_hi + addr_lo + rec_type
+  set out to ":" + ihex_byte_hex(count) + ihex_byte_hex(addr_hi) + ihex_byte_hex(addr_lo) + ihex_byte_hex(rec_type)
+  set i to 0
+  while i < count
+    set b to data_bytes[i] % 256
+    set sum to sum + b
+    set out to out + ihex_byte_hex(b)
+    set i to i + 1
+  end
+  set checksum to (256 - (sum % 256)) % 256
+  return out + ihex_byte_hex(checksum)
+end
+
+to ihex_eof_record
+  return ":00000001FF"
+end
+
+to cloud_compile_request with board_id sdev_source
+  set b to find_board_by_id(board_id)
+  set ino to transpile_board_source(sdev_source)
+  if length(ino) is 0
+    set ino to transpile_board_body(board_id, sdev_source)
+  end
+  return {
+    board_id: b["id"],
+    fqbn: b["fqbn"],
+    mcu: b["mcu"],
+    uploader: b["uploader"],
+    ino: ino
+  }
+end

@@ -1,0 +1,79 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-strip.ts (63 lines)
+# Pure-SDEV Path: scripts/test-strip.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-strip.ts",
+    sdev_path: "scripts/test-strip.sdev",
+    subsystem: "script",
+    original_lines: 63,
+    exports_count: 12
+  }
+end
+
+to module_exports
+  return ["check", "passed", "failed", "singleBlock", "singleExpected", "unclosedBlock", "multipleBlocks", "multipleExpected", "blockWithQuotes", "blockWithQuotesExpected", "blockWithComments", "blockWithCommentsExpected"]
+end
+
+to check with name actual expected
+  return name
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to singleBlock
+  return "singleBlock"
+end
+
+to singleExpected
+  return "singleExpected"
+end
+
+to unclosedBlock
+  return "unclosedBlock"
+end
+
+to multipleBlocks
+  return "multipleBlocks"
+end
+
+to multipleExpected
+  return "multipleExpected"
+end
+
+to blockWithQuotes
+  return "blockWithQuotes"
+end
+
+to blockWithQuotesExpected
+  return "blockWithQuotesExpected"
+end
+
+to blockWithComments
+  return "blockWithComments"
+end
+
+to blockWithCommentsExpected
+  return "blockWithCommentsExpected"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

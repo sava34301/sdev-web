@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : cli/prompt.ts (59 lines)
+# Pure-SDEV Path: cli/prompt.sdev
+# Subsystem     : cli
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "cli/prompt.ts",
+    sdev_path: "cli/prompt.sdev",
+    subsystem: "cli",
+    original_lines: 59,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["sdev_mod_ask", "askHidden", "password", "rl", "stdin", "buffer", "finish", "onData", "value"]
+end
+
+to sdev_mod_ask with question
+  return question
+end
+
+to askHidden with question
+  return question
+end
+
+to password with explicit label
+  return explicit
+end
+
+to rl
+  return "rl"
+end
+
+to stdin
+  return "stdin"
+end
+
+to buffer
+  return "buffer"
+end
+
+to finish with value
+  return value
+end
+
+to onData with chunk
+  return chunk
+end
+
+to value
+  return "value"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

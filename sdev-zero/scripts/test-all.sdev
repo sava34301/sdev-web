@@ -1,0 +1,148 @@
+# ================================================================
+# SDEV Zero-Host Self-Hosted Language Core Test Runner
+# (100% Pure SDEV — Zero Node.js, Zero .mjs/.js/.ts, Zero Wasm)
+#
+#   ./bin/sdev test
+#   ./bin/sdev scripts/test-all.sdev
+# ================================================================
+
+use "lang/stdlib/testkit.sdev"
+
+to run_suite with name cmd
+  say concat("\n▶ [Running] ", concat(name, "..."))
+  set res to shell(cmd)
+  set nl to find(res, "\n")
+  set status_code to substr(res, 0, nl)
+  set output to substr(res, nl + 1, length(res) - (nl + 1))
+  if length(output) > 0
+    say output
+  end
+  if status_code is "0"
+    say concat("✓ [PASSED] ", name)
+    return 1
+  else
+    say concat("✗ [FAILED] ", concat(name, concat(" (exit code ", concat(status_code, ")"))))
+    return 0
+  end
+end
+
+say "================================================================"
+say "  Running SDEV 100% Zero-Host Pure-SDEV Test Suites"
+say "================================================================"
+
+set tally to mklist(2)
+set tally[0] to 0
+set tally[1] to 0
+
+to record with ok
+  if ok is 1
+    set tally[0] to tally[0] + 1
+  else
+    set tally[1] to tally[1] + 1
+  end
+  return 0
+end
+
+# 0. Zero-Host Purity & Toolchain Doctor
+set _ to record(run_suite("Zero-Host Purity & Toolchain Doctor", "./bin/sdev doctor"))
+
+# 1. Fixed-Point Bootstrap (Stage 1 == Stage 2 == Stage 3)
+set _ to record(run_suite("Self-Hosted Fixed-Point Bootstrap", "./bin/sdev bootstrap"))
+
+# 2. Toolchain (Lexer/Parser/Codegen)
+set _ to record(run_suite("Toolchain (Lexer/Parser/Codegen)", "./bin/sdev scripts/test-self-toolchain.sdev"))
+
+# 3. Driver Artifact
+set _ to record(run_suite("Driver Artifact", "./bin/sdev scripts/test-driver-artifact.sdev"))
+
+# 4. Self-Hosted Lexer
+set _ to record(run_suite("Self-Hosted Lexer", "./bin/sdev scripts/test-self-lexer.sdev"))
+
+# 5. Self-Hosted Parser
+set _ to record(run_suite("Self-Hosted Parser", "./bin/sdev scripts/test-self-parser.sdev"))
+
+# 6. Self-Hosted Codegen
+set _ to record(run_suite("Self-Hosted Codegen", "./bin/sdev scripts/test-self-codegen.sdev"))
+
+# 7. Self-Hosted v1 Compiler (6 Layers + Stage 1/2/3 Fixed Point)
+set _ to record(run_suite("Self-Hosted v1 Compiler", "./bin/sdev scripts/test-self-v1-compiler.sdev"))
+
+# 8. Self-Hosted Stdlib v2
+set _ to record(run_suite("Self-Hosted Stdlib v2", "./bin/sdev scripts/test-selfhosted-stdlib.sdev"))
+
+# 9. OCE Causal Engine
+set _ to record(run_suite("OCE Causal Engine", "./bin/sdev scripts/test-oce.sdev"))
+
+# 10. Self-Hosted Subsystems
+set _ to record(run_suite("Self-Hosted Subsystems", "./bin/sdev scripts/test-selfhosted-subsystems.sdev"))
+
+# 11. Shim Fixed-Point (88 cases)
+set _ to record(run_suite("Shim Fixed-Point (88 cases)", "./bin/sdev scripts/test-shim-fixed-point.sdev"))
+
+# 12. Parity Gate (209 features)
+set _ to record(run_suite("Parity Gate (209 features)", "./bin/sdev scripts/test-parity.sdev"))
+
+# 13. Formal Formatter Suite
+set _ to record(run_suite("Formal Formatter Suite (8 cases)", "./bin/sdev scripts/test-formatter.sdev"))
+
+# 14. Parser Literals Suite
+set _ to record(run_suite("Parser Literals (names & strings)", "./bin/sdev scripts/test-parser-literals.sdev"))
+
+# 15. Multi-Language Parity Suite
+set _ to record(run_suite("Multi-Language Parity Suite", "./bin/sdev scripts/test-multi-language-features.sdev"))
+
+# 16. Self-Hosted Web Toolkit Suite
+set _ to record(run_suite("Self-Hosted Web Toolkit Suite (11 cases)", "./bin/sdev scripts/test-selfhosted-web.sdev"))
+
+# 17. Self-Hosted All Features Suite
+set _ to record(run_suite("Self-Hosted All Features Suite (45 cases)", "./bin/sdev scripts/test-selfhosted-features.sdev"))
+
+# 18. SDEV Website Built in SDEV
+set _ to record(run_suite("SDEV Website Built in SDEV", "./bin/sdev lang/web/sdev-website.sdev"))
+
+# 19. Zero-Host Pure-SDEV CLI, Native ELF & Windows PE32+ Suite
+set _ to record(run_suite("Zero-Host Pure-SDEV CLI & Native Targets (12 cases)", "./bin/sdev scripts/test-zero-host-cli.sdev"))
+
+# 20. Complete Hardware Subsystem in Pure SDEV
+set _ to record(run_suite("Complete Hardware Subsystem in Pure SDEV", "./bin/sdev scripts/test-hardware-full.sdev"))
+
+# 21. Complete Dialect Subsystem in Pure SDEV
+set _ to record(run_suite("Complete Dialect Subsystem in Pure SDEV", "./bin/sdev scripts/test-dialect-full.sdev"))
+
+# 22. Understander Agent Pipeline in Pure SDEV
+set _ to record(run_suite("Understander Agent Pipeline in Pure SDEV", "./bin/sdev scripts/test-agent-pipeline.sdev"))
+
+# 23. Core Engine, Live Scratchpad & Multiplayer CRDT Room in Pure SDEV
+set _ to record(run_suite("Core Engine, Live Scratchpad & Multiplayer CRDT Room", "./bin/sdev scripts/test-core-collab.sdev"))
+
+# 24. Language Bridge, Wasm Seed Emitter & CLI Subsystems in Pure SDEV
+set _ to record(run_suite("Language Bridge, Wasm Seed Emitter & CLI Subsystems", "./bin/sdev scripts/test-bridge-cli.sdev"))
+
+# 25. Builtins Subsystem in Pure SDEV
+set _ to record(run_suite("Builtins Subsystem (JSON, Dict, Functional, Regex Guard, Time)", "./bin/sdev scripts/test-builtins-full.sdev"))
+
+# 26. Studio Time-Travel Chrono Debugger in Pure SDEV
+set _ to record(run_suite("Studio Time-Travel Chrono Debugger & Live Lens Tracer", "./bin/sdev scripts/test-studio-debugger.sdev"))
+
+# 27. MCP Server & Cloud Edge Functions in Pure SDEV
+set _ to record(run_suite("MCP JSON-RPC Server & Cloud Edge Functions", "./bin/sdev scripts/test-mcp-server.sdev"))
+
+# 28. IDE Intelligence, 3D Compiler Scene & App Router in Pure SDEV
+set _ to record(run_suite("IDE Intelligence, 3D Compiler Scene & App Router", "./bin/sdev scripts/test-ide-intelligence.sdev"))
+
+# 29. Release Pipeline, Book Builder & Hardware Docs in Pure SDEV
+set _ to record(run_suite("Release Pipeline, Book Builder & Hardware Docs", "./bin/sdev scripts/test-tools-release.sdev"))
+
+# 30. 1:1 Pure-SDEV Repository Mirror Verification (370 Source Counterparts)
+set _ to record(run_suite("1:1 Pure-SDEV Repository Mirror (370 Counterparts)", "./bin/sdev scripts/test-1to1-mirror.sdev"))
+
+say "\n================================================================"
+if tally[1] is 0
+  say concat("  All ", concat(str(tally[0]), " Zero-Host Pure-SDEV Test Suites Passed!"))
+  say "================================================================\n"
+  set _ to write_file("sdev:exit:0", "")
+else
+  say concat("  Test Run FAILED: ", concat(str(tally[1]), " suite(s) failed."))
+  say "================================================================\n"
+  set _ to write_file("sdev:exit:1", "")
+end

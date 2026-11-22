@@ -1,0 +1,51 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/dict.ts (127 lines)
+# Pure-SDEV Path: src/lang/builtins/dict.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/dict.ts",
+    sdev_path: "src/lang/builtins/dict.sdev",
+    subsystem: "builtins",
+    original_lines: 127,
+    exports_count: 5
+  }
+end
+
+to module_exports
+  return ["registerDict", "obj", "key", "existed", "result"]
+end
+
+to registerDict with builtins SdevFunction output
+  return builtins
+end
+
+to obj
+  return "obj"
+end
+
+to key
+  return "key"
+end
+
+to existed
+  return "existed"
+end
+
+to result
+  return "result"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

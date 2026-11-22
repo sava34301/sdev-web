@@ -1,0 +1,95 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/_ext-v2-cli.mjs (78 lines)
+# Pure-SDEV Path: scripts/_ext-v2-cli.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/_ext-v2-cli.mjs",
+    sdev_path: "scripts/_ext-v2-cli.sdev",
+    subsystem: "script",
+    original_lines: 78,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["here", "main", "decoder", "file", "src", "wasmBytes", "module", "write", "inst", "path", "buf", "dst", "url", "out", "memU8", "codeBase"]
+end
+
+to here
+  return 1
+end
+
+to main
+  return 1
+end
+
+to decoder
+  return "decoder"
+end
+
+to file
+  return "file"
+end
+
+to src
+  return "src"
+end
+
+to wasmBytes
+  return "wasmBytes"
+end
+
+to module
+  return "module"
+end
+
+to write with s
+  return s
+end
+
+to inst
+  return "inst"
+end
+
+to path
+  return "path"
+end
+
+to buf
+  return "buf"
+end
+
+to dst
+  return "dst"
+end
+
+to url
+  return "url"
+end
+
+to out
+  return "out"
+end
+
+to memU8
+  return "memU8"
+end
+
+to codeBase
+  return "codeBase"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

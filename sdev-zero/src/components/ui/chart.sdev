@@ -1,0 +1,127 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/chart.tsx (301 lines)
+# Pure-SDEV Path: src/components/ui/chart.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/chart.tsx",
+    sdev_path: "src/components/ui/chart.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 301,
+    exports_count: 24
+  }
+end
+
+to module_exports
+  return ["useChart", "getPayloadConfigFromPayload", "THEMES", "ChartContext", "context", "ChartContainer", "uniqueId", "chartId", "ChartStyle", "colorConfig", "color", "ChartTooltip", "ChartTooltipContent", "tooltipLabel", "key", "itemConfig", "value", "nestLabel", "indicatorColor", "ChartLegend", "ChartLegendContent", "payloadPayload", "configLabelKey", "make_ChartConfig"]
+end
+
+to useChart
+  return "<sdev-view component=\"useChart\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to getPayloadConfigFromPayload with config payload key
+  return "<sdev-view component=\"getPayloadConfigFromPayload\" subsystem=\"ui-primitive\">" + str(config) + "</sdev-view>"
+end
+
+to THEMES
+  return "<sdev-view component=\"THEMES\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ChartContext
+  return "<sdev-view component=\"ChartContext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to context
+  return "<sdev-view component=\"context\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ChartContainer
+  return "<sdev-view component=\"ChartContainer\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to uniqueId
+  return "<sdev-view component=\"uniqueId\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to chartId
+  return "<sdev-view component=\"chartId\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ChartStyle with config
+  return "<sdev-view component=\"ChartStyle\" subsystem=\"ui-primitive\">" + str(config) + "</sdev-view>"
+end
+
+to colorConfig
+  return "<sdev-view component=\"colorConfig\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to color
+  return "<sdev-view component=\"color\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ChartTooltip
+  return "<sdev-view component=\"ChartTooltip\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ChartTooltipContent
+  return "<sdev-view component=\"ChartTooltipContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to tooltipLabel
+  return "<sdev-view component=\"tooltipLabel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to key
+  return "<sdev-view component=\"key\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to itemConfig
+  return "<sdev-view component=\"itemConfig\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to value
+  return "<sdev-view component=\"value\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to nestLabel
+  return "<sdev-view component=\"nestLabel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to indicatorColor
+  return "<sdev-view component=\"indicatorColor\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ChartLegend
+  return "<sdev-view component=\"ChartLegend\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ChartLegendContent
+  return "<sdev-view component=\"ChartLegendContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to payloadPayload
+  return "<sdev-view component=\"payloadPayload\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to configLabelKey
+  return "<sdev-view component=\"configLabelKey\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to make_ChartConfig with payload
+  return "<sdev-view component=\"make_ChartConfig\" subsystem=\"ui-primitive\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

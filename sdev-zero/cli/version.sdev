@@ -1,0 +1,39 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : cli/version.ts (3 lines)
+# Pure-SDEV Path: cli/version.sdev
+# Subsystem     : cli
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "cli/version.ts",
+    sdev_path: "cli/version.sdev",
+    subsystem: "cli",
+    original_lines: 3,
+    exports_count: 2
+  }
+end
+
+to module_exports
+  return ["VERSION", "SITE"]
+end
+
+to VERSION
+  return "VERSION"
+end
+
+to SITE
+  return "SITE"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

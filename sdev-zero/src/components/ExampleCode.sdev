@@ -1,0 +1,47 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ExampleCode.tsx (107 lines)
+# Pure-SDEV Path: src/components/ExampleCode.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ExampleCode.tsx",
+    sdev_path: "src/components/ExampleCode.sdev",
+    subsystem: "component",
+    original_lines: 107,
+    exports_count: 4
+  }
+end
+
+to module_exports
+  return ["ExampleCode", "EXAMPLES", "CATEGORIES", "Icon"]
+end
+
+to ExampleCode
+  return "<sdev-view component=\"ExampleCode\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to EXAMPLES
+  return "<sdev-view component=\"EXAMPLES\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to CATEGORIES
+  return "<sdev-view component=\"CATEGORIES\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to Icon
+  return "<sdev-view component=\"Icon\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

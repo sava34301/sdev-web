@@ -1,0 +1,27 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Release Pipeline, Book Builder & Hardware Docs
+# (sdev-zero/scripts/test-tools-release.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/tools/release_docs.sdev"
+
+set ts to test_begin("Release Pipeline, Book Builder & Hardware Documentation Generator")
+
+# 1. Single-version release manifest (Project Architecture Rule)
+set rel to release_build_manifest("2.4.0")
+set ts to assert_str_eq(ts, rel["version"], "2.4.0", "Release manifest carries single version 2.4.0")
+set ts to assert_str_eq(ts, rel["vscode_vsix_url"], "/downloads/sdev-vscode-2.4.0.vsix", "Release manifest generates VSIX URL")
+set ts to assert_eq(ts, rel["zero_host"], 1, "Release manifest marks zero_host = 1")
+
+# 2. Hardware Reference Markdown Generator
+set hw_md to generate_hardware_reference_md()
+set ts to assert_true(ts, index_of(hw_md, "arduino:avr:uno") >= 0, "Hardware docs include Uno FQBN")
+set ts to assert_true(ts, index_of(hw_md, "rp2040:rp2040:rpipico") >= 0, "Hardware docs include Raspberry Pi Pico FQBN")
+set ts to assert_true(ts, index_of(hw_md, "digitalWrite") >= 0, "Hardware docs list core Arduino functions")
+
+# 3. SDEV Book Markdown Builder
+set book_md to build_sdev_book_markdown("2.4.0")
+set ts to assert_true(ts, index_of(book_md, "Chapter 1: 100% Zero-Host Architecture") >= 0, "SDEV Book includes Chapter 1: 100% Zero-Host Architecture")
+
+set _ to test_summary(ts)

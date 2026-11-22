@@ -1,0 +1,136 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/mcp/index.ts (197 lines)
+# Pure-SDEV Path: supabase/functions/mcp/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/mcp/index.ts",
+    sdev_path: "supabase/functions/mcp/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 197,
+    exports_count: 20
+  }
+end
+
+to module_exports
+  return ["runtimeEnv", "configuredEnv", "supabaseProjectUrl", "supabasePublishableKey", "supabaseForUser", "runtime", "value", "url", "direct", "keyset", "parsed", "sdev_mod_keys", "key", "legacy", "token", "files", "db", "me", "dialects", "programs"]
+end
+
+to runtimeEnv with name
+  return {
+    status: 200,
+    handler: "runtimeEnv",
+    route: "supabase/functions/mcp/index.ts",
+    payload: name
+  }
+end
+
+to configuredEnv with names
+  return {
+    status: 200,
+    handler: "configuredEnv",
+    route: "supabase/functions/mcp/index.ts",
+    payload: names
+  }
+end
+
+to supabaseProjectUrl
+  return {
+    status: 200,
+    handler: "supabaseProjectUrl",
+    route: "supabase/functions/mcp/index.ts",
+    payload: ""
+  }
+end
+
+to supabasePublishableKey
+  return {
+    status: 200,
+    handler: "supabasePublishableKey",
+    route: "supabase/functions/mcp/index.ts",
+    payload: ""
+  }
+end
+
+to supabaseForUser with ctx
+  return {
+    status: 200,
+    handler: "supabaseForUser",
+    route: "supabase/functions/mcp/index.ts",
+    payload: ctx
+  }
+end
+
+to runtime
+  return "runtime"
+end
+
+to value
+  return "value"
+end
+
+to url
+  return "url"
+end
+
+to direct
+  return "direct"
+end
+
+to keyset
+  return "keyset"
+end
+
+to parsed
+  return "parsed"
+end
+
+to sdev_mod_keys
+  return "sdev_mod_keys"
+end
+
+to key
+  return "key"
+end
+
+to legacy
+  return "legacy"
+end
+
+to token
+  return "token"
+end
+
+to files
+  return "files"
+end
+
+to db
+  return "db"
+end
+
+to me
+  return "me"
+end
+
+to dialects
+  return "dialects"
+end
+
+to programs
+  return "programs"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

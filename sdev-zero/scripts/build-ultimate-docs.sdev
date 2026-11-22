@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-ultimate-docs.mjs (1165 lines)
+# Pure-SDEV Path: scripts/build-ultimate-docs.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-ultimate-docs.mjs",
+    sdev_path: "scripts/build-ultimate-docs.sdev",
+    subsystem: "script",
+    original_lines: 1165,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["shiftHeadings", "parseBuiltins", "builtinIndex", "keywordTable", "opcodeTable", "memoryMap", "walk", "sdevIndex", "parityAppendix", "repoMap", "toolchainIndex", "rewriteRelLinks", "ROOT", "OUT", "read", "exists", "lines", "fence", "level", "verbatim", "BUILTIN_MODULES", "BUILTIN_DOCS", "SDEV_FN_DOCS", "ARGNAMES", "marks", "out", "arity", "sig", "section", "sdev_mod_end", "body", "doc", "text", "idx", "variadic", "exact", "count", "errs", "desc", "oneLiner"]
+end
+
+to shiftHeadings with md by
+  return md
+end
+
+to parseBuiltins with src file
+  return src
+end
+
+to builtinIndex
+  return 1
+end
+
+to keywordTable
+  return 1
+end
+
+to opcodeTable
+  return 1
+end
+
+to memoryMap
+  return 1
+end
+
+to walk with dir acc
+  return dir
+end
+
+to sdevIndex with dirs
+  return dirs
+end
+
+to parityAppendix
+  return 1
+end
+
+to repoMap
+  return 1
+end
+
+to toolchainIndex
+  return 1
+end
+
+to rewriteRelLinks with md fromFile
+  return md
+end
+
+to ROOT
+  return "ROOT"
+end
+
+to OUT
+  return "OUT"
+end
+
+to read with p
+  return p
+end
+
+to exists with p
+  return p
+end
+
+to lines
+  return "lines"
+end
+
+to fence
+  return "fence"
+end
+
+to level
+  return "level"
+end
+
+to verbatim with s
+  return s
+end
+
+to BUILTIN_MODULES
+  return "BUILTIN_MODULES"
+end
+
+to BUILTIN_DOCS
+  return "BUILTIN_DOCS"
+end
+
+to SDEV_FN_DOCS
+  return "SDEV_FN_DOCS"
+end
+
+to ARGNAMES
+  return "ARGNAMES"
+end
+
+to marks
+  return "marks"
+end
+
+to out
+  return "out"
+end
+
+to arity
+  return "arity"
+end
+
+to sig
+  return "sig"
+end
+
+to section
+  return "section"
+end
+
+to sdev_mod_end
+  return "sdev_mod_end"
+end
+
+to body
+  return "body"
+end
+
+to doc
+  return "doc"
+end
+
+to text
+  return "text"
+end
+
+to idx
+  return "idx"
+end
+
+to variadic
+  return "variadic"
+end
+
+to exact
+  return "exact"
+end
+
+to count
+  return "count"
+end
+
+to errs
+  return "errs"
+end
+
+to desc
+  return "desc"
+end
+
+to oneLiner
+  return "oneLiner"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,2471 @@
+# SDEV self-hosted codegen (Milestone 5g).
+#
+# Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits
+# the byte stream to a global buffer `bc` whose cell 0 holds the current
+# byte count and cells 1..count hold the bytes. The scripts/test-self-
+# codegen.mjs driver harvests the buffer via `say`, reconstructs it as a
+# Uint8Array, feeds it into a fresh seed WASM instance, and verifies the
+# executed output matches the JS bootstrap compiler's output.
+#
+# Grammar this milestone covers:
+#   program := stmt*
+#   stmt    := 'say' expr
+#            | 'set' IDENT 'to' expr
+#            | 'if' expr NL block ('else' NL block)? 'end'
+#            | 'while' expr NL block 'end'
+#            | 'to' IDENT ('with' IDENT*)? NL block 'end'
+#            | 'return' expr?
+#   block   := stmt*                              (until 'else' or 'end')
+#   expr    := cmp
+#   cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )?
+#   add     := mul (('+'|'-') mul)*
+#   mul     := atom (('*'|'/') atom)*
+#   atom    := INT
+#            | IDENT                              (variable load)
+#            | IDENT '(' args? ')'                (function call / builtin)
+#            | '(' expr ')'
+#
+# Restriction: functions must be defined before their call sites — the
+# self-hosted compiler emits function bodies inline, bracketed by a JMP
+# that skips over them, and records each body's byte offset in a global
+# table. Forward references / mutual recursion land in a later milestone.
+
+# ---- character-class helpers ---------------------------------------------
+
+to is_digit with c
+  if c < 48
+    return 0
+  end
+  if c > 57
+    return 0
+  end
+  return 1
+end
+
+to is_alpha with c
+  if c is 95
+    return 1
+  end
+  # UTF-8 bytes are letters too: identifiers may be written in any script.
+  if c >= 128
+    return 1
+  end
+  if c >= 65
+    if c <= 90
+      return 1
+    end
+  end
+  if c >= 97
+    if c <= 122
+      return 1
+    end
+  end
+  return 0
+end
+
+to is_alnum with c
+  if is_digit(c)
+    return 1
+  end
+  return is_alpha(c)
+end
+
+to slice with src i j
+  set out to ""
+  while i < j
+    set out to out + chr(ord(src, i))
+    set i to i + 1
+  end
+  return out
+end
+
+# Milestone 5q: expression types are 0 = int, 1 = str, 2 = float. Float
+# arithmetic only kicks in when BOTH operands are floats (mixed arithmetic
+# requires an explicit i2f), matching the bootstrap oracle exactly.
+to both_float with a b
+  if a is 2
+    if b is 2
+      return 1
+    end
+  end
+  return 0
+end
+
+to str_eq with a b
+
+  set la to length(a)
+  if la is not length(b)
+    return 0
+  end
+  set i to 0
+  while i < la
+    if ord(a, i) is not ord(b, i)
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+# ---- Milestone 5z: modules (`use "path"`) --------------------------------
+#
+# Source-level prelink pass, byte-identical to the JS bootstrap's
+# `prelink()`. Every line whose trimmed form is `use "path"` is replaced by
+# the (recursively prelinked) text of that file, read through the host's
+# read_file. Each path is included at most once; the global `pre_seen`
+# string holds the already-included paths between `|` separators.
+
+set pre_seen to "|"
+
+to prelink_source with s
+  set out to ""
+  set n to length(s)
+  set i to 0
+  while i < n + 1
+    set j to i
+    while j < n
+      if ord(s, j) is 10
+        break
+      end
+      set j to j + 1
+    end
+    set line to slice(s, i, j)
+    set t to trim(line)
+    set is_use to 0
+    if length(t) > 5
+      if str_eq(substr(t, 0, 3), "use")
+        if ord(t, 3) is 32
+          if ord(t, 4) is 34
+            if ord(t, length(t) - 1) is 34
+              set is_use to 1
+            end
+          end
+        end
+      end
+    end
+    if is_use
+      set path to substr(t, 5, length(t) - 6)
+      if find(pre_seen, "|" + path + "|") < 0
+        set pre_seen to pre_seen + path + "|"
+        set out to out + prelink_source(read_file(path))
+      end
+      set out to out + "\n"
+    else
+      set out to out + line + "\n"
+    end
+    set i to j + 1
+  end
+  return out
+end
+
+# ---- byte emitter (writes into the global `bc` list, count at bc[0]) -----
+#
+# Milestone 5k: emit_byte is gated on `emit_enabled[0]`. Pass 1 (the
+# collect + return-type inference walk) runs with emit_enabled = 0 so it
+# advances token position without producing bytecode; pass 2 (the real
+# emit) runs with emit_enabled = 1.
+
+to emit_byte with b
+  if emit_enabled[0] is 0
+    return 0
+  end
+  if bc[0] + 1 >= length(bc)
+    throw "bytecode buffer overflow"
+  end
+  set bc[bc[0] + 1] to b
+  set bc[0] to bc[0] + 1
+  return 0
+end
+
+# ---- string pool (Milestone 5k) -----------------------------------------
+#
+# Matches the JS bootstrap's shared string pool byte-for-byte. Each unique
+# literal is written as `[u32 len][utf8 bytes...]` starting at
+# `pool_bytes[1]`. `intern_str(s)` returns the offset of `s` within the
+# pool, adding it (and its length prefix) if not seen. Called only during
+# pass 2 (emit_enabled = 1) to avoid double-appending across pass 1.
+
+to intern_str with s
+  if emit_enabled[0] is 0
+    return 0
+  end
+  set n to pool_keys[0]
+  set k to 1
+  while k <= n
+    if str_eq(pool_keys[k], s)
+      return pool_offs[k]
+    end
+    set k to k + 1
+  end
+  set off to pool_bytes[0]
+  set slen to length(s)
+  if off + 4 + slen >= length(pool_bytes)
+    throw "string pool overflow"
+  end
+  set pool_bytes[off + 1] to slen % 256
+  set pool_bytes[off + 2] to (slen / 256) % 256
+  set pool_bytes[off + 3] to (slen / 65536) % 256
+  set pool_bytes[off + 4] to (slen / 16777216) % 256
+  set pool_bytes[0] to off + 4
+  set i to 0
+  while i < slen
+    set pool_bytes[pool_bytes[0] + 1] to ord(s, i)
+    set pool_bytes[0] to pool_bytes[0] + 1
+    set i to i + 1
+  end
+  set pool_keys[n + 1] to s
+  set pool_offs[n + 1] to off
+  set pool_keys[0] to n + 1
+  set pool_offs[0] to n + 1
+  return off
+end
+
+to emit_i32 with v
+  emit_byte(v % 256)
+  set v to v / 256
+  emit_byte(v % 256)
+  set v to v / 256
+  emit_byte(v % 256)
+  set v to v / 256
+  emit_byte(v % 256)
+  return 0
+end
+
+# Reserve a two-byte i16 placeholder and return the byte offset at which
+# it starts (0-indexed, list cell = pos + 1).
+to placeholder16
+  set p to bc[0]
+  emit_byte(0)
+  emit_byte(0)
+  return p
+end
+
+# Patch a two-byte i16 at byte offset `pos` so a JZ/JMP jumps to byte
+# offset `target`. Offsets are relative to the end of the instruction
+# (pos + 2). Negative offsets get two's-complement 16-bit encoding.
+to patch_i16 with pos target
+  if emit_enabled[0] is 0
+    return 0
+  end
+  set off to target - (pos + 2)
+  if off < 0
+    set off to off + 65536
+  end
+  set bc[pos + 1] to off % 256
+  set bc[pos + 2] to (off / 256) % 256
+  return 0
+end
+
+# ---- symbol tables --------------------------------------------------------
+#
+# Three parallel tables live in global lists whose cell 0 holds the count
+# so every mutation is an index-assignment (immune to the bootstrap's
+# "plain set NAME inside a function creates a fresh local" rule):
+#
+#   sym_names   — global variable names,       slot = index - 1
+#   loc_names   — local names for CURRENT fn,  slot = index - 1
+#   fn_names    — user-defined function names
+#   fn_offsets  — parallel to fn_names, byte offset of each function's body
+#   fn_arities  — parallel to fn_names, number of declared parameters
+#   in_func     — one-cell flag (in_func[0] = 1 inside a function body)
+
+to intern_name with name
+  set k to 1
+  set stop to sym_names[0] + 1
+  while k < stop
+    if str_eq(sym_names[k], name)
+      return k - 1
+    end
+    set k to k + 1
+  end
+  if emit_enabled[0] is 1
+    if sym_names[0] >= 256
+      throw "too many globals (256 max)"
+    end
+  end
+  set sym_names[sym_names[0] + 1] to name
+  set sym_names[0] to sym_names[0] + 1
+  set sym_types[sym_names[0]] to 0
+  set sym_types[0] to sym_names[0]
+  return sym_names[0] - 1
+end
+
+to find_local with name
+  set k to 1
+  set stop to loc_names[0] + 1
+  while k < stop
+    if str_eq(loc_names[k], name)
+      return k - 1
+    end
+    set k to k + 1
+  end
+  return 0 - 1
+end
+
+to add_local with name
+  if emit_enabled[0] is 1
+    if loc_names[0] >= 256
+      throw "too many locals (256 max)"
+    end
+  end
+  set loc_names[loc_names[0] + 1] to name
+  set loc_names[0] to loc_names[0] + 1
+  # Fresh slots start int-typed; without this reset a slot reused by a
+  # later function inherits the previous function's type.
+  set loc_types[loc_names[0]] to 0
+  set loc_types[0] to loc_names[0]
+  return loc_names[0] - 1
+end
+
+to find_fn with name
+  set k to 1
+  set stop to fn_names[0] + 1
+  while k < stop
+    if str_eq(fn_names[k], name)
+      return k - 1
+    end
+    set k to k + 1
+  end
+  return 0 - 1
+end
+
+# ---- variable load / store dispatch --------------------------------------
+#
+# Milestone 5h added expression-type tracking. Every parse_* function that
+# emits a push updates `expr_type[0]` to 0 (int) or 1 (str). Persistent
+# per-variable types live in two parallel tables (`sym_types` /
+# `loc_types`) that mirror `sym_names` / `loc_names`.
+
+to emit_load_ident with name
+  if in_func[0] is 1
+    set slot to find_local(name)
+    if slot >= 0
+      emit_byte(99)
+      emit_byte(slot)
+      set expr_type[0] to loc_types[slot + 1]
+      return 0
+    end
+  end
+  set slot to intern_name(name)
+  emit_byte(3)
+  emit_byte(slot)
+  set expr_type[0] to sym_types[slot + 1]
+  return 0
+end
+
+to emit_store_ident with name
+  set t to expr_type[0]
+  if in_func[0] is 1
+    set slot to find_local(name)
+    if slot < 0
+      set slot to add_local(name)
+    end
+    emit_byte(100)
+    emit_byte(slot)
+    set loc_types[slot + 1] to t
+    return 0
+  end
+  set slot to intern_name(name)
+  emit_byte(4)
+  emit_byte(slot)
+  set sym_types[slot + 1] to t
+  return 0
+end
+
+# Milestone 5t: retype an existing variable without emitting anything —
+# used when `set t[k] to "s"` promotes a tome from int-valued to
+# string-valued so later reads pick SAY_STR.
+to set_ident_type with name t
+  if in_func[0] is 1
+    set slot to find_local(name)
+    if slot >= 0
+      set loc_types[slot + 1] to t
+      return 0
+    end
+  end
+  set slot to intern_name(name)
+  set sym_types[slot + 1] to t
+  return 0
+end
+
+# ---- call emission (built-ins first, then user functions) ----------------
+#
+# Milestone 5i: unresolved user-function calls emit a CALL with a zero
+# target and record the patch position + name in the pending-calls tables.
+# After the whole program parses, `resolve_pending_calls` walks the tables
+# and back-patches each u16 target. This unblocks mutual recursion and any
+# forward reference — a call site may appear before its callee's `to …`.
+
+to check_arity with name got want
+  if emit_enabled[0] is 1
+    if got is not want
+      throw name + ": expected " + str(want) + " args, got " + str(got)
+    end
+  end
+  return 0
+end
+
+to emit_call with name nargs
+  # The kind of the last argument pushed — `values(t)` needs it to decide
+  # whether the produced list holds strings.
+  set argk to expr_type[0]
+  # --- Milestone 5t: tome builtins ---
+  if str_eq(name, "keys")
+    check_arity(name, nargs, 1)
+    emit_byte(142)
+    set expr_type[0] to 5
+    return 0
+  end
+  if str_eq(name, "values")
+    check_arity(name, nargs, 1)
+    emit_byte(143)
+    if argk is 4
+      set expr_type[0] to 5
+    else
+      set expr_type[0] to 0
+    end
+    return 0
+  end
+  if str_eq(name, "has")
+    check_arity(name, nargs, 2)
+    emit_byte(141)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "length")
+    check_arity(name, nargs, 1)
+    emit_byte(131)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "concat")
+    check_arity(name, nargs, 2)
+    emit_byte(145)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "ord")
+    check_arity(name, nargs, 2)
+    emit_byte(132)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "chr")
+    check_arity(name, nargs, 1)
+    emit_byte(136)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "str")
+    check_arity(name, nargs, 1)
+    emit_byte(135)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "mklist")
+    check_arity(name, nargs, 1)
+    emit_byte(137)
+    set expr_type[0] to 0
+    return 0
+  end
+  # --- Milestone 5q: floats + host I/O builtins -----------------------------
+  if str_eq(name, "i2f")
+    check_arity(name, nargs, 1)
+    emit_byte(168)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "f2i")
+    check_arity(name, nargs, 1)
+    emit_byte(169)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "fneg")
+    check_arity(name, nargs, 1)
+    emit_byte(170)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fabs")
+    check_arity(name, nargs, 1)
+    emit_byte(171)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fsqrt")
+    check_arity(name, nargs, 1)
+    emit_byte(172)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fsin")
+    check_arity(name, nargs, 1)
+    emit_byte(174)
+    emit_byte(0)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fcos")
+    check_arity(name, nargs, 1)
+    emit_byte(174)
+    emit_byte(1)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "ftan")
+    check_arity(name, nargs, 1)
+    emit_byte(174)
+    emit_byte(2)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fexp")
+    check_arity(name, nargs, 1)
+    emit_byte(174)
+    emit_byte(3)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "flog")
+    check_arity(name, nargs, 1)
+    emit_byte(174)
+    emit_byte(4)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fpow")
+    check_arity(name, nargs, 2)
+    emit_byte(174)
+    emit_byte(5)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fbyte")
+    check_arity(name, nargs, 2)
+    emit_byte(180)
+    set expr_type[0] to 0
+    return 0
+  end
+  # Milestone 5v: num(s) parses a string into a float.
+  if str_eq(name, "num")
+    check_arity(name, nargs, 1)
+    emit_byte(195)
+    set expr_type[0] to 2
+    return 0
+  end
+
+  if str_eq(name, "read_file")
+    check_arity(name, nargs, 1)
+    emit_byte(176)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "write_file")
+    check_arity(name, nargs, 2)
+    emit_byte(177)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "http_get")
+    check_arity(name, nargs, 1)
+    emit_byte(178)
+    set expr_type[0] to 1
+    return 0
+  end
+
+  # --- Milestone 5u: string + numeric standard library ----------------------
+  if str_eq(name, "upper")
+    check_arity(name, nargs, 1)
+    emit_byte(146)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "lower")
+    check_arity(name, nargs, 1)
+    emit_byte(147)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "trim")
+    check_arity(name, nargs, 1)
+    emit_byte(148)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "substr")
+    check_arity(name, nargs, 3)
+    emit_byte(149)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "find")
+    check_arity(name, nargs, 2)
+    emit_byte(150)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "contains")
+    check_arity(name, nargs, 2)
+    emit_byte(150)
+    emit_byte(1)
+    emit_i32(0)
+    emit_byte(37)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "split")
+    check_arity(name, nargs, 2)
+    emit_byte(151)
+    set expr_type[0] to 5
+    return 0
+  end
+  if str_eq(name, "join")
+    check_arity(name, nargs, 2)
+    emit_byte(152)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "replace")
+    check_arity(name, nargs, 3)
+    emit_byte(153)
+    set expr_type[0] to 1
+    return 0
+  end
+  if str_eq(name, "int")
+    check_arity(name, nargs, 1)
+    emit_byte(154)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "abs")
+    check_arity(name, nargs, 1)
+    emit_byte(155)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "min")
+    check_arity(name, nargs, 2)
+    emit_byte(156)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "max")
+    check_arity(name, nargs, 2)
+    emit_byte(157)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "range")
+    check_arity(name, nargs, 1)
+    emit_byte(158)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "sum")
+    check_arity(name, nargs, 1)
+    emit_byte(159)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "random")
+    check_arity(name, nargs, 1)
+    emit_byte(184)
+    set expr_type[0] to 0
+    return 0
+  end
+  if str_eq(name, "fceil")
+    check_arity(name, nargs, 1)
+    emit_byte(181)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "ffloor")
+    check_arity(name, nargs, 1)
+    emit_byte(182)
+    set expr_type[0] to 2
+    return 0
+  end
+  if str_eq(name, "fround")
+    check_arity(name, nargs, 1)
+    emit_byte(183)
+    set expr_type[0] to 2
+    return 0
+  end
+
+
+  # User function. After pass 1, `idx` almost always resolves — but the
+  # target offset may not yet be known if this call sits inside a fn
+  # body that gets emitted before its callee (e.g. mutually recursive
+  # `is_even ↔ is_odd`). We always record a patch site in that case and
+  # let `resolve_pending_calls` write the final u16 target.
+  set idx to find_fn(name)
+  if emit_enabled[0] is 1
+    if idx < 0
+      throw "unknown function " + name
+    end
+    if fn_arities[idx + 1] is not nargs
+      throw name + ": expected " + str(fn_arities[idx + 1]) + " args, got " + str(nargs)
+    end
+  end
+  emit_byte(96)
+  set patch_pos to bc[0]
+  set target to 0
+  set known to 0
+  if idx >= 0
+    set target to fn_offsets[idx + 1]
+    if target > 0
+      set known to 1
+    end
+    set expr_type[0] to fn_ret_types[idx + 1]
+  else
+    set expr_type[0] to 0
+  end
+  if known is 1
+    emit_byte(target % 256)
+    emit_byte((target / 256) % 256)
+  else
+    emit_byte(0)
+    emit_byte(0)
+    if emit_enabled[0] is 1
+      set pend_names[pend_names[0] + 1] to name
+      set pend_pos[pend_names[0] + 1] to patch_pos
+      set pend_names[0] to pend_names[0] + 1
+      set pend_pos[0] to pend_pos[0] + 1
+    end
+  end
+  emit_byte(nargs)
+  return 0
+end
+
+# Milestone 5w: `ref NAME` pushes a function value — the callee's code
+# offset as a plain i32. Unknown offsets reuse the pending-call table; the
+# resolver tells the two site shapes apart by looking at the opcode byte
+# that precedes the patch position (0x60 CALL → u16 target, otherwise
+# 0x01 PUSH_I32 → i32 target).
+to emit_ref with name
+  emit_byte(1)
+  set patch_pos to bc[0]
+  set idx to find_fn(name)
+  if emit_enabled[0] is 1
+    if idx < 0
+      throw "unknown function " + name
+    end
+  end
+  set target to 0
+  if idx >= 0
+    set target to fn_offsets[idx + 1]
+  end
+  if target > 0
+    emit_i32(target)
+  else
+    emit_i32(0)
+    if emit_enabled[0] is 1
+      set pend_names[pend_names[0] + 1] to name
+      set pend_pos[pend_names[0] + 1] to patch_pos
+      set pend_names[0] to pend_names[0] + 1
+      set pend_pos[0] to pend_pos[0] + 1
+    end
+  end
+  set expr_type[0] to 0
+  return 0
+end
+
+# Back-patch every deferred CALL now that all function offsets are known.
+to resolve_pending_calls
+  set r to 1
+  set rstop to pend_names[0] + 1
+  while r < rstop
+    set idx to find_fn(pend_names[r])
+    if idx >= 0
+      set target to fn_offsets[idx + 1]
+      set pos to pend_pos[r]
+      set bc[pos + 1] to target % 256
+      set bc[pos + 2] to (target / 256) % 256
+      if bc[pos] is not 96
+        set bc[pos + 3] to (target / 65536) % 256
+        set bc[pos + 4] to (target / 16777216) % 256
+      end
+    end
+    set r to r + 1
+  end
+  return 0
+end
+
+# ---- Milestone 5s: loop-exit patch tables --------------------------------
+#
+# `break` / `continue` emit a JMP with an unresolved two-byte target and
+# record (placeholder position, loop depth) in a pending table. When the
+# enclosing loop finishes emitting, `patch_breaks` / `patch_conts` fill in
+# the real byte offsets and pop the entries again (loops nest properly, so
+# the resolved entries always sit at the tail of the table).
+
+to patch_breaks with target
+  set d to loop_depth[0]
+  set k to 1
+  set stop to brk_pos[0] + 1
+  while k < stop
+    if brk_dep[k] is d
+      patch_i16(brk_pos[k], target)
+      set brk_dep[k] to 0 - 1
+    end
+    set k to k + 1
+  end
+  set going to 1
+  while going
+    if brk_pos[0] > 0
+      if brk_dep[brk_pos[0]] is 0 - 1
+        set brk_pos[0] to brk_pos[0] - 1
+        set brk_dep[0] to brk_dep[0] - 1
+      else
+        set going to 0
+      end
+    else
+      set going to 0
+    end
+  end
+  return 0
+end
+
+to patch_conts with target
+  set d to loop_depth[0]
+  set k to 1
+  set stop to cnt_pos[0] + 1
+  while k < stop
+    if cnt_dep[k] is d
+      patch_i16(cnt_pos[k], target)
+      set cnt_dep[k] to 0 - 1
+    end
+    set k to k + 1
+  end
+  set going to 1
+  while going
+    if cnt_pos[0] > 0
+      if cnt_dep[cnt_pos[0]] is 0 - 1
+        set cnt_pos[0] to cnt_pos[0] - 1
+        set cnt_dep[0] to cnt_dep[0] - 1
+      else
+        set going to 0
+      end
+    else
+      set going to 0
+    end
+  end
+  return 0
+end
+
+# ---- Milestone 5y: kinds (classes) ---------------------------------------
+#
+# `kind Name … end` is desugared at the TOKEN level before either pass
+# runs, exactly the way the bootstrap oracle does it: the header and the
+# class-closing `end` are blanked to newlines, and each method name is
+# rewritten in place to `Name_method`, so the parser only ever sees plain
+# top-level `to …` declarations. The class registry (cls_names plus the
+# flat mth_cls / mth_key / mth_fn triple) is what `new Name` reads to
+# build the object tome.
+
+to blank_tok with i
+  set tk_kind[i] to 5
+  return 0
+end
+
+to prev_word_is with j w
+  set k to j - 1
+  set going to 1
+  while going
+    if k < 0
+      set going to 0
+    else
+      if tk_kind[k] is 5
+        set k to k - 1
+      else
+        set going to 0
+      end
+    end
+  end
+  if k < 0
+    return 0
+  end
+  return is_ident_word(k, w)
+end
+
+to is_kind_opener with j
+  if tk_kind[j] is not 2
+    return 0
+  end
+  set w to tk_txt[j]
+  if str_eq(w, "to")
+    # `to` is also the infix word of `set x to v`; only a statement-leading
+    # `to` opens a block.
+    if j is 0
+      return 1
+    end
+    if tk_kind[j - 1] is 5
+      return 1
+    end
+    return 0
+  end
+  if str_eq(w, "while")
+    return 1
+  end
+  if str_eq(w, "for")
+    return 1
+  end
+  if str_eq(w, "attempt")
+    return 1
+  end
+  if str_eq(w, "make")
+    return 1
+  end
+  if str_eq(w, "kind")
+    # `kind Name` opens a class only at the start of a statement, so `kind`
+    # stays usable as an ordinary variable or parameter name.
+    if j > 0
+      if tk_kind[j - 1] is not 5
+        return 0
+      end
+    end
+    if j + 1 < tk_count
+      if tk_kind[j + 1] is 2
+        return 1
+      end
+    end
+    return 0
+  end
+  if str_eq(w, "if")
+    # `else if` chains share the outer `end`.
+    if prev_word_is(j, "else")
+      return 0
+    end
+    return 1
+  end
+  return 0
+end
+
+to desugar_kinds
+  set i to 0
+  while i < tk_count
+    set matched to 0
+    if is_ident_word(i, "kind")
+      if i + 1 < tk_count
+        if tk_kind[i + 1] is 2
+          set matched to 1
+        end
+      end
+      if i > 0
+        if tk_kind[i - 1] is not 5
+          set matched to 0
+        end
+      end
+    end
+    if matched is 1
+      set cname to tk_txt[i + 1]
+      set cls_names[cls_names[0] + 1] to cname
+      set cls_names[0] to cls_names[0] + 1
+      set cidx to cls_names[0]
+      blank_tok(i)
+      blank_tok(i + 1)
+      # Milestone 6b: `kind Child extends Parent`.
+      set pidx to 0
+      set j to i + 2
+      if is_ident_word(i + 2, "extends")
+        if i + 3 < tk_count
+          if tk_kind[i + 3] is 2
+            set pname to tk_txt[i + 3]
+            set pk to 1
+            set pstop to cls_names[0] + 1
+            while pk < pstop
+              if str_eq(cls_names[pk], pname)
+                set pidx to pk
+              end
+              set pk to pk + 1
+            end
+            blank_tok(i + 2)
+            blank_tok(i + 3)
+            set j to i + 4
+          end
+        end
+      end
+      set depth to 0
+      set going to 1
+      while going
+        if j >= tk_count
+          set going to 0
+        else
+          # Milestone 6b: `super.m(...)` → `self.super_<Class>_m(...)`,
+          # statically bound to the lexical class via a qualified tome key.
+          set sup_hit to 0
+          if is_ident_word(j, "super")
+            if is_op_c(j + 1, 46)
+              if j + 2 < tk_count
+                if tk_kind[j + 2] is 2
+                  set sup_hit to 1
+                end
+              end
+            end
+          end
+          if sup_hit is 1
+            set tk_txt[j] to "self"
+            set tk_txt[j + 2] to "super_" + cname + "_" + tk_txt[j + 2]
+            set j to j + 3
+          else
+            if is_ident_word(j, "end")
+              if depth is 0
+                blank_tok(j)
+                set j to j + 1
+                set going to 0
+              else
+                set depth to depth - 1
+                set j to j + 1
+              end
+            else
+              if is_kind_opener(j)
+                if depth is 0
+                  if is_ident_word(j, "to")
+                    set mname to tk_txt[j + 1]
+                    set mfn to cname + "_" + mname
+                    set tk_txt[j + 1] to mfn
+                    set mth_cls[mth_cls[0] + 1] to cidx
+                    set mth_key[mth_key[0] + 1] to mname
+                    set mth_fn[mth_fn[0] + 1] to mfn
+                    set mth_sup[mth_sup[0] + 1] to 0
+                    set mth_cls[0] to mth_cls[0] + 1
+                    set mth_key[0] to mth_key[0] + 1
+                    set mth_fn[0] to mth_fn[0] + 1
+                    set mth_sup[0] to mth_sup[0] + 1
+                  end
+                end
+                set depth to depth + 1
+                set j to j + 1
+              else
+                set j to j + 1
+              end
+            end
+          end
+        end
+      end
+      # Inherit the parent's entries the child did not override, plus a
+      # `super_`-prefixed alias for each of them.
+      if pidx > 0
+        set own_stop to mth_cls[0]
+        set m to 1
+        set mstop2 to mth_cls[0] + 1
+        while m < mstop2
+          if mth_cls[m] is pidx
+            set pkey to mth_key[m]
+            set pfn to mth_fn[m]
+            if mth_sup[m] is 1
+              set mth_cls[mth_cls[0] + 1] to cidx
+              set mth_key[mth_key[0] + 1] to pkey
+              set mth_fn[mth_fn[0] + 1] to pfn
+              set mth_sup[mth_sup[0] + 1] to 1
+              set mth_cls[0] to mth_cls[0] + 1
+              set mth_key[0] to mth_key[0] + 1
+              set mth_fn[0] to mth_fn[0] + 1
+              set mth_sup[0] to mth_sup[0] + 1
+            else
+              set own to 0
+              set q to 1
+              set qstop to own_stop + 1
+              while q < qstop
+                if mth_cls[q] is cidx
+                  if mth_sup[q] is 0
+                    if str_eq(mth_key[q], pkey)
+                      set own to 1
+                    end
+                  end
+                end
+                set q to q + 1
+              end
+              if own is 0
+                set mth_cls[mth_cls[0] + 1] to cidx
+                set mth_key[mth_key[0] + 1] to pkey
+                set mth_fn[mth_fn[0] + 1] to pfn
+                set mth_sup[mth_sup[0] + 1] to 0
+                set mth_cls[0] to mth_cls[0] + 1
+                set mth_key[0] to mth_key[0] + 1
+                set mth_fn[0] to mth_fn[0] + 1
+                set mth_sup[0] to mth_sup[0] + 1
+              end
+              set mth_cls[mth_cls[0] + 1] to cidx
+              set mth_key[mth_key[0] + 1] to "super_" + cname + "_" + pkey
+              set mth_fn[mth_fn[0] + 1] to pfn
+              set mth_sup[mth_sup[0] + 1] to 1
+              set mth_cls[0] to mth_cls[0] + 1
+              set mth_key[0] to mth_key[0] + 1
+              set mth_fn[0] to mth_fn[0] + 1
+              set mth_sup[0] to mth_sup[0] + 1
+            end
+          end
+          set m to m + 1
+        end
+      end
+      set i to j
+
+    else
+      set i to i + 1
+    end
+  end
+  return 0
+end
+
+# `new NAME` — TNEW sized to the method count, then one
+# PUSH_STR / function value / TSET triple per method, in declaration order.
+to emit_new with cname
+  set ci to 0
+  set k to 1
+  set cstop to cls_names[0] + 1
+  while k < cstop
+    if str_eq(cls_names[k], cname)
+      set ci to k
+    end
+    set k to k + 1
+  end
+  if emit_enabled[0] is 1
+    if ci is 0
+      throw "unknown kind " + cname
+    end
+  end
+  set n to 0
+  set m to 1
+  set mstop to mth_cls[0] + 1
+  while m < mstop
+    if mth_cls[m] is ci
+      set n to n + 1
+    end
+    set m to m + 1
+  end
+  emit_byte(138)
+  emit_byte(n % 256)
+  emit_byte((n / 256) % 256)
+  set m to 1
+  while m < mstop
+    if mth_cls[m] is ci
+      set koff to intern_str(mth_key[m])
+      emit_byte(2)
+      emit_byte(koff % 256)
+      emit_byte((koff / 256) % 256)
+      emit_ref(mth_fn[m])
+      emit_byte(139)
+    end
+    set m to m + 1
+  end
+  set expr_type[0] to 3
+  return 0
+end
+
+# A method call is string-typed when ANY kind declares a method of that
+# name returning a string — mirrors the bootstrap oracle's name-based rule.
+to method_ret_type with name
+  set m to 1
+  set mstop to mth_key[0] + 1
+  while m < mstop
+    if str_eq(mth_key[m], name)
+      set fi to find_fn(mth_fn[m])
+      if fi >= 0
+        if fn_ret_types[fi + 1] is 1
+          return 1
+        end
+      end
+    end
+    set m to m + 1
+  end
+  return 0
+end
+
+# Emit PUSH_STR for a member name (shared by field reads, writes and calls).
+to emit_member_key with name
+  set moff to intern_str(name)
+  emit_byte(2)
+  emit_byte(moff % 256)
+  emit_byte((moff / 256) % 256)
+  return 0
+end
+
+# ---- token classifiers ---------------------------------------------------
+
+
+to is_op_c with pos c
+  if pos >= tk_count
+    return 0
+  end
+  if tk_kind[pos] is 4
+    if tk_num[pos] is c
+      return 1
+    end
+  end
+  return 0
+end
+
+to is_ident_word with pos w
+  if pos >= tk_count
+    return 0
+  end
+  if tk_kind[pos] is not 2
+    return 0
+  end
+  return str_eq(tk_txt[pos], w)
+end
+
+# ---- recursive-descent parser --------------------------------------------
+#
+# Every parse_* leaves `expr_type[0]` set to the type of the value it
+# pushed (0 = int, 1 = str). The top-level `say` uses this to pick between
+# SAY_I32 and SAY_STR; `+` uses it to promote to STRCAT when either
+# operand is a string.
+
+to parse_atom with pos
+  if tk_kind[pos] is 1
+    emit_byte(1)
+    emit_i32(tk_num[pos])
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  # Float literal (Milestone 5q). The lexer hands us the mantissa as an
+  # integer plus the number of fractional digits, so the value is exactly
+  # mantissa / 10^scale. Both operands are exactly representable for the
+  # sizes we accept, so a single IEEE division is correctly rounded — the
+  # same double JS's parser produces. FBYTE then peels off the eight
+  # little-endian bytes for the PUSH_F64 operand.
+  if tk_kind[pos] is 6
+    set fscale to tk_num2[pos]
+    set fdiv to 1
+    while fscale > 0
+      set fdiv to fdiv * 10
+      set fscale to fscale - 1
+    end
+    set fval to i2f(tk_num[pos]) / i2f(fdiv)
+    emit_byte(160)
+    set fb to 0
+    while fb < 8
+      emit_byte(fbyte(fval, fb))
+      set fb to fb + 1
+    end
+    set expr_type[0] to 2
+    return pos + 1
+  end
+
+  # String literal (Milestone 5k): intern into the shared string pool and
+  # emit PUSH_STR (0x02) + u16 pool offset, matching the JS bootstrap.
+  if tk_kind[pos] is 3
+    set s to tk_txt[pos]
+    set off to intern_str(s)
+    emit_byte(2)
+    emit_byte(off % 256)
+    emit_byte((off / 256) % 256)
+    set expr_type[0] to 1
+    return pos + 1
+  end
+  # Milestone 5r: boolean / nothing literals compile to plain ints, the
+  # same way the bootstrap oracle lowers them (true → 1, false/nothing → 0).
+  if is_ident_word(pos, "true")
+    emit_byte(1)
+    emit_i32(1)
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  if is_ident_word(pos, "false")
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  if is_ident_word(pos, "nothing")
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    return pos + 1
+  end
+  if tk_kind[pos] is 2
+    set name to tk_txt[pos]
+
+    # Milestone 5x: `make [with p...] [capture c...] NL body end` — a
+    # closure. Captures are loaded in the ENCLOSING scope, the body is
+    # emitted inline behind a JMP, and CLOSURE (197) boxes code + captures.
+    # The body's locals are params, then captures, then its own `set`s, so
+    # CALLV can append the captures straight after the arguments.
+    if str_eq(name, "make")
+      set lpos to pos + 1
+      set lam_names[0] to 0
+      set lam_caps[0] to 0
+      if is_ident_word(lpos, "with")
+        set lpos to lpos + 1
+        set lgo to 1
+        while lgo
+          if lpos >= tk_count
+            set lgo to 0
+          else
+            if tk_kind[lpos] is 2
+              if str_eq(tk_txt[lpos], "capture")
+                set lgo to 0
+              else
+                set lam_names[lam_names[0] + 1] to tk_txt[lpos]
+                set lam_names[0] to lam_names[0] + 1
+                set lpos to lpos + 1
+              end
+            else
+              set lgo to 0
+            end
+          end
+        end
+      end
+      set lnparams to lam_names[0]
+      if is_ident_word(lpos, "capture")
+        set lpos to lpos + 1
+        set lgo to 1
+        while lgo
+          if lpos >= tk_count
+            set lgo to 0
+          else
+            if tk_kind[lpos] is 2
+              set lam_caps[lam_caps[0] + 1] to tk_txt[lpos]
+              set lam_caps[0] to lam_caps[0] + 1
+              set lpos to lpos + 1
+            else
+              set lgo to 0
+            end
+          end
+        end
+      end
+      set lncaps to lam_caps[0]
+      set lci to 1
+      while lci <= lncaps
+        emit_load_ident(lam_caps[lci])
+        set lci to lci + 1
+      end
+      emit_byte(64)
+      set lover to placeholder16()
+      set lbody_off to bc[0]
+      set lbase to lsav_names[0]
+      set lsn to loc_names[0]
+      set lsi to 1
+      while lsi <= lsn
+        set lsav_names[lbase + lsi] to loc_names[lsi]
+        set lsav_types[lbase + lsi] to loc_types[lsi]
+        set lsi to lsi + 1
+      end
+      set lsav_names[0] to lbase + lsn
+      set lsav_types[0] to lbase + lsn
+      set lsave_in to in_func[0]
+      set loc_names[0] to 0
+      set loc_types[0] to 0
+      set lci to 1
+      while lci <= lnparams
+        add_local(lam_names[lci])
+        set lci to lci + 1
+      end
+      set lci to 1
+      while lci <= lncaps
+        add_local(lam_caps[lci])
+        set lci to lci + 1
+      end
+      set lfixed to loc_names[0]
+      set lbody_start to lpos
+      set lsave_emit to emit_enabled[0]
+      set lsave_syms to sym_names[0]
+      set emit_enabled[0] to 0
+      set in_func[0] to 1
+      set ltmp to parse_block(lbody_start)
+      set lextras to loc_names[0] - lfixed
+      set emit_enabled[0] to lsave_emit
+      set sym_names[0] to lsave_syms
+      set sym_types[0] to lsave_syms
+      set loc_names[0] to lfixed
+      if lextras > 0
+        emit_byte(98)
+        emit_byte(lextras)
+      end
+      set pos to parse_block(lbody_start)
+      emit_byte(1)
+      emit_i32(0)
+      emit_byte(97)
+      patch_i16(lover, bc[0])
+      emit_byte(197)
+      emit_byte(lbody_off % 256)
+      emit_byte((lbody_off / 256) % 256)
+      emit_byte(lncaps)
+      set loc_names[0] to lsn
+      set loc_types[0] to lsn
+      set lsi to 1
+      while lsi <= lsn
+        set loc_names[lsi] to lsav_names[lbase + lsi]
+        set loc_types[lsi] to lsav_types[lbase + lsi]
+        set lsi to lsi + 1
+      end
+      set lsav_names[0] to lbase
+      set lsav_types[0] to lbase
+      set in_func[0] to lsave_in
+      if is_ident_word(pos, "end")
+        set pos to pos + 1
+      end
+      set expr_type[0] to 0
+      return pos
+    end
+    # Milestone 5y: `new NAME` / `new NAME()` — instantiate a kind.
+    if str_eq(name, "new")
+      if pos + 1 < tk_count
+        if tk_kind[pos + 1] is 2
+          set cn to tk_txt[pos + 1]
+          set pos to pos + 2
+          if is_op_c(pos, 40)
+            set pos to pos + 1
+            if is_op_c(pos, 41)
+              set pos to pos + 1
+            end
+          end
+          emit_new(cn)
+          return pos
+        end
+      end
+    end
+    # Milestone 5w: `ref NAME` — a first-class function value.
+    if str_eq(name, "ref")
+      if pos + 1 < tk_count
+        if tk_kind[pos + 1] is 2
+          emit_ref(tk_txt[pos + 1])
+          return pos + 2
+        end
+      end
+    end
+    # Milestone 5w: `call TARGET(args)` — indirect call through a value.
+    if str_eq(name, "call")
+      if pos + 1 < tk_count
+        if tk_kind[pos + 1] is 2
+          set fname to tk_txt[pos + 1]
+          if is_op_c(pos + 2, 40)
+            set pos to pos + 3
+            set nargs to 0
+            if is_op_c(pos, 41)
+              set pos to pos + 1
+            else
+              set pos to parse_expr(pos)
+              set nargs to 1
+              while is_op_c(pos, 44)
+                set pos to parse_expr(pos + 1)
+                set nargs to nargs + 1
+              end
+              if is_op_c(pos, 41)
+                set pos to pos + 1
+              end
+            end
+            emit_load_ident(fname)
+            emit_byte(196)
+            emit_byte(nargs)
+            set expr_type[0] to 0
+            return pos
+          end
+        end
+      end
+    end
+
+    # Function/builtin call?  IDENT '(' args ')'
+    if pos + 1 < tk_count
+      if is_op_c(pos + 1, 40)
+        set pos to pos + 2
+        set nargs to 0
+        if is_op_c(pos, 41)
+          set pos to pos + 1
+        else
+          set pos to parse_expr(pos)
+          set nargs to 1
+          while is_op_c(pos, 44)
+            set pos to parse_expr(pos + 1)
+            set nargs to nargs + 1
+          end
+          if is_op_c(pos, 41)
+            set pos to pos + 1
+          end
+        end
+        emit_call(name, nargs)
+        return pos
+      end
+    end
+    set last_id[0] to name
+    emit_load_ident(name)
+    return pos + 1
+  end
+  if is_op_c(pos, 40)
+    set pos to parse_expr(pos + 1)
+    if is_op_c(pos, 41)
+      return pos + 1
+    end
+    return pos
+  end
+  # List literal: [ e1, e2, ... ]
+  if is_op_c(pos, 91)
+    set pos to pos + 1
+    set n to 0
+    if is_op_c(pos, 93)
+      set pos to pos + 1
+    else
+      set pos to parse_expr(pos)
+      set n to 1
+      while is_op_c(pos, 44)
+        set pos to parse_expr(pos + 1)
+        set n to n + 1
+      end
+      if is_op_c(pos, 93)
+        set pos to pos + 1
+      end
+    end
+    emit_byte(128)
+    emit_byte(n % 256)
+    emit_byte((n / 256) % 256)
+    set expr_type[0] to 0
+    return pos
+  end
+  # Milestone 5t — "tome_literal": { "k": v, name: v2 }
+  #
+  # TNEW carries the pair count as a u16 operand, but this compiler is a
+  # single streaming pass, so the operand is reserved and back-patched once
+  # the entries have been parsed. Each entry emits key, value, TSET; TSET
+  # leaves the tome on the stack so the whole literal is one value.
+  if is_op_c(pos, 123)
+    set pos to pos + 1
+    emit_byte(138)
+    set cap_pos to bc[0]
+    emit_byte(0)
+    emit_byte(0)
+    set n to 0
+    set vk to 0
+    set pos to skip_nl(pos)
+    set going to 1
+    if is_op_c(pos, 125)
+      set going to 0
+    end
+    while going
+      set pos to skip_nl(pos)
+      # A bare identifier key is sugar for the string of the same name.
+      set bare to 0
+      if tk_kind[pos] is 2
+        if is_op_c(pos + 1, 58)
+          set bare to 1
+        end
+      end
+      if bare is 1
+        set koff to intern_str(tk_txt[pos])
+        emit_byte(2)
+        emit_byte(koff % 256)
+        emit_byte((koff / 256) % 256)
+        set pos to pos + 1
+      else
+        set pos to parse_expr(pos)
+      end
+      if is_op_c(pos, 58)
+        set pos to pos + 1
+      end
+      set pos to parse_expr(pos)
+      if expr_type[0] is 1
+        set vk to 1
+      end
+      emit_byte(139)
+      set n to n + 1
+      set pos to skip_nl(pos)
+      if is_op_c(pos, 44)
+        set pos to pos + 1
+      else
+        set going to 0
+      end
+    end
+    set pos to skip_nl(pos)
+    if is_op_c(pos, 125)
+      set pos to pos + 1
+    end
+    if emit_enabled[0] is 1
+      set bc[cap_pos + 1] to n % 256
+      set bc[cap_pos + 2] to (n / 256) % 256
+    end
+    if vk is 1
+      set expr_type[0] to 4
+    else
+      set expr_type[0] to 3
+    end
+    return pos
+  end
+  return pos
+end
+
+# Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads,
+# each emitting an LGET.
+to parse_postfix with pos
+  set going to 1
+  while going
+    if is_op_c(pos, 91)
+      # Capture the target's kind before the index expression clobbers it:
+      # tomes read with TGET, lists with LGET, and a string-valued
+      # container yields a string.
+      set tk to expr_type[0]
+      set pos to pos + 1
+      set pos to parse_expr(pos)
+      if is_op_c(pos, 93)
+        set pos to pos + 1
+      end
+      if tk is 3
+        emit_byte(140)
+        set expr_type[0] to 0
+      else
+        if tk is 4
+          emit_byte(140)
+          set expr_type[0] to 1
+        else
+          emit_byte(129)
+          if tk is 5
+            set expr_type[0] to 1
+          else
+            set expr_type[0] to 0
+          end
+        end
+      end
+    else
+      if is_op_c(pos, 46)
+        # Milestone 5y: `obj.field` reads a tome entry; `obj.method(a…)`
+        # loads the target out of the object and calls it with the receiver
+        # threaded in as the first argument (already on the stack).
+        set mname to tk_txt[pos + 1]
+        set recv to last_id[0]
+        if is_op_c(pos + 2, 40)
+          set pos to pos + 3
+          set nargs to 0
+          if is_op_c(pos, 41)
+            set pos to pos + 1
+          else
+            set pos to parse_expr(pos)
+            set nargs to 1
+            while is_op_c(pos, 44)
+              set pos to parse_expr(pos + 1)
+              set nargs to nargs + 1
+            end
+            if is_op_c(pos, 41)
+              set pos to pos + 1
+            end
+          end
+          emit_load_ident(recv)
+          emit_member_key(mname)
+          emit_byte(140)
+          emit_byte(196)
+          emit_byte(nargs + 1)
+          set expr_type[0] to method_ret_type(mname)
+        else
+          emit_member_key(mname)
+          emit_byte(140)
+          set expr_type[0] to 0
+          set pos to pos + 2
+        end
+      else
+        set going to 0
+      end
+    end
+  end
+  return pos
+end
+
+# Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap
+# oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is
+# preserved. Postfix indexing binds tighter than the unary minus.
+to parse_unary with pos
+  if is_op_c(pos, 45)
+    emit_byte(1)
+    emit_i32(0)
+    set pos to parse_unary(pos + 1)
+    emit_byte(17)
+    set expr_type[0] to 0
+    return pos
+  end
+  set pos to parse_atom(pos)
+  set pos to parse_postfix(pos)
+  return pos
+end
+
+to parse_mul with pos
+  set pos to parse_unary(pos)
+  set going to 1
+  while going
+    if is_op_c(pos, 42)
+      set lk to expr_type[0]
+      set pos to parse_unary(pos + 1)
+      set rk to expr_type[0]
+      if both_float(lk, rk)
+        emit_byte(163)
+        set expr_type[0] to 2
+      else
+        emit_byte(18)
+        set expr_type[0] to 0
+      end
+    else
+      if is_op_c(pos, 47)
+        set lk to expr_type[0]
+        set pos to parse_unary(pos + 1)
+        set rk to expr_type[0]
+        if both_float(lk, rk)
+          emit_byte(164)
+          set expr_type[0] to 2
+        else
+          emit_byte(19)
+          set expr_type[0] to 0
+        end
+      else
+        if is_op_c(pos, 37)
+          set pos to parse_unary(pos + 1)
+          emit_byte(20)
+          set expr_type[0] to 0
+        else
+          set going to 0
+        end
+      end
+    end
+  end
+  return pos
+end
+
+
+
+# 1 when tokens s .. e-1 are exactly one list literal `[ ... ]`.
+to is_list_lit_span with s e
+  if is_op_c(s, 91) is 0
+    return 0
+  end
+  set depth to 0
+  set k to s
+  while k < e
+    if is_op_c(k, 91)
+      set depth to depth + 1
+    end
+    if is_op_c(k, 93)
+      set depth to depth - 1
+      if depth is 0
+        if k is e - 1
+          return 1
+        end
+        return 0
+      end
+    end
+    set k to k + 1
+  end
+  return 0
+end
+
+to parse_add with pos
+  set lstart to pos
+  set pos to parse_mul(pos)
+  set lend to pos
+  set first to 1
+  set going to 1
+  while going
+    if is_op_c(pos, 43)
+      set lk to expr_type[0]
+      set rstart to pos + 1
+      set pos to parse_mul(pos + 1)
+      set rk to expr_type[0]
+      # `xs + [a, b]` / `[a] + xs` joins lists via list_concat_two
+      # (lang/stdlib/v2/list.sdev), since the VM's ADD is integer-only.
+      set lit to is_list_lit_span(rstart, pos)
+      if first is 1
+        if is_list_lit_span(lstart, lend)
+          set lit to 1
+        end
+      end
+      set first to 0
+      if lit is 1
+        if emit_enabled[0] is 1
+          if find_fn("list_concat_two") < 0
+            throw "joining lists with + needs use \"lang/stdlib/v2/list.sdev\""
+          end
+        end
+        emit_call("list_concat_two", 2)
+        set lk to 7
+        set rk to 7
+      end
+      set promote to 0
+      if lk is 1
+        set promote to 1
+      end
+      if rk is 1
+        set promote to 1
+      end
+      if lit is 1
+        set expr_type[0] to 0
+      else
+        if promote is 1
+          emit_byte(145)
+          set expr_type[0] to 1
+        else
+          if both_float(lk, rk)
+            emit_byte(161)
+            set expr_type[0] to 2
+          else
+            emit_byte(16)
+            set expr_type[0] to 0
+          end
+        end
+      end
+    else
+      set first to 0
+      if is_op_c(pos, 45)
+        set lk to expr_type[0]
+        set pos to parse_mul(pos + 1)
+        set rk to expr_type[0]
+        if both_float(lk, rk)
+          emit_byte(162)
+          set expr_type[0] to 2
+        else
+          emit_byte(17)
+          set expr_type[0] to 0
+        end
+      else
+        set going to 0
+      end
+    end
+  end
+  return pos
+end
+
+# Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=`
+# are pre-folded by the driver's lexer into sentinel punctuation codes
+# 300 / 301. Every comparison yields an int (0 / 1). When both operands are
+# floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes.
+to parse_cmp with pos
+  set pos to parse_add(pos)
+  if is_ident_word(pos, "is")
+    set lk to expr_type[0]
+    set pos to pos + 1
+    set neg to 0
+    if is_ident_word(pos, "not")
+      set neg to 1
+      set pos to pos + 1
+    end
+    set pos to parse_add(pos)
+    set rk to expr_type[0]
+    # Natural comparators: `x is N or more` -> >=, `x is N or less` -> <=.
+    set natcmp to 0 - 1
+    if is_ident_word(pos, "or")
+      if is_ident_word(pos + 1, "more")
+        set natcmp to 37
+        set pos to pos + 2
+      end
+      if natcmp is 0 - 1
+        if is_ident_word(pos + 1, "less")
+          set natcmp to 36
+          set pos to pos + 2
+        end
+      end
+    end
+    if natcmp is not 0 - 1
+      emit_byte(natcmp)
+      set expr_type[0] to 0
+      return pos
+    end
+    set str_cmp to 0
+    if lk is 1
+      set str_cmp to 1
+    end
+    if rk is 1
+      set str_cmp to 1
+    end
+    if str_cmp is 1
+      emit_byte(144)
+      if neg
+        emit_byte(48)
+      end
+      set expr_type[0] to 0
+      return pos
+    end
+    if neg
+      emit_byte(33)
+    else
+      if both_float(lk, rk)
+        emit_byte(167)
+      else
+        emit_byte(32)
+      end
+    end
+    set expr_type[0] to 0
+    return pos
+  end
+  if is_op_c(pos, 60)
+    set lk to expr_type[0]
+    set pos to parse_add(pos + 1)
+    set rk to expr_type[0]
+    if both_float(lk, rk)
+      emit_byte(165)
+    else
+      emit_byte(34)
+    end
+    set expr_type[0] to 0
+    return pos
+  end
+  if is_op_c(pos, 62)
+    set lk to expr_type[0]
+    set pos to parse_add(pos + 1)
+    set rk to expr_type[0]
+    if both_float(lk, rk)
+      emit_byte(166)
+    else
+      emit_byte(35)
+    end
+    set expr_type[0] to 0
+    return pos
+  end
+
+  if is_op_c(pos, 300)
+    set pos to parse_add(pos + 1)
+    emit_byte(36)
+    set expr_type[0] to 0
+    return pos
+  end
+  if is_op_c(pos, 301)
+    set pos to parse_add(pos + 1)
+    emit_byte(37)
+    set expr_type[0] to 0
+    return pos
+  end
+  return pos
+end
+
+# ---- Milestone 5r: boolean tier -------------------------------------------
+#
+#   expr := or
+#   or   := and ('or' and)*
+#   and  := not ('and' not)*
+#   not  := 'not' not | cmp
+#
+# Both use JZ to short-circuit and leave one normalized integer result,
+# mirroring the bootstrap oracle's emission order byte-for-byte.
+
+to parse_not with pos
+  if is_ident_word(pos, "not")
+    set pos to parse_not(pos + 1)
+    emit_byte(48)
+    set expr_type[0] to 0
+    return pos
+  end
+  return parse_cmp(pos)
+end
+
+to parse_and with pos
+  set pos to parse_not(pos)
+  set going to 1
+  while going
+    if is_ident_word(pos, "and")
+      # a and b  ->  a JZ L1 ; b NOT NOT ; JMP L2 ; L1: PUSH 0 ; L2:
+      # Both paths leave exactly one 0/1 value on the stack.
+      emit_byte(65)
+      set fx to placeholder16()
+      set pos to parse_not(pos + 1)
+      emit_byte(48)
+      emit_byte(48)
+      emit_byte(64)
+      set fe to placeholder16()
+      patch_i16(fx, bc[0])
+      emit_byte(1)
+      emit_i32(0)
+      patch_i16(fe, bc[0])
+      set expr_type[0] to 0
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to parse_or with pos
+  set pos to parse_and(pos)
+  set going to 1
+  while going
+    if is_ident_word(pos, "or")
+      # a or b  ->  a JZ L1 ; PUSH 1 ; JMP L2 ; L1: b NOT NOT ; L2:
+      emit_byte(65)
+      set fx to placeholder16()
+      emit_byte(1)
+      emit_i32(1)
+      emit_byte(64)
+      set fe to placeholder16()
+      patch_i16(fx, bc[0])
+      set pos to parse_and(pos + 1)
+      emit_byte(48)
+      emit_byte(48)
+      patch_i16(fe, bc[0])
+      set expr_type[0] to 0
+    else
+      set going to 0
+    end
+  end
+  return pos
+end
+
+to parse_expr with pos
+  return parse_or(pos)
+end
+
+
+
+to skip_nl with pos
+  set going to 1
+  while going
+    if pos >= tk_count
+      set going to 0
+    else
+      if tk_kind[pos] is 5
+        set pos to pos + 1
+      else
+        set going to 0
+      end
+    end
+  end
+  return pos
+end
+
+# Parse a sequence of statements until `else`, `rescue`, `end`, or EOF.
+to parse_block with pos
+  set going to 1
+  while going
+    set pos to skip_nl(pos)
+    if pos >= tk_count
+      set going to 0
+    else
+      if is_ident_word(pos, "else")
+        set going to 0
+      else
+        if is_ident_word(pos, "rescue")
+          set going to 0
+        else
+          if is_ident_word(pos, "end")
+            set going to 0
+          else
+            set new_pos to parse_stmt(pos)
+            if new_pos is pos
+              set going to 0
+            else
+              set pos to new_pos
+            end
+          end
+        end
+      end
+    end
+  end
+  return pos
+end
+
+
+# Parse the parameter list of a `to NAME with p1 p2 ...` declaration and
+# push each param into loc_names. Returns (new_pos, n_params) packed into
+# a two-cell scratch list. Since SDEV functions can only return one
+# value, we return new_pos and stash n_params in a global scratch cell.
+to parse_params with pos
+  set scratch[0] to 0
+  if is_ident_word(pos, "with")
+    set pos to pos + 1
+    set collecting to 1
+    while collecting
+      if pos >= tk_count
+        set collecting to 0
+      else
+        if tk_kind[pos] is 2
+          add_local(tk_txt[pos])
+          set scratch[0] to scratch[0] + 1
+          set pos to pos + 1
+        else
+          set collecting to 0
+        end
+      end
+    end
+  end
+  return pos
+end
+
+to parse_stmt with pos
+  set pos to skip_nl(pos)
+  if pos >= tk_count
+    return pos
+  end
+  if is_ident_word(pos, "say")
+    set pos to parse_expr(pos + 1)
+    if expr_type[0] is 1
+      emit_byte(81)
+    else
+      if expr_type[0] is 2
+        emit_byte(173)
+      else
+        emit_byte(80)
+      end
+    end
+    return pos
+  end
+
+  if is_ident_word(pos, "set")
+    set pos to pos + 1
+    set name to tk_txt[pos]
+    set pos to pos + 1
+    # Milestone 5y: member-assignment form: set NAME . FIELD to EXPR
+    if is_op_c(pos, 46)
+      emit_load_ident(name)
+      emit_member_key(tk_txt[pos + 1])
+      set pos to pos + 2
+      if is_ident_word(pos, "to")
+        set pos to pos + 1
+      end
+      set pos to parse_expr(pos)
+      emit_byte(139)
+      emit_byte(5)
+      set expr_type[0] to 0
+      return pos
+    end
+    # Index-assignment form: set NAME [ EXPR ] to EXPR
+    if is_op_c(pos, 91)
+      emit_load_ident(name)
+      set tk to expr_type[0]
+      set pos to pos + 1
+      set pos to parse_expr(pos)
+      if is_op_c(pos, 93)
+        set pos to pos + 1
+      end
+      if is_ident_word(pos, "to")
+        set pos to pos + 1
+      end
+      set pos to parse_expr(pos)
+      set vk to expr_type[0]
+      set is_tome to 0
+      if tk is 3
+        set is_tome to 1
+      end
+      if tk is 4
+        set is_tome to 1
+      end
+      if is_tome is 1
+        # TSET leaves the tome on the stack; drop it. A string value
+        # promotes the variable to the string-valued tome kind.
+        emit_byte(139)
+        emit_byte(5)
+        if vk is 1
+          if tk is 3
+            set_ident_type(name, 4)
+          end
+        end
+      else
+        emit_byte(130)
+      end
+      set expr_type[0] to 0
+      return pos
+    end
+    # Plain: set NAME to EXPR
+    if is_ident_word(pos, "to")
+      set pos to pos + 1
+    end
+    set pos to parse_expr(pos)
+    emit_store_ident(name)
+    return pos
+  end
+  if is_ident_word(pos, "return")
+    set pos to pos + 1
+    set has_value to 0
+    if pos < tk_count
+      if tk_kind[pos] is not 5
+        set has_value to 1
+      end
+    end
+    if has_value is 1
+      set pos to parse_expr(pos)
+    else
+      emit_byte(1)
+      emit_i32(0)
+      set expr_type[0] to 0
+    end
+    # Record this return's type against the currently-parsing function.
+    # `cur_fn[0]` is a 1-indexed slot into fn_ret_types (0 = "none"). Any
+    # string return promotes the function's declared return type — the
+    # value survives across pass 1 iterations and drives SAY_STR / STRCAT
+    # selection on all call sites in pass 2.
+    if in_func[0] is 1
+      if expr_type[0] is 1
+        if cur_fn[0] > 0
+          set fn_ret_types[cur_fn[0]] to 1
+        end
+      end
+    end
+    emit_byte(97)
+    return pos
+  end
+  # Milestone 5s: `break` / `continue` are ordinary identifiers in the
+  # lexer, so they are matched before the expression-statement fallback.
+  if is_ident_word(pos, "break")
+    if emit_enabled[0] is 1
+      if loop_depth[0] is 0
+        throw "break outside of a loop"
+      end
+    end
+    emit_byte(64)
+    set bp to placeholder16()
+    set brk_pos[brk_pos[0] + 1] to bp
+    set brk_dep[brk_pos[0] + 1] to loop_depth[0]
+    set brk_pos[0] to brk_pos[0] + 1
+    set brk_dep[0] to brk_dep[0] + 1
+    return pos + 1
+  end
+  if is_ident_word(pos, "continue")
+    if emit_enabled[0] is 1
+      if loop_depth[0] is 0
+        throw "continue outside of a loop"
+      end
+    end
+    emit_byte(64)
+    set cp to placeholder16()
+    set cnt_pos[cnt_pos[0] + 1] to cp
+    set cnt_dep[cnt_pos[0] + 1] to loop_depth[0]
+    set cnt_pos[0] to cnt_pos[0] + 1
+    set cnt_dep[0] to cnt_dep[0] + 1
+    return pos + 1
+  end
+  # Milestone 5v: `throw EXPR` and `attempt … rescue [err] … end`.
+  if is_ident_word(pos, "throw")
+    set pos to parse_expr(pos + 1)
+    emit_byte(194)
+    return pos
+  end
+  if is_ident_word(pos, "attempt")
+    set pos to pos + 1
+    emit_byte(192)
+    set tryp to placeholder16()
+    set pos to parse_block(pos)
+    emit_byte(193)
+    emit_byte(64)
+    set overp to placeholder16()
+    patch_i16(tryp, bc[0])
+    if is_ident_word(pos, "rescue")
+      set pos to pos + 1
+      set ename to ""
+      if pos < tk_count
+        if tk_kind[pos] is 2
+          set ename to tk_txt[pos]
+          set pos to pos + 1
+        end
+      end
+      if length(ename) > 0
+        set expr_type[0] to 1
+        emit_store_ident(ename)
+      else
+        emit_byte(5)
+      end
+      set pos to parse_block(pos)
+    else
+      emit_byte(5)
+    end
+    patch_i16(overp, bc[0])
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
+  end
+  if is_ident_word(pos, "if")
+
+    set pos to parse_expr(pos + 1)
+    emit_byte(65)
+    set jz to placeholder16()
+    set pos to parse_block(pos)
+    if is_ident_word(pos, "else")
+      set pos to pos + 1
+      # `else if` chains: the nested `if` statement consumes its own `end`,
+      # so this level must not eat one afterwards.
+      set chained to 0
+      if is_ident_word(pos, "if")
+        set chained to 1
+      end
+      emit_byte(64)
+      set jmp to placeholder16()
+      patch_i16(jz, bc[0])
+      if chained is 1
+        set pos to parse_stmt(pos)
+      else
+        set pos to parse_block(pos)
+      end
+      patch_i16(jmp, bc[0])
+      if chained is 1
+        return pos
+      end
+    else
+      patch_i16(jz, bc[0])
+    end
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
+  end
+  if is_ident_word(pos, "while")
+    set loop_top to bc[0]
+    set pos to parse_expr(pos + 1)
+    emit_byte(65)
+    set jz to placeholder16()
+    set loop_depth[0] to loop_depth[0] + 1
+    set pos to parse_block(pos)
+    patch_conts(loop_top)
+    emit_byte(64)
+    set back to placeholder16()
+    patch_i16(back, loop_top)
+    patch_i16(jz, bc[0])
+    patch_breaks(bc[0])
+    set loop_depth[0] to loop_depth[0] - 1
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+
+    return pos
+  end
+  # Milestone 5s: `for each NAME in EXPR ... end`.
+  #
+  # Desugars to an index loop over two hidden variables whose names encode
+  # the lexical foreach-nesting depth (`_fe_l1` / `_fe_i1`, `_fe_l2` / …),
+  # which is exactly how the bootstrap oracle names them — so the byte
+  # stream stays identical even though this compiler has no AST.
+  if is_ident_word(pos, "for")
+    set pos to pos + 1
+    if is_ident_word(pos, "each")
+      set pos to pos + 1
+    end
+    set vname to tk_txt[pos]
+    set pos to pos + 1
+    if is_ident_word(pos, "in")
+      set pos to pos + 1
+    end
+    set fe_depth[0] to fe_depth[0] + 1
+    set lname to "_fe_l" + str(fe_depth[0])
+    set iname to "_fe_i" + str(fe_depth[0])
+    set pos to parse_expr(pos)
+    set iter_kind to expr_type[0]
+    emit_store_ident(lname)
+    emit_byte(1)
+    emit_i32(0)
+    set expr_type[0] to 0
+    emit_store_ident(iname)
+    set loop_top to bc[0]
+    emit_load_ident(iname)
+    emit_load_ident(lname)
+    emit_byte(131)
+    emit_byte(34)
+    emit_byte(65)
+    set jz to placeholder16()
+    emit_load_ident(lname)
+    emit_load_ident(iname)
+    emit_byte(129)
+    if iter_kind is 5
+      set expr_type[0] to 1
+    else
+      set expr_type[0] to 0
+    end
+    emit_store_ident(vname)
+    set loop_depth[0] to loop_depth[0] + 1
+    set pos to parse_block(pos)
+    patch_conts(bc[0])
+    emit_load_ident(iname)
+    emit_byte(1)
+    emit_i32(1)
+    emit_byte(16)
+    set expr_type[0] to 0
+    emit_store_ident(iname)
+    emit_byte(64)
+    set back to placeholder16()
+    patch_i16(back, loop_top)
+    patch_i16(jz, bc[0])
+    patch_breaks(bc[0])
+    set loop_depth[0] to loop_depth[0] - 1
+    set fe_depth[0] to fe_depth[0] - 1
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
+  end
+
+  # Milestone 5k: `to NAME with params NL body end`.
+  #
+  # This handler runs in two very different modes:
+  #
+  #   Pass 1  (emit_enabled=0, skip_fn_defs=0)
+  #     Register the function (if new), record its body-start token
+  #     position and n_params, walk the body via parse_block so that
+  #     `return EXPR` statements can update fn_ret_types[i]. Nothing is
+  #     emitted; loc_names ends up populated so we can read the extras
+  #     count.
+  #
+  #   Pass 2 main  (emit_enabled=1, skip_fn_defs=1)
+  #     Skip the whole `to ... end` block without emitting. Function
+  #     bodies for pass 2 are emitted by the driver's dedicated hoist
+  #     loop, not by parse_stmt.
+  if is_ident_word(pos, "to")
+    set pos to pos + 1
+    set fname to tk_txt[pos]
+    set pos to pos + 1
+    set body_start_pos to pos
+    # Fresh local scope; params collected by parse_params occupy slots 0..n-1.
+    set loc_names[0] to 0
+    set loc_types[0] to 0
+    set pos to parse_params(pos)
+    set n_params to scratch[0]
+    if skip_fn_defs[0] is 1
+      # Pass 2 main: consume the body silently (parse_block emits nothing
+      # because we flip emit_enabled off for the duration).
+      set save_emit to emit_enabled[0]
+      set emit_enabled[0] to 0
+      set in_func[0] to 1
+      set pos to parse_block(pos)
+      set in_func[0] to 0
+      set emit_enabled[0] to save_emit
+      if is_ident_word(pos, "end")
+        set pos to pos + 1
+      end
+      return pos
+    end
+    # Pass 1 (collect + infer). Register once, reuse across iterations.
+    set idx to find_fn(fname)
+    if idx < 0
+      set fn_names[fn_names[0] + 1] to fname
+      set fn_offsets[fn_names[0] + 1] to 0
+      set fn_arities[fn_names[0] + 1] to n_params
+      set fn_ret_types[fn_names[0] + 1] to 0
+      set fn_extras[fn_names[0] + 1] to 0
+      set fn_body_start[fn_names[0] + 1] to body_start_pos
+      set fn_names[0] to fn_names[0] + 1
+      set fn_offsets[0] to fn_offsets[0] + 1
+      set fn_arities[0] to fn_arities[0] + 1
+      set fn_ret_types[0] to fn_ret_types[0] + 1
+      set fn_extras[0] to fn_extras[0] + 1
+      set fn_body_start[0] to fn_body_start[0] + 1
+      set idx to fn_names[0] - 1
+    end
+    set cur_fn[0] to idx + 1
+    # Milestone 6c: pre-register every name the body assigns, in source
+    # order, before walking it for real. Without this a load that appears
+    # ahead of the name's first `set` inside the same function resolves to
+    # a global, while the reference compiler's collect pass makes it a
+    # local. The pre-walk emits nothing (emit_enabled is already 0 here).
+    set pre_pos to pos
+    set pre_emit to emit_enabled[0]
+    set pre_syms to sym_names[0]
+    set emit_enabled[0] to 0
+    set in_func[0] to 1
+    set pre_end to parse_block(pos)
+    set emit_enabled[0] to pre_emit
+    # Drop globals the pre-walk interned for names that turned out to be
+    # locals; the real walk re-interns whatever is genuinely global.
+    set sym_names[0] to pre_syms
+    set sym_types[0] to pre_syms
+    set pos to pre_pos
+    set in_func[0] to 1
+    set pos to parse_block(pos)
+
+    # After walking the body, loc_names[0] = n_params + n_extras.
+    set fn_extras[idx + 1] to loc_names[0] - n_params
+    set in_func[0] to 0
+    set cur_fn[0] to 0
+    if is_ident_word(pos, "end")
+      set pos to pos + 1
+    end
+    return pos
+  end
+  # Expression statement (e.g. bare function call). Only start if the
+  # current token is an identifier — otherwise leave pos alone so the
+  # driver's outer loop terminates cleanly.
+  if tk_kind[pos] is 2
+    set pos to parse_expr(pos)
+    emit_byte(5)
+    set expr_type[0] to 0
+    return pos
+  end
+  return pos
+end

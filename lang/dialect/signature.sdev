@@ -1,0 +1,102 @@
+# ============================================================
+# SDEV Dialect Subsystem — Invisible File Signature & Address Codec (signature.sdev)
+# 100% Pure SDEV port of src/lang/dialect/signature.ts & address.ts
+# ============================================================
+
+use "lang/dialect/dialect.sdev"
+
+to signature_prefix
+  return "#⟨sdev⟩ "
+end
+
+to strip_file_signature with source
+  set pfx to signature_prefix()
+  if text_starts_with(source, pfx)
+    set nl to index_of(source, "\n")
+    if nl < 0
+      return ""
+    end
+    return substr(source, nl + 1, length(source) - (nl + 1))
+  end
+  return source
+end
+
+to write_file_signature with body rt dialect_addr translated_body
+  set clean_body to strip_file_signature(body)
+  set sum to hash_fnv1a_hex(clean_body)
+  set d_str to dialect_addr
+  if length(d_str) is 0
+    set d_str to "canonical"
+  end
+  set payload to "v=1|rt=" + rt + "|dialect=" + d_str + "|sum=" + sum
+  if length(translated_body) > 0 and translated_body is not clean_body
+    set payload to payload + "|tr=" + base64_encode(translated_body)
+  end
+  set encoded to base64_encode(payload)
+  return signature_prefix() + encoded + "\n" + clean_body
+end
+
+to read_file_signature with source
+  set pfx to signature_prefix()
+  if not text_starts_with(source, pfx)
+    return {
+      has_signature: 0,
+      rt: "v2",
+      dialect: "canonical",
+      sum: hash_fnv1a_hex(source),
+      stale: 0,
+      body: source
+    }
+  end
+  set nl to index_of(source, "\n")
+  set line to source
+  set body to ""
+  if nl >= 0
+    set line to substr(source, 0, nl)
+    set body to substr(source, nl + 1, length(source) - (nl + 1))
+  end
+  set pfx_len to length(pfx)
+  set b64 to text_trim(substr(line, pfx_len, length(line) - pfx_len))
+  set decoded to base64_decode(b64)
+  set parts to split(decoded, "|")
+  set rt to "v2"
+  set dialect to "canonical"
+  set stored_sum to ""
+  set n to length(parts)
+  set i to 0
+  while i < n
+    set kv to parts[i]
+    if text_starts_with(kv, "rt=")
+      set rt to substr(kv, 3, length(kv) - 3)
+    end
+    if text_starts_with(kv, "dialect=")
+      set dialect to substr(kv, 8, length(kv) - 8)
+    end
+    if text_starts_with(kv, "sum=")
+      set stored_sum to substr(kv, 4, length(kv) - 4)
+    end
+    set i to i + 1
+  end
+  set actual_sum to hash_fnv1a_hex(body)
+  set is_stale to 0
+  if length(stored_sum) > 0 and stored_sum is not actual_sum
+    set is_stale to 1
+  end
+  return {
+    has_signature: 1,
+    rt: rt,
+    dialect: dialect,
+    sum: stored_sum,
+    actual_sum: actual_sum,
+    stale: is_stale,
+    body: body
+  }
+end
+
+to repair_file_signature with source
+  set info to read_file_signature(source)
+  if info["has_signature"] is 0
+    return write_file_signature(source, "v2", "canonical", "")
+  end
+  return write_file_signature(info["body"], info["rt"], info["dialect"], "")
+end

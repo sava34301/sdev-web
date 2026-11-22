@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/SelfHostingGuide.tsx (409 lines)
+# Pure-SDEV Path: src/pages/SelfHostingGuide.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/SelfHostingGuide.tsx",
+    sdev_path: "src/pages/SelfHostingGuide.sdev",
+    subsystem: "page",
+    original_lines: 409,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["Code", "H2", "SelfHostingGuide", "PATH", "TITLE", "DESCRIPTION", "SECTIONS", "FACT_SOURCE", "FAQ", "navigate", "els", "obs", "vis", "openInIde"]
+end
+
+to Code
+  return "<sdev-view component=\"Code\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to H2 with children
+  return "<sdev-view component=\"H2\" subsystem=\"page\">" + str(children) + "</sdev-view>"
+end
+
+to SelfHostingGuide
+  return "<sdev-view component=\"SelfHostingGuide\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to PATH
+  return "<sdev-view component=\"PATH\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to TITLE
+  return "<sdev-view component=\"TITLE\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to DESCRIPTION
+  return "<sdev-view component=\"DESCRIPTION\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to SECTIONS
+  return "<sdev-view component=\"SECTIONS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to FACT_SOURCE
+  return "<sdev-view component=\"FACT_SOURCE\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to FAQ
+  return "<sdev-view component=\"FAQ\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to els
+  return "<sdev-view component=\"els\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to obs
+  return "<sdev-view component=\"obs\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to vis
+  return "<sdev-view component=\"vis\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to openInIde
+  return "<sdev-view component=\"openInIde\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

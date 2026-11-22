@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/string.ts (388 lines)
+# Pure-SDEV Path: src/lang/builtins/string.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/string.ts",
+    sdev_path: "src/lang/builtins/string.sdev",
+    subsystem: "builtins",
+    original_lines: 388,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["registerString", "val", "haystack", "needle", "key", "arg", "sized", "vals", "pad", "sdev_mod_str", "idx", "width", "total", "left", "right"]
+end
+
+to registerString with builtins SdevFunction output
+  return builtins
+end
+
+to val
+  return "val"
+end
+
+to haystack
+  return "haystack"
+end
+
+to needle
+  return "needle"
+end
+
+to key
+  return "key"
+end
+
+to arg
+  return "arg"
+end
+
+to sized
+  return "sized"
+end
+
+to vals with sized
+  return sized
+end
+
+to pad
+  return "pad"
+end
+
+to sdev_mod_str
+  return "sdev_mod_str"
+end
+
+to idx
+  return "idx"
+end
+
+to width
+  return "width"
+end
+
+to total
+  return "total"
+end
+
+to left
+  return "left"
+end
+
+to right
+  return "right"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

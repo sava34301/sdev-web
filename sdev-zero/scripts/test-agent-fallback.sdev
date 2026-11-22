@@ -1,0 +1,121 @@
+!#agent:off
+// =====================================================================
+// Pure-SDEV test suite for the understander brain, math, tasks,
+// memory, promotion, board unmasking, fallback decisions, and IDE
+// translation helpers.
+//
+// Run: node bin/sdev.mjs scripts/test-agent-fallback.sdev
+// =====================================================================
+
+link "lang/agent/blocks.sdev"
+link "lang/agent/brain.sdev"
+link "lang/agent/math.sdev"
+link "lang/agent/tasks.sdev"
+link "lang/agent/memory.sdev"
+
+forge passed be 0
+forge failed be 0
+
+conjure check(name, cond) ::
+  ponder cond ::
+    passed be passed + 1
+    speak("  ok   " + name)
+  ;; otherwise ::
+    failed be failed + 1
+    speak("  FAIL " + name)
+  ;;
+;;
+
+// ---- 1. brain.sdev: directives & request detection ----
+forge d1 be scan_directives("!#agent:local\n!#agent:learn:off\nsay 1")
+check("scan_directives parses local + learn:off", d1[0] equals "on" also d1[1] equals "local" also d1[2] equals nope also d1[3] also d1[4] equals "\n\nsay 1")
+forge d2 be scan_directives("forge a be 1\r\nspeak(a)\r\n")
+check("scan_directives preserves CRLF when no directives", isnt d2[3] also d2[4] equals "forge a be 1\r\nspeak(a)\r\n")
+check("is_request detects natural language app prompt", is_request("please make a calculator app"))
+check("is_request rejects canonical code", isnt is_request("forge x be 5"))
+
+// ---- 2. brain.sdev: local endpoints, sanitizer, reply parser ----
+forge ep be normalize_local_endpoints("http://localhost:1234/v1")
+check("normalize_local_endpoints builds chatUrl", ep[1] equals "http://localhost:1234/v1/chat/completions")
+forge ol_ep be normalize_local_endpoints("http://localhost:11434/api/chat")
+check("normalize_local_endpoints detects Ollama native", ol_ep[4] also ol_ep[0] equals "http://localhost:11434")
+
+check("sanitize_brain_output rewrites print()", sanitize_brain_output("print(\"hi\")", "canonical") equals "say \"hi\"")
+check("sanitize_brain_output restores !#ai header", startswith(sanitize_brain_output("v x = 1\np(x)", "canonical"), "!#ai\n"))
+
+forge rp be parse_brain_reply("```json\n{\"canonical\":\"say 7\",\"notes\":\"seven\"}\n```", "canonical")
+check("parse_brain_reply extracts fenced JSON", rp differs void also rp[0] equals "say 7" also rp[1] equals "seven")
+
+// ---- 3. brain.sdev: NL solver, micro-brain translator & classifier ----
+forge nl be solve_nl_request("FizzBuzz up to 5")
+check("solve_nl_request generates FizzBuzz", nl differs void also contains(nl, "sequence(1, 6)"))
+
+forge sl be translate_line_speculative("let x = 10")
+check("translate_line_speculative rewrites let", sl[0] equals "forge x be 10")
+
+forge mb be run_micro_brain_translation("def greet(n):\n  print(n)")
+check("run_micro_brain_translation closes block", mb[1] also contains(mb[0], "conjure greet(n) ::") also contains(mb[0], ";;"))
+
+check("micro_brain_accepts accepts clean parsed change", micro_brain_accepts(yep, 0, yep, 1, 0))
+check("micro_brain_accepts rejects unknown names", isnt micro_brain_accepts(yep, 1, yep, 1, 0))
+
+forge ci be classify_line_intent("print \"hello\"")
+check("classify_line_intent classifies PRINT", ci[0] equals "PRINT")
+
+// ---- 4. brain.sdev: WebLLM -> Website AI fallback & IDE helpers ----
+check("brain_candidate_score adds penalties", brain_candidate_score(yep, 2, 1) equals 52)
+check("brain_needs_online_fallback escalates on score > 0", brain_needs_online_fallback(yep, 1, 0, "a", "a"))
+check("brain_needs_online_fallback skips online when clean", isnt brain_needs_online_fallback(yep, 0, 0, "b", "a"))
+check("reconsider_brain_mode escalates auto+local -> online", reconsider_brain_mode("auto", "local", yep, yep) equals "online")
+check("reconsider_brain_mode respects explicit local", reconsider_brain_mode("local", "local", yep, yep) equals "local")
+
+check("translation_has_diff detects rewrite", translation_has_diff("print hi", "say \"hi\""))
+check("translation_has_diff false when identical", isnt translation_has_diff("say \"hi\"", "say \"hi\""))
+check("translation_download_name adds .translated.sdev", translation_download_name("main.sdev", "translated", yep) equals "main.translated.sdev")
+check("translation_download_name keeps written name", translation_download_name("main.sdev", "written", yep) equals "main.sdev")
+check("translation_banner_text names Website AI", contains(translation_banner_text(nope, void, "online"), "Website AI"))
+
+// ---- 5. brain.sdev: Doctor prompts/parser & probe helpers ----
+check("doctor_system_prompt non-empty", contains(doctor_system_prompt(), "SDev Doctor"))
+forge d_fix be parse_doctor_fix("```json\n{\"fixed_code\":\"say 1\",\"explanation\":\"ok\",\"changes\":\"- fixed\",\"how_it_works\":\"runs\",\"confidence\":\"high\"}\n```")
+check("parse_doctor_fix parses JSON", d_fix differs void also d_fix[0] equals "say 1" also d_fix[4] equals "high")
+check("probe_server_type detects LM Studio", probe_server_type("http://localhost:1234") equals "LM Studio")
+check("probe_cors_hint mentions Ollama", contains(probe_cors_hint("http://127.0.0.1:11434"), "OLLAMA_ORIGINS"))
+
+// ---- 6. math.sdev ----
+check("math_request calculate 23-21", math_request("calculate 23-21", []) equals "23-21")
+check("math_request twenty three minus two", math_request("whats twenty three minus two", []) equals "23 - 2")
+check("math_request percent of", math_request("15% of 80", []) equals "(15 * 80 / 100)")
+check("math_request known variable", math_request("calculate x times 2", ["x"]) equals "x * 2")
+
+// ---- 7. tasks.sdev ----
+forge t1 be task_request("count from 1 to 5", [])
+check("task_request count 1 to 5", t1 differs void also t1[0] equals "set i to 1" also t1[1] equals "while i <= 5")
+forge masked_tok be chr(0) + "0" + chr(0)
+forge t2 be task_request("say " + masked_tok + " 2 times", [])
+check("task_request supports masked string token", t2 differs void also t2[2] equals "  say " + masked_tok)
+forge t3 be task_request("is 7 even", [])
+check("task_request is 7 even", t3 differs void also t3[0] equals "if 7 % 2 is 0")
+
+// ---- 8. memory.sdev ----
+forge k1 be memory_understand_key("say 1", "u8")
+forge k2 be memory_understand_key("say 2", "u8")
+check("memory_understand_key stable and distinct", k1 equals memory_understand_key("say 1", "u8") also k1 differs k2)
+
+forge mem_lines be :: "shout \"hi\"": :: "canonical": "say \"hi\"", "hits": 1 ;; ;;
+forge app be memory_apply_lines("  shout \"hi\"\nsay 2", mem_lines)
+check("memory_apply_lines rewrites matching line with indent", app[1] also app[0] equals "  say \"hi\"\nsay 2")
+
+forge learned be memory_learn_names("set total to 0\nto greet with who\n  say who\nend")
+check("memory_learn_names extracts set and to names", measure(learned) equals 2 also learned[0] equals "total" also learned[1] equals "greet")
+
+forge prom be memory_promote_words([["shout", "say"], ["print", "say"]], :: "say": "say" ;;, yep)
+check("memory_promote_words builds synonyms and names", prom[0]["say"] equals "shout" also measure(prom[1]["say"]) equals 2)
+
+forge unm be boards_unmask("say 1\n# sdev:board-block 0\n\nsay 2", [2], ["board \"uno\" {\n}"])
+check("boards_unmask restores board block", unm equals "say 1\nboard \"uno\" {\n}\nsay 2")
+
+speak("\nPure SDEV fallback suite: " + str(passed) + " passed, " + str(failed) + " failed")
+ponder failed > 0 ::
+  hurl "test-agent-fallback.sdev failed"
+;;

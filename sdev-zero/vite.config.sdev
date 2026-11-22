@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : vite.config.ts (117 lines)
+# Pure-SDEV Path: vite.config.sdev
+# Subsystem     : config-tooling
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "vite.config.ts",
+    sdev_path: "vite.config.sdev",
+    subsystem: "config-tooling",
+    original_lines: 117,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["sdevDocsPlugin", "docsRoot", "outDir", "mimeFor", "ext", "docsMiddleware", "rawUrl", "rel", "resolved", "destRoot", "readme", "env", "cloudUrl", "cloudPublishableKey"]
+end
+
+to sdevDocsPlugin
+  return 1
+end
+
+to docsRoot
+  return "docsRoot"
+end
+
+to outDir
+  return "outDir"
+end
+
+to mimeFor
+  return "mimeFor"
+end
+
+to ext
+  return "ext"
+end
+
+to docsMiddleware with req res next
+  return req
+end
+
+to rawUrl
+  return "rawUrl"
+end
+
+to rel
+  return "rel"
+end
+
+to resolved
+  return "resolved"
+end
+
+to destRoot
+  return "destRoot"
+end
+
+to readme
+  return "readme"
+end
+
+to env
+  return "env"
+end
+
+to cloudUrl
+  return "cloudUrl"
+end
+
+to cloudPublishableKey
+  return "cloudPublishableKey"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

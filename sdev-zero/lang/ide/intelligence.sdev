@@ -1,0 +1,105 @@
+# ============================================================
+# SDEV IDE Intelligence — Autocomplete, Symbol Outline, Search & Problems
+# (sdev-zero/lang/ide/intelligence.sdev)
+# 100% Pure SDEV port of languageData.ts, IdeAutocomplete.tsx,
+# IdeOutline.tsx, IdeSearchPanel.tsx, IdeCommandPalette.tsx & IdeProblems.tsx
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/linter/linter.sdev"
+
+to ide_default_keywords
+  return ["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in", "break", "continue", "say", "ask", "use", "board", "pin", "wait", "speak", "forge", "conjure", "ponder", "otherwise", "cycle"]
+end
+
+to ide_autocomplete with prefix_str
+  set p to lower(text_trim(prefix_str))
+  if length(p) is 0
+    return []
+  end
+  set kws to ide_default_keywords()
+  set n to length(kws)
+  set matches to []
+  set i to 0
+  while i < n
+    set w to kws[i]
+    if text_starts_with(w, p)
+      set matches to matches + [w]
+    end
+    set i to i + 1
+  end
+  return matches
+end
+
+to ide_extract_outline with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set symbols to []
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    set line_no to i + 1
+    # v2 function: to <name> ...
+    if text_starts_with(line, "to ")
+      set rest to text_trim(substr(line, 3, length(line) - 3))
+      set sp to index_of(rest, " ")
+      set fname to rest
+      if sp > 0
+        set fname to substr(rest, 0, sp)
+      end
+      set symbols to symbols + ["fn:" + fname + "@" + str(line_no)]
+    end
+    # v1 function: conjure <name>(...
+    if text_starts_with(line, "conjure ")
+      set rest to text_trim(substr(line, 8, length(line) - 8))
+      set lp to index_of(rest, "(")
+      set fname to rest
+      if lp > 0
+        set fname to substr(rest, 0, lp)
+      end
+      set symbols to symbols + ["fn:" + fname + "@" + str(line_no)]
+    end
+    # class / kind / essence
+    if text_starts_with(line, "kind ") or text_starts_with(line, "class ")
+      set sp to index_of(line, " ")
+      set cname to text_trim(substr(line, sp + 1, length(line) - (sp + 1)))
+      set symbols to symbols + ["class:" + cname + "@" + str(line_no)]
+    end
+    # hardware board block
+    if text_starts_with(line, "board \"")
+      set symbols to symbols + ["board@" + str(line_no)]
+    end
+    set i to i + 1
+  end
+  return symbols
+end
+
+to ide_collect_problems with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set problems to []
+  set i to 0
+  while i < n
+    set diag to sdev_lint_line(lines[i], i + 1)
+    if length(text_trim(diag)) > 0
+      set problems to problems + [diag]
+    end
+    set i to i + 1
+  end
+  return problems
+end
+
+to ide_search_in_source with file_name source query
+  set q to lower(text_trim(query))
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set hits to []
+  set i to 0
+  while i < n
+    if index_of(lower(lines[i]), q) >= 0
+      set hits to hits + [file_name + ":" + str(i + 1) + ": " + text_trim(lines[i])]
+    end
+    set i to i + 1
+  end
+  return hits
+end

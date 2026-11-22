@@ -1,0 +1,432 @@
+# =============================================================================
+# SDEV Standard Library: Matrix & Linear Algebra (lang/stdlib/v2/matrix.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+# A Matrix is represented as a flat list:
+#   cell 0 = rows
+#   cell 1 = cols
+#   cells 2..(2 + rows*cols - 1) = row-major elements
+
+to mat_zeros with rows cols
+  set total to rows * cols
+  set m to mklist(total + 2)
+  set m[0] to rows
+  set m[1] to cols
+  set i to 0
+  while i < total
+    set m[i + 2] to 0
+    set i to i + 1
+  end
+  return m
+end
+
+to mat_ones with rows cols
+  set total to rows * cols
+  set m to mklist(total + 2)
+  set m[0] to rows
+  set m[1] to cols
+  set i to 0
+  while i < total
+    set m[i + 2] to 1
+    set i to i + 1
+  end
+  return m
+end
+
+to mat_eye with n
+  set m to mat_zeros(n, n)
+  set i to 0
+  while i < n
+    set m[2 + i * n + i] to 1
+    set i to i + 1
+  end
+  return m
+end
+
+to mat_from_flat with rows cols flat_list
+  set total to rows * cols
+  set m to mklist(total + 2)
+  set m[0] to rows
+  set m[1] to cols
+  set i to 0
+  while i < total
+    set m[i + 2] to flat_list[i]
+    set i to i + 1
+  end
+  return m
+end
+
+to mat_rows with m
+  return m[0]
+end
+
+to mat_cols with m
+  return m[1]
+end
+
+to mat_get with m r c
+  set cols to m[1]
+  return m[2 + r * cols + c]
+end
+
+to mat_set with m r c val
+  set cols to m[1]
+  set m[2 + r * cols + c] to val
+  return m
+end
+
+to mat_add with a b
+  set r to a[0]
+  set c to a[1]
+  set total to r * c
+  set out to mat_zeros(r, c)
+  set i to 0
+  while i < total
+    set out[i + 2] to a[i + 2] + b[i + 2]
+    set i to i + 1
+  end
+  return out
+end
+
+to mat_sub with a b
+  set r to a[0]
+  set c to a[1]
+  set total to r * c
+  set out to mat_zeros(r, c)
+  set i to 0
+  while i < total
+    set out[i + 2] to a[i + 2] - b[i + 2]
+    set i to i + 1
+  end
+  return out
+end
+
+to mat_scale with m scalar
+  set r to m[0]
+  set c to m[1]
+  set total to r * c
+  set out to mat_zeros(r, c)
+  set i to 0
+  while i < total
+    set out[i + 2] to m[i + 2] * scalar
+    set i to i + 1
+  end
+  return out
+end
+
+to mat_mul with a b
+  set r to a[0]
+  set k_dim to a[1]
+  set c to b[1]
+  set out to mat_zeros(r, c)
+  set i to 0
+  while i < r
+    set j to 0
+    while j < c
+      set acc to 0
+      set k to 0
+      while k < k_dim
+        set acc to acc + a[2 + i * k_dim + k] * b[2 + k * c + j]
+        set k to k + 1
+      end
+      set out[2 + i * c + j] to acc
+      set j to j + 1
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to mat_transpose with m
+  set r to m[0]
+  set c to m[1]
+  set out to mat_zeros(c, r)
+  set i to 0
+  while i < r
+    set j to 0
+    while j < c
+      set out[2 + j * r + i] to m[2 + i * c + j]
+      set j to j + 1
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to mat_trace with m
+  set n to m[0]
+  set cols to m[1]
+  set tr to 0
+  set i to 0
+  while i < n
+    set tr to tr + m[2 + i * cols + i]
+    set i to i + 1
+  end
+  return tr
+end
+
+to mat_det with m
+  set n to m[0]
+  if n is 1
+    return m[2]
+  end
+  if n is 2
+    return m[2] * m[5] - m[3] * m[4]
+  end
+  if n is 3
+    set a to m[2]
+    set b to m[3]
+    set c to m[4]
+    set d to m[5]
+    set e to m[6]
+    set f to m[7]
+    set g to m[8]
+    set h to m[9]
+    set ii to m[10]
+    return a * (e * ii - f * h) - b * (d * ii - f * g) + c * (d * h - e * g)
+  end
+  return 0
+end
+
+to mat_dot with v1 v2
+  set n to length(v1)
+  set s to 0
+  set i to 0
+  while i < n
+    set s to s + v1[i] * v2[i]
+    set i to i + 1
+  end
+  return s
+end
+
+to mat_norm_sq with m
+  set total to m[0] * m[1]
+  set s to 0
+  set i to 0
+  while i < total
+    set v to m[i + 2]
+    set s to s + v * v
+    set i to i + 1
+  end
+  return s
+end
+
+to mat_to_str with m
+  set r to m[0]
+  set c to m[1]
+  set out to "["
+  set i to 0
+  while i < r
+    if i > 0
+      set out to out + ", "
+    end
+    set out to out + "["
+    set j to 0
+    while j < c
+      if j > 0
+        set out to out + ", "
+      end
+      set out to out + str(m[2 + i * c + j])
+      set j to j + 1
+    end
+    set out to out + "]"
+    set i to i + 1
+  end
+  set out to out + "]"
+  return concat(out, "")
+end
+
+# ── 2D List-of-Lists Matrix Operations (dual-runtime API parity) ─────────────
+
+to mat2d_create with rows cols fill
+  set out to mklist(rows)
+  set i to 0
+  while i < rows
+    set row to mklist(cols)
+    set j to 0
+    while j < cols
+      set row[j] to fill
+      set j to j + 1
+    end
+    set out[i] to row
+    set i to i + 1
+  end
+  return out
+end
+
+to mat2d_identity with n
+  set out to mat2d_create(n, n, 0)
+  set i to 0
+  while i < n
+    set row to out[i]
+    set row[i] to 1
+    set i to i + 1
+  end
+  return out
+end
+
+to mat2d_transpose with m
+  set rows to length(m)
+  if rows is 0
+    return mklist(0)
+  end
+  set r0 to m[0]
+  set cols to length(r0)
+  set out to mklist(cols)
+  set j to 0
+  while j < cols
+    set row to mklist(rows)
+    set i to 0
+    while i < rows
+      set mr to m[i]
+      set row[i] to mr[j]
+      set i to i + 1
+    end
+    set out[j] to row
+    set j to j + 1
+  end
+  return out
+end
+
+to mat2d_dot with a b
+  set n to length(a)
+  set s to 0
+  set i to 0
+  while i < n
+    set s to s + a[i] * b[i]
+    set i to i + 1
+  end
+  return s
+end
+
+to mat2d_mul with a b
+  set rows_a to length(a)
+  set a0 to a[0]
+  set cols_a to length(a0)
+  set b0 to b[0]
+  set cols_b to length(b0)
+  set out to mklist(rows_a)
+  set i to 0
+  while i < rows_a
+    set row to mklist(cols_b)
+    set ai to a[i]
+    set j to 0
+    while j < cols_b
+      set s to 0
+      set k to 0
+      while k < cols_a
+        set bk to b[k]
+        set s to s + ai[k] * bk[j]
+        set k to k + 1
+      end
+      set row[j] to s
+      set j to j + 1
+    end
+    set out[i] to row
+    set i to i + 1
+  end
+  return out
+end
+
+to mat2d_add with a b
+  set rows to length(a)
+  if rows is 0
+    return mklist(0)
+  end
+  set a0 to a[0]
+  set cols to length(a0)
+  set out to mklist(rows)
+  set i to 0
+  while i < rows
+    set ai to a[i]
+    set bi to b[i]
+    set row to mklist(cols)
+    set j to 0
+    while j < cols
+      set row[j] to ai[j] + bi[j]
+      set j to j + 1
+    end
+    set out[i] to row
+    set i to i + 1
+  end
+  return out
+end
+
+to mat2d_sub with a b
+  set rows to length(a)
+  if rows is 0
+    return mklist(0)
+  end
+  set a0 to a[0]
+  set cols to length(a0)
+  set out to mklist(rows)
+  set i to 0
+  while i < rows
+    set ai to a[i]
+    set bi to b[i]
+    set row to mklist(cols)
+    set j to 0
+    while j < cols
+      set row[j] to ai[j] - bi[j]
+      set j to j + 1
+    end
+    set out[i] to row
+    set i to i + 1
+  end
+  return out
+end
+
+to mat2d_scale with m scalar
+  set rows to length(m)
+  if rows is 0
+    return mklist(0)
+  end
+  set out to mklist(rows)
+  set i to 0
+  while i < rows
+    set mi to m[i]
+    set cols to length(mi)
+    set row to mklist(cols)
+    set j to 0
+    while j < cols
+      set row[j] to mi[j] * scalar
+      set j to j + 1
+    end
+    set out[i] to row
+    set i to i + 1
+  end
+  return out
+end
+
+to mat2d_sum with m
+  set rows to length(m)
+  set s to 0
+  set i to 0
+  while i < rows
+    set mi to m[i]
+    set cols to length(mi)
+    set j to 0
+    while j < cols
+      set s to s + mi[j]
+      set j to j + 1
+    end
+    set i to i + 1
+  end
+  return s
+end
+
+to mat2d_reshape with flat rows cols
+  set out to mklist(rows)
+  set i to 0
+  while i < rows
+    set row to mklist(cols)
+    set j to 0
+    while j < cols
+      set row[j] to flat[i * cols + j]
+      set j to j + 1
+    end
+    set out[i] to row
+    set i to i + 1
+  end
+  return out
+end

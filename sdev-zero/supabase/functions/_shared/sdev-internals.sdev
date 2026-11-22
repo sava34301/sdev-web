@@ -1,0 +1,51 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/_shared/sdev-internals.ts (147 lines)
+# Pure-SDEV Path: supabase/functions/_shared/sdev-internals.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/_shared/sdev-internals.ts",
+    sdev_path: "supabase/functions/_shared/sdev-internals.sdev",
+    subsystem: "edge-function",
+    original_lines: 147,
+    exports_count: 3
+  }
+end
+
+to module_exports
+  return ["instances", "Name", "SDEV_INTERNALS"]
+end
+
+to instances with init_arg
+  return {
+    kind: "instances",
+    subsystem: "edge-function",
+    state: init_arg
+  }
+end
+
+to Name with init_arg
+  return {
+    kind: "Name",
+    subsystem: "edge-function",
+    state: init_arg
+  }
+end
+
+to SDEV_INTERNALS
+  return "SDEV_INTERNALS"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

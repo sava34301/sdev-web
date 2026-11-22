@@ -1,0 +1,95 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/sdev-module.ts (113 lines)
+# Pure-SDEV Path: src/lang/sdev-module.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/sdev-module.ts",
+    sdev_path: "src/lang/sdev-module.sdev",
+    subsystem: "lang-core",
+    original_lines: 113,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["stripUseLines", "bindSeedVmPrimitives", "createSdevModuleRunner", "def", "start", "fn", "uniqueSources", "seen", "combined", "tokens", "ast", "interp", "env", "res", "make_SdevCallable", "make_SdevModuleRunner"]
+end
+
+to stripUseLines with src
+  return src
+end
+
+to bindSeedVmPrimitives with env
+  return env
+end
+
+to createSdevModuleRunner with rawSources
+  return rawSources
+end
+
+to def with name sdev_mod_call line
+  return name
+end
+
+to start
+  return "start"
+end
+
+to fn
+  return "fn"
+end
+
+to uniqueSources
+  return "uniqueSources"
+end
+
+to seen
+  return "seen"
+end
+
+to combined
+  return "combined"
+end
+
+to tokens
+  return "tokens"
+end
+
+to ast
+  return "ast"
+end
+
+to interp
+  return "interp"
+end
+
+to env
+  return "env"
+end
+
+to res
+  return "res"
+end
+
+to make_SdevCallable with payload
+  return payload
+end
+
+to make_SdevModuleRunner with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

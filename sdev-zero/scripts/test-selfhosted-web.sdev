@@ -1,0 +1,57 @@
+# =============================================================================
+# SDEV Self-Hosted Website Builder Test Suite — authored in SDEV
+#
+#   node bin/sdevhost.mjs scripts/test-selfhosted-web.sdev
+#
+# Compiles and executes the complete SDEV Website Building Toolkit
+# (lang/stdlib/v2/web.sdev: icons, themes, transpiler, css, html, components)
+# directly through the self-hosted SDEV compiler on the Seed VM.
+# =============================================================================
+
+use "lang/stdlib/testkit.sdev"
+use "lang/stdlib/v2/web.sdev"
+
+set _ to page("Self-Hosted Web Test")
+set _ to web_meta("Built 100% in self-hosted sdev", "/favicon.png")
+set _ to theme("sdev-dark")
+set _ to css_vars({ custom_accent: "#22d3ee" })
+set _ to style(".hero-box", { backgroundColor: "#111520", padding: "24", borderRadius: "12", opacity: "0.95", zIndex: "5" })
+set _ to style_nested(".hero-box", "&:hover", { borderColor: css_var("custom_accent", "#38bdf8") })
+set _ to media_style("mobile", ".grid-2", { gridTemplateColumns: "1fr" })
+set _ to keyframes("fade-in", { opacity: "0" }, { opacity: "1" })
+set _ to web_state_init("count", "0")
+set _ to open_header({ id: "top", class: "site-header sticky" })
+set _ to nav_el(a_html("Home", "/", { class: "active" }), { "aria-label": "Main" })
+set _ to end_header()
+set _ to open_main({ id: "main" })
+set _ to web_emit(web_tag_emmet("section.hero#intro", "Hero Emmet", {}))
+set _ to h1(raw("Write in " + web_el("span", "plain words", { class: "text-primary" }) + br_el() + "Run anywhere."), {})
+set _ to p("Escape test: 1 < 2 & 3 > 1", {})
+set _ to ul_list(["First", "Second", li_html("Third", { class: "custom" })], { class: "items" })
+set _ to markdown("# Markdown Heading\nParagraph with **bold** and `code`")
+set _ to tabs_component("demo-tabs", [{ id: "t1", label: "Tab 1", content: "<p>Panel 1</p>" }, { id: "t2", label: "Tab 2", content: "<p>Panel 2</p>" }])
+set _ to accordion([{ title: "Q1", content: "A1" }, { title: "Q2", content: "A2" }])
+set _ to data_table(["Name", "Role"], [["Ada", "Engineer"], ["Linus", "Architect"]])
+set _ to modal_dialog("info-modal", "System Ready", "<p>All checks green.</p>", "<button class=\"btn\">OK</button>")
+set _ to route_view("/", 1, "<h2>Home Route</h2>")
+set _ to route_view("/about", 0, "<h2>About Route</h2>")
+set _ to end_main()
+set _ to client_fn("bumpCount", "step", "forge next be state_get(\"count\") + step\nponder next > 10 ::\nstate_set(\"count\", 0)\n;; otherwise ::\nstate_set(\"count\", next)\n;;\ndom_text(\"#status\", \"Updated\")\nyield next")
+set _ to scroll_driver()
+set _ to scroll_reveal()
+set _ to pointer_spotlight()
+set html_doc to endpage()
+
+set _ to check("Web: produces <!DOCTYPE html>", text_starts_with(html_doc, "<!DOCTYPE html>"))
+set _ to check("Web: renders <header> with classes", contains(html_doc, "<header id=\"top\" class=\"site-header sticky\">"))
+set _ to check("Web: renders Emmet tag section.hero#intro", contains(html_doc, "<section id=\"intro\" class=\"hero\">Hero Emmet</section>"))
+set _ to check("Web: renders inline raw() and el() without double escaping", contains(html_doc, "<h1>Write in <span class=\"text-primary\">plain words</span><br>Run anywhere.</h1>"))
+set _ to check("Web: escapes untrusted < and & in text", contains(html_doc, "<p>Escape test: 1 &lt; 2 &amp; 3 &gt; 1</p>"))
+set _ to check("Web: converts camelCase CSS & adds px", contains(html_doc, "background-color: #111520; padding: 24px; border-radius: 12px; opacity: 0.95; z-index: 5;"))
+set _ to check("Web: expands nested &:hover and css_var()", contains(html_doc, ".hero-box:hover { border-color: var(--custom-accent, #38bdf8); }"))
+set _ to check("Web: expands @media mobile query", contains(html_doc, "@media (max-width: 767px)"))
+set _ to check("Web: emits @keyframes", contains(html_doc, "@keyframes fade-in"))
+set _ to check("Web: transpiles sdev client_fn to browser JS", contains(html_doc, "function bumpCount(step)") and contains(html_doc, "window.$sdev.set(\"count\", next)"))
+set _ to check("Web: renders Markdown, Tabs, Accordion, Table, Modal, Routes", contains(html_doc, "<strong>bold</strong>") and contains(html_doc, "data-tab-group=\"demo-tabs\"") and contains(html_doc, "data-route-view=\"/about\""))
+
+set _ to tk_report("self-hosted web toolkit")

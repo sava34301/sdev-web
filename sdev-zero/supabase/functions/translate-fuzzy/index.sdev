@@ -1,0 +1,99 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/translate-fuzzy/index.ts (183 lines)
+# Pure-SDEV Path: supabase/functions/translate-fuzzy/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/translate-fuzzy/index.ts",
+    sdev_path: "supabase/functions/translate-fuzzy/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 183,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["definition", "sdev_mod_new", "corsHeaders", "SYSTEM_PROMPT", "denied", "body", "partial", "sourceLanguage", "original", "stripped", "AI_KEY", "userMessage", "aiResp", "data", "translated"]
+end
+
+to definition with init_arg
+  return {
+    kind: "definition",
+    subsystem: "edge-function",
+    state: init_arg
+  }
+end
+
+to sdev_mod_new with init_arg
+  return {
+    kind: "sdev_mod_new",
+    subsystem: "edge-function",
+    state: init_arg
+  }
+end
+
+to corsHeaders
+  return "corsHeaders"
+end
+
+to SYSTEM_PROMPT
+  return "SYSTEM_PROMPT"
+end
+
+to denied
+  return "denied"
+end
+
+to body
+  return "body"
+end
+
+to partial
+  return "partial"
+end
+
+to sourceLanguage
+  return "sourceLanguage"
+end
+
+to original
+  return "original"
+end
+
+to stripped
+  return "stripped"
+end
+
+to AI_KEY
+  return "AI_KEY"
+end
+
+to userMessage
+  return "userMessage"
+end
+
+to aiResp
+  return "aiResp"
+end
+
+to data
+  return "data"
+end
+
+to translated
+  return "translated"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

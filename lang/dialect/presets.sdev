@@ -1,0 +1,70 @@
+# ============================================================
+# SDEV Dialect Subsystem — Ready-Made Presets & Samples (presets.sdev)
+# 100% Pure SDEV port of src/lang/dialect/presets.ts & sample.ts
+# ============================================================
+
+use "lang/dialect/spec_catalog.sdev"
+
+to preset_bulgarian_spec
+  set s to empty_dialect_spec("Сдев", "sdev-bg", "bg")
+  set s to dialect_spec_set_word(s, "set", "нека")
+  set s to dialect_spec_set_word(s, "to", "бъде")
+  set s to dialect_spec_set_word(s, "say", "кажи")
+  set s to dialect_spec_set_word(s, "if", "ако")
+  set s to dialect_spec_set_word(s, "else", "иначе")
+  set s to dialect_spec_set_word(s, "while", "докато")
+  set s to dialect_spec_set_word(s, "end", "край")
+  set s to dialect_spec_set_word(s, "return", "върни")
+  return s
+end
+
+to preset_spanish_spec
+  set s to empty_dialect_spec("Español SDEV", "sdev-es", "es")
+  set s to dialect_spec_set_word(s, "set", "forjar")
+  set s to dialect_spec_set_word(s, "to", "ser")
+  set s to dialect_spec_set_word(s, "say", "hablar")
+  set s to dialect_spec_set_word(s, "if", "si")
+  set s to dialect_spec_set_word(s, "else", "sino")
+  set s to dialect_spec_set_word(s, "while", "mientras")
+  set s to dialect_spec_set_word(s, "end", "fin")
+  set s to dialect_spec_set_word(s, "return", "retornar")
+  return s
+end
+
+to preset_pirate_spec
+  set s to empty_dialect_spec("Pirate Speak", "sdev-pirate", "en")
+  set s to dialect_spec_set_word(s, "set", "plunder")
+  set s to dialect_spec_set_word(s, "to", "be_yar")
+  set s to dialect_spec_set_word(s, "say", "bellow")
+  set s to dialect_spec_set_word(s, "if", "parley")
+  set s to dialect_spec_set_word(s, "else", "mutiny")
+  set s to dialect_spec_set_word(s, "end", "anchor")
+  return s
+end
+
+to preset_sample_program with slug
+  if slug is "sdev-bg" or slug is "bg"
+    return "нека x бъде 42\nкажи x"
+  end
+  if slug is "sdev-es" or slug is "es"
+    return "forjar x ser 42\nhablar x"
+  end
+  if slug is "sdev-pirate" or slug is "pirate"
+    return "plunder x be_yar 42\nbellow x"
+  end
+  return "set x to 42\nsay x"
+end
+
+to find_dialect_preset with slug
+  set k to lower(text_trim(slug))
+  if k is "sdev-bg" or k is "bg"
+    return { found: 1, spec: preset_bulgarian_spec(), sample: preset_sample_program("sdev-bg") }
+  end
+  if k is "sdev-es" or k is "es"
+    return { found: 1, spec: preset_spanish_spec(), sample: preset_sample_program("sdev-es") }
+  end
+  if k is "sdev-pirate" or k is "pirate"
+    return { found: 1, spec: preset_pirate_spec(), sample: preset_sample_program("sdev-pirate") }
+  end
+  return { found: 0, spec: empty_dialect_spec("Default", "en", "en"), sample: "set x to 42\nsay x" }
+end

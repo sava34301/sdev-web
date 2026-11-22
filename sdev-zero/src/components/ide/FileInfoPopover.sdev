@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/FileInfoPopover.tsx (141 lines)
+# Pure-SDEV Path: src/components/ide/FileInfoPopover.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/FileInfoPopover.tsx",
+    sdev_path: "src/components/ide/FileInfoPopover.sdev",
+    subsystem: "ide-component",
+    original_lines: 141,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["scanPins", "Row", "FileInfoPopover", "found", "re", "info", "body", "existing", "pins", "cached", "resolved", "addr", "bundle", "sdev_mod_sum"]
+end
+
+to scanPins with source
+  return "<sdev-view component=\"scanPins\" subsystem=\"ide-component\">" + str(source) + "</sdev-view>"
+end
+
+to Row with children
+  return "<sdev-view component=\"Row\" subsystem=\"ide-component\">" + str(children) + "</sdev-view>"
+end
+
+to FileInfoPopover with content cloudId runtime translatedSource recipeOps
+  return "<sdev-view component=\"FileInfoPopover\" subsystem=\"ide-component\">" + str(content) + "</sdev-view>"
+end
+
+to found
+  return "<sdev-view component=\"found\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to re
+  return "<sdev-view component=\"re\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to info
+  return "<sdev-view component=\"info\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to body
+  return "<sdev-view component=\"body\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to existing
+  return "<sdev-view component=\"existing\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to pins
+  return "<sdev-view component=\"pins\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to cached
+  return "<sdev-view component=\"cached\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to resolved
+  return "<sdev-view component=\"resolved\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to addr
+  return "<sdev-view component=\"addr\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to bundle
+  return "<sdev-view component=\"bundle\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdev_mod_sum
+  return "<sdev-view component=\"sdev_mod_sum\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

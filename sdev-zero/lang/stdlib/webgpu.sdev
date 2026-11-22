@@ -1,0 +1,235 @@
+# =====================================================================
+# lang/stdlib/webgpu.sdev
+# Milestone 10 — WebGPU acceleration for the browser IDE
+#
+# Provides a thin, sdev-native wrapper over the host's WebGPU bindings.
+# The runtime exposes a handful of host calls (`__wgpu_*`) that the
+# browser build implements through `navigator.gpu`. On Node/native
+# builds without a GPU adapter, every entry point falls back to the
+# pure-sdev CPU tensor kernels so user code stays portable.
+#
+# This module is written entirely in sdev and is compiled by the
+# self-hosted compiler like the rest of the stdlib.
+# =====================================================================
+
+use "lang/stdlib/ml/tensor.sdev" as T
+
+# ---------------------------------------------------------------------
+# Adapter / device lifecycle
+# ---------------------------------------------------------------------
+
+let _device = 0            # opaque handle, 0 = uninitialised
+let _available = -1        # -1 unknown, 0 no, 1 yes
+
+be is_available()
+  if _available == -1 then
+    _available = __wgpu_probe()          # host: returns 0/1
+  end
+  return _available == 1
+end
+
+be init()
+  if not is_available() then
+    return 0
+  end
+  if _device == 0 then
+    _device = __wgpu_request_device()    # host: returns handle or 0
+  end
+  return _device
+end
+
+be device_info()
+  if not is_available() then
+    return "webgpu: unavailable (falling back to CPU)"
+  end
+  return __wgpu_device_info(_device)
+end
+
+# ---------------------------------------------------------------------
+# Buffer management — mirrors the tensor.sdev layout
+# ---------------------------------------------------------------------
+# A gpu_buffer is a small record: [handle, len, shape_list]
+
+be upload(tensor)
+  if not init() then return tensor end
+  let data  = T.data(tensor)
+  let shape = T.shape(tensor)
+  let h = __wgpu_buffer_create(_device, T.numel(tensor))
+  __wgpu_buffer_write(h, data, 0, T.numel(tensor))
+  return mklist(h, T.numel(tensor), shape)
+end
+
+be download(gbuf)
+  let h     = gbuf[0]
+  let n     = gbuf[1]
+  let shape = gbuf[2]
+  let out   = __wgpu_buffer_read(h, n)   # host: returns f64 list
+  return T.from_data(shape, out)
+end
+
+be free(gbuf)
+  __wgpu_buffer_free(gbuf[0])
+  return 0
+end
+
+# ---------------------------------------------------------------------
+# Shader cache — WGSL modules are compiled once and reused
+# ---------------------------------------------------------------------
+
+let _shader_cache = mklist()     # list of [name, pipeline_handle]
+
+be _lookup_shader(name)
+  let i = 0
+  while i < len(_shader_cache) do
+    let entry = _shader_cache[i]
+    if entry[0] == name then return entry[1] end
+    i = i + 1
+  end
+  return 0
+end
+
+be _register_shader(name, wgsl, entry_point)
+  let cached = _lookup_shader(name)
+  if cached != 0 then return cached end
+  let p = __wgpu_pipeline_create(_device, wgsl, entry_point)
+  _shader_cache = append(_shader_cache, mklist(name, p))
+  return p
+end
+
+# ---------------------------------------------------------------------
+# Built-in kernels
+# ---------------------------------------------------------------------
+# Kernels are stored as WGSL string constants. The runtime rejects any
+# WGSL that uses reserved keywords or exceeds 8 storage buffers per the
+# platform notes, so we keep bindings tight (<= 3).
+
+let WGSL_MATMUL = "
+  struct Dims { M: u32, N: u32, K: u32, _pad: u32 };
+  @group(0) @binding(0) var<storage, read>       A : array<f32>;
+  @group(0) @binding(1) var<storage, read>       B : array<f32>;
+  @group(0) @binding(2) var<storage, read_write> C : array<f32>;
+  @group(0) @binding(3) var<uniform>             d : Dims;
+
+  @compute @workgroup_size(8, 8, 1)
+  fn main(@builtin(global_invocation_id) gid : vec3<u32>) {
+    let row = gid.x;
+    let col = gid.y;
+    if (row >= d.M || col >= d.N) { return; }
+    var acc : f32 = 0.0;
+    for (var k : u32 = 0u; k < d.K; k = k + 1u) {
+      acc = acc + A[row * d.K + k] * B[k * d.N + col];
+    }
+    C[row * d.N + col] = acc;
+  }
+"
+
+let WGSL_ELEMENTWISE_ADD = "
+  @group(0) @binding(0) var<storage, read>       A : array<f32>;
+  @group(0) @binding(1) var<storage, read>       B : array<f32>;
+  @group(0) @binding(2) var<storage, read_write> C : array<f32>;
+
+  @compute @workgroup_size(64, 1, 1)
+  fn main(@builtin(global_invocation_id) gid : vec3<u32>) {
+    let i = gid.x;
+    if (i >= arrayLength(&C)) { return; }
+    C[i] = A[i] + B[i];
+  }
+"
+
+let WGSL_RELU = "
+  @group(0) @binding(0) var<storage, read_write> X : array<f32>;
+
+  @compute @workgroup_size(64, 1, 1)
+  fn main(@builtin(global_invocation_id) gid : vec3<u32>) {
+    let i = gid.x;
+    if (i >= arrayLength(&X)) { return; }
+    if (X[i] < 0.0) { X[i] = 0.0; }
+  }
+"
+
+# ---------------------------------------------------------------------
+# High-level ops — GPU when available, CPU otherwise
+# ---------------------------------------------------------------------
+
+be matmul(a, b)
+  if not init() then return T.matmul(a, b) end
+  let ashape = T.shape(a)
+  let bshape = T.shape(b)
+  let M = ashape[0]
+  let K = ashape[1]
+  let N = bshape[1]
+  let ga = upload(a)
+  let gb = upload(b)
+  let gc = mklist(__wgpu_buffer_create(_device, M * N), M * N, mklist(M, N))
+  let pipe = _register_shader("matmul", WGSL_MATMUL, "main")
+  __wgpu_dispatch(_device, pipe,
+                  mklist(ga[0], gb[0], gc[0]),
+                  mklist(M, N, K, 0),         # uniform payload
+                  (M + 7) / 8, (N + 7) / 8, 1)
+  let out = download(gc)
+  free(ga); free(gb); free(gc)
+  return out
+end
+
+be add(a, b)
+  if not init() then return T.add(a, b) end
+  let ga = upload(a)
+  let gb = upload(b)
+  let gc = mklist(__wgpu_buffer_create(_device, ga[1]), ga[1], T.shape(a))
+  let pipe = _register_shader("add", WGSL_ELEMENTWISE_ADD, "main")
+  __wgpu_dispatch(_device, pipe,
+                  mklist(ga[0], gb[0], gc[0]),
+                  mklist(),
+                  (ga[1] + 63) / 64, 1, 1)
+  let out = download(gc)
+  free(ga); free(gb); free(gc)
+  return out
+end
+
+be relu(x)
+  if not init() then return T.relu(x) end
+  let gx = upload(x)
+  let pipe = _register_shader("relu", WGSL_RELU, "main")
+  __wgpu_dispatch(_device, pipe,
+                  mklist(gx[0]),
+                  mklist(),
+                  (gx[1] + 63) / 64, 1, 1)
+  let out = download(gx)
+  free(gx)
+  return out
+end
+
+# ---------------------------------------------------------------------
+# Custom kernels — user code can register WGSL and dispatch directly
+# ---------------------------------------------------------------------
+
+be kernel(name, wgsl)
+  if not init() then return 0 end
+  return _register_shader(name, wgsl, "main")
+end
+
+be run(pipe, gbufs, uniforms, gx, gy, gz)
+  let handles = mklist()
+  let i = 0
+  while i < len(gbufs) do
+    handles = append(handles, gbufs[i][0])
+    i = i + 1
+  end
+  __wgpu_dispatch(_device, pipe, handles, uniforms, gx, gy, gz)
+  return 0
+end
+
+# ---------------------------------------------------------------------
+# Device loss / reinit — the host emits `__wgpu_lost` when the adapter
+# vanishes (tab suspension, driver reset). Long-running training loops
+# should call `heartbeat()` between steps.
+# ---------------------------------------------------------------------
+
+be heartbeat()
+  if _device != 0 and __wgpu_lost(_device) == 1 then
+    _device = 0
+    _shader_cache = mklist()
+    init()
+  end
+  return _device
+end

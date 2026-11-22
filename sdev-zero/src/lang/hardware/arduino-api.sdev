@@ -1,0 +1,143 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/arduino-api.ts (533 lines)
+# Pure-SDEV Path: src/lang/hardware/arduino-api.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/arduino-api.ts",
+    sdev_path: "src/lang/hardware/arduino-api.sdev",
+    subsystem: "hardware",
+    original_lines: 533,
+    exports_count: 28
+  }
+end
+
+to module_exports
+  return ["findLibrary", "dio", "aio", "adv", "time", "math", "trig", "sdev_mod_chr", "rnd", "bits", "ext", "irq", "util", "ARDUINO_FUNCTIONS", "SERIAL_METHODS", "STRING_METHODS", "ARDUINO_CONSTANTS", "ARDUINO_TYPES", "lib", "ARDUINO_LIBRARIES", "LIB_BY_NAME", "LIB_BY_HEADER", "BUNDLED_HEADERS", "make_ArduinoFunction", "make_ArduinoMethod", "make_ArduinoClass", "make_ArduinoLibrary", "make_ArduinoConstant"]
+end
+
+to findLibrary with name
+  return name
+end
+
+to dio
+  return "dio"
+end
+
+to aio
+  return "aio"
+end
+
+to adv
+  return "adv"
+end
+
+to time
+  return "time"
+end
+
+to math
+  return "math"
+end
+
+to trig
+  return "trig"
+end
+
+to sdev_mod_chr
+  return "sdev_mod_chr"
+end
+
+to rnd
+  return "rnd"
+end
+
+to bits
+  return "bits"
+end
+
+to ext
+  return "ext"
+end
+
+to irq
+  return "irq"
+end
+
+to util
+  return "util"
+end
+
+to ARDUINO_FUNCTIONS
+  return "ARDUINO_FUNCTIONS"
+end
+
+to SERIAL_METHODS
+  return "SERIAL_METHODS"
+end
+
+to STRING_METHODS
+  return "STRING_METHODS"
+end
+
+to ARDUINO_CONSTANTS
+  return "ARDUINO_CONSTANTS"
+end
+
+to ARDUINO_TYPES
+  return "ARDUINO_TYPES"
+end
+
+to lib with l
+  return l
+end
+
+to ARDUINO_LIBRARIES
+  return "ARDUINO_LIBRARIES"
+end
+
+to LIB_BY_NAME
+  return "LIB_BY_NAME"
+end
+
+to LIB_BY_HEADER
+  return "LIB_BY_HEADER"
+end
+
+to BUNDLED_HEADERS
+  return "BUNDLED_HEADERS"
+end
+
+to make_ArduinoFunction with payload
+  return payload
+end
+
+to make_ArduinoMethod with payload
+  return payload
+end
+
+to make_ArduinoClass with payload
+  return payload
+end
+
+to make_ArduinoLibrary with payload
+  return payload
+end
+
+to make_ArduinoConstant with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

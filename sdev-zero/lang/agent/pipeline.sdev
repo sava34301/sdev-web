@@ -1,0 +1,315 @@
+# ============================================================
+# SDEV Understander Agent — Full Pipeline, Directives, Repair & Promotion
+# (sdev-zero/lang/agent/pipeline.sdev)
+# 100% Pure SDEV v2 port of directives.ts, boards.ts, repair.ts, vocabulary.ts,
+# sense.ts, promote.ts, ai-dialect, understander & index.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/hardware/strip.sdev"
+use "lang/hardware/understand.sdev"
+use "lang/dialect/spec_catalog.sdev"
+
+to agent_scan_directives with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set mode to "auto"
+  set brain to "auto"
+  set learn to 1
+  set is_ai to 0
+  set found to 0
+  set clean_lines to []
+
+  set i to 0
+  while i < n
+    set raw to lines[i]
+    set trimmed to text_trim(raw)
+    if text_starts_with(trimmed, "!#")
+      set found to 1
+      if trimmed is "!#ai"
+        set is_ai to 1
+      end
+      if trimmed is "!#agent:off"
+        set mode to "off"
+      end
+      if trimmed is "!#agent:on"
+        set mode to "on"
+      end
+      if trimmed is "!#agent:strict"
+        set mode to "strict"
+      end
+      if trimmed is "!#agent:local"
+        set brain to "local"
+      end
+      if trimmed is "!#agent:online"
+        set brain to "online"
+      end
+      if trimmed is "!#agent:none"
+        set brain to "none"
+      end
+      if trimmed is "!#learn:off"
+        set learn to 0
+      end
+      if trimmed is "!#learn:on"
+        set learn to 1
+      end
+      set clean_lines to clean_lines + [""]
+    else
+      set clean_lines to clean_lines + [raw]
+    end
+    set i to i + 1
+  end
+
+  return {
+    found: found,
+    is_ai: is_ai,
+    mode: mode,
+    brain: brain,
+    learn: learn,
+    source: join(clean_lines, "\n")
+  }
+end
+
+to ai_is_dialect with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set i to 0
+  while i < n
+    set t to text_trim(lines[i])
+    if length(t) > 0 and not text_starts_with(t, "#")
+      if t is "!#ai"
+        return 1
+      end
+      return 0
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to ai_to_sdev_line with raw_line
+  set line to text_trim(raw_line)
+  if length(line) is 0 or line is "!#ai" or text_starts_with(line, "!#")
+    return ""
+  end
+  if line is "}"
+    return "end"
+  end
+  if text_starts_with(line, "> ")
+    return "say " + text_trim(substr(line, 2, length(line) - 2))
+  end
+  if text_starts_with(line, "p(") and text_ends_with(line, ")")
+    return "say " + substr(line, 2, length(line) - 3)
+  end
+  if text_starts_with(line, "v ") and index_of(line, " = ") > 0
+    set eq to index_of(line, " = ")
+    set vname to text_trim(substr(line, 2, eq - 2))
+    set vexpr to text_trim(substr(line, eq + 3, length(line) - (eq + 3)))
+    return "set " + vname + " to " + vexpr
+  end
+  if text_starts_with(line, "? ") and text_ends_with(line, "{")
+    set cond to text_trim(substr(line, 2, length(line) - 3))
+    return "if " + cond
+  end
+  if text_starts_with(line, "w ") and text_ends_with(line, "{")
+    set cond to text_trim(substr(line, 2, length(line) - 3))
+    return "while " + cond
+  end
+  if text_starts_with(line, "r ")
+    return "return " + text_trim(substr(line, 2, length(line) - 2))
+  end
+  set eq_idx to index_of(line, " = ")
+  if eq_idx > 0
+    set lhs to text_trim(substr(line, 0, eq_idx))
+    set rhs to text_trim(substr(line, eq_idx + 3, length(line) - (eq_idx + 3)))
+    return "set " + lhs + " to " + rhs
+  end
+  return line
+end
+
+to ai_to_sdev with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set out to []
+  set i to 0
+  while i < n
+    set tr to ai_to_sdev_line(lines[i])
+    if length(tr) > 0
+      set out to out + [tr]
+    end
+    set i to i + 1
+  end
+  return join(out, "\n")
+end
+
+to agent_vocab_canonical with word
+  set w to lower(text_trim(word))
+  if w is "print" or w is "echo" or w is "display" or w is "output" or w is "show" or w is "log" or w is "speak"
+    return "say"
+  end
+  if w is "let" or w is "var" or w is "const" or w is "define" or w is "assign" or w is "forge"
+    return "set"
+  end
+  if w is "be" or w is "equals" or w is "equal"
+    return "to"
+  end
+  if w is "func" or w is "function" or w is "def" or w is "fn" or w is "proc" or w is "conjure"
+    return "to"
+  end
+  if w is "give" or w is "yield" or w is "reply"
+    return "return"
+  end
+  if w is "when" or w is "whenever" or w is "ponder"
+    return "if"
+  end
+  if w is "otherwise"
+    return "else"
+  end
+  if w is "loop" or w is "repeat_while" or w is "cycle"
+    return "while"
+  end
+  if w is "done" or w is "fi" or w is "endif"
+    return "end"
+  end
+  return ""
+end
+
+to understand_line with raw_line
+  set line to text_trim(raw_line)
+  if length(line) is 0 or text_starts_with(line, "#")
+    return raw_line
+  end
+  # "let x = 10" / "var x = 10" / "const x = 10"
+  if (text_starts_with(line, "let ") or text_starts_with(line, "var ")) and index_of(line, " = ") > 0
+    set eq to index_of(line, " = ")
+    set vname to text_trim(substr(line, 4, eq - 4))
+    set vexpr to text_trim(substr(line, eq + 3, length(line) - (eq + 3)))
+    return "set " + vname + " to " + vexpr
+  end
+  if text_starts_with(line, "const ") and index_of(line, " = ") > 0
+    set eq to index_of(line, " = ")
+    set vname to text_trim(substr(line, 6, eq - 6))
+    set vexpr to text_trim(substr(line, eq + 3, length(line) - (eq + 3)))
+    return "set " + vname + " to " + vexpr
+  end
+  # "print x" / "echo x" / "display x" / "show x"
+  if text_starts_with(line, "print ")
+    return "say " + text_trim(substr(line, 6, length(line) - 6))
+  end
+  if text_starts_with(line, "echo ")
+    return "say " + text_trim(substr(line, 5, length(line) - 5))
+  end
+  if text_starts_with(line, "display ")
+    return "say " + text_trim(substr(line, 8, length(line) - 8))
+  end
+  if text_starts_with(line, "show ")
+    return "say " + text_trim(substr(line, 5, length(line) - 5))
+  end
+  return raw_line
+end
+
+to understand_source with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set out to []
+  set i to 0
+  while i < n
+    set out to out + [understand_line(lines[i])]
+    set i to i + 1
+  end
+  return join(out, "\n")
+end
+
+to agent_close_unclosed_blocks with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set depth to 0
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    if text_starts_with(line, "to ") or text_starts_with(line, "if ") or text_starts_with(line, "while ") or text_starts_with(line, "for ")
+      set depth to depth + 1
+    end
+    if line is "end"
+      if depth > 0
+        set depth to depth - 1
+      end
+    end
+    set i to i + 1
+  end
+  set out to source
+  while depth > 0
+    set out to out + "\nend"
+    set depth to depth - 1
+  end
+  return out
+end
+
+to agent_understand_pipeline with source
+  set scan to agent_scan_directives(source)
+  if scan["mode"] is "off"
+    return {
+      source: scan["source"],
+      changed: 0,
+      mode: "off",
+      brain: scan["brain"],
+      is_ai: scan["is_ai"]
+    }
+  end
+
+  set working to scan["source"]
+  if scan["is_ai"] is 1 or ai_is_dialect(source) is 1
+    set working to ai_to_sdev(source)
+  end
+
+  # Mask and understand board blocks separately so firmware is never rewritten as sdev
+  set blk to extract_board_block(working)
+  if blk["found"] is 1
+    set prefix to substr(working, 0, blk["start_idx"])
+    set suffix to substr(working, blk["end_idx"], length(working) - blk["end_idx"])
+    set understood_prefix to understand_source(prefix)
+    set understood_board_body to hw_understand_body(blk["body"])
+    set understood_suffix to understand_source(suffix)
+    set rebuilt_board to "board \"" + blk["board_id"] + "\" {\n" + understood_board_body + "\n}"
+    set final_src to understood_prefix + rebuilt_board + understood_suffix
+    set changed to 0
+    if final_src is not source
+      set changed to 1
+    end
+    return {
+      source: final_src,
+      changed: changed,
+      mode: scan["mode"],
+      brain: scan["brain"],
+      is_ai: scan["is_ai"]
+    }
+  end
+
+  set understood to understand_source(working)
+  set closed to agent_close_unclosed_blocks(understood)
+  set did_change to 0
+  if closed is not source
+    set did_change to 1
+  end
+  return {
+    source: closed,
+    changed: did_change,
+    mode: scan["mode"],
+    brain: scan["brain"],
+    is_ai: scan["is_ai"]
+  }
+end
+
+to agent_promote_to_dialect with name slug learned_pairs
+  set spec to empty_dialect_spec(name, slug, "en")
+  set n to length(learned_pairs)
+  set i to 0
+  while i < n
+    set pair to learned_pairs[i]
+    set custom_word to pair[0]
+    set canonical_word to pair[1]
+    set spec to dialect_spec_set_word(spec, canonical_word, custom_word)
+    set i to i + 1
+  end
+  return spec
+end

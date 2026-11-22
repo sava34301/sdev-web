@@ -1,0 +1,605 @@
+# SDEV Bytecode Virtual Machine — authored in SDEV.
+#
+# A complete stack-based bytecode Virtual Machine and disassembler written in
+# 100% pure SDEV. Implements the SDEV seed VM instruction set with operand stack,
+# call frames, globals, and string pool lookup.
+
+use "lang/bootstrap/seed_vm.sdev"
+
+# ---- VM State Creation ----------------------------------------------------
+
+to vm_create with bytecode pool
+  set vm to {
+    bc: bytecode,
+    pool: pool,
+    pc: 0,
+    sp: 0,
+    fp: 0,
+    csp: 0,
+    stack: mklist(4096),
+    globals: mklist(256),
+    locals: mklist(4096),
+    call_pc: mklist(256),
+    call_fp: mklist(256),
+    str_tab: mklist(4096),
+    str_cnt: 0,
+    list_tab: mklist(2048),
+    list_cnt: 0,
+    output: mklist(1024),
+    out_count: 0,
+    halted: 0,
+    error: ""
+  }
+  return vm
+end
+
+to vm_alloc_str with vm s
+  set idx to vm["str_cnt"]
+  set tab to vm["str_tab"]
+  set tab[idx] to s
+  set vm["str_cnt"] to idx + 1
+  return idx
+end
+
+to vm_get_str with vm idx
+  if idx < 0
+    return ""
+  end
+  if idx >= vm["str_cnt"]
+    return ""
+  end
+  set tab to vm["str_tab"]
+  return tab[idx]
+end
+
+to vm_read_pool_str with pool off
+  if off < 0
+    return ""
+  end
+  if off + 4 > length(pool)
+    return ""
+  end
+  set slen to pool[off] + pool[off + 1] * 256 + pool[off + 2] * 65536 + pool[off + 3] * 16777216
+  set out to ""
+  set i to 0
+  while i < slen
+    if off + 4 + i < length(pool)
+      set out to out + chr(pool[off + 4 + i])
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to vm_sign16 with u
+  if u >= 32768
+    return u - 65536
+  end
+  return u
+end
+
+to vm_sign32 with u
+  if u >= 2147483648
+    return u - 4294967296
+  end
+  return u
+end
+
+to vm_push with vm val
+  set sp to vm["sp"]
+  set stk to vm["stack"]
+  set stk[sp] to val
+  set vm["sp"] to sp + 1
+  return 0
+end
+
+to vm_pop with vm
+  set sp to vm["sp"] - 1
+  set vm["sp"] to sp
+  set stk to vm["stack"]
+  return stk[sp]
+end
+
+# ---- Disassembler ---------------------------------------------------------
+
+to vm_disassemble with bc
+  set n to length(bc)
+  set i to 0
+  set lines to mklist(n)
+  set count to 0
+  while i < n
+    set op to bc[i]
+    if op is 1
+      set v to bc[i + 1] + bc[i + 2] * 256 + bc[i + 3] * 65536 + bc[i + 4] * 16777216
+      set lines[count] to str(i) + ": PUSH_I32 " + str(v)
+      set i to i + 5
+    else
+      if op is 2
+        set off to bc[i + 1] + bc[i + 2] * 256
+        set lines[count] to str(i) + ": PUSH_STR @" + str(off)
+        set i to i + 3
+      else
+        if op is 16
+          set lines[count] to str(i) + ": ADD"
+          set i to i + 1
+        else
+          if op is 17
+            set lines[count] to str(i) + ": SUB"
+            set i to i + 1
+          else
+            if op is 18
+              set lines[count] to str(i) + ": MUL"
+              set i to i + 1
+            else
+              if op is 80
+                set lines[count] to str(i) + ": SAY_I32"
+                set i to i + 1
+              else
+                if op is 81
+                  set lines[count] to str(i) + ": SAY_STR"
+                  set i to i + 1
+                else
+                  if op is 255
+                    set lines[count] to str(i) + ": HALT"
+                    set i to i + 1
+                  else
+                    set lines[count] to str(i) + ": OP_" + str(op)
+                    set i to i + 1
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    set count to count + 1
+  end
+  set res to mklist(count)
+  set j to 0
+  while j < count
+    set res[j] to lines[j]
+    set j to j + 1
+  end
+  return res
+end
+
+# ---- Single Step Execution ------------------------------------------------
+
+to vm_step with vm
+  if vm["halted"] is 1
+    return 0
+  end
+  set pc to vm["pc"]
+  set bc to vm["bc"]
+  if pc >= length(bc)
+    set vm["halted"] to 1
+    return 0
+  end
+
+  set op to bc[pc]
+
+  # PUSH_I32
+  if op is 1
+    set v to bc[pc + 1] + bc[pc + 2] * 256 + bc[pc + 3] * 65536 + bc[pc + 4] * 16777216
+    set _ to vm_push(vm, vm_sign32(v))
+    set vm["pc"] to pc + 5
+    return 1
+  end
+
+  # PUSH_STR
+  if op is 2
+    set off to bc[pc + 1] + bc[pc + 2] * 256
+    set s to vm_read_pool_str(vm["pool"], off)
+    set sid to vm_alloc_str(vm, s)
+    set _ to vm_push(vm, sid)
+    set vm["pc"] to pc + 3
+    return 1
+  end
+
+  # LOAD global
+  if op is 3
+    set slot to bc[pc + 1]
+    set g to vm["globals"]
+    set _ to vm_push(vm, g[slot])
+    set vm["pc"] to pc + 2
+    return 1
+  end
+
+  # STORE global
+  if op is 4
+    set slot to bc[pc + 1]
+    set g to vm["globals"]
+    set g[slot] to vm_pop(vm)
+    set vm["pc"] to pc + 2
+    return 1
+  end
+
+  # POP
+  if op is 5
+    set _ to vm_pop(vm)
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # ADD
+  if op is 16
+    set b to vm_pop(vm)
+    set a to vm_pop(vm)
+    set _ to vm_push(vm, a + b)
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # SUB
+  if op is 17
+    set b to vm_pop(vm)
+    set a to vm_pop(vm)
+    set _ to vm_push(vm, a - b)
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # MUL
+  if op is 18
+    set b to vm_pop(vm)
+    set a to vm_pop(vm)
+    set _ to vm_push(vm, a * b)
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # DIV
+  if op is 19
+    set b to vm_pop(vm)
+    set a to vm_pop(vm)
+    set _ to vm_push(vm, a / b)
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # MOD
+  if op is 20
+    set b to vm_pop(vm)
+    set a to vm_pop(vm)
+    set _ to vm_push(vm, a % b)
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # EQ..GE (32..37)
+  if op >= 32
+    if op <= 37
+      set b to vm_pop(vm)
+      set a to vm_pop(vm)
+      set r to 0
+      if op is 32
+        if a is b
+          set r to 1
+        end
+      end
+      if op is 33
+        if a is not b
+          set r to 1
+        end
+      end
+      if op is 34
+        if a < b
+          set r to 1
+        end
+      end
+      if op is 35
+        if a > b
+          set r to 1
+        end
+      end
+      if op is 36
+        if a <= b
+          set r to 1
+        end
+      end
+      if op is 37
+        if a >= b
+          set r to 1
+        end
+      end
+      set _ to vm_push(vm, r)
+      set vm["pc"] to pc + 1
+      return 1
+    end
+  end
+
+  # NOT (48)
+  if op is 48
+    set a to vm_pop(vm)
+    if a is 0
+      set _ to vm_push(vm, 1)
+    else
+      set _ to vm_push(vm, 0)
+    end
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # JMP (64)
+  if op is 64
+    set off to vm_sign16(bc[pc + 1] + bc[pc + 2] * 256)
+    set vm["pc"] to pc + 3 + off
+    return 1
+  end
+
+  # JZ (65)
+  if op is 65
+    set off to vm_sign16(bc[pc + 1] + bc[pc + 2] * 256)
+    set cond to vm_pop(vm)
+    if cond is 0
+      set vm["pc"] to pc + 3 + off
+    else
+      set vm["pc"] to pc + 3
+    end
+    return 1
+  end
+
+  # SAY_I32 (80)
+  if op is 80
+    set val to vm_pop(vm)
+    set cnt to vm["out_count"]
+    set out to vm["output"]
+    set out[cnt] to str(val)
+    set vm["out_count"] to cnt + 1
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # SAY_STR (81)
+  if op is 81
+    set sid to vm_pop(vm)
+    set cnt to vm["out_count"]
+    set out to vm["output"]
+    set out[cnt] to vm_get_str(vm, sid)
+    set vm["out_count"] to cnt + 1
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # CALL (96): u16 target, u8 nargs
+  if op is 96
+    set target to bc[pc + 1] + bc[pc + 2] * 256
+    set nargs to bc[pc + 3]
+    set csp to vm["csp"]
+    set cpc to vm["call_pc"]
+    set cfp to vm["call_fp"]
+    set cpc[csp] to pc + 4
+    set cfp[csp] to vm["fp"]
+    set vm["csp"] to csp + 1
+    set new_fp to vm["fp"] + 64
+    set vm["fp"] to new_fp
+    set locs to vm["locals"]
+    set k to nargs - 1
+    while k >= 0
+      set locs[new_fp + k] to vm_pop(vm)
+      set k to k - 1
+    end
+    set vm["pc"] to target
+    return 1
+  end
+
+  # RET (97)
+  if op is 97
+    set csp to vm["csp"] - 1
+    set vm["csp"] to csp
+    set cpc to vm["call_pc"]
+    set cfp to vm["call_fp"]
+    set vm["pc"] to cpc[csp]
+    set vm["fp"] to cfp[csp]
+    return 1
+  end
+
+  # ENTER (98): u8 nextras
+  if op is 98
+    set vm["pc"] to pc + 2
+    return 1
+  end
+
+  # LOAD_LOC (99)
+  if op is 99
+    set slot to bc[pc + 1]
+    set locs to vm["locals"]
+    set _ to vm_push(vm, locs[vm["fp"] + slot])
+    set vm["pc"] to pc + 2
+    return 1
+  end
+
+  # STORE_LOC (100)
+  if op is 100
+    set slot to bc[pc + 1]
+    set locs to vm["locals"]
+    set locs[vm["fp"] + slot] to vm_pop(vm)
+    set vm["pc"] to pc + 2
+    return 1
+  end
+
+  # LEN (131)
+  if op is 131
+    set sid to vm_pop(vm)
+    set _ to vm_push(vm, length(vm_get_str(vm, sid)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # SGET / ord (132)
+  if op is 132
+    set idx to vm_pop(vm)
+    set sid to vm_pop(vm)
+    set _ to vm_push(vm, ord(vm_get_str(vm, sid), idx))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # I2S / str (135)
+  if op is 135
+    set v to vm_pop(vm)
+    set _ to vm_push(vm, vm_alloc_str(vm, str(v)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # CHR (136)
+  if op is 136
+    set v to vm_pop(vm)
+    set _ to vm_push(vm, vm_alloc_str(vm, chr(v)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # STREQ (144)
+  if op is 144
+    set b to vm_get_str(vm, vm_pop(vm))
+    set a to vm_get_str(vm, vm_pop(vm))
+    if a is b
+      set _ to vm_push(vm, 1)
+    else
+      set _ to vm_push(vm, 0)
+    end
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # STRCAT (145)
+  if op is 145
+    set b to vm_get_str(vm, vm_pop(vm))
+    set a to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, vm_alloc_str(vm, a + b))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # UPPER (146), LOWER (147), TRIM (148)
+  if op is 146
+    set s to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, vm_alloc_str(vm, upper(s)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+  if op is 147
+    set s to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, vm_alloc_str(vm, lower(s)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+  if op is 148
+    set s to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, vm_alloc_str(vm, trim(s)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # SUBSTR (149)
+  if op is 149
+    set slen to vm_pop(vm)
+    set st to vm_pop(vm)
+    set s to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, vm_alloc_str(vm, substr(s, st, slen)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # FIND (150)
+  if op is 150
+    set needle to vm_get_str(vm, vm_pop(vm))
+    set hay to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, find(hay, needle))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # IABS (155), IMIN (156), IMAX (157)
+  if op is 155
+    set _ to vm_push(vm, abs(vm_pop(vm)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+  if op is 156
+    set b to vm_pop(vm)
+    set a to vm_pop(vm)
+    set _ to vm_push(vm, min(a, b))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+  if op is 157
+    set b to vm_pop(vm)
+    set a to vm_pop(vm)
+    set _ to vm_push(vm, max(a, b))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # READFILE (176), WRITEFILE (177)
+  if op is 176
+    set p to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, vm_alloc_str(vm, read_file(p)))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+  if op is 177
+    set d to vm_get_str(vm, vm_pop(vm))
+    set p to vm_get_str(vm, vm_pop(vm))
+    set _ to vm_push(vm, write_file(p, d))
+    set vm["pc"] to pc + 1
+    return 1
+  end
+
+  # HALT
+  if op is 255
+    set vm["halted"] to 1
+    set vm["pc"] to pc + 1
+    return 0
+  end
+
+  set vm["error"] to "unknown opcode: " + str(op)
+  set vm["halted"] to 1
+  return 0
+end
+
+# ---- Run Until Termination ------------------------------------------------
+
+to vm_run with vm max_steps
+  set steps to 0
+  while vm["halted"] is 0
+    if steps >= max_steps
+      set vm["error"] to "step limit exceeded"
+      return vm["output"]
+    end
+    set ok to vm_step(vm)
+    set steps to steps + 1
+  end
+  return vm["output"]
+end
+
+# Parse the integer-per-line stream produced by lang/compiler/driver.sdev
+# (`<bc_len>\n<byte>...\n<pool_len>\n<byte>...`) into a ready-to-run VM.
+to vm_from_driver_stream with stream_text
+  set lines to split(trim(stream_text), "\n")
+  if length(lines) < 2
+    return vm_create(mklist(0), mklist(0))
+  end
+  set bc_len to int(trim(lines[0]))
+  set bc to mklist(bc_len)
+  set i to 0
+  while i < bc_len
+    set bc[i] to int(trim(lines[1 + i]))
+    set i to i + 1
+  end
+  set pool_idx to 1 + bc_len
+  set pool_len to 0
+  if pool_idx < length(lines)
+    set pool_len to int(trim(lines[pool_idx]))
+  end
+  set pool to mklist(pool_len)
+  set j to 0
+  while j < pool_len
+    set pool[j] to int(trim(lines[pool_idx + 1 + j]))
+    set j to j + 1
+  end
+  return vm_create(bc, pool)
+end

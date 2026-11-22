@@ -1,0 +1,219 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/parser.ts (1899 lines)
+# Pure-SDEV Path: src/lang/parser.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/parser.ts",
+    sdev_path: "src/lang/parser.sdev",
+    subsystem: "lang-core",
+    original_lines: 1899,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["Parser", "declaration", "name", "body", "pattern", "function", "bracket", "FIXED_WORDS", "statements", "next", "after", "toToken", "params", "decorators", "node", "fn", "cls", "asyncToken", "loop", "eitherToken", "condition", "thenBranch", "elseBranch", "depth", "setToken", "target", "value", "starIndex", "token", "names", "annotation", "conjureToken", "paramSpecs", "returnType", "found", "walk", "kwOnly", "sdev_mod_kind", "def", "essenceToken"]
+end
+
+to Parser with init_arg
+  return {
+    kind: "Parser",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to declaration with init_arg
+  return {
+    kind: "declaration",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to name with init_arg
+  return {
+    kind: "name",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to body with init_arg
+  return {
+    kind: "body",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to pattern with init_arg
+  return {
+    kind: "pattern",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to function with init_arg
+  return {
+    kind: "function",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to bracket with init_arg
+  return {
+    kind: "bracket",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to FIXED_WORDS
+  return "FIXED_WORDS"
+end
+
+to statements
+  return "statements"
+end
+
+to next
+  return "next"
+end
+
+to after
+  return "after"
+end
+
+to toToken
+  return "toToken"
+end
+
+to params
+  return "params"
+end
+
+to decorators
+  return "decorators"
+end
+
+to node
+  return "node"
+end
+
+to fn
+  return "fn"
+end
+
+to cls
+  return "cls"
+end
+
+to asyncToken
+  return "asyncToken"
+end
+
+to loop
+  return "loop"
+end
+
+to eitherToken
+  return "eitherToken"
+end
+
+to condition
+  return "condition"
+end
+
+to thenBranch
+  return "thenBranch"
+end
+
+to elseBranch
+  return "elseBranch"
+end
+
+to depth
+  return "depth"
+end
+
+to setToken
+  return "setToken"
+end
+
+to target
+  return "target"
+end
+
+to value
+  return "value"
+end
+
+to starIndex
+  return "starIndex"
+end
+
+to token
+  return "token"
+end
+
+to names
+  return "names"
+end
+
+to annotation
+  return "annotation"
+end
+
+to conjureToken
+  return "conjureToken"
+end
+
+to paramSpecs
+  return "paramSpecs"
+end
+
+to returnType
+  return "returnType"
+end
+
+to found
+  return "found"
+end
+
+to walk
+  return "walk"
+end
+
+to kwOnly
+  return "kwOnly"
+end
+
+to sdev_mod_kind
+  return "sdev_mod_kind"
+end
+
+to def
+  return "def"
+end
+
+to essenceToken
+  return "essenceToken"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

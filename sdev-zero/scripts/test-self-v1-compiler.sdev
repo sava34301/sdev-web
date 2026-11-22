@@ -1,0 +1,109 @@
+# Self-hosted SDEV v1 compiler & toolchain verification — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-self-v1-compiler.sdev
+#
+# Verifies all 6 layers of the self-hosted v1 compiler:
+#   1. v1_lexer.sdev (self == oracle + live tokenization)
+#   2. v1_parser.sdev (self == oracle + live RPN statement/expr AST emission)
+#   3. v1_codegen.sdev / v1_driver.sdev (self == oracle)
+#   4. v1_self.sdev 100% pure-v1 compiler fixed point (Stage 1 == Stage 2 == Stage 3)
+#   5. v1_ir.sdev (self == oracle + live compile/disassemble/VM execution)
+#   6. v1_frontend.sdev (self == oracle + full v1-to-v2 syntax transpilation)
+
+use "lang/stdlib/testkit.sdev"
+use "lang/compiler/v1_lexer.sdev"
+use "lang/compiler/v1_parser.sdev"
+use "lang/compiler/v1_ir.sdev"
+use "lang/legacy/v1_frontend.sdev"
+
+set tk_kind  to mklist(2048)
+set tk_num   to mklist(2048)
+set tk_num2  to mklist(2048)
+set tk_txt   to mklist(2048)
+set tk_count to 0
+
+to v1c_check_parity with label self_key boot_key
+  set a to read_file(self_key)
+  set b to read_file(boot_key)
+  if find(a, "error ") is 0 or find(b, "error ") is 0
+    set _ to check(concat(label, " (compile succeeded)"), 0)
+    return 0
+  end
+  set ok to length(a) > 0 and str_same(a, b)
+  set _ to check(concat(label, ": self == oracle byte-identical"), ok)
+  if ok is 0
+    say concat("     first differing byte: ", str(first_diff(a, b)))
+  end
+  return 0
+end
+
+# ---- Layer 1-6 Module Parity (self == oracle) ------------------------------
+
+set _ to v1c_check_parity("lang/compiler/v1_lexer.sdev", "sdev:compile:self:lang/compiler/v1_lexer.sdev", "sdev:compile:boot:lang/compiler/v1_lexer.sdev")
+set _ to v1c_check_parity("lang/compiler/v1_parser.sdev", "sdev:compile:self:lang/compiler/v1_parser.sdev", "sdev:compile:boot:lang/compiler/v1_parser.sdev")
+set _ to v1c_check_parity("lang/compiler/v1_driver.sdev", "sdev:compile:self:lang/compiler/v1_driver.sdev", "sdev:compile:boot:lang/compiler/v1_driver.sdev")
+set _ to v1c_check_parity("lang/compiler/v1_ir.sdev", "sdev:compile:self:lang/compiler/v1_ir.sdev", "sdev:compile:boot:lang/compiler/v1_ir.sdev")
+set _ to v1c_check_parity("lang/legacy/v1_frontend.sdev", "sdev:compile:self:lang/legacy/v1_frontend.sdev", "sdev:compile:boot:lang/legacy/v1_frontend.sdev")
+
+# ---- Layer 4: Pure-v1 Self-Hosting Fixed Point -----------------------------
+
+set drv1 to read_file("sdev:driver:v1")
+set st1  to read_file("sdev:driver:v1-self")
+set st2  to read_file("sdev:driver:v1-self-stage2")
+set st3  to read_file("sdev:compile:v1-self-stage2:lang/compiler/v1_self.sdev")
+
+set _ to check("v1_driver.sdev compiled without error", length(drv1) > 0 and find(drv1, "error ") is not 0)
+set _ to check("v1_self.sdev Stage 1 built by v1_driver", length(st1) > 0 and find(st1, "error ") is not 0)
+set _ to check("v1_self.sdev Stage 2 built by Stage 1", length(st2) > 0 and find(st2, "error ") is not 0)
+set _ to check("v1_self.sdev Stage 3 built by Stage 2", length(st3) > 0 and find(st3, "error ") is not 0)
+set _ to check("v1_self fixed point Stage 1 == Stage 2", length(st1) > 0 and str_same(st1, st2))
+set _ to check("v1_self fixed point Stage 2 == Stage 3", length(st2) > 0 and str_same(st2, st3))
+
+set v1_self_src to read_file("lang/compiler/v1_self.sdev")
+set _ to check("v1_self.sdev uses v1 syntax (conjure/forge/ponder/;;)", contains(v1_self_src, "conjure ") and contains(v1_self_src, "forge ") and contains(v1_self_src, "ponder ") and contains(v1_self_src, ";;"))
+set _ to check("v1_self.sdev has no v2 statement leaks", find(v1_self_src, "\nset ") < 0 and find(v1_self_src, "\nsay ") < 0 and find(v1_self_src, "\nto ") < 0 and find(v1_self_src, "\nwhile ") < 0)
+
+# ---- Layer 1: Live v1 Lexer Verification -----------------------------------
+
+set lex_toks to v1_lex_list("conjure f(x) :: ponder x equals 0x10 :: yield f\"v={x}\" ;; ;;")
+set _ to check("v1_lex_list emits EOF sentinel", length(lex_toks) > 10 and str_same(lex_toks[length(lex_toks) - 1], "EOF"))
+set _ to check("v1_lex_list recognizes conjure/::/hex/fstring/;;", str_same(lex_toks[0], "I=conjure") and str_same(lex_toks[5], "P=::") and str_same(lex_toks[9], "N=16") and str_same(lex_toks[12], "FS=v={x}") and str_same(lex_toks[14], "P=;;"))
+
+# ---- Layer 2: Live v1 RPN Parser Verification ------------------------------
+
+set p_src to "forge ans be 2 + 3 * 4\nponder ans equals 14 :: speak(ans) ;;"
+set p_toks to v1_lex_list(p_src)
+set tk_count to v1_p_load_tokens(p_toks, tk_kind, tk_num, tk_num2, tk_txt)
+set _ to v1_rpn_reset(0)
+set ppos to 0
+while ppos < tk_count
+  if tk_kind[ppos] is 5
+    set ppos to ppos + 1
+  else
+    set np to v1_parse_rpn_stmt(ppos)
+    if np is ppos
+      break
+    end
+    set ppos to np
+  end
+end
+set rpn to v1_rpn_results()
+set _ to check("v1_parse_rpn_stmt emits arithmetic + ASSIGN", length(rpn) > 8 and str_same(rpn[0], "N=2") and str_same(rpn[4], "OP=+"))
+set _ to check("v1_parse_rpn_stmt consumes entire input", ppos is tk_count)
+
+# ---- Layer 5: Live v1 IR Compiler, Disassembler & VM -----------------------
+
+set ir_sample to "forge x be 2 + 3 * 4\nponder x equals 14 ::\n  ponder x > 10 :: speak(x) ;;\notherwise ::\n  speak(0)\n;;\nconjure fact(n) ::\n  ponder n <= 1 :: yield 1 ;;\n  yield n * fact(n - 1)\n;;\nspeak(fact(5))\nforge xs be [10, 20, 30]\nspeak(xs[1])\nforge d be {\"a\": 99}\nspeak(d.a)\nforge i be 0\nforge sum be 0\ncycle i < 4 ::\n  sum += i\n  i += 1\n;;\nspeak(sum)"
+set ir_chunk to v1_ir_compile(ir_sample)
+set ir_dis to v1_ir_disassemble(ir_chunk)
+set ir_out to v1_ir_run(ir_chunk)
+set _ to check("v1_ir_disassemble emits MAKE_FUNC & HALT", contains(ir_dis, "MAKE_FUNC") and contains(ir_dis, "HALT") and contains(ir_dis, "MAKE_DICT"))
+set _ to check("v1_ir_run executes sample program", str_same(ir_out, "14\n120\n20\n99\n6"))
+
+# ---- Layer 6: Live v1-to-v2 Frontend Transpiler ----------------------------
+
+set fe_src to "essence Box ::\n  conjure init(me, v) ::\n    me.v be v\n  ;;\n;;\nforge i be 0\ncycle i < 3 also yep ::\n  i += 1\n;;\nspeak(i)"
+set fe_v2 to v1_to_v2_source(fe_src)
+set _ to check("v1_frontend essence/init/self/while/and/true/say", contains(fe_v2, "kind Box") and contains(fe_v2, "to init with v") and contains(fe_v2, "set self.v to v") and contains(fe_v2, "while i < 3 and true") and contains(fe_v2, "say i"))
+
+set _ to tk_report("self-hosted v1 compiler")

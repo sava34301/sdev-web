@@ -1,0 +1,26 @@
+# SDEV v1 Self-Hosted Compiler Driver — authored in SDEV v2.
+#
+# Reads SDEV v1 source from virtual <stdin>, compiles it to Seed VM bytecode
+# and string pool via v1_compile_source, and writes:
+#   <bc_len> <bc_bytes...> <pool_len> <pool_bytes...>
+
+use "lang/compiler/v1_codegen.sdev"
+
+set v1_drv_src to read_file("<stdin>")
+v1_compile_source(v1_drv_src)
+
+set v1_drv_bc_len to cg_bc[0]
+say v1_drv_bc_len
+set v1_drv_i to 1
+while v1_drv_i <= v1_drv_bc_len
+  say cg_bc[v1_drv_i]
+  set v1_drv_i to v1_drv_i + 1
+end
+
+set v1_drv_pool_len to cg_pool_bytes[0]
+say v1_drv_pool_len
+set v1_drv_j to 1
+while v1_drv_j <= v1_drv_pool_len
+  say cg_pool_bytes[v1_drv_j]
+  set v1_drv_j to v1_drv_j + 1
+end

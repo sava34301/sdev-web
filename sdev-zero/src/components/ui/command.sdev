@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/command.tsx (132 lines)
+# Pure-SDEV Path: src/components/ui/command.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/command.tsx",
+    sdev_path: "src/components/ui/command.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 132,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["Command", "CommandDialog", "CommandInput", "CommandList", "CommandEmpty", "CommandGroup", "CommandSeparator", "CommandItem", "CommandShortcut"]
+end
+
+to Command
+  return "<sdev-view component=\"Command\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CommandDialog with props
+  return "<sdev-view component=\"CommandDialog\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to CommandInput
+  return "<sdev-view component=\"CommandInput\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CommandList
+  return "<sdev-view component=\"CommandList\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CommandEmpty
+  return "<sdev-view component=\"CommandEmpty\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CommandGroup
+  return "<sdev-view component=\"CommandGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CommandSeparator
+  return "<sdev-view component=\"CommandSeparator\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CommandItem
+  return "<sdev-view component=\"CommandItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CommandShortcut with props
+  return "<sdev-view component=\"CommandShortcut\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

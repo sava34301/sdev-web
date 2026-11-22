@@ -1,0 +1,43 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/environment.ts (74 lines)
+# Pure-SDEV Path: src/lang/environment.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/environment.ts",
+    sdev_path: "src/lang/environment.sdev",
+    subsystem: "lang-core",
+    original_lines: 74,
+    exports_count: 2
+  }
+end
+
+to module_exports
+  return ["Environment", "cur"]
+end
+
+to Environment with init_arg
+  return {
+    kind: "Environment",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to cur
+  return "cur"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

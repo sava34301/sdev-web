@@ -1,0 +1,69 @@
+# ============================================================
+# SDEV MCP Subsystem — Model Context Protocol (MCP) JSON-RPC 2.0 Server
+# (sdev-zero/lang/mcp/mcp_server.sdev)
+# 100% Pure SDEV port of src/lib/mcp/index.ts, tools/files.ts,
+# tools/community.ts & supabase/functions/mcp/index.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to mcp_server_metadata
+  return {
+    name: "sdev-simple-developer-language",
+    title: "Sdev: Simple Developer Language",
+    version: "2.4.0",
+    protocol_version: "2024-11-05"
+  }
+end
+
+to mcp_tool_names
+  return ["list_files", "read_file", "save_file", "list_dialects", "list_gists", "read_gist", "run_sdev", "lint_sdev"]
+end
+
+to mcp_create_workspace
+  set files to {}
+  set files["main.sdev"] to "set greeting to \"Hello from SDEV MCP\"\nsay greeting"
+  set dialects to ["@sava/sdev-bg", "@sava/sdev-es", "@sava/sdev-pirate"]
+  set gists to {}
+  set gists["gist-101"] to "set fib to 832040\nsay fib"
+  return {
+    files: files,
+    dialects: dialects,
+    gists: gists
+  }
+end
+
+to mcp_call_tool with ws tool_name arg1 arg2
+  if tool_name is "list_files"
+    set f to keys(ws["files"])
+    return { ok: 1, tool: "list_files", result: join(f, ",") }
+  end
+  if tool_name is "read_file"
+    set files to ws["files"]
+    if files[arg1] is nothing
+      return { ok: 0, tool: "read_file", result: "error: file not found: " + arg1 }
+    end
+    return { ok: 1, tool: "read_file", result: concat(files[arg1], "") }
+  end
+  if tool_name is "save_file"
+    set files to ws["files"]
+    set files[arg1] to arg2
+    set ws["files"] to files
+    return { ok: 1, tool: "save_file", result: "saved " + arg1 + " (" + str(length(arg2)) + " bytes)" }
+  end
+  if tool_name is "list_dialects"
+    return { ok: 1, tool: "list_dialects", result: join(ws["dialects"], ",") }
+  end
+  if tool_name is "list_gists"
+    set g to keys(ws["gists"])
+    return { ok: 1, tool: "list_gists", result: join(g, ",") }
+  end
+  if tool_name is "read_gist"
+    set gists to ws["gists"]
+    if gists[arg1] is nothing
+      return { ok: 0, tool: "read_gist", result: "error: gist not found" }
+    end
+    return { ok: 1, tool: "read_gist", result: concat(gists[arg1], "") }
+  end
+  return { ok: 0, tool: tool_name, result: "error: unknown MCP tool " + tool_name }
+end

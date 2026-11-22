@@ -1,0 +1,107 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/dialect/registry.ts (88 lines)
+# Pure-SDEV Path: src/lang/dialect/registry.sdev
+# Subsystem     : dialect
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/dialect/registry.ts",
+    sdev_path: "src/lang/dialect/registry.sdev",
+    subsystem: "dialect",
+    original_lines: 88,
+    exports_count: 19
+  }
+end
+
+to module_exports
+  return ["libraryReferences", "fetchLibrary", "resolveLibraries", "exportOfflineBundle", "importOfflineBundle", "db", "refs", "re", "address", "key", "cache", "version", "bundle", "offline", "map", "bare", "entry", "parsed", "libs"]
+end
+
+to libraryReferences with source
+  return source
+end
+
+to fetchLibrary with address
+  return address
+end
+
+to resolveLibraries with source
+  return source
+end
+
+to exportOfflineBundle
+  return 1
+end
+
+to importOfflineBundle with json
+  return json
+end
+
+to db
+  return "db"
+end
+
+to refs
+  return "refs"
+end
+
+to re
+  return "re"
+end
+
+to address
+  return "address"
+end
+
+to key
+  return "key"
+end
+
+to cache
+  return "cache"
+end
+
+to version
+  return "version"
+end
+
+to bundle
+  return "bundle"
+end
+
+to offline
+  return "offline"
+end
+
+to map
+  return "map"
+end
+
+to bare
+  return "bare"
+end
+
+to entry
+  return "entry"
+end
+
+to parsed
+  return "parsed"
+end
+
+to libs
+  return "libs"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

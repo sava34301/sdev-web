@@ -1,0 +1,127 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/AppPreviewPanel.tsx (253 lines)
+# Pure-SDEV Path: src/components/ide/AppPreviewPanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/AppPreviewPanel.tsx",
+    sdev_path: "src/components/ide/AppPreviewPanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 253,
+    exports_count: 24
+  }
+end
+
+to module_exports
+  return ["AppPreviewPanel", "NodeChildren", "NodeView", "root", "rootProps", "props", "recurse", "bind", "tabNodes", "first", "lvl", "sizes", "Tag", "txt", "raw", "val", "sdev_mod_max", "variant", "validVariants", "handlerId", "opts", "headers", "rows", "items"]
+end
+
+to AppPreviewPanel with invokeHandler setValue
+  return "<sdev-view component=\"AppPreviewPanel\" subsystem=\"ide-component\">" + str(invokeHandler) + "</sdev-view>"
+end
+
+to NodeChildren with rest args
+  return "<sdev-view component=\"NodeChildren\" subsystem=\"ide-component\">" + str(rest) + "</sdev-view>"
+end
+
+to NodeView with state invokeHandler setValue args
+  return "<sdev-view component=\"NodeView\" subsystem=\"ide-component\">" + str(state) + "</sdev-view>"
+end
+
+to root
+  return "<sdev-view component=\"root\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to rootProps
+  return "<sdev-view component=\"rootProps\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to props
+  return "<sdev-view component=\"props\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to recurse
+  return "<sdev-view component=\"recurse\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to bind
+  return "<sdev-view component=\"bind\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to tabNodes
+  return "<sdev-view component=\"tabNodes\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to first
+  return "<sdev-view component=\"first\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to lvl
+  return "<sdev-view component=\"lvl\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sizes
+  return "<sdev-view component=\"sizes\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to Tag
+  return "<sdev-view component=\"Tag\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to txt
+  return "<sdev-view component=\"txt\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to raw
+  return "<sdev-view component=\"raw\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to val
+  return "<sdev-view component=\"val\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdev_mod_max
+  return "<sdev-view component=\"sdev_mod_max\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to variant
+  return "<sdev-view component=\"variant\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to validVariants
+  return "<sdev-view component=\"validVariants\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handlerId
+  return "<sdev-view component=\"handlerId\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to opts
+  return "<sdev-view component=\"opts\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to headers
+  return "<sdev-view component=\"headers\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to rows
+  return "<sdev-view component=\"rows\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to items
+  return "<sdev-view component=\"items\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

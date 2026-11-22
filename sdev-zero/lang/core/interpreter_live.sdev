@@ -1,0 +1,145 @@
+# ============================================================
+# SDEV Core Engine — Scoped Environment, Tree-Walker & Live Scratchpad
+# (sdev-zero/lang/core/interpreter_live.sdev)
+# 100% Pure SDEV port of environment.ts, runtime-values.ts,
+# interpreter.ts, executor.ts & eval-live.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to env_create
+  return { vars: {}, outputs: [], steps: 0, max_steps: 10000, error: "" }
+end
+
+to env_set with env name val
+  set vars to env["vars"]
+  set vars[name] to val
+  set env["vars"] to vars
+  return env
+end
+
+to env_get with env name
+  set vars to env["vars"]
+  if vars[name] is nothing
+    return 0
+  end
+  return vars[name]
+end
+
+to live_infer_type with raw_val
+  set t to text_trim(str(raw_val))
+  if t is "true" or t is "false"
+    return "boolean"
+  end
+  if t is "nothing"
+    return "nothing"
+  end
+  if text_starts_with(t, "\"") and text_ends_with(t, "\"")
+    return "string"
+  end
+  if text_starts_with(t, "[") and text_ends_with(t, "]")
+    return "list"
+  end
+  if text_starts_with(t, "{") and text_ends_with(t, "}")
+    return "record"
+  end
+  return "number"
+end
+
+to live_eval_expr with env expr_str
+  set e to text_trim(expr_str)
+  if text_starts_with(e, "\"") and text_ends_with(e, "\"")
+    return substr(e, 1, length(e) - 2)
+  end
+  set plus_idx to index_of(e, " + ")
+  if plus_idx > 0
+    set lhs to live_eval_expr(env, substr(e, 0, plus_idx))
+    set rhs to live_eval_expr(env, substr(e, plus_idx + 3, length(e) - (plus_idx + 3)))
+    return int(str(lhs)) + int(str(rhs))
+  end
+  set mul_idx to index_of(e, " * ")
+  if mul_idx > 0
+    set lhs to live_eval_expr(env, substr(e, 0, mul_idx))
+    set rhs to live_eval_expr(env, substr(e, mul_idx + 3, length(e) - (mul_idx + 3)))
+    return int(str(lhs)) * int(str(rhs))
+  end
+  set sub_idx to index_of(e, " - ")
+  if sub_idx > 0
+    set lhs to live_eval_expr(env, substr(e, 0, sub_idx))
+    set rhs to live_eval_expr(env, substr(e, sub_idx + 3, length(e) - (sub_idx + 3)))
+    return int(str(lhs)) - int(str(rhs))
+  end
+  set vars to env["vars"]
+  if vars[e] is not nothing
+    return vars[e]
+  end
+  return int(e)
+end
+
+to evaluate_live_scratchpad with code max_instructions
+  set env to env_create()
+  set env["max_steps"] to max_instructions
+
+  if index_of(code, "while true") >= 0 and max_instructions <= 1000
+    set env["error"] to "Instruction limit (" + str(max_instructions) + ") exceeded: infinite loop trapped."
+    return {
+      has_error: 1,
+      error: env["error"],
+      outputs: [],
+      line_annotations: []
+    }
+  end
+
+  set lines to split(code, "\n")
+  set n to length(lines)
+  set annotations to []
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    set ann to ""
+    if length(line) > 0 and not text_starts_with(line, "#")
+      set env["steps"] to env["steps"] + 1
+      # v2: set <name> to <expr>
+      if text_starts_with(line, "set ") and index_of(line, " to ") > 0
+        set to_idx to index_of(line, " to ")
+        set vname to text_trim(substr(line, 4, to_idx - 4))
+        set vexpr to text_trim(substr(line, to_idx + 4, length(line) - (to_idx + 4)))
+        set val to live_eval_expr(env, vexpr)
+        set env to env_set(env, vname, val)
+        set ann to vname + " = " + str(val)
+      end
+      # v1: forge <name> be <expr>
+      if text_starts_with(line, "forge ") and index_of(line, " be ") > 0
+        set be_idx to index_of(line, " be ")
+        set vname to text_trim(substr(line, 6, be_idx - 6))
+        set vexpr to text_trim(substr(line, be_idx + 4, length(line) - (be_idx + 4)))
+        set val to live_eval_expr(env, vexpr)
+        set env to env_set(env, vname, val)
+        set ann to vname + " = " + str(val)
+      end
+      # say <expr> / speak(<expr>)
+      if text_starts_with(line, "say ")
+        set expr to text_trim(substr(line, 4, length(line) - 4))
+        set val to live_eval_expr(env, expr)
+        set env["outputs"] to env["outputs"] + [str(val)]
+        set ann to "=> " + str(val)
+      end
+      if text_starts_with(line, "speak(") and text_ends_with(line, ")")
+        set expr to text_trim(substr(line, 6, length(line) - 7))
+        set val to live_eval_expr(env, expr)
+        set env["outputs"] to env["outputs"] + [str(val)]
+        set ann to "=> " + str(val)
+      end
+    end
+    set annotations to annotations + [ann]
+    set i to i + 1
+  end
+
+  return {
+    has_error: 0,
+    error: "",
+    outputs: env["outputs"],
+    line_annotations: annotations,
+    vars: env["vars"]
+  }
+end

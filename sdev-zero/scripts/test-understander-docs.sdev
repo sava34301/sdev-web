@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-understander-docs.ts (47 lines)
+# Pure-SDEV Path: scripts/test-understander-docs.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-understander-docs.ts",
+    sdev_path: "scripts/test-understander-docs.sdev",
+    subsystem: "script",
+    original_lines: 47,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["memory", "verbose", "total", "docs", "text", "blocks", "isV2", "rewritten", "same"]
+end
+
+to memory
+  return "memory"
+end
+
+to verbose
+  return "verbose"
+end
+
+to total
+  return "total"
+end
+
+to docs
+  return "docs"
+end
+
+to text
+  return "text"
+end
+
+to blocks
+  return "blocks"
+end
+
+to isV2
+  return "isV2"
+end
+
+to rewritten
+  return "rewritten"
+end
+
+to same
+  return "same"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

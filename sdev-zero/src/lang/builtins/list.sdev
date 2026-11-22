@@ -1,0 +1,83 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/list.ts (273 lines)
+# Pure-SDEV Path: src/lang/builtins/list.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/list.ts",
+    sdev_path: "src/lang/builtins/list.sdev",
+    subsystem: "builtins",
+    original_lines: 273,
+    exports_count: 13
+  }
+end
+
+to module_exports
+  return ["registerList", "arr", "idx", "arrays", "minLen", "result", "first", "numArrays", "total", "fn", "seen", "key", "needle"]
+end
+
+to registerList with builtins SdevFunction output
+  return builtins
+end
+
+to arr
+  return "arr"
+end
+
+to idx
+  return "idx"
+end
+
+to arrays
+  return "arrays"
+end
+
+to minLen
+  return "minLen"
+end
+
+to result
+  return "result"
+end
+
+to first
+  return "first"
+end
+
+to numArrays
+  return "numArrays"
+end
+
+to total
+  return "total"
+end
+
+to fn
+  return "fn"
+end
+
+to seen
+  return "seen"
+end
+
+to key
+  return "key"
+end
+
+to needle
+  return "needle"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

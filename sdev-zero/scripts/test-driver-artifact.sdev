@@ -1,0 +1,41 @@
+# The checked-in driver artifact must stay honest — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-driver-artifact.sdev
+#
+# Re-derives the driver bytecode from the bootstrap oracle and compares it
+# with lang/compiler/driver-artifact.mjs. If codegen.sdev changed and nobody
+# re-baked the artifact, this fails.
+#
+# host-prefetch: sdev:driver:baked
+# host-prefetch: sdev:driver:fresh
+
+use "lang/stdlib/testkit.sdev"
+
+set baked to read_file("sdev:driver:baked")
+set fresh to read_file("sdev:driver:fresh")
+
+set bparts to split(baked, " ")
+set fparts to split(fresh, " ")
+
+set _ to check("driver bytecode matches the bootstrap oracle", str_same(bparts[0], fparts[0]))
+set _ to check("driver string pool matches the bootstrap oracle", str_same(bparts[1], fparts[1]))
+
+# The bootstrap-free shim must still compile real programs.
+to shim_compiles with path key
+  set out to read_file(key)
+  set ok to 1
+  if find(out, "error ") is 0
+    set ok to 0
+  end
+  if length(out) < 4
+    set ok to 0
+  end
+  set _ to check(concat("shim compiles ", path), ok)
+  return 0
+end
+
+set _ to shim_compiles("lexer.sdev", "sdev:compile:self:lang/compiler/lexer.sdev")
+set _ to shim_compiles("parser.sdev", "sdev:compile:self:lang/compiler/parser.sdev")
+set _ to shim_compiles("codegen.sdev", "sdev:compile:self:lang/compiler/codegen.sdev")
+
+set _ to tk_report("driver artifact")

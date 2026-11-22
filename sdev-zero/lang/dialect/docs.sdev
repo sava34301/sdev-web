@@ -1,0 +1,58 @@
+# ============================================================
+# SDEV Dialect Subsystem — Markdown Documentation Generator (docs.sdev)
+# 100% Pure SDEV port of src/lang/dialect/docs.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/dialect/spec_catalog.sdev"
+
+to generate_dialect_docs with spec sample_src
+  set out to "# " + spec["name"] + " (`" + spec["slug"] + "`)\n\n"
+  set out to out + "- **Language Tag**: `" + spec["lang"] + "`\n"
+  set out to out + "- **Version**: `" + spec["version"] + "`\n"
+  set out to out + "- **Block Style**: `" + spec["block_style"] + "`\n\n"
+  set out to out + "## Keyword Mapping\n\n"
+  set out to out + "| Canonical SDEV | " + spec["name"] + " | Category |\n"
+  set out to out + "|---|---|---|\n"
+
+  set words to catalog_words()
+  set names to spec["names"]
+  set n to length(words)
+  set i to 0
+  while i < n
+    set w to words[i]
+    set mapped to names[w]
+    if mapped is nothing
+      set mapped to w
+    end
+    set cat to catalog_category(w)
+    set out to out + "| `" + w + "` | `" + mapped + "` | " + cat + " |\n"
+    set i to i + 1
+  end
+
+  if length(text_trim(sample_src)) > 0
+    set out to out + "\n## Sample Program\n\n```sdev\n" + text_trim(sample_src) + "\n```\n"
+  end
+  return out
+end
+
+to dialect_doc_freshness with spec doc_markdown
+  if index_of(doc_markdown, "# " + spec["name"]) < 0
+    return "stale"
+  end
+  set words to catalog_words()
+  set names to spec["names"]
+  set n to length(words)
+  set i to 0
+  while i < n
+    set w to words[i]
+    set mapped to names[w]
+    if mapped is not nothing and mapped is not w
+      if index_of(doc_markdown, "`" + mapped + "`") < 0
+        return "stale"
+      end
+    end
+    set i to i + 1
+  end
+  return "fresh"
+end

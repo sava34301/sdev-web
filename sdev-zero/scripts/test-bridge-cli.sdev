@@ -1,0 +1,54 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Language Bridge, Wasm Seed Emitter & CLI Subsystems
+# (sdev-zero/scripts/test-bridge-cli.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/bridge/wasm_seed_emitter.sdev"
+use "lang/bridge/self_bridge.sdev"
+use "cli/store_env.sdev"
+use "cli/auth_cloud.sdev"
+use "cli/editor.sdev"
+use "cli/pipeline.sdev"
+
+set ts to test_begin("Language Bridge, Wasm Seed Emitter & CLI Subsystems (Store, Cloud, Editor, Pipeline)")
+
+# 1. Pure-SDEV WebAssembly (.wasm & .wat) Seed Emitter
+set wasm_bytes to wasm_emit_minimal_seed_module()
+set ts to assert_eq(ts, wasm_bytes[0], 0, "Wasm binary magic byte 0 is 0x00")
+set ts to assert_eq(ts, wasm_bytes[1], 97, "Wasm binary magic byte 1 is 'a' (97)")
+set ts to assert_eq(ts, wasm_bytes[2], 115, "Wasm binary magic byte 2 is 's' (115)")
+set ts to assert_eq(ts, wasm_bytes[3], 109, "Wasm binary magic byte 3 is 'm' (109)")
+set wat_src to wasm_emit_seed_wat_source()
+set ts to assert_true(ts, index_of(wat_src, "(memory (export \"memory\") 64)") >= 0, "WAT seed emitter exports 64-page memory")
+
+# 2. Pure-SDEV Self-Compiler Bridge & Fixed-Point Verification
+set fp to bridge_verify_driver_fixed_point()
+set ts to assert_eq(ts, fp["identical"], 1, "Self-compiler bridge verifies driver fixed point (bc=20933, pool=1123)")
+
+# 3. CLI Store, Semver Comparator & Auth/Cloud Publish Formatter
+set store to cli_store_create()
+set ts to assert_str_eq(ts, cli_version(), "2.4.0", "CLI version is 2.4.0")
+set upd to cli_check_update_status("2.4.0", "2.5.0")
+set ts to assert_eq(ts, upd["update_available"], 1, "Semver comparator detects 2.4.0 -> 2.5.0 update")
+set sess to cli_auth_session("sava", "tok_live_123")
+set pub to cli_cloud_format_publish_payload(sess, { slug: "sdev-bg", version: "1.0.0" }, "кажи 42")
+set ts to assert_eq(ts, pub["ok"], 1, "Authenticated cloud publish payload succeeds")
+set ts to assert_str_eq(ts, pub["address"], "@sava/sdev-bg@1.0.0", "Cloud publish formats @sava/sdev-bg@1.0.0 address")
+
+# 4. Terminal Text Editor Buffer & Viewport Renderer
+set ed to editor_open_buffer("hello.sdev", "set x to 1\nsay x")
+set ed to editor_replace_line(ed, 0, "set x to 42")
+set ed to editor_insert_line(ed, 2, "say x + 1")
+set rendered to editor_render_viewport(ed, 10)
+set ts to assert_true(ts, index_of(rendered, "hello.sdev [modified]") >= 0, "Editor viewport shows modified indicator")
+set ts to assert_true(ts, index_of(editor_to_source(ed), "set x to 42") >= 0, "Editor buffer updates source line")
+
+# 5. End-to-End CLI Pipeline (Dialect + Understander + Hardware Transpiler)
+set full_src to "нека x бъде 99\nboard \"uno\" {\n  turn on pin 13\n}\nкажи x"
+set prep to cli_prepare_source(full_src, "sdev-bg")
+set ts to assert_eq(ts, prep["has_board"], 1, "CLI pipeline extracts embedded hardware board block")
+set ts to assert_true(ts, index_of(prep["host_source"], "set x to 99") >= 0, "CLI pipeline canonicalizes Bulgarian host code")
+set ts to assert_true(ts, index_of(prep["ino_source"], "digitalWrite(13, HIGH);") >= 0, "CLI pipeline transpiles embedded board block to Arduino C++")
+
+set _ to test_summary(ts)

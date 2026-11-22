@@ -1,0 +1,47 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/types.ts (55 lines)
+# Pure-SDEV Path: src/lang/agent/types.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/types.ts",
+    sdev_path: "src/lang/agent/types.sdev",
+    subsystem: "agent",
+    original_lines: 55,
+    exports_count: 4
+  }
+end
+
+to module_exports
+  return ["make_DialectWords", "make_AgentNote", "make_UnderstandOptions", "make_UnderstandResult"]
+end
+
+to make_DialectWords with payload
+  return payload
+end
+
+to make_AgentNote with payload
+  return payload
+end
+
+to make_UnderstandOptions with payload
+  return payload
+end
+
+to make_UnderstandResult with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

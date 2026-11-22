@@ -1,0 +1,121 @@
+# ============================================================
+# SDEV Studio Engine — Time-Travel Chrono Debugger & Live Lens Tracer
+# (sdev-zero/lang/studio/time_travel.sdev)
+# 100% Pure SDEV port of src/studio/runner.ts, src/studio/store.ts & TimeTravelDebugger.tsx
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to studio_create_session with source max_steps
+  return {
+    source: source,
+    max_steps: max_steps,
+    cursor: 0,
+    steps: [],
+    outputs: [],
+    vars: {},
+    line_hits: {},
+    success: 1,
+    error: ""
+  }
+end
+
+to studio_eval_value with vars expr_str
+  set e to text_trim(expr_str)
+  if text_starts_with(e, "\"") and text_ends_with(e, "\"")
+    return substr(e, 1, length(e) - 2)
+  end
+  set plus to index_of(e, " + ")
+  if plus > 0
+    set a to studio_eval_value(vars, substr(e, 0, plus))
+    set b to studio_eval_value(vars, substr(e, plus + 3, length(e) - (plus + 3)))
+    return int(str(a)) + int(str(b))
+  end
+  set mul to index_of(e, " * ")
+  if mul > 0
+    set a to studio_eval_value(vars, substr(e, 0, mul))
+    set b to studio_eval_value(vars, substr(e, mul + 3, length(e) - (mul + 3)))
+    return int(str(a)) * int(str(b))
+  end
+  if vars[e] is not nothing
+    return vars[e]
+  end
+  return int(e)
+end
+
+to studio_run_traced with source max_steps
+  set sess to studio_create_session(source, max_steps)
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set step_idx to 0
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    set line_num to i + 1
+    if length(line) > 0 and not text_starts_with(line, "#")
+      if step_idx >= max_steps
+        set sess["success"] to 0
+        set sess["error"] to "Chrono step budget exceeded (" + str(max_steps) + ")"
+        return sess
+      end
+      set node_type to "Statement"
+      set summary to line
+      set result_val to ""
+
+      if text_starts_with(line, "set ") and index_of(line, " to ") > 0
+        set to_idx to index_of(line, " to ")
+        set vname to text_trim(substr(line, 4, to_idx - 4))
+        set vexpr to text_trim(substr(line, to_idx + 4, length(line) - (to_idx + 4)))
+        set val to studio_eval_value(sess["vars"], vexpr)
+        set vars to sess["vars"]
+        set vars[vname] to val
+        set sess["vars"] to vars
+        set node_type to "AssignStatement"
+        set result_val to str(val)
+        set summary to vname + " <- " + str(val)
+      end
+
+      if text_starts_with(line, "say ")
+        set expr to text_trim(substr(line, 4, length(line) - 4))
+        set val to studio_eval_value(sess["vars"], expr)
+        set sess["outputs"] to sess["outputs"] + [str(val)]
+        set node_type to "SayStatement"
+        set result_val to str(val)
+        set summary to "say " + str(val)
+      end
+
+      set step_record to {
+        index: step_idx,
+        line: line_num,
+        node_type: node_type,
+        code: line,
+        summary: summary,
+        result_value: result_val
+      }
+      set sess["steps"] to sess["steps"] + [step_record]
+      set step_idx to step_idx + 1
+    end
+    set i to i + 1
+  end
+  if step_idx > 0
+    set sess["cursor"] to step_idx - 1
+  end
+  return sess
+end
+
+to studio_seek_step with sess target_idx
+  set steps to sess["steps"]
+  set n to length(steps)
+  if n is 0
+    return { index: 0, line: 0, node_type: "Empty", code: "", summary: "", result_value: "" }
+  end
+  set idx to target_idx
+  if idx < 0
+    set idx to 0
+  end
+  if idx >= n
+    set idx to n - 1
+  end
+  set sess["cursor"] to idx
+  return steps[idx]
+end

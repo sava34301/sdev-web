@@ -1,0 +1,157 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/translate-sdev/index.ts (739 lines)
+# Pure-SDEV Path: supabase/functions/translate-sdev/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/translate-sdev/index.ts",
+    sdev_path: "supabase/functions/translate-sdev/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 739,
+    exports_count: 26
+  }
+end
+
+to module_exports
+  return ["buildKeywordTablePrompt", "names", "declaration", "name", "declarations", "corsHeaders", "KEYWORD_TABLES", "BUILTIN_FUNCTIONS", "SDEV_KEYWORDS_DOC", "table", "lines", "denied", "sourceLanguage", "AI_KEY", "langHint", "keywordTablePrompt", "builtinsList", "systemPrompt", "userPrompt", "response", "text", "data", "translated", "detectedLanguage", "detectResponse", "detectData"]
+end
+
+to buildKeywordTablePrompt with lang
+  return {
+    status: 200,
+    handler: "buildKeywordTablePrompt",
+    route: "supabase/functions/translate-sdev/index.ts",
+    payload: lang
+  }
+end
+
+to names with speak measure gather etc
+  return {
+    status: 200,
+    handler: "names",
+    route: "supabase/functions/translate-sdev/index.ts",
+    payload: speak
+  }
+end
+
+to declaration with init_arg
+  return {
+    kind: "declaration",
+    subsystem: "edge-function",
+    state: init_arg
+  }
+end
+
+to name with init_arg
+  return {
+    kind: "name",
+    subsystem: "edge-function",
+    state: init_arg
+  }
+end
+
+to declarations with init_arg
+  return {
+    kind: "declarations",
+    subsystem: "edge-function",
+    state: init_arg
+  }
+end
+
+to corsHeaders
+  return "corsHeaders"
+end
+
+to KEYWORD_TABLES
+  return "KEYWORD_TABLES"
+end
+
+to BUILTIN_FUNCTIONS
+  return "BUILTIN_FUNCTIONS"
+end
+
+to SDEV_KEYWORDS_DOC
+  return "SDEV_KEYWORDS_DOC"
+end
+
+to table
+  return "table"
+end
+
+to lines
+  return "lines"
+end
+
+to denied
+  return "denied"
+end
+
+to sourceLanguage
+  return "sourceLanguage"
+end
+
+to AI_KEY
+  return "AI_KEY"
+end
+
+to langHint
+  return "langHint"
+end
+
+to keywordTablePrompt
+  return "keywordTablePrompt"
+end
+
+to builtinsList
+  return "builtinsList"
+end
+
+to systemPrompt
+  return "systemPrompt"
+end
+
+to userPrompt
+  return "userPrompt"
+end
+
+to response
+  return "response"
+end
+
+to text
+  return "text"
+end
+
+to data
+  return "data"
+end
+
+to translated
+  return "translated"
+end
+
+to detectedLanguage
+  return "detectedLanguage"
+end
+
+to detectResponse
+  return "detectResponse"
+end
+
+to detectData
+  return "detectData"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/LaunchAnnouncementCarousel.tsx (210 lines)
+# Pure-SDEV Path: src/components/LaunchAnnouncementCarousel.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/LaunchAnnouncementCarousel.tsx",
+    sdev_path: "src/components/LaunchAnnouncementCarousel.sdev",
+    subsystem: "component",
+    original_lines: 210,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["LaunchAnnouncementCarousel", "STORAGE_KEY", "SLIDES", "navigate", "seen", "id", "close", "slide", "Icon", "last"]
+end
+
+to LaunchAnnouncementCarousel
+  return "<sdev-view component=\"LaunchAnnouncementCarousel\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to STORAGE_KEY
+  return "<sdev-view component=\"STORAGE_KEY\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to SLIDES
+  return "<sdev-view component=\"SLIDES\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to seen
+  return "<sdev-view component=\"seen\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to id
+  return "<sdev-view component=\"id\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to close
+  return "<sdev-view component=\"close\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to slide
+  return "<sdev-view component=\"slide\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to Icon
+  return "<sdev-view component=\"Icon\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to last
+  return "<sdev-view component=\"last\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

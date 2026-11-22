@@ -194,7 +194,7 @@ to hash_djb2 with s
   set n to length(s)
   set i to 0
   while i < n
-    set h to ((h * 33) + ord(s, i)) % 2147483647
+    set h to ((h * 33) + ord(s, i)) % 33554393
     set i to i + 1
   end
   return h
@@ -202,7 +202,7 @@ end
 
 to hash_fnv1a_hex with s
   set h to hash_djb2(s)
-  return bits_to_hex(h)
+  return concat(bits_to_hex(h), "")
 end
 
 # ── Arena Memory Operations (Pure SDEV) ───────────────────────────────────────

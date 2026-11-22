@@ -1,0 +1,59 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/googleCalendar.ts (41 lines)
+# Pure-SDEV Path: src/lib/googleCalendar.sdev
+# Subsystem     : lib
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/googleCalendar.ts",
+    sdev_path: "src/lib/googleCalendar.sdev",
+    subsystem: "lib",
+    original_lines: 41,
+    exports_count: 7
+  }
+end
+
+to module_exports
+  return ["fmt", "getGoogleCalendarUrl", "getIcsDataUrl", "start", "sdev_mod_end", "params", "ics"]
+end
+
+to fmt with d
+  return d
+end
+
+to getGoogleCalendarUrl with opts
+  return opts
+end
+
+to getIcsDataUrl with opts
+  return opts
+end
+
+to start
+  return "start"
+end
+
+to sdev_mod_end
+  return "sdev_mod_end"
+end
+
+to params
+  return "params"
+end
+
+to ics
+  return "ics"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

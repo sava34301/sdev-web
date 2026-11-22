@@ -1,0 +1,73 @@
+# ============================================================
+# SDEV Core Engine — Keywords, Tokens, AST Nodes & Structured Errors
+# (sdev-zero/lang/core/keywords_ast.sdev)
+# 100% Pure SDEV port of keywords.ts, tokens.ts, ast.ts & errors.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to core_v1_keywords
+  return ["forge", "be", "fixed", "conjure", "yield", "ponder", "otherwise", "cycle", "iterate", "through", "yeet", "skip", "speak", "whisper", "summon", "essence", "extend", "self", "super", "new", "attempt", "rescue", "async", "await", "spawn", "within", "match", "when", "true", "false", "void", "also", "either", "isnt", "equals", "differs"]
+end
+
+to core_v2_keywords
+  return ["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in", "break", "continue", "say", "ask", "use", "and", "or", "not", "is", "isnt", "true", "false", "nothing", "try", "catch", "throw", "class", "new", "match", "case", "spawn", "await"]
+end
+
+to core_is_v1_keyword with word
+  set kws to core_v1_keywords()
+  set n to length(kws)
+  set i to 0
+  while i < n
+    if kws[i] is word
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to core_is_v2_keyword with word
+  set kws to core_v2_keywords()
+  set n to length(kws)
+  set i to 0
+  while i < n
+    if kws[i] is word
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to core_token with kind lexeme line col
+  return {
+    kind: kind,
+    lexeme: lexeme,
+    line: line,
+    col: col
+  }
+end
+
+to core_ast_node with tag value children line
+  return {
+    tag: tag,
+    value: value,
+    children: children,
+    line: line
+  }
+end
+
+to core_format_error with phase message line col source_line
+  set header to "[" + phase + " Error] Line " + str(line) + ":" + str(col) + " — " + message
+  if length(text_trim(source_line)) is 0
+    return header
+  end
+  set caret_pad to ""
+  set k to 1
+  while k < col
+    set caret_pad to caret_pad + " "
+    set k to k + 1
+  end
+  return header + "\n  " + source_line + "\n  " + caret_pad + "^"
+end

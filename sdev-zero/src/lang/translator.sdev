@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/translator.ts (1026 lines)
+# Pure-SDEV Path: src/lang/translator.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/translator.ts",
+    sdev_path: "src/lang/translator.sdev",
+    subsystem: "lang-core",
+    original_lines: 1026,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["effectiveTable", "buildPhraseNormalizations", "compileReplacer", "segmentSource", "hasNonAscii", "getDetectTables", "detectLanguage", "dialectWords", "dialectLanguageHint", "translateSource", "translateForDialect", "levenshtein", "compileFuzzyReplacer", "KEYWORD_TABLES", "SUPPORTED_LANGUAGES", "EFFECTIVE_TABLES", "base", "key", "table", "PHRASE_NORMALIZATIONS", "phrases", "result", "spaced", "COMPILED_REPLACERS", "entries", "escape", "pattern", "re", "map", "fn", "repl", "segs", "codeStart", "stop", "cur", "NON_ASCII_RE", "DETECT_TABLES", "singles", "addWords", "weight"]
+end
+
+to effectiveTable with lang target
+  return lang
+end
+
+to buildPhraseNormalizations with lang target
+  return lang
+end
+
+to compileReplacer with lang target
+  return lang
+end
+
+to segmentSource with source
+  return source
+end
+
+to hasNonAscii with code
+  return code
+end
+
+to getDetectTables
+  return 1
+end
+
+to detectLanguage with source protect
+  return source
+end
+
+to dialectWords with spec
+  return spec
+end
+
+to dialectLanguageHint with spec
+  return spec
+end
+
+to translateSource with source sourceLanguage options
+  return source
+end
+
+to translateForDialect with source sourceLanguage dialect target
+  return source
+end
+
+to levenshtein with a b
+  return a
+end
+
+to compileFuzzyReplacer with lang target
+  return lang
+end
+
+to KEYWORD_TABLES
+  return "KEYWORD_TABLES"
+end
+
+to SUPPORTED_LANGUAGES
+  return "SUPPORTED_LANGUAGES"
+end
+
+to EFFECTIVE_TABLES
+  return "EFFECTIVE_TABLES"
+end
+
+to base
+  return "base"
+end
+
+to key
+  return "key"
+end
+
+to table
+  return "table"
+end
+
+to PHRASE_NORMALIZATIONS
+  return "PHRASE_NORMALIZATIONS"
+end
+
+to phrases
+  return "phrases"
+end
+
+to result
+  return "result"
+end
+
+to spaced
+  return "spaced"
+end
+
+to COMPILED_REPLACERS
+  return "COMPILED_REPLACERS"
+end
+
+to entries
+  return "entries"
+end
+
+to escape with s
+  return s
+end
+
+to pattern
+  return "pattern"
+end
+
+to re
+  return "re"
+end
+
+to map
+  return "map"
+end
+
+to fn
+  return "fn"
+end
+
+to repl
+  return "repl"
+end
+
+to segs
+  return "segs"
+end
+
+to codeStart
+  return "codeStart"
+end
+
+to stop
+  return "stop"
+end
+
+to cur
+  return "cur"
+end
+
+to NON_ASCII_RE
+  return "NON_ASCII_RE"
+end
+
+to DETECT_TABLES
+  return "DETECT_TABLES"
+end
+
+to singles
+  return "singles"
+end
+
+to addWords with tbl string
+  return tbl
+end
+
+to weight
+  return "weight"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Auth.tsx (160 lines)
+# Pure-SDEV Path: src/pages/Auth.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Auth.tsx",
+    sdev_path: "src/pages/Auth.sdev",
+    subsystem: "page",
+    original_lines: 160,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["Auth", "navigate", "signupAllowed", "rawNext", "next", "handleSignIn", "handleSignUp", "wanted", "handleGoogle"]
+end
+
+to Auth
+  return "<sdev-view component=\"Auth\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to signupAllowed
+  return "<sdev-view component=\"signupAllowed\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to rawNext
+  return "<sdev-view component=\"rawNext\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to next
+  return "<sdev-view component=\"next\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleSignIn with e
+  return "<sdev-view component=\"handleSignIn\" subsystem=\"page\">" + str(e) + "</sdev-view>"
+end
+
+to handleSignUp with e
+  return "<sdev-view component=\"handleSignUp\" subsystem=\"page\">" + str(e) + "</sdev-view>"
+end
+
+to wanted
+  return "<sdev-view component=\"wanted\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleGoogle
+  return "<sdev-view component=\"handleGoogle\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

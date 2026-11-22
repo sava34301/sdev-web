@@ -1,0 +1,111 @@
+# ============================================================
+# SDEV Builtins Subsystem — Higher-Order List, Functional & Regex Guard
+# (sdev-zero/lang/builtins/functional_list.sdev)
+# 100% Pure SDEV port of functional.ts, list.ts, string.ts & regex-guard.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to builtin_reversed with xs
+  set n to length(xs)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to xs[(n - 1) - i]
+    set i to i + 1
+  end
+  return out
+end
+
+to builtin_unique_ints with xs
+  set n to length(xs)
+  set out to []
+  set seen to "|"
+  set i to 0
+  while i < n
+    set key to "|" + str(xs[i]) + "|"
+    if index_of(seen, key) < 0
+      set seen to seen + str(xs[i]) + "|"
+      set out to out + [xs[i]]
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to builtin_zip with xs ys
+  set n to length(xs)
+  if length(ys) < n
+    set n to length(ys)
+  end
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to [xs[i], ys[i]]
+    set i to i + 1
+  end
+  return out
+end
+
+to builtin_enumerate with xs
+  set n to length(xs)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to [i, xs[i]]
+    set i to i + 1
+  end
+  return out
+end
+
+to builtin_chunk with xs chunk_size
+  set n to length(xs)
+  set out to []
+  set i to 0
+  while i < n
+    set row to []
+    set j to 0
+    while j < chunk_size and (i + j) < n
+      set row to row + [xs[i + j]]
+      set j to j + 1
+    end
+    set out to out + [row]
+    set i to i + chunk_size
+  end
+  return out
+end
+
+to builtin_filter_gt with xs threshold
+  set n to length(xs)
+  set out to []
+  set i to 0
+  while i < n
+    if xs[i] > threshold
+      set out to out + [xs[i]]
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to builtin_reduce_sum with xs initial_val
+  set acc to initial_val
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set acc to acc + xs[i]
+    set i to i + 1
+  end
+  return acc
+end
+
+to regex_is_safe_pattern with pattern
+  # Guards against catastrophic backtracking (nested quantifiers like (a+)+ or (.*)*)
+  if length(pattern) > 2048
+    return 0
+  end
+  if index_of(pattern, "+)+") >= 0 or index_of(pattern, "*)*") >= 0 or index_of(pattern, "+)*") >= 0
+    return 0
+  end
+  return 1
+end

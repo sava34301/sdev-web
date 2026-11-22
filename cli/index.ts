@@ -33,6 +33,7 @@ import {
   isSignatureStale, repairSignature, checksum,
 } from '@/lang/dialect/signature';
 import { validateDialect, isPublishable, inherit, preludeSource, type DialectSpec } from '@/lang/dialect/spec';
+import { serializeDialectToSdev, serializeDialectCollectionToSdev, parseDialectCollection } from '@/lang/dialect/sdev-format';
 import { canonicalize, dialectize, translateDialect } from '@/lang/dialect/canonicalize';
 import { presetList, findPreset } from '@/lang/dialect/presets';
 import { generateDialectDocs, docFreshness, TEMPLATE_VERSION } from '@/lang/dialect/docs';
@@ -159,6 +160,7 @@ DIALECTS
   dialect new <slug> --name "Name"    Create one
   dialect use <slug|none>             Choose the active dialect
   dialect show <slug>                 Inspect words and style
+  dialect source <slug> [-o file]     Emit the dialect as a pure .sdev file
   dialect validate <slug>             Check it is publishable
   dialect docs <slug> [-o file]       Generate its documentation
   dialect canon <file> [--from slug]  Dialect source -> canonical sdev
@@ -168,7 +170,8 @@ DIALECTS
   dialect install <@user/slug|code>   Install someone else's dialect
   dialect publish <slug>              Publish yours
   dialect pull | dialect sync         Fetch / two-way sync with your account
-  dialect export|import <file>
+  dialect export [slug] [-o file]     Export dialect(s) as a .sdev file
+  dialect import <file.sdev>          Import dialect(s) from a .sdev file
   dialect remove <slug>
 
 EXTENSIONS
@@ -206,7 +209,7 @@ SETTINGS
   update [--force]        Update sdev to the newest version (checked daily)
 
 OPTIONS
-  --dialect <slug|none>   Override the dialect for this run
+  --dialect <slug|file.sdev|none>   Override the dialect for this run (slug or .sdev file)
   --runtime <v1|v2>       Override the runtime
   --no-ext                Ignore enabled extensions
   --lang <Language>       Source language for the lexer
@@ -691,16 +694,23 @@ async function cmdDialect(sub: string, rest: string[]): Promise<void> {
       console.log(`published ${handle ? '@' + handle + '/' : ''}${published.meta.slug} v${published.meta.version}`);
       return;
     }
+    case 'source': {
+      const spec = requireLocalDialect(rest[0] ?? die('sdev dialect source <slug>'));
+      emit(serializeDialectToSdev(spec));
+      return;
+    }
     case 'export': {
-      const out = value('-o', '--out') ?? rest[0] ?? 'sdev-dialects.json';
-      writeFileSync(out, JSON.stringify({ format: 'sdev-dialects', version: 1, dialects: listDialects() }, null, 2));
+      const targetSlug = rest[0] && !rest[0].includes('.') ? rest[0] : null;
+      const specs = targetSlug ? [requireLocalDialect(targetSlug)] : listDialects();
+      const defaultOut = targetSlug ? `${targetSlug}.dialect.sdev` : 'sdev-dialects.sdev';
+      const out = value('-o', '--out') ?? (!targetSlug && rest[0] ? rest[0] : defaultOut);
+      writeFileSync(out, serializeDialectCollectionToSdev(specs));
       console.log('wrote', out);
       return;
     }
     case 'import': {
-      const file = rest[0] ?? die('sdev dialect import <file>');
-      const parsed = JSON.parse(readSource(file)) as { dialects?: DialectSpec[] };
-      const specs = parsed.dialects ?? [];
+      const file = rest[0] ?? die('sdev dialect import <file.sdev>');
+      const specs = parseDialectCollection(readSource(file));
       for (const s of specs) saveDialect(s);
       console.log(`imported ${specs.length} dialect(s)`);
       return;

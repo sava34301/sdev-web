@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-brain-sanitizer.ts (90 lines)
+# Pure-SDEV Path: scripts/test-brain-sanitizer.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-brain-sanitizer.ts",
+    sdev_path: "scripts/test-brain-sanitizer.sdev",
+    subsystem: "script",
+    original_lines: 90,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["aiCode", "sanitized", "canonical", "pythonCode", "pythonFn", "rangeLoop", "modelOutputWithProse", "reply", "embeddedJson"]
+end
+
+to aiCode
+  return "aiCode"
+end
+
+to sanitized
+  return "sanitized"
+end
+
+to canonical
+  return "canonical"
+end
+
+to pythonCode
+  return "pythonCode"
+end
+
+to pythonFn
+  return "pythonFn"
+end
+
+to rangeLoop
+  return "rangeLoop"
+end
+
+to modelOutputWithProse
+  return "modelOutputWithProse"
+end
+
+to reply
+  return "reply"
+end
+
+to embeddedJson
+  return "embeddedJson"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

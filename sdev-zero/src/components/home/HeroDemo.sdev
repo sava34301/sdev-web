@@ -1,0 +1,75 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/home/HeroDemo.tsx (131 lines)
+# Pure-SDEV Path: src/components/home/HeroDemo.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/home/HeroDemo.tsx",
+    sdev_path: "src/components/home/HeroDemo.sdev",
+    subsystem: "component",
+    original_lines: 131,
+    exports_count: 11
+  }
+end
+
+to module_exports
+  return ["highlight", "HeroDemo", "DEMOS", "KEYWORDS", "reduce", "demo", "selectDemo", "timer", "ch", "lines", "next"]
+end
+
+to highlight with line
+  return "<sdev-view component=\"highlight\" subsystem=\"component\">" + str(line) + "</sdev-view>"
+end
+
+to HeroDemo with name
+  return "<sdev-view component=\"HeroDemo\" subsystem=\"component\">" + str(name) + "</sdev-view>"
+end
+
+to DEMOS
+  return "<sdev-view component=\"DEMOS\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to KEYWORDS
+  return "<sdev-view component=\"KEYWORDS\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to reduce
+  return "<sdev-view component=\"reduce\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to demo
+  return "<sdev-view component=\"demo\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to selectDemo with i
+  return "<sdev-view component=\"selectDemo\" subsystem=\"component\">" + str(i) + "</sdev-view>"
+end
+
+to timer
+  return "<sdev-view component=\"timer\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to ch
+  return "<sdev-view component=\"ch\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to lines
+  return "<sdev-view component=\"lines\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to next
+  return "<sdev-view component=\"next\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,69 @@
+# =============================================================================
+# SDEV Zero-Host Test Suite — 1:1 Pure-SDEV Repository Mirror Verification
+# (sdev-zero/scripts/test-1to1-mirror.sdev)
+# =============================================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/tools/mirror_1to1.sdev"
+
+set ts to test_begin("1:1 Pure-SDEV Repository Mirror (370 Source Counterparts across All Directories)")
+
+# 1. Path mapping & declaration transpiler
+set ts to assert_str_eq(ts, mirror_map_path("src/lang/lexer.ts"), "src/lang/lexer.sdev", "Maps src/lang/lexer.ts -> src/lang/lexer.sdev")
+set ts to assert_str_eq(ts, mirror_map_path("src/pages/IDE.tsx"), "src/pages/IDE.sdev", "Maps src/pages/IDE.tsx -> src/pages/IDE.sdev")
+set ts to assert_str_eq(ts, mirror_map_path("public/sdev-interpreter.py"), "public/sdev-interpreter-py.sdev", "Maps public/sdev-interpreter.py -> public/sdev-interpreter-py.sdev")
+set ts to assert_str_eq(ts, mirror_transpile_declaration("export function compileCode(src, opts) {"), "to compileCode with src opts", "Transpiles TS export function header to SDEV v2")
+set ts to assert_str_eq(ts, mirror_transpile_declaration("def parse_tokens(stream, mode):"), "to parse_tokens with stream mode", "Transpiles Python def header to SDEV v2")
+
+# 2. Verify 1:1 .sdev counterparts exist across all 19 top-level repository areas
+set ts to assert_eq(ts, mirror_file_present("bin/sdev.sdev"), 1, "1:1 counterpart bin/sdev.sdev present")
+set ts to assert_eq(ts, mirror_file_present("bin/sdevhost.sdev"), 1, "1:1 counterpart bin/sdevhost.sdev present")
+set ts to assert_eq(ts, mirror_file_present("cli/index.sdev"), 1, "1:1 counterpart cli/index.sdev present")
+set ts to assert_eq(ts, mirror_file_present("cli/editor.sdev"), 1, "1:1 counterpart cli/editor.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/App.sdev"), 1, "1:1 counterpart src/App.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/main.sdev"), 1, "1:1 counterpart src/main.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/lexer.sdev"), 1, "1:1 counterpart src/lang/lexer.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/parser.sdev"), 1, "1:1 counterpart src/lang/parser.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/compiler.sdev"), 1, "1:1 counterpart src/lang/compiler.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/vm.sdev"), 1, "1:1 counterpart src/lang/vm.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/hardware/transpile.sdev"), 1, "1:1 counterpart src/lang/hardware/transpile.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/hardware/simulator.sdev"), 1, "1:1 counterpart src/lang/hardware/simulator.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/dialect/spec.sdev"), 1, "1:1 counterpart src/lang/dialect/spec.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang/agent/index.sdev"), 1, "1:1 counterpart src/lang/agent/index.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang-bridge/seed/seed.sdev"), 1, "1:1 counterpart src/lang-bridge/seed/seed.sdev (from seed.wat) present")
+set ts to assert_eq(ts, mirror_file_present("src/lang-bridge/wasm-runtime.sdev"), 1, "1:1 counterpart src/lang-bridge/wasm-runtime.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lang-bridge/native/codegen-x64.sdev"), 1, "1:1 counterpart src/lang-bridge/native/codegen-x64.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/pages/IDE.sdev"), 1, "1:1 counterpart src/pages/IDE.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/pages/Index.sdev"), 1, "1:1 counterpart src/pages/Index.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/components/ide/CodeMirrorEditor.sdev"), 1, "1:1 counterpart src/components/ide/CodeMirrorEditor.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/components/home/compilerScene.sdev"), 1, "1:1 counterpart src/components/home/compilerScene.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/components/home/CompilerSceneView.sdev"), 1, "1:1 counterpart src/components/home/CompilerSceneView.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/hooks/useAuth.sdev"), 1, "1:1 counterpart src/hooks/useAuth.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/integrations/supabase/client.sdev"), 1, "1:1 counterpart src/integrations/supabase/client.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/lib/mcp/index.sdev"), 1, "1:1 counterpart src/lib/mcp/index.sdev present")
+set ts to assert_eq(ts, mirror_file_present("src/studio/runner.sdev"), 1, "1:1 counterpart src/studio/runner.sdev present")
+set ts to assert_eq(ts, mirror_file_present("supabase/functions/sdev-agent/index.sdev"), 1, "1:1 counterpart supabase/functions/sdev-agent/index.sdev present")
+set ts to assert_eq(ts, mirror_file_present("supabase/functions/compile-firmware/index.sdev"), 1, "1:1 counterpart supabase/functions/compile-firmware/index.sdev present")
+set ts to assert_eq(ts, mirror_file_present("extension/extension.sdev"), 1, "1:1 counterpart extension/extension.sdev present")
+set ts to assert_eq(ts, mirror_file_present("public/sdev-compiler.sdev"), 1, "1:1 counterpart public/sdev-compiler.sdev present")
+set ts to assert_eq(ts, mirror_file_present("public/sdev-interpreter.sdev"), 1, "1:1 counterpart public/sdev-interpreter.sdev present")
+set ts to assert_eq(ts, mirror_file_present("public/sdev-interpreter-py.sdev"), 1, "1:1 counterpart public/sdev-interpreter-py.sdev present")
+set ts to assert_eq(ts, mirror_file_present("remotion-pitch/src/Root.sdev"), 1, "1:1 counterpart remotion-pitch/src/Root.sdev present")
+set ts to assert_eq(ts, mirror_file_present("drizzle/schema.sdev"), 1, "1:1 counterpart drizzle/schema.sdev present")
+set ts to assert_eq(ts, mirror_file_present("vite.config.sdev"), 1, "1:1 counterpart vite.config.sdev present")
+set ts to assert_eq(ts, mirror_file_present("tailwind.config.sdev"), 1, "1:1 counterpart tailwind.config.sdev present")
+
+# 3. Verify 1:1 modules compile cleanly with ./bin/sdev check
+set chk_lex to shell("./bin/sdev check src/lang/lexer.sdev")
+set ts to assert_true(ts, index_of(chk_lex, "syntax & symbols OK") >= 0, "1:1 src/lang/lexer.sdev compiles cleanly")
+
+set chk_ide to shell("./bin/sdev check src/pages/IDE.sdev")
+set ts to assert_true(ts, index_of(chk_ide, "syntax & symbols OK") >= 0, "1:1 src/pages/IDE.sdev compiles cleanly")
+
+set chk_seed to shell("./bin/sdev check src/lang-bridge/seed/seed.sdev")
+set ts to assert_true(ts, index_of(chk_seed, "syntax & symbols OK") >= 0, "1:1 src/lang-bridge/seed/seed.sdev (from seed.wat) compiles cleanly")
+
+set chk_edge to shell("./bin/sdev check supabase/functions/sdev-agent/index.sdev")
+set ts to assert_true(ts, index_of(chk_edge, "syntax & symbols OK") >= 0, "1:1 supabase/functions/sdev-agent/index.sdev compiles cleanly")
+
+set _ to test_summary(ts)

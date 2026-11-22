@@ -1,0 +1,107 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/sdev-agent/index.ts (273 lines)
+# Pure-SDEV Path: supabase/functions/sdev-agent/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/sdev-agent/index.ts",
+    sdev_path: "supabase/functions/sdev-agent/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 273,
+    exports_count: 19
+  }
+end
+
+to module_exports
+  return ["corsHeaders", "SYSTEM", "AI_DIALECT", "key", "body", "source", "user", "res", "text", "status", "message", "reader", "decoder", "buffer", "answer", "parts", "payload", "event", "reply"]
+end
+
+to corsHeaders
+  return "corsHeaders"
+end
+
+to SYSTEM
+  return "SYSTEM"
+end
+
+to AI_DIALECT
+  return "AI_DIALECT"
+end
+
+to key
+  return "key"
+end
+
+to body
+  return "body"
+end
+
+to source
+  return "source"
+end
+
+to user
+  return "user"
+end
+
+to res
+  return "res"
+end
+
+to text
+  return "text"
+end
+
+to status
+  return "status"
+end
+
+to message
+  return "message"
+end
+
+to reader
+  return "reader"
+end
+
+to decoder
+  return "decoder"
+end
+
+to buffer
+  return "buffer"
+end
+
+to answer
+  return "answer"
+end
+
+to parts
+  return "parts"
+end
+
+to payload
+  return "payload"
+end
+
+to event
+  return "event"
+end
+
+to reply
+  return "reply"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

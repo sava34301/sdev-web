@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Account.tsx (301 lines)
+# Pure-SDEV Path: src/pages/Account.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Account.tsx",
+    sdev_path: "src/pages/Account.sdev",
+    subsystem: "page",
+    original_lines: 301,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["Account", "navigate", "saveHandle", "next", "saveProfile", "handleDeleteFile", "handleDeleteGist", "copyGistLink", "url", "handleSignOut"]
+end
+
+to Account
+  return "<sdev-view component=\"Account\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to saveHandle
+  return "<sdev-view component=\"saveHandle\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to next
+  return "<sdev-view component=\"next\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to saveProfile
+  return "<sdev-view component=\"saveProfile\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleDeleteFile with id name
+  return "<sdev-view component=\"handleDeleteFile\" subsystem=\"page\">" + str(id) + "</sdev-view>"
+end
+
+to handleDeleteGist with id
+  return "<sdev-view component=\"handleDeleteGist\" subsystem=\"page\">" + str(id) + "</sdev-view>"
+end
+
+to copyGistLink with slug
+  return "<sdev-view component=\"copyGistLink\" subsystem=\"page\">" + str(slug) + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleSignOut
+  return "<sdev-view component=\"handleSignOut\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,75 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/functional.ts (205 lines)
+# Pure-SDEV Path: src/lang/builtins/functional.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/functional.ts",
+    sdev_path: "src/lang/builtins/functional.sdev",
+    subsystem: "builtins",
+    original_lines: 205,
+    exports_count: 11
+  }
+end
+
+to module_exports
+  return ["registerFunctional", "fns", "result", "fn", "arity", "curried", "all", "cache", "key", "fallback", "opt"]
+end
+
+to registerFunctional with builtins SdevFunction output
+  return builtins
+end
+
+to fns
+  return "fns"
+end
+
+to result
+  return "result"
+end
+
+to fn
+  return "fn"
+end
+
+to arity
+  return "arity"
+end
+
+to curried
+  return "curried"
+end
+
+to all
+  return "all"
+end
+
+to cache
+  return "cache"
+end
+
+to key
+  return "key"
+end
+
+to fallback
+  return "fallback"
+end
+
+to opt
+  return "opt"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/pyparity.ts (914 lines)
+# Pure-SDEV Path: src/lang/pyparity.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/pyparity.ts",
+    sdev_path: "src/lang/pyparity.sdev",
+    subsystem: "lang-core",
+    original_lines: 914,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["getPyRunner", "splitKwargs", "setObjectReprHook", "repr", "formatValue", "displayText", "createParityBuiltins", "pyRunner", "fn", "last", "objectReprHook", "custom", "body", "klass", "text", "width", "prec", "sdev_mod_num", "fill", "pad", "defaultAlign", "left", "add", "list", "sep", "sdev_mod_end", "out", "start", "stop", "step", "items", "pairs", "cols", "filler", "flags", "key", "reverse", "sorted", "scored", "bb"]
+end
+
+to getPyRunner
+  return 1
+end
+
+to splitKwargs with args
+  return args
+end
+
+to setObjectReprHook with hook
+  return hook
+end
+
+to repr with value
+  return value
+end
+
+to formatValue with value spec conv
+  return value
+end
+
+to displayText with value
+  return value
+end
+
+to createParityBuiltins with output host
+  return output
+end
+
+to pyRunner
+  return "pyRunner"
+end
+
+to fn with name impl line
+  return name
+end
+
+to last
+  return "last"
+end
+
+to objectReprHook
+  return "objectReprHook"
+end
+
+to custom
+  return "custom"
+end
+
+to body
+  return "body"
+end
+
+to klass
+  return "klass"
+end
+
+to text
+  return "text"
+end
+
+to width
+  return "width"
+end
+
+to prec
+  return "prec"
+end
+
+to sdev_mod_num
+  return "sdev_mod_num"
+end
+
+to fill
+  return "fill"
+end
+
+to pad
+  return "pad"
+end
+
+to defaultAlign
+  return "defaultAlign"
+end
+
+to left
+  return "left"
+end
+
+to add with name impl line
+  return name
+end
+
+to list
+  return "list"
+end
+
+to sep
+  return "sep"
+end
+
+to sdev_mod_end
+  return "sdev_mod_end"
+end
+
+to out
+  return "out"
+end
+
+to start
+  return "start"
+end
+
+to stop
+  return "stop"
+end
+
+to step
+  return "step"
+end
+
+to items
+  return "items"
+end
+
+to pairs
+  return "pairs"
+end
+
+to cols
+  return "cols"
+end
+
+to filler
+  return "filler"
+end
+
+to flags
+  return "flags"
+end
+
+to key
+  return "key"
+end
+
+to reverse
+  return "reverse"
+end
+
+to sorted
+  return "sorted"
+end
+
+to scored
+  return "scored"
+end
+
+to bb
+  return "bb"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

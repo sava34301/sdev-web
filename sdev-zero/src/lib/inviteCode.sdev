@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/inviteCode.ts (36 lines)
+# Pure-SDEV Path: src/lib/inviteCode.sdev
+# Subsystem     : lib
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/inviteCode.ts",
+    sdev_path: "src/lib/inviteCode.sdev",
+    subsystem: "lib",
+    original_lines: 36,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["hasInviteAccess", "clearInviteAccess", "redeemInviteCode", "KEY", "CODE_KEY", "trimmed"]
+end
+
+to hasInviteAccess
+  return 1
+end
+
+to clearInviteAccess
+  return 1
+end
+
+to redeemInviteCode with code
+  return code
+end
+
+to KEY
+  return "KEY"
+end
+
+to CODE_KEY
+  return "CODE_KEY"
+end
+
+to trimmed
+  return "trimmed"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

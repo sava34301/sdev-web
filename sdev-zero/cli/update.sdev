@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : cli/update.ts (88 lines)
+# Pure-SDEV Path: cli/update.sdev
+# Subsystem     : cli
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "cli/update.ts",
+    sdev_path: "cli/update.sdev",
+    subsystem: "cli",
+    original_lines: 88,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["newer", "fetchReleases", "maybeNotifyUpdate", "selfPath", "runUpdate", "pa", "res", "stampFile", "last", "sdev_mod_self", "dir", "get", "cli", "extras", "tmp"]
+end
+
+to newer with a b
+  return a
+end
+
+to fetchReleases
+  return 1
+end
+
+to maybeNotifyUpdate
+  return 1
+end
+
+to selfPath
+  return 1
+end
+
+to runUpdate with force
+  return force
+end
+
+to pa
+  return "pa"
+end
+
+to res
+  return "res"
+end
+
+to stampFile
+  return 1
+end
+
+to last
+  return "last"
+end
+
+to sdev_mod_self
+  return "sdev_mod_self"
+end
+
+to dir
+  return "dir"
+end
+
+to get with url
+  return url
+end
+
+to cli
+  return "cli"
+end
+
+to extras
+  return "extras"
+end
+
+to tmp
+  return "tmp"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

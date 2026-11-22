@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Docs.tsx (496 lines)
+# Pure-SDEV Path: src/pages/Docs.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Docs.tsx",
+    sdev_path: "src/pages/Docs.sdev",
+    subsystem: "page",
+    original_lines: 496,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["resolveSourceId", "normalizeRelPath", "extractHeadings", "Docs", "BASE_URL", "docUrl", "CATEGORIES", "SOURCES", "SOURCE_ALIASES", "key", "cleanHref", "baseParts", "out", "lines", "inFence", "level", "text", "navigate", "initialSource", "src", "contentRef", "requested", "resolved", "currentSource", "selectSource", "cancelled", "visibleSources", "filteredHeadings", "root", "obs", "visible", "totalLines", "totalWords", "isCatActive", "first", "Icon", "active", "el", "resolvedRel", "matched"]
+end
+
+to resolveSourceId with raw
+  return "<sdev-view component=\"resolveSourceId\" subsystem=\"page\">" + str(raw) + "</sdev-view>"
+end
+
+to normalizeRelPath with baseRelPath href
+  return "<sdev-view component=\"normalizeRelPath\" subsystem=\"page\">" + str(baseRelPath) + "</sdev-view>"
+end
+
+to extractHeadings with md
+  return "<sdev-view component=\"extractHeadings\" subsystem=\"page\">" + str(md) + "</sdev-view>"
+end
+
+to Docs
+  return "<sdev-view component=\"Docs\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to BASE_URL
+  return "<sdev-view component=\"BASE_URL\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to docUrl with relPath
+  return "<sdev-view component=\"docUrl\" subsystem=\"page\">" + str(relPath) + "</sdev-view>"
+end
+
+to CATEGORIES
+  return "<sdev-view component=\"CATEGORIES\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to SOURCES
+  return "<sdev-view component=\"SOURCES\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to SOURCE_ALIASES
+  return "<sdev-view component=\"SOURCE_ALIASES\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to key
+  return "<sdev-view component=\"key\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to cleanHref
+  return "<sdev-view component=\"cleanHref\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to baseParts
+  return "<sdev-view component=\"baseParts\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to out
+  return "<sdev-view component=\"out\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to lines
+  return "<sdev-view component=\"lines\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to inFence
+  return "<sdev-view component=\"inFence\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to level
+  return "<sdev-view component=\"level\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to text
+  return "<sdev-view component=\"text\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to initialSource
+  return "<sdev-view component=\"initialSource\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to src
+  return "<sdev-view component=\"src\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to contentRef
+  return "<sdev-view component=\"contentRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to requested
+  return "<sdev-view component=\"requested\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to resolved
+  return "<sdev-view component=\"resolved\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to currentSource
+  return "<sdev-view component=\"currentSource\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to selectSource
+  return "<sdev-view component=\"selectSource\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to cancelled
+  return "<sdev-view component=\"cancelled\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to visibleSources
+  return "<sdev-view component=\"visibleSources\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to filteredHeadings
+  return "<sdev-view component=\"filteredHeadings\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to root
+  return "<sdev-view component=\"root\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to obs
+  return "<sdev-view component=\"obs\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to visible
+  return "<sdev-view component=\"visible\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to totalLines
+  return "<sdev-view component=\"totalLines\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to totalWords
+  return "<sdev-view component=\"totalWords\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to isCatActive
+  return "<sdev-view component=\"isCatActive\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to first
+  return "<sdev-view component=\"first\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to Icon
+  return "<sdev-view component=\"Icon\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to active
+  return "<sdev-view component=\"active\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to el
+  return "<sdev-view component=\"el\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to resolvedRel
+  return "<sdev-view component=\"resolvedRel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to matched
+  return "<sdev-view component=\"matched\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

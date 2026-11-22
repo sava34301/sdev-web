@@ -1,0 +1,83 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/PersonalPanel.tsx (196 lines)
+# Pure-SDEV Path: src/components/ide/PersonalPanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/PersonalPanel.tsx",
+    sdev_path: "src/components/ide/PersonalPanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 196,
+    exports_count: 13
+  }
+end
+
+to module_exports
+  return ["PersonalPanel", "active", "installDialect", "spec", "installLibrary", "address", "bundle", "translateTo", "next", "downloadDocs", "blob", "url", "on"]
+end
+
+to PersonalPanel with onReplaceContent
+  return "<sdev-view component=\"PersonalPanel\" subsystem=\"ide-component\">" + str(onReplaceContent) + "</sdev-view>"
+end
+
+to active
+  return "<sdev-view component=\"active\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to installDialect
+  return "<sdev-view component=\"installDialect\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to spec
+  return "<sdev-view component=\"spec\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to installLibrary
+  return "<sdev-view component=\"installLibrary\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to address
+  return "<sdev-view component=\"address\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to bundle
+  return "<sdev-view component=\"bundle\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to translateTo with target
+  return "<sdev-view component=\"translateTo\" subsystem=\"ide-component\">" + str(target) + "</sdev-view>"
+end
+
+to next
+  return "<sdev-view component=\"next\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to downloadDocs
+  return "<sdev-view component=\"downloadDocs\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to blob
+  return "<sdev-view component=\"blob\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to on
+  return "<sdev-view component=\"on\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

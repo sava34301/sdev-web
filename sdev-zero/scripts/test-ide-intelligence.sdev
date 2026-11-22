@@ -1,0 +1,37 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — IDE Intelligence, 3D Scene Math & App Router
+# (sdev-zero/scripts/test-ide-intelligence.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/ide/intelligence.sdev"
+use "lang/ide/scene_router.sdev"
+
+set ts to test_begin("IDE Intelligence (Autocomplete, Symbol Outline, Search, Problems, 3D Scene, Router)")
+
+# 1. Autocomplete & Symbol Outline
+set ac to ide_autocomplete("wh")
+set ts to assert_str_eq(ts, ac[0], "while", "Autocomplete 'wh' suggests 'while'")
+set sample_code to "to compute_total with items\n  return 0\nend\nboard \"uno\" {\n  pin 13 on\n}"
+set outline to ide_extract_outline(sample_code)
+set ts to assert_str_eq(ts, outline[0], "fn:compute_total@1", "Outline extracts function compute_total at line 1")
+set ts to assert_str_eq(ts, outline[1], "board@4", "Outline extracts hardware board block at line 4")
+
+# 2. Problems Aggregator & Source Search
+set probs to ide_collect_problems("console.log(\"oops\")")
+set ts to assert_true(ts, length(probs) > 0 and index_of(probs[0], "SDEV004") >= 0, "IDE problems panel reports SDEV004 on console.log")
+set hits to ide_search_in_source("app.sdev", sample_code, "compute_total")
+set ts to assert_eq(ts, length(hits), 1, "Workspace search finds matching line in app.sdev")
+
+# 3. App Router Protocol Selection (Project Architecture Rule)
+set ts to assert_str_eq(ts, app_router_for_protocol("file:"), "HashRouter", "file: desktop entry selects HashRouter")
+set ts to assert_str_eq(ts, app_router_for_protocol("https:"), "BrowserRouter", "https: hosted entry selects BrowserRouter")
+
+# 4. Homepage 3D Compiler Scene Scroll Progress Math & Launch Gate
+set rig to scene_compute_rig_state(550)
+set ts to assert_eq(ts, rig["assembly_milli"], 500, "3D scene assembly smoothstep at p=0.55 is 0.50")
+set ts to assert_eq(ts, launch_verify_invite_code("sdev-2026-vip"), 1, "Invite code SDEV-2026-VIP is accepted")
+set cal_url to google_calendar_event_url("SDEV Launch", "Zero Host", "20261121T180000Z", "20261121T190000Z")
+set ts to assert_true(ts, index_of(cal_url, "text=SDEV+Launch") >= 0, "Google Calendar URL encodes event title")
+
+set _ to test_summary(ts)

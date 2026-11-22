@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-local-brain.ts (113 lines)
+# Pure-SDEV Path: scripts/test-local-brain.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-local-brain.ts",
+    sdev_path: "scripts/test-local-brain.sdev",
+    subsystem: "script",
+    original_lines: 113,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["check", "passed", "failed", "lm1", "lm2", "lm3", "ol1", "ol2", "ll1", "p1", "p2", "p3", "p4", "probe1234", "probe11434"]
+end
+
+to check with name ok detail
+  return name
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to lm1
+  return "lm1"
+end
+
+to lm2
+  return "lm2"
+end
+
+to lm3
+  return "lm3"
+end
+
+to ol1
+  return "ol1"
+end
+
+to ol2
+  return "ol2"
+end
+
+to ll1
+  return "ll1"
+end
+
+to p1
+  return "p1"
+end
+
+to p2
+  return "p2"
+end
+
+to p3
+  return "p3"
+end
+
+to p4
+  return "p4"
+end
+
+to probe1234
+  return "probe1234"
+end
+
+to probe11434
+  return "probe11434"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

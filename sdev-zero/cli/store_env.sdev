@@ -1,0 +1,87 @@
+# ============================================================
+# SDEV CLI Subsystem — Local Store, Environment, Version & Updater
+# (sdev-zero/cli/store_env.sdev)
+# 100% Pure SDEV port of cli/store.ts, cli/env.ts, cli/version.ts & cli/update.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to cli_version
+  return "2.4.0"
+end
+
+to cli_store_create
+  return {
+    active_dialect: "canonical",
+    brain_mode: "local",
+    local_model_url: "http://127.0.0.1:11434/v1/chat/completions",
+    local_model_name: "qwen2.5-coder:3b",
+    dialects: {},
+    libraries: {},
+    token: ""
+  }
+end
+
+to cli_store_set_dialect with store slug spec
+  set dmap to store["dialects"]
+  set dmap[slug] to spec
+  set store["dialects"] to dmap
+  set store["active_dialect"] to slug
+  return store
+end
+
+to cli_store_get_dialect with store slug
+  set dmap to store["dialects"]
+  return dmap[slug]
+end
+
+to cli_compare_semver with v_cur v_latest
+  set a to split(text_trim(v_cur), ".")
+  set b to split(text_trim(v_latest), ".")
+  if length(a) < 3 or length(b) < 3
+    return 0
+  end
+  set ma to int(a[0])
+  set mb to int(b[0])
+  if mb > ma
+    return 1
+  end
+  if mb < ma
+    return 0 - 1
+  end
+  set na to int(a[1])
+  set nb to int(b[1])
+  if nb > na
+    return 1
+  end
+  if nb < na
+    return 0 - 1
+  end
+  set pa to int(a[2])
+  set pb to int(b[2])
+  if pb > pa
+    return 1
+  end
+  if pb < pa
+    return 0 - 1
+  end
+  return 0
+end
+
+to cli_check_update_status with current_ver latest_ver
+  set cmp to cli_compare_semver(current_ver, latest_ver)
+  if cmp > 0
+    return {
+      update_available: 1,
+      current: current_ver,
+      latest: latest_ver,
+      message: "Update available: v" + current_ver + " -> v" + latest_ver
+    }
+  end
+  return {
+    update_available: 0,
+    current: current_ver,
+    latest: latest_ver,
+    message: "SDEV Zero-Host CLI is up to date (v" + current_ver + ")."
+  }
+end

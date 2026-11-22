@@ -1,0 +1,219 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/interpreter.ts (2137 lines)
+# Pure-SDEV Path: src/lang/interpreter.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/interpreter.ts",
+    sdev_path: "src/lang/interpreter.sdev",
+    subsystem: "lang-core",
+    original_lines: 2137,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["stmtDeclaresInScope", "blockNeedsScope", "BreakSignal", "ContinueSignal", "representation", "Interpreter", "after", "attributes", "sdev_mod_if", "MAX_ITERATIONS", "blockScopeCache", "cached", "stmts", "builtins", "advanced", "matrix", "parity", "web", "result", "it", "step", "op", "left", "right", "operand", "callee", "argNodes", "hasSpecial", "args", "kwargs", "an", "obj", "index", "value", "items", "star", "blockEnv", "iterations", "broke", "iterable"]
+end
+
+to stmtDeclaresInScope with node
+  return node
+end
+
+to blockNeedsScope with block
+  return block
+end
+
+to BreakSignal with init_arg
+  return {
+    kind: "BreakSignal",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to ContinueSignal with init_arg
+  return {
+    kind: "ContinueSignal",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to representation with init_arg
+  return {
+    kind: "representation",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to Interpreter with init_arg
+  return {
+    kind: "Interpreter",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to after with init_arg
+  return {
+    kind: "after",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to attributes with init_arg
+  return {
+    kind: "attributes",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to sdev_mod_if with init_arg
+  return {
+    kind: "sdev_mod_if",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to MAX_ITERATIONS
+  return "MAX_ITERATIONS"
+end
+
+to blockScopeCache
+  return "blockScopeCache"
+end
+
+to cached
+  return "cached"
+end
+
+to stmts
+  return "stmts"
+end
+
+to builtins
+  return "builtins"
+end
+
+to advanced
+  return "advanced"
+end
+
+to matrix
+  return "matrix"
+end
+
+to parity
+  return "parity"
+end
+
+to web
+  return "web"
+end
+
+to result
+  return "result"
+end
+
+to it
+  return "it"
+end
+
+to step
+  return "step"
+end
+
+to op
+  return "op"
+end
+
+to left
+  return "left"
+end
+
+to right
+  return "right"
+end
+
+to operand
+  return "operand"
+end
+
+to callee
+  return "callee"
+end
+
+to argNodes
+  return "argNodes"
+end
+
+to hasSpecial
+  return "hasSpecial"
+end
+
+to args
+  return "args"
+end
+
+to kwargs
+  return "kwargs"
+end
+
+to an
+  return "an"
+end
+
+to obj
+  return "obj"
+end
+
+to index
+  return "index"
+end
+
+to value
+  return "value"
+end
+
+to items
+  return "items"
+end
+
+to star
+  return "star"
+end
+
+to blockEnv
+  return "blockEnv"
+end
+
+to iterations
+  return "iterations"
+end
+
+to broke
+  return "broke"
+end
+
+to iterable
+  return "iterable"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

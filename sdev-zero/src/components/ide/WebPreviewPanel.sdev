@@ -1,0 +1,99 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/WebPreviewPanel.tsx (366 lines)
+# Pure-SDEV Path: src/components/ide/WebPreviewPanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/WebPreviewPanel.tsx",
+    sdev_path: "src/components/ide/WebPreviewPanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 366,
+    exports_count: 17
+  }
+end
+
+to module_exports
+  return ["WebPreviewPanel", "iframeRef", "doc", "bodyHtml", "cssSource", "jsSource", "onMessage", "data", "openInNewTab", "blob", "url", "reload", "downloadFile", "copySource", "viewportWidth", "errorCount", "activeCodeText"]
+end
+
+to WebPreviewPanel
+  return "<sdev-view component=\"WebPreviewPanel\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to iframeRef
+  return "<sdev-view component=\"iframeRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to doc
+  return "<sdev-view component=\"doc\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to bodyHtml
+  return "<sdev-view component=\"bodyHtml\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to cssSource
+  return "<sdev-view component=\"cssSource\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to jsSource
+  return "<sdev-view component=\"jsSource\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to onMessage with e
+  return "<sdev-view component=\"onMessage\" subsystem=\"ide-component\">" + str(e) + "</sdev-view>"
+end
+
+to data
+  return "<sdev-view component=\"data\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to openInNewTab
+  return "<sdev-view component=\"openInNewTab\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to blob
+  return "<sdev-view component=\"blob\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to reload
+  return "<sdev-view component=\"reload\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to downloadFile with content ext mime
+  return "<sdev-view component=\"downloadFile\" subsystem=\"ide-component\">" + str(content) + "</sdev-view>"
+end
+
+to copySource with text
+  return "<sdev-view component=\"copySource\" subsystem=\"ide-component\">" + str(text) + "</sdev-view>"
+end
+
+to viewportWidth
+  return "<sdev-view component=\"viewportWidth\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to errorCount
+  return "<sdev-view component=\"errorCount\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to activeCodeText
+  return "<sdev-view component=\"activeCodeText\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

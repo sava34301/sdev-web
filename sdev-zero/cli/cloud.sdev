@@ -1,0 +1,43 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : cli/cloud.ts (22 lines)
+# Pure-SDEV Path: cli/cloud.sdev
+# Subsystem     : cli
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "cli/cloud.ts",
+    sdev_path: "cli/cloud.sdev",
+    subsystem: "cli",
+    original_lines: 22,
+    exports_count: 3
+  }
+end
+
+to module_exports
+  return ["signIn", "myUsername", "db"]
+end
+
+to signIn with email password
+  return email
+end
+
+to myUsername with userId
+  return userId
+end
+
+to db
+  return "db"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

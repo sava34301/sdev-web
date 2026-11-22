@@ -388,6 +388,79 @@ static int compile_with_driver(
   char **out_err
 );
 
+static char *read_disk_file(const char *path, size_t *out_len);
+
+// Cached stage2 / v1 drivers (lazily compiled on demand)
+static uint8_t *g_stage2_bc = NULL, *g_stage2_pool = NULL;
+static uint32_t g_stage2_bc_len = 0, g_stage2_pool_len = 0;
+
+static uint8_t *g_v1_bc = NULL, *g_v1_pool = NULL;
+static uint32_t g_v1_bc_len = 0, g_v1_pool_len = 0;
+
+static uint8_t *g_v1self_bc = NULL, *g_v1self_pool = NULL;
+static uint32_t g_v1self_bc_len = 0, g_v1self_pool_len = 0;
+
+static uint8_t *g_v1self2_bc = NULL, *g_v1self2_pool = NULL;
+static uint32_t g_v1self2_bc_len = 0, g_v1self2_pool_len = 0;
+
+static int ensure_stage2_driver(char **err) {
+  if (g_stage2_bc) return 1;
+  size_t slen = 0;
+  char *src = read_disk_file("lang/compiler/driver.sdev", &slen);
+  if (!src) { if (err) *err = strdup("cannot read lang/compiler/driver.sdev"); return 0; }
+  int ok = compile_with_driver(
+    BAKED_DRIVER_BC, BAKED_DRIVER_BC_LEN,
+    BAKED_DRIVER_POOL, BAKED_DRIVER_POOL_LEN,
+    src, slen, &g_stage2_bc, &g_stage2_bc_len, &g_stage2_pool, &g_stage2_pool_len, err
+  );
+  free(src);
+  return ok;
+}
+
+static int ensure_v1_driver(char **err) {
+  if (g_v1_bc) return 1;
+  size_t slen = 0;
+  char *src = read_disk_file("lang/compiler/v1_driver.sdev", &slen);
+  if (!src) { if (err) *err = strdup("cannot read lang/compiler/v1_driver.sdev"); return 0; }
+  int ok = compile_with_driver(
+    BAKED_DRIVER_BC, BAKED_DRIVER_BC_LEN,
+    BAKED_DRIVER_POOL, BAKED_DRIVER_POOL_LEN,
+    src, slen, &g_v1_bc, &g_v1_bc_len, &g_v1_pool, &g_v1_pool_len, err
+  );
+  free(src);
+  return ok;
+}
+
+static int ensure_v1_self_driver(char **err) {
+  if (g_v1self_bc) return 1;
+  if (!ensure_v1_driver(err)) return 0;
+  size_t slen = 0;
+  char *src = read_disk_file("lang/compiler/v1_self.sdev", &slen);
+  if (!src) { if (err) *err = strdup("cannot read lang/compiler/v1_self.sdev"); return 0; }
+  int ok = compile_with_driver(
+    g_v1_bc, g_v1_bc_len,
+    g_v1_pool, g_v1_pool_len,
+    src, slen, &g_v1self_bc, &g_v1self_bc_len, &g_v1self_pool, &g_v1self_pool_len, err
+  );
+  free(src);
+  return ok;
+}
+
+static int ensure_v1_self_stage2_driver(char **err) {
+  if (g_v1self2_bc) return 1;
+  if (!ensure_v1_self_driver(err)) return 0;
+  size_t slen = 0;
+  char *src = read_disk_file("lang/compiler/v1_self.sdev", &slen);
+  if (!src) { if (err) *err = strdup("cannot read lang/compiler/v1_self.sdev"); return 0; }
+  int ok = compile_with_driver(
+    g_v1self_bc, g_v1self_bc_len,
+    g_v1self_pool, g_v1self_pool_len,
+    src, slen, &g_v1self2_bc, &g_v1self2_bc_len, &g_v1self2_pool, &g_v1self2_pool_len, err
+  );
+  free(src);
+  return ok;
+}
+
 static char *read_disk_file(const char *path, size_t *out_len) {
   FILE *f = fopen(path, "rb");
   if (!f) {
@@ -458,10 +531,51 @@ static uint32_t host_read_file(Vm *vm, const char *path_raw, uint32_t path_len) 
     return res;
   }
 
+  if (strcmp(path, "sdev:driver:v1") == 0 ||
+      strcmp(path, "sdev:driver:v1-self") == 0 ||
+      strcmp(path, "sdev:driver:v1-self-stage2") == 0) {
+    char *err = NULL;
+    int ok = 0;
+    const uint8_t *dbc = NULL, *dpool = NULL;
+    uint32_t dbcl = 0, dpl = 0;
+    if (strcmp(path, "sdev:driver:v1") == 0) {
+      ok = ensure_v1_driver(&err);
+      dbc = g_v1_bc; dbcl = g_v1_bc_len; dpool = g_v1_pool; dpl = g_v1_pool_len;
+    } else if (strcmp(path, "sdev:driver:v1-self") == 0) {
+      ok = ensure_v1_self_driver(&err);
+      dbc = g_v1self_bc; dbcl = g_v1self_bc_len; dpool = g_v1self_pool; dpl = g_v1self_pool_len;
+    } else {
+      ok = ensure_v1_self_stage2_driver(&err);
+      dbc = g_v1self2_bc; dbcl = g_v1self2_bc_len; dpool = g_v1self2_pool; dpl = g_v1self2_pool_len;
+    }
+    free(path);
+    if (!ok) {
+      char buf[512];
+      snprintf(buf, sizeof(buf), "error %s", err ? err : "v1 driver build failed");
+      free(err);
+      return vm_alloc_str(vm, buf, (uint32_t)strlen(buf));
+    }
+    char *bh = bytes_to_hex(dbc, dbcl);
+    char *ph = bytes_to_hex(dpool, dpl);
+    size_t len = strlen(bh) + 1 + strlen(ph);
+    char *comb = (char *)malloc(len + 1);
+    snprintf(comb, len + 1, "%s %s", bh, ph);
+    uint32_t res = vm_alloc_str(vm, comb, (uint32_t)len);
+    free(bh);
+    free(ph);
+    free(comb);
+    return res;
+  }
+
   if (strncmp(path, "sdev:compile:", 13) == 0) {
     const char *rest = path + 13;
     const char *colon = strchr(rest, ':');
     if (colon) {
+      size_t mode_len = (size_t)(colon - rest);
+      char mode[32];
+      if (mode_len >= sizeof(mode)) mode_len = sizeof(mode) - 1;
+      memcpy(mode, rest, mode_len);
+      mode[mode_len] = '\0';
       const char *target_path = colon + 1;
       size_t slen = 0;
       char *src = read_disk_file(target_path, &slen);
@@ -470,14 +584,31 @@ static uint32_t host_read_file(Vm *vm, const char *path_raw, uint32_t path_len) 
         const char *err = "error file not found";
         return vm_alloc_str(vm, err, (uint32_t)strlen(err));
       }
+      const uint8_t *dbc = BAKED_DRIVER_BC;
+      uint32_t dbcl = BAKED_DRIVER_BC_LEN;
+      const uint8_t *dpool = BAKED_DRIVER_POOL;
+      uint32_t dpl = BAKED_DRIVER_POOL_LEN;
+      char *err = NULL;
+      int drv_ok = 1;
+      if (strcmp(mode, "stage2") == 0) {
+        drv_ok = ensure_stage2_driver(&err);
+        dbc = g_stage2_bc; dbcl = g_stage2_bc_len; dpool = g_stage2_pool; dpl = g_stage2_pool_len;
+      } else if (strcmp(mode, "v1") == 0) {
+        drv_ok = ensure_v1_driver(&err);
+        dbc = g_v1_bc; dbcl = g_v1_bc_len; dpool = g_v1_pool; dpl = g_v1_pool_len;
+      } else if (strcmp(mode, "v1-self") == 0) {
+        drv_ok = ensure_v1_self_driver(&err);
+        dbc = g_v1self_bc; dbcl = g_v1self_bc_len; dpool = g_v1self_pool; dpl = g_v1self_pool_len;
+      } else if (strcmp(mode, "v1-self-stage2") == 0) {
+        drv_ok = ensure_v1_self_stage2_driver(&err);
+        dbc = g_v1self2_bc; dbcl = g_v1self2_bc_len; dpool = g_v1self2_pool; dpl = g_v1self2_pool_len;
+      }
       uint8_t *bc = NULL, *pool = NULL;
       uint32_t bc_len = 0, pool_len = 0;
-      char *err = NULL;
-      int ok = compile_with_driver(
-        BAKED_DRIVER_BC, BAKED_DRIVER_BC_LEN,
-        BAKED_DRIVER_POOL, BAKED_DRIVER_POOL_LEN,
+      int ok = drv_ok ? compile_with_driver(
+        dbc, dbcl, dpool, dpl,
         src, slen, &bc, &bc_len, &pool, &pool_len, &err
-      );
+      ) : 0;
       free(src);
       free(path);
       if (!ok) {
@@ -605,6 +736,24 @@ static int32_t host_write_file(Vm *vm, const char *p_raw, uint32_t p_len, const 
     fclose(f);
     return 0;
   }
+  if (strncmp(path, "sdev:write_hex:", 15) == 0) {
+    FILE *f = fopen(path + 15, "wb");
+    free(path);
+    if (!f) return -1;
+    uint32_t nbytes = d_len / 2;
+    uint8_t *raw = (uint8_t *)malloc(nbytes + 1);
+    for (uint32_t i = 0; i < nbytes; i++) {
+      uint8_t hi = (uint8_t)d_raw[i * 2];
+      uint8_t lo = (uint8_t)d_raw[i * 2 + 1];
+      uint8_t hv = (hi >= 'a') ? (hi - 'a' + 10) : (hi >= 'A') ? (hi - 'A' + 10) : (hi - '0');
+      uint8_t lv = (lo >= 'a') ? (lo - 'a' + 10) : (lo >= 'A') ? (lo - 'A' + 10) : (lo - '0');
+      raw[i] = (uint8_t)((hv << 4) | (lv & 0xf));
+    }
+    fwrite(raw, 1, nbytes, f);
+    free(raw);
+    fclose(f);
+    return 0;
+  }
   FILE *f = fopen(path, "wb");
   free(path);
   if (!f) return -1;
@@ -651,6 +800,10 @@ static double host_fmath(int op, double a, double b) {
     case 3: return exp(a);
     case 4: return log(a);
     case 5: return pow(a, b);
+    case 6: return ceil(a);
+    case 7: return floor(a);
+    case 8: return nearbyint(a);
+    case 9: return sqrt(a);
     default: return 0.0;
   }
 }
@@ -1298,7 +1451,91 @@ static void print_usage(void) {
   );
 }
 
+static int is_cli_subcommand(const char *cmd) {
+  static const char *SUBS[] = {
+    "doctor", "check", "disasm", "lint", "fmt", "translate",
+    "v1", "pe", "web", "test", "bootstrap",
+    "eval", "dialect", "api", "explain", "new", NULL
+  };
+  for (int i = 0; SUBS[i]; i++) {
+    if (strcmp(cmd, SUBS[i]) == 0) return 1;
+  }
+  return 0;
+}
+
+static int check_v1_fixed_reassignment(const char *src, char *bad_name, size_t bad_cap) {
+  char fixed_names[32][64];
+  int n_fixed = 0;
+  const char *p = src;
+  while (*p) {
+    while (*p == ' ' || *p == '\t') p++;
+    const char *eol = strchr(p, '\n');
+    size_t len = eol ? (size_t)(eol - p) : strlen(p);
+    if (len > 0 && p[len - 1] == '\r') len--;
+    if ((len > 6 && strncmp(p, "fixed ", 6) == 0) || (len > 6 && strncmp(p, "const ", 6) == 0)) {
+      const char *ns = p + 6;
+      while (*ns == ' ') ns++;
+      const char *ne = ns;
+      while (*ne && (isalnum((unsigned char)*ne) || *ne == '_')) ne++;
+      size_t nlen = (size_t)(ne - ns);
+      if (nlen > 0 && nlen < 63 && strncmp(ne, " be ", 4) == 0 && n_fixed < 32) {
+        memcpy(fixed_names[n_fixed], ns, nlen);
+        fixed_names[n_fixed][nlen] = '\0';
+        n_fixed++;
+      }
+    } else {
+      for (int i = 0; i < n_fixed; i++) {
+        size_t flen = strlen(fixed_names[i]);
+        if (len > flen + 4 && strncmp(p, fixed_names[i], flen) == 0 && strncmp(p + flen, " be ", 4) == 0) {
+          snprintf(bad_name, bad_cap, "%.60s", fixed_names[i]);
+          return 1;
+        }
+        if (len > flen + 7 && strncmp(p, "be ", 3) == 0 && strncmp(p + 3, fixed_names[i], flen) == 0 && strncmp(p + 3 + flen, " be ", 4) == 0) {
+          snprintf(bad_name, bad_cap, "%.60s", fixed_names[i]);
+          return 1;
+        }
+      }
+    }
+    if (!eol) break;
+    p = eol + 1;
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
+  // Delegate high-level pure-SDEV CLI subcommands to cli/sdev.sdev if available
+  if (argc >= 2 && (is_cli_subcommand(argv[1]) ||
+      ((strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0) && access("cli/sdev.sdev", R_OK) == 0))) {
+    const char *cli_script = "cli/sdev.sdev";
+    size_t slen = 0;
+    char *src = read_disk_file(cli_script, &slen);
+    if (src) {
+      uint8_t *bc = NULL, *pool = NULL;
+      uint32_t bc_len = 0, pool_len = 0;
+      char *err = NULL;
+      if (!compile_with_driver(
+            BAKED_DRIVER_BC, BAKED_DRIVER_BC_LEN,
+            BAKED_DRIVER_POOL, BAKED_DRIVER_POOL_LEN,
+            src, slen, &bc, &bc_len, &pool, &pool_len, &err)) {
+        fprintf(stderr, "sdev: %s: %s\n", cli_script, err ? err : "compile error");
+        free(err);
+        free(src);
+        return 1;
+      }
+      free(src);
+      Vm vm;
+      vm_init(&vm, bc, bc_len, pool, pool_len);
+      vm.prog_argc = argc - 1;
+      vm.prog_argv = argv + 1;
+      vm_run(&vm);
+      int code = vm.exit_code;
+      vm_destroy(&vm);
+      free(bc);
+      free(pool);
+      return code;
+    }
+  }
+
   if (argc < 2 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "help") == 0) {
     print_usage();
     return argc < 2 ? 2 : 0;
@@ -1429,8 +1666,13 @@ int main(int argc, char **argv) {
     return code;
   }
 
-  // Default / `run`: compile and execute <file.sdev> [args...]
+  // Default / `run`: compile and execute [--v1] <file.sdev> [args...]
   int arg_idx = (strcmp(argv[1], "run") == 0) ? 2 : 1;
+  int v1_mode = 0;
+  if (arg_idx < argc && strcmp(argv[arg_idx], "--v1") == 0) {
+    v1_mode = 1;
+    arg_idx++;
+  }
   if (arg_idx >= argc) {
     print_usage();
     return 2;
@@ -1442,13 +1684,34 @@ int main(int argc, char **argv) {
     fprintf(stderr, "sdev-vm: cannot open %s\n", script_path);
     return 1;
   }
+  if (!v1_mode && strncmp(src, "#!sdev v1", 9) == 0) {
+    v1_mode = 1;
+  }
 
   uint8_t *bc = NULL, *pool = NULL;
   uint32_t bc_len = 0, pool_len = 0;
   char *err = NULL;
+  const uint8_t *dbc = BAKED_DRIVER_BC;
+  uint32_t dbcl = BAKED_DRIVER_BC_LEN;
+  const uint8_t *dpool = BAKED_DRIVER_POOL;
+  uint32_t dpl = BAKED_DRIVER_POOL_LEN;
+  if (v1_mode) {
+    char bad_fixed[64];
+    if (check_v1_fixed_reassignment(src, bad_fixed, sizeof(bad_fixed))) {
+      fprintf(stderr, "sdev: %s: Cannot reassign fixed constant '%s'\n", script_path, bad_fixed);
+      free(src);
+      return 1;
+    }
+    if (!ensure_v1_driver(&err)) {
+      fprintf(stderr, "sdev: %s: %s\n", script_path, err ? err : "v1 driver error");
+      free(err);
+      free(src);
+      return 1;
+    }
+    dbc = g_v1_bc; dbcl = g_v1_bc_len; dpool = g_v1_pool; dpl = g_v1_pool_len;
+  }
   if (!compile_with_driver(
-        BAKED_DRIVER_BC, BAKED_DRIVER_BC_LEN,
-        BAKED_DRIVER_POOL, BAKED_DRIVER_POOL_LEN,
+        dbc, dbcl, dpool, dpl,
         src, slen, &bc, &bc_len, &pool, &pool_len, &err)) {
     fprintf(stderr, "sdev: %s: %s\n", script_path, err ? err : "compile error");
     free(err);

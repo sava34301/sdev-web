@@ -1,0 +1,59 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/run-ts.mjs (71 lines)
+# Pure-SDEV Path: scripts/run-ts.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/run-ts.mjs",
+    sdev_path: "scripts/run-ts.sdev",
+    subsystem: "script",
+    original_lines: 71,
+    exports_count: 7
+  }
+end
+
+to module_exports
+  return ["root", "entry", "rawPlugin", "tmpFile", "require", "__s", "res"]
+end
+
+to root
+  return "root"
+end
+
+to entry
+  return "entry"
+end
+
+to rawPlugin
+  return "rawPlugin"
+end
+
+to tmpFile
+  return "tmpFile"
+end
+
+to require
+  return "require"
+end
+
+to __s
+  return "__s"
+end
+
+to res
+  return "res"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

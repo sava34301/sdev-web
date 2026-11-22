@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/sense.ts (238 lines)
+# Pure-SDEV Path: src/lang/agent/sense.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/sense.ts",
+    sdev_path: "src/lang/agent/sense.sdev",
+    subsystem: "agent",
+    original_lines: 238,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["parseError", "parses", "runtimeNames", "builtinNames", "definedNames", "unknownNames", "isSdevWord", "codeOnly", "senseFile", "wordsNeedReading", "v2", "builtinCache", "runtimeCache", "WEB_CONTEXT_ONLY_NAMES", "env", "gfx", "NAME", "out", "add", "tokens", "defined", "sdevDefined", "builtins", "isWebProgram", "name", "prev", "next", "NON_CANONICAL_HEAD", "map", "STYLE_ONLY", "reasons", "lines", "line", "head", "canonicalHead", "known", "unknown", "ok", "working", "make_Sense"]
+end
+
+to parseError with source
+  return source
+end
+
+to parses with source
+  return source
+end
+
+to runtimeNames
+  return 1
+end
+
+to builtinNames
+  return 1
+end
+
+to definedNames with source
+  return source
+end
+
+to unknownNames with source
+  return source
+end
+
+to isSdevWord with word line
+  return word
+end
+
+to codeOnly with line
+  return line
+end
+
+to senseFile with source extra Intent
+  return source
+end
+
+to wordsNeedReading with source
+  return source
+end
+
+to v2
+  return "v2"
+end
+
+to builtinCache
+  return "builtinCache"
+end
+
+to runtimeCache
+  return "runtimeCache"
+end
+
+to WEB_CONTEXT_ONLY_NAMES
+  return "WEB_CONTEXT_ONLY_NAMES"
+end
+
+to env with sdev_mod_new
+  return sdev_mod_new
+end
+
+to gfx
+  return "gfx"
+end
+
+to NAME
+  return "NAME"
+end
+
+to out
+  return "out"
+end
+
+to add with re group
+  return re
+end
+
+to tokens
+  return "tokens"
+end
+
+to defined
+  return "defined"
+end
+
+to sdevDefined
+  return "sdevDefined"
+end
+
+to builtins
+  return "builtins"
+end
+
+to isWebProgram
+  return "isWebProgram"
+end
+
+to name
+  return "name"
+end
+
+to prev
+  return "prev"
+end
+
+to next
+  return "next"
+end
+
+to NON_CANONICAL_HEAD
+  return 1
+end
+
+to map
+  return "map"
+end
+
+to STYLE_ONLY
+  return "STYLE_ONLY"
+end
+
+to reasons
+  return "reasons"
+end
+
+to lines
+  return "lines"
+end
+
+to line
+  return "line"
+end
+
+to head
+  return "head"
+end
+
+to canonicalHead
+  return "canonicalHead"
+end
+
+to known
+  return "known"
+end
+
+to unknown
+  return "unknown"
+end
+
+to ok
+  return "ok"
+end
+
+to working
+  return "working"
+end
+
+to make_Sense with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

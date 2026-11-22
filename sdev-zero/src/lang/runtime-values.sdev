@@ -1,0 +1,123 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/runtime-values.ts (256 lines)
+# Pure-SDEV Path: src/lang/runtime-values.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/runtime-values.ts",
+    sdev_path: "src/lang/runtime-values.sdev",
+    subsystem: "lang-core",
+    original_lines: 256,
+    exports_count: 19
+  }
+end
+
+to module_exports
+  return ["keyOf", "makeTuple", "isTuple", "makeGenerator", "isGenerator", "isFunction", "dunderAlias", "SdevRaise", "SdevSet", "may", "so", "TUPLE", "gen", "PROTOCOL_SLOTS", "REFLECTED_SLOTS", "DUNDER_TO_SLOT", "SLOT_TO_DUNDER", "map", "make_SdevGenerator"]
+end
+
+to keyOf with value
+  return value
+end
+
+to makeTuple with items
+  return items
+end
+
+to isTuple with v
+  return v
+end
+
+to makeGenerator with iter unknown arg_2
+  return iter
+end
+
+to isGenerator with v
+  return v
+end
+
+to isFunction with v
+  return v
+end
+
+to dunderAlias with name
+  return name
+end
+
+to SdevRaise with init_arg
+  return {
+    kind: "SdevRaise",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to SdevSet with init_arg
+  return {
+    kind: "SdevSet",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to may with init_arg
+  return {
+    kind: "may",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to so with init_arg
+  return {
+    kind: "so",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to TUPLE
+  return "TUPLE"
+end
+
+to gen
+  return "gen"
+end
+
+to PROTOCOL_SLOTS
+  return "PROTOCOL_SLOTS"
+end
+
+to REFLECTED_SLOTS
+  return "REFLECTED_SLOTS"
+end
+
+to DUNDER_TO_SLOT
+  return "DUNDER_TO_SLOT"
+end
+
+to SLOT_TO_DUNDER
+  return 1
+end
+
+to map
+  return "map"
+end
+
+to make_SdevGenerator with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

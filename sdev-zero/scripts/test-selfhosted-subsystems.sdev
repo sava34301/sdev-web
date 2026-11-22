@@ -1,0 +1,78 @@
+# SDEV Self-Hosted Subsystems Test Suite — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-selfhosted-subsystems.sdev
+
+use "lang/stdlib/testkit.sdev"
+use "lang/translator/translator.sdev"
+use "lang/legacy/v1_frontend.sdev"
+use "lang/paradigms/functional.sdev"
+use "lang/paradigms/systems.sdev"
+use "lang/paradigms/data.sdev"
+use "lang/paradigms/hardware.sdev"
+use "lang/linter/linter.sdev"
+use "lang/stdlib/v2/sql.sdev"
+
+# 1. Test Multilingual Translator
+set langs to translator_supported_languages()
+set _ to check("Translator 26 languages supported", length(langs) is 26)
+set sc to translator_detect_script("set x to 10")
+set _ to check("Translator Latin script", sc is "Latin")
+set _ to check("Translator Bulgarian translation", translator_canonicalize_word("кажи") is "say")
+set _ to check("Translator Spanish translation", translator_canonicalize_word("si") is "if")
+
+# 2. Test v1-to-v2 Frontend Transpiler
+set v1_code to "forge x be 10\nspeak(x)\n;;"
+set v2_code to v1_to_v2_source(v1_code)
+set _ to check("v1 transpile contains set", contains(v2_code, "set x to 10"))
+set _ to check("v1 transpile contains say", contains(v2_code, "say x"))
+set _ to check("v1 transpile contains end", contains(v2_code, "end"))
+
+# 3. Test Functional Paradigm (ADTs & Monads)
+set opt to Some(42)
+set _ to check("Option is_some", is_some(opt) is 1)
+set _ to check("Option unwrap", unwrap_or(opt, 0) is 42)
+set none_opt to None()
+set _ to check("Option is_none", is_none(none_opt) is 1)
+set _ to check("Option fallback", unwrap_or(none_opt, 99) is 99)
+
+set res_ok to Ok("success")
+set _ to check("Result is_ok", is_ok(res_ok) is 1)
+set _ to check("Result unwrap", result_unwrap_or(res_ok, "fallback") is "success")
+
+# 4. Test Systems Paradigm (Memory Arena: u8, i16, i32)
+set a to arena_create(128)
+set ptr to arena_alloc(a, 8)
+set _ to mem_poke_u8(a, ptr, 250)
+set _ to check("Arena poke/peek u8", mem_peek_u8(a, ptr) is 250)
+set _ to mem_poke_i16(a, ptr + 1, 1024)
+set _ to check("Arena poke/peek i16", mem_peek_i16(a, ptr + 1) is 1024)
+set _ to mem_poke_i32(a, ptr + 3, 123456)
+set _ to check("Arena poke/peek i32", mem_peek_i32(a, ptr + 3) is 123456)
+
+# 5. Test Data Paradigm & Relational SQL
+set tbl to table_create("users", ["id", "name", "role"])
+set u1 to { id: 1, name: "Alice", role: "admin" }
+set _ to table_insert(tbl, u1)
+set _ to check("Table row count", table_count(tbl) is 1)
+set csv to table_to_csv(tbl)
+set _ to check("Table to CSV", contains(csv, "Alice") and contains(csv, "admin"))
+
+# Test pure-SDEV SQL module
+set recs to [{ id: 1, val: 10 }, { id: 2, val: 25 }]
+set _ to check("SQL count", sql_count(recs) is 2)
+set _ to check("SQL sum", sql_sum(recs, "val") is 35)
+
+# 6. Test Hardware Paradigm (Embedded Transpiler)
+set sdev_hw to "pin 13 be output\npin 13 be high\nwait 500 ms"
+set cpp to hw_transpile_board("uno", sdev_hw)
+set _ to check("HW transpiler setup pinMode", contains(cpp, "pinMode(13, OUTPUT);"))
+set _ to check("HW transpiler loop digitalWrite", contains(cpp, "digitalWrite(13, HIGH);"))
+set _ to check("HW transpiler loop delay", contains(cpp, "delay(500);"))
+
+# 7. Test Static Linter
+set diag to sdev_lint_line("console.log(\"bad\")", 5)
+set _ to check("Linter catches foreign console.log", contains(diag, "SDEV004"))
+set sug to sdev_suggest_builtin("speek")
+set _ to check("Linter suggest speak for speek", sug is "speak")
+
+set _ to tk_report("self-hosted subsystems")

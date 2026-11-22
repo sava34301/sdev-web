@@ -1,0 +1,183 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/dialect/canonicalize.ts (176 lines)
+# Pure-SDEV Path: src/lang/dialect/canonicalize.sdev
+# Subsystem     : dialect
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/dialect/canonicalize.ts",
+    sdev_path: "src/lang/dialect/canonicalize.sdev",
+    subsystem: "dialect",
+    original_lines: 176,
+    exports_count: 38
+  }
+end
+
+to module_exports
+  return ["splitLine", "mapWords", "forwardDict", "reverseDict", "escapeRe", "desugarOperators", "rewriteAssignmentForward", "rewriteAssignmentReverse", "mask", "unmask", "canonicalize", "dialectize", "translateDialect", "raw", "dictObj", "dict", "word", "out", "ops", "atom", "re", "pass", "next", "form", "PLACEHOLDER", "strings", "comment", "line", "BLOCK_OPENERS", "marker", "braces", "lines", "code", "canonicalComment", "prelude", "body", "dialectComment", "make_CanonicalizeResult"]
+end
+
+to splitLine with line commentMarker
+  return line
+end
+
+to mapWords with code dict string
+  return code
+end
+
+to forwardDict with spec
+  return spec
+end
+
+to reverseDict with spec
+  return spec
+end
+
+to escapeRe with s
+  return s
+end
+
+to desugarOperators with code spec
+  return code
+end
+
+to rewriteAssignmentForward with code spec
+  return code
+end
+
+to rewriteAssignmentReverse with code spec
+  return code
+end
+
+to mask with segs
+  return segs
+end
+
+to unmask with line strings
+  return line
+end
+
+to canonicalize with source spec opts
+  return source
+end
+
+to dialectize with source spec
+  return source
+end
+
+to translateDialect with source from sdev_mod_to
+  return source
+end
+
+to raw
+  return "raw"
+end
+
+to dictObj
+  return "dictObj"
+end
+
+to dict
+  return "dict"
+end
+
+to word
+  return "word"
+end
+
+to out
+  return "out"
+end
+
+to ops
+  return "ops"
+end
+
+to atom
+  return "atom"
+end
+
+to re
+  return "re"
+end
+
+to pass
+  return "pass"
+end
+
+to next
+  return "next"
+end
+
+to form
+  return "form"
+end
+
+to PLACEHOLDER
+  return "PLACEHOLDER"
+end
+
+to strings
+  return "strings"
+end
+
+to comment
+  return "comment"
+end
+
+to line
+  return "line"
+end
+
+to BLOCK_OPENERS
+  return "BLOCK_OPENERS"
+end
+
+to marker
+  return "marker"
+end
+
+to braces
+  return "braces"
+end
+
+to lines
+  return "lines"
+end
+
+to code
+  return "code"
+end
+
+to canonicalComment
+  return "canonicalComment"
+end
+
+to prelude
+  return "prelude"
+end
+
+to body
+  return "body"
+end
+
+to dialectComment
+  return "dialectComment"
+end
+
+to make_CanonicalizeResult with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

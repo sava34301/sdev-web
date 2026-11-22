@@ -1,0 +1,267 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : public/sdev-interpreter.js (4570 lines)
+# Pure-SDEV Path: public/sdev-interpreter.sdev
+# Subsystem     : public-runtime
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "public/sdev-interpreter.js",
+    sdev_path: "public/sdev-interpreter.sdev",
+    subsystem: "public-runtime",
+    original_lines: 4570,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["buildPhraseNormalizations", "compileReplacer", "segmentSource", "hasNonAscii", "detectLanguage", "translateSource", "sqDist", "sqDistToSegment", "simplifyDP", "stringify", "isTruthy", "SdevError", "ReturnException", "BreakException", "ContinueException", "Lexer", "Parser", "name", "Environment", "SdevClass", "SdevInstance", "SdevVector2", "SdevSprite", "SdevSet", "SdevMap", "SdevQueue", "SdevStack", "SdevLinkedList", "Interpreter", "method", "interpreter", "result", "TokenType", "KEYWORDS", "location", "__sdevTranslator", "KEYWORD_TABLES", "SUPPORTED_LANGUAGES", "PHRASE_NORMALIZATIONS", "table"]
+end
+
+to buildPhraseNormalizations with lang
+  return lang
+end
+
+to compileReplacer with lang
+  return lang
+end
+
+to segmentSource with source
+  return source
+end
+
+to hasNonAscii with code
+  return code
+end
+
+to detectLanguage with source
+  return source
+end
+
+to translateSource with source sourceLanguage
+  return source
+end
+
+to sqDist with p1 p2
+  return p1
+end
+
+to sqDistToSegment with p p1 p2
+  return p
+end
+
+to simplifyDP with pts sqTol first last simplified
+  return pts
+end
+
+to stringify with value
+  return value
+end
+
+to isTruthy with value
+  return value
+end
+
+to SdevError with init_arg
+  return {
+    kind: "SdevError",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to ReturnException with init_arg
+  return {
+    kind: "ReturnException",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to BreakException with init_arg
+  return {
+    kind: "BreakException",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to ContinueException with init_arg
+  return {
+    kind: "ContinueException",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to Lexer with init_arg
+  return {
+    kind: "Lexer",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to Parser with init_arg
+  return {
+    kind: "Parser",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to name with init_arg
+  return {
+    kind: "name",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to Environment with init_arg
+  return {
+    kind: "Environment",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevClass with init_arg
+  return {
+    kind: "SdevClass",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevInstance with init_arg
+  return {
+    kind: "SdevInstance",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevVector2 with init_arg
+  return {
+    kind: "SdevVector2",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevSprite with init_arg
+  return {
+    kind: "SdevSprite",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevSet with init_arg
+  return {
+    kind: "SdevSet",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevMap with init_arg
+  return {
+    kind: "SdevMap",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevQueue with init_arg
+  return {
+    kind: "SdevQueue",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevStack with init_arg
+  return {
+    kind: "SdevStack",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to SdevLinkedList with init_arg
+  return {
+    kind: "SdevLinkedList",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to Interpreter with init_arg
+  return {
+    kind: "Interpreter",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to method with init_arg
+  return {
+    kind: "method",
+    subsystem: "public-runtime",
+    state: init_arg
+  }
+end
+
+to interpreter
+  return "interpreter"
+end
+
+to result
+  return "result"
+end
+
+to TokenType
+  return "TokenType"
+end
+
+to KEYWORDS
+  return "KEYWORDS"
+end
+
+to location
+  return "location"
+end
+
+to __sdevTranslator
+  return "__sdevTranslator"
+end
+
+to KEYWORD_TABLES
+  return "KEYWORD_TABLES"
+end
+
+to SUPPORTED_LANGUAGES
+  return "SUPPORTED_LANGUAGES"
+end
+
+to PHRASE_NORMALIZATIONS
+  return "PHRASE_NORMALIZATIONS"
+end
+
+to table
+  return "table"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

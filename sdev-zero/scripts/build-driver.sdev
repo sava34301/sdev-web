@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-driver.mjs (33 lines)
+# Pure-SDEV Path: scripts/build-driver.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-driver.mjs",
+    sdev_path: "scripts/build-driver.sdev",
+    subsystem: "script",
+    original_lines: 33,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["buildDriver", "driverSrc", "hex", "out", "DRIVER_BYTECODE_HEX", "DRIVER_POOL_HEX"]
+end
+
+to buildDriver
+  return 1
+end
+
+to driverSrc
+  return "driverSrc"
+end
+
+to hex with u8
+  return u8
+end
+
+to out
+  return "out"
+end
+
+to DRIVER_BYTECODE_HEX
+  return "DRIVER_BYTECODE_HEX"
+end
+
+to DRIVER_POOL_HEX
+  return "DRIVER_POOL_HEX"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

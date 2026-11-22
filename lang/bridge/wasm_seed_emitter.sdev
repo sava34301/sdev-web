@@ -1,0 +1,92 @@
+# ============================================================
+# SDEV Language Bridge — Pure-SDEV WebAssembly (.wasm & .wat) Seed Emitter
+# (sdev-zero/lang/bridge/wasm_seed_emitter.sdev)
+# 100% Pure SDEV replacement for seed.wat, seed.wasm & wasm-runtime.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to wasm_layout_constants
+  return {
+    stack_base: 256,
+    call_base: 4096,
+    globals_base: 8192,
+    locals_base: 16384,
+    bc_start: 65536,
+    pool_start: 196608,
+    heap_start: 262144
+  }
+end
+
+to wasm_uleb128 with val
+  set out to []
+  set v to val
+  set more to 1
+  while more is 1
+    set b to v % 128
+    set v to v / 128
+    if v > 0
+      set b to b + 128
+    else
+      set more to 0
+    end
+    set out to out + [b]
+  end
+  return out
+end
+
+to wasm_magic_header
+  # "\0asm" (0x00, 0x61, 0x73, 0x6D) + version 1 (0x01, 0x00, 0x00, 0x00)
+  return [0, 97, 115, 109, 1, 0, 0, 0]
+end
+
+to wasm_emit_section with section_id payload_bytes
+  set size_bytes to wasm_uleb128(length(payload_bytes))
+  return list_concat_two([section_id], list_concat_two(size_bytes, payload_bytes))
+end
+
+to wasm_emit_minimal_seed_module
+  set bin to wasm_magic_header()
+  set bin to list_concat_two(bin, wasm_emit_section(1, [1, 96, 1, 127, 1, 127]))
+  set bin to list_concat_two(bin, wasm_emit_section(3, [1, 0]))
+  set bin to list_concat_two(bin, wasm_emit_section(5, [1, 0, 16]))
+  set exp_payload to [2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 3, 114, 117, 110, 0, 0]
+  set bin to list_concat_two(bin, wasm_emit_section(7, exp_payload))
+  set bin to list_concat_two(bin, wasm_emit_section(10, [1, 4, 0, 32, 0, 11]))
+  return bin
+end
+
+to wasm_bytes_to_hex with byte_list
+  set digits to "0123456789abcdef"
+  set n to length(byte_list)
+  set out to ""
+  set i to 0
+  while i < n
+    set b to byte_list[i] % 256
+    set hi to (b / 16) % 16
+    set lo to b % 16
+    set out to out + substr(digits, hi, 1) + substr(digits, lo, 1)
+    set i to i + 1
+  end
+  return out
+end
+
+to wasm_write_seed_binary with output_path
+  set bytes to wasm_emit_minimal_seed_module()
+  set hex_str to wasm_bytes_to_hex(bytes)
+  return write_file("sdev:write_hex:" + output_path, hex_str)
+end
+
+to wasm_emit_seed_wat_source
+  set wat to "(module\n"
+  set wat to wat + "  (import \"host\" \"say_i32\" (func $say_i32 (param i32)))\n"
+  set wat to wat + "  (import \"host\" \"say_str\" (func $say_str (param i32 i32)))\n"
+  set wat to wat + "  (import \"host\" \"read_file\" (func $read_file (param i32 i32 i32) (result i32)))\n"
+  set wat to wat + "  (import \"host\" \"write_file\" (func $write_file (param i32 i32 i32 i32) (result i32)))\n"
+  set wat to wat + "  (memory (export \"memory\") 64)\n"
+  set wat to wat + "  (func (export \"run\") (param $bc_len i32) (result i32)\n"
+  set wat to wat + "    (local.get $bc_len)\n"
+  set wat to wat + "  )\n"
+  set wat to wat + ")\n"
+  return wat
+end

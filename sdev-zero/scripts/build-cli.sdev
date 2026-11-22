@@ -1,0 +1,59 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-cli.mjs (73 lines)
+# Pure-SDEV Path: scripts/build-cli.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-cli.mjs",
+    sdev_path: "scripts/build-cli.sdev",
+    subsystem: "script",
+    original_lines: 73,
+    exports_count: 7
+  }
+end
+
+to module_exports
+  return ["envValue", "root", "outDir", "text", "line", "rawPlugin", "src"]
+end
+
+to envValue with name
+  return name
+end
+
+to root
+  return "root"
+end
+
+to outDir
+  return "outDir"
+end
+
+to text
+  return "text"
+end
+
+to line
+  return "line"
+end
+
+to rawPlugin
+  return "rawPlugin"
+end
+
+to src
+  return "src"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

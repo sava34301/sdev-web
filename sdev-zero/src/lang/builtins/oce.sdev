@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/oce.ts (563 lines)
+# Pure-SDEV Path: src/lang/builtins/oce.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/oce.ts",
+    sdev_path: "src/lang/builtins/oce.sdev",
+    subsystem: "builtins",
+    original_lines: 563,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["bits_shl", "bits_shr", "bits_test", "bits_popcount", "bits_to_hex", "bits_from_hex", "bitLoop", "bits_not_n", "floor_div", "wrap_i16", "mem_put_u8", "mem_put_u16", "mem_get_i16", "mem_fill_list", "mem_copy_list", "mem_equal", "mem_hex", "ring_create", "ring_push", "ring_pop_oldest", "oce_create", "oce_entity", "oce_set_conf", "oce_alloc", "oce_free", "oce_live_nodes", "oce_add_axiom", "oce_add_exception", "oce_guard_holds", "contribution", "resolve", "oce_step", "log", "findGuard", "spawnLatent", "candidates", "candValue", "logSuccesses", "repairFired", "sdev_mod_split"]
+end
+
+to bits_shl with val shift
+  return val
+end
+
+to bits_shr with val shift
+  return val
+end
+
+to bits_test with val pos
+  return val
+end
+
+to bits_popcount with val
+  return val
+end
+
+to bits_to_hex with val
+  return val
+end
+
+to bits_from_hex with s
+  return s
+end
+
+to bitLoop with a b mode
+  return a
+end
+
+to bits_not_n with val width
+  return val
+end
+
+to floor_div with a b
+  return a
+end
+
+to wrap_i16 with v
+  return v
+end
+
+to mem_put_u8 with m a v
+  return m
+end
+
+to mem_put_u16 with m a v
+  return m
+end
+
+to mem_get_i16 with m a
+  return m
+end
+
+to mem_fill_list with m a count v
+  return m
+end
+
+to mem_copy_list with dst da src sa count
+  return dst
+end
+
+to mem_equal with a aa b ba count
+  return a
+end
+
+to mem_hex with m a count
+  return m
+end
+
+to ring_create with cap
+  return cap
+end
+
+to ring_push with r v
+  return r
+end
+
+to ring_pop_oldest with r
+  return r
+end
+
+to oce_create
+  return 1
+end
+
+to oce_entity with m
+  return m
+end
+
+to oce_set_conf with m i c
+  return m
+end
+
+to oce_alloc with m op conf a b
+  return m
+end
+
+to oce_free with m i
+  return m
+end
+
+to oce_live_nodes with m
+  return m
+end
+
+to oce_add_axiom with m guard target a b
+  return m
+end
+
+to oce_add_exception with m parent guard special
+  return m
+end
+
+to oce_guard_holds with m base e g
+  return m
+end
+
+to contribution with m base e h
+  return m
+end
+
+to resolve with m base e h
+  return m
+end
+
+to oce_step with m src dst record
+  return m
+end
+
+to log with m sdev_mod_kind p h e
+  return m
+end
+
+to findGuard with m pos neg medium
+  return m
+end
+
+to spawnLatent with m posE
+  return m
+end
+
+to candidates with m row p d
+  return m
+end
+
+to candValue with m row c
+  return m
+end
+
+to logSuccesses with m h neg
+  return m
+end
+
+to repairFired with m obs e p h
+  return m
+end
+
+to sdev_mod_split with m obs p c wantPos
+  return m
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/drawer.tsx (87 lines)
+# Pure-SDEV Path: src/components/ui/drawer.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/drawer.tsx",
+    sdev_path: "src/components/ui/drawer.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 87,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["Drawer", "DrawerTrigger", "DrawerPortal", "DrawerClose", "DrawerOverlay", "DrawerContent", "DrawerHeader", "DrawerFooter", "DrawerTitle", "DrawerDescription"]
+end
+
+to Drawer with props
+  return "<sdev-view component=\"Drawer\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to DrawerTrigger
+  return "<sdev-view component=\"DrawerTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DrawerPortal
+  return "<sdev-view component=\"DrawerPortal\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DrawerClose
+  return "<sdev-view component=\"DrawerClose\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DrawerOverlay
+  return "<sdev-view component=\"DrawerOverlay\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DrawerContent
+  return "<sdev-view component=\"DrawerContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DrawerHeader with props
+  return "<sdev-view component=\"DrawerHeader\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to DrawerFooter with props
+  return "<sdev-view component=\"DrawerFooter\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to DrawerTitle
+  return "<sdev-view component=\"DrawerTitle\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DrawerDescription
+  return "<sdev-view component=\"DrawerDescription\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

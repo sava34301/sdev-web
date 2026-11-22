@@ -1,0 +1,167 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/hooks/useWorkspaceSync.ts (253 lines)
+# Pure-SDEV Path: src/hooks/useWorkspaceSync.sdev
+# Subsystem     : hook
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/hooks/useWorkspaceSync.ts",
+    sdev_path: "src/hooks/useWorkspaceSync.sdev",
+    subsystem: "hook",
+    original_lines: 253,
+    exports_count: 34
+  }
+end
+
+to module_exports
+  return ["useWorkspaceSync", "warnedRef", "debounceRef", "fileCloudMap", "folderCloudMap", "folders", "localId", "files", "raw", "sig", "body", "bodySum", "sigValid", "openIds", "activeRow", "activeId", "flush", "failures", "fail", "cloudId", "folderRows", "parentCloudId", "filesToUpsert", "folderCloudId", "existingSig", "understoodSrc", "hasUnderstoodDiff", "persistedContent", "trackedFileIds", "localFileCloudIds", "filesToDelete", "trackedFolderIds", "localFolderCloudIds", "foldersToDelete"]
+end
+
+to useWorkspaceSync with snapshot enabled
+  return snapshot
+end
+
+to warnedRef
+  return "warnedRef"
+end
+
+to debounceRef
+  return "debounceRef"
+end
+
+to fileCloudMap
+  return "fileCloudMap"
+end
+
+to folderCloudMap
+  return "folderCloudMap"
+end
+
+to folders
+  return "folders"
+end
+
+to localId
+  return "localId"
+end
+
+to files
+  return "files"
+end
+
+to raw
+  return "raw"
+end
+
+to sig
+  return "sig"
+end
+
+to body
+  return "body"
+end
+
+to bodySum
+  return "bodySum"
+end
+
+to sigValid
+  return "sigValid"
+end
+
+to openIds
+  return "openIds"
+end
+
+to activeRow
+  return "activeRow"
+end
+
+to activeId
+  return "activeId"
+end
+
+to flush
+  return "flush"
+end
+
+to failures
+  return "failures"
+end
+
+to fail with error
+  return error
+end
+
+to cloudId
+  return "cloudId"
+end
+
+to folderRows
+  return "folderRows"
+end
+
+to parentCloudId
+  return "parentCloudId"
+end
+
+to filesToUpsert
+  return "filesToUpsert"
+end
+
+to folderCloudId
+  return "folderCloudId"
+end
+
+to existingSig
+  return "existingSig"
+end
+
+to understoodSrc
+  return "understoodSrc"
+end
+
+to hasUnderstoodDiff
+  return "hasUnderstoodDiff"
+end
+
+to persistedContent
+  return "persistedContent"
+end
+
+to trackedFileIds
+  return "trackedFileIds"
+end
+
+to localFileCloudIds
+  return "localFileCloudIds"
+end
+
+to filesToDelete
+  return "filesToDelete"
+end
+
+to trackedFolderIds
+  return "trackedFolderIds"
+end
+
+to localFolderCloudIds
+  return "localFolderCloudIds"
+end
+
+to foldersToDelete
+  return "foldersToDelete"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

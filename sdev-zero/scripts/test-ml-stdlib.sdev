@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-ml-stdlib.ts (400 lines)
+# Pure-SDEV Path: scripts/test-ml-stdlib.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-ml-stdlib.ts",
+    sdev_path: "scripts/test-ml-stdlib.sdev",
+    subsystem: "script",
+    original_lines: 400,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["run", "resolveHostPath", "ML_DIR", "files", "failures", "linked", "result", "problem", "near"]
+end
+
+to run with name program expect
+  return name
+end
+
+to resolveHostPath with p
+  return p
+end
+
+to ML_DIR
+  return "ML_DIR"
+end
+
+to files
+  return "files"
+end
+
+to failures
+  return "failures"
+end
+
+to linked
+  return "linked"
+end
+
+to result
+  return "result"
+end
+
+to problem
+  return "problem"
+end
+
+to near with a b eps
+  return a
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

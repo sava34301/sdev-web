@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/HardwarePanel.tsx (933 lines)
+# Pure-SDEV Path: src/components/ide/HardwarePanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/HardwarePanel.tsx",
+    sdev_path: "src/components/ide/HardwarePanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 933,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["HardwarePanel", "LibrariesPanel", "cmpVer", "hex4", "downloadText", "triggerDownload", "DEFAULT_BUILD_URL", "monitorAbort", "agentOff", "reading", "understoodSource", "unresolvedLines", "block", "board", "transpiled", "guess", "detect", "getInstalledLibs", "compile", "sketch", "aiBlock", "left", "allLibs", "via", "msg", "testBuildServer", "res", "needsSerialPort", "upload", "hex", "exportFirmware", "uf2", "ab", "toggleMonitor", "ctl", "handleSendSerial", "serialSupported", "usbSupported", "cloudReady", "browserFlashable"]
+end
+
+to HardwarePanel with onAppendLog onInsertCode
+  return "<sdev-view component=\"HardwarePanel\" subsystem=\"ide-component\">" + str(onAppendLog) + "</sdev-view>"
+end
+
+to LibrariesPanel with usedInSketch onInsertCode
+  return "<sdev-view component=\"LibrariesPanel\" subsystem=\"ide-component\">" + str(usedInSketch) + "</sdev-view>"
+end
+
+to cmpVer with a b
+  return "<sdev-view component=\"cmpVer\" subsystem=\"ide-component\">" + str(a) + "</sdev-view>"
+end
+
+to hex4 with n
+  return "<sdev-view component=\"hex4\" subsystem=\"ide-component\">" + str(n) + "</sdev-view>"
+end
+
+to downloadText with name text
+  return "<sdev-view component=\"downloadText\" subsystem=\"ide-component\">" + str(name) + "</sdev-view>"
+end
+
+to triggerDownload with blob name
+  return "<sdev-view component=\"triggerDownload\" subsystem=\"ide-component\">" + str(blob) + "</sdev-view>"
+end
+
+to DEFAULT_BUILD_URL
+  return "<sdev-view component=\"DEFAULT_BUILD_URL\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to monitorAbort
+  return "<sdev-view component=\"monitorAbort\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to agentOff
+  return "<sdev-view component=\"agentOff\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to reading
+  return "<sdev-view component=\"reading\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to understoodSource
+  return "<sdev-view component=\"understoodSource\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to unresolvedLines
+  return "<sdev-view component=\"unresolvedLines\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to block
+  return "<sdev-view component=\"block\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to board
+  return "<sdev-view component=\"board\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to transpiled
+  return "<sdev-view component=\"transpiled\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to guess
+  return "<sdev-view component=\"guess\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to detect
+  return "<sdev-view component=\"detect\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to getInstalledLibs
+  return "<sdev-view component=\"getInstalledLibs\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to compile
+  return "<sdev-view component=\"compile\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sketch
+  return "<sdev-view component=\"sketch\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to aiBlock
+  return "<sdev-view component=\"aiBlock\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to left
+  return "<sdev-view component=\"left\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to allLibs
+  return "<sdev-view component=\"allLibs\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to via
+  return "<sdev-view component=\"via\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to msg
+  return "<sdev-view component=\"msg\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to testBuildServer
+  return "<sdev-view component=\"testBuildServer\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to res
+  return "<sdev-view component=\"res\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to needsSerialPort
+  return "<sdev-view component=\"needsSerialPort\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to upload
+  return "<sdev-view component=\"upload\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to hex
+  return "<sdev-view component=\"hex\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to exportFirmware
+  return "<sdev-view component=\"exportFirmware\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to uf2
+  return "<sdev-view component=\"uf2\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ab
+  return "<sdev-view component=\"ab\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to toggleMonitor
+  return "<sdev-view component=\"toggleMonitor\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ctl
+  return "<sdev-view component=\"ctl\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleSendSerial
+  return "<sdev-view component=\"handleSendSerial\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to serialSupported
+  return "<sdev-view component=\"serialSupported\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to usbSupported
+  return "<sdev-view component=\"usbSupported\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to cloudReady
+  return "<sdev-view component=\"cloudReady\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to browserFlashable
+  return "<sdev-view component=\"browserFlashable\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

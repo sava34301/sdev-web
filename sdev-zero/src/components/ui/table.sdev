@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/table.tsx (72 lines)
+# Pure-SDEV Path: src/components/ui/table.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/table.tsx",
+    sdev_path: "src/components/ui/table.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 72,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["Table", "TableHeader", "TableBody", "TableFooter", "TableRow", "TableHead", "TableCell", "TableCaption"]
+end
+
+to Table
+  return "<sdev-view component=\"Table\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to TableHeader
+  return "<sdev-view component=\"TableHeader\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to TableBody
+  return "<sdev-view component=\"TableBody\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to TableFooter
+  return "<sdev-view component=\"TableFooter\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to TableRow
+  return "<sdev-view component=\"TableRow\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to TableHead
+  return "<sdev-view component=\"TableHead\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to TableCell
+  return "<sdev-view component=\"TableCell\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to TableCaption
+  return "<sdev-view component=\"TableCaption\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

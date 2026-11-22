@@ -182,6 +182,12 @@ to x64_extra_op with bc pc
   set pop2 to "    subq $8, %r15\n    movq (%r15), %xmm1\n    subq $8, %r15\n    movq (%r15), %xmm0\n"
   set push0 to "    movq %xmm0, (%r15)\n    addq $8, %r15\n"
   set pushax to "    movq %rax, (%r15)\n    addq $8, %r15\n"
+  if op is 156
+    return "    subq $8, %r15\n    movq (%r15), %rcx\n    subq $8, %r15\n    movq (%r15), %rax\n    cmpq %rcx, %rax\n    cmovgq %rcx, %rax\n" + pushax
+  end
+  if op is 157
+    return "    subq $8, %r15\n    movq (%r15), %rcx\n    subq $8, %r15\n    movq (%r15), %rax\n    cmpq %rcx, %rax\n    cmovlq %rcx, %rax\n" + pushax
+  end
   if op is 160
     set s to "    .pushsection .rodata\n    .align 8\n.Lf64_" + str(pc) + ":\n"
     set k to 1

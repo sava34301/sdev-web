@@ -1,0 +1,188 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/process-email-queue/index.ts (364 lines)
+# Pure-SDEV Path: supabase/functions/process-email-queue/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/process-email-queue/index.ts",
+    sdev_path: "supabase/functions/process-email-queue/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 364,
+    exports_count: 33
+  }
+end
+
+to module_exports
+  return ["isRateLimited", "isForbidden", "getRetryAfterSeconds", "parseJwtClaims", "moveToDlq", "MAX_RETRIES", "DEFAULT_BATCH_SIZE", "DEFAULT_SEND_DELAY_MS", "DEFAULT_AUTH_TTL_MINUTES", "DEFAULT_TRANSACTIONAL_TTL_MINUTES", "parts", "payload", "apiKey", "supabaseUrl", "supabaseServiceKey", "authHeader", "token", "claims", "supabase", "batchSize", "sendDelayMs", "ttlMinutes", "totalProcessed", "messageIds", "failedAttemptsByMessageId", "messageId", "msg", "failedAttempts", "queuedAt", "ageMs", "maxAgeMs", "errorMsg", "retryAfterSecs"]
+end
+
+to isRateLimited with error
+  return {
+    status: 200,
+    handler: "isRateLimited",
+    route: "supabase/functions/process-email-queue/index.ts",
+    payload: error
+  }
+end
+
+to isForbidden with error
+  return {
+    status: 200,
+    handler: "isForbidden",
+    route: "supabase/functions/process-email-queue/index.ts",
+    payload: error
+  }
+end
+
+to getRetryAfterSeconds with error
+  return {
+    status: 200,
+    handler: "getRetryAfterSeconds",
+    route: "supabase/functions/process-email-queue/index.ts",
+    payload: error
+  }
+end
+
+to parseJwtClaims with token
+  return {
+    status: 200,
+    handler: "parseJwtClaims",
+    route: "supabase/functions/process-email-queue/index.ts",
+    payload: token
+  }
+end
+
+to moveToDlq with queue msg unknown reason
+  return {
+    status: 200,
+    handler: "moveToDlq",
+    route: "supabase/functions/process-email-queue/index.ts",
+    payload: queue
+  }
+end
+
+to MAX_RETRIES
+  return "MAX_RETRIES"
+end
+
+to DEFAULT_BATCH_SIZE
+  return "DEFAULT_BATCH_SIZE"
+end
+
+to DEFAULT_SEND_DELAY_MS
+  return "DEFAULT_SEND_DELAY_MS"
+end
+
+to DEFAULT_AUTH_TTL_MINUTES
+  return "DEFAULT_AUTH_TTL_MINUTES"
+end
+
+to DEFAULT_TRANSACTIONAL_TTL_MINUTES
+  return "DEFAULT_TRANSACTIONAL_TTL_MINUTES"
+end
+
+to parts
+  return "parts"
+end
+
+to payload
+  return "payload"
+end
+
+to apiKey
+  return "apiKey"
+end
+
+to supabaseUrl
+  return "supabaseUrl"
+end
+
+to supabaseServiceKey
+  return "supabaseServiceKey"
+end
+
+to authHeader
+  return "authHeader"
+end
+
+to token
+  return "token"
+end
+
+to claims
+  return "claims"
+end
+
+to supabase
+  return "supabase"
+end
+
+to batchSize
+  return "batchSize"
+end
+
+to sendDelayMs
+  return "sendDelayMs"
+end
+
+to ttlMinutes
+  return "ttlMinutes"
+end
+
+to totalProcessed
+  return "totalProcessed"
+end
+
+to messageIds
+  return "messageIds"
+end
+
+to failedAttemptsByMessageId
+  return "failedAttemptsByMessageId"
+end
+
+to messageId
+  return "messageId"
+end
+
+to msg
+  return "msg"
+end
+
+to failedAttempts
+  return "failedAttempts"
+end
+
+to queuedAt
+  return "queuedAt"
+end
+
+to ageMs
+  return "ageMs"
+end
+
+to maxAgeMs
+  return "maxAgeMs"
+end
+
+to errorMsg
+  return "errorMsg"
+end
+
+to retryAfterSecs
+  return "retryAfterSecs"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

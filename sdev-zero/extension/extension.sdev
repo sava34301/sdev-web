@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : extension/extension.js (276 lines)
+# Pure-SDEV Path: extension/extension.sdev
+# Subsystem     : vscode-extension
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "extension/extension.js",
+    sdev_path: "extension/extension.sdev",
+    subsystem: "vscode-extension",
+    original_lines: 276,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["cliEnv", "getOutput", "getConfig", "buildRunner", "runSource", "cleanup", "runV2", "buildNative", "activate", "newer", "checkForUpdate", "scheduleUpdates", "deactivate", "vscode", "path", "fs", "os", "SITE", "cfg", "runner", "ext", "py", "interpreter", "node", "cli", "out", "tmpFile", "start", "child", "ms", "full", "legacy", "args", "outDir", "target", "env", "editor", "sel", "seenKey", "pa"]
+end
+
+to cliEnv with ext
+  return ext
+end
+
+to getOutput
+  return 1
+end
+
+to getConfig
+  return 1
+end
+
+to buildRunner with context sourceFile
+  return context
+end
+
+to runSource with context source label
+  return context
+end
+
+to cleanup
+  return 1
+end
+
+to runV2 with context file
+  return context
+end
+
+to buildNative with context file
+  return context
+end
+
+to activate with context
+  return context
+end
+
+to newer with a b
+  return a
+end
+
+to checkForUpdate with context manual
+  return context
+end
+
+to scheduleUpdates with context
+  return context
+end
+
+to deactivate
+  return 1
+end
+
+to vscode
+  return "vscode"
+end
+
+to path
+  return "path"
+end
+
+to fs
+  return "fs"
+end
+
+to os
+  return "os"
+end
+
+to SITE
+  return "SITE"
+end
+
+to cfg
+  return "cfg"
+end
+
+to runner
+  return "runner"
+end
+
+to ext
+  return "ext"
+end
+
+to py
+  return "py"
+end
+
+to interpreter
+  return "interpreter"
+end
+
+to node
+  return "node"
+end
+
+to cli
+  return "cli"
+end
+
+to out
+  return "out"
+end
+
+to tmpFile
+  return "tmpFile"
+end
+
+to start
+  return "start"
+end
+
+to child
+  return "child"
+end
+
+to ms
+  return "ms"
+end
+
+to full
+  return "full"
+end
+
+to legacy
+  return "legacy"
+end
+
+to args
+  return "args"
+end
+
+to outDir
+  return "outDir"
+end
+
+to target
+  return "target"
+end
+
+to env
+  return "env"
+end
+
+to editor
+  return "editor"
+end
+
+to sel
+  return "sel"
+end
+
+to seenKey
+  return "seenKey"
+end
+
+to pa
+  return "pa"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

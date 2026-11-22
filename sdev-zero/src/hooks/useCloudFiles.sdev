@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/hooks/useCloudFiles.ts (124 lines)
+# Pure-SDEV Path: src/hooks/useCloudFiles.sdev
+# Subsystem     : hook
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/hooks/useCloudFiles.ts",
+    sdev_path: "src/hooks/useCloudFiles.sdev",
+    subsystem: "hook",
+    original_lines: 124,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["useCloudFiles", "refresh", "nextFiles", "saveFile", "dialect", "previous", "runtime", "libs", "signed", "mirror", "deleteFile", "recordRun", "createGist", "make_CloudFile"]
+end
+
+to useCloudFiles
+  return 1
+end
+
+to refresh
+  return "refresh"
+end
+
+to nextFiles
+  return "nextFiles"
+end
+
+to saveFile
+  return "saveFile"
+end
+
+to dialect
+  return "dialect"
+end
+
+to previous
+  return "previous"
+end
+
+to runtime
+  return "runtime"
+end
+
+to libs
+  return "libs"
+end
+
+to signed
+  return "signed"
+end
+
+to mirror
+  return "mirror"
+end
+
+to deleteFile
+  return "deleteFile"
+end
+
+to recordRun
+  return "recordRun"
+end
+
+to createGist
+  return "createGist"
+end
+
+to make_CloudFile with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

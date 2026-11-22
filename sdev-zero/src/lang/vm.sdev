@@ -1,0 +1,155 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/vm.ts (429 lines)
+# Pure-SDEV Path: src/lang/vm.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/vm.ts",
+    sdev_path: "src/lang/vm.sdev",
+    subsystem: "lang-core",
+    original_lines: 429,
+    exports_count: 30
+  }
+end
+
+to module_exports
+  return ["VM", "builtins", "frame", "ins", "name", "val", "cond", "count", "items", "pairs", "dict", "idx", "obj", "ri", "prop", "def", "capturedEnv", "fn", "argCount", "args", "callee", "result", "retVal", "size", "addr", "sdev_mod_num", "id", "savedStack", "savedFrames", "funcEnv"]
+end
+
+to VM with init_arg
+  return {
+    kind: "VM",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to builtins
+  return "builtins"
+end
+
+to frame
+  return "frame"
+end
+
+to ins
+  return "ins"
+end
+
+to name
+  return "name"
+end
+
+to val
+  return "val"
+end
+
+to cond
+  return "cond"
+end
+
+to count
+  return "count"
+end
+
+to items
+  return "items"
+end
+
+to pairs
+  return "pairs"
+end
+
+to dict
+  return "dict"
+end
+
+to idx
+  return "idx"
+end
+
+to obj
+  return "obj"
+end
+
+to ri
+  return "ri"
+end
+
+to prop
+  return "prop"
+end
+
+to def
+  return "def"
+end
+
+to capturedEnv
+  return "capturedEnv"
+end
+
+to fn
+  return "fn"
+end
+
+to argCount
+  return "argCount"
+end
+
+to args
+  return "args"
+end
+
+to callee
+  return "callee"
+end
+
+to result
+  return "result"
+end
+
+to retVal
+  return "retVal"
+end
+
+to size
+  return "size"
+end
+
+to addr
+  return "addr"
+end
+
+to sdev_mod_num
+  return "sdev_mod_num"
+end
+
+to id
+  return "id"
+end
+
+to savedStack
+  return "savedStack"
+end
+
+to savedFrames
+  return "savedFrames"
+end
+
+to funcEnv
+  return "funcEnv"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

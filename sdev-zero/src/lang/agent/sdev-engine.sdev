@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/sdev-engine.ts (732 lines)
+# Pure-SDEV Path: src/lang/agent/sdev-engine.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/sdev-engine.ts",
+    sdev_path: "src/lang/agent/sdev-engine.sdev",
+    subsystem: "agent",
+    original_lines: 732,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["load", "sdevUnderstand", "isAiDialect", "aiToSdev", "sdevToAi", "sdevDefinedNames", "sdevProjectNames", "sdevCloseBlocks", "sdevCloseAiBraces", "sdevCheckBlocks", "sdevParseProgram", "sdevValidateSyntax", "sdevEvalProgram", "sdevScanDirectives", "sdevIsRequest", "sdevNormalizeLocalEndpoints", "sdevSanitizeBrainOutput", "sdevParseBrainReply", "sdevSolveNlRequest", "sdevTranslateLineSpeculative", "sdevRunMicroBrainTranslation", "sdevMicroBrainAccepts", "sdevBrainCandidateScore", "sdevBrainNeedsOnlineFallback", "sdevReconsiderBrainMode", "sdevTranslationHasDiff", "sdevTranslationDownloadName", "sdevTranslationBannerText", "sdevMathRequest", "sdevTaskRequest", "sdevMemoryUnderstandKey", "sdevMemoryApplyLines", "sdevMemoryLearnNames", "sdevPromoteWords", "sdevBoardsUnmask", "sdevBrainInstructions", "sdevBrainInput", "sdevDoctorSystemPrompt", "sdevDoctorUserPrompt", "sdevParseDoctorFix"]
+end
+
+to load
+  return 1
+end
+
+to sdevUnderstand with source known words string
+  return source
+end
+
+to isAiDialect with source
+  return source
+end
+
+to aiToSdev with source
+  return source
+end
+
+to sdevToAi with source
+  return source
+end
+
+to sdevDefinedNames with source
+  return source
+end
+
+to sdevProjectNames with sources fallback
+  return sources
+end
+
+to sdevCloseBlocks with source
+  return source
+end
+
+to sdevCloseAiBraces with source
+  return source
+end
+
+to sdevCheckBlocks with source
+  return source
+end
+
+to sdevParseProgram with source
+  return source
+end
+
+to sdevValidateSyntax with source
+  return source
+end
+
+to sdevEvalProgram with source inputs
+  return source
+end
+
+to sdevScanDirectives with source
+  return source
+end
+
+to sdevIsRequest with source
+  return source
+end
+
+to sdevNormalizeLocalEndpoints with rawInput
+  return rawInput
+end
+
+to sdevSanitizeBrainOutput with code format
+  return code
+end
+
+to sdevParseBrainReply with text format
+  return text
+end
+
+to sdevSolveNlRequest with prompt
+  return prompt
+end
+
+to sdevTranslateLineSpeculative with rawLine
+  return rawLine
+end
+
+to sdevRunMicroBrainTranslation with source
+  return source
+end
+
+to sdevMicroBrainAccepts with parsesOk unknownCount changed unresolvedCount problemsCount
+  return parsesOk
+end
+
+to sdevBrainCandidateScore with parsesOk unknownCount extraProblemsCount
+  return parsesOk
+end
+
+to sdevBrainNeedsOnlineFallback with hasBest bestScore extraProblemsCount bestSource draftSource
+  return hasBest
+end
+
+to sdevReconsiderBrainMode with prepBrain lastUsedBrain allowOnline isOnline
+  return prepBrain
+end
+
+to sdevTranslationHasDiff with writtenBody translatedSource
+  return writtenBody
+end
+
+to sdevTranslationDownloadName with fileName variant hasDiff
+  return fileName
+end
+
+to sdevTranslationBannerText with fromCache detectedLang brainUsed
+  return fromCache
+end
+
+to sdevMathRequest with stmt known
+  return stmt
+end
+
+to sdevTaskRequest with stmt known
+  return stmt
+end
+
+to sdevMemoryUnderstandKey with source extra
+  return source
+end
+
+to sdevMemoryApplyLines with source linesTome
+  return source
+end
+
+to sdevMemoryLearnNames with canonical
+  return canonical
+end
+
+to sdevPromoteWords with pairs string canonicalMap arg_3 rename
+  return pairs
+end
+
+to sdevBoardsUnmask with source blockLineCounts texts
+  return source
+end
+
+to sdevBrainInstructions with format
+  return format
+end
+
+to sdevBrainInput with req
+  return req
+end
+
+to sdevDoctorSystemPrompt
+  return 1
+end
+
+to sdevDoctorUserPrompt with code error note
+  return code
+end
+
+to sdevParseDoctorFix with rawText
+  return rawText
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

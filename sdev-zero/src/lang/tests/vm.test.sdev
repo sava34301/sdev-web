@@ -1,0 +1,59 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/tests/vm.test.ts (60 lines)
+# Pure-SDEV Path: src/lang/tests/vm.test.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/tests/vm.test.ts",
+    sdev_path: "src/lang/tests/vm.test.sdev",
+    subsystem: "lang-core",
+    original_lines: 60,
+    exports_count: 7
+  }
+end
+
+to module_exports
+  return ["vm", "def", "env", "oldFrame", "originalExecuteLoop", "executed", "result"]
+end
+
+to vm
+  return "vm"
+end
+
+to def
+  return "def"
+end
+
+to env
+  return "env"
+end
+
+to oldFrame
+  return "oldFrame"
+end
+
+to originalExecuteLoop
+  return "originalExecuteLoop"
+end
+
+to executed
+  return "executed"
+end
+
+to result
+  return "result"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

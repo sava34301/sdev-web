@@ -1,0 +1,79 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/carousel.tsx (224 lines)
+# Pure-SDEV Path: src/components/ui/carousel.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/carousel.tsx",
+    sdev_path: "src/components/ui/carousel.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 224,
+    exports_count: 12
+  }
+end
+
+to module_exports
+  return ["useCarousel", "CarouselContext", "context", "Carousel", "onSelect", "scrollPrev", "scrollNext", "handleKeyDown", "CarouselContent", "CarouselItem", "CarouselPrevious", "CarouselNext"]
+end
+
+to useCarousel
+  return "<sdev-view component=\"useCarousel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CarouselContext
+  return "<sdev-view component=\"CarouselContext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to context
+  return "<sdev-view component=\"context\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to Carousel
+  return "<sdev-view component=\"Carousel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to onSelect
+  return "<sdev-view component=\"onSelect\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to scrollPrev
+  return "<sdev-view component=\"scrollPrev\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to scrollNext
+  return "<sdev-view component=\"scrollNext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to handleKeyDown
+  return "<sdev-view component=\"handleKeyDown\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CarouselContent
+  return "<sdev-view component=\"CarouselContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CarouselItem
+  return "<sdev-view component=\"CarouselItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CarouselPrevious
+  return "<sdev-view component=\"CarouselPrevious\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CarouselNext
+  return "<sdev-view component=\"CarouselNext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

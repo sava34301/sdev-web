@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/LiveClassroomPanel.tsx (440 lines)
+# Pure-SDEV Path: src/components/ide/LiveClassroomPanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/LiveClassroomPanel.tsx",
+    sdev_path: "src/components/ide/LiveClassroomPanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 440,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["LiveClassroomPanel", "sessionRef", "suppressOutgoingRef", "startRoom", "cleanCode", "live", "leaveRoom", "handleRoleChange", "handleBroadcastNow", "isTeacher", "handleShareOutput", "entry", "copyRoomInvite", "url", "make_LiveClassroomPanelProps"]
+end
+
+to LiveClassroomPanel with content cursor lastOutput lastError onApplyRemoteCode
+  return "<sdev-view component=\"LiveClassroomPanel\" subsystem=\"ide-component\">" + str(content) + "</sdev-view>"
+end
+
+to sessionRef
+  return "<sdev-view component=\"sessionRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to suppressOutgoingRef
+  return "<sdev-view component=\"suppressOutgoingRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to startRoom
+  return "<sdev-view component=\"startRoom\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to cleanCode
+  return "<sdev-view component=\"cleanCode\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to live
+  return "<sdev-view component=\"live\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to leaveRoom
+  return "<sdev-view component=\"leaveRoom\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleRoleChange with nextRole
+  return "<sdev-view component=\"handleRoleChange\" subsystem=\"ide-component\">" + str(nextRole) + "</sdev-view>"
+end
+
+to handleBroadcastNow
+  return "<sdev-view component=\"handleBroadcastNow\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to isTeacher
+  return "<sdev-view component=\"isTeacher\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleShareOutput
+  return "<sdev-view component=\"handleShareOutput\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to entry
+  return "<sdev-view component=\"entry\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to copyRoomInvite
+  return "<sdev-view component=\"copyRoomInvite\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to make_LiveClassroomPanelProps with payload
+  return "<sdev-view component=\"make_LiveClassroomPanelProps\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,75 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-oce-parity.ts (55 lines)
+# Pure-SDEV Path: scripts/test-oce-parity.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-oce-parity.ts",
+    sdev_path: "scripts/test-oce-parity.sdev",
+    subsystem: "script",
+    original_lines: 55,
+    exports_count: 11
+  }
+end
+
+to module_exports
+  return ["pass", "check", "lines", "run", "classic", "v2", "source", "ai", "hasBinutils", "dir", "exe"]
+end
+
+to pass
+  return "pass"
+end
+
+to check with name ok detail
+  return name
+end
+
+to lines with s
+  return s
+end
+
+to run with cmd args
+  return cmd
+end
+
+to classic with path
+  return path
+end
+
+to v2
+  return "v2"
+end
+
+to source
+  return "source"
+end
+
+to ai
+  return "ai"
+end
+
+to hasBinutils
+  return 1
+end
+
+to dir
+  return "dir"
+end
+
+to exe
+  return "exe"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

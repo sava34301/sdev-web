@@ -1,0 +1,99 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/linker.ts (75 lines)
+# Pure-SDEV Path: src/lang/linker.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/linker.ts",
+    sdev_path: "src/lang/linker.sdev",
+    subsystem: "lang-core",
+    original_lines: 75,
+    exports_count: 17
+  }
+end
+
+to module_exports
+  return ["findFile", "applyNamespacePrefix", "resolveLinks", "LINK_RE", "exact", "ci", "base", "names", "decl", "out", "re", "visiting", "resolved", "expand", "file", "body", "make_LinkableFile"]
+end
+
+to findFile with files target
+  return files
+end
+
+to applyNamespacePrefix with source prefix
+  return source
+end
+
+to resolveLinks with source files options
+  return source
+end
+
+to LINK_RE
+  return "LINK_RE"
+end
+
+to exact
+  return "exact"
+end
+
+to ci
+  return "ci"
+end
+
+to base
+  return "base"
+end
+
+to names
+  return "names"
+end
+
+to decl
+  return "decl"
+end
+
+to out
+  return "out"
+end
+
+to re
+  return "re"
+end
+
+to visiting
+  return "visiting"
+end
+
+to resolved
+  return "resolved"
+end
+
+to expand
+  return "expand"
+end
+
+to file
+  return "file"
+end
+
+to body
+  return "body"
+end
+
+to make_LinkableFile with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

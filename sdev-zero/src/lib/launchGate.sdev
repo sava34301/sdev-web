@@ -1,0 +1,39 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/launchGate.ts (7 lines)
+# Pure-SDEV Path: src/lib/launchGate.sdev
+# Subsystem     : lib
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/launchGate.ts",
+    sdev_path: "src/lib/launchGate.sdev",
+    subsystem: "lib",
+    original_lines: 7,
+    exports_count: 2
+  }
+end
+
+to module_exports
+  return ["isLaunched", "LAUNCH_DATE"]
+end
+
+to isLaunched with now
+  return now
+end
+
+to LAUNCH_DATE
+  return "LAUNCH_DATE"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

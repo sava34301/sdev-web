@@ -1,0 +1,168 @@
+# =============================================================================
+# SDEV Self-Hosted Canonical API Registry & Diagnostic Catalogue
+# (lang/registry/registry.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/linter/linter.sdev"
+
+to registry_modules
+  return ["core", "text", "list", "tome", "math", "matrix", "graphics", "turtle", "ui", "web", "hardware", "ml", "ffi", "webgpu", "kernel"]
+end
+
+to registry_find_module with api_name
+  set k to lower(trim(api_name))
+  if str_eq(k, "say") or str_eq(k, "speak") or str_eq(k, "length") or str_eq(k, "measure") or str_eq(k, "read_file") or str_eq(k, "write_file")
+    return "core"
+  end
+  if str_eq(k, "concat") or str_eq(k, "upper") or str_eq(k, "lower") or str_eq(k, "trim") or str_eq(k, "substr") or str_eq(k, "split") or str_eq(k, "join") or str_eq(k, "replace")
+    return "text"
+  end
+  if str_eq(k, "mklist") or str_eq(k, "range") or str_eq(k, "sum") or str_eq(k, "list_append") or str_eq(k, "list_clone")
+    return "list"
+  end
+  if str_eq(k, "keys") or str_eq(k, "values") or str_eq(k, "has") or str_eq(k, "tome_create")
+    return "tome"
+  end
+  if str_eq(k, "abs") or str_eq(k, "min") or str_eq(k, "max") or str_eq(k, "fsqrt") or str_eq(k, "fsin") or str_eq(k, "fcos") or str_eq(k, "fpow")
+    return "math"
+  end
+  if text_starts_with(k, "mat_")
+    return "matrix"
+  end
+  if text_starts_with(k, "gfx_") or str_eq(k, "canvas_create") or str_eq(k, "rect") or str_eq(k, "circle")
+    return "graphics"
+  end
+  if text_starts_with(k, "turtle_") or str_eq(k, "forward")
+    return "turtle"
+  end
+  if text_starts_with(k, "ui_") or str_eq(k, "window")
+    return "ui"
+  end
+  if str_eq(k, "page") or str_eq(k, "endpage") or str_eq(k, "div") or str_eq(k, "section") or str_eq(k, "style") or str_eq(k, "theme") or str_eq(k, "navbar") or str_eq(k, "hero_section") or str_eq(k, "render_html") or str_eq(k, "sdev_to_js")
+    return "web"
+  end
+  if text_starts_with(k, "hw_") or str_eq(k, "pin_mode") or str_eq(k, "digital_write")
+    return "hardware"
+  end
+  if text_starts_with(k, "tensor_") or text_starts_with(k, "nn_")
+    return "ml"
+  end
+  if text_starts_with(k, "kernel_")
+    return "kernel"
+  end
+  return ""
+end
+
+to registry_explain_diagnostic with code_str
+  set c to upper(trim(code_str))
+  if str_eq(c, "SDEV001")
+    return "SDEV001: Unbalanced or unclosed block delimiter (:: / ;; or if / end)."
+  end
+  if str_eq(c, "SDEV002")
+    return "SDEV002: Syntax or parser error (unexpected token or unterminated string)."
+  end
+  if str_eq(c, "SDEV003")
+    return "SDEV003: Division or modulo by zero (/ 0 or % 0)."
+  end
+  if str_eq(c, "SDEV004")
+    return "SDEV004: Unreachable code after return/yield/break/continue."
+  end
+  if str_eq(c, "SDEV005")
+    return "SDEV005: Unused variable declaration."
+  end
+  if str_eq(c, "SDEV006")
+    return "SDEV006: Unknown function or builtin call."
+  end
+  if str_eq(c, "SDEV007")
+    return "SDEV007: Target capability mismatch."
+  end
+  if str_eq(c, "SDEV008")
+    return "SDEV008: Deprecated builtin or legacy keyword alias."
+  end
+  if str_eq(c, "SDEV009")
+    return "SDEV009: Assignment syntax mismatch (= instead of be / set..to)."
+  end
+  if str_eq(c, "SDEV010")
+    return "SDEV010: Foreign declaration keyword (function / const / var)."
+  end
+  if str_eq(c, "SDEV011")
+    return "SDEV011: Builtin argument count (arity) mismatch."
+  end
+  if str_eq(c, "SDEV012")
+    return "SDEV012: Declaration shadows a core SDEV builtin."
+  end
+  if str_eq(c, "SDEV013")
+    return "SDEV013: Constant condition in conditional or loop."
+  end
+  if str_eq(c, "SDEV014")
+    return "SDEV014: Self-assignment or tautological comparison."
+  end
+  if str_eq(c, "SDEV015")
+    return "SDEV015: Planned or experimental API call."
+  end
+  return "Unknown diagnostic code: " + c
+end
+
+
+to registry_damerau_levenshtein with a b
+  set s to text_lower(a)
+  set t to text_lower(b)
+  if str_eq(s, t)
+    return 0
+  end
+  set n to length(s)
+  set m to length(t)
+  if n is 0
+    return m
+  end
+  if m is 0
+    return n
+  end
+  set cols to m + 1
+  set dp to mklist((n + 1) * cols)
+  set i to 0
+  while i <= n
+    set dp[i * cols] to i
+    set i to i + 1
+  end
+  set j to 0
+  while j <= m
+    set dp[j] to j
+    set j to j + 1
+  end
+  set i to 1
+  while i <= n
+    set si to substr(s, i - 1, 1)
+    set j to 1
+    while j <= m
+      set tj to substr(t, j - 1, 1)
+      set cost to 1
+      if str_eq(si, tj)
+        set cost to 0
+      end
+      set best to dp[(i - 1) * cols + j] + 1
+      set ins to dp[i * cols + (j - 1)] + 1
+      if ins < best
+        set best to ins
+      end
+      set sub to dp[(i - 1) * cols + (j - 1)] + cost
+      if sub < best
+        set best to sub
+      end
+      if i > 1 and j > 1
+        if str_eq(si, substr(t, j - 2, 1)) and str_eq(substr(s, i - 2, 1), tj)
+          set trans to dp[(i - 2) * cols + (j - 2)] + 1
+          if trans < best
+            set best to trans
+          end
+        end
+      end
+      set dp[i * cols + j] to best
+      set j to j + 1
+    end
+    set i to i + 1
+  end
+  return dp[n * cols + m]
+end

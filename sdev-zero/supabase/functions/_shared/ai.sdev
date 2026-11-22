@@ -1,0 +1,127 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/_shared/ai.ts (65 lines)
+# Pure-SDEV Path: supabase/functions/_shared/ai.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/_shared/ai.ts",
+    sdev_path: "supabase/functions/_shared/ai.sdev",
+    subsystem: "edge-function",
+    original_lines: 65,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["env", "usingOwnProvider", "legacyKey", "aiKey", "aiUrl", "aiHeaders", "aiModel", "LEGACY_BASE", "base", "key", "headers", "tiered", "AI_NOT_CONFIGURED", "make_AiTier"]
+end
+
+to env with name
+  return {
+    status: 200,
+    handler: "env",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: name
+  }
+end
+
+to usingOwnProvider
+  return {
+    status: 200,
+    handler: "usingOwnProvider",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: ""
+  }
+end
+
+to legacyKey
+  return {
+    status: 200,
+    handler: "legacyKey",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: ""
+  }
+end
+
+to aiKey
+  return {
+    status: 200,
+    handler: "aiKey",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: ""
+  }
+end
+
+to aiUrl with path
+  return {
+    status: 200,
+    handler: "aiUrl",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: path
+  }
+end
+
+to aiHeaders
+  return {
+    status: 200,
+    handler: "aiHeaders",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: ""
+  }
+end
+
+to aiModel with legacyModel tier
+  return {
+    status: 200,
+    handler: "aiModel",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: legacyModel
+  }
+end
+
+to LEGACY_BASE
+  return "LEGACY_BASE"
+end
+
+to base
+  return "base"
+end
+
+to key
+  return "key"
+end
+
+to headers
+  return "headers"
+end
+
+to tiered
+  return "tiered"
+end
+
+to AI_NOT_CONFIGURED
+  return "AI_NOT_CONFIGURED"
+end
+
+to make_AiTier with payload
+  return {
+    status: 200,
+    handler: "make_AiTier",
+    route: "supabase/functions/_shared/ai.ts",
+    payload: payload
+  }
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

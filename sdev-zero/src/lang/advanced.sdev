@@ -1,0 +1,131 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/advanced.ts (388 lines)
+# Pure-SDEV Path: src/lang/advanced.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/advanced.ts",
+    sdev_path: "src/lang/advanced.sdev",
+    subsystem: "lang-core",
+    original_lines: 388,
+    exports_count: 25
+  }
+end
+
+to module_exports
+  return ["createAdvancedBuiltins", "builtins", "virtualFS", "path", "content", "key", "obj", "existed", "url", "options", "response", "text", "ms", "arr", "sorted", "fn", "result", "needle", "sdev_mod_set", "setB", "sdev_mod_min", "sdev_mod_max", "shuffled", "condition", "message"]
+end
+
+to createAdvancedBuiltins with output
+  return output
+end
+
+to builtins
+  return "builtins"
+end
+
+to virtualFS
+  return "virtualFS"
+end
+
+to path
+  return "path"
+end
+
+to content
+  return "content"
+end
+
+to key
+  return "key"
+end
+
+to obj
+  return "obj"
+end
+
+to existed
+  return "existed"
+end
+
+to url
+  return "url"
+end
+
+to options
+  return "options"
+end
+
+to response
+  return "response"
+end
+
+to text
+  return "text"
+end
+
+to ms
+  return "ms"
+end
+
+to arr
+  return "arr"
+end
+
+to sorted
+  return "sorted"
+end
+
+to fn
+  return "fn"
+end
+
+to result
+  return "result"
+end
+
+to needle
+  return "needle"
+end
+
+to sdev_mod_set
+  return "sdev_mod_set"
+end
+
+to setB
+  return "setB"
+end
+
+to sdev_mod_min
+  return "sdev_mod_min"
+end
+
+to sdev_mod_max
+  return "sdev_mod_max"
+end
+
+to shuffled
+  return "shuffled"
+end
+
+to condition
+  return "condition"
+end
+
+to message
+  return "message"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

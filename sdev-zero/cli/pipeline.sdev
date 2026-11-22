@@ -1,0 +1,50 @@
+# ============================================================
+# SDEV CLI Subsystem — Unified Source Preparation & Execution Pipeline
+# (sdev-zero/cli/pipeline.sdev)
+# 100% Pure SDEV port of cli/pipeline.ts
+# ============================================================
+
+use "lang/dialect/signature.sdev"
+use "lang/dialect/presets.sdev"
+use "lang/agent/pipeline.sdev"
+use "lang/hardware/transpile.sdev"
+
+to cli_prepare_source with raw_source dialect_override
+  set sig_info to read_file_signature(raw_source)
+  set body to sig_info["body"]
+  set active_dialect to sig_info["dialect"]
+  if length(text_trim(dialect_override)) > 0
+    set active_dialect to text_trim(dialect_override)
+  end
+
+  # Step 1: If written in a preset or custom dialect, canonicalize to standard SDEV
+  if active_dialect is not "canonical" and length(active_dialect) > 0
+    set preset to find_dialect_preset(active_dialect)
+    if preset["found"] is 1
+      set d_engine to dialect_spec_to_engine(preset["spec"])
+      set body to dialect_canonicalize(body, d_engine)
+    end
+  end
+
+  # Step 2: Run the Understander Agent pipeline (handles !#ai, directives, board blocks, syntax repair)
+  set understood to agent_understand_pipeline(body)
+  set final_code to understood["source"]
+
+  # Step 3: Extract hardware board block (if any) and strip it from host SDEV code
+  set board_blk to extract_board_block(final_code)
+  set host_code to strip_board_blocks(final_code)
+  set ino_code to ""
+  if board_blk["found"] is 1
+    set ino_code to transpile_board_body(board_blk["board_id"], board_blk["body"])
+  end
+
+  return {
+    rt: sig_info["rt"],
+    dialect: active_dialect,
+    host_source: host_code,
+    has_board: board_blk["found"],
+    board_id: board_blk["board_id"],
+    ino_source: ino_code,
+    changed: understood["changed"]
+  }
+end

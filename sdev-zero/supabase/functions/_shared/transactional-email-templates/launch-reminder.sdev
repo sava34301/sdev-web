@@ -1,0 +1,68 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/_shared/transactional-email-templates/launch-reminder.tsx (44 lines)
+# Pure-SDEV Path: supabase/functions/_shared/transactional-email-templates/launch-reminder.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/_shared/transactional-email-templates/launch-reminder.tsx",
+    sdev_path: "supabase/functions/_shared/transactional-email-templates/launch-reminder.sdev",
+    subsystem: "edge-function",
+    original_lines: 44,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["Email", "template", "main", "container", "h1", "text", "button", "footer"]
+end
+
+to Email with launchDate siteUrl
+  return {
+    status: 200,
+    handler: "Email",
+    route: "supabase/functions/_shared/transactional-email-templates/launch-reminder.tsx",
+    payload: launchDate
+  }
+end
+
+to template
+  return "template"
+end
+
+to main
+  return "main"
+end
+
+to container
+  return "container"
+end
+
+to h1
+  return "h1"
+end
+
+to text
+  return "text"
+end
+
+to button
+  return "button"
+end
+
+to footer
+  return "footer"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

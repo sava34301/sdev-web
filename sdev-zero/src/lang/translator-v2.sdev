@@ -1,0 +1,43 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/translator-v2.ts (113 lines)
+# Pure-SDEV Path: src/lang/translator-v2.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/translator-v2.ts",
+    sdev_path: "src/lang/translator-v2.sdev",
+    subsystem: "lang-core",
+    original_lines: 113,
+    exports_count: 3
+  }
+end
+
+to module_exports
+  return ["V1_TO_V2", "V2_EXTRA", "TAG_TO_LANGUAGE"]
+end
+
+to V1_TO_V2
+  return "V1_TO_V2"
+end
+
+to V2_EXTRA
+  return "V2_EXTRA"
+end
+
+to TAG_TO_LANGUAGE
+  return "TAG_TO_LANGUAGE"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

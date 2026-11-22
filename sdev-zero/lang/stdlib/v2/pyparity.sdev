@@ -1,0 +1,349 @@
+# =============================================================================
+# SDEV Standard Library: Python-Parity Builtins, Itertools & Collections
+# (lang/stdlib/v2/pyparity.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/stdlib/v2/list.sdev"
+use "lang/stdlib/v2/bits.sdev"
+
+to py_enumerate with xs start_idx
+  set n to length(xs)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set pair to mklist(2)
+    set pair[0] to start_idx + i
+    set pair[1] to xs[i]
+    set out[i] to pair
+    set i to i + 1
+  end
+  return out
+end
+
+to py_zip with a b
+  set na to length(a)
+  set nb to length(b)
+  set n to na
+  if nb < n
+    set n to nb
+  end
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set pair to mklist(2)
+    set pair[0] to a[i]
+    set pair[1] to b[i]
+    set out[i] to pair
+    set i to i + 1
+  end
+  return out
+end
+
+to py_any with xs
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if xs[i] is not 0
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to py_all with xs
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if xs[i] is 0
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+to py_reversed with xs
+  return list_reverse_new(xs)
+end
+
+to py_sorted with xs
+  set out to list_clone(xs)
+  set n to length(out)
+  set i to 0
+  while i < n
+    set j to 0
+    while j < n - 1 - i
+      if out[j] > out[j + 1]
+        set tmp to out[j]
+        set out[j] to out[j + 1]
+        set out[j + 1] to tmp
+      end
+      set j to j + 1
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to py_divmod with a b
+  set rem to a % b
+  set res to mklist(2)
+  set res[0] to (a - rem) / b
+  set res[1] to rem
+  return res
+end
+
+to py_bin with n
+  if n is 0
+    return "0b0"
+  end
+  set v to n
+  set neg to 0
+  if v < 0
+    set neg to 1
+    set v to 0 - v
+  end
+  set bits_str to ""
+  while v > 0
+    set rem to v % 2
+    set bits_str to str(rem) + bits_str
+    set v to (v - rem) / 2
+  end
+  if neg is 1
+    return "-0b" + bits_str
+  end
+  return "0b" + bits_str
+end
+
+to py_oct with n
+  if n is 0
+    return "0o0"
+  end
+  set v to n
+  set neg to 0
+  if v < 0
+    set neg to 1
+    set v to 0 - v
+  end
+  set oct_str to ""
+  while v > 0
+    set rem to v % 8
+    set oct_str to str(rem) + oct_str
+    set v to (v - rem) / 8
+  end
+  if neg is 1
+    return "-0o" + oct_str
+  end
+  return "0o" + oct_str
+end
+
+to py_hex with n
+  if n < 0
+    return "-0x" + bits_to_hex(0 - n)
+  end
+  return "0x" + bits_to_hex(n)
+end
+
+to py_islice with xs start_idx stop_idx
+  set n to length(xs)
+  set s to start_idx
+  if s < 0
+    set s to 0
+  end
+  set e to stop_idx
+  if e > n
+    set e to n
+  end
+  if e <= s
+    return mklist(0)
+  end
+  set count to e - s
+  set out to mklist(count)
+  set i to 0
+  while i < count
+    set out[i] to xs[s + i]
+    set i to i + 1
+  end
+  return out
+end
+
+to py_chain with a b
+  return list_concat_two(a, b)
+end
+
+to py_repeat with item count
+  set out to mklist(count)
+  set i to 0
+  while i < count
+    set out[i] to item
+    set i to i + 1
+  end
+  return out
+end
+
+to py_accumulate with xs
+  set n to length(xs)
+  set out to mklist(n)
+  set acc to 0
+  set i to 0
+  while i < n
+    set acc to acc + xs[i]
+    set out[i] to acc
+    set i to i + 1
+  end
+  return out
+end
+
+# Set operations (represented as unique-element lists)
+to py_set_new with xs
+  set out to mklist(0)
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if list_contains_val(out, xs[i]) is 0
+      set out to list_append(out, xs[i])
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to py_set_add with s val
+  if list_contains_val(s, val) is 1
+    return s
+  end
+  return list_append(s, val)
+end
+
+to py_set_has with s val
+  return list_contains_val(s, val)
+end
+
+to py_set_union with a b
+  set out to py_set_new(a)
+  set nb to length(b)
+  set i to 0
+  while i < nb
+    set out to py_set_add(out, b[i])
+    set i to i + 1
+  end
+  return out
+end
+
+to py_set_intersection with a b
+  set out to mklist(0)
+  set na to length(a)
+  set i to 0
+  while i < na
+    if list_contains_val(b, a[i]) is 1
+      set out to py_set_add(out, a[i])
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to py_set_difference with a b
+  set out to mklist(0)
+  set na to length(a)
+  set i to 0
+  while i < na
+    if list_contains_val(b, a[i]) is 0
+      set out to py_set_add(out, a[i])
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to py_set_symmetric_difference with a b
+  set d1 to py_set_difference(a, b)
+  set d2 to py_set_difference(b, a)
+  return py_set_union(d1, d2)
+end
+
+to py_set_issubset with a b
+  set na to length(a)
+  set i to 0
+  while i < na
+    if list_contains_val(b, a[i]) is 0
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+
+to py_range with start stop step
+  set out to []
+  if step is 0
+    return out
+  end
+  set i to start
+  if step > 0
+    while i < stop
+      set out to list_append(out, i)
+      set i to i + step
+    end
+  else
+    while i > stop
+      set out to list_append(out, i)
+      set i to i + step
+    end
+  end
+  return out
+end
+
+to py_sum with xs init_val
+  set acc to init_val
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set acc to acc + xs[i]
+    set i to i + 1
+  end
+  return acc
+end
+
+to py_gcd with a b
+  set x to a
+  if x < 0
+    set x to 0 - x
+  end
+  set y to b
+  if y < 0
+    set y to 0 - y
+  end
+  while y > 0
+    set tmp to x % y
+    set x to y
+    set y to tmp
+  end
+  return x
+end
+
+to py_factorial with n
+  set acc to 1
+  set i to 2
+  while i <= n
+    set acc to acc * i
+    set i to i + 1
+  end
+  return acc
+end
+
+to py_str_hash with s
+  set h to 0
+  set n to length(s)
+  set i to 0
+  while i < n
+    set code to ord(s, i)
+    set h to ((h * 31) + code) % 2147483647
+    set i to i + 1
+  end
+  return h
+end

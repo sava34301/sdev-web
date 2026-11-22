@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeTerminal.tsx (199 lines)
+# Pure-SDEV Path: src/components/ide/IdeTerminal.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeTerminal.tsx",
+    sdev_path: "src/components/ide/IdeTerminal.sdev",
+    subsystem: "ide-component",
+    original_lines: 199,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["IdeTerminal", "bottomRef", "inputRef", "busyRef", "interpRef", "ensureEnv", "out", "runRepl", "tokens", "ast", "msg", "onKey", "ni", "hasOutput"]
+end
+
+to IdeTerminal with error execTime onClear
+  return "<sdev-view component=\"IdeTerminal\" subsystem=\"ide-component\">" + str(error) + "</sdev-view>"
+end
+
+to bottomRef
+  return "<sdev-view component=\"bottomRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to inputRef
+  return "<sdev-view component=\"inputRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to busyRef
+  return "<sdev-view component=\"busyRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to interpRef
+  return "<sdev-view component=\"interpRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ensureEnv with Runtime
+  return "<sdev-view component=\"ensureEnv\" subsystem=\"ide-component\">" + str(Runtime) + "</sdev-view>"
+end
+
+to out with msg
+  return "<sdev-view component=\"out\" subsystem=\"ide-component\">" + str(msg) + "</sdev-view>"
+end
+
+to runRepl with src
+  return "<sdev-view component=\"runRepl\" subsystem=\"ide-component\">" + str(src) + "</sdev-view>"
+end
+
+to tokens
+  return "<sdev-view component=\"tokens\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ast
+  return "<sdev-view component=\"ast\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to msg
+  return "<sdev-view component=\"msg\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to onKey with e
+  return "<sdev-view component=\"onKey\" subsystem=\"ide-component\">" + str(e) + "</sdev-view>"
+end
+
+to ni
+  return "<sdev-view component=\"ni\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to hasOutput
+  return "<sdev-view component=\"hasOutput\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

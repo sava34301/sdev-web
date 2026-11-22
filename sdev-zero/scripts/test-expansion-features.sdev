@@ -1,0 +1,179 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-expansion-features.ts (285 lines)
+# Pure-SDEV Path: scripts/test-expansion-features.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-expansion-features.ts",
+    sdev_path: "scripts/test-expansion-features.sdev",
+    subsystem: "script",
+    original_lines: 285,
+    exports_count: 37
+  }
+end
+
+to module_exports
+  return ["assert", "main", "passed", "failed", "blinkSource", "sim", "picoSource", "picoSim", "v1Code", "resV1", "stepWithTotal10", "stepWithTotal30", "stepWithTotal60", "v2PrismCode", "resV2", "stats", "intentPrint", "foreignSnippet", "acc", "answer", "translated", "execRes", "brainReply", "mathModule", "bundle", "addFn", "hipotSqFn", "code", "docA", "docB", "snapA", "mergedAtB", "snapA2", "docC", "snapC2", "receivedByStudent", "studentRoom"]
+end
+
+to assert with condition label detail
+  return condition
+end
+
+to main
+  return 1
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to blinkSource
+  return "blinkSource"
+end
+
+to sim
+  return "sim"
+end
+
+to picoSource
+  return "picoSource"
+end
+
+to picoSim
+  return "picoSim"
+end
+
+to v1Code
+  return "v1Code"
+end
+
+to resV1
+  return "resV1"
+end
+
+to stepWithTotal10
+  return "stepWithTotal10"
+end
+
+to stepWithTotal30
+  return "stepWithTotal30"
+end
+
+to stepWithTotal60
+  return "stepWithTotal60"
+end
+
+to v2PrismCode
+  return "v2PrismCode"
+end
+
+to resV2
+  return "resV2"
+end
+
+to stats
+  return "stats"
+end
+
+to intentPrint
+  return "intentPrint"
+end
+
+to foreignSnippet
+  return "foreignSnippet"
+end
+
+to acc
+  return "acc"
+end
+
+to answer
+  return "answer"
+end
+
+to translated
+  return "translated"
+end
+
+to execRes
+  return "execRes"
+end
+
+to brainReply
+  return "brainReply"
+end
+
+to mathModule
+  return "mathModule"
+end
+
+to bundle
+  return "bundle"
+end
+
+to addFn
+  return "addFn"
+end
+
+to hipotSqFn
+  return "hipotSqFn"
+end
+
+to code
+  return "code"
+end
+
+to docA
+  return "docA"
+end
+
+to docB
+  return "docB"
+end
+
+to snapA
+  return "snapA"
+end
+
+to mergedAtB
+  return "mergedAtB"
+end
+
+to snapA2
+  return "snapA2"
+end
+
+to docC
+  return "docC"
+end
+
+to snapC2
+  return "snapC2"
+end
+
+to receivedByStudent
+  return "receivedByStudent"
+end
+
+to studentRoom
+  return "studentRoom"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

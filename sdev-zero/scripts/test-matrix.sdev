@@ -1,0 +1,107 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-matrix.ts (170 lines)
+# Pure-SDEV Path: scripts/test-matrix.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-matrix.ts",
+    sdev_path: "scripts/test-matrix.sdev",
+    subsystem: "script",
+    original_lines: 170,
+    exports_count: 19
+  }
+end
+
+to module_exports
+  return ["check", "expectThrow", "assertDeepEqual", "builtins", "passed", "failed", "matrixFunc", "identityFunc", "transposeFunc", "dotFunc", "matmulFunc", "mataddFunc", "matsubFunc", "matscaleFunc", "shapeFunc", "flattenFunc", "reshapeFunc", "matsumFunc", "matmeanFunc"]
+end
+
+to check with name fn
+  return name
+end
+
+to expectThrow with name errorSubstr fn
+  return name
+end
+
+to assertDeepEqual with actual expected
+  return actual
+end
+
+to builtins
+  return "builtins"
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to matrixFunc
+  return "matrixFunc"
+end
+
+to identityFunc
+  return "identityFunc"
+end
+
+to transposeFunc
+  return "transposeFunc"
+end
+
+to dotFunc
+  return "dotFunc"
+end
+
+to matmulFunc
+  return "matmulFunc"
+end
+
+to mataddFunc
+  return "mataddFunc"
+end
+
+to matsubFunc
+  return "matsubFunc"
+end
+
+to matscaleFunc
+  return "matscaleFunc"
+end
+
+to shapeFunc
+  return "shapeFunc"
+end
+
+to flattenFunc
+  return "flattenFunc"
+end
+
+to reshapeFunc
+  return "reshapeFunc"
+end
+
+to matsumFunc
+  return "matsumFunc"
+end
+
+to matmeanFunc
+  return "matmeanFunc"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

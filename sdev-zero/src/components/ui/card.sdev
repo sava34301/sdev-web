@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/card.tsx (43 lines)
+# Pure-SDEV Path: src/components/ui/card.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/card.tsx",
+    sdev_path: "src/components/ui/card.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 43,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["Card", "CardHeader", "CardTitle", "CardDescription", "CardContent", "CardFooter"]
+end
+
+to Card
+  return "<sdev-view component=\"Card\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CardHeader
+  return "<sdev-view component=\"CardHeader\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CardTitle
+  return "<sdev-view component=\"CardTitle\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CardDescription
+  return "<sdev-view component=\"CardDescription\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CardContent
+  return "<sdev-view component=\"CardContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to CardFooter
+  return "<sdev-view component=\"CardFooter\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

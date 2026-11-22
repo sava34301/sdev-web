@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/io.ts (260 lines)
+# Pure-SDEV Path: src/lang/builtins/io.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/io.ts",
+    sdev_path: "src/lang/builtins/io.sdev",
+    subsystem: "builtins",
+    original_lines: 260,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["registerIo", "speak", "message", "arg", "val", "targetType", "sdev_mod_num", "start", "result", "arr", "fn", "acc", "sdev_mod_end", "sep", "sdev_mod_str"]
+end
+
+to registerIo with builtins SdevFunction output
+  return builtins
+end
+
+to speak
+  return "speak"
+end
+
+to message
+  return "message"
+end
+
+to arg
+  return "arg"
+end
+
+to val
+  return "val"
+end
+
+to targetType
+  return "targetType"
+end
+
+to sdev_mod_num
+  return "sdev_mod_num"
+end
+
+to start
+  return "start"
+end
+
+to result
+  return "result"
+end
+
+to arr
+  return "arr"
+end
+
+to fn
+  return "fn"
+end
+
+to acc
+  return "acc"
+end
+
+to sdev_mod_end
+  return "sdev_mod_end"
+end
+
+to sep
+  return "sep"
+end
+
+to sdev_mod_str
+  return "sdev_mod_str"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

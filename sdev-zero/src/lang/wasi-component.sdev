@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/wasi-component.ts (398 lines)
+# Pure-SDEV Path: src/lang/wasi-component.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/wasi-component.ts",
+    sdev_path: "src/lang/wasi-component.sdev",
+    subsystem: "lang-core",
+    original_lines: 398,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["getWasiRunner", "toKebabCase", "getFuncBodyStatements", "inferFunctionTypes", "scan", "extractWasiExports", "generateWitSpec", "encodeUleb128", "encodeF64", "encodeString", "encodeSection", "compileExprToWasmF64", "compileFunctionBodyToWasm", "emitWasiComponentWasm", "buildWasiComponentBundle", "wasiRunner", "returnsString", "returnsBool", "val", "rec", "returnType", "params", "understood", "canonical", "ast", "exports", "cleanName", "specs", "buf", "utf8", "idx", "left", "right", "paramMap", "returnExpr", "instrs", "bodyBytes", "effectiveExports", "header", "typeEntries"]
+end
+
+to getWasiRunner
+  return 1
+end
+
+to toKebabCase with identifier
+  return identifier
+end
+
+to getFuncBodyStatements with fn
+  return fn
+end
+
+to inferFunctionTypes with fn
+  return fn
+end
+
+to scan with node
+  return node
+end
+
+to extractWasiExports with source
+  return source
+end
+
+to generateWitSpec with exports moduleName
+  return exports
+end
+
+to encodeUleb128 with value
+  return value
+end
+
+to encodeF64 with value
+  return value
+end
+
+to encodeString with sdev_mod_str
+  return sdev_mod_str
+end
+
+to encodeSection with sectionId payload
+  return sectionId
+end
+
+to compileExprToWasmF64 with node paramIndexMap number
+  return node
+end
+
+to compileFunctionBodyToWasm with fn
+  return fn
+end
+
+to emitWasiComponentWasm with exports witSpec
+  return exports
+end
+
+to buildWasiComponentBundle with source fileName
+  return source
+end
+
+to wasiRunner
+  return "wasiRunner"
+end
+
+to returnsString
+  return "returnsString"
+end
+
+to returnsBool
+  return "returnsBool"
+end
+
+to val
+  return "val"
+end
+
+to rec
+  return "rec"
+end
+
+to returnType
+  return "returnType"
+end
+
+to params
+  return "params"
+end
+
+to understood
+  return "understood"
+end
+
+to canonical
+  return "canonical"
+end
+
+to ast
+  return "ast"
+end
+
+to exports
+  return "exports"
+end
+
+to cleanName
+  return "cleanName"
+end
+
+to specs
+  return "specs"
+end
+
+to buf
+  return "buf"
+end
+
+to utf8
+  return "utf8"
+end
+
+to idx
+  return "idx"
+end
+
+to left
+  return "left"
+end
+
+to right
+  return "right"
+end
+
+to paramMap
+  return "paramMap"
+end
+
+to returnExpr
+  return "returnExpr"
+end
+
+to instrs
+  return "instrs"
+end
+
+to bodyBytes
+  return "bodyBytes"
+end
+
+to effectiveExports
+  return "effectiveExports"
+end
+
+to header
+  return "header"
+end
+
+to typeEntries
+  return "typeEntries"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

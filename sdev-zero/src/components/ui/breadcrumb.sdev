@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/breadcrumb.tsx (90 lines)
+# Pure-SDEV Path: src/components/ui/breadcrumb.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/breadcrumb.tsx",
+    sdev_path: "src/components/ui/breadcrumb.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 90,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["Breadcrumb", "BreadcrumbList", "BreadcrumbItem", "BreadcrumbLink", "Comp", "BreadcrumbPage", "BreadcrumbSeparator", "BreadcrumbEllipsis"]
+end
+
+to Breadcrumb
+  return "<sdev-view component=\"Breadcrumb\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to BreadcrumbList
+  return "<sdev-view component=\"BreadcrumbList\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to BreadcrumbItem
+  return "<sdev-view component=\"BreadcrumbItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to BreadcrumbLink
+  return "<sdev-view component=\"BreadcrumbLink\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to Comp
+  return "<sdev-view component=\"Comp\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to BreadcrumbPage
+  return "<sdev-view component=\"BreadcrumbPage\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to BreadcrumbSeparator with className props
+  return "<sdev-view component=\"BreadcrumbSeparator\" subsystem=\"ui-primitive\">" + str(className) + "</sdev-view>"
+end
+
+to BreadcrumbEllipsis with props
+  return "<sdev-view component=\"BreadcrumbEllipsis\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

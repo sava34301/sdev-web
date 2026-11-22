@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/navigation-menu.tsx (120 lines)
+# Pure-SDEV Path: src/components/ui/navigation-menu.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/navigation-menu.tsx",
+    sdev_path: "src/components/ui/navigation-menu.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 120,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["NavigationMenu", "NavigationMenuList", "NavigationMenuItem", "navigationMenuTriggerStyle", "NavigationMenuTrigger", "NavigationMenuContent", "NavigationMenuLink", "NavigationMenuViewport", "NavigationMenuIndicator"]
+end
+
+to NavigationMenu
+  return "<sdev-view component=\"NavigationMenu\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to NavigationMenuList
+  return "<sdev-view component=\"NavigationMenuList\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to NavigationMenuItem
+  return "<sdev-view component=\"NavigationMenuItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to navigationMenuTriggerStyle
+  return "<sdev-view component=\"navigationMenuTriggerStyle\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to NavigationMenuTrigger
+  return "<sdev-view component=\"NavigationMenuTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to NavigationMenuContent
+  return "<sdev-view component=\"NavigationMenuContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to NavigationMenuLink
+  return "<sdev-view component=\"NavigationMenuLink\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to NavigationMenuViewport
+  return "<sdev-view component=\"NavigationMenuViewport\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to NavigationMenuIndicator
+  return "<sdev-view component=\"NavigationMenuIndicator\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

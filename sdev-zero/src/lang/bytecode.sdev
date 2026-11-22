@@ -1,0 +1,131 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/bytecode.ts (169 lines)
+# Pure-SDEV Path: src/lang/bytecode.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/bytecode.ts",
+    sdev_path: "src/lang/bytecode.sdev",
+    subsystem: "lang-core",
+    original_lines: 169,
+    exports_count: 25
+  }
+end
+
+to module_exports
+  return ["body", "serializeChunk", "deserializeChunk", "disassemble", "BYTECODE_VERSION", "BYTECODE_MAGIC", "json", "encoder", "payload", "buf", "view", "magic", "version", "payloadLen", "decoder", "chunk", "lines", "label", "op", "operand", "make_Instruction", "make_FunctionDef", "make_Chunk", "make_ConstantPool", "make_DebugInfo"]
+end
+
+to body with also
+  return also
+end
+
+to serializeChunk with chunk
+  return chunk
+end
+
+to deserializeChunk with buffer
+  return buffer
+end
+
+to disassemble with fn indent
+  return fn
+end
+
+to BYTECODE_VERSION
+  return "BYTECODE_VERSION"
+end
+
+to BYTECODE_MAGIC
+  return "BYTECODE_MAGIC"
+end
+
+to json
+  return "json"
+end
+
+to encoder
+  return "encoder"
+end
+
+to payload
+  return "payload"
+end
+
+to buf
+  return "buf"
+end
+
+to view
+  return "view"
+end
+
+to magic
+  return "magic"
+end
+
+to version
+  return "version"
+end
+
+to payloadLen
+  return "payloadLen"
+end
+
+to decoder
+  return "decoder"
+end
+
+to chunk
+  return "chunk"
+end
+
+to lines
+  return "lines"
+end
+
+to label
+  return "label"
+end
+
+to op
+  return "op"
+end
+
+to operand
+  return "operand"
+end
+
+to make_Instruction with payload
+  return payload
+end
+
+to make_FunctionDef with payload
+  return payload
+end
+
+to make_Chunk with payload
+  return payload
+end
+
+to make_ConstantPool with payload
+  return payload
+end
+
+to make_DebugInfo with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

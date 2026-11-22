@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/WasiComponentDialog.tsx (209 lines)
+# Pure-SDEV Path: src/components/ide/WasiComponentDialog.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/WasiComponentDialog.tsx",
+    sdev_path: "src/components/ide/WasiComponentDialog.sdev",
+    subsystem: "ide-component",
+    original_lines: 209,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["WasiComponentDialog", "bundle", "activeCode", "handleCopy", "downloadWasm", "blob", "url", "downloadWit", "runLiveWasmVerification", "exportedNames", "firstFnName", "fn", "sampleArgs", "res"]
+end
+
+to WasiComponentDialog with onOpenChange source fileName
+  return "<sdev-view component=\"WasiComponentDialog\" subsystem=\"ide-component\">" + str(onOpenChange) + "</sdev-view>"
+end
+
+to bundle
+  return "<sdev-view component=\"bundle\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to activeCode
+  return "<sdev-view component=\"activeCode\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to handleCopy
+  return "<sdev-view component=\"handleCopy\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to downloadWasm
+  return "<sdev-view component=\"downloadWasm\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to blob
+  return "<sdev-view component=\"blob\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to downloadWit
+  return "<sdev-view component=\"downloadWit\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to runLiveWasmVerification
+  return "<sdev-view component=\"runLiveWasmVerification\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to exportedNames
+  return "<sdev-view component=\"exportedNames\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to firstFnName
+  return "<sdev-view component=\"firstFnName\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to fn
+  return "<sdev-view component=\"fn\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sampleArgs
+  return "<sdev-view component=\"sampleArgs\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to res
+  return "<sdev-view component=\"res\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

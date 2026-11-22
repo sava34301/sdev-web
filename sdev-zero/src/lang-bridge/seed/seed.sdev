@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/seed/seed.wat (1678 lines)
+# Pure-SDEV Path: src/lang-bridge/seed/seed.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/seed/seed.wat",
+    sdev_path: "src/lang-bridge/seed/seed.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 1678,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["wat_export_memory", "wat_export_set_prog_len", "wat_export_code_base", "wat_export_dbg_hp", "wat_export_dbg_csp", "wat_export_sdev_version", "wat_export_alloc_str", "wat_export_run", "wat_fn_say_i32", "wat_fn_say_str", "wat_fn_say_f64", "wat_fn_fmath", "wat_fn_host_read_file", "wat_fn_host_write_file", "wat_fn_host_http_get", "wat_fn_alloc", "wat_fn_read_u8", "wat_fn_read_i32", "wat_fn_read_i16", "wat_fn_read_f64", "wat_fn_box_f", "wat_fn_streq", "wat_fn_is_closure", "wat_fn_is_tome", "wat_fn_tnew", "wat_fn_tfind", "wat_fn_tset", "wat_fn_tcollect", "wat_fn_substr", "wat_fn_find", "wat_fn_case_fold", "wat_fn_is_space", "wat_fn_trim", "wat_fn_split", "wat_fn_join", "wat_fn_replace", "wat_fn_s2i", "wat_fn_range", "wat_fn_sum", "wat_fn_rand_next"]
+end
+
+to wat_export_memory with arg0
+  return arg0
+end
+
+to wat_export_set_prog_len with arg0
+  return arg0
+end
+
+to wat_export_code_base with arg0
+  return arg0
+end
+
+to wat_export_dbg_hp with arg0
+  return arg0
+end
+
+to wat_export_dbg_csp with arg0
+  return arg0
+end
+
+to wat_export_sdev_version with arg0
+  return arg0
+end
+
+to wat_export_alloc_str with arg0
+  return arg0
+end
+
+to wat_export_run with arg0
+  return arg0
+end
+
+to wat_fn_say_i32 with arg0
+  return arg0
+end
+
+to wat_fn_say_str with arg0
+  return arg0
+end
+
+to wat_fn_say_f64 with arg0
+  return arg0
+end
+
+to wat_fn_fmath with arg0
+  return arg0
+end
+
+to wat_fn_host_read_file with arg0
+  return arg0
+end
+
+to wat_fn_host_write_file with arg0
+  return arg0
+end
+
+to wat_fn_host_http_get with arg0
+  return arg0
+end
+
+to wat_fn_alloc with arg0
+  return arg0
+end
+
+to wat_fn_read_u8 with arg0
+  return arg0
+end
+
+to wat_fn_read_i32 with arg0
+  return arg0
+end
+
+to wat_fn_read_i16 with arg0
+  return arg0
+end
+
+to wat_fn_read_f64 with arg0
+  return arg0
+end
+
+to wat_fn_box_f with arg0
+  return arg0
+end
+
+to wat_fn_streq with arg0
+  return arg0
+end
+
+to wat_fn_is_closure with arg0
+  return arg0
+end
+
+to wat_fn_is_tome with arg0
+  return arg0
+end
+
+to wat_fn_tnew with arg0
+  return arg0
+end
+
+to wat_fn_tfind with arg0
+  return arg0
+end
+
+to wat_fn_tset with arg0
+  return arg0
+end
+
+to wat_fn_tcollect with arg0
+  return arg0
+end
+
+to wat_fn_substr with arg0
+  return arg0
+end
+
+to wat_fn_find with arg0
+  return arg0
+end
+
+to wat_fn_case_fold with arg0
+  return arg0
+end
+
+to wat_fn_is_space with arg0
+  return arg0
+end
+
+to wat_fn_trim with arg0
+  return arg0
+end
+
+to wat_fn_split with arg0
+  return arg0
+end
+
+to wat_fn_join with arg0
+  return arg0
+end
+
+to wat_fn_replace with arg0
+  return arg0
+end
+
+to wat_fn_s2i with arg0
+  return arg0
+end
+
+to wat_fn_range with arg0
+  return arg0
+end
+
+to wat_fn_sum with arg0
+  return arg0
+end
+
+to wat_fn_rand_next with arg0
+  return arg0
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

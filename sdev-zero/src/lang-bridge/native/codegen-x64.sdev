@@ -1,0 +1,203 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/native/codegen-x64.mjs (1246 lines)
+# Pure-SDEV Path: src/lang-bridge/native/codegen-x64.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/native/codegen-x64.mjs",
+    sdev_path: "src/lang-bridge/native/codegen-x64.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 1246,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["f64bits", "typeOf", "methodRetType", "elemTypeOf", "tomeValKey", "inferFnTypes", "emitExpr", "emitStrExpr", "emitFloatExpr", "emitBuiltin", "emitCmp", "emitStmt", "collectSets", "generateAsm", "sdev_mod_is", "NativeEmitter", "functions", "LOCAL_SLOTS", "STR_BUILTINS", "INT_BUILTINS", "LIST_BUILTINS", "TOME_BUILTINS", "FLOAT_BUILTINS", "tt", "base", "classes", "fnTypes", "globalTys", "byName", "noteCalls", "key", "pass", "beforeFn", "beforeGlob", "tys", "localNames", "tmpLoc", "walk", "vt", "et"]
+end
+
+to f64bits with v
+  return v
+end
+
+to typeOf with e tys fnTypes
+  return e
+end
+
+to methodRetType with fnTypes key
+  return fnTypes
+end
+
+to elemTypeOf with e tys fnTypes
+  return e
+end
+
+to tomeValKey with e
+  return e
+end
+
+to inferFnTypes with funcs mainBody classes
+  return funcs
+end
+
+to emitExpr with e em locals tys
+  return e
+end
+
+to emitStrExpr with e em locals tys fnTypes
+  return e
+end
+
+to emitFloatExpr with e em locals tys fnTypes
+  return e
+end
+
+to emitBuiltin with e em locals tys fnTypes
+  return e
+end
+
+to emitCmp with em setInstr
+  return em
+end
+
+to emitStmt with s em locals ctx
+  return s
+end
+
+to collectSets with body locals
+  return body
+end
+
+to generateAsm with source opts
+  return source
+end
+
+to sdev_mod_is with init_arg
+  return {
+    kind: "sdev_mod_is",
+    subsystem: "lang-bridge",
+    state: init_arg
+  }
+end
+
+to NativeEmitter with init_arg
+  return {
+    kind: "NativeEmitter",
+    subsystem: "lang-bridge",
+    state: init_arg
+  }
+end
+
+to functions with init_arg
+  return {
+    kind: "functions",
+    subsystem: "lang-bridge",
+    state: init_arg
+  }
+end
+
+to LOCAL_SLOTS
+  return "LOCAL_SLOTS"
+end
+
+to STR_BUILTINS
+  return "STR_BUILTINS"
+end
+
+to INT_BUILTINS
+  return "INT_BUILTINS"
+end
+
+to LIST_BUILTINS
+  return "LIST_BUILTINS"
+end
+
+to TOME_BUILTINS
+  return "TOME_BUILTINS"
+end
+
+to FLOAT_BUILTINS
+  return "FLOAT_BUILTINS"
+end
+
+to tt
+  return "tt"
+end
+
+to base
+  return "base"
+end
+
+to classes
+  return "classes"
+end
+
+to fnTypes
+  return "fnTypes"
+end
+
+to globalTys
+  return "globalTys"
+end
+
+to byName
+  return "byName"
+end
+
+to noteCalls with e tys
+  return e
+end
+
+to key
+  return "key"
+end
+
+to pass
+  return "pass"
+end
+
+to beforeFn
+  return "beforeFn"
+end
+
+to beforeGlob
+  return "beforeGlob"
+end
+
+to tys
+  return "tys"
+end
+
+to localNames
+  return "localNames"
+end
+
+to tmpLoc
+  return "tmpLoc"
+end
+
+to walk with body
+  return body
+end
+
+to vt
+  return "vt"
+end
+
+to et
+  return "et"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

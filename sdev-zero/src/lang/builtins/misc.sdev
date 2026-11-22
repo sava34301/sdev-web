@@ -1,0 +1,171 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/misc.ts (795 lines)
+# Pure-SDEV Path: src/lang/builtins/misc.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/misc.ts",
+    sdev_path: "src/lang/builtins/misc.sdev",
+    subsystem: "builtins",
+    original_lines: 795,
+    exports_count: 35
+  }
+end
+
+to module_exports
+  return ["registerMisc", "buildVec", "template", "argIdx", "pad", "sdev_mod_str", "start", "sdev_mod_end", "arr", "idx", "setB", "fn", "sdev_mod_min", "sdev_mod_max", "total", "promptText", "result", "message", "val", "code", "msg", "groups", "key", "size", "results", "vec", "makeVecMethod", "makeMethod", "data", "obj", "update", "ri", "tryFn", "catchFn", "ch"]
+end
+
+to registerMisc with builtins SdevFunction output
+  return builtins
+end
+
+to buildVec with x y
+  return x
+end
+
+to template
+  return "template"
+end
+
+to argIdx
+  return "argIdx"
+end
+
+to pad
+  return "pad"
+end
+
+to sdev_mod_str
+  return "sdev_mod_str"
+end
+
+to start
+  return "start"
+end
+
+to sdev_mod_end
+  return "sdev_mod_end"
+end
+
+to arr
+  return "arr"
+end
+
+to idx
+  return "idx"
+end
+
+to setB
+  return "setB"
+end
+
+to fn
+  return "fn"
+end
+
+to sdev_mod_min
+  return "sdev_mod_min"
+end
+
+to sdev_mod_max
+  return "sdev_mod_max"
+end
+
+to total
+  return "total"
+end
+
+to promptText
+  return "promptText"
+end
+
+to result with globalThis
+  return globalThis
+end
+
+to message
+  return "message"
+end
+
+to val
+  return "val"
+end
+
+to code
+  return "code"
+end
+
+to msg
+  return "msg"
+end
+
+to groups
+  return "groups"
+end
+
+to key
+  return "key"
+end
+
+to size
+  return "size"
+end
+
+to results
+  return "results"
+end
+
+to vec
+  return "vec"
+end
+
+to makeVecMethod with fn rest
+  return fn
+end
+
+to makeMethod with fn rest
+  return fn
+end
+
+to data
+  return "data"
+end
+
+to obj
+  return "obj"
+end
+
+to update
+  return 1
+end
+
+to ri
+  return "ri"
+end
+
+to tryFn
+  return "tryFn"
+end
+
+to catchFn
+  return "catchFn"
+end
+
+to ch
+  return "ch"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

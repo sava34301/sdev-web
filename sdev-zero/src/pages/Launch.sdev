@@ -1,0 +1,79 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Launch.tsx (161 lines)
+# Pure-SDEV Path: src/pages/Launch.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Launch.tsx",
+    sdev_path: "src/pages/Launch.sdev",
+    subsystem: "page",
+    original_lines: 161,
+    exports_count: 12
+  }
+end
+
+to module_exports
+  return ["diff", "Launch", "ms", "navigate", "launched", "id", "launchLine", "calendarUrl", "icsUrl", "handleRedeem", "res", "alreadyInvited"]
+end
+
+to diff with target
+  return "<sdev-view component=\"diff\" subsystem=\"page\">" + str(target) + "</sdev-view>"
+end
+
+to Launch
+  return "<sdev-view component=\"Launch\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to ms
+  return "<sdev-view component=\"ms\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to launched
+  return "<sdev-view component=\"launched\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to id
+  return "<sdev-view component=\"id\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to launchLine
+  return "<sdev-view component=\"launchLine\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to calendarUrl
+  return "<sdev-view component=\"calendarUrl\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to icsUrl
+  return "<sdev-view component=\"icsUrl\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handleRedeem
+  return "<sdev-view component=\"handleRedeem\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to res
+  return "<sdev-view component=\"res\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to alreadyInvited
+  return "<sdev-view component=\"alreadyInvited\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

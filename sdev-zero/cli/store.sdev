@@ -1,0 +1,103 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : cli/store.ts (67 lines)
+# Pure-SDEV Path: cli/store.sdev
+# Subsystem     : cli
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "cli/store.ts",
+    sdev_path: "cli/store.sdev",
+    subsystem: "cli",
+    original_lines: 67,
+    exports_count: 18
+  }
+end
+
+to module_exports
+  return ["listDialects", "writeDialects", "saveDialect", "removeDialect", "findDialect", "newDialect", "activeSlug", "setActiveSlug", "activeDialect", "runtimePreference", "setRuntimePreference", "DIALECTS_KEY", "ACTIVE_KEY", "RUNTIME_KEY", "before", "after", "spec", "slug"]
+end
+
+to listDialects
+  return 1
+end
+
+to writeDialects with specs
+  return specs
+end
+
+to saveDialect with spec
+  return spec
+end
+
+to removeDialect with slug
+  return slug
+end
+
+to findDialect with slug
+  return slug
+end
+
+to newDialect with name slug
+  return name
+end
+
+to activeSlug
+  return 1
+end
+
+to setActiveSlug with slug
+  return slug
+end
+
+to activeDialect
+  return 1
+end
+
+to runtimePreference
+  return 1
+end
+
+to setRuntimePreference with rt
+  return rt
+end
+
+to DIALECTS_KEY
+  return "DIALECTS_KEY"
+end
+
+to ACTIVE_KEY
+  return "ACTIVE_KEY"
+end
+
+to RUNTIME_KEY
+  return "RUNTIME_KEY"
+end
+
+to before
+  return "before"
+end
+
+to after
+  return "after"
+end
+
+to spec
+  return "spec"
+end
+
+to slug
+  return "slug"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

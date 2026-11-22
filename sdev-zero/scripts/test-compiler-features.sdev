@@ -1,0 +1,75 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-compiler-features.ts (149 lines)
+# Pure-SDEV Path: scripts/test-compiler-features.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-compiler-features.ts",
+    sdev_path: "scripts/test-compiler-features.sdev",
+    subsystem: "script",
+    original_lines: 149,
+    exports_count: 11
+  }
+end
+
+to module_exports
+  return ["check", "runV2", "passed", "failed", "output", "lexer", "parser", "ast", "chunk", "vm", "result"]
+end
+
+to check with name ok detail
+  return name
+end
+
+to runV2 with source
+  return source
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to output
+  return "output"
+end
+
+to lexer
+  return "lexer"
+end
+
+to parser
+  return "parser"
+end
+
+to ast
+  return "ast"
+end
+
+to chunk
+  return "chunk"
+end
+
+to vm
+  return "vm"
+end
+
+to result
+  return "result"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

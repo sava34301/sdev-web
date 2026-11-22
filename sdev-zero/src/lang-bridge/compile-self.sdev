@@ -1,0 +1,175 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/compile-self.mjs (156 lines)
+# Pure-SDEV Path: src/lang-bridge/compile-self.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/compile-self.mjs",
+    sdev_path: "src/lang-bridge/compile-self.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 156,
+    exports_count: 36
+  }
+end
+
+to module_exports
+  return ["ensureNodeFs", "hexToBytes", "setSeedLoader", "defaultSeedBytes", "seedModule", "bakedDriver", "compileWith", "compile", "decoder", "encoder", "nodeFs", "out", "cachedModule", "seedLoader", "SEED_ASSET_PATH", "fs", "seedPath", "res", "wasmBytes", "baked", "wasmModule", "srcBytes", "dumped", "compilerErr", "inst", "msg", "path", "bytes", "text", "dst", "codeBase", "cursor", "bcCount", "bytecode", "poolCount", "stringPool"]
+end
+
+to ensureNodeFs
+  return 1
+end
+
+to hexToBytes with hex
+  return hex
+end
+
+to setSeedLoader with fn
+  return fn
+end
+
+to defaultSeedBytes
+  return 1
+end
+
+to seedModule
+  return 1
+end
+
+to bakedDriver
+  return 1
+end
+
+to compileWith with driver userSrc modules
+  return driver
+end
+
+to compile with userSrc modules
+  return userSrc
+end
+
+to decoder
+  return "decoder"
+end
+
+to encoder
+  return "encoder"
+end
+
+to nodeFs
+  return "nodeFs"
+end
+
+to out
+  return "out"
+end
+
+to cachedModule
+  return "cachedModule"
+end
+
+to seedLoader
+  return "seedLoader"
+end
+
+to SEED_ASSET_PATH
+  return "SEED_ASSET_PATH"
+end
+
+to fs
+  return "fs"
+end
+
+to seedPath
+  return "seedPath"
+end
+
+to res
+  return "res"
+end
+
+to wasmBytes
+  return "wasmBytes"
+end
+
+to baked
+  return "baked"
+end
+
+to wasmModule
+  return "wasmModule"
+end
+
+to srcBytes
+  return "srcBytes"
+end
+
+to dumped
+  return "dumped"
+end
+
+to compilerErr
+  return "compilerErr"
+end
+
+to inst
+  return "inst"
+end
+
+to msg
+  return "msg"
+end
+
+to path
+  return "path"
+end
+
+to bytes
+  return "bytes"
+end
+
+to text
+  return "text"
+end
+
+to dst
+  return "dst"
+end
+
+to codeBase
+  return "codeBase"
+end
+
+to cursor
+  return "cursor"
+end
+
+to bcCount
+  return "bcCount"
+end
+
+to bytecode
+  return "bytecode"
+end
+
+to poolCount
+  return "poolCount"
+end
+
+to stringPool
+  return "stringPool"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

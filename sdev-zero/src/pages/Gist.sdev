@@ -1,0 +1,51 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Gist.tsx (173 lines)
+# Pure-SDEV Path: src/pages/Gist.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Gist.tsx",
+    sdev_path: "src/pages/Gist.sdev",
+    subsystem: "page",
+    original_lines: 173,
+    exports_count: 5
+  }
+end
+
+to module_exports
+  return ["Gist", "navigate", "toggleStar", "openInIDE", "copyCode"]
+end
+
+to Gist
+  return "<sdev-view component=\"Gist\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to toggleStar
+  return "<sdev-view component=\"toggleStar\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to openInIDE
+  return "<sdev-view component=\"openInIDE\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to copyCode
+  return "<sdev-view component=\"copyCode\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

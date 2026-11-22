@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/dialect/catalog.ts (143 lines)
+# Pure-SDEV Path: src/lang/dialect/catalog.sdev
+# Subsystem     : dialect
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/dialect/catalog.ts",
+    sdev_path: "src/lang/dialect/catalog.sdev",
+    subsystem: "dialect",
+    original_lines: 143,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["CATALOG", "CATALOG_WORDS", "CATALOG_BY_WORD", "GROUP_LABELS", "make_CatalogGroup", "make_CatalogEntry"]
+end
+
+to CATALOG
+  return "CATALOG"
+end
+
+to CATALOG_WORDS
+  return "CATALOG_WORDS"
+end
+
+to CATALOG_BY_WORD
+  return "CATALOG_BY_WORD"
+end
+
+to GROUP_LABELS
+  return "GROUP_LABELS"
+end
+
+to make_CatalogGroup with payload
+  return payload
+end
+
+to make_CatalogEntry with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

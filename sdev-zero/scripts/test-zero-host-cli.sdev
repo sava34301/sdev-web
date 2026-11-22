@@ -1,0 +1,48 @@
+# =============================================================================
+# Zero-Host Pure-SDEV CLI, Native ELF & Windows PE32+ Verification Suite
+# (sdev-zero/scripts/test-zero-host-cli.sdev)
+#
+#   ./bin/sdev scripts/test-zero-host-cli.sdev
+# =============================================================================
+
+use "lang/stdlib/testkit.sdev"
+use "lang/native/pe_x64.sdev"
+use "lang/native/codegen_x64.sdev"
+
+# 1. Pure-SDEV Windows x86-64 PE32+ Console Executable Builder
+set pe_buf to pe_build_console_exe("Hello Windows PE32+!\r\n", 7)
+set _ to check("PE32+ console executable is 2048 bytes", pe_buf[0] is 2048)
+set _ to check("PE32+ header has MZ and PE\\0\\0 signature", pe_verify_header(pe_buf) is 1)
+set pe_hex to pe_to_hex(pe_buf)
+set _ to check("PE32+ hex encoding is 4096 hex chars starting with 4d5a", length(pe_hex) is 4096 and substr(pe_hex, 0, 4) is "4d5a")
+
+# 2. Pure-SDEV Bytecode -> x86-64 GAS Assembly Compiler
+# Bytecode for: PUSH_I32 99, SAY_I32, HALT
+set mini_bc to [1, 99, 0, 0, 0, 80, 255]
+set mini_asm to x64_compile_bytecode(mini_bc, mklist(0))
+set _ to check("x64_compile_bytecode emits sdev_main", contains(mini_asm, ".globl sdev_main"))
+set _ to check("x64_compile_bytecode emits sdev_say_int call", contains(mini_asm, "call sdev_say_int"))
+
+# 3. Pure-SDEV CLI Subcommands Verification
+set r_api to shell("./bin/sdev api mat_mul")
+set _ to check("CLI 'sdev api mat_mul' resolves matrix module", contains(r_api, "module 'matrix'"))
+
+set r_exp to shell("./bin/sdev explain SDEV001")
+set _ to check("CLI 'sdev explain SDEV001' explains block delimiter diagnostic", contains(r_exp, "SDEV001:"))
+
+set r_eval to shell("./bin/sdev eval \"say 6 * 7\"")
+set _ to check("CLI 'sdev eval' executes inline SDEV code", contains(r_eval, "42"))
+
+set r_chk to shell("./bin/sdev check lang/compiler/lexer.sdev")
+set _ to check("CLI 'sdev check' validates lexer.sdev", contains(r_chk, "syntax & symbols OK"))
+
+set r_dis to shell("./bin/sdev disasm lang/compiler/parser.sdev")
+set _ to check("CLI 'sdev disasm' disassembles bytecode instructions", contains(r_dis, "PUSH_I32") and contains(r_dis, "HALT"))
+
+set r_lint to shell("./bin/sdev lint lang/compiler/lexer.sdev")
+set _ to check("CLI 'sdev lint' passes clean SDEV file with 0 issues", contains(r_lint, "0 lint issues"))
+
+set r_v1 to shell("./bin/sdev v1 lang/parity/agent.sdev")
+set _ to check("CLI 'sdev v1' transpiles v1 conjure/forge to v2 to/set", contains(r_v1, "to unquote with s"))
+
+set _ to tk_report("zero-host pure-SDEV CLI & native targets suite")

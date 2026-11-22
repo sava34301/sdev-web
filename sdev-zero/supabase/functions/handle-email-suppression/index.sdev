@@ -1,0 +1,107 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/handle-email-suppression/index.ts (162 lines)
+# Pure-SDEV Path: supabase/functions/handle-email-suppression/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/handle-email-suppression/index.ts",
+    sdev_path: "supabase/functions/handle-email-suppression/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 162,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["parseSuppressionPayload", "jsonResponse", "mapReasonToStatus", "mapReasonToMessage", "parsed", "data", "apiKey", "supabaseUrl", "supabaseServiceKey", "payload", "supabase", "normalizedEmail", "sendLogStatus", "sendLogMessage"]
+end
+
+to parseSuppressionPayload with body
+  return {
+    status: 200,
+    handler: "parseSuppressionPayload",
+    route: "supabase/functions/handle-email-suppression/index.ts",
+    payload: body
+  }
+end
+
+to jsonResponse with data unknown status
+  return {
+    status: 200,
+    handler: "jsonResponse",
+    route: "supabase/functions/handle-email-suppression/index.ts",
+    payload: data
+  }
+end
+
+to mapReasonToStatus with reason
+  return {
+    status: 200,
+    handler: "mapReasonToStatus",
+    route: "supabase/functions/handle-email-suppression/index.ts",
+    payload: reason
+  }
+end
+
+to mapReasonToMessage with reason
+  return {
+    status: 200,
+    handler: "mapReasonToMessage",
+    route: "supabase/functions/handle-email-suppression/index.ts",
+    payload: reason
+  }
+end
+
+to parsed
+  return "parsed"
+end
+
+to data
+  return "data"
+end
+
+to apiKey
+  return "apiKey"
+end
+
+to supabaseUrl
+  return "supabaseUrl"
+end
+
+to supabaseServiceKey
+  return "supabaseServiceKey"
+end
+
+to payload
+  return "payload"
+end
+
+to supabase
+  return "supabase"
+end
+
+to normalizedEmail
+  return "normalizedEmail"
+end
+
+to sendLogStatus
+  return "sendLogStatus"
+end
+
+to sendLogMessage
+  return "sendLogMessage"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

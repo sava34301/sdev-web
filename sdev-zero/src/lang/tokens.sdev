@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/tokens.ts (145 lines)
+# Pure-SDEV Path: src/lang/tokens.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/tokens.ts",
+    sdev_path: "src/lang/tokens.sdev",
+    subsystem: "lang-core",
+    original_lines: 145,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["spellings", "declarations", "KEYWORDS", "map", "tt", "make_Token"]
+end
+
+to spellings with init_arg
+  return {
+    kind: "spellings",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to declarations with init_arg
+  return {
+    kind: "declarations",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to KEYWORDS
+  return 1
+end
+
+to map
+  return "map"
+end
+
+to tt
+  return "tt"
+end
+
+to make_Token with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,162 @@
+// OCE regression suite — classic sdev, for the browser and Python runtimes.
+// Mirrors scripts/test-oce.sdev (SDEV v2) check for check; both must agree.
+//   bun scripts/test-oce-parity.ts
+
+forge tally be [0, 0]
+conjure check(name, ok) ::
+  ponder ok ::
+    tally[0] be tally[0] + 1
+    speak("ok   " + name)
+  ;; otherwise ::
+    tally[1] be tally[1] + 1
+    speak("FAIL " + name)
+  ;;
+;;
+
+// -- bits & memory
+check("bits_and", bits_and(12, 10) == 8)
+check("bits_or", bits_or(12, 10) == 14)
+check("bits_xor", bits_xor(12, 10) == 6)
+check("bits_not_n", bits_not_n(5, 4) == 10)
+check("floor_div negative", floor_div(-7, 2) == -4)
+check("floor_mod negative", floor_mod(-7, 2) == 1)
+check("wrap_i16", wrap_i16(40000) == -25536)
+forge mm be mem_arena(16)
+mem_put_i16(mm, 2, -2)
+check("i16 round trip", mem_get_i16(mm, 2) == -2)
+check("i16 bytes little-endian", mem_hex(mm, 2, 2) == "fe ff")
+mem_put_u16(mm, 0, 513)
+check("u16 round trip", mem_get_u16(mm, 0) == 513)
+forge r be ring_create(3)
+ring_push(r, 1)
+ring_push(r, 2)
+ring_push(r, 3)
+ring_push(r, 4)
+check("ring keeps newest", ring_get(r, 0) == 2 also ring_len(r) == 3)
+
+// -- the 12-byte node
+forge m be oce_create()
+check("arena is 64 KB", measure(m) == 65536)
+forge n0 be oce_alloc(m, 7, 200, 1, 2, 3, -10)
+check("node packs to 12 bytes", mem_hex(m, 16384, 12) == "00 40 07 c8 01 00 02 00 03 00 f6 ff")
+oce_free(m, n0)
+check("freed slot is reused", oce_alloc(m, 1, 1, 0, 0, 0, 0) == 0)
+
+// -- learning physics from zero bytes
+forge m be oce_create()
+forge names be ["supported", "pos_z", "vel_z", "density", "pos_x", "vel_x", "mass", "near_magnet"]
+oce_medium(m, 3, 12)
+forge box be [[[0, 0, 0, 12, 0, 0, 0, 0]], [0], m]
+conjure add_body(sup, pz, dens, fe) ::
+  forge id be oce_entity(box[2])
+  box[0] be box[0] + [[sup, pz, 0, dens, 0, 0, 10, 0]]
+  box[1] be box[1] + [fe]
+  yield id
+;;
+forge table be add_body(1, 0, 50, 0)
+forge stone be add_body(1, 100, 50, 0)
+forge balloon be add_body(1, 100, 2, 0)
+forge cube_a be add_body(1, 0, 70, 1)
+forge cube_b be add_body(1, 0, 70, 0)
+
+conjure physics() ::
+  forge world be box[0]
+  forge ferro be box[1]
+  forge nw be [world[0]]
+  forge i be 1
+  cycle i < measure(world) ::
+    forge o be world[i]
+    forge x be [o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7]]
+    ponder o[0] == 0 ::
+      ponder o[3] > 12 ::
+        x[2] be o[2] - 10
+      ;; otherwise ::
+        x[2] be o[2] + 4
+      ;;
+    ;;
+    x[1] be o[1] + o[2]
+    x[4] be o[4] + o[5]
+    ponder ferro[i] == 1 also o[7] == 1 ::
+      x[5] be o[5] + 6
+    ;;
+    nw be nw + [x]
+    i be i + 1
+  ;;
+  box[0] be nw
+  yield 0
+;;
+conjure act(e, p, v) ::
+  forge row be box[0][e]
+  row[p] be v
+  oce_intervene(box[2], e, p, v)
+  yield v
+;;
+conjure run_ticks(k) ::
+  forge errs be 0
+  forge t be 0
+  cycle t < k ::
+    physics()
+    errs be errs + oce_observe(box[2], box[0])
+    t be t + 1
+  ;;
+  yield errs
+;;
+
+oce_observe(m, box[0])
+check("quiet world: no surprises", run_ticks(5) == 0)
+act(stone, 0, 0)
+forge early be run_ticks(3)
+check("stone release is surprising", early > 0)
+check("then gravity is predicted exactly", run_ticks(20) == 0)
+act(stone, 0, 1)
+act(stone, 2, 0)
+act(stone, 1, 100)
+run_ticks(2)
+act(stone, 0, 0)
+check("gravity holds on a second drop", run_ticks(10) == 0)
+act(balloon, 0, 0)
+run_ticks(2)
+check("balloon learned via exception (buoyancy)", run_ticks(8) == 0)
+act(cube_a, 7, 1)
+act(cube_b, 7, 1)
+run_ticks(3)
+check("identical cubes split by latent property", run_ticks(8) == 0)
+check("latent register was invented", oce_get(m, cube_a, 8) == 1 also oce_get(m, cube_b, 8) == 0)
+forge model be oce_describe(m, names)
+speak(model)
+check("model says gravity", contains(model, "if supported == 0 then vel_z += -10"))
+check("model says kinematics", contains(model, "pos_z += vel_z"))
+check("model says buoyancy exception", contains(model, "unless density < medium.density then vel_z += 4"))
+check("model uses a latent cause", contains(model, "latent_1 == 1"))
+check("model stays tiny (< 2 KB)", oce_mdl_bits(m) < 16384)
+
+// -- counterfactual
+oce_imagine(m, table, 0, 0, 3)
+check("imagined table falls", oce_imagined(m, table, 2) == -30)
+check("imagination leaves reality alone", oce_get(m, table, 2) == 0)
+
+// -- external knowledge
+forge ext be oce_ext_create()
+oce_ext_store(ext, 3, 74, 5555)
+check("external fact query", oce_ext_query(ext, 3, 74, 0) == 5555)
+
+// -- motif folding & generator discovery
+forge fold be oce_motifs("abcabcabcabc", 2)
+check("motifs compress repeats", measure(fold[0]) < 12)
+forge back be oce_motif_expand(fold[1], fold[0][0])
+check("motifs expand back", back == "abcabc" either back == "abc")
+forge seq be [3, 7, 11, 15]
+forge rule be oce_sequence_rule(seq)
+check("arithmetic rule", rule[0] == "add" also oce_sequence_next(seq, rule) == 19)
+check("geometric rule", oce_sequence_next([2, 6, 18], oce_sequence_rule([2, 6, 18])) == 54)
+check("fibonacci rule", oce_sequence_rule([1, 1, 2, 3, 5, 8])[0] == "fib")
+forge rows be [[0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0]]
+forge k be 0
+cycle k < 6 ::
+  rows be rows + [oce_ca_step(rows[measure(rows) - 1], 110)]
+  k be k + 1
+;;
+check("Rule 110 rediscovered from cells", oce_ca_rule(rows) == 110)
+
+speak("")
+speak("oce: " + str(tally[0]) + " passed, " + str(tally[1]) + " failed")

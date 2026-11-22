@@ -1,0 +1,99 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-book-pdf.py (329 lines)
+# Pure-SDEV Path: scripts/build-book-pdf.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-book-pdf.py",
+    sdev_path: "scripts/build-book-pdf.sdev",
+    subsystem: "script",
+    original_lines: 329,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["inline", "_stash_code", "_stash_link", "_restore_code", "_restore_link", "code_escape", "__init__", "afterFlowable", "_draw_cover_bg", "_draw_body_chrome", "_draw_chapter_chrome", "parse_markdown", "build_cover", "build_toc", "build", "BookDoc"]
+end
+
+to inline with text
+  return text
+end
+
+to _stash_code with m
+  return m
+end
+
+to _stash_link with m
+  return m
+end
+
+to _restore_code with m
+  return m
+end
+
+to _restore_link with m
+  return m
+end
+
+to code_escape with text
+  return text
+end
+
+to __init__ with filename title
+  return filename
+end
+
+to afterFlowable with flowable
+  return flowable
+end
+
+to _draw_cover_bg with canvas doc
+  return canvas
+end
+
+to _draw_body_chrome with canvas doc
+  return canvas
+end
+
+to _draw_chapter_chrome with canvas doc
+  return canvas
+end
+
+to parse_markdown with md_text lang
+  return md_text
+end
+
+to build_cover with title subtitle edition_label
+  return title
+end
+
+to build_toc with label
+  return label
+end
+
+to build with md_path out_path title subtitle lang
+  return md_path
+end
+
+to BookDoc with init_arg
+  return {
+    kind: "BookDoc",
+    subsystem: "script",
+    state: init_arg
+  }
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

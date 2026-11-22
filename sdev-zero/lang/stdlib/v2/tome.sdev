@@ -1,0 +1,77 @@
+# SDEV Standard Library: Tomes & Mappings (v2) — authored in SDEV.
+
+to tome_create
+  return {}
+end
+
+to tome_get_or with t key fallback
+  set ks to keys(t)
+  set vs to values(t)
+  set n to length(ks)
+  set i to 0
+  while i < n
+    if concat(ks[i], "") is key
+      return vs[i]
+    end
+    set i to i + 1
+  end
+  return fallback
+end
+
+to tome_put_kv with t key val
+  set t[key] to val
+  return t
+end
+
+to tome_has_key with t key
+  return has(t, key)
+end
+
+to tome_keys_list with t
+  return keys(t)
+end
+
+to tome_values_list with t
+  return values(t)
+end
+
+to tome_merge_two with a b
+  set out to {}
+  set ks_a to keys(a)
+  set i to 0
+  while i < length(ks_a)
+    set k to ks_a[i]
+    set out[k] to a[k]
+    set i to i + 1
+  end
+  set ks_b to keys(b)
+  set j to 0
+  while j < length(ks_b)
+    set k to ks_b[j]
+    set out[k] to b[k]
+    set j to j + 1
+  end
+  return out
+end
+
+to tome_pick_keys with t wanted_keys
+  set out to {}
+  set i to 0
+  while i < length(wanted_keys)
+    set k to wanted_keys[i]
+    if has(t, k)
+      set out[k] to t[k]
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+# SDEV v1 Compatibility Aliases
+to inscribe with t key val
+  return tome_put_kv(t, key, val)
+end
+
+to unscroll with t key
+  return tome_get_or(t, key, "")
+end

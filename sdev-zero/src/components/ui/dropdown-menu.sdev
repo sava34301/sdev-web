@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/dropdown-menu.tsx (179 lines)
+# Pure-SDEV Path: src/components/ui/dropdown-menu.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/dropdown-menu.tsx",
+    sdev_path: "src/components/ui/dropdown-menu.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 179,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["DropdownMenu", "DropdownMenuTrigger", "DropdownMenuGroup", "DropdownMenuPortal", "DropdownMenuSub", "DropdownMenuRadioGroup", "DropdownMenuSubTrigger", "DropdownMenuSubContent", "DropdownMenuContent", "DropdownMenuItem", "DropdownMenuCheckboxItem", "DropdownMenuRadioItem", "DropdownMenuLabel", "DropdownMenuSeparator", "DropdownMenuShortcut"]
+end
+
+to DropdownMenu
+  return "<sdev-view component=\"DropdownMenu\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuTrigger
+  return "<sdev-view component=\"DropdownMenuTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuGroup
+  return "<sdev-view component=\"DropdownMenuGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuPortal
+  return "<sdev-view component=\"DropdownMenuPortal\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuSub
+  return "<sdev-view component=\"DropdownMenuSub\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuRadioGroup
+  return "<sdev-view component=\"DropdownMenuRadioGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuSubTrigger
+  return "<sdev-view component=\"DropdownMenuSubTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuSubContent
+  return "<sdev-view component=\"DropdownMenuSubContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuContent
+  return "<sdev-view component=\"DropdownMenuContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuItem
+  return "<sdev-view component=\"DropdownMenuItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuCheckboxItem
+  return "<sdev-view component=\"DropdownMenuCheckboxItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuRadioItem
+  return "<sdev-view component=\"DropdownMenuRadioItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuLabel
+  return "<sdev-view component=\"DropdownMenuLabel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuSeparator
+  return "<sdev-view component=\"DropdownMenuSeparator\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DropdownMenuShortcut with props
+  return "<sdev-view component=\"DropdownMenuShortcut\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

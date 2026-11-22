@@ -1,0 +1,168 @@
+# ============================================================
+# SDEV Hardware Subsystem — Virtual MCU & Breadboard Simulator (simulator.sdev)
+# 100% Pure SDEV port of src/lang/hardware/simulator.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/hardware/board_db.sdev"
+use "lang/hardware/strip.sdev"
+use "lang/hardware/understand.sdev"
+
+to sim_create with board_id
+  set b to find_board_by_id(board_id)
+  set modes to {}
+  set digital to {}
+  set pwm to {}
+  set analog to {}
+  return {
+    board_id: b["id"],
+    board_name: b["name"],
+    builtin_led: b["builtin_led"],
+    baud: b["baud"],
+    elapsed_ms: 0,
+    cycles: 0,
+    modes: modes,
+    digital: digital,
+    pwm: pwm,
+    analog: analog,
+    tone_pin: 0 - 1,
+    tone_hz: 0,
+    servo_angle: 0,
+    serial_log: []
+  }
+end
+
+to sim_pin_mode with sim pin_str mode_str
+  set modes to sim["modes"]
+  set modes[pin_str] to mode_str
+  set sim["modes"] to modes
+  return sim
+end
+
+to sim_digital_write with sim pin_str val
+  set modes to sim["modes"]
+  if modes[pin_str] is nothing
+    set modes[pin_str] to "OUTPUT"
+    set sim["modes"] to modes
+  end
+  set dig to sim["digital"]
+  set dig[pin_str] to val
+  set sim["digital"] to dig
+  return sim
+end
+
+to sim_digital_read with sim pin_str
+  set dig to sim["digital"]
+  if dig[pin_str] is nothing
+    return 0
+  end
+  return dig[pin_str]
+end
+
+to sim_analog_write with sim pin_str val
+  set pwm to sim["pwm"]
+  set pwm[pin_str] to val
+  set sim["pwm"] to pwm
+  return sim
+end
+
+to sim_exec_line with sim raw_line
+  set line to hw_understand_line(raw_line)
+  if length(line) is 0 or text_starts_with(line, "#") or text_starts_with(line, "//")
+    return sim
+  end
+
+  if text_starts_with(line, "pin ") and text_ends_with(line, " be output")
+    set p to text_trim(substr(line, 4, length(line) - 14))
+    return sim_pin_mode(sim, p, "OUTPUT")
+  end
+  if text_starts_with(line, "pin ") and text_ends_with(line, " be input")
+    set p to text_trim(substr(line, 4, length(line) - 13))
+    return sim_pin_mode(sim, p, "INPUT")
+  end
+  if text_starts_with(line, "pin ") and (text_ends_with(line, " be high") or text_ends_with(line, " on"))
+    set cut_len to 12
+    if text_ends_with(line, " on")
+      set cut_len to 7
+    end
+    set p to text_trim(substr(line, 4, length(line) - cut_len))
+    return sim_digital_write(sim, p, 1)
+  end
+  if text_starts_with(line, "pin ") and (text_ends_with(line, " be low") or text_ends_with(line, " off"))
+    set cut_len to 11
+    if text_ends_with(line, " off")
+      set cut_len to 8
+    end
+    set p to text_trim(substr(line, 4, length(line) - cut_len))
+    return sim_digital_write(sim, p, 0)
+  end
+  if text_starts_with(line, "pin ") and text_ends_with(line, " toggle")
+    set p to text_trim(substr(line, 4, length(line) - 11))
+    set cur to sim_digital_read(sim, p)
+    set next_val to 1
+    if cur is 1
+      set next_val to 0
+    end
+    return sim_digital_write(sim, p, next_val)
+  end
+  if text_starts_with(line, "pin ") and index_of(line, " pwm ") > 0
+    set pwm_idx to index_of(line, " pwm ")
+    set p to text_trim(substr(line, 4, pwm_idx - 4))
+    set v to int(text_trim(substr(line, pwm_idx + 5, length(line) - (pwm_idx + 5))))
+    return sim_analog_write(sim, p, v)
+  end
+  if text_starts_with(line, "tone ")
+    set rest to text_trim(substr(line, 5, length(line) - 5))
+    set sp to index_of(rest, " ")
+    if sp > 0
+      set p to int(substr(rest, 0, sp))
+      set hz to int(text_trim(substr(rest, sp + 1, length(rest) - (sp + 1))))
+      set sim["tone_pin"] to p
+      set sim["tone_hz"] to hz
+    end
+    return sim
+  end
+  if text_starts_with(line, "notone ")
+    set sim["tone_pin"] to 0 - 1
+    set sim["tone_hz"] to 0
+    return sim
+  end
+  if text_starts_with(line, "wait ")
+    set d to text_trim(substr(line, 5, length(line) - 5))
+    if text_ends_with(d, " ms")
+      set d to text_trim(substr(d, 0, length(d) - 3))
+    end
+    set sim["elapsed_ms"] to sim["elapsed_ms"] + int(d)
+    return sim
+  end
+  if text_starts_with(line, "speak(") and text_ends_with(line, ")")
+    set msg to substr(line, 6, length(line) - 7)
+    if text_starts_with(msg, "\"") and text_ends_with(msg, "\"")
+      set msg to substr(msg, 1, length(msg) - 2)
+    end
+    set sim["serial_log"] to sim["serial_log"] + [msg]
+    return sim
+  end
+  return sim
+end
+
+to sim_run_sketch with source max_cycles
+  set blk to extract_board_block(source)
+  if blk["found"] is 0
+    return sim_create("uno")
+  end
+  set sim to sim_create(blk["board_id"])
+  set lines to split(blk["body"], "\n")
+  set n to length(lines)
+  set c to 0
+  while c < max_cycles
+    set i to 0
+    while i < n
+      set sim to sim_exec_line(sim, lines[i])
+      set i to i + 1
+    end
+    set sim["cycles"] to sim["cycles"] + 1
+    set c to c + 1
+  end
+  return sim
+end

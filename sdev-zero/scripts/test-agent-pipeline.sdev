@@ -1,0 +1,42 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Understander Agent Pipeline
+# (sdev-zero/scripts/test-agent-pipeline.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/agent/pipeline.sdev"
+
+set ts to test_begin("Understander Agent Pipeline (Directives, !#ai, Board Protection, Auto-Close, Promotion)")
+
+# 1. Directive scanning
+set dir_src to "!#ai\n!#agent:local\n!#learn:off\ny = 5\n> y"
+set scan to agent_scan_directives(dir_src)
+set ts to assert_eq(ts, scan["found"], 1, "Directive scanner detects !# directives")
+set ts to assert_eq(ts, scan["is_ai"], 1, "Directive scanner detects !#ai")
+set ts to assert_str_eq(ts, scan["brain"], "local", "Directive scanner detects !#agent:local")
+set ts to assert_eq(ts, scan["learn"], 0, "Directive scanner detects !#learn:off")
+
+# 2. Full pipeline on sdev:ai source
+set res_ai to agent_understand_pipeline(dir_src)
+set ts to assert_true(ts, index_of(res_ai["source"], "set y to 5") >= 0, "Pipeline translates sdev:ai assignment to canonical SDEV")
+set ts to assert_true(ts, index_of(res_ai["source"], "say y") >= 0, "Pipeline translates sdev:ai output '> y' to 'say y'")
+
+# 3. Board block masking & hardware understanding inside agent pipeline
+set hw_agent_src to "let count = 3\nboard \"uno\" {\n  turn on pin 13\n  wait 2 seconds\n}\nprint count"
+set res_hw to agent_understand_pipeline(hw_agent_src)
+set ts to assert_true(ts, index_of(res_hw["source"], "set count to 3") >= 0, "Pipeline normalizes host 'let count = 3'")
+set ts to assert_true(ts, index_of(res_hw["source"], "pin 13 on") >= 0, "Pipeline routes board block through hardware understander")
+set ts to assert_true(ts, index_of(res_hw["source"], "wait 2000 ms") >= 0, "Pipeline converts 'wait 2 seconds' inside board block")
+
+# 4. Unclosed block auto-closing
+set unclosed_src to "if 1 is 1\n  say 42"
+set closed_src to agent_close_unclosed_blocks(unclosed_src)
+set ts to assert_true(ts, text_ends_with(closed_src, "\nend"), "agent_close_unclosed_blocks appends missing 'end'")
+
+# 5. Promoting learned words to a publishable dialect spec
+set pairs to [["bellow", "say"], ["plunder", "set"]]
+set promoted to agent_promote_to_dialect("Captain Dialect", "captain-sdev", pairs)
+set ts to assert_str_eq(ts, promoted["names"]["say"], "bellow", "Promoted dialect maps 'say' -> 'bellow'")
+set ts to assert_str_eq(ts, promoted["names"]["set"], "plunder", "Promoted dialect maps 'set' -> 'plunder'")
+
+set _ to test_summary(ts)

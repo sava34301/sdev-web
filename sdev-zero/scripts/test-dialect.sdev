@@ -1,0 +1,99 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-dialect.ts (126 lines)
+# Pure-SDEV Path: scripts/test-dialect.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-dialect.ts",
+    sdev_path: "scripts/test-dialect.sdev",
+    subsystem: "script",
+    original_lines: 126,
+    exports_count: 17
+  }
+end
+
+to module_exports
+  return ["check", "pass", "failures", "bg", "bgSrc", "canon", "terse", "withOps", "clash", "body", "signed", "tampered", "signedWithTranslated", "bigWritten", "bigCanon", "bigRecipe", "bigSigned"]
+end
+
+to check with name actual expected
+  return name
+end
+
+to pass
+  return "pass"
+end
+
+to failures
+  return "failures"
+end
+
+to bg
+  return "bg"
+end
+
+to bgSrc
+  return "bgSrc"
+end
+
+to canon
+  return "canon"
+end
+
+to terse
+  return "terse"
+end
+
+to withOps
+  return "withOps"
+end
+
+to clash
+  return "clash"
+end
+
+to body
+  return "body"
+end
+
+to signed
+  return "signed"
+end
+
+to tampered
+  return "tampered"
+end
+
+to signedWithTranslated
+  return "signedWithTranslated"
+end
+
+to bigWritten
+  return "bigWritten"
+end
+
+to bigCanon
+  return "bigCanon"
+end
+
+to bigRecipe
+  return "bigRecipe"
+end
+
+to bigSigned
+  return "bigSigned"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

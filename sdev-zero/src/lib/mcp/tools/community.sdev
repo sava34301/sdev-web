@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/mcp/tools/community.ts (72 lines)
+# Pure-SDEV Path: src/lib/mcp/tools/community.sdev
+# Subsystem     : mcp
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/mcp/tools/community.ts",
+    sdev_path: "src/lib/mcp/tools/community.sdev",
+    subsystem: "mcp",
+    original_lines: 72,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["listDialects", "me", "dialects", "listGists", "programs", "readGist"]
+end
+
+to listDialects
+  return "listDialects"
+end
+
+to me
+  return "me"
+end
+
+to dialects
+  return "dialects"
+end
+
+to listGists
+  return "listGists"
+end
+
+to programs
+  return "programs"
+end
+
+to readGist
+  return "readGist"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

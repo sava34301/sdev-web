@@ -1,0 +1,44 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — MCP Server & Cloud Edge Functions
+# (sdev-zero/scripts/test-mcp-server.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/mcp/mcp_server.sdev"
+use "lang/server/edge_functions.sdev"
+
+set ts to test_begin("MCP JSON-RPC Server & Cloud Edge Functions (AI Router, Agent, Fix, Firmware)")
+
+# 1. MCP Server tools
+set meta to mcp_server_metadata()
+set ts to assert_str_eq(ts, meta["name"], "sdev-simple-developer-language", "MCP server name matches")
+set ws to mcp_create_workspace()
+set r_read to mcp_call_tool(ws, "read_file", "main.sdev", "")
+set ts to assert_eq(ts, r_read["ok"], 1, "MCP read_file succeeds on main.sdev")
+set ts to assert_true(ts, index_of(r_read["result"], "Hello from SDEV MCP") >= 0, "MCP read_file returns file content")
+set r_save to mcp_call_tool(ws, "save_file", "app.sdev", "say 99")
+set ts to assert_eq(ts, r_save["ok"], 1, "MCP save_file succeeds")
+set r_dialects to mcp_call_tool(ws, "list_dialects", "", "")
+set ts to assert_true(ts, index_of(r_dialects["result"], "@sava/sdev-bg") >= 0, "MCP list_dialects lists @sava/sdev-bg")
+
+# 2. Server-side AI Provider Router (Project Architecture Rule)
+set custom_ai to ai_resolve_provider("sk-proj-secret", "https://api.custom.ai/v1/chat", "llama-3.3-70b")
+set ts to assert_str_eq(ts, custom_ai["provider"], "custom", "SDEV_AI_API_KEY selects project's own OpenAI-compatible provider")
+set ts to assert_str_eq(ts, custom_ai["url"], "https://api.custom.ai/v1/chat", "Custom AI base URL is used")
+set fallback_ai to ai_resolve_provider("", "", "")
+set ts to assert_str_eq(ts, fallback_ai["provider"], "fallback-gateway", "Empty SDEV_AI_API_KEY falls back to hosted gateway")
+
+# 3. Cloud Edge Function Handlers (sdev-agent, sdev-fix, compile-firmware)
+set agent_resp to edge_sdev_agent_handler("!#ai\nx = 12\n> x")
+set ts to assert_eq(ts, agent_resp["status"], 200, "sdev-agent edge handler returns 200")
+set ts to assert_true(ts, index_of(agent_resp["source"], "set x to 12") >= 0, "sdev-agent translates sdev:ai input")
+
+set fix_resp to edge_sdev_fix_handler("if 1 is 1\n  print 7")
+set ts to assert_eq(ts, fix_resp["repaired"], 1, "sdev-fix repairs unclosed block and 'print'")
+set ts to assert_true(ts, index_of(fix_resp["fixed_source"], "say 7\nend") >= 0, "sdev-fix outputs canonical SDEV with 'end'")
+
+set fw_resp to edge_compile_firmware_handler("uno", "turn on pin 13")
+set ts to assert_str_eq(ts, fw_resp["fqbn"], "arduino:avr:uno", "compile-firmware resolves Uno FQBN")
+set ts to assert_true(ts, index_of(fw_resp["hex"], ":00000001FF") >= 0, "compile-firmware emits Intel HEX with EOF record")
+
+set _ to test_summary(ts)

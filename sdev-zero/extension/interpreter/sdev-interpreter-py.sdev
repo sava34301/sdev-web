@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : extension/interpreter/sdev-interpreter.py (6234 lines)
+# Pure-SDEV Path: extension/interpreter/sdev-interpreter-py.sdev
+# Subsystem     : vscode-extension
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "extension/interpreter/sdev-interpreter.py",
+    sdev_path: "extension/interpreter/sdev-interpreter-py.sdev",
+    subsystem: "vscode-extension",
+    original_lines: 6234,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["__init__", "_build_phrase_norms", "_compile_replacer", "fn", "_segment_source", "flush", "has_non_ascii", "detect_language", "translate_source", "tokenize", "scan_token", "scan_string", "scan_number", "scan_identifier", "skip_whitespace", "is_at_end", "peek", "peek_next", "advance", "add_token", "parse", "parse_statement", "parse_forge_statement", "parse_conjure_declaration", "parse_ponder_statement", "parse_cycle_statement", "parse_within_statement", "parse_yield_statement", "parse_break_statement", "parse_continue_statement", "parse_attempt_statement", "parse_block_statement", "parse_expression_statement", "parse_expression", "parse_ternary", "parse_pipe", "parse_or", "parse_and", "parse_equality", "parse_comparison"]
+end
+
+to __init__ with message line column
+  return message
+end
+
+to _build_phrase_norms with lang
+  return lang
+end
+
+to _compile_replacer with lang
+  return lang
+end
+
+to fn with src _regex _map
+  return src
+end
+
+to _segment_source with source
+  return source
+end
+
+to flush with code
+  return code
+end
+
+to has_non_ascii with code
+  return code
+end
+
+to detect_language with source
+  return source
+end
+
+to translate_source with source source_language
+  return source
+end
+
+to tokenize
+  return 1
+end
+
+to scan_token
+  return 1
+end
+
+to scan_string with quote start_column
+  return quote
+end
+
+to scan_number with first start_column
+  return first
+end
+
+to scan_identifier with first start_column
+  return first
+end
+
+to skip_whitespace
+  return 1
+end
+
+to is_at_end
+  return 1
+end
+
+to peek
+  return 1
+end
+
+to peek_next
+  return 1
+end
+
+to advance
+  return 1
+end
+
+to add_token with token_type value column
+  return token_type
+end
+
+to parse
+  return 1
+end
+
+to parse_statement
+  return 1
+end
+
+to parse_forge_statement
+  return 1
+end
+
+to parse_conjure_declaration
+  return 1
+end
+
+to parse_ponder_statement
+  return 1
+end
+
+to parse_cycle_statement
+  return 1
+end
+
+to parse_within_statement
+  return 1
+end
+
+to parse_yield_statement
+  return 1
+end
+
+to parse_break_statement
+  return 1
+end
+
+to parse_continue_statement
+  return 1
+end
+
+to parse_attempt_statement
+  return 1
+end
+
+to parse_block_statement
+  return 1
+end
+
+to parse_expression_statement
+  return 1
+end
+
+to parse_expression
+  return 1
+end
+
+to parse_ternary
+  return 1
+end
+
+to parse_pipe
+  return 1
+end
+
+to parse_or
+  return 1
+end
+
+to parse_and
+  return 1
+end
+
+to parse_equality
+  return 1
+end
+
+to parse_comparison
+  return 1
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

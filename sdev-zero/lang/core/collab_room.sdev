@@ -1,0 +1,86 @@
+# ============================================================
+# SDEV Core Engine — Multiplayer Classroom & Lamport CRDT Room
+# (sdev-zero/lang/core/collab_room.sdev)
+# 100% Pure SDEV port of src/lang/collab/live-room.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to collab_create_room with room_code host_peer_id initial_file initial_content
+  set peers to {}
+  set peers[host_peer_id] to {
+    peer_id: host_peer_id,
+    display_name: "Cosmic Falcon",
+    role: "teacher",
+    line: 1,
+    col: 1
+  }
+  return {
+    room_code: room_code,
+    clock: 1,
+    author_peer_id: host_peer_id,
+    file_name: initial_file,
+    content: initial_content,
+    peers: peers,
+    shared_runs: []
+  }
+end
+
+to collab_join_peer with room peer_id display_name role
+  set peers to room["peers"]
+  set peers[peer_id] to {
+    peer_id: peer_id,
+    display_name: display_name,
+    role: role,
+    line: 1,
+    col: 1
+  }
+  set room["peers"] to peers
+  return room
+end
+
+to collab_update_cursor with room peer_id line col
+  set peers to room["peers"]
+  if peers[peer_id] is not nothing
+    set p to peers[peer_id]
+    set p["line"] to line
+    set p["col"] to col
+    set peers[peer_id] to p
+    set room["peers"] to peers
+  end
+  return room
+end
+
+to collab_apply_crdt_snapshot with room remote_clock remote_peer_id new_content is_teacher_broadcast
+  set cur_clock to room["clock"]
+  set should_accept to 0
+  if is_teacher_broadcast is 1
+    set should_accept to 1
+  end
+  if remote_clock > cur_clock
+    set should_accept to 1
+  end
+  if remote_clock is cur_clock and remote_peer_id > room["author_peer_id"]
+    set should_accept to 1
+  end
+
+  if should_accept is 1
+    set next_clock to remote_clock
+    if cur_clock + 1 > next_clock
+      set next_clock to cur_clock + 1
+    end
+    set room["clock"] to next_clock
+    set room["author_peer_id"] to remote_peer_id
+    set room["content"] to new_content
+  end
+  return room
+end
+
+to collab_share_execution with room peer_id output_lines
+  set entry to {
+    peer_id: peer_id,
+    output: output_lines
+  }
+  set room["shared_runs"] to room["shared_runs"] + [entry]
+  return room
+end

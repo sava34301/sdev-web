@@ -1,0 +1,218 @@
+// ============================================================
+// sdev ML Stdlib — Neural Network Layers (Milestone 8c + M15)
+// ============================================================
+// High-level layer builders, accelerated matmul dispatch, and
+// batched forward passes. Each layer returns a tome exposing
+// { params: [tensors...], w, b, forward: conjure(x) }.
+
+link "autograd.sdev"
+link "cuda.sdev"
+
+// ---------- Accelerated matmul dispatch (M15) ----------
+// Active accelerator handles (optional; default to void -> pure SDEV fallback).
+forge ACCEL_CUDA be void
+forge ACCEL_BLAS be void
+forge ACCEL_WEBGPU be void
+
+conjure set_accel(cuda_dev be void, blas_handle be void, webgpu_dev be void) ::
+    be ACCEL_CUDA be cuda_dev
+    be ACCEL_BLAS be blas_handle
+    be ACCEL_WEBGPU be webgpu_dev
+    yield { cuda: ACCEL_CUDA, blas: ACCEL_BLAS, webgpu: ACCEL_WEBGPU }
+;;
+
+conjure t_matmul(a, b) ::
+    yield matmul(a, b)
+;;
+
+// Priority: CUDA -> BLAS -> WebGPU -> pure-SDEV t_matmul.
+// Accepts optional explicit (cuda_dev, blas_handle) or uses active globals.
+conjure accel_matmul(a, b, cuda_dev be void, blas_handle be void, webgpu_dev be void) ::
+    forge cu be cuda_dev differs void ~ cuda_dev : ACCEL_CUDA
+    forge bl be blas_handle differs void ~ blas_handle : ACCEL_BLAS
+    forge wg be webgpu_dev differs void ~ webgpu_dev : ACCEL_WEBGPU
+    either cu differs void ::
+        either cu.ok equals yep ::
+            yield best_matmul(cu, bl, a, b)
+        ;;
+    ;;
+    either bl differs void ::
+        yield best_matmul(cu, bl, a, b)
+    ;;
+    either wg differs void ::
+        either wg.ok equals yep ::
+            either wg.matmul differs void ::
+                yield wg.matmul(a, b)
+            ;;
+        ;;
+    ;;
+    yield t_matmul(a, b)
+;;
+
+conjure d_accel_matmul(a, b) ::
+    forge r be accel_matmul(a, b)
+    forge o be tensor_grad(r.data, r.shape)
+    record("matmul", [a, b], o)
+    yield o
+;;
+
+// ---------- Layers ----------
+conjure linear(in_features, out_features) ::
+    forge scale be 1.0 / root(1.0 * in_features)
+    forge w be randn([in_features, out_features])
+    forge b be zeros([1, out_features])
+    forge i be 0
+    cycle i < measure(w.data) :: set w.data[i] to w.data[i] * scale be i be i + 1 ;;
+    forge wg be tensor_grad(w.data, w.shape)
+    forge bg be tensor_grad(b.data, b.shape)
+    yield {
+        w: wg,
+        b: bg,
+        in_features: in_features,
+        out_features: out_features,
+        params: [wg, bg],
+        forward: (x) -> d_add(d_accel_matmul(x, wg), broadcast_row(bg, x.shape[0]))
+    }
+;;
+
+conjure broadcast_row(row, rows) ::
+    forge cols be row.shape[1]
+    forge d be gather()
+    forge r be 0
+    cycle r < rows ::
+        forge c be 0
+        cycle c < cols :: pluck(d, row.data[c]) be c be c + 1 ;;
+        be r be r + 1
+    ;;
+    forge t be tensor_grad(d, [rows, cols])
+    yield t
+;;
+
+conjure sequential(layers) ::
+    forge params be gather()
+    forge i be 0
+    cycle i < measure(layers) ::
+        forge lp be layers[i].params
+        forge j be 0
+        cycle j < measure(lp) :: pluck(params, lp[j]) be j be j + 1 ;;
+        be i be i + 1
+    ;;
+    yield {
+        layers: layers,
+        params: params,
+        forward: (x) -> seq_forward(layers, x)
+    }
+;;
+
+conjure seq_forward(layers, x) ::
+    forge cur be x
+    forge i be 0
+    cycle i < measure(layers) ::
+        be cur be layers[i].forward(cur)
+        be i be i + 1
+    ;;
+    yield cur
+;;
+
+conjure relu_layer() ::
+    yield { params: gather(), forward: (x) -> d_relu(x) }
+;;
+
+// ---------- Batched forward passes (M15) ----------
+// Accepts either a 2D tensor [batch_size, in_features] or a list of
+// sample tensors / feature lists, packs into [B, in_features], and
+// runs a single batched forward pass.
+conjure pack_batch_2d(batch_x) ::
+    either isTome(batch_x) ::
+        either batch_x.shape differs void ::
+            either measure(batch_x.shape) equals 2 ::
+                yield batch_x
+            ;;
+            either measure(batch_x.shape) equals 1 ::
+                yield tensor_grad(batch_x.data, [1, batch_x.shape[0]])
+            ;;
+        ;;
+    ;;
+    forge bsz be measure(batch_x)
+    either bsz equals 0 ::
+        yield tensor_grad([], [0, 0])
+    ;;
+    forge first_item be batch_x[0]
+    forge cols be 0
+    either isTome(first_item) ::
+        be cols be measure(first_item.data)
+    ;; otherwise ::
+        be cols be measure(first_item)
+    ;;
+    forge flat be gather()
+    forge i be 0
+    cycle i < bsz ::
+        forge item be batch_x[i]
+        forge src be isTome(item) ~ item.data : item
+        forge j be 0
+        cycle j < cols ::
+            pluck(flat, src[j])
+            be j be j + 1
+        ;;
+        be i be i + 1
+    ;;
+    yield tensor_grad(flat, [bsz, cols])
+;;
+
+conjure attach_batch_rows(out_tensor) ::
+    forge rows be out_tensor.shape[0]
+    forge cols be out_tensor.shape[1]
+    forge row_list be gather()
+    forge r be 0
+    cycle r < rows ::
+        forge rd be gather()
+        forge c be 0
+        cycle c < cols ::
+            pluck(rd, out_tensor.data[r * cols + c])
+            be c be c + 1
+        ;;
+        forge rt be tensor_grad(rd, [1, cols])
+        pluck(row_list, rt)
+        set out_tensor[str(r)] to rt
+        be r be r + 1
+    ;;
+    set out_tensor.outputs to row_list
+    set out_tensor.batch_size to rows
+    yield out_tensor
+;;
+
+conjure linear_forward_batch(layer, batch_x) ::
+    forge bx be pack_batch_2d(batch_x)
+    forge out be layer.forward(bx)
+    yield attach_batch_rows(out)
+;;
+
+conjure sequential_forward_batch(model, batch_x) ::
+    forge bx be pack_batch_2d(batch_x)
+    forge out be model.forward(bx)
+    yield attach_batch_rows(out)
+;;
+
+// ---------- training loop ----------
+conjure train_step(model, x, y, lr) ::
+    tape_reset()
+    forge pred be model.forward(x)
+    forge loss be d_mse(pred, y)
+    backward(loss)
+    sgd_step(model.params, lr)
+    yield loss.data[0]
+;;
+
+conjure fit(model, xs, ys, epochs, lr) ::
+    forge e be 0
+    cycle e < epochs ::
+        forge total be 0.0
+        forge i be 0
+        cycle i < measure(xs) ::
+            be total be total + train_step(model, xs[i], ys[i], lr)
+            be i be i + 1
+        ;;
+        speak("epoch " + str(e) + " loss=" + str(total / measure(xs)))
+        be e be e + 1
+    ;;
+;;

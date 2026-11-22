@@ -1,0 +1,83 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/translate-code/index.ts (466 lines)
+# Pure-SDEV Path: supabase/functions/translate-code/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/translate-code/index.ts",
+    sdev_path: "supabase/functions/translate-code/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 466,
+    exports_count: 13
+  }
+end
+
+to module_exports
+  return ["corsHeaders", "SDEV_SYNTAX_GUIDE", "denied", "VALID_LANGS", "AI_KEY", "isWebCode", "isFix", "systemPrompt", "userPrompt", "response", "errorText", "data", "translatedCode"]
+end
+
+to corsHeaders
+  return "corsHeaders"
+end
+
+to SDEV_SYNTAX_GUIDE
+  return "SDEV_SYNTAX_GUIDE"
+end
+
+to denied
+  return "denied"
+end
+
+to VALID_LANGS
+  return "VALID_LANGS"
+end
+
+to AI_KEY
+  return "AI_KEY"
+end
+
+to isWebCode
+  return "isWebCode"
+end
+
+to isFix
+  return "isFix"
+end
+
+to systemPrompt
+  return "systemPrompt"
+end
+
+to userPrompt
+  return "userPrompt"
+end
+
+to response
+  return "response"
+end
+
+to errorText
+  return "errorText"
+end
+
+to data
+  return "data"
+end
+
+to translatedCode
+  return "translatedCode"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

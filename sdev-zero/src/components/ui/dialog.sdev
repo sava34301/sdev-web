@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/dialog.tsx (95 lines)
+# Pure-SDEV Path: src/components/ui/dialog.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/dialog.tsx",
+    sdev_path: "src/components/ui/dialog.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 95,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["Dialog", "DialogTrigger", "DialogPortal", "DialogClose", "DialogOverlay", "DialogContent", "DialogHeader", "DialogFooter", "DialogTitle", "DialogDescription"]
+end
+
+to Dialog
+  return "<sdev-view component=\"Dialog\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DialogTrigger
+  return "<sdev-view component=\"DialogTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DialogPortal
+  return "<sdev-view component=\"DialogPortal\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DialogClose
+  return "<sdev-view component=\"DialogClose\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DialogOverlay
+  return "<sdev-view component=\"DialogOverlay\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DialogContent
+  return "<sdev-view component=\"DialogContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DialogHeader with props
+  return "<sdev-view component=\"DialogHeader\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to DialogFooter with props
+  return "<sdev-view component=\"DialogFooter\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to DialogTitle
+  return "<sdev-view component=\"DialogTitle\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to DialogDescription
+  return "<sdev-view component=\"DialogDescription\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

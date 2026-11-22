@@ -1,0 +1,175 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/_compiler-entry.ts (271 lines)
+# Pure-SDEV Path: scripts/_compiler-entry.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/_compiler-entry.ts",
+    sdev_path: "scripts/_compiler-entry.sdev",
+    subsystem: "script",
+    original_lines: 271,
+    exports_count: 36
+  }
+end
+
+to module_exports
+  return ["help", "readFlag", "hasFlag", "sdev_mod_abs", "loadSource", "parseSource", "loadContainer", "runWithInterpreter", "runWithVm", "execAst", "reportError", "runFile", "VERSION", "SDEVC_MAGIC", "args", "cmd", "FLAG_NAMES", "fileArg", "sourceLang", "outPath", "useVm", "lex", "tokens", "ast", "raw", "chunk", "src", "container", "out", "json", "sdev_mod_to", "from", "rl", "vmMode", "buffer", "interp"]
+end
+
+to help
+  return 1
+end
+
+to readFlag with name short
+  return name
+end
+
+to hasFlag with name short
+  return name
+end
+
+to sdev_mod_abs with file
+  return file
+end
+
+to loadSource with file
+  return file
+end
+
+to parseSource with src
+  return src
+end
+
+to loadContainer with file
+  return file
+end
+
+to runWithInterpreter with ast
+  return ast
+end
+
+to runWithVm with ast
+  return ast
+end
+
+to execAst with ast
+  return ast
+end
+
+to reportError with e
+  return e
+end
+
+to runFile with file
+  return file
+end
+
+to VERSION
+  return "VERSION"
+end
+
+to SDEVC_MAGIC
+  return "SDEVC_MAGIC"
+end
+
+to args
+  return "args"
+end
+
+to cmd
+  return "cmd"
+end
+
+to FLAG_NAMES
+  return "FLAG_NAMES"
+end
+
+to fileArg
+  return "fileArg"
+end
+
+to sourceLang
+  return "sourceLang"
+end
+
+to outPath
+  return "outPath"
+end
+
+to useVm
+  return "useVm"
+end
+
+to lex
+  return "lex"
+end
+
+to tokens
+  return "tokens"
+end
+
+to ast
+  return "ast"
+end
+
+to raw
+  return "raw"
+end
+
+to chunk
+  return "chunk"
+end
+
+to src
+  return "src"
+end
+
+to container
+  return "container"
+end
+
+to out
+  return "out"
+end
+
+to json
+  return "json"
+end
+
+to sdev_mod_to
+  return "sdev_mod_to"
+end
+
+to from
+  return "from"
+end
+
+to rl
+  return "rl"
+end
+
+to vmMode
+  return "vmMode"
+end
+
+to buffer
+  return "buffer"
+end
+
+to interp
+  return "interp"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

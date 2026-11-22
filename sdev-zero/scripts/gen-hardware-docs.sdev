@@ -1,0 +1,95 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/gen-hardware-docs.ts (320 lines)
+# Pure-SDEV Path: scripts/gen-hardware-docs.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/gen-hardware-docs.ts",
+    sdev_path: "scripts/gen-hardware-docs.sdev",
+    subsystem: "script",
+    original_lines: 320,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["root", "indexJsonPath", "outDocPath", "libIndex", "uno", "md", "flashRam", "browserFlash", "cloud", "categories", "sdevForm", "notes", "block", "res", "byCategory", "cat"]
+end
+
+to root
+  return "root"
+end
+
+to indexJsonPath
+  return "indexJsonPath"
+end
+
+to outDocPath
+  return "outDocPath"
+end
+
+to libIndex
+  return "libIndex"
+end
+
+to uno
+  return "uno"
+end
+
+to md
+  return "md"
+end
+
+to flashRam
+  return "flashRam"
+end
+
+to browserFlash
+  return "browserFlash"
+end
+
+to cloud
+  return "cloud"
+end
+
+to categories
+  return "categories"
+end
+
+to sdevForm
+  return "sdevForm"
+end
+
+to notes
+  return "notes"
+end
+
+to block
+  return "block"
+end
+
+to res
+  return "res"
+end
+
+to byCategory
+  return "byCategory"
+end
+
+to cat
+  return "cat"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

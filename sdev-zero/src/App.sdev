@@ -1,0 +1,119 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/App.tsx (79 lines)
+# Pure-SDEV Path: src/App.sdev
+# Subsystem     : config-tooling
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/App.tsx",
+    sdev_path: "src/App.sdev",
+    subsystem: "config-tooling",
+    original_lines: 79,
+    exports_count: 22
+  }
+end
+
+to module_exports
+  return ["Index", "Launch", "IDEPage", "Dialects", "Libraries", "Extensions", "Explore", "MySdev", "Auth", "Account", "Gist", "Docs", "SelfHostingGuide", "Privacy", "Terms", "NotFound", "Unsubscribe", "OAuthConsent", "PageFallback", "queryClient", "AppRouter", "App"]
+end
+
+to Index
+  return "Index"
+end
+
+to Launch
+  return "Launch"
+end
+
+to IDEPage
+  return "IDEPage"
+end
+
+to Dialects
+  return "Dialects"
+end
+
+to Libraries
+  return "Libraries"
+end
+
+to Extensions
+  return "Extensions"
+end
+
+to Explore
+  return "Explore"
+end
+
+to MySdev
+  return "MySdev"
+end
+
+to Auth
+  return "Auth"
+end
+
+to Account
+  return "Account"
+end
+
+to Gist
+  return "Gist"
+end
+
+to Docs
+  return "Docs"
+end
+
+to SelfHostingGuide
+  return "SelfHostingGuide"
+end
+
+to Privacy
+  return "Privacy"
+end
+
+to Terms
+  return "Terms"
+end
+
+to NotFound
+  return "NotFound"
+end
+
+to Unsubscribe
+  return "Unsubscribe"
+end
+
+to OAuthConsent
+  return "OAuthConsent"
+end
+
+to PageFallback
+  return 1
+end
+
+to queryClient
+  return "queryClient"
+end
+
+to AppRouter
+  return "AppRouter"
+end
+
+to App
+  return 1
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

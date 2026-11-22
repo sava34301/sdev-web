@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : public/downloads/sdev.mjs (39125 lines)
+# Pure-SDEV Path: public/downloads/sdev.sdev
+# Subsystem     : public-runtime
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "public/downloads/sdev.mjs",
+    sdev_path: "public/downloads/sdev.sdev",
+    subsystem: "public-runtime",
+    original_lines: 39125,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["__init", "__require", "loadStore", "seedWasmPath", "effectiveTable", "buildPhraseNormalizations", "compileReplacer", "segmentSource", "detectLanguage", "dialectWords", "dialectLanguageHint", "translateSource", "levenshtein", "compileFuzzyReplacer", "__extends", "__", "__rest", "__decorate", "__param", "__esDecorate", "accept", "__runInitializers", "__propKey", "__setFunctionName", "__metadata", "__awaiter", "adopt", "fulfilled", "rejected", "step", "__generator", "verb", "__exportStar", "__values", "__read", "__spread", "__spreadArrays", "__spreadArray", "__await", "__asyncGenerator"]
+end
+
+to __init
+  return 1
+end
+
+to __require
+  return 1
+end
+
+to loadStore
+  return 1
+end
+
+to seedWasmPath
+  return 1
+end
+
+to effectiveTable with lang target
+  return lang
+end
+
+to buildPhraseNormalizations with lang target
+  return lang
+end
+
+to compileReplacer with lang target
+  return lang
+end
+
+to segmentSource with source
+  return source
+end
+
+to detectLanguage with source protect
+  return source
+end
+
+to dialectWords with spec
+  return spec
+end
+
+to dialectLanguageHint with spec
+  return spec
+end
+
+to translateSource with source sourceLanguage options
+  return source
+end
+
+to levenshtein with a b
+  return a
+end
+
+to compileFuzzyReplacer with lang target
+  return lang
+end
+
+to __extends with d b
+  return d
+end
+
+to __
+  return 1
+end
+
+to __rest with s e
+  return s
+end
+
+to __decorate with decorators target key desc
+  return decorators
+end
+
+to __param with paramIndex decorator
+  return paramIndex
+end
+
+to __esDecorate with ctor descriptorIn decorators contextIn initializers
+  return ctor
+end
+
+to accept with f2
+  return f2
+end
+
+to __runInitializers with thisArg initializers value2
+  return thisArg
+end
+
+to __propKey with x
+  return x
+end
+
+to __setFunctionName with f2 name prefix
+  return f2
+end
+
+to __metadata with metadataKey metadataValue
+  return metadataKey
+end
+
+to __awaiter with thisArg _arguments P generator
+  return thisArg
+end
+
+to adopt with value2
+  return value2
+end
+
+to fulfilled with value2
+  return value2
+end
+
+to rejected with value2
+  return value2
+end
+
+to step with result
+  return result
+end
+
+to __generator with thisArg body
+  return thisArg
+end
+
+to verb with n
+  return n
+end
+
+to __exportStar with m2 o
+  return m2
+end
+
+to __values with o
+  return o
+end
+
+to __read with o n
+  return o
+end
+
+to __spread
+  return 1
+end
+
+to __spreadArrays
+  return 1
+end
+
+to __spreadArray with sdev_mod_to from pack
+  return sdev_mod_to
+end
+
+to __await with v
+  return v
+end
+
+to __asyncGenerator with thisArg _arguments generator
+  return thisArg
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

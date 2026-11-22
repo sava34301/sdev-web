@@ -1,0 +1,87 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/host.ts (159 lines)
+# Pure-SDEV Path: src/lang/builtins/host.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/host.ts",
+    sdev_path: "src/lang/builtins/host.sdev",
+    subsystem: "builtins",
+    original_lines: 159,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["registerHost", "host", "path", "content", "url", "xhr", "ffiHost", "buffers", "nextBufAddr", "bufOf", "view", "size", "addr", "sdev_mod_call"]
+end
+
+to registerHost with builtins SdevFunction output
+  return builtins
+end
+
+to host
+  return "host"
+end
+
+to path
+  return "path"
+end
+
+to content
+  return "content"
+end
+
+to url
+  return "url"
+end
+
+to xhr
+  return "xhr"
+end
+
+to ffiHost
+  return "ffiHost"
+end
+
+to buffers
+  return "buffers"
+end
+
+to nextBufAddr
+  return "nextBufAddr"
+end
+
+to bufOf
+  return "bufOf"
+end
+
+to view
+  return "view"
+end
+
+to size
+  return "size"
+end
+
+to addr
+  return "addr"
+end
+
+to sdev_mod_call
+  return "sdev_mod_call"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

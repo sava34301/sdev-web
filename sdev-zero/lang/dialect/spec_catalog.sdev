@@ -1,0 +1,160 @@
+# ============================================================
+# SDEV Dialect Subsystem — Catalog, Spec Validator & Translator (spec_catalog.sdev)
+# 100% Pure SDEV port of catalog.ts, spec.ts & canonicalize.ts
+# ============================================================
+
+use "lang/dialect/dialect.sdev"
+
+to catalog_words
+  return ["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in", "break", "continue", "and", "or", "not", "is", "isnt", "true", "false", "nothing", "say", "ask", "use", "try", "catch", "throw", "spawn", "await", "match", "case", "class", "new", "length", "substr", "index_of", "split", "join", "replace", "upper", "lower", "trim", "str", "int", "chr", "ord"]
+end
+
+to catalog_category with word
+  if word is "set" or word is "to" or word is "with" or word is "return" or word is "end"
+    return "declarations"
+  end
+  if word is "if" or word is "else" or word is "elif" or word is "while" or word is "for" or word is "each" or word is "in" or word is "break" or word is "continue"
+    return "control"
+  end
+  if word is "and" or word is "or" or word is "not" or word is "is" or word is "isnt"
+    return "logic"
+  end
+  if word is "true" or word is "false" or word is "nothing"
+    return "literals"
+  end
+  if word is "say" or word is "ask" or word is "use"
+    return "io"
+  end
+  return "stdlib"
+end
+
+to empty_dialect_spec with name slug lang_tag
+  set words to catalog_words()
+  set names to {}
+  set n to length(words)
+  set i to 0
+  while i < n
+    set w to words[i]
+    set names[w] to w
+    set i to i + 1
+  end
+  return {
+    spec_version: 1,
+    name: name,
+    slug: slug,
+    lang: lang_tag,
+    version: "1.0.0",
+    visibility: "private",
+    block_style: "word",
+    comment_marker: "#",
+    assignment: "set-to",
+    names: names,
+    functions: []
+  }
+end
+
+to dialect_spec_set_word with spec canonical_word custom_word
+  set names to spec["names"]
+  set names[canonical_word] to custom_word
+  set spec["names"] to names
+  return spec
+end
+
+to dialect_inherit with base_spec child_spec
+  set words to catalog_words()
+  set base_names to base_spec["names"]
+  set child_names to child_spec["names"]
+  set merged_names to {}
+  set n to length(words)
+  set i to 0
+  while i < n
+    set w to words[i]
+    set val to base_names[w]
+    if child_names[w] is not nothing and child_names[w] is not w
+      set val to child_names[w]
+    end
+    set merged_names[w] to val
+    set i to i + 1
+  end
+  set child_spec["names"] to merged_names
+  set child_spec["functions"] to base_spec["functions"] + child_spec["functions"]
+  return child_spec
+end
+
+to validate_dialect_spec with spec
+  set errors to []
+  if length(text_trim(spec["name"])) is 0
+    set errors to errors + ["meta.name: give your dialect a name"]
+  end
+  if length(text_trim(spec["slug"])) < 2
+    set errors to errors + ["meta.slug: slug must be at least 2 characters"]
+  end
+  set words to catalog_words()
+  set names to spec["names"]
+  set seen to "|"
+  set n to length(words)
+  set i to 0
+  while i < n
+    set w to words[i]
+    set mapped to names[w]
+    if mapped is nothing or length(text_trim(mapped)) is 0
+      set errors to errors + ["names." + w + ": missing word mapping"]
+    else
+      set key to "|" + lower(mapped) + "|"
+      if index_of(seen, key) >= 0
+        set errors to errors + ["names." + w + ": duplicate word '" + mapped + "'"]
+      end
+      set seen to seen + lower(mapped) + "|"
+    end
+    set i to i + 1
+  end
+  return errors
+end
+
+to is_dialect_publishable with spec
+  set errs to validate_dialect_spec(spec)
+  if length(errs) is 0
+    return 1
+  end
+  return 0
+end
+
+to dialect_spec_to_engine with spec
+  set d to dialect_create(spec["name"], spec["slug"], spec["lang"])
+  set words to catalog_words()
+  set names to spec["names"]
+  set n to length(words)
+  set i to 0
+  while i < n
+    set w to words[i]
+    set custom to names[w]
+    if custom is not nothing and custom is not w
+      set d to dialect_add_word(d, custom, w)
+    end
+    set i to i + 1
+  end
+  return d
+end
+
+to dialectize_source with canonical_src spec
+  set d to dialect_spec_to_engine(spec)
+  set n to d[3]
+  set dw to d[4]
+  set cw to d[5]
+  set out to canonical_src
+  set i to 0
+  while i < n
+    set custom_w to dw[i]
+    set canon_w to cw[i]
+    set out to replace(out, canon_w + " ", custom_w + " ")
+    set out to replace(out, " " + canon_w + "\n", " " + custom_w + "\n")
+    set i to i + 1
+  end
+  return out
+end
+
+to translate_between_dialects with src from_spec to_spec
+  set d_from to dialect_spec_to_engine(from_spec)
+  set canon to dialect_canonicalize(src, d_from)
+  return dialectize_source(canon, to_spec)
+end

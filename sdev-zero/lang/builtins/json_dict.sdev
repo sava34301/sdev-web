@@ -1,0 +1,92 @@
+# ============================================================
+# SDEV Builtins Subsystem — JSON Serializer/Parser & Dict Operations
+# (sdev-zero/lang/builtins/json_dict.sdev)
+# 100% Pure SDEV port of src/lang/builtins/json.ts & dict.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/stdlib/v2/tome.sdev"
+
+to json_quote_str with s
+  set escaped to replace(s, "\"", "\\\"")
+  set escaped to replace(escaped, "\n", "\\n")
+  return "\"" + escaped + "\""
+end
+
+to json_stringify_kv with key_str val_str is_num
+  if is_num is 1
+    return json_quote_str(key_str) + ":" + val_str
+  end
+  return json_quote_str(key_str) + ":" + json_quote_str(val_str)
+end
+
+to json_stringify_tome with t
+  set ks to keys(t)
+  set vs to values(t)
+  set n to length(ks)
+  set pairs to []
+  set i to 0
+  while i < n
+    set k to concat(ks[i], "")
+    set v to concat(vs[i], "")
+    set entry to json_quote_str(k) + ":" + json_quote_str(v)
+    set pairs to pairs + [entry]
+    set i to i + 1
+  end
+  return "{" + join(pairs, ",") + "}"
+end
+
+to json_parse_flat_object with raw_json
+  set s to text_trim(raw_json)
+  if text_starts_with(s, "{") and text_ends_with(s, "}")
+    set s to text_trim(substr(s, 1, length(s) - 2))
+  end
+  set out to {}
+  if length(s) is 0
+    return out
+  end
+  set parts to split(s, ",")
+  set n to length(parts)
+  set i to 0
+  while i < n
+    set item to text_trim(parts[i])
+    set colon to index_of(item, ":")
+    if colon > 0
+      set k to text_trim(substr(item, 0, colon))
+      set v to text_trim(substr(item, colon + 1, length(item) - (colon + 1)))
+      if text_starts_with(k, "\"") and text_ends_with(k, "\"")
+        set k to substr(k, 1, length(k) - 2)
+      end
+      if text_starts_with(v, "\"") and text_ends_with(v, "\"")
+        set v to substr(v, 1, length(v) - 2)
+      end
+      set out[k] to v
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to dict_get with d key fallback
+  return tome_get_or(d, key, fallback)
+end
+
+to dict_set with d key val
+  return tome_put_kv(d, key, val)
+end
+
+to dict_has with d key
+  return tome_has_key(d, key)
+end
+
+to dict_keys with d
+  return keys(d)
+end
+
+to dict_values with d
+  return values(d)
+end
+
+to dict_size with d
+  return length(keys(d))
+end

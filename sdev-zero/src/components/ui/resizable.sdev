@@ -1,0 +1,43 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/resizable.tsx (37 lines)
+# Pure-SDEV Path: src/components/ui/resizable.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/resizable.tsx",
+    sdev_path: "src/components/ui/resizable.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 37,
+    exports_count: 3
+  }
+end
+
+to module_exports
+  return ["ResizablePanelGroup", "ResizablePanel", "ResizableHandle"]
+end
+
+to ResizablePanelGroup with props
+  return "<sdev-view component=\"ResizablePanelGroup\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to ResizablePanel
+  return "<sdev-view component=\"ResizablePanel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ResizableHandle with className props
+  return "<sdev-view component=\"ResizableHandle\" subsystem=\"ui-primitive\">" + str(className) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

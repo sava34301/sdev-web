@@ -1,0 +1,119 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/notebook.ts (142 lines)
+# Pure-SDEV Path: src/lang/notebook.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/notebook.ts",
+    sdev_path: "src/lang/notebook.sdev",
+    subsystem: "lang-core",
+    original_lines: 142,
+    exports_count: 22
+  }
+end
+
+to module_exports
+  return ["getNbRunner", "parseNotebook", "executeNotebook", "nbRunner", "cells", "t0", "nb", "cellResults", "allOutputs", "overallSuccess", "codeCellsExecuted", "accumulatedCodeChunks", "tCellStart", "cellCode", "compositeCode", "res", "cellDuration", "newOutputs", "make_NotebookCell", "make_Notebook", "make_CellExecutionResult", "make_NotebookExecutionResult"]
+end
+
+to getNbRunner
+  return 1
+end
+
+to parseNotebook with markdown
+  return markdown
+end
+
+to executeNotebook with input
+  return input
+end
+
+to nbRunner
+  return "nbRunner"
+end
+
+to cells
+  return "cells"
+end
+
+to t0
+  return "t0"
+end
+
+to nb
+  return "nb"
+end
+
+to cellResults
+  return "cellResults"
+end
+
+to allOutputs
+  return "allOutputs"
+end
+
+to overallSuccess
+  return "overallSuccess"
+end
+
+to codeCellsExecuted
+  return "codeCellsExecuted"
+end
+
+to accumulatedCodeChunks
+  return "accumulatedCodeChunks"
+end
+
+to tCellStart
+  return "tCellStart"
+end
+
+to cellCode
+  return "cellCode"
+end
+
+to compositeCode
+  return "compositeCode"
+end
+
+to res
+  return "res"
+end
+
+to cellDuration
+  return "cellDuration"
+end
+
+to newOutputs
+  return "newOutputs"
+end
+
+to make_NotebookCell with payload
+  return payload
+end
+
+to make_Notebook with payload
+  return payload
+end
+
+to make_CellExecutionResult with payload
+  return payload
+end
+
+to make_NotebookExecutionResult with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

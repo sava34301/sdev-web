@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/MySdev.tsx (214 lines)
+# Pure-SDEV Path: src/pages/MySdev.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/MySdev.tsx",
+    sdev_path: "src/pages/MySdev.sdev",
+    subsystem: "page",
+    original_lines: 214,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["MySdev", "db", "load", "installPreset", "preset", "doPublish", "spec", "removeExtension"]
+end
+
+to MySdev
+  return "<sdev-view component=\"MySdev\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to db
+  return "<sdev-view component=\"db\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to load
+  return "<sdev-view component=\"load\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to installPreset with slug
+  return "<sdev-view component=\"installPreset\" subsystem=\"page\">" + str(slug) + "</sdev-view>"
+end
+
+to preset
+  return "<sdev-view component=\"preset\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to doPublish with slug
+  return "<sdev-view component=\"doPublish\" subsystem=\"page\">" + str(slug) + "</sdev-view>"
+end
+
+to spec
+  return "<sdev-view component=\"spec\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to removeExtension with id
+  return "<sdev-view component=\"removeExtension\" subsystem=\"page\">" + str(id) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

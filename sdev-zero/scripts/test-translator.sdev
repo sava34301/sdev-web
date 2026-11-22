@@ -1,0 +1,75 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-translator.ts (75 lines)
+# Pure-SDEV Path: scripts/test-translator.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-translator.ts",
+    sdev_path: "scripts/test-translator.sdev",
+    subsystem: "script",
+    original_lines: 75,
+    exports_count: 11
+  }
+end
+
+to module_exports
+  return ["cases", "pass", "ok", "programs", "out", "v2cases", "spec", "dialectSrc", "kept", "canonical", "dialectOk"]
+end
+
+to cases
+  return "cases"
+end
+
+to pass
+  return "pass"
+end
+
+to ok
+  return "ok"
+end
+
+to programs
+  return "programs"
+end
+
+to out
+  return "out"
+end
+
+to v2cases
+  return "v2cases"
+end
+
+to spec
+  return "spec"
+end
+
+to dialectSrc
+  return "dialectSrc"
+end
+
+to kept
+  return "kept"
+end
+
+to canonical
+  return "canonical"
+end
+
+to dialectOk
+  return "dialectOk"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

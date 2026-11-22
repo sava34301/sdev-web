@@ -1,0 +1,244 @@
+# ============================================================
+# SDEV Hardware Subsystem — Board Database (board_db.sdev)
+# 100% Pure SDEV port of src/lang/hardware/board-db.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to hw_all_board_ids
+  return ["uno", "uno-r4-minima", "uno-r4-wifi", "uno-q", "nano", "mega", "leonardo", "micro", "esp32", "esp8266", "pico", "stm32", "teensy40"]
+end
+
+to find_board_by_id with raw_id
+  set id to lower(text_trim(raw_id))
+  if id is "uno" or id is "arduino-uno" or id is "uno-r3"
+    return {
+      id: "uno",
+      name: "Arduino Uno (ATmega328P)",
+      fqbn: "arduino:avr:uno",
+      mcu: "atmega328p",
+      arch: "avr",
+      baud: 115200,
+      uploader: "stk500v1",
+      flash_kb: 32,
+      ram_bytes: 2048,
+      builtin_led: 13
+    }
+  end
+  if id is "uno-r4-minima" or id is "r4-minima"
+    return {
+      id: "uno-r4-minima",
+      name: "Arduino UNO R4 Minima (RA4M1)",
+      fqbn: "arduino:renesas_uno:minima",
+      mcu: "ra4m1",
+      arch: "renesas_uno",
+      baud: 115200,
+      uploader: "unsupported",
+      flash_kb: 256,
+      ram_bytes: 32768,
+      builtin_led: 13
+    }
+  end
+  if id is "uno-r4-wifi" or id is "r4-wifi" or id is "uno-r4"
+    return {
+      id: "uno-r4-wifi",
+      name: "Arduino UNO R4 WiFi (RA4M1 + ESP32-S3)",
+      fqbn: "arduino:renesas_uno:unor4wifi",
+      mcu: "ra4m1",
+      arch: "renesas_uno",
+      baud: 115200,
+      uploader: "unsupported",
+      flash_kb: 256,
+      ram_bytes: 32768,
+      builtin_led: 13
+    }
+  end
+  if id is "uno-q"
+    return {
+      id: "uno-q",
+      name: "Arduino UNO Q (QRB2210 + STM32U585)",
+      fqbn: "arduino:zephyr:unoq",
+      mcu: "stm32u585",
+      arch: "stm32",
+      baud: 115200,
+      uploader: "unsupported",
+      flash_kb: 2048,
+      ram_bytes: 786432,
+      builtin_led: 13
+    }
+  end
+  if id is "nano" or id is "arduino-nano"
+    return {
+      id: "nano",
+      name: "Arduino Nano (ATmega328P)",
+      fqbn: "arduino:avr:nano",
+      mcu: "atmega328p",
+      arch: "avr",
+      baud: 115200,
+      uploader: "stk500v1",
+      flash_kb: 32,
+      ram_bytes: 2048,
+      builtin_led: 13
+    }
+  end
+  if id is "mega" or id is "mega2560" or id is "arduino-mega"
+    return {
+      id: "mega",
+      name: "Arduino Mega 2560",
+      fqbn: "arduino:avr:mega",
+      mcu: "atmega2560",
+      arch: "avr",
+      baud: 115200,
+      uploader: "stk500v2",
+      flash_kb: 256,
+      ram_bytes: 8192,
+      builtin_led: 13
+    }
+  end
+  if id is "leonardo" or id is "arduino-leonardo"
+    return {
+      id: "leonardo",
+      name: "Arduino Leonardo (ATmega32U4)",
+      fqbn: "arduino:avr:leonardo",
+      mcu: "atmega32u4",
+      arch: "avr",
+      baud: 57600,
+      uploader: "avr109",
+      flash_kb: 32,
+      ram_bytes: 2560,
+      builtin_led: 13
+    }
+  end
+  if id is "micro" or id is "pro-micro"
+    return {
+      id: "micro",
+      name: "Arduino Micro (ATmega32U4)",
+      fqbn: "arduino:avr:micro",
+      mcu: "atmega32u4",
+      arch: "avr",
+      baud: 57600,
+      uploader: "avr109",
+      flash_kb: 32,
+      ram_bytes: 2560,
+      builtin_led: 13
+    }
+  end
+  if id is "esp32" or id is "esp32-devkit"
+    return {
+      id: "esp32",
+      name: "ESP32 Dev Module",
+      fqbn: "esp32:esp32:esp32",
+      mcu: "esp32",
+      arch: "esp32",
+      baud: 460800,
+      uploader: "esptool",
+      flash_kb: 4096,
+      ram_bytes: 327680,
+      builtin_led: 2
+    }
+  end
+  if id is "esp8266" or id is "nodemcu" or id is "d1-mini"
+    return {
+      id: "esp8266",
+      name: "ESP8266 NodeMCU / Wemos D1 Mini",
+      fqbn: "esp8266:esp8266:nodemcuv2",
+      mcu: "esp8266",
+      arch: "esp8266",
+      baud: 115200,
+      uploader: "esptool",
+      flash_kb: 4096,
+      ram_bytes: 81920,
+      builtin_led: 2
+    }
+  end
+  if id is "pico" or id is "rp2040"
+    return {
+      id: "pico",
+      name: "Raspberry Pi Pico (RP2040)",
+      fqbn: "rp2040:rp2040:rpipico",
+      mcu: "rp2040",
+      arch: "rp2040",
+      baud: 115200,
+      uploader: "uf2",
+      flash_kb: 2048,
+      ram_bytes: 270336,
+      builtin_led: 25
+    }
+  end
+  if id is "stm32" or id is "bluepill"
+    return {
+      id: "stm32",
+      name: "STM32 Blue Pill (F103C8)",
+      fqbn: "STMicroelectronics:stm32:GenF1",
+      mcu: "stm32f103c8",
+      arch: "stm32",
+      baud: 115200,
+      uploader: "unsupported",
+      flash_kb: 64,
+      ram_bytes: 20480,
+      builtin_led: 13
+    }
+  end
+  if id is "teensy40" or id is "teensy"
+    return {
+      id: "teensy40",
+      name: "Teensy 4.0 (i.MX RT1062)",
+      fqbn: "teensy:avr:teensy40",
+      mcu: "imxrt1062",
+      arch: "avr",
+      baud: 115200,
+      uploader: "unsupported",
+      flash_kb: 2048,
+      ram_bytes: 1048576,
+      builtin_led: 13
+    }
+  end
+  return {
+    id: "unknown",
+    name: "Unknown Board",
+    fqbn: "",
+    mcu: "",
+    arch: "unknown",
+    baud: 115200,
+    uploader: "unsupported",
+    flash_kb: 0,
+    ram_bytes: 0,
+    builtin_led: 13
+  }
+end
+
+to find_board_by_usb with vid pid
+  # Official Arduino VID = 0x2341 (9025)
+  if vid is 9025
+    if pid is 67 or pid is 1 or pid is 579
+      return find_board_by_id("uno")
+    end
+    if pid is 105 or pid is 32873
+      return find_board_by_id("uno-r4-minima")
+    end
+    if pid is 4098
+      return find_board_by_id("uno-r4-wifi")
+    end
+    if pid is 66 or pid is 16
+      return find_board_by_id("mega")
+    end
+    if pid is 54 or pid is 32822
+      return find_board_by_id("leonardo")
+    end
+    if pid is 55 or pid is 32823
+      return find_board_by_id("micro")
+    end
+  end
+  # Raspberry Pi VID = 0x2E8A (11914)
+  if vid is 11914
+    return find_board_by_id("pico")
+  end
+  # CH340 (0x1A86 = 6790), Silicon Labs CP210x (0x10C4 = 4292)
+  if vid is 4292
+    return find_board_by_id("esp32")
+  end
+  if vid is 6790
+    return find_board_by_id("uno")
+  end
+  return find_board_by_id("unknown")
+end

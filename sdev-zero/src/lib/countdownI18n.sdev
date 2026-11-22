@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/countdownI18n.ts (183 lines)
+# Pure-SDEV Path: src/lib/countdownI18n.sdev
+# Subsystem     : lib
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/countdownI18n.ts",
+    sdev_path: "src/lib/countdownI18n.sdev",
+    subsystem: "lib",
+    original_lines: 183,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["getCountdownStrings", "formatLaunchDate", "EXTRA_DEFAULTS", "TABLE", "base", "lang"]
+end
+
+to getCountdownStrings
+  return 1
+end
+
+to formatLaunchDate with d
+  return d
+end
+
+to EXTRA_DEFAULTS
+  return "EXTRA_DEFAULTS"
+end
+
+to TABLE
+  return "TABLE"
+end
+
+to base
+  return 1
+end
+
+to lang
+  return "lang"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

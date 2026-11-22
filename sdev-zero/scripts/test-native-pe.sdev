@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-native-pe.ts (68 lines)
+# Pure-SDEV Path: scripts/test-native-pe.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-native-pe.ts",
+    sdev_path: "scripts/test-native-pe.sdev",
+    subsystem: "script",
+    original_lines: 68,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["check", "passed", "failed", "buf", "peOff", "targetExe", "res", "out"]
+end
+
+to check with name ok detail
+  return name
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to buf
+  return "buf"
+end
+
+to peOff
+  return "peOff"
+end
+
+to targetExe
+  return "targetExe"
+end
+
+to res
+  return "res"
+end
+
+to out
+  return "out"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

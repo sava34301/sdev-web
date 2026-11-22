@@ -1,0 +1,700 @@
+# =============================================================================
+# SDEV Self-Hosted Web Toolkit: HTML5 & SVG Document Builder (lang/web/html.sdev)
+# Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/web/icons.sdev"
+use "lang/web/themes.sdev"
+use "lang/web/transpiler.sdev"
+use "lang/web/css.sdev"
+
+# _web_doc slots:
+# 0: active ("1" or "0")
+# 1: title
+# 2: lang
+# 3: desc
+# 4: favicon
+# 5: theme
+# 6: head
+# 7: css
+# 8: body
+# 9: js
+# 10: state_entries
+set _web_doc to mklist(16)
+set _web_doc[0] to "0"
+set _web_doc[1] to "sdev App"
+set _web_doc[2] to "en"
+set _web_doc[3] to ""
+set _web_doc[4] to "/favicon.png"
+set _web_doc[5] to "sdev-dark"
+set _web_doc[6] to ""
+set _web_doc[7] to ""
+set _web_doc[8] to ""
+set _web_doc[9] to ""
+set _web_doc[10] to ""
+
+to web_escape_html with s
+  set raw_s to concat(s, "")
+  if find(raw_s, chr(1)) >= 0
+    set out_mix to replace(raw_s, chr(1), "")
+    set out_mix to replace(out_mix, chr(2), "")
+    return concat(out_mix, "")
+  end
+  set out to replace(raw_s, "&", "&amp;")
+  set out to replace(out, "<", "&lt;")
+  set out to replace(out, ">", "&gt;")
+  set out to replace(out, "\"", "&quot;")
+  return concat(out, "")
+end
+
+to web_escape_attr with s
+  set raw_s to concat(s, "")
+  set out to replace(raw_s, "&", "&amp;")
+  set out to replace(out, "\"", "&quot;")
+  set out to replace(out, "<", "&lt;")
+  set out to replace(out, ">", "&gt;")
+  return concat(out, "")
+end
+
+to raw with html_str
+  return chr(1) + html_str + chr(2)
+end
+
+to web_tome_get_str with t key fallback
+  set ks to keys(t)
+  set vs to values(t)
+  set n to length(ks)
+  set i to 0
+  while i < n
+    if str_eq(ks[i], key)
+      return concat(vs[i], "")
+    end
+    set i to i + 1
+  end
+  return concat(fallback, "")
+end
+
+to web_attrs_from_tome with attrs_tome
+  set ks to keys(attrs_tome)
+  set vs to values(attrs_tome)
+  set n to length(ks)
+  set out to ""
+  set i to 0
+  while i < n
+    set k to concat(ks[i], "")
+    set v to concat(vs[i], "")
+    if str_eq(k, "bind")
+      set out to out + " data-bind-value=\"" + web_escape_attr(v) + "\""
+    else
+      if str_eq(k, "bind_text")
+        set out to out + " data-bind-text=\"" + web_escape_attr(v) + "\""
+      else
+        if str_eq(k, "bind_html")
+          set out to out + " data-bind-html=\"" + web_escape_attr(v) + "\""
+        else
+          if str_eq(k, "bind_show")
+            set out to out + " data-bind-show=\"" + web_escape_attr(v) + "\""
+          else
+            if str_eq(v, "false") or length(v) is 0
+              if text_starts_with(k, "aria-") or text_starts_with(k, "data-")
+                set out to out + " " + k + "=\"" + web_escape_attr(v) + "\""
+              end
+            else
+              if str_eq(v, "true") and (str_eq(k, "disabled") or str_eq(k, "checked") or str_eq(k, "required") or str_eq(k, "selected") or str_eq(k, "readonly") or str_eq(k, "multiple") or str_eq(k, "open") or str_eq(k, "controls") or str_eq(k, "autoplay") or str_eq(k, "loop") or str_eq(k, "muted"))
+                set out to out + " " + k
+              else
+                set out to out + " " + k + "=\"" + web_escape_attr(v) + "\""
+              end
+            end
+          end
+        end
+      end
+    end
+    set i to i + 1
+  end
+  return concat(out, "")
+end
+
+to web_el with tag_name content attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set inner to web_escape_html(content)
+  set html to "<" + tag_name + a_str + ">" + inner + "</" + tag_name + ">"
+  return raw(html)
+end
+
+to web_el_raw with tag_name inner_html attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set clean_inner to replace(replace(inner_html, chr(1), ""), chr(2), "")
+  set html to "<" + tag_name + a_str + ">" + clean_inner + "</" + tag_name + ">"
+  return raw(html)
+end
+
+to web_void_el with tag_name attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  return raw("<" + tag_name + a_str + ">")
+end
+
+to web_parse_tag_spec with spec
+  set clean to trim(spec)
+  set tname to "div"
+  set id_val to ""
+  set cls_val to ""
+  set n to length(clean)
+  set i to 0
+  set mode to 0
+  set cur to ""
+  while i <= n
+    set c to 0
+    if i < n
+      set c to ord(clean, i)
+    end
+    if i is n or c is 46 or c is 35
+      if length(cur) > 0
+        if mode is 0
+          set tname to cur
+        else
+          if mode is 1
+            if length(cls_val) > 0
+              set cls_val to cls_val + " " + cur
+            else
+              set cls_val to cur
+            end
+          else
+            set id_val to cur
+          end
+        end
+      end
+      set cur to ""
+      if c is 46
+        set mode to 1
+      end
+      if c is 35
+        set mode to 2
+      end
+    else
+      set cur to cur + chr(c)
+    end
+    set i to i + 1
+  end
+  if length(tname) is 0
+    set tname to "div"
+  end
+  return [tname, id_val, cls_val]
+end
+
+to web_tag_emmet with spec content attrs_tome
+  set parsed to web_parse_tag_spec(spec)
+  set tname to concat(parsed[0], "")
+  set id_val to concat(parsed[1], "")
+  set cls_val to concat(parsed[2], "")
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set extra_a to ""
+  if length(id_val) > 0
+    set extra_a to extra_a + " id=\"" + web_escape_attr(id_val) + "\""
+  end
+  if length(cls_val) > 0
+    set extra_a to extra_a + " class=\"" + web_escape_attr(cls_val) + "\""
+  end
+  set inner to web_escape_html(content)
+  return raw("<" + tname + extra_a + a_str + ">" + inner + "</" + tname + ">")
+end
+
+# ── Stateful Document Operations ─────────────────────────────────────────────
+
+to page with title_str
+  set _web_doc[0] to "1"
+  set _web_doc[1] to concat(title_str, "")
+  set _web_doc[2] to "en"
+  set _web_doc[3] to ""
+  set _web_doc[4] to "/favicon.png"
+  set _web_doc[5] to "sdev-dark"
+  set _web_doc[6] to ""
+  set _web_doc[7] to ""
+  set _web_doc[8] to ""
+  set _web_doc[9] to ""
+  set _web_doc[10] to ""
+  return 0
+end
+
+to web_meta with desc_str favicon_href
+  set _web_doc[3] to concat(desc_str, "")
+  if length(favicon_href) > 0
+    set _web_doc[4] to concat(favicon_href, "")
+  end
+  return 0
+end
+
+to theme with theme_name
+  set _web_doc[5] to concat(theme_name, "")
+  return 0
+end
+
+to web_emit with html_frag
+  set clean to replace(replace(html_frag, chr(1), ""), chr(2), "")
+  set cur to concat(_web_doc[8], "")
+  set _web_doc[8] to cur + clean + "\n"
+  return 0
+end
+
+to raw_html with html_str
+  return web_emit(html_str)
+end
+
+to web_add_css with rule_str
+  set cur to concat(_web_doc[7], "")
+  if length(cur) > 0
+    set _web_doc[7] to cur + "\n" + rule_str
+  else
+    set _web_doc[7] to concat(rule_str, "")
+  end
+  return 0
+end
+
+to web_add_js with js_str
+  set cur to concat(_web_doc[9], "")
+  if length(cur) > 0
+    set _web_doc[9] to cur + "\n" + js_str
+  else
+    set _web_doc[9] to concat(js_str, "")
+  end
+  return 0
+end
+
+to style with selector style_tome
+  return web_add_css(web_style_rule(selector, style_tome))
+end
+
+to style_nested with parent_sel child_sel style_tome
+  return web_add_css(web_nested_rule(parent_sel, child_sel, style_tome))
+end
+
+to media_style with bp selector style_tome
+  return web_add_css(web_media_rule(bp, web_style_rule(selector, style_tome)))
+end
+
+to keyframes with name from_tome to_tome
+  return web_add_css(web_keyframes_rule(name, from_tome, to_tome))
+end
+
+to css_vars with vars_tome
+  return web_add_css(web_css_vars_rule(vars_tome))
+end
+
+to css_var with name fallback
+  return web_css_var(name, fallback)
+end
+
+to script_raw with js_code
+  return web_add_js(js_code)
+end
+
+to script_sdev with sdev_code
+  return web_add_js(sdev_to_js(sdev_code))
+end
+
+to client_fn with name params sdev_body
+  return web_add_js(web_client_fn_js(name, params, sdev_body))
+end
+
+to on_ready with sdev_body
+  return web_add_js(web_on_ready_js(sdev_body))
+end
+
+to web_state_init with key val_json
+  set entry to "\"" + key + "\": " + val_json
+  set cur to concat(_web_doc[10], "")
+  if length(cur) > 0
+    set _web_doc[10] to cur + ", " + entry
+  else
+    set _web_doc[10] to entry
+  end
+  return 0
+end
+
+# ── Open / Close Structural Tags ─────────────────────────────────────────────
+
+to open_tag with tag_name attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  return web_emit("<" + tag_name + a_str + ">")
+end
+
+to close_tag with tag_name
+  return web_emit("</" + tag_name + ">")
+end
+
+to open_main with attrs_tome
+  return open_tag("main", attrs_tome)
+end
+to end_main
+  return close_tag("main")
+end
+
+to open_header with attrs_tome
+  return open_tag("header", attrs_tome)
+end
+to end_header
+  return close_tag("header")
+end
+
+to open_footer with attrs_tome
+  return open_tag("footer", attrs_tome)
+end
+to end_footer
+  return close_tag("footer")
+end
+
+to open_nav with attrs_tome
+  return open_tag("nav", attrs_tome)
+end
+to end_nav
+  return close_tag("nav")
+end
+
+to open_section with attrs_tome
+  return open_tag("section", attrs_tome)
+end
+to end_section
+  return close_tag("section")
+end
+
+to open_div with attrs_tome
+  return open_tag("div", attrs_tome)
+end
+to end_div
+  return close_tag("div")
+end
+
+to open_form with attrs_tome
+  return open_tag("form", attrs_tome)
+end
+to end_form
+  return close_tag("form")
+end
+
+to open_ul with attrs_tome
+  return open_tag("ul", attrs_tome)
+end
+to end_ul
+  return close_tag("ul")
+end
+
+to open_ol with attrs_tome
+  return open_tag("ol", attrs_tome)
+end
+to end_ol
+  return close_tag("ol")
+end
+
+to open_article with attrs_tome
+  return open_tag("article", attrs_tome)
+end
+to end_article
+  return close_tag("article")
+end
+
+to open_aside with attrs_tome
+  return open_tag("aside", attrs_tome)
+end
+to end_aside
+  return close_tag("aside")
+end
+
+# ── Element Emitters ─────────────────────────────────────────────────────────
+
+to div with content attrs_tome
+  set f to web_el("div", content, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to section with content attrs_tome
+  set f to web_el("section", content, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to header_el with content attrs_tome
+  set f to web_el("header", content, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to footer_el with content attrs_tome
+  set f to web_el("footer", content, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to nav_el with content attrs_tome
+  set f to web_el("nav", content, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to article with content attrs_tome
+  set f to web_el("article", content, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to aside with content attrs_tome
+  set f to web_el("aside", content, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to h1 with text attrs_tome
+  set f to web_el("h1", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to h2 with text attrs_tome
+  set f to web_el("h2", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to h3 with text attrs_tome
+  set f to web_el("h3", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to h4 with text attrs_tome
+  set f to web_el("h4", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to h5 with text attrs_tome
+  set f to web_el("h5", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to h6 with text attrs_tome
+  set f to web_el("h6", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to p with text attrs_tome
+  set f to web_el("p", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to span with text attrs_tome
+  set f to web_el("span", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to small with text attrs_tome
+  set f to web_el("small", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to strong with text attrs_tome
+  set f to web_el("strong", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to em with text attrs_tome
+  set f to web_el("em", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to code_el with text attrs_tome
+  set f to web_el("code", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to pre_el with text attrs_tome
+  set f to web_el("pre", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to a_html with text href attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set inner to web_escape_html(text)
+  return raw("<a href=\"" + web_escape_attr(href) + "\"" + a_str + ">" + inner + "</a>")
+end
+
+to a_link with text href attrs_tome
+  set f to a_html(text, href, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to btn_html with text attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set inner to web_escape_html(text)
+  return raw("<button type=\"button\"" + a_str + ">" + inner + "</button>")
+end
+
+to btn with text attrs_tome
+  set f to btn_html(text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to img_el with src alt attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set f to raw("<img src=\"" + web_escape_attr(src) + "\" alt=\"" + web_escape_attr(alt) + "\"" + a_str + ">")
+  set _ to web_emit(f)
+  return f
+end
+
+to input_el with input_type placeholder attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set ph to ""
+  if length(placeholder) > 0
+    set ph to " placeholder=\"" + web_escape_attr(placeholder) + "\""
+  end
+  set f to raw("<input type=\"" + web_escape_attr(input_type) + "\"" + ph + a_str + ">")
+  set _ to web_emit(f)
+  return f
+end
+
+to textarea_el with placeholder attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set ph to ""
+  if length(placeholder) > 0
+    set ph to " placeholder=\"" + web_escape_attr(placeholder) + "\""
+  end
+  set f to raw("<textarea" + ph + a_str + "></textarea>")
+  set _ to web_emit(f)
+  return f
+end
+
+to label_el with text for_id attrs_tome
+  set a_str to web_attrs_from_tome(attrs_tome)
+  set fa to ""
+  if length(for_id) > 0
+    set fa to " for=\"" + web_escape_attr(for_id) + "\""
+  end
+  set f to raw("<label" + fa + a_str + ">" + web_escape_html(text) + "</label>")
+  set _ to web_emit(f)
+  return f
+end
+
+to option_el with text val selected_flag
+  set sel to ""
+  if selected_flag is 1
+    set sel to " selected"
+  end
+  set f to raw("<option value=\"" + web_escape_attr(val) + "\"" + sel + ">" + web_escape_html(text) + "</option>")
+  set _ to web_emit(f)
+  return f
+end
+
+to li_html with text attrs_tome
+  return web_el("li", text, attrs_tome)
+end
+
+to li_el with text attrs_tome
+  set f to web_el("li", text, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to ul_list with items_list attrs_tome
+  set n to length(items_list)
+  set inner to ""
+  set i to 0
+  while i < n
+    set item to concat(items_list[i], "")
+    set item_clean to replace(replace(item, chr(1), ""), chr(2), "")
+    if text_starts_with(trim(item_clean), "<li")
+      set inner to inner + item_clean
+    else
+      set inner to inner + "<li>" + web_escape_html(item) + "</li>"
+    end
+    set i to i + 1
+  end
+  set f to web_el_raw("ul", inner, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to ol_list with items_list attrs_tome
+  set n to length(items_list)
+  set inner to ""
+  set i to 0
+  while i < n
+    set item to concat(items_list[i], "")
+    set item_clean to replace(replace(item, chr(1), ""), chr(2), "")
+    if text_starts_with(trim(item_clean), "<li")
+      set inner to inner + item_clean
+    else
+      set inner to inner + "<li>" + web_escape_html(item) + "</li>"
+    end
+    set i to i + 1
+  end
+  set f to web_el_raw("ol", inner, attrs_tome)
+  set _ to web_emit(f)
+  return f
+end
+
+to hr_el
+  set f to raw("<hr>")
+  set _ to web_emit(f)
+  return f
+end
+
+to br_el
+  return raw("<br>")
+end
+
+to inline_icon with name cls
+  return raw(web_icon_svg(name, cls))
+end
+
+to icon with name cls
+  set svg to web_icon_svg(name, cls)
+  set _ to web_emit(svg)
+  return raw(svg)
+end
+
+to render_html
+  set theme_css to web_theme_css(concat(_web_doc[5], ""))
+  set util_css to web_utilities_css()
+  set custom_css to concat(_web_doc[7], "")
+  set runtime_js to web_browser_runtime_js()
+  set state_init_js to ""
+  set st_entries to concat(_web_doc[10], "")
+  if length(st_entries) > 0
+    set state_init_js to "\nwindow.$sdev.initState({ " + st_entries + " });"
+  end
+  set custom_js to concat(_web_doc[9], "")
+  set desc_meta to ""
+  set d_str to concat(_web_doc[3], "")
+  if length(d_str) > 0
+    set desc_meta to "\n  <meta name=\"description\" content=\"" + web_escape_attr(d_str) + "\">"
+  end
+  set fav_link to ""
+  set fav_str to concat(_web_doc[4], "")
+  if length(fav_str) > 0
+    set fav_link to "\n  <link rel=\"icon\" href=\"" + web_escape_attr(fav_str) + "\">"
+  end
+  set doc to "<!DOCTYPE html>\n<html lang=\"" + concat(_web_doc[2], "") + "\" class=\"dark\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>" + web_escape_html(concat(_web_doc[1], "")) + "</title>" + desc_meta + fav_link + concat(_web_doc[6], "") + "\n  <style>\n" + theme_css + "\n" + util_css + "\n" + custom_css + "\n  </style>\n</head>\n<body>\n" + concat(_web_doc[8], "") + "  <script>\n" + runtime_js + state_init_js + "\n" + custom_js + "\n  </script>\n</body>\n</html>"
+  return concat(doc, "")
+end
+
+to save_html with path
+  set html to render_html()
+  set _ to write_file(path, html)
+  return html
+end
+
+to endpage
+  return render_html()
+end

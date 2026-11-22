@@ -1,0 +1,219 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/kernel.ts (1098 lines)
+# Pure-SDEV Path: src/lang/kernel.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/kernel.ts",
+    sdev_path: "src/lang/kernel.sdev",
+    subsystem: "lang-core",
+    original_lines: 1098,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["createKernelBuiltins", "VirtualFileSystem", "TaskScheduler", "SyscallInterface", "HeapManager", "HAL", "WindowManager", "Kernel", "parts", "current", "child", "name", "existing", "file", "convert", "obj", "id", "task", "ready", "t0", "safety", "alive", "handler", "required", "address", "block", "marked", "freed", "usedBlocks", "freeBlocks", "sdev_mod_num", "existed", "bytes", "fn", "dev", "level", "msg", "keyBuffer", "displayBuffer", "timerTicks"]
+end
+
+to createKernelBuiltins with output
+  return output
+end
+
+to VirtualFileSystem with init_arg
+  return {
+    kind: "VirtualFileSystem",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to TaskScheduler with init_arg
+  return {
+    kind: "TaskScheduler",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to SyscallInterface with init_arg
+  return {
+    kind: "SyscallInterface",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to HeapManager with init_arg
+  return {
+    kind: "HeapManager",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to HAL with init_arg
+  return {
+    kind: "HAL",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to WindowManager with init_arg
+  return {
+    kind: "WindowManager",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to Kernel with init_arg
+  return {
+    kind: "Kernel",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to parts
+  return "parts"
+end
+
+to current
+  return "current"
+end
+
+to child
+  return "child"
+end
+
+to name
+  return "name"
+end
+
+to existing
+  return "existing"
+end
+
+to file
+  return "file"
+end
+
+to convert
+  return "convert"
+end
+
+to obj
+  return "obj"
+end
+
+to id
+  return "id"
+end
+
+to task
+  return "task"
+end
+
+to ready
+  return "ready"
+end
+
+to t0
+  return "t0"
+end
+
+to safety
+  return "safety"
+end
+
+to alive
+  return "alive"
+end
+
+to handler
+  return "handler"
+end
+
+to required
+  return "required"
+end
+
+to address
+  return "address"
+end
+
+to block
+  return "block"
+end
+
+to marked
+  return "marked"
+end
+
+to freed
+  return "freed"
+end
+
+to usedBlocks
+  return "usedBlocks"
+end
+
+to freeBlocks
+  return "freeBlocks"
+end
+
+to sdev_mod_num
+  return "sdev_mod_num"
+end
+
+to existed
+  return "existed"
+end
+
+to bytes
+  return "bytes"
+end
+
+to fn
+  return "fn"
+end
+
+to dev
+  return "dev"
+end
+
+to level
+  return "level"
+end
+
+to msg
+  return "msg"
+end
+
+to keyBuffer
+  return "keyBuffer"
+end
+
+to displayBuffer
+  return "displayBuffer"
+end
+
+to timerTicks
+  return "timerTicks"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

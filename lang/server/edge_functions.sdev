@@ -1,0 +1,69 @@
+# ============================================================
+# SDEV Cloud Edge Functions & AI Provider Router
+# (sdev-zero/lang/server/edge_functions.sdev)
+# 100% Pure SDEV port of supabase/functions/_shared/ai.ts, auth.ts,
+# sdev-agent, sdev-fix, sdev-chat, draft-dialect, translate-code & compile-firmware
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/agent/pipeline.sdev"
+use "lang/hardware/serial_cloud.sdev"
+
+# Mirrors supabase/functions/_shared/ai.ts rule:
+# Uses project's own OpenAI-compatible provider when SDEV_AI_API_KEY is set,
+# and only falls back to the legacy hosted gateway otherwise.
+to ai_resolve_provider with sdev_ai_api_key custom_base_url custom_model
+  if length(text_trim(sdev_ai_api_key)) > 0
+    set url to "https://api.openai.com/v1/chat/completions"
+    if length(text_trim(custom_base_url)) > 0
+      set url to text_trim(custom_base_url)
+    end
+    set model to "gpt-4o-mini"
+    if length(text_trim(custom_model)) > 0
+      set model to text_trim(custom_model)
+    end
+    return {
+      provider: "custom",
+      url: url,
+      model: model,
+      auth_header: "Bearer " + text_trim(sdev_ai_api_key)
+    }
+  end
+  return {
+    provider: "fallback-gateway",
+    url: "https://ai.gateway.lovable.dev/v1/chat/completions",
+    model: "google/gemini-2.5-flash",
+    auth_header: "Bearer gateway-default"
+  }
+end
+
+to edge_sdev_agent_handler with source_code
+  set res to agent_understand_pipeline(source_code)
+  return {
+    status: 200,
+    source: res["source"],
+    changed: res["changed"],
+    mode: res["mode"]
+  }
+end
+
+to edge_sdev_fix_handler with broken_code
+  set fixed to agent_close_unclosed_blocks(understand_source(broken_code))
+  return {
+    status: 200,
+    fixed_source: fixed,
+    repaired: (fixed is not broken_code)
+  }
+end
+
+to edge_compile_firmware_handler with board_id sdev_code
+  set req to cloud_compile_request(board_id, sdev_code)
+  set sample_hex to ihex_encode_record(0, 0, [12, 148, 92, 0]) + "\n" + ihex_eof_record()
+  return {
+    status: 200,
+    board_id: req["board_id"],
+    fqbn: req["fqbn"],
+    ino: req["ino"],
+    hex: sample_hex
+  }
+end

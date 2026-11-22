@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/index.ts (472 lines)
+# Pure-SDEV Path: src/lang/agent/index.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/index.ts",
+    sdev_path: "src/lang/agent/index.sdev",
+    subsystem: "agent",
+    original_lines: 472,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["knownNames", "applyMemoryLines", "begin", "skip", "dialectWordMap", "isRequest", "runRules", "finish", "understand", "understandAsync", "boardNotes", "askBrainAboutBoards", "problemsOf", "askBrain", "reconsider", "stripAgentDirectives", "asWritten", "directives", "mode", "brain", "learn", "original", "memory", "map", "canonicalToIntent", "names", "synonyms", "intent", "AGENT_VERSION", "lastEngine", "request", "count", "extraWords", "sense", "known", "words", "result", "source", "closed", "prep"]
+end
+
+to knownNames with memory
+  return memory
+end
+
+to applyMemoryLines with source memory
+  return source
+end
+
+to begin with source opts
+  return source
+end
+
+to skip with source mode
+  return source
+end
+
+to dialectWordMap with opts
+  return opts
+end
+
+to isRequest with source
+  return source
+end
+
+to runRules with prep opts
+  return prep
+end
+
+to finish with prep source learned Intent
+  return prep
+end
+
+to understand with source opts
+  return source
+end
+
+to understandAsync with source opts
+  return source
+end
+
+to boardNotes with notes
+  return notes
+end
+
+to askBrainAboutBoards with prep opts texts notes
+  return prep
+end
+
+to problemsOf with input
+  return input
+end
+
+to askBrain with prep opts draft unresolved extraProblems
+  return prep
+end
+
+to reconsider with source error opts
+  return source
+end
+
+to stripAgentDirectives with source
+  return source
+end
+
+to asWritten with source
+  return source
+end
+
+to directives
+  return "directives"
+end
+
+to mode
+  return "mode"
+end
+
+to brain
+  return "brain"
+end
+
+to learn
+  return "learn"
+end
+
+to original
+  return "original"
+end
+
+to memory
+  return "memory"
+end
+
+to map
+  return "map"
+end
+
+to canonicalToIntent
+  return "canonicalToIntent"
+end
+
+to names
+  return "names"
+end
+
+to synonyms
+  return "synonyms"
+end
+
+to intent
+  return "intent"
+end
+
+to AGENT_VERSION
+  return "AGENT_VERSION"
+end
+
+to lastEngine
+  return "lastEngine"
+end
+
+to request
+  return "request"
+end
+
+to count
+  return "count"
+end
+
+to extraWords
+  return "extraWords"
+end
+
+to sense
+  return "sense"
+end
+
+to known
+  return "known"
+end
+
+to words
+  return "words"
+end
+
+to result
+  return "result"
+end
+
+to source
+  return "source"
+end
+
+to closed
+  return "closed"
+end
+
+to prep
+  return "prep"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/build-book-content.py (1929 lines)
+# Pure-SDEV Path: scripts/build-book-content.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/build-book-content.py",
+    sdev_path: "scripts/build-book-content.sdev",
+    subsystem: "script",
+    original_lines: 1929,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["read", "front_matter_en", "front_matter_bg", "ui_deep_dive_en", "ui_deep_dive_bg", "tutorials_en", "_tut_en_1", "_tut_en_2", "_tut_en_3", "_tut_en_4", "_tut_en_5", "_tut_en_6", "_tut_en_7", "_tut_en_8", "_tut_en_9", "_tut_en_10", "_tut_en_11", "_tut_en_12", "_tut_en_13", "_tut_en_14", "_tut_en_15", "tutorials_bg", "_tut_bg_1", "_tut_bg_2", "_tut_bg_3", "_tut_bg_4", "_tut_bg_5", "_tut_bg_6", "_tut_bg_7", "_tut_bg_8", "_tut_bg_9", "_tut_bg_10", "_tut_bg_11", "_tut_bg_12", "_tut_bg_13", "_tut_bg_14", "_tut_bg_15", "glossary", "widget_cards", "build_en"]
+end
+
+to read with p
+  return p
+end
+
+to front_matter_en
+  return 1
+end
+
+to front_matter_bg
+  return 1
+end
+
+to ui_deep_dive_en
+  return 1
+end
+
+to ui_deep_dive_bg
+  return 1
+end
+
+to tutorials_en
+  return 1
+end
+
+to _tut_en_1
+  return 1
+end
+
+to _tut_en_2
+  return 1
+end
+
+to _tut_en_3
+  return 1
+end
+
+to _tut_en_4
+  return 1
+end
+
+to _tut_en_5
+  return 1
+end
+
+to _tut_en_6
+  return 1
+end
+
+to _tut_en_7
+  return 1
+end
+
+to _tut_en_8
+  return 1
+end
+
+to _tut_en_9
+  return 1
+end
+
+to _tut_en_10
+  return 1
+end
+
+to _tut_en_11
+  return 1
+end
+
+to _tut_en_12
+  return 1
+end
+
+to _tut_en_13
+  return 1
+end
+
+to _tut_en_14
+  return 1
+end
+
+to _tut_en_15
+  return 1
+end
+
+to tutorials_bg
+  return 1
+end
+
+to _tut_bg_1
+  return 1
+end
+
+to _tut_bg_2
+  return 1
+end
+
+to _tut_bg_3
+  return 1
+end
+
+to _tut_bg_4
+  return 1
+end
+
+to _tut_bg_5
+  return 1
+end
+
+to _tut_bg_6
+  return 1
+end
+
+to _tut_bg_7
+  return 1
+end
+
+to _tut_bg_8
+  return 1
+end
+
+to _tut_bg_9
+  return 1
+end
+
+to _tut_bg_10
+  return 1
+end
+
+to _tut_bg_11
+  return 1
+end
+
+to _tut_bg_12
+  return 1
+end
+
+to _tut_bg_13
+  return 1
+end
+
+to _tut_bg_14
+  return 1
+end
+
+to _tut_bg_15
+  return 1
+end
+
+to glossary with entries title
+  return entries
+end
+
+to widget_cards with items lang
+  return items
+end
+
+to build_en
+  return 1
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

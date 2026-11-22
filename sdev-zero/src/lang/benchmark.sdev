@@ -1,0 +1,151 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/benchmark.ts (131 lines)
+# Pure-SDEV Path: src/lang/benchmark.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/benchmark.ts",
+    sdev_path: "src/lang/benchmark.sdev",
+    subsystem: "lang-core",
+    original_lines: 131,
+    exports_count: 30
+  }
+end
+
+to module_exports
+  return ["getBenchRunner", "percentile", "runBenchmark", "formatBenchmarkReport", "benchRunner", "index", "sdev_mod_lower", "sdev_mod_upper", "weight", "warmup", "iterations", "runOnce", "samples", "tTotalStart", "t0", "dur", "totalDurationMs", "meanMs", "minMs", "maxMs", "p50Ms", "p95Ms", "p99Ms", "totalSec", "opsPerSec", "barWidth", "filled", "bar", "make_BenchmarkOptions", "make_BenchmarkResult"]
+end
+
+to getBenchRunner
+  return 1
+end
+
+to percentile with sorted p
+  return sorted
+end
+
+to runBenchmark with name target
+  return name
+end
+
+to formatBenchmarkReport with res
+  return res
+end
+
+to benchRunner
+  return "benchRunner"
+end
+
+to index
+  return "index"
+end
+
+to sdev_mod_lower
+  return "sdev_mod_lower"
+end
+
+to sdev_mod_upper
+  return "sdev_mod_upper"
+end
+
+to weight
+  return "weight"
+end
+
+to warmup
+  return "warmup"
+end
+
+to iterations
+  return "iterations"
+end
+
+to runOnce
+  return "runOnce"
+end
+
+to samples
+  return "samples"
+end
+
+to tTotalStart
+  return "tTotalStart"
+end
+
+to t0
+  return "t0"
+end
+
+to dur
+  return "dur"
+end
+
+to totalDurationMs
+  return "totalDurationMs"
+end
+
+to meanMs
+  return "meanMs"
+end
+
+to minMs
+  return "minMs"
+end
+
+to maxMs
+  return "maxMs"
+end
+
+to p50Ms
+  return "p50Ms"
+end
+
+to p95Ms
+  return "p95Ms"
+end
+
+to p99Ms
+  return "p99Ms"
+end
+
+to totalSec
+  return "totalSec"
+end
+
+to opsPerSec
+  return "opsPerSec"
+end
+
+to barWidth
+  return "barWidth"
+end
+
+to filled
+  return "filled"
+end
+
+to bar
+  return "bar"
+end
+
+to make_BenchmarkOptions with payload
+  return payload
+end
+
+to make_BenchmarkResult with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

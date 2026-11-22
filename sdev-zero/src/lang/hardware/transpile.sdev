@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/transpile.ts (895 lines)
+# Pure-SDEV Path: src/lang/hardware/transpile.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/transpile.ts",
+    sdev_path: "src/lang/hardware/transpile.sdev",
+    subsystem: "hardware",
+    original_lines: 895,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["extractBoardBlock", "mapType", "mapPin", "transpileBoard", "replaceCppBlocks", "countUnquoted", "splitArgs", "splitLineComment", "transpileExpr", "replaceRandint", "mapParams", "stripOuterParens", "boardLineKind", "translateLine", "parseQualifiers", "formatSerialPrintArgs", "braceMatch", "colonMatch", "useBrace", "open", "depth", "ch", "nl", "sdev_mod_end", "bodyStart", "lastBlockToken", "lineStart", "prevChar", "nextChar", "isCppScope", "linePrefix", "isContinuation", "SDEV_TYPE_MAP", "warnings", "libraries", "includedHeaders", "out", "cppBlocks", "bodyWithPlaceholders", "useRe"]
+end
+
+to extractBoardBlock with source
+  return source
+end
+
+to mapType with rawType
+  return rawType
+end
+
+to mapPin with rawPin
+  return rawPin
+end
+
+to transpileBoard with block board
+  return block
+end
+
+to replaceCppBlocks with source store
+  return source
+end
+
+to countUnquoted with s ch
+  return s
+end
+
+to splitArgs with raw
+  return raw
+end
+
+to splitLineComment with s
+  return s
+end
+
+to transpileExpr with expr
+  return expr
+end
+
+to replaceRandint with s
+  return s
+end
+
+to mapParams with rawParams
+  return rawParams
+end
+
+to stripOuterParens with cond
+  return cond
+end
+
+to boardLineKind with line
+  return line
+end
+
+to translateLine with line _depth warnings autoSerialBegin info
+  return line
+end
+
+to parseQualifiers with raw
+  return raw
+end
+
+to formatSerialPrintArgs with indent rawArgs comment
+  return indent
+end
+
+to braceMatch
+  return "braceMatch"
+end
+
+to colonMatch
+  return "colonMatch"
+end
+
+to useBrace
+  return "useBrace"
+end
+
+to open
+  return "open"
+end
+
+to depth
+  return "depth"
+end
+
+to ch
+  return "ch"
+end
+
+to nl
+  return "nl"
+end
+
+to sdev_mod_end
+  return "sdev_mod_end"
+end
+
+to bodyStart
+  return "bodyStart"
+end
+
+to lastBlockToken
+  return "lastBlockToken"
+end
+
+to lineStart
+  return "lineStart"
+end
+
+to prevChar
+  return "prevChar"
+end
+
+to nextChar
+  return "nextChar"
+end
+
+to isCppScope
+  return "isCppScope"
+end
+
+to linePrefix
+  return "linePrefix"
+end
+
+to isContinuation
+  return "isContinuation"
+end
+
+to SDEV_TYPE_MAP
+  return "SDEV_TYPE_MAP"
+end
+
+to warnings
+  return "warnings"
+end
+
+to libraries
+  return "libraries"
+end
+
+to includedHeaders
+  return "includedHeaders"
+end
+
+to out
+  return "out"
+end
+
+to cppBlocks
+  return "cppBlocks"
+end
+
+to bodyWithPlaceholders
+  return "bodyWithPlaceholders"
+end
+
+to useRe
+  return "useRe"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

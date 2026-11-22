@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-preset-dialect.ts (43 lines)
+# Pure-SDEV Path: scripts/test-preset-dialect.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-preset-dialect.ts",
+    sdev_path: "scripts/test-preset-dialect.sdev",
+    subsystem: "script",
+    original_lines: 43,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["check", "run", "pass", "failures", "out", "tokens", "ast", "interp", "slug", "output"]
+end
+
+to check with name actual expected
+  return name
+end
+
+to run with source
+  return source
+end
+
+to pass
+  return "pass"
+end
+
+to failures
+  return "failures"
+end
+
+to out
+  return "out"
+end
+
+to tokens
+  return "tokens"
+end
+
+to ast
+  return "ast"
+end
+
+to interp
+  return "interp"
+end
+
+to slug
+  return "slug"
+end
+
+to output
+  return "output"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

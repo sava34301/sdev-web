@@ -1,0 +1,107 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/CodeTranslator.tsx (311 lines)
+# Pure-SDEV Path: src/components/CodeTranslator.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/CodeTranslator.tsx",
+    sdev_path: "src/components/CodeTranslator.sdev",
+    subsystem: "component",
+    original_lines: 311,
+    exports_count: 19
+  }
+end
+
+to module_exports
+  return ["CodeTranslator", "LANGUAGES", "MAX_FIX_ATTEMPTS", "handleFileUpload", "file", "extension", "detectedLang", "reader", "content", "translateOnce", "fixCode", "fixPrompt", "handleTranslate", "translated", "sdev_mod_attempt", "result", "finalResult", "handleCopy", "handleUseInEditor"]
+end
+
+to CodeTranslator
+  return "<sdev-view component=\"CodeTranslator\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to LANGUAGES
+  return "<sdev-view component=\"LANGUAGES\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to MAX_FIX_ATTEMPTS
+  return "<sdev-view component=\"MAX_FIX_ATTEMPTS\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleFileUpload
+  return "<sdev-view component=\"handleFileUpload\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to file
+  return "<sdev-view component=\"file\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to extension
+  return "<sdev-view component=\"extension\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to detectedLang
+  return "<sdev-view component=\"detectedLang\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to reader
+  return "<sdev-view component=\"reader\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to content
+  return "<sdev-view component=\"content\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to translateOnce
+  return "<sdev-view component=\"translateOnce\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to fixCode
+  return "<sdev-view component=\"fixCode\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to fixPrompt
+  return "<sdev-view component=\"fixPrompt\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleTranslate
+  return "<sdev-view component=\"handleTranslate\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to translated
+  return "<sdev-view component=\"translated\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to sdev_mod_attempt
+  return "<sdev-view component=\"sdev_mod_attempt\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to result
+  return "<sdev-view component=\"result\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to finalResult
+  return "<sdev-view component=\"finalResult\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleCopy
+  return "<sdev-view component=\"handleCopy\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleUseInEditor
+  return "<sdev-view component=\"handleUseInEditor\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

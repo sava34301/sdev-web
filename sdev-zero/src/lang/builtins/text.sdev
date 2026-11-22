@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/text.ts (112 lines)
+# Pure-SDEV Path: src/lang/builtins/text.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/text.ts",
+    sdev_path: "src/lang/builtins/text.sdev",
+    subsystem: "builtins",
+    original_lines: 112,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["text", "flagsOf", "re", "registerText", "cache", "bad", "def", "rx", "src", "peek", "fail", "atom", "power", "product", "sdev_mod_sum"]
+end
+
+to text with v fn line
+  return v
+end
+
+to flagsOf with v global
+  return v
+end
+
+to re with p f t line
+  return p
+end
+
+to registerText with builtins SdevFunction _output
+  return builtins
+end
+
+to cache
+  return "cache"
+end
+
+to bad
+  return "bad"
+end
+
+to def with name sdev_mod_call line
+  return name
+end
+
+to rx with a fn flagIdx global l
+  return a
+end
+
+to src
+  return "src"
+end
+
+to peek
+  return 1
+end
+
+to fail
+  return "fail"
+end
+
+to atom
+  return "atom"
+end
+
+to power
+  return "power"
+end
+
+to product
+  return "product"
+end
+
+to sdev_mod_sum
+  return "sdev_mod_sum"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

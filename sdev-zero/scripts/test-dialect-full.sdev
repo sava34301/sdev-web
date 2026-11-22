@@ -1,0 +1,57 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Complete Dialect Subsystem
+# (sdev-zero/scripts/test-dialect-full.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/dialect/spec_catalog.sdev"
+use "lang/dialect/presets.sdev"
+use "lang/dialect/signature.sdev"
+use "lang/dialect/docs.sdev"
+use "lang/dialect/extensions_registry.sdev"
+
+set ts to test_begin("Complete Dialect Subsystem (Catalog, Validator, Inheritance, Signatures, Docs, Cache)")
+
+# 1. Catalog & spec validation
+set words to catalog_words()
+set ts to assert_true(ts, length(words) >= 45, "Catalog defines 45+ canonical words")
+set bg_preset to find_dialect_preset("sdev-bg")
+set ts to assert_eq(ts, bg_preset["found"], 1, "Bulgarian dialect preset found")
+set bg_spec to bg_preset["spec"]
+set ts to assert_eq(ts, is_dialect_publishable(bg_spec), 1, "Bulgarian preset passes publishable validation")
+
+# 2. Dialect inheritance & cross-dialect translation
+set es_preset to find_dialect_preset("sdev-es")
+set es_spec to es_preset["spec"]
+set bg_code to "нека x бъде 42\nкажи x"
+set es_code to translate_between_dialects(bg_code, bg_spec, es_spec)
+set ts to assert_true(ts, index_of(es_code, "forjar x ser 42") >= 0, "Cross-dialect translation converts Bulgarian -> Spanish")
+
+# 3. Invisible file signatures (#⟨sdev⟩)
+set body_src to "set count to 7\nsay count"
+set signed_file to write_file_signature(body_src, "v2", "@sava/sdev-bg", "")
+set sig_read to read_file_signature(signed_file)
+set ts to assert_eq(ts, sig_read["has_signature"], 1, "File signature is detected")
+set ts to assert_str_eq(ts, sig_read["dialect"], "@sava/sdev-bg", "Signature preserves dialect address")
+set ts to assert_eq(ts, sig_read["stale"], 0, "Unmodified body checksum is fresh (not stale)")
+set tampered to signed_file + "\nsay 99"
+set tampered_read to read_file_signature(tampered)
+set ts to assert_eq(ts, tampered_read["stale"], 1, "Modified body is flagged as stale")
+set repaired to repair_file_signature(tampered)
+set repaired_read to read_file_signature(repaired)
+set ts to assert_eq(ts, repaired_read["stale"], 0, "repair_file_signature restores fresh checksum")
+
+# 4. Markdown documentation generator & freshness check
+set docs_md to generate_dialect_docs(bg_spec, bg_preset["sample"])
+set ts to assert_str_eq(ts, dialect_doc_freshness(bg_spec, docs_md), "fresh", "Generated dialect documentation is verified fresh")
+
+# 5. Offline library cache & @user/slug import resolution
+set cache to create_library_cache()
+set cache to cache_put_library(cache, "@sava/mathkit", "1.0.0", "to triple with n\n  return n * 3\nend")
+set app_src to "use \"@sava/mathkit\"\nsay triple(7)"
+set refs to extract_library_references(app_src)
+set ts to assert_str_eq(ts, refs[0], "@sava/mathkit", "extract_library_references finds @sava/mathkit")
+set resolved_src to resolve_cached_imports(app_src, cache)
+set ts to assert_true(ts, index_of(resolved_src, "to triple with n") >= 0, "resolve_cached_imports inlines offline cached library")
+
+set _ to test_summary(ts)

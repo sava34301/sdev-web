@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-ide-loading.ts (64 lines)
+# Pure-SDEV Path: scripts/test-ide-loading.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-ide-loading.ts",
+    sdev_path: "scripts/test-ide-loading.sdev",
+    subsystem: "script",
+    original_lines: 64,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["staticDependencies", "absolute", "source", "specifier", "name", "base", "target", "startup"]
+end
+
+to staticDependencies with entry visited
+  return entry
+end
+
+to absolute
+  return "absolute"
+end
+
+to source
+  return "source"
+end
+
+to specifier
+  return "specifier"
+end
+
+to name
+  return "name"
+end
+
+to base
+  return "base"
+end
+
+to target
+  return "target"
+end
+
+to startup
+  return "startup"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

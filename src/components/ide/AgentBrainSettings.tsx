@@ -100,7 +100,7 @@ export function AgentBrainSettings() {
     <div>
       <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Code understander AI</label>
       <p className="text-[11px] text-muted-foreground mb-2">
-        Simple code is understood instantly with no AI. For harder files a small AI runs right inside this browser, on your computer — nothing to install, no account, private.
+        The code understander is the syntax-free version of sdev — write in whatever way makes sense to you and it translates your intent into canonical sdev. Simple patterns resolve instantly with rules; for free-form code, a small AI runs right inside this browser — nothing to install, private.
       </p>
       <Toggle
         on={microBrain}

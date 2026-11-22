@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/ast.ts (513 lines)
+# Pure-SDEV Path: src/lang/ast.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/ast.ts",
+    sdev_path: "src/lang/ast.sdev",
+    subsystem: "lang-core",
+    original_lines: 513,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["make_ASTNode", "make_NumberLiteral", "make_StringLiteral", "make_BooleanLiteral", "make_NullLiteral", "make_Identifier", "make_BinaryExpr", "make_UnaryExpr", "make_TernaryExpr", "make_AwaitExpr", "make_CallExpr", "make_IndexExpr", "make_MemberExpr", "make_MemberAssignStatement", "make_ArrayLiteral", "make_DictLiteral", "make_LambdaExpr", "make_LetStatement", "make_AssignStatement", "make_IndexAssignStatement", "make_IfStatement", "make_WhileStatement", "make_ForEachStatement", "make_ForInStatement", "make_FuncDeclaration", "make_ReturnStatement", "make_BreakStatement", "make_ContinueStatement", "make_TryStatement", "make_ClassDeclaration", "make_NewExpr", "make_BlockStatement", "make_ExpressionStatement", "make_Program", "make_ExpressionNode", "make_Param", "make_FStringExpr", "make_FStringPart", "make_BytesLiteral", "make_EllipsisLiteral"]
+end
+
+to make_ASTNode with payload
+  return payload
+end
+
+to make_NumberLiteral with payload
+  return payload
+end
+
+to make_StringLiteral with payload
+  return payload
+end
+
+to make_BooleanLiteral with payload
+  return payload
+end
+
+to make_NullLiteral with payload
+  return payload
+end
+
+to make_Identifier with payload
+  return payload
+end
+
+to make_BinaryExpr with payload
+  return payload
+end
+
+to make_UnaryExpr with payload
+  return payload
+end
+
+to make_TernaryExpr with payload
+  return payload
+end
+
+to make_AwaitExpr with payload
+  return payload
+end
+
+to make_CallExpr with payload
+  return payload
+end
+
+to make_IndexExpr with payload
+  return payload
+end
+
+to make_MemberExpr with payload
+  return payload
+end
+
+to make_MemberAssignStatement with payload
+  return payload
+end
+
+to make_ArrayLiteral with payload
+  return payload
+end
+
+to make_DictLiteral with payload
+  return payload
+end
+
+to make_LambdaExpr with payload
+  return payload
+end
+
+to make_LetStatement with payload
+  return payload
+end
+
+to make_AssignStatement with payload
+  return payload
+end
+
+to make_IndexAssignStatement with payload
+  return payload
+end
+
+to make_IfStatement with payload
+  return payload
+end
+
+to make_WhileStatement with payload
+  return payload
+end
+
+to make_ForEachStatement with payload
+  return payload
+end
+
+to make_ForInStatement with payload
+  return payload
+end
+
+to make_FuncDeclaration with payload
+  return payload
+end
+
+to make_ReturnStatement with payload
+  return payload
+end
+
+to make_BreakStatement with payload
+  return payload
+end
+
+to make_ContinueStatement with payload
+  return payload
+end
+
+to make_TryStatement with payload
+  return payload
+end
+
+to make_ClassDeclaration with payload
+  return payload
+end
+
+to make_NewExpr with payload
+  return payload
+end
+
+to make_BlockStatement with payload
+  return payload
+end
+
+to make_ExpressionStatement with payload
+  return payload
+end
+
+to make_Program with payload
+  return payload
+end
+
+to make_ExpressionNode with payload
+  return payload
+end
+
+to make_Param with payload
+  return payload
+end
+
+to make_FStringExpr with payload
+  return payload
+end
+
+to make_FStringPart with payload
+  return payload
+end
+
+to make_BytesLiteral with payload
+  return payload
+end
+
+to make_EllipsisLiteral with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

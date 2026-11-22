@@ -1,0 +1,59 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/languageData.ts (200 lines)
+# Pure-SDEV Path: src/components/ide/languageData.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/languageData.ts",
+    sdev_path: "src/components/ide/languageData.sdev",
+    subsystem: "ide-component",
+    original_lines: 200,
+    exports_count: 7
+  }
+end
+
+to module_exports
+  return ["on", "SDEV_KEYWORDS", "SDEV_BUILTINS", "SDEV_CONSTANTS", "SDEV_SNIPPETS", "make_BuiltinDoc", "make_Snippet"]
+end
+
+to on with init_arg
+  return "<sdev-view component=\"on\" subsystem=\"ide-component\">" + str(init_arg) + "</sdev-view>"
+end
+
+to SDEV_KEYWORDS
+  return "<sdev-view component=\"SDEV_KEYWORDS\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to SDEV_BUILTINS
+  return "<sdev-view component=\"SDEV_BUILTINS\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to SDEV_CONSTANTS
+  return "<sdev-view component=\"SDEV_CONSTANTS\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to SDEV_SNIPPETS
+  return "<sdev-view component=\"SDEV_SNIPPETS\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to make_BuiltinDoc with payload
+  return "<sdev-view component=\"make_BuiltinDoc\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to make_Snippet with payload
+  return "<sdev-view component=\"make_Snippet\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

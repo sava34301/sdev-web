@@ -1,0 +1,111 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/CompilerPanel.tsx (200 lines)
+# Pure-SDEV Path: src/components/CompilerPanel.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/CompilerPanel.tsx",
+    sdev_path: "src/components/CompilerPanel.sdev",
+    subsystem: "component",
+    original_lines: 200,
+    exports_count: 20
+  }
+end
+
+to module_exports
+  return ["CompilerPanel", "handleCompile", "t0", "lexer", "tokens", "parser", "ast", "compiler", "compiled", "t1", "handleRun", "outputLines", "vm", "handleDownloadBytecode", "binary", "blob", "url", "handleDownloadDisasm", "countInstructions", "count"]
+end
+
+to CompilerPanel with onOutput
+  return "<sdev-view component=\"CompilerPanel\" subsystem=\"component\">" + str(onOutput) + "</sdev-view>"
+end
+
+to handleCompile
+  return "<sdev-view component=\"handleCompile\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to t0
+  return "<sdev-view component=\"t0\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to lexer
+  return "<sdev-view component=\"lexer\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to tokens
+  return "<sdev-view component=\"tokens\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to parser
+  return "<sdev-view component=\"parser\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to ast
+  return "<sdev-view component=\"ast\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to compiler
+  return "<sdev-view component=\"compiler\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to compiled
+  return "<sdev-view component=\"compiled\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to t1
+  return "<sdev-view component=\"t1\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleRun
+  return "<sdev-view component=\"handleRun\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to outputLines
+  return "<sdev-view component=\"outputLines\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to vm
+  return "<sdev-view component=\"vm\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleDownloadBytecode
+  return "<sdev-view component=\"handleDownloadBytecode\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to binary
+  return "<sdev-view component=\"binary\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to blob
+  return "<sdev-view component=\"blob\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to handleDownloadDisasm
+  return "<sdev-view component=\"handleDownloadDisasm\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to countInstructions
+  return "<sdev-view component=\"countInstructions\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to count
+  return "<sdev-view component=\"count\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

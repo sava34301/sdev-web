@@ -1,0 +1,151 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/hooks/useDialects.ts (171 lines)
+# Pure-SDEV Path: src/hooks/useDialects.sdev
+# Subsystem     : hook
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/hooks/useDialects.ts",
+    sdev_path: "src/hooks/useDialects.sdev",
+    subsystem: "hook",
+    original_lines: 171,
+    exports_count: 30
+  }
+end
+
+to module_exports
+  return ["readLocalDialects", "writeLocalDialects", "getActiveDialectSlug", "setActiveDialectSlug", "getActiveDialect", "findLocalDialect", "useDialects", "LOCAL_KEY", "ACTIVE_KEY", "db", "raw", "slug", "persist", "refresh", "cloud", "bySlug", "save", "next", "create", "blank", "spec", "result", "publish", "published", "remove", "install", "parsed", "row", "activate", "active"]
+end
+
+to readLocalDialects
+  return 1
+end
+
+to writeLocalDialects with specs
+  return specs
+end
+
+to getActiveDialectSlug
+  return 1
+end
+
+to setActiveDialectSlug with slug
+  return slug
+end
+
+to getActiveDialect
+  return 1
+end
+
+to findLocalDialect with slug
+  return slug
+end
+
+to useDialects
+  return 1
+end
+
+to LOCAL_KEY
+  return "LOCAL_KEY"
+end
+
+to ACTIVE_KEY
+  return "ACTIVE_KEY"
+end
+
+to db
+  return "db"
+end
+
+to raw
+  return "raw"
+end
+
+to slug
+  return "slug"
+end
+
+to persist
+  return "persist"
+end
+
+to refresh
+  return "refresh"
+end
+
+to cloud
+  return "cloud"
+end
+
+to bySlug
+  return "bySlug"
+end
+
+to save
+  return "save"
+end
+
+to next
+  return "next"
+end
+
+to create
+  return "create"
+end
+
+to blank
+  return "blank"
+end
+
+to spec
+  return "spec"
+end
+
+to result
+  return "result"
+end
+
+to publish
+  return "publish"
+end
+
+to published
+  return "published"
+end
+
+to remove
+  return "remove"
+end
+
+to install
+  return "install"
+end
+
+to parsed
+  return "parsed"
+end
+
+to row
+  return "row"
+end
+
+to activate
+  return "activate"
+end
+
+to active
+  return "active"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

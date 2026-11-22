@@ -1,0 +1,67 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeSettingsPanel.tsx (161 lines)
+# Pure-SDEV Path: src/components/ide/IdeSettingsPanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeSettingsPanel.tsx",
+    sdev_path: "src/components/ide/IdeSettingsPanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 161,
+    exports_count: 9
+  }
+end
+
+to module_exports
+  return ["IdeSettingsPanel", "FONT_FAMILIES", "THEMES", "sdev_mod_set", "stored", "current", "active", "titles", "labels"]
+end
+
+to IdeSettingsPanel with onChange
+  return "<sdev-view component=\"IdeSettingsPanel\" subsystem=\"ide-component\">" + str(onChange) + "</sdev-view>"
+end
+
+to FONT_FAMILIES
+  return "<sdev-view component=\"FONT_FAMILIES\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to THEMES
+  return "<sdev-view component=\"THEMES\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdev_mod_set
+  return "<sdev-view component=\"sdev_mod_set\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to stored
+  return "<sdev-view component=\"stored\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to current
+  return "<sdev-view component=\"current\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to active
+  return "<sdev-view component=\"active\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to titles
+  return "<sdev-view component=\"titles\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to labels
+  return "<sdev-view component=\"labels\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

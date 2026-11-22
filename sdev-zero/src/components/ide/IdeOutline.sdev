@@ -1,0 +1,79 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeOutline.tsx (87 lines)
+# Pure-SDEV Path: src/components/ide/IdeOutline.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeOutline.tsx",
+    sdev_path: "src/components/ide/IdeOutline.sdev",
+    subsystem: "ide-component",
+    original_lines: 87,
+    exports_count: 12
+  }
+end
+
+to module_exports
+  return ["extractSymbols", "IdeOutline", "out", "lines", "inClass", "classIndent", "indent", "ICONS", "COLORS", "symbols", "Icon", "make_Symbol"]
+end
+
+to extractSymbols with code
+  return "<sdev-view component=\"extractSymbols\" subsystem=\"ide-component\">" + str(code) + "</sdev-view>"
+end
+
+to IdeOutline with onJump
+  return "<sdev-view component=\"IdeOutline\" subsystem=\"ide-component\">" + str(onJump) + "</sdev-view>"
+end
+
+to out
+  return "<sdev-view component=\"out\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to lines
+  return "<sdev-view component=\"lines\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to inClass
+  return "<sdev-view component=\"inClass\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to classIndent
+  return "<sdev-view component=\"classIndent\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to indent
+  return "<sdev-view component=\"indent\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ICONS
+  return "<sdev-view component=\"ICONS\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to COLORS
+  return "<sdev-view component=\"COLORS\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to symbols
+  return "<sdev-view component=\"symbols\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to Icon
+  return "<sdev-view component=\"Icon\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to make_Symbol with payload
+  return "<sdev-view component=\"make_Symbol\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

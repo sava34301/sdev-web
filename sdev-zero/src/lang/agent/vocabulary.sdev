@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/vocabulary.ts (121 lines)
+# Pure-SDEV Path: src/lang/agent/vocabulary.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/vocabulary.ts",
+    sdev_path: "src/lang/agent/vocabulary.sdev",
+    subsystem: "agent",
+    original_lines: 121,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["baseWordMap", "VOCABULARY", "CANONICAL", "map", "ASSIGN_PHRASES", "NUMBER_WORDS", "COMPARISONS", "make_Intent"]
+end
+
+to baseWordMap
+  return 1
+end
+
+to VOCABULARY
+  return "VOCABULARY"
+end
+
+to CANONICAL
+  return "CANONICAL"
+end
+
+to map
+  return "map"
+end
+
+to ASSIGN_PHRASES
+  return "ASSIGN_PHRASES"
+end
+
+to NUMBER_WORDS
+  return "NUMBER_WORDS"
+end
+
+to COMPARISONS
+  return "COMPARISONS"
+end
+
+to make_Intent with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

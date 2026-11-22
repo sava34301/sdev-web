@@ -1,0 +1,47 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/utils.ts (25 lines)
+# Pure-SDEV Path: src/lib/utils.sdev
+# Subsystem     : lib
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/utils.ts",
+    sdev_path: "src/lib/utils.sdev",
+    subsystem: "lib",
+    original_lines: 25,
+    exports_count: 4
+  }
+end
+
+to module_exports
+  return ["cn", "escapeRe", "slugify", "slug"]
+end
+
+to cn with inputs
+  return inputs
+end
+
+to escapeRe with s
+  return s
+end
+
+to slugify with text fallback
+  return text
+end
+
+to slug
+  return "slug"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

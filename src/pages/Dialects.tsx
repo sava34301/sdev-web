@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CreateDialectDialog, type CreateDialectValues } from '@/components/dialect/CreateDialectDialog';
 import { CATALOG, GROUP_LABELS, type CatalogGroup } from '@/lang/dialect/catalog';
 import { validateDialect, type DialectSpec } from '@/lang/dialect/spec';
+import { serializeDialectToSdev } from '@/lang/dialect/sdev-format';
 import { dialectize } from '@/lang/dialect/canonicalize';
 import { SAMPLE } from '@/lang/dialect/sample';
 import { getOrGenerateDocs } from '@/lang/dialect/docs';
@@ -198,7 +199,7 @@ export default function Dialects() {
 
       <main className="container max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold tracking-tight mb-1">Dialect Studio</h1>
-        <p className="text-muted-foreground mb-8">Your own words, your own style, your own additions — compiled by the same sdev toolchain.</p>
+        <p className="text-muted-foreground mb-8">Build your own syntax as a pure .sdev dialect — translates automatically to canonical sdev v2 without the AI code understander.</p>
 
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
@@ -221,6 +222,23 @@ export default function Dialects() {
                     {activeSlug === d.meta.slug ? 'Deactivate' : 'Use'}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => openEditor(d)}>Edit</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const blob = new Blob([serializeDialectToSdev(d)], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${d.meta.slug}.dialect.sdev`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    aria-label={`Download ${d.meta.name} as .sdev`}
+                    title="Download .dialect.sdev"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => publishSpec(d)} aria-label={`Publish ${d.meta.name}`}><Upload className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(d.meta.slug)} aria-label={`Delete ${d.meta.name}`}><Trash2 className="h-4 w-4" /></Button>
                 </div>

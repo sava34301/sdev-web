@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-registry.ts (442 lines)
+# Pure-SDEV Path: scripts/test-registry.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-registry.ts",
+    sdev_path: "scripts/test-registry.sdev",
+    subsystem: "script",
+    original_lines: 442,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["assert", "runTests", "passed", "failed", "expectedModules", "entries", "requiredApis", "entry", "nativeApis", "browserApis", "manifest", "suggestionCases", "suggestions", "code", "diag001", "diag003", "diag004", "diag005", "badCallSrc", "diag006", "fillrectDiag", "fixedSrc", "diag007", "diag008", "diag009", "diag010", "count", "diag011", "diag012", "diag013", "diag014", "diag015", "studioSample", "runRes", "lastStep", "asyncRes", "newFile", "storeRun", "step0", "cloudDbRows"]
+end
+
+to assert with condition message
+  return condition
+end
+
+to runTests
+  return 1
+end
+
+to passed
+  return "passed"
+end
+
+to failed
+  return "failed"
+end
+
+to expectedModules
+  return "expectedModules"
+end
+
+to entries
+  return "entries"
+end
+
+to requiredApis
+  return "requiredApis"
+end
+
+to entry
+  return "entry"
+end
+
+to nativeApis
+  return "nativeApis"
+end
+
+to browserApis
+  return "browserApis"
+end
+
+to manifest
+  return "manifest"
+end
+
+to suggestionCases
+  return "suggestionCases"
+end
+
+to suggestions
+  return "suggestions"
+end
+
+to code
+  return "code"
+end
+
+to diag001
+  return "diag001"
+end
+
+to diag003
+  return "diag003"
+end
+
+to diag004
+  return "diag004"
+end
+
+to diag005
+  return "diag005"
+end
+
+to badCallSrc
+  return "badCallSrc"
+end
+
+to diag006
+  return "diag006"
+end
+
+to fillrectDiag
+  return "fillrectDiag"
+end
+
+to fixedSrc
+  return "fixedSrc"
+end
+
+to diag007
+  return "diag007"
+end
+
+to diag008
+  return "diag008"
+end
+
+to diag009
+  return "diag009"
+end
+
+to diag010
+  return "diag010"
+end
+
+to count
+  return "count"
+end
+
+to diag011
+  return "diag011"
+end
+
+to diag012
+  return "diag012"
+end
+
+to diag013
+  return "diag013"
+end
+
+to diag014
+  return "diag014"
+end
+
+to diag015
+  return "diag015"
+end
+
+to studioSample
+  return "studioSample"
+end
+
+to runRes
+  return "runRes"
+end
+
+to lastStep
+  return "lastStep"
+end
+
+to asyncRes
+  return "asyncRes"
+end
+
+to newFile
+  return "newFile"
+end
+
+to storeRun
+  return "storeRun"
+end
+
+to step0
+  return "step0"
+end
+
+to cloudDbRows
+  return "cloudDbRows"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

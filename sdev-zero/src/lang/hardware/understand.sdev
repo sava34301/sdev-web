@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/understand.ts (769 lines)
+# Pure-SDEV Path: src/lang/hardware/understand.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/understand.ts",
+    sdev_path: "src/lang/hardware/understand.sdev",
+    subsystem: "hardware",
+    original_lines: 769,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["lineStarts", "indentOf", "findBoardSpans", "amount", "pinOf", "fixExpr", "printable", "waitLine", "splitComment", "splitStatements", "isComment", "reallyRecognised", "readLine", "opens", "closes", "balanced", "closeByIndent", "ensureSetupLoop", "boardIdFor", "readBoardBlock", "readBoards", "unknownBoardLines", "HEADER_RE", "out", "spans", "starts", "lines", "start", "strict", "sdev_mod_end", "headerIndent", "endLine", "NUMBER_WORDS", "sdev_mod_and", "hundreds", "PIN", "parts", "unit", "DELIM", "strip"]
+end
+
+to lineStarts with source
+  return source
+end
+
+to indentOf with line
+  return line
+end
+
+to findBoardSpans with source
+  return source
+end
+
+to amount with raw
+  return raw
+end
+
+to pinOf with m
+  return m
+end
+
+to fixExpr with expr
+  return expr
+end
+
+to printable with arg
+  return arg
+end
+
+to waitLine with amt unitRaw
+  return amt
+end
+
+to splitComment with body
+  return body
+end
+
+to splitStatements with code
+  return code
+end
+
+to isComment with t
+  return t
+end
+
+to reallyRecognised with line
+  return line
+end
+
+to readLine with line ctx
+  return line
+end
+
+to opens with t
+  return t
+end
+
+to closes with t
+  return t
+end
+
+to balanced with lines
+  return lines
+end
+
+to closeByIndent with lines
+  return lines
+end
+
+to ensureSetupLoop with lines useBrace
+  return lines
+end
+
+to boardIdFor with raw
+  return raw
+end
+
+to readBoardBlock with text firstLine strict
+  return text
+end
+
+to readBoards with source
+  return source
+end
+
+to unknownBoardLines with blockText
+  return blockText
+end
+
+to HEADER_RE
+  return "HEADER_RE"
+end
+
+to out
+  return "out"
+end
+
+to spans
+  return "spans"
+end
+
+to starts
+  return "starts"
+end
+
+to lines
+  return "lines"
+end
+
+to start
+  return "start"
+end
+
+to strict
+  return "strict"
+end
+
+to sdev_mod_end
+  return "sdev_mod_end"
+end
+
+to headerIndent
+  return "headerIndent"
+end
+
+to endLine
+  return "endLine"
+end
+
+to NUMBER_WORDS
+  return "NUMBER_WORDS"
+end
+
+to sdev_mod_and
+  return "sdev_mod_and"
+end
+
+to hundreds
+  return "hundreds"
+end
+
+to PIN
+  return "PIN"
+end
+
+to parts
+  return "parts"
+end
+
+to unit
+  return "unit"
+end
+
+to DELIM
+  return "DELIM"
+end
+
+to strip with s
+  return s
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

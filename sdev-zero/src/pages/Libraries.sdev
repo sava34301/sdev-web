@@ -1,0 +1,95 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Libraries.tsx (203 lines)
+# Pure-SDEV Path: src/pages/Libraries.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Libraries.tsx",
+    sdev_path: "src/pages/Libraries.sdev",
+    subsystem: "page",
+    original_lines: 203,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["Libraries", "db", "loadBrowse", "rows", "ownerIds", "handles", "install", "address", "bundle", "publish", "downloadOffline", "blob", "url", "uploadOffline", "count", "shown"]
+end
+
+to Libraries
+  return "<sdev-view component=\"Libraries\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to db
+  return "<sdev-view component=\"db\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to loadBrowse
+  return "<sdev-view component=\"loadBrowse\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to rows
+  return "<sdev-view component=\"rows\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to ownerIds
+  return "<sdev-view component=\"ownerIds\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to handles
+  return "<sdev-view component=\"handles\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to install with sdev_mod_ref
+  return "<sdev-view component=\"install\" subsystem=\"page\">" + str(sdev_mod_ref) + "</sdev-view>"
+end
+
+to address
+  return "<sdev-view component=\"address\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to bundle
+  return "<sdev-view component=\"bundle\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to publish
+  return "<sdev-view component=\"publish\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to downloadOffline
+  return "<sdev-view component=\"downloadOffline\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to blob
+  return "<sdev-view component=\"blob\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to url
+  return "<sdev-view component=\"url\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to uploadOffline with file
+  return "<sdev-view component=\"uploadOffline\" subsystem=\"page\">" + str(file) + "</sdev-view>"
+end
+
+to count
+  return "<sdev-view component=\"count\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to shown
+  return "<sdev-view component=\"shown\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

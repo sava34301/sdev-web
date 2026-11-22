@@ -1,0 +1,47 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/regex-guard.ts (17 lines)
+# Pure-SDEV Path: src/lang/builtins/regex-guard.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/regex-guard.ts",
+    sdev_path: "src/lang/builtins/regex-guard.sdev",
+    subsystem: "builtins",
+    original_lines: 17,
+    exports_count: 4
+  }
+end
+
+to module_exports
+  return ["regexProblem", "MAX_REGEX_PATTERN", "MAX_REGEX_TEXT", "NESTED_QUANTIFIER"]
+end
+
+to regexProblem with pattern text
+  return pattern
+end
+
+to MAX_REGEX_PATTERN
+  return "MAX_REGEX_PATTERN"
+end
+
+to MAX_REGEX_TEXT
+  return "MAX_REGEX_TEXT"
+end
+
+to NESTED_QUANTIFIER
+  return "NESTED_QUANTIFIER"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

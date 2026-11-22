@@ -1,0 +1,52 @@
+# ============================================================
+# SDEV Release Pipeline, Book Builder & Hardware Reference Generator
+# (sdev-zero/lang/tools/release_docs.sdev)
+# 100% Pure SDEV port of scripts/release.mjs, scripts/build-book.ts,
+# scripts/gen-hardware-docs.ts & scripts/build-ultimate-docs.mjs
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/hardware/board_db.sdev"
+use "lang/hardware/arduino_api.sdev"
+
+# Project Architecture Rule:
+# release.json holds the single version for the IDE, CLI, VS Code extension
+# and desktop app; every installed tool reads releases.json to update itself.
+to release_build_manifest with version_str
+  set v to text_trim(version_str)
+  return {
+    version: v,
+    cli_url: "/downloads/sdev-cli-" + v,
+    vscode_vsix_url: "/downloads/sdev-vscode-" + v + ".vsix",
+    desktop_win_url: "/downloads/sdev-desktop-" + v + "-win-x64.exe",
+    desktop_linux_url: "/downloads/sdev-desktop-" + v + "-linux-x64",
+    zero_host: 1
+  }
+end
+
+to generate_hardware_reference_md
+  set ids to hw_all_board_ids()
+  set n to length(ids)
+  set out to "# SDEV Hardware & Embedded Reference\n\n## Supported Boards\n\n| ID | Name | FQBN | MCU | Uploader |\n|---|---|---|---|---|\n"
+  set i to 0
+  while i < n
+    set b to find_board_by_id(ids[i])
+    set out to out + "| `" + b["id"] + "` | " + b["name"] + " | `" + b["fqbn"] + "` | `" + b["mcu"] + "` | `" + b["uploader"] + "` |\n"
+    set i to i + 1
+  end
+  set fns to arduino_core_functions()
+  set out to out + "\n## Core Functions (" + str(length(fns)) + ")\n\n"
+  set out to out + join(fns, ", ") + "\n"
+  return out
+end
+
+to build_sdev_book_markdown with version_str
+  set book to "# The SDEV Programming Language Book (v" + version_str + ")\n\n"
+  set book to book + "## Chapter 1: 100% Zero-Host Architecture\n"
+  set book to book + "SDEV compiles itself to native x86-64 ELF, Windows PE32+ (.exe), and Seed VM bytecode.\n\n"
+  set book to book + "## Chapter 2: Canonical SDEV & Dialects\n"
+  set book to book + "Write in English, Bulgarian, Spanish, or any of 26 human languages.\n\n"
+  set book to book + "## Chapter 3: Hardware & Embedded Boards\n"
+  set book to book + "Use `board \"uno\" { ... }` to program microcontrollers in natural SDEV.\n"
+  return book
+end

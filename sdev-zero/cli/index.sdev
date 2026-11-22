@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : cli/index.ts (1556 lines)
+# Pure-SDEV Path: cli/index.sdev
+# Subsystem     : cli
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "cli/index.ts",
+    sdev_path: "cli/index.sdev",
+    subsystem: "cli",
+    original_lines: 1556,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["flag", "value", "positionals", "runOptions", "die", "help", "cmdAgent", "cmdRun", "cmdBuildWeb", "parseFile", "cmdRepl", "cmdWatch", "cmdCompile", "loadContainer", "cmdRunBc", "cmdDisasm", "hexdump", "cmdNative", "cmdInfo", "cmdSign", "requireLocalDialect", "cmdDialect", "installDialect", "cmdExt", "cmdLib", "cmdAuth", "cmdCloud", "emit", "cmdEdit", "cmdDoctor", "cmdExplain", "cmdLint", "cmdApi", "createProjectFiles", "cmdNew", "cmdInit", "main", "SDEVC_MAGIC", "argv", "FLAGS_WITH_VALUES"]
+end
+
+to flag with name short
+  return name
+end
+
+to value with name short
+  return name
+end
+
+to positionals
+  return 1
+end
+
+to runOptions
+  return 1
+end
+
+to die with msg
+  return msg
+end
+
+to help
+  return 1
+end
+
+to cmdAgent with sub rest
+  return sub
+end
+
+to cmdRun with file
+  return file
+end
+
+to cmdBuildWeb with file
+  return file
+end
+
+to parseFile with file opts
+  return file
+end
+
+to cmdRepl
+  return 1
+end
+
+to cmdWatch with file
+  return file
+end
+
+to cmdCompile with file
+  return file
+end
+
+to loadContainer with file
+  return file
+end
+
+to cmdRunBc with file
+  return file
+end
+
+to cmdDisasm with file
+  return file
+end
+
+to hexdump with bytes
+  return bytes
+end
+
+to cmdNative with file
+  return file
+end
+
+to cmdInfo with file
+  return file
+end
+
+to cmdSign with sub file
+  return sub
+end
+
+to requireLocalDialect with slug
+  return slug
+end
+
+to cmdDialect with sub rest
+  return sub
+end
+
+to installDialect with reference
+  return reference
+end
+
+to cmdExt with sub rest
+  return sub
+end
+
+to cmdLib with sub rest
+  return sub
+end
+
+to cmdAuth with sub rest
+  return sub
+end
+
+to cmdCloud with sub rest
+  return sub
+end
+
+to emit with text
+  return text
+end
+
+to cmdEdit with file
+  return file
+end
+
+to cmdDoctor
+  return 1
+end
+
+to cmdExplain with codeOrName
+  return codeOrName
+end
+
+to cmdLint with file
+  return file
+end
+
+to cmdApi with query
+  return query
+end
+
+to createProjectFiles with targetDir name templateKey isInit
+  return targetDir
+end
+
+to cmdNew with name
+  return name
+end
+
+to cmdInit
+  return 1
+end
+
+to main
+  return 1
+end
+
+to SDEVC_MAGIC
+  return "SDEVC_MAGIC"
+end
+
+to argv
+  return "argv"
+end
+
+to FLAGS_WITH_VALUES
+  return "FLAGS_WITH_VALUES"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/IDE.tsx (2478 lines)
+# Pure-SDEV Path: src/pages/IDE.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/IDE.tsx",
+    sdev_path: "src/pages/IDE.sdev",
+    subsystem: "page",
+    original_lines: 2478,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["translationHasDiff", "translationDownloadName", "uniqueUntitled", "IDEPage", "createWindow", "PersonalPanel", "IdeCommandPalette", "IdeSearchPanel", "IdeSettingsPanel", "IdeOutline", "IdeProblems", "IdeAssistantPanel", "HardwarePanel", "RuntimeExplorerPanel", "TimeTravelDebugger", "LiveClassroomPanel", "LiveScratchpadPanel", "WasiComponentDialog", "GitHubPushDialog", "AppPreviewPanel", "WebPreviewPanel", "patchLegacyRuntimeStub", "pattern", "replacement", "STARTER_FILES", "SNIPPETS", "fileIdSeq", "nextFileId", "taken", "DEFAULT_SETTINGS", "IDE_THEME_VARS", "LS_FILES", "LS_FOLDERS", "LS_ACTIVE", "LS_OPEN", "LS_SETTINGS", "SUPPORTED_LANGUAGES", "navigate", "uiStateRef", "uiHandlersRef"]
+end
+
+to translationHasDiff with writtenBody translatedSource
+  return "<sdev-view component=\"translationHasDiff\" subsystem=\"page\">" + str(writtenBody) + "</sdev-view>"
+end
+
+to translationDownloadName with fileName variant hasDiff
+  return "<sdev-view component=\"translationDownloadName\" subsystem=\"page\">" + str(fileName) + "</sdev-view>"
+end
+
+to uniqueUntitled with existing
+  return "<sdev-view component=\"uniqueUntitled\" subsystem=\"page\">" + str(existing) + "</sdev-view>"
+end
+
+to IDEPage
+  return "<sdev-view component=\"IDEPage\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to createWindow
+  return "<sdev-view component=\"createWindow\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to PersonalPanel
+  return "<sdev-view component=\"PersonalPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to IdeCommandPalette
+  return "<sdev-view component=\"IdeCommandPalette\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to IdeSearchPanel
+  return "<sdev-view component=\"IdeSearchPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to IdeSettingsPanel
+  return "<sdev-view component=\"IdeSettingsPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to IdeOutline
+  return "<sdev-view component=\"IdeOutline\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to IdeProblems
+  return "<sdev-view component=\"IdeProblems\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to IdeAssistantPanel
+  return "<sdev-view component=\"IdeAssistantPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to HardwarePanel
+  return "<sdev-view component=\"HardwarePanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to RuntimeExplorerPanel
+  return "<sdev-view component=\"RuntimeExplorerPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to TimeTravelDebugger
+  return "<sdev-view component=\"TimeTravelDebugger\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to LiveClassroomPanel
+  return "<sdev-view component=\"LiveClassroomPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to LiveScratchpadPanel
+  return "<sdev-view component=\"LiveScratchpadPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to WasiComponentDialog
+  return "<sdev-view component=\"WasiComponentDialog\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to GitHubPushDialog
+  return "<sdev-view component=\"GitHubPushDialog\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to AppPreviewPanel
+  return "<sdev-view component=\"AppPreviewPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to WebPreviewPanel
+  return "<sdev-view component=\"WebPreviewPanel\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to patchLegacyRuntimeStub
+  return "<sdev-view component=\"patchLegacyRuntimeStub\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to pattern
+  return "<sdev-view component=\"pattern\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to replacement
+  return "<sdev-view component=\"replacement\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to STARTER_FILES
+  return "<sdev-view component=\"STARTER_FILES\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to SNIPPETS
+  return "<sdev-view component=\"SNIPPETS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to fileIdSeq
+  return "<sdev-view component=\"fileIdSeq\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to nextFileId
+  return "<sdev-view component=\"nextFileId\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to taken
+  return "<sdev-view component=\"taken\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to DEFAULT_SETTINGS
+  return "<sdev-view component=\"DEFAULT_SETTINGS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to IDE_THEME_VARS
+  return "<sdev-view component=\"IDE_THEME_VARS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to LS_FILES
+  return "<sdev-view component=\"LS_FILES\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to LS_FOLDERS
+  return "<sdev-view component=\"LS_FOLDERS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to LS_ACTIVE
+  return "<sdev-view component=\"LS_ACTIVE\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to LS_OPEN
+  return "<sdev-view component=\"LS_OPEN\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to LS_SETTINGS
+  return "<sdev-view component=\"LS_SETTINGS\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to SUPPORTED_LANGUAGES
+  return "<sdev-view component=\"SUPPORTED_LANGUAGES\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to navigate
+  return "<sdev-view component=\"navigate\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to uiStateRef
+  return "<sdev-view component=\"uiStateRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to uiHandlersRef
+  return "<sdev-view component=\"uiHandlersRef\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

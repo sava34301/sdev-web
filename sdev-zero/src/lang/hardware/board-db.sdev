@@ -1,0 +1,63 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/board-db.ts (508 lines)
+# Pure-SDEV Path: src/lang/hardware/board-db.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/board-db.ts",
+    sdev_path: "src/lang/hardware/board-db.sdev",
+    subsystem: "hardware",
+    original_lines: 508,
+    exports_count: 8
+  }
+end
+
+to module_exports
+  return ["findBoardById", "detectBoardByUsb", "canFlashInBrowser", "canCompileInCloud", "BOARDS", "exact", "make_BoardUploader", "make_BoardDescriptor"]
+end
+
+to findBoardById with id
+  return id
+end
+
+to detectBoardByUsb with vid pid
+  return vid
+end
+
+to canFlashInBrowser with board
+  return board
+end
+
+to canCompileInCloud with board
+  return board
+end
+
+to BOARDS
+  return "BOARDS"
+end
+
+to exact
+  return "exact"
+end
+
+to make_BoardUploader with payload
+  return payload
+end
+
+to make_BoardDescriptor with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,47 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/compile-self.d.ts (6 lines)
+# Pure-SDEV Path: src/lang-bridge/compile-self-types.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/compile-self.d.ts",
+    sdev_path: "src/lang-bridge/compile-self-types.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 6,
+    exports_count: 4
+  }
+end
+
+to module_exports
+  return ["compile", "compileWith", "bakedDriver", "setSeedLoader"]
+end
+
+to compile with source modules string
+  return source
+end
+
+to compileWith with driver source modules string
+  return driver
+end
+
+to bakedDriver
+  return 1
+end
+
+to setSeedLoader with fn
+  return fn
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

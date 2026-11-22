@@ -1,0 +1,135 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/dialect/spec.ts (219 lines)
+# Pure-SDEV Path: src/lang/dialect/spec.sdev
+# Subsystem     : dialect
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/dialect/spec.ts",
+    sdev_path: "src/lang/dialect/spec.sdev",
+    subsystem: "dialect",
+    original_lines: 219,
+    exports_count: 26
+  }
+end
+
+to module_exports
+  return ["emptyDialect", "inherit", "validateDialect", "isPublishable", "preludeSource", "DEFAULT_STYLE", "WORD_RE", "SLUG_RE", "OP_RE", "issues", "seen", "word", "all", "owner", "fnNames", "opSymbols", "make_BlockStyle", "make_AssignmentForm", "make_DialectNames", "make_DialectSynonyms", "make_DialectStyle", "make_DialectConstructFn", "make_DialectConstructOp", "make_DialectMeta", "make_DialectSpec", "make_ValidationIssue"]
+end
+
+to emptyDialect with partial
+  return partial
+end
+
+to inherit with base child
+  return base
+end
+
+to validateDialect with spec
+  return spec
+end
+
+to isPublishable with spec
+  return spec
+end
+
+to preludeSource with spec
+  return spec
+end
+
+to DEFAULT_STYLE
+  return "DEFAULT_STYLE"
+end
+
+to WORD_RE
+  return "WORD_RE"
+end
+
+to SLUG_RE
+  return "SLUG_RE"
+end
+
+to OP_RE
+  return "OP_RE"
+end
+
+to issues
+  return "issues"
+end
+
+to seen
+  return "seen"
+end
+
+to word
+  return "word"
+end
+
+to all
+  return "all"
+end
+
+to owner
+  return "owner"
+end
+
+to fnNames
+  return "fnNames"
+end
+
+to opSymbols
+  return "opSymbols"
+end
+
+to make_BlockStyle with payload
+  return payload
+end
+
+to make_AssignmentForm with payload
+  return payload
+end
+
+to make_DialectNames with payload
+  return payload
+end
+
+to make_DialectSynonyms with payload
+  return payload
+end
+
+to make_DialectStyle with payload
+  return payload
+end
+
+to make_DialectConstructFn with payload
+  return payload
+end
+
+to make_DialectConstructOp with payload
+  return payload
+end
+
+to make_DialectMeta with payload
+  return payload
+end
+
+to make_DialectSpec with payload
+  return payload
+end
+
+to make_ValidationIssue with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

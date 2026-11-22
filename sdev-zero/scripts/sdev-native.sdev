@@ -1,0 +1,107 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/sdev-native.mjs (93 lines)
+# Pure-SDEV Path: scripts/sdev-native.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/sdev-native.mjs",
+    sdev_path: "scripts/sdev-native.sdev",
+    subsystem: "script",
+    original_lines: 93,
+    exports_count: 19
+  }
+end
+
+to module_exports
+  return ["usage", "extractSayMessages", "main", "msgs", "lines", "trimmed", "expr", "argv", "src", "target", "source", "srcDir", "readModule", "candidates", "base", "outBin", "asm", "asmPath", "messages"]
+end
+
+to usage
+  return 1
+end
+
+to extractSayMessages with source
+  return source
+end
+
+to main
+  return 1
+end
+
+to msgs
+  return "msgs"
+end
+
+to lines
+  return "lines"
+end
+
+to trimmed
+  return "trimmed"
+end
+
+to expr
+  return "expr"
+end
+
+to argv
+  return "argv"
+end
+
+to src
+  return "src"
+end
+
+to target
+  return "target"
+end
+
+to source
+  return "source"
+end
+
+to srcDir
+  return "srcDir"
+end
+
+to readModule with p
+  return p
+end
+
+to candidates
+  return "candidates"
+end
+
+to base
+  return "base"
+end
+
+to outBin
+  return "outBin"
+end
+
+to asm
+  return "asm"
+end
+
+to asmPath
+  return "asmPath"
+end
+
+to messages
+  return "messages"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

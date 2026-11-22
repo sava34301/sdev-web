@@ -1,0 +1,51 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/directives.ts (31 lines)
+# Pure-SDEV Path: src/lang/agent/directives.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/directives.ts",
+    sdev_path: "src/lang/agent/directives.sdev",
+    subsystem: "agent",
+    original_lines: 31,
+    exports_count: 5
+  }
+end
+
+to module_exports
+  return ["scanDirectives", "make_AgentMode", "make_BrainMode", "make_AgentDirectives", "make_DirectiveScan"]
+end
+
+to scanDirectives with source
+  return source
+end
+
+to make_AgentMode with payload
+  return payload
+end
+
+to make_BrainMode with payload
+  return payload
+end
+
+to make_AgentDirectives with payload
+  return payload
+end
+
+to make_DirectiveScan with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

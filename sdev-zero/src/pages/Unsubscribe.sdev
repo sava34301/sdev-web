@@ -1,0 +1,51 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/pages/Unsubscribe.tsx (89 lines)
+# Pure-SDEV Path: src/pages/Unsubscribe.sdev
+# Subsystem     : page
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/pages/Unsubscribe.tsx",
+    sdev_path: "src/pages/Unsubscribe.sdev",
+    subsystem: "page",
+    original_lines: 89,
+    exports_count: 5
+  }
+end
+
+to module_exports
+  return ["Unsubscribe", "token", "supabaseUrl", "supabaseAnonKey", "confirm"]
+end
+
+to Unsubscribe
+  return "<sdev-view component=\"Unsubscribe\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to token
+  return "<sdev-view component=\"token\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to supabaseUrl
+  return "<sdev-view component=\"supabaseUrl\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to supabaseAnonKey
+  return "<sdev-view component=\"supabaseAnonKey\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to confirm
+  return "<sdev-view component=\"confirm\" subsystem=\"page\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

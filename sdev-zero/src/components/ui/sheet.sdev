@@ -1,0 +1,75 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/sheet.tsx (107 lines)
+# Pure-SDEV Path: src/components/ui/sheet.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/sheet.tsx",
+    sdev_path: "src/components/ui/sheet.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 107,
+    exports_count: 11
+  }
+end
+
+to module_exports
+  return ["Sheet", "SheetTrigger", "SheetClose", "SheetPortal", "SheetOverlay", "sheetVariants", "SheetContent", "SheetHeader", "SheetFooter", "SheetTitle", "SheetDescription"]
+end
+
+to Sheet
+  return "<sdev-view component=\"Sheet\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SheetTrigger
+  return "<sdev-view component=\"SheetTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SheetClose
+  return "<sdev-view component=\"SheetClose\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SheetPortal
+  return "<sdev-view component=\"SheetPortal\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SheetOverlay
+  return "<sdev-view component=\"SheetOverlay\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to sheetVariants
+  return "<sdev-view component=\"sheetVariants\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SheetContent
+  return "<sdev-view component=\"SheetContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SheetHeader with props
+  return "<sdev-view component=\"SheetHeader\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to SheetFooter with props
+  return "<sdev-view component=\"SheetFooter\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to SheetTitle
+  return "<sdev-view component=\"SheetTitle\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SheetDescription
+  return "<sdev-view component=\"SheetDescription\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

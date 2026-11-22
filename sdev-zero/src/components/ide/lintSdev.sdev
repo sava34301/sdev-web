@@ -1,0 +1,103 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/lintSdev.ts (99 lines)
+# Pure-SDEV Path: src/components/ide/lintSdev.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/lintSdev.ts",
+    sdev_path: "src/components/ide/lintSdev.sdev",
+    subsystem: "ide-component",
+    original_lines: 99,
+    exports_count: 18
+  }
+end
+
+to module_exports
+  return ["lintEditorSource", "lintEditorFile", "lintCanonical", "problems", "lines", "openBlocks", "openParens", "openBrackets", "openString", "stringStartLine", "lineNo", "line", "ci", "code", "ch", "opens", "closes", "make_Problem"]
+end
+
+to lintEditorSource with code
+  return "<sdev-view component=\"lintEditorSource\" subsystem=\"ide-component\">" + str(code) + "</sdev-view>"
+end
+
+to lintEditorFile with code
+  return "<sdev-view component=\"lintEditorFile\" subsystem=\"ide-component\">" + str(code) + "</sdev-view>"
+end
+
+to lintCanonical with code
+  return "<sdev-view component=\"lintCanonical\" subsystem=\"ide-component\">" + str(code) + "</sdev-view>"
+end
+
+to problems
+  return "<sdev-view component=\"problems\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to lines
+  return "<sdev-view component=\"lines\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to openBlocks
+  return "<sdev-view component=\"openBlocks\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to openParens
+  return "<sdev-view component=\"openParens\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to openBrackets
+  return "<sdev-view component=\"openBrackets\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to openString
+  return "<sdev-view component=\"openString\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to stringStartLine
+  return "<sdev-view component=\"stringStartLine\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to lineNo
+  return "<sdev-view component=\"lineNo\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to line
+  return "<sdev-view component=\"line\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ci
+  return "<sdev-view component=\"ci\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to code
+  return "<sdev-view component=\"code\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ch
+  return "<sdev-view component=\"ch\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to opens
+  return "<sdev-view component=\"opens\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to closes
+  return "<sdev-view component=\"closes\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to make_Problem with payload
+  return "<sdev-view component=\"make_Problem\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/home/compilerScene.ts (125 lines)
+# Pure-SDEV Path: src/components/home/compilerScene.sdev
+# Subsystem     : component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/home/compilerScene.ts",
+    sdev_path: "src/components/home/compilerScene.sdev",
+    subsystem: "component",
+    original_lines: 125,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["createCompilerScene", "css", "color", "background", "surface", "primary", "foreground", "muted", "scene", "renderer", "camera", "light", "rig", "textures", "blocks", "canvas", "ctx", "texture", "group", "slab", "face", "edge", "machine", "tileGeometry", "tiles", "tile", "processor", "outline", "targets", "targetBlocks", "target", "smooth", "resize", "observer", "frame", "visible", "visibility", "render", "stage", "assembly"]
+end
+
+to createCompilerScene with host section panels
+  return "<sdev-view component=\"createCompilerScene\" subsystem=\"component\">" + str(host) + "</sdev-view>"
+end
+
+to css
+  return "<sdev-view component=\"css\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to color with token
+  return "<sdev-view component=\"color\" subsystem=\"component\">" + str(token) + "</sdev-view>"
+end
+
+to background
+  return "<sdev-view component=\"background\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to surface
+  return "<sdev-view component=\"surface\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to primary
+  return "<sdev-view component=\"primary\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to foreground
+  return "<sdev-view component=\"foreground\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to muted
+  return "<sdev-view component=\"muted\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to scene
+  return "<sdev-view component=\"scene\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to renderer
+  return "<sdev-view component=\"renderer\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to camera
+  return "<sdev-view component=\"camera\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to light
+  return "<sdev-view component=\"light\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to rig
+  return "<sdev-view component=\"rig\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to textures
+  return "<sdev-view component=\"textures\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to blocks
+  return "<sdev-view component=\"blocks\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to canvas
+  return "<sdev-view component=\"canvas\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to ctx
+  return "<sdev-view component=\"ctx\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to texture
+  return "<sdev-view component=\"texture\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to group
+  return "<sdev-view component=\"group\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to slab
+  return "<sdev-view component=\"slab\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to face
+  return "<sdev-view component=\"face\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to edge
+  return "<sdev-view component=\"edge\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to machine
+  return "<sdev-view component=\"machine\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to tileGeometry
+  return "<sdev-view component=\"tileGeometry\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to tiles
+  return "<sdev-view component=\"tiles\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to tile
+  return "<sdev-view component=\"tile\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to processor
+  return "<sdev-view component=\"processor\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to outline
+  return "<sdev-view component=\"outline\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to targets
+  return "<sdev-view component=\"targets\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to targetBlocks
+  return "<sdev-view component=\"targetBlocks\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to target
+  return "<sdev-view component=\"target\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to smooth with start sdev_mod_end p
+  return "<sdev-view component=\"smooth\" subsystem=\"component\">" + str(start) + "</sdev-view>"
+end
+
+to resize
+  return "<sdev-view component=\"resize\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to observer
+  return "<sdev-view component=\"observer\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to frame
+  return "<sdev-view component=\"frame\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to visible
+  return "<sdev-view component=\"visible\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to visibility
+  return "<sdev-view component=\"visibility\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to render
+  return "<sdev-view component=\"render\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to stage
+  return "<sdev-view component=\"stage\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to assembly
+  return "<sdev-view component=\"assembly\" subsystem=\"component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

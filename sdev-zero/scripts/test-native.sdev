@@ -1,0 +1,79 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-native.mjs (156 lines)
+# Pure-SDEV Path: scripts/test-native.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-native.mjs",
+    sdev_path: "scripts/test-native.sdev",
+    subsystem: "script",
+    original_lines: 156,
+    exports_count: 12
+  }
+end
+
+to module_exports
+  return ["findBintools", "main", "CASES", "which", "asPath", "ldPath", "bins", "pass", "dir", "bin", "asm", "wantStatus"]
+end
+
+to findBintools
+  return 1
+end
+
+to main
+  return 1
+end
+
+to CASES
+  return "CASES"
+end
+
+to which with cmd
+  return cmd
+end
+
+to asPath
+  return "asPath"
+end
+
+to ldPath
+  return "ldPath"
+end
+
+to bins
+  return "bins"
+end
+
+to pass
+  return "pass"
+end
+
+to dir
+  return "dir"
+end
+
+to bin
+  return "bin"
+end
+
+to asm
+  return "asm"
+end
+
+to wantStatus
+  return "wantStatus"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

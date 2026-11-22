@@ -1,7 +1,8 @@
 /**
- * The dialect spec: one versioned JSON document that describes a personal
- * version of sdev. A dialect is DATA — the self-hosted lexer/parser/codegen
- * are never forked.
+ * The dialect spec: a pure-data description of a personal version of sdev
+ * (authored and stored as a `.sdev` file via `sdev-format.ts`). A dialect is
+ * DATA — it translates straight into canonical sdev v2 without needing the AI
+ * understander or forking the self-hosted lexer/parser/codegen.
  */
 import { CATALOG, CATALOG_BY_WORD, CATALOG_WORDS } from './catalog';
 

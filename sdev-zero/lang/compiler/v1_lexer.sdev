@@ -1,0 +1,404 @@
+# SDEV v1 Lexer — authored in pure SDEV.
+#
+# Tokenizes SDEV v1 source code into a list of typed token records and can
+# stream them via `say`:
+#
+#   N=<int>             integer literal (decimal, 0x hex, 0b bin, 0o oct)
+#   F=<mantissa>:<sc>   floating-point literal (value = mantissa / 10^sc)
+#   I=<ident>           identifier or v1 keyword
+#   S=<text>            string literal (contents only, escapes decoded)
+#   FS=<text>           format string literal (f"..." / f'...')
+#   P=<op>              single- or multi-char punctuation / operator
+#   NL                  newline
+#   EOF                 end of source
+
+to v1_is_digit with c
+  if c >= 48 and c <= 57
+    return 1
+  end
+  return 0
+end
+
+to v1_is_hex_digit with c
+  if c >= 48 and c <= 57
+    return 1
+  end
+  if c >= 65 and c <= 70
+    return 1
+  end
+  if c >= 97 and c <= 102
+    return 1
+  end
+  return 0
+end
+
+to v1_hex_val with c
+  if c >= 48 and c <= 57
+    return c - 48
+  end
+  if c >= 65 and c <= 70
+    return c - 55
+  end
+  if c >= 97 and c <= 102
+    return c - 87
+  end
+  return 0
+end
+
+to v1_is_alpha with c
+  if c is 95
+    return 1
+  end
+  # UTF-8 lead/continuation bytes are treated as letters so all human scripts work.
+  if c >= 128
+    return 1
+  end
+  if c >= 65 and c <= 90
+    return 1
+  end
+  if c >= 97 and c <= 122
+    return 1
+  end
+  return 0
+end
+
+to v1_is_alnum with c
+  if v1_is_digit(c) is 1
+    return 1
+  end
+  return v1_is_alpha(c)
+end
+
+to v1_slice with src i j
+  if j <= i
+    return ""
+  end
+  return substr(src, i, j - i)
+end
+
+to v1_is_quote with c
+  if c is 34 or c is 39 or c is 96
+    return 1
+  end
+  return 0
+end
+
+to v1_two_op with c nx
+  # :: (58, 58)
+  if c is 58 and nx is 58
+    return "::"
+  end
+  # ;; (59, 59)
+  if c is 59 and nx is 59
+    return ";;"
+  end
+  # <= (60, 61)
+  if c is 60 and nx is 61
+    return "<="
+  end
+  # >= (62, 61)
+  if c is 62 and nx is 61
+    return ">="
+  end
+  # == (61, 61)
+  if c is 61 and nx is 61
+    return "=="
+  end
+  # != (33, 61)
+  if c is 33 and nx is 61
+    return "!="
+  end
+  # <> (60, 62)
+  if c is 60 and nx is 62
+    return "<>"
+  end
+  # -> (45, 62)
+  if c is 45 and nx is 62
+    return "->"
+  end
+  # => (61, 62)
+  if c is 61 and nx is 62
+    return "=>"
+  end
+  # |> (124, 62)
+  if c is 124 and nx is 62
+    return "|>"
+  end
+  # := (58, 61)
+  if c is 58 and nx is 61
+    return ":="
+  end
+  # ** (42, 42)
+  if c is 42 and nx is 42
+    return "**"
+  end
+  # += (43, 61), -= (45, 61), *= (42, 61), /= (47, 61), %= (37, 61)
+  if nx is 61
+    if c is 43
+      return "+="
+    end
+    if c is 45
+      return "-="
+    end
+    if c is 42
+      return "*="
+    end
+    if c is 47
+      return "/="
+    end
+    if c is 37
+      return "%="
+    end
+  end
+  # {| (123, 124), |} (124, 125)
+  if c is 123 and nx is 124
+    return "{|"
+  end
+  if c is 124 and nx is 125
+    return "|}"
+  end
+  # && (38, 38), || (124, 124)
+  if c is 38 and nx is 38
+    return "&&"
+  end
+  if c is 124 and nx is 124
+    return "||"
+  end
+  return ""
+end
+
+to v1_lex_list with src
+  set n to length(src)
+  set buf to mklist(n + 2)
+  set count to 0
+  set i to 0
+  while i < n
+    set c to ord(src, i)
+    set nx to 0 - 1
+    if i + 1 < n
+      set nx to ord(src, i + 1)
+    end
+    # Whitespace: space, tab, CR
+    if c is 32 or c is 9 or c is 13
+      set i to i + 1
+    else if c is 10
+      set buf[count] to "NL"
+      set count to count + 1
+      set i to i + 1
+    # Single-line # comment
+    else if c is 35
+      while i < n and ord(src, i) is not 10
+        set i to i + 1
+      end
+    # Single-line // comment
+    else if c is 47 and nx is 47
+      while i < n and ord(src, i) is not 10
+        set i to i + 1
+      end
+    # Block /* ... */ comment
+    else if c is 47 and nx is 42
+      set i to i + 2
+      set closed to 0
+      while i < n and closed is 0
+        if ord(src, i) is 42 and i + 1 < n and ord(src, i + 1) is 47
+          set i to i + 2
+          set closed to 1
+        else
+          set i to i + 1
+        end
+      end
+    # Single ';' statement separator (when not ';;')
+    else if c is 59 and nx is not 59
+      set i to i + 1
+    # String prefixes f/F, r/R, b/B followed by quote
+    else if (c is 102 or c is 70 or c is 114 or c is 82 or c is 98 or c is 66) and v1_is_quote(nx) is 1
+      set is_f to 0
+      set is_raw to 0
+      if c is 102 or c is 70
+        set is_f to 1
+      end
+      if c is 114 or c is 82
+        set is_raw to 1
+      end
+      set quote to nx
+      set j to i + 2
+      set sbuf to ""
+      set collecting to 1
+      while collecting is 1
+        if j >= n
+          set collecting to 0
+        else
+          set q to ord(src, j)
+          if q is quote
+            set collecting to 0
+          else if q is 92 and is_raw is 0 and j + 1 < n
+            set e to ord(src, j + 1)
+            if e is 110
+              set sbuf to concat(sbuf, chr(10))
+            else if e is 116
+              set sbuf to concat(sbuf, chr(9))
+            else if e is 114
+              set sbuf to concat(sbuf, chr(13))
+            else if e is 48
+              set sbuf to concat(sbuf, chr(0))
+            else
+              set sbuf to concat(sbuf, chr(e))
+            end
+            set j to j + 2
+          else
+            set sbuf to concat(sbuf, chr(q))
+            set j to j + 1
+          end
+        end
+      end
+      if is_f is 1
+        set buf[count] to concat("FS=", sbuf)
+      else
+        set buf[count] to concat("S=", sbuf)
+      end
+      set count to count + 1
+      set i to j + 1
+    # Regular string literal ("...", '...', `...`)
+    else if v1_is_quote(c) is 1
+      set quote to c
+      set j to i + 1
+      set sbuf to ""
+      set collecting to 1
+      while collecting is 1
+        if j >= n
+          set collecting to 0
+        else
+          set q to ord(src, j)
+          if q is quote
+            set collecting to 0
+          else if q is 92 and j + 1 < n
+            set e to ord(src, j + 1)
+            if e is 110
+              set sbuf to concat(sbuf, chr(10))
+            else if e is 116
+              set sbuf to concat(sbuf, chr(9))
+            else if e is 114
+              set sbuf to concat(sbuf, chr(13))
+            else if e is 48
+              set sbuf to concat(sbuf, chr(0))
+            else
+              set sbuf to concat(sbuf, chr(e))
+            end
+            set j to j + 2
+          else
+            set sbuf to concat(sbuf, chr(q))
+            set j to j + 1
+          end
+        end
+      end
+      set buf[count] to concat("S=", sbuf)
+      set count to count + 1
+      set i to j + 1
+    # Numeric literals (0x hex, 0b bin, 0o oct, decimal int, float)
+    else if v1_is_digit(c) is 1
+      if c is 48 and (nx is 120 or nx is 88 or nx is 98 or nx is 66 or nx is 111 or nx is 79)
+        set base to 16
+        if nx is 98 or nx is 66
+          set base to 2
+        else if nx is 111 or nx is 79
+          set base to 8
+        end
+        set j to i + 2
+        set v to 0
+        while j < n
+          set d to ord(src, j)
+          if d is 95
+            set j to j + 1
+          else if v1_is_hex_digit(d) is 1
+            set v to v * base + v1_hex_val(d)
+            set j to j + 1
+          else
+            break
+          end
+        end
+        set buf[count] to concat("N=", str(v))
+        set count to count + 1
+        set i to j
+      else
+        set j to i
+        set v to 0
+        while j < n
+          set d to ord(src, j)
+          if d is 95
+            set j to j + 1
+          else if v1_is_digit(d) is 1
+            set v to v * 10 + (d - 48)
+            set j to j + 1
+          else
+            break
+          end
+        end
+        set is_f to 0
+        set scale to 0
+        if j < n and ord(src, j) is 46 and j + 1 < n and v1_is_digit(ord(src, j + 1)) is 1
+          set is_f to 1
+          set j to j + 1
+          while j < n
+            set d to ord(src, j)
+            if d is 95
+              set j to j + 1
+            else if v1_is_digit(d) is 1
+              set v to v * 10 + (d - 48)
+              set scale to scale + 1
+              set j to j + 1
+            else
+              break
+            end
+          end
+        end
+        if is_f is 1
+          set buf[count] to concat("F=", concat(str(v), concat(":", str(scale))))
+        else
+          set buf[count] to concat("N=", str(v))
+        end
+        set count to count + 1
+        set i to j
+      end
+    # Identifiers and v1 keywords
+    else if v1_is_alpha(c) is 1
+      set j to i
+      while j < n and v1_is_alnum(ord(src, j)) is 1
+        set j to j + 1
+      end
+      set buf[count] to concat("I=", v1_slice(src, i, j))
+      set count to count + 1
+      set i to j
+    else
+      set op2 to v1_two_op(c, nx)
+      if length(op2) > 0
+        set buf[count] to concat("P=", op2)
+        set count to count + 1
+        set i to i + 2
+      else
+        set buf[count] to concat("P=", chr(c))
+        set count to count + 1
+        set i to i + 1
+      end
+    end
+  end
+  set buf[count] to "EOF"
+  set count to count + 1
+  set out to mklist(count)
+  set k to 0
+  while k < count
+    set out[k] to buf[k]
+    set k to k + 1
+  end
+  return out
+end
+
+to v1_lex with src
+  set toks to v1_lex_list(src)
+  set n to length(toks)
+  set i to 0
+  while i < n
+    say concat(toks[i], "")
+    set i to i + 1
+  end
+  return toks
+end

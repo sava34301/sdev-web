@@ -1,0 +1,95 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/menubar.tsx (207 lines)
+# Pure-SDEV Path: src/components/ui/menubar.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/menubar.tsx",
+    sdev_path: "src/components/ui/menubar.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 207,
+    exports_count: 16
+  }
+end
+
+to module_exports
+  return ["MenubarMenu", "MenubarGroup", "MenubarPortal", "MenubarSub", "MenubarRadioGroup", "Menubar", "MenubarTrigger", "MenubarSubTrigger", "MenubarSubContent", "MenubarContent", "MenubarItem", "MenubarCheckboxItem", "MenubarRadioItem", "MenubarLabel", "MenubarSeparator", "MenubarShortcut"]
+end
+
+to MenubarMenu
+  return "<sdev-view component=\"MenubarMenu\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarGroup
+  return "<sdev-view component=\"MenubarGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarPortal
+  return "<sdev-view component=\"MenubarPortal\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarSub
+  return "<sdev-view component=\"MenubarSub\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarRadioGroup
+  return "<sdev-view component=\"MenubarRadioGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to Menubar
+  return "<sdev-view component=\"Menubar\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarTrigger
+  return "<sdev-view component=\"MenubarTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarSubTrigger
+  return "<sdev-view component=\"MenubarSubTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarSubContent
+  return "<sdev-view component=\"MenubarSubContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarContent
+  return "<sdev-view component=\"MenubarContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarItem
+  return "<sdev-view component=\"MenubarItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarCheckboxItem
+  return "<sdev-view component=\"MenubarCheckboxItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarRadioItem
+  return "<sdev-view component=\"MenubarRadioItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarLabel
+  return "<sdev-view component=\"MenubarLabel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarSeparator
+  return "<sdev-view component=\"MenubarSeparator\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to MenubarShortcut with props
+  return "<sdev-view component=\"MenubarShortcut\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,240 @@
+# Self-hosted lexer test — authored in SDEV.
+#
+#   node bin/sdevhost.mjs scripts/test-self-lexer.sdev
+#
+# Runs the lexer rules from lang/compiler/lexer.sdev on sample sources and
+# diffs the token stream against an SDEV reference lexer, plus verifies
+# byte-identity of lang/compiler/lexer.sdev through the self-hosted shim.
+#
+# host-prefetch: sdev:compile:self:lang/compiler/lexer.sdev
+# host-prefetch: sdev:compile:boot:lang/compiler/lexer.sdev
+
+use "lang/stdlib/testkit.sdev"
+use "lang/compiler/lexer.sdev"
+
+# Stream tokens using the helpers from lang/compiler/lexer.sdev into a
+# newline-delimited string so we can diff in-process without subprocesses.
+to run_lexer with src
+  set out to ""
+  set n to length(src)
+  set i to 0
+  while i < n
+    set c to ord(src, i)
+    if c is 32
+      set i to i + 1
+    else
+      if c is 9
+        set i to i + 1
+      else
+        if c is 13
+          set i to i + 1
+        else
+          if c is 10
+            set out to out + "NL\n"
+            set i to i + 1
+          else
+            if is_digit(c)
+              set j to i
+              set cont to 1
+              while cont
+                if j >= n
+                  set cont to 0
+                else
+                  if is_digit(ord(src, j))
+                    set j to j + 1
+                  else
+                    set cont to 0
+                  end
+                end
+              end
+              set v to 0
+              set k to i
+              while k < j
+                set v to v * 10 + ord(src, k) - 48
+                set k to k + 1
+              end
+              set out to out + "N=" + str(v) + "\n"
+              set i to j
+            else
+              if is_alpha(c)
+                set j to i
+                set cont to 1
+                while cont
+                  if j >= n
+                    set cont to 0
+                  else
+                    if is_alnum(ord(src, j))
+                      set j to j + 1
+                    else
+                      set cont to 0
+                    end
+                  end
+                end
+                set out to out + "I=" + slice(src, i, j) + "\n"
+                set i to j
+              else
+                if c is 34
+                  set j to i + 1
+                  set cont to 1
+                  while cont
+                    if j >= n
+                      set cont to 0
+                    else
+                      if ord(src, j) is 34
+                        set cont to 0
+                      else
+                        set j to j + 1
+                      end
+                    end
+                  end
+                  set out to out + "S=" + slice(src, i + 1, j) + "\n"
+                  set i to j + 1
+                else
+                  set out to out + "P=" + chr(c) + "\n"
+                  set i to i + 1
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  set out to out + "EOF\n"
+  return out
+end
+
+# Reference implementation: ported from refLex in scripts/test-self-lexer.mjs,
+# using stdlib substr/int instead of lexer.sdev's manual loops.
+to ref_is_digit with c
+  if c >= 48
+    if c <= 57
+      return 1
+    end
+  end
+  return 0
+end
+
+to ref_is_alpha with c
+  if c is 95
+    return 1
+  end
+  if c >= 65
+    if c <= 90
+      return 1
+    end
+  end
+  if c >= 97
+    if c <= 122
+      return 1
+    end
+  end
+  return 0
+end
+
+to ref_is_alnum with c
+  if ref_is_digit(c)
+    return 1
+  end
+  return ref_is_alpha(c)
+end
+
+to ref_is_ws with c
+  if c is 32
+    return 1
+  end
+  if c is 9
+    return 1
+  end
+  if c is 13
+    return 1
+  end
+  return 0
+end
+
+to ref_lex with src
+  set out to ""
+  set i to 0
+  set n to length(src)
+  while i < n
+    set c to ord(src, i)
+    if ref_is_ws(c)
+      set i to i + 1
+    else if c is 10
+      set out to out + "NL\n"
+      set i to i + 1
+    else if ref_is_digit(c)
+      set j to i
+      set scanning to 1
+      while scanning
+        if j >= n
+          set scanning to 0
+        else if ref_is_digit(ord(src, j))
+          set j to j + 1
+        else
+          set scanning to 0
+        end
+      end
+      set out to out + "N=" + str(int(substr(src, i, j - i))) + "\n"
+      set i to j
+    else if ref_is_alpha(c)
+      set j to i
+      set scanning to 1
+      while scanning
+        if j >= n
+          set scanning to 0
+        else if ref_is_alnum(ord(src, j))
+          set j to j + 1
+        else
+          set scanning to 0
+        end
+      end
+      set out to out + "I=" + substr(src, i, j - i) + "\n"
+      set i to j
+    else if c is 34
+      set j to i + 1
+      set scanning to 1
+      while scanning
+        if j >= n
+          set scanning to 0
+        else if ord(src, j) is 34
+          set scanning to 0
+        else
+          set j to j + 1
+        end
+      end
+      set out to out + "S=" + substr(src, i + 1, j - i - 1) + "\n"
+      set i to j + 1
+    else
+      set out to out + "P=" + substr(src, i, 1) + "\n"
+      set i to i + 1
+    end
+  end
+  set out to out + "EOF\n"
+  return out
+end
+
+to check_lex_case with name src
+  set got to run_lexer(src)
+  set expected to ref_lex(src)
+  set ok to got is expected
+  set _ to check(name, ok)
+  if ok is 0
+    say concat("   expected: ", replace(expected, "\n", " "))
+    say concat("   got:      ", replace(got, "\n", " "))
+  end
+  return 0
+end
+
+set _ to check_lex_case("empty", "")
+set _ to check_lex_case("hello", "say \"hello\"\nsay 42")
+set _ to check_lex_case("arithmetic", "set x to 12 + 34 * 5\nsay x")
+set _ to check_lex_case("function + call", "to fib with n\nif n < 2\nreturn n\nend\nreturn fib(n - 1) + fib(n - 2)\nend\nsay fib(10)")
+set _ to check_lex_case("lists + index", "set xs to [1, 2, 3]\nset xs[1] to 99\nsay xs[1]")
+set _ to check_lex_case("punctuation zoo", "a = b + (c * d) - e / f % g\n")
+
+set self_out to read_file("sdev:compile:self:lang/compiler/lexer.sdev")
+set boot_out to read_file("sdev:compile:boot:lang/compiler/lexer.sdev")
+set _ to check("lexer.sdev compiles byte-identically", self_out is boot_out)
+
+set _ to tk_report("self-lexer")

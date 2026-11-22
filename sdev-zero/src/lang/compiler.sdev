@@ -1,0 +1,203 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/compiler.ts (841 lines)
+# Pure-SDEV Path: src/lang/compiler.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/compiler.ts",
+    sdev_path: "src/lang/compiler.sdev",
+    subsystem: "lang-core",
+    original_lines: 841,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["FunctionCompiler", "Compiler", "as", "fn", "jumpFalseT", "jumpEndT", "lambdaFn", "def", "idx", "funcFn", "ctx", "part", "passJump", "jumpFalse", "jumpTrue", "opMap", "op", "jumpEnd", "loopStart", "exitJump", "iterVar", "idxVar", "incrPos", "tempVar", "endJumps", "skipCaseJump", "binOp", "varName", "targetTemp", "indexTemp", "valTemp", "accVar", "loopExits", "cIdx", "clause", "lenVar", "targetVar", "skipJumps", "item", "ctxVar"]
+end
+
+to FunctionCompiler with init_arg
+  return {
+    kind: "FunctionCompiler",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to Compiler with init_arg
+  return {
+    kind: "Compiler",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to as with init_arg
+  return {
+    kind: "as",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to fn
+  return "fn"
+end
+
+to jumpFalseT
+  return "jumpFalseT"
+end
+
+to jumpEndT
+  return "jumpEndT"
+end
+
+to lambdaFn
+  return "lambdaFn"
+end
+
+to def
+  return "def"
+end
+
+to idx
+  return "idx"
+end
+
+to funcFn
+  return "funcFn"
+end
+
+to ctx
+  return "ctx"
+end
+
+to part
+  return "part"
+end
+
+to passJump
+  return "passJump"
+end
+
+to jumpFalse
+  return "jumpFalse"
+end
+
+to jumpTrue
+  return "jumpTrue"
+end
+
+to opMap
+  return "opMap"
+end
+
+to op
+  return "op"
+end
+
+to jumpEnd
+  return "jumpEnd"
+end
+
+to loopStart
+  return "loopStart"
+end
+
+to exitJump
+  return "exitJump"
+end
+
+to iterVar
+  return "iterVar"
+end
+
+to idxVar
+  return "idxVar"
+end
+
+to incrPos
+  return "incrPos"
+end
+
+to tempVar
+  return "tempVar"
+end
+
+to endJumps
+  return "endJumps"
+end
+
+to skipCaseJump
+  return "skipCaseJump"
+end
+
+to binOp
+  return "binOp"
+end
+
+to varName
+  return "varName"
+end
+
+to targetTemp
+  return "targetTemp"
+end
+
+to indexTemp
+  return "indexTemp"
+end
+
+to valTemp
+  return "valTemp"
+end
+
+to accVar
+  return "accVar"
+end
+
+to loopExits
+  return "loopExits"
+end
+
+to cIdx
+  return "cIdx"
+end
+
+to clause
+  return "clause"
+end
+
+to lenVar
+  return "lenVar"
+end
+
+to targetVar
+  return "targetVar"
+end
+
+to skipJumps
+  return "skipJumps"
+end
+
+to item
+  return "item"
+end
+
+to ctxVar
+  return "ctxVar"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

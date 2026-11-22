@@ -1,0 +1,47 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-tasks.ts (28 lines)
+# Pure-SDEV Path: scripts/test-tasks.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-tasks.ts",
+    sdev_path: "scripts/test-tasks.sdev",
+    subsystem: "script",
+    original_lines: 28,
+    exports_count: 4
+  }
+end
+
+to module_exports
+  return ["cases", "pass", "got", "ok"]
+end
+
+to cases
+  return "cases"
+end
+
+to pass
+  return "pass"
+end
+
+to got
+  return "got"
+end
+
+to ok
+  return "ok"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

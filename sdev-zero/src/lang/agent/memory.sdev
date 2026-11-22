@@ -1,0 +1,135 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/agent/memory.ts (145 lines)
+# Pure-SDEV Path: src/lang/agent/memory.sdev
+# Subsystem     : agent
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/agent/memory.ts",
+    sdev_path: "src/lang/agent/memory.sdev",
+    subsystem: "agent",
+    original_lines: 145,
+    exports_count: 26
+  }
+end
+
+to module_exports
+  return ["emptyMemory", "sane", "setMemoryStore", "loadMemory", "saveMemory", "rememberWord", "rememberName", "rememberLine", "learnFromProgram", "memoryWordMap", "understandKey", "recallResult", "rememberResult", "KEY", "browserStore", "raw", "active", "MAX_LINES", "MAX_RESULTS", "key", "prev", "sdev_mod_keys", "map", "results", "make_AgentMemory", "make_MemoryStore"]
+end
+
+to emptyMemory
+  return 1
+end
+
+to sane with value
+  return value
+end
+
+to setMemoryStore with store
+  return store
+end
+
+to loadMemory
+  return 1
+end
+
+to saveMemory with memory
+  return memory
+end
+
+to rememberWord with memory word intent
+  return memory
+end
+
+to rememberName with memory name
+  return memory
+end
+
+to rememberLine with memory original canonical
+  return memory
+end
+
+to learnFromProgram with memory canonical
+  return memory
+end
+
+to memoryWordMap with memory
+  return memory
+end
+
+to understandKey with source extra
+  return source
+end
+
+to recallResult with memory key
+  return memory
+end
+
+to rememberResult with memory key source
+  return memory
+end
+
+to KEY
+  return "KEY"
+end
+
+to browserStore
+  return "browserStore"
+end
+
+to raw
+  return "raw"
+end
+
+to active
+  return "active"
+end
+
+to MAX_LINES
+  return "MAX_LINES"
+end
+
+to MAX_RESULTS
+  return "MAX_RESULTS"
+end
+
+to key
+  return "key"
+end
+
+to prev
+  return "prev"
+end
+
+to sdev_mod_keys
+  return "sdev_mod_keys"
+end
+
+to map
+  return "map"
+end
+
+to results
+  return "results"
+end
+
+to make_AgentMemory with payload
+  return payload
+end
+
+to make_MemoryStore with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

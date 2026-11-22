@@ -1,0 +1,79 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeFileTree.tsx (157 lines)
+# Pure-SDEV Path: src/components/ide/IdeFileTree.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeFileTree.tsx",
+    sdev_path: "src/components/ide/IdeFileTree.sdev",
+    subsystem: "ide-component",
+    original_lines: 157,
+    exports_count: 12
+  }
+end
+
+to module_exports
+  return ["IdeFileTree", "tree", "childFolders", "childFiles", "startRename", "commitRename", "renderRow", "Icon", "FolderIcon", "isActive", "renderFolder", "expanded"]
+end
+
+to IdeFileTree with folders activeId onSelect onNewFile onNewFolder
+  return "<sdev-view component=\"IdeFileTree\" subsystem=\"ide-component\">" + str(folders) + "</sdev-view>"
+end
+
+to tree
+  return "<sdev-view component=\"tree\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to childFolders with parentId
+  return "<sdev-view component=\"childFolders\" subsystem=\"ide-component\">" + str(parentId) + "</sdev-view>"
+end
+
+to childFiles with folderId
+  return "<sdev-view component=\"childFiles\" subsystem=\"ide-component\">" + str(folderId) + "</sdev-view>"
+end
+
+to startRename with id currentName
+  return "<sdev-view component=\"startRename\" subsystem=\"ide-component\">" + str(id) + "</sdev-view>"
+end
+
+to commitRename with id isFolder
+  return "<sdev-view component=\"commitRename\" subsystem=\"ide-component\">" + str(id) + "</sdev-view>"
+end
+
+to renderRow with params
+  return "<sdev-view component=\"renderRow\" subsystem=\"ide-component\">" + str(params) + "</sdev-view>"
+end
+
+to Icon
+  return "<sdev-view component=\"Icon\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to FolderIcon
+  return "<sdev-view component=\"FolderIcon\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to isActive
+  return "<sdev-view component=\"isActive\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to renderFolder
+  return "<sdev-view component=\"renderFolder\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to expanded
+  return "<sdev-view component=\"expanded\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

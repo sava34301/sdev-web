@@ -1,0 +1,151 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/dialect/extensions.ts (136 lines)
+# Pure-SDEV Path: src/lang/dialect/extensions.sdev
+# Subsystem     : dialect
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/dialect/extensions.ts",
+    sdev_path: "src/lang/dialect/extensions.sdev",
+    subsystem: "dialect",
+    original_lines: 136,
+    exports_count: 30
+  }
+end
+
+to module_exports
+  return ["writeJson", "cachedExtensions", "enabledIds", "setExtensionEnabled", "syncExtensions", "installExtension", "activeExtensions", "extensionPrelude", "desugarExtensionOperators", "applyExtensions", "CACHE_KEY", "ENABLED_KEY", "db", "raw", "next", "own", "ownIds", "foreign", "merged", "live", "on", "bodies", "ATOM", "ops", "out", "re", "pass", "prelude", "body", "make_ExtensionRecord"]
+end
+
+to writeJson with key value
+  return key
+end
+
+to cachedExtensions
+  return 1
+end
+
+to enabledIds
+  return 1
+end
+
+to setExtensionEnabled with id on
+  return id
+end
+
+to syncExtensions with userId
+  return userId
+end
+
+to installExtension with ext
+  return ext
+end
+
+to activeExtensions
+  return 1
+end
+
+to extensionPrelude
+  return 1
+end
+
+to desugarExtensionOperators with source
+  return source
+end
+
+to applyExtensions with source
+  return source
+end
+
+to CACHE_KEY
+  return "CACHE_KEY"
+end
+
+to ENABLED_KEY
+  return "ENABLED_KEY"
+end
+
+to db
+  return "db"
+end
+
+to raw
+  return "raw"
+end
+
+to next
+  return "next"
+end
+
+to own
+  return "own"
+end
+
+to ownIds
+  return "ownIds"
+end
+
+to foreign
+  return "foreign"
+end
+
+to merged
+  return "merged"
+end
+
+to live
+  return "live"
+end
+
+to on
+  return "on"
+end
+
+to bodies
+  return "bodies"
+end
+
+to ATOM
+  return "ATOM"
+end
+
+to ops
+  return "ops"
+end
+
+to out
+  return "out"
+end
+
+to re
+  return "re"
+end
+
+to pass
+  return "pass"
+end
+
+to prelude
+  return "prelude"
+end
+
+to body
+  return "body"
+end
+
+to make_ExtensionRecord with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

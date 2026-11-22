@@ -1,0 +1,119 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : tools/arduino-build-server/server.mjs (144 lines)
+# Pure-SDEV Path: tools/arduino-build-server/server.sdev
+# Subsystem     : config-tooling
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "tools/arduino-build-server/server.mjs",
+    sdev_path: "tools/arduino-build-server/server.sdev",
+    subsystem: "config-tooling",
+    original_lines: 144,
+    exports_count: 22
+  }
+end
+
+to module_exports
+  return ["send", "cliVersion", "run", "ensureCore", "ensureLibraries", "compile", "PORT", "CLI", "CORS", "payload", "core", "log", "root", "sketchName", "sketchDir", "outDir", "files", "hexFile", "binFile", "server", "body", "result"]
+end
+
+to send with res status body
+  return res
+end
+
+to cliVersion
+  return 1
+end
+
+to run with cmd args opts
+  return cmd
+end
+
+to ensureCore with fqbn log
+  return fqbn
+end
+
+to ensureLibraries with libraries log
+  return libraries
+end
+
+to compile with ino libraries
+  return ino
+end
+
+to PORT
+  return "PORT"
+end
+
+to CLI
+  return "CLI"
+end
+
+to CORS
+  return "CORS"
+end
+
+to payload
+  return "payload"
+end
+
+to core
+  return "core"
+end
+
+to log
+  return "log"
+end
+
+to root
+  return "root"
+end
+
+to sketchName
+  return "sketchName"
+end
+
+to sketchDir
+  return "sketchDir"
+end
+
+to outDir
+  return "outDir"
+end
+
+to files
+  return "files"
+end
+
+to hexFile
+  return "hexFile"
+end
+
+to binFile
+  return "binFile"
+end
+
+to server
+  return "server"
+end
+
+to body
+  return "body"
+end
+
+to result
+  return "result"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

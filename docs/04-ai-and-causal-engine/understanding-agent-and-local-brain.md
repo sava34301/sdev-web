@@ -1,6 +1,6 @@
 # Code Understanding Agent & Multi-Tier Local AI Brain
 
-SDEV's **Understanding Agent** sits in front of the lexer, parser, and code generator across every entry point (Web IDE, Node CLI, WASM bridge). Its goal is simple: **let beginners write how they think, while guaranteeing that valid canonical programs always reach the compiler untouched (`asWritten()`).**
+SDEV's **Code Understander** is the **syntax-free version of SDEV** — alongside v1 and v2, it is the version with no fixed syntax. Rather than being just an error-fixer, it lets anyone write and learn in whatever style or mental model feels right to them, and turns their intent into canonical SDEV across every entry point (Web IDE, Node CLI, WASM bridge), while guaranteeing that valid canonical programs and deterministic [Personal Dialects](../02-language/personal-dialects-and-libraries.md) always reach the compiler untouched (`asWritten()`).
 
 ```text
 user source ─▶ [directives] ─▶ [sdev:ai] ─▶ [board mask] ─▶ [SDEV rules + memory] ─▶ [3-tier AI brain] ─▶ canonical sdev

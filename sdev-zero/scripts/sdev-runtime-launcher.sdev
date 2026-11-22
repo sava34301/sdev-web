@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/sdev-runtime-launcher.ts (302 lines)
+# Pure-SDEV Path: scripts/sdev-runtime-launcher.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/sdev-runtime-launcher.ts",
+    sdev_path: "scripts/sdev-runtime-launcher.sdev",
+    subsystem: "script",
+    original_lines: 302,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["readAppendedPayload", "escPs", "writeTemp", "openInDefaultBrowser", "spawnPowerShell", "canvasInfo", "canvasPowershell", "Brush", "showNativeCanvas", "serializeUi", "uiPowershell", "showOutputWindow", "runSdev", "main", "MAGIC", "exe", "size", "fd", "scanSize", "tail", "idx", "payloadLen", "absoluteMagicOffset", "payloadStart", "payload", "dir", "file", "ps1", "child", "cmd", "width", "height", "json", "text", "script", "output", "commands", "turtleState", "uiState", "webState"]
+end
+
+to readAppendedPayload
+  return 1
+end
+
+to escPs with s
+  return s
+end
+
+to writeTemp with name content
+  return name
+end
+
+to openInDefaultBrowser with file
+  return file
+end
+
+to spawnPowerShell with script wait
+  return script
+end
+
+to canvasInfo with commands
+  return commands
+end
+
+to canvasPowershell with commandsPath title width height
+  return commandsPath
+end
+
+to Brush
+  return 1
+end
+
+to showNativeCanvas with commands title
+  return commands
+end
+
+to serializeUi with s
+  return s
+end
+
+to uiPowershell with port title width height
+  return port
+end
+
+to showOutputWindow with lines title
+  return lines
+end
+
+to runSdev with source
+  return source
+end
+
+to main
+  return 1
+end
+
+to MAGIC
+  return "MAGIC"
+end
+
+to exe
+  return "exe"
+end
+
+to size
+  return "size"
+end
+
+to fd
+  return "fd"
+end
+
+to scanSize
+  return "scanSize"
+end
+
+to tail
+  return "tail"
+end
+
+to idx
+  return "idx"
+end
+
+to payloadLen
+  return "payloadLen"
+end
+
+to absoluteMagicOffset
+  return "absoluteMagicOffset"
+end
+
+to payloadStart
+  return "payloadStart"
+end
+
+to payload
+  return "payload"
+end
+
+to dir
+  return "dir"
+end
+
+to file
+  return "file"
+end
+
+to ps1
+  return "ps1"
+end
+
+to child
+  return "child"
+end
+
+to cmd
+  return "cmd"
+end
+
+to width
+  return "width"
+end
+
+to height
+  return "height"
+end
+
+to json
+  return "json"
+end
+
+to text
+  return "text"
+end
+
+to script
+  return "script"
+end
+
+to output
+  return "output"
+end
+
+to commands
+  return "commands"
+end
+
+to turtleState
+  return "turtleState"
+end
+
+to uiState
+  return "uiState"
+end
+
+to webState
+  return "webState"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

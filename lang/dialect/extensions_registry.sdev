@@ -1,0 +1,79 @@
+# ============================================================
+# SDEV Dialect Subsystem — Extensions, Offline Cache & Registry (extensions_registry.sdev)
+# 100% Pure SDEV port of extensions.ts, library-cache.ts & registry.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+use "lang/dialect/dialect.sdev"
+
+to extract_library_references with source
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set refs to []
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    if text_starts_with(line, "use \"@") and text_ends_with(line, "\"")
+      set ref_addr to substr(line, 5, length(line) - 6)
+      set refs to refs + [ref_addr]
+    end
+    set i to i + 1
+  end
+  return refs
+end
+
+to create_library_cache
+  return { entries: {} }
+end
+
+to cache_put_library with cache address version source_code
+  set entries to cache["entries"]
+  set entries[address] to {
+    address: address,
+    version: version,
+    source: source_code,
+    checksum: hash_fnv1a_hex(source_code)
+  }
+  set cache["entries"] to entries
+  return cache
+end
+
+to cache_get_library with cache address
+  set entries to cache["entries"]
+  if entries[address] is nothing
+    return { found: 0, address: address, version: "", source: "", checksum: "" }
+  end
+  set item to entries[address]
+  return {
+    found: 1,
+    address: item["address"],
+    version: item["version"],
+    source: item["source"],
+    checksum: item["checksum"]
+  }
+end
+
+to resolve_cached_imports with source cache
+  set lines to split(source, "\n")
+  set n to length(lines)
+  set preludes to []
+  set body_lines to []
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    if text_starts_with(line, "use \"@") and text_ends_with(line, "\"")
+      set addr to substr(line, 5, length(line) - 6)
+      set hit to cache_get_library(cache, addr)
+      if hit["found"] is 1
+        set preludes to preludes + [hit["source"]]
+      end
+    else
+      set body_lines to body_lines + [lines[i]]
+    end
+    set i to i + 1
+  end
+  if length(preludes) is 0
+    return source
+  end
+  return join(preludes, "\n") + "\n" + join(body_lines, "\n")
+end

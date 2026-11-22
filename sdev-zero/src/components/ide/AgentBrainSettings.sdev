@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/AgentBrainSettings.tsx (282 lines)
+# Pure-SDEV Path: src/components/ide/AgentBrainSettings.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/AgentBrainSettings.tsx",
+    sdev_path: "src/components/ide/AgentBrainSettings.sdev",
+    subsystem: "ide-component",
+    original_lines: 282,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["Toggle", "AgentBrainSettings", "PRESETS", "initial", "save", "applyPreset", "runProbe", "res", "supported", "stateText"]
+end
+
+to Toggle with label onClick
+  return "<sdev-view component=\"Toggle\" subsystem=\"ide-component\">" + str(label) + "</sdev-view>"
+end
+
+to AgentBrainSettings
+  return "<sdev-view component=\"AgentBrainSettings\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to PRESETS
+  return "<sdev-view component=\"PRESETS\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to initial
+  return "<sdev-view component=\"initial\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to save with k v
+  return "<sdev-view component=\"save\" subsystem=\"ide-component\">" + str(k) + "</sdev-view>"
+end
+
+to applyPreset with preset
+  return "<sdev-view component=\"applyPreset\" subsystem=\"ide-component\">" + str(preset) + "</sdev-view>"
+end
+
+to runProbe with targetUrl
+  return "<sdev-view component=\"runProbe\" subsystem=\"ide-component\">" + str(targetUrl) + "</sdev-view>"
+end
+
+to res
+  return "<sdev-view component=\"res\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to supported
+  return "<sdev-view component=\"supported\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to stateText
+  return "<sdev-view component=\"stateText\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

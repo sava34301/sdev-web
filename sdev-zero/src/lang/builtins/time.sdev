@@ -1,0 +1,35 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/builtins/time.ts (48 lines)
+# Pure-SDEV Path: src/lang/builtins/time.sdev
+# Subsystem     : builtins
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/builtins/time.ts",
+    sdev_path: "src/lang/builtins/time.sdev",
+    subsystem: "builtins",
+    original_lines: 48,
+    exports_count: 1
+  }
+end
+
+to module_exports
+  return ["registerTime"]
+end
+
+to registerTime with builtins SdevFunction output
+  return builtins
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

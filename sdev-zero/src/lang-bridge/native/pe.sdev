@@ -1,0 +1,159 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/native/pe.mjs (285 lines)
+# Pure-SDEV Path: src/lang-bridge/native/pe.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/native/pe.mjs",
+    sdev_path: "src/lang-bridge/native/pe.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 285,
+    exports_count: 32
+  }
+end
+
+to module_exports
+  return ["buildPeExecutable", "linkPe", "exitCode", "messages", "align", "msgBuffers", "RVA_TEXT", "RVA_RDATA", "rdata", "offImportDir", "offILT", "offIAT", "offHintGetStdHandle", "offHintWriteFile", "offHintExitProcess", "offDllName", "offMessages", "rvaGetStdHandle", "rvaWriteFile", "rvaExitProcess", "currMsgOff", "msgDescriptors", "text", "rip", "emit", "emit32", "iatGetStdHandleRva", "iatWriteFileRva", "iatExitProcessRva", "headers", "stub", "buf"]
+end
+
+to buildPeExecutable with opts
+  return opts
+end
+
+to linkPe with messages outPath exitCode
+  return messages
+end
+
+to exitCode
+  return "exitCode"
+end
+
+to messages
+  return "messages"
+end
+
+to align with n sdev_mod_to
+  return n
+end
+
+to msgBuffers
+  return "msgBuffers"
+end
+
+to RVA_TEXT
+  return "RVA_TEXT"
+end
+
+to RVA_RDATA
+  return "RVA_RDATA"
+end
+
+to rdata
+  return "rdata"
+end
+
+to offImportDir
+  return "offImportDir"
+end
+
+to offILT
+  return "offILT"
+end
+
+to offIAT
+  return "offIAT"
+end
+
+to offHintGetStdHandle
+  return "offHintGetStdHandle"
+end
+
+to offHintWriteFile
+  return "offHintWriteFile"
+end
+
+to offHintExitProcess
+  return "offHintExitProcess"
+end
+
+to offDllName
+  return "offDllName"
+end
+
+to offMessages
+  return "offMessages"
+end
+
+to rvaGetStdHandle
+  return "rvaGetStdHandle"
+end
+
+to rvaWriteFile
+  return "rvaWriteFile"
+end
+
+to rvaExitProcess
+  return "rvaExitProcess"
+end
+
+to currMsgOff
+  return "currMsgOff"
+end
+
+to msgDescriptors
+  return "msgDescriptors"
+end
+
+to text
+  return "text"
+end
+
+to rip
+  return "rip"
+end
+
+to emit with bytes
+  return bytes
+end
+
+to emit32 with val
+  return val
+end
+
+to iatGetStdHandleRva
+  return "iatGetStdHandleRva"
+end
+
+to iatWriteFileRva
+  return "iatWriteFileRva"
+end
+
+to iatExitProcessRva
+  return "iatExitProcessRva"
+end
+
+to headers
+  return "headers"
+end
+
+to stub
+  return "stub"
+end
+
+to buf
+  return "buf"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

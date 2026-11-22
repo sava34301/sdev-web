@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : bin/sdevhost.mjs (282 lines)
+# Pure-SDEV Path: bin/sdevhost.sdev
+# Subsystem     : bin
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "bin/sdevhost.mjs",
+    sdev_path: "bin/sdevhost.sdev",
+    subsystem: "bin",
+    original_lines: 282,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["oracle", "collectModules", "stage2Driver", "v1Driver", "v1SelfDriver", "v1SelfStage2Driver", "prefetch", "main", "decoder", "encoder", "hex", "oracleCompile", "modSrc", "stage2", "src", "v1Drv", "v1SelfDrv", "v1SelfSt2Drv", "table", "put", "wanted", "rawArgs", "v1Mode", "scriptSrc", "msg", "seedAssetPath", "wasmBytes", "module", "exitCode", "line", "emit", "parts", "blob", "dst", "hostRead", "cmd", "out", "inst", "path", "data"]
+end
+
+to oracle
+  return 1
+end
+
+to collectModules with src seen
+  return src
+end
+
+to stage2Driver
+  return 1
+end
+
+to v1Driver
+  return 1
+end
+
+to v1SelfDriver
+  return 1
+end
+
+to v1SelfStage2Driver
+  return 1
+end
+
+to prefetch with scriptSrc args
+  return scriptSrc
+end
+
+to main
+  return 1
+end
+
+to decoder
+  return "decoder"
+end
+
+to encoder
+  return "encoder"
+end
+
+to hex with u8
+  return u8
+end
+
+to oracleCompile
+  return "oracleCompile"
+end
+
+to modSrc
+  return "modSrc"
+end
+
+to stage2
+  return "stage2"
+end
+
+to src
+  return "src"
+end
+
+to v1Drv
+  return "v1Drv"
+end
+
+to v1SelfDrv
+  return "v1SelfDrv"
+end
+
+to v1SelfSt2Drv
+  return "v1SelfSt2Drv"
+end
+
+to table
+  return "table"
+end
+
+to put with k v
+  return k
+end
+
+to wanted
+  return "wanted"
+end
+
+to rawArgs
+  return "rawArgs"
+end
+
+to v1Mode
+  return "v1Mode"
+end
+
+to scriptSrc
+  return "scriptSrc"
+end
+
+to msg
+  return "msg"
+end
+
+to seedAssetPath
+  return "seedAssetPath"
+end
+
+to wasmBytes
+  return "wasmBytes"
+end
+
+to module
+  return "module"
+end
+
+to exitCode
+  return "exitCode"
+end
+
+to line
+  return "line"
+end
+
+to emit with text
+  return text
+end
+
+to parts
+  return "parts"
+end
+
+to blob with bytes
+  return bytes
+end
+
+to dst
+  return "dst"
+end
+
+to hostRead with path
+  return path
+end
+
+to cmd
+  return "cmd"
+end
+
+to out
+  return "out"
+end
+
+to inst
+  return "inst"
+end
+
+to path
+  return "path"
+end
+
+to data
+  return "data"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

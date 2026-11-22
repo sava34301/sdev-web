@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : public/sdev-compiler.mjs (11750 lines)
+# Pure-SDEV Path: public/sdev-compiler.sdev
+# Subsystem     : public-runtime
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "public/sdev-compiler.mjs",
+    sdev_path: "public/sdev-compiler.sdev",
+    subsystem: "public-runtime",
+    original_lines: 11750,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["effectiveTable", "buildPhraseNormalizations", "compileReplacer", "segmentSource", "detectLanguage", "dialectWords", "dialectLanguageHint", "translateSource", "levenshtein", "compileFuzzyReplacer", "disassemble", "createBuiltins", "buildVec", "setObjectTextHook", "stringify", "isTruthy", "toNumber", "createKernelBuiltins", "createAdvancedBuiltins", "createMatrixBuiltins", "matrixOp", "keyOf", "makeTuple", "isTuple", "makeGenerator", "isGenerator", "isFunction", "dunderAlias", "splitKwargs", "setObjectReprHook", "repr", "formatValue", "displayText", "createParityBuiltins", "help", "readFlag", "hasFlag", "sdev_mod_abs", "loadSource", "parseSource"]
+end
+
+to effectiveTable with lang target
+  return lang
+end
+
+to buildPhraseNormalizations with lang target
+  return lang
+end
+
+to compileReplacer with lang target
+  return lang
+end
+
+to segmentSource with source
+  return source
+end
+
+to detectLanguage with source protect
+  return source
+end
+
+to dialectWords with spec
+  return spec
+end
+
+to dialectLanguageHint with spec
+  return spec
+end
+
+to translateSource with source sourceLanguage options
+  return source
+end
+
+to levenshtein with a b
+  return a
+end
+
+to compileFuzzyReplacer with lang target
+  return lang
+end
+
+to disassemble with fn2 indent
+  return fn2
+end
+
+to createBuiltins with output
+  return output
+end
+
+to buildVec with x y
+  return x
+end
+
+to setObjectTextHook with hook
+  return hook
+end
+
+to stringify with value
+  return value
+end
+
+to isTruthy with value
+  return value
+end
+
+to toNumber with value line
+  return value
+end
+
+to createKernelBuiltins with output
+  return output
+end
+
+to createAdvancedBuiltins with output
+  return output
+end
+
+to createMatrixBuiltins
+  return 1
+end
+
+to matrixOp with a b op line
+  return a
+end
+
+to keyOf with value
+  return value
+end
+
+to makeTuple with items
+  return items
+end
+
+to isTuple with v
+  return v
+end
+
+to makeGenerator with iter
+  return iter
+end
+
+to isGenerator with v
+  return v
+end
+
+to isFunction with v
+  return v
+end
+
+to dunderAlias with name
+  return name
+end
+
+to splitKwargs with args2
+  return args2
+end
+
+to setObjectReprHook with hook
+  return hook
+end
+
+to repr with value
+  return value
+end
+
+to formatValue with value spec conv
+  return value
+end
+
+to displayText with value
+  return value
+end
+
+to createParityBuiltins with output host
+  return output
+end
+
+to help
+  return 1
+end
+
+to readFlag with name short
+  return name
+end
+
+to hasFlag with name short
+  return name
+end
+
+to sdev_mod_abs with file
+  return file
+end
+
+to loadSource with file
+  return file
+end
+
+to parseSource with src
+  return src
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

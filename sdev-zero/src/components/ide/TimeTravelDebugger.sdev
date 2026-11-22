@@ -1,0 +1,83 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/TimeTravelDebugger.tsx (461 lines)
+# Pure-SDEV Path: src/components/ide/TimeTravelDebugger.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/TimeTravelDebugger.tsx",
+    sdev_path: "src/components/ide/TimeTravelDebugger.sdev",
+    subsystem: "ide-component",
+    original_lines: 461,
+    exports_count: 13
+  }
+end
+
+to module_exports
+  return ["TimeTravelDebugger", "recomputeTrace", "res", "steps", "activeStep", "selectStep", "clamped", "step", "timer", "next", "st", "togglePlay", "make_TimeTravelDebuggerProps"]
+end
+
+to TimeTravelDebugger with runtime onJumpToLine onSyncCanvas
+  return "<sdev-view component=\"TimeTravelDebugger\" subsystem=\"ide-component\">" + str(runtime) + "</sdev-view>"
+end
+
+to recomputeTrace
+  return "<sdev-view component=\"recomputeTrace\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to res
+  return "<sdev-view component=\"res\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to steps
+  return "<sdev-view component=\"steps\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to activeStep
+  return "<sdev-view component=\"activeStep\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to selectStep
+  return "<sdev-view component=\"selectStep\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to clamped
+  return "<sdev-view component=\"clamped\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to step
+  return "<sdev-view component=\"step\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to timer
+  return "<sdev-view component=\"timer\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to next
+  return "<sdev-view component=\"next\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to st
+  return "<sdev-view component=\"st\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to togglePlay
+  return "<sdev-view component=\"togglePlay\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to make_TimeTravelDebuggerProps with payload
+  return "<sdev-view component=\"make_TimeTravelDebuggerProps\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

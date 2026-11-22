@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/sidebar.tsx (637 lines)
+# Pure-SDEV Path: src/components/ui/sidebar.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/sidebar.tsx",
+    sdev_path: "src/components/ui/sidebar.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 637,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["useSidebar", "SIDEBAR_COOKIE_NAME", "SIDEBAR_COOKIE_MAX_AGE", "SIDEBAR_WIDTH", "SIDEBAR_WIDTH_MOBILE", "SIDEBAR_WIDTH_ICON", "SIDEBAR_KEYBOARD_SHORTCUT", "SidebarContext", "context", "SidebarProvider", "isMobile", "open", "setOpen", "openState", "toggleSidebar", "handleKeyDown", "state", "contextValue", "Sidebar", "SidebarTrigger", "SidebarRail", "SidebarInset", "SidebarInput", "SidebarHeader", "SidebarFooter", "SidebarSeparator", "SidebarContent", "SidebarGroup", "SidebarGroupLabel", "Comp", "SidebarGroupAction", "SidebarGroupContent", "SidebarMenu", "SidebarMenuItem", "sidebarMenuButtonVariants", "SidebarMenuButton", "button", "SidebarMenuAction", "SidebarMenuBadge", "SidebarMenuSkeleton"]
+end
+
+to useSidebar
+  return "<sdev-view component=\"useSidebar\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SIDEBAR_COOKIE_NAME
+  return "<sdev-view component=\"SIDEBAR_COOKIE_NAME\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SIDEBAR_COOKIE_MAX_AGE
+  return "<sdev-view component=\"SIDEBAR_COOKIE_MAX_AGE\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SIDEBAR_WIDTH
+  return "<sdev-view component=\"SIDEBAR_WIDTH\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SIDEBAR_WIDTH_MOBILE
+  return "<sdev-view component=\"SIDEBAR_WIDTH_MOBILE\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SIDEBAR_WIDTH_ICON
+  return "<sdev-view component=\"SIDEBAR_WIDTH_ICON\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SIDEBAR_KEYBOARD_SHORTCUT
+  return "<sdev-view component=\"SIDEBAR_KEYBOARD_SHORTCUT\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarContext
+  return "<sdev-view component=\"SidebarContext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to context
+  return "<sdev-view component=\"context\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarProvider
+  return "<sdev-view component=\"SidebarProvider\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to isMobile
+  return "<sdev-view component=\"isMobile\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to open
+  return "<sdev-view component=\"open\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to setOpen
+  return "<sdev-view component=\"setOpen\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to openState
+  return "<sdev-view component=\"openState\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to toggleSidebar
+  return "<sdev-view component=\"toggleSidebar\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to handleKeyDown with event
+  return "<sdev-view component=\"handleKeyDown\" subsystem=\"ui-primitive\">" + str(event) + "</sdev-view>"
+end
+
+to state
+  return "<sdev-view component=\"state\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to contextValue
+  return "<sdev-view component=\"contextValue\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to Sidebar
+  return "<sdev-view component=\"Sidebar\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarTrigger
+  return "<sdev-view component=\"SidebarTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarRail
+  return "<sdev-view component=\"SidebarRail\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarInset
+  return "<sdev-view component=\"SidebarInset\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarInput
+  return "<sdev-view component=\"SidebarInput\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarHeader
+  return "<sdev-view component=\"SidebarHeader\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarFooter
+  return "<sdev-view component=\"SidebarFooter\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarSeparator
+  return "<sdev-view component=\"SidebarSeparator\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarContent
+  return "<sdev-view component=\"SidebarContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarGroup
+  return "<sdev-view component=\"SidebarGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarGroupLabel
+  return "<sdev-view component=\"SidebarGroupLabel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to Comp
+  return "<sdev-view component=\"Comp\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarGroupAction
+  return "<sdev-view component=\"SidebarGroupAction\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarGroupContent
+  return "<sdev-view component=\"SidebarGroupContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarMenu
+  return "<sdev-view component=\"SidebarMenu\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarMenuItem
+  return "<sdev-view component=\"SidebarMenuItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to sidebarMenuButtonVariants
+  return "<sdev-view component=\"sidebarMenuButtonVariants\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarMenuButton
+  return "<sdev-view component=\"SidebarMenuButton\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to button
+  return "<sdev-view component=\"button\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarMenuAction
+  return "<sdev-view component=\"SidebarMenuAction\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarMenuBadge
+  return "<sdev-view component=\"SidebarMenuBadge\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to SidebarMenuSkeleton
+  return "<sdev-view component=\"SidebarMenuSkeleton\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

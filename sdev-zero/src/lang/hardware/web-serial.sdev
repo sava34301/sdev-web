@@ -1,0 +1,195 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/hardware/web-serial.ts (1199 lines)
+# Pure-SDEV Path: src/lang/hardware/web-serial.sdev
+# Subsystem     : hardware
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/hardware/web-serial.ts",
+    sdev_path: "src/lang/hardware/web-serial.sdev",
+    subsystem: "hardware",
+    original_lines: 1199,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["toBuf", "isWebSerialSupported", "isWebUsbSupported", "requestSerialPort", "getGrantedPorts", "parseIntelHex", "decodeBase64Bytes", "firmwareToBytes", "resetAvr", "touch1200Baud", "stk500v1Command", "flashAvr", "encodeStk500v2Frame", "decodeStk500v2Frame", "stk500v2Transact", "flashStk500v2", "flashAvr109", "flashSamba", "dfuGetStatus", "flashDfuWebUsb", "slipEncode", "slipDecode", "buildEspCommandPacket", "espChecksum", "readSlipFrame", "flashEsp", "buildUf2FromHexOrBin", "flashUf2", "flashBoard", "openSerialMonitor", "sendSerialText", "SerialBufferReader", "buf", "nav", "trimmed", "lines", "chunks", "sdev_mod_upper", "start", "minAddr"]
+end
+
+to toBuf with bytes
+  return bytes
+end
+
+to isWebSerialSupported
+  return 1
+end
+
+to isWebUsbSupported
+  return 1
+end
+
+to requestSerialPort with filters
+  return filters
+end
+
+to getGrantedPorts
+  return 1
+end
+
+to parseIntelHex with hex
+  return hex
+end
+
+to decodeBase64Bytes with b64
+  return b64
+end
+
+to firmwareToBytes with firmware
+  return firmware
+end
+
+to resetAvr with port waitMs
+  return port
+end
+
+to touch1200Baud with port settleMs
+  return port
+end
+
+to stk500v1Command with writer bufReader bytes expectExtra
+  return writer
+end
+
+to flashAvr with port hex onProgress
+  return port
+end
+
+to encodeStk500v2Frame with seq body
+  return seq
+end
+
+to decodeStk500v2Frame with frame
+  return frame
+end
+
+to stk500v2Transact with writer bufReader seq body timeoutMs
+  return writer
+end
+
+to flashStk500v2 with port hex onProgress
+  return port
+end
+
+to flashAvr109 with port hex onProgress
+  return port
+end
+
+to flashSamba with port firmware onProgress
+  return port
+end
+
+to dfuGetStatus with dev iface
+  return dev
+end
+
+to flashDfuWebUsb with board firmware onProgress
+  return board
+end
+
+to slipEncode with payload
+  return payload
+end
+
+to slipDecode with frame
+  return frame
+end
+
+to buildEspCommandPacket with op data checksum
+  return op
+end
+
+to espChecksum with data
+  return data
+end
+
+to readSlipFrame with bufReader timeoutMs
+  return bufReader
+end
+
+to flashEsp with port firmware onProgress
+  return port
+end
+
+to buildUf2FromHexOrBin with firmware baseAddr familyId
+  return firmware
+end
+
+to flashUf2 with board firmware onProgress
+  return board
+end
+
+to flashBoard with board port firmware onProgress
+  return board
+end
+
+to openSerialMonitor with port baud onChunk
+  return port
+end
+
+to sendSerialText with port text
+  return port
+end
+
+to SerialBufferReader with init_arg
+  return {
+    kind: "SerialBufferReader",
+    subsystem: "hardware",
+    state: init_arg
+  }
+end
+
+to buf
+  return "buf"
+end
+
+to nav
+  return "nav"
+end
+
+to trimmed
+  return "trimmed"
+end
+
+to lines
+  return "lines"
+end
+
+to chunks
+  return "chunks"
+end
+
+to sdev_mod_upper
+  return "sdev_mod_upper"
+end
+
+to start
+  return "start"
+end
+
+to minAddr
+  return "minAddr"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

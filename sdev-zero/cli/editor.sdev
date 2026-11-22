@@ -1,0 +1,79 @@
+# ============================================================
+# SDEV CLI Subsystem — Terminal Text Editor Buffer & ANSI Renderer
+# (sdev-zero/cli/editor.sdev)
+# 100% Pure SDEV port of cli/editor.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to editor_open_buffer with file_name content
+  set lines to split(content, "\n")
+  if length(lines) is 0
+    set lines to [""]
+  end
+  return {
+    file_name: file_name,
+    lines: lines,
+    cursor_row: 0,
+    cursor_col: 0,
+    dirty: 0,
+    status: "READY"
+  }
+end
+
+to editor_insert_line with buf row_idx text_line
+  set lines to buf["lines"]
+  set n to length(lines)
+  set out to []
+  set i to 0
+  while i < n
+    if i is row_idx
+      set out to out + [text_line]
+    end
+    set out to out + [lines[i]]
+    set i to i + 1
+  end
+  if row_idx >= n
+    set out to out + [text_line]
+  end
+  set buf["lines"] to out
+  set buf["dirty"] to 1
+  return buf
+end
+
+to editor_replace_line with buf row_idx text_line
+  set lines to buf["lines"]
+  set n to length(lines)
+  if row_idx >= 0 and row_idx < n
+    set lines[row_idx] to text_line
+    set buf["lines"] to lines
+    set buf["dirty"] to 1
+  end
+  return buf
+end
+
+to editor_to_source with buf
+  return join(buf["lines"], "\n")
+end
+
+to editor_render_viewport with buf max_rows
+  set lines to buf["lines"]
+  set n to length(lines)
+  set limit to max_rows
+  if n < limit
+    set limit to n
+  end
+  set out to "=== SDEV ZERO-HOST EDITOR: " + buf["file_name"]
+  if buf["dirty"] is 1
+    set out to out + " [modified]"
+  end
+  set out to out + " ===\n"
+  set i to 0
+  while i < limit
+    set line_no to str(i + 1)
+    set out to out + " " + line_no + " | " + lines[i] + "\n"
+    set i to i + 1
+  end
+  set out to out + "--- Ln " + str(buf["cursor_row"] + 1) + ", Col " + str(buf["cursor_col"] + 1) + " | " + buf["status"] + " ---"
+  return out
+end

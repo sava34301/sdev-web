@@ -1,0 +1,139 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/test-wasm-runtime.mjs (674 lines)
+# Pure-SDEV Path: scripts/test-wasm-runtime.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/test-wasm-runtime.mjs",
+    sdev_path: "scripts/test-wasm-runtime.sdev",
+    subsystem: "script",
+    original_lines: 674,
+    exports_count: 26
+  }
+end
+
+to module_exports
+  return ["runProgram", "function", "wasmBytes", "module", "decoder", "encoder", "output", "host_read_file", "path", "buf", "dst", "host_write_file", "data", "host_http_get", "url", "out", "inst", "memU8", "codeBase", "tmpDir", "MOD_A", "MOD_B", "TMP_M7", "cases", "failed", "ok"]
+end
+
+to runProgram with src which
+  return src
+end
+
+to function with init_arg
+  return {
+    kind: "function",
+    subsystem: "script",
+    state: init_arg
+  }
+end
+
+to wasmBytes
+  return "wasmBytes"
+end
+
+to module
+  return "module"
+end
+
+to decoder
+  return "decoder"
+end
+
+to encoder
+  return "encoder"
+end
+
+to output
+  return "output"
+end
+
+to host_read_file with ptr len
+  return ptr
+end
+
+to path
+  return "path"
+end
+
+to buf
+  return "buf"
+end
+
+to dst
+  return "dst"
+end
+
+to host_write_file with pPtr pLen dPtr dLen
+  return pPtr
+end
+
+to data
+  return "data"
+end
+
+to host_http_get with ptr len
+  return ptr
+end
+
+to url
+  return "url"
+end
+
+to out
+  return "out"
+end
+
+to inst
+  return "inst"
+end
+
+to memU8
+  return "memU8"
+end
+
+to codeBase
+  return "codeBase"
+end
+
+to tmpDir
+  return "tmpDir"
+end
+
+to MOD_A
+  return "MOD_A"
+end
+
+to MOD_B
+  return "MOD_B"
+end
+
+to TMP_M7
+  return "TMP_M7"
+end
+
+to cases
+  return "cases"
+end
+
+to failed
+  return "failed"
+end
+
+to ok
+  return "ok"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

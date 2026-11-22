@@ -1,0 +1,99 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : scripts/release.mjs (97 lines)
+# Pure-SDEV Path: scripts/release.sdev
+# Subsystem     : script
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "scripts/release.mjs",
+    sdev_path: "scripts/release.sdev",
+    subsystem: "script",
+    original_lines: 97,
+    exports_count: 17
+  }
+end
+
+to module_exports
+  return ["root", "at", "rel", "bump", "VERSION", "SITE", "extPkgPath", "extPkg", "manPath", "files", "walk", "entries", "vsix", "py", "tmpJson", "pyBin", "manifest"]
+end
+
+to root
+  return "root"
+end
+
+to at with p
+  return p
+end
+
+to rel
+  return "rel"
+end
+
+to bump
+  return "bump"
+end
+
+to VERSION
+  return "VERSION"
+end
+
+to SITE
+  return "SITE"
+end
+
+to extPkgPath
+  return "extPkgPath"
+end
+
+to extPkg
+  return "extPkg"
+end
+
+to manPath
+  return "manPath"
+end
+
+to files
+  return "files"
+end
+
+to walk with dir
+  return dir
+end
+
+to entries
+  return "entries"
+end
+
+to vsix
+  return "vsix"
+end
+
+to py
+  return "py"
+end
+
+to tmpJson
+  return "tmpJson"
+end
+
+to pyBin
+  return "pyBin"
+end
+
+to manifest
+  return "manifest"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

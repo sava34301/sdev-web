@@ -1,0 +1,49 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Core Engine, Live Scratchpad & Collab Room
+# (sdev-zero/scripts/test-core-collab.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/core/keywords_ast.sdev"
+use "lang/core/interpreter_live.sdev"
+use "lang/core/linker_bench.sdev"
+use "lang/core/collab_room.sdev"
+
+set ts to test_begin("Core Engine (Keywords, AST, Live Scratchpad, Linker, Benchmarks, Multiplayer CRDT Room)")
+
+# 1. Keywords, Tokens, AST & Error Formatter
+set ts to assert_eq(ts, core_is_v1_keyword("conjure"), 1, "'conjure' is recognized as v1 keyword")
+set ts to assert_eq(ts, core_is_v2_keyword("while"), 1, "'while' is recognized as v2 keyword")
+set tok to core_token("IDENT", "score", 4, 7)
+set ts to assert_str_eq(ts, tok["lexeme"], "score", "core_token stores lexeme")
+set err_msg to core_format_error("Parser", "Unexpected token", 3, 5, "set @bad to 1")
+set ts to assert_true(ts, index_of(err_msg, "[Parser Error] Line 3:5") >= 0, "Structured error formatter includes phase and line:col")
+
+# 2. Live Scratchpad Evaluator & Infinite Loop Guard
+set live_res to evaluate_live_scratchpad("set a to 10\nset b to a * 4\nsay b + 2", 5000)
+set ts to assert_eq(ts, live_res["has_error"], 0, "Live scratchpad evaluates valid program without error")
+set ts to assert_str_eq(ts, live_res["outputs"][0], "42", "Live scratchpad computes 10 * 4 + 2 = 42")
+set ts to assert_str_eq(ts, live_res["line_annotations"][1], "b = 40", "Live scratchpad annotates line 2 with 'b = 40'")
+set trap_res to evaluate_live_scratchpad("while true\n  say 1\nend", 500)
+set ts to assert_eq(ts, trap_res["has_error"], 1, "Live scratchpad traps infinite loop within budget")
+
+# 3. Multi-File Virtual Linker & Core Benchmark Suite
+set vfiles to {}
+set vfiles["math_helper.sdev"] to "to double_it with x\n  return x * 2\nend"
+set linked to link_sdev_modules("use \"math_helper.sdev\"\nsay double_it(21)", vfiles)
+set ts to assert_true(ts, index_of(linked, "to double_it with x") >= 0, "Multi-file linker inlines virtual module")
+set bench to run_core_benchmark_suite()
+set ts to assert_eq(ts, bench["fib30"], 832040, "Benchmark suite fib(30) == 832040")
+set ts to assert_eq(ts, bench["primes100"], 25, "Benchmark suite sieve(100) finds 25 primes")
+
+# 4. Multiplayer Classroom & Lamport-Clock CRDT Live Room
+set room to collab_create_room("SDEV42", "peer-host", "main.sdev", "say 1")
+set room to collab_join_peer(room, "peer-alice", "Quantum Otter", "student")
+set room to collab_update_cursor(room, "peer-alice", 5, 12)
+set ts to assert_eq(ts, room["peers"]["peer-alice"]["line"], 5, "Collab room tracks peer cursor line")
+set room to collab_apply_crdt_snapshot(room, 2, "peer-alice", "say 42", 0)
+set ts to assert_str_eq(ts, room["content"], "say 42", "CRDT accepts higher Lamport clock update")
+set room to collab_apply_crdt_snapshot(room, 1, "peer-stale", "say 0", 0)
+set ts to assert_str_eq(ts, room["content"], "say 42", "CRDT rejects stale lower Lamport clock update")
+
+set _ to test_summary(ts)

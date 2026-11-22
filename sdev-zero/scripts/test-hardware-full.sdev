@@ -1,0 +1,61 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Complete Hardware Subsystem
+# (sdev-zero/scripts/test-hardware-full.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/hardware/board_db.sdev"
+use "lang/hardware/arduino_api.sdev"
+use "lang/hardware/strip.sdev"
+use "lang/hardware/understand.sdev"
+use "lang/hardware/transpile.sdev"
+use "lang/hardware/simulator.sdev"
+use "lang/hardware/serial_cloud.sdev"
+
+set ts to test_begin("Complete Hardware Subsystem (Board DB, Arduino API, Understander, Transpiler, Simulator, STK500/HEX)")
+
+# 1. Board DB
+set uno to find_board_by_id("uno")
+set ts to assert_str_eq(ts, uno["fqbn"], "arduino:avr:uno", "Uno FQBN is arduino:avr:uno")
+set ts to assert_eq(ts, uno["flash_kb"], 32, "Uno flash is 32 KB")
+set pico to find_board_by_usb(11914, 10)
+set ts to assert_str_eq(ts, pico["id"], "pico", "USB VID 0x2E8A resolves to Raspberry Pi Pico")
+set r4 to find_board_by_usb(9025, 4098)
+set ts to assert_str_eq(ts, r4["id"], "uno-r4-wifi", "USB VID 0x2341 PID 0x1002 resolves to UNO R4 WiFi")
+
+# 2. Arduino API catalog
+set ts to assert_eq(ts, is_arduino_function("digitalWrite"), 1, "digitalWrite is recognized in Arduino core API")
+set servo_lib to find_arduino_library("Servo")
+set ts to assert_str_eq(ts, servo_lib["header"], "#include <Servo.h>", "Servo library resolves to #include <Servo.h>")
+
+# 3. Board block extraction & stripping (preserving newline count)
+set mixed_src to "set a to 10\nboard \"uno\" {\n  turn on pin 13\n  wait half a second\n}\nsay a"
+set blk to extract_board_block(mixed_src)
+set ts to assert_eq(ts, blk["found"], 1, "extract_board_block finds board \"uno\" block")
+set ts to assert_str_eq(ts, blk["board_id"], "uno", "extract_board_block extracts board_id = uno")
+set stripped to strip_board_blocks(mixed_src)
+set ts to assert_true(ts, index_of(stripped, "turn on pin 13") < 0, "strip_board_blocks removes firmware lines")
+set ts to assert_eq(ts, length(split(stripped, "\n")), length(split(mixed_src, "\n")), "strip_board_blocks preserves exact line count")
+
+# 4. Natural-English hardware understander & Arduino .ino transpiler
+set ino to transpile_board_source(mixed_src)
+set ts to assert_true(ts, index_of(ino, "pinMode(13, OUTPUT);") >= 0, "Transpiler auto-emits pinMode(13, OUTPUT)")
+set ts to assert_true(ts, index_of(ino, "digitalWrite(13, HIGH);") >= 0, "Transpiler translates 'turn on pin 13' -> digitalWrite(13, HIGH)")
+set ts to assert_true(ts, index_of(ino, "delay(500);") >= 0, "Transpiler translates 'wait half a second' -> delay(500)")
+
+# 5. Virtual MCU & Breadboard Simulator
+set sim_src to "board \"uno\" {\n  set pin 13 as output\n  turn on pin 13\n  pin 9 pwm 128\n  wait 250 ms\n  say \"blink ok\"\n}"
+set sim to sim_run_sketch(sim_src, 2)
+set ts to assert_eq(ts, sim_digital_read(sim, "13"), 1, "Simulator sets pin 13 digital HIGH")
+set ts to assert_eq(ts, sim["pwm"]["9"], 128, "Simulator sets pin 9 PWM to 128")
+set ts to assert_eq(ts, sim["elapsed_ms"], 500, "Simulator advances elapsed_ms to 500 across 2 cycles")
+set ts to assert_str_eq(ts, sim["serial_log"][0], "blink ok", "Simulator records serial output")
+
+# 6. STK500v1 & Intel HEX encoder
+set sync_pkt to stk500_get_sync_packet()
+set ts to assert_eq(ts, sync_pkt[0], 48, "STK500 GET_SYNC byte 0 is 0x30 (48)")
+set ts to assert_eq(ts, sync_pkt[1], 32, "STK500 GET_SYNC byte 1 is 0x20 (32)")
+set hex_rec to ihex_encode_record(0, 0, [1, 2, 3, 4])
+set ts to assert_str_eq(ts, hex_rec, ":0400000001020304F2", "Intel HEX record checksum is :0400000001020304F2")
+
+set _ to test_summary(ts)

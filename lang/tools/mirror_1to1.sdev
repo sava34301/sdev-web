@@ -1,0 +1,76 @@
+# =============================================================================
+# SDEV 1:1 Repository Mirror & Source-to-SDEV Transpiler Engine
+# (sdev-zero/lang/tools/mirror_1to1.sdev)
+# Authored in 100% Pure SDEV
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to mirror_map_path with rel_path
+  set p to text_trim(rel_path)
+  if p is "extension/interpreter/sdev-interpreter.py"
+    return "extension/interpreter/sdev-interpreter-py.sdev"
+  end
+  if p is "public/sdev-interpreter.py"
+    return "public/sdev-interpreter-py.sdev"
+  end
+  if p is "src/components/home/CompilerScene.tsx"
+    return "src/components/home/CompilerSceneView.sdev"
+  end
+  if p is "src/lang-bridge/compile-self.d.ts"
+    return "src/lang-bridge/compile-self-types.sdev"
+  end
+  if text_ends_with(p, ".d.ts")
+    return substr(p, 0, length(p) - 5) + ".sdev"
+  end
+  if text_ends_with(p, ".tsx") or text_ends_with(p, ".mjs") or text_ends_with(p, ".wat")
+    return substr(p, 0, length(p) - 4) + ".sdev"
+  end
+  if text_ends_with(p, ".ts") or text_ends_with(p, ".js") or text_ends_with(p, ".py")
+    return substr(p, 0, length(p) - 3) + ".sdev"
+  end
+  return p + ".sdev"
+end
+
+to mirror_transpile_declaration with line_str
+  set line to text_trim(line_str)
+  # TypeScript/JS: export function foo(a, b) {
+  if text_starts_with(line, "export function ")
+    set rest to substr(line, 16, length(line) - 16)
+    set lp to index_of(rest, "(")
+    set rp to index_of(rest, ")")
+    if lp > 0 and rp > lp
+      set fname to text_trim(substr(rest, 0, lp))
+      set raw_args to text_trim(substr(rest, lp + 1, rp - (lp + 1)))
+      if length(raw_args) is 0
+        return "to " + fname
+      end
+      set args_clean to replace(raw_args, ",", "")
+      return "to " + fname + " with " + args_clean
+    end
+  end
+  # Python: def foo(a, b):
+  if text_starts_with(line, "def ")
+    set rest to substr(line, 4, length(line) - 4)
+    set lp to index_of(rest, "(")
+    set rp to index_of(rest, ")")
+    if lp > 0 and rp > lp
+      set fname to text_trim(substr(rest, 0, lp))
+      set raw_args to text_trim(substr(rest, lp + 1, rp - (lp + 1)))
+      if length(raw_args) is 0
+        return "to " + fname
+      end
+      set args_clean to replace(raw_args, ",", "")
+      return "to " + fname + " with " + args_clean
+    end
+  end
+  return line
+end
+
+to mirror_file_present with sdev_rel_path
+  set content to read_file(sdev_rel_path)
+  if length(content) > 0 and index_of(content, "to ") >= 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,92 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/compile-firmware/index.ts (138 lines)
+# Pure-SDEV Path: supabase/functions/compile-firmware/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/compile-firmware/index.ts",
+    sdev_path: "supabase/functions/compile-firmware/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 138,
+    exports_count: 14
+  }
+end
+
+to module_exports
+  return ["json", "Body", "VERIFIED_WOKWI_BY_FQBN", "buildUrl", "headers", "key", "upstream", "text", "payload", "targetWokwi", "hexiRes", "data", "log", "isIhex"]
+end
+
+to json with body status
+  return {
+    status: 200,
+    handler: "json",
+    route: "supabase/functions/compile-firmware/index.ts",
+    payload: body
+  }
+end
+
+to Body
+  return "Body"
+end
+
+to VERIFIED_WOKWI_BY_FQBN
+  return "VERIFIED_WOKWI_BY_FQBN"
+end
+
+to buildUrl
+  return "buildUrl"
+end
+
+to headers
+  return "headers"
+end
+
+to key
+  return "key"
+end
+
+to upstream
+  return "upstream"
+end
+
+to text
+  return "text"
+end
+
+to payload
+  return "payload"
+end
+
+to targetWokwi
+  return "targetWokwi"
+end
+
+to hexiRes
+  return "hexiRes"
+end
+
+to data
+  return "data"
+end
+
+to log
+  return "log"
+end
+
+to isIhex
+  return "isIhex"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

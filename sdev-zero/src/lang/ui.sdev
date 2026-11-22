@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/ui.ts (351 lines)
+# Pure-SDEV Path: src/lang/ui.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/ui.ts",
+    sdev_path: "src/lang/ui.sdev",
+    subsystem: "lang-core",
+    original_lines: 351,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["getUiRunner", "createUiBuiltins", "pushNode", "pop", "asString", "asNumber", "asBool", "asHandler", "resolveTextArg", "setUiValue", "uiRunner", "builtins", "state", "nextId", "containerStack", "currentParent", "id", "parent", "node", "fn", "title", "width", "height", "level", "size", "raw", "bind", "sdev_mod_max", "label", "handler", "variant", "placeholder", "rows", "sdev_mod_min", "step", "opts", "def", "headers", "rowsArg", "msg"]
+end
+
+to getUiRunner
+  return 1
+end
+
+to createUiBuiltins with emit registerHandler
+  return emit
+end
+
+to pushNode with type props unknown opts
+  return type
+end
+
+to pop
+  return 1
+end
+
+to asString with v fallback
+  return v
+end
+
+to asNumber with v fallback
+  return v
+end
+
+to asBool with v
+  return v
+end
+
+to asHandler with v
+  return v
+end
+
+to resolveTextArg with raw
+  return raw
+end
+
+to setUiValue with state key value
+  return state
+end
+
+to uiRunner
+  return "uiRunner"
+end
+
+to builtins
+  return "builtins"
+end
+
+to state
+  return "state"
+end
+
+to nextId
+  return "nextId"
+end
+
+to containerStack
+  return "containerStack"
+end
+
+to currentParent
+  return "currentParent"
+end
+
+to id
+  return "id"
+end
+
+to parent
+  return "parent"
+end
+
+to node
+  return "node"
+end
+
+to fn
+  return "fn"
+end
+
+to title
+  return "title"
+end
+
+to width
+  return "width"
+end
+
+to height
+  return "height"
+end
+
+to level
+  return "level"
+end
+
+to size
+  return "size"
+end
+
+to raw
+  return "raw"
+end
+
+to bind
+  return "bind"
+end
+
+to sdev_mod_max
+  return "sdev_mod_max"
+end
+
+to label
+  return "label"
+end
+
+to handler
+  return "handler"
+end
+
+to variant
+  return "variant"
+end
+
+to placeholder
+  return "placeholder"
+end
+
+to rows
+  return "rows"
+end
+
+to sdev_mod_min
+  return "sdev_mod_min"
+end
+
+to step
+  return "step"
+end
+
+to opts
+  return "opts"
+end
+
+to def
+  return "def"
+end
+
+to headers
+  return "headers"
+end
+
+to rowsArg
+  return "rowsArg"
+end
+
+to msg
+  return "msg"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

@@ -1,0 +1,179 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/CodeMirrorEditor.tsx (464 lines)
+# Pure-SDEV Path: src/components/ide/CodeMirrorEditor.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/CodeMirrorEditor.tsx",
+    sdev_path: "src/components/ide/CodeMirrorEditor.sdev",
+    subsystem: "ide-component",
+    original_lines: 464,
+    exports_count: 37
+  }
+end
+
+to module_exports
+  return ["sdevCompletions", "makeTheme", "CodeMirrorEditor", "KEYWORD_SET", "BUILTIN_SET", "CONSTANT_SET", "sdevLanguage", "quote", "escaped", "ch", "word", "sdevHighlight", "from", "seen", "options", "text", "sdevHover", "start", "doc", "dom", "hostRef", "viewRef", "cbRef", "fontSize", "tabSize", "fontFamily", "showLineNumbers", "wordWrap", "compartments", "state", "sel", "line", "view", "current", "diags", "pos", "make_IdeEditorHandle"]
+end
+
+to sdevCompletions with context
+  return "<sdev-view component=\"sdevCompletions\" subsystem=\"ide-component\">" + str(context) + "</sdev-view>"
+end
+
+to makeTheme with fontSize fontFamily
+  return "<sdev-view component=\"makeTheme\" subsystem=\"ide-component\">" + str(fontSize) + "</sdev-view>"
+end
+
+to CodeMirrorEditor with onChange onRun onFormat readOnly problems
+  return "<sdev-view component=\"CodeMirrorEditor\" subsystem=\"ide-component\">" + str(onChange) + "</sdev-view>"
+end
+
+to KEYWORD_SET
+  return "<sdev-view component=\"KEYWORD_SET\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to BUILTIN_SET
+  return "<sdev-view component=\"BUILTIN_SET\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to CONSTANT_SET
+  return "<sdev-view component=\"CONSTANT_SET\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdevLanguage
+  return "<sdev-view component=\"sdevLanguage\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to quote
+  return "<sdev-view component=\"quote\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to escaped
+  return "<sdev-view component=\"escaped\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to ch
+  return "<sdev-view component=\"ch\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to word
+  return "<sdev-view component=\"word\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdevHighlight
+  return "<sdev-view component=\"sdevHighlight\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to from
+  return "<sdev-view component=\"from\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to seen
+  return "<sdev-view component=\"seen\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to options
+  return "<sdev-view component=\"options\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to text
+  return "<sdev-view component=\"text\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sdevHover
+  return "<sdev-view component=\"sdevHover\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to start
+  return "<sdev-view component=\"start\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to doc
+  return "<sdev-view component=\"doc\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to dom
+  return "<sdev-view component=\"dom\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to hostRef
+  return "<sdev-view component=\"hostRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to viewRef
+  return "<sdev-view component=\"viewRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to cbRef
+  return "<sdev-view component=\"cbRef\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to fontSize
+  return "<sdev-view component=\"fontSize\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to tabSize
+  return "<sdev-view component=\"tabSize\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to fontFamily
+  return "<sdev-view component=\"fontFamily\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to showLineNumbers
+  return "<sdev-view component=\"showLineNumbers\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to wordWrap
+  return "<sdev-view component=\"wordWrap\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to compartments
+  return "<sdev-view component=\"compartments\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to state
+  return "<sdev-view component=\"state\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to sel
+  return "<sdev-view component=\"sel\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to line
+  return "<sdev-view component=\"line\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to view
+  return "<sdev-view component=\"view\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to current
+  return "<sdev-view component=\"current\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to diags
+  return "<sdev-view component=\"diags\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to pos
+  return "<sdev-view component=\"pos\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to make_IdeEditorHandle with payload
+  return "<sdev-view component=\"make_IdeEditorHandle\" subsystem=\"ide-component\">" + str(payload) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

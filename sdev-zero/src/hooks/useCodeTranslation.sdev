@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/hooks/useCodeTranslation.ts (112 lines)
+# Pure-SDEV Path: src/hooks/useCodeTranslation.sdev
+# Subsystem     : hook
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/hooks/useCodeTranslation.ts",
+    sdev_path: "src/hooks/useCodeTranslation.sdev",
+    subsystem: "hook",
+    original_lines: 112,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["hasForeignKeywordsLeft", "useCodeTranslation", "mightNeedTranslation", "stripped", "translate", "result", "msg", "clearLastResult", "make_TranslationResult", "make_TranslationState"]
+end
+
+to hasForeignKeywordsLeft with code
+  return code
+end
+
+to useCodeTranslation
+  return 1
+end
+
+to mightNeedTranslation with code
+  return code
+end
+
+to stripped
+  return "stripped"
+end
+
+to translate
+  return "translate"
+end
+
+to result
+  return "result"
+end
+
+to msg
+  return "msg"
+end
+
+to clearLastResult
+  return "clearLastResult"
+end
+
+to make_TranslationResult with payload
+  return payload
+end
+
+to make_TranslationState with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

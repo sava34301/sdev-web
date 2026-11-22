@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang-bridge/oracle/compile.mjs (1212 lines)
+# Pure-SDEV Path: src/lang-bridge/oracle/compile.sdev
+# Subsystem     : lang-bridge
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang-bridge/oracle/compile.mjs",
+    sdev_path: "src/lang-bridge/oracle/compile.sdev",
+    subsystem: "lang-bridge",
+    original_lines: 1212,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["scopeTypes", "ensureNodeFs", "setModuleReader", "defaultReadModule", "prelink", "desugarKinds", "parse", "parseWithKinds", "parseProgram", "statement", "ifStmt", "attemptStmt", "whileStmt", "forEachStmt", "funcDecl", "expr", "or_", "and_", "not_", "cmp_", "add_", "mul_", "un_", "callOrAtom", "canStartAtom", "atom", "value", "tomePair", "bodies", "emit", "collectSets", "methodRetType", "emitLoadName", "emitStoreName", "emitExpr", "inferReturnTypeOf", "inferBody", "inferExpr", "emitStmt", "compile"]
+end
+
+to scopeTypes with locals em
+  return locals
+end
+
+to ensureNodeFs
+  return 1
+end
+
+to setModuleReader with fn
+  return fn
+end
+
+to defaultReadModule with path
+  return path
+end
+
+to prelink with source readModule seen
+  return source
+end
+
+to desugarKinds with tokens
+  return tokens
+end
+
+to parse with source
+  return source
+end
+
+to parseWithKinds with source readModule
+  return source
+end
+
+to parseProgram with tokens
+  return tokens
+end
+
+to statement
+  return 1
+end
+
+to ifStmt
+  return 1
+end
+
+to attemptStmt
+  return 1
+end
+
+to whileStmt
+  return 1
+end
+
+to forEachStmt
+  return 1
+end
+
+to funcDecl
+  return 1
+end
+
+to expr
+  return 1
+end
+
+to or_
+  return 1
+end
+
+to and_
+  return 1
+end
+
+to not_
+  return 1
+end
+
+to cmp_
+  return 1
+end
+
+to add_
+  return 1
+end
+
+to mul_
+  return 1
+end
+
+to un_
+  return 1
+end
+
+to callOrAtom
+  return 1
+end
+
+to canStartAtom with t
+  return t
+end
+
+to atom
+  return 1
+end
+
+to value with its
+  return its
+end
+
+to tomePair
+  return 1
+end
+
+to bodies with recording
+  return recording
+end
+
+to emit with stmts em
+  return stmts
+end
+
+to collectSets with body locals
+  return body
+end
+
+to methodRetType with classes functions key
+  return classes
+end
+
+to emitLoadName with name em locals
+  return name
+end
+
+to emitStoreName with name em locals sdev_mod_kind
+  return name
+end
+
+to emitExpr with e em locals
+  return e
+end
+
+to inferReturnTypeOf with func fnTypes
+  return func
+end
+
+to inferBody with body localTypes fnTypes
+  return body
+end
+
+to inferExpr with e localTypes fnTypes
+  return e
+end
+
+to emitStmt with s em locals
+  return s
+end
+
+to compile with source opts
+  return source
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

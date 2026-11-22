@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/context-menu.tsx (178 lines)
+# Pure-SDEV Path: src/components/ui/context-menu.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/context-menu.tsx",
+    sdev_path: "src/components/ui/context-menu.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 178,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["ContextMenu", "ContextMenuTrigger", "ContextMenuGroup", "ContextMenuPortal", "ContextMenuSub", "ContextMenuRadioGroup", "ContextMenuSubTrigger", "ContextMenuSubContent", "ContextMenuContent", "ContextMenuItem", "ContextMenuCheckboxItem", "ContextMenuRadioItem", "ContextMenuLabel", "ContextMenuSeparator", "ContextMenuShortcut"]
+end
+
+to ContextMenu
+  return "<sdev-view component=\"ContextMenu\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuTrigger
+  return "<sdev-view component=\"ContextMenuTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuGroup
+  return "<sdev-view component=\"ContextMenuGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuPortal
+  return "<sdev-view component=\"ContextMenuPortal\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuSub
+  return "<sdev-view component=\"ContextMenuSub\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuRadioGroup
+  return "<sdev-view component=\"ContextMenuRadioGroup\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuSubTrigger
+  return "<sdev-view component=\"ContextMenuSubTrigger\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuSubContent
+  return "<sdev-view component=\"ContextMenuSubContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuContent
+  return "<sdev-view component=\"ContextMenuContent\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuItem
+  return "<sdev-view component=\"ContextMenuItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuCheckboxItem
+  return "<sdev-view component=\"ContextMenuCheckboxItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuRadioItem
+  return "<sdev-view component=\"ContextMenuRadioItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuLabel
+  return "<sdev-view component=\"ContextMenuLabel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuSeparator
+  return "<sdev-view component=\"ContextMenuSeparator\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to ContextMenuShortcut with props
+  return "<sdev-view component=\"ContextMenuShortcut\" subsystem=\"ui-primitive\">" + str(props) + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

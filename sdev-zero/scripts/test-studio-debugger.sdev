@@ -1,0 +1,31 @@
+# ============================================================
+# SDEV Zero-Host Test Suite — Studio Time-Travel Chrono Debugger
+# (sdev-zero/scripts/test-studio-debugger.sdev)
+# ============================================================
+
+use "lang/stdlib/v2/test.sdev"
+use "lang/studio/time_travel.sdev"
+
+set ts to test_begin("Studio Time-Travel Chrono Debugger & Live Lens Tracer")
+
+set prog to "set base to 6\nset mult to base * 7\nsay mult"
+set sess to studio_run_traced(prog, 100)
+set ts to assert_eq(ts, sess["success"], 1, "Studio tracer completes within step budget")
+set ts to assert_eq(ts, length(sess["steps"]), 3, "Studio tracer records 3 chrono steps")
+set ts to assert_str_eq(ts, sess["outputs"][0], "42", "Studio tracer captures console output 42")
+
+set step0 to studio_seek_step(sess, 0)
+set ts to assert_str_eq(ts, step0["node_type"], "AssignStatement", "Step 0 is AssignStatement")
+set ts to assert_str_eq(ts, step0["summary"], "base <- 6", "Step 0 summary is 'base <- 6'")
+
+set step1 to studio_seek_step(sess, 1)
+set ts to assert_str_eq(ts, step1["result_value"], "42", "Step 1 evaluates base * 7 = 42")
+
+set step2 to studio_seek_step(sess, 2)
+set ts to assert_str_eq(ts, step2["node_type"], "SayStatement", "Step 2 is SayStatement")
+
+# Budget exceeded guard
+set over_sess to studio_run_traced(prog, 2)
+set ts to assert_eq(ts, over_sess["success"], 0, "Studio tracer halts when chrono step budget is exceeded")
+
+set _ to test_summary(ts)

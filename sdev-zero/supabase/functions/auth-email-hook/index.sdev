@@ -1,0 +1,166 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : supabase/functions/auth-email-hook/index.ts (328 lines)
+# Pure-SDEV Path: supabase/functions/auth-email-hook/index.sdev
+# Subsystem     : edge-function
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "supabase/functions/auth-email-hook/index.ts",
+    sdev_path: "supabase/functions/auth-email-hook/index.sdev",
+    subsystem: "edge-function",
+    original_lines: 328,
+    exports_count: 30
+  }
+end
+
+to module_exports
+  return ["maskEmail", "handlePreview", "handleWebhook", "at", "corsHeaders", "EMAIL_SUBJECTS", "EMAIL_TEMPLATES", "SITE_NAME", "SENDER_DOMAIN", "ROOT_DOMAIN", "FROM_DOMAIN", "SAMPLE_PROJECT_URL", "SAMPLE_EMAIL", "SAMPLE_DATA", "previewCorsHeaders", "apiKey", "authHeader", "type", "EmailTemplate", "sampleData", "html", "payload", "verified", "emailType", "templateProps", "text", "supabase", "messageId", "url", "message"]
+end
+
+to maskEmail with e
+  return {
+    status: 200,
+    handler: "maskEmail",
+    route: "supabase/functions/auth-email-hook/index.ts",
+    payload: e
+  }
+end
+
+to handlePreview with req
+  return {
+    status: 200,
+    handler: "handlePreview",
+    route: "supabase/functions/auth-email-hook/index.ts",
+    payload: req
+  }
+end
+
+to handleWebhook with req
+  return {
+    status: 200,
+    handler: "handleWebhook",
+    route: "supabase/functions/auth-email-hook/index.ts",
+    payload: req
+  }
+end
+
+to at
+  return "at"
+end
+
+to corsHeaders
+  return "corsHeaders"
+end
+
+to EMAIL_SUBJECTS
+  return "EMAIL_SUBJECTS"
+end
+
+to EMAIL_TEMPLATES
+  return "EMAIL_TEMPLATES"
+end
+
+to SITE_NAME
+  return "SITE_NAME"
+end
+
+to SENDER_DOMAIN
+  return "SENDER_DOMAIN"
+end
+
+to ROOT_DOMAIN
+  return "ROOT_DOMAIN"
+end
+
+to FROM_DOMAIN
+  return "FROM_DOMAIN"
+end
+
+to SAMPLE_PROJECT_URL
+  return "SAMPLE_PROJECT_URL"
+end
+
+to SAMPLE_EMAIL
+  return "SAMPLE_EMAIL"
+end
+
+to SAMPLE_DATA
+  return "SAMPLE_DATA"
+end
+
+to previewCorsHeaders
+  return "previewCorsHeaders"
+end
+
+to apiKey
+  return "apiKey"
+end
+
+to authHeader
+  return "authHeader"
+end
+
+to type
+  return "type"
+end
+
+to EmailTemplate
+  return "EmailTemplate"
+end
+
+to sampleData
+  return "sampleData"
+end
+
+to html
+  return "html"
+end
+
+to payload
+  return "payload"
+end
+
+to verified
+  return "verified"
+end
+
+to emailType
+  return "emailType"
+end
+
+to templateProps
+  return "templateProps"
+end
+
+to text
+  return "text"
+end
+
+to supabase
+  return "supabase"
+end
+
+to messageId
+  return "messageId"
+end
+
+to url
+  return "url"
+end
+
+to message
+  return "message"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

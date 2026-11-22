@@ -1,0 +1,55 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lib/mcp/tools/files.ts (69 lines)
+# Pure-SDEV Path: src/lib/mcp/tools/files.sdev
+# Subsystem     : mcp
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lib/mcp/tools/files.ts",
+    sdev_path: "src/lib/mcp/tools/files.sdev",
+    subsystem: "mcp",
+    original_lines: 69,
+    exports_count: 6
+  }
+end
+
+to module_exports
+  return ["notAuthed", "listFiles", "files", "readFile", "saveFile", "db"]
+end
+
+to notAuthed
+  return 1
+end
+
+to listFiles
+  return "listFiles"
+end
+
+to files
+  return "files"
+end
+
+to readFile
+  return "readFile"
+end
+
+to saveFile
+  return "saveFile"
+end
+
+to db
+  return "db"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

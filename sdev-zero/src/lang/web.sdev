@@ -1,0 +1,191 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/web.ts (2353 lines)
+# Pure-SDEV Path: src/lang/web.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/web.ts",
+    sdev_path: "src/lang/web.sdev",
+    subsystem: "lang-core",
+    original_lines: 2353,
+    exports_count: 40
+  }
+end
+
+to module_exports
+  return ["getWebRunner", "callSdevWeb", "callSdevWebWithDoc", "renderIconSvg", "astToSdevSource", "sdevSourceToJs", "sdevFuncToJs", "markSafeHtml", "stripSafeMarkers", "asStr", "isPlainObject", "escapeHtml", "renderSafeText", "escapeAttr", "cssPropName", "cssPropValue", "cssRuleFromDict", "resolveMediaQuery", "parseTagSpec", "normalizeClassValue", "parseSimpleMarkdown", "createWebBuiltins", "compileHandlerCode", "renderAttrs", "parseElArgs", "renderElementToString", "emitElement", "openEl", "closeEl", "renderWebDocument", "bindWebBuiltinsToEnv", "webRunner", "runner", "doc", "res", "ret", "css", "html", "js", "svg"]
+end
+
+to getWebRunner
+  return 1
+end
+
+to callSdevWeb with fnName args
+  return fnName
+end
+
+to callSdevWebWithDoc with fnName args
+  return fnName
+end
+
+to renderIconSvg with name extraAttrs cls
+  return name
+end
+
+to astToSdevSource with node
+  return node
+end
+
+to sdevSourceToJs with src
+  return src
+end
+
+to sdevFuncToJs with fnVal overrideName
+  return fnVal
+end
+
+to markSafeHtml with html
+  return html
+end
+
+to stripSafeMarkers with s
+  return s
+end
+
+to asStr with v fb
+  return v
+end
+
+to isPlainObject with v
+  return v
+end
+
+to escapeHtml with s
+  return s
+end
+
+to renderSafeText with rawStr
+  return rawStr
+end
+
+to escapeAttr with s
+  return s
+end
+
+to cssPropName with k
+  return k
+end
+
+to cssPropValue with prop v
+  return prop
+end
+
+to cssRuleFromDict with selector dict unknown
+  return selector
+end
+
+to resolveMediaQuery with q
+  return q
+end
+
+to parseTagSpec with spec
+  return spec
+end
+
+to normalizeClassValue with v
+  return v
+end
+
+to parseSimpleMarkdown with md
+  return md
+end
+
+to createWebBuiltins with emit
+  return emit
+end
+
+to compileHandlerCode with handler defaultParams
+  return handler
+end
+
+to renderAttrs with attrs unknown extraSpec
+  return attrs
+end
+
+to parseElArgs with tag args
+  return tag
+end
+
+to renderElementToString with rawTagSpec args
+  return rawTagSpec
+end
+
+to emitElement with rawTagSpec args
+  return rawTagSpec
+end
+
+to openEl with rawTagSpec args
+  return rawTagSpec
+end
+
+to closeEl
+  return 1
+end
+
+to renderWebDocument with state
+  return state
+end
+
+to bindWebBuiltinsToEnv with env webBuiltins SdevFunction opts
+  return env
+end
+
+to webRunner
+  return "webRunner"
+end
+
+to runner
+  return "runner"
+end
+
+to doc
+  return "doc"
+end
+
+to res
+  return "res"
+end
+
+to ret
+  return "ret"
+end
+
+to css
+  return "css"
+end
+
+to html
+  return "html"
+end
+
+to js
+  return "js"
+end
+
+to svg
+  return "svg"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

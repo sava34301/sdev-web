@@ -1,0 +1,91 @@
+# ============================================================
+# SDEV Core Engine — Multi-File Linker, Module Runner & Benchmarks
+# (sdev-zero/lang/core/linker_bench.sdev)
+# 100% Pure SDEV port of linker.ts, sdev-module.ts, advanced.ts & benchmark.ts
+# ============================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to link_sdev_modules with entry_source virtual_files
+  set lines to split(entry_source, "\n")
+  set n to length(lines)
+  set linked to []
+  set seen to "|"
+  set i to 0
+  while i < n
+    set line to text_trim(lines[i])
+    if text_starts_with(line, "use \"") and text_ends_with(line, "\"")
+      set path to substr(line, 5, length(line) - 6)
+      if index_of(seen, "|" + path + "|") < 0
+        set seen to seen + path + "|"
+        if virtual_files[path] is not nothing
+          set linked to linked + [virtual_files[path]]
+        else
+          set disk_src to read_file(path)
+          if length(disk_src) > 0
+            set linked to linked + [disk_src]
+          end
+        end
+      end
+    else
+      set linked to linked + [lines[i]]
+    end
+    set i to i + 1
+  end
+  return join(linked, "\n")
+end
+
+to bench_fib with n
+  if n <= 1
+    return n
+  end
+  set a to 0
+  set b to 1
+  set i to 2
+  while i <= n
+    set c to a + b
+    set a to b
+    set b to c
+    set i to i + 1
+  end
+  return b
+end
+
+to bench_sieve_count with limit
+  set flags to mklist(limit + 1)
+  set i to 2
+  while i <= limit
+    set flags[i] to 1
+    set i to i + 1
+  end
+  set p to 2
+  while p * p <= limit
+    if flags[p] is 1
+      set mult to p * p
+      while mult <= limit
+        set flags[mult] to 0
+        set mult to mult + p
+      end
+    end
+    set p to p + 1
+  end
+  set count to 0
+  set k to 2
+  while k <= limit
+    if flags[k] is 1
+      set count to count + 1
+    end
+    set k to k + 1
+  end
+  return count
+end
+
+to run_core_benchmark_suite
+  set fib30 to bench_fib(30)
+  set primes100 to bench_sieve_count(100)
+  return {
+    fib30: fib30,
+    primes100: primes100,
+    passed: (fib30 is 832040 and primes100 is 25)
+  }
+end

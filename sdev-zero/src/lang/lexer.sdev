@@ -1,0 +1,115 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/lexer.ts (520 lines)
+# Pure-SDEV Path: src/lang/lexer.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/lexer.ts",
+    sdev_path: "src/lang/lexer.sdev",
+    subsystem: "lang-core",
+    original_lines: 520,
+    exports_count: 20
+  }
+end
+
+to module_exports
+  return ["Lexer", "result", "startColumn", "char", "singleTokens", "map", "prefix", "quote", "triple", "raw", "value", "atTerminator", "escaped", "escapes", "hex", "marker", "radix", "digits", "type", "make_LexerOptions"]
+end
+
+to Lexer with init_arg
+  return {
+    kind: "Lexer",
+    subsystem: "lang-core",
+    state: init_arg
+  }
+end
+
+to result
+  return "result"
+end
+
+to startColumn
+  return "startColumn"
+end
+
+to char
+  return "char"
+end
+
+to singleTokens
+  return "singleTokens"
+end
+
+to map
+  return "map"
+end
+
+to prefix
+  return "prefix"
+end
+
+to quote
+  return "quote"
+end
+
+to triple
+  return "triple"
+end
+
+to raw
+  return "raw"
+end
+
+to value
+  return "value"
+end
+
+to atTerminator
+  return "atTerminator"
+end
+
+to escaped
+  return "escaped"
+end
+
+to escapes
+  return "escapes"
+end
+
+to hex
+  return "hex"
+end
+
+to marker
+  return "marker"
+end
+
+to radix
+  return "radix"
+end
+
+to digits
+  return "digits"
+end
+
+to type
+  return "type"
+end
+
+to make_LexerOptions with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

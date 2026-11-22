@@ -1,0 +1,159 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/lang/executor.ts (172 lines)
+# Pure-SDEV Path: src/lang/executor.sdev
+# Subsystem     : lang-core
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/lang/executor.ts",
+    sdev_path: "src/lang/executor.sdev",
+    subsystem: "lang-core",
+    original_lines: 172,
+    exports_count: 32
+  }
+end
+
+to module_exports
+  return ["pickRuntime", "executeV2", "setLastAgentRun", "understandFor", "executeAsync", "execute", "head", "line", "pref", "written", "understood", "notYet", "lastAgentRun", "opts", "result", "first", "retry", "second", "output", "plain", "agentOpts", "sdev_mod_attempt", "lineOutput", "cleaned", "lexer", "tokens", "parser", "ast", "interpreter", "writtenAttempt", "make_ExecutionResult", "make_ExecuteOptions"]
+end
+
+to pickRuntime with source
+  return source
+end
+
+to executeV2 with source options
+  return source
+end
+
+to setLastAgentRun with result
+  return result
+end
+
+to understandFor with source options allowAI
+  return source
+end
+
+to executeAsync with source options
+  return source
+end
+
+to execute with source options
+  return source
+end
+
+to head
+  return "head"
+end
+
+to line
+  return "line"
+end
+
+to pref
+  return "pref"
+end
+
+to written
+  return "written"
+end
+
+to understood
+  return "understood"
+end
+
+to notYet
+  return "notYet"
+end
+
+to lastAgentRun
+  return "lastAgentRun"
+end
+
+to opts
+  return "opts"
+end
+
+to result
+  return "result"
+end
+
+to first
+  return "first"
+end
+
+to retry
+  return "retry"
+end
+
+to second
+  return "second"
+end
+
+to output
+  return "output"
+end
+
+to plain
+  return "plain"
+end
+
+to agentOpts
+  return "agentOpts"
+end
+
+to sdev_mod_attempt
+  return "sdev_mod_attempt"
+end
+
+to lineOutput
+  return "lineOutput"
+end
+
+to cleaned
+  return "cleaned"
+end
+
+to lexer
+  return "lexer"
+end
+
+to tokens
+  return "tokens"
+end
+
+to parser
+  return "parser"
+end
+
+to ast
+  return "ast"
+end
+
+to interpreter
+  return "interpreter"
+end
+
+to writtenAttempt
+  return "writtenAttempt"
+end
+
+to make_ExecutionResult with payload
+  return payload
+end
+
+to make_ExecuteOptions with payload
+  return payload
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

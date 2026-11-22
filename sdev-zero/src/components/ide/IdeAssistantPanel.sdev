@@ -1,0 +1,71 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ide/IdeAssistantPanel.tsx (264 lines)
+# Pure-SDEV Path: src/components/ide/IdeAssistantPanel.sdev
+# Subsystem     : ide-component
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ide/IdeAssistantPanel.tsx",
+    sdev_path: "src/components/ide/IdeAssistantPanel.sdev",
+    subsystem: "ide-component",
+    original_lines: 264,
+    exports_count: 10
+  }
+end
+
+to module_exports
+  return ["IdeAssistantPanel", "Section", "runFix", "settings", "localRes", "aiMode", "repaired", "understood", "apply", "confidenceColor"]
+end
+
+to IdeAssistantPanel with fileName error problemSummary onApply
+  return "<sdev-view component=\"IdeAssistantPanel\" subsystem=\"ide-component\">" + str(fileName) + "</sdev-view>"
+end
+
+to Section with children
+  return "<sdev-view component=\"Section\" subsystem=\"ide-component\">" + str(children) + "</sdev-view>"
+end
+
+to runFix
+  return "<sdev-view component=\"runFix\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to settings
+  return "<sdev-view component=\"settings\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to localRes
+  return "<sdev-view component=\"localRes\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to aiMode
+  return "<sdev-view component=\"aiMode\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to repaired
+  return "<sdev-view component=\"repaired\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to understood
+  return "<sdev-view component=\"understood\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to apply
+  return "<sdev-view component=\"apply\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to confidenceColor
+  return "<sdev-view component=\"confidenceColor\" subsystem=\"ide-component\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end

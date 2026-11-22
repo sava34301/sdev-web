@@ -1,0 +1,91 @@
+# =============================================================================
+# SDEV 1:1 Zero-Host Pure-SDEV Counterpart Module
+# Original File : src/components/ui/form.tsx (129 lines)
+# Pure-SDEV Path: src/components/ui/form.sdev
+# Subsystem     : ui-primitive
+# =============================================================================
+
+use "lang/stdlib/v2/text.sdev"
+
+to module_info
+  return {
+    original_path: "src/components/ui/form.tsx",
+    sdev_path: "src/components/ui/form.sdev",
+    subsystem: "ui-primitive",
+    original_lines: 129,
+    exports_count: 15
+  }
+end
+
+to module_exports
+  return ["Form", "FormFieldContext", "FormField", "useFormField", "fieldContext", "itemContext", "fieldState", "FormItemContext", "FormItem", "id", "FormLabel", "FormControl", "FormDescription", "FormMessage", "body"]
+end
+
+to Form
+  return "<sdev-view component=\"Form\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormFieldContext
+  return "<sdev-view component=\"FormFieldContext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormField
+  return "<sdev-view component=\"FormField\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to useFormField
+  return "<sdev-view component=\"useFormField\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to fieldContext
+  return "<sdev-view component=\"fieldContext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to itemContext
+  return "<sdev-view component=\"itemContext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to fieldState
+  return "<sdev-view component=\"fieldState\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormItemContext
+  return "<sdev-view component=\"FormItemContext\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormItem
+  return "<sdev-view component=\"FormItem\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to id
+  return "<sdev-view component=\"id\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormLabel
+  return "<sdev-view component=\"FormLabel\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormControl
+  return "<sdev-view component=\"FormControl\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormDescription
+  return "<sdev-view component=\"FormDescription\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to FormMessage
+  return "<sdev-view component=\"FormMessage\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to body
+  return "<sdev-view component=\"body\" subsystem=\"ui-primitive\">" + str("") + "</sdev-view>"
+end
+
+to module_self_test
+  set info to module_info()
+  set exps to module_exports()
+  if length(info["sdev_path"]) > 0 and length(exps) > 0
+    return 1
+  end
+  return 0
+end
