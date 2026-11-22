@@ -463,7 +463,8 @@ export class Interpreter {
             out += part.value;
           } else {
             const value = this.evalSync(part.expr, env);
-            out += formatValue(value, part.formatSpec, part.conversion);
+            const text = formatValue(value, part.spec, part.conv);
+            out += part.debug ? `${part.debug}=${text}` : text;
           }
         }
         return out;
@@ -1551,7 +1552,7 @@ export class Interpreter {
   private makeFunction(node: AST.FuncDeclaration, env: Environment, boundName?: string, ownerClass?: SdevClass): RichFunction {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
+    const specs: AST.Param[] = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
     const simpleParams = specs.every((s) => s.kind === 'normal' && !s.default);
     const paramNames = simpleParams ? specs.map((s) => s.name) : null;
     const paramCount = specs.length;
@@ -1636,7 +1637,7 @@ export class Interpreter {
   private makeLambda(node: AST.LambdaExpr, env: Environment): RichFunction {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    const specs = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
+    const specs: AST.Param[] = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
     const simpleParams = specs.every((s) => s.kind === 'normal' && !s.default);
     const paramNames = simpleParams ? specs.map((s) => s.name) : null;
     const paramCount = specs.length;

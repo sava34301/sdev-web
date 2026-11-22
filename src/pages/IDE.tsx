@@ -734,28 +734,23 @@ export default function IDEPage() {
     // source is canonicalized to plain sdev v2 first — the toolchain itself
     // is untouched by dialects.
     let activeDialect = getActiveDialect();
-    let strippedSrc = stripSignature(activeFile.content);
-    // Support `#!dialect <file.sdev|slug>` so a dialect can live right in a workspace .sdev file.
-    if (strippedSrc.includes('#!dialect')) {
-      const { extractDialectDirective, isDialectSdevFile, parseDialectFromSdev } = await import('@/lang/dialect/sdev-format');
-      const dir = extractDialectDirective(strippedSrc);
-      if (dir) {
-        strippedSrc = dir.stripped;
-        const targetNorm = dir.target.replace(/^\.\//, '');
-        const wsFile = files.find((f) => f.name === dir.target || f.name === targetNorm);
-        if (wsFile) {
-          const wsBody = stripSignature(wsFile.content);
-          if (isDialectSdevFile(wsBody)) activeDialect = parseDialectFromSdev(wsBody);
-        } else {
-          const { findLocalDialect } = await import('@/hooks/useDialects');
-          const local = findLocalDialect(dir.target);
-          if (local) activeDialect = local;
-        }
+    const strippedSrc = stripSignature(activeFile.content);
+    let dialectSrc = strippedSrc;
+    try {
+      if (activeDialect || strippedSrc.includes('#!dialect')) {
+        const { resolveDialectSource } = await import('@/lang/dialect/resolve');
+        const { findLocalDialect } = await import('@/hooks/useDialects');
+        const resolved = resolveDialectSource(strippedSrc, activeDialect,
+          files.map(f => ({ name: f.name, content: stripSignature(f.content) })), findLocalDialect);
+        activeDialect = resolved.dialect;
+        dialectSrc = resolved.source;
       }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message); setOutput([]); setStatusMsg(`✗ ${message}`);
+      setBottomPanel('terminal'); setIsRunning(false);
+      return;
     }
-    const dialectSrc = activeDialect
-      ? (await import('@/lang/dialect/canonicalize')).canonicalize(strippedSrc, activeDialect).source
-      : strippedSrc;
     const { applyExtensions } = await import('@/lang/dialect/extensions');
     // the file as its author wrote it: directives out, sdev:ai made canonical, nothing else
     const hasDirectives = dialectSrc.includes('!#');
@@ -768,7 +763,7 @@ export default function IDEPage() {
       const head10 = src.split('\n', 10).map(l => l.trim());
       const shebangV2 = head10.some(l => l.startsWith('#!sdev v2'));
       const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
-      return shebangV2 || (!shebangV1 && (Boolean(activeDialect) || runtimePref === 'v2' || runtimePref === 'v2-wasm'));
+      return Boolean(activeDialect) || shebangV2 || (!shebangV1 && (runtimePref === 'v2' || runtimePref === 'v2-wasm'));
     };
     // Compile + run with the self-hosted v2 toolchain. Returns null when the
     // compiler cannot compile the source (so the caller can decide what next).
@@ -805,14 +800,14 @@ export default function IDEPage() {
     // The understander only reads a v2 file when the self-hosted compiler
     // cannot compile it as written, so it can never break a working program.
     let v2AsWrittenError: string | null = null;
-    if (overrideSrc === undefined && wantsV2(writtenSrc) && (noUnderstand || !(await import('@/lang/agent')).wordsNeedReading(writtenSrc))) {
+    if (overrideSrc === undefined && wantsV2(writtenSrc) && (activeDialect || noUnderstand || !(await import('@/lang/agent')).wordsNeedReading(writtenSrc))) {
       setIsRunning(true);
       setStatusMsg(noUnderstand ? 'Running (v2 · without understanding)…' : 'Running (v2 · self-hosted)…');
       setUiState(null); setWebState(null);
       try {
         const r = await tryV2(writtenSrc);
         if (!('notCompiled' in r)) { showV2(r); setIsRunning(false); return; }
-        if (noUnderstand) {
+        if (activeDialect || noUnderstand) {
           setOutput([
             `✗ the self-hosted sdev compiler cannot compile this yet: ${r.notCompiled}`,
             '  v2 runs only on the self-hosted toolchain — no JavaScript fallback.',
@@ -826,7 +821,9 @@ export default function IDEPage() {
         }
         v2AsWrittenError = r.notCompiled;
       } catch (e) {
-        setStatusMsg(`✗ v2: ${e instanceof Error ? e.message : String(e)}`);
+        const message = e instanceof Error ? e.message : String(e);
+        setError(message); setOutput([]); setBottomPanel('terminal');
+        setStatusMsg(`✗ v2: ${message}`);
         setIsRunning(false);
         return;
       }

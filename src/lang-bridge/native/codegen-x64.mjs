@@ -28,10 +28,10 @@ const LOCAL_SLOTS = 32;
 // and `+` can pick addq vs sdev_concat.
 // ---------------------------------------------------------------------------
 
-const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'upper', 'lower', 'trim', 'replace', 'substring', 'substr', 'join',
+const STR_BUILTINS = new Set(['concat', 'chr', 'str', 'text', 'upper', 'lower', 'trim', 'replace', 'substring', 'substr', 'join',
   // Milestone 6g — host I/O
   'read_file', 'input', 'env', 'http_get']);
-const INT_BUILTINS = new Set(['length', 'ord', 'abs', 'contains', 'index_of', 'find', 'has', 'min', 'max', 'int',
+const INT_BUILTINS = new Set(['length', 'len', 'ord', 'abs', 'contains', 'index_of', 'find', 'has', 'min', 'max', 'int',
   'write_file', 'file_exists', 'append_file', 'now_ms',
   // Milestone 6i — sequence + numeric library
   'sum', 'f2i', 'fbyte']);
@@ -593,6 +593,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
   const a = e.args;
   const one = () => emitExpr(a[0], em, locals, tys, fnTypes);
   switch (n) {
+    case 'len':
     case 'length':            // length(x) — strings and lists share the header
       one();
       em.L('    movq (%rax), %rax');
@@ -624,6 +625,7 @@ function emitBuiltin(e, em, locals, tys, fnTypes) {
       em.L('    movq %rax, %rdi');
       em.L('    call sdev_chr');
       return true;
+    case 'text':
     case 'str':
       emitStrExpr(a[0], em, locals, tys, fnTypes);
       return true;

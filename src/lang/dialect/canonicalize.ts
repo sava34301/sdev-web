@@ -136,7 +136,11 @@ export function canonicalize(source: string, spec: DialectSpec, opts: { withPrel
     const { line, strings, comment } = mask(splitLine(raw, marker));
     let code = mapWords(line, dict);
     if (spec.constructs.operators.length) code = desugarOperators(code, spec);
-    if (braces) code = code.replace(/\s*\{\s*$/, '').replace(/^(\s*)\}\s*$/, '$1end');
+    if (braces) {
+      // A branch changes the current block; it does not close the whole if.
+      code = code.replace(/^(\s*)\}\s*(else|rescue)\b/, '$1$2');
+      code = code.replace(/\s*\{\s*$/, '').replace(/^(\s*)\}\s*$/, '$1end');
+    }
     code = rewriteAssignmentForward(code, spec);
     const canonicalComment = comment === null ? '' : '#' + comment.slice(marker.length);
     return (unmask(code, strings) + canonicalComment).replace(/\s+$/, '');

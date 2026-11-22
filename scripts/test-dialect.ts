@@ -6,6 +6,12 @@
  */
 import { emptyDialect, validateDialect, type DialectSpec } from '../src/lang/dialect/spec';
 import { canonicalize, dialectize, translateDialect } from '../src/lang/dialect/canonicalize';
+import { resolveDialectSource } from '../src/lang/dialect/resolve';
+import { SAMPLE } from '../src/lang/dialect/sample';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   serializeDialectToSdev,
   parseDialectFromSdev,
@@ -152,6 +158,46 @@ check('sdev dialect collection slugs', bundleParsed.map((d) => d.meta.slug), ['b
 const dirRes = extractDialectDirective('#!dialect ./bg.dialect.sdev\nкажи "здравей"');
 check('dialect directive target', dirRes?.target, './bg.dialect.sdev');
 check('dialect directive stripped', dirRes?.stripped, 'кажи "здравей"');
+
+check('brace else branches compile', canonicalize('ако вярно {\n  кажи 1\n} иначе {\n  кажи 2\n}', bg).source,
+  'if true\n  say 1\nelse\n  say 2\nend');
+check('workspace dialect overrides active dialect', resolveDialectSource(
+  '#!dialect ./bg.dialect.sdev\nкажи 42', terse,
+  [{ name: 'bg.dialect.sdev', content: bgSdev }], () => null).source, 'say 42');
+check('installed directive resolves without workspace file', resolveDialectSource(
+  '#!dialect bulgarski\nкажи 42', null, [], slug => slug === 'bulgarski' ? bg : null).source, 'say 42');
+for (const [name, source, files] of [
+  ['missing dialect', '#!dialect missing.sdev\nsay 42', []],
+  ['not a dialect', '#!dialect ordinary.sdev\nsay 42', [{ name: 'ordinary.sdev', content: 'say 1' }]],
+] as const) {
+  let rejected = false;
+  try { resolveDialectSource(source, bg, [...files], () => null); } catch { rejected = true; }
+  check(`${name} does not silently use active dialect`, rejected, true);
+}
+let invalidRejected = false;
+try { resolveDialectSource('say 42', clash, [], () => null); } catch { invalidRejected = true; }
+check('invalid dialect rejected before compilation', invalidRejected, true);
+
+// The actual Studio tour must run, not just round-trip its words.
+const pirate = emptyDialect({ name: 'Pirate sdev', slug: 'pirate-sdev', languages: ['bg'] });
+Object.assign(pirate.names, {
+  say: 'ахой', set: 'закотви', to: 'към', with: 'със', return: 'плячка',
+  for: 'плаване', each: 'моряк', in: 'на_борда', range: 'левги', if: 'ако_видиш',
+  is: 'е', else: 'иначе', end: 'стига', attempt: 'абордаж', throw: 'зад_борда',
+  rescue: 'спаси', text: 'свитък', len: 'брой',
+});
+pirate.style.commentMarker = '⚓';
+const tourDir = mkdtempSync(join(tmpdir(), 'sdev-dialect-tour-'));
+try {
+  for (const spec of [emptyDialect(), bg, pirate]) {
+    const file = join(tourDir, spec.meta.slug + '.sdev');
+    writeFileSync(file, canonicalize(dialectize(SAMPLE, spec), spec).source);
+    let output = '';
+    try { output = execFileSync('node', ['bin/sdevhost.mjs', file], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
+    catch (e) { output = String(e); }
+    check(`${spec.meta.slug} Studio example runs to completion`, output, 'hello, world\n0\none\n2\ncaught boom\n');
+  }
+} finally { rmSync(tourDir, { recursive: true, force: true }); }
 
 if (failures.length) {
   console.error(`\n${failures.length} FAILED:\n` + failures.join('\n\n'));

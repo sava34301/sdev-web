@@ -432,7 +432,7 @@ to emit_call with name nargs
     set expr_type[0] to 0
     return 0
   end
-  if str_eq(name, "length")
+  if str_eq(name, "length") or str_eq(name, "len")
     check_arity(name, nargs, 1)
     emit_byte(131)
     set expr_type[0] to 0
@@ -456,9 +456,11 @@ to emit_call with name nargs
     set expr_type[0] to 1
     return 0
   end
-  if str_eq(name, "str")
+  if str_eq(name, "str") or str_eq(name, "text")
     check_arity(name, nargs, 1)
-    emit_byte(135)
+    if argk is not 1
+      emit_byte(135)
+    end
     set expr_type[0] to 1
     return 0
   end
@@ -1479,6 +1481,32 @@ to parse_atom with pos
         emit_call(name, nargs)
         return pos
       end
+    end
+    # Space-separated call form, e.g. `greet with name`, also used by Studio.
+    if is_ident_word(pos + 1, "with")
+      set pos to pos + 2
+      set nargs to 0
+      set collecting to 1
+      while collecting
+        if pos >= tk_count
+          set collecting to 0
+        else
+          set k to tk_kind[pos]
+          if k is 1 or k is 2 or k is 3 or k is 6 or is_op_c(pos, 40) or is_op_c(pos, 91)
+            set next_pos to parse_atom(pos)
+            if next_pos <= pos
+              set collecting to 0
+            else
+              set pos to next_pos
+              set nargs to nargs + 1
+            end
+          else
+            set collecting to 0
+          end
+        end
+      end
+      emit_call(name, nargs)
+      return pos
     end
     set last_id[0] to name
     emit_load_ident(name)
