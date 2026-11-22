@@ -108,9 +108,12 @@ export async function runWasm(
   // Part of the language, not the IDE: any entry point that reaches the
   // self-hosted toolchain accepts sdev written in a supported human
   // language, translated onto the canonical v2 surface first.
+  // When a personal dialect is active, canonicalize() has already translated
+  // the dialect's words — skip translateSource so user identifiers in
+  // Bulgarian or other scripts are never rewritten as keywords.
   const lang = options.sourceLanguage ?? 'auto';
-  if (lang !== 'English' && lang !== null) {
-    const opts = { target: 'v2' as const, dialect: options.dialect ?? null };
+  if (!options.dialect && lang !== 'English' && lang !== null) {
+    const opts = { target: 'v2' as const, dialect: null };
     source = translateSource(source, lang, opts).translated;
     if (modules) {
       modules = Object.fromEntries(

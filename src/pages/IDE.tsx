@@ -677,7 +677,9 @@ export default function IDEPage() {
     const timer = setTimeout(() => {
       void import('@/components/ide/lintSdev').then(async ({ lintEditorFile }) => {
         if (cancelled) return;
-        const result = activeFile ? await lintEditorFile(activeFile.content) : [];
+        const result = activeFile
+          ? await lintEditorFile(activeFile.content, { dialectActive: Boolean(getActiveDialect()) })
+          : [];
         if (!cancelled) setProblems(result);
       });
     }, 300);

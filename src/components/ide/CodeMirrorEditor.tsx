@@ -86,7 +86,7 @@ const sdevLanguage = StreamLanguage.define<{ inBlockComment: boolean }>({
 
     if (stream.match(/^\d[\d_]*(\.\d+)?([eE][+-]?\d+)?/)) return 'number';
 
-    if (stream.match(/^[A-Za-z_]\w*/)) {
+    if (stream.match(/^[\p{L}_][\p{L}\p{N}_]*/u)) {
       const word = stream.current();
       if (KEYWORD_SET.has(word)) return 'keyword';
       if (CONSTANT_SET.has(word)) return 'constant';

@@ -35928,9 +35928,9 @@ function tokenize(src) {
       push("STR", s);
       continue;
     }
-    if (/[A-Za-z_]/.test(c)) {
+    if (/[\p{L}_]/u.test(c)) {
       let s = "";
-      while (i < src.length && /[A-Za-z0-9_]/.test(src[i])) {
+      while (i < src.length && /[\p{L}\p{N}_]/u.test(src[i])) {
         s += src[i++];
         col++;
       }
@@ -37579,8 +37579,8 @@ async function loadSeed() {
 async function runWasm(source, modules, options = {}) {
   const output = [];
   const lang = options.sourceLanguage ?? "auto";
-  if (lang !== "English" && lang !== null) {
-    const opts = { target: "v2", dialect: options.dialect ?? null };
+  if (!options.dialect && lang !== "English" && lang !== null) {
+    const opts = { target: "v2", dialect: null };
     source = translateSource(source, lang, opts).translated;
     if (modules) {
       modules = Object.fromEntries(

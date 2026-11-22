@@ -72,10 +72,10 @@ function tokenize(src) {
       push('STR', s); continue;
     }
 
-    // Identifiers / keywords
-    if (/[A-Za-z_]/.test(c)) {
+    // Identifiers / keywords (Unicode letters + _, matching lang/compiler/lexer.sdev)
+    if (/[\p{L}_]/u.test(c)) {
       let s = '';
-      while (i < src.length && /[A-Za-z0-9_]/.test(src[i])) { s += src[i++]; col++; }
+      while (i < src.length && /[\p{L}\p{N}_]/u.test(src[i])) { s += src[i++]; col++; }
       if (KEYWORDS.has(s)) push('KW', s);
       else if (s === 'yep' || s === 'nope') push('KW', s === 'yep' ? 'true' : 'false'); // v1 alias
       else push('IDENT', s);
