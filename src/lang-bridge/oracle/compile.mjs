@@ -62,10 +62,12 @@ const FMATH_OP = { sin: 0, cos: 1, tan: 2, exp: 3, log: 4, pow: 5 };
 // `ret` is the compile-time result type used by scope typing.
 const BUILTINS = {
   length:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LEN) },
+  len:     { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LEN) },
   concat:  { arity: 2, ret: 'str', emit: (em) => em.emit(OP.STRCAT) },
   ord:     { arity: 2, ret: 'int', emit: (em) => em.emit(OP.SGET) },
   chr:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.CHR) },
   str:     { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
+  text:    { arity: 1, ret: 'str', emit: (em) => em.emit(OP.I2S) },
   mklist:  { arity: 1, ret: 'int', emit: (em) => em.emit(OP.LNEW) },
   // --- Milestone 5t: tomes ---
   // `keys(t)` yields a list of string handles; `values(t)` a list whose
@@ -947,7 +949,8 @@ function emitExpr(e, em, locals) {
         if (e.args.length !== bi.arity) throw new SdevError(`${e.name}: expected ${bi.arity} args, got ${e.args.length}`, e.line ?? 0);
         let argKind = 'int';
         for (const a of e.args) argKind = emitExpr(a, em, locals);
-        bi.emit(em);
+        // Strings already carry their text; do not format their numeric address.
+        if (!((e.name === 'str' || e.name === 'text') && argKind === 'str')) bi.emit(em);
         // `values(t)` mirrors the tome's value kind onto the produced list.
         if (e.name === 'values') return argKind === 'tomestr' ? 'liststr' : 'int';
         return bi.ret;

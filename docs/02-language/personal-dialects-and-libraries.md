@@ -37,6 +37,8 @@ A `DialectSpec` contains four parts:
 
 ### Living Dialect Documentation
 
+The v2 compiler accepts `text(value)` (also `str(value)`) and `len(value)` (also `length(value)`). Renamed dialect spellings use these same functions: for example, Pirate sdev's `свитък(42)` produces `"42"`, and `свитък("ahoy")` keeps the text unchanged. Error messages caught by `rescue` can be passed to `text` without turning them into a numeric address.
+
 `src/lang/dialect/docs.ts` (`generateDialectDocs` / `getOrGenerateDocs`) renders per-dialect reference documentation straight from `CATALOG`, passes the sample program through `dialectize`, and appends the dialect's custom functions and operators. Cached rows in `dialect_docs` track `TEMPLATE_VERSION` and automatically regenerate when stale.
 
 ---

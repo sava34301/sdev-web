@@ -20,6 +20,8 @@ const CASES = [
   { name: 'concat',    src: `say "a" + "b" + "c"`, out: 'abc\n' },
   { name: 'str-int',   src: `say "n=" + 7`, out: 'n=7\n' },
   { name: 'str-neg',   src: `say str(0 - 42)`, out: '-42\n' },
+  { name: 'dialect-text', src: `say text(42)\nsay text("ahoy")\nsay str("ahoy")`, out: '42\nahoy\nahoy\n' },
+  { name: 'dialect-len', src: `say len("ahoy")\nsay len([4, 5, 6])`, out: '4\n3\n' },
   { name: 'chr-ord',   src: `say chr(65)\nsay ord("AB", 1)`, out: 'A\n66\n' },
   { name: 'abs',       src: `say abs(0 - 5)\nsay abs(5)`, out: '5\n5\n' },
   { name: 'list-lit',  src: `set xs to [10, 20, 30]\nsay length(xs)\nsay xs[2]`, out: '3\n30\n' },

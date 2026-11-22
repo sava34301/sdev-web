@@ -7,6 +7,11 @@
 import { emptyDialect, validateDialect, type DialectSpec } from '../src/lang/dialect/spec';
 import { canonicalize, dialectize, translateDialect } from '../src/lang/dialect/canonicalize';
 import { resolveDialectSource } from '../src/lang/dialect/resolve';
+import { SAMPLE } from '../src/lang/dialect/sample';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   serializeDialectToSdev,
   parseDialectFromSdev,
@@ -172,6 +177,27 @@ for (const [name, source, files] of [
 let invalidRejected = false;
 try { resolveDialectSource('say 42', clash, [], () => null); } catch { invalidRejected = true; }
 check('invalid dialect rejected before compilation', invalidRejected, true);
+
+// The actual Studio tour must run, not just round-trip its words.
+const pirate = emptyDialect({ name: 'Pirate sdev', slug: 'pirate-sdev', languages: ['bg'] });
+Object.assign(pirate.names, {
+  say: 'ахой', set: 'закотви', to: 'към', with: 'със', return: 'плячка',
+  for: 'плаване', each: 'моряк', in: 'на_борда', range: 'левги', if: 'ако_видиш',
+  is: 'е', else: 'иначе', end: 'стига', attempt: 'абордаж', throw: 'зад_борда',
+  rescue: 'спаси', text: 'свитък', len: 'брой',
+});
+pirate.style.commentMarker = '⚓';
+const tourDir = mkdtempSync(join(tmpdir(), 'sdev-dialect-tour-'));
+try {
+  for (const spec of [emptyDialect(), bg, pirate]) {
+    const file = join(tourDir, spec.meta.slug + '.sdev');
+    writeFileSync(file, canonicalize(dialectize(SAMPLE, spec), spec).source);
+    let output = '';
+    try { output = execFileSync('node', ['bin/sdevhost.mjs', file], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
+    catch (e) { output = String(e); }
+    check(`${spec.meta.slug} Studio example runs to completion`, output, 'hello, world\n0\none\n2\ncaught boom\n');
+  }
+} finally { rmSync(tourDir, { recursive: true, force: true }); }
 
 if (failures.length) {
   console.error(`\n${failures.length} FAILED:\n` + failures.join('\n\n'));
